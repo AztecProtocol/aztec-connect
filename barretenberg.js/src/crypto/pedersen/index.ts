@@ -18,24 +18,7 @@ export class Pedersen {
     return Buffer.from(this.wasm.sliceMemory(0, 32));
   }
 
-  public computeAccountNullifier(inputs: Buffer[]) {
-    const ACCOUNT_NULLIFIER_INDEX = 12;
-    const inputVectors = serializeBufferArrayToVector(inputs);
-    this.wasm.transferToHeap(inputVectors, 0);
-    this.wasm.call('pedersen_compress_with_hash_index', 0, 0, ACCOUNT_NULLIFIER_INDEX);
-    return Buffer.from(this.wasm.sliceMemory(0, 32));
-  }
-
-  public computeAliasNullifier(inputs: Buffer[]) {
-    const ALIAS_NULLIFIER_INDEX = 16;
-    const inputVectors = serializeBufferArrayToVector(inputs);
-    this.wasm.transferToHeap(inputVectors, 0);
-    this.wasm.call('pedersen_compress_with_hash_index', 0, 0, ALIAS_NULLIFIER_INDEX);
-    return Buffer.from(this.wasm.sliceMemory(0, 32));
-  }
-
-  public computeNoteNullifier(inputs: Buffer[]) {
-    const hashIndex = 5;
+  public compressWithHashIndex(inputs: Buffer[], hashIndex: number) {
     const inputVectors = serializeBufferArrayToVector(inputs);
     this.wasm.transferToHeap(inputVectors, 0);
     this.wasm.call('pedersen_compress_with_hash_index', 0, 0, hashIndex);

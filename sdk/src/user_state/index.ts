@@ -1,7 +1,7 @@
 import { GrumpkinAddress } from 'barretenberg/address';
 import { Block } from 'barretenberg/block_source';
 import {
-  computeNullifier,
+  computeNoteNullifier,
   computeRemoveSigningKeyNullifier,
 } from 'barretenberg/client_proofs/join_split_proof/compute_nullifier';
 import { decryptNote } from 'barretenberg/client_proofs/note';
@@ -217,7 +217,7 @@ export class UserState extends EventEmitter {
     }
 
     const { secret, value, assetId } = decryptedNote;
-    const nullifier = computeNullifier(dataEntry, index, secret, this.pedersen);
+    const nullifier = computeNoteNullifier(dataEntry, index, secret, this.pedersen);
     const note = {
       index,
       assetId,

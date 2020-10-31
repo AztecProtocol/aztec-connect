@@ -13,7 +13,7 @@ import { WorkerPool } from '../../wasm/worker_pool';
 import { PooledPippenger } from '../../pippenger';
 import { PooledFft } from '../../fft';
 import { JoinSplitProof } from './join_split_proof';
-import { computeNullifier } from './compute_nullifier';
+import { computeNoteNullifier } from './compute_nullifier';
 import { Grumpkin } from '../../ecc/grumpkin';
 import { NoteAlgorithms } from '../note_algorithms';
 import { GrumpkinAddress, EthAddress } from '../../address';
@@ -169,8 +169,8 @@ describe('join_split_proof', () => {
 
       const joinSplitProof = new JoinSplitProof(proof, []);
 
-      const expectedNullifier1 = computeNullifier(inputNote1Enc, 0, inputNote1.secret, pedersen);
-      const expectedNullifier2 = computeNullifier(inputNote2Enc, 1, inputNote2.secret, pedersen);
+      const expectedNullifier1 = computeNoteNullifier(inputNote1Enc, 0, inputNote1.secret, pedersen);
+      const expectedNullifier2 = computeNoteNullifier(inputNote2Enc, 1, inputNote2.secret, pedersen);
       expect(joinSplitProof.nullifier1).toEqual(expectedNullifier1);
       expect(joinSplitProof.nullifier2).toEqual(expectedNullifier2);
       expect(joinSplitProof.inputOwner).toEqual(inputOwner.toBuffer());

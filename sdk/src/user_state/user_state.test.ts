@@ -1,7 +1,7 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import {
   computeAliasNullifier,
-  computeNullifier,
+  computeNoteNullifier,
   computeRemoveSigningKeyNullifier,
 } from 'barretenberg/client_proofs/join_split_proof/compute_nullifier';
 import { createNoteSecret, encryptNote, Note } from 'barretenberg/client_proofs/note';
@@ -74,8 +74,8 @@ describe('user state', () => {
     const gibberishNote = new Note(GrumpkinAddress.randomAddress(), secret, 0n, 0);
     const encryptedNote1 = randomBytes(64);
     const encryptedNote2 = randomBytes(64);
-    const nullifier1 = computeNullifier(randomBytes(64), 0, secret, pedersen);
-    const nullifier2 = computeNullifier(randomBytes(64), 1, secret, pedersen);
+    const nullifier1 = computeNoteNullifier(randomBytes(64), 0, secret, pedersen);
+    const nullifier2 = computeNoteNullifier(randomBytes(64), 1, secret, pedersen);
     const viewingKeys = [
       encryptNote(validNewNote ? note1 : gibberishNote, grumpkin),
       encryptNote(validChangeNote ? note2 : gibberishNote, grumpkin),

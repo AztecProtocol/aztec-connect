@@ -1,7 +1,7 @@
 import { BarretenbergWasm } from '../../wasm';
 import { Pedersen } from '../../crypto/pedersen';
 import { Note } from '../note';
-import { computeNullifier, computeAliasNullifier } from './compute_nullifier';
+import { computeNoteNullifier, computeAliasNullifier } from './compute_nullifier';
 import { Grumpkin } from '../../ecc/grumpkin';
 import { GrumpkinAddress } from '../../address';
 import { NoteAlgorithms } from '../note_algorithms';
@@ -39,8 +39,8 @@ describe('compute_nullifier', () => {
     const inputNote1Enc = await noteAlgos.encryptNote(inputNote1);
     const inputNote2Enc = await noteAlgos.encryptNote(inputNote2);
 
-    const nullifier1 = computeNullifier(inputNote1Enc, 1, viewingKey, pedersen);
-    const nullifier2 = computeNullifier(inputNote2Enc, 0, inputNote2.secret, pedersen);
+    const nullifier1 = computeNoteNullifier(inputNote1Enc, 1, viewingKey, pedersen);
+    const nullifier2 = computeNoteNullifier(inputNote2Enc, 0, inputNote2.secret, pedersen);
 
     const expected1 = Buffer.from('1118758dfaa8f47c3f18438fa46117d417cc715a8a4da3a91120ea8ec136fa12', 'hex');
     const expected2 = Buffer.from('274bb51174ca4e8873a01b41ade057b2563c6ea250d7950daf26545970347e40', 'hex');

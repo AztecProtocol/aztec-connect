@@ -1,6 +1,10 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { EscapeHatchProver, EscapeHatchTx } from 'barretenberg/client_proofs/escape_hatch_proof';
-import { computeNullifier, nullifierBufferToIndex, JoinSplitProver } from 'barretenberg/client_proofs/join_split_proof';
+import {
+  computeNoteNullifier,
+  computeRemoveSigningKeyNullifier,
+  nullifierBufferToIndex,
+} from 'barretenberg/client_proofs/join_split_proof';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { Blake2s } from 'barretenberg/crypto/blake2s';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
@@ -83,7 +87,7 @@ export class EscapeHatchProofCreator {
     const encryptedInput1 = this.noteAlgos.encryptNote(input1);
     const encryptedInput2 = this.noteAlgos.encryptNote(input2);
     const nullifier1 = nullifierBufferToIndex(
-      computeNullifier(
+      computeNoteNullifier(
         encryptedInput1,
         joinSplitTx.inputNoteIndices[0],
         input1.secret,
@@ -92,7 +96,7 @@ export class EscapeHatchProofCreator {
       ),
     );
     const nullifier2 = nullifierBufferToIndex(
-      computeNullifier(
+      computeNoteNullifier(
         encryptedInput2,
         joinSplitTx.inputNoteIndices[1],
         input2.secret,
@@ -108,8 +112,13 @@ export class EscapeHatchProofCreator {
 
     const rootResponse = await this.hashPathSource.getHashPaths(2, [{ index: rootTreeState.size, value: newDataRoot }]);
 
-    const accountNote = Buffer.concat([joinSplitTx.inputNotes[0].ownerPubKey.x(), joinSplitTx.signingPubKey.x()]);
-    const accountNullifier = nullifierBufferToIndex(this.pedersen.computeAccountNullifier([joinSplitTx.inputNotes[0].ownerPubKey.x(), joinSplitTx.signingPubKey.x()]));
+    const accountNullifier = nullifierBufferToIndex(
+      computeRemoveSigningKeyNullifier(
+        joinSplitTx.inputNotes[0].ownerPubKey,
+        joinSplitTx.signingPubKey.x(),
+        this.pedersen,
+      ),
+    );
     const accountNullifierPath = await this.hashPathSource.getHashPath(1, accountNullifier);
 
     const tx = new EscapeHatchTx(

@@ -12,7 +12,12 @@ import { Prover } from '../prover';
 import { Grumpkin } from '../../ecc/grumpkin';
 import { EthAddress, GrumpkinAddress } from '../../address';
 import { HashPath } from '../../merkle_tree';
-import { computeNullifier, JoinSplitTx, nullifierBufferToIndex } from '../join_split_proof';
+import {
+  computeNoteNullifier,
+  computeRemoveSigningKeyNullifier,
+  JoinSplitTx,
+  nullifierBufferToIndex,
+} from '../join_split_proof';
 import { WorldStateDb } from '../../world_state_db';
 import { toBufferBE } from 'bigint-buffer';
 import { NoteAlgorithms } from '../note_algorithms';
@@ -95,7 +100,7 @@ describe('escape_hatch_proof', () => {
     const encryptedNotes = [inputNote1Enc, inputNote2Enc];
     const nullifiers = encryptedNotes.map((encNote, index) => {
       return nullifierBufferToIndex(
-        computeNullifier(encNote, inputIndexes[index], inputNotes[index].secret, pedersen, true),
+        computeNoteNullifier(encNote, inputIndexes[index], inputNotes[index].secret, pedersen, true),
       );
     });
 
@@ -133,7 +138,9 @@ describe('escape_hatch_proof', () => {
 
     const accountIndex = 0;
     const accountNotePath = await worldStateDb.getHashPath(dataTreeId, BigInt(accountIndex));
-    const accountNullifier = nullifierBufferToIndex(pedersen.computeAccountNullifier([inputNotes[0].ownerPubKey.x(), pubKey.x()]));
+    const accountNullifier = nullifierBufferToIndex(
+      computeRemoveSigningKeyNullifier(inputNotes[0].ownerPubKey, pubKey.x(), pedersen),
+    );
     const accountNullifierPath = await worldStateDb.getHashPath(1, accountNullifier);
 
     // Get value note nullifier data
