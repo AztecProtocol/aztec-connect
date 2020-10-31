@@ -2,7 +2,7 @@ import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import {
   computeAliasNullifier,
   computeNullifier,
-  computeRemoveSigningKeyNullifier
+  computeRemoveSigningKeyNullifier,
 } from 'barretenberg/client_proofs/join_split_proof/compute_nullifier';
 import { createNoteSecret, encryptNote, Note } from 'barretenberg/client_proofs/note';
 import { Blake2s } from 'barretenberg/crypto/blake2s';
@@ -115,10 +115,9 @@ describe('user state', () => {
     newKey2: GrumpkinAddress,
     nullify?: Buffer,
   ) => {
-    const secret = createNoteSecret();
     const note1 = Buffer.concat([publicKey.x(), newKey1.x()]);
     const note2 = Buffer.concat([publicKey.x(), newKey2.x()]);
-    const nullifier1 = computeAliasNullifier('god', pedersen);
+    const nullifier1 = computeAliasNullifier('god', pedersen, blake2s);
     const nullifier2 = computeRemoveSigningKeyNullifier(publicKey, nullify || randomBytes(32), pedersen);
     const viewingKeys = [Buffer.alloc(0), Buffer.alloc(0)];
     const innerProofData = new InnerProofData(

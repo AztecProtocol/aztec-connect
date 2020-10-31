@@ -502,7 +502,7 @@ export class CoreSdk extends EventEmitter {
   }
 
   public async getAddressFromAlias(alias: string) {
-    const aliasHash = computeAliasNullifier(alias, this.pedersen);
+    const aliasHash = computeAliasNullifier(alias, this.pedersen, this.blake2s);
     return await this.db.getAliasAddress(aliasHash);
   }
 
