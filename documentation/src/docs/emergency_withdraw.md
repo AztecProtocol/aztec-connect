@@ -70,7 +70,7 @@ async function demoEmergencyWithdraw(userId, signer) {
   console.info('Waiting for tx to settle...');
   await aztecSdkEmergency.awaitSettlement(userId, depositTxHash);
 
-  const balanceAfter = aztecSdkEmergency.getBalance(userId);
+  const balanceAfter = aztecSdkEmergency.getBalance(userId, assetId);
   console.info('Balance after deposit:', aztecSdkEmergency.fromErc20Units(assetId, balanceAfter));
 
   // Withdraw
@@ -84,7 +84,7 @@ async function demoEmergencyWithdraw(userId, signer) {
   console.info('Waiting for tx to settle...');
   await aztecSdkEmergency.awaitSettlement(userId, withdrawTxHash);
 
-  const finalBalance = aztecSdkEmergency.getBalance(userId);
+  const finalBalance = aztecSdkEmergency.getBalance(userId, assetId);
   console.info('Balance after withdraw:', aztecSdkEmergency.fromErc20Units(assetId, finalBalance));
 
   // Destroy this demo sdk

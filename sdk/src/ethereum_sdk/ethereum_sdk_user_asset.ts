@@ -24,7 +24,7 @@ export class EthereumSdkUserAsset {
   }
 
   balance() {
-    return this.sdk.getBalance(this.ethAddress);
+    return this.sdk.getBalance(this.ethAddress, this.assetId);
   }
 
   private async getGrumpkinAddress(addr?: GrumpkinAddress | string) {

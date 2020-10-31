@@ -9,44 +9,13 @@ export class NotePicker {
     this.sortedNotes = new SortedNotes(notes);
   }
 
-  reset() {
-    this.sortedNotes.reset();
-  }
-
-  addNote(note: Note) {
-    this.sortedNotes.add(note);
-  }
-
-  addNotes(notes: Note[]) {
-    this.sortedNotes.bulkAdd(notes);
-  }
-
-  removeNote(index: number) {
-    const note = this.sortedNotes.find(n => n.index === index);
-    if (note) {
-      this.sortedNotes.remove(note);
-    }
-    return note;
-  }
-
-  hasNote(index: number) {
-    return !!this.sortedNotes.find(n => n.index === index);
-  }
-
-  findNote(callback: (note: Note, i?: number) => boolean) {
-    return this.sortedNotes.find(callback);
-  }
-
   pick(value: bigint) {
-    if (!value) {
-      return [];
-    }
     return pick(this.sortedNotes, value);
   }
 
-  getNoteSum() {
+  getSum() {
     let sum = BigInt(0);
-    this.sortedNotes.each((n: Note) => (sum += n.value));
+    this.sortedNotes.forEach((n: Note) => (sum += n.value));
     return sum;
   }
 }

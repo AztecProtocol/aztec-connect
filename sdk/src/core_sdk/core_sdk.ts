@@ -706,12 +706,12 @@ export class CoreSdk extends EventEmitter {
     this.emit(SdkEvent.UPDATED_USERS);
   }
 
-  public getBalance(userId: Buffer) {
+  public getBalance(userId: Buffer, assetId: AssetId) {
     const userState = this.getUserState(userId);
     if (!userState) {
       throw new Error(`User not found: ${userId.toString('hex')}`);
     }
-    return userState.getBalance();
+    return userState.getBalance(assetId);
   }
 
   public async getLatestRollups(count: number) {

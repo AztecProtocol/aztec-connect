@@ -322,8 +322,8 @@ export class WalletSdk extends EventEmitter {
     return new WalletSdkUser(userId, this);
   }
 
-  public getBalance(userId: Buffer) {
-    return this.core.getBalance(userId);
+  public getBalance(userId: Buffer, assetId: AssetId) {
+    return this.core.getBalance(userId, assetId);
   }
 
   public async getPublicBalance(assetId: AssetId, ethAddress: EthAddress) {
