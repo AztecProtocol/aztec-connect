@@ -16,7 +16,7 @@ export class WalletSdkUserAsset {
   }
 
   balance() {
-    return this.sdk.getBalance(this.userId);
+    return this.sdk.getBalance(this.userId, this.id);
   }
 
   async mint(value: bigint, account: EthAddress): Promise<TxHash> {

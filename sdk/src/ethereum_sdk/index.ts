@@ -352,12 +352,12 @@ export class EthereumSdk extends EventEmitter {
     return userId ? new EthereumSdkUser(ethAddress, this) : undefined;
   }
 
-  public getBalance(ethAddress: EthAddress) {
+  public getBalance(ethAddress: EthAddress, assetId: AssetId) {
     const userId = this.getUserIdByEthAddress(ethAddress);
     if (!userId) {
       throw new Error(`User not found: ${ethAddress}`);
     }
-    return this.walletSdk.getBalance(userId);
+    return this.walletSdk.getBalance(userId, assetId);
   }
 
   public async getLatestRollups(count: number) {

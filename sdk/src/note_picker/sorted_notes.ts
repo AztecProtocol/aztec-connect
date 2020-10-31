@@ -4,15 +4,15 @@ export class SortedNotes {
   private sortedNotes: Note[] = [];
 
   constructor(notes: Note[] = []) {
-    this.sortedNotes = [...notes].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+    this.bulkAdd(notes);
   }
 
-  get length(): number {
+  get length() {
     return this.sortedNotes.length;
   }
 
-  reset() {
-    this.sortedNotes = [];
+  get notes() {
+    return [...this.sortedNotes];
   }
 
   add(note: Note) {
@@ -22,13 +22,12 @@ export class SortedNotes {
         break;
       }
     }
-
     this.sortedNotes.splice(i, 0, note);
   }
 
   bulkAdd(notes: Note[]) {
     if (!this.sortedNotes.length) {
-      this.sortedNotes = [...notes].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+      this.sortedNotes = [...notes].sort((a, b) => (a.value < b.value ? -1 : a.value > b.value ? 1 : 0));
     } else {
       notes.forEach(n => this.add(n));
     }
@@ -39,36 +38,11 @@ export class SortedNotes {
     this.sortedNotes.splice(idx, 1);
   }
 
-  each(callback: (note: Note, i: number) => void) {
+  forEach(callback: (note: Note, i: number) => void) {
     this.sortedNotes.forEach((note, i) => callback(note, i));
   }
 
-  find(callback: (note: Note, i?: number) => boolean) {
-    return this.sortedNotes.find(callback);
-  }
-
-  first(count: number): Note[] {
-    return this.sortedNotes.slice(0, count);
-  }
-
-  last(count: number): Note[] {
-    return this.sortedNotes.slice(-count);
-  }
-
-  nth(idx: number): Note {
+  nth(idx: number) {
     return this.sortedNotes[idx];
-  }
-
-  indexOfValue(value: bigint, start?: number): number {
-    return this.sortedNotes.findIndex((note, i) => (start === undefined || i >= start) && note.value === value);
-  }
-
-  lastIndexOfValue(value: bigint): number {
-    for (let i = this.sortedNotes.length - 1; i >= 0; i--) {
-      if (this.nth(i).value === value) {
-        return i;
-      }
-    }
-    return -1;
   }
 }

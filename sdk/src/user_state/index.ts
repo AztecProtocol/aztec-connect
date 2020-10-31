@@ -33,7 +33,7 @@ enum SyncState {
 }
 
 export class UserState extends EventEmitter {
-  private notePicker = new NotePicker();
+  private notePickers: Map<AssetId, NotePicker> = new Map();
   private blockQueue = new MemoryFifo<Block>();
   private syncState = SyncState.OFF;
   private syncingPromise!: Promise<void>;
@@ -105,7 +105,7 @@ export class UserState extends EventEmitter {
       return;
     }
 
-    const balanceBefore = this.getBalance();
+    const balanceBefore = this.getBalance(AssetId.DAI);
 
     const { rollupProofData, viewingKeysData } = block;
     const { rollupId, dataStartIndex, innerProofData } = RollupProofData.fromBuffer(rollupProofData, viewingKeysData);
@@ -126,11 +126,9 @@ export class UserState extends EventEmitter {
     this.user.syncedToRollup = rollupId;
     await this.db.updateUser(this.user);
 
-    const balanceAfter = this.getBalance();
+    const balanceAfter = this.getBalance(AssetId.DAI);
     const diff = balanceAfter - balanceBefore;
     this.emit(UserStateEvent.UPDATED_USER_STATE, this.user.id, balanceAfter, diff, AssetId.DAI);
-
-    return;
   }
 
   private async handleAccountTx(proof: InnerProofData, noteStartIndex: number) {
@@ -292,17 +290,24 @@ export class UserState extends EventEmitter {
   }
 
   private async refreshNotePicker() {
+    const notesMap: Map<AssetId, Note[]> = new Map();
     const notes = await this.db.getUserNotes(this.user.id);
-    this.notePicker = new NotePicker();
-    this.notePicker.addNotes(notes);
+    notes.forEach(note => {
+      const assetNotes = notesMap.get(note.assetId) || [];
+      notesMap.set(note.assetId, [...assetNotes, note]);
+    });
+    notesMap.forEach((notes, assetId) => {
+      const notePicker = new NotePicker(notes);
+      this.notePickers.set(assetId, notePicker);
+    });
   }
 
-  public pickNotes(value: bigint) {
-    return this.notePicker.pick(value);
+  public pickNotes(assetId: AssetId, value: bigint) {
+    return this.notePickers.get(assetId)?.pick(value);
   }
 
-  public getBalance() {
-    return this.notePicker.getNoteSum();
+  public getBalance(assetId: AssetId) {
+    return this.notePickers.get(assetId)?.getSum() || BigInt(0);
   }
 
   public async awaitSynchronised() {

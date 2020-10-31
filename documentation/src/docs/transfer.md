@@ -8,7 +8,7 @@ import { AssetId, GrumpkinAddress } from '@aztec/sdk';
 async function demoTransfer(aztecSdk, userId, signer) {
   const assetId = AssetId.DAI;
 
-  const balanceBefore = aztecSdk.getBalance(userId);
+  const balanceBefore = aztecSdk.getBalance(userId, assetId);
   console.info('Balance before transfer:', aztecSdk.fromErc20Units(assetId, balanceBefore));
 
   const value = aztecSdk.toErc20Units(assetId, '2');
@@ -23,7 +23,7 @@ async function demoTransfer(aztecSdk, userId, signer) {
   console.info('Waiting for tx to settle...');
   await aztecSdk.awaitSettlement(userId, txHash);
 
-  const balanceAfter = aztecSdk.getBalance(userId);
+  const balanceAfter = aztecSdk.getBalance(userId, assetId);
   console.info('Balance after transfer:', aztecSdk.fromErc20Units(assetId, balanceAfter));
 }
 ```
