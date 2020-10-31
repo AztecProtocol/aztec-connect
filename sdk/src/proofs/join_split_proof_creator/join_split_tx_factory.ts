@@ -30,7 +30,7 @@ export class JoinSplitTxFactory {
   ) {
     const max = (a: bigint, b: bigint) => (a > b ? a : b);
     const requiredInputNoteValue = max(BigInt(0), newNoteValue + publicOutput - publicInput);
-    const notes = requiredInputNoteValue ? userState.pickNotes(assetId, requiredInputNoteValue) : [];
+    const notes = requiredInputNoteValue ? await userState.pickNotes(assetId, requiredInputNoteValue) : [];
     if (!notes) {
       throw new Error(`Failed to find no more than 2 notes that sum to ${requiredInputNoteValue}.`);
     }

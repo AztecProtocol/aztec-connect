@@ -250,6 +250,15 @@ export class Server {
     return undefined;
   }
 
+  public async getPendingNoteNullifiers() {
+    const unsettledTxs = await this.rollupDb.getUnsettledTxs();
+    return unsettledTxs
+      .map(tx => new JoinSplitProof(tx.proofData, []))
+      .filter(tx => tx.proofId === 0)
+      .map(tx => [tx.nullifier1, tx.nullifier2])
+      .flat();
+  }
+
   private async processTxQueue(maxRollupWaitTime: Duration, minRollupInterval: Duration) {
     let flushTimeout!: NodeJS.Timeout;
     let txs: JoinSplitProof[] = [];

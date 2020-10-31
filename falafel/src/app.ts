@@ -156,6 +156,12 @@ export function appFactory(
     ctx.status = 200;
   });
 
+  router.get('/get-pending-note-nullifiers', async (ctx: Koa.Context) => {
+    const nullifiers = await server.getPendingNoteNullifiers();
+    ctx.body = nullifiers.map(n => n.toString('hex'));
+    ctx.status = 200;
+  });
+
   router.get('/remove-data', validateAuth, async (ctx: Koa.Context) => {
     await server.removeData();
     ctx.status = 200;

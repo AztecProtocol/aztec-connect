@@ -45,4 +45,13 @@ export class SortedNotes {
   nth(idx: number) {
     return this.sortedNotes[idx];
   }
+
+  slice(start: number, end?: number) {
+    return this.sortedNotes.slice(start, end);
+  }
+
+  filter(cb: (note: Note) => boolean) {
+    const chosenNotes = this.sortedNotes.filter(cb);
+    return new SortedNotes(chosenNotes);
+  }
 }

@@ -1,5 +1,5 @@
 import { GrumpkinAddress } from 'barretenberg/address';
-import { Block, BlockSource } from 'barretenberg/block_source';
+import { Block } from 'barretenberg/block_source';
 import {
   computeNullifier,
   computeRemoveSigningKeyNullifier,
@@ -10,6 +10,7 @@ import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { MemoryFifo } from 'barretenberg/fifo';
 import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
+import { RollupProvider } from 'barretenberg/rollup_provider';
 import { toBigIntBE } from 'bigint-buffer';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
@@ -44,7 +45,7 @@ export class UserState extends EventEmitter {
     private blake2s: Blake2s,
     private pedersen: Pedersen,
     private db: Database,
-    private blockSource: BlockSource,
+    private rollupProvider: RollupProvider,
   ) {
     super();
   }
@@ -64,7 +65,7 @@ export class UserState extends EventEmitter {
     }
     debug(`starting sync for ${this.user.id.toString('hex')} from rollup block ${this.user.syncedToRollup + 1}...`);
     this.syncState = SyncState.SYNCHING;
-    const blocks = await this.blockSource.getBlocks(this.user.syncedToRollup + 1);
+    const blocks = await this.rollupProvider.getBlocks(this.user.syncedToRollup + 1);
     for (const block of blocks) {
       if (this.syncState !== SyncState.SYNCHING) {
         return;
@@ -302,8 +303,14 @@ export class UserState extends EventEmitter {
     });
   }
 
-  public pickNotes(assetId: AssetId, value: bigint) {
-    return this.notePickers.get(assetId)?.pick(value);
+  public async pickNotes(assetId: AssetId, value: bigint) {
+    const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
+    return this.notePickers.get(assetId)?.pick(value, pendingNullifiers);
+  }
+
+  public async getMaxSpendableValue(assetId: AssetId) {
+    const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
+    return this.notePickers.get(assetId)?.getMaxSpendableValue(pendingNullifiers) || BigInt(0);
   }
 
   public getBalance(assetId: AssetId) {
@@ -323,10 +330,10 @@ export class UserStateFactory {
     private blake2s: Blake2s,
     private pedersen: Pedersen,
     private db: Database,
-    private blockSource: BlockSource,
+    private rollupProvider: RollupProvider,
   ) {}
 
   createUserState(user: UserData) {
-    return new UserState(user, this.grumpkin, this.blake2s, this.pedersen, this.db, this.blockSource);
+    return new UserState(user, this.grumpkin, this.blake2s, this.pedersen, this.db, this.rollupProvider);
   }
 }

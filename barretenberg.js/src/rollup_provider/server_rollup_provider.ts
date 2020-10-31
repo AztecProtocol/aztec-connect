@@ -4,7 +4,6 @@ import { ServerBlockSource } from '../block_source';
 import { Proof } from '../rollup_provider';
 import { getProviderStatus } from './get_provider_status';
 
-
 export class ServerRollupProvider extends ServerBlockSource implements RollupProvider {
   constructor(baseUrl: URL) {
     super(baseUrl);
@@ -35,5 +34,17 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
 
   async getStatus() {
     return getProviderStatus(this.baseUrl);
+  }
+
+  async getPendingNoteNullifiers() {
+    const url = new URL(`${this.baseUrl}/get-pending-note-nullifiers`);
+
+    const response = await fetch(url.toString());
+    if (response.status !== 200) {
+      throw new Error(`Bad response code ${response.status}.`);
+    }
+
+    const nullifiers = (await response.json()) as string[];
+    return nullifiers.map(n => Buffer.from(n, 'hex'));
   }
 }

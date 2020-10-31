@@ -84,6 +84,10 @@ export class LocalRollupProvider extends EventEmitter implements RollupProvider 
     };
   }
 
+  async getPendingNoteNullifiers() {
+    return [];
+  }
+
   stop() {
     this.running = false;
   }

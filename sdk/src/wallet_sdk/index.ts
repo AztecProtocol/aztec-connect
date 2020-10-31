@@ -207,7 +207,10 @@ export class WalletSdk extends EventEmitter {
     to: EthAddress,
   ): Promise<TxHash> {
     const action = () => this.core.createProof(assetId, userId, 'WITHDRAW', value, signer, undefined, undefined, to);
-    return this.core.performAction(Action.WITHDRAW, value, userId, to, action);
+    const validation = async () => {
+      await this.checkNoteBalance(userId, assetId, value);
+    };
+    return this.core.performAction(Action.WITHDRAW, value, userId, to, action, validation);
   }
 
   public async transfer(
@@ -219,7 +222,10 @@ export class WalletSdk extends EventEmitter {
   ): Promise<TxHash> {
     const recipient = typeof to === 'string' ? await this.getAddressFromAlias(to) : to;
     const action = () => this.core.createProof(assetId, userId, 'TRANSFER', value, signer, undefined, recipient);
-    return this.core.performAction(Action.TRANSFER, value, userId, to, action);
+    const validation = async () => {
+      await this.checkNoteBalance(userId, assetId, value);
+    };
+    return this.core.performAction(Action.TRANSFER, value, userId, to, action, validation);
   }
 
   private async checkPublicBalance(assetId: AssetId, value: bigint, from: EthAddress) {
@@ -228,6 +234,29 @@ export class WalletSdk extends EventEmitter {
     const pendingTokenBalance = await this.blockchain.getUserPendingDeposit(assetId, from);
     if (tokenBalance + pendingTokenBalance < value) {
       throw new Error(`Insufficient public token balance: ${tokenContract.fromErc20Units(tokenBalance)}`);
+    }
+  }
+
+  private async checkNoteBalance(userId: Buffer, assetId: AssetId, value: bigint) {
+    const userState = this.core.getUserState(userId);
+    if (!userState) {
+      throw new Error('User not found.');
+    }
+
+    const balance = userState.getBalance(assetId);
+    if (value > balance) {
+      throw new Error('Not enough balance.');
+    }
+
+    const maxTxValue = await userState.getMaxSpendableValue(assetId);
+    if (value > maxTxValue) {
+      const messages = [`Failed to find 2 notes that sum to ${this.fromErc20Units(assetId, value)}.`];
+      if (maxTxValue) {
+        messages.push(`Please make a transaction no more than ${this.fromErc20Units(assetId, maxTxValue)}.`);
+      } else {
+        messages.push('Please wait for pending transactions to settle.');
+      }
+      throw new Error(messages.join(' '));
     }
   }
 

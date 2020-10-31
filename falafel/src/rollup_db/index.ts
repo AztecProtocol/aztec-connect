@@ -159,6 +159,15 @@ export class RollupDb {
     });
   }
 
+  public getUnsettledTxs() {
+    return this.rollupTxRep
+      .createQueryBuilder('tx')
+      .leftJoinAndSelect('tx.rollup', 'rollup')
+      .where('tx.rollup IS NULL')
+      .orWhere('rollup.status != :rollupStatus', { rollupStatus: 'SETTLED' })
+      .getMany();
+  }
+
   public async getTxByTxId(txId: Buffer) {
     return this.rollupTxRep.findOne({ txId }, { relations: ['rollup'] });
   }

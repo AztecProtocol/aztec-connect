@@ -101,4 +101,8 @@ export class PersistentEthereumBlockchain implements Blockchain {
     await this.blockRep.save(blockToBlockDao(block));
     this.latestRollupId = block.rollupId;
   }
+
+  async getPendingNoteNullifiers() {
+    return [];
+  }
 }

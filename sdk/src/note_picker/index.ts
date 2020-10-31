@@ -2,20 +2,40 @@ import { SortedNotes } from './sorted_notes';
 import { pick } from './pick';
 import { Note } from '../note';
 
-export class NotePicker {
-  private sortedNotes: SortedNotes;
+const noteSum = (notes: Note[]) => notes.reduce((sum, { value }) => sum + value, BigInt(0));
 
-  constructor(notes: Note[] = []) {
-    this.sortedNotes = new SortedNotes(notes);
+export class NotePicker {
+  private spendableNotes: SortedNotes;
+  private numNotesPerTx = 2;
+
+  constructor(private notes: Note[] = [], excludeIndices: number[] = []) {
+    const availableNotes = notes.filter(({ index }) => excludeIndices.indexOf(index) < 0);
+    this.spendableNotes = new SortedNotes(availableNotes);
   }
 
-  pick(value: bigint) {
-    return pick(this.sortedNotes, value);
+  private getSpendableNotes(excludeNullifiers?: Buffer[]) {
+    return excludeNullifiers?.length
+      ? this.spendableNotes.filter(({ nullifier }) => !excludeNullifiers.some(n => n.equals(nullifier)))
+      : this.spendableNotes;
+  }
+
+  pick(value: bigint, excludeNullifiers?: Buffer[]) {
+    const spendableNotes = this.getSpendableNotes(excludeNullifiers);
+    return pick(spendableNotes, value);
   }
 
   getSum() {
-    let sum = BigInt(0);
-    this.sortedNotes.forEach((n: Note) => (sum += n.value));
-    return sum;
+    return noteSum(this.notes);
+  }
+
+  getSpendableSum(excludeNullifiers?: Buffer[]) {
+    const spendableNotes = this.getSpendableNotes(excludeNullifiers);
+    return noteSum(spendableNotes.notes);
+  }
+
+  getMaxSpendableValue(excludeNullifiers?: Buffer[]) {
+    const spendableNotes = this.getSpendableNotes(excludeNullifiers);
+    const notes = spendableNotes.slice(-this.numNotesPerTx);
+    return noteSum(notes);
   }
 }

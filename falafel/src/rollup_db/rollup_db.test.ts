@@ -520,6 +520,24 @@ describe('Rollup DB', () => {
     expect(rollups[1].txs[0].txId).toEqual(txDao1.txId);
   });
 
+  it('get unsettled txs', async () => {
+    const txs = [...Array(4)].map(() => randomTx());
+    await Promise.all(txs.map(async (tx) => rollupDb.addTx(tx)));
+
+    const rolledUpTxs = txs.slice(0, 3);
+    await Promise.all(rolledUpTxs.map(async (tx, i) => rollupDb.addRollup(randomRollup(i, [tx]))));
+
+    await rollupDb.confirmRollup(0);
+    await rollupDb.confirmSent(1, randomBytes(32));
+    await rollupDb.confirmRollupCreated(2);
+
+    const unsettledTxs = await rollupDb.getUnsettledTxs();
+    const unsettledTxIds = unsettledTxs.map((tx) => tx.txId);
+    const expectedTxIds = txs.slice(1).map(tx => tx.getTxId());
+    const sortTxIds = (txIds: Buffer[]) => txIds.sort((a, b) => a.toString('hex') < b.toString('hex') ? -1 : 1);
+    expect(sortTxIds(unsettledTxIds)).toEqual(sortTxIds(expectedTxIds));
+  });
+
   it('find data roots index by merkle root', async () => {
     const tx0 = randomTx();
     const tx1 = randomTx();

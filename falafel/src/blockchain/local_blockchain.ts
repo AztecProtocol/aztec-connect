@@ -194,4 +194,8 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
   public validateSignature() {
     return true;
   }
+
+  async getPendingNoteNullifiers() {
+    return [];
+  }
 }

@@ -237,4 +237,9 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     const recoveredSigner = ethers.utils.verifyMessage(digest, `0x${signature.toString('hex')}`);
     return recoveredSigner.toLowerCase() === publicOwner.toString().toLowerCase();
   }
+
+  // TODO - shouldn't have to have this method here
+  async getPendingNoteNullifiers() {
+    return [];
+  }
 }
