@@ -52,7 +52,7 @@ describe('escape_hatch_proof', () => {
 
   beforeEach(async () => {
     EventEmitter.defaultMaxListeners = 32;
-    const circuitSize = 512 * 1024;
+    const circuitSize = EscapeHatchProver.circuitSize;
 
     crs = new Crs(circuitSize);
     await crs.download();

@@ -5,6 +5,8 @@ import { AccountTx } from './account_tx';
 export class AccountProver {
   constructor(private prover: UnrolledProver) {}
 
+  static circuitSize = (64 * 1024);
+
   public async computeKey() {
     const worker = this.prover.getWorker();
     await worker.call('account__init_proving_key');
