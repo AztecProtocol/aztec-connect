@@ -3,7 +3,7 @@ import { ContractFactory, ethers, Signer } from 'ethers';
 import { NonceManager } from '@ethersproject/experimental';
 import RollupProcessor from '../artifacts/RollupProcessor.json';
 import { deployVerifier } from './deploy_verifier';
-import { addAsset, setSupportedAsset } from './add_asset';
+import { addAsset, setSupportedAsset } from './add_asset/add_asset';
 
 const {
   ETHEREUM_HOST,
@@ -45,8 +45,8 @@ async function main() {
 
   if (!erc20Address) {
     // Add assets, one regular, one with permit support.
-    await addAsset(signer, false);
-    await addAsset(signer, true);
+    await addAsset(rollup, signer, false);
+    await addAsset(rollup, signer, true);
   } else {
     await setSupportedAsset(rollup, erc20Address, !!supportsPermitStr);
   }

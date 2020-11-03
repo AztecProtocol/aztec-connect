@@ -16,7 +16,7 @@
   },
   "bin": {
     "deploy_rollup_processor": "./deploy/index.js",
-    "add_asset": "./deploy/add_asset.js"
+    "add_asset": "./deploy/add_asset/index.js"
   },
   "jest": {
     "transform": {
