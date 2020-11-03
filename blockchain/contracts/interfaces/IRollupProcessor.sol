@@ -13,16 +13,30 @@ interface IRollupProcessor {
     function depositPendingFunds(
         uint256 assetId,
         uint256 amount,
-        address depositorAddress
+        address owner
+    ) external;
+
+    function depositPendingFundsPermit(
+        uint256 assetId,
+        uint256 amount,
+        address owner,
+        address spender,
+        uint256 permitApprovalAmount,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
     ) external;
 
     function getSupportedAssetAddress(uint256 assetId) external view returns (address);
 
-    function setSupportedAsset(address _linkedToken) external;
+    function setSupportedAsset(address linkedToken, bool supportsPermit) external;
 
     function getNumSupportedAssets() external view returns (uint256);
 
     function getSupportedAssets() external view returns (address[] memory);
+
+    function getAssetPermitSupport(uint256 assetId) external view returns (bool);
 
     function getEscapeHatchStatus() external view returns (bool, uint256);
 

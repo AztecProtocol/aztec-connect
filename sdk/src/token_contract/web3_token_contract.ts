@@ -11,6 +11,7 @@ const minimalERC20ABI = [
   'function allowance(address owner, address spender) public view returns (uint256)',
   'function balanceOf(address account) public view returns (uint256)',
   'function mint(address _to, uint256 _value) public returns (bool)',
+  'function name() public view returns (string)',
 ];
 
 export class Web3TokenContract implements TokenContract {
@@ -73,6 +74,11 @@ export class Web3TokenContract implements TokenContract {
     const res = await contract.mint(account.toString(), value);
     const receipt = await res.wait(this.confirmations);
     return Buffer.from(receipt.transactionHash.slice(2), 'hex');
+  }
+
+  async name() {
+    await this.checkProviderChain();
+    return this.contract.name() as string;
   }
 
   private async checkProviderChain() {

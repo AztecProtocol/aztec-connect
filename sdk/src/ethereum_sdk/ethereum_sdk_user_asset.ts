@@ -23,6 +23,10 @@ export class EthereumSdkUserAsset {
     return this.sdk.getUserPendingDeposit(this.assetId, this.ethAddress);
   }
 
+  getPermitSupport() {
+    return this.sdk.getAssetPermitSupport(this.assetId);
+  }
+
   balance() {
     return this.sdk.getBalance(this.ethAddress, this.assetId);
   }

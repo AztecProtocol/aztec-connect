@@ -4,7 +4,7 @@ services:
     image: trufflesuite/ganache-cli
     environment:
       NODE_OPTIONS: --max_old_space_size=3072
-    command: ['-a=10', '-h=0.0.0.0', '-q']
+    command: ['-a=10', '-h=0.0.0.0', '-q', 'm=test test test test test test test test test test test junk']
     ports:
       - '8545:8545'
 

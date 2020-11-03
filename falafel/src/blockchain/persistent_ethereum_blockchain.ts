@@ -1,7 +1,7 @@
 import { EthAddress } from 'barretenberg/address';
 import { MemoryFifo } from 'barretenberg/fifo';
 import { Proof } from 'barretenberg/rollup_provider/rollup_provider';
-import { Block, Blockchain, EthereumBlockchain } from 'blockchain';
+import { Block, Blockchain, EthereumBlockchain, PermitArgs } from 'blockchain';
 import { Connection, MoreThanOrEqual, Repository } from 'typeorm';
 import { BlockDao } from '../entity/block';
 import { blockDaoToBlock, blockToBlockDao } from './blockdao_convert';
@@ -87,6 +87,15 @@ export class PersistentEthereumBlockchain implements Blockchain {
 
   public sendRollupProof(proof: Buffer, signatures: Buffer[], sigIndexes: number[], viewingKeys: Buffer[]) {
     return this.ethereumBlockchain.sendRollupProof(proof, signatures, sigIndexes, viewingKeys);
+  }
+
+  public async depositPendingFunds(
+    assetId: number,
+    amount: bigint,
+    depositorAddress: EthAddress,
+    permitArgs?: PermitArgs,
+  ) {
+    return this.ethereumBlockchain.depositPendingFunds(assetId, amount, depositorAddress, permitArgs);
   }
 
   public async validateDepositFunds(publicOwner: EthAddress, publicInput: bigint, assetId: number) {

@@ -2,12 +2,14 @@ import { ethers } from '@nomiclabs/buidler';
 import { EthAddress } from 'barretenberg/address';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { expect, use } from 'chai';
+import { randomBytes } from 'crypto';
 import { solidity } from 'ethereum-waffle';
 import { Contract, Signer } from 'ethers';
 import sinon from 'sinon';
 import { Blockchain } from '../src/blockchain';
 import { EthereumBlockchain } from '../src/ethereum_blockchain';
-import { createDepositProof, createSendProof, createWithdrawProof, numToBuffer } from './fixtures/create_mock_proof';
+import { createDepositProof, createSendProof, createWithdrawProof } from './fixtures/create_mock_proof';
+import { createLowLevelPermitSig, signPermit } from './fixtures/create_permit_signature';
 import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
 
 use(solidity);
@@ -55,6 +57,20 @@ describe('ethereum_blockchain', () => {
     expect(tokenContractAddresses.length).to.be.greaterThan(0);
   });
 
+  it('should set new supported asset', async () => {
+    const newERC20 = await ethers.getContractFactory('ERC20Mintable');
+    const newErc20 = await newERC20.deploy();
+    await ethereumBlockchain.setSupportedAsset(EthAddress.fromString(newErc20.address), true);
+
+    const supportedAssets = ethereumBlockchain.getTokenContractAddresses();
+    expect(supportedAssets.length).to.equal(2);
+    expect(supportedAssets[0].toString()).to.equal(erc20.address);
+    expect(supportedAssets[1].toString()).to.equal(newErc20.address);
+
+    const assetSupportsPermit = await ethereumBlockchain.getAssetPermitSupport(1);
+    expect(assetSupportsPermit).to.equal(true);
+  });
+
   it('should get user pending deposit', async () => {
     await erc20.approve(rollupProcessor.address, 50);
     await ethereumBlockchain.depositPendingFunds(0, BigInt(50), userAAddress);
@@ -67,6 +83,102 @@ describe('ethereum_blockchain', () => {
     await ethereumBlockchain.depositPendingFunds(0, BigInt(depositAmount), userAAddress);
     const sufficientDeposit = await ethereumBlockchain.validateDepositFunds(userAAddress, BigInt(depositAmount), 0);
     expect(sufficientDeposit).to.equal(true);
+  });
+
+  it('should get user nonce', async () => {
+    const ERC20Permit = await ethers.getContractFactory('ERC20Permit');
+    const erc20Permit = await ERC20Permit.deploy();
+    await ethereumBlockchain.setSupportedAsset(EthAddress.fromString(erc20Permit.address), true);
+
+    const nonce = await ethereumBlockchain.getUserNonce(1, userAAddress);
+    expect(nonce).to.equal(BigInt(0));
+  });
+
+  it('should deposit funds via permit flow', async () => {
+    const ERC20Permit = await ethers.getContractFactory('ERC20Permit');
+    const erc20Permit = await ERC20Permit.deploy();
+    await ethereumBlockchain.setSupportedAsset(EthAddress.fromString(erc20Permit.address), true);
+
+    const privKey = randomBytes(32);
+    const newUser = new ethers.Wallet(privKey, ethers.provider);
+    const newUserAddress = await newUser.getAddress();
+    await erc20Permit.mint(newUserAddress.toString(), 100);
+
+    const deadline = BigInt('0xffffffff');
+    const nonce = await erc20Permit.nonces(newUserAddress.toString());
+    const name = await erc20Permit.name();
+    const { v, r, s } = await signPermit(
+      newUser,
+      name,
+      EthAddress.fromString(await newUser.getAddress()),
+      EthAddress.fromString(rollupProcessor.address),
+      BigInt(depositAmount),
+      nonce,
+      deadline,
+      31337,
+      EthAddress.fromString(erc20Permit.address),
+    );
+
+    const permitArgs = { deadline, approvalAmount: BigInt(depositAmount), signature: { v, r, s } };
+    await ethereumBlockchain.depositPendingFunds(
+      1,
+      BigInt(depositAmount),
+      EthAddress.fromString(newUserAddress),
+      permitArgs,
+    );
+    const sufficientDeposit = await ethereumBlockchain.validateDepositFunds(
+      EthAddress.fromString(newUserAddress),
+      BigInt(depositAmount),
+      1,
+    );
+    expect(sufficientDeposit).to.equal(true);
+
+    const newNonce = await ethereumBlockchain.getUserNonce(1, EthAddress.fromString(newUserAddress));
+    expect(newNonce).to.equal(BigInt(1));
+  });
+
+  it('should deposit via low level signature permit flow', async () => {
+    const ERC20Permit = await ethers.getContractFactory('ERC20Permit');
+    const erc20Permit = await ERC20Permit.deploy();
+    await ethereumBlockchain.setSupportedAsset(EthAddress.fromString(erc20Permit.address), true);
+
+    const privKey = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
+    const newUser = new ethers.Wallet(privKey, ethers.provider);
+    const newUserAddress = await newUser.getAddress();
+    await erc20Permit.mint(newUserAddress.toString(), 100);
+
+    const deadline = BigInt('0xffffffff');
+    const nonce = await erc20Permit.nonces(newUserAddress.toString());
+    const name = await erc20Permit.name();
+    const { v, r, s } = await createLowLevelPermitSig(
+      Buffer.from(newUser.privateKey.slice(2), 'hex'),
+      EthAddress.fromString(newUserAddress),
+      name,
+      EthAddress.fromString(rollupProcessor.address),
+      BigInt(depositAmount),
+      nonce,
+      deadline,
+      31337,
+      EthAddress.fromString(erc20Permit.address),
+    );
+
+    const permitArgs = { deadline, approvalAmount: BigInt(depositAmount), signature: { v, r, s } };
+
+    await ethereumBlockchain.depositPendingFunds(
+      1,
+      BigInt(depositAmount),
+      EthAddress.fromString(newUserAddress),
+      permitArgs,
+    );
+    const sufficientDeposit = await ethereumBlockchain.validateDepositFunds(
+      EthAddress.fromString(newUserAddress),
+      BigInt(depositAmount),
+      1,
+    );
+    expect(sufficientDeposit).to.equal(true);
+
+    const newNonce = await ethereumBlockchain.getUserNonce(1, EthAddress.fromString(newUserAddress));
+    expect(newNonce).to.equal(BigInt(1));
   });
 
   it('should process a deposit proof', async () => {

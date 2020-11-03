@@ -1,4 +1,4 @@
-import { Provider } from '@ethersproject/abstract-provider';
+import { Provider } from '@ethersproject/providers';
 import { EthAddress } from 'barretenberg/address';
 import { Block } from './blockchain';
 import { Contracts } from './contracts';

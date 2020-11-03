@@ -63,7 +63,6 @@ describe('end-to-end tests', () => {
 
     // Transfer to user 1.
     const transferValue = user0Asset.toErc20Units('800');
-
     expect(user1Asset.balance()).toBe(0n);
 
     const transferTxHash = await user0Asset.transfer(transferValue, users[1].getUserData().publicKey);

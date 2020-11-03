@@ -3,6 +3,7 @@ import { TxHash } from 'barretenberg/rollup_provider';
 import { AssetId } from '../sdk';
 import { EthereumSigner, Signer } from '../signer';
 import { WalletSdk } from '.';
+import { PermitArgs } from 'blockchain';
 
 export class WalletSdkUserAsset {
   constructor(private userId: Buffer, public id: AssetId, private sdk: WalletSdk) {}
@@ -31,9 +32,10 @@ export class WalletSdkUserAsset {
     value: bigint,
     signer: Signer,
     ethSigner: EthereumSigner,
+    permitArgs: PermitArgs,
     to?: GrumpkinAddress | string,
   ): Promise<TxHash> {
-    return this.sdk.deposit(this.id, this.userId, value, signer, ethSigner, to);
+    return this.sdk.deposit(this.id, this.userId, value, signer, ethSigner, permitArgs, to);
   }
 
   async withdraw(value: bigint, signer: Signer, to: EthAddress): Promise<TxHash> {

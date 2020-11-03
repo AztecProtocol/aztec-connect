@@ -48,7 +48,7 @@ describe('rollup_processor: multi assets', () => {
     expect(supportedAssetAAddress).to.equal(erc20A.address);
 
     // set new supported asset
-    const tx = await rollupProcessor.setSupportedAsset(erc20B.address);
+    const tx = await rollupProcessor.setSupportedAsset(erc20B.address, false);
     const receipt = await tx.wait();
 
     const assetBId = rollupProcessor.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args.assetId;
@@ -65,7 +65,7 @@ describe('rollup_processor: multi assets', () => {
 
   it('should process asset A deposit tx and assetB deposit tx in one rollup', async () => {
     // set new supported asset
-    await rollupProcessor.setSupportedAsset(erc20B.address);
+    await rollupProcessor.setSupportedAsset(erc20B.address, false);
 
     const fourViewingKeys = [Buffer.alloc(32, 1), Buffer.alloc(32, 2), Buffer.alloc(32, 3), Buffer.alloc(32, 4)];
 
@@ -108,7 +108,7 @@ describe('rollup_processor: multi assets', () => {
     const faultyERC20 = await FaultyERC20.deploy();
     await faultyERC20.mint(userBAddress.toString(), mintAmount);
 
-    const tx = await rollupProcessor.setSupportedAsset(faultyERC20.address);
+    const tx = await rollupProcessor.setSupportedAsset(faultyERC20.address, false);
     const receipt = await tx.wait();
     const faultyERC20Id = Number(
       rollupProcessor.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args.assetId,

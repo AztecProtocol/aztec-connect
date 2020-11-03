@@ -36,6 +36,10 @@ export class MockTokenContract implements TokenContract {
     return randomBytes(32);
   }
 
+  async name() {
+    return randomBytes(32).toString();
+  }
+
   public fromErc20Units(value: bigint) {
     const decimals = this.getDecimals();
     return formatUnits(value.toString(), decimals);

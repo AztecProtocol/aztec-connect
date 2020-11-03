@@ -15,7 +15,8 @@
     "deploy": "node ./dest/deploy/index.js"
   },
   "bin": {
-    "deploy_rollup_processor": "./deploy/index.js"
+    "deploy_rollup_processor": "./deploy/index.js",
+    "add_asset": "./deploy/add_asset/index.js"
   },
   "jest": {
     "transform": {
@@ -42,9 +43,9 @@
     "typescript": "^3.5.3"
   },
   "devDependencies": {
-    "@nomiclabs/buidler": "^1.3.8",
-    "@nomiclabs/buidler-ethers": "^2.0.0",
-    "@nomiclabs/buidler-waffle": "^2.0.0",
+    "@nomiclabs/buidler": "^1.4.8",
+    "@nomiclabs/buidler-ethers": "^2.0.2",
+    "@nomiclabs/buidler-waffle": "^2.1.0",
     "@openzeppelin/contracts": "^3.0.1",
     "@types/debug": "^4.1.5",
     "@types/jest": "^26.0.15",
@@ -56,6 +57,7 @@
     "eslint": "^7.9.0",
     "eslint-config-prettier": "^6.11.0",
     "ethereum-waffle": "3.0.0",
+    "ethereumjs-util": "^7.0.7",
     "jest": "^26.6.1",
     "sinon": "^9.0.2",
     "solidity-docgen": "^0.5.3",

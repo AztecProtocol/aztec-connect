@@ -9,6 +9,7 @@ import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 
 import {IVerifier} from './interfaces/IVerifier.sol';
 import {IRollupProcessor} from './interfaces/IRollupProcessor.sol';
+import {IERC20Permit} from './interfaces/IERC20Permit.sol';
 import {Decoder} from './Decoder.sol';
 
 /**
@@ -43,20 +44,19 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
     // corresponds to the assetId of the asset
     address[] public supportedAssets;
 
+    // Mapping which maps an asset address to a bool, determining whether it supports
+    // permit as according to ERC-2612
+    mapping(address => bool) assetPermitSupport;
+
     // Mapping from assetId to mapping of userAddress to public userBalance stored on this contract
     mapping(uint256 => mapping(address => uint256)) public userPendingDeposits;
 
     constructor(
-        address[] memory _supportedTokens,
         address _verifierAddress,
         uint256 _escapeBlockLowerBound,
         uint256 _escapeBlockUpperBound
     ) public {
         verifier = IVerifier(_verifierAddress);
-
-        for (uint256 i = 0; i < _supportedTokens.length; i += 1) {
-            setSupportedAsset(_supportedTokens[i]);
-        }
         escapeBlockLowerBound = _escapeBlockLowerBound;
         escapeBlockUpperBound = _escapeBlockUpperBound;
     }
@@ -81,6 +81,15 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
      */
     function getNumSupportedAssets() external override view returns (uint256) {
         return supportedAssets.length;
+    }
+
+    /**
+     * @dev Get the status of whether an asset supports the permit ERC-2612 approval flow
+     * @param assetId - unique identifier of the supported asset
+     */
+    function getAssetPermitSupport(uint256 assetId) external override view returns (bool) {
+        address assetAddress = supportedAssets[assetId];
+        return assetPermitSupport[assetAddress];
     }
 
     /**
@@ -143,32 +152,74 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
     /**
      * @dev Set the mapping between an assetId and the address of the linked asset.
      * Protected by onlyOwner
-     * @param _linkedToken - address of the asset
+     * @param linkedToken - address of the asset
+     * @param supportsPermit - bool determining whether this supports permit
      */
-    function setSupportedAsset(address _linkedToken) public override onlyOwner {
-        require(_linkedToken != address(0x0), 'Rollup Processor: ZERO_ADDRESS');
-        supportedAssets.push(_linkedToken);
+    function setSupportedAsset(address linkedToken, bool supportsPermit) public override onlyOwner {
+        require(linkedToken != address(0x0), 'Rollup Processor: ZERO_ADDRESS');
+        supportedAssets.push(linkedToken);
+        assetPermitSupport[linkedToken] = supportsPermit;
 
         uint256 assetId = supportedAssets.length.sub(1);
-        emit AssetAdded(assetId, _linkedToken);
+        emit AssetAdded(assetId, linkedToken);
     }
 
     /**
-     * @dev Deposit ERC20 tokens to the contract, the first stage of the two part
-     * deposit flow.
-     * @param assetId - unique identifier for the asset being deposited
-     * @param amount - number of ERC20 tokens to transfer to the contract from the user's
-     * address
+     * @dev Deposit funds as part of the first stage of the two stage deposit. Non-permit flow
+     * @param assetId - unique ID of the asset
+     * @param amount - number of tokens being deposited
+     * @param depositorAddress - address from which funds are being transferred to the contract
      */
-    // depositor address needs to be selected/input, as now it's the ethereum_blockchain sending
     function depositPendingFunds(
         uint256 assetId,
         uint256 amount,
         address depositorAddress
     ) external override {
         address assetAddress = getSupportedAssetAddress(assetId);
+        internalDeposit(assetId, assetAddress, depositorAddress, amount);
+    }
 
-        // update userPendingDeposits to keep track of deposit
+    /**
+     * @dev Deposit funds as part of the first stage of the two stage deposit. Permit flow
+     * @param assetId - unique ID of the asset
+     * @param amount - number of tokens being deposited
+     * @param depositorAddress - address from which funds are being transferred to the contract
+     * @param spender - address being granted approval to spend the funds
+     * @param permitApprovalAmount - amount permit signature is approving
+     * @param deadline - when the permit signature expires
+     * @param v - ECDSA sig param
+     * @param r - ECDSA sig param
+     * @param s - ECDSA sig param
+     */
+    function depositPendingFundsPermit(
+        uint256 assetId,
+        uint256 amount,
+        address depositorAddress,
+        address spender,
+        uint256 permitApprovalAmount,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external override {
+        address assetAddress = getSupportedAssetAddress(assetId);
+        IERC20Permit(assetAddress).permit(depositorAddress, spender, permitApprovalAmount, deadline, v, r, s);
+        internalDeposit(assetId, assetAddress, depositorAddress, amount);
+    }
+
+    /**
+     * @dev Deposit funds as part of the first stage of the two stage deposit. Non-permit flow
+     * @param assetId - unique ID of the asset
+     * @param assetAddress - address of the ERC20 asset
+     * @param depositorAddress - address from which funds are being transferred to the contract
+     * @param amount - amount being deposited
+     */
+    function internalDeposit(
+        uint256 assetId,
+        address assetAddress,
+        address depositorAddress,
+        uint256 amount
+    ) internal {
         increasePendingDepositBalance(assetId, depositorAddress, amount);
 
         // check user approved contract to transfer funds, so can throw helpful error to user
