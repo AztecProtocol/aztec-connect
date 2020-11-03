@@ -7,7 +7,7 @@ import { EventEmitter } from 'events';
 import { createSdk, SdkOptions } from '../core_sdk/create_sdk';
 import { EthereumProvider } from '../provider/ethereum_provider';
 import { AssetId, SdkEvent } from '../sdk';
-import { Web3EthereumSigner } from '../signer/web3_signer';
+import { Web3Signer } from '../signer/web3_signer';
 import { EthereumSigner, Signer } from '../signer';
 import { deriveGrumpkinPrivateKey, RecoveryPayload, UserData } from '../user';
 import { WalletSdk } from '../wallet_sdk';
@@ -206,7 +206,7 @@ export class EthereumSdk extends EventEmitter {
       throw new Error(`User not found: ${from}`);
     }
     const aztecSigner = signer || this.getSchnorrSigner(from);
-    const ethSigner = new Web3EthereumSigner(this.etherumProvider, from);
+    const ethSigner = new Web3Signer(this.etherumProvider, from);
 
     const userPendingDeposit = await this.getUserPendingDeposit(assetId, ethSigner.getAddress());
     const amountToTransfer = BigInt(value) - BigInt(userPendingDeposit);
@@ -380,7 +380,7 @@ export class EthereumSdk extends EventEmitter {
   }
 
   public async addUser(ethAddress: EthAddress) {
-    const ethSigner = new Web3EthereumSigner(this.etherumProvider, ethAddress);
+    const ethSigner = new Web3Signer(this.etherumProvider, ethAddress);
     const privateKey = await deriveGrumpkinPrivateKey(ethSigner);
     this.pauseWalletEvents = true;
     try {

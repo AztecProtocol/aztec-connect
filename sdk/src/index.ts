@@ -1,6 +1,5 @@
 export * from './sdk';
 export * from './core_sdk/create_sdk';
-export * from './provider/ethereum_provider';
 export * from './ethereum_sdk';
 export * from './provider';
 export * from './signer';
