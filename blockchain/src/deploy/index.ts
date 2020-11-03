@@ -27,6 +27,7 @@ function getSigner() {
 }
 
 async function main() {
+  console.error('BLOCJSLASKJD');
   const [, , erc20Address, supportsPermitStr] = process.argv;
 
   const signer = getSigner();

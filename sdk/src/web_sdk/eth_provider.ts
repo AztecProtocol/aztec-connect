@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
 import createDebug from 'debug';
 import { EthAddress } from 'barretenberg/address';
-import { EthereumProvider } from '../ethereum_provider';
+import { EthereumProvider } from '../provider/ethereum_provider';
 import { Web3Provider } from '@ethersproject/providers';
 
 const debug = createDebug('bb:eth_provider');
@@ -53,8 +53,8 @@ export class EthProvider extends EventEmitter {
   }
 
   public destroy() {
-    this.provider.off('chainChanged', this.updateNetwork);
-    this.provider.off('accountsChanged', this.updateAccounts);
+    this.provider.removeListener('chainChanged', this.updateNetwork);
+    this.provider.removeListener('accountsChanged', this.updateAccounts);
     this.removeAllListeners();
   }
 

@@ -1,8 +1,15 @@
-import { AssetId, createEthSdk, EthereumSdk, EthereumSdkUser, EthAddress } from 'aztec2-sdk';
+import {
+  AssetId,
+  createEthSdk,
+  EthereumSdk,
+  EthereumSdkUser,
+  EthAddress,
+  EthersAdapter,
+  EthereumProvider,
+} from 'aztec2-sdk';
 import { EventEmitter } from 'events';
-import { Eth } from 'web3x/eth';
-import { HttpProvider } from 'web3x/providers';
 import { advanceBlocks, blocksToAdvance } from './manipulate_block';
+import { JsonRpcProvider } from '@ethersproject/providers';
 
 jest.setTimeout(10 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
@@ -10,7 +17,7 @@ EventEmitter.defaultMaxListeners = 30;
 const { ETHEREUM_HOST = 'http://localhost:8545', SRIRACHA_HOST = 'http://localhost:8082' } = process.env;
 
 describe('end-to-end escape tests', () => {
-  let provider: HttpProvider;
+  let provider: EthereumProvider;
   let sdk: EthereumSdk;
   let userAddresses: EthAddress[];
   let users: EthereumSdkUser[];
@@ -18,8 +25,9 @@ describe('end-to-end escape tests', () => {
 
   beforeAll(async () => {
     // Init sdk.
-    provider = new HttpProvider(ETHEREUM_HOST);
-    sdk = await createEthSdk((provider as any).provider, SRIRACHA_HOST, {
+    const ethersProvider = new JsonRpcProvider(ETHEREUM_HOST);
+    provider = new EthersAdapter(ethersProvider);
+    sdk = await createEthSdk(provider, SRIRACHA_HOST, {
       syncInstances: false,
       saveProvingKey: false,
       clearDb: true,
@@ -29,8 +37,7 @@ describe('end-to-end escape tests', () => {
     await sdk.awaitSynchronised();
 
     // Get contract addresses.
-    const eth = new Eth(provider);
-    userAddresses = (await eth.getAccounts()).slice(0, 4).map(a => new EthAddress(a.toBuffer()));
+    userAddresses = (await ethersProvider.listAccounts()).slice(0, 4).map(a => EthAddress.fromString(a));
     users = await Promise.all(
       userAddresses.map(async address => {
         return sdk.addUser(address);

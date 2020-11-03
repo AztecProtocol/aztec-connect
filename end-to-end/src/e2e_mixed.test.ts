@@ -1,8 +1,7 @@
-import { AssetId, createEthSdk, EthAddress } from 'aztec2-sdk';
+import { AssetId, createEthSdk, EthAddress, EthereumProvider, EthersAdapter } from 'aztec2-sdk';
 import { EventEmitter } from 'events';
-import { Eth } from 'web3x/eth';
-import { HttpProvider } from 'web3x/providers';
 import { advanceBlocks, blocksToAdvance } from './manipulate_block';
+import { JsonRpcProvider } from '@ethersproject/providers';
 
 jest.setTimeout(10 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
@@ -14,22 +13,22 @@ const {
 } = process.env;
 
 describe('end-to-end falafel recovery tests', () => {
-  let provider: HttpProvider;
+  let provider: EthereumProvider;
   let userAddress: EthAddress;
   const assetId = AssetId.DAI;
 
   beforeAll(async () => {
-    provider = new HttpProvider(ETHEREUM_HOST);
+    const jsonRpcProvider = new JsonRpcProvider(ETHEREUM_HOST);
+    provider = new EthersAdapter(jsonRpcProvider);
+
     // Get users addresses.
-    const eth = new Eth(provider);
-    const account = (await eth.getAccounts())[0];
-    userAddress = new EthAddress(account.toBuffer());
+    userAddress = EthAddress.fromString((await jsonRpcProvider.listAccounts())[0]);
   });
 
   it('should succesfully mix normal and escape mode transactions', async () => {
     // Run a normal sdk and deposit.
     {
-      const sdk = await createEthSdk((provider as any).provider, ROLLUP_HOST, {
+      const sdk = await createEthSdk(provider, ROLLUP_HOST, {
         syncInstances: false,
         saveProvingKey: false,
         clearDb: true,
@@ -57,7 +56,7 @@ describe('end-to-end falafel recovery tests', () => {
       const nextEscapeBlock = await blocksToAdvance(81, 100, provider);
       await advanceBlocks(nextEscapeBlock, provider);
 
-      const sdk = await createEthSdk((provider as any).provider, SRIRACHA_HOST, {
+      const sdk = await createEthSdk(provider, SRIRACHA_HOST, {
         syncInstances: false,
         saveProvingKey: false,
         clearDb: true,
@@ -80,7 +79,7 @@ describe('end-to-end falafel recovery tests', () => {
 
     {
       // Run a normal sdk and withdraw half.
-      const sdk = await createEthSdk((provider as any).provider, ROLLUP_HOST, {
+      const sdk = await createEthSdk(provider, ROLLUP_HOST, {
         syncInstances: false,
         saveProvingKey: false,
         clearDb: true,
