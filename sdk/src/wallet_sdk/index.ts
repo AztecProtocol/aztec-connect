@@ -9,7 +9,7 @@ import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { CoreSdk } from '../core_sdk/core_sdk';
 import { createSdk, SdkOptions } from '../core_sdk/create_sdk';
-import { EthereumProvider } from '../ethereum_provider';
+import { EthereumProvider } from '../provider/ethereum_provider';
 import { Action, ActionState, AssetId, SdkEvent, SdkInitState } from '../sdk';
 import { EthereumSigner, RecoverSignatureSigner, Signer } from '../signer';
 import { MockTokenContract, TokenContract, Web3TokenContract } from '../token_contract';

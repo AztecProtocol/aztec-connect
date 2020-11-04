@@ -1,5 +1,6 @@
 import { EthAddress } from '../address';
 import { RollupProviderStatusServerResponse } from './server_response';
+import { fetch } from '../iso_fetch';
 
 export async function getProviderStatus(baseUrl: string) {
   const response = await fetch(`${baseUrl}/status`);

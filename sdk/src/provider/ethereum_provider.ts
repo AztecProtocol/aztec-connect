@@ -13,7 +13,7 @@ export interface ProviderMessage {
 
 export interface RequestArguments {
   readonly method: string;
-  readonly params?: readonly unknown[] | object;
+  readonly params?: any[];
 }
 
 export interface ProviderRpcError extends Error {
@@ -29,7 +29,7 @@ export interface ProviderConnectInfo {
 export type EthereumProviderNotifications = 'connect' | 'disconnect' | 'chainChanged' | 'accountsChanged' | 'message';
 
 export interface EthereumProvider {
-  request(args: RequestArguments): Promise<unknown>;
+  request(args: RequestArguments): Promise<any>;
 
   on(notification: 'connect', listener: (connectInfo: ProviderConnectInfo) => void): this;
   on(notification: 'disconnect', listener: (error: ProviderRpcError) => void): this;
@@ -37,11 +37,9 @@ export interface EthereumProvider {
   on(notification: 'accountsChanged', listener: (accounts: string[]) => void): this;
   on(notification: 'message', listener: (message: ProviderMessage) => void): this;
 
-  off(notification: string, listener: Function): this;
-
-  removeListener(notification: 'notification', listener: (result: any) => void): this;
-  removeListener(notification: 'connect', listener: () => void): this;
-  removeListener(notification: 'close', listener: (code: number, reason: string) => void): this;
-  removeListener(notification: 'networkChanged', listener: (networkId: string) => void): this;
+  removeListener(notification: 'connect', listener: (connectInfo: ProviderConnectInfo) => void): this;
+  removeListener(notification: 'disconnect', listener: (error: ProviderRpcError) => void): this;
+  removeListener(notification: 'chainChanged', listener: (chainId: string) => void): this;
   removeListener(notification: 'accountsChanged', listener: (accounts: string[]) => void): this;
+  removeListener(notification: 'message', listener: (message: ProviderMessage) => void): this;
 }

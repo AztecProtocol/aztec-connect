@@ -9,7 +9,7 @@ import levelup from 'levelup';
 import { SrirachaProvider } from 'sriracha/hash_path_source';
 import { createConnection } from 'typeorm';
 import { DexieDatabase, SQLDatabase, getOrmConfig } from '../database';
-import { EthereumProvider } from '../ethereum_provider';
+import { EthereumProvider } from '../provider/ethereum_provider';
 import { SdkEvent, SdkInitState } from '../sdk';
 import { CoreSdk, CoreSdkEvent, CoreSdkOptions } from './core_sdk';
 

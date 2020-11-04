@@ -5,9 +5,9 @@ import createDebug from 'debug';
 import isNode from 'detect-node';
 import { EventEmitter } from 'events';
 import { createSdk, SdkOptions } from '../core_sdk/create_sdk';
-import { EthereumProvider } from '../ethereum_provider';
+import { EthereumProvider } from '../provider/ethereum_provider';
 import { AssetId, SdkEvent } from '../sdk';
-import { EthersEthereumSigner, Web3Signer } from '../signer/web3_signer';
+import { Web3Signer } from '../signer/web3_signer';
 import { EthereumSigner, Signer } from '../signer';
 import { deriveGrumpkinPrivateKey, RecoveryPayload, UserData } from '../user';
 import { WalletSdk } from '../wallet_sdk';
@@ -78,7 +78,7 @@ export async function createEthSdk(ethereumProvider: EthereumProvider, serverUrl
   const blockchain = await EthereumBlockchain.new(config, status.rollupContractAddress);
 
   const walletSdk = new WalletSdk(core, blockchain, tokenContracts);
-  return new EthereumSdk(provider, walletSdk, db);
+  return new EthereumSdk(ethereumProvider, walletSdk, db);
 }
 
 export class EthereumSdk extends EventEmitter {
@@ -86,7 +86,7 @@ export class EthereumSdk extends EventEmitter {
   private pauseWalletEvents = false;
   private pausedEvents: IArguments[] = [];
 
-  constructor(private web3Provider: Web3Provider, private walletSdk: WalletSdk, private db: Database) {
+  constructor(private etherumProvider: EthereumProvider, private walletSdk: WalletSdk, private db: Database) {
     super();
   }
 
@@ -206,7 +206,7 @@ export class EthereumSdk extends EventEmitter {
       throw new Error(`User not found: ${from}`);
     }
     const aztecSigner = signer || this.getSchnorrSigner(from);
-    const ethSigner = new Web3Signer(this.web3Provider, from);
+    const ethSigner = new Web3Signer(this.etherumProvider, from);
 
     const userPendingDeposit = await this.getUserPendingDeposit(assetId, ethSigner.getAddress());
     const amountToTransfer = BigInt(value) - BigInt(userPendingDeposit);
@@ -380,8 +380,8 @@ export class EthereumSdk extends EventEmitter {
   }
 
   public async addUser(ethAddress: EthAddress) {
-    const signer = new Web3Signer(this.web3Provider, ethAddress);
-    const privateKey = await deriveGrumpkinPrivateKey(signer);
+    const ethSigner = new Web3Signer(this.etherumProvider, ethAddress);
+    const privateKey = await deriveGrumpkinPrivateKey(ethSigner);
     this.pauseWalletEvents = true;
     try {
       const coreUser = await this.walletSdk.addUser(privateKey);

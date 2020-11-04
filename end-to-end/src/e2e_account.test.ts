@@ -1,8 +1,7 @@
-import { createEthSdk, EthereumSdk, EthereumSdkUser, EthAddress } from 'aztec2-sdk';
+import { createEthSdk, EthereumSdk, EthereumSdkUser, EthAddress, EthereumProvider, EthersAdapter } from 'aztec2-sdk';
 import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
-import { Eth } from 'web3x/eth';
-import { HttpProvider } from 'web3x/providers';
+import { JsonRpcProvider } from '@ethersproject/providers';
 
 jest.setTimeout(10 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
@@ -10,15 +9,16 @@ EventEmitter.defaultMaxListeners = 30;
 const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost:8081' } = process.env;
 
 describe('end-to-end account tests', () => {
-  let provider: HttpProvider;
+  let provider: EthereumProvider;
   let sdk: EthereumSdk;
   let userAddress: EthAddress;
   let users: EthereumSdkUser[];
 
   beforeAll(async () => {
     // Init sdk.
-    provider = new HttpProvider(ETHEREUM_HOST);
-    sdk = await createEthSdk((provider as any).provider, ROLLUP_HOST, {
+    const ethersProvider = new JsonRpcProvider(ETHEREUM_HOST);
+    provider = new EthersAdapter(ethersProvider);
+    sdk = await createEthSdk(provider, ROLLUP_HOST, {
       syncInstances: false,
       saveProvingKey: false,
       clearDb: true,
@@ -28,8 +28,7 @@ describe('end-to-end account tests', () => {
     await sdk.awaitSynchronised();
 
     // Get accounts and signers.
-    const eth = new Eth(provider);
-    userAddress = new EthAddress((await eth.getAccounts())[0].toBuffer());
+    userAddress = EthAddress.fromString((await ethersProvider.listAccounts())[0]);
     await sdk.addUser(userAddress);
   });
 
