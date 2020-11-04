@@ -27,6 +27,7 @@ export class BlockType {
   created!: Date;
 }
 
+/* eslint-disable camelcase */
 @InputType()
 class BlockFilter {
   @Field(() => Int, { nullable: true })
@@ -142,10 +143,10 @@ class BlockFilter {
 
   @Field(() => ISODateTime, { nullable: true })
   created_lt?: Date;
-
   @Field(() => ISODateTime, { nullable: true })
   created_lte?: Date;
 }
+/* eslint-enable */
 
 @InputType()
 class BlockOrder {

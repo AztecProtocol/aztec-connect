@@ -59,6 +59,7 @@ export class TxType {
   created!: Date;
 }
 
+/* eslint-disable camelcase */
 @InputType()
 class TxFilter {
   @Field(() => HexString, { nullable: true })
@@ -136,6 +137,7 @@ class TxFilter {
   @Field(() => ISODateTime, { nullable: true })
   created_lte?: Date;
 }
+/* eslint-enable */
 
 @InputType()
 class TxOrder {

@@ -57,6 +57,7 @@ export class RollupType {
   created!: Date;
 }
 
+/* eslint-disable camelcase */
 @InputType()
 class RollupFilter {
   @Field(() => Int, { nullable: true })
@@ -224,6 +225,7 @@ class RollupFilter {
   @Field(() => ISODateTime, { nullable: true })
   created_lte?: Date;
 }
+/* eslint-enable */
 
 @InputType()
 class RollupOrder {

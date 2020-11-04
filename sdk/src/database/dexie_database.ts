@@ -115,7 +115,15 @@ const userTxToDexieUserTx = (id: string, userTx: UserTx) =>
     userTx.recipient ? new Uint8Array(userTx.recipient) : undefined,
   );
 
-const dexieUserTxToUserTx = ({ id, txHash, settled, recipient, ...dexieUserTx }: DexieUserTx): UserTx => ({
+const dexieUserTxToUserTx = ({
+  /* eslint-disable @typescript-eslint/no-unused-vars */
+  id,
+  /* eslint-enable */
+  txHash,
+  settled,
+  recipient,
+  ...dexieUserTx
+}: DexieUserTx): UserTx => ({
   ...dexieUserTx,
   txHash: Buffer.from(txHash),
   userId: Buffer.from(dexieUserTx.userId),
@@ -142,19 +150,19 @@ export class DexieDatabase implements Database {
   private alias: Dexie.Table<DexieAlias, number>;
 
   constructor() {
-    this.dexie.version(3).stores({
+    this.dexie.version(4).stores({
       user: '&id, privateKey',
-      user_keys: '&[owner+key], owner',
-      user_tx: '&[txHash+userId], txHash, userId, settled, created',
-      note: '++id, nullified, owner',
+      userKeys: '&[owner+key], owner',
+      userTx: '&[txHash+userId], txHash, userId, settled, created',
+      note: '++id, [owner+nullifier], [owner+nullified]',
       key: '&name',
       alias: '&aliasHash',
     });
 
     this.user = this.dexie.table('user');
     this.note = this.dexie.table('note');
-    this.userTx = this.dexie.table('user_tx');
-    this.userKeys = this.dexie.table('user_keys');
+    this.userTx = this.dexie.table('userTx');
+    this.userKeys = this.dexie.table('userKeys');
     this.key = this.dexie.table('key');
     this.alias = this.dexie.table('alias');
     this.user.mapToClass(DexieUser);
@@ -185,11 +193,7 @@ export class DexieDatabase implements Database {
   }
 
   async getNoteByNullifier(userId: Buffer, nullifier: Buffer) {
-    const note = (
-      await this.note
-        .filter(n => nullifier.equals(Buffer.from(n.nullifier)) && Buffer.from(n.owner).equals(userId))
-        .toArray()
-    )[0];
+    const note = await this.note.get({ owner: new Uint8Array(userId), nullifier: new Uint8Array(nullifier) });
     return note ? dexieNoteToNote(note) : undefined;
   }
 
@@ -198,9 +202,7 @@ export class DexieDatabase implements Database {
   }
 
   async getUserNotes(userId: Buffer) {
-    return (await this.note.filter(n => !n.nullified && Buffer.from(n.owner).equals(userId)).toArray()).map(
-      dexieNoteToNote,
-    );
+    return (await this.note.where({ owner: new Uint8Array(userId), nullified: 0 }).toArray()).map(dexieNoteToNote);
   }
 
   async getUser(userId: Buffer) {
