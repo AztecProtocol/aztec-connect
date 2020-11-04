@@ -7,10 +7,6 @@ export interface Tx {
   proofId: number;
 }
 
-export interface EthBlock {
-  created: Date;
-}
-
 export interface Block {
   id: number;
   hash: string;
@@ -20,7 +16,7 @@ export interface Block {
   proofData?: string;
   nullifierRoot?: string;
   ethTxHash?: string;
-  ethBlock?: EthBlock;
+  created: Date;
 }
 
 export interface BlockQueryData {
@@ -47,9 +43,7 @@ export const GET_BLOCK = gql`
         proofId
       }
       status
-      ethBlock: block {
-        created
-      }
+      created
     }
   }
 `;
