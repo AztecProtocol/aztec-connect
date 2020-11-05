@@ -68,7 +68,6 @@ describe('merkle_tree', () => {
     const db = levelup(memdown());
     const tree = await MerkleTree.new(db, pedersen, 'test', 10);
     const root = tree.getRoot();
-
     expect(root).toEqual(Buffer.from('2d5a54bd09fb2f40e03689cbe46bcbc42a7b64632fa4ebb76d351c558a51be53', 'hex'));
   });
 

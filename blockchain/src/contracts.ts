@@ -103,7 +103,7 @@ export class Contracts {
       formattedSignatures,
       sigIndexes,
       Buffer.concat(viewingKeys),
-      { gasLimit, from: signingAddress?.toString() },
+      { gasLimit },
     );
     return Buffer.from(tx.hash.slice(2), 'hex');
   }

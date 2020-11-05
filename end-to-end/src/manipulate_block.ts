@@ -1,4 +1,4 @@
-import { EthereumProvider } from 'blockchain';
+import { EthereumProvider } from 'aztec2-sdk';
 
 async function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));

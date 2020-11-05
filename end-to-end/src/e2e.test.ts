@@ -4,8 +4,8 @@ import {
   EthereumSdk,
   EthereumSdkUser,
   EthAddress,
-  WalletProvider,
   EthersAdapter,
+  WalletProvider,
 } from 'aztec2-sdk';
 import { EventEmitter } from 'events';
 import { JsonRpcProvider } from '@ethersproject/providers';
