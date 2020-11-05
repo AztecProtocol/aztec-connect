@@ -1,7 +1,6 @@
 export * from './sdk';
 export * from './core_sdk/create_sdk';
 export * from './ethereum_sdk';
-export * from './provider';
 export * from './signer';
 export * from './user';
 export * from './user_tx';
@@ -11,3 +10,4 @@ export * from 'barretenberg/address';
 export * from 'barretenberg/client_proofs/signature';
 export * from 'barretenberg/rollup_provider';
 export * from 'barretenberg/fifo';
+export { WalletProvider, EthersAdapter, EthereumProvider, Web3Adapter, Web3Provider } from 'blockchain';

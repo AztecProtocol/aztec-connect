@@ -1,4 +1,3 @@
-import { Provider } from '@ethersproject/providers';
 import { EthAddress } from 'barretenberg/address';
 import { Block } from './blockchain';
 import { Contracts } from './contracts';
@@ -10,7 +9,6 @@ type Mockify<T> = {
 
 describe('ethereum_blockchain', () => {
   let blockchain: EthereumBlockchain;
-  let provider: Mockify<Provider>;
   let contracts: Mockify<Contracts>;
 
   const generateBlock = (rollupId: number) => ({
@@ -35,17 +33,12 @@ describe('ethereum_blockchain', () => {
       getRollupBlocksFrom: jest.fn().mockResolvedValue(blocks),
       getTokenContractAddresses: jest.fn().mockReturnValue([EthAddress.randomAddress()]),
       getRollupContractAddress: jest.fn().mockReturnValue(EthAddress.randomAddress()),
-    } as any;
-
-    provider = {
       getBlockNumber: jest.fn().mockResolvedValue(blocks.length),
       getNetwork: jest.fn().mockResolvedValue({ chainId: 999 }),
       getTransactionReceipt: jest.fn(),
     } as any;
 
     const config: EthereumBlockchainConfig = {
-      provider: provider as any,
-      signer: provider as any,
       networkOrHost: 'test',
       console: false,
     };
@@ -68,7 +61,7 @@ describe('ethereum_blockchain', () => {
     expect(emitted).toEqual(blocks);
 
     const newBlocks = [generateBlock(3), generateBlock(4)];
-    provider.getBlockNumber.mockResolvedValue(5);
+    contracts.getBlockNumber.mockResolvedValue(5);
     contracts.getRollupBlocksFrom.mockResolvedValueOnce(newBlocks);
 
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -111,19 +104,19 @@ describe('ethereum_blockchain', () => {
       numEscapeBlocksRemaining: 1,
     });
 
-    provider.getTransactionReceipt.mockResolvedValueOnce({
+    contracts.getTransactionReceipt.mockResolvedValueOnce({
       status: 1,
       blockNumber: 0,
       confirmations: 1,
     });
 
-    provider.getTransactionReceipt.mockResolvedValueOnce({
+    contracts.getTransactionReceipt.mockResolvedValueOnce({
       status: 1,
       blockNumber: 0,
       confirmations: 6,
     });
 
-    provider.getTransactionReceipt.mockResolvedValueOnce({
+    contracts.getTransactionReceipt.mockResolvedValueOnce({
       status: 1,
       blockNumber: 0,
       confirmations: 12,
@@ -133,6 +126,6 @@ describe('ethereum_blockchain', () => {
 
     await blockchain.getTransactionReceipt(Buffer.alloc(32));
 
-    expect(provider.getTransactionReceipt).toHaveBeenCalledTimes(3);
+    expect(contracts.getTransactionReceipt).toHaveBeenCalledTimes(3);
   });
 });

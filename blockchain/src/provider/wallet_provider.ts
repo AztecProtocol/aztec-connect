@@ -6,7 +6,6 @@ import {
   RequestArguments,
 } from './ethereum_provider';
 import { Wallet } from 'ethers';
-import { TransactionRequest } from '@ethersproject/abstract-provider';
 import { EthAddress } from 'barretenberg/address';
 
 export class WalletProvider implements EthereumProvider {
@@ -22,6 +21,8 @@ export class WalletProvider implements EthereumProvider {
 
   async request(args: RequestArguments): Promise<any> {
     switch (args.method) {
+      case 'eth_accounts':
+        return this.accounts.length ? this.accounts.map(a => a.address) : await this.provider.request(args);
       case 'eth_sign':
         return await this.sign(args);
       case 'eth_signTypedData_v4':
@@ -56,7 +57,7 @@ export class WalletProvider implements EthereumProvider {
   }
 
   private async signTransaction(args: RequestArguments) {
-    const tx = args.params![0] as TransactionRequest;
+    const tx = args.params![0];
     const account = this.accounts.find(a => a.address.toLowerCase() === tx.from);
     if (account) {
       return await account.signTransaction(tx);

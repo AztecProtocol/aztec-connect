@@ -9,7 +9,7 @@ import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { CoreSdk } from '../core_sdk/core_sdk';
 import { createSdk, SdkOptions } from '../core_sdk/create_sdk';
-import { EthereumProvider } from '../provider/ethereum_provider';
+import { EthereumProvider } from 'blockchain';
 import { Action, ActionState, AssetId, SdkEvent, SdkInitState } from '../sdk';
 import { EthereumSigner, RecoverSignatureSigner, Signer } from '../signer';
 import { MockTokenContract, TokenContract, Web3TokenContract } from '../token_contract';
@@ -51,14 +51,11 @@ export async function createWalletSdk(
   await Promise.all(tokenContracts.map(tc => tc.init()));
 
   const config = {
-    provider,
-    // TODO: broken.
-    signer: provider.getSigner(0),
     networkOrHost: serverUrl,
     console: false,
     gasLimit: 7000000,
   };
-  const blockchain = await EthereumBlockchain.new(config, status.rollupContractAddress);
+  const blockchain = await EthereumBlockchain.new(config, status.rollupContractAddress, ethereumProvider);
 
   return new WalletSdk(core, blockchain, tokenContracts);
 }

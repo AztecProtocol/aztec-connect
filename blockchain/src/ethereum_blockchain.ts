@@ -1,15 +1,13 @@
-import { Provider } from '@ethersproject/providers';
+import { EthereumProvider } from './ethereum_provider';
 import { EthAddress } from 'barretenberg/address';
 import { Proof, RollupProviderStatus } from 'barretenberg/rollup_provider';
 import createDebug from 'debug';
-import { ethers, Signer } from 'ethers';
+import { ethers } from 'ethers';
 import { EventEmitter } from 'events';
 import { Blockchain, PermitArgs, Receipt } from './blockchain';
 import { Contracts } from './contracts';
 
 export interface EthereumBlockchainConfig {
-  provider: Provider;
-  signer?: Signer;
   networkOrHost: string;
   console?: boolean;
   gasLimit?: number;
@@ -29,8 +27,8 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     this.debug = config.console === false ? createDebug('bb:ethereum_blockchain') : console.log;
   }
 
-  static async new(config: EthereumBlockchainConfig, rollupContractAddress: EthAddress) {
-    const contracts = new Contracts(rollupContractAddress, config.provider, config.signer);
+  static async new(config: EthereumBlockchainConfig, rollupContractAddress: EthAddress, provider: EthereumProvider) {
+    const contracts = new Contracts(rollupContractAddress, provider);
     await contracts.init();
     const eb = new EthereumBlockchain(config, contracts);
     await eb.init();
@@ -60,7 +58,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     };
 
     const emitBlocks = async () => {
-      const latestBlock = await this.config.provider.getBlockNumber().catch(err => {
+      const latestBlock = await this.contracts.getBlockNumber().catch(err => {
         this.debug(`getBlockNumber failed: ${err.code}`);
         return this.latestEthBlock;
       });
@@ -113,7 +111,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   private async initStatus() {
     await this.updateRollupStatus();
     await this.updateEscapeHatchStatus();
-    const { chainId } = await this.config.provider!.getNetwork();
+    const { chainId } = await this.contracts.getNetwork();
     const { networkOrHost } = this.config;
 
     this.status = {
@@ -165,8 +163,8 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return this.contracts.getUserNonce(assetId, account);
   }
 
-  public async setSupportedAsset(assetAddress: EthAddress, supportsPermit: boolean) {
-    return this.contracts.setSupportedAsset(assetAddress, supportsPermit);
+  public async setSupportedAsset(assetAddress: EthAddress, supportsPermit: boolean, signingAddress: EthAddress) {
+    return this.contracts.setSupportedAsset(assetAddress, supportsPermit, signingAddress);
   }
 
   public async getAssetPermitSupport(assetId: number) {
@@ -193,19 +191,33 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    * Appends viewingKeys to the proofData, so that they can later be fetched from the tx calldata
    * and added to the emitted rollupBlock.
    */
-  public async sendRollupProof(proofData: Buffer, signatures: Buffer[], sigIndexes: number[], viewingKeys: Buffer[]) {
-    return await this.contracts.sendRollupProof(proofData, signatures, sigIndexes, viewingKeys, this.config.gasLimit);
+  public async sendRollupProof(
+    proofData: Buffer,
+    signatures: Buffer[],
+    sigIndexes: number[],
+    viewingKeys: Buffer[],
+    signingAddress?: EthAddress | undefined,
+  ) {
+    return await this.contracts.sendRollupProof(
+      proofData,
+      signatures,
+      sigIndexes,
+      viewingKeys,
+      signingAddress,
+      this.config.gasLimit,
+    );
   }
 
   /**
    * This is called by the client side when in escape hatch mode. Hence it doesn't take deposit signatures.
    */
-  public async sendProof({ proofData, viewingKeys, depositSignature }: Proof) {
+  public async sendProof({ proofData, viewingKeys, depositSignature }: Proof, signingAddress?: EthAddress) {
     return this.sendRollupProof(
       proofData,
       depositSignature ? [depositSignature] : [],
       depositSignature ? [0] : [],
       viewingKeys,
+      signingAddress,
     );
   }
 
@@ -227,12 +239,11 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    * Wait for given transaction to be mined, and return receipt.
    */
   public async getTransactionReceipt(txHash: Buffer) {
-    const txHashStr = `0x${txHash.toString('hex')}`;
-    this.debug(`Getting tx receipt for ${txHashStr}...`);
-    let txReceipt = await this.config.provider.getTransactionReceipt(txHashStr);
+    this.debug(`Getting tx receipt for ${txHash.toString('hex')}...`);
+    let txReceipt = await this.contracts.getTransactionReceipt(txHash);
     while (!txReceipt || txReceipt.confirmations < this.getRequiredConfirmations()) {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      txReceipt = await this.config.provider.getTransactionReceipt(txHashStr);
+      txReceipt = await this.contracts.getTransactionReceipt(txHash);
     }
     return { status: !!txReceipt.status, blockNum: txReceipt.blockNumber } as Receipt;
   }

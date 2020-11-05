@@ -1,6 +1,6 @@
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from 'barretenberg/address';
-import { EthereumProvider } from '../provider';
+import { EthereumProvider } from 'blockchain';
 import { EthereumSigner } from './index';
 
 export class Web3Signer implements EthereumSigner {

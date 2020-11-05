@@ -1,12 +1,4 @@
-import {
-  AssetId,
-  createEthSdk,
-  EthereumSdk,
-  EthereumSdkUser,
-  EthAddress,
-  EthersAdapter,
-  EthereumProvider,
-} from 'aztec2-sdk';
+import { AssetId, createEthSdk, EthereumSdk, EthereumSdkUser, EthAddress, EthersAdapter, EthereumProvider } from 'aztec2-sdk';
 import { EventEmitter } from 'events';
 import { advanceBlocks, blocksToAdvance } from './manipulate_block';
 import { JsonRpcProvider } from '@ethersproject/providers';

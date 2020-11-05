@@ -24,6 +24,7 @@ export interface ServerConfig {
   readonly rollupSize: number;
   readonly maxRollupWaitTime: Duration;
   readonly minRollupInterval: Duration;
+  readonly signingAddress?: EthAddress;
 }
 
 interface PublishItem {
@@ -351,7 +352,13 @@ export class Server {
     const { proof, signatures, sigIndexes, viewingKeys } = item;
     while (true) {
       try {
-        return await this.blockchain.sendRollupProof(proof, signatures, sigIndexes, viewingKeys);
+        return await this.blockchain.sendRollupProof(
+          proof,
+          signatures,
+          sigIndexes,
+          viewingKeys,
+          this.config.signingAddress,
+        );
       } catch (err) {
         console.log(err);
         await new Promise(resolve => setTimeout(resolve, 10000));
