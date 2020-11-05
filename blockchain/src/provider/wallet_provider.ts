@@ -21,6 +21,8 @@ export class WalletProvider implements EthereumProvider {
 
   async request(args: RequestArguments): Promise<any> {
     switch (args.method) {
+      case 'eth_accounts':
+        return this.accounts.length ? this.accounts.map(a => a.address) : await this.provider.request(args);
       case 'eth_sign':
         return await this.sign(args);
       case 'eth_signTypedData_v4':

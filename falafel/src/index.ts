@@ -1,9 +1,5 @@
 import { WorldStateDb } from 'barretenberg/world_state_db';
-import { EthereumBlockchain, EthersAdapter, WalletProvider } from 'blockchain';
-import { EthAddress } from 'barretenberg/address';
-import dotenv from 'dotenv';
-import { ethers, Signer } from 'ethers';
-import { JsonRpcProvider, InfuraProvider } from '@ethersproject/providers';
+import { EthereumBlockchain } from 'blockchain';
 import http from 'http';
 import moment from 'moment';
 import 'reflect-metadata';
@@ -14,97 +10,37 @@ import { LocalBlockchain } from './blockchain/local_blockchain';
 import { RollupDb } from './rollup_db';
 import { Server, ServerConfig } from './server';
 import 'log-timestamp';
-import { randomBytes } from 'crypto';
-import { emptyDir, mkdirp, pathExists, readJson, writeJson } from 'fs-extra';
-
-dotenv.config();
-
-const {
-  PORT = '8081',
-  ROLLUP_CONTRACT_ADDRESS,
-  ETHEREUM_HOST,
-  INFURA_API_KEY,
-  NETWORK,
-  PRIVATE_KEY,
-  ROLLUP_SIZE = '2',
-  MAX_ROLLUP_WAIT_TIME = '10',
-  MIN_ROLLUP_INTERVAL = '0',
-  MIN_CONFIRMATION = '1',
-  MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW = '12',
-  LOCAL_BLOCKCHAIN_INIT_SIZE = '0',
-  API_PREFIX = '',
-  GAS_LIMIT = '',
-  SERVER_AUTH_TOKEN = randomBytes(32).toString('hex'),
-} = process.env;
-
-async function getEthereumBlockchainConfig() {
-  const gasLimit = GAS_LIMIT ? +GAS_LIMIT : undefined;
-  const minConfirmation = +MIN_CONFIRMATION;
-  const minConfirmationEHW = +MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW;
-  if (INFURA_API_KEY && NETWORK && PRIVATE_KEY && ROLLUP_CONTRACT_ADDRESS) {
-    console.log(`Infura network: ${NETWORK}`);
-    console.log(`Rollup contract address: ${ROLLUP_CONTRACT_ADDRESS}`);
-    const provider = new EthersAdapter(new InfuraProvider(NETWORK, INFURA_API_KEY));
-    const walletProvider = new WalletProvider(provider);
-    const signingAddress = walletProvider.addAccount(Buffer.from(PRIVATE_KEY.slice(2), 'hex'));
-    return {
-      provider,
-      ethConfig: {
-        networkOrHost: NETWORK,
-        gasLimit,
-        minConfirmation,
-        minConfirmationEHW,
-      },
-      signingAddress,
-    };
-  } else if (ETHEREUM_HOST && ROLLUP_CONTRACT_ADDRESS) {
-    console.log(`Ethereum host: ${ETHEREUM_HOST}`);
-    console.log(`Rollup contract address: ${ROLLUP_CONTRACT_ADDRESS}`);
-    console.log(`Gas limit: ${gasLimit}`);
-    const provider = new EthersAdapter(new JsonRpcProvider(ETHEREUM_HOST));
-    const ethConfig = { networkOrHost: ETHEREUM_HOST, gasLimit, minConfirmation, minConfirmationEHW };
-    if (PRIVATE_KEY) {
-      const walletProvider = new WalletProvider(provider);
-      const signingAddress = walletProvider.addAccount(Buffer.from(PRIVATE_KEY.slice(2), 'hex'));
-      return { provider: walletProvider, signingAddress, ethConfig };
-    } else {
-      return { provider, ethConfig };
-    }
-  }
-  throw new Error('Config incorrect.');
-}
-
-async function checkState() {
-  if (await pathExists('./data/state')) {
-    const { rollupContractAddress: storedRollupAddress } = await readJson('./data/state');
-
-    // Erase all data if rollup contract changes.
-    if (storedRollupAddress !== ROLLUP_CONTRACT_ADDRESS) {
-      console.log(`Rollup contract changed, erasing data: ${storedRollupAddress} -> ${ROLLUP_CONTRACT_ADDRESS}`);
-      await emptyDir('./data');
-    }
-  }
-
-  await mkdirp('./data');
-  await writeJson('./data/state', { rollupContractAddress: ROLLUP_CONTRACT_ADDRESS });
-}
+import { getConfig } from './config';
+import { EthAddress } from 'barretenberg/address';
 
 async function main() {
-  await checkState();
+  const {
+    provider,
+    ethConfig,
+    confVars: {
+      rollupContractAddress,
+      rollupSize,
+      localBlockchainInitSize,
+      maxRollupWaitTime,
+      minRollupInterval,
+      apiPrefix,
+      serverAuthToken,
+      port,
+    },
+  } = await getConfig();
 
-  const rollupSize = +ROLLUP_SIZE;
   const connection = await createConnection();
-  const { provider, ethConfig, signingAddress } = await getEthereumBlockchainConfig();
 
-  const blockchain = ethConfig
-    ? await EthereumBlockchain.new(ethConfig, EthAddress.fromString(ROLLUP_CONTRACT_ADDRESS!), provider)
-    : new LocalBlockchain(connection, rollupSize, +LOCAL_BLOCKCHAIN_INIT_SIZE);
+  const blockchain =
+    provider && ethConfig && rollupContractAddress
+      ? await EthereumBlockchain.new(ethConfig, EthAddress.fromString(rollupContractAddress), provider.provider)
+      : new LocalBlockchain(connection, rollupSize, localBlockchainInitSize);
 
   const serverConfig: ServerConfig = {
     rollupSize,
-    maxRollupWaitTime: moment.duration(+MAX_ROLLUP_WAIT_TIME, 's'),
-    minRollupInterval: moment.duration(+MIN_ROLLUP_INTERVAL, 's'),
-    signingAddress,
+    maxRollupWaitTime: moment.duration(maxRollupWaitTime, 's'),
+    minRollupInterval: moment.duration(minRollupInterval, 's'),
+    signingAddress: provider?.signingAddress,
   };
   const rollupDb = new RollupDb(connection);
 
@@ -122,11 +58,11 @@ async function main() {
   await server.start();
 
   const serverStatus = await server.getStatus();
-  const app = appFactory(server, API_PREFIX, connection, worldStateDb, serverStatus, SERVER_AUTH_TOKEN);
+  const app = appFactory(server, apiPrefix, connection, worldStateDb, serverStatus, serverAuthToken);
 
   const httpServer = http.createServer(app.callback());
-  httpServer.listen(PORT);
-  console.log(`Server listening on port ${PORT}.`);
+  httpServer.listen(port);
+  console.log(`Server listening on port ${port}.`);
 }
 
 main().catch(err => {
