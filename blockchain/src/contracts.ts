@@ -1,12 +1,13 @@
 import { TransactionResponse } from '@ethersproject/abstract-provider';
-import { Provider } from '@ethersproject/providers';
+import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from 'barretenberg/address';
-import { Contract, ethers, Signer } from 'ethers';
+import { Contract, ethers } from 'ethers';
 import { abi as RollupABI } from './artifacts/RollupProcessor.json';
 import { abi as ERC20ABI } from './artifacts/ERC20Mintable.json';
 import { abi as ERC20PermitABI } from './artifacts/ERC20Permit.json';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { Block } from './blockchain';
+import { EthereumProvider } from './ethereum_provider';
 
 export type EthereumSignature = { v: Buffer; r: Buffer; s: Buffer };
 export type PermitArgs = { deadline: bigint; approvalAmount: bigint; signature: EthereumSignature };
@@ -14,19 +15,20 @@ export type PermitArgs = { deadline: bigint; approvalAmount: bigint; signature: 
 export class Contracts {
   private rollupProcessor: Contract;
   private erc20Contracts: Contract[] = [];
+  private provider!: Web3Provider;
 
-  constructor(private rollupContractAddress: EthAddress, private provider: Provider, private signer?: Signer) {
-    this.rollupProcessor = new ethers.Contract(rollupContractAddress.toString(), RollupABI, signer || provider);
+  constructor(private rollupContractAddress: EthAddress, provider: EthereumProvider) {
+    this.provider = new Web3Provider(provider);
+    this.rollupProcessor = new ethers.Contract(rollupContractAddress.toString(), RollupABI, this.provider);
   }
 
   public async init() {
     const assetAddresses = await this.rollupProcessor.getSupportedAssets();
-
     this.erc20Contracts = await Promise.all(
       assetAddresses.map(async (a: any, index: number) => {
         const assetPermitSupport = await this.rollupProcessor.getAssetPermitSupport(index);
         const newContractABI = assetPermitSupport ? ERC20PermitABI : ERC20ABI;
-        return new ethers.Contract(a, newContractABI, this.signer);
+        return new ethers.Contract(a, newContractABI, this.provider);
       }),
     );
   }
@@ -36,15 +38,13 @@ export class Contracts {
     return assetAddresses.map((a: string) => EthAddress.fromString(a));
   }
 
-  public async setSupportedAsset(assetAddress: EthAddress, supportsPermit: boolean) {
-    const tx = await this.rollupProcessor.setSupportedAsset(assetAddress.toString(), supportsPermit);
+  public async setSupportedAsset(assetAddress: EthAddress, supportsPermit: boolean, signingAddress?: EthAddress) {
+    const signer = signingAddress ? this.provider.getSigner(signingAddress.toString()) : this.provider.getSigner(0);
+    const rollupProcessor = new Contract(this.rollupContractAddress.toString(), RollupABI, signer);
+    const tx = await rollupProcessor.setSupportedAsset(assetAddress.toString(), supportsPermit);
     const newContractABI = supportsPermit ? ERC20PermitABI : ERC20ABI;
-    this.erc20Contracts.push(new ethers.Contract(assetAddress.toString(), newContractABI, this.signer));
+    this.erc20Contracts.push(new ethers.Contract(assetAddress.toString(), newContractABI, this.provider));
     return Buffer.from(tx.hash.slice(2), 'hex');
-  }
-
-  public async getNetwork() {
-    return await this.provider!.getNetwork();
   }
 
   public async getRollupStatus() {
@@ -92,15 +92,18 @@ export class Contracts {
     signatures: Buffer[],
     sigIndexes: number[],
     viewingKeys: Buffer[],
+    signingAddress?: EthAddress,
     gasLimit?: number,
   ) {
+    const signer = signingAddress ? this.provider.getSigner(signingAddress.toString()) : this.provider.getSigner(0);
+    const rollupProcessor = new Contract(this.rollupContractAddress.toString(), RollupABI, signer);
     const formattedSignatures = this.solidityFormatSignatures(signatures);
-    const tx = await this.rollupProcessor.processRollup(
+    const tx = await rollupProcessor.processRollup(
       `0x${proofData.toString('hex')}`,
       formattedSignatures,
       sigIndexes,
       Buffer.concat(viewingKeys),
-      { gasLimit },
+      { gasLimit, from: signingAddress?.toString() },
     );
     return Buffer.from(tx.hash.slice(2), 'hex');
   }
@@ -111,8 +114,10 @@ export class Contracts {
     depositorAddress: EthAddress,
     permitArgs?: PermitArgs,
   ) {
+    const signer = this.provider.getSigner(depositorAddress.toString());
+    const rollupProcessor = new Contract(this.rollupContractAddress.toString(), RollupABI, signer);
     const tx = permitArgs
-      ? await this.rollupProcessor.depositPendingFundsPermit(
+      ? await rollupProcessor.depositPendingFundsPermit(
           assetId,
           amount,
           depositorAddress.toString(),
@@ -122,8 +127,11 @@ export class Contracts {
           permitArgs.signature.v,
           permitArgs.signature.r,
           permitArgs.signature.s,
+          // { value: assetId === 0 ? amount : undefined },
         )
-      : await this.rollupProcessor.depositPendingFunds(assetId, amount, depositorAddress.toString());
+      : await rollupProcessor.depositPendingFunds(assetId, amount, depositorAddress.toString(), {
+          // value: assetId === 0 ? amount : undefined,
+        });
     return Buffer.from(tx.hash.slice(2), 'hex');
   }
 
@@ -191,5 +199,18 @@ export class Contracts {
       rollupId: RollupProofData.getRollupIdFromBuffer(rollupProofData),
       rollupSize: RollupProofData.getRollupSizeFromBuffer(rollupProofData),
     };
+  }
+
+  public async getTransactionReceipt(txHash: Buffer) {
+    const txHashStr = `0x${txHash.toString('hex')}`;
+    return this.provider.getTransactionReceipt(txHashStr);
+  }
+
+  public async getNetwork() {
+    return this.provider.getNetwork();
+  }
+
+  public async getBlockNumber() {
+    return this.provider.getBlockNumber();
   }
 }

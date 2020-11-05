@@ -23,6 +23,7 @@ import Mutex from 'idb-mutex';
 import { LevelUp } from 'levelup';
 import { HashPathSource } from 'sriracha/hash_path_source';
 import { Database } from '../database';
+import { EthUserData } from '../ethereum_sdk';
 import { AccountProofCreator } from '../proofs/account_proof_creator';
 import { EscapeHatchProofCreator } from '../proofs/escape_hatch_proof_creator';
 import { JoinSplitProofCreator } from '../proofs/join_split_proof_creator';

@@ -85,8 +85,14 @@ export class PersistentEthereumBlockchain implements Blockchain {
     return this.ethereumBlockchain.getTransactionReceipt(txHash);
   }
 
-  public sendRollupProof(proof: Buffer, signatures: Buffer[], sigIndexes: number[], viewingKeys: Buffer[]) {
-    return this.ethereumBlockchain.sendRollupProof(proof, signatures, sigIndexes, viewingKeys);
+  public sendRollupProof(
+    proof: Buffer,
+    signatures: Buffer[],
+    sigIndexes: number[],
+    viewingKeys: Buffer[],
+    signingAddress?: EthAddress,
+  ) {
+    return this.ethereumBlockchain.sendRollupProof(proof, signatures, sigIndexes, viewingKeys, signingAddress);
   }
 
   public async depositPendingFunds(

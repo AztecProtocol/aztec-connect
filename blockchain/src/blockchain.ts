@@ -28,5 +28,11 @@ export interface Blockchain extends RollupProvider {
     depositorAddress: EthAddress,
     permitArgs?: PermitArgs,
   ): Promise<Buffer>;
-  sendRollupProof(proof: Buffer, signatures: Buffer[], sigIndexes: number[], viewingKeys: Buffer[]): Promise<Buffer>;
+  sendRollupProof(
+    proof: Buffer,
+    signatures: Buffer[],
+    sigIndexes: number[],
+    viewingKeys: Buffer[],
+    signingAddress?: EthAddress,
+  ): Promise<Buffer>;
 }

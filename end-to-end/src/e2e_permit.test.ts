@@ -6,9 +6,9 @@ import {
   WalletSdkUserAsset,
   UserData,
   createPermitData,
-  EthersAdapter,
-  WalletProvider,
   Web3Signer,
+  WalletProvider,
+  EthersAdapter,
 } from 'aztec2-sdk';
 import { EventEmitter } from 'events';
 import { JsonRpcProvider } from '@ethersproject/providers';

@@ -5,7 +5,7 @@ import createDebug from 'debug';
 import isNode from 'detect-node';
 import { EventEmitter } from 'events';
 import { createSdk, SdkOptions } from '../core_sdk/create_sdk';
-import { EthereumProvider } from '../provider/ethereum_provider';
+import { EthereumProvider } from 'blockchain';
 import { AssetId, SdkEvent } from '../sdk';
 import { Web3Signer } from '../signer/web3_signer';
 import { EthereumSigner, Signer } from '../signer';
@@ -69,13 +69,11 @@ export async function createEthSdk(ethereumProvider: EthereumProvider, serverUrl
   await Promise.all(tokenContracts.map(tc => tc.init()));
 
   const config = {
-    provider,
-    signer: provider.getSigner(0),
     networkOrHost: serverUrl,
     console: false,
     gasLimit: 7000000,
   };
-  const blockchain = await EthereumBlockchain.new(config, status.rollupContractAddress);
+  const blockchain = await EthereumBlockchain.new(config, status.rollupContractAddress, ethereumProvider);
 
   const walletSdk = new WalletSdk(core, blockchain, tokenContracts);
   return new EthereumSdk(ethereumProvider, walletSdk, db);

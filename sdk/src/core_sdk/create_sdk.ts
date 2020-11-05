@@ -3,13 +3,12 @@ import { EthereumBlockchain } from 'blockchain/ethereum_blockchain';
 import { BroadcastChannel, createLeaderElection } from 'broadcast-channel';
 import createDebug from 'debug';
 import isNode from 'detect-node';
-import { ethers } from 'ethers';
 import { mkdirSync } from 'fs';
 import levelup from 'levelup';
 import { SrirachaProvider } from 'sriracha/hash_path_source';
 import { createConnection } from 'typeorm';
 import { DexieDatabase, SQLDatabase, getOrmConfig } from '../database';
-import { EthereumProvider } from '../provider/ethereum_provider';
+import { EthereumProvider } from 'blockchain';
 import { SdkEvent, SdkInitState } from '../sdk';
 import { CoreSdk, CoreSdkEvent, CoreSdkOptions } from './core_sdk';
 
@@ -70,15 +69,12 @@ async function sdkFactory(
     return new CoreSdk(leveldb, db, rollupProvider, rollupProviderExplorer, undefined, options, escapeHatchMode);
   } else {
     const srirachaProvider = new SrirachaProvider(host);
-    const provider = new ethers.providers.Web3Provider(ethereumProvider);
     const config = {
-      provider,
-      signer: provider.getSigner(0),
       networkOrHost: hostStr,
       console: false,
       gasLimit: 7000000,
     };
-    const blockchain = await EthereumBlockchain.new(config, status.rollupContractAddress);
+    const blockchain = await EthereumBlockchain.new(config, status.rollupContractAddress, ethereumProvider);
     return new CoreSdk(leveldb, db, blockchain, undefined, srirachaProvider, options, escapeHatchMode);
   }
 }
