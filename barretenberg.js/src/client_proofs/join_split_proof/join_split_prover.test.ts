@@ -156,6 +156,7 @@ describe('join_split_proof', () => {
         2,
         accountNotePath,
         pubKey,
+        privateKey,
       );
 
       debug('creating proof...');

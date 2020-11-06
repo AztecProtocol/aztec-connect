@@ -22,6 +22,7 @@ export class JoinSplitTx {
     public accountIndex: number,
     public accountPath: HashPath,
     public signingPubKey: GrumpkinAddress,
+    public accountPrivateKey: Buffer,
   ) {}
 
   toBuffer() {
@@ -38,12 +39,15 @@ export class JoinSplitTx {
       this.merkleRoot,
       pathBuffer,
       noteBuffer,
+
+      this.accountPrivateKey,
+      numToUInt32BE(this.accountIndex),
+      this.signingPubKey.toBuffer(),
+      this.accountPath.toBuffer(),
       this.signature.toBuffer(),
+
       this.inputOwner.toBuffer32(),
       this.outputOwner.toBuffer32(),
-      numToUInt32BE(this.accountIndex),
-      this.accountPath.toBuffer(),
-      this.signingPubKey.toBuffer(),
     ]);
   }
 }

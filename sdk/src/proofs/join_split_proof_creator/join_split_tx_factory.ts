@@ -61,6 +61,7 @@ export class JoinSplitTxFactory {
     const signature = await signer.signMessage(message);
 
     // For now, we will use the account key as the signing key (no account note required).
+    const { privateKey } = userState.getUser();
     const accountIndex = 0;
     const accountPath = await this.worldState.getHashPath(0);
     const signingPubKey = senderPubKey;
@@ -81,6 +82,7 @@ export class JoinSplitTxFactory {
       accountIndex,
       accountPath,
       signingPubKey,
+      privateKey,
     );
 
     return tx;
