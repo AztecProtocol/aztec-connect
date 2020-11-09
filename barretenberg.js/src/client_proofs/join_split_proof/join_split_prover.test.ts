@@ -13,7 +13,6 @@ import { WorkerPool } from '../../wasm/worker_pool';
 import { PooledPippenger } from '../../pippenger';
 import { PooledFft } from '../../fft';
 import { JoinSplitProof } from './join_split_proof';
-import { computeNoteNullifier } from './compute_nullifier';
 import { Grumpkin } from '../../ecc/grumpkin';
 import { NoteAlgorithms } from '../note_algorithms';
 import { GrumpkinAddress, EthAddress } from '../../address';
@@ -76,24 +75,6 @@ describe('join_split_proof', () => {
   afterAll(async () => {
     await pool.destroy();
   });
-
-  // TODO: decryptNote is broken but not currently used
-  //   it('should decrypt note', () => {
-  //     const secret = randomBytes(32);
-  //     const note = new Note(pubKey, secret, BigInt(100), 0);
-  //     const encryptedNote = noteAlgos.encryptNote(note);
-  //     const { success, value } = noteAlgos.decryptNote(encryptedNote, privateKey, secret);
-  //     expect(success).toBe(true);
-  //     expect(value).toBe(BigInt(100));
-  //   });
-
-  //   it('should not decrypt note', () => {
-  //     const secret = randomBytes(32);
-  //     const note = new Note(pubKey, secret, BigInt(2000), 0);
-  //     const encryptedNote = noteAlgos.encryptNote(note);
-  //     const { success } = noteAlgos.decryptNote(encryptedNote, privateKey, secret);
-  //     expect(success).toBe(false);
-  //   });
 
   describe('join_split_proof_generation', () => {
     beforeAll(async () => {
@@ -170,8 +151,8 @@ describe('join_split_proof', () => {
 
       const joinSplitProof = new JoinSplitProof(proof, []);
 
-      const expectedNullifier1 = computeNoteNullifier(inputNote1Enc, 0, inputNote1.secret, pedersen);
-      const expectedNullifier2 = computeNoteNullifier(inputNote2Enc, 1, inputNote2.secret, pedersen);
+      const expectedNullifier1 = noteAlgos.computeNoteNullifier(inputNote1Enc, 0, privateKey);
+      const expectedNullifier2 = noteAlgos.computeNoteNullifier(inputNote2Enc, 1, privateKey);
       expect(joinSplitProof.nullifier1).toEqual(expectedNullifier1);
       expect(joinSplitProof.nullifier2).toEqual(expectedNullifier2);
       expect(joinSplitProof.inputOwner).toEqual(inputOwner.toBuffer());

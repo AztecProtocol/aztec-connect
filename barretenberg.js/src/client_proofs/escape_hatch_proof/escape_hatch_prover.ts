@@ -4,7 +4,7 @@ import { EscapeHatchTx } from './escape_hatch_tx';
 export class EscapeHatchProver {
   constructor(private prover: Prover) {}
 
-  static circuitSize = (512 * 1024);
+  static circuitSize = 256 * 1024;
 
   public async computeKey() {
     const worker = this.prover.getWorker();

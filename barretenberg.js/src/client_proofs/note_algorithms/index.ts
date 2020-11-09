@@ -6,10 +6,10 @@ import { BarretenbergWasm } from '../../wasm';
 export class NoteAlgorithms {
   constructor(private wasm: BarretenbergWasm) {}
 
-  public computeNullifier(encryptedNote: Buffer, accountPrivateKey: Buffer, index: number, real = true) {
+  public computeNoteNullifier(encryptedNote: Buffer, index: number, accountPrivateKey: Buffer, real = true) {
     this.wasm.transferToHeap(encryptedNote, 0);
     this.wasm.transferToHeap(accountPrivateKey, 64);
-    this.wasm.call('notes__compute_nullifier', 0, 0, index, real, 0);
+    this.wasm.call('notes__compute_nullifier', 0, 64, index, real, 0);
     return Buffer.from(this.wasm.sliceMemory(0, 32));
   }
 
