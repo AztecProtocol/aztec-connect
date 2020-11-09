@@ -182,6 +182,7 @@ describe('escape_hatch_proof', () => {
       accountIndex,
       accountNotePath,
       pubKey,
+      privateKey,
     );
 
     const tx = new EscapeHatchTx(
