@@ -31,8 +31,8 @@ library Rollup3Vk {
       0x0f8ae3111902a02aaa4499e3e8d06b8c2b756b4613277f1c6307784abe41c790
     );
     vk.Q2 = PairingsBn254.new_g1(
-      0x18c68cfd9f0c6c956fc601b27d238631307ca28186cdb4c9aeb5bddf98440014,
-      0x001ecdeebf7731ddff6efbdfd02ff3b4aabe778acad0b0186b7de75d7479133c
+      0x2ece185a3badd3943051b5eaef3b3920fb9ebe0350ce79a149076c0f818b9629,
+      0x265ed12cdb899911aafa38a85ffccee3c8ea4d78a67c764e298974da9b03fba5
     );
     vk.Q3 = PairingsBn254.new_g1(
       0x060be6953b138feab6f363268c19166a7380d10ea7e55e3ef443d89711918440,
