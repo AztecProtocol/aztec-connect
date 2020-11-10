@@ -1,7 +1,7 @@
 import { BarretenbergWasm } from '../../wasm';
 import { Pedersen } from '../../crypto/pedersen';
 import { Note } from '../note';
-import { computeNoteNullifier, computeAliasNullifier } from './compute_nullifier';
+import { computeAliasNullifier } from './compute_nullifier';
 import { Grumpkin } from '../../ecc/grumpkin';
 import { GrumpkinAddress } from '../../address';
 import { NoteAlgorithms } from '../note_algorithms';
@@ -39,11 +39,11 @@ describe('compute_nullifier', () => {
     const inputNote1Enc = await noteAlgos.encryptNote(inputNote1);
     const inputNote2Enc = await noteAlgos.encryptNote(inputNote2);
 
-    const nullifier1 = computeNoteNullifier(inputNote1Enc, 1, viewingKey, pedersen);
-    const nullifier2 = computeNoteNullifier(inputNote2Enc, 0, inputNote2.secret, pedersen);
+    const nullifier1 = noteAlgos.computeNoteNullifier(inputNote1Enc, 1, viewingKey);
+    const nullifier2 = noteAlgos.computeNoteNullifier(inputNote2Enc, 0, inputNote2.secret);
 
-    const expected1 = Buffer.from('1118758dfaa8f47c3f18438fa46117d417cc715a8a4da3a91120ea8ec136fa12', 'hex');
-    const expected2 = Buffer.from('274bb51174ca4e8873a01b41ade057b2563c6ea250d7950daf26545970347e40', 'hex');
+    const expected1 = Buffer.from('031a2fa1120fc9a7e36dfd45ca6d0f8ef24b8cac0aa59640b71c4e972bcb0ed9', 'hex');
+    const expected2 = Buffer.from('3030cb82a11761187c21427cb1793b72ce6a7addfe0b3dc02aa11e8d32cb64af', 'hex');
 
     expect(nullifier1).toEqual(expected1);
     expect(nullifier2).toEqual(expected2);

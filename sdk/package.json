@@ -19,7 +19,7 @@
       "^.+\\.js$": "babel-jest",
       "^.+\\.tsx?$": "ts-jest"
     },
-    "testRegex": ".*\\.test\\.ts$",
+    "testRegex": "./src/.*\\.test\\.ts$",
     "moduleFileExtensions": [
       "ts",
       "tsx",

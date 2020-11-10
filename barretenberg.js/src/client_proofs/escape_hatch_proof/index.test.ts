@@ -12,12 +12,7 @@ import { Prover } from '../prover';
 import { Grumpkin } from '../../ecc/grumpkin';
 import { EthAddress, GrumpkinAddress } from '../../address';
 import { HashPath } from '../../merkle_tree';
-import {
-  computeNoteNullifier,
-  computeRemoveSigningKeyNullifier,
-  JoinSplitTx,
-  nullifierBufferToIndex,
-} from '../join_split_proof';
+import { computeRemoveSigningKeyNullifier, JoinSplitTx, nullifierBufferToIndex } from '../join_split_proof';
 import { WorldStateDb } from '../../world_state_db';
 import { toBufferBE } from 'bigint-buffer';
 import { NoteAlgorithms } from '../note_algorithms';
@@ -78,7 +73,7 @@ describe('escape_hatch_proof', () => {
 
     pubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, privateKey));
 
-    worldStateDb = new WorldStateDb('/tmp/world_state.db');
+    worldStateDb = new WorldStateDb('/tmp/world_state_eh.db');
     worldStateDb.destroy();
     await worldStateDb.start();
   });
@@ -99,9 +94,7 @@ describe('escape_hatch_proof', () => {
     const inputNote2Enc = await noteAlgos.encryptNote(inputNote2);
     const encryptedNotes = [inputNote1Enc, inputNote2Enc];
     const nullifiers = encryptedNotes.map((encNote, index) => {
-      return nullifierBufferToIndex(
-        computeNoteNullifier(encNote, inputIndexes[index], inputNotes[index].secret, pedersen, true),
-      );
+      return nullifierBufferToIndex(noteAlgos.computeNoteNullifier(encNote, inputIndexes[index], privateKey, true));
     });
 
     const outputNote1 = new Note(pubKey, createNoteSecret(), BigInt(20), 0);
@@ -182,6 +175,7 @@ describe('escape_hatch_proof', () => {
       accountIndex,
       accountNotePath,
       pubKey,
+      privateKey,
     );
 
     const tx = new EscapeHatchTx(

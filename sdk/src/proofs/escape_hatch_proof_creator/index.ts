@@ -1,12 +1,7 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { EscapeHatchProver, EscapeHatchTx } from 'barretenberg/client_proofs/escape_hatch_proof';
-import {
-  computeNoteNullifier,
-  computeRemoveSigningKeyNullifier,
-  nullifierBufferToIndex,
-} from 'barretenberg/client_proofs/join_split_proof';
+import { computeRemoveSigningKeyNullifier, nullifierBufferToIndex } from 'barretenberg/client_proofs/join_split_proof';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
-import { Blake2s } from 'barretenberg/crypto/blake2s';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { RollupProofData } from 'barretenberg/rollup_proof';
@@ -29,7 +24,6 @@ export class EscapeHatchProofCreator {
     // TODO: Make WorldState and HashPathSource unify into a WorldStateSource.
     worldState: WorldState,
     grumpkin: Grumpkin,
-    private blake2s: Blake2s,
     private pedersen: Pedersen,
     private noteAlgos: NoteAlgorithms,
     private hashPathSource: HashPathSource,
@@ -87,20 +81,18 @@ export class EscapeHatchProofCreator {
     const encryptedInput1 = this.noteAlgos.encryptNote(input1);
     const encryptedInput2 = this.noteAlgos.encryptNote(input2);
     const nullifier1 = nullifierBufferToIndex(
-      computeNoteNullifier(
+      this.noteAlgos.computeNoteNullifier(
         encryptedInput1,
         joinSplitTx.inputNoteIndices[0],
         input1.secret,
-        this.pedersen,
         joinSplitTx.numInputNotes > 0,
       ),
     );
     const nullifier2 = nullifierBufferToIndex(
-      computeNoteNullifier(
+      this.noteAlgos.computeNoteNullifier(
         encryptedInput2,
         joinSplitTx.inputNoteIndices[1],
         input2.secret,
-        this.pedersen,
         joinSplitTx.numInputNotes > 1,
       ),
     );

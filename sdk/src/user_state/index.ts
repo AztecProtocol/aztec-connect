@@ -1,11 +1,8 @@
 import { GrumpkinAddress } from 'barretenberg/address';
 import { Block } from 'barretenberg/block_source';
-import {
-  computeNoteNullifier,
-  computeRemoveSigningKeyNullifier,
-} from 'barretenberg/client_proofs/join_split_proof/compute_nullifier';
+import { computeRemoveSigningKeyNullifier } from 'barretenberg/client_proofs/join_split_proof/compute_nullifier';
 import { decryptNote } from 'barretenberg/client_proofs/note';
-import { Blake2s } from 'barretenberg/crypto/blake2s';
+import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { MemoryFifo } from 'barretenberg/fifo';
@@ -42,7 +39,7 @@ export class UserState extends EventEmitter {
   constructor(
     private user: UserData,
     private grumpkin: Grumpkin,
-    private blake2s: Blake2s,
+    private noteAlgos: NoteAlgorithms,
     private pedersen: Pedersen,
     private db: Database,
     private rollupProvider: RollupProvider,
@@ -217,7 +214,7 @@ export class UserState extends EventEmitter {
     }
 
     const { secret, value, assetId } = decryptedNote;
-    const nullifier = computeNoteNullifier(dataEntry, index, secret, this.pedersen);
+    const nullifier = this.noteAlgos.computeNoteNullifier(dataEntry, index, this.user.privateKey);
     const note = {
       index,
       assetId,
@@ -327,13 +324,13 @@ export class UserState extends EventEmitter {
 export class UserStateFactory {
   constructor(
     private grumpkin: Grumpkin,
-    private blake2s: Blake2s,
+    private noteAlgos: NoteAlgorithms,
     private pedersen: Pedersen,
     private db: Database,
     private rollupProvider: RollupProvider,
   ) {}
 
   createUserState(user: UserData) {
-    return new UserState(user, this.grumpkin, this.blake2s, this.pedersen, this.db, this.rollupProvider);
+    return new UserState(user, this.grumpkin, this.noteAlgos, this.pedersen, this.db, this.rollupProvider);
   }
 }

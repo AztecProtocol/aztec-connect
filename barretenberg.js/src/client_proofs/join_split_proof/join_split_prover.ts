@@ -5,7 +5,7 @@ import { JoinSplitTx } from './join_split_tx';
 export class JoinSplitProver {
   constructor(private prover: UnrolledProver) {}
 
-  static circuitSize = (64 * 1024);
+  static circuitSize = 64 * 1024;
 
   public async computeKey() {
     const worker = this.prover.getWorker();

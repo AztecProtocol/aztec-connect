@@ -138,7 +138,7 @@ export class WorldStateDb {
     await mkdirp('./data');
     const proc = (this.proc = spawn(this.binPath, [this.dbPath]));
 
-    proc.stderr.on('data', data => {});
+    proc.stderr.on('data', () => {});
     proc.on('close', code => {
       this.proc = undefined;
       if (code) {

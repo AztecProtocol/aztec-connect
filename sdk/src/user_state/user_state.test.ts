@@ -1,10 +1,10 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import {
   computeAliasNullifier,
-  computeNoteNullifier,
   computeRemoveSigningKeyNullifier,
 } from 'barretenberg/client_proofs/join_split_proof/compute_nullifier';
 import { createNoteSecret, encryptNote, Note } from 'barretenberg/client_proofs/note';
+import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { Blake2s } from 'barretenberg/crypto/blake2s';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
@@ -24,6 +24,7 @@ describe('user state', () => {
   let grumpkin: Grumpkin;
   let blake2s: Blake2s;
   let pedersen: Pedersen;
+  let noteAlgos: NoteAlgorithms;
   let db: Mockify<Database>;
   let userState: UserState;
   let user: UserData;
@@ -33,6 +34,7 @@ describe('user state', () => {
     grumpkin = new Grumpkin(barretenberg);
     blake2s = new Blake2s(barretenberg);
     pedersen = new Pedersen(barretenberg);
+    noteAlgos = new NoteAlgorithms(barretenberg);
   });
 
   beforeEach(async () => {
@@ -63,7 +65,7 @@ describe('user state', () => {
       getBlocks: jest.fn().mockResolvedValue([]),
     };
 
-    userState = new UserState(user, grumpkin, blake2s, pedersen, db as any, blockSource as any);
+    userState = new UserState(user, grumpkin, noteAlgos, pedersen, db as any, blockSource as any);
     await userState.startSync();
   });
 
@@ -74,8 +76,8 @@ describe('user state', () => {
     const gibberishNote = new Note(GrumpkinAddress.randomAddress(), secret, 0n, 0);
     const encryptedNote1 = randomBytes(64);
     const encryptedNote2 = randomBytes(64);
-    const nullifier1 = computeNoteNullifier(randomBytes(64), 0, secret, pedersen);
-    const nullifier2 = computeNoteNullifier(randomBytes(64), 1, secret, pedersen);
+    const nullifier1 = noteAlgos.computeNoteNullifier(randomBytes(64), 0, user.privateKey);
+    const nullifier2 = noteAlgos.computeNoteNullifier(randomBytes(64), 1, user.privateKey);
     const viewingKeys = [
       encryptNote(validNewNote ? note1 : gibberishNote, grumpkin),
       encryptNote(validChangeNote ? note2 : gibberishNote, grumpkin),

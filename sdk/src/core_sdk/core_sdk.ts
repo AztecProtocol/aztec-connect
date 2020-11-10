@@ -124,13 +124,7 @@ export class CoreSdk extends EventEmitter {
     this.grumpkin = new Grumpkin(barretenberg);
     this.schnorr = new Schnorr(barretenberg);
     this.userFactory = new UserDataFactory(this.grumpkin);
-    this.userStateFactory = new UserStateFactory(
-      this.grumpkin,
-      this.blake2s,
-      this.pedersen,
-      this.db,
-      this.rollupProvider,
-    );
+    this.userStateFactory = new UserStateFactory(this.grumpkin, noteAlgos, this.pedersen, this.db, this.rollupProvider);
     this.workerPool = workerPool;
     this.worldState = new WorldState(this.leveldb, this.pedersen, this.blake2s);
     if (this.rollupProviderExplorer) {
@@ -168,7 +162,6 @@ export class CoreSdk extends EventEmitter {
         escapeHatchProver,
         this.worldState,
         this.grumpkin,
-        this.blake2s,
         this.pedersen,
         noteAlgos,
         this.hashPathSource!,
