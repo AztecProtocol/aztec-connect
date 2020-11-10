@@ -13,7 +13,7 @@ export interface UserData {
 }
 
 export const deriveGrumpkinPrivateKey = async (signer: EthereumSigner) => {
-  return await signer.signMessage(Buffer.from('Link Aztec account.'));
+  return (await signer.signMessage(Buffer.from('Link Aztec account.'))).slice(0, 32);
 };
 
 export class UserDataFactory {

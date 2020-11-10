@@ -73,7 +73,7 @@ describe('escape_hatch_proof', () => {
 
     pubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, privateKey));
 
-    worldStateDb = new WorldStateDb('/tmp/world_state.db');
+    worldStateDb = new WorldStateDb('/tmp/world_state_eh.db');
     worldStateDb.destroy();
     await worldStateDb.start();
   });
