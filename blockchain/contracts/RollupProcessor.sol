@@ -21,7 +21,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
     using SafeMath for uint256;
 
     bytes32 public dataRoot = 0x2708a627d38d74d478f645ec3b4e91afa325331acf1acebe9077891146b75e39;
-    bytes32 public nullRoot = 0x15ab517d8b278111e4bb51486fcb14e6ab5729215892cb1a4bdbe873c2b69798;
+    bytes32 public nullRoot = 0x2694dbe3c71a25d92213422d392479e7b8ef437add81e1e17244462e6edca9b1;
     bytes32 public rootRoot = 0x2d264e93dc455751a721aead9dba9ee2a9fef5460921aeede73f63f6210e6851;
 
     uint256 public dataSize;

@@ -4,7 +4,7 @@ import { Rollup } from './';
 
 const randomRoot = () => randomBytes(32);
 const randomDataPath = () => new HashPath([...Array(32)].map(() => [randomBytes(32), randomBytes(32)]));
-const randomNullPath = () => new HashPath([...Array(128)].map(() => [randomBytes(32), randomBytes(32)]));
+const randomNullPath = () => new HashPath([...Array(256)].map(() => [randomBytes(32), randomBytes(32)]));
 
 describe('Rollup', () => {
   it('serialize rollup data to buffer and deserialize it back', () => {

@@ -16,5 +16,5 @@ export function computeRemoveSigningKeyNullifier(owner: GrumpkinAddress, signing
 }
 
 export function nullifierBufferToIndex(nullifier: Buffer) {
-  return toBigIntBE(nullifier.slice(16, 32));
+  return toBigIntBE(nullifier);
 }

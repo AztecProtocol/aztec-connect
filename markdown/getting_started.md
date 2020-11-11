@@ -120,10 +120,9 @@ Ensure you've installed ganache globally:
 yarn global add ganache-cli
 ```
 
-Run a local ganache instance (currently requires Node 12).
+Run a local ganache instance.
 
 ```
-nvm use 12
 ganache-cli -d
 ```
 

@@ -17,11 +17,11 @@ describe('world_state_db', () => {
 
   it('should be initialized with correct metadata', async () => {
     const expectedDataRoot = Buffer.from('2708a627d38d74d478f645ec3b4e91afa325331acf1acebe9077891146b75e39', 'hex');
-    const expectedNullifierRoot = Buffer.from('15ab517d8b278111e4bb51486fcb14e6ab5729215892cb1a4bdbe873c2b69798', 'hex');
+    const expectedNullRoot = Buffer.from('2694dbe3c71a25d92213422d392479e7b8ef437add81e1e17244462e6edca9b1', 'hex');
     const expectedRootRoot = Buffer.from('2d264e93dc455751a721aead9dba9ee2a9fef5460921aeede73f63f6210e6851', 'hex');
 
     expect(worldStateDb.getRoot(0)).toEqual(expectedDataRoot);
-    expect(worldStateDb.getRoot(1)).toEqual(expectedNullifierRoot);
+    expect(worldStateDb.getRoot(1)).toEqual(expectedNullRoot);
     expect(worldStateDb.getRoot(2)).toEqual(expectedRootRoot);
     expect(worldStateDb.getSize(0)).toBe(BigInt(0));
     expect(worldStateDb.getSize(1)).toBe(BigInt(0));
@@ -46,7 +46,7 @@ describe('world_state_db', () => {
     expect(path[31][1]).toEqual(expectedLast);
 
     const nullPath = (await worldStateDb.getHashPath(1, BigInt(0))).data;
-    expect(nullPath.length).toEqual(128);
+    expect(nullPath.length).toEqual(256);
   });
 
   it('should update value', async () => {

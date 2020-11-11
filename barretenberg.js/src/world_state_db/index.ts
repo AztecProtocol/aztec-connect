@@ -4,6 +4,7 @@ import { HashPath } from '../merkle_tree';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { ChildProcess, execSync, spawn } from 'child_process';
 import { PromiseReadable } from 'promise-readable';
+import { numToUInt32BE } from '../serialize';
 
 export class WorldStateDb {
   private proc?: ChildProcess;
@@ -40,11 +41,7 @@ export class WorldStateDb {
   }
 
   private async get_(treeId: number, index: bigint) {
-    const buffer = Buffer.alloc(18);
-    buffer.writeInt8(0, 0);
-    buffer.writeInt8(treeId, 1);
-    const indexBuf = toBufferBE(index, 16);
-    indexBuf.copy(buffer, 2);
+    const buffer = Buffer.concat([Buffer.alloc(1, 0), Buffer.alloc(1, treeId), toBufferBE(index, 32)]);
 
     this.proc!.stdin!.write(buffer);
 
@@ -65,11 +62,7 @@ export class WorldStateDb {
   }
 
   private async getHashPath_(treeId: number, index: bigint) {
-    const buffer = Buffer.alloc(18);
-    buffer.writeInt8(4, 0);
-    buffer.writeInt8(treeId, 1);
-    const indexBuf = toBufferBE(index, 16);
-    indexBuf.copy(buffer, 2);
+    const buffer = Buffer.concat([Buffer.alloc(1, 4), Buffer.alloc(1, treeId), toBufferBE(index, 32)]);
 
     this.proc!.stdin!.write(buffer);
 
@@ -90,12 +83,12 @@ export class WorldStateDb {
   }
 
   private async put_(treeId: number, index: bigint, value: Buffer) {
-    const buffer = Buffer.alloc(22);
-    buffer.writeInt8(1, 0);
-    buffer.writeInt8(treeId, 1);
-    const indexBuf = toBufferBE(index, 16);
-    indexBuf.copy(buffer, 2);
-    buffer.writeUInt32BE(value.length, 18);
+    const buffer = Buffer.concat([
+      Buffer.alloc(1, 1),
+      Buffer.alloc(1, treeId),
+      toBufferBE(index, 32),
+      numToUInt32BE(value.length),
+    ]);
 
     this.proc!.stdin!.write(Buffer.concat([buffer, value]));
 
@@ -157,9 +150,9 @@ export class WorldStateDb {
     this.roots[0] = await this.stdout.read(32);
     this.roots[1] = await this.stdout.read(32);
     this.roots[2] = await this.stdout.read(32);
-    const dataSize = await this.stdout.read(16);
-    const nullifierSize = await this.stdout.read(16);
-    const rootSize = await this.stdout.read(16);
+    const dataSize = await this.stdout.read(32);
+    const nullifierSize = await this.stdout.read(32);
+    const rootSize = await this.stdout.read(32);
     this.sizes[0] = toBigIntBE(dataSize);
     this.sizes[1] = toBigIntBE(nullifierSize);
     this.sizes[2] = toBigIntBE(rootSize);
