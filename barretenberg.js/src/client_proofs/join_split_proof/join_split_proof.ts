@@ -1,21 +1,22 @@
 import { createHash } from 'crypto';
 
 export class JoinSplitProof {
-  static NUM_PUBLIC_INPUTS = 14;
-  static NUM_PUBLISHED_PUBLIC_INPUTS = 12;
+  static readonly NUM_PUBLIC_INPUTS = 14;
+  static readonly NUM_PUBLISHED_PUBLIC_INPUTS = 12;
 
-  public proofId: number;
-  public publicInput: Buffer;
-  public publicOutput: Buffer;
-  public assetId: number;
-  public newNote1: Buffer;
-  public newNote2: Buffer;
-  public nullifier1: Buffer;
-  public nullifier2: Buffer;
-  public inputOwner: Buffer;
-  public outputOwner: Buffer;
-  public noteTreeRoot: Buffer;
-  public accountNullifier: Buffer;
+  public readonly txId: Buffer;
+  public readonly proofId: number;
+  public readonly publicInput: Buffer;
+  public readonly publicOutput: Buffer;
+  public readonly assetId: number;
+  public readonly newNote1: Buffer;
+  public readonly newNote2: Buffer;
+  public readonly nullifier1: Buffer;
+  public readonly nullifier2: Buffer;
+  public readonly inputOwner: Buffer;
+  public readonly outputOwner: Buffer;
+  public readonly noteTreeRoot: Buffer;
+  public readonly accountNullifier: Buffer;
   public dataRootsIndex = 0;
 
   constructor(public proofData: Buffer, public viewingKeys: Buffer[], public signature?: Buffer) {
@@ -33,10 +34,8 @@ export class JoinSplitProof {
     // Not published as part of inner proofs.
     this.noteTreeRoot = proofData.slice(12 * 32, 12 * 32 + 32);
     this.accountNullifier = proofData.slice(13 * 32, 13 * 32 + 32);
-  }
 
-  getTxId() {
-    return createHash('sha256')
+    this.txId = createHash('sha256')
       .update(this.proofData.slice(0, JoinSplitProof.NUM_PUBLISHED_PUBLIC_INPUTS * 32))
       .digest();
   }

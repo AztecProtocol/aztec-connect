@@ -58,7 +58,7 @@ export class JoinSplitProofCreator {
     debug(`proof size: ${proofData.length}`);
 
     const joinSplitProof = new JoinSplitProof(proofData, viewingKeys);
-    const txId = joinSplitProof.getTxId();
+    const txId = joinSplitProof.txId;
 
     const depositSignature = publicInput
       ? await this.ethSign(joinSplitProof.getDepositSigningData(), ethSigner)

@@ -8,7 +8,7 @@ import { Rollup } from '../rollup';
 
 export const joinSplitProofToTxDao = (tx: JoinSplitProof) => {
   const txDao = new TxDao();
-  txDao.txId = tx.getTxId();
+  txDao.txId = tx.txId;
   txDao.proofData = tx.proofData;
   txDao.viewingKey1 = tx.viewingKeys[0];
   txDao.viewingKey2 = tx.viewingKeys[1];
@@ -17,12 +17,12 @@ export const joinSplitProofToTxDao = (tx: JoinSplitProof) => {
   return txDao;
 };
 
-export const innerProofDataToTxDao = (tx: InnerProofData) => {
+export const innerProofDataToTxDao = (tx: InnerProofData, viewingKeys: Buffer[]) => {
   const txDao = new TxDao();
   txDao.txId = tx.getTxId();
   txDao.proofData = tx.toBuffer();
-  txDao.viewingKey1 = tx.viewingKeys[0];
-  txDao.viewingKey2 = tx.viewingKeys[1];
+  txDao.viewingKey1 = viewingKeys[0];
+  txDao.viewingKey2 = viewingKeys[1];
   txDao.created = new Date();
   return txDao;
 };
@@ -67,6 +67,7 @@ export class RollupDb {
     rollupDao.dataRoot = rollup.newDataRoot;
     rollupDao.txs = txs;
     rollupDao.status = 'CREATING';
+    rollupDao.viewingKeys = Buffer.concat(rollup.viewingKeys);
     return this.rollupRep.save(rollupDao);
   }
 
@@ -74,14 +75,13 @@ export class RollupDb {
     await this.rollupRep.save(rollupDao);
   }
 
-  public async setRollupProof(rollupId: number, proofData: Buffer, viewingKeys: Buffer) {
+  public async setRollupProof(rollupId: number, proofData: Buffer) {
     const rollupDao = await this.getRollupFromId(rollupId);
     if (!rollupDao) {
       throw new Error(`Rollup not found: ${rollupId}`);
     }
 
     rollupDao.proofData = proofData;
-    rollupDao.viewingKeys = viewingKeys;
     await this.rollupRep.save(rollupDao);
   }
 
@@ -237,7 +237,6 @@ export class RollupDb {
 
   public async getDataRootsIndex(root: Buffer) {
     // Lookup and save the proofs data root index (for old root support).
-    // prettier-ignore
     const emptyDataRoot = Buffer.from('2708a627d38d74d478f645ec3b4e91afa325331acf1acebe9077891146b75e39', 'hex');
     if (root.equals(emptyDataRoot)) {
       return 0;

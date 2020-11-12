@@ -1,5 +1,6 @@
 import { JoinSplitProof } from 'barretenberg/client_proofs/join_split_proof';
 import { HashPath } from 'barretenberg/merkle_tree';
+import { VIEWING_KEY_SIZE } from 'barretenberg/rollup_proof';
 import { createHash, randomBytes } from 'crypto';
 import { Connection, createConnection } from 'typeorm';
 import { RollupDao } from '../entity/rollup';
@@ -45,6 +46,7 @@ const randomRollup = (rollupId: number, txs: JoinSplitProof[]) =>
     new HashPath([[randomBytes(28)]]),
     [new HashPath([[randomBytes(28)]])],
     [0],
+    [randomBytes(VIEWING_KEY_SIZE)],
   );
 
 describe('Rollup DB', () => {
@@ -70,7 +72,7 @@ describe('Rollup DB', () => {
   it('should add raw data and tx with no rollup', async () => {
     const tx = randomTx();
     const txDao = await rollupDb.addTx(tx);
-    expect(txDao.txId).toEqual(tx.getTxId());
+    expect(txDao.txId).toEqual(tx.txId);
     expect(txDao.proofData).toEqual(tx.proofData);
     expect(txDao.viewingKey1).toEqual(tx.viewingKeys[0]);
     expect(txDao.viewingKey2).toEqual(tx.viewingKeys[1]);
@@ -121,7 +123,7 @@ describe('Rollup DB', () => {
     const rollup = randomRollup(0, [tx0]);
     await rollupDb.addRollup(rollup);
 
-    const rollupHash = createHash('sha256').update(tx0.getTxId()).digest();
+    const rollupHash = createHash('sha256').update(tx0.txId).digest();
     const rollupDao = (await rollupDb.getRollupFromHash(rollupHash))!;
     expect(rollupDao.id).toBe(0);
     expect(rollupDao.dataRoot).toEqual(rollup.newDataRoot);
@@ -149,7 +151,7 @@ describe('Rollup DB', () => {
     const rollup2 = randomRollup(0, [tx2]);
     await rollupDb.addRollup(rollup2);
 
-    const rollup2Hash = createHash('sha256').update(tx2.getTxId()).digest();
+    const rollup2Hash = createHash('sha256').update(tx2.txId).digest();
     const rollupDao2 = (await rollupDb.getRollupFromHash(rollup2Hash))!;
     expect(rollupDao2.id).toBe(0);
     expect(rollupDao2.dataRoot).toEqual(rollup2.newDataRoot);
@@ -175,7 +177,7 @@ describe('Rollup DB', () => {
     const rollupDao = new RollupDao();
 
     const rollupHash = createHash('sha256')
-      .update(Buffer.concat([tx0.getTxId(), tx1.getTxId()]))
+      .update(Buffer.concat([tx0.txId, tx1.txId]))
       .digest();
 
     rollupDao.hash = rollupHash;
@@ -185,6 +187,7 @@ describe('Rollup DB', () => {
     rollupDao.proofData = randomBytes(100);
     rollupDao.status = 'SETTLED';
     rollupDao.created = new Date();
+    rollupDao.viewingKeys = randomBytes(VIEWING_KEY_SIZE);
 
     txDao0.rollup = rollupDao;
     txDao1.rollup = rollupDao;
@@ -208,13 +211,12 @@ describe('Rollup DB', () => {
     expect(rollupDao!.proofData).toBe(null);
 
     const proofData = randomBytes(100);
-    await rollupDb.setRollupProof(rollupId, proofData, Buffer.alloc(0));
+    await rollupDb.setRollupProof(rollupId, proofData);
 
     const updatedRollupDao = await rollupDb.getRollupFromId(rollupId);
     expect(updatedRollupDao).toEqual({
       ...rollupDao,
       proofData,
-      viewingKeys: Buffer.alloc(0),
     });
   });
 
@@ -291,18 +293,18 @@ describe('Rollup DB', () => {
     const rollupDao = await rollupDb.getRollupFromId(0);
     expect(rollupDao!.id).toBe(0);
 
-    const txDao0 = await rollupDb.getTxByTxId(tx0.getTxId());
+    const txDao0 = await rollupDb.getTxByTxId(tx0.txId);
     expect(txDao0!.rollup).toEqual(rollupDao);
 
     await rollupDb.deleteRollup(0);
 
     const rollupDao0After = await rollupDb.getRollupFromId(0);
-    const txDao0After = await rollupDb.getTxByTxId(tx0.getTxId());
+    const txDao0After = await rollupDb.getTxByTxId(tx0.txId);
     expect(rollupDao0After).toBe(undefined);
     expect(txDao0After!.rollup).toBe(null);
 
     const rollupDao1 = await rollupDb.getRollupFromId(1);
-    const txDao1After = await rollupDb.getTxByTxId(tx1.getTxId());
+    const txDao1After = await rollupDb.getTxByTxId(tx1.txId);
     expect(rollupDao1!.id).toBe(1);
     expect(txDao1After!.rollup).toEqual(rollupDao1);
   });
@@ -327,9 +329,9 @@ describe('Rollup DB', () => {
     const rollupDao0 = await rollupDb.getRollupFromId(0);
     const rollupDao1 = await rollupDb.getRollupFromId(1);
     const rollupDao2 = await rollupDb.getRollupFromId(2);
-    const txDao0 = await rollupDb.getTxByTxId(tx0.getTxId());
-    const txDao1 = await rollupDb.getTxByTxId(tx1.getTxId());
-    const txDao2 = await rollupDb.getTxByTxId(tx2.getTxId());
+    const txDao0 = await rollupDb.getTxByTxId(tx0.txId);
+    const txDao1 = await rollupDb.getTxByTxId(tx1.txId);
+    const txDao2 = await rollupDb.getTxByTxId(tx2.txId);
     expect(rollupDao0).toBe(undefined);
     expect(rollupDao1).not.toBe(undefined);
     expect(rollupDao2).toBe(undefined);
@@ -394,7 +396,7 @@ describe('Rollup DB', () => {
 
   it('get tx and its rollup by txId', async () => {
     const tx0 = randomTx();
-    const txId = tx0.getTxId();
+    const txId = tx0.txId;
     await rollupDb.addTx(tx0);
 
     const randomtxDao = await rollupDb.getTxByTxId(Buffer.alloc(32, 1));
@@ -522,7 +524,7 @@ describe('Rollup DB', () => {
 
   it('get unsettled txs', async () => {
     const txs = [...Array(4)].map(() => randomTx());
-    await Promise.all(txs.map(async (tx) => rollupDb.addTx(tx)));
+    await Promise.all(txs.map(async tx => rollupDb.addTx(tx)));
 
     const rolledUpTxs = txs.slice(0, 3);
     await Promise.all(rolledUpTxs.map(async (tx, i) => rollupDb.addRollup(randomRollup(i, [tx]))));
@@ -532,9 +534,9 @@ describe('Rollup DB', () => {
     await rollupDb.confirmRollupCreated(2);
 
     const unsettledTxs = await rollupDb.getUnsettledTxs();
-    const unsettledTxIds = unsettledTxs.map((tx) => tx.txId);
-    const expectedTxIds = txs.slice(1).map(tx => tx.getTxId());
-    const sortTxIds = (txIds: Buffer[]) => txIds.sort((a, b) => a.toString('hex') < b.toString('hex') ? -1 : 1);
+    const unsettledTxIds = unsettledTxs.map(tx => tx.txId);
+    const expectedTxIds = txs.slice(1).map(tx => tx.txId);
+    const sortTxIds = (txIds: Buffer[]) => txIds.sort((a, b) => (a.toString('hex') < b.toString('hex') ? -1 : 1));
     expect(sortTxIds(unsettledTxIds)).toEqual(sortTxIds(expectedTxIds));
   });
 

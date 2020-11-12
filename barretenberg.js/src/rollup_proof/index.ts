@@ -19,7 +19,6 @@ export class InnerProofData {
     public nullifier2: Buffer,
     public inputOwner: EthAddress,
     public outputOwner: EthAddress,
-    public viewingKeys: Buffer[],
   ) {}
 
   getTxId() {
@@ -45,7 +44,7 @@ export class InnerProofData {
     ]);
   }
 
-  static fromBuffer(innerPublicInputs: Buffer, viewingKeys: Buffer[] = []) {
+  static fromBuffer(innerPublicInputs: Buffer) {
     const proofId = innerPublicInputs.readUInt32BE(0 * 32 + 28);
     const publicInput = innerPublicInputs.slice(1 * 32, 1 * 32 + 32);
     const publicOutput = innerPublicInputs.slice(2 * 32, 2 * 32 + 32);
@@ -68,7 +67,6 @@ export class InnerProofData {
       nullifier2,
       inputOwner,
       outputOwner,
-      viewingKeys,
     );
   }
 }
@@ -91,6 +89,7 @@ export class RollupProofData {
     public numTxs: number,
     public innerProofData: InnerProofData[],
     public recursiveProofOutput: Buffer,
+    public viewingKeys: Buffer[][],
   ) {
     const allTxIds = this.innerProofData.map(innerProof => innerProof.getTxId());
     this.rollupHash = createHash('sha256').update(Buffer.concat(allTxIds)).digest();
@@ -114,7 +113,7 @@ export class RollupProofData {
   }
 
   getViewingKeyData() {
-    return Buffer.concat(this.innerProofData.map(p => p.viewingKeys).flat());
+    return Buffer.concat(this.viewingKeys.flat());
   }
 
   public static getRollupIdFromBuffer(proofData: Buffer) {
@@ -137,22 +136,31 @@ export class RollupProofData {
     const newDataRootsRoot = proofData.slice(8 * 32, 8 * 32 + 32);
     const numTxs = proofData.readUInt32BE(9 * 32 + 28);
 
-    const viewingKeys: Buffer[] = [];
-    if (viewingKeyData) {
-      for (let i = 0; i < numTxs * 2 * VIEWING_KEY_SIZE; i += VIEWING_KEY_SIZE) {
-        viewingKeys.push(viewingKeyData.slice(i, i + VIEWING_KEY_SIZE));
-      }
-    }
-
     const innerProofData: InnerProofData[] = [];
     for (let i = 0; i < numTxs; ++i) {
       const startIndex = RollupProofData.LENGTH_ROLLUP_PUBLIC + i * InnerProofData.LENGTH;
       const innerData = proofData.slice(startIndex, startIndex + InnerProofData.LENGTH);
-      innerProofData[i] = InnerProofData.fromBuffer(innerData, viewingKeys.slice(i * 2, i * 2 + 2));
+      innerProofData[i] = InnerProofData.fromBuffer(innerData);
+    }
+
+    // Populate j/s tx viewingKey data.
+    const viewingKeys: Buffer[][] = [];
+    if (viewingKeyData) {
+      for (let i = 0, jsCount = 0; i < numTxs; ++i) {
+        if (innerProofData[i].proofId === 0) {
+          const offset = jsCount * VIEWING_KEY_SIZE;
+          const vk1 = viewingKeyData.slice(offset, offset + VIEWING_KEY_SIZE);
+          const vk2 = viewingKeyData.slice(offset + VIEWING_KEY_SIZE, offset + VIEWING_KEY_SIZE * 2);
+          jsCount++;
+          viewingKeys.push([vk1, vk2]);
+        } else {
+          viewingKeys.push([Buffer.alloc(0), Buffer.alloc(0)]);
+        }
+      }
     }
 
     const recursiveStartIndex = RollupProofData.LENGTH_ROLLUP_PUBLIC + numTxs * InnerProofData.LENGTH;
-    const recursiveProofOutput = proofData.slice(recursiveStartIndex, recursiveStartIndex + (16 * 32));
+    const recursiveProofOutput = proofData.slice(recursiveStartIndex, recursiveStartIndex + 16 * 32);
     return new RollupProofData(
       rollupId,
       rollupSize,
@@ -166,6 +174,7 @@ export class RollupProofData {
       numTxs,
       innerProofData,
       recursiveProofOutput,
+      viewingKeys,
     );
   }
 }

@@ -25,7 +25,6 @@ const generateRollup = (rollupId: number, rollupSize: number) => {
           randomBytes(32),
           EthAddress.ZERO,
           EthAddress.ZERO,
-          [randomBytes(VIEWING_KEY_SIZE), randomBytes(VIEWING_KEY_SIZE)],
         ),
     );
   return new RollupProofData(
@@ -41,6 +40,7 @@ const generateRollup = (rollupId: number, rollupSize: number) => {
     rollupSize,
     innerProofs,
     randomBytes(16 * 32),
+    [[randomBytes(VIEWING_KEY_SIZE), randomBytes(VIEWING_KEY_SIZE)]],
   );
 };
 

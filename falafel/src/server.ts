@@ -158,8 +158,8 @@ export class Server {
       const rollupDao = new RollupDao();
 
       const txs: TxDao[] = [];
-      for (const tx of rollup.innerProofData) {
-        const txDao = innerProofDataToTxDao(tx);
+      for (let i = 0; i < rollup.innerProofData.length; ++i) {
+        const txDao = innerProofDataToTxDao(rollup.innerProofData[i], rollup.viewingKeys[i]);
         txDao.rollup = rollupDao;
         txs.push(txDao);
       }
@@ -175,6 +175,7 @@ export class Server {
       rollupDao.txs = txs;
       rollupDao.status = 'SETTLED';
       rollupDao.created = block.created;
+      rollupDao.viewingKeys = rollup.getViewingKeyData();
       await this.rollupDb.addRollupDao(rollupDao);
     }
   }
@@ -316,18 +317,17 @@ export class Server {
         return;
       }
 
-      const viewingKeys = txs.map(tx => tx.viewingKeys).flat();
       const signatures = txs.reduce((acc, tx) => (tx.signature ? [...acc, tx.signature] : acc), [] as Buffer[]);
       const sigIndexes = txs.reduce((acc, tx, i) => (tx.signature ? [...acc, i] : acc), [] as number[]);
 
-      await this.rollupDb.setRollupProof(rollup.rollupId, proof, Buffer.concat(viewingKeys));
+      await this.rollupDb.setRollupProof(rollup.rollupId, proof);
 
       const publishItem = {
         rollupId: rollup.rollupId,
         proof,
         signatures,
         sigIndexes,
-        viewingKeys,
+        viewingKeys: rollup.viewingKeys,
       };
 
       const blockNum = await this.publishRollup(publishItem);
@@ -407,7 +407,7 @@ export class Server {
       rollupId: dao.id,
       rollupSize: RollupProofData.getRollupSizeFromBuffer(dao.proofData!),
       rollupProofData: dao.proofData!,
-      viewingKeysData: dao.viewingKeys!,
+      viewingKeysData: dao.viewingKeys,
     }));
   }
 
@@ -458,7 +458,7 @@ export class Server {
     const nullifier1 = nullifierBufferToIndex(proof.nullifier1);
     const nullifier2 = nullifierBufferToIndex(proof.nullifier2);
 
-    console.log(`Received tx: ${proof.getTxId().toString('hex')}`);
+    console.log(`Received tx: ${proof.txId.toString('hex')}`);
 
     // Check nullifiers don't exist in the db.
     const emptyValue = Buffer.alloc(64, 0);
@@ -598,6 +598,8 @@ export class Server {
     const newDataRootsRoot = this.worldStateDb.getRoot(2);
     const newDataRootsPath = await this.worldStateDb.getHashPath(2, rootTreeSize);
 
+    const viewingKeys = txs.map(tx => tx.viewingKeys).flat();
+
     return new Rollup(
       await this.rollupDb.getNextRollupId(),
       Number(dataStartIndex),
@@ -620,6 +622,8 @@ export class Server {
       newDataRootsPath,
       dataRootsPaths,
       dataRootsIndicies,
+
+      viewingKeys,
     );
   }
 }

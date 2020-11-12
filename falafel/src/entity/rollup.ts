@@ -23,8 +23,8 @@ export class RollupDao {
   @Column({ nullable: true })
   public proofData?: Buffer;
 
-  @Column({ nullable: true })
-  public viewingKeys?: Buffer;
+  @Column()
+  public viewingKeys!: Buffer;
 
   @Column({ nullable: true })
   public ethTxHash?: Buffer;

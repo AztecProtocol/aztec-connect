@@ -106,14 +106,17 @@ export class UserState extends EventEmitter {
     const balanceBefore = this.getBalance(AssetId.DAI);
 
     const { rollupProofData, viewingKeysData } = block;
-    const { rollupId, dataStartIndex, innerProofData } = RollupProofData.fromBuffer(rollupProofData, viewingKeysData);
+    const { rollupId, dataStartIndex, innerProofData, viewingKeys } = RollupProofData.fromBuffer(
+      rollupProofData,
+      viewingKeysData,
+    );
     for (let i = 0; i < innerProofData.length; ++i) {
       const proof = innerProofData[i];
       const noteStartIndex = dataStartIndex + i * 2;
 
       switch (proof.proofId) {
         case 0:
-          await this.handleJoinSplitTx(innerProofData[i], noteStartIndex);
+          await this.handleJoinSplitTx(innerProofData[i], noteStartIndex, viewingKeys[i]);
           break;
         case 1:
           await this.handleAccountTx(innerProofData[i], noteStartIndex);
@@ -173,7 +176,7 @@ export class UserState extends EventEmitter {
     }
   }
 
-  private async handleJoinSplitTx(proof: InnerProofData, noteStartIndex: number) {
+  private async handleJoinSplitTx(proof: InnerProofData, noteStartIndex: number, viewingKeys: Buffer[]) {
     const { id } = this.user;
     const txId = proof.getTxId();
     const savedUserTx = await this.db.getUserTx(id, txId);
@@ -181,7 +184,7 @@ export class UserState extends EventEmitter {
       return;
     }
 
-    const { newNote1, newNote2, nullifier1, nullifier2, viewingKeys } = proof;
+    const { newNote1, newNote2, nullifier1, nullifier2 } = proof;
     const newNote = await this.processNewNote(noteStartIndex, newNote1, viewingKeys[0]);
     const changeNote = await this.processNewNote(noteStartIndex + 1, newNote2, viewingKeys[1]);
     if (!newNote && !changeNote) {
@@ -215,7 +218,7 @@ export class UserState extends EventEmitter {
 
     const { secret, value, assetId } = decryptedNote;
     const nullifier = this.noteAlgos.computeNoteNullifier(dataEntry, index, this.user.privateKey);
-    const note = {
+    const note: Note = {
       index,
       assetId,
       value,

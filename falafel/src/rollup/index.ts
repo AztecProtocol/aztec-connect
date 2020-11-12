@@ -31,6 +31,8 @@ export class Rollup {
     public newDataRootsPath: HashPath,
     public dataRootsPaths: HashPath[],
     public dataRootsIndicies: number[],
+
+    public viewingKeys: Buffer[],
   ) {}
 
   public toBuffer() {
@@ -69,7 +71,7 @@ export class Rollup {
     ]);
   }
 
-  public static fromBuffer(buf: Buffer) {
+  public static fromBuffer(buf: Buffer, viewingKeys: Buffer[]) {
     const rollupId = buf.readUInt32BE(0);
     const dataStartIndex = buf.readUInt32BE(8);
     let offset = 12;
@@ -124,6 +126,7 @@ export class Rollup {
       newDataRootsPath.elem,
       dataRootsPaths.elem,
       dataRootsIndicies.elem,
+      viewingKeys,
     );
   }
 }

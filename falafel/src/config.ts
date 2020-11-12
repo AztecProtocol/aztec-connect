@@ -115,7 +115,7 @@ async function loadConfVars(path: string) {
   // Erase all data if rollup contract changes.
   if (state.rollupContractAddress && state.rollupContractAddress !== saved.rollupContractAddress) {
     console.log(
-      `Rollup contract changed, erasing data: ${state.rollupContractAddress} -> ${saved.rollupContractAddress}`,
+      `Rollup contract changed, erasing data: ${saved.rollupContractAddress} -> ${state.rollupContractAddress}`,
     );
     await emptyDir(dir);
   }

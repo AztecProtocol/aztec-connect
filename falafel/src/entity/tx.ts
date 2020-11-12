@@ -6,7 +6,7 @@ export class TxDao {
   @PrimaryColumn({ length: 32 })
   public txId!: Buffer;
 
-  @ManyToOne(type => RollupDao, r => r.txs, { onDelete: 'SET NULL' })
+  @ManyToOne(() => RollupDao, r => r.txs, { onDelete: 'SET NULL' })
   public rollup?: RollupDao;
 
   @Column()

@@ -93,7 +93,6 @@ describe('user state', () => {
       nullifier2,
       EthAddress.ZERO,
       EthAddress.ZERO,
-      viewingKeys,
     );
     return new RollupProofData(
       0,
@@ -108,6 +107,7 @@ describe('user state', () => {
       1,
       [innerProofData],
       randomBytes(32 * 16),
+      [viewingKeys],
     );
   };
 
@@ -133,7 +133,6 @@ describe('user state', () => {
       nullifier2,
       EthAddress.ZERO,
       EthAddress.ZERO,
-      viewingKeys,
     );
     return new RollupProofData(
       0,
@@ -148,6 +147,7 @@ describe('user state', () => {
       1,
       [innerProofData],
       randomBytes(32 * 16),
+      [viewingKeys],
     );
   };
 

@@ -605,7 +605,7 @@ export class CoreSdk extends EventEmitter {
 
       // It *looks* like a join split...
       const proofData = new JoinSplitProof(rawProofData, []);
-      const txHash = proofData.getTxId();
+      const txHash = proofData.txId;
 
       const userTx: UserTx = {
         action: 'ACCOUNT',

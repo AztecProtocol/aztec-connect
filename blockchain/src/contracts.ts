@@ -143,8 +143,11 @@ export class Contracts {
     }
     const filter = this.rollupProcessor.filters.RollupProcessed();
     const rollupEvents = await this.rollupProcessor.queryFilter(filter, rollupEvent.blockNumber);
-    const txs = await Promise.all(rollupEvents.map(event => event.getTransaction()));
-    return txs.filter(tx => tx.confirmations >= minConfirmations).map(tx => this.decodeBlock(tx));
+    const txs = (await Promise.all(rollupEvents.map(event => event.getTransaction()))).filter(
+      tx => tx.confirmations >= minConfirmations,
+    );
+    const blocks = await Promise.all(txs.map(tx => this.provider.getBlock(tx.blockNumber!)));
+    return txs.map((tx, i) => this.decodeBlock({ ...tx, timestamp: blocks[i].timestamp }));
   }
 
   public async getUserPendingDeposit(assetId: number, account: EthAddress): Promise<bigint> {
