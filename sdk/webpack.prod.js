@@ -67,7 +67,14 @@ const common = {
 
 const nodeConfig = merge(common, {
   output: { filename: 'aztec-sdk.node.js' },
-  plugins: [new webpack.ExternalsPlugin('commonjs', ['leveldown', 'typeorm', 'threads'])],
+  plugins: [
+    new webpack.ExternalsPlugin('commonjs', ['leveldown', 'typeorm', 'threads']),
+    // fixes ethers issue
+    // https://github.com/ethers-io/ethers.js/issues/1108
+    new webpack.DefinePlugin({
+      window: JSON.stringify(''),
+    }),
+  ],
   target: 'node',
   node: {
     __dirname: false,
