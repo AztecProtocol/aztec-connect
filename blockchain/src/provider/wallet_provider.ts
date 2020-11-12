@@ -69,12 +69,11 @@ export class WalletProvider implements EthereumProvider {
     const tx = args.params![0];
     const account = this.accounts.find(a => a.address.toLowerCase() === tx.from);
     if (account) {
-      const { gas, ...rest } = tx;
-      if (!tx.gasPrice) {
-        tx.gasPrice = await this.provider.request({ method: 'eth_gasPrice' });
-      }
+      const { gas: gasLimit, ...rest } = tx;
       const nonce = await this.provider.request({ method: 'eth_getTransactionCount', params: [tx.from, 'latest'] });
-      const result = await account.signTransaction({ ...rest, gasLimit: gas, nonce });
+      const gasPrice = tx.gasPrice || (await this.provider.request({ method: 'eth_gasPrice' }));
+      const toSign = { ...rest, gasLimit, gasPrice, nonce };
+      const result = await account.signTransaction(toSign);
       return this.provider.request({ method: 'eth_sendRawTransaction', params: [result] });
     }
     return this.provider.request(args);
