@@ -18,6 +18,7 @@ import { WorkerPool } from 'barretenberg/wasm/worker_pool';
 import { WorldState } from 'barretenberg/world_state';
 import createDebug from 'debug';
 import isNode from 'detect-node';
+import os from 'os';
 import { EventEmitter } from 'events';
 import Mutex from 'idb-mutex';
 import { LevelUp } from 'levelup';
@@ -68,6 +69,7 @@ export class CoreSdk extends EventEmitter {
   private userStateFactory!: UserStateFactory;
   private txsState!: TxsState;
   private mutex = !isNode ? new Mutex('world-state-mutex') : undefined;
+  private numCPU = !isNode ? navigator.hardwareConcurrency : os.cpus().length;
   private sdkStatus: SdkStatus = {
     chainId: -1,
     rollupContractAddress: EthAddress.ZERO,
@@ -108,7 +110,7 @@ export class CoreSdk extends EventEmitter {
     const crsData = await this.getCrsData(
       this.escapeHatchMode ? EscapeHatchProver.circuitSize : JoinSplitProver.circuitSize,
     );
-    const numWorkers = Math.min(navigator.hardwareConcurrency || 1, 8);
+    const numWorkers = Math.min(this.numCPU || 1, 8);
     const workerPool = await WorkerPool.new(barretenberg, numWorkers);
     const pooledProverFactory = new PooledProverFactory(workerPool, crsData);
     const joinSplitProver = new JoinSplitProver(
