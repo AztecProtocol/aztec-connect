@@ -43,6 +43,12 @@ describe('ethereum_blockchain', () => {
     provider.addAccount(Buffer.from(localUser.privateKey.slice(2), 'hex'));
 
     [userA, userB] = await ethers.getSigners();
+
+    await userA.sendTransaction({
+      to: localUser.address,
+      value: ethers.utils.parseEther('1'),
+    });
+
     userAAddress = EthAddress.fromString(await userA.getAddress());
     ({ erc20, rollupProcessor, viewingKeys } = await setupRollupProcessor([userA, userB], mintAmount));
 
