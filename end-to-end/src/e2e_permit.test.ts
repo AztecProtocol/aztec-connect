@@ -13,6 +13,7 @@ import {
 import { EventEmitter } from 'events';
 import { JsonRpcProvider } from '@ethersproject/providers';
 import { randomBytes } from 'crypto';
+import { createFundedWalletProvider } from './create_funded_wallet_provider';
 
 jest.setTimeout(10 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
@@ -29,10 +30,9 @@ describe('end-to-end permit tests', () => {
   const newPermitAssetId = AssetId.DAI + 1;
 
   beforeAll(async () => {
-    provider = new WalletProvider(new EthersAdapter(new JsonRpcProvider(ETHEREUM_HOST)));
-
-    privateKey = randomBytes(32);
-    userAddress = provider.addAccount(privateKey);
+    provider = await createFundedWalletProvider(ETHEREUM_HOST, 1);
+    privateKey = provider.getPrivateKey(0);
+    userAddress = provider.getAccount(0);
 
     sdk = await createWalletSdk(provider, ROLLUP_HOST, {
       syncInstances: false,

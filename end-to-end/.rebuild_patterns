@@ -2,4 +2,5 @@
 ^barretenberg.js/
 ^sdk/
 ^falafel/
+^blockchain/
 ^end-to-end/

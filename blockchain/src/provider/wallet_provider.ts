@@ -19,6 +19,18 @@ export class WalletProvider implements EthereumProvider {
     return EthAddress.fromString(wallet.address);
   }
 
+  public getAccounts() {
+    return this.accounts.map(a => EthAddress.fromString(a.address));
+  }
+
+  public getAccount(account: number) {
+    return EthAddress.fromString(this.accounts[account].address);
+  }
+
+  public getPrivateKey(account: number) {
+    return Buffer.from(this.accounts[account].privateKey.slice(2), 'hex');
+  }
+
   async request(args: RequestArguments): Promise<any> {
     switch (args.method) {
       case 'eth_accounts':
