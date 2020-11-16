@@ -1,4 +1,5 @@
 import { EthereumProvider, WebSdk, EthAddress } from '@aztec/sdk';
+import { Web3Provider } from '@ethersproject/providers';
 import { EventEmitter } from 'events';
 import { createContext } from 'react';
 // For use in live code editor.
@@ -18,11 +19,13 @@ export const BLOCK_EXPLORER_URL =
 
 export class App extends EventEmitter {
   private webSdk!: WebSdk;
+  private web3Provider!: Web3Provider;
 
   constructor(private ethereumProvider?: EthereumProvider) {
     super();
     if (ethereumProvider) {
       this.webSdk = new WebSdk(ethereumProvider);
+      this.web3Provider = new Web3Provider(ethereumProvider);
     }
   }
 
@@ -35,8 +38,7 @@ export class App extends EventEmitter {
   }
 
   getWeb3Provider() {
-    // @ts-ignore
-    return this.webSdk.getSdk().web3Provider;
+    return this.web3Provider;
   }
 
   getWebSdk() {

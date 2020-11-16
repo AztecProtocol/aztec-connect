@@ -55,7 +55,7 @@ const common = {
           to: '[name].[ext]',
         },
         {
-          from: 'node_modules/barretenberg/**/*.d.ts',
+          from: 'node_modules/(barretenberg|blockchain)/**/*.d.ts',
           transformPath(targetPath) {
             return targetPath.replace(/^node_modules\//, '');
           },

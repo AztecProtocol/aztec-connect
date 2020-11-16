@@ -70,6 +70,8 @@ module.exports = env => ({
     env === 'development'
       ? {
           hot: true,
+          transportMode: 'ws',
+          injectClient: false,
         }
       : undefined,
   output: {

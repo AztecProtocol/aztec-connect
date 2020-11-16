@@ -34,3 +34,4 @@ const findAndReplace = (dir, level, moduleName) => {
   });
 };
 findAndReplace(OUTPUT_PATH, 0, 'barretenberg');
+findAndReplace(OUTPUT_PATH, 0, 'blockchain');

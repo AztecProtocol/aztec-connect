@@ -35,6 +35,12 @@ describe('parseSpec', () => {
       name: 'ActionState',
       isDeclaration: true,
     });
+
+    expect(parseSpec('@spec @aztec/sdk/web3\\_signer.d.ts Web3Signer')).toEqual({
+      srcName: '@aztec/sdk/web3_signer.d.ts',
+      name: 'Web3Signer',
+      isDeclaration: true,
+    });
   });
 
   it('parse spec with a specific type', () => {
@@ -59,6 +65,13 @@ describe('parseSpec', () => {
 
   it('parse spec with options', () => {
     expect(parseSpec('@spec index.d.ts WalletSdk [AS_INTERFACE]')).toEqual({
+      srcName: 'index.d.ts',
+      name: 'WalletSdk',
+      isDeclaration: true,
+      options: ['AS_INTERFACE'],
+    });
+
+    expect(parseSpec('@spec index.d.ts WalletSdk \\[AS_INTERFACE]')).toEqual({
       srcName: 'index.d.ts',
       name: 'WalletSdk',
       isDeclaration: true,

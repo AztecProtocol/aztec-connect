@@ -4,7 +4,6 @@ This method deposits assets from layer 1.
 
 ```js
 import { AssetId, EthAddress, Web3Signer } from '@aztec/sdk';
-import { ethers } from 'ethers';
 
 async function demoDeposit(aztecSdk, userId, signer) {
   const assetId = AssetId.DAI;
@@ -13,8 +12,7 @@ async function demoDeposit(aztecSdk, userId, signer) {
   console.info('Balance before deposit:', aztecSdk.fromErc20Units(assetId, balanceBefore));
 
   const senderEthAddress = EthAddress.fromString(window.ethereum.selectedAddress);
-  const provider = new ethers.providers.Web3Provider(window.ethereum);
-  const ethSigner = new Web3Signer(provider, senderEthAddress);
+  const ethSigner = new Web3Signer(window.ethereum, senderEthAddress);
 
   const value = aztecSdk.toErc20Units(assetId, '10');
 
@@ -44,7 +42,6 @@ Each [UserAsset](/#/Types/WalletSdkUserAsset) is bound to a user id and an asset
 
 ```js
 import { AssetId, EthAddress, Web3Signer } from '@aztec/sdk';
-import { ethers } from 'ethers';
 
 async function demoDeposit(aztecSdk, userId, signer) {
   const user = aztecSdk.getUser(userId);
@@ -54,8 +51,7 @@ async function demoDeposit(aztecSdk, userId, signer) {
   console.info('Balance before deposit:', asset.fromErc20Units(balanceBefore));
 
   const senderEthAddress = EthAddress.fromString(window.ethereum.selectedAddress);
-  const provider = new ethers.providers.Web3Provider(window.ethereum);
-  const ethSigner = new Web3Signer(provider, senderEthAddress);
+  const ethSigner = new Web3Signer(window.ethereum, senderEthAddress);
 
   const value = asset.toErc20Units('10');
 

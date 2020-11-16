@@ -13,9 +13,9 @@ interface SpecConfig {
 }
 
 export const specPattern = new RegExp(
-  `@spec\\s+([\\w@-_\\/]+(.d)?.ts)\\s+(${specTypes.join(
+  `@spec\\s+([\\w@-_\\/\]+(.d)?.ts)\\s+(${specTypes.join(
     '|',
-  )})?\\s*([a-zA-Z_][a-zA-Z0-9_-]+)\\s*(\\[[A-Z_\\|\\s]+\\])?(\n|$)`,
+  )})?\\s*([a-zA-Z_][a-zA-Z0-9_-]+)\\s*(\\\\{0,}\\[[A-Z_\\|\\s]+\\])?(\n|$)`,
 );
 
 export const parseSpec = (txt: string) => {
@@ -29,6 +29,7 @@ export const parseSpec = (txt: string) => {
   const options = optionsStr
     ? optionsStr
         .trim()
+        .replace('\\', '')
         .slice(1, -1)
         .split('|')
         .map(s => {
@@ -41,7 +42,7 @@ export const parseSpec = (txt: string) => {
     : undefined;
 
   const config: SpecConfig = {
-    srcName,
+    srcName: srcName.replace('\\', ''),
     name,
     isDeclaration: !!dFileExt,
     type,

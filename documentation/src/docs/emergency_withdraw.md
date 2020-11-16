@@ -35,7 +35,6 @@ docker run -ti -e INFURA_API_KEY=01234 -e NETWORK=goerli -e ROLLUP_CONTRACT_ADDR
 
 ```js
 import { AssetId, EthAddress, createWalletSdk, Web3Signer } from '@aztec/sdk';
-import { ethers } from 'ethers';
 
 // First we do a deposit, followed by a withdraw
 async function demoEmergencyWithdraw(userId, signer) {
@@ -48,11 +47,10 @@ async function demoEmergencyWithdraw(userId, signer) {
 
   // Deposit
   const assetId = AssetId.DAI;
-  const provider = new ethers.providers.Web3Provider(window.ethereum);
   const value = aztecSdkEmergency.toErc20Units(assetId, '10');
 
   const senderEthereumAddress = EthAddress.fromString(window.ethereum.selectedAddress);
-  const ethSigner = new Web3Signer(provider, senderEthereumAddress);
+  const ethSigner = new Web3Signer(window.ethereum, senderEthereumAddress);
 
   const allowance = await aztecSdkEmergency.getPublicAllowance(assetId, senderEthereumAddress);
 
