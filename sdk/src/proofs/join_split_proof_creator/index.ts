@@ -1,6 +1,7 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { JoinSplitProof, JoinSplitProver } from 'barretenberg/client_proofs/join_split_proof';
+import { JoinSplitProver } from 'barretenberg/client_proofs/join_split_proof';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
+import { ProofData } from 'barretenberg/client_proofs/proof_data';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { WorldState } from 'barretenberg/world_state';
@@ -57,7 +58,7 @@ export class JoinSplitProofCreator {
     debug(`created proof: ${new Date().getTime() - start}ms`);
     debug(`proof size: ${proofData.length}`);
 
-    const joinSplitProof = new JoinSplitProof(proofData, viewingKeys);
+    const joinSplitProof = new ProofData(proofData, viewingKeys);
     const txId = joinSplitProof.txId;
 
     const depositSignature = publicInput

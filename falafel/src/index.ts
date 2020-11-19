@@ -48,7 +48,7 @@ async function main() {
   const server = new Server(serverConfig, blockchain, rollupDb, worldStateDb);
 
   const shutdown = async () => {
-    server.stop();
+    await server.stop();
     await connection.close();
     process.exit(0);
   };

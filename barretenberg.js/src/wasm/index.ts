@@ -19,7 +19,7 @@ export class BarretenbergWasm extends EventEmitter {
   private instance!: WebAssembly.Instance;
   public module!: WebAssembly.Module;
 
-  public static async new(name: string = 'wasm') {
+  public static async new(name = 'wasm') {
     const barretenberg = new BarretenbergWasm();
     barretenberg.on('log', createDebug(`bb:${name}`));
     await barretenberg.init();

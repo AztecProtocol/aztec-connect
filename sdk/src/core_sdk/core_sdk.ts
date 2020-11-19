@@ -1,8 +1,9 @@
 import { Address, EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { Block } from 'barretenberg/block_source';
-import { AccountProver } from 'barretenberg/client_proofs/account_proof';
+import { AccountProver, computeAliasNullifier } from 'barretenberg/client_proofs/account_proof';
 import { EscapeHatchProver } from 'barretenberg/client_proofs/escape_hatch_proof';
-import { computeAliasNullifier, JoinSplitProof, JoinSplitProver } from 'barretenberg/client_proofs/join_split_proof';
+import { JoinSplitProver } from 'barretenberg/client_proofs/join_split_proof';
+import { ProofData } from 'barretenberg/client_proofs/proof_data';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { PooledProverFactory } from 'barretenberg/client_proofs/prover';
 import { Crs } from 'barretenberg/crs';
@@ -606,7 +607,7 @@ export class CoreSdk extends EventEmitter {
       await this.rollupProvider.sendProof({ proofData: rawProofData, viewingKeys: [] });
 
       // It *looks* like a join split...
-      const proofData = new JoinSplitProof(rawProofData, []);
+      const proofData = new ProofData(rawProofData, []);
       const txHash = proofData.txId;
 
       const userTx: UserTx = {

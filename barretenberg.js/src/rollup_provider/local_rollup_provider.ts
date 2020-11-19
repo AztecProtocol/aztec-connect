@@ -1,14 +1,11 @@
 import { Block } from '../block_source';
 import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
-import createDebug from 'debug';
-import { JoinSplitProof, JoinSplitVerifier } from '../client_proofs/join_split_proof';
+import { ProofData } from '../client_proofs/proof_data';
 import { RollupProvider } from './rollup_provider';
 import { EthAddress } from '../address';
 import { RollupProofData } from '../rollup_proof';
 import { Proof } from '../rollup_provider';
-
-const debug = createDebug('bb:local_rollup_provider');
 
 export class LocalRollupProvider extends EventEmitter implements RollupProvider {
   private blockNum = 0;
@@ -19,7 +16,7 @@ export class LocalRollupProvider extends EventEmitter implements RollupProvider 
   private nullRoot = Buffer.alloc(32, 0);
   private rootRoot = Buffer.alloc(32, 0);
 
-  constructor(private joinSplitVerifier: JoinSplitVerifier) {
+  constructor() {
     super();
   }
 
@@ -42,13 +39,7 @@ export class LocalRollupProvider extends EventEmitter implements RollupProvider 
       throw new Error('Server is not running.');
     }
 
-    const verified = await this.joinSplitVerifier.verifyProof(proofData);
-    debug(`verified: ${verified}`);
-    if (!verified) {
-      throw new Error('Proof not verified.');
-    }
-
-    const proof = new JoinSplitProof(proofData, viewingKeys);
+    const proof = new ProofData(proofData, viewingKeys);
     const block: Block = {
       txHash: randomBytes(32),
       rollupId: this.blockNum,

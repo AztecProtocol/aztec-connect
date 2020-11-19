@@ -1,3 +1,4 @@
+import { ProofData } from 'barretenberg/client_proofs/proof_data';
 import { HashPath } from 'barretenberg/merkle_tree';
 import {
   deserializeArrayFromVector,
@@ -7,8 +8,11 @@ import {
   serializeBufferArrayToVector,
   serializeBufferToVector,
 } from 'barretenberg/serialize';
+import { createHash } from 'crypto';
 
 export class Rollup {
+  public rollupHash: Buffer;
+
   constructor(
     public rollupId: number,
     public dataStartIndex: number,
@@ -31,9 +35,10 @@ export class Rollup {
     public newDataRootsPath: HashPath,
     public dataRootsPaths: HashPath[],
     public dataRootsIndicies: number[],
-
-    public viewingKeys: Buffer[],
-  ) {}
+  ) {
+    const txIds = proofs.map(p => new ProofData(p).txId);
+    this.rollupHash = createHash('sha256').update(Buffer.concat(txIds)).digest();
+  }
 
   public toBuffer() {
     const numBuf = Buffer.alloc(12);
@@ -71,7 +76,7 @@ export class Rollup {
     ]);
   }
 
-  public static fromBuffer(buf: Buffer, viewingKeys: Buffer[]) {
+  public static fromBuffer(buf: Buffer) {
     const rollupId = buf.readUInt32BE(0);
     const dataStartIndex = buf.readUInt32BE(8);
     let offset = 12;
@@ -126,7 +131,6 @@ export class Rollup {
       newDataRootsPath.elem,
       dataRootsPaths.elem,
       dataRootsIndicies.elem,
-      viewingKeys,
     );
   }
 }

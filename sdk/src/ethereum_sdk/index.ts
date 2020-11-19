@@ -207,12 +207,12 @@ export class EthereumSdk extends EventEmitter {
     const ethSigner = new Web3Signer(this.etherumProvider, from);
 
     const userPendingDeposit = await this.getUserPendingDeposit(assetId, ethSigner.getAddress());
-    const amountToTransfer = BigInt(value) - BigInt(userPendingDeposit);
+    const amountToTransfer = value - userPendingDeposit;
     const assetSupportsPermit = await this.getAssetPermitSupport(assetId);
 
     // Determine if any approval is required.
     const existingAllowance = await this.getTokenContract(assetId).allowance(ethSigner.getAddress());
-    const approvalAmount = amountToTransfer - existingAllowance;
+    const approvalAmount = amountToTransfer - existingAllowance - userPendingDeposit;
 
     if (approvalAmount > 0) {
       if (assetSupportsPermit) {

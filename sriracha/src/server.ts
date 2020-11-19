@@ -1,11 +1,10 @@
 import { EthAddress } from 'barretenberg/address';
 import { Block } from 'barretenberg/block_source';
-import { nullifierBufferToIndex } from 'barretenberg/client_proofs/join_split_proof';
 import { MemoryFifo } from 'barretenberg/fifo';
 import { HashPath } from 'barretenberg/merkle_tree';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { WorldStateDb } from 'barretenberg/world_state_db';
-import { toBufferBE } from 'bigint-buffer';
+import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { Blockchain } from 'blockchain';
 import { pathExists, readJson, writeJson } from 'fs-extra';
 import { GetHashPathsResponse, HashPathSource } from './hash_path_source';
@@ -120,8 +119,8 @@ export default class Server implements HashPathSource {
       const tx = innerProofData[i];
       await this.worldStateDb.put(0, BigInt(dataStartIndex + i * rollupSize), tx.newNote1);
       await this.worldStateDb.put(0, BigInt(dataStartIndex + i * rollupSize + 1), tx.newNote2);
-      await this.worldStateDb.put(1, nullifierBufferToIndex(tx.nullifier1), toBufferBE(1n, 64));
-      await this.worldStateDb.put(1, nullifierBufferToIndex(tx.nullifier2), toBufferBE(1n, 64));
+      await this.worldStateDb.put(1, toBigIntBE(tx.nullifier1), toBufferBE(1n, 64));
+      await this.worldStateDb.put(1, toBigIntBE(tx.nullifier2), toBufferBE(1n, 64));
     }
     if (innerProofData.length < rollupSize) {
       await this.worldStateDb.put(0, BigInt(dataStartIndex + rollupSize * 2 - 1), Buffer.alloc(64, 0));

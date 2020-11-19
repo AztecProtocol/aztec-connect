@@ -8,11 +8,8 @@ import {
   createPermitData,
   Web3Signer,
   WalletProvider,
-  EthersAdapter,
 } from 'aztec2-sdk';
 import { EventEmitter } from 'events';
-import { JsonRpcProvider } from '@ethersproject/providers';
-import { randomBytes } from 'crypto';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
 
 jest.setTimeout(10 * 60 * 1000);

@@ -178,15 +178,18 @@ export class WalletSdk extends EventEmitter {
     const recipient = toAddr || this.getUserData(userId)!.publicKey;
 
     const action = async () => {
-      this.emit(SdkEvent.LOG, 'Depositing funds to contract...');
-      const depositTxHash = await this.blockchain.depositPendingFunds(
-        assetId,
-        value,
-        ethSigner.getAddress(),
-        permitArgs,
-      );
-      await this.blockchain.getTransactionReceipt(depositTxHash);
-      this.emit(SdkEvent.UPDATED_USER_STATE, userId);
+      const userPendingDeposit = await this.getUserPendingDeposit(assetId, ethSigner.getAddress());
+      if (userPendingDeposit < value) {
+        this.emit(SdkEvent.LOG, 'Depositing funds to contract...');
+        const depositTxHash = await this.blockchain.depositPendingFunds(
+          assetId,
+          value,
+          ethSigner.getAddress(),
+          permitArgs,
+        );
+        await this.blockchain.getTransactionReceipt(depositTxHash);
+        this.emit(SdkEvent.UPDATED_USER_STATE, userId);
+      }
       this.emit(SdkEvent.LOG, 'Creating deposit proof...');
       return await this.core.createProof(assetId, userId, 'DEPOSIT', value, signer, ethSigner, recipient, undefined);
     };

@@ -1,4 +1,4 @@
-import { JoinSplitProof } from '../client_proofs/join_split_proof';
+import { ProofData } from '../client_proofs/proof_data';
 import { RollupProviderExplorer, Rollup, Tx } from './rollup_provider_explorer';
 import { RollupServerResponse, TxServerResponse } from './server_response';
 
@@ -15,7 +15,7 @@ const toRollup = ({ id, status, dataRoot, proofData, txHashes, ethTxHash, create
 });
 
 const toTx = ({ txHash, proofData, viewingKeys, rollup, created }: TxServerResponse): Tx => {
-  const { newNote1, newNote2, nullifier1, nullifier2, publicInput, publicOutput, noteTreeRoot } = new JoinSplitProof(
+  const { newNote1, newNote2, nullifier1, nullifier2, publicInput, publicOutput, noteTreeRoot } = new ProofData(
     Buffer.from(proofData, 'hex'),
     viewingKeys.map(vk => Buffer.from(vk, 'hex')),
   );

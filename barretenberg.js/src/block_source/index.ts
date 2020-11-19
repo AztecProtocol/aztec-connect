@@ -7,11 +7,6 @@ export interface Block {
   viewingKeysData: Buffer;
 }
 
-export interface GetBlocksResponse {
-  latestRollupId: number;
-  blocks: Block[];
-}
-
 export interface BlockSource {
   /**
    * Returns all blocks from rollup id `from`.

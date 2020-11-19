@@ -1,34 +1,11 @@
-import { JoinSplitProof } from 'barretenberg/client_proofs/join_split_proof';
 import { InnerProofData } from 'barretenberg/rollup_proof';
-import { createHash } from 'crypto';
 import { Connection, In, MoreThanOrEqual, Not, Repository } from 'typeorm';
 import { RollupDao } from '../entity/rollup';
 import { TxDao } from '../entity/tx';
 import { Rollup } from '../rollup';
 
-export const joinSplitProofToTxDao = (tx: JoinSplitProof) => {
-  const txDao = new TxDao();
-  txDao.txId = tx.txId;
-  txDao.proofData = tx.proofData;
-  txDao.viewingKey1 = tx.viewingKeys[0];
-  txDao.viewingKey2 = tx.viewingKeys[1];
-  txDao.signature = tx.signature;
-  txDao.created = new Date();
-  return txDao;
-};
-
-export const innerProofDataToTxDao = (tx: InnerProofData, viewingKeys: Buffer[]) => {
-  const txDao = new TxDao();
-  txDao.txId = tx.getTxId();
-  txDao.proofData = tx.toBuffer();
-  txDao.viewingKey1 = viewingKeys[0];
-  txDao.viewingKey2 = viewingKeys[1];
-  txDao.created = new Date();
-  return txDao;
-};
-
 export class RollupDb {
-  private rollupTxRep: Repository<TxDao>;
+  public rollupTxRep: Repository<TxDao>;
   private rollupRep: Repository<RollupDao>;
 
   constructor(private connection: Connection) {
@@ -36,38 +13,26 @@ export class RollupDb {
     this.rollupRep = this.connection.getRepository(RollupDao);
   }
 
-  public async addTx(tx: JoinSplitProof) {
-    const txDao = joinSplitProofToTxDao(tx);
+  public async addTx(txDao: TxDao) {
     return this.rollupTxRep.save(txDao);
   }
 
-  public async addRollup(rollup: Rollup) {
+  public async addRollup(rollup: Rollup, viewingKeys: Buffer[] = []) {
     const rollupDao = new RollupDao();
 
-    const txs = await Promise.all(
-      rollup.proofs.map(async txBuf => {
-        const txId = InnerProofData.fromBuffer(txBuf).getTxId();
-        const txDao = await this.rollupTxRep.findOne({ txId });
-        if (!txDao) {
-          throw new Error(`RollupTx not found: ${txId.toString('hex')}`);
-        }
-        if (txDao.rollup) {
-          throw new Error(`RollupTx has been linked to a rollup: ${txId.toString('hex')}`);
-        }
-        txDao.rollup = rollupDao;
-        return txDao;
-      }),
-    );
+    const txIds = rollup.proofs.map(txBuf => InnerProofData.fromBuffer(txBuf).txId);
+    const txs = await this.rollupTxRep.find({ where: { txId: In(txIds) } });
+    if (txs.length !== txIds.length) {
+      throw new Error('Missing txs.');
+    }
 
-    const txIds = Buffer.concat(txs.map(tx => tx.txId));
-    const rollupHash = createHash('sha256').update(txIds).digest();
-    rollupDao.hash = rollupHash;
+    rollupDao.hash = rollup.rollupHash;
     rollupDao.created = new Date();
     rollupDao.id = rollup.rollupId;
     rollupDao.dataRoot = rollup.newDataRoot;
     rollupDao.txs = txs;
     rollupDao.status = 'CREATING';
-    rollupDao.viewingKeys = Buffer.concat(rollup.viewingKeys);
+    rollupDao.viewingKeys = Buffer.concat(viewingKeys);
     return this.rollupRep.save(rollupDao);
   }
 
@@ -179,10 +144,17 @@ export class RollupDb {
     });
   }
 
-  public async getPendingTxs() {
+  public async getPendingTxCount() {
+    return this.rollupTxRep.count({
+      where: { rollup: null },
+    });
+  }
+
+  public async getPendingTxs(take?: number) {
     return this.rollupTxRep.find({
       where: { rollup: null },
       order: { created: 'ASC' },
+      take,
     });
   }
 

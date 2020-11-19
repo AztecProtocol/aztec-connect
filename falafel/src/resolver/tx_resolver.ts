@@ -1,4 +1,4 @@
-import { JoinSplitProof } from 'barretenberg/client_proofs/join_split_proof';
+import { ProofData } from 'barretenberg/client_proofs/proof_data';
 import { Arg, Args, FieldResolver, Int, Query, Resolver, Root } from 'type-graphql';
 import { Inject } from 'typedi';
 import { Connection, Repository, LessThanOrEqual } from 'typeorm';
@@ -32,55 +32,55 @@ export class TxResolver {
 
   @FieldResolver(() => Int)
   async proofId(@Root() { proofData }: TxDao) {
-    const joinSplit = new JoinSplitProof(proofData, []);
+    const joinSplit = new ProofData(proofData, []);
     return joinSplit.proofId;
   }
 
   @FieldResolver()
   async publicInput(@Root() { proofData }: TxDao) {
-    const joinSplit = new JoinSplitProof(proofData, []);
+    const joinSplit = new ProofData(proofData, []);
     return joinSplit.publicInput;
   }
 
   @FieldResolver()
   async publicOutput(@Root() { proofData }: TxDao) {
-    const joinSplit = new JoinSplitProof(proofData, []);
+    const joinSplit = new ProofData(proofData, []);
     return joinSplit.publicOutput;
   }
 
   @FieldResolver()
   async newNote1(@Root() { proofData }: TxDao) {
-    const joinSplit = new JoinSplitProof(proofData, []);
+    const joinSplit = new ProofData(proofData, []);
     return joinSplit.newNote1;
   }
 
   @FieldResolver()
   async newNote2(@Root() { proofData }: TxDao) {
-    const joinSplit = new JoinSplitProof(proofData, []);
+    const joinSplit = new ProofData(proofData, []);
     return joinSplit.newNote2;
   }
 
   @FieldResolver()
   async nullifier1(@Root() { proofData }: TxDao) {
-    const joinSplit = new JoinSplitProof(proofData, []);
+    const joinSplit = new ProofData(proofData, []);
     return joinSplit.nullifier1;
   }
 
   @FieldResolver()
   async nullifier2(@Root() { proofData }: TxDao) {
-    const joinSplit = new JoinSplitProof(proofData, []);
+    const joinSplit = new ProofData(proofData, []);
     return joinSplit.nullifier2;
   }
 
   @FieldResolver()
   async inputOwner(@Root() { proofData }: TxDao) {
-    const joinSplit = new JoinSplitProof(proofData, []);
+    const joinSplit = new ProofData(proofData, []);
     return joinSplit.inputOwner;
   }
 
   @FieldResolver()
   async outputOwner(@Root() { proofData }: TxDao) {
-    const joinSplit = new JoinSplitProof(proofData, []);
+    const joinSplit = new ProofData(proofData, []);
     return joinSplit.outputOwner;
   }
 

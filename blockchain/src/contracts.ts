@@ -150,8 +150,8 @@ export class Contracts {
     return txs.map((tx, i) => this.decodeBlock({ ...tx, timestamp: blocks[i].timestamp }));
   }
 
-  public async getUserPendingDeposit(assetId: number, account: EthAddress): Promise<bigint> {
-    return this.rollupProcessor.getUserPendingDeposit(assetId, account.toString());
+  public async getUserPendingDeposit(assetId: number, account: EthAddress) {
+    return BigInt(await this.rollupProcessor.getUserPendingDeposit(assetId, account.toString()));
   }
 
   /**

@@ -36,13 +36,12 @@ describe('Rollup', () => {
       randomDataPath(),
       dataRootsPaths,
       [1, 2],
-      [],
     );
 
     const buf = rollup.toBuffer();
     expect(buf).toBeInstanceOf(Buffer);
 
-    const recovered = Rollup.fromBuffer(buf, []);
+    const recovered = Rollup.fromBuffer(buf);
     expect(recovered).toEqual(rollup);
   });
 });

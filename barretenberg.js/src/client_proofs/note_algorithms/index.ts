@@ -13,6 +13,10 @@ export class NoteAlgorithms {
     return Buffer.from(this.wasm.sliceMemory(0, 32));
   }
 
+  public computeNoteNullifierBigInt(encryptedNote: Buffer, index: number, accountPrivateKey: Buffer, real = true) {
+    return toBigIntBE(this.computeNoteNullifier(encryptedNote, index, accountPrivateKey, real));
+  }
+
   public encryptNote(note: Note) {
     this.wasm.transferToHeap(note.toBuffer(), 0);
     this.wasm.call('notes__encrypt_note', 0, 100);

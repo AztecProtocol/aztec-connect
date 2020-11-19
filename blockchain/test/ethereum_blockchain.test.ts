@@ -99,7 +99,7 @@ describe('ethereum_blockchain', () => {
     await erc20.approve(rollupProcessor.address, 50);
     await ethereumBlockchain.depositPendingFunds(0, BigInt(50), userAAddress);
     const pendingDeposit = await ethereumBlockchain.getUserPendingDeposit(0, userAAddress);
-    expect(pendingDeposit).to.equal(50);
+    expect(pendingDeposit).to.equal(BigInt(50));
   });
 
   it('should validate user has deposited sufficient funds', async () => {

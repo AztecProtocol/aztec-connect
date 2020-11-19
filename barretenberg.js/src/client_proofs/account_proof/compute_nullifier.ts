@@ -1,4 +1,3 @@
-import { toBigIntBE } from 'bigint-buffer';
 import { Pedersen } from '../../crypto/pedersen';
 import { GrumpkinAddress } from '../../address';
 import { numToUInt32BE } from '../../serialize';
@@ -13,8 +12,4 @@ export function computeAliasNullifier(alias: string, pedersen: Pedersen, blake2s
 export function computeRemoveSigningKeyNullifier(owner: GrumpkinAddress, signingKey: Buffer, pedersen: Pedersen) {
   const accountHashIndex = 12;
   return pedersen.compressWithHashIndex([owner.x(), signingKey], accountHashIndex);
-}
-
-export function nullifierBufferToIndex(nullifier: Buffer) {
-  return toBigIntBE(nullifier);
 }

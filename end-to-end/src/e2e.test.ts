@@ -1,15 +1,5 @@
-import {
-  AssetId,
-  createEthSdk,
-  EthereumSdk,
-  EthereumSdkUser,
-  EthAddress,
-  EthersAdapter,
-  WalletProvider,
-} from 'aztec2-sdk';
+import { AssetId, createEthSdk, EthereumSdk, EthereumSdkUser, EthAddress } from 'aztec2-sdk';
 import { EventEmitter } from 'events';
-import { JsonRpcProvider } from '@ethersproject/providers';
-import { randomBytes } from 'crypto';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
 
 jest.setTimeout(10 * 60 * 1000);
@@ -54,9 +44,7 @@ describe('end-to-end tests', () => {
     // Deposit to user 0.
     const depositValue = user0Asset.toErc20Units('1000');
     await user0Asset.mint(depositValue);
-    await user0Asset.approve(depositValue);
     expect(await user0Asset.publicBalance()).toBe(depositValue);
-    expect(await user0Asset.publicAllowance()).toBe(depositValue);
     expect(user0Asset.balance()).toBe(0n);
 
     const txHash = await user0Asset.deposit(depositValue);

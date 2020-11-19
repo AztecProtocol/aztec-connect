@@ -108,9 +108,9 @@ export function appFactory(
       viewingKeys: viewingKeys.map((v: string) => Buffer.from(v, 'hex')),
       depositSignature: depositSignature ? Buffer.from(depositSignature, 'hex') : undefined,
     };
-    const txDao = await server.receiveTx(tx);
+    const txId = await server.receiveTx(tx);
     const response: ProofServerResponse = {
-      txHash: txDao.txId.toString('hex'),
+      txHash: txId.toString('hex'),
     };
     ctx.body = response;
     ctx.status = 200;

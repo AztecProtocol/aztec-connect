@@ -1,8 +1,5 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import {
-  computeAliasNullifier,
-  computeRemoveSigningKeyNullifier,
-} from 'barretenberg/client_proofs/join_split_proof/compute_nullifier';
+import { computeAliasNullifier, computeRemoveSigningKeyNullifier } from 'barretenberg/client_proofs/account_proof';
 import { createNoteSecret, encryptNote, Note } from 'barretenberg/client_proofs/note';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { Blake2s } from 'barretenberg/crypto/blake2s';
@@ -174,7 +171,7 @@ describe('user state', () => {
 
     const innerProofData = rollupProofData.innerProofData[0];
     expect(db.settleUserTx).toHaveBeenCalledTimes(1);
-    expect(db.settleUserTx).toHaveBeenCalledWith(user.id, innerProofData.getTxId());
+    expect(db.settleUserTx).toHaveBeenCalledWith(user.id, innerProofData.txId);
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({ dataEntry: innerProofData.newNote1, value: 100n });
     expect(db.nullifyNote).toHaveBeenCalledTimes(1);

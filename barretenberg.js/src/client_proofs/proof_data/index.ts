@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 
-export class JoinSplitProof {
+export class ProofData {
   static readonly NUM_PUBLIC_INPUTS = 14;
   static readonly NUM_PUBLISHED_PUBLIC_INPUTS = 12;
 
@@ -17,9 +17,8 @@ export class JoinSplitProof {
   public readonly outputOwner: Buffer;
   public readonly noteTreeRoot: Buffer;
   public readonly accountNullifier: Buffer;
-  public dataRootsIndex = 0;
 
-  constructor(public proofData: Buffer, public viewingKeys: Buffer[], public signature?: Buffer) {
+  constructor(public proofData: Buffer, public viewingKeys?: Buffer[], public signature?: Buffer) {
     this.proofId = proofData.readUInt32BE(0 * 32 + 28);
     this.publicInput = proofData.slice(1 * 32, 1 * 32 + 32);
     this.publicOutput = proofData.slice(2 * 32, 2 * 32 + 32);
@@ -36,7 +35,7 @@ export class JoinSplitProof {
     this.accountNullifier = proofData.slice(13 * 32, 13 * 32 + 32);
 
     this.txId = createHash('sha256')
-      .update(this.proofData.slice(0, JoinSplitProof.NUM_PUBLISHED_PUBLIC_INPUTS * 32))
+      .update(this.proofData.slice(0, ProofData.NUM_PUBLISHED_PUBLIC_INPUTS * 32))
       .digest();
   }
 
@@ -46,6 +45,6 @@ export class JoinSplitProof {
    * This excludes the last two fields, the noteTreeRoot and the accountNullifier.
    */
   getDepositSigningData() {
-    return this.proofData.slice(0, JoinSplitProof.NUM_PUBLISHED_PUBLIC_INPUTS * 32);
+    return this.proofData.slice(0, ProofData.NUM_PUBLISHED_PUBLIC_INPUTS * 32);
   }
 }

@@ -8,6 +8,8 @@ export class InnerProofData {
   static NUM_PUBLIC_INPUTS = 12;
   static LENGTH = InnerProofData.NUM_PUBLIC_INPUTS * 32;
 
+  public txId: Buffer;
+
   constructor(
     public proofId: number,
     public publicInput: Buffer,
@@ -19,10 +21,8 @@ export class InnerProofData {
     public nullifier2: Buffer,
     public inputOwner: EthAddress,
     public outputOwner: EthAddress,
-  ) {}
-
-  getTxId() {
-    return createHash('sha256').update(this.toBuffer()).digest();
+  ) {
+    this.txId = createHash('sha256').update(this.toBuffer()).digest();
   }
 
   getDepositSigningData() {
@@ -91,7 +91,7 @@ export class RollupProofData {
     public recursiveProofOutput: Buffer,
     public viewingKeys: Buffer[][],
   ) {
-    const allTxIds = this.innerProofData.map(innerProof => innerProof.getTxId());
+    const allTxIds = this.innerProofData.map(innerProof => innerProof.txId);
     this.rollupHash = createHash('sha256').update(Buffer.concat(allTxIds)).digest();
   }
 

@@ -334,9 +334,7 @@ export class TerminalHandler {
     await this.printQueue.put(`private: ${userAsset.fromErc20Units(userAsset.balance())}\n`);
     const fundsPendingDeposit = await userAsset.getUserPendingDeposit();
     if (fundsPendingDeposit > 0) {
-      await this.printQueue.put(
-        `funds held, pending deposit proof: ${userAsset.fromErc20Units(fundsPendingDeposit)}\n`,
-      );
+      await this.printQueue.put(`pending deposit: ${userAsset.fromErc20Units(fundsPendingDeposit)}\n`);
     }
   }
 

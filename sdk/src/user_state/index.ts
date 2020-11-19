@@ -1,6 +1,6 @@
 import { GrumpkinAddress } from 'barretenberg/address';
 import { Block } from 'barretenberg/block_source';
-import { computeRemoveSigningKeyNullifier } from 'barretenberg/client_proofs/join_split_proof/compute_nullifier';
+import { computeRemoveSigningKeyNullifier } from 'barretenberg/client_proofs/account_proof';
 import { decryptNote } from 'barretenberg/client_proofs/note';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
@@ -134,7 +134,7 @@ export class UserState extends EventEmitter {
 
   private async handleAccountTx(proof: InnerProofData, noteStartIndex: number) {
     const { id } = this.user;
-    const txId = proof.getTxId();
+    const txId = proof.txId;
     const savedUserTx = await this.db.getUserTx(id, txId);
     if (savedUserTx && savedUserTx.settled) {
       return;
@@ -169,7 +169,7 @@ export class UserState extends EventEmitter {
     }
 
     if (savedUserTx) {
-      await this.db.settleUserTx(this.user.id, proof.getTxId());
+      await this.db.settleUserTx(this.user.id, proof.txId);
     } else {
       const userTx = this.recoverUserTx(proof);
       await this.db.addUserTx(userTx);
@@ -178,7 +178,7 @@ export class UserState extends EventEmitter {
 
   private async handleJoinSplitTx(proof: InnerProofData, noteStartIndex: number, viewingKeys: Buffer[]) {
     const { id } = this.user;
-    const txId = proof.getTxId();
+    const txId = proof.txId;
     const savedUserTx = await this.db.getUserTx(id, txId);
     if (savedUserTx && savedUserTx.settled) {
       return;
@@ -253,7 +253,7 @@ export class UserState extends EventEmitter {
     destroyedNote2?: Note,
   ): UserTx {
     const createTx = (action: UserTxAction, assetId: number, value: bigint, recipient?: Buffer) => ({
-      txHash: proof.getTxId(),
+      txHash: proof.txId,
       action,
       assetId,
       value,

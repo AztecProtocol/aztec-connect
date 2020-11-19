@@ -12,7 +12,7 @@ import { Crs } from '../../crs';
 import { WorkerPool } from '../../wasm/worker_pool';
 import { PooledPippenger } from '../../pippenger';
 import { PooledFft } from '../../fft';
-import { JoinSplitProof } from './join_split_proof';
+import { ProofData } from '../proof_data';
 import { Grumpkin } from '../../ecc/grumpkin';
 import { NoteAlgorithms } from '../note_algorithms';
 import { GrumpkinAddress, EthAddress } from '../../address';
@@ -149,7 +149,7 @@ describe('join_split_proof', () => {
       const verified = await joinSplitVerifier.verifyProof(proof);
       expect(verified).toBe(true);
 
-      const joinSplitProof = new JoinSplitProof(proof, []);
+      const joinSplitProof = new ProofData(proof, []);
 
       const expectedNullifier1 = noteAlgos.computeNoteNullifier(inputNote1Enc, 0, privateKey);
       const expectedNullifier2 = noteAlgos.computeNoteNullifier(inputNote2Enc, 1, privateKey);

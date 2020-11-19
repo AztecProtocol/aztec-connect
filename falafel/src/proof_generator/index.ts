@@ -13,7 +13,7 @@ export class ProofGenerator {
 
   constructor(private rollupSize: number) {}
 
-  public async run() {
+  public async start() {
     await this.ensureCrs();
     this.launch();
     if (!(await this.stdout.read(1))) {
@@ -22,12 +22,23 @@ export class ProofGenerator {
     console.log('Proof generator initialized.');
   }
 
-  public cancel() {
+  public stop() {
     if (this.proc) {
       this.proc.kill('SIGINT');
       this.proc = undefined;
     }
   }
+
+  /**
+   * TODO: Should signal to the rollup_cli to stop what it's doing and await new work.
+   * This will require the rollup_cli to fork child processes, and for the parent process to terminate the child.
+   */
+  public interrupt() {}
+
+  /**
+   * TODO: Clear the interrupt flag allowing for continued proof creation.
+   */
+  public clearInterrupt() {}
 
   public async createProof(rollup: Rollup) {
     if (this.busy) {

@@ -1,12 +1,12 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
+import { computeRemoveSigningKeyNullifier } from 'barretenberg/client_proofs/account_proof';
 import { EscapeHatchProver, EscapeHatchTx } from 'barretenberg/client_proofs/escape_hatch_proof';
-import { computeRemoveSigningKeyNullifier, nullifierBufferToIndex } from 'barretenberg/client_proofs/join_split_proof';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { WorldState } from 'barretenberg/world_state';
-import { toBufferBE } from 'bigint-buffer';
+import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import createDebug from 'debug';
 import { utils } from 'ethers';
 import { HashPathSource } from 'sriracha/hash_path_source';
@@ -80,21 +80,17 @@ export class EscapeHatchProofCreator {
     const [input1, input2] = joinSplitTx.inputNotes;
     const encryptedInput1 = this.noteAlgos.encryptNote(input1);
     const encryptedInput2 = this.noteAlgos.encryptNote(input2);
-    const nullifier1 = nullifierBufferToIndex(
-      this.noteAlgos.computeNoteNullifier(
-        encryptedInput1,
-        joinSplitTx.inputNoteIndices[0],
-        input1.secret,
-        joinSplitTx.numInputNotes > 0,
-      ),
+    const nullifier1 = this.noteAlgos.computeNoteNullifierBigInt(
+      encryptedInput1,
+      joinSplitTx.inputNoteIndices[0],
+      input1.secret,
+      joinSplitTx.numInputNotes > 0,
     );
-    const nullifier2 = nullifierBufferToIndex(
-      this.noteAlgos.computeNoteNullifier(
-        encryptedInput2,
-        joinSplitTx.inputNoteIndices[1],
-        input2.secret,
-        joinSplitTx.numInputNotes > 1,
-      ),
+    const nullifier2 = this.noteAlgos.computeNoteNullifierBigInt(
+      encryptedInput2,
+      joinSplitTx.inputNoteIndices[1],
+      input2.secret,
+      joinSplitTx.numInputNotes > 1,
     );
     const nullifierValue = toBufferBE(BigInt(1), 64);
     const nullResponse = await this.hashPathSource.getHashPaths(1, [
@@ -104,7 +100,7 @@ export class EscapeHatchProofCreator {
 
     const rootResponse = await this.hashPathSource.getHashPaths(2, [{ index: rootTreeState.size, value: newDataRoot }]);
 
-    const accountNullifier = nullifierBufferToIndex(
+    const accountNullifier = toBigIntBE(
       computeRemoveSigningKeyNullifier(
         joinSplitTx.inputNotes[0].ownerPubKey,
         joinSplitTx.signingPubKey.x(),
@@ -138,7 +134,7 @@ export class EscapeHatchProofCreator {
     debug(`proof size: ${proofData.length}`);
 
     const rollupProofData = RollupProofData.fromBuffer(proofData);
-    const txId = rollupProofData.innerProofData[0].getTxId();
+    const txId = rollupProofData.innerProofData[0].txId;
 
     const depositSignature = publicInput
       ? await this.ethSign(rollupProofData.innerProofData[0].getDepositSigningData(), ethSigner)

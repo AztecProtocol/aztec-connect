@@ -1,5 +1,5 @@
 import { randomBytes } from 'crypto';
-import { JoinSplitProof } from '../client_proofs/join_split_proof';
+import { ProofData } from '../client_proofs/proof_data';
 import { RollupProofData, InnerProofData, VIEWING_KEY_SIZE } from './';
 import { EthAddress } from '../address';
 
@@ -89,8 +89,8 @@ describe('RollupProofData', () => {
     );
 
     const joinSplitProofData = Buffer.concat([innerProofData.toBuffer(), randomBytes(32), randomBytes(32)]);
-    const joinSplitProof = new JoinSplitProof(joinSplitProofData, []);
+    const joinSplitProof = new ProofData(joinSplitProofData, []);
 
-    expect(innerProofData.getTxId()).toEqual(joinSplitProof.txId);
+    expect(innerProofData.txId).toEqual(joinSplitProof.txId);
   });
 });
