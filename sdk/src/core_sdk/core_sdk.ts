@@ -3,7 +3,6 @@ import { Block } from 'barretenberg/block_source';
 import { AccountProver } from 'barretenberg/client_proofs/account_proof';
 import { EscapeHatchProver } from 'barretenberg/client_proofs/escape_hatch_proof';
 import { JoinSplitProver } from 'barretenberg/client_proofs/join_split_proof';
-import { ProofData } from 'barretenberg/client_proofs/proof_data';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { PooledProverFactory } from 'barretenberg/client_proofs/prover';
 import { Crs } from 'barretenberg/crs';
@@ -494,10 +493,11 @@ export class CoreSdk extends EventEmitter {
 
     this.escapeHatchMode ? await this.validateEscapeOpen() : undefined;
 
-    await this.rollupProvider.sendProof(proofOutput);
+    const txHash = await this.rollupProvider.sendProof(proofOutput);
+
     const userTx: UserTx = {
       action,
-      txHash: proofOutput.txId,
+      txHash,
       userId,
       assetId,
       value,
@@ -508,7 +508,8 @@ export class CoreSdk extends EventEmitter {
     await this.db.addUserTx(userTx);
     this.emit(CoreSdkEvent.UPDATED_USER_STATE, userTx.userId);
     this.emit(SdkEvent.UPDATED_USER_STATE, userTx.userId);
-    return proofOutput.txId;
+
+    return txHash;
   }
 
   public async validateEscapeOpen() {
@@ -551,9 +552,9 @@ export class CoreSdk extends EventEmitter {
     value: bigint,
     userId: UserId,
     recipient: Address | string,
-    fn: () => Promise<Buffer>,
+    fn: () => Promise<TxHash>,
     validation = async () => {},
-  ): Promise<TxHash> {
+  ) {
     this.actionState = {
       action,
       value,
@@ -619,7 +620,7 @@ export class CoreSdk extends EventEmitter {
     newAccountPublicKey?: GrumpkinAddress,
     newSigningPublicKey1?: GrumpkinAddress,
     newSigningPublicKey2?: GrumpkinAddress,
-  ): Promise<TxHash> {
+  ) {
     if (this.escapeHatchMode) {
       throw new Error('Account modifications not supported in escape hatch mode.');
     }
@@ -648,12 +649,9 @@ export class CoreSdk extends EventEmitter {
         accountIndex,
       );
 
-      await this.rollupProvider.sendProof({ proofData: rawProofData, viewingKeys: [] });
+      const txHash = await this.rollupProvider.sendProof({ proofData: rawProofData, viewingKeys: [] });
 
       // It *looks* like a join split...
-      const proofData = new ProofData(rawProofData, []);
-      const txHash = proofData.txId;
-
       const userTx: UserTx = {
         action: 'ACCOUNT',
         txHash,
@@ -695,7 +693,7 @@ export class CoreSdk extends EventEmitter {
     const started = new Date().getTime();
     while (true) {
       if (timeout && new Date().getTime() - started > timeout * 1000) {
-        throw new Error(`Timeout awaiting tx settlement: ${txHash.toString('hex')}`);
+        throw new Error(`Timeout awaiting tx settlement: ${txHash}`);
       }
       const txs = await this.db.getUserTxsByTxHash(txHash);
       if (txs.every(tx => tx.settled === true)) {
@@ -792,7 +790,7 @@ export class CoreSdk extends EventEmitter {
     return await this.txsState.getRollup(rollupId);
   }
 
-  public async getTx(txHash: Buffer) {
+  public async getTx(txHash: TxHash) {
     return await this.txsState.getTx(txHash);
   }
 

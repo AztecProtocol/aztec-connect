@@ -26,7 +26,7 @@ async function demoDeposit(aztecSdk, accountPublicKey, signer) {
   console.info('Creating deposit proof...');
   const userData = await aztecSdk.getUserData(accountPublicKey);
   const txHash = await aztecSdk.deposit(assetId, accountPublicKey, value, signer, ethSigner);
-  console.info('Proof accepted by server. Tx hash:', txHash.toString('hex'));
+  console.info(`Proof accepted by server. Tx hash: ${txHash}`);
 
   console.info('Waiting for tx to settle...');
   await aztecSdk.awaitSettlement(txHash);
@@ -64,7 +64,7 @@ async function demoDeposit(aztecSdk, accountPublicKey, signer) {
 
   console.info('Creating deposit proof...');
   const txHash = await asset.deposit(value, signer, ethSigner);
-  console.info('Proof accepted by server. Tx hash:', txHash.toString('hex'));
+  console.info(`Proof accepted by server. Tx hash: ${txHash}`);
 
   console.info('Waiting for tx to settle...');
   await aztecSdk.awaitSettlement(txHash);

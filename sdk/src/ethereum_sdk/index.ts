@@ -182,7 +182,7 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.getActionState(userId);
   }
 
-  public async approve(assetId: AssetId, value: bigint, from: EthAddress): Promise<TxHash> {
+  public async approve(assetId: AssetId, value: bigint, from: EthAddress) {
     const publicKey = this.getPublicKeyByEthAddress(from);
     if (!publicKey) {
       throw new Error(`User not found: ${from}`);
@@ -191,7 +191,7 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.approve(assetId, publicKey, value, from);
   }
 
-  public async mint(assetId: AssetId, value: bigint, account: EthAddress): Promise<TxHash> {
+  public async mint(assetId: AssetId, value: bigint, account: EthAddress) {
     const publicKey = this.getPublicKeyByEthAddress(account);
     if (!publicKey) {
       throw new Error(`User not found: ${account}`);
@@ -207,7 +207,7 @@ export class EthereumSdk extends EventEmitter {
     to: GrumpkinAddress,
     signer?: Signer,
     toNonce?: number,
-  ): Promise<TxHash> {
+  ) {
     const publicKey = this.getPublicKeyByEthAddress(from);
     if (!publicKey) {
       throw new Error(`User not found: ${from}`);
@@ -277,7 +277,7 @@ export class EthereumSdk extends EventEmitter {
     to: EthAddress,
     signer?: Signer,
     fromNonce?: number,
-  ): Promise<TxHash> {
+  ) {
     const publicKey = this.getPublicKeyByEthAddress(from);
     if (!publicKey) {
       throw new Error(`User not found: ${from}`);
@@ -295,7 +295,7 @@ export class EthereumSdk extends EventEmitter {
     signer?: Signer,
     fromNonce?: number,
     toNonce?: number,
-  ): Promise<TxHash> {
+  ) {
     const publicKey = this.getPublicKeyByEthAddress(from);
     if (!publicKey) {
       throw new Error(`User not found: ${from}`);
@@ -324,7 +324,7 @@ export class EthereumSdk extends EventEmitter {
     ethAddress: EthAddress,
     newSigningPublicKey: GrumpkinAddress,
     recoveryPublicKey?: GrumpkinAddress,
-  ): Promise<TxHash> {
+  ) {
     const publicKey = this.getPublicKeyByEthAddress(ethAddress);
     if (!publicKey) {
       throw new Error(`User not found: ${ethAddress}`);
@@ -333,7 +333,7 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.createAccount(alias, publicKey, newSigningPublicKey, recoveryPublicKey);
   }
 
-  async recoverAccount(alias: string, recoveryPayload: RecoveryPayload): Promise<TxHash> {
+  async recoverAccount(alias: string, recoveryPayload: RecoveryPayload) {
     return this.walletSdk.recoverAccount(alias, recoveryPayload);
   }
 
@@ -343,7 +343,7 @@ export class EthereumSdk extends EventEmitter {
     newSigningPublicKey: GrumpkinAddress,
     recoveryPublicKey?: GrumpkinAddress,
     newEthAddress?: EthAddress,
-  ): Promise<TxHash> {
+  ) {
     let newAccountPublicKey;
     if (newEthAddress) {
       const ethSigner = new Web3Signer(this.etherumProvider, newEthAddress);
@@ -360,7 +360,7 @@ export class EthereumSdk extends EventEmitter {
     signingPublicKey1: GrumpkinAddress,
     signingPublicKey2?: GrumpkinAddress,
     nonce?: number,
-  ): Promise<TxHash> {
+  ) {
     return this.walletSdk.addSigningKeys(alias, signer, signingPublicKey1, signingPublicKey2, nonce);
   }
 
@@ -448,7 +448,7 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.getRollup(rollupId);
   }
 
-  public async getTx(txHash: Buffer) {
+  public async getTx(txHash: TxHash) {
     return this.walletSdk.getTx(txHash);
   }
 

@@ -1,4 +1,5 @@
 import { EthAddress } from 'barretenberg/address';
+import { TxHash } from 'barretenberg/rollup_provider';
 import { UserId } from './user';
 
 export enum SdkEvent {
@@ -47,7 +48,7 @@ export interface ActionState {
   sender: UserId;
   recipient: string;
   created: Date;
-  txHash?: Buffer;
+  txHash?: TxHash;
   error?: Error;
 }
 

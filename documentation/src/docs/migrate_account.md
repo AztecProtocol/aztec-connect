@@ -25,7 +25,7 @@ async function demoRecoveryData(aztecSdk) {
     signer1.getPublicKey(),
     signer2.getPublicKey(),
   );
-  console.info('Proof accepted by server. Tx hash:', txHash.toString('hex'));
+  console.info(`Proof accepted by server. Tx hash: ${txHash}`);
 
   console.info('Waiting for tx to settle...');
   await aztecSdk.awaitSettlement(txHash);
@@ -42,7 +42,7 @@ async function demoRecoveryData(aztecSdk) {
     signer2,
     signer2.getPublicKey(),
   );
-  console.info('Proof accepted by server. Tx hash:', migrateTxHash.toString('hex'));
+  console.info(`Proof accepted by server. Tx hash: ${migrateTxHash}`);
 
   console.info('Waiting for tx to settle...');
   await aztecSdk.awaitSettlement(migrateTxHash);

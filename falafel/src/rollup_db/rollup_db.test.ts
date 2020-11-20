@@ -1,6 +1,7 @@
 import { ProofData } from 'barretenberg/client_proofs/proof_data';
 import { HashPath } from 'barretenberg/merkle_tree';
 import { VIEWING_KEY_SIZE } from 'barretenberg/rollup_proof';
+import { TxHash } from 'barretenberg/rollup_provider';
 import { randomBytes } from 'crypto';
 import { Connection, createConnection } from 'typeorm';
 import { RollupDao } from '../entity/rollup';
@@ -226,7 +227,7 @@ describe('Rollup DB', () => {
     await rollupDb.addTx(tx);
 
     const rollupId = 3;
-    const ethTxHash = randomBytes(32);
+    const ethTxHash = TxHash.random();
     await rollupDb.addRollup(randomRollup(rollupId, [tx]));
 
     const rollupDao = await rollupDb.getRollupFromId(rollupId);
@@ -237,7 +238,7 @@ describe('Rollup DB', () => {
     const updatedRollupDao = await rollupDb.getRollupFromId(rollupId);
     expect(updatedRollupDao).toEqual({
       ...rollupDao,
-      ethTxHash,
+      ethTxHash: ethTxHash.toBuffer(),
       status: 'PUBLISHED',
     });
   });
@@ -247,7 +248,7 @@ describe('Rollup DB', () => {
     await rollupDb.addTx(tx);
 
     const rollupId = 3;
-    const ethTxHash = randomBytes(32);
+    const ethTxHash = TxHash.random();
     await rollupDb.addRollup(randomRollup(rollupId, [tx]));
     await rollupDb.confirmSent(rollupId, ethTxHash);
 
@@ -512,7 +513,7 @@ describe('Rollup DB', () => {
     await Promise.all(rolledUpTxs.map(async (tx, i) => rollupDb.addRollup(randomRollup(i, [tx]))));
 
     await rollupDb.confirmRollup(0);
-    await rollupDb.confirmSent(1, randomBytes(32));
+    await rollupDb.confirmSent(1, TxHash.random());
     await rollupDb.confirmRollupCreated(2);
 
     const unsettledTxs = await rollupDb.getUnsettledTxs();

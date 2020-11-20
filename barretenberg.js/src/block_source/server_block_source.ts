@@ -1,6 +1,7 @@
 import { BlockSource, Block } from '.';
 import { EventEmitter } from 'events';
 import { fetch } from '../iso_fetch';
+import { TxHash } from '../rollup_provider';
 // import createDebug from 'debug';
 
 export interface BlockServerResponse {
@@ -21,7 +22,7 @@ export interface GetBlocksServerResponse {
 
 const toBlock = (block: BlockServerResponse): Block => ({
   ...block,
-  txHash: Buffer.from(block.txHash, 'hex'),
+  txHash: TxHash.fromString(block.txHash),
   rollupProofData: Buffer.from(block.rollupProofData, 'hex'),
   viewingKeysData: Buffer.from(block.viewingKeysData, 'hex'),
   created: new Date(block.created),

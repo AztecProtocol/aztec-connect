@@ -15,7 +15,7 @@ export class Signature {
     if (!Signature.isSignature(signature)) {
       throw new Error(`Invalid signature string: ${signature}`);
     }
-    return new Signature(Buffer.from(signature.replace(/^0x/, ''), 'hex'));
+    return new Signature(Buffer.from(signature.replace(/^0x/i, ''), 'hex'));
   }
 
   public static randomSignature() {

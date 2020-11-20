@@ -5,7 +5,7 @@ import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { MemoryFifo } from 'barretenberg/fifo';
 import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
-import { RollupProvider } from 'barretenberg/rollup_provider';
+import { RollupProvider, TxHash } from 'barretenberg/rollup_provider';
 import { toBigIntBE } from 'bigint-buffer';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
@@ -128,8 +128,8 @@ export class UserState extends EventEmitter {
   }
 
   private async handleAccountTx(proof: InnerProofData, noteStartIndex: number) {
-    const txId = proof.txId;
-    const savedUserTx = await this.db.getUserTx(this.user.id, txId);
+    const txHash = new TxHash(proof.txId);
+    const savedUserTx = await this.db.getUserTx(this.user.id, txHash);
     if (savedUserTx && savedUserTx.settled) {
       return;
     }
@@ -140,7 +140,7 @@ export class UserState extends EventEmitter {
     if (!publicKey.equals(this.user.publicKey) || accountId.nonce !== this.user.id.nonce) {
       if (savedUserTx) {
         // Create or migrate account.
-        await this.db.settleUserTx(this.user.id, proof.txId);
+        await this.db.settleUserTx(this.user.id, txHash);
       }
       return;
     }
@@ -168,7 +168,7 @@ export class UserState extends EventEmitter {
     }
 
     if (savedUserTx) {
-      await this.db.settleUserTx(this.user.id, proof.txId);
+      await this.db.settleUserTx(this.user.id, txHash);
     } else {
       const userTx = this.recoverUserTx(proof);
       await this.db.addUserTx(userTx);
@@ -176,8 +176,8 @@ export class UserState extends EventEmitter {
   }
 
   private async handleJoinSplitTx(proof: InnerProofData, noteStartIndex: number, viewingKeys: Buffer[]) {
-    const txId = proof.txId;
-    const savedUserTx = await this.db.getUserTx(this.user.id, txId);
+    const txHash = new TxHash(proof.txId);
+    const savedUserTx = await this.db.getUserTx(this.user.id, txHash);
     if (savedUserTx && savedUserTx.settled) {
       return;
     }
@@ -194,7 +194,7 @@ export class UserState extends EventEmitter {
     const destroyedNote2 = await this.nullifyNote(nullifier2);
 
     if (savedUserTx) {
-      await this.db.settleUserTx(this.user.id, txId);
+      await this.db.settleUserTx(this.user.id, txHash);
     } else {
       const userTx = this.recoverUserTx(proof, newNote, changeNote, destroyedNote1, destroyedNote2);
       await this.db.addUserTx(userTx);
@@ -255,7 +255,7 @@ export class UserState extends EventEmitter {
     destroyedNote2?: Note,
   ): UserTx {
     const createTx = (action: UserTxAction, assetId: number, value: bigint, recipient?: Buffer) => ({
-      txHash: proof.txId,
+      txHash: new TxHash(proof.txId),
       userId: this.user.id,
       action,
       assetId,

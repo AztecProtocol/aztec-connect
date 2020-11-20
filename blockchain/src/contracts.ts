@@ -1,6 +1,7 @@
 import { TransactionResponse } from '@ethersproject/abstract-provider';
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from 'barretenberg/address';
+import { TxHash } from 'barretenberg/rollup_provider';
 import { Contract, ethers } from 'ethers';
 import { abi as RollupABI } from './artifacts/RollupProcessor.json';
 import { abi as ERC20ABI } from './artifacts/ERC20Mintable.json';
@@ -105,7 +106,7 @@ export class Contracts {
       Buffer.concat(viewingKeys),
       { gasLimit },
     );
-    return Buffer.from(tx.hash.slice(2), 'hex');
+    return TxHash.fromString(tx.hash);
   }
 
   public async depositPendingFunds(
@@ -132,7 +133,7 @@ export class Contracts {
       : await rollupProcessor.depositPendingFunds(assetId, amount, depositorAddress.toString(), {
           // value: assetId === 0 ? amount : undefined,
         });
-    return Buffer.from(tx.hash.slice(2), 'hex');
+    return TxHash.fromString(tx.hash);
   }
 
   public async getRollupBlocksFrom(rollupId: number, minConfirmations: number) {
@@ -196,7 +197,7 @@ export class Contracts {
 
     return {
       created: new Date(tx.timestamp! * 1000),
-      txHash: Buffer.from(tx.hash.slice(2), 'hex'),
+      txHash: TxHash.fromString(tx.hash),
       rollupProofData,
       viewingKeysData,
       rollupId: RollupProofData.getRollupIdFromBuffer(rollupProofData),
@@ -204,9 +205,8 @@ export class Contracts {
     };
   }
 
-  public async getTransactionReceipt(txHash: Buffer) {
-    const txHashStr = `0x${txHash.toString('hex')}`;
-    return this.provider.getTransactionReceipt(txHashStr);
+  public async getTransactionReceipt(txHash: TxHash) {
+    return this.provider.getTransactionReceipt(txHash.toString());
   }
 
   public async getNetwork() {

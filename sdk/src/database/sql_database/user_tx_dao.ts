@@ -1,13 +1,14 @@
+import { TxHash } from 'barretenberg/rollup_provider';
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 import { UserId } from '../../user';
 import { UserTx, UserTxAction } from '../../user_tx';
-import { bigintTransformer, userIdTransformer } from './transformer';
+import { bigintTransformer, txHashTransformer, userIdTransformer } from './transformer';
 
 @Entity({ name: 'userTx' })
 @Index(['txHash', 'userId'], { unique: true })
 export class UserTxDao implements UserTx {
-  @PrimaryColumn()
-  public txHash!: Buffer;
+  @PrimaryColumn('blob', { transformer: [txHashTransformer] })
+  public txHash!: TxHash;
 
   @PrimaryColumn('blob', { transformer: [userIdTransformer] })
   public userId!: UserId;

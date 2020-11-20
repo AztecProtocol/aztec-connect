@@ -1,5 +1,6 @@
 import { EthAddress } from '../address';
 import { BlockSource } from '../block_source';
+import { TxHash } from './tx_hash';
 
 export interface Proof {
   proofData: Buffer;
@@ -21,8 +22,6 @@ export interface RollupProviderStatus {
   escapeOpen: boolean;
   numEscapeBlocksRemaining: number;
 }
-
-export type TxHash = Buffer;
 
 export interface RollupProvider extends BlockSource {
   sendProof(proof: Proof, signingAddress?: EthAddress): Promise<TxHash>;

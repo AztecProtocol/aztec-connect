@@ -1,4 +1,5 @@
 import { EthAddress } from 'barretenberg/address';
+import { TxHash } from 'barretenberg/rollup_provider';
 import { Block } from './blockchain';
 import { Contracts } from './contracts';
 import { EthereumBlockchain, EthereumBlockchainConfig } from './ethereum_blockchain';
@@ -12,7 +13,7 @@ describe('ethereum_blockchain', () => {
   let contracts: Mockify<Contracts>;
 
   const generateBlock = (rollupId: number) => ({
-    txHash: Buffer.alloc(32, 0),
+    txHash: TxHash.random(),
     created: new Date(),
     rollupId,
     rollupSize: 2,
@@ -124,7 +125,7 @@ describe('ethereum_blockchain', () => {
 
     await blockchain.start();
 
-    await blockchain.getTransactionReceipt(Buffer.alloc(32));
+    await blockchain.getTransactionReceipt(TxHash.random());
 
     expect(contracts.getTransactionReceipt).toHaveBeenCalledTimes(3);
   });

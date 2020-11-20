@@ -161,12 +161,7 @@ export class WalletSdk extends EventEmitter {
     return this.core.getActionState(userId);
   }
 
-  public async approve(
-    assetId: AssetId,
-    publicKey: GrumpkinAddress,
-    value: bigint,
-    account: EthAddress,
-  ): Promise<TxHash> {
+  public async approve(assetId: AssetId, publicKey: GrumpkinAddress, value: bigint, account: EthAddress) {
     const action = () => this.getTokenContract(assetId).approve(value, account);
     const { rollupContractAddress } = this.core.getLocalStatus();
     const userId = this.getUserId(publicKey);
@@ -175,7 +170,7 @@ export class WalletSdk extends EventEmitter {
     return txHash;
   }
 
-  public async mint(assetId: AssetId, publicKey: GrumpkinAddress, value: bigint, account: EthAddress): Promise<TxHash> {
+  public async mint(assetId: AssetId, publicKey: GrumpkinAddress, value: bigint, account: EthAddress) {
     const action = () => this.getTokenContract(assetId).mint(value, account);
     const userId = this.getUserId(publicKey);
     const txHash = await this.core.performAction(Action.MINT, value, userId, account, action);
@@ -192,7 +187,7 @@ export class WalletSdk extends EventEmitter {
     permitArgs?: PermitArgs,
     to?: GrumpkinAddress | string,
     toNonce?: number,
-  ): Promise<TxHash> {
+  ) {
     const userId = this.getUserId(publicKey);
     const recipient = !to ? publicKey : typeof to === 'string' ? await this.getAddressFromAlias(to) : to;
 
@@ -232,7 +227,7 @@ export class WalletSdk extends EventEmitter {
     signer: Signer,
     to: EthAddress,
     fromNonce?: number,
-  ): Promise<TxHash> {
+  ) {
     const userId = this.getUserId(publicKey, fromNonce);
     const action = () =>
       this.core.createProof(assetId, userId, 'WITHDRAW', value, signer, undefined, undefined, undefined, to);
@@ -250,7 +245,7 @@ export class WalletSdk extends EventEmitter {
     to: GrumpkinAddress | string,
     fromNonce?: number,
     toNonce?: number,
-  ): Promise<TxHash> {
+  ) {
     const userId = this.getUserId(publicKey, fromNonce);
     const recipient = typeof to === 'string' ? await this.getAddressFromAlias(to) : to;
     const action = () =>
@@ -332,7 +327,7 @@ export class WalletSdk extends EventEmitter {
     publicKey: GrumpkinAddress,
     newSigningPublicKey: GrumpkinAddress,
     recoveryPublicKey?: GrumpkinAddress,
-  ): Promise<TxHash> {
+  ) {
     const user = this.getUserData(publicKey);
     if (!user) {
       throw new Error(`User not found: ${publicKey}`);
@@ -359,7 +354,7 @@ export class WalletSdk extends EventEmitter {
     );
   }
 
-  public async recoverAccount(alias: string, recoveryPayload: RecoveryPayload): Promise<TxHash> {
+  public async recoverAccount(alias: string, recoveryPayload: RecoveryPayload) {
     const { trustedThirdPartyPublicKey, recoveryPublicKey, recoveryData } = recoveryPayload;
     const { nonce, signature } = recoveryData;
     const recoverySigner = new RecoverSignatureSigner(recoveryPublicKey, signature);
@@ -373,7 +368,7 @@ export class WalletSdk extends EventEmitter {
     newSigningPublicKey: GrumpkinAddress,
     recoveryPublicKey?: GrumpkinAddress,
     newAccountPublicKey?: GrumpkinAddress,
-  ): Promise<TxHash> {
+  ) {
     const publicKey = await this.getAddressFromAlias(alias);
     if (!publicKey) {
       throw new Error('Alias not registered.');
@@ -403,7 +398,7 @@ export class WalletSdk extends EventEmitter {
     signingPublicKey1: GrumpkinAddress,
     signingPublicKey2?: GrumpkinAddress,
     nonce?: number,
-  ): Promise<TxHash> {
+  ) {
     const publicKey = await this.getAddressFromAlias(alias, nonce);
     if (!publicKey) {
       throw new Error('Alias not registered.');
@@ -491,7 +486,7 @@ export class WalletSdk extends EventEmitter {
     return this.core.getRollup(rollupId);
   }
 
-  public async getTx(txHash: Buffer) {
+  public async getTx(txHash: TxHash) {
     return this.core.getTx(txHash);
   }
 

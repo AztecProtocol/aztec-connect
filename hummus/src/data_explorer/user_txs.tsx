@@ -91,7 +91,7 @@ export const UserTxs = ({ account, app }: UserTxsProps) => {
     <ThemeContext.Consumer>
       {({ theme, link, colorLight }) =>
         txs.map(({ txHash, action, value, recipient, settled, created }, i) => {
-          const txHashStr = txHash.toString('hex');
+          const txHashStr = txHash.toString();
           return (
             <Block
               key={txHashStr}
@@ -105,7 +105,7 @@ export const UserTxs = ({ account, app }: UserTxsProps) => {
                 iconBackground={actionIconBackgroundMapping[action]}
                 iconShape="square"
                 id={
-                  <TextButton text={`0x${txHashStr.slice(0, 10)}`} href={`/tx/${txHashStr}`} color={link} Link={Link} />
+                  <TextButton text={`${txHashStr.slice(0, 12)}`} href={`/tx/${txHashStr}`} color={link} Link={Link} />
                 }
                 status={settled ? 'SETTLED' : 'PENDING'}
                 created={created}

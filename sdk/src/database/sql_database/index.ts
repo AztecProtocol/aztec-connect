@@ -1,5 +1,6 @@
 import { GrumpkinAddress } from 'barretenberg/address';
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
+import { TxHash } from 'barretenberg/rollup_provider';
 import { Connection, ConnectionOptions, MoreThan, MoreThanOrEqual, Repository } from 'typeorm';
 import { Note } from '../../note';
 import { AccountId, UserData, UserId } from '../../user';
@@ -100,7 +101,7 @@ export class SQLDatabase implements Database {
     await this.userDataRep.update({ syncedToRollup: MoreThan(-1) }, { syncedToRollup: -1 });
   }
 
-  async getUserTx(userId: UserId, txHash: Buffer) {
+  async getUserTx(userId: UserId, txHash: TxHash) {
     return this.userTxRep.findOne({ txHash, userId });
   }
 
@@ -112,11 +113,11 @@ export class SQLDatabase implements Database {
     return this.userTxRep.find({ where: { userId }, order: { created: 'DESC' } });
   }
 
-  async getUserTxsByTxHash(txHash: Buffer) {
+  async getUserTxsByTxHash(txHash: TxHash) {
     return this.userTxRep.find({ where: { txHash } });
   }
 
-  async settleUserTx(userId: UserId, txHash: Buffer) {
+  async settleUserTx(userId: UserId, txHash: TxHash) {
     await this.userTxRep.update({ userId, txHash }, { settled: true });
   }
 

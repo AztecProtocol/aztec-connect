@@ -25,7 +25,7 @@ async function demoAddSigningKey(aztecSdk) {
     signer1.getPublicKey(),
     signer2.getPublicKey(),
   );
-  console.info('Proof accepted by server. Tx hash:', txHash.toString('hex'));
+  console.info(`Proof accepted by server. Tx hash: ${txHash}`);
 
   console.info('Waiting for tx to settle...');
   await aztecSdk.awaitSettlement(txHash);
@@ -40,7 +40,7 @@ async function demoAddSigningKey(aztecSdk) {
   const newSigningKey2 = GrumpkinAddress.randomAddress();
   console.info('Creating proof...');
   const addKeysTxHash = await aztecSdk.addSigningKeys(alias, signer1, newSigningKey1, newSigningKey2);
-  console.info('Proof accepted by server. Tx hash:', addKeysTxHash.toString('hex'));
+  console.info(`Proof accepted by server. Tx hash: ${addKeysTxHash}`);
 
   console.info('Waiting for tx to settle...');
   await aztecSdk.awaitSettlement(addKeysTxHash);

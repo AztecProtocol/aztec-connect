@@ -1,6 +1,6 @@
 import { EthAddress } from 'barretenberg/address';
 import { InnerProofData, RollupProofData, VIEWING_KEY_SIZE } from 'barretenberg/rollup_proof';
-import { Proof } from 'barretenberg/rollup_provider';
+import { Proof, TxHash } from 'barretenberg/rollup_provider';
 import { numToUInt32BE } from 'barretenberg/serialize';
 import { Block, Blockchain, PermitArgs, Receipt } from 'blockchain';
 import { randomBytes } from 'crypto';
@@ -145,7 +145,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
   }
 
   private async addBlock(rollup: RollupProofData, proofData: Buffer, viewingKeysData: Buffer) {
-    const txHash = randomBytes(32);
+    const txHash = TxHash.random();
     const block: Block = {
       txHash,
       rollupId: rollup.rollupId,
@@ -169,13 +169,13 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
     depositorAddress: EthAddress,
     permitArgs?: PermitArgs,
   ) {
-    return randomBytes(32);
+    return TxHash.random();
   }
 
-  public async getTransactionReceipt(txHash: Buffer) {
-    const block = await this.blockRep.findOne({ txHash });
+  public async getTransactionReceipt(txHash: TxHash) {
+    const block = await this.blockRep.findOne({ txHash: txHash.toBuffer() });
     if (!block) {
-      throw new Error(`Block does not exist: ${txHash.toString('hex')}`);
+      throw new Error(`Block does not exist: ${txHash}`);
     }
 
     return {

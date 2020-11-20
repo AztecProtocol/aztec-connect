@@ -3,6 +3,7 @@ import { fetch } from '../iso_fetch';
 import { ServerBlockSource } from '../block_source';
 import { Proof } from '../rollup_provider';
 import { getProviderStatus } from './get_provider_status';
+import { TxHash } from './tx_hash';
 
 export class ServerRollupProvider extends ServerBlockSource implements RollupProvider {
   constructor(baseUrl: URL) {
@@ -29,7 +30,7 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
       throw new Error(`Bad response code ${response.status}.`);
     }
     const body = await response.json();
-    return Buffer.from(body.txHash, 'hex');
+    return TxHash.fromString(body.txHash);
   }
 
   async getStatus() {

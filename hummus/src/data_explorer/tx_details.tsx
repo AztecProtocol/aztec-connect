@@ -1,13 +1,12 @@
-import { Tx } from 'aztec2-sdk';
-import { WebSdk } from 'aztec2-sdk';
+import { Tx, TxHash, WebSdk } from 'aztec2-sdk';
 import { toBigIntBE } from 'bigint-buffer';
 import moment from 'moment';
-import React, { useEffect,useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Form, FormSection } from '../components';
-import { ContentLink,DetailRow } from './detail_row';
+import { ContentLink, DetailRow } from './detail_row';
 
 interface TxDetailsProps {
-  txHash: Buffer;
+  txHash: TxHash;
   app: WebSdk;
 }
 
@@ -57,7 +56,7 @@ export const TxDetails = ({ txHash, app }: TxDetailsProps) => {
     return (
       <Form>
         <FormSection title={loading ? 'Tx Details' : 'Tx Not Found'}>
-          <DetailRow title="Id" content={`0x${txHash.toString('hex')}`} />
+          <DetailRow title="Id" content={`${txHash}`} />
         </FormSection>
       </Form>
     );
@@ -66,7 +65,7 @@ export const TxDetails = ({ txHash, app }: TxDetailsProps) => {
   return (
     <Form>
       <FormSection title="Tx Details">
-        <DetailRow title="Tx Hash" content={`0x${tx.txHash.toString('hex')}`} />
+        <DetailRow title="Tx Hash" content={`${tx.txHash}`} />
         <DetailRow title="Status" content={tx.rollup ? tx.rollup.status : 'QUEUED'} />
         <DetailRow
           title="Rollup"
