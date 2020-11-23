@@ -65,8 +65,8 @@ export class TxReceiver {
     const txDao = new TxDao({
       txId: proof.txId,
       proofData,
-      viewingKey1: viewingKeys[0],
-      viewingKey2: viewingKeys[1],
+      viewingKey1: viewingKeys[0] || Buffer.alloc(0),
+      viewingKey2: viewingKeys[1] || Buffer.alloc(0),
       signature: depositSignature,
       nullifier1: proof.nullifier1,
       nullifier2: proof.nullifier2,
