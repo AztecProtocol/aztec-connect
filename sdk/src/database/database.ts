@@ -1,12 +1,20 @@
 import { GrumpkinAddress } from 'barretenberg/address';
+import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { Note } from '../note';
-import { UserData } from '../user';
+import { AccountId, UserData, UserId } from '../user';
 import { UserTx } from '../user_tx';
 
 export interface SigningKey {
-  owner: Buffer;
+  accountId: AccountId;
+  address: GrumpkinAddress;
   treeIndex: number;
   key: Buffer;
+}
+
+export interface Alias {
+  aliasHash: AliasHash;
+  address: GrumpkinAddress;
+  latestNonce: number;
 }
 
 export interface Database {
@@ -15,30 +23,36 @@ export interface Database {
 
   addNote(note: Note): Promise<void>;
   getNote(treeIndex: number): Promise<Note | undefined>;
-  getNoteByNullifier(userId: Buffer, nullifier: Buffer): Promise<Note | undefined>;
+  getNoteByNullifier(nullifier: Buffer): Promise<Note | undefined>;
   nullifyNote(index: number): Promise<void>;
-  getUserNotes(userId: Buffer): Promise<Note[]>;
+  getUserNotes(userId: UserId): Promise<Note[]>;
 
-  getUser(userId: Buffer): Promise<UserData | undefined>;
-  getUserByPrivateKey(privateKey: Buffer): Promise<UserData | undefined>;
+  getUser(userId: UserId): Promise<UserData | undefined>;
   getUsers(): Promise<UserData[]>;
   addUser(user: UserData): Promise<void>;
   updateUser(user: UserData): Promise<void>;
-  removeUser(userId: Buffer): Promise<void>;
+  removeUser(userId: UserId): Promise<void>;
   resetUsers(): Promise<void>;
 
-  getUserTx(userId: Buffer, txHash: Buffer): Promise<UserTx | undefined>;
-  getUserTxs(userId: Buffer): Promise<UserTx[]>;
+  getUserTx(userId: UserId, txHash: Buffer): Promise<UserTx | undefined>;
+  getUserTxs(userId: UserId): Promise<UserTx[]>;
+  getUserTxsByTxHash(txHash: Buffer): Promise<UserTx[]>;
   addUserTx(userTx: UserTx): Promise<void>;
-  settleUserTx(userId: Buffer, txHash: Buffer): Promise<void>;
+  settleUserTx(userId: UserId, txHash: Buffer): Promise<void>;
 
-  getUserSigningKeys(userId: Buffer): Promise<SigningKey[]>;
   addUserSigningKey(signingKey: SigningKey): Promise<void>;
-  removeUserSigningKey(signingKey: SigningKey): Promise<void>;
-  getUserSigningKeyIndex(owner: Buffer, signingKey: GrumpkinAddress): Promise<number | undefined>;
+  getUserSigningKeys(accountId: AccountId): Promise<SigningKey[]>;
+  getUserSigningKeyIndex(accountId: AccountId, signingKey: GrumpkinAddress): Promise<number | undefined>;
+  removeUserSigningKeys(accountId: AccountId): Promise<void>;
 
-  addAlias(aliasHash: Buffer, address: GrumpkinAddress): Promise<void>;
-  getAliasAddress(aliasHash: Buffer): Promise<GrumpkinAddress | undefined>;
+  addAlias(alias: Alias): Promise<void>;
+  updateAlias(alias: Alias): Promise<void>;
+  getAlias(aliasHash: AliasHash, address: GrumpkinAddress): Promise<Alias | undefined>;
+  getAliases(aliasHash: AliasHash): Promise<Alias[]>;
+  getLatestNonceByAddress(address: GrumpkinAddress): Promise<number | undefined>;
+  getLatestNonceByAliasHash(aliasHash: AliasHash): Promise<number | undefined>;
+  getAliasHashByAddress(address: GrumpkinAddress, nonce?: number): Promise<AliasHash | undefined>;
+  getAddressByAliasHash(aliasHash: AliasHash, nonce?: number): Promise<GrumpkinAddress | undefined>;
 
   deleteKey(name: string): Promise<void>;
   addKey(name: string, value: Buffer): Promise<void>;

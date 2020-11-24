@@ -29,12 +29,24 @@ export class App extends EventEmitter {
     }
   }
 
+  private async removeTestUsers() {
+    const ethSdk = this.getEthereumSdk();
+    const walletSdk = this.getWalletSdk();
+    const users = await ethSdk.getUsersData();
+    for (const user of users) {
+      if (user.ethAddress.equals(EthAddress.ZERO)) {
+        await walletSdk.removeUser(user.publicKey, user.nonce);
+      }
+    }
+  }
+
   isSdkAvailable() {
     return !!this.ethereumProvider;
   }
 
   async createSdk(serverUrl = SERVER_URL) {
     await this.webSdk.init(serverUrl, { debug: true });
+    await this.removeTestUsers();
   }
 
   getWeb3Provider() {
@@ -56,10 +68,12 @@ export class App extends EventEmitter {
 
   getAvailableArgs() {
     const userData = this.webSdk.getUser().getUserData();
-    const signer = userData.alias ? undefined : this.webSdk.getSdk().createSchnorrSigner(userData.privateKey);
+    const signer = this.webSdk.getSdk().createSchnorrSigner(userData.privateKey);
     return {
       aztecSdk: this.getWalletSdk(),
       userId: userData.id,
+      accountPublicKey: userData.id.publicKey,
+      nonce: userData.id.nonce,
       signer,
     };
   }

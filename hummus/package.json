@@ -6,7 +6,7 @@
   "scripts": {
     "build": "webpack --config webpack.prod.js",
     "lint": "eslint ./",
-    "test": "tsc --noEmit",
+    "test": "jest --passWithNoTests",
     "generate:styles": "guacamole generateStyles",
     "start": "node ./server",
     "start:dev": "webpack-dev-server --config webpack.dev.js"

@@ -1,9 +1,10 @@
 import { GrumpkinAddress } from 'barretenberg/address';
-import { Connection, ConnectionOptions, MoreThan, Repository } from 'typeorm';
+import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
+import { Connection, ConnectionOptions, MoreThan, MoreThanOrEqual, Repository } from 'typeorm';
 import { Note } from '../../note';
-import { UserData } from '../../user';
+import { AccountId, UserData, UserId } from '../../user';
 import { UserTx } from '../../user_tx';
-import { Database, SigningKey } from '../database';
+import { Alias, Database, SigningKey } from '../database';
 import { AliasDao } from './alias_dao';
 import { KeyDao } from './key_dao';
 import { NoteDao } from './note_dao';
@@ -53,34 +54,24 @@ export class SQLDatabase implements Database {
     return this.noteRep.findOne({ index });
   }
 
-  async getNoteByNullifier(userId: Buffer, nullifier: Buffer) {
-    return this.noteRep.findOne({ owner: userId, nullifier });
+  async getNoteByNullifier(nullifier: Buffer) {
+    return this.noteRep.findOne({ nullifier });
   }
 
   async nullifyNote(index: number) {
-    const note = await this.getNote(index);
-    if (!note) {
-      throw new Error(`Not not found: ${index}`);
-    }
-
-    note.nullified = true;
-    await this.noteRep.save(note);
+    await this.noteRep.update(index, { nullified: true });
   }
 
-  async getUserNotes(userId: Buffer) {
+  async getUserNotes(userId: UserId) {
     return this.noteRep.find({ where: { owner: userId, nullified: false } });
   }
 
-  async getUser(userId: Buffer) {
+  async getUser(userId: UserId) {
     return this.userDataRep.findOne({ id: userId });
   }
 
   async addUser(user: UserData) {
     await this.userDataRep.save(user);
-  }
-
-  async getUserByPrivateKey(privateKey: Buffer) {
-    return this.userDataRep.findOne({ privateKey });
   }
 
   async getUsers() {
@@ -91,7 +82,13 @@ export class SQLDatabase implements Database {
     await this.userDataRep.update({ id: user.id }, user);
   }
 
-  async removeUser(userId: Buffer) {
+  async removeUser(userId: UserId) {
+    const user = await this.getUser(userId);
+    if (!user) return;
+
+    await this.userKeyRep.delete({ address: user.publicKey });
+    await this.userTxRep.delete({ userId });
+    await this.noteRep.delete({ owner: userId });
     await this.userDataRep.delete({ id: userId });
   }
 
@@ -103,7 +100,7 @@ export class SQLDatabase implements Database {
     await this.userDataRep.update({ syncedToRollup: MoreThan(-1) }, { syncedToRollup: -1 });
   }
 
-  async getUserTx(userId: Buffer, txHash: Buffer) {
+  async getUserTx(userId: UserId, txHash: Buffer) {
     return this.userTxRep.findOne({ txHash, userId });
   }
 
@@ -111,11 +108,15 @@ export class SQLDatabase implements Database {
     await this.userTxRep.save(userTx);
   }
 
-  async getUserTxs(userId: Buffer) {
+  async getUserTxs(userId: UserId) {
     return this.userTxRep.find({ where: { userId }, order: { created: 'DESC' } });
   }
 
-  async settleUserTx(userId: Buffer, txHash: Buffer) {
+  async getUserTxsByTxHash(txHash: Buffer) {
+    return this.userTxRep.find({ where: { txHash } });
+  }
+
+  async settleUserTx(userId: UserId, txHash: Buffer) {
     await this.userTxRep.update({ userId, txHash }, { settled: true });
   }
 
@@ -123,27 +124,60 @@ export class SQLDatabase implements Database {
     await this.userKeyRep.save(signingKey);
   }
 
-  async getUserSigningKeys(owner: Buffer) {
-    return await this.userKeyRep.find({ owner });
+  async getUserSigningKeys(accountId: AccountId) {
+    return await this.userKeyRep.find({ accountId });
   }
 
-  async removeUserSigningKey({ owner, key }: SigningKey) {
-    await this.userKeyRep.delete({ owner, key });
-  }
-
-  async getUserSigningKeyIndex(owner: Buffer, key: GrumpkinAddress) {
+  async getUserSigningKeyIndex(accountId: AccountId, key: GrumpkinAddress) {
     const keyBuffer = key.toBuffer();
-    const signingKey = await this.userKeyRep.findOne({ where: { owner, key: keyBuffer.slice(0, 32) } });
+    const signingKey = await this.userKeyRep.findOne({ where: { accountId, key: keyBuffer.slice(0, 32) } });
     return signingKey ? signingKey.treeIndex : undefined;
   }
 
-  async addAlias(aliasHash: Buffer, address: GrumpkinAddress) {
-    await this.aliasRep.save({ aliasHash, address });
+  async removeUserSigningKeys(accountId: AccountId) {
+    await this.userKeyRep.delete({ accountId });
   }
 
-  async getAliasAddress(aliasHash: Buffer) {
-    const alias = await this.aliasRep.findOne({ aliasHash });
-    return alias ? alias.address : undefined;
+  async addAlias(alias: Alias) {
+    await this.aliasRep.save(alias);
+  }
+
+  async updateAlias(alias: Alias) {
+    await this.aliasRep.update({ aliasHash: alias.aliasHash, address: alias.address }, alias);
+  }
+
+  async getAlias(aliasHash: AliasHash, address: GrumpkinAddress) {
+    return this.aliasRep.findOne({ aliasHash, address });
+  }
+
+  async getAliases(aliasHash: AliasHash) {
+    return this.aliasRep.find({ aliasHash });
+  }
+
+  async getLatestNonceByAddress(address: GrumpkinAddress) {
+    const alias = await this.aliasRep.findOne({ where: { address }, order: { latestNonce: 'DESC' } });
+    return alias?.latestNonce;
+  }
+
+  async getLatestNonceByAliasHash(aliasHash: AliasHash) {
+    const alias = await this.aliasRep.findOne({ where: { aliasHash }, order: { latestNonce: 'DESC' } });
+    return alias?.latestNonce;
+  }
+
+  async getAliasHashByAddress(address: GrumpkinAddress, nonce?: number) {
+    const alias = await this.aliasRep.findOne({
+      where: { address, latestNonce: MoreThanOrEqual(nonce || 0) },
+      order: { latestNonce: nonce !== undefined ? 'ASC' : 'DESC' },
+    });
+    return alias?.aliasHash;
+  }
+
+  async getAddressByAliasHash(aliasHash: AliasHash, nonce?: number) {
+    const alias = await this.aliasRep.findOne({
+      where: { aliasHash, latestNonce: MoreThanOrEqual(nonce || 0) },
+      order: { latestNonce: nonce !== undefined ? 'ASC' : 'DESC' },
+    });
+    return alias?.address;
   }
 
   async addKey(name: string, value: Buffer) {

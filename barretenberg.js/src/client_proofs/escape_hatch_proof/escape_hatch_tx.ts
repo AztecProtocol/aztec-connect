@@ -16,7 +16,6 @@ export class EscapeHatchTx {
     public newNullifierRoots: Buffer[],
     public oldNullifierPaths: HashPath[],
     public newNullifierPaths: HashPath[],
-    public accountNullifierPath: HashPath,
 
     public oldDataRootsRoot: Buffer,
     public newDataRootsRoot: Buffer,
@@ -41,7 +40,6 @@ export class EscapeHatchTx {
       serializeBufferArrayToVector(this.newNullifierRoots),
       serializeBufferArrayToVector(this.oldNullifierPaths.map(p => p.toBuffer())),
       serializeBufferArrayToVector(this.newNullifierPaths.map(p => p.toBuffer())),
-      this.accountNullifierPath.toBuffer(),
 
       this.oldDataRootsRoot,
       this.newDataRootsRoot,

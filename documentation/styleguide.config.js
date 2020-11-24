@@ -162,13 +162,13 @@ module.exports = {
               exampleMode: 'hide',
             },
             {
-              name: 'addSigningKey',
-              content: 'src/docs/add_signing_key.md',
+              name: 'migrateAccount',
+              content: 'src/docs/migrate_account.md',
               exampleMode: 'hide',
             },
             {
-              name: 'removeSigningKey',
-              content: 'src/docs/revoke_signing_key.md',
+              name: 'addSigningKeys',
+              content: 'src/docs/add_signing_keys.md',
               exampleMode: 'hide',
             },
           ],
@@ -260,6 +260,11 @@ module.exports = {
               exampleMode: 'hide',
             },
             {
+              name: 'EthereumSignature',
+              content: 'src/docs/types/ethereum_signature.md',
+              exampleMode: 'hide',
+            },
+            {
               name: 'EthereumSigner',
               content: 'src/docs/types/ethereum_signer.md',
               exampleMode: 'hide',
@@ -267,6 +272,11 @@ module.exports = {
             {
               name: 'GrumpkinAddress',
               content: 'src/docs/types/grumpkin_address.md',
+              exampleMode: 'hide',
+            },
+            {
+              name: 'PermitArgs',
+              content: 'src/docs/types/permit_args.md',
               exampleMode: 'hide',
             },
             {

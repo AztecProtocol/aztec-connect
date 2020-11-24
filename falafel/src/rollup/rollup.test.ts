@@ -15,7 +15,6 @@ describe('Rollup', () => {
     const newNullRoots = [...Array(numberOfTxs * 2)].map(randomRoot);
     const oldNullPaths = [...Array(numberOfTxs * 2)].map(randomNullPath);
     const newNullPaths = [...Array(numberOfTxs * 2)].map(randomNullPath);
-    const accountNullPaths = [...Array(numberOfTxs)].map(randomNullPath);
     const dataRootsPaths = [...Array(numberOfTxs)].map(randomDataPath);
     const rollup = new Rollup(
       0,
@@ -29,7 +28,6 @@ describe('Rollup', () => {
       newNullRoots,
       oldNullPaths,
       newNullPaths,
-      accountNullPaths,
       randomRoot(),
       randomRoot(),
       randomDataPath(),

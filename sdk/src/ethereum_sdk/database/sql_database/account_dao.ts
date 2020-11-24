@@ -1,5 +1,6 @@
-import { EthAddress } from 'barretenberg/address';
-import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
+import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
+import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { grumpkinAddressTransformer } from '../../../database/sql_database/transformer';
 import { DbAccount } from '../database';
 import { ethAddressTransformer } from './transformer';
 
@@ -8,7 +9,6 @@ export class AccountDao implements DbAccount {
   @PrimaryColumn('blob', { transformer: [ethAddressTransformer] })
   public ethAddress!: EthAddress;
 
-  @Index({ unique: true })
-  @Column()
-  public userId!: Buffer;
+  @Column('blob', { transformer: [grumpkinAddressTransformer] })
+  public accountPublicKey!: GrumpkinAddress;
 }

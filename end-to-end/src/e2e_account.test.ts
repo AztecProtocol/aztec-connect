@@ -1,4 +1,4 @@
-import { createEthSdk, EthereumSdk, EthereumSdkUser, EthAddress, EthereumProvider, EthersAdapter } from 'aztec2-sdk';
+import { createEthSdk, EthereumSdk, EthAddress, EthereumProvider, EthersAdapter, GrumpkinAddress } from 'aztec2-sdk';
 import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
 import { JsonRpcProvider } from '@ethersproject/providers';
@@ -11,8 +11,7 @@ const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost
 describe('end-to-end account tests', () => {
   let provider: EthereumProvider;
   let sdk: EthereumSdk;
-  let userAddress: EthAddress;
-  let user: EthereumSdkUser;
+  let userAddresses: EthAddress[];
 
   beforeAll(async () => {
     // Init sdk.
@@ -28,42 +27,88 @@ describe('end-to-end account tests', () => {
     await sdk.awaitSynchronised();
 
     // Get accounts and signers.
-    userAddress = EthAddress.fromString((await ethersProvider.listAccounts())[0]);
-    user = await sdk.addUser(userAddress);
+    userAddresses = (await ethersProvider.listAccounts()).map(account => EthAddress.fromString(account));
   });
 
   afterAll(async () => {
     await sdk.destroy();
   });
 
+  const expectEqualSigningKeys = (signingKeys: Buffer[], publicKeys: GrumpkinAddress[]) => {
+    expect(signingKeys.length).toBe(publicKeys.length);
+    expect(signingKeys).toEqual(expect.arrayContaining(publicKeys.map(key => key.toBuffer().slice(0, 32))));
+  };
+
   it('should create and recover account, add and remove signing keys.', async () => {
+    const alias = 'pebble';
+    const userAddress = userAddresses[0];
+    const user = await sdk.addUser(userAddress);
+
     const thirdPartySigner = sdk.createSchnorrSigner(randomBytes(32));
-    const recoveryPayloads = await user.generateAccountRecoveryData([thirdPartySigner.getPublicKey()]);
+    const recoveryPayloads = await sdk.generateAccountRecoveryData(alias, userAddress, [
+      thirdPartySigner.getPublicKey(),
+    ]);
 
     // Create a new account.
-    const alias = 'pebble';
     const userSigner = sdk.createSchnorrSigner(randomBytes(32));
     const { recoveryPublicKey } = recoveryPayloads[0];
-    const txHash = await user.createAccount(userSigner.getPublicKey(), recoveryPublicKey, alias);
-    await sdk.awaitSettlement(userAddress, txHash, 300);
+    const txHash = await sdk.createAccount(alias, userAddress, userSigner.getPublicKey(), recoveryPublicKey);
+    await sdk.awaitSettlement(txHash, 300);
 
     expect(await sdk.getAddressFromAlias(alias)).toEqual(user.getUserData().publicKey);
 
+    const user1 = await sdk.addUser(userAddress, 1);
+    await user1.awaitSynchronised();
+    expectEqualSigningKeys(await sdk.getSigningKeys(alias, 1), [userSigner.getPublicKey(), recoveryPublicKey]);
+
     // Recover account.
-    const recoverTxHash = await user.recoverAccount(recoveryPayloads[0]);
-    await sdk.awaitSettlement(userAddress, recoverTxHash, 300);
+    const recoverTxHash = await sdk.recoverAccount(alias, recoveryPayloads[0]);
+    await sdk.awaitSettlement(recoverTxHash, 300);
+    expectEqualSigningKeys(await sdk.getSigningKeys(alias, 1), [
+      userSigner.getPublicKey(),
+      recoveryPublicKey,
+      recoveryPayloads[0].trustedThirdPartyPublicKey,
+    ]);
 
     // Add new signing key.
-    const newSigner = sdk.createSchnorrSigner(randomBytes(32));
-    const addKeyTxHash = await user.addSigningKey(newSigner.getPublicKey(), thirdPartySigner);
-    await sdk.awaitSettlement(userAddress, addKeyTxHash, 300);
+    const userSigner1 = sdk.createSchnorrSigner(randomBytes(32));
+    const addKeyTxHash = await sdk.addSigningKeys(alias, thirdPartySigner, userSigner1.getPublicKey());
+    await sdk.awaitSettlement(addKeyTxHash, 300);
+    expectEqualSigningKeys(await sdk.getSigningKeys(alias, 1), [
+      userSigner.getPublicKey(),
+      recoveryPublicKey,
+      recoveryPayloads[0].trustedThirdPartyPublicKey,
+      userSigner1.getPublicKey(),
+    ]);
 
-    // Remove 3rd party's signing key.
-    const removeTxHash = await user.removeSigningKey(thirdPartySigner.getPublicKey(), newSigner);
-    await sdk.awaitSettlement(userAddress, removeTxHash, 300);
+    // Migrate account.
+    const userSigner2 = sdk.createSchnorrSigner(randomBytes(32));
+    const migrateTxHash = await sdk.migrateAccount(alias, userSigner1, userSigner2.getPublicKey());
+    await sdk.awaitSettlement(migrateTxHash, 300);
 
-    // Should not be able to do anything if key is removed.
-    const anotherSigner = sdk.createSchnorrSigner(randomBytes(32));
-    await expect(user.addSigningKey(anotherSigner.getPublicKey(), thirdPartySigner)).rejects.toThrow();
+    const user2 = await sdk.addUser(userAddress, 2);
+    await user2.awaitSynchronised();
+    expectEqualSigningKeys(await sdk.getSigningKeys(alias, 2), [userSigner2.getPublicKey()]);
+
+    // Migrate account to another account public key.
+    const newUserAddress = userAddresses[1];
+    const userSigner3 = sdk.createSchnorrSigner(randomBytes(32));
+    const migrateNewTxHash = await sdk.migrateAccount(
+      alias,
+      userSigner2,
+      userSigner3.getPublicKey(),
+      userSigner1.getPublicKey(),
+      newUserAddress,
+    );
+    await sdk.awaitSettlement(migrateNewTxHash, 300);
+
+    const user3 = await sdk.addUser(newUserAddress, 3);
+    await user3.awaitSynchronised();
+    expectEqualSigningKeys(await sdk.getSigningKeys(alias, 3), [
+      userSigner3.getPublicKey(),
+      userSigner1.getPublicKey(),
+    ]);
+
+    expect(await sdk.getAddressFromAlias(alias)).toEqual(user3.getUserData().publicKey);
   });
 });

@@ -1,4 +1,4 @@
-import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
+import { EthAddress } from 'barretenberg/address';
 import { JoinSplitProver } from 'barretenberg/client_proofs/join_split_proof';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { ProofData } from 'barretenberg/client_proofs/proof_data';
@@ -7,6 +7,7 @@ import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { WorldState } from 'barretenberg/world_state';
 import createDebug from 'debug';
 import { ethers } from 'ethers';
+import { AccountValueId } from '../../account_value_id';
 import { EthereumSigner, Signer } from '../../signer';
 import { UserState } from '../../user_state';
 import { JoinSplitTxFactory } from './join_split_tx_factory';
@@ -33,8 +34,7 @@ export class JoinSplitProofCreator {
     assetId: number,
     newNoteValue: bigint,
     signer: Signer,
-    senderPubKey: GrumpkinAddress,
-    receiverPubKey?: GrumpkinAddress,
+    receiver?: AccountValueId,
     outputOwnerAddress?: EthAddress,
     ethSigner?: EthereumSigner,
   ) {
@@ -45,8 +45,7 @@ export class JoinSplitProofCreator {
       assetId,
       newNoteValue,
       signer,
-      senderPubKey,
-      receiverPubKey,
+      receiver,
       ethSigner ? ethSigner.getAddress() : undefined,
       outputOwnerAddress,
     );

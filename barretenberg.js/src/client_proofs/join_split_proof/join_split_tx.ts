@@ -2,6 +2,7 @@ import { toBufferBE } from 'bigint-buffer';
 import { EthAddress, GrumpkinAddress } from '../../address';
 import { HashPath } from '../../merkle_tree';
 import { numToUInt32BE } from '../../serialize';
+import { AccountId } from '../account_id';
 import { Note } from '../note';
 import { Signature } from '../signature';
 
@@ -16,13 +17,14 @@ export class JoinSplitTx {
     public inputNotePaths: HashPath[],
     public inputNotes: Note[],
     public outputNotes: Note[],
-    public signature: Signature,
-    public inputOwner: EthAddress,
-    public outputOwner: EthAddress,
+    public accountPrivateKey: Buffer,
+    public accountId: AccountId,
     public accountIndex: number,
     public accountPath: HashPath,
     public signingPubKey: GrumpkinAddress,
-    public accountPrivateKey: Buffer,
+    public signature: Signature,
+    public inputOwner: EthAddress,
+    public outputOwner: EthAddress,
   ) {}
 
   toBuffer() {
@@ -41,9 +43,11 @@ export class JoinSplitTx {
       noteBuffer,
 
       this.accountPrivateKey,
+      this.accountId.aliasHash.toBuffer32(),
+      numToUInt32BE(this.accountId.nonce),
       numToUInt32BE(this.accountIndex),
-      this.signingPubKey.toBuffer(),
       this.accountPath.toBuffer(),
+      this.signingPubKey.toBuffer(),
       this.signature.toBuffer(),
 
       this.inputOwner.toBuffer32(),

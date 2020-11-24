@@ -1,6 +1,6 @@
 import { Address, EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { Block } from 'barretenberg/block_source';
-import { AccountProver, computeAliasNullifier } from 'barretenberg/client_proofs/account_proof';
+import { AccountProver } from 'barretenberg/client_proofs/account_proof';
 import { EscapeHatchProver } from 'barretenberg/client_proofs/escape_hatch_proof';
 import { JoinSplitProver } from 'barretenberg/client_proofs/join_split_proof';
 import { ProofData } from 'barretenberg/client_proofs/proof_data';
@@ -24,7 +24,7 @@ import { EventEmitter } from 'events';
 import Mutex from 'idb-mutex';
 import { LevelUp } from 'levelup';
 import { HashPathSource } from 'sriracha/hash_path_source';
-import { Database } from '../database';
+import { Alias, Database } from '../database';
 import { AccountProofCreator } from '../proofs/account_proof_creator';
 import { EscapeHatchProofCreator } from '../proofs/escape_hatch_proof_creator';
 import { JoinSplitProofCreator } from '../proofs/join_split_proof_creator';
@@ -32,9 +32,11 @@ import { Action, ActionState, AssetId, SdkEvent, SdkInitState, SdkStatus } from 
 import { EthereumSigner, Signer } from '../signer';
 import { SchnorrSigner } from '../signer';
 import { TxsState } from '../txs_state';
-import { UserDataFactory } from '../user';
+import { AccountId, UserDataFactory, UserId } from '../user';
 import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
 import { UserTx, UserTxAction } from '../user_tx';
+import { AccountValueId } from '../account_value_id';
+import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 
 const debug = createDebug('bb:core_sdk');
 
@@ -127,7 +129,7 @@ export class CoreSdk extends EventEmitter {
     this.grumpkin = new Grumpkin(barretenberg);
     this.schnorr = new Schnorr(barretenberg);
     this.userFactory = new UserDataFactory(this.grumpkin);
-    this.userStateFactory = new UserStateFactory(this.grumpkin, noteAlgos, this.pedersen, this.db, this.rollupProvider);
+    this.userStateFactory = new UserStateFactory(this.grumpkin, noteAlgos, this.db, this.rollupProvider);
     this.workerPool = workerPool;
     this.worldState = new WorldState(this.leveldb, this.pedersen, this.blake2s);
     if (this.rollupProviderExplorer) {
@@ -396,10 +398,10 @@ export class CoreSdk extends EventEmitter {
       this.sdkStatus.dataSize = this.worldState.getSize();
       await this.mutex?.unlock();
 
+      await this.processAliases(rollup);
+
       // Forward the block on to each UserState for processing.
       this.userStates.forEach(us => us.processBlock(block));
-
-      await this.processAliases(rollup);
 
       this.emit(CoreSdkEvent.UPDATED_WORLD_STATE, rollupId, this.sdkStatus.latestRollupId);
       this.emit(SdkEvent.UPDATED_WORLD_STATE, rollupId, this.sdkStatus.latestRollupId);
@@ -407,13 +409,20 @@ export class CoreSdk extends EventEmitter {
   }
 
   private async processAliases(rollup: RollupProofData) {
-    for (const { proofId, publicInput, publicOutput, nullifier1 } of rollup.innerProofData) {
+    for (const { proofId, publicInput, publicOutput, assetId } of rollup.innerProofData) {
       if (proofId !== 1) {
         continue;
       }
-      const publicKey = new GrumpkinAddress(Buffer.concat([publicInput, publicOutput]));
-      debug(`adding alias: ${nullifier1.toString('hex')} -> ${publicKey.toString()}.`);
-      this.db.addAlias(nullifier1, publicKey);
+
+      const { aliasHash, nonce } = AccountId.fromBuffer(assetId);
+      const address = new GrumpkinAddress(Buffer.concat([publicInput, publicOutput]));
+      const prevAlias = await this.db.getAlias(aliasHash, address);
+      debug(`adding alias: ${aliasHash} -> ${address} (${nonce}).`);
+      if (!prevAlias) {
+        await this.db.addAlias({ aliasHash, address, latestNonce: nonce });
+      } else if (nonce > prevAlias.latestNonce) {
+        await this.db.updateAlias({ aliasHash, address, latestNonce: nonce });
+      }
     }
   }
 
@@ -434,19 +443,20 @@ export class CoreSdk extends EventEmitter {
    * Call the user state init function to refresh users internal state.
    * Emit an SdkEvent to update the UI.
    */
-  public async notifyUserStateUpdated(userId: Buffer, balanceAfter?: bigint, diff?: bigint, assetId?: number) {
+  public async notifyUserStateUpdated(userId: UserId, balanceAfter?: bigint, diff?: bigint, assetId?: number) {
     await this.getUserState(userId)?.init();
     this.emit(SdkEvent.UPDATED_USER_STATE, userId, balanceAfter, diff, assetId);
   }
 
   public async createProof(
     assetId: AssetId,
-    userId: Buffer,
+    userId: UserId,
     action: UserTxAction,
     value: bigint,
     signer: Signer,
     ethSigner?: EthereumSigner,
     noteRecipient?: GrumpkinAddress,
+    noteRecipientNonce?: number,
     outputOwner?: EthAddress,
   ) {
     if (!noteRecipient && !outputOwner) {
@@ -456,12 +466,18 @@ export class CoreSdk extends EventEmitter {
     const created = Date.now();
     const user = await this.db.getUser(userId);
     if (!user) {
-      throw new Error(`Unknown user: ${userId.toString('hex')}`);
+      throw new Error(`Unknown user: ${userId}`);
     }
     const userState = this.getUserState(userId)!;
     const publicInput = ['DEPOSIT', 'PUBLIC_TRANSFER'].includes(action) ? value : BigInt(0);
     const publicOutput = ['WITHDRAW', 'PUBLIC_TRANSFER'].includes(action) ? value : BigInt(0);
     const newNoteValue = ['DEPOSIT', 'TRANSFER'].includes(action) ? value : BigInt(0);
+    const recipientNonce = noteRecipient
+      ? noteRecipientNonce !== undefined
+        ? noteRecipientNonce
+        : await this.getLatestUserNonce(noteRecipient)
+      : undefined;
+    const recipient = noteRecipient ? new AccountValueId(noteRecipient, recipientNonce!) : undefined;
 
     const proofCreator = this.escapeHatchMode ? this.escapeHatchProofCreator : this.joinSplitProofCreator;
     const proofOutput = await proofCreator.createProof(
@@ -471,8 +487,7 @@ export class CoreSdk extends EventEmitter {
       assetId,
       newNoteValue,
       signer,
-      user.publicKey,
-      noteRecipient,
+      recipient,
       outputOwner,
       ethSigner,
     );
@@ -503,15 +518,38 @@ export class CoreSdk extends EventEmitter {
     }
   }
 
-  public async getAddressFromAlias(alias: string) {
-    const aliasHash = computeAliasNullifier(alias, this.pedersen, this.blake2s);
-    return await this.db.getAliasAddress(aliasHash);
+  public async getLatestUserNonce(publicKey: GrumpkinAddress) {
+    return (await this.db.getLatestNonceByAddress(publicKey)) || 0;
+  }
+
+  public async getLatestAliasNonce(alias: string) {
+    const aliasHash = this.computeAliasHash(alias);
+    return (await this.db.getLatestNonceByAliasHash(aliasHash)) || 0;
+  }
+
+  public async getAliasHashFromAddress(publicKey: GrumpkinAddress, nonce?: number) {
+    return this.db.getAliasHashByAddress(publicKey, nonce);
+  }
+
+  public async getAddressFromAlias(alias: string, nonce?: number) {
+    const aliasHash = this.computeAliasHash(alias);
+    return this.db.getAddressByAliasHash(aliasHash, nonce);
+  }
+
+  public async isAliasAvailable(alias: string) {
+    // TODO - request it from server so that we can also check those aliases in unsettled txs.
+    const nonce = await this.getLatestAliasNonce(alias);
+    return !nonce;
+  }
+
+  public computeAliasHash(alias: string) {
+    return AliasHash.fromAlias(alias, this.blake2s);
   }
 
   public async performAction(
     action: Action,
     value: bigint,
-    userId: Buffer,
+    userId: UserId,
     recipient: Address | string,
     fn: () => Promise<Buffer>,
     validation = async () => {},
@@ -546,61 +584,67 @@ export class CoreSdk extends EventEmitter {
   }
 
   public async createAccountTx(
-    userId: Buffer,
     signer: Signer,
-    ownerPublicKey: GrumpkinAddress,
+    alias: string,
+    nonce: number,
+    migrate: boolean,
+    accountPublicKey: GrumpkinAddress,
+    newAccountPublicKey?: GrumpkinAddress,
     newSigningPubKey1?: GrumpkinAddress,
     newSigningPubKey2?: GrumpkinAddress,
-    nullifiedKey?: GrumpkinAddress,
-    alias?: string,
-    isDummyAlias?: boolean,
   ) {
-    const signerPublicKey = signer.getPublicKey();
-    const accountIndex = await this.db.getUserSigningKeyIndex(userId, signerPublicKey);
+    const aliasHash = alias ? this.computeAliasHash(alias) : undefined;
+    const accountId = aliasHash && nonce ? new AccountId(aliasHash, nonce) : undefined;
+    const accountIndex = accountId ? await this.db.getUserSigningKeyIndex(accountId, signer.getPublicKey()) : undefined;
+
     return this.accountProofCreator.createAccountTx(
       signer,
-      ownerPublicKey,
+      alias,
+      nonce,
+      migrate,
+      accountPublicKey,
+      newAccountPublicKey,
       newSigningPubKey1,
       newSigningPubKey2,
-      nullifiedKey,
-      alias,
-      isDummyAlias,
       accountIndex,
     );
   }
 
   public async createAccountProof(
-    userId: Buffer,
+    userId: UserId,
     signer: Signer,
+    alias: string,
+    nonce: number,
+    migrate: boolean,
+    newAccountPublicKey?: GrumpkinAddress,
     newSigningPublicKey1?: GrumpkinAddress,
     newSigningPublicKey2?: GrumpkinAddress,
-    nullifiedKey?: GrumpkinAddress,
-    alias?: string,
-    isDummyAlias?: boolean,
   ): Promise<TxHash> {
     if (this.escapeHatchMode) {
       throw new Error('Account modifications not supported in escape hatch mode.');
     }
+
     const userState = this.getUserState(userId);
     if (!userState) {
-      throw new Error(`Unknown user: ${userId.toString('hex')}`);
+      throw new Error(`Unknown user: ${userId}`);
     }
-    if (alias && (await this.getAddressFromAlias(alias))) {
-      throw new Error(`Alias already registered: ${alias}`);
-    }
+
     const { publicKey } = userState.getUser();
 
     const action = async () => {
       const signerPublicKey = signer.getPublicKey();
-      const accountIndex = await this.db.getUserSigningKeyIndex(userId, signerPublicKey);
+      const aliasHash = alias ? this.computeAliasHash(alias) : undefined;
+      const accountId = aliasHash && nonce ? new AccountId(aliasHash, nonce) : undefined;
+      const accountIndex = accountId ? await this.db.getUserSigningKeyIndex(accountId, signerPublicKey) : undefined;
       const rawProofData = await this.accountProofCreator.createProof(
         signer,
+        alias,
+        nonce,
+        migrate,
         publicKey,
+        newAccountPublicKey,
         newSigningPublicKey1,
         newSigningPublicKey2,
-        nullifiedKey,
-        alias,
-        isDummyAlias,
         accountIndex,
       );
 
@@ -616,7 +660,7 @@ export class CoreSdk extends EventEmitter {
         userId,
         assetId: 0,
         value: BigInt(0),
-        recipient: userId,
+        recipient: Buffer.alloc(0),
         settled: false,
         created: new Date(),
       };
@@ -643,29 +687,29 @@ export class CoreSdk extends EventEmitter {
     }
   }
 
-  public async awaitUserSynchronised(userId: Buffer) {
+  public async awaitUserSynchronised(userId: UserId) {
     await this.getUserState(userId)?.awaitSynchronised();
   }
 
-  public async awaitSettlement(userId: Buffer, txHash: TxHash, timeout = 120) {
+  public async awaitSettlement(txHash: TxHash, timeout = 120) {
     const started = new Date().getTime();
     while (true) {
       if (timeout && new Date().getTime() - started > timeout * 1000) {
         throw new Error(`Timeout awaiting tx settlement: ${txHash.toString('hex')}`);
       }
-      const tx = await this.db.getUserTx(userId, txHash);
-      if (tx?.settled === true) {
+      const txs = await this.db.getUserTxsByTxHash(txHash);
+      if (txs.every(tx => tx.settled === true)) {
         break;
       }
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
   }
 
-  public getUserState(userId: Buffer) {
+  public getUserState(userId: UserId) {
     return this.userStates.find(us => us.getUser().id.equals(userId));
   }
 
-  public getUserData(userId: Buffer) {
+  public getUserData(userId: UserId) {
     return this.getUserState(userId)?.getUser();
   }
 
@@ -673,13 +717,23 @@ export class CoreSdk extends EventEmitter {
     return this.userStates.map(us => us.getUser());
   }
 
-  public async addUser(privateKey: Buffer) {
-    let user = await this.db.getUserByPrivateKey(privateKey);
-    if (user) {
-      throw new Error(`User already exists: ${user.id.toString('hex')}`);
+  public derivePublicKey(privateKey: Buffer) {
+    return this.userFactory.derivePublicKey(privateKey);
+  }
+
+  public async addUser(privateKey: Buffer, nonce?: number) {
+    const publicKey = this.derivePublicKey(privateKey);
+    const accountNonce = nonce !== undefined ? nonce : await this.getLatestUserNonce(publicKey);
+    const aliasHash = await this.getAliasHashFromAddress(publicKey, accountNonce);
+    if (accountNonce > 0 && !aliasHash) {
+      throw new Error('User not registered.');
     }
 
-    user = await this.userFactory.createUser(privateKey);
+    const user = await this.userFactory.createUser(privateKey, accountNonce, aliasHash);
+    if (await this.db.getUser(user.id)) {
+      throw new Error(`User already exists: ${user.id}`);
+    }
+
     await this.db.addUser(user);
 
     const userState = this.userStateFactory.createUserState(user);
@@ -694,10 +748,10 @@ export class CoreSdk extends EventEmitter {
     return user;
   }
 
-  public async removeUser(userId: Buffer) {
+  public async removeUser(userId: UserId) {
     const userState = this.getUserState(userId);
     if (!userState) {
-      throw new Error(`User does not exist: ${userId.toString('hex')}`);
+      throw new Error(`User does not exist: ${userId}`);
     }
 
     this.userStates = this.userStates.filter(us => us !== userState);
@@ -708,11 +762,21 @@ export class CoreSdk extends EventEmitter {
     this.emit(SdkEvent.UPDATED_USERS);
   }
 
-  public getBalance(userId: Buffer, assetId: AssetId) {
+  public async getSigningKeys(alias: string, nonce?: number) {
+    const aliasHash = this.computeAliasHash(alias);
+    const accountNounce = nonce !== undefined ? nonce : await this.getLatestAliasNonce(alias);
+    const accountId = new AccountId(aliasHash, accountNounce);
+    // TODO - fetch the keys from server so that the account doesn't have to be added locally.
+    const keys = await this.db.getUserSigningKeys(accountId);
+    return keys.map(k => k.key);
+  }
+
+  public getBalance(assetId: AssetId, userId: UserId) {
     const userState = this.getUserState(userId);
     if (!userState) {
-      throw new Error(`User not found: ${userId.toString('hex')}`);
+      throw new Error(`User not found: ${userId}`);
     }
+
     return userState.getBalance(assetId);
   }
 
@@ -732,11 +796,11 @@ export class CoreSdk extends EventEmitter {
     return await this.txsState.getTx(txHash);
   }
 
-  public async getUserTxs(userId: Buffer) {
+  public async getUserTxs(userId: UserId) {
     return this.db.getUserTxs(userId);
   }
 
-  public getActionState(userId?: Buffer) {
+  public getActionState(userId?: UserId) {
     return !userId || this.actionState?.sender.equals(userId) ? this.actionState : undefined;
   }
 

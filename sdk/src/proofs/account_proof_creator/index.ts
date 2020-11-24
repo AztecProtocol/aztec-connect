@@ -1,11 +1,13 @@
 import { GrumpkinAddress } from 'barretenberg/address';
 import { AccountProver, AccountTx, computeSigningData } from 'barretenberg/client_proofs/account_proof';
+import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { Blake2s } from 'barretenberg/crypto/blake2s';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { WorldState } from 'barretenberg/world_state';
 import { randomBytes } from 'crypto';
 import createDebug from 'debug';
 import { Signer } from '../../signer';
+import { AccountId } from '../../user';
 
 const debug = createDebug('bb:account_proof');
 
@@ -19,12 +21,13 @@ export class AccountProofCreator {
 
   public async createAccountTx(
     signer: Signer,
-    ownerPublicKey: GrumpkinAddress,
+    alias: string,
+    nonce: number,
+    migrate: boolean,
+    accountPublicKey: GrumpkinAddress,
+    newAccountPublicKey?: GrumpkinAddress,
     newSigningPubKey1?: GrumpkinAddress,
     newSigningPubKey2?: GrumpkinAddress,
-    nullifiedKey?: GrumpkinAddress,
-    alias?: string,
-    isDummyAlias?: boolean,
     accountIndex = 0,
   ) {
     const merkleRoot = this.worldState.getRoot();
@@ -33,58 +36,58 @@ export class AccountProofCreator {
     const signingPubKey = signer.getPublicKey();
     const accountPath = await this.worldState.getHashPath(accountIndex);
 
-    const aliasField = alias
-      ? !isDummyAlias
-        ? this.blake2s.hashToField(Buffer.from(alias))
-        : Buffer.from(alias, 'hex')
-      : randomBytes(32);
-    const nullifiedPubKey = nullifiedKey || GrumpkinAddress.randomAddress();
+    const aliasHash = AliasHash.fromAlias(alias, this.blake2s);
+    const accountId = new AccountId(aliasHash, nonce);
+
+    const gibberish = randomBytes(32);
 
     const sigMsg = computeSigningData(
-      ownerPublicKey,
+      accountId,
+      accountPublicKey,
+      newAccountPublicKey || accountPublicKey,
       newSigningPubKey1 || GrumpkinAddress.ZERO,
       newSigningPubKey2 || GrumpkinAddress.ZERO,
-      aliasField,
-      nullifiedPubKey,
       this.pedersen,
     );
     const signature = await signer.signMessage(sigMsg);
 
     return new AccountTx(
       merkleRoot,
-      ownerPublicKey,
+      accountPublicKey,
+      newAccountPublicKey || accountPublicKey,
       numNewKeys,
       newSigningPubKey1 || GrumpkinAddress.ZERO,
       newSigningPubKey2 || GrumpkinAddress.ZERO,
-      !!alias && !isDummyAlias,
-      aliasField,
-      !!nullifiedKey,
-      nullifiedPubKey,
+      accountId,
+      migrate,
+      gibberish,
       accountIndex,
-      signingPubKey,
       accountPath,
+      signingPubKey,
       signature,
     );
   }
 
   public async createProof(
     signer: Signer,
-    ownerPublicKey: GrumpkinAddress,
+    alias: string,
+    nonce: number,
+    migrate: boolean,
+    accountPublicKey: GrumpkinAddress,
+    newAccountPublicKey?: GrumpkinAddress,
     newSigningPubKey1?: GrumpkinAddress,
     newSigningPubKey2?: GrumpkinAddress,
-    nullifiedKey?: GrumpkinAddress,
-    alias?: string,
-    isDummyAlias?: boolean,
     accountIndex?: number,
   ) {
     const tx = await this.createAccountTx(
       signer,
-      ownerPublicKey,
+      alias,
+      nonce,
+      migrate,
+      accountPublicKey,
+      newAccountPublicKey,
       newSigningPubKey1,
       newSigningPubKey2,
-      nullifiedKey,
-      alias,
-      isDummyAlias,
       accountIndex,
     );
 

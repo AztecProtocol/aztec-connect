@@ -1,14 +1,14 @@
-import { EthAddress } from 'barretenberg/address';
+import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import Dexie from 'dexie';
 import { Database, DbAccount } from './database';
 
 class DexieAccount {
-  constructor(public ethAddress: Uint8Array, public userId: Uint8Array) {}
+  constructor(public ethAddress: Uint8Array, public accountPublicKey: Uint8Array) {}
 }
 
-const dexieAccountToDbAccount = ({ ethAddress, userId }: DexieAccount): DbAccount => ({
+const dexieAccountToDbAccount = ({ ethAddress, accountPublicKey }: DexieAccount): DbAccount => ({
   ethAddress: new EthAddress(Buffer.from(ethAddress)),
-  userId: Buffer.from(userId),
+  accountPublicKey: new GrumpkinAddress(Buffer.from(accountPublicKey)),
 });
 
 export class DexieDatabase implements Database {
@@ -35,12 +35,14 @@ export class DexieDatabase implements Database {
     await this.db.close();
   }
 
-  async addAccount({ ethAddress, userId }: DbAccount) {
-    await this.user.put(new DexieAccount(new Uint8Array(ethAddress.toBuffer()), new Uint8Array(userId)));
+  async addAccount({ ethAddress, accountPublicKey }: DbAccount) {
+    await this.user.put(
+      new DexieAccount(new Uint8Array(ethAddress.toBuffer()), new Uint8Array(accountPublicKey.toBuffer())),
+    );
   }
 
   async getAccount(ethAddress: EthAddress) {
-    const account = await this.user.get(new Uint8Array(ethAddress.toBuffer()));
+    const account = await this.user.get({ ethAddress: new Uint8Array(ethAddress.toBuffer()) });
     return account ? dexieAccountToDbAccount(account) : undefined;
   }
 

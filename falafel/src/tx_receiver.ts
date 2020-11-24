@@ -90,17 +90,21 @@ export class TxReceiver {
         throw new Error('No deposit signature provided.');
       }
 
+      const inputOwnerAddress = new EthAddress(inputOwner.slice(12));
+
       if (
-        !(await this.blockchain.validateSignature(
-          new EthAddress(inputOwner),
-          proof.signature,
-          proof.getDepositSigningData(),
-        ))
+        !(await this.blockchain.validateSignature(inputOwnerAddress, proof.signature, proof.getDepositSigningData()))
       ) {
         throw new Error('Invalid deposit signature.');
       }
 
-      if (!(await this.blockchain.validateDepositFunds(new EthAddress(inputOwner), toBigIntBE(publicInput), assetId))) {
+      if (
+        !(await this.blockchain.validateDepositFunds(
+          inputOwnerAddress,
+          toBigIntBE(publicInput),
+          assetId.readUInt32BE(28),
+        ))
+      ) {
         throw new Error('User has insufficient or unapproved deposit balance.');
       }
     }

@@ -1,15 +1,16 @@
 import { GrumpkinAddress } from 'barretenberg/address';
+import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import Dexie from 'dexie';
 import { Note } from '../note';
-import { UserData } from '../user';
+import { AccountId, UserData, UserId } from '../user';
 import { UserTx, UserTxAction } from '../user_tx';
-import { Database, SigningKey } from './database';
+import { Alias, Database, SigningKey } from './database';
 
 const MAX_BYTE_LENGTH = 100000000;
 
 const toSubKeyName = (name: string, index: number) => `${name}__${index}`;
 
-const toDexieUserTxId = (userTx: UserTx) => `${userTx.txHash.toString('hex')}__${userTx.userId.toString('hex')}`;
+const toDexieUserTxId = (userTx: UserTx) => `${userTx.txHash.toString('hex')}__${userTx.userId.toString()}`;
 
 class DexieNote {
   constructor(
@@ -35,7 +36,7 @@ const noteToDexieNote = (note: Note) =>
     note.encrypted,
     note.nullifier,
     note.nullified ? 1 : 0,
-    new Uint8Array(note.owner),
+    new Uint8Array(note.owner.toBuffer()),
   );
 
 const dexieNoteToNote = ({
@@ -57,7 +58,7 @@ const dexieNoteToNote = ({
   encrypted: Buffer.from(encrypted),
   nullifier: Buffer.from(nullifier),
   nullified: !!nullified,
-  owner: Buffer.from(owner),
+  owner: UserId.fromBuffer(Buffer.from(owner)),
 });
 
 class DexieKey {
@@ -69,23 +70,28 @@ class DexieUser {
     public id: Uint8Array,
     public publicKey: Uint8Array,
     public privateKey: Uint8Array,
+    public nonce: number,
     public syncedToRollup: number,
-    public alias?: string,
+    public aliasHash?: Uint8Array,
   ) {}
 }
 
-const userToDexieUser = (user: UserData): DexieUser => ({
-  ...user,
-  id: new Uint8Array(user.id),
-  publicKey: new Uint8Array(user.publicKey.toBuffer()),
-  privateKey: new Uint8Array(user.privateKey),
-});
+const userToDexieUser = ({ id, publicKey, privateKey, nonce, aliasHash, syncedToRollup }: UserData) =>
+  new DexieUser(
+    new Uint8Array(id.toBuffer()),
+    new Uint8Array(publicKey.toBuffer()),
+    new Uint8Array(privateKey),
+    nonce,
+    syncedToRollup,
+    aliasHash ? new Uint8Array(aliasHash.toBuffer()) : undefined,
+  );
 
-const dexieUserToUser = (dexieUser: DexieUser): UserData => ({
-  ...dexieUser,
-  id: Buffer.from(dexieUser.id),
-  publicKey: new GrumpkinAddress(Buffer.from(dexieUser.publicKey)),
-  privateKey: Buffer.from(dexieUser.privateKey),
+const dexieUserToUser = ({ id, publicKey, privateKey, aliasHash, ...rest }: DexieUser): UserData => ({
+  ...rest,
+  id: UserId.fromBuffer(Buffer.from(id)),
+  publicKey: new GrumpkinAddress(Buffer.from(publicKey)),
+  privateKey: Buffer.from(privateKey),
+  aliasHash: aliasHash ? new AliasHash(Buffer.from(aliasHash)) : undefined,
 });
 
 class DexieUserTx {
@@ -106,7 +112,7 @@ const userTxToDexieUserTx = (id: string, userTx: UserTx) =>
   new DexieUserTx(
     id,
     new Uint8Array(userTx.txHash),
-    new Uint8Array(userTx.userId),
+    new Uint8Array(userTx.userId.toBuffer()),
     userTx.action,
     userTx.assetId,
     userTx.value.toString(),
@@ -126,19 +132,37 @@ const dexieUserTxToUserTx = ({
 }: DexieUserTx): UserTx => ({
   ...dexieUserTx,
   txHash: Buffer.from(txHash),
-  userId: Buffer.from(dexieUserTx.userId),
+  userId: UserId.fromBuffer(Buffer.from(dexieUserTx.userId)),
   value: BigInt(dexieUserTx.value),
   settled: !!settled,
   recipient: recipient ? Buffer.from(recipient) : undefined,
 });
 
 class DexieUserKey {
-  constructor(public owner: Uint8Array, public key: Uint8Array, public treeIndex: number) {}
+  constructor(
+    public accountId: Uint8Array,
+    public address: Uint8Array,
+    public key: Uint8Array,
+    public treeIndex: number,
+  ) {}
 }
 
+const dexieUserKeyToSigningKey = (userKey: DexieUserKey): SigningKey => ({
+  ...userKey,
+  accountId: AccountId.fromBuffer(Buffer.from(userKey.accountId)),
+  key: Buffer.from(userKey.key),
+  address: new GrumpkinAddress(Buffer.from(userKey.address)),
+});
+
 class DexieAlias {
-  constructor(public aliasHash: Uint8Array, public key: Uint8Array) {}
+  constructor(public aliasHash: Uint8Array, public address: Uint8Array, public latestNonce: number) {}
 }
+
+const dexieAliasToAlias = ({ aliasHash, address, latestNonce }: DexieAlias): Alias => ({
+  aliasHash: new AliasHash(Buffer.from(aliasHash)),
+  address: new GrumpkinAddress(Buffer.from(address)),
+  latestNonce,
+});
 
 export class DexieDatabase implements Database {
   private dexie = new Dexie('hummus');
@@ -150,13 +174,13 @@ export class DexieDatabase implements Database {
   private alias: Dexie.Table<DexieAlias, number>;
 
   constructor() {
-    this.dexie.version(4).stores({
+    this.dexie.version(5).stores({
       user: '&id, privateKey',
-      userKeys: '&[owner+key], owner',
+      userKeys: '&[accountId+key], accountId, address',
       userTx: '&[txHash+userId], txHash, userId, settled, created',
-      note: '++id, [owner+nullifier], [owner+nullified]',
+      note: '++id, [owner+nullified], nullifier, owner',
       key: '&name',
-      alias: '&aliasHash',
+      alias: '&[aliasHash+address], aliasHash, address, latestNonce',
     });
 
     this.user = this.dexie.table('user');
@@ -192,8 +216,8 @@ export class DexieDatabase implements Database {
     return note ? dexieNoteToNote(note) : undefined;
   }
 
-  async getNoteByNullifier(userId: Buffer, nullifier: Buffer) {
-    const note = await this.note.get({ owner: new Uint8Array(userId), nullifier: new Uint8Array(nullifier) });
+  async getNoteByNullifier(nullifier: Buffer) {
+    const note = await this.note.get({ nullifier: new Uint8Array(nullifier) });
     return note ? dexieNoteToNote(note) : undefined;
   }
 
@@ -201,17 +225,14 @@ export class DexieDatabase implements Database {
     await this.note.update(index, { nullified: 1 });
   }
 
-  async getUserNotes(userId: Buffer) {
-    return (await this.note.where({ owner: new Uint8Array(userId), nullified: 0 }).toArray()).map(dexieNoteToNote);
+  async getUserNotes(userId: UserId) {
+    return (await this.note.where({ owner: new Uint8Array(userId.toBuffer()), nullified: 0 }).toArray()).map(
+      dexieNoteToNote,
+    );
   }
 
-  async getUser(userId: Buffer) {
-    const user = await this.user.get(new Uint8Array(userId));
-    return user ? dexieUserToUser(user) : undefined;
-  }
-
-  async getUserByPrivateKey(privateKey: Buffer) {
-    const user = await this.user.get({ privateKey: new Uint8Array(privateKey) });
+  async getUser(userId: UserId) {
+    const user = await this.user.get(new Uint8Array(userId.toBuffer()));
     return user ? dexieUserToUser(user) : undefined;
   }
 
@@ -224,24 +245,28 @@ export class DexieDatabase implements Database {
   }
 
   async updateUser(user: UserData) {
-    await this.user.where({ id: new Uint8Array(user.id) }).modify(userToDexieUser(user));
+    await this.user.where({ id: new Uint8Array(user.id.toBuffer()) }).modify(userToDexieUser(user));
   }
 
-  async getUserTx(userId: Buffer, txHash: Buffer) {
+  async getUserTx(userId: UserId, txHash: Buffer) {
     const userTx = await this.userTx.get({
-      userId: new Uint8Array(userId),
+      userId: new Uint8Array(userId.toBuffer()),
       txHash: new Uint8Array(txHash),
     });
     return userTx ? dexieUserTxToUserTx(userTx) : undefined;
   }
 
-  async getUserTxs(userId: Buffer) {
+  async getUserTxs(userId: UserId) {
     return (
       await this.userTx
-        .where({ userId: new Uint8Array(userId) })
+        .where({ userId: new Uint8Array(userId.toBuffer()) })
         .reverse()
         .sortBy('created')
     ).map(dexieUserTxToUserTx);
+  }
+
+  async getUserTxsByTxHash(txHash: Buffer) {
+    return (await this.userTx.where({ txHash: new Uint8Array(txHash) }).toArray()).map(dexieUserTxToUserTx);
   }
 
   async addUserTx(userTx: UserTx) {
@@ -249,12 +274,20 @@ export class DexieDatabase implements Database {
     await this.userTx.put(userTxToDexieUserTx(id, userTx));
   }
 
-  async settleUserTx(userId: Buffer, txHash: Buffer) {
-    await this.userTx.where({ userId: new Uint8Array(userId), txHash: new Uint8Array(txHash) }).modify({ settled: 1 });
+  async settleUserTx(userId: UserId, txHash: Buffer) {
+    await this.userTx
+      .where({ userId: new Uint8Array(userId.toBuffer()), txHash: new Uint8Array(txHash) })
+      .modify({ settled: 1 });
   }
 
-  async removeUser(userId: Buffer) {
-    const id = new Uint8Array(userId);
+  async removeUser(userId: UserId) {
+    const user = await this.getUser(userId);
+    if (!user) return;
+
+    const publicKey = new Uint8Array(user.publicKey.toBuffer());
+    await this.userKeys.where({ address: publicKey }).delete();
+
+    const id = new Uint8Array(userId.toBuffer());
     await this.userTx.where({ userId: id }).delete();
     await this.note.where({ owner: id }).delete();
     await this.user.where({ id }).delete();
@@ -326,33 +359,104 @@ export class DexieDatabase implements Database {
     return value;
   }
 
-  async getUserSigningKeys(owner: Buffer) {
-    const userKeys = await this.userKeys.where({ owner: new Uint8Array(owner) }).toArray();
-    return userKeys.map(uk => ({ ...uk, owner: Buffer.from(uk.owner), key: Buffer.from(uk.key) }));
+  async addUserSigningKey({ accountId, address, key, treeIndex }: SigningKey) {
+    await this.userKeys.add(
+      new DexieUserKey(
+        new Uint8Array(accountId.toBuffer()),
+        new Uint8Array(address.toBuffer()),
+        new Uint8Array(key),
+        treeIndex,
+      ),
+    );
   }
 
-  async addUserSigningKey({ owner, key, treeIndex }: SigningKey) {
-    await this.userKeys.add({ owner: new Uint8Array(owner), key: new Uint8Array(key), treeIndex });
+  async getUserSigningKeys(accountId: AccountId) {
+    const userKeys = await this.userKeys.where({ accountId: new Uint8Array(accountId.toBuffer()) }).toArray();
+    return userKeys.map(dexieUserKeyToSigningKey);
   }
 
-  async removeUserSigningKey({ owner, key }: SigningKey) {
-    await this.userKeys.where({ owner: new Uint8Array(owner), key: new Uint8Array(key) }).delete();
-  }
-
-  async getUserSigningKeyIndex(owner: Buffer, signingKey: GrumpkinAddress) {
+  async getUserSigningKeyIndex(accountId: AccountId, signingKey: GrumpkinAddress) {
     const userKey = await this.userKeys.get({
-      owner: new Uint8Array(owner),
+      accountId: new Uint8Array(accountId.toBuffer()),
       key: new Uint8Array(signingKey.toBuffer().slice(0, 32)),
     });
     return userKey ? userKey.treeIndex : undefined;
   }
 
-  async addAlias(aliasHash: Buffer, address: GrumpkinAddress) {
-    await this.alias.add({ aliasHash: new Uint8Array(aliasHash), key: new Uint8Array(address.toBuffer()) });
+  async removeUserSigningKeys(accountId: AccountId) {
+    await this.userKeys.where({ accountId: new Uint8Array(accountId.toBuffer()) }).delete();
   }
 
-  async getAliasAddress(aliasHash: Buffer) {
-    const alias = await this.alias.get(new Uint8Array(aliasHash));
-    return alias ? new GrumpkinAddress(Buffer.from(alias.key)) : undefined;
+  async addAlias({ aliasHash, address, latestNonce }: Alias) {
+    await this.alias.add(
+      new DexieAlias(new Uint8Array(aliasHash.toBuffer()), new Uint8Array(address.toBuffer()), latestNonce),
+    );
+  }
+
+  async updateAlias({ aliasHash, address, latestNonce }: Alias) {
+    await this.alias
+      .where({ aliasHash: new Uint8Array(aliasHash.toBuffer()), address: new Uint8Array(address.toBuffer()) })
+      .modify({
+        latestNonce,
+      });
+  }
+
+  async getAlias(aliasHash: AliasHash, address: GrumpkinAddress) {
+    const alias = await this.alias.get({
+      aliasHash: new Uint8Array(aliasHash.toBuffer()),
+      address: new Uint8Array(address.toBuffer()),
+    });
+    return alias ? dexieAliasToAlias(alias) : undefined;
+  }
+
+  async getAliases(aliasHash: AliasHash) {
+    const aliases = await this.alias.where({ aliasHash: new Uint8Array(aliasHash.toBuffer()) }).toArray();
+    return aliases.map(alias => dexieAliasToAlias(alias));
+  }
+
+  async getLatestNonceByAddress(address: GrumpkinAddress) {
+    const aliases = await this.alias
+      .where({
+        address: new Uint8Array(address.toBuffer()),
+      })
+      .reverse()
+      .sortBy('latestNonce');
+    return aliases[0]?.latestNonce;
+  }
+
+  async getLatestNonceByAliasHash(aliasHash: AliasHash) {
+    const aliases = await this.alias
+      .where({
+        aliasHash: new Uint8Array(aliasHash.toBuffer()),
+      })
+      .reverse()
+      .sortBy('latestNonce');
+    return aliases[0]?.latestNonce;
+  }
+
+  async getAliasHashByAddress(address: GrumpkinAddress, nonce?: number) {
+    const collection = this.alias
+      .where({
+        address: new Uint8Array(address.toBuffer()),
+      })
+      .filter(a => nonce === undefined || a.latestNonce >= nonce);
+    if (nonce === undefined) {
+      collection.reverse();
+    }
+    const aliases = await collection.sortBy('latestNonce');
+    return aliases.length ? new AliasHash(Buffer.from(aliases[0].aliasHash)) : undefined;
+  }
+
+  async getAddressByAliasHash(aliasHash: AliasHash, nonce?: number) {
+    const collection = this.alias
+      .where({
+        aliasHash: new Uint8Array(aliasHash.toBuffer()),
+      })
+      .filter(a => nonce === undefined || a.latestNonce >= nonce);
+    if (nonce === undefined) {
+      collection.reverse();
+    }
+    const aliases = await collection.sortBy('latestNonce');
+    return aliases.length ? new GrumpkinAddress(Buffer.from(aliases[0].address)) : undefined;
   }
 }

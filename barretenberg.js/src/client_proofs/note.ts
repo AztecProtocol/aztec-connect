@@ -10,6 +10,7 @@ export class Note {
     public secret: Buffer,
     public value: bigint,
     public assetId: number,
+    public nonce: number,
   ) {}
 
   static fromBuffer(buf: Buffer) {
@@ -19,6 +20,7 @@ export class Note {
       buf.slice(96, 128),
       toBigIntBE(buf.slice(64, 96)),
       buf.readUInt32BE(128),
+      buf.readUInt32BE(132),
     );
   }
 
@@ -28,6 +30,7 @@ export class Note {
       toBufferBE(this.value, 32),
       this.secret,
       numToUInt32BE(this.assetId),
+      numToUInt32BE(this.nonce),
     ]);
   }
 }

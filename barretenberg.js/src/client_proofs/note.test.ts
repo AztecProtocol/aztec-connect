@@ -13,16 +13,12 @@ describe('note', () => {
     const receiverPubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, receiverPrivKey));
 
     const secret = randomBytes(32);
-    const note = new Note(receiverPubKey, secret, BigInt(100), 0);
+    const note = new Note(receiverPubKey, secret, BigInt(100), 0, 1);
     const encryptedNote = encryptNote(note, grumpkin);
 
     const note2 = decryptNote(encryptedNote, receiverPrivKey, grumpkin)!;
 
-    expect(note2).not.toBeUndefined();
-    expect(note2.secret).toEqual(note.secret);
-    expect(note2.ownerPubKey).toEqual(note.ownerPubKey);
-    expect(note2.value).toEqual(note.value);
-    expect(note2.assetId).toEqual(note.assetId);
+    expect(note2).toEqual(note);
   });
 
   it('should not decrypt note', async () => {
@@ -33,7 +29,7 @@ describe('note', () => {
     const receiverPubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, receiverPrivKey));
 
     const secret = randomBytes(32);
-    const note = new Note(receiverPubKey, secret, BigInt(100), 0);
+    const note = new Note(receiverPubKey, secret, BigInt(100), 0, 1);
     const encryptedNote = encryptNote(note, grumpkin);
 
     const note2 = decryptNote(encryptedNote, randomBytes(32), grumpkin)!;

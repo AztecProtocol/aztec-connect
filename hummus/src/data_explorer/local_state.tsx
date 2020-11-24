@@ -1,7 +1,7 @@
 import { Block, FlexBox, TextButton } from '@aztec/guacamole-ui';
 import { SdkEvent, WebSdk } from 'aztec2-sdk';
 import { EthAddress } from 'barretenberg/address';
-import React, { useEffect,useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Form, FormSection } from '../components';
 import { UserTxs } from './user_txs';
 
@@ -30,9 +30,9 @@ export const LocalState = ({ app }: DataExplorerProps) => {
 
   return (
     <Form>
-      {users.map(({ ethAddress, alias }) => {
+      {users.map(({ ethAddress }) => {
         return (
-          <FormSection key={ethAddress.toString()} title={<UserTitle app={app} account={ethAddress} alias={alias} />}>
+          <FormSection key={ethAddress.toString()} title={<UserTitle app={app} account={ethAddress} />}>
             <UserTxs account={ethAddress} app={app} />
           </FormSection>
         );

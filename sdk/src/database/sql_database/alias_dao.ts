@@ -1,12 +1,19 @@
 import { GrumpkinAddress } from 'barretenberg/address';
-import { Column, Entity, PrimaryColumn } from 'typeorm';
-import { grumpkinAddressTransformer } from './transformer';
+import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
+import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
+import { Alias } from '../database';
+import { aliasHashTransformer, grumpkinAddressTransformer } from './transformer';
 
 @Entity({ name: 'alias' })
-export class AliasDao {
-  @PrimaryColumn()
-  public aliasHash!: Buffer;
+@Index(['aliasHash', 'address'], { unique: true })
+export class AliasDao implements Alias {
+  @PrimaryColumn('blob', { transformer: [aliasHashTransformer] })
+  public aliasHash!: AliasHash;
 
-  @Column('blob', { transformer: [grumpkinAddressTransformer] })
+  @PrimaryColumn('blob', { transformer: [grumpkinAddressTransformer] })
   public address!: GrumpkinAddress;
+
+  @Index({ unique: false })
+  @Column()
+  public latestNonce!: number;
 }

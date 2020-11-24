@@ -1,6 +1,7 @@
 import { randomBytes } from 'crypto';
 import { ProofData } from '../client_proofs/proof_data';
 import { RollupProofData, InnerProofData, VIEWING_KEY_SIZE } from './';
+import { numToUInt32BE } from '../serialize';
 import { EthAddress } from '../address';
 
 describe('RollupProofData', () => {
@@ -9,13 +10,13 @@ describe('RollupProofData', () => {
       0,
       randomBytes(32),
       randomBytes(32),
-      0,
+      randomBytes(32),
       randomBytes(64),
       randomBytes(64),
       randomBytes(32),
       randomBytes(32),
-      EthAddress.randomAddress(),
-      EthAddress.randomAddress(),
+      randomBytes(32),
+      randomBytes(32),
     );
 
     const buffer = innerProofData.toBuffer();
@@ -32,25 +33,25 @@ describe('RollupProofData', () => {
       1,
       randomBytes(32),
       randomBytes(32),
-      0,
+      randomBytes(32),
       randomBytes(64),
       randomBytes(64),
       randomBytes(32),
       randomBytes(32),
-      EthAddress.randomAddress(),
-      EthAddress.randomAddress(),
+      randomBytes(32),
+      randomBytes(32),
     );
     const jsInnerProofData = new InnerProofData(
       0,
       randomBytes(32),
       randomBytes(32),
-      0,
+      numToUInt32BE(1, 32),
       randomBytes(64),
       randomBytes(64),
       randomBytes(32),
       randomBytes(32),
-      EthAddress.randomAddress(),
-      EthAddress.randomAddress(),
+      EthAddress.randomAddress().toBuffer32(),
+      EthAddress.randomAddress().toBuffer32(),
     );
     const rollupProofData = new RollupProofData(
       70,
@@ -79,13 +80,13 @@ describe('RollupProofData', () => {
       0,
       randomBytes(32),
       randomBytes(32),
-      0,
+      randomBytes(32),
       randomBytes(64),
       randomBytes(64),
       randomBytes(32),
       randomBytes(32),
-      EthAddress.randomAddress(),
-      EthAddress.randomAddress(),
+      randomBytes(32),
+      randomBytes(32),
     );
 
     const joinSplitProofData = Buffer.concat([innerProofData.toBuffer(), randomBytes(32), randomBytes(32)]);

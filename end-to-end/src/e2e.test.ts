@@ -10,7 +10,7 @@ const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost
 describe('end-to-end tests', () => {
   let sdk: EthereumSdk;
   let userAddresses: EthAddress[] = [];
-  let users: EthereumSdkUser[];
+  const users: EthereumSdkUser[] = [];
   const assetId = AssetId.DAI;
 
   beforeAll(async () => {
@@ -26,11 +26,10 @@ describe('end-to-end tests', () => {
     await sdk.init();
     await sdk.awaitSynchronised();
 
-    users = await Promise.all(
-      userAddresses.map(async address => {
-        return sdk.addUser(address);
-      }),
-    );
+    for (const address of userAddresses) {
+      const user = await sdk.addUser(address);
+      users.push(user);
+    }
   });
 
   afterAll(async () => {
@@ -48,7 +47,7 @@ describe('end-to-end tests', () => {
     expect(user0Asset.balance()).toBe(0n);
 
     const txHash = await user0Asset.deposit(depositValue);
-    await sdk.awaitSettlement(userAddresses[0], txHash, 300);
+    await sdk.awaitSettlement(txHash, 300);
     expect(await user0Asset.publicBalance()).toBe(0n);
     const user0BalanceAfterDeposit = user0Asset.balance();
     expect(user0BalanceAfterDeposit).toBe(depositValue);
@@ -57,17 +56,17 @@ describe('end-to-end tests', () => {
     const transferValue = user0Asset.toErc20Units('800');
     expect(user1Asset.balance()).toBe(0n);
     const transferTxHash = await user0Asset.transfer(transferValue, users[1].getUserData().publicKey);
-    await sdk.awaitSettlement(userAddresses[0], transferTxHash, 300);
+    await sdk.awaitSettlement(transferTxHash, 300);
 
     expect(user0Asset.balance()).toBe(user0BalanceAfterDeposit - transferValue);
-    await sdk.awaitSettlement(userAddresses[1], transferTxHash, 300);
+    await sdk.awaitSettlement(transferTxHash, 300);
     const user1BalanceAfterTransfer = user1Asset.balance();
     expect(user1BalanceAfterTransfer).toBe(transferValue);
 
     // Withdraw to user 1.
     const withdrawValue = user0Asset.toErc20Units('300');
     const withdrawTxHash = await user1Asset.withdraw(withdrawValue);
-    await sdk.awaitSettlement(users[1].getUserData().ethAddress, withdrawTxHash, 300);
+    await sdk.awaitSettlement(withdrawTxHash, 300);
     expect(await user1Asset.publicBalance()).toBe(withdrawValue);
     expect(user1Asset.balance()).toBe(user1BalanceAfterTransfer - withdrawValue);
   });

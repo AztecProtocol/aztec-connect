@@ -1,6 +1,5 @@
 import { createHash } from 'crypto';
 import { numToUInt32BE } from '../serialize';
-import { EthAddress } from '../address';
 
 export const VIEWING_KEY_SIZE = 208;
 
@@ -14,13 +13,13 @@ export class InnerProofData {
     public proofId: number,
     public publicInput: Buffer,
     public publicOutput: Buffer,
-    public assetId: number,
+    public assetId: Buffer,
     public newNote1: Buffer,
     public newNote2: Buffer,
     public nullifier1: Buffer,
     public nullifier2: Buffer,
-    public inputOwner: EthAddress,
-    public outputOwner: EthAddress,
+    public inputOwner: Buffer,
+    public outputOwner: Buffer,
   ) {
     this.txId = createHash('sha256').update(this.toBuffer()).digest();
   }
@@ -34,13 +33,13 @@ export class InnerProofData {
       numToUInt32BE(this.proofId, 32),
       this.publicInput,
       this.publicOutput,
-      numToUInt32BE(this.assetId, 32),
+      this.assetId,
       this.newNote1,
       this.newNote2,
       this.nullifier1,
       this.nullifier2,
-      this.inputOwner.toBuffer32(),
-      this.outputOwner.toBuffer32(),
+      this.inputOwner,
+      this.outputOwner,
     ]);
   }
 
@@ -48,13 +47,13 @@ export class InnerProofData {
     const proofId = innerPublicInputs.readUInt32BE(0 * 32 + 28);
     const publicInput = innerPublicInputs.slice(1 * 32, 1 * 32 + 32);
     const publicOutput = innerPublicInputs.slice(2 * 32, 2 * 32 + 32);
-    const assetId = innerPublicInputs.readUInt32BE(3 * 32 + 28);
+    const assetId = innerPublicInputs.slice(3 * 32, 3 * 32 + 32);
     const newNote1 = innerPublicInputs.slice(4 * 32, 4 * 32 + 64);
     const newNote2 = innerPublicInputs.slice(6 * 32, 6 * 32 + 64);
     const nullifier1 = innerPublicInputs.slice(8 * 32, 8 * 32 + 32);
     const nullifier2 = innerPublicInputs.slice(9 * 32, 9 * 32 + 32);
-    const inputOwner = new EthAddress(innerPublicInputs.slice(10 * 32 + 12, 10 * 32 + 32));
-    const outputOwner = new EthAddress(innerPublicInputs.slice(11 * 32 + 12, 11 * 32 + 32));
+    const inputOwner = innerPublicInputs.slice(10 * 32, 10 * 32 + 32);
+    const outputOwner = innerPublicInputs.slice(11 * 32, 11 * 32 + 32);
 
     return new InnerProofData(
       proofId,

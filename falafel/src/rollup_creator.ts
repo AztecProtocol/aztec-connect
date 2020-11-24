@@ -106,9 +106,6 @@ export class RollupCreator {
     const dataRootsPaths: HashPath[] = [];
     const dataRootsIndicies: number[] = [];
 
-    // Deprecated. Use gibberish.
-    const accountNullPaths: HashPath[] = new Array(txs.length).fill(await worldStateDb.getHashPath(1, 0n));
-
     for (const tx of txs) {
       const proof = new ProofData(tx.proofData);
       await worldStateDb.put(0, nextDataIndex++, proof.newNote1);
@@ -162,7 +159,6 @@ export class RollupCreator {
       newNullRoots,
       oldNullPaths,
       newNullPaths,
-      accountNullPaths,
 
       oldDataRootsRoot,
       newDataRootsRoot,

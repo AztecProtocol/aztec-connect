@@ -24,13 +24,11 @@ const CONSOLE_STYLES = {
 };
 
 const slipInExplorerLink = (code: string) =>
-  code.replace(
-    /await\s+aztecSdk\.awaitSettlement\((?:\n\s)*([^,]+),([^\)]+)\)\s*;/g,
-    (awaitSettlement, userId, txHash) =>
-      [
-        `console.warn('In the meantime, check out the block explorer for more details:', \`${BLOCK_EXPLORER_URL}/tx/$\{${txHash.trim()}.toString('hex')}\`);`,
-        awaitSettlement,
-      ].join('\n'),
+  code.replace(/await\s+aztecSdk\.awaitSettlement\((?:\n\s)*([^\)]+)\)\s*;/g, (awaitSettlement, txHash) =>
+    [
+      `console.warn('In the meantime, check out the block explorer for more details:', \`${BLOCK_EXPLORER_URL}/tx/$\{${txHash.trim()}.toString('hex')}\`);`,
+      awaitSettlement,
+    ].join('\n'),
   );
 
 const generateFullCode = (code: string, demoArgs: { [key: string]: any }) => {

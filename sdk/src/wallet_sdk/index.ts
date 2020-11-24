@@ -1,6 +1,5 @@
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { Signature } from 'barretenberg/client_proofs/signature';
 import { getProviderStatus, Rollup, Tx, TxHash } from 'barretenberg/rollup_provider';
 import { PermitArgs } from 'blockchain';
 import { EthereumBlockchain } from 'blockchain/ethereum_blockchain';
@@ -13,7 +12,7 @@ import { EthereumProvider } from 'blockchain';
 import { Action, ActionState, AssetId, SdkEvent, SdkInitState } from '../sdk';
 import { EthereumSigner, RecoverSignatureSigner, Signer } from '../signer';
 import { MockTokenContract, TokenContract, Web3TokenContract } from '../token_contract';
-import { RecoveryPayload } from '../user';
+import { RecoveryData, RecoveryPayload, UserId } from '../user';
 import { WalletSdkUser } from './wallet_sdk_user';
 
 export * from './wallet_sdk_user';
@@ -66,7 +65,7 @@ export interface WalletSdk {
   on(event: SdkEvent.UPDATED_EXPLORER_TXS, listener: (txs: Tx[]) => void): this;
   on(event: SdkEvent.UPDATED_INIT_STATE, listener: (initState: SdkInitState, message?: string) => void): this;
   on(event: SdkEvent.UPDATED_USERS, listener: () => void): this;
-  on(event: SdkEvent.UPDATED_USER_STATE, listener: (userId: Buffer) => void): this;
+  on(event: SdkEvent.UPDATED_USER_STATE, listener: (userId: UserId) => void): this;
   on(event: SdkEvent.UPDATED_WORLD_STATE, listener: (rollupId: number, latestRollupId: number) => void): this;
 }
 
@@ -102,12 +101,12 @@ export class WalletSdk extends EventEmitter {
     return this.core.awaitSynchronised();
   }
 
-  public async awaitUserSynchronised(userId: Buffer) {
+  public async awaitUserSynchronised(userId: UserId) {
     return this.core.awaitUserSynchronised(userId);
   }
 
-  public async awaitSettlement(userId: Buffer, txHash: TxHash, timeout = 120) {
-    return this.core.awaitSettlement(userId, txHash, timeout);
+  public async awaitSettlement(txHash: TxHash, timeout = 120) {
+    return this.core.awaitSettlement(txHash, timeout);
   }
 
   public isEscapeHatchMode() {
@@ -138,28 +137,47 @@ export class WalletSdk extends EventEmitter {
     return this.blockchain.getTransactionReceipt(txHash);
   }
 
-  public async getAddressFromAlias(alias: string) {
-    return this.core.getAddressFromAlias(alias);
+  public async getAddressFromAlias(alias: string, nonce?: number) {
+    return this.core.getAddressFromAlias(alias, nonce);
+  }
+
+  public async getLatestUserNonce(publicKey: GrumpkinAddress) {
+    return this.core.getLatestUserNonce(publicKey);
+  }
+
+  public async getLatestAliasNonce(alias: string) {
+    return this.core.getLatestAliasNonce(alias);
+  }
+
+  public async isAliasAvailable(alias: string) {
+    return this.core.isAliasAvailable(alias);
   }
 
   public getAssetPermitSupport(assetId) {
     return this.blockchain.getAssetPermitSupport(assetId);
   }
 
-  public getActionState(userId?: Buffer) {
+  public getActionState(userId?: UserId) {
     return this.core.getActionState(userId);
   }
 
-  public async approve(assetId: AssetId, userId: Buffer, value: bigint, account: EthAddress): Promise<TxHash> {
+  public async approve(
+    assetId: AssetId,
+    publicKey: GrumpkinAddress,
+    value: bigint,
+    account: EthAddress,
+  ): Promise<TxHash> {
     const action = () => this.getTokenContract(assetId).approve(value, account);
     const { rollupContractAddress } = this.core.getLocalStatus();
+    const userId = this.getUserId(publicKey);
     const txHash = await this.core.performAction(Action.APPROVE, value, userId, rollupContractAddress, action);
     this.emit(SdkEvent.UPDATED_USER_STATE, userId);
     return txHash;
   }
 
-  public async mint(assetId: AssetId, userId: Buffer, value: bigint, account: EthAddress): Promise<TxHash> {
+  public async mint(assetId: AssetId, publicKey: GrumpkinAddress, value: bigint, account: EthAddress): Promise<TxHash> {
     const action = () => this.getTokenContract(assetId).mint(value, account);
+    const userId = this.getUserId(publicKey);
     const txHash = await this.core.performAction(Action.MINT, value, userId, account, action);
     this.emit(SdkEvent.UPDATED_USER_STATE, userId);
     return txHash;
@@ -167,15 +185,16 @@ export class WalletSdk extends EventEmitter {
 
   public async deposit(
     assetId: AssetId,
-    userId: Buffer,
+    publicKey: GrumpkinAddress,
     value: bigint,
     signer: Signer,
     ethSigner: EthereumSigner,
     permitArgs?: PermitArgs,
     to?: GrumpkinAddress | string,
+    toNonce?: number,
   ): Promise<TxHash> {
-    const toAddr = typeof to === 'string' ? await this.getAddressFromAlias(to) : (to as GrumpkinAddress);
-    const recipient = toAddr || this.getUserData(userId)!.publicKey;
+    const userId = this.getUserId(publicKey);
+    const recipient = !to ? publicKey : typeof to === 'string' ? await this.getAddressFromAlias(to) : to;
 
     const action = async () => {
       const userPendingDeposit = await this.getUserPendingDeposit(assetId, ethSigner.getAddress());
@@ -191,7 +210,8 @@ export class WalletSdk extends EventEmitter {
         this.emit(SdkEvent.UPDATED_USER_STATE, userId);
       }
       this.emit(SdkEvent.LOG, 'Creating deposit proof...');
-      return await this.core.createProof(assetId, userId, 'DEPOSIT', value, signer, ethSigner, recipient, undefined);
+
+      return this.core.createProof(assetId, userId, 'DEPOSIT', value, signer, ethSigner, recipient, toNonce);
     };
 
     const validation = async () => {
@@ -207,29 +227,36 @@ export class WalletSdk extends EventEmitter {
 
   public async withdraw(
     assetId: AssetId,
-    userId: Buffer,
+    publicKey: GrumpkinAddress,
     value: bigint,
     signer: Signer,
     to: EthAddress,
+    fromNonce?: number,
   ): Promise<TxHash> {
-    const action = () => this.core.createProof(assetId, userId, 'WITHDRAW', value, signer, undefined, undefined, to);
+    const userId = this.getUserId(publicKey, fromNonce);
+    const action = () =>
+      this.core.createProof(assetId, userId, 'WITHDRAW', value, signer, undefined, undefined, undefined, to);
     const validation = async () => {
-      await this.checkNoteBalance(userId, assetId, value);
+      await this.checkNoteBalance(publicKey, assetId, value, fromNonce);
     };
     return this.core.performAction(Action.WITHDRAW, value, userId, to, action, validation);
   }
 
   public async transfer(
     assetId: AssetId,
-    userId: Buffer,
+    publicKey: GrumpkinAddress,
     value: bigint,
     signer: Signer,
     to: GrumpkinAddress | string,
+    fromNonce?: number,
+    toNonce?: number,
   ): Promise<TxHash> {
+    const userId = this.getUserId(publicKey, fromNonce);
     const recipient = typeof to === 'string' ? await this.getAddressFromAlias(to) : to;
-    const action = () => this.core.createProof(assetId, userId, 'TRANSFER', value, signer, undefined, recipient);
+    const action = () =>
+      this.core.createProof(assetId, userId, 'TRANSFER', value, signer, undefined, recipient, toNonce);
     const validation = async () => {
-      await this.checkNoteBalance(userId, assetId, value);
+      await this.checkNoteBalance(publicKey, assetId, value, fromNonce);
     };
     return this.core.performAction(Action.TRANSFER, value, userId, to, action, validation);
   }
@@ -249,7 +276,8 @@ export class WalletSdk extends EventEmitter {
     }
   }
 
-  private async checkNoteBalance(userId: Buffer, assetId: AssetId, value: bigint) {
+  private async checkNoteBalance(publicKey: GrumpkinAddress, assetId: AssetId, value: bigint, nonce?: number) {
+    const userId = this.getUserId(publicKey, nonce);
     const userState = this.core.getUserState(userId);
     if (!userState) {
       throw new Error('User not found.');
@@ -272,74 +300,138 @@ export class WalletSdk extends EventEmitter {
     }
   }
 
-  public async generateAccountRecoveryData(userId: Buffer, trustedThirdPartyPublicKeys: GrumpkinAddress[]) {
-    const user = this.getUserData(userId);
-    if (!user) {
-      throw new Error(`User not found: ${userId.toString('hex')}`);
-    }
-
+  public async generateAccountRecoveryData(
+    alias: string,
+    publicKey: GrumpkinAddress,
+    trustedThirdPartyPublicKeys: GrumpkinAddress[],
+    nonce?: number,
+  ) {
+    const accountNonce = nonce !== undefined ? nonce : (await this.core.getLatestUserNonce(publicKey)) + 1;
     const socialRecoverySigner = this.core.createSchnorrSigner(randomBytes(32));
     const recoveryPublicKey = socialRecoverySigner.getPublicKey();
+
     return Promise.all(
       trustedThirdPartyPublicKeys.map(async trustedThirdPartyPublicKey => {
-        const { signature, alias, nullifiedKey } = await this.core.createAccountTx(
-          user.id,
+        const { signature } = await this.core.createAccountTx(
           socialRecoverySigner,
-          user.publicKey,
+          alias,
+          accountNonce,
+          false,
+          publicKey,
+          undefined,
           trustedThirdPartyPublicKey,
         );
-        const recoveryData = Buffer.concat([alias, nullifiedKey.toBuffer(), signature.toBuffer()]);
+        const recoveryData = new RecoveryData(accountNonce, signature);
         return new RecoveryPayload(trustedThirdPartyPublicKey, recoveryPublicKey, recoveryData);
       }),
     );
   }
 
   public async createAccount(
-    userId: Buffer,
-    newSigningPublicKey: GrumpkinAddress,
-    recoveryPublicKey: GrumpkinAddress,
     alias: string,
-  ) {
-    const user = this.getUserData(userId);
+    publicKey: GrumpkinAddress,
+    newSigningPublicKey: GrumpkinAddress,
+    recoveryPublicKey?: GrumpkinAddress,
+  ): Promise<TxHash> {
+    const user = this.getUserData(publicKey);
     if (!user) {
-      throw new Error(`User not found: ${userId.toString('hex')}`);
+      throw new Error(`User not found: ${publicKey}`);
+    }
+
+    if (user.nonce > 0) {
+      throw new Error('User already registered.');
+    }
+
+    if (!(await this.isAliasAvailable(alias))) {
+      throw new Error('Alias already registered.');
     }
 
     const signer = this.core.createSchnorrSigner(user.privateKey);
-    return this.core.createAccountProof(user.id, signer, newSigningPublicKey, recoveryPublicKey, user.publicKey, alias);
-  }
-
-  public async recoverAccount(userId: Buffer, recoveryPayload: RecoveryPayload): Promise<TxHash> {
-    const { recoveryData } = recoveryPayload;
-    const alias = recoveryData.slice(0, 32).toString('hex');
-    const nullifiedKey = new GrumpkinAddress(recoveryData.slice(32, 32 + 64));
-    const signature = new Signature(recoveryData.slice(32 + 64, 32 + 64 + 64));
-    const recoverySigner = new RecoverSignatureSigner(recoveryPayload.recoveryPublicKey, signature);
     return this.core.createAccountProof(
-      userId,
-      recoverySigner,
-      recoveryPayload.trustedThirdPartyPublicKey,
-      undefined,
-      nullifiedKey,
+      user.id,
+      signer,
       alias,
+      0,
       true,
+      undefined,
+      newSigningPublicKey,
+      recoveryPublicKey,
     );
   }
 
-  public async addAlias(userId: Buffer, alias: string, signer: Signer): Promise<TxHash> {
-    return this.core.createAccountProof(userId, signer, undefined, undefined, undefined, alias);
+  public async recoverAccount(alias: string, recoveryPayload: RecoveryPayload): Promise<TxHash> {
+    const { trustedThirdPartyPublicKey, recoveryPublicKey, recoveryData } = recoveryPayload;
+    const { nonce, signature } = recoveryData;
+    const recoverySigner = new RecoverSignatureSigner(recoveryPublicKey, signature);
+
+    return this.addSigningKeys(alias, recoverySigner, trustedThirdPartyPublicKey, undefined, nonce);
   }
 
-  public async addSigningKey(userId: Buffer, signingPublicKey: GrumpkinAddress, signer: Signer): Promise<TxHash> {
-    return this.core.createAccountProof(userId, signer, signingPublicKey);
+  public async migrateAccount(
+    alias: string,
+    signer: Signer,
+    newSigningPublicKey: GrumpkinAddress,
+    recoveryPublicKey?: GrumpkinAddress,
+    newAccountPublicKey?: GrumpkinAddress,
+  ): Promise<TxHash> {
+    const publicKey = await this.getAddressFromAlias(alias);
+    if (!publicKey) {
+      throw new Error('Alias not registered.');
+    }
+
+    const latestNonce = await this.core.getLatestAliasNonce(alias);
+    const user = this.getUserData(publicKey, latestNonce);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return this.core.createAccountProof(
+      user.id,
+      signer,
+      alias,
+      user.nonce,
+      true,
+      newAccountPublicKey,
+      newSigningPublicKey,
+      recoveryPublicKey,
+    );
   }
 
-  public async removeSigningKey(userId: Buffer, signingPublicKey: GrumpkinAddress, signer: Signer): Promise<TxHash> {
-    throw new Error('Signing key revokation not yet implemented.');
-    // return this.core.createAccountProof(userId, signer, undefined, undefined, signingPublicKey);
+  public async addSigningKeys(
+    alias: string,
+    signer: Signer,
+    signingPublicKey1: GrumpkinAddress,
+    signingPublicKey2?: GrumpkinAddress,
+    nonce?: number,
+  ): Promise<TxHash> {
+    const publicKey = await this.getAddressFromAlias(alias, nonce);
+    if (!publicKey) {
+      throw new Error('Alias not registered.');
+    }
+
+    const user = this.getUserData(publicKey, nonce);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return this.core.createAccountProof(
+      user.id,
+      signer,
+      alias,
+      user.nonce,
+      false,
+      undefined,
+      signingPublicKey1,
+      signingPublicKey2,
+    );
   }
 
-  public getUserData(userId: Buffer) {
+  public async getSigningKeys(alias: string, nonce?: number) {
+    return this.core.getSigningKeys(alias, nonce);
+  }
+
+  public getUserData(publicKey: GrumpkinAddress, nonce?: number) {
+    const userId = this.getUserId(publicKey, nonce);
     return this.core.getUserData(userId);
   }
 
@@ -351,20 +443,24 @@ export class WalletSdk extends EventEmitter {
     return this.core.createSchnorrSigner(privateKey);
   }
 
-  public async addUser(privateKey: Buffer) {
-    return this.core.addUser(privateKey);
+  public async addUser(privateKey: Buffer, nonce?: number) {
+    const userData = await this.core.addUser(privateKey, nonce);
+    return new WalletSdkUser(userData.id, this);
   }
 
-  public async removeUser(userId: Buffer) {
+  public async removeUser(publicKey: GrumpkinAddress, nonce?: number) {
+    const userId = this.getUserId(publicKey, nonce);
     return this.core.removeUser(userId);
   }
 
-  public getUser(userId: Buffer) {
+  public getUser(publicKey: GrumpkinAddress, nonce?: number) {
+    const userId = this.getUserId(publicKey, nonce);
     return new WalletSdkUser(userId, this);
   }
 
-  public getBalance(userId: Buffer, assetId: AssetId) {
-    return this.core.getBalance(userId, assetId);
+  public getBalance(assetId: AssetId, publicKey: GrumpkinAddress, nonce?: number) {
+    const userId = this.getUserId(publicKey, nonce);
+    return this.core.getBalance(assetId, userId);
   }
 
   public async getPublicBalance(assetId: AssetId, ethAddress: EthAddress) {
@@ -399,7 +495,7 @@ export class WalletSdk extends EventEmitter {
     return this.core.getTx(txHash);
   }
 
-  public async getUserTxs(userId: Buffer) {
+  public async getUserTxs(userId: UserId) {
     return this.core.getUserTxs(userId);
   }
 
@@ -409,5 +505,23 @@ export class WalletSdk extends EventEmitter {
 
   public stopTrackingGlobalState() {
     return this.core.stopTrackingGlobalState();
+  }
+
+  public derivePublicKey(privateKey: Buffer) {
+    return this.core.derivePublicKey(privateKey);
+  }
+
+  public getUserId(publicKey: GrumpkinAddress, nonce?: number) {
+    if (nonce !== undefined) {
+      return new UserId(publicKey, nonce);
+    }
+
+    const maxNonce = this.core
+      .getUsersData()
+      .reduce(
+        (maxNonce, user) => (user.publicKey.equals(publicKey) && user.nonce > maxNonce ? user.nonce : maxNonce),
+        0,
+      );
+    return new UserId(publicKey, maxNonce);
   }
 }

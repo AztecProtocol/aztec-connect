@@ -18,13 +18,13 @@ const generateRollup = (rollupId: number, rollupSize: number) => {
           0,
           numToUInt32BE(0, 32),
           numToUInt32BE(0, 32),
-          0,
+          numToUInt32BE(0, 32),
           randomBytes(64),
           randomBytes(64),
           randomBytes(32),
           randomBytes(32),
-          EthAddress.ZERO,
-          EthAddress.ZERO,
+          randomBytes(32),
+          randomBytes(32),
         ),
     );
   return new RollupProofData(

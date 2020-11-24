@@ -1,4 +1,12 @@
-import { AssetId, createEthSdk, EthereumSdk, EthereumSdkUser, EthAddress, EthersAdapter, EthereumProvider } from 'aztec2-sdk';
+import {
+  AssetId,
+  createEthSdk,
+  EthereumSdk,
+  EthereumSdkUser,
+  EthAddress,
+  EthersAdapter,
+  EthereumProvider,
+} from 'aztec2-sdk';
 import { EventEmitter } from 'events';
 import { advanceBlocks, blocksToAdvance } from './manipulate_block';
 import { JsonRpcProvider } from '@ethersproject/providers';
@@ -58,7 +66,7 @@ describe('end-to-end escape tests', () => {
     expect(user0Asset.balance()).toBe(0n);
 
     const txHash = await user0Asset.deposit(depositValue);
-    await sdk.awaitSettlement(userAddresses[0], txHash);
+    await sdk.awaitSettlement(txHash);
 
     expect(await user0Asset.publicBalance()).toBe(0n);
     const user0BalanceAfterDeposit = user0Asset.balance();
@@ -70,10 +78,10 @@ describe('end-to-end escape tests', () => {
     expect(user1Asset.balance()).toBe(0n);
 
     const transferTxHash = await user0Asset.transfer(transferValue, users[1].getUserData().publicKey);
-    await sdk.awaitSettlement(userAddresses[0], transferTxHash);
+    await sdk.awaitSettlement(transferTxHash);
     expect(user0Asset.balance()).toBe(user0BalanceAfterDeposit - transferValue);
 
-    await sdk.awaitSettlement(userAddresses[1], transferTxHash);
+    await sdk.awaitSettlement(transferTxHash);
     const user1BalanceAfterTransfer = user1Asset.balance();
     expect(user1BalanceAfterTransfer).toBe(transferValue);
 
@@ -81,7 +89,7 @@ describe('end-to-end escape tests', () => {
     const withdrawValue = user0Asset.toErc20Units('300');
 
     const withdrawTxHash = await user1Asset.withdraw(withdrawValue);
-    await sdk.awaitSettlement(users[1].getUserData().ethAddress, withdrawTxHash);
+    await sdk.awaitSettlement(withdrawTxHash);
 
     expect(await user1Asset.publicBalance()).toBe(withdrawValue);
     expect(user1Asset.balance()).toBe(user1BalanceAfterTransfer - withdrawValue);

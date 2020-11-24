@@ -5,30 +5,30 @@ import { Signer } from '../signer';
 import { EthereumSdk } from './';
 
 export class EthereumSdkUserAsset {
-  constructor(private ethAddress: EthAddress, private assetId: AssetId, private sdk: EthereumSdk) {}
+  constructor(public ethAddress: EthAddress, public id: AssetId, private sdk: EthereumSdk, public nonce: number) {}
 
   symbol() {
     return 'DAI';
   }
 
   publicBalance() {
-    return this.sdk.getTokenContract(this.assetId).balanceOf(this.ethAddress);
+    return this.sdk.getTokenContract(this.id).balanceOf(this.ethAddress);
   }
 
   publicAllowance() {
-    return this.sdk.getTokenContract(this.assetId).allowance(this.ethAddress);
+    return this.sdk.getTokenContract(this.id).allowance(this.ethAddress);
   }
 
   getUserPendingDeposit() {
-    return this.sdk.getUserPendingDeposit(this.assetId, this.ethAddress);
+    return this.sdk.getUserPendingDeposit(this.id, this.ethAddress);
   }
 
   getPermitSupport() {
-    return this.sdk.getAssetPermitSupport(this.assetId);
+    return this.sdk.getAssetPermitSupport(this.id);
   }
 
   balance() {
-    return this.sdk.getBalance(this.ethAddress, this.assetId);
+    return this.sdk.getBalance(this.id, this.ethAddress, this.nonce);
   }
 
   private async getGrumpkinAddress(addr?: GrumpkinAddress | string) {
@@ -47,30 +47,45 @@ export class EthereumSdkUserAsset {
   }
 
   async mint(value: bigint): Promise<TxHash> {
-    return this.sdk.mint(this.assetId, value, this.ethAddress);
+    return this.sdk.mint(this.id, value, this.ethAddress);
   }
 
   async approve(value: bigint): Promise<TxHash> {
-    return this.sdk.approve(this.assetId, value, this.ethAddress);
+    return this.sdk.approve(this.id, value, this.ethAddress);
   }
 
-  async deposit(value: bigint, to?: GrumpkinAddress | string, signer?: Signer): Promise<TxHash> {
-    return this.sdk.deposit(this.assetId, value, this.ethAddress, await this.getGrumpkinAddress(to), signer);
+  async deposit(value: bigint, to?: GrumpkinAddress | string, signer?: Signer, toNonce?: number): Promise<TxHash> {
+    return this.sdk.deposit(
+      this.id,
+      value,
+      this.ethAddress,
+      await this.getGrumpkinAddress(to),
+      signer,
+      to || toNonce !== undefined ? toNonce : this.nonce,
+    );
   }
 
   async withdraw(value: bigint, to?: EthAddress, signer?: Signer): Promise<TxHash> {
-    return this.sdk.withdraw(this.assetId, value, this.ethAddress, to || this.ethAddress, signer);
+    return this.sdk.withdraw(this.id, value, this.ethAddress, to || this.ethAddress, signer, this.nonce);
   }
 
-  async transfer(value: bigint, to: GrumpkinAddress | string, signer?: Signer): Promise<TxHash> {
-    return this.sdk.transfer(this.assetId, value, this.ethAddress, await this.getGrumpkinAddress(to), signer);
+  async transfer(value: bigint, to: GrumpkinAddress | string, signer?: Signer, toNonce?: number): Promise<TxHash> {
+    return this.sdk.transfer(
+      this.id,
+      value,
+      this.ethAddress,
+      await this.getGrumpkinAddress(to),
+      signer,
+      this.nonce,
+      toNonce,
+    );
   }
 
   public fromErc20Units(value: bigint, precision?: number) {
-    return this.sdk.getTokenContract(this.assetId).fromErc20Units(value, precision);
+    return this.sdk.getTokenContract(this.id).fromErc20Units(value, precision);
   }
 
   public toErc20Units(value: string) {
-    return this.sdk.getTokenContract(this.assetId).toErc20Units(value);
+    return this.sdk.getTokenContract(this.id).toErc20Units(value);
   }
 }

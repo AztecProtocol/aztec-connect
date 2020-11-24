@@ -1,15 +1,15 @@
-import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { computeRemoveSigningKeyNullifier } from 'barretenberg/client_proofs/account_proof';
+import { EthAddress } from 'barretenberg/address';
 import { EscapeHatchProver, EscapeHatchTx } from 'barretenberg/client_proofs/escape_hatch_proof';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { WorldState } from 'barretenberg/world_state';
-import { toBigIntBE, toBufferBE } from 'bigint-buffer';
+import { toBufferBE } from 'bigint-buffer';
 import createDebug from 'debug';
 import { utils } from 'ethers';
 import { HashPathSource } from 'sriracha/hash_path_source';
+import { AccountValueId } from '../../account_value_id';
 import { EthereumSigner, Signer } from '../../signer';
 import { UserState } from '../../user_state';
 import { JoinSplitTxFactory } from '../join_split_proof_creator/join_split_tx_factory';
@@ -38,8 +38,7 @@ export class EscapeHatchProofCreator {
     assetId: number,
     newNoteValue: bigint,
     signer: Signer,
-    senderPubKey: GrumpkinAddress,
-    receiverPubKey?: GrumpkinAddress,
+    receiver?: AccountValueId,
     outputOwnerAddress?: EthAddress,
     ethSigner?: EthereumSigner,
   ) {
@@ -50,8 +49,7 @@ export class EscapeHatchProofCreator {
       assetId,
       newNoteValue,
       signer,
-      senderPubKey,
-      receiverPubKey,
+      receiver,
       ethSigner ? ethSigner.getAddress() : undefined,
       outputOwnerAddress,
     );
@@ -100,15 +98,6 @@ export class EscapeHatchProofCreator {
 
     const rootResponse = await this.hashPathSource.getHashPaths(2, [{ index: rootTreeState.size, value: newDataRoot }]);
 
-    const accountNullifier = toBigIntBE(
-      computeRemoveSigningKeyNullifier(
-        joinSplitTx.inputNotes[0].ownerPubKey,
-        joinSplitTx.signingPubKey.x(),
-        this.pedersen,
-      ),
-    );
-    const accountNullifierPath = await this.hashPathSource.getHashPath(1, accountNullifier);
-
     const tx = new EscapeHatchTx(
       joinSplitTx,
       rollupId,
@@ -120,7 +109,6 @@ export class EscapeHatchProofCreator {
       nullResponse.newRoots,
       nullResponse.oldHashPaths,
       nullResponse.newHashPaths,
-      accountNullifierPath,
       rootResponse.oldRoot,
       rootResponse.newRoots[0],
       rootResponse.oldHashPaths[0],

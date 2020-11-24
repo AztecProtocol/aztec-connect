@@ -4,10 +4,10 @@ import {
   createWalletSdk,
   WalletSdk,
   WalletSdkUserAsset,
-  UserData,
   createPermitData,
   Web3Signer,
   WalletProvider,
+  WalletSdkUser,
 } from 'aztec2-sdk';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
@@ -21,7 +21,7 @@ describe('end-to-end permit tests', () => {
   let provider: WalletProvider;
   let sdk: WalletSdk;
   let privateKey: Buffer;
-  let user: UserData;
+  let user: WalletSdkUser;
   let userAsset: WalletSdkUserAsset;
   let userAddress: EthAddress;
   const newPermitAssetId = AssetId.DAI + 1;
@@ -41,7 +41,7 @@ describe('end-to-end permit tests', () => {
     await sdk.awaitSynchronised();
 
     user = await sdk.addUser(privateKey);
-    userAsset = await sdk.getUser(user.id).getAsset(newPermitAssetId);
+    userAsset = await user.getAsset(newPermitAssetId);
   });
 
   afterAll(async () => {
@@ -79,7 +79,7 @@ describe('end-to-end permit tests', () => {
     const permitArgs = { deadline, approvalAmount: depositValue, signature };
 
     const txHash = await userAsset.deposit(depositValue, aztecSigner, ethSigner, permitArgs);
-    await sdk.awaitSettlement(user.id, txHash, 300);
+    await sdk.awaitSettlement(txHash, 300);
 
     expect(await userAsset.publicBalance(userAddress)).toBe(0n);
     expect(userAsset.balance()).toBe(depositValue);

@@ -1,9 +1,10 @@
 import { GrumpkinAddress } from 'barretenberg/address';
+import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { randomBytes } from 'crypto';
 import { Note } from '../../note';
-import { UserData } from '../../user';
+import { AccountId, UserData, UserId } from '../../user';
 import { UserTx } from '../../user_tx';
-import { SigningKey } from '../database';
+import { Alias, SigningKey } from '../database';
 
 export const randomInt = () => {
   return Math.floor(Math.random() * 2 ** 32);
@@ -18,19 +19,21 @@ export const randomNote = (): Note => ({
   encrypted: randomBytes(32),
   nullifier: randomBytes(32),
   nullified: false,
-  owner: randomBytes(32),
+  owner: UserId.random(),
 });
 
 export const randomUser = (): UserData => ({
-  id: randomBytes(64),
+  id: UserId.random(),
   privateKey: randomBytes(32),
   publicKey: GrumpkinAddress.randomAddress(),
+  nonce: randomInt(),
+  aliasHash: AliasHash.random(),
   syncedToRollup: randomInt(),
 });
 
 export const randomUserTx = (): UserTx => ({
   txHash: randomBytes(32),
-  userId: randomBytes(32),
+  userId: UserId.random(),
   action: 'DEPOSIT',
   assetId: randomInt(),
   value: BigInt(randomInt()),
@@ -39,8 +42,17 @@ export const randomUserTx = (): UserTx => ({
   recipient: randomBytes(32),
 });
 
+export const randomAccountId = () => new AccountId(AliasHash.random(), randomInt());
+
 export const randomSigningKey = (): SigningKey => ({
-  owner: randomBytes(32),
+  accountId: randomAccountId(),
   key: randomBytes(32),
   treeIndex: randomInt(),
+  address: GrumpkinAddress.randomAddress(),
+});
+
+export const randomAlias = (): Alias => ({
+  aliasHash: AliasHash.random(),
+  address: GrumpkinAddress.randomAddress(),
+  latestNonce: randomInt(),
 });

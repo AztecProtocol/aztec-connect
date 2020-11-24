@@ -45,7 +45,7 @@ describe('end-to-end falafel recovery tests', () => {
       await userAsset.approve(depositValue);
 
       const txHash = await userAsset.deposit(depositValue);
-      await sdk.awaitSettlement(userAddress, txHash);
+      await sdk.awaitSettlement(txHash);
 
       expect(userAsset.balance()).toBe(depositValue);
       await sdk.destroy();
@@ -69,7 +69,7 @@ describe('end-to-end falafel recovery tests', () => {
       const userAsset = user.getAsset(assetId);
 
       const txHash = await userAsset.withdraw(500n);
-      await sdk.awaitSettlement(userAddress, txHash);
+      await sdk.awaitSettlement(txHash);
 
       expect(await userAsset.publicBalance()).toBe(500n);
       expect(userAsset.balance()).toBe(500n);
@@ -92,7 +92,7 @@ describe('end-to-end falafel recovery tests', () => {
       const userAsset = user.getAsset(assetId);
 
       const txHash = await userAsset.withdraw(500n);
-      await sdk.awaitSettlement(userAddress, txHash);
+      await sdk.awaitSettlement(txHash);
 
       expect(await userAsset.publicBalance()).toBe(1000n);
       expect(userAsset.balance()).toBe(0n);

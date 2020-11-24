@@ -118,20 +118,16 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.awaitSynchronised();
   }
 
-  public async awaitUserSynchronised(ethAddress: EthAddress) {
-    const userId = this.getUserIdByEthAddress(ethAddress);
+  public async awaitUserSynchronised(ethAddress: EthAddress, nonce?: number) {
+    const userId = this.getUserIdByEthAddress(ethAddress, nonce);
     if (!userId) {
       throw new Error(`User not found: ${ethAddress}`);
     }
     return this.walletSdk.awaitUserSynchronised(userId);
   }
 
-  public async awaitSettlement(ethAddress: EthAddress, txHash: TxHash, timeout = 120) {
-    const userId = this.getUserIdByEthAddress(ethAddress);
-    if (!userId) {
-      throw new Error(`User not found: ${ethAddress}`);
-    }
-    return this.walletSdk.awaitSettlement(userId, txHash, timeout);
+  public async awaitSettlement(txHash: TxHash, timeout = 120) {
+    return this.walletSdk.awaitSettlement(txHash, timeout);
   }
 
   public isEscapeHatchMode() {
@@ -158,16 +154,28 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.getUserPendingDeposit(assetId, account);
   }
 
-  public async getAddressFromAlias(alias: string) {
-    return this.walletSdk.getAddressFromAlias(alias);
+  public async getAddressFromAlias(alias: string, nonce?: number) {
+    return this.walletSdk.getAddressFromAlias(alias, nonce);
   }
 
-  public getActionState(ethAddress?: EthAddress) {
+  public async getLatestUserNonce(publicKey: GrumpkinAddress) {
+    return this.walletSdk.getLatestUserNonce(publicKey);
+  }
+
+  public async getLatestAliasNonce(alias: string) {
+    return this.walletSdk.getLatestAliasNonce(alias);
+  }
+
+  public async isAliasAvailable(alias: string) {
+    return this.walletSdk.isAliasAvailable(alias);
+  }
+
+  public getActionState(ethAddress?: EthAddress, nonce?: number) {
     if (!ethAddress) {
       return this.walletSdk.getActionState();
     }
 
-    const userId = this.getUserIdByEthAddress(ethAddress);
+    const userId = this.getUserIdByEthAddress(ethAddress, nonce);
     if (!userId) {
       throw new Error(`User not found: ${ethAddress}`);
     }
@@ -175,21 +183,21 @@ export class EthereumSdk extends EventEmitter {
   }
 
   public async approve(assetId: AssetId, value: bigint, from: EthAddress): Promise<TxHash> {
-    const userId = this.getUserIdByEthAddress(from);
-    if (!userId) {
+    const publicKey = this.getPublicKeyByEthAddress(from);
+    if (!publicKey) {
       throw new Error(`User not found: ${from}`);
     }
 
-    return this.walletSdk.approve(assetId, userId, value, from);
+    return this.walletSdk.approve(assetId, publicKey, value, from);
   }
 
   public async mint(assetId: AssetId, value: bigint, account: EthAddress): Promise<TxHash> {
-    const userId = this.getUserIdByEthAddress(account);
-    if (!userId) {
+    const publicKey = this.getPublicKeyByEthAddress(account);
+    if (!publicKey) {
       throw new Error(`User not found: ${account}`);
     }
 
-    return this.walletSdk.mint(assetId, userId, value, account);
+    return this.walletSdk.mint(assetId, publicKey, value, account);
   }
 
   public async deposit(
@@ -198,9 +206,10 @@ export class EthereumSdk extends EventEmitter {
     from: EthAddress,
     to: GrumpkinAddress,
     signer?: Signer,
+    toNonce?: number,
   ): Promise<TxHash> {
-    const userId = this.getUserIdByEthAddress(from);
-    if (!userId) {
+    const publicKey = this.getPublicKeyByEthAddress(from);
+    if (!publicKey) {
       throw new Error(`User not found: ${from}`);
     }
     const aztecSigner = signer || this.getSchnorrSigner(from);
@@ -220,7 +229,7 @@ export class EthereumSdk extends EventEmitter {
           const deadline = BigInt(300);
           const signature = await this.createPermitSignature(assetId, ethSigner, approvalAmount, deadline);
           const permitArgs = { approvalAmount, deadline, signature };
-          return this.walletSdk.deposit(assetId, userId, value, aztecSigner, ethSigner, permitArgs, to);
+          return this.walletSdk.deposit(assetId, publicKey, value, aztecSigner, ethSigner, permitArgs, to, toNonce);
         } catch {
           this.emit(SdkEvent.LOG, 'Approving deposit...');
           await this.approve(assetId, approvalAmount, from);
@@ -231,7 +240,7 @@ export class EthereumSdk extends EventEmitter {
       }
     }
 
-    return this.walletSdk.deposit(assetId, userId, value, aztecSigner, ethSigner, undefined, to);
+    return this.walletSdk.deposit(assetId, publicKey, value, aztecSigner, ethSigner, undefined, to, toNonce);
   }
 
   private async createPermitSignature(
@@ -267,14 +276,15 @@ export class EthereumSdk extends EventEmitter {
     from: EthAddress,
     to: EthAddress,
     signer?: Signer,
+    fromNonce?: number,
   ): Promise<TxHash> {
-    const userId = this.getUserIdByEthAddress(from);
-    if (!userId) {
+    const publicKey = this.getPublicKeyByEthAddress(from);
+    if (!publicKey) {
       throw new Error(`User not found: ${from}`);
     }
 
     const aztecSigner = signer || this.getSchnorrSigner(from);
-    return this.walletSdk.withdraw(assetId, userId, value, aztecSigner, to);
+    return this.walletSdk.withdraw(assetId, publicKey, value, aztecSigner, to, fromNonce);
   }
 
   public async transfer(
@@ -283,87 +293,94 @@ export class EthereumSdk extends EventEmitter {
     from: EthAddress,
     to: GrumpkinAddress,
     signer?: Signer,
+    fromNonce?: number,
+    toNonce?: number,
   ): Promise<TxHash> {
-    const userId = this.getUserIdByEthAddress(from);
-    if (!userId) {
+    const publicKey = this.getPublicKeyByEthAddress(from);
+    if (!publicKey) {
       throw new Error(`User not found: ${from}`);
     }
 
     const aztecSigner = signer || this.getSchnorrSigner(from);
-    return this.walletSdk.transfer(assetId, userId, value, aztecSigner, to);
+    return this.walletSdk.transfer(assetId, publicKey, value, aztecSigner, to, fromNonce, toNonce);
   }
 
-  public async generateAccountRecoveryData(ethAddress: EthAddress, trustedThirdPartyPublicKeys: GrumpkinAddress[]) {
-    const userId = this.getUserIdByEthAddress(ethAddress);
-    if (!userId) {
+  public async generateAccountRecoveryData(
+    alias: string,
+    ethAddress: EthAddress,
+    trustedThirdPartyPublicKeys: GrumpkinAddress[],
+    nonce?: number,
+  ) {
+    const publicKey = this.getPublicKeyByEthAddress(ethAddress);
+    if (!publicKey) {
       throw new Error(`User not found: ${ethAddress}`);
     }
 
-    return this.walletSdk.generateAccountRecoveryData(userId, trustedThirdPartyPublicKeys);
+    return this.walletSdk.generateAccountRecoveryData(alias, publicKey, trustedThirdPartyPublicKeys, nonce);
   }
 
   public async createAccount(
+    alias: string,
     ethAddress: EthAddress,
     newSigningPublicKey: GrumpkinAddress,
-    recoveryPublicKey: GrumpkinAddress,
-    alias: string,
+    recoveryPublicKey?: GrumpkinAddress,
   ): Promise<TxHash> {
-    const userId = this.getUserIdByEthAddress(ethAddress);
-    if (!userId) {
+    const publicKey = this.getPublicKeyByEthAddress(ethAddress);
+    if (!publicKey) {
       throw new Error(`User not found: ${ethAddress}`);
     }
 
-    return this.walletSdk.createAccount(userId, newSigningPublicKey, recoveryPublicKey, alias);
+    return this.walletSdk.createAccount(alias, publicKey, newSigningPublicKey, recoveryPublicKey);
   }
 
-  async recoverAccount(ethAddress: EthAddress, recoveryPayload: RecoveryPayload): Promise<TxHash> {
-    const userId = this.getUserIdByEthAddress(ethAddress);
-    if (!userId) {
-      throw new Error(`User not found: ${ethAddress}`);
-    }
-
-    return this.walletSdk.recoverAccount(userId, recoveryPayload);
+  async recoverAccount(alias: string, recoveryPayload: RecoveryPayload): Promise<TxHash> {
+    return this.walletSdk.recoverAccount(alias, recoveryPayload);
   }
 
-  async addAlias(ethAddress: EthAddress, alias: string, signer: Signer): Promise<TxHash> {
-    const userId = this.getUserIdByEthAddress(ethAddress);
-    if (!userId) {
-      throw new Error(`User not found: ${ethAddress}`);
+  public async migrateAccount(
+    alias: string,
+    signer: Signer,
+    newSigningPublicKey: GrumpkinAddress,
+    recoveryPublicKey?: GrumpkinAddress,
+    newEthAddress?: EthAddress,
+  ): Promise<TxHash> {
+    let newAccountPublicKey;
+    if (newEthAddress) {
+      const ethSigner = new Web3Signer(this.etherumProvider, newEthAddress);
+      const privateKey = await deriveGrumpkinPrivateKey(ethSigner);
+      newAccountPublicKey = this.walletSdk.derivePublicKey(privateKey);
     }
 
-    return this.walletSdk.addAlias(userId, alias, signer);
+    return this.walletSdk.migrateAccount(alias, signer, newSigningPublicKey, recoveryPublicKey, newAccountPublicKey);
   }
 
-  async addSigningKey(ethAddress: EthAddress, signingPublicKey: GrumpkinAddress, signer: Signer): Promise<TxHash> {
-    const userId = this.getUserIdByEthAddress(ethAddress);
-    if (!userId) {
-      throw new Error(`User not found: ${ethAddress}`);
-    }
-
-    return this.walletSdk.addSigningKey(userId, signingPublicKey, signer);
+  async addSigningKeys(
+    alias: string,
+    signer: Signer,
+    signingPublicKey1: GrumpkinAddress,
+    signingPublicKey2?: GrumpkinAddress,
+    nonce?: number,
+  ): Promise<TxHash> {
+    return this.walletSdk.addSigningKeys(alias, signer, signingPublicKey1, signingPublicKey2, nonce);
   }
 
-  async removeSigningKey(ethAddress: EthAddress, signingPublicKey: GrumpkinAddress, signer: Signer): Promise<TxHash> {
-    const userId = this.getUserIdByEthAddress(ethAddress);
-    if (!userId) {
-      throw new Error(`User not found: ${ethAddress}`);
-    }
-
-    return this.walletSdk.removeSigningKey(userId, signingPublicKey, signer);
+  public async getSigningKeys(alias: string, nonce?: number) {
+    return this.walletSdk.getSigningKeys(alias, nonce);
   }
 
-  public getUserData(ethAddress: EthAddress) {
-    const userId = this.getUserIdByEthAddress(ethAddress);
-    if (!userId) {
+  public getUserData(ethAddress: EthAddress, nonce?: number) {
+    const publicKey = this.getPublicKeyByEthAddress(ethAddress);
+    if (!publicKey) {
       throw new Error(`User not found: ${ethAddress}`);
     }
-    const userData = this.walletSdk.getUserData(userId);
+
+    const userData = this.walletSdk.getUserData(publicKey, nonce);
     return userData ? toEthUserData(ethAddress, userData) : undefined;
   }
 
   public getUsersData() {
     return this.walletSdk.getUsersData().map(userData => {
-      const ethAddress = this.getEthAddressByUserId(userData.id)!;
+      const ethAddress = this.getEthAddressByPublicKey(userData.publicKey);
       return toEthUserData(ethAddress, userData);
     });
   }
@@ -377,42 +394,46 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.createSchnorrSigner(privateKey);
   }
 
-  public async addUser(ethAddress: EthAddress) {
+  public async addUser(ethAddress: EthAddress, nonce?: number) {
     const ethSigner = new Web3Signer(this.etherumProvider, ethAddress);
     const privateKey = await deriveGrumpkinPrivateKey(ethSigner);
     this.pauseWalletEvents = true;
     try {
-      const coreUser = await this.walletSdk.addUser(privateKey);
-      await this.db.addAccount({ ethAddress, userId: coreUser.id });
+      const coreUser = await this.walletSdk.addUser(privateKey, nonce);
+      const coreUserData = coreUser.getUserData();
+      const latestAccount = await this.db.getAccount(ethAddress);
+      if (!latestAccount) {
+        await this.db.addAccount({ ethAddress, accountPublicKey: coreUserData.publicKey });
+      }
       await this.updateLocalAccounts();
-      return new EthereumSdkUser(ethAddress, this);
+      return new EthereumSdkUser(ethAddress, this, coreUserData.nonce);
     } finally {
       this.resumeEvents();
     }
   }
 
-  public async removeUser(ethAddress: EthAddress) {
-    const userId = this.getUserIdByEthAddress(ethAddress);
-    if (!userId) {
+  public async removeUser(ethAddress: EthAddress, nonce?: number) {
+    const publicKey = this.getPublicKeyByEthAddress(ethAddress);
+    if (!publicKey) {
       throw new Error(`User not found: ${ethAddress}`);
     }
 
     await this.db.deleteAccount(ethAddress);
     await this.updateLocalAccounts();
-    return this.walletSdk.removeUser(userId);
+    return this.walletSdk.removeUser(publicKey, nonce);
   }
 
-  public getUser(ethAddress: EthAddress) {
-    const userId = this.getUserIdByEthAddress(ethAddress);
-    return userId ? new EthereumSdkUser(ethAddress, this) : undefined;
+  public getUser(ethAddress: EthAddress, nonce?: number) {
+    const userId = this.getUserIdByEthAddress(ethAddress, nonce);
+    return userId ? new EthereumSdkUser(ethAddress, this, userId.nonce) : undefined;
   }
 
-  public getBalance(ethAddress: EthAddress, assetId: AssetId) {
-    const userId = this.getUserIdByEthAddress(ethAddress);
-    if (!userId) {
+  public getBalance(assetId: AssetId, ethAddress: EthAddress, nonce?: number) {
+    const publicKey = this.getPublicKeyByEthAddress(ethAddress);
+    if (!publicKey) {
       throw new Error(`User not found: ${ethAddress}`);
     }
-    return this.walletSdk.getBalance(userId, assetId);
+    return this.walletSdk.getBalance(assetId, publicKey, nonce);
   }
 
   public async getLatestRollups(count: number) {
@@ -431,8 +452,8 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.getTx(txHash);
   }
 
-  public async getUserTxs(ethAddress: EthAddress) {
-    const userId = this.getUserIdByEthAddress(ethAddress);
+  public async getUserTxs(ethAddress: EthAddress, nonce?: number) {
+    const userId = this.getUserIdByEthAddress(ethAddress, nonce);
     if (!userId) {
       throw new Error(`User not found: ${ethAddress}`);
     }
@@ -451,15 +472,24 @@ export class EthereumSdk extends EventEmitter {
     this.localAccounts = await this.db.getAccounts();
   }
 
-  private getUserIdByEthAddress(ethAddress: EthAddress) {
+  private getPublicKeyByEthAddress(ethAddress: EthAddress) {
     const ethAddressBuf = ethAddress.toBuffer();
     const account = this.localAccounts.find(a => a.ethAddress.toBuffer().equals(ethAddressBuf));
-    return account?.userId;
+    return account?.accountPublicKey;
   }
 
-  private getEthAddressByUserId(userId: Buffer) {
-    const account = this.localAccounts.find(a => a.userId.equals(userId));
-    return account?.ethAddress;
+  private getUserIdByEthAddress(ethAddress: EthAddress, nonce?: number) {
+    const publicKey = this.getPublicKeyByEthAddress(ethAddress);
+    if (!publicKey) {
+      return undefined;
+    }
+
+    return this.walletSdk.getUserId(publicKey, nonce);
+  }
+
+  private getEthAddressByPublicKey(publicKey: GrumpkinAddress) {
+    const account = this.localAccounts.find(a => a.accountPublicKey.equals(publicKey));
+    return account ? account.ethAddress : EthAddress.ZERO;
   }
 
   private forwardEvent(event: SdkEvent, args: any[]) {
@@ -472,8 +502,8 @@ export class EthereumSdk extends EventEmitter {
     switch (event) {
       case SdkEvent.UPDATED_USER_STATE: {
         const [userId, ...rest] = args;
-        const ethAddress = this.getEthAddressByUserId(userId);
-        this.emit(event, ethAddress, ...rest);
+        const ethAddress = this.getEthAddressByPublicKey(userId.publicKey);
+        this.emit(event, ethAddress, ...rest, userId.nonce);
         break;
       }
       default:

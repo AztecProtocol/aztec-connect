@@ -1,11 +1,15 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
+import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { JoinSplitTx, computeSigningData } from 'barretenberg/client_proofs/join_split_proof';
 import { createNoteSecret, encryptNote, Note } from 'barretenberg/client_proofs/note';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { WorldState } from 'barretenberg/world_state';
+import { randomBytes } from 'crypto';
+import { AccountValueId } from '../../account_value_id';
 import { Signer } from '../../signer';
+import { AccountId } from '../../user';
 import { UserState } from '../../user_state';
 
 export class JoinSplitTxFactory {
@@ -23,8 +27,7 @@ export class JoinSplitTxFactory {
     assetId: number,
     newNoteValue: bigint,
     signer: Signer,
-    senderPubKey: GrumpkinAddress,
-    receiverPubKey?: GrumpkinAddress,
+    receiver?: AccountValueId,
     inputOwnerAddress?: EthAddress,
     outputOwnerAddress?: EthAddress,
   ) {
@@ -34,22 +37,28 @@ export class JoinSplitTxFactory {
     if (!notes) {
       throw new Error(`Failed to find no more than 2 notes that sum to ${requiredInputNoteValue}.`);
     }
-    const numInputNotes = notes.length;
 
+    const sender = userState.getUser();
+    const accountId = new AccountId(sender.aliasHash || AliasHash.random(), sender.nonce);
+
+    const numInputNotes = notes.length;
     const totalNoteInputValue = notes.reduce((sum, note) => sum + note.value, BigInt(0));
     const inputNoteIndices = notes.map(n => n.index);
-    const inputNotes = notes.map(n => new Note(senderPubKey, n.viewingKey, n.value, assetId));
+    const inputNotes = notes.map(n => new Note(n.owner.publicKey, n.viewingKey, n.value, assetId, n.owner.nonce));
     for (let i = notes.length; i < 2; ++i) {
       inputNoteIndices.push(i);
-      inputNotes.push(new Note(senderPubKey, createNoteSecret(), BigInt(0), assetId));
+      inputNotes.push(new Note(sender.publicKey, createNoteSecret(), BigInt(0), assetId, sender.nonce));
     }
     const inputNotePaths = await Promise.all(inputNoteIndices.map(async idx => this.worldState.getHashPath(idx)));
 
     const changeValue = max(BigInt(0), totalNoteInputValue - newNoteValue - publicOutput);
-    const newNoteOwner = receiverPubKey || GrumpkinAddress.randomAddress();
+    const newNoteOwner = receiver || {
+      publicKey: GrumpkinAddress.randomAddress(),
+      nonce: 0,
+    };
     const outputNotes = [
-      new Note(newNoteOwner, createNoteSecret(), newNoteValue, assetId),
-      new Note(senderPubKey, createNoteSecret(), changeValue, assetId),
+      new Note(newNoteOwner.publicKey, createNoteSecret(), newNoteValue, assetId, newNoteOwner.nonce),
+      new Note(sender.publicKey, createNoteSecret(), changeValue, assetId, sender.nonce),
     ];
 
     const dataRoot = this.worldState.getRoot();
@@ -64,7 +73,7 @@ export class JoinSplitTxFactory {
     const { privateKey } = userState.getUser();
     const accountIndex = 0;
     const accountPath = await this.worldState.getHashPath(0);
-    const signingPubKey = senderPubKey;
+    const signingPubKey = signer.getPublicKey();
 
     const tx = new JoinSplitTx(
       publicInput,
@@ -76,13 +85,14 @@ export class JoinSplitTxFactory {
       inputNotePaths,
       inputNotes,
       outputNotes,
-      signature,
-      inputOwner,
-      outputOwner,
+      privateKey,
+      accountId,
       accountIndex,
       accountPath,
       signingPubKey,
-      privateKey,
+      signature,
+      inputOwner,
+      outputOwner,
     );
 
     return tx;

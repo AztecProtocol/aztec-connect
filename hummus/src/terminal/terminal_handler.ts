@@ -323,8 +323,9 @@ export class TerminalHandler {
       throw new Error('alias already registered.');
     }
     this.printQueue.put(`generating registration proof...\n`);
-    const signer = this.app.getSdk().getSchnorrSigner(this.app.getUser().getUserData().ethAddress);
-    await this.app.getUser().addAlias(alias, signer);
+    const newSigningPublicKey = GrumpkinAddress.randomAddress();
+    const recoveryPublicKey = GrumpkinAddress.randomAddress();
+    await this.app.getUser().createAccount(alias, newSigningPublicKey, recoveryPublicKey);
     this.printQueue.put(`registration proof sent.\n`);
   }
 

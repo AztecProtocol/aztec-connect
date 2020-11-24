@@ -282,7 +282,7 @@ describe('ethereum_blockchain', () => {
     expect(rollup0.dataStartIndex).to.equal(0);
     expect(rollup0.innerProofData[0].publicInput.readInt32BE(28)).to.equal(depositAmount);
     expect(rollup0.innerProofData[0].publicOutput.readInt32BE(28)).to.equal(0);
-    expect(rollup0.innerProofData[0].inputOwner.toString()).to.equal(userAAddress.toString());
+    expect(rollup0.innerProofData[0].inputOwner.toString('hex')).to.equal(userAAddress.toBuffer32().toString('hex'));
 
     const rollup1 = RollupProofData.fromBuffer(blocks[1].rollupProofData, blocks[1].viewingKeysData);
     expect(blocks[1].txHash).to.have.lengthOf(32);
@@ -291,7 +291,7 @@ describe('ethereum_blockchain', () => {
     expect(rollup1.dataStartIndex).to.equal(4);
     expect(rollup1.innerProofData[0].publicInput.readInt32BE(28)).to.equal(0);
     expect(rollup1.innerProofData[0].publicOutput.readInt32BE(28)).to.equal(withdrawalAmount);
-    expect(rollup1.innerProofData[0].outputOwner.toString()).to.equal(userAAddress.toString());
+    expect(rollup1.innerProofData[0].outputOwner.toString('hex')).to.equal(userAAddress.toBuffer32().toString('hex'));
   });
 
   it('should reject sending proof if depositor has insufficient approval ', async () => {

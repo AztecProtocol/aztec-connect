@@ -1,6 +1,7 @@
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
+import { UserId } from '../../user';
 import { UserTx, UserTxAction } from '../../user_tx';
-import { bigintTransformer } from './transformer';
+import { bigintTransformer, userIdTransformer } from './transformer';
 
 @Entity({ name: 'userTx' })
 @Index(['txHash', 'userId'], { unique: true })
@@ -8,8 +9,8 @@ export class UserTxDao implements UserTx {
   @PrimaryColumn()
   public txHash!: Buffer;
 
-  @PrimaryColumn()
-  public userId!: Buffer;
+  @PrimaryColumn('blob', { transformer: [userIdTransformer] })
+  public userId!: UserId;
 
   @Column('varchar')
   public action!: UserTxAction;

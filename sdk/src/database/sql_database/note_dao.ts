@@ -1,6 +1,7 @@
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 import { Note } from '../../note';
-import { bigintTransformer } from './transformer';
+import { UserId } from '../../user';
+import { bigintTransformer, userIdTransformer } from './transformer';
 
 @Entity({ name: 'note' })
 export class NoteDao implements Note {
@@ -22,7 +23,7 @@ export class NoteDao implements Note {
   @Column()
   public encrypted!: Buffer;
 
-  @Index({ unique: false })
+  @Index({ unique: true })
   @Column()
   public nullifier!: Buffer;
 
@@ -30,6 +31,6 @@ export class NoteDao implements Note {
   @Column()
   public nullified!: boolean;
 
-  @Column()
-  public owner!: Buffer;
+  @Column('blob', { transformer: [userIdTransformer] })
+  public owner!: UserId;
 }

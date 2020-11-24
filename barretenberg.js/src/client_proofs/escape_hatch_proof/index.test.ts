@@ -1,7 +1,6 @@
 import { EscapeHatchProver, EscapeHatchTx, EscapeHatchVerifier } from './index';
 import createDebug from 'debug';
 import { BarretenbergWasm } from '../../wasm';
-import { Pedersen } from '../../crypto/pedersen';
 import { createNoteSecret, Note } from '../note';
 import { EventEmitter } from 'events';
 import { Crs } from '../../crs';
@@ -12,12 +11,14 @@ import { Prover } from '../prover';
 import { Grumpkin } from '../../ecc/grumpkin';
 import { EthAddress, GrumpkinAddress } from '../../address';
 import { HashPath } from '../../merkle_tree';
-import { computeRemoveSigningKeyNullifier } from '../account_proof';
 import { JoinSplitTx } from '../join_split_proof';
 import { WorldStateDb } from '../../world_state_db';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { NoteAlgorithms } from '../note_algorithms';
 import { RollupProofData } from '../../rollup_proof';
+import { Blake2s } from '../../crypto/blake2s';
+import { AccountId } from '../account_id';
+import { AliasHash } from '../alias_hash';
 
 const debug = createDebug('bb:escape_hatch_proof');
 
@@ -28,8 +29,8 @@ describe('escape_hatch_proof', () => {
   let pool!: WorkerPool;
   let escapeHatchProver!: EscapeHatchProver;
   let escapeHatchVerifier!: EscapeHatchVerifier;
-  let pedersen!: Pedersen;
   let crs!: Crs;
+  let blake2s!: Blake2s;
   let grumpkin!: Grumpkin;
   let pippenger!: PooledPippenger;
   let pubKey!: GrumpkinAddress;
@@ -68,7 +69,7 @@ describe('escape_hatch_proof', () => {
 
     escapeHatchProver = new EscapeHatchProver(prover);
     escapeHatchVerifier = new EscapeHatchVerifier();
-    pedersen = new Pedersen(barretenberg);
+    blake2s = new Blake2s(barretenberg);
     grumpkin = new Grumpkin(barretenberg);
     noteAlgos = new NoteAlgorithms(barretenberg);
 
@@ -86,8 +87,8 @@ describe('escape_hatch_proof', () => {
   });
 
   it('should construct and verify an escape hatch proof', async () => {
-    const inputNote1 = new Note(pubKey, createNoteSecret(), BigInt(100), 0);
-    const inputNote2 = new Note(pubKey, createNoteSecret(), BigInt(50), 0);
+    const inputNote1 = new Note(pubKey, createNoteSecret(), BigInt(100), 0, 0);
+    const inputNote2 = new Note(pubKey, createNoteSecret(), BigInt(50), 0, 0);
     const inputNotes = [inputNote1, inputNote2];
 
     const inputIndexes = [0, 1];
@@ -98,8 +99,8 @@ describe('escape_hatch_proof', () => {
       return toBigIntBE(noteAlgos.computeNoteNullifier(encNote, inputIndexes[index], privateKey, true));
     });
 
-    const outputNote1 = new Note(pubKey, createNoteSecret(), BigInt(20), 0);
-    const outputNote2 = new Note(pubKey, createNoteSecret(), BigInt(10), 0);
+    const outputNote1 = new Note(pubKey, createNoteSecret(), BigInt(20), 0, 0);
+    const outputNote2 = new Note(pubKey, createNoteSecret(), BigInt(10), 0, 0);
     const outputNotes = [outputNote1, outputNote2];
 
     // Setup state, simulate inputs notes already being in
@@ -130,12 +131,12 @@ describe('escape_hatch_proof', () => {
     const outputOwner = EthAddress.randomAddress();
     const signature = await noteAlgos.sign([...inputNotes, ...outputNotes], privateKey, outputOwner.toBuffer());
 
+    const aliasHash = AliasHash.fromAlias('user_zero', blake2s);
+    const nonce = 0;
+    const accountId = new AccountId(aliasHash, nonce);
+
     const accountIndex = 0;
     const accountNotePath = await worldStateDb.getHashPath(dataTreeId, BigInt(accountIndex));
-    const accountNullifier = toBigIntBE(
-      computeRemoveSigningKeyNullifier(inputNotes[0].ownerPubKey, pubKey.x(), pedersen),
-    );
-    const accountNullifierPath = await worldStateDb.getHashPath(1, accountNullifier);
 
     // Get value note nullifier data
     const oldNullifierRoot = worldStateDb.getRoot(nullifierTreeId);
@@ -170,13 +171,14 @@ describe('escape_hatch_proof', () => {
       [inputNote1Path, inputNote2Path],
       inputNotes,
       outputNotes,
-      signature,
-      inputOwner,
-      outputOwner,
+      privateKey,
+      accountId,
       accountIndex,
       accountNotePath,
       pubKey,
-      privateKey,
+      signature,
+      inputOwner,
+      outputOwner,
     );
 
     const tx = new EscapeHatchTx(
@@ -191,7 +193,6 @@ describe('escape_hatch_proof', () => {
       newNullifierRoots,
       oldNullifierPaths,
       newNullifierPaths,
-      accountNullifierPath,
 
       oldDataRootsRoot,
       newDataRootsRoot,

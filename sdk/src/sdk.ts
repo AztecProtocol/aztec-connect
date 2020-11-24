@@ -1,4 +1,5 @@
 import { EthAddress } from 'barretenberg/address';
+import { UserId } from './user';
 
 export enum SdkEvent {
   // Initialization state changes.
@@ -43,7 +44,7 @@ export enum Action {
 export interface ActionState {
   action: Action;
   value: bigint;
-  sender: Buffer;
+  sender: UserId;
   recipient: string;
   created: Date;
   txHash?: Buffer;

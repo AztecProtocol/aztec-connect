@@ -1,8 +1,8 @@
-import { EthAddress } from 'barretenberg/address';
+import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 
 export interface DbAccount {
   ethAddress: EthAddress;
-  userId: Buffer;
+  accountPublicKey: GrumpkinAddress;
 }
 
 export interface Database {

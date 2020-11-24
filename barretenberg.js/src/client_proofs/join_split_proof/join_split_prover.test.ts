@@ -19,6 +19,9 @@ import { GrumpkinAddress, EthAddress } from '../../address';
 import { Schnorr } from '../../crypto/schnorr';
 import { UnrolledProver } from '../prover';
 import { computeSigningData } from './compute_signing_data';
+import { Blake2s } from '../../crypto/blake2s';
+import { AccountId } from '../account_id';
+import { AliasHash } from '../alias_hash';
 
 const debug = createDebug('bb:join_split_proof_test');
 
@@ -29,6 +32,7 @@ describe('join_split_proof', () => {
   let pool!: WorkerPool;
   let joinSplitProver!: JoinSplitProver;
   let joinSplitVerifier!: JoinSplitVerifier;
+  let blake2s!: Blake2s;
   let pedersen!: Pedersen;
   let schnorr!: Schnorr;
   let crs!: Crs;
@@ -62,6 +66,7 @@ describe('join_split_proof', () => {
 
     const prover = new UnrolledProver(pool.workers[0], pippenger, fft);
 
+    blake2s = new Blake2s(barretenberg);
     pedersen = new Pedersen(barretenberg);
     schnorr = new Schnorr(barretenberg);
     grumpkin = new Grumpkin(barretenberg);
@@ -94,10 +99,10 @@ describe('join_split_proof', () => {
     });
 
     it('should construct join split proof', async () => {
-      const inputNote1 = new Note(pubKey, createNoteSecret(), BigInt(100), 0);
-      const inputNote2 = new Note(pubKey, createNoteSecret(), BigInt(50), 0);
-      const outputNote1 = new Note(pubKey, createNoteSecret(), BigInt(80), 0);
-      const outputNote2 = new Note(pubKey, createNoteSecret(), BigInt(70), 0);
+      const inputNote1 = new Note(pubKey, createNoteSecret(), BigInt(100), 0, 0);
+      const inputNote2 = new Note(pubKey, createNoteSecret(), BigInt(50), 0, 0);
+      const outputNote1 = new Note(pubKey, createNoteSecret(), BigInt(80), 0, 0);
+      const outputNote2 = new Note(pubKey, createNoteSecret(), BigInt(70), 0, 0);
 
       const inputNote1Enc = await noteAlgos.encryptNote(inputNote1);
       const inputNote2Enc = await noteAlgos.encryptNote(inputNote2);
@@ -109,6 +114,10 @@ describe('join_split_proof', () => {
       const inputNote1Path = await tree.getHashPath(0);
       const inputNote2Path = await tree.getHashPath(1);
       const accountNotePath = await tree.getHashPath(2);
+
+      const aliasHash = AliasHash.fromAlias('user_zero', blake2s);
+      const nonce = 0;
+      const accountId = new AccountId(aliasHash, nonce);
 
       const inputOwner = EthAddress.randomAddress();
       const outputOwner = EthAddress.randomAddress();
@@ -131,13 +140,14 @@ describe('join_split_proof', () => {
         [inputNote1Path, inputNote2Path],
         [inputNote1, inputNote2],
         [outputNote1, outputNote2],
-        signature,
-        inputOwner,
-        outputOwner,
+        privateKey,
+        accountId,
         2,
         accountNotePath,
         pubKey,
-        privateKey,
+        signature,
+        inputOwner,
+        outputOwner,
       );
 
       debug('creating proof...');
@@ -155,8 +165,8 @@ describe('join_split_proof', () => {
       const expectedNullifier2 = noteAlgos.computeNoteNullifier(inputNote2Enc, 1, privateKey);
       expect(joinSplitProof.nullifier1).toEqual(expectedNullifier1);
       expect(joinSplitProof.nullifier2).toEqual(expectedNullifier2);
-      expect(joinSplitProof.inputOwner).toEqual(inputOwner.toBuffer());
-      expect(joinSplitProof.outputOwner).toEqual(outputOwner.toBuffer());
+      expect(joinSplitProof.inputOwner).toEqual(inputOwner.toBuffer32());
+      expect(joinSplitProof.outputOwner).toEqual(outputOwner.toBuffer32());
     });
   });
 });

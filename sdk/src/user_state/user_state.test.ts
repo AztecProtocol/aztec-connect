@@ -1,5 +1,6 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { computeAliasNullifier, computeRemoveSigningKeyNullifier } from 'barretenberg/client_proofs/account_proof';
+import { computeAccountIdNullifier } from 'barretenberg/client_proofs/account_proof/compute_nullifier';
+import { AccountId } from 'barretenberg/client_proofs/account_id';
 import { createNoteSecret, encryptNote, Note } from 'barretenberg/client_proofs/note';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { Blake2s } from 'barretenberg/crypto/blake2s';
@@ -9,9 +10,11 @@ import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
 import { numToUInt32BE } from 'barretenberg/serialize';
 import { BarretenbergWasm } from 'barretenberg/wasm';
 import { randomBytes } from 'crypto';
-import { Database, SigningKey } from '../database';
+import { Database } from '../database';
 import { UserData } from '../user';
+import { UserId } from '../user/user_id';
 import { UserState } from './index';
+import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;
@@ -36,10 +39,12 @@ describe('user state', () => {
 
   beforeEach(async () => {
     const privateKey = randomBytes(32);
+    const publicKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, privateKey));
     user = {
-      id: randomBytes(64),
+      id: new UserId(publicKey, 0),
       privateKey,
-      publicKey: new GrumpkinAddress(grumpkin.mul(Grumpkin.one, privateKey)),
+      publicKey,
+      nonce: 0,
       syncedToRollup: -1,
     };
 
@@ -54,7 +59,6 @@ describe('user state', () => {
       getUserNotes: jest.fn(),
       updateUser: jest.fn(),
       addUserSigningKey: jest.fn(),
-      removeUserSigningKey: jest.fn(),
       getUserSigningKeys: jest.fn().mockResolvedValue([]),
     } as any;
 
@@ -62,15 +66,15 @@ describe('user state', () => {
       getBlocks: jest.fn().mockResolvedValue([]),
     };
 
-    userState = new UserState(user, grumpkin, noteAlgos, pedersen, db as any, blockSource as any);
+    userState = new UserState(user, grumpkin, noteAlgos, db as any, blockSource as any);
     await userState.startSync();
   });
 
   const generateRollup = (validNewNote = true, validChangeNote = true, publicInput = 0, publicOutput = 0) => {
     const secret = createNoteSecret();
-    const note1 = new Note(user.publicKey, secret, BigInt(100), 0);
-    const note2 = new Note(user.publicKey, secret, BigInt(0), 0);
-    const gibberishNote = new Note(GrumpkinAddress.randomAddress(), secret, 0n, 0);
+    const note1 = new Note(user.publicKey, secret, BigInt(100), 0, 0);
+    const note2 = new Note(user.publicKey, secret, BigInt(0), 0, 0);
+    const gibberishNote = new Note(GrumpkinAddress.randomAddress(), secret, 0n, 0, 0);
     const encryptedNote1 = randomBytes(64);
     const encryptedNote2 = randomBytes(64);
     const nullifier1 = noteAlgos.computeNoteNullifier(randomBytes(64), 0, user.privateKey);
@@ -83,13 +87,13 @@ describe('user state', () => {
       0,
       numToUInt32BE(publicInput, 32),
       numToUInt32BE(publicOutput, 32),
-      0,
+      numToUInt32BE(0, 32),
       encryptedNote1,
       encryptedNote2,
       nullifier1,
       nullifier2,
-      EthAddress.ZERO,
-      EthAddress.ZERO,
+      EthAddress.ZERO.toBuffer32(),
+      EthAddress.ZERO.toBuffer32(),
     );
     return new RollupProofData(
       0,
@@ -108,28 +112,26 @@ describe('user state', () => {
     );
   };
 
-  const generateAccountRollup = (
-    publicKey: GrumpkinAddress,
-    newKey1: GrumpkinAddress,
-    newKey2: GrumpkinAddress,
-    nullify?: Buffer,
-  ) => {
+  const generateAccountRollup = (publicKey: GrumpkinAddress, newKey1: GrumpkinAddress, newKey2: GrumpkinAddress) => {
     const note1 = Buffer.concat([publicKey.x(), newKey1.x()]);
     const note2 = Buffer.concat([publicKey.x(), newKey2.x()]);
-    const nullifier1 = computeAliasNullifier('god', pedersen, blake2s);
-    const nullifier2 = computeRemoveSigningKeyNullifier(publicKey, nullify || randomBytes(32), pedersen);
+    const aliasHash = AliasHash.fromAlias('god', blake2s);
+    const nonce = 0;
+    const accountId = new AccountId(aliasHash, nonce);
+    const nullifier1 = computeAccountIdNullifier(accountId, pedersen);
+    const nullifier2 = randomBytes(32);
     const viewingKeys = [Buffer.alloc(0), Buffer.alloc(0)];
     const innerProofData = new InnerProofData(
       1,
       publicKey.x(),
       publicKey.y(),
-      0,
+      accountId.toBuffer(),
       note1,
       note2,
       nullifier1,
       nullifier2,
-      EthAddress.ZERO,
-      EthAddress.ZERO,
+      newKey1.toBuffer().slice(0, 32),
+      newKey2.toBuffer().slice(0, 32),
     );
     return new RollupProofData(
       0,
@@ -163,7 +165,7 @@ describe('user state', () => {
     const block = createBlock(rollupProofData);
 
     db.getUserTx.mockResolvedValue({ settled: false });
-    db.getNoteByNullifier.mockResolvedValueOnce({ index: 123 });
+    db.getNoteByNullifier.mockResolvedValueOnce({ index: 123, owner: user.id });
     db.getUserNotes.mockResolvedValue([]);
 
     userState.processBlock(block);
@@ -220,7 +222,7 @@ describe('user state', () => {
     const block = createBlock(rollupProofData);
 
     db.getUserNotes.mockResolvedValue([]);
-    db.getNoteByNullifier.mockResolvedValueOnce({ index: 123, value: 100n });
+    db.getNoteByNullifier.mockResolvedValueOnce({ index: 123, value: 100n, owner: user.id });
 
     userState.processBlock(block);
     await userState.stopSync(true);
@@ -260,7 +262,7 @@ describe('user state', () => {
     const block = createBlock(rollupProofData);
 
     db.getUserNotes.mockResolvedValue([]);
-    db.getNoteByNullifier.mockResolvedValueOnce({ index: 123, value: 100n });
+    db.getNoteByNullifier.mockResolvedValueOnce({ index: 123, value: 100n, owner: user.id });
 
     userState.processBlock(block);
     await userState.stopSync(true);
@@ -279,7 +281,6 @@ describe('user state', () => {
     await userState.stopSync(true);
 
     expect(db.addUserSigningKey).not.toHaveBeenCalled();
-    expect(db.removeUserSigningKey).not.toHaveBeenCalled();
   });
 
   it('should add signing keys for user', async () => {
@@ -291,27 +292,19 @@ describe('user state', () => {
     userState.processBlock(block);
     await userState.stopSync(true);
 
-    expect(db.addUserSigningKey).toHaveBeenCalledWith({ owner: user.id, key: key1.x(), treeIndex: 0 });
-    expect(db.addUserSigningKey).toHaveBeenCalledWith({ owner: user.id, key: key2.x(), treeIndex: 1 });
-    expect(db.removeUserSigningKey).not.toHaveBeenCalled();
-  });
+    const accountId = AccountId.fromBuffer(rollupProofData.innerProofData[0].assetId);
 
-  it('should remove signing key for user', async () => {
-    const key1 = GrumpkinAddress.ZERO;
-    const key2 = GrumpkinAddress.ZERO;
-    const toNullify = GrumpkinAddress.randomAddress();
-    const existingKey: SigningKey = { owner: user.id, key: toNullify.x(), treeIndex: 0 };
-
-    db.getUserSigningKeys.mockResolvedValue([existingKey]);
-
-    const rollupProofData = generateAccountRollup(user.publicKey, key1, key2, toNullify.x());
-    const block = createBlock(rollupProofData);
-
-    userState.processBlock(block);
-    await userState.stopSync(true);
-
-    expect(db.addUserSigningKey).not.toHaveBeenCalled();
-    expect(db.addUserSigningKey).not.toHaveBeenCalled();
-    expect(db.removeUserSigningKey).toHaveBeenCalledWith(existingKey);
+    expect(db.addUserSigningKey).toHaveBeenCalledWith({
+      accountId,
+      address: user.publicKey,
+      key: key1.x().slice(0, 32),
+      treeIndex: 0,
+    });
+    expect(db.addUserSigningKey).toHaveBeenCalledWith({
+      accountId,
+      address: user.publicKey,
+      key: key2.x().slice(0, 32),
+      treeIndex: 1,
+    });
   });
 });

@@ -1,15 +1,10 @@
 import { Pedersen } from '../../crypto/pedersen';
-import { GrumpkinAddress } from '../../address';
 import { numToUInt32BE } from '../../serialize';
-import { Blake2s } from '../../crypto/blake2s';
+import { AccountId } from '../account_id';
 
-export function computeAliasNullifier(alias: string, pedersen: Pedersen, blake2s: Blake2s) {
-  const aliasHashIndex = 16;
-  const prefixBuf = numToUInt32BE(3, 32);
-  return pedersen.compressWithHashIndex([prefixBuf, blake2s.hashToField(Buffer.from(alias))], aliasHashIndex);
-}
-
-export function computeRemoveSigningKeyNullifier(owner: GrumpkinAddress, signingKey: Buffer, pedersen: Pedersen) {
-  const accountHashIndex = 12;
-  return pedersen.compressWithHashIndex([owner.x(), signingKey], accountHashIndex);
+export function computeAccountIdNullifier(accountId: AccountId, pedersen: Pedersen) {
+  const accountIdIndex = 11;
+  const proofId = 1;
+  const prefixBuf = numToUInt32BE(proofId, 32);
+  return pedersen.compressWithHashIndex([prefixBuf, accountId.toBuffer()], accountIdIndex);
 }

@@ -12,6 +12,8 @@ import { Crs } from '../../crs';
 import { WorkerPool } from '../../wasm/worker_pool';
 import { PooledPippenger } from '../../pippenger';
 import { PooledFft } from '../../fft';
+import { AccountId } from '../account_id';
+import { AliasHash } from '../alias_hash';
 import { UnrolledProver } from '../prover';
 import { AccountProver, AccountVerifier, AccountTx } from './index';
 import { GrumpkinAddress } from '../../address';
@@ -91,17 +93,18 @@ describe('account proof', () => {
     const signingKey0 = createKeyPair();
     const signingKey1 = createKeyPair();
 
-    const alias = Buffer.from('user_zero');
-    const aliasField = blake2s.hashToField(alias);
+    const aliasHash = AliasHash.fromAlias('user_zero', blake2s);
+    const nonce = 0;
+    const accountId = new AccountId(aliasHash, nonce);
 
     const accountPath = await tree.getHashPath(0);
 
     const message = computeSigningData(
+      accountId,
+      user.publicKey,
       user.publicKey,
       signingKey0.publicKey,
       signingKey1.publicKey,
-      aliasField,
-      user.publicKey,
       pedersen,
     );
     const signature = schnorr.constructSignature(message, user.privateKey);
@@ -109,16 +112,16 @@ describe('account proof', () => {
     const tx = new AccountTx(
       merkleRoot,
       user.publicKey,
+      user.publicKey,
       2,
       signingKey0.publicKey,
       signingKey1.publicKey,
+      accountId,
       true,
-      aliasField,
-      true,
-      user.publicKey,
+      randomBytes(32),
       0,
-      user.publicKey,
       accountPath,
+      user.publicKey,
       signature,
     );
 

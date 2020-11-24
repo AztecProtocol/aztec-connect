@@ -20,8 +20,8 @@ describe('compute_nullifier', () => {
     const noteAlgos = new NoteAlgorithms(barretenberg);
 
     const pubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, privateKey));
-    const inputNote1 = new Note(pubKey, viewingKey, BigInt(100), 0);
-    const inputNote2 = new Note(pubKey, viewingKey, BigInt(50), 0);
+    const inputNote1 = new Note(pubKey, viewingKey, BigInt(100), 0, 0);
+    const inputNote2 = new Note(pubKey, viewingKey, BigInt(50), 0, 0);
 
     const inputNote1Enc = await noteAlgos.encryptNote(inputNote1);
     const inputNote2Enc = await noteAlgos.encryptNote(inputNote2);
