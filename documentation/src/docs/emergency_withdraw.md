@@ -63,7 +63,7 @@ async function demoEmergencyWithdraw(accountPublicKey, signer) {
   console.info('Creating deposit proof...');
   const userData = await aztecSdkEmergency.getUserData(accountPublicKey);
   const depositTxHash = await aztecSdkEmergency.deposit(assetId, accountPublicKey, value, signer, ethSigner);
-  console.info('Proof accepted. Tx hash:', depositTxHash.toString('hex'));
+  console.info(`Proof accepted. Tx hash: ${depositTxHash}`);
 
   console.info('Waiting for tx to settle...');
   await aztecSdkEmergency.awaitSettlement(depositTxHash);
@@ -77,7 +77,7 @@ async function demoEmergencyWithdraw(accountPublicKey, signer) {
 
   console.info('Creating withdraw proof...');
   const withdrawTxHash = await aztecSdkEmergency.withdraw(assetId, accountPublicKey, value, signer, recipientEthereumAddress);
-  console.info('Proof accepted. Tx hash:', withdrawTxHash.toString('hex'));
+  console.info(`Proof accepted. Tx hash: ${withdrawTxHash}`);
 
   console.info('Waiting for tx to settle...');
   await aztecSdkEmergency.awaitSettlement(withdrawTxHash);

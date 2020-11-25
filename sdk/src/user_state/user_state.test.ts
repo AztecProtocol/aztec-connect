@@ -9,12 +9,13 @@ import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
 import { numToUInt32BE } from 'barretenberg/serialize';
 import { BarretenbergWasm } from 'barretenberg/wasm';
+import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
+import { TxHash } from 'barretenberg/rollup_provider';
 import { randomBytes } from 'crypto';
 import { Database } from '../database';
 import { UserData } from '../user';
 import { UserId } from '../user/user_id';
 import { UserState } from './index';
-import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;
@@ -151,7 +152,7 @@ describe('user state', () => {
   };
 
   const createBlock = (rollupProofData: RollupProofData) => ({
-    txHash: randomBytes(32),
+    txHash: TxHash.random(),
     blockNum: 0,
     rollupId: 0,
     rollupSize: 1,
@@ -173,7 +174,7 @@ describe('user state', () => {
 
     const innerProofData = rollupProofData.innerProofData[0];
     expect(db.settleUserTx).toHaveBeenCalledTimes(1);
-    expect(db.settleUserTx).toHaveBeenCalledWith(user.id, innerProofData.txId);
+    expect(db.settleUserTx).toHaveBeenCalledWith(user.id, new TxHash(innerProofData.txId));
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({ dataEntry: innerProofData.newNote1, value: 100n });
     expect(db.nullifyNote).toHaveBeenCalledTimes(1);

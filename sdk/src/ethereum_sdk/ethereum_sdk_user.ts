@@ -1,5 +1,4 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { TxHash } from 'barretenberg/rollup_provider';
 import { AssetId } from '../sdk';
 import { EthereumSdk } from './';
 import { EthereumSdkUserAsset } from './ethereum_sdk_user_asset';
@@ -7,11 +6,7 @@ import { EthereumSdkUserAsset } from './ethereum_sdk_user_asset';
 export class EthereumSdkUser {
   constructor(public ethAddress: EthAddress, private sdk: EthereumSdk, public nonce: number) {}
 
-  createAccount(
-    alias: string,
-    newSigningPublicKey: GrumpkinAddress,
-    recoveryPublicKey?: GrumpkinAddress,
-  ): Promise<TxHash> {
+  createAccount(alias: string, newSigningPublicKey: GrumpkinAddress, recoveryPublicKey?: GrumpkinAddress) {
     return this.sdk.createAccount(alias, this.ethAddress, newSigningPublicKey, recoveryPublicKey);
   }
 

@@ -352,7 +352,7 @@ export class TerminalHandler {
     for (const tx of txs.slice(f, f + n)) {
       const asset = user.getAsset(tx.assetId);
       this.printQueue.put(
-        `${tx.txHash.toString('hex').slice(0, 8)}: ${tx.action} ${
+        `${tx.txHash.toString().slice(2, 10)}: ${tx.action} ${
           tx.action === 'ACCOUNT' ? '' : `${asset.fromErc20Units(tx.value)} ${asset.symbol()} `
         }${tx.settled ? 'settled' : 'pending'}\n`,
       );

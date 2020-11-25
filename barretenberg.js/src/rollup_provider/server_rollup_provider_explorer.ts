@@ -1,6 +1,7 @@
 import { ProofData } from '../client_proofs/proof_data';
 import { RollupProviderExplorer, Rollup, Tx } from './rollup_provider_explorer';
 import { RollupServerResponse, TxServerResponse } from './server_response';
+import { TxHash } from './tx_hash';
 
 export * from './rollup_provider_explorer';
 
@@ -9,8 +10,8 @@ const toRollup = ({ id, status, dataRoot, proofData, txHashes, ethTxHash, create
   status,
   dataRoot: Buffer.from(dataRoot, 'hex'),
   proofData: proofData ? Buffer.from(proofData, 'hex') : undefined,
-  txHashes: txHashes.map(txHash => Buffer.from(txHash, 'hex')),
-  ethTxHash: ethTxHash ? Buffer.from(ethTxHash, 'hex') : undefined,
+  txHashes: txHashes.map(txHash => TxHash.fromString(txHash)),
+  ethTxHash: ethTxHash ? TxHash.fromString(ethTxHash) : undefined,
   created: new Date(created),
 });
 
@@ -20,7 +21,7 @@ const toTx = ({ txHash, proofData, viewingKeys, rollup, created }: TxServerRespo
     viewingKeys.map(vk => Buffer.from(vk, 'hex')),
   );
   return {
-    txHash: Buffer.from(txHash, 'hex'),
+    txHash: TxHash.fromString(txHash),
     merkleRoot: noteTreeRoot,
     newNote1,
     newNote2,
@@ -79,9 +80,9 @@ export class ServerRollupProviderExplorer implements RollupProviderExplorer {
     return rollup ? toRollup(rollup) : undefined;
   }
 
-  async getTx(txHash: Buffer) {
+  async getTx(txHash: TxHash) {
     const url = new URL(`${this.baseUrl}/get-tx`);
-    url.searchParams.append('txHash', txHash.toString('hex'));
+    url.searchParams.append('txHash', txHash.toString());
 
     const response = await fetch(url.toString());
     if (response.status !== 200) {

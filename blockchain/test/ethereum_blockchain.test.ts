@@ -175,12 +175,10 @@ describe('ethereum_blockchain', () => {
     await erc20.approve(rollupProcessor.address, depositAmount);
 
     const depositTxHash = await ethereumBlockchain.depositPendingFunds(0, BigInt(depositAmount), userAAddress);
-    expect(depositTxHash).to.have.lengthOf(32);
     const depositReceipt = await ethereumBlockchain.getTransactionReceipt(depositTxHash);
     expect(depositReceipt.blockNum).to.be.above(0);
 
     const txHash = await ethereumBlockchain.sendRollupProof(proofData, signatures, sigIndexes, viewingKeys);
-    expect(txHash).to.have.lengthOf(32);
     const receipt = await ethereumBlockchain.getTransactionReceipt(txHash);
     expect(receipt.blockNum).to.be.above(depositReceipt.blockNum);
   });
@@ -188,7 +186,6 @@ describe('ethereum_blockchain', () => {
   it('should process send proof', async () => {
     const { proofData } = await createSendProof();
     const txHash = await ethereumBlockchain.sendRollupProof(proofData, [], [], viewingKeys);
-    expect(txHash).to.have.lengthOf(32);
     const receipt = await ethereumBlockchain.getTransactionReceipt(txHash);
     expect(receipt.blockNum).to.be.above(0);
   });
@@ -209,7 +206,6 @@ describe('ethereum_blockchain', () => {
     );
     await waitOnBlockProcessed;
 
-    expect(depositTxHash).to.have.lengthOf(32);
     const depositReceipt = await ethereumBlockchain.getTransactionReceipt(depositTxHash);
     expect(depositReceipt.blockNum).to.be.above(0);
 
@@ -226,7 +222,6 @@ describe('ethereum_blockchain', () => {
       viewingKeys,
     );
     await waitOnBlockProcessed;
-    expect(withdrawTxHash).to.have.lengthOf(32);
     const withdrawReceipt = await ethereumBlockchain.getTransactionReceipt(withdrawTxHash);
     expect(withdrawReceipt.blockNum).to.be.above(0);
   });
@@ -245,7 +240,6 @@ describe('ethereum_blockchain', () => {
     expect(numBlockEvents).to.equal(1);
 
     const blockEvent = spy.getCall(0);
-    expect(blockEvent.args[0].txHash).to.have.lengthOf(32);
     expect(blockEvent.args[0].rollupSize).to.equal(2);
     expect(blockEvent.args[0].rollupProofData).to.deep.equal(proofData);
     expect(blockEvent.args[0].viewingKeysData).to.deep.equal(Buffer.concat(viewingKeys));
@@ -276,7 +270,6 @@ describe('ethereum_blockchain', () => {
     const blocks = await ethereumBlockchain.getBlocks(rollupIdStart);
 
     const rollup0 = RollupProofData.fromBuffer(blocks[0].rollupProofData, blocks[0].viewingKeysData);
-    expect(blocks[0].txHash).to.have.lengthOf(32);
     expect(blocks[0].rollupSize).to.equal(2);
     expect(rollup0.rollupId).to.equal(0);
     expect(rollup0.dataStartIndex).to.equal(0);
@@ -285,7 +278,6 @@ describe('ethereum_blockchain', () => {
     expect(rollup0.innerProofData[0].inputOwner.toString('hex')).to.equal(userAAddress.toBuffer32().toString('hex'));
 
     const rollup1 = RollupProofData.fromBuffer(blocks[1].rollupProofData, blocks[1].viewingKeysData);
-    expect(blocks[1].txHash).to.have.lengthOf(32);
     expect(blocks[1].rollupSize).to.equal(2);
     expect(rollup1.rollupId).to.equal(1);
     expect(rollup1.dataStartIndex).to.equal(4);

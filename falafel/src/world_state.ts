@@ -115,7 +115,7 @@ export class WorldState {
       const rollupDao = new RollupDao();
       rollupDao.id = rollup.rollupId;
       rollupDao.hash = rollup.rollupHash;
-      rollupDao.ethTxHash = txHash;
+      rollupDao.ethTxHash = txHash.toBuffer();
       rollupDao.dataRoot = rollup.newDataRoot;
       rollupDao.proofData = rollupProofData;
       rollupDao.txs = [];

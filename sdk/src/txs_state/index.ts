@@ -1,4 +1,4 @@
-import { RollupProviderExplorer, Rollup, Tx } from 'barretenberg/rollup_provider';
+import { RollupProviderExplorer, Rollup, Tx, TxHash } from 'barretenberg/rollup_provider';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 
@@ -69,7 +69,7 @@ export class TxsState extends EventEmitter {
     return this.explorer.getRollup(id);
   }
 
-  public async getTx(txHash: Buffer) {
+  public async getTx(txHash: TxHash) {
     return this.explorer.getTx(txHash);
   }
 }

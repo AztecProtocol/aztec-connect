@@ -1,5 +1,6 @@
 import { formatUnits, parseUnits } from '@ethersproject/units';
 import { EthAddress } from 'barretenberg/address';
+import { TxHash } from 'barretenberg/rollup_provider';
 import { randomBytes } from 'crypto';
 import { TokenContract } from '.';
 
@@ -28,12 +29,12 @@ export class MockTokenContract implements TokenContract {
   }
 
   async approve(value: bigint, account: EthAddress) {
-    return randomBytes(32);
+    return TxHash.random();
   }
 
   async mint(value: bigint, account: EthAddress) {
     this.balances[account.toString()] += value;
-    return randomBytes(32);
+    return TxHash.random();
   }
 
   async name() {

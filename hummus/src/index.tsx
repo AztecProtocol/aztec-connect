@@ -1,6 +1,6 @@
 import './styles/guacamole.css';
-import { Block, FlexBox, PageSteps, SwitchInput, Text, TextButton } from '@aztec/guacamole-ui';
-import { WebSdk } from 'aztec2-sdk';
+import { Block, FlexBox, PageSteps, SwitchInput, Text } from '@aztec/guacamole-ui';
+import { TxHash, WebSdk } from 'aztec2-sdk';
 import debug from 'debug';
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
@@ -113,7 +113,7 @@ function ThemedContent({ app }: { app: WebSdk }) {
                   <Route
                     path="/tx/:txHash"
                     component={({ match }: TxRouteProps) => (
-                      <TxDetails app={app} txHash={Buffer.from(match.params.txHash, 'hex')} />
+                      <TxDetails app={app} txHash={TxHash.fromString(match.params.txHash)} />
                     )}
                   />
                   <Route exact path="/transactions">

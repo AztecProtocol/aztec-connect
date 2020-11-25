@@ -18,7 +18,7 @@ async function demoTransfer(aztecSdk, accountPublicKey, signer) {
   console.info('Creating transfer proof...');
   const userData = await aztecSdk.getUserData(accountPublicKey);
   const txHash = await aztecSdk.transfer(assetId, accountPublicKey, value, signer, recipientPublicKey);
-  console.info('Proof accepted by server. Tx hash:', txHash.toString('hex'));
+  console.info(`Proof accepted by server. Tx hash: ${txHash}`);
 
   console.info('Waiting for tx to settle...');
   await aztecSdk.awaitSettlement(txHash);
@@ -53,7 +53,7 @@ async function demoTransfer(aztecSdk, accountPublicKey, signer) {
 
   console.info('Creating transfer proof...');
   const txHash = await asset.transfer(value, signer, recipientAlias);
-  console.info('Proof accepted by server. Tx hash:', txHash.toString('hex'));
+  console.info(`Proof accepted by server. Tx hash: ${txHash}`);
 
   console.info('Waiting for tx to settle...');
   await aztecSdk.awaitSettlement(txHash);

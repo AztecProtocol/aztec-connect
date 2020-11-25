@@ -1,11 +1,11 @@
 import { Block } from '../block_source';
-import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
 import { ProofData } from '../client_proofs/proof_data';
 import { RollupProvider } from './rollup_provider';
 import { EthAddress } from '../address';
 import { RollupProofData } from '../rollup_proof';
 import { Proof } from '../rollup_provider';
+import { TxHash } from './tx_hash';
 
 export class LocalRollupProvider extends EventEmitter implements RollupProvider {
   private blockNum = 0;
@@ -41,7 +41,7 @@ export class LocalRollupProvider extends EventEmitter implements RollupProvider 
 
     const proof = new ProofData(proofData, viewingKeys);
     const block: Block = {
-      txHash: randomBytes(32),
+      txHash: TxHash.random(),
       rollupId: this.blockNum,
       rollupSize: 1,
       rollupProofData: proofData,
@@ -55,7 +55,7 @@ export class LocalRollupProvider extends EventEmitter implements RollupProvider 
     this.dataRoot = proof.noteTreeRoot;
     this.emit('block', block);
 
-    return randomBytes(32);
+    return block.txHash;
   }
 
   async getStatus() {

@@ -25,7 +25,7 @@ async function demoCreateAccount(aztecSdk) {
     signingPublicKey,
     recoveryPublicKey,
   );
-  console.info('Proof accepted by server. Tx hash:', txHash.toString('hex'));
+  console.info(`Proof accepted by server. Tx hash: ${txHash}`);
 
   console.info('Waiting for tx to settle...');
   await aztecSdk.awaitSettlement(txHash);

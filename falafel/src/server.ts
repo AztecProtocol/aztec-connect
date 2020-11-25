@@ -1,6 +1,7 @@
 import { EthAddress } from 'barretenberg/address';
 import { emptyDir } from 'fs-extra';
 import { RollupProofData } from 'barretenberg/rollup_proof';
+import { TxHash } from 'barretenberg/rollup_provider';
 import { WorldStateDb } from 'barretenberg/world_state_db';
 import { Block, Blockchain } from 'blockchain';
 import { Duration } from 'moment';
@@ -122,7 +123,7 @@ export class Server {
   public async getBlocks(from: number): Promise<Block[]> {
     const rollups = await this.rollupDb.getSettledRollupsFromId(from);
     return rollups.map(dao => ({
-      txHash: dao.ethTxHash!,
+      txHash: new TxHash(dao.ethTxHash!),
       created: dao.created,
       rollupId: dao.id,
       rollupSize: RollupProofData.getRollupSizeFromBuffer(dao.proofData!),

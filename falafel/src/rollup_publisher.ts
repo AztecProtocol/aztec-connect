@@ -1,4 +1,5 @@
 import { EthAddress } from 'barretenberg/address';
+import { TxHash } from 'barretenberg/rollup_provider';
 import { Blockchain } from 'blockchain';
 import { RollupDb } from './rollup_db';
 
@@ -29,7 +30,7 @@ export class RollupPublisher {
     }
   }
 
-  private async getTransactionReceipt(txHash: Buffer) {
+  private async getTransactionReceipt(txHash: TxHash) {
     while (!this.interrupted) {
       try {
         return await this.blockchain.getTransactionReceipt(txHash);
@@ -66,7 +67,7 @@ export class RollupPublisher {
         break;
       }
 
-      console.log(`Transaction status failed: ${txHash.toString('hex')}`);
+      console.log(`Transaction status failed: ${txHash}`);
       await this.sleepOrInterrupted(60000);
     }
 

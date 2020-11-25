@@ -28,7 +28,7 @@ const cors = require('@koa/cors');
 
 const toBlockResponse = (block: Block): BlockServerResponse => ({
   ...block,
-  txHash: block.txHash.toString('hex'),
+  txHash: block.txHash.toString(),
   rollupProofData: block.rollupProofData.toString('hex'),
   viewingKeysData: block.viewingKeysData.toString('hex'),
   created: block.created.toISOString(),
@@ -64,6 +64,8 @@ const toTxResponse = ({ txId, rollup, proofData, viewingKey1, viewingKey2, creat
   viewingKeys: [viewingKey1, viewingKey2].map(vk => vk.toString('hex')),
   created: created.toISOString(),
 });
+
+const bufferFromHex = (hexStr: string) => Buffer.from(hexStr.replace(/^0x/i, ''), 'hex');
 
 export function appFactory(
   server: Server,
@@ -104,9 +106,9 @@ export function appFactory(
     const stream = new PromiseReadable(ctx.req);
     const { proofData, viewingKeys, depositSignature } = JSON.parse((await stream.readAll()) as string);
     const tx: Proof = {
-      proofData: Buffer.from(proofData, 'hex'),
-      viewingKeys: viewingKeys.map((v: string) => Buffer.from(v, 'hex')),
-      depositSignature: depositSignature ? Buffer.from(depositSignature, 'hex') : undefined,
+      proofData: bufferFromHex(proofData),
+      viewingKeys: viewingKeys.map((v: string) => bufferFromHex(v)),
+      depositSignature: depositSignature ? bufferFromHex(depositSignature) : undefined,
     };
     const txId = await server.receiveTx(tx);
     const response: ProofServerResponse = {
@@ -141,7 +143,7 @@ export function appFactory(
   router.get('/get-txs', async (ctx: Koa.Context) => {
     let txs;
     if (ctx.query.txIds) {
-      const txIds = (ctx.query.txIds as string).split(',').map(txId => Buffer.from(txId, 'hex'));
+      const txIds = (ctx.query.txIds as string).split(',').map(txId => bufferFromHex(txId));
       txs = await server.getTxs(txIds);
     } else {
       txs = await server.getLatestTxs(+ctx.query.count);
@@ -151,7 +153,7 @@ export function appFactory(
   });
 
   router.get('/get-tx', async (ctx: Koa.Context) => {
-    const tx = await server.getTx(Buffer.from(ctx.query.txHash, 'hex'));
+    const tx = await server.getTx(bufferFromHex(ctx.query.txHash));
     ctx.body = tx ? toTxResponse(tx) : undefined;
     ctx.status = 200;
   });

@@ -1,5 +1,4 @@
 import { GrumpkinAddress } from 'barretenberg/address';
-import { TxHash } from 'barretenberg/rollup_provider';
 import { AssetId } from '../sdk';
 import { UserId } from '../user';
 import { WalletSdk } from '.';
@@ -8,11 +7,7 @@ import { WalletSdkUserAsset } from './wallet_sdk_user_asset';
 export class WalletSdkUser {
   constructor(public id: UserId, private sdk: WalletSdk) {}
 
-  async createAccount(
-    alias: string,
-    newSigningPublicKey: GrumpkinAddress,
-    recoveryPublicKey?: GrumpkinAddress,
-  ): Promise<TxHash> {
+  async createAccount(alias: string, newSigningPublicKey: GrumpkinAddress, recoveryPublicKey?: GrumpkinAddress) {
     return this.sdk.createAccount(alias, this.id.publicKey, newSigningPublicKey, recoveryPublicKey);
   }
 

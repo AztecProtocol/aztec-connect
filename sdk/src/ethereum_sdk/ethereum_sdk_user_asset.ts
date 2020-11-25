@@ -1,5 +1,4 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { TxHash } from 'barretenberg/rollup_provider';
 import { AssetId } from '../sdk';
 import { Signer } from '../signer';
 import { EthereumSdk } from './';
@@ -46,15 +45,15 @@ export class EthereumSdkUserAsset {
     return addr;
   }
 
-  async mint(value: bigint): Promise<TxHash> {
+  async mint(value: bigint) {
     return this.sdk.mint(this.id, value, this.ethAddress);
   }
 
-  async approve(value: bigint): Promise<TxHash> {
+  async approve(value: bigint) {
     return this.sdk.approve(this.id, value, this.ethAddress);
   }
 
-  async deposit(value: bigint, to?: GrumpkinAddress | string, signer?: Signer, toNonce?: number): Promise<TxHash> {
+  async deposit(value: bigint, to?: GrumpkinAddress | string, signer?: Signer, toNonce?: number) {
     return this.sdk.deposit(
       this.id,
       value,
@@ -65,11 +64,11 @@ export class EthereumSdkUserAsset {
     );
   }
 
-  async withdraw(value: bigint, to?: EthAddress, signer?: Signer): Promise<TxHash> {
+  async withdraw(value: bigint, to?: EthAddress, signer?: Signer) {
     return this.sdk.withdraw(this.id, value, this.ethAddress, to || this.ethAddress, signer, this.nonce);
   }
 
-  async transfer(value: bigint, to: GrumpkinAddress | string, signer?: Signer, toNonce?: number): Promise<TxHash> {
+  async transfer(value: bigint, to: GrumpkinAddress | string, signer?: Signer, toNonce?: number) {
     return this.sdk.transfer(
       this.id,
       value,

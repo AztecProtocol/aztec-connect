@@ -1,6 +1,6 @@
 import { EthAddress } from 'barretenberg/address';
 import { MemoryFifo } from 'barretenberg/fifo';
-import { Proof } from 'barretenberg/rollup_provider/rollup_provider';
+import { TxHash, Proof } from 'barretenberg/rollup_provider';
 import { Block, Blockchain, EthereumBlockchain, PermitArgs } from 'blockchain';
 import { Connection, MoreThanOrEqual, Repository } from 'typeorm';
 import { BlockDao } from '../entity/block';
@@ -81,7 +81,7 @@ export class PersistentEthereumBlockchain implements Blockchain {
     return this.ethereumBlockchain.sendProof(proof);
   }
 
-  public getTransactionReceipt(txHash: Buffer) {
+  public getTransactionReceipt(txHash: TxHash) {
     return this.ethereumBlockchain.getTransactionReceipt(txHash);
   }
 

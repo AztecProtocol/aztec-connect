@@ -1,5 +1,6 @@
 import { GrumpkinAddress } from 'barretenberg/address';
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
+import { TxHash } from 'barretenberg/rollup_provider';
 import { Note } from '../note';
 import { AccountId, UserData, UserId } from '../user';
 import { UserTx } from '../user_tx';
@@ -34,11 +35,11 @@ export interface Database {
   removeUser(userId: UserId): Promise<void>;
   resetUsers(): Promise<void>;
 
-  getUserTx(userId: UserId, txHash: Buffer): Promise<UserTx | undefined>;
+  getUserTx(userId: UserId, txHash: TxHash): Promise<UserTx | undefined>;
   getUserTxs(userId: UserId): Promise<UserTx[]>;
-  getUserTxsByTxHash(txHash: Buffer): Promise<UserTx[]>;
+  getUserTxsByTxHash(txHash: TxHash): Promise<UserTx[]>;
   addUserTx(userTx: UserTx): Promise<void>;
-  settleUserTx(userId: UserId, txHash: Buffer): Promise<void>;
+  settleUserTx(userId: UserId, txHash: TxHash): Promise<void>;
 
   addUserSigningKey(signingKey: SigningKey): Promise<void>;
   getUserSigningKeys(accountId: AccountId): Promise<SigningKey[]>;

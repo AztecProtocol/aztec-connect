@@ -35,7 +35,7 @@ export const LatestTxs = ({ bindSetter, unbindSetter, sdk }: LatestTxsProps) => 
       {({ theme, link }) =>
         txs.map(({ txHash, rollup, created }, i) => (
           <Block
-            key={txHash.toString('hex')}
+            key={`${txHash}`}
             padding="xs 0"
             hasBorderTop={i > 0}
             borderColor={theme === 'light' ? 'grey-lighter' : 'white-lightest'}
@@ -45,8 +45,8 @@ export const LatestTxs = ({ bindSetter, unbindSetter, sdk }: LatestTxsProps) => 
               iconShape="square"
               id={
                 <TextButton
-                  text={`0x${txHash.toString('hex').slice(0, 10)}`}
-                  href={`/tx/${txHash.toString('hex')}`}
+                  text={`${txHash.toString().slice(0, 12)}`}
+                  href={`/tx/${txHash}`}
                   color={link}
                   Link={Link}
                 />

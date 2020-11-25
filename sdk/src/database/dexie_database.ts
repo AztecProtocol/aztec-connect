@@ -1,5 +1,6 @@
 import { GrumpkinAddress } from 'barretenberg/address';
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
+import { TxHash } from 'barretenberg/rollup_provider';
 import Dexie from 'dexie';
 import { Note } from '../note';
 import { AccountId, UserData, UserId } from '../user';
@@ -10,7 +11,7 @@ const MAX_BYTE_LENGTH = 100000000;
 
 const toSubKeyName = (name: string, index: number) => `${name}__${index}`;
 
-const toDexieUserTxId = (userTx: UserTx) => `${userTx.txHash.toString('hex')}__${userTx.userId.toString()}`;
+const toDexieUserTxId = (userTx: UserTx) => `${userTx.txHash.toString()}__${userTx.userId.toString()}`;
 
 class DexieNote {
   constructor(
@@ -111,7 +112,7 @@ class DexieUserTx {
 const userTxToDexieUserTx = (id: string, userTx: UserTx) =>
   new DexieUserTx(
     id,
-    new Uint8Array(userTx.txHash),
+    new Uint8Array(userTx.txHash.toBuffer()),
     new Uint8Array(userTx.userId.toBuffer()),
     userTx.action,
     userTx.assetId,
@@ -131,7 +132,7 @@ const dexieUserTxToUserTx = ({
   ...dexieUserTx
 }: DexieUserTx): UserTx => ({
   ...dexieUserTx,
-  txHash: Buffer.from(txHash),
+  txHash: new TxHash(Buffer.from(txHash)),
   userId: UserId.fromBuffer(Buffer.from(dexieUserTx.userId)),
   value: BigInt(dexieUserTx.value),
   settled: !!settled,
@@ -248,10 +249,10 @@ export class DexieDatabase implements Database {
     await this.user.where({ id: new Uint8Array(user.id.toBuffer()) }).modify(userToDexieUser(user));
   }
 
-  async getUserTx(userId: UserId, txHash: Buffer) {
+  async getUserTx(userId: UserId, txHash: TxHash) {
     const userTx = await this.userTx.get({
       userId: new Uint8Array(userId.toBuffer()),
-      txHash: new Uint8Array(txHash),
+      txHash: new Uint8Array(txHash.toBuffer()),
     });
     return userTx ? dexieUserTxToUserTx(userTx) : undefined;
   }
@@ -265,8 +266,8 @@ export class DexieDatabase implements Database {
     ).map(dexieUserTxToUserTx);
   }
 
-  async getUserTxsByTxHash(txHash: Buffer) {
-    return (await this.userTx.where({ txHash: new Uint8Array(txHash) }).toArray()).map(dexieUserTxToUserTx);
+  async getUserTxsByTxHash(txHash: TxHash) {
+    return (await this.userTx.where({ txHash: new Uint8Array(txHash.toBuffer()) }).toArray()).map(dexieUserTxToUserTx);
   }
 
   async addUserTx(userTx: UserTx) {
@@ -274,9 +275,9 @@ export class DexieDatabase implements Database {
     await this.userTx.put(userTxToDexieUserTx(id, userTx));
   }
 
-  async settleUserTx(userId: UserId, txHash: Buffer) {
+  async settleUserTx(userId: UserId, txHash: TxHash) {
     await this.userTx
-      .where({ userId: new Uint8Array(userId.toBuffer()), txHash: new Uint8Array(txHash) })
+      .where({ userId: new Uint8Array(userId.toBuffer()), txHash: new Uint8Array(txHash.toBuffer()) })
       .modify({ settled: 1 });
   }
 

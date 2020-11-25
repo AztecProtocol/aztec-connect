@@ -1,3 +1,5 @@
+import { TxHash } from './tx_hash';
+
 export type RollupStatus = 'CREATING' | 'CREATED' | 'PUBLISHED' | 'SETTLED';
 
 export interface LinkedRollup {
@@ -6,7 +8,7 @@ export interface LinkedRollup {
 }
 
 export interface Tx {
-  txHash: Buffer;
+  txHash: TxHash;
   rollup?: LinkedRollup;
   merkleRoot: Buffer;
   newNote1: Buffer;
@@ -22,10 +24,10 @@ export interface Rollup {
   id: number;
   status: RollupStatus;
   dataRoot: Buffer;
-  txHashes: Buffer[];
+  txHashes: TxHash[];
   proofData?: Buffer;
   ethBlock?: number;
-  ethTxHash?: Buffer;
+  ethTxHash?: TxHash;
   created: Date;
 }
 
@@ -36,5 +38,5 @@ export interface RollupProviderExplorer {
 
   getRollup(id: number): Promise<Rollup | undefined>;
 
-  getTx(txHash: Buffer): Promise<Tx | undefined>;
+  getTx(txHash: TxHash): Promise<Tx | undefined>;
 }

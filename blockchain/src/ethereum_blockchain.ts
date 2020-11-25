@@ -1,6 +1,6 @@
 import { EthereumProvider } from './ethereum_provider';
 import { EthAddress } from 'barretenberg/address';
-import { Proof, RollupProviderStatus } from 'barretenberg/rollup_provider';
+import { Proof, RollupProviderStatus, TxHash } from 'barretenberg/rollup_provider';
 import createDebug from 'debug';
 import { ethers } from 'ethers';
 import { EventEmitter } from 'events';
@@ -238,8 +238,8 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   /**
    * Wait for given transaction to be mined, and return receipt.
    */
-  public async getTransactionReceipt(txHash: Buffer) {
-    this.debug(`Getting tx receipt for ${txHash.toString('hex')}...`);
+  public async getTransactionReceipt(txHash: TxHash) {
+    this.debug(`Getting tx receipt for ${txHash}...`);
     let txReceipt = await this.contracts.getTransactionReceipt(txHash);
     while (!txReceipt || txReceipt.confirmations < this.getRequiredConfirmations()) {
       await new Promise(resolve => setTimeout(resolve, 1000));

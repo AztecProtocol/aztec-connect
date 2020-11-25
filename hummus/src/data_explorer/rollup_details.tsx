@@ -1,16 +1,15 @@
 import { Block, Offset } from '@aztec/guacamole-ui';
-import { Rollup } from 'aztec2-sdk';
-import { WebSdk } from 'aztec2-sdk';
+import { Rollup, TxHash, WebSdk } from 'aztec2-sdk';
 import moment from 'moment';
 import React, { useEffect, useState } from 'react';
 import { Form, FormSection } from '../components';
 import { ContentLink, DetailRow } from './detail_row';
 
-const TxList = ({ txHashes }: { txHashes: Buffer[] }) => (
+const TxList = ({ txHashes }: { txHashes: TxHash[] }) => (
   <Offset top="xs" bottom="xs">
     {txHashes.map(txHash => (
       <Block key={txHash} padding="xs 0">
-        <ContentLink text={`0x${txHash.toString('hex').slice(0, 10)}`} href={`/tx/${txHash.toString('hex')}`} />
+        <ContentLink text={`${txHash.toString().slice(0, 12)}`} href={`/tx/${txHash}`} />
       </Block>
     ))}
   </Offset>
@@ -81,7 +80,7 @@ export const RollupDetails = ({ id, app }: RollupDetailsProps) => {
         <DetailRow title="Txs" content={<TxList txHashes={rollup.txHashes} />} />
         <DetailRow title="Data Root" content={`0x${rollup.dataRoot.toString('hex')}`} />
         <DetailRow title="Eth Block" content={typeof rollup.ethBlock === 'number' ? `${rollup.ethBlock}` : '-'} />
-        <DetailRow title="Eth Tx Hash" content={rollup.ethTxHash ? `0x${rollup.ethTxHash.toString('hex')}` : '-'} />
+        <DetailRow title="Eth Tx Hash" content={rollup.ethTxHash ? `${rollup.ethTxHash}` : '-'} />
         <DetailRow title="Created At" content={moment(new Date(rollup.created).toUTCString()).format('ll LTS +UTC')} />
       </FormSection>
     </Form>

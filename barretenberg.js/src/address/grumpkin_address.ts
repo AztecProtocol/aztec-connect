@@ -1,13 +1,6 @@
 import { Address } from './address';
 import { randomBytes } from 'crypto';
 
-/**
- * GrumpkinAddress.
- * @type This method allows a user to add a signing key to their account. This is usefull for multiple devices, or for device recovery. Today all signing keys are on the Grumpkin Elliptic curve. In the next 6 months we will support SCEPK256K1 signatures and Curve25519 signatures.
- * @param signingPublicKey - [GrumpkinAddress] The 32byte public key of the private key the user wishes to use to update state.
- * @returns Promise -  resolves to [TxHash](/#/SDK/Types) object containing the transaction.
- */
-
 export class GrumpkinAddress implements Address {
   public static ZERO = new GrumpkinAddress(Buffer.alloc(64));
 

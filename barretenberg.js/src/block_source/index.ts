@@ -1,5 +1,7 @@
+import { TxHash } from '../rollup_provider';
+
 export interface Block {
-  txHash: Buffer;
+  txHash: TxHash;
   created: Date;
   rollupId: number;
   rollupSize: number;

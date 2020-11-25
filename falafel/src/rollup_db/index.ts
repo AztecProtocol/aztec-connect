@@ -1,4 +1,5 @@
 import { InnerProofData } from 'barretenberg/rollup_proof';
+import { TxHash } from 'barretenberg/rollup_provider';
 import { Connection, In, MoreThanOrEqual, Not, Repository } from 'typeorm';
 import { RollupDao } from '../entity/rollup';
 import { TxDao } from '../entity/tx';
@@ -60,7 +61,7 @@ export class RollupDb {
     await this.rollupRep.save(rollupDao);
   }
 
-  public async confirmSent(rollupId: number, ethTxHash: Buffer) {
+  public async confirmSent(rollupId: number, ethTxHash: TxHash) {
     const rollupDao = await this.getRollupFromId(rollupId);
     if (!rollupDao) {
       throw new Error(`Rollup not found: ${rollupId}`);
@@ -72,7 +73,7 @@ export class RollupDb {
     }
 
     rollupDao.status = 'PUBLISHED';
-    rollupDao.ethTxHash = ethTxHash;
+    rollupDao.ethTxHash = ethTxHash.toBuffer();
     await this.rollupRep.save(rollupDao);
   }
 

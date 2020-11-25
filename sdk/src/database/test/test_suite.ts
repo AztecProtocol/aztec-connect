@@ -1,5 +1,6 @@
 import { GrumpkinAddress } from 'barretenberg/address';
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
+import { TxHash } from 'barretenberg/rollup_provider';
 import { randomBytes } from 'crypto';
 import { Note } from '../../note';
 import { AccountId, UserData, UserId } from '../../user';
@@ -192,7 +193,7 @@ export const databaseTestSuite = (
 
       it('get all txs with the same tx hash', async () => {
         const userTxs: UserTx[] = [];
-        const txHash = randomBytes(32);
+        const txHash = TxHash.random();
         for (let i = 0; i < 5; ++i) {
           const userTx = randomUserTx();
           userTx.txHash = txHash;
