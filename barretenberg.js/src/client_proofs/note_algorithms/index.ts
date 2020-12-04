@@ -31,13 +31,4 @@ export class NoteAlgorithms {
     const value = toBigIntBE(Buffer.from(this.wasm.sliceMemory(196, 228)));
     return { success, value };
   }
-
-  public sign(notes: Note[], pk: Buffer, outputOwner: Buffer) {
-    const buf = Buffer.concat(notes.map(n => n.toBuffer()));
-    this.wasm.transferToHeap(pk, 0);
-    this.wasm.transferToHeap(Buffer.concat([Buffer.alloc(12), outputOwner]), 32);
-    this.wasm.transferToHeap(buf, 64);
-    this.wasm.call('notes__sign_4_notes', 0, 32, 64);
-    return new Signature(Buffer.from(this.wasm.sliceMemory(0, 64)));
-  }
 }

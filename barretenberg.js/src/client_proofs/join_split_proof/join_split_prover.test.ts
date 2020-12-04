@@ -122,9 +122,18 @@ describe('join_split_proof', () => {
       const inputOwner = EthAddress.randomAddress();
       const outputOwner = EthAddress.randomAddress();
 
+      const numInputNotes = 2;
       const sigMsg = computeSigningData(
         [inputNote1, inputNote2, outputNote1, outputNote2],
+        0,
+        1,
+        inputOwner,
         outputOwner,
+        BigInt(0),
+        BigInt(0),
+        0,
+        numInputNotes,
+        privateKey,
         pedersen,
         noteAlgos,
       );
@@ -134,7 +143,7 @@ describe('join_split_proof', () => {
         BigInt(0),
         BigInt(0),
         0,
-        2,
+        numInputNotes,
         [0, 1],
         tree.getRoot(),
         [inputNote1Path, inputNote2Path],
@@ -150,6 +159,9 @@ describe('join_split_proof', () => {
         outputOwner,
       );
 
+      const expectedNullifier1 = noteAlgos.computeNoteNullifier(inputNote1Enc, 0, privateKey);
+      const expectedNullifier2 = noteAlgos.computeNoteNullifier(inputNote2Enc, 1, privateKey);
+
       debug('creating proof...');
       const start = new Date().getTime();
       const proof = await joinSplitProver.createProof(tx);
@@ -160,9 +172,6 @@ describe('join_split_proof', () => {
       expect(verified).toBe(true);
 
       const joinSplitProof = new ProofData(proof, []);
-
-      const expectedNullifier1 = noteAlgos.computeNoteNullifier(inputNote1Enc, 0, privateKey);
-      const expectedNullifier2 = noteAlgos.computeNoteNullifier(inputNote2Enc, 1, privateKey);
       expect(joinSplitProof.nullifier1).toEqual(expectedNullifier1);
       expect(joinSplitProof.nullifier2).toEqual(expectedNullifier2);
       expect(joinSplitProof.inputOwner).toEqual(inputOwner.toBuffer32());

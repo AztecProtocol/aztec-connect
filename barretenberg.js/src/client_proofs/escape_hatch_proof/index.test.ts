@@ -5,6 +5,8 @@ import { createNoteSecret, Note } from '../note';
 import { EventEmitter } from 'events';
 import { Crs } from '../../crs';
 import { WorkerPool } from '../../wasm/worker_pool';
+import { Pedersen } from '../../crypto/pedersen';
+import { Schnorr } from '../../crypto/schnorr';
 import { PooledPippenger } from '../../pippenger';
 import { PooledFft } from '../../fft';
 import { Prover } from '../prover';
@@ -19,6 +21,7 @@ import { RollupProofData } from '../../rollup_proof';
 import { Blake2s } from '../../crypto/blake2s';
 import { AccountId } from '../account_id';
 import { AliasHash } from '../alias_hash';
+import { computeSigningData } from '../join_split_proof/compute_signing_data';
 
 const debug = createDebug('bb:escape_hatch_proof');
 
@@ -31,6 +34,8 @@ describe('escape_hatch_proof', () => {
   let escapeHatchVerifier!: EscapeHatchVerifier;
   let crs!: Crs;
   let blake2s!: Blake2s;
+  let pedersen!: Pedersen;
+  let schnorr!: Schnorr;
   let grumpkin!: Grumpkin;
   let pippenger!: PooledPippenger;
   let pubKey!: GrumpkinAddress;
@@ -70,6 +75,8 @@ describe('escape_hatch_proof', () => {
     escapeHatchProver = new EscapeHatchProver(prover);
     escapeHatchVerifier = new EscapeHatchVerifier();
     blake2s = new Blake2s(barretenberg);
+    pedersen = new Pedersen(barretenberg);
+    schnorr = new Schnorr(barretenberg);
     grumpkin = new Grumpkin(barretenberg);
     noteAlgos = new NoteAlgorithms(barretenberg);
 
@@ -129,7 +136,22 @@ describe('escape_hatch_proof', () => {
 
     const inputOwner = EthAddress.randomAddress();
     const outputOwner = EthAddress.randomAddress();
-    const signature = await noteAlgos.sign([...inputNotes, ...outputNotes], privateKey, outputOwner.toBuffer());
+
+    const sigMsg = computeSigningData(
+        [inputNote1, inputNote2, outputNote1, outputNote2],
+        0,
+        1,
+        inputOwner,
+        outputOwner,
+        BigInt(0),
+        BigInt(120),
+        0,
+        2,
+        privateKey,
+        pedersen,
+        noteAlgos,
+      );
+    const signature = schnorr.constructSignature(sigMsg, privateKey);
 
     const aliasHash = AliasHash.fromAlias('user_zero', blake2s);
     const nonce = 0;

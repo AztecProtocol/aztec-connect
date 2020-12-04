@@ -66,11 +66,27 @@ export class JoinSplitTxFactory {
     const inputOwner = inputOwnerAddress || EthAddress.ZERO;
     const outputOwner = outputOwnerAddress || EthAddress.ZERO;
 
-    const message = computeSigningData([...inputNotes, ...outputNotes], outputOwner, this.pedersen, this.noteAlgos);
-    const signature = await signer.signMessage(message);
-
     // For now, we will use the account key as the signing key (no account note required).
     const { privateKey } = userState.getUser();
+
+    const message = computeSigningData(
+        [...inputNotes, ...outputNotes],
+        inputNoteIndices[0],
+        inputNoteIndices[1],
+        inputOwner,
+        outputOwner,
+        publicInput,
+        publicOutput,
+        assetId,
+        numInputNotes,
+        privateKey,
+        this.pedersen,
+        this.noteAlgos
+      );
+
+    const signature = await signer.signMessage(message);
+
+
     const accountIndex = 0;
     const accountPath = await this.worldState.getHashPath(0);
     const signingPubKey = signer.getPublicKey();
