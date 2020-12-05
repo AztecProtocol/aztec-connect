@@ -88,10 +88,6 @@ export class MerkleTree {
     return new MerkleTree(db, leafHasher, name, depth, size, root);
   }
 
-  async destroy() {
-    await this.db.clear();
-  }
-
   public async syncFromDb() {
     const meta: Buffer = await this.db.get(Buffer.from(this.name));
     this.root = meta.slice(0, 32);
