@@ -3,7 +3,7 @@ import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { TxHash } from 'barretenberg/rollup_provider';
 import { Connection, ConnectionOptions, MoreThan, MoreThanOrEqual, Repository } from 'typeorm';
 import { Note } from '../../note';
-import { AccountId, UserData, UserId } from '../../user';
+import { AccountAliasId, UserData, AccountId } from '../../user';
 import { UserTx } from '../../user_tx';
 import { Alias, Database, SigningKey } from '../database';
 import { AliasDao } from './alias_dao';
@@ -63,11 +63,11 @@ export class SQLDatabase implements Database {
     await this.noteRep.update(index, { nullified: true });
   }
 
-  async getUserNotes(userId: UserId) {
+  async getUserNotes(userId: AccountId) {
     return this.noteRep.find({ where: { owner: userId, nullified: false } });
   }
 
-  async getUser(userId: UserId) {
+  async getUser(userId: AccountId) {
     return this.userDataRep.findOne({ id: userId });
   }
 
@@ -83,7 +83,7 @@ export class SQLDatabase implements Database {
     await this.userDataRep.update({ id: user.id }, user);
   }
 
-  async removeUser(userId: UserId) {
+  async removeUser(userId: AccountId) {
     const user = await this.getUser(userId);
     if (!user) return;
 
@@ -101,7 +101,7 @@ export class SQLDatabase implements Database {
     await this.userDataRep.update({ syncedToRollup: MoreThan(-1) }, { syncedToRollup: -1 });
   }
 
-  async getUserTx(userId: UserId, txHash: TxHash) {
+  async getUserTx(userId: AccountId, txHash: TxHash) {
     return this.userTxRep.findOne({ txHash, userId });
   }
 
@@ -109,7 +109,7 @@ export class SQLDatabase implements Database {
     await this.userTxRep.save(userTx);
   }
 
-  async getUserTxs(userId: UserId) {
+  async getUserTxs(userId: AccountId) {
     return this.userTxRep.find({ where: { userId }, order: { created: 'DESC' } });
   }
 
@@ -117,7 +117,7 @@ export class SQLDatabase implements Database {
     return this.userTxRep.find({ where: { txHash } });
   }
 
-  async settleUserTx(userId: UserId, txHash: TxHash) {
+  async settleUserTx(userId: AccountId, txHash: TxHash) {
     await this.userTxRep.update({ userId, txHash }, { settled: true });
   }
 
@@ -125,18 +125,18 @@ export class SQLDatabase implements Database {
     await this.userKeyRep.save(signingKey);
   }
 
-  async getUserSigningKeys(accountId: AccountId) {
-    return await this.userKeyRep.find({ accountId });
+  async getUserSigningKeys(accountAliasId: AccountAliasId) {
+    return await this.userKeyRep.find({ accountAliasId });
   }
 
-  async getUserSigningKeyIndex(accountId: AccountId, key: GrumpkinAddress) {
+  async getUserSigningKeyIndex(accountAliasId: AccountAliasId, key: GrumpkinAddress) {
     const keyBuffer = key.toBuffer();
-    const signingKey = await this.userKeyRep.findOne({ where: { accountId, key: keyBuffer.slice(0, 32) } });
+    const signingKey = await this.userKeyRep.findOne({ where: { accountAliasId, key: keyBuffer.slice(0, 32) } });
     return signingKey ? signingKey.treeIndex : undefined;
   }
 
-  async removeUserSigningKeys(accountId: AccountId) {
-    await this.userKeyRep.delete({ accountId });
+  async removeUserSigningKeys(accountAliasId: AccountAliasId) {
+    await this.userKeyRep.delete({ accountAliasId });
   }
 
   async addAlias(alias: Alias) {

@@ -3,10 +3,10 @@ import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { TxHash } from 'barretenberg/rollup_provider';
 import { randomBytes } from 'crypto';
 import { Note } from '../../note';
-import { AccountId, UserData, UserId } from '../../user';
+import { AccountAliasId, UserData, AccountId } from '../../user';
 import { UserTx } from '../../user_tx';
 import { Database, SigningKey } from '../database';
-import { randomAccountId, randomAlias, randomNote, randomSigningKey, randomUser, randomUserTx } from './fixtures';
+import { randomAccountAliasId, randomAlias, randomNote, randomSigningKey, randomUser, randomUserTx } from './fixtures';
 
 const sort = (arr: any[], sortBy: string) => arr.sort((a, b) => (a[sortBy] < b[sortBy] ? -1 : 1));
 
@@ -59,7 +59,7 @@ export const databaseTestSuite = (
       });
 
       it('get all notes belonging to a user that are not nullified', async () => {
-        const userId = UserId.random();
+        const userId = AccountId.random();
         const userNotes: Note[] = [];
         for (let i = 0; i < 5; ++i) {
           const note = randomNote();
@@ -73,7 +73,7 @@ export const databaseTestSuite = (
         }
         for (let i = 0; i < 5; ++i) {
           const note = randomNote();
-          note.owner = UserId.random();
+          note.owner = AccountId.random();
           await db.addNote(note);
         }
 
@@ -117,7 +117,7 @@ export const databaseTestSuite = (
         const user = randomUser();
         await db.addUser(user);
 
-        const newUser = { ...user, id: UserId.random() };
+        const newUser = { ...user, id: AccountId.random() };
         await db.updateUser(newUser);
 
         const oldUser = await db.getUser(user.id);
@@ -133,7 +133,7 @@ export const databaseTestSuite = (
         const userTx = randomUserTx();
         await db.addUserTx(userTx);
 
-        const newUserId = UserId.random();
+        const newUserId = AccountId.random();
         const sharedUserTx = { ...userTx, userId: newUserId };
         await db.addUserTx(sharedUserTx);
 
@@ -160,10 +160,10 @@ export const databaseTestSuite = (
       it('settle a user tx with specified user id and tx hash', async () => {
         const userTx = randomUserTx();
 
-        const userId0 = UserId.random();
+        const userId0 = AccountId.random();
         await db.addUserTx({ ...userTx, userId: userId0 });
 
-        const userId1 = UserId.random();
+        const userId1 = AccountId.random();
         await db.addUserTx({ ...userTx, userId: userId1 });
 
         await db.settleUserTx(userId0, userTx.txHash);
@@ -176,7 +176,7 @@ export const databaseTestSuite = (
       });
 
       it('get all txs for a user from newest to oldest', async () => {
-        const userId = UserId.random();
+        const userId = AccountId.random();
         const userTxs: UserTx[] = [];
         const now = Date.now();
         for (let i = 0; i < 5; ++i) {
@@ -213,11 +213,11 @@ export const databaseTestSuite = (
 
     describe('UserKey', () => {
       it('add signing key and get all keys for a user', async () => {
-        const accountId = randomAccountId();
+        const accountAliasId = randomAccountAliasId();
         const userKeys: SigningKey[] = [];
         for (let i = 0; i < 3; ++i) {
           const signingKey = randomSigningKey();
-          signingKey.accountId = accountId;
+          signingKey.accountAliasId = accountAliasId;
           await db.addUserSigningKey(signingKey);
           userKeys.push(signingKey);
         }
@@ -226,49 +226,49 @@ export const databaseTestSuite = (
           await db.addUserSigningKey(signingKey);
         }
 
-        const savedUserKeys = await db.getUserSigningKeys(accountId);
+        const savedUserKeys = await db.getUserSigningKeys(accountAliasId);
         expect(sort(savedUserKeys, 'key')).toEqual(sort(userKeys, 'key'));
       });
 
       it('remove all signing keys of given account id', async () => {
-        const generateAccountSigningKeys = async (accountId: AccountId, numKeys = 3) => {
+        const generateAccountSigningKeys = async (accountAliasId: AccountAliasId, numKeys = 3) => {
           const keys: SigningKey[] = [];
           for (let i = 0; i < numKeys; ++i) {
             const signingKey = randomSigningKey();
-            signingKey.accountId = accountId;
+            signingKey.accountAliasId = accountAliasId;
             await db.addUserSigningKey(signingKey);
             keys.push(signingKey);
           }
           return keys;
         };
 
-        const accountId0 = randomAccountId();
-        const accountId1 = randomAccountId();
-        const keys0 = await generateAccountSigningKeys(accountId0);
-        const keys1 = await generateAccountSigningKeys(accountId1);
+        const accountAliasId0 = randomAccountAliasId();
+        const accountAliasId1 = randomAccountAliasId();
+        const keys0 = await generateAccountSigningKeys(accountAliasId0);
+        const keys1 = await generateAccountSigningKeys(accountAliasId1);
 
-        const savedSigningKeys0 = await db.getUserSigningKeys(accountId0);
+        const savedSigningKeys0 = await db.getUserSigningKeys(accountAliasId0);
         expect(sort(savedSigningKeys0, 'key')).toEqual(sort(keys0, 'key'));
 
-        await db.removeUserSigningKeys(accountId0);
+        await db.removeUserSigningKeys(accountAliasId0);
 
-        expect(await db.getUserSigningKeys(accountId0)).toEqual([]);
+        expect(await db.getUserSigningKeys(accountAliasId0)).toEqual([]);
 
-        const savedSigningKeys1 = await db.getUserSigningKeys(accountId1);
+        const savedSigningKeys1 = await db.getUserSigningKeys(accountAliasId1);
         expect(sort(savedSigningKeys1, 'key')).toEqual(sort(keys1, 'key'));
       });
 
       it('get the index of a signing key', async () => {
-        const accountId = randomAccountId();
+        const accountAliasId = randomAccountAliasId();
         const signingKey = randomSigningKey();
-        signingKey.accountId = accountId;
+        signingKey.accountAliasId = accountAliasId;
         await db.addUserSigningKey(signingKey);
 
         const fullKey = new GrumpkinAddress(Buffer.concat([signingKey.key, randomBytes(32)]));
-        const index0 = await db.getUserSigningKeyIndex(accountId, fullKey);
+        const index0 = await db.getUserSigningKeyIndex(accountAliasId, fullKey);
         expect(index0).toEqual(signingKey.treeIndex);
 
-        const index1 = await db.getUserSigningKeyIndex(randomAccountId(), fullKey);
+        const index1 = await db.getUserSigningKeyIndex(randomAccountAliasId(), fullKey);
         expect(index1).toBeUndefined();
       });
     });
@@ -430,11 +430,11 @@ export const databaseTestSuite = (
         await db.removeUser(profile0.user.id);
 
         expect(await db.getNote(profile0.note.index)).toBeUndefined();
-        expect(await db.getUserSigningKeys(profile0.signingKey.accountId)).toEqual([]);
+        expect(await db.getUserSigningKeys(profile0.signingKey.accountAliasId)).toEqual([]);
         expect(await db.getUserTxs(profile0.userTx.userId)).toEqual([]);
 
         expect(await db.getNote(profile1.note.index)).toEqual(profile1.note);
-        expect(await db.getUserSigningKeys(profile1.signingKey.accountId)).toEqual([profile1.signingKey]);
+        expect(await db.getUserSigningKeys(profile1.signingKey.accountAliasId)).toEqual([profile1.signingKey]);
         expect(await db.getUserTxs(profile1.userTx.userId)).toEqual([profile1.userTx]);
       });
 
@@ -463,7 +463,7 @@ export const databaseTestSuite = (
 
         expect(await db.getAliases(alias.aliasHash)).toEqual([]);
         expect(await db.getNote(note.index)).toBeUndefined();
-        expect(await db.getUserSigningKeyIndex(signingKey.accountId, fullKey)).toBeUndefined();
+        expect(await db.getUserSigningKeyIndex(signingKey.accountAliasId, fullKey)).toBeUndefined();
         expect(await db.getUserTx(userTx.userId, userTx.txHash)).toBeUndefined();
 
         expect(await db.getUser(user.id)).toEqual({
@@ -501,7 +501,7 @@ export const databaseTestSuite = (
         expect(await db.getNote(note.index)).toBeUndefined();
         expect(await db.getUser(user.id)).toBeUndefined();
         expect(await db.getKey(keyName)).toBeUndefined();
-        expect(await db.getUserSigningKeyIndex(signingKey.accountId, fullKey)).toBeUndefined();
+        expect(await db.getUserSigningKeyIndex(signingKey.accountAliasId, fullKey)).toBeUndefined();
         expect(await db.getUserTx(userTx.userId, userTx.txHash)).toBeUndefined();
       });
     });

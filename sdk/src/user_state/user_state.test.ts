@@ -1,6 +1,5 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { computeAccountIdNullifier } from 'barretenberg/client_proofs/account_proof/compute_nullifier';
-import { AccountId } from 'barretenberg/client_proofs/account_id';
+import { computeAccountAliasIdNullifier } from 'barretenberg/client_proofs/account_proof/compute_nullifier';
 import { createNoteSecret, encryptNote, Note } from 'barretenberg/client_proofs/note';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { Blake2s } from 'barretenberg/crypto/blake2s';
@@ -13,8 +12,7 @@ import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { TxHash } from 'barretenberg/rollup_provider';
 import { randomBytes } from 'crypto';
 import { Database } from '../database';
-import { UserData } from '../user';
-import { UserId } from '../user/user_id';
+import { UserData, AccountId, AccountAliasId } from '../user';
 import { UserState } from './index';
 
 type Mockify<T> = {
@@ -42,7 +40,7 @@ describe('user state', () => {
     const privateKey = randomBytes(32);
     const publicKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, privateKey));
     user = {
-      id: new UserId(publicKey, 0),
+      id: new AccountId(publicKey, 0),
       privateKey,
       publicKey,
       nonce: 0,
@@ -118,15 +116,15 @@ describe('user state', () => {
     const note2 = Buffer.concat([publicKey.x(), newKey2.x()]);
     const aliasHash = AliasHash.fromAlias('god', blake2s);
     const nonce = 0;
-    const accountId = new AccountId(aliasHash, nonce);
-    const nullifier1 = computeAccountIdNullifier(accountId, pedersen);
+    const accountAliasId = new AccountAliasId(aliasHash, nonce);
+    const nullifier1 = computeAccountAliasIdNullifier(accountAliasId, pedersen);
     const nullifier2 = randomBytes(32);
     const viewingKeys = [Buffer.alloc(0), Buffer.alloc(0)];
     const innerProofData = new InnerProofData(
       1,
       publicKey.x(),
       publicKey.y(),
-      accountId.toBuffer(),
+      accountAliasId.toBuffer(),
       note1,
       note2,
       nullifier1,
@@ -293,16 +291,16 @@ describe('user state', () => {
     userState.processBlock(block);
     await userState.stopSync(true);
 
-    const accountId = AccountId.fromBuffer(rollupProofData.innerProofData[0].assetId);
+    const accountAliasId = AccountAliasId.fromBuffer(rollupProofData.innerProofData[0].assetId);
 
     expect(db.addUserSigningKey).toHaveBeenCalledWith({
-      accountId,
+      accountAliasId,
       address: user.publicKey,
       key: key1.x().slice(0, 32),
       treeIndex: 0,
     });
     expect(db.addUserSigningKey).toHaveBeenCalledWith({
-      accountId,
+      accountAliasId,
       address: user.publicKey,
       key: key2.x().slice(0, 32),
       treeIndex: 1,

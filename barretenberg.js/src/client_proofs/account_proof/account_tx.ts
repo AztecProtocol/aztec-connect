@@ -2,7 +2,7 @@ import { HashPath } from '../../merkle_tree';
 import { numToUInt32BE } from '../../serialize';
 import { Signature } from '../signature';
 import { GrumpkinAddress } from '../../address';
-import { AccountId } from '../account_id';
+import { AccountAliasId } from '../account_alias_id';
 
 export class AccountTx {
   constructor(
@@ -12,7 +12,7 @@ export class AccountTx {
     public numNewKeys: number,
     public newSigningPubKey1: GrumpkinAddress,
     public newSigningPubKey2: GrumpkinAddress,
-    public accountId: AccountId,
+    public accountAliasId: AccountAliasId,
     public migrate: boolean,
     public gibberish: Buffer,
     public accountIndex: number,
@@ -33,8 +33,8 @@ export class AccountTx {
       numToUInt32BE(this.numNewKeys),
       this.newSigningPubKey1.toBuffer(),
       this.newSigningPubKey2.toBuffer(),
-      this.accountId.aliasHash.toBuffer32(),
-      numToUInt32BE(this.accountId.nonce),
+      this.accountAliasId.aliasHash.toBuffer32(),
+      numToUInt32BE(this.accountAliasId.nonce),
       Buffer.from([!!this.migrate]),
       this.gibberish,
       numToUInt32BE(this.accountIndex),

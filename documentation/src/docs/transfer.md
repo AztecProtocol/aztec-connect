@@ -5,25 +5,26 @@ This method sends funds privately on layer 2, the transfer is private and confid
 ```js
 import { AssetId, GrumpkinAddress } from '@aztec/sdk';
 
-async function demoTransfer(aztecSdk, accountPublicKey, signer) {
+async function demoTransfer(aztecSdk, userId, signer) {
   const assetId = AssetId.DAI;
 
-  const balanceBefore = aztecSdk.getBalance(assetId, accountPublicKey);
+  const balanceBefore = aztecSdk.getBalance(assetId, userId);
   console.info('Balance before transfer:', aztecSdk.fromErc20Units(assetId, balanceBefore));
 
   const value = aztecSdk.toErc20Units(assetId, '2');
 
   const recipientPublicKey = GrumpkinAddress.fromString('RECIPIENT_PUBLIC_KEY');
+  const recipientId = await aztecSdk.getAccountId(recipientPublicKey);
 
   console.info('Creating transfer proof...');
-  const userData = await aztecSdk.getUserData(accountPublicKey);
-  const txHash = await aztecSdk.transfer(assetId, accountPublicKey, value, signer, recipientPublicKey);
+  const userData = await aztecSdk.getUserData(userId);
+  const txHash = await aztecSdk.transfer(assetId, userId, value, signer, recipientId);
   console.info(`Proof accepted by server. Tx hash: ${txHash}`);
 
   console.info('Waiting for tx to settle...');
   await aztecSdk.awaitSettlement(txHash);
 
-  const balanceAfter = aztecSdk.getBalance(assetId, accountPublicKey);
+  const balanceAfter = aztecSdk.getBalance(assetId, userId);
   console.info('Balance after transfer:', aztecSdk.fromErc20Units(assetId, balanceAfter));
 }
 ```
@@ -35,8 +36,8 @@ Each [UserAsset](/#/Types/WalletSdkUserAsset) is bound to a user id and an asset
 ```js
 import { AssetId, GrumpkinAddress } from '@aztec/sdk';
 
-async function demoTransfer(aztecSdk, accountPublicKey, signer) {
-  const user = aztecSdk.getUser(accountPublicKey);
+async function demoTransfer(aztecSdk, userId, signer) {
+  const user = aztecSdk.getUser(userId);
   const asset = user.getAsset(AssetId.DAI);
 
   const balanceBefore = asset.balance();
@@ -52,7 +53,8 @@ async function demoTransfer(aztecSdk, accountPublicKey, signer) {
   }
 
   console.info('Creating transfer proof...');
-  const txHash = await asset.transfer(value, signer, recipientAlias);
+  const recipientId = await aztecSdk.getAccountId(recipientAlias);
+  const txHash = await asset.transfer(value, signer, recipientId);
   console.info(`Proof accepted by server. Tx hash: ${txHash}`);
 
   console.info('Waiting for tx to settle...');

@@ -7,7 +7,7 @@ import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { WorldState } from 'barretenberg/world_state';
 import createDebug from 'debug';
 import { ethers } from 'ethers';
-import { AccountValueId } from '../../account_value_id';
+import { AccountId } from '../../user';
 import { EthereumSigner, Signer } from '../../signer';
 import { UserState } from '../../user_state';
 import { JoinSplitTxFactory } from './join_split_tx_factory';
@@ -34,7 +34,7 @@ export class JoinSplitProofCreator {
     assetId: number,
     newNoteValue: bigint,
     signer: Signer,
-    receiver?: AccountValueId,
+    receiver?: AccountId,
     outputOwnerAddress?: EthAddress,
     ethSigner?: EthereumSigner,
   ) {

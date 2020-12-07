@@ -4,65 +4,45 @@ export interface Sdk {
   /**
    * Deposit.
    * @param assetId - [AssetId] See the list of assets we currently support [here](/#/Types/AssetId).
-   * @param accountPublicKey - [GrumpkinAddress] Public key of the proof sender.
+   * @param userId - [AccountId] The account id of the proof sender.
    * @param value - [bigint] The amount to deposit in ERC20 units.
    * @param signer - [Signer] An aztec signer used to create signatures.
    * @param ethSigner - [EthereumSigner] An ethereum signer used to create signatures to authorize the tx.
    * @param permitArgs - [PermitArgs]? Options for the erc20 permit function.
-   * @param to - [GrumpkinAddress|string]? The public key or alias of the user receiving funds.
-   * @param toNonce - [number]? The nonce of the account receiving funds.
+   * @param to - [AccountId]? The accountId of the user receiving funds. Default to the proof sender.
    * @returns Promise<TxHash> - Resolves to [TxHash](/#/Types/TxHash).
    */
   deposit(
     assetId: AssetId,
-    accountPublicKey: GrumpkinAddress,
+    userId: AccountId,
     value: bigint,
     signer: Signer,
     ethSigner: EthereumSigner,
     permitArgs?: PermitArgs,
-    to?: GrumpkinAddress | string,
-    toNonce?: number,
+    to?: AccountId,
   ): Promise<TxHash>;
 
   /**
    * Withdraw
    * @param assetId - [AssetId] See the list of assets we currently support [here](/#/Types/AssetId).
-   * @param accountPublicKey - [GrumpkinAddress] Public key of the proof sender.
+   * @param userId - [AccountId] The account id of the proof sender.
    * @param value - [bigint] The amount to withdraw in ERC20 units.
    * @param signer - [Signer] An aztec signer used to create signatures.
    * @param to - [EthAddress] The Ethereum address of the user receiving funds.
-   * @param fromNonce - [number]? The nonce of the account. Default to the latest nonce of accountPublicKey.
    * @returns Promise<TxHash> - Resolves to [TxHash](/#/Types/TxHash).
    */
-  withdraw(
-    assetId: AssetId,
-    accountPublicKey: GrumpkinAddress,
-    value: bigint,
-    signer: Signer,
-    to: EthAddress,
-    fromNonce?: number,
-  ): Promise<TxHash>;
+  withdraw(assetId: AssetId, userId: AccountId, value: bigint, signer: Signer, to: EthAddress): Promise<TxHash>;
 
   /**
    * Transfer
    * @param assetId - [AssetId] See the list of assets we currently support [here](/#/Types/AssetId).
-   * @param accountPublicKey - [GrumpkinAddress] Public key of the proof sender.
+   * @param userId - [AccountId] The account id of the proof sender.
    * @param value - [bigint] The amount to transfer in ERC20 units.
    * @param signer - [Signer] An aztec signer used to create signatures.
-   * @param to - [GrumpkinAddress|string] The public key or alias of the user receiving funds.
-   * @param fromNonce - [number]? The nonce of the account. Default to the latest nonce of accountPublicKey.
-   * @param toNonce - [number]? The nonce of the account receiving funds.
+   * @param to - [AccountId] The account id of the user receiving funds.
    * @returns Promise<TxHash> - Resolves to [TxHash](/#/Types/TxHash).
    */
-  transfer(
-    assetId: AssetId,
-    accountPublicKey: GrumpkinAddress,
-    value: bigint,
-    signer: Signer,
-    to: GrumpkinAddress | string,
-    fromNonce?: number,
-    toNonce?: number,
-  ): Promise<TxHash>;
+  transfer(assetId: AssetId, userId: AccountId, value: bigint, signer: Signer, to: AccountId): Promise<TxHash>;
 
   /**
    * Await Settlement
@@ -89,30 +69,29 @@ export interface Sdk {
 
   /**
    * Create Account
+   * @param userId - [AccountId] The account id of the proof sender.
    * @param alias - [string] The user's alias they wish to be identified by.
-   * @param accountPublicKey - [GrumpkinAddress] Public key of the proof sender.
    * @param newSigningPublicKey - [GrumpkinAddress] The 32-byte public key of the private key the user wishes to use to update state.
    * @param recoveryPublicKey - [GrumpkinAddress] The 32-byte public key generated along with user's recovery data.
    * @returns Promise<TxHash> - Resolves to [TxHash](/#/Types/TxHash).
    */
   createAccount(
+    userId: AccountId,
     alias: string,
-    accountPublicKey: GrumpkinAddress,
     newSigningPublicKey: GrumpkinAddress,
     recoveryPublicKey?: GrumpkinAddress,
   ): Promise<TxHash>;
 
   /**
    * Recover Acocunt
-   * @param alias - [string] The user's alias they wish to be identified by.
    * @param recoveryPayload - [RecoveryPayload] The data created at account creation that authorises the key addition.
    * @returns Promise<TxHash> - Resolves to [TxHash](/#/Types/TxHash).
    */
-  recoverAccount(alias: string, recoveryPayload: RecoveryPayload): Promise<TxHash>;
+  recoverAccount(recoveryPayload: RecoveryPayload): Promise<TxHash>;
 
   /**
    * Migrate Account
-   * @param alias - [string] The user's alias.
+   * @param userId - [AccountId] The account id of the proof sender.
    * @param signer - [Signer] An aztec signer used to create signatures.
    * @param newSigningPublicKey - [GrumpkinAddress] The 32-byte public key of the private key the user wishes to use to update state.
    * @param recoveryPublicKey - [GrumpkinAddress]? The 32-byte public key generated along with user's recovery data.
@@ -120,7 +99,7 @@ export interface Sdk {
    * @returns Promise<TxHash> - Resolves to [TxHash](/#/Types/TxHash).
    */
   migrateAccount(
-    alias: string,
+    userId: AccountId,
     signer: Signer,
     newSigningPublicKey: GrumpkinAddress,
     recoveryPublicKey?: GrumpkinAddress,
@@ -129,19 +108,17 @@ export interface Sdk {
 
   /**
    * Add Signing Key
-   * @param alias - [string] The user's alias.
+   * @param userId - [AccountId] The account id of the proof sender.
    * @param signer - [Signer] An aztec signer used to create signatures.
    * @param signingPublicKey1 - [GrumpkinAddress] The 32-byte public key of the private key the user wishes to use to update state.
    * @param signingPublicKey2 - [GrumpkinAddress] The 32-byte public key of the private key the user wishes to use to update state.
-   * @param nonce - [number]? The nonce of the user account. Default to the latest nonce.
    * @returns Promise<TxHash> - Resolves to [TxHash](/#/Types/TxHash).
    */
   addSigningKeys(
-    alias: string,
+    userId: AccountId,
     signer: Signer,
     signingPublicKey1: GrumpkinAddress,
     signingPublicKey2?: GrumpkinAddress,
-    nonce?: number,
   ): Promise<TxHash>;
 
   /**

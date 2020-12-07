@@ -1,9 +1,9 @@
 import { GrumpkinAddress } from '../../address';
 import { Pedersen } from '../../crypto/pedersen';
-import { AccountId } from '../account_id';
+import { AccountAliasId } from '../account_alias_id';
 
 export function computeSigningData(
-  accountId: AccountId,
+  accountAliasId: AccountAliasId,
   accountPublicKey: GrumpkinAddress,
   newAccountPublicKey: GrumpkinAddress,
   newSigningPublicKey1: GrumpkinAddress,
@@ -11,7 +11,7 @@ export function computeSigningData(
   pedersen: Pedersen,
 ) {
   const toCompress = [
-    accountId.toBuffer(),
+    accountAliasId.toBuffer(),
     accountPublicKey.x(),
     newAccountPublicKey.x(),
     newSigningPublicKey1.x(),

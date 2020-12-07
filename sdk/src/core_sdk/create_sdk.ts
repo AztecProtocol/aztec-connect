@@ -10,7 +10,7 @@ import { createConnection } from 'typeorm';
 import { DexieDatabase, SQLDatabase, getOrmConfig } from '../database';
 import { EthereumProvider } from 'blockchain';
 import { SdkEvent, SdkInitState } from '../sdk';
-import { UserId } from '../user';
+import { AccountId } from '../user';
 import { CoreSdk, CoreSdkEvent, CoreSdkOptions } from './core_sdk';
 
 const debug = createDebug('bb:create_sdk');
@@ -123,14 +123,16 @@ export async function createSdk(
 
     sdk.on(CoreSdkEvent.UPDATED_WORLD_STATE, () => channel.postMessage({ name: CoreSdkEvent.UPDATED_WORLD_STATE }));
     sdk.on(CoreSdkEvent.UPDATED_USERS, () => channel.postMessage({ name: CoreSdkEvent.UPDATED_USERS }));
-    sdk.on(CoreSdkEvent.UPDATED_USER_STATE, (userId: UserId, balanceAfter?: bigint, diff?: bigint, assetId?: number) =>
-      channel.postMessage({
-        name: CoreSdkEvent.UPDATED_USER_STATE,
-        userId: userId.toString(),
-        balanceAfter: balanceAfter?.toString(),
-        diff: diff?.toString(),
-        assetId,
-      }),
+    sdk.on(
+      CoreSdkEvent.UPDATED_USER_STATE,
+      (userId: AccountId, balanceAfter?: bigint, diff?: bigint, assetId?: number) =>
+        channel.postMessage({
+          name: CoreSdkEvent.UPDATED_USER_STATE,
+          userId: userId.toString(),
+          balanceAfter: balanceAfter?.toString(),
+          diff: diff?.toString(),
+          assetId,
+        }),
     );
     sdk.on(CoreSdkEvent.CLEAR_DATA, () => channel.postMessage({ name: CoreSdkEvent.CLEAR_DATA }));
 
@@ -147,7 +149,7 @@ export async function createSdk(
           break;
         case CoreSdkEvent.UPDATED_USER_STATE:
           sdk.notifyUserStateUpdated(
-            UserId.fromString(msg.userId),
+            AccountId.fromString(msg.userId),
             msg.balanceAfter ? BigInt(msg.balanceAfter) : undefined,
             msg.diff ? BigInt(msg.diff) : undefined,
             msg.assetId,

@@ -1,7 +1,7 @@
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 import { Note } from '../../note';
-import { UserId } from '../../user';
-import { bigintTransformer, userIdTransformer } from './transformer';
+import { AccountId } from '../../user';
+import { bigintTransformer, accountIdTransformer } from './transformer';
 
 @Entity({ name: 'note' })
 export class NoteDao implements Note {
@@ -31,6 +31,6 @@ export class NoteDao implements Note {
   @Column()
   public nullified!: boolean;
 
-  @Column('blob', { transformer: [userIdTransformer] })
-  public owner!: UserId;
+  @Column('blob', { transformer: [accountIdTransformer] })
+  public owner!: AccountId;
 }

@@ -5,10 +5,10 @@ This method deposits assets from layer 1.
 ```js
 import { AssetId, EthAddress, Web3Signer } from '@aztec/sdk';
 
-async function demoDeposit(aztecSdk, accountPublicKey, signer) {
+async function demoDeposit(aztecSdk, userId, signer) {
   const assetId = AssetId.DAI;
 
-  const balanceBefore = aztecSdk.getBalance(assetId, accountPublicKey);
+  const balanceBefore = aztecSdk.getBalance(assetId, userId);
   console.info('Balance before deposit:', aztecSdk.fromErc20Units(assetId, balanceBefore));
 
   const senderEthAddress = EthAddress.fromString(window.ethereum.selectedAddress);
@@ -19,19 +19,19 @@ async function demoDeposit(aztecSdk, accountPublicKey, signer) {
   const allowance = await aztecSdk.getPublicAllowance(assetId, senderEthAddress);
   if (allowance < value) {
     console.info('Approve rollup contract to spend your token...');
-    await aztecSdk.approve(assetId, accountPublicKey, value, senderEthAddress);
+    await aztecSdk.approve(assetId, userId, value, senderEthAddress);
     console.info('Approved!');
   }
 
   console.info('Creating deposit proof...');
-  const userData = await aztecSdk.getUserData(accountPublicKey);
-  const txHash = await aztecSdk.deposit(assetId, accountPublicKey, value, signer, ethSigner);
+  const userData = await aztecSdk.getUserData(userId);
+  const txHash = await aztecSdk.deposit(assetId, userId, value, signer, ethSigner);
   console.info(`Proof accepted by server. Tx hash: ${txHash}`);
 
   console.info('Waiting for tx to settle...');
   await aztecSdk.awaitSettlement(txHash);
 
-  const balanceAfter = aztecSdk.getBalance(assetId, accountPublicKey);
+  const balanceAfter = aztecSdk.getBalance(assetId, userId);
   console.info('Balance after deposit:', aztecSdk.fromErc20Units(assetId, balanceAfter));
 }
 ```
@@ -43,8 +43,8 @@ Each [UserAsset](/#/Types/WalletSdkUserAsset) is bound to a user id and an asset
 ```js
 import { AssetId, EthAddress, Web3Signer } from '@aztec/sdk';
 
-async function demoDeposit(aztecSdk, accountPublicKey, signer) {
-  const user = aztecSdk.getUser(accountPublicKey);
+async function demoDeposit(aztecSdk, userId, signer) {
+  const user = aztecSdk.getUser(userId);
   const asset = user.getAsset(AssetId.DAI);
 
   const balanceBefore = asset.balance();

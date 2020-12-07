@@ -20,7 +20,7 @@ import { Schnorr } from '../../crypto/schnorr';
 import { UnrolledProver } from '../prover';
 import { computeSigningData } from './compute_signing_data';
 import { Blake2s } from '../../crypto/blake2s';
-import { AccountId } from '../account_id';
+import { AccountAliasId } from '../account_alias_id';
 import { AliasHash } from '../alias_hash';
 
 const debug = createDebug('bb:join_split_proof_test');
@@ -117,7 +117,7 @@ describe('join_split_proof', () => {
 
       const aliasHash = AliasHash.fromAlias('user_zero', blake2s);
       const nonce = 0;
-      const accountId = new AccountId(aliasHash, nonce);
+      const accountAliasId = new AccountAliasId(aliasHash, nonce);
 
       const inputOwner = EthAddress.randomAddress();
       const outputOwner = EthAddress.randomAddress();
@@ -150,7 +150,7 @@ describe('join_split_proof', () => {
         [inputNote1, inputNote2],
         [outputNote1, outputNote2],
         privateKey,
-        accountId,
+        accountAliasId,
         2,
         accountNotePath,
         pubKey,

@@ -3,7 +3,7 @@ import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { TxHash } from 'barretenberg/rollup_provider';
 import { randomBytes } from 'crypto';
 import { Note } from '../../note';
-import { AccountId, UserData, UserId } from '../../user';
+import { AccountAliasId, UserData, AccountId } from '../../user';
 import { UserTx } from '../../user_tx';
 import { Alias, SigningKey } from '../database';
 
@@ -20,11 +20,11 @@ export const randomNote = (): Note => ({
   encrypted: randomBytes(32),
   nullifier: randomBytes(32),
   nullified: false,
-  owner: UserId.random(),
+  owner: AccountId.random(),
 });
 
 export const randomUser = (): UserData => ({
-  id: UserId.random(),
+  id: AccountId.random(),
   privateKey: randomBytes(32),
   publicKey: GrumpkinAddress.randomAddress(),
   nonce: randomInt(),
@@ -34,7 +34,7 @@ export const randomUser = (): UserData => ({
 
 export const randomUserTx = (): UserTx => ({
   txHash: TxHash.random(),
-  userId: UserId.random(),
+  userId: AccountId.random(),
   action: 'DEPOSIT',
   assetId: randomInt(),
   value: BigInt(randomInt()),
@@ -43,10 +43,10 @@ export const randomUserTx = (): UserTx => ({
   recipient: randomBytes(32),
 });
 
-export const randomAccountId = () => new AccountId(AliasHash.random(), randomInt());
+export const randomAccountAliasId = () => new AccountAliasId(AliasHash.random(), randomInt());
 
 export const randomSigningKey = (): SigningKey => ({
-  accountId: randomAccountId(),
+  accountAliasId: randomAccountAliasId(),
   key: randomBytes(32),
   treeIndex: randomInt(),
   address: GrumpkinAddress.randomAddress(),

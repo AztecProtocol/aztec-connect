@@ -10,7 +10,6 @@ async function demoCreateAccount(aztecSdk) {
   // define the privacy key used for decrypting data
   const privacyKey = randomBytes(32);
   const user = await aztecSdk.addUser(privacyKey);
-  const accountPublicKey = user.getUserData().publicKey;
 
   // define the public key used for signing proof data
   const signingPublicKey = GrumpkinAddress.randomAddress();
@@ -19,9 +18,8 @@ async function demoCreateAccount(aztecSdk) {
   const recoveryPublicKey = GrumpkinAddress.randomAddress();
 
   console.info('Creating proof...');
-  const txHash = await aztecSdk.createAccount(
+  const txHash = await user.createAccount(
     alias,
-    accountPublicKey,
     signingPublicKey,
     recoveryPublicKey,
   );
@@ -32,7 +30,7 @@ async function demoCreateAccount(aztecSdk) {
   console.info('Account created!');
 
   // remove this demo user from your device
-  await aztecSdk.removeUser(accountPublicKey);
+  await aztecSdk.removeUser(user.id);
 }
 ```
 

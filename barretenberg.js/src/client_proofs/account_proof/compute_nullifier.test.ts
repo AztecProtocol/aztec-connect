@@ -1,8 +1,8 @@
 import { BarretenbergWasm } from '../../wasm';
 import { Pedersen } from '../../crypto/pedersen';
-import { computeAccountIdNullifier } from './compute_nullifier';
+import { computeAccountAliasIdNullifier } from './compute_nullifier';
 import { Blake2s } from '../../crypto/blake2s';
-import { AccountId } from '../account_id';
+import { AccountAliasId } from '../account_alias_id';
 import { AliasHash } from '../alias_hash';
 
 describe('account_proof_compute_nullifier', () => {
@@ -19,8 +19,8 @@ describe('account_proof_compute_nullifier', () => {
   it('should compute correct alias id nullifier', async () => {
     const aliasHash = AliasHash.fromAlias('pebble', blake2s);
     const nonce = 1;
-    const accountId = new AccountId(aliasHash, nonce);
-    const nullifier = computeAccountIdNullifier(accountId, pedersen);
+    const accountAliasId = new AccountAliasId(aliasHash, nonce);
+    const nullifier = computeAccountAliasIdNullifier(accountAliasId, pedersen);
 
     const expected = Buffer.from('07b0af8337b106f504265f5f633a2980bb22e292ac05f51d5c569b2474bf1f7e', 'hex');
 

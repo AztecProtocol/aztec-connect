@@ -1,14 +1,14 @@
 import { GrumpkinAddress } from 'barretenberg/address';
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
-import { UserData, UserId } from '../../user';
-import { aliasHashTransformer, grumpkinAddressTransformer, userIdTransformer } from './transformer';
+import { UserData, AccountId } from '../../user';
+import { aliasHashTransformer, grumpkinAddressTransformer, accountIdTransformer } from './transformer';
 
 @Entity({ name: 'userData' })
 @Index(['publicKey', 'nonce'], { unique: true })
 export class UserDataDao implements UserData {
-  @PrimaryColumn('blob', { transformer: [userIdTransformer] })
-  public id!: UserId;
+  @PrimaryColumn('blob', { transformer: [accountIdTransformer] })
+  public id!: AccountId;
 
   @Column('blob', { transformer: [grumpkinAddressTransformer] })
   public publicKey!: GrumpkinAddress;

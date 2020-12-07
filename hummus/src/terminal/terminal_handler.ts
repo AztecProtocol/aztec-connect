@@ -1,6 +1,15 @@
-import { AppEvent, AppInitAction, AppInitState, AppInitStatus, WebSdk } from 'aztec2-sdk';
-import { AssetId, MemoryFifo, SdkEvent } from 'aztec2-sdk';
-import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
+import {
+  AppEvent,
+  AppInitAction,
+  AppInitState,
+  AppInitStatus,
+  AssetId,
+  EthUserId,
+  GrumpkinAddress,
+  MemoryFifo,
+  SdkEvent,
+  WebSdk,
+} from 'aztec2-sdk';
 import copy from 'copy-to-clipboard';
 import { Terminal } from './terminal';
 import createDebug from 'debug';
@@ -146,10 +155,10 @@ export class TerminalHandler {
   /**
    * If the users balance updates, print an update.
    */
-  private handleUserStateChange = (account: EthAddress, balance: bigint, diff: bigint, assetId: AssetId) => {
+  private handleUserStateChange = (account: EthUserId, balance: bigint, diff: bigint, assetId: AssetId) => {
     const user = this.app.getUser();
     const userIsSynced = user.getUserData().syncedToRollup === this.app.getSdk().getLocalStatus().syncedToRollup;
-    if (user.getUserData().ethAddress.equals(account) && diff && userIsSynced) {
+    if (user.getUserData().ethUserId.equals(account) && diff && userIsSynced) {
       const userAsset = user.getAsset(assetId);
       this.printQueue.put(
         `balance updated: ${userAsset.fromErc20Units(balance)} (${diff >= 0 ? '+' : ''}${userAsset.fromErc20Units(
@@ -306,9 +315,7 @@ export class TerminalHandler {
   }
 
   private async transfer(addressOrAlias: string, value: string) {
-    const to = GrumpkinAddress.isAddress(addressOrAlias)
-      ? GrumpkinAddress.fromString(addressOrAlias)
-      : await this.app.getSdk().getAddressFromAlias(addressOrAlias);
+    const to = await this.app.getSdk().getAccountId(addressOrAlias);
     if (!to) {
       throw new Error(`unknown user: ${addressOrAlias}`);
     }

@@ -1,17 +1,17 @@
 import { GrumpkinAddress } from 'barretenberg/address';
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 import { SigningKey } from '../';
-import { AccountId } from '../../user';
-import { accountIdTransformer, grumpkinAddressTransformer } from './transformer';
+import { AccountAliasId } from '../../user';
+import { accountAliasIdTransformer, grumpkinAddressTransformer } from './transformer';
 
 @Entity({ name: 'userKey' })
-@Index(['key', 'accountId'], { unique: true })
+@Index(['key', 'accountAliasId'], { unique: true })
 export class UserKeyDao implements SigningKey {
   @PrimaryColumn()
   public key!: Buffer;
 
-  @PrimaryColumn('blob', { transformer: [accountIdTransformer] })
-  public accountId!: AccountId;
+  @PrimaryColumn('blob', { transformer: [accountAliasIdTransformer] })
+  public accountAliasId!: AccountAliasId;
 
   @Index({ unique: false })
   @Column('blob', { transformer: [grumpkinAddressTransformer] })

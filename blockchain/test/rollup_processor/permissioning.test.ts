@@ -38,7 +38,7 @@ describe('rollup_processor: permissioning', () => {
       proofData,
       solidityFormatSignatures(signatures),
       sigIndexes,
-      viewingKeys,
+      Buffer.concat(viewingKeys),
     );
     const receipt = await tx.wait();
     expect(receipt.status).to.equal(1);
@@ -55,7 +55,12 @@ describe('rollup_processor: permissioning', () => {
     await rollupProcessor.depositPendingFunds(assetId, depositAmount, userAAddress.toString());
 
     await expect(
-      rollupProcessor.processRollup(proofData, solidityFormatSignatures([fakeSignature]), sigIndexes, viewingKeys),
+      rollupProcessor.processRollup(
+        proofData,
+        solidityFormatSignatures([fakeSignature]),
+        sigIndexes,
+        Buffer.concat(viewingKeys),
+      ),
     ).to.be.revertedWith('Rollup Processor: INVALID_TRANSFER_SIGNATURE');
   });
 
@@ -63,6 +68,7 @@ describe('rollup_processor: permissioning', () => {
     const { proofData, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
     const zeroSignatures = Buffer.alloc(soliditySignatureLength);
     await erc20.approve(rollupProcessor.address, depositAmount);
-    await expect(rollupProcessor.processRollup(proofData, zeroSignatures, sigIndexes, viewingKeys)).to.be.reverted;
+    await expect(rollupProcessor.processRollup(proofData, zeroSignatures, sigIndexes, Buffer.concat(viewingKeys))).to.be
+      .reverted;
   });
 });

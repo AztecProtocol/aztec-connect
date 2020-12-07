@@ -3,7 +3,7 @@ import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { TxHash } from 'barretenberg/rollup_provider';
 import Dexie from 'dexie';
 import { Note } from '../note';
-import { AccountId, UserData, UserId } from '../user';
+import { AccountAliasId, UserData, AccountId } from '../user';
 import { UserTx, UserTxAction } from '../user_tx';
 import { Alias, Database, SigningKey } from './database';
 
@@ -59,7 +59,7 @@ const dexieNoteToNote = ({
   encrypted: Buffer.from(encrypted),
   nullifier: Buffer.from(nullifier),
   nullified: !!nullified,
-  owner: UserId.fromBuffer(Buffer.from(owner)),
+  owner: AccountId.fromBuffer(Buffer.from(owner)),
 });
 
 class DexieKey {
@@ -89,7 +89,7 @@ const userToDexieUser = ({ id, publicKey, privateKey, nonce, aliasHash, syncedTo
 
 const dexieUserToUser = ({ id, publicKey, privateKey, aliasHash, ...rest }: DexieUser): UserData => ({
   ...rest,
-  id: UserId.fromBuffer(Buffer.from(id)),
+  id: AccountId.fromBuffer(Buffer.from(id)),
   publicKey: new GrumpkinAddress(Buffer.from(publicKey)),
   privateKey: Buffer.from(privateKey),
   aliasHash: aliasHash ? new AliasHash(Buffer.from(aliasHash)) : undefined,
@@ -133,7 +133,7 @@ const dexieUserTxToUserTx = ({
 }: DexieUserTx): UserTx => ({
   ...dexieUserTx,
   txHash: new TxHash(Buffer.from(txHash)),
-  userId: UserId.fromBuffer(Buffer.from(dexieUserTx.userId)),
+  userId: AccountId.fromBuffer(Buffer.from(dexieUserTx.userId)),
   value: BigInt(dexieUserTx.value),
   settled: !!settled,
   recipient: recipient ? Buffer.from(recipient) : undefined,
@@ -141,7 +141,7 @@ const dexieUserTxToUserTx = ({
 
 class DexieUserKey {
   constructor(
-    public accountId: Uint8Array,
+    public accountAliasId: Uint8Array,
     public address: Uint8Array,
     public key: Uint8Array,
     public treeIndex: number,
@@ -150,7 +150,7 @@ class DexieUserKey {
 
 const dexieUserKeyToSigningKey = (userKey: DexieUserKey): SigningKey => ({
   ...userKey,
-  accountId: AccountId.fromBuffer(Buffer.from(userKey.accountId)),
+  accountAliasId: AccountAliasId.fromBuffer(Buffer.from(userKey.accountAliasId)),
   key: Buffer.from(userKey.key),
   address: new GrumpkinAddress(Buffer.from(userKey.address)),
 });
@@ -177,7 +177,7 @@ export class DexieDatabase implements Database {
   constructor() {
     this.dexie.version(5).stores({
       user: '&id, privateKey',
-      userKeys: '&[accountId+key], accountId, address',
+      userKeys: '&[accountAliasId+key], accountAliasId, address',
       userTx: '&[txHash+userId], txHash, userId, settled, created',
       note: '++id, [owner+nullified], nullifier, owner',
       key: '&name',
@@ -226,13 +226,13 @@ export class DexieDatabase implements Database {
     await this.note.update(index, { nullified: 1 });
   }
 
-  async getUserNotes(userId: UserId) {
+  async getUserNotes(userId: AccountId) {
     return (await this.note.where({ owner: new Uint8Array(userId.toBuffer()), nullified: 0 }).toArray()).map(
       dexieNoteToNote,
     );
   }
 
-  async getUser(userId: UserId) {
+  async getUser(userId: AccountId) {
     const user = await this.user.get(new Uint8Array(userId.toBuffer()));
     return user ? dexieUserToUser(user) : undefined;
   }
@@ -249,7 +249,7 @@ export class DexieDatabase implements Database {
     await this.user.where({ id: new Uint8Array(user.id.toBuffer()) }).modify(userToDexieUser(user));
   }
 
-  async getUserTx(userId: UserId, txHash: TxHash) {
+  async getUserTx(userId: AccountId, txHash: TxHash) {
     const userTx = await this.userTx.get({
       userId: new Uint8Array(userId.toBuffer()),
       txHash: new Uint8Array(txHash.toBuffer()),
@@ -257,7 +257,7 @@ export class DexieDatabase implements Database {
     return userTx ? dexieUserTxToUserTx(userTx) : undefined;
   }
 
-  async getUserTxs(userId: UserId) {
+  async getUserTxs(userId: AccountId) {
     return (
       await this.userTx
         .where({ userId: new Uint8Array(userId.toBuffer()) })
@@ -275,13 +275,13 @@ export class DexieDatabase implements Database {
     await this.userTx.put(userTxToDexieUserTx(id, userTx));
   }
 
-  async settleUserTx(userId: UserId, txHash: TxHash) {
+  async settleUserTx(userId: AccountId, txHash: TxHash) {
     await this.userTx
       .where({ userId: new Uint8Array(userId.toBuffer()), txHash: new Uint8Array(txHash.toBuffer()) })
       .modify({ settled: 1 });
   }
 
-  async removeUser(userId: UserId) {
+  async removeUser(userId: AccountId) {
     const user = await this.getUser(userId);
     if (!user) return;
 
@@ -360,10 +360,10 @@ export class DexieDatabase implements Database {
     return value;
   }
 
-  async addUserSigningKey({ accountId, address, key, treeIndex }: SigningKey) {
+  async addUserSigningKey({ accountAliasId, address, key, treeIndex }: SigningKey) {
     await this.userKeys.add(
       new DexieUserKey(
-        new Uint8Array(accountId.toBuffer()),
+        new Uint8Array(accountAliasId.toBuffer()),
         new Uint8Array(address.toBuffer()),
         new Uint8Array(key),
         treeIndex,
@@ -371,21 +371,21 @@ export class DexieDatabase implements Database {
     );
   }
 
-  async getUserSigningKeys(accountId: AccountId) {
-    const userKeys = await this.userKeys.where({ accountId: new Uint8Array(accountId.toBuffer()) }).toArray();
+  async getUserSigningKeys(accountAliasId: AccountAliasId) {
+    const userKeys = await this.userKeys.where({ accountAliasId: new Uint8Array(accountAliasId.toBuffer()) }).toArray();
     return userKeys.map(dexieUserKeyToSigningKey);
   }
 
-  async getUserSigningKeyIndex(accountId: AccountId, signingKey: GrumpkinAddress) {
+  async getUserSigningKeyIndex(accountAliasId: AccountAliasId, signingKey: GrumpkinAddress) {
     const userKey = await this.userKeys.get({
-      accountId: new Uint8Array(accountId.toBuffer()),
+      accountAliasId: new Uint8Array(accountAliasId.toBuffer()),
       key: new Uint8Array(signingKey.toBuffer().slice(0, 32)),
     });
     return userKey ? userKey.treeIndex : undefined;
   }
 
-  async removeUserSigningKeys(accountId: AccountId) {
-    await this.userKeys.where({ accountId: new Uint8Array(accountId.toBuffer()) }).delete();
+  async removeUserSigningKeys(accountAliasId: AccountAliasId) {
+    await this.userKeys.where({ accountAliasId: new Uint8Array(accountAliasId.toBuffer()) }).delete();
   }
 
   async addAlias({ aliasHash, address, latestNonce }: Alias) {

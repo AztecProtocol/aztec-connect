@@ -23,7 +23,7 @@ import { EventEmitter } from 'events';
 import Mutex from 'idb-mutex';
 import { LevelUp } from 'levelup';
 import { HashPathSource } from 'sriracha/hash_path_source';
-import { Alias, Database } from '../database';
+import { Database } from '../database';
 import { AccountProofCreator } from '../proofs/account_proof_creator';
 import { EscapeHatchProofCreator } from '../proofs/escape_hatch_proof_creator';
 import { JoinSplitProofCreator } from '../proofs/join_split_proof_creator';
@@ -31,10 +31,9 @@ import { Action, ActionState, AssetId, SdkEvent, SdkInitState, SdkStatus } from 
 import { EthereumSigner, Signer } from '../signer';
 import { SchnorrSigner } from '../signer';
 import { TxsState } from '../txs_state';
-import { AccountId, UserDataFactory, UserId } from '../user';
+import { AccountAliasId, UserDataFactory, AccountId } from '../user';
 import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
 import { UserTx, UserTxAction } from '../user_tx';
-import { AccountValueId } from '../account_value_id';
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 
 const debug = createDebug('bb:core_sdk');
@@ -413,7 +412,7 @@ export class CoreSdk extends EventEmitter {
         continue;
       }
 
-      const { aliasHash, nonce } = AccountId.fromBuffer(assetId);
+      const { aliasHash, nonce } = AccountAliasId.fromBuffer(assetId);
       const address = new GrumpkinAddress(Buffer.concat([publicInput, publicOutput]));
       const prevAlias = await this.db.getAlias(aliasHash, address);
       debug(`adding alias: ${aliasHash} -> ${address} (${nonce}).`);
@@ -442,20 +441,19 @@ export class CoreSdk extends EventEmitter {
    * Call the user state init function to refresh users internal state.
    * Emit an SdkEvent to update the UI.
    */
-  public async notifyUserStateUpdated(userId: UserId, balanceAfter?: bigint, diff?: bigint, assetId?: number) {
+  public async notifyUserStateUpdated(userId: AccountId, balanceAfter?: bigint, diff?: bigint, assetId?: number) {
     await this.getUserState(userId)?.init();
     this.emit(SdkEvent.UPDATED_USER_STATE, userId, balanceAfter, diff, assetId);
   }
 
   public async createProof(
     assetId: AssetId,
-    userId: UserId,
+    userId: AccountId,
     action: UserTxAction,
     value: bigint,
     signer: Signer,
     ethSigner?: EthereumSigner,
-    noteRecipient?: GrumpkinAddress,
-    noteRecipientNonce?: number,
+    noteRecipient?: AccountId,
     outputOwner?: EthAddress,
   ) {
     if (!noteRecipient && !outputOwner) {
@@ -471,12 +469,6 @@ export class CoreSdk extends EventEmitter {
     const publicInput = ['DEPOSIT', 'PUBLIC_TRANSFER'].includes(action) ? value : BigInt(0);
     const publicOutput = ['WITHDRAW', 'PUBLIC_TRANSFER'].includes(action) ? value : BigInt(0);
     const newNoteValue = ['DEPOSIT', 'TRANSFER'].includes(action) ? value : BigInt(0);
-    const recipientNonce = noteRecipient
-      ? noteRecipientNonce !== undefined
-        ? noteRecipientNonce
-        : await this.getLatestUserNonce(noteRecipient)
-      : undefined;
-    const recipient = noteRecipient ? new AccountValueId(noteRecipient, recipientNonce!) : undefined;
 
     const proofCreator = this.escapeHatchMode ? this.escapeHatchProofCreator : this.joinSplitProofCreator;
     const proofOutput = await proofCreator.createProof(
@@ -486,7 +478,7 @@ export class CoreSdk extends EventEmitter {
       assetId,
       newNoteValue,
       signer,
-      recipient,
+      noteRecipient,
       outputOwner,
       ethSigner,
     );
@@ -532,9 +524,28 @@ export class CoreSdk extends EventEmitter {
     return this.db.getAliasHashByAddress(publicKey, nonce);
   }
 
+  public async getAddressFromAliasHash(aliasHash: AliasHash, nonce?: number) {
+    return this.db.getAddressByAliasHash(aliasHash, nonce);
+  }
+
   public async getAddressFromAlias(alias: string, nonce?: number) {
     const aliasHash = this.computeAliasHash(alias);
-    return this.db.getAddressByAliasHash(aliasHash, nonce);
+    return this.getAddressFromAliasHash(aliasHash, nonce);
+  }
+
+  public async getAccountId(user: string | GrumpkinAddress, nonce?: number) {
+    const publicKey =
+      typeof user !== 'string'
+        ? user
+        : GrumpkinAddress.isAddress(user)
+        ? GrumpkinAddress.fromString(user)
+        : await this.getAddressFromAlias(user);
+    if (!publicKey) {
+      throw new Error('Alias not registered.');
+    }
+
+    const accountNonce = nonce !== undefined ? nonce : await this.getLatestUserNonce(publicKey);
+    return new AccountId(publicKey, accountNonce);
   }
 
   public async isAliasAvailable(alias: string) {
@@ -550,7 +561,7 @@ export class CoreSdk extends EventEmitter {
   public async performAction(
     action: Action,
     value: bigint,
-    userId: UserId,
+    userId: AccountId,
     recipient: Address | string,
     fn: () => Promise<TxHash>,
     validation = async () => {},
@@ -586,7 +597,7 @@ export class CoreSdk extends EventEmitter {
 
   public async createAccountTx(
     signer: Signer,
-    alias: string,
+    aliasHash: AliasHash,
     nonce: number,
     migrate: boolean,
     accountPublicKey: GrumpkinAddress,
@@ -594,13 +605,14 @@ export class CoreSdk extends EventEmitter {
     newSigningPubKey1?: GrumpkinAddress,
     newSigningPubKey2?: GrumpkinAddress,
   ) {
-    const aliasHash = alias ? this.computeAliasHash(alias) : undefined;
-    const accountId = aliasHash && nonce ? new AccountId(aliasHash, nonce) : undefined;
-    const accountIndex = accountId ? await this.db.getUserSigningKeyIndex(accountId, signer.getPublicKey()) : undefined;
+    const accountAliasId = aliasHash && nonce ? new AccountAliasId(aliasHash, nonce) : undefined;
+    const accountIndex = accountAliasId
+      ? await this.db.getUserSigningKeyIndex(accountAliasId, signer.getPublicKey())
+      : undefined;
 
     return this.accountProofCreator.createAccountTx(
       signer,
-      alias,
+      aliasHash,
       nonce,
       migrate,
       accountPublicKey,
@@ -612,9 +624,9 @@ export class CoreSdk extends EventEmitter {
   }
 
   public async createAccountProof(
-    userId: UserId,
+    userId: AccountId,
     signer: Signer,
-    alias: string,
+    aliasHash: AliasHash,
     nonce: number,
     migrate: boolean,
     newAccountPublicKey?: GrumpkinAddress,
@@ -626,20 +638,17 @@ export class CoreSdk extends EventEmitter {
     }
 
     const userState = this.getUserState(userId);
-    if (!userState) {
-      throw new Error(`Unknown user: ${userId}`);
-    }
-
     const { publicKey } = userState.getUser();
 
     const action = async () => {
       const signerPublicKey = signer.getPublicKey();
-      const aliasHash = alias ? this.computeAliasHash(alias) : undefined;
-      const accountId = aliasHash && nonce ? new AccountId(aliasHash, nonce) : undefined;
-      const accountIndex = accountId ? await this.db.getUserSigningKeyIndex(accountId, signerPublicKey) : undefined;
+      const accountAliasId = aliasHash && nonce ? new AccountAliasId(aliasHash, nonce) : undefined;
+      const accountIndex = accountAliasId
+        ? await this.db.getUserSigningKeyIndex(accountAliasId, signerPublicKey)
+        : undefined;
       const rawProofData = await this.accountProofCreator.createProof(
         signer,
-        alias,
+        aliasHash,
         nonce,
         migrate,
         publicKey,
@@ -685,7 +694,7 @@ export class CoreSdk extends EventEmitter {
     }
   }
 
-  public async awaitUserSynchronised(userId: UserId) {
+  public async awaitUserSynchronised(userId: AccountId) {
     await this.getUserState(userId)?.awaitSynchronised();
   }
 
@@ -703,12 +712,16 @@ export class CoreSdk extends EventEmitter {
     }
   }
 
-  public getUserState(userId: UserId) {
-    return this.userStates.find(us => us.getUser().id.equals(userId));
+  public getUserState(userId: AccountId) {
+    const userState = this.userStates.find(us => us.getUser().id.equals(userId));
+    if (!userState) {
+      throw new Error(`User not found: ${userId}`);
+    }
+    return userState;
   }
 
-  public getUserData(userId: UserId) {
-    return this.getUserState(userId)?.getUser();
+  public getUserData(userId: AccountId) {
+    return this.getUserState(userId).getUser();
   }
 
   public getUsersData() {
@@ -746,12 +759,8 @@ export class CoreSdk extends EventEmitter {
     return user;
   }
 
-  public async removeUser(userId: UserId) {
+  public async removeUser(userId: AccountId) {
     const userState = this.getUserState(userId);
-    if (!userState) {
-      throw new Error(`User does not exist: ${userId}`);
-    }
-
     this.userStates = this.userStates.filter(us => us !== userState);
     userState.stopSync();
     await this.db.removeUser(userId);
@@ -760,21 +769,20 @@ export class CoreSdk extends EventEmitter {
     this.emit(SdkEvent.UPDATED_USERS);
   }
 
-  public async getSigningKeys(alias: string, nonce?: number) {
-    const aliasHash = this.computeAliasHash(alias);
-    const accountNounce = nonce !== undefined ? nonce : await this.getLatestAliasNonce(alias);
-    const accountId = new AccountId(aliasHash, accountNounce);
+  public async getSigningKeys(userId: AccountId) {
+    const userData = this.getUserData(userId);
+    if (!userData.aliasHash) {
+      return [];
+    }
+
+    const accountAliasId = new AccountAliasId(userData.aliasHash, userId.nonce);
     // TODO - fetch the keys from server so that the account doesn't have to be added locally.
-    const keys = await this.db.getUserSigningKeys(accountId);
+    const keys = await this.db.getUserSigningKeys(accountAliasId);
     return keys.map(k => k.key);
   }
 
-  public getBalance(assetId: AssetId, userId: UserId) {
+  public getBalance(assetId: AssetId, userId: AccountId) {
     const userState = this.getUserState(userId);
-    if (!userState) {
-      throw new Error(`User not found: ${userId}`);
-    }
-
     return userState.getBalance(assetId);
   }
 
@@ -794,11 +802,11 @@ export class CoreSdk extends EventEmitter {
     return await this.txsState.getTx(txHash);
   }
 
-  public async getUserTxs(userId: UserId) {
+  public async getUserTxs(userId: AccountId) {
     return this.db.getUserTxs(userId);
   }
 
-  public getActionState(userId?: UserId) {
+  public getActionState(userId?: AccountId) {
     return !userId || this.actionState?.sender.equals(userId) ? this.actionState : undefined;
   }
 

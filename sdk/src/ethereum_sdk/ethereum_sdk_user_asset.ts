@@ -1,25 +1,27 @@
-import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
+import { EthAddress } from 'barretenberg/address';
 import { AssetId } from '../sdk';
 import { Signer } from '../signer';
+import { AccountId } from '../user';
 import { EthereumSdk } from './';
+import { EthUserId } from './eth_user_id';
 
 export class EthereumSdkUserAsset {
-  constructor(public ethAddress: EthAddress, public id: AssetId, private sdk: EthereumSdk, public nonce: number) {}
+  constructor(public ethUserId: EthUserId, public id: AssetId, private sdk: EthereumSdk) {}
 
   symbol() {
     return 'DAI';
   }
 
   publicBalance() {
-    return this.sdk.getTokenContract(this.id).balanceOf(this.ethAddress);
+    return this.sdk.getTokenContract(this.id).balanceOf(this.ethUserId.ethAddress);
   }
 
   publicAllowance() {
-    return this.sdk.getTokenContract(this.id).allowance(this.ethAddress);
+    return this.sdk.getTokenContract(this.id).allowance(this.ethUserId.ethAddress);
   }
 
   getUserPendingDeposit() {
-    return this.sdk.getUserPendingDeposit(this.id, this.ethAddress);
+    return this.sdk.getUserPendingDeposit(this.id, this.ethUserId.ethAddress);
   }
 
   getPermitSupport() {
@@ -27,57 +29,27 @@ export class EthereumSdkUserAsset {
   }
 
   balance() {
-    return this.sdk.getBalance(this.id, this.ethAddress, this.nonce);
-  }
-
-  private async getGrumpkinAddress(addr?: GrumpkinAddress | string) {
-    if (!addr) {
-      const userData = await this.sdk.getUserData(this.ethAddress);
-      return userData!.publicKey;
-    }
-    if (typeof addr === 'string') {
-      const address = await this.sdk.getAddressFromAlias(addr);
-      if (!address) {
-        throw new Error(`No address found for alias: ${addr}`);
-      }
-      return address;
-    }
-    return addr;
+    return this.sdk.getBalance(this.id, this.ethUserId);
   }
 
   async mint(value: bigint) {
-    return this.sdk.mint(this.id, value, this.ethAddress);
+    return this.sdk.mint(this.id, value, this.ethUserId);
   }
 
   async approve(value: bigint) {
-    return this.sdk.approve(this.id, value, this.ethAddress);
+    return this.sdk.approve(this.id, value, this.ethUserId);
   }
 
-  async deposit(value: bigint, to?: GrumpkinAddress | string, signer?: Signer, toNonce?: number) {
-    return this.sdk.deposit(
-      this.id,
-      value,
-      this.ethAddress,
-      await this.getGrumpkinAddress(to),
-      signer,
-      to || toNonce !== undefined ? toNonce : this.nonce,
-    );
+  async deposit(value: bigint, to?: AccountId, signer?: Signer) {
+    return this.sdk.deposit(this.id, value, this.ethUserId, to, signer);
   }
 
   async withdraw(value: bigint, to?: EthAddress, signer?: Signer) {
-    return this.sdk.withdraw(this.id, value, this.ethAddress, to || this.ethAddress, signer, this.nonce);
+    return this.sdk.withdraw(this.id, value, this.ethUserId, to || this.ethUserId.ethAddress, signer);
   }
 
-  async transfer(value: bigint, to: GrumpkinAddress | string, signer?: Signer, toNonce?: number) {
-    return this.sdk.transfer(
-      this.id,
-      value,
-      this.ethAddress,
-      await this.getGrumpkinAddress(to),
-      signer,
-      this.nonce,
-      toNonce,
-    );
+  async transfer(value: bigint, to: AccountId, signer?: Signer) {
+    return this.sdk.transfer(this.id, value, this.ethUserId, to, signer);
   }
 
   public fromErc20Units(value: bigint, precision?: number) {

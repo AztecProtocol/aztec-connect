@@ -1,6 +1,6 @@
 import { EthAddress } from 'barretenberg/address';
 import { TxHash } from 'barretenberg/rollup_provider';
-import { UserId } from './user';
+import { AccountId } from './user';
 
 export enum SdkEvent {
   // Initialization state changes.
@@ -45,7 +45,7 @@ export enum Action {
 export interface ActionState {
   action: Action;
   value: bigint;
-  sender: UserId;
+  sender: AccountId;
   recipient: string;
   created: Date;
   txHash?: TxHash;

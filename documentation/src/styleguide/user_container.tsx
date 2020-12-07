@@ -1,4 +1,5 @@
 import { AssetId, WebSdk, EthAddress, EthereumSdkUser, EthereumSdkUserAsset, SdkEvent } from '@aztec/sdk';
+import { EthUserId } from '@aztec/sdk/ethereum_sdk/eth_user_id';
 import { useState, useEffect } from 'react';
 import { App } from './app';
 
@@ -23,13 +24,13 @@ export const PrivateAssetContainer = ({ sdk, user, assetId, children }: PrivateA
   }, [assetId]);
 
   useEffect(() => {
-    const handleUserStateChanged = (address: EthAddress) => {
-      if (!address || !address.equals(user.getUserData().ethAddress)) return;
+    const handleUserStateChanged = (ethUserId: EthUserId) => {
+      if (!ethUserId || !ethUserId.equals(user.getUserData().ethUserId)) return;
 
       setBalance(asset.balance());
     };
 
-    handleUserStateChanged(user.getUserData()?.ethAddress);
+    handleUserStateChanged(user.getUserData()?.ethUserId);
 
     sdk.on(SdkEvent.UPDATED_USER_STATE, handleUserStateChanged);
 
@@ -64,8 +65,8 @@ export const PublicAssetContainer = ({ sdk, user, assetId, children }: PublicAss
   }, [assetId]);
 
   useEffect(() => {
-    const handleUserStateChanged = async (address: EthAddress) => {
-      if (!address || !address.equals(user.getUserData().ethAddress)) return;
+    const handleUserStateChanged = async (ethUserId: EthUserId) => {
+      if (!ethUserId || !ethUserId.equals(user.getUserData().ethUserId)) return;
 
       const balance = await asset.publicBalance();
       setBalance(balance);
@@ -73,7 +74,7 @@ export const PublicAssetContainer = ({ sdk, user, assetId, children }: PublicAss
       setAllowance(allowance);
     };
 
-    handleUserStateChanged(user.getUserData()?.ethAddress);
+    handleUserStateChanged(user.getUserData()?.ethUserId);
 
     // TODO - should subscribe to contract event
     sdk.on(SdkEvent.UPDATED_USER_STATE, handleUserStateChanged);
@@ -91,7 +92,6 @@ export const PublicAssetContainer = ({ sdk, user, assetId, children }: PublicAss
 };
 
 export interface UserContainerChildrenProps {
-  address?: EthAddress;
   user?: EthereumSdkUser;
 }
 

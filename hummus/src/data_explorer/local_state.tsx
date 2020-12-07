@@ -1,11 +1,10 @@
 import { Block, FlexBox, TextButton } from '@aztec/guacamole-ui';
-import { SdkEvent, WebSdk } from 'aztec2-sdk';
-import { EthAddress } from 'barretenberg/address';
+import { EthUserId, SdkEvent, WebSdk } from 'aztec2-sdk';
 import React, { useEffect, useState } from 'react';
 import { Form, FormSection } from '../components';
 import { UserTxs } from './user_txs';
 
-const UserTitle = ({ app, account, alias }: { app: WebSdk; account: EthAddress; alias?: string }) => (
+const UserTitle = ({ app, account, alias }: { app: WebSdk; account: EthUserId; alias?: string }) => (
   <FlexBox valign="center">
     <Block right="m">{alias || account.toString()}</Block>
     <TextButton theme="implicit" text="Unlink" onClick={() => app.getSdk().removeUser(account)} />
@@ -30,10 +29,10 @@ export const LocalState = ({ app }: DataExplorerProps) => {
 
   return (
     <Form>
-      {users.map(({ ethAddress }) => {
+      {users.map(({ ethUserId }) => {
         return (
-          <FormSection key={ethAddress.toString()} title={<UserTitle app={app} account={ethAddress} />}>
-            <UserTxs account={ethAddress} app={app} />
+          <FormSection key={ethUserId.toString()} title={<UserTitle app={app} account={ethUserId} />}>
+            <UserTxs account={ethUserId} app={app} />
           </FormSection>
         );
       })}

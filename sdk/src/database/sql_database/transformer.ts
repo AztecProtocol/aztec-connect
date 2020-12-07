@@ -2,7 +2,7 @@ import { GrumpkinAddress } from 'barretenberg/address';
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { TxHash } from 'barretenberg/rollup_provider';
 import { ValueTransformer } from 'typeorm';
-import { AccountId, UserId } from '../../user';
+import { AccountAliasId, AccountId } from '../../user';
 
 export const bigintTransformer: ValueTransformer = {
   to: (entityValue?: bigint) => (entityValue !== undefined ? `${entityValue}` : ''),
@@ -19,14 +19,14 @@ export const aliasHashTransformer: ValueTransformer = {
   from: (dbValue?: Buffer) => (dbValue ? new AliasHash(dbValue) : undefined),
 };
 
+export const accountAliasIdTransformer: ValueTransformer = {
+  to: (entityValue?: AccountAliasId) => entityValue?.toBuffer(),
+  from: (dbValue?: Buffer) => (dbValue ? AccountAliasId.fromBuffer(dbValue) : undefined),
+};
+
 export const accountIdTransformer: ValueTransformer = {
   to: (entityValue?: AccountId) => entityValue?.toBuffer(),
   from: (dbValue?: Buffer) => (dbValue ? AccountId.fromBuffer(dbValue) : undefined),
-};
-
-export const userIdTransformer: ValueTransformer = {
-  to: (entityValue?: UserId) => entityValue?.toBuffer(),
-  from: (dbValue?: Buffer) => (dbValue ? UserId.fromBuffer(dbValue) : undefined),
 };
 
 export const txHashTransformer: ValueTransformer = {

@@ -2,15 +2,15 @@ import { GrumpkinAddress } from 'barretenberg/address';
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { EthereumSigner } from '../signer';
-import { UserId } from './user_id';
+import { AccountId } from './account_id';
 
-export * from 'barretenberg/client_proofs/account_id';
+export * from 'barretenberg/client_proofs/account_alias_id';
 export * from 'barretenberg/client_proofs/alias_hash';
 export * from './recovery_payload';
-export * from './user_id';
+export * from './account_id';
 
 export interface UserData {
-  id: UserId;
+  id: AccountId;
   privateKey: Buffer;
   publicKey: GrumpkinAddress;
   nonce: number;
@@ -31,7 +31,7 @@ export class UserDataFactory {
 
   async createUser(privateKey: Buffer, nonce: number, aliasHash?: AliasHash): Promise<UserData> {
     const publicKey = this.derivePublicKey(privateKey);
-    const id = new UserId(publicKey, nonce);
+    const id = new AccountId(publicKey, nonce);
     return { id, privateKey, publicKey, nonce, aliasHash, syncedToRollup: -1 };
   }
 }

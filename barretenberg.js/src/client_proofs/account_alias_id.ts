@@ -1,6 +1,6 @@
 import { AliasHash } from './alias_hash';
 
-export class AccountId {
+export class AccountAliasId {
   constructor(public aliasHash: AliasHash, public nonce: number) {}
 
   public static fromBuffer(id: Buffer) {
@@ -10,7 +10,7 @@ export class AccountId {
 
     const aliasHash = new AliasHash(id.slice(4, 32));
     const nonce = id.readUInt32BE(0);
-    return new AccountId(aliasHash, nonce);
+    return new AccountAliasId(aliasHash, nonce);
   }
 
   toBuffer() {
@@ -23,7 +23,7 @@ export class AccountId {
     return `0x${this.toBuffer().toString('hex')}`;
   }
 
-  equals(rhs: AccountId) {
+  equals(rhs: AccountAliasId) {
     return this.aliasHash.equals(rhs.aliasHash) && this.nonce === rhs.nonce;
   }
 }

@@ -37,7 +37,7 @@ docker run -ti -e INFURA_API_KEY=01234 -e NETWORK=goerli -e ROLLUP_CONTRACT_ADDR
 import { AssetId, EthAddress, createWalletSdk, Web3Signer } from '@aztec/sdk';
 
 // First we do a deposit, followed by a withdraw
-async function demoEmergencyWithdraw(accountPublicKey, signer) {
+async function demoEmergencyWithdraw(userId, signer) {
   const srirachaURL = 'SRIRACHA_URL';
   const aztecSdkEmergency = await createWalletSdk(window.ethereum, srirachaURL);
   console.info('Is escape hatch mode?', aztecSdkEmergency.isEscapeHatchMode());
@@ -56,19 +56,19 @@ async function demoEmergencyWithdraw(accountPublicKey, signer) {
 
   if (allowance < value) {
     console.info('Approve rollup contract to spend your token...');
-    await aztecSdkEmergency.approve(assetId, accountPublicKey, value, senderEthereumAddress);
+    await aztecSdkEmergency.approve(assetId, userId, value, senderEthereumAddress);
     console.info('Approved!');
   }
 
   console.info('Creating deposit proof...');
-  const userData = await aztecSdkEmergency.getUserData(accountPublicKey);
-  const depositTxHash = await aztecSdkEmergency.deposit(assetId, accountPublicKey, value, signer, ethSigner);
+  const userData = await aztecSdkEmergency.getUserData(userId);
+  const depositTxHash = await aztecSdkEmergency.deposit(assetId, userId, value, signer, ethSigner);
   console.info(`Proof accepted. Tx hash: ${depositTxHash}`);
 
   console.info('Waiting for tx to settle...');
   await aztecSdkEmergency.awaitSettlement(depositTxHash);
 
-  const balanceAfter = aztecSdkEmergency.getBalance(assetId, accountPublicKey);
+  const balanceAfter = aztecSdkEmergency.getBalance(assetId, userId);
   console.info('Balance after deposit:', aztecSdkEmergency.fromErc20Units(assetId, balanceAfter));
 
   // Withdraw
@@ -76,13 +76,13 @@ async function demoEmergencyWithdraw(accountPublicKey, signer) {
   const recipientEthereumAddress = EthAddress.fromString(window.ethereum.selectedAddress);
 
   console.info('Creating withdraw proof...');
-  const withdrawTxHash = await aztecSdkEmergency.withdraw(assetId, accountPublicKey, value, signer, recipientEthereumAddress);
+  const withdrawTxHash = await aztecSdkEmergency.withdraw(assetId, userId, value, signer, recipientEthereumAddress);
   console.info(`Proof accepted. Tx hash: ${withdrawTxHash}`);
 
   console.info('Waiting for tx to settle...');
   await aztecSdkEmergency.awaitSettlement(withdrawTxHash);
 
-  const finalBalance = aztecSdkEmergency.getBalance(assetId, accountPublicKey);
+  const finalBalance = aztecSdkEmergency.getBalance(assetId, userId);
   console.info('Balance after withdraw:', aztecSdkEmergency.fromErc20Units(assetId, finalBalance));
 
   // Destroy this demo sdk

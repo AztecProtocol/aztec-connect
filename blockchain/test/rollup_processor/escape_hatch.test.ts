@@ -33,7 +33,12 @@ describe('rollup_processor: escape hatch', () => {
     await erc20.approve(rollupProcessor.address, depositAmount);
     await rollupProcessor.depositPendingFunds(assetId, depositAmount, userAAddress.toString());
 
-    await rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, viewingKeys);
+    await rollupProcessor.processRollup(
+      proofData,
+      solidityFormatSignatures(signatures),
+      sigIndexes,
+      Buffer.concat(viewingKeys),
+    );
   });
 
   it('should get escape hatch closed status', async () => {
@@ -59,7 +64,7 @@ describe('rollup_processor: escape hatch', () => {
     const { proofData } = await createEscapeProof(withdrawalAmount, userAAddress);
     const nextEscapeBlock = await blocksToAdvance(80, 100, provider);
     await advanceBlocks(nextEscapeBlock, provider);
-    await rollupProcessor.processRollup(proofData, [], [], viewingKeys);
+    await rollupProcessor.processRollup(proofData, [], [], Buffer.concat(viewingKeys));
 
     // check balances
     const finalContractBalance = await erc20.balanceOf(rollupProcessor.address);
@@ -73,7 +78,7 @@ describe('rollup_processor: escape hatch', () => {
     const { proofData } = await createEscapeProof(withdrawalAmount, userAAddress);
     const escapeBlock = await blocksToAdvance(101, 100, provider);
     await advanceBlocks(escapeBlock, provider);
-    await expect(rollupProcessor.processRollup(proofData, [], [], viewingKeys)).to.be.revertedWith(
+    await expect(rollupProcessor.processRollup(proofData, [], [], Buffer.concat(viewingKeys))).to.be.revertedWith(
       'Rollup Processor: ESCAPE_BLOCK_RANGE_INCORRECT',
     );
   });

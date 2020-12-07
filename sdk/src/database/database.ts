@@ -2,11 +2,11 @@ import { GrumpkinAddress } from 'barretenberg/address';
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { TxHash } from 'barretenberg/rollup_provider';
 import { Note } from '../note';
-import { AccountId, UserData, UserId } from '../user';
+import { AccountAliasId, UserData, AccountId } from '../user';
 import { UserTx } from '../user_tx';
 
 export interface SigningKey {
-  accountId: AccountId;
+  accountAliasId: AccountAliasId;
   address: GrumpkinAddress;
   treeIndex: number;
   key: Buffer;
@@ -26,25 +26,25 @@ export interface Database {
   getNote(treeIndex: number): Promise<Note | undefined>;
   getNoteByNullifier(nullifier: Buffer): Promise<Note | undefined>;
   nullifyNote(index: number): Promise<void>;
-  getUserNotes(userId: UserId): Promise<Note[]>;
+  getUserNotes(userId: AccountId): Promise<Note[]>;
 
-  getUser(userId: UserId): Promise<UserData | undefined>;
+  getUser(userId: AccountId): Promise<UserData | undefined>;
   getUsers(): Promise<UserData[]>;
   addUser(user: UserData): Promise<void>;
   updateUser(user: UserData): Promise<void>;
-  removeUser(userId: UserId): Promise<void>;
+  removeUser(userId: AccountId): Promise<void>;
   resetUsers(): Promise<void>;
 
-  getUserTx(userId: UserId, txHash: TxHash): Promise<UserTx | undefined>;
-  getUserTxs(userId: UserId): Promise<UserTx[]>;
+  getUserTx(userId: AccountId, txHash: TxHash): Promise<UserTx | undefined>;
+  getUserTxs(userId: AccountId): Promise<UserTx[]>;
   getUserTxsByTxHash(txHash: TxHash): Promise<UserTx[]>;
   addUserTx(userTx: UserTx): Promise<void>;
-  settleUserTx(userId: UserId, txHash: TxHash): Promise<void>;
+  settleUserTx(userId: AccountId, txHash: TxHash): Promise<void>;
 
   addUserSigningKey(signingKey: SigningKey): Promise<void>;
-  getUserSigningKeys(accountId: AccountId): Promise<SigningKey[]>;
-  getUserSigningKeyIndex(accountId: AccountId, signingKey: GrumpkinAddress): Promise<number | undefined>;
-  removeUserSigningKeys(accountId: AccountId): Promise<void>;
+  getUserSigningKeys(accountAliasId: AccountAliasId): Promise<SigningKey[]>;
+  getUserSigningKeyIndex(accountAliasId: AccountAliasId, signingKey: GrumpkinAddress): Promise<number | undefined>;
+  removeUserSigningKeys(accountAliasId: AccountAliasId): Promise<void>;
 
   addAlias(alias: Alias): Promise<void>;
   updateAlias(alias: Alias): Promise<void>;

@@ -1,6 +1,6 @@
 import { GrumpkinAddress } from 'barretenberg/address';
 
-export class AccountValueId {
+export class AccountId {
   constructor(public publicKey: GrumpkinAddress, public nonce: number) {}
 
   public static fromBuffer(id: Buffer) {
@@ -10,7 +10,7 @@ export class AccountValueId {
 
     const publicKey = new GrumpkinAddress(id.slice(0, 64));
     const nonce = id.readUInt32BE(64);
-    return new AccountValueId(publicKey, nonce);
+    return new AccountId(publicKey, nonce);
   }
 
   public static fromString(idStr: string) {
@@ -19,16 +19,16 @@ export class AccountValueId {
       throw new Error('Invalid id string.');
     }
 
-    const publicKey = new GrumpkinAddress(Buffer.from(publicKeyStr, 'hex'));
-    return new AccountValueId(publicKey, +nonceStr);
+    const publicKey = GrumpkinAddress.fromString(publicKeyStr);
+    return new AccountId(publicKey, +nonceStr);
   }
 
   public static random() {
     const randomNonce = Math.floor(Math.random() * 2 ** 32);
-    return new AccountValueId(GrumpkinAddress.randomAddress(), randomNonce);
+    return new AccountId(GrumpkinAddress.randomAddress(), randomNonce);
   }
 
-  equals(rhs: AccountValueId) {
+  equals(rhs: AccountId) {
     return this.toBuffer().equals(rhs.toBuffer());
   }
 

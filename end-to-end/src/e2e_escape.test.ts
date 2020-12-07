@@ -77,7 +77,7 @@ describe('end-to-end escape tests', () => {
 
     expect(user1Asset.balance()).toBe(0n);
 
-    const transferTxHash = await user0Asset.transfer(transferValue, users[1].getUserData().publicKey);
+    const transferTxHash = await user0Asset.transfer(transferValue, users[1].getUserData().id);
     await sdk.awaitSettlement(transferTxHash);
     expect(user0Asset.balance()).toBe(user0BalanceAfterDeposit - transferValue);
 

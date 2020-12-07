@@ -4,6 +4,7 @@ import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { SdkOptions } from '../core_sdk/create_sdk';
 import { createEthSdk, EthereumSdk } from '../ethereum_sdk';
+import { EthUserId } from '../ethereum_sdk/eth_user_id';
 import { SdkEvent, SdkInitState } from '../sdk';
 import { chainIdToNetwork, EthProvider, EthProviderEvent } from './eth_provider';
 
@@ -141,8 +142,8 @@ export class WebSdk extends EventEmitter {
       return;
     }
 
-    const user = this.sdk.getUser(account);
-    if (!user) {
+    const ethUserId = new EthUserId(account, 0);
+    if (!this.sdk.isUserAdded(ethUserId)) {
       // We are initializing until the account is added to sdk.
       this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.AWAIT_LINK_AZTEC_ACCOUNT);
     } else {
@@ -152,8 +153,8 @@ export class WebSdk extends EventEmitter {
 
   private usersChanged = () => {
     const account = this.ethProvider.getAccount()!;
-    const user = this.sdk.getUser(account);
-    if (!user) {
+    const ethUserId = new EthUserId(account, 0);
+    if (!this.sdk.isUserAdded(ethUserId)) {
       this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.AWAIT_LINK_AZTEC_ACCOUNT);
     }
   };
@@ -171,8 +172,8 @@ export class WebSdk extends EventEmitter {
       throw new Error('Account access withdrawn.');
     }
 
-    const user = this.sdk.getUser(account);
-    if (!user) {
+    const ethUserId = new EthUserId(account, 0);
+    if (!this.sdk.isUserAdded(ethUserId)) {
       this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.LINK_AZTEC_ACCOUNT);
       try {
         await this.sdk.addUser(account);
@@ -192,8 +193,8 @@ export class WebSdk extends EventEmitter {
       return;
     }
 
-    const user = this.sdk.getUser(account);
-    if (!user) {
+    const ethUserId = new EthUserId(account, 0);
+    if (!this.sdk.isUserAdded(ethUserId)) {
       this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.LINK_AZTEC_ACCOUNT);
       try {
         await this.sdk.addUser(account);
@@ -232,6 +233,7 @@ export class WebSdk extends EventEmitter {
   }
 
   public getUser() {
-    return this.sdk.getUser(this.initStatus.account!)!;
+    const ethUserId = new EthUserId(this.initStatus.account!, 0);
+    return this.sdk.getUser(ethUserId)!;
   }
 }

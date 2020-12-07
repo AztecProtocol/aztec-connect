@@ -1,14 +1,14 @@
 import { GrumpkinAddress } from 'barretenberg/address';
+import { AccountAliasId } from 'barretenberg/client_proofs/account_alias_id';
 import { Signature } from 'barretenberg/client_proofs/signature';
-import { numToUInt32BE } from 'barretenberg/serialize';
 
 export class RecoveryData {
-  constructor(public nonce: number, public signature: Signature) {}
+  constructor(public accountAliasId: AccountAliasId, public signature: Signature) {}
 
   static fromBuffer(data: Buffer) {
-    const nonce = data.readUInt32BE(0);
-    const signature = new Signature(data.slice(4, 68));
-    return new RecoveryData(nonce, signature);
+    const accountAliasId = AccountAliasId.fromBuffer(data.slice(0, 32));
+    const signature = new Signature(data.slice(32, 96));
+    return new RecoveryData(accountAliasId, signature);
   }
 
   static fromString(data: string) {
@@ -16,7 +16,7 @@ export class RecoveryData {
   }
 
   toBuffer() {
-    return Buffer.concat([numToUInt32BE(this.nonce), this.signature.toBuffer()]);
+    return Buffer.concat([this.accountAliasId.toBuffer(), this.signature.toBuffer()]);
   }
 
   toString() {

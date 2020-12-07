@@ -1,7 +1,5 @@
 import { Block, FlexBox } from '@aztec/guacamole-ui';
-import { Action, AssetId, SdkEvent } from 'aztec2-sdk';
-import { WebSdk } from 'aztec2-sdk';
-import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
+import { Action, AssetId, EthUserId, SdkEvent, WebSdk } from 'aztec2-sdk';
 import React, { useEffect, useState } from 'react';
 import { Form, FormField, FormSection } from '../components';
 import { ActionSelect } from './action_select';
@@ -12,7 +10,7 @@ import { RecipientValueForm } from './recipient_value_form';
 
 interface ActionFormProps {
   app: WebSdk;
-  account: EthAddress;
+  account: EthUserId;
 }
 
 export const ActionForm = ({ app, account }: ActionFormProps) => {
@@ -34,8 +32,8 @@ export const ActionForm = ({ app, account }: ActionFormProps) => {
   const [logMsg, setLogMsg] = useState('');
 
   useEffect(() => {
-    const handleUserStateChange = async (ethAddress: EthAddress) => {
-      if (!ethAddress.equals(account)) {
+    const handleUserStateChange = async (ethUserId: EthUserId) => {
+      if (!ethUserId.equals(ethUserId)) {
         return;
       }
       setSyncedToRollup(user.getUserData().syncedToRollup);
@@ -78,7 +76,7 @@ export const ActionForm = ({ app, account }: ActionFormProps) => {
           <Block padding="xs 0">
             <FlexBox valign="center">
               <FormField label="Account">{account.toString()}</FormField>
-              <Copy toCopy={account.toString()} />
+              <Copy toCopy={account.ethAddress.toString()} />
             </FlexBox>
             <FlexBox valign="center">
               <FormField label="Private Address">{user.getUserData().publicKey.toString().slice(0, 42)}...</FormField>
@@ -135,7 +133,7 @@ export const ActionForm = ({ app, account }: ActionFormProps) => {
                 recipientLabel="To"
                 buttonText="Transfer"
                 onSubmit={async (value: bigint, recipient: string) =>
-                  userAsset.transfer(value, GrumpkinAddress.fromString(recipient))
+                  userAsset.transfer(value, await sdk.getAccountId(recipient))
                 }
                 toNoteValue={(value: string) => userAsset.toErc20Units(value)}
                 isLoading={isLoading(Action.TRANSFER)}

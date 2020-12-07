@@ -1,5 +1,5 @@
 import { AssetId } from './sdk';
-import { UserId } from './user';
+import { AccountId } from './user';
 
 export interface Note {
   index: number;
@@ -10,5 +10,5 @@ export interface Note {
   encrypted: Buffer;
   nullifier: Buffer;
   nullified: boolean;
-  owner: UserId;
+  owner: AccountId;
 }

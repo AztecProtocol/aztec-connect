@@ -13,7 +13,7 @@ import { Database } from '../database';
 import { Note } from '../note';
 import { NotePicker } from '../note_picker';
 import { AssetId } from '../sdk';
-import { AccountId, UserData } from '../user';
+import { AccountAliasId, UserData } from '../user';
 import { UserTx, UserTxAction } from '../user_tx';
 
 const debug = createDebug('bb:user_state');
@@ -136,8 +136,8 @@ export class UserState extends EventEmitter {
 
     const { publicInput, publicOutput, assetId, inputOwner, outputOwner } = proof;
     const publicKey = new GrumpkinAddress(Buffer.concat([publicInput, publicOutput]));
-    const accountId = AccountId.fromBuffer(assetId);
-    if (!publicKey.equals(this.user.publicKey) || accountId.nonce !== this.user.id.nonce) {
+    const accountAliasId = AccountAliasId.fromBuffer(assetId);
+    if (!publicKey.equals(this.user.publicKey) || accountAliasId.nonce !== this.user.id.nonce) {
       if (savedUserTx) {
         // Create or migrate account.
         await this.db.settleUserTx(this.user.id, txHash);
@@ -149,7 +149,7 @@ export class UserState extends EventEmitter {
     if (!key1.equals(Buffer.alloc(32))) {
       debug(`user ${this.user.id} adds signing key ${key1.toString('hex')}.`);
       await this.db.addUserSigningKey({
-        accountId,
+        accountAliasId,
         address: this.user.publicKey,
         key: key1,
         treeIndex: noteStartIndex,
@@ -160,7 +160,7 @@ export class UserState extends EventEmitter {
     if (!key2.equals(Buffer.alloc(32))) {
       debug(`user ${this.user.id} adds signing key ${key2.toString('hex')}.`);
       await this.db.addUserSigningKey({
-        accountId,
+        accountAliasId,
         address: this.user.publicKey,
         key: key2,
         treeIndex: noteStartIndex + 1,

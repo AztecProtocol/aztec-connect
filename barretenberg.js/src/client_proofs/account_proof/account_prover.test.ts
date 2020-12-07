@@ -12,7 +12,7 @@ import { Crs } from '../../crs';
 import { WorkerPool } from '../../wasm/worker_pool';
 import { PooledPippenger } from '../../pippenger';
 import { PooledFft } from '../../fft';
-import { AccountId } from '../account_id';
+import { AccountAliasId } from '../account_alias_id';
 import { AliasHash } from '../alias_hash';
 import { UnrolledProver } from '../prover';
 import { AccountProver, AccountVerifier, AccountTx } from './index';
@@ -95,12 +95,12 @@ describe('account proof', () => {
 
     const aliasHash = AliasHash.fromAlias('user_zero', blake2s);
     const nonce = 0;
-    const accountId = new AccountId(aliasHash, nonce);
+    const accountAliasId = new AccountAliasId(aliasHash, nonce);
 
     const accountPath = await tree.getHashPath(0);
 
     const message = computeSigningData(
-      accountId,
+      accountAliasId,
       user.publicKey,
       user.publicKey,
       signingKey0.publicKey,
@@ -116,7 +116,7 @@ describe('account proof', () => {
       2,
       signingKey0.publicKey,
       signingKey1.publicKey,
-      accountId,
+      accountAliasId,
       true,
       randomBytes(32),
       0,

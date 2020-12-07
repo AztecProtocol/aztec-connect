@@ -11,17 +11,15 @@ import { randomBytes } from 'crypto';
 async function demoRecoveryData(aztecSdk) {
   // create a new user
   const privacyKey = randomBytes(32);
-  const user = await aztecSdk.addUser(privacyKey);
-  const accountPublicKey = user.getUserData().publicKey;
+  const user0 = await aztecSdk.addUser(privacyKey);
   const alias = randomBytes(5).toString();
 
   // create a new account
   const signer1 = aztecSdk.createSchnorrSigner(randomBytes(32));
   const signer2 = aztecSdk.createSchnorrSigner(randomBytes(32));
   console.info('Creating proof...');
-  const txHash = await aztecSdk.createAccount(
+  const txHash = await user0.createAccount(
     alias,
-    accountPublicKey,
     signer1.getPublicKey(),
     signer2.getPublicKey(),
   );
@@ -37,8 +35,7 @@ async function demoRecoveryData(aztecSdk) {
 
   // signer1 is compromised, migrate the account
   console.info('Creating proof...');
-  const migrateTxHash = await aztecSdk.migrateAccount(
-    alias,
+  const migrateTxHash = await user1.migrateAccount(
     signer2,
     signer2.getPublicKey(),
   );
@@ -49,8 +46,8 @@ async function demoRecoveryData(aztecSdk) {
   console.info('Account recovered!');
 
   // remove these demo users from your device
-  await aztecSdk.removeUser(accountPublicKey, 0);
-  await aztecSdk.removeUser(accountPublicKey, 1);
+  await aztecSdk.removeUser(user0.id);
+  await aztecSdk.removeUser(user1.id);
 }
 ```
 

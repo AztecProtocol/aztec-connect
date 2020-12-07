@@ -11,17 +11,15 @@ import { randomBytes } from 'crypto';
 async function demoAddSigningKey(aztecSdk) {
   // create a new user
   const privacyKey = randomBytes(32);
-  const user = await aztecSdk.addUser(privacyKey);
-  const accountPublicKey = user.getUserData().publicKey;
+  const user0 = await aztecSdk.addUser(privacyKey);
   const alias = randomBytes(5).toString();
 
   // create a new account
   const signer1 = aztecSdk.createSchnorrSigner(randomBytes(32));
   const signer2 = aztecSdk.createSchnorrSigner(randomBytes(32));
   console.info('Creating proof...');
-  const txHash = await aztecSdk.createAccount(
+  const txHash = await user0.createAccount(
     alias,
-    accountPublicKey,
     signer1.getPublicKey(),
     signer2.getPublicKey(),
   );
@@ -39,7 +37,7 @@ async function demoAddSigningKey(aztecSdk) {
   const newSigningKey1 = GrumpkinAddress.randomAddress();
   const newSigningKey2 = GrumpkinAddress.randomAddress();
   console.info('Creating proof...');
-  const addKeysTxHash = await aztecSdk.addSigningKeys(alias, signer1, newSigningKey1, newSigningKey2);
+  const addKeysTxHash = await user1.addSigningKeys(signer1, newSigningKey1, newSigningKey2);
   console.info(`Proof accepted by server. Tx hash: ${addKeysTxHash}`);
 
   console.info('Waiting for tx to settle...');
@@ -47,8 +45,8 @@ async function demoAddSigningKey(aztecSdk) {
   console.info('New signing key added!');
 
   // remove these demo users from your device
-  await aztecSdk.removeUser(accountPublicKey, 0);
-  await aztecSdk.removeUser(accountPublicKey, 1);
+  await aztecSdk.removeUser(user0.id);
+  await aztecSdk.removeUser(user1.id);
 }
 ```
 

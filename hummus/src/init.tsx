@@ -1,6 +1,5 @@
 import { Block, Text, TextButton } from '@aztec/guacamole-ui';
-import { AppEvent, AppInitAction, AppInitState, AppInitStatus, WebSdk } from 'aztec2-sdk';
-import { EthAddress } from 'barretenberg/address';
+import { AppEvent, AppInitAction, AppInitState, AppInitStatus, EthUserId, WebSdk } from 'aztec2-sdk';
 import createDebug from 'debug';
 import React, { FunctionComponent, useEffect, useState } from 'react';
 import { Button, Form, FormSection, Input } from './components';
@@ -9,7 +8,7 @@ const debug = createDebug('bb::init_form');
 
 export interface InitChildrenProps {
   app: WebSdk;
-  account: EthAddress;
+  account: EthUserId;
 }
 
 interface InitProps {
@@ -70,7 +69,7 @@ export const Init: FunctionComponent<InitProps> = ({ app, initialServerUrl = '',
           )}
         </Form>
       )}
-      {initState === AppInitState.INITIALIZED && children({ app, account: initStatus.account! })}
+      {initState === AppInitState.INITIALIZED && children({ app, account: app.getUser().ethUserId })}
     </>
   );
 };

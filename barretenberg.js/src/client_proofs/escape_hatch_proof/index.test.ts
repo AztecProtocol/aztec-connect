@@ -19,7 +19,7 @@ import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { NoteAlgorithms } from '../note_algorithms';
 import { RollupProofData } from '../../rollup_proof';
 import { Blake2s } from '../../crypto/blake2s';
-import { AccountId } from '../account_id';
+import { AccountAliasId } from '../account_alias_id';
 import { AliasHash } from '../alias_hash';
 import { computeSigningData } from '../join_split_proof/compute_signing_data';
 
@@ -155,7 +155,7 @@ describe('escape_hatch_proof', () => {
 
     const aliasHash = AliasHash.fromAlias('user_zero', blake2s);
     const nonce = 0;
-    const accountId = new AccountId(aliasHash, nonce);
+    const accountAliasId = new AccountAliasId(aliasHash, nonce);
 
     const accountIndex = 0;
     const accountNotePath = await worldStateDb.getHashPath(dataTreeId, BigInt(accountIndex));
@@ -194,7 +194,7 @@ describe('escape_hatch_proof', () => {
       inputNotes,
       outputNotes,
       privateKey,
-      accountId,
+      accountAliasId,
       accountIndex,
       accountNotePath,
       pubKey,

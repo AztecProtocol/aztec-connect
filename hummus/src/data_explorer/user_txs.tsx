@@ -1,6 +1,5 @@
 import { Block, FlexBox, Text, TextButton } from '@aztec/guacamole-ui';
-import { Action, ActionState, AssetId, SdkEvent, UserTx, WebSdk } from 'aztec2-sdk';
-import { EthAddress } from 'barretenberg/address';
+import { Action, ActionState, AssetId, EthUserId, SdkEvent, UserTx, WebSdk } from 'aztec2-sdk';
 import React, { useEffect, useState } from 'react';
 import CopyToClipboard from 'react-copy-to-clipboard';
 import { Link } from 'react-router-dom';
@@ -9,7 +8,7 @@ import { StatusRow, TmpRow } from './status_row';
 
 interface UserTxsProps {
   app: WebSdk;
-  account: EthAddress;
+  account: EthUserId;
 }
 
 const actionTextMapping = {
@@ -60,8 +59,8 @@ export const UserTxs = ({ account, app }: UserTxsProps) => {
   const [actionState, setActionState] = useState<ActionState | undefined>(undefined);
 
   useEffect(() => {
-    const updatedUserState = async (updatedAccount: EthAddress) => {
-      if (!updatedAccount.equals(account)) {
+    const updatedUserState = async (ethUserId: EthUserId) => {
+      if (!ethUserId.equals(account)) {
         return;
       }
       setTxs(await user.getTxs());

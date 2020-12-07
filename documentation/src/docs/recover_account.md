@@ -13,7 +13,7 @@ import { randomBytes } from 'crypto';
 async function demoRecoveryData(aztecSdk) {
   // create a new user
   const privacyKey = randomBytes(32);
-  const user = await aztecSdk.addUser(privacyKey);
+  const user0 = await aztecSdk.addUser(privacyKey);
   const accountPublicKey = user.getUserData().publicKey;
 
   // choose an alias name
@@ -25,14 +25,14 @@ async function demoRecoveryData(aztecSdk) {
     alias,
     accountPublicKey,
     trustedThirdParties,
+    1,
   );
 
   // create a new account
   const signingPublicKey = GrumpkinAddress.randomAddress();
   console.info('Creating proof...');
-  const txHash = await aztecSdk.createAccount(
+  const txHash = await user0.createAccount(
     alias,
-    accountPublicKey,
     signingPublicKey,
     recoveryPayload.recoveryPublicKey,
   );
@@ -48,7 +48,7 @@ async function demoRecoveryData(aztecSdk) {
 
   // recover the account
   console.info('Creating proof...');
-  const recoverTxHash = await aztecSdk.recoverAccount(alias, recoveryPayload);
+  const recoverTxHash = await user1.recoverAccount(recoveryPayload);
   console.info(`Proof accepted by server. Tx hash: ${recoverTxHash}`);
 
   console.info('Waiting for tx to settle...');
@@ -56,8 +56,8 @@ async function demoRecoveryData(aztecSdk) {
   console.info('Account recovered!');
 
   // remove these demo users from your device
-  await aztecSdk.removeUser(accountPublicKey, 0);
-  await aztecSdk.removeUser(accountPublicKey, 1);
+  await aztecSdk.removeUser(user0.id);
+  await aztecSdk.removeUser(user1.id);
 }
 ```
 

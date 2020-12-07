@@ -75,7 +75,12 @@ describe('rollup_processor: core', () => {
       );
       expect(postDepositUserPublicBalance).to.equal(depositAmount);
 
-      await rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, viewingKeys);
+      await rollupProcessor.processRollup(
+        proofData,
+        solidityFormatSignatures(signatures),
+        sigIndexes,
+        Buffer.concat(viewingKeys),
+      );
 
       const postRollupUserPublicBalance = await rollupProcessor.getUserPendingDeposit(assetId, userAAddress.toString());
       expect(postRollupUserPublicBalance).to.equal(0);
@@ -99,7 +104,7 @@ describe('rollup_processor: core', () => {
         depositProofData,
         solidityFormatSignatures(depositSignatures),
         depositSigIndexes,
-        viewingKeys,
+        Buffer.concat(viewingKeys),
       );
 
       const {
@@ -111,7 +116,7 @@ describe('rollup_processor: core', () => {
         withdrawalProofData,
         solidityFormatSignatures(withdrawalSignatures),
         withdrawalSigIndexes,
-        viewingKeys,
+        Buffer.concat(viewingKeys),
       );
 
       const postWithdrawUserPublicBalance = await rollupProcessor.getUserPendingDeposit(
@@ -139,7 +144,7 @@ describe('rollup_processor: core', () => {
         depositProofData,
         solidityFormatSignatures(depositSignatures),
         depositSigIndexes,
-        viewingKeys,
+        Buffer.concat(viewingKeys),
       );
 
       const {
@@ -151,7 +156,7 @@ describe('rollup_processor: core', () => {
         withdrawalProofData,
         solidityFormatSignatures(withdrawalSignatures),
         withdrawalSigIndexes,
-        viewingKeys,
+        Buffer.concat(viewingKeys),
       );
 
       const postWithdrawalRollupBalance = await erc20.balanceOf(rollupProcessor.address);
@@ -164,7 +169,7 @@ describe('rollup_processor: core', () => {
 
     it('should process private send proof without requiring signatures', async () => {
       const { proofData } = await createSendProof();
-      const tx = await rollupProcessor.processRollup(proofData, Buffer.alloc(32), [], viewingKeys);
+      const tx = await rollupProcessor.processRollup(proofData, Buffer.alloc(32), [], Buffer.concat(viewingKeys));
       const receipt = await tx.wait();
       expect(receipt.status).to.equal(1);
     });
@@ -172,7 +177,9 @@ describe('rollup_processor: core', () => {
     it('should allow any address to send processRollup() tx', async () => {
       // owner is address that deployed contract - userA. Send with user B
       const { proofData } = await createSendProof();
-      const tx = await rollupProcessor.connect(userB).processRollup(proofData, Buffer.alloc(32), [], viewingKeys);
+      const tx = await rollupProcessor
+        .connect(userB)
+        .processRollup(proofData, Buffer.alloc(32), [], Buffer.concat(viewingKeys));
       const receipt = await tx.wait();
       expect(receipt.status).to.equal(1);
     });
@@ -182,7 +189,12 @@ describe('rollup_processor: core', () => {
       await erc20.approve(rollupProcessor.address, depositAmount);
       await rollupProcessor.depositPendingFunds(assetId, depositAmount - 1, userAAddress.toString());
       await expect(
-        rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, viewingKeys),
+        rollupProcessor.processRollup(
+          proofData,
+          solidityFormatSignatures(signatures),
+          sigIndexes,
+          Buffer.concat(viewingKeys),
+        ),
       ).to.be.revertedWith('Rollup Processor: INSUFFICIENT_DEPOSIT');
     });
   });
@@ -219,7 +231,12 @@ describe('rollup_processor: core', () => {
       await erc20.connect(userB).approve(rollupProcessor.address, userBDepositAmount);
       await rollupProcessor.connect(userB).depositPendingFunds(assetId, userBDepositAmount, userBAddress.toString());
 
-      await rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, fourViewingKeys);
+      await rollupProcessor.processRollup(
+        proofData,
+        solidityFormatSignatures(signatures),
+        sigIndexes,
+        Buffer.concat(fourViewingKeys),
+      );
 
       const postDepositUserABalance = await erc20.balanceOf(userAAddress.toString());
       expect(postDepositUserABalance).to.equal(initialUserABalance - depositAmount);
@@ -240,7 +257,12 @@ describe('rollup_processor: core', () => {
 
       await erc20.approve(rollupProcessor.address, depositAmount);
       await rollupProcessor.depositPendingFunds(assetId, depositAmount, userAAddress.toString());
-      await rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, viewingKeys);
+      await rollupProcessor.processRollup(
+        proofData,
+        solidityFormatSignatures(signatures),
+        sigIndexes,
+        Buffer.concat(viewingKeys),
+      );
 
       const dataRoot = await rollupProcessor.dataRoot();
       const nullRoot = await rollupProcessor.nullRoot();
@@ -255,7 +277,12 @@ describe('rollup_processor: core', () => {
       const { proofData, signatures, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
       proofData.writeUInt32BE(randInt(), 0); // make ID non-sequential
       await expect(
-        rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, viewingKeys),
+        rollupProcessor.processRollup(
+          proofData,
+          solidityFormatSignatures(signatures),
+          sigIndexes,
+          Buffer.concat(viewingKeys),
+        ),
       ).to.be.revertedWith('Rollup Processor: ID_NOT_SEQUENTIAL');
     });
 
@@ -263,7 +290,12 @@ describe('rollup_processor: core', () => {
       const { proofData, signatures, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
       proofData.writeUInt32BE(randInt(), 32 * 2); // malform data start index
       await expect(
-        rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, viewingKeys),
+        rollupProcessor.processRollup(
+          proofData,
+          solidityFormatSignatures(signatures),
+          sigIndexes,
+          Buffer.concat(viewingKeys),
+        ),
       ).to.be.revertedWith('Rollup Processor: INCORRECT_DATA_START_INDEX');
     });
 
@@ -271,7 +303,12 @@ describe('rollup_processor: core', () => {
       const { proofData, signatures, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
       proofData.writeUInt32BE(randInt(), 32 * 3); // malform data start index
       await expect(
-        rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, viewingKeys),
+        rollupProcessor.processRollup(
+          proofData,
+          solidityFormatSignatures(signatures),
+          sigIndexes,
+          Buffer.concat(viewingKeys),
+        ),
       ).to.be.revertedWith('Rollup Processor: INCORRECT_DATA_ROOT');
     });
 
@@ -279,7 +316,12 @@ describe('rollup_processor: core', () => {
       const { proofData, signatures, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
       proofData.writeUInt32BE(randInt(), 32 * 5); // malform oldNullRoot
       await expect(
-        rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, viewingKeys),
+        rollupProcessor.processRollup(
+          proofData,
+          solidityFormatSignatures(signatures),
+          sigIndexes,
+          Buffer.concat(viewingKeys),
+        ),
       ).to.be.revertedWith('Rollup Processor: INCORRECT_NULL_ROOT');
     });
 
@@ -287,7 +329,12 @@ describe('rollup_processor: core', () => {
       const { proofData, signatures, sigIndexes } = await createDepositProof(depositAmount, userAAddress, userA);
       proofData.writeUInt32BE(randInt(), 32 * 7); // malform oldRootRoot
       await expect(
-        rollupProcessor.processRollup(proofData, solidityFormatSignatures(signatures), sigIndexes, viewingKeys),
+        rollupProcessor.processRollup(
+          proofData,
+          solidityFormatSignatures(signatures),
+          sigIndexes,
+          Buffer.concat(viewingKeys),
+        ),
       ).to.be.revertedWith('Rollup Processor: INCORRECT_ROOT_ROOT');
     });
   });

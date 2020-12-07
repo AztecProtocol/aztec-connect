@@ -6,10 +6,8 @@ import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { WorldState } from 'barretenberg/world_state';
-import { randomBytes } from 'crypto';
-import { AccountValueId } from '../../account_value_id';
 import { Signer } from '../../signer';
-import { AccountId } from '../../user';
+import { AccountId, AccountAliasId } from '../../user';
 import { UserState } from '../../user_state';
 
 export class JoinSplitTxFactory {
@@ -27,7 +25,7 @@ export class JoinSplitTxFactory {
     assetId: number,
     newNoteValue: bigint,
     signer: Signer,
-    receiver?: AccountValueId,
+    receiver?: AccountId,
     inputOwnerAddress?: EthAddress,
     outputOwnerAddress?: EthAddress,
   ) {
@@ -39,7 +37,7 @@ export class JoinSplitTxFactory {
     }
 
     const sender = userState.getUser();
-    const accountId = new AccountId(sender.aliasHash || AliasHash.random(), sender.nonce);
+    const accountAliasId = new AccountAliasId(sender.aliasHash || AliasHash.random(), sender.nonce);
 
     const numInputNotes = notes.length;
     const totalNoteInputValue = notes.reduce((sum, note) => sum + note.value, BigInt(0));
@@ -102,7 +100,7 @@ export class JoinSplitTxFactory {
       inputNotes,
       outputNotes,
       privateKey,
-      accountId,
+      accountAliasId,
       accountIndex,
       accountPath,
       signingPubKey,

@@ -215,6 +215,11 @@ module.exports = {
           pagePerSection: true,
           sections: [
             {
+              name: 'AccountId',
+              content: 'src/docs/types/account_id.md',
+              exampleMode: 'hide',
+            },
+            {
               name: 'Action',
               content: 'src/docs/types/action.md',
               exampleMode: 'hide',

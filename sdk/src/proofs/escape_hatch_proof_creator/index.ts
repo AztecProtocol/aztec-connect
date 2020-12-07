@@ -9,7 +9,7 @@ import { toBufferBE } from 'bigint-buffer';
 import createDebug from 'debug';
 import { utils } from 'ethers';
 import { HashPathSource } from 'sriracha/hash_path_source';
-import { AccountValueId } from '../../account_value_id';
+import { AccountId } from '../../user';
 import { EthereumSigner, Signer } from '../../signer';
 import { UserState } from '../../user_state';
 import { JoinSplitTxFactory } from '../join_split_proof_creator/join_split_tx_factory';
@@ -38,7 +38,7 @@ export class EscapeHatchProofCreator {
     assetId: number,
     newNoteValue: bigint,
     signer: Signer,
-    receiver?: AccountValueId,
+    receiver?: AccountId,
     outputOwnerAddress?: EthAddress,
     ethSigner?: EthereumSigner,
   ) {

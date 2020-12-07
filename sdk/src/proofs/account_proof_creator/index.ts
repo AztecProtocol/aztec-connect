@@ -7,7 +7,7 @@ import { WorldState } from 'barretenberg/world_state';
 import { randomBytes } from 'crypto';
 import createDebug from 'debug';
 import { Signer } from '../../signer';
-import { AccountId } from '../../user';
+import { AccountAliasId } from '../../user';
 
 const debug = createDebug('bb:account_proof');
 
@@ -21,7 +21,7 @@ export class AccountProofCreator {
 
   public async createAccountTx(
     signer: Signer,
-    alias: string,
+    aliasHash: AliasHash,
     nonce: number,
     migrate: boolean,
     accountPublicKey: GrumpkinAddress,
@@ -32,17 +32,12 @@ export class AccountProofCreator {
   ) {
     const merkleRoot = this.worldState.getRoot();
     const numNewKeys = [newSigningPubKey1, newSigningPubKey2].filter(k => !!k).length;
-
     const signingPubKey = signer.getPublicKey();
     const accountPath = await this.worldState.getHashPath(accountIndex);
-
-    const aliasHash = AliasHash.fromAlias(alias, this.blake2s);
-    const accountId = new AccountId(aliasHash, nonce);
-
+    const accountAliasId = new AccountAliasId(aliasHash, nonce);
     const gibberish = randomBytes(32);
-
     const sigMsg = computeSigningData(
-      accountId,
+      accountAliasId,
       accountPublicKey,
       newAccountPublicKey || accountPublicKey,
       newSigningPubKey1 || GrumpkinAddress.ZERO,
@@ -58,7 +53,7 @@ export class AccountProofCreator {
       numNewKeys,
       newSigningPubKey1 || GrumpkinAddress.ZERO,
       newSigningPubKey2 || GrumpkinAddress.ZERO,
-      accountId,
+      accountAliasId,
       migrate,
       gibberish,
       accountIndex,
@@ -70,7 +65,7 @@ export class AccountProofCreator {
 
   public async createProof(
     signer: Signer,
-    alias: string,
+    aliasHash: AliasHash,
     nonce: number,
     migrate: boolean,
     accountPublicKey: GrumpkinAddress,
@@ -81,7 +76,7 @@ export class AccountProofCreator {
   ) {
     const tx = await this.createAccountTx(
       signer,
-      alias,
+      aliasHash,
       nonce,
       migrate,
       accountPublicKey,
