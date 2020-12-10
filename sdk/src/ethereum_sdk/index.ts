@@ -52,6 +52,8 @@ export async function createEthSdk(ethereumProvider: EthereumProvider, serverUrl
   const db = await getDb(sdkOptions.dbPath);
   const { rollupContractAddress, tokenContractAddresses, chainId, networkOrHost } = status;
 
+  await db.init();
+
   // Set erase flag if requested or contract changed.
   if (sdkOptions.clearDb || !(await core.getRollupContractAddress())?.equals(rollupContractAddress)) {
     debug('erasing database');

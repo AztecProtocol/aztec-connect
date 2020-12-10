@@ -44,7 +44,8 @@ export const DocRenderer: React.FunctionComponent<DocProps> = ({ srcName, apiNam
   const params: Spec[] = [];
   for (const paramBlock of docComment.params.blocks) {
     const paramContent = parseDocNode(paramBlock.content);
-    const [_, type, optional, description] = paramContent.trim().match(/^\[([a-z\|]+)\](\?)?\s+([\S\s]+)$/i) || [];
+    const [_, type, optional, description] =
+      paramContent.trim().match(/^\[([a-z\|]+[\[\]]*)\](\?)?\s+([\S\s]+)$/i) || [];
     params.push({
       name: paramBlock.parameterName,
       type: type || '',

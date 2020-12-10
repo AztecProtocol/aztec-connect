@@ -157,21 +157,9 @@ export const UserTxs = ({ account, app }: UserTxsProps) => {
               statusColor={actionState.error ? 'red' : colorLight}
               created={actionState.created}
             >
-              <FlexBox direction="column">
-                <span>
-                  <Text text={`${actionTextMapping[action]}: `} size="xxs" color={colorLight} />
-                  <Text text={userAsset.fromErc20Units(actionState.value)} size="xxs" />
-                </span>
-                <FlexBox>
-                  <Text text="To:" size="xxs" color={colorLight} />
-                  <Block left="xs">
-                    <CopyToClipboard text={actionState.recipient}>
-                      <span style={{ position: 'relative', cursor: 'pointer' }} title="Click to copy">
-                        <Text text={`0x${actionState.recipient.slice(0, 10)}...`} size="xxs" />
-                      </span>
-                    </CopyToClipboard>
-                  </Block>
-                </FlexBox>
+              <FlexBox>
+                <Text text={`${actionTextMapping[action]}: `} size="xxs" color={colorLight} />
+                <Text text={userAsset.fromErc20Units(actionState.value)} size="xxs" />
               </FlexBox>
             </TmpRow>
           </Block>

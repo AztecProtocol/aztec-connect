@@ -39,6 +39,8 @@ export class SQLDatabase implements Database {
     this.userTxRep = this.connection.getRepository(UserTxDao);
   }
 
+  async init() {}
+
   async close() {
     await this.connection.close();
   }

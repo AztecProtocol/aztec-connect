@@ -46,7 +46,6 @@ export interface ActionState {
   action: Action;
   value: bigint;
   sender: AccountId;
-  recipient: string;
   created: Date;
   txHash?: TxHash;
   error?: Error;

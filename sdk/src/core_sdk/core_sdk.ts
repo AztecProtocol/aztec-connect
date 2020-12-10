@@ -1,4 +1,4 @@
-import { Address, EthAddress, GrumpkinAddress } from 'barretenberg/address';
+import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { Block } from 'barretenberg/block_source';
 import { AccountProver } from 'barretenberg/client_proofs/account_proof';
 import { EscapeHatchProver } from 'barretenberg/client_proofs/escape_hatch_proof';
@@ -27,7 +27,7 @@ import { Database } from '../database';
 import { AccountProofCreator } from '../proofs/account_proof_creator';
 import { EscapeHatchProofCreator } from '../proofs/escape_hatch_proof_creator';
 import { JoinSplitProofCreator } from '../proofs/join_split_proof_creator';
-import { Action, ActionState, AssetId, SdkEvent, SdkInitState, SdkStatus } from '../sdk';
+import { AssetId, SdkEvent, SdkInitState, SdkStatus } from '../sdk';
 import { EthereumSigner, Signer } from '../signer';
 import { SchnorrSigner } from '../signer';
 import { TxsState } from '../txs_state';
@@ -80,7 +80,6 @@ export class CoreSdk extends EventEmitter {
     dataRoot: Buffer.alloc(0),
     dataSize: 0,
   };
-  private actionState?: ActionState;
   private processBlocksPromise?: Promise<void>;
   private blake2s!: Blake2s;
   private pedersen!: Pedersen;
@@ -446,6 +445,65 @@ export class CoreSdk extends EventEmitter {
     this.emit(SdkEvent.UPDATED_USER_STATE, userId, balanceAfter, diff, assetId);
   }
 
+  public async validateEscapeOpen() {
+    const { escapeOpen, numEscapeBlocksRemaining } = await this.rollupProvider.getStatus();
+    if (!escapeOpen) {
+      throw new Error(`Escape hatch window closed. Opens in ${numEscapeBlocksRemaining} blocks`);
+    }
+  }
+
+  public async getLatestUserNonce(publicKey: GrumpkinAddress) {
+    return (await this.db.getLatestNonceByAddress(publicKey)) || 0;
+  }
+
+  public async getLatestAliasNonce(alias: string) {
+    const aliasHash = this.computeAliasHash(alias);
+    return (await this.db.getLatestNonceByAliasHash(aliasHash)) || 0;
+  }
+
+  public async getAliasHashFromAddress(publicKey: GrumpkinAddress, nonce?: number) {
+    return this.db.getAliasHashByAddress(publicKey, nonce);
+  }
+
+  public async getAddressFromAliasHash(aliasHash: AliasHash, nonce?: number) {
+    return this.db.getAddressByAliasHash(aliasHash, nonce);
+  }
+
+  public async getAddressFromAlias(alias: string, nonce?: number) {
+    const aliasHash = this.computeAliasHash(alias);
+    return this.getAddressFromAliasHash(aliasHash, nonce);
+  }
+
+  public async getAccountId(user: string | GrumpkinAddress, nonce?: number) {
+    const publicKey =
+      typeof user !== 'string'
+        ? user
+        : GrumpkinAddress.isAddress(user)
+        ? GrumpkinAddress.fromString(user)
+        : await this.getAddressFromAlias(user);
+    if (!publicKey) {
+      throw new Error('Alias not registered.');
+    }
+
+    const accountNonce = nonce !== undefined ? nonce : await this.getLatestUserNonce(publicKey);
+    return new AccountId(publicKey, accountNonce);
+  }
+
+  public async isAliasAvailable(alias: string) {
+    // TODO - request it from server so that we can also check those aliases in unsettled txs.
+    const nonce = await this.getLatestAliasNonce(alias);
+    return !nonce;
+  }
+
+  public computeAliasHash(alias: string) {
+    return AliasHash.fromAlias(alias, this.blake2s);
+  }
+
+  public createSchnorrSigner(privateKey: Buffer) {
+    const publicKey = new GrumpkinAddress(this.grumpkin.mul(Grumpkin.one, privateKey));
+    return new SchnorrSigner(this.schnorr, publicKey, privateKey);
+  }
+
   public async createProof(
     assetId: AssetId,
     userId: AccountId,
@@ -504,97 +562,6 @@ export class CoreSdk extends EventEmitter {
     return txHash;
   }
 
-  public async validateEscapeOpen() {
-    const { escapeOpen, numEscapeBlocksRemaining } = await this.rollupProvider.getStatus();
-    if (!escapeOpen) {
-      throw new Error(`Escape hatch window closed. Opens in ${numEscapeBlocksRemaining} blocks`);
-    }
-  }
-
-  public async getLatestUserNonce(publicKey: GrumpkinAddress) {
-    return (await this.db.getLatestNonceByAddress(publicKey)) || 0;
-  }
-
-  public async getLatestAliasNonce(alias: string) {
-    const aliasHash = this.computeAliasHash(alias);
-    return (await this.db.getLatestNonceByAliasHash(aliasHash)) || 0;
-  }
-
-  public async getAliasHashFromAddress(publicKey: GrumpkinAddress, nonce?: number) {
-    return this.db.getAliasHashByAddress(publicKey, nonce);
-  }
-
-  public async getAddressFromAliasHash(aliasHash: AliasHash, nonce?: number) {
-    return this.db.getAddressByAliasHash(aliasHash, nonce);
-  }
-
-  public async getAddressFromAlias(alias: string, nonce?: number) {
-    const aliasHash = this.computeAliasHash(alias);
-    return this.getAddressFromAliasHash(aliasHash, nonce);
-  }
-
-  public async getAccountId(user: string | GrumpkinAddress, nonce?: number) {
-    const publicKey =
-      typeof user !== 'string'
-        ? user
-        : GrumpkinAddress.isAddress(user)
-        ? GrumpkinAddress.fromString(user)
-        : await this.getAddressFromAlias(user);
-    if (!publicKey) {
-      throw new Error('Alias not registered.');
-    }
-
-    const accountNonce = nonce !== undefined ? nonce : await this.getLatestUserNonce(publicKey);
-    return new AccountId(publicKey, accountNonce);
-  }
-
-  public async isAliasAvailable(alias: string) {
-    // TODO - request it from server so that we can also check those aliases in unsettled txs.
-    const nonce = await this.getLatestAliasNonce(alias);
-    return !nonce;
-  }
-
-  public computeAliasHash(alias: string) {
-    return AliasHash.fromAlias(alias, this.blake2s);
-  }
-
-  public async performAction(
-    action: Action,
-    value: bigint,
-    userId: AccountId,
-    recipient: Address | string,
-    fn: () => Promise<TxHash>,
-    validation = async () => {},
-  ) {
-    this.actionState = {
-      action,
-      value,
-      sender: userId,
-      recipient: recipient.toString(),
-      created: new Date(),
-    };
-    this.emit(SdkEvent.UPDATED_ACTION_STATE, { ...this.actionState });
-    try {
-      await validation();
-      this.actionState.txHash = await fn();
-    } catch (err) {
-      this.actionState.error = err;
-      throw err;
-    } finally {
-      this.emit(SdkEvent.UPDATED_ACTION_STATE, { ...this.actionState });
-    }
-    return this.actionState.txHash;
-  }
-
-  public isBusy() {
-    return this.actionState ? !this.actionState.txHash && !this.actionState.error : false;
-  }
-
-  public createSchnorrSigner(privateKey: Buffer) {
-    const publicKey = new GrumpkinAddress(this.grumpkin.mul(Grumpkin.one, privateKey));
-    return new SchnorrSigner(this.schnorr, publicKey, privateKey);
-  }
-
   public async createAccountTx(
     signer: Signer,
     aliasHash: AliasHash,
@@ -640,46 +607,42 @@ export class CoreSdk extends EventEmitter {
     const userState = this.getUserState(userId);
     const { publicKey } = userState.getUser();
 
-    const action = async () => {
-      const signerPublicKey = signer.getPublicKey();
-      const accountAliasId = aliasHash && nonce ? new AccountAliasId(aliasHash, nonce) : undefined;
-      const accountIndex = accountAliasId
-        ? await this.db.getUserSigningKeyIndex(accountAliasId, signerPublicKey)
-        : undefined;
-      const rawProofData = await this.accountProofCreator.createProof(
-        signer,
-        aliasHash,
-        nonce,
-        migrate,
-        publicKey,
-        newAccountPublicKey,
-        newSigningPublicKey1,
-        newSigningPublicKey2,
-        accountIndex,
-      );
+    const signerPublicKey = signer.getPublicKey();
+    const accountAliasId = aliasHash && nonce ? new AccountAliasId(aliasHash, nonce) : undefined;
+    const accountIndex = accountAliasId
+      ? await this.db.getUserSigningKeyIndex(accountAliasId, signerPublicKey)
+      : undefined;
+    const rawProofData = await this.accountProofCreator.createProof(
+      signer,
+      aliasHash,
+      nonce,
+      migrate,
+      publicKey,
+      newAccountPublicKey,
+      newSigningPublicKey1,
+      newSigningPublicKey2,
+      accountIndex,
+    );
 
-      const txHash = await this.rollupProvider.sendProof({ proofData: rawProofData, viewingKeys: [] });
+    const txHash = await this.rollupProvider.sendProof({ proofData: rawProofData, viewingKeys: [] });
 
-      // It *looks* like a join split...
-      const userTx: UserTx = {
-        action: 'ACCOUNT',
-        txHash,
-        userId,
-        assetId: 0,
-        value: BigInt(0),
-        recipient: Buffer.alloc(0),
-        settled: false,
-        created: new Date(),
-      };
-      await this.db.addUserTx(userTx);
-
-      this.emit(CoreSdkEvent.UPDATED_USER_STATE, userTx.userId);
-      this.emit(SdkEvent.UPDATED_USER_STATE, userTx.userId);
-
-      return txHash;
+    // It *looks* like a join split...
+    const userTx: UserTx = {
+      action: 'ACCOUNT',
+      txHash,
+      userId,
+      assetId: 0,
+      value: BigInt(0),
+      recipient: Buffer.alloc(0),
+      settled: false,
+      created: new Date(),
     };
+    await this.db.addUserTx(userTx);
 
-    return this.performAction(Action.ACCOUNT, BigInt(0), userId, publicKey, action);
+    this.emit(CoreSdkEvent.UPDATED_USER_STATE, userTx.userId);
+    this.emit(SdkEvent.UPDATED_USER_STATE, userTx.userId);
+
+    return txHash;
   }
 
   private async isSynchronised() {
@@ -804,10 +767,6 @@ export class CoreSdk extends EventEmitter {
 
   public async getUserTxs(userId: AccountId) {
     return this.db.getUserTxs(userId);
-  }
-
-  public getActionState(userId?: AccountId) {
-    return !userId || this.actionState?.sender.equals(userId) ? this.actionState : undefined;
   }
 
   public startTrackingGlobalState() {

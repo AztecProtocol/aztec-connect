@@ -2,6 +2,24 @@
 
 export interface Sdk {
   /**
+   * @param privateKey - [Buffer] The private key of the user.
+   * @param nonce - [number]? The nonce of the user. Default to the latest nonce.
+   * @returns WalletSdkUser - A user instance with apis bound to the user's account id.
+   */
+  addUser(privateKey: Buffer, nonce?: number): Promise<WalletSdkUser>;
+
+  /**
+   * @param userId - [AccountId] The account id of the user.
+   * @returns WalletSdkUser - A user instance with apis bound to the user's account id.
+   */
+  getUser(userId: AccountId): WalletSdkUser;
+
+  /**
+   * @returns UserData[] - An array of user data.
+   */
+  getUsersData(): UserData[];
+
+  /**
    * Deposit.
    * @param assetId - [AssetId] See the list of assets we currently support [here](/#/Types/AssetId).
    * @param userId - [AccountId] The account id of the proof sender.
@@ -141,4 +159,34 @@ export interface Sdk {
    * @returns Promise -  resolves to [TxHash](/#/Types) object containing the transaction.
    */
   emergencyWithdraw(assetId: string, blockHeight: number, value: number, to: EthAddress, signer: Signer);
+
+  /**
+   * @param assetId - [AssetId] See the list of assets we currently support [here](/#/Types/AssetId).
+   * @param accountPublicKey - [GrumpkinAddress] Public key of the user.
+   * @param nonce - [number]? The nonce of the user. Default to the latest nonce.
+   * @returns bigint - Private balance of the account.
+   */
+  getBalance(assetId: AssetId, publicKey: GrumpkinAddress, nonce?: number): bigint;
+
+  /**
+   * @param assetId - [AssetId] See the list of assets we currently support [here](/#/Types/AssetId).
+   * @param ethAddress - [EthAddress] The ethereum address of the user.
+   * @returns bigint - Public balance of the account.
+   */
+  getPublicBalance(assetId: AssetId, ethAddress: EthAddress): Promise<bigint>;
+
+  /**
+   * @param assetId - [AssetId] The asset of the value to be converted.
+   * @param value - [bigint] Value to convert to string.
+   * @param precision - [number] The number of decimal places to return.
+   * @returns string - Formatted string.
+   */
+  fromErc20Units(assetId: AssetId, value: bigint, precision?: number): string;
+
+  /**
+   * @param assetId - [AssetId] The asset of the value to be converted.
+   * @param valueS - [string] Value to convert to bigint.
+   * @returns bigint - Token value.
+   */
+  toErc20Units(assetId: AssetId, value: string): bigint;
 }

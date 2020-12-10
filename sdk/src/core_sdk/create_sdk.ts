@@ -57,6 +57,8 @@ async function sdkFactory(
   const leveldb = getLevelDb();
   const db = await getDb(options.dbPath);
 
+  await db.init();
+
   if (options.clearDb) {
     await leveldb.clear();
     await db.clear();

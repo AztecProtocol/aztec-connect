@@ -19,6 +19,8 @@ export class SQLDatabase implements Database {
     this.accountRep = this.connection.getRepository(AccountDao);
   }
 
+  async init() {}
+
   async close() {
     await this.connection.close();
   }

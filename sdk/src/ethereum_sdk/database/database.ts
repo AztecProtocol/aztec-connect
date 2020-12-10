@@ -6,6 +6,8 @@ export interface DbAccount {
 }
 
 export interface Database {
+  init(): Promise<void>;
+
   clear(): Promise<void>;
   close(): Promise<void>;
 

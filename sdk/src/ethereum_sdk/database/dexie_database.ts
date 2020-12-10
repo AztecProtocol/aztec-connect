@@ -12,12 +12,25 @@ const dexieAccountToDbAccount = ({ ethAddress, accountPublicKey }: DexieAccount)
 });
 
 export class DexieDatabase implements Database {
-  private db: Dexie;
-  private user: Dexie.Table<DexieAccount, Uint8Array>;
+  private db!: Dexie;
+  private user!: Dexie.Table<DexieAccount, Uint8Array>;
 
-  constructor() {
-    this.db = new Dexie('aztec2-sdk-eth');
-    this.db.version(1).stores({
+  constructor(private dbName = 'aztec2-sdk-eth', private version = 1) {}
+
+  async init() {
+    this.createTables();
+
+    try {
+      await this.getAccounts();
+    } catch (e) {
+      await this.db.delete();
+      this.createTables();
+    }
+  }
+
+  private createTables() {
+    this.db = new Dexie(this.dbName);
+    this.db.version(this.version).stores({
       user: '&ethAddress',
     });
 

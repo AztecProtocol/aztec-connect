@@ -147,6 +147,16 @@ module.exports = {
           content: 'src/docs/user.md',
           sections: [
             {
+              name: 'addUser',
+              content: 'src/docs/add_user.md',
+              exampleMode: 'hide',
+            },
+            {
+              name: 'getUser',
+              content: 'src/docs/get_user.md',
+              exampleMode: 'hide',
+            },
+            {
               name: 'createAccount',
               content: 'src/docs/create_account.md',
               exampleMode: 'hide',
@@ -198,6 +208,16 @@ module.exports = {
               content: 'src/docs/emergency_withdraw.md',
               exampleMode: 'hide',
             },
+            {
+              name: 'getBalance',
+              content: 'src/docs/get_balance.md',
+              exampleMode: 'hide',
+            },
+            {
+              name: 'units',
+              content: 'src/docs/units.md',
+              exampleMode: 'hide',
+            },
           ],
         },
         {
@@ -232,6 +252,11 @@ module.exports = {
             {
               name: 'Address',
               content: 'src/docs/types/address.md',
+              exampleMode: 'hide',
+            },
+            {
+              name: 'AliasHash',
+              content: 'src/docs/types/alias_hash.md',
               exampleMode: 'hide',
             },
             {

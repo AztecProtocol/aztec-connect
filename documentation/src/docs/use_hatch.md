@@ -1,1 +1,0 @@
-@spec sdk.ts emergencyWithdraw

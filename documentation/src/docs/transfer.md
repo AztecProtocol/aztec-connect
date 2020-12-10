@@ -67,6 +67,7 @@ async function demoTransfer(aztecSdk, userId, signer) {
 
 ## See Also
 
+- **[Get Balance](/#/ERC20%20Tokens/getBalance)**
 - **[Deposit](/#/ERC20%20Tokens/deposit)**
 - **[Withdraw](/#/ERC20%20Tokens/withdraw)**
-- **[Public Transfer](/#/ERC20%20Tokens/publicTransfer)**
+- **[Emergency Withdraw](/#/ERC20%20Tokens/emergencyWithdraw)**

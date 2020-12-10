@@ -70,6 +70,8 @@ export interface WalletSdk {
 }
 
 export class WalletSdk extends EventEmitter {
+  private actionState?: ActionState;
+
   constructor(private core: CoreSdk, private blockchain: EthereumBlockchain, private tokenContracts: TokenContract[]) {
     super();
   }
@@ -94,7 +96,7 @@ export class WalletSdk extends EventEmitter {
   }
 
   public isBusy() {
-    return this.core.isBusy();
+    return this.actionState ? !this.actionState.txHash && !this.actionState.error : false;
   }
 
   public async awaitSynchronised() {
@@ -167,20 +169,19 @@ export class WalletSdk extends EventEmitter {
   }
 
   public getActionState(userId?: AccountId) {
-    return this.core.getActionState(userId);
+    return !userId || this.actionState?.sender.equals(userId) ? this.actionState : undefined;
   }
 
   public async approve(assetId: AssetId, userId: AccountId, value: bigint, account: EthAddress) {
     const action = () => this.getTokenContract(assetId).approve(value, account);
-    const { rollupContractAddress } = this.core.getLocalStatus();
-    const txHash = await this.core.performAction(Action.APPROVE, value, userId, rollupContractAddress, action);
+    const txHash = await this.performAction(Action.APPROVE, value, userId, action);
     this.emit(SdkEvent.UPDATED_USER_STATE, userId);
     return txHash;
   }
 
   public async mint(assetId: AssetId, userId: AccountId, value: bigint, account: EthAddress) {
     const action = () => this.getTokenContract(assetId).mint(value, account);
-    const txHash = await this.core.performAction(Action.MINT, value, userId, account, action);
+    const txHash = await this.performAction(Action.MINT, value, userId, action);
     this.emit(SdkEvent.UPDATED_USER_STATE, userId);
     return txHash;
   }
@@ -217,12 +218,9 @@ export class WalletSdk extends EventEmitter {
     const validation = async () => {
       const isPermit = !!permitArgs;
       await this.checkPublicBalanceAndApproval(assetId, value, ethSigner.getAddress(), isPermit);
-      if (!recipient) {
-        throw new Error(`No address found for alias: ${to}`);
-      }
     };
 
-    return this.core.performAction(Action.DEPOSIT, value, userId, recipient, action, validation);
+    return this.performAction(Action.DEPOSIT, value, userId, action, validation);
   }
 
   public async withdraw(assetId: AssetId, userId: AccountId, value: bigint, signer: Signer, to: EthAddress) {
@@ -230,7 +228,7 @@ export class WalletSdk extends EventEmitter {
     const validation = async () => {
       await this.checkNoteBalance(assetId, userId, value);
     };
-    return this.core.performAction(Action.WITHDRAW, value, userId, to, action, validation);
+    return this.performAction(Action.WITHDRAW, value, userId, action, validation);
   }
 
   public async transfer(assetId: AssetId, userId: AccountId, value: bigint, signer: Signer, to: AccountId) {
@@ -238,7 +236,7 @@ export class WalletSdk extends EventEmitter {
     const validation = async () => {
       await this.checkNoteBalance(assetId, userId, value);
     };
-    return this.core.performAction(Action.TRANSFER, value, userId, to, action, validation);
+    return this.performAction(Action.TRANSFER, value, userId, action, validation);
   }
 
   private async checkPublicBalanceAndApproval(assetId: AssetId, value: bigint, from: EthAddress, isPermit: boolean) {
@@ -323,19 +321,23 @@ export class WalletSdk extends EventEmitter {
       throw new Error('Alias already registered.');
     }
 
-    const signer = this.core.createSchnorrSigner(user.privateKey);
-    const aliasHash = this.core.computeAliasHash(alias);
+    const action = async () => {
+      const signer = this.core.createSchnorrSigner(user.privateKey);
+      const aliasHash = this.core.computeAliasHash(alias);
 
-    return this.core.createAccountProof(
-      user.id,
-      signer,
-      aliasHash,
-      0,
-      true,
-      undefined,
-      newSigningPublicKey,
-      recoveryPublicKey,
-    );
+      return this.core.createAccountProof(
+        user.id,
+        signer,
+        aliasHash,
+        0,
+        true,
+        undefined,
+        newSigningPublicKey,
+        recoveryPublicKey,
+      );
+    };
+
+    return this.performAction(Action.ACCOUNT, BigInt(0), userId, action);
   }
 
   public async recoverAccount(recoveryPayload: RecoveryPayload) {
@@ -364,16 +366,20 @@ export class WalletSdk extends EventEmitter {
       throw new Error('User not registered.');
     }
 
-    return this.core.createAccountProof(
-      user.id,
-      signer,
-      user.aliasHash,
-      user.nonce,
-      true,
-      newAccountPublicKey,
-      newSigningPublicKey,
-      recoveryPublicKey,
-    );
+    const action = async () => {
+      return this.core.createAccountProof(
+        user.id,
+        signer,
+        user.aliasHash!,
+        user.nonce,
+        true,
+        newAccountPublicKey,
+        newSigningPublicKey,
+        recoveryPublicKey,
+      );
+    };
+
+    return this.performAction(Action.ACCOUNT, BigInt(0), userId, action);
   }
 
   public async addSigningKeys(
@@ -387,16 +393,20 @@ export class WalletSdk extends EventEmitter {
       throw new Error('User not registered.');
     }
 
-    return this.core.createAccountProof(
-      user.id,
-      signer,
-      user.aliasHash,
-      user.nonce,
-      false,
-      undefined,
-      signingPublicKey1,
-      signingPublicKey2,
-    );
+    const action = async () => {
+      return this.core.createAccountProof(
+        user.id,
+        signer,
+        user.aliasHash!,
+        user.nonce,
+        false,
+        undefined,
+        signingPublicKey1,
+        signingPublicKey2,
+      );
+    };
+
+    return this.performAction(Action.ACCOUNT, BigInt(0), userId, action);
   }
 
   public async getSigningKeys(userId: AccountId) {
@@ -495,5 +505,31 @@ export class WalletSdk extends EventEmitter {
 
   public async getAccountId(user: string | GrumpkinAddress, nonce?: number) {
     return this.core.getAccountId(user, nonce);
+  }
+
+  private async performAction(
+    action: Action,
+    value: bigint,
+    userId: AccountId,
+    fn: () => Promise<TxHash>,
+    validation = async () => {},
+  ) {
+    this.actionState = {
+      action,
+      value,
+      sender: userId,
+      created: new Date(),
+    };
+    this.emit(SdkEvent.UPDATED_ACTION_STATE, { ...this.actionState });
+    try {
+      await validation();
+      this.actionState.txHash = await fn();
+    } catch (err) {
+      this.actionState.error = err;
+      throw err;
+    } finally {
+      this.emit(SdkEvent.UPDATED_ACTION_STATE, { ...this.actionState });
+    }
+    return this.actionState.txHash;
   }
 }

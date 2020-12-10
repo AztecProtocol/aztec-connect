@@ -13,6 +13,7 @@ export const databaseTestSuite = (
 
     beforeEach(async () => {
       db = await createDb();
+      await db.init();
     });
 
     afterEach(async () => {

@@ -166,16 +166,32 @@ const dexieAliasToAlias = ({ aliasHash, address, latestNonce }: DexieAlias): Ali
 });
 
 export class DexieDatabase implements Database {
-  private dexie = new Dexie('hummus');
-  private user: Dexie.Table<DexieUser, number>;
-  private userKeys: Dexie.Table<DexieUserKey, string>;
-  private userTx: Dexie.Table<DexieUserTx, string>;
-  private note: Dexie.Table<DexieNote, number>;
-  private key: Dexie.Table<DexieKey, string>;
-  private alias: Dexie.Table<DexieAlias, number>;
+  private dexie!: Dexie;
+  private user!: Dexie.Table<DexieUser, number>;
+  private userKeys!: Dexie.Table<DexieUserKey, string>;
+  private userTx!: Dexie.Table<DexieUserTx, string>;
+  private note!: Dexie.Table<DexieNote, number>;
+  private key!: Dexie.Table<DexieKey, string>;
+  private alias!: Dexie.Table<DexieAlias, number>;
 
-  constructor() {
-    this.dexie.version(5).stores({
+  constructor(private dbName = 'hummus', private version = 5) {}
+
+  async init() {
+    this.createTables();
+
+    try {
+      // Try to do something with indexedDB.
+      // If it fails (with UpgradeError), then the schema has changed significantly that we need to recreate the entire db.
+      await this.getUsers();
+    } catch (e) {
+      await this.dexie.delete();
+      this.createTables();
+    }
+  }
+
+  private createTables() {
+    this.dexie = new Dexie(this.dbName);
+    this.dexie.version(this.version).stores({
       user: '&id, privateKey',
       userKeys: '&[accountAliasId+key], accountAliasId, address',
       userTx: '&[txHash+userId], txHash, userId, settled, created',

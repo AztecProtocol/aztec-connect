@@ -89,3 +89,10 @@ async function demoEmergencyWithdraw(userId, signer) {
   await aztecSdkEmergency.destroy();
 }
 ```
+
+## See Also
+
+- **[Get Balance](/#/ERC20%20Tokens/getBalance)**
+- **[Deposit](/#/ERC20%20Tokens/deposit)**
+- **[Withdraw](/#/ERC20%20Tokens/withdraw)**
+- **[Transfer](/#/ERC20%20Tokens/transfer)**

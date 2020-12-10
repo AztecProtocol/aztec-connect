@@ -19,6 +19,7 @@ export interface Alias {
 }
 
 export interface Database {
+  init(): Promise<void>;
   close(): Promise<void>;
   clear(): Promise<void>;
 
