@@ -1,38 +1,31 @@
-import { Column, Entity, Index, OneToMany, PrimaryColumn } from 'typeorm';
-import { TxDao } from './tx';
-
-export const rollupStatus = <const>['CREATING', 'CREATED', 'PUBLISHED', 'SETTLED'];
-
-export type RollupStatus = typeof rollupStatus[number];
+import { Column, Entity, Index, OneToOne, PrimaryColumn } from 'typeorm';
+import { RollupProofDao } from './rollup_proof';
 
 @Entity({ name: 'rollup' })
 export class RollupDao {
+  public constructor(init?: Partial<RollupDao>) {
+    Object.assign(this, init);
+  }
+
   @PrimaryColumn()
   public id!: number;
-
-  @Column()
-  public hash!: Buffer;
 
   @Index({ unique: true })
   @Column()
   public dataRoot!: Buffer;
 
-  @OneToMany(() => TxDao, tx => tx.rollup, { cascade: true })
-  public txs!: TxDao[];
-
-  @Column({ nullable: true })
-  public proofData?: Buffer;
+  @OneToOne(() => RollupProofDao, rollupPoof => rollupPoof.rollup, { cascade: true })
+  public rollupProof!: RollupProofDao;
 
   @Column()
   public viewingKeys!: Buffer;
 
-  @Column({ nullable: true })
-  public ethTxHash?: Buffer;
-
-  @Index()
-  @Column()
-  public status!: RollupStatus;
-
   @Column()
   public created!: Date;
+
+  @Column({ nullable: true })
+  public ethTxHash!: Buffer;
+
+  @Column({ default: false })
+  public mined!: boolean;
 }

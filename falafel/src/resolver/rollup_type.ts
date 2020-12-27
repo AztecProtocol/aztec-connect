@@ -4,7 +4,7 @@ import { Field, Int, ObjectType, ArgsType, InputType } from 'type-graphql';
 import { BlockType } from './block_type';
 import { TxType } from './tx_type';
 import { MAX_COUNT, Sort } from './query_builder';
-import { HexString, ISODateTime, RollupStatusScalarType } from './scalar_type';
+import { HexString, ISODateTime } from './scalar_type';
 
 @ObjectType()
 export class RollupType {
@@ -49,10 +49,10 @@ export class RollupType {
 
   @Field({ nullable: true })
   block?: BlockType;
-
+  /*
   @Field(() => RollupStatusScalarType)
   status!: RollupStatus;
-
+*/
   @Field(() => ISODateTime)
   created!: Date;
 }
@@ -188,7 +188,7 @@ class RollupFilter {
 
   @Field(() => HexString, { nullable: true })
   ethTxHash_contains?: string;
-
+  /*
   @Field(() => RollupStatusScalarType, { nullable: true })
   status?: RollupStatus;
 
@@ -200,7 +200,7 @@ class RollupFilter {
 
   @Field(() => [RollupStatusScalarType!], { nullable: true })
   status_not_in?: RollupStatus[];
-
+*/
   @Field(() => ISODateTime, { nullable: true })
   created?: Date;
 

@@ -13,55 +13,48 @@ export class TxAggregator {
   constructor(
     private rollupCreator: RollupCreator,
     private rollupDb: RollupDb,
-    private rollupSize: number,
-    private maxRollupWaitTime: Duration,
-    private minRollupInterval: Duration,
+    private txRollupSize: number,
+    private flushInterval: Duration,
   ) {}
-
-  public async init() {
-    await this.rollupCreator.init();
-  }
-
-  public destroy() {
-    this.rollupCreator.destroy();
-  }
 
   /**
    * Starts monitoring for txs, and once conditions are met, creates a rollup.
+   * Stops monitoring once a rollup has been successfully published or `stop` called.
    */
-  public start() {
+  public async start() {
     this.running = true;
-
+    this.flush = false;
+    this.rollupCreator.clearInterrupt();
     this.stopPromise = new Promise(resolve => (this.cancel = resolve));
 
     const fn = async () => {
       while (this.running) {
         const count = await this.rollupDb.getPendingTxCount();
 
-        if (count === 0) {
-          await this.sleepOrStopped(1000);
-          continue;
+        if (moment().isAfter(await this.getDeadline()) && count > 0) {
+          this.flush = true;
         }
 
-        const first = (await this.rollupDb.getPendingTxs(1))[0];
-        if (
-          this.flush ||
-          count >= this.rollupSize ||
-          moment(first.created).isBefore(moment().subtract(this.maxRollupWaitTime, 's'))
-        ) {
-          this.flush = false;
-          const txs = await this.rollupDb.getPendingTxs(this.rollupSize);
-          await this.rollupCreator.create(txs);
+        if (this.flush || count >= this.txRollupSize) {
+          const txs = await this.rollupDb.getPendingTxs(this.txRollupSize);
+          const published = await this.rollupCreator.create(txs, this.flush);
 
-          // Throttle.
-          await this.sleepOrStopped(this.minRollupInterval.asMilliseconds());
+          if (published) {
+            break;
+          }
         }
+
+        await this.sleepOrStopped(1000);
       }
 
-      this.rollupCreator.clearInterrupt();
+      this.running = false;
     };
 
-    this.runningPromise = fn();
+    this.runningPromise = fn().catch(err => {
+      console.log('PANIC!');
+      console.log(err);
+      this.running = false;
+    });
   }
 
   /**
@@ -79,6 +72,15 @@ export class TxAggregator {
 
   public flushTxs() {
     this.flush = true;
+  }
+
+  private async getDeadline() {
+    const lastSettled = await this.rollupDb.getSettledRollups(0, true, 1);
+    if (lastSettled.length) {
+      const lastCreatedTime = moment(lastSettled[0].created);
+      return lastCreatedTime.add(this.flushInterval);
+    }
+    return moment.unix(0);
   }
 
   private async sleepOrStopped(ms: number) {

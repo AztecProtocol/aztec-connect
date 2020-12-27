@@ -17,7 +17,7 @@ export class TxResolver {
 
   @Query(() => TxType, { nullable: true })
   async tx(@Arg('txId', () => HexString) txId: Buffer) {
-    return this.txRep.findOne({ txId });
+    return this.txRep.findOne({ id: txId });
   }
 
   @Query(() => [TxType!])
@@ -86,8 +86,9 @@ export class TxResolver {
 
   @FieldResolver({ nullable: true })
   async rollup(@Root() tx: TxDao) {
-    const { rollup } = (await this.txRep.findOne({ txId: tx.txId }, { relations: ['rollup'] })) || {};
-    return rollup;
+    const { rollupProof } =
+      (await this.txRep.findOne({ id: tx.id }, { relations: ['rollupProof', 'rollupProof.rollup'] })) || {};
+    return rollupProof?.rollup;
   }
 
   @Query(() => Int)

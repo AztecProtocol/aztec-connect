@@ -1,211 +1,153 @@
-import { InnerProofData } from 'barretenberg/rollup_proof';
 import { TxHash } from 'barretenberg/rollup_provider';
-import { Connection, In, MoreThanOrEqual, Not, Repository } from 'typeorm';
+import { Connection, In, IsNull, MoreThanOrEqual, Repository } from 'typeorm';
 import { RollupDao } from '../entity/rollup';
+import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
-import { Rollup } from '../rollup';
 
 export class RollupDb {
-  public rollupTxRep: Repository<TxDao>;
+  private txRep: Repository<TxDao>;
+  private rollupProofRep: Repository<RollupProofDao>;
   private rollupRep: Repository<RollupDao>;
 
   constructor(private connection: Connection) {
-    this.rollupTxRep = this.connection.getRepository(TxDao);
+    this.txRep = this.connection.getRepository(TxDao);
+    this.rollupProofRep = this.connection.getRepository(RollupProofDao);
     this.rollupRep = this.connection.getRepository(RollupDao);
   }
 
   public async addTx(txDao: TxDao) {
-    return this.rollupTxRep.save(txDao);
+    return this.txRep.save(txDao);
   }
 
-  public async addRollup(rollup: Rollup, viewingKeys: Buffer[] = []) {
-    const rollupDao = new RollupDao();
-
-    const txIds = rollup.proofs.map(txBuf => InnerProofData.fromBuffer(txBuf).txId);
-    const txs = await this.rollupTxRep.find({ where: { txId: In(txIds) } });
-    if (txs.length !== txIds.length) {
-      throw new Error('Missing txs.');
-    }
-
-    rollupDao.hash = rollup.rollupHash;
-    rollupDao.created = new Date();
-    rollupDao.id = rollup.rollupId;
-    rollupDao.dataRoot = rollup.newDataRoot;
-    rollupDao.txs = txs;
-    rollupDao.status = 'CREATING';
-    rollupDao.viewingKeys = Buffer.concat(viewingKeys);
-    return this.rollupRep.save(rollupDao);
-  }
-
-  public async addRollupDao(rollupDao: RollupDao) {
-    await this.rollupRep.save(rollupDao);
-  }
-
-  public async setRollupProof(rollupId: number, proofData: Buffer) {
-    const rollupDao = await this.getRollupFromId(rollupId);
-    if (!rollupDao) {
-      throw new Error(`Rollup not found: ${rollupId}`);
-    }
-
-    rollupDao.proofData = proofData;
-    await this.rollupRep.save(rollupDao);
-  }
-
-  public async confirmRollupCreated(rollupId: number) {
-    const rollupDao = await this.getRollupFromId(rollupId);
-    if (!rollupDao) {
-      throw new Error(`Rollup not found: ${rollupId}`);
-    }
-
-    rollupDao.status = 'CREATED';
-    await this.rollupRep.save(rollupDao);
-  }
-
-  public async confirmSent(rollupId: number, ethTxHash: TxHash) {
-    const rollupDao = await this.getRollupFromId(rollupId);
-    if (!rollupDao) {
-      throw new Error(`Rollup not found: ${rollupId}`);
-    }
-
-    if (rollupDao.status === 'SETTLED') {
-      // When using local blockchain, the block gets resolved and confirmRollup is triggered before we call confirmSent.
-      return;
-    }
-
-    rollupDao.status = 'PUBLISHED';
-    rollupDao.ethTxHash = ethTxHash.toBuffer();
-    await this.rollupRep.save(rollupDao);
-  }
-
-  public async confirmRollup(rollupId: number) {
-    let rollup = await this.rollupRep.findOne(rollupId);
-
-    if (!rollup) {
-      rollup = new RollupDao();
-      rollup.created = new Date();
-      rollup.id = rollupId;
-      rollup.status = 'SETTLED';
-    } else {
-      rollup.status = 'SETTLED';
-    }
-    await this.rollupRep.save(rollup);
-  }
-
-  public async deleteRollup(rollupId: number) {
-    await this.rollupRep.delete(rollupId);
-  }
-
-  public async deletePendingRollups() {
-    await this.rollupRep.delete({ status: 'CREATING' });
-  }
-
-  public async deleteUnsettledRollups() {
-    await this.rollupRep.delete({ status: Not('SETTLED') });
-  }
-
-  public getPendingRollups() {
-    return this.rollupRep.find({
-      where: { status: 'CREATING' },
-      order: { id: 'ASC' },
-    });
-  }
-
-  public getCreatedRollups() {
-    return this.rollupRep.find({
-      where: { status: 'CREATED' },
-      relations: ['txs'],
-      order: { id: 'ASC' },
-    });
-  }
-
-  public getUnsettledRollups() {
-    return this.rollupRep.find({
-      where: { status: Not('SETTLED') },
-      order: { id: 'ASC' },
-    });
-  }
-
-  public getUnsettledTxs() {
-    return this.rollupTxRep
-      .createQueryBuilder('tx')
-      .leftJoinAndSelect('tx.rollup', 'rollup')
-      .where('tx.rollup IS NULL')
-      .orWhere('rollup.status != :rollupStatus', { rollupStatus: 'SETTLED' })
-      .getMany();
-  }
-
-  public async getTxByTxId(txId: Buffer) {
-    return this.rollupTxRep.findOne({ txId }, { relations: ['rollup'] });
+  public async getTx(txId: Buffer) {
+    return this.txRep.findOne({ id: txId }, { relations: ['rollupProof'] });
   }
 
   public async getTxsByTxIds(txIds: Buffer[]) {
-    return this.rollupTxRep.find({
+    return this.txRep.find({
       where: { txId: In(txIds) },
-      relations: ['rollup'],
+      relations: ['rollupProof', 'rollupProof.rollup'],
+    });
+  }
+
+  public async getLatestTxs(take: number) {
+    return this.txRep.find({
+      order: { created: 'DESC' },
+      relations: ['rollupProof', 'rollupProof.rollup'],
+      take,
     });
   }
 
   public async getPendingTxCount() {
-    return this.rollupTxRep.count({
-      where: { rollup: null },
+    return this.txRep.count({
+      where: { rollupProof: null },
     });
   }
 
   public async getPendingTxs(take?: number) {
-    return this.rollupTxRep.find({
-      where: { rollup: null },
+    return this.txRep.find({
+      where: { rollupProof: null },
       order: { created: 'ASC' },
       take,
     });
   }
 
-  public async getLatestTxs(count: number) {
-    return this.rollupTxRep.find({
-      order: { created: 'DESC' },
-      relations: ['rollup'],
-      take: count,
-    });
+  public async addRollupProof(rollupDao: RollupProofDao) {
+    await this.rollupProofRep.save(rollupDao);
   }
 
-  public async getRollupFromId(id: number) {
-    return this.rollupRep.findOne({ id });
+  public async getRollupProof(id: Buffer, includeTxs = false) {
+    return this.rollupProofRep.findOne({ id }, { relations: includeTxs ? ['txs'] : undefined });
   }
 
-  public async getSettledRollupsFromId(id: number) {
-    return this.rollupRep.find({ where: { id: MoreThanOrEqual(id), status: 'SETTLED' } });
+  public async deleteRollupProof(id: Buffer) {
+    return this.rollupProofRep.delete({ id });
   }
 
-  public async getRollupFromHash(hash: Buffer) {
-    return this.rollupRep.findOne({ hash });
+  /**
+   * If a rollup proof is replaced by a larger aggregate, it will become "orphaned" from it's transactions.
+   * This removes any rollup proofs that are no longer referenced by transactions.
+   */
+  public async deleteTxlessRollupProofs() {
+    const orphaned = await this.rollupProofRep
+      .createQueryBuilder('rollup_proof')
+      .select('rollup_proof.id')
+      .leftJoin('rollup_proof.txs', 'tx')
+      .where('tx.rollupProof IS NULL')
+      .getMany();
+    await this.rollupProofRep.delete({ id: In(orphaned.map(rp => rp.id)) });
   }
 
-  public async getRollupWithTxs(id: number) {
-    return this.rollupRep.findOne({
-      where: { id },
+  public async deleteOrphanedRollupProofs() {
+    await this.rollupProofRep.delete({ rollup: IsNull() });
+  }
+
+  public async getRollupProofsBySize(numTxs: number) {
+    // return await this.rollupProofRep
+    //   .createQueryBuilder('rollup_proof')
+    //   .innerJoin('rollup_proof.txs', 'tx')
+    //   .where('rollup_proof.rollup IS NULL')
+    //   .groupBy('tx.rollupProof')
+    //   .having('COUNT(tx.id) = :numTxs', { numTxs })
+    //   .getMany();
+    return await this.rollupProofRep.find({
+      where: { rollupSize: numTxs, rollup: null },
       relations: ['txs'],
+      order: { dataStartIndex: 'ASC' },
     });
+  }
+
+  public async getNextRollupId() {
+    const latestRollup = await this.rollupRep.findOne({ mined: true }, { order: { id: 'DESC' } });
+    return latestRollup ? latestRollup.id + 1 : 0;
+  }
+
+  public async getRollup(id: number) {
+    return this.rollupRep.findOne({ id }, { relations: ['rollupProof', 'rollupProof.txs'] });
+  }
+
+  public async getRollups(take: number) {
+    return this.rollupRep.find({
+      order: { id: 'DESC' },
+      relations: ['rollupProof', 'rollupProof.txs'],
+      take,
+    });
+  }
+
+  public async addRollup(rollup: RollupDao) {
+    return await this.rollupRep.save(rollup);
+  }
+
+  public async confirmSent(id: number, txHash: TxHash) {
+    await this.rollupRep.update({ id }, { ethTxHash: txHash.toBuffer() });
+  }
+
+  public async confirmMined(id: number) {
+    await this.rollupRep.update({ id }, { mined: true });
+  }
+
+  public getSettledRollups(from = 0, descending = false, take?: number) {
+    return this.rollupRep.find({
+      where: { id: MoreThanOrEqual(from), mined: true },
+      order: { id: descending ? 'DESC' : 'ASC' },
+      relations: ['rollupProof'],
+      take,
+    });
+  }
+
+  public getUnsettledRollups() {
+    return this.rollupRep.find({
+      where: { mined: false },
+      order: { id: 'ASC' },
+    });
+  }
+
+  public async deleteUnsettledRollups() {
+    await this.rollupRep.delete({ mined: false });
   }
 
   public async getRollupByDataRoot(dataRoot: Buffer) {
     return this.rollupRep.findOne({ dataRoot });
-  }
-
-  public async getLatestRollups(count: number) {
-    return this.rollupRep.find({
-      order: { id: 'DESC' },
-      relations: ['txs'],
-      take: count,
-    });
-  }
-
-  public async getLatestSettledRollupId() {
-    const latestRollup = await this.rollupRep.findOne({ status: 'SETTLED' }, { order: { id: 'DESC' } });
-    return latestRollup ? latestRollup.id : -1;
-  }
-
-  public async getNextRollupId() {
-    const latestRollup = await this.rollupRep.findOne(undefined, { order: { id: 'DESC' } });
-    return latestRollup ? latestRollup.id + 1 : 0;
   }
 
   public async getDataRootsIndex(root: Buffer) {

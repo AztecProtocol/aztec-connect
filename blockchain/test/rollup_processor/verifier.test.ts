@@ -1,4 +1,5 @@
 import { ethers } from '@nomiclabs/buidler';
+import { RollupProofData } from 'barretenberg/rollup_proof';
 import { expect, use } from 'chai';
 import { solidity } from 'ethereum-waffle';
 import { Contract } from 'ethers';

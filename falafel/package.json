@@ -9,7 +9,7 @@
     "start:dev": "tsc-watch -p tsconfig.prod.json --onSuccess 'yarn start'",
     "test": "jest",
     "clean_db": "rm -rf ./data/db.sqlite ./data/world_state.db",
-    "clean_keys": "rm -rf ./data/account ./data/join_split ./data/rollup*",
+    "clean_keys": "rm -rf ./data/account ./data/join_split ./data/*rollup*",
     "clean": "rm -rf ./data"
   },
   "jest": {
@@ -51,7 +51,7 @@
     "sqlite3": "^4.2.0",
     "type-graphql": "^1.0.0",
     "typedi": "^0.8.0",
-    "typeorm": "0.2.24",
+    "typeorm": "0.2.29",
     "typescript": "^3.5.3"
   },
   "devDependencies": {

@@ -15,31 +15,32 @@ import { EthAddress } from 'barretenberg/address';
 
 async function main() {
   const {
+    ormConfig,
     provider,
     ethConfig,
     confVars: {
       rollupContractAddress,
-      rollupSize,
+      innerRollupSize,
+      outerRollupSize,
       localBlockchainInitSize,
-      maxRollupWaitTime,
-      minRollupInterval,
+      publishInterval,
       apiPrefix,
       serverAuthToken,
       port,
     },
   } = await getConfig();
 
-  const connection = await createConnection();
+  const connection = await createConnection(ormConfig);
 
   const blockchain =
     provider && ethConfig && rollupContractAddress
       ? await EthereumBlockchain.new(ethConfig, EthAddress.fromString(rollupContractAddress), provider.provider)
-      : new LocalBlockchain(connection, rollupSize, localBlockchainInitSize);
+      : new LocalBlockchain(connection, innerRollupSize * outerRollupSize, localBlockchainInitSize);
 
   const serverConfig: ServerConfig = {
-    rollupSize,
-    maxRollupWaitTime: moment.duration(maxRollupWaitTime, 's'),
-    minRollupInterval: moment.duration(minRollupInterval, 's'),
+    innerRollupSize,
+    outerRollupSize,
+    publishInterval: moment.duration(publishInterval, 's'),
     signingAddress: provider?.signingAddress,
   };
   const rollupDb = new RollupDb(connection);

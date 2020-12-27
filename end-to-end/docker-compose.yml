@@ -14,8 +14,6 @@ services:
     environment:
       ETHEREUM_HOST: http://ganache:8545
       NODE_ENV: production
-      MAX_ROLLUP_WAIT_TIME: 0
-      ROLLUP_SIZE: 1
     depends_on:
       - ganache
     command: >

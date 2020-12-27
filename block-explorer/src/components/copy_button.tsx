@@ -53,7 +53,7 @@ export const CopyButton: React.FunctionComponent<CopyButtonProps> = ({ className
   useEffect(() => {
     let resetTimeout: number;
     if (justCopied) {
-      resetTimeout = setTimeout(() => {
+      resetTimeout = window.setTimeout(() => {
         setJustCopied(false);
       }, 1500);
     }

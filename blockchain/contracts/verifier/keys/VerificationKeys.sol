@@ -7,7 +7,7 @@ pragma experimental ABIEncoderV2;
 import {Types} from '../cryptography/Types.sol';
 import {Rollup1Vk} from '../keys/Rollup1Vk.sol';
 import {Rollup2Vk} from '../keys/Rollup2Vk.sol';
-import {Rollup3Vk} from '../keys/Rollup3Vk.sol';
+import {Rollup4Vk} from '../keys/Rollup4Vk.sol';
 import {EscapeHatchVk} from '../keys/EscapeHatchVk.sol';
 
 /**
@@ -29,8 +29,8 @@ library VerificationKeys {
             vk = Rollup1Vk.get_verification_key();
         } else if (_keyId == 2) {
             vk = Rollup2Vk.get_verification_key();
-        } else if (_keyId == 3) {
-            vk = Rollup3Vk.get_verification_key();
+        } else if (_keyId == 4) {
+            vk = Rollup4Vk.get_verification_key();
         } else {
             require(false, "UNKNOWN_KEY_ID");
         }

@@ -5,16 +5,16 @@ import {
   deserializeBufferFromVector,
   deserializeField,
   deserializeUInt32,
+  numToUInt32BE,
   serializeBufferArrayToVector,
   serializeBufferToVector,
 } from 'barretenberg/serialize';
 import { createHash } from 'crypto';
 
-export class Rollup {
+export class TxRollup {
   public rollupHash: Buffer;
 
   constructor(
-    public rollupId: number,
     public dataStartIndex: number,
     public proofs: Buffer[],
 
@@ -28,10 +28,7 @@ export class Rollup {
     public oldNullPaths: HashPath[],
     public newNullPaths: HashPath[],
 
-    public oldDataRootsRoot: Buffer,
-    public newDataRootsRoot: Buffer,
-    public oldDataRootsPath: HashPath,
-    public newDataRootsPath: HashPath,
+    public dataRootsRoot: Buffer,
     public dataRootsPaths: HashPath[],
     public dataRootsIndicies: number[],
   ) {
@@ -40,13 +37,9 @@ export class Rollup {
   }
 
   public toBuffer() {
-    const numBuf = Buffer.alloc(12);
-    numBuf.writeUInt32BE(this.rollupId, 0);
-    numBuf.writeUInt32BE(this.proofs.length, 4);
-    numBuf.writeUInt32BE(this.dataStartIndex, 8);
-
     return Buffer.concat([
-      numBuf,
+      numToUInt32BE(this.proofs.length),
+      numToUInt32BE(this.dataStartIndex),
       serializeBufferArrayToVector(this.proofs.map(p => serializeBufferToVector(p))),
 
       this.oldDataRoot,
@@ -59,10 +52,7 @@ export class Rollup {
       serializeBufferArrayToVector(this.oldNullPaths.map(path => path.toBuffer())),
       serializeBufferArrayToVector(this.newNullPaths.map(path => path.toBuffer())),
 
-      this.oldDataRootsRoot,
-      this.newDataRootsRoot,
-      this.oldDataRootsPath.toBuffer(),
-      this.newDataRootsPath.toBuffer(),
+      this.dataRootsRoot,
       serializeBufferArrayToVector(this.dataRootsPaths.map(path => path.toBuffer())),
       serializeBufferArrayToVector(
         this.dataRootsIndicies.map(v => {
@@ -75,9 +65,8 @@ export class Rollup {
   }
 
   public static fromBuffer(buf: Buffer) {
-    const rollupId = buf.readUInt32BE(0);
-    const dataStartIndex = buf.readUInt32BE(8);
-    let offset = 12;
+    const dataStartIndex = buf.readUInt32BE(4);
+    let offset = 8;
     const proofs = deserializeArrayFromVector(deserializeBufferFromVector, buf, offset);
     offset += proofs.adv;
     const oldDataRoot = deserializeField(buf, offset);
@@ -96,20 +85,13 @@ export class Rollup {
     offset += oldNullPaths.adv;
     const newNullPaths = deserializeArrayFromVector(HashPath.deserialize, buf, offset);
     offset += newNullPaths.adv;
-    const oldDataRootsRoot = deserializeField(buf, offset);
-    offset += oldDataRootsRoot.adv;
-    const newDataRootsRoot = deserializeField(buf, offset);
-    offset += newDataRootsRoot.adv;
-    const oldDataRootsPath = HashPath.deserialize(buf, offset);
-    offset += oldDataRootsPath.adv;
-    const newDataRootsPath = HashPath.deserialize(buf, offset);
-    offset += newDataRootsPath.adv;
+    const dataRootsRoot = deserializeField(buf, offset);
+    offset += dataRootsRoot.adv;
     const dataRootsPaths = deserializeArrayFromVector(HashPath.deserialize, buf, offset);
     offset += dataRootsPaths.adv;
     const dataRootsIndicies = deserializeArrayFromVector(deserializeUInt32, buf, offset);
 
-    return new Rollup(
-      rollupId,
+    return new TxRollup(
       dataStartIndex,
       proofs.elem,
       oldDataRoot.elem,
@@ -120,10 +102,7 @@ export class Rollup {
       newNullRoots.elem,
       oldNullPaths.elem,
       newNullPaths.elem,
-      oldDataRootsRoot.elem,
-      newDataRootsRoot.elem,
-      oldDataRootsPath.elem,
-      newDataRootsPath.elem,
+      dataRootsRoot.elem,
       dataRootsPaths.elem,
       dataRootsIndicies.elem,
     );

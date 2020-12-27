@@ -12,45 +12,56 @@ import { RollupCreator } from './rollup_creator';
 import { TxAggregator } from './tx_aggregator';
 import { WorldState } from './world_state';
 import { RollupPublisher } from './rollup_publisher';
+import { RollupAggregator } from './rollup_aggregator';
+import moment from 'moment';
 
 export interface ServerConfig {
-  readonly rollupSize: number;
-  readonly maxRollupWaitTime: Duration;
-  readonly minRollupInterval: Duration;
+  readonly innerRollupSize: number;
+  readonly outerRollupSize: number;
+  readonly publishInterval: Duration;
   readonly signingAddress?: EthAddress;
 }
 
 export class Server {
   private worldState: WorldState;
   private txReceiver: TxReceiver;
+  private proofGenerator: ProofGenerator;
 
   constructor(
     private config: ServerConfig,
     private blockchain: Blockchain,
     private rollupDb: RollupDb,
-    private worldStateDb: WorldStateDb,
+    worldStateDb: WorldStateDb,
   ) {
-    const { rollupSize, minRollupInterval, maxRollupWaitTime } = config;
-    if (!rollupSize) {
-      throw new Error('Rollup size must be greater than 0.');
-    }
+    const { innerRollupSize, outerRollupSize, publishInterval, signingAddress } = config;
 
-    if (minRollupInterval.asSeconds() > maxRollupWaitTime.asSeconds()) {
-      throw new Error('minRollupInterval must be <= maxRollupWaitTime');
-    }
-
-    const rollupPublisher = new RollupPublisher(rollupDb, blockchain, this.config.signingAddress);
-    const proofGenerator = new ProofGenerator(rollupSize);
-    const rollupCreator = new RollupCreator(rollupDb, worldStateDb, proofGenerator, rollupPublisher, rollupSize);
-    const txAggregator = new TxAggregator(rollupCreator, rollupDb, rollupSize, maxRollupWaitTime, minRollupInterval);
+    this.proofGenerator = new ProofGenerator(innerRollupSize, outerRollupSize);
+    const rollupPublisher = new RollupPublisher(rollupDb, blockchain, publishInterval, signingAddress);
+    const rollupAggregator = new RollupAggregator(
+      this.proofGenerator,
+      rollupPublisher,
+      rollupDb,
+      worldStateDb,
+      innerRollupSize,
+      outerRollupSize,
+    );
+    const rollupCreator = new RollupCreator(
+      rollupDb,
+      worldStateDb,
+      this.proofGenerator,
+      rollupAggregator,
+      innerRollupSize,
+    );
+    const txAggregator = new TxAggregator(rollupCreator, rollupDb, innerRollupSize, publishInterval);
     this.worldState = new WorldState(rollupDb, worldStateDb, blockchain, txAggregator);
     this.txReceiver = new TxReceiver(rollupDb, blockchain);
   }
 
   public async start() {
     console.log('Server start...');
+    await this.proofGenerator.start();
     await this.worldState.start();
-    // The tx receiver depends on the world state to have been initialized to gain access to vks.
+    // The tx receiver depends on the proof generator to have been initialized to gain access to vks.
     await this.txReceiver.init();
   }
 
@@ -58,6 +69,7 @@ export class Server {
     console.log('Server stop...');
     await this.txReceiver.destroy();
     await this.worldState.stop();
+    this.proofGenerator.stop();
   }
 
   public async removeData() {
@@ -67,77 +79,51 @@ export class Server {
   }
 
   public async getStatus() {
-    const {
-      chainId,
-      networkOrHost,
-      rollupContractAddress,
-      tokenContractAddresses,
-      nextRollupId,
-      escapeOpen,
-      numEscapeBlocksRemaining,
-    } = await this.blockchain.getStatus();
+    const status = await this.blockchain.getStatus();
 
     return {
+      ...status,
       serviceName: 'falafel',
-      chainId,
-      networkOrHost,
-      rollupContractAddress,
-      tokenContractAddresses,
-      dataSize: Number(this.worldStateDb.getSize(0)),
-      dataRoot: this.worldStateDb.getRoot(0),
-      nullRoot: this.worldStateDb.getRoot(1),
-      rootRoot: this.worldStateDb.getRoot(2),
-      nextRollupId,
-      escapeOpen,
-      numEscapeBlocksRemaining,
     };
   }
 
   public async getNextPublishTime() {
-    // TODO: Replace horror show with time till flushTimeout completes?
-    const { escapeOpen } = await this.blockchain.getStatus();
-    const confirmations = escapeOpen ? 12 : 1;
-    const avgSettleTime = (30 + confirmations * 15) * 1000;
-    const avgProofTime = 30 * 1000;
-
-    const [pendingRollup] = await this.rollupDb.getUnsettledRollups();
-    if (pendingRollup) {
-      return new Date(pendingRollup.created.getTime() + avgProofTime + avgSettleTime);
+    const pendingTxs = await this.rollupDb.getPendingTxCount();
+    if (!pendingTxs) {
+      return;
     }
 
-    const [pendingTx] = await this.rollupDb.getPendingTxs();
-    if (pendingTx) {
-      return new Date(
-        pendingTx.created.getTime() + this.config.maxRollupWaitTime.asMilliseconds() + avgProofTime + avgSettleTime,
-      );
+    const lastPublished = await this.rollupDb.getSettledRollups(0, true, 1);
+    if (!lastPublished.length) {
+      return;
     }
 
-    return undefined;
+    return moment(lastPublished[0].created).add(this.config.publishInterval).toDate().getTime();
   }
 
   public async getPendingNoteNullifiers() {
-    const unsettledTxs = await this.rollupDb.getUnsettledTxs();
+    const unsettledTxs = await this.rollupDb.getPendingTxs();
     return unsettledTxs.map(tx => [tx.nullifier1, tx.nullifier2]).flat();
   }
 
   public async getBlocks(from: number): Promise<Block[]> {
-    const rollups = await this.rollupDb.getSettledRollupsFromId(from);
+    const rollups = await this.rollupDb.getSettledRollups(from);
     return rollups.map(dao => ({
       txHash: new TxHash(dao.ethTxHash!),
       created: dao.created,
       rollupId: dao.id,
-      rollupSize: RollupProofData.getRollupSizeFromBuffer(dao.proofData!),
-      rollupProofData: dao.proofData!,
+      rollupSize: RollupProofData.getRollupSizeFromBuffer(dao.rollupProof.proofData!),
+      rollupProofData: dao.rollupProof.proofData!,
       viewingKeysData: dao.viewingKeys,
     }));
   }
 
   public async getLatestRollupId() {
-    return await this.rollupDb.getLatestSettledRollupId();
+    return (await this.rollupDb.getNextRollupId()) - 1;
   }
 
   public async getLatestRollups(count: number) {
-    return this.rollupDb.getLatestRollups(count);
+    return this.rollupDb.getRollups(count);
   }
 
   public async getLatestTxs(count: number) {
@@ -145,7 +131,7 @@ export class Server {
   }
 
   public async getRollup(id: number) {
-    return this.rollupDb.getRollupWithTxs(id);
+    return this.rollupDb.getRollup(id);
   }
 
   public async getTxs(txIds: Buffer[]) {
@@ -153,7 +139,7 @@ export class Server {
   }
 
   public async getTx(txId: Buffer) {
-    return this.rollupDb.getTxByTxId(txId);
+    return this.rollupDb.getTx(txId);
   }
 
   public async receiveTx(tx: Tx) {

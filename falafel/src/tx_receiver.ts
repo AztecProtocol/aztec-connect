@@ -63,7 +63,7 @@ export class TxReceiver {
     const dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
 
     const txDao = new TxDao({
-      txId: proof.txId,
+      id: proof.txId,
       proofData,
       viewingKey1: viewingKeys[0] || Buffer.alloc(0),
       viewingKey2: viewingKeys[1] || Buffer.alloc(0),

@@ -18,10 +18,10 @@ import { buildSchemaSync } from 'type-graphql';
 import { Container } from 'typedi';
 import { Connection } from 'typeorm';
 import { DefaultState, Context } from 'koa';
-import { RollupDao } from './entity/rollup';
 import { TxDao } from './entity/tx';
 import { BlockResolver, RollupResolver, TxResolver, ServerStatusResolver } from './resolver';
 import { Server } from './server';
+import { RollupDao } from './entity/rollup';
 
 // eslint-disable-next-line
 const cors = require('@koa/cors');
@@ -36,30 +36,37 @@ const toBlockResponse = (block: Block): BlockServerResponse => ({
 
 const toRollupResponse = ({
   id,
-  status,
   dataRoot,
-  proofData,
-  txs,
   ethTxHash,
+  mined,
+  rollupProof,
   created,
 }: RollupDao): RollupServerResponse => ({
   id,
-  status,
+  status: mined ? 'SETTLED' : ethTxHash ? 'PUBLISHED' : 'CREATING',
   dataRoot: dataRoot.toString('hex'),
-  proofData: proofData ? proofData.toString('hex') : undefined,
-  txHashes: txs.map(tx => tx.txId.toString('hex')),
+  proofData: rollupProof.proofData.toString('hex'),
+  txHashes: rollupProof.txs.map(tx => tx.id.toString('hex')),
   ethTxHash: ethTxHash ? ethTxHash.toString('hex') : undefined,
   created: created.toISOString(),
 });
 
-const toTxResponse = ({ txId, rollup, proofData, viewingKey1, viewingKey2, created }: TxDao): TxServerResponse => ({
+const toTxResponse = ({
+  id: txId,
+  rollupProof,
+  proofData,
+  viewingKey1,
+  viewingKey2,
+  created,
+}: TxDao): TxServerResponse => ({
   txHash: txId.toString('hex'),
-  rollup: !rollup
-    ? undefined
-    : {
-        id: rollup.id,
-        status: rollup.status,
-      },
+  rollup:
+    rollupProof && rollupProof.rollup
+      ? {
+          id: rollupProof.rollup.id,
+          status: rollupProof.rollup.mined ? 'SETTLED' : rollupProof.rollup.ethTxHash ? 'PUBLISHED' : 'CREATING',
+        }
+      : undefined,
   proofData: proofData.toString('hex'),
   viewingKeys: [viewingKey1, viewingKey2].map(vk => vk.toString('hex')),
   created: created.toISOString(),
@@ -118,6 +125,7 @@ export function appFactory(
     ctx.status = 200;
   });
 
+  // TODO: Unify get-blocks and get-rollups.
   router.get('/get-blocks', async (ctx: Koa.Context) => {
     const blocks = await server.getBlocks(+ctx.query.from);
     const response: GetBlocksServerResponse = {

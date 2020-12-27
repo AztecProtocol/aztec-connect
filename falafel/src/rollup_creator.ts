@@ -2,73 +2,50 @@ import { ProofData } from 'barretenberg/client_proofs/proof_data';
 import { HashPath } from 'barretenberg/merkle_tree';
 import { WorldStateDb } from 'barretenberg/world_state_db';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
+import { RollupProofDao } from './entity/rollup_proof';
 import { TxDao } from './entity/tx';
-import { ProofGenerator } from './proof_generator';
-import { Rollup } from './rollup';
+import { ProofGenerator, TxRollup } from './proof_generator';
+import { RollupAggregator } from './rollup_aggregator';
 import { RollupDb } from './rollup_db';
-import { PublishItem, RollupPublisher } from './rollup_publisher';
 
 export class RollupCreator {
   constructor(
     private rollupDb: RollupDb,
     private worldStateDb: WorldStateDb,
     private proofGenerator: ProofGenerator,
-    private rollupPublisher: RollupPublisher,
+    private rollupAggregator: RollupAggregator,
     private rollupSize: number,
   ) {}
-
-  public async init() {
-    await this.proofGenerator.start();
-  }
-
-  public destroy() {
-    this.proofGenerator.stop();
-  }
 
   /**
    * Creates a rollup from the given txs and publishes it.
    * @returns true if successfully published, otherwise false.
    */
-  public async create(txs: TxDao[]) {
-    const rollup = await this.createRollup(txs);
-    const viewingKeys = txs
-      .map(tx => [tx.viewingKey1, tx.viewingKey2])
-      .flat()
-      .filter(k => !!k);
-    const signatures = txs.map(tx => tx.signature!).filter(s => s !== null);
-    const sigIndexes = txs.map((tx, i) => (tx.signature ? i : -1)).filter(i => i >= 0);
+  public async create(txs: TxDao[], flush: boolean) {
+    if (txs.length) {
+      const rollup = await this.createRollup(txs);
 
-    await this.rollupDb.addRollup(rollup, viewingKeys);
+      console.log(`Creating proof for rollup ${rollup.rollupHash.toString('hex')} with ${txs.length} txs...`);
+      const proof = await this.proofGenerator.createTxRollupProof(rollup);
 
-    console.log(`Creating rollup ${rollup.rollupId} with ${txs.length} txs...`);
-    const proof = await this.proofGenerator.createProof(rollup);
+      if (!proof) {
+        // TODO: Once we correctly handle interrupts, this is not a panic scenario.
+        throw new Error('Failed to create proof. This should not happen.');
+      }
 
-    if (!proof) {
-      // This shouldn't happen!? What happens to the txs?
-      // Perhaps need to extract the troublemaker, and then retry?
-      // TODO: Also handle interrupt case.
-      console.log('Failed to create proof.');
-      await this.rollupDb.deleteRollup(rollup.rollupId);
-      return false;
+      const rollupProofDao = new RollupProofDao({
+        id: rollup.rollupHash,
+        txs,
+        proofData: proof,
+        rollupSize: this.rollupSize,
+        dataStartIndex: rollup.dataStartIndex,
+        created: new Date(),
+      });
+
+      await this.rollupDb.addRollupProof(rollupProofDao);
     }
 
-    await this.rollupDb.setRollupProof(rollup.rollupId, proof);
-
-    const publishItem: PublishItem = {
-      rollupId: rollup.rollupId,
-      proof,
-      signatures,
-      sigIndexes,
-      viewingKeys,
-    };
-
-    const success = await this.rollupPublisher.publishRollup(publishItem);
-    if (!success) {
-      await this.rollupDb.deleteRollup(publishItem.rollupId);
-      return false;
-    }
-
-    return true;
+    return await this.rollupAggregator.aggregateRollupProofs(flush);
   }
 
   /**
@@ -79,19 +56,20 @@ export class RollupCreator {
    */
   public interrupt() {
     this.proofGenerator.interrupt();
-    this.rollupPublisher.interrupt();
+    this.rollupAggregator.interrupt();
   }
 
   public clearInterrupt() {
     this.proofGenerator.clearInterrupt();
-    this.rollupPublisher.clearInterrupt();
+    this.rollupAggregator.clearInterrupt();
   }
 
   private async createRollup(txs: TxDao[]) {
     const worldStateDb = this.worldStateDb;
     const dataSize = worldStateDb.getSize(0);
-    const toInsert = BigInt(this.rollupSize * 2);
-    const dataStartIndex = dataSize % toInsert === 0n ? dataSize : dataSize + toInsert - (dataSize % toInsert);
+    const rollupSizePow2 = 1 << Math.ceil(Math.log2(this.rollupSize));
+    const subtreeSize = BigInt(rollupSizePow2 * 2);
+    const dataStartIndex = dataSize % subtreeSize === 0n ? dataSize : dataSize + subtreeSize - (dataSize % subtreeSize);
 
     // Get old data.
     const oldDataRoot = worldStateDb.getRoot(0);
@@ -128,25 +106,23 @@ export class RollupCreator {
     }
 
     if (txs.length < this.rollupSize) {
-      worldStateDb.put(0, dataStartIndex + BigInt(this.rollupSize) * 2n - 1n, Buffer.alloc(64, 0));
+      // Grows the data tree by inserting 0 at last subtree position.
+      await worldStateDb.put(0, dataStartIndex + BigInt(this.rollupSize) * 2n - 1n, Buffer.alloc(64, 0));
+
+      // Add padding data. The vectors that are shorter than their expected size, will be grown to their full circuit
+      // size using the last element in the vector as the value. Padding transactions will use nullifier index 0, and
+      // expect the value at index 0 to be unchanged.
+      const zeroNullPath = await worldStateDb.getHashPath(1, BigInt(0));
+      oldNullPaths.push(zeroNullPath);
+      newNullPaths.push(zeroNullPath);
     }
 
     // Get new data.
     const newDataPath = await worldStateDb.getHashPath(0, dataStartIndex);
     const newDataRoot = worldStateDb.getRoot(0);
+    const dataRootsRoot = worldStateDb.getRoot(2);
 
-    // Get root tree data.
-    const oldDataRootsRoot = worldStateDb.getRoot(2);
-    const rootTreeSize = worldStateDb.getSize(2);
-    const oldDataRootsPath = await worldStateDb.getHashPath(2, rootTreeSize);
-    await worldStateDb.put(2, rootTreeSize, newDataRoot);
-    const newDataRootsRoot = worldStateDb.getRoot(2);
-    const newDataRootsPath = await worldStateDb.getHashPath(2, rootTreeSize);
-
-    await worldStateDb.rollback();
-
-    return new Rollup(
-      await this.rollupDb.getNextRollupId(),
+    return new TxRollup(
       Number(dataStartIndex),
       txs.map(tx => tx.proofData),
 
@@ -160,10 +136,7 @@ export class RollupCreator {
       oldNullPaths,
       newNullPaths,
 
-      oldDataRootsRoot,
-      newDataRootsRoot,
-      oldDataRootsPath,
-      newDataRootsPath,
+      dataRootsRoot,
       dataRootsPaths,
       dataRootsIndicies,
     );

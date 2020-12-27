@@ -30,7 +30,7 @@ export class Web3TokenContract implements TokenContract {
     this.contract = new Contract(contractAddress.toString(), minimalERC20ABI, ethersProvider);
 
     // If ganache, just 1 confirmation.
-    if (chainId === 1337) {
+    if (chainId === 1337 || chainId === 31337) {
       this.confirmations = 1;
     }
   }

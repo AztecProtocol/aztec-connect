@@ -3,6 +3,10 @@ import { randomBytes } from 'crypto';
 import { emptyDir, mkdirp, pathExists, readJson, writeJson } from 'fs-extra';
 import { dirname } from 'path';
 import { JsonRpcProvider, InfuraProvider } from '@ethersproject/providers';
+import { RollupDao } from './entity/rollup';
+import { RollupProofDao } from './entity/rollup_proof';
+import { TxDao } from './entity/tx';
+import { ConnectionOptions } from 'typeorm';
 
 interface ConfVars {
   port: number;
@@ -11,9 +15,9 @@ interface ConfVars {
   infuraApiKey?: string;
   network?: string;
   privateKey?: Buffer;
-  rollupSize: number;
-  maxRollupWaitTime: number;
-  minRollupInterval: number;
+  innerRollupSize: number;
+  outerRollupSize: number;
+  publishInterval: number;
   minConfirmation: number;
   minConfirmationEHW: number;
   gasLimit?: number;
@@ -30,9 +34,9 @@ function getConfVars(): ConfVars {
     NETWORK,
     PRIVATE_KEY,
     PORT,
-    ROLLUP_SIZE,
-    MAX_ROLLUP_WAIT_TIME,
-    MIN_ROLLUP_INTERVAL,
+    INNER_ROLLUP_SIZE,
+    OUTER_ROLLUP_SIZE,
+    PUBLISH_INTERVAL,
     MIN_CONFIRMATION,
     MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW,
     LOCAL_BLOCKCHAIN_INIT_SIZE,
@@ -48,9 +52,9 @@ function getConfVars(): ConfVars {
     infuraApiKey: INFURA_API_KEY,
     network: NETWORK,
     privateKey: PRIVATE_KEY ? Buffer.from(PRIVATE_KEY.slice(2), 'hex') : undefined,
-    rollupSize: +(ROLLUP_SIZE || 2),
-    maxRollupWaitTime: +(MAX_ROLLUP_WAIT_TIME || 10),
-    minRollupInterval: +(MIN_ROLLUP_INTERVAL || 0),
+    innerRollupSize: +(INNER_ROLLUP_SIZE || 1),
+    outerRollupSize: +(OUTER_ROLLUP_SIZE || 2),
+    publishInterval: +(PUBLISH_INTERVAL || 0),
     minConfirmation: +(MIN_CONFIRMATION || 1),
     minConfirmationEHW: +(MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW || 12),
     gasLimit: GAS_LIMIT ? +GAS_LIMIT : undefined,
@@ -126,12 +130,23 @@ async function loadConfVars(path: string) {
   return state;
 }
 
+function getOrmConfig(): ConnectionOptions {
+  return {
+    type: 'sqlite',
+    database: 'data/db.sqlite',
+    entities: [TxDao, RollupProofDao, RollupDao],
+    synchronize: true,
+    logging: false,
+  };
+}
+
 export async function getConfig() {
+  const ormConfig = getOrmConfig();
   const confVars = await loadConfVars('./data/config');
   const { gasLimit, rollupContractAddress } = confVars;
 
   console.log(`Gas limit: ${gasLimit || 'default'}`);
   console.log(`Rollup contract address: ${rollupContractAddress || 'none'}`);
 
-  return { confVars, provider: getProvider(confVars), ethConfig: getEthereumBlockchainConfig(confVars) };
+  return { confVars, ormConfig, provider: getProvider(confVars), ethConfig: getEthereumBlockchainConfig(confVars) };
 }

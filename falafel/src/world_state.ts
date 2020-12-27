@@ -4,19 +4,20 @@ import { WorldStateDb } from 'barretenberg/world_state_db';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { Block, Blockchain } from 'blockchain';
 import { RollupDao } from './entity/rollup';
+import { RollupProofDao } from './entity/rollup_proof';
 import { TxDao } from './entity/tx';
 import { RollupDb } from './rollup_db';
 import { TxAggregator } from './tx_aggregator';
 
-const innerProofDataToTxDao = (tx: InnerProofData, viewingKeys: Buffer[]) => {
+const innerProofDataToTxDao = (tx: InnerProofData, viewingKeys: Buffer[], created: Date) => {
   const txDao = new TxDao();
-  txDao.txId = tx.txId;
+  txDao.id = tx.txId;
   txDao.proofData = tx.toBuffer();
   txDao.viewingKey1 = viewingKeys[0];
   txDao.viewingKey2 = viewingKeys[1];
   txDao.nullifier1 = tx.nullifier1;
   txDao.nullifier2 = tx.nullifier2;
-  txDao.created = new Date();
+  txDao.created = created;
   return txDao;
 };
 
@@ -35,7 +36,6 @@ export class WorldState {
 
     await this.syncState();
 
-    await this.txAggregator.init();
     this.txAggregator.start();
 
     this.blockchain.on('block', block => this.blockQueue.put(block));
@@ -48,7 +48,6 @@ export class WorldState {
     this.blockQueue.cancel();
     this.blockchain.stop();
     await this.txAggregator.stop();
-    this.txAggregator.destroy();
     this.worldStateDb.stop();
   }
 
@@ -57,11 +56,14 @@ export class WorldState {
   }
 
   /**
-   * Processes all rollup blocks from the last settled rollup in the rollup db.
    * Called at startup to bring us back in sync.
+   * Erases any orphaned rollup proofs and unsettled rollups from rollup db.
+   * Processes all rollup blocks from the last settled rollup in the rollup db.
    */
   private async syncState() {
+    this.printState();
     console.log('Syncing state...');
+
     const nextRollupId = await this.rollupDb.getNextRollupId();
     const blocks = await this.blockchain.getBlocks(nextRollupId);
 
@@ -70,6 +72,7 @@ export class WorldState {
     }
 
     await this.rollupDb.deleteUnsettledRollups();
+    await this.rollupDb.deleteOrphanedRollupProofs();
 
     console.log('Sync complete.');
   }
@@ -82,8 +85,12 @@ export class WorldState {
   }
 
   private async handleBlock(block: Block) {
+    // Interrupt completion of any current rollup construction.
     await this.txAggregator.stop();
+
     await this.updateDbs(block);
+
+    // Kick off asynchronously. Allows incoming block to be handled and interrupt completion.
     this.txAggregator.start();
   }
 
@@ -91,45 +98,54 @@ export class WorldState {
    * Inserts the rollup in the given block into the merkle tree and sql db.
    */
   private async updateDbs(block: Block) {
-    const { rollupProofData, viewingKeysData } = block;
-    const rollup = RollupProofData.fromBuffer(rollupProofData, viewingKeysData);
+    const { rollupProofData: rawRollupData, viewingKeysData } = block;
+    const rollupProofData = RollupProofData.fromBuffer(rawRollupData, viewingKeysData);
+    const { rollupId, rollupHash, newDataRoot } = rollupProofData;
 
-    // const existingRollup = await this.rollupDb.getRollupFromHash(rollup.rollupHash);
-    // if (existingRollup && existingRollup.status === 'SETTLED') {
-    //   return;
-    // }
+    console.log(`Processing rollup ${rollupId}: ${rollupHash.toString('hex')}...`);
 
-    console.log(`Processing rollup ${rollup.rollupId}: ${rollup.rollupHash.toString('hex')}...`);
-    await this.addRollupToWorldState(rollup);
-    await this.confirmOrAddRollupToDb(rollup, block);
+    if (newDataRoot.equals(this.worldStateDb.getRoot(0))) {
+      // This must be the rollup we just published. Commit the world state.
+      await this.worldStateDb.commit();
+    } else {
+      // Someone elses rollup. Discard any of our world state modifications and update world state with new rollup.
+      await this.worldStateDb.rollback();
+      await this.addRollupToWorldState(rollupProofData);
+    }
+
+    await this.confirmOrAddRollupToDb(rollupProofData, block);
 
     await this.printState();
   }
 
   private async confirmOrAddRollupToDb(rollup: RollupProofData, block: Block) {
-    const { txHash, rollupProofData } = block;
-    if (await this.rollupDb.getRollupFromHash(rollup.rollupHash)) {
-      await this.rollupDb.confirmRollup(rollup.rollupId);
+    const { txHash, rollupProofData: proofData, created } = block;
+
+    if (await this.rollupDb.getRollupProof(rollup.rollupHash)) {
+      await this.rollupDb.confirmMined(rollup.rollupId);
     } else {
       // Not a rollup we created. Add or replace rollup.
-      const rollupDao = new RollupDao();
-      rollupDao.id = rollup.rollupId;
-      rollupDao.hash = rollup.rollupHash;
-      rollupDao.ethTxHash = txHash.toBuffer();
-      rollupDao.dataRoot = rollup.newDataRoot;
-      rollupDao.proofData = rollupProofData;
-      rollupDao.txs = [];
-      rollupDao.status = 'SETTLED';
-      rollupDao.created = block.created;
-      rollupDao.viewingKeys = rollup.getViewingKeyData();
+      const rollupProofDao = new RollupProofDao();
+      rollupProofDao.id = rollup.rollupHash;
+      rollupProofDao.rollupSize = rollup.rollupSize;
+      rollupProofDao.dataStartIndex = rollup.dataStartIndex;
+      rollupProofDao.proofData = proofData;
+      rollupProofDao.txs = rollup.innerProofData.map((p, i) =>
+        innerProofDataToTxDao(p, rollup.viewingKeys[i], created),
+      );
+      rollupProofDao.created = created;
 
-      for (let i = 0; i < rollup.innerProofData.length; ++i) {
-        const txDao = innerProofDataToTxDao(rollup.innerProofData[i], rollup.viewingKeys[i]);
-        txDao.rollup = rollupDao;
-        rollupDao.txs.push(txDao);
-      }
+      const rollupDao = new RollupDao({
+        id: rollup.rollupId,
+        dataRoot: rollup.newDataRoot,
+        rollupProof: rollupProofDao,
+        ethTxHash: txHash.toBuffer(),
+        mined: true,
+        created: new Date(),
+        viewingKeys: Buffer.concat(rollup.viewingKeys.flat()),
+      });
 
-      await this.rollupDb.addRollupDao(rollupDao);
+      await this.rollupDb.addRollup(rollupDao);
     }
   }
 
