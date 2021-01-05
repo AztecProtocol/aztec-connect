@@ -28,7 +28,7 @@ function getEthereumBlockchainConfig() {
   } else if (ETHEREUM_HOST && ROLLUP_CONTRACT_ADDRESS) {
     console.log(`Ethereum host: ${ETHEREUM_HOST}`);
     console.log(`Rollup contract address: ${ROLLUP_CONTRACT_ADDRESS}`);
-    const provider = new EthersAdapter(new ethers.providers.WebSocketProvider(ETHEREUM_HOST));
+    const provider = new EthersAdapter(new ethers.providers.JsonRpcProvider(ETHEREUM_HOST));
     const ethConfig = { networkOrHost: ETHEREUM_HOST };
     return { provider, ethConfig };
   }
