@@ -46,6 +46,7 @@
     "koa-router": "^7.4.0",
     "log-timestamp": "^0.3.0",
     "moment": "^2.25.3",
+    "prom-client": "^13.0.0",
     "promise-readable": "^5.0.4",
     "source-map-support": "^0.5.19",
     "sqlite3": "^4.2.0",

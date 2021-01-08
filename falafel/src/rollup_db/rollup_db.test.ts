@@ -231,4 +231,25 @@ describe('rollup_db', () => {
     expect(settledRollups2.length).toBe(1);
     expect(settledRollups2[0].rollupProof).not.toBeUndefined();
   });
+
+  it('should get unsettled tx count', async () => {
+    const tx0 = randomTx();
+    await rollupDb.addTx(tx0);
+
+    expect(await rollupDb.getUnsettledTxCount()).toBe(1);
+
+    const rollupProof = randomRollupProof([tx0], 0);
+    await rollupDb.addRollupProof(rollupProof);
+
+    expect(await rollupDb.getUnsettledTxCount()).toBe(1);
+
+    const rollup = randomRollup(0, rollupProof);
+    await rollupDb.addRollup(rollup);
+
+    expect(await rollupDb.getUnsettledTxCount()).toBe(1);
+
+    await rollupDb.confirmMined(rollup.id);
+
+    expect(await rollupDb.getUnsettledTxCount()).toBe(0);
+  });
 });

@@ -6,6 +6,7 @@ import { Block, Blockchain } from 'blockchain';
 import { RollupDao } from './entity/rollup';
 import { RollupProofDao } from './entity/rollup_proof';
 import { TxDao } from './entity/tx';
+import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
 import { TxAggregator } from './tx_aggregator';
 
@@ -29,6 +30,7 @@ export class WorldState {
     public worldStateDb: WorldStateDb,
     private blockchain: Blockchain,
     private txAggregator: TxAggregator,
+    private metrics: Metrics,
   ) {}
 
   public async start() {
@@ -98,6 +100,7 @@ export class WorldState {
    * Inserts the rollup in the given block into the merkle tree and sql db.
    */
   private async updateDbs(block: Block) {
+    const end = this.metrics.processBlockTimer();
     const { rollupProofData: rawRollupData, viewingKeysData } = block;
     const rollupProofData = RollupProofData.fromBuffer(rawRollupData, viewingKeysData);
     const { rollupId, rollupHash, newDataRoot } = rollupProofData;
@@ -116,13 +119,25 @@ export class WorldState {
     await this.confirmOrAddRollupToDb(rollupProofData, block);
 
     await this.printState();
+    end();
   }
 
   private async confirmOrAddRollupToDb(rollup: RollupProofData, block: Block) {
     const { txHash, rollupProofData: proofData, created } = block;
 
-    if (await this.rollupDb.getRollupProof(rollup.rollupHash)) {
+    const rollupProof = await this.rollupDb.getRollupProof(rollup.rollupHash, true);
+    if (rollupProof) {
+      // Our rollup. Confirm mined and track settlement times.
       await this.rollupDb.confirmMined(rollup.rollupId);
+
+      for (const inner of rollup.innerProofData) {
+        const tx = rollupProof.txs.find(tx => tx.id.equals(inner.txId));
+        if (!tx) {
+          console.log('Rollup tx missing. Not tracking time...');
+          continue;
+        }
+        this.metrics.txSettlementDuration(block.created.getTime() - tx.created.getTime());
+      }
     } else {
       // Not a rollup we created. Add or replace rollup.
       const rollupProofDao = new RollupProofDao();
@@ -140,8 +155,8 @@ export class WorldState {
         dataRoot: rollup.newDataRoot,
         rollupProof: rollupProofDao,
         ethTxHash: txHash.toBuffer(),
-        mined: true,
-        created: new Date(),
+        mined: block.created,
+        created: block.created,
         viewingKeys: Buffer.concat(rollup.viewingKeys.flat()),
       });
 

@@ -12,6 +12,7 @@ import { Server, ServerConfig } from './server';
 import 'log-timestamp';
 import { getConfig } from './config';
 import { EthAddress } from 'barretenberg/address';
+import { Metrics } from './metrics';
 
 async function main() {
   const {
@@ -44,9 +45,9 @@ async function main() {
     signingAddress: provider?.signingAddress,
   };
   const rollupDb = new RollupDb(connection);
-
   const worldStateDb = new WorldStateDb();
-  const server = new Server(serverConfig, blockchain, rollupDb, worldStateDb);
+  const metrics = new Metrics(rollupDb);
+  const server = new Server(serverConfig, blockchain, rollupDb, worldStateDb, metrics);
 
   const shutdown = async () => {
     await server.stop();
@@ -59,7 +60,7 @@ async function main() {
   await server.start();
 
   const serverStatus = await server.getStatus();
-  const app = appFactory(server, apiPrefix, connection, worldStateDb, serverStatus, serverAuthToken);
+  const app = appFactory(server, apiPrefix, metrics, connection, worldStateDb, serverStatus, serverAuthToken);
 
   const httpServer = http.createServer(app.callback());
   httpServer.listen(port);

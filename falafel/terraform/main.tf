@@ -49,11 +49,22 @@ resource "aws_service_discovery_service" "falafel" {
     namespace_id = data.terraform_remote_state.setup_iac.outputs.local_service_discovery_id
 
     dns_records {
-      ttl  = 10
+      ttl  = 60
       type = "A"
     }
 
+    dns_records {
+      ttl  = 60
+      type = "SRV"
+    }
+
     routing_policy = "MULTIVALUE"
+  }
+
+  # Terraform just fails if this resource changes and you have registered instances.
+  provisioner "local-exec" {
+    when    = destroy
+    command = "${path.module}/servicediscovery-drain.sh ${self.id}"
   }
 }
 
@@ -74,7 +85,8 @@ echo 'ECS_INSTANCE_ATTRIBUTES={"group": "falafel"}' >> /etc/ecs/ecs.config
 USER_DATA
 
   tags = {
-    Name = "falafel-container-instance-az1"
+    Name       = "falafel-container-instance-az1"
+    prometheus = ""
   }
 }
 
@@ -150,7 +162,7 @@ resource "aws_ecs_task_definition" "falafel" {
     "name": "falafel",
     "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/falafel:latest",
     "essential": true,
-    "memoryReservation": 256,
+    "memoryReservation": 32768,
     "portMappings": [
       {
         "containerPort": 80
@@ -204,6 +216,30 @@ resource "aws_ecs_task_definition" "falafel" {
         "awslogs-stream-prefix": "ecs"
       }
     }
+  },
+  {
+    "name": "metrics",
+    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/metrics-sidecar:latest",
+    "memoryReservation": 256,
+    "portMappings": [
+      {
+        "containerPort": 9545
+      }
+    ],
+    "environment": [
+      {
+        "name": "SERVICE",
+        "value": "falafel"
+      }
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/fargate/service/falafel",
+        "awslogs-region": "eu-west-2",
+        "awslogs-stream-prefix": "ecs"
+      }
+    }
   }
 ]
 DEFINITIONS
@@ -236,7 +272,9 @@ resource "aws_ecs_service" "falafel" {
   }
 
   service_registries {
-    registry_arn = aws_service_discovery_service.falafel.arn
+    registry_arn   = aws_service_discovery_service.falafel.arn
+    container_name = "falafel"
+    container_port = 80
   }
 
   placement_constraints {

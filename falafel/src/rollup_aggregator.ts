@@ -2,6 +2,7 @@ import { RollupProofData } from 'barretenberg/rollup_proof';
 import { WorldStateDb } from 'barretenberg/world_state_db';
 import { RollupDao } from './entity/rollup';
 import { RollupProofDao } from './entity/rollup_proof';
+import { Metrics } from './metrics';
 import { ProofGenerator } from './proof_generator';
 import { RootRollup } from './proof_generator/root_rollup';
 import { RollupDb } from './rollup_db';
@@ -15,6 +16,7 @@ export class RollupAggregator {
     private worldStateDb: WorldStateDb,
     private innerRollupSize: number,
     private outerRollupSize: number,
+    private metrics: Metrics,
   ) {}
 
   /**
@@ -31,7 +33,9 @@ export class RollupAggregator {
 
     if (currentSize === this.outerRollupSize || flush) {
       const rootRollup = await this.createRootRollup(innerProofs);
+      const end = this.metrics.rootRollupTimer();
       const proofData = await this.proofGenerator.createAggregateProof(rootRollup);
+      end();
 
       if (!proofData) {
         throw new Error('Failed to create valid aggregate rollup.');

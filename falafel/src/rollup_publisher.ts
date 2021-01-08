@@ -3,6 +3,7 @@ import { TxHash } from 'barretenberg/rollup_provider';
 import { Blockchain } from 'blockchain';
 import moment, { Duration } from 'moment';
 import { RollupDao } from './entity/rollup';
+import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
 
 interface PublishItem {
@@ -22,6 +23,7 @@ export class RollupPublisher {
     private rollupDb: RollupDb,
     private blockchain: Blockchain,
     private publishInterval: Duration,
+    private metrics: Metrics,
     private signingAddress?: EthAddress,
   ) {}
 
@@ -56,10 +58,12 @@ export class RollupPublisher {
         sigIndexes,
       };
 
+      const end = this.metrics.publishTimer();
       const txHash = await this.sendRollupProof(item);
       if (!txHash) {
         break;
       }
+      end();
 
       await this.rollupDb.confirmSent(rollupId, txHash);
 

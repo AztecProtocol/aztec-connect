@@ -26,6 +26,6 @@ export class RollupDao {
   @Column({ nullable: true })
   public ethTxHash!: Buffer;
 
-  @Column({ default: false })
-  public mined!: boolean;
+  @Column({ nullable: true })
+  public mined!: Date;
 }

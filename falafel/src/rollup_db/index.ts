@@ -1,5 +1,5 @@
 import { TxHash } from 'barretenberg/rollup_provider';
-import { Connection, In, IsNull, MoreThanOrEqual, Repository } from 'typeorm';
+import { Connection, In, IsNull, MoreThanOrEqual, Not, Repository } from 'typeorm';
 import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
@@ -42,6 +42,19 @@ export class RollupDb {
     return this.txRep.count({
       where: { rollupProof: null },
     });
+  }
+
+  public async getTotalTxCount() {
+    return this.txRep.count();
+  }
+
+  public async getUnsettledTxCount() {
+    return await this.txRep
+      .createQueryBuilder('tx')
+      .leftJoinAndSelect('tx.rollupProof', 'rp')
+      .leftJoinAndSelect('rp.rollup', 'r')
+      .where('tx.rollupProof IS NULL OR rp.rollup IS NULL OR r.mined IS NULL')
+      .getCount();
   }
 
   public async getPendingTxs(take?: number) {
@@ -98,7 +111,7 @@ export class RollupDb {
   }
 
   public async getNextRollupId() {
-    const latestRollup = await this.rollupRep.findOne({ mined: true }, { order: { id: 'DESC' } });
+    const latestRollup = await this.rollupRep.findOne({ mined: Not(IsNull()) }, { order: { id: 'DESC' } });
     return latestRollup ? latestRollup.id + 1 : 0;
   }
 
@@ -123,12 +136,12 @@ export class RollupDb {
   }
 
   public async confirmMined(id: number) {
-    await this.rollupRep.update({ id }, { mined: true });
+    await this.rollupRep.update({ id }, { mined: new Date() });
   }
 
   public getSettledRollups(from = 0, descending = false, take?: number) {
     return this.rollupRep.find({
-      where: { id: MoreThanOrEqual(from), mined: true },
+      where: { id: MoreThanOrEqual(from), mined: Not(IsNull()) },
       order: { id: descending ? 'DESC' : 'ASC' },
       relations: ['rollupProof'],
       take,
@@ -137,13 +150,13 @@ export class RollupDb {
 
   public getUnsettledRollups() {
     return this.rollupRep.find({
-      where: { mined: false },
+      where: { mined: IsNull() },
       order: { id: 'ASC' },
     });
   }
 
   public async deleteUnsettledRollups() {
-    await this.rollupRep.delete({ mined: false });
+    await this.rollupRep.delete({ mined: IsNull() });
   }
 
   public async getRollupByDataRoot(dataRoot: Buffer) {

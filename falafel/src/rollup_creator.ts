@@ -4,6 +4,7 @@ import { WorldStateDb } from 'barretenberg/world_state_db';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { RollupProofDao } from './entity/rollup_proof';
 import { TxDao } from './entity/tx';
+import { Metrics } from './metrics';
 import { ProofGenerator, TxRollup } from './proof_generator';
 import { RollupAggregator } from './rollup_aggregator';
 import { RollupDb } from './rollup_db';
@@ -15,6 +16,7 @@ export class RollupCreator {
     private proofGenerator: ProofGenerator,
     private rollupAggregator: RollupAggregator,
     private rollupSize: number,
+    private metrics: Metrics,
   ) {}
 
   /**
@@ -26,7 +28,9 @@ export class RollupCreator {
       const rollup = await this.createRollup(txs);
 
       console.log(`Creating proof for rollup ${rollup.rollupHash.toString('hex')} with ${txs.length} txs...`);
+      const end = this.metrics.txRollupTimer();
       const proof = await this.proofGenerator.createTxRollupProof(rollup);
+      end();
 
       if (!proof) {
         // TODO: Once we correctly handle interrupts, this is not a panic scenario.

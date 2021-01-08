@@ -14,6 +14,7 @@ import { WorldState } from './world_state';
 import { RollupPublisher } from './rollup_publisher';
 import { RollupAggregator } from './rollup_aggregator';
 import moment from 'moment';
+import { Metrics } from './metrics';
 
 export interface ServerConfig {
   readonly innerRollupSize: number;
@@ -32,11 +33,12 @@ export class Server {
     private blockchain: Blockchain,
     private rollupDb: RollupDb,
     worldStateDb: WorldStateDb,
+    private metrics: Metrics,
   ) {
     const { innerRollupSize, outerRollupSize, publishInterval, signingAddress } = config;
 
     this.proofGenerator = new ProofGenerator(innerRollupSize, outerRollupSize);
-    const rollupPublisher = new RollupPublisher(rollupDb, blockchain, publishInterval, signingAddress);
+    const rollupPublisher = new RollupPublisher(rollupDb, blockchain, publishInterval, metrics, signingAddress);
     const rollupAggregator = new RollupAggregator(
       this.proofGenerator,
       rollupPublisher,
@@ -44,6 +46,7 @@ export class Server {
       worldStateDb,
       innerRollupSize,
       outerRollupSize,
+      metrics,
     );
     const rollupCreator = new RollupCreator(
       rollupDb,
@@ -51,9 +54,10 @@ export class Server {
       this.proofGenerator,
       rollupAggregator,
       innerRollupSize,
+      metrics,
     );
     const txAggregator = new TxAggregator(rollupCreator, rollupDb, innerRollupSize, publishInterval);
-    this.worldState = new WorldState(rollupDb, worldStateDb, blockchain, txAggregator);
+    this.worldState = new WorldState(rollupDb, worldStateDb, blockchain, txAggregator, metrics);
     this.txReceiver = new TxReceiver(rollupDb, blockchain);
   }
 
@@ -143,7 +147,12 @@ export class Server {
   }
 
   public async receiveTx(tx: Tx) {
-    return await this.txReceiver.receiveTx(tx);
+    const end = this.metrics.receiveTxTimer();
+    const start = new Date().getTime();
+    const result = await this.txReceiver.receiveTx(tx);
+    console.log(`Received tx in ${new Date().getTime() - start}ms`);
+    end();
+    return result;
   }
 
   public flushTxs() {

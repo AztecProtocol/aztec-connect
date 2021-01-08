@@ -203,6 +203,27 @@ jobs:
           working_directory: website
           command: build website:latest
 
+  metrics:
+    docker:
+      - image: aztecprotocol/build-image
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker:
+          version: 19.03.13
+      - run:
+          name: 'Build sidecar'
+          working_directory: metrics/sidecar
+          command: build metrics-sidecar:latest
+      - run:
+          name: 'Build prometheus'
+          working_directory: metrics/prometheus
+          command: build prometheus:latest
+      - run:
+          name: 'Build grafana'
+          working_directory: metrics/grafana
+          command: build grafana:latest
+
   deploy:
     docker:
       - image: aztecprotocol/build-image
@@ -276,6 +297,13 @@ jobs:
           command: |
             deploy website:latest
             deploy_s3 website:latest
+      - run:
+          name: 'metrics'
+          working_directory: metrics
+          command: |
+            cd sidecar && deploy metrics-sidecar:latest && cd ..
+            cd prometheus && deploy prometheus:latest && cd ..
+            cd grafana && deploy grafana:latest && cd ..
 
 workflows:
   build:
@@ -320,6 +348,7 @@ workflows:
           requires:
             - sdk
       - website
+      - metrics
       - deploy:
           requires:
             - x86_64-linux-gcc

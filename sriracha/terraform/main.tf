@@ -147,6 +147,30 @@ resource "aws_ecs_task_definition" "sriracha" {
         "awslogs-stream-prefix": "ecs"
       }
     }
+  },
+  {
+    "name": "metrics",
+    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/metrics-sidecar:latest",
+    "memoryReservation": 256,
+    "portMappings": [
+      {
+        "containerPort": 9545
+      }
+    ],
+    "environment": [
+      {
+        "name": "SERVICE",
+        "value": "sriracha"
+      }
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/fargate/service/sriracha",
+        "awslogs-region": "eu-west-2",
+        "awslogs-stream-prefix": "ecs"
+      }
+    }
   }
 ]
 DEFINITIONS

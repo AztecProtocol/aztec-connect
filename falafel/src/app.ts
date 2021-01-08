@@ -22,6 +22,7 @@ import { TxDao } from './entity/tx';
 import { BlockResolver, RollupResolver, TxResolver, ServerStatusResolver } from './resolver';
 import { Server } from './server';
 import { RollupDao } from './entity/rollup';
+import { Metrics } from './metrics';
 
 // eslint-disable-next-line
 const cors = require('@koa/cors');
@@ -77,6 +78,7 @@ const bufferFromHex = (hexStr: string) => Buffer.from(hexStr.replace(/^0x/i, '')
 export function appFactory(
   server: Server,
   prefix: string,
+  metrics: Metrics,
   connection: Connection,
   worldStateDb: WorldStateDb,
   serverStatus: RollupProviderStatus,
@@ -195,6 +197,11 @@ export function appFactory(
     };
     ctx.set('content-type', 'application/json');
     ctx.body = response;
+    ctx.status = 200;
+  });
+
+  router.get('/metrics', async (ctx: Koa.Context) => {
+    ctx.body = await metrics.getMetrics();
     ctx.status = 200;
   });
 
