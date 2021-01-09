@@ -34,20 +34,19 @@ async function main() {
   const connection = await createConnection(ormConfig);
 
   const blockchain =
-    provider && ethConfig && rollupContractAddress
-      ? await EthereumBlockchain.new(ethConfig, EthAddress.fromString(rollupContractAddress), provider.provider)
+    ethConfig.networkOrHost !== 'local'
+      ? await EthereumBlockchain.new(ethConfig, EthAddress.fromString(rollupContractAddress!), provider)
       : new LocalBlockchain(connection, innerRollupSize * outerRollupSize, localBlockchainInitSize);
 
   const serverConfig: ServerConfig = {
     innerRollupSize,
     outerRollupSize,
     publishInterval: moment.duration(publishInterval, 's'),
-    signingAddress: provider?.signingAddress,
   };
   const rollupDb = new RollupDb(connection);
   const worldStateDb = new WorldStateDb();
   const metrics = new Metrics(rollupDb);
-  const server = new Server(serverConfig, blockchain, rollupDb, worldStateDb, metrics);
+  const server = new Server(serverConfig, blockchain, rollupDb, worldStateDb, metrics, provider);
 
   const shutdown = async () => {
     await server.stop();

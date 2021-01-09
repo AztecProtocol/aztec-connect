@@ -1,9 +1,8 @@
-import { EthAddress } from 'barretenberg/address';
 import { emptyDir } from 'fs-extra';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { TxHash } from 'barretenberg/rollup_provider';
 import { WorldStateDb } from 'barretenberg/world_state_db';
-import { Block, Blockchain } from 'blockchain';
+import { Block, Blockchain, EthereumProvider } from 'blockchain';
 import { Duration } from 'moment';
 import { ProofGenerator } from './proof_generator';
 import { RollupDb } from './rollup_db';
@@ -20,7 +19,6 @@ export interface ServerConfig {
   readonly innerRollupSize: number;
   readonly outerRollupSize: number;
   readonly publishInterval: Duration;
-  readonly signingAddress?: EthAddress;
 }
 
 export class Server {
@@ -34,11 +32,12 @@ export class Server {
     private rollupDb: RollupDb,
     worldStateDb: WorldStateDb,
     private metrics: Metrics,
+    provider: EthereumProvider,
   ) {
-    const { innerRollupSize, outerRollupSize, publishInterval, signingAddress } = config;
+    const { innerRollupSize, outerRollupSize, publishInterval } = config;
 
     this.proofGenerator = new ProofGenerator(innerRollupSize, outerRollupSize);
-    const rollupPublisher = new RollupPublisher(rollupDb, blockchain, publishInterval, metrics, signingAddress);
+    const rollupPublisher = new RollupPublisher(rollupDb, blockchain, publishInterval, metrics, provider);
     const rollupAggregator = new RollupAggregator(
       this.proofGenerator,
       rollupPublisher,

@@ -7,11 +7,12 @@
   "scripts": {
     "build": "yarn clean && yarn compile && tsc -p tsconfig.cjs.json && tsc -p tsconfig.es.json && node ./package.js && chmod +x ./dest/deploy/index.js",
     "build:dev": "tsc -p tsconfig.cjs.json --watch & tsc -p tsconfig.es.json --watch",
-    "compile": "yarn buidler compile",
+    "compile": "yarn hardhat compile",
     "clean": "rm -rf ./cache ./dest ./dest-es",
-    "test": "yarn test:src && buidler test",
+    "test": "yarn test:src && yarn test:contract",
+    "test:contract": "hardhat test",
     "test:src": "jest",
-    "test:ganache": "yarn buidler --network ganache test",
+    "test:ganache": "yarn hardhat --network ganache test",
     "deploy": "node ./dest/deploy/index.js"
   },
   "bin": {
@@ -43,9 +44,8 @@
     "typescript": "^3.5.3"
   },
   "devDependencies": {
-    "@nomiclabs/buidler": "^1.4.8",
-    "@nomiclabs/buidler-ethers": "^2.0.2",
-    "@nomiclabs/buidler-waffle": "^2.1.0",
+    "@nomiclabs/hardhat-ethers": "^2.0.1",
+    "@nomiclabs/hardhat-waffle": "^2.0.0",
     "@openzeppelin/contracts": "^3.0.1",
     "@types/debug": "^4.1.5",
     "@types/jest": "^26.0.15",
@@ -58,6 +58,7 @@
     "eslint-config-prettier": "^6.11.0",
     "ethereum-waffle": "3.0.0",
     "ethereumjs-util": "^7.0.7",
+    "hardhat": "^2.0.4",
     "jest": "^26.6.1",
     "sinon": "^9.0.2",
     "solidity-docgen": "^0.5.3",

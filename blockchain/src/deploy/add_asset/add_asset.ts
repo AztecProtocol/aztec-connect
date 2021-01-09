@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { Contract, ContractFactory, Signer } from 'ethers';
-import ERC20Permit from '../../artifacts/ERC20Permit.json';
-import ERC20Mintable from '../../artifacts/ERC20Mintable.json';
+import ERC20Permit from '../../artifacts/contracts/test/ERC20Permit.sol/ERC20Permit.json';
+import ERC20Mintable from '../../artifacts/contracts/test/ERC20Mintable.sol/ERC20Mintable.json';
 
 export async function addAsset(rollup: Contract, signer: Signer, supportsPermit: boolean) {
   if (supportsPermit) {

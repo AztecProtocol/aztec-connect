@@ -37,6 +37,7 @@ const generateRollup = (rollupId: number, rollupSize: number) => {
     randomBytes(32),
     randomBytes(32),
     randomBytes(32),
+    randomBytes(32),
     rollupSize,
     innerProofs,
     randomBytes(16 * 32),
@@ -72,6 +73,10 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
 
   public getTokenContractAddresses() {
     return [EthAddress.ZERO];
+  }
+
+  public async getEthBalance(account: EthAddress) {
+    return BigInt(0);
   }
 
   public async start() {
@@ -118,6 +123,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
       dataSize: this.dataStartIndex,
       escapeOpen: false,
       numEscapeBlocksRemaining: 0,
+      fees: new Map(),
     };
   }
 

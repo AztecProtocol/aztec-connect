@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 
 export class ProofData {
-  static readonly NUM_PUBLIC_INPUTS = 13;
+  static readonly NUM_PUBLIC_INPUTS = 14;
   static readonly NUM_PUBLISHED_PUBLIC_INPUTS = 12;
 
   public readonly txId: Buffer;
@@ -16,6 +16,7 @@ export class ProofData {
   public readonly inputOwner: Buffer;
   public readonly outputOwner: Buffer;
   public readonly noteTreeRoot: Buffer;
+  public readonly txFee: Buffer;
 
   constructor(public proofData: Buffer, public viewingKeys?: Buffer[], public signature?: Buffer) {
     this.proofId = proofData.readUInt32BE(0 * 32 + 28);
@@ -31,6 +32,7 @@ export class ProofData {
 
     // Not published as part of inner proofs.
     this.noteTreeRoot = proofData.slice(12 * 32, 12 * 32 + 32);
+    this.txFee = proofData.slice(13 * 32, 13 * 32 + 32);
 
     this.txId = createHash('sha256')
       .update(this.proofData.slice(0, ProofData.NUM_PUBLISHED_PUBLIC_INPUTS * 32))
@@ -40,7 +42,7 @@ export class ProofData {
   /**
    * TODO: Get rid of this in favor of just signing tx id.
    * The data we sign over for authorizing deposits, consists of the data that is published on chain.
-   * This excludes the last field, the noteTreeRoot.
+   * This excludes the last two fields, the noteTreeRoot and the txFee.
    */
   getDepositSigningData() {
     return this.proofData.slice(0, ProofData.NUM_PUBLISHED_PUBLIC_INPUTS * 32);

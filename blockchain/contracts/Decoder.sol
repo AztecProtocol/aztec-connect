@@ -41,7 +41,7 @@ contract Decoder {
             newNullRoot := mload(add(dataStart, 0xc0))
             oldRootRoot := mload(add(dataStart, 0xe0))
             newRootRoot := mload(add(dataStart, 0x100))
-            numTxs := mload(add(dataStart, 0x120))
+            numTxs := mload(add(dataStart, 0x140))
         }
         return (
             [rollupId, rollupSize, dataStartIndex, numTxs],
@@ -52,6 +52,14 @@ contract Decoder {
             oldRootRoot,
             newRootRoot
         );
+    }
+
+    function extractTotalTxFee(bytes memory proofData) internal pure returns (uint256) {
+        uint256 totalTxFee;
+        assembly {
+            totalTxFee := mload(add(proofData, 0x140))
+        }
+        return totalTxFee;
     }
 
     /**

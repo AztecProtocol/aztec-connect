@@ -60,6 +60,13 @@ export class TxReceiver {
         break;
     }
 
+    const { fees } = await this.blockchain.getStatus();
+    const requiredFee = fees.get(proof.proofId) || BigInt(0);
+    const txFee = toBigIntBE(proof.txFee);
+    if (txFee < requiredFee) {
+      throw new Error('Insufficient fee.');
+    }
+
     const dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
 
     const txDao = new TxDao({

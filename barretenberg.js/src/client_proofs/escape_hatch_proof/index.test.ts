@@ -110,6 +110,10 @@ describe('escape_hatch_proof', () => {
     const outputNote2 = new Note(pubKey, createNoteSecret(), BigInt(10), 0, 0);
     const outputNotes = [outputNote1, outputNote2];
 
+    const txFee = BigInt(3);
+    const publicInput = BigInt(0) + txFee;
+    const publicOutput = BigInt(120);
+
     // Setup state, simulate inputs notes already being in
     await worldStateDb.put(dataTreeId, BigInt(inputIndexes[0]), inputNote1Enc);
     await worldStateDb.put(dataTreeId, BigInt(inputIndexes[1]), inputNote2Enc);
@@ -138,19 +142,19 @@ describe('escape_hatch_proof', () => {
     const outputOwner = EthAddress.randomAddress();
 
     const sigMsg = computeSigningData(
-        [inputNote1, inputNote2, outputNote1, outputNote2],
-        0,
-        1,
-        inputOwner,
-        outputOwner,
-        BigInt(0),
-        BigInt(120),
-        0,
-        2,
-        privateKey,
-        pedersen,
-        noteAlgos,
-      );
+      [inputNote1, inputNote2, outputNote1, outputNote2],
+      0,
+      1,
+      inputOwner,
+      outputOwner,
+      publicInput,
+      publicOutput,
+      0,
+      2,
+      privateKey,
+      pedersen,
+      noteAlgos,
+    );
     const signature = schnorr.constructSignature(sigMsg, privateKey);
 
     const aliasHash = AliasHash.fromAlias('user_zero', blake2s);
@@ -184,8 +188,8 @@ describe('escape_hatch_proof', () => {
     const rollupId = 0;
 
     const joinSplitTx = new JoinSplitTx(
-      BigInt(0),
-      BigInt(120),
+      publicInput,
+      publicOutput,
       0,
       2,
       inputIndexes,
@@ -241,6 +245,7 @@ describe('escape_hatch_proof', () => {
     expect(escapeHatchProof.newNullRoot).toEqual(newNullifierRoots[1]); // TODO
     expect(escapeHatchProof.oldDataRootsRoot).toEqual(oldDataRootsRoot);
     expect(escapeHatchProof.newDataRootsRoot).toEqual(newDataRootsRoot);
+    expect(escapeHatchProof.totalTxFee).toEqual(toBufferBE(txFee, 32));
     expect(escapeHatchProof.numTxs).toEqual(1);
   });
 });

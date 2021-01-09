@@ -2,7 +2,6 @@
 // Copyright 2020 Spilsbury Holdings Ltd
 pragma solidity >=0.6.10 <0.7.0;
 
-import {ECDSA} from '@openzeppelin/contracts/cryptography/ECDSA.sol';
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
@@ -11,6 +10,7 @@ import {IVerifier} from './interfaces/IVerifier.sol';
 import {IRollupProcessor} from './interfaces/IRollupProcessor.sol';
 import {IERC20Permit} from './interfaces/IERC20Permit.sol';
 import {Decoder} from './Decoder.sol';
+import './libraries/RollupProcessorLibrary.sol';
 
 /**
  * @title Rollup Processor
@@ -29,16 +29,20 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
 
     IVerifier public verifier;
 
-    uint256 public constant txPubInputLength = 12 * 32; // public inputs length for of each inner proof tx
-    uint256 public constant rollupPubInputLength = 10 * 32;
+    uint256 public constant txNumPubInputs = 12;
+    uint256 public constant rollupNumPubInputs = 11;
+    uint256 public constant txPubInputLength = txNumPubInputs * 32; // public inputs length for of each inner proof tx
+    uint256 public constant rollupPubInputLength = rollupNumPubInputs * 32;
+    uint256 public constant ethAssetId = 0;
     uint256 public immutable escapeBlockLowerBound;
     uint256 public immutable escapeBlockUpperBound;
 
     event RollupProcessed(uint256 indexed rollupId, bytes32 dataRoot, bytes32 nullRoot);
-    event Deposit(address depositorAddress, uint256 depositValue);
-    event Withdraw(address withdrawAddress, uint256 withdrawValue);
+    event Deposit(uint256 assetId, address depositorAddress, uint256 depositValue);
+    event Withdraw(uint256 assetId, address withdrawAddress, uint256 withdrawValue);
     event WithdrawError(bytes errorReason);
     event AssetAdded(uint256 indexed assetId, address indexed assetAddress);
+    event RollupProviderUpdated(address indexed providerAddress, bool valid);
 
     // Array of supported ERC20 token address. The array index of the ERC20 token address
     // corresponds to the assetId of the asset
@@ -51,6 +55,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
     // Mapping from assetId to mapping of userAddress to public userBalance stored on this contract
     mapping(uint256 => mapping(address => uint256)) public userPendingDeposits;
 
+    mapping(address => bool) rollupProviders;
+
     constructor(
         address _verifierAddress,
         uint256 _escapeBlockLowerBound,
@@ -59,6 +65,12 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
         verifier = IVerifier(_verifierAddress);
         escapeBlockLowerBound = _escapeBlockLowerBound;
         escapeBlockUpperBound = _escapeBlockUpperBound;
+        rollupProviders[msg.sender] = true;
+    }
+
+    function setRollupProvider(address provderAddress, bool valid) public override onlyOwner {
+        rollupProviders[provderAddress] = valid;
+        emit RollupProviderUpdated(provderAddress, valid);
     }
 
     /**
@@ -174,9 +186,14 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
         uint256 assetId,
         uint256 amount,
         address depositorAddress
-    ) external override {
-        address assetAddress = getSupportedAssetAddress(assetId);
-        internalDeposit(assetId, assetAddress, depositorAddress, amount);
+    ) external override payable {
+        if (assetId == ethAssetId) {
+            require(amount == msg.value, 'Rollup Processor: INSUFFICIENT_ETH_TRANSFER');
+            increasePendingDepositBalance(assetId, depositorAddress, amount);
+        } else {
+            address assetAddress = getSupportedAssetAddress(assetId);
+            internalDeposit(assetId, assetAddress, depositorAddress, amount);
+        }
     }
 
     /**
@@ -227,7 +244,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
         require(rollupAllowance >= amount, 'Rollup Processor: INSUFFICIENT_TOKEN_APPROVAL');
 
         IERC20(assetAddress).transferFrom(depositorAddress, address(this), amount);
-        emit Deposit(depositorAddress, amount);
+        emit Deposit(assetId, depositorAddress, amount);
     }
 
     /**
@@ -260,8 +277,42 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
         uint256[] calldata sigIndexes,
         bytes calldata viewingKeys
     ) external override {
+        (bool isOpen, ) = getEscapeHatchStatus();
+        require(isOpen, 'Rollup Processor: ESCAPE_BLOCK_RANGE_INCORRECT');
+
+        processRollupProof(proofData, signatures, sigIndexes, viewingKeys, msg.sender);
+    }
+
+    function processRollupSig(
+        bytes calldata proofData,
+        bytes calldata signatures,
+        uint256[] calldata sigIndexes,
+        bytes calldata viewingKeys,
+        bytes calldata providerSignature,
+        address rollupProvider
+    ) external override {
+        require(rollupProviders[rollupProvider], 'Rollup Processor: UNKNOWN_PROVIDER');
+
+        bytes calldata publicInputs = proofData[0:rollupPubInputLength];
+        RollupProcessorLibrary.validateSignature(publicInputs, providerSignature, rollupProvider);
+
+        processRollupProof(proofData, signatures, sigIndexes, viewingKeys, rollupProvider);
+    }
+
+    function processRollupProof(
+        bytes calldata proofData,
+        bytes calldata signatures,
+        uint256[] calldata sigIndexes,
+        bytes calldata viewingKeys,
+        address feeRecipient
+    ) internal {
         uint256 numTxs = updateAndVerifyProof(proofData);
         processTransactions(proofData[rollupPubInputLength:], numTxs, signatures, sigIndexes);
+
+        uint256 totalTxFee = extractTotalTxFee(proofData);
+        if (totalTxFee > 0) {
+            feeRecipient.call{value: totalTxFee}('');
+        }
     }
 
     /**
@@ -282,13 +333,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
         ) = validateMerkleRoots(proofData);
 
         verifier.verify(proofData, rollupSize);
-
-        // rollupSize = 0 indicates an escape hatch proof
-        if (rollupSize == 0) {
-            // Ensure an escaper, can only escape within last the set escape hatch window
-            (bool isOpen, ) = getEscapeHatchStatus();
-            require(isOpen, 'Rollup Processor: ESCAPE_BLOCK_RANGE_INCORRECT');
-        }
 
         // update state variables
         dataRoot = newDataRoot;
@@ -392,38 +436,17 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
             if (proofId == 0) {
                 if (publicInput > 0) {
                     bytes memory signature = extractSignature(signatures, findSigIndex(sigIndexes, i));
-                    validateSignature(proof, signature, inputOwner);
+                    RollupProcessorLibrary.validateSignature(proof, signature, inputOwner);
                     decreasePendingDepositBalance(assetId, inputOwner, publicInput);
                 }
 
                 if (publicOutput > 0) {
-                    withdraw(publicOutput, outputOwner, assetId);
+                    assetId == ethAssetId
+                        ? withdrawETH(publicOutput, outputOwner, assetId)
+                        : withdrawERC20(publicOutput, outputOwner, assetId);
                 }
             }
         }
-    }
-
-    /**
-     * Perform ECDSA signature validation for a signature over a proof. Relies on the
-     * openzeppelin ECDSA cryptography library - this performs checks on `s` and `v`
-     * to prevent signature malleability based attacks
-     *
-     * @param innerPublicInputs - Inner proof data for a single transaction. Includes deposit and withdrawal data
-     * @param signature - ECDSA signature over the secp256k1 elliptic curve
-     * @param publicOwner - address which ERC20 tokens are from being transferred from or to
-     */
-    function validateSignature(
-        bytes calldata innerPublicInputs,
-        bytes memory signature,
-        address publicOwner
-    ) internal pure {
-        require(publicOwner != address(0x0), 'Rollup Processor: ZERO_ADDRESS');
-
-        bytes32 digest = keccak256(innerPublicInputs);
-        bytes32 msgHash = ECDSA.toEthSignedMessageHash(digest);
-
-        address recoveredSigner = ECDSA.recover(msgHash, signature);
-        require(recoveredSigner == publicOwner, 'Rollup Processor: INVALID_TRANSFER_SIGNATURE');
     }
 
     /**
@@ -432,16 +455,36 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
      * @param receiverAddress - address receiving public ERC20 tokens
      * @param assetId - ID of the asset for which a withdrawl is being performed
      */
-    function withdraw(
+    function withdrawETH(
         uint256 withdrawValue,
         address receiverAddress,
         uint256 assetId
     ) internal {
         require(receiverAddress != address(0), 'Rollup Processor: ZERO_ADDRESS');
+
+        bool success = payable(receiverAddress).send(withdrawValue);
+        require(success, 'Rollup Processor: WITHDRAW_ETH_FAILED');
+
+        emit Withdraw(assetId, receiverAddress, withdrawValue);
+    }
+
+    /**
+     * @dev Internal utility function to withdraw ERC20 funds from the contract to a receiver address
+     * @param withdrawValue - value being withdrawn from the contract
+     * @param receiverAddress - address receiving public ERC20 tokens
+     * @param assetId - ID of the asset for which a withdrawl is being performed
+     */
+    function withdrawERC20(
+        uint256 withdrawValue,
+        address receiverAddress,
+        uint256 assetId
+    ) internal {
+        require(receiverAddress != address(0), 'Rollup Processor: ZERO_ADDRESS');
+
         address assetAddress = getSupportedAssetAddress(assetId);
 
         try IERC20(assetAddress).transfer(receiverAddress, withdrawValue)  {
-            emit Withdraw(receiverAddress, withdrawValue);
+            emit Withdraw(assetId, receiverAddress, withdrawValue);
         } catch (bytes memory reason) {
             emit WithdrawError(reason);
         }

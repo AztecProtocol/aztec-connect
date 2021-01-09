@@ -22,6 +22,7 @@ export enum SdkEvent {
 }
 
 export enum AssetId {
+  ETH,
   DAI,
 }
 

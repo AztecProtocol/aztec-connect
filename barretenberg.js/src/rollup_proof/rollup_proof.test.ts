@@ -63,6 +63,7 @@ describe('RollupProofData', () => {
       randomBytes(32),
       randomBytes(32),
       randomBytes(32),
+      randomBytes(32),
       2,
       [accountInnerProofData, jsInnerProofData],
       randomBytes(32 * 16),

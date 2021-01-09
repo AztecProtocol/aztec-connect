@@ -71,7 +71,7 @@ export class InnerProofData {
 }
 
 export class RollupProofData {
-  static NUM_ROLLUP_PUBLIC_INPUTS = 10;
+  static NUM_ROLLUP_PUBLIC_INPUTS = 11;
   static LENGTH_ROLLUP_PUBLIC = RollupProofData.NUM_ROLLUP_PUBLIC_INPUTS * 32;
   public rollupHash: Buffer;
 
@@ -85,6 +85,7 @@ export class RollupProofData {
     public newNullRoot: Buffer,
     public oldDataRootsRoot: Buffer,
     public newDataRootsRoot: Buffer,
+    public totalTxFee: Buffer,
     public numTxs: number,
     public innerProofData: InnerProofData[],
     public recursiveProofOutput: Buffer,
@@ -105,6 +106,7 @@ export class RollupProofData {
       this.newNullRoot,
       this.oldDataRootsRoot,
       this.newDataRootsRoot,
+      this.totalTxFee,
       numToUInt32BE(this.numTxs, 32),
       ...this.innerProofData.map(p => p.toBuffer()),
       this.recursiveProofOutput,
@@ -133,7 +135,8 @@ export class RollupProofData {
     const newNullRoot = proofData.slice(6 * 32, 6 * 32 + 32);
     const oldDataRootsRoot = proofData.slice(7 * 32, 7 * 32 + 32);
     const newDataRootsRoot = proofData.slice(8 * 32, 8 * 32 + 32);
-    const numTxs = proofData.readUInt32BE(9 * 32 + 28);
+    const totalTxFee = proofData.slice(9 * 32, 9 * 32 + 32);
+    const numTxs = proofData.readUInt32BE(10 * 32 + 28);
 
     const innerProofData: InnerProofData[] = [];
     for (let i = 0; i < numTxs; ++i) {
@@ -170,6 +173,7 @@ export class RollupProofData {
       newNullRoot,
       oldDataRootsRoot,
       newDataRootsRoot,
+      totalTxFee,
       numTxs,
       innerProofData,
       recursiveProofOutput,

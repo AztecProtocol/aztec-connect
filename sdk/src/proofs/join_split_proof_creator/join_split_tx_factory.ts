@@ -22,18 +22,19 @@ export class JoinSplitTxFactory {
     userState: UserState,
     publicInput: bigint,
     publicOutput: bigint,
+    privateInput: bigint,
+    privateOutput: bigint,
     assetId: number,
-    newNoteValue: bigint,
     signer: Signer,
     receiver?: AccountId,
     inputOwnerAddress?: EthAddress,
     outputOwnerAddress?: EthAddress,
   ) {
     const max = (a: bigint, b: bigint) => (a > b ? a : b);
-    const requiredInputNoteValue = max(BigInt(0), newNoteValue + publicOutput - publicInput);
-    const notes = requiredInputNoteValue ? await userState.pickNotes(assetId, requiredInputNoteValue) : [];
+    // const requiredInputNoteValue = max(BigInt(0), newNoteValue + publicOutput - publicInput + privateTxFee);
+    const notes = privateInput ? await userState.pickNotes(assetId, privateInput) : [];
     if (!notes) {
-      throw new Error(`Failed to find no more than 2 notes that sum to ${requiredInputNoteValue}.`);
+      throw new Error(`Failed to find no more than 2 notes that sum to ${privateInput}.`);
     }
 
     const sender = userState.getUser();
@@ -49,13 +50,13 @@ export class JoinSplitTxFactory {
     }
     const inputNotePaths = await Promise.all(inputNoteIndices.map(async idx => this.worldState.getHashPath(idx)));
 
-    const changeValue = max(BigInt(0), totalNoteInputValue - newNoteValue - publicOutput);
+    const changeValue = max(BigInt(0), totalNoteInputValue - privateInput);
     const newNoteOwner = receiver || {
       publicKey: GrumpkinAddress.randomAddress(),
       nonce: 0,
     };
     const outputNotes = [
-      new Note(newNoteOwner.publicKey, createNoteSecret(), newNoteValue, assetId, newNoteOwner.nonce),
+      new Note(newNoteOwner.publicKey, createNoteSecret(), privateOutput, assetId, newNoteOwner.nonce),
       new Note(sender.publicKey, createNoteSecret(), changeValue, assetId, sender.nonce),
     ];
 
@@ -68,22 +69,21 @@ export class JoinSplitTxFactory {
     const { privateKey } = userState.getUser();
 
     const message = computeSigningData(
-        [...inputNotes, ...outputNotes],
-        inputNoteIndices[0],
-        inputNoteIndices[1],
-        inputOwner,
-        outputOwner,
-        publicInput,
-        publicOutput,
-        assetId,
-        numInputNotes,
-        privateKey,
-        this.pedersen,
-        this.noteAlgos
-      );
+      [...inputNotes, ...outputNotes],
+      inputNoteIndices[0],
+      inputNoteIndices[1],
+      inputOwner,
+      outputOwner,
+      publicInput,
+      publicOutput,
+      assetId,
+      numInputNotes,
+      privateKey,
+      this.pedersen,
+      this.noteAlgos,
+    );
 
     const signature = await signer.signMessage(message);
-
 
     const accountIndex = 0;
     const accountPath = await this.worldState.getHashPath(0);

@@ -1,6 +1,6 @@
 {
   "name": "aztec2-sdk",
-  "version": "2.0.9",
+  "version": "2.0.10",
   "main": "index.js",
   "homepage": "https://developers.aztec.network",
   "author": "AZTEC",
@@ -49,7 +49,7 @@
     "level-js": "^5.0.2",
     "leveldown": "^5.6.0",
     "levelup": "^4.4.0",
-    "sqlite3": "^5.0.0",
+    "sqlite3": "5.0.0",
     "sriracha": "file:../sriracha/dest-es",
     "tslib": "^2.0.0",
     "typeorm": "^0.2.28"

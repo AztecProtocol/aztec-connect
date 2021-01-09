@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { ContractFactory, ethers, Signer } from 'ethers';
 import { NonceManager } from '@ethersproject/experimental';
-import RollupProcessor from '../artifacts/RollupProcessor.json';
+import RollupProcessor from '../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
 import { deployVerifier } from './deploy_verifier';
 import { addAsset, setSupportedAsset } from './add_asset/add_asset';
 

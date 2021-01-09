@@ -1,5 +1,6 @@
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
+import { ProofId } from 'barretenberg/client_proofs';
 import { getProviderStatus, Rollup, Tx, TxHash } from 'barretenberg/rollup_provider';
 import { PermitArgs } from 'blockchain';
 import { EthereumBlockchain } from 'blockchain/ethereum_blockchain';
@@ -8,6 +9,7 @@ import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { CoreSdk } from '../core_sdk/core_sdk';
 import { createSdk, SdkOptions } from '../core_sdk/create_sdk';
+import { JoinSplitTxOptions } from './tx_options';
 import { EthereumProvider } from 'blockchain';
 import { Action, ActionState, AssetId, SdkEvent, SdkInitState } from '../sdk';
 import { EthereumSigner, RecoverSignatureSigner, Signer } from '../signer';
@@ -18,6 +20,7 @@ import { WalletSdkUser } from './wallet_sdk_user';
 export * from './wallet_sdk_user';
 export * from './wallet_sdk_user_asset';
 export * from './create_permit_data';
+export * from './tx_options';
 
 const debug = createDebug('bb:wallet_sdk');
 
@@ -194,62 +197,198 @@ export class WalletSdk extends EventEmitter {
     ethSigner: EthereumSigner,
     permitArgs?: PermitArgs,
     to?: AccountId,
+    options?: JoinSplitTxOptions,
   ) {
     const recipient = to || userId;
+    const { publicTxFee, privateTxFee } = await this.getTxFeeFromOptions(options);
+    const publicInput = value + publicTxFee;
+    const privateInput = privateTxFee;
 
     const action = async () => {
-      const userPendingDeposit = await this.getUserPendingDeposit(assetId, ethSigner.getAddress());
-      if (userPendingDeposit < value) {
-        this.emit(SdkEvent.LOG, 'Depositing funds to contract...');
-        const depositTxHash = await this.blockchain.depositPendingFunds(
-          assetId,
-          value,
-          ethSigner.getAddress(),
-          permitArgs,
-        );
-        await this.blockchain.getTransactionReceipt(depositTxHash);
-        this.emit(SdkEvent.UPDATED_USER_STATE, userId);
-      }
-      this.emit(SdkEvent.LOG, 'Creating deposit proof...');
+      await this.depositFundsToContract(assetId, userId, ethSigner.getAddress(), publicInput, permitArgs);
 
-      return this.core.createProof(assetId, userId, 'DEPOSIT', value, signer, ethSigner, recipient);
+      this.emit(SdkEvent.LOG, 'Creating deposit proof...');
+      return this.core.createProof(
+        assetId,
+        userId,
+        'DEPOSIT',
+        value,
+        signer,
+        ethSigner,
+        recipient,
+        undefined,
+        publicTxFee,
+        privateTxFee,
+      );
     };
 
     const validation = async () => {
+      if (publicTxFee && assetId !== AssetId.ETH) {
+        throw new Error('Fee is currently only payable in ETH.');
+      }
+
+      if (options?.feePayer && options.feePayer.getAddress() !== ethSigner.getAddress()) {
+        throw new Error('Fee payer must be the depositor.');
+      }
+
       const isPermit = !!permitArgs;
-      await this.checkPublicBalanceAndApproval(assetId, value, ethSigner.getAddress(), isPermit);
+      await this.checkPublicBalanceAndApproval(assetId, publicInput, ethSigner.getAddress(), isPermit);
+
+      if (privateInput) {
+        await this.checkNoteBalance(assetId, userId, privateInput);
+      }
     };
 
     return this.performAction(Action.DEPOSIT, value, userId, action, validation);
   }
 
-  public async withdraw(assetId: AssetId, userId: AccountId, value: bigint, signer: Signer, to: EthAddress) {
-    const action = () => this.core.createProof(assetId, userId, 'WITHDRAW', value, signer, undefined, undefined, to);
-    const validation = async () => {
-      await this.checkNoteBalance(assetId, userId, value);
+  public async withdraw(
+    assetId: AssetId,
+    userId: AccountId,
+    value: bigint,
+    signer: Signer,
+    to: EthAddress,
+    options?: JoinSplitTxOptions,
+  ) {
+    const { publicTxFee, privateTxFee } = await this.getTxFeeFromOptions(options);
+    const { feePayer, permitArgs } = options || {};
+    const publicInput = publicTxFee;
+    const privateInput = value + privateTxFee;
+
+    const action = async () => {
+      if (publicInput) {
+        await this.depositFundsToContract(assetId, userId, feePayer!.getAddress(), publicInput, permitArgs);
+      }
+
+      return this.core.createProof(
+        assetId,
+        userId,
+        'WITHDRAW',
+        value,
+        signer,
+        feePayer,
+        undefined,
+        to,
+        publicTxFee,
+        privateTxFee,
+      );
     };
+
+    const validation = async () => {
+      await this.checkNoteBalance(assetId, userId, privateInput);
+
+      if (publicInput) {
+        if (assetId !== AssetId.ETH) {
+          throw new Error('Fee is currently only payable in ETH.');
+        }
+
+        if (!feePayer) {
+          throw new Error('Fee payer not specified.');
+        }
+
+        await this.checkPublicBalanceAndApproval(assetId, publicInput, feePayer.getAddress(), false);
+      }
+    };
+
     return this.performAction(Action.WITHDRAW, value, userId, action, validation);
   }
 
-  public async transfer(assetId: AssetId, userId: AccountId, value: bigint, signer: Signer, to: AccountId) {
-    const action = () => this.core.createProof(assetId, userId, 'TRANSFER', value, signer, undefined, to);
-    const validation = async () => {
-      await this.checkNoteBalance(assetId, userId, value);
+  public async transfer(
+    assetId: AssetId,
+    userId: AccountId,
+    value: bigint,
+    signer: Signer,
+    to: AccountId,
+    options?: JoinSplitTxOptions,
+  ) {
+    const { publicTxFee, privateTxFee } = await this.getTxFeeFromOptions(options);
+    const { feePayer, permitArgs } = options || {};
+    const publicInput = publicTxFee;
+    const privateInput = value + privateTxFee;
+
+    const action = async () => {
+      if (publicInput) {
+        await this.depositFundsToContract(assetId, userId, feePayer!.getAddress(), publicInput, permitArgs);
+      }
+
+      return this.core.createProof(
+        assetId,
+        userId,
+        'TRANSFER',
+        value,
+        signer,
+        feePayer,
+        to,
+        undefined,
+        publicTxFee,
+        privateTxFee,
+      );
     };
+
+    const validation = async () => {
+      await this.checkNoteBalance(assetId, userId, privateInput);
+
+      if (publicInput) {
+        if (assetId !== AssetId.ETH) {
+          throw new Error('Fee is currently only payable in ETH.');
+        }
+
+        if (!feePayer) {
+          throw new Error('Fee payer not specified.');
+        }
+
+        await this.checkPublicBalanceAndApproval(assetId, publicInput, feePayer.getAddress(), false);
+      }
+    };
+
     return this.performAction(Action.TRANSFER, value, userId, action, validation);
   }
 
-  private async checkPublicBalanceAndApproval(assetId: AssetId, value: bigint, from: EthAddress, isPermit: boolean) {
-    const tokenContract = this.getTokenContract(assetId);
-    const tokenBalance = await tokenContract.balanceOf(from);
-    const pendingTokenBalance = await this.blockchain.getUserPendingDeposit(assetId, from);
-    if (tokenBalance + pendingTokenBalance < value) {
-      throw new Error(`Insufficient public token balance: ${tokenContract.fromErc20Units(tokenBalance)}`);
+  private async depositFundsToContract(
+    assetId: AssetId,
+    userId: AccountId,
+    from: EthAddress,
+    value: bigint,
+    permitArgs?: PermitArgs,
+  ) {
+    const userPendingDeposit = await this.getUserPendingDeposit(assetId, from);
+    if (userPendingDeposit < value) {
+      this.emit(SdkEvent.LOG, 'Depositing funds to contract...');
+      const depositTxHash = await this.blockchain.depositPendingFunds(assetId, value, from, permitArgs);
+      await this.blockchain.getTransactionReceipt(depositTxHash);
+      this.emit(SdkEvent.UPDATED_USER_STATE, userId);
     }
-    if (!isPermit) {
-      const allowance = await tokenContract.allowance(from);
-      if (allowance < value) {
-        throw new Error(`Insufficient allowance: ${tokenContract.fromErc20Units(allowance)}`);
+  }
+
+  private async getTxFeeFromOptions(options?: JoinSplitTxOptions) {
+    const { txFee, payTxFeeByPrivateAsset } = options || {};
+    const { fees } = await this.getRemoteStatus();
+    const fee = txFee !== undefined ? txFee : fees.get(ProofId.JOIN_SPLIT) || BigInt(0);
+    const [publicTxFee, privateTxFee] = payTxFeeByPrivateAsset ? [BigInt(0), fee] : [fee, BigInt(0)];
+    return {
+      publicTxFee,
+      privateTxFee,
+    };
+  }
+
+  private async checkPublicBalanceAndApproval(assetId: AssetId, value: bigint, from: EthAddress, isPermit: boolean) {
+    if (assetId === AssetId.ETH) {
+      const ethBalance = await this.blockchain.getEthBalance(from);
+      if (ethBalance < value) {
+        throw new Error(`Insufficient eth balance: ${ethBalance}.`);
+      }
+    } else {
+      const tokenContract = this.getTokenContract(assetId);
+      const tokenBalance = await tokenContract.balanceOf(from);
+      const pendingTokenBalance = await this.blockchain.getUserPendingDeposit(assetId, from);
+      if (tokenBalance + pendingTokenBalance < value) {
+        throw new Error(`Insufficient public token balance: ${tokenContract.fromErc20Units(tokenBalance)}`);
+      }
+      if (!isPermit) {
+        const allowance = await tokenContract.allowance(from);
+        if (allowance < value) {
+          throw new Error(`Insufficient allowance: ${tokenContract.fromErc20Units(allowance)}`);
+        }
       }
     }
   }
@@ -444,6 +583,10 @@ export class WalletSdk extends EventEmitter {
   }
 
   public async getPublicBalance(assetId: AssetId, ethAddress: EthAddress) {
+    if (assetId === AssetId.ETH) {
+      return this.blockchain.getEthBalance(ethAddress);
+    }
+
     return this.getTokenContract(assetId).balanceOf(ethAddress);
   }
 

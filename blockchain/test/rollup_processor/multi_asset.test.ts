@@ -1,10 +1,11 @@
-import { ethers } from '@nomiclabs/buidler';
 import { EthAddress } from 'barretenberg/address';
 import { expect, use } from 'chai';
 import { solidity } from 'ethereum-waffle';
 import { Contract, Signer } from 'ethers';
+import { ethers } from 'hardhat';
 import {
   createDepositProof,
+  createRollupProof,
   createTwoDepositsProof,
   createWithdrawProof,
   numToBuffer,
@@ -18,23 +19,23 @@ describe('rollup_processor: multi assets', () => {
   let rollupProcessor: Contract;
   let erc20A: Contract;
   let erc20B: Contract;
+  let rollupProvider: Signer;
   let userA: Signer;
   let userB: Signer;
   let userAAddress: EthAddress;
   let userBAddress: EthAddress;
-  let assetAId!: number;
 
   const mintAmount = 100;
   const userADepositAmount = 60;
   const userBDepositAmount = 15;
 
   beforeEach(async () => {
-    [userA, userB] = await ethers.getSigners();
+    [userA, userB, rollupProvider] = await ethers.getSigners();
     userAAddress = EthAddress.fromString(await userA.getAddress());
     userBAddress = EthAddress.fromString(await userB.getAddress());
-    ({ erc20: erc20A, rollupProcessor, assetId: assetAId } = await setupRollupProcessor([userA, userB], mintAmount));
+    ({ erc20: erc20A, rollupProcessor } = await setupRollupProcessor(rollupProvider, [userA, userB], mintAmount));
 
-    // create second erc20
+    // set new erc20
     const ERC20B = await ethers.getContractFactory('ERC20Mintable');
     erc20B = await ERC20B.deploy();
     await erc20B.mint(userBAddress.toString(), mintAmount);
@@ -42,9 +43,9 @@ describe('rollup_processor: multi assets', () => {
 
   it('should initialise state variables', async () => {
     const originalNumSupportedAssets = await rollupProcessor.getNumSupportedAssets();
-    expect(originalNumSupportedAssets).to.equal(1);
+    expect(originalNumSupportedAssets).to.equal(2);
 
-    const supportedAssetAAddress = await rollupProcessor.getSupportedAssetAddress(0);
+    const supportedAssetAAddress = await rollupProcessor.getSupportedAssetAddress(1);
     expect(supportedAssetAAddress).to.equal(erc20A.address);
 
     // set new supported asset
@@ -53,14 +54,14 @@ describe('rollup_processor: multi assets', () => {
 
     const assetBId = rollupProcessor.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args.assetId;
     const assetBAddress = rollupProcessor.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args.assetAddress;
-    expect(assetBId).to.equal(1);
+    expect(assetBId).to.equal(2);
     expect(assetBAddress).to.equal(erc20B.address);
 
-    const supportedAssetBAddress = await rollupProcessor.getSupportedAssetAddress(1);
+    const supportedAssetBAddress = await rollupProcessor.getSupportedAssetAddress(2);
     expect(supportedAssetBAddress).to.equal(erc20B.address);
 
     const newNumSupportedAssets = await rollupProcessor.getNumSupportedAssets();
-    expect(newNumSupportedAssets).to.equal(2);
+    expect(newNumSupportedAssets).to.equal(3);
   });
 
   it('should process asset A deposit tx and assetB deposit tx in one rollup', async () => {
@@ -70,17 +71,20 @@ describe('rollup_processor: multi assets', () => {
     const fourViewingKeys = [Buffer.alloc(32, 1), Buffer.alloc(32, 2), Buffer.alloc(32, 3), Buffer.alloc(32, 4)];
 
     // deposit funds from userA and userB, from assetA and assetB respectively
-    const assetAId = Buffer.alloc(32, 0);
-    const assetBId = numToBuffer(1);
-    const { proofData, signatures, sigIndexes } = await createTwoDepositsProof(
-      userADepositAmount,
-      userAAddress,
-      userA,
-      assetAId,
-      userBDepositAmount,
-      userBAddress,
-      userB,
-      assetBId,
+    const assetAId = 1;
+    const assetBId = 2;
+    const { proofData, signatures, sigIndexes } = await createRollupProof(
+      rollupProvider,
+      await createTwoDepositsProof(
+        userADepositAmount,
+        userAAddress,
+        userA,
+        numToBuffer(assetAId),
+        userBDepositAmount,
+        userBAddress,
+        userB,
+        numToBuffer(assetBId),
+      ),
     );
 
     await erc20A.approve(rollupProcessor.address, userADepositAmount);
@@ -121,11 +125,9 @@ describe('rollup_processor: multi assets', () => {
 
     // deposit funds from assetB
     const fourViewingKeys = [Buffer.alloc(32, 1), Buffer.alloc(32, 2), Buffer.alloc(32, 3), Buffer.alloc(32, 4)];
-    const { proofData, signatures, sigIndexes } = await createDepositProof(
-      userBDepositAmount,
-      userBAddress,
-      userB,
-      faultyERC20Id,
+    const { proofData, signatures, sigIndexes } = await createRollupProof(
+      rollupProvider,
+      await createDepositProof(userBDepositAmount, userBAddress, userB, faultyERC20Id),
     );
 
     await faultyERC20.approve(rollupProcessor.address, userBDepositAmount);
@@ -143,7 +145,11 @@ describe('rollup_processor: multi assets', () => {
     // withdraw funds to userB - this is not expected to perform a transfer (as the ERC20 is faulty)
     // so we don't expect the withdraw funds to be transferred, and expect an error event emission
     const withdrawAmount = 5;
-    const { proofData: withdrawProofData } = await createWithdrawProof(withdrawAmount, userBAddress, faultyERC20Id);
+    const { proofData: withdrawProofData } = await createRollupProof(
+      rollupProvider,
+      await createWithdrawProof(withdrawAmount, userBAddress, faultyERC20Id),
+      1,
+    );
     const withdrawTx = await rollupProcessor.processRollup(withdrawProofData, [], [], Buffer.concat(fourViewingKeys));
 
     const rollupReceipt = await withdrawTx.wait();

@@ -1,9 +1,9 @@
 import { ContractFactory, Signer } from 'ethers';
-import PolynomialEval from '../artifacts/PolynomialEval.json';
-import TranscriptLibrary from '../artifacts/TranscriptLibrary.json';
-import TurboPlonk from '../artifacts/TurboPlonk.json';
-import TurboVerifier from '../artifacts/TurboVerifier.json';
-import VerificationKeys from '../artifacts/VerificationKeys.json';
+import PolynomialEval from '../artifacts/contracts/verifier/cryptography/PolynomialEval.sol/PolynomialEval.json';
+import TranscriptLibrary from '../artifacts/contracts/verifier/cryptography/TranscriptLibrary.sol/TranscriptLibrary.json';
+import TurboPlonk from '../artifacts/contracts/verifier/cryptography/TurboPlonk.sol/TurboPlonk.json';
+import TurboVerifier from '../artifacts/contracts/verifier/TurboVerifier.sol/TurboVerifier.json';
+import VerificationKeys from '../artifacts/contracts/verifier/keys/VerificationKeys.sol/VerificationKeys.json';
 
 function linkBytecode(artifact: any, libraries: any) {
   let bytecode = artifact.bytecode;

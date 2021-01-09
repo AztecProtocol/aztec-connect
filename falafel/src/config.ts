@@ -1,4 +1,4 @@
-import { EthersAdapter, WalletProvider } from 'blockchain';
+import { EthereumBlockchainConfig, EthersAdapter, WalletProvider } from 'blockchain';
 import { randomBytes } from 'crypto';
 import { emptyDir, mkdirp, pathExists, readJson, writeJson } from 'fs-extra';
 import { dirname } from 'path';
@@ -24,6 +24,8 @@ interface ConfVars {
   apiPrefix: string;
   serverAuthToken: string;
   localBlockchainInitSize?: number;
+  // Temporary blockchain constants
+  txFee: bigint;
 }
 
 function getConfVars(): ConfVars {
@@ -43,6 +45,7 @@ function getConfVars(): ConfVars {
     API_PREFIX,
     GAS_LIMIT,
     SERVER_AUTH_TOKEN,
+    TX_FEE,
   } = process.env;
 
   return {
@@ -61,6 +64,7 @@ function getConfVars(): ConfVars {
     apiPrefix: API_PREFIX || '',
     serverAuthToken: SERVER_AUTH_TOKEN || randomBytes(32).toString('hex'),
     localBlockchainInitSize: LOCAL_BLOCKCHAIN_INIT_SIZE ? +LOCAL_BLOCKCHAIN_INIT_SIZE : undefined,
+    txFee: BigInt(TX_FEE || 0),
   };
 }
 
@@ -70,12 +74,14 @@ function getEthereumBlockchainConfig({
   minConfirmationEHW,
   network,
   ethereumHost,
-}: ConfVars) {
+  txFee,
+}: ConfVars): EthereumBlockchainConfig {
   return {
     networkOrHost: network || ethereumHost || 'local',
     gasLimit,
     minConfirmation,
     minConfirmationEHW,
+    txFee,
   };
 }
 
@@ -93,15 +99,17 @@ function getProvider(confVars: ConfVars) {
   const { privateKey } = confVars;
   const provider = getBaseProvider(confVars);
   if (!provider) {
-    return;
+    throw new Error('Provider is undefined.');
   }
+
   if (privateKey) {
     const walletProvider = new WalletProvider(provider);
     const signingAddress = walletProvider.addAccount(privateKey);
     console.log(`Signing address: ${signingAddress}`);
-    return { provider: walletProvider, signingAddress };
+    return walletProvider;
   }
-  return { provider };
+
+  return provider;
 }
 
 async function loadConfVars(path: string) {
@@ -110,22 +118,25 @@ async function loadConfVars(path: string) {
 
   if (!(await pathExists(path))) {
     await mkdirp(dir);
-    await writeJson(path, state);
-    return state;
-  }
-
-  const saved = await readJson(path);
-
-  // Erase all data if rollup contract changes.
-  if (state.rollupContractAddress && state.rollupContractAddress !== saved.rollupContractAddress) {
-    console.log(
-      `Rollup contract changed, erasing data: ${saved.rollupContractAddress} -> ${state.rollupContractAddress}`,
-    );
-    await emptyDir(dir);
+  } else {
+    // Erase all data if rollup contract changes.
+    const saved: ConfVars = await readJson(path);
+    if (state.rollupContractAddress && state.rollupContractAddress !== saved.rollupContractAddress) {
+      console.log(
+        `Rollup contract changed, erasing data: ${saved.rollupContractAddress} -> ${state.rollupContractAddress}`,
+      );
+      await emptyDir(dir);
+    }
   }
 
   // Save, redacting private key.
-  await writeJson(path, { ...state, privateKey: undefined });
+  await writeJson(path, {
+    ...state,
+    PRIVATE_KEY: undefined,
+    // Remove all bigint values for now. fs-extra can't process bigint (#765) but will be able to do so in the next majoy release (10.0).
+    // https://github.com/jprichardson/node-fs-extra/issues/846
+    txFee: undefined,
+  });
 
   return state;
 }

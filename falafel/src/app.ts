@@ -23,6 +23,7 @@ import { BlockResolver, RollupResolver, TxResolver, ServerStatusResolver } from 
 import { Server } from './server';
 import { RollupDao } from './entity/rollup';
 import { Metrics } from './metrics';
+import { ProofId } from 'barretenberg/client_proofs';
 
 // eslint-disable-next-line
 const cors = require('@koa/cors');
@@ -186,7 +187,11 @@ export function appFactory(
 
   router.get('/status', async (ctx: Koa.Context) => {
     const status = await server.getStatus();
-    const { rollupContractAddress, tokenContractAddresses, dataRoot, nullRoot, rootRoot } = status;
+    const { rollupContractAddress, tokenContractAddresses, dataRoot, nullRoot, rootRoot, fees } = status;
+    const feesResponse: { [key in ProofId]?: string } = {};
+    for (const [proofId, fee] of fees.entries()) {
+      feesResponse[proofId] = fee.toString();
+    }
     const response: RollupProviderStatusServerResponse = {
       ...status,
       rollupContractAddress: rollupContractAddress.toString(),
@@ -194,6 +199,7 @@ export function appFactory(
       dataRoot: dataRoot.toString('hex'),
       nullRoot: nullRoot.toString('hex'),
       rootRoot: rootRoot.toString('hex'),
+      fees: feesResponse,
     };
     ctx.set('content-type', 'application/json');
     ctx.body = response;

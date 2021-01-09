@@ -26,6 +26,9 @@ export function computeSigningData(
     const nullifier1 = noteAlgos.computeNoteNullifier(encryptedNotes[0], inputNote1Index, nullifierKey, numInputNotes >= 1);
     const nullifier2 = noteAlgos.computeNoteNullifier(encryptedNotes[1], inputNote2Index, nullifierKey, numInputNotes >= 2);
 
+    const totalInputValue = notes[0].value + notes[1].value + inputValue;
+    const totalOutputValue = notes[2].value + notes[3].value + outputValue;
+    const txFee = totalInputValue - totalOutputValue;
     const toCompress = [
         toBufferBE(inputValue, 32),
         toBufferBE(outputValue, 32),
@@ -35,6 +38,7 @@ export function computeSigningData(
         nullifier2,
         Buffer.concat([Buffer.alloc(12), inputOwner.toBuffer()]),
         Buffer.concat([Buffer.alloc(12), outputOwner.toBuffer()]),
+        toBufferBE(txFee, 32),
     ];
     return pedersen.compressInputs(toCompress);
 }

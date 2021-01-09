@@ -26,6 +26,7 @@ export function appFactory(server: Server, prefix: string) {
       dataRoot: dataRoot.toString('hex'),
       nullRoot: nullRoot.toString('hex'),
       rootRoot: rootRoot.toString('hex'),
+      fees: {},
     };
     ctx.set('content-type', 'application/json');
     ctx.body = response;

@@ -1,12 +1,19 @@
 import { EthAddress } from '../address';
 import { RollupProviderStatusServerResponse } from './server_response';
 import { fetch } from '../iso_fetch';
+import { RollupProviderStatus } from './rollup_provider';
+import { ProofId } from '../client_proofs';
 
-export async function getProviderStatus(baseUrl: string) {
+export async function getProviderStatus(baseUrl: string): Promise<RollupProviderStatus> {
   const response = await fetch(`${baseUrl}/status`);
   try {
     const body = (await response.json()) as RollupProviderStatusServerResponse;
-    const { rollupContractAddress, tokenContractAddresses, dataRoot, nullRoot, rootRoot } = body;
+    const { rollupContractAddress, tokenContractAddresses, dataRoot, nullRoot, rootRoot, fees } = body;
+    const feesMap: Map<ProofId, bigint> = new Map();
+    for (const proofId in fees) {
+      feesMap.set(parseInt(proofId), BigInt(fees[proofId]));
+    }
+
     return {
       ...body,
       rollupContractAddress: EthAddress.fromString(rollupContractAddress),
@@ -14,6 +21,7 @@ export async function getProviderStatus(baseUrl: string) {
       dataRoot: Buffer.from(dataRoot, 'hex'),
       nullRoot: Buffer.from(nullRoot, 'hex'),
       rootRoot: Buffer.from(rootRoot, 'hex'),
+      fees: feesMap,
     };
   } catch (err) {
     throw new Error(`Bad response from: ${baseUrl}`);

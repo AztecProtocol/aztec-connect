@@ -1,4 +1,5 @@
 import { EthAddress } from 'barretenberg/address';
+import { JoinSplitTxOptions } from '../wallet_sdk';
 import { AssetId } from '../sdk';
 import { EthereumSigner, Signer } from '../signer';
 import { AccountId } from '../user';
@@ -9,11 +10,11 @@ export class WalletSdkUserAsset {
   constructor(public userId: AccountId, public id: AssetId, private sdk: WalletSdk) {}
 
   async publicBalance(ethAddress: EthAddress) {
-    return this.sdk.getTokenContract(this.id).balanceOf(ethAddress);
+    return this.sdk.getPublicBalance(this.id, ethAddress);
   }
 
   async publicAllowance(ethAddress: EthAddress) {
-    return this.sdk.getTokenContract(this.id).allowance(ethAddress);
+    return this.sdk.getPublicAllowance(this.id, ethAddress);
   }
 
   balance() {
@@ -28,16 +29,23 @@ export class WalletSdkUserAsset {
     return this.sdk.approve(this.id, this.userId, value, account);
   }
 
-  async deposit(value: bigint, signer: Signer, ethSigner: EthereumSigner, permitArgs: PermitArgs, to?: AccountId) {
-    return this.sdk.deposit(this.id, this.userId, value, signer, ethSigner, permitArgs, to);
+  async deposit(
+    value: bigint,
+    signer: Signer,
+    ethSigner: EthereumSigner,
+    permitArgs: PermitArgs,
+    to?: AccountId,
+    options?: JoinSplitTxOptions,
+  ) {
+    return this.sdk.deposit(this.id, this.userId, value, signer, ethSigner, permitArgs, to, options);
   }
 
-  async withdraw(value: bigint, signer: Signer, to: EthAddress) {
-    return this.sdk.withdraw(this.id, this.userId, value, signer, to);
+  async withdraw(value: bigint, signer: Signer, to: EthAddress, options?: JoinSplitTxOptions) {
+    return this.sdk.withdraw(this.id, this.userId, value, signer, to, options);
   }
 
-  async transfer(value: bigint, signer: Signer, to: AccountId) {
-    return this.sdk.transfer(this.id, this.userId, value, signer, to);
+  async transfer(value: bigint, signer: Signer, to: AccountId, options?: JoinSplitTxOptions) {
+    return this.sdk.transfer(this.id, this.userId, value, signer, to, options);
   }
 
   public fromErc20Units(value: bigint, precision?: number) {

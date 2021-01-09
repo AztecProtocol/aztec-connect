@@ -10,11 +10,20 @@ interface IRollupProcessor {
         bytes calldata viewingKeys
     ) external;
 
+    function processRollupSig(
+        bytes calldata proofData,
+        bytes calldata signatures,
+        uint256[] calldata sigIndexes,
+        bytes calldata viewingKeys,
+        bytes calldata providerSignature,
+        address rollupProvider
+    ) external;
+
     function depositPendingFunds(
         uint256 assetId,
         uint256 amount,
         address owner
-    ) external;
+    ) external payable;
 
     function depositPendingFundsPermit(
         uint256 assetId,
@@ -27,6 +36,8 @@ interface IRollupProcessor {
         bytes32 r,
         bytes32 s
     ) external;
+
+    function setRollupProvider(address provderAddress, bool valid) external;
 
     function getSupportedAssetAddress(uint256 assetId) external view returns (address);
 

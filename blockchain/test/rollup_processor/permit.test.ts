@@ -1,7 +1,7 @@
-import { ethers } from '@nomiclabs/buidler';
 import { expect, use } from 'chai';
 import { solidity } from 'ethereum-waffle';
 import { Contract, Signer, Wallet } from 'ethers';
+import { ethers } from 'hardhat';
 import { setupRollupProcessor } from '../fixtures/setup_rollup_processor';
 import { signPermit, createLowLevelPermitSig } from '../fixtures/create_permit_signature';
 import { EthAddress } from 'barretenberg/address';
@@ -14,20 +14,21 @@ describe('rollup_processor: permit', () => {
   let erc20Permit: Contract;
   let erc20PermitAssetId: number;
   let userA: Signer;
+  let rollupProvider: Signer;
 
   const mintAmount = 100;
   const depositAmount = 60;
 
   beforeEach(async () => {
-    [userA] = await ethers.getSigners();
+    [userA, rollupProvider] = await ethers.getSigners();
 
-    ({ rollupProcessor } = await setupRollupProcessor([userA], mintAmount));
+    ({ rollupProcessor } = await setupRollupProcessor(rollupProvider, [userA], mintAmount));
 
     const ERC20Permit = await ethers.getContractFactory('ERC20Permit');
     erc20Permit = await ERC20Permit.deploy();
 
     await rollupProcessor.setSupportedAsset(erc20Permit.address, true);
-    erc20PermitAssetId = 1;
+    erc20PermitAssetId = 2;
   });
 
   it('should deposit funds into the rollup contract via permit call', async () => {

@@ -513,6 +513,8 @@ export class CoreSdk extends EventEmitter {
     ethSigner?: EthereumSigner,
     noteRecipient?: AccountId,
     outputOwner?: EthAddress,
+    publicTxFee = BigInt(0),
+    privateTxFee = BigInt(0),
   ) {
     if (!noteRecipient && !outputOwner) {
       throw new Error('Must provide either a note recipient or an output eth address.');
@@ -524,17 +526,19 @@ export class CoreSdk extends EventEmitter {
       throw new Error(`Unknown user: ${userId}`);
     }
     const userState = this.getUserState(userId)!;
-    const publicInput = ['DEPOSIT', 'PUBLIC_TRANSFER'].includes(action) ? value : BigInt(0);
+    const publicInput = publicTxFee + (['DEPOSIT', 'PUBLIC_TRANSFER'].includes(action) ? value : BigInt(0));
     const publicOutput = ['WITHDRAW', 'PUBLIC_TRANSFER'].includes(action) ? value : BigInt(0);
-    const newNoteValue = ['DEPOSIT', 'TRANSFER'].includes(action) ? value : BigInt(0);
+    const privateInput = privateTxFee + (['WITHDRAW', 'TRANSFER'].includes(action) ? value : BigInt(0));
+    const privateOutput = ['DEPOSIT', 'TRANSFER'].includes(action) ? value : BigInt(0);
 
     const proofCreator = this.escapeHatchMode ? this.escapeHatchProofCreator : this.joinSplitProofCreator;
     const proofOutput = await proofCreator.createProof(
       userState,
       publicInput,
       publicOutput,
+      privateInput,
+      privateOutput,
       assetId,
-      newNoteValue,
       signer,
       noteRecipient,
       outputOwner,

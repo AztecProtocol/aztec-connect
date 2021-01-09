@@ -1,5 +1,6 @@
 import { EthAddress } from '../address';
 import { BlockSource } from '../block_source';
+import { ProofId } from '../client_proofs';
 import { TxHash } from './tx_hash';
 
 export interface Proof {
@@ -21,10 +22,11 @@ export interface RollupProviderStatus {
   rootRoot: Buffer;
   escapeOpen: boolean;
   numEscapeBlocksRemaining: number;
+  fees: Map<ProofId, bigint>;
 }
 
 export interface RollupProvider extends BlockSource {
-  sendProof(proof: Proof, signingAddress?: EthAddress): Promise<TxHash>;
+  sendProof(proof: Proof, providerSignature?: Buffer, signingAddress?: EthAddress): Promise<TxHash>;
   getStatus(): Promise<RollupProviderStatus>;
   getPendingNoteNullifiers: () => Promise<Buffer[]>;
 }

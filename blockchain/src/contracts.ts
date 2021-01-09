@@ -3,13 +3,14 @@ import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from 'barretenberg/address';
 import { TxHash } from 'barretenberg/rollup_provider';
 import { Contract, ethers } from 'ethers';
-import { abi as RollupABI } from './artifacts/RollupProcessor.json';
-import { abi as ERC20ABI } from './artifacts/ERC20Mintable.json';
-import { abi as ERC20PermitABI } from './artifacts/ERC20Permit.json';
+import { abi as RollupABI } from './artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
+import { abi as ERC20ABI } from './artifacts/contracts/test/ERC20Mintable.sol/ERC20Mintable.json';
+import { abi as ERC20PermitABI } from './artifacts/contracts/test/ERC20Permit.sol/ERC20Permit.json';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { Block } from './blockchain';
 import { EthereumProvider } from './ethereum_provider';
 
+export const EthLinkedAddress = EthAddress.fromString('0xeFEfeFEfeFeFEFEFEfefeFeFefEfEfEfeFEFEFEf');
 export type EthereumSignature = { v: Buffer; r: Buffer; s: Buffer };
 export type PermitArgs = { deadline: bigint; approvalAmount: bigint; signature: EthereumSignature };
 
@@ -73,6 +74,10 @@ export class Contracts {
     };
   }
 
+  public async getEthBalance(account: EthAddress) {
+    return BigInt(await this.provider.getBalance(account.toString()));
+  }
+
   public getRollupContractAddress() {
     return this.rollupContractAddress;
   }
@@ -93,19 +98,30 @@ export class Contracts {
     signatures: Buffer[],
     sigIndexes: number[],
     viewingKeys: Buffer[],
+    providerSignature?: Buffer,
     signingAddress?: EthAddress,
     gasLimit?: number,
   ) {
     const signer = signingAddress ? this.provider.getSigner(signingAddress.toString()) : this.provider.getSigner(0);
     const rollupProcessor = new Contract(this.rollupContractAddress.toString(), RollupABI, signer);
     const formattedSignatures = this.solidityFormatSignatures(signatures);
-    const tx = await rollupProcessor.processRollup(
-      `0x${proofData.toString('hex')}`,
-      formattedSignatures,
-      sigIndexes,
-      Buffer.concat(viewingKeys),
-      { gasLimit },
-    );
+    const tx = providerSignature
+      ? await rollupProcessor.processRollupSig(
+          `0x${proofData.toString('hex')}`,
+          formattedSignatures,
+          sigIndexes,
+          Buffer.concat(viewingKeys),
+          providerSignature,
+          await signer.getAddress(),
+          { gasLimit },
+        )
+      : await rollupProcessor.processRollup(
+          `0x${proofData.toString('hex')}`,
+          formattedSignatures,
+          sigIndexes,
+          Buffer.concat(viewingKeys),
+          { gasLimit },
+        );
     return TxHash.fromString(tx.hash);
   }
 
@@ -128,10 +144,10 @@ export class Contracts {
           permitArgs.signature.v,
           permitArgs.signature.r,
           permitArgs.signature.s,
-          // { value: assetId === 0 ? amount : undefined },
+          { value: assetId === 0 ? amount : undefined },
         )
       : await rollupProcessor.depositPendingFunds(assetId, amount, depositorAddress.toString(), {
-          // value: assetId === 0 ? amount : undefined,
+          value: assetId === 0 ? amount : undefined,
         });
     return TxHash.fromString(tx.hash);
   }

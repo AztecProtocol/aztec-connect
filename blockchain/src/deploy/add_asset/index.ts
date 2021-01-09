@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { Contract, ethers, Signer } from 'ethers';
-import RollupProcessor from '../../artifacts/RollupProcessor.json';
+import RollupProcessor from '../../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
 import { addAsset } from './add_asset';
 
 const { ETHEREUM_HOST, INFURA_API_KEY, NETWORK, PRIVATE_KEY, ROLLUP_CONTRACT_ADDRESS } = process.env;
