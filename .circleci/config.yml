@@ -128,11 +128,7 @@ jobs:
       - run:
           name: 'Build and test'
           working_directory: sdk
-          command: |
-            build sdk:latest
-            if check_rebuild; then
-              check_npm_version @aztec/sdk
-            fi
+          command: build sdk:latest
 
   hummus:
     docker:
