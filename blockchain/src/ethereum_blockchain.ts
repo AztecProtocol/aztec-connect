@@ -157,6 +157,10 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return this.contracts.getRollupContractAddress();
   }
 
+  public getFeeDistributorContractAddress() {
+    return this.contracts.getFeeDistributorContractAddress();
+  }
+
   public async getEthBalance(account: EthAddress) {
     return this.contracts.getEthBalance(account);
   }
@@ -206,7 +210,9 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     signatures: Buffer[],
     sigIndexes: number[],
     viewingKeys: Buffer[],
-    providerSignature?: Buffer,
+    providerSignature: Buffer,
+    feeReceiver: EthAddress,
+    feeLimit: bigint,
     signingAddress?: EthAddress,
   ) {
     return await this.contracts.sendRollupProof(
@@ -215,6 +221,8 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       sigIndexes,
       viewingKeys,
       providerSignature,
+      feeReceiver,
+      feeLimit,
       signingAddress,
       this.config.gasLimit,
     );
@@ -223,17 +231,12 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   /**
    * This is called by the client side when in escape hatch mode. Hence it doesn't take deposit signatures.
    */
-  public async sendProof(
-    { proofData, viewingKeys, depositSignature }: Proof,
-    providerSignature?: Buffer,
-    signingAddress?: EthAddress,
-  ) {
-    return this.sendRollupProof(
+  public async sendProof({ proofData, viewingKeys, depositSignature }: Proof, signingAddress?: EthAddress) {
+    return this.contracts.sendEscapeHatchProof(
       proofData,
       depositSignature ? [depositSignature] : [],
       depositSignature ? [0] : [],
       viewingKeys,
-      providerSignature,
       signingAddress,
     );
   }

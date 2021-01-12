@@ -21,6 +21,7 @@ export interface Blockchain extends RollupProvider {
   validateSignature(publicOwner: EthAddress, signature: Buffer, proof: Buffer): boolean;
   getNetworkInfo(): Promise<NetworkInfo>;
   getRollupContractAddress(): EthAddress;
+  getFeeDistributorContractAddress(): EthAddress;
   getTokenContractAddresses(): EthAddress[];
   getEthBalance(account: EthAddress): Promise<bigint>;
   depositPendingFunds(
@@ -34,7 +35,9 @@ export interface Blockchain extends RollupProvider {
     signatures: Buffer[],
     sigIndexes: number[],
     viewingKeys: Buffer[],
-    providerSignature?: Buffer,
+    providerSignature: Buffer,
+    feeReceiver: EthAddress,
+    feeLimit: bigint,
     signingAddress?: EthAddress,
   ): Promise<TxHash>;
 }

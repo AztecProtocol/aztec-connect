@@ -3,21 +3,27 @@
 pragma solidity >=0.6.10 <0.7.0;
 
 interface IRollupProcessor {
-    function processRollup(
+    function txFeeBalance() external view returns (uint256);
+
+    function escapeHatch(
         bytes calldata proofData,
         bytes calldata signatures,
         uint256[] calldata sigIndexes,
         bytes calldata viewingKeys
     ) external;
 
-    function processRollupSig(
+    function processRollup(
         bytes calldata proofData,
         bytes calldata signatures,
         uint256[] calldata sigIndexes,
         bytes calldata viewingKeys,
         bytes calldata providerSignature,
-        address rollupProvider
+        address provider,
+        address payable feeReceiver,
+        uint256 feeLimit
     ) external;
+
+    function depositTxFee(uint256 amount) external payable;
 
     function depositPendingFunds(
         uint256 assetId,
@@ -38,6 +44,8 @@ interface IRollupProcessor {
     ) external;
 
     function setRollupProvider(address provderAddress, bool valid) external;
+
+    function setFeeDistributor(address payable feeDistributorAddress) external;
 
     function getSupportedAssetAddress(uint256 assetId) external view returns (address);
 

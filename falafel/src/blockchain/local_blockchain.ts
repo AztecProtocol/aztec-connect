@@ -71,6 +71,10 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
     return EthAddress.ZERO;
   }
 
+  public getFeeDistributorContractAddress() {
+    return EthAddress.ZERO;
+  }
+
   public getTokenContractAddresses() {
     return [EthAddress.ZERO];
   }

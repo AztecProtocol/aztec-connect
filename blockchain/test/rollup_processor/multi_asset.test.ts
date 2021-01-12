@@ -92,7 +92,7 @@ describe('rollup_processor: multi assets', () => {
     await rollupProcessor.connect(userA).depositPendingFunds(assetAId, userADepositAmount, userAAddress.toString());
     await rollupProcessor.connect(userB).depositPendingFunds(assetBId, userBDepositAmount, userBAddress.toString());
 
-    await rollupProcessor.processRollup(
+    await rollupProcessor.escapeHatch(
       proofData,
       solidityFormatSignatures(signatures),
       sigIndexes,
@@ -135,7 +135,7 @@ describe('rollup_processor: multi assets', () => {
     await rollupProcessor
       .connect(userB)
       .depositPendingFunds(faultyERC20Id, userBDepositAmount, userBAddress.toString());
-    await rollupProcessor.processRollup(
+    await rollupProcessor.escapeHatch(
       proofData,
       solidityFormatSignatures(signatures),
       sigIndexes,
@@ -148,9 +148,11 @@ describe('rollup_processor: multi assets', () => {
     const { proofData: withdrawProofData } = await createRollupProof(
       rollupProvider,
       await createWithdrawProof(withdrawAmount, userBAddress, faultyERC20Id),
-      1,
+      {
+        rollupId: 1,
+      },
     );
-    const withdrawTx = await rollupProcessor.processRollup(withdrawProofData, [], [], Buffer.concat(fourViewingKeys));
+    const withdrawTx = await rollupProcessor.escapeHatch(withdrawProofData, [], [], Buffer.concat(fourViewingKeys));
 
     const rollupReceipt = await withdrawTx.wait();
     expect(receipt.status).to.equal(1);

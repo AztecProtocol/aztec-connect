@@ -1,7 +1,10 @@
 #!/usr/bin/env node
-import { ContractFactory, ethers, Signer } from 'ethers';
+import { Contract, ContractFactory, ethers, Signer } from 'ethers';
 import { NonceManager } from '@ethersproject/experimental';
+import { parseEther } from '@ethersproject/units';
 import RollupProcessor from '../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
+import FeeDistributor from '../artifacts/contracts/interfaces/IFeeDistributor.sol/IFeeDistributor.json';
+import { deployFeeDistributor } from './deploy_fee_distributor';
 import { deployVerifier } from './deploy_verifier';
 import { addAsset, setSupportedAsset } from './add_asset/add_asset';
 
@@ -27,7 +30,7 @@ function getSigner() {
 }
 
 async function main() {
-  const [, , erc20Address, supportsPermitStr] = process.argv;
+  const [, , feeDistributorAddress, initialFee, erc20Address, supportsPermitStr] = process.argv;
 
   const signer = getSigner();
   if (!signer) {
@@ -42,6 +45,16 @@ async function main() {
   console.error(`Awaiting deployment...`);
   await rollup.deployed();
   console.error(`Rollup contract address: ${rollup.address}`);
+
+  const feeDistributor = feeDistributorAddress
+    ? new Contract(feeDistributorAddress, FeeDistributor.abi, signer)
+    : await deployFeeDistributor(signer, rollup);
+  rollup.setFeeDistributor(feeDistributor.address);
+
+  if (initialFee) {
+    const amount = parseEther(initialFee);
+    feeDistributor.deposit(amount, { value: amount });
+  }
 
   if (!erc20Address) {
     // Add assets, one regular, one with permit support.

@@ -28,6 +28,7 @@ async function main() {
       apiPrefix,
       serverAuthToken,
       port,
+      feeLimit,
     },
   } = await getConfig();
 
@@ -42,6 +43,7 @@ async function main() {
     innerRollupSize,
     outerRollupSize,
     publishInterval: moment.duration(publishInterval, 's'),
+    feeLimit,
   };
   const rollupDb = new RollupDb(connection);
   const worldStateDb = new WorldStateDb();

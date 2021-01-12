@@ -19,7 +19,7 @@ const config: HardhatUserConfig = {
     },
     hardhat: {
       blockGasLimit: 10000000,
-      gas: 8000000,
+      gasPrice: 10,
       hardfork: 'istanbul',
     },
   },

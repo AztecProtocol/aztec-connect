@@ -2,6 +2,7 @@ import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from 'barretenberg/address';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { TxHash } from 'barretenberg/rollup_provider';
+import { toBufferBE } from 'bigint-buffer';
 import { Blockchain, EthereumProvider } from 'blockchain';
 import { utils } from 'ethers';
 import moment, { Duration } from 'moment';
@@ -27,8 +28,9 @@ export class RollupPublisher {
     private rollupDb: RollupDb,
     private blockchain: Blockchain,
     private publishInterval: Duration,
-    private metrics: Metrics,
+    private feeLimit: bigint,
     provider: EthereumProvider,
+    private metrics: Metrics,
   ) {
     this.provider = new Web3Provider(provider);
   }
@@ -110,10 +112,25 @@ export class RollupPublisher {
     this.interrupted = false;
   }
 
-  private async generateSignature(rollupProof: Buffer) {
+  private async generateSignature(
+    rollupProof: Buffer,
+    feeReceiver: EthAddress,
+    feeLimit: bigint,
+    feeDistributorAddress: EthAddress,
+  ) {
     const signer = this.provider.getSigner();
     const publicInputs = rollupProof.slice(0, RollupProofData.LENGTH_ROLLUP_PUBLIC);
-    const msgHash = utils.solidityKeccak256(['bytes'], [publicInputs]);
+    const msgHash = utils.solidityKeccak256(
+      ['bytes'],
+      [
+        Buffer.concat([
+          publicInputs,
+          feeReceiver.toBuffer(),
+          toBufferBE(feeLimit, 32),
+          feeDistributorAddress.toBuffer(),
+        ]),
+      ],
+    );
     const digest = utils.arrayify(msgHash);
     const signature = await signer.signMessage(digest);
     let signatureBuf = Buffer.from(signature.slice(2), 'hex');
@@ -127,9 +144,11 @@ export class RollupPublisher {
 
   private async sendRollupProof(item: PublishItem) {
     const { proof, signatures, sigIndexes, viewingKeys } = item;
-    const providerSignature = await this.generateSignature(proof);
     const signer = this.provider.getSigner();
-    const signingAddress = signer ? EthAddress.fromString(await signer.getAddress()) : undefined;
+    const signingAddress = EthAddress.fromString(await signer.getAddress());
+    const feeReceiver = signingAddress;
+    const feeDistributorAddress = this.blockchain.getFeeDistributorContractAddress();
+    const providerSignature = await this.generateSignature(proof, feeReceiver, this.feeLimit, feeDistributorAddress);
 
     while (!this.interrupted) {
       try {
@@ -139,6 +158,8 @@ export class RollupPublisher {
           sigIndexes,
           viewingKeys,
           providerSignature,
+          feeReceiver,
+          this.feeLimit,
           signingAddress,
         );
       } catch (err) {

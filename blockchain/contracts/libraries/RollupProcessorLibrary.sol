@@ -15,7 +15,7 @@ library RollupProcessorLibrary {
      * @param signer - Address that signs the signatrue.
      */
     function validateSignature(
-        bytes calldata data,
+        bytes memory data,
         bytes memory signature,
         address signer
     ) internal pure {

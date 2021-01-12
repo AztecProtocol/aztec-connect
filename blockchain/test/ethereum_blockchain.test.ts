@@ -29,12 +29,14 @@ async function createWaitOnBlockProcessed(blockchain: Blockchain) {
 
 describe('ethereum_blockchain', () => {
   let rollupProcessor: Contract;
+  let feeDistributor: Contract;
   let erc20: Contract;
   let erc20UserA: Contract;
   let erc20Permit: Contract;
   let ethereumBlockchain!: EthereumBlockchain;
   let rollupProvider: Signer;
   let rollupProviderAddress: EthAddress;
+  let feeDistributorAddress: EthAddress;
   let userA: Signer;
   let userB: Signer;
   let userAAddress: EthAddress;
@@ -63,12 +65,13 @@ describe('ethereum_blockchain', () => {
     });
 
     userAAddress = EthAddress.fromString(await userA.getAddress());
-    ({ erc20, rollupProcessor, viewingKeys, erc20AssetId, ethAssetId } = await setupRollupProcessor(
+    ({ erc20, rollupProcessor, feeDistributor, viewingKeys, erc20AssetId, ethAssetId } = await setupRollupProcessor(
       rollupProvider,
       [userA, userB],
       mintAmount,
     ));
     erc20UserA = erc20.connect(userA);
+    feeDistributorAddress = EthAddress.fromString(feeDistributor.address);
 
     ethereumBlockchain = await EthereumBlockchain.new(
       {
@@ -204,7 +207,7 @@ describe('ethereum_blockchain', () => {
   });
 
   it('should process a deposit proof', async () => {
-    const { proofData, signatures, sigIndexes } = await createRollupProof(
+    const { proofData, signatures } = await createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAAddress, userA),
     );
@@ -219,18 +222,26 @@ describe('ethereum_blockchain', () => {
     const depositReceipt = await ethereumBlockchain.getTransactionReceipt(depositTxHash);
     expect(depositReceipt.blockNum).to.be.above(0);
 
-    const txHash = await ethereumBlockchain.sendRollupProof(proofData, signatures, sigIndexes, viewingKeys);
+    const txHash = await ethereumBlockchain.sendProof({ proofData, viewingKeys, depositSignature: signatures[0] });
     const receipt = await ethereumBlockchain.getTransactionReceipt(txHash);
     expect(receipt.blockNum).to.be.above(depositReceipt.blockNum);
   });
 
-  it('should process a deposit proof with signatue', async () => {
+  it('should process a deposit proof with signature', async () => {
     const txFee = 10;
     const publicInput = depositAmount + txFee;
+    const feeLimit = BigInt(10) ** BigInt(18);
+    const prepaidFee = feeLimit;
+
+    await rollupProcessor.depositTxFee(prepaidFee, { value: prepaidFee });
 
     const { proofData, signatures, sigIndexes, providerSignature } = await createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAAddress, userA, ethAssetId, txFee),
+      {
+        feeLimit,
+        feeDistributorAddress,
+      },
     );
 
     const depositTxHash = await ethereumBlockchain.depositPendingFunds(ethAssetId, BigInt(publicInput), userAAddress);
@@ -245,6 +256,8 @@ describe('ethereum_blockchain', () => {
       viewingKeys,
       providerSignature,
       providerAddress,
+      feeLimit,
+      providerAddress,
     );
     const receipt = await ethereumBlockchain.getTransactionReceipt(txHash);
     expect(receipt.blockNum).to.be.above(depositReceipt.blockNum);
@@ -252,42 +265,37 @@ describe('ethereum_blockchain', () => {
 
   it('should process send proof', async () => {
     const { proofData } = await createRollupProof(rollupProvider, await createSendProof());
-    const txHash = await ethereumBlockchain.sendRollupProof(proofData, [], [], viewingKeys);
+    const txHash = await ethereumBlockchain.sendProof({ proofData, viewingKeys });
     const receipt = await ethereumBlockchain.getTransactionReceipt(txHash);
     expect(receipt.blockNum).to.be.above(0);
   });
 
   it('should process withdraw proof', async () => {
-    const {
-      proofData: depositProofData,
-      signatures: depositSignatures,
-      sigIndexes: depositSigIndexes,
-    } = await createRollupProof(rollupProvider, await createDepositProof(depositAmount, userAAddress, userA));
+    const { proofData: depositProofData, signatures: depositSignatures } = await createRollupProof(
+      rollupProvider,
+      await createDepositProof(depositAmount, userAAddress, userA),
+    );
     await erc20UserA.approve(rollupProcessor.address, depositAmount);
     await ethereumBlockchain.depositPendingFunds(erc20AssetId, BigInt(depositAmount), userAAddress);
-    const depositTxHash = await ethereumBlockchain.sendRollupProof(
-      depositProofData,
-      depositSignatures,
-      depositSigIndexes,
+    const depositTxHash = await ethereumBlockchain.sendProof({
+      proofData: depositProofData,
+      depositSignature: depositSignatures[0],
       viewingKeys,
-    );
+    });
     await waitOnBlockProcessed;
 
     const depositReceipt = await ethereumBlockchain.getTransactionReceipt(depositTxHash);
     expect(depositReceipt.blockNum).to.be.above(0);
 
-    const {
-      proofData: withdrawProofData,
-      signatures: withdrawalSignatures,
-      sigIndexes: withdrawSigIndexes,
-    } = await createRollupProof(rollupProvider, await createWithdrawProof(withdrawalAmount, userAAddress), 1);
-    await erc20UserA.approve(rollupProcessor.address, depositAmount);
-    const withdrawTxHash = await ethereumBlockchain.sendRollupProof(
-      withdrawProofData,
-      withdrawalSignatures,
-      withdrawSigIndexes,
-      viewingKeys,
+    const { proofData: withdrawProofData } = await createRollupProof(
+      rollupProvider,
+      await createWithdrawProof(withdrawalAmount, userAAddress),
+      {
+        rollupId: 1,
+      },
     );
+    await erc20UserA.approve(rollupProcessor.address, depositAmount);
+    const withdrawTxHash = await ethereumBlockchain.sendProof({ proofData: withdrawProofData, viewingKeys });
     await waitOnBlockProcessed;
     const withdrawReceipt = await ethereumBlockchain.getTransactionReceipt(withdrawTxHash);
     expect(withdrawReceipt.blockNum).to.be.above(0);
@@ -295,7 +303,7 @@ describe('ethereum_blockchain', () => {
 
   it('should emit new blocks as events', async () => {
     const spy = sinon.spy();
-    const { proofData, signatures, sigIndexes } = await createRollupProof(
+    const { proofData, signatures } = await createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAAddress, userA),
     );
@@ -303,7 +311,7 @@ describe('ethereum_blockchain', () => {
 
     await erc20UserA.approve(rollupProcessor.address, depositAmount);
     await ethereumBlockchain.depositPendingFunds(erc20AssetId, BigInt(depositAmount), userAAddress);
-    await ethereumBlockchain.sendRollupProof(proofData, signatures, sigIndexes, viewingKeys);
+    await ethereumBlockchain.sendProof({ proofData, viewingKeys, depositSignature: signatures[0] });
     await waitOnBlockProcessed;
 
     const numBlockEvents = spy.callCount;
@@ -317,23 +325,28 @@ describe('ethereum_blockchain', () => {
   });
 
   it('should get specified blocks', async () => {
-    const {
-      proofData: depositProofData,
-      signatures: depositSignatures,
-      sigIndexes: depositSigIndexes,
-    } = await createRollupProof(rollupProvider, await createDepositProof(depositAmount, userAAddress, userA));
+    const { proofData: depositProofData, signatures: depositSignatures } = await createRollupProof(
+      rollupProvider,
+      await createDepositProof(depositAmount, userAAddress, userA),
+    );
     await erc20UserA.approve(rollupProcessor.address, depositAmount);
     await ethereumBlockchain.depositPendingFunds(1, BigInt(depositAmount), userAAddress);
-    await ethereumBlockchain.sendRollupProof(depositProofData, depositSignatures, depositSigIndexes, viewingKeys);
+    await ethereumBlockchain.sendProof({
+      proofData: depositProofData,
+      depositSignature: depositSignatures[0],
+      viewingKeys,
+    });
     await waitOnBlockProcessed;
 
-    const {
-      proofData: withdrawProofData,
-      signatures: withdrawalSignatures,
-      sigIndexes: withdrawSigIndexes,
-    } = await createRollupProof(rollupProvider, await createWithdrawProof(withdrawalAmount, userAAddress), 1);
+    const { proofData: withdrawProofData } = await createRollupProof(
+      rollupProvider,
+      await createWithdrawProof(withdrawalAmount, userAAddress),
+      {
+        rollupId: 1,
+      },
+    );
     await erc20UserA.approve(rollupProcessor.address, depositAmount);
-    await ethereumBlockchain.sendRollupProof(withdrawProofData, withdrawalSignatures, withdrawSigIndexes, viewingKeys);
+    await ethereumBlockchain.sendProof({ proofData: withdrawProofData, viewingKeys });
     await waitOnBlockProcessed;
 
     const rollupIdStart = 0;
@@ -357,14 +370,14 @@ describe('ethereum_blockchain', () => {
   });
 
   it('should reject sending proof if depositor has insufficient approval ', async () => {
-    const { proofData, signatures, sigIndexes } = await createRollupProof(
+    const { proofData, signatures } = await createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAAddress, userA),
     );
 
     // no erc20 approval
-    await expect(ethereumBlockchain.sendRollupProof(proofData, signatures, sigIndexes, viewingKeys)).to.be.revertedWith(
-      'Rollup Processor: INSUFFICIENT_DEPOSIT',
-    );
+    await expect(
+      ethereumBlockchain.sendProof({ proofData, viewingKeys, depositSignature: signatures[0] }),
+    ).to.be.revertedWith('Rollup Processor: INSUFFICIENT_DEPOSIT');
   });
 });

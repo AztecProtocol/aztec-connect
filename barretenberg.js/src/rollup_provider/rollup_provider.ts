@@ -26,7 +26,7 @@ export interface RollupProviderStatus {
 }
 
 export interface RollupProvider extends BlockSource {
-  sendProof(proof: Proof, providerSignature?: Buffer, signingAddress?: EthAddress): Promise<TxHash>;
+  sendProof(proof: Proof): Promise<TxHash>;
   getStatus(): Promise<RollupProviderStatus>;
   getPendingNoteNullifiers: () => Promise<Buffer[]>;
 }

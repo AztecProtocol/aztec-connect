@@ -13,6 +13,8 @@ use(solidity);
 
 describe('rollup_processor: permissioning', () => {
   let rollupProcessor: Contract;
+  let feeDistributor: Contract;
+  let feeDistributorAddress: EthAddress;
   let erc20: Contract;
   let rollupProvider: Signer;
   let userA: Signer;
@@ -28,11 +30,12 @@ describe('rollup_processor: permissioning', () => {
   beforeEach(async () => {
     [userA, userB, rollupProvider] = await ethers.getSigners();
     userAAddress = EthAddress.fromString(await userA.getAddress());
-    ({ erc20, rollupProcessor, viewingKeys, erc20AssetId } = await setupRollupProcessor(
+    ({ erc20, rollupProcessor, feeDistributor, viewingKeys, erc20AssetId } = await setupRollupProcessor(
       rollupProvider,
       [userA, userB],
       mintAmount,
     ));
+    feeDistributorAddress = EthAddress.fromString(feeDistributor.address);
   });
 
   it('should deposit funds, which requires a successfull sig validation', async () => {
@@ -42,7 +45,7 @@ describe('rollup_processor: permissioning', () => {
     );
     await erc20.approve(rollupProcessor.address, depositAmount);
     await rollupProcessor.depositPendingFunds(erc20AssetId, depositAmount, userAAddress.toString());
-    const tx = await rollupProcessor.processRollup(
+    const tx = await rollupProcessor.escapeHatch(
       proofData,
       solidityFormatSignatures(signatures),
       sigIndexes,
@@ -66,7 +69,7 @@ describe('rollup_processor: permissioning', () => {
     await rollupProcessor.depositPendingFunds(erc20AssetId, depositAmount, userAAddress.toString());
 
     await expect(
-      rollupProcessor.processRollup(
+      rollupProcessor.escapeHatch(
         proofData,
         solidityFormatSignatures([fakeSignature]),
         sigIndexes,
@@ -82,48 +85,136 @@ describe('rollup_processor: permissioning', () => {
     );
     const zeroSignatures = Buffer.alloc(soliditySignatureLength);
     await erc20.approve(rollupProcessor.address, depositAmount);
-    await expect(rollupProcessor.processRollup(proofData, zeroSignatures, sigIndexes, Buffer.concat(viewingKeys))).to.be
+    await expect(rollupProcessor.escapeHatch(proofData, zeroSignatures, sigIndexes, Buffer.concat(viewingKeys))).to.be
       .reverted;
   });
 
+  it('should accept a rollup from anyone with a valid signature', async () => {
+    const feeLimit = BigInt(10) ** BigInt(18);
+    const prepaidFee = feeLimit;
+
+    const { proofData, signatures, sigIndexes, providerSignature } = await createRollupProof(
+      rollupProvider,
+      await createDepositProof(depositAmount, userAAddress, userA),
+      {
+        feeLimit,
+        feeDistributorAddress,
+      },
+    );
+
+    await erc20.approve(rollupProcessor.address, depositAmount);
+    await rollupProcessor.depositPendingFunds(erc20AssetId, depositAmount, userAAddress.toString());
+
+    await rollupProcessor.depositTxFee(prepaidFee, { value: prepaidFee });
+
+    const providerAddress = await rollupProvider.getAddress();
+    const rollupProcessorUserB = rollupProcessor.connect(userB);
+
+    const tx = await rollupProcessorUserB.processRollup(
+      proofData,
+      solidityFormatSignatures(signatures),
+      sigIndexes,
+      Buffer.concat(viewingKeys),
+      providerSignature,
+      providerAddress,
+      providerAddress,
+      feeLimit,
+    );
+    const receipt = await tx.wait();
+    expect(receipt.status).to.equal(1);
+  });
+
   it('should reject a rollup with invalid signature', async () => {
+    const feeLimit = BigInt(10) ** BigInt(18);
     const { proofData, signatures, sigIndexes, publicInputs } = await createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAAddress, userA),
-      1,
+      {
+        feeLimit,
+        feeDistributorAddress,
+      },
     );
 
-    const invalidSignature = (await ethSign(userA, Buffer.concat(publicInputs))).signature;
+    const fakeReceiver = randomBytes(20);
+    const invalidSignature = (await ethSign(rollupProvider, Buffer.concat([...publicInputs, fakeReceiver]))).signature;
+    const providerAddress = await rollupProvider.getAddress();
 
     await expect(
-      rollupProcessor.processRollupSig(
+      rollupProcessor.processRollup(
         proofData,
         solidityFormatSignatures(signatures),
         sigIndexes,
         Buffer.concat(viewingKeys),
         invalidSignature,
-        await rollupProvider.getAddress(),
+        providerAddress,
+        providerAddress,
+        feeLimit,
       ),
     ).to.be.revertedWith('Validate Signatue: INVALID_SIGNATRUE');
   });
 
-  it('should reject a rollup with signature from an unknown provider', async () => {
+  it('should reject a rollup with signature not signed by the provider', async () => {
+    const feeLimit = BigInt(10) ** BigInt(18);
     const { proofData, signatures, sigIndexes, publicInputs } = await createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAAddress, userA),
-      1,
+      {
+        feeDistributorAddress,
+        feeLimit,
+      },
     );
 
-    const providerSignature = (await ethSign(userA, Buffer.concat(publicInputs))).signature;
+    const feeReceiver = userAAddress.toString();
+    const providerSignature = (
+      await ethSign(userA, Buffer.concat([...publicInputs, Buffer.from(feeReceiver.slice(2), 'hex')]))
+    ).signature;
+
+    const rollupProcessorUserA = rollupProcessor.connect(userA);
+    const rollupProviderAddress = await rollupProvider.getAddress();
 
     await expect(
-      rollupProcessor.processRollupSig(
+      rollupProcessorUserA.processRollup(
         proofData,
         solidityFormatSignatures(signatures),
         sigIndexes,
         Buffer.concat(viewingKeys),
         providerSignature,
-        userAAddress.toString(),
+        rollupProviderAddress,
+        feeReceiver,
+        feeLimit,
+      ),
+    ).to.be.revertedWith('Validate Signatue: INVALID_SIGNATRUE');
+  });
+
+  it('should reject a rollup from an unknown provider', async () => {
+    const feeLimit = BigInt(10) ** BigInt(18);
+    const { proofData, signatures, sigIndexes, publicInputs } = await createRollupProof(
+      rollupProvider,
+      await createDepositProof(depositAmount, userAAddress, userA),
+      {
+        feeLimit,
+        feeDistributorAddress,
+      },
+    );
+
+    const feeReceiver = userAAddress.toString();
+    const providerSignature = (
+      await ethSign(userA, Buffer.concat([...publicInputs, Buffer.from(feeReceiver.slice(2), 'hex')]))
+    ).signature;
+
+    const rollupProcessorUserA = rollupProcessor.connect(userA);
+    const signerAddress = await userA.getAddress();
+
+    await expect(
+      rollupProcessorUserA.processRollup(
+        proofData,
+        solidityFormatSignatures(signatures),
+        sigIndexes,
+        Buffer.concat(viewingKeys),
+        providerSignature,
+        signerAddress,
+        feeReceiver,
+        feeLimit,
       ),
     ).to.be.revertedWith('Rollup Processor: UNKNOWN_PROVIDER');
   });

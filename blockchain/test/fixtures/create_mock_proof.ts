@@ -3,6 +3,7 @@ import { randomBytes } from 'crypto';
 import { Signer } from 'ethers';
 import { ethSign } from '../signing/eth_sign';
 import { numToUInt32BE } from 'barretenberg/serialize';
+import { toBufferBE } from 'bigint-buffer';
 
 const dataNoteSize = 64;
 
@@ -229,17 +230,37 @@ export async function createEscapeProof(amount: number, withdrawalAddress: EthAd
   };
 }
 
+interface RollupProofOptions {
+  rollupId?: number;
+  rollupSize?: number;
+  dataStartIndex?: number;
+  feeLimit?: bigint;
+  feeDistributorAddress?: EthAddress;
+}
+
 export async function createRollupProof(
   rollupProvider: Signer,
   proofOutput: InnerProofOutput,
-  rollupId = 0,
-  rollupSize = 2,
-  dataStartIndex?: number,
+  {
+    rollupId = 0,
+    rollupSize = 2,
+    dataStartIndex,
+    feeLimit = BigInt(0),
+    feeDistributorAddress = EthAddress.randomAddress(),
+  }: RollupProofOptions = {},
 ) {
   const { innerProofs, totalTxFee } = proofOutput;
   const publicInputs = publicInputData(rollupId, innerProofs.length, totalTxFee, rollupSize, dataStartIndex);
   const proofData = Buffer.concat([...publicInputs, ...innerProofs]);
-  const providerSignature = (await ethSign(rollupProvider, Buffer.concat(publicInputs))).signature;
+
+  const providerAddress = await rollupProvider.getAddress();
+  const sigData = Buffer.concat([
+    ...publicInputs,
+    Buffer.from(providerAddress.slice(2), 'hex'),
+    toBufferBE(feeLimit, 32),
+    feeDistributorAddress.toBuffer(),
+  ]);
+  const providerSignature = (await ethSign(rollupProvider, sigData)).signature;
 
   return {
     ...proofOutput,

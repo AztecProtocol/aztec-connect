@@ -19,6 +19,7 @@ export interface ServerConfig {
   readonly innerRollupSize: number;
   readonly outerRollupSize: number;
   readonly publishInterval: Duration;
+  readonly feeLimit: bigint;
 }
 
 export class Server {
@@ -34,10 +35,10 @@ export class Server {
     private metrics: Metrics,
     provider: EthereumProvider,
   ) {
-    const { innerRollupSize, outerRollupSize, publishInterval } = config;
+    const { innerRollupSize, outerRollupSize, publishInterval, feeLimit } = config;
 
     this.proofGenerator = new ProofGenerator(innerRollupSize, outerRollupSize);
-    const rollupPublisher = new RollupPublisher(rollupDb, blockchain, publishInterval, metrics, provider);
+    const rollupPublisher = new RollupPublisher(rollupDb, blockchain, publishInterval, feeLimit, provider, metrics);
     const rollupAggregator = new RollupAggregator(
       this.proofGenerator,
       rollupPublisher,

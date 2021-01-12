@@ -17,6 +17,7 @@ use(solidity);
 
 describe('rollup_processor: escape hatch', () => {
   let rollupProcessor: Contract;
+  let feeDistributor: Contract;
   let erc20: Contract;
   let rollupProvider: Signer;
   let userA: Signer;
@@ -33,7 +34,7 @@ describe('rollup_processor: escape hatch', () => {
   beforeEach(async () => {
     [userA, userB, rollupProvider] = await ethers.getSigners();
     userAAddress = EthAddress.fromString(await userA.getAddress());
-    ({ erc20, rollupProcessor, viewingKeys, erc20AssetId } = await setupRollupProcessor(
+    ({ erc20, rollupProcessor, feeDistributor, viewingKeys, erc20AssetId } = await setupRollupProcessor(
       rollupProvider,
       [userA, userB],
       mintAmount,
@@ -46,7 +47,7 @@ describe('rollup_processor: escape hatch', () => {
     await erc20.approve(rollupProcessor.address, depositAmount);
     await rollupProcessor.depositPendingFunds(erc20AssetId, depositAmount, userAAddress.toString());
 
-    await rollupProcessor.processRollup(
+    await rollupProcessor.escapeHatch(
       proofData,
       solidityFormatSignatures(signatures),
       sigIndexes,
@@ -74,16 +75,14 @@ describe('rollup_processor: escape hatch', () => {
     expect(initialContractBalance).to.equal(depositAmount);
     const initialUserBalance = await erc20.balanceOf(userAAddress.toString());
 
-    const { proofData } = await createRollupProof(
-      userA,
-      await createEscapeProof(withdrawalAmount, userAAddress),
-      1,
-      0,
-      4,
-    );
+    const { proofData } = await createRollupProof(userA, await createEscapeProof(withdrawalAmount, userAAddress), {
+      rollupId: 1,
+      rollupSize: 0,
+      dataStartIndex: 4,
+    });
     const nextEscapeBlock = await blocksToAdvance(80, 100, provider);
     await advanceBlocks(nextEscapeBlock, provider);
-    await rollupProcessor.processRollup(proofData, [], [], Buffer.concat(viewingKeys));
+    await rollupProcessor.escapeHatch(proofData, [], [], Buffer.concat(viewingKeys));
 
     // check balances
     const finalContractBalance = await erc20.balanceOf(rollupProcessor.address);
@@ -94,16 +93,14 @@ describe('rollup_processor: escape hatch', () => {
   });
 
   it('should reject escape hatch outside valid block window', async () => {
-    const { proofData } = await createRollupProof(
-      userA,
-      await createEscapeProof(withdrawalAmount, userAAddress),
-      1,
-      0,
-      4,
-    );
+    const { proofData } = await createRollupProof(userA, await createEscapeProof(withdrawalAmount, userAAddress), {
+      rollupId: 1,
+      rollupSize: 0,
+      dataStartIndex: 4,
+    });
     const escapeBlock = await blocksToAdvance(101, 100, provider);
     await advanceBlocks(escapeBlock, provider);
-    await expect(rollupProcessor.processRollup(proofData, [], [], Buffer.concat(viewingKeys))).to.be.revertedWith(
+    await expect(rollupProcessor.escapeHatch(proofData, [], [], Buffer.concat(viewingKeys))).to.be.revertedWith(
       'Rollup Processor: ESCAPE_BLOCK_RANGE_INCORRECT',
     );
   });
@@ -117,19 +114,31 @@ describe('rollup_processor: escape hatch', () => {
 
     const initialUserBalance = BigInt(await erc20.balanceOf(userAAddress.toString()));
 
+    const feeLimit = BigInt(10) ** BigInt(18);
+    const prepaidFee = feeLimit;
+
+    await rollupProcessor.depositTxFee(prepaidFee, { value: prepaidFee });
+
     const { proofData, signatures, sigIndexes, providerSignature } = await createRollupProof(
       rollupProvider,
       await createWithdrawProof(withdrawalAmount, userAAddress),
-      1,
+      {
+        rollupId: 1,
+        feeDistributorAddress: EthAddress.fromString(feeDistributor.address),
+        feeLimit,
+      },
     );
 
-    await rollupProcessor.processRollupSig(
+    const providerAddress = await rollupProvider.getAddress();
+    await rollupProcessor.processRollup(
       proofData,
       solidityFormatSignatures(signatures),
       sigIndexes,
       Buffer.concat(viewingKeys),
       providerSignature,
-      await rollupProvider.getAddress(),
+      providerAddress,
+      providerAddress,
+      feeLimit,
     );
 
     const postUserBalance = BigInt(await erc20.balanceOf(userAAddress.toString()));

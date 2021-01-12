@@ -4,6 +4,7 @@ import { EthAddress } from 'barretenberg/address';
 import { TxHash } from 'barretenberg/rollup_provider';
 import { Contract, ethers } from 'ethers';
 import { abi as RollupABI } from './artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
+import { abi as FeeDistributorABI } from './artifacts/contracts/interfaces/IFeeDistributor.sol/IFeeDistributor.json';
 import { abi as ERC20ABI } from './artifacts/contracts/test/ERC20Mintable.sol/ERC20Mintable.json';
 import { abi as ERC20PermitABI } from './artifacts/contracts/test/ERC20Permit.sol/ERC20Permit.json';
 import { RollupProofData } from 'barretenberg/rollup_proof';
@@ -16,6 +17,7 @@ export type PermitArgs = { deadline: bigint; approvalAmount: bigint; signature: 
 
 export class Contracts {
   private rollupProcessor: Contract;
+  private feeDistributorContract!: Contract;
   private erc20Contracts: Contract[] = [];
   private provider!: Web3Provider;
 
@@ -25,6 +27,9 @@ export class Contracts {
   }
 
   public async init() {
+    const feeDistributorContractAddress = await this.rollupProcessor.feeDistributor();
+    this.feeDistributorContract = new ethers.Contract(feeDistributorContractAddress, FeeDistributorABI, this.provider);
+
     const assetAddresses = await this.rollupProcessor.getSupportedAssets();
     this.erc20Contracts = await Promise.all(
       assetAddresses.map(async (a: any, index: number) => {
@@ -82,6 +87,10 @@ export class Contracts {
     return this.rollupContractAddress;
   }
 
+  public getFeeDistributorContractAddress() {
+    return EthAddress.fromString(this.feeDistributorContract.address);
+  }
+
   public getTokenContractAddresses() {
     return this.erc20Contracts.map(c => EthAddress.fromString(c.address));
   }
@@ -93,35 +102,60 @@ export class Contracts {
    * Appends viewingKeys to the proofData, so that they can later be fetched from the tx calldata
    * and added to the emitted rollupBlock.
    */
-  public async sendRollupProof(
+  public async sendEscapeHatchProof(
     proofData: Buffer,
     signatures: Buffer[],
     sigIndexes: number[],
     viewingKeys: Buffer[],
-    providerSignature?: Buffer,
     signingAddress?: EthAddress,
     gasLimit?: number,
   ) {
     const signer = signingAddress ? this.provider.getSigner(signingAddress.toString()) : this.provider.getSigner(0);
     const rollupProcessor = new Contract(this.rollupContractAddress.toString(), RollupABI, signer);
     const formattedSignatures = this.solidityFormatSignatures(signatures);
-    const tx = providerSignature
-      ? await rollupProcessor.processRollupSig(
-          `0x${proofData.toString('hex')}`,
-          formattedSignatures,
-          sigIndexes,
-          Buffer.concat(viewingKeys),
-          providerSignature,
-          await signer.getAddress(),
-          { gasLimit },
-        )
-      : await rollupProcessor.processRollup(
-          `0x${proofData.toString('hex')}`,
-          formattedSignatures,
-          sigIndexes,
-          Buffer.concat(viewingKeys),
-          { gasLimit },
-        );
+    const tx = await rollupProcessor.escapeHatch(
+      `0x${proofData.toString('hex')}`,
+      formattedSignatures,
+      sigIndexes,
+      Buffer.concat(viewingKeys),
+      { gasLimit },
+    );
+    return TxHash.fromString(tx.hash);
+  }
+
+  /**
+   * Send a proof to the rollup processor, which processes the proof and passes it to the verifier to
+   * be verified, and refunds tx fee to feeReceiver.
+   *
+   * Appends viewingKeys to the proofData, so that they can later be fetched from the tx calldata
+   * and added to the emitted rollupBlock.
+   */
+  public async sendRollupProof(
+    proofData: Buffer,
+    signatures: Buffer[],
+    sigIndexes: number[],
+    viewingKeys: Buffer[],
+    providerSignature: Buffer,
+    feeReceiver: EthAddress,
+    feeLimit: bigint,
+    signingAddress?: EthAddress,
+    gasLimit?: number,
+  ) {
+    const signer = signingAddress ? this.provider.getSigner(signingAddress.toString()) : this.provider.getSigner(0);
+    const signerAddress = await signer.getAddress();
+    const rollupProcessor = new Contract(this.rollupContractAddress.toString(), RollupABI, signer);
+    const formattedSignatures = this.solidityFormatSignatures(signatures);
+    const tx = await rollupProcessor.processRollup(
+      `0x${proofData.toString('hex')}`,
+      formattedSignatures,
+      sigIndexes,
+      Buffer.concat(viewingKeys),
+      providerSignature,
+      signerAddress,
+      feeReceiver ? feeReceiver.toString() : signerAddress,
+      feeLimit,
+      { gasLimit },
+    );
     return TxHash.fromString(tx.hash);
   }
 

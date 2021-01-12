@@ -26,6 +26,11 @@ export async function setupRollupProcessor(rollupProvider: Signer, users: Signer
     escapeBlockUpperBound,
   );
 
+  const AztecFeeDistributor = await ethers.getContractFactory('AztecFeeDistributor');
+  const feeDistributor = await AztecFeeDistributor.deploy(rollupProcessor.address);
+
+  await rollupProcessor.setFeeDistributor(feeDistributor.address);
+
   await rollupProcessor.setSupportedAsset(EthLinkedAddress.toString(), false);
   const ethAssetId = 0;
 
@@ -41,6 +46,7 @@ export async function setupRollupProcessor(rollupProvider: Signer, users: Signer
 
   return {
     rollupProcessor,
+    feeDistributor,
     erc20,
     viewingKeys,
     rollupSize,
