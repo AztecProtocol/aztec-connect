@@ -55,6 +55,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
     // Mapping from assetId to mapping of userAddress to public userBalance stored on this contract
     mapping(uint256 => mapping(address => uint256)) public userPendingDeposits;
 
+    mapping(address => mapping(bytes32 => bool)) public depositProofApprovals;
+
     mapping(address => bool) public rollupProviders;
 
     address payable public feeDistributor;
@@ -77,6 +79,10 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
 
     function setFeeDistributor(address payable feeDistributorAddress) public override onlyOwner {
         feeDistributor = feeDistributorAddress;
+    }
+
+    function approveProof(bytes32 _proofHash, bool approval) public {
+        depositProofApprovals[msg.sender][_proofHash] = approval;
     }
 
     /**
@@ -458,18 +464,22 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable {
                 address outputOwner
             ) = extractTxComponents(proof);
 
-            if (proofId == 0) {
-                if (publicInput > 0) {
+            if (proofId != 0) {
+                continue;
+            }
+
+            if (publicInput > 0) {
+                if (!depositProofApprovals[inputOwner][keccak256(proof)]) {
                     bytes memory signature = extractSignature(signatures, findSigIndex(sigIndexes, i));
                     RollupProcessorLibrary.validateSignature(proof, signature, inputOwner);
-                    decreasePendingDepositBalance(assetId, inputOwner, publicInput);
                 }
+                decreasePendingDepositBalance(assetId, inputOwner, publicInput);
+            }
 
-                if (publicOutput > 0) {
-                    assetId == ethAssetId
-                        ? withdrawETH(publicOutput, outputOwner, assetId)
-                        : withdrawERC20(publicOutput, outputOwner, assetId);
-                }
+            if (publicOutput > 0) {
+                assetId == ethAssetId
+                    ? withdrawETH(publicOutput, outputOwner, assetId)
+                    : withdrawERC20(publicOutput, outputOwner, assetId);
             }
         }
     }

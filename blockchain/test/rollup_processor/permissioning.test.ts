@@ -4,6 +4,8 @@ import { randomBytes } from 'crypto';
 import { solidity } from 'ethereum-waffle';
 import { Contract, Signer } from 'ethers';
 import { ethers } from 'hardhat';
+import { utils } from 'ethers';
+import { RollupProofData } from 'barretenberg/rollup_proof';
 import { createDepositProof, createRollupProof } from '../fixtures/create_mock_proof';
 import { setupRollupProcessor } from '../fixtures/setup_rollup_processor';
 import { ethSign } from '../signing/eth_sign';
@@ -87,6 +89,27 @@ describe('rollup_processor: permissioning', () => {
     await erc20.approve(rollupProcessor.address, depositAmount);
     await expect(rollupProcessor.escapeHatch(proofData, zeroSignatures, sigIndexes, Buffer.concat(viewingKeys))).to.be
       .reverted;
+  });
+
+  it('should allow manual proof approval if the user cant submit a signature', async () => {
+    const { proofData, sigIndexes } = await createRollupProof(
+      rollupProvider,
+      await createDepositProof(depositAmount, userAAddress, userA),
+    );
+
+    const { innerProofData } = RollupProofData.fromBuffer(proofData);
+    const proofHash = utils.keccak256(innerProofData[0].toBuffer());
+    const zeroSignatures = Buffer.alloc(soliditySignatureLength);
+
+    await erc20.approve(rollupProcessor.address, depositAmount);
+    await rollupProcessor.depositPendingFunds(erc20AssetId, depositAmount, userAAddress.toString());
+
+    await rollupProcessor.connect(userA).approveProof(proofHash, true);
+
+    const tx = await rollupProcessor.escapeHatch(proofData, zeroSignatures, sigIndexes, Buffer.concat(viewingKeys));
+
+    const receipt = await tx.wait();
+    expect(receipt.status).to.equal(1);
   });
 
   it('should accept a rollup from anyone with a valid signature', async () => {
