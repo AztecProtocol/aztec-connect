@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 import { numToUInt32BE } from '../serialize';
 
-export const VIEWING_KEY_SIZE = 208;
+export const VIEWING_KEY_SIZE = 128; // 208
 
 export class InnerProofData {
   static NUM_PUBLIC_INPUTS = 12;

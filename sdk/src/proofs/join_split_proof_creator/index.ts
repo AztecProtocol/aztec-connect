@@ -39,7 +39,7 @@ export class JoinSplitProofCreator {
     outputOwnerAddress?: EthAddress,
     ethSigner?: EthereumSigner,
   ) {
-    const tx = await this.txFactory.createJoinSplitTx(
+    const { tx, outputKeys } = await this.txFactory.createJoinSplitTx(
       userState,
       publicInput,
       publicOutput,
@@ -51,7 +51,7 @@ export class JoinSplitProofCreator {
       ethSigner ? ethSigner.getAddress() : undefined,
       outputOwnerAddress,
     );
-    const viewingKeys = this.txFactory.createViewingKeys(tx.outputNotes);
+    const viewingKeys = this.txFactory.createViewingKeys(tx.outputNotes, outputKeys);
 
     debug('creating proof...');
     const start = new Date().getTime();

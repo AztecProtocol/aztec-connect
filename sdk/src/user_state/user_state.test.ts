@@ -1,6 +1,6 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { computeAccountAliasIdNullifier } from 'barretenberg/client_proofs/account_proof/compute_nullifier';
-import { createNoteSecret, encryptNote, Note } from 'barretenberg/client_proofs/note';
+import { createEphemeralPrivKey, encryptNote, Note } from 'barretenberg/client_proofs/note';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { Blake2s } from 'barretenberg/crypto/blake2s';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
@@ -70,17 +70,17 @@ describe('user state', () => {
   });
 
   const generateRollup = (validNewNote = true, validChangeNote = true, publicInput = 0, publicOutput = 0) => {
-    const secret = createNoteSecret();
-    const note1 = new Note(user.publicKey, secret, BigInt(100), 0, 0);
-    const note2 = new Note(user.publicKey, secret, BigInt(0), 0, 0);
-    const gibberishNote = new Note(GrumpkinAddress.randomAddress(), secret, 0n, 0, 0);
+    const ephPrivKey = createEphemeralPrivKey();
+    const note1 = Note.createFromEphPriv(user.publicKey, BigInt(100), 0, 0, ephPrivKey, grumpkin);
+    const note2 = Note.createFromEphPriv(user.publicKey, BigInt(0), 0, 0, ephPrivKey, grumpkin);
+    const gibberishNote = Note.createFromEphPriv(GrumpkinAddress.randomAddress(), 0n, 0, 0, ephPrivKey, grumpkin);
     const encryptedNote1 = randomBytes(64);
     const encryptedNote2 = randomBytes(64);
     const nullifier1 = noteAlgos.computeNoteNullifier(randomBytes(64), 0, user.privateKey);
     const nullifier2 = noteAlgos.computeNoteNullifier(randomBytes(64), 1, user.privateKey);
     const viewingKeys = [
-      encryptNote(validNewNote ? note1 : gibberishNote, grumpkin),
-      encryptNote(validChangeNote ? note2 : gibberishNote, grumpkin),
+      encryptNote(validNewNote ? note1 : gibberishNote, ephPrivKey, grumpkin),
+      encryptNote(validChangeNote ? note2 : gibberishNote, ephPrivKey, grumpkin),
     ];
     const innerProofData = new InnerProofData(
       0,

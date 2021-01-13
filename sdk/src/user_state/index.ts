@@ -209,12 +209,12 @@ export class UserState extends EventEmitter {
       return savedNote.owner.equals(this.user.id) ? savedNote : undefined;
     }
 
-    const decryptedNote = decryptNote(viewingKey, this.user.privateKey!, this.grumpkin);
+    const decryptedNote = decryptNote(viewingKey, this.user.privateKey, this.grumpkin);
     if (!decryptedNote) {
       return;
     }
 
-    const { secret, value, assetId, nonce } = decryptedNote;
+    const { noteSecret, value, assetId, nonce } = decryptedNote;
     if (nonce !== this.user.id.nonce) {
       return;
     }
@@ -225,8 +225,8 @@ export class UserState extends EventEmitter {
       assetId,
       value,
       dataEntry,
-      viewingKey: secret,
-      encrypted: viewingKey,
+      secret: noteSecret,
+      viewingKey,
       nullifier,
       nullified: false,
       owner: this.user.id,

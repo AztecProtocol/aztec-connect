@@ -5,6 +5,14 @@ export function numToUInt32BE(n: number, bufferSize = 4) {
   return buf;
 }
 
+// For serializing numbers to 32 bit big-endian form.
+export function numToUInt8(n: number) {
+    const bufferSize = 1;
+    const buf = Buffer.alloc(bufferSize);
+    buf.writeUInt8(n, 0);
+    return buf;
+  }
+
 // For serializing a buffer as a vector.
 export function serializeBufferToVector(buf: Buffer) {
   const lengthBuf = Buffer.alloc(4);

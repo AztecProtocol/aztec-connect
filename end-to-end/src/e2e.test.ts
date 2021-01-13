@@ -53,6 +53,7 @@ describe('end-to-end tests', () => {
     expect(user0BalanceAfterDeposit).toBe(depositValue);
 
     // Transfer to user 1.
+    console.log('transfer');
     const transferValue = user0Asset.toErc20Units('800');
     expect(user1Asset.balance()).toBe(0n);
     const transferTxHash = await user0Asset.transfer(transferValue, users[1].getUserData().id);

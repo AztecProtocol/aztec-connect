@@ -6,7 +6,7 @@ import { MerkleTree } from '../../merkle_tree';
 import levelup from 'levelup';
 import memdown from 'memdown';
 import { Pedersen } from '../../crypto/pedersen';
-import { Note, createNoteSecret } from '../note';
+import { Note, createEphemeralPrivKey } from '../note';
 import { EventEmitter } from 'events';
 import { Crs } from '../../crs';
 import { WorkerPool } from '../../wasm/worker_pool';
@@ -99,13 +99,18 @@ describe('join_split_proof', () => {
     });
 
     it('should construct join split proof', async () => {
-      const inputNote1 = new Note(pubKey, createNoteSecret(), BigInt(100), 0, 0);
-      const inputNote2 = new Note(pubKey, createNoteSecret(), BigInt(50), 0, 0);
-      const outputNote1 = new Note(pubKey, createNoteSecret(), BigInt(80), 0, 0);
-      const outputNote2 = new Note(pubKey, createNoteSecret(), BigInt(70), 0, 0);
+      const inputNote1EphKey = createEphemeralPrivKey();
+      const inputNote2EphKey = createEphemeralPrivKey();
+      const outputNote1EphKey = createEphemeralPrivKey();
+      const outputNote2EphKey = createEphemeralPrivKey();
 
-      const inputNote1Enc = await noteAlgos.encryptNote(inputNote1);
-      const inputNote2Enc = await noteAlgos.encryptNote(inputNote2);
+      const inputNote1 = Note.createFromEphPriv(pubKey, BigInt(100), 0, 0, inputNote1EphKey, grumpkin);
+      const inputNote2 = Note.createFromEphPriv(pubKey, BigInt(50), 0, 0, inputNote2EphKey, grumpkin);
+      const outputNote1 = Note.createFromEphPriv(pubKey, BigInt(80), 0, 0, outputNote1EphKey, grumpkin);
+      const outputNote2 = Note.createFromEphPriv(pubKey, BigInt(70), 0, 0, outputNote2EphKey, grumpkin);
+
+      const inputNote1Enc = noteAlgos.encryptNote(inputNote1);
+      const inputNote2Enc = noteAlgos.encryptNote(inputNote2);
 
       const tree = new MerkleTree(levelup(memdown()), pedersen, 'data', 32);
       await tree.updateElement(0, inputNote1Enc);

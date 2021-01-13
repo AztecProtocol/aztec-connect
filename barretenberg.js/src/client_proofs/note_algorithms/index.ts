@@ -1,6 +1,5 @@
 import { toBigIntBE } from 'bigint-buffer';
 import { Note } from '../note';
-import { Signature } from '../signature';
 import { BarretenbergWasm } from '../../wasm';
 
 export class NoteAlgorithms {
@@ -18,17 +17,11 @@ export class NoteAlgorithms {
   }
 
   public encryptNote(note: Note) {
-    this.wasm.transferToHeap(note.toBuffer(), 0);
-    this.wasm.call('notes__encrypt_note', 0, 100);
-    return Buffer.from(this.wasm.sliceMemory(100, 164));
-  }
-
-  public decryptNote(encryptedNote: Buffer, privateKey: Buffer, viewingKey: Buffer) {
-    this.wasm.transferToHeap(encryptedNote, 0);
-    this.wasm.transferToHeap(privateKey, 64);
-    this.wasm.transferToHeap(viewingKey, 96);
-    const success = this.wasm.call('notes__decrypt_note', 0, 64, 96, 196) ? true : false;
-    const value = toBigIntBE(Buffer.from(this.wasm.sliceMemory(196, 228)));
-    return { success, value };
+    const noteBuf = note.toBuffer();
+    const mem = this.wasm.call('bbmalloc', noteBuf.length);
+    this.wasm.transferToHeap(noteBuf, mem);
+    this.wasm.call('notes__encrypt_note', mem, 0);
+    this.wasm.call('bbfree', mem);
+    return Buffer.from(this.wasm.sliceMemory(0, 64));
   }
 }

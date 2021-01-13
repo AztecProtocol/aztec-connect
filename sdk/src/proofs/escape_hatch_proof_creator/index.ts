@@ -43,7 +43,7 @@ export class EscapeHatchProofCreator {
     outputOwnerAddress?: EthAddress,
     ethSigner?: EthereumSigner,
   ) {
-    const joinSplitTx = await this.joinSplitTxFactory.createJoinSplitTx(
+    const { tx: joinSplitTx, outputKeys }  = await this.joinSplitTxFactory.createJoinSplitTx(
       userState,
       publicInput,
       publicOutput,
@@ -55,7 +55,7 @@ export class EscapeHatchProofCreator {
       ethSigner ? ethSigner.getAddress() : undefined,
       outputOwnerAddress,
     );
-    const viewingKeys = this.joinSplitTxFactory.createViewingKeys(joinSplitTx.outputNotes);
+    const viewingKeys = this.joinSplitTxFactory.createViewingKeys(joinSplitTx.outputNotes, outputKeys);
 
     const dataTreeState = await this.hashPathSource.getTreeState(0);
     const rootTreeState = await this.hashPathSource.getTreeState(2);
@@ -80,16 +80,17 @@ export class EscapeHatchProofCreator {
     const [input1, input2] = joinSplitTx.inputNotes;
     const encryptedInput1 = this.noteAlgos.encryptNote(input1);
     const encryptedInput2 = this.noteAlgos.encryptNote(input2);
+    const { privateKey } = userState.getUser();
     const nullifier1 = this.noteAlgos.computeNoteNullifierBigInt(
       encryptedInput1,
       joinSplitTx.inputNoteIndices[0],
-      input1.secret,
+      privateKey,
       joinSplitTx.numInputNotes > 0,
     );
     const nullifier2 = this.noteAlgos.computeNoteNullifierBigInt(
       encryptedInput2,
       joinSplitTx.inputNoteIndices[1],
-      input2.secret,
+      privateKey,
       joinSplitTx.numInputNotes > 1,
     );
     const nullifierValue = toBufferBE(BigInt(1), 64);

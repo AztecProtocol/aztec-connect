@@ -1,7 +1,7 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { JoinSplitTx, computeSigningData } from 'barretenberg/client_proofs/join_split_proof';
-import { createNoteSecret, encryptNote, Note } from 'barretenberg/client_proofs/note';
+import { createEphemeralPrivKey, encryptNote, Note } from 'barretenberg/client_proofs/note';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
@@ -43,10 +43,19 @@ export class JoinSplitTxFactory {
     const numInputNotes = notes.length;
     const totalNoteInputValue = notes.reduce((sum, note) => sum + note.value, BigInt(0));
     const inputNoteIndices = notes.map(n => n.index);
-    const inputNotes = notes.map(n => new Note(n.owner.publicKey, n.viewingKey, n.value, assetId, n.owner.nonce));
+    const inputNotes = notes.map(n => new Note(n.owner.publicKey, n.value, n.assetId, n.owner.nonce, n.secret));
     for (let i = notes.length; i < 2; ++i) {
       inputNoteIndices.push(i);
-      inputNotes.push(new Note(sender.publicKey, createNoteSecret(), BigInt(0), assetId, sender.nonce));
+      inputNotes.push(
+        Note.createFromEphPriv(
+          sender.publicKey,
+          BigInt(0),
+          assetId,
+          sender.nonce,
+          createEphemeralPrivKey(),
+          this.grumpkin,
+        ),
+      );
     }
     const inputNotePaths = await Promise.all(inputNoteIndices.map(async idx => this.worldState.getHashPath(idx)));
 
@@ -55,9 +64,19 @@ export class JoinSplitTxFactory {
       publicKey: GrumpkinAddress.randomAddress(),
       nonce: 0,
     };
+
+    const outputNote1EphKey = createEphemeralPrivKey();
+    const outputNote2EphKey = createEphemeralPrivKey();
     const outputNotes = [
-      new Note(newNoteOwner.publicKey, createNoteSecret(), privateOutput, assetId, newNoteOwner.nonce),
-      new Note(sender.publicKey, createNoteSecret(), changeValue, assetId, sender.nonce),
+      Note.createFromEphPriv(
+        newNoteOwner.publicKey,
+        privateOutput,
+        assetId,
+        newNoteOwner.nonce,
+        outputNote1EphKey,
+        this.grumpkin,
+      ),
+      Note.createFromEphPriv(sender.publicKey, changeValue, assetId, sender.nonce, outputNote2EphKey, this.grumpkin),
     ];
 
     const dataRoot = this.worldState.getRoot();
@@ -109,12 +128,13 @@ export class JoinSplitTxFactory {
       outputOwner,
     );
 
-    return tx;
+    const outputKeys = [outputNote1EphKey, outputNote2EphKey];
+    return { tx, outputKeys };
   }
 
-  public createViewingKeys(notes: Note[]) {
-    const encViewingKey1 = encryptNote(notes[0], this.grumpkin);
-    const encViewingKey2 = encryptNote(notes[1], this.grumpkin);
+  public createViewingKeys(notes: Note[], ephemeralPrivateKeys: Buffer[]) {
+    const encViewingKey1 = encryptNote(notes[0], ephemeralPrivateKeys[0], this.grumpkin);
+    const encViewingKey2 = encryptNote(notes[1], ephemeralPrivateKeys[1], this.grumpkin);
     return [encViewingKey1, encViewingKey2];
   }
 }

@@ -18,10 +18,10 @@ export class NoteDao implements Note {
   public dataEntry!: Buffer;
 
   @Column()
-  public viewingKey!: Buffer;
+  public secret!: Buffer;
 
   @Column()
-  public encrypted!: Buffer;
+  public viewingKey!: Buffer;
 
   @Index({ unique: true })
   @Column()

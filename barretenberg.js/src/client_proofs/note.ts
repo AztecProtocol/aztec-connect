@@ -2,75 +2,114 @@ import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { createHash, randomBytes, createCipheriv, createDecipheriv } from 'crypto';
 import { Grumpkin } from '../ecc/grumpkin';
 import { GrumpkinAddress } from '../address';
-import { numToUInt32BE } from '../serialize';
+import { numToUInt8, numToUInt32BE } from '../serialize';
 
 export class Note {
   constructor(
     public ownerPubKey: GrumpkinAddress,
-    public secret: Buffer,
     public value: bigint,
     public assetId: number,
     public nonce: number,
+    public noteSecret: Buffer,
   ) {}
 
-  static fromBuffer(buf: Buffer) {
-    // TODO: Read 16 bytes value.
-    return new Note(
-      new GrumpkinAddress(buf.slice(0, 64)),
-      buf.slice(96, 128),
-      toBigIntBE(buf.slice(64, 96)),
-      buf.readUInt32BE(128),
-      buf.readUInt32BE(132),
-    );
+  static createFromEphPub(
+    ownerPubKey: GrumpkinAddress,
+    value: bigint,
+    assetId: number,
+    nonce: number,
+    ephPubKey: GrumpkinAddress,
+    ownerPrivKey: Buffer,
+    grumpkin: Grumpkin,
+  ) {
+    const noteSecret = deriveNoteSecret(ephPubKey, ownerPrivKey, grumpkin);
+    return new Note(ownerPubKey, value, assetId, nonce, noteSecret);
+  }
+
+  static createFromEphPriv(
+    ownerPubKey: GrumpkinAddress,
+    value: bigint,
+    assetId: number,
+    nonce: number,
+    ephPrivKey: Buffer,
+    grumpkin: Grumpkin,
+  ) {
+    const noteSecret = deriveNoteSecret(ownerPubKey, ephPrivKey, grumpkin);
+    return new Note(ownerPubKey, value, assetId, nonce, noteSecret);
   }
 
   toBuffer() {
     return Buffer.concat([
-      this.ownerPubKey.toBuffer(),
       toBufferBE(this.value, 32),
-      this.secret,
       numToUInt32BE(this.assetId),
       numToUInt32BE(this.nonce),
+      this.ownerPubKey.toBuffer(),
+      this.noteSecret,
     ]);
   }
 }
 
-export function createNoteSecret() {
+export function createEphemeralPrivKey() {
   const key = randomBytes(32);
-  key[0] &= 0x03;
+  key[0] &= 0x03; // TODO PROPERLY REDUCE THIS MOD P
   return key;
+}
+
+function deriveNoteSecret(ecdhPubKey: GrumpkinAddress, ecdhPrivKey: Buffer, grumpkin: Grumpkin) {
+  const sharedSecret = grumpkin.mul(ecdhPubKey.toBuffer(), ecdhPrivKey);
+  const secretBuffer = Buffer.concat([sharedSecret, numToUInt8(0)]);
+  const hash = createHash('sha256').update(secretBuffer).digest();
+  hash[0] &= 0x03; // TODO PROPERLY REDUCE THIS MOD P
+  return hash;
+}
+
+function deriveAESSecret(ecdhPubKey: GrumpkinAddress, ecdhPrivKey: Buffer, grumpkin: Grumpkin) {
+  const sharedSecret = grumpkin.mul(ecdhPubKey.toBuffer(), ecdhPrivKey);
+  const secretBuffer = Buffer.concat([sharedSecret, numToUInt8(1)]);
+  const hash = createHash('sha256').update(secretBuffer).digest();
+  return hash;
 }
 
 /**
  * Returns the AES encrypted "viewing key".
  * [AES:[64 bytes owner public key][32 bytes value][32 bytes secret]][64 bytes ephemeral public key]
  */
-export function encryptNote(note: Note, grumpkin: Grumpkin) {
-  const ephPrivKey = randomBytes(32);
+export function encryptNote(note: Note, ephPrivKey: Buffer, grumpkin: Grumpkin) {
   const ephPubKey = grumpkin.mul(Grumpkin.one, ephPrivKey);
-  const P = grumpkin.mul(note.ownerPubKey.toBuffer(), ephPrivKey);
-  const hash = createHash('sha256').update(P).digest();
-  const aesKey = hash.slice(0, 16);
-  const iv = hash.slice(16, 32);
-
+  const aesSecret = deriveAESSecret(note.ownerPubKey, ephPrivKey, grumpkin);
+  const aesKey = aesSecret.slice(0, 16);
+  const iv = aesSecret.slice(16, 32);
   const cipher = createCipheriv('aes-128-cbc', aesKey, iv);
-  return Buffer.concat([cipher.update(note.toBuffer()), cipher.final(), ephPubKey]);
+
+  const noteBuf = Buffer.concat([toBufferBE(note.value, 32), numToUInt32BE(note.assetId), numToUInt32BE(note.nonce)]);
+  const plaintext = Buffer.concat([iv.slice(0, 8), noteBuf]);
+  return Buffer.concat([cipher.update(plaintext), cipher.final(), ephPubKey]);
 }
 
 export function decryptNote(encryptedNote: Buffer, privateKey: Buffer, grumpkin: Grumpkin) {
-  const expectedPubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, privateKey));
-
-  const ephPubKey = encryptedNote.slice(-64);
-  const P = grumpkin.mul(ephPubKey, privateKey);
-  const hash = createHash('sha256').update(P).digest();
-  const aesKey = hash.slice(0, 16);
-  const iv = hash.slice(16, 32);
+  const ephPubKey = new GrumpkinAddress(encryptedNote.slice(-64));
+  const aesSecret = deriveAESSecret(ephPubKey, privateKey, grumpkin);
+  const aesKey = aesSecret.slice(0, 16);
+  const iv = aesSecret.slice(16, 32);
 
   try {
     const decipher = createDecipheriv('aes-128-cbc', aesKey, iv);
-    const noteData = Buffer.concat([decipher.update(encryptedNote.slice(0, -64)), decipher.final()]);
-    const note = Note.fromBuffer(noteData);
-    return expectedPubKey.equals(note.ownerPubKey) ? note : undefined;
+    const plaintext = Buffer.concat([decipher.update(encryptedNote.slice(0, -64)), decipher.final()]);
+
+    const noteBuf = plaintext.slice(8);
+    const ownerPubKey = grumpkin.mul(Grumpkin.one, privateKey);
+    const note = Note.createFromEphPub(
+      new GrumpkinAddress(ownerPubKey),
+      toBigIntBE(noteBuf.slice(0, 32)),
+      noteBuf.readUInt32BE(32),
+      noteBuf.readUInt32BE(36),
+      ephPubKey,
+      privateKey,
+      grumpkin,
+    );
+
+    const testIvSlice = plaintext.slice(0, 8);
+    return testIvSlice.equals(iv.slice(0, 8)) ? note : undefined;
   } catch (err) {
     return;
   }
