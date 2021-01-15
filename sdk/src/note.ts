@@ -1,4 +1,4 @@
-import { AssetId } from './sdk';
+import { AssetId } from 'barretenberg/client_proofs';
 import { AccountId } from './user';
 
 export interface Note {

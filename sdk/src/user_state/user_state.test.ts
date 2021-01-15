@@ -78,6 +78,7 @@ describe('user state', () => {
     const encryptedNote2 = randomBytes(64);
     const nullifier1 = noteAlgos.computeNoteNullifier(randomBytes(64), 0, user.privateKey);
     const nullifier2 = noteAlgos.computeNoteNullifier(randomBytes(64), 1, user.privateKey);
+    const totalTxFees = new Array(RollupProofData.NUMBER_OF_ASSETS).fill(0).map(() => randomBytes(32));
     const viewingKeys = [
       encryptNote(validNewNote ? note1 : gibberishNote, ephPrivKey, grumpkin),
       encryptNote(validChangeNote ? note2 : gibberishNote, ephPrivKey, grumpkin),
@@ -104,7 +105,7 @@ describe('user state', () => {
       randomBytes(32),
       randomBytes(32),
       randomBytes(32),
-      randomBytes(32),
+      totalTxFees,
       1,
       [innerProofData],
       randomBytes(32 * 16),
@@ -120,6 +121,7 @@ describe('user state', () => {
     const accountAliasId = new AccountAliasId(aliasHash, nonce);
     const nullifier1 = computeAccountAliasIdNullifier(accountAliasId, pedersen);
     const nullifier2 = randomBytes(32);
+    const totalTxFees = new Array(RollupProofData.NUMBER_OF_ASSETS).fill(0).map(() => randomBytes(32));
     const viewingKeys = [Buffer.alloc(0), Buffer.alloc(0)];
     const innerProofData = new InnerProofData(
       1,
@@ -143,7 +145,7 @@ describe('user state', () => {
       randomBytes(32),
       randomBytes(32),
       randomBytes(32),
-      randomBytes(32),
+      totalTxFees,
       1,
       [innerProofData],
       randomBytes(32 * 16),

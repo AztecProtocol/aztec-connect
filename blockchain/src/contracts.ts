@@ -1,6 +1,7 @@
 import { TransactionResponse } from '@ethersproject/abstract-provider';
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from 'barretenberg/address';
+import { AssetId } from 'barretenberg/client_proofs';
 import { TxHash } from 'barretenberg/rollup_provider';
 import { Contract, ethers } from 'ethers';
 import { abi as RollupABI } from './artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
@@ -11,7 +12,6 @@ import { RollupProofData } from 'barretenberg/rollup_proof';
 import { Block } from './blockchain';
 import { EthereumProvider } from './ethereum_provider';
 
-export const EthLinkedAddress = EthAddress.fromString('0xeFEfeFEfeFeFEFEFEfefeFeFefEfEfEfeFEFEFEf');
 export type EthereumSignature = { v: Buffer; r: Buffer; s: Buffer };
 export type PermitArgs = { deadline: bigint; approvalAmount: bigint; signature: EthereumSignature };
 
@@ -33,7 +33,8 @@ export class Contracts {
     const assetAddresses = await this.rollupProcessor.getSupportedAssets();
     this.erc20Contracts = await Promise.all(
       assetAddresses.map(async (a: any, index: number) => {
-        const assetPermitSupport = await this.rollupProcessor.getAssetPermitSupport(index);
+        const assetId = index + 1;
+        const assetPermitSupport = await this.rollupProcessor.getAssetPermitSupport(assetId);
         const newContractABI = assetPermitSupport ? ERC20PermitABI : ERC20ABI;
         return new ethers.Contract(a, newContractABI, this.provider);
       }),
@@ -160,7 +161,7 @@ export class Contracts {
   }
 
   public async depositPendingFunds(
-    assetId: number,
+    assetId: AssetId,
     amount: bigint,
     depositorAddress: EthAddress,
     permitArgs?: PermitArgs,
@@ -201,7 +202,7 @@ export class Contracts {
     return txs.map((tx, i) => this.decodeBlock({ ...tx, timestamp: blocks[i].timestamp }));
   }
 
-  public async getUserPendingDeposit(assetId: number, account: EthAddress) {
+  public async getUserPendingDeposit(assetId: AssetId, account: EthAddress) {
     return BigInt(await this.rollupProcessor.getUserPendingDeposit(assetId, account.toString()));
   }
 
@@ -220,22 +221,21 @@ export class Contracts {
     return Buffer.concat(paddedSignatures);
   }
 
-  public async getAssetBalance(assetId: number, address: EthAddress): Promise<bigint> {
-    return BigInt(await this.erc20Contracts[assetId].balanceOf(address.toString()));
+  public async getAssetBalance(assetId: AssetId, address: EthAddress): Promise<bigint> {
+    return BigInt(await this.getAssetContract(assetId).balanceOf(address.toString()));
   }
 
-  public async getAssetPermitSupport(assetId: number): Promise<boolean> {
+  public async getAssetPermitSupport(assetId: AssetId): Promise<boolean> {
     return this.rollupProcessor.getAssetPermitSupport(assetId);
   }
 
-  public async getUserNonce(assetId: number, address: EthAddress): Promise<bigint> {
-    const tokenPermitContract = this.erc20Contracts[assetId];
-    return BigInt(await tokenPermitContract.nonces(address.toString()));
+  public async getUserNonce(assetId: AssetId, address: EthAddress): Promise<bigint> {
+    return BigInt(await this.getAssetContract(assetId).nonces(address.toString()));
   }
 
-  public async getAssetAllowance(assetId: number, address: EthAddress): Promise<bigint> {
+  public async getAssetAllowance(assetId: AssetId, address: EthAddress): Promise<bigint> {
     return BigInt(
-      await this.erc20Contracts[assetId].allowance(address.toString(), this.rollupContractAddress.toString()),
+      await this.getAssetContract(assetId).allowance(address.toString(), this.rollupContractAddress.toString()),
     );
   }
 
@@ -265,5 +265,9 @@ export class Contracts {
 
   public async getBlockNumber() {
     return this.provider.getBlockNumber();
+  }
+
+  private getAssetContract(assetId: AssetId) {
+    return this.erc20Contracts[assetId - 1];
   }
 }

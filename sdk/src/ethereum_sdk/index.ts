@@ -1,13 +1,13 @@
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { ProofId } from 'barretenberg/client_proofs';
+import { AssetId } from 'barretenberg/client_proofs';
 import { getProviderStatus, TxHash } from 'barretenberg/rollup_provider';
 import createDebug from 'debug';
 import isNode from 'detect-node';
 import { EventEmitter } from 'events';
 import { createSdk, SdkOptions } from '../core_sdk/create_sdk';
 import { EthereumProvider } from 'blockchain';
-import { AssetId, SdkEvent } from '../sdk';
+import { SdkEvent } from '../sdk';
 import { Web3Signer } from '../signer/web3_signer';
 import { EthereumSigner, Signer } from '../signer';
 import { AccountId, deriveGrumpkinPrivateKey, RecoveryPayload, UserData } from '../user';

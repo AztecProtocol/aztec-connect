@@ -1,4 +1,5 @@
 import { EthAddress } from 'barretenberg/address';
+import { AssetId } from 'barretenberg/client_proofs';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { expect, use } from 'chai';
 import { randomBytes } from 'crypto';
@@ -7,7 +8,6 @@ import { Contract, Signer, Wallet } from 'ethers';
 import { ethers, network } from 'hardhat';
 import sinon from 'sinon';
 import { Blockchain } from '../src/blockchain';
-import { EthLinkedAddress } from '../src/contracts';
 import { EthereumBlockchain } from '../src/ethereum_blockchain';
 import { EthersAdapter, WalletProvider } from '../src/provider';
 import {
@@ -42,8 +42,8 @@ describe('ethereum_blockchain', () => {
   let userAAddress: EthAddress;
   let localUser: Wallet;
   let viewingKeys: Buffer[];
-  let erc20AssetId: number;
-  let ethAssetId: number;
+  let erc20AssetId: AssetId;
+  let ethAssetId: AssetId;
 
   const mintAmount = 100;
   const depositAmount = 30;
@@ -108,11 +108,10 @@ describe('ethereum_blockchain', () => {
     await ethereumBlockchain.setSupportedAsset(EthAddress.fromString(newErc20.address), true, rollupProviderAddress);
 
     const supportedAssets = ethereumBlockchain.getTokenContractAddresses();
-    expect(supportedAssets.length).to.equal(4);
-    expect(supportedAssets[0].toString()).to.equal(EthLinkedAddress.toString());
-    expect(supportedAssets[1].toString()).to.equal(erc20.address);
-    expect(supportedAssets[2].toString()).to.equal(erc20Permit.address);
-    expect(supportedAssets[3].toString()).to.equal(newErc20.address);
+    expect(supportedAssets.length).to.equal(3);
+    expect(supportedAssets[0].toString()).to.equal(erc20.address);
+    expect(supportedAssets[1].toString()).to.equal(erc20Permit.address);
+    expect(supportedAssets[2].toString()).to.equal(newErc20.address);
 
     const assetSupportsPermit = await ethereumBlockchain.getAssetPermitSupport(2);
     expect(assetSupportsPermit).to.equal(true);
@@ -137,10 +136,6 @@ describe('ethereum_blockchain', () => {
   });
 
   it('should get user nonce', async () => {
-    const ERC20Permit = await ethers.getContractFactory('ERC20Permit');
-    const erc20Permit = await ERC20Permit.deploy();
-    await ethereumBlockchain.setSupportedAsset(EthAddress.fromString(erc20Permit.address), true, rollupProviderAddress);
-
     const nonce = await ethereumBlockchain.getUserNonce(permitAssetId, userAAddress);
     expect(nonce).to.equal(BigInt(0));
   });
@@ -233,7 +228,7 @@ describe('ethereum_blockchain', () => {
     const feeLimit = BigInt(10) ** BigInt(18);
     const prepaidFee = feeLimit;
 
-    await rollupProcessor.depositTxFee(prepaidFee, { value: prepaidFee });
+    await feeDistributor.deposit(ethAssetId, prepaidFee, { value: prepaidFee });
 
     const { proofData, signatures, sigIndexes, providerSignature } = await createRollupProof(
       rollupProvider,

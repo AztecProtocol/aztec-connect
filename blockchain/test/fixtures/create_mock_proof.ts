@@ -19,20 +19,34 @@ export const secondProofNewDataRootsRoot = randomBytes(32);
 
 export const newDataRootsRoot = newDataRoot;
 
-interface InnerProofOutput {
-  innerProofs: Buffer[];
-  signatures: Buffer[];
-  sigIndexes: number[];
-  totalTxFee: number;
+class InnerProofOutput {
+  constructor(
+    public innerProofs: Buffer[],
+    public signatures: Buffer[],
+    public sigIndexes: number[],
+    public totalTxFees: number[],
+  ) {}
 }
 
 // Note: creates publicInputData, so that the 'new' values for the deposit proof map onto the 'old'
 // values for the subsequent withdraw proof
-function publicInputData(id: number, numTxs: number, totalTxFee: number, rollupSize: number, dataStartIndex?: number) {
+function publicInputData(
+  id: number,
+  innerProofOutput: InnerProofOutput,
+  rollupSize: number,
+  numberOfAssets: number,
+  dataStartIndex?: number,
+) {
+  const { innerProofs, totalTxFees } = innerProofOutput;
   const rollupId = numToBuffer(id);
   const rollupSizeBuf = numToBuffer(rollupSize);
-  const numTxsBuf = numToBuffer(numTxs);
+  const numTxsBuf = numToBuffer(innerProofs.length);
   const dataStartIndexBuf = numToBuffer(dataStartIndex === undefined ? id * rollupSize * 2 : dataStartIndex);
+
+  const totalTxFeePublicInputs: Buffer[] = [];
+  for (let i = 0; i < numberOfAssets; ++i) {
+    totalTxFeePublicInputs.push(numToBuffer(totalTxFees[i] || 0));
+  }
 
   let allPublicInputs;
   if (id === 0) {
@@ -46,7 +60,7 @@ function publicInputData(id: number, numTxs: number, totalTxFee: number, rollupS
       newNullifierRoot,
       oldDataRootsRoot,
       newDataRootsRoot,
-      numToBuffer(totalTxFee),
+      ...totalTxFeePublicInputs,
       numTxsBuf,
     ];
   } else if (id === 1) {
@@ -60,7 +74,7 @@ function publicInputData(id: number, numTxs: number, totalTxFee: number, rollupS
       secondProofNewNullifierRoot,
       newDataRootsRoot,
       secondProofNewDataRootsRoot,
-      numToBuffer(totalTxFee),
+      ...totalTxFeePublicInputs,
       numTxsBuf,
     ];
   } else if (id === 2) {
@@ -74,7 +88,7 @@ function publicInputData(id: number, numTxs: number, totalTxFee: number, rollupS
       randomBytes(32),
       secondProofNewDataRootsRoot,
       randomBytes(32),
-      numToBuffer(totalTxFee),
+      ...totalTxFeePublicInputs,
       numTxsBuf,
     ];
   } else {
@@ -145,42 +159,49 @@ export async function createDepositProof(
   const { signature } = await ethSign(user, innerProof);
   const sigIndexes = [0]; // first index corresponds to first innerProof
 
-  return {
-    innerProofs: [innerProof],
-    signatures: [signature],
-    sigIndexes,
-    totalTxFee: txFee,
-  };
+  const totalTxFees: number[] = [];
+  totalTxFees[assetId] = txFee;
+
+  return new InnerProofOutput([innerProof], [signature], sigIndexes, totalTxFees);
 }
 
 export async function createTwoDepositsProof(
   firstDepositAmount: number,
   firstDepositorAddress: EthAddress,
   firstUser: Signer,
-  firstAssetId: Buffer,
+  firstAssetId: number,
   secondDepositAmount: number,
   secondDepositorAddress: EthAddress,
   secondUser: Signer,
-  secondAssetId: Buffer,
+  secondAssetId: number,
   txFee = 0,
 ) {
-  const firstInnerProof = await innerProofData(true, firstDepositAmount, firstDepositorAddress, firstAssetId, txFee);
+  const firstInnerProof = await innerProofData(
+    true,
+    firstDepositAmount,
+    firstDepositorAddress,
+    numToBuffer(firstAssetId),
+    txFee,
+  );
   const secondInnerProof = await innerProofData(
     true,
     secondDepositAmount,
     secondDepositorAddress,
-    secondAssetId,
+    numToBuffer(secondAssetId),
     txFee,
   );
   const { signature: firstSignature } = await ethSign(firstUser, firstInnerProof);
   const { signature: secondSignature } = await ethSign(secondUser, secondInnerProof);
+  const totalTxFees: number[] = [];
+  totalTxFees[firstAssetId] = txFee;
+  totalTxFees[secondAssetId] = txFee;
 
-  return {
-    innerProofs: [firstInnerProof, secondInnerProof],
-    signatures: [secondSignature, firstSignature],
-    sigIndexes: [1, 0], // deliberately reverse sig order to more thoroughly test
-    totalTxFee: txFee * 2,
-  };
+  return new InnerProofOutput(
+    [firstInnerProof, secondInnerProof],
+    [secondSignature, firstSignature],
+    [1, 0], // deliberately reverse sig order to more thoroughly test
+    totalTxFees,
+  );
 }
 
 export async function createWithdrawProof(amount: number, withdrawalAddress: EthAddress, assetId = 1, txFee = 0) {
@@ -190,12 +211,10 @@ export async function createWithdrawProof(amount: number, withdrawalAddress: Eth
   const signature: Buffer = Buffer.alloc(32);
   const sigIndexes = [0]; // first index corresponds to first tx
 
-  return {
-    innerProofs: [innerProof],
-    signatures: [signature],
-    sigIndexes,
-    totalTxFee: txFee,
-  };
+  const totalTxFees: number[] = [];
+  totalTxFees[assetId] = txFee;
+
+  return new InnerProofOutput([innerProof], [signature], sigIndexes, totalTxFees);
 }
 
 export async function createSendProof(assetId = 1, txFee = 0) {
@@ -204,13 +223,10 @@ export async function createSendProof(assetId = 1, txFee = 0) {
   const innerProof = await innerProofData(true, transferAmount, publicOwner, numToBuffer(assetId), txFee);
   const signature: Buffer = Buffer.alloc(32);
   const sigIndexes = [0];
+  const totalTxFees: number[] = [];
+  totalTxFees[assetId] = txFee;
 
-  return {
-    innerProofs: [innerProof],
-    signatures: [signature],
-    sigIndexes,
-    totalTxFee: txFee,
-  };
+  return new InnerProofOutput([innerProof], [signature], sigIndexes, totalTxFees);
 }
 
 // same as withdraw proof, except rollupSize in publicInputData set to 0 - indicating
@@ -222,17 +238,16 @@ export async function createEscapeProof(amount: number, withdrawalAddress: EthAd
   const signature: Buffer = Buffer.alloc(32);
   const sigIndexes = [0]; // first index corresponds to first tx
 
-  return {
-    innerProofs: [innerProof],
-    signatures: [signature],
-    sigIndexes,
-    totalTxFee: txFee,
-  };
+  const totalTxFees: number[] = [];
+  totalTxFees[assetId] = txFee;
+
+  return new InnerProofOutput([innerProof], [signature], sigIndexes, totalTxFees);
 }
 
 interface RollupProofOptions {
   rollupId?: number;
   rollupSize?: number;
+  numberOfAssets?: number;
   dataStartIndex?: number;
   feeLimit?: bigint;
   feeDistributorAddress?: EthAddress;
@@ -240,17 +255,18 @@ interface RollupProofOptions {
 
 export async function createRollupProof(
   rollupProvider: Signer,
-  proofOutput: InnerProofOutput,
+  innerProofOutput: InnerProofOutput,
   {
     rollupId = 0,
     rollupSize = 2,
+    numberOfAssets = 4,
     dataStartIndex,
     feeLimit = BigInt(0),
     feeDistributorAddress = EthAddress.randomAddress(),
   }: RollupProofOptions = {},
 ) {
-  const { innerProofs, totalTxFee } = proofOutput;
-  const publicInputs = publicInputData(rollupId, innerProofs.length, totalTxFee, rollupSize, dataStartIndex);
+  const { innerProofs } = innerProofOutput;
+  const publicInputs = publicInputData(rollupId, innerProofOutput, rollupSize, numberOfAssets, dataStartIndex);
   const proofData = Buffer.concat([...publicInputs, ...innerProofs]);
 
   const providerAddress = await rollupProvider.getAddress();
@@ -263,7 +279,7 @@ export async function createRollupProof(
   const providerSignature = (await ethSign(rollupProvider, sigData)).signature;
 
   return {
-    ...proofOutput,
+    ...innerProofOutput,
     proofData,
     providerSignature,
     publicInputs,

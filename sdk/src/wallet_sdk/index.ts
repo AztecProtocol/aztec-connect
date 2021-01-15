@@ -1,6 +1,6 @@
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { ProofId } from 'barretenberg/client_proofs';
+import { AssetId, ProofId } from 'barretenberg/client_proofs';
 import { getProviderStatus, Rollup, Tx, TxHash } from 'barretenberg/rollup_provider';
 import { PermitArgs } from 'blockchain';
 import { EthereumBlockchain } from 'blockchain/ethereum_blockchain';
@@ -11,7 +11,7 @@ import { CoreSdk } from '../core_sdk/core_sdk';
 import { createSdk, SdkOptions } from '../core_sdk/create_sdk';
 import { JoinSplitTxOptions } from './tx_options';
 import { EthereumProvider } from 'blockchain';
-import { Action, ActionState, AssetId, SdkEvent, SdkInitState } from '../sdk';
+import { Action, ActionState, SdkEvent, SdkInitState } from '../sdk';
 import { EthereumSigner, RecoverSignatureSigner, Signer } from '../signer';
 import { MockTokenContract, TokenContract, Web3TokenContract } from '../token_contract';
 import { RecoveryData, RecoveryPayload, AccountId, AccountAliasId } from '../user';
@@ -127,7 +127,8 @@ export class WalletSdk extends EventEmitter {
   }
 
   public getTokenContract(assetId: AssetId) {
-    return this.tokenContracts[assetId];
+    // assetId 0 is eth.
+    return this.tokenContracts[assetId - 1];
   }
 
   public getUserPendingDeposit(assetId: AssetId, account: EthAddress) {
@@ -363,7 +364,8 @@ export class WalletSdk extends EventEmitter {
   private async getTxFeeFromOptions(options?: JoinSplitTxOptions) {
     const { txFee, payTxFeeByPrivateAsset } = options || {};
     const { fees } = await this.getRemoteStatus();
-    const fee = txFee !== undefined ? txFee : fees.get(ProofId.JOIN_SPLIT) || BigInt(0);
+    const assetFees = fees.get(AssetId.ETH);
+    const fee = txFee !== undefined ? txFee : (assetFees && assetFees.get(ProofId.JOIN_SPLIT)) || BigInt(0);
     const [publicTxFee, privateTxFee] = payTxFeeByPrivateAsset ? [BigInt(0), fee] : [fee, BigInt(0)];
     return {
       publicTxFee,

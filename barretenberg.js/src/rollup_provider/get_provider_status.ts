@@ -2,17 +2,19 @@ import { EthAddress } from '../address';
 import { RollupProviderStatusServerResponse } from './server_response';
 import { fetch } from '../iso_fetch';
 import { RollupProviderStatus } from './rollup_provider';
-import { ProofId } from '../client_proofs';
+import { assetIds, proofIds, AssetId, ProofId } from '../client_proofs';
 
 export async function getProviderStatus(baseUrl: string): Promise<RollupProviderStatus> {
   const response = await fetch(`${baseUrl}/status`);
   try {
     const body = (await response.json()) as RollupProviderStatusServerResponse;
     const { rollupContractAddress, tokenContractAddresses, dataRoot, nullRoot, rootRoot, fees } = body;
-    const feesMap: Map<ProofId, bigint> = new Map();
-    for (const proofId in fees) {
-      feesMap.set(parseInt(proofId), BigInt(fees[proofId]));
-    }
+    const feesMap: Map<AssetId, Map<ProofId, bigint>> = new Map();
+    assetIds.forEach(assetId => {
+      const assetFees: Map<ProofId, bigint> = new Map();
+      proofIds.forEach(proofId => assetFees.set(proofId, BigInt(fees[assetId][proofId])));
+      feesMap.set(assetId, assetFees);
+    });
 
     return {
       ...body,

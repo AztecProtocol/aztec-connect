@@ -12,8 +12,10 @@ import {IRollupProcessor} from './interfaces/IRollupProcessor.sol';
 contract AztecFeeDistributor is IFeeDistributor, Ownable {
     using SafeMath for uint256;
 
-    event FeeReceived(address sender, uint256 amount);
+    event FeeReceived(address sender, uint256 amount, uint256 assetId);
     event FeeReimbursed(address receiver, uint256 amount);
+
+    uint256 public constant ethAssetId = 0;
 
     address public rollupProcessor;
 
@@ -22,25 +24,37 @@ contract AztecFeeDistributor is IFeeDistributor, Ownable {
     }
 
     receive() external payable {
-        emit FeeReceived(msg.sender, msg.value);
+        emit FeeReceived(msg.sender, msg.value, ethAssetId);
     }
 
-    function txFeeBalance() public view override returns (uint256) {
-        return address(this).balance;
+    function txFeeBalance(uint256 assetId) public view override returns (uint256) {
+        if (assetId == ethAssetId) {
+            return address(this).balance;
+        } else {
+            address assetAddress = IRollupProcessor(rollupProcessor).getSupportedAsset(assetId);
+            return IERC20(assetAddress).balanceOf(address(this));
+        }
     }
 
-    function canPayFeeAmount(uint256 amount) public override returns (bool) {
-        return txFeeBalance() >= amount;
-    }
-
-    function deposit(uint256 amount) external payable override returns (uint256 depositedAmount) {
+    function deposit(uint256 assetId, uint256 amount) external payable override returns (uint256 depositedAmount) {
         // callable by anyone, adds eth to the contract
-        // checks to see if any ERC20 balances can be converted to ETH on Uniswap
-        // convertERC20s()
-        require(amount == msg.value, 'Fee Distributor: INSUFFICIENT_VALUE');
-        depositedAmount = amount;
+        if (assetId == ethAssetId) {
+            require(amount == msg.value, 'Fee Distributor: WRONG_AMOUNT');
 
-        emit FeeReceived(msg.sender, amount);
+            depositedAmount = amount;
+        } else {
+            require(msg.value == 0, 'Fee Distributor: WRONG_PAYMENT_TYPE');
+
+            address assetAddress = IRollupProcessor(rollupProcessor).getSupportedAsset(assetId);
+            IERC20(assetAddress).transferFrom(msg.sender, address(this), amount);
+
+            // TODO
+            // checks to see if any ERC20 balances can be converted to ETH on Uniswap
+            // convertERC20s()
+            depositedAmount = amount;
+        }
+
+        emit FeeReceived(msg.sender, amount, assetId);
     }
 
     function reimburseGas(

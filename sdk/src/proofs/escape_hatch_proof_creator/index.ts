@@ -1,4 +1,5 @@
 import { EthAddress } from 'barretenberg/address';
+import { AssetId } from 'barretenberg/client_proofs';
 import { EscapeHatchProver, EscapeHatchTx } from 'barretenberg/client_proofs/escape_hatch_proof';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
@@ -37,13 +38,13 @@ export class EscapeHatchProofCreator {
     publicOutput: bigint,
     privateInput: bigint,
     privateOutput: bigint,
-    assetId: number,
+    assetId: AssetId,
     signer: Signer,
     receiver?: AccountId,
     outputOwnerAddress?: EthAddress,
     ethSigner?: EthereumSigner,
   ) {
-    const { tx: joinSplitTx, outputKeys }  = await this.joinSplitTxFactory.createJoinSplitTx(
+    const { tx: joinSplitTx, outputKeys } = await this.joinSplitTxFactory.createJoinSplitTx(
       userState,
       publicInput,
       publicOutput,

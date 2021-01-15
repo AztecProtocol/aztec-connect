@@ -1,6 +1,6 @@
 import { EthAddress } from 'barretenberg/address';
+import { AssetId } from 'barretenberg/client_proofs';
 import { JoinSplitTxOptions } from '../wallet_sdk';
-import { AssetId } from '../sdk';
 import { EthereumSigner, Signer } from '../signer';
 import { AccountId } from '../user';
 import { WalletSdk } from '.';

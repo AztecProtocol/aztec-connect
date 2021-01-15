@@ -1,4 +1,5 @@
 import { EthAddress } from 'barretenberg/address';
+import { AssetId } from 'barretenberg/client_proofs';
 import { RollupProvider, TxHash } from 'barretenberg/rollup_provider';
 import { PermitArgs } from './contracts';
 
@@ -17,7 +18,7 @@ export interface Receipt {
 
 export interface Blockchain extends RollupProvider {
   getTransactionReceipt(txHash: TxHash): Promise<Receipt>;
-  validateDepositFunds(publicOwner: EthAddress, publicInput: bigint, assetId: number): Promise<boolean>;
+  validateDepositFunds(publicOwner: EthAddress, publicInput: bigint, assetId: AssetId): Promise<boolean>;
   validateSignature(publicOwner: EthAddress, signature: Buffer, proof: Buffer): boolean;
   getNetworkInfo(): Promise<NetworkInfo>;
   getRollupContractAddress(): EthAddress;
@@ -25,7 +26,7 @@ export interface Blockchain extends RollupProvider {
   getTokenContractAddresses(): EthAddress[];
   getEthBalance(account: EthAddress): Promise<bigint>;
   depositPendingFunds(
-    assetId: number,
+    assetId: AssetId,
     amount: bigint,
     depositorAddress: EthAddress,
     permitArgs?: PermitArgs,

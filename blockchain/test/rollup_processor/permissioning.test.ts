@@ -23,6 +23,7 @@ describe('rollup_processor: permissioning', () => {
   let userB: Signer;
   let userAAddress: EthAddress;
   let viewingKeys: Buffer[];
+  let ethAssetId!: number;
   let erc20AssetId!: number;
 
   const mintAmount = 100;
@@ -32,7 +33,7 @@ describe('rollup_processor: permissioning', () => {
   beforeEach(async () => {
     [userA, userB, rollupProvider] = await ethers.getSigners();
     userAAddress = EthAddress.fromString(await userA.getAddress());
-    ({ erc20, rollupProcessor, feeDistributor, viewingKeys, erc20AssetId } = await setupRollupProcessor(
+    ({ erc20, rollupProcessor, feeDistributor, viewingKeys, ethAssetId, erc20AssetId } = await setupRollupProcessor(
       rollupProvider,
       [userA, userB],
       mintAmount,
@@ -128,7 +129,7 @@ describe('rollup_processor: permissioning', () => {
     await erc20.approve(rollupProcessor.address, depositAmount);
     await rollupProcessor.depositPendingFunds(erc20AssetId, depositAmount, userAAddress.toString());
 
-    await rollupProcessor.depositTxFee(prepaidFee, { value: prepaidFee });
+    await feeDistributor.deposit(ethAssetId, prepaidFee, { value: prepaidFee });
 
     const providerAddress = await rollupProvider.getAddress();
     const rollupProcessorUserB = rollupProcessor.connect(userB);

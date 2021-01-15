@@ -13,7 +13,7 @@ contract Decoder {
      * @dev Decode the public inputs component of proofData. Required to update state variables
      * @param proofData - cryptographic proofData associated with a rollup
      */
-    function decodeProof(bytes memory proofData)
+    function decodeProof(bytes memory proofData, uint256 numberOfAssets)
         internal
         pure
         returns (
@@ -41,7 +41,7 @@ contract Decoder {
             newNullRoot := mload(add(dataStart, 0xc0))
             oldRootRoot := mload(add(dataStart, 0xe0))
             newRootRoot := mload(add(dataStart, 0x100))
-            numTxs := mload(add(dataStart, 0x140))
+            numTxs := mload(add(add(dataStart, 0x120), mul(0x20, numberOfAssets)))
         }
         return (
             [rollupId, rollupSize, dataStartIndex, numTxs],
@@ -54,10 +54,10 @@ contract Decoder {
         );
     }
 
-    function extractTotalTxFee(bytes memory proofData) internal pure returns (uint256) {
+    function extractTotalTxFee(bytes memory proofData, uint256 assetId) internal pure returns (uint256) {
         uint256 totalTxFee;
         assembly {
-            totalTxFee := mload(add(proofData, 0x140))
+            totalTxFee := mload(add(add(proofData, 0x140), mul(0x20, assetId)))
         }
         return totalTxFee;
     }

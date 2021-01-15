@@ -3,7 +3,9 @@
 pragma solidity >=0.6.10 <0.7.0;
 
 interface IRollupProcessor {
-    function txFeeBalance() external view returns (uint256);
+    function feeDistributor() external view returns (address);
+
+    function txFeeBalance(uint256 assetId) external view returns (uint256);
 
     function escapeHatch(
         bytes calldata proofData,
@@ -22,8 +24,6 @@ interface IRollupProcessor {
         address payable feeReceiver,
         uint256 feeLimit
     ) external;
-
-    function depositTxFee(uint256 amount) external payable;
 
     function depositPendingFunds(
         uint256 assetId,
@@ -45,13 +45,13 @@ interface IRollupProcessor {
 
     function setRollupProvider(address provderAddress, bool valid) external;
 
-    function setFeeDistributor(address payable feeDistributorAddress) external;
-
-    function getSupportedAssetAddress(uint256 assetId) external view returns (address);
+    function setFeeDistributor(address feeDistributorAddress) external;
 
     function setSupportedAsset(address linkedToken, bool supportsPermit) external;
 
-    function getNumSupportedAssets() external view returns (uint256);
+    function setAssetPermitSupport(uint256 assetId, bool supportsPermit) external;
+
+    function getSupportedAsset(uint256 assetId) external view returns (address);
 
     function getSupportedAssets() external view returns (address[] memory);
 

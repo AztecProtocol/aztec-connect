@@ -1,4 +1,5 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
+import { AssetId } from 'barretenberg/client_proofs';
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { JoinSplitTx, computeSigningData } from 'barretenberg/client_proofs/join_split_proof';
 import { createEphemeralPrivKey, encryptNote, Note } from 'barretenberg/client_proofs/note';
@@ -24,7 +25,7 @@ export class JoinSplitTxFactory {
     publicOutput: bigint,
     privateInput: bigint,
     privateOutput: bigint,
-    assetId: number,
+    assetId: AssetId,
     signer: Signer,
     receiver?: AccountId,
     inputOwnerAddress?: EthAddress,

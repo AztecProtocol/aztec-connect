@@ -1,4 +1,5 @@
 import { EthAddress } from 'barretenberg/address';
+import { AssetId } from 'barretenberg/client_proofs';
 import { JoinSplitProver } from 'barretenberg/client_proofs/join_split_proof';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { ProofData } from 'barretenberg/client_proofs/proof_data';
@@ -33,7 +34,7 @@ export class JoinSplitProofCreator {
     publicOutput: bigint,
     privateInput: bigint,
     privateOutput: bigint,
-    assetId: number,
+    assetId: AssetId,
     signer: Signer,
     receiver?: AccountId,
     outputOwnerAddress?: EthAddress,

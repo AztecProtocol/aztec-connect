@@ -2,6 +2,7 @@ import { createEthSdk, EthereumSdk, EthAddress, EthereumProvider, EthersAdapter,
 import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
 import { JsonRpcProvider } from '@ethersproject/providers';
+import { topUpFeeDistributorContract } from './fee_distributor_contract';
 
 jest.setTimeout(10 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
@@ -28,6 +29,10 @@ describe('end-to-end account tests', () => {
 
     // Get accounts and signers.
     userAddresses = (await ethersProvider.listAccounts()).map(account => EthAddress.fromString(account));
+
+    const { rollupContractAddress } = await sdk.getRemoteStatus();
+    const tenEth = BigInt(10) ** BigInt(19);
+    await topUpFeeDistributorContract(tenEth, rollupContractAddress, provider);
   });
 
   afterAll(async () => {

@@ -4,6 +4,7 @@ import { decryptNote } from 'barretenberg/client_proofs/note';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { MemoryFifo } from 'barretenberg/fifo';
+import { AssetId } from 'barretenberg/client_proofs';
 import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
 import { RollupProvider, TxHash } from 'barretenberg/rollup_provider';
 import { toBigIntBE } from 'bigint-buffer';
@@ -12,7 +13,6 @@ import { EventEmitter } from 'events';
 import { Database } from '../database';
 import { Note } from '../note';
 import { NotePicker } from '../note_picker';
-import { AssetId } from '../sdk';
 import { AccountAliasId, UserData } from '../user';
 import { UserTx, UserTxAction } from '../user_tx';
 

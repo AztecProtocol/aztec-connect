@@ -1,7 +1,6 @@
 import { VIEWING_KEY_SIZE } from 'barretenberg/rollup_proof';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
-import { EthLinkedAddress } from '../../src/contracts';
 import { advanceBlocks, blocksToAdvance } from './advance_block';
 
 export async function setupRollupProcessor(rollupProvider: Signer, users: Signer[], mintAmount: bigint | number) {
@@ -31,7 +30,6 @@ export async function setupRollupProcessor(rollupProvider: Signer, users: Signer
 
   await rollupProcessor.setFeeDistributor(feeDistributor.address);
 
-  await rollupProcessor.setSupportedAsset(EthLinkedAddress.toString(), false);
   const ethAssetId = 0;
 
   await rollupProcessor.setSupportedAsset(erc20.address, false);

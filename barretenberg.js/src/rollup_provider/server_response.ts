@@ -1,4 +1,3 @@
-import { ProofId } from '../client_proofs';
 import { LinkedRollup, RollupStatus } from './rollup_provider_explorer';
 
 export interface RollupProviderStatusServerResponse {
@@ -14,7 +13,7 @@ export interface RollupProviderStatusServerResponse {
   rootRoot: string;
   escapeOpen: boolean;
   numEscapeBlocksRemaining: number;
-  fees: { [key in ProofId]?: string };
+  fees: string[][];
 }
 
 export interface RollupServerResponse {

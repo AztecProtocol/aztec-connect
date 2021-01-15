@@ -1,4 +1,5 @@
 import { EthAddress } from 'barretenberg/address';
+import { assetIds, proofIds } from 'barretenberg/client_proofs';
 import { InnerProofData, RollupProofData, VIEWING_KEY_SIZE } from 'barretenberg/rollup_proof';
 import { Proof, TxHash } from 'barretenberg/rollup_provider';
 import { numToUInt32BE } from 'barretenberg/serialize';
@@ -9,24 +10,25 @@ import { Connection, Repository } from 'typeorm';
 import { BlockDao } from '../entity/block';
 import { blockDaoToBlock, blockToBlockDao } from './blockdao_convert';
 
+const generate = <T>(count: number, generator: () => T): T[] => new Array(count).fill(0).map(generator);
+
 const generateRollup = (rollupId: number, rollupSize: number) => {
-  const innerProofs = new Array(rollupSize)
-    .fill(0)
-    .map(
-      () =>
-        new InnerProofData(
-          0,
-          numToUInt32BE(0, 32),
-          numToUInt32BE(0, 32),
-          numToUInt32BE(0, 32),
-          randomBytes(64),
-          randomBytes(64),
-          randomBytes(32),
-          randomBytes(32),
-          randomBytes(32),
-          randomBytes(32),
-        ),
-    );
+  const innerProofs = generate(
+    rollupSize,
+    () =>
+      new InnerProofData(
+        0,
+        numToUInt32BE(0, 32),
+        numToUInt32BE(0, 32),
+        numToUInt32BE(0, 32),
+        randomBytes(64),
+        randomBytes(64),
+        randomBytes(32),
+        randomBytes(32),
+        randomBytes(32),
+        randomBytes(32),
+      ),
+  );
   return new RollupProofData(
     rollupId,
     rollupSize,
@@ -37,7 +39,7 @@ const generateRollup = (rollupId: number, rollupSize: number) => {
     randomBytes(32),
     randomBytes(32),
     randomBytes(32),
-    randomBytes(32),
+    generate(RollupProofData.NUMBER_OF_ASSETS, () => randomBytes(32)),
     rollupSize,
     innerProofs,
     randomBytes(16 * 32),
@@ -114,6 +116,15 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
   public async getStatus() {
     const { chainId, networkOrHost } = await this.getNetworkInfo();
 
+    const fees = new Map();
+    assetIds.forEach(assetId => {
+      const assetFees = new Map();
+      proofIds.forEach(proofId => {
+        assetFees.set(proofId, BigInt(0));
+      });
+      fees.set(assetId, assetFees);
+    });
+
     return {
       serviceName: 'falafel',
       chainId,
@@ -127,7 +138,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
       dataSize: this.dataStartIndex,
       escapeOpen: false,
       numEscapeBlocksRemaining: 0,
-      fees: new Map(),
+      fees,
     };
   }
 

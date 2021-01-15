@@ -12,6 +12,7 @@ import { EthereumProvider } from 'blockchain';
 import { SdkEvent, SdkInitState } from '../sdk';
 import { AccountId } from '../user';
 import { CoreSdk, CoreSdkEvent, CoreSdkOptions } from './core_sdk';
+import { AssetId } from 'barretenberg/client_proofs';
 
 const debug = createDebug('bb:create_sdk');
 
@@ -127,7 +128,7 @@ export async function createSdk(
     sdk.on(CoreSdkEvent.UPDATED_USERS, () => channel.postMessage({ name: CoreSdkEvent.UPDATED_USERS }));
     sdk.on(
       CoreSdkEvent.UPDATED_USER_STATE,
-      (userId: AccountId, balanceAfter?: bigint, diff?: bigint, assetId?: number) =>
+      (userId: AccountId, balanceAfter?: bigint, diff?: bigint, assetId?: AssetId) =>
         channel.postMessage({
           name: CoreSdkEvent.UPDATED_USER_STATE,
           userId: userId.toString(),

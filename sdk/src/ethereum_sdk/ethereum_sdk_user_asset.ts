@@ -1,5 +1,5 @@
 import { EthAddress } from 'barretenberg/address';
-import { AssetId } from '../sdk';
+import { AssetId } from 'barretenberg/client_proofs';
 import { Signer } from '../signer';
 import { AccountId } from '../user';
 import { JoinSplitTxOptions } from '../wallet_sdk';

@@ -8,7 +8,6 @@ import {
   createRollupProof,
   createTwoDepositsProof,
   createWithdrawProof,
-  numToBuffer,
 } from '../fixtures/create_mock_proof';
 import { setupRollupProcessor } from '../fixtures/setup_rollup_processor';
 import { solidityFormatSignatures } from '../signing/solidity_format_sigs';
@@ -24,6 +23,8 @@ describe('rollup_processor: multi assets', () => {
   let userB: Signer;
   let userAAddress: EthAddress;
   let userBAddress: EthAddress;
+  let erc20AssetId: number;
+  let ethAssetId: number;
 
   const mintAmount = 100;
   const userADepositAmount = 60;
@@ -33,7 +34,11 @@ describe('rollup_processor: multi assets', () => {
     [userA, userB, rollupProvider] = await ethers.getSigners();
     userAAddress = EthAddress.fromString(await userA.getAddress());
     userBAddress = EthAddress.fromString(await userB.getAddress());
-    ({ erc20: erc20A, rollupProcessor } = await setupRollupProcessor(rollupProvider, [userA, userB], mintAmount));
+    ({ erc20: erc20A, erc20AssetId, ethAssetId, rollupProcessor } = await setupRollupProcessor(
+      rollupProvider,
+      [userA, userB],
+      mintAmount,
+    ));
 
     // set new erc20
     const ERC20B = await ethers.getContractFactory('ERC20Mintable');
@@ -42,10 +47,7 @@ describe('rollup_processor: multi assets', () => {
   });
 
   it('should initialise state variables', async () => {
-    const originalNumSupportedAssets = await rollupProcessor.getNumSupportedAssets();
-    expect(originalNumSupportedAssets).to.equal(2);
-
-    const supportedAssetAAddress = await rollupProcessor.getSupportedAssetAddress(1);
+    const supportedAssetAAddress = await rollupProcessor.getSupportedAsset(1);
     expect(supportedAssetAAddress).to.equal(erc20A.address);
 
     // set new supported asset
@@ -57,11 +59,19 @@ describe('rollup_processor: multi assets', () => {
     expect(assetBId).to.equal(2);
     expect(assetBAddress).to.equal(erc20B.address);
 
-    const supportedAssetBAddress = await rollupProcessor.getSupportedAssetAddress(2);
+    const supportedAssetBAddress = await rollupProcessor.getSupportedAsset(2);
     expect(supportedAssetBAddress).to.equal(erc20B.address);
+  });
 
-    const newNumSupportedAssets = await rollupProcessor.getNumSupportedAssets();
-    expect(newNumSupportedAssets).to.equal(3);
+  it('should revert if trying to set more assets than it is allowed', async () => {
+    const maxAssets = 4;
+    const existingAssets = await rollupProcessor.getSupportedAssets();
+    for (let i = existingAssets.length + 1; i < maxAssets; ++i) {
+      await rollupProcessor.setSupportedAsset(erc20B.address, false);
+    }
+    await expect(rollupProcessor.setSupportedAsset(erc20B.address, false)).to.be.revertedWith(
+      'Rollup Processor: MAX_ASSET_REACHED',
+    );
   });
 
   it('should process asset A deposit tx and assetB deposit tx in one rollup', async () => {
@@ -79,11 +89,11 @@ describe('rollup_processor: multi assets', () => {
         userADepositAmount,
         userAAddress,
         userA,
-        numToBuffer(assetAId),
+        assetAId,
         userBDepositAmount,
         userBAddress,
         userB,
-        numToBuffer(assetBId),
+        assetBId,
       ),
     );
 
@@ -167,5 +177,24 @@ describe('rollup_processor: multi assets', () => {
 
     const rollupFinalBalance = await faultyERC20.balanceOf(rollupProcessor.address);
     expect(rollupFinalBalance).to.equal(userBDepositAmount);
+  });
+
+  it('should revert for depositing eth with inconsistent value', async () => {
+    await expect(
+      rollupProcessor.depositPendingFunds(ethAssetId, 2, userAAddress.toString(), { value: 1 }),
+    ).to.be.revertedWith('Rollup Processor: WRONG_AMOUNT');
+  });
+
+  it('should revert for depositing fund for an erc20 asset with non-zero value', async () => {
+    await erc20A.approve(rollupProcessor.address, 1);
+    await expect(
+      rollupProcessor.depositPendingFunds(erc20AssetId, 1, userAAddress.toString(), { value: 1 }),
+    ).to.be.revertedWith('Rollup Processor: WRONG_PAYMENT_TYPE');
+  });
+
+  it('should revert for depositing fund for an unknown asset', async () => {
+    const unknownAssetId = 3;
+    await expect(rollupProcessor.getSupportedAsset(unknownAssetId)).to.be.reverted;
+    await expect(rollupProcessor.depositPendingFunds(unknownAssetId, 1, userAAddress.toString())).to.be.reverted;
   });
 });

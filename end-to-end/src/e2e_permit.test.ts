@@ -1,16 +1,15 @@
 import {
   AssetId,
+  createEthSdk,
   EthAddress,
-  createWalletSdk,
-  WalletSdk,
-  WalletSdkUserAsset,
-  createPermitData,
-  Web3Signer,
+  EthereumSdk,
+  EthereumSdkUser,
+  EthereumSdkUserAsset,
   WalletProvider,
-  WalletSdkUser,
 } from 'aztec2-sdk';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
+import { topUpFeeDistributorContract } from './fee_distributor_contract';
 
 jest.setTimeout(10 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
@@ -19,19 +18,17 @@ const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost
 
 describe('end-to-end permit tests', () => {
   let provider: WalletProvider;
-  let sdk: WalletSdk;
-  let privateKey: Buffer;
-  let user: WalletSdkUser;
-  let userAsset: WalletSdkUserAsset;
+  let sdk: EthereumSdk;
+  let user: EthereumSdkUser;
+  let userAsset: EthereumSdkUserAsset;
   let userAddress: EthAddress;
-  const newPermitAssetId = AssetId.DAI + 1;
+  const assetId = AssetId.DAI;
 
   beforeAll(async () => {
-    provider = await createFundedWalletProvider(ETHEREUM_HOST, 1);
-    privateKey = provider.getPrivateKey(0);
+    provider = await createFundedWalletProvider(ETHEREUM_HOST, 2, '10');
     userAddress = provider.getAccount(0);
 
-    sdk = await createWalletSdk(provider, ROLLUP_HOST, {
+    sdk = await createEthSdk(provider, ROLLUP_HOST, {
       syncInstances: false,
       saveProvingKey: false,
       clearDb: true,
@@ -40,8 +37,12 @@ describe('end-to-end permit tests', () => {
     await sdk.init();
     await sdk.awaitSynchronised();
 
-    user = await sdk.addUser(privateKey);
-    userAsset = await user.getAsset(newPermitAssetId);
+    user = await sdk.addUser(userAddress);
+    userAsset = await user.getAsset(assetId);
+
+    const { rollupContractAddress } = await sdk.getRemoteStatus();
+    const oneEth = BigInt(10) ** BigInt(18);
+    await topUpFeeDistributorContract(oneEth, rollupContractAddress, provider, provider.getAccount(1));
   });
 
   afterAll(async () => {
@@ -49,39 +50,18 @@ describe('end-to-end permit tests', () => {
   });
 
   it('should deposit funds to permit supporting asset', async () => {
-    const depositValue = userAsset.toErc20Units('1000');
-    await userAsset.mint(depositValue, userAddress);
+    const supportPermit = await sdk.getAssetPermitSupport(assetId);
+    expect(supportPermit).toBe(true);
 
-    expect(await userAsset.publicBalance(userAddress)).toBe(depositValue);
+    const depositValue = userAsset.toErc20Units('1000');
+    await userAsset.mint(depositValue);
+    expect(await userAsset.publicBalance()).toBe(depositValue);
     expect(userAsset.balance()).toBe(0n);
 
-    const { rollupContractAddress } = sdk.getLocalStatus();
-    const nonce = await sdk.getUserNonce(newPermitAssetId, userAddress);
-    const tokenContract = await sdk.getTokenContract(newPermitAssetId);
-    const tokenAddress = await tokenContract.getAddress();
-    const tokenName = await tokenContract.name();
-    const deadline = BigInt('0xffffffff');
-    const chainId = 1; // Note: Ganache's chainId is actually 1337, but the chainid opcode returns 1.
-
-    const dataToSign = createPermitData(
-      tokenName,
-      userAddress,
-      rollupContractAddress,
-      depositValue,
-      nonce,
-      deadline,
-      chainId,
-      tokenAddress,
-    );
-    const ethSigner = new Web3Signer(provider, userAddress);
-    const signature = await ethSigner.signTypedData(dataToSign);
-    const aztecSigner = sdk.createSchnorrSigner(privateKey);
-    const permitArgs = { deadline, approvalAmount: depositValue, signature };
-
-    const txHash = await userAsset.deposit(depositValue, aztecSigner, ethSigner, permitArgs);
+    const txHash = await userAsset.deposit(depositValue);
     await sdk.awaitSettlement(txHash, 300);
 
-    expect(await userAsset.publicBalance(userAddress)).toBe(0n);
+    expect(await userAsset.publicBalance()).toBe(0n);
     expect(userAsset.balance()).toBe(depositValue);
   });
 });

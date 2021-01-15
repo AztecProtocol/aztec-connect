@@ -53,12 +53,11 @@ async function main() {
 
   if (initialFee) {
     const amount = parseEther(initialFee);
-    feeDistributor.deposit(amount, { value: amount });
+    feeDistributor.deposit(0, amount, { value: amount });
   }
 
   if (!erc20Address) {
-    // Add assets, one regular, one with permit support.
-    await addAsset(rollup, signer, false);
+    // Add asset with permit support.
     await addAsset(rollup, signer, true);
   } else {
     await setSupportedAsset(rollup, erc20Address, !!supportsPermitStr);

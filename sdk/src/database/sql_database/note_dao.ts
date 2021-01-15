@@ -1,3 +1,4 @@
+import { AssetId } from 'barretenberg/client_proofs';
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 import { Note } from '../../note';
 import { AccountId } from '../../user';
@@ -9,7 +10,7 @@ export class NoteDao implements Note {
   public index!: number;
 
   @Column()
-  public assetId!: number;
+  public assetId!: AssetId;
 
   @Column('bigint', { transformer: [bigintTransformer] })
   public value!: bigint;

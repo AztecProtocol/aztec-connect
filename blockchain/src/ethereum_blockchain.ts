@@ -1,7 +1,7 @@
 import { EthereumProvider } from './ethereum_provider';
 import { EthAddress } from 'barretenberg/address';
 import { Proof, RollupProviderStatus, TxHash } from 'barretenberg/rollup_provider';
-import { ProofId } from 'barretenberg/client_proofs';
+import { AssetId, ProofId } from 'barretenberg/client_proofs';
 import createDebug from 'debug';
 import { ethers } from 'ethers';
 import { EventEmitter } from 'events';
@@ -115,9 +115,15 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     await this.updateEscapeHatchStatus();
     const { chainId } = await this.contracts.getNetwork();
     const { networkOrHost, txFee = BigInt(0) } = this.config;
+    const ethFees = new Map();
+    ethFees.set(ProofId.JOIN_SPLIT, txFee);
+    ethFees.set(ProofId.ACCOUNT, BigInt(0));
+    const daiFees = new Map();
+    daiFees.set(ProofId.JOIN_SPLIT, BigInt(0));
+    daiFees.set(ProofId.ACCOUNT, BigInt(0));
     const fees = new Map();
-    fees.set(ProofId.JOIN_SPLIT, txFee);
-    fees.set(ProofId.ACCOUNT, BigInt(0));
+    fees.set(AssetId.ETH, ethFees);
+    fees.set(AssetId.DAI, daiFees);
 
     this.status = {
       ...this.status,
@@ -169,11 +175,11 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return this.contracts.getTokenContractAddresses();
   }
 
-  public async getUserPendingDeposit(assetId: number, account: EthAddress) {
+  public async getUserPendingDeposit(assetId: AssetId, account: EthAddress) {
     return this.contracts.getUserPendingDeposit(assetId, account);
   }
 
-  public async getUserNonce(assetId: number, account: EthAddress) {
+  public async getUserNonce(assetId: AssetId, account: EthAddress) {
     return this.contracts.getUserNonce(assetId, account);
   }
 
@@ -181,7 +187,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return this.contracts.setSupportedAsset(assetAddress, supportsPermit, signingAddress);
   }
 
-  public async getAssetPermitSupport(assetId: number) {
+  public async getAssetPermitSupport(assetId: AssetId) {
     return this.contracts.getAssetPermitSupport(assetId);
   }
 
@@ -190,7 +196,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    * If the asset supports the permit() flow, deposit via the permit signature flow
    */
   public async depositPendingFunds(
-    assetId: number,
+    assetId: AssetId,
     amount: bigint,
     depositorAddress: EthAddress,
     permitArgs?: PermitArgs,
@@ -272,7 +278,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    * Check users have deposited sufficient numbers of tokens , for rollup deposits
    * to succeed
    */
-  public async validateDepositFunds(inputOwner: EthAddress, publicInput: bigint, assetId: number) {
+  public async validateDepositFunds(inputOwner: EthAddress, publicInput: bigint, assetId: AssetId) {
     const depositedBalance = BigInt(await this.contracts.getUserPendingDeposit(assetId, inputOwner));
     return depositedBalance >= publicInput;
   }

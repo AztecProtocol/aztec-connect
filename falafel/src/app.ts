@@ -1,5 +1,6 @@
 import { ApolloServer } from 'apollo-server-koa';
 import { Block, BlockServerResponse, GetBlocksServerResponse } from 'barretenberg/block_source';
+import { assetIds, proofIds } from 'barretenberg/client_proofs';
 import {
   RollupServerResponse,
   TxServerResponse,
@@ -23,7 +24,6 @@ import { BlockResolver, RollupResolver, TxResolver, ServerStatusResolver } from 
 import { Server } from './server';
 import { RollupDao } from './entity/rollup';
 import { Metrics } from './metrics';
-import { ProofId } from 'barretenberg/client_proofs';
 
 // eslint-disable-next-line
 const cors = require('@koa/cors');
@@ -188,10 +188,14 @@ export function appFactory(
   router.get('/status', async (ctx: Koa.Context) => {
     const status = await server.getStatus();
     const { rollupContractAddress, tokenContractAddresses, dataRoot, nullRoot, rootRoot, fees } = status;
-    const feesResponse: { [key in ProofId]?: string } = {};
-    for (const [proofId, fee] of fees.entries()) {
-      feesResponse[proofId] = fee.toString();
-    }
+    const feesResponse: string[][] = [];
+    assetIds.forEach(assetId => {
+      const assetFees: string[] = [];
+      proofIds.forEach(proofId => {
+        assetFees[proofId] = fees.get(assetId)!.get(proofId)!.toString();
+      });
+      feesResponse[assetId] = assetFees;
+    });
     const response: RollupProviderStatusServerResponse = {
       ...status,
       rollupContractAddress: rollupContractAddress.toString(),

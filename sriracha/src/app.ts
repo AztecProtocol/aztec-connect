@@ -1,4 +1,5 @@
 import cors from '@koa/cors';
+import { assetIds, proofIds } from 'barretenberg/client_proofs';
 import { RollupProviderStatusServerResponse } from 'barretenberg/rollup_provider';
 import { toBigIntBE } from 'bigint-buffer';
 import Koa from 'koa';
@@ -18,7 +19,15 @@ export function appFactory(server: Server, prefix: string) {
 
   router.get('/status', async (ctx: Koa.Context) => {
     const status = await server.getStatus();
-    const { rollupContractAddress, tokenContractAddresses, dataRoot, nullRoot, rootRoot } = status;
+    const { rollupContractAddress, tokenContractAddresses, dataRoot, nullRoot, rootRoot, fees } = status;
+    const feesResponse: string[][] = [];
+    assetIds.forEach(assetId => {
+      const assetFees: string[] = [];
+      proofIds.forEach(proofId => {
+        assetFees[proofId] = fees.get(assetId)!.get(proofId)!.toString();
+      });
+      feesResponse[assetId] = assetFees;
+    });
     const response: RollupProviderStatusServerResponse = {
       ...status,
       rollupContractAddress: rollupContractAddress.toString(),
@@ -26,7 +35,7 @@ export function appFactory(server: Server, prefix: string) {
       dataRoot: dataRoot.toString('hex'),
       nullRoot: nullRoot.toString('hex'),
       rootRoot: rootRoot.toString('hex'),
-      fees: {},
+      fees: feesResponse,
     };
     ctx.set('content-type', 'application/json');
     ctx.body = response;

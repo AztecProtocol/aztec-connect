@@ -22,6 +22,7 @@ import { Blake2s } from '../../crypto/blake2s';
 import { AccountAliasId } from '../account_alias_id';
 import { AliasHash } from '../alias_hash';
 import { computeSigningData } from '../join_split_proof/compute_signing_data';
+import { AssetId } from '../asset_id';
 
 const debug = createDebug('bb:escape_hatch_proof');
 
@@ -114,8 +115,7 @@ describe('escape_hatch_proof', () => {
     const outputNote2 = Note.createFromEphPriv(pubKey, BigInt(10), 0, 0, outputNote2EphKey, grumpkin);
     const outputNotes = [outputNote1, outputNote2];
 
-    const txFee = BigInt(3);
-    const publicInput = BigInt(0) + txFee;
+    const publicInput = BigInt(0);
     const publicOutput = BigInt(120);
 
     // Setup state, simulate inputs notes already being in
@@ -194,7 +194,7 @@ describe('escape_hatch_proof', () => {
     const joinSplitTx = new JoinSplitTx(
       publicInput,
       publicOutput,
-      0,
+      AssetId.ETH,
       2,
       inputIndexes,
       oldDataRoot,
@@ -249,7 +249,9 @@ describe('escape_hatch_proof', () => {
     expect(escapeHatchProof.newNullRoot).toEqual(newNullifierRoots[1]); // TODO
     expect(escapeHatchProof.oldDataRootsRoot).toEqual(oldDataRootsRoot);
     expect(escapeHatchProof.newDataRootsRoot).toEqual(newDataRootsRoot);
-    expect(escapeHatchProof.totalTxFee).toEqual(toBufferBE(txFee, 32));
+    for (let i = 0; i < RollupProofData.NUMBER_OF_ASSETS; ++i) {
+      expect(escapeHatchProof.totalTxFees[i]).toEqual(Buffer.alloc(32));
+    }
     expect(escapeHatchProof.numTxs).toEqual(1);
   });
 });

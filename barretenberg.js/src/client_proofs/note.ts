@@ -3,12 +3,13 @@ import { createHash, randomBytes, createCipheriv, createDecipheriv } from 'crypt
 import { Grumpkin } from '../ecc/grumpkin';
 import { GrumpkinAddress } from '../address';
 import { numToUInt8, numToUInt32BE } from '../serialize';
+import { AssetId } from './asset_id';
 
 export class Note {
   constructor(
     public ownerPubKey: GrumpkinAddress,
     public value: bigint,
-    public assetId: number,
+    public assetId: AssetId,
     public nonce: number,
     public noteSecret: Buffer,
   ) {}
@@ -16,7 +17,7 @@ export class Note {
   static createFromEphPub(
     ownerPubKey: GrumpkinAddress,
     value: bigint,
-    assetId: number,
+    assetId: AssetId,
     nonce: number,
     ephPubKey: GrumpkinAddress,
     ownerPrivKey: Buffer,
@@ -29,7 +30,7 @@ export class Note {
   static createFromEphPriv(
     ownerPubKey: GrumpkinAddress,
     value: bigint,
-    assetId: number,
+    assetId: AssetId,
     nonce: number,
     ephPrivKey: Buffer,
     grumpkin: Grumpkin,

@@ -4,8 +4,12 @@ async function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+export async function getCurrentblockNumber(provider: EthereumProvider) {
+  return parseInt(await provider.request({ method: 'eth_blockNumber' }));
+}
+
 export async function blocksToAdvance(target: number, accuracy: number, provider: EthereumProvider) {
-  const blockNumber = await provider.request({ method: 'eth_blockNumber' });
+  const blockNumber = await getCurrentblockNumber(provider);
   const remainder = blockNumber % accuracy;
   if (remainder > target) {
     return accuracy - remainder + target;
@@ -15,12 +19,9 @@ export async function blocksToAdvance(target: number, accuracy: number, provider
 }
 
 export async function advanceBlocks(blocks: number, provider: EthereumProvider) {
-  const blockArray = new Array(blocks).fill(1);
-  await Promise.all(
-    blockArray.map(async () => {
-      await sleep(50);
-      await provider.request({ method: 'evm_mine' });
-    }),
-  );
-  return await provider.request({ method: 'eth_blockNumber' });
+  for (let i = 0; i < blocks; ++i) {
+    await provider.request({ method: 'evm_mine' });
+  }
+  await sleep(1200); // wait for ethereum_blockchain to update its status (it's polling and updating status every second)
+  return getCurrentblockNumber(provider);
 }

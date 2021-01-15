@@ -1,5 +1,5 @@
+import { AssetId } from 'barretenberg/client_proofs';
 import { TxHash } from 'barretenberg/rollup_provider';
-import { AssetId } from './sdk';
 import { AccountId } from './user';
 
 export type UserTxAction = 'DEPOSIT' | 'WITHDRAW' | 'TRANSFER' | 'PUBLIC_TRANSFER' | 'RECEIVE' | 'ACCOUNT';

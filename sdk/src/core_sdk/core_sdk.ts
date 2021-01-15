@@ -1,5 +1,6 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { Block } from 'barretenberg/block_source';
+import { AssetId } from 'barretenberg/client_proofs';
 import { AccountProver } from 'barretenberg/client_proofs/account_proof';
 import { EscapeHatchProver } from 'barretenberg/client_proofs/escape_hatch_proof';
 import { JoinSplitProver } from 'barretenberg/client_proofs/join_split_proof';
@@ -27,7 +28,7 @@ import { Database } from '../database';
 import { AccountProofCreator } from '../proofs/account_proof_creator';
 import { EscapeHatchProofCreator } from '../proofs/escape_hatch_proof_creator';
 import { JoinSplitProofCreator } from '../proofs/join_split_proof_creator';
-import { AssetId, SdkEvent, SdkInitState, SdkStatus } from '../sdk';
+import { SdkEvent, SdkInitState, SdkStatus } from '../sdk';
 import { EthereumSigner, Signer } from '../signer';
 import { SchnorrSigner } from '../signer';
 import { TxsState } from '../txs_state';
@@ -440,7 +441,7 @@ export class CoreSdk extends EventEmitter {
    * Call the user state init function to refresh users internal state.
    * Emit an SdkEvent to update the UI.
    */
-  public async notifyUserStateUpdated(userId: AccountId, balanceAfter?: bigint, diff?: bigint, assetId?: number) {
+  public async notifyUserStateUpdated(userId: AccountId, balanceAfter?: bigint, diff?: bigint, assetId?: AssetId) {
     await this.getUserState(userId)?.init();
     this.emit(SdkEvent.UPDATED_USER_STATE, userId, balanceAfter, diff, assetId);
   }

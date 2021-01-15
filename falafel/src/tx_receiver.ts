@@ -60,8 +60,13 @@ export class TxReceiver {
         break;
     }
 
+    const assetId = proof.assetId.readUInt32BE(28);
     const { fees } = await this.blockchain.getStatus();
-    const requiredFee = fees.get(proof.proofId) || BigInt(0);
+    const assetFees = fees.get(assetId);
+    if (!assetFees) {
+      throw new Error(`Unsupported asset id ${assetId}.`);
+    }
+    const requiredFee = assetFees.get(proof.proofId)!;
     const txFee = toBigIntBE(proof.txFee);
     if (txFee < requiredFee) {
       throw new Error('Insufficient fee.');

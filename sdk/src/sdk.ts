@@ -21,11 +21,6 @@ export enum SdkEvent {
   LOG = 'SDKEVENT_LOG',
 }
 
-export enum AssetId {
-  ETH,
-  DAI,
-}
-
 export enum SdkInitState {
   UNINITIALIZED = 'UNINITIALIZED',
   INITIALIZING = 'INITIALIZING',

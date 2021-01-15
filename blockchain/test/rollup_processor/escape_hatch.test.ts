@@ -24,6 +24,7 @@ describe('rollup_processor: escape hatch', () => {
   let userB: Signer;
   let userAAddress: EthAddress;
   let viewingKeys: Buffer[];
+  let ethAssetId!: number;
   let erc20AssetId!: number;
 
   const provider = ethers.provider;
@@ -34,7 +35,7 @@ describe('rollup_processor: escape hatch', () => {
   beforeEach(async () => {
     [userA, userB, rollupProvider] = await ethers.getSigners();
     userAAddress = EthAddress.fromString(await userA.getAddress());
-    ({ erc20, rollupProcessor, feeDistributor, viewingKeys, erc20AssetId } = await setupRollupProcessor(
+    ({ erc20, rollupProcessor, feeDistributor, viewingKeys, ethAssetId, erc20AssetId } = await setupRollupProcessor(
       rollupProvider,
       [userA, userB],
       mintAmount,
@@ -117,7 +118,7 @@ describe('rollup_processor: escape hatch', () => {
     const feeLimit = BigInt(10) ** BigInt(18);
     const prepaidFee = feeLimit;
 
-    await rollupProcessor.depositTxFee(prepaidFee, { value: prepaidFee });
+    await feeDistributor.deposit(ethAssetId, prepaidFee, { value: prepaidFee });
 
     const { proofData, signatures, sigIndexes, providerSignature } = await createRollupProof(
       rollupProvider,
