@@ -19,12 +19,12 @@ library RollupProcessorLibrary {
         bytes memory signature,
         address signer
     ) internal pure {
-        require(signer != address(0x0), 'Validate Signatue: ZERO_ADDRESS');
+        require(signer != address(0x0), 'validateSignature: ZERO_ADDRESS');
 
         bytes32 digest = keccak256(data);
         bytes32 msgHash = ECDSA.toEthSignedMessageHash(digest);
 
         address recoveredSigner = ECDSA.recover(msgHash, signature);
-        require(recoveredSigner == signer, 'Validate Signatue: INVALID_SIGNATRUE');
+        require(recoveredSigner == signer, 'validateSignature: INVALID_SIGNATURE');
     }
 }

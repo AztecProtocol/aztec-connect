@@ -83,7 +83,7 @@ describe('rollup_processor: multi assets', () => {
     // deposit funds from userA and userB, from assetA and assetB respectively
     const assetAId = 1;
     const assetBId = 2;
-    const { proofData, signatures, sigIndexes } = await createRollupProof(
+    const { proofData, signatures } = await createRollupProof(
       rollupProvider,
       await createTwoDepositsProof(
         userADepositAmount,
@@ -102,12 +102,7 @@ describe('rollup_processor: multi assets', () => {
     await rollupProcessor.connect(userA).depositPendingFunds(assetAId, userADepositAmount, userAAddress.toString());
     await rollupProcessor.connect(userB).depositPendingFunds(assetBId, userBDepositAmount, userBAddress.toString());
 
-    await rollupProcessor.escapeHatch(
-      proofData,
-      solidityFormatSignatures(signatures),
-      sigIndexes,
-      Buffer.concat(fourViewingKeys),
-    );
+    await rollupProcessor.escapeHatch(proofData, solidityFormatSignatures(signatures), Buffer.concat(fourViewingKeys));
 
     const postDepositUserABalance = await erc20A.balanceOf(userAAddress.toString());
     expect(postDepositUserABalance).to.equal(mintAmount - userADepositAmount);
@@ -135,7 +130,7 @@ describe('rollup_processor: multi assets', () => {
 
     // deposit funds from assetB
     const fourViewingKeys = [Buffer.alloc(32, 1), Buffer.alloc(32, 2), Buffer.alloc(32, 3), Buffer.alloc(32, 4)];
-    const { proofData, signatures, sigIndexes } = await createRollupProof(
+    const { proofData, signatures } = await createRollupProof(
       rollupProvider,
       await createDepositProof(userBDepositAmount, userBAddress, userB, faultyERC20Id),
     );
@@ -145,12 +140,7 @@ describe('rollup_processor: multi assets', () => {
     await rollupProcessor
       .connect(userB)
       .depositPendingFunds(faultyERC20Id, userBDepositAmount, userBAddress.toString());
-    await rollupProcessor.escapeHatch(
-      proofData,
-      solidityFormatSignatures(signatures),
-      sigIndexes,
-      Buffer.concat(fourViewingKeys),
-    );
+    await rollupProcessor.escapeHatch(proofData, solidityFormatSignatures(signatures), Buffer.concat(fourViewingKeys));
 
     // withdraw funds to userB - this is not expected to perform a transfer (as the ERC20 is faulty)
     // so we don't expect the withdraw funds to be transferred, and expect an error event emission
@@ -162,7 +152,7 @@ describe('rollup_processor: multi assets', () => {
         rollupId: 1,
       },
     );
-    const withdrawTx = await rollupProcessor.escapeHatch(withdrawProofData, [], [], Buffer.concat(fourViewingKeys));
+    const withdrawTx = await rollupProcessor.escapeHatch(withdrawProofData, [], Buffer.concat(fourViewingKeys));
 
     const rollupReceipt = await withdrawTx.wait();
     expect(receipt.status).to.equal(1);

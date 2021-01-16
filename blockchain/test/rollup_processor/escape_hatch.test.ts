@@ -41,19 +41,14 @@ describe('rollup_processor: escape hatch', () => {
       mintAmount,
     ));
 
-    const { proofData, signatures, sigIndexes } = await createRollupProof(
+    const { proofData, signatures } = await createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAAddress, userA),
     );
     await erc20.approve(rollupProcessor.address, depositAmount);
     await rollupProcessor.depositPendingFunds(erc20AssetId, depositAmount, userAAddress.toString());
 
-    await rollupProcessor.escapeHatch(
-      proofData,
-      solidityFormatSignatures(signatures),
-      sigIndexes,
-      Buffer.concat(viewingKeys),
-    );
+    await rollupProcessor.escapeHatch(proofData, solidityFormatSignatures(signatures), Buffer.concat(viewingKeys));
   });
 
   it('should get escape hatch closed status', async () => {
@@ -83,7 +78,7 @@ describe('rollup_processor: escape hatch', () => {
     });
     const nextEscapeBlock = await blocksToAdvance(80, 100, provider);
     await advanceBlocks(nextEscapeBlock, provider);
-    await rollupProcessor.escapeHatch(proofData, [], [], Buffer.concat(viewingKeys));
+    await rollupProcessor.escapeHatch(proofData, [], Buffer.concat(viewingKeys));
 
     // check balances
     const finalContractBalance = await erc20.balanceOf(rollupProcessor.address);
@@ -101,7 +96,7 @@ describe('rollup_processor: escape hatch', () => {
     });
     const escapeBlock = await blocksToAdvance(101, 100, provider);
     await advanceBlocks(escapeBlock, provider);
-    await expect(rollupProcessor.escapeHatch(proofData, [], [], Buffer.concat(viewingKeys))).to.be.revertedWith(
+    await expect(rollupProcessor.escapeHatch(proofData, [], Buffer.concat(viewingKeys))).to.be.revertedWith(
       'Rollup Processor: ESCAPE_BLOCK_RANGE_INCORRECT',
     );
   });
@@ -120,7 +115,7 @@ describe('rollup_processor: escape hatch', () => {
 
     await feeDistributor.deposit(ethAssetId, prepaidFee, { value: prepaidFee });
 
-    const { proofData, signatures, sigIndexes, providerSignature } = await createRollupProof(
+    const { proofData, signatures, providerSignature } = await createRollupProof(
       rollupProvider,
       await createWithdrawProof(withdrawalAmount, userAAddress),
       {
@@ -134,7 +129,6 @@ describe('rollup_processor: escape hatch', () => {
     await rollupProcessor.processRollup(
       proofData,
       solidityFormatSignatures(signatures),
-      sigIndexes,
       Buffer.concat(viewingKeys),
       providerSignature,
       providerAddress,

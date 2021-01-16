@@ -230,7 +230,7 @@ describe('ethereum_blockchain', () => {
 
     await feeDistributor.deposit(ethAssetId, prepaidFee, { value: prepaidFee });
 
-    const { proofData, signatures, sigIndexes, providerSignature } = await createRollupProof(
+    const { proofData, signatures, providerSignature } = await createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAAddress, userA, ethAssetId, txFee),
       {
@@ -247,7 +247,6 @@ describe('ethereum_blockchain', () => {
     const txHash = await ethereumBlockchain.sendRollupProof(
       proofData,
       signatures,
-      sigIndexes,
       viewingKeys,
       providerSignature,
       providerAddress,

@@ -43,6 +43,10 @@ export class InnerProofData {
     ]);
   }
 
+  isPadding() {
+    return this.nullifier1.equals(Buffer.alloc(32, 0));
+  }
+
   static fromBuffer(innerPublicInputs: Buffer) {
     const proofId = innerPublicInputs.readUInt32BE(0 * 32 + 28);
     const publicInput = innerPublicInputs.slice(1 * 32, 1 * 32 + 32);
@@ -146,7 +150,7 @@ export class RollupProofData {
     const numTxs = proofData.readUInt32BE((9 + RollupProofData.NUMBER_OF_ASSETS) * 32 + 28);
 
     const innerProofData: InnerProofData[] = [];
-    for (let i = 0; i < numTxs; ++i) {
+    for (let i = 0; i < rollupSize; ++i) {
       const startIndex = RollupProofData.LENGTH_ROLLUP_PUBLIC + i * InnerProofData.LENGTH;
       const innerData = proofData.slice(startIndex, startIndex + InnerProofData.LENGTH);
       innerProofData[i] = InnerProofData.fromBuffer(innerData);
@@ -155,8 +159,8 @@ export class RollupProofData {
     // Populate j/s tx viewingKey data.
     const viewingKeys: Buffer[][] = [];
     if (viewingKeyData) {
-      for (let i = 0, jsCount = 0; i < numTxs; ++i) {
-        if (innerProofData[i].proofId === 0) {
+      for (let i = 0, jsCount = 0; i < rollupSize; ++i) {
+        if (innerProofData[i].proofId === 0 && !innerProofData[i].isPadding()) {
           const offset = jsCount * VIEWING_KEY_SIZE;
           const vk1 = viewingKeyData.slice(offset, offset + VIEWING_KEY_SIZE);
           const vk2 = viewingKeyData.slice(offset + VIEWING_KEY_SIZE, offset + VIEWING_KEY_SIZE * 2);
@@ -168,7 +172,7 @@ export class RollupProofData {
       }
     }
 
-    const recursiveStartIndex = RollupProofData.LENGTH_ROLLUP_PUBLIC + numTxs * InnerProofData.LENGTH;
+    const recursiveStartIndex = RollupProofData.LENGTH_ROLLUP_PUBLIC + rollupSize * InnerProofData.LENGTH;
     const recursiveProofOutput = proofData.slice(recursiveStartIndex, recursiveStartIndex + 16 * 32);
     return new RollupProofData(
       rollupId,

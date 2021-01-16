@@ -102,7 +102,7 @@ export class WorldStateDb {
   }
 
   public async commit() {
-    await new Promise(resolve => {
+    await new Promise<void>(resolve => {
       this.stdioQueue.put(async () => {
         const buffer = Buffer.from([0x02]);
         this.proc!.stdin!.write(buffer);
@@ -113,7 +113,7 @@ export class WorldStateDb {
   }
 
   public async rollback() {
-    await new Promise(resolve => {
+    await new Promise<void>(resolve => {
       this.stdioQueue.put(async () => {
         const buffer = Buffer.from([0x03]);
         this.proc!.stdin!.write(buffer);

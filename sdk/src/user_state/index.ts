@@ -204,6 +204,10 @@ export class UserState extends EventEmitter {
   }
 
   private async processNewNote(index: number, dataEntry: Buffer, viewingKey: Buffer) {
+    if (viewingKey.length === 0) {
+      return;
+    }
+
     const savedNote = await this.db.getNote(index);
     if (savedNote) {
       return savedNote.owner.equals(this.user.id) ? savedNote : undefined;

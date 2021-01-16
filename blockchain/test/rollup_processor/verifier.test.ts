@@ -17,9 +17,9 @@ describe('Verifier', () => {
 
   it('should validate a proof', async () => {
     const proof = await getRollupData();
-    const rollupSize = 1;
+    const rollupSize = 2;
     const tx = await verifier.verify(proof, rollupSize);
     const receipt = await tx.wait();
     expect(receipt.status).to.equal(1);
-  }).timeout(120000);
+  }).timeout(600000);
 });

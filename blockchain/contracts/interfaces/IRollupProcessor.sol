@@ -10,14 +10,12 @@ interface IRollupProcessor {
     function escapeHatch(
         bytes calldata proofData,
         bytes calldata signatures,
-        uint256[] calldata sigIndexes,
         bytes calldata viewingKeys
     ) external;
 
     function processRollup(
         bytes calldata proofData,
         bytes calldata signatures,
-        uint256[] calldata sigIndexes,
         bytes calldata viewingKeys,
         bytes calldata providerSignature,
         address provider,

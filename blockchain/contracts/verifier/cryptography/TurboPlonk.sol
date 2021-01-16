@@ -226,9 +226,8 @@ library TurboPlonk {
 
         challenges.init = Types.Fr({value: uint256(transcript.current_challenge) % Types.r_mod});
 
-        for (uint256 i = 0; i < vk.num_inputs; i++) {
-            transcript.update_with_u256(decoded_proof.public_input_values[i]);
-        }
+        transcript.update_with_public_inputs(decoded_proof.public_input_values, vk.num_inputs);
+
         assert(decoded_proof.wire_commitments.length == 4);
         for (uint256 i = 0; i < decoded_proof.wire_commitments.length; i++) {
             transcript.update_with_g1(decoded_proof.wire_commitments[i]);
@@ -303,7 +302,7 @@ library TurboPlonk {
          */
         for (uint256 i = 1; i < Types.NUM_NU_CHALLENGES; i += 1) {
             // reset to base_v_challenge, and generate next from that
-            transcript.data = abi.encodePacked(base_v_challenge_unreduced);
+            transcript.reset_to_bytes32(base_v_challenge_unreduced);
             transcript.append_byte(uint8(i));
             challenges.v[i] = transcript.get_challenge();
         }

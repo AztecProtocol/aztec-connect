@@ -214,7 +214,6 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   public async sendRollupProof(
     proofData: Buffer,
     signatures: Buffer[],
-    sigIndexes: number[],
     viewingKeys: Buffer[],
     providerSignature: Buffer,
     feeReceiver: EthAddress,
@@ -224,7 +223,6 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return await this.contracts.sendRollupProof(
       proofData,
       signatures,
-      sigIndexes,
       viewingKeys,
       providerSignature,
       feeReceiver,
@@ -241,7 +239,6 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return this.contracts.sendEscapeHatchProof(
       proofData,
       depositSignature ? [depositSignature] : [],
-      depositSignature ? [0] : [],
       viewingKeys,
       signingAddress,
     );

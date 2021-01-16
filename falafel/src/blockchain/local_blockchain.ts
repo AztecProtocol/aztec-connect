@@ -143,10 +143,10 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
   }
 
   public async sendProof({ proofData, viewingKeys }: Proof) {
-    return this.sendRollupProof(proofData, [], [], viewingKeys);
+    return this.sendRollupProof(proofData, [], viewingKeys);
   }
 
-  public async sendRollupProof(proofData: Buffer, signatures: Buffer[], sigIndexes: number[], viewingKeys: Buffer[]) {
+  public async sendRollupProof(proofData: Buffer, signatures: Buffer[], viewingKeys: Buffer[]) {
     if (!this.running) {
       throw new Error('Blockchain is not accessible.');
     }

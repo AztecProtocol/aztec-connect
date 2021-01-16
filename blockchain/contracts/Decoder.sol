@@ -63,19 +63,6 @@ contract Decoder {
     }
 
     /**
-     * @dev Find the signature index
-     * @param sigIndexes - array specifying whic transaction each signature corresponds to
-     * @param txIndex - current transaction number
-     */
-    function findSigIndex(uint256[] memory sigIndexes, uint256 txIndex) internal pure returns (uint256) {
-        for (uint256 i = 0; i <= sigIndexes.length; i += 1) {
-            if (sigIndexes[i] == txIndex) {
-                return i;
-            }
-        }
-    }
-
-    /**
      * @dev Extract the various data needed from the proofData and signatures bytes array.
      * Information later used for signature validation and token transfer
      *

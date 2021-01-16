@@ -42,7 +42,7 @@ describe('rollup_processor: permissioning', () => {
   });
 
   it('should deposit funds, which requires a successfull sig validation', async () => {
-    const { proofData, signatures, sigIndexes } = await createRollupProof(
+    const { proofData, signatures } = await createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAAddress, userA),
     );
@@ -51,7 +51,6 @@ describe('rollup_processor: permissioning', () => {
     const tx = await rollupProcessor.escapeHatch(
       proofData,
       solidityFormatSignatures(signatures),
-      sigIndexes,
       Buffer.concat(viewingKeys),
     );
     const receipt = await tx.wait();
@@ -59,7 +58,7 @@ describe('rollup_processor: permissioning', () => {
   });
 
   it('should reject transfer with fake signature', async () => {
-    const { proofData, sigIndexes } = await createRollupProof(
+    const { proofData } = await createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAAddress, userA),
     );
@@ -72,28 +71,22 @@ describe('rollup_processor: permissioning', () => {
     await rollupProcessor.depositPendingFunds(erc20AssetId, depositAmount, userAAddress.toString());
 
     await expect(
-      rollupProcessor.escapeHatch(
-        proofData,
-        solidityFormatSignatures([fakeSignature]),
-        sigIndexes,
-        Buffer.concat(viewingKeys),
-      ),
-    ).to.be.revertedWith('Validate Signatue: INVALID_SIGNATRUE');
+      rollupProcessor.escapeHatch(proofData, solidityFormatSignatures([fakeSignature]), Buffer.concat(viewingKeys)),
+    ).to.be.revertedWith('validateSignature: INVALID_SIGNATURE');
   });
 
   it('should reject transfer with zero signature', async () => {
-    const { proofData, sigIndexes } = await createRollupProof(
+    const { proofData } = await createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAAddress, userA),
     );
     const zeroSignatures = Buffer.alloc(soliditySignatureLength);
     await erc20.approve(rollupProcessor.address, depositAmount);
-    await expect(rollupProcessor.escapeHatch(proofData, zeroSignatures, sigIndexes, Buffer.concat(viewingKeys))).to.be
-      .reverted;
+    await expect(rollupProcessor.escapeHatch(proofData, zeroSignatures, Buffer.concat(viewingKeys))).to.be.reverted;
   });
 
   it('should allow manual proof approval if the user cant submit a signature', async () => {
-    const { proofData, sigIndexes } = await createRollupProof(
+    const { proofData } = await createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAAddress, userA),
     );
@@ -107,7 +100,7 @@ describe('rollup_processor: permissioning', () => {
 
     await rollupProcessor.connect(userA).approveProof(proofHash, true);
 
-    const tx = await rollupProcessor.escapeHatch(proofData, zeroSignatures, sigIndexes, Buffer.concat(viewingKeys));
+    const tx = await rollupProcessor.escapeHatch(proofData, zeroSignatures, Buffer.concat(viewingKeys));
 
     const receipt = await tx.wait();
     expect(receipt.status).to.equal(1);
@@ -117,7 +110,7 @@ describe('rollup_processor: permissioning', () => {
     const feeLimit = BigInt(10) ** BigInt(18);
     const prepaidFee = feeLimit;
 
-    const { proofData, signatures, sigIndexes, providerSignature } = await createRollupProof(
+    const { proofData, signatures, providerSignature } = await createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAAddress, userA),
       {
@@ -137,7 +130,6 @@ describe('rollup_processor: permissioning', () => {
     const tx = await rollupProcessorUserB.processRollup(
       proofData,
       solidityFormatSignatures(signatures),
-      sigIndexes,
       Buffer.concat(viewingKeys),
       providerSignature,
       providerAddress,
@@ -150,7 +142,7 @@ describe('rollup_processor: permissioning', () => {
 
   it('should reject a rollup with invalid signature', async () => {
     const feeLimit = BigInt(10) ** BigInt(18);
-    const { proofData, signatures, sigIndexes, publicInputs } = await createRollupProof(
+    const { proofData, signatures, publicInputs } = await createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAAddress, userA),
       {
@@ -167,19 +159,18 @@ describe('rollup_processor: permissioning', () => {
       rollupProcessor.processRollup(
         proofData,
         solidityFormatSignatures(signatures),
-        sigIndexes,
         Buffer.concat(viewingKeys),
         invalidSignature,
         providerAddress,
         providerAddress,
         feeLimit,
       ),
-    ).to.be.revertedWith('Validate Signatue: INVALID_SIGNATRUE');
+    ).to.be.revertedWith('validateSignature: INVALID_SIGNATURE');
   });
 
   it('should reject a rollup with signature not signed by the provider', async () => {
     const feeLimit = BigInt(10) ** BigInt(18);
-    const { proofData, signatures, sigIndexes, publicInputs } = await createRollupProof(
+    const { proofData, signatures, publicInputs } = await createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAAddress, userA),
       {
@@ -200,19 +191,18 @@ describe('rollup_processor: permissioning', () => {
       rollupProcessorUserA.processRollup(
         proofData,
         solidityFormatSignatures(signatures),
-        sigIndexes,
         Buffer.concat(viewingKeys),
         providerSignature,
         rollupProviderAddress,
         feeReceiver,
         feeLimit,
       ),
-    ).to.be.revertedWith('Validate Signatue: INVALID_SIGNATRUE');
+    ).to.be.revertedWith('validateSignature: INVALID_SIGNATURE');
   });
 
   it('should reject a rollup from an unknown provider', async () => {
     const feeLimit = BigInt(10) ** BigInt(18);
-    const { proofData, signatures, sigIndexes, publicInputs } = await createRollupProof(
+    const { proofData, signatures, publicInputs } = await createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAAddress, userA),
       {
@@ -233,7 +223,6 @@ describe('rollup_processor: permissioning', () => {
       rollupProcessorUserA.processRollup(
         proofData,
         solidityFormatSignatures(signatures),
-        sigIndexes,
         Buffer.concat(viewingKeys),
         providerSignature,
         signerAddress,

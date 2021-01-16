@@ -131,6 +131,9 @@ export class WorldState {
       await this.rollupDb.confirmMined(rollup.rollupId);
 
       for (const inner of rollup.innerProofData) {
+        if (inner.isPadding()) {
+          continue;
+        }
         const tx = rollupProof.txs.find(tx => tx.id.equals(inner.txId));
         if (!tx) {
           console.log('Rollup tx missing. Not tracking time...');
@@ -145,9 +148,9 @@ export class WorldState {
       rollupProofDao.rollupSize = rollup.rollupSize;
       rollupProofDao.dataStartIndex = rollup.dataStartIndex;
       rollupProofDao.proofData = proofData;
-      rollupProofDao.txs = rollup.innerProofData.map((p, i) =>
-        innerProofDataToTxDao(p, rollup.viewingKeys[i], created),
-      );
+      rollupProofDao.txs = rollup.innerProofData
+        .filter(tx => !tx.isPadding())
+        .map((p, i) => innerProofDataToTxDao(p, rollup.viewingKeys[i], created));
       rollupProofDao.created = created;
 
       const rollupDao = new RollupDao({
@@ -165,15 +168,19 @@ export class WorldState {
   }
 
   private async addRollupToWorldState(rollup: RollupProofData) {
-    const { rollupId, rollupSize, dataStartIndex, innerProofData } = rollup;
-    for (let i = 0; i < innerProofData.length; ++i) {
+    const { rollupId, dataStartIndex, rollupSize, innerProofData } = rollup;
+    let i = 0;
+    for (; i < innerProofData.length; ++i) {
       const tx = innerProofData[i];
-      await this.worldStateDb.put(0, BigInt(dataStartIndex + i * rollupSize), tx.newNote1);
-      await this.worldStateDb.put(0, BigInt(dataStartIndex + i * rollupSize + 1), tx.newNote2);
+      if (tx.isPadding()) {
+        break;
+      }
+      await this.worldStateDb.put(0, BigInt(dataStartIndex + i * 2), tx.newNote1);
+      await this.worldStateDb.put(0, BigInt(dataStartIndex + i * 2 + 1), tx.newNote2);
       await this.worldStateDb.put(1, toBigIntBE(tx.nullifier1), toBufferBE(1n, 64));
       await this.worldStateDb.put(1, toBigIntBE(tx.nullifier2), toBufferBE(1n, 64));
     }
-    if (innerProofData.length < rollupSize) {
+    if (i < rollupSize) {
       await this.worldStateDb.put(0, BigInt(dataStartIndex + rollupSize * 2 - 1), Buffer.alloc(64, 0));
     }
     await this.worldStateDb.put(2, BigInt(rollupId + 1), this.worldStateDb.getRoot(0));

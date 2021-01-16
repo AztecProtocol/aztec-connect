@@ -14,7 +14,6 @@ interface PublishItem {
   rollupId: number;
   proof: Buffer;
   signatures: Buffer[];
-  sigIndexes: number[];
   viewingKeys: Buffer[];
 }
 
@@ -56,14 +55,12 @@ export class RollupPublisher {
       const txs = rollup.rollupProof.txs;
       const viewingKeys = txs.map(tx => [tx.viewingKey1, tx.viewingKey2]).flat();
       const signatures = txs.map(tx => tx.signature!).filter(s => !!s);
-      const sigIndexes = txs.map((tx, i) => (tx.signature ? i : -1)).filter(i => i >= 0);
 
       const item = {
         rollupId,
         proof,
         viewingKeys,
         signatures,
-        sigIndexes,
       };
 
       const end = this.metrics.publishTimer();
@@ -143,7 +140,7 @@ export class RollupPublisher {
   }
 
   private async sendRollupProof(item: PublishItem) {
-    const { proof, signatures, sigIndexes, viewingKeys } = item;
+    const { proof, signatures, viewingKeys } = item;
     const signer = this.provider.getSigner();
     const signingAddress = EthAddress.fromString(await signer.getAddress());
     const feeReceiver = signingAddress;
@@ -155,7 +152,6 @@ export class RollupPublisher {
         return await this.blockchain.sendRollupProof(
           proof,
           signatures,
-          sigIndexes,
           viewingKeys,
           providerSignature,
           feeReceiver,

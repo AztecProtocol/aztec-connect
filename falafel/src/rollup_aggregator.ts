@@ -29,7 +29,11 @@ export class RollupAggregator {
     const innerProofs = await this.rollupDb.getRollupProofsBySize(this.innerRollupSize);
     const currentSize = innerProofs.length * this.innerRollupSize;
 
-    console.log(`Aggregator current / required size: ${currentSize} / ${this.outerRollupSize}`);
+    console.log(
+      `Aggregator current / required / flushing: ${currentSize} / ${
+        this.innerRollupSize * this.outerRollupSize
+      } / ${flush}`,
+    );
 
     if (currentSize === this.outerRollupSize || flush) {
       const rootRollup = await this.createRootRollup(innerProofs);
@@ -84,8 +88,10 @@ export class RollupAggregator {
     const newDataRootsRoot = worldStateDb.getRoot(2);
     const newDataRootsPath = await worldStateDb.getHashPath(2, rootTreeSize);
 
+    const innerRollupSizePow2 = 1 << Math.ceil(Math.log2(this.innerRollupSize));
+    const outerRollupSizePow2 = 1 << Math.ceil(Math.log2(innerRollupSizePow2 * this.outerRollupSize));
     if (rollupProofs.length < this.outerRollupSize) {
-      const endIndex = rollupProofs[0].dataStartIndex + this.innerRollupSize * this.outerRollupSize * 2 - 1;
+      const endIndex = rollupProofs[0].dataStartIndex + outerRollupSizePow2 * 2 - 1;
       // Grows the data tree by inserting 0 at last subtree position.
       await worldStateDb.put(0, BigInt(endIndex), Buffer.alloc(64, 0));
     }

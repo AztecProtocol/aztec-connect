@@ -161,29 +161,102 @@ library PolynomialEval {
         Types.ChallengeTranscript memory challenges,
         Types.VerificationKey memory vk
     ) internal pure returns (Types.Fraction memory) {
-        Types.Fr memory numerator = PairingsBn254.new_fr(1);
-        Types.Fr memory denominator = PairingsBn254.new_fr(1);
+        uint256 gamma = challenges.gamma.value;
+        uint256 beta = challenges.beta.value;
+        uint256 work_root = vk.work_root.value;
 
-        Types.Fr memory T0 = PairingsBn254.new_fr(0);
-        Types.Fr memory T1 = PairingsBn254.new_fr(0);
-        Types.Fr memory T2 = PairingsBn254.new_fr(0);
-        Types.Fr memory T3 = PairingsBn254.new_fr(0);
+        uint256 numerator_value = 1;
+        uint256 denominator_value = 1;
 
-        Types.Fr memory accumulating_root = PairingsBn254.new_fr(1);
+        // we multiply length by 0x20 because our loop step size is 0x20 not 0x01
+        // we add 0x20 to step over the `length` field of `public_inputs`
+        // we subtract 0x60 because our loop is unrolled 4 times an we don't want to overshoot
+        uint256 endpoint = (public_inputs.length * 0x20) + 0x20 - 0x60;
 
-        for (uint256 index = 0; index < public_inputs.length; index += 1) {
-            T0 = PairingsBn254.new_fr(public_inputs[index]).add_fr(challenges.gamma);
-            T1 = accumulating_root.mul_fr(challenges.beta);
-            T2 = T1.mul_fr(PairingsBn254.new_fr(Types.coset_generator0));
-            T3 = T1.mul_fr(PairingsBn254.new_fr(Types.coset_generator7));
-            T2.add_assign(T0);
-            T3.add_assign(T0);
-            numerator.mul_assign(T2);
-            denominator.mul_assign(T3);
-            accumulating_root.mul_assign(vk.work_root);
+        // perform this computation in assembly to improve efficiency. We are sensitive to the cost of this loop as
+        // it scales with the number of public inputs
+        assembly {
+            let accumulating_root := beta
+            let p := 21888242871839275222246405745257275088548364400416034343698204186575808495617
+            let i := 0x20
+
+            // Do some loop unrolling to reduce number of conditional jump operations
+            for {} lt(i, endpoint) {}
+            {
+                let T0 := addmod(mload(add(public_inputs, i)), gamma, p)
+                numerator_value := mulmod(
+                    numerator_value,
+                    add(mulmod(accumulating_root, 0x05, p), T0), // 0x05 = coset_generator0
+                    p
+                )
+                denominator_value := mulmod(
+                    denominator_value,
+                    add(mulmod(accumulating_root, 0x0c, p), T0), // 0x0c = coset_generator7
+                    p
+                )
+                accumulating_root := mulmod(accumulating_root, work_root, p)
+
+                let T1 := addmod(mload(add(public_inputs, add(i, 0x20))), gamma, p)
+                numerator_value := mulmod(
+                    numerator_value,
+                    add(mulmod(accumulating_root, 0x05, p), T1), // 0x05 = coset_generator0
+                    p
+                )
+                denominator_value := mulmod(
+                    denominator_value,
+                    add(mulmod(accumulating_root, 0x0c, p), T1), // 0x0c = coset_generator7
+                    p
+                )
+                accumulating_root := mulmod(accumulating_root, work_root, p)
+
+                let T2 := addmod(mload(add(public_inputs, add(i, 0x40))), gamma, p)
+                numerator_value := mulmod(
+                    numerator_value,
+                    add(mulmod(accumulating_root, 0x05, p), T2), // 0x05 = coset_generator0
+                    p
+                )
+                denominator_value := mulmod(
+                    denominator_value,
+                    add(mulmod(accumulating_root, 0x0c, p), T2), // 0x0c = coset_generator7
+                    p
+                )
+                accumulating_root := mulmod(accumulating_root, work_root, p)
+
+                let T3 := addmod(mload(add(public_inputs, add(i, 0x60))), gamma, p)
+                numerator_value := mulmod(
+                    numerator_value,
+                    add(mulmod(accumulating_root, 0x05, p), T3), // 0x05 = coset_generator0
+                    p
+                )
+                denominator_value := mulmod(
+                    denominator_value,
+                    add(mulmod(accumulating_root, 0x0c, p), T3), // 0x0c = coset_generator7
+                    p
+                )
+                accumulating_root := mulmod(accumulating_root, work_root, p)
+
+                i := add(i, 0x80)
+            }
+
+            endpoint := add(endpoint, 0x60)
+            for {} lt(i, endpoint) { i := add(i, 0x20) }
+            {
+                let T0 := addmod(mload(add(public_inputs, i)), gamma, p)
+                numerator_value := mulmod(
+                    numerator_value,
+                    add(mulmod(accumulating_root, 0x05, p), T0), // 0x05 = coset_generator0
+                    p
+                )
+                denominator_value := mulmod(
+                    denominator_value,
+                    add(mulmod(accumulating_root, 0x0c, p), T0), // 0x0c = coset_generator7
+                    p
+                )
+                accumulating_root := mulmod(accumulating_root, work_root, p)
+            }
         }
-
-        return Types.Fraction({numerator: numerator, denominator: denominator});
+        
+        return Types.Fraction({numerator: PairingsBn254.new_fr(numerator_value), denominator: PairingsBn254.new_fr(denominator_value)});
     }
 
     /**

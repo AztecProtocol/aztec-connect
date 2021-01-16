@@ -106,7 +106,6 @@ export class Contracts {
   public async sendEscapeHatchProof(
     proofData: Buffer,
     signatures: Buffer[],
-    sigIndexes: number[],
     viewingKeys: Buffer[],
     signingAddress?: EthAddress,
     gasLimit?: number,
@@ -117,7 +116,6 @@ export class Contracts {
     const tx = await rollupProcessor.escapeHatch(
       `0x${proofData.toString('hex')}`,
       formattedSignatures,
-      sigIndexes,
       Buffer.concat(viewingKeys),
       { gasLimit },
     );
@@ -134,7 +132,6 @@ export class Contracts {
   public async sendRollupProof(
     proofData: Buffer,
     signatures: Buffer[],
-    sigIndexes: number[],
     viewingKeys: Buffer[],
     providerSignature: Buffer,
     feeReceiver: EthAddress,
@@ -149,7 +146,6 @@ export class Contracts {
     const tx = await rollupProcessor.processRollup(
       `0x${proofData.toString('hex')}`,
       formattedSignatures,
-      sigIndexes,
       Buffer.concat(viewingKeys),
       providerSignature,
       signerAddress,

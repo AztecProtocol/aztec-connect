@@ -4,6 +4,7 @@ import { Signer } from 'ethers';
 import { ethSign } from '../signing/eth_sign';
 import { numToUInt32BE } from 'barretenberg/serialize';
 import { toBufferBE } from 'bigint-buffer';
+import { InnerProofData } from 'barretenberg/rollup_proof';
 
 const dataNoteSize = 64;
 
@@ -20,12 +21,7 @@ export const secondProofNewDataRootsRoot = randomBytes(32);
 export const newDataRootsRoot = newDataRoot;
 
 class InnerProofOutput {
-  constructor(
-    public innerProofs: Buffer[],
-    public signatures: Buffer[],
-    public sigIndexes: number[],
-    public totalTxFees: number[],
-  ) {}
+  constructor(public innerProofs: Buffer[], public signatures: Buffer[], public totalTxFees: number[]) {}
 }
 
 // Note: creates publicInputData, so that the 'new' values for the deposit proof map onto the 'old'
@@ -48,7 +44,7 @@ function publicInputData(
     totalTxFeePublicInputs.push(numToBuffer(totalTxFees[i] || 0));
   }
 
-  let allPublicInputs;
+  let allPublicInputs: Buffer[];
   if (id === 0) {
     allPublicInputs = [
       rollupId,
@@ -157,12 +153,11 @@ export async function createDepositProof(
 ) {
   const innerProof = await innerProofData(true, amount, depositorAddress, numToBuffer(assetId), txFee);
   const { signature } = await ethSign(user, innerProof);
-  const sigIndexes = [0]; // first index corresponds to first innerProof
 
   const totalTxFees: number[] = [];
   totalTxFees[assetId] = txFee;
 
-  return new InnerProofOutput([innerProof], [signature], sigIndexes, totalTxFees);
+  return new InnerProofOutput([innerProof], [signature], totalTxFees);
 }
 
 export async function createTwoDepositsProof(
@@ -196,12 +191,11 @@ export async function createTwoDepositsProof(
   totalTxFees[firstAssetId] = txFee;
   totalTxFees[secondAssetId] = txFee;
 
-  return new InnerProofOutput(
-    [firstInnerProof, secondInnerProof],
-    [secondSignature, firstSignature],
-    [1, 0], // deliberately reverse sig order to more thoroughly test
+  return {
+    innerProofs: [firstInnerProof, secondInnerProof],
+    signatures: [firstSignature, secondSignature],
     totalTxFees,
-  );
+  };
 }
 
 export async function createWithdrawProof(amount: number, withdrawalAddress: EthAddress, assetId = 1, txFee = 0) {
@@ -209,12 +203,11 @@ export async function createWithdrawProof(amount: number, withdrawalAddress: Eth
 
   // withdraws do not require signature
   const signature: Buffer = Buffer.alloc(32);
-  const sigIndexes = [0]; // first index corresponds to first tx
 
   const totalTxFees: number[] = [];
   totalTxFees[assetId] = txFee;
 
-  return new InnerProofOutput([innerProof], [signature], sigIndexes, totalTxFees);
+  return new InnerProofOutput([innerProof], [signature], totalTxFees);
 }
 
 export async function createSendProof(assetId = 1, txFee = 0) {
@@ -226,7 +219,7 @@ export async function createSendProof(assetId = 1, txFee = 0) {
   const totalTxFees: number[] = [];
   totalTxFees[assetId] = txFee;
 
-  return new InnerProofOutput([innerProof], [signature], sigIndexes, totalTxFees);
+  return new InnerProofOutput([innerProof], [signature], totalTxFees);
 }
 
 // same as withdraw proof, except rollupSize in publicInputData set to 0 - indicating
@@ -236,12 +229,11 @@ export async function createEscapeProof(amount: number, withdrawalAddress: EthAd
 
   // withdraws do not require signature
   const signature: Buffer = Buffer.alloc(32);
-  const sigIndexes = [0]; // first index corresponds to first tx
 
   const totalTxFees: number[] = [];
   totalTxFees[assetId] = txFee;
 
-  return new InnerProofOutput([innerProof], [signature], sigIndexes, totalTxFees);
+  return new InnerProofOutput([innerProof], [signature], totalTxFees);
 }
 
 interface RollupProofOptions {
@@ -267,7 +259,10 @@ export async function createRollupProof(
 ) {
   const { innerProofs } = innerProofOutput;
   const publicInputs = publicInputData(rollupId, innerProofOutput, rollupSize, numberOfAssets, dataStartIndex);
-  const proofData = Buffer.concat([...publicInputs, ...innerProofs]);
+  // Escape hatch is demarked 0, but has size 1.
+  rollupSize = rollupSize || 1;
+  const padding = Buffer.alloc(32 * InnerProofData.NUM_PUBLIC_INPUTS * (rollupSize - innerProofs.length), 0);
+  const proofData = Buffer.concat([...publicInputs, ...innerProofs, padding]);
 
   const providerAddress = await rollupProvider.getAddress();
   const sigData = Buffer.concat([

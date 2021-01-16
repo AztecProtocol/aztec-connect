@@ -34,7 +34,6 @@ export interface Blockchain extends RollupProvider {
   sendRollupProof(
     proof: Buffer,
     signatures: Buffer[],
-    sigIndexes: number[],
     viewingKeys: Buffer[],
     providerSignature: Buffer,
     feeReceiver: EthAddress,

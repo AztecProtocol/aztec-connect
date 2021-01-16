@@ -53,7 +53,7 @@ async function main() {
 
   if (initialFee) {
     const amount = parseEther(initialFee);
-    feeDistributor.deposit(0, amount, { value: amount });
+    await feeDistributor.deposit(0, amount, { value: amount });
   }
 
   if (!erc20Address) {

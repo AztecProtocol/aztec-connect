@@ -29,8 +29,8 @@ if [ "$(npx semver $LOCAL_VERSION)" == "" ]; then
 fi
 
 if [ "$LOCAL_VERSION" == "$PUBLISHED_VERSION" ] || [ "$LOCAL_VERSION" != "$HIGHER_VERSION" ]; then
-  echo "$LOCAL_VERSION is <= published version $PUBLISHED_VERSION, bumping to $NEW_VERSION."
   readonly NEW_VERSION=$(npx semver -i patch $PUBLISHED_VERSION)
+  echo "$LOCAL_VERSION is <= published version $PUBLISHED_VERSION, bumping to $NEW_VERSION."
   tmp=$(mktemp)
   jq --arg v $NEW_VERSION '.version = $v' package.json > $tmp && mv $tmp package.json
 fi
