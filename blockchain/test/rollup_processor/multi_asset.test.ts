@@ -117,7 +117,7 @@ describe('rollup_processor: multi assets', () => {
     expect(postDepositContractBalanceB).to.equal(userBDepositAmount);
   });
 
-  it('should not revert if withdraw() fails due to faulty ERC20 contract', async () => {
+  it('should revert if withdraw() fails due to faulty ERC20 transfer', async () => {
     const FaultyERC20 = await ethers.getContractFactory('ERC20FaultyTransfer');
     const faultyERC20 = await FaultyERC20.deploy();
     await faultyERC20.mint(userBAddress.toString(), mintAmount);
@@ -152,21 +152,7 @@ describe('rollup_processor: multi assets', () => {
         rollupId: 1,
       },
     );
-    const withdrawTx = await rollupProcessor.escapeHatch(withdrawProofData, [], Buffer.concat(fourViewingKeys));
-
-    const rollupReceipt = await withdrawTx.wait();
-    expect(receipt.status).to.equal(1);
-
-    const errorReason = rollupProcessor.interface.parseLog(rollupReceipt.logs[rollupReceipt.logs.length - 1]).args
-      .errorReason;
-    expect(errorReason.length).to.be.greaterThan(0);
-
-    const userBFinalBalance = await faultyERC20.balanceOf(userBAddress.toString());
-    // not expecting withdraw to have transferred funds
-    expect(userBFinalBalance).to.equal(mintAmount - userBDepositAmount);
-
-    const rollupFinalBalance = await faultyERC20.balanceOf(rollupProcessor.address);
-    expect(rollupFinalBalance).to.equal(userBDepositAmount);
+    await expect(rollupProcessor.escapeHatch(withdrawProofData, [], Buffer.concat(fourViewingKeys))).to.be.reverted;
   });
 
   it('should revert for depositing eth with inconsistent value', async () => {

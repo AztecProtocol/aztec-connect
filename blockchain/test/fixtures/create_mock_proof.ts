@@ -215,7 +215,6 @@ export async function createSendProof(assetId = 1, txFee = 0) {
   const publicOwner = EthAddress.ZERO;
   const innerProof = await innerProofData(true, transferAmount, publicOwner, numToBuffer(assetId), txFee);
   const signature: Buffer = Buffer.alloc(32);
-  const sigIndexes = [0];
   const totalTxFees: number[] = [];
   totalTxFees[assetId] = txFee;
 

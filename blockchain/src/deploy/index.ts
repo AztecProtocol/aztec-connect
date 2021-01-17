@@ -15,6 +15,7 @@ const {
   PRIVATE_KEY,
   ESCAPE_BLOCK_LOWER = '4560', // window of 1hr every 20hrs (escape in last 240 blocks of every 4800)
   ESCAPE_BLOCK_UPPER = '4800',
+  OWNER_ADDRESS,
 } = process.env;
 
 function getSigner() {
@@ -40,7 +41,10 @@ async function main() {
   const verifier = await deployVerifier(signer);
   console.error('Deploying RollupProcessor...');
   const rollupFactory = new ContractFactory(RollupProcessor.abi, RollupProcessor.bytecode, signer);
-  const rollup = await rollupFactory.deploy(verifier.address, ESCAPE_BLOCK_LOWER, ESCAPE_BLOCK_UPPER);
+
+  // note we need to change this address for production to the multisig
+  const ownerAddress = OWNER_ADDRESS ? OWNER_ADDRESS : await signer.getAddress();
+  const rollup = await rollupFactory.deploy(verifier.address, ESCAPE_BLOCK_LOWER, ESCAPE_BLOCK_UPPER, ownerAddress);
 
   console.error(`Awaiting deployment...`);
   await rollup.deployed();

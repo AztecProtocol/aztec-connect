@@ -15,6 +15,7 @@ export async function setupRollupProcessor(rollupProvider: Signer, users: Signer
 
   const MockVerifier = await ethers.getContractFactory('MockVerifier');
   const mockVerifier = await MockVerifier.deploy();
+  const ownerAddress = rollupProvider.getAddress();
 
   const RollupProcessor = await ethers.getContractFactory('RollupProcessor', rollupProvider);
   const escapeBlockLowerBound = 80;
@@ -23,6 +24,7 @@ export async function setupRollupProcessor(rollupProvider: Signer, users: Signer
     mockVerifier.address,
     escapeBlockLowerBound,
     escapeBlockUpperBound,
+    ownerAddress,
   );
 
   const AztecFeeDistributor = await ethers.getContractFactory('AztecFeeDistributor');
