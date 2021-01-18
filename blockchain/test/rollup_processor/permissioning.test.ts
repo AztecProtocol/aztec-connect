@@ -6,10 +6,10 @@ import { Contract, Signer } from 'ethers';
 import { ethers } from 'hardhat';
 import { utils } from 'ethers';
 import { RollupProofData } from 'barretenberg/rollup_proof';
-import { createDepositProof, createRollupProof } from '../fixtures/create_mock_proof';
-import { setupRollupProcessor } from '../fixtures/setup_rollup_processor';
-import { ethSign } from '../signing/eth_sign';
-import { solidityFormatSignatures } from '../signing/solidity_format_sigs';
+import { createDepositProof, createRollupProof } from './fixtures/create_mock_proof';
+import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
+import { ethSign } from './fixtures/eth_sign';
+import { solidityFormatSignatures } from '../../src/solidity_format_signatures';
 
 use(solidity);
 

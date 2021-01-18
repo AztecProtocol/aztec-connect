@@ -15,9 +15,9 @@ import {
   createRollupProof,
   createSendProof,
   createWithdrawProof,
-} from './fixtures/create_mock_proof';
-import { createLowLevelPermitSig, signPermit } from './fixtures/create_permit_signature';
-import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
+} from './rollup_processor/fixtures/create_mock_proof';
+import { createLowLevelPermitSig, signPermit } from './rollup_processor/fixtures/create_permit_signature';
+import { setupRollupProcessor } from './rollup_processor/fixtures/setup_rollup_processor';
 
 use(solidity);
 

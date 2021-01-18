@@ -3,15 +3,15 @@ import { expect, use } from 'chai';
 import { solidity } from 'ethereum-waffle';
 import { Contract, Signer } from 'ethers';
 import { ethers } from 'hardhat';
-import { advanceBlocks, blocksToAdvance } from '../fixtures/advance_block';
+import { advanceBlocks, blocksToAdvance } from './fixtures/advance_block';
 import {
   createDepositProof,
   createEscapeProof,
   createRollupProof,
   createWithdrawProof,
-} from '../fixtures/create_mock_proof';
-import { setupRollupProcessor } from '../fixtures/setup_rollup_processor';
-import { solidityFormatSignatures } from '../signing/solidity_format_sigs';
+} from './fixtures/create_mock_proof';
+import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
+import { solidityFormatSignatures } from '../../src/solidity_format_signatures';
 
 use(solidity);
 

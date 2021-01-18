@@ -2,8 +2,8 @@ import { expect, use } from 'chai';
 import { solidity } from 'ethereum-waffle';
 import { Contract, Signer, Wallet } from 'ethers';
 import { ethers } from 'hardhat';
-import { setupRollupProcessor } from '../fixtures/setup_rollup_processor';
-import { signPermit, createLowLevelPermitSig } from '../fixtures/create_permit_signature';
+import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
+import { signPermit, createLowLevelPermitSig } from './fixtures/create_permit_signature';
 import { EthAddress } from 'barretenberg/address';
 import { randomBytes } from 'crypto';
 

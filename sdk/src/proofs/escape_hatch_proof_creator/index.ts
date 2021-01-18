@@ -25,7 +25,7 @@ export class EscapeHatchProofCreator {
     // TODO: Make WorldState and HashPathSource unify into a WorldStateSource.
     worldState: WorldState,
     grumpkin: Grumpkin,
-    private pedersen: Pedersen,
+    pedersen: Pedersen,
     private noteAlgos: NoteAlgorithms,
     private hashPathSource: HashPathSource,
   ) {

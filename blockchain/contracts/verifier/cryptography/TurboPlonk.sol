@@ -109,7 +109,6 @@ library TurboPlonk {
             Types.PartialStateFractions memory partial_state_fractions;
 
             Types.Fraction memory public_input_delta_fraction = PolynomialEval.compute_public_input_delta(
-                decoded_proof.public_input_values,
                 challenges,
                 vk
             );
@@ -215,7 +214,6 @@ library TurboPlonk {
         Types.VerificationKey memory vk
     ) internal pure returns (Types.ChallengeTranscript memory, TranscriptLibrary.Transcript memory) {
         // TODO: do these need acting on?
-        // require(decoded_proof.public_input_values.length == vk.num_inputs);
         // require(vk.num_inputs >= 1);
         TranscriptLibrary.Transcript memory transcript = TranscriptLibrary.new_transcript(
             vk.circuit_size,
@@ -226,7 +224,7 @@ library TurboPlonk {
 
         challenges.init = Types.Fr({value: uint256(transcript.current_challenge) % Types.r_mod});
 
-        transcript.update_with_public_inputs(decoded_proof.public_input_values, vk.num_inputs);
+        transcript.update_with_public_inputs(vk.num_inputs);
 
         assert(decoded_proof.wire_commitments.length == 4);
         for (uint256 i = 0; i < decoded_proof.wire_commitments.length; i++) {

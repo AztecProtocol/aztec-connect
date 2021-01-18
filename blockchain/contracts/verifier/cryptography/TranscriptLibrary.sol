@@ -15,7 +15,7 @@ library TranscriptLibrary {
 
     // When creating `transcript.data` we pre-allocate all the memory required to store the entire transcript.
     // TODO: figure out how big this needs to be! 16384 bytes is a big overestimate
-    uint256 constant NUM_TRANSCRIPT_BYTES = 16384;
+    uint256 constant NUM_TRANSCRIPT_BYTES = 163840 * 3;
 
     struct Transcript {
         bytes32 current_challenge;
@@ -88,7 +88,10 @@ library TranscriptLibrary {
     /**
      * Add public inputs into the transcript
      */
-    function update_with_public_inputs(Transcript memory self, uint256[] memory, uint256 num_public_inputs) internal pure {
+    function update_with_public_inputs(
+        Transcript memory self,
+        uint256 num_public_inputs
+    ) internal pure {
         bytes memory data_ptr = self.data;
         // fetch the public inputs directly from calldata to reduce gas costs
         // N.B. IF WE CHANGE THE ABI FOR `verify` THIS CODE WILL NEED TO BE UPDATED

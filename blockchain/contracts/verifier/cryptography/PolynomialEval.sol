@@ -157,7 +157,6 @@ library PolynomialEval {
     }
 
     function compute_public_input_delta(
-        uint256[] memory public_inputs,
         Types.ChallengeTranscript memory challenges,
         Types.VerificationKey memory vk
     ) internal pure returns (Types.Fraction memory) {
@@ -169,21 +168,23 @@ library PolynomialEval {
         uint256 denominator_value = 1;
 
         // we multiply length by 0x20 because our loop step size is 0x20 not 0x01
-        // we add 0x20 to step over the `length` field of `public_inputs`
         // we subtract 0x60 because our loop is unrolled 4 times an we don't want to overshoot
-        uint256 endpoint = (public_inputs.length * 0x20) + 0x20 - 0x60;
+        uint256 endpoint = (vk.num_inputs * 0x20) - 0x60;
 
         // perform this computation in assembly to improve efficiency. We are sensitive to the cost of this loop as
         // it scales with the number of public inputs
         assembly {
             let accumulating_root := beta
             let p := 21888242871839275222246405745257275088548364400416034343698204186575808495617
-            let i := 0x20
+            let i := 0x00
+
+            // get public inputs from calldata. N.B. If Contract ABI Changes this code will need to be updated!
+            let public_inputs := add(calldataload(0x04), 0x24)
 
             // Do some loop unrolling to reduce number of conditional jump operations
             for {} lt(i, endpoint) {}
             {
-                let T0 := addmod(mload(add(public_inputs, i)), gamma, p)
+                let T0 := addmod(calldataload(add(public_inputs, i)), gamma, p)
                 numerator_value := mulmod(
                     numerator_value,
                     add(mulmod(accumulating_root, 0x05, p), T0), // 0x05 = coset_generator0
@@ -196,7 +197,7 @@ library PolynomialEval {
                 )
                 accumulating_root := mulmod(accumulating_root, work_root, p)
 
-                let T1 := addmod(mload(add(public_inputs, add(i, 0x20))), gamma, p)
+                let T1 := addmod(calldataload(add(public_inputs, add(i, 0x20))), gamma, p)
                 numerator_value := mulmod(
                     numerator_value,
                     add(mulmod(accumulating_root, 0x05, p), T1), // 0x05 = coset_generator0
@@ -209,7 +210,7 @@ library PolynomialEval {
                 )
                 accumulating_root := mulmod(accumulating_root, work_root, p)
 
-                let T2 := addmod(mload(add(public_inputs, add(i, 0x40))), gamma, p)
+                let T2 := addmod(calldataload(add(public_inputs, add(i, 0x40))), gamma, p)
                 numerator_value := mulmod(
                     numerator_value,
                     add(mulmod(accumulating_root, 0x05, p), T2), // 0x05 = coset_generator0
@@ -222,7 +223,7 @@ library PolynomialEval {
                 )
                 accumulating_root := mulmod(accumulating_root, work_root, p)
 
-                let T3 := addmod(mload(add(public_inputs, add(i, 0x60))), gamma, p)
+                let T3 := addmod(calldataload(add(public_inputs, add(i, 0x60))), gamma, p)
                 numerator_value := mulmod(
                     numerator_value,
                     add(mulmod(accumulating_root, 0x05, p), T3), // 0x05 = coset_generator0
@@ -241,7 +242,7 @@ library PolynomialEval {
             endpoint := add(endpoint, 0x60)
             for {} lt(i, endpoint) { i := add(i, 0x20) }
             {
-                let T0 := addmod(mload(add(public_inputs, i)), gamma, p)
+                let T0 := addmod(calldataload(add(public_inputs, i)), gamma, p)
                 numerator_value := mulmod(
                     numerator_value,
                     add(mulmod(accumulating_root, 0x05, p), T0), // 0x05 = coset_generator0
@@ -812,7 +813,6 @@ library PolynomialEval {
         Types.VerificationKey memory vk,
         Types.ChallengeTranscript memory challenges
     ) public view returns (Types.G1Point memory, Types.Fr memory) {
-        proof.debug_challenge = PairingsBn254.new_fr(challenges.alpha_base.value);
         Types.Fr memory t0 = proof.wire_values_at_z[0].add_fr(proof.wire_values_at_z[0]);
         t0.add_assign(t0);
         t0.neg_assign();

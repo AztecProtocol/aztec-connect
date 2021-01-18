@@ -65,7 +65,7 @@ describe('end-to-end tests', () => {
       expect(user0Asset.balance()).toBe(0n);
 
       const txHash = await user0Asset.deposit(depositValue, undefined, undefined, { txFee });
-      await sdk.awaitSettlement(txHash, 300);
+      await sdk.awaitSettlement(txHash, 600);
 
       const publicBalance = await user0Asset.publicBalance();
       const expectedPublicBalance = initialPublicBalance - depositValue - txFee;
@@ -92,7 +92,7 @@ describe('end-to-end tests', () => {
         txFee,
         payTxFeeByPrivateAsset: true,
       });
-      await sdk.awaitSettlement(transferTxHash, 300);
+      await sdk.awaitSettlement(transferTxHash, 600);
 
       expect(await user0Asset.publicBalance()).toBe(initialPublicBalanceUser0);
       expect(user0Asset.balance()).toBe(initialBalanceUser0 - transferValue - txFee);
@@ -115,7 +115,7 @@ describe('end-to-end tests', () => {
         txFee,
         payTxFeeByPrivateAsset: true,
       });
-      await sdk.awaitSettlement(withdrawTxHash, 300);
+      await sdk.awaitSettlement(withdrawTxHash, 600);
 
       expect(await user1Asset.publicBalance()).toBe(initialPublicBalance + withdrawValue);
       expect(user1Asset.balance()).toBe(initialBalance - withdrawValue - txFee);

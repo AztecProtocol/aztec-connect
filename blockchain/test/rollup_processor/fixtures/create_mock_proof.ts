@@ -1,7 +1,7 @@
 import { EthAddress } from 'barretenberg/address';
 import { randomBytes } from 'crypto';
 import { Signer } from 'ethers';
-import { ethSign } from '../signing/eth_sign';
+import { ethSign } from './eth_sign';
 import { numToUInt32BE } from 'barretenberg/serialize';
 import { toBufferBE } from 'bigint-buffer';
 import { InnerProofData } from 'barretenberg/rollup_proof';

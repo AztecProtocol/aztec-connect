@@ -97,39 +97,44 @@ contract TurboVerifier is IVerifier {
             data_ptr := add(calldataload(0x04), 0x24)
         }
 
-        proof.public_input_values = new uint256[](num_public_inputs);
-
-        uint256[] memory public_input_ptr = proof.public_input_values;
-        assembly {
-            let public_input_byte_length := mul(num_public_inputs, 0x20)
-            calldatacopy(add(public_input_ptr, 0x20), data_ptr, public_input_byte_length)
-            data_ptr := add(data_ptr, public_input_byte_length)
-        }
-
         if (vk.contains_recursive_proof)
         {
-            uint256 x0 = proof.public_input_values[vk.recursive_proof_indices[0]]
-            + (proof.public_input_values[vk.recursive_proof_indices[1]] << 68)
-            + (proof.public_input_values[vk.recursive_proof_indices[2]] << 136)
-            + (proof.public_input_values[vk.recursive_proof_indices[3]] << 204);
-            uint256 y0 = proof.public_input_values[vk.recursive_proof_indices[4]]
-            + (proof.public_input_values[vk.recursive_proof_indices[5]] << 68)
-            + (proof.public_input_values[vk.recursive_proof_indices[6]] << 136)
-            + (proof.public_input_values[vk.recursive_proof_indices[7]] << 204);
-            uint256 x1 = proof.public_input_values[vk.recursive_proof_indices[8]]
-            + (proof.public_input_values[vk.recursive_proof_indices[9]] << 68)
-            + (proof.public_input_values[vk.recursive_proof_indices[10]] << 136)
-            + (proof.public_input_values[vk.recursive_proof_indices[11]] << 204);
-            uint256 y1 = proof.public_input_values[vk.recursive_proof_indices[12]]
-            + (proof.public_input_values[vk.recursive_proof_indices[13]] << 68)
-            + (proof.public_input_values[vk.recursive_proof_indices[14]] << 136)
-            + (proof.public_input_values[vk.recursive_proof_indices[15]] << 204);
+            uint256 index_counter = vk.recursive_proof_indices[0] * 32;
+            uint256 x0 = 0;
+            uint256 y0 = 0;
+            uint256 x1 = 0;
+            uint256 y1 = 0;
+            assembly {
+                index_counter := add(index_counter, data_ptr)
+                x0 := calldataload(index_counter)
+                x0 := add(x0, shl(68, calldataload(add(index_counter, 0x20))))
+                x0 := add(x0, shl(136, calldataload(add(index_counter, 0x40))))
+                x0 := add(x0, shl(204, calldataload(add(index_counter, 0x60))))
+                y0 := calldataload(add(index_counter, 0x80))
+                y0 := add(y0, shl(68, calldataload(add(index_counter, 0xa0))))
+                y0 := add(y0, shl(136, calldataload(add(index_counter, 0xc0))))
+                y0 := add(y0, shl(204, calldataload(add(index_counter, 0xe0))))
+                x1 := calldataload(add(index_counter, 0x100))
+                x1 := add(x1, shl(68, calldataload(add(index_counter, 0x120))))
+                x1 := add(x1, shl(136, calldataload(add(index_counter, 0x140))))
+                x1 := add(x1, shl(204, calldataload(add(index_counter, 0x160))))
+                y1 := calldataload(add(index_counter, 0x180))
+                y1 := add(y1, shl(68, calldataload(add(index_counter, 0x1a0))))
+                y1 := add(y1, shl(136, calldataload(add(index_counter, 0x1c0))))
+                y1 := add(y1, shl(204, calldataload(add(index_counter, 0x1e0))))
+            }
+
             proof.recursive_proof_outputs[0] = PairingsBn254.new_g1(
                 x0, y0
             );
             proof.recursive_proof_outputs[1] = PairingsBn254.new_g1(
                 x1, y1
             );
+        }
+        
+        assembly {
+            let public_input_byte_length := mul(num_public_inputs, 0x20)
+            data_ptr := add(data_ptr, public_input_byte_length)
         }
         for (uint256 i = 0; i < Types.STATE_WIDTH; ++i) {
             assembly {

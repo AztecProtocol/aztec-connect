@@ -16,7 +16,7 @@ library Rollup28x4Vk {
     Types.VerificationKey memory vk;
 
     vk.circuit_size = 4194304;
-    vk.num_inputs = 49182;
+    vk.num_inputs = 1566;
     vk.work_root = PairingsBn254.new_fr(
       0x1ad92f46b1f8d9a7cda0ceb68be08215ec1a1f05359eebbba76dde56a219447e
     );
@@ -27,64 +27,64 @@ library Rollup28x4Vk {
       0x2eb584390c74a876ecc11e9c6d3c38c3d437be9d4beced2343dc52e27faa1396
     );
     vk.Q1 = PairingsBn254.new_g1(
-      0x22c31ac16b99ba0b7f7f9545c77a341003b0d3c5624933855f3d0b4a48ef3217,
-      0x1e0eda1b80411629cef88851220831b06528841c0ddec8578dc180f4ec0e11e7
+      0x2886d6da18eaf56e54fa980aa974848df26c1b11328c4ef13db1477b1b94eb44,
+      0x1b8e611ec27842d17bbec836cdceb47dd199e56b24e89495eb0ecb2787767b6f
     );
     vk.Q2 = PairingsBn254.new_g1(
-      0x0ad455ad7a04445d90f695c6574fc85729ba0a46949691767d5c829f1b46ea6b,
-      0x2f0a60f261b06f9788dabbe15c1ac9d109ec755fdd8df2135c0ae001bdb52896
+      0x1d375ea6af177226ae733922f2ecfe89f188797e41cf88f34fad0d079795bd5a,
+      0x1523a06c426ccf3bb94415af7343311e325a2fd81792562721fd6d4071ce244c
     );
     vk.Q3 = PairingsBn254.new_g1(
-      0x0300601af361902311c1675821d914a0b9b46de6230af5c9c50851294ae6887c,
-      0x098919b21b5612fcd6e71bee5b2bf7e940d3a1332ebb6083e8bd99ec0eeac0f9
+      0x18f8e63faeeac3bdea214cef496c86157129762b084cd998b58996e2128c8c23,
+      0x0a2e09272721a3058a18e67bbdc3ed692077da867890218521942b2843f98331
     );
     vk.Q4 = PairingsBn254.new_g1(
-      0x2528b67d8cf9c66a77ad086a01e7e0c491265835b62665e07b73d7bd2fdc4d3f,
-      0x2a9b034762351589789929fc84acb37f747d472fbf81b5fe0b6bcc95a83e4523
+      0x057d116c25cee4582ff5d8abc4f513762c14c85f52391a74c77cc3278c31eb0b,
+      0x0f5b614f99639ae163fb233758937728f1a7a8f6b793032bee042b7010104c58
     );
     vk.Q5 = PairingsBn254.new_g1(
-      0x279fd8e98cc873f0dca503f1da7ab9c3174e0255e9f6b6f893b38b45d51bea90,
-      0x14e79bb4dcd646c48e14e03d99fb02c52413761ccb783dee5e0476626946e9a1
+      0x01209c83527bd3b7cfcc84f773aabc98dfdf8219f1b815d767f5545393c2e991,
+      0x08b2898b0ff93ed59c94fc8163c9cdfb70649a5763a65081d4101b5fa8dfbd19
     );
     vk.QM = PairingsBn254.new_g1(
-      0x206be4a15d412f0f95f00ac120bddd584390080685573c22296a6268156beef5,
-      0x1661882e823c187d98a4fe6db9c8fa07b7e4840e7c4bb8a7d4735027f6d0b310
+      0x2a25af73d1d1e18e6996fefd4c93f131d822bcacc697cef6a4e01bf7789bb6f9,
+      0x2cd7d2f7991441dc21a9e03433c71a4472397cc6d26eab31b736c733f5e31cf1
     );
     vk.QC = PairingsBn254.new_g1(
-      0x227471cb31b4f8e41c0b0a0f23bcbab5962adc3785d0f57eefff6a68dada870f,
-      0x135b4dda24f5070827a5db0a1af5781f5524ab47b111094ce8bf88a36ebabd35
+      0x00134df533d1209c3f8b35d7b6f80d12409ef64606f626a25d008d2eeb95b664,
+      0x03fb82850e95de970aa9630117da02308b1b9f31c3ffcdc2185d0f73a20ddef3
     );
     vk.QARITH = PairingsBn254.new_g1(
-      0x2b87aff1061d91c41b7c450cf9f5de2951faf46756fd24efd7d07fa06a645148,
-      0x1b8d7475a7095536137a415b1f51000d7751b89eb269e3df3f24adb88c5b9376
+      0x055c5de129f19793389c3ce9b5a3ccb7cff247cc10d730a3b49eba7706081221,
+      0x0cd78ca48d4076ca003747875c01c9ffa971ca8bc7128ee7aab1b929b67542ec
     );
     vk.QECC = PairingsBn254.new_g1(
-      0x02bbe461cca76100511347649b085f898b24acc58929a4b0263f747b74778a35,
-      0x08f11553f7b039e91a6d81aad1a53936a212c484466b7ecf4deeda43295c20db
+      0x1d76ab4aa28048497fc48229c668449f3bbf7948cd12beb6db95b2226c756b7a,
+      0x0bf05f0416a2076ee22c907c2f83e89f51692ca20e0110a06b2c6974c43f9995
     );
     vk.QRANGE = PairingsBn254.new_g1(
-      0x1a33706e332f0bc59cd13b286dfbc03c3dd8349636646e6ae64a3ae7780c4c14,
-      0x0d25c3cb42b04c623652b4d08df663fc635ee101c7c57f7748e9aff4d6b8e2f7
+      0x23a35b7851a65fe59b1875aee30de567ae76104bc64052761f714dfa003602d9,
+      0x22e7293cdff7bbf4a494781be5a653c559137c0e5be22c0d64adcf03242f457d
     );
     vk.QLOGIC = PairingsBn254.new_g1(
-      0x0d586f212da42f8d446f025c58e0b6cbd18422d50039ee80a29a141395030fc3,
-      0x2c0a0684a26727091fb127b8e319f42879676f64317accaeb73693009ca1a273
+      0x0b224dd5b9e2a0382044e7f4a7da069e36d07c9967a6374bc027db3f146c5970,
+      0x2199763b1e7108835424f82c983f16788a9035255a9cfeb89cc82be44e617540
     );
     vk.sigma_commitments[0] = PairingsBn254.new_g1(
-      0x0046cfee80318d66b3f27b06a23fc02bdd856f8ebbc458352d4e21f22e821433,
-      0x2f9488343341e38f9016ef24c7539482ab11ea5aa63519b15d6e7c05ae1877f5
+      0x08ae072fc1a74e9076fbede3c25b1311ea90a36ae2f8901d17db2e91c2b13d55,
+      0x18501b839feb78ab86be66c1692e632b291dd2f787fc608cedef72b82518ec4a
     );
     vk.sigma_commitments[1] = PairingsBn254.new_g1(
-      0x300dc3ec4f3fec2d386077705e05ab48421f437a4785e33205d3f84d3a4b25aa,
-      0x058c46a8121c74dc2058c366aa7489ba5371773e1eaae375bda0633c88b410f6
+      0x06a191b32eeba7c216ac90226f63c95fbdd63fb8d1aee1c8160a1ea2cd7ad716,
+      0x27d546884b4f03112d9b9d531368db595f9230254d7b271e53e9725516c063a7
     );
     vk.sigma_commitments[2] = PairingsBn254.new_g1(
-      0x09de9804c91eab592bb78155cf52ad0d62c180612a8f6eccea5a6362b74aa912,
-      0x0d70115f442f5e926e216f0698107f74aa791f8548856249194febafbf998968
+      0x0c700f983ced4110af8522566a7c7f205e36662707f38a16179569ea5bd04616,
+      0x0f9be9c13277ca1a16c2b2df9a4e0c5e604e335ac298ec0a2a3f258c7017685c
     );
     vk.sigma_commitments[3] = PairingsBn254.new_g1(
-      0x07baccefc2d7e7a6aa4400ee3a7d3888cc7396754cdc7a70c37e5a1fe3d98f3b,
-      0x091fda49211ae4663589c9471c327c785dee99e922a8b04a797e01b72761bde6
+      0x0b99277f9bfd5eb404455223a06ad065a539e7086c3f92ff4429afb86be4576e,
+      0x08cff985db0b36a0286afb230c0c4b8b4ee093ef858029d7ad0a73e5eb2669af
     );
     vk.permutation_non_residues[0] = PairingsBn254.new_fr(
       0x0000000000000000000000000000000000000000000000000000000000000005
@@ -96,22 +96,22 @@ library Rollup28x4Vk {
       0x0000000000000000000000000000000000000000000000000000000000000007
     );
     vk.contains_recursive_proof = true;
-    vk.recursive_proof_indices[0] = 49166;
-    vk.recursive_proof_indices[1] = 49167;
-    vk.recursive_proof_indices[2] = 49168;
-    vk.recursive_proof_indices[3] = 49169;
-    vk.recursive_proof_indices[4] = 49170;
-    vk.recursive_proof_indices[5] = 49171;
-    vk.recursive_proof_indices[6] = 49172;
-    vk.recursive_proof_indices[7] = 49173;
-    vk.recursive_proof_indices[8] = 49174;
-    vk.recursive_proof_indices[9] = 49175;
-    vk.recursive_proof_indices[10] = 49176;
-    vk.recursive_proof_indices[11] = 49177;
-    vk.recursive_proof_indices[12] = 49178;
-    vk.recursive_proof_indices[13] = 49179;
-    vk.recursive_proof_indices[14] = 49180;
-    vk.recursive_proof_indices[15] = 49181;
+    vk.recursive_proof_indices[0] = 1550;
+    vk.recursive_proof_indices[1] = 1551;
+    vk.recursive_proof_indices[2] = 1552;
+    vk.recursive_proof_indices[3] = 1553;
+    vk.recursive_proof_indices[4] = 1554;
+    vk.recursive_proof_indices[5] = 1555;
+    vk.recursive_proof_indices[6] = 1556;
+    vk.recursive_proof_indices[7] = 1557;
+    vk.recursive_proof_indices[8] = 1558;
+    vk.recursive_proof_indices[9] = 1559;
+    vk.recursive_proof_indices[10] = 1560;
+    vk.recursive_proof_indices[11] = 1561;
+    vk.recursive_proof_indices[12] = 1562;
+    vk.recursive_proof_indices[13] = 1563;
+    vk.recursive_proof_indices[14] = 1564;
+    vk.recursive_proof_indices[15] = 1565;
     vk.g2_x = PairingsBn254.new_g2([
       0x260e01b251f6f1c7e7ff4e580791dee8ea51d87a358e038b4efe30fac09383c1,
       0x0118c4d5b837bcc2bc89b5b398b5974e9f5944073b32078b7e231fec938883b0

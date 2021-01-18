@@ -79,16 +79,24 @@ export class ProofGenerator {
   }
 
   private async ensureCrs() {
-    if (await pathExists('./data/crs/transcript00.dat')) {
+    const pointPerTranscript = 5040000;
+    for (let i = 0, required = 2 ** 25; required > 0; i++, required -= pointPerTranscript) {
+      await this.downloadTranscript(i);
+    }
+  }
+
+  private async downloadTranscript(n: number) {
+    const id = String(n).padStart(2, '0');
+    if (await pathExists(`./data/crs/transcript${id}.dat`)) {
       return;
     }
-    console.log('Downloading crs...');
+    console.log(`Downloading crs: transcript${id}.dat...`);
     await mkdirp('./data/crs');
-    const response = await fetch('http://aztec-ignition.s3.amazonaws.com/MAIN%20IGNITION/sealed/transcript00.dat');
+    const response = await fetch(`http://aztec-ignition.s3.amazonaws.com/MAIN%20IGNITION/sealed/transcript${id}.dat`);
     if (response.status !== 200) {
       throw new Error('Failed to download crs.');
     }
-    const out = createWriteStream('./data/crs/transcript00.dat');
+    const out = createWriteStream(`./data/crs/transcript${id}.dat`);
     return new Promise(resolve => {
       out.once('close', resolve);
       (response.body as any).pipe(out);

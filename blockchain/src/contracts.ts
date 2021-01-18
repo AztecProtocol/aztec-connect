@@ -11,6 +11,7 @@ import { abi as ERC20PermitABI } from './artifacts/contracts/test/ERC20Permit.so
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { Block } from './blockchain';
 import { EthereumProvider } from './ethereum_provider';
+import { solidityFormatSignatures } from './solidity_format_signatures';
 
 export type EthereumSignature = { v: Buffer; r: Buffer; s: Buffer };
 export type PermitArgs = { deadline: bigint; approvalAmount: bigint; signature: EthereumSignature };
@@ -112,7 +113,7 @@ export class Contracts {
   ) {
     const signer = signingAddress ? this.provider.getSigner(signingAddress.toString()) : this.provider.getSigner(0);
     const rollupProcessor = new Contract(this.rollupContractAddress.toString(), RollupABI, signer);
-    const formattedSignatures = this.solidityFormatSignatures(signatures);
+    const formattedSignatures = solidityFormatSignatures(signatures);
     const tx = await rollupProcessor.escapeHatch(
       `0x${proofData.toString('hex')}`,
       formattedSignatures,
@@ -142,7 +143,7 @@ export class Contracts {
     const signer = signingAddress ? this.provider.getSigner(signingAddress.toString()) : this.provider.getSigner(0);
     const signerAddress = await signer.getAddress();
     const rollupProcessor = new Contract(this.rollupContractAddress.toString(), RollupABI, signer);
-    const formattedSignatures = this.solidityFormatSignatures(signatures);
+    const formattedSignatures = solidityFormatSignatures(signatures);
     const tx = await rollupProcessor.processRollup(
       `0x${proofData.toString('hex')}`,
       formattedSignatures,
@@ -200,21 +201,6 @@ export class Contracts {
 
   public async getUserPendingDeposit(assetId: AssetId, account: EthAddress) {
     return BigInt(await this.rollupProcessor.getUserPendingDeposit(assetId, account.toString()));
-  }
-
-  /**
-   * Format all signatures into useful solidity format. EVM word size is 32bytes
-   * and we're supplying a concatenated array of signatures - so need each ECDSA
-   * param (v, r, s) to occupy 32 bytes.
-   *
-   * Zero left padding v by 31 bytes.
-   */
-  private solidityFormatSignatures(signatures: Buffer[]) {
-    const paddedSignatures = signatures.map(currentSignature => {
-      const v = currentSignature.slice(-1);
-      return Buffer.concat([currentSignature.slice(0, 64), Buffer.alloc(31), v]);
-    });
-    return Buffer.concat(paddedSignatures);
   }
 
   public async getAssetBalance(assetId: AssetId, address: EthAddress): Promise<bigint> {

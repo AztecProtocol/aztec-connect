@@ -3,29 +3,17 @@ import { solidity } from 'ethereum-waffle';
 import { Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import { deployVerifier } from '../../src/deploy/deploy_verifier';
-import { setupRollupProcessor } from '../fixtures/setup_rollup_processor';
-import { getRollupData } from '../fixtures/get_rollup_data';
+import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
 
 use(solidity);
 
-describe('Verifier', () => {
-  let verifier: Contract;
+describe('rollup_processor: verifier', async () => {
   let rollupProcessor: Contract;
-  const mintAmount = 100;
 
   beforeEach(async () => {
-    const [signer, userA, rollupProvider] = await ethers.getSigners();
-    verifier = await deployVerifier(signer);
-    ({ rollupProcessor } = await setupRollupProcessor(rollupProvider, [userA], mintAmount));
+    const [, userA, rollupProvider] = await ethers.getSigners();
+    ({ rollupProcessor } = await setupRollupProcessor(rollupProvider, [userA], 100));
   });
-
-  it('should validate a proof', async () => {
-    const proof = await getRollupData();
-    const rollupSize = 2;
-    const tx = await verifier.verify(proof, rollupSize);
-    const receipt = await tx.wait();
-    expect(receipt.status).to.equal(1);
-  }).timeout(120000);
 
   it('should allow the owner to change the verifier address', async () => {
     const [signer] = await ethers.getSigners();

@@ -45,7 +45,6 @@ library Types {
     }
 
     struct Proof {
-        uint256[] public_input_values;
         G1Point[STATE_WIDTH] wire_commitments;
         G1Point grand_product_commitment;
         G1Point permutation_commitment;
@@ -66,8 +65,6 @@ library Types {
         G1Point[2] recursive_proof_outputs;
         Fr[NUM_KATE_OPENING_ELEMENTS] kate_field_elements;
         uint256 kate_array_indexer;
-        Fr debug_challenge;
-        Fr[10] debug_markers;
     }
 
     struct PartialVerifierState {

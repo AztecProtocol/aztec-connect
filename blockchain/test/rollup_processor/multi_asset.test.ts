@@ -8,9 +8,9 @@ import {
   createRollupProof,
   createTwoDepositsProof,
   createWithdrawProof,
-} from '../fixtures/create_mock_proof';
-import { setupRollupProcessor } from '../fixtures/setup_rollup_processor';
-import { solidityFormatSignatures } from '../signing/solidity_format_sigs';
+} from './fixtures/create_mock_proof';
+import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
+import { solidityFormatSignatures } from '../../src/solidity_format_signatures';
 
 use(solidity);
 
