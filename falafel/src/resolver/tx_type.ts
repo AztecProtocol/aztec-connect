@@ -8,7 +8,7 @@ import { HexString, ISODateTime } from './scalar_type';
 export class TxType {
   @Field(() => HexString)
   @Length(32)
-  txId!: string;
+  id!: string;
 
   @Field(() => Int)
   txNo!: number;
@@ -63,25 +63,25 @@ export class TxType {
 @InputType()
 class TxFilter {
   @Field(() => HexString, { nullable: true })
-  txId?: string;
+  id?: string;
 
   @Field(() => HexString, { nullable: true })
-  txId_not?: string;
+  id_not?: string;
 
   @Field(() => [HexString!], { nullable: true })
-  txId_in?: string[];
+  id_in?: string[];
 
   @Field(() => [HexString!], { nullable: true })
-  txId_not_in?: string[];
+  id_not_in?: string[];
 
   @Field(() => HexString, { nullable: true })
-  txId_starts_with?: string;
+  id_starts_with?: string;
 
   @Field(() => HexString, { nullable: true })
-  txId_ends_with?: string;
+  id_ends_with?: string;
 
   @Field(() => HexString, { nullable: true })
-  txId_contains?: string;
+  id_contains?: string;
 
   @Field(() => Int, { nullable: true })
   rollup?: number;
@@ -142,7 +142,7 @@ class TxFilter {
 @InputType()
 class TxOrder {
   @Field({ nullable: true })
-  txId?: Sort;
+  id?: Sort;
 
   @Field({ nullable: true })
   rollup?: Sort;

@@ -58,33 +58,3 @@ export const HexString = new GraphQLScalarType({
     return Buffer.from(ast.value.replace(/^0x/i, ''), 'hex');
   },
 });
-
-/*
-export const RollupStatusScalarType = new GraphQLScalarType({
-  name: 'RollupStatus',
-  description: `One of [${rollupStatus.map(status => `\`${status}\``).join(', ')}].`,
-  serialize(value: RollupStatus) {
-    if (rollupStatus.indexOf(value) < 0) {
-      throw new Error(rollupStatusError(value));
-    }
-    return value;
-  },
-  parseValue(value: RollupStatus) {
-    if (rollupStatus.indexOf(value) < 0) {
-      throw new Error(rollupStatusError(value));
-    }
-    return value;
-  },
-  parseLiteral(ast) {
-    if (ast.kind !== Kind.STRING) {
-      return null;
-    }
-
-    if (rollupStatus.indexOf(ast.value as any) < 0) {
-      throw new Error(rollupStatusError(ast.value));
-    }
-
-    return ast.value;
-  },
-});
-*/

@@ -11,7 +11,7 @@ export const App = () => (
   <Template>
     <Switch>
       <Route path="/block/:id" render={({ match }) => <Block id={+match.params.id} />} />
-      <Route path="/tx/:txId" render={({ match }) => <Tx txId={match.params.txId} />} />
+      <Route path="/tx/:id" render={({ match }) => <Tx id={match.params.id} />} />
       <Route path="/" exact>
         <Overview />
       </Route>

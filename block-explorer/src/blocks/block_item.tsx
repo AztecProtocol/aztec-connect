@@ -2,7 +2,7 @@ import moment from 'moment';
 import React from 'react';
 import { Link } from 'react-router-dom';
 import styled, { css } from 'styled-components';
-import { blockStatusColourNames, BlockStatusText } from '../block_status';
+import { blockStatusColours, BlockStatusText, getBlockStatus } from '../block_status';
 import { DeviceWidth, Text, contentStyle, contentHighlightStyle, contentPlaceholderStyle } from '../components';
 import chevronRightIcon from '../images/chevron_right.svg';
 import clockIcon from '../images/clock.svg';
@@ -187,14 +187,14 @@ interface BlockProps {
 }
 
 export const BlockItem: React.FunctionComponent<BlockProps> = ({ block }) => {
-  const { id, hash, numTxs, status, created } = block;
-  const statusColour = blockStatusColourNames[status];
+  const { id, hash, numTxs, created } = block;
+  const status = getBlockStatus(block);
 
   return (
     <DeviceWidth>
       {({ breakpoint }) => (
         <Root to={`/block/${id}`}>
-          <BlockNo text={`${id}`} color={statusColour} size="m" weight="semibold" monospace />
+          <BlockNo text={`${id}`} color={blockStatusColours[status]} size="m" weight="semibold" monospace />
           {(() => {
             let hashStr = hash;
             if (breakpoint === 'l') {

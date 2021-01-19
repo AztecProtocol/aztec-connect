@@ -1,9 +1,8 @@
 import { gql } from 'apollo-boost';
-import { BlockStatus } from '../block_status';
 import { POLL_INTERVAL } from '../queries';
 
 export interface Tx {
-  txId: string;
+  id: string;
   proofId: number;
 }
 
@@ -12,11 +11,11 @@ export interface Block {
   hash: string;
   dataRoot: string;
   txs: Tx[];
-  status: BlockStatus;
   proofData?: string;
   nullifierRoot?: string;
   ethTxHash?: string;
   created: Date;
+  mined?: Date;
 }
 
 export interface BlockQueryData {
@@ -39,11 +38,11 @@ export const GET_BLOCK = gql`
       dataRoot
       nullifierRoot
       txs {
-        txId
+        id
         proofId
       }
-      status
       created
+      mined
     }
   }
 `;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery } from 'react-apollo';
 import styled from 'styled-components';
-import { BlockStatusIndicator } from '../block_status';
+import { BlockStatusIndicator, getBlockStatus } from '../block_status';
 import { Button, Text } from '../components';
 import { breakpoints, spacings } from '../styles';
 import { Sections, Section, SectionTitle } from '../template';
@@ -62,7 +62,7 @@ export const Block: React.FunctionComponent<BlockProps> = ({ id }) => {
     pollInterval: BLOCK_POLL_INTERVAL,
   });
 
-  if (data?.block?.status === 'SETTLED') {
+  if (data?.block?.mined) {
     stopPolling();
   }
 
@@ -116,8 +116,8 @@ export const Block: React.FunctionComponent<BlockProps> = ({ id }) => {
     );
   }
 
-  const { status, ethTxHash } = block;
-
+  const { ethTxHash } = block;
+  const status = getBlockStatus(block);
   const statusIndicator = <StyledBlockStatusIndicator status={status} size="s" />;
 
   const titleNode = (

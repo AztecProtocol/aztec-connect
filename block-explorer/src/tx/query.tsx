@@ -1,15 +1,14 @@
 import { gql } from 'apollo-boost';
-import { BlockStatus } from '../block_status';
 import { POLL_INTERVAL } from '../queries';
 
 export interface Block {
   id: number;
-  status: BlockStatus;
   created: Date;
+  mined?: Date;
 }
 
 export interface Tx {
-  txId: string;
+  id: string;
   txNo: number;
   proofId: number;
   proofData: string;
@@ -21,7 +20,7 @@ export interface Tx {
   publicOutput: string;
   inputOwner: string;
   outputOwner: string;
-  block: Block;
+  block?: Block;
 }
 
 export interface TxQueryData {
@@ -29,15 +28,15 @@ export interface TxQueryData {
 }
 
 export interface TxQueryVars {
-  txId: string;
+  id: string;
 }
 
 export const TX_POLL_INTERVAL = POLL_INTERVAL;
 
 export const GET_TX = gql`
-  query Tx($txId: HexString!) {
-    tx(txId: $txId) {
-      txId
+  query Tx($id: HexString!) {
+    tx(id: $id) {
+      id
       txNo
       proofId
       proofData
@@ -51,8 +50,8 @@ export const GET_TX = gql`
       outputOwner
       block: rollup {
         id
-        status
         created
+        mined
       }
     }
   }

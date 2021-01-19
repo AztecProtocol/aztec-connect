@@ -18,8 +18,8 @@ interface TxListProps {
 export const TxList: React.FunctionComponent<TxListProps> = ({ txs }) => {
   return (
     <Root>
-      {txs.map((tx) => (
-        <TxRow key={tx.txId}>
+      {txs.map(tx => (
+        <TxRow key={tx.id}>
           <TxItem tx={tx} />
         </TxRow>
       ))}

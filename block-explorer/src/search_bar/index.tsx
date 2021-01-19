@@ -15,8 +15,8 @@ const SEARCH_BY_ID = gql`
 
 const SEARCH_BY_HASH = gql`
   query Search($hash: HexString!) {
-    tx(txId: $hash) {
-      txId
+    tx(id: $hash) {
+      id
     }
     rollup(hash: $hash) {
       id
@@ -29,8 +29,8 @@ const SEARCH_BY_HASH = gql`
 
 const SEARCH_BY_PARTIAL_HASH = gql`
   query Search($hash: HexString!) {
-    txs(take: 1, where: { txId_starts_with: $hash }) {
-      txId
+    txs(take: 1, where: { id_starts_with: $hash }) {
+      id
     }
     rollups(take: 1, where: { hash_starts_with: $hash }) {
       id
@@ -38,8 +38,8 @@ const SEARCH_BY_PARTIAL_HASH = gql`
     publishedRollups: rollups(take: 1, where: { ethTxHash_starts_with: $hash }) {
       id
     }
-    txs_end: txs(take: 1, where: { txId_ends_with: $hash }) {
-      txId
+    txs_end: txs(take: 1, where: { id_ends_with: $hash }) {
+      id
     }
     rollups_end: rollups(take: 1, where: { hash_ends_with: $hash }) {
       id
@@ -64,11 +64,11 @@ export const SearchBar: React.FunctionComponent = () => {
     if (idData?.rollup) {
       history.push(`/block/${idData.rollup.id}`);
     } else if (hashData?.tx) {
-      history.push(`/tx/${hashData.tx.txId}`);
+      history.push(`/tx/${hashData.tx.id}`);
     } else if (hashData?.rollup || hashData?.publishedRollup) {
       history.push(`/block/${(hashData.rollup || hashData.publishedRollup).id}`);
     } else if (partialHashData?.txs.length || partialHashData?.txs_end.length) {
-      history.push(`/tx/${(partialHashData.txs[0] || partialHashData.txs_end[0]).txId}`);
+      history.push(`/tx/${(partialHashData.txs[0] || partialHashData.txs_end[0]).id}`);
     } else if (
       partialHashData?.rollups.length ||
       partialHashData?.publishedRollups.length ||

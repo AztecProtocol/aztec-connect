@@ -16,8 +16,8 @@ export class TxResolver {
   }
 
   @Query(() => TxType, { nullable: true })
-  async tx(@Arg('txId', () => HexString) txId: Buffer) {
-    return this.txRep.findOne({ id: txId });
+  async tx(@Arg('id', () => HexString) id: Buffer) {
+    return this.txRep.findOne({ id });
   }
 
   @Query(() => [TxType!])
@@ -85,14 +85,16 @@ export class TxResolver {
   }
 
   @FieldResolver({ nullable: true })
-  async rollup(@Root() tx: TxDao) {
-    const { rollupProof } =
-      (await this.txRep.findOne({ id: tx.id }, { relations: ['rollupProof', 'rollupProof.rollup'] })) || {};
-    return rollupProof?.rollup;
+  async rollup(@Root() { id }: TxDao) {
+    const { rollupProof } = (await getQuery(this.txRep, { where: { id } }, {}, [
+      'rollupProof',
+      'rollupProof.rollup',
+    ]).getOne())!;
+    return rollupProof;
   }
 
   @Query(() => Int)
   async totalTxs(@Args() args: TxCountArgs) {
-    return getQuery(this.txRep, args).getCount();
+    return getQuery(this.txRep, args, { rollup: 'rollupProof' }).getCount();
   }
 }

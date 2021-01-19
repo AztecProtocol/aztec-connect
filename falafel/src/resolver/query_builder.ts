@@ -4,6 +4,8 @@ export const MAX_COUNT = 100;
 
 export type Sort = 'ASC' | 'DESC';
 
+export type FieldAliases = { [key: string]: string };
+
 interface QueryArgs {
   where?: { [key: string]: any };
   order?: { [key: string]: any };
@@ -14,30 +16,30 @@ interface QueryArgs {
 const getConstraint = (key: string, field: string, cond: string) => {
   switch (cond) {
     case 'not':
-      return `obj.${field} != :${key}`;
+      return `${field} != :${key}`;
     case 'null':
-      return `obj.${field} IS NULL`;
+      return `${field} IS NULL`;
     case 'not_null':
-      return `obj.${field} IS NOT NULL`;
+      return `${field} IS NOT NULL`;
     case 'gte':
-      return `obj.${field} >= :${key}`;
+      return `${field} >= :${key}`;
     case 'gt':
-      return `obj.${field} > :${key}`;
+      return `${field} > :${key}`;
     case 'lte':
-      return `obj.${field} <= :${key}`;
+      return `${field} <= :${key}`;
     case 'lt':
-      return `obj.${field} < :${key}`;
+      return `${field} < :${key}`;
     case 'in':
-      return `obj.${field} IN (:...${key})`;
+      return `${field} IN (:...${key})`;
     case 'not_in':
-      return `obj.${field} NOT IN (:...${key})`;
+      return `${field} NOT IN (:...${key})`;
     case 'starts_with':
     case 'ends_with':
     case 'contains':
-      return `hex(obj.${field}) LIKE :${key}`;
+      return `hex(${field}) LIKE :${key}`;
   }
 
-  return `obj.${field} = :${key}`;
+  return `${field} = :${key}`;
 };
 
 const getConstraintValue = (cond: string, value: any) => {
@@ -53,23 +55,43 @@ const getConstraintValue = (cond: string, value: any) => {
   return value;
 };
 
-export const getQuery = <T>(rep: Repository<T>, { where, order, take, skip }: QueryArgs) => {
+const fullFieldName = (field: string, aliases: FieldAliases) => {
+  const fieldName = aliases[field] || field;
+  return fieldName.indexOf('.') > 0 ? fieldName : `obj.${fieldName}`;
+};
+
+export const getQuery = <T>(
+  rep: Repository<T>,
+  { where, order, take, skip }: QueryArgs,
+  fieldAliases: FieldAliases = {},
+  leftJoins: string[] = [],
+) => {
   const query = rep.createQueryBuilder('obj').select('obj');
+  leftJoins.forEach(joinOn => {
+    const [, table] = joinOn.split('.', 2);
+    if (table) {
+      query.leftJoinAndSelect(joinOn, table);
+    } else {
+      query.leftJoinAndSelect(`obj.${joinOn}`, joinOn);
+    }
+  });
   if (where) {
     Object.keys(where).forEach(key => {
       const [field, cond] = key.split(/_(.+)/);
+      const fieldName = fullFieldName(field, fieldAliases);
       const value = where[key];
       if (value !== undefined && value !== null) {
-        query.andWhere(getConstraint(key, field, cond), { [key]: getConstraintValue(cond, value) });
+        query.andWhere(getConstraint(key, fieldName, cond), { [key]: getConstraintValue(cond, value) });
       }
     });
   }
   if (order) {
     Object.keys(order).forEach((field, i) => {
+      const fieldName = fullFieldName(field, fieldAliases);
       if (!i) {
-        query.orderBy(`obj.${field}`, order[field]);
+        query.orderBy(fieldName, order[field]);
       } else {
-        query.addOrderBy(`obj.${field}`, order[field]);
+        query.addOrderBy(fieldName, order[field]);
       }
     });
   }

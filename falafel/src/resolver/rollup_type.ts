@@ -1,7 +1,5 @@
-import { RollupStatus } from 'barretenberg/rollup_provider';
 import { Max } from 'class-validator';
 import { Field, Int, ObjectType, ArgsType, InputType } from 'type-graphql';
-import { BlockType } from './block_type';
 import { TxType } from './tx_type';
 import { MAX_COUNT, Sort } from './query_builder';
 import { HexString, ISODateTime } from './scalar_type';
@@ -14,25 +12,25 @@ export class RollupType {
   @Field(() => HexString)
   hash!: string;
 
-  @Field(() => HexString, { nullable: true })
+  @Field(() => HexString)
   proofData?: string;
 
   @Field(() => HexString)
   dataRoot!: string;
 
-  @Field(() => HexString, { nullable: true })
+  @Field(() => HexString)
   oldDataRoot?: string;
 
-  @Field(() => HexString, { nullable: true })
+  @Field(() => HexString)
   nullifierRoot?: string;
 
-  @Field(() => HexString, { nullable: true })
+  @Field(() => HexString)
   oldNullifierRoot?: string;
 
-  @Field(() => HexString, { nullable: true })
+  @Field(() => HexString)
   dataRootsRoot?: string;
 
-  @Field(() => HexString, { nullable: true })
+  @Field(() => HexString)
   oldDataRootsRoot?: string;
 
   @Field(() => Int)
@@ -41,20 +39,14 @@ export class RollupType {
   @Field(() => [TxType!])
   txs!: TxType[];
 
-  @Field(() => Int, { nullable: true })
-  ethBlock?: number;
-
   @Field(() => HexString, { nullable: true })
   ethTxHash?: string;
 
-  @Field({ nullable: true })
-  block?: BlockType;
-  /*
-  @Field(() => RollupStatusScalarType)
-  status!: RollupStatus;
-*/
   @Field(() => ISODateTime)
   created!: Date;
+
+  @Field(() => ISODateTime, { nullable: true })
+  mined!: Date;
 }
 
 /* eslint-disable camelcase */
@@ -132,36 +124,6 @@ class RollupFilter {
   @Field(() => HexString, { nullable: true })
   dataRoot_contains?: string;
 
-  @Field(() => Int, { nullable: true })
-  ethBlock?: number;
-
-  @Field(() => Int, { nullable: true })
-  ethBlock_not?: number;
-
-  @Field({ nullable: true })
-  ethBlock_null?: boolean;
-
-  @Field({ nullable: true })
-  ethBlock_not_null?: boolean;
-
-  @Field(() => [Int!], { nullable: true })
-  ethBlock_in?: number[];
-
-  @Field(() => [Int!], { nullable: true })
-  ethBlock_not_in?: number[];
-
-  @Field(() => Int, { nullable: true })
-  ethBlock_gt?: number;
-
-  @Field(() => Int, { nullable: true })
-  ethBlock_gte?: number;
-
-  @Field(() => Int, { nullable: true })
-  ethBlock_lt?: number;
-
-  @Field(() => Int, { nullable: true })
-  ethBlock_lte?: number;
-
   @Field(() => HexString, { nullable: true })
   ethTxHash?: string;
 
@@ -188,19 +150,7 @@ class RollupFilter {
 
   @Field(() => HexString, { nullable: true })
   ethTxHash_contains?: string;
-  /*
-  @Field(() => RollupStatusScalarType, { nullable: true })
-  status?: RollupStatus;
 
-  @Field(() => RollupStatusScalarType, { nullable: true })
-  status_not?: RollupStatus;
-
-  @Field(() => [RollupStatusScalarType!], { nullable: true })
-  status_in?: RollupStatus[];
-
-  @Field(() => [RollupStatusScalarType!], { nullable: true })
-  status_not_in?: RollupStatus[];
-*/
   @Field(() => ISODateTime, { nullable: true })
   created?: Date;
 
@@ -224,6 +174,36 @@ class RollupFilter {
 
   @Field(() => ISODateTime, { nullable: true })
   created_lte?: Date;
+
+  @Field(() => ISODateTime, { nullable: true })
+  mined?: Date;
+
+  @Field(() => ISODateTime, { nullable: true })
+  mined_not?: Date;
+
+  @Field({ nullable: true })
+  mined_null?: boolean;
+
+  @Field({ nullable: true })
+  mined_not_null?: boolean;
+
+  @Field(() => [ISODateTime!], { nullable: true })
+  mined_in?: Date[];
+
+  @Field(() => [ISODateTime!], { nullable: true })
+  mined_not_in?: Date[];
+
+  @Field(() => ISODateTime, { nullable: true })
+  mined_gt?: Date;
+
+  @Field(() => ISODateTime, { nullable: true })
+  mined_gte?: Date;
+
+  @Field(() => ISODateTime, { nullable: true })
+  mined_lt?: Date;
+
+  @Field(() => ISODateTime, { nullable: true })
+  mined_lte?: Date;
 }
 /* eslint-enable */
 
@@ -233,10 +213,10 @@ class RollupOrder {
   id?: Sort;
 
   @Field({ nullable: true })
-  ethBlock?: Sort;
+  created?: Sort;
 
   @Field({ nullable: true })
-  created?: Sort;
+  mined?: Sort;
 }
 
 @ArgsType()

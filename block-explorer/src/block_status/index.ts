@@ -3,25 +3,30 @@ import { colours, Colour } from '../styles';
 export * from './block_status_indicator';
 export * from './block_status_text';
 
-export type BlockStatus = 'CREATING' | 'CREATED' | 'PUBLISHED' | 'SETTLED';
+export enum BlockStatus {
+  CREATING = 'CREATING',
+  PUBLISHED = 'PUBLISHED',
+  SETTLED = 'SETTLED',
+}
 
-export const blockStatusNames = {
+export const blockStatusNames: { [key in BlockStatus]: string } = {
   CREATING: 'PENDING',
-  CREATED: 'PENDING',
   PUBLISHED: 'PUBLISHED',
   SETTLED: 'SETTLED',
 };
 
-export const blockStatusColourNames: { [key in BlockStatus]: Colour } = {
+export const blockStatusColours: { [key in BlockStatus]: Colour } = {
   CREATING: 'blue',
-  CREATED: 'blue',
   PUBLISHED: 'indigo',
   SETTLED: 'green',
 };
 
-export const blockStatusColours = {
-  CREATING: colours.blue,
-  CREATED: colours.blue,
-  PUBLISHED: colours.indigo,
-  SETTLED: colours.green,
+export const getBlockStatus = (block?: { ethTxHash?: string; mined?: Date }) => {
+  if (block?.mined) {
+    return BlockStatus.SETTLED;
+  }
+  if (block?.ethTxHash) {
+    return BlockStatus.PUBLISHED;
+  }
+  return BlockStatus.CREATING;
 };

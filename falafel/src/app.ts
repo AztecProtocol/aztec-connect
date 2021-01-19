@@ -20,7 +20,7 @@ import { Container } from 'typedi';
 import { Connection } from 'typeorm';
 import { DefaultState, Context } from 'koa';
 import { TxDao } from './entity/tx';
-import { BlockResolver, RollupResolver, TxResolver, ServerStatusResolver } from './resolver';
+import { RollupResolver, TxResolver, ServerStatusResolver } from './resolver';
 import { Server } from './server';
 import { RollupDao } from './entity/rollup';
 import { Metrics } from './metrics';
@@ -230,7 +230,7 @@ export function appFactory(
   Container.set({ id: 'serverStatus', factory: () => serverStatus });
   Container.set({ id: 'server', factory: () => server });
   const schema = buildSchemaSync({
-    resolvers: [BlockResolver, RollupResolver, TxResolver, ServerStatusResolver],
+    resolvers: [RollupResolver, TxResolver, ServerStatusResolver],
     container: Container,
   });
   const appServer = new ApolloServer({ schema, introspection: true });

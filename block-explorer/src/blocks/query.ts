@@ -1,13 +1,13 @@
 import { gql } from 'apollo-boost';
-import { BlockStatus } from '../block_status';
 import { POLL_INTERVAL } from '../queries';
 
 export interface Block {
   id: number;
   hash: string;
   numTxs: number;
-  status: BlockStatus;
+  ethTxHash?: string;
   created: Date;
+  mined?: Date;
 }
 
 export interface BlocksQueryData {
@@ -35,8 +35,9 @@ export const GET_BLOCKS = gql`
       id
       hash
       numTxs
-      status
+      ethTxHash
       created
+      mined
     }
   }
 `;

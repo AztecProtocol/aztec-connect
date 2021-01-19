@@ -7,7 +7,7 @@ import { ProofId, proofIdToType, ProofTypeTag } from '../proof_type';
 import { spacings, fontSizes, lineHeights, breakpoints } from '../styles';
 
 export interface Tx {
-  txId: string;
+  id: string;
   proofId: ProofId;
 }
 
@@ -69,22 +69,21 @@ interface TxItemProps {
   tx: Tx;
 }
 
-export const TxItem: React.FunctionComponent<TxItemProps> = ({ tx }) => {
-  const { txId, proofId } = tx;
+export const TxItem: React.FunctionComponent<TxItemProps> = ({ tx: { id, proofId } }) => {
   const proofType = proofIdToType(proofId);
   return (
-    <Root to={`/tx/${txId}`}>
+    <Root to={`/tx/${id}`}>
       <Info>
         <StyledProofTypeTag proofType={proofType} />
         <DeviceWidth>
           {({ breakpoint }) => {
-            let hash = txId;
+            let hash = id;
             if (breakpoint === 'm') {
-              hash = `${txId.slice(0, 40)}...${txId.slice(-6)}`;
+              hash = `${id.slice(0, 40)}...${id.slice(-6)}`;
             } else if (breakpoint === 's') {
-              hash = `${txId.slice(0, 24)}...${txId.slice(-6)}`;
+              hash = `${id.slice(0, 24)}...${id.slice(-6)}`;
             } else if (breakpoint === 'xs') {
-              hash = `${txId.slice(0, 8)}...${txId.slice(-6)}`;
+              hash = `${id.slice(0, 8)}...${id.slice(-6)}`;
             }
             return <Hash text={`0x${hash}`} weight="light" color="white" monospace />;
           }}

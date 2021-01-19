@@ -102,7 +102,7 @@ export class Server {
       return;
     }
 
-    return moment(lastPublished[0].created).add(this.config.publishInterval).toDate().getTime();
+    return moment(lastPublished[0].created).add(this.config.publishInterval).toDate();
   }
 
   public async getPendingNoteNullifiers() {

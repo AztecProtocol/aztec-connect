@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery } from 'react-apollo';
 import styled from 'styled-components';
-import { BlockStatusIndicator } from '../block_status';
+import { BlockStatusIndicator, getBlockStatus } from '../block_status';
 import { Button, Text } from '../components';
 import { breakpoints, spacings } from '../styles';
 import { Sections, Section, SectionTitle } from '../template';
@@ -39,16 +39,16 @@ const BackButtonRoot = styled.div`
 `;
 
 interface TxProps {
-  txId: string;
+  id: string;
 }
 
-export const Tx: React.FunctionComponent<TxProps> = ({ txId }) => {
+export const Tx: React.FunctionComponent<TxProps> = ({ id }) => {
   const { loading, error, data, stopPolling } = useQuery<TxQueryData, TxQueryVars>(GET_TX, {
-    variables: { txId },
+    variables: { id },
     pollInterval: TX_POLL_INTERVAL,
   });
 
-  if (data?.tx?.block?.status === 'SETTLED') {
+  if (data?.tx?.block?.mined) {
     stopPolling();
   }
 
@@ -62,7 +62,7 @@ export const Tx: React.FunctionComponent<TxProps> = ({ txId }) => {
       to: data?.tx?.block ? `/block/${data.tx.block.id}` : undefined,
     },
     {
-      text: `0x${txId.slice(0, 8)}...`,
+      text: `0x${id.slice(0, 8)}...`,
       highlight: true,
     },
   ];
@@ -96,7 +96,7 @@ export const Tx: React.FunctionComponent<TxProps> = ({ txId }) => {
       <Sections>
         <Section title={txTitleNode}>
           <Text text={`Transaction not found.`} size="m" weight="light" />
-          <Text text={`0x${txId}`} size="s" weight="light" monospace />
+          <Text text={`0x${id}`} size="s" weight="light" monospace />
           <BackButtonRoot>
             <Button text="Back to Network Stats" to="/" />
           </BackButtonRoot>
@@ -105,7 +105,7 @@ export const Tx: React.FunctionComponent<TxProps> = ({ txId }) => {
     );
   }
 
-  const { status } = tx.block || {};
+  const status = getBlockStatus(tx.block);
 
   const titleNode = (
     <TxTitle>
