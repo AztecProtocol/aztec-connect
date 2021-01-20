@@ -1,51 +1,53 @@
-import {
-  AssetId,
-  createEthSdk,
-  EthereumSdk,
-  EthereumSdkUser,
-  EthAddress,
-  EthersAdapter,
-  EthereumProvider,
-} from 'aztec2-sdk';
+import { AssetId, createEthSdk, EthereumSdk, EthereumSdkUser } from 'aztec2-sdk';
 import { EventEmitter } from 'events';
 import { advanceBlocks, blocksToAdvance } from './manipulate_block';
-import { JsonRpcProvider } from '@ethersproject/providers';
+import { createFundedWalletProvider } from './create_funded_wallet_provider';
 
 jest.setTimeout(10 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
 
 const { ETHEREUM_HOST = 'http://localhost:8545', SRIRACHA_HOST = 'http://localhost:8082' } = process.env;
 
+/**
+ * Set the following environment variables
+ * - before deploying the contracts:
+ *   ESCAPE_BLOCK_LOWER=10
+ *   ESCAPE_BLOCK_UPPER=100
+ * - before running sriracha:
+ *   MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW=1
+ */
+
 describe('end-to-end escape tests', () => {
-  let provider: EthereumProvider;
   let sdk: EthereumSdk;
-  let userAddresses: EthAddress[];
-  let users: EthereumSdkUser[];
+  const users: EthereumSdkUser[] = [];
   const assetId = AssetId.DAI;
+  const escapeBlockLowerBound = 10;
+  const escapeBlockUpperBound = 100;
 
   beforeAll(async () => {
     // Init sdk.
-    const ethersProvider = new JsonRpcProvider(ETHEREUM_HOST);
-    provider = new EthersAdapter(ethersProvider);
-    sdk = await createEthSdk(provider, SRIRACHA_HOST, {
+    const walletProvider = await createFundedWalletProvider(ETHEREUM_HOST, 2, '1');
+    const accounts = walletProvider.getAccounts();
+
+    sdk = await createEthSdk(walletProvider, SRIRACHA_HOST, {
       syncInstances: false,
       saveProvingKey: false,
       clearDb: true,
       dbPath: ':memory:',
+      minConfirmationEHW: 1,
     });
     await sdk.init();
     await sdk.awaitSynchronised();
 
-    // Get contract addresses.
-    userAddresses = (await ethersProvider.listAccounts()).slice(0, 4).map(a => EthAddress.fromString(a));
-    users = await Promise.all(
-      userAddresses.map(async address => {
-        return sdk.addUser(address);
-      }),
-    );
+    // Get user addresses.
+    const userAddresses = accounts.slice(0, 2);
+    for (const address of userAddresses) {
+      const user = await sdk.addUser(address);
+      users.push(user);
+    }
 
-    const nextEscapeBlock = await blocksToAdvance(4560, 4800, provider);
-    await advanceBlocks(nextEscapeBlock, provider);
+    const nextEscapeBlock = await blocksToAdvance(escapeBlockLowerBound, escapeBlockUpperBound, walletProvider);
+    await advanceBlocks(nextEscapeBlock, walletProvider);
   });
 
   afterAll(async () => {
@@ -53,45 +55,55 @@ describe('end-to-end escape tests', () => {
   });
 
   it('should deposit, transfer and withdraw funds', async () => {
+    const { escapeOpen } = await sdk.getRemoteStatus();
+    expect(escapeOpen).toBe(true);
+
     const user0Asset = users[0].getAsset(assetId);
     const user1Asset = users[1].getAsset(assetId);
 
     // Deposit to user 0.
-    const depositValue = user0Asset.toErc20Units('1000');
+    {
+      const depositValue = user0Asset.toErc20Units('1000');
 
-    await user0Asset.mint(depositValue);
-    await user0Asset.approve(depositValue);
-    expect(await user0Asset.publicBalance()).toBe(depositValue);
-    expect(await user0Asset.publicAllowance()).toBe(depositValue);
-    expect(user0Asset.balance()).toBe(0n);
+      await user0Asset.mint(depositValue);
+      await user0Asset.approve(depositValue);
+      expect(await user0Asset.publicBalance()).toBe(depositValue);
+      expect(await user0Asset.publicAllowance()).toBe(depositValue);
+      expect(user0Asset.balance()).toBe(0n);
 
-    const txHash = await user0Asset.deposit(depositValue);
-    await sdk.awaitSettlement(txHash);
+      const txHash = await user0Asset.deposit(depositValue);
+      await sdk.awaitSettlement(txHash);
 
-    expect(await user0Asset.publicBalance()).toBe(0n);
-    const user0BalanceAfterDeposit = user0Asset.balance();
-    expect(user0BalanceAfterDeposit).toBe(depositValue);
+      expect(await user0Asset.publicBalance()).toBe(0n);
+      expect(user0Asset.balance()).toBe(depositValue);
+    }
 
     // Transfer to user 1.
-    const transferValue = user0Asset.toErc20Units('800');
+    {
+      const transferValue = user0Asset.toErc20Units('800');
 
-    expect(user1Asset.balance()).toBe(0n);
+      const initialBalance0 = user0Asset.balance();
+      const initialBalance1 = user1Asset.balance();
 
-    const transferTxHash = await user0Asset.transfer(transferValue, users[1].getUserData().id);
-    await sdk.awaitSettlement(transferTxHash);
-    expect(user0Asset.balance()).toBe(user0BalanceAfterDeposit - transferValue);
+      const transferTxHash = await user0Asset.transfer(transferValue, users[1].getUserData().id);
+      await sdk.awaitSettlement(transferTxHash);
 
-    await sdk.awaitSettlement(transferTxHash);
-    const user1BalanceAfterTransfer = user1Asset.balance();
-    expect(user1BalanceAfterTransfer).toBe(transferValue);
+      expect(user0Asset.balance()).toBe(initialBalance0 - transferValue);
+      expect(user1Asset.balance()).toBe(initialBalance1 + transferValue);
+    }
 
     // Withdraw to user 1.
-    const withdrawValue = user0Asset.toErc20Units('300');
+    {
+      const withdrawValue = user0Asset.toErc20Units('300');
 
-    const withdrawTxHash = await user1Asset.withdraw(withdrawValue);
-    await sdk.awaitSettlement(withdrawTxHash);
+      const initialPublicBalance = await user1Asset.publicBalance();
+      const initialBalance = user1Asset.balance();
 
-    expect(await user1Asset.publicBalance()).toBe(withdrawValue);
-    expect(user1Asset.balance()).toBe(user1BalanceAfterTransfer - withdrawValue);
+      const withdrawTxHash = await user1Asset.withdraw(withdrawValue);
+      await sdk.awaitSettlement(withdrawTxHash);
+
+      expect(await user1Asset.publicBalance()).toBe(initialPublicBalance + withdrawValue);
+      expect(user1Asset.balance()).toBe(initialBalance - withdrawValue);
+    }
   });
 });

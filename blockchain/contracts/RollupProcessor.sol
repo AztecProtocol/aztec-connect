@@ -351,8 +351,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         bytes calldata signatures,
         bytes calldata viewingKeys
     ) internal {
-        uint256 rollupSize = verifyProofAndUpdateState(proofData);
-        processDepositsAndWithdrawals(proofData[rollupPubInputLength:], rollupSize, signatures);
+        uint256 numTxs = verifyProofAndUpdateState(proofData);
+        processDepositsAndWithdrawals(proofData[rollupPubInputLength:], numTxs, signatures);
     }
 
     /**
@@ -381,7 +381,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
 
         emit RollupProcessed(rollupId, newDataRoot, newNullRoot);
 
-        return rollupSize;
+        return numTxs;
     }
 
     /**
@@ -417,10 +417,10 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         ) = decodeProof(proofData, numberOfAssets);
 
         // Escape hatch denominated by a rollup size of 0, which means inserting 2 new entries.
-        nums[1] = nums[1] == 0 ? 1 : nums[1];
+        nums[3] = nums[1] == 0 ? 1 : nums[1];
 
         // Ensure we are inserting at the next subtree boundary.
-        uint256 toInsert = nums[1].mul(2);
+        uint256 toInsert = nums[3].mul(2);
         if (dataSize % toInsert == 0) {
             require(nums[2] == dataSize, 'Rollup Processor: INCORRECT_DATA_START_INDEX');
         } else {
@@ -440,17 +440,17 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     /**
      * @dev Process deposits and withdrawls.
      * @param innerProofData - all proofData associated with the rolled up transactions
-     * @param rollupSize - number of transactions rolled up in the proof
+     * @param numTxs - number of transactions rolled up in the proof
      * @param signatures - bytes array of secp256k1 ECDSA signatures, authorising a transfer of tokens
      */
     function processDepositsAndWithdrawals(
         bytes calldata innerProofData,
-        uint256 rollupSize,
+        uint256 numTxs,
         bytes calldata signatures
     ) internal {
         uint256 sigIndex = 0;
 
-        for (uint256 i = 0; i < rollupSize; i++) {
+        for (uint256 i = 0; i < numTxs; i++) {
             bytes calldata txPubInputs = innerProofData[i.mul(txPubInputLength):i.mul(txPubInputLength).add(
                 txPubInputLength
             )];

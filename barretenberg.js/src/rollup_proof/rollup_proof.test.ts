@@ -78,7 +78,33 @@ describe('RollupProofData', () => {
     expect(recoveredRollup).toEqual(rollupProofData);
   });
 
-  it('show throw if totalTxFees is of the wrong size', () => {
+  it('should parse an escape hatch proof with rollup size 0', () => {
+    const rollupSize = 0;
+    const totalTxFees = [...Array(RollupProofData.NUMBER_OF_ASSETS)].map(() => randomBytes(32));
+    const rollupProofData = new RollupProofData(
+      70,
+      rollupSize,
+      150,
+      randomBytes(32),
+      randomBytes(32),
+      randomBytes(32),
+      randomBytes(32),
+      randomBytes(32),
+      randomBytes(32),
+      totalTxFees,
+      1,
+      [innerProofData],
+      randomBytes(32 * 16),
+      [],
+    );
+
+    const buffer = rollupProofData.toBuffer();
+    const recoveredRollup = RollupProofData.fromBuffer(buffer);
+
+    expect(recoveredRollup).toEqual(rollupProofData);
+  });
+
+  it('should throw if totalTxFees is of the wrong size', () => {
     const totalTxFees = [...Array(RollupProofData.NUMBER_OF_ASSETS)].map(() => randomBytes(32));
     totalTxFees.push(randomBytes(32));
 

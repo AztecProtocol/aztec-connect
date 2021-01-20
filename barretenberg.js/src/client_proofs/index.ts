@@ -1,4 +1,3 @@
-import { Runtime } from 'inspector';
 import { AssetId } from './asset_id';
 import { ProofId } from './proof_id';
 

@@ -1,7 +1,8 @@
-import { AssetId, createEthSdk, EthAddress, EthereumProvider, EthersAdapter } from 'aztec2-sdk';
+import { AssetId, createEthSdk, EthAddress, WalletProvider } from 'aztec2-sdk';
 import { EventEmitter } from 'events';
 import { advanceBlocks, blocksToAdvance } from './manipulate_block';
-import { JsonRpcProvider } from '@ethersproject/providers';
+import { topUpFeeDistributorContract } from './fee_distributor_contract';
+import { createFundedWalletProvider } from './create_funded_wallet_provider';
 
 jest.setTimeout(10 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
@@ -12,17 +13,27 @@ const {
   ROLLUP_HOST = 'http://localhost:8081',
 } = process.env;
 
+/**
+ * Set the following environment variables
+ * - before deploying the contracts:
+ *   ESCAPE_BLOCK_LOWER=10
+ *   ESCAPE_BLOCK_UPPER=100
+ * - before running sriracha:
+ *   MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW=1
+ */
+
 describe('end-to-end falafel recovery tests', () => {
-  let provider: EthereumProvider;
+  let provider: WalletProvider;
   let userAddress: EthAddress;
+  let feeContributor: EthAddress;
   const assetId = AssetId.DAI;
+  const escapeBlockLowerBound = 10;
+  const escapeBlockUpperBound = 100;
+  const awaitSettlementTimeout = 300;
 
   beforeAll(async () => {
-    const jsonRpcProvider = new JsonRpcProvider(ETHEREUM_HOST);
-    provider = new EthersAdapter(jsonRpcProvider);
-
-    // Get users addresses.
-    userAddress = EthAddress.fromString((await jsonRpcProvider.listAccounts())[0]);
+    provider = await createFundedWalletProvider(ETHEREUM_HOST, 2, '10');
+    [userAddress, feeContributor] = provider.getAccounts();
   });
 
   it('should succesfully mix normal and escape mode transactions', async () => {
@@ -33,8 +44,14 @@ describe('end-to-end falafel recovery tests', () => {
         saveProvingKey: false,
         clearDb: true,
         dbPath: ':memory:',
+        minConfirmationEHW: 1,
       });
       await sdk.init();
+
+      const { rollupContractAddress } = await sdk.getRemoteStatus();
+      const oneEth = BigInt(10) ** BigInt(18);
+      await topUpFeeDistributorContract(oneEth, rollupContractAddress, provider, feeContributor);
+
       const user = await sdk.addUser(userAddress);
       await sdk.awaitSynchronised();
 
@@ -45,15 +62,16 @@ describe('end-to-end falafel recovery tests', () => {
       await userAsset.approve(depositValue);
 
       const txHash = await userAsset.deposit(depositValue);
-      await sdk.awaitSettlement(txHash);
+      await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
 
       expect(userAsset.balance()).toBe(depositValue);
+
       await sdk.destroy();
     }
 
     // Run an escape sdk and withdraw half.
     {
-      const nextEscapeBlock = await blocksToAdvance(81, 100, provider);
+      const nextEscapeBlock = await blocksToAdvance(escapeBlockLowerBound, escapeBlockUpperBound, provider);
       await advanceBlocks(nextEscapeBlock, provider);
 
       const sdk = await createEthSdk(provider, SRIRACHA_HOST, {
@@ -61,6 +79,7 @@ describe('end-to-end falafel recovery tests', () => {
         saveProvingKey: false,
         clearDb: true,
         dbPath: ':memory:',
+        minConfirmationEHW: 1,
       });
       await sdk.init();
       const user = await sdk.addUser(userAddress);
@@ -69,7 +88,7 @@ describe('end-to-end falafel recovery tests', () => {
       const userAsset = user.getAsset(assetId);
 
       const txHash = await userAsset.withdraw(500n);
-      await sdk.awaitSettlement(txHash);
+      await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
 
       expect(await userAsset.publicBalance()).toBe(500n);
       expect(userAsset.balance()).toBe(500n);
@@ -84,6 +103,7 @@ describe('end-to-end falafel recovery tests', () => {
         saveProvingKey: false,
         clearDb: true,
         dbPath: ':memory:',
+        minConfirmationEHW: 1,
       });
       await sdk.init();
       const user = await sdk.addUser(userAddress);
@@ -92,7 +112,7 @@ describe('end-to-end falafel recovery tests', () => {
       const userAsset = user.getAsset(assetId);
 
       const txHash = await userAsset.withdraw(500n);
-      await sdk.awaitSettlement(txHash);
+      await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
 
       expect(await userAsset.publicBalance()).toBe(1000n);
       expect(userAsset.balance()).toBe(0n);

@@ -57,7 +57,15 @@ export class Server {
       metrics,
     );
     const txAggregator = new TxAggregator(rollupCreator, rollupDb, innerRollupSize, publishInterval);
-    this.worldState = new WorldState(rollupDb, worldStateDb, blockchain, txAggregator, metrics);
+    this.worldState = new WorldState(
+      rollupDb,
+      worldStateDb,
+      blockchain,
+      txAggregator,
+      innerRollupSize,
+      outerRollupSize,
+      metrics,
+    );
     this.txReceiver = new TxReceiver(rollupDb, blockchain);
   }
 

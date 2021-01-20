@@ -22,6 +22,8 @@ const innerProofDataToTxDao = (tx: InnerProofData, viewingKeys: Buffer[], create
   return txDao;
 };
 
+const roundUpToPow2 = (value: number) => 1 << Math.ceil(Math.log2(value));
+
 export class WorldState {
   private blockQueue = new MemoryFifo<Block>();
 
@@ -30,6 +32,8 @@ export class WorldState {
     public worldStateDb: WorldStateDb,
     private blockchain: Blockchain,
     private txAggregator: TxAggregator,
+    private rollupSize: number,
+    private outerRollupSize: number,
     private metrics: Metrics,
   ) {}
 
@@ -168,7 +172,7 @@ export class WorldState {
   }
 
   private async addRollupToWorldState(rollup: RollupProofData) {
-    const { rollupId, dataStartIndex, rollupSize, innerProofData } = rollup;
+    const { rollupId, dataStartIndex, innerProofData } = rollup;
     let i = 0;
     for (; i < innerProofData.length; ++i) {
       const tx = innerProofData[i];
@@ -180,11 +184,22 @@ export class WorldState {
       await this.worldStateDb.put(1, toBigIntBE(tx.nullifier1), toBufferBE(1n, 64));
       await this.worldStateDb.put(1, toBigIntBE(tx.nullifier2), toBufferBE(1n, 64));
     }
-    if (i < rollupSize) {
-      await this.worldStateDb.put(0, BigInt(dataStartIndex + rollupSize * 2 - 1), Buffer.alloc(64, 0));
-    }
+
+    await this.padToNextRollupBoundary();
+
     await this.worldStateDb.put(2, BigInt(rollupId + 1), this.worldStateDb.getRoot(0));
 
     await this.worldStateDb.commit();
+  }
+
+  private async padToNextRollupBoundary() {
+    const dataSize = this.worldStateDb.getSize(0);
+    const rollupSizePow2 = roundUpToPow2(this.rollupSize) * roundUpToPow2(this.outerRollupSize);
+    const subtreeSize = BigInt(rollupSizePow2 * 2);
+    const nextDataStartIndex =
+      dataSize % subtreeSize === 0n ? dataSize : dataSize + subtreeSize - (dataSize % subtreeSize);
+    if (dataSize < nextDataStartIndex - 1n) {
+      await this.worldStateDb.put(0, nextDataStartIndex - 1n, Buffer.alloc(64, 0));
+    }
   }
 }

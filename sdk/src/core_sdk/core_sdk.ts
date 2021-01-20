@@ -36,6 +36,7 @@ import { AccountAliasId, UserDataFactory, AccountId } from '../user';
 import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
 import { UserTx, UserTxAction } from '../user_tx';
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
+import { ProofData } from 'barretenberg/client_proofs/proof_data';
 
 const debug = createDebug('bb:core_sdk');
 
@@ -548,8 +549,9 @@ export class CoreSdk extends EventEmitter {
 
     this.escapeHatchMode ? await this.validateEscapeOpen() : undefined;
 
-    const txHash = await this.rollupProvider.sendProof(proofOutput);
+    await this.rollupProvider.sendProof(proofOutput);
 
+    const txHash = new TxHash(proofOutput.txId);
     const userTx: UserTx = {
       action,
       txHash,
@@ -629,9 +631,11 @@ export class CoreSdk extends EventEmitter {
       accountIndex,
     );
 
-    const txHash = await this.rollupProvider.sendProof({ proofData: rawProofData, viewingKeys: [] });
+    await this.rollupProvider.sendProof({ proofData: rawProofData, viewingKeys: [] });
 
     // It *looks* like a join split...
+    const proof = new ProofData(rawProofData);
+    const txHash = new TxHash(proof.txId);
     const userTx: UserTx = {
       action: 'ACCOUNT',
       txHash,

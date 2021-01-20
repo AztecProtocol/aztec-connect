@@ -221,20 +221,6 @@ export async function createSendProof(assetId = 1, txFee = 0) {
   return new InnerProofOutput([innerProof], [signature], totalTxFees);
 }
 
-// same as withdraw proof, except rollupSize in publicInputData set to 0 - indicating
-// that it's an escape proof
-export async function createEscapeProof(amount: number, withdrawalAddress: EthAddress, assetId = 1, txFee = 0) {
-  const innerProof = await innerProofData(false, amount, withdrawalAddress, numToBuffer(assetId), txFee);
-
-  // withdraws do not require signature
-  const signature: Buffer = Buffer.alloc(32);
-
-  const totalTxFees: number[] = [];
-  totalTxFees[assetId] = txFee;
-
-  return new InnerProofOutput([innerProof], [signature], totalTxFees);
-}
-
 interface RollupProofOptions {
   rollupId?: number;
   rollupSize?: number;
@@ -278,4 +264,21 @@ export async function createRollupProof(
     providerSignature,
     publicInputs,
   };
+}
+
+// Same as rollup proof, except rollupSize is set to 0.
+export async function createEscapeHatchProof(
+  signer: Signer,
+  innerProofOutput: InnerProofOutput,
+  options: RollupProofOptions = {},
+) {
+  const { innerProofs } = innerProofOutput;
+  if (innerProofs.length !== 1) {
+    throw new Error('Escape hatch proof only has 1 inner proof.');
+  }
+
+  return createRollupProof(signer, innerProofOutput, {
+    ...options,
+    rollupSize: 0,
+  });
 }

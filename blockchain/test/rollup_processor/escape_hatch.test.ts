@@ -6,7 +6,7 @@ import { ethers } from 'hardhat';
 import { advanceBlocks, blocksToAdvance } from './fixtures/advance_block';
 import {
   createDepositProof,
-  createEscapeProof,
+  createEscapeHatchProof,
   createRollupProof,
   createWithdrawProof,
 } from './fixtures/create_mock_proof';
@@ -71,11 +71,14 @@ describe('rollup_processor: escape hatch', () => {
     expect(initialContractBalance).to.equal(depositAmount);
     const initialUserBalance = await erc20.balanceOf(userAAddress.toString());
 
-    const { proofData } = await createRollupProof(userA, await createEscapeProof(withdrawalAmount, userAAddress), {
-      rollupId: 1,
-      rollupSize: 0,
-      dataStartIndex: 4,
-    });
+    const { proofData } = await createEscapeHatchProof(
+      userA,
+      await createWithdrawProof(withdrawalAmount, userAAddress),
+      {
+        rollupId: 1,
+        dataStartIndex: 4,
+      },
+    );
     const nextEscapeBlock = await blocksToAdvance(80, 100, provider);
     await advanceBlocks(nextEscapeBlock, provider);
     await rollupProcessor.escapeHatch(proofData, [], Buffer.concat(viewingKeys));
@@ -89,11 +92,14 @@ describe('rollup_processor: escape hatch', () => {
   });
 
   it('should reject escape hatch outside valid block window', async () => {
-    const { proofData } = await createRollupProof(userA, await createEscapeProof(withdrawalAmount, userAAddress), {
-      rollupId: 1,
-      rollupSize: 0,
-      dataStartIndex: 4,
-    });
+    const { proofData } = await createEscapeHatchProof(
+      userA,
+      await createWithdrawProof(withdrawalAmount, userAAddress),
+      {
+        rollupId: 1,
+        dataStartIndex: 4,
+      },
+    );
     const escapeBlock = await blocksToAdvance(101, 100, provider);
     await advanceBlocks(escapeBlock, provider);
     await expect(rollupProcessor.escapeHatch(proofData, [], Buffer.concat(viewingKeys))).to.be.revertedWith(

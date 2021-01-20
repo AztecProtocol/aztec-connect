@@ -115,14 +115,19 @@ export default class Server implements HashPathSource {
 
     console.log(`Processing rollup ${rollupId}...`);
 
-    for (let i = 0; i < innerProofData.length; ++i) {
+    let i = 0;
+    for (; i < innerProofData.length; ++i) {
       const tx = innerProofData[i];
+      if (tx.isPadding()) {
+        break;
+      }
+
       await this.worldStateDb.put(0, BigInt(dataStartIndex + i * rollupSize), tx.newNote1);
       await this.worldStateDb.put(0, BigInt(dataStartIndex + i * rollupSize + 1), tx.newNote2);
       await this.worldStateDb.put(1, toBigIntBE(tx.nullifier1), toBufferBE(1n, 64));
       await this.worldStateDb.put(1, toBigIntBE(tx.nullifier2), toBufferBE(1n, 64));
     }
-    if (innerProofData.length < rollupSize) {
+    if (i < rollupSize) {
       await this.worldStateDb.put(0, BigInt(dataStartIndex + rollupSize * 2 - 1), Buffer.alloc(64, 0));
     }
     await this.worldStateDb.put(2, BigInt(rollupId + 1), this.worldStateDb.getRoot(0));

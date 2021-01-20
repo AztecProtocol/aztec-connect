@@ -42,6 +42,8 @@ export type SdkOptions = {
   clearDb?: boolean;
   debug?: boolean;
   dbPath?: string;
+  minConfirmation?: number;
+  minConfirmationEHW?: number;
 } & CoreSdkOptions;
 
 async function sdkFactory(
@@ -72,11 +74,13 @@ async function sdkFactory(
     const rollupProviderExplorer = new ServerRollupProviderExplorer(host);
     return new CoreSdk(leveldb, db, rollupProvider, rollupProviderExplorer, undefined, options, escapeHatchMode);
   } else {
+    const { minConfirmationEHW } = options;
     const srirachaProvider = new SrirachaProvider(host);
     const config = {
       networkOrHost: hostStr,
       console: false,
       gasLimit: 7000000,
+      minConfirmationEHW,
     };
     const blockchain = await EthereumBlockchain.new(config, status.rollupContractAddress, ethereumProvider);
     return new CoreSdk(leveldb, db, blockchain, undefined, srirachaProvider, options, escapeHatchMode);

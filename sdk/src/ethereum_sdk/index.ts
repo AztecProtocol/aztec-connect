@@ -75,10 +75,13 @@ export async function createEthSdk(ethereumProvider: EthereumProvider, serverUrl
 
   await Promise.all(tokenContracts.map(tc => tc.init()));
 
+  const { minConfirmation, minConfirmationEHW } = sdkOptions;
   const config = {
     networkOrHost: serverUrl,
     console: false,
     gasLimit: 7000000,
+    minConfirmation,
+    minConfirmationEHW,
   };
   const blockchain = await EthereumBlockchain.new(config, status.rollupContractAddress, ethereumProvider);
 
@@ -156,6 +159,10 @@ export class EthereumSdk extends EventEmitter {
 
   public getUserPendingDeposit(assetId: AssetId, account: EthAddress) {
     return this.walletSdk.getUserPendingDeposit(assetId, account);
+  }
+
+  public getUserNonce(assetId: AssetId, account: EthAddress) {
+    return this.walletSdk.getUserNonce(assetId, account);
   }
 
   public async getAddressFromAlias(alias: string, nonce?: number) {

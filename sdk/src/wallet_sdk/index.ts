@@ -52,10 +52,13 @@ export async function createWalletSdk(
 
   await Promise.all(tokenContracts.map(tc => tc.init()));
 
+  const { minConfirmation, minConfirmationEHW } = sdkOptions;
   const config = {
     networkOrHost: serverUrl,
     console: false,
     gasLimit: 7000000,
+    minConfirmation,
+    minConfirmationEHW,
   };
   const blockchain = await EthereumBlockchain.new(config, status.rollupContractAddress, ethereumProvider);
 
