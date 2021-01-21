@@ -373,6 +373,7 @@ workflows:
             - block-explorer
             - documentation
             - website
+            - zk-money
           filters:
             branches:
               only: master
