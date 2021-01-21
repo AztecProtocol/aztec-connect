@@ -1,0 +1,4 @@
+Dockerfile
+dist
+node_modules
+**/.terraform

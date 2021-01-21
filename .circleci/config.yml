@@ -186,6 +186,17 @@ jobs:
               docker tag $ECR_URL/end-to-end:cache-$CIRCLE_SHA1-latest $ECR_DEPLOY_URL/end-to-end:latest
               docker-compose up --exit-code-from end-to-end
             fi
+  zk-money:
+    docker:
+      - image: aztecprotocol/build-image
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker
+      - run:
+          name: 'Build and test'
+          working_directory: zk.money
+          command: build zk-money:latest
 
   website:
     docker:
@@ -294,6 +305,12 @@ jobs:
             deploy website:latest
             deploy_s3 website:latest
       - run:
+          name: 'zk-money'
+          working_directory: zk.money
+          command: |
+            deploy zk-money
+            deploy_s3 zk-money:latest
+      - run:
           name: 'metrics'
           working_directory: metrics
           command: |
@@ -335,6 +352,9 @@ workflows:
           requires:
             - sdk
       - block-explorer:
+          requires:
+            - sdk
+      - zk-money:
           requires:
             - sdk
       - documentation:
