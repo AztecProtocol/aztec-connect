@@ -36,11 +36,6 @@ resource "aws_acm_certificate" "zkmoney" {
   }
 }
 
-resource "aws_acm_certificate_validation" "zkmoney" {
-  provider                = aws
-  certificate_arn         = aws_acm_certificate.zkmoney.arn
-  validation_record_fqdns = [for record in aws_route53_record.zkmoney : record.fqdn]
-}
 
 # Certificate validation records.
 resource "aws_route53_record" "zkmoney" {
@@ -265,7 +260,7 @@ resource "aws_cloudfront_distribution" "zkmoney_redirect_distribution" {
   is_ipv6_enabled = true
   comment         = "Managed by Terraform"
 
-  aliases = ["zk.money"]
+  aliases = ["www.zk.money"]
   
   default_cache_behavior {
     allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
@@ -303,7 +298,7 @@ resource "aws_cloudfront_distribution" "zkmoney_redirect_distribution" {
 resource "aws_cloudfront_distribution" "zkmoney_distribution" {
   origin {
     domain_name = aws_s3_bucket.zkmoney.website_endpoint
-    origin_id   = "zkmoney"
+    origin_id   = "website"
     custom_origin_config {
       http_port              = "80"
       https_port             = "443"
