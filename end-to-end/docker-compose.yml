@@ -15,6 +15,7 @@ services:
     environment:
       ETHEREUM_HOST: http://ganache:8545
       NODE_ENV: production
+      TX_FEE: 100000000000000000
     depends_on:
       - ganache
     command: >

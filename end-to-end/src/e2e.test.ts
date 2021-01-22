@@ -9,12 +9,16 @@ EventEmitter.defaultMaxListeners = 30;
 
 const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost:8081' } = process.env;
 
+/**
+ * Set the following environment variables before running falafel:
+ *   TX_FEE=100000000000000000
+ */
+
 describe('end-to-end tests', () => {
   let feeDistributor: Contract;
   let sdk: EthereumSdk;
   const users: EthereumSdkUser[] = [];
   const assetId = AssetId.ETH;
-  const oneEth = BigInt(10) ** BigInt(18);
 
   beforeAll(async () => {
     const walletProvider = await createFundedWalletProvider(ETHEREUM_HOST, 3, '10');
@@ -37,7 +41,6 @@ describe('end-to-end tests', () => {
 
     const { rollupContractAddress } = await sdk.getRemoteStatus();
     feeDistributor = await getFeeDistributorContract(rollupContractAddress, walletProvider, accounts[2]);
-    await feeDistributor.deposit(assetId, oneEth, { value: oneEth });
   });
 
   afterAll(async () => {
@@ -54,17 +57,17 @@ describe('end-to-end tests', () => {
   it('should deposit, transfer and withdraw funds', async () => {
     const user0Asset = users[0].getAsset(assetId);
     const user1Asset = users[1].getAsset(assetId);
-    const txFee = oneEth / BigInt(10);
-
-    const initialTxFeeBalance = BigInt(await feeDistributor.txFeeBalance(assetId));
+    const txFee = await sdk.getFee(assetId);
 
     // Deposit to user 0.
     {
-      const depositValue = oneEth * BigInt(8);
+      const depositValue = user0Asset.toBaseUnits('8');
+
+      const initialTxFeeBalance = BigInt(await feeDistributor.txFeeBalance(assetId));
       const initialPublicBalance = await user0Asset.publicBalance();
       expect(user0Asset.balance()).toBe(0n);
 
-      const txHash = await user0Asset.deposit(depositValue, undefined, undefined, { txFee });
+      const txHash = await user0Asset.deposit(depositValue, txFee);
       await sdk.awaitSettlement(txHash, 600);
 
       const publicBalance = await user0Asset.publicBalance();
@@ -80,7 +83,7 @@ describe('end-to-end tests', () => {
 
     // Transfer to user 1.
     {
-      const transferValue = oneEth * BigInt(5);
+      const transferValue = user0Asset.toBaseUnits('5');
 
       const initialPublicBalanceUser0 = await user0Asset.publicBalance();
       const initialBalanceUser0 = user0Asset.balance();
@@ -88,11 +91,8 @@ describe('end-to-end tests', () => {
 
       expect(user1Asset.balance()).toBe(0n);
 
-      const transferTxHash = await user0Asset.transfer(transferValue, users[1].getUserData().id, undefined, {
-        txFee,
-        payTxFeeByPrivateAsset: true,
-      });
-      await sdk.awaitSettlement(transferTxHash, 600);
+      const txHash = await user0Asset.transfer(transferValue, txFee, users[1].getUserData().id);
+      await sdk.awaitSettlement(txHash, 600);
 
       expect(await user0Asset.publicBalance()).toBe(initialPublicBalanceUser0);
       expect(user0Asset.balance()).toBe(initialBalanceUser0 - transferValue - txFee);
@@ -110,12 +110,9 @@ describe('end-to-end tests', () => {
       const initialBalance = user1Asset.balance();
       const initialTxFeeBalance = BigInt(await feeDistributor.txFeeBalance(assetId));
 
-      const withdrawValue = oneEth * BigInt(3);
-      const withdrawTxHash = await user1Asset.withdraw(withdrawValue, undefined, undefined, {
-        txFee,
-        payTxFeeByPrivateAsset: true,
-      });
-      await sdk.awaitSettlement(withdrawTxHash, 600);
+      const withdrawValue = user0Asset.toBaseUnits('3');
+      const txHash = await user1Asset.withdraw(withdrawValue, txFee);
+      await sdk.awaitSettlement(txHash, 600);
 
       expect(await user1Asset.publicBalance()).toBe(initialPublicBalance + withdrawValue);
       expect(user1Asset.balance()).toBe(initialBalance - withdrawValue - txFee);

@@ -184,7 +184,7 @@ module.exports = {
           ],
         },
         {
-          name: 'ERC20 Tokens',
+          name: 'zkAssets',
           pagePerSection: true,
           content: 'src/docs/tokens.md',
           sections: [
@@ -201,6 +201,11 @@ module.exports = {
             {
               name: 'transfer',
               content: 'src/docs/transfer.md',
+              exampleMode: 'hide',
+            },
+            {
+              name: 'joinSplit',
+              content: 'src/docs/join_split.md',
               exampleMode: 'hide',
             },
             {
@@ -305,6 +310,11 @@ module.exports = {
               exampleMode: 'hide',
             },
             {
+              name: 'JoinSplitTxOptions',
+              content: 'src/docs/types/join_split_tx_options.md',
+              exampleMode: 'hide',
+            },
+            {
               name: 'PermitArgs',
               content: 'src/docs/types/permit_args.md',
               exampleMode: 'hide',
@@ -365,18 +375,18 @@ module.exports = {
               exampleMode: 'hide',
             },
             {
+              name: 'UserAccountTx',
+              content: 'src/docs/types/user_account_tx.md',
+              exampleMode: 'hide',
+            },
+            {
               name: 'UserData',
               content: 'src/docs/types/user_data.md',
               exampleMode: 'hide',
             },
             {
-              name: 'UserTx',
-              content: 'src/docs/types/user_tx.md',
-              exampleMode: 'hide',
-            },
-            {
-              name: 'UserTxAction',
-              content: 'src/docs/types/user_tx_action.md',
+              name: 'UserJoinSplitTx',
+              content: 'src/docs/types/user_join_split_tx.md',
               exampleMode: 'hide',
             },
             {

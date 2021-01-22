@@ -9,30 +9,32 @@ async function demoDeposit(aztecSdk, userId, signer) {
   const assetId = AssetId.DAI;
 
   const balanceBefore = aztecSdk.getBalance(assetId, userId);
-  console.info('Balance before deposit:', aztecSdk.fromErc20Units(assetId, balanceBefore));
+  console.info('Balance before deposit:', aztecSdk.fromBaseUnits(assetId, balanceBefore));
 
   const senderEthAddress = EthAddress.fromString(window.ethereum.selectedAddress);
   const ethSigner = new Web3Signer(window.ethereum, senderEthAddress);
 
-  const value = aztecSdk.toErc20Units(assetId, '10');
+  const value = aztecSdk.toBaseUnits(assetId, '10');
+  const fee = await aztecSdk.getFee(assetId);
 
+  const totalDeposit = value + fee;
   const allowance = await aztecSdk.getPublicAllowance(assetId, senderEthAddress);
-  if (allowance < value) {
+  if (allowance < totalDeposit) {
     console.info('Approve rollup contract to spend your token...');
-    await aztecSdk.approve(assetId, userId, value, senderEthAddress);
+    await aztecSdk.approve(assetId, userId, totalDeposit, senderEthAddress);
     console.info('Approved!');
   }
 
   console.info('Creating deposit proof...');
   const userData = await aztecSdk.getUserData(userId);
-  const txHash = await aztecSdk.deposit(assetId, userId, value, signer, ethSigner);
+  const txHash = await aztecSdk.deposit(assetId, userId, value, fee, signer, ethSigner);
   console.info(`Proof accepted by server. Tx hash: ${txHash}`);
 
   console.info('Waiting for tx to settle...');
   await aztecSdk.awaitSettlement(txHash);
 
   const balanceAfter = aztecSdk.getBalance(assetId, userId);
-  console.info('Balance after deposit:', aztecSdk.fromErc20Units(assetId, balanceAfter));
+  console.info('Balance after deposit:', aztecSdk.fromBaseUnits(assetId, balanceAfter));
 }
 ```
 
@@ -48,29 +50,31 @@ async function demoDeposit(aztecSdk, userId, signer) {
   const asset = user.getAsset(AssetId.DAI);
 
   const balanceBefore = asset.balance();
-  console.info('Balance before deposit:', asset.fromErc20Units(balanceBefore));
+  console.info('Balance before deposit:', asset.fromBaseUnits(balanceBefore));
 
   const senderEthAddress = EthAddress.fromString(window.ethereum.selectedAddress);
   const ethSigner = new Web3Signer(window.ethereum, senderEthAddress);
 
-  const value = asset.toErc20Units('10');
+  const value = asset.toBaseUnits('10');
+  const fee = await asset.getFee();
+  const totalDeposit = value + fee;
 
   const allowance = await asset.publicAllowance(senderEthAddress);
-  if (allowance < value) {
+  if (allowance < totalDeposit) {
     console.info('Approve rollup contract to spend your token...');
-    await asset.approve(value, senderEthAddress);
+    await asset.approve(totalDeposit, senderEthAddress);
     console.info('Approved!');
   }
 
   console.info('Creating deposit proof...');
-  const txHash = await asset.deposit(value, signer, ethSigner);
+  const txHash = await asset.deposit(value, fee, signer, ethSigner);
   console.info(`Proof accepted by server. Tx hash: ${txHash}`);
 
   console.info('Waiting for tx to settle...');
   await aztecSdk.awaitSettlement(txHash);
 
   const balanceAfter = asset.balance();
-  console.info('Balance after deposit:', asset.fromErc20Units(balanceAfter));
+  console.info('Balance after deposit:', asset.fromBaseUnits(balanceAfter));
 }
 ```
 

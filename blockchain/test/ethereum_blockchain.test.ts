@@ -78,7 +78,6 @@ describe('ethereum_blockchain', () => {
         networkOrHost: '',
         gasLimit: 5000000,
         console: false,
-        minConfirmationEHW: 1,
       },
       EthAddress.fromString(rollupProcessor.address),
       provider,

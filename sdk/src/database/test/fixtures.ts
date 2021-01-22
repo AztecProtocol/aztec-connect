@@ -1,10 +1,10 @@
-import { GrumpkinAddress } from 'barretenberg/address';
+import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { TxHash } from 'barretenberg/rollup_provider';
 import { randomBytes } from 'crypto';
 import { Note } from '../../note';
 import { AccountAliasId, UserData, AccountId } from '../../user';
-import { UserTx } from '../../user_tx';
+import { UserAccountTx, UserJoinSplitTx } from '../../user_tx';
 import { Alias, SigningKey } from '../database';
 
 export const randomInt = () => {
@@ -32,15 +32,31 @@ export const randomUser = (): UserData => ({
   syncedToRollup: randomInt(),
 });
 
-export const randomUserTx = (): UserTx => ({
+export const randomUserAccountTx = (): UserAccountTx => ({
   txHash: TxHash.random(),
   userId: AccountId.random(),
-  action: 'DEPOSIT',
-  assetId: randomInt(),
-  value: BigInt(randomInt()),
+  aliasHash: AliasHash.random(),
+  newSigningPubKey1: randomBytes(32),
+  newSigningPubKey2: randomBytes(32),
+  migrated: false,
   settled: false,
   created: new Date(),
-  recipient: randomBytes(32),
+});
+
+export const randomUserJoinSplitTx = (): UserJoinSplitTx => ({
+  txHash: TxHash.random(),
+  userId: AccountId.random(),
+  assetId: randomInt(),
+  publicInput: BigInt(randomInt()),
+  publicOutput: BigInt(randomInt()),
+  privateInput: BigInt(randomInt()),
+  recipientPrivateOutput: BigInt(randomInt()),
+  senderPrivateOutput: BigInt(randomInt()),
+  inputOwner: EthAddress.randomAddress(),
+  outputOwner: EthAddress.randomAddress(),
+  ownedByUser: true,
+  settled: false,
+  created: new Date(),
 });
 
 export const randomAccountAliasId = () => new AccountAliasId(AliasHash.random(), randomInt());

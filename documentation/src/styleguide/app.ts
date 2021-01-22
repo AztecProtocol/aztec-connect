@@ -1,4 +1,4 @@
-import { EthereumProvider, WebSdk, EthAddress } from '@aztec/sdk';
+import { AssetId, EthereumProvider, WebSdk, EthAddress } from '@aztec/sdk';
 import { Web3Provider } from '@ethersproject/providers';
 import { EventEmitter } from 'events';
 import { createContext } from 'react';
@@ -20,6 +20,7 @@ export const BLOCK_EXPLORER_URL =
 export class App extends EventEmitter {
   private webSdk!: WebSdk;
   private web3Provider!: Web3Provider;
+  private assetId = AssetId.DAI;
 
   constructor(private ethereumProvider?: EthereumProvider) {
     super();
@@ -35,7 +36,11 @@ export class App extends EventEmitter {
     const users = await ethSdk.getUsersData();
     for (const user of users) {
       if (user.ethAddress.equals(EthAddress.ZERO)) {
-        await walletSdk.removeUser(user.publicKey, user.nonce);
+        try {
+          await walletSdk.removeUser(user.id);
+        } catch (e) {
+          console.error(e);
+        }
       }
     }
   }
@@ -45,8 +50,12 @@ export class App extends EventEmitter {
   }
 
   async createSdk(serverUrl = SERVER_URL) {
-    await this.webSdk.init(serverUrl, { debug: true });
-    await this.removeTestUsers();
+    try {
+      await this.webSdk.init(serverUrl, { debug: true });
+      await this.removeTestUsers();
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   getWeb3Provider() {
@@ -64,6 +73,10 @@ export class App extends EventEmitter {
   getWalletSdk() {
     // @ts-ignore
     return this.webSdk.getSdk().walletSdk;
+  }
+
+  getAssetId() {
+    return this.assetId;
   }
 
   getAvailableArgs() {

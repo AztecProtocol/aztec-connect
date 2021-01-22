@@ -1,7 +1,7 @@
 import { EthereumProvider } from './ethereum_provider';
 import { EthAddress } from 'barretenberg/address';
 import { Proof, RollupProviderStatus, TxHash } from 'barretenberg/rollup_provider';
-import { AssetId, ProofId } from 'barretenberg/client_proofs';
+import { AssetId } from 'barretenberg/client_proofs';
 import createDebug from 'debug';
 import { ethers } from 'ethers';
 import { EventEmitter } from 'events';
@@ -115,15 +115,9 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     await this.updateEscapeHatchStatus();
     const { chainId } = await this.contracts.getNetwork();
     const { networkOrHost, txFee = BigInt(0) } = this.config;
-    const ethFees = new Map();
-    ethFees.set(ProofId.JOIN_SPLIT, txFee);
-    ethFees.set(ProofId.ACCOUNT, BigInt(0));
-    const daiFees = new Map();
-    daiFees.set(ProofId.JOIN_SPLIT, BigInt(0));
-    daiFees.set(ProofId.ACCOUNT, BigInt(0));
     const fees = new Map();
-    fees.set(AssetId.ETH, ethFees);
-    fees.set(AssetId.DAI, daiFees);
+    fees.set(AssetId.ETH, txFee);
+    fees.set(AssetId.DAI, BigInt(0));
 
     this.status = {
       ...this.status,
@@ -245,8 +239,9 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   }
 
   private getRequiredConfirmations() {
-    const { escapeOpen, numEscapeBlocksRemaining } = this.status;
-    const { minConfirmation = 1, minConfirmationEHW: minConfirmationEHW = 12 } = this.config;
+    const { escapeOpen, numEscapeBlocksRemaining, chainId } = this.status;
+    const defaultMinConfirmationEHW = chainId === 1337 || chainId === 31337 ? 1 : 12; // If ganache, just 1 confirmation.
+    const { minConfirmation = 1, minConfirmationEHW = defaultMinConfirmationEHW } = this.config;
     return escapeOpen || numEscapeBlocksRemaining <= minConfirmationEHW ? minConfirmationEHW : minConfirmation;
   }
 

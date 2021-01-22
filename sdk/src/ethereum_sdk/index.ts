@@ -133,7 +133,7 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.awaitUserSynchronised(userId);
   }
 
-  public async awaitSettlement(txHash: TxHash, timeout = 120) {
+  public async awaitSettlement(txHash: TxHash, timeout?: number) {
     return this.walletSdk.awaitSettlement(txHash, timeout);
   }
 
@@ -147,6 +147,10 @@ export class EthereumSdk extends EventEmitter {
 
   public async getRemoteStatus() {
     return this.walletSdk.getRemoteStatus();
+  }
+
+  public async getFee(assetId: AssetId) {
+    return this.walletSdk.getFee(assetId);
   }
 
   public getAssetPermitSupport(assetId: AssetId) {
@@ -169,8 +173,9 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.getAddressFromAlias(alias, nonce);
   }
 
-  public async getLatestUserNonce(publicKey: GrumpkinAddress) {
-    return this.walletSdk.getLatestUserNonce(publicKey);
+  public async getLatestUserNonce(account: EthAddress) {
+    const publicKey = this.getPublicKeyByEthAddress(account);
+    return publicKey ? this.walletSdk.getLatestUserNonce(publicKey) : 0;
   }
 
   public async getLatestAliasNonce(alias: string) {
@@ -209,48 +214,35 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.mint(assetId, userId, value, ethUserId.ethAddress);
   }
 
-  public async deposit(
-    assetId: AssetId,
-    value: bigint,
-    ethUserId: EthUserId,
-    to?: AccountId,
-    signer?: Signer,
-    options?: JoinSplitTxOptions,
-  ) {
+  public async deposit(assetId: AssetId, ethUserId: EthUserId, value: bigint, fee: bigint, signer?: Signer) {
     const userId = this.getUserIdFromEthUserId(ethUserId);
     const aztecSigner = signer || this.getSchnorrSigner(ethUserId.ethAddress);
     const ethSigner = new Web3Signer(this.etherumProvider, ethUserId.ethAddress);
 
-    const userPendingDeposit = await this.getUserPendingDeposit(assetId, ethSigner.getAddress());
-    const amountToTransfer = value - userPendingDeposit;
-    const assetSupportsPermit = await this.getAssetPermitSupport(assetId);
-
     // Determine if any approval is required.
     if (assetId !== AssetId.ETH) {
+      const userPendingDeposit = await this.getUserPendingDeposit(assetId, ethSigner.getAddress());
+      const amountToTransfer = value + fee - userPendingDeposit;
       const existingAllowance = await this.getTokenContract(assetId).allowance(ethSigner.getAddress());
       const approvalAmount = amountToTransfer - existingAllowance;
 
       if (approvalAmount > 0) {
+        const assetSupportsPermit = await this.getAssetPermitSupport(assetId);
         if (assetSupportsPermit) {
-          try {
-            const currentTimeInt = parseInt((new Date().getTime() / 1000).toString());
-            const expireIn = BigInt(300);
-            const deadline = BigInt(currentTimeInt) + expireIn;
-            const signature = await this.createPermitSignature(assetId, ethSigner, approvalAmount, deadline);
-            const permitArgs = { approvalAmount, deadline, signature };
-            return this.walletSdk.deposit(assetId, userId, value, aztecSigner, ethSigner, permitArgs, to);
-          } catch {
-            this.emit(SdkEvent.LOG, 'Approving deposit...');
-            await this.approve(assetId, approvalAmount, ethUserId);
-          }
-        } else {
-          this.emit(SdkEvent.LOG, 'Approving deposit...');
-          await this.approve(assetId, approvalAmount, ethUserId);
+          const currentTimeInt = parseInt((new Date().getTime() / 1000).toString());
+          const expireIn = BigInt(300);
+          const deadline = BigInt(currentTimeInt) + expireIn;
+          const signature = await this.createPermitSignature(assetId, ethSigner, approvalAmount, deadline);
+          const permitArgs = { approvalAmount, deadline, signature };
+          return this.walletSdk.deposit(assetId, userId, value, fee, aztecSigner, ethSigner, permitArgs);
         }
+
+        this.emit(SdkEvent.LOG, 'Approving deposit...');
+        await this.approve(assetId, approvalAmount, ethUserId);
       }
     }
 
-    return this.walletSdk.deposit(assetId, userId, value, aztecSigner, ethSigner, undefined, to, options);
+    return this.walletSdk.deposit(assetId, userId, value, fee, aztecSigner, ethSigner);
   }
 
   private async createPermitSignature(
@@ -262,10 +254,8 @@ export class EthereumSdk extends EventEmitter {
     const nonce = await this.walletSdk.getUserNonce(assetId, await ethSigner.getAddress());
     const { rollupContractAddress, chainId } = this.walletSdk.getLocalStatus();
     const tokenContract = await this.walletSdk.getTokenContract(assetId);
-    const tokenName = await this.walletSdk.getTokenContract(assetId).name();
-
     const permitData = createPermitData(
-      tokenName,
+      tokenContract.getName(),
       ethSigner.getAddress(),
       rollupContractAddress,
       amountToTransfer,
@@ -278,40 +268,50 @@ export class EthereumSdk extends EventEmitter {
     return ethSigner.signTypedData(permitData);
   }
 
-  public async withdraw(
-    assetId: AssetId,
-    value: bigint,
-    ethUserId: EthUserId,
-    to: EthAddress,
-    signer?: Signer,
-    options?: JoinSplitTxOptions,
-  ) {
+  public async withdraw(assetId: AssetId, ethUserId: EthUserId, value: bigint, fee: bigint, signer?: Signer) {
     const userId = this.getUserIdFromEthUserId(ethUserId);
     const aztecSigner = signer || this.getSchnorrSigner(ethUserId.ethAddress);
-    const txOptions = { ...(options || {}) };
-    if (txOptions.txFee && !txOptions.payTxFeeByPrivateAsset && !txOptions.feePayer) {
-      txOptions.feePayer = new Web3Signer(this.etherumProvider, ethUserId.ethAddress);
-    }
 
-    return this.walletSdk.withdraw(assetId, userId, value, aztecSigner, to, txOptions);
+    return this.walletSdk.withdraw(assetId, userId, value, fee, aztecSigner, ethUserId.ethAddress);
   }
 
   public async transfer(
     assetId: AssetId,
-    value: bigint,
     ethUserId: EthUserId,
+    value: bigint,
+    fee: bigint,
     to: AccountId,
     signer?: Signer,
-    options?: JoinSplitTxOptions,
   ) {
     const userId = this.getUserIdFromEthUserId(ethUserId);
     const aztecSigner = signer || this.getSchnorrSigner(ethUserId.ethAddress);
-    const txOptions = { ...(options || {}) };
-    if (txOptions.txFee && !txOptions.payTxFeeByPrivateAsset && !txOptions.feePayer) {
-      txOptions.feePayer = new Web3Signer(this.etherumProvider, ethUserId.ethAddress);
-    }
 
-    return this.walletSdk.transfer(assetId, userId, value, aztecSigner, to, txOptions);
+    return this.walletSdk.transfer(assetId, userId, value, fee, aztecSigner, to);
+  }
+
+  public async joinSplit(
+    assetId: AssetId,
+    ethUserId: EthUserId,
+    publicInput: bigint,
+    publicOutput: bigint,
+    privateInput: bigint,
+    recipientPrivateOutput: bigint,
+    senderPrivateOutput: bigint,
+    signer: Signer,
+    options: JoinSplitTxOptions = {},
+  ) {
+    const userId = this.getUserIdFromEthUserId(ethUserId);
+    return this.walletSdk.joinSplit(
+      assetId,
+      userId,
+      publicInput,
+      publicOutput,
+      privateInput,
+      recipientPrivateOutput,
+      senderPrivateOutput,
+      signer,
+      options,
+    );
   }
 
   public async generateAccountRecoveryData(
@@ -335,7 +335,12 @@ export class EthereumSdk extends EventEmitter {
     recoveryPublicKey?: GrumpkinAddress,
   ) {
     const userId = this.getUserIdFromEthUserId(ethUserId);
-    return this.walletSdk.createAccount(userId, alias, newSigningPublicKey, recoveryPublicKey);
+    const txHash = await this.walletSdk.createAccount(userId, alias, newSigningPublicKey, recoveryPublicKey);
+
+    await this.db.addAccount({ ethAddress: ethUserId.ethAddress, accountPublicKey: userId.publicKey });
+    await this.updateLocalAccounts();
+
+    return txHash;
   }
 
   async recoverAccount(recoveryPayload: RecoveryPayload) {
@@ -350,15 +355,29 @@ export class EthereumSdk extends EventEmitter {
     newEthAddress?: EthAddress,
   ) {
     const userId = this.getUserIdFromEthUserId(ethUserId);
-
-    let newAccountPublicKey;
+    let newAccountPrivateKey;
     if (newEthAddress) {
       const ethSigner = new Web3Signer(this.etherumProvider, newEthAddress);
-      const privateKey = await deriveGrumpkinPrivateKey(ethSigner);
-      newAccountPublicKey = this.walletSdk.derivePublicKey(privateKey);
+      newAccountPrivateKey = await deriveGrumpkinPrivateKey(ethSigner);
     }
 
-    return this.walletSdk.migrateAccount(userId, signer, newSigningPublicKey, recoveryPublicKey, newAccountPublicKey);
+    const txHash = this.walletSdk.migrateAccount(
+      userId,
+      signer,
+      newSigningPublicKey,
+      recoveryPublicKey,
+      newAccountPrivateKey,
+    );
+
+    if (newEthAddress) {
+      await this.db.addAccount({
+        ethAddress: newEthAddress,
+        accountPublicKey: this.walletSdk.derivePublicKey(newAccountPrivateKey),
+      });
+      await this.updateLocalAccounts();
+    }
+
+    return txHash;
   }
 
   async addSigningKeys(
@@ -454,6 +473,37 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.getPublicAllowance(assetId, ethAddress);
   }
 
+  public fromBaseUnits(assetId: AssetId, value: bigint, precision?: number) {
+    return this.walletSdk.fromBaseUnits(assetId, value, precision);
+  }
+
+  public toBaseUnits(assetId: AssetId, value: string) {
+    return this.walletSdk.toBaseUnits(assetId, value);
+  }
+
+  public getAssetName(assetId: AssetId) {
+    return this.walletSdk.getAssetName(assetId);
+  }
+
+  public getAssetSymbol(assetId: AssetId) {
+    return this.walletSdk.getAssetSymbol(assetId);
+  }
+
+  public async getJoinSplitTxs(ethUserId: EthUserId) {
+    const userId = this.getUserIdFromEthUserId(ethUserId);
+    return this.walletSdk.getJoinSplitTxs(userId);
+  }
+
+  public async getAccountTxs(ethUserId: EthUserId) {
+    const userId = this.getUserIdFromEthUserId(ethUserId);
+    return this.walletSdk.getAccountTxs(userId);
+  }
+
+  public async getNotes(ethUserId: EthUserId) {
+    const userId = this.getUserIdFromEthUserId(ethUserId);
+    return this.walletSdk.getNotes(userId);
+  }
+
   public async getLatestRollups(count: number) {
     return this.walletSdk.getLatestRollups(count);
   }
@@ -468,11 +518,6 @@ export class EthereumSdk extends EventEmitter {
 
   public async getTx(txHash: TxHash) {
     return this.walletSdk.getTx(txHash);
-  }
-
-  public async getUserTxs(ethUserId: EthUserId) {
-    const userId = this.getUserIdFromEthUserId(ethUserId);
-    return this.walletSdk.getUserTxs(userId);
   }
 
   public startTrackingGlobalState() {

@@ -6,6 +6,7 @@ import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
 import { signPermit, createLowLevelPermitSig } from './fixtures/create_permit_signature';
 import { EthAddress } from 'barretenberg/address';
 import { randomBytes } from 'crypto';
+import { AssetId } from 'barretenberg/client_proofs';
 
 use(solidity);
 
@@ -29,6 +30,12 @@ describe('rollup_processor: permit', () => {
 
     await rollupProcessor.setSupportedAsset(erc20Permit.address, true);
     erc20PermitAssetId = 2;
+  });
+
+  it('should return whether an asset supports the permit ERC-2612 approval flow', async () => {
+    expect(await rollupProcessor.getAssetPermitSupport(AssetId.ETH)).to.equal(false);
+    expect(await rollupProcessor.getAssetPermitSupport(AssetId.DAI)).to.equal(false);
+    expect(await rollupProcessor.getAssetPermitSupport(erc20PermitAssetId)).to.equal(true);
   });
 
   it('should deposit funds into the rollup contract via permit call', async () => {

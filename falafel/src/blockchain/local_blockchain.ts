@@ -1,5 +1,5 @@
 import { EthAddress } from 'barretenberg/address';
-import { assetIds, proofIds } from 'barretenberg/client_proofs';
+import { assetIds } from 'barretenberg/client_proofs';
 import { InnerProofData, RollupProofData, VIEWING_KEY_SIZE } from 'barretenberg/rollup_proof';
 import { Proof, TxHash } from 'barretenberg/rollup_provider';
 import { numToUInt32BE } from 'barretenberg/serialize';
@@ -118,11 +118,7 @@ export class LocalBlockchain extends EventEmitter implements Blockchain {
 
     const fees = new Map();
     assetIds.forEach(assetId => {
-      const assetFees = new Map();
-      proofIds.forEach(proofId => {
-        assetFees.set(proofId, BigInt(0));
-      });
-      fees.set(assetId, assetFees);
+      fees.set(assetId, BigInt(0));
     });
 
     return {

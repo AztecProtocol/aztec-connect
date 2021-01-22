@@ -34,7 +34,6 @@ describe('end-to-end escape tests', () => {
       saveProvingKey: false,
       clearDb: true,
       dbPath: ':memory:',
-      minConfirmationEHW: 1,
     });
     await sdk.init();
     await sdk.awaitSynchronised();
@@ -60,10 +59,11 @@ describe('end-to-end escape tests', () => {
 
     const user0Asset = users[0].getAsset(assetId);
     const user1Asset = users[1].getAsset(assetId);
+    const fee = 0n;
 
     // Deposit to user 0.
     {
-      const depositValue = user0Asset.toErc20Units('1000');
+      const depositValue = user0Asset.toBaseUnits('1000');
 
       await user0Asset.mint(depositValue);
       await user0Asset.approve(depositValue);
@@ -71,7 +71,7 @@ describe('end-to-end escape tests', () => {
       expect(await user0Asset.publicAllowance()).toBe(depositValue);
       expect(user0Asset.balance()).toBe(0n);
 
-      const txHash = await user0Asset.deposit(depositValue);
+      const txHash = await user0Asset.deposit(depositValue, fee);
       await sdk.awaitSettlement(txHash);
 
       expect(await user0Asset.publicBalance()).toBe(0n);
@@ -80,12 +80,12 @@ describe('end-to-end escape tests', () => {
 
     // Transfer to user 1.
     {
-      const transferValue = user0Asset.toErc20Units('800');
+      const transferValue = user0Asset.toBaseUnits('800');
 
       const initialBalance0 = user0Asset.balance();
       const initialBalance1 = user1Asset.balance();
 
-      const transferTxHash = await user0Asset.transfer(transferValue, users[1].getUserData().id);
+      const transferTxHash = await user0Asset.transfer(transferValue, fee, users[1].getUserData().id);
       await sdk.awaitSettlement(transferTxHash);
 
       expect(user0Asset.balance()).toBe(initialBalance0 - transferValue);
@@ -94,12 +94,12 @@ describe('end-to-end escape tests', () => {
 
     // Withdraw to user 1.
     {
-      const withdrawValue = user0Asset.toErc20Units('300');
+      const withdrawValue = user0Asset.toBaseUnits('300');
 
       const initialPublicBalance = await user1Asset.publicBalance();
       const initialBalance = user1Asset.balance();
 
-      const withdrawTxHash = await user1Asset.withdraw(withdrawValue);
+      const withdrawTxHash = await user1Asset.withdraw(withdrawValue, fee);
       await sdk.awaitSettlement(withdrawTxHash);
 
       expect(await user1Asset.publicBalance()).toBe(initialPublicBalance + withdrawValue);

@@ -2,9 +2,11 @@ import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { Block } from 'barretenberg/block_source';
 import { decryptNote } from 'barretenberg/client_proofs/note';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
+import { computeAccountAliasIdNullifier } from 'barretenberg/client_proofs/account_proof';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
+import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { MemoryFifo } from 'barretenberg/fifo';
-import { AssetId } from 'barretenberg/client_proofs';
+import { AssetId, assetIds } from 'barretenberg/client_proofs';
 import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
 import { RollupProvider, TxHash } from 'barretenberg/rollup_provider';
 import { toBigIntBE } from 'bigint-buffer';
@@ -14,7 +16,8 @@ import { Database } from '../database';
 import { Note } from '../note';
 import { NotePicker } from '../note_picker';
 import { AccountAliasId, UserData } from '../user';
-import { UserTx, UserTxAction } from '../user_tx';
+import { UserAccountTx, UserJoinSplitTx } from '../user_tx';
+import { AccountId } from '../user/account_id';
 
 const debug = createDebug('bb:user_state');
 
@@ -37,6 +40,7 @@ export class UserState extends EventEmitter {
   constructor(
     private user: UserData,
     private grumpkin: Grumpkin,
+    private pedersen: Pedersen,
     private noteAlgos: NoteAlgorithms,
     private db: Database,
     private rollupProvider: RollupProvider,
@@ -98,7 +102,7 @@ export class UserState extends EventEmitter {
       return;
     }
 
-    const balanceBefore = this.getBalance(AssetId.DAI);
+    const balancesBefore = assetIds.map(assetId => this.getBalance(assetId));
 
     const { rollupProofData, viewingKeysData } = block;
     const { rollupId, dataStartIndex, innerProofData, viewingKeys } = RollupProofData.fromBuffer(
@@ -122,63 +126,59 @@ export class UserState extends EventEmitter {
     this.user.syncedToRollup = rollupId;
     await this.db.updateUser(this.user);
 
-    const balanceAfter = this.getBalance(AssetId.DAI);
-    const diff = balanceAfter - balanceBefore;
-    this.emit(UserStateEvent.UPDATED_USER_STATE, this.user.id, balanceAfter, diff, AssetId.DAI);
+    assetIds.forEach((assetId, i) => {
+      const balanceAfter = this.getBalance(assetId);
+      const diff = balanceAfter - balancesBefore[i];
+      if (diff) {
+        this.emit(UserStateEvent.UPDATED_USER_STATE, this.user.id, balanceAfter, diff, assetId);
+      }
+    });
   }
 
   private async handleAccountTx(proof: InnerProofData, noteStartIndex: number) {
+    const tx = this.recoverAccountTx(proof);
+    if (!tx.userId.equals(this.user.id)) {
+      return;
+    }
+
     const txHash = new TxHash(proof.txId);
-    const savedUserTx = await this.db.getUserTx(this.user.id, txHash);
-    if (savedUserTx && savedUserTx.settled) {
-      return;
-    }
+    const savedTx = await this.db.getAccountTx(txHash);
 
-    const { publicInput, publicOutput, assetId, inputOwner, outputOwner } = proof;
-    const publicKey = new GrumpkinAddress(Buffer.concat([publicInput, publicOutput]));
-    const accountAliasId = AccountAliasId.fromBuffer(assetId);
-    if (!publicKey.equals(this.user.publicKey) || accountAliasId.nonce !== this.user.id.nonce) {
-      if (savedUserTx) {
-        // Create or migrate account.
-        await this.db.settleUserTx(this.user.id, txHash);
-      }
-      return;
-    }
+    const accountAliasId = new AccountAliasId(tx.aliasHash, tx.userId.nonce);
 
-    const key1 = inputOwner;
-    if (!key1.equals(Buffer.alloc(32))) {
-      debug(`user ${this.user.id} adds signing key ${key1.toString('hex')}.`);
+    if (tx.newSigningPubKey1) {
+      debug(`user ${this.user.id} adds signing key ${tx.newSigningPubKey1.toString('hex')}.`);
       await this.db.addUserSigningKey({
         accountAliasId,
         address: this.user.publicKey,
-        key: key1,
+        key: tx.newSigningPubKey1,
         treeIndex: noteStartIndex,
       });
     }
 
-    const key2 = outputOwner;
-    if (!key2.equals(Buffer.alloc(32))) {
-      debug(`user ${this.user.id} adds signing key ${key2.toString('hex')}.`);
+    if (tx.newSigningPubKey2) {
+      debug(`user ${this.user.id} adds signing key ${tx.newSigningPubKey2.toString('hex')}.`);
       await this.db.addUserSigningKey({
         accountAliasId,
         address: this.user.publicKey,
-        key: key2,
+        key: tx.newSigningPubKey2,
         treeIndex: noteStartIndex + 1,
       });
     }
 
-    if (savedUserTx) {
-      await this.db.settleUserTx(this.user.id, txHash);
+    if (savedTx) {
+      await this.db.settleAccountTx(txHash);
     } else {
-      const userTx = this.recoverUserTx(proof);
-      await this.db.addUserTx(userTx);
+      await this.db.addAccountTx(tx);
     }
+
+    this.emit(UserStateEvent.UPDATED_USER_STATE, this.user.id);
   }
 
   private async handleJoinSplitTx(proof: InnerProofData, noteStartIndex: number, viewingKeys: Buffer[]) {
     const txHash = new TxHash(proof.txId);
-    const savedUserTx = await this.db.getUserTx(this.user.id, txHash);
-    if (savedUserTx && savedUserTx.settled) {
+    const savedTx = await this.db.getJoinSplitTx(this.user.id, txHash);
+    if (savedTx?.settled) {
       return;
     }
 
@@ -193,14 +193,14 @@ export class UserState extends EventEmitter {
     const destroyedNote1 = await this.nullifyNote(nullifier1);
     const destroyedNote2 = await this.nullifyNote(nullifier2);
 
-    if (savedUserTx) {
-      await this.db.settleUserTx(this.user.id, txHash);
-    } else {
-      const userTx = this.recoverUserTx(proof, newNote, changeNote, destroyedNote1, destroyedNote2);
-      await this.db.addUserTx(userTx);
-    }
-
     await this.refreshNotePicker();
+
+    if (savedTx) {
+      await this.db.settleJoinSplitTx(txHash);
+    } else {
+      const tx = this.recoverJoinSplitTx(proof, newNote, changeNote, destroyedNote1, destroyedNote2);
+      await this.db.addJoinSplitTx(tx);
+    }
   }
 
   private async processNewNote(index: number, dataEntry: Buffer, viewingKey: Buffer) {
@@ -235,68 +235,88 @@ export class UserState extends EventEmitter {
       nullified: false,
       owner: this.user.id,
     };
+
     if (value) {
       await this.db.addNote(note);
       debug(`user ${this.user.id} successfully decrypted note at index ${index} with value ${value}.`);
     }
+
     return note;
   }
 
   private async nullifyNote(nullifier: Buffer) {
     const note = await this.db.getNoteByNullifier(nullifier);
-    if (note && note.owner.equals(this.user.id)) {
+    if (note?.owner.equals(this.user.id)) {
       await this.db.nullifyNote(note.index);
       debug(`user ${this.user.id} nullified note at index ${note.index} with value ${note.value}.`);
     }
     return note;
   }
 
-  private recoverUserTx(
+  private recoverJoinSplitTx(
     proof: InnerProofData,
     newNote?: Note,
     changeNote?: Note,
     destroyedNote1?: Note,
     destroyedNote2?: Note,
-  ): UserTx {
-    const createTx = (action: UserTxAction, assetId: number, value: bigint, recipient?: Buffer) => ({
-      txHash: new TxHash(proof.txId),
-      userId: this.user.id,
-      action,
-      assetId,
-      value,
-      recipient,
-      settled: true,
-      created: new Date(),
-    });
+  ): UserJoinSplitTx {
+    const assetId = proof.assetId.readUInt32BE(28);
 
-    if (proof.proofId === 1) {
-      return createTx('ACCOUNT', 0, BigInt(0), this.user.publicKey.toBuffer());
-    }
-
-    if (!changeNote) {
-      return createTx('RECEIVE', newNote!.assetId, newNote!.value, this.user.publicKey.toBuffer());
-    }
+    const noteValue = (note?: Note) => (note ? note.value : BigInt(0));
+    const privateInput = noteValue(destroyedNote1) + noteValue(destroyedNote2);
+    const recipientPrivateOutput = noteValue(newNote);
+    const senderPrivateOutput = noteValue(changeNote);
 
     const publicInput = toBigIntBE(proof.publicInput);
     const publicOutput = toBigIntBE(proof.publicOutput);
 
-    const assetId = proof.assetId.readUInt32BE(28);
-    const outputOwner = new EthAddress(proof.outputOwner.slice(12));
+    const nonEmptyAddress = (address: Buffer) =>
+      !address.equals(Buffer.alloc(address.length)) ? new EthAddress(address) : undefined;
+    const inputOwner = nonEmptyAddress(proof.inputOwner);
+    const outputOwner = nonEmptyAddress(proof.outputOwner);
 
-    if (!publicInput && !publicOutput) {
-      const value = destroyedNote1!.value + (destroyedNote2 ? destroyedNote2.value : BigInt(0)) - changeNote.value;
-      return createTx('TRANSFER', changeNote!.assetId, value, newNote ? this.user.publicKey.toBuffer() : undefined);
-    }
+    return {
+      txHash: new TxHash(proof.txId),
+      userId: this.user.id,
+      assetId,
+      publicInput,
+      publicOutput,
+      privateInput,
+      recipientPrivateOutput,
+      senderPrivateOutput,
+      inputOwner,
+      outputOwner,
+      ownedByUser: !!changeNote,
+      settled: true,
+      created: new Date(),
+    };
+  }
 
-    if (publicInput === publicOutput) {
-      return createTx('PUBLIC_TRANSFER', assetId, publicInput, outputOwner.toBuffer());
-    }
+  private recoverAccountTx(proof: InnerProofData): UserAccountTx {
+    const { txId, publicInput, publicOutput, assetId, inputOwner, outputOwner, nullifier1 } = proof;
 
-    if (publicInput > publicOutput) {
-      return createTx('DEPOSIT', assetId, publicInput, this.user.publicKey.toBuffer());
-    }
+    const txHash = new TxHash(txId);
+    const publicKey = new GrumpkinAddress(Buffer.concat([publicInput, publicOutput]));
+    const { aliasHash, nonce } = AccountAliasId.fromBuffer(assetId);
+    const userId = new AccountId(publicKey, nonce);
 
-    return createTx('WITHDRAW', assetId, publicOutput, outputOwner.toBuffer());
+    const nonEmptyKey = (address: Buffer) => (!address.equals(Buffer.alloc(32)) ? address : undefined);
+    const newSigningPubKey1 = nonEmptyKey(inputOwner);
+    const newSigningPubKey2 = nonEmptyKey(outputOwner);
+
+    const accountAliasId = new AccountAliasId(aliasHash, nonce);
+    const migrated = nonce !== 0 && nullifier1.equals(computeAccountAliasIdNullifier(accountAliasId, this.pedersen));
+
+    return {
+      txHash,
+      userId,
+      aliasHash,
+      newSigningPubKey1,
+      newSigningPubKey2,
+      migrated,
+      settled: true,
+      created: new Date(),
+    };
   }
 
   private async refreshNotePicker() {
@@ -306,8 +326,8 @@ export class UserState extends EventEmitter {
       const assetNotes = notesMap.get(note.assetId) || [];
       notesMap.set(note.assetId, [...assetNotes, note]);
     });
-    notesMap.forEach((notes, assetId) => {
-      const notePicker = new NotePicker(notes);
+    assetIds.forEach(assetId => {
+      const notePicker = new NotePicker(notesMap.get(assetId));
       this.notePickers.set(assetId, notePicker);
     });
   }
@@ -326,6 +346,16 @@ export class UserState extends EventEmitter {
     return this.notePickers.get(assetId)?.getSum() || BigInt(0);
   }
 
+  public async addJoinSplitTx(tx: UserJoinSplitTx) {
+    await this.db.addJoinSplitTx(tx);
+    this.emit(UserStateEvent.UPDATED_USER_STATE, this.user.id);
+  }
+
+  public async addAccountTx(tx: UserAccountTx) {
+    await this.db.addAccountTx(tx);
+    this.emit(UserStateEvent.UPDATED_USER_STATE, this.user.id);
+  }
+
   public async awaitSynchronised() {
     while (this.syncState === SyncState.SYNCHING) {
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -336,12 +366,13 @@ export class UserState extends EventEmitter {
 export class UserStateFactory {
   constructor(
     private grumpkin: Grumpkin,
+    private pedersen: Pedersen,
     private noteAlgos: NoteAlgorithms,
     private db: Database,
     private rollupProvider: RollupProvider,
   ) {}
 
   createUserState(user: UserData) {
-    return new UserState(user, this.grumpkin, this.noteAlgos, this.db, this.rollupProvider);
+    return new UserState(user, this.grumpkin, this.pedersen, this.noteAlgos, this.db, this.rollupProvider);
   }
 }

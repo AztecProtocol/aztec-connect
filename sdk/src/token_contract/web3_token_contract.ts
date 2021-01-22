@@ -3,8 +3,8 @@ import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from 'barretenberg/address';
 import { TxHash } from 'barretenberg/rollup_provider';
 import { Contract } from 'ethers';
+import { fromBaseUnits, toBaseUnits } from '../wallet_sdk/units';
 import { TokenContract } from '.';
-import { fromErc20Units, toErc20Units } from './units';
 
 const minimalERC20ABI = [
   'function decimals() public view returns (uint8)',
@@ -13,10 +13,13 @@ const minimalERC20ABI = [
   'function balanceOf(address account) public view returns (uint256)',
   'function mint(address _to, uint256 _value) public returns (bool)',
   'function name() public view returns (string)',
+  'function symbol() public view returns (string)',
 ];
 
 export class Web3TokenContract implements TokenContract {
   private contract!: Contract;
+  private name!: string;
+  private symbol!: string;
   private decimals = 0;
   private precision = 2;
   private confirmations = 2;
@@ -36,8 +39,19 @@ export class Web3TokenContract implements TokenContract {
   }
 
   async init() {
+    this.name = await this.contract.name();
+    this.symbol = await this.contract.symbol();
+
     const decimals = await this.contract.decimals();
     this.decimals = +decimals;
+  }
+
+  getName() {
+    return this.name;
+  }
+
+  getSymbol() {
+    return this.symbol;
   }
 
   getDecimals() {
@@ -77,11 +91,6 @@ export class Web3TokenContract implements TokenContract {
     return TxHash.fromString(receipt.transactionHash);
   }
 
-  async name() {
-    await this.checkProviderChain();
-    return this.contract.name() as string;
-  }
-
   private async checkProviderChain() {
     const { chainId } = await this.ethersProvider.getNetwork();
     if (this.chainId != chainId) {
@@ -89,11 +98,11 @@ export class Web3TokenContract implements TokenContract {
     }
   }
 
-  public fromErc20Units(value: bigint, precision = this.precision) {
-    return fromErc20Units(value, this.decimals, precision);
+  public fromBaseUnits(value: bigint, precision = this.precision) {
+    return fromBaseUnits(value, this.decimals, precision);
   }
 
-  public toErc20Units(value: string) {
-    return toErc20Units(value, this.decimals);
+  public toBaseUnits(value: string) {
+    return toBaseUnits(value, this.decimals);
   }
 }

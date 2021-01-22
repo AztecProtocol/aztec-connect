@@ -24,20 +24,20 @@ export interface Sdk {
    * @param assetId - [AssetId] See the list of assets we currently support [here](/#/Types/AssetId).
    * @param userId - [AccountId] The account id of the proof sender.
    * @param value - [bigint] The amount to deposit in ERC20 units.
+   * @param fee - [bigint] The amount charged by rollup provider.
    * @param signer - [Signer] An aztec signer used to create signatures.
    * @param ethSigner - [EthereumSigner] An ethereum signer used to create signatures to authorize the tx.
    * @param permitArgs - [PermitArgs]? Options for the erc20 permit function.
-   * @param to - [AccountId]? The accountId of the user receiving funds. Default to the proof sender.
    * @returns Promise<TxHash> - Resolves to [TxHash](/#/Types/TxHash).
    */
   deposit(
     assetId: AssetId,
     userId: AccountId,
     value: bigint,
+    fee: bigint,
     signer: Signer,
     ethSigner: EthereumSigner,
     permitArgs?: PermitArgs,
-    to?: AccountId,
   ): Promise<TxHash>;
 
   /**
@@ -45,22 +45,61 @@ export interface Sdk {
    * @param assetId - [AssetId] See the list of assets we currently support [here](/#/Types/AssetId).
    * @param userId - [AccountId] The account id of the proof sender.
    * @param value - [bigint] The amount to withdraw in ERC20 units.
+   * @param fee - [bigint] The amount charged by rollup provider.
    * @param signer - [Signer] An aztec signer used to create signatures.
    * @param to - [EthAddress] The Ethereum address of the user receiving funds.
    * @returns Promise<TxHash> - Resolves to [TxHash](/#/Types/TxHash).
    */
-  withdraw(assetId: AssetId, userId: AccountId, value: bigint, signer: Signer, to: EthAddress): Promise<TxHash>;
+  withdraw(
+    assetId: AssetId,
+    userId: AccountId,
+    value: bigint,
+    fee: bigint,
+    signer: Signer,
+    to: EthAddress,
+  ): Promise<TxHash>;
 
   /**
    * Transfer
    * @param assetId - [AssetId] See the list of assets we currently support [here](/#/Types/AssetId).
    * @param userId - [AccountId] The account id of the proof sender.
    * @param value - [bigint] The amount to transfer in ERC20 units.
+   * @param fee - [bigint] The amount charged by rollup provider.
    * @param signer - [Signer] An aztec signer used to create signatures.
    * @param to - [AccountId] The account id of the user receiving funds.
    * @returns Promise<TxHash> - Resolves to [TxHash](/#/Types/TxHash).
    */
-  transfer(assetId: AssetId, userId: AccountId, value: bigint, signer: Signer, to: AccountId): Promise<TxHash>;
+  transfer(
+    assetId: AssetId,
+    userId: AccountId,
+    value: bigint,
+    fee: bigint,
+    signer: Signer,
+    to: AccountId,
+  ): Promise<TxHash>;
+
+  /**
+   * Join Split
+   * @param assetId - [AssetId] See the list of assets we currently support [here](/#/Types/AssetId).
+   * @param userId - [AccountId] The account id of the proof sender.
+   * @param publicInput - [bigint] The amount to deposit in ERC20 units.
+   * @param publicOutput - [bigint] The amount to withdraw in ERC20 units.
+   * @param privateInput - [bigint] The amount of notes to be destroyed.
+   * @param privateOutput - [bigint] The amount of new notes to be created.
+   * @param signer - [Signer] An aztec signer used to create signatures.
+   * @param options - [JoinSplitTxOptions]? Options for various use cases.
+   * @returns Promise<TxHash> - Resolves to [TxHash](/#/Types/TxHash).
+   */
+  joinSplit(
+    assetId: AssetId,
+    userId: AccountId,
+    publicInput: bigint,
+    publicOutput: bigint,
+    privateInput: bigint,
+    privateOutput: bigint,
+    signer: Signer,
+    options: JoinSplitTxOptions = {},
+  ): Promise<TxHash>;
 
   /**
    * Await Settlement
@@ -113,7 +152,7 @@ export interface Sdk {
    * @param signer - [Signer] An aztec signer used to create signatures.
    * @param newSigningPublicKey - [GrumpkinAddress] The 32-byte public key of the private key the user wishes to use to update state.
    * @param recoveryPublicKey - [GrumpkinAddress]? The 32-byte public key generated along with user's recovery data.
-   * @param newAccountPublicKey - [GrumpkinAddress]? A new public key to be linked to the alias. Default to the current public key.
+   * @param newAccountPrivateKey - [Buffer]? A new private key whose public key will be linked to the alias. Default to the current private key.
    * @returns Promise<TxHash> - Resolves to [TxHash](/#/Types/TxHash).
    */
   migrateAccount(
@@ -121,7 +160,7 @@ export interface Sdk {
     signer: Signer,
     newSigningPublicKey: GrumpkinAddress,
     recoveryPublicKey?: GrumpkinAddress,
-    newAccountPublicKey?: GrumpkinAddress,
+    newAccountPrivateKey?: Buffer,
   ): Promise<TxHash>;
 
   /**
@@ -140,33 +179,11 @@ export interface Sdk {
   ): Promise<TxHash>;
 
   /**
-   * Lock Escape Hatch .
-   * @remarks This method allows the user to commit to a future block height to lock the verifier for 20 blocks. Users should use this method to withdraw if the Rollup Provider is not responding or acting maliciously.
-   * @param blockHeight - [number] The height at which the user whishes to withdraw must satisfy blockHeight % 100 > 80.
-   * @param address - [EthAddress] The ethereum address of the user that will be calling the escape hatch.
-   * @returns Promise -  resolves to [TxHash](/#/Types) object containing the transaction.
-   */
-  lockEscapeHatch(blockHeight: number, address: EthAddress): Promise<TxHash>;
-
-  /**
-   * Emergency Withdraw.
-   * @remarks This method allows the user to emergency withdraw.
-   * @param assetId - [string] 3 letter asset code (/#/assets).
-   * @param blockHeight [number] The block height that the user reserved to send the tx
-   * @param value [number] The value the user wants to withdraw.
-   * @param to [EthAddress] The ethereum address that will be sent the funds.
-   * @param signer [Signer] An ethers signer used to create signatures to authorize the tx and send.
-   * @returns Promise -  resolves to [TxHash](/#/Types) object containing the transaction.
-   */
-  emergencyWithdraw(assetId: string, blockHeight: number, value: number, to: EthAddress, signer: Signer);
-
-  /**
    * @param assetId - [AssetId] See the list of assets we currently support [here](/#/Types/AssetId).
-   * @param accountPublicKey - [GrumpkinAddress] Public key of the user.
-   * @param nonce - [number]? The nonce of the user. Default to the latest nonce.
+   * @param userId - [AccountId] Public key and nonce pair of the user.
    * @returns bigint - Private balance of the account.
    */
-  getBalance(assetId: AssetId, publicKey: GrumpkinAddress, nonce?: number): bigint;
+  getBalance(assetId: AssetId, userId: AccountId): bigint;
 
   /**
    * @param assetId - [AssetId] See the list of assets we currently support [here](/#/Types/AssetId).
@@ -181,12 +198,12 @@ export interface Sdk {
    * @param precision - [number] The number of decimal places to return.
    * @returns string - Formatted string.
    */
-  fromErc20Units(assetId: AssetId, value: bigint, precision?: number): string;
+  fromBaseUnits(assetId: AssetId, value: bigint, precision?: number): string;
 
   /**
    * @param assetId - [AssetId] The asset of the value to be converted.
-   * @param valueS - [string] Value to convert to bigint.
+   * @param value - [string] Value to convert to bigint.
    * @returns bigint - Token value.
    */
-  toErc20Units(assetId: AssetId, value: string): bigint;
+  toBaseUnits(assetId: AssetId, value: string): bigint;
 }

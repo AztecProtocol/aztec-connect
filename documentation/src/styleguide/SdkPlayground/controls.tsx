@@ -1,3 +1,4 @@
+import { AssetId } from '@aztec/sdk';
 import clsx from 'clsx';
 import React from 'react';
 import Styled from 'react-styleguidist/lib/client/rsg-components/Styled';
@@ -10,7 +11,6 @@ import { EnsureLogin } from '../ensure_login';
 import { Spinner } from '../spinner';
 import { UserContainer, PrivateAssetContainer, PublicAssetContainer } from '../user_container';
 import { InitButton } from './init_button';
-import { AssetId } from '@aztec/sdk';
 
 export const styles = ({ space, fontSize }: Rsg.Theme) => ({
   controls: {
@@ -104,6 +104,8 @@ interface ControlsRendererProps extends JssInjectedProps {
 }
 
 const ControlsRenderer: React.FunctionComponent<ControlsRendererProps> = ({ classes, app, runCode, running }) => {
+  const assetId = app.getAssetId();
+
   const UnsupportedContent = () => (
     <div className={classes.message}>Switch to a browser that has MetaMask installed to use the interactive docs.</div>
   );
@@ -118,28 +120,30 @@ const ControlsRenderer: React.FunctionComponent<ControlsRendererProps> = ({ clas
                 <div className={classes.info}>
                   <div className={classes.balance}>
                     <div className={classes.label}>Private Balance:</div>
-                    <PrivateAssetContainer sdk={sdk} user={user!} assetId={AssetId.DAI}>
-                      {({ asset, balance }) => <>{asset.fromErc20Units(balance)}</>}
+                    <PrivateAssetContainer sdk={sdk} user={user!} assetId={assetId}>
+                      {({ asset, balance }) => <>{asset.fromBaseUnits(balance)}</>}
                     </PrivateAssetContainer>
                   </div>
-                  <div className={classes.balance}>
-                    <div className={classes.label}>Public Balance:</div>
-                    <PublicAssetContainer sdk={sdk} user={user!} assetId={AssetId.DAI}>
-                      {({ asset, balance }) => (
-                        <>
-                          <div className={classes.value}>{asset.fromErc20Units(balance)}</div>
-                          <div
-                            className={classes.inlineButton}
-                            onClick={async () => {
-                              await asset.mint(BigInt(asset.toErc20Units('100')));
-                            }}
-                          >
-                            Get Tokens
-                          </div>
-                        </>
-                      )}
-                    </PublicAssetContainer>
-                  </div>
+                  {assetId !== AssetId.ETH && (
+                    <div className={classes.balance}>
+                      <div className={classes.label}>Public Balance:</div>
+                      <PublicAssetContainer sdk={sdk} user={user!} assetId={assetId}>
+                        {({ asset, balance }) => (
+                          <>
+                            <div className={classes.value}>{asset.fromBaseUnits(balance)}</div>
+                            <div
+                              className={classes.inlineButton}
+                              onClick={async () => {
+                                await asset.mint(BigInt(asset.toBaseUnits('100')));
+                              }}
+                            >
+                              Get Tokens
+                            </div>
+                          </>
+                        )}
+                      </PublicAssetContainer>
+                    </div>
+                  )}
                 </div>
               )}
             </UserContainer>

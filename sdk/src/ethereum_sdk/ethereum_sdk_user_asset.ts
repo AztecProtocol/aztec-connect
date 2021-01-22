@@ -1,16 +1,19 @@
-import { EthAddress } from 'barretenberg/address';
 import { AssetId } from 'barretenberg/client_proofs';
 import { Signer } from '../signer';
 import { AccountId } from '../user';
-import { JoinSplitTxOptions } from '../wallet_sdk';
+import { JoinSplitTxOptions } from '../wallet_sdk/tx_options';
 import { EthereumSdk } from './';
 import { EthUserId } from './eth_user_id';
 
 export class EthereumSdkUserAsset {
   constructor(public ethUserId: EthUserId, public id: AssetId, private sdk: EthereumSdk) {}
 
+  name() {
+    return this.sdk.getAssetName(this.id);
+  }
+
   symbol() {
-    return this.sdk.getTokenContract(this.id).name();
+    return this.sdk.getAssetSymbol(this.id);
   }
 
   publicBalance() {
@@ -41,23 +44,49 @@ export class EthereumSdkUserAsset {
     return this.sdk.approve(this.id, value, this.ethUserId);
   }
 
-  async deposit(value: bigint, to?: AccountId, signer?: Signer, options?: JoinSplitTxOptions) {
-    return this.sdk.deposit(this.id, value, this.ethUserId, to, signer, options);
+  async deposit(value: bigint, fee: bigint, signer?: Signer) {
+    return this.sdk.deposit(this.id, this.ethUserId, value, fee, signer);
   }
 
-  async withdraw(value: bigint, to?: EthAddress, signer?: Signer, options?: JoinSplitTxOptions) {
-    return this.sdk.withdraw(this.id, value, this.ethUserId, to || this.ethUserId.ethAddress, signer, options);
+  async withdraw(value: bigint, fee: bigint, signer?: Signer) {
+    return this.sdk.withdraw(this.id, this.ethUserId, value, fee, signer);
   }
 
-  async transfer(value: bigint, to: AccountId, signer?: Signer, options?: JoinSplitTxOptions) {
-    return this.sdk.transfer(this.id, value, this.ethUserId, to, signer, options);
+  async transfer(value: bigint, fee: bigint, to: AccountId, signer?: Signer) {
+    return this.sdk.transfer(this.id, this.ethUserId, value, fee, to, signer);
   }
 
-  public fromErc20Units(value: bigint, precision?: number) {
-    return this.sdk.getTokenContract(this.id).fromErc20Units(value, precision);
+  async joinSplit(
+    publicInput: bigint,
+    publicOutput: bigint,
+    privateInput: bigint,
+    recipientPrivateOutput: bigint,
+    senderPrivateOutput: bigint,
+    signer: Signer,
+    options?: JoinSplitTxOptions,
+  ) {
+    return this.sdk.joinSplit(
+      this.id,
+      this.ethUserId,
+      publicInput,
+      publicOutput,
+      privateInput,
+      recipientPrivateOutput,
+      senderPrivateOutput,
+      signer,
+      options,
+    );
   }
 
-  public toErc20Units(value: string) {
-    return this.sdk.getTokenContract(this.id).toErc20Units(value);
+  public fromBaseUnits(value: bigint, precision?: number) {
+    return this.sdk.fromBaseUnits(this.id, value, precision);
+  }
+
+  public toBaseUnits(value: string) {
+    return this.sdk.toBaseUnits(this.id, value);
+  }
+
+  public async getFee() {
+    return this.sdk.getFee(this.id);
   }
 }

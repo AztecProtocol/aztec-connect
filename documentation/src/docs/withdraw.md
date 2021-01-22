@@ -9,22 +9,22 @@ async function demoWithdraw(aztecSdk, userId, signer) {
   const assetId = AssetId.DAI;
 
   const balanceBefore = aztecSdk.getBalance(assetId, userId);
-  console.info('Balance before withdraw:', aztecSdk.fromErc20Units(assetId, balanceBefore));
+  console.info('Balance before withdraw:', aztecSdk.fromBaseUnits(assetId, balanceBefore));
 
-  const value = aztecSdk.toErc20Units(assetId, '1.2');
+  const value = aztecSdk.toBaseUnits(assetId, '1.2');
+  const fee = await aztecSdk.getFee(assetId);
 
   const recipientEthereumAddress = EthAddress.fromString(window.ethereum.selectedAddress);
 
   console.info('Creating withdraw proof...');
-  const userData = await aztecSdk.getUserData(userId);
-  const txHash = await aztecSdk.withdraw(assetId, userId, value, signer, recipientEthereumAddress);
+  const txHash = await aztecSdk.withdraw(assetId, userId, value, fee, signer, recipientEthereumAddress);
   console.info(`Proof accepted by server. Tx hash: ${txHash}`);
 
   console.info('Waiting for tx to settle...');
   await aztecSdk.awaitSettlement(txHash);
 
   const balanceAfter = aztecSdk.getBalance(assetId, userId);
-  console.info('Balance after withdraw:', aztecSdk.fromErc20Units(assetId, balanceAfter));
+  console.info('Balance after withdraw:', aztecSdk.fromBaseUnits(assetId, balanceAfter));
 }
 ```
 
@@ -40,21 +40,22 @@ async function demoWithdraw(aztecSdk, userId, signer) {
   const asset = user.getAsset(AssetId.DAI);
 
   const balanceBefore = asset.balance();
-  console.info('Balance before withdraw:', asset.fromErc20Units(balanceBefore));
+  console.info('Balance before withdraw:', asset.fromBaseUnits(balanceBefore));
 
-  const value = asset.toErc20Units('1.2');
+  const value = asset.toBaseUnits('1.2');
+  const fee = await asset.getFee();
 
   const recipientEthereumAddress = EthAddress.fromString(window.ethereum.selectedAddress);
 
   console.info('Creating withdraw proof...');
-  const txHash = await asset.withdraw(value, signer, recipientEthereumAddress);
+  const txHash = await asset.withdraw(value, fee, signer, recipientEthereumAddress);
   console.info(`Proof accepted by server. Tx hash: ${txHash}`);
 
   console.info('Waiting for tx to settle...');
   await aztecSdk.awaitSettlement(txHash);
 
   const balanceAfter = asset.balance();
-  console.info('Balance after withdraw:', asset.fromErc20Units(balanceAfter));
+  console.info('Balance after withdraw:', asset.fromBaseUnits(balanceAfter));
 }
 ```
 

@@ -8,6 +8,7 @@ import {
   GrumpkinAddress,
   MemoryFifo,
   SdkEvent,
+  UserJoinSplitTx,
   WebSdk,
 } from 'aztec2-sdk';
 import copy from 'copy-to-clipboard';
@@ -41,10 +42,12 @@ export class TerminalHandler {
     transfer: this.transfer,
     register: this.registerAlias,
     balance: this.balance,
+    fee: this.fee,
     copykey: this.copyKey,
     status: this.status,
     cleardata: this.clearData,
   };
+  private assetId = AssetId.ETH;
 
   constructor(private app: WebSdk, private terminal: Terminal) {}
 
@@ -161,7 +164,7 @@ export class TerminalHandler {
     if (user.getUserData().ethUserId.equals(account) && diff && userIsSynced) {
       const userAsset = user.getAsset(assetId);
       this.printQueue.put(
-        `balance updated: ${userAsset.fromErc20Units(balance)} (${diff >= 0 ? '+' : ''}${userAsset.fromErc20Units(
+        `balance updated: ${userAsset.fromBaseUnits(balance)} (${diff >= 0 ? '+' : ''}${userAsset.fromBaseUnits(
           diff,
         )})\n`,
       );
@@ -239,14 +242,18 @@ export class TerminalHandler {
     if (!this.app.isInitialized()) {
       this.printQueue.put('init [server]\n');
     } else {
+      const isMintable = this.assetId !== AssetId.ETH;
+      const requireApproval =
+        this.assetId !== AssetId.ETH && !(await this.app.getSdk().getAssetPermitSupport(this.assetId));
       this.printQueue.put(
-        'mint <amount>\n' +
-          'approve <amount>\n' +
+        (isMintable ? 'mint <amount>\n' : '') +
+          (requireApproval ? 'approve <amount>\n' : '') +
           'deposit <amount>\n' +
           'withdraw <amount>\n' +
           'transfer <to> <amount>\n' +
           'register <alias>\n' +
           'balance\n' +
+          'fee\n' +
           'copykey\n' +
           'status [num] [from]\n',
       );
@@ -283,34 +290,34 @@ export class TerminalHandler {
   }
 
   private async mint(value: string) {
-    const userAsset = this.app.getUser().getAsset(AssetId.DAI);
+    const userAsset = this.app.getUser().getAsset(this.assetId);
     this.printQueue.put('requesting mint...\n');
-    await userAsset.mint(userAsset.toErc20Units(value));
+    await userAsset.mint(userAsset.toBaseUnits(value));
     await this.balance();
   }
 
   private async approve(value: string) {
-    const userAsset = this.app.getUser().getAsset(AssetId.DAI);
+    const userAsset = this.app.getUser().getAsset(this.assetId);
     this.printQueue.put('requesting approval...\n');
-    await userAsset.approve(userAsset.toErc20Units(value));
+    await userAsset.approve(userAsset.toBaseUnits(value));
     this.printQueue.put('approval complete.\n');
   }
 
   private async deposit(valueStr: string) {
-    const userAsset = this.app.getUser().getAsset(AssetId.DAI);
-    const value = userAsset.toErc20Units(valueStr);
-    const tokenBalance = await userAsset.publicBalance();
-    if (tokenBalance < value) {
-      throw new Error(`insufficient public balance: ${userAsset.fromErc20Units(tokenBalance)}`);
-    }
-    await userAsset.deposit(value);
+    const userAsset = this.app.getUser().getAsset(this.assetId);
+    const value = userAsset.toBaseUnits(valueStr);
+    const { fees } = await this.app.getSdk().getRemoteStatus();
+    const fee = fees.get(this.assetId)!;
+    await userAsset.deposit(value, fee);
     this.printQueue.put(`deposit proof sent.\n`);
   }
 
   private async withdraw(value: string) {
-    const userAsset = this.app.getUser().getAsset(AssetId.DAI);
+    const userAsset = this.app.getUser().getAsset(this.assetId);
+    const { fees } = await this.app.getSdk().getRemoteStatus();
+    const fee = fees.get(this.assetId)!;
     this.printQueue.put(`generating withdrawl proof...\n`);
-    await userAsset.withdraw(userAsset.toErc20Units(value));
+    await userAsset.withdraw(userAsset.toBaseUnits(value), fee);
     this.printQueue.put(`withdrawl proof sent.\n`);
   }
 
@@ -319,9 +326,11 @@ export class TerminalHandler {
     if (!to) {
       throw new Error(`unknown user: ${addressOrAlias}`);
     }
-    const userAsset = this.app.getUser().getAsset(AssetId.DAI);
+    const userAsset = this.app.getUser().getAsset(this.assetId);
+    const { fees } = await this.app.getSdk().getRemoteStatus();
+    const fee = fees.get(this.assetId)!;
     this.printQueue.put(`generating transfer proof...\n`);
-    await userAsset.transfer(userAsset.toErc20Units(value), to);
+    await userAsset.transfer(userAsset.toBaseUnits(value), fee, to);
     this.printQueue.put(`transfer proof sent.\n`);
   }
 
@@ -330,20 +339,31 @@ export class TerminalHandler {
       throw new Error('alias already registered.');
     }
     this.printQueue.put(`generating registration proof...\n`);
-    const newSigningPublicKey = GrumpkinAddress.randomAddress();
+    const user = this.app.getUser();
+    const newSigningPublicKey = user.getUserData().publicKey;
     const recoveryPublicKey = GrumpkinAddress.randomAddress();
-    await this.app.getUser().createAccount(alias, newSigningPublicKey, recoveryPublicKey);
-    this.printQueue.put(`registration proof sent.\n`);
+    const txHash = await user.createAccount(alias, newSigningPublicKey, recoveryPublicKey);
+    this.printQueue.put(`registration proof sent. awaiting settlement...\n`);
+    await this.app.getSdk().awaitSettlement(txHash, 300);
+    await this.app.syncAccountNonce();
+    this.printQueue.put(`successfully registered alias '${alias}'.\n`);
   }
 
   private async balance() {
-    const userAsset = this.app.getUser().getAsset(AssetId.DAI);
-    await this.printQueue.put(`public: ${userAsset.fromErc20Units(await userAsset.publicBalance())}\n`);
-    await this.printQueue.put(`private: ${userAsset.fromErc20Units(userAsset.balance())}\n`);
+    const userAsset = this.app.getUser().getAsset(this.assetId);
+    await this.printQueue.put(`public: ${userAsset.fromBaseUnits(await userAsset.publicBalance())}\n`);
+    await this.printQueue.put(`private: ${userAsset.fromBaseUnits(userAsset.balance())}\n`);
     const fundsPendingDeposit = await userAsset.getUserPendingDeposit();
     if (fundsPendingDeposit > 0) {
-      await this.printQueue.put(`pending deposit: ${userAsset.fromErc20Units(fundsPendingDeposit)}\n`);
+      await this.printQueue.put(`pending deposit: ${userAsset.fromBaseUnits(fundsPendingDeposit)}\n`);
     }
+  }
+
+  private async fee() {
+    const sdk = this.app.getSdk();
+    const { fees } = await sdk.getRemoteStatus();
+    const fee = fees.get(this.assetId)!;
+    await this.printQueue.put(`fee: ${sdk.fromBaseUnits(this.assetId, fee)}\n`);
   }
 
   private async copyKey() {
@@ -353,16 +373,28 @@ export class TerminalHandler {
 
   private async status(num = '1', from = '0') {
     const user = this.app.getUser();
-    const txs = await user.getTxs();
+    const txs = await user.getJoinSplitTxs();
     const f = Math.max(0, +from);
     const n = Math.min(Math.max(+num, 0), 5);
-    for (const tx of txs.slice(f, f + n)) {
+    const printTx = (tx: UserJoinSplitTx, action: string, value: bigint) => {
       const asset = user.getAsset(tx.assetId);
       this.printQueue.put(
-        `${tx.txHash.toString().slice(2, 10)}: ${tx.action} ${
-          tx.action === 'ACCOUNT' ? '' : `${asset.fromErc20Units(tx.value)} ${asset.symbol()} `
-        }${tx.settled ? 'settled' : 'pending'}\n`,
+        `${tx.txHash.toString().slice(2, 10)}: ${action} ${asset.fromBaseUnits(value)} ${asset.symbol()} ${
+          tx.settled ? 'settled' : 'pending'
+        }\n`,
       );
+    };
+    for (const tx of txs.slice(f, f + n)) {
+      if (tx.publicInput) {
+        printTx(tx, 'DEPOSIT', tx.senderPrivateOutput);
+      } else if (tx.publicOutput) {
+        printTx(tx, 'WITHDRAW', tx.publicOutput);
+      } else if (tx.privateInput) {
+        // Can't restore fee :(
+        printTx(tx, 'TRANSFER', tx.privateInput - tx.senderPrivateOutput);
+      } else {
+        printTx(tx, 'RECEIVE', tx.recipientPrivateOutput);
+      }
     }
   }
 

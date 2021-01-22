@@ -47,7 +47,8 @@ async function demoEmergencyWithdraw(userId, signer) {
 
   // Deposit
   const assetId = AssetId.DAI;
-  const value = aztecSdkEmergency.toErc20Units(assetId, '10');
+  const value = aztecSdkEmergency.toBaseUnits(assetId, '10');
+  const fee = BigInt(0);
 
   const senderEthereumAddress = EthAddress.fromString(window.ethereum.selectedAddress);
   const ethSigner = new Web3Signer(window.ethereum, senderEthereumAddress);
@@ -62,28 +63,28 @@ async function demoEmergencyWithdraw(userId, signer) {
 
   console.info('Creating deposit proof...');
   const userData = await aztecSdkEmergency.getUserData(userId);
-  const depositTxHash = await aztecSdkEmergency.deposit(assetId, userId, value, signer, ethSigner);
+  const depositTxHash = await aztecSdkEmergency.deposit(assetId, userId, value, fee, signer, ethSigner);
   console.info(`Proof accepted. Tx hash: ${depositTxHash}`);
 
   console.info('Waiting for tx to settle...');
   await aztecSdkEmergency.awaitSettlement(depositTxHash);
 
   const balanceAfter = aztecSdkEmergency.getBalance(assetId, userId);
-  console.info('Balance after deposit:', aztecSdkEmergency.fromErc20Units(assetId, balanceAfter));
+  console.info('Balance after deposit:', aztecSdkEmergency.fromBaseUnits(assetId, balanceAfter));
 
   // Withdraw
-  const withdrawValue = aztecSdkEmergency.toErc20Units(assetId, '5');
+  const withdrawValue = aztecSdkEmergency.toBaseUnits(assetId, '5');
   const recipientEthereumAddress = EthAddress.fromString(window.ethereum.selectedAddress);
 
   console.info('Creating withdraw proof...');
-  const withdrawTxHash = await aztecSdkEmergency.withdraw(assetId, userId, value, signer, recipientEthereumAddress);
+  const withdrawTxHash = await aztecSdkEmergency.withdraw(assetId, userId, value, fee, signer, recipientEthereumAddress);
   console.info(`Proof accepted. Tx hash: ${withdrawTxHash}`);
 
   console.info('Waiting for tx to settle...');
   await aztecSdkEmergency.awaitSettlement(withdrawTxHash);
 
   const finalBalance = aztecSdkEmergency.getBalance(assetId, userId);
-  console.info('Balance after withdraw:', aztecSdkEmergency.fromErc20Units(assetId, finalBalance));
+  console.info('Balance after withdraw:', aztecSdkEmergency.fromBaseUnits(assetId, finalBalance));
 
   // Destroy this demo sdk
   await aztecSdkEmergency.destroy();

@@ -1,7 +1,7 @@
 @spec sdk.ts createAccount
 
 ```js
-import { GrumpkinAddress } from '@aztec/sdk';
+import { AccountId, GrumpkinAddress } from '@aztec/sdk';
 import { randomBytes } from 'crypto';
 
 async function demoCreateAccount(aztecSdk) {
@@ -10,6 +10,7 @@ async function demoCreateAccount(aztecSdk) {
   // define the privacy key used for decrypting data
   const privacyKey = randomBytes(32);
   const user = await aztecSdk.addUser(privacyKey);
+  const accountPublicKey = user.getUserData().publicKey;
 
   // define the public key used for signing proof data
   const signingPublicKey = GrumpkinAddress.randomAddress();
@@ -29,8 +30,14 @@ async function demoCreateAccount(aztecSdk) {
   await aztecSdk.awaitSettlement(txHash);
   console.info('Account created!');
 
-  // remove this demo user from your device
+  // get the newly created user with nonce = 1
+  const newUserId = new AccountId(accountPublicKey, 1);
+  const newUser = await aztecSdk.getUser(newUserId);
+  console.info(newUser.getUserData());
+
+  // remove demo users from your device
   await aztecSdk.removeUser(user.id);
+  await aztecSdk.removeUser(newUser.id);
 }
 ```
 

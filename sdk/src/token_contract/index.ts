@@ -7,6 +7,10 @@ export * from './mock_token_contract';
 export interface TokenContract {
   init(): Promise<void>;
 
+  getName(): string;
+
+  getSymbol(): string;
+
   getDecimals(): number;
 
   getAddress(): EthAddress;
@@ -19,9 +23,7 @@ export interface TokenContract {
 
   mint(value: bigint, account: EthAddress): Promise<TxHash>;
 
-  name(): Promise<string>;
+  fromBaseUnits(value: bigint, precision?: number): string;
 
-  fromErc20Units(value: bigint, precision?: number): string;
-
-  toErc20Units(value: string): bigint;
+  toBaseUnits(value: string): bigint;
 }

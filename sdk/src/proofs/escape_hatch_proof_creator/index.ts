@@ -14,6 +14,7 @@ import { AccountId } from '../../user';
 import { EthereumSigner, Signer } from '../../signer';
 import { UserState } from '../../user_state';
 import { JoinSplitTxFactory } from '../join_split_proof_creator/join_split_tx_factory';
+import { Database } from '../../database';
 
 const debug = createDebug('bb:escape_hatch_proof_creator');
 
@@ -28,8 +29,9 @@ export class EscapeHatchProofCreator {
     pedersen: Pedersen,
     private noteAlgos: NoteAlgorithms,
     private hashPathSource: HashPathSource,
+    db: Database,
   ) {
-    this.joinSplitTxFactory = new JoinSplitTxFactory(worldState, grumpkin, pedersen, noteAlgos);
+    this.joinSplitTxFactory = new JoinSplitTxFactory(worldState, grumpkin, pedersen, noteAlgos, db);
   }
 
   public async createProof(
@@ -37,7 +39,8 @@ export class EscapeHatchProofCreator {
     publicInput: bigint,
     publicOutput: bigint,
     privateInput: bigint,
-    privateOutput: bigint,
+    recipientPrivateOutput: bigint,
+    senderPrivateOutput: bigint,
     assetId: AssetId,
     signer: Signer,
     receiver?: AccountId,
@@ -49,7 +52,8 @@ export class EscapeHatchProofCreator {
       publicInput,
       publicOutput,
       privateInput,
-      privateOutput,
+      recipientPrivateOutput,
+      senderPrivateOutput,
       assetId,
       signer,
       receiver,

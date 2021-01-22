@@ -41,7 +41,7 @@ describe('end-to-end permit tests', () => {
     userAsset = await user.getAsset(assetId);
 
     const { rollupContractAddress } = await sdk.getRemoteStatus();
-    const oneEth = BigInt(10) ** BigInt(18);
+    const oneEth = sdk.toBaseUnits(AssetId.ETH, '1');
     await topUpFeeDistributorContract(oneEth, rollupContractAddress, provider, provider.getAccount(1));
   });
 
@@ -53,12 +53,13 @@ describe('end-to-end permit tests', () => {
     const supportPermit = await sdk.getAssetPermitSupport(assetId);
     expect(supportPermit).toBe(true);
 
-    const depositValue = userAsset.toErc20Units('1000');
-    await userAsset.mint(depositValue);
-    expect(await userAsset.publicBalance()).toBe(depositValue);
+    const depositValue = userAsset.toBaseUnits('1000');
+    const txFee = await sdk.getFee(assetId);
+    await userAsset.mint(depositValue + txFee);
+    expect(await userAsset.publicBalance()).toBe(depositValue + txFee);
     expect(userAsset.balance()).toBe(0n);
 
-    const txHash = await userAsset.deposit(depositValue);
+    const txHash = await userAsset.deposit(depositValue, txFee);
     await sdk.awaitSettlement(txHash, 300);
 
     expect(await userAsset.publicBalance()).toBe(0n);

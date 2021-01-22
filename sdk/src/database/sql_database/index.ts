@@ -4,39 +4,42 @@ import { TxHash } from 'barretenberg/rollup_provider';
 import { Connection, ConnectionOptions, MoreThan, MoreThanOrEqual, Repository } from 'typeorm';
 import { Note } from '../../note';
 import { AccountAliasId, UserData, AccountId } from '../../user';
-import { UserTx } from '../../user_tx';
+import { UserAccountTx, UserJoinSplitTx } from '../../user_tx';
 import { Alias, Database, SigningKey } from '../database';
 import { AliasDao } from './alias_dao';
 import { KeyDao } from './key_dao';
 import { NoteDao } from './note_dao';
+import { AccountTxDao } from './account_tx_dao';
 import { UserDataDao } from './user_data_dao';
+import { JoinSplitTxDao } from './join_split_tx_dao';
 import { UserKeyDao } from './user_key_dao';
-import { UserTxDao } from './user_tx_dao';
 
 export const getOrmConfig = (dbPath?: string): ConnectionOptions => ({
   name: 'aztec2-sdk',
   type: 'sqlite',
   database: dbPath === ':memory:' ? dbPath : `${dbPath || '.'}/aztec2-sdk.sqlite`,
-  entities: [AliasDao, KeyDao, NoteDao, UserDataDao, UserKeyDao, UserTxDao],
+  entities: [AccountTxDao, AliasDao, JoinSplitTxDao, KeyDao, NoteDao, UserDataDao, UserKeyDao],
   synchronize: true,
   logging: false,
 });
 
 export class SQLDatabase implements Database {
+  private accountTxRep: Repository<AccountTxDao>;
   private aliasRep: Repository<AliasDao>;
   private keyRep: Repository<KeyDao>;
   private noteRep: Repository<NoteDao>;
   private userDataRep: Repository<UserDataDao>;
   private userKeyRep: Repository<UserKeyDao>;
-  private userTxRep: Repository<UserTxDao>;
+  private joinSplitTxRep: Repository<JoinSplitTxDao>;
 
   constructor(private connection: Connection) {
+    this.accountTxRep = this.connection.getRepository(AccountTxDao);
     this.aliasRep = this.connection.getRepository(AliasDao);
+    this.joinSplitTxRep = this.connection.getRepository(JoinSplitTxDao);
     this.keyRep = this.connection.getRepository(KeyDao);
     this.noteRep = this.connection.getRepository(NoteDao);
     this.userDataRep = this.connection.getRepository(UserDataDao);
     this.userKeyRep = this.connection.getRepository(UserKeyDao);
-    this.userTxRep = this.connection.getRepository(UserTxDao);
   }
 
   async init() {}
@@ -90,7 +93,8 @@ export class SQLDatabase implements Database {
     if (!user) return;
 
     await this.userKeyRep.delete({ address: user.publicKey });
-    await this.userTxRep.delete({ userId });
+    await this.accountTxRep.delete({ userId });
+    await this.joinSplitTxRep.delete({ userId });
     await this.noteRep.delete({ owner: userId });
     await this.userDataRep.delete({ id: userId });
   }
@@ -99,28 +103,45 @@ export class SQLDatabase implements Database {
     await this.aliasRep.clear();
     await this.noteRep.clear();
     await this.userKeyRep.clear();
-    await this.userTxRep.clear();
+    await this.accountTxRep.clear();
+    await this.joinSplitTxRep.clear();
     await this.userDataRep.update({ syncedToRollup: MoreThan(-1) }, { syncedToRollup: -1 });
   }
 
-  async getUserTx(userId: AccountId, txHash: TxHash) {
-    return this.userTxRep.findOne({ txHash, userId });
+  async addJoinSplitTx(tx: UserJoinSplitTx) {
+    await this.joinSplitTxRep.save(tx);
   }
 
-  async addUserTx(userTx: UserTx) {
-    await this.userTxRep.save(userTx);
+  async getJoinSplitTx(userId: AccountId, txHash: TxHash) {
+    return this.joinSplitTxRep.findOne({ txHash, userId });
   }
 
-  async getUserTxs(userId: AccountId) {
-    return this.userTxRep.find({ where: { userId }, order: { created: 'DESC' } });
+  async getJoinSplitTxs(userId) {
+    return this.joinSplitTxRep.find({ where: { userId }, order: { created: 'DESC' } });
   }
 
-  async getUserTxsByTxHash(txHash: TxHash) {
-    return this.userTxRep.find({ where: { txHash } });
+  async getJoinSplitTxsByTxHash(txHash: TxHash) {
+    return this.joinSplitTxRep.find({ where: { txHash } });
   }
 
-  async settleUserTx(userId: AccountId, txHash: TxHash) {
-    await this.userTxRep.update({ userId, txHash }, { settled: true });
+  async settleJoinSplitTx(txHash: TxHash) {
+    await this.joinSplitTxRep.update({ txHash }, { settled: true });
+  }
+
+  async addAccountTx(tx: UserAccountTx) {
+    await this.accountTxRep.save(tx);
+  }
+
+  async getAccountTx(txHash: TxHash) {
+    return this.accountTxRep.findOne({ txHash });
+  }
+
+  async getAccountTxs(userId) {
+    return this.accountTxRep.find({ where: { userId }, order: { created: 'DESC' } });
+  }
+
+  async settleAccountTx(txHash: TxHash) {
+    await this.accountTxRep.update({ txHash }, { settled: true });
   }
 
   async addUserSigningKey(signingKey: SigningKey) {

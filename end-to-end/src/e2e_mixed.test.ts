@@ -44,7 +44,6 @@ describe('end-to-end falafel recovery tests', () => {
         saveProvingKey: false,
         clearDb: true,
         dbPath: ':memory:',
-        minConfirmationEHW: 1,
       });
       await sdk.init();
 
@@ -56,12 +55,13 @@ describe('end-to-end falafel recovery tests', () => {
       await sdk.awaitSynchronised();
 
       const userAsset = user.getAsset(assetId);
+      const txFee = await userAsset.getFee();
       const depositValue = 1000n;
 
-      await userAsset.mint(depositValue);
-      await userAsset.approve(depositValue);
+      await userAsset.mint(depositValue + txFee);
+      await userAsset.approve(depositValue + txFee);
 
-      const txHash = await userAsset.deposit(depositValue);
+      const txHash = await userAsset.deposit(depositValue, txFee);
       await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
 
       expect(userAsset.balance()).toBe(depositValue);
@@ -79,7 +79,6 @@ describe('end-to-end falafel recovery tests', () => {
         saveProvingKey: false,
         clearDb: true,
         dbPath: ':memory:',
-        minConfirmationEHW: 1,
       });
       await sdk.init();
       const user = await sdk.addUser(userAddress);
@@ -87,7 +86,7 @@ describe('end-to-end falafel recovery tests', () => {
 
       const userAsset = user.getAsset(assetId);
 
-      const txHash = await userAsset.withdraw(500n);
+      const txHash = await userAsset.withdraw(500n, 0n);
       await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
 
       expect(await userAsset.publicBalance()).toBe(500n);
@@ -103,18 +102,19 @@ describe('end-to-end falafel recovery tests', () => {
         saveProvingKey: false,
         clearDb: true,
         dbPath: ':memory:',
-        minConfirmationEHW: 1,
       });
       await sdk.init();
       const user = await sdk.addUser(userAddress);
       await sdk.awaitSynchronised();
 
       const userAsset = user.getAsset(assetId);
+      const txFee = await userAsset.getFee();
+      const withdrawValue = 500n - txFee;
 
-      const txHash = await userAsset.withdraw(500n);
+      const txHash = await userAsset.withdraw(withdrawValue, txFee);
       await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
 
-      expect(await userAsset.publicBalance()).toBe(1000n);
+      expect(await userAsset.publicBalance()).toBe(500n + withdrawValue);
       expect(userAsset.balance()).toBe(0n);
 
       await sdk.destroy();

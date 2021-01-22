@@ -30,17 +30,13 @@ export enum SdkInitState {
 
 export enum Action {
   APPROVE = 'APPROVE',
-  DEPOSIT = 'DEPOSIT',
-  TRANSFER = 'TRANSFER',
-  PUBLIC_TRANSFER = 'PUBLIC_TRANSFER',
-  WITHDRAW = 'WITHDRAW',
   MINT = 'MINT',
+  JOIN_SPLIT = 'JOIN_SPLIT',
   ACCOUNT = 'ACCOUNT',
 }
 
 export interface ActionState {
   action: Action;
-  value: bigint;
   sender: AccountId;
   created: Date;
   txHash?: TxHash;

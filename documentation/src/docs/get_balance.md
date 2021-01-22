@@ -3,11 +3,11 @@
 ```js
 import { AssetId } from '@aztec/sdk';
 
-async function demoGetBalance(aztecSdk, accountPublicKey) {
+async function demoGetBalance(aztecSdk, userId) {
   const assetId = AssetId.DAI;
-  const balance = aztecSdk.getBalance(assetId, accountPublicKey);
+  const balance = aztecSdk.getBalance(assetId, userId);
   console.info(`Balance: ${balance}`);
-  console.info('Balance in erc20 unit:', aztecSdk.fromErc20Units(assetId, balance));
+  console.info('Balance in base unit:', aztecSdk.fromBaseUnits(assetId, balance));
 }
 ```
 
@@ -18,12 +18,12 @@ Using a [UserAsset](/#/Types/WalletSdkUserAsset) object to get the balance of a 
 ```js
 import { AssetId } from '@aztec/sdk';
 
-async function demoGetBalance(aztecSdk, accountPublicKey) {
-  const user = aztecSdk.getUser(accountPublicKey);
+async function demoGetBalance(aztecSdk, userId) {
+  const user = aztecSdk.getUser(userId);
   const asset = user.getAsset(AssetId.DAI);
   const balance = asset.balance();
   console.info(`Balance: ${balance}`);
-  console.info('Balance in erc20 unit:', asset.fromErc20Units(balance));
+  console.info('Balance in base unit:', asset.fromBaseUnits(balance));
 }
 ```
 

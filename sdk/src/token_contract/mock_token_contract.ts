@@ -6,8 +6,18 @@ import { TokenContract } from '.';
 
 export class MockTokenContract implements TokenContract {
   private balances: { [key: string]: bigint } = {};
+  private name = randomBytes(32).toString();
+  private symbol = this.name.slice(0, 3).toUpperCase();
 
   async init() {}
+
+  getName() {
+    return this.name;
+  }
+
+  getSymbol() {
+    return this.symbol;
+  }
 
   getDecimals() {
     return 2;
@@ -37,16 +47,12 @@ export class MockTokenContract implements TokenContract {
     return TxHash.random();
   }
 
-  async name() {
-    return randomBytes(32).toString();
-  }
-
-  public fromErc20Units(value: bigint) {
+  public fromBaseUnits(value: bigint) {
     const decimals = this.getDecimals();
     return formatUnits(value.toString(), decimals);
   }
 
-  public toErc20Units(value: string) {
+  public toBaseUnits(value: string) {
     const decimals = this.getDecimals();
     return BigInt(parseUnits(value, decimals).toString());
   }

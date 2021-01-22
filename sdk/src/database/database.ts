@@ -3,13 +3,13 @@ import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { TxHash } from 'barretenberg/rollup_provider';
 import { Note } from '../note';
 import { AccountAliasId, UserData, AccountId } from '../user';
-import { UserTx } from '../user_tx';
+import { UserAccountTx, UserJoinSplitTx } from '../user_tx';
 
 export interface SigningKey {
   accountAliasId: AccountAliasId;
   address: GrumpkinAddress;
+  key: Buffer; // only contains x coordinate of a grumpkin address.
   treeIndex: number;
-  key: Buffer;
 }
 
 export interface Alias {
@@ -36,11 +36,16 @@ export interface Database {
   removeUser(userId: AccountId): Promise<void>;
   resetUsers(): Promise<void>;
 
-  getUserTx(userId: AccountId, txHash: TxHash): Promise<UserTx | undefined>;
-  getUserTxs(userId: AccountId): Promise<UserTx[]>;
-  getUserTxsByTxHash(txHash: TxHash): Promise<UserTx[]>;
-  addUserTx(userTx: UserTx): Promise<void>;
-  settleUserTx(userId: AccountId, txHash: TxHash): Promise<void>;
+  addJoinSplitTx(tx: UserJoinSplitTx): Promise<void>;
+  getJoinSplitTx(userId: AccountId, txHash: TxHash): Promise<UserJoinSplitTx | undefined>;
+  getJoinSplitTxs(userId): Promise<UserJoinSplitTx[]>;
+  getJoinSplitTxsByTxHash(txHash: TxHash): Promise<UserJoinSplitTx[]>;
+  settleJoinSplitTx(txHash: TxHash): Promise<void>;
+
+  addAccountTx(tx: UserAccountTx): Promise<void>;
+  getAccountTx(txHash: TxHash): Promise<UserAccountTx | undefined>;
+  getAccountTxs(userId): Promise<UserAccountTx[]>;
+  settleAccountTx(txHash: TxHash): Promise<void>;
 
   addUserSigningKey(signingKey: SigningKey): Promise<void>;
   getUserSigningKeys(accountAliasId: AccountAliasId): Promise<SigningKey[]>;

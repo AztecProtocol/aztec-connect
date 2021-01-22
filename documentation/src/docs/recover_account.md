@@ -42,9 +42,9 @@ async function demoRecoveryData(aztecSdk) {
   await aztecSdk.awaitSettlement(txHash);
   console.info('Account created!');
 
-  // add the newly created user with nonce = 1
-  const user1 = await aztecSdk.addUser(privacyKey, 1);
-  await user1.awaitSynchronised();
+  // get the newly created user with nonce = 1
+  const userId1 = new AccountId(accountPublicKey, 1);
+  const user1 = await aztecSdk.getUser(userId1);
 
   // recover the account
   console.info('Creating proof...');

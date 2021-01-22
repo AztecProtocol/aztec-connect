@@ -7,6 +7,7 @@ import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { WorldState } from 'barretenberg/world_state';
+import { Database } from '../../database';
 import { Signer } from '../../signer';
 import { AccountId, AccountAliasId } from '../../user';
 import { UserState } from '../../user_state';
@@ -17,6 +18,7 @@ export class JoinSplitTxFactory {
     private grumpkin: Grumpkin,
     private pedersen: Pedersen,
     private noteAlgos: NoteAlgorithms,
+    private db: Database,
   ) {}
 
   public async createJoinSplitTx(
@@ -24,7 +26,8 @@ export class JoinSplitTxFactory {
     publicInput: bigint,
     publicOutput: bigint,
     privateInput: bigint,
-    privateOutput: bigint,
+    recipientPrivateOutput: bigint,
+    senderPrivateOutput: bigint,
     assetId: AssetId,
     signer: Signer,
     receiver?: AccountId,
@@ -32,7 +35,6 @@ export class JoinSplitTxFactory {
     outputOwnerAddress?: EthAddress,
   ) {
     const max = (a: bigint, b: bigint) => (a > b ? a : b);
-    // const requiredInputNoteValue = max(BigInt(0), newNoteValue + publicOutput - publicInput + privateTxFee);
     const notes = privateInput ? await userState.pickNotes(assetId, privateInput) : [];
     if (!notes) {
       throw new Error(`Failed to find no more than 2 notes that sum to ${privateInput}.`);
@@ -45,8 +47,9 @@ export class JoinSplitTxFactory {
     const totalNoteInputValue = notes.reduce((sum, note) => sum + note.value, BigInt(0));
     const inputNoteIndices = notes.map(n => n.index);
     const inputNotes = notes.map(n => new Note(n.owner.publicKey, n.value, n.assetId, n.owner.nonce, n.secret));
+    const maxNoteIndex = Math.max(...inputNoteIndices, 0);
     for (let i = notes.length; i < 2; ++i) {
-      inputNoteIndices.push(i);
+      inputNoteIndices.push(maxNoteIndex + i); // notes can't have the same index
       inputNotes.push(
         Note.createFromEphPriv(
           sender.publicKey,
@@ -71,13 +74,20 @@ export class JoinSplitTxFactory {
     const outputNotes = [
       Note.createFromEphPriv(
         newNoteOwner.publicKey,
-        privateOutput,
+        recipientPrivateOutput,
         assetId,
         newNoteOwner.nonce,
         outputNote1EphKey,
         this.grumpkin,
       ),
-      Note.createFromEphPriv(sender.publicKey, changeValue, assetId, sender.nonce, outputNote2EphKey, this.grumpkin),
+      Note.createFromEphPriv(
+        sender.publicKey,
+        changeValue + senderPrivateOutput,
+        assetId,
+        sender.nonce,
+        outputNote2EphKey,
+        this.grumpkin,
+      ),
     ];
 
     const dataRoot = this.worldState.getRoot();
@@ -105,8 +115,13 @@ export class JoinSplitTxFactory {
 
     const signature = await signer.signMessage(message);
 
-    const accountIndex = 0;
-    const accountPath = await this.worldState.getHashPath(0);
+    const accountIndex =
+      accountAliasId.nonce !== 0 ? await this.db.getUserSigningKeyIndex(accountAliasId, signer.getPublicKey()) : 0;
+    if (accountIndex === undefined) {
+      throw new Error('Unknown signing key.');
+    }
+
+    const accountPath = await this.worldState.getHashPath(accountIndex);
     const signingPubKey = signer.getPublicKey();
 
     const tx = new JoinSplitTx(

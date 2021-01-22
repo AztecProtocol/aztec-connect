@@ -1,6 +1,6 @@
 import { Block } from '../block_source';
 import { EventEmitter } from 'events';
-import { ProofId } from '../client_proofs';
+import { assetIds } from '../client_proofs';
 import { ProofData } from '../client_proofs/proof_data';
 import { RollupProvider } from './rollup_provider';
 import { EthAddress } from '../address';
@@ -60,6 +60,11 @@ export class LocalRollupProvider extends EventEmitter implements RollupProvider 
   }
 
   async getStatus() {
+    const fees = new Map();
+    assetIds.forEach(assetId => {
+      fees.set(assetId, BigInt(0));
+    });
+
     return {
       serviceName: 'local',
       chainId: 0,
@@ -73,7 +78,7 @@ export class LocalRollupProvider extends EventEmitter implements RollupProvider 
       rootRoot: this.rootRoot,
       escapeOpen: false,
       numEscapeBlocksRemaining: 0,
-      fees: new Map(),
+      fees,
     };
   }
 

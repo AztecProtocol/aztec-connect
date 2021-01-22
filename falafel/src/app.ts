@@ -1,6 +1,6 @@
 import { ApolloServer } from 'apollo-server-koa';
 import { Block, BlockServerResponse, GetBlocksServerResponse } from 'barretenberg/block_source';
-import { assetIds, proofIds } from 'barretenberg/client_proofs';
+import { assetIds } from 'barretenberg/client_proofs';
 import {
   RollupServerResponse,
   TxServerResponse,
@@ -188,13 +188,9 @@ export function appFactory(
   router.get('/status', async (ctx: Koa.Context) => {
     const status = await server.getStatus();
     const { rollupContractAddress, tokenContractAddresses, dataRoot, nullRoot, rootRoot, fees } = status;
-    const feesResponse: string[][] = [];
+    const feesResponse: string[] = [];
     assetIds.forEach(assetId => {
-      const assetFees: string[] = [];
-      proofIds.forEach(proofId => {
-        assetFees[proofId] = fees.get(assetId)!.get(proofId)!.toString();
-      });
-      feesResponse[assetId] = assetFees;
+      feesResponse[assetId] = fees.get(assetId)!.toString();
     });
     const response: RollupProviderStatusServerResponse = {
       ...status,

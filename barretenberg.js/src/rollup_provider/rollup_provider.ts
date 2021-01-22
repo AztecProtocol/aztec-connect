@@ -1,6 +1,6 @@
 import { EthAddress } from '../address';
 import { BlockSource } from '../block_source';
-import { AssetId, ProofId } from '../client_proofs';
+import { AssetId } from '../client_proofs';
 import { TxHash } from './tx_hash';
 
 export interface Proof {
@@ -22,7 +22,7 @@ export interface RollupProviderStatus {
   rootRoot: Buffer;
   escapeOpen: boolean;
   numEscapeBlocksRemaining: number;
-  fees: Map<AssetId, Map<ProofId, bigint>>;
+  fees: Map<AssetId, bigint>;
 }
 
 export interface RollupProvider extends BlockSource {

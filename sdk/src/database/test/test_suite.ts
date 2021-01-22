@@ -4,9 +4,17 @@ import { TxHash } from 'barretenberg/rollup_provider';
 import { randomBytes } from 'crypto';
 import { Note } from '../../note';
 import { AccountAliasId, UserData, AccountId } from '../../user';
-import { UserTx } from '../../user_tx';
+import { UserAccountTx, UserJoinSplitTx } from '../../user_tx';
 import { Database, SigningKey } from '../database';
-import { randomAccountAliasId, randomAlias, randomNote, randomSigningKey, randomUser, randomUserTx } from './fixtures';
+import {
+  randomAccountAliasId,
+  randomAlias,
+  randomNote,
+  randomSigningKey,
+  randomUser,
+  randomUserAccountTx,
+  randomUserJoinSplitTx,
+} from './fixtures';
 
 const sort = (arr: any[], sortBy: string) => arr.sort((a, b) => (a[sortBy] < b[sortBy] ? -1 : 1));
 
@@ -129,86 +137,156 @@ export const databaseTestSuite = (
       });
     });
 
-    describe('UserTx', () => {
-      it('add user tx to db and get it by user id and tx hash', async () => {
-        const userTx = randomUserTx();
-        await db.addUserTx(userTx);
+    describe('JoinSplitTx', () => {
+      it('add join split tx to db and get it by user id and tx hash', async () => {
+        const tx = randomUserJoinSplitTx();
+        await db.addJoinSplitTx(tx);
 
         const newUserId = AccountId.random();
-        const sharedUserTx = { ...userTx, userId: newUserId };
-        await db.addUserTx(sharedUserTx);
+        const sharedTx = { ...tx, userId: newUserId };
+        await db.addJoinSplitTx(sharedTx);
 
-        const savedUserTx = await db.getUserTx(userTx.userId, userTx.txHash);
-        expect(savedUserTx).toEqual(userTx);
+        const savedTx = await db.getJoinSplitTx(tx.userId, tx.txHash);
+        expect(savedTx).toEqual(tx);
 
-        const newUserTx = await db.getUserTx(newUserId, userTx.txHash);
-        expect(newUserTx).toEqual(sharedUserTx);
+        const newTx = await db.getJoinSplitTx(newUserId, tx.txHash);
+        expect(newTx).toEqual(sharedTx);
       });
 
       it('will override old data if try to add a user tx with the same user id and tx hash combination', async () => {
-        const userTx = randomUserTx();
-        await db.addUserTx(userTx);
+        const tx = randomUserJoinSplitTx();
+        await db.addJoinSplitTx(tx);
 
-        const newUserTx = randomUserTx();
-        newUserTx.userId = userTx.userId;
-        newUserTx.txHash = userTx.txHash;
-        await db.addUserTx(newUserTx);
+        const newTx = randomUserJoinSplitTx();
+        newTx.userId = tx.userId;
+        newTx.txHash = tx.txHash;
+        await db.addJoinSplitTx(newTx);
 
-        const savedUserTx = await db.getUserTx(userTx.userId, userTx.txHash);
-        expect(savedUserTx).toEqual(newUserTx);
+        const savedTx = await db.getJoinSplitTx(tx.userId, tx.txHash);
+        expect(savedTx).toEqual(newTx);
       });
 
-      it('settle a user tx with specified user id and tx hash', async () => {
-        const userTx = randomUserTx();
+      it('settle all user txs with the same tx hash', async () => {
+        const tx = randomUserJoinSplitTx();
 
         const userId0 = AccountId.random();
-        await db.addUserTx({ ...userTx, userId: userId0 });
+        await db.addJoinSplitTx({ ...tx, userId: userId0 });
 
         const userId1 = AccountId.random();
-        await db.addUserTx({ ...userTx, userId: userId1 });
+        await db.addJoinSplitTx({ ...tx, userId: userId1 });
 
-        await db.settleUserTx(userId0, userTx.txHash);
+        await db.settleJoinSplitTx(tx.txHash);
 
-        const userTx0 = await db.getUserTx(userId0, userTx.txHash);
-        expect(userTx0!.settled).toBe(true);
+        const tx0 = await db.getJoinSplitTx(userId0, tx.txHash);
+        expect(tx0!.settled).toBe(true);
 
-        const userTx1 = await db.getUserTx(userId1, userTx.txHash);
-        expect(userTx1!.settled).toBe(false);
+        const tx1 = await db.getJoinSplitTx(userId1, tx.txHash);
+        expect(tx1!.settled).toBe(true);
+      });
+
+      it('get all txs for a user from newest to oldest', async () => {
+        const userId0 = AccountId.random();
+        const userId1 = AccountId.random();
+        const txs0: UserJoinSplitTx[] = [];
+        const txs1: UserJoinSplitTx[] = [];
+        const now = Date.now();
+        for (let i = 0; i < 5; ++i) {
+          const tx0 = randomUserJoinSplitTx();
+          tx0.userId = userId0;
+          tx0.created = new Date(now + i);
+          await db.addJoinSplitTx(tx0);
+          txs0.push(tx0);
+
+          const tx1 = randomUserJoinSplitTx();
+          tx1.userId = userId1;
+          tx1.created = new Date(now - i);
+          await db.addJoinSplitTx(tx1);
+          txs1.push(tx1);
+        }
+
+        const savedTxs0 = await db.getJoinSplitTxs(userId0);
+        expect(savedTxs0).toEqual(txs0.reverse());
+
+        const savedTxs1 = await db.getJoinSplitTxs(userId1);
+        expect(savedTxs1).toEqual(txs1);
+      });
+
+      it('get all txs with the same tx hash', async () => {
+        const txs: UserJoinSplitTx[] = [];
+        const txHash = TxHash.random();
+        for (let i = 0; i < 5; ++i) {
+          const tx = randomUserJoinSplitTx();
+          tx.txHash = txHash;
+          await db.addJoinSplitTx(tx);
+          txs.push(tx);
+        }
+        for (let i = 0; i < 3; ++i) {
+          const tx = randomUserJoinSplitTx();
+          await db.addJoinSplitTx(tx);
+        }
+
+        const savedTxs = await db.getJoinSplitTxsByTxHash(txHash);
+        expect(savedTxs.length).toEqual(txs.length);
+        expect(savedTxs).toEqual(expect.arrayContaining(txs));
+      });
+    });
+
+    describe('AccountTx', () => {
+      it('add account tx to db and get it by tx hash', async () => {
+        const tx0 = randomUserAccountTx();
+        await db.addAccountTx(tx0);
+
+        const tx1 = randomUserAccountTx();
+        await db.addAccountTx(tx1);
+
+        expect(await db.getAccountTx(tx0.txHash)).toEqual(tx0);
+        expect(await db.getAccountTx(tx1.txHash)).toEqual(tx1);
+      });
+
+      it('will override old data if try to add an account tx with existing tx hash', async () => {
+        const tx = randomUserAccountTx();
+        await db.addAccountTx(tx);
+
+        const newTx = randomUserAccountTx();
+        newTx.txHash = tx.txHash;
+        await db.addAccountTx(newTx);
+
+        const savedTx = await db.getAccountTx(tx.txHash);
+        expect(savedTx).toEqual(newTx);
+      });
+
+      it('settle an account tx with a specific tx hash', async () => {
+        const tx0 = randomUserAccountTx();
+        const tx1 = randomUserAccountTx();
+        await db.addAccountTx(tx0);
+        await db.addAccountTx(tx1);
+
+        await db.settleAccountTx(tx1.txHash);
+
+        const savedTx0 = await db.getAccountTx(tx0.txHash);
+        expect(savedTx0!.settled).toBe(false);
+
+        const savedTx1 = await db.getAccountTx(tx1.txHash);
+        expect(savedTx1!.settled).toBe(true);
       });
 
       it('get all txs for a user from newest to oldest', async () => {
         const userId = AccountId.random();
-        const userTxs: UserTx[] = [];
+        const txs: UserAccountTx[] = [];
         const now = Date.now();
         for (let i = 0; i < 5; ++i) {
-          const userTx = randomUserTx();
-          userTx.userId = userId;
-          userTx.created = new Date(now + i);
-          await db.addUserTx(userTx);
-          userTxs.push(userTx);
+          const tx = randomUserAccountTx();
+          tx.userId = userId;
+          tx.created = new Date(now + i);
+          await db.addAccountTx(tx);
+          txs.push(tx);
+
+          const tx2 = randomUserAccountTx();
+          await db.addAccountTx(tx2);
         }
 
-        const savedUserTxs = await db.getUserTxs(userId);
-        expect(savedUserTxs).toEqual(userTxs.reverse());
-      });
-
-      it('get all txs with the same tx hash', async () => {
-        const userTxs: UserTx[] = [];
-        const txHash = TxHash.random();
-        for (let i = 0; i < 5; ++i) {
-          const userTx = randomUserTx();
-          userTx.txHash = txHash;
-          await db.addUserTx(userTx);
-          userTxs.push(userTx);
-        }
-        for (let i = 0; i < 3; ++i) {
-          const userTx = randomUserTx();
-          await db.addUserTx(userTx);
-        }
-
-        const savedUserTxs = await db.getUserTxsByTxHash(txHash);
-        expect(savedUserTxs.length).toEqual(userTxs.length);
-        expect(savedUserTxs).toEqual(expect.arrayContaining(userTxs));
+        const savedTxs = await db.getAccountTxs(userId);
+        expect(savedTxs).toEqual(txs.reverse());
       });
     });
 
@@ -229,6 +307,27 @@ export const databaseTestSuite = (
 
         const savedUserKeys = await db.getUserSigningKeys(accountAliasId);
         expect(sort(savedUserKeys, 'key')).toEqual(sort(userKeys, 'key'));
+      });
+
+      it('override the existing data when adding signing keys with the same accountAliasId and key', async () => {
+        const accountAliasId = randomAccountAliasId();
+        const key1 = randomSigningKey();
+        key1.accountAliasId = accountAliasId;
+
+        await db.addUserSigningKey(key1);
+        expect(await db.getUserSigningKeys(accountAliasId)).toEqual([key1]);
+
+        const key2 = { ...key1, treeIndex: key1.treeIndex + 1 };
+        await db.addUserSigningKey(key2);
+        expect(await db.getUserSigningKeys(accountAliasId)).toEqual([key2]);
+
+        const key3 = { ...key1, accountAliasId: randomAccountAliasId() };
+        await db.addUserSigningKey(key3);
+        expect(await db.getUserSigningKeys(accountAliasId)).toEqual([key2]);
+
+        const key4 = { ...key1, key: randomBytes(32) };
+        await db.addUserSigningKey(key4);
+        expect(sort(await db.getUserSigningKeys(accountAliasId), 'key')).toEqual(sort([key2, key4], 'key'));
       });
 
       it('remove all signing keys of given account id', async () => {
@@ -418,11 +517,11 @@ export const databaseTestSuite = (
           signingKey.address = user.publicKey;
           await db.addUserSigningKey(signingKey);
 
-          const userTx = randomUserTx();
-          userTx.userId = user.id;
-          await db.addUserTx(userTx);
+          const tx = randomUserJoinSplitTx();
+          tx.userId = user.id;
+          await db.addJoinSplitTx(tx);
 
-          return { user, note, signingKey, userTx };
+          return { user, note, signingKey, tx };
         };
 
         const profile0 = await generateUserProfile();
@@ -432,11 +531,11 @@ export const databaseTestSuite = (
 
         expect(await db.getNote(profile0.note.index)).toBeUndefined();
         expect(await db.getUserSigningKeys(profile0.signingKey.accountAliasId)).toEqual([]);
-        expect(await db.getUserTxs(profile0.userTx.userId)).toEqual([]);
+        expect(await db.getJoinSplitTxs(profile0.tx.userId)).toEqual([]);
 
         expect(await db.getNote(profile1.note.index)).toEqual(profile1.note);
         expect(await db.getUserSigningKeys(profile1.signingKey.accountAliasId)).toEqual([profile1.signingKey]);
-        expect(await db.getUserTxs(profile1.userTx.userId)).toEqual([profile1.userTx]);
+        expect(await db.getJoinSplitTxs(profile1.tx.userId)).toEqual([profile1.tx]);
       });
 
       it('can reset user related data', async () => {
@@ -457,15 +556,15 @@ export const databaseTestSuite = (
         const fullKey = new GrumpkinAddress(Buffer.concat([signingKey.key, randomBytes(32)]));
         await db.addUserSigningKey(signingKey);
 
-        const userTx = randomUserTx();
-        await db.addUserTx(userTx);
+        const tx = randomUserJoinSplitTx();
+        await db.addJoinSplitTx(tx);
 
         await db.resetUsers();
 
         expect(await db.getAliases(alias.aliasHash)).toEqual([]);
         expect(await db.getNote(note.index)).toBeUndefined();
         expect(await db.getUserSigningKeyIndex(signingKey.accountAliasId, fullKey)).toBeUndefined();
-        expect(await db.getUserTx(userTx.userId, userTx.txHash)).toBeUndefined();
+        expect(await db.getJoinSplitTx(tx.userId, tx.txHash)).toBeUndefined();
 
         expect(await db.getUser(user.id)).toEqual({
           ...user,
@@ -493,8 +592,8 @@ export const databaseTestSuite = (
         const fullKey = new GrumpkinAddress(Buffer.concat([signingKey.key, randomBytes(32)]));
         await db.addUserSigningKey(signingKey);
 
-        const userTx = randomUserTx();
-        await db.addUserTx(userTx);
+        const tx = randomUserJoinSplitTx();
+        await db.addJoinSplitTx(tx);
 
         await db.clear();
 
@@ -503,7 +602,7 @@ export const databaseTestSuite = (
         expect(await db.getUser(user.id)).toBeUndefined();
         expect(await db.getKey(keyName)).toBeUndefined();
         expect(await db.getUserSigningKeyIndex(signingKey.accountAliasId, fullKey)).toBeUndefined();
-        expect(await db.getUserTx(userTx.userId, userTx.txHash)).toBeUndefined();
+        expect(await db.getJoinSplitTx(tx.userId, tx.txHash)).toBeUndefined();
       });
     });
   });

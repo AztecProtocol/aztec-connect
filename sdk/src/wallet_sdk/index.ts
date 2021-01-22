@@ -1,6 +1,6 @@
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { AssetId, ProofId } from 'barretenberg/client_proofs';
+import { AssetId } from 'barretenberg/client_proofs';
 import { getProviderStatus, Rollup, Tx, TxHash } from 'barretenberg/rollup_provider';
 import { PermitArgs } from 'blockchain';
 import { EthereumBlockchain } from 'blockchain/ethereum_blockchain';
@@ -16,6 +16,7 @@ import { EthereumSigner, RecoverSignatureSigner, Signer } from '../signer';
 import { MockTokenContract, TokenContract, Web3TokenContract } from '../token_contract';
 import { RecoveryData, RecoveryPayload, AccountId, AccountAliasId } from '../user';
 import { WalletSdkUser } from './wallet_sdk_user';
+import { fromBaseUnits, toBaseUnits } from './units';
 
 export * from './wallet_sdk_user';
 export * from './wallet_sdk_user_asset';
@@ -113,7 +114,7 @@ export class WalletSdk extends EventEmitter {
     return this.core.awaitUserSynchronised(userId);
   }
 
-  public async awaitSettlement(txHash: TxHash, timeout = 120) {
+  public async awaitSettlement(txHash: TxHash, timeout?: number) {
     return this.core.awaitSettlement(txHash, timeout);
   }
 
@@ -127,6 +128,10 @@ export class WalletSdk extends EventEmitter {
 
   public async getRemoteStatus() {
     return this.core.getRemoteStatus();
+  }
+
+  public async getFee(assetId: AssetId) {
+    return this.core.getFee(assetId);
   }
 
   public getTokenContract(assetId: AssetId) {
@@ -180,172 +185,102 @@ export class WalletSdk extends EventEmitter {
   }
 
   public async approve(assetId: AssetId, userId: AccountId, value: bigint, account: EthAddress) {
-    const action = () => this.getTokenContract(assetId).approve(value, account);
-    const txHash = await this.performAction(Action.APPROVE, value, userId, action);
+    const txHash = await this.performAction(Action.APPROVE, userId, async () =>
+      this.getTokenContract(assetId).approve(value, account),
+    );
     this.emit(SdkEvent.UPDATED_USER_STATE, userId);
     return txHash;
   }
 
   public async mint(assetId: AssetId, userId: AccountId, value: bigint, account: EthAddress) {
-    const action = () => this.getTokenContract(assetId).mint(value, account);
-    const txHash = await this.performAction(Action.MINT, value, userId, action);
+    const txHash = await this.performAction(Action.MINT, userId, async () =>
+      this.getTokenContract(assetId).mint(value, account),
+    );
     this.emit(SdkEvent.UPDATED_USER_STATE, userId);
     return txHash;
   }
 
-  public async deposit(
+  async deposit(
     assetId: AssetId,
     userId: AccountId,
     value: bigint,
+    fee: bigint,
     signer: Signer,
     ethSigner: EthereumSigner,
     permitArgs?: PermitArgs,
-    to?: AccountId,
-    options?: JoinSplitTxOptions,
   ) {
-    const recipient = to || userId;
-    const { publicTxFee, privateTxFee } = await this.getTxFeeFromOptions(options);
-    const publicInput = value + publicTxFee;
-    const privateInput = privateTxFee;
+    return this.joinSplit(assetId, userId, value + fee, BigInt(0), BigInt(0), BigInt(0), value, signer, {
+      ethSigner,
+      permitArgs,
+    });
+  }
 
-    const action = async () => {
-      await this.depositFundsToContract(assetId, userId, ethSigner.getAddress(), publicInput, permitArgs);
+  async withdraw(assetId: AssetId, userId: AccountId, value: bigint, fee: bigint, signer: Signer, to: EthAddress) {
+    return this.joinSplit(assetId, userId, BigInt(0), value, value + fee, BigInt(0), BigInt(0), signer, {
+      outputOwner: to,
+    });
+  }
 
-      this.emit(SdkEvent.LOG, 'Creating deposit proof...');
-      return this.core.createProof(
-        assetId,
-        userId,
-        'DEPOSIT',
-        value,
-        signer,
-        ethSigner,
-        recipient,
-        undefined,
-        publicTxFee,
-        privateTxFee,
-      );
-    };
+  async transfer(assetId: AssetId, userId: AccountId, value: bigint, fee: bigint, signer: Signer, to: AccountId) {
+    return this.joinSplit(assetId, userId, BigInt(0), BigInt(0), value + fee, value, BigInt(0), signer, {
+      outputNoteOwner: to,
+    });
+  }
 
-    const validation = async () => {
-      if (publicTxFee && assetId !== AssetId.ETH) {
-        throw new Error('Fee is currently only payable in ETH.');
+  public async joinSplit(
+    assetId: AssetId,
+    userId: AccountId,
+    publicInput: bigint,
+    publicOutput: bigint,
+    privateInput: bigint,
+    recipientPrivateOutput: bigint,
+    senderPrivateOutput: bigint,
+    signer: Signer,
+    options: JoinSplitTxOptions = {},
+  ) {
+    return this.performAction(Action.JOIN_SPLIT, userId, async () => {
+      const { permitArgs, ethSigner, outputOwner, outputNoteOwner } = options;
+
+      if (publicOutput + recipientPrivateOutput + senderPrivateOutput > publicInput + privateInput) {
+        throw new Error('Total output cannot be larger than total input.');
       }
 
-      if (options?.feePayer && options.feePayer.getAddress() !== ethSigner.getAddress()) {
-        throw new Error('Fee payer must be the depositor.');
-      }
+      if (publicInput) {
+        if (!ethSigner) {
+          throw new Error('Eth signer not defined.');
+        }
 
-      const isPermit = !!permitArgs;
-      await this.checkPublicBalanceAndApproval(assetId, publicInput, ethSigner.getAddress(), isPermit);
+        await this.checkPublicBalanceAndApproval(assetId, publicInput, ethSigner.getAddress(), permitArgs);
+      }
 
       if (privateInput) {
         await this.checkNoteBalance(assetId, userId, privateInput);
       }
-    };
 
-    return this.performAction(Action.DEPOSIT, value, userId, action, validation);
-  }
-
-  public async withdraw(
-    assetId: AssetId,
-    userId: AccountId,
-    value: bigint,
-    signer: Signer,
-    to: EthAddress,
-    options?: JoinSplitTxOptions,
-  ) {
-    const { publicTxFee, privateTxFee } = await this.getTxFeeFromOptions(options);
-    const { feePayer, permitArgs } = options || {};
-    const publicInput = publicTxFee;
-    const privateInput = value + privateTxFee;
-
-    const action = async () => {
-      if (publicInput) {
-        await this.depositFundsToContract(assetId, userId, feePayer!.getAddress(), publicInput, permitArgs);
+      if (publicOutput) {
+        if (!ethSigner && !outputOwner) {
+          throw new Error('Output owner not defined.');
+        }
       }
 
-      return this.core.createProof(
+      if (publicInput) {
+        await this.depositFundsToContract(assetId, userId, ethSigner!.getAddress(), publicInput, permitArgs);
+      }
+
+      return this.core.createJoinSplitProof(
         assetId,
         userId,
-        'WITHDRAW',
-        value,
+        publicInput,
+        publicOutput,
+        privateInput,
+        recipientPrivateOutput,
+        senderPrivateOutput,
         signer,
-        feePayer,
-        undefined,
-        to,
-        publicTxFee,
-        privateTxFee,
+        ethSigner,
+        outputNoteOwner || userId,
+        outputOwner || ethSigner?.getAddress(),
       );
-    };
-
-    const validation = async () => {
-      await this.checkNoteBalance(assetId, userId, privateInput);
-
-      if (publicInput) {
-        if (assetId !== AssetId.ETH) {
-          throw new Error('Fee is currently only payable in ETH.');
-        }
-
-        if (!feePayer) {
-          throw new Error('Fee payer not specified.');
-        }
-
-        await this.checkPublicBalanceAndApproval(assetId, publicInput, feePayer.getAddress(), false);
-      }
-    };
-
-    return this.performAction(Action.WITHDRAW, value, userId, action, validation);
-  }
-
-  public async transfer(
-    assetId: AssetId,
-    userId: AccountId,
-    value: bigint,
-    signer: Signer,
-    to: AccountId,
-    options?: JoinSplitTxOptions,
-  ) {
-    const { publicTxFee, privateTxFee } = await this.getTxFeeFromOptions(options);
-    const { feePayer, permitArgs } = options || {};
-    const publicInput = publicTxFee;
-    const privateInput = value + privateTxFee;
-
-    const action = async () => {
-      if (publicInput) {
-        await this.depositFundsToContract(assetId, userId, feePayer!.getAddress(), publicInput, permitArgs);
-      }
-
-      return this.core.createProof(
-        assetId,
-        userId,
-        'TRANSFER',
-        value,
-        signer,
-        feePayer,
-        to,
-        undefined,
-        publicTxFee,
-        privateTxFee,
-      );
-    };
-
-    const validation = async () => {
-      await this.checkNoteBalance(assetId, userId, privateInput);
-
-      if (publicInput) {
-        if (assetId !== AssetId.ETH) {
-          throw new Error('Fee is currently only payable in ETH.');
-        }
-
-        if (!feePayer) {
-          throw new Error('Fee payer not specified.');
-        }
-
-        await this.checkPublicBalanceAndApproval(assetId, publicInput, feePayer.getAddress(), false);
-      }
-    };
-
-    return this.performAction(Action.TRANSFER, value, userId, action, validation);
+    });
   }
 
   private async depositFundsToContract(
@@ -364,19 +299,12 @@ export class WalletSdk extends EventEmitter {
     }
   }
 
-  private async getTxFeeFromOptions(options?: JoinSplitTxOptions) {
-    const { txFee, payTxFeeByPrivateAsset } = options || {};
-    const { fees } = await this.getRemoteStatus();
-    const assetFees = fees.get(AssetId.ETH);
-    const fee = txFee !== undefined ? txFee : (assetFees && assetFees.get(ProofId.JOIN_SPLIT)) || BigInt(0);
-    const [publicTxFee, privateTxFee] = payTxFeeByPrivateAsset ? [BigInt(0), fee] : [fee, BigInt(0)];
-    return {
-      publicTxFee,
-      privateTxFee,
-    };
-  }
-
-  private async checkPublicBalanceAndApproval(assetId: AssetId, value: bigint, from: EthAddress, isPermit: boolean) {
+  private async checkPublicBalanceAndApproval(
+    assetId: AssetId,
+    value: bigint,
+    from: EthAddress,
+    permitArgs?: PermitArgs,
+  ) {
     if (assetId === AssetId.ETH) {
       const ethBalance = await this.blockchain.getEthBalance(from);
       if (ethBalance < value) {
@@ -387,12 +315,17 @@ export class WalletSdk extends EventEmitter {
       const tokenBalance = await tokenContract.balanceOf(from);
       const pendingTokenBalance = await this.blockchain.getUserPendingDeposit(assetId, from);
       if (tokenBalance + pendingTokenBalance < value) {
-        throw new Error(`Insufficient public token balance: ${tokenContract.fromErc20Units(tokenBalance)}`);
+        throw new Error(`Insufficient public token balance: ${tokenContract.fromBaseUnits(tokenBalance)}`);
       }
-      if (!isPermit) {
+      if (permitArgs) {
+        const supportPermit = await this.getAssetPermitSupport(assetId);
+        if (!supportPermit) {
+          throw new Error(`Asset does not support permit.`);
+        }
+      } else {
         const allowance = await tokenContract.allowance(from);
         if (allowance < value) {
-          throw new Error(`Insufficient allowance: ${tokenContract.fromErc20Units(allowance)}`);
+          throw new Error(`Insufficient allowance: ${tokenContract.fromBaseUnits(allowance)}`);
         }
       }
     }
@@ -411,9 +344,9 @@ export class WalletSdk extends EventEmitter {
 
     const maxTxValue = await userState.getMaxSpendableValue(assetId);
     if (value > maxTxValue) {
-      const messages = [`Failed to find 2 notes that sum to ${this.fromErc20Units(assetId, value)}.`];
+      const messages = [`Failed to find 2 notes that sum to ${this.fromBaseUnits(assetId, value)}.`];
       if (maxTxValue) {
-        messages.push(`Please make a transaction no more than ${this.fromErc20Units(assetId, maxTxValue)}.`);
+        messages.push(`Please make a transaction no more than ${this.fromBaseUnits(assetId, maxTxValue)}.`);
       } else {
         messages.push('Please wait for pending transactions to settle.');
       }
@@ -456,32 +389,21 @@ export class WalletSdk extends EventEmitter {
     newSigningPublicKey: GrumpkinAddress,
     recoveryPublicKey?: GrumpkinAddress,
   ) {
-    const user = this.getUserData(userId);
-    if (user.nonce > 0) {
-      throw new Error('User already registered.');
-    }
+    return this.performAction(Action.ACCOUNT, userId, async () => {
+      const user = this.getUserData(userId);
+      if (user.nonce > 0) {
+        throw new Error('User already registered.');
+      }
 
-    if (!(await this.isAliasAvailable(alias))) {
-      throw new Error('Alias already registered.');
-    }
+      if (!(await this.isAliasAvailable(alias))) {
+        throw new Error('Alias already registered.');
+      }
 
-    const action = async () => {
       const signer = this.core.createSchnorrSigner(user.privateKey);
       const aliasHash = this.core.computeAliasHash(alias);
 
-      return this.core.createAccountProof(
-        user.id,
-        signer,
-        aliasHash,
-        0,
-        true,
-        undefined,
-        newSigningPublicKey,
-        recoveryPublicKey,
-      );
-    };
-
-    return this.performAction(Action.ACCOUNT, BigInt(0), userId, action);
+      return this.core.createAccountProof(user.id, signer, aliasHash, 0, true, newSigningPublicKey, recoveryPublicKey);
+    });
   }
 
   public async recoverAccount(recoveryPayload: RecoveryPayload) {
@@ -493,9 +415,10 @@ export class WalletSdk extends EventEmitter {
     }
 
     const userId = this.getUserId(publicKey, accountAliasId.nonce);
-    const recoverySigner = new RecoverSignatureSigner(recoveryPublicKey, signature);
-
-    return this.addSigningKeys(userId, recoverySigner, trustedThirdPartyPublicKey);
+    return this.performAction(Action.ACCOUNT, userId, async () => {
+      const recoverySigner = new RecoverSignatureSigner(recoveryPublicKey, signature);
+      return this.addSigningKeys(userId, recoverySigner, trustedThirdPartyPublicKey);
+    });
   }
 
   public async migrateAccount(
@@ -503,27 +426,25 @@ export class WalletSdk extends EventEmitter {
     signer: Signer,
     newSigningPublicKey: GrumpkinAddress,
     recoveryPublicKey?: GrumpkinAddress,
-    newAccountPublicKey?: GrumpkinAddress,
+    newAccountPrivateKey?: Buffer,
   ) {
-    const user = this.getUserData(userId);
-    if (!user.aliasHash) {
-      throw new Error('User not registered.');
-    }
+    return this.performAction(Action.ACCOUNT, userId, async () => {
+      const user = this.getUserData(userId);
+      if (!user.aliasHash) {
+        throw new Error('User not registered.');
+      }
 
-    const action = async () => {
       return this.core.createAccountProof(
         user.id,
         signer,
         user.aliasHash!,
         user.nonce,
         true,
-        newAccountPublicKey,
         newSigningPublicKey,
         recoveryPublicKey,
+        newAccountPrivateKey,
       );
-    };
-
-    return this.performAction(Action.ACCOUNT, BigInt(0), userId, action);
+    });
   }
 
   public async addSigningKeys(
@@ -532,25 +453,22 @@ export class WalletSdk extends EventEmitter {
     signingPublicKey1: GrumpkinAddress,
     signingPublicKey2?: GrumpkinAddress,
   ) {
-    const user = this.getUserData(userId);
-    if (!user.aliasHash) {
-      throw new Error('User not registered.');
-    }
+    return this.performAction(Action.ACCOUNT, userId, async () => {
+      const user = this.getUserData(userId);
+      if (!user.aliasHash) {
+        throw new Error('User not registered.');
+      }
 
-    const action = async () => {
       return this.core.createAccountProof(
         user.id,
         signer,
         user.aliasHash!,
         user.nonce,
         false,
-        undefined,
         signingPublicKey1,
         signingPublicKey2,
       );
-    };
-
-    return this.performAction(Action.ACCOUNT, BigInt(0), userId, action);
+    });
   }
 
   public async getSigningKeys(userId: AccountId) {
@@ -599,12 +517,44 @@ export class WalletSdk extends EventEmitter {
     return this.getTokenContract(assetId).allowance(ethAddress);
   }
 
-  public fromErc20Units(assetId: AssetId, value: bigint, precision?: number) {
-    return this.getTokenContract(assetId).fromErc20Units(value, precision);
+  public fromBaseUnits(assetId: AssetId, value: bigint, precision?: number) {
+    if (assetId === AssetId.ETH) {
+      return fromBaseUnits(value, 18, precision !== undefined ? precision : 8);
+    }
+    return this.getTokenContract(assetId).fromBaseUnits(value, precision);
   }
 
-  public toErc20Units(assetId: AssetId, value: string) {
-    return this.getTokenContract(assetId).toErc20Units(value);
+  public toBaseUnits(assetId: AssetId, value: string) {
+    if (assetId === AssetId.ETH) {
+      return toBaseUnits(value, 18);
+    }
+    return this.getTokenContract(assetId).toBaseUnits(value);
+  }
+
+  public getAssetName(assetId: AssetId) {
+    if (assetId === AssetId.ETH) {
+      return 'Eth';
+    }
+    return this.getTokenContract(assetId).getName();
+  }
+
+  public getAssetSymbol(assetId: AssetId) {
+    if (assetId === AssetId.ETH) {
+      return 'ETH';
+    }
+    return this.getTokenContract(assetId).getSymbol();
+  }
+
+  public async getJoinSplitTxs(userId: AccountId) {
+    return this.core.getJoinSplitTxs(userId);
+  }
+
+  public async getAccountTxs(userId: AccountId) {
+    return this.core.getAccountTxs(userId);
+  }
+
+  public async getNotes(userId: AccountId) {
+    return this.core.getNotes(userId);
   }
 
   public async getLatestRollups(count: number) {
@@ -621,10 +571,6 @@ export class WalletSdk extends EventEmitter {
 
   public async getTx(txHash: TxHash) {
     return this.core.getTx(txHash);
-  }
-
-  public async getUserTxs(userId: AccountId) {
-    return this.core.getUserTxs(userId);
   }
 
   public startTrackingGlobalState() {
@@ -655,22 +601,19 @@ export class WalletSdk extends EventEmitter {
     return this.core.getAccountId(user, nonce);
   }
 
-  private async performAction(
-    action: Action,
-    value: bigint,
-    userId: AccountId,
-    fn: () => Promise<TxHash>,
-    validation = async () => {},
-  ) {
+  private async performAction(action: Action, userId: AccountId, fn: () => Promise<TxHash>) {
+    // Make sure there's only one action running at a time.
+    while (this.actionState && !this.actionState.txHash && !this.actionState.error) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
     this.actionState = {
       action,
-      value,
       sender: userId,
       created: new Date(),
     };
     this.emit(SdkEvent.UPDATED_ACTION_STATE, { ...this.actionState });
     try {
-      await validation();
       this.actionState.txHash = await fn();
     } catch (err) {
       this.actionState.error = err;

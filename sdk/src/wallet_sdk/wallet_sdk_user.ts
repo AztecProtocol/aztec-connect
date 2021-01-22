@@ -24,9 +24,9 @@ export class WalletSdkUser {
     signer: Signer,
     newSigningPublicKey: GrumpkinAddress,
     recoveryPublicKey?: GrumpkinAddress,
-    newAccountPublicKey?: GrumpkinAddress,
+    newAccountPrivateKey?: Buffer,
   ) {
-    this.sdk.migrateAccount(this.id, signer, newSigningPublicKey, recoveryPublicKey, newAccountPublicKey);
+    this.sdk.migrateAccount(this.id, signer, newSigningPublicKey, recoveryPublicKey, newAccountPrivateKey);
   }
 
   public async addSigningKeys(signer: Signer, signingPublicKey1: GrumpkinAddress, signingPublicKey2?: GrumpkinAddress) {
@@ -41,8 +41,16 @@ export class WalletSdkUser {
     return this.sdk.getUserData(this.id);
   }
 
-  getTxs() {
-    return this.sdk.getUserTxs(this.id);
+  public async getJoinSplitTxs() {
+    return this.sdk.getJoinSplitTxs(this.id);
+  }
+
+  public async getAccountTxs() {
+    return this.sdk.getAccountTxs(this.id);
+  }
+
+  public async getNotes() {
+    return this.sdk.getNotes(this.id);
   }
 
   getAsset(assetId: AssetId) {

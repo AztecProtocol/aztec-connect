@@ -42,8 +42,16 @@ export class EthereumSdkUser {
     return this.sdk.getUserData(this.ethUserId);
   }
 
-  getTxs() {
-    return this.sdk.getUserTxs(this.ethUserId);
+  public async getJoinSplitTxs() {
+    return this.sdk.getJoinSplitTxs(this.ethUserId);
+  }
+
+  public async getAccountTxs() {
+    return this.sdk.getAccountTxs(this.ethUserId);
+  }
+
+  public async getNotes() {
+    return this.sdk.getNotes(this.ethUserId);
   }
 
   getAsset(assetId: AssetId) {

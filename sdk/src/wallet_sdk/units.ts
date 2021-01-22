@@ -6,7 +6,7 @@
  * @param decimals the number of least significant digits of value that represent the decimal
  * @param precision the number of decimal places to return
  */
-export function fromErc20Units(value: bigint, decimals: number, precision: number = decimals) {
+export function fromBaseUnits(value: bigint, decimals: number, precision: number = decimals) {
   const neg = value < BigInt(0);
   const valStr = value
     .toString()
@@ -18,11 +18,11 @@ export function fromErc20Units(value: bigint, decimals: number, precision: numbe
 }
 
 /**
- * Converts the value from a decimal string to bigint token value.
+ * Converts the value from a decimal string to bigint value.
  * @param valueString to convert to bigint
  * @param decimals the number of least significant digits of value that represent the decimal
  */
-export function toErc20Units(valueString: string, decimals: number) {
+export function toBaseUnits(valueString: string, decimals: number) {
   const [integer, decimal] = valueString.split('.');
   const fractional = (decimal || '').replace(/0+$/, '').slice(0, decimals);
   const scalingFactor = BigInt(10) ** BigInt(decimals);

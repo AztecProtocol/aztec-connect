@@ -12,6 +12,7 @@ import { AccountId } from '../../user';
 import { EthereumSigner, Signer } from '../../signer';
 import { UserState } from '../../user_state';
 import { JoinSplitTxFactory } from './join_split_tx_factory';
+import { Database } from '../../database';
 
 const debug = createDebug('bb:join_split_proof_creator');
 
@@ -24,8 +25,9 @@ export class JoinSplitProofCreator {
     grumpkin: Grumpkin,
     pedersen: Pedersen,
     noteAlgos: NoteAlgorithms,
+    db: Database,
   ) {
-    this.txFactory = new JoinSplitTxFactory(worldState, grumpkin, pedersen, noteAlgos);
+    this.txFactory = new JoinSplitTxFactory(worldState, grumpkin, pedersen, noteAlgos, db);
   }
 
   public async createProof(
@@ -33,7 +35,8 @@ export class JoinSplitProofCreator {
     publicInput: bigint,
     publicOutput: bigint,
     privateInput: bigint,
-    privateOutput: bigint,
+    recipientPrivateOutput: bigint,
+    senderPrivateOutput: bigint,
     assetId: AssetId,
     signer: Signer,
     receiver?: AccountId,
@@ -45,7 +48,8 @@ export class JoinSplitProofCreator {
       publicInput,
       publicOutput,
       privateInput,
-      privateOutput,
+      recipientPrivateOutput,
+      senderPrivateOutput,
       assetId,
       signer,
       receiver,

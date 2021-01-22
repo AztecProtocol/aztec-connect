@@ -12,6 +12,7 @@ async function demoRecoveryData(aztecSdk) {
   // create a new user
   const privacyKey = randomBytes(32);
   const user0 = await aztecSdk.addUser(privacyKey);
+  const accountPublicKey = user0.getUserData().publicKey;
   const alias = randomBytes(5).toString();
 
   // create a new account
@@ -29,9 +30,9 @@ async function demoRecoveryData(aztecSdk) {
   await aztecSdk.awaitSettlement(txHash);
   console.info('Account created!');
 
-  // add the newly created account with nonce = 1
-  const user1 = await aztecSdk.addUser(privacyKey, 1);
-  await user1.awaitSynchronised();
+  // get the newly created user with nonce = 1
+  const userId1 = new AccountId(accountPublicKey, 1);
+  const user1 = await aztecSdk.getUser(userId1);
 
   // signer1 is compromised, migrate the account
   console.info('Creating proof...');
@@ -45,9 +46,14 @@ async function demoRecoveryData(aztecSdk) {
   await aztecSdk.awaitSettlement(migrateTxHash);
   console.info('Account recovered!');
 
+// get the migrated account with nonce = 2
+  const userId1 = new AccountId(accountPublicKey, 2);
+  const user2 = await aztecSdk.getUser(userId2);
+
   // remove these demo users from your device
   await aztecSdk.removeUser(user0.id);
   await aztecSdk.removeUser(user1.id);
+  await aztecSdk.removeUser(user2.id);
 }
 ```
 

@@ -24,12 +24,13 @@ const CONSOLE_STYLES = {
 };
 
 const slipInExplorerLink = (code: string) =>
-  code.replace(/await\s+aztecSdk\.awaitSettlement\((?:\n\s)*([^\)]+)\)\s*;/g, (awaitSettlement, txHash) =>
-    [
+  code.replace(/await\s+aztecSdk\.awaitSettlement\((?:\n\s)*([^\)]+)\)\s*;/g, (awaitSettlement, params) => {
+    const txHash = params.split(',')[0];
+    return [
       `console.warn('In the meantime, check out the block explorer for more details:', \`${BLOCK_EXPLORER_URL}/tx/$\{${txHash.trim()}.toString('hex')}\`);`,
       awaitSettlement,
-    ].join('\n'),
-  );
+    ].join('\n');
+  });
 
 const generateFullCode = (code: string, demoArgs: { [key: string]: any }) => {
   const executableCode = slipInExplorerLink(code).replace(

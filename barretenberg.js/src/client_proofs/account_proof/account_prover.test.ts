@@ -18,6 +18,8 @@ import { UnrolledProver } from '../prover';
 import { AccountProver, AccountVerifier, AccountTx } from './index';
 import { GrumpkinAddress } from '../../address';
 import { computeSigningData } from './compute_signing_data';
+import { ProofData } from '../proof_data';
+import { computeAccountAliasIdNullifier } from './compute_nullifier';
 
 const debug = createDebug('bb:account_proof_test');
 
@@ -87,9 +89,11 @@ describe('account proof', () => {
     const tree = new MerkleTree(levelup(memdown()), pedersen, 'data', 32);
 
     const user = createKeyPair();
+    const newAccountPublicKey = user.publicKey;
 
     const merkleRoot = tree.getRoot();
 
+    const numNewKeys = 2;
     const signingKey0 = createKeyPair();
     const signingKey1 = createKeyPair();
 
@@ -97,6 +101,9 @@ describe('account proof', () => {
     const nonce = 0;
     const accountAliasId = new AccountAliasId(aliasHash, nonce);
 
+    const migrate = true;
+
+    const accountIndex = 0;
     const accountPath = await tree.getHashPath(0);
 
     const message = computeSigningData(
@@ -112,14 +119,14 @@ describe('account proof', () => {
     const tx = new AccountTx(
       merkleRoot,
       user.publicKey,
-      user.publicKey,
-      2,
+      newAccountPublicKey,
+      numNewKeys,
       signingKey0.publicKey,
       signingKey1.publicKey,
       accountAliasId,
-      true,
+      migrate,
       randomBytes(32),
-      0,
+      accountIndex,
       accountPath,
       user.publicKey,
       signature,
@@ -133,5 +140,15 @@ describe('account proof', () => {
 
     const verified = await accountVerifier.verifyProof(proof);
     expect(verified).toBe(true);
+
+    // Check public inputs
+    const accountProof = new ProofData(proof, []);
+    const newAccountAliasId = new AccountAliasId(aliasHash, nonce + 1);
+    expect(accountProof.publicInput).toEqual(newAccountPublicKey.x());
+    expect(accountProof.publicOutput).toEqual(newAccountPublicKey.y());
+    expect(accountProof.assetId).toEqual(newAccountAliasId.toBuffer());
+    expect(accountProof.nullifier1).toEqual(computeAccountAliasIdNullifier(accountAliasId, pedersen));
+    expect(accountProof.inputOwner).toEqual(signingKey0.publicKey.x());
+    expect(accountProof.outputOwner).toEqual(signingKey1.publicKey.x());
   });
 });

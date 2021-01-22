@@ -13,7 +13,7 @@ export interface RollupProviderStatusServerResponse {
   rootRoot: string;
   escapeOpen: boolean;
   numEscapeBlocksRemaining: number;
-  fees: string[][];
+  fees: string[];
 }
 
 export interface RollupServerResponse {

@@ -1,4 +1,5 @@
 import { EthAddress } from 'barretenberg/address';
+import { ProofId } from 'barretenberg/client_proofs';
 import { AccountVerifier } from 'barretenberg/client_proofs/account_proof';
 import { JoinSplitVerifier } from 'barretenberg/client_proofs/join_split_proof';
 import { ProofData } from 'barretenberg/client_proofs/proof_data';
@@ -52,21 +53,17 @@ export class TxReceiver {
 
     // Check the proof is valid.
     switch (proof.proofId) {
-      case 0:
+      case ProofId.JOIN_SPLIT:
         await this.validateJoinSplitTx(proof);
         break;
-      case 1:
+      case ProofId.ACCOUNT:
         await this.validateAccountTx(proof);
         break;
     }
 
     const assetId = proof.assetId.readUInt32BE(28);
-    const { fees } = await this.blockchain.getStatus();
-    const assetFees = fees.get(assetId);
-    if (!assetFees) {
-      throw new Error(`Unsupported asset id ${assetId}.`);
-    }
-    const requiredFee = assetFees.get(proof.proofId)!;
+    const requiredFee =
+      proof.proofId === ProofId.JOIN_SPLIT ? (await this.blockchain.getStatus()).fees.get(assetId)! : BigInt(0);
     const txFee = toBigIntBE(proof.txFee);
     if (txFee < requiredFee) {
       throw new Error('Insufficient fee.');
@@ -80,6 +77,7 @@ export class TxReceiver {
       viewingKey1: viewingKeys[0] || Buffer.alloc(0),
       viewingKey2: viewingKeys[1] || Buffer.alloc(0),
       signature: depositSignature,
+      // TODO: Need separate nullifier table to have single set of nullifiers for uniqueness check.
       nullifier1: proof.nullifier1,
       nullifier2: proof.nullifier2,
       dataRootsIndex,
