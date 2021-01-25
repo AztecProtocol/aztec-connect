@@ -1,14 +1,13 @@
 import { EthAddress } from 'barretenberg/address';
-import { ProofId } from 'barretenberg/client_proofs';
+import { Blockchain } from 'barretenberg/blockchain';
 import { AccountVerifier } from 'barretenberg/client_proofs/account_proof';
 import { JoinSplitVerifier } from 'barretenberg/client_proofs/join_split_proof';
-import { ProofData } from 'barretenberg/client_proofs/proof_data';
+import { ProofId, ProofData } from 'barretenberg/client_proofs/proof_data';
 import { Crs } from 'barretenberg/crs';
 import { BarretenbergWasm } from 'barretenberg/wasm';
 import { BarretenbergWorker } from 'barretenberg/wasm/worker';
 import { createWorker, destroyWorker } from 'barretenberg/wasm/worker_factory';
 import { toBigIntBE } from 'bigint-buffer';
-import { Blockchain } from 'blockchain';
 import { readFile } from 'fs-extra';
 import { TxDao } from './entity/tx';
 import { RollupDb } from './rollup_db';
@@ -24,7 +23,7 @@ export class TxReceiver {
   private joinSplitVerifier!: JoinSplitVerifier;
   private accountVerifier!: AccountVerifier;
 
-  constructor(private rollupDb: RollupDb, private blockchain: Blockchain) {}
+  constructor(private rollupDb: RollupDb, private blockchain: Blockchain, private minFees: bigint[]) {}
 
   public async init() {
     const crs = new Crs(0);
@@ -61,12 +60,8 @@ export class TxReceiver {
         break;
     }
 
-    const assetId = proof.assetId.readUInt32BE(28);
-    const requiredFee =
-      proof.proofId === ProofId.JOIN_SPLIT ? (await this.blockchain.getStatus()).fees.get(assetId)! : BigInt(0);
-    const txFee = toBigIntBE(proof.txFee);
-    if (txFee < requiredFee) {
-      throw new Error('Insufficient fee.');
+    if (await this.rollupDb.nullifiersExist(proof.nullifier1, proof.nullifier2)) {
+      throw new Error('Nullifier already exists.');
     }
 
     const dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
@@ -77,7 +72,6 @@ export class TxReceiver {
       viewingKey1: viewingKeys[0] || Buffer.alloc(0),
       viewingKey2: viewingKeys[1] || Buffer.alloc(0),
       signature: depositSignature,
-      // TODO: Need separate nullifier table to have single set of nullifiers for uniqueness check.
       nullifier1: proof.nullifier1,
       nullifier2: proof.nullifier2,
       dataRootsIndex,
@@ -90,7 +84,12 @@ export class TxReceiver {
   }
 
   private async validateJoinSplitTx(proof: ProofData) {
-    const { publicInput, inputOwner, assetId } = proof;
+    const { publicInput, inputOwner, assetId, txFee } = proof;
+
+    if (toBigIntBE(txFee) < this.minFees[assetId.readUInt32BE(28)]) {
+      throw new Error('Insufficient fee.');
+    }
+
     if (!(await this.joinSplitVerifier.verifyProof(proof.proofData))) {
       throw new Error('Join-split proof verification failed.');
     }
@@ -108,6 +107,11 @@ export class TxReceiver {
         throw new Error('Invalid deposit signature.');
       }
 
+      // TODO: WARNING! Need to sum outstanding deposits from this address and validate against the difference!
+      // Otherwise user can do two proof deposits against the same funds.
+      // We actually need an atomic "insert only if sum of existing + new tx is good value". Which probably isn't
+      // possible in sqlite (need stored procedures). Given we only have the one service for now, we could put
+      // a mutex around the entire receiveTx call and we side-step the race condition. But that is kinda clunky.
       if (
         !(await this.blockchain.validateDepositFunds(
           inputOwnerAddress,

@@ -1,12 +1,12 @@
 import { EthereumProvider } from './ethereum_provider';
 import { EthAddress } from 'barretenberg/address';
-import { Proof, RollupProviderStatus, TxHash } from 'barretenberg/rollup_provider';
-import { AssetId } from 'barretenberg/client_proofs';
+import { AssetId } from 'barretenberg/asset';
 import createDebug from 'debug';
-import { ethers } from 'ethers';
 import { EventEmitter } from 'events';
-import { Blockchain, PermitArgs, Receipt } from './blockchain';
+import { Blockchain, BlockchainAsset, BlockchainStatus, PermitArgs, Receipt } from 'barretenberg/blockchain';
 import { Contracts } from './contracts';
+import { TxHash } from 'barretenberg/tx_hash';
+import { validateSignature } from './validate_signature';
 
 export interface EthereumBlockchainConfig {
   networkOrHost: string;
@@ -14,7 +14,6 @@ export interface EthereumBlockchainConfig {
   gasLimit?: number;
   minConfirmation?: number;
   minConfirmationEHW?: number;
-  txFee?: bigint;
 }
 
 export class EthereumBlockchain extends EventEmitter implements Blockchain {
@@ -22,7 +21,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   private latestEthBlock = -1;
   private latestRollupId = -1;
   private debug: any;
-  private status!: RollupProviderStatus;
+  private status!: BlockchainStatus;
 
   constructor(private config: EthereumBlockchainConfig, private contracts: Contracts) {
     super();
@@ -106,7 +105,10 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   /**
    * Get the status of the rollup contract
    */
-  public async getStatus() {
+  public async getBlockchainStatus(refresh = false) {
+    if (refresh) {
+      await this.initStatus();
+    }
     return this.status;
   }
 
@@ -114,19 +116,27 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     await this.updateRollupStatus();
     await this.updateEscapeHatchStatus();
     const { chainId } = await this.contracts.getNetwork();
-    const { networkOrHost, txFee = BigInt(0) } = this.config;
-    const fees = new Map();
-    fees.set(AssetId.ETH, txFee);
-    fees.set(AssetId.DAI, BigInt(0));
+    const { networkOrHost } = this.config;
+
+    const supportedAssets = [EthAddress.ZERO, ...(await this.contracts.getSupportedAssets())];
+    const permitSupport = await Promise.all(supportedAssets.map((_, i) => this.contracts.getAssetPermitSupport(i)));
+    const decimals = await Promise.all(supportedAssets.map((_, i) => this.contracts.getAssetDecimals(i)));
+    const symbols = await Promise.all(supportedAssets.map((_, i) => this.contracts.getAssetSymbol(i)));
+    const assets: BlockchainAsset[] = supportedAssets.map((addr, i) => ({
+      address: addr,
+      permitSupport: permitSupport[i],
+      decimals: decimals[i],
+      symbol: symbols[i],
+    }));
 
     this.status = {
       ...this.status,
-      serviceName: 'ethereum',
       chainId,
       networkOrHost,
-      tokenContractAddresses: this.getTokenContractAddresses(),
-      rollupContractAddress: this.getRollupContractAddress(),
-      fees,
+      tokenContractAddresses: this.contracts.getTokenContractAddresses(),
+      rollupContractAddress: this.contracts.getRollupContractAddress(),
+      feeDistributorContractAddress: this.contracts.getFeeDistributorContractAddress(),
+      assets,
     };
   }
 
@@ -148,25 +158,8 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return this.latestRollupId;
   }
 
-  public async getNetworkInfo() {
-    const { chainId, networkOrHost } = this.status;
-    return { chainId, networkOrHost };
-  }
-
-  public getRollupContractAddress() {
-    return this.contracts.getRollupContractAddress();
-  }
-
-  public getFeeDistributorContractAddress() {
-    return this.contracts.getFeeDistributorContractAddress();
-  }
-
   public async getEthBalance(account: EthAddress) {
     return this.contracts.getEthBalance(account);
-  }
-
-  public getTokenContractAddresses() {
-    return this.contracts.getTokenContractAddresses();
   }
 
   public async getUserPendingDeposit(assetId: AssetId, account: EthAddress) {
@@ -179,10 +172,6 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
 
   public async setSupportedAsset(assetAddress: EthAddress, supportsPermit: boolean, signingAddress: EthAddress) {
     return this.contracts.setSupportedAsset(assetAddress, supportsPermit, signingAddress);
-  }
-
-  public async getAssetPermitSupport(assetId: AssetId) {
-    return this.contracts.getAssetPermitSupport(assetId);
   }
 
   /**
@@ -212,30 +201,66 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     providerSignature: Buffer,
     feeReceiver: EthAddress,
     feeLimit: bigint,
+    providerAddress: EthAddress,
+  ) {
+    return this.sendTx(
+      await this.createRollupProofTx(
+        proofData,
+        signatures,
+        viewingKeys,
+        providerSignature,
+        providerAddress,
+        feeReceiver,
+        feeLimit,
+      ),
+    );
+  }
+
+  public async sendEscapeHatchProof(
+    proofData: Buffer,
+    viewingKeys: Buffer[],
+    depositSignature?: Buffer,
     signingAddress?: EthAddress,
   ) {
-    return await this.contracts.sendRollupProof(
+    return this.sendTx(await this.createEscapeHatchProofTx(proofData, viewingKeys, depositSignature, signingAddress));
+  }
+
+  public async createRollupProofTx(
+    proofData: Buffer,
+    signatures: Buffer[],
+    viewingKeys: Buffer[],
+    providerSignature: Buffer,
+    providerAddress: EthAddress,
+    feeReceiver: EthAddress,
+    feeLimit: bigint,
+  ) {
+    return await this.contracts.createRollupProofTx(
       proofData,
       signatures,
       viewingKeys,
       providerSignature,
+      providerAddress,
       feeReceiver,
       feeLimit,
-      signingAddress,
-      this.config.gasLimit,
     );
   }
 
-  /**
-   * This is called by the client side when in escape hatch mode. Hence it doesn't take deposit signatures.
-   */
-  public async sendProof({ proofData, viewingKeys, depositSignature }: Proof, signingAddress?: EthAddress) {
-    return this.contracts.sendEscapeHatchProof(
+  public async createEscapeHatchProofTx(
+    proofData: Buffer,
+    viewingKeys: Buffer[],
+    depositSignature?: Buffer,
+    signingAddress?: EthAddress,
+  ) {
+    return await this.contracts.createEscapeHatchProofTx(
       proofData,
-      depositSignature ? [depositSignature] : [],
       viewingKeys,
+      depositSignature ? [depositSignature] : [],
       signingAddress,
     );
+  }
+
+  public sendTx(tx: Buffer, signingAddress?: EthAddress) {
+    return this.contracts.sendTx(tx, signingAddress, this.config.gasLimit);
   }
 
   private getRequiredConfirmations() {
@@ -279,14 +304,6 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    * Validate locally that a signature was produced by a publicOwner
    */
   public validateSignature(publicOwner: EthAddress, signature: Buffer, signingData: Buffer) {
-    const msgHash = ethers.utils.solidityKeccak256(['bytes'], [signingData]);
-    const digest = ethers.utils.arrayify(msgHash);
-    const recoveredSigner = ethers.utils.verifyMessage(digest, `0x${signature.toString('hex')}`);
-    return recoveredSigner.toLowerCase() === publicOwner.toString().toLowerCase();
-  }
-
-  // TODO - shouldn't have to have this method here
-  async getPendingNoteNullifiers() {
-    return [];
+    return validateSignature(publicOwner, signature, signingData);
   }
 }

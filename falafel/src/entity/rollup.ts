@@ -23,9 +23,19 @@ export class RollupDao {
   @Column()
   public created!: Date;
 
+  // Null until tx sent.
   @Column({ nullable: true })
   public ethTxHash!: Buffer;
 
+  // Null until mined.
+  @Column({ nullable: true })
+  public gasPrice!: Buffer;
+
+  // Null until mined.
+  @Column({ nullable: true })
+  public gasUsed!: number;
+
+  // Null until mined.
   @Column({ nullable: true })
   public mined!: Date;
 }

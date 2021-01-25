@@ -1,5 +1,7 @@
 import { randomBytes } from 'crypto';
 import { Connection, createConnection } from 'typeorm';
+import { AccountTxDao } from '../entity/account_tx';
+import { JoinSplitTxDao } from '../entity/join_split_tx';
 import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
@@ -14,7 +16,7 @@ describe('rollup_db', () => {
     connection = await createConnection({
       type: 'sqlite',
       database: ':memory:',
-      entities: [TxDao, RollupProofDao, RollupDao],
+      entities: [TxDao, RollupProofDao, RollupDao, JoinSplitTxDao, AccountTxDao],
       dropSchema: true,
       synchronize: true,
       logging: false,
@@ -176,7 +178,7 @@ describe('rollup_db', () => {
     const settledRollups1 = await rollupDb.getSettledRollups();
     expect(settledRollups1.length).toBe(0);
 
-    await rollupDb.confirmMined(rollup.id);
+    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date());
 
     const settledRollups2 = await rollupDb.getSettledRollups();
     expect(settledRollups2.length).toBe(1);
@@ -199,8 +201,30 @@ describe('rollup_db', () => {
 
     expect(await rollupDb.getUnsettledTxCount()).toBe(1);
 
-    await rollupDb.confirmMined(rollup.id);
+    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date());
 
     expect(await rollupDb.getUnsettledTxCount()).toBe(0);
+  });
+
+  it('should delete unsettled rollups', async () => {
+    const tx0 = randomTx();
+    await rollupDb.addTx(tx0);
+
+    expect(await rollupDb.getUnsettledTxCount()).toBe(1);
+    expect(await rollupDb.getUnsettledRollups()).toHaveLength(0);
+
+    const rollupProof = randomRollupProof([tx0], 0);
+    await rollupDb.addRollupProof(rollupProof);
+
+    const rollup = randomRollup(0, rollupProof);
+    await rollupDb.addRollup(rollup);
+
+    expect(await rollupDb.getUnsettledTxCount()).toBe(1);
+    expect(await rollupDb.getUnsettledRollups()).toHaveLength(1);
+
+    await rollupDb.deleteUnsettledRollups();
+
+    expect(await rollupDb.getUnsettledTxCount()).toBe(1);
+    expect(await rollupDb.getUnsettledRollups()).toHaveLength(0);
   });
 });

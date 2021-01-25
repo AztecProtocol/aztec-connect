@@ -1,4 +1,4 @@
-import { AssetId } from 'barretenberg/client_proofs';
+import { AssetId } from 'barretenberg/asset';
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 import { Note } from '../../note';
 import { AccountId } from '../../user';

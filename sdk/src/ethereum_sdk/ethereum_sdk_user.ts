@@ -1,5 +1,5 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { AssetId } from 'barretenberg/client_proofs';
+import { AssetId } from 'barretenberg/asset';
 import { Signer } from '../signer';
 import { RecoveryPayload } from '../user';
 import { EthereumSdk } from './';

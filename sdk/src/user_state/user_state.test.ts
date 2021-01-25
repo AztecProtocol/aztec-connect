@@ -15,6 +15,7 @@ import { randomBytes } from 'crypto';
 import { Database } from '../database';
 import { UserData, AccountId, AccountAliasId } from '../user';
 import { UserState } from './index';
+import { Block } from 'barretenberg/block_source';
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;
@@ -186,14 +187,15 @@ describe('user state', () => {
     );
   };
 
-  const createBlock = (rollupProofData: RollupProofData) => ({
+  const createBlock = (rollupProofData: RollupProofData): Block => ({
     txHash: TxHash.random(),
-    blockNum: 0,
     rollupId: 0,
     rollupSize: 1,
     rollupProofData: rollupProofData.toBuffer(),
     viewingKeysData: rollupProofData.getViewingKeyData(),
     created: new Date(),
+    gasUsed: 0,
+    gasPrice: 0n,
   });
 
   it('settle existing join split tx, add new note to db and nullify old note', async () => {

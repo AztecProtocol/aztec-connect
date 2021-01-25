@@ -1,6 +1,6 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { Block } from 'barretenberg/block_source';
-import { AssetId } from 'barretenberg/client_proofs';
+import { AssetId } from 'barretenberg/asset';
 import { AccountProver } from 'barretenberg/client_proofs/account_proof';
 import { EscapeHatchProver } from 'barretenberg/client_proofs/escape_hatch_proof';
 import { JoinSplitProver } from 'barretenberg/client_proofs/join_split_proof';
@@ -64,9 +64,8 @@ export class CoreSdk extends EventEmitter {
   private worldState!: WorldState;
   private userStates: UserState[] = [];
   private workerPool!: WorkerPool;
-  private joinSplitProofCreator!: JoinSplitProofCreator;
+  private joinSplitProofCreator!: JoinSplitProofCreator | EscapeHatchProofCreator;
   private accountProofCreator!: AccountProofCreator;
-  private escapeHatchProofCreator!: EscapeHatchProofCreator;
   private blockQueue!: MemoryFifo<Block>;
   private userFactory!: UserDataFactory;
   private userStateFactory!: UserStateFactory;
@@ -137,7 +136,9 @@ export class CoreSdk extends EventEmitter {
 
     await this.worldState.init();
 
-    const { chainId, rollupContractAddress } = await this.getRemoteStatus();
+    const {
+      blockchainStatus: { chainId, rollupContractAddress },
+    } = await this.getRemoteStatus();
     await this.leveldb.put('rollupContractAddress', rollupContractAddress.toBuffer());
 
     // If chainId is 0 (falafel is using simulated blockchain) pretend it needs to be goerli.
@@ -163,7 +164,7 @@ export class CoreSdk extends EventEmitter {
       await this.createJoinSplitProvingKey(joinSplitProver);
       await this.createAccountProvingKey(accountProver);
     } else {
-      this.escapeHatchProofCreator = new EscapeHatchProofCreator(
+      this.joinSplitProofCreator = new EscapeHatchProofCreator(
         escapeHatchProver,
         this.worldState,
         this.grumpkin,
@@ -348,8 +349,8 @@ export class CoreSdk extends EventEmitter {
   }
 
   public async getFee(assetId: AssetId) {
-    const { fees } = await this.getRemoteStatus();
-    return fees.get(assetId)!;
+    const { minFees } = await this.getRemoteStatus();
+    return minFees[assetId];
   }
 
   public async startReceivingBlocks() {
@@ -455,7 +456,9 @@ export class CoreSdk extends EventEmitter {
   }
 
   public async validateEscapeOpen() {
-    const { escapeOpen, numEscapeBlocksRemaining } = await this.rollupProvider.getStatus();
+    const {
+      blockchainStatus: { escapeOpen, numEscapeBlocksRemaining },
+    } = await this.rollupProvider.getStatus();
     if (!escapeOpen) {
       throw new Error(`Escape hatch window closed. Opens in ${numEscapeBlocksRemaining} blocks`);
     }
@@ -532,8 +535,7 @@ export class CoreSdk extends EventEmitter {
     }
     const userState = this.getUserState(userId)!;
 
-    const proofCreator = this.escapeHatchMode ? this.escapeHatchProofCreator : this.joinSplitProofCreator;
-    const proofOutput = await proofCreator.createProof(
+    const proofOutput = await this.joinSplitProofCreator.createProof(
       userState,
       publicInput,
       publicOutput,
@@ -668,7 +670,7 @@ export class CoreSdk extends EventEmitter {
   private async isSynchronised() {
     const providerStatus = await this.rollupProvider.getStatus();
     const localDataRoot = await this.worldState.getRoot();
-    return localDataRoot.equals(providerStatus.dataRoot);
+    return localDataRoot.equals(providerStatus.blockchainStatus.dataRoot);
   }
 
   public async awaitSynchronised() {

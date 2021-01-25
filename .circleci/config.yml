@@ -219,6 +219,10 @@ jobs:
       - setup_remote_docker:
           version: 19.03.13
       - run:
+          name: 'Build coinbase-exporter'
+          working_directory: metrics/coinbase-exporter
+          command: build coinbase-exporter:latest
+      - run:
           name: 'Build sidecar'
           working_directory: metrics/sidecar
           command: build metrics-sidecar:latest
@@ -314,6 +318,8 @@ jobs:
           name: 'metrics'
           working_directory: metrics
           command: |
+            cd coinbase-exporter && deploy coinbase-exporter:latest && cd ..
+            cd ecs-exporter && deploy_terraform && cd ..
             cd sidecar && deploy metrics-sidecar:latest && cd ..
             cd prometheus && deploy prometheus:latest && cd ..
             cd grafana && deploy grafana:latest && cd ..

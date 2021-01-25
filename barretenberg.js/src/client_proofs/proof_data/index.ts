@@ -1,11 +1,16 @@
 import { createHash } from 'crypto';
 
+export enum ProofId {
+  JOIN_SPLIT,
+  ACCOUNT
+}
+
 export class ProofData {
   static readonly NUM_PUBLIC_INPUTS = 14;
   static readonly NUM_PUBLISHED_PUBLIC_INPUTS = 12;
 
   public readonly txId: Buffer;
-  public readonly proofId: number;
+  public readonly proofId: ProofId;
   public readonly publicInput: Buffer;
   public readonly publicOutput: Buffer;
   public readonly assetId: Buffer;

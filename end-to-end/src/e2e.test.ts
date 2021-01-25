@@ -39,7 +39,9 @@ describe('end-to-end tests', () => {
       users.push(user);
     }
 
-    const { rollupContractAddress } = await sdk.getRemoteStatus();
+    const {
+      blockchainStatus: { rollupContractAddress },
+    } = await sdk.getRemoteStatus();
     feeDistributor = await getFeeDistributorContract(rollupContractAddress, walletProvider, accounts[2]);
   });
 
@@ -72,7 +74,8 @@ describe('end-to-end tests', () => {
 
       const publicBalance = await user0Asset.publicBalance();
       const expectedPublicBalance = initialPublicBalance - depositValue - txFee;
-      expect(publicBalance < expectedPublicBalance).toBe(true); // Minus gas cost for depositing funds to rollup contract.
+      // Minus gas cost for depositing funds to rollup contract.
+      expect(publicBalance < expectedPublicBalance).toBe(true);
 
       expect(user0Asset.balance()).toBe(depositValue);
 

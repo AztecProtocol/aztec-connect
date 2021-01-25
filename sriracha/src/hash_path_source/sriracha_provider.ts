@@ -1,6 +1,6 @@
+import { blockchainStatusFromJson } from 'barretenberg/blockchain';
 import { fetch } from 'barretenberg/iso_fetch';
 import { HashPath } from 'barretenberg/merkle_tree';
-import { getProviderStatus } from 'barretenberg/rollup_provider';
 import { toBufferBE } from 'bigint-buffer';
 import {
   GetHashPathServerResponse,
@@ -17,7 +17,20 @@ export class SrirachaProvider implements HashPathSource {
   }
 
   public async getStatus() {
-    return getProviderStatus(this.baseUrl);
+    const url = new URL(`${this.baseUrl}/status`);
+    const response = await fetch(url.toString()).catch(() => undefined);
+    if (!response) {
+      throw new Error('Failed to contact rollup provider.');
+    }
+    try {
+      const body = await response.json();
+
+      return {
+        blockchainStatus: blockchainStatusFromJson(body.blockchainStatus),
+      };
+    } catch (err) {
+      throw new Error(`Bad response from: ${url}`);
+    }
   }
 
   public async getTreeState(treeIndex: number) {

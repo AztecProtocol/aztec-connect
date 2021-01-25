@@ -22,9 +22,9 @@ export class ServerStatusResolver {
     @Inject('serverStatus') serverStatus: RollupProviderStatus,
   ) {
     this.staticServerStatus = {
-      chainId: serverStatus.chainId,
-      networkOrHost: serverStatus.networkOrHost,
-      rollupContractAddress: serverStatus.rollupContractAddress.toString(),
+      chainId: serverStatus.blockchainStatus.chainId,
+      networkOrHost: serverStatus.blockchainStatus.networkOrHost,
+      rollupContractAddress: serverStatus.blockchainStatus.rollupContractAddress.toString(),
     };
   }
 

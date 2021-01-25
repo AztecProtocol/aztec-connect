@@ -1,4 +1,6 @@
 import { Connection, createConnection, Repository } from 'typeorm';
+import { AccountTxDao } from '../entity/account_tx';
+import { JoinSplitTxDao } from '../entity/join_split_tx';
 import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
@@ -16,7 +18,7 @@ describe('Query Builder', () => {
     connection = await createConnection({
       type: 'sqlite',
       database: ':memory:',
-      entities: [TxDao, RollupProofDao, RollupDao],
+      entities: [TxDao, RollupProofDao, RollupDao, JoinSplitTxDao, AccountTxDao],
       dropSchema: true,
       synchronize: true,
       logging: false,
@@ -113,7 +115,7 @@ describe('Query Builder', () => {
       await rollupDb.addRollup(rollup);
 
       if (i < 3) {
-        await rollupDb.confirmMined(rollupId);
+        await rollupDb.confirmMined(rollupId, 0, 0n, new Date());
       }
 
       txs.push(tx);

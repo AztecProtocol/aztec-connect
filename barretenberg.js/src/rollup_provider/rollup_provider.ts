@@ -1,7 +1,6 @@
-import { EthAddress } from '../address';
 import { BlockSource } from '../block_source';
-import { AssetId } from '../client_proofs';
-import { TxHash } from './tx_hash';
+import { TxHash } from '../tx_hash';
+import { BlockchainStatus } from '../blockchain';
 
 export interface Proof {
   proofData: Buffer;
@@ -10,19 +9,8 @@ export interface Proof {
 }
 
 export interface RollupProviderStatus {
-  serviceName: string;
-  chainId: number;
-  networkOrHost: string;
-  rollupContractAddress: EthAddress;
-  tokenContractAddresses: EthAddress[];
-  nextRollupId: number;
-  dataSize: number;
-  dataRoot: Buffer;
-  nullRoot: Buffer;
-  rootRoot: Buffer;
-  escapeOpen: boolean;
-  numEscapeBlocksRemaining: number;
-  fees: Map<AssetId, bigint>;
+  blockchainStatus: BlockchainStatus;
+  minFees: bigint[];
 }
 
 export interface RollupProvider extends BlockSource {

@@ -22,7 +22,7 @@ import { Blake2s } from '../../crypto/blake2s';
 import { AccountAliasId } from '../account_alias_id';
 import { AliasHash } from '../alias_hash';
 import { computeSigningData } from '../join_split_proof/compute_signing_data';
-import { AssetId } from '../asset_id';
+import { AssetId } from '../../asset';
 
 const debug = createDebug('bb:escape_hatch_proof');
 

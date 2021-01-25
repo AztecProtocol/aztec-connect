@@ -1,27 +1,21 @@
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from 'barretenberg/address';
+import { Blockchain } from 'barretenberg/blockchain';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { TxHash } from 'barretenberg/rollup_provider';
 import { toBufferBE } from 'bigint-buffer';
-import { Blockchain, EthereumProvider } from 'blockchain';
-import { utils } from 'ethers';
+import { EthereumProvider } from 'blockchain';
+import { Signer, utils } from 'ethers';
 import moment, { Duration } from 'moment';
 import { RollupDao } from './entity/rollup';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
 
-interface PublishItem {
-  rollupId: number;
-  proof: Buffer;
-  signatures: Buffer[];
-  viewingKeys: Buffer[];
-}
-
 export class RollupPublisher {
   private interrupted = false;
   private interruptPromise = Promise.resolve();
   private interruptResolve = () => {};
-  private provider: Web3Provider;
+  private signer: Signer;
 
   constructor(
     private rollupDb: RollupDb,
@@ -31,7 +25,7 @@ export class RollupPublisher {
     provider: EthereumProvider,
     private metrics: Metrics,
   ) {
-    this.provider = new Web3Provider(provider);
+    this.signer = new Web3Provider(provider).getSigner();
   }
 
   public async publishRollup(rollup: RollupDao) {
@@ -47,30 +41,20 @@ export class RollupPublisher {
       }
     }
 
+    const txData = await this.createTxData(rollup);
+
+    // TODO: This is to be outsourced to Padron. The txData above should be made available on an endpoint.
     while (!this.interrupted) {
       this.interruptPromise = new Promise(resolve => (this.interruptResolve = resolve));
 
-      const proof = rollup.rollupProof.proofData;
-      const rollupId = rollup.id;
-      const txs = rollup.rollupProof.txs;
-      const viewingKeys = txs.map(tx => [tx.viewingKey1, tx.viewingKey2]).flat();
-      const signatures = txs.map(tx => tx.signature!).filter(s => !!s);
-
-      const item = {
-        rollupId,
-        proof,
-        viewingKeys,
-        signatures,
-      };
-
       const end = this.metrics.publishTimer();
-      const txHash = await this.sendRollupProof(item);
+      const txHash = await this.sendRollupProof(txData);
       if (!txHash) {
         break;
       }
       end();
 
-      await this.rollupDb.confirmSent(rollupId, txHash);
+      await this.rollupDb.confirmSent(rollup.id, txHash);
 
       const receipt = await this.getTransactionReceipt(txHash);
       if (!receipt) {
@@ -81,8 +65,8 @@ export class RollupPublisher {
         return true;
       }
 
-      const { nextRollupId } = await this.blockchain.getStatus();
-      if (nextRollupId > item.rollupId) {
+      const { nextRollupId } = await this.blockchain.getBlockchainStatus();
+      if (nextRollupId > rollup.id) {
         console.log('Publish failed. Contract changed underfoot.');
         break;
       }
@@ -109,13 +93,37 @@ export class RollupPublisher {
     this.interrupted = false;
   }
 
+  private async createTxData(rollup: RollupDao) {
+    const proof = rollup.rollupProof.proofData;
+    const txs = rollup.rollupProof.txs;
+    const viewingKeys = txs.map(tx => [tx.viewingKey1, tx.viewingKey2]).flat();
+    const signatures = txs.map(tx => tx.signature!).filter(s => !!s);
+    const providerAddress = EthAddress.fromString(await this.signer.getAddress());
+    const { feeDistributorContractAddress } = await this.blockchain.getBlockchainStatus();
+    const providerSignature = await this.generateSignature(
+      proof,
+      providerAddress,
+      this.feeLimit,
+      feeDistributorContractAddress,
+    );
+
+    return await this.blockchain.createRollupProofTx(
+      proof,
+      signatures,
+      viewingKeys,
+      providerSignature,
+      providerAddress,
+      providerAddress,
+      this.feeLimit,
+    );
+  }
+
   private async generateSignature(
     rollupProof: Buffer,
     feeReceiver: EthAddress,
     feeLimit: bigint,
     feeDistributorAddress: EthAddress,
   ) {
-    const signer = this.provider.getSigner();
     const publicInputs = rollupProof.slice(0, RollupProofData.LENGTH_ROLLUP_PUBLIC);
     const msgHash = utils.solidityKeccak256(
       ['bytes'],
@@ -129,7 +137,7 @@ export class RollupPublisher {
       ],
     );
     const digest = utils.arrayify(msgHash);
-    const signature = await signer.signMessage(digest);
+    const signature = await this.signer.signMessage(digest);
     let signatureBuf = Buffer.from(signature.slice(2), 'hex');
     const v = signatureBuf[signatureBuf.length - 1];
     if (v <= 1) {
@@ -139,25 +147,10 @@ export class RollupPublisher {
     return signatureBuf;
   }
 
-  private async sendRollupProof(item: PublishItem) {
-    const { proof, signatures, viewingKeys } = item;
-    const signer = this.provider.getSigner();
-    const signingAddress = EthAddress.fromString(await signer.getAddress());
-    const feeReceiver = signingAddress;
-    const feeDistributorAddress = this.blockchain.getFeeDistributorContractAddress();
-    const providerSignature = await this.generateSignature(proof, feeReceiver, this.feeLimit, feeDistributorAddress);
-
+  private async sendRollupProof(txData: Buffer) {
     while (!this.interrupted) {
       try {
-        return await this.blockchain.sendRollupProof(
-          proof,
-          signatures,
-          viewingKeys,
-          providerSignature,
-          feeReceiver,
-          this.feeLimit,
-          signingAddress,
-        );
+        return await this.blockchain.sendTx(txData);
       } catch (err) {
         console.log(err.message.slice(0, 200));
         await this.sleepOrInterrupted(60000);

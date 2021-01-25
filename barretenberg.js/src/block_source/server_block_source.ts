@@ -11,6 +11,8 @@ export interface BlockServerResponse {
   rollupSize: number;
   rollupProofData: string;
   viewingKeysData: string;
+  gasPrice: string;
+  gasUsed: number;
 }
 
 export interface GetBlocksServerResponse {
@@ -26,6 +28,7 @@ const toBlock = (block: BlockServerResponse): Block => ({
   rollupProofData: Buffer.from(block.rollupProofData, 'hex'),
   viewingKeysData: Buffer.from(block.viewingKeysData, 'hex'),
   created: new Date(block.created),
+  gasPrice: BigInt(block.gasPrice),
 });
 
 export class ServerBlockSource extends EventEmitter implements BlockSource {

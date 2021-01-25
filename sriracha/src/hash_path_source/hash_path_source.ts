@@ -1,5 +1,4 @@
 import { HashPath } from 'barretenberg/merkle_tree';
-import { RollupProviderStatus } from 'barretenberg/rollup_provider';
 
 export interface GetHashPathsResponse {
   oldRoot: Buffer;
@@ -30,7 +29,6 @@ export interface TreeState {
 }
 
 export interface HashPathSource {
-  getStatus(): Promise<RollupProviderStatus>;
   getTreeState(treeIndex: number): Promise<TreeState>;
   getHashPath(treeIndex: number, index: bigint): Promise<HashPath>;
   getHashPaths(treeIndex: number, additions: { index: bigint; value: Buffer }[]): Promise<GetHashPathsResponse>;

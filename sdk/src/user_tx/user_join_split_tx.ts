@@ -1,5 +1,5 @@
 import { EthAddress } from 'barretenberg/address';
-import { AssetId } from 'barretenberg/client_proofs';
+import { AssetId } from 'barretenberg/asset';
 import { TxHash } from 'barretenberg/rollup_provider';
 import { AccountId } from '../user';
 

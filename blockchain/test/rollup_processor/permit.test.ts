@@ -6,7 +6,7 @@ import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
 import { signPermit, createLowLevelPermitSig } from './fixtures/create_permit_signature';
 import { EthAddress } from 'barretenberg/address';
 import { randomBytes } from 'crypto';
-import { AssetId } from 'barretenberg/client_proofs';
+import { AssetId } from 'barretenberg/asset';
 
 use(solidity);
 

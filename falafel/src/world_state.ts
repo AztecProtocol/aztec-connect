@@ -2,13 +2,14 @@ import { MemoryFifo } from 'barretenberg/fifo';
 import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
 import { WorldStateDb } from 'barretenberg/world_state_db';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
-import { Block, Blockchain } from 'blockchain';
+import { Blockchain } from 'barretenberg/blockchain';
 import { RollupDao } from './entity/rollup';
 import { RollupProofDao } from './entity/rollup_proof';
 import { TxDao } from './entity/tx';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
 import { TxAggregator } from './tx_aggregator';
+import { Block } from 'barretenberg/block_source';
 
 const innerProofDataToTxDao = (tx: InnerProofData, viewingKeys: Buffer[], created: Date) => {
   const txDao = new TxDao();
@@ -32,7 +33,7 @@ export class WorldState {
     public worldStateDb: WorldStateDb,
     private blockchain: Blockchain,
     private txAggregator: TxAggregator,
-    private rollupSize: number,
+    private innerRollupSize: number,
     private outerRollupSize: number,
     private metrics: Metrics,
   ) {}
@@ -77,6 +78,7 @@ export class WorldState {
       await this.updateDbs(block);
     }
 
+    // This deletes all proofs created until now. Not ideal, figure out a way to resume.
     await this.rollupDb.deleteUnsettledRollups();
     await this.rollupDb.deleteOrphanedRollupProofs();
 
@@ -122,7 +124,7 @@ export class WorldState {
 
     await this.confirmOrAddRollupToDb(rollupProofData, block);
 
-    await this.printState();
+    this.printState();
     end();
   }
 
@@ -132,7 +134,7 @@ export class WorldState {
     const rollupProof = await this.rollupDb.getRollupProof(rollup.rollupHash, true);
     if (rollupProof) {
       // Our rollup. Confirm mined and track settlement times.
-      await this.rollupDb.confirmMined(rollup.rollupId);
+      await this.rollupDb.confirmMined(rollup.rollupId, block.gasUsed, block.gasPrice, block.created);
 
       for (const inner of rollup.innerProofData) {
         if (inner.isPadding()) {
@@ -165,6 +167,8 @@ export class WorldState {
         mined: block.created,
         created: block.created,
         viewingKeys: Buffer.concat(rollup.viewingKeys.flat()),
+        gasPrice: toBufferBE(block.gasPrice, 32),
+        gasUsed: block.gasUsed,
       });
 
       await this.rollupDb.addRollup(rollupDao);
@@ -194,7 +198,7 @@ export class WorldState {
 
   private async padToNextRollupBoundary() {
     const dataSize = this.worldStateDb.getSize(0);
-    const rollupSizePow2 = roundUpToPow2(this.rollupSize) * roundUpToPow2(this.outerRollupSize);
+    const rollupSizePow2 = roundUpToPow2(this.innerRollupSize) * roundUpToPow2(this.outerRollupSize);
     const subtreeSize = BigInt(rollupSizePow2 * 2);
     const nextDataStartIndex =
       dataSize % subtreeSize === 0n ? dataSize : dataSize + subtreeSize - (dataSize % subtreeSize);

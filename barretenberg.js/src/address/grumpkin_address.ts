@@ -1,7 +1,6 @@
-import { Address } from './address';
 import { randomBytes } from 'crypto';
 
-export class GrumpkinAddress implements Address {
+export class GrumpkinAddress {
   public static ZERO = new GrumpkinAddress(Buffer.alloc(64));
 
   constructor(private buffer: Buffer) {
@@ -25,7 +24,7 @@ export class GrumpkinAddress implements Address {
     return new GrumpkinAddress(randomBytes(64));
   }
 
-  public equals(rhs: Address) {
+  public equals(rhs: GrumpkinAddress) {
     return this.buffer.equals(rhs.toBuffer());
   }
 

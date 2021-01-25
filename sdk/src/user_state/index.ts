@@ -6,7 +6,7 @@ import { computeAccountAliasIdNullifier } from 'barretenberg/client_proofs/accou
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { MemoryFifo } from 'barretenberg/fifo';
-import { AssetId, assetIds } from 'barretenberg/client_proofs';
+import { AssetId, AssetIds } from 'barretenberg/asset';
 import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
 import { RollupProvider, TxHash } from 'barretenberg/rollup_provider';
 import { toBigIntBE } from 'bigint-buffer';
@@ -102,7 +102,7 @@ export class UserState extends EventEmitter {
       return;
     }
 
-    const balancesBefore = assetIds.map(assetId => this.getBalance(assetId));
+    const balancesBefore = AssetIds.map(assetId => this.getBalance(assetId));
 
     const { rollupProofData, viewingKeysData } = block;
     const { rollupId, dataStartIndex, innerProofData, viewingKeys } = RollupProofData.fromBuffer(
@@ -126,7 +126,7 @@ export class UserState extends EventEmitter {
     this.user.syncedToRollup = rollupId;
     await this.db.updateUser(this.user);
 
-    assetIds.forEach((assetId, i) => {
+    AssetIds.forEach((assetId, i) => {
       const balanceAfter = this.getBalance(assetId);
       const diff = balanceAfter - balancesBefore[i];
       if (diff) {
@@ -326,7 +326,7 @@ export class UserState extends EventEmitter {
       const assetNotes = notesMap.get(note.assetId) || [];
       notesMap.set(note.assetId, [...assetNotes, note]);
     });
-    assetIds.forEach(assetId => {
+    AssetIds.forEach(assetId => {
       const notePicker = new NotePicker(notesMap.get(assetId));
       this.notePickers.set(assetId, notePicker);
     });

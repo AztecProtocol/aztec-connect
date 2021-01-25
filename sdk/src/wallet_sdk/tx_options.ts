@@ -1,5 +1,5 @@
+import { PermitArgs } from 'barretenberg/blockchain';
 import { EthAddress } from 'barretenberg/address';
-import { PermitArgs } from 'blockchain';
 import { EthereumSigner } from '../signer';
 import { AccountId } from '../user';
 

@@ -1,4 +1,4 @@
-import { RollupProviderStatus, ServerRollupProvider, ServerRollupProviderExplorer } from 'barretenberg/rollup_provider';
+import { ServerRollupProvider, ServerRollupProviderExplorer } from 'barretenberg/rollup_provider';
 import { EthereumBlockchain } from 'blockchain/ethereum_blockchain';
 import { BroadcastChannel, createLeaderElection } from 'broadcast-channel';
 import createDebug from 'debug';
@@ -12,7 +12,9 @@ import { EthereumProvider } from 'blockchain';
 import { SdkEvent, SdkInitState } from '../sdk';
 import { AccountId } from '../user';
 import { CoreSdk, CoreSdkEvent, CoreSdkOptions } from './core_sdk';
-import { AssetId } from 'barretenberg/client_proofs';
+import { AssetId } from 'barretenberg/asset';
+import { BlockchainStatus } from 'barretenberg/blockchain';
+import { EscapeHatchRollupProvider } from '../escape_hatch_rollup_provider';
 
 const debug = createDebug('bb:create_sdk');
 
@@ -49,7 +51,8 @@ export type SdkOptions = {
 async function sdkFactory(
   hostStr: string,
   options: SdkOptions,
-  status: RollupProviderStatus,
+  serviceName: string,
+  status: BlockchainStatus,
   ethereumProvider: EthereumProvider,
 ) {
   if (options.debug) {
@@ -67,7 +70,7 @@ async function sdkFactory(
     await db.clear();
   }
 
-  const escapeHatchMode = status.serviceName === 'sriracha';
+  const escapeHatchMode = serviceName === 'sriracha';
 
   if (!escapeHatchMode) {
     const rollupProvider = new ServerRollupProvider(host);
@@ -83,7 +86,8 @@ async function sdkFactory(
       minConfirmationEHW,
     };
     const blockchain = await EthereumBlockchain.new(config, status.rollupContractAddress, ethereumProvider);
-    return new CoreSdk(leveldb, db, blockchain, undefined, srirachaProvider, options, escapeHatchMode);
+    const rollupProvider = new EscapeHatchRollupProvider(blockchain);
+    return new CoreSdk(leveldb, db, rollupProvider, undefined, srirachaProvider, options, escapeHatchMode);
   }
 }
 
@@ -95,11 +99,12 @@ async function sdkFactory(
 export async function createSdk(
   hostStr: string,
   options: SdkOptions = {},
-  status: RollupProviderStatus,
+  serviceName: string,
+  status: BlockchainStatus,
   ethereumProvider: EthereumProvider,
 ) {
   options = { syncInstances: true, saveProvingKey: true, ...options };
-  const sdk = await sdkFactory(hostStr, options, status, ethereumProvider);
+  const sdk = await sdkFactory(hostStr, options, serviceName, status, ethereumProvider);
   if (!options.syncInstances) {
     // We're not going to sync across multiple instances. We should start recieving blocks once initialized.
     sdk.on(SdkEvent.UPDATED_INIT_STATE, state => {

@@ -1,5 +1,5 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { AssetId } from 'barretenberg/client_proofs';
+import { AssetId } from 'barretenberg/asset';
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { JoinSplitTx, computeSigningData } from 'barretenberg/client_proofs/join_split_proof';
 import { createEphemeralPrivKey, encryptNote, Note } from 'barretenberg/client_proofs/note';

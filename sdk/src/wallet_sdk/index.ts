@@ -1,8 +1,9 @@
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { AssetId } from 'barretenberg/client_proofs';
-import { getProviderStatus, Rollup, Tx, TxHash } from 'barretenberg/rollup_provider';
-import { PermitArgs } from 'blockchain';
+import { AssetId } from 'barretenberg/asset';
+import { Rollup, Tx, TxHash } from 'barretenberg/rollup_provider';
+import { getBlockchainStatus, getServiceName } from 'barretenberg/service';
+import { PermitArgs } from 'barretenberg/blockchain';
 import { EthereumBlockchain } from 'blockchain/ethereum_blockchain';
 import { randomBytes } from 'crypto';
 import createDebug from 'debug';
@@ -30,8 +31,9 @@ export async function createWalletSdk(
   serverUrl: string,
   sdkOptions: SdkOptions = {},
 ) {
-  const status = await getProviderStatus(serverUrl);
-  const core = await createSdk(serverUrl, sdkOptions, status, ethereumProvider);
+  const serviceName = await getServiceName(serverUrl);
+  const status = await getBlockchainStatus(serverUrl);
+  const core = await createSdk(serverUrl, sdkOptions, serviceName, status, ethereumProvider);
   const { rollupContractAddress, tokenContractAddresses, chainId, networkOrHost } = status;
 
   // Set erase flag if requested or contract changed.
@@ -176,8 +178,9 @@ export class WalletSdk extends EventEmitter {
     }
   }
 
-  public getAssetPermitSupport(assetId) {
-    return this.blockchain.getAssetPermitSupport(assetId);
+  public async getAssetPermitSupport(assetId) {
+    const { assets } = await this.blockchain.getBlockchainStatus();
+    return assets[assetId].permitSupport;
   }
 
   public getActionState(userId?: AccountId) {
@@ -307,7 +310,8 @@ export class WalletSdk extends EventEmitter {
   ) {
     if (assetId === AssetId.ETH) {
       const ethBalance = await this.blockchain.getEthBalance(from);
-      if (ethBalance < value) {
+      const pendingBalance = await this.blockchain.getUserPendingDeposit(assetId, from);
+      if (ethBalance + pendingBalance < value) {
         throw new Error(`Insufficient eth balance: ${ethBalance}.`);
       }
     } else {

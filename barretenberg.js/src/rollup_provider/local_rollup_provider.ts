@@ -1,12 +1,11 @@
 import { Block } from '../block_source';
 import { EventEmitter } from 'events';
-import { assetIds } from '../client_proofs';
 import { ProofData } from '../client_proofs/proof_data';
 import { RollupProvider } from './rollup_provider';
 import { EthAddress } from '../address';
 import { RollupProofData } from '../rollup_proof';
 import { Proof } from '../rollup_provider';
-import { TxHash } from './tx_hash';
+import { TxHash } from '../tx_hash';
 
 export class LocalRollupProvider extends EventEmitter implements RollupProvider {
   private blockNum = 0;
@@ -48,6 +47,8 @@ export class LocalRollupProvider extends EventEmitter implements RollupProvider 
       rollupProofData: proofData,
       viewingKeysData: Buffer.concat(viewingKeys),
       created: new Date(),
+      gasPrice: BigInt(0),
+      gasUsed: 0,
     };
 
     this.blocks.push(block);
@@ -60,25 +61,28 @@ export class LocalRollupProvider extends EventEmitter implements RollupProvider 
   }
 
   async getStatus() {
-    const fees = new Map();
-    assetIds.forEach(assetId => {
-      fees.set(assetId, BigInt(0));
-    });
-
     return {
-      serviceName: 'local',
-      chainId: 0,
-      networkOrHost: '',
-      rollupContractAddress: EthAddress.ZERO,
-      tokenContractAddresses: [EthAddress.ZERO],
-      nextRollupId: this.blockNum,
-      dataSize: this.dataTreeSize,
-      dataRoot: this.dataRoot,
-      nullRoot: this.nullRoot,
-      rootRoot: this.rootRoot,
-      escapeOpen: false,
-      numEscapeBlocksRemaining: 0,
-      fees,
+      blockchainStatus: {
+        chainId: 0,
+        networkOrHost: '',
+        rollupContractAddress: EthAddress.ZERO,
+        feeDistributorContractAddress: EthAddress.ZERO,
+        tokenContractAddresses: [EthAddress.ZERO],
+        nextRollupId: this.blockNum,
+        dataSize: this.dataTreeSize,
+        dataRoot: this.dataRoot,
+        nullRoot: this.nullRoot,
+        rootRoot: this.rootRoot,
+        escapeOpen: false,
+        numEscapeBlocksRemaining: 0,
+        totalDeposited: [],
+        totalWithdrawn: [],
+        totalPendingDeposit: [],
+        totalFees: [],
+        feeDistributorBalance: [],
+        assets: [],
+      },
+      minFees: [],
     };
   }
 

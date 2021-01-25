@@ -2,8 +2,8 @@ import { RollupProvider } from './rollup_provider';
 import { fetch } from '../iso_fetch';
 import { ServerBlockSource } from '../block_source';
 import { Proof } from '../rollup_provider';
-import { getProviderStatus } from './get_provider_status';
-import { TxHash } from './tx_hash';
+import { TxHash } from '../tx_hash';
+import { blockchainStatusFromJson } from '../blockchain';
 
 export class ServerRollupProvider extends ServerBlockSource implements RollupProvider {
   constructor(baseUrl: URL) {
@@ -34,7 +34,21 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
   }
 
   async getStatus() {
-    return getProviderStatus(this.baseUrl);
+    const url = new URL(`${this.baseUrl}/status`);
+    const response = await fetch(url.toString()).catch(() => undefined);
+    if (!response) {
+      throw new Error('Failed to contact rollup provider.');
+    }
+    try {
+      const body = await response.json();
+
+      return {
+        blockchainStatus: blockchainStatusFromJson(body.blockchainStatus),
+        minFees: body.minFees.map(f => BigInt(f)),
+      };
+    } catch (err) {
+      throw new Error(`Bad response from: ${url}`);
+    }
   }
 
   async getPendingNoteNullifiers() {

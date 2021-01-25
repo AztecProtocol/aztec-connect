@@ -7,6 +7,8 @@ import { RollupDao } from './entity/rollup';
 import { RollupProofDao } from './entity/rollup_proof';
 import { TxDao } from './entity/tx';
 import { ConnectionOptions } from 'typeorm';
+import { JoinSplitTxDao } from './entity/join_split_tx';
+import { AccountTxDao } from './entity/account_tx';
 
 interface ConfVars {
   port: number;
@@ -14,7 +16,7 @@ interface ConfVars {
   ethereumHost?: string;
   infuraApiKey?: string;
   network?: string;
-  privateKey?: Buffer;
+  privateKey: Buffer;
   innerRollupSize: number;
   outerRollupSize: number;
   publishInterval: number;
@@ -24,7 +26,6 @@ interface ConfVars {
   apiPrefix: string;
   serverAuthToken: string;
   localBlockchainInitSize?: number;
-  // Temporary blockchain constants
   txFee: bigint;
   feeLimit: bigint;
 }
@@ -56,7 +57,10 @@ function getConfVars(): ConfVars {
     ethereumHost: ETHEREUM_HOST,
     infuraApiKey: INFURA_API_KEY,
     network: NETWORK,
-    privateKey: PRIVATE_KEY ? Buffer.from(PRIVATE_KEY.slice(2), 'hex') : undefined,
+    privateKey: PRIVATE_KEY
+      ? Buffer.from(PRIVATE_KEY.slice(2), 'hex')
+      : // Test mnemonic account 0.
+        Buffer.from('ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', 'hex'),
     innerRollupSize: +(INNER_ROLLUP_SIZE || 1),
     outerRollupSize: +(OUTER_ROLLUP_SIZE || 2),
     publishInterval: +(PUBLISH_INTERVAL || 0),
@@ -77,14 +81,12 @@ function getEthereumBlockchainConfig({
   minConfirmationEHW,
   network,
   ethereumHost,
-  txFee,
 }: ConfVars): EthereumBlockchainConfig {
   return {
     networkOrHost: network || ethereumHost || 'local',
     gasLimit,
     minConfirmation,
     minConfirmationEHW,
-    txFee,
   };
 }
 
@@ -105,14 +107,10 @@ function getProvider(confVars: ConfVars) {
     throw new Error('Provider is undefined.');
   }
 
-  if (privateKey) {
-    const walletProvider = new WalletProvider(provider);
-    const signingAddress = walletProvider.addAccount(privateKey);
-    console.log(`Signing address: ${signingAddress}`);
-    return walletProvider;
-  }
-
-  return provider;
+  const walletProvider = new WalletProvider(provider);
+  const signingAddress = walletProvider.addAccount(privateKey);
+  console.log(`Signing address: ${signingAddress}`);
+  return walletProvider;
 }
 
 async function loadConfVars(path: string) {
@@ -149,7 +147,7 @@ function getOrmConfig(): ConnectionOptions {
   return {
     type: 'sqlite',
     database: 'data/db.sqlite',
-    entities: [TxDao, RollupProofDao, RollupDao],
+    entities: [TxDao, JoinSplitTxDao, AccountTxDao, RollupProofDao, RollupDao],
     synchronize: true,
     logging: false,
   };

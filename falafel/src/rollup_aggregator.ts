@@ -1,3 +1,4 @@
+import { Blockchain } from 'barretenberg/blockchain';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { WorldStateDb } from 'barretenberg/world_state_db';
 import { RollupDao } from './entity/rollup';
@@ -14,6 +15,7 @@ export class RollupAggregator {
     private rollupPublisher: RollupPublisher,
     private rollupDb: RollupDb,
     private worldStateDb: WorldStateDb,
+    private blockchain: Blockchain,
     private innerRollupSize: number,
     private outerRollupSize: number,
     private metrics: Metrics,

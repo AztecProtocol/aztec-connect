@@ -1,14 +1,6 @@
 import { ApolloServer } from 'apollo-server-koa';
 import { Block, BlockServerResponse, GetBlocksServerResponse } from 'barretenberg/block_source';
-import { assetIds } from 'barretenberg/client_proofs';
-import {
-  RollupServerResponse,
-  TxServerResponse,
-  Proof,
-  ProofServerResponse,
-  RollupProviderStatusServerResponse,
-  RollupProviderStatus,
-} from 'barretenberg/rollup_provider';
+import { RollupServerResponse, TxServerResponse, Proof, RollupProviderStatus } from 'barretenberg/rollup_provider';
 import { WorldStateDb } from 'barretenberg/world_state_db';
 import graphqlPlayground from 'graphql-playground-middleware-koa';
 import Koa from 'koa';
@@ -24,6 +16,7 @@ import { RollupResolver, TxResolver, ServerStatusResolver } from './resolver';
 import { Server } from './server';
 import { RollupDao } from './entity/rollup';
 import { Metrics } from './metrics';
+import { blockchainStatusToJson } from 'barretenberg/blockchain';
 
 // eslint-disable-next-line
 const cors = require('@koa/cors');
@@ -34,6 +27,7 @@ const toBlockResponse = (block: Block): BlockServerResponse => ({
   rollupProofData: block.rollupProofData.toString('hex'),
   viewingKeysData: block.viewingKeysData.toString('hex'),
   created: block.created.toISOString(),
+  gasPrice: block.gasPrice.toString(),
 });
 
 const toRollupResponse = ({
@@ -109,7 +103,10 @@ export function appFactory(
   };
 
   router.get('/', async (ctx: Koa.Context) => {
-    ctx.body = 'OK\n';
+    ctx.body = {
+      serviceName: 'falafel',
+    };
+    ctx.status = 200;
   });
 
   router.post('/tx', async (ctx: Koa.Context) => {
@@ -121,7 +118,7 @@ export function appFactory(
       depositSignature: depositSignature ? bufferFromHex(depositSignature) : undefined,
     };
     const txId = await server.receiveTx(tx);
-    const response: ProofServerResponse = {
+    const response = {
       txHash: txId.toString('hex'),
     };
     ctx.body = response;
@@ -187,19 +184,9 @@ export function appFactory(
 
   router.get('/status', async (ctx: Koa.Context) => {
     const status = await server.getStatus();
-    const { rollupContractAddress, tokenContractAddresses, dataRoot, nullRoot, rootRoot, fees } = status;
-    const feesResponse: string[] = [];
-    assetIds.forEach(assetId => {
-      feesResponse[assetId] = fees.get(assetId)!.toString();
-    });
-    const response: RollupProviderStatusServerResponse = {
-      ...status,
-      rollupContractAddress: rollupContractAddress.toString(),
-      tokenContractAddresses: tokenContractAddresses.map(a => a.toString()),
-      dataRoot: dataRoot.toString('hex'),
-      nullRoot: nullRoot.toString('hex'),
-      rootRoot: rootRoot.toString('hex'),
-      fees: feesResponse,
+    const response = {
+      blockchainStatus: blockchainStatusToJson(status.blockchainStatus),
+      minFees: status.minFees.map(f => f.toString()),
     };
     ctx.set('content-type', 'application/json');
     ctx.body = response;

@@ -3,7 +3,7 @@ import { createHash, randomBytes, createCipheriv, createDecipheriv } from 'crypt
 import { Grumpkin } from '../ecc/grumpkin';
 import { GrumpkinAddress } from '../address';
 import { numToUInt8, numToUInt32BE } from '../serialize';
-import { AssetId } from './asset_id';
+import { AssetId } from '../asset';
 
 export class Note {
   constructor(

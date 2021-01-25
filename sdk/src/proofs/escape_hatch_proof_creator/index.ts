@@ -1,5 +1,5 @@
 import { EthAddress } from 'barretenberg/address';
-import { AssetId } from 'barretenberg/client_proofs';
+import { AssetId } from 'barretenberg/asset';
 import { EscapeHatchProver, EscapeHatchTx } from 'barretenberg/client_proofs/escape_hatch_proof';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { Pedersen } from 'barretenberg/crypto/pedersen';

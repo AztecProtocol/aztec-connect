@@ -1,4 +1,14 @@
-import { BeforeInsert, BeforeUpdate, Column, Entity, JoinColumn, OneToMany, OneToOne, PrimaryColumn } from 'typeorm';
+import {
+  BeforeInsert,
+  BeforeUpdate,
+  Column,
+  Entity,
+  Index,
+  JoinColumn,
+  OneToMany,
+  OneToOne,
+  PrimaryColumn,
+} from 'typeorm';
 import { RollupDao } from './rollup';
 import { TxDao } from './tx';
 
@@ -21,6 +31,7 @@ export class RollupProofDao {
   public txs!: TxDao[];
 
   @Column()
+  @Index()
   public rollupSize!: number;
 
   @Column()
@@ -32,7 +43,7 @@ export class RollupProofDao {
   @Column()
   public created!: Date;
 
-  @OneToOne(() => RollupDao, rollup => rollup.rollupProof)
+  @OneToOne(() => RollupDao, rollup => rollup.rollupProof, { onDelete: 'SET NULL' })
   @JoinColumn()
   rollup!: RollupDao;
 

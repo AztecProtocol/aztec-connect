@@ -1,5 +1,28 @@
+import { AssetId, AssetIds } from 'barretenberg/asset';
+import { Blockchain } from 'barretenberg/blockchain';
+import { WorldStateDb } from 'barretenberg/world_state_db';
+import { toBigIntBE } from 'bigint-buffer';
 import client, { Gauge, Histogram } from 'prom-client';
 import { RollupDb } from '../rollup_db';
+
+/**
+ * Converts the value to a decimal string representation with the given precision.
+ * The digits outside the precision are simply discarded (i.e. the result is floored).
+ * This ensures we never report more funds than actually exists.
+ * @param value to convert to string
+ * @param decimals the number of least significant digits of value that represent the decimal
+ * @param precision the number of decimal places to return
+ */
+export function fromBaseUnits(value: bigint, decimals: number, precision: number = decimals) {
+  const neg = value < BigInt(0);
+  const valStr = value
+    .toString()
+    .slice(neg ? 1 : 0)
+    .padStart(decimals + 1, '0');
+  const integer = valStr.slice(0, valStr.length - decimals);
+  const fractional = valStr.slice(-decimals);
+  return Number((neg ? '-' : '') + (fractional ? `${integer}.${fractional.slice(0, precision)}` : integer));
+}
 
 export class Metrics {
   private receiveTxDuration: Histogram<string>;
@@ -9,7 +32,15 @@ export class Metrics {
   private publishHistogram: Histogram<string>;
   private processBlockHistogram: Histogram<string>;
 
-  constructor(rollupDb: RollupDb) {
+  private rollupGasUsed: Gauge<string>;
+  private rollupGasPrice: Gauge<string>;
+  private rollupSize: Gauge<string>;
+  private totalDeposited: Gauge<string>;
+  private totalPendingDeposit: Gauge<string>;
+  private totalWithdrawn: Gauge<string>;
+  private totalFees: Gauge<string>;
+
+  constructor(worldStateDb: WorldStateDb, private rollupDb: RollupDb, private blockchain: Blockchain) {
     client.collectDefaultMetrics();
 
     new Gauge({
@@ -29,11 +60,90 @@ export class Metrics {
     });
 
     new Gauge({
-      name: 'rollups_total',
+      name: 'tx_join_split_total',
+      help: 'Total join split transactions',
+      async collect() {
+        this.set(await rollupDb.getJoinSplitTxCount());
+      },
+    });
+
+    new Gauge({
+      name: 'tx_account_total',
+      help: 'Total account transactions',
+      async collect() {
+        this.set(await rollupDb.getAccountTxCount());
+      },
+    });
+
+    new Gauge({
+      name: 'tx_registrations_total',
+      help: 'Total registration transactions',
+      async collect() {
+        this.set(await rollupDb.getRegistrationTxCount());
+      },
+    });
+
+    new Gauge({
+      name: 'world_state_data_size',
+      help: 'Size of data tree',
+      async collect() {
+        this.set(Number(await worldStateDb.getSize(0)));
+      },
+    });
+
+    new Gauge({
+      name: 'rollup_total',
       help: 'Total rollups',
       async collect() {
         this.set(await rollupDb.getNextRollupId());
       },
+    });
+
+    new Gauge({
+      name: 'escapes_total',
+      help: 'Total escapes',
+      async collect() {
+        this.set(await rollupDb.getTotalRollupsOfSize(0));
+      },
+    });
+
+    this.rollupSize = new Gauge({
+      name: 'rollup_size',
+      help: 'Rollup size',
+    });
+
+    this.rollupGasUsed = new Gauge({
+      name: 'rollup_gas_used',
+      help: 'Total gas used by rollup',
+    });
+
+    this.rollupGasPrice = new Gauge({
+      name: 'rollup_gas_price',
+      help: 'Gas price for rollup',
+    });
+
+    this.totalDeposited = new Gauge({
+      name: 'rollup_contract_total_deposited',
+      help: 'Total deposited',
+      labelNames: ['symbol'],
+    });
+
+    this.totalPendingDeposit = new Gauge({
+      name: 'rollup_contract_total_pending_deposit',
+      help: 'Total pending deposit',
+      labelNames: ['symbol'],
+    });
+
+    this.totalWithdrawn = new Gauge({
+      name: 'rollup_contract_total_withdrawn',
+      help: 'Total withdrawn',
+      labelNames: ['symbol'],
+    });
+
+    this.totalFees = new Gauge({
+      name: 'rollup_contract_total_fees',
+      help: 'Total fees',
+      labelNames: ['symbol'],
     });
 
     this.receiveTxDuration = new Histogram({
@@ -91,7 +201,29 @@ export class Metrics {
     this.txSettlementHistogram.observe(ms / 1000);
   }
 
-  getMetrics() {
+  async getMetrics() {
+    const status = await this.blockchain.getBlockchainStatus();
+    for (const asset of AssetIds) {
+      const totalDeposited = fromBaseUnits(status.totalDeposited[asset], status.assets[asset].decimals);
+      this.totalDeposited.labels(AssetId[asset].toString()).set(totalDeposited);
+
+      const totalPendingDeposit = fromBaseUnits(status.totalPendingDeposit[asset], status.assets[asset].decimals);
+      this.totalPendingDeposit.labels(AssetId[asset].toString()).set(totalPendingDeposit);
+
+      const totalWithdrawn = fromBaseUnits(status.totalWithdrawn[asset], status.assets[asset].decimals);
+      this.totalWithdrawn.labels(AssetId[asset].toString()).set(totalWithdrawn);
+
+      const totalFees = fromBaseUnits(status.totalFees[asset], status.assets[asset].decimals);
+      this.totalFees.labels(AssetId[asset].toString()).set(totalFees);
+    }
+
+    const rollup = await this.rollupDb.getLastRollup();
+    if (rollup) {
+      this.rollupSize.set(rollup.rollupProof.rollupSize);
+      this.rollupGasUsed.set(rollup.gasUsed);
+      this.rollupGasPrice.set(Number(toBigIntBE(rollup.gasPrice)));
+    }
+
     return client.register.metrics();
   }
 }

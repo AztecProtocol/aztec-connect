@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2020 Spilsbury Holdings Ltd
-pragma solidity >=0.6.10 <0.7.0;
+pragma solidity >=0.6.10 <0.8.0;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
@@ -40,7 +40,13 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     uint256 public immutable escapeBlockLowerBound;
     uint256 public immutable escapeBlockUpperBound;
 
-    event RollupProcessed(uint256 indexed rollupId, bytes32 dataRoot, bytes32 nullRoot);
+    event RollupProcessed(
+        uint256 indexed rollupId,
+        bytes32 dataRoot,
+        bytes32 nullRoot,
+        bytes32 rootRoot,
+        uint256 dataSize
+    );
     event Deposit(uint256 assetId, address depositorAddress, uint256 depositValue);
     event Withdraw(uint256 assetId, address withdrawAddress, uint256 withdrawValue);
     event WithdrawError(bytes errorReason);
@@ -48,8 +54,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     event RollupProviderUpdated(address indexed providerAddress, bool valid);
     event VerifierUpdated(address indexed verifierAddress);
 
-    // Array of supported ERC20 token address. The array index of the ERC20 token address
-    // corresponds to the assetId of the asset
+    // Array of supported ERC20 token address.
     address[] public supportedAssets;
 
     // Mapping which maps an asset address to a bool, determining whether it supports
@@ -65,6 +70,12 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
 
     address public override feeDistributor;
 
+    // Metrics
+    uint256[] public totalPendingDeposit;
+    uint256[] public totalDeposited;
+    uint256[] public totalWithdrawn;
+    uint256[] public totalFees;
+
     constructor(
         address _verifierAddress,
         uint256 _escapeBlockLowerBound,
@@ -75,6 +86,10 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         escapeBlockLowerBound = _escapeBlockLowerBound;
         escapeBlockUpperBound = _escapeBlockUpperBound;
         rollupProviders[msg.sender] = true;
+        totalPendingDeposit.push(0);
+        totalDeposited.push(0);
+        totalWithdrawn.push(0);
+        totalFees.push(0);
         transferOwnership(_contractOwner);
     }
 
@@ -100,7 +115,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
      * @dev Get the ERC20 token address of a supported asset, for a given assetId
      * @param assetId - identifier used to denote a particular asset
      */
-    function getSupportedAsset(uint256 assetId) public override view returns (address) {
+    function getSupportedAsset(uint256 assetId) public view override returns (address) {
         if (assetId == ethAssetId) {
             return address(0x0);
         }
@@ -111,15 +126,31 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     /**
      * @dev Get the addresses of all supported ERC20 tokens
      */
-    function getSupportedAssets() external override view returns (address[] memory) {
+    function getSupportedAssets() external view override returns (address[] memory) {
         return supportedAssets;
+    }
+
+    function getTotalDeposited() external view override returns (uint256[] memory) {
+        return totalDeposited;
+    }
+
+    function getTotalWithdrawn() external view override returns (uint256[] memory) {
+        return totalWithdrawn;
+    }
+
+    function getTotalPendingDeposit() external view override returns (uint256[] memory) {
+        return totalPendingDeposit;
+    }
+
+    function getTotalFees() external view override returns (uint256[] memory) {
+        return totalFees;
     }
 
     /**
      * @dev Get the status of whether an asset supports the permit ERC-2612 approval flow
      * @param assetId - unique identifier of the supported asset
      */
-    function getAssetPermitSupport(uint256 assetId) external override view returns (bool) {
+    function getAssetPermitSupport(uint256 assetId) external view override returns (bool) {
         address assetAddress = getSupportedAsset(assetId);
         return assetPermitSupport[assetAddress];
     }
@@ -129,7 +160,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
      * hatch is open and also the number of blocks until the hatch will switch from
      * open to closed or vice versa
      */
-    function getEscapeHatchStatus() public override view returns (bool, uint256) {
+    function getEscapeHatchStatus() public view override returns (bool, uint256) {
         uint256 blockNum = block.number;
 
         bool isOpen = blockNum % escapeBlockUpperBound >= escapeBlockLowerBound;
@@ -150,7 +181,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
      * @param assetId - unique identifier of the asset
      * @param userAddress - Ethereum address of the user who's balance is being queried
      */
-    function getUserPendingDeposit(uint256 assetId, address userAddress) external override view returns (uint256) {
+    function getUserPendingDeposit(uint256 assetId, address userAddress) external view override returns (uint256) {
         return userPendingDeposits[assetId][userAddress];
     }
 
@@ -163,6 +194,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         uint256 amount
     ) internal {
         userPendingDeposits[assetId][depositorAddress] = userPendingDeposits[assetId][depositorAddress].add(amount);
+        totalPendingDeposit[assetId] = totalPendingDeposit[assetId].add(amount);
     }
 
     /**
@@ -177,6 +209,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         require(userBalance >= amount, 'Rollup Processor: INSUFFICIENT_DEPOSIT');
 
         userPendingDeposits[assetId][transferFromAddress] = userBalance.sub(amount);
+        totalPendingDeposit[assetId] = totalPendingDeposit[assetId].sub(amount);
+        totalDeposited[assetId] = totalDeposited[assetId].add(amount);
     }
 
     /**
@@ -193,6 +227,11 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
 
         uint256 assetId = supportedAssets.length;
         require(assetId < numberOfAssets, 'Rollup Processor: MAX_ASSET_REACHED');
+
+        totalPendingDeposit.push(0);
+        totalDeposited.push(0);
+        totalWithdrawn.push(0);
+        totalFees.push(0);
 
         emit AssetAdded(assetId, linkedToken);
     }
@@ -220,7 +259,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         uint256 assetId,
         uint256 amount,
         address depositorAddress
-    ) external override payable whenNotPaused {
+    ) external payable override whenNotPaused {
         if (assetId == ethAssetId) {
             require(msg.value == amount, 'Rollup Processor: WRONG_AMOUNT');
 
@@ -323,26 +362,23 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         uint256 initialGas = gasleft();
 
         require(rollupProviders[provider], 'Rollup Processor: UNKNOWN_PROVIDER');
-        bytes memory sigData = abi.encodePacked(
-            proofData[0:rollupPubInputLength],
-            feeReceiver,
-            feeLimit,
-            feeDistributor
-        );
+        bytes memory sigData =
+            abi.encodePacked(proofData[0:rollupPubInputLength], feeReceiver, feeLimit, feeDistributor);
         RollupProcessorLibrary.validateSignature(sigData, providerSignature, provider);
 
         processRollupProof(proofData, signatures, viewingKeys);
 
         transferFee(proofData);
 
-        (bool success, ) = feeDistributor.call(
-            abi.encodeWithSignature(
-                'reimburseGas(uint256,uint256,address)',
-                initialGas - gasleft(),
-                feeLimit,
-                feeReceiver
-            )
-        );
+        (bool success, ) =
+            feeDistributor.call(
+                abi.encodeWithSignature(
+                    'reimburseGas(uint256,uint256,address)',
+                    initialGas - gasleft(),
+                    feeLimit,
+                    feeReceiver
+                )
+            );
         require(success, 'Rollup Processor: REIMBURSE_GAS_FAILED');
     }
 
@@ -352,7 +388,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         bytes calldata viewingKeys
     ) internal {
         uint256 numTxs = verifyProofAndUpdateState(proofData);
-        processDepositsAndWithdrawals(proofData[rollupPubInputLength:], numTxs, signatures);
+        processDepositsAndWithdrawals(proofData[rollupPubInputLength:proofData.length], numTxs, signatures);
     }
 
     /**
@@ -379,7 +415,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         rootRoot = newRootRoot;
         dataSize = newDataSize;
 
-        emit RollupProcessed(rollupId, newDataRoot, newNullRoot);
+        emit RollupProcessed(rollupId, dataRoot, nullRoot, rootRoot, dataSize);
 
         return numTxs;
     }
@@ -451,9 +487,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         uint256 sigIndex = 0;
 
         for (uint256 i = 0; i < numTxs; i++) {
-            bytes calldata txPubInputs = innerProofData[i.mul(txPubInputLength):i.mul(txPubInputLength).add(
-                txPubInputLength
-            )];
+            bytes calldata txPubInputs =
+                innerProofData[i.mul(txPubInputLength):i.mul(txPubInputLength).add(txPubInputLength)];
             (
                 uint256 proofId,
                 uint256 publicInput,
@@ -476,9 +511,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             }
 
             if (publicOutput > 0) {
-                assetId == ethAssetId
-                    ? withdrawETH(publicOutput, outputOwner, assetId)
-                    : withdrawERC20(publicOutput, outputOwner, assetId);
+                withdraw(publicOutput, outputOwner, assetId);
             }
         }
     }
@@ -496,6 +529,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                     (success, ) = feeDistributor.call(abi.encodeWithSignature('deposit(uint256,uint256)', i, txFee));
                 }
                 require(success, 'Rollup Processor: DEPOSIT_TX_FEE_FAILED');
+                totalFees[i] = totalFees[i].add(txFee);
             }
         }
     }
@@ -506,30 +540,18 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
      * @param receiverAddress - address receiving public ERC20 tokens
      * @param assetId - ID of the asset for which a withdrawl is being performed
      */
-    function withdrawETH(
+    function withdraw(
         uint256 withdrawValue,
         address receiverAddress,
         uint256 assetId
     ) internal {
         require(receiverAddress != address(0), 'Rollup Processor: ZERO_ADDRESS');
-        payable(receiverAddress).call{gas: 30000, value: withdrawValue}('');
-    }
-
-    /**
-     * @dev Internal utility function to withdraw ERC20 funds from the contract to a receiver address
-     * @param withdrawValue - value being withdrawn from the contract
-     * @param receiverAddress - address receiving public ERC20 tokens
-     * @param assetId - ID of the asset for which a withdrawl is being performed
-     */
-    function withdrawERC20(
-        uint256 withdrawValue,
-        address receiverAddress,
-        uint256 assetId
-    ) internal {
-        require(receiverAddress != address(0), 'Rollup Processor: ZERO_ADDRESS');
-
-        address assetAddress = getSupportedAsset(assetId);
-
-        IERC20(assetAddress).transfer(receiverAddress, withdrawValue);
+        if (assetId == 0) {
+            payable(receiverAddress).call{gas: 30000, value: withdrawValue}('');
+        } else {
+            address assetAddress = getSupportedAsset(assetId);
+            IERC20(assetAddress).transfer(receiverAddress, withdrawValue);
+        }
+        totalWithdrawn[assetId] = totalWithdrawn[assetId].add(withdrawValue);
     }
 }

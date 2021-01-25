@@ -38,7 +38,9 @@ describe('end-to-end account tests', () => {
     // Get accounts and signers.
     userAddresses = (await ethersProvider.listAccounts()).map(account => EthAddress.fromString(account));
 
-    const { rollupContractAddress } = await sdk.getRemoteStatus();
+    const {
+      blockchainStatus: { rollupContractAddress },
+    } = await sdk.getRemoteStatus();
     const tenEth = BigInt(10) ** BigInt(19);
     await topUpFeeDistributorContract(tenEth, rollupContractAddress, provider);
   });

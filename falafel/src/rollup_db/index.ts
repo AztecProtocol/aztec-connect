@@ -1,22 +1,60 @@
+import { AccountAliasId } from 'barretenberg/client_proofs/account_alias_id';
+import { InnerProofData } from 'barretenberg/rollup_proof';
 import { TxHash } from 'barretenberg/rollup_provider';
+import { toBufferBE } from 'bigint-buffer';
 import { Connection, In, IsNull, MoreThanOrEqual, Not, Repository } from 'typeorm';
+import { AccountTxDao } from '../entity/account_tx';
+import { JoinSplitTxDao } from '../entity/join_split_tx';
 import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
 
 export class RollupDb {
   private txRep: Repository<TxDao>;
+  private joinSplitTxRep: Repository<JoinSplitTxDao>;
+  private accountTxRep: Repository<AccountTxDao>;
   private rollupProofRep: Repository<RollupProofDao>;
   private rollupRep: Repository<RollupDao>;
 
   constructor(private connection: Connection) {
     this.txRep = this.connection.getRepository(TxDao);
+    this.joinSplitTxRep = this.connection.getRepository(JoinSplitTxDao);
+    this.accountTxRep = this.connection.getRepository(AccountTxDao);
     this.rollupProofRep = this.connection.getRepository(RollupProofDao);
     this.rollupRep = this.connection.getRepository(RollupDao);
   }
 
   public async addTx(txDao: TxDao) {
-    return this.txRep.save(txDao);
+    await this.connection.transaction(async transactionalEntityManager => {
+      await transactionalEntityManager.save(txDao);
+
+      const proofData = InnerProofData.fromBuffer(txDao.proofData);
+
+      if (proofData.proofId === 0) {
+        const joinSplitDao = new JoinSplitTxDao({
+          id: proofData.txId,
+          publicInput: proofData.publicInput,
+          publicOutput: proofData.publicOutput,
+          assetId: proofData.assetId.readUInt32BE(28),
+          inputOwner: proofData.inputOwner.slice(12),
+          outputOwner: proofData.outputOwner.slice(12),
+          created: txDao.created,
+        });
+        await transactionalEntityManager.save(joinSplitDao);
+      } else if (proofData.proofId === 1) {
+        const accountAliasId = AccountAliasId.fromBuffer(proofData.assetId);
+        const accountTxDao = new AccountTxDao({
+          id: proofData.txId,
+          accountPubKey: Buffer.concat([proofData.publicInput, proofData.publicOutput]),
+          aliasHash: accountAliasId.aliasHash.toBuffer(),
+          nonce: accountAliasId.nonce,
+          spendingKey1: proofData.nullifier1,
+          spendingKey2: proofData.nullifier2,
+          created: txDao.created,
+        });
+        await transactionalEntityManager.save(accountTxDao);
+      }
+    });
   }
 
   public async getTx(txId: Buffer) {
@@ -48,6 +86,29 @@ export class RollupDb {
     return this.txRep.count();
   }
 
+  public async getJoinSplitTxCount() {
+    return this.joinSplitTxRep.count();
+  }
+
+  public async getAccountTxCount() {
+    return this.accountTxRep.count();
+  }
+
+  public async getRegistrationTxCount() {
+    const result = await this.accountTxRep.query(
+      `select count(distinct(accountPubKey)) as count from account_tx where nonce=1 group by accountPubKey`,
+    );
+    return result[0] ? result[0].count : 0;
+  }
+
+  public async getTotalRollupsOfSize(rollupSize: number) {
+    return await this.rollupProofRep
+      .createQueryBuilder('rp')
+      .leftJoinAndSelect('rp.rollup', 'r')
+      .where('rp.rollupSize = :rollupSize AND r.mined IS NOT NULL', { rollupSize })
+      .getCount();
+  }
+
   public async getUnsettledTxCount() {
     return await this.txRep
       .createQueryBuilder('tx')
@@ -63,6 +124,19 @@ export class RollupDb {
       order: { created: 'ASC' },
       take,
     });
+  }
+
+  public async getPendingNoteNullifiers() {
+    const unsettledTxs = await this.getPendingTxs();
+    return unsettledTxs.map(tx => [tx.nullifier1, tx.nullifier2]).flat();
+  }
+
+  public async nullifiersExist(n1: Buffer, n2: Buffer) {
+    const count = await this.txRep
+      .createQueryBuilder('tx')
+      .where('tx.nullifier1 IS :n1 OR tx.nullifier1 IS :n2 OR tx.nullifier2 IS :n1 OR tx.nullifier2 IS :n2', { n1, n2 })
+      .getCount();
+    return count > 0;
   }
 
   public async addRollupProof(rollupDao: RollupProofDao) {
@@ -96,13 +170,6 @@ export class RollupDb {
   }
 
   public async getRollupProofsBySize(numTxs: number) {
-    // return await this.rollupProofRep
-    //   .createQueryBuilder('rollup_proof')
-    //   .innerJoin('rollup_proof.txs', 'tx')
-    //   .where('rollup_proof.rollup IS NULL')
-    //   .groupBy('tx.rollupProof')
-    //   .having('COUNT(tx.id) = :numTxs', { numTxs })
-    //   .getMany();
     return await this.rollupProofRep.find({
       where: { rollupSize: numTxs, rollup: null },
       relations: ['txs'],
@@ -127,6 +194,13 @@ export class RollupDb {
     });
   }
 
+  public async getLastRollup() {
+    return this.rollupRep.findOne({
+      order: { id: 'DESC' },
+      relations: ['rollupProof'],
+    });
+  }
+
   public async addRollup(rollup: RollupDao) {
     return await this.rollupRep.save(rollup);
   }
@@ -135,8 +209,8 @@ export class RollupDb {
     await this.rollupRep.update({ id }, { ethTxHash: txHash.toBuffer() });
   }
 
-  public async confirmMined(id: number) {
-    await this.rollupRep.update({ id }, { mined: new Date() });
+  public async confirmMined(id: number, gasUsed: number, gasPrice: bigint, mined: Date) {
+    await this.rollupRep.update({ id }, { mined, gasUsed, gasPrice: toBufferBE(gasPrice, 32) });
   }
 
   public getSettledRollups(from = 0, descending = false, take?: number) {

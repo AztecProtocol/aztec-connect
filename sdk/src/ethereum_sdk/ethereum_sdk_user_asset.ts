@@ -1,4 +1,4 @@
-import { AssetId } from 'barretenberg/client_proofs';
+import { AssetId } from 'barretenberg/asset';
 import { Signer } from '../signer';
 import { AccountId } from '../user';
 import { JoinSplitTxOptions } from '../wallet_sdk/tx_options';

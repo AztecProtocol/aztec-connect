@@ -1,7 +1,7 @@
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { AssetId } from 'barretenberg/client_proofs';
-import { getProviderStatus, TxHash } from 'barretenberg/rollup_provider';
+import { AssetId } from 'barretenberg/asset';
+import { TxHash } from 'barretenberg/rollup_provider';
 import createDebug from 'debug';
 import isNode from 'detect-node';
 import { EventEmitter } from 'events';
@@ -19,6 +19,7 @@ import { createConnection } from 'typeorm';
 import { EthereumBlockchain } from 'blockchain';
 import { createPermitData } from '../wallet_sdk/create_permit_data';
 import { EthUserId } from './eth_user_id';
+import { getBlockchainStatus, getServiceName } from 'barretenberg/service';
 
 export * from './eth_user_id';
 export * from './ethereum_sdk_user';
@@ -48,8 +49,9 @@ async function getDb(dbPath = 'data') {
 }
 
 export async function createEthSdk(ethereumProvider: EthereumProvider, serverUrl: string, sdkOptions: SdkOptions = {}) {
-  const status = await getProviderStatus(serverUrl);
-  const core = await createSdk(serverUrl, sdkOptions, status, ethereumProvider);
+  const serviceName = await getServiceName(serverUrl);
+  const status = await getBlockchainStatus(serverUrl);
+  const core = await createSdk(serverUrl, sdkOptions, serviceName, status, ethereumProvider);
   const db = await getDb(sdkOptions.dbPath);
   const { rollupContractAddress, tokenContractAddresses, chainId, networkOrHost } = status;
 

@@ -1,6 +1,6 @@
 import { EthAddress } from 'barretenberg/address';
+import { Block } from 'barretenberg/block_source';
 import { TxHash } from 'barretenberg/rollup_provider';
-import { Block } from './blockchain';
 import { Contracts } from './contracts';
 import { EthereumBlockchain, EthereumBlockchainConfig } from './ethereum_blockchain';
 
@@ -19,13 +19,18 @@ describe('ethereum_blockchain', () => {
     rollupSize: 2,
     rollupProofData: Buffer.alloc(0),
     viewingKeysData: Buffer.alloc(0),
+    gasPrice: BigInt(0),
+    gasUsed: 0,
   });
 
   const blocks: Block[] = [generateBlock(0), generateBlock(1), generateBlock(2)];
 
   beforeEach(async () => {
     contracts = {
-      getSupportedAssets: jest.fn(),
+      getSupportedAssets: jest.fn().mockResolvedValue([]),
+      getAssetPermitSupport: jest.fn().mockResolvedValue(false),
+      getAssetDecimals: jest.fn().mockResolvedValue(18),
+      getAssetSymbol: jest.fn().mockResolvedValue('ETH'),
       getRollupStatus: jest.fn().mockResolvedValue({ nextRollupId: 0 }),
       getEscapeHatchStatus: jest.fn().mockResolvedValue({
         escapeOpen: false,
@@ -34,6 +39,7 @@ describe('ethereum_blockchain', () => {
       getRollupBlocksFrom: jest.fn().mockResolvedValue(blocks),
       getTokenContractAddresses: jest.fn().mockReturnValue([EthAddress.randomAddress()]),
       getRollupContractAddress: jest.fn().mockReturnValue(EthAddress.randomAddress()),
+      getFeeDistributorContractAddress: jest.fn().mockReturnValue(EthAddress.randomAddress()),
       getBlockNumber: jest.fn().mockResolvedValue(blocks.length),
       getNetwork: jest.fn().mockResolvedValue({ chainId: 999 }),
       getTransactionReceipt: jest.fn(),

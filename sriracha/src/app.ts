@@ -1,6 +1,5 @@
 import cors from '@koa/cors';
-import { assetIds } from 'barretenberg/client_proofs';
-import { RollupProviderStatusServerResponse } from 'barretenberg/rollup_provider';
+import { blockchainStatusToJson } from 'barretenberg/blockchain';
 import { toBigIntBE } from 'bigint-buffer';
 import Koa from 'koa';
 import bodyParser from 'koa-bodyparser';
@@ -13,28 +12,18 @@ export function appFactory(server: Server, prefix: string) {
   const router = new Router({ prefix });
 
   router.get('/', async (ctx: Koa.Context) => {
-    ctx.body = 'OK\n';
+    ctx.body = {
+      serviceName: 'sriracha',
+    };
     ctx.response.status = 200;
   });
 
   router.get('/status', async (ctx: Koa.Context) => {
     const status = await server.getStatus();
-    const { rollupContractAddress, tokenContractAddresses, dataRoot, nullRoot, rootRoot, fees } = status;
-    const feesResponse: string[] = [];
-    assetIds.forEach(assetId => {
-      feesResponse[assetId] = fees.get(assetId)!.toString();
-    });
-    const response: RollupProviderStatusServerResponse = {
-      ...status,
-      rollupContractAddress: rollupContractAddress.toString(),
-      tokenContractAddresses: tokenContractAddresses.map(address => address.toString()),
-      dataRoot: dataRoot.toString('hex'),
-      nullRoot: nullRoot.toString('hex'),
-      rootRoot: rootRoot.toString('hex'),
-      fees: feesResponse,
-    };
     ctx.set('content-type', 'application/json');
-    ctx.body = response;
+    ctx.body = {
+      blockchainStatus: blockchainStatusToJson(status.blockchainStatus),
+    };
     ctx.response.status = 200;
   });
 

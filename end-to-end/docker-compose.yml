@@ -5,7 +5,14 @@ services:
     environment:
       NODE_OPTIONS: --max_old_space_size=3072
     command:
-      ['-a=10', '-h=0.0.0.0', '--chainId=1337', '-q', 'm=test test test test test test test test test test test junk']
+      [
+        '-h=0.0.0.0',
+        '--chainId=1337',
+        '-q',
+        '-l 12000000',
+        '-e 10000',
+        '-m=test test test test test test test test test test test junk',
+      ]
     ports:
       - '8545:8545'
 

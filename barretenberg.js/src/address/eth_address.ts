@@ -1,5 +1,4 @@
 import { Keccak } from 'sha3';
-import { Address } from './address';
 import { randomBytes } from 'crypto';
 
 const hash = new Keccak(256);
@@ -13,7 +12,7 @@ function sha3(input: string) {
   return hash.digest('hex');
 }
 
-export class EthAddress implements Address {
+export class EthAddress {
   public static ZERO = new EthAddress(Buffer.alloc(20));
 
   constructor(private buffer: Buffer) {
@@ -87,7 +86,7 @@ export class EthAddress implements Address {
     return checksumAddress;
   }
 
-  public equals(rhs: Address) {
+  public equals(rhs: EthAddress) {
     return this.buffer.equals(rhs.toBuffer());
   }
 

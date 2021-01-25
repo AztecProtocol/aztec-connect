@@ -1,4 +1,4 @@
-import { pathExists, mkdirp } from 'fs-extra';
+import { pathExists, mkdirp, rename } from 'fs-extra';
 import { fetch } from 'barretenberg/iso_fetch';
 import { ChildProcess, spawn } from 'child_process';
 import { createWriteStream } from 'fs';
@@ -79,8 +79,10 @@ export class ProofGenerator {
   }
 
   private async ensureCrs() {
+    // Approximate. rollup_cli could report max circuit size after init.
+    let required = Math.floor(2 ** 25 / 28) * this.txRollupSize;
     const pointPerTranscript = 5040000;
-    for (let i = 0, required = 2 ** 25; required > 0; i++, required -= pointPerTranscript) {
+    for (let i = 0; required > 0; i++, required -= pointPerTranscript) {
       await this.downloadTranscript(i);
     }
   }
@@ -96,11 +98,12 @@ export class ProofGenerator {
     if (response.status !== 200) {
       throw new Error('Failed to download crs.');
     }
-    const out = createWriteStream(`./data/crs/transcript${id}.dat`);
-    return new Promise(resolve => {
+    const out = createWriteStream(`./data/crs/transcript${id}.dat.progress`);
+    await new Promise(resolve => {
       out.once('close', resolve);
       (response.body as any).pipe(out);
     });
+    await rename(`./data/crs/transcript${id}.dat.progress`, `./data/crs/transcript${id}.dat`);
   }
 
   private launch() {

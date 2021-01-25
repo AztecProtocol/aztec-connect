@@ -68,24 +68,43 @@ export class WalletProvider implements EthereumProvider {
     return this.provider.request(args);
   }
 
+  /**
+   * Given a tx in Eth Json Rpc format, convert to ethers format and give to account to sign.
+   * Populate any missing fields.
+   */
+  private async signTxLocally(tx: any, account: Wallet) {
+    const gasLimit = tx.gas || 7000000;
+    const gasPrice = tx.gasPrice || (await this.provider.request({ method: 'eth_gasPrice' }));
+    const value = tx.value || 0;
+    const nonce =
+      tx.nonce || (await this.provider.request({ method: 'eth_getTransactionCount', params: [tx.from, 'latest'] }));
+
+    const toSign = {
+      from: tx.from,
+      to: tx.to,
+      data: tx.data,
+      gasLimit,
+      gasPrice,
+      value,
+      nonce,
+    };
+    return await account.signTransaction(toSign);
+  }
+
   private async signTransaction(args: RequestArguments) {
     const tx = args.params![0];
-    const account = this.accounts.find(a => a.address.toLowerCase() === tx.from);
+    const account = this.accounts.find(a => a.address.toLowerCase() === tx.from.toLowerCase());
     if (account) {
-      return await account.signTransaction(tx);
+      return this.signTxLocally(tx, account);
     }
     return this.provider.request(args);
   }
 
   private async sendTransaction(args: RequestArguments) {
     const tx = args.params![0];
-    const account = this.accounts.find(a => a.address.toLowerCase() === tx.from);
+    const account = this.accounts.find(a => a.address.toLowerCase() === tx.from.toLowerCase());
     if (account) {
-      const { gas: gasLimit, ...rest } = tx;
-      const nonce = await this.provider.request({ method: 'eth_getTransactionCount', params: [tx.from, 'latest'] });
-      const gasPrice = tx.gasPrice || (await this.provider.request({ method: 'eth_gasPrice' }));
-      const toSign = { ...rest, gasLimit, gasPrice, nonce };
-      const result = await account.signTransaction(toSign);
+      const result = await this.signTxLocally(tx, account);
       return this.provider.request({ method: 'eth_sendRawTransaction', params: [result] });
     }
     return this.provider.request(args);

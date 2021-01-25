@@ -13,6 +13,8 @@ const { ETHEREUM_HOST = 'http://localhost:8545', SRIRACHA_HOST = 'http://localho
  * - before deploying the contracts:
  *   ESCAPE_BLOCK_LOWER=10
  *   ESCAPE_BLOCK_UPPER=100
+ * - before running (if running) falafel:
+ *   MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW=1
  * - before running sriracha:
  *   MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW=1
  */
@@ -54,7 +56,9 @@ describe('end-to-end escape tests', () => {
   });
 
   it('should deposit, transfer and withdraw funds', async () => {
-    const { escapeOpen } = await sdk.getRemoteStatus();
+    const {
+      blockchainStatus: { escapeOpen },
+    } = await sdk.getRemoteStatus();
     expect(escapeOpen).toBe(true);
 
     const user0Asset = users[0].getAsset(assetId);

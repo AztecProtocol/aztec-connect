@@ -1,5 +1,5 @@
 import { EthAddress } from 'barretenberg/address';
-import { AssetId } from 'barretenberg/client_proofs';
+import { AssetId } from 'barretenberg/asset';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { expect, use } from 'chai';
 import { randomBytes } from 'crypto';
@@ -7,7 +7,7 @@ import { solidity } from 'ethereum-waffle';
 import { Contract, Signer, Wallet } from 'ethers';
 import { ethers, network } from 'hardhat';
 import sinon from 'sinon';
-import { Blockchain } from '../src/blockchain';
+import { Blockchain } from 'barretenberg/blockchain';
 import { EthereumBlockchain } from '../src/ethereum_blockchain';
 import { EthersAdapter, WalletProvider } from '../src/provider';
 import {
@@ -96,7 +96,7 @@ describe('ethereum_blockchain', () => {
   });
 
   it('should get status', async () => {
-    const { rollupContractAddress, tokenContractAddresses } = await ethereumBlockchain.getStatus();
+    const { rollupContractAddress, tokenContractAddresses } = await ethereumBlockchain.getBlockchainStatus();
     expect(rollupContractAddress.toString().length).to.be.greaterThan(0);
     expect(tokenContractAddresses.length).to.be.greaterThan(0);
   });
@@ -104,16 +104,19 @@ describe('ethereum_blockchain', () => {
   it('should set new supported asset', async () => {
     const newERC20 = await ethers.getContractFactory('ERC20Mintable');
     const newErc20 = await newERC20.deploy();
-    await ethereumBlockchain.setSupportedAsset(EthAddress.fromString(newErc20.address), true, rollupProviderAddress);
+    const txHash = await ethereumBlockchain.setSupportedAsset(
+      EthAddress.fromString(newErc20.address),
+      true,
+      rollupProviderAddress,
+    );
+    await ethereumBlockchain.getTransactionReceipt(txHash);
 
-    const supportedAssets = ethereumBlockchain.getTokenContractAddresses();
-    expect(supportedAssets.length).to.equal(3);
-    expect(supportedAssets[0].toString()).to.equal(erc20.address);
-    expect(supportedAssets[1].toString()).to.equal(erc20Permit.address);
-    expect(supportedAssets[2].toString()).to.equal(newErc20.address);
-
-    const assetSupportsPermit = await ethereumBlockchain.getAssetPermitSupport(2);
-    expect(assetSupportsPermit).to.equal(true);
+    const { assets } = await ethereumBlockchain.getBlockchainStatus(true);
+    expect(assets.length).to.equal(4);
+    expect(assets[1].address.toString()).to.equal(erc20.address);
+    expect(assets[2].address.toString()).to.equal(erc20Permit.address);
+    expect(assets[3].address.toString()).to.equal(newErc20.address);
+    expect(assets[3].permitSupport).to.equal(true);
   });
 
   it('should get user pending deposit', async () => {
@@ -216,7 +219,7 @@ describe('ethereum_blockchain', () => {
     const depositReceipt = await ethereumBlockchain.getTransactionReceipt(depositTxHash);
     expect(depositReceipt.blockNum).to.be.above(0);
 
-    const txHash = await ethereumBlockchain.sendProof({ proofData, viewingKeys, depositSignature: signatures[0] });
+    const txHash = await ethereumBlockchain.sendEscapeHatchProof(proofData, viewingKeys, signatures[0]);
     const receipt = await ethereumBlockchain.getTransactionReceipt(txHash);
     expect(receipt.blockNum).to.be.above(depositReceipt.blockNum);
   });
@@ -258,7 +261,7 @@ describe('ethereum_blockchain', () => {
 
   it('should process send proof', async () => {
     const { proofData } = await createRollupProof(rollupProvider, await createSendProof());
-    const txHash = await ethereumBlockchain.sendProof({ proofData, viewingKeys });
+    const txHash = await ethereumBlockchain.sendEscapeHatchProof(proofData, viewingKeys);
     const receipt = await ethereumBlockchain.getTransactionReceipt(txHash);
     expect(receipt.blockNum).to.be.above(0);
   });
@@ -270,11 +273,11 @@ describe('ethereum_blockchain', () => {
     );
     await erc20UserA.approve(rollupProcessor.address, depositAmount);
     await ethereumBlockchain.depositPendingFunds(erc20AssetId, BigInt(depositAmount), userAAddress);
-    const depositTxHash = await ethereumBlockchain.sendProof({
-      proofData: depositProofData,
-      depositSignature: depositSignatures[0],
+    const depositTxHash = await ethereumBlockchain.sendEscapeHatchProof(
+      depositProofData,
       viewingKeys,
-    });
+      depositSignatures[0],
+    );
     await waitOnBlockProcessed;
 
     const depositReceipt = await ethereumBlockchain.getTransactionReceipt(depositTxHash);
@@ -288,7 +291,7 @@ describe('ethereum_blockchain', () => {
       },
     );
     await erc20UserA.approve(rollupProcessor.address, depositAmount);
-    const withdrawTxHash = await ethereumBlockchain.sendProof({ proofData: withdrawProofData, viewingKeys });
+    const withdrawTxHash = await ethereumBlockchain.sendEscapeHatchProof(withdrawProofData, viewingKeys);
     await waitOnBlockProcessed;
     const withdrawReceipt = await ethereumBlockchain.getTransactionReceipt(withdrawTxHash);
     expect(withdrawReceipt.blockNum).to.be.above(0);
@@ -304,7 +307,7 @@ describe('ethereum_blockchain', () => {
 
     await erc20UserA.approve(rollupProcessor.address, depositAmount);
     await ethereumBlockchain.depositPendingFunds(erc20AssetId, BigInt(depositAmount), userAAddress);
-    await ethereumBlockchain.sendProof({ proofData, viewingKeys, depositSignature: signatures[0] });
+    await ethereumBlockchain.sendEscapeHatchProof(proofData, viewingKeys, signatures[0]);
     await waitOnBlockProcessed;
 
     const numBlockEvents = spy.callCount;
@@ -324,11 +327,7 @@ describe('ethereum_blockchain', () => {
     );
     await erc20UserA.approve(rollupProcessor.address, depositAmount);
     await ethereumBlockchain.depositPendingFunds(1, BigInt(depositAmount), userAAddress);
-    await ethereumBlockchain.sendProof({
-      proofData: depositProofData,
-      depositSignature: depositSignatures[0],
-      viewingKeys,
-    });
+    await ethereumBlockchain.sendEscapeHatchProof(depositProofData, viewingKeys, depositSignatures[0]);
     await waitOnBlockProcessed;
 
     const { proofData: withdrawProofData } = await createRollupProof(
@@ -339,7 +338,7 @@ describe('ethereum_blockchain', () => {
       },
     );
     await erc20UserA.approve(rollupProcessor.address, depositAmount);
-    await ethereumBlockchain.sendProof({ proofData: withdrawProofData, viewingKeys });
+    await ethereumBlockchain.sendEscapeHatchProof(withdrawProofData, viewingKeys);
     await waitOnBlockProcessed;
 
     const rollupIdStart = 0;
@@ -369,8 +368,8 @@ describe('ethereum_blockchain', () => {
     );
 
     // no erc20 approval
-    await expect(
-      ethereumBlockchain.sendProof({ proofData, viewingKeys, depositSignature: signatures[0] }),
-    ).to.be.revertedWith('Rollup Processor: INSUFFICIENT_DEPOSIT');
+    await expect(ethereumBlockchain.sendEscapeHatchProof(proofData, viewingKeys, signatures[0])).to.be.revertedWith(
+      'Rollup Processor: INSUFFICIENT_DEPOSIT',
+    );
   });
 });

@@ -1,8 +1,8 @@
 import { emptyDir } from 'fs-extra';
 import { RollupProofData } from 'barretenberg/rollup_proof';
-import { TxHash } from 'barretenberg/rollup_provider';
+import { RollupProviderStatus, TxHash } from 'barretenberg/rollup_provider';
 import { WorldStateDb } from 'barretenberg/world_state_db';
-import { Block, Blockchain, EthereumProvider } from 'blockchain';
+import { EthereumProvider } from 'blockchain';
 import { Duration } from 'moment';
 import { ProofGenerator } from './proof_generator';
 import { RollupDb } from './rollup_db';
@@ -14,12 +14,16 @@ import { RollupPublisher } from './rollup_publisher';
 import { RollupAggregator } from './rollup_aggregator';
 import moment from 'moment';
 import { Metrics } from './metrics';
+import { Blockchain } from 'barretenberg/blockchain';
+import { Block } from 'barretenberg/block_source';
+import { toBigIntBE } from 'bigint-buffer';
 
 export interface ServerConfig {
   readonly innerRollupSize: number;
   readonly outerRollupSize: number;
   readonly publishInterval: Duration;
   readonly feeLimit: bigint;
+  readonly minFees: bigint[];
 }
 
 export class Server {
@@ -44,6 +48,7 @@ export class Server {
       rollupPublisher,
       rollupDb,
       worldStateDb,
+      blockchain,
       innerRollupSize,
       outerRollupSize,
       metrics,
@@ -66,7 +71,7 @@ export class Server {
       outerRollupSize,
       metrics,
     );
-    this.txReceiver = new TxReceiver(rollupDb, blockchain);
+    this.txReceiver = new TxReceiver(rollupDb, blockchain, config.minFees);
   }
 
   public async start() {
@@ -90,12 +95,12 @@ export class Server {
     process.kill(process.pid, 'SIGINT');
   }
 
-  public async getStatus() {
-    const status = await this.blockchain.getStatus();
+  public async getStatus(): Promise<RollupProviderStatus> {
+    const status = await this.blockchain.getBlockchainStatus();
 
     return {
-      ...status,
-      serviceName: 'falafel',
+      blockchainStatus: status,
+      minFees: this.config.minFees,
     };
   }
 
@@ -114,8 +119,7 @@ export class Server {
   }
 
   public async getPendingNoteNullifiers() {
-    const unsettledTxs = await this.rollupDb.getPendingTxs();
-    return unsettledTxs.map(tx => [tx.nullifier1, tx.nullifier2]).flat();
+    return this.rollupDb.getPendingNoteNullifiers();
   }
 
   public async getBlocks(from: number): Promise<Block[]> {
@@ -127,6 +131,8 @@ export class Server {
       rollupSize: RollupProofData.getRollupSizeFromBuffer(dao.rollupProof.proofData!),
       rollupProofData: dao.rollupProof.proofData!,
       viewingKeysData: dao.viewingKeys,
+      gasPrice: toBigIntBE(dao.gasPrice),
+      gasUsed: dao.gasUsed,
     }));
   }
 

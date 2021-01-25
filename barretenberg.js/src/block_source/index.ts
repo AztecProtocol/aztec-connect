@@ -7,6 +7,8 @@ export interface Block {
   rollupSize: number;
   rollupProofData: Buffer;
   viewingKeysData: Buffer;
+  gasUsed: number;
+  gasPrice: bigint;
 }
 
 export interface BlockSource {

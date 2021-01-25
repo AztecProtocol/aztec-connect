@@ -1,10 +1,10 @@
 import { EthAddress } from 'barretenberg/address';
-import { AssetId } from 'barretenberg/client_proofs';
+import { AssetId } from 'barretenberg/asset';
 import { EthereumSigner, Signer } from '../signer';
 import { AccountId } from '../user';
 import { JoinSplitTxOptions } from './tx_options';
 import { WalletSdk } from '.';
-import { PermitArgs } from 'blockchain';
+import { PermitArgs } from 'barretenberg/blockchain';
 
 export class WalletSdkUserAsset {
   constructor(public userId: AccountId, public id: AssetId, private sdk: WalletSdk) {}

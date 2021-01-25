@@ -1,4 +1,4 @@
-import { TxHash } from './tx_hash';
+import { TxHash } from '../tx_hash';
 
 export type RollupStatus = 'CREATING' | 'CREATED' | 'PUBLISHED' | 'SETTLED';
 

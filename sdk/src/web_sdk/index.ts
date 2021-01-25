@@ -1,5 +1,5 @@
 import { EthAddress } from 'barretenberg/address';
-import { getProviderStatus } from 'barretenberg/rollup_provider';
+import { getBlockchainStatus } from 'barretenberg/service';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { SdkOptions } from '../core_sdk/create_sdk';
@@ -72,7 +72,7 @@ export class WebSdk extends EventEmitter {
     debug('initializing app...');
 
     try {
-      const { chainId: rollupProviderChainId } = await getProviderStatus(serverUrl);
+      const { chainId: rollupProviderChainId } = await getBlockchainStatus(serverUrl);
 
       this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.LINK_PROVIDER_ACCOUNT);
       this.ethProvider = new EthProvider(this.ethereumProvider);

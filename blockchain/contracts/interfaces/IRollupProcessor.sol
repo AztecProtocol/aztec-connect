@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2020 Spilsbury Holdings Ltd
-pragma solidity >=0.6.10 <0.7.0;
+pragma solidity >=0.6.10 <0.8.0;
 
 interface IRollupProcessor {
     function feeDistributor() external view returns (address);
@@ -52,6 +52,14 @@ interface IRollupProcessor {
     function getSupportedAsset(uint256 assetId) external view returns (address);
 
     function getSupportedAssets() external view returns (address[] memory);
+
+    function getTotalDeposited() external view returns (uint256[] memory);
+
+    function getTotalWithdrawn() external view returns (uint256[] memory);
+
+    function getTotalPendingDeposit() external view returns (uint256[] memory);
+
+    function getTotalFees() external view returns (uint256[] memory);
 
     function getAssetPermitSupport(uint256 assetId) external view returns (bool);
 

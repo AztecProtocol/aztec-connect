@@ -1,11 +1,11 @@
 import { EthAddress } from 'barretenberg/address';
+import { Blockchain } from 'barretenberg/blockchain';
 import { Block } from 'barretenberg/block_source';
 import { MemoryFifo } from 'barretenberg/fifo';
 import { HashPath } from 'barretenberg/merkle_tree';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { WorldStateDb } from 'barretenberg/world_state_db';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
-import { Blockchain } from 'blockchain';
 import { pathExists, readJson, writeJson } from 'fs-extra';
 import { GetHashPathsResponse, HashPathSource } from './hash_path_source';
 
@@ -67,8 +67,9 @@ export default class Server implements HashPathSource {
   }
 
   public async getStatus() {
-    const status = await this.blockchain.getStatus();
-    return { ...status, serviceName: 'sriracha' };
+    return {
+      blockchainStatus: await this.blockchain.getBlockchainStatus(),
+    };
   }
 
   public async getTreeState(treeIndex: number) {

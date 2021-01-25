@@ -1,9 +1,27 @@
 import { ProofData } from '../client_proofs/proof_data';
-import { RollupProviderExplorer, Rollup, Tx } from './rollup_provider_explorer';
-import { RollupServerResponse, TxServerResponse } from './server_response';
-import { TxHash } from './tx_hash';
+import { RollupProviderExplorer, Rollup, Tx, RollupStatus, LinkedRollup } from './rollup_provider_explorer';
+import { TxHash } from '../tx_hash';
 
 export * from './rollup_provider_explorer';
+
+export interface RollupServerResponse {
+  id: number;
+  status: RollupStatus;
+  dataRoot: string;
+  txHashes: string[];
+  proofData?: string;
+  ethBlock?: number;
+  ethTxHash?: string;
+  created: string;
+}
+
+export interface TxServerResponse {
+  txHash: string;
+  rollup?: LinkedRollup;
+  proofData: string;
+  viewingKeys: string[];
+  created: string;
+}
 
 const toRollup = ({ id, status, dataRoot, proofData, txHashes, ethTxHash, created }: RollupServerResponse): Rollup => ({
   id,
