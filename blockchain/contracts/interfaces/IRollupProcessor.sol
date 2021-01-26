@@ -41,6 +41,8 @@ interface IRollupProcessor {
 
     function setRollupProvider(address provderAddress, bool valid) external;
 
+    function approveProof(bytes32 _proofHash) external;
+
     function setFeeDistributor(address feeDistributorAddress) external;
 
     function setVerifier(address verifierAddress) external;

@@ -98,7 +98,7 @@ describe('rollup_processor: permissioning', () => {
     await erc20.approve(rollupProcessor.address, depositAmount);
     await rollupProcessor.depositPendingFunds(erc20AssetId, depositAmount, userAAddress.toString());
 
-    await rollupProcessor.connect(userA).approveProof(proofHash, true);
+    await rollupProcessor.connect(userA).approveProof(proofHash);
 
     const tx = await rollupProcessor.escapeHatch(proofData, zeroSignatures, Buffer.concat(viewingKeys));
 

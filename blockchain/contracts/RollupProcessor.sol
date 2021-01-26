@@ -107,8 +107,13 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         feeDistributor = feeDistributorAddress;
     }
 
-    function approveProof(bytes32 _proofHash, bool approval) public whenNotPaused {
-        depositProofApprovals[msg.sender][_proofHash] = approval;
+    /**
+     * @dev Approve a proofHash for spending a users deposited funds, this is one way and must be called by the owner of the funds
+     * @param _proofHash - keccack256 hash of the inner proof public inputs
+     */
+
+    function approveProof(bytes32 _proofHash) public override whenNotPaused {
+        depositProofApprovals[msg.sender][_proofHash] = true;
     }
 
     /**
