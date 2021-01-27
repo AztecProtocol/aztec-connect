@@ -227,7 +227,7 @@ export class Metrics {
       this.feeDistributorBalance.labels(AssetId[asset].toString()).set(feeDistributorBalance);
     }
 
-    const rollup = await this.rollupDb.getLastRollup();
+    const rollup = (await this.rollupDb.getSettledRollups(0, true, 1))[0];
     if (rollup) {
       this.rollupSize.set(rollup.rollupProof.rollupSize);
       this.rollupGasUsed.set(rollup.gasUsed);

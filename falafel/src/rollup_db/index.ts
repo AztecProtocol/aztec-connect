@@ -194,13 +194,6 @@ export class RollupDb {
     });
   }
 
-  public async getLastRollup() {
-    return this.rollupRep.findOne({
-      order: { id: 'DESC' },
-      relations: ['rollupProof'],
-    });
-  }
-
   public async addRollup(rollup: RollupDao) {
     return await this.rollupRep.save(rollup);
   }
