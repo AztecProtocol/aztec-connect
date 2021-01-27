@@ -20,8 +20,17 @@ copyFileSync('README.md', `${OUTPUT_PATH}/README.md`);
 // Temporary until we no longer expose barretenberg types through the sdk.
 // Change import path to relative path.
 const updateImportPathInSourceCode = (filename, oldImportPath, importPath) => {
-  const sdkCode = readFileSync(filename, 'utf-8').replace(new RegExp(oldImportPath, 'g'), importPath);
-  writeFileSync(filename, sdkCode, 'utf-8');
+  const sdkCode = readFileSync(filename, 'utf-8')
+    .split('\n')
+    .map(l =>
+      l
+        .replace(
+          new RegExp(`^(import|export)(.*? from ')${oldImportPath}(.*)`),
+          (_, m1, m2, m3) => `${m1}${m2}${importPath}${m3}`,
+        )
+        .replace(new RegExp(`import\\("${oldImportPath}`), `import("${importPath}`),
+    );
+  writeFileSync(filename, sdkCode.join('\n'), 'utf-8');
 };
 const findAndReplace = (dir, level, moduleName) => {
   const relativePath = `${!level ? '.' : Array(level).fill('..').join('/')}/${moduleName}`;

@@ -12,7 +12,6 @@ export interface BlockchainStatus {
   networkOrHost: string;
   rollupContractAddress: EthAddress;
   feeDistributorContractAddress: EthAddress;
-  tokenContractAddresses: EthAddress[];
   nextRollupId: number;
   dataSize: number;
   dataRoot: Buffer;
@@ -33,7 +32,6 @@ export interface BlockchainStatusJson {
   networkOrHost: string;
   rollupContractAddress: string;
   feeDistributorContractAddress: string;
-  tokenContractAddresses: string[];
   nextRollupId: number;
   dataSize: number;
   dataRoot: string;
@@ -46,7 +44,12 @@ export interface BlockchainStatusJson {
   totalPendingDeposit: string[];
   totalFees: string[];
   feeDistributorBalance: string[];
-  assets: BlockchainAsset[];
+  assets: {
+    address: string;
+    permitSupport: boolean;
+    decimals: number;
+    symbol: string;
+  }[];
 }
 
 export function blockchainStatusToJson(status: BlockchainStatus): BlockchainStatusJson {
@@ -54,7 +57,6 @@ export function blockchainStatusToJson(status: BlockchainStatus): BlockchainStat
     ...status,
     rollupContractAddress: status.rollupContractAddress.toString(),
     feeDistributorContractAddress: status.feeDistributorContractAddress.toString(),
-    tokenContractAddresses: status.tokenContractAddresses.map(a => a.toString()),
     dataRoot: status.dataRoot.toString('hex'),
     nullRoot: status.nullRoot.toString('hex'),
     rootRoot: status.rootRoot.toString('hex'),
@@ -63,6 +65,10 @@ export function blockchainStatusToJson(status: BlockchainStatus): BlockchainStat
     totalPendingDeposit: status.totalPendingDeposit.map(f => f.toString()),
     totalFees: status.totalFees.map(f => f.toString()),
     feeDistributorBalance: status.feeDistributorBalance.map(f => f.toString()),
+    assets: status.assets.map(a => ({
+      ...a,
+      address: a.address.toString(),
+    })),
   };
 }
 
@@ -71,7 +77,6 @@ export function blockchainStatusFromJson(json: BlockchainStatusJson) {
     ...json,
     rollupContractAddress: EthAddress.fromString(json.rollupContractAddress),
     feeDistributorContractAddress: EthAddress.fromString(json.feeDistributorContractAddress),
-    tokenContractAddresses: json.tokenContractAddresses.map(a => EthAddress.fromString(a)),
     dataRoot: Buffer.from(json.dataRoot, 'hex'),
     nullRoot: Buffer.from(json.nullRoot, 'hex'),
     rootRoot: Buffer.from(json.rootRoot, 'hex'),
@@ -80,6 +85,10 @@ export function blockchainStatusFromJson(json: BlockchainStatusJson) {
     totalPendingDeposit: json.totalPendingDeposit.map(f => BigInt(f)),
     totalFees: json.totalFees.map(f => BigInt(f)),
     feeDistributorBalance: json.feeDistributorBalance.map(f => BigInt(f)),
+    assets: json.assets.map(a => ({
+      ...a,
+      address: EthAddress.fromString(a.address),
+    })),
   };
 }
 

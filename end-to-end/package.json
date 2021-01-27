@@ -27,7 +27,7 @@
     "@ethersproject/contracts": "^5.0.9",
     "@ethersproject/providers": "^5.0.18",
     "@ethersproject/units": "^5.0.9",
-    "aztec2-sdk": "file:../sdk/dest",
+    "@aztec/sdk": "file:../sdk/dest",
     "typescript": "^3.5.3"
   },
   "devDependencies": {

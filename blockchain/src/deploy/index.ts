@@ -6,7 +6,7 @@ import RollupProcessor from '../artifacts/contracts/RollupProcessor.sol/RollupPr
 import FeeDistributor from '../artifacts/contracts/interfaces/IFeeDistributor.sol/IFeeDistributor.json';
 import { deployFeeDistributor } from './deploy_fee_distributor';
 import { deployVerifier } from './deploy_verifier';
-import { addAsset, setSupportedAsset } from './add_asset/add_asset';
+import { addAsset } from './add_asset/add_asset';
 
 const {
   ETHEREUM_HOST,
@@ -31,7 +31,7 @@ function getSigner() {
 }
 
 async function main() {
-  const [, , feeDistributorAddress, initialFee, erc20Address, supportsPermitStr] = process.argv;
+  const [, , initialFee, feeDistributorAddress] = process.argv;
 
   const signer = getSigner();
   if (!signer) {
@@ -56,16 +56,13 @@ async function main() {
   rollup.setFeeDistributor(feeDistributor.address);
 
   if (initialFee) {
+    console.error(`Depositing ${initialFee} ETH to FeeDistributor.`);
     const amount = parseEther(initialFee);
     await feeDistributor.deposit(0, amount, { value: amount });
   }
 
-  if (!erc20Address) {
-    // Add asset with permit support.
-    await addAsset(rollup, signer, true);
-  } else {
-    await setSupportedAsset(rollup, erc20Address, !!supportsPermitStr);
-  }
+  // Add test asset with permit support.
+  await addAsset(rollup, signer, true);
 
   console.log(`export ROLLUP_CONTRACT_ADDRESS=${rollup.address}`);
 }

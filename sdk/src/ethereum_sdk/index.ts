@@ -53,7 +53,7 @@ export async function createEthSdk(ethereumProvider: EthereumProvider, serverUrl
   const status = await getBlockchainStatus(serverUrl);
   const core = await createSdk(serverUrl, sdkOptions, serviceName, status, ethereumProvider);
   const db = await getDb(sdkOptions.dbPath);
-  const { rollupContractAddress, tokenContractAddresses, chainId, networkOrHost } = status;
+  const { rollupContractAddress, assets, chainId, networkOrHost } = status;
 
   await db.init();
 
@@ -72,7 +72,7 @@ export async function createEthSdk(ethereumProvider: EthereumProvider, serverUrl
 
   const tokenContracts: TokenContract[] =
     networkOrHost !== 'development'
-      ? tokenContractAddresses.map(a => new Web3TokenContract(provider, a, rollupContractAddress, chainId))
+      ? assets.slice(1).map(a => new Web3TokenContract(provider, a.address, rollupContractAddress, chainId))
       : [new MockTokenContract()];
 
   await Promise.all(tokenContracts.map(tc => tc.init()));

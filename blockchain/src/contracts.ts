@@ -1,7 +1,7 @@
 import { TransactionResponse, TransactionReceipt } from '@ethersproject/abstract-provider';
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from 'barretenberg/address';
-import { AssetId, AssetIds } from 'barretenberg/asset';
+import { AssetId } from 'barretenberg/asset';
 import { TxHash } from 'barretenberg/rollup_provider';
 import { Contract, ethers } from 'ethers';
 import { abi as RollupABI } from './artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
@@ -66,7 +66,7 @@ export class Contracts {
     const nullRoot = Buffer.from((await this.rollupProcessor.nullRoot()).slice(2), 'hex');
     const rootRoot = Buffer.from((await this.rollupProcessor.rootRoot()).slice(2), 'hex');
 
-    const padding = Array<bigint>(this.erc20Contracts.length + 1).fill(0n);
+    const padding = Array<bigint>(this.erc20Contracts.length + 1).fill(BigInt(0));
     const getAssetValues = async (promise: Promise<string[]>) =>
       [...(await promise).map(v => BigInt(v)), ...padding].slice(0, padding.length);
 
@@ -74,9 +74,11 @@ export class Contracts {
     const totalWithdrawn = await getAssetValues(this.rollupProcessor.getTotalWithdrawn());
     const totalPendingDeposit = await getAssetValues(this.rollupProcessor.getTotalPendingDeposit());
     const totalFees = await getAssetValues(this.rollupProcessor.getTotalFees());
-    const feeDistributorBalance = (
-      await Promise.all(AssetIds.map(id => this.feeDistributorContract.txFeeBalance(id)))
-    ).map((f: string) => BigInt(f));
+
+    const feeDistributorBalance: bigint[] = [];
+    for (let i = 0; i < this.erc20Contracts.length + 1; ++i) {
+      feeDistributorBalance[i] = BigInt(await this.feeDistributorContract.txFeeBalance(i));
+    }
 
     return {
       nextRollupId,
@@ -171,22 +173,16 @@ export class Contracts {
     return Buffer.from(tx.data!.slice(2), 'hex');
   }
 
-  /**
-   * Send a transaction. If no signing address is given, it will sign with providers first account.
-   * The first case is used by a server such as falafel, which always has a fixed account it's using.
-   * The second case is used client side, where a user may have selected a different account in e.g. Metamask.
-   * ethers.js is a trash library, so we call the provider directly to perform the signing.
-   */
   public async sendTx(data: Buffer, signingAddress?: EthAddress, gasLimit?: number) {
-    const from = signingAddress ? signingAddress.toString() : (await this.provider.listAccounts())[0];
+    const signer = signingAddress ? this.provider.getSigner(signingAddress.toString()) : this.provider.getSigner(0);
+    const from = await signer.getAddress();
     const txRequest = {
       to: this.rollupContractAddress.toString(),
       from,
-      gas: gasLimit,
+      gasLimit,
       data,
     };
-    const signedTx = await this.ethereumProvider.request({ method: 'eth_signTransaction', params: [txRequest] });
-    const txResponse = await this.provider.sendTransaction(signedTx).catch(fixEthersStackTrace);
+    const txResponse = await signer.sendTransaction(txRequest);
     return TxHash.fromString(txResponse.hash);
   }
 

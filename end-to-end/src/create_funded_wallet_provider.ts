@@ -1,6 +1,6 @@
 import { JsonRpcProvider } from '@ethersproject/providers';
 import { parseEther } from '@ethersproject/units';
-import { EthersAdapter, WalletProvider } from 'aztec2-sdk';
+import { EthersAdapter, WalletProvider } from '@aztec/sdk';
 import { randomBytes } from 'crypto';
 
 export async function createFundedWalletProvider(host: string, accounts: number, initialBalance = '1') {

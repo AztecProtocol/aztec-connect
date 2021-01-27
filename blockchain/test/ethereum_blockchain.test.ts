@@ -96,9 +96,9 @@ describe('ethereum_blockchain', () => {
   });
 
   it('should get status', async () => {
-    const { rollupContractAddress, tokenContractAddresses } = await ethereumBlockchain.getBlockchainStatus();
+    const { rollupContractAddress, assets } = await ethereumBlockchain.getBlockchainStatus();
     expect(rollupContractAddress.toString().length).to.be.greaterThan(0);
-    expect(tokenContractAddresses.length).to.be.greaterThan(0);
+    expect(assets.length).to.be.greaterThan(0);
   });
 
   it('should set new supported asset', async () => {

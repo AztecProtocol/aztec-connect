@@ -2,5 +2,5 @@
 set -e
 
 yarn install
-yarn link aztec2-sdk
+yarn link @aztec/sdk
 yarn link barretenberg

@@ -38,6 +38,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
 
   public async init() {
     await this.initStatus();
+    this.debug(`Ethereum blockchain initialized with assets: ${this.status.assets.map(a => a.symbol)}`);
   }
 
   /**
@@ -133,7 +134,6 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       ...this.status,
       chainId,
       networkOrHost,
-      tokenContractAddresses: this.contracts.getTokenContractAddresses(),
       rollupContractAddress: this.contracts.getRollupContractAddress(),
       feeDistributorContractAddress: this.contracts.getFeeDistributorContractAddress(),
       assets,

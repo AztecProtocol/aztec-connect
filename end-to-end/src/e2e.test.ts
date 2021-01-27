@@ -1,4 +1,4 @@
-import { AssetId, createEthSdk, EthereumSdk, EthereumSdkUser } from 'aztec2-sdk';
+import { AssetId, createEthSdk, EthereumSdk, EthereumSdkUser } from '@aztec/sdk';
 import { Contract } from '@ethersproject/contracts';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';

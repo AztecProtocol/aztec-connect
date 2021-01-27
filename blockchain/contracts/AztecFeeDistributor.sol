@@ -13,7 +13,6 @@ contract AztecFeeDistributor is IFeeDistributor, Ownable {
     using SafeMath for uint256;
 
     event FeeReceived(address sender, uint256 amount, uint256 assetId);
-    event FeeReimbursed(address receiver, uint256 amount);
 
     uint256 public constant ethAssetId = 0;
 

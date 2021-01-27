@@ -40,7 +40,7 @@ const common = {
     filename: 'aztec-sdk.js',
     globalObject: 'this',
     publicPath: '/',
-    library: 'aztec2-sdk',
+    library: '@aztec/sdk',
     libraryTarget: 'umd',
   },
   plugins: [

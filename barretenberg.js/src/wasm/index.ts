@@ -31,6 +31,7 @@ export class BarretenbergWasm extends EventEmitter {
     this.heap = new Uint8Array(this.memory.buffer);
 
     const importObj = {
+      /* eslint-disable camelcase */
       wasi_unstable: {
         fd_close: () => {},
         fd_read: () => {},
@@ -48,6 +49,7 @@ export class BarretenbergWasm extends EventEmitter {
           }
         },
       },
+      /* eslint-enable camelcase */
       module: {},
       env: {
         logstr: (addr: number) => {
@@ -55,6 +57,7 @@ export class BarretenbergWasm extends EventEmitter {
           const m = this.getMemory();
           let i = addr;
           for (; m[i] !== 0; ++i);
+          // eslint-disable-next-line
           const decoder = isNode ? new (require('util').TextDecoder)() : new TextDecoder();
           const str = decoder.decode(m.slice(addr, i));
           const str2 = `${str} (mem:${m.length})`;

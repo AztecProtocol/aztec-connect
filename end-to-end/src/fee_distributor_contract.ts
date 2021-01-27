@@ -1,6 +1,6 @@
 import { Contract } from '@ethersproject/contracts';
 import { Web3Provider } from '@ethersproject/providers';
-import { AssetId, EthAddress, EthereumProvider } from 'aztec2-sdk';
+import { AssetId, EthAddress, EthereumProvider } from '@aztec/sdk';
 
 const minimalRollupProcessorABI = ['function feeDistributor() external view returns (address)'];
 

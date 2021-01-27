@@ -10,7 +10,7 @@ import {
   SdkEvent,
   UserJoinSplitTx,
   WebSdk,
-} from 'aztec2-sdk';
+} from '@aztec/sdk';
 import copy from 'copy-to-clipboard';
 import { Terminal } from './terminal';
 import createDebug from 'debug';
@@ -54,12 +54,18 @@ export class TerminalHandler {
   public start() {
     this.processCommands();
     this.processPrint();
-    this.printQueue.put("\x01\x01\x01\x01aztec zero knowledge terminal.\x01\ntype command or 'help'\n");
-    this.printQueue.put(TermControl.PROMPT);
-    this.terminal.on('cmd', this.queueCommand);
+    this.printQueue.put('\x01\x01\x01\x01aztec zero knowledge terminal.\x01\n');
 
-    if (this.app.isInitialized()) {
-      this.registerHandlers();
+    if (window.ethereum) {
+      this.printQueue.put("type command or 'help'\n");
+      this.printQueue.put(TermControl.PROMPT);
+      this.terminal.on('cmd', this.queueCommand);
+
+      if (this.app.isInitialized()) {
+        this.registerHandlers();
+      }
+    } else {
+      this.printQueue.put('requires chrome with metamask.\n');
     }
   }
 
@@ -272,7 +278,9 @@ export class TerminalHandler {
 
     const sdk = this.app.getSdk()!;
     try {
-      const { dataSize, dataRoot, nullRoot } = await sdk.getRemoteStatus();
+      const {
+        blockchainStatus: { dataSize, dataRoot, nullRoot },
+      } = await sdk.getRemoteStatus();
       this.printQueue.put(`data size: ${dataSize}\n`);
       this.printQueue.put(`data root: ${dataRoot.slice(0, 8).toString('hex')}...\n`);
       this.printQueue.put(`null root: ${nullRoot.slice(0, 8).toString('hex')}...\n`);
@@ -306,18 +314,16 @@ export class TerminalHandler {
   private async deposit(valueStr: string) {
     const userAsset = this.app.getUser().getAsset(this.assetId);
     const value = userAsset.toBaseUnits(valueStr);
-    const { fees } = await this.app.getSdk().getRemoteStatus();
-    const fee = fees.get(this.assetId)!;
-    await userAsset.deposit(value, fee);
+    const { minFees } = await this.app.getSdk().getRemoteStatus();
+    await userAsset.deposit(value, minFees[this.assetId]);
     this.printQueue.put(`deposit proof sent.\n`);
   }
 
   private async withdraw(value: string) {
     const userAsset = this.app.getUser().getAsset(this.assetId);
-    const { fees } = await this.app.getSdk().getRemoteStatus();
-    const fee = fees.get(this.assetId)!;
+    const { minFees } = await this.app.getSdk().getRemoteStatus();
     this.printQueue.put(`generating withdrawl proof...\n`);
-    await userAsset.withdraw(userAsset.toBaseUnits(value), fee);
+    await userAsset.withdraw(userAsset.toBaseUnits(value), minFees[this.assetId]);
     this.printQueue.put(`withdrawl proof sent.\n`);
   }
 
@@ -327,10 +333,9 @@ export class TerminalHandler {
       throw new Error(`unknown user: ${addressOrAlias}`);
     }
     const userAsset = this.app.getUser().getAsset(this.assetId);
-    const { fees } = await this.app.getSdk().getRemoteStatus();
-    const fee = fees.get(this.assetId)!;
+    const { minFees } = await this.app.getSdk().getRemoteStatus();
     this.printQueue.put(`generating transfer proof...\n`);
-    await userAsset.transfer(userAsset.toBaseUnits(value), fee, to);
+    await userAsset.transfer(userAsset.toBaseUnits(value), minFees[this.assetId], to);
     this.printQueue.put(`transfer proof sent.\n`);
   }
 
@@ -343,10 +348,10 @@ export class TerminalHandler {
     const newSigningPublicKey = user.getUserData().publicKey;
     const recoveryPublicKey = GrumpkinAddress.randomAddress();
     const txHash = await user.createAccount(alias, newSigningPublicKey, recoveryPublicKey);
-    this.printQueue.put(`registration proof sent. awaiting settlement...\n`);
+    this.printQueue.put(`registration proof sent.\nawaiting settlement...\n`);
     await this.app.getSdk().awaitSettlement(txHash, 300);
     await this.app.syncAccountNonce();
-    this.printQueue.put(`successfully registered alias '${alias}'.\n`);
+    this.printQueue.put(`done.\n`);
   }
 
   private async balance() {
@@ -361,9 +366,8 @@ export class TerminalHandler {
 
   private async fee() {
     const sdk = this.app.getSdk();
-    const { fees } = await sdk.getRemoteStatus();
-    const fee = fees.get(this.assetId)!;
-    await this.printQueue.put(`fee: ${sdk.fromBaseUnits(this.assetId, fee)}\n`);
+    const { minFees } = await sdk.getRemoteStatus();
+    await this.printQueue.put(`fee: ${sdk.fromBaseUnits(this.assetId, minFees[this.assetId])}\n`);
   }
 
   private async copyKey() {

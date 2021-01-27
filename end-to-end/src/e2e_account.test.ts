@@ -6,7 +6,7 @@ import {
   EthersAdapter,
   GrumpkinAddress,
   EthUserId,
-} from 'aztec2-sdk';
+} from '@aztec/sdk';
 import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
 import { JsonRpcProvider } from '@ethersproject/providers';

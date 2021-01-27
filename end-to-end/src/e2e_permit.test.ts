@@ -6,7 +6,7 @@ import {
   EthereumSdkUser,
   EthereumSdkUserAsset,
   WalletProvider,
-} from 'aztec2-sdk';
+} from '@aztec/sdk';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
 import { topUpFeeDistributorContract } from './fee_distributor_contract';
@@ -40,7 +40,9 @@ describe('end-to-end permit tests', () => {
     user = await sdk.addUser(userAddress);
     userAsset = await user.getAsset(assetId);
 
-    const { rollupContractAddress } = await sdk.getRemoteStatus();
+    const {
+      blockchainStatus: { rollupContractAddress },
+    } = await sdk.getRemoteStatus();
     const oneEth = sdk.toBaseUnits(AssetId.ETH, '1');
     await topUpFeeDistributorContract(oneEth, rollupContractAddress, provider, provider.getAccount(1));
   });

@@ -1,4 +1,4 @@
-import { WebSdk } from 'aztec2-sdk';
+import { WebSdk } from '@aztec/sdk';
 import { useEffect } from 'react';
 import React from 'react';
 import { createGlobalStyle } from 'styled-components';

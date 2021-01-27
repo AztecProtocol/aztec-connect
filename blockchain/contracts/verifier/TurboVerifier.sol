@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2020 Spilsbury Holdings Ltd
 
-pragma solidity >=0.6.0 <0.7.0;
+pragma solidity >=0.6.0 <0.8.0;
 pragma experimental ABIEncoderV2;
 
 import {PairingsBn254} from './cryptography/PairingsBn254.sol';
@@ -44,10 +44,10 @@ contract TurboVerifier is IVerifier {
         uint256 num_public_inputs = vk.num_inputs;
 
         Types.Proof memory decoded_proof = deserialize_proof(num_public_inputs, vk);
-        
-        (Types.ChallengeTranscript memory challenges, TranscriptLibrary.Transcript memory transcript) = TurboPlonk
-            .construct_alpha_beta_gamma_zeta_challenges(decoded_proof, vk);
-        
+
+        (Types.ChallengeTranscript memory challenges, TranscriptLibrary.Transcript memory transcript) =
+            TurboPlonk.construct_alpha_beta_gamma_zeta_challenges(decoded_proof, vk);
+
         /**
          * Compute all inverses that will be needed throughout the program here.
          *
@@ -55,27 +55,25 @@ contract TurboVerifier is IVerifier {
          * which allows all inversions to be replaced with one inversion operation, at the expense of a few
          * additional multiplications
          **/
-        (Types.Fr memory quotient_eval, Types.Fr memory L1) = TurboPlonk.compute_partial_state(
-            decoded_proof,
-            vk,
-            challenges
-        );
+        (Types.Fr memory quotient_eval, Types.Fr memory L1) =
+            TurboPlonk.compute_partial_state(decoded_proof, vk, challenges);
         decoded_proof.quotient_polynomial_at_z = PairingsBn254.new_fr(quotient_eval.value);
 
         //reset 'alpha base'
         challenges = TurboPlonk.construct_nu_u_challenges(decoded_proof, transcript, challenges);
         challenges.alpha_base = PairingsBn254.new_fr(challenges.alpha.value);
 
-        (Types.G1Point memory batch_opening_commitment, Types.G1Point memory batch_evaluation_commitment) = TurboPlonk
-            .evaluate_polynomials(decoded_proof, vk, challenges, L1);
-    
-        bool result = TurboPlonk.perform_pairing(
-            batch_opening_commitment,
-            batch_evaluation_commitment,
-            challenges,
-            decoded_proof,
-            vk
-        );
+        (Types.G1Point memory batch_opening_commitment, Types.G1Point memory batch_evaluation_commitment) =
+            TurboPlonk.evaluate_polynomials(decoded_proof, vk, challenges, L1);
+
+        bool result =
+            TurboPlonk.perform_pairing(
+                batch_opening_commitment,
+                batch_evaluation_commitment,
+                challenges,
+                decoded_proof,
+                vk
+            );
         require(result, 'Proof failed');
     }
 
@@ -97,8 +95,7 @@ contract TurboVerifier is IVerifier {
             data_ptr := add(calldataload(0x04), 0x24)
         }
 
-        if (vk.contains_recursive_proof)
-        {
+        if (vk.contains_recursive_proof) {
             uint256 index_counter = vk.recursive_proof_indices[0] * 32;
             uint256 x0 = 0;
             uint256 y0 = 0;
@@ -124,14 +121,10 @@ contract TurboVerifier is IVerifier {
                 y1 := add(y1, shl(204, calldataload(add(index_counter, 0x1e0))))
             }
 
-            proof.recursive_proof_outputs[0] = PairingsBn254.new_g1(
-                x0, y0
-            );
-            proof.recursive_proof_outputs[1] = PairingsBn254.new_g1(
-                x1, y1
-            );
+            proof.recursive_proof_outputs[0] = PairingsBn254.new_g1(x0, y0);
+            proof.recursive_proof_outputs[1] = PairingsBn254.new_g1(x1, y1);
         }
-        
+
         assembly {
             let public_input_byte_length := mul(num_public_inputs, 0x20)
             data_ptr := add(data_ptr, public_input_byte_length)

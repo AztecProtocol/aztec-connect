@@ -49,9 +49,6 @@
       "tsx",
       "js",
       "json"
-    ],
-    "transformIgnorePatterns": [
-      "/node_modules/(?!aztec2-sdk).+\\.js$"
     ]
   }
 }

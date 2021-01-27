@@ -69,6 +69,8 @@ export class WebSdk extends EventEmitter {
       createDebug.enable('bb:*');
     }
 
+    this.ethereumProvider.autoRefreshOnNetworkChange = false;
+
     debug('initializing app...');
 
     try {

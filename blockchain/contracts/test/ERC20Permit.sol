@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2020 Spilsbury Holdings Ltd
-pragma solidity >=0.6.10 <0.7.0;
+pragma solidity >=0.6.10 <0.8.0;
 
 import {ERC20Mintable} from './ERC20Mintable.sol';
 
@@ -40,13 +40,14 @@ contract ERC20Permit is ERC20Mintable {
         bytes32 s
     ) external {
         require(deadline >= block.timestamp, 'EXPIRED');
-        bytes32 digest = keccak256(
-            abi.encodePacked(
-                '\x19\x01',
-                DOMAIN_SEPARATOR,
-                keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, nonces[owner]++, deadline))
-            )
-        );
+        bytes32 digest =
+            keccak256(
+                abi.encodePacked(
+                    '\x19\x01',
+                    DOMAIN_SEPARATOR,
+                    keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, value, nonces[owner]++, deadline))
+                )
+            );
         address recoveredAddress = ecrecover(digest, v, r, s);
         require(recoveredAddress != address(0) && recoveredAddress == owner, 'INVALID_SIGNATURE');
         _approve(owner, spender, value);

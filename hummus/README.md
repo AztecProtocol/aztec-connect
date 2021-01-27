@@ -1,13 +1,16 @@
-# Hummus README
+# Hummus
 
-`Hummus` is our rollup front-end. It currently uses the webassembly build of `Barretenberg`, through `barretenberg.js`, to construct proofs.
+`hummus` is our terminal test frontend for the sdk.
 
 # Getting started
 
-You will need to compile `Barretenberg`, link it with `barretenberg.js`, and install and build `Hummus`. You can do this simply by calling `./bootstrap.sh` at the root of the repo.
+Ensure you've built `barretenberg`, `barretenberg.js`, and `sdk`.
 
-Once bootstrapped, you are ready to launch the front-end:
+Run:
 
-`yarn start`
+```
+./bootstrap.sh
+yarn start:dev
+```
 
-Once that process is finished, you can open your browser to `http://localhost:8080/` to start building proofs. The UI should be self-explanatory.
+Navigate to `http://localhost:8080/`.

@@ -34,7 +34,7 @@ export async function createWalletSdk(
   const serviceName = await getServiceName(serverUrl);
   const status = await getBlockchainStatus(serverUrl);
   const core = await createSdk(serverUrl, sdkOptions, serviceName, status, ethereumProvider);
-  const { rollupContractAddress, tokenContractAddresses, chainId, networkOrHost } = status;
+  const { rollupContractAddress, assets, chainId, networkOrHost } = status;
 
   // Set erase flag if requested or contract changed.
   if (sdkOptions.clearDb || !(await core.getRollupContractAddress())?.equals(rollupContractAddress)) {
@@ -50,7 +50,7 @@ export async function createWalletSdk(
 
   const tokenContracts: TokenContract[] =
     networkOrHost !== 'development'
-      ? tokenContractAddresses.map(a => new Web3TokenContract(provider, a, rollupContractAddress, chainId))
+      ? assets.slice(1).map(a => new Web3TokenContract(provider, a.address, rollupContractAddress, chainId))
       : [new MockTokenContract()];
 
   await Promise.all(tokenContracts.map(tc => tc.init()));

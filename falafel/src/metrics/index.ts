@@ -39,6 +39,7 @@ export class Metrics {
   private totalPendingDeposit: Gauge<string>;
   private totalWithdrawn: Gauge<string>;
   private totalFees: Gauge<string>;
+  private feeDistributorBalance: Gauge<string>;
 
   constructor(worldStateDb: WorldStateDb, private rollupDb: RollupDb, private blockchain: Blockchain) {
     client.collectDefaultMetrics();
@@ -146,6 +147,12 @@ export class Metrics {
       labelNames: ['symbol'],
     });
 
+    this.feeDistributorBalance = new Gauge({
+      name: 'fee_contract_balance',
+      help: 'Current balance on fee distributor contract',
+      labelNames: ['symbol'],
+    });
+
     this.receiveTxDuration = new Histogram({
       name: 'tx_received_duration_seconds',
       help: 'Time to process received transaction',
@@ -215,6 +222,9 @@ export class Metrics {
 
       const totalFees = fromBaseUnits(status.totalFees[asset], status.assets[asset].decimals);
       this.totalFees.labels(AssetId[asset].toString()).set(totalFees);
+
+      const feeDistributorBalance = fromBaseUnits(status.feeDistributorBalance[asset], status.assets[asset].decimals);
+      this.feeDistributorBalance.labels(AssetId[asset].toString()).set(feeDistributorBalance);
     }
 
     const rollup = await this.rollupDb.getLastRollup();
