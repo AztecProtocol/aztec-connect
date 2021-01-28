@@ -270,6 +270,8 @@ export class WalletSdk extends EventEmitter {
         await this.depositFundsToContract(assetId, userId, ethSigner!.getAddress(), publicInput, permitArgs);
       }
 
+      this.emit(SdkEvent.LOG, 'Generating deposit proof...');
+
       return this.core.createJoinSplitProof(
         assetId,
         userId,
@@ -523,7 +525,7 @@ export class WalletSdk extends EventEmitter {
 
   public fromBaseUnits(assetId: AssetId, value: bigint, precision?: number) {
     if (assetId === AssetId.ETH) {
-      return fromBaseUnits(value, 18, precision !== undefined ? precision : 8);
+      return fromBaseUnits(value, 18, precision !== undefined ? precision : 6);
     }
     return this.getTokenContract(assetId).fromBaseUnits(value, precision);
   }

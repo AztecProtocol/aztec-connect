@@ -96,7 +96,7 @@ export class RollupDb {
 
   public async getRegistrationTxCount() {
     const result = await this.accountTxRep.query(
-      `select count(distinct(accountPubKey)) as count from account_tx where nonce=1 group by accountPubKey`,
+      `select count(distinct(accountPubKey)) as count from account_tx where nonce=1`,
     );
     return result[0] ? result[0].count : 0;
   }
