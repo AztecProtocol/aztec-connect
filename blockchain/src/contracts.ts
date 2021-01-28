@@ -59,21 +59,21 @@ export class Contracts {
     return TxHash.fromString(tx.hash);
   }
 
-  public async getRollupStatus() {
+  private async getAssetValues(promise: Promise<string[]>) {
+    const padding = Array<bigint>(this.erc20Contracts.length + 1).fill(BigInt(0));
+    return [...(await promise).map(v => BigInt(v)), ...padding].slice(0, padding.length);
+  }
+
+  public async getPerRollupState() {
     const nextRollupId = +(await this.rollupProcessor.nextRollupId());
     const dataSize = +(await this.rollupProcessor.dataSize());
     const dataRoot = Buffer.from((await this.rollupProcessor.dataRoot()).slice(2), 'hex');
     const nullRoot = Buffer.from((await this.rollupProcessor.nullRoot()).slice(2), 'hex');
     const rootRoot = Buffer.from((await this.rollupProcessor.rootRoot()).slice(2), 'hex');
 
-    const padding = Array<bigint>(this.erc20Contracts.length + 1).fill(BigInt(0));
-    const getAssetValues = async (promise: Promise<string[]>) =>
-      [...(await promise).map(v => BigInt(v)), ...padding].slice(0, padding.length);
-
-    const totalDeposited = await getAssetValues(this.rollupProcessor.getTotalDeposited());
-    const totalWithdrawn = await getAssetValues(this.rollupProcessor.getTotalWithdrawn());
-    const totalPendingDeposit = await getAssetValues(this.rollupProcessor.getTotalPendingDeposit());
-    const totalFees = await getAssetValues(this.rollupProcessor.getTotalFees());
+    const totalDeposited = await this.getAssetValues(this.rollupProcessor.getTotalDeposited());
+    const totalWithdrawn = await this.getAssetValues(this.rollupProcessor.getTotalWithdrawn());
+    const totalFees = await this.getAssetValues(this.rollupProcessor.getTotalFees());
 
     const feeDistributorBalance: bigint[] = [];
     for (let i = 0; i < this.erc20Contracts.length + 1; ++i) {
@@ -88,18 +88,19 @@ export class Contracts {
       dataSize,
       totalDeposited,
       totalWithdrawn,
-      totalPendingDeposit,
       totalFees,
       feeDistributorBalance,
     };
   }
 
-  public async getEscapeHatchStatus() {
+  public async getPerBlockState() {
     const [escapeOpen, blocksRemaining] = await this.rollupProcessor.getEscapeHatchStatus();
     const numEscapeBlocksRemaining = blocksRemaining.toNumber();
+    const totalPendingDeposit = await this.getAssetValues(this.rollupProcessor.getTotalPendingDeposit());
     return {
       escapeOpen,
       numEscapeBlocksRemaining,
+      totalPendingDeposit,
     };
   }
 

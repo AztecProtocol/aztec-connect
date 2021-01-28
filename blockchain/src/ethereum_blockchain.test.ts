@@ -84,7 +84,7 @@ describe('ethereum_blockchain', () => {
   });
 
   it('require more confirmations leading into escape window', async () => {
-    contracts.getEscapeHatchStatus.mockResolvedValue({
+    contracts.getPerBlockState.mockResolvedValue({
       escapeOpen: false,
       numEscapeBlocksRemaining: 12,
     });
@@ -95,7 +95,7 @@ describe('ethereum_blockchain', () => {
   });
 
   it('require more confirmations inside escape window', async () => {
-    contracts.getEscapeHatchStatus.mockResolvedValue({
+    contracts.getPerBlockState.mockResolvedValue({
       escapeOpen: true,
       numEscapeBlocksRemaining: 100,
     });
@@ -106,7 +106,7 @@ describe('ethereum_blockchain', () => {
   });
 
   it('get transaction receipt with enough confirmations', async () => {
-    contracts.getEscapeHatchStatus.mockResolvedValue({
+    contracts.getPerBlockState.mockResolvedValue({
       escapeOpen: true,
       numEscapeBlocksRemaining: 1,
     });

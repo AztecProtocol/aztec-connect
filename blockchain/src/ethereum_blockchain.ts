@@ -68,11 +68,11 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
         return;
       }
       this.latestEthBlock = latestBlock;
-      await this.updateEscapeHatchStatus();
+      await this.updatePerBlockState();
 
       const blocks = await getBlocks(fromRollup);
       if (blocks.length) {
-        await this.updateRollupStatus();
+        await this.updatePerRollupState();
       }
       for (const block of blocks) {
         this.debug(`Block received: ${block.rollupId}`);
@@ -114,8 +114,8 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   }
 
   private async initStatus() {
-    await this.updateRollupStatus();
-    await this.updateEscapeHatchStatus();
+    await this.updatePerRollupState();
+    await this.updatePerBlockState();
     const { chainId } = await this.contracts.getNetwork();
     const { networkOrHost } = this.config;
 
@@ -140,17 +140,17 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     };
   }
 
-  private async updateRollupStatus() {
+  private async updatePerRollupState() {
     this.status = {
       ...this.status,
-      ...(await this.contracts.getRollupStatus()),
+      ...(await this.contracts.getPerRollupState()),
     };
   }
 
-  private async updateEscapeHatchStatus() {
+  private async updatePerBlockState() {
     this.status = {
       ...this.status,
-      ...(await this.contracts.getEscapeHatchStatus()),
+      ...(await this.contracts.getPerBlockState()),
     };
   }
 
