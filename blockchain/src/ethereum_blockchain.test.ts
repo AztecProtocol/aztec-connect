@@ -31,8 +31,8 @@ describe('ethereum_blockchain', () => {
       getAssetPermitSupport: jest.fn().mockResolvedValue(false),
       getAssetDecimals: jest.fn().mockResolvedValue(18),
       getAssetSymbol: jest.fn().mockResolvedValue('ETH'),
-      getRollupStatus: jest.fn().mockResolvedValue({ nextRollupId: 0 }),
-      getEscapeHatchStatus: jest.fn().mockResolvedValue({
+      getPerRollupState: jest.fn().mockResolvedValue({ nextRollupId: 0 }),
+      getPerBlockState: jest.fn().mockResolvedValue({
         escapeOpen: false,
         numEscapeBlocksRemaining: 100,
       }),

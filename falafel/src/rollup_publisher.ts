@@ -43,7 +43,6 @@ export class RollupPublisher {
 
     const txData = await this.createTxData(rollup);
 
-    // TODO: This is to be outsourced to Padron. The txData above should be made available on an endpoint.
     while (!this.interrupted) {
       this.interruptPromise = new Promise(resolve => (this.interruptResolve = resolve));
 
@@ -52,7 +51,6 @@ export class RollupPublisher {
       if (!txHash) {
         break;
       }
-      end();
 
       await this.rollupDb.confirmSent(rollup.id, txHash);
 
@@ -62,6 +60,7 @@ export class RollupPublisher {
       }
 
       if (receipt.status) {
+        end();
         return true;
       }
 
