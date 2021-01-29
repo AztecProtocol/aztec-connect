@@ -535,6 +535,8 @@ export class CoreSdk extends EventEmitter {
     }
     const userState = this.getUserState(userId)!;
 
+    this.emit(SdkEvent.LOG, 'Generating proof...');
+
     const proofOutput = await this.joinSplitProofCreator.createProof(
       userState,
       publicInput,
@@ -628,6 +630,8 @@ export class CoreSdk extends EventEmitter {
       : undefined;
     const newAccountPublicKey = newAccountPrivateKey ? this.derivePublicKey(newAccountPrivateKey) : publicKey;
     const newNonce = nonce + +migrate;
+
+    this.emit(SdkEvent.LOG, 'Generating proof...');
 
     const rawProofData = await this.accountProofCreator.createProof(
       signer,

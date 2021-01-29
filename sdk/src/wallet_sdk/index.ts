@@ -270,8 +270,6 @@ export class WalletSdk extends EventEmitter {
         await this.depositFundsToContract(assetId, userId, ethSigner!.getAddress(), publicInput, permitArgs);
       }
 
-      this.emit(SdkEvent.LOG, 'Generating deposit proof...');
-
       return this.core.createJoinSplitProof(
         assetId,
         userId,

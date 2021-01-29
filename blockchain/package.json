@@ -37,12 +37,12 @@
     "rootDir": "./src"
   },
   "dependencies": {
-    "@ethersproject/experimental": "^5.0.5",
+    "@ethersproject/experimental": "^5.0.8",
     "barretenberg": "../barretenberg.js/dest",
     "bigint-buffer": "^1.1.5",
     "debug": "^4.1.1",
     "dotenv": "^8.2.0",
-    "ethers": "5.0.19",
+    "ethers": "5.0.20",
     "typescript": "^3.5.3"
   },
   "devDependencies": {

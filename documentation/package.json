@@ -26,7 +26,7 @@
     "console-feed": "3.0.0",
     "copy-webpack-plugin": "^6.1.1",
     "css-loader": "^4.2.1",
-    "ethers": "^5.0.14",
+    "ethers": "5.0.20",
     "file-loader": "^6.1.0",
     "jest": "^26.4.2",
     "mini-css-extract-plugin": "^0.10.0",

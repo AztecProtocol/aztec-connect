@@ -133,7 +133,7 @@ export function TerminalPage({ terminal }: TerminalProps) {
           </Logo>
           <StyledTerminal>{terminal.asString()}</StyledTerminal>
           <ScanlineContainer>
-            {Array(8 * terminal.getRows())
+            {Array(10 * terminal.getRows())
               .fill(0)
               .map((_, i) => (
                 <Scanline key={i}></Scanline>

@@ -47,7 +47,9 @@ describe('end-to-end falafel recovery tests', () => {
       });
       await sdk.init();
 
-      const { rollupContractAddress } = await sdk.getRemoteStatus();
+      const {
+        blockchainStatus: { rollupContractAddress },
+      } = await sdk.getRemoteStatus();
       const oneEth = BigInt(10) ** BigInt(18);
       await topUpFeeDistributorContract(oneEth, rollupContractAddress, provider, feeContributor);
 

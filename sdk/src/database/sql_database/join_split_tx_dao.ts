@@ -16,7 +16,7 @@ export class JoinSplitTxDao implements UserJoinSplitTx {
   public userId!: AccountId;
 
   @Column()
-  public assetId!: AssetId;
+  public assetId!: number;
 
   @Column('bigint', { transformer: [bigintTransformer] })
   public publicInput!: bigint;

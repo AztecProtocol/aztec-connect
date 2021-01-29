@@ -44,7 +44,11 @@ module.exports = env => ({
           from: 'src/assets',
         },
         {
-          from: 'node_modules/@aztec/sdk/*.(wasm|worker.js)',
+          from: 'node_modules/@aztec/sdk/barretenberg.wasm',
+          to: '[name].[ext]',
+        },
+        {
+          from: 'node_modules/@aztec/sdk/worker*.js',
           to: '[name].[ext]',
         },
       ],

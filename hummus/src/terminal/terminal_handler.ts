@@ -322,7 +322,6 @@ export class TerminalHandler {
   private async withdraw(value: string) {
     const userAsset = this.app.getUser().getAsset(this.assetId);
     const { minFees } = await this.app.getSdk().getRemoteStatus();
-    this.printQueue.put(`generating withdrawl proof...\n`);
     await userAsset.withdraw(userAsset.toBaseUnits(value), minFees[this.assetId]);
     this.printQueue.put(`withdrawl proof sent.\n`);
   }
@@ -334,7 +333,6 @@ export class TerminalHandler {
     }
     const userAsset = this.app.getUser().getAsset(this.assetId);
     const { minFees } = await this.app.getSdk().getRemoteStatus();
-    this.printQueue.put(`generating transfer proof...\n`);
     await userAsset.transfer(userAsset.toBaseUnits(value), minFees[this.assetId], to);
     this.printQueue.put(`transfer proof sent.\n`);
   }
@@ -343,7 +341,6 @@ export class TerminalHandler {
     if (await this.app.getSdk().getAddressFromAlias(alias)) {
       throw new Error('alias already registered.');
     }
-    this.printQueue.put(`generating registration proof...\n`);
     const user = this.app.getUser();
     const newSigningPublicKey = user.getUserData().publicKey;
     const recoveryPublicKey = GrumpkinAddress.randomAddress();
