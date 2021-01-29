@@ -33,7 +33,6 @@ export class WorldState {
     public worldStateDb: WorldStateDb,
     private blockchain: Blockchain,
     private txAggregator: TxAggregator,
-    private innerRollupSize: number,
     private outerRollupSize: number,
     private metrics: Metrics,
   ) {}
@@ -198,8 +197,7 @@ export class WorldState {
 
   private async padToNextRollupBoundary() {
     const dataSize = this.worldStateDb.getSize(0);
-    const rollupSizePow2 = roundUpToPow2(this.innerRollupSize) * roundUpToPow2(this.outerRollupSize);
-    const subtreeSize = BigInt(rollupSizePow2 * 2);
+    const subtreeSize = BigInt(this.outerRollupSize * 2);
     const nextDataStartIndex =
       dataSize % subtreeSize === 0n ? dataSize : dataSize + subtreeSize - (dataSize % subtreeSize);
     if (dataSize < nextDataStartIndex - 1n) {

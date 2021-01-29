@@ -1,5 +1,4 @@
 import { EthAddress } from 'barretenberg/address';
-import { AssetId } from 'barretenberg/asset';
 import { TxHash } from 'barretenberg/rollup_provider';
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 import { AccountId } from '../../user';

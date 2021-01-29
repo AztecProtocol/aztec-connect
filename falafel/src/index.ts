@@ -20,8 +20,8 @@ async function main() {
     ethConfig,
     confVars: {
       rollupContractAddress,
-      innerRollupSize,
-      outerRollupSize,
+      numInnerRollupTxs,
+      numOuterRollupProofs,
       publishInterval,
       apiPrefix,
       serverAuthToken,
@@ -35,8 +35,8 @@ async function main() {
   const blockchain = await EthereumBlockchain.new(ethConfig, EthAddress.fromString(rollupContractAddress!), provider);
 
   const serverConfig: ServerConfig = {
-    innerRollupSize,
-    outerRollupSize,
+    numInnerRollupTxs,
+    numOuterRollupProofs,
     publishInterval: moment.duration(publishInterval, 's'),
     feeLimit,
     minFees: [txFee, 0n],

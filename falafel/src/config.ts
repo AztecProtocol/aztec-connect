@@ -17,8 +17,8 @@ interface ConfVars {
   infuraApiKey?: string;
   network?: string;
   privateKey: Buffer;
-  innerRollupSize: number;
-  outerRollupSize: number;
+  numInnerRollupTxs: number;
+  numOuterRollupProofs: number;
   publishInterval: number;
   minConfirmation: number;
   minConfirmationEHW: number;
@@ -38,8 +38,8 @@ function getConfVars(): ConfVars {
     NETWORK,
     PRIVATE_KEY,
     PORT,
-    INNER_ROLLUP_SIZE,
-    OUTER_ROLLUP_SIZE,
+    NUM_INNER_ROLLUP_TXS,
+    NUM_OUTER_ROLLUP_PROOFS,
     PUBLISH_INTERVAL,
     MIN_CONFIRMATION,
     MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW,
@@ -61,8 +61,8 @@ function getConfVars(): ConfVars {
       ? Buffer.from(PRIVATE_KEY.slice(2), 'hex')
       : // Test mnemonic account 0.
         Buffer.from('ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', 'hex'),
-    innerRollupSize: +(INNER_ROLLUP_SIZE || 1),
-    outerRollupSize: +(OUTER_ROLLUP_SIZE || 2),
+    numInnerRollupTxs: +(NUM_INNER_ROLLUP_TXS || 1),
+    numOuterRollupProofs: +(NUM_OUTER_ROLLUP_PROOFS || 1),
     publishInterval: +(PUBLISH_INTERVAL || 0),
     minConfirmation: +(MIN_CONFIRMATION || 1),
     minConfirmationEHW: +(MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW || 12),

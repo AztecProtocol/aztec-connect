@@ -70,8 +70,8 @@ resource "aws_service_discovery_service" "falafel" {
 
 # Create EC2 instances in each AZ.
 resource "aws_instance" "container_instance_az1" {
-  ami                    = "ami-08ebd554ebc53fa9f"
-  instance_type          = "m5.4xlarge"
+  ami                    = "ami-0cd4858f2b923aa6b"
+  instance_type          = "r5.8xlarge"
   subnet_id              = data.terraform_remote_state.setup_iac.outputs.subnet_az1_private_id
   vpc_security_group_ids = [data.terraform_remote_state.setup_iac.outputs.security_group_private_id]
   iam_instance_profile   = data.terraform_remote_state.setup_iac.outputs.ecs_instance_profile_name
@@ -162,7 +162,7 @@ resource "aws_ecs_task_definition" "falafel" {
     "name": "falafel",
     "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/falafel:latest",
     "essential": true,
-    "memoryReservation": 32768,
+    "memoryReservation": 253952,
     "portMappings": [
       {
         "containerPort": 80
@@ -200,6 +200,14 @@ resource "aws_ecs_task_definition" "falafel" {
       {
         "name": "API_PREFIX",
         "value": "/falafel"
+      },
+      {
+        "name": "NUM_INNER_ROLLUP_TXS",
+        "value": "28"
+      },
+      {
+        "name": "NUM_OUTER_ROLLUP_PROOFS",
+        "value": "1"
       }
     ],
     "mountPoints": [

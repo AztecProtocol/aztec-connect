@@ -19,8 +19,8 @@ import { Block } from 'barretenberg/block_source';
 import { toBigIntBE } from 'bigint-buffer';
 
 export interface ServerConfig {
-  readonly innerRollupSize: number;
-  readonly outerRollupSize: number;
+  readonly numInnerRollupTxs: number;
+  readonly numOuterRollupProofs: number;
   readonly publishInterval: Duration;
   readonly feeLimit: bigint;
   readonly minFees: bigint[];
@@ -39,18 +39,25 @@ export class Server {
     private metrics: Metrics,
     provider: EthereumProvider,
   ) {
-    const { innerRollupSize, outerRollupSize, publishInterval, feeLimit } = config;
+    const { numInnerRollupTxs, numOuterRollupProofs, publishInterval, feeLimit } = config;
+    const innerRollupSize = 1 << Math.ceil(Math.log2(numInnerRollupTxs));
+    const outerRollupSize = 1 << Math.ceil(Math.log2(innerRollupSize * numOuterRollupProofs));
 
-    this.proofGenerator = new ProofGenerator(innerRollupSize, outerRollupSize);
+    console.log(`Num inner rollup txs: ${numInnerRollupTxs}`);
+    console.log(`Num outer rollup proofs: ${numOuterRollupProofs}`);
+    console.log(`Inner rollup size: ${innerRollupSize}`);
+    console.log(`Outer rollup size: ${outerRollupSize}`);
+
+    this.proofGenerator = new ProofGenerator(numInnerRollupTxs, numOuterRollupProofs);
     const rollupPublisher = new RollupPublisher(rollupDb, blockchain, publishInterval, feeLimit, provider, metrics);
     const rollupAggregator = new RollupAggregator(
       this.proofGenerator,
       rollupPublisher,
       rollupDb,
       worldStateDb,
-      blockchain,
       innerRollupSize,
       outerRollupSize,
+      numOuterRollupProofs,
       metrics,
     );
     const rollupCreator = new RollupCreator(
@@ -58,19 +65,12 @@ export class Server {
       worldStateDb,
       this.proofGenerator,
       rollupAggregator,
+      numInnerRollupTxs,
       innerRollupSize,
       metrics,
     );
-    const txAggregator = new TxAggregator(rollupCreator, rollupDb, innerRollupSize, publishInterval);
-    this.worldState = new WorldState(
-      rollupDb,
-      worldStateDb,
-      blockchain,
-      txAggregator,
-      innerRollupSize,
-      outerRollupSize,
-      metrics,
-    );
+    const txAggregator = new TxAggregator(rollupCreator, rollupDb, numInnerRollupTxs, publishInterval);
+    this.worldState = new WorldState(rollupDb, worldStateDb, blockchain, txAggregator, outerRollupSize, metrics);
     this.txReceiver = new TxReceiver(rollupDb, blockchain, config.minFees);
   }
 

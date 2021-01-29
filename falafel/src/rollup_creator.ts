@@ -15,7 +15,8 @@ export class RollupCreator {
     private worldStateDb: WorldStateDb,
     private proofGenerator: ProofGenerator,
     private rollupAggregator: RollupAggregator,
-    private rollupSize: number,
+    private numInnerRollupTxs: number,
+    private innerRollupSize: number,
     private metrics: Metrics,
   ) {}
 
@@ -41,7 +42,7 @@ export class RollupCreator {
         id: rollup.rollupHash,
         txs,
         proofData: proof,
-        rollupSize: this.rollupSize,
+        rollupSize: this.innerRollupSize,
         dataStartIndex: rollup.dataStartIndex,
         created: new Date(),
       });
@@ -71,8 +72,7 @@ export class RollupCreator {
   private async createRollup(txs: TxDao[]) {
     const worldStateDb = this.worldStateDb;
     const dataSize = worldStateDb.getSize(0);
-    const rollupSizePow2 = 1 << Math.ceil(Math.log2(this.rollupSize));
-    const subtreeSize = BigInt(rollupSizePow2 * 2);
+    const subtreeSize = BigInt(this.innerRollupSize * 2);
     const dataStartIndex = dataSize % subtreeSize === 0n ? dataSize : dataSize + subtreeSize - (dataSize % subtreeSize);
 
     // Get old data.
@@ -109,9 +109,9 @@ export class RollupCreator {
       dataRootsIndicies.push(tx.dataRootsIndex!);
     }
 
-    if (txs.length < this.rollupSize) {
+    if (txs.length < this.numInnerRollupTxs) {
       // Grows the data tree by inserting 0 at last subtree position.
-      await worldStateDb.put(0, dataStartIndex + BigInt(this.rollupSize) * 2n - 1n, Buffer.alloc(64, 0));
+      await worldStateDb.put(0, dataStartIndex + BigInt(this.innerRollupSize) * 2n - 1n, Buffer.alloc(64, 0));
 
       // Add padding data. The vectors that are shorter than their expected size, will be grown to their full circuit
       // size using the last element in the vector as the value. Padding transactions will use nullifier index 0, and
