@@ -4,10 +4,10 @@ set -e
 IMAGE=$1
 REPOSITORY=${IMAGE%:*}
 TAG=${IMAGE#*:}
-IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:cache-$CIRCLE_SHA1-$TAG
+IMAGE_COMMIT_TAG=cache-$CIRCLE_SHA1-$TAG
 
 # Do nothing if this wasn't rebuilt.
-image_exists $REPOSITORY $IMAGE_COMMIT_URI || { echo "No new image found." && exit 0; }
+image_exists $REPOSITORY $IMAGE_COMMIT_TAG || { echo "No new image found." && exit 0; }
 
 deploy_ecr $1
 deploy_terraform
