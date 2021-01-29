@@ -17,6 +17,24 @@ const flicker = keyframes`
   100% { opacity: 0.9; }
 `;
 
+const StyledTerminalSelectionText = styled.div`
+  position: absolute;
+  top: 0px;
+  width: 100%;
+  margin: 50px auto;
+  text-align: center;
+
+  padding-top: 30px;
+
+  font-family: 'Courier new';
+  color: rgba(255, 255, 255, 0);
+  font-size: 50px;
+  font-weight: bold;
+  font-style: normal;
+  white-space: pre;
+  text-align: center;
+`;
+
 const Monitor = styled.div`
   position: absolute;
   top: 0px;
@@ -27,6 +45,7 @@ const Monitor = styled.div`
 `;
 
 const Display = styled.div`
+  user-select: none;
   display: inline-block;
   position: relative;
   background-color: #000;
@@ -56,24 +75,6 @@ const StyledTerminal = styled.div`
   filter: blur(1px);
   text-align: center;
   text-shadow: 0 0 30px rgba(255, 255, 255, 0.4);
-`;
-
-const StyledTerminalSelectionText = styled.div`
-  position: absolute;
-  top: 0px;
-  width: 100%;
-  margin: 50px auto;
-  text-align: center;
-
-  padding: 30px;
-
-  font-family: 'Courier new';
-  color: rgba(255, 255, 255, 0);
-  font-size: 50px;
-  font-weight: bold;
-  font-style: normal;
-  white-space: pre;
-  text-align: center;
 `;
 
 const Scanline = styled.div`
