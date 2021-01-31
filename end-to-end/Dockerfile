@@ -6,7 +6,7 @@ FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/sriracha:latest
 # and tagged correctly in CI for use by docker-compose. Let's call it a feature...
 FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/falafel:latest
 
-FROM node:12-alpine
+FROM node:14-alpine
 COPY --from=0 /usr/src/barretenberg.js/dest /usr/src/barretenberg.js/dest
 COPY --from=1 /usr/src/sdk/dest /usr/src/sdk/dest
 COPY --from=2 /usr/src/blockchain/dest /usr/src/blockchain/dest

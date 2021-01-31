@@ -30,6 +30,7 @@ export class Server {
   private worldState: WorldState;
   private txReceiver: TxReceiver;
   private proofGenerator: ProofGenerator;
+  private ready = false;
 
   constructor(
     private config: ServerConfig,
@@ -75,18 +76,25 @@ export class Server {
   }
 
   public async start() {
-    console.log('Server start...');
+    console.log('Server initializing...');
     await this.proofGenerator.start();
     await this.worldState.start();
     // The tx receiver depends on the proof generator to have been initialized to gain access to vks.
     await this.txReceiver.init();
+    this.ready = true;
+    console.log('Server ready to receive txs.');
   }
 
   public async stop() {
     console.log('Server stop...');
+    this.ready = false;
     await this.txReceiver.destroy();
     await this.worldState.stop();
     this.proofGenerator.stop();
+  }
+
+  public isReady() {
+    return this.ready;
   }
 
   public async removeData() {

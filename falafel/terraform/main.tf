@@ -266,7 +266,6 @@ resource "aws_ecs_service" "falafel" {
   desired_count                      = "1"
   deployment_maximum_percent         = 100
   deployment_minimum_healthy_percent = 0
-  health_check_grace_period_seconds  = 600
 
   network_configuration {
     subnets = [

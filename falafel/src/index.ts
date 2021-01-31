@@ -54,14 +54,14 @@ async function main() {
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
 
-  await server.start();
-
   const serverStatus = await server.getStatus();
   const app = appFactory(server, apiPrefix, metrics, connection, worldStateDb, serverStatus, serverAuthToken);
 
   const httpServer = http.createServer(app.callback());
   httpServer.listen(port);
   console.log(`Server listening on port ${port}.`);
+
+  await server.start();
 }
 
 main().catch(err => {

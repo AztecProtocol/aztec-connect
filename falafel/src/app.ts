@@ -92,6 +92,15 @@ export function appFactory(
     }
   };
 
+  const checkReady = async (ctx: Koa.Context, next: () => Promise<void>) => {
+    if (!server.isReady()) {
+      ctx.status = 503;
+      ctx.body = { error: 'Server not ready.' };
+    } else {
+      await next();
+    }
+  };
+
   const exceptionHandler = async (ctx: Koa.Context, next: () => Promise<void>) => {
     try {
       await next();
@@ -105,11 +114,12 @@ export function appFactory(
   router.get('/', async (ctx: Koa.Context) => {
     ctx.body = {
       serviceName: 'falafel',
+      isReady: server.isReady(),
     };
     ctx.status = 200;
   });
 
-  router.post('/tx', async (ctx: Koa.Context) => {
+  router.post('/tx', checkReady, async (ctx: Koa.Context) => {
     const stream = new PromiseReadable(ctx.req);
     const { proofData, viewingKeys, depositSignature } = JSON.parse((await stream.readAll()) as string);
     const tx: Proof = {
