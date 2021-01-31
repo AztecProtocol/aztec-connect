@@ -44,8 +44,7 @@ services:
       - falafel
     command: >
       sh -c "
-      apk add curl jq;
-      while ! nc -z falafel 8081; do sleep 1; done;
-      while [ \"$$(curl -s localhost:8081 | jq .isReady)\" = 'false' ]; do sleep 1; done;
+      apk add curl jq bash;
+      ./scripts/wait-till-ready.sh
       yarn test ./src/e2e.test.ts
       "
