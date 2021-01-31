@@ -10,7 +10,8 @@
     "test": "jest",
     "clean_db": "rm -rf ./data/db.sqlite ./data/world_state.db",
     "clean_keys": "rm -rf ./data/account ./data/join_split ./data/*rollup*",
-    "clean": "rm -rf ./data"
+    "clean": "rm -rf ./data",
+    "start:e2e": "yarn clean_db && `yarn -s deploy_rollup_processor` && NUM_OUTER_ROLLUP_PROOFS=2 TX_FEE=100000000000000000 yarn start:dev"
   },
   "jest": {
     "transform": {
@@ -30,7 +31,7 @@
   "dependencies": {
     "@koa/cors": "^3.0.0",
     "apollo-server-koa": "^2.17.0",
-    "async-mutex": "^0.1.3",
+    "async-mutex": "^0.2.6",
     "barretenberg": "file:../barretenberg.js/dest",
     "bigint-buffer": "^1.1.5",
     "blockchain": "file:../blockchain/dest",

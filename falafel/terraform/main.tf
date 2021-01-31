@@ -163,6 +163,7 @@ resource "aws_ecs_task_definition" "falafel" {
     "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/falafel:latest",
     "essential": true,
     "memoryReservation": 253952,
+    "cpu": 32,
     "portMappings": [
       {
         "containerPort": 80
@@ -228,6 +229,7 @@ resource "aws_ecs_task_definition" "falafel" {
   {
     "name": "metrics",
     "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/metrics-sidecar:latest",
+    "essential": false,
     "memoryReservation": 256,
     "portMappings": [
       {
@@ -264,6 +266,7 @@ resource "aws_ecs_service" "falafel" {
   desired_count                      = "1"
   deployment_maximum_percent         = 100
   deployment_minimum_healthy_percent = 0
+  health_check_grace_period_seconds  = 600
 
   network_configuration {
     subnets = [
@@ -311,7 +314,7 @@ resource "aws_alb_target_group" "falafel" {
   health_check {
     path                = "/falafel"
     matcher             = "200"
-    interval            = 60
+    interval            = 10
     healthy_threshold   = 2
     unhealthy_threshold = 5
     timeout             = 3

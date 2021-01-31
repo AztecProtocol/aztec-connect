@@ -292,15 +292,6 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   }
 
   /**
-   * Check users have deposited sufficient numbers of tokens , for rollup deposits
-   * to succeed
-   */
-  public async validateDepositFunds(inputOwner: EthAddress, publicInput: bigint, assetId: AssetId) {
-    const depositedBalance = BigInt(await this.contracts.getUserPendingDeposit(assetId, inputOwner));
-    return depositedBalance >= publicInput;
-  }
-
-  /**
    * Validate locally that a signature was produced by a publicOwner
    */
   public validateSignature(publicOwner: EthAddress, signature: Buffer, signingData: Buffer) {

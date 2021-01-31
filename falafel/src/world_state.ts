@@ -23,8 +23,6 @@ const innerProofDataToTxDao = (tx: InnerProofData, viewingKeys: Buffer[], create
   return txDao;
 };
 
-const roundUpToPow2 = (value: number) => 1 << Math.ceil(Math.log2(value));
-
 export class WorldState {
   private blockQueue = new MemoryFifo<Block>();
 
@@ -91,13 +89,33 @@ export class WorldState {
     console.log(`Root root: ${this.worldStateDb.getRoot(2).toString('hex')}`);
   }
 
+  /**
+   * Called to purge all received, unsettled txs, and reset the rollup pipeline.
+   * Stops the TxAggregator, stopping any current rollup construction or publishing.
+   * Resets db state.
+   * Starts the TxAggregator.
+   */
+  public async resetPipeline() {
+    await this.txAggregator.stop();
+
+    await this.rollupDb.deleteUnsettledRollups();
+    await this.rollupDb.deleteOrphanedRollupProofs();
+    await this.rollupDb.deletePendingTxs();
+
+    this.txAggregator.start();
+  }
+
+  /**
+   * Called in serial to process each incoming block.
+   * Stops the TxAggregator, stopping any current rollup construction or publishing.
+   * Processes the block, loading it's data into the db.
+   * Starts the TxAggregator.
+   */
   private async handleBlock(block: Block) {
-    // Interrupt completion of any current rollup construction.
     await this.txAggregator.stop();
 
     await this.updateDbs(block);
 
-    // Kick off asynchronously. Allows incoming block to be handled and interrupt completion.
     this.txAggregator.start();
   }
 

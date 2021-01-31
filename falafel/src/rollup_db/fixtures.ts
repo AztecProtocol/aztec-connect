@@ -1,32 +1,32 @@
+import { EthAddress } from 'barretenberg/address';
 import { ProofData } from 'barretenberg/client_proofs/proof_data';
 import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
+import { toBufferBE } from 'bigint-buffer';
 import { randomBytes } from 'crypto';
 import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
 
-export const randomTx = (signature?: Buffer): TxDao => {
+export const randomTx = (signature?: Buffer, inputOwner?: EthAddress, publicInput?: bigint) => {
   const proofData = new ProofData(
     Buffer.concat([
       Buffer.alloc(32), // proofId
-      randomBytes(32), // publicInput
+      publicInput ? toBufferBE(publicInput, 32) : randomBytes(32), // publicInput
       randomBytes(32), // publicOutput
       Buffer.alloc(32), // assetId
       randomBytes(64), // note1
       randomBytes(64), // note2
       randomBytes(32), // nullifier1
       randomBytes(32), // nullifier2
-      Buffer.concat([Buffer.alloc(12), randomBytes(20)]),
+      inputOwner ? inputOwner.toBuffer32() : Buffer.concat([Buffer.alloc(12), randomBytes(20)]),
       Buffer.concat([Buffer.alloc(12), randomBytes(20)]),
     ]),
-    [randomBytes(32), randomBytes(32)],
-    signature,
   );
   return new TxDao({
     id: proofData.txId,
-    proofData: proofData.proofData,
-    viewingKey1: proofData.viewingKeys![0],
-    viewingKey2: proofData.viewingKeys![1],
+    proofData: proofData.rawProofData,
+    viewingKey1: randomBytes(32),
+    viewingKey2: randomBytes(32),
     nullifier1: proofData.nullifier1,
     nullifier2: proofData.nullifier2,
     dataRootsIndex: 0,

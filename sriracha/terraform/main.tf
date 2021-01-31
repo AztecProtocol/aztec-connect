@@ -249,7 +249,7 @@ resource "aws_lb_listener_rule" "sriracha" {
 
   condition {
     path_pattern {
-      values = ["/sriracha/*"]
+      values = ["/sriracha*"]
     }
   }
 }

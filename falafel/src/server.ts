@@ -95,6 +95,11 @@ export class Server {
     process.kill(process.pid, 'SIGINT');
   }
 
+  public async resetPipline() {
+    console.log('Resetting pipeline...');
+    await this.worldState.resetPipeline();
+  }
+
   public async getStatus(): Promise<RollupProviderStatus> {
     const status = await this.blockchain.getBlockchainStatus();
 

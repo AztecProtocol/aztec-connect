@@ -7,6 +7,7 @@ import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
 import { randomRollup, randomRollupProof, randomTx } from './fixtures';
 import { RollupDb } from './';
+import { EthAddress } from 'barretenberg/address';
 
 describe('rollup_db', () => {
   let connection: Connection;
@@ -63,24 +64,44 @@ describe('rollup_db', () => {
   it('should add rollup proof and update the rollup id for its txs', async () => {
     const tx0 = randomTx();
     const tx1 = randomTx();
+    const tx2 = randomTx();
     await rollupDb.addTx(tx0);
     await rollupDb.addTx(tx1);
+    await rollupDb.addTx(tx2);
 
-    expect(await rollupDb.getPendingTxCount()).toBe(2);
+    expect(await rollupDb.getPendingTxCount()).toBe(3);
 
-    const rollupProof = randomRollupProof([tx0]);
-    await rollupDb.addRollupProof(rollupProof);
+    {
+      const rollupProof = randomRollupProof([tx0]);
+      await rollupDb.addRollupProof(rollupProof);
 
-    const rollupDao = (await rollupDb.getRollupProof(rollupProof.id))!;
+      // Check the rollup proof is associated with tx0.
+      const rollupDao = (await rollupDb.getRollupProof(rollupProof.id))!;
+      const newTxDao0 = await rollupDb.getTx(tx0.id);
+      expect(newTxDao0!.rollupProof).toStrictEqual(rollupDao);
 
-    const newTxDao0 = await rollupDb.getTx(tx0.id);
-    expect(newTxDao0!.rollupProof).toStrictEqual(rollupDao);
+      // Check tx1 is still pending.
+      const newTxDao1 = await rollupDb.getTx(tx1.id);
+      expect(newTxDao1!.rollupProof).toBeUndefined();
 
-    const newTxDao1 = await rollupDb.getTx(tx1.id);
-    expect(newTxDao1!.rollupProof).toBeUndefined();
+      expect(await rollupDb.getPendingTxCount()).toBe(2);
+      expect(await rollupDb.getPendingTxs()).toStrictEqual([tx1, tx2]);
+    }
 
-    expect(await rollupDb.getPendingTxCount()).toBe(1);
-    expect(await rollupDb.getPendingTxs()).toStrictEqual([tx1]);
+    {
+      // Add a new rollup proof containing tx0 and tx1.
+      const rollupProof = randomRollupProof([tx0, tx1]);
+      await rollupDb.addRollupProof(rollupProof);
+
+      // Check the rollup proof is associated with tx0 and tx1.
+      const rollupDao = (await rollupDb.getRollupProof(rollupProof.id))!;
+      const newTxDao0 = await rollupDb.getTx(tx0.id);
+      const newTxDao1 = await rollupDb.getTx(tx1.id);
+      expect(newTxDao0!.rollupProof).toStrictEqual(rollupDao);
+      expect(newTxDao1!.rollupProof).toStrictEqual(rollupDao);
+
+      expect(await rollupDb.getPendingTxs()).toStrictEqual([tx2]);
+    }
   });
 
   it('should update rollup id for txs when newer proof added', async () => {
@@ -204,6 +225,39 @@ describe('rollup_db', () => {
     await rollupDb.confirmMined(rollup.id, 0, 0n, new Date());
 
     expect(await rollupDb.getUnsettledTxCount()).toBe(0);
+  });
+
+  it('should get unsettled js tx for account', async () => {
+    const addr = EthAddress.randomAddress();
+    const tx0 = randomTx(undefined, addr, 10n);
+    const tx1 = randomTx(undefined, addr, 20n);
+    const tx2 = randomTx(undefined, addr, 40n);
+    await rollupDb.addTx(tx0);
+    await rollupDb.addTx(tx1);
+    await rollupDb.addTx(tx2);
+
+    {
+      const result = await rollupDb.getUnsettledJoinSplitTxsForInputAddress(addr);
+      expect(result.length).toBe(3);
+      expect(result[0].publicInput).toBe(10n);
+      expect(result[1].publicInput).toBe(20n);
+      expect(result[2].publicInput).toBe(40n);
+    }
+
+    const rollupProof = randomRollupProof([tx0], 0);
+    await rollupDb.addRollupProof(rollupProof);
+
+    const rollup = randomRollup(0, rollupProof);
+    await rollupDb.addRollup(rollup);
+
+    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date());
+
+    {
+      const result = await rollupDb.getUnsettledJoinSplitTxsForInputAddress(addr);
+      expect(result.length).toBe(2);
+      expect(result[0].publicInput).toBe(20n);
+      expect(result[1].publicInput).toBe(40n);
+    }
   });
 
   it('should delete unsettled rollups', async () => {

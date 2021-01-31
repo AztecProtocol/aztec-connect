@@ -176,7 +176,7 @@ describe('join_split_proof', () => {
       const verified = await joinSplitVerifier.verifyProof(proof);
       expect(verified).toBe(true);
 
-      const joinSplitProof = new ProofData(proof, []);
+      const joinSplitProof = new ProofData(proof);
       expect(joinSplitProof.nullifier1).toEqual(expectedNullifier1);
       expect(joinSplitProof.nullifier2).toEqual(expectedNullifier2);
       expect(joinSplitProof.inputOwner).toEqual(inputOwner.toBuffer32());

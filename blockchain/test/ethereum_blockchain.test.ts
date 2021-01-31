@@ -129,12 +129,8 @@ describe('ethereum_blockchain', () => {
   it('should validate user has deposited sufficient funds', async () => {
     await erc20UserA.approve(rollupProcessor.address, depositAmount);
     await ethereumBlockchain.depositPendingFunds(erc20AssetId, BigInt(depositAmount), userAAddress);
-    const sufficientDeposit = await ethereumBlockchain.validateDepositFunds(
-      userAAddress,
-      BigInt(depositAmount),
-      erc20AssetId,
-    );
-    expect(sufficientDeposit).to.equal(true);
+    const deposited = await ethereumBlockchain.getUserPendingDeposit(erc20AssetId, userAAddress);
+    expect(deposited).to.equal(BigInt(depositAmount));
   });
 
   it('should get user nonce', async () => {
@@ -161,12 +157,8 @@ describe('ethereum_blockchain', () => {
 
     const permitArgs = { deadline, approvalAmount: BigInt(depositAmount), signature: { v, r, s } };
     await ethereumBlockchain.depositPendingFunds(permitAssetId, BigInt(depositAmount), localAddress, permitArgs);
-    const sufficientDeposit = await ethereumBlockchain.validateDepositFunds(
-      localAddress,
-      BigInt(depositAmount),
-      permitAssetId,
-    );
-    expect(sufficientDeposit).to.equal(true);
+    const deposited = await ethereumBlockchain.getUserPendingDeposit(permitAssetId, localAddress);
+    expect(deposited).to.equal(BigInt(depositAmount));
 
     const newNonce = await ethereumBlockchain.getUserNonce(permitAssetId, localAddress);
     expect(newNonce).to.equal(BigInt(1));
@@ -192,12 +184,8 @@ describe('ethereum_blockchain', () => {
     const permitArgs = { deadline, approvalAmount: BigInt(depositAmount), signature: { v, r, s } };
 
     await ethereumBlockchain.depositPendingFunds(permitAssetId, BigInt(depositAmount), localAddress, permitArgs);
-    const sufficientDeposit = await ethereumBlockchain.validateDepositFunds(
-      localAddress,
-      BigInt(depositAmount),
-      permitAssetId,
-    );
-    expect(sufficientDeposit).to.equal(true);
+    const deposited = await ethereumBlockchain.getUserPendingDeposit(permitAssetId, localAddress);
+    expect(deposited).to.equal(BigInt(depositAmount));
 
     const newNonce = await ethereumBlockchain.getUserNonce(permitAssetId, localAddress);
     expect(parseInt(newNonce.toString(), 10)).to.equal(1);

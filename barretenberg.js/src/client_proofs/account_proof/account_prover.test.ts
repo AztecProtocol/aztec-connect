@@ -142,7 +142,7 @@ describe('account proof', () => {
     expect(verified).toBe(true);
 
     // Check public inputs
-    const accountProof = new ProofData(proof, []);
+    const accountProof = new ProofData(proof);
     const newAccountAliasId = new AccountAliasId(aliasHash, nonce + 1);
     expect(accountProof.publicInput).toEqual(newAccountPublicKey.x());
     expect(accountProof.publicOutput).toEqual(newAccountPublicKey.y());

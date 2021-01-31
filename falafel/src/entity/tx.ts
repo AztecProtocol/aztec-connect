@@ -20,8 +20,10 @@ export class TxDao {
 
   // Cannot use id as primary as it's a Buffer and typeorm has bugs...
   // To workaround, compute the hex string form and use that as primary.
+  // WARNING: You will *not* be able to verify this in the tests. It only shows up outside a jest context.
+  // You can imagine my pain.
   @PrimaryColumn()
-  private internalId!: string;
+  public internalId!: string;
 
   // To be treated as primary key.
   @Column({ unique: true })
@@ -29,7 +31,7 @@ export class TxDao {
 
   @ManyToOne(() => RollupProofDao, r => r.txs, { onDelete: 'SET NULL' })
   @JoinColumn()
-  public rollupProof?: RollupProofDao;
+  public rollupProof?: RollupProofDao | null;
 
   @Column()
   public proofData!: Buffer;

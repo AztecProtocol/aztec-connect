@@ -2,7 +2,7 @@ import { EthAddress } from 'barretenberg/address';
 import { AssetId } from 'barretenberg/asset';
 import { JoinSplitProver } from 'barretenberg/client_proofs/join_split_proof';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
-import { ProofData } from 'barretenberg/client_proofs/proof_data';
+import { JoinSplitProofData, ProofData } from 'barretenberg/client_proofs/proof_data';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { WorldState } from 'barretenberg/world_state';
@@ -64,12 +64,13 @@ export class JoinSplitProofCreator {
     debug(`created proof: ${new Date().getTime() - start}ms`);
     debug(`proof size: ${proofData.length}`);
 
-    const joinSplitProof = new ProofData(proofData, viewingKeys);
-    const txId = joinSplitProof.txId;
+    const joinSplitProof = new JoinSplitProofData(new ProofData(proofData));
+    const {
+      depositSigningData,
+      proofData: { txId },
+    } = joinSplitProof;
 
-    const depositSignature = publicInput
-      ? await this.ethSign(joinSplitProof.getDepositSigningData(), ethSigner)
-      : undefined;
+    const depositSignature = publicInput ? await this.ethSign(depositSigningData, ethSigner) : undefined;
 
     return { proofData, viewingKeys, depositSignature, txId };
   }

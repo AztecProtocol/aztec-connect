@@ -177,6 +177,11 @@ export function appFactory(
     ctx.status = 200;
   });
 
+  router.get('/reset', validateAuth, async (ctx: Koa.Context) => {
+    await server.resetPipline();
+    ctx.status = 200;
+  });
+
   router.get('/flush', validateAuth, async (ctx: Koa.Context) => {
     await server.flushTxs();
     ctx.status = 200;

@@ -153,6 +153,8 @@ export class Terminal extends EventEmitter {
     }
 
     if (this.printable(event.keyCode)) {
+      event.preventDefault();
+
       // Reset blink.
       this.setCursor(blockCursor());
 

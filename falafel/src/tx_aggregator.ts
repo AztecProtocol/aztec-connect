@@ -21,7 +21,7 @@ export class TxAggregator {
    * Starts monitoring for txs, and once conditions are met, creates a rollup.
    * Stops monitoring once a rollup has been successfully published or `stop` called.
    */
-  public async start() {
+  public start() {
     this.running = true;
     this.flush = false;
     this.rollupCreator.clearInterrupt();

@@ -144,7 +144,7 @@ describe('RollupProofData', () => {
     );
 
     const joinSplitProofData = Buffer.concat([innerProofData.toBuffer(), randomBytes(32), randomBytes(32)]);
-    const joinSplitProof = new ProofData(joinSplitProofData, []);
+    const joinSplitProof = new ProofData(joinSplitProofData);
 
     expect(innerProofData.txId).toEqual(joinSplitProof.txId);
   });

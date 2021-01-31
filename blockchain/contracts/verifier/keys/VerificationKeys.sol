@@ -8,7 +8,7 @@ import {Types} from '../cryptography/Types.sol';
 
 import {Rollup1x1Vk} from '../keys/Rollup1x1Vk.sol';
 import {Rollup1x2Vk} from '../keys/Rollup1x2Vk.sol';
-import {Rollup1x3Vk} from '../keys/Rollup1x3Vk.sol';
+import {Rollup1x4Vk} from '../keys/Rollup1x4Vk.sol';
 
 import {Rollup28x1Vk} from '../keys/Rollup28x1Vk.sol';
 import {Rollup28x2Vk} from '../keys/Rollup28x2Vk.sol';
@@ -39,7 +39,7 @@ library VerificationKeys {
         } else if (_keyId == 2) {
             vk = Rollup1x2Vk.get_verification_key();
         } else if (_keyId == 4) {
-            vk = Rollup1x3Vk.get_verification_key();
+            vk = Rollup1x4Vk.get_verification_key();
         } else if (_keyId == 32) {
             vk = Rollup28x1Vk.get_verification_key();
         } else if (_keyId == 64) {

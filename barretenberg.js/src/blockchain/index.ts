@@ -17,7 +17,7 @@ export type PermitArgs = { deadline: bigint; approvalAmount: bigint; signature: 
 export interface Blockchain extends BlockSource, BlockchainStatusSource {
   getTransactionReceipt(txHash: TxHash): Promise<Receipt>;
 
-  validateDepositFunds(publicOwner: EthAddress, publicInput: bigint, assetId: AssetId): Promise<boolean>;
+  getUserPendingDeposit(assetId: AssetId, account: EthAddress): Promise<bigint>;
 
   validateSignature(publicOwner: EthAddress, signature: Buffer, proof: Buffer): boolean;
 

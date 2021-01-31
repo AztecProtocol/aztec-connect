@@ -1,4 +1,6 @@
+import { EthAddress } from 'barretenberg/address';
 import { AccountAliasId } from 'barretenberg/client_proofs/account_alias_id';
+import { JoinSplitProofData, ProofData } from 'barretenberg/client_proofs/proof_data';
 import { InnerProofData } from 'barretenberg/rollup_proof';
 import { TxHash } from 'barretenberg/rollup_provider';
 import { toBufferBE } from 'bigint-buffer';
@@ -31,13 +33,14 @@ export class RollupDb {
       const proofData = InnerProofData.fromBuffer(txDao.proofData);
 
       if (proofData.proofId === 0) {
+        const jsProofData = new JoinSplitProofData(new ProofData(txDao.proofData));
         const joinSplitDao = new JoinSplitTxDao({
           id: proofData.txId,
-          publicInput: proofData.publicInput,
-          publicOutput: proofData.publicOutput,
-          assetId: proofData.assetId.readUInt32BE(28),
-          inputOwner: proofData.inputOwner.slice(12),
-          outputOwner: proofData.outputOwner.slice(12),
+          publicInput: jsProofData.publicInput,
+          publicOutput: jsProofData.publicOutput,
+          assetId: jsProofData.assetId,
+          inputOwner: jsProofData.inputOwner,
+          outputOwner: jsProofData.outputOwner,
           created: txDao.created,
         });
         await transactionalEntityManager.save(joinSplitDao);
@@ -82,6 +85,10 @@ export class RollupDb {
     });
   }
 
+  public async deletePendingTxs() {
+    return this.txRep.delete({ rollupProof: null });
+  }
+
   public async getTotalTxCount() {
     return this.txRep.count();
   }
@@ -104,12 +111,33 @@ export class RollupDb {
   public async getTotalRollupsOfSize(rollupSize: number) {
     return await this.rollupProofRep
       .createQueryBuilder('rp')
-      .leftJoinAndSelect('rp.rollup', 'r')
+      .leftJoin('rp.rollup', 'r')
       .where('rp.rollupSize = :rollupSize AND r.mined IS NOT NULL', { rollupSize })
       .getCount();
   }
 
   public async getUnsettledTxCount() {
+    return await this.txRep
+      .createQueryBuilder('tx')
+      .leftJoin('tx.rollupProof', 'rp')
+      .leftJoin('rp.rollup', 'r')
+      .where('tx.rollupProof IS NULL OR rp.rollup IS NULL OR r.mined IS NULL')
+      .getCount();
+  }
+
+  public async getUnsettledJoinSplitTxsForInputAddress(inputOwner: EthAddress) {
+    return await this.joinSplitTxRep
+      .createQueryBuilder('js_tx')
+      .leftJoin('js_tx.internalId', 'tx')
+      .leftJoin('tx.rollupProof', 'rp')
+      .leftJoin('rp.rollup', 'r')
+      .where('js_tx.inputOwner = :owner AND (tx.rollupProof IS NULL OR rp.rollup IS NULL OR r.mined IS NULL)', {
+        owner: inputOwner.toBuffer(),
+      })
+      .getMany();
+  }
+
+  public async deleteUnsettledTxs() {
     return await this.txRep
       .createQueryBuilder('tx')
       .leftJoinAndSelect('tx.rollupProof', 'rp')
