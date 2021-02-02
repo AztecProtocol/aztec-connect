@@ -1,4 +1,4 @@
-import { VIEWING_KEY_SIZE } from 'barretenberg/rollup_proof';
+import { ViewingKey } from 'barretenberg/viewing_key';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
 import { advanceBlocks, blocksToAdvance } from './advance_block';
@@ -41,7 +41,7 @@ export async function setupRollupProcessor(rollupProvider: Signer, users: Signer
   const blocks = await blocksToAdvance(80, 100, ethers.provider);
   await advanceBlocks(blocks, ethers.provider);
 
-  const viewingKeys = [Buffer.alloc(VIEWING_KEY_SIZE, 1), Buffer.alloc(VIEWING_KEY_SIZE, 2)];
+  const viewingKeys = [Buffer.alloc(ViewingKey.SIZE, 1), Buffer.alloc(ViewingKey.SIZE, 2)];
   const rollupSize = 2;
 
   return {

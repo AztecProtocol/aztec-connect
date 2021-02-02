@@ -4,6 +4,7 @@ import { Grumpkin } from '../ecc/grumpkin';
 import { GrumpkinAddress } from '../address';
 import { numToUInt8, numToUInt32BE } from '../serialize';
 import { AssetId } from '../asset';
+import { ViewingKey } from '../viewing_key';
 
 export class Note {
   constructor(
@@ -84,10 +85,11 @@ export function encryptNote(note: Note, ephPrivKey: Buffer, grumpkin: Grumpkin) 
 
   const noteBuf = Buffer.concat([toBufferBE(note.value, 32), numToUInt32BE(note.assetId), numToUInt32BE(note.nonce)]);
   const plaintext = Buffer.concat([iv.slice(0, 8), noteBuf]);
-  return Buffer.concat([cipher.update(plaintext), cipher.final(), ephPubKey]);
+  return new ViewingKey(Buffer.concat([cipher.update(plaintext), cipher.final(), ephPubKey]));
 }
 
-export function decryptNote(encryptedNote: Buffer, privateKey: Buffer, grumpkin: Grumpkin) {
+export function decryptNote(viewingKey: ViewingKey, privateKey: Buffer, grumpkin: Grumpkin) {
+  const encryptedNote = viewingKey.toBuffer();
   const ephPubKey = new GrumpkinAddress(encryptedNote.slice(-64));
   const aesSecret = deriveAESSecret(ephPubKey, privateKey, grumpkin);
   const aesKey = aesSecret.slice(0, 16);

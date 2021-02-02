@@ -1,10 +1,11 @@
 import { BlockSource } from '../block_source';
 import { TxHash } from '../tx_hash';
 import { BlockchainStatus } from '../blockchain';
+import { ViewingKey } from '../viewing_key';
 
 export interface Proof {
   proofData: Buffer;
-  viewingKeys: Buffer[];
+  viewingKeys: ViewingKey[];
   depositSignature?: Buffer;
 }
 

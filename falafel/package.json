@@ -11,7 +11,7 @@
     "clean_db": "rm -rf ./data/db.sqlite ./data/world_state.db",
     "clean_keys": "rm -rf ./data/account ./data/join_split ./data/*rollup*",
     "clean": "rm -rf ./data",
-    "start:e2e": "yarn clean_db && `yarn -s deploy_rollup_processor` && NUM_OUTER_ROLLUP_PROOFS=2 TX_FEE=100000000000000000 yarn start:dev"
+    "start:e2e": "yarn clean_db && `yarn -s deploy_rollup_processor 1` && TX_FEE=100000000000000000 yarn start:dev"
   },
   "jest": {
     "transform": {

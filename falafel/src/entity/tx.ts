@@ -1,3 +1,4 @@
+import { ViewingKey } from 'barretenberg/viewing_key';
 import {
   AfterInsert,
   AfterLoad,
@@ -11,6 +12,7 @@ import {
   PrimaryColumn,
 } from 'typeorm';
 import { RollupProofDao } from './rollup_proof';
+import { viewingKeyTransformer } from './transformer';
 
 @Entity({ name: 'tx' })
 export class TxDao {
@@ -36,11 +38,11 @@ export class TxDao {
   @Column()
   public proofData!: Buffer;
 
-  @Column()
-  public viewingKey1!: Buffer;
+  @Column('blob', { transformer: [viewingKeyTransformer] })
+  public viewingKey1!: ViewingKey;
 
-  @Column()
-  public viewingKey2!: Buffer;
+  @Column('blob', { transformer: [viewingKeyTransformer] })
+  public viewingKey2!: ViewingKey;
 
   // Nullable, as only deposits have signatures.
   @Column({ nullable: true })

@@ -419,10 +419,8 @@ export class WalletSdk extends EventEmitter {
     }
 
     const userId = this.getUserId(publicKey, accountAliasId.nonce);
-    return this.performAction(Action.ACCOUNT, userId, async () => {
-      const recoverySigner = new RecoverSignatureSigner(recoveryPublicKey, signature);
-      return this.addSigningKeys(userId, recoverySigner, trustedThirdPartyPublicKey);
-    });
+    const recoverySigner = new RecoverSignatureSigner(recoveryPublicKey, signature);
+    return this.addSigningKeys(userId, recoverySigner, trustedThirdPartyPublicKey);
   }
 
   public async migrateAccount(
@@ -485,6 +483,10 @@ export class WalletSdk extends EventEmitter {
 
   public getUsersData() {
     return this.core.getUsersData();
+  }
+
+  public getPublicKeyFromPrivateKey(privateKey: Buffer) {
+    return this.core.getPublicKeyFromPrivateKey(privateKey);
   }
 
   public createSchnorrSigner(privateKey: Buffer) {

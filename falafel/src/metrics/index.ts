@@ -62,7 +62,7 @@ export class Metrics {
 
     new Gauge({
       name: 'tx_unsettled_total',
-      help: 'Pending transactions',
+      help: 'Unsettled transactions',
       async collect() {
         this.set(await rollupDb.getUnsettledTxCount());
       },

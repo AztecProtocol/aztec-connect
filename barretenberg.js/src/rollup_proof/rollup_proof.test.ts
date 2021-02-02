@@ -1,8 +1,9 @@
 import { randomBytes } from 'crypto';
 import { ProofData } from '../client_proofs/proof_data';
-import { RollupProofData, InnerProofData, VIEWING_KEY_SIZE } from './';
+import { RollupProofData, InnerProofData } from './';
 import { numToUInt32BE } from '../serialize';
 import { EthAddress } from '../address';
+import { ViewingKey } from '../viewing_key';
 
 describe('RollupProofData', () => {
   const innerProofData = new InnerProofData(
@@ -26,8 +27,8 @@ describe('RollupProofData', () => {
 
   it('can convert a rollup proof object to buffer and back', () => {
     const viewingKeys = [
-      [Buffer.alloc(0), Buffer.alloc(0)],
-      [randomBytes(VIEWING_KEY_SIZE), randomBytes(VIEWING_KEY_SIZE)],
+      [ViewingKey.EMPTY, ViewingKey.EMPTY],
+      [ViewingKey.random(), ViewingKey.random()],
     ];
     const accountInnerProofData = new InnerProofData(
       1,
@@ -73,7 +74,10 @@ describe('RollupProofData', () => {
     );
 
     const buffer = rollupProofData.toBuffer();
-    const recoveredRollup = RollupProofData.fromBuffer(buffer, Buffer.concat(viewingKeys.flat()));
+    const recoveredRollup = RollupProofData.fromBuffer(
+      buffer,
+      Buffer.concat(viewingKeys.flat().map(vk => vk.toBuffer())),
+    );
 
     expect(recoveredRollup).toEqual(rollupProofData);
   });

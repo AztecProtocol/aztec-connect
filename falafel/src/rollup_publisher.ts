@@ -95,7 +95,7 @@ export class RollupPublisher {
   private async createTxData(rollup: RollupDao) {
     const proof = rollup.rollupProof.proofData;
     const txs = rollup.rollupProof.txs;
-    const viewingKeys = txs.map(tx => [tx.viewingKey1, tx.viewingKey2]).flat();
+    const viewingKeys = txs.map(tx => [tx.viewingKey1, tx.viewingKey2]).flat().map(vk => vk.toBuffer());
     const signatures = txs.map(tx => tx.signature!).filter(s => !!s);
     const providerAddress = EthAddress.fromString(await this.signer.getAddress());
     const { feeDistributorContractAddress } = await this.blockchain.getBlockchainStatus();

@@ -107,23 +107,34 @@ describe('rollup_db', () => {
   it('should update rollup id for txs when newer proof added', async () => {
     const tx0 = randomTx();
     const tx1 = randomTx();
+    const tx2 = randomTx();
+    const tx3 = randomTx();
     await rollupDb.addTx(tx0);
     await rollupDb.addTx(tx1);
+    await rollupDb.addTx(tx2);
+    await rollupDb.addTx(tx3);
 
-    const rollupProof = randomRollupProof([tx0]);
-    await rollupDb.addRollupProof(rollupProof);
+    const rollupProof1 = randomRollupProof([tx0, tx1]);
+    await rollupDb.addRollupProof(rollupProof1);
 
-    const rollupProof2 = randomRollupProof([tx0, tx1]);
+    const rollupProof2 = randomRollupProof([tx2, tx3]);
     await rollupDb.addRollupProof(rollupProof2);
 
-    const rollupProof3 = randomRollupProof([]);
+    const rollupProof3 = randomRollupProof([tx0, tx1, tx2, tx3]);
     await rollupDb.addRollupProof(rollupProof3);
 
-    const rollupDao = (await rollupDb.getRollupProof(rollupProof2.id))!;
-    const newTxDao0 = await rollupDb.getTx(tx0.id);
-    expect(newTxDao0!.rollupProof).toStrictEqual(rollupDao);
-    const newTxDao1 = await rollupDb.getTx(tx1.id);
-    expect(newTxDao1!.rollupProof).toStrictEqual(rollupDao);
+    expect((await rollupDb.getRollupProof(rollupProof1.id, true))!.txs).toHaveLength(0);
+    expect((await rollupDb.getRollupProof(rollupProof2.id, true))!.txs).toHaveLength(0);
+    expect((await rollupDb.getRollupProof(rollupProof3.id, true))!.txs).toHaveLength(4);
+
+    const rollupDao = (await rollupDb.getRollupProof(rollupProof3.id))!;
+    expect((await rollupDb.getTx(tx0.id))!.rollupProof).toStrictEqual(rollupDao);
+    expect((await rollupDb.getTx(tx1.id))!.rollupProof).toStrictEqual(rollupDao);
+    expect((await rollupDb.getTx(tx2.id))!.rollupProof).toStrictEqual(rollupDao);
+    expect((await rollupDb.getTx(tx3.id))!.rollupProof).toStrictEqual(rollupDao);
+
+    const rollupDaoWithTxs = (await rollupDb.getRollupProof(rollupProof3.id, true))!;
+    expect(rollupDaoWithTxs.txs).toStrictEqual([tx0, tx1, tx2, tx3]);
   });
 
   it('should set tx rollup proof ids to null if rollup proof is deleted', async () => {

@@ -10,10 +10,11 @@ import { readFile } from 'fs-extra';
 import { TxDao } from './entity/tx';
 import { RollupDb } from './rollup_db';
 import { Mutex } from 'async-mutex';
+import { ViewingKey } from 'barretenberg/viewing_key';
 
 export interface Tx {
   proofData: Buffer;
-  viewingKeys: Buffer[];
+  viewingKeys: ViewingKey[];
   depositSignature?: Buffer;
 }
 
@@ -53,6 +54,10 @@ export class TxReceiver {
 
       console.log(`Received tx: ${proof.txId.toString('hex')}`);
 
+      if (await this.rollupDb.nullifiersExist(proof.nullifier1, proof.nullifier2)) {
+        throw new Error('Nullifier already exists.');
+      }
+
       // Check the proof is valid.
       switch (proof.proofId) {
         case ProofId.JOIN_SPLIT:
@@ -63,17 +68,13 @@ export class TxReceiver {
           break;
       }
 
-      if (await this.rollupDb.nullifiersExist(proof.nullifier1, proof.nullifier2)) {
-        throw new Error('Nullifier already exists.');
-      }
-
       const dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
 
       const txDao = new TxDao({
         id: proof.txId,
         proofData,
-        viewingKey1: viewingKeys[0] || Buffer.alloc(0),
-        viewingKey2: viewingKeys[1] || Buffer.alloc(0),
+        viewingKey1: proof.proofId == ProofId.JOIN_SPLIT ? viewingKeys[0] : ViewingKey.EMPTY,
+        viewingKey2: proof.proofId == ProofId.JOIN_SPLIT ? viewingKeys[1] : ViewingKey.EMPTY,
         signature: depositSignature,
         nullifier1: proof.nullifier1,
         nullifier2: proof.nullifier2,
@@ -89,7 +90,7 @@ export class TxReceiver {
     }
   }
 
-  private async validateJoinSplitTx(proofData: ProofData, signature?: Buffer) {
+  private async validateJoinSplitTx(proofData: ProofData, depositSignature?: Buffer) {
     const jsProofData = new JoinSplitProofData(proofData);
     const { txFee } = proofData;
     const { publicInput, inputOwner, assetId, depositSigningData } = jsProofData;
@@ -103,11 +104,11 @@ export class TxReceiver {
     }
 
     if (publicInput > 0n) {
-      if (!signature) {
+      if (!depositSignature) {
         throw new Error('No deposit signature provided.');
       }
 
-      if (!(await this.blockchain.validateSignature(inputOwner, signature, depositSigningData))) {
+      if (!(await this.blockchain.validateSignature(inputOwner, depositSignature, depositSigningData))) {
         throw new Error('Invalid deposit signature.');
       }
 

@@ -1,92 +1,73 @@
 import { AssetId } from 'barretenberg/asset';
-import { Signer } from '../signer';
+import { EthAddress } from '..';
 import { AccountId } from '../user';
-import { JoinSplitTxOptions } from '../wallet_sdk/tx_options';
 import { EthereumSdk } from './';
-import { EthUserId } from './eth_user_id';
 
 export class EthereumSdkUserAsset {
-  constructor(public ethUserId: EthUserId, public id: AssetId, private sdk: EthereumSdk) {}
+  constructor(
+    private address: EthAddress,
+    private accountId: AccountId,
+    private assetId: AssetId,
+    private sdk: EthereumSdk,
+  ) {}
 
   name() {
-    return this.sdk.getAssetName(this.id);
+    return this.sdk.getAssetName(this.assetId);
   }
 
   symbol() {
-    return this.sdk.getAssetSymbol(this.id);
+    return this.sdk.getAssetSymbol(this.assetId);
   }
 
   publicBalance() {
-    return this.sdk.getPublicBalance(this.id, this.ethUserId.ethAddress);
+    return this.sdk.getPublicBalance(this.assetId, this.address);
   }
 
   publicAllowance() {
-    return this.sdk.getPublicAllowance(this.id, this.ethUserId.ethAddress);
+    return this.sdk.getPublicAllowance(this.assetId, this.address);
   }
 
   getUserPendingDeposit() {
-    return this.sdk.getUserPendingDeposit(this.id, this.ethUserId.ethAddress);
+    return this.sdk.getUserPendingDeposit(this.assetId, this.address);
   }
 
   getPermitSupport() {
-    return this.sdk.getAssetPermitSupport(this.id);
+    return this.sdk.getAssetPermitSupport(this.assetId);
   }
 
   balance() {
-    return this.sdk.getBalance(this.id, this.ethUserId);
+    return this.sdk.getBalance(this.assetId, this.accountId);
   }
 
   async mint(value: bigint) {
-    return this.sdk.mint(this.id, value, this.ethUserId);
+    return this.sdk.mint(this.assetId, this.accountId, value, this.address);
   }
 
   async approve(value: bigint) {
-    return this.sdk.approve(this.id, value, this.ethUserId);
+    return this.sdk.approve(this.assetId, this.accountId, value, this.address);
   }
 
-  async deposit(value: bigint, fee: bigint, signer?: Signer) {
-    return this.sdk.deposit(this.id, this.ethUserId, value, fee, signer);
+  async deposit(value: bigint, fee: bigint) {
+    return this.sdk.deposit(this.assetId, this.address, this.accountId, value, fee);
   }
 
-  async withdraw(value: bigint, fee: bigint, signer?: Signer) {
-    return this.sdk.withdraw(this.id, this.ethUserId, value, fee, signer);
+  async withdraw(value: bigint, fee: bigint) {
+    return this.sdk.withdraw(this.assetId, this.accountId, this.address, value, fee);
   }
 
-  async transfer(value: bigint, fee: bigint, to: AccountId, signer?: Signer) {
-    return this.sdk.transfer(this.id, this.ethUserId, value, fee, to, signer);
-  }
-
-  async joinSplit(
-    publicInput: bigint,
-    publicOutput: bigint,
-    privateInput: bigint,
-    recipientPrivateOutput: bigint,
-    senderPrivateOutput: bigint,
-    signer: Signer,
-    options?: JoinSplitTxOptions,
-  ) {
-    return this.sdk.joinSplit(
-      this.id,
-      this.ethUserId,
-      publicInput,
-      publicOutput,
-      privateInput,
-      recipientPrivateOutput,
-      senderPrivateOutput,
-      signer,
-      options,
-    );
+  async transfer(value: bigint, fee: bigint, to: AccountId) {
+    return this.sdk.transfer(this.assetId, this.accountId, to, value, fee);
   }
 
   public fromBaseUnits(value: bigint, precision?: number) {
-    return this.sdk.fromBaseUnits(this.id, value, precision);
+    return this.sdk.fromBaseUnits(this.assetId, value, precision);
   }
 
   public toBaseUnits(value: string) {
-    return this.sdk.toBaseUnits(this.id, value);
+    return this.sdk.toBaseUnits(this.assetId, value);
   }
 
   public async getFee() {
-    return this.sdk.getFee(this.id);
+    return this.sdk.getFee(this.assetId);
   }
 }

@@ -1,6 +1,7 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { TxHash } from 'barretenberg/rollup_provider';
+import { ViewingKey } from 'barretenberg/viewing_key';
 import { ValueTransformer } from 'typeorm';
 import { AccountAliasId, AccountId } from '../../user';
 
@@ -37,4 +38,9 @@ export const txHashTransformer: ValueTransformer = {
 export const ethAddressTransformer: ValueTransformer = {
   to: (entityValue?: EthAddress) => entityValue?.toBuffer(),
   from: (dbValue?: Buffer) => (dbValue ? new EthAddress(dbValue) : undefined),
+};
+
+export const viewingKeyTransformer: ValueTransformer = {
+  to: (entityValue?: ViewingKey) => entityValue?.toBuffer(),
+  from: (dbValue?: Buffer) => (dbValue ? new ViewingKey(dbValue) : undefined),
 };

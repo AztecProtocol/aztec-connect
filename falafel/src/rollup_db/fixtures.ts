@@ -1,6 +1,7 @@
 import { EthAddress } from 'barretenberg/address';
 import { ProofData } from 'barretenberg/client_proofs/proof_data';
 import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
+import { ViewingKey } from 'barretenberg/viewing_key';
 import { toBufferBE } from 'bigint-buffer';
 import { randomBytes } from 'crypto';
 import { RollupDao } from '../entity/rollup';
@@ -25,8 +26,8 @@ export const randomTx = (signature?: Buffer, inputOwner?: EthAddress, publicInpu
   return new TxDao({
     id: proofData.txId,
     proofData: proofData.rawProofData,
-    viewingKey1: randomBytes(32),
-    viewingKey2: randomBytes(32),
+    viewingKey1: ViewingKey.random(),
+    viewingKey2: ViewingKey.random(),
     nullifier1: proofData.nullifier1,
     nullifier2: proofData.nullifier2,
     dataRootsIndex: 0,
@@ -78,6 +79,11 @@ export const randomRollup = (rollupId: number, rollupProof: RollupProofDao) =>
     id: rollupId,
     dataRoot: randomBytes(32),
     rollupProof,
-    viewingKeys: Buffer.concat(rollupProof.txs.map(tx => [tx.viewingKey1, tx.viewingKey2]).flat()),
+    viewingKeys: Buffer.concat(
+      rollupProof.txs
+        .map(tx => [tx.viewingKey1, tx.viewingKey2])
+        .flat()
+        .map(vk => vk.toBuffer()),
+    ),
     created: new Date(),
   });

@@ -160,7 +160,7 @@ export class CoreSdk extends EventEmitter {
         noteAlgos,
         this.db,
       );
-      this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState, this.blake2s, this.pedersen);
+      this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState, this.pedersen);
       await this.createJoinSplitProvingKey(joinSplitProver);
       await this.createAccountProvingKey(accountProver);
     } else {
@@ -511,8 +511,12 @@ export class CoreSdk extends EventEmitter {
     return AliasHash.fromAlias(alias, this.blake2s);
   }
 
+  public getPublicKeyFromPrivateKey(privateKey: Buffer) {
+    return new GrumpkinAddress(this.grumpkin.mul(Grumpkin.one, privateKey));
+  }
+
   public createSchnorrSigner(privateKey: Buffer) {
-    const publicKey = new GrumpkinAddress(this.grumpkin.mul(Grumpkin.one, privateKey));
+    const publicKey = this.getPublicKeyFromPrivateKey(privateKey);
     return new SchnorrSigner(this.schnorr, publicKey, privateKey);
   }
 

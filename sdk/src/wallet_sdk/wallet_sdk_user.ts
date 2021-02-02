@@ -26,11 +26,11 @@ export class WalletSdkUser {
     recoveryPublicKey?: GrumpkinAddress,
     newAccountPrivateKey?: Buffer,
   ) {
-    this.sdk.migrateAccount(this.id, signer, newSigningPublicKey, recoveryPublicKey, newAccountPrivateKey);
+    return this.sdk.migrateAccount(this.id, signer, newSigningPublicKey, recoveryPublicKey, newAccountPrivateKey);
   }
 
   public async addSigningKeys(signer: Signer, signingPublicKey1: GrumpkinAddress, signingPublicKey2?: GrumpkinAddress) {
-    this.sdk.migrateAccount(this.id, signer, signingPublicKey1, signingPublicKey2);
+    return this.sdk.addSigningKeys(this.id, signer, signingPublicKey1, signingPublicKey2);
   }
 
   public async getSigningKeys() {

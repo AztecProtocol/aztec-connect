@@ -18,6 +18,7 @@ import { NotePicker } from '../note_picker';
 import { AccountAliasId, UserData } from '../user';
 import { UserAccountTx, UserJoinSplitTx } from '../user_tx';
 import { AccountId } from '../user/account_id';
+import { ViewingKey } from 'barretenberg/viewing_key';
 
 const debug = createDebug('bb:user_state');
 
@@ -175,7 +176,7 @@ export class UserState extends EventEmitter {
     this.emit(UserStateEvent.UPDATED_USER_STATE, this.user.id);
   }
 
-  private async handleJoinSplitTx(proof: InnerProofData, noteStartIndex: number, viewingKeys: Buffer[]) {
+  private async handleJoinSplitTx(proof: InnerProofData, noteStartIndex: number, viewingKeys: ViewingKey[]) {
     const txHash = new TxHash(proof.txId);
     const savedTx = await this.db.getJoinSplitTx(this.user.id, txHash);
     if (savedTx?.settled) {
@@ -203,8 +204,8 @@ export class UserState extends EventEmitter {
     }
   }
 
-  private async processNewNote(index: number, dataEntry: Buffer, viewingKey: Buffer) {
-    if (viewingKey.length === 0) {
+  private async processNewNote(index: number, dataEntry: Buffer, viewingKey: ViewingKey) {
+    if (viewingKey.isEmpty()) {
       return;
     }
 

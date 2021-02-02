@@ -6,7 +6,11 @@ export class EscapeHatchRollupProvider implements RollupProvider {
   constructor(private blockchain: Blockchain) {}
 
   sendProof(proof: Proof): Promise<TxHash> {
-    return this.blockchain.sendEscapeHatchProof(proof.proofData, proof.viewingKeys, proof.depositSignature);
+    return this.blockchain.sendEscapeHatchProof(
+      proof.proofData,
+      proof.viewingKeys.map(vk => vk.toBuffer()),
+      proof.depositSignature,
+    );
   }
 
   async getStatus(): Promise<RollupProviderStatus> {

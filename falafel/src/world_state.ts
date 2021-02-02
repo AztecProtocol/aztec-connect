@@ -10,8 +10,9 @@ import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
 import { TxAggregator } from './tx_aggregator';
 import { Block } from 'barretenberg/block_source';
+import { ViewingKey } from 'barretenberg/viewing_key';
 
-const innerProofDataToTxDao = (tx: InnerProofData, viewingKeys: Buffer[], created: Date) => {
+const innerProofDataToTxDao = (tx: InnerProofData, viewingKeys: ViewingKey[], created: Date) => {
   const txDao = new TxDao();
   txDao.id = tx.txId;
   txDao.proofData = tx.toBuffer();
@@ -183,7 +184,7 @@ export class WorldState {
         ethTxHash: txHash.toBuffer(),
         mined: block.created,
         created: block.created,
-        viewingKeys: Buffer.concat(rollup.viewingKeys.flat()),
+        viewingKeys: Buffer.concat(rollup.viewingKeys.flat().map(vk => vk.toBuffer())),
         gasPrice: toBufferBE(block.gasPrice, 32),
         gasUsed: block.gasUsed,
       });

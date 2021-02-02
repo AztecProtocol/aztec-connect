@@ -1,6 +1,7 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { TxHash } from 'barretenberg/rollup_provider';
+import { ViewingKey } from 'barretenberg/viewing_key';
 import Dexie from 'dexie';
 import { Note } from '../note';
 import { AccountAliasId, UserData, AccountId } from '../user';
@@ -35,7 +36,7 @@ const noteToDexieNote = (note: Note) =>
     note.value.toString(),
     note.dataEntry,
     note.secret,
-    note.viewingKey,
+    note.viewingKey.toBuffer(),
     note.nullifier,
     note.nullified ? 1 : 0,
     new Uint8Array(note.owner.toBuffer()),
@@ -57,7 +58,7 @@ const dexieNoteToNote = ({
   value: BigInt(value),
   dataEntry: Buffer.from(dataEntry),
   secret: Buffer.from(viewingKey),
-  viewingKey: Buffer.from(encrypted),
+  viewingKey: new ViewingKey(Buffer.from(encrypted)),
   nullifier: Buffer.from(nullifier),
   nullified: !!nullified,
   owner: AccountId.fromBuffer(Buffer.from(owner)),

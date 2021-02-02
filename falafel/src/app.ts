@@ -17,6 +17,7 @@ import { Server } from './server';
 import { RollupDao } from './entity/rollup';
 import { Metrics } from './metrics';
 import { blockchainStatusToJson } from 'barretenberg/blockchain';
+import { ViewingKey } from 'barretenberg/viewing_key';
 
 // eslint-disable-next-line
 const cors = require('@koa/cors');
@@ -64,7 +65,7 @@ const toTxResponse = ({
         }
       : undefined,
   proofData: proofData.toString('hex'),
-  viewingKeys: [viewingKey1, viewingKey2].map(vk => vk.toString('hex')),
+  viewingKeys: [viewingKey1, viewingKey2].map(vk => vk.toString()),
   created: created.toISOString(),
 });
 
@@ -124,7 +125,7 @@ export function appFactory(
     const { proofData, viewingKeys, depositSignature } = JSON.parse((await stream.readAll()) as string);
     const tx: Proof = {
       proofData: bufferFromHex(proofData),
-      viewingKeys: viewingKeys.map((v: string) => bufferFromHex(v)),
+      viewingKeys: viewingKeys.map((v: string) => ViewingKey.fromString(v)),
       depositSignature: depositSignature ? bufferFromHex(depositSignature) : undefined,
     };
     const txId = await server.receiveTx(tx);

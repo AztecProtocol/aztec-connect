@@ -1,7 +1,6 @@
 import { createHash } from 'crypto';
 import { numToUInt32BE } from '../serialize';
-
-export const VIEWING_KEY_SIZE = 128; // 208
+import { ViewingKey } from '../viewing_key';
 
 export class InnerProofData {
   static NUM_PUBLIC_INPUTS = 12;
@@ -94,7 +93,7 @@ export class RollupProofData {
     public numTxs: number,
     public innerProofData: InnerProofData[],
     public recursiveProofOutput: Buffer,
-    public viewingKeys: Buffer[][],
+    public viewingKeys: ViewingKey[][],
   ) {
     const allTxIds = this.innerProofData.map(innerProof => innerProof.txId);
     this.rollupHash = createHash('sha256').update(Buffer.concat(allTxIds)).digest();
@@ -122,7 +121,7 @@ export class RollupProofData {
   }
 
   getViewingKeyData() {
-    return Buffer.concat(this.viewingKeys.flat());
+    return Buffer.concat(this.viewingKeys.flat().map(vk => vk.toBuffer()));
   }
 
   public static getRollupIdFromBuffer(proofData: Buffer) {
@@ -158,17 +157,17 @@ export class RollupProofData {
     }
 
     // Populate j/s tx viewingKey data.
-    const viewingKeys: Buffer[][] = [];
+    const viewingKeys: ViewingKey[][] = [];
     if (viewingKeyData) {
       for (let i = 0, jsCount = 0; i < innerProofSize; ++i) {
         if (innerProofData[i].proofId === 0 && !innerProofData[i].isPadding()) {
-          const offset = jsCount * VIEWING_KEY_SIZE;
-          const vk1 = viewingKeyData.slice(offset, offset + VIEWING_KEY_SIZE);
-          const vk2 = viewingKeyData.slice(offset + VIEWING_KEY_SIZE, offset + VIEWING_KEY_SIZE * 2);
+          const offset = jsCount * ViewingKey.SIZE;
+          const vk1 = new ViewingKey(viewingKeyData.slice(offset, offset + ViewingKey.SIZE));
+          const vk2 = new ViewingKey(viewingKeyData.slice(offset + ViewingKey.SIZE, offset + ViewingKey.SIZE * 2));
           jsCount++;
           viewingKeys.push([vk1, vk2]);
         } else {
-          viewingKeys.push([Buffer.alloc(0), Buffer.alloc(0)]);
+          viewingKeys.push([ViewingKey.EMPTY, ViewingKey.EMPTY]);
         }
       }
     }

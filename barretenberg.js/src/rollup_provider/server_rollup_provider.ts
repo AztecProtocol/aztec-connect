@@ -14,7 +14,7 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
     const url = new URL(`${this.baseUrl}/tx`);
     const data = {
       proofData: proofData.toString('hex'),
-      viewingKeys: viewingKeys.map(v => v.toString('hex')),
+      viewingKeys: viewingKeys.map(v => v.toString()),
       depositSignature: depositSignature ? depositSignature.toString('hex') : undefined,
       ...rest,
     };

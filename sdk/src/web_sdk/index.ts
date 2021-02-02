@@ -3,8 +3,7 @@ import { getBlockchainStatus } from 'barretenberg/service';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { SdkOptions } from '../core_sdk/create_sdk';
-import { createEthSdk, EthereumSdk } from '../ethereum_sdk';
-import { EthUserId } from '../ethereum_sdk/eth_user_id';
+import { createEthSdk, EthereumSdk, EthereumSdkUser } from '../ethereum_sdk';
 import { SdkEvent, SdkInitState } from '../sdk';
 import { chainIdToNetwork, EthProvider, EthProviderEvent } from './eth_provider';
 
@@ -30,8 +29,6 @@ export enum AppEvent {
 export interface AppInitStatus {
   initState: AppInitState;
   initAction?: AppInitAction;
-  account?: EthAddress;
-  nonce?: number;
   network?: string;
   message?: string;
 }
@@ -59,6 +56,7 @@ export class WebSdk extends EventEmitter {
   private sdk!: EthereumSdk;
   private ethProvider!: EthProvider;
   private initStatus: AppInitStatus = { initState: AppInitState.UNINITIALIZED };
+  private user?: EthereumSdkUser;
 
   constructor(private ethereumProvider: any) {
     super();
@@ -139,15 +137,13 @@ export class WebSdk extends EventEmitter {
   }
 
   private accountChanged = async (account?: EthAddress) => {
-    this.initStatus.account = account;
     if (!account) {
       this.destroy();
       return;
     }
 
-    const nonce = await this.sdk.getLatestUserNonce(account);
-    const ethUserId = new EthUserId(account, nonce);
-    if (!this.sdk.isUserAdded(ethUserId)) {
+    this.user = await this.sdk.getUser(account);
+    if (!this.user) {
       // We are initializing until the account is added to sdk.
       this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.AWAIT_LINK_AZTEC_ACCOUNT);
     } else {
@@ -157,9 +153,8 @@ export class WebSdk extends EventEmitter {
 
   private usersChanged = async () => {
     const account = this.ethProvider.getAccount()!;
-    const nonce = await this.sdk.getLatestUserNonce(account);
-    const ethUserId = new EthUserId(account, nonce);
-    if (!this.sdk.isUserAdded(ethUserId)) {
+    const accountId = await this.sdk.getAccountIdFromAddress(account);
+    if (!accountId) {
       this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.AWAIT_LINK_AZTEC_ACCOUNT);
     }
   };
@@ -172,19 +167,15 @@ export class WebSdk extends EventEmitter {
 
   private async initLinkAccount() {
     const account = this.ethProvider.getAccount();
-    this.initStatus.account = account;
     if (!account) {
-      this.initStatus.nonce = undefined;
       throw new Error('Account access withdrawn.');
     }
 
-    const nonce = await this.sdk.getLatestUserNonce(account);
-    this.initStatus.nonce = nonce;
-    const ethUserId = new EthUserId(account, nonce);
-    if (!this.sdk.isUserAdded(ethUserId)) {
+    this.user = await this.sdk.getUser(account);
+    if (!this.user) {
       this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.LINK_AZTEC_ACCOUNT);
       try {
-        await this.sdk.addUser(account, nonce);
+        this.user = await this.sdk.addUser(account);
       } catch (e) {
         debug(e);
         throw new Error('Account link rejected.');
@@ -200,14 +191,11 @@ export class WebSdk extends EventEmitter {
       return;
     }
 
-    const nonce = await this.sdk.getLatestUserNonce(account);
-    this.initStatus.account = account;
-    this.initStatus.nonce = nonce;
-    const ethUserId = new EthUserId(account, nonce);
-    if (!this.sdk.isUserAdded(ethUserId)) {
+    this.user = await this.sdk.getUser(account);
+    if (!this.user) {
       this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.LINK_AZTEC_ACCOUNT);
       try {
-        await this.sdk.addUser(account, nonce);
+        this.user = await this.sdk.addUser(account);
       } catch (e) {
         debug(e);
         this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.AWAIT_LINK_AZTEC_ACCOUNT);
@@ -217,17 +205,15 @@ export class WebSdk extends EventEmitter {
     this.updateInitStatus(AppInitState.INITIALIZED);
   };
 
-  public async syncAccountNonce() {
-    const nonce = await this.sdk.getLatestUserNonce(this.initStatus.account!);
-    this.initStatus.nonce = nonce;
+  public async loadLatestAccount() {
+    this.user = await this.sdk.getUser(this.ethProvider.getAccount()!);
   }
 
   public async destroy() {
     debug('destroying app...');
     await this.sdk?.destroy();
     this.ethProvider?.destroy();
-    this.initStatus.account === undefined;
-    this.initStatus.nonce === undefined;
+    this.user === undefined;
     this.updateInitStatus(AppInitState.UNINITIALIZED);
   }
 
@@ -249,7 +235,10 @@ export class WebSdk extends EventEmitter {
   }
 
   public getUser() {
-    const ethUserId = new EthUserId(this.initStatus.account!, this.initStatus.nonce!);
-    return this.sdk.getUser(ethUserId)!;
+    return this.user!;
+  }
+
+  public getAddress() {
+    return this.ethProvider.getAccount()!;
   }
 }

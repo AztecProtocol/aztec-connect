@@ -1,10 +1,10 @@
 import {
+  AccountId,
   AppEvent,
   AppInitAction,
   AppInitState,
   AppInitStatus,
   AssetId,
-  EthUserId,
   GrumpkinAddress,
   MemoryFifo,
   SdkEvent,
@@ -145,7 +145,7 @@ export class TerminalHandler {
     if (initStatus.initState === AppInitState.INITIALIZED) {
       this.controlQueue.put(async () => {
         this.printQueue.put(TermControl.LOCK);
-        this.printQueue.put(`\ruser: ${initStatus.account!.toString().slice(0, 12)}...\n`);
+        this.printQueue.put(`\ruser: ${this.app.getAddress().toString().slice(0, 12)}...\n`);
         await this.app.getUser().awaitSynchronised();
         await this.balance();
         this.printQueue.put(TermControl.PROMPT);
@@ -164,10 +164,15 @@ export class TerminalHandler {
   /**
    * If the users balance updates, print an update.
    */
-  private handleUserStateChange = (account: EthUserId, balance: bigint, diff: bigint, assetId: AssetId) => {
+  private handleUserStateChange = (accountId: AccountId, balance: bigint, diff: bigint, assetId: AssetId) => {
     const user = this.app.getUser();
-    const userIsSynced = user.getUserData().syncedToRollup === this.app.getSdk().getLocalStatus().syncedToRollup;
-    if (user.getUserData().ethUserId.equals(account) && diff && userIsSynced) {
+    if (!user) {
+      // Kind of a hack. But this event can emitted when adding a new user and the app doesn't have a handle on it yet.
+      return;
+    }
+    const userData = user.getUserData();
+    const userIsSynced = userData.syncedToRollup === this.app.getSdk().getLocalStatus().syncedToRollup;
+    if (userData.id.equals(accountId) && diff && userIsSynced) {
       const userAsset = user.getAsset(assetId);
       this.printQueue.put(
         `balance updated: ${userAsset.fromBaseUnits(balance)} (${diff >= 0 ? '+' : ''}${userAsset.fromBaseUnits(
@@ -291,13 +296,14 @@ export class TerminalHandler {
     this.printQueue.put(`synching user state...\n`);
     await this.app.getUser().awaitSynchronised();
 
-    this.printQueue.put(`user: ${this.app.getInitStatus().account!.toString().slice(0, 12)}...\n`);
+    this.printQueue.put(`user: ${this.app.getAddress().toString().slice(0, 12)}...\n`);
     await this.balance();
 
     this.registerHandlers();
   }
 
   private async mint(value: string) {
+    this.assertRegistered();
     const userAsset = this.app.getUser().getAsset(this.assetId);
     this.printQueue.put('requesting mint...\n');
     await userAsset.mint(userAsset.toBaseUnits(value));
@@ -312,6 +318,7 @@ export class TerminalHandler {
   }
 
   private async deposit(valueStr: string) {
+    this.assertRegistered();
     const userAsset = this.app.getUser().getAsset(this.assetId);
     const value = userAsset.toBaseUnits(valueStr);
     const { minFees } = await this.app.getSdk().getRemoteStatus();
@@ -320,13 +327,16 @@ export class TerminalHandler {
   }
 
   private async withdraw(value: string) {
+    this.assertRegistered();
     const userAsset = this.app.getUser().getAsset(this.assetId);
     const { minFees } = await this.app.getSdk().getRemoteStatus();
-    await userAsset.withdraw(userAsset.toBaseUnits(value), minFees[this.assetId]);
+    const fee = minFees[this.assetId];
+    await userAsset.withdraw(userAsset.toBaseUnits(value) - fee, fee);
     this.printQueue.put(`withdrawl proof sent.\n`);
   }
 
   private async transfer(addressOrAlias: string, value: string) {
+    this.assertRegistered();
     const to = await this.app.getSdk().getAccountId(addressOrAlias);
     if (!to) {
       throw new Error(`unknown user: ${addressOrAlias}`);
@@ -337,39 +347,52 @@ export class TerminalHandler {
     this.printQueue.put(`transfer proof sent.\n`);
   }
 
+  private assertRegistered() {
+    if (!this.isRegistered()) {
+      throw new Error('register an alias first.');
+    }
+  }
+
+  private isRegistered() {
+    return this.app.getUser().getUserData().id.nonce != 0;
+  }
+
   private async registerAlias(alias: string) {
+    if (this.isRegistered()) {
+      throw new Error('account already has an alias.');
+    }
     if (await this.app.getSdk().getAddressFromAlias(alias)) {
       throw new Error('alias already registered.');
     }
     const user = this.app.getUser();
-    const newSigningPublicKey = user.getUserData().publicKey;
+    const { publicKey: newSigningPublicKey } = await user.getUserData();
     const recoveryPublicKey = GrumpkinAddress.randomAddress();
     const txHash = await user.createAccount(alias, newSigningPublicKey, recoveryPublicKey);
     this.printQueue.put(`registration proof sent.\nawaiting settlement...\n`);
     await this.app.getSdk().awaitSettlement(txHash, 300);
-    await this.app.syncAccountNonce();
+    await this.app.loadLatestAccount();
     this.printQueue.put(`done.\n`);
   }
 
   private async balance() {
     const userAsset = this.app.getUser().getAsset(this.assetId);
-    await this.printQueue.put(`public: ${userAsset.fromBaseUnits(await userAsset.publicBalance())}\n`);
-    await this.printQueue.put(`private: ${userAsset.fromBaseUnits(userAsset.balance())}\n`);
+    this.printQueue.put(`public: ${userAsset.fromBaseUnits(await userAsset.publicBalance())}\n`);
+    this.printQueue.put(`private: ${userAsset.fromBaseUnits(userAsset.balance())}\n`);
     const fundsPendingDeposit = await userAsset.getUserPendingDeposit();
     if (fundsPendingDeposit > 0) {
-      await this.printQueue.put(`pending deposit: ${userAsset.fromBaseUnits(fundsPendingDeposit)}\n`);
+      this.printQueue.put(`pending deposit: ${userAsset.fromBaseUnits(fundsPendingDeposit)}\n`);
     }
   }
 
   private async fee() {
     const sdk = this.app.getSdk();
     const { minFees } = await sdk.getRemoteStatus();
-    await this.printQueue.put(`fee: ${sdk.fromBaseUnits(this.assetId, minFees[this.assetId])}\n`);
+    this.printQueue.put(`fee: ${sdk.fromBaseUnits(this.assetId, minFees[this.assetId])}\n`);
   }
 
   private async copyKey() {
-    const userData = this.app.getUser().getUserData();
-    copy(userData.publicKey.toString());
+    const user = this.app.getUser();
+    copy(user.getUserData().publicKey.toString());
   }
 
   private async status(num = '1', from = '0') {

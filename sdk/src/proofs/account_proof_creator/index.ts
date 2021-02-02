@@ -1,7 +1,6 @@
 import { GrumpkinAddress } from 'barretenberg/address';
 import { AccountProver, AccountTx, computeSigningData } from 'barretenberg/client_proofs/account_proof';
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
-import { Blake2s } from 'barretenberg/crypto/blake2s';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { WorldState } from 'barretenberg/world_state';
 import { randomBytes } from 'crypto';
@@ -12,12 +11,7 @@ import { AccountAliasId } from '../../user';
 const debug = createDebug('bb:account_proof');
 
 export class AccountProofCreator {
-  constructor(
-    private accountProver: AccountProver,
-    private worldState: WorldState,
-    private blake2s: Blake2s,
-    private pedersen: Pedersen,
-  ) {}
+  constructor(private accountProver: AccountProver, private worldState: WorldState, private pedersen: Pedersen) {}
 
   public async createAccountTx(
     signer: Signer,

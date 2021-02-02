@@ -1,7 +1,8 @@
+import { ViewingKey } from 'barretenberg/viewing_key';
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 import { Note } from '../../note';
 import { AccountId } from '../../user';
-import { bigintTransformer, accountIdTransformer } from './transformer';
+import { bigintTransformer, accountIdTransformer, viewingKeyTransformer } from './transformer';
 
 @Entity({ name: 'note' })
 export class NoteDao implements Note {
@@ -20,8 +21,8 @@ export class NoteDao implements Note {
   @Column()
   public secret!: Buffer;
 
-  @Column()
-  public viewingKey!: Buffer;
+  @Column('blob', { transformer: [viewingKeyTransformer] })
+  public viewingKey!: ViewingKey;
 
   @Index({ unique: true })
   @Column()
