@@ -13,6 +13,7 @@
     "symlink-wasm": "cp -R ./src/wasm/barretenberg.wasm ./dest/wasm && cp -R ./src/wasm/barretenberg.wasm ./dest-es/wasm"
   },
   "jest": {
+    "rootDir": "dest",
     "testRegex": "dest/.*\\.test\\.js$",
     "moduleFileExtensions": [
       "ts",

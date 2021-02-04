@@ -14,7 +14,7 @@ describe('merkle_tree', () => {
     await barretenberg.init();
     pedersen = new Pedersen(barretenberg);
 
-    for (let i = 0; i < 10; ++i) {
+    for (let i = 0; i < 32; ++i) {
       const v = Buffer.alloc(64, 0);
       v.writeUInt32LE(i, 0);
       values[i] = v;
@@ -36,10 +36,6 @@ describe('merkle_tree', () => {
 
     for (let i = 0; i < 4; ++i) {
       await tree.updateElement(i, values[i]);
-    }
-
-    for (let i = 0; i < 4; ++i) {
-      expect(await tree.getElement(i)).toEqual(values[i]);
     }
 
     let expected = new HashPath([
@@ -75,18 +71,63 @@ describe('merkle_tree', () => {
     const db = levelup(memdown());
     const tree = await MerkleTree.new(db, pedersen, 'test', 10);
 
-    for (let i = 0; i < 10; ++i) {
+    for (let i = 0; i < values.length; ++i) {
       await tree.updateElement(i, values[i]);
     }
     const root1 = tree.getRoot();
 
-    for (let i = 0; i < 10; ++i) {
+    for (let i = 0; i < values.length; ++i) {
       await tree.updateElement(i, values[i]);
     }
     const root2 = tree.getRoot();
 
     expect(root1).toEqual(root2);
   });
+
+  it('should get same result when using subtree insertion', async () => {
+    const db1 = levelup(memdown());
+    const tree1 = await MerkleTree.new(db1, pedersen, 'test', 10);
+
+    for (let i = 0; i < values.length; ++i) {
+      await tree1.updateElement(i, values[i]);
+    }
+
+    const db2 = levelup(memdown());
+    const tree2 = await MerkleTree.new(db2, pedersen, 'test', 10);
+
+    const subtreeInsertIndex = values.length / 2;
+    for (let i = 0; i < subtreeInsertIndex; ++i) {
+      await tree2.updateElement(i, values[i]);
+    }
+    await tree2.updateElements(subtreeInsertIndex, values.slice(subtreeInsertIndex));
+
+    expect(tree2.getRoot().toString('hex')).toEqual(tree2.getRoot().toString('hex'));
+
+    for (let i = 0; i < values.length; ++i) {
+      const hashPath1 = await tree1.getHashPath(i);
+      const hashPath2 = await tree2.getHashPath(i);
+      expect(hashPath2).toStrictEqual(hashPath1);
+    }
+  });
+
+  /*
+  it('benchmark', async () => {
+    const values: Buffer[] = [];
+    for (let i = 0; i < 64; ++i) {
+      const v = Buffer.alloc(64, 0);
+      v.writeUInt32LE(i, 0);
+      values[i] = v;
+    }
+
+    const db = levelup(memdown());
+    const tree = await MerkleTree.new(db, pedersen, 'test', 32);
+
+    const start = new Date().getTime();
+    await tree.updateElements(0, values);
+    const end = new Date().getTime() - start;
+    console.log(end);
+  });
+  */
 
   it('should be able to restore from previous data', async () => {
     const levelDown = memdown();

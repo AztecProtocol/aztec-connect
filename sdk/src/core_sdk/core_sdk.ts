@@ -129,7 +129,7 @@ export class CoreSdk extends EventEmitter {
     this.userFactory = new UserDataFactory(this.grumpkin);
     this.userStateFactory = new UserStateFactory(this.grumpkin, this.pedersen, noteAlgos, this.db, this.rollupProvider);
     this.workerPool = workerPool;
-    this.worldState = new WorldState(this.leveldb, this.pedersen, this.blake2s);
+    this.worldState = new WorldState(this.leveldb, this.pedersen);
     if (this.rollupProviderExplorer) {
       this.txsState = new TxsState(this.rollupProviderExplorer);
     }

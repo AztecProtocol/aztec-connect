@@ -1,6 +1,5 @@
 import { MerkleTree } from '../merkle_tree';
 import { LevelUp } from 'levelup';
-import { Blake2s } from '../crypto/blake2s';
 import { Pedersen } from '../crypto/pedersen';
 import { Block } from '../block_source';
 import { RollupProofData } from '../rollup_proof';
@@ -11,7 +10,7 @@ const debug = createDebug('bb:world_state');
 export class WorldState {
   private tree!: MerkleTree;
 
-  constructor(private db: LevelUp, private pedersen: Pedersen, private blake2s: Blake2s) {}
+  constructor(private db: LevelUp, private pedersen: Pedersen) {}
 
   public async init() {
     try {
@@ -24,19 +23,14 @@ export class WorldState {
   }
 
   public async processBlock(block: Block) {
-    const { rollupSize, rollupProofData, viewingKeysData } = block;
+    const { rollupProofData, viewingKeysData } = block;
     const rollup = RollupProofData.fromBuffer(rollupProofData, viewingKeysData);
     const { rollupId, dataStartIndex, innerProofData } = rollup;
 
     debug(`processing rollup ${rollupId}...`);
 
-    for (let i = 0; i < innerProofData.length; ++i) {
-      await this.tree.updateElement(dataStartIndex + i * 2, innerProofData[i].newNote1);
-      await this.tree.updateElement(dataStartIndex + i * 2 + 1, innerProofData[i].newNote2);
-    }
-    if (innerProofData.length < rollupSize) {
-      await this.tree.updateElement(dataStartIndex + rollupSize * 2 - 1, Buffer.alloc(64, 0));
-    }
+    const leaves = innerProofData.map(p => [p.newNote1, p.newNote2]).flat();
+    await this.tree.updateElements(dataStartIndex, leaves);
 
     debug(`data size: ${this.tree.getSize()}`);
     debug(`data root: ${this.tree.getRoot().toString('hex')}`);

@@ -22,6 +22,7 @@ function keepNLsb(input: number, numBits: number) {
 export interface LeafHasher {
   compress(lhs: Uint8Array, rhs: Uint8Array): Buffer;
   hashToField(data: Uint8Array): Buffer;
+  hashValuesToTree(values: Buffer[]): Buffer[];
 }
 
 export class HashPath {
@@ -115,6 +116,10 @@ export class MerkleTree {
     return this.size;
   }
 
+  /**
+   * Returns a hash path for the element at the given index.
+   * The hash path is an array of pairs of hashes, with the lowest pair (leaf hashes) first, and the highest pair last.
+   */
   public async getHashPath(index: number) {
     const path = new HashPath();
 
@@ -127,6 +132,23 @@ export class MerkleTree {
         continue;
       }
 
+      if (data.length > 64) {
+        // Data is a subtree. Extract hash pair at height i.
+        const subtreeDepth = i + 1;
+        let layerSize = 2 ** subtreeDepth;
+        let offset = 0;
+        index = keepNLsb(index, subtreeDepth);
+        for (let j = 0; j < subtreeDepth; ++j) {
+          index -= index & 0x1;
+          const lhsOffset = offset + index * 32;
+          path.data[j] = [data.slice(lhsOffset, lhsOffset + 32), data.slice(lhsOffset + 32, lhsOffset + 64)];
+          offset += layerSize * 32;
+          layerSize >>= 1;
+          index >>= 1;
+        }
+        break;
+      }
+
       const lhs = data.slice(0, 32);
       const rhs = data.slice(32, 64);
       path.data[i] = [lhs, rhs];
@@ -137,33 +159,10 @@ export class MerkleTree {
     return path;
   }
 
-  public async getElement(index: number) {
-    const leaf = await this.getElementInternal(this.root, index, this.depth);
-    const data = await this.dbGet(leaf);
-    return data ? data : Buffer.alloc(64, 0);
-  }
-
-  private async getElementInternal(root: Buffer, index: number, height: number): Promise<Buffer> {
-    if (height === 0) {
-      return root;
-    }
-
-    const data = await this.dbGet(root);
-
-    if (!data) {
-      return this.zeroHashes[0];
-    }
-
-    const isRight = (index >> (height - 1)) & 0x1;
-    const subtreeRoot = isRight ? data.slice(32, 64) : data.slice(0, 32);
-    return await this.getElementInternal(subtreeRoot, keepNLsb(index, height - 1), height - 1);
-  }
-
   public async updateElement(index: number, value: Buffer) {
     const batch = this.db.batch();
     const shaLeaf = this.leafHasher.hashToField(value);
     this.root = await this.updateElementInternal(this.root, shaLeaf, index, this.depth, batch);
-    await this.db.put(shaLeaf, value);
 
     this.size = Math.max(this.size, index + 1);
 
@@ -193,6 +192,81 @@ export class MerkleTree {
       value,
       keepNLsb(index, height - 1),
       height - 1,
+      batch,
+    );
+
+    if (isRight) {
+      right = newSubtreeRoot;
+    } else {
+      left = newSubtreeRoot;
+    }
+    const newRoot = this.leafHasher.compress(left, right);
+    batch.put(newRoot, Buffer.concat([left, right]));
+    if (!root.equals(newRoot)) {
+      await batch.del(root);
+    }
+    return newRoot;
+  }
+
+  public async updateElements(index: number, values: Buffer[]) {
+    const subtreeDepth = Math.ceil(Math.log2(values.length));
+    const subtreeSize = 2 ** subtreeDepth;
+    if (index % subtreeSize !== 0) {
+      throw new Error(`Subtree insertion index must be a multiple of the subtree size being inserted.`);
+    }
+    if (index < this.size) {
+      // Simply because we don't currently erase any existing data...
+      throw new Error(`Subtree insertion must be in empty part of the tree.`);
+    }
+    values = values.concat(Array(subtreeSize - values.length).fill(Buffer.alloc(64, 0)));
+
+    // Actually not any faster. But perhaps could be...
+    // const hashes = this.leafHasher.hashValuesToTree(values);
+
+    const hashes = values.map(v => this.leafHasher.hashToField(v));
+    for (let i = 0; i < (subtreeSize - 1) * 2; i += 2) {
+      hashes.push(this.leafHasher.compress(hashes[i], hashes[i + 1]));
+    }
+
+    const batch = this.db.batch();
+    this.root = await this.updateElementsInternal(this.root, hashes, index, this.depth, subtreeDepth, batch);
+
+    this.size = Math.max(this.size, index + subtreeSize);
+
+    await this.writeMeta(batch);
+    await batch.write();
+  }
+
+  private async updateElementsInternal(
+    root: Buffer,
+    hashes: Buffer[],
+    index: number,
+    height: number,
+    subtreeHeight: number,
+    batch: LevelUpChain<Buffer, Buffer>,
+  ) {
+    if (height === subtreeHeight) {
+      const root = hashes.pop()!;
+      batch.put(root, Buffer.concat(hashes));
+      return root;
+    }
+
+    const data = await this.dbGet(root);
+    const isRight = (index >> (height - 1)) & 0x1;
+
+    if (data && data.length > 64) {
+      throw new Error('Attempting to update a subtree within a subtree not supported.');
+    }
+
+    let left = data ? data.slice(0, 32) : this.zeroHashes[height - 1];
+    let right = data ? data.slice(32, 64) : this.zeroHashes[height - 1];
+    const subtreeRoot = isRight ? right : left;
+    const newSubtreeRoot = await this.updateElementsInternal(
+      subtreeRoot,
+      hashes,
+      keepNLsb(index, height - 1),
+      height - 1,
+      subtreeHeight,
       batch,
     );
 

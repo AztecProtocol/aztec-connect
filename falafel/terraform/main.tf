@@ -313,10 +313,10 @@ resource "aws_alb_target_group" "falafel" {
   health_check {
     path                = "/falafel"
     matcher             = "200"
-    interval            = 10
+    interval            = 60
     healthy_threshold   = 2
     unhealthy_threshold = 5
-    timeout             = 3
+    timeout             = 30
   }
 
   tags = {

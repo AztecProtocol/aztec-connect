@@ -32,4 +32,19 @@ export class Pedersen {
     this.wasm.call('bbfree', mem);
     return Buffer.from(this.wasm.sliceMemory(0, 32));
   }
+
+  public hashValuesToTree(values: Buffer[]) {
+    const data = Buffer.concat(values);
+    const mem = this.wasm.call('bbmalloc', data.length);
+    this.wasm.transferToHeap(data, mem);
+    const resultSize = this.wasm.call('pedersen_hash_to_tree', mem, data.length, 0);
+    const resultPtr = Buffer.from(this.wasm.sliceMemory(0, 4)).readUInt32LE(0);
+    const result = Buffer.from(this.wasm.sliceMemory(resultPtr, resultPtr + resultSize));
+    this.wasm.call('bbfree', resultPtr);
+    const results: Buffer[] = [];
+    for (let i = 0; i < result.length; i += 32) {
+      results.push(result.slice(i, i + 32));
+    }
+    return results;
+  }
 }
