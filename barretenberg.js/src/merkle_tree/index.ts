@@ -220,7 +220,13 @@ export class MerkleTree {
     }
     values = values.concat(Array(subtreeSize - values.length).fill(Buffer.alloc(64, 0)));
 
-    const hashes = this.leafHasher.hashValuesToTree(values);
+    // Actually not any faster. But perhaps could be...
+    // const hashes = this.leafHasher.hashValuesToTree(values);
+
+    const hashes = values.map(v => this.leafHasher.hashToField(v));
+    for (let i = 0; i < (subtreeSize - 1) * 2; i += 2) {
+      hashes.push(this.leafHasher.compress(hashes[i], hashes[i + 1]));
+    }
 
     const batch = this.db.batch();
     this.root = await this.updateElementsInternal(this.root, hashes, index, this.depth, subtreeDepth, batch);
