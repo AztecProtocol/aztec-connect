@@ -99,6 +99,7 @@ export class WorldState {
   public async resetPipeline() {
     await this.txAggregator.stop();
 
+    await this.worldStateDb.rollback();
     await this.rollupDb.deleteUnsettledRollups();
     await this.rollupDb.deleteOrphanedRollupProofs();
     await this.rollupDb.deletePendingTxs();

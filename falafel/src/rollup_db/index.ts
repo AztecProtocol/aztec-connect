@@ -1,3 +1,4 @@
+import { Mutex } from 'async-mutex';
 import { EthAddress } from 'barretenberg/address';
 import { AccountAliasId } from 'barretenberg/client_proofs/account_alias_id';
 import { JoinSplitProofData, ProofData } from 'barretenberg/client_proofs/proof_data';
@@ -17,6 +18,7 @@ export class RollupDb {
   private accountTxRep: Repository<AccountTxDao>;
   private rollupProofRep: Repository<RollupProofDao>;
   private rollupRep: Repository<RollupDao>;
+  private writeMutex = new Mutex();
 
   constructor(private connection: Connection) {
     this.txRep = this.connection.getRepository(TxDao);
@@ -27,37 +29,42 @@ export class RollupDb {
   }
 
   public async addTx(txDao: TxDao) {
-    await this.connection.transaction(async transactionalEntityManager => {
-      await transactionalEntityManager.save(txDao);
+    const release = await this.writeMutex.acquire();
+    try {
+      await this.connection.transaction(async transactionalEntityManager => {
+        await transactionalEntityManager.save(txDao);
 
-      const proofData = InnerProofData.fromBuffer(txDao.proofData);
+        const proofData = InnerProofData.fromBuffer(txDao.proofData);
 
-      if (proofData.proofId === 0) {
-        const jsProofData = new JoinSplitProofData(new ProofData(txDao.proofData));
-        const joinSplitDao = new JoinSplitTxDao({
-          id: proofData.txId,
-          publicInput: jsProofData.publicInput,
-          publicOutput: jsProofData.publicOutput,
-          assetId: jsProofData.assetId,
-          inputOwner: jsProofData.inputOwner,
-          outputOwner: jsProofData.outputOwner,
-          created: txDao.created,
-        });
-        await transactionalEntityManager.save(joinSplitDao);
-      } else if (proofData.proofId === 1) {
-        const accountAliasId = AccountAliasId.fromBuffer(proofData.assetId);
-        const accountTxDao = new AccountTxDao({
-          id: proofData.txId,
-          accountPubKey: Buffer.concat([proofData.publicInput, proofData.publicOutput]),
-          aliasHash: accountAliasId.aliasHash.toBuffer(),
-          nonce: accountAliasId.nonce,
-          spendingKey1: proofData.nullifier1,
-          spendingKey2: proofData.nullifier2,
-          created: txDao.created,
-        });
-        await transactionalEntityManager.save(accountTxDao);
-      }
-    });
+        if (proofData.proofId === 0) {
+          const jsProofData = new JoinSplitProofData(new ProofData(txDao.proofData));
+          const joinSplitDao = new JoinSplitTxDao({
+            id: proofData.txId,
+            publicInput: jsProofData.publicInput,
+            publicOutput: jsProofData.publicOutput,
+            assetId: jsProofData.assetId,
+            inputOwner: jsProofData.inputOwner,
+            outputOwner: jsProofData.outputOwner,
+            created: txDao.created,
+          });
+          await transactionalEntityManager.save(joinSplitDao);
+        } else if (proofData.proofId === 1) {
+          const accountAliasId = AccountAliasId.fromBuffer(proofData.assetId);
+          const accountTxDao = new AccountTxDao({
+            id: proofData.txId,
+            accountPubKey: Buffer.concat([proofData.publicInput, proofData.publicOutput]),
+            aliasHash: accountAliasId.aliasHash.toBuffer(),
+            nonce: accountAliasId.nonce,
+            spendingKey1: proofData.nullifier1,
+            spendingKey2: proofData.nullifier2,
+            created: txDao.created,
+          });
+          await transactionalEntityManager.save(accountTxDao);
+        }
+      });
+    } finally {
+      release();
+    }
   }
 
   public async getTx(txId: Buffer) {
@@ -86,7 +93,12 @@ export class RollupDb {
   }
 
   public async deletePendingTxs() {
-    return this.txRep.delete({ rollupProof: null });
+    const release = await this.writeMutex.acquire();
+    try {
+      return this.txRep.delete({ rollupProof: null });
+    } finally {
+      release();
+    }
   }
 
   public async getTotalTxCount() {
@@ -138,12 +150,17 @@ export class RollupDb {
   }
 
   public async deleteUnsettledTxs() {
-    return await this.txRep
-      .createQueryBuilder('tx')
-      .leftJoinAndSelect('tx.rollupProof', 'rp')
-      .leftJoinAndSelect('rp.rollup', 'r')
-      .where('tx.rollupProof IS NULL OR rp.rollup IS NULL OR r.mined IS NULL')
-      .getCount();
+    const release = await this.writeMutex.acquire();
+    try {
+      return await this.txRep
+        .createQueryBuilder('tx')
+        .leftJoinAndSelect('tx.rollupProof', 'rp')
+        .leftJoinAndSelect('rp.rollup', 'r')
+        .where('tx.rollupProof IS NULL OR rp.rollup IS NULL OR r.mined IS NULL')
+        .getCount();
+    } finally {
+      release();
+    }
   }
 
   public async getPendingTxs(take?: number) {
@@ -168,7 +185,12 @@ export class RollupDb {
   }
 
   public async addRollupProof(rollupDao: RollupProofDao) {
-    await this.rollupProofRep.save(rollupDao);
+    const release = await this.writeMutex.acquire();
+    try {
+      await this.rollupProofRep.save(rollupDao);
+    } finally {
+      release();
+    }
   }
 
   public async getRollupProof(id: Buffer, includeTxs = false) {
@@ -176,7 +198,12 @@ export class RollupDb {
   }
 
   public async deleteRollupProof(id: Buffer) {
-    return this.rollupProofRep.delete({ id });
+    const release = await this.writeMutex.acquire();
+    try {
+      return this.rollupProofRep.delete({ id });
+    } finally {
+      release();
+    }
   }
 
   /**
@@ -184,17 +211,27 @@ export class RollupDb {
    * This removes any rollup proofs that are no longer referenced by transactions.
    */
   public async deleteTxlessRollupProofs() {
-    const orphaned = await this.rollupProofRep
-      .createQueryBuilder('rollup_proof')
-      .select('rollup_proof.id')
-      .leftJoin('rollup_proof.txs', 'tx')
-      .where('tx.rollupProof IS NULL')
-      .getMany();
-    await this.rollupProofRep.delete({ id: In(orphaned.map(rp => rp.id)) });
+    const release = await this.writeMutex.acquire();
+    try {
+      const orphaned = await this.rollupProofRep
+        .createQueryBuilder('rollup_proof')
+        .select('rollup_proof.id')
+        .leftJoin('rollup_proof.txs', 'tx')
+        .where('tx.rollupProof IS NULL')
+        .getMany();
+      await this.rollupProofRep.delete({ id: In(orphaned.map(rp => rp.id)) });
+    } finally {
+      release();
+    }
   }
 
   public async deleteOrphanedRollupProofs() {
-    await this.rollupProofRep.delete({ rollup: IsNull() });
+    const release = await this.writeMutex.acquire();
+    try {
+      await this.rollupProofRep.delete({ rollup: IsNull() });
+    } finally {
+      release();
+    }
   }
 
   public async getRollupProofsBySize(numTxs: number) {
@@ -223,15 +260,30 @@ export class RollupDb {
   }
 
   public async addRollup(rollup: RollupDao) {
-    return await this.rollupRep.save(rollup);
+    const release = await this.writeMutex.acquire();
+    try {
+      return await this.rollupRep.save(rollup);
+    } finally {
+      release();
+    }
   }
 
   public async confirmSent(id: number, txHash: TxHash) {
-    await this.rollupRep.update({ id }, { ethTxHash: txHash.toBuffer() });
+    const release = await this.writeMutex.acquire();
+    try {
+      await this.rollupRep.update({ id }, { ethTxHash: txHash.toBuffer() });
+    } finally {
+      release();
+    }
   }
 
   public async confirmMined(id: number, gasUsed: number, gasPrice: bigint, mined: Date) {
-    await this.rollupRep.update({ id }, { mined, gasUsed, gasPrice: toBufferBE(gasPrice, 32) });
+    const release = await this.writeMutex.acquire();
+    try {
+      await this.rollupRep.update({ id }, { mined, gasUsed, gasPrice: toBufferBE(gasPrice, 32) });
+    } finally {
+      release();
+    }
   }
 
   public getSettledRollups(from = 0, descending = false, take?: number) {
@@ -251,7 +303,12 @@ export class RollupDb {
   }
 
   public async deleteUnsettledRollups() {
-    await this.rollupRep.delete({ mined: IsNull() });
+    const release = await this.writeMutex.acquire();
+    try {
+      await this.rollupRep.delete({ mined: IsNull() });
+    } finally {
+      release();
+    }
   }
 
   public async getRollupByDataRoot(dataRoot: Buffer) {
