@@ -31,6 +31,11 @@ export class WalletProvider implements EthereumProvider {
     return Buffer.from(this.accounts[account].privateKey.slice(2), 'hex');
   }
 
+  public getPrivateKeyForAddress(account: EthAddress) {
+    const wallet = this.accounts.find(w => account.equals(EthAddress.fromString(w.address)));
+    return wallet ? Buffer.from(wallet.privateKey.slice(2), 'hex') : undefined;
+  }
+
   async request(args: RequestArguments): Promise<any> {
     switch (args.method) {
       case 'eth_accounts':

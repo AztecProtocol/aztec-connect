@@ -161,7 +161,7 @@ export class RollupProofData {
     if (viewingKeyData) {
       for (let i = 0, jsCount = 0; i < innerProofSize; ++i) {
         if (innerProofData[i].proofId === 0 && !innerProofData[i].isPadding()) {
-          const offset = jsCount * ViewingKey.SIZE;
+          const offset = jsCount * ViewingKey.SIZE * 2;
           const vk1 = new ViewingKey(viewingKeyData.slice(offset, offset + ViewingKey.SIZE));
           const vk2 = new ViewingKey(viewingKeyData.slice(offset + ViewingKey.SIZE, offset + ViewingKey.SIZE * 2));
           jsCount++;

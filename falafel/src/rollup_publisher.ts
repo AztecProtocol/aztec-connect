@@ -14,7 +14,7 @@ import { RollupDb } from './rollup_db';
 export class RollupPublisher {
   private interrupted = false;
   private interruptPromise = Promise.resolve();
-  private interruptResolve = () => {};
+  private interruptResolve = () => { };
   private signer: Signer;
 
   constructor(

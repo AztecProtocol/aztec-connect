@@ -82,6 +82,65 @@ describe('RollupProofData', () => {
     expect(recoveredRollup).toEqual(rollupProofData);
   });
 
+  it('can convert a rollup proof object to buffer and back with two js txs', () => {
+    const viewingKeys = [
+      [ViewingKey.EMPTY, ViewingKey.EMPTY],
+      [ViewingKey.random(), ViewingKey.random()],
+    ];
+
+    const accountInnerProofData = new InnerProofData(
+      1,
+      randomBytes(32),
+      randomBytes(32),
+      numToUInt32BE(1, 32),
+      randomBytes(64),
+      randomBytes(64),
+      randomBytes(32),
+      randomBytes(32),
+      EthAddress.randomAddress().toBuffer32(),
+      EthAddress.randomAddress().toBuffer32(),
+    );
+
+    const jsInnerProofData = new InnerProofData(
+      0,
+      randomBytes(32),
+      randomBytes(32),
+      numToUInt32BE(1, 32),
+      randomBytes(64),
+      randomBytes(64),
+      randomBytes(32),
+      randomBytes(32),
+      EthAddress.randomAddress().toBuffer32(),
+      EthAddress.randomAddress().toBuffer32(),
+    );
+
+    const totalTxFees = [...Array(RollupProofData.NUMBER_OF_ASSETS)].map(() => randomBytes(32));
+    const rollupProofData = new RollupProofData(
+      70,
+      2,
+      150,
+      randomBytes(32),
+      randomBytes(32),
+      randomBytes(32),
+      randomBytes(32),
+      randomBytes(32),
+      randomBytes(32),
+      totalTxFees,
+      2,
+      [accountInnerProofData, jsInnerProofData],
+      randomBytes(32 * 16),
+      viewingKeys,
+    );
+
+    const buffer = rollupProofData.toBuffer();
+    const recoveredRollup = RollupProofData.fromBuffer(
+      buffer,
+      Buffer.concat(viewingKeys.flat().map(vk => vk.toBuffer())),
+    );
+
+    expect(recoveredRollup).toEqual(rollupProofData);
+  });
+
   it('should parse an escape hatch proof with rollup size 0', () => {
     const rollupSize = 0;
     const totalTxFees = [...Array(RollupProofData.NUMBER_OF_ASSETS)].map(() => randomBytes(32));
