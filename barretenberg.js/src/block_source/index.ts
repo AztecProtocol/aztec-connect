@@ -1,4 +1,4 @@
-import { TxHash } from '../rollup_provider';
+import { TxHash } from '../tx_hash';
 
 export interface Block {
   txHash: TxHash;

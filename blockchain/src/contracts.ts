@@ -2,17 +2,17 @@ import { TransactionResponse, TransactionReceipt } from '@ethersproject/abstract
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from 'barretenberg/address';
 import { AssetId } from 'barretenberg/asset';
-import { TxHash } from 'barretenberg/rollup_provider';
 import { Contract, ethers } from 'ethers';
 import { abi as RollupABI } from './artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
 import { abi as FeeDistributorABI } from './artifacts/contracts/interfaces/IFeeDistributor.sol/IFeeDistributor.json';
-import { abi as ERC20ABI } from './artifacts/contracts/test/ERC20Mintable.sol/ERC20Mintable.json';
-import { abi as ERC20PermitABI } from './artifacts/contracts/test/ERC20Permit.sol/ERC20Permit.json';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { Block } from 'barretenberg/block_source';
 import { EthereumProvider } from './ethereum_provider';
 import { solidityFormatSignatures } from './solidity_format_signatures';
-import { PermitArgs } from 'barretenberg/blockchain';
+import { Asset, EthereumSignature, PermitArgs, TypedData } from 'barretenberg/blockchain';
+import { TokenAsset } from './token_asset';
+import { TxHash } from 'barretenberg/tx_hash';
+import { EthAsset } from './eth_asset';
 
 const fixEthersStackTrace = (err: Error) => {
   err.stack! += new Error().stack;
@@ -22,10 +22,10 @@ const fixEthersStackTrace = (err: Error) => {
 export class Contracts {
   private rollupProcessor: Contract;
   private feeDistributorContract!: Contract;
-  private erc20Contracts: Contract[] = [];
+  private assets!: Asset[];
   private provider!: Web3Provider;
 
-  constructor(private rollupContractAddress: EthAddress, private ethereumProvider: EthereumProvider) {
+  constructor(private rollupContractAddress: EthAddress, ethereumProvider: EthereumProvider) {
     this.provider = new Web3Provider(ethereumProvider);
     this.rollupProcessor = new ethers.Contract(rollupContractAddress.toString(), RollupABI, this.provider);
   }
@@ -34,18 +34,13 @@ export class Contracts {
     const feeDistributorContractAddress = await this.rollupProcessor.feeDistributor();
     this.feeDistributorContract = new ethers.Contract(feeDistributorContractAddress, FeeDistributorABI, this.provider);
 
-    const assetAddresses = await this.rollupProcessor.getSupportedAssets();
-    this.erc20Contracts = await Promise.all(
-      assetAddresses.map(async (a: any, index: number) => {
-        const assetId = index + 1;
-        const assetPermitSupport = await this.rollupProcessor.getAssetPermitSupport(assetId);
-        const newContractABI = assetPermitSupport ? ERC20PermitABI : ERC20ABI;
-        return new ethers.Contract(a, newContractABI, this.provider);
-      }),
-    );
+    const assetAddresses = await this.getSupportedAssets();
+    const tokenAssets = assetAddresses.map(addr => new TokenAsset(this.provider, addr));
+    await Promise.all(tokenAssets.map(async (t, i) => t.init(this.rollupProcessor.getAssetPermitSupport(i + 1))));
+    this.assets = [new EthAsset(this.provider), ...tokenAssets];
   }
 
-  public async getSupportedAssets(): Promise<EthAddress[]> {
+  private async getSupportedAssets(): Promise<EthAddress[]> {
     const assetAddresses = await this.rollupProcessor.getSupportedAssets();
     return assetAddresses.map((a: string) => EthAddress.fromString(a));
   }
@@ -54,13 +49,14 @@ export class Contracts {
     const signer = signingAddress ? this.provider.getSigner(signingAddress.toString()) : this.provider.getSigner(0);
     const rollupProcessor = new Contract(this.rollupContractAddress.toString(), RollupABI, signer);
     const tx = await rollupProcessor.setSupportedAsset(assetAddress.toString(), supportsPermit);
-    const newContractABI = supportsPermit ? ERC20PermitABI : ERC20ABI;
-    this.erc20Contracts.push(new ethers.Contract(assetAddress.toString(), newContractABI, this.provider));
+    const tokenAsset = new TokenAsset(this.provider, assetAddress);
+    await tokenAsset.init(supportsPermit);
+    this.assets.push(tokenAsset);
     return TxHash.fromString(tx.hash);
   }
 
   private async getAssetValues(promise: Promise<string[]>) {
-    const padding = Array<bigint>(this.erc20Contracts.length + 1).fill(BigInt(0));
+    const padding = Array<bigint>(this.assets.length).fill(BigInt(0));
     return [...(await promise).map(v => BigInt(v)), ...padding].slice(0, padding.length);
   }
 
@@ -76,7 +72,7 @@ export class Contracts {
     const totalFees = await this.getAssetValues(this.rollupProcessor.getTotalFees());
 
     const feeDistributorBalance: bigint[] = [];
-    for (let i = 0; i < this.erc20Contracts.length + 1; ++i) {
+    for (let i = 0; i < this.assets.length; ++i) {
       feeDistributorBalance[i] = BigInt(await this.feeDistributorContract.txFeeBalance(i));
     }
 
@@ -104,10 +100,6 @@ export class Contracts {
     };
   }
 
-  public async getEthBalance(account: EthAddress) {
-    return BigInt(await this.provider.getBalance(account.toString()));
-  }
-
   public getRollupContractAddress() {
     return this.rollupContractAddress;
   }
@@ -116,17 +108,6 @@ export class Contracts {
     return EthAddress.fromString(this.feeDistributorContract.address);
   }
 
-  public getTokenContractAddresses() {
-    return this.erc20Contracts.map(c => EthAddress.fromString(c.address));
-  }
-
-  /**
-   * Send a proof to the rollup processor, which processes the proof and passes it to the verifier to
-   * be verified.
-   *
-   * Appends viewingKeys to the proofData, so that they can later be fetched from the tx calldata
-   * and added to the emitted rollupBlock.
-   */
   public async createEscapeHatchProofTx(
     proofData: Buffer,
     viewingKeys: Buffer[],
@@ -142,13 +123,6 @@ export class Contracts {
     return Buffer.from(tx.data!.slice(2), 'hex');
   }
 
-  /**
-   * Send a proof to the rollup processor, which processes the proof and passes it to the verifier to
-   * be verified, and refunds tx fee to feeReceiver.
-   *
-   * Appends viewingKeys to the proofData, so that they can later be fetched from the tx calldata
-   * and added to the emitted rollupBlock.
-   */
   public async createRollupProofTx(
     proofData: Buffer,
     signatures: Buffer[],
@@ -241,47 +215,6 @@ export class Contracts {
     return BigInt(await this.rollupProcessor.getUserPendingDeposit(assetId, account.toString()));
   }
 
-  public async getAssetBalance(assetId: AssetId, address: EthAddress): Promise<bigint> {
-    if (assetId === AssetId.ETH) {
-      return BigInt(await this.provider.getBalance(address.toString()));
-    }
-    return BigInt(await this.getAssetContract(assetId).balanceOf(address.toString()));
-  }
-
-  public async getAssetPermitSupport(assetId: AssetId): Promise<boolean> {
-    if (assetId === AssetId.ETH) {
-      false;
-    }
-    return this.rollupProcessor.getAssetPermitSupport(assetId);
-  }
-
-  public async getUserNonce(assetId: AssetId, address: EthAddress): Promise<bigint> {
-    return BigInt(await this.getAssetContract(assetId).nonces(address.toString()));
-  }
-
-  public async getAssetAllowance(assetId: AssetId, address: EthAddress): Promise<bigint> {
-    if (assetId === AssetId.ETH) {
-      throw new Error('getAssetAllowance does not support ETH.');
-    }
-    return BigInt(
-      await this.getAssetContract(assetId).allowance(address.toString(), this.rollupContractAddress.toString()),
-    );
-  }
-
-  public async getAssetDecimals(assetId: AssetId): Promise<number> {
-    if (assetId === AssetId.ETH) {
-      return 18;
-    }
-    return +(await this.getAssetContract(assetId).decimals());
-  }
-
-  public async getAssetSymbol(assetId: AssetId): Promise<string> {
-    if (assetId === AssetId.ETH) {
-      return 'ETH';
-    }
-    return await this.getAssetContract(assetId).symbol();
-  }
-
   private decodeBlock(tx: TransactionResponse, receipt: TransactionReceipt): Block {
     const rollupAbi = new ethers.utils.Interface(RollupABI);
     const result = rollupAbi.parseTransaction({ data: tx.data });
@@ -312,7 +245,37 @@ export class Contracts {
     return this.provider.getBlockNumber();
   }
 
-  private getAssetContract(assetId: AssetId) {
-    return this.erc20Contracts[assetId - 1];
+  public async signMessage(message: Buffer, address: EthAddress) {
+    const signer = this.provider.getSigner(address.toString());
+    const sig = await signer.signMessage(message);
+    const signature = Buffer.from(sig.slice(2), 'hex');
+
+    // Ganache is not signature standard compliant. Returns 00 or 01 as v.
+    // Need to adjust to make v 27 or 28.
+    const v = signature[signature.length - 1];
+    if (v <= 1) {
+      return Buffer.concat([signature.slice(0, -1), Buffer.from([v + 27])]);
+    }
+
+    return signature;
+  }
+
+  public async signTypedData({ domain, types, message }: TypedData, address: EthAddress) {
+    const signer = this.provider.getSigner(address.toString());
+    const result = await signer._signTypedData(domain, types, message);
+    const signature = Buffer.from(result.slice(2), 'hex');
+    const r = signature.slice(0, 32);
+    const s = signature.slice(32, 64);
+    const v = signature.slice(64, 65);
+    const sig: EthereumSignature = { v, r, s };
+    return sig;
+  }
+
+  public getAssets() {
+    return this.assets;
+  }
+
+  public getAsset(assetId: AssetId) {
+    return this.assets[assetId];
   }
 }

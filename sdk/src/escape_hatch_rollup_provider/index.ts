@@ -1,16 +1,17 @@
-import { Proof, RollupProvider, RollupProviderStatus, TxHash } from 'barretenberg/rollup_provider';
+import { Proof, RollupProvider, RollupProviderStatus } from 'barretenberg/rollup_provider';
 import { Blockchain } from 'barretenberg/blockchain';
 import { Block } from 'barretenberg/block_source';
 
 export class EscapeHatchRollupProvider implements RollupProvider {
   constructor(private blockchain: Blockchain) {}
 
-  sendProof(proof: Proof): Promise<TxHash> {
-    return this.blockchain.sendEscapeHatchProof(
+  async sendProof(proof: Proof) {
+    const tx = await this.blockchain.createEscapeHatchProofTx(
       proof.proofData,
       proof.viewingKeys.map(vk => vk.toBuffer()),
       proof.depositSignature,
     );
+    return this.blockchain.sendTx(tx);
   }
 
   async getStatus(): Promise<RollupProviderStatus> {

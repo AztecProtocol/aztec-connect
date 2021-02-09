@@ -1,4 +1,5 @@
-import { RollupProviderExplorer, Rollup, Tx, TxHash } from 'barretenberg/rollup_provider';
+import { RollupProviderExplorer, Rollup, Tx } from 'barretenberg/rollup_provider';
+import { TxHash } from 'barretenberg/tx_hash';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 

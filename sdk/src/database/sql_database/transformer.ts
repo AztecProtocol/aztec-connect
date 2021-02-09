@@ -1,6 +1,6 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
-import { TxHash } from 'barretenberg/rollup_provider';
+import { TxHash } from 'barretenberg/tx_hash';
 import { ViewingKey } from 'barretenberg/viewing_key';
 import { ValueTransformer } from 'typeorm';
 import { AccountAliasId, AccountId } from '../../user';

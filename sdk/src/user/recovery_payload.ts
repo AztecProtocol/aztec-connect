@@ -1,14 +1,14 @@
 import { GrumpkinAddress } from 'barretenberg/address';
-import { AccountAliasId } from 'barretenberg/client_proofs/account_alias_id';
 import { Signature } from 'barretenberg/client_proofs/signature';
+import { AccountId } from './account_id';
 
 export class RecoveryData {
-  constructor(public accountAliasId: AccountAliasId, public signature: Signature) {}
+  constructor(public accountId: AccountId, public signature: Signature) {}
 
   static fromBuffer(data: Buffer) {
-    const accountAliasId = AccountAliasId.fromBuffer(data.slice(0, 32));
+    const accountId = AccountId.fromBuffer(data.slice(0, 32));
     const signature = new Signature(data.slice(32, 96));
-    return new RecoveryData(accountAliasId, signature);
+    return new RecoveryData(accountId, signature);
   }
 
   static fromString(data: string) {
@@ -16,7 +16,7 @@ export class RecoveryData {
   }
 
   toBuffer() {
-    return Buffer.concat([this.accountAliasId.toBuffer(), this.signature.toBuffer()]);
+    return Buffer.concat([this.accountId.toBuffer(), this.signature.toBuffer()]);
   }
 
   toString() {

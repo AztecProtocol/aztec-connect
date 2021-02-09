@@ -1,6 +1,6 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
-import { TxHash } from 'barretenberg/rollup_provider';
+import { TxHash } from 'barretenberg/tx_hash';
 import { ViewingKey } from 'barretenberg/viewing_key';
 import { randomBytes } from 'crypto';
 import { Note } from '../../note';
@@ -24,14 +24,17 @@ export const randomNote = (): Note => ({
   owner: AccountId.random(),
 });
 
-export const randomUser = (): UserData => ({
-  id: AccountId.random(),
-  privateKey: randomBytes(32),
-  publicKey: GrumpkinAddress.randomAddress(),
-  nonce: randomInt(),
-  aliasHash: AliasHash.random(),
-  syncedToRollup: randomInt(),
-});
+export const randomUser = (): UserData => {
+  const id = AccountId.random();
+  return {
+    id,
+    privateKey: randomBytes(32),
+    publicKey: id.publicKey,
+    nonce: id.nonce,
+    alias: randomBytes(8).toString('hex'),
+    syncedToRollup: randomInt(),
+  };
+};
 
 export const randomUserAccountTx = (): UserAccountTx => ({
   txHash: TxHash.random(),
@@ -63,7 +66,7 @@ export const randomUserJoinSplitTx = (): UserJoinSplitTx => ({
 export const randomAccountAliasId = () => new AccountAliasId(AliasHash.random(), randomInt());
 
 export const randomSigningKey = (): SigningKey => ({
-  accountAliasId: randomAccountAliasId(),
+  accountId: AccountId.random(),
   key: randomBytes(32),
   treeIndex: randomInt(),
   address: GrumpkinAddress.randomAddress(),

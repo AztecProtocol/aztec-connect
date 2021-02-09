@@ -16,6 +16,6 @@
     "declarationMap": true,
     "resolveJsonModule": true
   },
-  "include": ["src", "test", "../barretenberg.js/src/blockchain/index.ts"],
+  "include": ["src", "test"],
   "files": ["./hardhat.config.ts"]
 }

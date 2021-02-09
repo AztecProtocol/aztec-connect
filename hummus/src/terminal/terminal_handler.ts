@@ -11,7 +11,6 @@ import {
   UserJoinSplitTx,
   WebSdk,
 } from '@aztec/sdk';
-import copy from 'copy-to-clipboard';
 import { Terminal } from './terminal';
 import createDebug from 'debug';
 
@@ -32,20 +31,18 @@ enum TermControl {
 export class TerminalHandler {
   private controlQueue = new MemoryFifo<() => Promise<void>>();
   private printQueue = new MemoryFifo<string | TermControl>();
-  private preInitCmds = { help: this.help, init: this.init, cleardata: this.clearData };
+  private preInitCmds = { help: this.help, init: this.init };
   private postInitCmds = {
     help: this.help,
-    mint: this.mint,
-    approve: this.approve,
+    // mint: this.mint,
+    // approve: this.approve,
     deposit: this.deposit,
     withdraw: this.withdraw,
     transfer: this.transfer,
     register: this.registerAlias,
     balance: this.balance,
     fee: this.fee,
-    copykey: this.copyKey,
     status: this.status,
-    cleardata: this.clearData,
   };
   private assetId = AssetId.ETH;
 
@@ -118,6 +115,7 @@ export class TerminalHandler {
   private unregisterHandlers() {
     this.app.off(AppEvent.UPDATED_INIT_STATE, this.handleInitStateChange);
     this.app.off(SdkEvent.UPDATED_USER_STATE, this.handleUserStateChange);
+    this.app.off(SdkEvent.LOG, this.logHandler);
   }
 
   /**
@@ -126,13 +124,15 @@ export class TerminalHandler {
   private handleInitStateChange = (initStatus: AppInitStatus, previousStatus: AppInitStatus) => {
     if (initStatus.initState === AppInitState.INITIALIZING) {
       if (
-        previousStatus.initAction === AppInitAction.LINK_AZTEC_ACCOUNT &&
-        initStatus.initAction === AppInitAction.AWAIT_LINK_AZTEC_ACCOUNT
+        initStatus.initAction === AppInitAction.AWAITING_PERMISSION_TO_LINK &&
+        previousStatus.initAction === AppInitAction.AWAITING_PROVIDER_SIGNATURE
       ) {
+        debug('received request to link account, but already waiting on signature acceptence.');
         this.app.destroy();
-      } else if (initStatus.initAction === AppInitAction.AWAIT_LINK_AZTEC_ACCOUNT) {
+      } else if (initStatus.initAction === AppInitAction.AWAITING_PERMISSION_TO_LINK) {
         this.app.linkAccount();
       } else {
+        // Lock the terminal.
         this.controlQueue.put(async () => {
           this.printQueue.put(TermControl.LOCK);
           const msg = this.getInitString(initStatus);
@@ -171,8 +171,7 @@ export class TerminalHandler {
       return;
     }
     const userData = user.getUserData();
-    const userIsSynced = userData.syncedToRollup === this.app.getSdk().getLocalStatus().syncedToRollup;
-    if (userData.id.equals(accountId) && diff && userIsSynced) {
+    if (userData.id.equals(accountId) && diff && !user.isSynching()) {
       const userAsset = user.getAsset(assetId);
       this.printQueue.put(
         `balance updated: ${userAsset.fromBaseUnits(balance)} (${diff >= 0 ? '+' : ''}${userAsset.fromBaseUnits(
@@ -182,15 +181,13 @@ export class TerminalHandler {
     }
   };
 
-  private getInitString({ initAction, network, message }: AppInitStatus) {
+  private getInitString({ initAction, network }: AppInitStatus) {
     switch (initAction) {
-      case undefined:
-        return message;
       case AppInitAction.CHANGE_NETWORK:
         return `set network to ${network}...`;
       case AppInitAction.LINK_PROVIDER_ACCOUNT:
         return `requesting account access...`;
-      case AppInitAction.LINK_AZTEC_ACCOUNT:
+      case AppInitAction.AWAITING_PROVIDER_SIGNATURE:
         return `check provider to link aztec account...`;
     }
   }
@@ -253,19 +250,16 @@ export class TerminalHandler {
     if (!this.app.isInitialized()) {
       this.printQueue.put('init [server]\n');
     } else {
-      const isMintable = this.assetId !== AssetId.ETH;
-      const requireApproval =
-        this.assetId !== AssetId.ETH && !(await this.app.getSdk().getAssetPermitSupport(this.assetId));
       this.printQueue.put(
-        (isMintable ? 'mint <amount>\n' : '') +
-          (requireApproval ? 'approve <amount>\n' : '') +
-          'deposit <amount>\n' +
+        // TODO: multi asset support.
+        // 'mint <amount> <asset>\n' +
+        // 'approve <amount> <asset>\n' +
+        'deposit <amount>\n' +
           'withdraw <amount>\n' +
           'transfer <to> <amount>\n' +
           'register <alias>\n' +
           'balance\n' +
           'fee\n' +
-          'copykey\n' +
           'status [num] [from]\n',
       );
     }
@@ -273,13 +267,16 @@ export class TerminalHandler {
 
   private async init(server: string) {
     this.app.off(AppEvent.UPDATED_INIT_STATE, this.initProgressHandler);
+    this.app.off(SdkEvent.LOG, this.logHandler);
     this.unregisterHandlers();
 
     this.app.on(AppEvent.UPDATED_INIT_STATE, this.initProgressHandler);
+    this.app.on(SdkEvent.LOG, this.logHandler);
     const serverUrl =
       server || (process.env.NODE_ENV === 'production' ? 'https://api.aztec.network/falafel' : 'http://localhost:8081');
     await this.app.init(serverUrl);
     this.app.off(AppEvent.UPDATED_INIT_STATE, this.initProgressHandler);
+    this.app.off(SdkEvent.LOG, this.logHandler);
 
     const sdk = this.app.getSdk()!;
     try {
@@ -293,29 +290,26 @@ export class TerminalHandler {
       this.printQueue.put('failed to get server status.\n');
     }
 
-    this.printQueue.put(`synching user state...\n`);
-    await this.app.getUser().awaitSynchronised();
-
     this.printQueue.put(`user: ${this.app.getAddress().toString().slice(0, 12)}...\n`);
     await this.balance();
 
     this.registerHandlers();
   }
 
-  private async mint(value: string) {
-    this.assertRegistered();
-    const userAsset = this.app.getUser().getAsset(this.assetId);
-    this.printQueue.put('requesting mint...\n');
-    await userAsset.mint(userAsset.toBaseUnits(value));
-    await this.balance();
-  }
+  // private async mint(value: string) {
+  //   this.assertRegistered();
+  //   const userAsset = this.app.getUser().getAsset(this.assetId);
+  //   this.printQueue.put('requesting mint...\n');
+  //   await userAsset.mint(userAsset.toBaseUnits(value));
+  //   await this.balance();
+  // }
 
-  private async approve(value: string) {
-    const userAsset = this.app.getUser().getAsset(this.assetId);
-    this.printQueue.put('requesting approval...\n');
-    await userAsset.approve(userAsset.toBaseUnits(value));
-    this.printQueue.put('approval complete.\n');
-  }
+  // private async approve(value: string) {
+  //   const userAsset = this.app.getUser().getAsset(this.assetId);
+  //   this.printQueue.put('requesting approval...\n');
+  //   await userAsset.approve(userAsset.toBaseUnits(value));
+  //   this.printQueue.put('approval complete.\n');
+  // }
 
   private async deposit(valueStr: string) {
     this.assertRegistered();
@@ -361,7 +355,7 @@ export class TerminalHandler {
     if (this.isRegistered()) {
       throw new Error('account already has an alias.');
     }
-    if (await this.app.getSdk().getAddressFromAlias(alias)) {
+    if (!(await this.app.getSdk().isAliasAvailable(alias))) {
       throw new Error('alias already registered.');
     }
     const user = this.app.getUser();
@@ -371,6 +365,8 @@ export class TerminalHandler {
     this.printQueue.put(`registration proof sent.\nawaiting settlement...\n`);
     await this.app.getSdk().awaitSettlement(txHash, 300);
     await this.app.loadLatestAccount();
+    // Stop monitoring pre-registration account.
+    await user.remove();
     this.printQueue.put(`done.\n`);
   }
 
@@ -385,14 +381,9 @@ export class TerminalHandler {
   }
 
   private async fee() {
-    const sdk = this.app.getSdk();
-    const { minFees } = await sdk.getRemoteStatus();
-    this.printQueue.put(`fee: ${sdk.fromBaseUnits(this.assetId, minFees[this.assetId])}\n`);
-  }
-
-  private async copyKey() {
-    const user = this.app.getUser();
-    copy(user.getUserData().publicKey.toString());
+    const { symbol } = this.app.getSdk().getAssetInfo(this.assetId);
+    const fee = await this.app.getSdk().getFee(this.assetId);
+    this.printQueue.put(`fee: ${this.app.getSdk().fromBaseUnits(this.assetId, fee)} ${symbol}\n`);
   }
 
   private async status(num = '1', from = '0') {
@@ -403,7 +394,7 @@ export class TerminalHandler {
     const printTx = (tx: UserJoinSplitTx, action: string, value: bigint) => {
       const asset = user.getAsset(tx.assetId);
       this.printQueue.put(
-        `${tx.txHash.toString().slice(2, 10)}: ${action} ${asset.fromBaseUnits(value)} ${asset.symbol()} ${
+        `${tx.txHash.toString().slice(2, 10)}: ${action} ${asset.fromBaseUnits(value)} ${asset.getInfo().symbol} ${
           tx.settled ? 'settled' : 'pending'
         }\n`,
       );
@@ -420,9 +411,5 @@ export class TerminalHandler {
         printTx(tx, 'RECEIVE', tx.recipientPrivateOutput);
       }
     }
-  }
-
-  private async clearData() {
-    await this.app.getSdk()!.clearData();
   }
 }

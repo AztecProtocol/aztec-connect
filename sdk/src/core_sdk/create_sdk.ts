@@ -1,5 +1,4 @@
-import { ServerRollupProvider, ServerRollupProviderExplorer } from 'barretenberg/rollup_provider';
-import { EthereumBlockchain } from 'blockchain/ethereum_blockchain';
+import { ServerRollupProvider } from 'barretenberg/rollup_provider';
 import { BroadcastChannel, createLeaderElection } from 'broadcast-channel';
 import createDebug from 'debug';
 import isNode from 'detect-node';
@@ -8,13 +7,13 @@ import levelup from 'levelup';
 import { SrirachaProvider } from 'sriracha/hash_path_source';
 import { createConnection } from 'typeorm';
 import { DexieDatabase, SQLDatabase, getOrmConfig } from '../database';
-import { EthereumProvider } from 'blockchain';
 import { SdkEvent, SdkInitState } from '../sdk';
 import { AccountId } from '../user';
 import { CoreSdk, CoreSdkEvent, CoreSdkOptions } from './core_sdk';
 import { AssetId } from 'barretenberg/asset';
-import { BlockchainStatus } from 'barretenberg/blockchain';
+import { Blockchain } from 'barretenberg/blockchain';
 import { EscapeHatchRollupProvider } from '../escape_hatch_rollup_provider';
+import { getServiceName } from 'barretenberg/service';
 
 const debug = createDebug('bb:create_sdk');
 
@@ -48,13 +47,7 @@ export type SdkOptions = {
   minConfirmationEHW?: number;
 } & CoreSdkOptions;
 
-async function sdkFactory(
-  hostStr: string,
-  options: SdkOptions,
-  serviceName: string,
-  status: BlockchainStatus,
-  ethereumProvider: EthereumProvider,
-) {
+async function sdkFactory(hostStr: string, options: SdkOptions, blockchain: Blockchain) {
   if (options.debug) {
     createDebug.enable('bb:*');
   }
@@ -70,24 +63,16 @@ async function sdkFactory(
     await db.clear();
   }
 
+  const serviceName = await getServiceName(hostStr);
   const escapeHatchMode = serviceName === 'sriracha';
 
   if (!escapeHatchMode) {
     const rollupProvider = new ServerRollupProvider(host);
-    const rollupProviderExplorer = new ServerRollupProviderExplorer(host);
-    return new CoreSdk(leveldb, db, rollupProvider, rollupProviderExplorer, undefined, options, escapeHatchMode);
+    return new CoreSdk(leveldb, db, rollupProvider, undefined, blockchain, options, escapeHatchMode);
   } else {
-    const { minConfirmationEHW } = options;
     const srirachaProvider = new SrirachaProvider(host);
-    const config = {
-      networkOrHost: hostStr,
-      console: false,
-      gasLimit: 7000000,
-      minConfirmationEHW,
-    };
-    const blockchain = await EthereumBlockchain.new(config, status.rollupContractAddress, ethereumProvider);
     const rollupProvider = new EscapeHatchRollupProvider(blockchain);
-    return new CoreSdk(leveldb, db, rollupProvider, undefined, srirachaProvider, options, escapeHatchMode);
+    return new CoreSdk(leveldb, db, rollupProvider, srirachaProvider, blockchain, options, escapeHatchMode);
   }
 }
 
@@ -96,15 +81,10 @@ async function sdkFactory(
  * share events and synchronise instances. Only one instance will be the "leader" and that instance will receive
  * blocks from the block source and update the (shared) world state.
  */
-export async function createSdk(
-  hostStr: string,
-  options: SdkOptions = {},
-  serviceName: string,
-  status: BlockchainStatus,
-  ethereumProvider: EthereumProvider,
-) {
+export async function createSdk(hostStr: string, options: SdkOptions = {}, blockchain: Blockchain) {
   options = { syncInstances: true, saveProvingKey: true, ...options };
-  const sdk = await sdkFactory(hostStr, options, serviceName, status, ethereumProvider);
+  const sdk = await sdkFactory(hostStr, options, blockchain);
+
   if (!options.syncInstances) {
     // We're not going to sync across multiple instances. We should start recieving blocks once initialized.
     sdk.on(SdkEvent.UPDATED_INIT_STATE, state => {
@@ -146,7 +126,6 @@ export async function createSdk(
           assetId,
         }),
     );
-    sdk.on(CoreSdkEvent.CLEAR_DATA, () => channel.postMessage({ name: CoreSdkEvent.CLEAR_DATA }));
 
     channel.onmessage = msg => {
       if (sdk.getLocalStatus().initState !== SdkInitState.INITIALIZED) {
@@ -166,9 +145,6 @@ export async function createSdk(
             msg.diff ? BigInt(msg.diff) : undefined,
             msg.assetId,
           );
-          break;
-        case CoreSdkEvent.CLEAR_DATA:
-          sdk.notifiedClearData();
           break;
       }
     };

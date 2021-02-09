@@ -1,12 +1,12 @@
 import { GrumpkinAddress } from 'barretenberg/address';
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
-import { TxHash } from 'barretenberg/rollup_provider';
+import { TxHash } from 'barretenberg/tx_hash';
 import { Note } from '../note';
-import { AccountAliasId, UserData, AccountId } from '../user';
+import { UserData, AccountId } from '../user';
 import { UserAccountTx, UserJoinSplitTx } from '../user_tx';
 
 export interface SigningKey {
-  accountAliasId: AccountAliasId;
+  accountId: AccountId;
   address: GrumpkinAddress;
   key: Buffer; // only contains x coordinate of a grumpkin address.
   treeIndex: number;
@@ -48,12 +48,12 @@ export interface Database {
   settleAccountTx(txHash: TxHash): Promise<void>;
 
   addUserSigningKey(signingKey: SigningKey): Promise<void>;
-  getUserSigningKeys(accountAliasId: AccountAliasId): Promise<SigningKey[]>;
-  getUserSigningKeyIndex(accountAliasId: AccountAliasId, signingKey: GrumpkinAddress): Promise<number | undefined>;
-  removeUserSigningKeys(accountAliasId: AccountAliasId): Promise<void>;
+  getUserSigningKeys(accountId: AccountId): Promise<SigningKey[]>;
+  getUserSigningKeyIndex(accountId: AccountId, signingKey: GrumpkinAddress): Promise<number | undefined>;
+  removeUserSigningKeys(accountId: AccountId): Promise<void>;
 
-  addAlias(alias: Alias): Promise<void>;
-  updateAlias(alias: Alias): Promise<void>;
+  setAlias(alias: Alias): Promise<void>;
+  setAliases(alias: Alias[]): Promise<void>;
   getAlias(aliasHash: AliasHash, address: GrumpkinAddress): Promise<Alias | undefined>;
   getAliases(aliasHash: AliasHash): Promise<Alias[]>;
   getLatestNonceByAddress(address: GrumpkinAddress): Promise<number | undefined>;

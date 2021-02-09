@@ -9,10 +9,12 @@ import { WorldState } from 'barretenberg/world_state';
 import createDebug from 'debug';
 import { ethers } from 'ethers';
 import { AccountId } from '../../user';
-import { EthereumSigner, Signer } from '../../signer';
+import { Signer } from '../../signer';
 import { UserState } from '../../user_state';
 import { JoinSplitTxFactory } from './join_split_tx_factory';
 import { Database } from '../../database';
+import { Blake2s } from 'barretenberg/crypto/blake2s';
+import { EthereumSigner } from 'barretenberg/blockchain';
 
 const debug = createDebug('bb:join_split_proof_creator');
 
@@ -21,13 +23,15 @@ export class JoinSplitProofCreator {
 
   constructor(
     private joinSplitProver: JoinSplitProver,
+    private ethSigner: EthereumSigner,
     worldState: WorldState,
+    blake2s: Blake2s,
     grumpkin: Grumpkin,
     pedersen: Pedersen,
     noteAlgos: NoteAlgorithms,
     db: Database,
   ) {
-    this.txFactory = new JoinSplitTxFactory(worldState, grumpkin, pedersen, noteAlgos, db);
+    this.txFactory = new JoinSplitTxFactory(worldState, blake2s, grumpkin, pedersen, noteAlgos, db);
   }
 
   public async createProof(
@@ -40,10 +44,14 @@ export class JoinSplitProofCreator {
     assetId: AssetId,
     signer: Signer,
     receiver?: AccountId,
-    outputOwnerAddress?: EthAddress,
-    ethSigner?: EthereumSigner,
+    outputOwner?: EthAddress,
+    inputOwner?: EthAddress,
   ) {
-    const { tx, outputKeys } = await this.txFactory.createJoinSplitTx(
+    if (publicInput && !inputOwner) {
+      throw new Error('Input owner undefined.');
+    }
+
+    const { tx, viewingKeys } = await this.txFactory.createJoinSplitTx(
       userState,
       publicInput,
       publicOutput,
@@ -53,10 +61,9 @@ export class JoinSplitProofCreator {
       assetId,
       signer,
       receiver,
-      ethSigner ? ethSigner.getAddress() : undefined,
-      outputOwnerAddress,
+      inputOwner,
+      outputOwner,
     );
-    const viewingKeys = this.txFactory.createViewingKeys(tx.outputNotes, outputKeys);
 
     debug('creating proof...');
     const start = new Date().getTime();
@@ -70,27 +77,14 @@ export class JoinSplitProofCreator {
       proofData: { txId },
     } = joinSplitProof;
 
-    const depositSignature = publicInput ? await this.ethSign(depositSigningData, ethSigner) : undefined;
+    const depositSignature = publicInput ? await this.ethSign(depositSigningData, inputOwner!) : undefined;
 
     return { proofData, viewingKeys, depositSignature, txId };
   }
 
-  private async ethSign(txPublicInputs: Buffer, ethSigner?: EthereumSigner) {
-    if (!ethSigner) {
-      throw new Error('Signer undefined.');
-    }
-
+  private async ethSign(txPublicInputs: Buffer, inputOwner: EthAddress) {
     const msgHash = ethers.utils.keccak256(txPublicInputs);
     const digest = ethers.utils.arrayify(msgHash);
-    let signature = await ethSigner.signMessage(Buffer.from(digest));
-
-    // Ganache is not signature standard compliant. Returns 00 or 01 as v.
-    // Need to adjust to make v 27 or 28.
-    const v = signature[signature.length - 1];
-    if (v <= 1) {
-      signature = Buffer.concat([signature.slice(0, -1), Buffer.from([v + 27])]);
-    }
-
-    return signature;
+    return await this.ethSigner.signMessage(Buffer.from(digest), inputOwner);
   }
 }

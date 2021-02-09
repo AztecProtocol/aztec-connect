@@ -1,4 +1,5 @@
 import { EthAddress } from 'barretenberg/address';
+import { TypedData } from 'barretenberg/blockchain';
 
 export function createPermitData(
   name: string,
@@ -9,7 +10,7 @@ export function createPermitData(
   deadline: bigint,
   chainId: number,
   verifyingContract: EthAddress,
-) {
+): TypedData {
   const domain = getDomain(name, chainId, verifyingContract.toString());
   const types = getTypes();
   const message = getMessage(owner, spender, value, nonce, deadline);

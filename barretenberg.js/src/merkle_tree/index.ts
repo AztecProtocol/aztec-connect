@@ -4,25 +4,14 @@ import { serializeBufferArrayToVector, deserializeArrayFromVector } from '../ser
 const MAX_DEPTH = 32;
 const LEAF_BYTES = 64;
 
-/*
-TODO: Maybe use these for bitshifts over 32 bits?
-function lshift(num, bits) {
-  return num * Math.pow(2,bits);
-}
-
-function rshift(num, bits) {
-  return num / Math.pow(2,bits);
-}
-*/
-
 function keepNLsb(input: number, numBits: number) {
   return numBits >= MAX_DEPTH ? input : input & ((1 << numBits) - 1);
 }
 
-export interface LeafHasher {
+export interface Hasher {
   compress(lhs: Uint8Array, rhs: Uint8Array): Buffer;
   hashToField(data: Uint8Array): Buffer;
-  hashValuesToTree(values: Buffer[]): Buffer[];
+  hashValuesToTree(values: Buffer[]): Promise<Buffer[]>;
 }
 
 export class HashPath {
@@ -54,7 +43,7 @@ export class MerkleTree {
 
   constructor(
     private db: LevelUp,
-    private leafHasher: LeafHasher,
+    private hasher: Hasher,
     private name: string,
     private depth: number,
     private size: number = 0,
@@ -65,28 +54,28 @@ export class MerkleTree {
     }
 
     // Compute the zero values at each layer.
-    let current = this.leafHasher.hashToField(Buffer.alloc(LEAF_BYTES, 0));
+    let current = this.hasher.hashToField(Buffer.alloc(LEAF_BYTES, 0));
     for (let i = 0; i < depth; ++i) {
       this.zeroHashes[i] = current;
-      current = leafHasher.compress(current, current);
+      current = hasher.compress(current, current);
     }
 
     this.root = root ? root : current;
   }
 
-  static async new(db: LevelUp, leafHasher: LeafHasher, name: string, depth: number) {
-    const tree = new MerkleTree(db, leafHasher, name, depth);
+  static async new(db: LevelUp, hasher: Hasher, name: string, depth: number) {
+    const tree = new MerkleTree(db, hasher, name, depth);
     await tree.writeMeta();
 
     return tree;
   }
 
-  static async fromName(db: LevelUp, leafHasher: LeafHasher, name: string) {
+  static async fromName(db: LevelUp, hasher: Hasher, name: string) {
     const meta: Buffer = await db.get(Buffer.from(name));
     const root = meta.slice(0, 32);
     const depth = meta.readUInt32LE(32);
     const size = meta.readUInt32LE(36);
-    return new MerkleTree(db, leafHasher, name, depth, size, root);
+    return new MerkleTree(db, hasher, name, depth, size, root);
   }
 
   public async syncFromDb() {
@@ -161,7 +150,7 @@ export class MerkleTree {
 
   public async updateElement(index: number, value: Buffer) {
     const batch = this.db.batch();
-    const shaLeaf = this.leafHasher.hashToField(value);
+    const shaLeaf = this.hasher.hashToField(value);
     this.root = await this.updateElementInternal(this.root, shaLeaf, index, this.depth, batch);
 
     this.size = Math.max(this.size, index + 1);
@@ -200,7 +189,7 @@ export class MerkleTree {
     } else {
       left = newSubtreeRoot;
     }
-    const newRoot = this.leafHasher.compress(left, right);
+    const newRoot = this.hasher.compress(left, right);
     batch.put(newRoot, Buffer.concat([left, right]));
     if (!root.equals(newRoot)) {
       await batch.del(root);
@@ -208,33 +197,52 @@ export class MerkleTree {
     return newRoot;
   }
 
+  /**
+   * Updates all the given values, starting at index. This is optimal when inserting multiple values, as it can
+   * compute a single subtree and insert it in one go.
+   * However it comes with restrictions:
+   * - The insertion index must be a multiple of the subtree size, which must be power of 2.
+   * - The insertion index must be >= the current size of the tree (inserting into an empty location).
+   *
+   * We cannot over extend the tree size, as these inserts are bulk inserts, and a subsequent update would involve
+   * a lot of complexity adjusting a previously inserted bulk insert. For this reason depending on the number of
+   * values to insert, it will be chunked into the fewest number of subtrees required to grow the tree be precisely
+   * that size. In normal operation (e.g. continuously inserting 64 values), we will be able to leverage single inserts.
+   * Only when synching creates a non power of 2 set of values will the chunking mechanism come into play.
+   * e.g. If we need insert 192 values, first a subtree of 128 is inserted, then a subtree of 32.
+   */
   public async updateElements(index: number, values: Buffer[]) {
-    const subtreeDepth = Math.ceil(Math.log2(values.length));
-    const subtreeSize = 2 ** subtreeDepth;
-    if (index % subtreeSize !== 0) {
-      throw new Error(`Subtree insertion index must be a multiple of the subtree size being inserted.`);
-    }
     if (index < this.size) {
       // Simply because we don't currently erase any existing data...
       throw new Error(`Subtree insertion must be in empty part of the tree.`);
     }
-    values = values.concat(Array(subtreeSize - values.length).fill(Buffer.alloc(64, 0)));
 
-    // Actually not any faster. But perhaps could be...
-    // const hashes = this.leafHasher.hashValuesToTree(values);
+    while (values.length) {
+      const batch = this.db.batch();
+      let subtreeDepth = Math.ceil(Math.log2(values.length));
+      let subtreeSize = 2 ** subtreeDepth;
 
-    const hashes = values.map(v => this.leafHasher.hashToField(v));
-    for (let i = 0; i < (subtreeSize - 1) * 2; i += 2) {
-      hashes.push(this.leafHasher.compress(hashes[i], hashes[i + 1]));
+      // We need to reduce the size of the subtree being inserted until it is:
+      // a) Less than or equal in size to the number of values being inserted.
+      // b) Fits in a subtree, with a size that is a multiple of the insertion index.
+      while (values.length < subtreeSize || index % subtreeSize !== 0) {
+        subtreeSize >>= 1;
+        subtreeDepth--;
+      }
+
+      const toInsert = values.slice(0, subtreeSize);
+      const hashes = await this.hasher.hashValuesToTree(toInsert);
+
+      this.root = await this.updateElementsInternal(this.root, hashes, index, this.depth, subtreeDepth, batch);
+
+      // Slice off inserted values and adjust next insertion index.
+      values = values.slice(subtreeSize);
+      index += subtreeSize;
+      this.size = index + values.length;
+
+      await this.writeMeta(batch);
+      await batch.write();
     }
-
-    const batch = this.db.batch();
-    this.root = await this.updateElementsInternal(this.root, hashes, index, this.depth, subtreeDepth, batch);
-
-    this.size = Math.max(this.size, index + subtreeSize);
-
-    await this.writeMeta(batch);
-    await batch.write();
   }
 
   private async updateElementsInternal(
@@ -275,7 +283,7 @@ export class MerkleTree {
     } else {
       left = newSubtreeRoot;
     }
-    const newRoot = this.leafHasher.compress(left, right);
+    const newRoot = this.hasher.compress(left, right);
     batch.put(newRoot, Buffer.concat([left, right]));
     if (!root.equals(newRoot)) {
       await batch.del(root);

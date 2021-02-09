@@ -1,9 +1,9 @@
 import { GrumpkinAddress } from 'barretenberg/address';
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
-import { TxHash } from 'barretenberg/rollup_provider';
+import { TxHash } from 'barretenberg/tx_hash';
 import { Connection, ConnectionOptions, MoreThan, MoreThanOrEqual, Repository } from 'typeorm';
 import { Note } from '../../note';
-import { AccountAliasId, UserData, AccountId } from '../../user';
+import { UserData, AccountId } from '../../user';
 import { UserAccountTx, UserJoinSplitTx } from '../../user_tx';
 import { Alias, Database, SigningKey } from '../database';
 import { AliasDao } from './alias_dao';
@@ -148,26 +148,29 @@ export class SQLDatabase implements Database {
     await this.userKeyRep.save(signingKey);
   }
 
-  async getUserSigningKeys(accountAliasId: AccountAliasId) {
-    return await this.userKeyRep.find({ accountAliasId });
+  async getUserSigningKeys(accountId: AccountId) {
+    return await this.userKeyRep.find({ accountId });
   }
 
-  async getUserSigningKeyIndex(accountAliasId: AccountAliasId, key: GrumpkinAddress) {
+  async getUserSigningKeyIndex(accountId: AccountId, key: GrumpkinAddress) {
     const keyBuffer = key.toBuffer();
-    const signingKey = await this.userKeyRep.findOne({ where: { accountAliasId, key: keyBuffer.slice(0, 32) } });
+    const signingKey = await this.userKeyRep.findOne({ where: { accountId, key: keyBuffer.slice(0, 32) } });
     return signingKey ? signingKey.treeIndex : undefined;
   }
 
-  async removeUserSigningKeys(accountAliasId: AccountAliasId) {
-    await this.userKeyRep.delete({ accountAliasId });
+  async removeUserSigningKeys(accountId: AccountId) {
+    await this.userKeyRep.delete({ accountId });
   }
 
-  async addAlias(alias: Alias) {
+  async setAlias(alias: Alias) {
     await this.aliasRep.save(alias);
   }
 
-  async updateAlias(alias: Alias) {
-    await this.aliasRep.update({ aliasHash: alias.aliasHash, address: alias.address }, alias);
+  async setAliases(aliases: Alias[]) {
+    // TODO: Dedupe for bulk insert.
+    for (const alias of aliases) {
+      await this.aliasRep.save(alias);
+    }
   }
 
   async getAlias(aliasHash: AliasHash, address: GrumpkinAddress) {

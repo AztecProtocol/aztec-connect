@@ -11,8 +11,7 @@ export interface Database {
   clear(): Promise<void>;
   close(): Promise<void>;
 
-  addAccount(account: DbAccount): Promise<void>;
+  setAccount(account: DbAccount): Promise<void>;
   getAccount(ethAddress: EthAddress): Promise<DbAccount | undefined>;
-  getAccounts(): Promise<DbAccount[]>;
   deleteAccount(ethAddress: EthAddress): Promise<void>;
 }

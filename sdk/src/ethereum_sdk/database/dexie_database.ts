@@ -20,8 +20,9 @@ export class DexieDatabase implements Database {
   async init() {
     this.createTables();
 
+    // If schemas changed, delete db.
     try {
-      await this.getAccounts();
+      await this.getAccount(EthAddress.ZERO);
     } catch (e) {
       await this.db.delete();
       this.createTables();
@@ -48,7 +49,7 @@ export class DexieDatabase implements Database {
     await this.db.close();
   }
 
-  async addAccount({ ethAddress, accountPublicKey }: DbAccount) {
+  async setAccount({ ethAddress, accountPublicKey }: DbAccount) {
     await this.user.put(
       new DexieAccount(new Uint8Array(ethAddress.toBuffer()), new Uint8Array(accountPublicKey.toBuffer())),
     );
@@ -57,11 +58,6 @@ export class DexieDatabase implements Database {
   async getAccount(ethAddress: EthAddress) {
     const account = await this.user.get({ ethAddress: new Uint8Array(ethAddress.toBuffer()) });
     return account ? dexieAccountToDbAccount(account) : undefined;
-  }
-
-  async getAccounts() {
-    const users = await this.user.toArray();
-    return users.map(dexieAccountToDbAccount);
   }
 
   async deleteAccount(ethAddress: EthAddress) {

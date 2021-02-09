@@ -1,7 +1,16 @@
+import { Blake2s } from '../crypto/blake2s';
 import { AliasHash } from './alias_hash';
 
 export class AccountAliasId {
   constructor(public aliasHash: AliasHash, public nonce: number) {}
+
+  static fromAlias(alias: string, nonce: number, blake2s: Blake2s) {
+    return new AccountAliasId(AliasHash.fromAlias(alias, blake2s), nonce);
+  }
+
+  static random() {
+    return new AccountAliasId(AliasHash.random(), 0);
+  }
 
   public static fromBuffer(id: Buffer) {
     if (id.length !== 32) {

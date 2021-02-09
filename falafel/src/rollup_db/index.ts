@@ -3,7 +3,7 @@ import { EthAddress } from 'barretenberg/address';
 import { AccountAliasId } from 'barretenberg/client_proofs/account_alias_id';
 import { JoinSplitProofData, ProofData } from 'barretenberg/client_proofs/proof_data';
 import { InnerProofData } from 'barretenberg/rollup_proof';
-import { TxHash } from 'barretenberg/rollup_provider';
+import { TxHash } from 'barretenberg/tx_hash';
 import { toBufferBE } from 'bigint-buffer';
 import { Connection, In, IsNull, MoreThanOrEqual, Not, Repository } from 'typeorm';
 import { AccountTxDao } from '../entity/account_tx';

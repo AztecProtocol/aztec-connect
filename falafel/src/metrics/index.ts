@@ -1,28 +1,10 @@
 import { AssetId, AssetIds } from 'barretenberg/asset';
 import { Blockchain } from 'barretenberg/blockchain';
+import { fromBaseUnits } from 'blockchain';
 import { WorldStateDb } from 'barretenberg/world_state_db';
 import { toBigIntBE } from 'bigint-buffer';
 import client, { Gauge, Histogram } from 'prom-client';
 import { RollupDb } from '../rollup_db';
-
-/**
- * Converts the value to a decimal string representation with the given precision.
- * The digits outside the precision are simply discarded (i.e. the result is floored).
- * This ensures we never report more funds than actually exists.
- * @param value to convert to string
- * @param decimals the number of least significant digits of value that represent the decimal
- * @param precision the number of decimal places to return
- */
-export function fromBaseUnits(value: bigint, decimals: number, precision: number = decimals) {
-  const neg = value < BigInt(0);
-  const valStr = value
-    .toString()
-    .slice(neg ? 1 : 0)
-    .padStart(decimals + 1, '0');
-  const integer = valStr.slice(0, valStr.length - decimals);
-  const fractional = valStr.slice(-decimals);
-  return Number((neg ? '-' : '') + (fractional ? `${integer}.${fractional.slice(0, precision)}` : integer));
-}
 
 export class Metrics {
   private receiveTxDuration: Histogram<string>;
@@ -219,19 +201,19 @@ export class Metrics {
   async getMetrics() {
     const status = await this.blockchain.getBlockchainStatus();
     for (const asset of AssetIds) {
-      const totalDeposited = fromBaseUnits(status.totalDeposited[asset], status.assets[asset].decimals);
+      const totalDeposited = +fromBaseUnits(status.totalDeposited[asset], status.assets[asset].decimals);
       this.totalDeposited.labels(AssetId[asset].toString()).set(totalDeposited);
 
-      const totalPendingDeposit = fromBaseUnits(status.totalPendingDeposit[asset], status.assets[asset].decimals);
+      const totalPendingDeposit = +fromBaseUnits(status.totalPendingDeposit[asset], status.assets[asset].decimals);
       this.totalPendingDeposit.labels(AssetId[asset].toString()).set(totalPendingDeposit);
 
-      const totalWithdrawn = fromBaseUnits(status.totalWithdrawn[asset], status.assets[asset].decimals);
+      const totalWithdrawn = +fromBaseUnits(status.totalWithdrawn[asset], status.assets[asset].decimals);
       this.totalWithdrawn.labels(AssetId[asset].toString()).set(totalWithdrawn);
 
-      const totalFees = fromBaseUnits(status.totalFees[asset], status.assets[asset].decimals);
+      const totalFees = +fromBaseUnits(status.totalFees[asset], status.assets[asset].decimals);
       this.totalFees.labels(AssetId[asset].toString()).set(totalFees);
 
-      const feeDistributorBalance = fromBaseUnits(status.feeDistributorBalance[asset], status.assets[asset].decimals);
+      const feeDistributorBalance = +fromBaseUnits(status.feeDistributorBalance[asset], status.assets[asset].decimals);
       this.feeDistributorBalance.labels(AssetId[asset].toString()).set(feeDistributorBalance);
     }
 

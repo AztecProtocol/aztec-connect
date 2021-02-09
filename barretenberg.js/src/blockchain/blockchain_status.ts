@@ -5,11 +5,11 @@ export interface BlockchainAsset {
   permitSupport: boolean;
   decimals: number;
   symbol: string;
+  name: string;
 }
 
 export interface BlockchainStatus {
   chainId: number;
-  networkOrHost: string;
   rollupContractAddress: EthAddress;
   feeDistributorContractAddress: EthAddress;
   nextRollupId: number;
@@ -29,7 +29,6 @@ export interface BlockchainStatus {
 
 export interface BlockchainStatusJson {
   chainId: number;
-  networkOrHost: string;
   rollupContractAddress: string;
   feeDistributorContractAddress: string;
   nextRollupId: number;
@@ -49,6 +48,7 @@ export interface BlockchainStatusJson {
     permitSupport: boolean;
     decimals: number;
     symbol: string;
+    name: string;
   }[];
 }
 
@@ -72,7 +72,7 @@ export function blockchainStatusToJson(status: BlockchainStatus): BlockchainStat
   };
 }
 
-export function blockchainStatusFromJson(json: BlockchainStatusJson) {
+export function blockchainStatusFromJson(json: BlockchainStatusJson): BlockchainStatus {
   return {
     ...json,
     rollupContractAddress: EthAddress.fromString(json.rollupContractAddress),

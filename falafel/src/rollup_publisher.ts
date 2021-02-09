@@ -2,7 +2,7 @@ import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from 'barretenberg/address';
 import { Blockchain } from 'barretenberg/blockchain';
 import { RollupProofData } from 'barretenberg/rollup_proof';
-import { TxHash } from 'barretenberg/rollup_provider';
+import { TxHash } from 'barretenberg/tx_hash';
 import { toBufferBE } from 'bigint-buffer';
 import { EthereumProvider } from 'blockchain';
 import { Signer, utils } from 'ethers';
@@ -14,7 +14,7 @@ import { RollupDb } from './rollup_db';
 export class RollupPublisher {
   private interrupted = false;
   private interruptPromise = Promise.resolve();
-  private interruptResolve = () => { };
+  private interruptResolve = () => {};
   private signer: Signer;
 
   constructor(
@@ -95,7 +95,10 @@ export class RollupPublisher {
   private async createTxData(rollup: RollupDao) {
     const proof = rollup.rollupProof.proofData;
     const txs = rollup.rollupProof.txs;
-    const viewingKeys = txs.map(tx => [tx.viewingKey1, tx.viewingKey2]).flat().map(vk => vk.toBuffer());
+    const viewingKeys = txs
+      .map(tx => [tx.viewingKey1, tx.viewingKey2])
+      .flat()
+      .map(vk => vk.toBuffer());
     const signatures = txs.map(tx => tx.signature!).filter(s => !!s);
     const providerAddress = EthAddress.fromString(await this.signer.getAddress());
     const { feeDistributorContractAddress } = await this.blockchain.getBlockchainStatus();

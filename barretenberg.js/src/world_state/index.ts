@@ -1,7 +1,6 @@
 import { MerkleTree } from '../merkle_tree';
 import { LevelUp } from 'levelup';
 import { Pedersen } from '../crypto/pedersen';
-import { Block } from '../block_source';
 import { RollupProofData } from '../rollup_proof';
 import createDebug from 'debug';
 
@@ -22,15 +21,27 @@ export class WorldState {
     debug(`data root: ${this.tree.getRoot().toString('hex')}`);
   }
 
-  public async processBlock(block: Block) {
-    const { rollupProofData, viewingKeysData } = block;
-    const rollup = RollupProofData.fromBuffer(rollupProofData, viewingKeysData);
+  public async processRollup(rollup: RollupProofData) {
     const { rollupId, dataStartIndex, innerProofData } = rollup;
 
     debug(`processing rollup ${rollupId}...`);
 
     const leaves = innerProofData.map(p => [p.newNote1, p.newNote2]).flat();
     await this.tree.updateElements(dataStartIndex, leaves);
+
+    debug(`data size: ${this.tree.getSize()}`);
+    debug(`data root: ${this.tree.getRoot().toString('hex')}`);
+  }
+
+  public async processRollups(rollups: RollupProofData[]) {
+    debug(`processing ${rollups.length} rollups from rollup ${rollups[0].rollupId}...`);
+
+    const leaves = rollups
+      .map(r => r.innerProofData)
+      .flat()
+      .map(p => [p.newNote1, p.newNote2])
+      .flat();
+    await this.tree.updateElements(rollups[0].dataStartIndex, leaves);
 
     debug(`data size: ${this.tree.getSize()}`);
     debug(`data root: ${this.tree.getRoot().toString('hex')}`);

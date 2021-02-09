@@ -85,6 +85,14 @@ describe('merkle_tree', () => {
   });
 
   it('should get same result when using subtree insertion', async () => {
+    const values: Buffer[] = [];
+    for (let i = 0; i < 32 * 8; ++i) {
+      const v = Buffer.alloc(64, 0);
+      v.writeUInt32LE(i, 0);
+      values[i] = v;
+    }
+
+    // Create reference tree.
     const db1 = levelup(memdown());
     const tree1 = await MerkleTree.new(db1, pedersen, 'test', 10);
 
@@ -92,18 +100,70 @@ describe('merkle_tree', () => {
       await tree1.updateElement(i, values[i]);
     }
 
+    // Create tree from subtrees.
     const db2 = levelup(memdown());
     const tree2 = await MerkleTree.new(db2, pedersen, 'test', 10);
 
-    const subtreeInsertIndex = values.length / 2;
-    for (let i = 0; i < subtreeInsertIndex; ++i) {
-      await tree2.updateElement(i, values[i]);
+    for (let i = 0; i < values.length; i += 32) {
+      await tree2.updateElements(i, values.slice(i, i + 32));
     }
-    await tree2.updateElements(subtreeInsertIndex, values.slice(subtreeInsertIndex));
 
-    expect(tree2.getRoot().toString('hex')).toEqual(tree2.getRoot().toString('hex'));
+    expect(tree2.getRoot().toString('hex')).toEqual(tree1.getRoot().toString('hex'));
 
     for (let i = 0; i < values.length; ++i) {
+      const hashPath1 = await tree1.getHashPath(i);
+      const hashPath2 = await tree2.getHashPath(i);
+      expect(hashPath2).toStrictEqual(hashPath1);
+    }
+  });
+
+  it('should update elements without over extending tree size', async () => {
+    // Create reference tree from 12 values.
+    const db1 = levelup(memdown());
+    const tree1 = await MerkleTree.new(db1, pedersen, 'test', 10);
+
+    for (let i = 0; i < 12; ++i) {
+      await tree1.updateElement(i, values[i]);
+    }
+
+    // Create tree from 2 updates, of 6 values in each.
+    const db2 = levelup(memdown());
+    const tree2 = await MerkleTree.new(db2, pedersen, 'test', 10);
+
+    await tree2.updateElements(0, values.slice(0, 12));
+
+    expect(tree2.getRoot().toString('hex')).toEqual(tree1.getRoot().toString('hex'));
+
+    for (let i = 0; i < 12; ++i) {
+      const hashPath1 = await tree1.getHashPath(i);
+      const hashPath2 = await tree2.getHashPath(i);
+      expect(hashPath2).toStrictEqual(hashPath1);
+    }
+  });
+
+  it('should update elements, simulating escape hatch behaviour', async () => {
+    // Create reference tree.
+    const db1 = levelup(memdown());
+    const tree1 = await MerkleTree.new(db1, pedersen, 'test', 10);
+
+    for (let i = 0; i < 9; ++i) {
+      await tree1.updateElement(i, values[i]);
+    }
+    for (let i = 16; i < 24; ++i) {
+      await tree1.updateElement(i, values[i]);
+    }
+
+    // Create tree from 8 rollup, 1 escape, 8 rollup.
+    const db2 = levelup(memdown());
+    const tree2 = await MerkleTree.new(db2, pedersen, 'test', 10);
+
+    await tree2.updateElements(0, values.slice(0, 8));
+    await tree2.updateElements(8, [values[8]]);
+    await tree2.updateElements(16, values.slice(16, 24));
+
+    expect(tree2.getRoot().toString('hex')).toEqual(tree1.getRoot().toString('hex'));
+
+    for (let i = 0; i < 24; ++i) {
       const hashPath1 = await tree1.getHashPath(i);
       const hashPath2 = await tree2.getHashPath(i);
       expect(hashPath2).toStrictEqual(hashPath1);

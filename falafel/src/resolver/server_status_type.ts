@@ -7,9 +7,6 @@ export class ServerStatusType {
   chainId!: number;
 
   @Field()
-  networkOrHost!: string;
-
-  @Field()
   rollupContractAddress!: string;
 
   @Field(() => Int)

@@ -1,9 +1,9 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { AssetId } from 'barretenberg/asset';
-import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { JoinSplitTx, computeSigningData } from 'barretenberg/client_proofs/join_split_proof';
 import { createEphemeralPrivKey, encryptNote, Note } from 'barretenberg/client_proofs/note';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
+import { Blake2s } from 'barretenberg/crypto/blake2s';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { WorldState } from 'barretenberg/world_state';
@@ -15,6 +15,7 @@ import { UserState } from '../../user_state';
 export class JoinSplitTxFactory {
   constructor(
     private worldState: WorldState,
+    private blake2s: Blake2s,
     private grumpkin: Grumpkin,
     private pedersen: Pedersen,
     private noteAlgos: NoteAlgorithms,
@@ -40,8 +41,8 @@ export class JoinSplitTxFactory {
       throw new Error(`Failed to find no more than 2 notes that sum to ${privateInput}.`);
     }
 
-    const sender = userState.getUser();
-    const accountAliasId = new AccountAliasId(sender.aliasHash || AliasHash.random(), sender.nonce);
+    const { id, alias, publicKey, nonce } = userState.getUser();
+    const accountAliasId = alias ? AccountAliasId.fromAlias(alias, nonce, this.blake2s) : AccountAliasId.random();
 
     const numInputNotes = notes.length;
     const totalNoteInputValue = notes.reduce((sum, note) => sum + note.value, BigInt(0));
@@ -51,14 +52,7 @@ export class JoinSplitTxFactory {
     for (let i = notes.length; i < 2; ++i) {
       inputNoteIndices.push(maxNoteIndex + i); // notes can't have the same index
       inputNotes.push(
-        Note.createFromEphPriv(
-          sender.publicKey,
-          BigInt(0),
-          assetId,
-          sender.nonce,
-          createEphemeralPrivKey(),
-          this.grumpkin,
-        ),
+        Note.createFromEphPriv(publicKey, BigInt(0), assetId, nonce, createEphemeralPrivKey(), this.grumpkin),
       );
     }
     const inputNotePaths = await Promise.all(inputNoteIndices.map(async idx => this.worldState.getHashPath(idx)));
@@ -81,10 +75,10 @@ export class JoinSplitTxFactory {
         this.grumpkin,
       ),
       Note.createFromEphPriv(
-        sender.publicKey,
+        publicKey,
         changeValue + senderPrivateOutput,
         assetId,
-        sender.nonce,
+        nonce,
         outputNote2EphKey,
         this.grumpkin,
       ),
@@ -115,8 +109,7 @@ export class JoinSplitTxFactory {
 
     const signature = await signer.signMessage(message);
 
-    const accountIndex =
-      accountAliasId.nonce !== 0 ? await this.db.getUserSigningKeyIndex(accountAliasId, signer.getPublicKey()) : 0;
+    const accountIndex = nonce !== 0 ? await this.db.getUserSigningKeyIndex(id, signer.getPublicKey()) : 0;
     if (accountIndex === undefined) {
       throw new Error('Unknown signing key.');
     }
@@ -144,11 +137,12 @@ export class JoinSplitTxFactory {
       outputOwner,
     );
 
-    const outputKeys = [outputNote1EphKey, outputNote2EphKey];
-    return { tx, outputKeys };
+    const ephemeralPrivateKeys = [outputNote1EphKey, outputNote2EphKey];
+    const viewingKeys = this.createViewingKeys(tx.outputNotes, ephemeralPrivateKeys);
+    return { tx, viewingKeys };
   }
 
-  public createViewingKeys(notes: Note[], ephemeralPrivateKeys: Buffer[]) {
+  private createViewingKeys(notes: Note[], ephemeralPrivateKeys: Buffer[]) {
     const encViewingKey1 = encryptNote(notes[0], ephemeralPrivateKeys[0], this.grumpkin);
     const encViewingKey2 = encryptNote(notes[1], ephemeralPrivateKeys[1], this.grumpkin);
     return [encViewingKey1, encViewingKey2];

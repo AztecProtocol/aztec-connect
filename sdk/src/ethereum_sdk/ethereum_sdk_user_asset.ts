@@ -11,12 +11,8 @@ export class EthereumSdkUserAsset {
     private sdk: EthereumSdk,
   ) {}
 
-  name() {
-    return this.sdk.getAssetName(this.assetId);
-  }
-
-  symbol() {
-    return this.sdk.getAssetSymbol(this.assetId);
+  getInfo() {
+    return this.sdk.getAssetInfo(this.assetId);
   }
 
   publicBalance() {
@@ -29,10 +25,6 @@ export class EthereumSdkUserAsset {
 
   getUserPendingDeposit() {
     return this.sdk.getUserPendingDeposit(this.assetId, this.address);
-  }
-
-  getPermitSupport() {
-    return this.sdk.getAssetPermitSupport(this.assetId);
   }
 
   balance() {

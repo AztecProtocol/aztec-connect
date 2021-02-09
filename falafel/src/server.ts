@@ -1,6 +1,6 @@
 import { emptyDir } from 'fs-extra';
 import { RollupProofData } from 'barretenberg/rollup_proof';
-import { RollupProviderStatus, TxHash } from 'barretenberg/rollup_provider';
+import { RollupProviderStatus } from 'barretenberg/rollup_provider';
 import { WorldStateDb } from 'barretenberg/world_state_db';
 import { EthereumProvider } from 'blockchain';
 import { Duration } from 'moment';
@@ -17,6 +17,7 @@ import { Metrics } from './metrics';
 import { Blockchain } from 'barretenberg/blockchain';
 import { Block } from 'barretenberg/block_source';
 import { toBigIntBE } from 'bigint-buffer';
+import { TxHash } from 'barretenberg/tx_hash';
 
 export interface ServerConfig {
   readonly numInnerRollupTxs: number;

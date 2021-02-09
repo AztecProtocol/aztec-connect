@@ -1,5 +1,6 @@
 import { EthAddress } from 'barretenberg/address';
-import { TxHash } from 'barretenberg/rollup_provider';
+import { BlockchainAsset } from 'barretenberg/blockchain';
+import { TxHash } from 'barretenberg/tx_hash';
 import { AccountId } from './user';
 
 export enum SdkEvent {
@@ -51,4 +52,5 @@ export interface SdkStatus {
   initState: SdkInitState;
   dataSize: number;
   dataRoot: Buffer;
+  assets: BlockchainAsset[];
 }

@@ -29,16 +29,12 @@ export class SQLDatabase implements Database {
     await this.connection.synchronize(true);
   }
 
-  async addAccount(account: DbAccount) {
+  async setAccount(account: DbAccount) {
     await this.accountRep.save(account);
   }
 
   async getAccount(ethAddress: EthAddress) {
     return this.accountRep.findOne({ ethAddress });
-  }
-
-  async getAccounts() {
-    return this.accountRep.find();
   }
 
   async deleteAccount(ethAddress: EthAddress) {

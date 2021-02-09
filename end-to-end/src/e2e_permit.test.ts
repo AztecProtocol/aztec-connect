@@ -52,9 +52,6 @@ describe('end-to-end permit tests', () => {
   });
 
   it('should deposit funds to permit supporting asset', async () => {
-    const supportPermit = await sdk.getAssetPermitSupport(assetId);
-    expect(supportPermit).toBe(true);
-
     const depositValue = userAsset.toBaseUnits('1000');
     const txFee = await sdk.getFee(assetId);
     await userAsset.mint(depositValue + txFee);

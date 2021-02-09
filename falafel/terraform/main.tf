@@ -144,15 +144,8 @@ resource "aws_ecs_task_definition" "falafel" {
 
   volume {
     name = "efs-data-store"
-    docker_volume_configuration {
-      scope         = "shared"
-      autoprovision = true
-      driver        = "local"
-      driver_opts = {
-        type   = "nfs"
-        device = "${aws_efs_file_system.falafel_data_store.dns_name}:/"
-        o      = "addr=${aws_efs_file_system.falafel_data_store.dns_name},nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2"
-      }
+    efs_volume_configuration {
+      file_system_id = aws_efs_file_system.falafel_data_store.id
     }
   }
 
@@ -316,7 +309,7 @@ resource "aws_alb_target_group" "falafel" {
     interval            = 60
     healthy_threshold   = 2
     unhealthy_threshold = 5
-    timeout             = 30
+    timeout             = 50
   }
 
   tags = {

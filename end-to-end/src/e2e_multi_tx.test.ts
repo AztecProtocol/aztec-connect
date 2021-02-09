@@ -1,4 +1,4 @@
-import { AssetId, createWalletSdk, WalletSdk, WalletSdkUser, EthAddress, WalletProvider, Web3Signer } from '@aztec/sdk';
+import { AssetId, createWalletSdk, WalletSdk, WalletSdkUser, EthAddress, WalletProvider } from '@aztec/sdk';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
 import { getFeeDistributorContract } from './fee_distributor_contract';
@@ -62,30 +62,9 @@ describe('end-to-end wallet tests', () => {
       const schnorrSigner1 = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[1])!);
       const schnorrSigner2 = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[2])!);
 
-      const tx1Hash = await sdk.deposit(
-        AssetId.ETH,
-        users[0].id,
-        depositValue,
-        txFee,
-        schnorrSigner0,
-        new Web3Signer(provider, accounts[0]),
-      );
-      const tx2Hash = await sdk.deposit(
-        AssetId.ETH,
-        users[1].id,
-        depositValue,
-        txFee,
-        schnorrSigner1,
-        new Web3Signer(provider, accounts[1]),
-      );
-      const tx3Hash = await sdk.deposit(
-        AssetId.ETH,
-        users[2].id,
-        depositValue,
-        txFee,
-        schnorrSigner2,
-        new Web3Signer(provider, accounts[2]),
-      );
+      const tx1Hash = await sdk.deposit(AssetId.ETH, accounts[0], users[0].id, depositValue, txFee, schnorrSigner0);
+      const tx2Hash = await sdk.deposit(AssetId.ETH, accounts[1], users[1].id, depositValue, txFee, schnorrSigner1);
+      const tx3Hash = await sdk.deposit(AssetId.ETH, accounts[2], users[2].id, depositValue, txFee, schnorrSigner2);
 
       await sdk.awaitSettlement(tx1Hash, 300);
       await sdk.awaitSettlement(tx2Hash, 300);

@@ -1,8 +1,7 @@
 import { GrumpkinAddress } from 'barretenberg/address';
-import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 import { UserData, AccountId } from '../../user';
-import { aliasHashTransformer, grumpkinAddressTransformer, accountIdTransformer } from './transformer';
+import { grumpkinAddressTransformer, accountIdTransformer } from './transformer';
 
 @Entity({ name: 'userData' })
 @Index(['publicKey', 'nonce'], { unique: true })
@@ -19,8 +18,8 @@ export class UserDataDao implements UserData {
   @Column()
   public nonce!: number;
 
-  @Column('blob', { nullable: true, transformer: [aliasHashTransformer] })
-  public aliasHash?: AliasHash;
+  @Column({ nullable: true })
+  public alias?: string;
 
   @Column()
   public syncedToRollup!: number;

@@ -1,6 +1,6 @@
 import { EthAddress } from 'barretenberg/address';
 import { Block } from 'barretenberg/block_source';
-import { TxHash } from 'barretenberg/rollup_provider';
+import { TxHash } from 'barretenberg/tx_hash';
 import { Contracts } from './contracts';
 import { EthereumBlockchain, EthereumBlockchainConfig } from './ethereum_blockchain';
 
@@ -27,17 +27,13 @@ describe('ethereum_blockchain', () => {
 
   beforeEach(async () => {
     contracts = {
-      getSupportedAssets: jest.fn().mockResolvedValue([]),
-      getAssetPermitSupport: jest.fn().mockResolvedValue(false),
-      getAssetDecimals: jest.fn().mockResolvedValue(18),
-      getAssetSymbol: jest.fn().mockResolvedValue('ETH'),
+      getAssets: jest.fn().mockReturnValue([]),
       getPerRollupState: jest.fn().mockResolvedValue({ nextRollupId: 0 }),
       getPerBlockState: jest.fn().mockResolvedValue({
         escapeOpen: false,
         numEscapeBlocksRemaining: 100,
       }),
       getRollupBlocksFrom: jest.fn().mockResolvedValue(blocks),
-      getTokenContractAddresses: jest.fn().mockReturnValue([EthAddress.randomAddress()]),
       getRollupContractAddress: jest.fn().mockReturnValue(EthAddress.randomAddress()),
       getFeeDistributorContractAddress: jest.fn().mockReturnValue(EthAddress.randomAddress()),
       getBlockNumber: jest.fn().mockResolvedValue(blocks.length),
@@ -46,7 +42,6 @@ describe('ethereum_blockchain', () => {
     } as any;
 
     const config: EthereumBlockchainConfig = {
-      networkOrHost: 'test',
       console: false,
     };
 

@@ -8,7 +8,7 @@ import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { MemoryFifo } from 'barretenberg/fifo';
 import { AssetId, AssetIds } from 'barretenberg/asset';
 import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
-import { RollupProvider, TxHash } from 'barretenberg/rollup_provider';
+import { RollupProvider } from 'barretenberg/rollup_provider';
 import { toBigIntBE } from 'bigint-buffer';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
@@ -19,6 +19,7 @@ import { AccountAliasId, UserData } from '../user';
 import { UserAccountTx, UserJoinSplitTx } from '../user_tx';
 import { AccountId } from '../user/account_id';
 import { ViewingKey } from 'barretenberg/viewing_key';
+import { TxHash } from 'barretenberg/tx_hash';
 
 const debug = createDebug('bb:user_state');
 
@@ -81,6 +82,7 @@ export class UserState extends EventEmitter {
     if (this.syncState === SyncState.OFF) {
       return;
     }
+    debug(`stopping sync for ${this.user.id}.`);
     flush ? this.blockQueue.end() : this.blockQueue.cancel();
     this.syncState = SyncState.OFF;
     return this.syncingPromise;
@@ -145,12 +147,12 @@ export class UserState extends EventEmitter {
     const txHash = new TxHash(proof.txId);
     const savedTx = await this.db.getAccountTx(txHash);
 
-    const accountAliasId = new AccountAliasId(tx.aliasHash, tx.userId.nonce);
+    const accountId = new AccountId(tx.userId.publicKey, tx.userId.nonce);
 
     if (tx.newSigningPubKey1) {
       debug(`user ${this.user.id} adds signing key ${tx.newSigningPubKey1.toString('hex')}.`);
       await this.db.addUserSigningKey({
-        accountAliasId,
+        accountId,
         address: this.user.publicKey,
         key: tx.newSigningPubKey1,
         treeIndex: noteStartIndex,
@@ -160,7 +162,7 @@ export class UserState extends EventEmitter {
     if (tx.newSigningPubKey2) {
       debug(`user ${this.user.id} adds signing key ${tx.newSigningPubKey2.toString('hex')}.`);
       await this.db.addUserSigningKey({
-        accountAliasId,
+        accountId,
         address: this.user.publicKey,
         key: tx.newSigningPubKey2,
         treeIndex: noteStartIndex + 1,

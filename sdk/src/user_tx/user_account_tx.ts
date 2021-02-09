@@ -1,5 +1,5 @@
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
-import { TxHash } from 'barretenberg/rollup_provider';
+import { TxHash } from 'barretenberg/tx_hash';
 import { AccountId } from '../user';
 
 export interface UserAccountTx {

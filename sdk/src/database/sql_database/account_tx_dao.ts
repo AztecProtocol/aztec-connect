@@ -1,4 +1,4 @@
-import { TxHash } from 'barretenberg/rollup_provider';
+import { TxHash } from 'barretenberg/tx_hash';
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 import { AccountId, AliasHash } from '../../user';
 import { UserAccountTx } from '../../user_tx';

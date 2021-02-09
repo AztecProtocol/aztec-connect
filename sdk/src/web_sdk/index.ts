@@ -4,7 +4,7 @@ import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { SdkOptions } from '../core_sdk/create_sdk';
 import { createEthSdk, EthereumSdk, EthereumSdkUser } from '../ethereum_sdk';
-import { SdkEvent, SdkInitState } from '../sdk';
+import { SdkEvent } from '../sdk';
 import { chainIdToNetwork, EthProvider, EthProviderEvent } from './eth_provider';
 
 const debug = createDebug('bb:websdk');
@@ -16,10 +16,10 @@ export enum AppInitState {
 }
 
 export enum AppInitAction {
-  LINK_PROVIDER_ACCOUNT,
-  LINK_AZTEC_ACCOUNT,
-  AWAIT_LINK_AZTEC_ACCOUNT,
-  CHANGE_NETWORK,
+  LINK_PROVIDER_ACCOUNT = 'LINK_PROVIDER_ACCOUNT',
+  AWAITING_PROVIDER_SIGNATURE = 'AWAITING_PROVIDER_SIGNATURE',
+  AWAITING_PERMISSION_TO_LINK = 'AWAITING_PERMISSION_TO_LINK',
+  CHANGE_NETWORK = 'CHANGE_NETWORK',
 }
 
 export enum AppEvent {
@@ -30,7 +30,6 @@ export interface AppInitStatus {
   initState: AppInitState;
   initAction?: AppInitAction;
   network?: string;
-  message?: string;
 }
 
 /**
@@ -42,12 +41,12 @@ export interface AppInitStatus {
  * UPDATED_INIT_STATE => INITIALIZING, CHANGE_NETWORK
  * UPDATED_INIT_STATE => INITIALIZING, "info message 1"
  * UPDATED_INIT_STATE => INITIALIZING, "info message 2"
- * UPDATED_INIT_STATE => INITIALIZING, LINK_AZTEC_ACCOUNT (user accepts, otherwise destroy)
+ * UPDATED_INIT_STATE => INITIALIZING, AWAITING_PROVIDER_SIGNATURE (user accepts, otherwise destroy)
  * UPDATED_INIT_STATE => INITIALIZED, address 1
- * UPDATED_INIT_STATE => INITIALIZING, AWAIT_LINK_AZTEC_ACCOUNT (user changes to unlinked account)
- * UPDATED_INIT_STATE => INITIALIZING, LINK_AZTEC_ACCOUNT (user rejects)
- * UPDATED_INIT_STATE => INITIALIZING, AWAIT_LINK_AZTEC_ACCOUNT
- * UPDATED_INIT_STATE => INITIALIZING, LINK_AZTEC_ACCOUNT (user accepts)
+ * UPDATED_INIT_STATE => INITIALIZING, AWAITING_PERMISSION_TO_LINK (user changes to unlinked account)
+ * UPDATED_INIT_STATE => INITIALIZING, AWAITING_PROVIDER_SIGNATURE (user rejects)
+ * UPDATED_INIT_STATE => INITIALIZING, AWAITING_PERMISSION_TO_LINK
+ * UPDATED_INIT_STATE => INITIALIZING, AWAITING_PROVIDER_SIGNATURE (user accepts)
  * UPDATED_INIT_STATE => INITIALIZED, address 2
  * UPDATED_INIT_STATE => INITIALIZED, address 1 (user changes to linked account)
  * UPDATED_INIT_STATE => DESTROYED
@@ -95,13 +94,6 @@ export class WebSdk extends EventEmitter {
         this.sdk.on(event, (...args: any[]) => this.emit(event, ...args));
       }
 
-      // Handle SDK init messages.
-      this.sdk.on(SdkEvent.UPDATED_INIT_STATE, (initState: SdkInitState, msg?: string) => {
-        if (initState === SdkInitState.INITIALIZING) {
-          this.updateInitStatus(AppInitState.INITIALIZING, undefined, msg);
-        }
-      });
-
       await this.sdk.init();
 
       // Link account. Will be INITIALZED once complete.
@@ -109,9 +101,6 @@ export class WebSdk extends EventEmitter {
 
       // Handle account changes.
       this.ethProvider.on(EthProviderEvent.UPDATED_ACCOUNT, this.accountChanged);
-
-      // Handle users changes.
-      this.sdk.on(SdkEvent.UPDATED_USERS, this.usersChanged);
 
       // Ensure we're still on correct network, and attach handler.
       // Any network changes at this point result in destruction.
@@ -125,14 +114,14 @@ export class WebSdk extends EventEmitter {
     }
   }
 
-  private updateInitStatus(initState: AppInitState, initAction?: AppInitAction, message?: string) {
+  private updateInitStatus(initState: AppInitState, initAction?: AppInitAction) {
     const previous = this.initStatus;
     this.initStatus = {
       ...this.initStatus,
       initState,
       initAction,
-      message,
     };
+    // debug(`state ${previous.initState} -> ${initState}: ${initAction}`);
     this.emit(AppEvent.UPDATED_INIT_STATE, { ...this.initStatus }, previous);
   }
 
@@ -145,17 +134,10 @@ export class WebSdk extends EventEmitter {
     this.user = await this.sdk.getUser(account);
     if (!this.user) {
       // We are initializing until the account is added to sdk.
-      this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.AWAIT_LINK_AZTEC_ACCOUNT);
+      debug(`provider emitted account changed to ${account}, requesting permission to link...`);
+      this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.AWAITING_PERMISSION_TO_LINK);
     } else {
       this.updateInitStatus(AppInitState.INITIALIZED);
-    }
-  };
-
-  private usersChanged = async () => {
-    const account = this.ethProvider.getAccount()!;
-    const accountId = await this.sdk.getAccountIdFromAddress(account);
-    if (!accountId) {
-      this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.AWAIT_LINK_AZTEC_ACCOUNT);
     }
   };
 
@@ -173,7 +155,8 @@ export class WebSdk extends EventEmitter {
 
     this.user = await this.sdk.getUser(account);
     if (!this.user) {
-      this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.LINK_AZTEC_ACCOUNT);
+      // Call to addUser will attempt to perform a signature. Alert client.
+      this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.AWAITING_PROVIDER_SIGNATURE);
       try {
         this.user = await this.sdk.addUser(account);
       } catch (e) {
@@ -193,12 +176,13 @@ export class WebSdk extends EventEmitter {
 
     this.user = await this.sdk.getUser(account);
     if (!this.user) {
-      this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.LINK_AZTEC_ACCOUNT);
+      // Call to addUser will attempt to perform a signature. Alert client.
+      this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.AWAITING_PROVIDER_SIGNATURE);
       try {
         this.user = await this.sdk.addUser(account);
       } catch (e) {
         debug(e);
-        this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.AWAIT_LINK_AZTEC_ACCOUNT);
+        this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.AWAITING_PERMISSION_TO_LINK);
         return;
       }
     }

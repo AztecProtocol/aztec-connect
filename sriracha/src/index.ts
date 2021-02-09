@@ -25,13 +25,13 @@ function getEthereumBlockchainConfig() {
     console.log(`Infura network: ${NETWORK}`);
     console.log(`Rollup contract address: ${ROLLUP_CONTRACT_ADDRESS}`);
     const provider = new EthersAdapter(new ethers.providers.InfuraProvider(NETWORK, INFURA_API_KEY));
-    const ethConfig = { networkOrHost: NETWORK, minConfirmationEHW };
+    const ethConfig = { minConfirmationEHW };
     return { provider, ethConfig };
   } else if (ETHEREUM_HOST && ROLLUP_CONTRACT_ADDRESS) {
     console.log(`Ethereum host: ${ETHEREUM_HOST}`);
     console.log(`Rollup contract address: ${ROLLUP_CONTRACT_ADDRESS}`);
     const provider = new EthersAdapter(new ethers.providers.JsonRpcProvider(ETHEREUM_HOST));
-    const ethConfig = { networkOrHost: ETHEREUM_HOST, minConfirmationEHW };
+    const ethConfig = { minConfirmationEHW };
     return { provider, ethConfig };
   }
   throw new Error('Config incorrect');

@@ -9,7 +9,7 @@ import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
 import { numToUInt32BE } from 'barretenberg/serialize';
 import { BarretenbergWasm } from 'barretenberg/wasm';
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
-import { TxHash } from 'barretenberg/rollup_provider';
+import { TxHash } from 'barretenberg/tx_hash';
 import { toBufferBE } from 'bigint-buffer';
 import { randomBytes } from 'crypto';
 import { Database } from '../database';
@@ -46,7 +46,7 @@ describe('user state', () => {
       privateKey,
       publicKey,
       nonce: 0,
-      aliasHash: AliasHash.fromAlias('god', blake2s),
+      alias: 'god',
       syncedToRollup: -1,
     };
 
@@ -150,7 +150,8 @@ describe('user state', () => {
     newSigningPubKey2 = GrumpkinAddress.randomAddress(),
     migrate = false,
   } = {}) => {
-    const { publicKey, nonce, aliasHash } = accountCreator;
+    const { publicKey, nonce, alias } = accountCreator;
+    const aliasHash = AliasHash.fromAlias(alias!, blake2s);
     const note1 = Buffer.concat([publicKey.x(), newSigningPubKey1.x()]);
     const note2 = Buffer.concat([publicKey.x(), newSigningPubKey2.x()]);
     const newAccountAliasId = new AccountAliasId(aliasHash!, nonce + +migrate);
@@ -364,17 +365,17 @@ describe('user state', () => {
 
     const innerProofData = rollupProofData.innerProofData[0];
     const txHash = new TxHash(innerProofData.txId);
-    const accountAliasId = new AccountAliasId(user.aliasHash!, user.nonce);
+    const accountId = new AccountId(user.publicKey, user.nonce);
 
     expect(db.addUserSigningKey).toHaveBeenCalledTimes(2);
     expect(db.addUserSigningKey.mock.calls[0][0]).toEqual({
-      accountAliasId,
+      accountId,
       address: user.publicKey,
       key: newSigningPubKey1.x(),
       treeIndex: 0,
     });
     expect(db.addUserSigningKey.mock.calls[1][0]).toEqual({
-      accountAliasId,
+      accountId,
       address: user.publicKey,
       key: newSigningPubKey2.x(),
       treeIndex: 1,
@@ -427,16 +428,16 @@ describe('user state', () => {
 
     const innerProofData = rollupProofData.innerProofData[0];
     const txHash = new TxHash(innerProofData.txId);
-    const accountAliasId = new AccountAliasId(user.aliasHash!, user.nonce);
+    const accountId = new AccountId(user.publicKey, user.nonce);
 
     expect(db.addUserSigningKey).toHaveBeenCalledWith({
-      accountAliasId,
+      accountId,
       address: user.publicKey,
       key: newSigningPubKey1.x(),
       treeIndex: 0,
     });
     expect(db.addUserSigningKey).toHaveBeenCalledWith({
-      accountAliasId,
+      accountId,
       address: user.publicKey,
       key: newSigningPubKey2.x(),
       treeIndex: 1,
@@ -446,7 +447,7 @@ describe('user state', () => {
     expect(db.addAccountTx.mock.calls[0][0]).toMatchObject({
       txHash,
       userId: user.id,
-      aliasHash: user.aliasHash,
+      aliasHash: AliasHash.fromAlias(user.alias!, blake2s),
       newSigningPubKey1: newSigningPubKey1.x(),
       newSigningPubKey2: newSigningPubKey2.x(),
       migrated: false,

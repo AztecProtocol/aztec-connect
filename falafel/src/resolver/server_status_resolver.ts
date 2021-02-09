@@ -8,7 +8,6 @@ import { ServerStatusType } from './server_status_type';
 
 interface StaticServerStatus {
   chainId: number;
-  networkOrHost: string;
   rollupContractAddress: string;
 }
 
@@ -23,7 +22,6 @@ export class ServerStatusResolver {
   ) {
     this.staticServerStatus = {
       chainId: serverStatus.blockchainStatus.chainId,
-      networkOrHost: serverStatus.blockchainStatus.networkOrHost,
       rollupContractAddress: serverStatus.blockchainStatus.rollupContractAddress.toString(),
     };
   }

@@ -1,8 +1,9 @@
 import { serializeBufferArrayToVector } from '../../serialize';
 import { BarretenbergWasm } from '../../wasm';
+import { BarretenbergWorker } from '../../wasm/worker';
 
 export class Pedersen {
-  constructor(private wasm: BarretenbergWasm) {}
+  constructor(private wasm: BarretenbergWasm, private worker: BarretenbergWorker = wasm as any) {}
 
   public compress(lhs: Uint8Array, rhs: Uint8Array) {
     this.wasm.transferToHeap(lhs, 0);
@@ -33,14 +34,14 @@ export class Pedersen {
     return Buffer.from(this.wasm.sliceMemory(0, 32));
   }
 
-  public hashValuesToTree(values: Buffer[]) {
+  public async hashValuesToTree(values: Buffer[]) {
     const data = Buffer.concat(values);
-    const mem = this.wasm.call('bbmalloc', data.length);
-    this.wasm.transferToHeap(data, mem);
-    const resultSize = this.wasm.call('pedersen_hash_to_tree', mem, data.length, 0);
-    const resultPtr = Buffer.from(this.wasm.sliceMemory(0, 4)).readUInt32LE(0);
-    const result = Buffer.from(this.wasm.sliceMemory(resultPtr, resultPtr + resultSize));
-    this.wasm.call('bbfree', resultPtr);
+    const mem = await this.worker.call('bbmalloc', data.length);
+    await this.worker.transferToHeap(data, mem);
+    const resultSize = await this.worker.call('pedersen_hash_to_tree', mem, data.length, 0);
+    const resultPtr = Buffer.from(await this.worker.sliceMemory(0, 4)).readUInt32LE(0);
+    const result = Buffer.from(await this.worker.sliceMemory(resultPtr, resultPtr + resultSize));
+    await this.worker.call('bbfree', resultPtr);
     const results: Buffer[] = [];
     for (let i = 0; i < result.length; i += 32) {
       results.push(result.slice(i, i + 32));

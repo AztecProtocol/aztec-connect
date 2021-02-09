@@ -112,6 +112,9 @@ export class ProofGenerator {
       this.txRollupSize.toString(),
       this.rootRollupSize.toString(),
       './data/crs',
+      './data',
+      '0', // reduce mem
+      '0', // persist rollup keys
     ]));
     this.stdout = new PromiseReadable(proc!.stdout!);
 

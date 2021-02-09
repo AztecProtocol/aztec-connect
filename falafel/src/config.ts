@@ -79,11 +79,8 @@ function getEthereumBlockchainConfig({
   gasLimit,
   minConfirmation,
   minConfirmationEHW,
-  network,
-  ethereumHost,
 }: ConfVars): EthereumBlockchainConfig {
   return {
-    networkOrHost: network || ethereumHost || 'local',
     gasLimit,
     minConfirmation,
     minConfirmationEHW,

@@ -52,7 +52,7 @@ describe('end-to-end account tests', () => {
 
     // Create a new account.
     // The recoveryPublicKey is a single use key allowing the addition of the trustedThirdPartyPublicKey.
-    const alias = 'pebble';
+    const alias = randomBytes(8).toString('hex');
     const thirdPartySigner = sdk.createSchnorrSigner(randomBytes(32));
     const recoveryPayloads = await sdk.generateAccountRecoveryData(alias, account1PubKey, [
       thirdPartySigner.getPublicKey(),
@@ -105,7 +105,7 @@ describe('end-to-end account tests', () => {
 
     // Migrate account to another account public key.
     const account3PrivKey = randomBytes(32);
-    const account3PubKey = sdk.getPublicKeyFromPrivateKey(account3PrivKey);
+    const account3PubKey = sdk.derivePublicKey(account3PrivKey);
     const migrateNewTxHash = await account2.migrateAccount(
       signer3,
       signer3.getPublicKey(),

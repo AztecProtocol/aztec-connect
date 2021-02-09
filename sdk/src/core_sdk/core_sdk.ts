@@ -13,7 +13,7 @@ import { Schnorr } from 'barretenberg/crypto/schnorr';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { MemoryFifo } from 'barretenberg/fifo';
 import { RollupProofData } from 'barretenberg/rollup_proof';
-import { RollupProvider, RollupProviderExplorer, TxHash } from 'barretenberg/rollup_provider';
+import { RollupProvider } from 'barretenberg/rollup_provider';
 import { BarretenbergWasm } from 'barretenberg/wasm';
 import { WorkerPool } from 'barretenberg/wasm/worker_pool';
 import { WorldState } from 'barretenberg/world_state';
@@ -29,14 +29,15 @@ import { AccountProofCreator } from '../proofs/account_proof_creator';
 import { EscapeHatchProofCreator } from '../proofs/escape_hatch_proof_creator';
 import { JoinSplitProofCreator } from '../proofs/join_split_proof_creator';
 import { SdkEvent, SdkInitState, SdkStatus } from '../sdk';
-import { EthereumSigner, Signer } from '../signer';
+import { Signer } from '../signer';
 import { SchnorrSigner } from '../signer';
-import { TxsState } from '../txs_state';
-import { AccountAliasId, UserDataFactory, AccountId } from '../user';
+import { AccountAliasId, UserDataFactory, AccountId, UserData } from '../user';
 import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
 import { UserAccountTx, UserJoinSplitTx } from '../user_tx';
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { ProofData } from 'barretenberg/client_proofs/proof_data';
+import { EthereumSigner } from 'barretenberg/blockchain';
+import { TxHash } from 'barretenberg/tx_hash';
 
 const debug = createDebug('bb:core_sdk');
 
@@ -52,8 +53,6 @@ export enum CoreSdkEvent {
   UPDATED_USERS = 'CORESDKEVENT_UPDATED_USERS',
   // The state of a user has changed.
   UPDATED_USER_STATE = 'CORESDKEVENT_UPDATED_USER_STATE',
-  // The instance must restart.
-  CLEAR_DATA = 'CORESDKEVENT_RESTART',
 }
 
 export interface CoreSdkOptions {
@@ -69,7 +68,6 @@ export class CoreSdk extends EventEmitter {
   private blockQueue!: MemoryFifo<Block>;
   private userFactory!: UserDataFactory;
   private userStateFactory!: UserStateFactory;
-  private txsState!: TxsState;
   private mutex = !isNode ? new Mutex('world-state-mutex') : undefined;
   private numCPU = !isNode ? navigator.hardwareConcurrency : os.cpus().length;
   private sdkStatus: SdkStatus = {
@@ -80,6 +78,7 @@ export class CoreSdk extends EventEmitter {
     initState: SdkInitState.UNINITIALIZED,
     dataRoot: Buffer.alloc(0),
     dataSize: 0,
+    assets: [],
   };
   private processBlocksPromise?: Promise<void>;
   private blake2s!: Blake2s;
@@ -91,8 +90,8 @@ export class CoreSdk extends EventEmitter {
     private leveldb: LevelUp,
     private db: Database,
     private rollupProvider: RollupProvider,
-    private rollupProviderExplorer: RollupProviderExplorer | undefined,
     private hashPathSource: HashPathSource | undefined,
+    private ethSigner: EthereumSigner,
     private options: CoreSdkOptions,
     private escapeHatchMode: boolean,
   ) {
@@ -123,38 +122,41 @@ export class CoreSdk extends EventEmitter {
     );
 
     this.blake2s = new Blake2s(barretenberg);
-    this.pedersen = new Pedersen(barretenberg);
+    this.pedersen = new Pedersen(barretenberg, workerPool.workers[0]);
     this.grumpkin = new Grumpkin(barretenberg);
     this.schnorr = new Schnorr(barretenberg);
     this.userFactory = new UserDataFactory(this.grumpkin);
     this.userStateFactory = new UserStateFactory(this.grumpkin, this.pedersen, noteAlgos, this.db, this.rollupProvider);
     this.workerPool = workerPool;
     this.worldState = new WorldState(this.leveldb, this.pedersen);
-    if (this.rollupProviderExplorer) {
-      this.txsState = new TxsState(this.rollupProviderExplorer);
-    }
 
     await this.worldState.init();
 
     const {
-      blockchainStatus: { chainId, rollupContractAddress },
+      blockchainStatus: { chainId, rollupContractAddress, assets },
     } = await this.getRemoteStatus();
     await this.leveldb.put('rollupContractAddress', rollupContractAddress.toBuffer());
 
     // If chainId is 0 (falafel is using simulated blockchain) pretend it needs to be goerli.
-    this.sdkStatus.chainId = chainId || 5;
-    this.sdkStatus.rollupContractAddress = rollupContractAddress;
-    this.sdkStatus.dataSize = this.worldState.getSize();
-    this.sdkStatus.dataRoot = this.worldState.getRoot();
-    this.sdkStatus.syncedToRollup = +(await this.leveldb.get('syncedToRollup').catch(() => -1));
-    this.sdkStatus.latestRollupId = +(await this.leveldb.get('latestRollupId').catch(() => -1));
+    this.sdkStatus = {
+      ...this.sdkStatus,
+      chainId: chainId || 5,
+      rollupContractAddress: rollupContractAddress,
+      dataSize: this.worldState.getSize(),
+      dataRoot: this.worldState.getRoot(),
+      syncedToRollup: +(await this.leveldb.get('syncedToRollup').catch(() => -1)),
+      latestRollupId: +(await this.leveldb.get('latestRollupId').catch(() => -1)),
+      assets,
+    };
 
     await this.initUserStates();
 
     if (!this.escapeHatchMode) {
       this.joinSplitProofCreator = new JoinSplitProofCreator(
         joinSplitProver,
+        this.ethSigner,
         this.worldState,
+        this.blake2s,
         this.grumpkin,
         this.pedersen,
         noteAlgos,
@@ -166,7 +168,9 @@ export class CoreSdk extends EventEmitter {
     } else {
       this.joinSplitProofCreator = new EscapeHatchProofCreator(
         escapeHatchProver,
+        this.ethSigner,
         this.worldState,
+        this.blake2s,
         this.grumpkin,
         this.pedersen,
         noteAlgos,
@@ -209,9 +213,9 @@ export class CoreSdk extends EventEmitter {
   /**
    * Shutdown any existing `UserState` instances and wait for them to complete any processing.
    * Load the users from the database and create and initialize their new user states.
-   * Emit SdkEvent.UPDATED_USERS to update the UI containing and user lists.
+   * Emit SdkEvent.UPDATED_USERS to update the UI containing any user lists.
    * Emit SdkEvent.UPDATED_USER_STATE to update the UI for each user.
-   * Register for changes to each user state an emit appropriate events.
+   * Register for changes to each user state and emit appropriate events.
    * If this SDK instance is handling blocks, start syncing the user states.
    *
    * Public, as it will be called in the event of another instance emitting CoreSdkEvent.UPDATED_USERS.
@@ -298,7 +302,6 @@ export class CoreSdk extends EventEmitter {
   public async destroy() {
     await this.stopSyncingUserStates();
     await this.stopReceivingBlocks();
-    this.stopTrackingGlobalState();
     await this.workerPool?.destroy();
     await this.leveldb.close();
     await this.db.close();
@@ -306,33 +309,9 @@ export class CoreSdk extends EventEmitter {
     this.removeAllListeners();
   }
 
-  private updateInitState(initState: SdkInitState, msg?: string) {
+  private updateInitState(initState: SdkInitState) {
     this.sdkStatus.initState = initState;
-    this.emit(SdkEvent.UPDATED_INIT_STATE, initState, msg);
-  }
-
-  public async clearData() {
-    if (this.processBlocksPromise) {
-      await this.notifiedClearData();
-    } else {
-      // Emit event requesting the primary instance clears the data.
-      this.emit(CoreSdkEvent.CLEAR_DATA);
-    }
-  }
-
-  public async notifiedClearData() {
-    if (!this.processBlocksPromise) {
-      return;
-    }
-    await this.stopSyncingUserStates();
-    await this.stopReceivingBlocks();
-    await this.leveldb.clear();
-    await this.db.resetUsers();
-
-    await this.worldState.init();
-    await this.notifyWorldStateUpdated();
-    await this.initUserStates();
-    await this.startReceivingBlocks();
+    this.emit(SdkEvent.UPDATED_INIT_STATE, initState);
   }
 
   public getLocalStatus() {
@@ -340,7 +319,7 @@ export class CoreSdk extends EventEmitter {
   }
 
   private logInitMsgAndDebug(msg: string) {
-    this.updateInitState(SdkInitState.INITIALIZING, msg);
+    this.emit(SdkEvent.LOG, msg);
     debug(msg.toLowerCase());
   }
 
@@ -360,15 +339,49 @@ export class CoreSdk extends EventEmitter {
 
     this.blockQueue = new MemoryFifo<Block>();
     this.rollupProvider.on('block', b => this.blockQueue.put(b));
-
-    const syncedToRollup = await this.leveldb.get('syncedToRollup').catch(() => -1);
-    await this.rollupProvider.start(+syncedToRollup + 1);
-    this.sdkStatus.latestRollupId = this.rollupProvider.getLatestRollupId();
-
     this.userStates.forEach(us => us.startSync());
     this.processBlocksPromise = this.processBlockQueue();
 
+    await this.sync();
+
+    const syncedToRollup = await this.leveldb.get('syncedToRollup').catch(() => -1);
+    await this.rollupProvider.start(+syncedToRollup + 1);
+
     debug('started processing blocks.');
+  }
+
+  private async sync() {
+    const syncedToRollup = +(await this.leveldb.get('syncedToRollup').catch(() => -1));
+    const blocks = await this.rollupProvider.getBlocks(syncedToRollup + 1);
+    if (!blocks.length) {
+      return;
+    }
+
+    const rollups = blocks.map(b => RollupProofData.fromBuffer(b.rollupProofData));
+    debug('synchronising data...');
+    await this.worldState.processRollups(rollups);
+    await this.processAliases(rollups);
+    if (rollups.length) {
+      await this.updateStatusRollupInfo(rollups[rollups.length - 1]);
+    }
+    debug('done.');
+
+    // Forward the block on to each UserState for processing.
+    for (const block of blocks) {
+      this.userStates.forEach(us => us.processBlock(block));
+    }
+  }
+
+  private async updateStatusRollupInfo(rollup: RollupProofData) {
+    const rollupId = rollup.rollupId;
+    const latestRollupId = this.rollupProvider.getLatestRollupId();
+    await this.leveldb.put('syncedToRollup', rollupId.toString());
+    await this.leveldb.put('latestRollupId', latestRollupId.toString());
+
+    this.sdkStatus.syncedToRollup = rollupId;
+    this.sdkStatus.latestRollupId = latestRollupId;
+    this.sdkStatus.dataRoot = this.worldState.getRoot();
+    this.sdkStatus.dataSize = this.worldState.getSize();
   }
 
   private async stopReceivingBlocks() {
@@ -391,46 +404,34 @@ export class CoreSdk extends EventEmitter {
       // be for only one tab to process the block, and to alert the others to sync.
       await this.mutex?.lock();
       await this.worldState.syncFromDb().catch(() => {});
-      await this.worldState.processBlock(block);
-
       const rollup = RollupProofData.fromBuffer(block.rollupProofData);
-      const rollupId = rollup.rollupId;
-      const latestRollupId = this.rollupProvider.getLatestRollupId();
-      await this.leveldb.put('syncedToRollup', rollupId.toString());
-      await this.leveldb.put('latestRollupId', latestRollupId.toString());
-
-      this.sdkStatus.syncedToRollup = rollupId;
-      this.sdkStatus.latestRollupId = latestRollupId;
-      this.sdkStatus.dataRoot = this.worldState.getRoot();
-      this.sdkStatus.dataSize = this.worldState.getSize();
+      await this.worldState.processRollup(rollup);
+      await this.updateStatusRollupInfo(rollup);
       await this.mutex?.unlock();
 
-      await this.processAliases(rollup);
+      await this.processAliases([rollup]);
 
       // Forward the block on to each UserState for processing.
       this.userStates.forEach(us => us.processBlock(block));
 
-      this.emit(CoreSdkEvent.UPDATED_WORLD_STATE, rollupId, this.sdkStatus.latestRollupId);
-      this.emit(SdkEvent.UPDATED_WORLD_STATE, rollupId, this.sdkStatus.latestRollupId);
+      this.emit(CoreSdkEvent.UPDATED_WORLD_STATE, rollup.rollupId, this.sdkStatus.latestRollupId);
+      this.emit(SdkEvent.UPDATED_WORLD_STATE, rollup.rollupId, this.sdkStatus.latestRollupId);
     }
   }
 
-  private async processAliases(rollup: RollupProofData) {
-    for (const { proofId, publicInput, publicOutput, assetId } of rollup.innerProofData) {
-      if (proofId !== 1) {
-        continue;
-      }
-
-      const { aliasHash, nonce } = AccountAliasId.fromBuffer(assetId);
-      const address = new GrumpkinAddress(Buffer.concat([publicInput, publicOutput]));
-      const prevAlias = await this.db.getAlias(aliasHash, address);
-      debug(`adding alias: ${aliasHash} -> ${address} (${nonce}).`);
-      if (!prevAlias) {
-        await this.db.addAlias({ aliasHash, address, latestNonce: nonce });
-      } else if (nonce > prevAlias.latestNonce) {
-        await this.db.updateAlias({ aliasHash, address, latestNonce: nonce });
-      }
-    }
+  private async processAliases(rollups: RollupProofData[]) {
+    const aliases = rollups
+      .map(r => r.innerProofData)
+      .flat()
+      .filter(ip => ip.proofId === 1)
+      .map(ip => {
+        const { publicInput, publicOutput, assetId } = ip;
+        const { aliasHash, nonce } = AccountAliasId.fromBuffer(assetId);
+        const address = new GrumpkinAddress(Buffer.concat([publicInput, publicOutput]));
+        // debug(`setting alias: ${aliasHash} -> ${address} (${nonce}).`);
+        return { aliasHash, address, latestNonce: nonce };
+      });
+    await this.db.setAliases(aliases);
   }
 
   /**
@@ -464,59 +465,47 @@ export class CoreSdk extends EventEmitter {
     }
   }
 
+  /**
+   * Return the latest nonce for a given public key, derived from chain data.
+   */
   public async getLatestUserNonce(publicKey: GrumpkinAddress) {
     return (await this.db.getLatestNonceByAddress(publicKey)) || 0;
   }
 
-  public async getLatestAliasNonce(alias: string) {
+  public async getAddressFromAlias(alias: string, nonce?: number) {
     const aliasHash = this.computeAliasHash(alias);
-    return (await this.db.getLatestNonceByAliasHash(aliasHash)) || 0;
-  }
-
-  public async getAliasHashFromAddress(publicKey: GrumpkinAddress, nonce?: number) {
-    return this.db.getAliasHashByAddress(publicKey, nonce);
-  }
-
-  public async getAddressFromAliasHash(aliasHash: AliasHash, nonce?: number) {
     return this.db.getAddressByAliasHash(aliasHash, nonce);
   }
 
-  public async getAddressFromAlias(alias: string, nonce?: number) {
-    const aliasHash = this.computeAliasHash(alias);
-    return this.getAddressFromAliasHash(aliasHash, nonce);
-  }
-
   public async getAccountId(user: string | GrumpkinAddress, nonce?: number) {
-    const publicKey =
-      typeof user !== 'string'
-        ? user
-        : GrumpkinAddress.isAddress(user)
+    if (typeof user === 'string') {
+      const publicKey = GrumpkinAddress.isAddress(user)
         ? GrumpkinAddress.fromString(user)
         : await this.getAddressFromAlias(user);
-    if (!publicKey) {
-      throw new Error('Alias not registered.');
+      if (!publicKey) {
+        throw new Error('Alias not registered.');
+      }
+      const accountNonce = nonce !== undefined ? nonce : await this.getLatestUserNonce(publicKey);
+      return new AccountId(publicKey, accountNonce);
     }
 
-    const accountNonce = nonce !== undefined ? nonce : await this.getLatestUserNonce(publicKey);
-    return new AccountId(publicKey, accountNonce);
+    const accountNonce = nonce !== undefined ? nonce : await this.getLatestUserNonce(user);
+    return new AccountId(user, accountNonce);
   }
 
   public async isAliasAvailable(alias: string) {
     // TODO - request it from server so that we can also check those aliases in unsettled txs.
-    const nonce = await this.getLatestAliasNonce(alias);
-    return !nonce;
+    const aliasHash = this.computeAliasHash(alias);
+    const address = await this.db.getAddressByAliasHash(aliasHash);
+    return !address;
   }
 
-  public computeAliasHash(alias: string) {
+  private computeAliasHash(alias: string) {
     return AliasHash.fromAlias(alias, this.blake2s);
   }
 
-  public getPublicKeyFromPrivateKey(privateKey: Buffer) {
-    return new GrumpkinAddress(this.grumpkin.mul(Grumpkin.one, privateKey));
-  }
-
   public createSchnorrSigner(privateKey: Buffer) {
-    const publicKey = this.getPublicKeyFromPrivateKey(privateKey);
+    const publicKey = this.derivePublicKey(privateKey);
     return new SchnorrSigner(this.schnorr, publicKey, privateKey);
   }
 
@@ -529,15 +518,15 @@ export class CoreSdk extends EventEmitter {
     recipientPrivateOutput: bigint,
     senderPrivateOutput: bigint,
     signer: Signer,
-    ethSigner?: EthereumSigner,
+    inputOwner?: EthAddress,
     noteRecipient?: AccountId,
     outputOwner?: EthAddress,
   ) {
-    const user = await this.db.getUser(userId);
-    if (!user) {
-      throw new Error(`Unknown user: ${userId}`);
+    if (this.escapeHatchMode) {
+      await this.validateEscapeOpen();
     }
-    const userState = this.getUserState(userId)!;
+
+    const userState = this.getUserState(userId);
 
     this.emit(SdkEvent.LOG, 'Generating proof...');
 
@@ -552,12 +541,8 @@ export class CoreSdk extends EventEmitter {
       signer,
       noteRecipient,
       outputOwner,
-      ethSigner,
+      inputOwner,
     );
-
-    if (this.escapeHatchMode) {
-      await this.validateEscapeOpen();
-    }
 
     await this.rollupProvider.sendProof(proofOutput);
 
@@ -571,7 +556,7 @@ export class CoreSdk extends EventEmitter {
       privateInput,
       recipientPrivateOutput,
       senderPrivateOutput,
-      inputOwner: ethSigner?.getAddress(),
+      inputOwner,
       outputOwner,
       ownedByUser: true,
       settled: false,
@@ -584,7 +569,7 @@ export class CoreSdk extends EventEmitter {
 
   public async createAccountTx(
     signer: Signer,
-    aliasHash: AliasHash,
+    alias: string,
     nonce: number,
     migrate: boolean,
     accountPublicKey: GrumpkinAddress,
@@ -592,10 +577,9 @@ export class CoreSdk extends EventEmitter {
     newSigningPubKey1?: GrumpkinAddress,
     newSigningPubKey2?: GrumpkinAddress,
   ) {
-    const accountAliasId = aliasHash && nonce ? new AccountAliasId(aliasHash, nonce) : undefined;
-    const accountIndex = accountAliasId
-      ? await this.db.getUserSigningKeyIndex(accountAliasId, signer.getPublicKey())
-      : undefined;
+    const aliasHash = this.computeAliasHash(alias);
+    const accountId = nonce ? new AccountId(accountPublicKey, nonce) : undefined;
+    const accountIndex = accountId ? await this.db.getUserSigningKeyIndex(accountId, signer.getPublicKey()) : undefined;
 
     return this.accountProofCreator.createAccountTx(
       signer,
@@ -613,7 +597,7 @@ export class CoreSdk extends EventEmitter {
   public async createAccountProof(
     userId: AccountId,
     signer: Signer,
-    aliasHash: AliasHash,
+    alias: string,
     nonce: number,
     migrate: boolean,
     newSigningPublicKey1?: GrumpkinAddress,
@@ -624,14 +608,13 @@ export class CoreSdk extends EventEmitter {
       throw new Error('Account modifications not supported in escape hatch mode.');
     }
 
+    const aliasHash = this.computeAliasHash(alias);
     const userState = this.getUserState(userId);
-    const { publicKey } = userState.getUser();
+    const { publicKey, privateKey } = userState.getUser();
 
     const signerPublicKey = signer.getPublicKey();
-    const accountAliasId = aliasHash && nonce ? new AccountAliasId(aliasHash, nonce) : undefined;
-    const accountIndex = accountAliasId
-      ? await this.db.getUserSigningKeyIndex(accountAliasId, signerPublicKey)
-      : undefined;
+    const accountId = nonce ? new AccountId(publicKey, nonce) : undefined;
+    const accountIndex = accountId ? await this.db.getUserSigningKeyIndex(accountId, signerPublicKey) : undefined;
     const newAccountPublicKey = newAccountPrivateKey ? this.derivePublicKey(newAccountPrivateKey) : publicKey;
     const newNonce = nonce + +migrate;
 
@@ -652,8 +635,8 @@ export class CoreSdk extends EventEmitter {
     await this.rollupProvider.sendProof({ proofData: rawProofData, viewingKeys: [] });
 
     if (migrate) {
-      const privateKey = newAccountPrivateKey || userState.getUser().privateKey;
-      await this.addUser(privateKey, newNonce, aliasHash);
+      const userData = await this.userFactory.createUser(newAccountPrivateKey || privateKey, newNonce, alias);
+      await this.addUserFromUserData(userData);
     }
 
     const newUserId = new AccountId(newAccountPublicKey, newNonce);
@@ -682,13 +665,24 @@ export class CoreSdk extends EventEmitter {
   }
 
   public async awaitSynchronised() {
-    while (!(await this.isSynchronised())) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    while (true) {
+      try {
+        if (await this.isSynchronised()) {
+          return;
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (err) {
+        debug(err);
+      }
     }
   }
 
+  public isUserSynching(userId: AccountId) {
+    return this.getUserState(userId).isSyncing();
+  }
+
   public async awaitUserSynchronised(userId: AccountId) {
-    await this.getUserState(userId)?.awaitSynchronised();
+    await this.getUserState(userId).awaitSynchronised();
   }
 
   public async awaitSettlement(txHash: TxHash, timeout = 300) {
@@ -712,7 +706,7 @@ export class CoreSdk extends EventEmitter {
     }
   }
 
-  public getUserState(userId: AccountId) {
+  private getUserState(userId: AccountId) {
     const userState = this.userStates.find(us => us.getUser().id.equals(userId));
     if (!userState) {
       throw new Error(`User not found: ${userId}`);
@@ -732,20 +726,19 @@ export class CoreSdk extends EventEmitter {
     return this.userFactory.derivePublicKey(privateKey);
   }
 
-  public async addUser(privateKey: Buffer, nonce?: number, alias?: AliasHash) {
+  public async addUser(privateKey: Buffer, nonce?: number) {
     const publicKey = this.derivePublicKey(privateKey);
     const accountNonce = nonce !== undefined ? nonce : await this.getLatestUserNonce(publicKey);
-    const aliasHash =
-      accountNonce > 0 ? alias || (await this.getAliasHashFromAddress(publicKey, accountNonce)) : undefined;
-    if (accountNonce > 0 && !aliasHash) {
-      throw new Error('User not registered.');
-    }
 
-    const user = await this.userFactory.createUser(privateKey, accountNonce, aliasHash);
+    const user = await this.userFactory.createUser(privateKey, accountNonce);
     if (await this.db.getUser(user.id)) {
       throw new Error(`User already exists: ${user.id}`);
     }
 
+    return await this.addUserFromUserData(user);
+  }
+
+  private async addUserFromUserData(user: UserData) {
     await this.db.addUser(user);
 
     const userState = this.userStateFactory.createUserState(user);
@@ -770,21 +763,20 @@ export class CoreSdk extends EventEmitter {
     this.emit(SdkEvent.UPDATED_USERS);
   }
 
-  public async getSigningKeys(userId: AccountId) {
-    const userData = this.getUserData(userId);
-    if (!userData.aliasHash) {
-      return [];
-    }
-
-    const accountAliasId = new AccountAliasId(userData.aliasHash, userId.nonce);
+  public async getSigningKeys(accountId: AccountId) {
     // TODO - fetch the keys from server so that the account doesn't have to be added locally.
-    const keys = await this.db.getUserSigningKeys(accountAliasId);
+    const keys = await this.db.getUserSigningKeys(accountId);
     return keys.map(k => k.key);
   }
 
   public getBalance(assetId: AssetId, userId: AccountId) {
     const userState = this.getUserState(userId);
     return userState.getBalance(assetId);
+  }
+
+  public getMaxSpendableValue(assetId: AssetId, userId: AccountId) {
+    const userState = this.getUserState(userId);
+    return userState.getMaxSpendableValue(assetId);
   }
 
   public async getJoinSplitTxs(userId: AccountId) {
@@ -797,32 +789,5 @@ export class CoreSdk extends EventEmitter {
 
   public async getNotes(userId: AccountId) {
     return this.db.getUserNotes(userId);
-  }
-
-  public async getLatestRollups(count: number) {
-    return this.txsState.getLatestRollups(count);
-  }
-
-  public async getLatestTxs(count: number) {
-    return this.txsState.getLatestTxs(count);
-  }
-
-  public async getRollup(rollupId: number) {
-    return await this.txsState.getRollup(rollupId);
-  }
-
-  public async getTx(txHash: TxHash) {
-    return await this.txsState.getTx(txHash);
-  }
-
-  public startTrackingGlobalState() {
-    this.txsState.on('rollups', rollups => this.emit(SdkEvent.UPDATED_EXPLORER_ROLLUPS, rollups));
-    this.txsState.on('txs', txs => this.emit(SdkEvent.UPDATED_EXPLORER_TXS, txs));
-    this.txsState.start();
-  }
-
-  public stopTrackingGlobalState() {
-    this.txsState?.removeAllListeners();
-    this.txsState?.stop();
   }
 }
