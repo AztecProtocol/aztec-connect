@@ -14,12 +14,9 @@ const {
 } = process.env;
 
 /**
- * Set the following environment variables
- * - before deploying the contracts:
- *   ESCAPE_BLOCK_LOWER=10
- *   ESCAPE_BLOCK_UPPER=100
- * - before running sriracha:
- *   MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW=1
+ * Run the following:
+ * - blockchain: yarn start:ganache
+ * - falafel: yarn start:e2e
  */
 
 describe('end-to-end falafel recovery tests', () => {
@@ -83,8 +80,10 @@ describe('end-to-end falafel recovery tests', () => {
         dbPath: ':memory:',
       });
       await sdk.init();
-      const user = await sdk.addUser(userAddress);
       await sdk.awaitSynchronised();
+
+      const user = await sdk.addUser(userAddress);
+      await user.awaitSynchronised();
 
       const userAsset = user.getAsset(assetId);
 
@@ -106,6 +105,8 @@ describe('end-to-end falafel recovery tests', () => {
         dbPath: ':memory:',
       });
       await sdk.init();
+      await sdk.awaitSynchronised();
+
       const user = await sdk.addUser(userAddress);
       await sdk.awaitSynchronised();
 

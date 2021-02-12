@@ -4,22 +4,20 @@ import { RollupProviderStatus } from 'barretenberg/rollup_provider';
 import { WorldStateDb } from 'barretenberg/world_state_db';
 import { EthereumProvider } from 'blockchain';
 import { Duration } from 'moment';
-import { ProofGenerator } from './proof_generator';
 import { RollupDb } from './rollup_db';
 import { Tx, TxReceiver } from './tx_receiver';
-import { RollupCreator } from './rollup_creator';
-import { TxAggregator } from './tx_aggregator';
 import { WorldState } from './world_state';
-import { RollupPublisher } from './rollup_publisher';
-import { RollupAggregator } from './rollup_aggregator';
 import moment from 'moment';
 import { Metrics } from './metrics';
 import { Blockchain } from 'barretenberg/blockchain';
 import { Block } from 'barretenberg/block_source';
 import { toBigIntBE } from 'bigint-buffer';
 import { TxHash } from 'barretenberg/tx_hash';
+import { ProofGenerator, ServerProofGenerator } from 'halloumi/proof_generator';
+import { RollupPipelineFactory } from './rollup_pipeline';
 
 export interface ServerConfig {
+  readonly halloumiHost: string;
   readonly numInnerRollupTxs: number;
   readonly numOuterRollupProofs: number;
   readonly publishInterval: Duration;
@@ -42,43 +40,28 @@ export class Server {
     provider: EthereumProvider,
   ) {
     const { numInnerRollupTxs, numOuterRollupProofs, publishInterval, feeLimit } = config;
-    const innerRollupSize = 1 << Math.ceil(Math.log2(numInnerRollupTxs));
-    const outerRollupSize = 1 << Math.ceil(Math.log2(innerRollupSize * numOuterRollupProofs));
 
-    console.log(`Num inner rollup txs: ${numInnerRollupTxs}`);
-    console.log(`Num outer rollup proofs: ${numOuterRollupProofs}`);
-    console.log(`Inner rollup size: ${innerRollupSize}`);
-    console.log(`Outer rollup size: ${outerRollupSize}`);
-
-    this.proofGenerator = new ProofGenerator(numInnerRollupTxs, numOuterRollupProofs);
-    const rollupPublisher = new RollupPublisher(rollupDb, blockchain, publishInterval, feeLimit, provider, metrics);
-    const rollupAggregator = new RollupAggregator(
+    this.proofGenerator = new ServerProofGenerator(config.halloumiHost);
+    const pipelineFactory = new RollupPipelineFactory(
       this.proofGenerator,
-      rollupPublisher,
+      blockchain,
       rollupDb,
       worldStateDb,
-      innerRollupSize,
-      outerRollupSize,
-      numOuterRollupProofs,
       metrics,
-    );
-    const rollupCreator = new RollupCreator(
-      rollupDb,
-      worldStateDb,
-      this.proofGenerator,
-      rollupAggregator,
+      provider,
+      publishInterval,
+      feeLimit,
       numInnerRollupTxs,
-      innerRollupSize,
-      metrics,
+      numOuterRollupProofs,
     );
-    const txAggregator = new TxAggregator(rollupCreator, rollupDb, numInnerRollupTxs, publishInterval);
-    this.worldState = new WorldState(rollupDb, worldStateDb, blockchain, txAggregator, outerRollupSize, metrics);
-    this.txReceiver = new TxReceiver(rollupDb, blockchain, config.minFees);
+    this.worldState = new WorldState(rollupDb, worldStateDb, blockchain, pipelineFactory, metrics);
+    this.txReceiver = new TxReceiver(rollupDb, blockchain, this.proofGenerator, config.minFees);
   }
 
   public async start() {
     console.log('Server initializing...');
-    await this.proofGenerator.start();
+    console.log('Waiting until halloumi is ready...');
+    await this.proofGenerator.awaitReady();
     await this.worldState.start();
     // The tx receiver depends on the proof generator to have been initialized to gain access to vks.
     await this.txReceiver.init();
@@ -91,7 +74,6 @@ export class Server {
     this.ready = false;
     await this.txReceiver.destroy();
     await this.worldState.stop();
-    this.proofGenerator.stop();
   }
 
   public isReady() {

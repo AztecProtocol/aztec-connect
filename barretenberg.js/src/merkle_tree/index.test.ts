@@ -170,6 +170,32 @@ describe('merkle_tree', () => {
     }
   });
 
+  it('should update 0 values elements', async () => {
+    const values: Buffer[] = Array(6).fill(Buffer.alloc(64, 0));
+
+    // Create reference tree.
+    const db1 = levelup(memdown());
+    const tree1 = await MerkleTree.new(db1, pedersen, 'test', 10);
+
+    for (let i = 0; i < 6; ++i) {
+      await tree1.updateElement(i, values[i]);
+    }
+
+    // Create tree from 8 rollup, 1 escape, 8 rollup.
+    const db2 = levelup(memdown());
+    const tree2 = await MerkleTree.new(db2, pedersen, 'test', 10);
+
+    await tree2.updateElements(0, values.slice(0, 6));
+
+    expect(tree2.getRoot().toString('hex')).toEqual(tree1.getRoot().toString('hex'));
+
+    for (let i = 0; i < 6; ++i) {
+      const hashPath1 = await tree1.getHashPath(i);
+      const hashPath2 = await tree2.getHashPath(i);
+      expect(hashPath2).toStrictEqual(hashPath1);
+    }
+  });
+
   /*
   it('benchmark', async () => {
     const values: Buffer[] = [];

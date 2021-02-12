@@ -2,10 +2,10 @@ import { ProofData } from 'barretenberg/client_proofs/proof_data';
 import { HashPath } from 'barretenberg/merkle_tree';
 import { WorldStateDb } from 'barretenberg/world_state_db';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
+import { ProofGenerator, TxRollup, TxRollupProofRequest } from 'halloumi/proof_generator';
 import { RollupProofDao } from './entity/rollup_proof';
 import { TxDao } from './entity/tx';
 import { Metrics } from './metrics';
-import { ProofGenerator, TxRollup } from './proof_generator';
 import { RollupAggregator } from './rollup_aggregator';
 import { RollupDb } from './rollup_db';
 
@@ -17,6 +17,7 @@ export class RollupCreator {
     private rollupAggregator: RollupAggregator,
     private numInnerRollupTxs: number,
     private innerRollupSize: number,
+    private outerRollupSize: number,
     private metrics: Metrics,
   ) {}
 
@@ -30,7 +31,9 @@ export class RollupCreator {
 
       console.log(`Creating proof for rollup ${rollup.rollupHash.toString('hex')} with ${txs.length} txs...`);
       const end = this.metrics.txRollupTimer();
-      const proof = await this.proofGenerator.createTxRollupProof(rollup);
+      const txRollupRequest = new TxRollupProofRequest(this.numInnerRollupTxs, rollup);
+      const proof = await this.proofGenerator.createProof(txRollupRequest.toBuffer());
+      console.log(`Proof received: ${proof.length}`);
       end();
 
       if (!proof) {
@@ -57,22 +60,20 @@ export class RollupCreator {
    * If a call to `create` is in progress, this will cause it to return early.
    * Currently the call to `proofGenerator.interrupt()` does nothing, so if a proofs being created the caller
    * of `create` will have to wait until it completes.
-   * A call to `clearInterrupt` is required before you can continue creating rollups.
    */
   public interrupt() {
-    this.proofGenerator.interrupt();
+    // this.proofGenerator.interrupt();
     this.rollupAggregator.interrupt();
   }
 
-  public clearInterrupt() {
-    this.proofGenerator.clearInterrupt();
-    this.rollupAggregator.clearInterrupt();
-  }
-
   private async createRollup(txs: TxDao[]) {
+    // To find the correct data start index, we need to position ourselves on:
+    // - an outer rollup size boundary for the first inner proof.
+    // - an inner rollup size boundary for any other proofs.
+    const firstInner = (await this.rollupDb.getNumRollupProofsBySize(this.innerRollupSize)) === 0;
     const worldStateDb = this.worldStateDb;
     const dataSize = worldStateDb.getSize(0);
-    const subtreeSize = BigInt(this.innerRollupSize * 2);
+    const subtreeSize = BigInt(firstInner ? this.outerRollupSize * 2 : this.innerRollupSize * 2);
     const dataStartIndex = dataSize % subtreeSize === 0n ? dataSize : dataSize + subtreeSize - (dataSize % subtreeSize);
 
     // Get old data.

@@ -24,7 +24,6 @@ export class TxAggregator {
   public start() {
     this.running = true;
     this.flush = false;
-    this.rollupCreator.clearInterrupt();
     this.stopPromise = new Promise(resolve => (this.cancel = resolve));
 
     const fn = async () => {
@@ -53,11 +52,7 @@ export class TxAggregator {
       this.running = false;
     };
 
-    this.runningPromise = fn().catch(err => {
-      console.log('PANIC!');
-      console.log(err);
-      this.running = false;
-    });
+    return (this.runningPromise = fn());
   }
 
   /**

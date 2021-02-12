@@ -68,48 +68,6 @@ resource "aws_service_discovery_service" "falafel" {
   }
 }
 
-# Create EC2 instances in each AZ.
-resource "aws_instance" "container_instance_az1" {
-  ami                    = "ami-0cd4858f2b923aa6b"
-  instance_type          = "r5.8xlarge"
-  subnet_id              = data.terraform_remote_state.setup_iac.outputs.subnet_az1_private_id
-  vpc_security_group_ids = [data.terraform_remote_state.setup_iac.outputs.security_group_private_id]
-  iam_instance_profile   = data.terraform_remote_state.setup_iac.outputs.ecs_instance_profile_name
-  key_name               = data.terraform_remote_state.setup_iac.outputs.ecs_instance_key_pair_name
-  availability_zone      = "eu-west-2a"
-
-  user_data = <<USER_DATA
-#!/bin/bash
-echo ECS_CLUSTER=${data.terraform_remote_state.setup_iac.outputs.ecs_cluster_name} >> /etc/ecs/ecs.config
-echo 'ECS_INSTANCE_ATTRIBUTES={"group": "falafel"}' >> /etc/ecs/ecs.config
-USER_DATA
-
-  tags = {
-    Name       = "falafel-container-instance-az1"
-    prometheus = ""
-  }
-}
-
-# resource "aws_instance" "container_instance_az2" {
-#   ami                    = "ami-08ebd554ebc53fa9f"
-#   instance_type          = "m5.2xlarge"
-#   subnet_id              = data.terraform_remote_state.setup_iac.outputs.subnet_az2_private_id
-#   vpc_security_group_ids = [data.terraform_remote_state.setup_iac.outputs.security_group_private_id]
-#   iam_instance_profile   = data.terraform_remote_state.setup_iac.outputs.ecs_instance_profile_name
-#   key_name               = data.terraform_remote_state.setup_iac.outputs.ecs_instance_key_pair_name
-#   availability_zone      = "eu-west-2b"
-
-#   user_data = <<USER_DATA
-# #!/bin/bash
-# echo ECS_CLUSTER=${data.terraform_remote_state.setup_iac.outputs.ecs_cluster_name} >> /etc/ecs/ecs.config
-# echo 'ECS_INSTANCE_ATTRIBUTES={"group": "falafel"}' >> /etc/ecs/ecs.config
-# USER_DATA
-
-#   tags = {
-#     Name = "falafel-container-instance-az2"
-#   }
-# }
-
 # Configure an EFS filesystem for holding transcripts and state data, mountable in each AZ.
 resource "aws_efs_file_system" "falafel_data_store" {
   creation_token = "falafel-data-store"
@@ -138,8 +96,10 @@ resource "aws_efs_mount_target" "private_az2" {
 # Define task definition and service.
 resource "aws_ecs_task_definition" "falafel" {
   family                   = "falafel"
-  requires_compatibilities = ["EC2"]
+  requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
+  cpu                      = "1024"
+  memory                   = "2048"
   execution_role_arn       = data.terraform_remote_state.setup_iac.outputs.ecs_task_execution_role_arn
 
   volume {
@@ -155,8 +115,7 @@ resource "aws_ecs_task_definition" "falafel" {
     "name": "falafel",
     "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/falafel:latest",
     "essential": true,
-    "memoryReservation": 253952,
-    "cpu": 32,
+    "memoryReservation": 1536,
     "portMappings": [
       {
         "containerPort": 80
@@ -174,6 +133,10 @@ resource "aws_ecs_task_definition" "falafel" {
       {
         "name": "ETHEREUM_HOST",
         "value": "http://ethereum.aztec.network:10545"
+      },
+      {
+        "name": "HALLOUMI_HOST",
+        "value": "http://halloumi.local"
       },
       {
         "name": "ROLLUP_CONTRACT_ADDRESS",

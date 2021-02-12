@@ -14,6 +14,7 @@ interface ConfVars {
   port: number;
   rollupContractAddress?: string;
   ethereumHost?: string;
+  halloumiHost: string;
   infuraApiKey?: string;
   network?: string;
   privateKey: Buffer;
@@ -34,6 +35,7 @@ function getConfVars(): ConfVars {
   const {
     ROLLUP_CONTRACT_ADDRESS,
     ETHEREUM_HOST,
+    HALLOUMI_HOST,
     INFURA_API_KEY,
     NETWORK,
     PRIVATE_KEY,
@@ -55,6 +57,7 @@ function getConfVars(): ConfVars {
     port: +(PORT || 8081),
     rollupContractAddress: ROLLUP_CONTRACT_ADDRESS,
     ethereumHost: ETHEREUM_HOST,
+    halloumiHost: HALLOUMI_HOST || 'http://localhost:8083',
     infuraApiKey: INFURA_API_KEY,
     network: NETWORK,
     privateKey: PRIVATE_KEY

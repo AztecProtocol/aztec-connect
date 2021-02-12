@@ -16,15 +16,25 @@ services:
     ports:
       - '8545:8545'
 
+  halloumi:
+    build: ../halloumi
+    image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/halloumi:latest
+    environment:
+      NODE_ENV: production
+    ports:
+      - '8083:8083'
+
   falafel:
     build: ../falafel
     image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/falafel:latest
     environment:
       ETHEREUM_HOST: http://ganache:8545
+      HALLOUMI_HOST: http://halloumi:8083
       NODE_ENV: production
       TX_FEE: 100000000000000000
     depends_on:
       - ganache
+      - halloumi
     command: >
       sh -c "
       while ! nc -z ganache 8545; do sleep 1; done;

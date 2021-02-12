@@ -8,9 +8,9 @@ import { RollupProofDao } from './entity/rollup_proof';
 import { TxDao } from './entity/tx';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
-import { TxAggregator } from './tx_aggregator';
 import { Block } from 'barretenberg/block_source';
 import { ViewingKey } from 'barretenberg/viewing_key';
+import { RollupPipeline, RollupPipelineFactory } from './rollup_pipeline';
 
 const innerProofDataToTxDao = (tx: InnerProofData, viewingKeys: ViewingKey[], created: Date) => {
   const txDao = new TxDao();
@@ -26,13 +26,13 @@ const innerProofDataToTxDao = (tx: InnerProofData, viewingKeys: ViewingKey[], cr
 
 export class WorldState {
   private blockQueue = new MemoryFifo<Block>();
+  private pipeline!: RollupPipeline;
 
   constructor(
     public rollupDb: RollupDb,
     public worldStateDb: WorldStateDb,
     private blockchain: Blockchain,
-    private txAggregator: TxAggregator,
-    private outerRollupSize: number,
+    private pipelineFactory: RollupPipelineFactory,
     private metrics: Metrics,
   ) {}
 
@@ -41,7 +41,7 @@ export class WorldState {
 
     await this.syncState();
 
-    this.txAggregator.start();
+    await this.startNewPipeline();
 
     this.blockchain.on('block', block => this.blockQueue.put(block));
     await this.blockchain.start(await this.rollupDb.getNextRollupId());
@@ -52,12 +52,12 @@ export class WorldState {
   public async stop() {
     this.blockQueue.cancel();
     this.blockchain.stop();
-    await this.txAggregator.stop();
+    await this.pipeline.stop();
     this.worldStateDb.stop();
   }
 
   public flushTxs() {
-    this.txAggregator.flushTxs();
+    this.pipeline.flushTxs();
   }
 
   /**
@@ -92,33 +92,34 @@ export class WorldState {
 
   /**
    * Called to purge all received, unsettled txs, and reset the rollup pipeline.
-   * Stops the TxAggregator, stopping any current rollup construction or publishing.
-   * Resets db state.
-   * Starts the TxAggregator.
    */
   public async resetPipeline() {
-    await this.txAggregator.stop();
-
+    await this.pipeline.stop();
     await this.worldStateDb.rollback();
     await this.rollupDb.deleteUnsettledRollups();
     await this.rollupDb.deleteOrphanedRollupProofs();
     await this.rollupDb.deletePendingTxs();
+    await this.startNewPipeline();
+  }
 
-    this.txAggregator.start();
+  private async startNewPipeline() {
+    this.pipeline = await this.pipelineFactory.create();
+    this.pipeline.start().catch(async err => {
+      console.log('PIPELINE PANIC!');
+      console.log(err);
+    });
   }
 
   /**
    * Called in serial to process each incoming block.
-   * Stops the TxAggregator, stopping any current rollup construction or publishing.
+   * Stops the pipeline, stopping any current rollup construction or publishing.
    * Processes the block, loading it's data into the db.
-   * Starts the TxAggregator.
+   * Starts a new pipeline.
    */
   private async handleBlock(block: Block) {
-    await this.txAggregator.stop();
-
+    await this.pipeline.stop();
     await this.updateDbs(block);
-
-    this.txAggregator.start();
+    await this.startNewPipeline();
   }
 
   /**
@@ -196,32 +197,18 @@ export class WorldState {
 
   private async addRollupToWorldState(rollup: RollupProofData) {
     const { rollupId, dataStartIndex, innerProofData } = rollup;
-    let i = 0;
-    for (; i < innerProofData.length; ++i) {
+    for (let i = 0; i < innerProofData.length; ++i) {
       const tx = innerProofData[i];
-      if (tx.isPadding()) {
-        break;
-      }
       await this.worldStateDb.put(0, BigInt(dataStartIndex + i * 2), tx.newNote1);
       await this.worldStateDb.put(0, BigInt(dataStartIndex + i * 2 + 1), tx.newNote2);
-      await this.worldStateDb.put(1, toBigIntBE(tx.nullifier1), toBufferBE(1n, 64));
-      await this.worldStateDb.put(1, toBigIntBE(tx.nullifier2), toBufferBE(1n, 64));
+      if (!tx.isPadding()) {
+        await this.worldStateDb.put(1, toBigIntBE(tx.nullifier1), toBufferBE(1n, 64));
+        await this.worldStateDb.put(1, toBigIntBE(tx.nullifier2), toBufferBE(1n, 64));
+      }
     }
-
-    await this.padToNextRollupBoundary();
 
     await this.worldStateDb.put(2, BigInt(rollupId + 1), this.worldStateDb.getRoot(0));
 
     await this.worldStateDb.commit();
-  }
-
-  private async padToNextRollupBoundary() {
-    const dataSize = this.worldStateDb.getSize(0);
-    const subtreeSize = BigInt(this.outerRollupSize * 2);
-    const nextDataStartIndex =
-      dataSize % subtreeSize === 0n ? dataSize : dataSize + subtreeSize - (dataSize % subtreeSize);
-    if (dataSize < nextDataStartIndex - 1n) {
-      await this.worldStateDb.put(0, nextDataStartIndex - 1n, Buffer.alloc(64, 0));
-    }
   }
 }

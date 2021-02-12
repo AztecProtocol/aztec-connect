@@ -11,7 +11,7 @@
     "clean_db": "rm -rf ./data/db.sqlite ./data/world_state.db",
     "clean_keys": "rm -rf ./data/account ./data/join_split ./data/*rollup*",
     "clean": "rm -rf ./data",
-    "start:e2e": "yarn clean_db && `yarn -s deploy_rollup_processor 1` && TX_FEE=100000000000000000 yarn start:dev"
+    "start:e2e": "yarn clean_db && `ESCAPE_BLOCK_LOWER=10 ESCAPE_BLOCK_UPPER=100 yarn -s deploy_rollup_processor 1` && TX_FEE=100000000000000000 MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW=1 NUM_OUTER_ROLLUP_PROOFS=2 yarn start:dev"
   },
   "jest": {
     "transform": {
@@ -42,6 +42,7 @@
     "fs-extra": "^9.0.1",
     "graphql": "^15.3.0",
     "graphql-playground-middleware-koa": "^1.6.19",
+    "halloumi": "file:../halloumi/dest",
     "koa": "^2.7.0",
     "koa-compress": "^3.0.0",
     "koa-router": "^7.4.0",
@@ -54,7 +55,7 @@
     "type-graphql": "^1.0.0",
     "typedi": "^0.8.0",
     "typeorm": "0.2.29",
-    "typescript": "^3.5.3"
+    "typescript": "^4.1.5"
   },
   "devDependencies": {
     "@types/bn.js": "^4.11.5",

@@ -94,6 +94,18 @@ jobs:
           working_directory: blockchain
           command: build blockchain:latest
 
+  halloumi:
+    machine:
+      image: ubuntu-1604:201903-01
+    resource_class: large
+    steps:
+      - checkout
+      - *setup_env
+      - run:
+          name: 'Build and test'
+          working_directory: halloumi
+          command: build halloumi:latest
+
   falafel:
     machine:
       image: ubuntu-1604:201903-01
@@ -275,6 +287,10 @@ jobs:
             deploy sdk:latest
             deploy_npm sdk:latest
       - run:
+          name: 'halloumi'
+          working_directory: halloumi
+          command: deploy halloumi:latest
+      - run:
           name: 'falafel'
           working_directory: falafel
           command: deploy falafel:latest
@@ -344,9 +360,12 @@ workflows:
       - blockchain:
           requires:
             - barretenberg-js
-      - falafel:
+      - halloumi:
           requires:
             - blockchain
+      - falafel:
+          requires:
+            - halloumi
       - sriracha:
           requires:
             - blockchain

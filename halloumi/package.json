@@ -1,0 +1,54 @@
+{
+  "name": "halloumi",
+  "version": "1.0.0",
+  "main": "dest/index.js",
+  "license": "GPL-2.0",
+  "scripts": {
+    "build": "rm -rf ./dest && tsc -p tsconfig.prod.json && node package.js",
+    "build:dev": "tsc --watch",
+    "start": "node ./dest",
+    "start:dev": "tsc-watch -p tsconfig.prod.json --onSuccess 'yarn start'",
+    "test": "jest",
+    "clean": "rm -rf ./data"
+  },
+  "jest": {
+    "transform": {
+      "^.+\\.ts$": "ts-jest"
+    },
+    "testRegex": ".*\\.test\\.(tsx?|js)$",
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "jsx",
+      "json",
+      "node"
+    ],
+    "rootDir": "./src"
+  },
+  "dependencies": {
+    "barretenberg": "file:../barretenberg.js/dest",
+    "fs-extra": "^9.0.1",
+    "koa": "^2.7.0",
+    "koa-router": "^7.4.0",
+    "log-timestamp": "^0.3.0",
+    "promise-readable": "^5.0.4",
+    "source-map-support": "^0.5.19",
+    "typescript": "^3.5.3"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^9.0.2",
+    "@types/jest": "^24.0.15",
+    "@types/koa": "^2.0.49",
+    "@types/koa-router": "^7.0.42",
+    "@types/node": "^12.6.8",
+    "@typescript-eslint/eslint-plugin": "^4.1.1",
+    "@typescript-eslint/parser": "^4.1.1",
+    "eslint": "^7.9.0",
+    "eslint-config-prettier": "^6.11.0",
+    "jest": "^24.8.0",
+    "prettier": "^2.0.5",
+    "ts-jest": "^24.0.2",
+    "tsc-watch": "^2.2.1"
+  }
+}

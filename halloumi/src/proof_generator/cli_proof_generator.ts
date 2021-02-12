@@ -4,16 +4,16 @@ import { ChildProcess, spawn } from 'child_process';
 import { createWriteStream } from 'fs';
 import { PromiseReadable } from 'promise-readable';
 import { createInterface } from 'readline';
-import { TxRollup } from './tx_rollup';
-import { RootRollup } from './root_rollup';
-import { numToUInt32BE } from 'barretenberg/serialize';
+import { MemoryFifo } from 'barretenberg/fifo';
 
-export class ProofGenerator {
+export class CliProofGenerator {
   private proc?: ChildProcess;
   private stdout: any;
+  private runningPromise?: Promise<void>;
+  private execQueue = new MemoryFifo<() => Promise<void>>();
 
-  constructor(private txRollupSize: number, private rootRollupSize: number) {
-    if (!txRollupSize || !rootRollupSize) {
+  constructor(private maxCircuitSize: number) {
+    if (!maxCircuitSize) {
       throw new Error('Rollup sizes must be greater than 0.');
     }
   }
@@ -25,13 +25,18 @@ export class ProofGenerator {
     if (initByte[0] !== 1) {
       throw new Error('Failed to initialize rollup_cli.');
     }
+    this.execQueue.process(fn => fn());
     console.log('Proof generator initialized.');
   }
 
-  public stop() {
+  public async stop() {
+    this.execQueue.cancel();
     if (this.proc) {
       this.proc.kill('SIGINT');
       this.proc = undefined;
+    }
+    if (this.runningPromise) {
+      await this.runningPromise;
     }
   }
 
@@ -46,7 +51,8 @@ export class ProofGenerator {
    */
   public clearInterrupt() {}
 
-  private async createProof(buffer: Buffer) {
+  private async createProofInternal(buffer: Buffer) {
+    // this.proc!.stdin!.write(numToUInt32BE(proofId));
     this.proc!.stdin!.write(buffer);
 
     const header = (await this.stdout.read(4)) as Buffer | undefined;
@@ -64,23 +70,28 @@ export class ProofGenerator {
     }
 
     const verified = data.readUInt8(proofLength);
+    if (!verified) {
+      throw new Error('Proof invalid.');
+    }
 
-    return verified ? data.slice(0, -1) : undefined;
+    return data.slice(0, -1);
   }
 
-  public async createTxRollupProof(txRollup: TxRollup) {
-    this.proc!.stdin!.write(numToUInt32BE(0));
-    return this.createProof(txRollup.toBuffer());
-  }
-
-  public async createAggregateProof(rootRollup: RootRollup) {
-    this.proc!.stdin!.write(numToUInt32BE(1));
-    return this.createProof(rootRollup.toBuffer());
+  public async createProof(data: Buffer) {
+    return new Promise<Buffer>((resolve, reject) => {
+      const fn = async () => {
+        try {
+          resolve(await this.createProofInternal(data));
+        } catch (err) {
+          reject(err);
+        }
+      };
+      this.execQueue.put(fn);
+    });
   }
 
   private async ensureCrs() {
-    // Approximate. rollup_cli could report max circuit size after init.
-    let required = Math.floor(2 ** 25 / 28) * this.txRollupSize;
+    let required = this.maxCircuitSize;
     const pointPerTranscript = 5040000;
     for (let i = 0; required > 0; i++, required -= pointPerTranscript) {
       await this.downloadTranscript(i);
@@ -108,14 +119,7 @@ export class ProofGenerator {
 
   private launch() {
     const binPath = '../barretenberg/build/src/aztec/rollup/rollup_cli/rollup_cli';
-    const proc = (this.proc = spawn(binPath, [
-      this.txRollupSize.toString(),
-      this.rootRollupSize.toString(),
-      './data/crs',
-      './data',
-      '0', // reduce mem
-      '0', // persist rollup keys
-    ]));
+    const proc = (this.proc = spawn(binPath, ['./data/crs', './data']));
     this.stdout = new PromiseReadable(proc!.stdout!);
 
     const rl = createInterface({
@@ -124,11 +128,14 @@ export class ProofGenerator {
     });
     rl.on('line', (line: string) => console.log('rollup_cli: ' + line.trim()));
 
-    proc.on('close', (code, signal) => {
-      this.proc = undefined;
-      if (code !== 0) {
-        console.log(`rollup_cli exited with unexpected code or signal: ${code || signal}.`);
-      }
+    this.runningPromise = new Promise(resolve => {
+      proc.on('close', (code, signal) => {
+        this.proc = undefined;
+        if (code !== 0) {
+          console.log(`rollup_cli exited with code or signal: ${code || signal}.`);
+        }
+        resolve();
+      });
     });
 
     proc.on('error', console.log);

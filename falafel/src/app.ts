@@ -172,7 +172,7 @@ export function appFactory(
   });
 
   router.get('/get-tx', async (ctx: Koa.Context) => {
-    const tx = await server.getTx(bufferFromHex(ctx.query.txHash));
+    const tx = await server.getTx(bufferFromHex(ctx.query.txHash as string));
     ctx.body = tx ? toTxResponse(tx) : undefined;
     ctx.status = 200;
   });

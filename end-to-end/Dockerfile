@@ -5,6 +5,7 @@ FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/sriracha:latest
 # Although this isn't used by the code, including it here ensures it's pulled
 # and tagged correctly in CI for use by docker-compose. Let's call it a feature...
 FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/falafel:latest
+FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/halloumi:latest
 
 FROM node:14-alpine
 COPY --from=0 /usr/src/barretenberg.js/dest /usr/src/barretenberg.js/dest

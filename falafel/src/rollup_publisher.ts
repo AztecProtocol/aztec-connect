@@ -88,10 +88,6 @@ export class RollupPublisher {
     this.interruptResolve();
   }
 
-  public clearInterrupt() {
-    this.interrupted = false;
-  }
-
   private async createTxData(rollup: RollupDao) {
     const proof = rollup.rollupProof.proofData;
     const txs = rollup.rollupProof.txs;

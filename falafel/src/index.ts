@@ -19,6 +19,7 @@ async function main() {
     provider,
     ethConfig,
     confVars: {
+      halloumiHost,
       rollupContractAddress,
       numInnerRollupTxs,
       numOuterRollupProofs,
@@ -35,6 +36,7 @@ async function main() {
   const blockchain = await EthereumBlockchain.new(ethConfig, EthAddress.fromString(rollupContractAddress!), provider);
 
   const serverConfig: ServerConfig = {
+    halloumiHost,
     numInnerRollupTxs,
     numOuterRollupProofs,
     publishInterval: moment.duration(publishInterval, 's'),

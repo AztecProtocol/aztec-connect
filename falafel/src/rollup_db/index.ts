@@ -242,6 +242,12 @@ export class RollupDb {
     });
   }
 
+  public async getNumRollupProofsBySize(numTxs: number) {
+    return await this.rollupProofRep.count({
+      where: { rollupSize: numTxs, rollup: null },
+    });
+  }
+
   public async getNextRollupId() {
     const latestRollup = await this.rollupRep.findOne({ mined: Not(IsNull()) }, { order: { id: 'DESC' } });
     return latestRollup ? latestRollup.id + 1 : 0;

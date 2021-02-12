@@ -38,6 +38,7 @@ export class HashPath {
 }
 
 export class MerkleTree {
+  private static ZERO_ELEMENT = Buffer.alloc(64, 0);
   private root!: Buffer;
   private zeroHashes: Buffer[] = [];
 
@@ -259,6 +260,11 @@ export class MerkleTree {
       return root;
     }
 
+    // Do nothing if updating zero values.
+    if (hashes[hashes.length - 1].equals(this.zeroHashes[height - 1])) {
+      return root;
+    }
+
     const data = await this.dbGet(root);
     const isRight = (index >> (height - 1)) & 0x1;
 
@@ -286,7 +292,7 @@ export class MerkleTree {
     const newRoot = this.hasher.compress(left, right);
     batch.put(newRoot, Buffer.concat([left, right]));
     if (!root.equals(newRoot)) {
-      await batch.del(root);
+      batch.del(root);
     }
     return newRoot;
   }

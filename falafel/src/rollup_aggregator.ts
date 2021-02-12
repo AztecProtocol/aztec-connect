@@ -1,10 +1,9 @@
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { WorldStateDb } from 'barretenberg/world_state_db';
+import { ProofGenerator, RootRollup, RootRollupProofRequest } from 'halloumi/proof_generator';
 import { RollupDao } from './entity/rollup';
 import { RollupProofDao } from './entity/rollup_proof';
 import { Metrics } from './metrics';
-import { ProofGenerator } from './proof_generator';
-import { RootRollup } from './proof_generator/root_rollup';
 import { RollupDb } from './rollup_db';
 import { RollupPublisher } from './rollup_publisher';
 
@@ -16,6 +15,7 @@ export class RollupAggregator {
     private worldStateDb: WorldStateDb,
     private innerRollupSize: number,
     private outerRollupSize: number,
+    private numInnerRollupTxs: number,
     private numOuterRollupProofs: number,
     private metrics: Metrics,
   ) {}
@@ -36,7 +36,12 @@ export class RollupAggregator {
     if (innerProofs.length === this.numOuterRollupProofs || flush) {
       const rootRollup = await this.createRootRollup(innerProofs);
       const end = this.metrics.rootRollupTimer();
-      const proofData = await this.proofGenerator.createAggregateProof(rootRollup);
+      const rootRollupRequest = new RootRollupProofRequest(
+        this.numInnerRollupTxs,
+        this.numOuterRollupProofs,
+        rootRollup,
+      );
+      const proofData = await this.proofGenerator.createProof(rootRollupRequest.toBuffer());
       end();
 
       if (!proofData) {
@@ -111,9 +116,5 @@ export class RollupAggregator {
 
   public interrupt() {
     this.rollupPublisher.interrupt();
-  }
-
-  public clearInterrupt() {
-    this.rollupPublisher.clearInterrupt();
   }
 }

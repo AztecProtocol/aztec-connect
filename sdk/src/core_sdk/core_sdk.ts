@@ -673,6 +673,7 @@ export class CoreSdk extends EventEmitter {
         await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (err) {
         debug(err);
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
   }

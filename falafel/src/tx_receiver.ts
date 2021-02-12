@@ -6,11 +6,11 @@ import { Crs } from 'barretenberg/crs';
 import { BarretenbergWasm } from 'barretenberg/wasm';
 import { BarretenbergWorker } from 'barretenberg/wasm/worker';
 import { createWorker, destroyWorker } from 'barretenberg/wasm/worker_factory';
-import { readFile } from 'fs-extra';
 import { TxDao } from './entity/tx';
 import { RollupDb } from './rollup_db';
 import { Mutex } from 'async-mutex';
 import { ViewingKey } from 'barretenberg/viewing_key';
+import { ProofGenerator } from 'halloumi/proof_generator';
 
 export interface Tx {
   proofData: Buffer;
@@ -24,7 +24,12 @@ export class TxReceiver {
   private accountVerifier!: AccountVerifier;
   private mutex = new Mutex();
 
-  constructor(private rollupDb: RollupDb, private blockchain: Blockchain, private minFees: bigint[]) {}
+  constructor(
+    private rollupDb: RollupDb,
+    private blockchain: Blockchain,
+    private proofGenerator: ProofGenerator,
+    private minFees: bigint[],
+  ) {}
 
   public async init() {
     const crs = new Crs(0);
@@ -33,11 +38,11 @@ export class TxReceiver {
     const barretenberg = await BarretenbergWasm.new();
     this.worker = await createWorker('0', barretenberg.module);
 
-    const jsKey = await readFile('./data/join_split/verification_key');
+    const jsKey = await this.proofGenerator.getJoinSplitVk();
     this.joinSplitVerifier = new JoinSplitVerifier();
     await this.joinSplitVerifier.loadKey(this.worker, jsKey, crs.getG2Data());
 
-    const accountKey = await readFile('./data/account/verification_key');
+    const accountKey = await this.proofGenerator.getAccountVk();
     this.accountVerifier = new AccountVerifier();
     await this.accountVerifier.loadKey(this.worker, accountKey, crs.getG2Data());
   }
