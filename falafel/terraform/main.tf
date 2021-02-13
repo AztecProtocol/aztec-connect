@@ -68,9 +68,11 @@ resource "aws_service_discovery_service" "falafel" {
   }
 }
 
-# Configure an EFS filesystem for holding transcripts and state data, mountable in each AZ.
+# Configure an EFS filesystem.
 resource "aws_efs_file_system" "falafel_data_store" {
-  creation_token = "falafel-data-store"
+  creation_token                  = "falafel-data-store"
+  throughput_mode                 = "provisioned"
+  provisioned_throughput_in_mibps = 20
 
   tags = {
     Name = "falafel-data-store"
@@ -218,10 +220,11 @@ data "aws_ecs_task_definition" "falafel" {
 resource "aws_ecs_service" "falafel" {
   name                               = "falafel"
   cluster                            = data.terraform_remote_state.setup_iac.outputs.ecs_cluster_id
-  launch_type                        = "EC2"
-  desired_count                      = "1"
+  launch_type                        = "FARGATE"
+  desired_count                      = 1
   deployment_maximum_percent         = 100
   deployment_minimum_healthy_percent = 0
+  platform_version                   = "1.4.0"
 
   network_configuration {
     subnets = [
@@ -241,11 +244,6 @@ resource "aws_ecs_service" "falafel" {
     registry_arn   = aws_service_discovery_service.falafel.arn
     container_name = "falafel"
     container_port = 80
-  }
-
-  placement_constraints {
-    type       = "memberOf"
-    expression = "attribute:group == falafel"
   }
 
   task_definition = "${aws_ecs_task_definition.falafel.family}:${max(aws_ecs_task_definition.falafel.revision, data.aws_ecs_task_definition.falafel.revision)}"
@@ -269,10 +267,10 @@ resource "aws_alb_target_group" "falafel" {
   health_check {
     path                = "/falafel"
     matcher             = "200"
-    interval            = 60
+    interval            = 10
     healthy_threshold   = 2
     unhealthy_threshold = 5
-    timeout             = 50
+    timeout             = 5
   }
 
   tags = {

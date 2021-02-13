@@ -290,7 +290,8 @@ export class TerminalHandler {
       this.printQueue.put('failed to get server status.\n');
     }
 
-    this.printQueue.put(`user: ${this.app.getAddress().toString().slice(0, 12)}...\n`);
+    this.printQueue.put(`syncing user: ${this.app.getAddress().toString().slice(0, 12)}...\n`);
+    await this.app.getUser().awaitSynchronised();
     await this.balance();
 
     this.registerHandlers();

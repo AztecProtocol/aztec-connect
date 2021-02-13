@@ -138,8 +138,8 @@ resource "aws_ecs_task_definition" "halloumi" {
         "value": "80"
       },
       {
-        "name": "API_PREFIX",
-        "value": "/halloumi"
+        "name": "MAX_CIRCUIT_SIZE",
+        "value": "33554432"
       }
     ],
     "logConfiguration": {

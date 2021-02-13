@@ -7,6 +7,7 @@ import {
   BeforeUpdate,
   Column,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryColumn,
@@ -33,6 +34,7 @@ export class TxDao {
 
   @ManyToOne(() => RollupProofDao, r => r.txs, { onDelete: 'SET NULL' })
   @JoinColumn()
+  @Index()
   public rollupProof?: RollupProofDao | null;
 
   @Column()

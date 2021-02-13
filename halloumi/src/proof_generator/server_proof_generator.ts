@@ -34,7 +34,7 @@ export class ServerProofGenerator implements ProofGenerator {
         }
         return Buffer.from(await response.arrayBuffer());
       } catch (err) {
-        console.log(err);
+        console.log(err.message);
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
