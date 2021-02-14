@@ -84,6 +84,11 @@ export class RollupPipelineFactory {
     private numOuterRollupProofs: number,
   ) {}
 
+  public setTopology(numInnerRollupTxs: number, numOuterRollupProofs: number) {
+    this.numInnerRollupTxs = numInnerRollupTxs;
+    this.numOuterRollupProofs = numOuterRollupProofs;
+  }
+
   public async create() {
     return new RollupPipeline(
       this.proofGenerator,

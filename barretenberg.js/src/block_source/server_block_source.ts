@@ -75,11 +75,25 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
     this.running = false;
   }
 
+  private async awaitSucceed(fn: () => Promise<Response>) {
+    while (true) {
+      try {
+        const response = await fn();
+        if (response.status !== 200) {
+          throw new Error(`Bad status code: ${response.status}`);
+        }
+        return response;
+      } catch (err) {
+        console.log(err.message);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+  }
+
   public async getBlocks(from: number) {
     const url = new URL(`${this.baseUrl}/get-blocks`);
     url.searchParams.append('from', from.toString());
-
-    const response = await fetch(url.toString());
+    const response = await this.awaitSucceed(() => fetch(url.toString()));
     const result = (await response.json()) as GetBlocksServerResponse;
     this.latestRollupId = result.latestRollupId;
     return result.blocks.map(toBlock);

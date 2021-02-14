@@ -28,6 +28,7 @@ export interface ServerConfig {
 export class Server {
   private worldState: WorldState;
   private txReceiver: TxReceiver;
+  private pipelineFactory: RollupPipelineFactory;
   private proofGenerator: ProofGenerator;
   private ready = false;
 
@@ -42,7 +43,7 @@ export class Server {
     const { numInnerRollupTxs, numOuterRollupProofs, publishInterval, feeLimit } = config;
 
     this.proofGenerator = new ServerProofGenerator(config.halloumiHost);
-    const pipelineFactory = new RollupPipelineFactory(
+    this.pipelineFactory = new RollupPipelineFactory(
       this.proofGenerator,
       blockchain,
       rollupDb,
@@ -54,7 +55,7 @@ export class Server {
       numInnerRollupTxs,
       numOuterRollupProofs,
     );
-    this.worldState = new WorldState(rollupDb, worldStateDb, blockchain, pipelineFactory, metrics);
+    this.worldState = new WorldState(rollupDb, worldStateDb, blockchain, this.pipelineFactory, metrics);
     this.txReceiver = new TxReceiver(rollupDb, blockchain, this.proofGenerator, config.minFees);
   }
 
@@ -119,6 +120,11 @@ export class Server {
   }
 
   public async getBlocks(from: number): Promise<Block[]> {
+    const { nextRollupId } = await this.blockchain.getBlockchainStatus();
+    if (from >= nextRollupId) {
+      return [];
+    }
+
     const rollups = await this.rollupDb.getSettledRollups(from);
     return rollups.map(dao => ({
       txHash: new TxHash(dao.ethTxHash!),
@@ -168,5 +174,9 @@ export class Server {
   public flushTxs() {
     console.log('Flushing queued transactions...');
     this.worldState.flushTxs();
+  }
+
+  public setTopology(numInnerRollupTxs: number, numOuterRollupProofs: number) {
+    this.pipelineFactory.setTopology(numInnerRollupTxs, numOuterRollupProofs);
   }
 }

@@ -209,6 +209,16 @@ export function appFactory(
     ctx.status = 200;
   });
 
+  router.get('/set-topology', validateAuth, async (ctx: Koa.Context) => {
+    const numInnerRollupTxs = +(ctx.query.numInnerRollupTxs as string);
+    const numOuterRollupProofs = +(ctx.query.numOuterRollupProofs as string);
+    if (!numInnerRollupTxs || !numOuterRollupProofs || numInnerRollupTxs > 28 || numOuterRollupProofs > 32) {
+      throw new Error('Bad topology.');
+    }
+    server.setTopology(numInnerRollupTxs, numOuterRollupProofs);
+    ctx.status = 200;
+  });
+
   router.get('/metrics', async (ctx: Koa.Context) => {
     ctx.body = await metrics.getMetrics();
     ctx.status = 200;
