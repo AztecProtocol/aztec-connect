@@ -660,7 +660,7 @@ export class CoreSdk extends EventEmitter {
 
   private async isSynchronised() {
     const providerStatus = await this.rollupProvider.getStatus();
-    const localDataRoot = await this.worldState.getRoot();
+    const localDataRoot = this.worldState.getRoot();
     return localDataRoot.equals(providerStatus.blockchainStatus.dataRoot);
   }
 

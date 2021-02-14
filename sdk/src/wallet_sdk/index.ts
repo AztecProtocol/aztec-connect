@@ -60,6 +60,7 @@ export async function createWalletSdk(
 }
 
 export interface WalletSdk {
+  on(event: SdkEvent.LOG, listener: (msg: string) => void): this;
   on(event: SdkEvent.UPDATED_ACTION_STATE, listener: (actionState: ActionState) => void): this;
   on(event: SdkEvent.UPDATED_EXPLORER_ROLLUPS, listener: (rollups: Rollup[]) => void): this;
   on(event: SdkEvent.UPDATED_EXPLORER_TXS, listener: (txs: Tx[]) => void): this;
@@ -74,6 +75,14 @@ export class WalletSdk extends EventEmitter {
 
   constructor(private core: CoreSdk, private blockchain: EthereumBlockchain) {
     super();
+  }
+
+  public static create(
+    ethereumProvider: EthereumProvider,
+    serverUrl: string,
+    sdkOptions: SdkOptions = {},
+  ) {
+    return createWalletSdk(ethereumProvider, serverUrl, sdkOptions);
   }
 
   public async init() {

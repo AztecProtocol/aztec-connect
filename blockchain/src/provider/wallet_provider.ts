@@ -7,14 +7,27 @@ import {
 } from './ethereum_provider';
 import { Wallet } from 'ethers';
 import { EthAddress } from 'barretenberg/address';
+import { EthersAdapter } from './ethers_adapter';
+import { JsonRpcProvider } from '@ethersproject/providers';
 
+/**
+ * Given an EIP1193 provider, wraps it, and provides the ability to add local accounts.
+ */
 export class WalletProvider implements EthereumProvider {
   private accounts: Wallet[] = [];
 
   constructor(private provider: EthereumProvider) {}
 
+  public static fromHost(ethereumHost: string) {
+    const ethersProvider = new JsonRpcProvider(ethereumHost);
+    return new WalletProvider(new EthersAdapter(ethersProvider));
+  }
+
   public addAccount(privateKey: Buffer) {
-    const wallet = new Wallet(privateKey);
+    return this.addEthersWallet(new Wallet(privateKey));
+  }
+
+  public addEthersWallet(wallet: Wallet) {
     this.accounts.push(wallet);
     return EthAddress.fromString(wallet.address);
   }

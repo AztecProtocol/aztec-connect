@@ -1,5 +1,8 @@
 import { EthereumProvider, RequestArguments } from './ethereum_provider';
 
+/**
+ * Adapts an etheres provider into an EIP1193 compatible provider for injecting into the sdk.
+ */
 export class EthersAdapter implements EthereumProvider {
   constructor(private provider: { send: (method: string, params: any[]) => Promise<any> }) {}
 

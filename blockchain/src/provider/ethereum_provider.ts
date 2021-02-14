@@ -28,6 +28,11 @@ export interface ProviderConnectInfo {
 
 export type EthereumProviderNotifications = 'connect' | 'disconnect' | 'chainChanged' | 'accountsChanged' | 'message';
 
+/**
+ * Interface defining an EIP1193 compatible provider. This is the standard that all future providers should adhere to.
+ * The Aztec SDK accepts such a provider. If non standard providers wish to be used, wrap them in an adapter first.
+ * Two adapters are provided, an EthersAdapter for ethers providers, and Web3Adapter, for legacy web3 providers.
+ */
 export interface EthereumProvider {
   request(args: RequestArguments): Promise<any>;
 

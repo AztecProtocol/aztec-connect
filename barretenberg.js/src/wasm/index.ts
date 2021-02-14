@@ -4,6 +4,8 @@ import { promisify } from 'util';
 import { EventEmitter } from 'events';
 import createDebug from 'debug';
 
+EventEmitter.defaultMaxListeners = 30;
+
 export async function fetchCode() {
   if (isNode) {
     return await promisify(readFile)(__dirname + '/barretenberg.wasm');

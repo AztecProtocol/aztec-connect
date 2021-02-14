@@ -130,6 +130,18 @@ jobs:
           working_directory: sriracha
           command: build sriracha:latest
 
+  wasabi:
+    machine:
+      image: ubuntu-1604:201903-01
+    resource_class: large
+    steps:
+      - checkout
+      - *setup_env
+      - run:
+          name: 'Build and test'
+          working_directory: wasabi
+          command: build wasabi:latest
+
   sdk:
     docker:
       - image: aztecprotocol/build-image
@@ -301,6 +313,11 @@ jobs:
             deploy sriracha:latest
             deploy_dockerhub sriracha:latest
       - run:
+          name: 'wasabi'
+          working_directory: wasabi
+          command: |
+            deploy wasabi:latest
+      - run:
           name: 'hummus'
           working_directory: hummus
           command: |
@@ -376,6 +393,9 @@ workflows:
       - hummus:
           requires:
             - sdk
+      - wasabi:
+          requires:
+            - sdk
       - block-explorer:
           requires:
             - sdk
@@ -395,6 +415,7 @@ workflows:
             - x86_64-linux-gcc
             - end-to-end
             - hummus
+            - wasabi
             - block-explorer
             - documentation
             - website

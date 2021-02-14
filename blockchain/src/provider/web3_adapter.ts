@@ -1,6 +1,9 @@
 import { EthereumProvider, RequestArguments } from './ethereum_provider';
 import { Web3Provider } from './web3_provider';
 
+/**
+ * Adapts a legacy web3 provider into an EIP1193 compatible provider for injecting into the sdk.
+ */
 export class Web3Adapter implements EthereumProvider {
   private id = 0;
 

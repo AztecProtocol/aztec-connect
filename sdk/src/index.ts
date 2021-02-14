@@ -11,4 +11,14 @@ export * from 'barretenberg/asset';
 export * from 'barretenberg/client_proofs/signature';
 export * from 'barretenberg/rollup_provider';
 export * from 'barretenberg/fifo';
-export { WalletProvider, EthersAdapter, EthereumProvider, Web3Adapter, Web3Provider } from 'blockchain';
+export * from 'barretenberg/tx_hash';
+
+export {
+  WalletProvider,
+  EthersAdapter,
+  EthereumProvider,
+  Web3Adapter,
+  Web3Provider,
+  toBaseUnits,
+  fromBaseUnits,
+} from 'blockchain';
