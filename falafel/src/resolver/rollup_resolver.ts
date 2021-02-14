@@ -3,20 +3,17 @@ import { Arg, Args, FieldResolver, Int, Query, Resolver, Root } from 'type-graph
 import { Inject } from 'typedi';
 import { Connection, Repository } from 'typeorm';
 import { RollupProofDao } from '../entity/rollup_proof';
-import { TxDao } from '../entity/tx';
-import { FieldAliases, getQuery } from './query_builder';
-import { RollupType, RollupsArgs, RollupCountArgs } from './rollup_type';
+import { FieldAliases, getQuery, pickOne } from './query_builder';
+import { RollupsArgs, RollupType } from './rollup_type';
 import { HexString } from './scalar_type';
 
 @Resolver(() => RollupType)
 export class RollupResolver {
   private readonly rollupRep: Repository<RollupProofDao>;
-  private readonly rollupTxRep: Repository<TxDao>;
   private fieldAliases: FieldAliases = {};
 
   constructor(@Inject('connection') connection: Connection) {
     this.rollupRep = connection.getRepository(RollupProofDao);
-    this.rollupTxRep = connection.getRepository(TxDao);
     this.fieldAliases.hash = 'id';
     ['id', 'dataRoot', 'ethTxHash', 'mined'].forEach(field => {
       this.fieldAliases[field] = `rollup.${field}`;
@@ -27,13 +24,11 @@ export class RollupResolver {
   async rollup(
     @Arg('id', () => Int, { nullable: true }) id?: number,
     @Arg('hash', () => HexString, { nullable: true }) hash?: Buffer,
-    @Arg('dataRoot', () => HexString, { nullable: true }) dataRoot?: Buffer,
-    @Arg('ethTxHash', () => HexString, { nullable: true }) ethTxHash?: Buffer,
   ) {
     return getQuery(
       this.rollupRep,
       {
-        where: { id, hash, dataRoot, ethTxHash, rollup_not_null: true }, // eslint-disable-line camelcase
+        where: { ...pickOne({ id, hash }), rollup_not_null: true }, // eslint-disable-line camelcase
       },
       this.fieldAliases,
       ['rollup', 'txs'],
@@ -44,7 +39,7 @@ export class RollupResolver {
   async rollups(@Args() { where, ...args }: RollupsArgs) {
     return getQuery(
       this.rollupRep,
-      { where: { ...where, rollup_not_null: true }, ...args }, // eslint-disable-line camelcase
+      { where: { ...pickOne(where || {}), rollup_not_null: true }, ...args }, // eslint-disable-line camelcase
       this.fieldAliases,
       ['rollup', 'txs'],
     ).getMany();
@@ -112,7 +107,7 @@ export class RollupResolver {
   }
 
   @Query(() => Int)
-  async totalRollups(@Args() { where }: RollupCountArgs) {
-    return getQuery(this.rollupRep, { where: { ...where, rollup_not_null: true } }).getCount(); // eslint-disable-line camelcase
+  async totalRollups() {
+    return getQuery(this.rollupRep, { where: { rollup_not_null: true } }).getCount(); // eslint-disable-line camelcase
   }
 }

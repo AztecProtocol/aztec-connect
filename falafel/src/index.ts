@@ -12,6 +12,8 @@ import 'log-timestamp';
 import { getConfig } from './config';
 import { EthAddress } from 'barretenberg/address';
 import { Metrics } from './metrics';
+import { BarretenbergWasm } from 'barretenberg/wasm';
+import { Container } from 'typedi';
 
 async function main() {
   const {
@@ -34,6 +36,7 @@ async function main() {
 
   const connection = await createConnection(ormConfig);
   const blockchain = await EthereumBlockchain.new(ethConfig, EthAddress.fromString(rollupContractAddress!), provider);
+  const barretenberg = await BarretenbergWasm.new();
 
   const serverConfig: ServerConfig = {
     halloumiHost,
@@ -46,7 +49,7 @@ async function main() {
   const rollupDb = new RollupDb(connection);
   const worldStateDb = new WorldStateDb();
   const metrics = new Metrics(worldStateDb, rollupDb, blockchain);
-  const server = new Server(serverConfig, blockchain, rollupDb, worldStateDb, metrics, provider);
+  const server = new Server(serverConfig, blockchain, rollupDb, worldStateDb, metrics, provider, barretenberg);
 
   const shutdown = async () => {
     await server.stop();
@@ -56,8 +59,10 @@ async function main() {
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
 
-  const serverStatus = await server.getStatus();
-  const app = appFactory(server, apiPrefix, metrics, connection, worldStateDb, serverStatus, serverAuthToken);
+  Container.set({ id: 'barretenberg', factory: () => barretenberg });
+  Container.set({ id: 'connection', factory: () => connection });
+  Container.set({ id: 'server', factory: () => server });
+  const app = appFactory(server, apiPrefix, metrics, serverAuthToken);
 
   const httpServer = http.createServer(app.callback());
   httpServer.listen(port);

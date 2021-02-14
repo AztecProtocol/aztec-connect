@@ -31,7 +31,7 @@ export const BLOCKS_POLL_INTERVAL = POLL_INTERVAL;
 
 export const GET_BLOCKS = gql`
   query Blocks($take: Int!, $skip: Int!) {
-    blocks: rollups(take: $take, skip: $skip) {
+    blocks: rollups(take: $take, skip: $skip, order: { id: "DESC" }) {
       id
       hash
       numTxs

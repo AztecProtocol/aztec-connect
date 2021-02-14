@@ -25,6 +25,7 @@ export class TxReceiver {
   private mutex = new Mutex();
 
   constructor(
+    private barretenberg: BarretenbergWasm,
     private rollupDb: RollupDb,
     private blockchain: Blockchain,
     private proofGenerator: ProofGenerator,
@@ -35,8 +36,7 @@ export class TxReceiver {
     const crs = new Crs(0);
     await crs.downloadG2Data();
 
-    const barretenberg = await BarretenbergWasm.new();
-    this.worker = await createWorker('0', barretenberg.module);
+    this.worker = await createWorker('0', this.barretenberg.module);
 
     const jsKey = await this.proofGenerator.getJoinSplitVk();
     this.joinSplitVerifier = new JoinSplitVerifier();

@@ -16,9 +16,11 @@ export class AccountTxDao {
   @Column({ unique: true })
   public id!: Buffer;
 
+  @Index({ unique: false })
   @Column()
   public accountPubKey!: Buffer;
 
+  @Index({ unique: false })
   @Column()
   public aliasHash!: Buffer;
 

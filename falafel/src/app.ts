@@ -1,23 +1,20 @@
 import { ApolloServer } from 'apollo-server-koa';
+import { blockchainStatusToJson } from 'barretenberg/blockchain';
 import { Block, BlockServerResponse, GetBlocksServerResponse } from 'barretenberg/block_source';
-import { RollupServerResponse, TxServerResponse, Proof, RollupProviderStatus } from 'barretenberg/rollup_provider';
-import { WorldStateDb } from 'barretenberg/world_state_db';
+import { Proof, RollupServerResponse, TxServerResponse } from 'barretenberg/rollup_provider';
+import { ViewingKey } from 'barretenberg/viewing_key';
 import graphqlPlayground from 'graphql-playground-middleware-koa';
-import Koa from 'koa';
+import Koa, { Context, DefaultState } from 'koa';
 import compress from 'koa-compress';
 import Router from 'koa-router';
 import { PromiseReadable } from 'promise-readable';
 import { buildSchemaSync } from 'type-graphql';
 import { Container } from 'typedi';
-import { Connection } from 'typeorm';
-import { DefaultState, Context } from 'koa';
-import { TxDao } from './entity/tx';
-import { RollupResolver, TxResolver, ServerStatusResolver } from './resolver';
-import { Server } from './server';
 import { RollupDao } from './entity/rollup';
+import { TxDao } from './entity/tx';
 import { Metrics } from './metrics';
-import { blockchainStatusToJson } from 'barretenberg/blockchain';
-import { ViewingKey } from 'barretenberg/viewing_key';
+import { AccountTxResolver, RollupResolver, ServerStatusResolver, TxResolver } from './resolver';
+import { Server } from './server';
 
 // eslint-disable-next-line
 const cors = require('@koa/cors');
@@ -71,15 +68,7 @@ const toTxResponse = ({
 
 const bufferFromHex = (hexStr: string) => Buffer.from(hexStr.replace(/^0x/i, ''), 'hex');
 
-export function appFactory(
-  server: Server,
-  prefix: string,
-  metrics: Metrics,
-  connection: Connection,
-  worldStateDb: WorldStateDb,
-  serverStatus: RollupProviderStatus,
-  serverAuthToken: string,
-) {
+export function appFactory(server: Server, prefix: string, metrics: Metrics, serverAuthToken: string) {
   const router = new Router<DefaultState, Context>({ prefix });
 
   const validateAuth = async (ctx: Koa.Context, next: () => Promise<void>) => {
@@ -234,12 +223,8 @@ export function appFactory(
   app.use(router.routes());
   app.use(router.allowedMethods());
 
-  Container.set({ id: 'connection', factory: () => connection });
-  Container.set({ id: 'worldStateDb', factory: () => worldStateDb });
-  Container.set({ id: 'serverStatus', factory: () => serverStatus });
-  Container.set({ id: 'server', factory: () => server });
   const schema = buildSchemaSync({
-    resolvers: [RollupResolver, TxResolver, ServerStatusResolver],
+    resolvers: [AccountTxResolver, RollupResolver, TxResolver, ServerStatusResolver],
     container: Container,
   });
   const appServer = new ApolloServer({ schema, introspection: true });

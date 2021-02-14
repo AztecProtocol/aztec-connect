@@ -1,15 +1,18 @@
 import { ProofData } from 'barretenberg/client_proofs/proof_data';
 import { Arg, Args, FieldResolver, Int, Query, Resolver, Root } from 'type-graphql';
 import { Inject } from 'typedi';
-import { Connection, Repository, LessThanOrEqual } from 'typeorm';
+import { Connection, LessThanOrEqual, Repository } from 'typeorm';
 import { TxDao } from '../entity/tx';
-import { getQuery } from './query_builder';
+import { getQuery, pickOne } from './query_builder';
 import { HexString, toSQLIteDateTime } from './scalar_type';
-import { TxType, TxsArgs, TxCountArgs } from './tx_type';
+import { TxCountArgs, TxsArgs, TxType } from './tx_type';
 
 @Resolver(() => TxType)
 export class TxResolver {
   private readonly txRep: Repository<TxDao>;
+  private fieldAliases = {
+    rollup: 'rollupProof',
+  };
 
   constructor(@Inject('connection') connection: Connection) {
     this.txRep = connection.getRepository(TxDao);
@@ -21,8 +24,8 @@ export class TxResolver {
   }
 
   @Query(() => [TxType!])
-  async txs(@Args() args: TxsArgs) {
-    return getQuery(this.txRep, args).getMany();
+  async txs(@Args() { where, ...args }: TxsArgs) {
+    return getQuery(this.txRep, { where: where ? pickOne(where) : undefined, ...args }, this.fieldAliases).getMany();
   }
 
   @FieldResolver(() => Int)
@@ -46,6 +49,12 @@ export class TxResolver {
   async publicOutput(@Root() { proofData }: TxDao) {
     const joinSplit = new ProofData(proofData);
     return joinSplit.publicOutput;
+  }
+
+  @FieldResolver()
+  async assetId(@Root() { proofData }: TxDao) {
+    const joinSplit = new ProofData(proofData);
+    return joinSplit.assetId;
   }
 
   @FieldResolver()
@@ -94,7 +103,7 @@ export class TxResolver {
   }
 
   @Query(() => Int)
-  async totalTxs(@Args() args: TxCountArgs) {
-    return getQuery(this.txRep, args, { rollup: 'rollupProof' }).getCount();
+  async totalTxs(@Args() { where }: TxCountArgs) {
+    return getQuery(this.txRep, { where: where ? pickOne(where) : undefined }, this.fieldAliases).getCount();
   }
 }

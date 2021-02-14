@@ -13,6 +13,7 @@ import { Blockchain } from 'barretenberg/blockchain';
 import { Block } from 'barretenberg/block_source';
 import { toBigIntBE } from 'bigint-buffer';
 import { TxHash } from 'barretenberg/tx_hash';
+import { BarretenbergWasm } from 'barretenberg/wasm';
 import { ProofGenerator, ServerProofGenerator } from 'halloumi/proof_generator';
 import { RollupPipelineFactory } from './rollup_pipeline';
 
@@ -39,6 +40,7 @@ export class Server {
     worldStateDb: WorldStateDb,
     private metrics: Metrics,
     provider: EthereumProvider,
+    barretenberg: BarretenbergWasm,
   ) {
     const { numInnerRollupTxs, numOuterRollupProofs, publishInterval, feeLimit } = config;
 
@@ -56,7 +58,7 @@ export class Server {
       numOuterRollupProofs,
     );
     this.worldState = new WorldState(rollupDb, worldStateDb, blockchain, this.pipelineFactory, metrics);
-    this.txReceiver = new TxReceiver(rollupDb, blockchain, this.proofGenerator, config.minFees);
+    this.txReceiver = new TxReceiver(barretenberg, rollupDb, blockchain, this.proofGenerator, config.minFees);
   }
 
   public async start() {

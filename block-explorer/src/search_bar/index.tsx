@@ -38,15 +38,6 @@ const SEARCH_BY_PARTIAL_HASH = gql`
     publishedRollups: rollups(take: 1, where: { ethTxHash_starts_with: $hash }) {
       id
     }
-    txs_end: txs(take: 1, where: { id_ends_with: $hash }) {
-      id
-    }
-    rollups_end: rollups(take: 1, where: { hash_ends_with: $hash }) {
-      id
-    }
-    publishedRollups_end: rollups(take: 1, where: { ethTxHash_ends_with: $hash }) {
-      id
-    }
   }
 `;
 
@@ -67,24 +58,10 @@ export const SearchBar: React.FunctionComponent = () => {
       history.push(`/tx/${hashData.tx.id}`);
     } else if (hashData?.rollup || hashData?.publishedRollup) {
       history.push(`/block/${(hashData.rollup || hashData.publishedRollup).id}`);
-    } else if (partialHashData?.txs.length || partialHashData?.txs_end.length) {
-      history.push(`/tx/${(partialHashData.txs[0] || partialHashData.txs_end[0]).id}`);
-    } else if (
-      partialHashData?.rollups.length ||
-      partialHashData?.publishedRollups.length ||
-      partialHashData?.rollups_end.length ||
-      partialHashData?.publishedRollups_end.length
-    ) {
-      history.push(
-        `/block/${
-          (
-            partialHashData.rollups[0] ||
-            partialHashData.publishedRollups[0] ||
-            partialHashData.rollups_end[0] ||
-            partialHashData.publishedRollups_end[0]
-          ).id
-        }`,
-      );
+    } else if (partialHashData?.txs.length) {
+      history.push(`/tx/${partialHashData.txs[0].id}`);
+    } else if (partialHashData?.rollups.length || partialHashData?.publishedRollups.length) {
+      history.push(`/block/${(partialHashData.rollups[0] || partialHashData.publishedRollups[0]).id}`);
     } else {
       history.push(`/search?q=${encodeURIComponent(searchTerm)}`);
     }

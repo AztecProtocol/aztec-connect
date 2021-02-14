@@ -1,6 +1,6 @@
 import { Length, Max } from 'class-validator';
-import { Field, Int, ObjectType, InputType, ArgsType } from 'type-graphql';
-import { Sort, MAX_COUNT } from './query_builder';
+import { ArgsType, Field, InputType, Int, ObjectType } from 'type-graphql';
+import { MAX_COUNT } from './query_builder';
 import { RollupType } from './rollup_type';
 import { HexString, ISODateTime } from './scalar_type';
 
@@ -27,6 +27,9 @@ export class TxType {
 
   @Field(() => HexString)
   publicOutput!: string;
+
+  @Field(() => HexString)
+  assetId!: string;
 
   @Field(() => HexString)
   newNote1!: string;
@@ -63,101 +66,17 @@ export class TxType {
 @InputType()
 class TxFilter {
   @Field(() => HexString, { nullable: true })
-  id?: string;
-
-  @Field(() => HexString, { nullable: true })
-  id_not?: string;
-
-  @Field(() => [HexString!], { nullable: true })
-  id_in?: string[];
-
-  @Field(() => [HexString!], { nullable: true })
-  id_not_in?: string[];
-
-  @Field(() => HexString, { nullable: true })
   id_starts_with?: string;
-
-  @Field(() => HexString, { nullable: true })
-  id_ends_with?: string;
-
-  @Field(() => HexString, { nullable: true })
-  id_contains?: string;
-
-  @Field(() => Int, { nullable: true })
-  rollup?: number;
-
-  @Field(() => Int, { nullable: true })
-  rollup_not?: number;
 
   @Field({ nullable: true })
   rollup_null?: boolean;
-
-  @Field({ nullable: true })
-  rollup_not_null?: boolean;
-
-  @Field(() => [Int!], { nullable: true })
-  rollup_in?: number[];
-
-  @Field(() => [Int!], { nullable: true })
-  rollup_not_in?: number[];
-
-  @Field(() => Int, { nullable: true })
-  rollup_gt?: number;
-
-  @Field(() => Int, { nullable: true })
-  rollup_gte?: number;
-
-  @Field(() => Int, { nullable: true })
-  rollup_lt?: number;
-
-  @Field(() => Int, { nullable: true })
-  rollup_lte?: number;
-
-  @Field(() => ISODateTime, { nullable: true })
-  created?: Date;
-
-  @Field(() => ISODateTime, { nullable: true })
-  created_not?: Date;
-
-  @Field(() => [ISODateTime!], { nullable: true })
-  created_in?: Date[];
-
-  @Field(() => [ISODateTime!], { nullable: true })
-  created_not_in?: Date[];
-
-  @Field(() => ISODateTime, { nullable: true })
-  created_gt?: Date;
-
-  @Field(() => ISODateTime, { nullable: true })
-  created_gte?: Date;
-
-  @Field(() => ISODateTime, { nullable: true })
-  created_lt?: Date;
-
-  @Field(() => ISODateTime, { nullable: true })
-  created_lte?: Date;
 }
 /* eslint-enable */
-
-@InputType()
-class TxOrder {
-  @Field({ nullable: true })
-  id?: Sort;
-
-  @Field({ nullable: true })
-  rollup?: Sort;
-
-  @Field({ nullable: true })
-  created?: Sort;
-}
 
 @ArgsType()
 export class TxsArgs {
   @Field(() => TxFilter, { nullable: true })
   where?: TxFilter;
-
-  @Field({ defaultValue: { id: 'DESC' } })
-  order?: TxOrder;
 
   @Field(() => Int, { defaultValue: 0 })
   skip?: number;
@@ -167,8 +86,16 @@ export class TxsArgs {
   take?: number;
 }
 
+/* eslint-disable camelcase */
+@InputType()
+class TxCountFilter {
+  @Field({ nullable: true })
+  rollup_null?: boolean;
+}
+/* eslint-enable */
+
 @ArgsType()
 export class TxCountArgs {
-  @Field(() => TxFilter, { nullable: true })
-  where?: TxFilter;
+  @Field(() => TxCountFilter, { nullable: true })
+  where?: TxCountFilter;
 }

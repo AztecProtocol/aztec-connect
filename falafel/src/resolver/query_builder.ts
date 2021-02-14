@@ -103,3 +103,10 @@ export const getQuery = <T>(
   }
   return query;
 };
+
+export const pickOne = (filters: { [key: string]: any }) => {
+  for (const filterName in filters) {
+    return { [filterName]: filters[filterName] };
+  }
+  return {};
+};
