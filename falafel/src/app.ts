@@ -199,12 +199,11 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   });
 
   router.get('/set-topology', validateAuth, async (ctx: Koa.Context) => {
-    const numInnerRollupTxs = +(ctx.query.numInnerRollupTxs as string);
-    const numOuterRollupProofs = +(ctx.query.numOuterRollupProofs as string);
-    if (!numInnerRollupTxs || !numOuterRollupProofs || numInnerRollupTxs > 28 || numOuterRollupProofs > 32) {
-      throw new Error('Bad topology.');
+    const numOuterRollupProofs = +(ctx.query['num-outer-proofs'] as string);
+    if (!numOuterRollupProofs || numOuterRollupProofs > 32 || numOuterRollupProofs & (numOuterRollupProofs - 1)) {
+      throw new Error('Bad topology, num-outer-proofs must be 1 to 32, powers of 2.');
     }
-    server.setTopology(numInnerRollupTxs, numOuterRollupProofs);
+    server.setTopology(numOuterRollupProofs);
     ctx.status = 200;
   });
 

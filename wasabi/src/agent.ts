@@ -18,12 +18,13 @@ export default class Agent {
     private id: number,
     private minBalance: bigint,
     private masterWallet: Wallet,
+    private numTransfers: number,
   ) {
     this.sdk = sdk;
     this.wallet = Wallet.createRandom();
     this.address = provider.addEthersWallet(this.wallet);
 
-    this.steps = ['init', 'deposit', ...Array(1).fill('transfer'), 'withdraw'];
+    this.steps = ['init', 'deposit', ...Array(numTransfers).fill('transfer'), 'withdraw'];
     this.step = 0;
   }
 

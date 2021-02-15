@@ -178,7 +178,7 @@ export class Server {
     this.worldState.flushTxs();
   }
 
-  public setTopology(numInnerRollupTxs: number, numOuterRollupProofs: number) {
-    this.pipelineFactory.setTopology(numInnerRollupTxs, numOuterRollupProofs);
+  public setTopology(numOuterRollupProofs: number) {
+    this.pipelineFactory.setTopology(this.config.numInnerRollupTxs, numOuterRollupProofs);
   }
 }

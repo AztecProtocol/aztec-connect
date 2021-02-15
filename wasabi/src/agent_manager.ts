@@ -10,6 +10,7 @@ export default class AgentManager {
 
   public constructor(
     private numAccounts: number,
+    private numTransfers: number,
     private rollupHost: string,
     private minBalance: bigint,
     private mnemonic: string,
@@ -38,7 +39,7 @@ export default class AgentManager {
     await this.sdk.awaitSynchronised();
 
     for (let i = 0; i < this.numAccounts; i++) {
-      this.agents.push(new Agent(this.sdk, this.provider, i, this.minBalance, masterWallet));
+      this.agents.push(new Agent(this.sdk, this.provider, i, this.minBalance, masterWallet, this.numTransfers));
     }
 
     this.running = true;
