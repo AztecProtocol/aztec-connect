@@ -90,22 +90,7 @@ library EscapeHatchVk {
             0x0000000000000000000000000000000000000000000000000000000000000007
         );
         vk.contains_recursive_proof = false;
-        vk.recursive_proof_indices[0] = 0;
-        vk.recursive_proof_indices[1] = 0;
-        vk.recursive_proof_indices[2] = 0;
-        vk.recursive_proof_indices[3] = 0;
-        vk.recursive_proof_indices[4] = 0;
-        vk.recursive_proof_indices[5] = 0;
-        vk.recursive_proof_indices[6] = 0;
-        vk.recursive_proof_indices[7] = 0;
-        vk.recursive_proof_indices[8] = 0;
-        vk.recursive_proof_indices[9] = 0;
-        vk.recursive_proof_indices[10] = 0;
-        vk.recursive_proof_indices[11] = 0;
-        vk.recursive_proof_indices[12] = 0;
-        vk.recursive_proof_indices[13] = 0;
-        vk.recursive_proof_indices[14] = 0;
-        vk.recursive_proof_indices[15] = 0;
+        vk.recursive_proof_indices = 0;
         vk.g2_x = PairingsBn254.new_g2(
             [
                 0x260e01b251f6f1c7e7ff4e580791dee8ea51d87a358e038b4efe30fac09383c1,

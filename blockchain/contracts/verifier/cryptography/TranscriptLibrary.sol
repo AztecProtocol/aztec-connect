@@ -13,17 +13,14 @@ import {Types} from './Types.sol';
 library TranscriptLibrary {
     uint256 constant r_mod = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
 
-    // When creating `transcript.data` we pre-allocate all the memory required to store the entire transcript.
-    // TODO: figure out how big this needs to be! 16384 bytes is a big overestimate
-    uint256 constant NUM_TRANSCRIPT_BYTES = 163840 * 3;
+    // When creating `transcript.data` we pre-allocate all the memory required to store the entire transcript, minus public inputs
+    uint256 constant NUM_TRANSCRIPT_BYTES = 1248;
 
     struct Transcript {
         bytes32 current_challenge;
         bytes data;
         uint32 challenge_counter;
-        bytes32 debug_data;
     }
-    event ChallengeDebug(bytes32 data);
 
     /**
      * Instantiate a transcript and calculate the initial challenge, from which other challenges are derived.
@@ -39,16 +36,16 @@ library TranscriptLibrary {
         bytes memory formatted_num_public_inputs = format_4_byte_variable(uint32(num_public_inputs));
 
         transcript.current_challenge = keccak256(abi.encodePacked(formatted_circuit_size, formatted_num_public_inputs));
-        transcript.debug_data = transcript.current_challenge;
         transcript.challenge_counter = 0;
 
         // manually format the transcript.data bytes array
         // This is because we want to reserve memory that is greatly in excess of the array's initial size
         bytes memory transcript_data_pointer;
         bytes32 transcript_data = transcript.current_challenge;
+        uint256 total_transcript_bytes = NUM_TRANSCRIPT_BYTES;
         assembly {
             transcript_data_pointer := mload(0x40)
-            mstore(0x40, add(transcript_data_pointer, NUM_TRANSCRIPT_BYTES))
+            mstore(0x40, add(transcript_data_pointer, total_transcript_bytes))
             // update length of transcript.data
             mstore(transcript_data_pointer, 0x20)
             // insert current challenge
@@ -58,11 +55,6 @@ library TranscriptLibrary {
     }
 
     function format_4_byte_variable(uint32 input) internal pure returns (bytes memory) {
-        // uint8 byte0 = uint8(input & 0xff);
-        // uint8 byte1 = uint8((input >> 8) & 0xff);
-        // uint8 byte2 = uint8((input >> 16) & 0xff);
-        // uint8 byte3 = uint8((input >> 24) & 0xff);
-        // // TODO SWAP
         uint8 byte0 = uint8((input >> 24) & 0xff);
         uint8 byte1 = uint8((input >> 16) & 0xff);
         uint8 byte2 = uint8((input >> 8) & 0xff);
@@ -161,6 +153,47 @@ library TranscriptLibrary {
             let length := mload(data_ptr)
             challenge := keccak256(add(data_ptr, 0x20), length)
         }
+        self.current_challenge = challenge;
+
+        // reset self.data by setting length to 0x20 and update first element
+        {
+            assembly {
+                mstore(data_ptr, 0x20)
+                mstore(add(data_ptr, 0x20), challenge)
+            }
+        }
+        return Types.Fr({value: uint256(challenge) % r_mod});
+    }
+
+    /**
+     * We treat the beta challenge as a special case, because it includes the public inputs.
+     * The number of public inputs can be extremely large for rollups and we want to minimize mem consumption.
+     * => we directly allocate memory to hash the public inputs, in order to prevent the global memory pointer from increasing
+     */
+    function get_beta_challenge(Transcript memory self, uint256 num_public_inputs) internal pure returns (Types.Fr memory) {
+        bytes32 challenge;
+        bytes32 old_challenge = self.current_challenge;
+
+        assembly {
+            let m_ptr := mload(0x40)
+
+            // N.B. If the calldata ABI changes this code will need to change!
+            // We can copy all of the public inputs, followed by the wire commitments, into memory
+            // using calldatacopy
+            mstore(m_ptr, old_challenge)
+            m_ptr := add(m_ptr, 0x20)
+            let inputs_start := add(calldataload(0x04), 0x24)
+            // num_calldata_bytes = public input size + 256 bytes for the 4 wire commitments
+            let num_calldata_bytes := add(0x100, mul(num_public_inputs, 0x20))
+            calldatacopy(m_ptr, inputs_start, num_calldata_bytes)
+
+            let start := mload(0x40)
+            let length := add(num_calldata_bytes, 0x20)
+
+            challenge := keccak256(start, length)
+        }
+
+        bytes memory data_ptr = self.data;
         self.current_challenge = challenge;
 
         // reset self.data by setting length to 0x20 and update first element

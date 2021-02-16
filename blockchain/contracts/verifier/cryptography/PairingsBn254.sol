@@ -115,11 +115,9 @@ library PairingsBn254 {
         pure
         returns (Types.Fr memory out)
     {
-        // uint256 mulValue;
         assembly {
             mstore(out, mulmod(mload(a), mload(b), r_mod))
         }
-        // return Types.Fr(mulValue);
     }
 
     function sqr_fr(Types.Fr memory a)
@@ -220,17 +218,25 @@ library PairingsBn254 {
 
     function pow_small(
         Types.Fr memory base,
-        uint256 exp,
-        uint256 mod
+        uint256 exponent,
+        uint256 modulus
     ) internal pure returns (Types.Fr memory) {
         uint256 result = 1;
         uint256 input = base.value;
-        for (uint256 count = 1; count <= exp; count *= 2) {
-            if (exp & count != 0) {
-                result = mulmod(result, input, mod);
+
+        uint256 count = 1;
+
+        assembly {
+            let endpoint := add(exponent, 0x01)
+            for {} lt(count, endpoint) { count := add(count, count) }
+            {
+                if and(exponent, count) {
+                    result := mulmod(result, input, modulus)
+                }
+                input := mulmod(input, input, modulus)
             }
-            input = mulmod(input, input, mod);
         }
+
         return new_fr(result);
     }
 
@@ -247,88 +253,6 @@ library PairingsBn254 {
         }
         require(success);
         return Types.Fr({value: result[0]});
-    }
-
-    // Calculates the result of an expression of the form: (a + bc + d).
-    // a, b, c, d are Fr elements
-    function compute_bracket(
-        Types.Fr memory a,
-        Types.Fr memory b,
-        Types.Fr memory c,
-        Types.Fr memory d
-    ) internal pure returns (Types.Fr memory) {
-        uint256 aPlusD;
-        assembly {
-            aPlusD := addmod(mload(a), mload(d), r_mod)
-        }
-
-        uint256 bMulC;
-        assembly {
-            bMulC := mulmod(mload(b), mload(c), r_mod)
-        }
-
-        uint256 result;
-        assembly {
-            result := addmod(aPlusD, bMulC, r_mod)
-        }
-        return new_fr(result);
-    }
-
-    // Calculates the result of an expression of the form: (abcd)
-    // a, b, c are Fr elements
-    // d is a G1Point
-    function compute_product_3(
-        Types.Fr memory a,
-        Types.Fr memory b,
-        Types.Fr memory c
-    ) internal pure returns (Types.Fr memory) {
-        Types.Fr memory scalar_product = mul_fr(a, mul_fr(b, c));
-        return scalar_product;
-    }
-
-    // calculates the result of an expression of the form: (abc)
-    // a, b are Fr elements
-    // c is a G1Point
-    function compute_product_3_mixed(
-        Types.Fr memory a,
-        Types.Fr memory b,
-        Types.G1Point memory c
-    ) internal view returns (Types.G1Point memory) {
-        Types.Fr memory scalar_product = mul_fr(a, b);
-        Types.G1Point memory result = point_mul(c, scalar_product);
-        return result;
-    }
-
-    function compute_elliptic_mul(
-        Types.G1Point memory first_term,
-        Types.G1Point memory second_term,
-        Types.G1Point memory third_term,
-        Types.G1Point memory fourth_term,
-        Types.G1Point memory fifth_term
-    ) internal view returns (Types.G1Point memory) {
-        Types.G1Point memory accumulator = copy_g1(first_term);
-        accumulator = point_add(accumulator, second_term);
-        accumulator = point_add(accumulator, third_term);
-        accumulator = point_add(accumulator, fourth_term);
-        accumulator = point_add(accumulator, fifth_term);
-        return accumulator;
-    }
-
-    function accumulate_six(
-        Types.G1Point memory first_term,
-        Types.G1Point memory second_term,
-        Types.G1Point memory third_term,
-        Types.G1Point memory fourth_term,
-        Types.G1Point memory fifth_term,
-        Types.G1Point memory sixth_term
-    ) internal view returns (Types.G1Point memory) {
-        Types.G1Point memory accumulator = copy_g1(first_term);
-        accumulator = point_add(accumulator, second_term);
-        accumulator = point_add(accumulator, third_term);
-        accumulator = point_add(accumulator, fourth_term);
-        accumulator = point_add(accumulator, fifth_term);
-        accumulator = point_add(accumulator, sixth_term);
-        return accumulator;
     }
 
     function P1() internal pure returns (Types.G1Point memory) {
@@ -580,13 +504,14 @@ library PairingsBn254 {
         require(point.Y != uint256(0), "PairingsBn254: y = 0");
 
         // validating on curve: check y^2 = x^3 + 3 mod q_mod holds
-        Types.Fr memory lhs = pow_small(new_fr(point.Y), 2, q_mod);
-        Types.Fr memory rhs = add_fr(
-            pow_small(new_fr(point.X), 3, q_mod),
-            new_fr(3),
-            q_mod
-        );
-        require(lhs.value == rhs.value, "PairingsBn254: not on curve");
+        uint256 x = point.X;
+        uint256 y = point.Y;
+        uint256 q = q_mod;
+        bool on_curve;
+        assembly {
+            on_curve := eq(mulmod(y, y, q), addmod(mulmod(x, mulmod(x, x, q), q), 3, q))
+        }
+        require(on_curve, "PairingsBn254: not on curve");
     }
 
     function validateScalar(Types.Fr memory scalar) internal pure {

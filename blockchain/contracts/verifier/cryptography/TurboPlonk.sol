@@ -67,7 +67,7 @@ library TurboPlonk {
             decoded_proof
         );
 
-        (Types.G1Point memory batch_evaluation_commitment, ) = PolynomialEval.compute_batch_evaluation_commitment(
+        Types.G1Point memory batch_evaluation_commitment = PolynomialEval.compute_batch_evaluation_commitment(
             decoded_proof,
             challenges
         );
@@ -104,7 +104,8 @@ library TurboPlonk {
     ) internal view returns (Types.Fr memory, Types.Fr memory) {
         Types.Fr memory public_input_delta;
         Types.Fr memory zero_polynomial_eval;
-        Types.Fr[] memory lagrange_evals;
+        Types.Fr memory l_start;
+        Types.Fr memory l_end;
         {
             Types.PartialStateFractions memory partial_state_fractions;
 
@@ -121,7 +122,7 @@ library TurboPlonk {
             );
             partial_state_fractions.zero_poly = zero_poly_fraction;
 
-            // lagrange_evals[0] = L1, lagrange_evals[1] = Ln
+            // l_start = L1, l_end = Ln
 
             Types.Fraction[] memory lagrange_eval_fractions = PolynomialEval.compute_lagrange_evaluations(
                 vk,
@@ -130,7 +131,7 @@ library TurboPlonk {
             partial_state_fractions.lagrange_1_fraction = lagrange_eval_fractions[0];
             partial_state_fractions.lagrange_n_fraction = lagrange_eval_fractions[1];
 
-            (zero_polynomial_eval, public_input_delta, lagrange_evals) = PolynomialEval.compute_batch_inversions(
+            (zero_polynomial_eval, public_input_delta, l_start, l_end) = PolynomialEval.compute_batch_inversions(
                 partial_state_fractions
             );
         }
@@ -142,12 +143,13 @@ library TurboPlonk {
                 zero_polynomial_eval,
                 public_input_delta,
                 challenges,
-                lagrange_evals,
+                l_start,
+                l_end,
                 decoded_proof
             );
         }
 
-        return (quotient_eval, lagrange_evals[0]);
+        return (quotient_eval, l_start);
     }
 
     /**
@@ -213,8 +215,6 @@ library TurboPlonk {
         Types.Proof memory decoded_proof,
         Types.VerificationKey memory vk
     ) internal pure returns (Types.ChallengeTranscript memory, TranscriptLibrary.Transcript memory) {
-        // TODO: do these need acting on?
-        // require(vk.num_inputs >= 1);
         TranscriptLibrary.Transcript memory transcript = TranscriptLibrary.new_transcript(
             vk.circuit_size,
             vk.num_inputs
@@ -224,14 +224,8 @@ library TurboPlonk {
 
         challenges.init = Types.Fr({value: uint256(transcript.current_challenge) % Types.r_mod});
 
-        transcript.update_with_public_inputs(vk.num_inputs);
-
         assert(decoded_proof.wire_commitments.length == 4);
-        for (uint256 i = 0; i < decoded_proof.wire_commitments.length; i++) {
-            transcript.update_with_g1(decoded_proof.wire_commitments[i]);
-        }
-        challenges.debug_data = transcript.debug_data;
-        challenges.beta = transcript.get_challenge();
+        challenges.beta = transcript.get_beta_challenge(vk.num_inputs);
 
         transcript.append_byte(1);
         challenges.gamma = transcript.get_challenge();

@@ -96,22 +96,7 @@ library Rollup28x2Vk {
       0x0000000000000000000000000000000000000000000000000000000000000007
     );
     vk.contains_recursive_proof = true;
-    vk.recursive_proof_indices[0] = 782;
-    vk.recursive_proof_indices[1] = 783;
-    vk.recursive_proof_indices[2] = 784;
-    vk.recursive_proof_indices[3] = 785;
-    vk.recursive_proof_indices[4] = 786;
-    vk.recursive_proof_indices[5] = 787;
-    vk.recursive_proof_indices[6] = 788;
-    vk.recursive_proof_indices[7] = 789;
-    vk.recursive_proof_indices[8] = 790;
-    vk.recursive_proof_indices[9] = 791;
-    vk.recursive_proof_indices[10] = 792;
-    vk.recursive_proof_indices[11] = 793;
-    vk.recursive_proof_indices[12] = 794;
-    vk.recursive_proof_indices[13] = 795;
-    vk.recursive_proof_indices[14] = 796;
-    vk.recursive_proof_indices[15] = 797;
+    vk.recursive_proof_indices = 782;
     vk.g2_x = PairingsBn254.new_g2([
       0x260e01b251f6f1c7e7ff4e580791dee8ea51d87a358e038b4efe30fac09383c1,
       0x0118c4d5b837bcc2bc89b5b398b5974e9f5944073b32078b7e231fec938883b0

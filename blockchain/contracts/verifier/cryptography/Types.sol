@@ -45,48 +45,34 @@ library Types {
     }
 
     struct Proof {
+        Fr[STATE_WIDTH] wire_values_at_z;
+        Fr[STATE_WIDTH] wire_values_at_z_omega;
+        Fr[STATE_WIDTH - 1] permutation_polynomials_at_z;
+        Fr q_arith_at_z;
+        Fr q_ecc_at_z;
+        Fr q_c_at_z;
+        Fr linearization_polynomial_at_z;
+        Fr grand_product_at_z_omega;
+        Fr quotient_polynomial_at_z;
         G1Point[STATE_WIDTH] wire_commitments;
         G1Point grand_product_commitment;
         G1Point permutation_commitment;
         G1Point[STATE_WIDTH] quotient_poly_commitments;
-        Fr[STATE_WIDTH] wire_values_at_z;
-        Fr[STATE_WIDTH] wire_values_at_z_omega;
-        Fr q_arith_at_z;
-        Fr q_ecc_at_z;
-        Fr q_c_at_z;
-        Fr grand_product_at_z_omega;
-        Fr quotient_polynomial_at_z;
-        Fr linearization_polynomial_at_z;
-        Fr[STATE_WIDTH - 1] permutation_polynomials_at_z;
         Fr wzBar;
         G1Point opening_at_z_proof;
         G1Point opening_at_z_omega_proof;
-        G1Point[28] kate_group_elements;
         G1Point[2] recursive_proof_outputs;
-        Fr[NUM_KATE_OPENING_ELEMENTS] kate_field_elements;
-        uint256 kate_array_indexer;
-    }
-
-    struct PartialVerifierState {
-        Fr alpha;
-        Fr beta;
-        Fr gamma;
-        Fr[NUM_NU_CHALLENGES] v;
-        Fr u;
-        Fr zeta;
-        Fr[] cached_lagrange_evals;
     }
 
     struct ChallengeTranscript {
-        bytes32 debug_data;
-        Fr init;
+        Fr u;
+        Fr[NUM_NU_CHALLENGES] v;
         Fr alpha;
         Fr beta;
         Fr gamma;
         Fr zeta;
-        Fr[NUM_NU_CHALLENGES] v;
-        Fr u;
         Fr alpha_base;
+        Fr init;
     }
 
     struct VerificationKey {
@@ -112,7 +98,7 @@ library Types {
         Fr[STATE_WIDTH - 1] permutation_non_residues;
         G2Point g2_x;
         bool contains_recursive_proof;
-        uint256[16] recursive_proof_indices;
+        uint256 recursive_proof_indices;
     }
 
     struct BatchInversions {

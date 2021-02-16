@@ -96,7 +96,7 @@ contract TurboVerifier is IVerifier {
         }
 
         if (vk.contains_recursive_proof) {
-            uint256 index_counter = vk.recursive_proof_indices[0] * 32;
+            uint256 index_counter = vk.recursive_proof_indices * 32;
             uint256 x0 = 0;
             uint256 y0 = 0;
             uint256 x1 = 0;
