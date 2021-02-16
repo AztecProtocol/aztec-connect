@@ -7,7 +7,6 @@ import { UserAccountTx, UserJoinSplitTx } from '../user_tx';
 
 export interface SigningKey {
   accountId: AccountId;
-  address: GrumpkinAddress;
   key: Buffer; // only contains x coordinate of a grumpkin address.
   treeIndex: number;
 }
@@ -40,12 +39,12 @@ export interface Database {
   getJoinSplitTx(userId: AccountId, txHash: TxHash): Promise<UserJoinSplitTx | undefined>;
   getJoinSplitTxs(userId): Promise<UserJoinSplitTx[]>;
   getJoinSplitTxsByTxHash(txHash: TxHash): Promise<UserJoinSplitTx[]>;
-  settleJoinSplitTx(txHash: TxHash): Promise<void>;
+  settleJoinSplitTx(txHash: TxHash, settled: Date): Promise<void>;
 
   addAccountTx(tx: UserAccountTx): Promise<void>;
   getAccountTx(txHash: TxHash): Promise<UserAccountTx | undefined>;
   getAccountTxs(userId): Promise<UserAccountTx[]>;
-  settleAccountTx(txHash: TxHash): Promise<void>;
+  settleAccountTx(txHash: TxHash, settled: Date): Promise<void>;
 
   addUserSigningKey(signingKey: SigningKey): Promise<void>;
   getUserSigningKeys(accountId: AccountId): Promise<SigningKey[]>;

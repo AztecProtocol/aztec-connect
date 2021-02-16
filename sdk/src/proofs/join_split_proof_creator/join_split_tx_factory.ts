@@ -1,21 +1,19 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { AssetId } from 'barretenberg/asset';
-import { JoinSplitTx, computeSigningData } from 'barretenberg/client_proofs/join_split_proof';
+import { computeSigningData, JoinSplitTx } from 'barretenberg/client_proofs/join_split_proof';
 import { createEphemeralPrivKey, encryptNote, Note } from 'barretenberg/client_proofs/note';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
-import { Blake2s } from 'barretenberg/crypto/blake2s';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { WorldState } from 'barretenberg/world_state';
 import { Database } from '../../database';
 import { Signer } from '../../signer';
-import { AccountId, AccountAliasId } from '../../user';
+import { AccountAliasId, AccountId } from '../../user';
 import { UserState } from '../../user_state';
 
 export class JoinSplitTxFactory {
   constructor(
     private worldState: WorldState,
-    private blake2s: Blake2s,
     private grumpkin: Grumpkin,
     private pedersen: Pedersen,
     private noteAlgos: NoteAlgorithms,
@@ -41,8 +39,8 @@ export class JoinSplitTxFactory {
       throw new Error(`Failed to find no more than 2 notes that sum to ${privateInput}.`);
     }
 
-    const { id, alias, publicKey, nonce } = userState.getUser();
-    const accountAliasId = alias ? AccountAliasId.fromAlias(alias, nonce, this.blake2s) : AccountAliasId.random();
+    const { id, aliasHash, publicKey, nonce } = userState.getUser();
+    const accountAliasId = aliasHash ? new AccountAliasId(aliasHash, nonce) : AccountAliasId.random();
 
     const numInputNotes = notes.length;
     const totalNoteInputValue = notes.reduce((sum, note) => sum + note.value, BigInt(0));

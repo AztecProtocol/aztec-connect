@@ -20,7 +20,6 @@ import { NoteAlgorithms } from '../note_algorithms';
 import { RollupProofData } from '../../rollup_proof';
 import { Blake2s } from '../../crypto/blake2s';
 import { AccountAliasId } from '../account_alias_id';
-import { AliasHash } from '../alias_hash';
 import { computeSigningData } from '../join_split_proof/compute_signing_data';
 import { AssetId } from '../../asset';
 
@@ -161,9 +160,8 @@ describe('escape_hatch_proof', () => {
     );
     const signature = schnorr.constructSignature(sigMsg, privateKey);
 
-    const aliasHash = AliasHash.fromAlias('user_zero', blake2s);
     const nonce = 0;
-    const accountAliasId = new AccountAliasId(aliasHash, nonce);
+    const accountAliasId = AccountAliasId.fromAlias('user_zero', nonce, blake2s);
 
     const accountIndex = 0;
     const accountNotePath = await worldStateDb.getHashPath(dataTreeId, BigInt(accountIndex));

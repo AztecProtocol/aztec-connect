@@ -16,7 +16,7 @@ import { Database } from '../database';
 import { Note } from '../note';
 import { NotePicker } from '../note_picker';
 import { AccountAliasId, UserData } from '../user';
-import { UserAccountTx, UserJoinSplitTx } from '../user_tx';
+import { isJoinSplitTx, UserAccountTx, UserJoinSplitTx } from '../user_tx';
 import { AccountId } from '../user/account_id';
 import { ViewingKey } from 'barretenberg/viewing_key';
 import { TxHash } from 'barretenberg/tx_hash';
@@ -34,7 +34,7 @@ enum SyncState {
 }
 
 export class UserState extends EventEmitter {
-  private notePickers: Map<AssetId, NotePicker> = new Map();
+  private notePickers: NotePicker[] = [];
   private blockQueue = new MemoryFifo<Block>();
   private syncState = SyncState.OFF;
   private syncingPromise!: Promise<void>;
@@ -107,7 +107,7 @@ export class UserState extends EventEmitter {
 
     const balancesBefore = AssetIds.map(assetId => this.getBalance(assetId));
 
-    const { rollupProofData, viewingKeysData } = block;
+    const { rollupProofData, viewingKeysData, created } = block;
     const { rollupId, dataStartIndex, innerProofData, viewingKeys } = RollupProofData.fromBuffer(
       rollupProofData,
       viewingKeysData,
@@ -118,10 +118,10 @@ export class UserState extends EventEmitter {
 
       switch (proof.proofId) {
         case 0:
-          await this.handleJoinSplitTx(innerProofData[i], noteStartIndex, viewingKeys[i]);
+          await this.handleJoinSplitTx(innerProofData[i], noteStartIndex, viewingKeys[i], created);
           break;
         case 1:
-          await this.handleAccountTx(innerProofData[i], noteStartIndex);
+          await this.handleAccountTx(innerProofData[i], noteStartIndex, created);
           break;
       }
     }
@@ -136,10 +136,12 @@ export class UserState extends EventEmitter {
         this.emit(UserStateEvent.UPDATED_USER_STATE, this.user.id, balanceAfter, diff, assetId);
       }
     });
+
+    this.emit(UserStateEvent.UPDATED_USER_STATE, this.user.id);
   }
 
-  private async handleAccountTx(proof: InnerProofData, noteStartIndex: number) {
-    const tx = this.recoverAccountTx(proof);
+  private async handleAccountTx(proof: InnerProofData, noteStartIndex: number, blockCreated: Date) {
+    const tx = this.recoverAccountTx(proof, blockCreated);
     if (!tx.userId.equals(this.user.id)) {
       return;
     }
@@ -153,7 +155,6 @@ export class UserState extends EventEmitter {
       debug(`user ${this.user.id} adds signing key ${tx.newSigningPubKey1.toString('hex')}.`);
       await this.db.addUserSigningKey({
         accountId,
-        address: this.user.publicKey,
         key: tx.newSigningPubKey1,
         treeIndex: noteStartIndex,
       });
@@ -163,22 +164,29 @@ export class UserState extends EventEmitter {
       debug(`user ${this.user.id} adds signing key ${tx.newSigningPubKey2.toString('hex')}.`);
       await this.db.addUserSigningKey({
         accountId,
-        address: this.user.publicKey,
         key: tx.newSigningPubKey2,
         treeIndex: noteStartIndex + 1,
       });
     }
 
+    if (!this.user.aliasHash) {
+      this.user = { ...this.user, aliasHash: tx.aliasHash };
+      await this.db.updateUser(this.user);
+    }
+
     if (savedTx) {
-      await this.db.settleAccountTx(txHash);
+      await this.db.settleAccountTx(txHash, blockCreated);
     } else {
       await this.db.addAccountTx(tx);
     }
-
-    this.emit(UserStateEvent.UPDATED_USER_STATE, this.user.id);
   }
 
-  private async handleJoinSplitTx(proof: InnerProofData, noteStartIndex: number, viewingKeys: ViewingKey[]) {
+  private async handleJoinSplitTx(
+    proof: InnerProofData,
+    noteStartIndex: number,
+    viewingKeys: ViewingKey[],
+    blockCreated: Date,
+  ) {
     const txHash = new TxHash(proof.txId);
     const savedTx = await this.db.getJoinSplitTx(this.user.id, txHash);
     if (savedTx?.settled) {
@@ -199,9 +207,9 @@ export class UserState extends EventEmitter {
     await this.refreshNotePicker();
 
     if (savedTx) {
-      await this.db.settleJoinSplitTx(txHash);
+      await this.db.settleJoinSplitTx(txHash, blockCreated);
     } else {
-      const tx = this.recoverJoinSplitTx(proof, newNote, changeNote, destroyedNote1, destroyedNote2);
+      const tx = this.recoverJoinSplitTx(proof, blockCreated, newNote, changeNote, destroyedNote1, destroyedNote2);
       await this.db.addJoinSplitTx(tx);
     }
   }
@@ -258,6 +266,7 @@ export class UserState extends EventEmitter {
 
   private recoverJoinSplitTx(
     proof: InnerProofData,
+    blockCreated: Date,
     newNote?: Note,
     changeNote?: Note,
     destroyedNote1?: Note,
@@ -290,24 +299,24 @@ export class UserState extends EventEmitter {
       inputOwner,
       outputOwner,
       ownedByUser: !!changeNote,
-      settled: true,
       created: new Date(),
+      settled: blockCreated,
     };
   }
 
-  private recoverAccountTx(proof: InnerProofData): UserAccountTx {
+  private recoverAccountTx(proof: InnerProofData, blockCreated: Date): UserAccountTx {
     const { txId, publicInput, publicOutput, assetId, inputOwner, outputOwner, nullifier1 } = proof;
 
     const txHash = new TxHash(txId);
     const publicKey = new GrumpkinAddress(Buffer.concat([publicInput, publicOutput]));
-    const { aliasHash, nonce } = AccountAliasId.fromBuffer(assetId);
+    const accountAliasId = AccountAliasId.fromBuffer(assetId);
+    const { aliasHash, nonce } = accountAliasId;
     const userId = new AccountId(publicKey, nonce);
 
     const nonEmptyKey = (address: Buffer) => (!address.equals(Buffer.alloc(32)) ? address : undefined);
     const newSigningPubKey1 = nonEmptyKey(inputOwner);
     const newSigningPubKey2 = nonEmptyKey(outputOwner);
 
-    const accountAliasId = new AccountAliasId(aliasHash, nonce);
     const migrated = nonce !== 0 && nullifier1.equals(computeAccountAliasIdNullifier(accountAliasId, this.pedersen));
 
     return {
@@ -317,45 +326,50 @@ export class UserState extends EventEmitter {
       newSigningPubKey1,
       newSigningPubKey2,
       migrated,
-      settled: true,
       created: new Date(),
+      settled: blockCreated,
     };
   }
 
   private async refreshNotePicker() {
-    const notesMap: Map<AssetId, Note[]> = new Map();
+    const notesMap: Note[][] = Array(AssetIds.length)
+      .fill(0)
+      .map(() => []);
     const notes = await this.db.getUserNotes(this.user.id);
-    notes.forEach(note => {
-      const assetNotes = notesMap.get(note.assetId) || [];
-      notesMap.set(note.assetId, [...assetNotes, note]);
-    });
-    AssetIds.forEach(assetId => {
-      const notePicker = new NotePicker(notesMap.get(assetId));
-      this.notePickers.set(assetId, notePicker);
-    });
+    notes.forEach(note => notesMap[note.assetId].push(note));
+    this.notePickers = AssetIds.map(assetId => new NotePicker(notesMap[assetId]));
   }
 
   public async pickNotes(assetId: AssetId, value: bigint) {
     const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
-    return this.notePickers.get(assetId)?.pick(value, pendingNullifiers);
+    return this.notePickers[assetId].pick(value, pendingNullifiers);
+  }
+
+  public async getSpendableNotes(assetId: AssetId) {
+    const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
+    return this.notePickers[assetId].getSpendableNotes(pendingNullifiers).notes;
+  }
+
+  public async getSpendableSum(assetId: AssetId) {
+    const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
+    return this.notePickers[assetId].getSpendableSum(pendingNullifiers);
   }
 
   public async getMaxSpendableValue(assetId: AssetId) {
     const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
-    return this.notePickers.get(assetId)?.getMaxSpendableValue(pendingNullifiers) || BigInt(0);
+    return this.notePickers[assetId].getMaxSpendableValue(pendingNullifiers);
   }
 
   public getBalance(assetId: AssetId) {
-    return this.notePickers.get(assetId)?.getSum() || BigInt(0);
+    return this.notePickers[assetId].getSum();
   }
 
-  public async addJoinSplitTx(tx: UserJoinSplitTx) {
-    await this.db.addJoinSplitTx(tx);
-    this.emit(UserStateEvent.UPDATED_USER_STATE, this.user.id);
-  }
-
-  public async addAccountTx(tx: UserAccountTx) {
-    await this.db.addAccountTx(tx);
+  public async addTx(tx: UserJoinSplitTx | UserAccountTx) {
+    if (isJoinSplitTx(tx)) {
+      await this.db.addJoinSplitTx(tx);
+    } else {
+      await this.db.addAccountTx(tx);
+    }
     this.emit(UserStateEvent.UPDATED_USER_STATE, this.user.id);
   }
 

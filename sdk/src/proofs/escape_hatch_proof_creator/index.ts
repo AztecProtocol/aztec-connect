@@ -8,15 +8,12 @@ import { RollupProofData } from 'barretenberg/rollup_proof';
 import { WorldState } from 'barretenberg/world_state';
 import { toBufferBE } from 'bigint-buffer';
 import createDebug from 'debug';
-import { utils } from 'ethers';
 import { HashPathSource } from 'sriracha/hash_path_source';
-import { AccountId } from '../../user';
+import { Database } from '../../database';
 import { Signer } from '../../signer';
+import { AccountId } from '../../user';
 import { UserState } from '../../user_state';
 import { JoinSplitTxFactory } from '../join_split_proof_creator/join_split_tx_factory';
-import { Database } from '../../database';
-import { Blake2s } from 'barretenberg/crypto/blake2s';
-import { EthereumSigner } from 'barretenberg/blockchain';
 
 const debug = createDebug('bb:escape_hatch_proof_creator');
 
@@ -27,16 +24,14 @@ export class EscapeHatchProofCreator {
   // Currently we use WorldState for fetching js data paths, but need a HashPathSource for the other trees.
   constructor(
     private escapeHatchProver: EscapeHatchProver,
-    private ethSigner: EthereumSigner,
     worldState: WorldState,
-    blake2s: Blake2s,
     grumpkin: Grumpkin,
     pedersen: Pedersen,
     private noteAlgos: NoteAlgorithms,
     private hashPathSource: HashPathSource,
     db: Database,
   ) {
-    this.joinSplitTxFactory = new JoinSplitTxFactory(worldState, blake2s, grumpkin, pedersen, noteAlgos, db);
+    this.joinSplitTxFactory = new JoinSplitTxFactory(worldState, grumpkin, pedersen, noteAlgos, db);
   }
 
   public async createProof(
@@ -49,8 +44,8 @@ export class EscapeHatchProofCreator {
     assetId: AssetId,
     signer: Signer,
     receiver?: AccountId,
-    outputOwner?: EthAddress,
     inputOwner?: EthAddress,
+    outputOwner?: EthAddress,
   ) {
     if (publicInput && !inputOwner) {
       throw new Error('Input owner undefined.');
@@ -140,16 +135,8 @@ export class EscapeHatchProofCreator {
     const rollupProofData = RollupProofData.fromBuffer(proofData);
     const txId = rollupProofData.innerProofData[0].txId;
 
-    const depositSignature = publicInput
-      ? await this.ethSign(rollupProofData.innerProofData[0].getDepositSigningData(), inputOwner!)
-      : undefined;
+    const depositSigningData = publicInput ? rollupProofData.innerProofData[0].getDepositSigningData() : undefined;
 
-    return { proofData, viewingKeys, depositSignature, txId };
-  }
-
-  private async ethSign(txPublicInputs: Buffer, inputOwner: EthAddress) {
-    const msgHash = utils.keccak256(txPublicInputs);
-    const digest = utils.arrayify(msgHash);
-    return await this.ethSigner.signMessage(Buffer.from(digest), inputOwner);
+    return { proofData, viewingKeys, depositSigningData, txId };
   }
 }

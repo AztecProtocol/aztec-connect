@@ -13,7 +13,7 @@ export class NotePicker {
     this.spendableNotes = new SortedNotes(availableNotes);
   }
 
-  private getSpendableNotes(excludeNullifiers?: Buffer[]) {
+  getSpendableNotes(excludeNullifiers?: Buffer[]) {
     return excludeNullifiers?.length
       ? this.spendableNotes.filter(({ nullifier }) => !excludeNullifiers.some(n => n.equals(nullifier)))
       : this.spendableNotes;

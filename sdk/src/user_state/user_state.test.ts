@@ -46,7 +46,6 @@ describe('user state', () => {
       privateKey,
       publicKey,
       nonce: 0,
-      alias: 'god',
       syncedToRollup: -1,
     };
 
@@ -61,7 +60,7 @@ describe('user state', () => {
       addNote: jest.fn(),
       nullifyNote: jest.fn(),
       getNoteByNullifier: jest.fn(),
-      getUserNotes: jest.fn(),
+      getUserNotes: jest.fn().mockResolvedValue([]),
       updateUser: jest.fn(),
       addUserSigningKey: jest.fn(),
       getUserSigningKeys: jest.fn().mockResolvedValue([]),
@@ -72,6 +71,7 @@ describe('user state', () => {
     };
 
     userState = new UserState(user, grumpkin, pedersen, noteAlgos, db as any, blockSource as any);
+    await userState.init();
     await userState.startSync();
   });
 
@@ -146,12 +146,13 @@ describe('user state', () => {
 
   const generateAccountRollup = ({
     accountCreator = user,
+    alias = 'god',
     newSigningPubKey1 = GrumpkinAddress.randomAddress(),
     newSigningPubKey2 = GrumpkinAddress.randomAddress(),
     migrate = false,
   } = {}) => {
-    const { publicKey, nonce, alias } = accountCreator;
-    const aliasHash = AliasHash.fromAlias(alias!, blake2s);
+    const { publicKey, nonce } = accountCreator;
+    const aliasHash = AliasHash.fromAlias(alias, blake2s);
     const note1 = Buffer.concat([publicKey.x(), newSigningPubKey1.x()]);
     const note2 = Buffer.concat([publicKey.x(), newSigningPubKey2.x()]);
     const newAccountAliasId = new AccountAliasId(aliasHash!, nonce + +migrate);
@@ -188,13 +189,13 @@ describe('user state', () => {
     );
   };
 
-  const createBlock = (rollupProofData: RollupProofData): Block => ({
+  const createBlock = (rollupProofData: RollupProofData, created = new Date()): Block => ({
     txHash: TxHash.random(),
     rollupId: 0,
     rollupSize: 1,
     rollupProofData: rollupProofData.toBuffer(),
     viewingKeysData: rollupProofData.getViewingKeyData(),
-    created: new Date(),
+    created,
     gasUsed: 0,
     gasPrice: 0n,
   });
@@ -208,11 +209,11 @@ describe('user state', () => {
       outputNoteValue1,
       outputNoteValue2,
     });
-    const block = createBlock(rollupProofData);
+    const blockCreated = new Date();
+    const block = createBlock(rollupProofData, blockCreated);
 
-    db.getJoinSplitTx.mockResolvedValue({ settled: false });
+    db.getJoinSplitTx.mockResolvedValue({ settled: undefined });
     db.getNoteByNullifier.mockResolvedValueOnce({ index: inputNoteIndex, owner: user.id });
-    db.getUserNotes.mockResolvedValue([]);
 
     userState.processBlock(block);
     await userState.stopSync(true);
@@ -224,8 +225,12 @@ describe('user state', () => {
     expect(db.nullifyNote).toHaveBeenCalledTimes(1);
     expect(db.nullifyNote).toHaveBeenCalledWith(inputNoteIndex);
     expect(db.settleJoinSplitTx).toHaveBeenCalledTimes(1);
-    expect(db.settleJoinSplitTx).toHaveBeenCalledWith(new TxHash(innerProofData.txId));
+    expect(db.settleJoinSplitTx).toHaveBeenCalledWith(new TxHash(innerProofData.txId), blockCreated);
     expect(db.addJoinSplitTx).toHaveBeenCalledTimes(0);
+    expect(db.updateUser).toHaveBeenLastCalledWith({
+      ...user,
+      syncedToRollup: block.rollupId,
+    });
   });
 
   it('do nothing if it cannot decrypt new notes', async () => {
@@ -243,7 +248,7 @@ describe('user state', () => {
     const rollupProofData = generateRollup();
     const block = createBlock(rollupProofData);
 
-    db.getJoinSplitTx.mockResolvedValue({ settled: true });
+    db.getJoinSplitTx.mockResolvedValue({ settled: new Date() });
 
     userState.processBlock(block);
     await userState.stopSync(true);
@@ -260,8 +265,7 @@ describe('user state', () => {
     });
     const block = createBlock(rollupProofData);
 
-    db.getJoinSplitTx.mockResolvedValue({ settled: false });
-    db.getUserNotes.mockResolvedValue([]);
+    db.getJoinSplitTx.mockResolvedValue({ settled: undefined });
 
     userState.processBlock(block);
     await userState.stopSync(true);
@@ -291,10 +295,10 @@ describe('user state', () => {
       inputOwner,
       outputOwner,
     });
-    const block = createBlock(rollupProofData);
+    const blockCreated = new Date();
+    const block = createBlock(rollupProofData, blockCreated);
 
     db.getNoteByNullifier.mockResolvedValueOnce({ index: 123, owner: user.id, value: inputNoteValue });
-    db.getUserNotes.mockResolvedValue([]);
 
     userState.processBlock(block);
     await userState.stopSync(true);
@@ -320,16 +324,15 @@ describe('user state', () => {
       inputOwner,
       outputOwner,
       ownedByUser: true,
-      settled: true,
+      settled: blockCreated,
     });
   });
 
   it('restore a join split tx sent from another user to us', async () => {
     const outputNoteValue1 = 56n;
     const rollupProofData = generateRollup({ validChangeNote: false, outputNoteValue1 });
-    const block = createBlock(rollupProofData);
-
-    db.getUserNotes.mockResolvedValue([]);
+    const blockCreated = new Date();
+    const block = createBlock(rollupProofData, blockCreated);
 
     userState.processBlock(block);
     await userState.stopSync(true);
@@ -346,7 +349,7 @@ describe('user state', () => {
       recipientPrivateOutput: outputNoteValue1,
       senderPrivateOutput: 0n,
       ownedByUser: false,
-      settled: true,
+      settled: blockCreated,
     });
   });
 
@@ -354,10 +357,11 @@ describe('user state', () => {
     const newSigningPubKey1 = GrumpkinAddress.randomAddress();
     const newSigningPubKey2 = GrumpkinAddress.randomAddress();
     const rollupProofData = generateAccountRollup({ newSigningPubKey1, newSigningPubKey2 });
-    const block = createBlock(rollupProofData);
+    const blockCreated = new Date();
+    const block = createBlock(rollupProofData, blockCreated);
 
     db.getAccountTx.mockResolvedValue({
-      settled: false,
+      settled: undefined,
     });
 
     userState.processBlock(block);
@@ -370,18 +374,16 @@ describe('user state', () => {
     expect(db.addUserSigningKey).toHaveBeenCalledTimes(2);
     expect(db.addUserSigningKey.mock.calls[0][0]).toEqual({
       accountId,
-      address: user.publicKey,
       key: newSigningPubKey1.x(),
       treeIndex: 0,
     });
     expect(db.addUserSigningKey.mock.calls[1][0]).toEqual({
       accountId,
-      address: user.publicKey,
       key: newSigningPubKey2.x(),
       treeIndex: 1,
     });
     expect(db.settleAccountTx).toHaveBeenCalledTimes(1);
-    expect(db.settleAccountTx).toHaveBeenCalledWith(txHash);
+    expect(db.settleAccountTx).toHaveBeenCalledWith(txHash, blockCreated);
     expect(db.addAccountTx).toHaveBeenCalledTimes(0);
   });
 
@@ -417,11 +419,17 @@ describe('user state', () => {
     expect(db.addAccountTx).toHaveBeenCalledTimes(0);
   });
 
-  it('restore account tx and save to db', async () => {
+  it('restore account tx, update user alias hash and save to db', async () => {
     const newSigningPubKey1 = GrumpkinAddress.randomAddress();
     const newSigningPubKey2 = GrumpkinAddress.randomAddress();
-    const rollupProofData = generateAccountRollup({ newSigningPubKey1, newSigningPubKey2 });
-    const block = createBlock(rollupProofData);
+    const alias = 'fairy';
+    const rollupProofData = generateAccountRollup({ alias, newSigningPubKey1, newSigningPubKey2 });
+    const aliasHash = AliasHash.fromAlias(alias, blake2s);
+
+    const blockCreated = new Date();
+    const block = createBlock(rollupProofData, blockCreated);
+
+    expect(userState.getUser().aliasHash).toBe(undefined);
 
     userState.processBlock(block);
     await userState.stopSync(true);
@@ -430,15 +438,19 @@ describe('user state', () => {
     const txHash = new TxHash(innerProofData.txId);
     const accountId = new AccountId(user.publicKey, user.nonce);
 
+    expect(userState.getUser().aliasHash).toEqual(aliasHash);
+    expect(db.updateUser).toHaveBeenLastCalledWith({
+      ...user,
+      aliasHash,
+      syncedToRollup: block.rollupId,
+    });
     expect(db.addUserSigningKey).toHaveBeenCalledWith({
       accountId,
-      address: user.publicKey,
       key: newSigningPubKey1.x(),
       treeIndex: 0,
     });
     expect(db.addUserSigningKey).toHaveBeenCalledWith({
       accountId,
-      address: user.publicKey,
       key: newSigningPubKey2.x(),
       treeIndex: 1,
     });
@@ -447,11 +459,11 @@ describe('user state', () => {
     expect(db.addAccountTx.mock.calls[0][0]).toMatchObject({
       txHash,
       userId: user.id,
-      aliasHash: AliasHash.fromAlias(user.alias!, blake2s),
+      aliasHash,
       newSigningPubKey1: newSigningPubKey1.x(),
       newSigningPubKey2: newSigningPubKey2.x(),
       migrated: false,
-      settled: true,
+      settled: blockCreated,
     });
   });
 });

@@ -205,6 +205,10 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.getBalance(assetId, accountId);
   }
 
+  public async getMaxSpendableValue(assetId: AssetId, accountId: AccountId) {
+    return this.walletSdk.getMaxSpendableValue(assetId, accountId);
+  }
+
   public async getPublicBalance(assetId: AssetId, ethAddress: EthAddress) {
     return this.walletSdk.getPublicBalance(assetId, ethAddress);
   }

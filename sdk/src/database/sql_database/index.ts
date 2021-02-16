@@ -92,9 +92,9 @@ export class SQLDatabase implements Database {
     const user = await this.getUser(userId);
     if (!user) return;
 
-    await this.userKeyRep.delete({ address: user.publicKey });
     await this.accountTxRep.delete({ userId });
     await this.joinSplitTxRep.delete({ userId });
+    await this.userKeyRep.delete({ accountId: userId });
     await this.noteRep.delete({ owner: userId });
     await this.userDataRep.delete({ id: userId });
   }
@@ -117,15 +117,18 @@ export class SQLDatabase implements Database {
   }
 
   async getJoinSplitTxs(userId) {
-    return this.joinSplitTxRep.find({ where: { userId }, order: { created: 'DESC' } });
+    const txs = await this.joinSplitTxRep.find({ where: { userId }, order: { settled: 'DESC' } });
+    const unsettled = txs.filter(tx => !tx.settled).sort((a, b) => (a.created < b.created ? 1 : -1));
+    const settled = txs.filter(tx => tx.settled);
+    return [...unsettled, ...settled];
   }
 
   async getJoinSplitTxsByTxHash(txHash: TxHash) {
     return this.joinSplitTxRep.find({ where: { txHash } });
   }
 
-  async settleJoinSplitTx(txHash: TxHash) {
-    await this.joinSplitTxRep.update({ txHash }, { settled: true });
+  async settleJoinSplitTx(txHash: TxHash, settled: Date) {
+    await this.joinSplitTxRep.update({ txHash }, { settled });
   }
 
   async addAccountTx(tx: UserAccountTx) {
@@ -137,11 +140,14 @@ export class SQLDatabase implements Database {
   }
 
   async getAccountTxs(userId) {
-    return this.accountTxRep.find({ where: { userId }, order: { created: 'DESC' } });
+    const txs = await this.accountTxRep.find({ where: { userId }, order: { settled: 'DESC' } });
+    const unsettled = txs.filter(tx => !tx.settled).sort((a, b) => (a.created < b.created ? 1 : -1));
+    const settled = txs.filter(tx => tx.settled);
+    return [...unsettled, ...settled];
   }
 
-  async settleAccountTx(txHash: TxHash) {
-    await this.accountTxRep.update({ txHash }, { settled: true });
+  async settleAccountTx(txHash: TxHash, settled: Date) {
+    await this.accountTxRep.update({ txHash }, { settled });
   }
 
   async addUserSigningKey(signingKey: SigningKey) {

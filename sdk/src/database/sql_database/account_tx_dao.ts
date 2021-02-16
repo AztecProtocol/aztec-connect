@@ -2,7 +2,7 @@ import { TxHash } from 'barretenberg/tx_hash';
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 import { AccountId, AliasHash } from '../../user';
 import { UserAccountTx } from '../../user_tx';
-import { txHashTransformer, accountIdTransformer, aliasHashTransformer } from './transformer';
+import { accountIdTransformer, aliasHashTransformer, txHashTransformer } from './transformer';
 
 @Entity({ name: 'accountTx' })
 export class AccountTxDao implements UserAccountTx {
@@ -26,8 +26,8 @@ export class AccountTxDao implements UserAccountTx {
   public migrated!: boolean;
 
   @Column()
-  public settled!: boolean;
-
-  @Column()
   public created!: Date;
+
+  @Column({ nullable: true })
+  public settled?: Date;
 }

@@ -2,14 +2,10 @@ import { randomBytes } from 'crypto';
 import { Blake2s } from '../crypto/blake2s';
 
 export class AliasHash {
-  private value!: Buffer;
-
-  constructor(aliasHash: Buffer) {
-    if (aliasHash.length < 28) {
-      throw new Error('Invalid alias hash.');
+  constructor(private buffer: Buffer) {
+    if (buffer.length !== 28) {
+      throw new Error('Invalid alias hash buffer.');
     }
-
-    this.value = aliasHash.slice(0, 28);
   }
 
   static random() {
@@ -17,16 +13,16 @@ export class AliasHash {
   }
 
   static fromAlias(alias: string, blake2s: Blake2s) {
-    return new AliasHash(blake2s.hashToField(Buffer.from(alias)));
+    return new AliasHash(blake2s.hashToField(Buffer.from(alias)).slice(0, 28));
   }
 
   toBuffer() {
-    return this.value;
+    return this.buffer;
   }
 
   toBuffer32() {
     const buffer = Buffer.alloc(32);
-    this.value.copy(buffer, 4);
+    this.buffer.copy(buffer, 4);
     return buffer;
   }
 

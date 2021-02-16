@@ -3,7 +3,7 @@ import { TxHash } from 'barretenberg/tx_hash';
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 import { AccountId } from '../../user';
 import { UserJoinSplitTx } from '../../user_tx';
-import { bigintTransformer, txHashTransformer, accountIdTransformer, ethAddressTransformer } from './transformer';
+import { accountIdTransformer, bigintTransformer, ethAddressTransformer, txHashTransformer } from './transformer';
 
 @Entity({ name: 'joinSplitTx' })
 @Index(['txHash', 'userId'], { unique: true })
@@ -42,8 +42,8 @@ export class JoinSplitTxDao implements UserJoinSplitTx {
   public ownedByUser!: boolean;
 
   @Column()
-  public settled!: boolean;
-
-  @Column()
   public created!: Date;
+
+  @Column({ nullable: true })
+  public settled?: Date;
 }

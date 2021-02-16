@@ -31,7 +31,7 @@ export const randomUser = (): UserData => {
     privateKey: randomBytes(32),
     publicKey: id.publicKey,
     nonce: id.nonce,
-    alias: randomBytes(8).toString('hex'),
+    aliasHash: AliasHash.random(),
     syncedToRollup: randomInt(),
   };
 };
@@ -43,7 +43,6 @@ export const randomUserAccountTx = (): UserAccountTx => ({
   newSigningPubKey1: randomBytes(32),
   newSigningPubKey2: randomBytes(32),
   migrated: false,
-  settled: false,
   created: new Date(),
 });
 
@@ -59,7 +58,6 @@ export const randomUserJoinSplitTx = (): UserJoinSplitTx => ({
   inputOwner: EthAddress.randomAddress(),
   outputOwner: EthAddress.randomAddress(),
   ownedByUser: true,
-  settled: false,
   created: new Date(),
 });
 
@@ -69,7 +67,6 @@ export const randomSigningKey = (): SigningKey => ({
   accountId: AccountId.random(),
   key: randomBytes(32),
   treeIndex: randomInt(),
-  address: GrumpkinAddress.randomAddress(),
 });
 
 export const randomAlias = (): Alias => ({

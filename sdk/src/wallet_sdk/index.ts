@@ -18,6 +18,7 @@ import { RecoveryData, RecoveryPayload, AccountId } from '../user';
 import { WalletSdkUser } from './wallet_sdk_user';
 import { createPermitData } from './create_permit_data';
 import { TxHash } from 'barretenberg/tx_hash';
+import { AccountProofOutput, JoinSplitProofOutput } from '../proofs/proof_output';
 
 export * from './wallet_sdk_user';
 export * from './wallet_sdk_user_asset';
@@ -267,10 +268,13 @@ export class WalletSdk extends EventEmitter {
         }
 
         await this.checkPublicBalanceAndApproval(assetId, publicInput, inputOwner, permitArgs);
-        await this.depositFundsToContract(assetId, userId, inputOwner, publicInput, permitArgs);
+        const pendingDeposit = await this.getUserPendingDeposit(assetId, inputOwner);
+        if (pendingDeposit < publicInput) {
+          await this.depositFundsToContract(assetId, inputOwner, publicInput - pendingDeposit, permitArgs);
+        }
       }
 
-      return this.core.createJoinSplitProof(
+      return this.core.sendJoinSplitProof(
         assetId,
         userId,
         publicInput,
@@ -279,27 +283,71 @@ export class WalletSdk extends EventEmitter {
         recipientPrivateOutput,
         senderPrivateOutput,
         signer,
-        inputOwner,
         outputNoteOwner || userId,
+        inputOwner,
         outputOwner,
       );
     });
   }
 
-  private async depositFundsToContract(
+  public async createJoinSplitProof(
     assetId: AssetId,
     userId: AccountId,
-    from: EthAddress,
-    value: bigint,
-    permitArgs?: PermitArgs,
+    publicInput: bigint,
+    publicOutput: bigint,
+    privateInput: bigint,
+    recipientPrivateOutput: bigint,
+    senderPrivateOutput: bigint,
+    signer: Signer,
+    noteRecipient?: AccountId,
+    inputOwner?: EthAddress,
+    outputOwner?: EthAddress,
   ) {
-    const userPendingDeposit = await this.getUserPendingDeposit(assetId, from);
-    if (userPendingDeposit < value) {
-      this.emit(SdkEvent.LOG, 'Depositing funds to contract...');
-      const depositTxHash = await this.blockchain.depositPendingFunds(assetId, value, from, permitArgs);
-      await this.blockchain.getTransactionReceipt(depositTxHash);
-      this.emit(SdkEvent.UPDATED_USER_STATE, userId);
-    }
+    return this.core.createJoinSplitProof(
+      assetId,
+      userId,
+      publicInput,
+      publicOutput,
+      privateInput,
+      recipientPrivateOutput,
+      senderPrivateOutput,
+      signer,
+      noteRecipient,
+      inputOwner,
+      outputOwner,
+    );
+  }
+
+  public async createAccountProof(
+    userId: AccountId,
+    signer: Signer,
+    alias: string,
+    nonce: number,
+    migrate: boolean,
+    newSigningPublicKey1?: GrumpkinAddress,
+    newSigningPublicKey2?: GrumpkinAddress,
+    newAccountPrivateKey?: Buffer,
+  ) {
+    const aliasHash = this.core.computeAliasHash(alias);
+    return this.core.createAccountProof(
+      userId,
+      signer,
+      aliasHash,
+      nonce,
+      migrate,
+      newSigningPublicKey1,
+      newSigningPublicKey2,
+      newAccountPrivateKey,
+    );
+  }
+
+  public async sendProof(proofOutput: JoinSplitProofOutput | AccountProofOutput) {
+    return this.core.sendProof(proofOutput);
+  }
+
+  public async depositFundsToContract(assetId: AssetId, from: EthAddress, value: bigint, permitArgs?: PermitArgs) {
+    const depositTxHash = await this.blockchain.depositPendingFunds(assetId, value, from, permitArgs);
+    return this.blockchain.getTransactionReceipt(depositTxHash);
   }
 
   private async checkPublicBalanceAndApproval(
@@ -394,8 +442,9 @@ export class WalletSdk extends EventEmitter {
       }
 
       const signer = this.core.createSchnorrSigner(user.privateKey);
+      const aliasHash = this.core.computeAliasHash(alias);
 
-      return this.core.createAccountProof(user.id, signer, alias, 0, true, newSigningPublicKey, recoveryPublicKey);
+      return this.core.sendAccountProof(user.id, signer, aliasHash, 0, true, newSigningPublicKey, recoveryPublicKey);
     });
   }
 
@@ -415,14 +464,14 @@ export class WalletSdk extends EventEmitter {
   ) {
     return this.performAction(Action.ACCOUNT, userId, async () => {
       const user = this.getUserData(userId);
-      if (!user.alias) {
+      if (!user.aliasHash) {
         throw new Error('User not registered.');
       }
 
-      return this.core.createAccountProof(
+      return this.core.sendAccountProof(
         user.id,
         signer,
-        user.alias,
+        user.aliasHash,
         user.nonce,
         true,
         newSigningPublicKey,
@@ -440,14 +489,14 @@ export class WalletSdk extends EventEmitter {
   ) {
     return this.performAction(Action.ACCOUNT, userId, async () => {
       const user = this.getUserData(userId);
-      if (!user.alias) {
+      if (!user.aliasHash) {
         throw new Error('User not registered.');
       }
 
-      return this.core.createAccountProof(
+      return this.core.sendAccountProof(
         user.id,
         signer,
-        user.alias!,
+        user.aliasHash,
         user.nonce,
         false,
         signingPublicKey1,
@@ -491,6 +540,18 @@ export class WalletSdk extends EventEmitter {
 
   public getBalance(assetId: AssetId, userId: AccountId) {
     return this.core.getBalance(assetId, userId);
+  }
+
+  public async getMaxSpendableValue(assetId: AssetId, userId: AccountId) {
+    return this.core.getMaxSpendableValue(assetId, userId);
+  }
+
+  public async getSpendableNotes(assetId: AssetId, userId: AccountId) {
+    return this.core.getSpendableNotes(assetId, userId);
+  }
+
+  public async getSpendableSum(assetId: AssetId, userId: AccountId) {
+    return this.core.getSpendableSum(assetId, userId);
   }
 
   public async getPublicBalance(assetId: AssetId, ethAddress: EthAddress) {

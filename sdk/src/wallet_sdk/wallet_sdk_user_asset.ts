@@ -16,6 +16,10 @@ export class WalletSdkUserAsset {
     return this.sdk.getBalance(this.assetId, this.userId);
   }
 
+  async getMaxSpendableValue() {
+    return this.sdk.getMaxSpendableValue(this.assetId, this.userId);
+  }
+
   async mint(value: bigint, account: EthAddress) {
     return this.sdk.mint(this.assetId, this.userId, value, account);
   }

@@ -9,6 +9,6 @@ export interface UserAccountTx {
   newSigningPubKey1?: Buffer;
   newSigningPubKey2?: Buffer;
   migrated: boolean;
-  settled: boolean;
   created: Date;
+  settled?: Date;
 }

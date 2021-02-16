@@ -10,6 +10,7 @@ export interface EnsureLoginChildrenProps {
 
 export interface DefaultContentProps {
   app: App;
+  sdk: WebSdk;
   initStatus?: AppInitStatus;
 }
 
@@ -37,7 +38,7 @@ const SdkPermissionHandler = ({ app, children, DefaultContent }: SdkPermissionHa
 
   if (initStatus?.initState === AppInitState.INITIALIZED) {
     if (typeof children === 'function') {
-      return children({ app, sdk, account: initStatus!.account! });
+      return children({ app, sdk, account: sdk.getAddress() });
     }
 
     return <>{children}</>;
@@ -47,7 +48,7 @@ const SdkPermissionHandler = ({ app, children, DefaultContent }: SdkPermissionHa
     return <></>;
   }
 
-  return <DefaultContent app={app} initStatus={initStatus} />;
+  return <DefaultContent app={app} sdk={sdk} initStatus={initStatus} />;
 };
 
 interface EnsureLoginProps {

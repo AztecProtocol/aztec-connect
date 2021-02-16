@@ -15,6 +15,6 @@ export interface UserJoinSplitTx {
   inputOwner?: EthAddress;
   outputOwner?: EthAddress;
   ownedByUser: boolean;
-  settled: boolean;
   created: Date;
+  settled?: Date;
 }

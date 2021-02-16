@@ -30,21 +30,6 @@ export class App extends EventEmitter {
     }
   }
 
-  private async removeTestUsers() {
-    const ethSdk = this.getEthereumSdk();
-    const walletSdk = this.getWalletSdk();
-    const users = await ethSdk.getUsersData();
-    for (const user of users) {
-      if (user.ethAddress.equals(EthAddress.ZERO)) {
-        try {
-          await walletSdk.removeUser(user.id);
-        } catch (e) {
-          console.error(e);
-        }
-      }
-    }
-  }
-
   isSdkAvailable() {
     return !!this.ethereumProvider;
   }
@@ -52,7 +37,6 @@ export class App extends EventEmitter {
   async createSdk(serverUrl = SERVER_URL) {
     try {
       await this.webSdk.init(serverUrl, { debug: true });
-      await this.removeTestUsers();
     } catch (e) {
       console.error(e);
     }
@@ -66,10 +50,6 @@ export class App extends EventEmitter {
     return this.webSdk;
   }
 
-  getEthereumSdk() {
-    return this.webSdk.getSdk();
-  }
-
   getWalletSdk() {
     // @ts-ignore
     return this.webSdk.getSdk().walletSdk;
@@ -80,8 +60,9 @@ export class App extends EventEmitter {
   }
 
   getAvailableArgs() {
-    const userData = this.webSdk.getUser().getUserData();
-    const signer = this.webSdk.getSdk().createSchnorrSigner(userData.privateKey);
+    const user = this.webSdk.getUser();
+    const userData = user.getUserData();
+    const signer = this.getWalletSdk().createSchnorrSigner(userData.privateKey);
     return {
       aztecSdk: this.getWalletSdk(),
       userId: userData.id,

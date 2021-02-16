@@ -78,18 +78,17 @@ const Button: React.FunctionComponent<ButtonProps> = ({ classes, text, loading, 
 
 interface InitButtonProps extends JssInjectedProps, DefaultContentProps {}
 
-const InitButtonRenderer: React.FunctionComponent<InitButtonProps> = ({ classes, app, initStatus }) => {
+const InitButtonRenderer: React.FunctionComponent<InitButtonProps> = ({ classes, app, sdk, initStatus }) => {
   if (!initStatus || initStatus.initState === AppInitState.UNINITIALIZED) {
     return <Button classes={classes} text="Initialize SDK" onClick={() => app.createSdk()} />;
   }
 
   if (initStatus.initAction === AppInitAction.AWAIT_LINK_AZTEC_ACCOUNT) {
+    const account = sdk.getAddress();
     return (
       <Button
         classes={classes}
-        text={`Link ${initStatus.account!.toString().slice(0, 6)}...${initStatus
-          .account!.toString()
-          .slice(-4)} to Aztec.`}
+        text={`Link ${account.toString().slice(0, 6)}...${account.toString().slice(-4)} to Aztec.`}
         onClick={() => app.getWebSdk().linkAccount()}
       />
     );

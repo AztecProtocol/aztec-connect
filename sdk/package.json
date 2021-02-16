@@ -7,8 +7,7 @@
   "license": "GPL-2.0",
   "scripts": {
     "build": "yarn clean && tsc -p tsconfig.cjs.json && tsc -p tsconfig.es.json && node ./package.js",
-    "bundle": "tsc -p tsconfig.bundle.json && parcel build ./src/index.ts --log-level 1 && yarn bundle:types && node ./package.bundle.js",
-    "bundle:types": "cd node_modules && find ./barretenberg/* ./blockchain/* -iname \"*.d.ts\" -exec cp --parents \\{\\} ../dist \\;",
+    "bundle": "tsc -p tsconfig.bundle.json && parcel build ./src/index.ts --log-level 1 && node ./package.bundle.js",
     "clean": "rm -rf ./dest ./dest-es ./dist",
     "test": "jest",
     "build:dev": "yarn build:dev:cjs & yarn build:dev:es",

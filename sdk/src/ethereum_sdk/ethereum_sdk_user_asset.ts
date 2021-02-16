@@ -31,6 +31,10 @@ export class EthereumSdkUserAsset {
     return this.sdk.getBalance(this.assetId, this.accountId);
   }
 
+  async getMaxSpendableValue() {
+    return this.sdk.getMaxSpendableValue(this.assetId, this.accountId);
+  }
+
   async mint(value: bigint) {
     return this.sdk.mint(this.assetId, this.accountId, value, this.address);
   }

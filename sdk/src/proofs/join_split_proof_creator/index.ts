@@ -7,14 +7,11 @@ import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { WorldState } from 'barretenberg/world_state';
 import createDebug from 'debug';
-import { ethers } from 'ethers';
-import { AccountId } from '../../user';
+import { Database } from '../../database';
 import { Signer } from '../../signer';
+import { AccountId } from '../../user';
 import { UserState } from '../../user_state';
 import { JoinSplitTxFactory } from './join_split_tx_factory';
-import { Database } from '../../database';
-import { Blake2s } from 'barretenberg/crypto/blake2s';
-import { EthereumSigner } from 'barretenberg/blockchain';
 
 const debug = createDebug('bb:join_split_proof_creator');
 
@@ -23,15 +20,13 @@ export class JoinSplitProofCreator {
 
   constructor(
     private joinSplitProver: JoinSplitProver,
-    private ethSigner: EthereumSigner,
     worldState: WorldState,
-    blake2s: Blake2s,
     grumpkin: Grumpkin,
     pedersen: Pedersen,
     noteAlgos: NoteAlgorithms,
     db: Database,
   ) {
-    this.txFactory = new JoinSplitTxFactory(worldState, blake2s, grumpkin, pedersen, noteAlgos, db);
+    this.txFactory = new JoinSplitTxFactory(worldState, grumpkin, pedersen, noteAlgos, db);
   }
 
   public async createProof(
@@ -44,8 +39,8 @@ export class JoinSplitProofCreator {
     assetId: AssetId,
     signer: Signer,
     receiver?: AccountId,
-    outputOwner?: EthAddress,
     inputOwner?: EthAddress,
+    outputOwner?: EthAddress,
   ) {
     if (publicInput && !inputOwner) {
       throw new Error('Input owner undefined.');
@@ -77,14 +72,6 @@ export class JoinSplitProofCreator {
       proofData: { txId },
     } = joinSplitProof;
 
-    const depositSignature = publicInput ? await this.ethSign(depositSigningData, inputOwner!) : undefined;
-
-    return { proofData, viewingKeys, depositSignature, txId };
-  }
-
-  private async ethSign(txPublicInputs: Buffer, inputOwner: EthAddress) {
-    const msgHash = ethers.utils.keccak256(txPublicInputs);
-    const digest = ethers.utils.arrayify(msgHash);
-    return await this.ethSigner.signMessage(Buffer.from(digest), inputOwner);
+    return { proofData, viewingKeys, depositSigningData, txId };
   }
 }

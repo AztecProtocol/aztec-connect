@@ -21,7 +21,6 @@ import { UnrolledProver } from '../prover';
 import { computeSigningData } from './compute_signing_data';
 import { Blake2s } from '../../crypto/blake2s';
 import { AccountAliasId } from '../account_alias_id';
-import { AliasHash } from '../alias_hash';
 
 const debug = createDebug('bb:join_split_proof_test');
 
@@ -120,9 +119,8 @@ describe('join_split_proof', () => {
       const inputNote2Path = await tree.getHashPath(1);
       const accountNotePath = await tree.getHashPath(2);
 
-      const aliasHash = AliasHash.fromAlias('user_zero', blake2s);
       const nonce = 0;
-      const accountAliasId = new AccountAliasId(aliasHash, nonce);
+      const accountAliasId = AccountAliasId.fromAlias('user_zero', nonce, blake2s);
 
       const inputOwner = EthAddress.randomAddress();
       const outputOwner = EthAddress.randomAddress();

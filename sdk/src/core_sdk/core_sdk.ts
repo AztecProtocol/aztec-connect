@@ -38,6 +38,7 @@ import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { ProofData } from 'barretenberg/client_proofs/proof_data';
 import { EthereumSigner } from 'barretenberg/blockchain';
 import { TxHash } from 'barretenberg/tx_hash';
+import { AccountProofOutput, JoinSplitProofOutput, ProofOutput } from '../proofs/proof_output';
 
 const debug = createDebug('bb:core_sdk');
 
@@ -154,9 +155,7 @@ export class CoreSdk extends EventEmitter {
     if (!this.escapeHatchMode) {
       this.joinSplitProofCreator = new JoinSplitProofCreator(
         joinSplitProver,
-        this.ethSigner,
         this.worldState,
-        this.blake2s,
         this.grumpkin,
         this.pedersen,
         noteAlgos,
@@ -168,9 +167,7 @@ export class CoreSdk extends EventEmitter {
     } else {
       this.joinSplitProofCreator = new EscapeHatchProofCreator(
         escapeHatchProver,
-        this.ethSigner,
         this.worldState,
-        this.blake2s,
         this.grumpkin,
         this.pedersen,
         noteAlgos,
@@ -500,13 +497,51 @@ export class CoreSdk extends EventEmitter {
     return !address;
   }
 
-  private computeAliasHash(alias: string) {
+  public computeAliasHash(alias: string) {
     return AliasHash.fromAlias(alias, this.blake2s);
   }
 
   public createSchnorrSigner(privateKey: Buffer) {
     const publicKey = this.derivePublicKey(privateKey);
     return new SchnorrSigner(this.schnorr, publicKey, privateKey);
+  }
+
+  public async sendJoinSplitProof(
+    assetId: AssetId,
+    userId: AccountId,
+    publicInput: bigint,
+    publicOutput: bigint,
+    privateInput: bigint,
+    recipientPrivateOutput: bigint,
+    senderPrivateOutput: bigint,
+    signer: Signer,
+    noteRecipient?: AccountId,
+    inputOwner?: EthAddress,
+    outputOwner?: EthAddress,
+  ) {
+    const proofOutput = await this.createJoinSplitProof(
+      assetId,
+      userId,
+      publicInput,
+      publicOutput,
+      privateInput,
+      recipientPrivateOutput,
+      senderPrivateOutput,
+      signer,
+      noteRecipient,
+      inputOwner,
+      outputOwner,
+    );
+
+    if (proofOutput.signingData) {
+      if (!inputOwner) {
+        throw new Error('Signer undefined.');
+      }
+
+      await proofOutput.ethSign(this.ethSigner, inputOwner);
+    }
+
+    return this.sendProof(proofOutput);
   }
 
   public async createJoinSplitProof(
@@ -518,8 +553,8 @@ export class CoreSdk extends EventEmitter {
     recipientPrivateOutput: bigint,
     senderPrivateOutput: bigint,
     signer: Signer,
-    inputOwner?: EthAddress,
     noteRecipient?: AccountId,
+    inputOwner?: EthAddress,
     outputOwner?: EthAddress,
   ) {
     if (this.escapeHatchMode) {
@@ -530,7 +565,7 @@ export class CoreSdk extends EventEmitter {
 
     this.emit(SdkEvent.LOG, 'Generating proof...');
 
-    const proofOutput = await this.joinSplitProofCreator.createProof(
+    const { txId, proofData, viewingKeys, depositSigningData } = await this.joinSplitProofCreator.createProof(
       userState,
       publicInput,
       publicOutput,
@@ -540,13 +575,11 @@ export class CoreSdk extends EventEmitter {
       assetId,
       signer,
       noteRecipient,
-      outputOwner,
       inputOwner,
+      outputOwner,
     );
 
-    await this.rollupProvider.sendProof(proofOutput);
-
-    const txHash = new TxHash(proofOutput.txId);
+    const txHash = new TxHash(txId);
     const tx: UserJoinSplitTx = {
       txHash,
       userId,
@@ -559,12 +592,10 @@ export class CoreSdk extends EventEmitter {
       inputOwner,
       outputOwner,
       ownedByUser: true,
-      settled: false,
       created: new Date(),
     };
-    await userState.addJoinSplitTx(tx);
 
-    return txHash;
+    return new JoinSplitProofOutput(tx, proofData, viewingKeys, publicInput ? depositSigningData : undefined);
   }
 
   public async createAccountTx(
@@ -594,10 +625,54 @@ export class CoreSdk extends EventEmitter {
     );
   }
 
+  public async sendAccountProof(
+    userId: AccountId,
+    signer: Signer,
+    aliasHash: AliasHash,
+    nonce: number,
+    migrate: boolean,
+    newSigningPublicKey1?: GrumpkinAddress,
+    newSigningPublicKey2?: GrumpkinAddress,
+    newAccountPrivateKey?: Buffer,
+  ) {
+    const proofOutput = await this.createAccountProof(
+      userId,
+      signer,
+      aliasHash,
+      nonce,
+      migrate,
+      newSigningPublicKey1,
+      newSigningPublicKey2,
+      newAccountPrivateKey,
+    );
+
+    let newUser;
+    const { tx } = proofOutput;
+    if (tx.migrated) {
+      const { privateKey } = this.getUserData(userId);
+      const userData = await this.userFactory.createUser(
+        newAccountPrivateKey || privateKey,
+        tx.userId.nonce,
+        aliasHash,
+      );
+      newUser = await this.addUserFromUserData(userData);
+    }
+
+    try {
+      const txId = await this.sendProof(proofOutput);
+      return txId;
+    } catch (e) {
+      if (newUser) {
+        await this.removeUser(newUser.id);
+      }
+      throw e;
+    }
+  }
+
   public async createAccountProof(
     userId: AccountId,
     signer: Signer,
-    alias: string,
+    aliasHash: AliasHash,
     nonce: number,
     migrate: boolean,
     newSigningPublicKey1?: GrumpkinAddress,
@@ -608,9 +683,8 @@ export class CoreSdk extends EventEmitter {
       throw new Error('Account modifications not supported in escape hatch mode.');
     }
 
-    const aliasHash = this.computeAliasHash(alias);
     const userState = this.getUserState(userId);
-    const { publicKey, privateKey } = userState.getUser();
+    const { publicKey } = userState.getUser();
 
     const signerPublicKey = signer.getPublicKey();
     const accountId = nonce ? new AccountId(publicKey, nonce) : undefined;
@@ -632,30 +706,41 @@ export class CoreSdk extends EventEmitter {
       accountIndex,
     );
 
-    await this.rollupProvider.sendProof({ proofData: rawProofData, viewingKeys: [] });
-
-    if (migrate) {
-      const userData = await this.userFactory.createUser(newAccountPrivateKey || privateKey, newNonce, alias);
-      await this.addUserFromUserData(userData);
-    }
-
-    const newUserId = new AccountId(newAccountPublicKey, newNonce);
-    const newUserState = this.getUserState(newUserId);
-    const proof = new ProofData(rawProofData);
-    const txHash = new TxHash(proof.txId);
+    const { txId } = new ProofData(rawProofData);
+    const txHash = new TxHash(txId);
     const tx: UserAccountTx = {
       txHash,
-      userId: newUserId,
+      userId: new AccountId(newAccountPublicKey, newNonce),
       aliasHash,
       newSigningPubKey1: newSigningPublicKey1?.x(),
       newSigningPubKey2: newSigningPublicKey2?.x(),
       migrated: migrate,
-      settled: false,
       created: new Date(),
     };
-    await newUserState.addAccountTx(tx);
 
-    return txHash;
+    return new AccountProofOutput(tx, rawProofData);
+  }
+
+  public async sendProof(proofOutput: ProofOutput) {
+    if (this.escapeHatchMode) {
+      await this.validateEscapeOpen();
+    }
+
+    const { signingData, depositSignature } = proofOutput;
+    if (signingData && !depositSignature) {
+      throw new Error('Proof not signed.');
+    }
+
+    const { tx } = proofOutput;
+    const { userId } = tx;
+    const userState = this.getUserState(userId);
+
+    const { proofData, viewingKeys } = proofOutput;
+    await this.rollupProvider.sendProof({ proofData, viewingKeys, depositSignature });
+
+    await userState.addTx(tx);
+
+    return tx.txHash;
   }
 
   private async isSynchronised() {
@@ -699,7 +784,7 @@ export class CoreSdk extends EventEmitter {
         }
       } else {
         const txs = await this.db.getJoinSplitTxsByTxHash(txHash);
-        if (txs.every(tx => tx.settled === true)) {
+        if (txs.every(tx => tx.settled)) {
           break;
         }
       }
@@ -731,7 +816,8 @@ export class CoreSdk extends EventEmitter {
     const publicKey = this.derivePublicKey(privateKey);
     const accountNonce = nonce !== undefined ? nonce : await this.getLatestUserNonce(publicKey);
 
-    const user = await this.userFactory.createUser(privateKey, accountNonce);
+    const aliasHash = accountNonce > 0 ? await this.db.getAliasHashByAddress(publicKey) : undefined;
+    const user = await this.userFactory.createUser(privateKey, accountNonce, aliasHash);
     if (await this.db.getUser(user.id)) {
       throw new Error(`User already exists: ${user.id}`);
     }
@@ -778,6 +864,16 @@ export class CoreSdk extends EventEmitter {
   public getMaxSpendableValue(assetId: AssetId, userId: AccountId) {
     const userState = this.getUserState(userId);
     return userState.getMaxSpendableValue(assetId);
+  }
+
+  public async getSpendableNotes(assetId: AssetId, userId: AccountId) {
+    const userState = this.getUserState(userId);
+    return userState.getSpendableNotes(assetId);
+  }
+
+  public async getSpendableSum(assetId: AssetId, userId: AccountId) {
+    const userState = this.getUserState(userId);
+    return userState.getSpendableSum(assetId);
   }
 
   public async getJoinSplitTxs(userId: AccountId) {
