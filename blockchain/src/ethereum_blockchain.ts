@@ -226,7 +226,18 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   public async getTransactionReceipt(txHash: TxHash) {
     this.debug(`Getting tx receipt for ${txHash}...`);
     let txReceipt = await this.contracts.getTransactionReceipt(txHash);
-    while (!txReceipt || txReceipt.confirmations < this.getRequiredConfirmations()) {
+    while (!txReceipt || !txReceipt.confirmations) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      txReceipt = await this.contracts.getTransactionReceipt(txHash);
+    }
+    return { status: !!txReceipt.status, blockNum: txReceipt.blockNumber } as Receipt;
+  }
+
+  public async getTransactionReceiptSafe(txHash: TxHash) {
+    const confs = this.getRequiredConfirmations();
+    this.debug(`Getting tx receipt for ${txHash} (${confs} confs)...`);
+    let txReceipt = await this.contracts.getTransactionReceipt(txHash);
+    while (!txReceipt || txReceipt.confirmations < confs) {
       await new Promise(resolve => setTimeout(resolve, 1000));
       txReceipt = await this.contracts.getTransactionReceipt(txHash);
     }

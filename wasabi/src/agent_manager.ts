@@ -1,18 +1,18 @@
-import { WalletSdk, WalletProvider, SdkEvent } from '@aztec/sdk';
+import { WalletSdk, WalletProvider, SdkEvent, MemoryFifo } from '@aztec/sdk';
 import { Web3Provider } from '@ethersproject/providers';
 import { Wallet } from 'ethers';
-import Agent from './agent';
+import { Agent } from './agent';
+import { SimpleAgent } from './simple_agent';
+import { NonceManager } from '@ethersproject/experimental';
 
-export default class AgentManager {
+export class AgentManager {
   private sdk!: WalletSdk;
   private agents: Agent[] = [];
-  private running = false;
+  private queue = new MemoryFifo<() => Promise<void>>();
 
   public constructor(
-    private numAccounts: number,
-    private numTransfers: number,
+    private numAgents: number,
     private rollupHost: string,
-    private minBalance: bigint,
     private mnemonic: string,
     private provider: WalletProvider,
   ) {}
@@ -21,7 +21,11 @@ export default class AgentManager {
     console.log('Starting wasabi...');
 
     const ethersProvider = new Web3Provider(this.provider);
-    const masterWallet = Wallet.fromMnemonic(this.mnemonic, `m/44'/60'/0'/0/0`).connect(ethersProvider);
+    const masterWallet = new NonceManager(
+      Wallet.fromMnemonic(this.mnemonic, `m/44'/60'/0'/0/0`).connect(ethersProvider),
+    );
+
+    console.log(`Master account: ${await masterWallet.getAddress()}`);
 
     this.sdk = await WalletSdk.create(this.provider, this.rollupHost, {
       syncInstances: false,
@@ -35,25 +39,16 @@ export default class AgentManager {
 
     await this.sdk.init();
 
-    console.log('Synching data tree...');
-    await this.sdk.awaitSynchronised();
+    // console.log('Synching data tree...');
+    // await this.sdk.awaitSynchronised();
 
-    for (let i = 0; i < this.numAccounts; i++) {
-      this.agents.push(new Agent(this.sdk, this.provider, i, this.minBalance, masterWallet, this.numTransfers));
-    }
+    // Task queue to serialize sdk access.
+    this.queue.process(fn => fn());
 
-    this.running = true;
-    while (this.running) {
-      for (const agent of this.agents) {
-        await agent.advanceAgent();
-      }
-      // Try advancing all agents every 5 seconds.
-      await new Promise(resolve => setTimeout(resolve, 5000));
-    }
-  }
+    this.agents = Array(this.numAgents)
+      .fill(0)
+      .map((_, i) => new SimpleAgent(this.sdk, this.provider, masterWallet, i, this.queue));
 
-  public async stop() {
-    // TODO
-    this.running = false;
+    await Promise.all(this.agents.map(a => a.run()));
   }
 }

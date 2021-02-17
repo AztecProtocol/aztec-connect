@@ -265,9 +265,14 @@ export class WalletSdk extends EventEmitter {
         }
 
         await this.checkPublicBalanceAndApproval(assetId, publicInput, inputOwner, permitArgs);
-        const pendingDeposit = await this.getUserPendingDeposit(assetId, inputOwner);
-        if (pendingDeposit < publicInput) {
-          await this.depositFundsToContract(assetId, inputOwner, publicInput - pendingDeposit, permitArgs);
+        // await this.depositFundsToContractInternal(assetId, userId, inputOwner, publicInput, permitArgs);
+        const userPendingDeposit = await this.getUserPendingDeposit(assetId, inputOwner);
+        if (userPendingDeposit < publicInput) {
+          this.emit(SdkEvent.LOG, 'Depositing funds to contract...');
+          const depositTxHash = await this.blockchain.depositPendingFunds(assetId, publicInput, inputOwner, permitArgs);
+          await this.blockchain.getTransactionReceipt(depositTxHash);
+          this.emit(SdkEvent.UPDATED_USER_STATE, userId);
+          this.emit(SdkEvent.LOG, 'Generating proof...');
         }
       }
 
@@ -343,8 +348,7 @@ export class WalletSdk extends EventEmitter {
   }
 
   public async depositFundsToContract(assetId: AssetId, from: EthAddress, value: bigint, permitArgs?: PermitArgs) {
-    const depositTxHash = await this.blockchain.depositPendingFunds(assetId, value, from, permitArgs);
-    return this.blockchain.getTransactionReceipt(depositTxHash);
+    return await this.blockchain.depositPendingFunds(assetId, value, from, permitArgs);
   }
 
   private async checkPublicBalanceAndApproval(
@@ -518,8 +522,8 @@ export class WalletSdk extends EventEmitter {
     return this.core.createSchnorrSigner(privateKey);
   }
 
-  public async addUser(privateKey: Buffer, nonce?: number) {
-    const userData = await this.core.addUser(privateKey, nonce);
+  public async addUser(privateKey: Buffer, nonce?: number, noSync = false) {
+    const userData = await this.core.addUser(privateKey, nonce, noSync);
     return new WalletSdkUser(userData.id, this);
   }
 

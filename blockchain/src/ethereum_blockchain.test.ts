@@ -127,7 +127,7 @@ describe('ethereum_blockchain', () => {
 
     await blockchain.start();
 
-    await blockchain.getTransactionReceipt(TxHash.random());
+    await blockchain.getTransactionReceiptSafe(TxHash.random());
 
     expect(contracts.getTransactionReceipt).toHaveBeenCalledTimes(3);
   });

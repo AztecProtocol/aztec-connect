@@ -82,6 +82,7 @@ export class JoinSplitTxFactory {
       ),
     ];
 
+    const dataSize = this.worldState.getSize();
     const dataRoot = this.worldState.getRoot();
 
     const inputOwner = inputOwnerAddress || EthAddress.ZERO;
@@ -114,6 +115,11 @@ export class JoinSplitTxFactory {
 
     const accountPath = await this.worldState.getHashPath(accountIndex);
     const signingPubKey = signer.getPublicKey();
+
+    // console.log({ dataRoot, dataSize, accountIndex });
+    // console.log(inputNotePaths[0]);
+    // console.log(inputNotePaths[1]);
+    // console.log(accountPath);
 
     const tx = new JoinSplitTx(
       publicInput,

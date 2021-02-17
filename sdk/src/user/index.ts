@@ -24,9 +24,9 @@ export class UserDataFactory {
     return new GrumpkinAddress(this.grumpkin.mul(Grumpkin.one, privateKey));
   }
 
-  async createUser(privateKey: Buffer, nonce: number, aliasHash?: AliasHash): Promise<UserData> {
+  async createUser(privateKey: Buffer, nonce: number, aliasHash?: AliasHash, syncedToRollup = -1): Promise<UserData> {
     const publicKey = this.derivePublicKey(privateKey);
     const id = new AccountId(publicKey, nonce);
-    return { id, privateKey, publicKey, nonce, aliasHash, syncedToRollup: -1 };
+    return { id, privateKey, publicKey, nonce, aliasHash, syncedToRollup };
   }
 }

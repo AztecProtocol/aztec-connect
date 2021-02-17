@@ -37,7 +37,7 @@ export class WalletSdkUser {
     return this.sdk.getSigningKeys(this.id);
   }
 
-  getUserData() {
+  public getUserData() {
     return this.sdk.getUserData(this.id);
   }
 
@@ -53,7 +53,11 @@ export class WalletSdkUser {
     return this.sdk.getNotes(this.id);
   }
 
-  getAsset(assetId: AssetId) {
+  public getAsset(assetId: AssetId) {
     return new WalletSdkUserAsset(this.id, assetId, this.sdk);
+  }
+
+  public getSigner() {
+    return this.sdk.createSchnorrSigner(this.getUserData().privateKey);
   }
 }

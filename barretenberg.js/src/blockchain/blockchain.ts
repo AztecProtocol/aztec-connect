@@ -16,6 +16,11 @@ export type PermitArgs = { deadline: bigint; approvalAmount: bigint; signature: 
 export interface Blockchain extends BlockSource, BlockchainStatusSource, EthereumSigner {
   getTransactionReceipt(txHash: TxHash): Promise<Receipt>;
 
+  /**
+   * Will consider if the escape hatch window is open or not, waiting additional confirmations if it is.
+   */
+  getTransactionReceiptSafe(txHash: TxHash): Promise<Receipt>;
+
   getUserPendingDeposit(assetId: AssetId, account: EthAddress): Promise<bigint>;
 
   depositPendingFunds(

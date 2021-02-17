@@ -14,8 +14,7 @@ import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { MemoryFifo } from 'barretenberg/fifo';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { RollupProvider } from 'barretenberg/rollup_provider';
-import { BarretenbergWasm } from 'barretenberg/wasm';
-import { WorkerPool } from 'barretenberg/wasm/worker_pool';
+import { BarretenbergWasm, createWorker, destroyWorker, WorkerPool } from 'barretenberg/wasm';
 import { WorldState } from 'barretenberg/world_state';
 import createDebug from 'debug';
 import isNode from 'detect-node';
@@ -39,6 +38,7 @@ import { ProofData } from 'barretenberg/client_proofs/proof_data';
 import { EthereumSigner, TxType } from 'barretenberg/blockchain';
 import { TxHash } from 'barretenberg/tx_hash';
 import { AccountProofOutput, JoinSplitProofOutput, ProofOutput } from '../proofs/proof_output';
+import { BarretenbergWorker } from 'barretenberg/wasm/worker';
 
 const debug = createDebug('bb:core_sdk');
 
@@ -64,6 +64,7 @@ export class CoreSdk extends EventEmitter {
   private worldState!: WorldState;
   private userStates: UserState[] = [];
   private workerPool!: WorkerPool;
+  private pedersenWorker!: BarretenbergWorker;
   private joinSplitProofCreator!: JoinSplitProofCreator | EscapeHatchProofCreator;
   private accountProofCreator!: AccountProofCreator;
   private blockQueue!: MemoryFifo<Block>;
@@ -124,7 +125,8 @@ export class CoreSdk extends EventEmitter {
     );
 
     this.blake2s = new Blake2s(barretenberg);
-    this.pedersen = new Pedersen(barretenberg, workerPool.workers[0]);
+    this.pedersenWorker = await createWorker('pedersenWorker', barretenberg.module);
+    this.pedersen = new Pedersen(barretenberg, this.pedersenWorker);
     this.grumpkin = new Grumpkin(barretenberg);
     this.schnorr = new Schnorr(barretenberg);
     this.userFactory = new UserDataFactory(this.grumpkin);
@@ -302,6 +304,7 @@ export class CoreSdk extends EventEmitter {
   public async destroy() {
     await this.stopSyncingUserStates();
     await this.stopReceivingBlocks();
+    await destroyWorker(this.pedersenWorker);
     await this.workerPool?.destroy();
     await this.leveldb.close();
     await this.db.close();
@@ -566,8 +569,6 @@ export class CoreSdk extends EventEmitter {
 
     const userState = this.getUserState(userId);
 
-    this.emit(SdkEvent.LOG, 'Generating proof...');
-
     const { txId, proofData, viewingKeys, depositSigningData } = await this.joinSplitProofCreator.createProof(
       userState,
       publicInput,
@@ -815,12 +816,20 @@ export class CoreSdk extends EventEmitter {
     return this.userFactory.derivePublicKey(privateKey);
   }
 
-  public async addUser(privateKey: Buffer, nonce?: number) {
+  public async addUser(privateKey: Buffer, nonce?: number, noSync = false) {
     const publicKey = this.derivePublicKey(privateKey);
     const accountNonce = nonce !== undefined ? nonce : await this.getLatestUserNonce(publicKey);
 
+    let syncedToRollup = -1;
+    if (noSync) {
+      const {
+        blockchainStatus: { nextRollupId },
+      } = await this.getRemoteStatus();
+      syncedToRollup = nextRollupId - 1;
+    }
+
     const aliasHash = accountNonce > 0 ? await this.db.getAliasHashByAddress(publicKey) : undefined;
-    const user = await this.userFactory.createUser(privateKey, accountNonce, aliasHash);
+    const user = await this.userFactory.createUser(privateKey, accountNonce, aliasHash, syncedToRollup);
     if (await this.db.getUser(user.id)) {
       throw new Error(`User already exists: ${user.id}`);
     }

@@ -17,11 +17,16 @@ import { getServiceName } from 'barretenberg/service';
 
 const debug = createDebug('bb:create_sdk');
 
-function getLevelDb() {
+function getLevelDb(dbPath = 'data') {
   if (isNode) {
-    mkdirSync('./data', { recursive: true });
-    // eslint-disable-next-line
-    return levelup(require('leveldown')('./data/aztec2-sdk.db'));
+    if (dbPath === ':memory:') {
+      // eslint-disable-next-line
+      return levelup(require('memdown')());
+    } else {
+      mkdirSync(dbPath, { recursive: true });
+      // eslint-disable-next-line
+      return levelup(require('leveldown')(`${dbPath}/aztec2-sdk.db`));
+    }
   } else {
     // eslint-disable-next-line
     return levelup(require('level-js')('aztec2-sdk'));
@@ -53,7 +58,7 @@ async function sdkFactory(hostStr: string, options: SdkOptions, blockchain: Bloc
   }
 
   const host = new URL(hostStr);
-  const leveldb = getLevelDb();
+  const leveldb = getLevelDb(options.dbPath);
   const db = await getDb(options.dbPath);
 
   await db.init();

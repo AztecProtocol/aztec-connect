@@ -73,7 +73,7 @@ function getConfVars(): ConfVars {
     apiPrefix: API_PREFIX || '',
     serverAuthToken: SERVER_AUTH_TOKEN || randomBytes(32).toString('hex'),
     baseTxGas: +(BASE_TX_GAS || 0),
-    feeGasPrice: BigInt(FEE_GAS_PRICE || 1),
+    feeGasPrice: BigInt(FEE_GAS_PRICE || 0),
     reimbursementFeeLimit: REIMBURSEMENT_FEE_LIMIT ? BigInt(REIMBURSEMENT_FEE_LIMIT) : BigInt(10) ** BigInt(30),
   };
 }

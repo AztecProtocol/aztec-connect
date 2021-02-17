@@ -169,7 +169,7 @@ export class RollupPublisher {
   private async getTransactionReceipt(txHash: TxHash) {
     while (!this.interrupted) {
       try {
-        return await this.blockchain.getTransactionReceipt(txHash);
+        return await this.blockchain.getTransactionReceiptSafe(txHash);
       } catch (err) {
         console.log(err);
         await this.sleepOrInterrupted(60000);

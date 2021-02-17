@@ -146,7 +146,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "GAS_LIMIT",
-        "value": "7000000"
+        "value": "8000000"
       },
       {
         "name": "PRIVATE_KEY",
@@ -167,6 +167,10 @@ resource "aws_ecs_task_definition" "falafel" {
       {
         "name": "NUM_OUTER_ROLLUP_PROOFS",
         "value": "1"
+      },
+      {
+        "name": "FEE_GAS_PRICE",
+        "value": "0"
       }
     ],
     "mountPoints": [
