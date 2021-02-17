@@ -70,12 +70,8 @@ resource "aws_ecs_task_definition" "wasabi" {
         "value": "http://ethereum.aztec.network:10545"
       },
       {
-        "name": "NUM_ACCOUNTS",
-        "value": "40"
-      },
-      {
-        "name": "DEBUG",
-        "value": "bb:*"
+        "name": "NUM_AGENTS",
+        "value": "30"
       }
     ],
     "logConfiguration": {
@@ -100,7 +96,7 @@ resource "aws_ecs_service" "wasabi" {
   name                               = "wasabi"
   cluster                            = data.terraform_remote_state.setup_iac.outputs.ecs_cluster_id
   launch_type                        = "FARGATE"
-  desired_count                      = 0
+  desired_count                      = 6
   deployment_maximum_percent         = 100
   deployment_minimum_healthy_percent = 0
   platform_version                   = "1.4.0"

@@ -33,7 +33,7 @@ export class SimpleAgent {
   }
 
   /**
-   * This SDK does not support parallel execution.
+   * The SDK does not support parallel execution.
    * Given a function that resolves to a TxHash, will execute that function in serial across all agents sharing the
    * queue. Resolves when the TxHash is settled.
    */
@@ -42,7 +42,7 @@ export class SimpleAgent {
       this.queue.put(() => fn().then(resolve).catch(reject)),
     );
     console.log(`Agent ${this.id} awaiting settlement...`);
-    await this.sdk.awaitSettlement(txHash, 1800);
+    await this.sdk.awaitSettlement(txHash, 3600 * 12);
   }
 
   public async run() {
