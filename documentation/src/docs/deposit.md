@@ -3,7 +3,7 @@ This method deposits assets from layer 1.
 @spec sdk.ts deposit
 
 ```js
-import { AssetId, EthAddress, Web3Signer } from '@aztec/sdk';
+import { AssetId, EthAddress, Web3Signer, TxType } from '@aztec/sdk';
 
 async function demoDeposit(aztecSdk, userId, signer) {
   const assetId = AssetId.DAI;
@@ -15,7 +15,7 @@ async function demoDeposit(aztecSdk, userId, signer) {
   const ethSigner = new Web3Signer(window.ethereum, senderEthAddress);
 
   const value = aztecSdk.toBaseUnits(assetId, '10');
-  const fee = await aztecSdk.getFee(assetId);
+  const fee = await aztecSdk.getFee(assetId, TxType.DEPOSIT);
 
   const totalDeposit = value + fee;
   const allowance = await aztecSdk.getPublicAllowance(assetId, senderEthAddress);

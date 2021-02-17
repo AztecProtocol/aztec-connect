@@ -1,4 +1,4 @@
-import { AssetId, createWalletSdk, WalletSdk, WalletSdkUser, EthAddress, WalletProvider } from '@aztec/sdk';
+import { AssetId, createWalletSdk, WalletSdk, WalletSdkUser, EthAddress, WalletProvider, TxType } from '@aztec/sdk';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
 import { getFeeDistributorContract } from './fee_distributor_contract';
@@ -51,7 +51,7 @@ describe('end-to-end wallet tests', () => {
 
   it('should deposit, transfer and withdraw funds', async () => {
     const user0Asset = users[0].getAsset(assetId);
-    const txFee = await sdk.getFee(assetId);
+    const txFee = await sdk.getFee(assetId, TxType.DEPOSIT);
 
     // Deposit to user 0.
     {

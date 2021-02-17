@@ -16,6 +16,7 @@ export class RollupPublisher {
   private interruptPromise = Promise.resolve();
   private interruptResolve = () => {};
   private signer: Signer;
+  private lastPublishedTime: Date;
 
   constructor(
     private rollupDb: RollupDb,
@@ -26,14 +27,15 @@ export class RollupPublisher {
     private metrics: Metrics,
   ) {
     this.signer = new Web3Provider(provider).getSigner();
+    this.lastPublishedTime = moment.unix(0).toDate();
   }
 
   public async publishRollup(rollup: RollupDao) {
     const lastPublished = await this.rollupDb.getSettledRollups(0, true, 1);
 
     if (lastPublished.length) {
-      const lastPublishedAt = lastPublished[0].created;
-      const sincePublished = moment().diff(lastPublishedAt, 's');
+      this.lastPublishedTime = lastPublished[0].created;
+      const sincePublished = moment().diff(this.lastPublishedTime, 's');
       if (sincePublished < this.publishInterval.seconds()) {
         const sleepFor = this.publishInterval.seconds() - sincePublished;
         console.log(`Rollup due to be published in ${sleepFor} seconds...`);
@@ -114,6 +116,14 @@ export class RollupPublisher {
       providerAddress,
       this.feeLimit,
     );
+  }
+
+  public async getLastPublishedTime() {
+    if (!this.lastPublishedTime) {
+      const lastPublished = await this.rollupDb.getSettledRollups(0, true, 1);
+      this.lastPublishedTime = lastPublished[0].created;
+    }
+    return this.lastPublishedTime;
   }
 
   private async generateSignature(

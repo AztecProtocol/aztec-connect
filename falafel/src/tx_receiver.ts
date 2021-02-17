@@ -1,4 +1,4 @@
-import { Blockchain } from 'barretenberg/blockchain';
+import { Blockchain, TxType } from 'barretenberg/blockchain';
 import { AccountVerifier } from 'barretenberg/client_proofs/account_proof';
 import { JoinSplitVerifier } from 'barretenberg/client_proofs/join_split_proof';
 import { ProofId, ProofData, JoinSplitProofData } from 'barretenberg/client_proofs/proof_data';
@@ -11,6 +11,7 @@ import { RollupDb } from './rollup_db';
 import { Mutex } from 'async-mutex';
 import { ViewingKey } from 'barretenberg/viewing_key';
 import { ProofGenerator } from 'halloumi/proof_generator';
+import { TxFeeResolver } from './tx_fee_resolver';
 
 export interface Tx {
   proofData: Buffer;
@@ -29,7 +30,7 @@ export class TxReceiver {
     private rollupDb: RollupDb,
     private blockchain: Blockchain,
     private proofGenerator: ProofGenerator,
-    private minFees: bigint[],
+    private txFeeResolver: TxFeeResolver,
   ) {}
 
   public async init() {
@@ -95,12 +96,29 @@ export class TxReceiver {
     }
   }
 
+  private async getTxType(jsProofData: JoinSplitProofData) {
+    const { publicInput, publicOutput, outputOwner } = jsProofData;
+
+    const isContract = await this.blockchain.isContract(outputOwner);
+
+    if (publicInput > 0) {
+      return TxType.DEPOSIT;
+    } else if (publicOutput > 0 && isContract) {
+      return TxType.WITHDRAW_TO_CONTRACT;
+    } else if (publicOutput > 0) {
+      return TxType.WITHDRAW_TO_WALLET;
+    } else {
+      return TxType.TRANSFER;
+    }
+  }
+
   private async validateJoinSplitTx(proofData: ProofData, depositSignature?: Buffer) {
     const jsProofData = new JoinSplitProofData(proofData);
-    const { txFee } = proofData;
     const { publicInput, inputOwner, assetId, depositSigningData } = jsProofData;
 
-    if (txFee < this.minFees[assetId]) {
+    const txType = await this.getTxType(jsProofData);
+    const minFee = this.txFeeResolver.getTxFee(assetId, txType);
+    if (jsProofData.proofData.txFee < minFee) {
       throw new Error('Insufficient fee.');
     }
 

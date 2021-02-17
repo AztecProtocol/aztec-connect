@@ -190,9 +190,11 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   router.get('/status', async (ctx: Koa.Context) => {
     const status = await server.getStatus();
     const response = {
+      ...status,
       blockchainStatus: blockchainStatusToJson(status.blockchainStatus),
-      minFees: status.minFees.map(f => f.toString()),
+      minFees: status.minFees.map(assetFees => assetFees.map(fee => fee.toString())),
     };
+
     ctx.set('content-type', 'application/json');
     ctx.body = response;
     ctx.status = 200;

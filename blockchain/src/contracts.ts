@@ -278,4 +278,9 @@ export class Contracts {
   public getAsset(assetId: AssetId) {
     return this.assets[assetId];
   }
+
+  public async isContract(address: EthAddress) {
+    const result = await this.provider.getCode(address.toString());
+    return result.toString() !== '0x';
+  }
 }

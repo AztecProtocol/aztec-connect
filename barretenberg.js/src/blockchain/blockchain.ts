@@ -45,4 +45,6 @@ export interface Blockchain extends BlockSource, BlockchainStatusSource, Ethereu
   sendTx(tx: Buffer): Promise<TxHash>;
 
   getAsset(assetId: AssetId): Asset;
+
+  isContract(address: EthAddress): Promise<boolean>;
 }

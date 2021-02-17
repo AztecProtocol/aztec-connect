@@ -1,4 +1,4 @@
-import { AssetId, createEthSdk, EthAddress, WalletProvider } from '@aztec/sdk';
+import { AssetId, createEthSdk, EthAddress, WalletProvider, TxType } from '@aztec/sdk';
 import { EventEmitter } from 'events';
 import { advanceBlocks, blocksToAdvance } from './manipulate_block';
 import { topUpFeeDistributorContract } from './fee_distributor_contract';
@@ -54,7 +54,7 @@ describe('end-to-end falafel recovery tests', () => {
       await sdk.awaitSynchronised();
 
       const userAsset = user.getAsset(assetId);
-      const txFee = await userAsset.getFee();
+      const txFee = await userAsset.getFee(TxType.DEPOSIT);
       const depositValue = 1000n;
 
       await userAsset.mint(depositValue + txFee);
@@ -111,7 +111,7 @@ describe('end-to-end falafel recovery tests', () => {
       await sdk.awaitSynchronised();
 
       const userAsset = user.getAsset(assetId);
-      const txFee = await userAsset.getFee();
+      const txFee = await userAsset.getFee(TxType.WITHDRAW_TO_WALLET);
       const withdrawValue = 500n - txFee;
 
       const txHash = await userAsset.withdraw(withdrawValue, txFee);

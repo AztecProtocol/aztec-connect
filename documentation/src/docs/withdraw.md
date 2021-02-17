@@ -12,7 +12,7 @@ async function demoWithdraw(aztecSdk, userId, signer) {
   console.info('Balance before withdraw:', aztecSdk.fromBaseUnits(assetId, balanceBefore));
 
   const value = aztecSdk.toBaseUnits(assetId, '1.2');
-  const fee = await aztecSdk.getFee(assetId);
+  const fee = await aztecSdk.getFee(assetId, TxType.WITHDRAW_TO_ADDRESS);
 
   const recipientEthereumAddress = EthAddress.fromString(window.ethereum.selectedAddress);
 
@@ -43,7 +43,7 @@ async function demoWithdraw(aztecSdk, userId, signer) {
   console.info('Balance before withdraw:', asset.fromBaseUnits(balanceBefore));
 
   const value = asset.toBaseUnits('1.2');
-  const fee = await asset.getFee();
+  const fee = await asset.getFee(TxType.WITHDRAW_TO_ADDRESS);
 
   const recipientEthereumAddress = EthAddress.fromString(window.ethereum.selectedAddress);
 

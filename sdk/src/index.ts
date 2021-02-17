@@ -13,6 +13,7 @@ export * from 'barretenberg/client_proofs/signature';
 export * from 'barretenberg/rollup_provider';
 export * from 'barretenberg/fifo';
 export * from 'barretenberg/tx_hash';
+export * from 'barretenberg/blockchain';
 
 export {
   WalletProvider,

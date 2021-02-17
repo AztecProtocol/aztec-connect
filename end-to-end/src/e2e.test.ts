@@ -1,4 +1,4 @@
-import { AssetId, createEthSdk, EthereumSdk, EthereumSdkUser } from '@aztec/sdk';
+import { AssetId, createEthSdk, EthereumSdk, EthereumSdkUser, TxType } from '@aztec/sdk';
 import { Contract } from '@ethersproject/contracts';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
@@ -59,7 +59,9 @@ describe('end-to-end tests', () => {
   it('should deposit, transfer and withdraw funds', async () => {
     const user0Asset = users[0].getAsset(assetId);
     const user1Asset = users[1].getAsset(assetId);
-    const txFee = await sdk.getFee(assetId);
+    const depositFee = await sdk.getFee(assetId, TxType.DEPOSIT);
+    const transferFee = await sdk.getFee(assetId, TxType.TRANSFER);
+    const withdrawFee = await sdk.getFee(assetId, TxType.WITHDRAW_TO_WALLET);
 
     // Deposit to user 0.
     {
@@ -69,11 +71,11 @@ describe('end-to-end tests', () => {
       const initialPublicBalance = await user0Asset.publicBalance();
       expect(user0Asset.balance()).toBe(0n);
 
-      const txHash = await user0Asset.deposit(depositValue, txFee);
+      const txHash = await user0Asset.deposit(depositValue, depositFee);
       await sdk.awaitSettlement(txHash, 600);
 
       const publicBalance = await user0Asset.publicBalance();
-      const expectedPublicBalance = initialPublicBalance - depositValue - txFee;
+      const expectedPublicBalance = initialPublicBalance - depositValue - depositFee;
       // Minus gas cost for depositing funds to rollup contract.
       expect(publicBalance < expectedPublicBalance).toBe(true);
 
@@ -81,7 +83,7 @@ describe('end-to-end tests', () => {
 
       const reimbursement = await getLastReimbursement();
       const txFeeBalance = BigInt(await feeDistributor.txFeeBalance(assetId));
-      expect(txFeeBalance).toEqual(initialTxFeeBalance + txFee - reimbursement);
+      expect(txFeeBalance).toEqual(initialTxFeeBalance + depositFee - reimbursement);
     }
 
     // Transfer to user 1.
@@ -94,17 +96,17 @@ describe('end-to-end tests', () => {
 
       expect(user1Asset.balance()).toBe(0n);
 
-      const txHash = await user0Asset.transfer(transferValue, txFee, users[1].getUserData().id);
+      const txHash = await user0Asset.transfer(transferValue, transferFee, users[1].getUserData().id);
       await sdk.awaitSettlement(txHash, 600);
 
       expect(await user0Asset.publicBalance()).toBe(initialPublicBalanceUser0);
-      expect(user0Asset.balance()).toBe(initialBalanceUser0 - transferValue - txFee);
+      expect(user0Asset.balance()).toBe(initialBalanceUser0 - transferValue - transferFee);
 
       expect(user1Asset.balance()).toBe(transferValue);
 
       const reimbursement = await getLastReimbursement();
       const txFeeBalance = BigInt(await feeDistributor.txFeeBalance(assetId));
-      expect(txFeeBalance).toEqual(initialTxFeeBalance + txFee - reimbursement);
+      expect(txFeeBalance).toEqual(initialTxFeeBalance + transferFee - reimbursement);
     }
 
     // Withdraw to user 1.
@@ -114,15 +116,15 @@ describe('end-to-end tests', () => {
       const initialTxFeeBalance = BigInt(await feeDistributor.txFeeBalance(assetId));
 
       const withdrawValue = user0Asset.toBaseUnits('3');
-      const txHash = await user1Asset.withdraw(withdrawValue, txFee);
+      const txHash = await user1Asset.withdraw(withdrawValue, withdrawFee);
       await sdk.awaitSettlement(txHash, 600);
 
       expect(await user1Asset.publicBalance()).toBe(initialPublicBalance + withdrawValue);
-      expect(user1Asset.balance()).toBe(initialBalance - withdrawValue - txFee);
+      expect(user1Asset.balance()).toBe(initialBalance - withdrawValue - withdrawFee);
 
       const reimbursement = await getLastReimbursement();
       const txFeeBalance = BigInt(await feeDistributor.txFeeBalance(assetId));
-      expect(txFeeBalance).toEqual(initialTxFeeBalance + txFee - reimbursement);
+      expect(txFeeBalance).toEqual(initialTxFeeBalance + withdrawFee - reimbursement);
     }
   });
 });

@@ -1,5 +1,6 @@
+import { EthAddress } from 'barretenberg/address';
 import { AssetId } from 'barretenberg/asset';
-import { EthAddress } from '..';
+import { TxType } from 'barretenberg/blockchain';
 import { AccountId } from '../user';
 import { EthereumSdk } from './';
 
@@ -63,7 +64,7 @@ export class EthereumSdkUserAsset {
     return this.sdk.toBaseUnits(this.assetId, value);
   }
 
-  public async getFee() {
-    return this.sdk.getFee(this.assetId);
+  public async getFee(txType: TxType) {
+    return this.sdk.getFee(this.assetId, txType);
   }
 }

@@ -12,7 +12,7 @@ async function demoTransfer(aztecSdk, userId, signer) {
   console.info('Balance before transfer:', aztecSdk.fromBaseUnits(assetId, balanceBefore));
 
   const value = aztecSdk.toBaseUnits(assetId, '2');
-  const fee = await aztecSdk.getFee(assetId);
+  const fee = await aztecSdk.getFee(assetId, TxType.TRANSFER);
 
   const recipientPublicKey = GrumpkinAddress.fromString('RECIPIENT_PUBLIC_KEY');
   const recipientId = await aztecSdk.getAccountId(recipientPublicKey);
@@ -44,7 +44,7 @@ async function demoTransfer(aztecSdk, userId, signer) {
   console.info('Balance before transfer:', asset.fromBaseUnits(balanceBefore));
 
   const value = asset.toBaseUnits('2');
-  const fee = await asset.getFee();
+  const fee = await asset.getFee(TxType.TRANSFER);
 
   const recipientAlias = 'RECIPIENT_ALIAS';
 

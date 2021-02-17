@@ -36,7 +36,7 @@ import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
 import { UserAccountTx, UserJoinSplitTx } from '../user_tx';
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { ProofData } from 'barretenberg/client_proofs/proof_data';
-import { EthereumSigner } from 'barretenberg/blockchain';
+import { EthereumSigner, TxType } from 'barretenberg/blockchain';
 import { TxHash } from 'barretenberg/tx_hash';
 import { AccountProofOutput, JoinSplitProofOutput, ProofOutput } from '../proofs/proof_output';
 
@@ -80,6 +80,7 @@ export class CoreSdk extends EventEmitter {
     dataRoot: Buffer.alloc(0),
     dataSize: 0,
     assets: [],
+    minFees: [],
   };
   private processBlocksPromise?: Promise<void>;
   private blake2s!: Blake2s;
@@ -135,6 +136,7 @@ export class CoreSdk extends EventEmitter {
 
     const {
       blockchainStatus: { chainId, rollupContractAddress, assets },
+      minFees,
     } = await this.getRemoteStatus();
     await this.leveldb.put('rollupContractAddress', rollupContractAddress.toBuffer());
 
@@ -148,6 +150,7 @@ export class CoreSdk extends EventEmitter {
       syncedToRollup: +(await this.leveldb.get('syncedToRollup').catch(() => -1)),
       latestRollupId: +(await this.leveldb.get('latestRollupId').catch(() => -1)),
       assets,
+      minFees,
     };
 
     await this.initUserStates();
@@ -324,9 +327,9 @@ export class CoreSdk extends EventEmitter {
     return await this.rollupProvider.getStatus();
   }
 
-  public async getFee(assetId: AssetId) {
-    const { minFees } = await this.getRemoteStatus();
-    return minFees[assetId];
+  public async getFee(assetId: AssetId, transactionType: TxType) {
+    const { minFees } = this.getLocalStatus();
+    return minFees[assetId][transactionType];
   }
 
   public async startReceivingBlocks() {

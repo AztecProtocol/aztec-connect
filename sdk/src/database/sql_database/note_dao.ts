@@ -12,7 +12,7 @@ export class NoteDao implements Note {
   @Column()
   public assetId!: number;
 
-  @Column('bigint', { transformer: [bigintTransformer] })
+  @Column('text', { transformer: [bigintTransformer] })
   public value!: bigint;
 
   @Column()

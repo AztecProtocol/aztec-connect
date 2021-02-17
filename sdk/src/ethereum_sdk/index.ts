@@ -15,6 +15,7 @@ import { createConnection } from 'typeorm';
 import { EthereumBlockchain } from 'blockchain';
 import { getBlockchainStatus } from 'barretenberg/service';
 import { TxHash } from 'barretenberg/tx_hash';
+import { TxType } from 'barretenberg/blockchain';
 
 export * from './ethereum_sdk_user';
 export * from './ethereum_sdk_user_asset';
@@ -116,8 +117,8 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.getRemoteStatus();
   }
 
-  public async getFee(assetId: AssetId) {
-    return this.walletSdk.getFee(assetId);
+  public async getFee(assetId: AssetId, txType: TxType) {
+    return this.walletSdk.getFee(assetId, txType);
   }
 
   public getUserPendingDeposit(assetId: AssetId, account: EthAddress) {

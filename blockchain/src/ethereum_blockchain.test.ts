@@ -55,6 +55,7 @@ describe('ethereum_blockchain', () => {
 
   it('emit all historical blocks, then new blocks', async () => {
     const emitted: Block[] = [];
+
     blockchain.on('block', block => emitted.push(block));
 
     await blockchain.start();

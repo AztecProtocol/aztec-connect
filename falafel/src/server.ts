@@ -15,6 +15,7 @@ import { toBigIntBE } from 'bigint-buffer';
 import { TxHash } from 'barretenberg/tx_hash';
 import { BarretenbergWasm } from 'barretenberg/wasm';
 import { ProofGenerator, ServerProofGenerator } from 'halloumi/proof_generator';
+import { TxFeeResolver } from './tx_fee_resolver';
 import { RollupPipelineFactory } from './rollup_pipeline';
 
 export interface ServerConfig {
@@ -22,13 +23,16 @@ export interface ServerConfig {
   readonly numInnerRollupTxs: number;
   readonly numOuterRollupProofs: number;
   readonly publishInterval: Duration;
-  readonly feeLimit: bigint;
-  readonly minFees: bigint[];
+  readonly gasLimit?: number;
+  readonly baseTxGas: number;
+  readonly feeGasPrice: bigint;
+  readonly reimbursementFeeLimit: bigint;
 }
 
 export class Server {
   private worldState: WorldState;
   private txReceiver: TxReceiver;
+  private txFeeResolver: TxFeeResolver;
   private pipelineFactory: RollupPipelineFactory;
   private proofGenerator: ProofGenerator;
   private ready = false;
@@ -42,7 +46,14 @@ export class Server {
     provider: EthereumProvider,
     barretenberg: BarretenbergWasm,
   ) {
-    const { numInnerRollupTxs, numOuterRollupProofs, publishInterval, feeLimit } = config;
+    const {
+      numInnerRollupTxs,
+      numOuterRollupProofs,
+      publishInterval,
+      reimbursementFeeLimit,
+      baseTxGas,
+      feeGasPrice,
+    } = config;
 
     this.proofGenerator = new ServerProofGenerator(config.halloumiHost);
     this.pipelineFactory = new RollupPipelineFactory(
@@ -53,21 +64,26 @@ export class Server {
       metrics,
       provider,
       publishInterval,
-      feeLimit,
+      reimbursementFeeLimit,
       numInnerRollupTxs,
       numOuterRollupProofs,
     );
     this.worldState = new WorldState(rollupDb, worldStateDb, blockchain, this.pipelineFactory, metrics);
-    this.txReceiver = new TxReceiver(barretenberg, rollupDb, blockchain, this.proofGenerator, config.minFees);
+
+    this.txFeeResolver = new TxFeeResolver(blockchain, baseTxGas, feeGasPrice);
+    this.txReceiver = new TxReceiver(barretenberg, rollupDb, blockchain, this.proofGenerator, this.txFeeResolver);
   }
 
   public async start() {
     console.log('Server initializing...');
+
     console.log('Waiting until halloumi is ready...');
     await this.proofGenerator.awaitReady();
+
     await this.worldState.start();
-    // The tx receiver depends on the proof generator to have been initialized to gain access to vks.
+    await this.txFeeResolver.init();
     await this.txReceiver.init();
+
     this.ready = true;
     console.log('Server ready to receive txs.');
   }
@@ -77,6 +93,10 @@ export class Server {
     this.ready = false;
     await this.txReceiver.destroy();
     await this.worldState.stop();
+  }
+
+  public getPendingTxCount() {
+    return this.worldState.getPendingTxCount();
   }
 
   public isReady() {
@@ -99,22 +119,17 @@ export class Server {
 
     return {
       blockchainStatus: status,
-      minFees: this.config.minFees,
+      minFees: this.txFeeResolver.getTxFees(),
+      nextPublishTime: await this.getNextPublishTime(),
+      pendingTxCount: this.getPendingTxCount(),
+      txsPerRollup: this.config.numInnerRollupTxs * this.config.numOuterRollupProofs,
     };
   }
 
-  public async getNextPublishTime() {
-    const pendingTxs = await this.rollupDb.getPendingTxCount();
-    if (!pendingTxs) {
-      return;
-    }
-
-    const lastPublished = await this.rollupDb.getSettledRollups(0, true, 1);
-    if (!lastPublished.length) {
-      return;
-    }
-
-    return moment(lastPublished[0].created).add(this.config.publishInterval).toDate();
+  private async getNextPublishTime() {
+    return moment(await this.worldState.getLastPublishedTime())
+      .add(this.config.publishInterval)
+      .toDate();
   }
 
   public async getPendingNoteNullifiers() {

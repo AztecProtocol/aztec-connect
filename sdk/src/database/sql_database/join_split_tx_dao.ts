@@ -17,19 +17,19 @@ export class JoinSplitTxDao implements UserJoinSplitTx {
   @Column()
   public assetId!: number;
 
-  @Column('bigint', { transformer: [bigintTransformer] })
+  @Column('text', { transformer: [bigintTransformer] })
   public publicInput!: bigint;
 
-  @Column('bigint', { transformer: [bigintTransformer] })
+  @Column('text', { transformer: [bigintTransformer] })
   public publicOutput!: bigint;
 
-  @Column('bigint', { transformer: [bigintTransformer] })
+  @Column('text', { transformer: [bigintTransformer] })
   public privateInput!: bigint;
 
-  @Column('bigint', { transformer: [bigintTransformer] })
+  @Column('text', { transformer: [bigintTransformer] })
   public recipientPrivateOutput!: bigint;
 
-  @Column('bigint', { transformer: [bigintTransformer] })
+  @Column('text', { transformer: [bigintTransformer] })
   public senderPrivateOutput!: bigint;
 
   @Column('blob', { transformer: [ethAddressTransformer], nullable: true })

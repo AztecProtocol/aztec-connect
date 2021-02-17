@@ -53,4 +53,5 @@ export interface SdkStatus {
   dataSize: number;
   dataRoot: Buffer;
   assets: BlockchainAsset[];
+  minFees: bigint[][];
 }

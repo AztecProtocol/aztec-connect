@@ -21,6 +21,7 @@ export class ServerStatusResolver {
 
   @FieldResolver(() => ISODateTime, { nullable: true })
   async nextPublishTime() {
-    return this.server.getNextPublishTime();
+    const { nextPublishTime } = await this.server.getStatus();
+    return nextPublishTime;
   }
 }

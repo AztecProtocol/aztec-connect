@@ -66,6 +66,7 @@ export class JoinSplitProofData {
     this.assetId = this.proofData.assetId.readUInt32BE(28);
     this.publicInput = toBigIntBE(this.proofData.publicInput);
     this.publicOutput = toBigIntBE(this.proofData.publicOutput);
+
     this.inputOwner = new EthAddress(this.proofData.inputOwner.slice(12));
     this.outputOwner = new EthAddress(this.proofData.outputOwner.slice(12));
 

@@ -29,8 +29,10 @@ async function main() {
       apiPrefix,
       serverAuthToken,
       port,
-      feeLimit,
-      txFee,
+      gasLimit,
+      baseTxGas,
+      feeGasPrice,
+      reimbursementFeeLimit,
     },
   } = await getConfig();
 
@@ -43,8 +45,10 @@ async function main() {
     numInnerRollupTxs,
     numOuterRollupProofs,
     publishInterval: moment.duration(publishInterval, 's'),
-    feeLimit,
-    minFees: [txFee, 0n],
+    gasLimit,
+    baseTxGas,
+    feeGasPrice,
+    reimbursementFeeLimit,
   };
   const rollupDb = new RollupDb(connection);
   const worldStateDb = new WorldStateDb();

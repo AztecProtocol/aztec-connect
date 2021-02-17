@@ -1,11 +1,19 @@
 import { EthAddress } from '../address';
 
+export enum TxType {
+  DEPOSIT,
+  TRANSFER,
+  WITHDRAW_TO_WALLET,
+  WITHDRAW_TO_CONTRACT,
+}
+
 export interface BlockchainAsset {
   address: EthAddress;
   permitSupport: boolean;
   decimals: number;
   symbol: string;
   name: string;
+  gasConstants: number[];
 }
 
 export interface BlockchainStatus {
@@ -49,6 +57,7 @@ export interface BlockchainStatusJson {
     decimals: number;
     symbol: string;
     name: string;
+    gasConstants: number[];
   }[];
 }
 

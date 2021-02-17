@@ -37,6 +37,8 @@ export const databaseTestSuite = (
     describe('Note', () => {
       it('add note to db and get note by index', async () => {
         const note = randomNote();
+        note.value = 2899999999999990600n;
+
         await db.addNote(note);
 
         const savedNote = await db.getNote(note.index);

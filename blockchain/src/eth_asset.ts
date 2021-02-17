@@ -18,6 +18,7 @@ export class EthAsset implements Asset {
       symbol: 'ETH',
       decimals: 18,
       permitSupport: false,
+      gasConstants: [14000, 9400, 14000, 40000],
     };
   }
 

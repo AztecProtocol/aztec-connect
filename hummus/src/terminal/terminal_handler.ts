@@ -10,6 +10,7 @@ import {
   SdkEvent,
   UserJoinSplitTx,
   WebSdk,
+  TxType,
 } from '@aztec/sdk';
 import { Terminal } from './terminal';
 import createDebug from 'debug';
@@ -41,7 +42,7 @@ export class TerminalHandler {
     transfer: this.transfer,
     register: this.registerAlias,
     balance: this.balance,
-    fee: this.fee,
+    fees: this.fees,
     status: this.status,
   };
   private assetId = AssetId.ETH;
@@ -259,7 +260,7 @@ export class TerminalHandler {
           'transfer <to> <amount>\n' +
           'register <alias>\n' +
           'balance\n' +
-          'fee\n' +
+          'fees\n' +
           'status [num] [from]\n',
       );
     }
@@ -316,16 +317,15 @@ export class TerminalHandler {
     this.assertRegistered();
     const userAsset = this.app.getUser().getAsset(this.assetId);
     const value = userAsset.toBaseUnits(valueStr);
-    const { minFees } = await this.app.getSdk().getRemoteStatus();
-    await userAsset.deposit(value, minFees[this.assetId]);
+    const fee = await this.app.getSdk().getFee(this.assetId, TxType.DEPOSIT);
+    await userAsset.deposit(value, fee);
     this.printQueue.put(`deposit proof sent.\n`);
   }
 
   private async withdraw(value: string) {
     this.assertRegistered();
     const userAsset = this.app.getUser().getAsset(this.assetId);
-    const { minFees } = await this.app.getSdk().getRemoteStatus();
-    const fee = minFees[this.assetId];
+    const fee = await this.app.getSdk().getFee(this.assetId, TxType.WITHDRAW_TO_WALLET);
     await userAsset.withdraw(userAsset.toBaseUnits(value) - fee, fee);
     this.printQueue.put(`withdrawl proof sent.\n`);
   }
@@ -337,8 +337,9 @@ export class TerminalHandler {
       throw new Error(`unknown user: ${addressOrAlias}`);
     }
     const userAsset = this.app.getUser().getAsset(this.assetId);
-    const { minFees } = await this.app.getSdk().getRemoteStatus();
-    await userAsset.transfer(userAsset.toBaseUnits(value), minFees[this.assetId], to);
+    const fee = await this.app.getSdk().getFee(this.assetId, TxType.TRANSFER);
+
+    await userAsset.transfer(userAsset.toBaseUnits(value), fee, to);
     this.printQueue.put(`transfer proof sent.\n`);
   }
 
@@ -381,10 +382,14 @@ export class TerminalHandler {
     }
   }
 
-  private async fee() {
+  private async fees() {
     const { symbol } = this.app.getSdk().getAssetInfo(this.assetId);
-    const fee = await this.app.getSdk().getFee(this.assetId);
-    this.printQueue.put(`fee: ${this.app.getSdk().fromBaseUnits(this.assetId, fee)} ${symbol}\n`);
+    const { minFees } = this.app.getSdk().getLocalStatus();
+    const feeNames = ['DEPOSIT', 'WITHDRAW_TO_ADDRESS', 'WITHDRAW_TO_CONTACT', 'TRANSFER'];
+
+    minFees[this.assetId].forEach((fee, index) => {
+      this.printQueue.put(`${feeNames[index]}: ${this.app.getSdk().fromBaseUnits(this.assetId, fee)} ${symbol}\n`);
+    });
   }
 
   private async status(num = '1', from = '0') {

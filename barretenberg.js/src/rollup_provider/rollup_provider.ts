@@ -11,7 +11,10 @@ export interface Proof {
 
 export interface RollupProviderStatus {
   blockchainStatus: BlockchainStatus;
-  minFees: bigint[];
+  minFees: bigint[][];
+  nextPublishTime: Date;
+  pendingTxCount: number;
+  txsPerRollup: number;
 }
 
 export interface RollupProvider extends BlockSource {

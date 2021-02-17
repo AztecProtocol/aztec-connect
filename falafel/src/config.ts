@@ -26,9 +26,9 @@ interface ConfVars {
   gasLimit?: number;
   apiPrefix: string;
   serverAuthToken: string;
-  localBlockchainInitSize?: number;
-  txFee: bigint;
-  feeLimit: bigint;
+  baseTxGas: number;
+  feeGasPrice: bigint;
+  reimbursementFeeLimit: bigint;
 }
 
 function getConfVars(): ConfVars {
@@ -45,12 +45,12 @@ function getConfVars(): ConfVars {
     PUBLISH_INTERVAL,
     MIN_CONFIRMATION,
     MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW,
-    LOCAL_BLOCKCHAIN_INIT_SIZE,
     API_PREFIX,
     GAS_LIMIT,
     SERVER_AUTH_TOKEN,
-    TX_FEE,
-    FEE_LIMIT,
+    BASE_TX_GAS,
+    FEE_GAS_PRICE,
+    REIMBURSEMENT_FEE_LIMIT,
   } = process.env;
 
   return {
@@ -72,9 +72,9 @@ function getConfVars(): ConfVars {
     gasLimit: GAS_LIMIT ? +GAS_LIMIT : undefined,
     apiPrefix: API_PREFIX || '',
     serverAuthToken: SERVER_AUTH_TOKEN || randomBytes(32).toString('hex'),
-    localBlockchainInitSize: LOCAL_BLOCKCHAIN_INIT_SIZE ? +LOCAL_BLOCKCHAIN_INIT_SIZE : undefined,
-    txFee: BigInt(TX_FEE || 0),
-    feeLimit: FEE_LIMIT ? BigInt(FEE_LIMIT) : BigInt(10) ** BigInt(30),
+    baseTxGas: +(BASE_TX_GAS || 0),
+    feeGasPrice: BigInt(FEE_GAS_PRICE || 1),
+    reimbursementFeeLimit: REIMBURSEMENT_FEE_LIMIT ? BigInt(REIMBURSEMENT_FEE_LIMIT) : BigInt(10) ** BigInt(30),
   };
 }
 
@@ -134,10 +134,10 @@ async function loadConfVars(path: string) {
   await writeJson(path, {
     ...state,
     PRIVATE_KEY: undefined,
-    // Remove all bigint values for now. fs-extra can't process bigint (#765) but will be able to do so in the next majoy release (10.0).
+    // fs-extra can't process bigint (#765) but will be able to do so in the next major release (10.0).
     // https://github.com/jprichardson/node-fs-extra/issues/846
-    txFee: undefined,
-    feeLimit: undefined,
+    reimbursementFeeLimit: state.reimbursementFeeLimit.toString(),
+    feeGasPrice: state.feeGasPrice.toString(),
   });
 
   return state;

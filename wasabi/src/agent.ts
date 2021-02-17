@@ -1,6 +1,5 @@
 import { Wallet } from 'ethers';
-import { WalletSdk, WalletProvider, SchnorrSigner, AccountId, AssetId, EthAddress } from '@aztec/sdk';
-import { TxHash } from 'barretenberg/tx_hash';
+import { WalletSdk, WalletProvider, SchnorrSigner, AccountId, AssetId, EthAddress, TxHash, TxType } from '@aztec/sdk';
 import { utils } from 'ethers';
 
 export default class Agent {
@@ -79,14 +78,14 @@ export default class Agent {
 
     console.log(`Agent ${this.id} depositing...`);
     const value = this.sdk.toBaseUnits(AssetId.ETH, '0.01');
-    const fee = await this.sdk.getFee(AssetId.ETH);
+    const fee = await this.sdk.getFee(AssetId.ETH, TxType.DEPOSIT);
     return await this.sdk.deposit(AssetId.ETH, this.address, this.aztecUserId, value, fee, this.signer);
   }
 
   private async transfer() {
     console.log(`Agent ${this.id} transferring...`);
     const value = this.sdk.toBaseUnits(AssetId.ETH, '0.01');
-    const fee = await this.sdk.getFee(AssetId.ETH);
+    const fee = await this.sdk.getFee(AssetId.ETH, TxType.TRANSFER);
     return await this.sdk.transfer(AssetId.ETH, this.aztecUserId, value, fee, this.signer, this.aztecUserId);
   }
 
@@ -94,7 +93,7 @@ export default class Agent {
     console.log(`Agent ${this.id} withdrawing...`);
     const masterAddress = EthAddress.fromString(this.masterWallet.address);
     const value = this.sdk.toBaseUnits(AssetId.ETH, '0.01');
-    const fee = await this.sdk.getFee(AssetId.ETH);
+    const fee = await this.sdk.getFee(AssetId.ETH, TxType.WITHDRAW_TO_WALLET);
     return await this.sdk.withdraw(AssetId.ETH, this.aztecUserId!, value, fee, this.signer, masterAddress);
   }
 

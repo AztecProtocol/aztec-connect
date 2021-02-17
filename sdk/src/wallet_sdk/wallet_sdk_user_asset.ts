@@ -4,6 +4,7 @@ import { Signer } from '../signer';
 import { AccountId } from '../user';
 import { JoinSplitTxOptions } from './tx_options';
 import { WalletSdk } from '.';
+import { TxType } from 'barretenberg/blockchain';
 
 export class WalletSdkUserAsset {
   constructor(public userId: AccountId, public assetId: AssetId, private sdk: WalletSdk) {}
@@ -70,7 +71,7 @@ export class WalletSdkUserAsset {
     return this.sdk.toBaseUnits(this.assetId, value);
   }
 
-  public async getFee() {
-    return this.sdk.getFee(this.assetId);
+  public async getFee(txType: TxType) {
+    return this.sdk.getFee(this.assetId, txType);
   }
 }

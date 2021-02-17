@@ -18,7 +18,10 @@ export class EscapeHatchRollupProvider implements RollupProvider {
     return {
       blockchainStatus: await this.blockchain.getBlockchainStatus(),
       minFees: [],
-    };
+      txsPerRollup: 0,
+      pendingTxCount: 0,
+      nextPublishTime: new Date(0),
+    } as RollupProviderStatus;
   }
 
   getBlocks(from: number) {

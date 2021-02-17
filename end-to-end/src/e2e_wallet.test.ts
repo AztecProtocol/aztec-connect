@@ -1,15 +1,4 @@
-import {
-  AssetId,
-  createEthSdk,
-  EthereumSdk,
-  EthereumSdkUser,
-  createWalletSdk,
-  WalletSdk,
-  WalletSdkUser,
-  EthAddress,
-  WalletProvider,
-  Web3Signer,
-} from '@aztec/sdk';
+import { AssetId, createWalletSdk, WalletSdk, WalletSdkUser, EthAddress, WalletProvider, TxType } from '@aztec/sdk';
 import { Contract } from '@ethersproject/contracts';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
@@ -34,7 +23,7 @@ describe('end-to-end wallet tests', () => {
   const assetId = AssetId.ETH;
 
   beforeAll(async () => {
-    provider = await createFundedWalletProvider(ETHEREUM_HOST, 3, '10');
+    provider = await createFundedWalletProvider(ETHEREUM_HOST, 3, '3');
     accounts = provider.getAccounts();
 
     sdk = await createWalletSdk(provider, ROLLUP_HOST, {
@@ -70,24 +59,30 @@ describe('end-to-end wallet tests', () => {
 
   it('should deposit, transfer and withdraw funds', async () => {
     const user0Asset = users[0].getAsset(assetId);
-    const user1Asset = users[1].getAsset(assetId);
-    const txFee = await sdk.getFee(assetId);
+    const txFee = await sdk.getFee(assetId, TxType.DEPOSIT);
 
     // Deposit to user 0.
     {
       const depositor = accounts[0];
-      const depositValue = user0Asset.toBaseUnits('8');
+      const depositValue = user0Asset.toBaseUnits('0.02');
 
       const initialTxFeeBalance = BigInt(await feeDistributor.txFeeBalance(assetId));
-      const initialPublicBalance = await user0Asset.publicBalance(depositor);
+      const initialPublicBalance = BigInt(
+        await provider.request({
+          method: 'eth_getBalance',
+          params: [depositor.toString()],
+        }),
+      );
       expect(user0Asset.balance()).toBe(0n);
       const schnorrSigner = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
-      const ethSigner = new Web3Signer(provider, depositor);
-      const txHash = await user0Asset.deposit(depositValue, txFee, schnorrSigner, ethSigner);
+      const txHash = await user0Asset.deposit(depositValue, txFee, schnorrSigner, depositor);
       await sdk.awaitSettlement(txHash, 600);
 
-      const publicBalance = await user0Asset.publicBalance(accounts[0]);
-      const expectedPublicBalance = initialPublicBalance - depositValue - txFee;
+      const publicBalance = await provider.request({
+        method: 'eth_getBalance',
+        params: [accounts[0].toString()],
+      });
+      const expectedPublicBalance = BigInt(initialPublicBalance) - BigInt(depositValue) - BigInt(txFee);
       // Minus gas cost for depositing funds to rollup contract.
       expect(publicBalance < expectedPublicBalance).toBe(true);
 
@@ -95,7 +90,7 @@ describe('end-to-end wallet tests', () => {
 
       const reimbursement = await getLastReimbursement();
       const txFeeBalance = BigInt(await feeDistributor.txFeeBalance(assetId));
-      expect(txFeeBalance).toEqual(initialTxFeeBalance + txFee - reimbursement);
+      expect(txFeeBalance).toEqual(BigInt(initialTxFeeBalance) + BigInt(txFee) - BigInt(reimbursement));
     }
   });
 });

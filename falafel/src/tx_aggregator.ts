@@ -9,6 +9,7 @@ export class TxAggregator {
   private stopPromise!: Promise<void>;
   private cancel!: () => void;
   private flush = false;
+  private count = 0;
 
   constructor(
     private rollupCreator: RollupCreator,
@@ -28,18 +29,18 @@ export class TxAggregator {
 
     const fn = async () => {
       while (this.running) {
-        const count = await this.rollupDb.getPendingTxCount();
+        this.count = await this.rollupDb.getPendingTxCount();
 
-        if (moment().isAfter(await this.getDeadline()) && count > 0) {
+        if (moment().isAfter(await this.getDeadline()) && this.count > 0) {
           this.flush = true;
         }
 
-        if (this.flush || count >= this.numInnerRollupTxs) {
+        if (this.flush || this.count >= this.numInnerRollupTxs) {
           const txs = await this.rollupDb.getPendingTxs(this.numInnerRollupTxs);
           // If we are past deadline we flush (this.flush == true), but not if we have more pending txs
           // than can fit in a single inner rollup. In this case we want a chance to loop around again
           // to produce another inner rollup.
-          const published = await this.rollupCreator.create(txs, this.flush && count <= this.numInnerRollupTxs);
+          const published = await this.rollupCreator.create(txs, this.flush && this.count <= this.numInnerRollupTxs);
 
           if (published) {
             break;
@@ -70,6 +71,10 @@ export class TxAggregator {
 
   public flushTxs() {
     this.flush = true;
+  }
+
+  public getPendingTxCount() {
+    return this.count;
   }
 
   private async getDeadline() {

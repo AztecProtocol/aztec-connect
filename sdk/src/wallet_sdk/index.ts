@@ -3,7 +3,7 @@ import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { AssetId } from 'barretenberg/asset';
 import { Rollup, Tx } from 'barretenberg/rollup_provider';
 import { getBlockchainStatus } from 'barretenberg/service';
-import { PermitArgs } from 'barretenberg/blockchain';
+import { PermitArgs, TxType } from 'barretenberg/blockchain';
 import { EthereumBlockchain } from 'blockchain/ethereum_blockchain';
 import { randomBytes } from 'crypto';
 import createDebug from 'debug';
@@ -24,6 +24,7 @@ export * from './wallet_sdk_user';
 export * from './wallet_sdk_user_asset';
 export * from './create_permit_data';
 export * from './tx_options';
+export * from 'barretenberg/asset';
 
 const debug = createDebug('bb:wallet_sdk');
 
@@ -78,11 +79,7 @@ export class WalletSdk extends EventEmitter {
     super();
   }
 
-  public static create(
-    ethereumProvider: EthereumProvider,
-    serverUrl: string,
-    sdkOptions: SdkOptions = {},
-  ) {
+  public static create(ethereumProvider: EthereumProvider, serverUrl: string, sdkOptions: SdkOptions = {}) {
     return createWalletSdk(ethereumProvider, serverUrl, sdkOptions);
   }
 
@@ -133,8 +130,8 @@ export class WalletSdk extends EventEmitter {
     return this.core.getRemoteStatus();
   }
 
-  public async getFee(assetId: AssetId) {
-    return this.core.getFee(assetId);
+  public async getFee(assetId: AssetId, txType: TxType) {
+    return this.core.getFee(assetId, txType);
   }
 
   public getUserPendingDeposit(assetId: AssetId, account: EthAddress) {

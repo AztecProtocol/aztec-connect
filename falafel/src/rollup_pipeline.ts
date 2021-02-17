@@ -12,6 +12,7 @@ import { TxAggregator } from './tx_aggregator';
 
 export class RollupPipeline {
   private txAggregator: TxAggregator;
+  private rollupPublisher: RollupPublisher;
 
   constructor(
     proofGenerator: ProofGenerator,
@@ -32,10 +33,10 @@ export class RollupPipeline {
       `Pipeline inner_txs/outer_txs/rollup_size: ${numInnerRollupTxs}/${numOuterRollupProofs}/${outerRollupSize}`,
     );
 
-    const rollupPublisher = new RollupPublisher(rollupDb, blockchain, publishInterval, feeLimit, provider, metrics);
+    this.rollupPublisher = new RollupPublisher(rollupDb, blockchain, publishInterval, feeLimit, provider, metrics);
     const rollupAggregator = new RollupAggregator(
       proofGenerator,
-      rollupPublisher,
+      this.rollupPublisher,
       rollupDb,
       worldStateDb,
       innerRollupSize,
@@ -44,6 +45,7 @@ export class RollupPipeline {
       numOuterRollupProofs,
       metrics,
     );
+
     const rollupCreator = new RollupCreator(
       rollupDb,
       worldStateDb,
@@ -55,6 +57,14 @@ export class RollupPipeline {
       metrics,
     );
     this.txAggregator = new TxAggregator(rollupCreator, rollupDb, numInnerRollupTxs, publishInterval);
+  }
+
+  public getPendingTxCount() {
+    return this.txAggregator.getPendingTxCount();
+  }
+
+  public async getLastPublishedTime() {
+    return this.rollupPublisher.getLastPublishedTime();
   }
 
   start() {

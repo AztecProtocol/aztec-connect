@@ -6,6 +6,7 @@ import {
   EthereumSdkUser,
   EthereumSdkUserAsset,
   WalletProvider,
+  TxType,
 } from '@aztec/sdk';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
@@ -53,7 +54,7 @@ describe('end-to-end permit tests', () => {
 
   it('should deposit funds to permit supporting asset', async () => {
     const depositValue = userAsset.toBaseUnits('1000');
-    const txFee = await sdk.getFee(assetId);
+    const txFee = await sdk.getFee(assetId, TxType.DEPOSIT);
     await userAsset.mint(depositValue + txFee);
     expect(await userAsset.publicBalance()).toBe(depositValue + txFee);
     expect(userAsset.balance()).toBe(0n);
