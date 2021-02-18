@@ -3,6 +3,7 @@ import { Arg, Args, FieldResolver, Int, Query, Resolver, Root } from 'type-graph
 import { Inject } from 'typedi';
 import { Connection, Repository } from 'typeorm';
 import { RollupProofDao } from '../entity/rollup_proof';
+import { RollupDao } from '../entity/rollup';
 import { FieldAliases, getQuery, pickOne } from './query_builder';
 import { RollupsArgs, RollupType } from './rollup_type';
 import { HexString } from './scalar_type';
@@ -10,10 +11,14 @@ import { HexString } from './scalar_type';
 @Resolver(() => RollupType)
 export class RollupResolver {
   private readonly rollupRep: Repository<RollupProofDao>;
+  private readonly rollupTxRep: Repository<RollupDao>;
+
   private fieldAliases: FieldAliases = {};
 
   constructor(@Inject('connection') connection: Connection) {
     this.rollupRep = connection.getRepository(RollupProofDao);
+    this.rollupTxRep = connection.getRepository(RollupDao);
+
     this.fieldAliases.hash = 'id';
     ['id', 'dataRoot', 'ethTxHash', 'mined'].forEach(field => {
       this.fieldAliases[field] = `rollup.${field}`;
@@ -108,6 +113,6 @@ export class RollupResolver {
 
   @Query(() => Int)
   async totalRollups() {
-    return getQuery(this.rollupRep, { where: { rollup_not_null: true } }).getCount(); // eslint-disable-line camelcase
+    return getQuery(this.rollupTxRep, { where: { mined_not_null: true } }).getCount(); // eslint-disable-line camelcase
   }
 }

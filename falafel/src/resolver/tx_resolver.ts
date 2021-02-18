@@ -5,7 +5,7 @@ import { Connection, LessThanOrEqual, Repository } from 'typeorm';
 import { TxDao } from '../entity/tx';
 import { getQuery, pickOne } from './query_builder';
 import { HexString, toSQLIteDateTime } from './scalar_type';
-import { TxCountArgs, TxsArgs, TxType } from './tx_type';
+import { TxsArgs, TxType } from './tx_type';
 
 @Resolver(() => TxType)
 export class TxResolver {
@@ -103,7 +103,7 @@ export class TxResolver {
   }
 
   @Query(() => Int)
-  async totalTxs(@Args() { where }: TxCountArgs) {
-    return getQuery(this.txRep, { where: where ? pickOne(where) : undefined }, this.fieldAliases).getCount();
+  async totalTxs() {
+    return getQuery(this.txRep, {}).getCount();
   }
 }

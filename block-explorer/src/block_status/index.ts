@@ -1,4 +1,4 @@
-import { colours, Colour } from '../styles';
+import { Colour } from '../styles';
 
 export * from './block_status_indicator';
 export * from './block_status_text';

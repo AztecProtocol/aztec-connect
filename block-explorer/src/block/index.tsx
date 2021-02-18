@@ -57,10 +57,13 @@ interface BlockProps {
 }
 
 export const Block: React.FunctionComponent<BlockProps> = ({ id }) => {
-  const { loading, error, data, stopPolling } = useQuery<BlockQueryData, BlockQueryVars>(GET_BLOCK, {
+  const { loading, error, data, stopPolling, startPolling } = useQuery<BlockQueryData, BlockQueryVars>(GET_BLOCK, {
     variables: { id },
-    pollInterval: BLOCK_POLL_INTERVAL,
   });
+
+  if (!data) {
+    startPolling(BLOCK_POLL_INTERVAL);
+  }
 
   if (data?.block?.mined) {
     stopPolling();

@@ -19,6 +19,12 @@ export class ServerStatusResolver {
     return rollupContractAddress.toString();
   }
 
+  @FieldResolver()
+  async pendingTxCount() {
+    const { pendingTxCount } = await this.server.getStatus();
+    return pendingTxCount;
+  }
+
   @FieldResolver(() => ISODateTime, { nullable: true })
   async nextPublishTime() {
     const { nextPublishTime } = await this.server.getStatus();

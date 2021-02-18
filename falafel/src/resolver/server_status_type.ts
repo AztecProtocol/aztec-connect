@@ -23,4 +23,7 @@ export class ServerStatusType {
 
   @Field(() => ISODateTime, { nullable: true })
   nextPublishTime?: Date;
+
+  @Field(() => Int, { nullable: true })
+  pendingTxCount?: number;
 }

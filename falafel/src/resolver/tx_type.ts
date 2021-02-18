@@ -67,9 +67,6 @@ export class TxType {
 class TxFilter {
   @Field(() => HexString, { nullable: true })
   id_starts_with?: string;
-
-  @Field({ nullable: true })
-  rollup_null?: boolean;
 }
 /* eslint-enable */
 
@@ -84,18 +81,4 @@ export class TxsArgs {
   @Field(() => Int, { defaultValue: MAX_COUNT })
   @Max(MAX_COUNT)
   take?: number;
-}
-
-/* eslint-disable camelcase */
-@InputType()
-class TxCountFilter {
-  @Field({ nullable: true })
-  rollup_null?: boolean;
-}
-/* eslint-enable */
-
-@ArgsType()
-export class TxCountArgs {
-  @Field(() => TxCountFilter, { nullable: true })
-  where?: TxCountFilter;
 }

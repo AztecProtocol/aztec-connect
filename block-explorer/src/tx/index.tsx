@@ -43,11 +43,13 @@ interface TxProps {
 }
 
 export const Tx: React.FunctionComponent<TxProps> = ({ id }) => {
-  const { loading, error, data, stopPolling } = useQuery<TxQueryData, TxQueryVars>(GET_TX, {
+  const { loading, error, data, stopPolling, startPolling } = useQuery<TxQueryData, TxQueryVars>(GET_TX, {
     variables: { id },
-    pollInterval: TX_POLL_INTERVAL,
   });
 
+  if (!data) {
+    startPolling(TX_POLL_INTERVAL);
+  }
   if (data?.tx?.block?.mined) {
     stopPolling();
   }

@@ -21,12 +21,6 @@ export interface BlocksQueryVars {
 
 export const TOTAL_BLOCKS_POLL_INTERVAL = POLL_INTERVAL;
 
-export const GET_TOTAL_BLOCKS = gql`
-  {
-    totalBlocks: totalRollups
-  }
-`;
-
 export const BLOCKS_POLL_INTERVAL = POLL_INTERVAL;
 
 export const GET_BLOCKS = gql`

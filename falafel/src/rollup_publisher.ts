@@ -16,7 +16,7 @@ export class RollupPublisher {
   private interruptPromise = Promise.resolve();
   private interruptResolve = () => {};
   private signer: Signer;
-  private lastPublishedTime: Date;
+  private lastPublishedTime!: Date;
 
   constructor(
     private rollupDb: RollupDb,
@@ -27,14 +27,12 @@ export class RollupPublisher {
     private metrics: Metrics,
   ) {
     this.signer = new Web3Provider(provider).getSigner();
-    this.lastPublishedTime = moment.unix(0).toDate();
   }
 
   public async publishRollup(rollup: RollupDao) {
     const lastPublished = await this.rollupDb.getSettledRollups(0, true, 1);
 
     if (lastPublished.length) {
-      this.lastPublishedTime = lastPublished[0].created;
       const sincePublished = moment().diff(this.lastPublishedTime, 's');
       if (sincePublished < this.publishInterval.seconds()) {
         const sleepFor = this.publishInterval.seconds() - sincePublished;
@@ -44,6 +42,7 @@ export class RollupPublisher {
     }
 
     const txData = await this.createTxData(rollup);
+    this.lastPublishedTime = rollup.created;
 
     while (!this.interrupted) {
       this.interruptPromise = new Promise(resolve => (this.interruptResolve = resolve));
@@ -121,7 +120,7 @@ export class RollupPublisher {
   public async getLastPublishedTime() {
     if (!this.lastPublishedTime) {
       const lastPublished = await this.rollupDb.getSettledRollups(0, true, 1);
-      this.lastPublishedTime = lastPublished[0].created;
+      this.lastPublishedTime = lastPublished[0] ? lastPublished[0].created : moment(0).toDate();
     }
     return this.lastPublishedTime;
   }
