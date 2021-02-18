@@ -127,12 +127,11 @@ export class TxReceiver {
     }
 
     if (publicInput > 0n) {
-      if (!depositSignature) {
-        throw new Error('No deposit signature provided.');
-      }
-
-      if (!(await this.blockchain.validateSignature(inputOwner, depositSignature, depositSigningData))) {
-        throw new Error('Invalid deposit signature.');
+      const proofApproval = await this.blockchain.getUserProofApprovalStatus(inputOwner, depositSigningData);
+      if (!depositSignature && !proofApproval) {
+        throw new Error('Deposit proof not approved');
+      } else if (!(await this.blockchain.validateSignature(inputOwner, depositSignature!, depositSigningData))) {
+        throw new Error('Invalid deposit approval signature.');
       }
 
       // WARNING! Need to check the sum of all deposits in txs remains <= the amount pending deposit on contract.

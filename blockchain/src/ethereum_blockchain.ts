@@ -7,6 +7,7 @@ import { Blockchain, BlockchainStatus, PermitArgs, Receipt, TypedData } from 'ba
 import { Contracts } from './contracts';
 import { TxHash } from 'barretenberg/tx_hash';
 import { validateSignature } from './validate_signature';
+import { hashData } from './hash_data';
 
 export interface EthereumBlockchainConfig {
   console?: boolean;
@@ -146,8 +147,18 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return this.latestRollupId;
   }
 
+  public async approveProof(account: EthAddress, signingData: Buffer) {
+    const proofHash = hashData(signingData);
+    return this.contracts.approveProof(account, proofHash);
+  }
+
   public async getUserPendingDeposit(assetId: AssetId, account: EthAddress) {
     return this.contracts.getUserPendingDeposit(assetId, account);
+  }
+
+  public async getUserProofApprovalStatus(account: EthAddress, signingData: Buffer) {
+    const proofHash = hashData(signingData);
+    return this.contracts.getUserProofApprovalStatus(account, proofHash);
   }
 
   public async setSupportedAsset(assetAddress: EthAddress, supportsPermit: boolean, signingAddress: EthAddress) {

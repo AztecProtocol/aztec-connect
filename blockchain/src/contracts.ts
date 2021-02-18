@@ -195,6 +195,13 @@ export class Contracts {
     }
   }
 
+  public async approveProof(address: EthAddress, proofHash: string) {
+    const signer = this.provider.getSigner(address.toString());
+    const rollupProcessor = new Contract(this.rollupContractAddress.toString(), RollupABI, signer);
+    const tx = await rollupProcessor.approveProof(proofHash).catch(fixEthersStackTrace);
+    return TxHash.fromString(tx.hash);
+  }
+
   public async getRollupBlocksFrom(rollupId: number, minConfirmations: number) {
     const rollupFilter = this.rollupProcessor.filters.RollupProcessed(rollupId);
     const [rollupEvent] = await this.rollupProcessor.queryFilter(rollupFilter);
@@ -277,6 +284,12 @@ export class Contracts {
 
   public getAsset(assetId: AssetId) {
     return this.assets[assetId];
+  }
+
+  public async getUserProofApprovalStatus(address: EthAddress, proofHash: string) {
+    const signer = this.provider.getSigner(address.toString());
+    const rollupProcessor = new Contract(this.rollupContractAddress.toString(), RollupABI, signer);
+    return await rollupProcessor.depositProofApprovals(address.toString(), proofHash);
   }
 
   public async isContract(address: EthAddress) {

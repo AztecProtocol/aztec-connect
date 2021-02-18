@@ -10,6 +10,7 @@ import { createDepositProof, createRollupProof } from './fixtures/create_mock_pr
 import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
 import { ethSign } from './fixtures/eth_sign';
 import { solidityFormatSignatures } from '../../src/solidity_format_signatures';
+import { hashData } from '../../src/hash_data';
 
 use(solidity);
 
@@ -166,6 +167,16 @@ describe('rollup_processor: permissioning', () => {
         feeLimit,
       ),
     ).to.be.revertedWith('validateSignature: INVALID_SIGNATURE');
+  });
+
+  it('should all proof appoval queries', async () => {
+    const proof = await createDepositProof(depositAmount, userAAddress, userA);
+    const proofHash = hashData(proof.innerProofs[0]);
+    const approval = await rollupProcessor.depositProofApprovals(userA.getAddress(), proofHash);
+    expect(Boolean(approval)).to.be.false;
+    await rollupProcessor.connect(userA).approveProof(proofHash);
+    const approval2 = await rollupProcessor.depositProofApprovals(userA.getAddress(), proofHash);
+    expect(Boolean(approval2)).to.be.true;
   });
 
   it('should reject a rollup with signature not signed by the provider', async () => {

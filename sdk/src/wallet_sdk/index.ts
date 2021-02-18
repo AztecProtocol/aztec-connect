@@ -347,8 +347,17 @@ export class WalletSdk extends EventEmitter {
     return this.core.sendProof(proofOutput);
   }
 
+  public async approveProof(address: EthAddress, publicInputs: Buffer) {
+    const txHash = await this.blockchain.approveProof(address, publicInputs);
+    return this.blockchain.getTransactionReceipt(txHash);
+  }
+
   public async depositFundsToContract(assetId: AssetId, from: EthAddress, value: bigint, permitArgs?: PermitArgs) {
     return await this.blockchain.depositPendingFunds(assetId, value, from, permitArgs);
+  }
+
+  public async isContract(address: EthAddress) {
+    return this.blockchain.isContract(address);
   }
 
   private async checkPublicBalanceAndApproval(
