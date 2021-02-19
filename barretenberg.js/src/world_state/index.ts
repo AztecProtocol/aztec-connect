@@ -36,16 +36,17 @@ export class WorldState {
   public async processRollups(rollups: RollupProofData[]) {
     debug(`processing ${rollups.length} rollups from rollup ${rollups[0].rollupId}...`);
 
+    const dataStartIndex = rollups[0].dataStartIndex;
     const leaves: Buffer[] = [];
     for (const rollup of rollups) {
-      if (rollup.dataStartIndex > leaves.length) {
+      if (rollup.dataStartIndex > dataStartIndex + leaves.length) {
         const padding = rollup.dataStartIndex - leaves.length;
         leaves.push(...new Array(padding).fill(Buffer.alloc(64, 0)));
       }
       leaves.push(...rollup.innerProofData.map(p => [p.newNote1, p.newNote2]).flat());
     }
 
-    await this.tree.updateElements(rollups[0].dataStartIndex, leaves);
+    await this.tree.updateElements(dataStartIndex, leaves);
 
     debug(`data size: ${this.tree.getSize()}`);
     debug(`data root: ${this.tree.getRoot().toString('hex')}`);

@@ -109,6 +109,7 @@ describe('merkle_tree', () => {
     }
 
     expect(tree2.getRoot().toString('hex')).toEqual(tree1.getRoot().toString('hex'));
+    expect(tree2.getSize()).toEqual(values.length);
 
     for (let i = 0; i < values.length; ++i) {
       const hashPath1 = await tree1.getHashPath(i);
@@ -130,9 +131,11 @@ describe('merkle_tree', () => {
     const db2 = levelup(memdown());
     const tree2 = await MerkleTree.new(db2, pedersen, 'test', 10);
 
-    await tree2.updateElements(0, values.slice(0, 12));
+    await tree2.updateElements(0, values.slice(0, 6));
+    await tree2.updateElements(6, values.slice(6, 12));
 
     expect(tree2.getRoot().toString('hex')).toEqual(tree1.getRoot().toString('hex'));
+    expect(tree2.getSize()).toEqual(12);
 
     for (let i = 0; i < 12; ++i) {
       const hashPath1 = await tree1.getHashPath(i);
@@ -146,22 +149,23 @@ describe('merkle_tree', () => {
     const db1 = levelup(memdown());
     const tree1 = await MerkleTree.new(db1, pedersen, 'test', 10);
 
-    for (let i = 0; i < 9; ++i) {
+    for (let i = 0; i < 10; ++i) {
       await tree1.updateElement(i, values[i]);
     }
     for (let i = 16; i < 24; ++i) {
       await tree1.updateElement(i, values[i]);
     }
 
-    // Create tree from 8 rollup, 1 escape, 8 rollup.
+    // Create tree from 4 rollup, 1 escape, 4 rollup.
     const db2 = levelup(memdown());
     const tree2 = await MerkleTree.new(db2, pedersen, 'test', 10);
 
     await tree2.updateElements(0, values.slice(0, 8));
-    await tree2.updateElements(8, [values[8]]);
+    await tree2.updateElements(8, values.slice(8, 10));
     await tree2.updateElements(16, values.slice(16, 24));
 
     expect(tree2.getRoot().toString('hex')).toEqual(tree1.getRoot().toString('hex'));
+    expect(tree2.getSize()).toEqual(24);
 
     for (let i = 0; i < 24; ++i) {
       const hashPath1 = await tree1.getHashPath(i);
@@ -186,6 +190,7 @@ describe('merkle_tree', () => {
     const tree2 = await MerkleTree.new(db2, pedersen, 'test', 10);
 
     await tree2.updateElements(0, values.slice(0, 6));
+    expect(tree2.getSize()).toEqual(6);
 
     expect(tree2.getRoot().toString('hex')).toEqual(tree1.getRoot().toString('hex'));
 

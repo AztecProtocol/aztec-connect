@@ -10,8 +10,11 @@ EventEmitter.defaultMaxListeners = 30;
 const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost:8081' } = process.env;
 
 /**
- * Set the following environment variables before running falafel:
- *   TX_FEE=100000000000000000
+ * Run the following:
+ * blockchain: yarn start:ganache
+ * halloumi: yarn start:dev
+ * falafel: yarn start:e2e
+ * end-to-end: yarn test ./src/e2e.test.ts
  */
 
 describe('end-to-end tests', () => {

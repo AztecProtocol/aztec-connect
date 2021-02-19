@@ -239,7 +239,7 @@ export class MerkleTree {
       // Slice off inserted values and adjust next insertion index.
       values = values.slice(subtreeSize);
       index += subtreeSize;
-      this.size = index + values.length;
+      this.size = index;
 
       await this.writeMeta(batch);
       await batch.write();
