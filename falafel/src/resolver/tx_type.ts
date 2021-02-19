@@ -67,6 +67,9 @@ export class TxType {
 class TxFilter {
   @Field(() => HexString, { nullable: true })
   id_starts_with?: string;
+  
+  @Field({ nullable: true })
+  rollup_null?: boolean;
 }
 /* eslint-enable */
 
