@@ -9,11 +9,11 @@ import {
   WalletSdkUser,
   WalletSdkUserAsset,
   MemoryFifo,
-  TxHash,
 } from '@aztec/sdk';
 import { randomBytes } from 'crypto';
+import { Agent } from './agent';
 
-export class SimpleAgent {
+export class SimpleAgent extends Agent {
   private wallet: Wallet;
   private address: EthAddress;
   private signer!: SchnorrSigner;
@@ -21,28 +21,15 @@ export class SimpleAgent {
   private userAsset!: WalletSdkUserAsset;
 
   constructor(
-    private sdk: WalletSdk,
+    sdk: WalletSdk,
     provider: WalletProvider,
     private masterWallet: Signer,
-    private id: number,
-    private queue: MemoryFifo<() => Promise<void>>,
+    id: number,
+    queue: MemoryFifo<() => Promise<void>>,
   ) {
-    this.sdk = sdk;
+    super(sdk, id, queue);
     this.wallet = Wallet.createRandom();
     this.address = provider.addEthersWallet(this.wallet);
-  }
-
-  /**
-   * The SDK does not support parallel execution.
-   * Given a function that resolves to a TxHash, will execute that function in serial across all agents sharing the
-   * queue. Resolves when the TxHash is settled.
-   */
-  private async serialize(fn: () => Promise<TxHash>) {
-    const txHash = await new Promise<TxHash>((resolve, reject) =>
-      this.queue.put(() => fn().then(resolve).catch(reject)),
-    );
-    console.log(`Agent ${this.id} awaiting settlement...`);
-    await this.sdk.awaitSettlement(txHash, 3600 * 12);
   }
 
   public async run() {

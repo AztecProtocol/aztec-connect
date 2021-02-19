@@ -56,27 +56,25 @@ export class RollupPipeline {
       outerRollupSize,
       metrics,
     );
-    this.txAggregator = new TxAggregator(rollupCreator, rollupDb, numInnerRollupTxs, publishInterval);
-  }
-
-  public getPendingTxCount() {
-    return this.txAggregator.getPendingTxCount();
+    this.txAggregator = new TxAggregator(rollupCreator, rollupDb, numInnerRollupTxs);
   }
 
   public async getLastPublishedTime() {
     return this.rollupPublisher.getLastPublishedTime();
   }
 
-  start() {
-    return this.txAggregator.start();
+  public async start() {
+    const nextPublishTime = await this.rollupPublisher.getNextPublishTime();
+    return this.txAggregator.start(nextPublishTime);
   }
 
-  async stop() {
+  public async stop() {
     await this.txAggregator.stop();
   }
 
-  flushTxs() {
-    return this.txAggregator.flushTxs();
+  public flushTxs() {
+    this.txAggregator.flushTxs();
+    this.rollupPublisher.flush();
   }
 }
 

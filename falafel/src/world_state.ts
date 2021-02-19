@@ -102,10 +102,6 @@ export class WorldState {
     await this.startNewPipeline();
   }
 
-  public getPendingTxCount() {
-    return this.pipeline.getPendingTxCount();
-  }
-
   public async getLastPublishedTime() {
     return this.pipeline.getLastPublishedTime();
   }

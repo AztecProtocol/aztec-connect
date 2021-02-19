@@ -23,6 +23,10 @@ export class RollupDao {
   @Column()
   public created!: Date;
 
+  // Null until calldata computed.
+  @Column({ nullable: true })
+  public callData!: Buffer;
+
   // Null until tx sent.
   @Column({ nullable: true })
   public ethTxHash!: Buffer;

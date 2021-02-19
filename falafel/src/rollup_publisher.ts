@@ -16,7 +16,8 @@ export class RollupPublisher {
   private interruptPromise = Promise.resolve();
   private interruptResolve = () => {};
   private signer: Signer;
-  private lastPublishedTime!: Date;
+  private lastPublishedTime?: Date;
+  private flush_ = false;
 
   constructor(
     private rollupDb: RollupDb,
@@ -27,26 +28,23 @@ export class RollupPublisher {
     private metrics: Metrics,
   ) {
     this.signer = new Web3Provider(provider).getSigner();
+    this.interruptPromise = new Promise(resolve => (this.interruptResolve = resolve));
   }
 
   public async publishRollup(rollup: RollupDao) {
-    const lastPublished = await this.rollupDb.getSettledRollups(0, true, 1);
+    const nextPublishTime = await this.getNextPublishTime();
 
-    if (lastPublished.length) {
-      const sincePublished = moment().diff(this.lastPublishedTime, 's');
-      if (sincePublished < this.publishInterval.seconds()) {
-        const sleepFor = this.publishInterval.seconds() - sincePublished;
-        console.log(`Rollup due to be published in ${sleepFor} seconds...`);
-        await this.sleepOrInterrupted(sleepFor * 1000);
+    if (!this.flush_ && moment().isBefore(nextPublishTime)) {
+      console.log(`Rollup due to be published at ${nextPublishTime.toISOString()}...`);
+      while (!this.flush_ && moment().isBefore(nextPublishTime)) {
+        await this.sleepOrInterrupted(1000);
       }
     }
 
     const txData = await this.createTxData(rollup);
-    this.lastPublishedTime = rollup.created;
+    await this.rollupDb.setCallData(rollup.id, txData);
 
     while (!this.interrupted) {
-      this.interruptPromise = new Promise(resolve => (this.interruptResolve = resolve));
-
       const end = this.metrics.publishTimer();
       const txHash = await this.sendRollupProof(txData);
       if (!txHash) {
@@ -89,6 +87,10 @@ export class RollupPublisher {
     this.interruptResolve();
   }
 
+  public flush() {
+    this.flush_ = true;
+  }
+
   private async createTxData(rollup: RollupDao) {
     const proof = rollup.rollupProof.proofData;
     const txs = rollup.rollupProof.txs;
@@ -120,9 +122,15 @@ export class RollupPublisher {
   public async getLastPublishedTime() {
     if (!this.lastPublishedTime) {
       const lastPublished = await this.rollupDb.getSettledRollups(0, true, 1);
-      this.lastPublishedTime = lastPublished[0] ? lastPublished[0].created : moment(0).toDate();
+      this.lastPublishedTime = lastPublished[0] ? lastPublished[0].created : moment().toDate();
     }
     return this.lastPublishedTime;
+  }
+
+  public async getNextPublishTime() {
+    return moment(await this.getLastPublishedTime())
+      .add(this.publishInterval)
+      .toDate();
   }
 
   private async generateSignature(

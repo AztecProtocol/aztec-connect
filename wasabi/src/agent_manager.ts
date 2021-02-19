@@ -4,6 +4,7 @@ import { Wallet } from 'ethers';
 import { Agent } from './agent';
 import { SimpleAgent } from './simple_agent';
 import { NonceManager } from '@ethersproject/experimental';
+// import { DepositingAgent } from './depositing_agent';
 
 export class AgentManager {
   private sdk!: WalletSdk;
@@ -44,6 +45,20 @@ export class AgentManager {
 
     // Task queue to serialize sdk access.
     this.queue.process(fn => fn());
+
+    // this.agents = Array(this.numAgents)
+    //   .fill(0)
+    //   .map(
+    //     (_, i) =>
+    //       new DepositingAgent(
+    //         this.sdk,
+    //         this.provider,
+    //         masterWallet,
+    //         Wallet.fromMnemonic(this.mnemonic, `m/44'/60'/0'/0/${i + 1}`).connect(ethersProvider),
+    //         i,
+    //         this.queue,
+    //       ),
+    //   );
 
     this.agents = Array(this.numAgents)
       .fill(0)

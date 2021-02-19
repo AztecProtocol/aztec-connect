@@ -10,7 +10,7 @@
     "compile": "yarn hardhat compile",
     "clean": "rm -rf ./cache ./dest ./dest-es",
     "test": "yarn test:src && yarn test:contract",
-    "test:contract": "hardhat test",
+    "test:contract": "hardhat test ./test/**/*.test.ts",
     "test:src": "jest",
     "test:ganache": "yarn hardhat --network ganache test",
     "deploy": "node ./dest/deploy/index.js",

@@ -1,5 +1,4 @@
 import { EthereumBlockchainConfig, EthersAdapter, WalletProvider } from 'blockchain';
-import { randomBytes } from 'crypto';
 import { emptyDir, mkdirp, pathExists, readJson, writeJson } from 'fs-extra';
 import { dirname } from 'path';
 import { JsonRpcProvider, InfuraProvider } from '@ethersproject/providers';
@@ -71,7 +70,7 @@ function getConfVars(): ConfVars {
     minConfirmationEHW: +(MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW || 12),
     gasLimit: GAS_LIMIT ? +GAS_LIMIT : undefined,
     apiPrefix: API_PREFIX || '',
-    serverAuthToken: SERVER_AUTH_TOKEN || randomBytes(32).toString('hex'),
+    serverAuthToken: SERVER_AUTH_TOKEN || '!changeme#',
     baseTxGas: +(BASE_TX_GAS || 0),
     feeGasPrice: BigInt(FEE_GAS_PRICE || 0),
     reimbursementFeeLimit: REIMBURSEMENT_FEE_LIMIT ? BigInt(REIMBURSEMENT_FEE_LIMIT) : BigInt(10) ** BigInt(30),

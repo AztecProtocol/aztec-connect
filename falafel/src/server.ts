@@ -96,7 +96,7 @@ export class Server {
   }
 
   public getPendingTxCount() {
-    return this.worldState.getPendingTxCount();
+    return this.rollupDb.getPendingTxCount();
   }
 
   public isReady() {
@@ -121,7 +121,7 @@ export class Server {
       blockchainStatus: status,
       minFees: this.txFeeResolver.getTxFees(),
       nextPublishTime: await this.getNextPublishTime(),
-      pendingTxCount: this.getPendingTxCount(),
+      pendingTxCount: await this.getPendingTxCount(),
       txsPerRollup: this.config.numInnerRollupTxs * this.config.numOuterRollupProofs,
     };
   }
@@ -183,7 +183,9 @@ export class Server {
     const end = this.metrics.receiveTxTimer();
     const start = new Date().getTime();
     const result = await this.txReceiver.receiveTx(tx);
-    console.log(`Received tx in ${new Date().getTime() - start}ms`);
+    console.log(
+      `Received tx in ${new Date().getTime() - start}ms (unsettled: ${await this.rollupDb.getUnsettledTxCount()})`,
+    );
     end();
     return result;
   }

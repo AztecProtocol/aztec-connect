@@ -6,7 +6,6 @@ import 'reflect-metadata';
 import 'source-map-support/register';
 import { createConnection } from 'typeorm';
 import { appFactory } from './app';
-import { RollupDb } from './rollup_db';
 import { Server, ServerConfig } from './server';
 import 'log-timestamp';
 import { getConfig } from './config';
@@ -14,6 +13,7 @@ import { EthAddress } from 'barretenberg/address';
 import { Metrics } from './metrics';
 import { BarretenbergWasm } from 'barretenberg/wasm';
 import { Container } from 'typedi';
+import { CachedRollupDb } from './rollup_db';
 
 async function main() {
   const {
@@ -50,7 +50,7 @@ async function main() {
     feeGasPrice,
     reimbursementFeeLimit,
   };
-  const rollupDb = new RollupDb(connection);
+  const rollupDb = new CachedRollupDb(connection);
   const worldStateDb = new WorldStateDb();
   const metrics = new Metrics(worldStateDb, rollupDb, blockchain);
   const server = new Server(serverConfig, blockchain, rollupDb, worldStateDb, metrics, provider, barretenberg);
