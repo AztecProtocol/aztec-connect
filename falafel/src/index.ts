@@ -13,7 +13,7 @@ import { EthAddress } from 'barretenberg/address';
 import { Metrics } from './metrics';
 import { BarretenbergWasm } from 'barretenberg/wasm';
 import { Container } from 'typedi';
-import { CachedRollupDb } from './rollup_db';
+import { CachedRollupDb, RollupDb } from './rollup_db';
 
 async function main() {
   const {
@@ -37,6 +37,7 @@ async function main() {
   } = await getConfig();
 
   const connection = await createConnection(ormConfig);
+  const writeConnection = await createConnection({ ...ormConfig, name: 'writeConnection' });
   const blockchain = await EthereumBlockchain.new(ethConfig, EthAddress.fromString(rollupContractAddress!), provider);
   const barretenberg = await BarretenbergWasm.new();
 
@@ -50,10 +51,20 @@ async function main() {
     feeGasPrice,
     reimbursementFeeLimit,
   };
-  const rollupDb = new CachedRollupDb(connection);
+  const rollupDbRead = new CachedRollupDb(connection);
+  const rollupDbWrite = new RollupDb(writeConnection);
   const worldStateDb = new WorldStateDb();
-  const metrics = new Metrics(worldStateDb, rollupDb, blockchain);
-  const server = new Server(serverConfig, blockchain, rollupDb, worldStateDb, metrics, provider, barretenberg);
+  const metrics = new Metrics(worldStateDb, rollupDbRead, blockchain);
+  const server = new Server(
+    serverConfig,
+    blockchain,
+    rollupDbRead,
+    rollupDbWrite,
+    worldStateDb,
+    metrics,
+    provider,
+    barretenberg,
+  );
 
   const shutdown = async () => {
     await server.stop();
