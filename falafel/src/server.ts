@@ -41,7 +41,7 @@ export class Server {
     private config: ServerConfig,
     private blockchain: Blockchain,
     private rollupDbRead: RollupDb,
-    private rollupDbWrite: RollupDb,
+    rollupDbWrite: RollupDb,
     worldStateDb: WorldStateDb,
     private metrics: Metrics,
     provider: EthereumProvider,

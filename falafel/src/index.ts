@@ -69,6 +69,7 @@ async function main() {
   const shutdown = async () => {
     await server.stop();
     await connection.close();
+    await writeConnection.close();
     process.exit(0);
   };
   process.once('SIGINT', shutdown);
