@@ -4,7 +4,7 @@ import { JoinSplitTxDao } from '../entity/join_split_tx';
 import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
-import { RollupDb } from '../rollup_db';
+import { RollupDb, TypeOrmRollupDb } from '../rollup_db';
 import { randomRollup, randomRollupProof, randomTx } from '../rollup_db/fixtures';
 import { getQuery } from './query_builder';
 
@@ -27,7 +27,7 @@ describe('Query Builder', () => {
     txRep = connection.getRepository(TxDao);
     rollupProofRep = connection.getRepository(RollupProofDao);
 
-    rollupDb = new RollupDb(connection);
+    rollupDb = new TypeOrmRollupDb(connection);
   });
 
   afterEach(async () => {

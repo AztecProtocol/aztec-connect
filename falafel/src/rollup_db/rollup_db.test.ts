@@ -6,7 +6,7 @@ import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
 import { randomRollup, randomRollupProof, randomTx } from './fixtures';
-import { RollupDb } from './';
+import { RollupDb, TypeOrmRollupDb } from './';
 import { EthAddress } from 'barretenberg/address';
 
 describe('rollup_db', () => {
@@ -22,7 +22,7 @@ describe('rollup_db', () => {
       synchronize: true,
       logging: false,
     });
-    rollupDb = new RollupDb(connection);
+    rollupDb = new TypeOrmRollupDb(connection);
   });
 
   afterEach(async () => {
