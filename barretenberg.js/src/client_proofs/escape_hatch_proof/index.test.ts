@@ -1,7 +1,7 @@
 import { EscapeHatchProver, EscapeHatchTx, EscapeHatchVerifier } from './index';
 import createDebug from 'debug';
 import { BarretenbergWasm } from '../../wasm';
-import { createEphemeralPrivKey, Note } from '../note';
+import { createEphemeralPrivKey, TreeNote } from '../note';
 import { EventEmitter } from 'events';
 import { Crs } from '../../crs';
 import { WorkerPool } from '../../wasm/worker_pool';
@@ -96,8 +96,8 @@ describe('escape_hatch_proof', () => {
   it('should construct and verify an escape hatch proof', async () => {
     const inputNote1EphKey = createEphemeralPrivKey();
     const inputNote2EphKey = createEphemeralPrivKey();
-    const inputNote1 = Note.createFromEphPriv(pubKey, BigInt(100), 0, 0, inputNote1EphKey, grumpkin);
-    const inputNote2 = Note.createFromEphPriv(pubKey, BigInt(50), 0, 0, inputNote2EphKey, grumpkin);
+    const inputNote1 = TreeNote.createFromEphPriv(pubKey, BigInt(100), 0, 0, inputNote1EphKey, grumpkin);
+    const inputNote2 = TreeNote.createFromEphPriv(pubKey, BigInt(50), 0, 0, inputNote2EphKey, grumpkin);
     const inputNotes = [inputNote1, inputNote2];
 
     const inputIndexes = [0, 1];
@@ -110,8 +110,8 @@ describe('escape_hatch_proof', () => {
     const outputNote1EphKey = createEphemeralPrivKey();
     const outputNote2EphKey = createEphemeralPrivKey();
 
-    const outputNote1 = Note.createFromEphPriv(pubKey, BigInt(20), 0, 0, outputNote1EphKey, grumpkin);
-    const outputNote2 = Note.createFromEphPriv(pubKey, BigInt(10), 0, 0, outputNote2EphKey, grumpkin);
+    const outputNote1 = TreeNote.createFromEphPriv(pubKey, BigInt(20), 0, 0, outputNote1EphKey, grumpkin);
+    const outputNote2 = TreeNote.createFromEphPriv(pubKey, BigInt(10), 0, 0, outputNote2EphKey, grumpkin);
     const outputNotes = [outputNote1, outputNote2];
 
     const publicInput = BigInt(0);

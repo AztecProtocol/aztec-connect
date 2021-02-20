@@ -1,7 +1,6 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { TxHash } from 'barretenberg/tx_hash';
-import { ViewingKey } from 'barretenberg/viewing_key';
 import Dexie from 'dexie';
 import { Note } from '../note';
 import { UserData, AccountId } from '../user';
@@ -18,8 +17,7 @@ class DexieNote {
     public assetId: number,
     public value: string,
     public dataEntry: Uint8Array,
-    public viewingKey: Uint8Array,
-    public encrypted: Uint8Array,
+    public secret: Uint8Array,
     public nullifier: Uint8Array,
     public nullified: 0 | 1,
     public owner: Uint8Array,
@@ -33,29 +31,17 @@ const noteToDexieNote = (note: Note) =>
     note.value.toString(),
     note.dataEntry,
     note.secret,
-    note.viewingKey.toBuffer(),
     note.nullifier,
     note.nullified ? 1 : 0,
     new Uint8Array(note.owner.toBuffer()),
   );
 
-const dexieNoteToNote = ({
-  id,
-  value,
-  dataEntry,
-  viewingKey,
-  encrypted,
-  nullifier,
-  nullified,
-  owner,
-  ...rest
-}: DexieNote): Note => ({
+const dexieNoteToNote = ({ id, value, dataEntry, secret, nullifier, nullified, owner, ...rest }: DexieNote): Note => ({
   ...rest,
   index: id,
   value: BigInt(value),
   dataEntry: Buffer.from(dataEntry),
-  secret: Buffer.from(viewingKey),
-  viewingKey: new ViewingKey(Buffer.from(encrypted)),
+  secret: Buffer.from(secret),
   nullifier: Buffer.from(nullifier),
   nullified: !!nullified,
   owner: AccountId.fromBuffer(Buffer.from(owner)),

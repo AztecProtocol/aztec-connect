@@ -9,9 +9,11 @@ EventEmitter.defaultMaxListeners = 30;
 const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost:8081' } = process.env;
 
 /**
- * Set the following environment variables before running falafel:
- *   TX_FEE=100000000000000000
- *   NUM_OUTER_ROLLUP_PROOFS=2
+ * Run the following:
+ * blockchain: yarn start:ganache
+ * halloumi: yarn start:dev
+ * falafel: yarn start:e2e
+ * end-to-end: yarn test ./src/e2e_multi_tx.test.ts
  */
 
 describe('end-to-end wallet tests', () => {
@@ -49,37 +51,32 @@ describe('end-to-end wallet tests', () => {
     await sdk.destroy();
   });
 
-  it('should deposit, transfer and withdraw funds', async () => {
+  it('should deposit to three accounts', async () => {
     const user0Asset = users[0].getAsset(assetId);
     const txFee = await sdk.getFee(assetId, TxType.DEPOSIT);
 
-    // Deposit to user 0.
-    {
-      const depositValue = user0Asset.toBaseUnits('0.2');
+    expect(user0Asset.balance()).toBe(0n);
+    const schnorrSigner0 = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[0])!);
+    const schnorrSigner1 = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[1])!);
+    const schnorrSigner2 = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[2])!);
 
-      expect(user0Asset.balance()).toBe(0n);
-      const schnorrSigner0 = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[0])!);
-      const schnorrSigner1 = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[1])!);
-      const schnorrSigner2 = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[2])!);
+    const tx1Hash = await sdk.deposit(AssetId.ETH, accounts[0], users[0].id, 1n, txFee, schnorrSigner0);
+    const tx2Hash = await sdk.deposit(AssetId.ETH, accounts[1], users[1].id, 2n, txFee, schnorrSigner1);
+    const tx3Hash = await sdk.deposit(AssetId.ETH, accounts[2], users[2].id, 3n, txFee, schnorrSigner2);
 
-      const tx1Hash = await sdk.deposit(AssetId.ETH, accounts[0], users[0].id, depositValue, txFee, schnorrSigner0);
-      const tx2Hash = await sdk.deposit(AssetId.ETH, accounts[1], users[1].id, depositValue, txFee, schnorrSigner1);
-      const tx3Hash = await sdk.deposit(AssetId.ETH, accounts[2], users[2].id, depositValue, txFee, schnorrSigner2);
+    await sdk.awaitSettlement(tx1Hash, 300);
+    await sdk.awaitSettlement(tx2Hash, 300);
+    await sdk.awaitSettlement(tx3Hash, 300);
+    await sdk.awaitUserSynchronised(users[0].id);
+    await sdk.awaitUserSynchronised(users[1].id);
+    await sdk.awaitUserSynchronised(users[2].id);
 
-      await sdk.awaitSettlement(tx1Hash, 300);
-      await sdk.awaitSettlement(tx2Hash, 300);
-      await sdk.awaitSettlement(tx3Hash, 300);
-      await sdk.awaitUserSynchronised(users[0].id);
-      await sdk.awaitUserSynchronised(users[1].id);
-      await sdk.awaitUserSynchronised(users[2].id);
+    const user0Balance = await sdk.getBalance(AssetId.ETH, users[0].id);
+    const user1Balance = await sdk.getBalance(AssetId.ETH, users[1].id);
+    const user2Balance = await sdk.getBalance(AssetId.ETH, users[2].id);
 
-      const user0Balance = await sdk.getBalance(AssetId.ETH, users[0].id);
-      const user1Balance = await sdk.getBalance(AssetId.ETH, users[1].id);
-      const user2Balance = await sdk.getBalance(AssetId.ETH, users[2].id);
-
-      expect(user0Balance).toEqual(depositValue);
-      expect(user1Balance).toEqual(depositValue);
-      expect(user2Balance).toEqual(depositValue);
-    }
+    expect(user0Balance).toEqual(1n);
+    expect(user1Balance).toEqual(2n);
+    expect(user2Balance).toEqual(3n);
   });
 });

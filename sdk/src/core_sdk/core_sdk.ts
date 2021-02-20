@@ -63,8 +63,10 @@ export interface CoreSdkOptions {
 export class CoreSdk extends EventEmitter {
   private worldState!: WorldState;
   private userStates: UserState[] = [];
+  // Used for proof construction.
   private workerPool!: WorkerPool;
-  private pedersenWorker!: BarretenbergWorker;
+  // Used for other long running tasks (data tree hash computation and note decryption).
+  private worker!: BarretenbergWorker;
   private joinSplitProofCreator!: JoinSplitProofCreator | EscapeHatchProofCreator;
   private accountProofCreator!: AccountProofCreator;
   private blockQueue!: MemoryFifo<Block>;
@@ -109,7 +111,6 @@ export class CoreSdk extends EventEmitter {
     this.updateInitState(SdkInitState.INITIALIZING);
 
     const barretenberg = await BarretenbergWasm.new();
-    const noteAlgos = new NoteAlgorithms(barretenberg);
     const crsData = await this.getCrsData(
       this.escapeHatchMode ? EscapeHatchProver.circuitSize : JoinSplitProver.circuitSize,
     );
@@ -124,9 +125,10 @@ export class CoreSdk extends EventEmitter {
       await pooledProverFactory.createProver(EscapeHatchProver.circuitSize),
     );
 
+    this.worker = await createWorker('worker', barretenberg.module);
+    const noteAlgos = new NoteAlgorithms(barretenberg, this.worker);
     this.blake2s = new Blake2s(barretenberg);
-    this.pedersenWorker = await createWorker('pedersenWorker', barretenberg.module);
-    this.pedersen = new Pedersen(barretenberg, this.pedersenWorker);
+    this.pedersen = new Pedersen(barretenberg, this.worker);
     this.grumpkin = new Grumpkin(barretenberg);
     this.schnorr = new Schnorr(barretenberg);
     this.userFactory = new UserDataFactory(this.grumpkin);
@@ -304,7 +306,7 @@ export class CoreSdk extends EventEmitter {
   public async destroy() {
     await this.stopSyncingUserStates();
     await this.stopReceivingBlocks();
-    await destroyWorker(this.pedersenWorker);
+    await destroyWorker(this.worker);
     await this.workerPool?.destroy();
     await this.leveldb.close();
     await this.db.close();

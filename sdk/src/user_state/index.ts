@@ -1,6 +1,6 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { Block } from 'barretenberg/block_source';
-import { decryptNote } from 'barretenberg/client_proofs/note';
+import { TreeNote } from 'barretenberg/client_proofs/note';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { computeAccountAliasIdNullifier } from 'barretenberg/client_proofs/account_proof';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
@@ -18,7 +18,6 @@ import { NotePicker } from '../note_picker';
 import { AccountAliasId, UserData } from '../user';
 import { isJoinSplitTx, UserAccountTx, UserJoinSplitTx } from '../user_tx';
 import { AccountId } from '../user/account_id';
-import { ViewingKey } from 'barretenberg/viewing_key';
 import { TxHash } from 'barretenberg/tx_hash';
 
 const debug = createDebug('bb:user_state');
@@ -62,16 +61,13 @@ export class UserState extends EventEmitter {
     if (this.syncState !== SyncState.OFF) {
       return;
     }
+    const start = new Date().getTime();
     debug(`starting sync for ${this.user.id} from rollup block ${this.user.syncedToRollup + 1}...`);
     this.syncState = SyncState.SYNCHING;
     const blocks = await this.rollupProvider.getBlocks(this.user.syncedToRollup + 1);
-    for (const block of blocks) {
-      if (this.syncState !== SyncState.SYNCHING) {
-        return;
-      }
-      await this.handleBlock(block);
-    }
-    this.syncingPromise = this.blockQueue.process(async block => this.handleBlock(block));
+    await this.handleBlocks(blocks);
+    debug(`sync complete in ${new Date().getTime() - start}ms.`);
+    this.syncingPromise = this.blockQueue.process(async block => this.handleBlocks([block]));
     this.syncState = SyncState.MONITORING;
   }
 
@@ -100,33 +96,41 @@ export class UserState extends EventEmitter {
     this.blockQueue.put(block);
   }
 
-  private async handleBlock(block: Block) {
-    if (block.rollupId <= this.user.syncedToRollup) {
+  public async handleBlocks(blocks: Block[]) {
+    blocks = blocks.filter(b => b.rollupId > this.user.syncedToRollup);
+    if (blocks.length == 0) {
       return;
     }
 
     const balancesBefore = AssetIds.map(assetId => this.getBalance(assetId));
+    const viewingKeys = Buffer.concat(blocks.map(b => b.viewingKeysData));
+    const notes = await this.noteAlgos.batchDecryptNotes(viewingKeys, this.user.privateKey, this.grumpkin);
 
-    const { rollupProofData, viewingKeysData, created } = block;
-    const { rollupId, dataStartIndex, innerProofData, viewingKeys } = RollupProofData.fromBuffer(
-      rollupProofData,
-      viewingKeysData,
-    );
-    for (let i = 0; i < innerProofData.length; ++i) {
-      const proof = innerProofData[i];
-      const noteStartIndex = dataStartIndex + i * 2;
+    let jsCount = 0;
+    for (const block of blocks) {
+      const proofData = RollupProofData.fromBuffer(block.rollupProofData, block.viewingKeysData);
 
-      switch (proof.proofId) {
-        case 0:
-          await this.handleJoinSplitTx(innerProofData[i], noteStartIndex, viewingKeys[i], created);
-          break;
-        case 1:
-          await this.handleAccountTx(innerProofData[i], noteStartIndex, created);
-          break;
+      for (let i = 0; i < proofData.innerProofData.length; ++i) {
+        const proof = proofData.innerProofData[i];
+        const noteStartIndex = proofData.dataStartIndex + i * 2;
+
+        if (proof.proofId === 0) {
+          const [note1, note2] = notes.slice(jsCount * 2, jsCount * 2 + 2);
+          ++jsCount;
+          if (!note1 && !note2) {
+            continue;
+          }
+          await this.handleJoinSplitTx(proof, noteStartIndex, block.created, note1, note2);
+        }
+
+        if (proof.proofId === 1) {
+          await this.handleAccountTx(proof, noteStartIndex, block.created);
+        }
+
+        this.user.syncedToRollup = block.rollupId;
       }
     }
 
-    this.user.syncedToRollup = rollupId;
     await this.db.updateUser(this.user);
 
     AssetIds.forEach((assetId, i) => {
@@ -184,8 +188,9 @@ export class UserState extends EventEmitter {
   private async handleJoinSplitTx(
     proof: InnerProofData,
     noteStartIndex: number,
-    viewingKeys: ViewingKey[],
     blockCreated: Date,
+    note1?: TreeNote,
+    note2?: TreeNote,
   ) {
     const txHash = new TxHash(proof.txId);
     const savedTx = await this.db.getJoinSplitTx(this.user.id, txHash);
@@ -194,10 +199,10 @@ export class UserState extends EventEmitter {
     }
 
     const { newNote1, newNote2, nullifier1, nullifier2 } = proof;
-    const newNote = await this.processNewNote(noteStartIndex, newNote1, viewingKeys[0]);
-    const changeNote = await this.processNewNote(noteStartIndex + 1, newNote2, viewingKeys[1]);
+    const newNote = await this.processNewNote(noteStartIndex, newNote1, note1);
+    const changeNote = await this.processNewNote(noteStartIndex + 1, newNote2, note2);
     if (!newNote && !changeNote) {
-      // Neither note was decrypted (change note should always belong to us).
+      // Neither note was decrypted (change note should always belong to us for txs we created).
       return;
     }
 
@@ -214,8 +219,8 @@ export class UserState extends EventEmitter {
     }
   }
 
-  private async processNewNote(index: number, dataEntry: Buffer, viewingKey: ViewingKey) {
-    if (viewingKey.isEmpty()) {
+  private async processNewNote(index: number, dataEntry: Buffer, treeNote?: TreeNote) {
+    if (!treeNote) {
       return;
     }
 
@@ -224,12 +229,7 @@ export class UserState extends EventEmitter {
       return savedNote.owner.equals(this.user.id) ? savedNote : undefined;
     }
 
-    const decryptedNote = decryptNote(viewingKey, this.user.privateKey, this.grumpkin);
-    if (!decryptedNote) {
-      return;
-    }
-
-    const { noteSecret, value, assetId, nonce } = decryptedNote;
+    const { noteSecret, value, assetId, nonce } = treeNote;
     if (nonce !== this.user.id.nonce) {
       return;
     }
@@ -241,7 +241,7 @@ export class UserState extends EventEmitter {
       value,
       dataEntry,
       secret: noteSecret,
-      viewingKey,
+      // viewingKey,
       nullifier,
       nullified: false,
       owner: this.user.id,

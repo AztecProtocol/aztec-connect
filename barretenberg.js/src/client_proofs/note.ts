@@ -6,7 +6,7 @@ import { numToUInt8, numToUInt32BE } from '../serialize';
 import { AssetId } from '../asset';
 import { ViewingKey } from '../viewing_key';
 
-export class Note {
+export class TreeNote {
   constructor(
     public ownerPubKey: GrumpkinAddress,
     public value: bigint,
@@ -25,7 +25,7 @@ export class Note {
     grumpkin: Grumpkin,
   ) {
     const noteSecret = deriveNoteSecret(ephPubKey, ownerPrivKey, grumpkin);
-    return new Note(ownerPubKey, value, assetId, nonce, noteSecret);
+    return new TreeNote(ownerPubKey, value, assetId, nonce, noteSecret);
   }
 
   static createFromEphPriv(
@@ -37,7 +37,7 @@ export class Note {
     grumpkin: Grumpkin,
   ) {
     const noteSecret = deriveNoteSecret(ownerPubKey, ephPrivKey, grumpkin);
-    return new Note(ownerPubKey, value, assetId, nonce, noteSecret);
+    return new TreeNote(ownerPubKey, value, assetId, nonce, noteSecret);
   }
 
   toBuffer() {
@@ -76,16 +76,18 @@ function deriveAESSecret(ecdhPubKey: GrumpkinAddress, ecdhPrivKey: Buffer, grump
  * Returns the AES encrypted "viewing key".
  * [AES:[64 bytes owner public key][32 bytes value][32 bytes secret]][64 bytes ephemeral public key]
  */
-export function encryptNote(note: Note, ephPrivKey: Buffer, grumpkin: Grumpkin) {
+export function encryptNote(note: TreeNote, ephPrivKey: Buffer, grumpkin: Grumpkin) {
   const ephPubKey = grumpkin.mul(Grumpkin.one, ephPrivKey);
   const aesSecret = deriveAESSecret(note.ownerPubKey, ephPrivKey, grumpkin);
   const aesKey = aesSecret.slice(0, 16);
   const iv = aesSecret.slice(16, 32);
-  const cipher = createCipheriv('aes-128-cbc', aesKey, iv);
 
+  const cipher = createCipheriv('aes-128-cbc', aesKey, iv);
+  cipher.setAutoPadding(false); // plaintext is already a multiple of 16 bytes
   const noteBuf = Buffer.concat([toBufferBE(note.value, 32), numToUInt32BE(note.assetId), numToUInt32BE(note.nonce)]);
   const plaintext = Buffer.concat([iv.slice(0, 8), noteBuf]);
-  return new ViewingKey(Buffer.concat([cipher.update(plaintext), cipher.final(), ephPubKey]));
+  const result = new ViewingKey(Buffer.concat([cipher.update(plaintext), cipher.final(), ephPubKey]));
+  return result;
 }
 
 export function decryptNote(viewingKey: ViewingKey, privateKey: Buffer, grumpkin: Grumpkin) {
@@ -97,11 +99,12 @@ export function decryptNote(viewingKey: ViewingKey, privateKey: Buffer, grumpkin
 
   try {
     const decipher = createDecipheriv('aes-128-cbc', aesKey, iv);
+    decipher.setAutoPadding(false); // plaintext is already a multiple of 16 bytes
     const plaintext = Buffer.concat([decipher.update(encryptedNote.slice(0, -64)), decipher.final()]);
 
     const noteBuf = plaintext.slice(8);
     const ownerPubKey = grumpkin.mul(Grumpkin.one, privateKey);
-    const note = Note.createFromEphPub(
+    const note = TreeNote.createFromEphPub(
       new GrumpkinAddress(ownerPubKey),
       toBigIntBE(noteBuf.slice(0, 32)),
       noteBuf.readUInt32BE(32),

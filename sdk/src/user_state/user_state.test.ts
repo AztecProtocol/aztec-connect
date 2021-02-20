@@ -1,6 +1,6 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { computeAccountAliasIdNullifier } from 'barretenberg/client_proofs/account_proof/compute_nullifier';
-import { createEphemeralPrivKey, encryptNote, Note } from 'barretenberg/client_proofs/note';
+import { createEphemeralPrivKey, encryptNote, TreeNote } from 'barretenberg/client_proofs/note';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { Blake2s } from 'barretenberg/crypto/blake2s';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
@@ -86,9 +86,10 @@ describe('user state', () => {
     inputOwner = EthAddress.ZERO,
     outputOwner = EthAddress.ZERO,
     newNoteNonce = user.nonce,
+    rollupId = 0,
   } = {}) => {
     const ephPrivKey = createEphemeralPrivKey();
-    const note1 = Note.createFromEphPriv(
+    const note1 = TreeNote.createFromEphPriv(
       user.publicKey,
       BigInt(outputNoteValue1),
       assetId,
@@ -96,7 +97,7 @@ describe('user state', () => {
       ephPrivKey,
       grumpkin,
     );
-    const note2 = Note.createFromEphPriv(
+    const note2 = TreeNote.createFromEphPriv(
       user.publicKey,
       BigInt(outputNoteValue2),
       assetId,
@@ -104,7 +105,7 @@ describe('user state', () => {
       ephPrivKey,
       grumpkin,
     );
-    const gibberishNote = Note.createFromEphPriv(GrumpkinAddress.randomAddress(), 0n, 0, 0, ephPrivKey, grumpkin);
+    const gibberishNote = TreeNote.createFromEphPriv(GrumpkinAddress.randomAddress(), 0n, 0, 0, ephPrivKey, grumpkin);
     const encryptedNote1 = randomBytes(64);
     const encryptedNote2 = randomBytes(64);
     const nullifier1 = noteAlgos.computeNoteNullifier(randomBytes(64), 0, user.privateKey);
@@ -127,7 +128,7 @@ describe('user state', () => {
       outputOwner.toBuffer32(),
     );
     return new RollupProofData(
-      0,
+      rollupId,
       1,
       0,
       randomBytes(32),
@@ -191,7 +192,7 @@ describe('user state', () => {
 
   const createBlock = (rollupProofData: RollupProofData, created = new Date()): Block => ({
     txHash: TxHash.random(),
-    rollupId: 0,
+    rollupId: rollupProofData.rollupId,
     rollupSize: 1,
     rollupProofData: rollupProofData.toBuffer(),
     viewingKeysData: rollupProofData.getViewingKeyData(),
@@ -230,6 +231,52 @@ describe('user state', () => {
     expect(db.updateUser).toHaveBeenLastCalledWith({
       ...user,
       syncedToRollup: block.rollupId,
+    });
+  });
+
+  it('should correctly process multiple blocks', async () => {
+    const rollupProofData1 = generateRollup({
+      rollupId: 0,
+      outputNoteValue1: 1n,
+      outputNoteValue2: 2n,
+    });
+    const blockCreated = new Date();
+    const block1 = createBlock(rollupProofData1, blockCreated);
+
+    const rollupProofData2 = generateRollup({
+      rollupId: 1,
+      outputNoteValue1: 3n,
+      outputNoteValue2: 4n,
+    });
+    const block2 = createBlock(rollupProofData2, blockCreated);
+
+    db.getJoinSplitTx.mockResolvedValue({ settled: undefined });
+    db.getNoteByNullifier.mockResolvedValueOnce({ index: 0, owner: user.id });
+    db.getNoteByNullifier.mockResolvedValueOnce({ index: 1, owner: user.id });
+    db.getNoteByNullifier.mockResolvedValueOnce({ index: 2, owner: user.id });
+    db.getNoteByNullifier.mockResolvedValueOnce({ index: 3, owner: user.id });
+
+    await userState.handleBlocks([block1, block2]);
+
+    const innerProofData1 = rollupProofData1.innerProofData[0];
+    const innerProofData2 = rollupProofData2.innerProofData[0];
+    expect(db.addNote).toHaveBeenCalledTimes(4);
+    expect(db.addNote.mock.calls[0][0]).toMatchObject({ dataEntry: innerProofData1.newNote1, value: 1n });
+    expect(db.addNote.mock.calls[1][0]).toMatchObject({ dataEntry: innerProofData1.newNote2, value: 2n });
+    expect(db.addNote.mock.calls[2][0]).toMatchObject({ dataEntry: innerProofData2.newNote1, value: 3n });
+    expect(db.addNote.mock.calls[3][0]).toMatchObject({ dataEntry: innerProofData2.newNote2, value: 4n });
+    expect(db.nullifyNote).toHaveBeenCalledTimes(4);
+    expect(db.nullifyNote).toHaveBeenCalledWith(0);
+    expect(db.nullifyNote).toHaveBeenCalledWith(1);
+    expect(db.nullifyNote).toHaveBeenCalledWith(2);
+    expect(db.nullifyNote).toHaveBeenCalledWith(3);
+    expect(db.settleJoinSplitTx).toHaveBeenCalledTimes(2);
+    expect(db.settleJoinSplitTx).toHaveBeenCalledWith(new TxHash(innerProofData1.txId), blockCreated);
+    expect(db.settleJoinSplitTx).toHaveBeenCalledWith(new TxHash(innerProofData2.txId), blockCreated);
+    expect(db.addJoinSplitTx).toHaveBeenCalledTimes(0);
+    expect(db.updateUser).toHaveBeenLastCalledWith({
+      ...user,
+      syncedToRollup: block2.rollupId,
     });
   });
 

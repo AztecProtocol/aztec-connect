@@ -1,7 +1,6 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { TxHash } from 'barretenberg/tx_hash';
-import { ViewingKey } from 'barretenberg/viewing_key';
 import { randomBytes } from 'crypto';
 import { Note } from '../../note';
 import { AccountAliasId, UserData, AccountId } from '../../user';
@@ -18,7 +17,6 @@ export const randomNote = (): Note => ({
   value: BigInt(randomInt()),
   dataEntry: randomBytes(32),
   secret: randomBytes(32),
-  viewingKey: ViewingKey.random(),
   nullifier: randomBytes(32),
   nullified: false,
   owner: AccountId.random(),

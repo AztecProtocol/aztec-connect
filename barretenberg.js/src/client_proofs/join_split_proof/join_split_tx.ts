@@ -4,7 +4,7 @@ import { HashPath } from '../../merkle_tree';
 import { numToUInt32BE } from '../../serialize';
 import { AccountAliasId } from '../account_alias_id';
 import { AssetId } from '../../asset';
-import { Note } from '../note';
+import { TreeNote } from '../note';
 import { Signature } from '../signature';
 
 export class JoinSplitTx {
@@ -16,8 +16,8 @@ export class JoinSplitTx {
     public inputNoteIndices: number[],
     public merkleRoot: Buffer,
     public inputNotePaths: HashPath[],
-    public inputNotes: Note[],
-    public outputNotes: Note[],
+    public inputNotes: TreeNote[],
+    public outputNotes: TreeNote[],
     public accountPrivateKey: Buffer,
     public accountAliasId: AccountAliasId,
     public accountIndex: number,

@@ -1,7 +1,7 @@
 import { randomBytes } from 'crypto';
 
 export class ViewingKey {
-  static SIZE = 128;
+  static SIZE = 112;
   static EMPTY = new ViewingKey();
   private buffer: Buffer;
 

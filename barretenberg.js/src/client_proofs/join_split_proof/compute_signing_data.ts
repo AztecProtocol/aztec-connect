@@ -1,13 +1,13 @@
 import { toBufferBE } from 'bigint-buffer';
 import { EthAddress } from '../../address';
 import { Pedersen } from '../../crypto/pedersen';
-import { Note } from '../note';
+import { TreeNote } from '../note';
 import { NoteAlgorithms } from '../note_algorithms';
 import { numToUInt32BE } from '../../serialize';
 import { AssetId } from '../../asset';
 
 export function computeSigningData(
-  notes: Note[],
+  notes: TreeNote[],
   inputNote1Index: number,
   inputNote2Index: number,
   inputOwner: EthAddress,

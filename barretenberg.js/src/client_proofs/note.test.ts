@@ -1,5 +1,5 @@
 import { Grumpkin } from '../ecc/grumpkin';
-import { Note, encryptNote, decryptNote } from './note';
+import { TreeNote, encryptNote, decryptNote } from './note';
 import { randomBytes } from 'crypto';
 import { BarretenbergWasm } from '../wasm';
 import { GrumpkinAddress } from '../address';
@@ -14,12 +14,12 @@ describe('note', () => {
 
     const ephPrivKey = randomBytes(32);
     const ephPubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, ephPrivKey));
-    const note = Note.createFromEphPriv(receiverPubKey, BigInt(100), 0, 1, ephPrivKey, grumpkin);
+    const note = TreeNote.createFromEphPriv(receiverPubKey, BigInt(100), 0, 1, ephPrivKey, grumpkin);
     const encryptedNote = encryptNote(note, ephPrivKey, grumpkin);
 
     const note2 = decryptNote(encryptedNote, receiverPrivKey, grumpkin)!;
 
-    const note3 = Note.createFromEphPub(receiverPubKey, BigInt(100), 0, 1, ephPubKey, receiverPrivKey, grumpkin);
+    const note3 = TreeNote.createFromEphPub(receiverPubKey, BigInt(100), 0, 1, ephPubKey, receiverPrivKey, grumpkin);
     expect(note2).toEqual(note);
     expect(note).toEqual(note3);
   });
@@ -32,7 +32,7 @@ describe('note', () => {
     const receiverPubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, receiverPrivKey));
 
     const ephPrivKey = randomBytes(32);
-    const note = Note.createFromEphPriv(receiverPubKey, BigInt(100), 0, 1, ephPrivKey, grumpkin);
+    const note = TreeNote.createFromEphPriv(receiverPubKey, BigInt(100), 0, 1, ephPrivKey, grumpkin);
     const encryptedNote = encryptNote(note, ephPrivKey, grumpkin);
 
     const note2 = decryptNote(encryptedNote, randomBytes(32), grumpkin)!;

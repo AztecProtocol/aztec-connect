@@ -166,7 +166,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "NUM_OUTER_ROLLUP_PROOFS",
-        "value": "4"
+        "value": "2"
       },
       {
         "name": "FEE_GAS_PRICE",

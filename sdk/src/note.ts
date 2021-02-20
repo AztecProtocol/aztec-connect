@@ -1,5 +1,5 @@
 import { AssetId } from 'barretenberg/asset';
-import { ViewingKey } from 'barretenberg/viewing_key';
+// import { ViewingKey } from 'barretenberg/viewing_key';
 import { AccountId } from './user';
 
 export interface Note {
@@ -8,7 +8,7 @@ export interface Note {
   value: bigint;
   secret: Buffer;
   dataEntry: Buffer;
-  viewingKey: ViewingKey;
+  // viewingKey: ViewingKey;
   nullifier: Buffer;
   nullified: boolean;
   owner: AccountId;

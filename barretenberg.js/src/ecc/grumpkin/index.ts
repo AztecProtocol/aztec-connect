@@ -17,4 +17,16 @@ export class Grumpkin {
     this.wasm.call('ecc_grumpkin__mul', 0, 64, 96);
     return Buffer.from(this.wasm.sliceMemory(96, 160));
   }
+
+  public batch_mul(points: Uint8Array, scalar: Uint8Array, numPoints: number) {
+      const mem = this.wasm.call('bbmalloc', points.length * 2);
+
+      this.wasm.transferToHeap(points, mem);
+      this.wasm.transferToHeap(scalar, 0);
+      this.wasm.call('ecc_grumpkin__batch_mul', mem, 0, numPoints, mem + points.length);
+
+      const result: Buffer = Buffer.from(this.wasm.sliceMemory(mem + points.length, mem + points.length + points.length));
+      this.wasm.call('bbfree', mem);
+      return result;
+  }
 }
