@@ -40,8 +40,7 @@ export class Server {
   constructor(
     private config: ServerConfig,
     private blockchain: Blockchain,
-    private rollupDbRead: RollupDb,
-    rollupDbWrite: RollupDb,
+    private rollupDb: RollupDb,
     worldStateDb: WorldStateDb,
     private metrics: Metrics,
     provider: EthereumProvider,
@@ -60,7 +59,7 @@ export class Server {
     this.pipelineFactory = new RollupPipelineFactory(
       this.proofGenerator,
       blockchain,
-      rollupDbWrite,
+      rollupDb,
       worldStateDb,
       metrics,
       provider,
@@ -69,9 +68,9 @@ export class Server {
       numInnerRollupTxs,
       numOuterRollupProofs,
     );
-    this.worldState = new WorldState(rollupDbWrite, worldStateDb, blockchain, this.pipelineFactory, metrics);
+    this.worldState = new WorldState(rollupDb, worldStateDb, blockchain, this.pipelineFactory, metrics);
     this.txFeeResolver = new TxFeeResolver(blockchain, baseTxGas, feeGasPrice);
-    this.txReceiver = new TxReceiver(barretenberg, rollupDbWrite, blockchain, this.proofGenerator, this.txFeeResolver);
+    this.txReceiver = new TxReceiver(barretenberg, rollupDb, blockchain, this.proofGenerator, this.txFeeResolver);
   }
 
   public async start() {
@@ -96,7 +95,7 @@ export class Server {
   }
 
   public getPendingTxCount() {
-    return this.rollupDbRead.getPendingTxCount();
+    return this.rollupDb.getPendingTxCount();
   }
 
   public isReady() {
@@ -133,7 +132,7 @@ export class Server {
   }
 
   public async getPendingNoteNullifiers() {
-    return this.rollupDbRead.getPendingNoteNullifiers();
+    return this.rollupDb.getPendingNoteNullifiers();
   }
 
   public async getBlocks(from: number): Promise<Block[]> {
@@ -142,7 +141,7 @@ export class Server {
       return [];
     }
 
-    const rollups = await this.rollupDbRead.getSettledRollups(from);
+    const rollups = await this.rollupDb.getSettledRollups(from);
     return rollups.map(dao => {
       if (!dao.rollupProof) {
         console.log(dao);
@@ -161,27 +160,27 @@ export class Server {
   }
 
   public async getLatestRollupId() {
-    return (await this.rollupDbRead.getNextRollupId()) - 1;
+    return (await this.rollupDb.getNextRollupId()) - 1;
   }
 
   public async getLatestRollups(count: number) {
-    return this.rollupDbRead.getRollups(count);
+    return this.rollupDb.getRollups(count);
   }
 
   public async getLatestTxs(count: number) {
-    return this.rollupDbRead.getLatestTxs(count);
+    return this.rollupDb.getLatestTxs(count);
   }
 
   public async getRollup(id: number) {
-    return this.rollupDbRead.getRollup(id);
+    return this.rollupDb.getRollup(id);
   }
 
   public async getTxs(txIds: Buffer[]) {
-    return this.rollupDbRead.getTxsByTxIds(txIds);
+    return this.rollupDb.getTxsByTxIds(txIds);
   }
 
   public async getTx(txId: Buffer) {
-    return this.rollupDbRead.getTx(txId);
+    return this.rollupDb.getTx(txId);
   }
 
   public async receiveTx(tx: Tx) {
@@ -189,7 +188,7 @@ export class Server {
     const start = new Date().getTime();
     const result = await this.txReceiver.receiveTx(tx);
     console.log(
-      `Received tx in ${new Date().getTime() - start}ms (unsettled: ${await this.rollupDbRead.getUnsettledTxCount()})`,
+      `Received tx in ${new Date().getTime() - start}ms (unsettled: ${await this.rollupDb.getUnsettledTxCount()})`,
     );
     end();
     return result;

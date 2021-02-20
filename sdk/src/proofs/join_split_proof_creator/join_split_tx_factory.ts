@@ -82,7 +82,6 @@ export class JoinSplitTxFactory {
       ),
     ];
 
-    const dataSize = this.worldState.getSize();
     const dataRoot = this.worldState.getRoot();
 
     const inputOwner = inputOwnerAddress || EthAddress.ZERO;

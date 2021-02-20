@@ -1,4 +1,3 @@
-import { Mutex } from 'async-mutex';
 import { EthAddress } from 'barretenberg/address';
 import { AccountAliasId } from 'barretenberg/client_proofs/account_alias_id';
 import { JoinSplitProofData, ProofData } from 'barretenberg/client_proofs/proof_data';
@@ -12,13 +11,16 @@ import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
 
-export class RollupDb {
+export type RollupDb = {
+  [P in keyof TypeOrmRollupDb]: TypeOrmRollupDb[P];
+};
+
+export class TypeOrmRollupDb implements RollupDb {
   private txRep: Repository<TxDao>;
   private joinSplitTxRep: Repository<JoinSplitTxDao>;
   private accountTxRep: Repository<AccountTxDao>;
   private rollupProofRep: Repository<RollupProofDao>;
   private rollupRep: Repository<RollupDao>;
-  private writeMutex = new Mutex();
 
   constructor(private connection: Connection) {
     this.txRep = this.connection.getRepository(TxDao);
@@ -29,38 +31,36 @@ export class RollupDb {
   }
 
   public async addTx(txDao: TxDao) {
-    await this.synchronise(async () => {
-      await this.connection.transaction(async transactionalEntityManager => {
-        await transactionalEntityManager.save(txDao);
+    await this.connection.transaction(async transactionalEntityManager => {
+      await transactionalEntityManager.save(txDao);
 
-        const proofData = InnerProofData.fromBuffer(txDao.proofData);
+      const proofData = InnerProofData.fromBuffer(txDao.proofData);
 
-        if (proofData.proofId === 0) {
-          const jsProofData = new JoinSplitProofData(new ProofData(txDao.proofData));
-          const joinSplitDao = new JoinSplitTxDao({
-            id: proofData.txId,
-            publicInput: jsProofData.publicInput,
-            publicOutput: jsProofData.publicOutput,
-            assetId: jsProofData.assetId,
-            inputOwner: jsProofData.inputOwner,
-            outputOwner: jsProofData.outputOwner,
-            created: txDao.created,
-          });
-          await transactionalEntityManager.save(joinSplitDao);
-        } else if (proofData.proofId === 1) {
-          const accountAliasId = AccountAliasId.fromBuffer(proofData.assetId);
-          const accountTxDao = new AccountTxDao({
-            id: proofData.txId,
-            accountPubKey: Buffer.concat([proofData.publicInput, proofData.publicOutput]),
-            aliasHash: accountAliasId.aliasHash.toBuffer(),
-            nonce: accountAliasId.nonce,
-            spendingKey1: proofData.nullifier1,
-            spendingKey2: proofData.nullifier2,
-            created: txDao.created,
-          });
-          await transactionalEntityManager.save(accountTxDao);
-        }
-      });
+      if (proofData.proofId === 0) {
+        const jsProofData = new JoinSplitProofData(new ProofData(txDao.proofData));
+        const joinSplitDao = new JoinSplitTxDao({
+          id: proofData.txId,
+          publicInput: jsProofData.publicInput,
+          publicOutput: jsProofData.publicOutput,
+          assetId: jsProofData.assetId,
+          inputOwner: jsProofData.inputOwner,
+          outputOwner: jsProofData.outputOwner,
+          created: txDao.created,
+        });
+        await transactionalEntityManager.save(joinSplitDao);
+      } else if (proofData.proofId === 1) {
+        const accountAliasId = AccountAliasId.fromBuffer(proofData.assetId);
+        const accountTxDao = new AccountTxDao({
+          id: proofData.txId,
+          accountPubKey: Buffer.concat([proofData.publicInput, proofData.publicOutput]),
+          aliasHash: accountAliasId.aliasHash.toBuffer(),
+          nonce: accountAliasId.nonce,
+          spendingKey1: proofData.nullifier1,
+          spendingKey2: proofData.nullifier2,
+          created: txDao.created,
+        });
+        await transactionalEntityManager.save(accountTxDao);
+      }
     });
   }
 
@@ -90,7 +90,7 @@ export class RollupDb {
   }
 
   public async deletePendingTxs() {
-    await this.synchronise(() => this.txRep.delete({ rollupProof: null }));
+    await this.txRep.delete({ rollupProof: null });
   }
 
   public async getTotalTxCount() {
@@ -163,7 +163,7 @@ export class RollupDb {
   }
 
   public async addRollupProof(rollupDao: RollupProofDao) {
-    await this.synchronise(() => this.rollupProofRep.save(rollupDao));
+    await this.rollupProofRep.save(rollupDao);
   }
 
   public async getRollupProof(id: Buffer, includeTxs = false) {
@@ -171,7 +171,7 @@ export class RollupDb {
   }
 
   public async deleteRollupProof(id: Buffer) {
-    await this.synchronise(() => this.rollupProofRep.delete({ id }));
+    await this.rollupProofRep.delete({ id });
   }
 
   /**
@@ -179,19 +179,17 @@ export class RollupDb {
    * This removes any rollup proofs that are no longer referenced by transactions.
    */
   public async deleteTxlessRollupProofs() {
-    await this.synchronise(async () => {
-      const orphaned = await this.rollupProofRep
-        .createQueryBuilder('rollup_proof')
-        .select('rollup_proof.id')
-        .leftJoin('rollup_proof.txs', 'tx')
-        .where('tx.rollupProof IS NULL')
-        .getMany();
-      await this.rollupProofRep.delete({ id: In(orphaned.map(rp => rp.id)) });
-    });
+    const orphaned = await this.rollupProofRep
+      .createQueryBuilder('rollup_proof')
+      .select('rollup_proof.id')
+      .leftJoin('rollup_proof.txs', 'tx')
+      .where('tx.rollupProof IS NULL')
+      .getMany();
+    await this.rollupProofRep.delete({ id: In(orphaned.map(rp => rp.id)) });
   }
 
   public async deleteOrphanedRollupProofs() {
-    await this.synchronise(() => this.rollupProofRep.delete({ rollup: IsNull() }));
+    await this.rollupProofRep.delete({ rollup: IsNull() });
   }
 
   public async getRollupProofsBySize(numTxs: number) {
@@ -226,19 +224,19 @@ export class RollupDb {
   }
 
   public async addRollup(rollup: RollupDao) {
-    return await this.synchronise(() => this.rollupRep.save(rollup));
+    return await this.rollupRep.save(rollup);
   }
 
   public async setCallData(id: number, callData: Buffer) {
-    await this.synchronise(() => this.rollupRep.update({ id }, { callData }));
+    await this.rollupRep.update({ id }, { callData });
   }
 
   public async confirmSent(id: number, txHash: TxHash) {
-    await this.synchronise(() => this.rollupRep.update({ id }, { ethTxHash: txHash.toBuffer() }));
+    await this.rollupRep.update({ id }, { ethTxHash: txHash.toBuffer() });
   }
 
   public async confirmMined(id: number, gasUsed: number, gasPrice: bigint, mined: Date) {
-    await this.synchronise(() => this.rollupRep.update({ id }, { mined, gasUsed, gasPrice: toBufferBE(gasPrice, 32) }));
+    await this.rollupRep.update({ id }, { mined, gasUsed, gasPrice: toBufferBE(gasPrice, 32) });
   }
 
   public getSettledRollups(from = 0, descending = false, take?: number) {
@@ -258,7 +256,7 @@ export class RollupDb {
   }
 
   public async deleteUnsettledRollups() {
-    await this.synchronise(() => this.rollupRep.delete({ mined: IsNull() }));
+    await this.rollupRep.delete({ mined: IsNull() });
   }
 
   public async getRollupByDataRoot(dataRoot: Buffer) {
@@ -277,14 +275,5 @@ export class RollupDb {
       throw new Error(`Rollup not found for merkle root: ${root.toString('hex')}`);
     }
     return rollup.id + 1;
-  }
-
-  private async synchronise<T>(fn: () => Promise<T>) {
-    const release = await this.writeMutex.acquire();
-    try {
-      return await fn();
-    } finally {
-      release();
-    }
   }
 }
