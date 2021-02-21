@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2020 Spilsbury Holdings Ltd
 
-pragma solidity >=0.6.0 <0.7.0;
+pragma solidity >=0.6.0 <0.8.0;
 pragma experimental ABIEncoderV2;
 
 import {PolynomialEval} from './PolynomialEval.sol';
 
 import {TranscriptLibrary} from './TranscriptLibrary.sol';
-import {PairingsBn254} from './PairingsBn254.sol';
+import {Bn254Crypto} from './Bn254Crypto.sol';
 import {Types} from './Types.sol';
 
 /**
@@ -32,9 +32,8 @@ import {Types} from './Types.sol';
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 library TurboPlonk {
-    using PairingsBn254 for Types.G1Point;
-    using PairingsBn254 for Types.G2Point;
-    using PairingsBn254 for Types.Fr;
+    using Bn254Crypto for Types.G1Point;
+    using Bn254Crypto for Types.G2Point;
     using TranscriptLibrary for TranscriptLibrary.Transcript;
 
     /**
@@ -50,12 +49,11 @@ library TurboPlonk {
         Types.Proof memory decoded_proof,
         Types.VerificationKey memory vk,
         Types.ChallengeTranscript memory challenges,
-        Types.Fr memory L1
-    ) internal view returns (Types.G1Point memory, Types.G1Point memory) {
-        Types.G1Point memory partial_opening_commitment = PolynomialEval.compute_partial_opening_commitment(
+        uint256 L1
+    ) internal view returns (Types.G1Point memory, uint256) {
+        Types.G1Point memory partial_opening_commitment = PolynomialEval.compute_linearised_opening_terms(
             challenges,
             L1,
-            vk.sigma_commitments[2],
             vk,
             decoded_proof
         );
@@ -67,12 +65,13 @@ library TurboPlonk {
             decoded_proof
         );
 
-        Types.G1Point memory batch_evaluation_commitment = PolynomialEval.compute_batch_evaluation_commitment(
+
+        uint256 batch_evaluation_g1_scalar = PolynomialEval.compute_batch_evaluation_scalar_multiplier(
             decoded_proof,
             challenges
         );
 
-        return (batch_opening_commitment, batch_evaluation_commitment);
+        return (batch_opening_commitment, batch_evaluation_g1_scalar);
     }
 
     /**
@@ -86,10 +85,8 @@ library TurboPlonk {
      * Specifically, each function call: compute_public_input_delta() etc. at some point needs to invert a
      * value to calculate a denominator in a fraction. Instead of performing this inversion as it is needed, we
      * instead 'save up' the denominator calculations. The inputs to this are returned from the various functions
-     * and then we perform all necessary inversions in one go at the end of `compute_partial_state()`. This
+     * and then we perform all necessary inversions in one go at the end of `evalaute_field_operations()`. This
      * gives us the various variables that need to be returned.
-     *
-     * It should be noted that an intermediate inverse is
      *
      * @param decoded_proof - deserialised proof
      * @param vk - verification key
@@ -97,57 +94,49 @@ library TurboPlonk {
      * ChallengeTranscript struct form
      * @return quotient polynomial evaluation (field element) and lagrange 1 evaluation (field element)
      */
-    function compute_partial_state(
+    function evalaute_field_operations(
         Types.Proof memory decoded_proof,
         Types.VerificationKey memory vk,
         Types.ChallengeTranscript memory challenges
-    ) internal view returns (Types.Fr memory, Types.Fr memory) {
-        Types.Fr memory public_input_delta;
-        Types.Fr memory zero_polynomial_eval;
-        Types.Fr memory l_start;
-        Types.Fr memory l_end;
+    ) internal view returns (uint256, uint256) {
+        uint256 public_input_delta;
+        uint256 zero_polynomial_eval;
+        uint256 l_start;
+        uint256 l_end;
         {
-            Types.PartialStateFractions memory partial_state_fractions;
-
-            Types.Fraction memory public_input_delta_fraction = PolynomialEval.compute_public_input_delta(
+            (uint256 public_input_numerator, uint256 public_input_denominator) = PolynomialEval.compute_public_input_delta(
                 challenges,
                 vk
             );
-            partial_state_fractions.public_input_delta = public_input_delta_fraction;
 
-            Types.Fraction memory zero_poly_fraction = PolynomialEval.compute_zero_polynomial(
-                challenges.zeta,
-                vk.circuit_size,
-                vk.work_root_inverse
-            );
-            partial_state_fractions.zero_poly = zero_poly_fraction;
+            (
+                uint256 vanishing_numerator,
+                uint256 vanishing_denominator,
+                uint256 lagrange_numerator,
+                uint256 l_start_denominator,
+                uint256 l_end_denominator
+            ) = PolynomialEval.compute_lagrange_and_vanishing_fractions(vk, challenges.zeta);
 
-            // l_start = L1, l_end = Ln
-
-            Types.Fraction[] memory lagrange_eval_fractions = PolynomialEval.compute_lagrange_evaluations(
-                vk,
-                challenges.zeta
-            );
-            partial_state_fractions.lagrange_1_fraction = lagrange_eval_fractions[0];
-            partial_state_fractions.lagrange_n_fraction = lagrange_eval_fractions[1];
 
             (zero_polynomial_eval, public_input_delta, l_start, l_end) = PolynomialEval.compute_batch_inversions(
-                partial_state_fractions
+                public_input_numerator,
+                public_input_denominator,
+                vanishing_numerator,
+                vanishing_denominator,
+                lagrange_numerator,
+                l_start_denominator,
+                l_end_denominator
             );
         }
 
-        Types.Fr memory quotient_eval;
-        {
-            // scope to avoid stack too deep
-            quotient_eval = PolynomialEval.compute_quotient_polynomial(
-                zero_polynomial_eval,
-                public_input_delta,
-                challenges,
-                l_start,
-                l_end,
-                decoded_proof
-            );
-        }
+        uint256 quotient_eval = PolynomialEval.compute_quotient_polynomial(
+            zero_polynomial_eval,
+            public_input_delta,
+            challenges,
+            l_start,
+            l_end,
+            decoded_proof
+        );
 
         return (quotient_eval, l_start);
     }
@@ -155,7 +144,7 @@ library TurboPlonk {
     /**
      * @dev Perform the pairing check
      * @param batch_opening_commitment - G1 point representing the calculated batch opening commitment
-     * @param batch_evaluation_commitment - G1 point representing the calculated batch evaluation commitment
+     * @param batch_evaluation_g1_scalar - uint256 representing the batch evaluation scalar multiplier to be applied to the G1 generator point
      * @param challenges - all challenges (alpha, beta, gamma, zeta, nu[NUM_NU_CHALLENGES], u) stored in
      * ChallengeTranscript struct form
      * @param vk - verification key
@@ -164,43 +153,135 @@ library TurboPlonk {
      */
     function perform_pairing(
         Types.G1Point memory batch_opening_commitment,
-        Types.G1Point memory batch_evaluation_commitment,
+        uint256 batch_evaluation_g1_scalar,
         Types.ChallengeTranscript memory challenges,
         Types.Proof memory decoded_proof,
         Types.VerificationKey memory vk
     ) internal view returns (bool) {
-        // lhs
-        Types.G1Point memory lhsTerm1 = PairingsBn254.point_add(
-            decoded_proof.opening_at_z_proof,
-            PairingsBn254.point_mul(decoded_proof.opening_at_z_omega_proof, challenges.u)
-        );
 
-        lhsTerm1.negate();
+        uint256 u = challenges.u;
+        bool success;
+        uint256 p = Bn254Crypto.r_mod;
+        Types.G1Point memory rhs;     
+        Types.G1Point memory PI_Z_OMEGA = decoded_proof.PI_Z_OMEGA;
+        Types.G1Point memory PI_Z = decoded_proof.PI_Z;
+        PI_Z.validateG1Point();
+        PI_Z_OMEGA.validateG1Point();
+    
+        // rhs = zeta.[PI_Z] + u.zeta.omega.[PI_Z_OMEGA] + [batch_opening_commitment] - batch_evaluation_g1_scalar.[1]
+        // scope this block to prevent stack depth errors
+        {
+            uint256 zeta = challenges.zeta;
+            uint256 pi_z_omega_scalar = vk.work_root;
+            assembly {
+                pi_z_omega_scalar := mulmod(pi_z_omega_scalar, zeta, p)
+                pi_z_omega_scalar := mulmod(pi_z_omega_scalar, u, p)
+                batch_evaluation_g1_scalar := sub(p, batch_evaluation_g1_scalar)
 
-        // rhs
-        // first term
-        Types.G1Point memory first_term = PairingsBn254.point_mul(decoded_proof.opening_at_z_proof, challenges.zeta);
+                // store accumulator point at mptr
+                let mPtr := mload(0x40)
 
-        // second term
-        Types.Fr memory scalars = PairingsBn254.mul_fr(
-            challenges.u,
-            (PairingsBn254.mul_fr(challenges.zeta, vk.work_root))
-        );
-        Types.G1Point memory second_term = PairingsBn254.point_mul(decoded_proof.opening_at_z_omega_proof, scalars);
+                // set accumulator = batch_opening_commitment
+                mstore(mPtr, mload(batch_opening_commitment))
+                mstore(add(mPtr, 0x20), mload(add(batch_opening_commitment, 0x20)))
 
-        Types.G1Point memory rhsTerm1 = PairingsBn254.point_add(first_term, second_term);
-        rhsTerm1.point_add_assign(batch_opening_commitment);
-        rhsTerm1.point_sub_assign(batch_evaluation_commitment);
+                // compute zeta.[PI_Z] and add into accumulator
+                mstore(add(mPtr, 0x40), mload(PI_Z))
+                mstore(add(mPtr, 0x60), mload(add(PI_Z, 0x20)))
+                mstore(add(mPtr, 0x80), zeta)
+                success := staticcall(gas(), 7, add(mPtr, 0x40), 0x60, add(mPtr, 0x40), 0x40)
+                success := and(success, staticcall(gas(), 6, mPtr, 0x80, mPtr, 0x40))
 
+                // compute u.zeta.omega.[PI_Z_OMEGA] and add into accumulator
+                mstore(add(mPtr, 0x40), mload(PI_Z_OMEGA))
+                mstore(add(mPtr, 0x60), mload(add(PI_Z_OMEGA, 0x20)))
+                mstore(add(mPtr, 0x80), pi_z_omega_scalar)
+                success := and(success, staticcall(gas(), 7, add(mPtr, 0x40), 0x60, add(mPtr, 0x40), 0x40))
+                success := and(success, staticcall(gas(), 6, mPtr, 0x80, mPtr, 0x40))
+
+                // compute -batch_evaluation_g1_scalar.[1]
+                mstore(add(mPtr, 0x40), 0x01) // hardcoded generator point (1, 2)
+                mstore(add(mPtr, 0x60), 0x02)
+                mstore(add(mPtr, 0x80), batch_evaluation_g1_scalar)
+                success := and(success, staticcall(gas(), 7, add(mPtr, 0x40), 0x60, add(mPtr, 0x40), 0x40))
+
+                // add -batch_evaluation_g1_scalar.[1] and the accumulator point, write result into rhs
+                success := and(success, staticcall(gas(), 6, mPtr, 0x80, rhs, 0x40))
+            }
+        }
+
+        Types.G1Point memory lhs;   
+        assembly {
+            // store accumulator point at mptr
+            let mPtr := mload(0x40)
+
+            // copy [PI_Z] into mPtr
+            mstore(mPtr, mload(PI_Z))
+            mstore(add(mPtr, 0x20), mload(add(PI_Z, 0x20)))
+
+            // compute u.[PI_Z_OMEGA] and write to (mPtr + 0x40)
+            mstore(add(mPtr, 0x40), mload(PI_Z_OMEGA))
+            mstore(add(mPtr, 0x60), mload(add(PI_Z_OMEGA, 0x20)))
+            mstore(add(mPtr, 0x80), u)
+            success := and(success, staticcall(gas(), 7, add(mPtr, 0x40), 0x60, add(mPtr, 0x40), 0x40))
+            
+            // add [PI_Z] + u.[PI_Z_OMEGA] and write result into lhs
+            success := and(success, staticcall(gas(), 6, mPtr, 0x80, lhs, 0x40))
+        }
+
+        // negate lhs y-coordinate
+        uint256 q = Bn254Crypto.p_mod;
+        assembly {
+            mstore(add(lhs, 0x20), sub(q, mload(add(lhs, 0x20))))
+        }
 
         if (vk.contains_recursive_proof)
         {
-            Types.Fr memory separator_challenge = challenges.u.sqr_fr();
+            // If the proof itself contains an accumulated proof,
+            // we will have extracted two G1 elements `recursive_P1`, `recursive_p2` from the public inputs
 
-            rhsTerm1.point_add_assign(decoded_proof.recursive_proof_outputs[0].point_mul(separator_challenge));
-            lhsTerm1.point_add_assign(decoded_proof.recursive_proof_outputs[1].point_mul(separator_challenge));
+            // We need to evaluate that e(recursive_P1, [x]_2) == e(recursive_P2, [1]_2) to finish verifying the inner proof
+            // We do this by creating a random linear combination between (lhs, recursive_P1) and (rhs, recursivee_P2)
+            // That way we still only need to evaluate one pairing product
+
+            // We use `challenge.u * challenge.u` as the randomness to create a linear combination
+            // challenge.u is produced by hashing the entire transcript, which contains the public inputs (and by extension the recursive proof)
+
+            // i.e. [lhs] = [lhs] + u.u.[recursive_P1]
+            //      [rhs] = [rhs] + u.u.[recursive_P2]
+            Types.G1Point memory recursive_P1 = decoded_proof.recursive_P1;
+            Types.G1Point memory recursive_P2 = decoded_proof.recursive_P2;
+            recursive_P1.validateG1Point();
+            recursive_P2.validateG1Point();
+            assembly {
+                let mPtr := mload(0x40)
+
+                // compute u.u.[recursive_P1]
+                mstore(mPtr, mload(recursive_P1))
+                mstore(add(mPtr, 0x20), mload(add(recursive_P1, 0x20)))
+                mstore(add(mPtr, 0x40), mulmod(u, u, p)) // separator_challenge = u * u
+                success := and(success, staticcall(gas(), 7, mPtr, 0x60, add(mPtr, 0x60), 0x40))
+
+                // compute u.u.[recursive_P2] (u*u is still in memory at (mPtr + 0x40), no need to re-write it)
+                mstore(mPtr, mload(recursive_P2))
+                mstore(add(mPtr, 0x20), mload(add(recursive_P2, 0x20)))
+                success := and(success, staticcall(gas(), 7, mPtr, 0x60, mPtr, 0x40))
+
+                // compute u.u.[recursiveP2] + rhs and write into rhs
+                mstore(add(mPtr, 0xa0), mload(rhs))
+                mstore(add(mPtr, 0xc0), mload(add(rhs, 0x20)))
+                success := and(success, staticcall(gas(), 6, add(mPtr, 0x60), 0x80, rhs, 0x40))
+
+                // compute u.u.[recursiveP1] + lhs and write into lhs
+                mstore(add(mPtr, 0x40), mload(lhs))
+                mstore(add(mPtr, 0x60), mload(add(lhs, 0x20)))
+                success := and(success, staticcall(gas(), 6, mPtr, 0x80, lhs, 0x40))
+            }
         }
-        return PairingsBn254.pairingProd2(rhsTerm1, PairingsBn254.P2(), lhsTerm1, vk.g2_x);
+
+        require(success, "perform_pairing G1 operations preamble fail");
+
+        return Bn254Crypto.pairingProd2(rhs, Bn254Crypto.P2(), lhs, vk.g2_x);
     }
 
     /**
@@ -222,21 +303,17 @@ library TurboPlonk {
 
         Types.ChallengeTranscript memory challenges;
 
-        challenges.init = Types.Fr({value: uint256(transcript.current_challenge) % Types.r_mod});
-
-        assert(decoded_proof.wire_commitments.length == 4);
-        challenges.beta = transcript.get_beta_challenge(vk.num_inputs);
-
-        transcript.append_byte(1);
-        challenges.gamma = transcript.get_challenge();
-
-        transcript.update_with_g1(decoded_proof.grand_product_commitment);
+        transcript.get_beta_gamma_challenges(challenges, vk.num_inputs);
+        transcript.update_with_g1(decoded_proof.Z);
         challenges.alpha = transcript.get_challenge();
-        challenges.alpha_base = PairingsBn254.new_fr(challenges.alpha.value);
+        challenges.alpha_base = challenges.alpha;
 
-        for (uint256 i = 0; i < Types.STATE_WIDTH; i += 1) {
-            transcript.update_with_g1(decoded_proof.quotient_poly_commitments[i]);
-        }
+        transcript.update_with_four_g1_elements(
+            decoded_proof.T1,
+            decoded_proof.T2,
+            decoded_proof.T3,
+            decoded_proof.T4
+        );
         challenges.zeta = transcript.get_challenge();
 
         return (challenges, transcript);
@@ -258,49 +335,12 @@ library TurboPlonk {
         TranscriptLibrary.Transcript memory transcript,
         Types.ChallengeTranscript memory challenges
     ) internal pure returns (Types.ChallengeTranscript memory) {
-        transcript.update_with_fr(decoded_proof.quotient_polynomial_at_z);
 
-        for (uint256 i = 0; i < Types.STATE_WIDTH; i++) {
-            transcript.update_with_fr(decoded_proof.wire_values_at_z[i]);
-        }
+        transcript.get_nu_challenges(decoded_proof.quotient_polynomial_eval, challenges);
 
-        for (uint256 i = 0; i < decoded_proof.permutation_polynomials_at_z.length; i++) {
-            transcript.update_with_fr(decoded_proof.permutation_polynomials_at_z[i]);
-        }
 
-        transcript.update_with_fr(decoded_proof.q_arith_at_z);
-        transcript.update_with_fr(decoded_proof.q_ecc_at_z);
-        transcript.update_with_fr(decoded_proof.q_c_at_z);
-
-        transcript.update_with_fr(decoded_proof.linearization_polynomial_at_z);
-        transcript.update_with_fr(decoded_proof.grand_product_at_z_omega);
-        for (uint256 i = 0; i < Types.STATE_WIDTH; i++) {
-            transcript.update_with_fr(decoded_proof.wire_values_at_z_omega[i]);
-        }
-
-        Types.Fr memory base_v_challenge = transcript.get_challenge();
-        bytes32 base_v_challenge_unreduced = transcript.current_challenge;
-        challenges.v[0] = base_v_challenge;
-
-        /**
-         * Aim here is to generate a number of challenges, derived from a baseHash/challenge.
-         *
-         * To do this, we take the baseHash and then append a byte to the end, which increases in
-         * value on each round of the for loop i.e.:
-         *
-         * challenge1 = keccak256(${baseHash}'01')
-         * challenge2 = keccak256(${baseHash}'02')
-         *
-         */
-        for (uint256 i = 1; i < Types.NUM_NU_CHALLENGES; i += 1) {
-            // reset to base_v_challenge, and generate next from that
-            transcript.reset_to_bytes32(base_v_challenge_unreduced);
-            transcript.append_byte(uint8(i));
-            challenges.v[i] = transcript.get_challenge();
-        }
-
-        transcript.update_with_g1(decoded_proof.opening_at_z_proof);
-        transcript.update_with_g1(decoded_proof.opening_at_z_omega_proof);
+        transcript.update_with_g1(decoded_proof.PI_Z);
+        transcript.update_with_g1(decoded_proof.PI_Z_OMEGA);
         challenges.u = transcript.get_challenge();
 
         return challenges;

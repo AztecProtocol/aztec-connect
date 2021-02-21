@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2020 Spilsbury Holdings Ltd
-pragma solidity >=0.6.0 <0.7.0;
+pragma solidity >=0.6.0 <0.8.0;
 pragma experimental ABIEncoderV2;
 
-import {PairingsBn254} from './PairingsBn254.sol';
+import {Bn254Crypto} from './Bn254Crypto.sol';
 import {Types} from './Types.sol';
 
 /**
@@ -26,9 +26,8 @@ import {Types} from './Types.sol';
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 library PolynomialEval {
-    using PairingsBn254 for Types.G1Point;
-    using PairingsBn254 for Types.G2Point;
-    using PairingsBn254 for Types.Fr;
+    using Bn254Crypto for Types.G1Point;
+    using Bn254Crypto for Types.G2Point;
 
     /**
      * @dev Use batch inversion (so called Montgomery's trick). Circuit size is the domain
@@ -36,134 +35,88 @@ library PolynomialEval {
      *
      * Returns a struct containing the inverted elements
      */
-    function compute_batch_inversions(Types.PartialStateFractions memory partial_state_fractions)
+    function compute_batch_inversions(
+        uint256 public_input_delta_numerator,
+        uint256 public_input_delta_denominator,
+        uint256 vanishing_numerator,
+        uint256 vanishing_denominator,
+        uint256 lagrange_numerator,
+        uint256 l_start_denominator,
+        uint256 l_end_denominator
+    )
         internal
         view
         returns (
-            Types.Fr memory,
-            Types.Fr memory,
-            Types.Fr memory,
-            Types.Fr memory
+            uint256 zero_polynomial_eval,
+            uint256 public_input_delta,
+            uint256 l_start,
+            uint256 l_end
         )
     {
-        uint256 denominatorsLength = 4;
-        Types.Fr[4] memory denominators;
+        uint256 mPtr;
+        uint256 p = Bn254Crypto.r_mod;
+        uint256 accumulator = 1;
+        assembly {
+            mPtr := mload(0x40)
+            mstore(0x40, add(mPtr, 0x200))
+        }
+    
+        // store denominators in mPtr -> mPtr + 0x80
+        assembly {
+            mstore(mPtr, public_input_delta_denominator) // store denominator
+            mstore(add(mPtr, 0x20), vanishing_numerator) // store numerator, because we want the inverse of the zero poly
+            mstore(add(mPtr, 0x40), l_start_denominator) // store denominator
+            mstore(add(mPtr, 0x60), l_end_denominator) // store denominator
 
-        // Extract all denominators from partial_state_fractions
-        denominators[0] = partial_state_fractions.public_input_delta.denominator;
-        denominators[1] = partial_state_fractions.zero_poly.numerator; // we actually want the inverse of the zero poly
-        denominators[2] = partial_state_fractions.lagrange_1_fraction.denominator;
-        denominators[3] = partial_state_fractions.lagrange_n_fraction.denominator;
-
-        Types.Fr memory product_accumulator = PairingsBn254.new_fr(1);
-
-        Types.Fr[4] memory temporaries;
-
-        for (uint256 i = 0; i < denominatorsLength; i += 1) {
-            temporaries[i] = product_accumulator;
-            product_accumulator = PairingsBn254.mul_fr(product_accumulator, denominators[i]);
+            // store temporary product terms at mPtr + 0x80 -> mPtr + 0x100
+            mstore(add(mPtr, 0x80), accumulator)
+            accumulator := mulmod(accumulator, mload(mPtr), p)
+            mstore(add(mPtr, 0xa0), accumulator)
+            accumulator := mulmod(accumulator, mload(add(mPtr, 0x20)), p)
+            mstore(add(mPtr, 0xc0), accumulator)
+            accumulator := mulmod(accumulator, mload(add(mPtr, 0x40)), p)
+            mstore(add(mPtr, 0xe0), accumulator)
+            accumulator := mulmod(accumulator, mload(add(mPtr, 0x60)), p)
         }
 
-        product_accumulator = product_accumulator.inverse();
+        accumulator = Bn254Crypto.invert(accumulator);
+        assembly {
+            let intermediate := mulmod(accumulator, mload(add(mPtr, 0xe0)), p)
+            accumulator := mulmod(accumulator, mload(add(mPtr, 0x60)), p)
+            mstore(add(mPtr, 0x60), intermediate)
 
-        Types.Fr memory intermediate;
-        for (uint256 i = denominatorsLength - 1; i < denominatorsLength; i -= 1) {
-            intermediate = PairingsBn254.mul_fr(product_accumulator, temporaries[i]);
-            product_accumulator = PairingsBn254.mul_fr(product_accumulator, denominators[i]);
-            denominators[i] = intermediate;
+            intermediate := mulmod(accumulator, mload(add(mPtr, 0xc0)), p)
+            accumulator := mulmod(accumulator, mload(add(mPtr, 0x40)), p)
+            mstore(add(mPtr, 0x40), intermediate)
+
+            intermediate := mulmod(accumulator, mload(add(mPtr, 0xa0)), p)
+            accumulator := mulmod(accumulator, mload(add(mPtr, 0x20)), p)
+            mstore(add(mPtr, 0x20), intermediate)
+
+            intermediate := mulmod(accumulator, mload(add(mPtr, 0x80)), p)
+            accumulator := mulmod(accumulator, mload(mPtr), p)
+            mstore(mPtr, intermediate)
+
+            public_input_delta := mulmod(public_input_delta_numerator, mload(mPtr), p)
+
+            zero_polynomial_eval := mulmod(vanishing_denominator, mload(add(mPtr, 0x20)), p)
+    
+            l_start := mulmod(lagrange_numerator, mload(add(mPtr, 0x40)), p)
+
+            l_end := mulmod(lagrange_numerator, mload(add(mPtr, 0x60)), p)
         }
-
-        Types.BatchInversions memory batch_inverted_elements = Types.BatchInversions({
-            public_input_delta_denominator_inverse: denominators[0],
-            zero_poly_inverse: denominators[1],
-            lagrange_1_fraction_inverse: denominators[2],
-            lagrange_n_fraction_inverse: denominators[3]
-        });
-
-        Types.Fr memory zero_polynomial_eval;
-        Types.Fr memory public_input_delta;
-        Types.Fr memory l_start;
-        Types.Fr memory l_end;
-        (zero_polynomial_eval, public_input_delta, l_start, l_end) = evaluate_fractions(
-            partial_state_fractions,
-            batch_inverted_elements
-        );
-
-        return (zero_polynomial_eval, public_input_delta, l_start, l_end);
-    }
-
-    function evaluate_fractions(
-        Types.PartialStateFractions memory partial_state_fractions,
-        Types.BatchInversions memory batch_inverted_elements
-    )
-        internal
-        pure
-        returns (
-            Types.Fr memory,
-            Types.Fr memory,
-            Types.Fr memory,
-            Types.Fr memory
-        )
-    {
-        Types.Fr memory public_input_delta = PairingsBn254.mul_fr(
-            batch_inverted_elements.public_input_delta_denominator_inverse,
-            partial_state_fractions.public_input_delta.numerator
-        );
-
-        Types.Fr memory zero_poly_eval = PairingsBn254.mul_fr(
-            batch_inverted_elements.zero_poly_inverse,
-            partial_state_fractions.zero_poly.denominator
-        );
-
-        Types.Fr memory L1 = PairingsBn254.mul_fr(
-            batch_inverted_elements.lagrange_1_fraction_inverse,
-            partial_state_fractions.lagrange_1_fraction.numerator
-        );
-
-        Types.Fr memory Ln = PairingsBn254.mul_fr(
-            batch_inverted_elements.lagrange_n_fraction_inverse,
-            partial_state_fractions.lagrange_n_fraction.numerator
-        );
-
-        return (zero_poly_eval, public_input_delta, L1, Ln);
-    }
-
-    function compute_zero_polynomial(
-        Types.Fr memory zeta,
-        uint256 circuit_size,
-        Types.Fr memory work_root_inverse
-    ) internal pure returns (Types.Fraction memory) {
-        Types.Fr memory firstTerm = zeta.pow_small(circuit_size, Types.r_mod);
-
-        Types.Fr memory secondTerm = PairingsBn254.new_fr(1);
-
-        Types.Fr memory denominator = PairingsBn254.new_fr(1);
-        Types.Fr memory work_root = work_root_inverse.copy();
-        Types.Fr memory T0 = PairingsBn254.new_fr(1);
-        for (uint256 i = 0; i < 4; ++i)
-        {
-            // T0 = z - w^{n-i}
-            T0 = PairingsBn254.sub_fr(zeta, work_root);
-            // denominator = PairingsBn254.mul_fr(denominator, T0);
-            denominator.mul_assign(T0);
-            work_root.mul_assign(work_root_inverse);
-        }
-
-        Types.Fr memory numerator = PairingsBn254.sub_fr(firstTerm, secondTerm);
-
-        return Types.Fraction({numerator: numerator, denominator: denominator});
     }
 
     function compute_public_input_delta(
         Types.ChallengeTranscript memory challenges,
         Types.VerificationKey memory vk
-    ) internal pure returns (Types.Fraction memory) {
-        uint256 gamma = challenges.gamma.value;
-        uint256 work_root = vk.work_root.value;
+    ) internal pure returns (uint256, uint256) {
+        uint256 gamma = challenges.gamma;
+        uint256 work_root = vk.work_root;
 
         uint256 endpoint = (vk.num_inputs * 0x20) - 0x60;
         uint256 public_inputs;
-        uint256 accumulating_root = challenges.beta.value;
+        uint256 accumulating_root = challenges.beta;
         uint256 numerator_value = 1;
         uint256 denominator_value = 1;
 
@@ -172,9 +125,8 @@ library PolynomialEval {
 
         // perform this computation in assembly to improve efficiency. We are sensitive to the cost of this loop as
         // it scales with the number of public inputs
-        uint256 p = PairingsBn254.r_mod;
+        uint256 p = Bn254Crypto.r_mod;
         assembly {
-            // let accumulating_root := beta
             public_inputs := add(calldataload(0x04), 0x24)
 
             // get public inputs from calldata. N.B. If Contract ABI Changes this code will need to be updated!
@@ -225,59 +177,75 @@ library PolynomialEval {
             }
         }
         
-        return Types.Fraction({numerator: PairingsBn254.new_fr(numerator_value), denominator: PairingsBn254.new_fr(denominator_value)});
+        return (numerator_value, denominator_value);
     }
 
     /**
-     * @dev Computes the lagrange evaluations L1 and Ln.
-     * @return Returns lagrange evals as an array, with L1 at index 0 and Ln at index 1
+     * @dev Computes the vanishing polynoimal and lagrange evaluations L1 and Ln.
+     * @return Returns fractions as numerators and denominators. We combine with the public input fraction and compute inverses as a batch
      */
-    function compute_lagrange_evaluations(Types.VerificationKey memory vk, Types.Fr memory zeta)
-        internal
-        pure
-        returns (Types.Fraction[] memory)
-    {
-        Types.Fr memory zeta_copy = zeta;
-        Types.Fr memory vanishing_poly_numerator = PairingsBn254.sub_fr(
-            zeta.pow_small(vk.circuit_size, Types.r_mod),
-            PairingsBn254.new_fr(1)
-        );
+    function compute_lagrange_and_vanishing_fractions(Types.VerificationKey memory vk, uint256 zeta
+    ) internal pure returns (uint256, uint256, uint256, uint256, uint256) {
 
-        Types.Fr memory domain_inverse = vk.domain_inverse;
+        uint256 p = Bn254Crypto.r_mod;
+        uint256 vanishing_numerator = Bn254Crypto.pow_small(zeta, vk.circuit_size, p);
+        vk.zeta_pow_n = vanishing_numerator;
+        assembly {
+            vanishing_numerator := addmod(vanishing_numerator, sub(p, 1), p)
+        }
 
-        Types.Fr memory numerator = PairingsBn254.mul_fr(vanishing_poly_numerator, domain_inverse);
+        uint256 accumulating_root = vk.work_root_inverse;
+        uint256 work_root = vk.work_root_inverse;
+        uint256 vanishing_denominator;
+        uint256 domain_inverse = vk.domain_inverse;
+        uint256 l_start_denominator;
+        uint256 l_end_denominator;
+        uint256 z = zeta; // copy input var to prevent stack depth errors
+        assembly {
 
-        Types.Fr memory denominator1 = PairingsBn254.sub_fr(zeta_copy, PairingsBn254.new_fr(1));
+            // vanishing_denominator = (z - w^{n-1})(z - w^{n-2})(z - w^{n-3})(z - w^{n-4})
+            // we need to cut 4 roots of unity out of the vanishing poly, the last 4 constraints are not satisfied due to randomness
+            // added to ensure the proving system is zero-knowledge
+            vanishing_denominator := addmod(z, sub(p, work_root), p)
+            work_root := mulmod(work_root, accumulating_root, p)
+            vanishing_denominator := mulmod(vanishing_denominator, addmod(z, sub(p, work_root), p), p)
+            work_root := mulmod(work_root, accumulating_root, p)
+            vanishing_denominator := mulmod(vanishing_denominator, addmod(z, sub(p, work_root), p), p)
+            work_root := mulmod(work_root, accumulating_root, p)
+            vanishing_denominator := mulmod(vanishing_denominator, addmod(z, sub(p, work_root), p), p)
+        }
+        
+        work_root = vk.work_root;
+        uint256 lagrange_numerator;
+        assembly {
+            lagrange_numerator := mulmod(vanishing_numerator, domain_inverse, p)
+            // l_start_denominator = z - 1
+            // l_end_denominator = z * \omega^5 - 1
+            l_start_denominator := addmod(z, sub(p, 1), p)
 
-        Types.Fr memory w_pow_5 = PairingsBn254.mul_fr(vk.work_root, vk.work_root.pow_4()); 
-        Types.Fr memory T0 = PairingsBn254.mul_fr(zeta_copy, w_pow_5);
+            accumulating_root := mulmod(work_root, work_root, p)
+            accumulating_root := mulmod(accumulating_root, accumulating_root, p)
+            accumulating_root := mulmod(accumulating_root, work_root, p)
 
-        Types.Fr memory denominatorEnd = PairingsBn254.sub_fr(T0, PairingsBn254.new_fr(1));
+            l_end_denominator := addmod(mulmod(accumulating_root, z, p), sub(p, 1), p)
+        }
 
-        Types.Fraction memory L1 = Types.Fraction({numerator: numerator, denominator: denominator1});
-        Types.Fraction memory Lend = Types.Fraction({numerator: numerator, denominator: denominatorEnd});
-
-        Types.Fraction[] memory lagrange_evals = new Types.Fraction[](2);
-        lagrange_evals[0] = L1;
-        lagrange_evals[1] = Lend;
-
-        return lagrange_evals;
+        return (vanishing_numerator, vanishing_denominator, lagrange_numerator, l_start_denominator, l_end_denominator);
     }
 
     function compute_arithmetic_gate_quotient_contribution(
         Types.ChallengeTranscript memory challenges,
         Types.Proof memory proof
-    ) internal pure returns (Types.Fr memory) {
+    ) internal pure returns (uint256) {
 
-        uint256 q_arith = proof.q_arith_at_z.value;
-        uint256 wire3 = proof.wire_values_at_z[2].value;
-        uint256 wire4 = proof.wire_values_at_z[3].value;
-        uint256 alpha_base = challenges.alpha_base.value;
-        uint256 alpha = challenges.alpha.value;
+        uint256 q_arith = proof.q_arith;
+        uint256 wire3 = proof.w3;
+        uint256 wire4 = proof.w4;
+        uint256 alpha_base = challenges.alpha_base;
+        uint256 alpha = challenges.alpha;
         uint256 t1;
-        uint256 p = PairingsBn254.r_mod;
+        uint256 p = Bn254Crypto.r_mod;
         assembly {
-            
             t1 := addmod(mulmod(q_arith, q_arith, p), sub(p, q_arith), p)
 
             let t2 := addmod(sub(p, mulmod(wire4, 0x04, p)), wire3, p)
@@ -296,28 +264,28 @@ library PolynomialEval {
             alpha_base := mulmod(alpha_base, alpha, p)
         }
 
-        challenges.alpha_base = Types.Fr(alpha_base);
+        challenges.alpha_base = alpha_base;
 
-        return Types.Fr(t1);
+        return t1;
     }
 
     function compute_pedersen_gate_quotient_contribution(
         Types.ChallengeTranscript memory challenges,
         Types.Proof memory proof
-    ) internal pure returns (Types.Fr memory) {
+    ) internal pure returns (uint256) {
 
 
-        uint256 alpha = challenges.alpha.value;
+        uint256 alpha = challenges.alpha;
         uint256 gate_id = 0;
-        uint256 alpha_base = challenges.alpha_base.value;
+        uint256 alpha_base = challenges.alpha_base;
 
         {
-            uint256 p = PairingsBn254.r_mod;
+            uint256 p = Bn254Crypto.r_mod;
             uint256 delta = 0;
 
-            uint256 wire_t0 = proof.wire_values_at_z[3].value; // w4
-            uint256 wire_t1 = proof.wire_values_at_z_omega[3].value; // w4_omega
-            uint256 wire_t2 = proof.wire_values_at_z_omega[2].value; // w3_omega
+            uint256 wire_t0 = proof.w4; // w4
+            uint256 wire_t1 = proof.w4_omega; // w4_omega
+            uint256 wire_t2 = proof.w3_omega; // w3_omega
             assembly {
                 let wire4_neg := sub(p, wire_t0)
                 delta := addmod(wire_t1, mulmod(wire4_neg, 0x04, p), p)
@@ -347,12 +315,12 @@ library PolynomialEval {
                 alpha_base := mulmod(alpha_base, alpha, p)
             }
 
-            uint256 selector_value = proof.q_ecc_at_z.value;
+            uint256 selector_value = proof.q_ecc;
 
-            wire_t0 = proof.wire_values_at_z[0].value; // w1
-            wire_t1 = proof.wire_values_at_z_omega[0].value; // w1_omega
-            wire_t2 = proof.wire_values_at_z[1].value; // w2
-            uint256 wire_t3 = proof.wire_values_at_z_omega[2].value; // w3_omega
+            wire_t0 = proof.w1; // w1
+            wire_t1 = proof.w1_omega; // w1_omega
+            wire_t2 = proof.w2; // w2
+            uint256 wire_t3 = proof.w3_omega; // w3_omega
             uint256 t0;
             uint256 t1;
             uint256 t2;
@@ -384,11 +352,11 @@ library PolynomialEval {
                 alpha_base := mulmod(alpha_base, alpha, p)
             }
 
-            wire_t0 = proof.wire_values_at_z[0].value; // w1
-            wire_t1 = proof.wire_values_at_z_omega[1].value; // w2_omega
-            wire_t2 = proof.wire_values_at_z[1].value; // w2
-            wire_t3 = proof.wire_values_at_z_omega[2].value; // w3_omega
-            uint256 wire_t4 = proof.wire_values_at_z_omega[0].value; // w1_omega
+            wire_t0 = proof.w1; // w1
+            wire_t1 = proof.w2_omega; // w2_omega
+            wire_t2 = proof.w2; // w2
+            wire_t3 = proof.w3_omega; // w3_omega
+            uint256 wire_t4 = proof.w1_omega; // w1_omega
             assembly {
                 t0 := mulmod(
                     addmod(wire_t1, wire_t2, p),
@@ -409,10 +377,10 @@ library PolynomialEval {
                 alpha_base := mulmod(alpha_base, alpha, p)
             }
 
-            selector_value = proof.q_c_at_z.value;
+            selector_value = proof.q_c;
         
-            wire_t1 = proof.wire_values_at_z[3].value; // w4
-            wire_t2 = proof.wire_values_at_z[2].value; // w3
+            wire_t1 = proof.w4; // w4
+            wire_t2 = proof.w3; // w3
             assembly {
                 let acc_init_id := addmod(wire_t1, sub(p, 0x01), p)
 
@@ -434,9 +402,9 @@ library PolynomialEval {
                 alpha_base := mulmod(alpha_base, alpha, p)
             }
 
-            wire_t0 = proof.wire_values_at_z[1].value; // w2
-            wire_t1 = proof.wire_values_at_z[2].value; // w3
-            wire_t2 = proof.wire_values_at_z[3].value; // w4
+            wire_t0 = proof.w2; // w2
+            wire_t1 = proof.w3; // w3
+            wire_t2 = proof.w4; // w4
             assembly {
                 let y_init_id := mulmod(add(0x01, sub(p, wire_t2)), selector_value, p)
 
@@ -449,37 +417,37 @@ library PolynomialEval {
                 alpha_base := mulmod(alpha_base, alpha, p)
 
             }
-            selector_value = proof.q_ecc_at_z.value;
+            selector_value = proof.q_ecc;
             assembly {
                 gate_id := mulmod(gate_id, selector_value, p)
             }
         }
-        challenges.alpha_base = Types.Fr(alpha_base);
-        return Types.Fr(gate_id);
+        challenges.alpha_base = alpha_base;
+        return gate_id;
     }
 
     function compute_permutation_quotient_contribution(
-        Types.Fr memory public_input_delta,
+        uint256 public_input_delta,
         Types.ChallengeTranscript memory challenges,
-        Types.Fr memory lagrange_start,
-        Types.Fr memory lagrange_end,
+        uint256 lagrange_start,
+        uint256 lagrange_end,
         Types.Proof memory proof
-    ) internal pure returns (Types.Fr memory) {
+    ) internal pure returns (uint256) {
 
         uint256 numerator_collector;
-        uint256 alpha = challenges.alpha.value;
-        uint256 beta = challenges.beta.value;
-        uint256 p = PairingsBn254.r_mod;
-        uint256 grand_product = proof.grand_product_at_z_omega.value;
+        uint256 alpha = challenges.alpha;
+        uint256 beta = challenges.beta;
+        uint256 p = Bn254Crypto.r_mod;
+        uint256 grand_product = proof.grand_product_at_z_omega;
         {
-            uint256 gamma = challenges.gamma.value;
-            uint256 wire1 = proof.wire_values_at_z[0].value;
-            uint256 wire2 = proof.wire_values_at_z[1].value;
-            uint256 wire3 = proof.wire_values_at_z[2].value;
-            uint256 wire4 = proof.wire_values_at_z[3].value;
-            uint256 sigma1 = proof.permutation_polynomials_at_z[0].value;
-            uint256 sigma2 = proof.permutation_polynomials_at_z[1].value;
-            uint256 sigma3 = proof.permutation_polynomials_at_z[2].value;
+            uint256 gamma = challenges.gamma;
+            uint256 wire1 = proof.w1;
+            uint256 wire2 = proof.w2;
+            uint256 wire3 = proof.w3;
+            uint256 wire4 = proof.w4;
+            uint256 sigma1 = proof.sigma1;
+            uint256 sigma2 = proof.sigma2;
+            uint256 sigma3 = proof.sigma3;
             assembly {
 
                 let t0 := add(
@@ -522,12 +490,12 @@ library PolynomialEval {
         }
 
 
-        uint256 alpha_base = challenges.alpha_base.value;
+        uint256 alpha_base = challenges.alpha_base;
         {
-            uint256 lstart = lagrange_start.value;
-            uint256 lend = lagrange_end.value;
-            uint256 public_delta = public_input_delta.value;
-            uint256 linearization_poly = proof.linearization_polynomial_at_z.value;
+            uint256 lstart = lagrange_start;
+            uint256 lend = lagrange_end;
+            uint256 public_delta = public_input_delta;
+            uint256 linearization_poly = proof.linearization_polynomial;
             assembly {
                 let alpha_squared := mulmod(alpha, alpha, p)
                 let alpha_cubed := mulmod(alpha, alpha_squared, p)
@@ -544,57 +512,89 @@ library PolynomialEval {
             }
         }
 
-        challenges.alpha_base = Types.Fr(alpha_base);
+        challenges.alpha_base = alpha_base;
 
-        return Types.Fr(numerator_collector);
+        return numerator_collector;
     }
 
     function compute_quotient_polynomial(
-        Types.Fr memory zero_poly_eval,
-        Types.Fr memory public_input_delta,
+        uint256 zero_poly_inverse,
+        uint256 public_input_delta,
         Types.ChallengeTranscript memory challenges,
-        Types.Fr memory lagrange_start,
-        Types.Fr memory lagrange_end,
+        uint256 lagrange_start,
+        uint256 lagrange_end,
         Types.Proof memory proof
-    ) internal pure returns (Types.Fr memory) {
+    ) internal pure returns (uint256) {
         uint256 t0 = compute_permutation_quotient_contribution(
             public_input_delta,
             challenges,
             lagrange_start,
             lagrange_end,
             proof
-        ).value;
+        );
 
-        uint256 t1 = compute_arithmetic_gate_quotient_contribution(challenges, proof).value;
+        uint256 t1 = compute_arithmetic_gate_quotient_contribution(challenges, proof);
 
-        uint256 t2 = compute_pedersen_gate_quotient_contribution(challenges, proof).value;
-
-        uint256 zero_inverse = zero_poly_eval.value;
+        uint256 t2 = compute_pedersen_gate_quotient_contribution(challenges, proof);
 
         uint256 quotient_eval;
-        uint256 p = PairingsBn254.r_mod;
+        uint256 p = Bn254Crypto.r_mod;
         assembly {
-            quotient_eval := add(t0, add(t1, t2))
-            quotient_eval := mulmod(quotient_eval, zero_inverse, p)
+            quotient_eval := addmod(t0, addmod(t1, t2, p), p)
+            quotient_eval := mulmod(quotient_eval, zero_poly_inverse, p)
         }
-        return Types.Fr(quotient_eval);
+        return quotient_eval;
     }
 
-    function compute_partial_opening_commitment(
+    function compute_linearised_opening_terms(
         Types.ChallengeTranscript memory challenges,
-        Types.Fr memory L1_fr,
-        Types.G1Point memory,
+        uint256 L1_fr,
         Types.VerificationKey memory vk,
         Types.Proof memory proof
     ) internal view returns (Types.G1Point memory) {
-        Types.G1Point memory accumulator = compute_grand_product_opening_scalar(proof, vk, challenges, L1_fr);
-        Types.G1Point memory arithmetic_term = compute_arithmetic_selector_opening_scalars(proof, vk, challenges);
-        Types.G1Point memory range_term = compute_range_gate_opening_scalar(proof, vk, challenges);
-        Types.G1Point memory logic_term = compute_logic_gate_opening_scalar(proof, vk, challenges);
+        Types.G1Point memory accumulator = compute_grand_product_opening_group_element(proof, vk, challenges, L1_fr);
+        Types.G1Point memory arithmetic_term = compute_arithmetic_selector_opening_group_element(proof, vk, challenges);
+        uint256 range_multiplier = compute_range_gate_opening_scalar(proof, challenges);
+        uint256 logic_multiplier = compute_logic_gate_opening_scalar(proof, challenges);
 
-        accumulator.point_add_assign(arithmetic_term);
-        accumulator.point_add_assign(range_term);
-        accumulator.point_add_assign(logic_term);
+        Types.G1Point memory QRANGE = vk.QRANGE;
+        Types.G1Point memory QLOGIC = vk.QLOGIC;
+        QRANGE.validateG1Point();
+        QLOGIC.validateG1Point();
+
+        // compute range_multiplier.[QRANGE] + logic_multiplier.[QLOGIC] + [accumulator] + [grand_product_term]
+        bool success;
+        assembly {
+            let mPtr := mload(0x40)
+
+            // range_multiplier.[QRANGE]
+            mstore(mPtr, mload(QRANGE))
+            mstore(add(mPtr, 0x20), mload(add(QRANGE, 0x20)))
+            mstore(add(mPtr, 0x40), range_multiplier)
+            success := staticcall(gas(), 7, mPtr, 0x60, mPtr, 0x40)
+
+            // add scalar mul output into accumulator
+            // we use mPtr to store accumulated point
+            mstore(add(mPtr, 0x40), mload(accumulator))
+            mstore(add(mPtr, 0x60), mload(add(accumulator, 0x20)))
+            success := and(success, staticcall(gas(), 6, mPtr, 0x80, mPtr, 0x40))
+
+            // logic_multiplier.[QLOGIC]
+            mstore(add(mPtr, 0x40), mload(QLOGIC))
+            mstore(add(mPtr, 0x60), mload(add(QLOGIC, 0x20)))
+            mstore(add(mPtr, 0x80), logic_multiplier)
+            success := and(success, staticcall(gas(), 7, add(mPtr, 0x40), 0x60, add(mPtr, 0x40), 0x40))
+
+            // add scalar mul output into accumulator
+            success := and(success, staticcall(gas(), 6, mPtr, 0x80, mPtr, 0x40))
+
+            // add arithmetic into accumulator
+            mstore(add(mPtr, 0x40), mload(arithmetic_term))
+            mstore(add(mPtr, 0x60), mload(add(arithmetic_term, 0x20)))
+            success := and(success, staticcall(gas(), 6, mPtr, 0x80, accumulator, 0x40))
+        }
+        require(success, "compute_linearised_opening_terms group operations fail");
+    
         return accumulator;
     }
 
@@ -604,216 +604,403 @@ library PolynomialEval {
         Types.G1Point memory partial_opening_commitment,
         Types.Proof memory proof
     ) internal view returns (Types.G1Point memory) {
-        // first term
+        // Computes the Kate opening proof group operations, for commitments that are not linearised
+        bool success;
+        // Reserve 0xa0 bytes of memory to perform group operations
+        uint256 accumulator_ptr;
+        uint256 p = Bn254Crypto.r_mod;
+        assembly {
+            accumulator_ptr := mload(0x40)
+            mstore(0x40, add(accumulator_ptr, 0xa0))
+        }
 
-        Types.G1Point memory accumulator = PairingsBn254.copy_g1(proof.quotient_poly_commitments[0]); //tlow
+        // first term
+        Types.G1Point memory work_point = proof.T1;
+        work_point.validateG1Point();
+        assembly {
+            mstore(accumulator_ptr, mload(work_point))
+            mstore(add(accumulator_ptr, 0x20), mload(add(work_point, 0x20)))
+        }
 
         // second term
-        Types.Fr memory zeta_n = challenges.zeta.pow_small(vk.circuit_size, Types.r_mod);
+        uint256 scalar_multiplier = vk.zeta_pow_n; // zeta_pow_n is computed in compute_lagrange_and_vanishing_fractions
+        uint256 zeta_n = scalar_multiplier;
+        work_point = proof.T2;
+        work_point.validateG1Point();
+        assembly {
+            mstore(add(accumulator_ptr, 0x40), mload(work_point))
+            mstore(add(accumulator_ptr, 0x60), mload(add(work_point, 0x20)))
+            mstore(add(accumulator_ptr, 0x80), scalar_multiplier)
 
-        accumulator.point_add_assign(PairingsBn254.point_mul(proof.quotient_poly_commitments[1], zeta_n));
+            // compute zeta_n.[T2]
+            success := staticcall(gas(), 7, add(accumulator_ptr, 0x40), 0x60, add(accumulator_ptr, 0x40), 0x40)
+            
+            // add scalar mul output into accumulator
+            success := and(success, staticcall(gas(), 6, accumulator_ptr, 0x80, accumulator_ptr, 0x40))
+        }
 
         // third term
-        Types.Fr memory zeta_2n = zeta_n.pow_2();
+        work_point = proof.T3;
+        work_point.validateG1Point();
+        assembly {
+            scalar_multiplier := mulmod(scalar_multiplier, scalar_multiplier, p)
 
-        accumulator.point_add_assign(PairingsBn254.point_mul(proof.quotient_poly_commitments[2], zeta_2n));
+            mstore(add(accumulator_ptr, 0x40), mload(work_point))
+            mstore(add(accumulator_ptr, 0x60), mload(add(work_point, 0x20)))
+            mstore(add(accumulator_ptr, 0x80), scalar_multiplier)
+
+            // compute zeta_n^2.[T3]
+            success := and(success, staticcall(gas(), 7, add(accumulator_ptr, 0x40), 0x60, add(accumulator_ptr, 0x40), 0x40))
+            
+            // add scalar mul output into accumulator
+            success := and(success, staticcall(gas(), 6, accumulator_ptr, 0x80, accumulator_ptr, 0x40))
+
+        }
 
         // fourth term
-        Types.Fr memory zeta_3n = zeta_n.pow_3();
+        work_point = proof.T4;
+        work_point.validateG1Point();
+        assembly {
+            scalar_multiplier := mulmod(scalar_multiplier, zeta_n, p)
 
-        accumulator.point_add_assign(PairingsBn254.point_mul(proof.quotient_poly_commitments[3], zeta_3n));
+            mstore(add(accumulator_ptr, 0x40), mload(work_point))
+            mstore(add(accumulator_ptr, 0x60), mload(add(work_point, 0x20)))
+            mstore(add(accumulator_ptr, 0x80), scalar_multiplier)
+
+            // compute zeta_n^3.[T4]
+            success := and(success, staticcall(gas(), 7, add(accumulator_ptr, 0x40), 0x60, add(accumulator_ptr, 0x40), 0x40))
+            
+            // add scalar mul output into accumulator
+            success := and(success, staticcall(gas(), 6, accumulator_ptr, 0x80, accumulator_ptr, 0x40))
+        }
 
         // fifth term
-        accumulator.point_add_assign(partial_opening_commitment);
+        work_point = partial_opening_commitment;
+        work_point.validateG1Point();
+        assembly {            
+            // add partial opening commitment into accumulator
+            mstore(add(accumulator_ptr, 0x40), mload(partial_opening_commitment))
+            mstore(add(accumulator_ptr, 0x60), mload(add(partial_opening_commitment, 0x20)))
+            success := and(success, staticcall(gas(), 6, accumulator_ptr, 0x80, accumulator_ptr, 0x40))
+        }
 
-        Types.Fr memory u_plus_one = challenges.u.add_fr(Types.Fr(1));
+        uint256 u_plus_one = challenges.u;
+        uint256 v_challenge = challenges.v0;
 
-        // shifted_wire_value
-        Types.Fr memory scalar_multiplier = challenges.v[0].mul_fr(u_plus_one);
+        // W1
+        work_point = proof.W1;
+        work_point.validateG1Point();
+        assembly {
+            u_plus_one := addmod(u_plus_one, 0x01, p)
 
-        accumulator.point_add_assign(PairingsBn254.point_mul(proof.wire_commitments[0], scalar_multiplier));
+            scalar_multiplier := mulmod(v_challenge, u_plus_one, p)
 
-        scalar_multiplier = challenges.v[1].mul_fr(u_plus_one);
-        accumulator.point_add_assign(PairingsBn254.point_mul(proof.wire_commitments[1], scalar_multiplier));
+            mstore(add(accumulator_ptr, 0x40), mload(work_point))
+            mstore(add(accumulator_ptr, 0x60), mload(add(work_point, 0x20)))
+            mstore(add(accumulator_ptr, 0x80), scalar_multiplier)
 
-        scalar_multiplier = challenges.v[2].mul_fr(u_plus_one);
-        accumulator.point_add_assign(PairingsBn254.point_mul(proof.wire_commitments[2], scalar_multiplier));
+            // compute v0(u + 1).[W1]
+            success := and(success, staticcall(gas(), 7, add(accumulator_ptr, 0x40), 0x60, add(accumulator_ptr, 0x40), 0x40))
+            
+            // add scalar mul output into accumulator
+            success := and(success, staticcall(gas(), 6, accumulator_ptr, 0x80, accumulator_ptr, 0x40))
+        }
 
-        scalar_multiplier = challenges.v[3].mul_fr(u_plus_one);
-        accumulator.point_add_assign(PairingsBn254.point_mul(proof.wire_commitments[3], scalar_multiplier));
+        // W2
+        v_challenge = challenges.v1;
+        work_point = proof.W2;
+        work_point.validateG1Point();
+        assembly {
+            scalar_multiplier := mulmod(v_challenge, u_plus_one, p)
 
-        // copy permutation selectors
-        scalar_multiplier = challenges.v[4];
-        accumulator.point_add_assign(PairingsBn254.point_mul(vk.sigma_commitments[0], scalar_multiplier));
+            mstore(add(accumulator_ptr, 0x40), mload(work_point))
+            mstore(add(accumulator_ptr, 0x60), mload(add(work_point, 0x20)))
+            mstore(add(accumulator_ptr, 0x80), scalar_multiplier)
 
-        scalar_multiplier = challenges.v[5];
-        accumulator.point_add_assign(PairingsBn254.point_mul(vk.sigma_commitments[1], scalar_multiplier));
+            // compute v1(u + 1).[W2]
+            success := and(success, staticcall(gas(), 7, add(accumulator_ptr, 0x40), 0x60, add(accumulator_ptr, 0x40), 0x40))
+            
+            // add scalar mul output into accumulator
+            success := and(success, staticcall(gas(), 6, accumulator_ptr, 0x80, accumulator_ptr, 0x40))
+        }
 
-        scalar_multiplier = challenges.v[6];
-        accumulator.point_add_assign(PairingsBn254.point_mul(vk.sigma_commitments[2], scalar_multiplier));
+        // W3
+        v_challenge = challenges.v2;
+        work_point = proof.W3;
+        work_point.validateG1Point();
+        assembly {
+            scalar_multiplier := mulmod(v_challenge, u_plus_one, p)
 
-        // arithmetic selector evaluations
-        scalar_multiplier = challenges.v[7];
-        accumulator.point_add_assign(PairingsBn254.point_mul(vk.QARITH, scalar_multiplier));
+            mstore(add(accumulator_ptr, 0x40), mload(work_point))
+            mstore(add(accumulator_ptr, 0x60), mload(add(work_point, 0x20)))
+            mstore(add(accumulator_ptr, 0x80), scalar_multiplier)
 
-        // arithmetic selector evaluations
-        scalar_multiplier = challenges.v[8];
-        accumulator.point_add_assign(PairingsBn254.point_mul(vk.QECC, scalar_multiplier));
+            // compute v2(u + 1).[W3]
+            success := and(success, staticcall(gas(), 7, add(accumulator_ptr, 0x40), 0x60, add(accumulator_ptr, 0x40), 0x40))
+            
+            // add scalar mul output into accumulator
+            success := and(success, staticcall(gas(), 6, accumulator_ptr, 0x80, accumulator_ptr, 0x40))
+        }
 
-        return accumulator;
+
+        // W4
+        v_challenge = challenges.v3;
+        work_point = proof.W4;
+        work_point.validateG1Point();
+        assembly {
+            scalar_multiplier := mulmod(v_challenge, u_plus_one, p)
+
+            mstore(add(accumulator_ptr, 0x40), mload(work_point))
+            mstore(add(accumulator_ptr, 0x60), mload(add(work_point, 0x20)))
+            mstore(add(accumulator_ptr, 0x80), scalar_multiplier)
+
+            // compute v3(u + 1).[W4]
+            success := and(success, staticcall(gas(), 7, add(accumulator_ptr, 0x40), 0x60, add(accumulator_ptr, 0x40), 0x40))
+            
+            // add scalar mul output into accumulator
+            success := and(success, staticcall(gas(), 6, accumulator_ptr, 0x80, accumulator_ptr, 0x40))
+        }
+
+        // SIGMA1
+        scalar_multiplier = challenges.v4;
+        work_point = vk.SIGMA1;
+        work_point.validateG1Point();
+        assembly {
+            mstore(add(accumulator_ptr, 0x40), mload(work_point))
+            mstore(add(accumulator_ptr, 0x60), mload(add(work_point, 0x20)))
+            mstore(add(accumulator_ptr, 0x80), scalar_multiplier)
+
+            // compute v4.[SIGMA1]
+            success := and(success, staticcall(gas(), 7, add(accumulator_ptr, 0x40), 0x60, add(accumulator_ptr, 0x40), 0x40))
+            
+            // add scalar mul output into accumulator
+            success := and(success, staticcall(gas(), 6, accumulator_ptr, 0x80, accumulator_ptr, 0x40))
+        }
+
+        // SIGMA2
+        scalar_multiplier = challenges.v5;
+        work_point = vk.SIGMA2;
+        work_point.validateG1Point();
+        assembly {
+            mstore(add(accumulator_ptr, 0x40), mload(work_point))
+            mstore(add(accumulator_ptr, 0x60), mload(add(work_point, 0x20)))
+            mstore(add(accumulator_ptr, 0x80), scalar_multiplier)
+
+            // compute v5.[SIGMA2]
+            success := and(success, staticcall(gas(), 7, add(accumulator_ptr, 0x40), 0x60, add(accumulator_ptr, 0x40), 0x40))
+            
+            // add scalar mul output into accumulator
+            success := and(success, staticcall(gas(), 6, accumulator_ptr, 0x80, accumulator_ptr, 0x40))
+        }
+
+        // SIGMA3
+        scalar_multiplier = challenges.v6;
+        work_point = vk.SIGMA3;
+        work_point.validateG1Point();
+        assembly {
+            mstore(add(accumulator_ptr, 0x40), mload(work_point))
+            mstore(add(accumulator_ptr, 0x60), mload(add(work_point, 0x20)))
+            mstore(add(accumulator_ptr, 0x80), scalar_multiplier)
+
+            // compute v6.[SIGMA3]
+            success := and(success, staticcall(gas(), 7, add(accumulator_ptr, 0x40), 0x60, add(accumulator_ptr, 0x40), 0x40))
+            
+            // add scalar mul output into accumulator
+            success := and(success, staticcall(gas(), 6, accumulator_ptr, 0x80, accumulator_ptr, 0x40))
+        }
+
+        // QARITH
+        scalar_multiplier = challenges.v7;
+        work_point = vk.QARITH;
+        work_point.validateG1Point();
+        assembly {
+            mstore(add(accumulator_ptr, 0x40), mload(work_point))
+            mstore(add(accumulator_ptr, 0x60), mload(add(work_point, 0x20)))
+            mstore(add(accumulator_ptr, 0x80), scalar_multiplier)
+
+            // compute v7.[QARITH]
+            success := and(success, staticcall(gas(), 7, add(accumulator_ptr, 0x40), 0x60, add(accumulator_ptr, 0x40), 0x40))
+            
+            // add scalar mul output into accumulator
+            success := and(success, staticcall(gas(), 6, accumulator_ptr, 0x80, accumulator_ptr, 0x40))
+        }
+
+        Types.G1Point memory output;
+        // QECC
+        scalar_multiplier = challenges.v8;
+        work_point = vk.QECC;
+        work_point.validateG1Point();
+        assembly {
+            mstore(add(accumulator_ptr, 0x40), mload(work_point))
+            mstore(add(accumulator_ptr, 0x60), mload(add(work_point, 0x20)))
+            mstore(add(accumulator_ptr, 0x80), scalar_multiplier)
+
+            // compute v8.[QECC]
+            success := and(success, staticcall(gas(), 7, add(accumulator_ptr, 0x40), 0x60, add(accumulator_ptr, 0x40), 0x40))
+            
+            // add scalar mul output into output point
+            success := and(success, staticcall(gas(), 6, accumulator_ptr, 0x80, output, 0x40))
+        }
+        
+        require(success, "compute_batch_opening_commitment group operations error");
+
+        return output;
     }
 
-    function compute_batch_evaluation_commitment(Types.Proof memory proof, Types.ChallengeTranscript memory challenges)
+    function compute_batch_evaluation_scalar_multiplier(Types.Proof memory proof, Types.ChallengeTranscript memory challenges)
         internal
-        view
-        returns (Types.G1Point memory)
+        pure
+        returns (uint256)
     {
-        uint256 p = PairingsBn254.r_mod;
+        uint256 p = Bn254Crypto.r_mod;
         uint256 opening_scalar;
         uint256 lhs;
         uint256 rhs;
 
-        lhs = challenges.v[0].value;
-        rhs = proof.wire_values_at_z[0].value;
+        lhs = challenges.v0;
+        rhs = proof.w1;
         assembly {
             opening_scalar := addmod(opening_scalar, mulmod(lhs, rhs, p), p)
         }
 
-        lhs = challenges.v[1].value;
-        rhs = proof.wire_values_at_z[1].value;
+        lhs = challenges.v1;
+        rhs = proof.w2;
         assembly {
             opening_scalar := addmod(opening_scalar, mulmod(lhs, rhs, p), p)
         }
 
-        lhs = challenges.v[2].value;
-        rhs = proof.wire_values_at_z[2].value;
+        lhs = challenges.v2;
+        rhs = proof.w3;
         assembly {
             opening_scalar := addmod(opening_scalar, mulmod(lhs, rhs, p), p)
         }
 
-        lhs = challenges.v[3].value;
-        rhs = proof.wire_values_at_z[3].value;
+        lhs = challenges.v3;
+        rhs = proof.w4;
         assembly {
             opening_scalar := addmod(opening_scalar, mulmod(lhs, rhs, p), p)
         }
 
-        lhs = challenges.v[4].value;
-        rhs = proof.permutation_polynomials_at_z[0].value;
+        lhs = challenges.v4;
+        rhs = proof.sigma1;
         assembly {
             opening_scalar := addmod(opening_scalar, mulmod(lhs, rhs, p), p)
         }
 
-        lhs = challenges.v[5].value;
-        rhs = proof.permutation_polynomials_at_z[1].value;
+        lhs = challenges.v5;
+        rhs = proof.sigma2;
         assembly {
             opening_scalar := addmod(opening_scalar, mulmod(lhs, rhs, p), p)
         }
 
-        lhs = challenges.v[6].value;
-        rhs = proof.permutation_polynomials_at_z[2].value;
+        lhs = challenges.v6;
+        rhs = proof.sigma3;
         assembly {
             opening_scalar := addmod(opening_scalar, mulmod(lhs, rhs, p), p)
         }
 
-        lhs = challenges.v[7].value;
-        rhs = proof.q_arith_at_z.value;
+        lhs = challenges.v7;
+        rhs = proof.q_arith;
         assembly {
             opening_scalar := addmod(opening_scalar, mulmod(lhs, rhs, p), p)
         }
 
-        lhs = challenges.v[8].value;
-        rhs = proof.q_ecc_at_z.value;
+        lhs = challenges.v8;
+        rhs = proof.q_ecc;
         assembly {
             opening_scalar := addmod(opening_scalar, mulmod(lhs, rhs, p), p)
         }
 
-        lhs = challenges.v[9].value;
-        rhs = proof.q_c_at_z.value;
+        lhs = challenges.v9;
+        rhs = proof.q_c;
         assembly {
             opening_scalar := addmod(opening_scalar, mulmod(lhs, rhs, p), p)
         }
     
-        lhs = challenges.v[10].value;
-        rhs = proof.linearization_polynomial_at_z.value;
+        lhs = challenges.v10;
+        rhs = proof.linearization_polynomial;
         assembly {
             opening_scalar := addmod(opening_scalar, mulmod(lhs, rhs, p), p)
         }
     
-        lhs = proof.quotient_polynomial_at_z.value;
+        lhs = proof.quotient_polynomial_eval;
         assembly {
             opening_scalar := addmod(opening_scalar, lhs, p)
         }
 
-        lhs = challenges.v[0].value;
-        rhs = proof.wire_values_at_z_omega[0].value;
+        lhs = challenges.v0;
+        rhs = proof.w1_omega;
         uint256 shifted_opening_scalar;
         assembly {
             shifted_opening_scalar := mulmod(lhs, rhs, p)
         }
     
-        lhs = challenges.v[1].value;
-        rhs = proof.wire_values_at_z_omega[1].value;
+        lhs = challenges.v1;
+        rhs = proof.w2_omega;
         assembly {
             shifted_opening_scalar := addmod(shifted_opening_scalar, mulmod(lhs, rhs, p), p)
         }
 
-        lhs = challenges.v[2].value;
-        rhs = proof.wire_values_at_z_omega[2].value;
+        lhs = challenges.v2;
+        rhs = proof.w3_omega;
         assembly {
             shifted_opening_scalar := addmod(shifted_opening_scalar, mulmod(lhs, rhs, p), p)
         }
 
-        lhs = challenges.v[3].value;
-        rhs = proof.wire_values_at_z_omega[3].value;
+        lhs = challenges.v3;
+        rhs = proof.w4_omega;
         assembly {
             shifted_opening_scalar := addmod(shifted_opening_scalar, mulmod(lhs, rhs, p), p)
         }
 
-        lhs = proof.grand_product_at_z_omega.value;
+        lhs = proof.grand_product_at_z_omega;
         assembly {
             shifted_opening_scalar := addmod(shifted_opening_scalar, lhs, p)
         }
 
-        lhs = challenges.u.value;
+        lhs = challenges.u;
         assembly {
             shifted_opening_scalar := mulmod(shifted_opening_scalar, lhs, p)
 
             opening_scalar := addmod(opening_scalar, shifted_opening_scalar, p)
         }
 
-        Types.G1Point memory batch_eval_commitment = PairingsBn254.point_mul(PairingsBn254.P1(), Types.Fr(opening_scalar));
-        return batch_eval_commitment;
+        return opening_scalar;
     }
 
     // Compute kate opening scalar for arithmetic gate selectors and pedersen gate selectors
     // (both the arithmetic gate and pedersen hash gate reuse the same selectors)
-    function compute_arithmetic_selector_opening_scalars(
+    function compute_arithmetic_selector_opening_group_element(
         Types.Proof memory proof,
         Types.VerificationKey memory vk,
         Types.ChallengeTranscript memory challenges
     ) internal view returns (Types.G1Point memory) {
 
-        uint256 q_arith = proof.q_arith_at_z.value;
-        uint256 q_ecc_at_z = proof.q_ecc_at_z.value;
-        uint256 linear_challenge = challenges.v[10].value;
-        uint256 alpha_base = challenges.alpha_base.value;
-        uint256 scaling_alpha = challenges.alpha_base.value;
-        uint256 alpha = challenges.alpha.value;
-        uint256 p = PairingsBn254.r_mod;
+        uint256 q_arith = proof.q_arith;
+        uint256 q_ecc = proof.q_ecc;
+        uint256 linear_challenge = challenges.v10;
+        uint256 alpha_base = challenges.alpha_base;
+        uint256 scaling_alpha = challenges.alpha_base;
+        uint256 alpha = challenges.alpha;
+        uint256 p = Bn254Crypto.r_mod;
         uint256 scalar_multiplier;
-        Types.G1Point memory accumulator;
+        uint256 accumulator_ptr; // reserve 0xa0 bytes of memory to multiply and add points
+        assembly {
+            accumulator_ptr := mload(0x40)
+            mstore(0x40, add(accumulator_ptr, 0xa0))
+        }
         {
             uint256 delta;
             // Q1 Selector
             {
                 {
-                    uint256 w4 = proof.wire_values_at_z[3].value;
-                    uint256 w4_omega = proof.wire_values_at_z_omega[3].value;
+                    uint256 w4 = proof.w4;
+                    uint256 w4_omega = proof.w4_omega;
                     assembly {
                         delta := addmod(w4_omega, sub(p, mulmod(w4, 0x04, p)), p)
                     }
                 }
-                uint256 w1 = proof.wire_values_at_z[0].value;
+                uint256 w1 = proof.w1;
 
                 assembly {
                     scalar_multiplier := mulmod(w1, linear_challenge, p)
@@ -824,32 +1011,58 @@ library PolynomialEval {
                     scaling_alpha := mulmod(scaling_alpha, alpha, p)
                     scaling_alpha := mulmod(scaling_alpha, alpha, p)
                     let t0 := mulmod(delta, delta, p)
-                    t0 := mulmod(t0, q_ecc_at_z, p)
+                    t0 := mulmod(t0, q_ecc, p)
                     t0 := mulmod(t0, scaling_alpha, p)
 
                     scalar_multiplier := addmod(scalar_multiplier, mulmod(t0, linear_challenge, p), p)
                 }
+                Types.G1Point memory Q1 = vk.Q1;
+                Q1.validateG1Point();
+                bool success;
+                assembly {
+                    let mPtr := mload(0x40)
+                    mstore(mPtr, mload(Q1))
+                    mstore(add(mPtr, 0x20), mload(add(Q1, 0x20)))
+                    mstore(add(mPtr, 0x40), scalar_multiplier)
+                    success := staticcall(gas(), 7, mPtr, 0x60, accumulator_ptr, 0x40)
+                }
+                require(success, "G1 point multiplication failed!");
             }
-            accumulator = PairingsBn254.point_mul(vk.Q1, Types.Fr(scalar_multiplier));
 
             // Q2 Selector
             {
-                uint256 w2 = proof.wire_values_at_z[1].value;
+                uint256 w2 = proof.w2;
                 assembly {
                     scalar_multiplier := mulmod(w2, linear_challenge, p)
                     scalar_multiplier := mulmod(scalar_multiplier, alpha_base, p)
                     scalar_multiplier := mulmod(scalar_multiplier, q_arith, p)
 
-                    let t0 := mulmod(scaling_alpha, q_ecc_at_z, p)
+                    let t0 := mulmod(scaling_alpha, q_ecc, p)
                     scalar_multiplier := addmod(scalar_multiplier, mulmod(t0, linear_challenge, p), p)
                 }
+
+                Types.G1Point memory Q2 = vk.Q2;
+                Q2.validateG1Point();
+                bool success;
+                assembly {
+                    let mPtr := mload(0x40)
+                    mstore(mPtr, mload(Q2))
+                    mstore(add(mPtr, 0x20), mload(add(Q2, 0x20)))
+                    mstore(add(mPtr, 0x40), scalar_multiplier)
+
+                    // write scalar mul output 0x40 bytes ahead of accumulator
+                    success := staticcall(gas(), 7, mPtr, 0x60, add(accumulator_ptr, 0x40), 0x40)
+
+                    // add scalar mul output into accumulator
+                    success := and(success, staticcall(gas(), 6, accumulator_ptr, 0x80, accumulator_ptr, 0x40))
+                }
+                require(success, "G1 point multiplication failed!");
             }
-            accumulator.point_add_assign(PairingsBn254.point_mul(vk.Q2, Types.Fr(scalar_multiplier)));
 
             // Q3 Selector
             {
                 {
-                    uint256 w3 = proof.wire_values_at_z[2].value;
+                    uint256 w3 = proof.w3;
                     assembly {
                         scalar_multiplier := mulmod(w3, linear_challenge, p)
                         scalar_multiplier := mulmod(scalar_multiplier, alpha_base, p)
@@ -859,72 +1072,104 @@ library PolynomialEval {
                 {
                     uint256 t1;
                     {
-                        uint256 w3_omega = proof.wire_values_at_z_omega[2].value;
+                        uint256 w3_omega = proof.w3_omega;
                         assembly {
                             t1 := mulmod(delta, w3_omega, p)
                         }
                     }
                     {
-                        uint256 w2 = proof.wire_values_at_z[1].value;
+                        uint256 w2 = proof.w2;
                         assembly {
                             scaling_alpha := mulmod(scaling_alpha, alpha, p)
 
                             t1 := mulmod(t1, w2, p)
                             t1 := mulmod(t1, scaling_alpha, p)
                             t1 := addmod(t1, t1, p)
-                            t1 := mulmod(t1, q_ecc_at_z, p)
+                            t1 := mulmod(t1, q_ecc, p)
 
                         scalar_multiplier := addmod(scalar_multiplier, mulmod(t1, linear_challenge, p), p)
                         }
                     }
                 }
-                uint256 t0 = proof.wire_values_at_z_omega[0].value;
+                uint256 t0 = proof.w1_omega;
                 {
-                    uint256 w1 = proof.wire_values_at_z[0].value;
+                    uint256 w1 = proof.w1;
                     assembly {
                         scaling_alpha := mulmod(scaling_alpha, alpha, p)
                         t0 := addmod(t0, sub(p, w1), p)
                         t0 := mulmod(t0, delta, p)
                     }
                 }
-                uint256 w3_omega = proof.wire_values_at_z_omega[2].value;
+                uint256 w3_omega = proof.w3_omega;
                 assembly {
 
                     t0 := mulmod(t0, w3_omega, p)
                     t0 := mulmod(t0, scaling_alpha, p)
 
-                    t0 := mulmod(t0, q_ecc_at_z, p)
+                    t0 := mulmod(t0, q_ecc, p)
 
                     scalar_multiplier := addmod(scalar_multiplier, mulmod(t0, linear_challenge, p), p)
                 }
             }
+
+            Types.G1Point memory Q3 = vk.Q3;
+            Q3.validateG1Point();
+            bool success;
+            assembly {
+                let mPtr := mload(0x40)
+                mstore(mPtr, mload(Q3))
+                mstore(add(mPtr, 0x20), mload(add(Q3, 0x20)))
+                mstore(add(mPtr, 0x40), scalar_multiplier)
+
+                // write scalar mul output 0x40 bytes ahead of accumulator
+                success := staticcall(gas(), 7, mPtr, 0x60, add(accumulator_ptr, 0x40), 0x40)
+
+                // add scalar mul output into accumulator
+                success := and(success, staticcall(gas(), 6, accumulator_ptr, 0x80, accumulator_ptr, 0x40))
+            }
+            require(success, "G1 point multiplication failed!");
         }
-        accumulator.point_add_assign(PairingsBn254.point_mul(vk.Q3, Types.Fr(scalar_multiplier)));
 
         // Q4 Selector
         {
-            uint256 w3 = proof.wire_values_at_z[2].value;
-            uint256 w4 = proof.wire_values_at_z[3].value;
-            uint256 q_c_at_z = proof.q_c_at_z.value;
+            uint256 w3 = proof.w3;
+            uint256 w4 = proof.w4;
+            uint256 q_c = proof.q_c;
             assembly {
                 scalar_multiplier := mulmod(w4, linear_challenge, p)
                 scalar_multiplier := mulmod(scalar_multiplier, alpha_base, p)
                 scalar_multiplier := mulmod(scalar_multiplier, q_arith, p)
 
                 scaling_alpha := mulmod(scaling_alpha, mulmod(alpha, alpha, p), p)
-                let t0 := mulmod(w3, q_ecc_at_z, p)
-                t0 := mulmod(t0, q_c_at_z, p)
+                let t0 := mulmod(w3, q_ecc, p)
+                t0 := mulmod(t0, q_c, p)
                 t0 := mulmod(t0, scaling_alpha, p)
 
                 scalar_multiplier := addmod(scalar_multiplier, mulmod(t0, linear_challenge, p), p)
             }
+
+            Types.G1Point memory Q4 = vk.Q4;
+            Q4.validateG1Point();
+            bool success;
+            assembly {
+                let mPtr := mload(0x40)
+                mstore(mPtr, mload(Q4))
+                mstore(add(mPtr, 0x20), mload(add(Q4, 0x20)))
+                mstore(add(mPtr, 0x40), scalar_multiplier)
+
+                // write scalar mul output 0x40 bytes ahead of accumulator
+                success := staticcall(gas(), 7, mPtr, 0x60, add(accumulator_ptr, 0x40), 0x40)
+
+                // add scalar mul output into accumulator
+                success := and(success, staticcall(gas(), 6, accumulator_ptr, 0x80, accumulator_ptr, 0x40))
+            }
+            require(success, "G1 point multiplication failed!");
         }
-        accumulator.point_add_assign(PairingsBn254.point_mul(vk.Q4, Types.Fr(scalar_multiplier)));
 
         // Q5 Selector
         {
-            uint256 w4 = proof.wire_values_at_z[3].value;
-            uint256 q_c_at_z = proof.q_c_at_z.value;
+            uint256 w4 = proof.w4;
+            uint256 q_c = proof.q_c;
             assembly {
                 let neg_w4 := sub(p, w4)
                 scalar_multiplier := mulmod(w4, w4, p)
@@ -936,20 +1181,36 @@ library PolynomialEval {
                 scalar_multiplier := mulmod(scalar_multiplier, linear_challenge, p)
 
                 let t0 := addmod(0x01, neg_w4, p)
-                t0 := mulmod(t0, q_ecc_at_z, p)
-                t0 := mulmod(t0, q_c_at_z, p)
+                t0 := mulmod(t0, q_ecc, p)
+                t0 := mulmod(t0, q_c, p)
                 t0 := mulmod(t0, scaling_alpha, p)
 
                 scalar_multiplier := addmod(scalar_multiplier, mulmod(t0, linear_challenge, p), p)
             }
+
+            Types.G1Point memory Q5 = vk.Q5;
+            Q5.validateG1Point();
+            bool success;
+            assembly {
+                let mPtr := mload(0x40)
+                mstore(mPtr, mload(Q5))
+                mstore(add(mPtr, 0x20), mload(add(Q5, 0x20)))
+                mstore(add(mPtr, 0x40), scalar_multiplier)
+
+                // write scalar mul output 0x40 bytes ahead of accumulator
+                success := staticcall(gas(), 7, mPtr, 0x60, add(accumulator_ptr, 0x40), 0x40)
+
+                // add scalar mul output into accumulator
+                success := and(success, staticcall(gas(), 6, accumulator_ptr, 0x80, accumulator_ptr, 0x40))
+            }
+            require(success, "G1 point multiplication failed!");
         }
-        accumulator.point_add_assign(PairingsBn254.point_mul(vk.Q5, Types.Fr(scalar_multiplier)));
     
         // QM Selector
         {
             {
-                uint256 w1 = proof.wire_values_at_z[0].value;
-                uint256 w2 = proof.wire_values_at_z[1].value;
+                uint256 w1 = proof.w1;
+                uint256 w2 = proof.w2;
 
                 assembly {
                     scalar_multiplier := mulmod(w1, w2, p)
@@ -958,23 +1219,40 @@ library PolynomialEval {
                     scalar_multiplier := mulmod(scalar_multiplier, q_arith, p)
                 }
             }
-            uint256 w3 = proof.wire_values_at_z[2].value;
-            uint256 q_c_at_z = proof.q_c_at_z.value;
+            uint256 w3 = proof.w3;
+            uint256 q_c = proof.q_c;
             assembly {
 
                 scaling_alpha := mulmod(scaling_alpha, alpha, p)
-                let t0 := mulmod(w3, q_ecc_at_z, p)
-                t0 := mulmod(t0, q_c_at_z, p)
+                let t0 := mulmod(w3, q_ecc, p)
+                t0 := mulmod(t0, q_c, p)
                 t0 := mulmod(t0, scaling_alpha, p)
 
                 scalar_multiplier := addmod(scalar_multiplier, mulmod(t0, linear_challenge, p), p)
             }
-        }
-        accumulator.point_add_assign(PairingsBn254.point_mul(vk.QM, Types.Fr(scalar_multiplier)));
 
+            Types.G1Point memory QM = vk.QM;
+            QM.validateG1Point();
+            bool success;
+            assembly {
+                let mPtr := mload(0x40)
+                mstore(mPtr, mload(QM))
+                mstore(add(mPtr, 0x20), mload(add(QM, 0x20)))
+                mstore(add(mPtr, 0x40), scalar_multiplier)
+
+                // write scalar mul output 0x40 bytes ahead of accumulator
+                success := staticcall(gas(), 7, mPtr, 0x60, add(accumulator_ptr, 0x40), 0x40)
+
+                // add scalar mul output into accumulator
+                success := and(success, staticcall(gas(), 6, accumulator_ptr, 0x80, accumulator_ptr, 0x40))
+            }
+            require(success, "G1 point multiplication failed!");
+        }
+
+        Types.G1Point memory output;
         // QC Selector
         {
-            uint256 q_c_challenge = challenges.v[9].value;
+            uint256 q_c_challenge = challenges.v9;
             assembly {
                 scalar_multiplier := mulmod(linear_challenge, alpha_base, p)
                 scalar_multiplier := mulmod(scalar_multiplier, q_arith, p)
@@ -984,25 +1262,41 @@ library PolynomialEval {
 
                 alpha_base := mulmod(scaling_alpha, alpha, p)
             }
-        }
-        accumulator.point_add_assign(PairingsBn254.point_mul(vk.QC, Types.Fr(scalar_multiplier)));
-        challenges.alpha_base = Types.Fr(alpha_base);
 
-        return accumulator;
+            Types.G1Point memory QC = vk.QC;
+            QC.validateG1Point();
+            bool success;
+            assembly {
+                let mPtr := mload(0x40)
+                mstore(mPtr, mload(QC))
+                mstore(add(mPtr, 0x20), mload(add(QC, 0x20)))
+                mstore(add(mPtr, 0x40), scalar_multiplier)
+
+                // write scalar mul output 0x40 bytes ahead of accumulator
+                success := staticcall(gas(), 7, mPtr, 0x60, add(accumulator_ptr, 0x40), 0x40)
+
+                // add scalar mul output into output point
+                success := and(success, staticcall(gas(), 6, accumulator_ptr, 0x80, output, 0x40))
+            }
+            require(success, "G1 point multiplication failed!");
+
+        }
+        challenges.alpha_base = alpha_base;
+
+        return output;
     }
 
 
-    // Compute kate opening scalar for arithmetic gate selectors
+    // Compute kate opening scalar for logic gate opening scalars
+    // This method evalautes the polynomial identity used to evaluate either
+    // a 2-bit AND or XOR operation in a single constraint
     function compute_logic_gate_opening_scalar(
         Types.Proof memory proof,
-        Types.VerificationKey memory vk,
         Types.ChallengeTranscript memory challenges
-    ) internal view returns (Types.G1Point memory) {
-
+    ) internal pure returns (uint256) {
         uint256 identity = 0;
-
+        uint256 p = Bn254Crypto.r_mod;
         {
-            uint256 p = PairingsBn254.r_mod;
             uint256 delta_sum = 0;
             uint256 delta_squared_sum = 0;
             uint256 t0 = 0;
@@ -1010,16 +1304,16 @@ library PolynomialEval {
             uint256 t2 = 0;
             uint256 t3 = 0;
             {
-                uint256 wire1_omega = proof.wire_values_at_z_omega[0].value;
-                uint256 wire1 = proof.wire_values_at_z[0].value;
+                uint256 wire1_omega = proof.w1_omega;
+                uint256 wire1 = proof.w1;
                 assembly {
                     t0 := addmod(wire1_omega, sub(p, mulmod(wire1, 0x04, p)), p)
                 }
             }
 
             {
-                uint256 wire2_omega = proof.wire_values_at_z_omega[1].value;
-                uint256 wire2 = proof.wire_values_at_z[1].value;
+                uint256 wire2_omega = proof.w2_omega;
+                uint256 wire2 = proof.w2;
                 assembly {
                     t1 := addmod(wire2_omega, sub(p, mulmod(wire2, 0x04, p)), p)
 
@@ -1033,10 +1327,10 @@ library PolynomialEval {
             }
 
             uint256 t4 = 0;
-            uint256 alpha = challenges.alpha.value;
+            uint256 alpha = challenges.alpha;
 
             {
-                uint256 wire3 = proof.wire_values_at_z[2].value;
+                uint256 wire3 = proof.w3;
                 assembly{
                     t4 := mulmod(wire3, 0x02, p)
                     identity := addmod(identity, sub(p, t4), p)
@@ -1085,7 +1379,7 @@ library PolynomialEval {
             }
 
             {
-                uint256 wire3 = proof.wire_values_at_z[2].value;
+                uint256 wire3 = proof.w3;
                 assembly {
                     delta_sum := mulmod(delta_sum, wire3, p)
 
@@ -1094,19 +1388,19 @@ library PolynomialEval {
                 }
             }
             {
-                uint256 wire4 = proof.wire_values_at_z[3].value;
+                uint256 wire4 = proof.w4;
                 assembly {
                     t2 := mulmod(wire4, 0x04, p)
                 }
             }
             {
-                uint256 wire4_omega = proof.wire_values_at_z_omega[3].value;
+                uint256 wire4_omega = proof.w4_omega;
                 assembly {
                     t2 := addmod(wire4_omega, sub(p, t2), p)
                 }
             }
             {
-                uint256 q_c = proof.q_c_at_z.value;
+                uint256 q_c = proof.q_c;
                 assembly {
                     t3 := addmod(t2, t2, p)
                     t2 := addmod(t2, t3, p)
@@ -1126,41 +1420,42 @@ library PolynomialEval {
                     identity := addmod(identity, t2, p)
                 }
             }
-            uint256 linear_nu = challenges.v[10].value;
-            uint256 alpha_base = challenges.alpha_base.value;
+            uint256 linear_nu = challenges.v10;
+            uint256 alpha_base = challenges.alpha_base;
 
             assembly {
                 identity := mulmod(identity, alpha_base, p)
                 identity := mulmod(identity, linear_nu, p)
             }
         }
-        Types.Fr memory identity_fr = Types.Fr(identity);
-        Types.G1Point memory kate_component = PairingsBn254.point_mul(vk.QLOGIC, identity_fr);
+        // update alpha
+        uint256 alpha_base = challenges.alpha_base;
+        uint256 alpha = challenges.alpha;
+        assembly {
+            alpha := mulmod(alpha, alpha, p)
+            alpha := mulmod(alpha, alpha, p)
+            alpha_base := mulmod(alpha_base, alpha, p) 
+        }
+        challenges.alpha_base = alpha_base;
 
-        challenges.alpha_base.mul_assign(challenges.alpha);
-        challenges.alpha_base.mul_assign(challenges.alpha);
-        challenges.alpha_base.mul_assign(challenges.alpha);
-        challenges.alpha_base.mul_assign(challenges.alpha);
-
-        return kate_component;
+        return identity;
     }
 
     // Compute kate opening scalar for arithmetic gate selectors
     function compute_range_gate_opening_scalar(
         Types.Proof memory proof,
-        Types.VerificationKey memory vk,
         Types.ChallengeTranscript memory challenges
-    ) internal view returns (Types.G1Point memory) {
-
-        uint256 wire1 = proof.wire_values_at_z[0].value;
-        uint256 wire2 = proof.wire_values_at_z[1].value;
-        uint256 wire3 = proof.wire_values_at_z[2].value;
-        uint256 wire4 = proof.wire_values_at_z[3].value;
-        uint256 wire4_omega = proof.wire_values_at_z_omega[3].value;
-        uint256 alpha = challenges.alpha.value;
-        uint256 alpha_base = challenges.alpha_base.value;
+    ) internal pure returns (uint256) {
+        uint256 wire1 = proof.w1;
+        uint256 wire2 = proof.w2;
+        uint256 wire3 = proof.w3;
+        uint256 wire4 = proof.w4;
+        uint256 wire4_omega = proof.w4_omega;
+        uint256 alpha = challenges.alpha;
+        uint256 alpha_base = challenges.alpha_base;
         uint256 range_acc;
-        uint256 p = PairingsBn254.r_mod;
+        uint256 p = Bn254Crypto.r_mod;
+        uint256 linear_challenge = challenges.v10;
         assembly {
             let delta_1 := addmod(wire3, sub(p, mulmod(wire4, 0x04, p)), p)
             let delta_2 := addmod(wire2, sub(p, mulmod(wire3, 0x04, p)), p)
@@ -1208,35 +1503,32 @@ library PolynomialEval {
             t0 := mulmod(t0, alpha_base, p)
             range_acc := addmod(range_acc, t0, p)
             alpha_base := mulmod(alpha_base, alpha, p)
+
+            range_acc := mulmod(range_acc, linear_challenge, p)
         }
 
-        Types.Fr memory range_accumulator = Types.Fr(range_acc);
-        range_accumulator.mul_assign(challenges.v[10]);
-        Types.G1Point memory kate_component = PairingsBn254.point_mul(vk.QRANGE, range_accumulator);
-
-        challenges.alpha_base = Types.Fr(alpha_base);
-
-        return kate_component;
+        challenges.alpha_base = alpha_base;
+        return range_acc;
     }
 
     // Compute grand product opening scalar and perform kate verification scalar multiplication
-    function compute_grand_product_opening_scalar(
+    function compute_grand_product_opening_group_element(
         Types.Proof memory proof,
         Types.VerificationKey memory vk,
         Types.ChallengeTranscript memory challenges,
-        Types.Fr memory L1_fr
+        uint256 L1_fr
     ) internal view returns (Types.G1Point memory) {
-        uint256 beta = challenges.beta.value;
-        uint256 zeta = challenges.zeta.value;
-        uint256 gamma = challenges.gamma.value;
-        uint256 p = PairingsBn254.r_mod;
+        uint256 beta = challenges.beta;
+        uint256 zeta = challenges.zeta;
+        uint256 gamma = challenges.gamma;
+        uint256 p = Bn254Crypto.r_mod;
         
         uint256 partial_grand_product;
         uint256 sigma_multiplier;
 
         {
-            uint256 w1 = proof.wire_values_at_z[0].value;
-            uint256 sigma1 = proof.permutation_polynomials_at_z[0].value;
+            uint256 w1 = proof.w1;
+            uint256 sigma1 = proof.sigma1;
             assembly {
                 let witness_term := addmod(w1, gamma, p)
                 partial_grand_product := addmod(mulmod(beta, zeta, p), witness_term, p)
@@ -1244,8 +1536,8 @@ library PolynomialEval {
             }
         }
         {
-            uint256 w2 = proof.wire_values_at_z[1].value;
-            uint256 sigma2 = proof.permutation_polynomials_at_z[1].value;
+            uint256 w2 = proof.w2;
+            uint256 sigma2 = proof.sigma2;
             assembly {
                 let witness_term := addmod(w2, gamma, p)
                 partial_grand_product := mulmod(partial_grand_product, addmod(mulmod(mulmod(zeta, 0x05, p), beta, p), witness_term, p), p)
@@ -1253,8 +1545,8 @@ library PolynomialEval {
             }
         }
         {
-            uint256 w3 = proof.wire_values_at_z[2].value;
-            uint256 sigma3 = proof.permutation_polynomials_at_z[2].value;
+            uint256 w3 = proof.w3;
+            uint256 sigma3 = proof.sigma3;
             assembly {
                 let witness_term := addmod(w3, gamma, p)
                 partial_grand_product := mulmod(partial_grand_product, addmod(mulmod(mulmod(zeta, 0x06, p), beta, p), witness_term, p), p)
@@ -1263,18 +1555,18 @@ library PolynomialEval {
             }
         }
         {
-            uint256 w4 = proof.wire_values_at_z[3].value;
+            uint256 w4 = proof.w4;
             assembly {
                 partial_grand_product := mulmod(partial_grand_product, addmod(addmod(mulmod(mulmod(zeta, 0x07, p), beta, p), gamma, p), w4, p), p)
             }
         }
         {
-            uint256 linear_challenge = challenges.v[10].value;
-            uint256 alpha_base = challenges.alpha_base.value;
-            uint256 alpha = challenges.alpha.value;
-            uint256 separator_challenge = challenges.u.value;
-            uint256 grand_product_at_z_omega = proof.grand_product_at_z_omega.value;
-            uint256 l_start = L1_fr.value;
+            uint256 linear_challenge = challenges.v10;
+            uint256 alpha_base = challenges.alpha_base;
+            uint256 alpha = challenges.alpha;
+            uint256 separator_challenge = challenges.u;
+            uint256 grand_product_at_z_omega = proof.grand_product_at_z_omega;
+            uint256 l_start = L1_fr;
             assembly {
                 partial_grand_product := mulmod(partial_grand_product, alpha_base, p)
 
@@ -1286,16 +1578,31 @@ library PolynomialEval {
 
                 alpha_base := mulmod(alpha_base, alpha, p)
             }
-            challenges.alpha_base = Types.Fr(alpha_base);
+            challenges.alpha_base = alpha_base;
         }
 
-        Types.G1Point memory accumulator = PairingsBn254.point_mul(
-            proof.grand_product_commitment,
-            Types.Fr(partial_grand_product)
-        );
+        Types.G1Point memory Z = proof.Z;
+        Types.G1Point memory SIGMA4 = vk.SIGMA4;
+        Types.G1Point memory accumulator;
+        Z.validateG1Point();
+        SIGMA4.validateG1Point();
+        bool success;
+        assembly {
+            let mPtr := mload(0x40)
+            mstore(mPtr, mload(Z))
+            mstore(add(mPtr, 0x20), mload(add(Z, 0x20)))
+            mstore(add(mPtr, 0x40), partial_grand_product)
+            success := staticcall(gas(), 7, mPtr, 0x60, mPtr, 0x40)
 
-        Types.G1Point memory S = PairingsBn254.point_mul(vk.sigma_commitments[3], Types.Fr(sigma_multiplier));
-        accumulator.point_add_assign(S);
+            mstore(add(mPtr, 0x40), mload(SIGMA4))
+            mstore(add(mPtr, 0x60), mload(add(SIGMA4, 0x20)))
+            mstore(add(mPtr, 0x80), sigma_multiplier)
+            success := and(success, staticcall(gas(), 7, add(mPtr, 0x40), 0x60, add(mPtr, 0x40), 0x40))
+            
+            success := and(success, staticcall(gas(), 6, mPtr, 0x80, accumulator, 0x40))
+        }
+
+        require(success, "compute_grand_product_opening_scalar group operations failure");
         return accumulator;
     }
 }

@@ -27,6 +27,18 @@ describe('Verifier', function () {
     expect(receipt.status).to.equal(1);
   }
 
+  it('should validate a 1 rollup proof (1 tx)', async () => {
+    await validate(1, 1);
+  });
+
+  it('should validate a 2 rollup proof (1 tx)', async () => {
+    await validate(1, 2);
+  });
+
+  it('should validate a 4 rollup proof (1 tx)', async () => {
+    await validate(1, 4);
+  });
+
   it('should validate a 32 rollup proof (1 tx)', async () => {
     await validate(28, 1);
   });

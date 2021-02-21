@@ -369,7 +369,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         require(rollupProviders[provider], 'Rollup Processor: UNKNOWN_PROVIDER');
         bytes memory sigData =
             abi.encodePacked(proofData[0:rollupPubInputLength], feeReceiver, feeLimit, feeDistributor);
-        RollupProcessorLibrary.validateSignature(sigData, providerSignature, provider);
+        RollupProcessorLibrary.validateSignature(keccak256(sigData), providerSignature, provider);
 
         processRollupProof(proofData, signatures, viewingKeys);
 
@@ -388,12 +388,12 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     }
 
     function processRollupProof(
-        bytes calldata proofData,
-        bytes calldata signatures,
-        bytes calldata viewingKeys
+        bytes memory proofData,
+        bytes memory signatures,
+        bytes calldata /*viewingKeys*/
     ) internal {
         uint256 numTxs = verifyProofAndUpdateState(proofData);
-        processDepositsAndWithdrawals(proofData[rollupPubInputLength:proofData.length], numTxs, signatures);
+        processDepositsAndWithdrawals(proofData, numTxs, signatures);
     }
 
     /**
@@ -411,8 +411,63 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             uint256 newDataSize
         ) = validateMerkleRoots(proofData);
 
-        verifier.verify(proofData, rollupSize);
 
+        // // Verify the rollup proof.
+        // // 
+        // // We manually call the verifier contract via assembly. This is to prevent a
+        // // redundant copy of `proofData` into memory, which costs between 100,000 to 1,000,000 gas
+        // // depending on the rollup size!
+        // bool proof_verified = false;
+        // address verifierAddress;
+        // uint256 temp1;
+        // uint256 temp2;
+        // uint256 temp3;
+        // assembly {
+
+        //     // Step 1: we need to insert 68 bytes of verifier 'calldata' just prior to proofData
+        //     // Start by defining the start of our 'calldata'. Also grab the verifier contract address from storage
+        //     let inputPtr := sub(proofData, 0x44)
+        //     verifierAddress := sload(verifier_slot)
+
+        //     // Step 2: we need to overwrite the memory between `inputPtr` and `inputPtr + 68`
+        //     // we load the existing 68 bytes of memory into stack variables temp1, temp2, temp3
+        //     // Once we have called the verifier contract, we will write this data back into memory
+        //     temp1 := mload(inputPtr)
+        //     temp2 := mload(add(inputPtr, 0x20))
+        //     temp3 := mload(add(inputPtr, 0x40))
+
+        //     // Step 3: insert our calldata into memory
+        //     // We call the function `verify(bytes,uint256)`
+        //     // The function signature is 0xac318c5d
+        //     // Calldata map is:
+        //     // 0x00 - 0x04 : 0xac318c5d
+        //     // 0x04 - 0x24 : 0x40 (number of bytes between 0x04 and the start of the `proofData` array at 0x44)
+        //     // 0x24 - 0x44 : rollupSize
+        //     // 0x44 - .... : proofData (already present in memory)
+        //     mstore8(inputPtr, 0xac)
+        //     mstore8(add(inputPtr, 0x01), 0x31)
+        //     mstore8(add(inputPtr, 0x02), 0x8c)
+        //     mstore8(add(inputPtr, 0x03), 0x5d)
+        //     mstore(add(inputPtr, 0x04), 0x40)
+        //     mstore(add(inputPtr, 0x24), rollupSize)
+
+        //     // Total calldata size is proofData.length + 96 bytes (the 66 bytes we just wrote, plus the 32 byte 'length' field of proofData)
+        //     let callSize := add(mload(proofData), 0x64)
+
+        //     // Step 4: Call our verifier contract. If does not return any values, but will throw an error if the proof is not valid
+        //     // i.e. verified == false if proof is not valid
+        //     proof_verified := staticcall(gas(), verifierAddress, inputPtr, callSize, 0x00, 0x00)
+
+        //     // Step 5: Restore the memory we overwrote with our 'calldata'
+        //     mstore(inputPtr, temp1)
+        //     mstore(add(inputPtr, 0x20), temp2)
+        //     mstore(add(inputPtr, 0x40), temp3)
+        // }
+
+        // // Check the proof is valid!
+        // require(proof_verified, "proof verification failed");
+        // TODO: clean this up and see why e2e test is failing
+        verifier.verify(proofData, rollupSize);
         // Update state variables.
         dataRoot = newDataRoot;
         nullRoot = newNullRoot;
@@ -421,7 +476,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         dataSize = newDataSize;
 
         emit RollupProcessed(rollupId, dataRoot, nullRoot, rootRoot, dataSize);
-
         return numTxs;
     }
 
@@ -480,48 +534,102 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
 
     /**
      * @dev Process deposits and withdrawls.
-     * @param innerProofData - all proofData associated with the rolled up transactions
+     * @param proofData - the proof data
      * @param numTxs - number of transactions rolled up in the proof
      * @param signatures - bytes array of secp256k1 ECDSA signatures, authorising a transfer of tokens
      */
     function processDepositsAndWithdrawals(
-        bytes calldata innerProofData,
+        bytes memory proofData,
         uint256 numTxs,
-        bytes calldata signatures
+        bytes memory signatures
     ) internal {
-        uint256 sigIndex = 0;
+        uint256 sigIndex = 0x00;
+        uint256 proofDataPtr;
+        assembly {
+            proofDataPtr := add(proofData, 0x20) // add 0x20 to skip over 1st field in bytes array (the length field)
+        }
+        proofDataPtr += rollupPubInputLength; // update pointer to skip over rollup public inputs and point to inner tx public inputs
+        uint256 end = proofDataPtr + (numTxs * txPubInputLength);
+        uint256 stepSize = txPubInputLength;
 
-        for (uint256 i = 0; i < numTxs; i++) {
-            bytes calldata txPubInputs =
-                innerProofData[i.mul(txPubInputLength):i.mul(txPubInputLength).add(txPubInputLength)];
-            (
-                uint256 proofId,
-                uint256 publicInput,
-                uint256 publicOutput,
-                uint256 assetId,
-                address inputOwner,
-                address outputOwner
-            ) = extractTxComponents(txPubInputs);
-
-            if (proofId != 0) {
-                continue;
+        // This is a bit of a hot loop, we iterate over every tx to determine whether to process deposits or withdrawals.
+        while (proofDataPtr < end)
+        {
+            // extract the minimum information we need to determine whether to skip this iteration
+            uint256 proofId;
+            uint256 publicInput;
+            uint256 publicOutput;
+            bool txNeedsProcessing;
+            assembly {
+                proofId := mload(proofDataPtr)
+                publicInput := mload(add(proofDataPtr, 0x20))
+                publicOutput := mload(add(proofDataPtr, 0x40))
+                // only process deposits and withdrawals iff
+                // the proofId == 0 (not an account proof) and publicInput > 0 OR publicOutput > 0
+                txNeedsProcessing := and(
+                    iszero(proofId),
+                    or(not(iszero(publicInput)), not(iszero(publicOutput)))
+                )
             }
 
-            if (publicInput > 0) {
-                if (!depositProofApprovals[inputOwner][keccak256(txPubInputs)]) {
-                    bytes memory signature = extractSignature(signatures, sigIndex++);
-                    RollupProcessorLibrary.validateSignature(txPubInputs, signature, inputOwner);
+            if (txNeedsProcessing)
+            {
+                // extract asset Id
+                uint256 assetId;
+                assembly {
+                    assetId := mload(add(proofDataPtr, 0x60))
                 }
-                decreasePendingDepositBalance(assetId, inputOwner, publicInput);
-            }
 
-            if (publicOutput > 0) {
-                withdraw(publicOutput, outputOwner, assetId);
+                if (publicInput > 0) {
+                    // validate user has approved deposit
+                    address inputOwner;
+                    bytes32 digest;
+                    assembly {
+                        inputOwner := mload(add(proofDataPtr, 0x140))
+
+                        // compute the message digest to check if user has approved tx
+                        digest := keccak256(proofDataPtr, stepSize)
+                    }
+                    if (!depositProofApprovals[inputOwner][digest]) {
+
+                        // extract and validate signature
+                        // we can create a bytes memory container for the signature without allocating new memory,
+                        // by overwriting the previous 32 bytes in the `signatures` array with the 'length' of our synthetic byte array (92)
+                        // we store the memory we overwrite in `temp`, so that we can restore it
+                        bytes memory signature;
+                        uint256 temp;
+                        assembly {
+                            // set `signature` to point to 32 bytes less than the desired `r, s, v` values in `signatures`
+                            signature := add(signatures, sigIndex)
+                            // cache the memory we're about to overwrite
+                            temp := mload(signature)
+                            // write in a 92-byte 'length' parameter into the `signature` bytes array
+                            mstore(signature, 0x60)
+                        }
+                        // validate the signature
+                        RollupProcessorLibrary.validateUnpackedSignature(digest, signature, inputOwner);
+                        // restore the memory we overwrote
+                        assembly {
+                            mstore(signature, temp)
+                            sigIndex := add(sigIndex, 0x60)
+                        }
+                    }
+                    decreasePendingDepositBalance(assetId, inputOwner, publicInput);
+                }
+
+                if (publicOutput > 0) {
+                    address outputOwner;
+                    assembly {
+                        outputOwner := mload(add(proofDataPtr, 0x160))
+                    }
+                    withdraw(publicOutput, outputOwner, assetId);
+                }
             }
+            proofDataPtr += txPubInputLength;
         }
     }
 
-    function transferFee(bytes calldata proofData) internal {
+    function transferFee(bytes memory proofData) internal {
         for (uint256 i = 0; i < numberOfAssets; ++i) {
             uint256 txFee = extractTotalTxFee(proofData, i);
             if (txFee > 0) {
@@ -552,6 +660,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     ) internal {
         require(receiverAddress != address(0), 'Rollup Processor: ZERO_ADDRESS');
         if (assetId == 0) {
+            // We explicitly do not throw if this call fails, as this opens up the possiblity of 
+            // griefing attacks, as engineering a failed withdrawal will invalidate an entire rollup block
             payable(receiverAddress).call{gas: 30000, value: withdrawValue}('');
         } else {
             address assetAddress = getSupportedAsset(assetId);
