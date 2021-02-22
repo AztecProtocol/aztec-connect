@@ -213,7 +213,7 @@ describe('user state', () => {
     const blockCreated = new Date();
     const block = createBlock(rollupProofData, blockCreated);
 
-    db.getJoinSplitTx.mockResolvedValue({ settled: undefined });
+    db.getJoinSplitTx.mockResolvedValue({ txHash: '', settled: undefined });
     db.getNoteByNullifier.mockResolvedValueOnce({ index: inputNoteIndex, owner: user.id });
 
     userState.processBlock(block);
@@ -250,7 +250,7 @@ describe('user state', () => {
     });
     const block2 = createBlock(rollupProofData2, blockCreated);
 
-    db.getJoinSplitTx.mockResolvedValue({ settled: undefined });
+    db.getJoinSplitTx.mockResolvedValue({ txHash: '', settled: undefined });
     db.getNoteByNullifier.mockResolvedValueOnce({ index: 0, owner: user.id });
     db.getNoteByNullifier.mockResolvedValueOnce({ index: 1, owner: user.id });
     db.getNoteByNullifier.mockResolvedValueOnce({ index: 2, owner: user.id });
