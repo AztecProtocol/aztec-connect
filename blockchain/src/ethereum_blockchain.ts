@@ -147,6 +147,13 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return this.latestRollupId;
   }
 
+  public async setProvider(provider: EthereumProvider) {
+    const rollupContractAddress = this.contracts.getRollupContractAddress();
+    const contracts = new Contracts(rollupContractAddress, provider);
+    await contracts.init();
+    this.contracts = contracts;
+  }
+
   public async approveProof(account: EthAddress, signingData: Buffer) {
     const proofHash = hashData(signingData);
     return this.contracts.approveProof(account, proofHash);

@@ -106,6 +106,10 @@ export class WalletSdk extends EventEmitter {
     return this.core.awaitSynchronised();
   }
 
+  public async setProvider(provider: EthereumProvider) {
+    await this.blockchain.setProvider(provider);
+  }
+
   public isUserSynching(userId: AccountId) {
     return this.core.isUserSynching(userId);
   }
