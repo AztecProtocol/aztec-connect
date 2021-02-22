@@ -4,11 +4,13 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "build": "tsc -p tsconfig.cjs.json",
+    "build": "yarn clean && tsc -p tsconfig.cjs.json",
     "build:dev": "tsc -p tsconfig.cjs.json --watch",
     "start": "node ./dest",
     "start:dev": "tsc-watch -p tsconfig.cjs.json --onSuccess 'yarn start'",
-    "test": "jest --passWithNoTests"
+    "test": "jest --passWithNoTests",
+    "start:local": "yarn build && DEBUG=bb:user_state ETHEREUM_HOST=http://localhost:8545 NUM_AGENTS=40 ROLLUP_HOST=http://localhost:8081 MNEMONIC='test test test test test test test test test test test junk' node ./dest",
+    "clean": "rm -rf ./dest"
   },
   "jest": {
     "transform": {

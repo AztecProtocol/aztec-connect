@@ -16,7 +16,7 @@ async function main() {
   process.once('SIGTERM', shutdown);
 
   const provider = WalletProvider.fromHost(ETHEREUM_HOST);
-  const agent = new AgentManager(+NUM_AGENTS, ROLLUP_HOST, MNEMONIC, provider);
+  const agent = new AgentManager(+NUM_AGENTS, ROLLUP_HOST, MNEMONIC, provider, ':memory:');
   await agent.start();
 }
 

@@ -16,6 +16,7 @@ export class AgentManager {
     private rollupHost: string,
     private mnemonic: string,
     private provider: WalletProvider,
+    private dbPath: string,
   ) {}
 
   public async start() {
@@ -33,7 +34,7 @@ export class AgentManager {
       saveProvingKey: false,
       clearDb: true,
       debug: false,
-      dbPath: ':memory:',
+      dbPath: this.dbPath,
     });
 
     this.sdk.on(SdkEvent.LOG, console.log);

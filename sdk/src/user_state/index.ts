@@ -112,6 +112,10 @@ export class UserState extends EventEmitter {
 
       for (let i = 0; i < proofData.innerProofData.length; ++i) {
         const proof = proofData.innerProofData[i];
+        if (proof.isPadding()) {
+          continue;
+        }
+
         const noteStartIndex = proofData.dataStartIndex + i * 2;
 
         if (proof.proofId === 0) {
@@ -212,9 +216,11 @@ export class UserState extends EventEmitter {
     await this.refreshNotePicker();
 
     if (savedTx) {
+      debug(`settling tx: ${savedTx.txHash.toString()}`);
       await this.db.settleJoinSplitTx(txHash, blockCreated);
     } else {
       const tx = this.recoverJoinSplitTx(proof, blockCreated, newNote, changeNote, destroyedNote1, destroyedNote2);
+      debug(`recovered tx: ${tx.txHash.toString()}`);
       await this.db.addJoinSplitTx(tx);
     }
   }
@@ -366,8 +372,10 @@ export class UserState extends EventEmitter {
 
   public async addTx(tx: UserJoinSplitTx | UserAccountTx) {
     if (isJoinSplitTx(tx)) {
+      debug(`adding join split tx: ${tx.txHash}`);
       await this.db.addJoinSplitTx(tx);
     } else {
+      debug(`adding account tx: ${tx.txHash}`);
       await this.db.addAccountTx(tx);
     }
     this.emit(UserStateEvent.UPDATED_USER_STATE, this.user.id);

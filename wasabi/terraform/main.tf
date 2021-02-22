@@ -43,8 +43,8 @@ resource "aws_ecs_task_definition" "wasabi" {
   family                   = "wasabi"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
-  cpu                      = "1024"
-  memory                   = "2048"
+  cpu                      = "4096"
+  memory                   = "8192"
   execution_role_arn       = data.terraform_remote_state.setup_iac.outputs.ecs_task_execution_role_arn
 
 
@@ -54,7 +54,7 @@ resource "aws_ecs_task_definition" "wasabi" {
     "name": "wasabi",
     "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/wasabi:latest",
     "essential": true,
-    "memoryReservation": 2048,
+    "memoryReservation": 8192,
     "portMappings": [
       {
         "containerPort": 80
@@ -71,7 +71,7 @@ resource "aws_ecs_task_definition" "wasabi" {
       },
       {
         "name": "NUM_AGENTS",
-        "value": "30"
+        "value": "70"
       }
     ],
     "logConfiguration": {
