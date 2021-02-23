@@ -130,9 +130,9 @@ export class UserState extends EventEmitter {
         if (proof.proofId === 1) {
           await this.handleAccountTx(proof, noteStartIndex, block.created);
         }
-
-        this.user.syncedToRollup = block.rollupId;
       }
+
+      this.user = { ...this.user, syncedToRollup: proofData.rollupId };
     }
 
     await this.db.updateUser(this.user);

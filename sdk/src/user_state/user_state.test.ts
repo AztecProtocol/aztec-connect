@@ -87,6 +87,7 @@ describe('user state', () => {
     outputOwner = EthAddress.ZERO,
     newNoteNonce = user.nonce,
     rollupId = 0,
+    isPadding = false,
   } = {}) => {
     const ephPrivKey = createEphemeralPrivKey();
     const note1 = TreeNote.createFromEphPriv(
@@ -108,7 +109,9 @@ describe('user state', () => {
     const gibberishNote = TreeNote.createFromEphPriv(GrumpkinAddress.randomAddress(), 0n, 0, 0, ephPrivKey, grumpkin);
     const encryptedNote1 = randomBytes(64);
     const encryptedNote2 = randomBytes(64);
-    const nullifier1 = noteAlgos.computeNoteNullifier(randomBytes(64), 0, user.privateKey);
+    const nullifier1 = isPadding
+      ? Buffer.alloc(32)
+      : noteAlgos.computeNoteNullifier(randomBytes(64), 0, user.privateKey);
     const nullifier2 = noteAlgos.computeNoteNullifier(randomBytes(64), 1, user.privateKey);
     const totalTxFees = new Array(RollupProofData.NUMBER_OF_ASSETS).fill(0).map(() => randomBytes(32));
     const viewingKeys = [
@@ -278,6 +281,40 @@ describe('user state', () => {
       ...user,
       syncedToRollup: block2.rollupId,
     });
+  });
+
+  it('should correctly update syncedToRollup', async () => {
+    const initialUser = userState.getUser();
+    expect(initialUser.syncedToRollup).toBe(-1);
+
+    const blocks = Array(5)
+      .fill(0)
+      .map((_, i) =>
+        createBlock(
+          generateRollup({
+            rollupId: i,
+          }),
+        ),
+      );
+    await userState.handleBlocks(blocks);
+
+    const user = userState.getUser();
+    expect(user.syncedToRollup).toBe(4);
+    expect(user).not.toBe(initialUser);
+
+    const paddingBlocks = Array(3)
+      .fill(0)
+      .map((_, i) =>
+        createBlock(
+          generateRollup({
+            rollupId: blocks.length + i,
+            isPadding: true,
+          }),
+        ),
+      );
+    await userState.handleBlocks(paddingBlocks);
+
+    expect(userState.getUser().syncedToRollup).toBe(7);
   });
 
   it('do nothing if it cannot decrypt new notes', async () => {
