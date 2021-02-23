@@ -65,6 +65,7 @@ export class Server {
       provider,
       publishInterval,
       reimbursementFeeLimit,
+      feeGasPrice,
       numInnerRollupTxs,
       numOuterRollupProofs,
     );
@@ -143,9 +144,6 @@ export class Server {
 
     const rollups = await this.rollupDb.getSettledRollups(from);
     return rollups.map(dao => {
-      if (!dao.rollupProof) {
-        console.log(dao);
-      }
       return {
         txHash: new TxHash(dao.ethTxHash!),
         created: dao.created,
@@ -184,13 +182,13 @@ export class Server {
   }
 
   public async receiveTx(tx: Tx) {
-    const end = this.metrics.receiveTxTimer();
     const start = new Date().getTime();
+    const end = this.metrics.receiveTxTimer();
     const result = await this.txReceiver.receiveTx(tx);
+    end();
     console.log(
       `Received tx in ${new Date().getTime() - start}ms (unsettled: ${await this.rollupDb.getUnsettledTxCount()})`,
     );
-    end();
     return result;
   }
 

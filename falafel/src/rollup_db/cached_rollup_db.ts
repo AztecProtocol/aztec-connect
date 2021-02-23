@@ -2,6 +2,7 @@ import { TxDao } from '../entity/tx';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { RollupDao } from '../entity/rollup';
 import { SyncRollupDb } from './sync_rolllup_db';
+import { TxHash } from 'barretenberg/tx_hash';
 
 export class CachedRollupDb extends SyncRollupDb {
   private pendingTxCount?: number;
@@ -94,8 +95,8 @@ export class CachedRollupDb extends SyncRollupDb {
     return result;
   }
 
-  public async confirmMined(id: number, gasUsed: number, gasPrice: bigint, mined: Date) {
-    await super.confirmMined(id, gasUsed, gasPrice, mined);
+  public async confirmMined(id: number, gasUsed: number, gasPrice: bigint, mined: Date, ethTxHash: TxHash) {
+    await super.confirmMined(id, gasUsed, gasPrice, mined, ethTxHash);
     this.nextRollupId = undefined;
     this.purge();
     this.purgeRollupCaches();

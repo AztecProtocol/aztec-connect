@@ -11,6 +11,12 @@ export interface Receipt {
   blockNum: number;
 }
 
+export interface SendTxOptions {
+  gasPrice?: bigint;
+  gasLimit?: number;
+  signingAddress?: EthAddress;
+}
+
 export type PermitArgs = { deadline: bigint; approvalAmount: bigint; signature: EthereumSignature };
 
 export interface Blockchain extends BlockSource, BlockchainStatusSource, EthereumSigner {
@@ -47,11 +53,15 @@ export interface Blockchain extends BlockSource, BlockchainStatusSource, Ethereu
     signingAddress?: EthAddress,
   ): Promise<Buffer>;
 
-  sendTx(tx: Buffer): Promise<TxHash>;
+  sendTx(tx: Buffer, options?: SendTxOptions): Promise<TxHash>;
 
   getAsset(assetId: AssetId): Asset;
 
   isContract(address: EthAddress): Promise<boolean>;
 
   getUserProofApprovalStatus(address: EthAddress, proofData: Buffer): Promise<boolean>;
+
+  getGasPrice(): Promise<bigint>;
+
+  estimateGas(data: Buffer): Promise<number>;
 }

@@ -9,7 +9,7 @@ import { RollupProofData } from 'barretenberg/rollup_proof';
 import { Block } from 'barretenberg/block_source';
 import { EthereumProvider } from './ethereum_provider';
 import { solidityFormatSignatures } from './solidity_format_signatures';
-import { Asset, EthereumSignature, PermitArgs, TypedData } from 'barretenberg/blockchain';
+import { Asset, EthereumSignature, PermitArgs, SendTxOptions, TypedData } from 'barretenberg/blockchain';
 import { TokenAsset } from './token_asset';
 import { TxHash } from 'barretenberg/tx_hash';
 import { EthAsset } from './eth_asset';
@@ -148,17 +148,32 @@ export class Contracts {
     return Buffer.from(tx.data!.slice(2), 'hex');
   }
 
-  public async sendTx(data: Buffer, signingAddress?: EthAddress, gasLimit?: number) {
+  public async sendTx(data: Buffer, options: SendTxOptions = {}) {
+    const { signingAddress, gasLimit } = options;
     const signer = signingAddress ? this.provider.getSigner(signingAddress.toString()) : this.provider.getSigner(0);
     const from = await signer.getAddress();
+    const gasPrice = options.gasPrice || (await this.getGasPrice());
     const txRequest = {
       to: this.rollupContractAddress.toString(),
       from,
       gasLimit,
+      gasPrice: `0x${gasPrice.toString(16)}`,
       data,
     };
     const txResponse = await signer.sendTransaction(txRequest);
     return TxHash.fromString(txResponse.hash);
+  }
+
+  public async estimateGas(data: Buffer) {
+    const signer = this.provider.getSigner(0);
+    const from = await signer.getAddress();
+    const txRequest = {
+      to: this.rollupContractAddress.toString(),
+      from,
+      data,
+    };
+    const estimate = await this.provider.estimateGas(txRequest);
+    return estimate.toNumber();
   }
 
   public async depositPendingFunds(
@@ -295,5 +310,9 @@ export class Contracts {
   public async isContract(address: EthAddress) {
     const result = await this.provider.getCode(address.toString());
     return result.toString() !== '0x';
+  }
+
+  public async getGasPrice() {
+    return BigInt((await this.provider.getGasPrice()).toString());
   }
 }

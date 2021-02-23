@@ -24,6 +24,7 @@ export class RollupPublisher {
     private blockchain: Blockchain,
     private publishInterval: Duration,
     private feeLimit: bigint,
+    private feeGasPrice: bigint,
     provider: EthereumProvider,
     private metrics: Metrics,
   ) {
@@ -165,7 +166,9 @@ export class RollupPublisher {
   private async sendRollupProof(txData: Buffer) {
     while (!this.interrupted) {
       try {
-        return await this.blockchain.sendTx(txData);
+        const reportedPrice = await this.blockchain.getGasPrice();
+        const gasPrice = reportedPrice < this.feeGasPrice ? reportedPrice : this.feeGasPrice;
+        return await this.blockchain.sendTx(txData, { gasPrice });
       } catch (err) {
         console.log(err.message.slice(0, 200));
         await this.sleepOrInterrupted(60000);

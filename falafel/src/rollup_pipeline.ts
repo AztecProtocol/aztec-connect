@@ -23,6 +23,7 @@ export class RollupPipeline {
     provider: EthereumProvider,
     publishInterval: Duration,
     feeLimit: bigint,
+    feeGasPrice: bigint,
     numInnerRollupTxs: number,
     numOuterRollupProofs: number,
   ) {
@@ -33,7 +34,15 @@ export class RollupPipeline {
       `Pipeline inner_txs/outer_txs/rollup_size: ${numInnerRollupTxs}/${numOuterRollupProofs}/${outerRollupSize}`,
     );
 
-    this.rollupPublisher = new RollupPublisher(rollupDb, blockchain, publishInterval, feeLimit, provider, metrics);
+    this.rollupPublisher = new RollupPublisher(
+      rollupDb,
+      blockchain,
+      publishInterval,
+      feeLimit,
+      feeGasPrice,
+      provider,
+      metrics,
+    );
     const rollupAggregator = new RollupAggregator(
       proofGenerator,
       this.rollupPublisher,
@@ -88,6 +97,7 @@ export class RollupPipelineFactory {
     private provider: EthereumProvider,
     private publishInterval: Duration,
     private feeLimit: bigint,
+    private feeGasPrice: bigint,
     private numInnerRollupTxs: number,
     private numOuterRollupProofs: number,
   ) {}
@@ -107,6 +117,7 @@ export class RollupPipelineFactory {
       this.provider,
       this.publishInterval,
       this.feeLimit,
+      this.feeGasPrice,
       this.numInnerRollupTxs,
       this.numOuterRollupProofs,
     );

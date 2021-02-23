@@ -8,6 +8,7 @@ import { TxDao } from '../entity/tx';
 import { randomRollup, randomRollupProof, randomTx } from './fixtures';
 import { RollupDb, TypeOrmRollupDb } from './';
 import { EthAddress } from 'barretenberg/address';
+import { TxHash } from 'barretenberg/tx_hash';
 
 describe('rollup_db', () => {
   let connection: Connection;
@@ -210,7 +211,7 @@ describe('rollup_db', () => {
     const settledRollups1 = await rollupDb.getSettledRollups();
     expect(settledRollups1.length).toBe(0);
 
-    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date());
+    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random());
 
     const settledRollups2 = await rollupDb.getSettledRollups();
     expect(settledRollups2.length).toBe(1);
@@ -233,7 +234,7 @@ describe('rollup_db', () => {
 
     expect(await rollupDb.getUnsettledTxCount()).toBe(1);
 
-    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date());
+    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random());
 
     expect(await rollupDb.getUnsettledTxCount()).toBe(0);
   });
@@ -261,7 +262,7 @@ describe('rollup_db', () => {
     const rollup = randomRollup(0, rollupProof);
     await rollupDb.addRollup(rollup);
 
-    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date());
+    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random());
 
     {
       const result = await rollupDb.getUnsettledJoinSplitTxsForInputAddress(addr);

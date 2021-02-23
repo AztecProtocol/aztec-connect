@@ -5,12 +5,11 @@ import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
 import { RollupDb, TypeOrmRollupDb } from '../rollup_db';
-import { randomRollup, randomRollupProof, randomTx } from '../rollup_db/fixtures';
+import { randomRollupProof } from '../rollup_db/fixtures';
 import { getQuery } from './query_builder';
 
 describe('Query Builder', () => {
   let connection: Connection;
-  let txRep: Repository<TxDao>;
   let rollupProofRep: Repository<RollupProofDao>;
   let rollupDb: RollupDb;
 
@@ -24,7 +23,6 @@ describe('Query Builder', () => {
       logging: false,
     });
 
-    txRep = connection.getRepository(TxDao);
     rollupProofRep = connection.getRepository(RollupProofDao);
 
     rollupDb = new TypeOrmRollupDb(connection);

@@ -242,8 +242,11 @@ export class TypeOrmRollupDb implements RollupDb {
     await this.rollupRep.update({ id }, { ethTxHash: txHash.toBuffer() });
   }
 
-  public async confirmMined(id: number, gasUsed: number, gasPrice: bigint, mined: Date) {
-    await this.rollupRep.update({ id }, { mined, gasUsed, gasPrice: toBufferBE(gasPrice, 32) });
+  public async confirmMined(id: number, gasUsed: number, gasPrice: bigint, mined: Date, ethTxHash: TxHash) {
+    await this.rollupRep.update(
+      { id },
+      { mined, gasUsed, gasPrice: toBufferBE(gasPrice, 32), ethTxHash: ethTxHash.toBuffer() },
+    );
   }
 
   public getSettledRollups(from = 0, descending = false, take?: number) {

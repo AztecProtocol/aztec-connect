@@ -3,7 +3,7 @@ import { EthAddress } from 'barretenberg/address';
 import { AssetId } from 'barretenberg/asset';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
-import { Blockchain, BlockchainStatus, PermitArgs, Receipt, TypedData } from 'barretenberg/blockchain';
+import { Blockchain, BlockchainStatus, PermitArgs, Receipt, SendTxOptions, TypedData } from 'barretenberg/blockchain';
 import { Contracts } from './contracts';
 import { TxHash } from 'barretenberg/tx_hash';
 import { validateSignature } from './validate_signature';
@@ -219,8 +219,9 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     );
   }
 
-  public sendTx(tx: Buffer, signingAddress?: EthAddress) {
-    return this.contracts.sendTx(tx, signingAddress, this.config.gasLimit);
+  public sendTx(tx: Buffer, options: SendTxOptions = {}) {
+    options = { ...options, gasLimit: options.gasLimit || this.config.gasLimit };
+    return this.contracts.sendTx(tx, options);
   }
 
   private getRequiredConfirmations() {
@@ -283,5 +284,13 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
 
   public async isContract(address: EthAddress) {
     return this.contracts.isContract(address);
+  }
+
+  public async getGasPrice() {
+    return this.contracts.getGasPrice();
+  }
+
+  public async estimateGas(data: Buffer) {
+    return this.contracts.estimateGas(data);
   }
 }

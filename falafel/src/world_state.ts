@@ -158,7 +158,7 @@ export class WorldState {
     const rollupProof = await this.rollupDb.getRollupProof(rollup.rollupHash, true);
     if (rollupProof) {
       // Our rollup. Confirm mined and track settlement times.
-      await this.rollupDb.confirmMined(rollup.rollupId, block.gasUsed, block.gasPrice, block.created);
+      await this.rollupDb.confirmMined(rollup.rollupId, block.gasUsed, block.gasPrice, block.created, block.txHash);
 
       for (const inner of rollup.innerProofData) {
         if (inner.isPadding()) {
