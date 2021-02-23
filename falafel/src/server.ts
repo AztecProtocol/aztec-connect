@@ -186,9 +186,7 @@ export class Server {
     const end = this.metrics.receiveTxTimer();
     const result = await this.txReceiver.receiveTx(tx);
     end();
-    console.log(
-      `Received tx in ${new Date().getTime() - start}ms (unsettled: ${await this.rollupDb.getUnsettledTxCount()})`,
-    );
+    console.log(`Received tx in ${new Date().getTime() - start}ms.`);
     return result;
   }
 
