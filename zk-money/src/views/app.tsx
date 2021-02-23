@@ -78,7 +78,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
   }
 
   componentDidMount() {
-    this.app.on(AppEvent.SESSION_STARTED, this.handleSessionStarted);
+    this.app.on(AppEvent.SESSION_CLOSED, this.handleSessionClosed);
     this.app.on(AppEvent.UPDATED_LOGIN_STATE, this.handleLoginStateChange);
     this.app.on(AppEvent.UPDATED_PROVIDER_STATE, this.handleProviderStateChange);
     this.app.on(AppEvent.UPDATED_WORLD_STATE, this.handleWorldStateChange);
@@ -145,9 +145,10 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
     }
   };
 
-  private handleSessionStarted = () => {
+  private handleSessionClosed = () => {
+    const { action } = this.state;
     this.setState({
-      action: AppAction.LOGIN,
+      action: action === AppAction.ACCOUNT ? AppAction.LOGIN : action,
       loginState: this.app.loginState,
       worldState: this.app.worldState,
       providerState: this.app.providerState,
@@ -157,14 +158,13 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
       [AccountAction.SHIELD]: initialShieldForm,
       [AccountAction.SEND]: initialSendForm,
       [AccountAction.MERGE]: initialMergeForm,
-      systemMessage: {
-        message: '',
-        type: MessageType.TEXT,
-      },
     });
   };
 
   private handleLogin = () => {
+    if (this.state.action !== AppAction.LOGIN) {
+      this.setState({ action: AppAction.LOGIN });
+    }
     this.app.createSession();
   };
 

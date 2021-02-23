@@ -1,5 +1,14 @@
-import { AccountId, AssetId, EthAddress, Note, SdkEvent, TxType, WalletSdk } from '@aztec/sdk';
-import { Web3Provider } from '@ethersproject/providers';
+import {
+  AccountAliasId,
+  AccountId,
+  AssetId,
+  EthAddress,
+  GrumpkinAddress,
+  Note,
+  SdkEvent,
+  TxType,
+  WalletSdk,
+} from '@aztec/sdk';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { debounce, DebouncedFunc, uniqWith } from 'lodash';
@@ -98,6 +107,7 @@ export class Account extends EventEmitter {
   private debounceUpdateShieldRecipient: DebouncedFunc<() => void>;
   private debounceUpdateSendRecipient: DebouncedFunc<() => void>;
   private debounceUpdateSendMinFee: DebouncedFunc<() => void>;
+  private balanceSubscriber?: number;
 
   private readonly settledInDebounceWait = 1000;
   private readonly aliasDebounceWait = 1000;
@@ -110,9 +120,8 @@ export class Account extends EventEmitter {
     private provider: Provider,
     private db: Database,
     private graphql: GraphQLService,
-    private readonly graphqlEndpoint: string,
+    private readonly explorerUrl: string,
     private readonly depositLimit: bigint,
-    private readonly rollupPublishInterval: number,
   ) {
     super();
     this.accountState.alias = alias;
@@ -171,6 +180,7 @@ export class Account extends EventEmitter {
     }
 
     this.debounceRefreshAccountState.cancel();
+    this.unsubscribeToBalance();
     this.activeAction = undefined;
     this.asset = assets[assetId];
 
@@ -193,6 +203,9 @@ export class Account extends EventEmitter {
 
     this.resetForm(action);
     this.updateActionState(action);
+    if (action === AccountAction.SHIELD) {
+      this.subscribeToBalance();
+    }
   }
 
   clearAction() {
@@ -201,6 +214,7 @@ export class Account extends EventEmitter {
       return;
     }
 
+    this.unsubscribeToBalance();
     this.updateActionState();
   }
 
@@ -560,7 +574,7 @@ export class Account extends EventEmitter {
     const publicInput = amount + fee;
     const ethAddress = EthAddress.fromString(form.ethAddress.value);
     const deposited = await this.sdk.getUserPendingDeposit(this.asset.id, ethAddress);
-    const pendingDeposit = await this.graphql.getPendingDeposit(this.asset.id, ethAddress);
+    const pendingDeposit = await this.getPendingDeposit(this.asset.id, ethAddress);
     const toBeDeposited = max(publicInput + pendingDeposit - deposited, 0n);
 
     this.updateForm(AccountAction.SHIELD, {
@@ -763,7 +777,7 @@ export class Account extends EventEmitter {
     let minFee: bigint;
     if (!EthAddress.isAddress(recipientAddress)) {
       minFee = minFeeTransfer.value;
-    } else if (await this.isContract(EthAddress.fromString(recipientAddress))) {
+    } else if (await this.sdk.isContract(EthAddress.fromString(recipientAddress))) {
       minFee = minFeeContract.value;
     } else {
       minFee = minFeeWallet.value;
@@ -832,21 +846,15 @@ export class Account extends EventEmitter {
 
   private async getSettledIn(minFee: bigint, fee: bigint) {
     const { nextPublishTime, pendingTxCount, txsPerRollup, minFees } = await this.sdk.getRemoteStatus();
-    const goneBy = Math.max(
-      0,
-      nextPublishTime ? this.rollupPublishInterval - Math.ceil((nextPublishTime.getTime() - Date.now()) / 1000) : 0,
-    );
-    const queuedRollups = Math.floor(pendingTxCount / txsPerRollup);
-    const baseSettleTime = Math.max(0, queuedRollups * this.rollupPublishInterval - goneBy);
+    let settledIn = Math.ceil((nextPublishTime.getTime() - Date.now()) / 1000);
     const baseFee = minFees[this.asset.id][TxType.TRANSFER];
-    let settledIn = this.rollupPublishInterval - (queuedRollups ? 0 : goneBy);
     if (baseFee) {
-      const expectedNewTxs = txsPerRollup - (pendingTxCount % txsPerRollup);
+      const expectedNewTxs = txsPerRollup - pendingTxCount;
       const baseInterval = settledIn / expectedNewTxs;
       const advance = Number(min(BigInt(expectedNewTxs), (fee - (minFee - baseFee)) / baseFee));
       settledIn -= baseInterval * advance;
     }
-    return baseSettleTime + settledIn;
+    return settledIn;
   }
 
   private isPublicSend(form: SendForm) {
@@ -860,7 +868,7 @@ export class Account extends EventEmitter {
     }
     const recipient = form.recipient.value;
     const isContract = EthAddress.isAddress(recipient)
-      ? await this.isContract(EthAddress.fromString(recipient))
+      ? await this.sdk.isContract(EthAddress.fromString(recipient))
       : false;
     return this.sdk.getFee(form.asset.value.id, isContract ? TxType.WITHDRAW_TO_CONTRACT : TxType.WITHDRAW_TO_WALLET);
   }
@@ -870,6 +878,25 @@ export class Account extends EventEmitter {
     return [spendableNotes.slice(-3)]
       .filter(notes => sumNotes(notes) - fee > spendableBalance)
       .map(notes => notes.reduce((values, note) => [...values, note.value], [] as bigint[]));
+  }
+
+  private subscribeToBalance(interval = 2000) {
+    if (this.balanceSubscriber !== undefined) {
+      debug('Already subscribed to balance changes.');
+      return;
+    }
+    this.balanceSubscriber = window.setInterval(async () => {
+      const { ethAddress, publicBalance: prevPublicBalance } = this.accountState;
+      const publicBalance = ethAddress ? await this.sdk.getPublicBalance(this.asset.id, ethAddress) : 0n;
+      if (publicBalance !== prevPublicBalance) {
+        await this.updateAccountState({ publicBalance });
+      }
+    }, interval);
+  }
+
+  private unsubscribeToBalance() {
+    clearInterval(this.balanceSubscriber);
+    this.balanceSubscriber = undefined;
   }
 
   private handleEthAddressChange = async (ethAddress?: EthAddress) => {
@@ -887,10 +914,10 @@ export class Account extends EventEmitter {
   };
 
   private refreshAccountState = async () => {
-    const accountTxs = (await this.sdk.getAccountTxs(this.userId)).map(tx => parseAccountTx(tx, this.graphqlEndpoint));
+    const accountTxs = (await this.sdk.getAccountTxs(this.userId)).map(tx => parseAccountTx(tx, this.explorerUrl));
     const settled = accountTxs.length > 1 || !!accountTxs[0]?.settled;
     let txsPublishTime = accountTxs.some(tx => !tx.settled)
-      ? (await this.sdk.getRemoteStatus()).nextPublishTime || new Date(Date.now() + this.rollupPublishInterval * 1000)
+      ? (await this.sdk.getRemoteStatus()).nextPublishTime
       : undefined;
 
     const asset = this.asset;
@@ -923,8 +950,7 @@ export class Account extends EventEmitter {
       }
     }
     if (!txsPublishTime && userJoinSplitTxs.some(tx => !tx.settled)) {
-      txsPublishTime =
-        (await this.sdk.getRemoteStatus()).nextPublishTime || new Date(Date.now() + this.rollupPublishInterval * 1000);
+      txsPublishTime = (await this.sdk.getRemoteStatus()).nextPublishTime;
     }
 
     await this.updateAccountState({
@@ -936,7 +962,7 @@ export class Account extends EventEmitter {
       accountTxs,
       joinSplitTxs: uniqWith(userJoinSplitTxs, (tx0, tx1) => tx0.txHash.equals(tx1.txHash))
         .sort((a, b) => (!a.settled && b.settled ? -1 : 0))
-        .map(tx => parseJoinSplitTx(tx, this.graphqlEndpoint)),
+        .map(tx => parseJoinSplitTx(tx, this.explorerUrl)),
       txsPublishTime,
       settled,
     });
@@ -986,7 +1012,50 @@ export class Account extends EventEmitter {
   // TODO - Find a way to get pending account's public key without having to compute its alias hash or send the alias to server.
   private async getPendingAccountId(alias: string) {
     const aliasHash = (this.sdk as any).core.computeAliasHash(alias);
-    return this.graphql.getPendingAccountId(aliasHash);
+    const take = 100;
+    for (let retry = 0; retry < 10; ++retry) {
+      const pendingTxs = await this.graphql.getPendingTxs(take, retry * take);
+      const accountTxs = pendingTxs.filter(tx => tx.proofId === 1);
+      const account = accountTxs.find(({ assetId }) => {
+        const id = AccountAliasId.fromBuffer(Buffer.from(assetId, 'hex'));
+        return id.aliasHash.equals(aliasHash);
+      });
+
+      if (account) {
+        const { assetId, publicInput, publicOutput } = account;
+        const id = AccountAliasId.fromBuffer(Buffer.from(assetId, 'hex'));
+        const publicKey = new GrumpkinAddress(
+          Buffer.concat([Buffer.from(publicInput, 'hex'), Buffer.from(publicOutput, 'hex')]),
+        );
+        return new AccountId(publicKey, id.nonce);
+      }
+
+      if (pendingTxs.length < take) {
+        break;
+      }
+    }
+  }
+
+  async getPendingDeposit(assetId: AssetId, inputOwner: EthAddress) {
+    const take = 100;
+    let pendingDeposit = 0n;
+    for (let retry = 0; retry < 10; ++retry) {
+      const pendingTxs = await this.graphql.getPendingTxs(take, retry * take);
+      pendingDeposit +=
+        pendingTxs
+          .filter(
+            tx =>
+              tx.proofId === 0 &&
+              +tx.assetId === assetId &&
+              new EthAddress(Buffer.from(tx.inputOwner, 'hex')).equals(inputOwner),
+          )
+          .reduce((sum, tx) => sum + BigInt(`0x${tx.publicInput}`), 0n) || 0n;
+
+      if (pendingTxs.length < take) {
+        break;
+      }
+    }
+    return pendingDeposit;
   }
 
   private async getJoinSplitTxs(userId: AccountId) {
@@ -1003,11 +1072,5 @@ export class Account extends EventEmitter {
     } catch (e) {
       return false;
     }
-  }
-
-  private async isContract(address: EthAddress) {
-    const web3provider = new Web3Provider(this.provider.ethereumProvider);
-    const result = await web3provider.getCode(address.toString());
-    return result.toString() !== '0x';
   }
 }

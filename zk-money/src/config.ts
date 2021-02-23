@@ -5,7 +5,6 @@ export interface Config {
   infuraId?: string;
   network: string;
   ethereumHost?: string;
-  rollupPublishInterval: number;
   depositLimit: bigint;
   sessionTimeout: number;
   debug: boolean;
@@ -17,7 +16,6 @@ export const getConfig = (): Config => {
     REACT_APP_INFURA_ID,
     REACT_APP_NETWORK,
     REACT_APP_ETHEREUM_HOST,
-    REACT_APP_ROLLUP_PUBLISH_INTERVAL,
     REACT_APP_DEPOSIT_LIMIT,
     REACT_APP_SESSION_TIMEOUT,
     REACT_APP_ENABLE_DEBUG,
@@ -38,13 +36,11 @@ export const getConfig = (): Config => {
       ? `${window.location.protocol}//${window.location.hostname}:3000`
       : 'https://explorer.aztec.network';
 
-  const infuraId = REACT_APP_INFURA_ID || (NODE_ENV === 'development' ? 'b3320e6dfb2944d69e7b160be3473874' : undefined);
+  const infuraId = NODE_ENV === 'development' ? 'b3320e6dfb2944d69e7b160be3473874' : '6a04b7c89c5b421faefde663f787aa35';
 
   const network = REACT_APP_NETWORK || (NODE_ENV === 'development' ? 'ganache' : 'goerli');
 
   const ethereumHost = REACT_APP_ETHEREUM_HOST || (NODE_ENV === 'development' ? 'http://localhost:8545' : undefined);
-
-  const rollupPublishInterval = +(REACT_APP_ROLLUP_PUBLISH_INTERVAL || 6 * 3600);
 
   const depositLimit = BigInt(REACT_APP_DEPOSIT_LIMIT || '1'.padEnd(19, '0'));
 
@@ -59,7 +55,6 @@ export const getConfig = (): Config => {
     infuraId,
     network,
     ethereumHost,
-    rollupPublishInterval,
     depositLimit,
     sessionTimeout,
     debug,

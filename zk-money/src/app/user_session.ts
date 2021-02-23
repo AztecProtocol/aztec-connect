@@ -395,7 +395,7 @@ export class UserSession extends EventEmitter {
       const { accountPublicKey } = this.linkedAccount || this.signedInAccount!;
       const userId = await this.signIn(new AccountId(accountPublicKey, accountNonce), alias);
 
-      const { graphqlEndpoint, depositLimit, rollupPublishInterval } = this.config;
+      const { depositLimit, explorerUrl } = this.config;
       this.account = new Account(
         userId,
         alias,
@@ -403,9 +403,8 @@ export class UserSession extends EventEmitter {
         this.provider,
         this.db,
         this.graphql,
-        graphqlEndpoint,
+        explorerUrl,
         depositLimit,
-        rollupPublishInterval,
       );
       for (const e in AccountEvent) {
         const event = (AccountEvent as any)[e];

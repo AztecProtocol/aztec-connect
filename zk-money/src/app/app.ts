@@ -6,7 +6,7 @@ import { Config } from '../config';
 import { AccountState, initialAccountState } from './account';
 import { AccountAction } from './account_txs';
 import { Database } from './database';
-import { Form, SystemMessage } from './form';
+import { Form, MessageType, SystemMessage } from './form';
 import { GraphQLService } from './graphql_service';
 import { getNetwork, Network } from './networks';
 import { ProviderState } from './provider';
@@ -23,7 +23,7 @@ import { Wallet } from './wallet_providers';
 const debug = createDebug('zm:app');
 
 export enum AppEvent {
-  SESSION_STARTED = 'SESSION_STARTED',
+  SESSION_CLOSED = 'SESSION_CLOSED',
   UPDATED_LOGIN_STATE = 'UPDATED_LOGIN_STATE',
   UPDATED_PROVIDER_STATE = 'UPDATED_PROVIDER_STATE',
   UPDATED_ACTION_STATE = 'UPDATED_ACTION_STATE',
@@ -34,7 +34,7 @@ export enum AppEvent {
 }
 
 export interface App {
-  on(event: AppEvent.SESSION_STARTED, listener: () => void): this;
+  on(event: AppEvent.SESSION_CLOSED, listener: () => void): this;
   on(event: AppEvent.UPDATED_LOGIN_STATE, listener: (state: LoginState) => void): this;
   on(event: AppEvent.UPDATED_PROVIDER_STATE, listener: (state: ProviderState) => void): this;
   on(event: AppEvent.UPDATED_WORLD_STATE, listener: (state: WorldState) => void): this;
@@ -116,7 +116,6 @@ export class App extends EventEmitter {
       const event = (UserSessionEvent as any)[e];
       this.session.on(event, (...args) => this.emit(event, ...args));
     }
-    this.emit(AppEvent.SESSION_STARTED);
   };
 
   connectWallet = async (wallet: Wallet) => {
@@ -150,8 +149,10 @@ export class App extends EventEmitter {
   restart = async () => {
     const session = this.session;
     this.session = undefined;
-    this.createSession();
     session!.removeAllListeners();
+    this.emit(AppEvent.UPDATED_SYSTEM_MESSAGE, { message: '', type: MessageType.TEXT });
+    this.emit(AppEvent.SESSION_CLOSED);
+    this.createSession();
     await session!.close();
   };
 
@@ -159,6 +160,7 @@ export class App extends EventEmitter {
     const session = this.session;
     this.session = undefined;
     session!.removeAllListeners();
+    this.emit(AppEvent.SESSION_CLOSED);
     await session!.close();
   };
 
