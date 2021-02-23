@@ -5,11 +5,7 @@ export const ContentWrapper = styled.div`
   position: relative;
   padding: 0 ${spacings.xl};
   width: 100%;
-  max-width: ${parseInt(breakpoints.l) - parseInt(spacings.xl) * 2}px;
-
-  @media (max-width: ${breakpoints.l}) {
-    padding: 0 ${spacings.xl};
-  }
+  max-width: ${parseInt(breakpoints.xl) - parseInt(spacings.xl) * 2}px;
 
   @media (max-width: ${breakpoints.m}) {
     padding: 0 ${spacings.l};

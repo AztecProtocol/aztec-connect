@@ -4,8 +4,8 @@ export const fontFamily = {
 };
 
 export const fontSizes = {
-  xl: '45px',
-  l: '40px',
+  xl: '40px',
+  l: '28px',
   m: '20px',
   s: '16px',
   xs: '14px',
@@ -14,8 +14,8 @@ export const fontSizes = {
 export type FontSize = keyof typeof fontSizes;
 
 export const lineHeights = {
-  xl: '70px',
-  l: '60px',
+  xl: '64px',
+  l: '40px',
   m: '32px',
   s: '24px',
   xs: '20px',
@@ -24,8 +24,8 @@ export const lineHeights = {
 export type LineHeight = keyof typeof lineHeights;
 
 export const fontWeights = {
-  light: 300,
   normal: 400,
-  semibold: 500,
+  semibold: 450,
+  bold: 500,
 };
 export type FontWeight = keyof typeof fontWeights;

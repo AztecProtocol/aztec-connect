@@ -1,22 +1,46 @@
-import React from 'react';
-import styled from 'styled-components';
-import { CookiesForm } from '../cookies_form';
-import { breakpoints, colours, spacings } from '../../styles';
+import React, { useState } from 'react';
+import styled, { css } from 'styled-components';
+import { AccountState, SystemMessage, WorldState } from '../../app';
+import { breakpoints, colours, gradients, spacings, Theme } from '../../styles';
+import { CookiesForm, isCookieAccepted } from '../cookies_form';
 import { ContentWrapper } from './content_wrapper';
+import { Footer } from './footer';
 import { Header } from './header';
+import { SystemMessagePopup } from './system_message_popup';
 
 export * from './content_wrapper';
 export * from './section';
 
-const TemplateRoot = styled.div`
+const rootStyle = css`
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(101.14deg, #940dff 11.12%, #0094ff 58.22%, #0094ff 58.22%);
-  color: ${colours.white};
   overflow: hidden;
+`;
+
+const GradientRoot = styled.div`
+  ${rootStyle};
+  background: linear-gradient(101.14deg, ${gradients.primary.from} 11.12%, ${gradients.primary.to} 58.22%);
+  color: ${colours.white};
+`;
+
+const WhiteRoot = styled.div`
+  ${rootStyle};
+  background: ${colours.white};
+`;
+
+interface ContentRootProps {
+  extraFooterSpace: boolean;
+}
+
+const ContentRoot = styled(ContentWrapper)<ContentRootProps>`
+  ${({ extraFooterSpace }) => extraFooterSpace && 'padding-bottom: 160px;'}
+
+  @media (max-width: ${breakpoints.m}) {
+    ${({ extraFooterSpace }) => extraFooterSpace && 'padding-bottom: 216px;'}
+  }
 `;
 
 const CookiesFormRoot = styled.div`
@@ -28,27 +52,50 @@ const CookiesFormRoot = styled.div`
   justify-content: center;
   z-index: 9;
 
-  @media (max-width: ${parseInt(breakpoints.l) - parseInt(spacings.xl) * 2 + 1}px) {
-    bottom: 0;
+  @media (max-width: ${breakpoints.l}) {
+    bottom: ${spacings.l};
+  }
+
+  @media (max-width: ${breakpoints.m}) {
+    bottom: ${spacings.m};
   }
 `;
 
-const CookiesFormWrapper = styled(ContentWrapper)``;
-
 interface TemplateProps {
+  theme: Theme;
   children: React.ReactNode;
+  network?: string;
+  worldState?: WorldState;
+  account?: AccountState;
+  systemMessage?: SystemMessage;
+  onLogout?: () => void;
 }
 
-export const Template: React.FunctionComponent<TemplateProps> = ({ children }) => (
-  <TemplateRoot>
-    <ContentWrapper>
-      <Header />
-      {children}
-    </ContentWrapper>
-    <CookiesFormRoot>
-      <CookiesFormWrapper>
-        <CookiesForm />
-      </CookiesFormWrapper>
-    </CookiesFormRoot>
-  </TemplateRoot>
-);
+export const Template: React.FunctionComponent<TemplateProps> = ({
+  theme,
+  children,
+  network,
+  worldState,
+  account,
+  systemMessage,
+  onLogout,
+}) => {
+  const [withCookie, setWithCookie] = useState(!isCookieAccepted());
+  const TemplateRoot = theme === Theme.GRADIENT ? GradientRoot : WhiteRoot;
+
+  return (
+    <TemplateRoot>
+      <ContentRoot extraFooterSpace={withCookie && theme === Theme.GRADIENT}>
+        <Header theme={theme} network={network} worldState={worldState} account={account} onLogout={onLogout} />
+        {children}
+      </ContentRoot>
+      {theme === Theme.WHITE && <Footer />}
+      {!!systemMessage?.message && <SystemMessagePopup message={systemMessage.message} type={systemMessage.type} />}
+      <CookiesFormRoot>
+        <ContentWrapper>
+          <CookiesForm theme={theme} onClose={() => setWithCookie(false)} />
+        </ContentWrapper>
+      </CookiesFormRoot>
+    </TemplateRoot>
+  );
+};

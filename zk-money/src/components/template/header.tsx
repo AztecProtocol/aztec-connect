@@ -1,64 +1,90 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
-import logo from '../../images/zk.money.svg';
-import { spacings, breakpoints } from '../../styles';
+import { AccountState, WorldState } from '../../app';
+import logo from '../../images/zk_money.svg';
+import logoWhite from '../../images/zk_money_white.svg';
+import { breakpoints, spacings, Theme } from '../../styles';
 import { NetworkIndicator } from '../network_indicator';
+import { UserAccount } from './user_account';
 
 const HeaderRoot = styled.div`
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: flex-start;
   padding: ${spacings.xxl} 0;
 
   @media (max-width: ${breakpoints.s}) {
-    align-items: flex-end;
-  }
-
-  @media (max-width: ${breakpoints.xs}) {
     padding: ${spacings.xl} 0;
-    flex-wrap: wrap;
   }
 `;
 
-const RightSideRoot = styled.div`
-  display: flex;
-  padding: ${spacings.xs} 0;
+interface LogoRootProps {
+  theme: Theme;
+}
 
-  @media (min-width: ${parseInt(breakpoints.xs) + 1}px) and (max-width: ${breakpoints.s}) {
-  }
+const LogoRoot = styled.div<LogoRootProps>`
+  flex-shrink: 0;
+  line-height: 0;
 
-  @media (max-width: ${breakpoints.xs}) {
-    padding: ${spacings.m} 0;
-    width: 100%;
-  }
-`;
-
-const LogoRoot = styled(Link)`
-  display: flex;
-  align-items: flex-end;
-
-  @media (max-width: ${breakpoints.xs}) {
-    flex-wrap: wrap;
+  @media (max-width: ${breakpoints.s}) {
+    ${({ theme }) =>
+      theme === Theme.GRADIENT &&
+      `
+      display: flex;
+      justify-content: center;
+      width: 100%;
+    `}
   }
 `;
 
 const Logo = styled.img`
   margin-right: ${spacings.xs};
   height: 40px;
+`;
 
-  @media (max-width: ${breakpoints.xs}) {
-    height: 40px;
+const AccountRoot = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex: 1;
+`;
+
+const AccountItem = styled.div`
+  padding: ${spacings.xxs} 0;
+`;
+
+const NetworkRoot = styled(AccountItem)`
+  @media (max-width: ${breakpoints.s}) {
+    display: none;
   }
 `;
 
-export const Header: React.FunctionComponent = () => (
+interface HeaderProps {
+  theme: Theme;
+  network?: string;
+  worldState?: WorldState;
+  account?: AccountState;
+  onLogout?: () => void;
+}
+
+export const Header: React.FunctionComponent<HeaderProps> = ({ theme, network, worldState, account, onLogout }) => (
   <HeaderRoot>
-    <LogoRoot to="/">
-      <Logo src={logo} />
+    <LogoRoot theme={theme}>
+      <Link to="/">
+        <Logo src={theme === Theme.GRADIENT ? logoWhite : logo} />
+      </Link>
     </LogoRoot>
-    <RightSideRoot>
-      <NetworkIndicator />
-    </RightSideRoot>
+    <AccountRoot>
+      {!!network && (
+        <NetworkRoot>
+          <NetworkIndicator theme={theme} network={network} />
+        </NetworkRoot>
+      )}
+      {!!account && (
+        <AccountItem>
+          <UserAccount account={account} worldState={worldState!} onLogout={onLogout!} />
+        </AccountItem>
+      )}
+    </AccountRoot>
   </HeaderRoot>
 );

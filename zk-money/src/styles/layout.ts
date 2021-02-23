@@ -7,11 +7,11 @@
 // 768×1024
 export const breakpoints = {
   xxs: '0px',
-  xs: '640px',
-  s: '900px',
-  m: '1080px',
-  l: '1366px',
-  xl: '1920px',
+  xs: '414px',
+  s: '640px',
+  m: '768px',
+  l: '960px',
+  xl: '1024px',
 };
 export type Breakpoint = keyof typeof breakpoints;
 
@@ -27,8 +27,12 @@ export const spacings = {
 };
 export type Spacing = keyof typeof spacings;
 
-export const borderRadius = '10px';
-export const borderRadiusLarge = '20px';
+export const borderRadiuses = {
+  s: '10px',
+  m: '20px',
+  l: '40px',
+};
+export type BorderRadius = keyof typeof borderRadiuses;
 
 const sizes = ['xxs', 'xs', 's', 'm', 'l', 'xl', 'xxl'] as const;
 export type Size = typeof sizes[number];

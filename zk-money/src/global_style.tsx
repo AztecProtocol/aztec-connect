@@ -1,7 +1,7 @@
 import { createGlobalStyle } from 'styled-components';
 import { reset } from 'styled-reset';
-import sohneBuch from './fonts/soehne-web-halbfett.woff2';
-import sohneHalbfett from './fonts/soehne-halbfett.ttf';
+import sohneBuch from './fonts/soehne-web-buch.woff2';
+import sohneHalbfett from './fonts/soehne-web-halbfett.woff2';
 import sohneLeicht from './fonts/soehne-web-leicht.woff2';
 import sohneLeichtKursiv from './fonts/soehne-leicht-kursiv.ttf';
 import sohneMonoBuch from './fonts/soehne-mono-buch.woff';
@@ -16,21 +16,14 @@ export const GlobalStyle = createGlobalStyle`
     font-family: Sohne;
     font-style: normal;
     font-weight: 400;
-    src: url(${sohneBuch});
-  }
-
-  @font-face {
-    font-family: Sohne;
-    font-style: normal;
-    font-weight: 300;
     src: url(${sohneLeicht});
   }
 
   @font-face {
     font-family: Sohne;
-    font-style: italic;
-    font-weight: 300;
-    src: url(${sohneLeichtKursiv});
+    font-style: normal;
+    font-weight: 450;
+    src: url(${sohneBuch});
   }
 
   @font-face {
@@ -41,17 +34,24 @@ export const GlobalStyle = createGlobalStyle`
   }
 
   @font-face {
-    font-family: 'Sohne Mono';
-    font-style: normal;
+    font-family: Sohne;
+    font-style: italic;
     font-weight: 400;
-    src: url(${sohneMonoBuch});
+    src: url(${sohneLeichtKursiv});
   }
 
   @font-face {
     font-family: 'Sohne Mono';
     font-style: normal;
-    font-weight: 300;
+    font-weight: 400;
     src: url(${sohneMonoLeicht});
+  }
+
+  @font-face {
+    font-family: 'Sohne Mono';
+    font-style: normal;
+    font-weight: 450;
+    src: url(${sohneMonoBuch});
   }
 
   @font-face {
@@ -62,7 +62,7 @@ export const GlobalStyle = createGlobalStyle`
   }
 
   body {
-    background: linear-gradient(101.14deg, #940DFF 11.12%, #0094FF 58.22%, #0094FF 58.22%);
+    width: 100%;
     font-family: ${fontFamily.base};
     font-size: ${fontSizes.m};
   }
