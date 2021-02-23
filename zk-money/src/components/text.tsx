@@ -19,6 +19,7 @@ export const gradientStyle = css`
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  text-shadow: 0px 0px #00000000;
 `;
 
 interface TextRootProps {

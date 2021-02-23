@@ -35,25 +35,10 @@ const optionStyle = css`
   }
 `;
 
-interface StaticOptionProps {
-  disabled: boolean;
-}
-
-const StaticOption = styled.div<StaticOptionProps>`
+const StaticOption = styled.div`
   ${optionStyle}
   color: ${rgba(defaultTextColour, 0.5)};
   transition: all 0.2s ease-out;
-
-  ${({ disabled }) =>
-    disabled &&
-    `
-    color: ${rgba(defaultTextColour, 0.3)};
-    transform: scale(0.9);
-  `}
-
-  @media (min-width: ${parseInt(breakpoints.s) + 1}px) {
-    display: none;
-  }
 `;
 
 const StaticText = styled(Text)`
@@ -144,25 +129,31 @@ interface ConnectProps {
   onSubmit: (wallet: Wallet) => any;
 }
 
-export const Connect: React.FunctionComponent<ConnectProps> = ({ wallet, onSubmit }) => (
-  <Root>
-    <OptionsRoot>
-      {wallets.map(({ id, nameShort, icon }) => (
-        <Option
-          key={id}
-          name={nameShort}
-          icon={icon}
-          iconHeight={id === Wallet.CONNECT ? 60 : 80}
-          onClick={() => onSubmit(id)}
-          active={wallet === id}
-          disabled={wallet !== undefined && wallet !== id}
-        />
-      ))}
-      <StaticOption disabled={!!wallet}>
-        <StaticText>
-          More <br /> Coming <br /> Soon
-        </StaticText>
-      </StaticOption>
-    </OptionsRoot>
-  </Root>
-);
+export const Connect: React.FunctionComponent<ConnectProps> = ({ wallet, onSubmit }) => {
+  const availableWallets = window.ethereum ? wallets : wallets.filter(w => w.id !== Wallet.METAMASK);
+
+  return (
+    <Root>
+      <OptionsRoot>
+        {availableWallets.map(({ id, nameShort, icon }) => (
+          <Option
+            key={id}
+            name={nameShort}
+            icon={icon}
+            iconHeight={id === Wallet.CONNECT ? 60 : 80}
+            onClick={() => onSubmit(id)}
+            active={wallet === id}
+            disabled={wallet !== undefined && wallet !== id}
+          />
+        ))}
+        {availableWallets.length < 3 && (
+          <StaticOption>
+            <StaticText>
+              More <br /> Coming <br /> Soon
+            </StaticText>
+          </StaticOption>
+        )}
+      </OptionsRoot>
+    </Root>
+  );
+};
