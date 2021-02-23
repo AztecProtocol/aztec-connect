@@ -6,7 +6,7 @@ import { Input } from '../components';
 import searchSvg from '../images/search.svg';
 
 const SEARCH_BY_ID = gql`
-  query Search($id: Int) {
+  query Search($id: Int!) {
     rollup(id: $id) {
       id
     }
@@ -18,12 +18,6 @@ const SEARCH_BY_HASH = gql`
     tx(id: $hash) {
       id
     }
-    rollup(hash: $hash) {
-      id
-    }
-    publishedRollup: rollup(ethTxHash: $hash) {
-      id
-    }
   }
 `;
 
@@ -32,10 +26,7 @@ const SEARCH_BY_PARTIAL_HASH = gql`
     txs(take: 1, where: { id_starts_with: $hash }) {
       id
     }
-    rollups(take: 1, where: { hash_starts_with: $hash }) {
-      id
-    }
-    publishedRollups: rollups(take: 1, where: { ethTxHash_starts_with: $hash }) {
+    searchRollups(take: 1, where: { hash_starts_with: $hash }) {
       id
     }
   }
@@ -60,8 +51,8 @@ export const SearchBar: React.FunctionComponent = () => {
       history.push(`/block/${(hashData.rollup || hashData.publishedRollup).id}`);
     } else if (partialHashData?.txs.length) {
       history.push(`/tx/${partialHashData.txs[0].id}`);
-    } else if (partialHashData?.rollups.length || partialHashData?.publishedRollups.length) {
-      history.push(`/block/${(partialHashData.rollups[0] || partialHashData.publishedRollups[0]).id}`);
+    } else if (partialHashData?.searchRollups.length) {
+      history.push(`/block/${partialHashData.rollups[0]}`);
     } else {
       history.push(`/search?q=${encodeURIComponent(searchTerm)}`);
     }

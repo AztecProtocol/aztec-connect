@@ -52,11 +52,8 @@ export class RollupType {
 /* eslint-disable camelcase */
 @InputType()
 class RollupFilter {
-  @Field(() => HexString, { nullable: true })
+  @Field(() => HexString)
   hash_starts_with?: string;
-
-  @Field(() => HexString, { nullable: true })
-  ethTxHash_starts_with?: string;
 }
 /* eslint-enable */
 
@@ -68,6 +65,19 @@ class RollupOrder {
 
 @ArgsType()
 export class RollupsArgs {
+  @Field(() => RollupOrder, { nullable: true })
+  order?: RollupOrder;
+
+  @Field(() => Int, { defaultValue: 0 })
+  skip?: number;
+
+  @Field(() => Int, { defaultValue: MAX_COUNT })
+  @Max(MAX_COUNT)
+  take?: number;
+}
+
+@ArgsType()
+export class SearchRollupsArgs {
   @Field(() => RollupFilter, { nullable: true })
   where?: RollupFilter;
 

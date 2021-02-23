@@ -6,26 +6,24 @@ import { TxDao } from '../entity/tx';
 import { getQuery, pickOne } from './query_builder';
 import { HexString, toSQLIteDateTime } from './scalar_type';
 import { TxsArgs, TxType } from './tx_type';
+import { CachedRollupDb } from '../rollup_db';
 
 @Resolver(() => TxType)
 export class TxResolver {
   private readonly txRep: Repository<TxDao>;
-  private fieldAliases = {
-    rollup: 'rollupProof',
-  };
 
-  constructor(@Inject('connection') connection: Connection) {
+  constructor(@Inject('connection') connection: Connection, @Inject('rollupDb') private rollupDb: CachedRollupDb) {
     this.txRep = connection.getRepository(TxDao);
   }
 
   @Query(() => TxType, { nullable: true })
   async tx(@Arg('id', () => HexString) id: Buffer) {
-    return this.txRep.findOne({ id });
+    return this.txRep.findOne({ id }, { relations: ['rollupProof', 'rollupProof.rollup'] });
   }
 
   @Query(() => [TxType!])
   async txs(@Args() { where, ...args }: TxsArgs) {
-    return getQuery(this.txRep, { where: where ? pickOne(where) : undefined, ...args }, this.fieldAliases).getMany();
+    return getQuery(this.txRep, { where: where ? pickOne(where) : undefined, ...args }).getMany();
   }
 
   @FieldResolver(() => Int)
@@ -93,17 +91,13 @@ export class TxResolver {
     return joinSplit.outputOwner;
   }
 
-  @FieldResolver({ nullable: true })
-  async rollup(@Root() { id }: TxDao) {
-    const { rollupProof } = (await getQuery(this.txRep, { where: { id } }, {}, [
-      'rollupProof',
-      'rollupProof.rollup',
-    ]).getOne())!;
-    return rollupProof;
+  @FieldResolver()
+  async rollup(@Root() { rollupProof }: TxDao) {
+    return rollupProof?.rollup;
   }
 
   @Query(() => Int)
   async totalTxs() {
-    return getQuery(this.txRep, {}).getCount();
+    return this.rollupDb.getTotalTxCount();
   }
 }

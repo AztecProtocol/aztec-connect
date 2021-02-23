@@ -24,13 +24,16 @@ interface BlockListProps {
 }
 
 export const BlockList: React.FunctionComponent<BlockListProps> = ({ page, blocksPerPage }) => {
-  const { loading, error, data } = useQuery<BlocksQueryData, BlocksQueryVars>(GET_BLOCKS, {
+  const { loading, error, data, startPolling } = useQuery<BlocksQueryData, BlocksQueryVars>(GET_BLOCKS, {
     variables: {
       take: blocksPerPage,
       skip: Math.max(0, blocksPerPage * (page - 1)),
     },
-    pollInterval: BLOCKS_POLL_INTERVAL,
   });
+
+  if (!data && page === 1) {
+    startPolling(BLOCKS_POLL_INTERVAL);
+  }
 
   if (loading || !data) {
     return (

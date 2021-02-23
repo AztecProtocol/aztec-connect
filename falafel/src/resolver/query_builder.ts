@@ -34,9 +34,6 @@ const getConstraint = (key: string, field: string, cond: string) => {
     case 'not_in':
       return `${field} NOT IN (:...${key})`;
     case 'starts_with':
-    case 'ends_with':
-    case 'contains':
-      return `hex(${field}) LIKE :${key}`;
   }
 
   return `${field} = :${key}`;
@@ -46,10 +43,6 @@ const getConstraintValue = (cond: string, value: any) => {
   switch (cond) {
     case 'starts_with':
       return `${value.toString('hex')}%`;
-    case 'ends_with':
-      return `%${value.toString('hex')}`;
-    case 'contains':
-      return `%${value.toString('hex')}%`;
   }
 
   return value;
@@ -64,17 +57,9 @@ export const getQuery = <T>(
   rep: Repository<T>,
   { where, order, take, skip }: QueryArgs,
   fieldAliases: FieldAliases = {},
-  leftJoins: string[] = [],
 ) => {
   const query = rep.createQueryBuilder('obj').select('obj');
-  leftJoins.forEach(joinOn => {
-    const [, table] = joinOn.split('.', 2);
-    if (table) {
-      query.leftJoinAndSelect(joinOn, table);
-    } else {
-      query.leftJoinAndSelect(`obj.${joinOn}`, joinOn);
-    }
-  });
+
   if (where) {
     Object.keys(where).forEach(key => {
       const [field, cond] = key.split(/_(.+)/);

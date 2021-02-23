@@ -206,6 +206,12 @@ export class TypeOrmRollupDb implements RollupDb {
     });
   }
 
+  public async getNumSettledRollups() {
+    return await this.rollupRep.count({
+      where: { mined: Not(IsNull()) },
+    });
+  }
+
   public async getNextRollupId() {
     const latestRollup = await this.rollupRep.findOne({ mined: Not(IsNull()) }, { order: { id: 'DESC' } });
     return latestRollup ? latestRollup.id + 1 : 0;
@@ -215,11 +221,12 @@ export class TypeOrmRollupDb implements RollupDb {
     return this.rollupRep.findOne({ id }, { relations: ['rollupProof', 'rollupProof.txs'] });
   }
 
-  public async getRollups(take: number) {
+  public async getRollups(take: number, skip?: number) {
     return this.rollupRep.find({
       order: { id: 'DESC' },
       relations: ['rollupProof', 'rollupProof.txs'],
       take,
+      skip,
     });
   }
 

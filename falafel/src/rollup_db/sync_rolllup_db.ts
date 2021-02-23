@@ -111,8 +111,12 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.getRollup(id));
   }
 
-  public async getRollups(take: number) {
-    return this.synchronise(() => this.rollupDb.getRollups(take));
+  public async getRollups(take: number, skip?: number) {
+    return this.synchronise(() => this.rollupDb.getRollups(take, skip));
+  }
+
+  public async getNumSettledRollups() {
+    return this.synchronise(() => this.rollupDb.getNumSettledRollups());
   }
 
   public async addRollup(rollup: RollupDao) {

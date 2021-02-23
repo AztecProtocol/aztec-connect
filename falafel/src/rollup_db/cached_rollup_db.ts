@@ -7,12 +7,32 @@ export class CachedRollupDb extends SyncRollupDb {
   private pendingTxCount?: number;
   private unsettledTxCount?: number;
   private nextRollupId?: number;
+  private totalTxCount?: number;
+  private numSettledRollups?: number;
+  private rollups?: RollupDao[];
 
   public async getPendingTxCount() {
     if (this.pendingTxCount === undefined) {
       this.pendingTxCount = await super.getPendingTxCount();
     }
     return this.pendingTxCount;
+  }
+
+  public async getRollups(take: number, skip = 0) {
+    if (!skip && take === 5) {
+      if (!this.rollups) {
+        this.rollups = await super.getRollups(take, skip);
+      }
+      return this.rollups;
+    }
+    return await super.getRollups(take, skip);
+  }
+
+  public async getNumSettledRollups() {
+    if (this.numSettledRollups === undefined) {
+      this.numSettledRollups = await super.getNumSettledRollups();
+    }
+    return this.numSettledRollups;
   }
 
   public async getUnsettledTxCount() {
@@ -27,6 +47,13 @@ export class CachedRollupDb extends SyncRollupDb {
       this.nextRollupId = await super.getNextRollupId();
     }
     return this.nextRollupId;
+  }
+
+  public async getTotalTxCount() {
+    if (!this.totalTxCount) {
+      this.totalTxCount = await super.getTotalTxCount();
+    }
+    return this.totalTxCount;
   }
 
   public async addTx(txDao: TxDao) {
@@ -47,6 +74,7 @@ export class CachedRollupDb extends SyncRollupDb {
   public async deleteRollupProof(id: Buffer) {
     await super.deleteRollupProof(id);
     this.purge();
+    this.purgeRollupCaches();
   }
 
   public async deleteTxlessRollupProofs() {
@@ -62,6 +90,7 @@ export class CachedRollupDb extends SyncRollupDb {
   public async addRollup(rollup: RollupDao) {
     const result = await super.addRollup(rollup);
     this.purge();
+    this.purgeRollupCaches();
     return result;
   }
 
@@ -69,15 +98,23 @@ export class CachedRollupDb extends SyncRollupDb {
     await super.confirmMined(id, gasUsed, gasPrice, mined);
     this.nextRollupId = undefined;
     this.purge();
+    this.purgeRollupCaches();
   }
 
   public async deleteUnsettledRollups() {
     await super.deleteUnsettledRollups();
+    this.purgeRollupCaches();
     this.purge();
   }
+
+  private purgeRollupCaches = () => {
+    this.rollups = undefined;
+    this.numSettledRollups = undefined;
+  };
 
   private purge = () => {
     this.pendingTxCount = undefined;
     this.unsettledTxCount = undefined;
+    this.totalTxCount = undefined;
   };
 }

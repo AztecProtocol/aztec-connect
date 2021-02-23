@@ -24,8 +24,8 @@ export const Blocks: React.FunctionComponent<BlocksProps> = ({ blocksPerPage = 5
   const page = +(urlQuery.get('p') || 1);
 
   const { loading, error, data, startPolling } = useQuery<NetworkStatsQueryData>(GET_NETWORK_STAT);
-  if (!data) {
-    startPolling(page === 1 ? TOTAL_BLOCKS_POLL_INTERVAL : 0);
+  if (!data && page === 1) {
+    startPolling(TOTAL_BLOCKS_POLL_INTERVAL);
   }
 
   return (
