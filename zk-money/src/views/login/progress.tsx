@@ -1,16 +1,21 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { LoginStep, WorldState } from '../../app';
 import { PaddedBlock, Text, Dot, Loader, LoaderTheme } from '../../components';
 import errorIcon from '../../images/exclamation_mark.svg';
 import { spacings, borderRadiuses } from '../../styles';
 
-const calculateProgress = ({ latestRollup, accountSyncedToRollup }: WorldState) => {
+const calculateProgress = (worldState: WorldState, batchDecryptElapsed: number) => {
+  const { syncedToRollup, latestRollup, accountSyncedToRollup } = worldState;
   if (latestRollup <= 0) {
     return 0;
   }
 
-  return Math.max(0, accountSyncedToRollup) / latestRollup;
+  const batchSize = latestRollup - syncedToRollup;
+  return (
+    (batchSize ? batchDecryptElapsed / batchSize : 1) * 0.95 +
+    (Math.max(0, accountSyncedToRollup) / latestRollup) * 0.05
+  );
 };
 
 const loginSteps = [
@@ -95,7 +100,25 @@ export const Progress: React.FunctionComponent<ProgressProps> = ({
   active,
   failed,
 }) => {
+  const [batchDecryptElapsed, setBatchDecryptElapsed] = useState(0);
   const steps = isNewAccount ? signupSteps : loginSteps;
+
+  useEffect(() => {
+    const { syncedToRollup, latestRollup } = worldState;
+    const batchSize = latestRollup - syncedToRollup;
+    if (batchDecryptElapsed >= batchSize) {
+      return;
+    }
+
+    const increment = 1 + Math.round(Math.random() * 2);
+    const timer = setTimeout(() => {
+      setBatchDecryptElapsed(Math.min(batchDecryptElapsed + increment, batchSize));
+    }, increment * 300);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [batchDecryptElapsed, worldState]);
 
   return (
     <Root>
@@ -103,7 +126,7 @@ export const Progress: React.FunctionComponent<ProgressProps> = ({
         const isCurrentStep = step === currentStep;
         let titleText = title;
         if (isCurrentStep && step === LoginStep.SYNC_DATA) {
-          const progress = calculateProgress(worldState);
+          const progress = calculateProgress(worldState, batchDecryptElapsed);
           titleText = `${title} (${Math.floor(progress * 100)}%)`;
         }
         return (
