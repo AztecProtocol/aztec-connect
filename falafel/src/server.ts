@@ -27,6 +27,7 @@ export interface ServerConfig {
   readonly baseTxGas: number;
   readonly feeGasPrice: bigint;
   readonly reimbursementFeeLimit: bigint;
+  readonly maxUnsettledTxs: number;
 }
 
 export class Server {
@@ -95,8 +96,8 @@ export class Server {
     await this.worldState.stop();
   }
 
-  public getPendingTxCount() {
-    return this.rollupDb.getPendingTxCount();
+  public getUnsettledTxCount() {
+    return this.rollupDb.getUnsettledTxCount();
   }
 
   public isReady() {
@@ -121,7 +122,7 @@ export class Server {
       blockchainStatus: status,
       minFees: this.txFeeResolver.getTxFees(),
       nextPublishTime: await this.getNextPublishTime(),
-      pendingTxCount: await this.getPendingTxCount(),
+      pendingTxCount: await this.rollupDb.getUnsettledTxCount(),
       txsPerRollup: this.config.numInnerRollupTxs * this.config.numOuterRollupProofs,
     };
   }
@@ -182,6 +183,12 @@ export class Server {
   }
 
   public async receiveTx(tx: Tx) {
+    const { maxUnsettledTxs } = this.config;
+    const unsettled = await this.getUnsettledTxCount();
+    if (maxUnsettledTxs && unsettled >= maxUnsettledTxs) {
+      throw new Error('Too many transactions awaiting settlement. Try again later.');
+    }
+
     const start = new Date().getTime();
     const end = this.metrics.receiveTxTimer();
     const result = await this.txReceiver.receiveTx(tx);

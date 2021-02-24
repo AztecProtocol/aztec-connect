@@ -33,6 +33,7 @@ async function main() {
       baseTxGas,
       feeGasPrice,
       reimbursementFeeLimit,
+      maxUnsettledTxs,
     },
   } = await getConfig();
 
@@ -49,6 +50,7 @@ async function main() {
     baseTxGas,
     feeGasPrice,
     reimbursementFeeLimit,
+    maxUnsettledTxs,
   };
   const rollupDb = new CachedRollupDb(new TypeOrmRollupDb(connection));
   const worldStateDb = new WorldStateDb();

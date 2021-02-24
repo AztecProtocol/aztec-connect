@@ -7,6 +7,9 @@ import { randomBytes } from 'crypto';
 import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
+import moment from 'moment';
+
+const now = moment();
 
 export const randomTx = (signature?: Buffer, inputOwner?: EthAddress, publicInput?: bigint) => {
   const proofData = new ProofData(
@@ -31,7 +34,7 @@ export const randomTx = (signature?: Buffer, inputOwner?: EthAddress, publicInpu
     nullifier1: proofData.nullifier1,
     nullifier2: proofData.nullifier2,
     dataRootsIndex: 0,
-    created: new Date(),
+    created: now.add(1, 's').toDate(),
     signature,
   });
 };

@@ -1,4 +1,4 @@
-import { randomBytes, createDecipher } from 'crypto';
+import { randomBytes } from 'crypto';
 import { Connection, createConnection } from 'typeorm';
 import { AccountTxDao } from '../entity/account_tx';
 import { JoinSplitTxDao } from '../entity/join_split_tx';

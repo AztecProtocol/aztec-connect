@@ -15,9 +15,7 @@ import { TxDao } from './entity/tx';
 import { Metrics } from './metrics';
 import { JoinSplitTxResolver, AccountTxResolver, RollupResolver, ServerStatusResolver, TxResolver } from './resolver';
 import { Server } from './server';
-
-// eslint-disable-next-line
-const cors = require('@koa/cors');
+import cors from '@koa/cors';
 
 const toBlockResponse = (block: Block): BlockServerResponse => ({
   ...block,

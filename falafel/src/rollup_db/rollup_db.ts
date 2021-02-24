@@ -137,7 +137,6 @@ export class TypeOrmRollupDb implements RollupDb {
       .leftJoin('rp.rollup', 'r')
       .where('(tx.rollupProof IS NULL OR rp.rollup IS NULL OR r.mined IS NULL)')
       .orderBy('js_tx.created', 'ASC')
-      .take(1000)
       .getMany();
   }
 
@@ -149,7 +148,6 @@ export class TypeOrmRollupDb implements RollupDb {
       .leftJoin('rp.rollup', 'r')
       .where('(tx.rollupProof IS NULL OR rp.rollup IS NULL OR r.mined IS NULL)')
       .orderBy('act_tx.created', 'ASC')
-      .take(1000)
       .getMany();
   }
 

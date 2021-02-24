@@ -28,6 +28,7 @@ interface ConfVars {
   baseTxGas: number;
   feeGasPrice: bigint;
   reimbursementFeeLimit: bigint;
+  maxUnsettledTxs: number;
 }
 
 function getConfVars(): ConfVars {
@@ -50,6 +51,7 @@ function getConfVars(): ConfVars {
     BASE_TX_GAS,
     FEE_GAS_PRICE,
     REIMBURSEMENT_FEE_LIMIT,
+    MAX_UNSETTLED_TXS,
   } = process.env;
 
   return {
@@ -74,6 +76,7 @@ function getConfVars(): ConfVars {
     baseTxGas: +(BASE_TX_GAS || 0),
     feeGasPrice: BigInt(FEE_GAS_PRICE || 0),
     reimbursementFeeLimit: REIMBURSEMENT_FEE_LIMIT ? BigInt(REIMBURSEMENT_FEE_LIMIT) : BigInt(10) ** BigInt(30),
+    maxUnsettledTxs: +(MAX_UNSETTLED_TXS || 0),
   };
 }
 
