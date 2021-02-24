@@ -8,13 +8,18 @@ import { AccountTxDao } from '../entity/account_tx';
 import { AccountTxsArgs, AccountTxType } from './account_tx_type';
 import { getQuery, pickOne } from './query_builder';
 import { HexString } from './scalar_type';
+import { CachedRollupDb } from '../rollup_db';
 
 @Resolver(() => AccountTxType)
 export class AccountTxResolver {
   private readonly accountTxRep: Repository<AccountTxDao>;
   private blake: Blake2s;
 
-  constructor(@Inject('connection') connection: Connection, @Inject('barretenberg') barretenberg: BarretenbergWasm) {
+  constructor(
+    @Inject('connection') connection: Connection,
+    @Inject('barretenberg') barretenberg: BarretenbergWasm,
+    @Inject('rollupDb') private rollupDb: CachedRollupDb,
+  ) {
     this.accountTxRep = connection.getRepository(AccountTxDao);
     this.blake = new Blake2s(barretenberg);
   }
@@ -34,10 +39,16 @@ export class AccountTxResolver {
   @Query(() => [AccountTxType!])
   async accountTxs(@Args() { where, ...args }: AccountTxsArgs) {
     const { alias, ...filters } = where || {};
+
     if (alias) {
       const aliasHash = AliasHash.fromAlias(alias, this.blake).toBuffer();
       return getQuery(this.accountTxRep, { where: { aliasHash }, ...args }).getMany();
     }
     return getQuery(this.accountTxRep, { where: pickOne(filters), ...args }).getMany();
+  }
+
+  @Query(() => [AccountTxType!])
+  async unsettledAccountTxs() {
+    return this.rollupDb.getUnsettledAccountTxs();
   }
 }

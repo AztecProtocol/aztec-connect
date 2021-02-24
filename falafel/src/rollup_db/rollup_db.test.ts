@@ -1,4 +1,4 @@
-import { randomBytes } from 'crypto';
+import { randomBytes, createDecipher } from 'crypto';
 import { Connection, createConnection } from 'typeorm';
 import { AccountTxDao } from '../entity/account_tx';
 import { JoinSplitTxDao } from '../entity/join_split_tx';
@@ -249,11 +249,11 @@ describe('rollup_db', () => {
     await rollupDb.addTx(tx2);
 
     {
-      const result = await rollupDb.getUnsettledJoinSplitTxsForInputAddress(addr);
+      const result = await rollupDb.getUnsettledJoinSplitTxs();
       expect(result.length).toBe(3);
-      expect(result[0].publicInput).toBe(10n);
-      expect(result[1].publicInput).toBe(20n);
-      expect(result[2].publicInput).toBe(40n);
+      expect(BigInt(result[0].publicInput)).toEqual(10n);
+      expect(BigInt(result[1].publicInput)).toEqual(20n);
+      expect(BigInt(result[2].publicInput)).toEqual(40n);
     }
 
     const rollupProof = randomRollupProof([tx0], 0);
@@ -265,10 +265,10 @@ describe('rollup_db', () => {
     await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random());
 
     {
-      const result = await rollupDb.getUnsettledJoinSplitTxsForInputAddress(addr);
+      const result = await rollupDb.getUnsettledJoinSplitTxs();
       expect(result.length).toBe(2);
-      expect(result[0].publicInput).toBe(20n);
-      expect(result[1].publicInput).toBe(40n);
+      expect(BigInt(result[0].publicInput)).toEqual(20n);
+      expect(BigInt(result[1].publicInput)).toEqual(40n);
     }
   });
 

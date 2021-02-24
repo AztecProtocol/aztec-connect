@@ -1,14 +1,4 @@
-import {
-  AccountAliasId,
-  AccountId,
-  AssetId,
-  EthAddress,
-  GrumpkinAddress,
-  Note,
-  SdkEvent,
-  TxType,
-  WalletSdk,
-} from '@aztec/sdk';
+import { AccountId, AssetId, EthAddress, GrumpkinAddress, Note, SdkEvent, TxType, WalletSdk } from '@aztec/sdk';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { debounce, DebouncedFunc, uniqWith } from 'lodash';
@@ -1012,50 +1002,25 @@ export class Account extends EventEmitter {
   // TODO - Find a way to get pending account's public key without having to compute its alias hash or send the alias to server.
   private async getPendingAccountId(alias: string) {
     const aliasHash = (this.sdk as any).core.computeAliasHash(alias);
-    const take = 100;
-    for (let retry = 0; retry < 10; ++retry) {
-      const pendingTxs = await this.graphql.getPendingTxs(take, retry * take);
-      const accountTxs = pendingTxs.filter(tx => tx.proofId === 1);
-      const account = accountTxs.find(({ assetId }) => {
-        const id = AccountAliasId.fromBuffer(Buffer.from(assetId, 'hex'));
-        return id.aliasHash.equals(aliasHash);
-      });
+    const account = (await this.graphql.getUnsettledAccountTxs()).find(tx =>
+      Buffer.from(tx.aliasHash, 'hex').equals(aliasHash),
+    );
+    if (!account) return;
 
-      if (account) {
-        const { assetId, publicInput, publicOutput } = account;
-        const id = AccountAliasId.fromBuffer(Buffer.from(assetId, 'hex'));
-        const publicKey = new GrumpkinAddress(
-          Buffer.concat([Buffer.from(publicInput, 'hex'), Buffer.from(publicOutput, 'hex')]),
-        );
-        return new AccountId(publicKey, id.nonce);
-      }
-
-      if (pendingTxs.length < take) {
-        break;
-      }
-    }
+    const { accountPubKey, nonce } = account;
+    const publicKey = GrumpkinAddress.fromString(accountPubKey);
+    return new AccountId(publicKey, nonce);
   }
 
   async getPendingDeposit(assetId: AssetId, inputOwner: EthAddress) {
-    const take = 100;
-    let pendingDeposit = 0n;
-    for (let retry = 0; retry < 10; ++retry) {
-      const pendingTxs = await this.graphql.getPendingTxs(take, retry * take);
-      pendingDeposit +=
-        pendingTxs
-          .filter(
-            tx =>
-              tx.proofId === 0 &&
-              +tx.assetId === assetId &&
-              new EthAddress(Buffer.from(tx.inputOwner, 'hex')).equals(inputOwner),
-          )
-          .reduce((sum, tx) => sum + BigInt(`0x${tx.publicInput}`), 0n) || 0n;
-
-      if (pendingTxs.length < take) {
-        break;
-      }
-    }
-    return pendingDeposit;
+    const txs = await this.graphql.getUnsettledJoinSplitTxs();
+    return (
+      txs
+        .filter(tx => tx.assetId === assetId && EthAddress.fromString(tx.inputOwner).equals(inputOwner))
+        .reduce((sum, tx) => {
+          return sum + BigInt(tx.publicInput);
+        }, 0n) || 0n
+    );
   }
 
   private async getJoinSplitTxs(userId: AccountId) {

@@ -13,7 +13,7 @@ import { Container } from 'typedi';
 import { RollupDao } from './entity/rollup';
 import { TxDao } from './entity/tx';
 import { Metrics } from './metrics';
-import { AccountTxResolver, RollupResolver, ServerStatusResolver, TxResolver } from './resolver';
+import { JoinSplitTxResolver, AccountTxResolver, RollupResolver, ServerStatusResolver, TxResolver } from './resolver';
 import { Server } from './server';
 
 // eslint-disable-next-line
@@ -225,7 +225,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   app.use(router.allowedMethods());
 
   const schema = buildSchemaSync({
-    resolvers: [AccountTxResolver, RollupResolver, TxResolver, ServerStatusResolver],
+    resolvers: [JoinSplitTxResolver, AccountTxResolver, RollupResolver, TxResolver, ServerStatusResolver],
     container: Container,
   });
   const appServer = new ApolloServer({ schema, introspection: true });

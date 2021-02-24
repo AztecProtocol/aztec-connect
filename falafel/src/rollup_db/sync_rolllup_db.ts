@@ -1,5 +1,4 @@
 import { Mutex } from 'async-mutex';
-import { EthAddress } from 'barretenberg/address';
 import { TxHash } from 'barretenberg/tx_hash';
 import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
@@ -59,8 +58,12 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.getUnsettledTxCount());
   }
 
-  public async getUnsettledJoinSplitTxsForInputAddress(inputOwner: EthAddress) {
-    return this.synchronise(() => this.rollupDb.getUnsettledJoinSplitTxsForInputAddress(inputOwner));
+  public async getUnsettledJoinSplitTxs() {
+    return this.synchronise(() => this.rollupDb.getUnsettledJoinSplitTxs());
+  }
+
+  public async getUnsettledAccountTxs() {
+    return this.synchronise(() => this.rollupDb.getUnsettledAccountTxs());
   }
 
   public async getPendingTxs(take?: number) {

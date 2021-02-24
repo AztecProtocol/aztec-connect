@@ -1,4 +1,5 @@
-import { BeforeInsert, BeforeUpdate, Column, Entity, Index, PrimaryColumn } from 'typeorm';
+import { BeforeInsert, BeforeUpdate, Column, Entity, JoinColumn, OneToOne, Index, PrimaryColumn } from 'typeorm';
+import { TxDao } from './tx';
 
 @Entity({ name: 'account_tx' })
 @Index(['nonce', 'accountPubKey'])
@@ -10,6 +11,8 @@ export class AccountTxDao {
   // Cannot use id as primary as it's a Buffer and typeorm has bugs...
   // To workaround, compute the hex string form and use that as primary.
   @PrimaryColumn()
+  @OneToOne(() => TxDao, tx => tx.internalId, { onDelete: 'CASCADE' })
+  @JoinColumn()
   private internalId!: string;
 
   // To be treated as primary key.

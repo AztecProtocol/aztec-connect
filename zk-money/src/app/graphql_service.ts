@@ -3,6 +3,7 @@ import { ApolloClient, gql } from 'apollo-boost';
 
 interface AccountTx {
   accountPubKey: string;
+  aliasHash: string;
   nonce: number;
 }
 
@@ -12,14 +13,14 @@ interface AccountTxsResponse {
 
 interface Tx {
   proofId: number;
-  assetId: string;
+  assetId: number;
   publicInput: string;
   publicOutput: string;
   inputOwner: string;
 }
 
-interface TxsResponse {
-  txs: Tx[];
+interface JoinSplitTxsResponse {
+  unsettledJoinSplitTxs: Tx[];
 }
 
 export class GraphQLService {
@@ -54,21 +55,35 @@ export class GraphQLService {
     return tx ? GrumpkinAddress.fromString(tx.accountPubKey) : undefined;
   }
 
-  async getPendingTxs(take: number, skip: number) {
-    const { data } = await this.apollo.query<TxsResponse>({
+  async getUnsettledAccountTxs() {
+    const { data } = await this.apollo.query<AccountTxsResponse>({
       query: gql`
         query Query {
-          txs(where: { rollup_null: true }, take: ${take}, skip: ${skip}) {
-            proofId
+          unsettledAccountTxs {
+            nonce
+            accountPubKey
+            aliasHash
+          }
+        }
+      `,
+      fetchPolicy: 'no-cache',
+    });
+    return data?.accountTxs || [];
+  }
+
+  async getUnsettledJoinSplitTxs() {
+    const { data } = await this.apollo.query<JoinSplitTxsResponse>({
+      query: gql`
+        query Query {
+          unsettledJoinSplitTxs {
             assetId
             publicInput
-            publicOutput
             inputOwner
           }
         }
       `,
       fetchPolicy: 'no-cache',
     });
-    return data?.txs || [];
+    return data?.unsettledJoinSplitTxs || [];
   }
 }

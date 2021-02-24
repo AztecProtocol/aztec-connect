@@ -12,8 +12,11 @@ export class AccountTxType {
   @Field(() => HexString)
   accountPubKey!: string;
 
+  @Field(() => HexString)
+  aliasHash!: string;
+
   @Field(() => Int)
-  nonce!: string;
+  nonce!: number;
 
   @Field(() => HexString)
   spendingKey1!: string;

@@ -1,4 +1,3 @@
-import { EthAddress } from 'barretenberg/address';
 import { AccountAliasId } from 'barretenberg/client_proofs/account_alias_id';
 import { JoinSplitProofData, ProofData } from 'barretenberg/client_proofs/proof_data';
 import { InnerProofData } from 'barretenberg/rollup_proof';
@@ -31,37 +30,38 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async addTx(txDao: TxDao) {
+    let txToAdd: JoinSplitTxDao | AccountTxDao | undefined;
+
+    const proofData = InnerProofData.fromBuffer(txDao.proofData);
+
+    if (proofData.proofId === 0) {
+      const jsProofData = new JoinSplitProofData(new ProofData(txDao.proofData));
+      txToAdd = new JoinSplitTxDao({
+        id: proofData.txId,
+        publicInput: jsProofData.publicInput,
+        publicOutput: jsProofData.publicOutput,
+        assetId: jsProofData.assetId,
+        inputOwner: jsProofData.inputOwner,
+        outputOwner: jsProofData.outputOwner,
+        created: txDao.created,
+      });
+    } else if (proofData.proofId === 1) {
+      const accountAliasId = AccountAliasId.fromBuffer(proofData.assetId);
+      txToAdd = new AccountTxDao({
+        id: proofData.txId,
+        accountPubKey: Buffer.concat([proofData.publicInput, proofData.publicOutput]),
+        aliasHash: accountAliasId.aliasHash.toBuffer(),
+        nonce: accountAliasId.nonce,
+        spendingKey1: proofData.nullifier1,
+        spendingKey2: proofData.nullifier2,
+        created: txDao.created,
+      });
+    }
     await this.connection.transaction(async transactionalEntityManager => {
       await transactionalEntityManager.save(txDao);
-
-      const proofData = InnerProofData.fromBuffer(txDao.proofData);
-
-      if (proofData.proofId === 0) {
-        const jsProofData = new JoinSplitProofData(new ProofData(txDao.proofData));
-        const joinSplitDao = new JoinSplitTxDao({
-          id: proofData.txId,
-          publicInput: jsProofData.publicInput,
-          publicOutput: jsProofData.publicOutput,
-          assetId: jsProofData.assetId,
-          inputOwner: jsProofData.inputOwner,
-          outputOwner: jsProofData.outputOwner,
-          created: txDao.created,
-        });
-        await transactionalEntityManager.save(joinSplitDao);
-      } else if (proofData.proofId === 1) {
-        const accountAliasId = AccountAliasId.fromBuffer(proofData.assetId);
-        const accountTxDao = new AccountTxDao({
-          id: proofData.txId,
-          accountPubKey: Buffer.concat([proofData.publicInput, proofData.publicOutput]),
-          aliasHash: accountAliasId.aliasHash.toBuffer(),
-          nonce: accountAliasId.nonce,
-          spendingKey1: proofData.nullifier1,
-          spendingKey2: proofData.nullifier2,
-          created: txDao.created,
-        });
-        await transactionalEntityManager.save(accountTxDao);
-      }
+      await transactionalEntityManager.save(txToAdd);
     });
+    return txToAdd;
   }
 
   public async getTx(txId: Buffer) {
@@ -129,15 +129,27 @@ export class TypeOrmRollupDb implements RollupDb {
       .getCount();
   }
 
-  public async getUnsettledJoinSplitTxsForInputAddress(inputOwner: EthAddress) {
+  public async getUnsettledJoinSplitTxs() {
     return await this.joinSplitTxRep
       .createQueryBuilder('js_tx')
       .leftJoin('js_tx.internalId', 'tx')
       .leftJoin('tx.rollupProof', 'rp')
       .leftJoin('rp.rollup', 'r')
-      .where('js_tx.inputOwner = :owner AND (tx.rollupProof IS NULL OR rp.rollup IS NULL OR r.mined IS NULL)', {
-        owner: inputOwner.toBuffer(),
-      })
+      .where('(tx.rollupProof IS NULL OR rp.rollup IS NULL OR r.mined IS NULL)')
+      .orderBy('js_tx.created', 'ASC')
+      .take(1000)
+      .getMany();
+  }
+
+  public async getUnsettledAccountTxs() {
+    return await this.accountTxRep
+      .createQueryBuilder('act_tx')
+      .leftJoin('act_tx.internalId', 'tx')
+      .leftJoin('tx.rollupProof', 'rp')
+      .leftJoin('rp.rollup', 'r')
+      .where('(tx.rollupProof IS NULL OR rp.rollup IS NULL OR r.mined IS NULL)')
+      .orderBy('act_tx.created', 'ASC')
+      .take(1000)
       .getMany();
   }
 

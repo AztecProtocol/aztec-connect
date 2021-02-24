@@ -3,6 +3,9 @@ import { RollupProofDao } from '../entity/rollup_proof';
 import { RollupDao } from '../entity/rollup';
 import { SyncRollupDb } from './sync_rolllup_db';
 import { TxHash } from 'barretenberg/tx_hash';
+import { JoinSplitTxDao } from '../entity/join_split_tx';
+import { ProofData, ProofId } from 'barretenberg/client_proofs/proof_data';
+import { AccountTxDao } from '../entity/account_tx';
 
 export class CachedRollupDb extends SyncRollupDb {
   private pendingTxCount?: number;
@@ -11,6 +14,8 @@ export class CachedRollupDb extends SyncRollupDb {
   private totalTxCount?: number;
   private numSettledRollups?: number;
   private rollups?: RollupDao[];
+  private unsettledJoinSplitTxs?: JoinSplitTxDao[];
+  private unsettledAccountTxs?: AccountTxDao[];
 
   public async getPendingTxCount() {
     if (this.pendingTxCount === undefined) {
@@ -43,6 +48,19 @@ export class CachedRollupDb extends SyncRollupDb {
     return this.unsettledTxCount;
   }
 
+  public async getUnsettledJoinSplitTxs() {
+    if (this.unsettledJoinSplitTxs === undefined) {
+      this.unsettledJoinSplitTxs = await super.getUnsettledJoinSplitTxs();
+    }
+    return this.unsettledJoinSplitTxs;
+  }
+  public async getUnsettledAccountTxs() {
+    if (this.unsettledAccountTxs === undefined) {
+      this.unsettledAccountTxs = await super.getUnsettledAccountTxs();
+    }
+    return this.unsettledAccountTxs;
+  }
+
   public async getNextRollupId() {
     if (this.nextRollupId === undefined) {
       this.nextRollupId = await super.getNextRollupId();
@@ -58,8 +76,28 @@ export class CachedRollupDb extends SyncRollupDb {
   }
 
   public async addTx(txDao: TxDao) {
-    await super.addTx(txDao);
+    const addedTx = await super.addTx(txDao);
+    const { proofId } = new ProofData(txDao.proofData);
+
+    switch (proofId) {
+      case ProofId.JOIN_SPLIT: {
+        if (!this.unsettledJoinSplitTxs) {
+          this.unsettledJoinSplitTxs = [];
+        }
+        this.unsettledJoinSplitTxs?.push(addedTx as JoinSplitTxDao);
+        break;
+      }
+      case ProofId.ACCOUNT: {
+        if (!this.unsettledAccountTxs) {
+          this.unsettledAccountTxs = [];
+        }
+        this.unsettledAccountTxs?.push(addedTx as AccountTxDao);
+        break;
+      }
+    }
+
     this.purge();
+    return addedTx;
   }
 
   public async deletePendingTxs() {
@@ -100,6 +138,9 @@ export class CachedRollupDb extends SyncRollupDb {
     this.nextRollupId = undefined;
     this.purge();
     this.purgeRollupCaches();
+    this.purgePendingTxs();
+    this.unsettledAccountTxs = await this.getUnsettledAccountTxs();
+    this.unsettledJoinSplitTxs = await this.getUnsettledJoinSplitTxs();
   }
 
   public async deleteUnsettledRollups() {
@@ -111,6 +152,11 @@ export class CachedRollupDb extends SyncRollupDb {
   private purgeRollupCaches = () => {
     this.rollups = undefined;
     this.numSettledRollups = undefined;
+  };
+
+  private purgePendingTxs = () => {
+    this.unsettledJoinSplitTxs = undefined;
+    this.unsettledAccountTxs = undefined;
   };
 
   private purge = () => {

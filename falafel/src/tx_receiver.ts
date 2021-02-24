@@ -12,6 +12,7 @@ import { Mutex } from 'async-mutex';
 import { ViewingKey } from 'barretenberg/viewing_key';
 import { ProofGenerator } from 'halloumi/proof_generator';
 import { TxFeeResolver } from './tx_fee_resolver';
+import { JoinSplitTxDao } from './entity/join_split_tx';
 
 export interface Tx {
   proofData: Buffer;
@@ -137,8 +138,11 @@ export class TxReceiver {
       // WARNING! Need to check the sum of all deposits in txs remains <= the amount pending deposit on contract.
       // As the db read of existing txs, and insertion of new tx, needs to be atomic, we have to mutex receiveTx.
       // TODO: Move to a system where you only ever deposit against a proof hash!
-      const pendingTxs = await this.rollupDb.getUnsettledJoinSplitTxsForInputAddress(inputOwner);
-      const total = pendingTxs.reduce((acc, tx) => acc + tx.publicInput, 0n) + publicInput;
+      const pendingTxs = await this.rollupDb.getUnsettledJoinSplitTxs();
+      const userTxs = pendingTxs.filter(
+        (tx: JoinSplitTxDao) => tx.inputOwner.toString() === inputOwner.toString() && tx.assetId === assetId,
+      );
+      const total = userTxs.reduce((acc, tx) => acc + tx.publicInput, 0n) + publicInput;
       const pendingDeposit = await this.blockchain.getUserPendingDeposit(assetId, inputOwner);
       if (pendingDeposit < total) {
         throw new Error('Use insufficient pending deposit balance.');

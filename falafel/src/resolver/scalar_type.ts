@@ -58,3 +58,28 @@ export const HexString = new GraphQLScalarType({
     return Buffer.from(ast.value.replace(/^0x/i, ''), 'hex');
   },
 });
+
+export const BigIntStr = new GraphQLScalarType({
+  name: 'BigIntStr',
+  description: 'BigInt as string.',
+  serialize(value: bigint) {
+    if (typeof value !== 'bigint') {
+      throw new Error(`Unable to serialize value '${value}' as it's not a bigint.`);
+    }
+    return `${value}`;
+  },
+  parseValue(value: string) {
+    return BigInt(value || '0');
+  },
+  parseLiteral(ast) {
+    if (ast.kind !== Kind.STRING) {
+      return null;
+    }
+
+    if (typeof ast.value !== 'bigint') {
+      throw new Error(`Unable to parse value '${ast.value}' as it's not a bigint.`);
+    }
+
+    return `${ast.value}`;
+  },
+});
