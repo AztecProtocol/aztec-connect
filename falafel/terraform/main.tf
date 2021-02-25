@@ -101,7 +101,7 @@ resource "aws_ecs_task_definition" "falafel" {
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   cpu                      = "1024"
-  memory                   = "4096"
+  memory                   = "8192"
   execution_role_arn       = data.terraform_remote_state.setup_iac.outputs.ecs_task_execution_role_arn
 
   volume {
@@ -117,7 +117,7 @@ resource "aws_ecs_task_definition" "falafel" {
     "name": "falafel",
     "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/falafel:latest",
     "essential": true,
-    "memoryReservation": 1536,
+    "memoryReservation": 7936,
     "portMappings": [
       {
         "containerPort": 80

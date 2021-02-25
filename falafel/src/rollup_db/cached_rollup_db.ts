@@ -38,7 +38,7 @@ export class CachedRollupDb extends SyncRollupDb {
   }
 
   public async getRollups(take?: number, skip = 0, descending = false) {
-    const rollups = descending ? this.rollups.reverse() : this.rollups;
+    const rollups = descending ? this.rollups.slice().reverse() : this.rollups;
     return rollups.slice(skip, take ? skip + take : undefined);
   }
 
