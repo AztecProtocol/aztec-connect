@@ -8,10 +8,10 @@ export class JoinSplitTxType {
   @Length(32)
   id!: string;
 
-  @Field(() => BigIntStr)
+  @Field(() => BigIntStr, { nullable: true })
   publicOutput?: string;
 
-  @Field(() => BigIntStr)
+  @Field(() => BigIntStr, { nullable: true })
   publicInput?: string;
 
   @Field()
