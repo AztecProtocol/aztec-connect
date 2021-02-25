@@ -159,7 +159,7 @@ export class CachedRollupDb extends SyncRollupDb {
 
   public async deleteUnsettledRollups() {
     await super.deleteUnsettledRollups();
-    this.rollups = this.settledRollups;
+    this.rollups = this.settledRollups.slice();
     this.purgeTxCounters();
   }
 

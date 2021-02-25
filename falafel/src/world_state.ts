@@ -168,15 +168,17 @@ export class WorldState {
       }
     } else {
       // Not a rollup we created. Add or replace rollup.
-      const rollupProofDao = new RollupProofDao();
-      rollupProofDao.id = rollup.rollupHash;
-      rollupProofDao.rollupSize = rollup.rollupSize;
-      rollupProofDao.dataStartIndex = rollup.dataStartIndex;
-      rollupProofDao.proofData = proofData;
-      rollupProofDao.txs = rollup.innerProofData
+      const txs = rollup.innerProofData
         .filter(tx => !tx.isPadding())
         .map((p, i) => innerProofDataToTxDao(p, rollup.viewingKeys[i], created));
-      rollupProofDao.created = created;
+      const rollupProofDao = new RollupProofDao({
+        id: rollup.rollupHash,
+        txs,
+        rollupSize: rollup.rollupSize,
+        dataStartIndex: rollup.dataStartIndex,
+        proofData: proofData,
+        created: created,
+      });
 
       const rollupDao = new RollupDao({
         id: rollup.rollupId,

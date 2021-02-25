@@ -11,18 +11,17 @@ import { CachedRollupDb } from '../rollup_db';
 @Resolver(() => RollupType)
 export class RollupResolver {
   private readonly rollupRep: Repository<RollupProofDao>;
-  private readonly rollupTxRep: Repository<RollupDao>;
   private rollupDb: CachedRollupDb;
 
   private fieldAliases: FieldAliases = {};
 
   constructor(@Inject('rollupDb') rollupDb: CachedRollupDb, @Inject('connection') connection: Connection) {
     this.rollupRep = connection.getRepository(RollupProofDao);
-    this.rollupTxRep = connection.getRepository(RollupDao);
     this.rollupDb = rollupDb;
 
     this.fieldAliases.hash = 'id';
   }
+
   @Query(() => RollupType, { nullable: true })
   async rollup(@Arg('id', () => Int) id: number) {
     return this.rollupDb.getRollup(id);

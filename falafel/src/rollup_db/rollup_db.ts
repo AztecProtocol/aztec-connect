@@ -232,12 +232,18 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async getRollups(take?: number, skip?: number, descending = false) {
-    return this.rollupRep.find({
+    const result = await this.rollupRep.find({
       order: { id: descending ? 'DESC' : 'ASC' },
-      relations: ['rollupProof', 'rollupProof.txs'],
+      relations: ['rollupProof'],
       take,
       skip,
     });
+    // Loading these as part of relations above leaks GB's of memory.
+    // One would think the following would be much slower, but it's not actually that bad.
+    for (const rollup of result) {
+      rollup.rollupProof.txs = await this.txRep.find({ where: { rollupProof: rollup.rollupProof } });
+    }
+    return result;
   }
 
   public async addRollup(rollup: RollupDao) {
