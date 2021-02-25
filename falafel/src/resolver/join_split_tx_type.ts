@@ -9,19 +9,19 @@ export class JoinSplitTxType {
   id!: string;
 
   @Field(() => BigIntStr)
-  publicOutput!: string;
+  publicOutput?: string;
 
   @Field(() => BigIntStr)
-  publicInput!: string;
+  publicInput?: string;
 
   @Field()
   assetId!: number;
 
   @Field(() => HexString)
-  inputOwner!: string;
+  inputOwner?: string;
 
   @Field(() => HexString)
-  outputOwner!: string;
+  outputOwner?: string;
 
   @Field(() => ISODateTime)
   created!: Date;
