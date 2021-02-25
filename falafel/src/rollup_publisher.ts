@@ -16,7 +16,6 @@ export class RollupPublisher {
   private interruptPromise = Promise.resolve();
   private interruptResolve = () => {};
   private signer: Signer;
-  private lastPublishedTime?: Date;
   private flush_ = false;
 
   constructor(
@@ -120,18 +119,9 @@ export class RollupPublisher {
     );
   }
 
-  public async getLastPublishedTime() {
-    if (!this.lastPublishedTime) {
-      const lastPublished = await this.rollupDb.getSettledRollups(0, true, 1);
-      this.lastPublishedTime = lastPublished[0] ? lastPublished[0].created : moment().toDate();
-    }
-    return this.lastPublishedTime;
-  }
-
   public async getNextPublishTime() {
-    return moment(await this.getLastPublishedTime())
-      .add(this.publishInterval)
-      .toDate();
+    const lastRollup = await this.rollupDb.getLastSettledRollup();
+    return lastRollup ? moment(lastRollup.mined).add(this.publishInterval).toDate() : new Date();
   }
 
   private async generateSignature(

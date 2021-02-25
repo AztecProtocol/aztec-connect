@@ -67,9 +67,8 @@ export class WorldState {
    */
   private async syncState() {
     this.printState();
-    console.log('Syncing state...');
-
     const nextRollupId = await this.rollupDb.getNextRollupId();
+    console.log(`Syncing state from rollup ${nextRollupId}...`);
     const blocks = await this.blockchain.getBlocks(nextRollupId);
 
     for (const block of blocks) {
@@ -100,10 +99,6 @@ export class WorldState {
     await this.rollupDb.deleteOrphanedRollupProofs();
     await this.rollupDb.deletePendingTxs();
     await this.startNewPipeline();
-  }
-
-  public async getLastPublishedTime() {
-    return this.pipeline.getLastPublishedTime();
   }
 
   private async startNewPipeline() {
@@ -200,6 +195,19 @@ export class WorldState {
   }
 
   private async addRollupToWorldState(rollup: RollupProofData) {
+    /*
+    const entries: PutEntry[] = [];
+    for (let i = 0; i < innerProofData.length; ++i) {
+      const tx = innerProofData[i];
+      entries.push({ treeId: 0, index: BigInt(dataStartIndex + i * 2), value: tx.newNote1 });
+      entries.push({ treeId: 0, index: BigInt(dataStartIndex + i * 2 + 1), value: tx.newNote2 });
+      if (!tx.isPadding()) {
+        entries.push({ treeId: 1, index: toBigIntBE(tx.nullifier1), value: toBufferBE(1n, 64) });
+        entries.push({ treeId: 1, index: toBigIntBE(tx.nullifier2), value: toBufferBE(1n, 64) });
+      }
+    }
+    await this.worldStateDb.batchPut(entries);
+    */
     const { rollupId, dataStartIndex, innerProofData } = rollup;
     for (let i = 0; i < innerProofData.length; ++i) {
       const tx = innerProofData[i];

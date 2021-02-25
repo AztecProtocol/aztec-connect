@@ -231,9 +231,9 @@ export class TypeOrmRollupDb implements RollupDb {
     return this.rollupRep.findOne({ id }, { relations: ['rollupProof', 'rollupProof.txs'] });
   }
 
-  public async getRollups(take: number, skip?: number) {
+  public async getRollups(take?: number, skip?: number, descending = false) {
     return this.rollupRep.find({
-      order: { id: 'DESC' },
+      order: { id: descending ? 'DESC' : 'ASC' },
       relations: ['rollupProof', 'rollupProof.txs'],
       take,
       skip,
@@ -241,7 +241,7 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async addRollup(rollup: RollupDao) {
-    return await this.rollupRep.save(rollup);
+    await this.rollupRep.save(rollup);
   }
 
   public async setCallData(id: number, callData: Buffer) {
@@ -257,15 +257,25 @@ export class TypeOrmRollupDb implements RollupDb {
       { id },
       { mined, gasUsed, gasPrice: toBufferBE(gasPrice, 32), ethTxHash: ethTxHash.toBuffer() },
     );
+    return (await this.getRollup(id))!;
   }
 
-  public getSettledRollups(from = 0, descending = false, take?: number) {
+  public getSettledRollups(from = 0) {
     return this.rollupRep.find({
       where: { id: MoreThanOrEqual(from), mined: Not(IsNull()) },
-      order: { id: descending ? 'DESC' : 'ASC' },
+      order: { id: 'ASC' },
       relations: ['rollupProof'],
-      take,
     });
+  }
+
+  public getLastSettledRollup() {
+    return this.rollupRep.findOne(
+      { mined: Not(IsNull()) },
+      {
+        order: { id: 'DESC' },
+        relations: ['rollupProof'],
+      },
+    );
   }
 
   public getUnsettledRollups() {

@@ -1,7 +1,7 @@
 import { ApolloServer } from 'apollo-server-koa';
 import { blockchainStatusToJson } from 'barretenberg/blockchain';
 import { Block, BlockServerResponse, GetBlocksServerResponse } from 'barretenberg/block_source';
-import { Proof, RollupServerResponse, TxServerResponse } from 'barretenberg/rollup_provider';
+import { Proof } from 'barretenberg/rollup_provider';
 import { ViewingKey } from 'barretenberg/viewing_key';
 import graphqlPlayground from 'graphql-playground-middleware-koa';
 import Koa, { Context, DefaultState } from 'koa';
@@ -10,8 +10,6 @@ import Router from 'koa-router';
 import { PromiseReadable } from 'promise-readable';
 import { buildSchemaSync } from 'type-graphql';
 import { Container } from 'typedi';
-import { RollupDao } from './entity/rollup';
-import { TxDao } from './entity/tx';
 import { Metrics } from './metrics';
 import { JoinSplitTxResolver, AccountTxResolver, RollupResolver, ServerStatusResolver, TxResolver } from './resolver';
 import { Server } from './server';
@@ -24,44 +22,6 @@ const toBlockResponse = (block: Block): BlockServerResponse => ({
   viewingKeysData: block.viewingKeysData.toString('hex'),
   created: block.created.toISOString(),
   gasPrice: block.gasPrice.toString(),
-});
-
-const toRollupResponse = ({
-  id,
-  dataRoot,
-  ethTxHash,
-  mined,
-  rollupProof,
-  created,
-}: RollupDao): RollupServerResponse => ({
-  id,
-  status: mined ? 'SETTLED' : ethTxHash ? 'PUBLISHED' : 'CREATING',
-  dataRoot: dataRoot.toString('hex'),
-  proofData: rollupProof.proofData.toString('hex'),
-  txHashes: rollupProof.txs.map(tx => tx.id.toString('hex')),
-  ethTxHash: ethTxHash ? ethTxHash.toString('hex') : undefined,
-  created: created.toISOString(),
-});
-
-const toTxResponse = ({
-  id: txId,
-  rollupProof,
-  proofData,
-  viewingKey1,
-  viewingKey2,
-  created,
-}: TxDao): TxServerResponse => ({
-  txHash: txId.toString('hex'),
-  rollup:
-    rollupProof && rollupProof.rollup
-      ? {
-          id: rollupProof.rollup.id,
-          status: rollupProof.rollup.mined ? 'SETTLED' : rollupProof.rollup.ethTxHash ? 'PUBLISHED' : 'CREATING',
-        }
-      : undefined,
-  proofData: proofData.toString('hex'),
-  viewingKeys: [viewingKey1, viewingKey2].map(vk => vk.toString()),
-  created: created.toISOString(),
 });
 
 const bufferFromHex = (hexStr: string) => Buffer.from(hexStr.replace(/^0x/i, ''), 'hex');
@@ -123,7 +83,6 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     ctx.status = 200;
   });
 
-  // TODO: Unify get-blocks and get-rollups.
   router.get('/get-blocks', async (ctx: Koa.Context) => {
     const blocks = await server.getBlocks(+ctx.query.from);
     const response: GetBlocksServerResponse = {
@@ -131,42 +90,6 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
       blocks: blocks.map(toBlockResponse),
     };
     ctx.body = response;
-    ctx.status = 200;
-  });
-
-  router.get('/get-rollups', async (ctx: Koa.Context) => {
-    const rollups = await server.getLatestRollups(+ctx.query.count);
-    ctx.body = rollups.map(toRollupResponse);
-    ctx.status = 200;
-  });
-
-  router.get('/get-rollup', async (ctx: Koa.Context) => {
-    const rollup = await server.getRollup(+ctx.query.id);
-    ctx.body = rollup ? toRollupResponse(rollup) : undefined;
-    ctx.status = 200;
-  });
-
-  router.get('/get-txs', async (ctx: Koa.Context) => {
-    let txs;
-    if (ctx.query.txIds) {
-      const txIds = (ctx.query.txIds as string).split(',').map(txId => bufferFromHex(txId));
-      txs = await server.getTxs(txIds);
-    } else {
-      txs = await server.getLatestTxs(+ctx.query.count);
-    }
-    ctx.body = txs.map(toTxResponse);
-    ctx.status = 200;
-  });
-
-  router.get('/get-tx', async (ctx: Koa.Context) => {
-    const tx = await server.getTx(bufferFromHex(ctx.query.txHash as string));
-    ctx.body = tx ? toTxResponse(tx) : undefined;
-    ctx.status = 200;
-  });
-
-  router.get('/get-pending-note-nullifiers', async (ctx: Koa.Context) => {
-    const nullifiers = await server.getPendingNoteNullifiers();
-    ctx.body = nullifiers.map(n => n.toString('hex'));
     ctx.status = 200;
   });
 
@@ -195,6 +118,12 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
 
     ctx.set('content-type', 'application/json');
     ctx.body = response;
+    ctx.status = 200;
+  });
+
+  router.get('/get-pending-note-nullifiers', async (ctx: Koa.Context) => {
+    const nullifiers = await server.getPendingNoteNullifiers();
+    ctx.body = nullifiers.map(n => n.toString('hex'));
     ctx.status = 200;
   });
 

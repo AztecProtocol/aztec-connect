@@ -128,9 +128,8 @@ export class Server {
   }
 
   private async getNextPublishTime() {
-    return moment(await this.worldState.getLastPublishedTime())
-      .add(this.config.publishInterval)
-      .toDate();
+    const lastRollup = await this.rollupDb.getLastSettledRollup();
+    return lastRollup ? moment(lastRollup.mined).add(this.config.publishInterval).toDate() : new Date();
   }
 
   public async getPendingNoteNullifiers() {
@@ -160,14 +159,6 @@ export class Server {
 
   public async getLatestRollupId() {
     return (await this.rollupDb.getNextRollupId()) - 1;
-  }
-
-  public async getLatestRollups(count: number) {
-    return this.rollupDb.getRollups(count);
-  }
-
-  public async getLatestTxs(count: number) {
-    return this.rollupDb.getLatestTxs(count);
   }
 
   public async getRollup(id: number) {

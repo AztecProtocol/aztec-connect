@@ -53,6 +53,7 @@ async function main() {
     maxUnsettledTxs,
   };
   const rollupDb = new CachedRollupDb(new TypeOrmRollupDb(connection));
+  await rollupDb.init();
   const worldStateDb = new WorldStateDb();
   const metrics = new Metrics(worldStateDb, rollupDb, blockchain);
   const server = new Server(serverConfig, blockchain, rollupDb, worldStateDb, metrics, provider, barretenberg);

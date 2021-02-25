@@ -30,7 +30,7 @@ export class RollupResolver {
 
   @Query(() => [RollupType!])
   async rollups(@Args() { take, skip }: RollupsArgs) {
-    const data = await this.rollupDb.getRollups(take!, skip!);
+    const data = await this.rollupDb.getRollups(take!, skip!, true);
     return data;
   }
 

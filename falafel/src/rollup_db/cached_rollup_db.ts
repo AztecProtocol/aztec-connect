@@ -1,7 +1,7 @@
 import { TxDao } from '../entity/tx';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { RollupDao } from '../entity/rollup';
-import { SyncRollupDb } from './sync_rolllup_db';
+import { SyncRollupDb } from './sync_rollup_db';
 import { TxHash } from 'barretenberg/tx_hash';
 import { JoinSplitTxDao } from '../entity/join_split_tx';
 import { ProofData, ProofId } from 'barretenberg/client_proofs/proof_data';
@@ -10,12 +10,21 @@ import { AccountTxDao } from '../entity/account_tx';
 export class CachedRollupDb extends SyncRollupDb {
   private pendingTxCount?: number;
   private unsettledTxCount?: number;
-  private nextRollupId?: number;
   private totalTxCount?: number;
-  private numSettledRollups?: number;
-  private rollups?: RollupDao[];
+  private rollups: RollupDao[] = [];
+  private settledRollups: RollupDao[] = [];
   private unsettledJoinSplitTxs?: JoinSplitTxDao[];
   private unsettledAccountTxs?: AccountTxDao[];
+
+  public async init() {
+    await this.refreshRollups();
+  }
+
+  public async refreshRollups() {
+    this.rollups = await super.getRollups();
+    this.settledRollups = this.rollups.filter(rollup => rollup.mined);
+    console.log(`Db cache loaded ${this.rollups.length} rollups from db...`);
+  }
 
   public async getPendingTxCount() {
     if (this.pendingTxCount === undefined) {
@@ -24,21 +33,17 @@ export class CachedRollupDb extends SyncRollupDb {
     return this.pendingTxCount;
   }
 
-  public async getRollups(take: number, skip = 0) {
-    if (!skip && take === 5) {
-      if (!this.rollups) {
-        this.rollups = await super.getRollups(take, skip);
-      }
-      return this.rollups;
-    }
-    return await super.getRollups(take, skip);
+  public async getRollup(id: number) {
+    return this.rollups[id];
+  }
+
+  public async getRollups(take?: number, skip = 0, descending = false) {
+    const rollups = descending ? this.rollups.reverse() : this.rollups;
+    return rollups.slice(skip, take ? skip + take : undefined);
   }
 
   public async getNumSettledRollups() {
-    if (this.numSettledRollups === undefined) {
-      this.numSettledRollups = await super.getNumSettledRollups();
-    }
-    return this.numSettledRollups;
+    return this.settledRollups.length;
   }
 
   public async getUnsettledTxCount() {
@@ -54,6 +59,7 @@ export class CachedRollupDb extends SyncRollupDb {
     }
     return this.unsettledJoinSplitTxs;
   }
+
   public async getUnsettledAccountTxs() {
     if (this.unsettledAccountTxs === undefined) {
       this.unsettledAccountTxs = await super.getUnsettledAccountTxs();
@@ -61,11 +67,19 @@ export class CachedRollupDb extends SyncRollupDb {
     return this.unsettledAccountTxs;
   }
 
+  public async getSettledRollups(from = 0) {
+    return this.settledRollups.slice(from);
+  }
+
+  public async getLastSettledRollup() {
+    return this.settledRollups.length ? this.settledRollups[this.settledRollups.length - 1] : undefined;
+  }
+
   public async getNextRollupId() {
-    if (this.nextRollupId === undefined) {
-      this.nextRollupId = await super.getNextRollupId();
+    if (this.settledRollups.length === 0) {
+      return 0;
     }
-    return this.nextRollupId;
+    return this.settledRollups[this.settledRollups.length - 1].id + 1;
   }
 
   public async getTotalTxCount() {
@@ -96,70 +110,60 @@ export class CachedRollupDb extends SyncRollupDb {
       }
     }
 
-    this.purge();
+    this.purgeTxCounters();
     return addedTx;
   }
 
   public async deletePendingTxs() {
     await super.deletePendingTxs();
-    this.purge();
+    this.purgeTxCounters();
   }
 
   public async addRollupProof(rollupDao: RollupProofDao) {
     await super.addRollupProof(rollupDao);
-    this.purge();
+    this.purgeTxCounters();
   }
 
   public async deleteRollupProof(id: Buffer) {
     await super.deleteRollupProof(id);
-    this.purge();
-    this.purgeRollupCaches();
+    this.purgeTxCounters();
   }
 
   public async deleteTxlessRollupProofs() {
     await super.deleteTxlessRollupProofs();
-    this.purge();
+    this.purgeTxCounters();
   }
 
   public async deleteOrphanedRollupProofs() {
     await super.deleteOrphanedRollupProofs();
-    this.purge();
+    this.purgeTxCounters();
   }
 
   public async addRollup(rollup: RollupDao) {
-    const result = await super.addRollup(rollup);
-    this.purge();
-    this.purgeRollupCaches();
-    return result;
+    await super.addRollup(rollup);
+    this.rollups[rollup.id] = rollup;
+    if (rollup.mined) {
+      this.settledRollups[rollup.id] = rollup;
+    }
+    this.purgeTxCounters();
   }
 
   public async confirmMined(id: number, gasUsed: number, gasPrice: bigint, mined: Date, ethTxHash: TxHash) {
-    await super.confirmMined(id, gasUsed, gasPrice, mined, ethTxHash);
-    this.nextRollupId = undefined;
-    this.purge();
-    this.purgeRollupCaches();
-    this.purgePendingTxs();
-    this.unsettledAccountTxs = await this.getUnsettledAccountTxs();
-    this.unsettledJoinSplitTxs = await this.getUnsettledJoinSplitTxs();
+    const rollup = await super.confirmMined(id, gasUsed, gasPrice, mined, ethTxHash);
+    this.purgeTxCounters();
+    this.settledRollups[rollup.id] = rollup;
+    this.unsettledJoinSplitTxs = undefined;
+    this.unsettledAccountTxs = undefined;
+    return rollup;
   }
 
   public async deleteUnsettledRollups() {
     await super.deleteUnsettledRollups();
-    this.purgeRollupCaches();
-    this.purge();
+    this.rollups = this.settledRollups;
+    this.purgeTxCounters();
   }
 
-  private purgeRollupCaches = () => {
-    this.rollups = undefined;
-    this.numSettledRollups = undefined;
-  };
-
-  private purgePendingTxs = () => {
-    this.unsettledJoinSplitTxs = undefined;
-    this.unsettledAccountTxs = undefined;
-  };
-
-  private purge = () => {
+  private purgeTxCounters = () => {
     this.pendingTxCount = undefined;
     this.unsettledTxCount = undefined;
     this.totalTxCount = undefined;

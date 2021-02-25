@@ -29,6 +29,7 @@ interface ConfVars {
   feeGasPrice: bigint;
   reimbursementFeeLimit: bigint;
   maxUnsettledTxs: number;
+  typeOrmLogging: boolean;
 }
 
 function getConfVars(): ConfVars {
@@ -52,6 +53,7 @@ function getConfVars(): ConfVars {
     FEE_GAS_PRICE,
     REIMBURSEMENT_FEE_LIMIT,
     MAX_UNSETTLED_TXS,
+    TYPEORM_LOGGING,
   } = process.env;
 
   return {
@@ -77,6 +79,7 @@ function getConfVars(): ConfVars {
     feeGasPrice: BigInt(FEE_GAS_PRICE || 0),
     reimbursementFeeLimit: REIMBURSEMENT_FEE_LIMIT ? BigInt(REIMBURSEMENT_FEE_LIMIT) : BigInt(10) ** BigInt(30),
     maxUnsettledTxs: +(MAX_UNSETTLED_TXS || 0),
+    typeOrmLogging: !!TYPEORM_LOGGING,
   };
 }
 
@@ -145,20 +148,21 @@ async function loadConfVars(path: string) {
   return state;
 }
 
-function getOrmConfig(): ConnectionOptions {
+function getOrmConfig(logging: boolean): ConnectionOptions {
   return {
     type: 'sqlite',
     database: 'data/db.sqlite',
     entities: [TxDao, JoinSplitTxDao, AccountTxDao, RollupProofDao, RollupDao],
     synchronize: true,
-    logging: false,
+    logging,
   };
 }
 
 export async function getConfig() {
-  const ormConfig = getOrmConfig();
   const confVars = await loadConfVars('./data/config');
-  const { gasLimit, rollupContractAddress } = confVars;
+  const { gasLimit, rollupContractAddress, typeOrmLogging } = confVars;
+
+  const ormConfig = getOrmConfig(typeOrmLogging);
 
   console.log(`Gas limit: ${gasLimit || 'default'}`);
   console.log(`Rollup contract address: ${rollupContractAddress || 'none'}`);

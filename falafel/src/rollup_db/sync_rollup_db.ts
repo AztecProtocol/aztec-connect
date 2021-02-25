@@ -114,8 +114,8 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.getRollup(id));
   }
 
-  public async getRollups(take: number, skip?: number) {
-    return this.synchronise(() => this.rollupDb.getRollups(take, skip));
+  public async getRollups(take?: number, skip?: number, descending = false) {
+    return this.synchronise(() => this.rollupDb.getRollups(take, skip, descending));
   }
 
   public async getNumSettledRollups() {
@@ -138,8 +138,12 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.confirmMined(id, gasUsed, gasPrice, mined, ethTxHash));
   }
 
-  public getSettledRollups(from = 0, descending = false, take?: number) {
-    return this.synchronise(() => this.rollupDb.getSettledRollups(from, descending, take));
+  public getSettledRollups(from = 0) {
+    return this.synchronise(() => this.rollupDb.getSettledRollups(from));
+  }
+
+  public async getLastSettledRollup() {
+    return this.synchronise(() => this.rollupDb.getLastSettledRollup());
   }
 
   public getUnsettledRollups() {

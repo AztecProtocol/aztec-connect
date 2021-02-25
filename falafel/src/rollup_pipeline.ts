@@ -68,10 +68,6 @@ export class RollupPipeline {
     this.txAggregator = new TxAggregator(rollupCreator, rollupDb, numInnerRollupTxs);
   }
 
-  public async getLastPublishedTime() {
-    return this.rollupPublisher.getLastPublishedTime();
-  }
-
   public async start() {
     const nextPublishTime = await this.rollupPublisher.getNextPublishTime();
     return this.txAggregator.start(nextPublishTime);

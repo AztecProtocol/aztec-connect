@@ -4,7 +4,13 @@ import { HashPath } from '../merkle_tree';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { ChildProcess, execSync, spawn } from 'child_process';
 import { PromiseReadable } from 'promise-readable';
-import { numToUInt32BE } from '../serialize';
+import { serializeBufferArrayToVector, serializeBufferToVector } from '../serialize';
+
+export interface PutEntry {
+  treeId: number;
+  index: bigint;
+  value: Buffer;
+}
 
 export class WorldStateDb {
   private proc?: ChildProcess;
@@ -87,10 +93,10 @@ export class WorldStateDb {
       Buffer.alloc(1, 1),
       Buffer.alloc(1, treeId),
       toBufferBE(index, 32),
-      numToUInt32BE(value.length),
+      serializeBufferToVector(value),
     ]);
 
-    this.proc!.stdin!.write(Buffer.concat([buffer, value]));
+    this.proc!.stdin!.write(buffer);
 
     this.roots[treeId] = await this.stdout.read(32);
 
@@ -99,6 +105,21 @@ export class WorldStateDb {
     }
 
     return this.roots[treeId];
+  }
+
+  public async batchPut(entries: PutEntry[]) {
+    return new Promise(resolve => this.stdioQueue.put(async () => resolve(await this.batchPut_(entries))));
+  }
+
+  private async batchPut_(entries: PutEntry[]) {
+    const bufs = entries.map(e =>
+      Buffer.concat([Buffer.alloc(1, e.treeId), toBufferBE(e.index, 32), serializeBufferToVector(e.value)]),
+    );
+    const buffer = Buffer.concat([Buffer.alloc(1, 5), serializeBufferArrayToVector(bufs)]);
+
+    this.proc!.stdin!.write(buffer);
+
+    await this.readMetadata();
   }
 
   public async commit() {
