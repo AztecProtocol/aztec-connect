@@ -308,8 +308,7 @@ export class Contracts {
   }
 
   public async isContract(address: EthAddress) {
-    const result = await this.provider.getCode(address.toString());
-    return result.toString() !== '0x';
+    return (await this.provider.getCode(address.toString())) !== '0x';
   }
 
   public async getGasPrice() {

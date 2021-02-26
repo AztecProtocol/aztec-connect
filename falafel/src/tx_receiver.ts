@@ -13,6 +13,7 @@ import { ViewingKey } from 'barretenberg/viewing_key';
 import { ProofGenerator } from 'halloumi/proof_generator';
 import { TxFeeResolver } from './tx_fee_resolver';
 import { JoinSplitTxDao } from './entity/join_split_tx';
+import { Metrics } from './metrics';
 
 export interface Tx {
   proofData: Buffer;
@@ -32,6 +33,7 @@ export class TxReceiver {
     private blockchain: Blockchain,
     private proofGenerator: ProofGenerator,
     private txFeeResolver: TxFeeResolver,
+    private metrics: Metrics,
   ) {}
 
   public async init() {
@@ -58,6 +60,8 @@ export class TxReceiver {
     await this.mutex.acquire();
     try {
       const proof = new ProofData(proofData);
+      const txType = await this.getTxType(proof);
+      this.metrics.txReceived(txType);
 
       console.log(`Received tx: ${proof.txId.toString('hex')}`);
 
@@ -67,9 +71,10 @@ export class TxReceiver {
 
       // Check the proof is valid.
       switch (proof.proofId) {
-        case ProofId.JOIN_SPLIT:
-          await this.validateJoinSplitTx(proof, depositSignature);
+        case ProofId.JOIN_SPLIT: {
+          await this.validateJoinSplitTx(proof, txType, depositSignature);
           break;
+        }
         case ProofId.ACCOUNT:
           await this.validateAccountTx(proof);
           break;
@@ -97,33 +102,32 @@ export class TxReceiver {
     }
   }
 
-  private async getTxType(jsProofData: JoinSplitProofData) {
-    const { publicInput, publicOutput, outputOwner } = jsProofData;
+  private async getTxType(proofData: ProofData) {
+    if (proofData.proofId == ProofId.ACCOUNT) {
+      return TxType.ACCOUNT;
+    }
 
-    const isContract = await this.blockchain.isContract(outputOwner);
+    const { publicInput, publicOutput, outputOwner } = new JoinSplitProofData(proofData);
 
     if (publicInput > 0) {
       return TxType.DEPOSIT;
-    } else if (publicOutput > 0 && isContract) {
-      return TxType.WITHDRAW_TO_CONTRACT;
     } else if (publicOutput > 0) {
-      return TxType.WITHDRAW_TO_WALLET;
+      return (await this.blockchain.isContract(outputOwner)) ? TxType.WITHDRAW_TO_CONTRACT : TxType.WITHDRAW_TO_WALLET;
     } else {
       return TxType.TRANSFER;
     }
   }
 
-  private async validateJoinSplitTx(proofData: ProofData, depositSignature?: Buffer) {
+  private async validateJoinSplitTx(proofData: ProofData, txType: TxType, depositSignature?: Buffer) {
     const jsProofData = new JoinSplitProofData(proofData);
     const { publicInput, inputOwner, assetId, depositSigningData } = jsProofData;
 
-    const txType = await this.getTxType(jsProofData);
     const minFee = this.txFeeResolver.getTxFee(assetId, txType);
     if (jsProofData.proofData.txFee < minFee) {
       throw new Error('Insufficient fee.');
     }
 
-    if (!(await this.joinSplitVerifier.verifyProof(proofData.rawProofData))) {
+    if (!(await this.joinSplitVerifier.verifyProof(jsProofData.proofData.rawProofData))) {
       throw new Error('Join-split proof verification failed.');
     }
 

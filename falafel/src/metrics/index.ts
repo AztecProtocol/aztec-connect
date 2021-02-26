@@ -1,9 +1,9 @@
 import { AssetId, AssetIds } from 'barretenberg/asset';
-import { Blockchain } from 'barretenberg/blockchain';
+import { Blockchain, TxType } from 'barretenberg/blockchain';
 import { fromBaseUnits } from 'blockchain';
 import { WorldStateDb } from 'barretenberg/world_state_db';
 import { toBigIntBE } from 'bigint-buffer';
-import client, { Gauge, Histogram } from 'prom-client';
+import client, { Counter, Gauge, Histogram } from 'prom-client';
 import { RollupDb } from '../rollup_db';
 
 export class Metrics {
@@ -23,12 +23,14 @@ export class Metrics {
   private totalFees: Gauge<string>;
   private feeDistributorBalance: Gauge<string>;
 
+  private txReceivedCounter: Counter<string>;
+
   constructor(worldStateDb: WorldStateDb, private rollupDb: RollupDb, private blockchain: Blockchain) {
     client.collectDefaultMetrics();
 
     new Gauge({
-      name: 'tx_received_total',
-      help: 'Transactions received',
+      name: 'tx_total',
+      help: 'Total transactions',
       async collect() {
         this.set(await rollupDb.getTotalTxCount());
       },
@@ -172,6 +174,12 @@ export class Metrics {
       name: 'process_block_duration_seconds',
       help: 'Time to process a received block',
     });
+
+    this.txReceivedCounter = new Counter({
+      name: 'tx_received',
+      help: 'Transaction received counter',
+      labelNames: ['tx_type'],
+    });
   }
 
   receiveTxTimer() {
@@ -196,6 +204,10 @@ export class Metrics {
 
   txSettlementDuration(ms: number) {
     this.txSettlementHistogram.observe(ms / 1000);
+  }
+
+  txReceived(txType: TxType) {
+    this.txReceivedCounter.labels(TxType[txType]).inc();
   }
 
   async getMetrics() {

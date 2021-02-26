@@ -72,7 +72,14 @@ export class Server {
     );
     this.worldState = new WorldState(rollupDb, worldStateDb, blockchain, this.pipelineFactory, metrics);
     this.txFeeResolver = new TxFeeResolver(blockchain, baseTxGas, feeGasPrice);
-    this.txReceiver = new TxReceiver(barretenberg, rollupDb, blockchain, this.proofGenerator, this.txFeeResolver);
+    this.txReceiver = new TxReceiver(
+      barretenberg,
+      rollupDb,
+      blockchain,
+      this.proofGenerator,
+      this.txFeeResolver,
+      metrics,
+    );
   }
 
   public async start() {

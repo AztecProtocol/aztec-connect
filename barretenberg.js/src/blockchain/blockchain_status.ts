@@ -5,6 +5,7 @@ export enum TxType {
   TRANSFER,
   WITHDRAW_TO_WALLET,
   WITHDRAW_TO_CONTRACT,
+  ACCOUNT,
 }
 
 export interface BlockchainAsset {
