@@ -38,7 +38,6 @@ describe.only('aes128', () => {
     cipher.setAutoPadding(false);
     const ciphertext = Buffer.concat([cipher.update(data), cipher.final()]);
 
-    console.log('ciphertext length = ', ciphertext.length);
     const decipher = createDecipheriv('aes-128-cbc', key, iv);
     decipher.setAutoPadding(false);
     const expected = Buffer.concat([decipher.update(ciphertext), decipher.final()]);

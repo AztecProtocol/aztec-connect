@@ -3,6 +3,7 @@ import isNode from 'detect-node';
 import { promisify } from 'util';
 import { EventEmitter } from 'events';
 import createDebug from 'debug';
+import { getRandomBytes } from '../crypto/random';
 
 EventEmitter.defaultMaxListeners = 30;
 
@@ -46,8 +47,9 @@ export class BarretenbergWasm extends EventEmitter {
         random_get: (arr, length) => {
           arr = arr >>> 0;
           const heap = new Uint8Array(this.memory.buffer);
+          const randomBytes = getRandomBytes(length);
           for (let i = arr; i < arr + length; ++i) {
-            heap[i] = Math.floor(Math.random() * 256);
+            heap[i] = randomBytes[i - arr];
           }
         },
       },
