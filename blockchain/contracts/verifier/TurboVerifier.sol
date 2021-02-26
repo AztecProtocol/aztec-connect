@@ -8,7 +8,7 @@ import {Bn254Crypto} from './cryptography/Bn254Crypto.sol';
 import {PolynomialEval} from './cryptography/PolynomialEval.sol';
 import {Types} from './cryptography/Types.sol';
 import {VerificationKeys} from './keys/VerificationKeys.sol';
-import {TranscriptLibrary} from './cryptography/TranscriptLibrary.sol';
+import {Transcript} from './cryptography/Transcript.sol';
 import {IVerifier} from '../interfaces/IVerifier.sol';
 
 /**
@@ -31,7 +31,7 @@ import {IVerifier} from '../interfaces/IVerifier.sol';
 contract TurboVerifier is IVerifier {
     using Bn254Crypto for Types.G1Point;
     using Bn254Crypto for Types.G2Point;
-    using TranscriptLibrary for TranscriptLibrary.Transcript;
+    using Transcript for Transcript.TranscriptData;
 
     /**
      * @dev Verify a Plonk proof
@@ -46,25 +46,14 @@ contract TurboVerifier is IVerifier {
         // parse the input calldata and construct a Proof object
         Types.Proof memory decoded_proof = deserialize_proof(num_public_inputs, vk);
 
-        TranscriptLibrary.Transcript memory transcript = TranscriptLibrary.new_transcript(
-            vk.circuit_size,
-            vk.num_inputs
-        );
+        Transcript.TranscriptData memory transcript;
+        transcript.generate_initial_challenge(vk.circuit_size, vk.num_inputs);
 
         // reconstruct the beta, gamma, alpha and zeta challenges
         Types.ChallengeTranscript memory challenges;
-        transcript.get_beta_gamma_challenges(challenges, vk.num_inputs);
-        transcript.update_with_g1(decoded_proof.Z);
-        challenges.alpha = transcript.get_challenge();
-        challenges.alpha_base = challenges.alpha;
-        transcript.update_with_four_g1_elements(
-            decoded_proof.T1,
-            decoded_proof.T2,
-            decoded_proof.T3,
-            decoded_proof.T4
-        );
-        challenges.zeta = transcript.get_challenge();
-
+        transcript.generate_beta_gamma_challenges(challenges, vk.num_inputs);
+        transcript.generate_alpha_challenge(challenges, decoded_proof.Z);
+        transcript.generate_zeta_challenge(challenges, decoded_proof.T1, decoded_proof.T2, decoded_proof.T3, decoded_proof.T4);
 
         /**
          * Compute all inverses that will be needed throughout the program here.
@@ -77,15 +66,13 @@ contract TurboVerifier is IVerifier {
         decoded_proof.quotient_polynomial_eval = quotient_eval;
 
         // reconstruct the nu and u challenges
-        transcript.get_nu_challenges(decoded_proof.quotient_polynomial_eval, challenges);
-        transcript.update_with_g1(decoded_proof.PI_Z);
-        transcript.update_with_g1(decoded_proof.PI_Z_OMEGA);
-        challenges.u = transcript.get_challenge();
+        transcript.generate_nu_challenges(challenges, decoded_proof.quotient_polynomial_eval, vk.num_inputs);
+        transcript.generate_separator_challenge(challenges, decoded_proof.PI_Z, decoded_proof.PI_Z_OMEGA);
 
         //reset 'alpha base'
         challenges.alpha_base = challenges.alpha;
 
-        Types.G1Point memory partial_opening_commitment = PolynomialEval.compute_linearised_opening_terms(
+        Types.G1Point memory linearised_contribution = PolynomialEval.compute_linearised_opening_terms(
             challenges,
             L1,
             vk,
@@ -95,7 +82,7 @@ contract TurboVerifier is IVerifier {
         Types.G1Point memory batch_opening_commitment = PolynomialEval.compute_batch_opening_commitment(
             challenges,
             vk,
-            partial_opening_commitment,
+            linearised_contribution,
             decoded_proof
         );
 

@@ -411,63 +411,60 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             uint256 newDataSize
         ) = validateMerkleRoots(proofData);
 
+        // Verify the rollup proof.
+        //
+        // We manually call the verifier contract via assembly. This is to prevent a
+        // redundant copy of `proofData` into memory, which costs between 100,000 to 1,000,000 gas
+        // depending on the rollup size!
+        bool proof_verified = false;
+        address verifierAddress;
+        uint256 temp1;
+        uint256 temp2;
+        uint256 temp3;
+        assembly {
+            // Step 1: we need to insert 68 bytes of verifier 'calldata' just prior to proofData
+            // Start by defining the start of our 'calldata'. Also grab the verifier contract address from storage
+            let inputPtr := sub(proofData, 0x44)
+            verifierAddress := sload(verifier_slot)
 
-        // // Verify the rollup proof.
-        // // 
-        // // We manually call the verifier contract via assembly. This is to prevent a
-        // // redundant copy of `proofData` into memory, which costs between 100,000 to 1,000,000 gas
-        // // depending on the rollup size!
-        // bool proof_verified = false;
-        // address verifierAddress;
-        // uint256 temp1;
-        // uint256 temp2;
-        // uint256 temp3;
-        // assembly {
+            // Step 2: we need to overwrite the memory between `inputPtr` and `inputPtr + 68`
+            // we load the existing 68 bytes of memory into stack variables temp1, temp2, temp3
+            // Once we have called the verifier contract, we will write this data back into memory
+            temp1 := mload(inputPtr)
+            temp2 := mload(add(inputPtr, 0x20))
+            temp3 := mload(add(inputPtr, 0x40))
 
-        //     // Step 1: we need to insert 68 bytes of verifier 'calldata' just prior to proofData
-        //     // Start by defining the start of our 'calldata'. Also grab the verifier contract address from storage
-        //     let inputPtr := sub(proofData, 0x44)
-        //     verifierAddress := sload(verifier_slot)
+            // Step 3: insert our calldata into memory
+            // We call the function `verify(bytes,uint256)`
+            // The function signature is 0xac318c5d
+            // Calldata map is:
+            // 0x00 - 0x04 : 0xac318c5d
+            // 0x04 - 0x24 : 0x40 (number of bytes between 0x04 and the start of the `proofData` array at 0x44)
+            // 0x24 - 0x44 : rollupSize
+            // 0x44 - .... : proofData (already present in memory)
+            mstore8(inputPtr, 0xac)
+            mstore8(add(inputPtr, 0x01), 0x31)
+            mstore8(add(inputPtr, 0x02), 0x8c)
+            mstore8(add(inputPtr, 0x03), 0x5d)
+            mstore(add(inputPtr, 0x04), 0x40)
+            mstore(add(inputPtr, 0x24), rollupSize)
 
-        //     // Step 2: we need to overwrite the memory between `inputPtr` and `inputPtr + 68`
-        //     // we load the existing 68 bytes of memory into stack variables temp1, temp2, temp3
-        //     // Once we have called the verifier contract, we will write this data back into memory
-        //     temp1 := mload(inputPtr)
-        //     temp2 := mload(add(inputPtr, 0x20))
-        //     temp3 := mload(add(inputPtr, 0x40))
+            // Total calldata size is proofData.length + 96 bytes (the 66 bytes we just wrote, plus the 32 byte 'length' field of proofData)
+            let callSize := add(mload(proofData), 0x64)
 
-        //     // Step 3: insert our calldata into memory
-        //     // We call the function `verify(bytes,uint256)`
-        //     // The function signature is 0xac318c5d
-        //     // Calldata map is:
-        //     // 0x00 - 0x04 : 0xac318c5d
-        //     // 0x04 - 0x24 : 0x40 (number of bytes between 0x04 and the start of the `proofData` array at 0x44)
-        //     // 0x24 - 0x44 : rollupSize
-        //     // 0x44 - .... : proofData (already present in memory)
-        //     mstore8(inputPtr, 0xac)
-        //     mstore8(add(inputPtr, 0x01), 0x31)
-        //     mstore8(add(inputPtr, 0x02), 0x8c)
-        //     mstore8(add(inputPtr, 0x03), 0x5d)
-        //     mstore(add(inputPtr, 0x04), 0x40)
-        //     mstore(add(inputPtr, 0x24), rollupSize)
+            // Step 4: Call our verifier contract. If does not return any values, but will throw an error if the proof is not valid
+            // i.e. verified == false if proof is not valid
+            proof_verified := staticcall(gas(), verifierAddress, inputPtr, callSize, 0x00, 0x00)
 
-        //     // Total calldata size is proofData.length + 96 bytes (the 66 bytes we just wrote, plus the 32 byte 'length' field of proofData)
-        //     let callSize := add(mload(proofData), 0x64)
+            // Step 5: Restore the memory we overwrote with our 'calldata'
+            mstore(inputPtr, temp1)
+            mstore(add(inputPtr, 0x20), temp2)
+            mstore(add(inputPtr, 0x40), temp3)
+        }
 
-        //     // Step 4: Call our verifier contract. If does not return any values, but will throw an error if the proof is not valid
-        //     // i.e. verified == false if proof is not valid
-        //     proof_verified := staticcall(gas(), verifierAddress, inputPtr, callSize, 0x00, 0x00)
+        // Check the proof is valid!
+        require(proof_verified, 'proof verification failed');
 
-        //     // Step 5: Restore the memory we overwrote with our 'calldata'
-        //     mstore(inputPtr, temp1)
-        //     mstore(add(inputPtr, 0x20), temp2)
-        //     mstore(add(inputPtr, 0x40), temp3)
-        // }
-
-        // // Check the proof is valid!
-        // require(proof_verified, "proof verification failed");
-        // TODO: clean this up and see why e2e test is failing
-        verifier.verify(proofData, rollupSize);
         // Update state variables.
         dataRoot = newDataRoot;
         nullRoot = newNullRoot;
@@ -553,8 +550,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         uint256 stepSize = txPubInputLength;
 
         // This is a bit of a hot loop, we iterate over every tx to determine whether to process deposits or withdrawals.
-        while (proofDataPtr < end)
-        {
+        while (proofDataPtr < end) {
             // extract the minimum information we need to determine whether to skip this iteration
             uint256 proofId;
             uint256 publicInput;
@@ -566,14 +562,10 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                 publicOutput := mload(add(proofDataPtr, 0x40))
                 // only process deposits and withdrawals iff
                 // the proofId == 0 (not an account proof) and publicInput > 0 OR publicOutput > 0
-                txNeedsProcessing := and(
-                    iszero(proofId),
-                    or(not(iszero(publicInput)), not(iszero(publicOutput)))
-                )
+                txNeedsProcessing := and(iszero(proofId), or(not(iszero(publicInput)), not(iszero(publicOutput))))
             }
 
-            if (txNeedsProcessing)
-            {
+            if (txNeedsProcessing) {
                 // extract asset Id
                 uint256 assetId;
                 assembly {
@@ -591,7 +583,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                         digest := keccak256(proofDataPtr, stepSize)
                     }
                     if (!depositProofApprovals[inputOwner][digest]) {
-
                         // extract and validate signature
                         // we can create a bytes memory container for the signature without allocating new memory,
                         // by overwriting the previous 32 bytes in the `signatures` array with the 'length' of our synthetic byte array (92)
@@ -660,7 +651,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     ) internal {
         require(receiverAddress != address(0), 'Rollup Processor: ZERO_ADDRESS');
         if (assetId == 0) {
-            // We explicitly do not throw if this call fails, as this opens up the possiblity of 
+            // We explicitly do not throw if this call fails, as this opens up the possiblity of
             // griefing attacks, as engineering a failed withdrawal will invalidate an entire rollup block
             payable(receiverAddress).call{gas: 30000, value: withdrawValue}('');
         } else {

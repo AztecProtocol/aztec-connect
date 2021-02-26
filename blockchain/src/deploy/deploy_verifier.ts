@@ -1,7 +1,4 @@
 import { ContractFactory, Signer } from 'ethers';
-import PolynomialEval from '../artifacts/contracts/verifier/cryptography/PolynomialEval.sol/PolynomialEval.json';
-import TranscriptLibrary from '../artifacts/contracts/verifier/cryptography/TranscriptLibrary.sol/TranscriptLibrary.json';
-import TurboPlonk from '../artifacts/contracts/verifier/cryptography/TurboPlonk.sol/TurboPlonk.json';
 import TurboVerifier from '../artifacts/contracts/verifier/TurboVerifier.sol/TurboVerifier.json';
 import VerificationKeys from '../artifacts/contracts/verifier/keys/VerificationKeys.sol/VerificationKeys.json';
 
@@ -29,33 +26,12 @@ function linkBytecode(artifact: any, libraries: any) {
 }
 
 export async function deployVerifier(signer: Signer) {
-  console.error('Deploying TranscriptLibrary...');
-  const linkedTBytecode = linkBytecode(TranscriptLibrary, {});
-  const transcriptLibraryFactory = new ContractFactory(TranscriptLibrary.abi, linkedTBytecode, signer);
-  const transcriptLib = await transcriptLibraryFactory.deploy();
-
-  console.error('Deploying PolynomialEvalLibrary...');
-  const linkedPBytecode = linkBytecode(PolynomialEval, {});
-  const polynomialEvalLibFactory = new ContractFactory(PolynomialEval.abi, linkedPBytecode, signer);
-  const polynomialEvalLib = await polynomialEvalLibFactory.deploy();
-
   console.error('Deploying VerificationKeys...');
   const verificationKeysLibrary = new ContractFactory(VerificationKeys.abi, VerificationKeys.bytecode, signer);
   const verificationKeysLib = await verificationKeysLibrary.deploy();
 
-  console.error('Deploying TurboPlonk...');
-  const linkedTPBytecode = linkBytecode(TurboPlonk, {
-    TranscriptLibrary: transcriptLib.address,
-    PolynomialEval: polynomialEvalLib.address,
-  });
-  const turboPlonkFactory = new ContractFactory(TurboPlonk.abi, linkedTPBytecode, signer);
-  const turboPlonkLib = await turboPlonkFactory.deploy();
-
   console.error('Deploying TurboVerifier...');
   const linkedVBytecode = linkBytecode(TurboVerifier, {
-    TranscriptLibrary: transcriptLib.address,
-    PolynomialEval: polynomialEvalLib.address,
-    TurboPlonk: turboPlonkLib.address,
     VerificationKeys: verificationKeysLib.address,
   });
   const verifierFactory = new ContractFactory(TurboVerifier.abi, linkedVBytecode, signer);
