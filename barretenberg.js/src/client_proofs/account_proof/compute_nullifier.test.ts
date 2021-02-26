@@ -20,7 +20,7 @@ describe('account_proof_compute_nullifier', () => {
     const accountAliasId = AccountAliasId.fromAlias('pebble', nonce, blake2s);
     const nullifier = computeAccountAliasIdNullifier(accountAliasId, pedersen);
 
-    const expected = Buffer.from('07b0af8337b106f504265f5f633a2980bb22e292ac05f51d5c569b2474bf1f7e', 'hex');
+    const expected = Buffer.from('26f33c3e568762296cf86dc3f1be364490b266d5bf1db2c8684721037942cf28', 'hex');
 
     expect(nullifier).toEqual(expected);
   });

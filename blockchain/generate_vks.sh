@@ -5,3 +5,5 @@ pushd ../barretenberg/build && make -j$(nproc) keygen && popd
 
 cd ./test/verifier/fixtures
 ./create_rollup_proof.sh
+./create_rollup_proof.sh 1 1 2
+./create_rollup_proof.sh 1 1 4
