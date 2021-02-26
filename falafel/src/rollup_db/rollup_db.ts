@@ -129,6 +129,16 @@ export class TypeOrmRollupDb implements RollupDb {
       .getCount();
   }
 
+  private async getUnsettledTxs() {
+    return await this.txRep
+      .createQueryBuilder('tx')
+      .leftJoin('tx.rollupProof', 'rp')
+      .leftJoin('rp.rollup', 'r')
+      .where('tx.rollupProof IS NULL OR rp.rollup IS NULL OR r.mined IS NULL')
+      .orderBy('tx.created', 'ASC')
+      .getMany();
+  }
+
   public async getUnsettledJoinSplitTxs() {
     return await this.joinSplitTxRep
       .createQueryBuilder('js_tx')
@@ -159,8 +169,8 @@ export class TypeOrmRollupDb implements RollupDb {
     });
   }
 
-  public async getPendingNoteNullifiers() {
-    const unsettledTxs = await this.getPendingTxs();
+  public async getUnsettledNullifiers() {
+    const unsettledTxs = await this.getUnsettledTxs();
     return unsettledTxs.map(tx => [tx.nullifier1, tx.nullifier2]).flat();
   }
 

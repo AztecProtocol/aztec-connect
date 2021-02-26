@@ -70,8 +70,8 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.getPendingTxs(take));
   }
 
-  public async getPendingNoteNullifiers() {
-    return this.synchronise(() => this.rollupDb.getPendingNoteNullifiers());
+  public async getUnsettledNullifiers() {
+    return this.synchronise(() => this.rollupDb.getUnsettledNullifiers());
   }
 
   public async nullifiersExist(n1: Buffer, n2: Buffer) {

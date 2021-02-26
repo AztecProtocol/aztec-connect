@@ -122,7 +122,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   });
 
   router.get('/get-pending-note-nullifiers', async (ctx: Koa.Context) => {
-    const nullifiers = await server.getPendingNoteNullifiers();
+    const nullifiers = await server.getUnsettledNullifiers();
     ctx.body = nullifiers.map(n => n.toString('hex'));
     ctx.status = 200;
   });

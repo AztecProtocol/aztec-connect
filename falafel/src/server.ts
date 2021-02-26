@@ -132,8 +132,8 @@ export class Server {
     return lastRollup ? moment(lastRollup.mined).add(this.config.publishInterval).toDate() : new Date();
   }
 
-  public async getPendingNoteNullifiers() {
-    return this.rollupDb.getPendingNoteNullifiers();
+  public async getUnsettledNullifiers() {
+    return this.rollupDb.getUnsettledNullifiers();
   }
 
   public async getBlocks(from: number): Promise<Block[]> {
