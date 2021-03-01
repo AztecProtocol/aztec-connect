@@ -27,7 +27,7 @@
     "bigint-buffer": "^1.1.5",
     "debug": "^4.1.1",
     "detect-node": "^2.0.4",
-    "fs-extra": "^9.1.0",
+    "fs-extra": "9.0.1",
     "levelup": "^4.4.0",
     "memdown": "^5.1.0",
     "node-fetch": "^2.6.0",
@@ -38,6 +38,7 @@
   },
   "devDependencies": {
     "@types/debug": "^4.1.5",
+    "@types/fs-extra": "9.0.1",
     "@types/jest": "^26.0.20",
     "@types/memdown": "^3.0.0",
     "@types/node": "^13.7.7",
