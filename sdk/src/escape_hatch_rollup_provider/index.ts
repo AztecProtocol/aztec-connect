@@ -17,7 +17,7 @@ export class EscapeHatchRollupProvider implements RollupProvider {
   async getStatus(): Promise<RollupProviderStatus> {
     return {
       blockchainStatus: await this.blockchain.getBlockchainStatus(),
-      minFees: [],
+      txFees: [],
       txsPerRollup: 0,
       pendingTxCount: 0,
       nextPublishTime: new Date(0),

@@ -8,13 +8,26 @@ export interface Proof {
   viewingKeys: ViewingKey[];
   depositSignature?: Buffer;
 }
+export interface FeeQuote {
+  fee: bigint;
+  time: number;
+}
+export interface AssetFeeQuote {
+  feeConstants: bigint[];
+  baseFeeQuotes: FeeQuote[];
+}
+export enum SettlementTime {
+  SLOW,
+  AVERAGE,
+  FAST,
+  INSTANT,
+}
 
 export interface RollupProviderStatus {
   blockchainStatus: BlockchainStatus;
-  minFees: bigint[][];
+  txFees: AssetFeeQuote[];
   nextPublishTime: Date;
   pendingTxCount: number;
-  txsPerRollup: number;
 }
 
 export interface RollupProvider extends BlockSource {

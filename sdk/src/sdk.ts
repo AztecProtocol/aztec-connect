@@ -2,6 +2,7 @@ import { EthAddress } from 'barretenberg/address';
 import { BlockchainAsset } from 'barretenberg/blockchain';
 import { TxHash } from 'barretenberg/tx_hash';
 import { AccountId } from './user';
+import { AssetFeeQuote } from 'barretenberg/rollup_provider';
 
 export enum SdkEvent {
   // Initialization state changes.
@@ -53,5 +54,5 @@ export interface SdkStatus {
   dataSize: number;
   dataRoot: Buffer;
   assets: BlockchainAsset[];
-  minFees: bigint[][];
+  txFees: AssetFeeQuote[];
 }

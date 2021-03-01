@@ -113,7 +113,13 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     const response = {
       ...status,
       blockchainStatus: blockchainStatusToJson(status.blockchainStatus),
-      minFees: status.minFees.map(assetFees => assetFees.map(fee => fee.toString())),
+      txFees: status.txFees.map(({ feeConstants, baseFeeQuotes }) => ({
+        feeConstants: feeConstants.map(constant => constant.toString()),
+        baseFeeQuotes: baseFeeQuotes.map(({ fee, time }) => ({
+          time,
+          fee: fee.toString(),
+        })),
+      })),
     };
 
     ctx.set('content-type', 'application/json');

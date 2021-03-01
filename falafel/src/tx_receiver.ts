@@ -68,7 +68,6 @@ export class TxReceiver {
       if (await this.rollupDb.nullifiersExist(proof.nullifier1, proof.nullifier2)) {
         throw new Error('Nullifier already exists.');
       }
-
       // Check the proof is valid.
       switch (proof.proofId) {
         case ProofId.JOIN_SPLIT: {
@@ -92,6 +91,7 @@ export class TxReceiver {
         nullifier2: proof.nullifier2,
         dataRootsIndex,
         created: new Date(),
+        txType,
       });
 
       await this.rollupDb.addTx(txDao);

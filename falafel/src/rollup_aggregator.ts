@@ -5,83 +5,66 @@ import { RollupDao } from './entity/rollup';
 import { RollupProofDao } from './entity/rollup_proof';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
-import { RollupPublisher } from './rollup_publisher';
 
 export class RollupAggregator {
   constructor(
     private proofGenerator: ProofGenerator,
-    private rollupPublisher: RollupPublisher,
     private rollupDb: RollupDb,
     private worldStateDb: WorldStateDb,
-    private innerRollupSize: number,
     private outerRollupSize: number,
     private numInnerRollupTxs: number,
     private numOuterRollupProofs: number,
     private metrics: Metrics,
   ) {}
 
-  /**
-   * Checks the database for rollup proofs of `innerRollupSize`. When it finds `numOuterRollupProofs` it constructs a
-   * rollup proof aggregating those rollup proofs, and replaces the inner proofs with the single aggregated proof,
-   * updating the db as necessary.
-   * @returns true if a proof is succesfully published.
-   */
-  public async aggregateRollupProofs(flush: boolean) {
-    const innerProofs = await this.rollupDb.getRollupProofsBySize(this.innerRollupSize);
+  public async aggregateRollupProofs(innerProofs: RollupProofDao[]) {
+    console.log(`Creating root rollup proof ${innerProofs.length} inner proofs...`);
 
-    console.log(
-      `Inner proof aggregator num/required/flush: ${innerProofs.length}/${this.numOuterRollupProofs}/${flush}`,
-    );
+    const rootRollup = await this.createRootRollup(innerProofs);
+    const end = this.metrics.rootRollupTimer();
+    const rootRollupRequest = new RootRollupProofRequest(this.numInnerRollupTxs, this.numOuterRollupProofs, rootRollup);
+    const proofData = await this.proofGenerator.createProof(rootRollupRequest.toBuffer());
+    end();
 
-    if (innerProofs.length === this.numOuterRollupProofs || flush) {
-      const rootRollup = await this.createRootRollup(innerProofs);
-      const end = this.metrics.rootRollupTimer();
-      const rootRollupRequest = new RootRollupProofRequest(
-        this.numInnerRollupTxs,
-        this.numOuterRollupProofs,
-        rootRollup,
-      );
-      const proofData = await this.proofGenerator.createProof(rootRollupRequest.toBuffer());
-      end();
-
-      if (!proofData) {
-        throw new Error('Failed to create valid aggregate rollup.');
-      }
-
-      const rollupProofData = RollupProofData.fromBuffer(proofData);
-
-      const rollupProofDao = new RollupProofDao();
-      rollupProofDao.id = rollupProofData.rollupHash;
-      // TypeOrm is bugged using Buffers as primaries, so there's an internalId that's a string.
-      // I've mostly hidden this workaround in the entities but it's needed here.
-      rollupProofDao.internalId = rollupProofData.rollupHash.toString('hex');
-      rollupProofDao.txs = innerProofs.map(p => p.txs).flat();
-      rollupProofDao.proofData = proofData;
-      rollupProofDao.rollupSize = this.outerRollupSize;
-      rollupProofDao.created = new Date();
-      rollupProofDao.dataStartIndex = innerProofs[0].dataStartIndex;
-
-      const rollupDao = new RollupDao({
-        id: rootRollup.rollupId,
-        dataRoot: this.worldStateDb.getRoot(0),
-        rollupProof: rollupProofDao,
-        created: new Date(),
-        viewingKeys: Buffer.concat(
-          rollupProofDao.txs
-            .map(tx => [tx.viewingKey1, tx.viewingKey2])
-            .flat()
-            .map(vk => vk.toBuffer()),
-        ),
-      });
-
-      await this.rollupDb.addRollup(rollupDao);
-
-      await this.rollupDb.deleteTxlessRollupProofs();
-
-      return await this.rollupPublisher.publishRollup(rollupDao);
+    if (!proofData) {
+      throw new Error('Failed to create valid aggregate rollup.');
     }
 
-    return false;
+    const rollupProofData = RollupProofData.fromBuffer(proofData);
+
+    const rollupProofDao = new RollupProofDao();
+    rollupProofDao.id = rollupProofData.rollupHash;
+    // TypeOrm is bugged using Buffers as primaries, so there's an internalId that's a string.
+    // I've mostly hidden this workaround in the entities but it's needed here.
+    rollupProofDao.internalId = rollupProofData.rollupHash.toString('hex');
+    rollupProofDao.txs = innerProofs.map(p => p.txs).flat();
+    rollupProofDao.proofData = proofData;
+    rollupProofDao.rollupSize = this.outerRollupSize;
+    rollupProofDao.created = new Date();
+    rollupProofDao.dataStartIndex = innerProofs[0].dataStartIndex;
+
+    const rollupDao = new RollupDao({
+      id: rootRollup.rollupId,
+      dataRoot: this.worldStateDb.getRoot(0),
+      rollupProof: rollupProofDao,
+      created: new Date(),
+      viewingKeys: Buffer.concat(
+        rollupProofDao.txs
+          .map(tx => [tx.viewingKey1, tx.viewingKey2])
+          .flat()
+          .map(vk => vk.toBuffer()),
+      ),
+    });
+
+    await this.rollupDb.addRollup(rollupDao);
+
+    await this.rollupDb.deleteTxlessRollupProofs();
+
+    return rollupDao;
+  }
+
+  public interrupt() {
+    // TODO: Interrupt proof creation.
   }
 
   private async createRootRollup(rollupProofs: RollupProofDao[]) {
@@ -112,9 +95,5 @@ export class RollupAggregator {
     );
 
     return rootRollup;
-  }
-
-  public interrupt() {
-    this.rollupPublisher.interrupt();
   }
 }

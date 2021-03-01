@@ -6,7 +6,6 @@ import { ProofGenerator, TxRollup, TxRollupProofRequest } from 'halloumi/proof_g
 import { RollupProofDao } from './entity/rollup_proof';
 import { TxDao } from './entity/tx';
 import { Metrics } from './metrics';
-import { RollupAggregator } from './rollup_aggregator';
 import { RollupDb } from './rollup_db';
 
 export class RollupCreator {
@@ -14,7 +13,6 @@ export class RollupCreator {
     private rollupDb: RollupDb,
     private worldStateDb: WorldStateDb,
     private proofGenerator: ProofGenerator,
-    private rollupAggregator: RollupAggregator,
     private numInnerRollupTxs: number,
     private innerRollupSize: number,
     private outerRollupSize: number,
@@ -25,45 +23,40 @@ export class RollupCreator {
    * Creates a rollup from the given txs and publishes it.
    * @returns true if successfully published, otherwise false.
    */
-  public async create(txs: TxDao[], flush: boolean) {
-    if (txs.length) {
-      const rollup = await this.createRollup(txs);
+  public async create(txs: TxDao[]) {
+    if (!txs.length) {
+      throw new Error('Txs empty.');
+    }
+    const rollup = await this.createRollup(txs);
 
-      console.log(`Creating proof for rollup ${rollup.rollupHash.toString('hex')} with ${txs.length} txs...`);
-      const end = this.metrics.txRollupTimer();
-      const txRollupRequest = new TxRollupProofRequest(this.numInnerRollupTxs, rollup);
-      const proof = await this.proofGenerator.createProof(txRollupRequest.toBuffer());
-      console.log(`Proof received: ${proof.length}`);
-      end();
+    console.log(`Creating proof for rollup ${rollup.rollupHash.toString('hex')} with ${txs.length} txs...`);
+    const end = this.metrics.txRollupTimer();
+    const txRollupRequest = new TxRollupProofRequest(this.numInnerRollupTxs, rollup);
+    const proof = await this.proofGenerator.createProof(txRollupRequest.toBuffer());
+    console.log(`Proof received: ${proof.length}`);
+    end();
 
-      if (!proof) {
-        // TODO: Once we correctly handle interrupts, this is not a panic scenario.
-        throw new Error('Failed to create proof. This should not happen.');
-      }
-
-      const rollupProofDao = new RollupProofDao({
-        id: rollup.rollupHash,
-        txs,
-        proofData: proof,
-        rollupSize: this.innerRollupSize,
-        dataStartIndex: rollup.dataStartIndex,
-        created: new Date(),
-      });
-
-      await this.rollupDb.addRollupProof(rollupProofDao);
+    if (!proof) {
+      // TODO: Once we correctly handle interrupts, this is not a panic scenario.
+      throw new Error('Failed to create proof. This should not happen.');
     }
 
-    return await this.rollupAggregator.aggregateRollupProofs(flush);
+    const rollupProofDao = new RollupProofDao({
+      id: rollup.rollupHash,
+      txs,
+      proofData: proof,
+      rollupSize: this.innerRollupSize,
+      dataStartIndex: rollup.dataStartIndex,
+      created: new Date(),
+    });
+
+    await this.rollupDb.addRollupProof(rollupProofDao);
+
+    return rollupProofDao;
   }
 
-  /**
-   * If a call to `create` is in progress, this will cause it to return early.
-   * Currently the call to `proofGenerator.interrupt()` does nothing, so if a proofs being created the caller
-   * of `create` will have to wait until it completes.
-   */
   public interrupt() {
-    // this.proofGenerator.interrupt();
-    this.rollupAggregator.interrupt();
+    // TODO: Interrupt proof creation.
   }
 
   private async createRollup(txs: TxDao[]) {

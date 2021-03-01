@@ -6,9 +6,10 @@ import { TxHash } from 'barretenberg/tx_hash';
 import { toBufferBE } from 'bigint-buffer';
 import { EthereumProvider } from 'blockchain';
 import { Signer, utils } from 'ethers';
-import moment, { Duration } from 'moment';
 import { RollupDao } from './entity/rollup';
 import { Metrics } from './metrics';
+import moment from 'moment';
+import { Duration } from 'moment';
 import { RollupDb } from './rollup_db';
 
 export class RollupPublisher {
@@ -16,7 +17,6 @@ export class RollupPublisher {
   private interruptPromise = Promise.resolve();
   private interruptResolve = () => {};
   private signer: Signer;
-  private flush_ = false;
 
   constructor(
     private rollupDb: RollupDb,
@@ -32,15 +32,6 @@ export class RollupPublisher {
   }
 
   public async publishRollup(rollup: RollupDao) {
-    const nextPublishTime = await this.getNextPublishTime();
-
-    if (!this.flush_ && moment().isBefore(nextPublishTime)) {
-      console.log(`Rollup due to be published at ${nextPublishTime.toISOString()}...`);
-      while (!this.flush_ && moment().isBefore(nextPublishTime)) {
-        await this.sleepOrInterrupted(1000);
-      }
-    }
-
     const txData = await this.createTxData(rollup);
     await this.rollupDb.setCallData(rollup.id, txData);
 
@@ -85,10 +76,6 @@ export class RollupPublisher {
   public interrupt() {
     this.interrupted = true;
     this.interruptResolve();
-  }
-
-  public flush() {
-    this.flush_ = true;
   }
 
   private async createTxData(rollup: RollupDao) {

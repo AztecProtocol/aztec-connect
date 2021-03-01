@@ -36,6 +36,7 @@ export const randomTx = (signature?: Buffer, inputOwner?: EthAddress, publicInpu
     dataRootsIndex: 0,
     created: now.add(1, 's').toDate(),
     signature,
+    txType: 0,
   });
 };
 

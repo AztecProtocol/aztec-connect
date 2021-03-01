@@ -24,7 +24,7 @@ describe('end-to-end tests', () => {
   const assetId = AssetId.ETH;
 
   beforeAll(async () => {
-    const walletProvider = await createFundedWalletProvider(ETHEREUM_HOST, 3, '10');
+    const walletProvider = await createFundedWalletProvider(ETHEREUM_HOST, 3, '4');
     const accounts = walletProvider.getAccounts();
 
     sdk = await createEthSdk(walletProvider, ROLLUP_HOST, {
@@ -68,7 +68,7 @@ describe('end-to-end tests', () => {
 
     // Deposit to user 0.
     {
-      const depositValue = user0Asset.toBaseUnits('8');
+      const depositValue = user0Asset.toBaseUnits('2');
 
       const initialTxFeeBalance = BigInt(await feeDistributor.txFeeBalance(assetId));
       const initialPublicBalance = await user0Asset.publicBalance();
@@ -91,7 +91,7 @@ describe('end-to-end tests', () => {
 
     // Transfer to user 1.
     {
-      const transferValue = user0Asset.toBaseUnits('5');
+      const transferValue = user0Asset.toBaseUnits('1');
 
       const initialPublicBalanceUser0 = await user0Asset.publicBalance();
       const initialBalanceUser0 = user0Asset.balance();
@@ -118,7 +118,7 @@ describe('end-to-end tests', () => {
       const initialBalance = user1Asset.balance();
       const initialTxFeeBalance = BigInt(await feeDistributor.txFeeBalance(assetId));
 
-      const withdrawValue = user0Asset.toBaseUnits('3');
+      const withdrawValue = user0Asset.toBaseUnits('1');
       const txHash = await user1Asset.withdraw(withdrawValue, withdrawFee);
       await sdk.awaitSettlement(txHash, 600);
 

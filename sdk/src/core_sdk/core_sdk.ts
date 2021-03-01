@@ -13,7 +13,7 @@ import { Schnorr } from 'barretenberg/crypto/schnorr';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { MemoryFifo } from 'barretenberg/fifo';
 import { RollupProofData } from 'barretenberg/rollup_proof';
-import { RollupProvider } from 'barretenberg/rollup_provider';
+import { RollupProvider, SettlementTime } from 'barretenberg/rollup_provider';
 import { BarretenbergWasm, createWorker, destroyWorker, WorkerPool } from 'barretenberg/wasm';
 import { WorldState } from 'barretenberg/world_state';
 import createDebug from 'debug';
@@ -83,7 +83,7 @@ export class CoreSdk extends EventEmitter {
     dataRoot: Buffer.alloc(0),
     dataSize: 0,
     assets: [],
-    minFees: [],
+    txFees: [],
   };
   private processBlocksPromise?: Promise<void>;
   private blake2s!: Blake2s;
@@ -140,7 +140,7 @@ export class CoreSdk extends EventEmitter {
 
     const {
       blockchainStatus: { chainId, rollupContractAddress, assets },
-      minFees,
+      txFees,
     } = await this.getRemoteStatus();
     await this.leveldb.put('rollupContractAddress', rollupContractAddress.toBuffer());
 
@@ -154,7 +154,7 @@ export class CoreSdk extends EventEmitter {
       syncedToRollup: +(await this.leveldb.get('syncedToRollup').catch(() => -1)),
       latestRollupId: +(await this.leveldb.get('latestRollupId').catch(() => -1)),
       assets,
-      minFees,
+      txFees,
     };
 
     await this.initUserStates();
@@ -332,9 +332,9 @@ export class CoreSdk extends EventEmitter {
     return await this.rollupProvider.getStatus();
   }
 
-  public async getFee(assetId: AssetId, transactionType: TxType) {
-    const { minFees } = this.getLocalStatus();
-    return minFees[assetId][transactionType];
+  public async getFee(assetId: AssetId, transactionType: TxType, speed = SettlementTime.SLOW) {
+    const { txFees } = this.getLocalStatus();
+    return txFees[assetId].feeConstants[transactionType] + txFees[assetId].baseFeeQuotes[speed].fee;
   }
 
   public async startReceivingBlocks() {

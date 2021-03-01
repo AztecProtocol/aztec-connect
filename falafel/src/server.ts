@@ -17,6 +17,7 @@ import { BarretenbergWasm } from 'barretenberg/wasm';
 import { ProofGenerator, ServerProofGenerator } from 'halloumi/proof_generator';
 import { TxFeeResolver } from './tx_fee_resolver';
 import { RollupPipelineFactory } from './rollup_pipeline';
+import { AssetId } from 'barretenberg/asset';
 
 export interface ServerConfig {
   readonly halloumiHost: string;
@@ -56,6 +57,14 @@ export class Server {
       feeGasPrice,
     } = config;
 
+    this.txFeeResolver = new TxFeeResolver(
+      blockchain,
+      baseTxGas,
+      feeGasPrice,
+      numInnerRollupTxs * numOuterRollupProofs,
+      publishInterval.asSeconds(),
+    );
+
     this.proofGenerator = new ServerProofGenerator(config.halloumiHost);
     this.pipelineFactory = new RollupPipelineFactory(
       this.proofGenerator,
@@ -69,9 +78,9 @@ export class Server {
       feeGasPrice,
       numInnerRollupTxs,
       numOuterRollupProofs,
+      this.txFeeResolver,
     );
     this.worldState = new WorldState(rollupDb, worldStateDb, blockchain, this.pipelineFactory, metrics);
-    this.txFeeResolver = new TxFeeResolver(blockchain, baseTxGas, feeGasPrice);
     this.txReceiver = new TxReceiver(
       barretenberg,
       rollupDb,
@@ -124,13 +133,11 @@ export class Server {
 
   public async getStatus(): Promise<RollupProviderStatus> {
     const status = await this.blockchain.getBlockchainStatus();
-
     return {
       blockchainStatus: status,
-      minFees: this.txFeeResolver.getTxFees(),
+      txFees: [this.txFeeResolver.getFeeQuotes(AssetId.ETH)],
       nextPublishTime: await this.getNextPublishTime(),
       pendingTxCount: await this.rollupDb.getUnsettledTxCount(),
-      txsPerRollup: this.config.numInnerRollupTxs * this.config.numOuterRollupProofs,
     };
   }
 

@@ -40,7 +40,7 @@ export class TokenAsset implements Asset {
       symbol: await this.contract.symbol(),
       decimals: +(await this.contract.decimals()),
       permitSupport,
-      gasConstants: [35000, 9400, 40000, 40000],
+      gasConstants: [25000, 0, 25000, 25000],
     };
   }
 

@@ -40,12 +40,18 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
       throw new Error('Failed to contact rollup provider.');
     }
     try {
-      const { minFees, blockchainStatus, nextPublishTime, ...rest } = await response.json();
+      const { txFees, blockchainStatus, nextPublishTime, ...rest } = await response.json();
 
       return {
         ...rest,
         blockchainStatus: blockchainStatusFromJson(blockchainStatus),
-        minFees: minFees.map(fees => fees.map(f => BigInt(f))),
+        txFees: txFees.map(({ feeConstants, baseFeeQuotes }) => ({
+          feeConstants: feeConstants.map(r => BigInt(r)),
+          baseFeeQuotes: baseFeeQuotes.map(({ fee, time }) => ({
+            time,
+            fee: BigInt(fee),
+          })),
+        })),
         nextPublishTime: new Date(nextPublishTime),
       };
     } catch (err) {

@@ -61,6 +61,9 @@ export class TxDao {
   public dataRootsIndex?: number;
 
   @Column()
+  public txType!: number;
+
+  @Column()
   public created!: Date;
 
   @AfterLoad()

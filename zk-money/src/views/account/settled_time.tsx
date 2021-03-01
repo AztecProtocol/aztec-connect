@@ -4,6 +4,7 @@ import { Loader, TextLink } from '../../components';
 import clockIcon from '../../images/clock.svg';
 import { spacings } from '../../styles';
 import { ValueAvailability } from '../../app';
+import moment from 'moment';
 
 const Root = styled.div`
   display: flex;
@@ -32,18 +33,7 @@ const SettledIn = styled(TextLink)<SettledInProps>`
 `;
 
 const formatTime = (seconds: number) => {
-  const hours = Math.ceil(seconds / 3600);
-  if (hours) {
-    return `~${hours} hour${hours > 1 ? 's' : ''}`;
-  }
-  const minutes = Math.ceil(seconds / 60);
-  if (minutes <= 10) {
-    return '< 10 mins';
-  }
-  if (minutes <= 30) {
-    return '< 30 mins';
-  }
-  return '< 1 hour';
+  return moment().add(seconds, 's').fromNow();
 };
 
 interface SettledTimeProps {

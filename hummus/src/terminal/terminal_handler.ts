@@ -384,11 +384,13 @@ export class TerminalHandler {
 
   private async fees() {
     const { symbol } = this.app.getSdk().getAssetInfo(this.assetId);
-    const { minFees } = this.app.getSdk().getLocalStatus();
+    const { txFees } = this.app.getSdk().getLocalStatus();
     const feeNames = ['DEPOSIT', 'TRANSFER', 'WALLET WITHDRAW', 'CONTRACT WITHDRAW'];
-
-    minFees[this.assetId].forEach((fee, index) => {
-      this.printQueue.put(`${feeNames[index]}: ${this.app.getSdk().fromBaseUnits(this.assetId, fee)} ${symbol}\n`);
+    const baseFee = txFees[this.assetId].baseFeeQuotes[0].fee;
+    txFees[this.assetId].feeConstants.forEach((fee, index) => {
+      this.printQueue.put(
+        `${feeNames[index]}: ${this.app.getSdk().fromBaseUnits(this.assetId, fee + baseFee)} ${symbol}\n`,
+      );
     });
   }
 

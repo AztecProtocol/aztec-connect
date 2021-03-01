@@ -411,7 +411,7 @@ export class Account extends EventEmitter {
       updated = {
         ...updated,
         fee: { value: fromBaseUnits(minFee, this.asset.decimals) },
-        settledIn: { value: { seconds: await this.getSettledIn(minFee, minFee), valid: ValueAvailability.VALID } },
+        settledIn: { value: { seconds: await this.getSettledIn(minFee), valid: ValueAvailability.VALID } },
         amount: { value: fromBaseUnits(maxAmount, this.asset.decimals) },
         recipient: { value: this.alias },
         recipientStatus: { value: { input: this.alias, valid: true } },
@@ -445,7 +445,7 @@ export class Account extends EventEmitter {
       updated = {
         ...updated,
         fee: { value: fromBaseUnits(minFee, this.asset.decimals) },
-        settledIn: { value: { seconds: await this.getSettledIn(minFee, minFee), valid: ValueAvailability.VALID } },
+        settledIn: { value: { seconds: await this.getSettledIn(minFee), valid: ValueAvailability.VALID } },
       };
     }
 
@@ -788,8 +788,7 @@ export class Account extends EventEmitter {
     if (!this.activeAction) return;
     const action = this.activeAction;
     const fee = toBaseUnits(this.forms[action].fee.value, this.forms[action].asset.value.decimals);
-    const minFee = this.forms[action].minFee.value;
-    const seconds = await this.getSettledIn(minFee, fee);
+    const seconds = await this.getSettledIn(fee);
     if (action === this.activeAction) {
       this.updateForm(action, { settledIn: { value: { seconds, valid: ValueAvailability.VALID } } });
     }
@@ -834,17 +833,15 @@ export class Account extends EventEmitter {
     return this.getPendingAccountId(alias);
   }
 
-  private async getSettledIn(minFee: bigint, fee: bigint) {
-    const { nextPublishTime, pendingTxCount, txsPerRollup, minFees } = await this.sdk.getRemoteStatus();
-    let settledIn = Math.ceil((nextPublishTime.getTime() - Date.now()) / 1000);
-    const baseFee = minFees[this.asset.id][TxType.TRANSFER];
-    if (baseFee) {
-      const expectedNewTxs = txsPerRollup - pendingTxCount;
-      const baseInterval = settledIn / expectedNewTxs;
-      const advance = Number(min(BigInt(expectedNewTxs), (fee - (minFee - baseFee)) / baseFee));
-      settledIn -= baseInterval * advance;
-    }
-    return settledIn;
+  private async getSettledIn(fee: bigint) {
+    const { txFees } = await this.sdk.getRemoteStatus();
+    let interval = txFees[this.asset.id].baseFeeQuotes[0].time;
+    txFees[this.asset.id].baseFeeQuotes.forEach(quote => {
+      if (fee > quote.fee) {
+        interval = quote.time;
+      }
+    });
+    return interval;
   }
 
   private isPublicSend(form: SendForm) {
@@ -977,6 +974,7 @@ export class Account extends EventEmitter {
 
   private updateForm(action: AccountAction, newInputs: Form) {
     this.forms[action] = mergeForm(this.forms[action], newInputs);
+    console.log(action, newInputs);
     this.emit(AccountEvent.UPDATED_FORM_INPUTS, action, this.forms[action]);
   }
 

@@ -8,10 +8,11 @@ import { RollupAggregator } from './rollup_aggregator';
 import { RollupCreator } from './rollup_creator';
 import { RollupDb } from './rollup_db';
 import { RollupPublisher } from './rollup_publisher';
-import { TxAggregator } from './tx_aggregator';
+import { PipelineCoordinator } from './pipeline_coordinator';
+import { TxFeeResolver } from './tx_fee_resolver';
 
 export class RollupPipeline {
-  private txAggregator: TxAggregator;
+  private pipelineCoordinator: PipelineCoordinator;
   private rollupPublisher: RollupPublisher;
 
   constructor(
@@ -26,6 +27,7 @@ export class RollupPipeline {
     feeGasPrice: bigint,
     numInnerRollupTxs: number,
     numOuterRollupProofs: number,
+    feeResolver: TxFeeResolver,
   ) {
     const innerRollupSize = 1 << Math.ceil(Math.log2(numInnerRollupTxs));
     const outerRollupSize = 1 << Math.ceil(Math.log2(innerRollupSize * numOuterRollupProofs));
@@ -45,10 +47,8 @@ export class RollupPipeline {
     );
     const rollupAggregator = new RollupAggregator(
       proofGenerator,
-      this.rollupPublisher,
       rollupDb,
       worldStateDb,
-      innerRollupSize,
       outerRollupSize,
       numInnerRollupTxs,
       numOuterRollupProofs,
@@ -59,27 +59,33 @@ export class RollupPipeline {
       rollupDb,
       worldStateDb,
       proofGenerator,
-      rollupAggregator,
       numInnerRollupTxs,
       innerRollupSize,
       outerRollupSize,
       metrics,
     );
-    this.txAggregator = new TxAggregator(rollupCreator, rollupDb, numInnerRollupTxs);
+    this.pipelineCoordinator = new PipelineCoordinator(
+      rollupCreator,
+      rollupAggregator,
+      this.rollupPublisher,
+      rollupDb,
+      numInnerRollupTxs,
+      numOuterRollupProofs,
+      feeResolver,
+    );
   }
 
   public async start() {
     const nextPublishTime = await this.rollupPublisher.getNextPublishTime();
-    return this.txAggregator.start(nextPublishTime);
+    return this.pipelineCoordinator.start(nextPublishTime);
   }
 
   public async stop() {
-    await this.txAggregator.stop();
+    await this.pipelineCoordinator.stop();
   }
 
   public flushTxs() {
-    this.txAggregator.flushTxs();
-    this.rollupPublisher.flush();
+    this.pipelineCoordinator.flushTxs();
   }
 }
 
@@ -96,6 +102,7 @@ export class RollupPipelineFactory {
     private feeGasPrice: bigint,
     private numInnerRollupTxs: number,
     private numOuterRollupProofs: number,
+    private txFeeResolver: TxFeeResolver,
   ) {}
 
   public setTopology(numInnerRollupTxs: number, numOuterRollupProofs: number) {
@@ -116,6 +123,7 @@ export class RollupPipelineFactory {
       this.feeGasPrice,
       this.numInnerRollupTxs,
       this.numOuterRollupProofs,
+      this.txFeeResolver,
     );
   }
 }
