@@ -61,10 +61,15 @@ export class TxDao {
   public dataRootsIndex?: number;
 
   @Column()
+  @Index()
   public txType!: number;
 
   @Column()
   public created!: Date;
+
+  @Column({ nullable: true })
+  @Index()
+  public mined!: Date;
 
   @AfterLoad()
   @AfterInsert()

@@ -3,9 +3,7 @@ import { RollupProofDao } from '../entity/rollup_proof';
 import { RollupDao } from '../entity/rollup';
 import { SyncRollupDb } from './sync_rollup_db';
 import { TxHash } from 'barretenberg/tx_hash';
-import { JoinSplitTxDao } from '../entity/join_split_tx';
 import { ProofData, ProofId } from 'barretenberg/client_proofs/proof_data';
-import { AccountTxDao } from '../entity/account_tx';
 import { toBigIntBE } from 'bigint-buffer';
 
 export class CachedRollupDb extends SyncRollupDb {
@@ -14,8 +12,8 @@ export class CachedRollupDb extends SyncRollupDb {
   private totalTxCount!: number;
   private rollups: RollupDao[] = [];
   private settledRollups: RollupDao[] = [];
-  private unsettledJoinSplitTxs!: JoinSplitTxDao[];
-  private unsettledAccountTxs!: AccountTxDao[];
+  private unsettledJoinSplitTxs!: TxDao[];
+  private unsettledAccountTxs!: TxDao[];
   private settledNullifiers = new Set<bigint>();
   private unsettledNullifiers: Buffer[] = [];
 
@@ -106,18 +104,18 @@ export class CachedRollupDb extends SyncRollupDb {
   }
 
   public async addTx(txDao: TxDao) {
-    const addedTx = await super.addTx(txDao);
+    await super.addTx(txDao);
     const { proofId, nullifier1, nullifier2 } = new ProofData(txDao.proofData);
 
     this.unsettledNullifiers.push(nullifier1, nullifier2);
 
     switch (proofId) {
       case ProofId.JOIN_SPLIT: {
-        this.unsettledJoinSplitTxs.push(addedTx as JoinSplitTxDao);
+        this.unsettledJoinSplitTxs.push(txDao);
         break;
       }
       case ProofId.ACCOUNT: {
-        this.unsettledAccountTxs.push(addedTx as AccountTxDao);
+        this.unsettledAccountTxs.push(txDao);
         break;
       }
     }
@@ -125,8 +123,6 @@ export class CachedRollupDb extends SyncRollupDb {
     this.pendingTxCount++;
     this.unsettledTxCount++;
     this.totalTxCount++;
-
-    return addedTx;
   }
 
   public async deletePendingTxs() {
@@ -157,8 +153,15 @@ export class CachedRollupDb extends SyncRollupDb {
     }
   }
 
-  public async confirmMined(id: number, gasUsed: number, gasPrice: bigint, mined: Date, ethTxHash: TxHash) {
-    const rollup = await super.confirmMined(id, gasUsed, gasPrice, mined, ethTxHash);
+  public async confirmMined(
+    id: number,
+    gasUsed: number,
+    gasPrice: bigint,
+    mined: Date,
+    ethTxHash: TxHash,
+    txIds: Buffer[],
+  ) {
+    const rollup = await super.confirmMined(id, gasUsed, gasPrice, mined, ethTxHash, txIds);
     this.rollups[rollup.id] = rollup;
     this.settledRollups[rollup.id] = rollup;
     rollup.rollupProof.txs

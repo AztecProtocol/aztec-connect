@@ -1,7 +1,5 @@
 import { randomBytes } from 'crypto';
 import { Connection, createConnection } from 'typeorm';
-import { AccountTxDao } from '../entity/account_tx';
-import { JoinSplitTxDao } from '../entity/join_split_tx';
 import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
@@ -18,7 +16,7 @@ describe('rollup_db', () => {
     connection = await createConnection({
       type: 'sqlite',
       database: ':memory:',
-      entities: [TxDao, RollupProofDao, RollupDao, JoinSplitTxDao, AccountTxDao],
+      entities: [TxDao, RollupProofDao, RollupDao],
       dropSchema: true,
       synchronize: true,
       logging: false,
@@ -211,7 +209,7 @@ describe('rollup_db', () => {
     const settledRollups1 = await rollupDb.getSettledRollups();
     expect(settledRollups1.length).toBe(0);
 
-    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random());
+    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random(), [tx0.id, tx1.id]);
 
     const settledRollups2 = await rollupDb.getSettledRollups();
     expect(settledRollups2.length).toBe(1);
@@ -234,12 +232,12 @@ describe('rollup_db', () => {
 
     expect(await rollupDb.getUnsettledTxCount()).toBe(1);
 
-    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random());
+    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random(), [tx0.id]);
 
     expect(await rollupDb.getUnsettledTxCount()).toBe(0);
   });
 
-  it('should get unsettled js tx for account', async () => {
+  it('should get unsettled js txs', async () => {
     const addr = EthAddress.randomAddress();
     const tx0 = randomTx(undefined, addr, 10n);
     const tx1 = randomTx(undefined, addr, 20n);
@@ -248,28 +246,8 @@ describe('rollup_db', () => {
     await rollupDb.addTx(tx1);
     await rollupDb.addTx(tx2);
 
-    {
-      const result = await rollupDb.getUnsettledJoinSplitTxs();
-      expect(result.length).toBe(3);
-      expect(BigInt(result[0].publicInput)).toEqual(10n);
-      expect(BigInt(result[1].publicInput)).toEqual(20n);
-      expect(BigInt(result[2].publicInput)).toEqual(40n);
-    }
-
-    const rollupProof = randomRollupProof([tx0], 0);
-    await rollupDb.addRollupProof(rollupProof);
-
-    const rollup = randomRollup(0, rollupProof);
-    await rollupDb.addRollup(rollup);
-
-    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random());
-
-    {
-      const result = await rollupDb.getUnsettledJoinSplitTxs();
-      expect(result.length).toBe(2);
-      expect(BigInt(result[0].publicInput)).toEqual(20n);
-      expect(BigInt(result[1].publicInput)).toEqual(40n);
-    }
+    const result = await rollupDb.getUnsettledJoinSplitTxs();
+    expect(result.length).toBe(3);
   });
 
   it('should delete unsettled rollups', async () => {

@@ -12,8 +12,8 @@ import { Mutex } from 'async-mutex';
 import { ViewingKey } from 'barretenberg/viewing_key';
 import { ProofGenerator } from 'halloumi/proof_generator';
 import { TxFeeResolver } from './tx_fee_resolver';
-import { JoinSplitTxDao } from './entity/join_split_tx';
 import { Metrics } from './metrics';
+import { getTxTypeFromProofData } from './get_tx_type';
 
 export interface Tx {
   proofData: Buffer;
@@ -60,7 +60,7 @@ export class TxReceiver {
     await this.mutex.acquire();
     try {
       const proof = new ProofData(proofData);
-      const txType = await this.getTxType(proof);
+      const txType = await getTxTypeFromProofData(proof, this.blockchain);
       this.metrics.txReceived(txType);
 
       console.log(`Received tx: ${proof.txId.toString('hex')}`);
@@ -102,22 +102,6 @@ export class TxReceiver {
     }
   }
 
-  private async getTxType(proofData: ProofData) {
-    if (proofData.proofId == ProofId.ACCOUNT) {
-      return TxType.ACCOUNT;
-    }
-
-    const { publicInput, publicOutput, outputOwner } = new JoinSplitProofData(proofData);
-
-    if (publicInput > 0) {
-      return TxType.DEPOSIT;
-    } else if (publicOutput > 0) {
-      return (await this.blockchain.isContract(outputOwner)) ? TxType.WITHDRAW_TO_CONTRACT : TxType.WITHDRAW_TO_WALLET;
-    } else {
-      return TxType.TRANSFER;
-    }
-  }
-
   private async validateJoinSplitTx(proofData: ProofData, txType: TxType, depositSignature?: Buffer) {
     const jsProofData = new JoinSplitProofData(proofData);
     const { publicInput, inputOwner, assetId, depositSigningData } = jsProofData;
@@ -142,14 +126,16 @@ export class TxReceiver {
       // WARNING! Need to check the sum of all deposits in txs remains <= the amount pending deposit on contract.
       // As the db read of existing txs, and insertion of new tx, needs to be atomic, we have to mutex receiveTx.
       // TODO: Move to a system where you only ever deposit against a proof hash!
-      const pendingTxs = await this.rollupDb.getUnsettledJoinSplitTxs();
-      const userTxs = pendingTxs.filter(
-        (tx: JoinSplitTxDao) => tx.inputOwner.toString() === inputOwner.toString() && tx.assetId === assetId,
-      );
-      const total = userTxs.reduce((acc, tx) => acc + tx.publicInput, 0n) + publicInput;
+      const total =
+        (await this.rollupDb.getUnsettledJoinSplitTxs())
+          .map(tx => new JoinSplitProofData(new ProofData(tx.proofData)))
+          .filter(proofData => proofData.inputOwner.equals(inputOwner) && proofData.assetId === assetId)
+          .reduce((acc, proofData) => acc + proofData.publicInput, 0n) + publicInput;
+
       const pendingDeposit = await this.blockchain.getUserPendingDeposit(assetId, inputOwner);
+
       if (pendingDeposit < total) {
-        throw new Error('Use insufficient pending deposit balance.');
+        throw new Error('User insufficient pending deposit balance.');
       }
     }
   }

@@ -2,7 +2,7 @@ import { MemoryFifo } from 'barretenberg/fifo';
 import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
 import { WorldStateDb } from 'barretenberg/world_state_db';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
-import { Blockchain } from 'barretenberg/blockchain';
+import { Blockchain, TxType } from 'barretenberg/blockchain';
 import { RollupDao } from './entity/rollup';
 import { RollupProofDao } from './entity/rollup_proof';
 import { TxDao } from './entity/tx';
@@ -11,8 +11,9 @@ import { RollupDb } from './rollup_db';
 import { Block } from 'barretenberg/block_source';
 import { ViewingKey } from 'barretenberg/viewing_key';
 import { RollupPipeline, RollupPipelineFactory } from './rollup_pipeline';
+import { getTxTypeFromInnerProofData } from './get_tx_type';
 
-const innerProofDataToTxDao = (tx: InnerProofData, viewingKeys: ViewingKey[], created: Date) => {
+const innerProofDataToTxDao = (tx: InnerProofData, viewingKeys: ViewingKey[], created: Date, txType: TxType) => {
   const txDao = new TxDao();
   txDao.id = tx.txId;
   txDao.proofData = tx.toBuffer();
@@ -21,6 +22,7 @@ const innerProofDataToTxDao = (tx: InnerProofData, viewingKeys: ViewingKey[], cr
   txDao.nullifier1 = tx.nullifier1;
   txDao.nullifier2 = tx.nullifier2;
   txDao.created = created;
+  txDao.txType = txType;
   return txDao;
 };
 
@@ -150,10 +152,19 @@ export class WorldState {
   private async confirmOrAddRollupToDb(rollup: RollupProofData, block: Block) {
     const { txHash, rollupProofData: proofData, created } = block;
 
+    // Get by rollup hash, as a competing rollup may have the same rollup number.
     const rollupProof = await this.rollupDb.getRollupProof(rollup.rollupHash, true);
     if (rollupProof) {
       // Our rollup. Confirm mined and track settlement times.
-      await this.rollupDb.confirmMined(rollup.rollupId, block.gasUsed, block.gasPrice, block.created, block.txHash);
+      const txIds = rollupProof.txs.map(tx => tx.id);
+      await this.rollupDb.confirmMined(
+        rollup.rollupId,
+        block.gasUsed,
+        block.gasPrice,
+        block.created,
+        block.txHash,
+        txIds,
+      );
 
       for (const inner of rollup.innerProofData) {
         if (inner.isPadding()) {
@@ -170,7 +181,7 @@ export class WorldState {
       // Not a rollup we created. Add or replace rollup.
       const txs = rollup.innerProofData
         .filter(tx => !tx.isPadding())
-        .map((p, i) => innerProofDataToTxDao(p, rollup.viewingKeys[i], created));
+        .map((p, i) => innerProofDataToTxDao(p, rollup.viewingKeys[i], created, getTxTypeFromInnerProofData(p)));
       const rollupProofDao = new RollupProofDao({
         id: rollup.rollupHash,
         txs,

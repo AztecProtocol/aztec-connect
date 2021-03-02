@@ -2,6 +2,7 @@ import { toBigIntBE } from 'bigint-buffer';
 import { createHash } from 'crypto';
 import { EthAddress } from '../../address';
 import { AssetId } from '../../asset';
+import { AccountAliasId } from '../account_alias_id';
 
 export enum ProofId {
   JOIN_SPLIT,
@@ -76,5 +77,15 @@ export class JoinSplitProofData {
      * This excludes the last two fields, the noteTreeRoot and the txFee.
      */
     this.depositSigningData = this.proofData.rawProofData.slice(0, ProofData.NUM_PUBLISHED_PUBLIC_INPUTS * 32);
+  }
+}
+
+export class AccountProofData {
+  public accountAliasId: AccountAliasId;
+  public publicKey: Buffer;
+
+  constructor(public proofData: ProofData) {
+    this.accountAliasId = AccountAliasId.fromBuffer(proofData.assetId);
+    this.publicKey = Buffer.concat([proofData.publicInput, proofData.publicOutput]);
   }
 }

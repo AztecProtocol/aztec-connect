@@ -1,8 +1,9 @@
+import { ProofData } from 'barretenberg/client_proofs/proof_data';
 import { Query, Resolver, FieldResolver, Root } from 'type-graphql';
 import { Inject } from 'typedi';
+import { TxDao } from '../entity/tx';
 import { CachedRollupDb } from '../rollup_db';
 import { JoinSplitTxType } from './join_split_tx_type';
-import { JoinSplitTxDao } from '../entity/join_split_tx';
 
 @Resolver(() => JoinSplitTxType)
 export class JoinSplitTxResolver {
@@ -14,12 +15,12 @@ export class JoinSplitTxResolver {
   }
 
   @FieldResolver()
-  async inputOwner(@Root() { inputOwner }: JoinSplitTxDao) {
-    return inputOwner.toBuffer();
+  async inputOwner(@Root() { proofData }: TxDao) {
+    return new ProofData(proofData).inputOwner;
   }
 
   @FieldResolver()
-  async outputOwner(@Root() { outputOwner }: JoinSplitTxDao) {
-    return outputOwner.toBuffer();
+  async outputOwner(@Root() { proofData }: TxDao) {
+    return new ProofData(proofData).outputOwner;
   }
 }

@@ -1,11 +1,9 @@
-import { AccountAliasId } from 'barretenberg/client_proofs/account_alias_id';
-import { JoinSplitProofData, ProofData } from 'barretenberg/client_proofs/proof_data';
-import { InnerProofData } from 'barretenberg/rollup_proof';
+import { TxType } from 'barretenberg/blockchain';
+import { AccountProofData, ProofData } from 'barretenberg/client_proofs/proof_data';
 import { TxHash } from 'barretenberg/tx_hash';
 import { toBufferBE } from 'bigint-buffer';
 import { Connection, In, IsNull, MoreThanOrEqual, Not, Repository } from 'typeorm';
-import { AccountTxDao } from '../entity/account_tx';
-import { JoinSplitTxDao } from '../entity/join_split_tx';
+import { AccountDao } from '../entity/account';
 import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
@@ -16,52 +14,26 @@ export type RollupDb = {
 
 export class TypeOrmRollupDb implements RollupDb {
   private txRep: Repository<TxDao>;
-  private joinSplitTxRep: Repository<JoinSplitTxDao>;
-  private accountTxRep: Repository<AccountTxDao>;
   private rollupProofRep: Repository<RollupProofDao>;
   private rollupRep: Repository<RollupDao>;
 
   constructor(private connection: Connection) {
     this.txRep = this.connection.getRepository(TxDao);
-    this.joinSplitTxRep = this.connection.getRepository(JoinSplitTxDao);
-    this.accountTxRep = this.connection.getRepository(AccountTxDao);
     this.rollupProofRep = this.connection.getRepository(RollupProofDao);
     this.rollupRep = this.connection.getRepository(RollupDao);
   }
 
   public async addTx(txDao: TxDao) {
-    let txToAdd: JoinSplitTxDao | AccountTxDao | undefined;
-
-    const proofData = InnerProofData.fromBuffer(txDao.proofData);
-
-    if (proofData.proofId === 0) {
-      const jsProofData = new JoinSplitProofData(new ProofData(txDao.proofData));
-      txToAdd = new JoinSplitTxDao({
-        id: proofData.txId,
-        publicInput: jsProofData.publicInput,
-        publicOutput: jsProofData.publicOutput,
-        assetId: jsProofData.assetId,
-        inputOwner: jsProofData.inputOwner,
-        outputOwner: jsProofData.outputOwner,
-        created: txDao.created,
-      });
-    } else if (proofData.proofId === 1) {
-      const accountAliasId = AccountAliasId.fromBuffer(proofData.assetId);
-      txToAdd = new AccountTxDao({
-        id: proofData.txId,
-        accountPubKey: Buffer.concat([proofData.publicInput, proofData.publicOutput]),
-        aliasHash: accountAliasId.aliasHash.toBuffer(),
-        nonce: accountAliasId.nonce,
-        spendingKey1: proofData.nullifier1,
-        spendingKey2: proofData.nullifier2,
-        created: txDao.created,
-      });
-    }
     await this.connection.transaction(async transactionalEntityManager => {
+      if (txDao.txType === TxType.ACCOUNT_REGISTRATION || txDao.txType === TxType.ACCOUNT_OTHER) {
+        const proofData = new AccountProofData(new ProofData(txDao.proofData));
+        const account = new AccountDao();
+        account.aliasHash = proofData.accountAliasId.aliasHash.toBuffer();
+        account.publicKey = proofData.publicKey;
+        await transactionalEntityManager.save(account);
+      }
       await transactionalEntityManager.save(txDao);
-      await transactionalEntityManager.save(txToAdd);
     });
-    return txToAdd;
   }
 
   public async getTx(txId: Buffer) {
@@ -98,18 +70,15 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async getJoinSplitTxCount() {
-    return this.joinSplitTxRep.count();
+    return this.txRep.count({ where: { txType: Not(In([TxType.ACCOUNT_OTHER, TxType.ACCOUNT_REGISTRATION])) } });
   }
 
   public async getAccountTxCount() {
-    return this.accountTxRep.count();
+    return this.txRep.count({ where: { txType: In([TxType.ACCOUNT_OTHER, TxType.ACCOUNT_REGISTRATION]) } });
   }
 
   public async getRegistrationTxCount() {
-    const result = await this.accountTxRep.query(
-      `select count(distinct(accountPubKey)) as count from account_tx where nonce=1`,
-    );
-    return result[0] ? result[0].count : 0;
+    return this.txRep.count({ where: { txType: TxType.ACCOUNT_REGISTRATION } });
   }
 
   public async getTotalRollupsOfSize(rollupSize: number) {
@@ -121,44 +90,23 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async getUnsettledTxCount() {
-    return await this.txRep
-      .createQueryBuilder('tx')
-      .leftJoin('tx.rollupProof', 'rp')
-      .leftJoin('rp.rollup', 'r')
-      .where('tx.rollupProof IS NULL OR rp.rollup IS NULL OR r.mined IS NULL')
-      .getCount();
+    return await this.txRep.count({ where: { mined: null } });
   }
 
   private async getUnsettledTxs() {
-    return await this.txRep
-      .createQueryBuilder('tx')
-      .leftJoin('tx.rollupProof', 'rp')
-      .leftJoin('rp.rollup', 'r')
-      .where('tx.rollupProof IS NULL OR rp.rollup IS NULL OR r.mined IS NULL')
-      .orderBy('tx.created', 'ASC')
-      .getMany();
+    return await this.txRep.find({ where: { mined: null } });
   }
 
   public async getUnsettledJoinSplitTxs() {
-    return await this.joinSplitTxRep
-      .createQueryBuilder('js_tx')
-      .leftJoin('js_tx.internalId', 'tx')
-      .leftJoin('tx.rollupProof', 'rp')
-      .leftJoin('rp.rollup', 'r')
-      .where('(tx.rollupProof IS NULL OR rp.rollup IS NULL OR r.mined IS NULL)')
-      .orderBy('js_tx.created', 'ASC')
-      .getMany();
+    return await this.txRep.find({
+      where: { txType: Not(In([TxType.ACCOUNT_OTHER, TxType.ACCOUNT_REGISTRATION])), mined: null },
+    });
   }
 
   public async getUnsettledAccountTxs() {
-    return await this.accountTxRep
-      .createQueryBuilder('act_tx')
-      .leftJoin('act_tx.internalId', 'tx')
-      .leftJoin('tx.rollupProof', 'rp')
-      .leftJoin('rp.rollup', 'r')
-      .where('(tx.rollupProof IS NULL OR rp.rollup IS NULL OR r.mined IS NULL)')
-      .orderBy('act_tx.created', 'ASC')
-      .getMany();
+    return await this.txRep.find({
+      where: { txType: In([TxType.ACCOUNT_OTHER, TxType.ACCOUNT_REGISTRATION]), mined: null },
+    });
   }
 
   public async getPendingTxs(take?: number) {
@@ -268,11 +216,22 @@ export class TypeOrmRollupDb implements RollupDb {
     await this.rollupRep.update({ id }, { ethTxHash: txHash.toBuffer() });
   }
 
-  public async confirmMined(id: number, gasUsed: number, gasPrice: bigint, mined: Date, ethTxHash: TxHash) {
-    await this.rollupRep.update(
-      { id },
-      { mined, gasUsed, gasPrice: toBufferBE(gasPrice, 32), ethTxHash: ethTxHash.toBuffer() },
-    );
+  public async confirmMined(
+    id: number,
+    gasUsed: number,
+    gasPrice: bigint,
+    mined: Date,
+    ethTxHash: TxHash,
+    txIds: Buffer[],
+  ) {
+    await this.connection.transaction(async transactionalEntityManager => {
+      await transactionalEntityManager.update(this.txRep.target, { id: In(txIds) }, { mined });
+      await transactionalEntityManager.update(
+        this.rollupRep.target,
+        { id },
+        { mined, gasUsed, gasPrice: toBufferBE(gasPrice, 32), ethTxHash: ethTxHash.toBuffer() },
+      );
+    });
     return (await this.getRollup(id))!;
   }
 
