@@ -171,6 +171,10 @@ resource "aws_ecs_task_definition" "falafel" {
       {
         "name": "FEE_GAS_PRICE",
         "value": "0"
+      },
+      {
+        "name": "PUBLISH_INTERVAL",
+        "value": "1800"
       }
     ],
     "mountPoints": [
