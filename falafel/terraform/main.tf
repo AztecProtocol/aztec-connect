@@ -100,7 +100,7 @@ resource "aws_ecs_task_definition" "falafel" {
   family                   = "falafel"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
-  cpu                      = "1024"
+  cpu                      = "2048"
   memory                   = "4096"
   execution_role_arn       = data.terraform_remote_state.setup_iac.outputs.ecs_task_execution_role_arn
 

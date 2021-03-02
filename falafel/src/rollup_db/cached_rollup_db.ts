@@ -33,6 +33,7 @@ export class CachedRollupDb extends SyncRollupDb {
   }
 
   public async refresh() {
+    this.totalTxCount = await super.getTotalTxCount();
     this.pendingTxCount = await super.getPendingTxCount();
     this.unsettledTxCount = await super.getUnsettledTxCount();
     this.unsettledJoinSplitTxs = await super.getUnsettledJoinSplitTxs();
@@ -97,9 +98,6 @@ export class CachedRollupDb extends SyncRollupDb {
   }
 
   public async getTotalTxCount() {
-    if (!this.totalTxCount) {
-      this.totalTxCount = await super.getTotalTxCount();
-    }
     return this.totalTxCount;
   }
 
@@ -125,32 +123,24 @@ export class CachedRollupDb extends SyncRollupDb {
     this.totalTxCount++;
   }
 
-  public async deletePendingTxs() {
-    await super.deletePendingTxs();
-    await this.refresh();
-  }
-
   public async addRollupProof(rollupDao: RollupProofDao) {
     await super.addRollupProof(rollupDao);
-    await this.refresh();
-  }
-
-  public async deleteRollupProof(id: Buffer) {
-    await super.deleteRollupProof(id);
-    await this.refresh();
-  }
-
-  public async deleteOrphanedRollupProofs() {
-    await super.deleteOrphanedRollupProofs();
     await this.refresh();
   }
 
   public async addRollup(rollup: RollupDao) {
     await super.addRollup(rollup);
     this.rollups[rollup.id] = rollup;
+
     if (rollup.mined) {
       this.settledRollups[rollup.id] = rollup;
+      rollup.rollupProof.txs
+        .map(tx => [tx.nullifier1, tx.nullifier2])
+        .flat()
+        .forEach(n => this.settledNullifiers.add(toBigIntBE(n)));
     }
+
+    await this.refresh();
   }
 
   public async confirmMined(
@@ -170,6 +160,21 @@ export class CachedRollupDb extends SyncRollupDb {
       .forEach(n => this.settledNullifiers.add(toBigIntBE(n)));
     await this.refresh();
     return rollup;
+  }
+
+  public async deletePendingTxs() {
+    await super.deletePendingTxs();
+    await this.refresh();
+  }
+
+  public async deleteRollupProof(id: Buffer) {
+    await super.deleteRollupProof(id);
+    await this.refresh();
+  }
+
+  public async deleteOrphanedRollupProofs() {
+    await super.deleteOrphanedRollupProofs();
+    await this.refresh();
   }
 
   public async deleteUnsettledRollups() {
