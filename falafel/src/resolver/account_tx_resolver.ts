@@ -33,7 +33,7 @@ export class AccountTxResolver {
       const aliasHash = AliasHash.fromAlias(alias, this.blake).toBuffer();
       return this.accountRep.findOne({ aliasHash });
     }
-    return this.accountRep.findOne({ publicKey: accountPubKey });
+    return this.accountRep.findOne({ accountPubKey });
   }
 
   @Query(() => [AccountTxType!])

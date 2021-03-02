@@ -29,7 +29,8 @@ export class TypeOrmRollupDb implements RollupDb {
         const proofData = new AccountProofData(new ProofData(txDao.proofData));
         const account = new AccountDao();
         account.aliasHash = proofData.accountAliasId.aliasHash.toBuffer();
-        account.publicKey = proofData.publicKey;
+        account.nonce = proofData.accountAliasId.nonce;
+        account.accountPubKey = proofData.publicKey;
         await transactionalEntityManager.save(account);
       }
       await transactionalEntityManager.save(txDao);

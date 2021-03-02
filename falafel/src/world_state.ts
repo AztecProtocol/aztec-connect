@@ -22,6 +22,7 @@ const innerProofDataToTxDao = (tx: InnerProofData, viewingKeys: ViewingKey[], cr
   txDao.nullifier1 = tx.nullifier1;
   txDao.nullifier2 = tx.nullifier2;
   txDao.created = created;
+  txDao.mined = created;
   txDao.txType = txType;
   return txDao;
 };
