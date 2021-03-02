@@ -29,16 +29,17 @@ export class CachedRollupDb extends SyncRollupDb {
     );
 
     await this.refresh();
-    console.log(`Refreshed state.`);
   }
 
   public async refresh() {
+    const start = new Date().getTime();
     this.totalTxCount = await super.getTotalTxCount();
     this.pendingTxCount = await super.getPendingTxCount();
     this.unsettledTxCount = await super.getUnsettledTxCount();
     this.unsettledJoinSplitTxs = await super.getUnsettledJoinSplitTxs();
     this.unsettledAccountTxs = await super.getUnsettledAccountTxs();
     this.unsettledNullifiers = await super.getUnsettledNullifiers();
+    console.log(`Refreshed db cache in ${new Date().getTime() - start}ms.`);
   }
 
   public async getPendingTxCount() {
