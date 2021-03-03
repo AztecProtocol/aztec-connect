@@ -17,10 +17,10 @@ export class JoinSplitTxType {
   @Field()
   assetId!: number;
 
-  @Field(() => HexString)
+  @Field()
   inputOwner?: string;
 
-  @Field(() => HexString)
+  @Field()
   outputOwner?: string;
 
   @Field(() => ISODateTime)

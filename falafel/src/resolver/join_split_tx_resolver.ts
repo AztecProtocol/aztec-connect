@@ -1,7 +1,6 @@
-import { ProofData } from 'barretenberg/client_proofs/proof_data';
+import { ProofData, JoinSplitProofData } from 'barretenberg/client_proofs/proof_data';
 import { Query, Resolver, FieldResolver, Root } from 'type-graphql';
 import { Inject } from 'typedi';
-import { TxDao } from '../entity/tx';
 import { CachedRollupDb } from '../rollup_db';
 import { JoinSplitTxType } from './join_split_tx_type';
 
@@ -11,16 +10,39 @@ export class JoinSplitTxResolver {
 
   @Query(() => [JoinSplitTxType!])
   async unsettledJoinSplitTxs() {
-    return this.rollupDb.getUnsettledJoinSplitTxs();
+    const txs = await this.rollupDb.getUnsettledJoinSplitTxs();
+    return txs.map(({ proofData, ...rest }) => {
+      const joinSplitProofData = new JoinSplitProofData(new ProofData(proofData));
+      return {
+        ...rest,
+        proofData,
+        joinSplitProofData,
+      };
+    });
   }
 
   @FieldResolver()
-  async inputOwner(@Root() { proofData }: TxDao) {
-    return new ProofData(proofData).inputOwner;
+  async inputOwner(@Root() { joinSplitProofData }: any) {
+    return joinSplitProofData.inputOwner.toString();
   }
 
   @FieldResolver()
-  async outputOwner(@Root() { proofData }: TxDao) {
-    return new ProofData(proofData).outputOwner;
+  async publicInput(@Root() { joinSplitProofData }: any) {
+    return joinSplitProofData.publicInput;
+  }
+
+  @FieldResolver()
+  async publicOutput(@Root() { joinSplitProofData }: any) {
+    return joinSplitProofData.publicOutput;
+  }
+
+  @FieldResolver()
+  async assetId(@Root() { joinSplitProofData }: any) {
+    return joinSplitProofData.assetId;
+  }
+
+  @FieldResolver()
+  async outputOwner(@Root() { joinSplitProofData }: any) {
+    return joinSplitProofData.outputOwner.toString();
   }
 }
