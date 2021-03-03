@@ -11,7 +11,7 @@ interface AccountTxsResponse {
   accountTxs: AccountTx[];
 }
 
-interface Tx {
+interface JoinSplitTx {
   proofId: number;
   assetId: number;
   publicInput: string;
@@ -20,7 +20,7 @@ interface Tx {
 }
 
 interface JoinSplitTxsResponse {
-  unsettledJoinSplitTxs: Tx[];
+  joinSplitTxs: JoinSplitTx[];
 }
 
 export class GraphQLService {
@@ -59,7 +59,7 @@ export class GraphQLService {
     const { data } = await this.apollo.query<AccountTxsResponse>({
       query: gql`
         query Query {
-          unsettledAccountTxs {
+          accountTxs: unsettledAccountTxs {
             nonce
             accountPubKey
             aliasHash
@@ -75,7 +75,7 @@ export class GraphQLService {
     const { data } = await this.apollo.query<JoinSplitTxsResponse>({
       query: gql`
         query Query {
-          unsettledJoinSplitTxs {
+          joinSplitTxs: unsettledJoinSplitTxs {
             assetId
             publicInput
             inputOwner
@@ -84,6 +84,6 @@ export class GraphQLService {
       `,
       fetchPolicy: 'no-cache',
     });
-    return data?.unsettledJoinSplitTxs || [];
+    return data?.joinSplitTxs || [];
   }
 }

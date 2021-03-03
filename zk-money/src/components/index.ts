@@ -1,6 +1,7 @@
 export * from './block_title';
 export * from './button';
 export * from './checkbox';
+export * from './click_to_copy';
 export * from './cookies_form';
 export * from './disclaimer_block';
 export * from './dot';

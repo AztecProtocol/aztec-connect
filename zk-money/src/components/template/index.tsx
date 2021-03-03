@@ -67,6 +67,7 @@ interface TemplateProps {
   network?: string;
   worldState?: WorldState;
   account?: AccountState;
+  rootUrl?: string;
   systemMessage?: SystemMessage;
   onLogout?: () => void;
 }
@@ -77,6 +78,7 @@ export const Template: React.FunctionComponent<TemplateProps> = ({
   network,
   worldState,
   account,
+  rootUrl = '/',
   systemMessage,
   onLogout,
 }) => {
@@ -86,7 +88,14 @@ export const Template: React.FunctionComponent<TemplateProps> = ({
   return (
     <TemplateRoot>
       <ContentRoot extraFooterSpace={withCookie && theme === Theme.GRADIENT}>
-        <Header theme={theme} network={network} worldState={worldState} account={account} onLogout={onLogout} />
+        <Header
+          theme={theme}
+          rootUrl={rootUrl}
+          network={network}
+          worldState={worldState}
+          account={account}
+          onLogout={onLogout}
+        />
         {children}
       </ContentRoot>
       {theme === Theme.WHITE && <Footer />}

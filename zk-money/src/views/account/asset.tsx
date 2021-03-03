@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
-import { AccountAction, AccountState, Asset, MergeForm, sum } from '../../app';
-import { BlockTitle, DisclaimerBlock, TextLink } from '../../components';
+import { AccountAction, AccountState, Asset, AssetState, sum } from '../../app';
+import { BlockTitle, DisclaimerBlock, Spinner, Text, TextLink } from '../../components';
 import { breakpoints, spacings } from '../../styles';
 import { MergeBlock } from './merge_block';
 import { TransactionHistory } from './transaction_history';
@@ -45,27 +45,64 @@ const Col = styled.div`
   }
 `;
 
+const InitializationRoot = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: ${spacings.xxl} 0;
+
+  @media (max-width: ${breakpoints.s}) {
+    padding: ${spacings.l} 0;
+  }
+`;
+
+const InitializationMessage = styled(Text)`
+  padding: ${spacings.s} 0;
+`;
+
 interface AccountAssetProps {
-  asset: Asset;
   accountState: AccountState;
-  mergeForm?: MergeForm;
+  asset: Asset;
+  assetState: AssetState;
+  mergeForm?: {
+    mergeOption: bigint[];
+    fee: bigint;
+  };
+  txsPublishTime?: Date;
   onSubmitMergeForm(toMerge: bigint[]): void;
   onSelectAction(action: AccountAction): void;
+  isInitializing: boolean;
 }
 
 export const AccountAsset: React.FunctionComponent<AccountAssetProps> = ({
-  asset,
   accountState,
+  asset,
+  assetState,
   mergeForm,
+  txsPublishTime,
   onSubmitMergeForm,
   onSelectAction,
+  isInitializing,
 }) => {
-  const { balance, spendableBalance, accountTxs, joinSplitTxs, txsPublishTime } = accountState;
+  if (isInitializing) {
+    return (
+      <InitializationRoot>
+        <Spinner theme="gradient" size="m" />
+        <InitializationMessage text="Getting things ready" size="s" />
+      </InitializationRoot>
+    );
+  }
+
+  const isLoading = asset.id !== assetState.asset.id;
+  const { accountTxs } = accountState;
+  const { balance, spendableBalance, joinSplitTxs } = assetState;
   const pendingTxs = joinSplitTxs.filter(tx => !tx.settled);
+  const pendingValue = sum(pendingTxs.map(tx => tx.balanceDiff));
 
   return (
     <>
-      {!balance && (
+      {!isLoading && !balance && !pendingValue && (
         <Row>
           <ZeroBalancePrompt asset={asset} onSubmit={() => onSelectAction(AccountAction.SHIELD)} />
         </Row>
@@ -76,7 +113,7 @@ export const AccountAsset: React.FunctionComponent<AccountAssetProps> = ({
           <ValueSummary
             title="Total"
             value={balance}
-            pendingValue={sum(pendingTxs.map(tx => tx.balanceDiff))}
+            pendingValue={pendingValue}
             pendingTxs={pendingTxs.length}
             asset={asset}
             buttonText="Shield"
@@ -105,9 +142,14 @@ export const AccountAsset: React.FunctionComponent<AccountAssetProps> = ({
           />
         </Col>
       </PaddedRow>
-      {!!mergeForm && (
+      {mergeForm && (
         <Row>
-          <MergeBlock form={mergeForm} onSubmit={onSubmitMergeForm} />
+          <MergeBlock
+            assetState={assetState}
+            mergeOption={mergeForm.mergeOption}
+            fee={mergeForm.fee}
+            onSubmit={onSubmitMergeForm}
+          />
         </Row>
       )}
       <Row>

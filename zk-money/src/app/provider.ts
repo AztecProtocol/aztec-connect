@@ -24,15 +24,11 @@ export interface ProviderState {
 
 export enum ProviderEvent {
   UPDATED_PROVIDER_STATE = 'UPDATED_PROVIDER_STATE',
-  UPDATED_NETWORK = 'UPDATED_NETWORK',
-  UPDATED_ACCOUNT = 'UPDATED_ACCOUNT',
   LOG_MESSAGE = 'LOG_MESSAGE',
 }
 
 export interface Provider {
   on(event: ProviderEvent.UPDATED_PROVIDER_STATE, listener: (state: ProviderState) => void): this;
-  on(event: ProviderEvent.UPDATED_NETWORK, listener: (network: Network) => void): this;
-  on(event: ProviderEvent.UPDATED_ACCOUNT, listener: (account: EthAddress) => void): this;
   on(event: ProviderEvent.LOG_MESSAGE, listener: (message: string, messageType: MessageType) => void): this;
 }
 
@@ -41,20 +37,22 @@ export class Provider extends EventEmitter {
   private state: ProviderState;
   private walletProvider!: WalletProvider;
   public ethereumProvider!: EthereumProvider;
-  private isUserProvider = true;
 
-  constructor(public wallet: Wallet, config: ProviderConfig) {
+  constructor(private wallet: Wallet, config: ProviderConfig) {
     super();
     this.walletProvider = createWalletProvider(wallet, config)!;
     this.state = {
       wallet,
       status: ProviderStatus.UNINITIALIZED,
     };
-    this.isUserProvider = wallet !== Wallet.HOT;
   }
 
-  private get destroyed() {
+  public get destroyed() {
     return this.state.status === ProviderStatus.DESTROYED;
+  }
+
+  public get initialized() {
+    return this.state.status === ProviderStatus.INITIALIZED;
   }
 
   get chainId() {
@@ -102,17 +100,13 @@ export class Provider extends EventEmitter {
 
     this.ethereumProvider.on('disconnect', this.handleDisconnect);
     this.ethereumProvider.on('chainChanged', this.updateNetwork);
-    if (this.isUserProvider) {
-      this.ethereumProvider.on('accountsChanged', this.updateAccounts);
-    }
+    this.ethereumProvider.on('accountsChanged', this.updateAccounts);
 
     const chainId = (await ethersProvider.getNetwork()).chainId;
     this.updateNetwork(`${chainId}`);
 
-    if (this.isUserProvider) {
-      const accounts = await ethersProvider.listAccounts();
-      this.updateAccounts(accounts);
-    }
+    const accounts = await ethersProvider.listAccounts();
+    this.updateAccounts(accounts);
 
     if (requiredNetwork && this.chainId !== requiredNetwork.chainId) {
       this.log(`Please switch your wallet's network to ${requiredNetwork.network}...`, MessageType.WARNING);
@@ -127,7 +121,6 @@ export class Provider extends EventEmitter {
   }
 
   async destroy() {
-    this.updateState({ status: ProviderStatus.DESTROYED });
     this.removeAllListeners();
     this.ethereumProvider?.removeListener('disconnect', this.handleDisconnect);
     this.ethereumProvider?.removeListener('chainChanged', this.updateNetwork);
@@ -140,22 +133,22 @@ export class Provider extends EventEmitter {
   }
 
   private handleDisconnect = async () => {
+    this.updateState({ status: ProviderStatus.DESTROYED, account: undefined });
     await this.destroy();
   };
 
   private updateNetwork = (chainId: string) => {
     const network = chainIdToNetwork(+chainId);
     this.updateState({ network });
-    this.emit(ProviderEvent.UPDATED_NETWORK, network);
   };
 
-  private updateAccounts = (accounts: string[]) => {
-    if (this.accounts.length && !accounts.length) {
-      this.handleDisconnect();
-    }
+  private updateAccounts = async (accounts: string[]) => {
     this.accounts = accounts.map(EthAddress.fromString);
-    this.updateState({ account: this.accounts[0] });
-    this.emit(ProviderEvent.UPDATED_ACCOUNT, this.accounts[0]);
+    if (!this.accounts.length) {
+      await this.handleDisconnect();
+    } else {
+      this.updateState({ account: this.accounts[0] });
+    }
   };
 
   private updateState(state: Partial<ProviderState>) {

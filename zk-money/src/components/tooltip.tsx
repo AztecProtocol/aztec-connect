@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import styled, { css } from 'styled-components';
 import { borderRadiuses, colours, spacings } from '../styles';
 
-type TooltipPivot = 'topcenter' | 'topright';
+export type TooltipPivot = 'topcenter' | 'topright';
 
 const popoverStyles: { [key in TooltipPivot]: any } = {
   topcenter: css`

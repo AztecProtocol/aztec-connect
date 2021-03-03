@@ -9,6 +9,7 @@ import { Link } from './link';
 import { Tag } from './tag';
 import { Text } from './text';
 import { Tooltip } from './tooltip';
+import { ClickToCopy } from './click_to_copy';
 
 const Root = styled.div`
   display: flex;
@@ -68,19 +69,26 @@ const Value = styled(Text)`
   padding: 0 ${spacings.xs};
 `;
 
-const HexRoot = styled(Item)`
+const Group = styled(Item)`
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+`;
+
+const GroupItem = styled.div`
+  padding: 0 ${spacings.s};
+`;
+
+const HexRoot = styled(Group)`
   order: 3;
 
   @media (max-width: ${breakpoints.s}) {
+    margin: 0 -${spacings.s};
     order: 5;
   }
 `;
 
 const StatusRoot = styled(Item)`
-  margin: 0 -${spacings.m};
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
   order: 4;
 
   @media (max-width: ${breakpoints.s}) {
@@ -88,12 +96,12 @@ const StatusRoot = styled(Item)`
   }
 `;
 
-const StatusItem = styled.div`
-  padding: 0 ${spacings.m};
+const LinkRoot = styled(Link)`
+  display: inline-block;
 `;
 
 const LinkIcon = styled.img`
-  width: 16px;
+  height: 16px;
 `;
 
 const Divider = styled.div`
@@ -143,30 +151,38 @@ const TransactionSummary: React.FunctionComponent<TransactionSummaryProps> = ({
       </TagRoot>
       <InfoWrapper>{children}</InfoWrapper>
       <HexRoot>
-        <Text text={`${txHash.slice(0, 6)}...${txHash.slice(-4)}`} monospace />
+        <GroupItem>
+          <ClickToCopy text={txHash}>
+            <Text text={`${txHash.slice(0, 6)}...${txHash.slice(-4)}`} monospace />
+          </ClickToCopy>
+        </GroupItem>
+        <GroupItem>
+          <Tooltip
+            trigger={
+              <LinkRoot href={link} target="_blank">
+                <LinkIcon src={linkIcon} />
+              </LinkRoot>
+            }
+          >
+            <Text text="View on block explorer" size="xxs" nowrap />
+          </Tooltip>
+        </GroupItem>
       </HexRoot>
       <StatusRoot>
-        <StatusItem>
-          <Link href={link} target="_blank">
-            <LinkIcon src={linkIcon} />
-          </Link>
-        </StatusItem>
-        <StatusItem>
-          <Tooltip trigger={<Dot size="s" color={settled ? 'green' : 'yellow'} />} pivot="topright">
-            {settled && (
-              <TimeRoot size="xxs" nowrap>
-                <TimeIcon src={clockIcon} />
-                <RelativeTime date={settled} />
-              </TimeRoot>
-            )}
-            {!settled && !!publishTime && (
-              <Text size="xxs" nowrap>
-                {'Scheduled to publish '}
-                <RelativeTime date={publishTime} />
-              </Text>
-            )}
-          </Tooltip>
-        </StatusItem>
+        <Tooltip trigger={<Dot size="s" color={settled ? 'green' : 'yellow'} />} pivot="topright">
+          {settled && (
+            <TimeRoot size="xxs" nowrap>
+              <TimeIcon src={clockIcon} />
+              <RelativeTime date={settled} />
+            </TimeRoot>
+          )}
+          {!settled && (
+            <Text size="xxs" nowrap>
+              {'Scheduled to publish '}
+              {!!publishTime && <RelativeTime date={publishTime} />}
+            </Text>
+          )}
+        </Tooltip>
       </StatusRoot>
       <Divider />
     </Root>

@@ -171,6 +171,16 @@ export const ProgressTemplate: React.FunctionComponent<ProgressTemplateProps> = 
         </FeedbackRoot>
       );
     }
+    if (message && messageType === MessageType.ERROR) {
+      return (
+        <FeedbackRoot>
+          <FooterMessage theme={inputTheme} message={message} type={messageType} />
+          <FeedbackButtonRoot>
+            <TextLink text="(Edit Transaction)" size="s" onClick={onGoBack} />
+          </FeedbackButtonRoot>
+        </FeedbackRoot>
+      );
+    }
     if (message) {
       return <FooterMessage theme={inputTheme} message={message} type={messageType} />;
     }

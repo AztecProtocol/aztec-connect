@@ -1,12 +1,13 @@
 import React from 'react';
-import { fromBaseUnits, MergeForm, MergeStatus, sum, toBaseUnits } from '../../app';
+import { Asset, fromBaseUnits, MergeFormValues, MergeStatus, sum, toBaseUnits } from '../../app';
 import { Theme } from '../../styles';
 import { AssetInfoRow } from './asset_info_row';
 import { ProgressTemplate } from './progress_template';
 
 interface MergeProgressProps {
   theme: Theme;
-  form: MergeForm;
+  asset: Asset;
+  form: MergeFormValues;
   onGoBack(): void;
   onSubmit(): void;
   onClose(): void;
@@ -14,13 +15,13 @@ interface MergeProgressProps {
 
 export const MergeProgress: React.FunctionComponent<MergeProgressProps> = ({
   theme,
+  asset,
   form,
   onGoBack,
   onSubmit,
   onClose,
 }) => {
   const { toMerge, fee, submit, status } = form;
-  const asset = form.asset.value;
   const newSpendableBalance = sum(toMerge.value) - toBaseUnits(fee.value, asset.decimals);
 
   const items = [
@@ -51,7 +52,7 @@ export const MergeProgress: React.FunctionComponent<MergeProgressProps> = ({
       action="Merge"
       items={items}
       steps={steps}
-      form={form}
+      form={form as any}
       currentStatus={status.value}
       confirmStatus={MergeStatus.CONFIRM}
       doneStatus={MergeStatus.DONE}

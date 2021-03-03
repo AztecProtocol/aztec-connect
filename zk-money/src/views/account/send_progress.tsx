@@ -1,12 +1,20 @@
 import React from 'react';
-import { formatValueString, isValidAliasInput, SendForm, SendStatus } from '../../app';
+import { Asset, formatValueString, isAddress, SendFormValues, SendStatus } from '../../app';
 import { Theme } from '../../styles';
 import { AssetInfoRow } from './asset_info_row';
 import { ProgressTemplate } from './progress_template';
 
+const formatRecipient = (input: string) => {
+  if (!isAddress(input)) {
+    return `@${input}`;
+  }
+  return `0x${input.replace(/^0x/i, '')}`;
+};
+
 interface SendProgressProps {
   theme: Theme;
-  form: SendForm;
+  asset: Asset;
+  form: SendFormValues;
   onGoBack(): void;
   onSubmit(): void;
   onClose(): void;
@@ -14,13 +22,13 @@ interface SendProgressProps {
 
 export const SendProgress: React.FunctionComponent<SendProgressProps> = ({
   theme,
+  asset,
   form,
   onGoBack,
   onSubmit,
   onClose,
 }) => {
   const { amount, fee, recipient, submit, status } = form;
-  const asset = form.asset.value;
 
   const items = [
     {
@@ -33,7 +41,7 @@ export const SendProgress: React.FunctionComponent<SendProgressProps> = ({
     },
     {
       title: 'Recipient',
-      content: `${isValidAliasInput(recipient.value) ? '@' : ''}${recipient.value}`,
+      content: formatRecipient(recipient.value.input),
     },
   ];
 
@@ -54,7 +62,7 @@ export const SendProgress: React.FunctionComponent<SendProgressProps> = ({
       action="Send"
       items={items}
       steps={steps}
-      form={form}
+      form={form as any}
       currentStatus={status.value}
       confirmStatus={SendStatus.CONFIRM}
       doneStatus={SendStatus.DONE}

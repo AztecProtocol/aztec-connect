@@ -38,11 +38,15 @@ const formatTime = (seconds: number) => {
 
 interface SettledTimeProps {
   settledIn: number;
-  status: ValueAvailability;
+  status?: ValueAvailability;
   explorerUrl: string;
 }
 
-export const SettledTime: React.FunctionComponent<SettledTimeProps> = ({ settledIn, status, explorerUrl }) => (
+export const SettledTime: React.FunctionComponent<SettledTimeProps> = ({
+  settledIn,
+  status = ValueAvailability.VALID,
+  explorerUrl,
+}) => (
   <Root>
     <IconRoot>
       {status === ValueAvailability.PENDING ? (

@@ -6,8 +6,10 @@ import ethWhiteIcon from '../images/ethereum_white.svg';
 import wbtcIcon from '../images/wbtc.svg';
 import wbtcWhiteIcon from '../images/wbtc_white.svg';
 
+export type AppAssetId = AssetId.ETH | AssetId.DAI | 2;
+
 export interface Asset {
-  id: AssetId;
+  id: AppAssetId;
   name: string;
   symbol: string;
   icon: string;

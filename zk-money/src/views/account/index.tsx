@@ -1,18 +1,17 @@
-import { AssetId } from '@aztec/sdk';
 import React from 'react';
 import styled from 'styled-components';
 import {
   AccountAction,
   AccountState,
+  AppAssetId,
   Asset,
   assets,
+  AssetState,
   Form,
   LoginState,
-  MergeForm,
+  LoginStep,
   MergeStatus,
   ProviderState,
-  SendForm,
-  ShieldForm,
   Wallet,
 } from '../../app';
 import { Modal, PaddedBlock, Tab } from '../../components';
@@ -67,36 +66,42 @@ interface AccountProps {
   theme?: Theme;
   accountState: AccountState;
   asset: Asset;
+  assetState: AssetState;
   loginState: LoginState;
   providerState?: ProviderState;
   explorerUrl: string;
-  shieldForm: ShieldForm;
-  sendForm: SendForm;
-  mergeForm: MergeForm;
-  action?: AccountAction;
+  activeAction?: {
+    action: AccountAction;
+    formValues: Form;
+  };
   processingAction: boolean;
+  mergeForm?: {
+    mergeOption: bigint[];
+    fee: bigint;
+  };
+  txsPublishTime?: Date;
   onFormInputsChange(action: AccountAction, inputs: Form): void;
   onValidate(action: AccountAction): void;
   onChangeWallet(wallet: Wallet): void;
   onGoBack(action: AccountAction): void;
   onSubmit(action: AccountAction): void;
-  onChangeAsset(assetId: AssetId): void;
+  onChangeAsset(assetId: AppAssetId): void;
   onSelectAction(action: AccountAction): void;
   onClearAction(): void;
 }
 
 export const Account: React.FunctionComponent<AccountProps> = ({
   theme = Theme.WHITE,
-  asset,
   accountState,
+  asset,
+  assetState,
   loginState,
   providerState,
   explorerUrl,
-  shieldForm,
-  sendForm,
-  mergeForm,
-  action,
+  activeAction,
   processingAction,
+  mergeForm,
+  txsPublishTime,
   onFormInputsChange,
   onValidate,
   onChangeWallet,
@@ -106,11 +111,16 @@ export const Account: React.FunctionComponent<AccountProps> = ({
   onSelectAction,
   onClearAction,
 }) => {
-  const enableMerge = mergeForm.mergeOptions.value.length > 0;
+  const isInitializing = loginState.step !== LoginStep.DONE;
 
   const handleValidateMergeForm = (toMerge: bigint[]) => {
     onFormInputsChange(AccountAction.MERGE, { toMerge: { value: toMerge } });
     onValidate(AccountAction.MERGE);
+  };
+
+  const handleSubmitMergeForm = (toMerge: bigint[]) => {
+    onSelectAction(AccountAction.MERGE);
+    handleValidateMergeForm(toMerge);
   };
 
   return (
@@ -124,37 +134,40 @@ export const Account: React.FunctionComponent<AccountProps> = ({
       </AssetsRoot>
       {asset.enabled ? (
         <AccountAsset
-          asset={asset}
           accountState={accountState}
-          mergeForm={enableMerge ? mergeForm : undefined}
-          onSubmitMergeForm={handleValidateMergeForm}
+          asset={asset}
+          assetState={assetState}
+          mergeForm={mergeForm}
+          txsPublishTime={txsPublishTime}
+          onSubmitMergeForm={handleSubmitMergeForm}
           onSelectAction={onSelectAction}
+          isInitializing={isInitializing}
         />
       ) : (
         <PaddedBlock>
           <UnsupportedAsset asset={asset} />
         </PaddedBlock>
       )}
-      {action !== undefined && (
+      {activeAction && (
         <Modal
           title={
-            action === AccountAction.MERGE && mergeForm.status.value === MergeStatus.NADA
+            activeAction.action === AccountAction.MERGE && activeAction.formValues!.status.value === MergeStatus.NADA
               ? 'About your balance'
-              : popupInfos[action].title
+              : popupInfos[activeAction.action].title
           }
           onClose={!processingAction ? onClearAction : undefined}
         >
           {(() => {
-            switch (action) {
+            switch (activeAction.action) {
               case AccountAction.SHIELD:
                 return (
                   <Shield
                     theme={theme}
-                    wallet={loginState.wallet!}
+                    asset={asset}
                     providerState={providerState}
+                    form={activeAction.formValues as any}
                     explorerUrl={explorerUrl}
-                    form={shieldForm}
-                    onChangeInputs={(inputs: ShieldForm) => onFormInputsChange(AccountAction.SHIELD, inputs)}
+                    onChangeInputs={(inputs: Form) => onFormInputsChange(AccountAction.SHIELD, inputs)}
                     onValidate={() => onValidate(AccountAction.SHIELD)}
                     onChangeWallet={onChangeWallet}
                     onGoBack={() => onGoBack(AccountAction.SHIELD)}
@@ -166,9 +179,10 @@ export const Account: React.FunctionComponent<AccountProps> = ({
                 return (
                   <Send
                     theme={theme}
+                    asset={asset}
+                    form={activeAction.formValues as any}
                     explorerUrl={explorerUrl}
-                    form={sendForm}
-                    onChangeInputs={(inputs: SendForm) => onFormInputsChange(AccountAction.SEND, inputs)}
+                    onChangeInputs={(inputs: Form) => onFormInputsChange(AccountAction.SEND, inputs)}
                     onValidate={() => onValidate(AccountAction.SEND)}
                     onGoBack={() => onGoBack(AccountAction.SEND)}
                     onSubmit={() => onSubmit(AccountAction.SEND)}
@@ -179,7 +193,8 @@ export const Account: React.FunctionComponent<AccountProps> = ({
                 return (
                   <Merge
                     theme={theme}
-                    form={mergeForm}
+                    assetState={assetState}
+                    form={activeAction.formValues as any}
                     onValidate={handleValidateMergeForm}
                     onGoBack={() => onGoBack(AccountAction.MERGE)}
                     onSubmit={() => onSubmit(AccountAction.MERGE)}

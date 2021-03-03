@@ -6,16 +6,17 @@ import { EventEmitter } from 'events';
 import Cookie from 'js-cookie';
 import { debounce, DebouncedFunc } from 'lodash';
 import { Config } from '../config';
-import { Account, AccountEvent, AccountState } from './account';
-import { ValueAvailability } from './account_forms';
-import { AccountAction } from './account_txs';
+import { AccountUtils } from './account_utils';
 import { formatAliasInput, getAliasError } from './alias';
+import { AppAssetId } from './assets';
 import { Database, LinkedAccount } from './database';
-import { Form, MessageType, SystemMessage } from './form';
+import { MessageType, SystemMessage, ValueAvailability } from './form';
 import { GraphQLService } from './graphql_service';
 import { Network } from './networks';
 import { Provider, ProviderEvent, ProviderState, ProviderStatus } from './provider';
+import { RollupService } from './rollup_service';
 import { formatSeedPhraseInput, generateSeedPhrase, getSeedPhraseError, sliceSeedPhrase } from './seed_phrase';
+import { UserAccount, UserAccountEvent } from './user_account';
 import { Wallet, wallets, Web3Signer } from './wallet_providers';
 
 const debug = createDebug('zm:login_handler');
@@ -67,10 +68,8 @@ export const initialWorldState: WorldState = { syncedToRollup: -1, latestRollup:
 export enum UserSessionEvent {
   UPDATED_LOGIN_STATE = 'UPDATED_LOGIN_STATE',
   UPDATED_PROVIDER_STATE = 'UPDATED_PROVIDER_STATE',
-  UPDATED_ACTION_STATE = 'UPDATED_ACTION_STATE',
   UPDATED_WORLD_STATE = 'UPDATED_WORLD_STATE',
-  UPDATED_ACCOUNT_STATE = 'UPDATED_ACCOUNT_STATE',
-  UPDATED_FORM_INPUTS = 'UPDATED_FORM_INPUTS',
+  UPDATED_USER_ACCOUNT_DATA = 'UPDATED_USER_ACCOUNT_DATA',
   UPDATED_SYSTEM_MESSAGE = 'UPDATED_SYSTEM_MESSAGE',
   SESSION_CLOSED = 'SESSION_CLOSED',
 }
@@ -79,34 +78,33 @@ export interface UserSession {
   on(event: UserSessionEvent.UPDATED_LOGIN_STATE, listener: (state: LoginState) => void): this;
   on(event: UserSessionEvent.UPDATED_PROVIDER_STATE, listener: (state: ProviderState) => void): this;
   on(event: UserSessionEvent.UPDATED_WORLD_STATE, listener: (state: WorldState) => void): this;
-  on(
-    event: UserSessionEvent.UPDATED_ACTION_STATE,
-    listener: (action: AccountAction, locked: boolean, processing: boolean) => void,
-  ): this;
-  on(event: UserSessionEvent.UPDATED_ACCOUNT_STATE, listener: (state: AccountState) => void): this;
-  on(event: UserSessionEvent.UPDATED_FORM_INPUTS, listener: (action: AccountAction, inputs: Form) => void): this;
+  on(event: UserSessionEvent.UPDATED_USER_ACCOUNT_DATA, listener: () => void): this;
   on(event: UserSessionEvent.UPDATED_SYSTEM_MESSAGE, listener: (message: SystemMessage) => void): this;
   on(event: UserSessionEvent.SESSION_CLOSED, listener: () => void): this;
 }
 
 export class UserSession extends EventEmitter {
-  private provider!: Provider;
+  private coreProvider!: Provider;
+  private provider?: Provider;
   private sdk!: WalletSdk;
+  private rollupService!: RollupService;
   private linkedAccount?: LinkedAccount;
   private signedInAccount?: SignedInAccount;
   private loginState = initialLoginState;
   private worldState = initialWorldState;
-  private account!: Account;
+  private account!: UserAccount;
   private debounceCheckAlias: DebouncedFunc<() => void>;
+  private destroyed = false;
 
   private readonly debounceCheckAliasWait = 600;
-  private readonly sessionCookieName = '_zkmoney_session';
 
   constructor(
     private config: Config,
     private requiredNetwork: Network,
+    private activeAsset: AppAssetId,
     private db: Database,
     private graphql: GraphQLService,
+    private sessionCookieName: string,
   ) {
     super();
     this.debounceCheckAlias = debounce(this.updateAliasAvailability, this.debounceCheckAliasWait);
@@ -141,13 +139,17 @@ export class UserSession extends EventEmitter {
     this.removeAllListeners();
     this.debounceCheckAlias.cancel();
     this.account?.destroy();
+    this.coreProvider?.destroy();
     this.provider?.destroy();
+    this.rollupService?.destroy();
     if (this.sdk) {
       this.sdk.removeAllListeners();
       // Can only safely destroy the sdk after it's fully initialized.
       await this.awaitSdkInitialized(this.sdk);
       await this.sdk.destroy();
     }
+    this.destroyed = true;
+    debug('Session destroyed.');
   }
 
   connectWallet = async (wallet: Wallet) => {
@@ -158,22 +160,32 @@ export class UserSession extends EventEmitter {
 
     this.updateLoginState({ wallet });
 
-    const walletName = wallets[wallet].name;
-    this.emitSystemMessage(`Connecting to ${walletName}...`);
-
     const { infuraId, network, ethereumHost } = this.config;
-    this.provider = new Provider(wallet, { infuraId, network, ethereumHost });
-    this.provider.on(ProviderEvent.LOG_MESSAGE, (message: string, type: MessageType) =>
-      this.emitSystemMessage(message, type),
-    );
+    const walletName = wallets[wallet].name;
+    if (wallet !== Wallet.HOT) {
+      this.emitSystemMessage(`Connecting to ${walletName}...`);
 
-    try {
-      await this.provider.init(this.requiredNetwork);
-    } catch (e) {
-      return this.abort(e.message);
+      this.provider = new Provider(wallet, { infuraId, network, ethereumHost });
+      const relayMessage = (message: string, type: MessageType) => this.emitSystemMessage(message, type);
+      this.provider.on(ProviderEvent.LOG_MESSAGE, relayMessage);
+      this.provider.on(ProviderEvent.UPDATED_PROVIDER_STATE, this.handleProviderStateChange);
+
+      try {
+        await this.provider.init(this.requiredNetwork);
+      } catch (e) {
+        return this.abort(e.message);
+      }
+
+      this.provider.off(ProviderEvent.LOG_MESSAGE, relayMessage);
     }
 
     this.emitSystemMessage('Connecting to rollup provider...');
+
+    this.coreProvider = new Provider(Wallet.HOT, { infuraId, network, ethereumHost });
+    await this.coreProvider.init();
+    if (this.coreProvider.chainId !== this.requiredNetwork.chainId) {
+      return this.abort(`Wrong network. This shouldn't happen.`);
+    }
 
     if (!this.db.isOpen) {
       await this.db.open();
@@ -181,7 +193,7 @@ export class UserSession extends EventEmitter {
 
     try {
       const { rollupProviderUrl, debug } = this.config;
-      this.sdk = await createWalletSdk(this.provider.ethereumProvider, rollupProviderUrl, { debug });
+      this.sdk = await createWalletSdk(this.coreProvider.ethereumProvider, rollupProviderUrl, { debug });
       // If local rollupContractAddress is empty, it is a new device or the data just got wiped out.
       if (!(await this.getLocalRollupContractAddress())) {
         await this.db.clear();
@@ -195,34 +207,20 @@ export class UserSession extends EventEmitter {
     // Leave it to run in the background so that it won't block the ui.
     this.sdk.init();
 
-    this.emitSystemMessage(`Linking your ${walletName} account...`);
-
     await confirmUserStates;
-
-    const ensureNetworkAndProceed = async (step: LoginStep) => {
-      // Ensure we're still on correct network, and attach handler.
-      // Any network changes at this point result in destruction.
-      if (this.provider.chainId !== this.requiredNetwork.chainId) {
-        return this.abort(`Your wallet's network was not on ${this.requiredNetwork.network}.`);
-      }
-
-      this.provider.removeAllListeners();
-      this.bindProviderEvents();
-      await this.toStep(step);
-    };
 
     const linkedAccount = await this.getLinkedAccountFromSession();
     if (linkedAccount) {
-      const accountNonce = await this.graphql.getAccountNonce(linkedAccount.accountPublicKey);
-      const userId = new AccountId(linkedAccount.accountPublicKey, accountNonce);
-      if (this.isUserAdded(userId)) {
+      const { accountPublicKey, alias } = linkedAccount;
+      const accountNonce = this.getLatestLocalNonce(accountPublicKey);
+      if (accountNonce) {
         this.linkedAccount = linkedAccount;
         this.clearSystemMessage();
         this.updateLoginState({
-          alias: linkedAccount.alias,
+          alias,
           accountNonce,
         });
-        return ensureNetworkAndProceed(LoginStep.INIT_SDK);
+        return this.toStep(LoginStep.INIT_SDK);
       }
 
       await this.db.deleteAccount(linkedAccount.accountPublicKey);
@@ -235,10 +233,23 @@ export class UserSession extends EventEmitter {
       return this.toStep(LoginStep.SET_SEED_PHRASE);
     }
 
+    if (this.provider!.chainId !== this.requiredNetwork.chainId) {
+      this.emitSystemMessage(
+        `Please switch your wallet's network to ${this.requiredNetwork.network}...`,
+        MessageType.WARNING,
+      );
+      while (this.provider!.chainId !== this.requiredNetwork.chainId) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        if (this.destroyed) {
+          return;
+        }
+      }
+    }
+
     this.emitSystemMessage('Check for signature request in your wallet to link account...', MessageType.WARNING);
 
     try {
-      this.signedInAccount = await this.linkAccount();
+      this.signedInAccount = await this.linkAccount(this.provider!);
     } catch (e) {
       debug(e);
       return this.abort('Unable to link your account.');
@@ -249,11 +260,11 @@ export class UserSession extends EventEmitter {
     const accountNonce = await this.graphql.getAccountNonce(this.signedInAccount!.accountPublicKey);
     this.updateLoginState({ accountNonce });
 
-    await ensureNetworkAndProceed(LoginStep.SET_ALIAS);
+    this.toStep(LoginStep.SET_ALIAS);
   };
 
   changeWallet = async (wallet: Wallet) => {
-    if (this.provider.status === ProviderStatus.INITIALIZING) {
+    if (this.provider?.status === ProviderStatus.INITIALIZING) {
       debug('Cannot change wallet before the current one is initialized or destroyed.');
       return;
     }
@@ -262,16 +273,15 @@ export class UserSession extends EventEmitter {
     this.emitSystemMessage(`Connecting to ${walletName}...`);
 
     const prevProvider = this.provider;
-    prevProvider.removeAllListeners();
+    prevProvider?.removeAllListeners();
 
     const { infuraId, network, ethereumHost } = this.config;
     this.provider = new Provider(wallet, { infuraId, network, ethereumHost });
+
     this.provider.on(ProviderEvent.LOG_MESSAGE, (message: string, type: MessageType) =>
       this.emitSystemMessage(message, type),
     );
-    this.provider.on(ProviderEvent.UPDATED_PROVIDER_STATE, (state: ProviderState) =>
-      this.emit(UserSessionEvent.UPDATED_PROVIDER_STATE, state),
-    );
+    this.provider.on(ProviderEvent.UPDATED_PROVIDER_STATE, this.handleProviderStateChange);
 
     try {
       await this.provider.init(this.requiredNetwork);
@@ -282,14 +292,20 @@ export class UserSession extends EventEmitter {
     }
 
     this.clearSystemMessage();
-    this.provider.removeAllListeners();
-    this.bindProviderEvents();
+    this.provider?.removeAllListeners();
+    this.provider?.on(ProviderEvent.UPDATED_PROVIDER_STATE, this.handleProviderStateChange);
     if (prevProvider !== this.provider) {
-      await prevProvider.destroy();
-      this.sdk.setProvider(this.provider.ethereumProvider);
-      this.account.changeProvider(this.provider);
+      await prevProvider?.destroy();
+      this.account.changeProvider(this.provider!);
       this.updateLoginState({ wallet });
+    } else {
+      this.handleProviderStateChange(this.provider?.getState());
     }
+  };
+
+  changeAsset = (assetId: AppAssetId) => {
+    this.activeAsset = assetId;
+    this.account?.changeAsset(assetId);
   };
 
   async setSeedPhrase(seedPhrase: string) {
@@ -313,7 +329,7 @@ export class UserSession extends EventEmitter {
     await this.toStep(LoginStep.SET_ALIAS);
   }
 
-  setAlias = async (aliasInput: string) => {
+  async setAlias(aliasInput: string) {
     if (this.loginState.accountNonce) {
       this.clearSystemMessage();
       return this.updateLoginState({ alias: aliasInput, aliasAvailability: ValueAvailability.PENDING });
@@ -342,13 +358,13 @@ export class UserSession extends EventEmitter {
     this.clearSystemMessage();
     this.updateLoginState({ alias: aliasInput, aliasAvailability: ValueAvailability.PENDING });
     this.debounceCheckAlias();
-  };
+  }
 
-  setRememberMe = (rememberMe: boolean) => {
+  setRememberMe(rememberMe: boolean) {
     this.updateLoginState({ rememberMe });
-  };
+  }
 
-  confirmAlias = async (aliasInput: string) => {
+  async confirmAlias(aliasInput: string) {
     const { accountNonce } = this.loginState;
     const error = getAliasError(aliasInput);
     if (error) {
@@ -369,18 +385,15 @@ export class UserSession extends EventEmitter {
     }
 
     await this.toStep(LoginStep.INIT_SDK);
-  };
+  }
 
-  initSdk = async () => {
+  async initSdk() {
     if (!(await this.awaitSdkInitialized())) {
       return;
     }
 
-    // Check if sdk has been destroyed due to network change.
-    const isValidSdk = () => this.sdk.getLocalStatus().initState !== SdkInitState.DESTROYED;
-
     const proceed = (step: LoginStep) => {
-      if (!isValidSdk()) {
+      if (this.sdk.getLocalStatus().initState === SdkInitState.DESTROYED) {
         throw new Error('Sdk destroyed.');
       }
 
@@ -395,21 +408,7 @@ export class UserSession extends EventEmitter {
       const { accountPublicKey } = this.linkedAccount || this.signedInAccount!;
       const userId = await this.signIn(new AccountId(accountPublicKey, accountNonce), alias);
 
-      const { depositLimit, explorerUrl } = this.config;
-      this.account = new Account(
-        userId,
-        alias,
-        this.sdk,
-        this.provider,
-        this.db,
-        this.graphql,
-        explorerUrl,
-        depositLimit,
-      );
-      for (const e in AccountEvent) {
-        const event = (AccountEvent as any)[e];
-        this.account.on(event, (...args) => this.emit(event, ...args));
-      }
+      await this.createUserAccount(userId, alias);
 
       const {
         blockchainStatus: { nextRollupId },
@@ -425,18 +424,115 @@ export class UserSession extends EventEmitter {
 
       await this.sdk.awaitUserSynchronised(userId);
 
-      await this.account.init();
+      await this.account.init(this.provider);
 
       proceed(LoginStep.DONE);
     } catch (e) {
       debug(e);
-      if (isValidSdk()) {
-        // Show error on screen.
-        this.emitSystemMessage(e.message, MessageType.ERROR);
-        // TODO - destroy or start from failed step.
-      }
+      this.emitSystemMessage(e.message, MessageType.ERROR);
+      // TODO - destroy or start from failed step.
     }
-  };
+  }
+
+  async backgroundLogin(wallet = Wallet.HOT) {
+    if (this.loginState.wallet !== undefined) {
+      debug('Attempt to login again.');
+      return;
+    }
+
+    try {
+      this.updateLoginState({ wallet });
+
+      const { infuraId, network, ethereumHost } = this.config;
+      this.coreProvider = new Provider(wallet, { infuraId, network, ethereumHost });
+      await this.coreProvider.init();
+      if (this.coreProvider.chainId !== this.requiredNetwork.chainId) {
+        return this.abort(`Wrong network. This shouldn't happen.`);
+      }
+
+      if (!this.db.isOpen) {
+        await this.db.open();
+      }
+
+      const { rollupProviderUrl, debug } = this.config;
+      this.sdk = await createWalletSdk(this.coreProvider.ethereumProvider, rollupProviderUrl, { debug });
+      // If local rollupContractAddress is empty, it is a new device or the data just got wiped out.
+      if (!(await this.getLocalRollupContractAddress())) {
+        throw new Error('Require data reset.');
+      }
+
+      const confirmUserStates = this.ensureUserStates();
+      // Leave it to run in the background so that it won't block the ui.
+      this.sdk.init();
+
+      await confirmUserStates;
+
+      this.linkedAccount = await this.getLinkedAccountFromSession();
+      if (!this.linkedAccount) {
+        throw new Error('Session data not exists.');
+      }
+
+      const { accountPublicKey, alias } = this.linkedAccount;
+      const accountNonce = this.getLatestLocalNonce(accountPublicKey);
+      if (!accountNonce) {
+        await this.db.deleteAccount(accountPublicKey);
+        throw new Error('Account not exists.');
+      }
+
+      this.updateLoginState({
+        alias,
+        accountNonce,
+      });
+
+      const userId = new AccountId(accountPublicKey, accountNonce);
+      await this.createUserAccount(userId, alias);
+
+      const {
+        blockchainStatus: { nextRollupId },
+      } = await this.sdk.getRemoteStatus();
+      const { syncedToRollup } = this.sdk.getLocalStatus();
+      this.handleWorldStateChange(syncedToRollup, nextRollupId - 1);
+      this.handleUserStateChange(userId);
+      this.sdk.on(SdkEvent.UPDATED_WORLD_STATE, this.handleWorldStateChange);
+      this.sdk.on(SdkEvent.UPDATED_USER_STATE, this.handleUserStateChange);
+
+      await this.sdk.awaitUserSynchronised(userId);
+
+      await this.account.init();
+
+      this.toStep(LoginStep.DONE);
+    } catch (e) {
+      debug(e);
+      await this.close();
+    }
+  }
+
+  private async createUserAccount(userId: AccountId, alias: string) {
+    this.rollupService = new RollupService(this.sdk);
+    await this.rollupService.init();
+
+    const { txAmountLimit, explorerUrl } = this.config;
+
+    const accountUtils = new AccountUtils(this.sdk, this.graphql, this.requiredNetwork);
+    this.account = new UserAccount(
+      userId,
+      alias,
+      this.activeAsset,
+      this.sdk,
+      this.coreProvider,
+      this.db,
+      this.rollupService,
+      accountUtils,
+      this.requiredNetwork,
+      explorerUrl,
+      txAmountLimit,
+    );
+
+    for (const e in UserAccountEvent) {
+      const event = (UserAccountEvent as any)[e];
+      this.account.on(event, () => this.emit(UserSessionEvent.UPDATED_USER_ACCOUNT_DATA));
+    }
+  }
 
   private generateSeedPhrase() {
     const entropy = this.hashToField(Buffer.from(randomString({ length: 64, type: 'base64' })));
@@ -450,9 +546,9 @@ export class UserSession extends EventEmitter {
     return { accountPublicKey, privateKey };
   }
 
-  private async linkAccount() {
-    const ethAddress = this.provider.account!;
-    const signer = new Web3Signer(this.provider.ethereumProvider);
+  private async linkAccount(provider: Provider) {
+    const ethAddress = provider.account!;
+    const signer = new Web3Signer(provider.ethereumProvider);
     const message = this.hashToField(ethAddress.toBuffer());
     const msgHash = utils.keccak256(message);
     const digest = utils.arrayify(msgHash);
@@ -493,9 +589,8 @@ export class UserSession extends EventEmitter {
       // User just generated a private key to sign in. Add the user to db or update its last logged in time
       const { accountPublicKey } = this.signedInAccount;
       await this.db.addAccount({ accountPublicKey, alias: aliasInput, timestamp: new Date() });
-      const { rememberMe, wallet } = this.loginState;
-      if (rememberMe) {
-        await this.setLinkedAccountToSession(wallet!, accountPublicKey);
+      if (this.loginState.rememberMe) {
+        await this.setLinkedAccountToSession(accountPublicKey);
       }
     }
 
@@ -507,20 +602,19 @@ export class UserSession extends EventEmitter {
     if (!session) return;
 
     const currentSession = Buffer.from(session, 'hex');
-    const { wallet } = this.loginState;
     const accounts = await this.db.getAccounts();
     const now = Date.now();
     const expiresIn = this.config.sessionTimeout * 86400 * 1000;
     for (const account of accounts) {
-      const key = await this.generateLoginSessionKey(wallet!, account.accountPublicKey);
+      const key = await this.generateLoginSessionKey(account.accountPublicKey);
       if (key.equals(currentSession) && account.timestamp.getTime() + expiresIn > now) {
         return account;
       }
     }
   }
 
-  private async setLinkedAccountToSession(wallet: Wallet, accountPublicKey: GrumpkinAddress) {
-    const sessionKey = this.generateLoginSessionKey(wallet, accountPublicKey);
+  private async setLinkedAccountToSession(accountPublicKey: GrumpkinAddress) {
+    const sessionKey = this.generateLoginSessionKey(accountPublicKey);
     Cookie.set(this.sessionCookieName, sessionKey.toString('hex'), { expires: this.config.sessionTimeout });
   }
 
@@ -528,28 +622,9 @@ export class UserSession extends EventEmitter {
     Cookie.remove(this.sessionCookieName);
   }
 
-  private generateLoginSessionKey(wallet: Wallet, accountPublicKey: GrumpkinAddress) {
-    const idBuf = Buffer.alloc(2);
-    idBuf.writeUInt16BE(wallet);
-    return this.hashToField(Buffer.concat([idBuf, accountPublicKey.toBuffer()]));
+  private generateLoginSessionKey(accountPublicKey: GrumpkinAddress) {
+    return this.hashToField(accountPublicKey.toBuffer());
   }
-
-  private bindProviderEvents() {
-    this.provider.on(ProviderEvent.UPDATED_NETWORK, this.handleNetworkChange);
-    this.provider.on(ProviderEvent.UPDATED_PROVIDER_STATE, (state: ProviderState) =>
-      this.emit(UserSessionEvent.UPDATED_PROVIDER_STATE, state),
-    );
-  }
-
-  private handleNetworkChange = async (network: Network) => {
-    if (network.chainId !== this.requiredNetwork.chainId) {
-      this.close(
-        `You've been logged out because your wallet's network was not on ${this.requiredNetwork.network}.`,
-        MessageType.ERROR,
-        false,
-      );
-    }
-  };
 
   private handleWorldStateChange = (syncedToRollup: number, latestRollup: number) => {
     this.updateWorldState({ ...this.worldState, syncedToRollup, latestRollup });
@@ -561,6 +636,14 @@ export class UserSession extends EventEmitter {
     const user = this.sdk.getUserData(userId);
     this.worldState = { ...this.worldState, accountSyncedToRollup: user.syncedToRollup };
     this.emit(UserSessionEvent.UPDATED_WORLD_STATE, this.worldState);
+  };
+
+  private handleProviderStateChange = (state?: ProviderState) => {
+    if (!state || state.status === ProviderStatus.DESTROYED) {
+      this.provider = undefined;
+      this.account?.changeProvider();
+    }
+    this.emit(UserSessionEvent.UPDATED_PROVIDER_STATE, state);
   };
 
   private toStep(step: LoginStep, message = '', messageType = MessageType.TEXT) {
@@ -626,6 +709,11 @@ export class UserSession extends EventEmitter {
 
   private async getLocalRollupContractAddress() {
     return (this.sdk as any).core.getRollupContractAddress();
+  }
+
+  private getLatestLocalNonce(publicKey: GrumpkinAddress) {
+    const users = this.sdk.getUsersData().filter(u => u.publicKey.equals(publicKey));
+    return users.length ? users.reduce((n, { nonce }) => Math.max(n, nonce), 0) : undefined;
   }
 
   private isUserAdded(userId: AccountId) {

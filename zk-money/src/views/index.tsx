@@ -5,7 +5,7 @@ import { Config } from '../config';
 import { PageTransitionHandler } from '../page_transition_handler';
 import { Theme } from '../styles';
 import { AboutBalance } from './about_balance';
-import { AppView } from './app';
+import { appPaths, AppView } from './app';
 import { NotFound } from './not_found';
 
 interface ViewsProps {
@@ -15,9 +15,11 @@ interface ViewsProps {
 export const Views: React.FunctionComponent<ViewsProps> = ({ config }) => (
   <>
     <Switch>
-      <Route path="/" exact>
-        <AppView config={config} />
-      </Route>
+      <Route
+        path={appPaths}
+        exact
+        children={({ match, ...props }) => <AppView {...props} config={config} match={match as any} />}
+      />
       <Route path="/about_your_balance" exact>
         <Template theme={Theme.WHITE}>
           <AboutBalance />

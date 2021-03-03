@@ -1,7 +1,7 @@
 import { EthAddress } from '@aztec/sdk';
 import React from 'react';
 import styled from 'styled-components';
-import { fromBaseUnits, isValidForm, SendForm, SendStatus } from '../../app';
+import { Asset, fromBaseUnits, isAddress, isValidForm, SendFormValues, SendStatus, ValueAvailability } from '../../app';
 import {
   BlockTitle,
   Button,
@@ -23,6 +23,7 @@ import {
 import { borderRadiuses, breakpoints, colours, spacings, Theme } from '../../styles';
 import { SendProgress } from './send_progress';
 import { SettledTime } from './settled_time';
+import { WithdrawDisclaimer } from './withdraw_disclaimer';
 
 const AssetIcon = styled.img`
   padding: 0 ${spacings.s};
@@ -77,9 +78,10 @@ const ButtonRoot = styled(InputCol)`
 
 interface SendProps {
   theme: Theme;
+  asset: Asset;
+  form: SendFormValues;
   explorerUrl: string;
-  form: SendForm;
-  onChangeInputs(inputs: Partial<SendForm>): void;
+  onChangeInputs(inputs: Partial<SendFormValues>): void;
   onValidate(): void;
   onGoBack(): void;
   onSubmit(): void;
@@ -88,23 +90,23 @@ interface SendProps {
 
 export const Send: React.FunctionComponent<SendProps> = ({
   theme,
-  explorerUrl,
+  asset,
   form,
+  explorerUrl,
   onChangeInputs,
   onValidate,
   onGoBack,
   onSubmit,
   onClose,
 }) => {
-  const { asset, amount, fee, settledIn, maxAmount, recipient, recipientStatus, confirmed, submit, status } = form;
-
-  if (status.value !== SendStatus.NADA) {
-    return <SendProgress theme={theme} form={form} onGoBack={onGoBack} onSubmit={onSubmit} onClose={onClose} />;
+  if (form.status.value !== SendStatus.NADA) {
+    return (
+      <SendProgress theme={theme} asset={asset} form={form} onGoBack={onGoBack} onSubmit={onSubmit} onClose={onClose} />
+    );
   }
 
   const inputTheme = theme === Theme.WHITE ? InputTheme.WHITE : InputTheme.LIGHT;
-  const { icon, decimals } = asset.value;
-  const isStatusUpToDate = recipient.value === recipientStatus.value.input;
+  const { amount, fee, settledIn, maxAmount, recipient, confirmed, submit } = form;
 
   return (
     <>
@@ -114,19 +116,21 @@ export const Send: React.FunctionComponent<SendProps> = ({
           <InputWrapper theme={inputTheme}>
             <InputStatusIcon
               status={
-                !isStatusUpToDate
+                recipient.value.valid === ValueAvailability.PENDING
                   ? InputStatus.LOADING
-                  : recipient.value && !recipientStatus.value.valid
+                  : (recipient.value.input || recipient.message) && recipient.value.valid === ValueAvailability.INVALID
                   ? InputStatus.ERROR
                   : InputStatus.SUCCESS
               }
-              inactive={!recipient.value}
+              inactive={!recipient.value.input && !recipient.message}
             />
             <MaskedInput
               theme={inputTheme}
-              value={recipient.value}
-              prefix={EthAddress.isAddress(recipient.value.trim()) ? '' : '@'}
-              onChangeValue={value => onChangeInputs({ recipient: { value: value.replace(/^@+/, '') } })}
+              value={recipient.value.input}
+              prefix={EthAddress.isAddress(recipient.value.input.trim()) ? '' : '@'}
+              onChangeValue={value =>
+                onChangeInputs({ recipient: { value: { ...recipient.value, input: value.replace(/^@+/, '') } } })
+              }
               placeholder="username or ethereum address"
             />
           </InputWrapper>
@@ -135,19 +139,26 @@ export const Send: React.FunctionComponent<SendProps> = ({
           )}
         </InputCol>
       </InputRow>
+      {isAddress(recipient.value.input) && (
+        <PaddedBlock size="m">
+          <WithdrawDisclaimer />
+        </PaddedBlock>
+      )}
       <InputRow>
         <AmountCol>
           <BlockTitle title="Amount" />
           <AmountInputWrapper theme={inputTheme}>
             <AmountAssetIconRoot>
-              <AssetIcon src={icon} />
+              <AssetIcon src={asset.icon} />
             </AmountAssetIconRoot>
             <Input
               theme={inputTheme}
               value={amount.value}
               onChangeValue={value => onChangeInputs({ amount: { value } })}
             />
-            <MaxButton onClick={() => onChangeInputs({ amount: { value: fromBaseUnits(maxAmount.value, decimals) } })}>
+            <MaxButton
+              onClick={() => onChangeInputs({ amount: { value: fromBaseUnits(maxAmount.value, asset.decimals) } })}
+            >
               <Text text="MAX" size="xs" />
             </MaxButton>
           </AmountInputWrapper>
@@ -156,18 +167,9 @@ export const Send: React.FunctionComponent<SendProps> = ({
           )}
         </AmountCol>
         <FeeCol>
-          <BlockTitle
-            title="Fee"
-            info={
-              <SettledTime
-                settledIn={settledIn.value.seconds}
-                status={settledIn.value.valid}
-                explorerUrl={explorerUrl}
-              />
-            }
-          />
+          <BlockTitle title="Fee" info={<SettledTime settledIn={settledIn.value} explorerUrl={explorerUrl} />} />
           <InputWrapper theme={inputTheme}>
-            <AssetIcon src={icon} />
+            <AssetIcon src={asset.icon} />
             <Input theme={inputTheme} value={fee.value} onChangeValue={value => onChangeInputs({ fee: { value } })} />
           </InputWrapper>
           {fee.message && <FixedInputMessage theme={inputTheme} message={fee.message} type={fee.messageType} />}
@@ -192,7 +194,7 @@ export const Send: React.FunctionComponent<SendProps> = ({
             theme="gradient"
             text="Next"
             onClick={onValidate}
-            disabled={!isValidForm(form) || !isStatusUpToDate || !recipientStatus.value.valid}
+            disabled={!isValidForm(form as any) || recipient.value.valid !== ValueAvailability.VALID}
             isLoading={submit.value}
           />
         </ButtonRoot>

@@ -9,6 +9,10 @@ import { LoginTemplate } from './login_template';
 import { Progress } from './progress';
 import { SeedPhraseForm } from './seed_phrase_form';
 
+const PaddedTop = styled.div`
+  padding-top: ${spacings.m};
+`;
+
 interface LoginStepInfo {
   step: number;
   title: string | React.ReactNode;
@@ -25,7 +29,12 @@ const loginSteps: LoginStepInfo[] = [
         {' wallet'}
       </>
     ),
-    description: 'More wallets coming soon!',
+    description: (
+      <>
+        {'Your wallet is used to derive a private key, used encrypt your data and sign private transactions.'}
+        <PaddedTop>{'More coming soon!'}</PaddedTop>
+      </>
+    ),
   },
   {
     step: 1,

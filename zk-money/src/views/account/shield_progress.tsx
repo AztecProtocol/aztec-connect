@@ -1,12 +1,13 @@
 import React from 'react';
-import { formatValueString, ShieldForm, ShieldStatus } from '../../app';
+import { Asset, formatValueString, ShieldFormValues, ShieldStatus } from '../../app';
 import { Theme } from '../../styles';
 import { AssetInfoRow } from './asset_info_row';
 import { ProgressTemplate } from './progress_template';
 
 interface ShieldProgressProps {
   theme: Theme;
-  form: ShieldForm;
+  asset: Asset;
+  form: ShieldFormValues;
   onGoBack(): void;
   onSubmit(): void;
   onClose(): void;
@@ -14,13 +15,13 @@ interface ShieldProgressProps {
 
 export const ShieldProgress: React.FunctionComponent<ShieldProgressProps> = ({
   theme,
+  asset,
   form,
   onGoBack,
   onSubmit,
   onClose,
 }) => {
   const { amount, fee, recipient, status, submit } = form;
-  const asset = form.asset.value;
 
   const items = [
     {
@@ -33,7 +34,7 @@ export const ShieldProgress: React.FunctionComponent<ShieldProgressProps> = ({
     },
     {
       title: 'Recipient',
-      content: `@${recipient.value}`,
+      content: `@${recipient.value.input}`,
     },
   ];
 
@@ -62,7 +63,7 @@ export const ShieldProgress: React.FunctionComponent<ShieldProgressProps> = ({
       action="Shield"
       items={items}
       steps={steps}
-      form={form}
+      form={form as any}
       currentStatus={status.value}
       confirmStatus={ShieldStatus.CONFIRM}
       doneStatus={ShieldStatus.DONE}

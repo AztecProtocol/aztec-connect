@@ -30,6 +30,8 @@ const aliasChecklist: ChecklistItem[] = [
 
 export const formatAliasInput = (aliasInput: string) => aliasInput.toLowerCase();
 
+export const isSameAlias = (alias0: string, alias1: string) => formatAliasInput(alias0) === formatAliasInput(alias1);
+
 export const isValidAliasInput = (aliasInput: string) => {
   const alias = formatAliasInput(aliasInput);
   return aliasChecklist.every(({ validate }) => validate(alias));

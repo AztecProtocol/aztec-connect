@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import { MergeForm, toBaseUnits } from '../../app';
+import { AssetState, fromBaseUnits, sum } from '../../app';
 import { Text } from '../../components';
 import mergeIcon from '../../images/merge_gradient.svg';
 import { borderRadiuses, breakpoints, colours, spacings } from '../../styles';
@@ -60,13 +60,14 @@ const MergeTxRow = styled(MergeTx)`
 `;
 
 interface MergeBlockProps {
-  form: MergeForm;
+  assetState: AssetState;
+  mergeOption: bigint[];
+  fee: bigint;
   onSubmit(toMerge: bigint[]): void;
 }
 
-export const MergeBlock: React.FunctionComponent<MergeBlockProps> = ({ form, onSubmit }) => {
-  const { asset, spendableBalance, mergeOptions, fee } = form;
-  const [notes] = mergeOptions.value;
+export const MergeBlock: React.FunctionComponent<MergeBlockProps> = ({ assetState, mergeOption, fee, onSubmit }) => {
+  const { asset, spendableBalance } = assetState;
 
   return (
     <Root>
@@ -85,11 +86,11 @@ export const MergeBlock: React.FunctionComponent<MergeBlockProps> = ({ form, onS
         </Block>
       </Content>
       <MergeTxRow
-        asset={asset.value}
-        prevAmount={spendableBalance.value}
-        amount={notes.reduce((sum, v) => sum + v, 0n) - toBaseUnits(fee.value, asset.value.decimals)}
-        fee={fee.value}
-        onSubmit={() => onSubmit(notes)}
+        asset={asset}
+        prevAmount={spendableBalance}
+        amount={sum(mergeOption) - fee}
+        fee={fromBaseUnits(fee, asset.decimals)}
+        onSubmit={() => onSubmit(mergeOption)}
       />
     </Root>
   );

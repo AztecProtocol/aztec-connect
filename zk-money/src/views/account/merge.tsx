@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import { MergeForm, MergeStatus, toBaseUnits } from '../../app';
+import { AssetState, MergeFormValues, MergeStatus, toBaseUnits } from '../../app';
 import { BlockTitle, PaddedBlock, Text } from '../../components';
 import { spacings, Theme, themeColours } from '../../styles';
 import { MergeProgress } from './merge_progress';
@@ -14,7 +14,8 @@ const MergeTxRow = styled(MergeTx)`
 
 interface MergeProps {
   theme: Theme;
-  form: MergeForm;
+  assetState: AssetState;
+  form: MergeFormValues;
   onValidate(toMerge: bigint[]): void;
   onGoBack(): void;
   onSubmit(): void;
@@ -23,17 +24,29 @@ interface MergeProps {
 
 export const Merge: React.FunctionComponent<MergeProps> = ({
   theme,
+  assetState,
   form,
   onValidate,
   onGoBack,
   onSubmit,
   onClose,
 }) => {
-  const { asset, spendableBalance, mergeOptions, fee, status } = form;
-
-  if (status.value !== MergeStatus.NADA) {
-    return <MergeProgress theme={theme} form={form} onGoBack={onGoBack} onSubmit={onSubmit} onClose={onClose} />;
+  const { asset } = assetState;
+  if (form.status.value !== MergeStatus.NADA) {
+    return (
+      <MergeProgress
+        theme={theme}
+        asset={asset}
+        form={form}
+        onGoBack={onGoBack}
+        onSubmit={onSubmit}
+        onClose={onClose}
+      />
+    );
   }
+
+  const { spendableBalance } = assetState;
+  const { mergeOptions, fee } = form;
 
   return (
     <div>
@@ -68,9 +81,9 @@ export const Merge: React.FunctionComponent<MergeProps> = ({
           {mergeOptions.value.map((values, i) => (
             <MergeTxRow
               key={i}
-              asset={asset.value}
-              prevAmount={spendableBalance.value}
-              amount={values.reduce((sum, v) => sum + v, 0n) - toBaseUnits(fee.value, asset.value.decimals)}
+              asset={asset}
+              prevAmount={spendableBalance}
+              amount={values.reduce((sum, v) => sum + v, 0n) - toBaseUnits(fee.value, asset.decimals)}
               fee={fee.value}
               onSubmit={() => onValidate(values)}
             />

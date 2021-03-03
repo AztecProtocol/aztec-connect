@@ -61,16 +61,24 @@ const NetworkRoot = styled(AccountItem)`
 
 interface HeaderProps {
   theme: Theme;
+  rootUrl: string;
   network?: string;
   worldState?: WorldState;
   account?: AccountState;
   onLogout?: () => void;
 }
 
-export const Header: React.FunctionComponent<HeaderProps> = ({ theme, network, worldState, account, onLogout }) => (
+export const Header: React.FunctionComponent<HeaderProps> = ({
+  theme,
+  rootUrl,
+  network,
+  worldState,
+  account,
+  onLogout,
+}) => (
   <HeaderRoot>
     <LogoRoot theme={theme}>
-      <Link to="/">
+      <Link to={rootUrl}>
         <Logo src={theme === Theme.GRADIENT ? logoWhite : logo} />
       </Link>
     </LogoRoot>

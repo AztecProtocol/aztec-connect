@@ -1,12 +1,16 @@
 import React from 'react';
 import styled from 'styled-components';
 import {
+  Asset,
+  EthAccountState,
   fromBaseUnits,
   isValidForm,
+  MessageType,
   ProviderState,
   ProviderStatus,
-  ShieldForm,
+  ShieldFormValues,
   ShieldStatus,
+  ValueAvailability,
   Wallet,
   wallets,
 } from '../../app';
@@ -78,6 +82,15 @@ const MaxButton = styled.div`
   cursor: pointer;
 `;
 
+const InputFoot = styled(Text)`
+  padding-top: ${spacings.xs};
+  text-align: right;
+
+  @media (max-width: ${breakpoints.s}) {
+    text-align: left;
+  }
+`;
+
 const FlexRow = styled.div`
   display: flex;
   align-items: center;
@@ -96,7 +109,8 @@ const ErrorEthAddressRoot = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  flex: 0 0 16px;
+  flex-shrink: 0;
+  width: 16px;
   height: 16px;
   border-radius: 100%;
   background: ${systemStates.error};
@@ -150,7 +164,7 @@ interface WalletItemProps {
   connected: boolean;
 }
 
-export const WalletItem: React.FunctionComponent<WalletItemProps> = ({ name, icon, connected }) => (
+const WalletItem: React.FunctionComponent<WalletItemProps> = ({ name, icon, connected }) => (
   <FlexRow>
     <WalletItemIcon src={icon} />
     <WalletItemText text={name} />
@@ -158,61 +172,29 @@ export const WalletItem: React.FunctionComponent<WalletItemProps> = ({ name, ico
   </FlexRow>
 );
 
-interface ShieldProps {
-  theme: Theme;
-  wallet: Wallet;
+interface WalletSelectInputProps {
+  asset: Asset;
   providerState?: ProviderState;
-  explorerUrl: string;
-  form: ShieldForm;
-  onChangeInputs(inputs: Partial<ShieldForm>): void;
-  onValidate(): void;
+  ethAccount: EthAccountState;
+  message?: string;
+  messageType?: MessageType;
   onChangeWallet(wallet: Wallet): void;
-  onGoBack(): void;
-  onSubmit(): void;
-  onClose(): void;
 }
 
-export const Shield: React.FunctionComponent<ShieldProps> = ({
-  theme,
-  wallet,
+const WalletSelectInput: React.FunctionComponent<WalletSelectInputProps> = ({
+  asset,
   providerState,
-  explorerUrl,
-  form,
-  onChangeInputs,
-  onValidate,
+  ethAccount,
+  message,
+  messageType,
   onChangeWallet,
-  onGoBack,
-  onSubmit,
-  onClose,
 }) => {
-  const {
-    asset,
-    amount,
-    fee,
-    settledIn,
-    maxAmount,
-    ethAddress,
-    publicBalance,
-    recipient,
-    recipientStatus,
-    enableAddToBalance,
-    addToBalance,
-    confirmed,
-    submit,
-    status,
-  } = form;
+  const { ethAddress, publicBalance } = ethAccount;
 
-  if (status.value !== ShieldStatus.NADA) {
-    return <ShieldProgress theme={theme} form={form} onGoBack={onGoBack} onSubmit={onSubmit} onClose={onClose} />;
-  }
-
-  const inputTheme = theme === Theme.WHITE ? InputTheme.WHITE : InputTheme.LIGHT;
-  const { icon, decimals, symbol } = asset.value;
-  const isStatusUpToDate = recipient.value === recipientStatus.value.input;
-
+  const wallet = providerState?.wallet;
   const walletSelect = (
     <Select
-      trigger={<Text text={`(${ethAddress.value ? 'Change' : 'Connect'})`} size="xs" nowrap />}
+      trigger={<Text text={`(${ethAddress ? 'Change' : 'Connect'})`} size="xs" nowrap />}
       items={wallets
         .filter(({ id }) => id !== Wallet.HOT)
         .map(({ id, name, icon }) => ({
@@ -224,6 +206,108 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
     />
   );
 
+  if (ethAddress && ethAddress.toString() === providerState?.account?.toString()) {
+    return (
+      <FlexRow>
+        <Tooltip
+          trigger={
+            message && messageType === MessageType.ERROR ? (
+              <ErrorEthAddressRoot>
+                <ErrorEthAddressIcon src={errorIcon} />
+              </ErrorEthAddressRoot>
+            ) : (
+              <EthAddressStatus size="xs" color="green" />
+            )
+          }
+        >
+          <EthAddressText
+            text={message || `${fromBaseUnits(publicBalance, asset.decimals)} ${asset.symbol}`}
+            size="xxs"
+            nowrap
+          />
+        </Tooltip>
+        <EthAddressText text={formatAddress(ethAddress.toString())} size="xs" italic />
+        {walletSelect}
+      </FlexRow>
+    );
+  }
+
+  if (providerState && [ProviderStatus.INITIALIZING, ProviderStatus.INITIALIZED].indexOf(providerState.status) >= 0) {
+    return (
+      <FlexRow>
+        <EthAddressStatus size="xs" color="orange" />
+        <EthAddressText text={`Connecting to ${wallets[providerState!.wallet].name}...`} size="xs" italic nowrap />
+      </FlexRow>
+    );
+  }
+
+  return (
+    <FlexRow>
+      <ErrorEthAddressRoot>
+        <ErrorEthAddressIcon src={errorIcon} />
+      </ErrorEthAddressRoot>
+      <EthAddressText text="Unknown Wallet" size="xs" italic nowrap />
+      {walletSelect}
+    </FlexRow>
+  );
+};
+
+interface ShieldProps {
+  theme: Theme;
+  asset: Asset;
+  providerState?: ProviderState;
+  explorerUrl: string;
+  form: ShieldFormValues;
+  onChangeInputs(inputs: Partial<ShieldFormValues>): void;
+  onValidate(): void;
+  onChangeWallet(wallet: Wallet): void;
+  onGoBack(): void;
+  onSubmit(): void;
+  onClose(): void;
+}
+
+export const Shield: React.FunctionComponent<ShieldProps> = ({
+  theme,
+  asset,
+  providerState,
+  explorerUrl,
+  form,
+  onChangeInputs,
+  onValidate,
+  onChangeWallet,
+  onGoBack,
+  onSubmit,
+  onClose,
+}) => {
+  if (form.status.value !== ShieldStatus.NADA) {
+    return (
+      <ShieldProgress
+        theme={theme}
+        asset={asset}
+        form={form}
+        onGoBack={onGoBack}
+        onSubmit={onSubmit}
+        onClose={onClose}
+      />
+    );
+  }
+
+  const inputTheme = theme === Theme.WHITE ? InputTheme.WHITE : InputTheme.LIGHT;
+  const {
+    amount,
+    fee,
+    settledIn,
+    maxAmount,
+    ethAccount,
+    recipient,
+    enableAddToBalance,
+    addToBalance,
+    confirmed,
+    submit,
+  } = form;
+  const { icon, decimals } = asset;
+  const { pendingBalance } = ethAccount.value;
+
   return (
     <>
       <InputRow>
@@ -231,37 +315,14 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
           <BlockTitle
             title="Amount"
             info={
-              ethAddress.value ? (
-                <FlexRow>
-                  <Tooltip trigger={<EthAddressStatus size="xs" color="green" />}>
-                    <EthAddressText
-                      text={`${fromBaseUnits(publicBalance.value, decimals)} ${symbol}`}
-                      size="xxs"
-                      nowrap
-                    />
-                  </Tooltip>
-                  <EthAddressText text={formatAddress(ethAddress.value)} size="xs" italic />
-                  {walletSelect}
-                </FlexRow>
-              ) : providerState?.status === ProviderStatus.INITIALIZING ? (
-                <FlexRow>
-                  <EthAddressStatus size="xs" color="orange" />
-                  <EthAddressText
-                    text={`Connecting to ${wallets[providerState.wallet].name}...`}
-                    size="xs"
-                    italic
-                    nowrap
-                  />
-                </FlexRow>
-              ) : (
-                <FlexRow>
-                  <ErrorEthAddressRoot>
-                    <ErrorEthAddressIcon src={errorIcon} />
-                  </ErrorEthAddressRoot>
-                  <EthAddressText text="Unknown Wallet" size="xs" italic nowrap />
-                  {walletSelect}
-                </FlexRow>
-              )
+              <WalletSelectInput
+                asset={asset}
+                providerState={providerState}
+                ethAccount={ethAccount.value}
+                message={ethAccount.message}
+                messageType={ethAccount.messageType}
+                onChangeWallet={onChangeWallet}
+              />
             }
           />
           <AmountInputWrapper theme={inputTheme}>
@@ -277,21 +338,21 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
               <Text text="MAX" size="xs" />
             </MaxButton>
           </AmountInputWrapper>
+          {!!pendingBalance && (
+            <InputFoot
+              text={`You have ${fromBaseUnits(
+                pendingBalance,
+                decimals,
+              )} ETH pending on the contract, this will be used first.`}
+              size="xxs"
+            />
+          )}
           {amount.message && (
             <FixedInputMessage theme={inputTheme} message={amount.message} type={amount.messageType} />
           )}
         </AmountCol>
         <FeeCol>
-          <BlockTitle
-            title="Fee"
-            info={
-              <SettledTime
-                settledIn={settledIn.value.seconds}
-                status={settledIn.value.valid}
-                explorerUrl={explorerUrl}
-              />
-            }
-          />
+          <BlockTitle title="Fee" info={<SettledTime settledIn={settledIn.value} explorerUrl={explorerUrl} />} />
           <InputWrapper theme={inputTheme}>
             <AssetIcon src={icon} />
             <Input theme={inputTheme} value={fee.value} onChangeValue={value => onChangeInputs({ fee: { value } })} />
@@ -305,9 +366,9 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
           <InputWrapper theme={inputTheme}>
             <InputStatusIcon
               status={
-                !isStatusUpToDate
+                recipient.value.valid === ValueAvailability.PENDING
                   ? InputStatus.LOADING
-                  : recipient.value && !recipientStatus.value.valid
+                  : recipient.value && recipient.value.valid === ValueAvailability.INVALID
                   ? InputStatus.ERROR
                   : InputStatus.SUCCESS
               }
@@ -315,9 +376,9 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
             />
             <MaskedInput
               theme={inputTheme}
-              value={recipient.value}
+              value={recipient.value.input}
               prefix="@"
-              onChangeValue={value => onChangeInputs({ recipient: { value } })}
+              onChangeValue={input => onChangeInputs({ recipient: { value: { ...recipient.value, input } } })}
               placeholder="@montzema50"
             />
           </InputWrapper>
@@ -362,7 +423,7 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
             theme="gradient"
             text="Next"
             onClick={onValidate}
-            disabled={!isValidForm(form) || !isStatusUpToDate || !recipientStatus.value.valid}
+            disabled={!isValidForm(form as any) || recipient.value.valid !== ValueAvailability.VALID}
             isLoading={submit.value}
           />
         </ButtonRoot>

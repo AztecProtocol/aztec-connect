@@ -2,7 +2,7 @@ import copy from 'copy-to-clipboard';
 import { rgba } from 'polished';
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
-import { sliceSeedPhrase } from '../../app';
+import { formatSeedPhraseInput, sliceSeedPhrase } from '../../app';
 import { Button, Checkbox, InputTheme, InputWrapper, PaddedBlock, Text, Textarea } from '../../components';
 import copyIcon from '../../images/copy_white.svg';
 import { borderRadiuses, colours, spacings } from '../../styles';
@@ -81,7 +81,7 @@ export const SeedPhraseForm: React.FunctionComponent<SeedPhraseFormProps> = ({
   }, [justCopied, seedPhrase]);
 
   const handleCopy = () => {
-    copy(seedPhrase);
+    copy(formatSeedPhraseInput(seedPhrase));
     setJustCopied(true);
   };
 

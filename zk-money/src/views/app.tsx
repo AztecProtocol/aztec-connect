@@ -1,21 +1,21 @@
+import { AssetId } from '@aztec/sdk';
+import { isEqual } from 'lodash';
 import React, { PureComponent } from 'react';
 import { withApollo, WithApolloClient } from 'react-apollo';
+import { RouteComponentProps } from 'react-router';
 import {
   AccountAction,
   AccountState,
   App,
   AppAction,
+  AppAssetId,
   AppEvent,
+  assets,
+  AssetState,
   Form,
-  initialMergeForm,
-  initialSendForm,
-  initialShieldForm,
   LoginState,
   LoginStep,
-  MergeForm,
   MessageType,
-  SendForm,
-  ShieldForm,
   SystemMessage,
   Wallet,
   WorldState,
@@ -28,8 +28,31 @@ import { Account } from '../views/account';
 import { Home } from '../views/home';
 import { Login } from '../views/login';
 
-interface AppProps {
-  initialAction?: AppAction;
+const views = [
+  {
+    path: '/',
+    action: AppAction.NADA,
+  },
+  {
+    path: '/signin',
+    action: AppAction.LOGIN,
+  },
+  {
+    path: '/asset/:assetSymbol',
+    action: AppAction.ACCOUNT,
+  },
+];
+
+const getAccountUrl = (assetId: AppAssetId) =>
+  views.find(v => v.action === AppAction.ACCOUNT)!.path.replace(':assetSymbol', `${assets[assetId].symbol}`);
+
+export const appPaths = views.map(p => p.path);
+
+interface RouteParams {
+  assetSymbol?: string;
+}
+
+interface AppProps extends RouteComponentProps<RouteParams> {
   config: Config;
 }
 
@@ -37,39 +60,52 @@ type AppPropsWithApollo = WithApolloClient<AppProps>;
 
 interface AppState {
   action: AppAction;
+  activeAsset: AppAssetId;
   loginState: LoginState;
   worldState: WorldState;
   providerState?: ProviderState;
-  accountState: AccountState;
-  accountAction?: AccountAction;
+  accountState?: AccountState;
+  assetState?: AssetState;
+  activeAction?: {
+    action: AccountAction;
+    formValues: Form;
+  };
   processingAction: boolean;
-  [AccountAction.SHIELD]: ShieldForm;
-  [AccountAction.SEND]: SendForm;
-  [AccountAction.MERGE]: MergeForm;
   systemMessage: SystemMessage;
 }
 
 class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
   private app: App;
 
+  private readonly defaultAsset = AssetId.ETH;
+
   constructor(props: AppPropsWithApollo) {
     super(props);
 
-    const { client, config, initialAction = AppAction.NADA } = props;
+    const { match, client, config } = props;
+    const { path, params } = match;
+    const initialAction = views.find(v => v.path === path)?.action || AppAction.NADA;
+    let activeAsset = params?.assetSymbol
+      ? assets.find(a => a.symbol.toLowerCase() === params.assetSymbol!.toLowerCase())?.id
+      : this.defaultAsset;
+    if (activeAsset === undefined) {
+      activeAsset = this.defaultAsset;
+      const url = getAccountUrl(activeAsset);
+      this.props.history.push(url);
+    }
 
-    this.app = new App(config, client);
+    this.app = new App(config, client, activeAsset);
 
     this.state = {
       action: initialAction,
+      activeAsset,
       loginState: this.app.loginState,
       worldState: this.app.worldState,
       providerState: this.app.providerState,
       accountState: this.app.accountState,
-      accountAction: this.app.accountAction,
+      assetState: this.app.assetState,
+      activeAction: this.app.activeAction,
       processingAction: this.app.isProcessingAction(),
-      [AccountAction.SHIELD]: initialShieldForm,
-      [AccountAction.SEND]: initialSendForm,
-      [AccountAction.MERGE]: initialMergeForm,
       systemMessage: {
         message: '',
         type: MessageType.TEXT,
@@ -78,114 +114,164 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
   }
 
   componentDidMount() {
-    this.app.on(AppEvent.SESSION_CLOSED, this.handleSessionClosed);
-    this.app.on(AppEvent.UPDATED_LOGIN_STATE, this.handleLoginStateChange);
-    this.app.on(AppEvent.UPDATED_PROVIDER_STATE, this.handleProviderStateChange);
-    this.app.on(AppEvent.UPDATED_WORLD_STATE, this.handleWorldStateChange);
-    this.app.on(AppEvent.UPDATED_ACTION_STATE, this.handleAccountActionChange);
-    this.app.on(AppEvent.UPDATED_ACCOUNT_STATE, this.handleAccountStateChange);
-    this.app.on(AppEvent.UPDATED_FORM_INPUTS, this.handleFormChange);
-    this.app.on(AppEvent.UPDATED_SYSTEM_MESSAGE, this.handleSystemMessageChange);
+    this.app.on(AppEvent.SESSION_CLOSED, this.onSessionClosed);
+    this.app.on(AppEvent.UPDATED_LOGIN_STATE, this.onLoginStateChange);
+    this.app.on(AppEvent.UPDATED_USER_SESSION_DATA, this.onUserSessionDataChange);
+    this.app.on(AppEvent.UPDATED_SYSTEM_MESSAGE, this.onSystemMessageChange);
+    this.handleActionChange(this.state.action);
+  }
+
+  componentDidUpdate(prevProps: AppPropsWithApollo, prevState: AppState) {
+    const { match: prevMatch } = prevProps;
+    const { match } = this.props;
+    const { action: prevAction } = prevState;
+    const { action } = this.state;
+    if (match.path !== prevMatch.path || !isEqual(match.params, prevMatch.params)) {
+      this.handleUrlChange(match);
+    }
+    if (action !== prevAction) {
+      this.handleActionChange(action);
+    }
   }
 
   componentWillUnmount() {
     this.app.destroy();
   }
 
-  private handleLoginStateChange = (loginState: LoginState) => {
+  private goToAction = (action: AppAction) => {
+    if (action === this.state.action) {
+      return;
+    }
+
+    if (action === AppAction.ACCOUNT) {
+      const url = getAccountUrl(this.state.activeAsset);
+      this.props.history.push(url);
+    } else {
+      const { path } = views.find(v => v.action === action)!;
+      this.props.history.push(path);
+    }
+  };
+
+  private handleUrlChange = ({ path, params }: { path: string; params: RouteParams }) => {
+    const action = views.find(v => v.path === path)?.action || AppAction.NADA;
+    this.setState({ action });
+
+    if (action === AppAction.ACCOUNT) {
+      const activeAsset = assets.find(a => a.symbol.toLowerCase() === params.assetSymbol!.toLowerCase())?.id;
+      if (activeAsset !== this.state.activeAsset) {
+        this.handleChangeAssetThroughUrl(activeAsset);
+      }
+    }
+  };
+
+  private handleActionChange(action: AppAction) {
+    if (action === AppAction.ACCOUNT) {
+      if (!this.app.hasSession()) {
+        if (this.app.hasCookie()) {
+          this.app.backgroundLogin();
+        } else {
+          this.goToAction(AppAction.LOGIN);
+        }
+      }
+    } else if (this.app.hasSession()) {
+      this.goToAction(AppAction.ACCOUNT);
+    }
+  }
+
+  private onLoginStateChange = (loginState: LoginState) => {
     if (loginState.step === LoginStep.DONE) {
-      this.setState({ action: AppAction.ACCOUNT, loginState });
+      this.setState({ loginState }, () => this.goToAction(AppAction.ACCOUNT));
     } else {
       const callback =
         loginState.step === LoginStep.INIT_SDK && this.state.loginState.step !== LoginStep.INIT_SDK
           ? this.app.initSdk
           : undefined;
-      this.setState(
-        {
-          action: AppAction.LOGIN,
-          loginState,
-        },
-        callback,
-      );
+      this.setState({ loginState }, callback);
     }
   };
 
-  private handleProviderStateChange = (providerState: ProviderState) => {
-    this.setState({ providerState });
+  private onUserSessionDataChange = () => {
+    this.setState({
+      providerState: this.app.providerState,
+      worldState: this.app.worldState,
+      accountState: this.app.accountState,
+      assetState: this.app.assetState,
+      activeAction: this.app.activeAction,
+      processingAction: this.app.isProcessingAction(),
+    });
   };
 
-  private handleWorldStateChange = (worldState: WorldState) => {
-    this.setState({ worldState });
-  };
-
-  private handleAccountActionChange = (accountAction: AccountAction, locked: boolean, processingAction: boolean) => {
-    this.setState({ accountAction, processingAction });
-  };
-
-  private handleAccountStateChange = (accountState: AccountState) => {
-    this.setState({ accountState });
-  };
-
-  private handleSystemMessageChange = (systemMessage: SystemMessage) => {
+  private onSystemMessageChange = (systemMessage: SystemMessage) => {
     this.setState({ systemMessage });
   };
 
-  private handleFormChange = (action: AccountAction, inputs: Form) => {
-    switch (action) {
-      case AccountAction.SHIELD:
-        this.setState({ [AccountAction.SHIELD]: inputs as ShieldForm });
-        break;
-      case AccountAction.SEND:
-        this.setState({ [AccountAction.SEND]: inputs as SendForm });
-        break;
-      case AccountAction.MERGE:
-        this.setState({ [AccountAction.MERGE]: inputs as MergeForm });
-        break;
-      default:
-    }
-  };
-
-  private handleSessionClosed = () => {
+  private onSessionClosed = () => {
     const { action } = this.state;
+    if (action === AppAction.ACCOUNT) {
+      this.goToAction(AppAction.LOGIN);
+    }
     this.setState({
-      action: action === AppAction.ACCOUNT ? AppAction.LOGIN : action,
       loginState: this.app.loginState,
       worldState: this.app.worldState,
       providerState: this.app.providerState,
       accountState: this.app.accountState,
-      accountAction: this.app.accountAction,
+      assetState: this.app.assetState,
+      activeAction: this.app.activeAction,
       processingAction: this.app.isProcessingAction(),
-      [AccountAction.SHIELD]: initialShieldForm,
-      [AccountAction.SEND]: initialSendForm,
-      [AccountAction.MERGE]: initialMergeForm,
     });
   };
 
   private handleLogin = () => {
-    if (this.state.action !== AppAction.LOGIN) {
-      this.setState({ action: AppAction.LOGIN });
+    if (this.app.hasCookie()) {
+      this.goToAction(AppAction.ACCOUNT);
+    } else if (this.state.action !== AppAction.LOGIN) {
+      this.goToAction(AppAction.LOGIN);
     }
-    this.app.createSession();
   };
 
   private handleConnect = (wallet: Wallet) => {
     if (!this.app.hasSession()) {
-      this.handleLogin();
+      this.app.createSession();
     }
     this.app.connectWallet(wallet);
   };
 
-  private handleLogout = () => {
-    this.setState({ action: AppAction.NADA, systemMessage: { message: '', type: MessageType.TEXT } }, () =>
-      this.app.logout(),
-    );
+  private handleRestart = () => {
+    this.setState({ systemMessage: { message: '', type: MessageType.TEXT } }, () => this.app.logout());
   };
+
+  private handleLogout = () => {
+    this.goToAction(AppAction.NADA);
+    this.setState({ systemMessage: { message: '', type: MessageType.TEXT } }, () => this.app.logout());
+  };
+
+  private handleChangeAsset = (assetId: AppAssetId) => {
+    const action = this.state.action;
+    if (action !== AppAction.ACCOUNT || assetId == this.state.activeAsset || this.app.isProcessingAction()) return;
+
+    const url = getAccountUrl(assetId);
+    this.props.history.push(url);
+    this.setState({ activeAsset: assetId });
+    this.app.changeAsset(assetId);
+  };
+
+  private handleChangeAssetThroughUrl(assetId?: AppAssetId) {
+    if (assetId === undefined || this.app.isProcessingAction()) {
+      const url = getAccountUrl(this.state.activeAsset);
+      this.props.history.push(url);
+    } else {
+      this.setState({ activeAsset: assetId });
+      this.app.changeAsset(assetId);
+    }
+  }
 
   render() {
     const {
       action,
+      assetState,
+      activeAsset,
       accountState,
-      accountAction,
+      activeAction,
       loginState,
       providerState,
       processingAction,
@@ -196,10 +282,12 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
     const theme = action === AppAction.ACCOUNT ? Theme.WHITE : Theme.GRADIENT;
     const { requiredNetwork } = this.app;
     const allowRestart = step === LoginStep.SET_SEED_PHRASE || step === LoginStep.SET_ALIAS;
+    const rootUrl = this.app.hasSession() ? this.props.match.url : '/';
 
     return (
       <Template
         theme={theme}
+        rootUrl={rootUrl}
         network={requiredNetwork.network}
         worldState={worldState}
         account={step === LoginStep.DONE ? accountState : undefined}
@@ -227,7 +315,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
                   onSelectWallet={this.handleConnect}
                   onSelectSeedPhrase={this.app.confirmSeedPhrase}
                   onSelectAlias={this.app.confirmAlias}
-                  onRestart={allowRestart ? this.app.restart : undefined}
+                  onRestart={allowRestart ? this.handleRestart : undefined}
                 />
               );
             }
@@ -235,22 +323,22 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
               const { config } = this.props;
               return (
                 <Account
-                  asset={accountState.asset}
-                  accountState={accountState}
+                  accountState={accountState!}
+                  asset={assets[activeAsset]}
+                  assetState={assetState!}
                   loginState={loginState}
                   providerState={providerState}
-                  action={accountAction}
+                  activeAction={activeAction}
                   processingAction={processingAction}
                   explorerUrl={config.explorerUrl}
-                  shieldForm={this.state[AccountAction.SHIELD]}
-                  sendForm={this.state[AccountAction.SEND]}
-                  mergeForm={this.state[AccountAction.MERGE]}
+                  txsPublishTime={this.app.txsPublishTime}
+                  mergeForm={this.app.mergeForm}
                   onFormInputsChange={this.app.changeForm}
                   onValidate={this.app.validateForm}
                   onChangeWallet={this.app.changeWallet}
                   onGoBack={this.app.resetFormStep}
                   onSubmit={this.app.submitForm}
-                  onChangeAsset={this.app.changeAsset}
+                  onChangeAsset={this.handleChangeAsset}
                   onSelectAction={this.app.selectAction}
                   onClearAction={this.app.clearAction}
                 />
