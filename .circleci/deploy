@@ -11,4 +11,4 @@ image_exists $REPOSITORY $IMAGE_COMMIT_TAG || { echo "No new image found." && ex
 
 deploy_ecr $1
 deploy_terraform
-deploy_service $1
+deploy_service $REPOSITORY

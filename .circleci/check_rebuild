@@ -1,8 +1,14 @@
 #!/bin/bash
 set -e
 
+# If this is a tagged commit, rebuild.
+if [ -n "$CIRCLE_TAG" ]; then
+  exit 0
+fi
+
 PATTERNS=${1:-.rebuild_patterns}
 
+# If there are is no rebuild patterns file, create one from project directory.
 if [ ! -f "$PATTERNS" ]; then
   echo "^$(git rev-parse --show-prefix)" > $PATTERNS
 fi

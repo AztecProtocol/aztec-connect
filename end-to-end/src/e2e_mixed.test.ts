@@ -51,7 +51,7 @@ describe('end-to-end falafel recovery tests', () => {
       await topUpFeeDistributorContract(oneEth, rollupContractAddress, provider, feeContributor);
 
       const user = await sdk.addUser(userAddress);
-      await sdk.awaitSynchronised();
+      await user.awaitSynchronised();
 
       const userAsset = user.getAsset(assetId);
       const txFee = await userAsset.getFee(TxType.DEPOSIT);
@@ -108,7 +108,7 @@ describe('end-to-end falafel recovery tests', () => {
       await sdk.awaitSynchronised();
 
       const user = await sdk.addUser(userAddress);
-      await sdk.awaitSynchronised();
+      await user.awaitSynchronised();
 
       const userAsset = user.getAsset(assetId);
       const txFee = await userAsset.getFee(TxType.WITHDRAW_TO_WALLET);

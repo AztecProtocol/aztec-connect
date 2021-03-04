@@ -8,6 +8,7 @@
     "build:dev": "tsc -p tsconfig.cjs.json --watch & tsc -p tsconfig.es.json --watch",
     "start": "node ./dest",
     "start:dev": "tsc-watch -p tsconfig.cjs.json --onSuccess 'yarn start'",
+    "start:e2e": "yarn clean_data && yarn start:dev",
     "test": "jest --passWithNoTests",
     "clean": "rm -rf ./dest ./dest-es",
     "clean_data": "rm -rf ./data"

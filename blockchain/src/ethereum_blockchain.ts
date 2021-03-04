@@ -14,6 +14,7 @@ export interface EthereumBlockchainConfig {
   gasLimit?: number;
   minConfirmation?: number;
   minConfirmationEHW?: number;
+  pollInterval?: number;
 }
 
 export class EthereumBlockchain extends EventEmitter implements Blockchain {
@@ -89,7 +90,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     this.running = true;
     (async () => {
       while (this.running) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, this.config.pollInterval || 1000));
         await emitBlocks().catch(this.debug);
       }
     })();

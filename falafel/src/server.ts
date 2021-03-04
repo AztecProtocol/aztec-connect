@@ -17,7 +17,6 @@ import { BarretenbergWasm } from 'barretenberg/wasm';
 import { ProofGenerator, ServerProofGenerator } from 'halloumi/proof_generator';
 import { TxFeeResolver } from './tx_fee_resolver';
 import { RollupPipelineFactory } from './rollup_pipeline';
-import { AssetId } from 'barretenberg/asset';
 
 export interface ServerConfig {
   readonly halloumiHost: string;
@@ -135,7 +134,7 @@ export class Server {
     const status = await this.blockchain.getBlockchainStatus();
     return {
       blockchainStatus: status,
-      txFees: [this.txFeeResolver.getFeeQuotes(AssetId.ETH)],
+      txFees: status.assets.map((_, i) => this.txFeeResolver.getFeeQuotes(i)),
       nextPublishTime: await this.getNextPublishTime(),
       pendingTxCount: await this.rollupDb.getUnsettledTxCount(),
     };

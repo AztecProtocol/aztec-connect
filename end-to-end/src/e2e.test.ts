@@ -68,7 +68,7 @@ describe('end-to-end tests', () => {
 
     // Deposit to user 0.
     {
-      const depositValue = user0Asset.toBaseUnits('2');
+      const depositValue = user0Asset.toBaseUnits('3');
 
       const initialTxFeeBalance = BigInt(await feeDistributor.txFeeBalance(assetId));
       const initialPublicBalance = await user0Asset.publicBalance();
@@ -91,7 +91,7 @@ describe('end-to-end tests', () => {
 
     // Transfer to user 1.
     {
-      const transferValue = user0Asset.toBaseUnits('1');
+      const transferValue = user0Asset.toBaseUnits('2');
 
       const initialPublicBalanceUser0 = await user0Asset.publicBalance();
       const initialBalanceUser0 = user0Asset.balance();

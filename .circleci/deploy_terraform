@@ -1,8 +1,10 @@
 #!/bin/bash
 set -e
 
+TF_DIR=${1:-./terraform}
+
 # Apply terraform.
-if [ -d ./terraform ]; then
+if [ -d $TF_DIR ]; then
   ensure_terraform
   export TF_IN_AUTOMATION=1
   cd terraform

@@ -27,3 +27,10 @@ docker tag $IMAGE_COMMIT_URI $IMAGE_DEPLOY_URI
 docker tag $IMAGE_COMMIT_URI $IMAGE_DEPLOY_COMMIT_URI
 docker push $IMAGE_DEPLOY_URI
 docker push $IMAGE_DEPLOY_COMMIT_URI
+
+# If this is a tagged commit, create equivalent image tag.
+if [ -n "$CIRCLE_TAG" ]; then
+  IMAGE_DEPLOY_TAG_URI=$ECR_DEPLOY_URL/$REPOSITORY:$CIRCLE_TAG-$TAG
+  docker tag $IMAGE_COMMIT_URI $IMAGE_DEPLOY_TAG_URI
+  docker push $IMAGE_DEPLOY_TAG_URI
+fi

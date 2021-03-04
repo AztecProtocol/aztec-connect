@@ -83,6 +83,12 @@ if [ -d ./terraform ]; then
   ensure_terraform
   export TF_IN_AUTOMATION=1
   cd terraform
-  terraform init -input=false
-  terraform validate
+  for DIR in . $(find . -maxdepth 1 -type d); do
+    pushd $DIR
+    if [ -f ./main.tf ]; then
+      terraform init -input=false
+      terraform validate
+    fi
+    popd
+  done
 fi

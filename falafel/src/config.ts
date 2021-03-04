@@ -12,6 +12,7 @@ interface ConfVars {
   port: number;
   rollupContractAddress?: string;
   ethereumHost?: string;
+  ethereumPollInterval?: number;
   halloumiHost: string;
   infuraApiKey?: string;
   network?: string;
@@ -35,6 +36,7 @@ function getConfVars(): ConfVars {
   const {
     ROLLUP_CONTRACT_ADDRESS,
     ETHEREUM_HOST,
+    ETHEREUM_POLL_INTERVAL,
     HALLOUMI_HOST,
     INFURA_API_KEY,
     NETWORK,
@@ -59,6 +61,7 @@ function getConfVars(): ConfVars {
     port: +(PORT || 8081),
     rollupContractAddress: ROLLUP_CONTRACT_ADDRESS,
     ethereumHost: ETHEREUM_HOST,
+    ethereumPollInterval: +(ETHEREUM_POLL_INTERVAL || 1000),
     halloumiHost: HALLOUMI_HOST || 'http://localhost:8083',
     infuraApiKey: INFURA_API_KEY,
     network: NETWORK,
@@ -86,11 +89,13 @@ function getEthereumBlockchainConfig({
   gasLimit,
   minConfirmation,
   minConfirmationEHW,
+  ethereumPollInterval,
 }: ConfVars): EthereumBlockchainConfig {
   return {
     gasLimit,
     minConfirmation,
     minConfirmationEHW,
+    pollInterval: ethereumPollInterval,
   };
 }
 

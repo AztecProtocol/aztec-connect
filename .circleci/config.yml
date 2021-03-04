@@ -210,6 +210,7 @@ jobs:
               docker tag $ECR_URL/end-to-end:cache-$CIRCLE_SHA1-latest $ECR_DEPLOY_URL/end-to-end:latest
               docker-compose up --exit-code-from end-to-end
             fi
+
   zk-money:
     docker:
       - image: aztecprotocol/build-image
@@ -269,19 +270,19 @@ jobs:
       - run:
           name: 'barretenberg:x86_64-linux-gcc'
           working_directory: barretenberg
-          command: deploy barretenberg:x86_64-linux-gcc
+          command: deploy_ecr barretenberg:x86_64-linux-gcc
       - run:
           name: 'barretenberg:x86_64-linux-clang'
           working_directory: barretenberg
-          command: deploy barretenberg:x86_64-linux-clang
+          command: deploy_ecr barretenberg:x86_64-linux-clang
       - run:
           name: 'barretenberg:wasm-linux-clang'
           working_directory: barretenberg
-          command: deploy barretenberg:wasm-linux-clang
+          command: deploy_ecr barretenberg:wasm-linux-clang
       - run:
           name: 'barretenberg.js'
           working_directory: barretenberg.js
-          command: deploy barretenberg.js:latest
+          command: deploy_ecr barretenberg.js:latest
       - run:
           name: 'blockchain'
           working_directory: blockchain
@@ -296,7 +297,7 @@ jobs:
           name: 'sdk'
           working_directory: sdk
           command: |
-            deploy sdk:latest
+            deploy_ecr sdk:latest
             deploy_npm sdk:latest
       - run:
           name: 'halloumi'
