@@ -31,7 +31,9 @@ const loginSteps: LoginStepInfo[] = [
     ),
     description: (
       <>
-        {'Your wallet is used to derive a private key, used encrypt your data and sign private transactions.'}
+        {
+          'Your wallet is used to derive a private key, which is used to encrypt your data and sign private transactions.'
+        }
         <PaddedTop>{'More coming soon!'}</PaddedTop>
       </>
     ),

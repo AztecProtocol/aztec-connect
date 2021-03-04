@@ -4,27 +4,37 @@ import { Asset } from '../../app';
 import { Text } from '../../components';
 import icon from '../../images/coming_soon.svg';
 import { borderRadiuses, spacings, Theme, themeColours } from '../../styles';
+import { TextLink } from '../../components/text_link';
 
 const Root = styled.div`
   display: flex;
   align-items: center;
-  padding: ${spacings.m} ${spacings.s};
+  justify-content: space-between;
+  padding: ${spacings.l} ${spacings.s};
   border: 1px solid ${themeColours[Theme.WHITE].border};
   border-radius: ${borderRadiuses.m};
+  flex-direction: column;
+  min-height: 300px;
+  text-align: center;
 `;
 
-const ColIcon = styled.div`
-  padding: 0 ${spacings.s};
-  flex-shrink: 0;
+const PaddedText = styled.div`
+  padding: ${spacings.l} ${spacings.l};
+  width: 75%;
 `;
 
-const ColContent = styled.div`
-  padding: 0 ${spacings.s};
-  flex: 1;
+const Social = styled.div`
+  padding: 0 ${spacings.m};
+  width: 50%;
 `;
+
+interface IconProps {
+  size: number;
+}
 
 const Icon = styled.img`
-  width: 60px;
+  ${({ size }: IconProps) => `width: ${size}px;`}
+  margin: 0 ${spacings.s};
 `;
 
 interface UnsupportedAssetProps {
@@ -33,11 +43,34 @@ interface UnsupportedAssetProps {
 
 export const UnsupportedAsset: React.FunctionComponent<UnsupportedAssetProps> = ({ asset }) => (
   <Root>
-    <ColIcon>
-      <Icon src={icon} />
-    </ColIcon>
-    <ColContent>
-      <Text text={`We will support ${asset.name} soon. Stay tuned!`} size="s" weight="semibold" />
-    </ColContent>
+    <PaddedText>
+      <Text text={`${asset.name} is coming soon!`} size="m" weight="semibold" />
+    </PaddedText>
+    <Icon size={100} src={icon} />
+    <PaddedText>
+      <>
+        <Text size="s" weight="semibold">
+          {`We will be adding more assets support soon. Follow our `}
+          <TextLink
+            text={`Twitter `}
+            size="s"
+            weight="bold"
+            inline
+            href="https://twitter.com/aztecnetwork"
+            target="_blank"
+          />
+          {`or join our `}
+          <TextLink
+            text={`Discord `}
+            size="s"
+            weight="bold"
+            inline
+            href="https://discord.gg/H3zKj94T"
+            target="_blank"
+          />
+          {`for updates.`}
+        </Text>
+      </>
+    </PaddedText>
   </Root>
 );

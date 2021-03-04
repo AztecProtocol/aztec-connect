@@ -67,7 +67,7 @@ export const DisclaimerBlock: React.FunctionComponent = () => {
       <ColContent>
         <Text size="s">
           {
-            'This is experimental software that hasn’t been externally audited. Your private key is stored in the browser, for security amounts are capped at 1 ETH. '
+            'This is experimental software that hasn’t been externally audited yet. Your private key is stored in the browser. For security, amounts are capped at 1 ETH. '
           }
           <WarningFootnote text="Use at your own risk." weight="bold" inline />
         </Text>
