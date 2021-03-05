@@ -1,5 +1,5 @@
 import React from 'react';
-import { Asset, formatValueString, ShieldFormValues, ShieldStatus } from '../../app';
+import { Asset, ShieldFormValues, ShieldStatus, toBaseUnits } from '../../app';
 import { Theme } from '../../styles';
 import { AssetInfoRow } from './asset_info_row';
 import { ProgressTemplate } from './progress_template';
@@ -7,6 +7,7 @@ import { ProgressTemplate } from './progress_template';
 interface ShieldProgressProps {
   theme: Theme;
   asset: Asset;
+  assetPrice: bigint;
   form: ShieldFormValues;
   onGoBack(): void;
   onSubmit(): void;
@@ -16,6 +17,7 @@ interface ShieldProgressProps {
 export const ShieldProgress: React.FunctionComponent<ShieldProgressProps> = ({
   theme,
   asset,
+  assetPrice,
   form,
   onGoBack,
   onSubmit,
@@ -26,11 +28,11 @@ export const ShieldProgress: React.FunctionComponent<ShieldProgressProps> = ({
   const items = [
     {
       title: 'Amount',
-      content: <AssetInfoRow asset={asset} value={formatValueString(amount.value)} />,
+      content: <AssetInfoRow asset={asset} value={toBaseUnits(amount.value, asset.decimals)} price={assetPrice} />,
     },
     {
       title: 'Fee',
-      content: <AssetInfoRow asset={asset} value={formatValueString(fee.value)} />,
+      content: <AssetInfoRow asset={asset} value={toBaseUnits(fee.value, asset.decimals)} price={assetPrice} />,
     },
     {
       title: 'Recipient',

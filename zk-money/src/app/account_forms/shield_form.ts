@@ -333,7 +333,10 @@ export class ShieldForm extends EventEmitter implements AccountForm {
 
     const { publicBalance, pendingBalance } = ethAccountState;
     const fee = changes.fee ? toBaseUnits(changes.fee.value, this.asset.decimals) : resetFee ? this.minFee : prevFee;
-    const maxAmount = min(max(0n, publicBalance + pendingBalance - fee - this.depositGasCost), this.txAmountLimit);
+    const maxAmount = min(
+      max(0n, publicBalance + pendingBalance - fee - this.depositGasCost, pendingBalance - fee),
+      this.txAmountLimit,
+    );
     const recipient = this.values.recipient.value.input;
 
     const toUpdate = this.validateChanges({
@@ -419,22 +422,23 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     }
 
     const isActiveProvider = this.accountUtils.isActiveProvider(this.provider);
+    const amount = toBaseUnits(form.amount.value, this.asset.decimals);
     if (!isActiveProvider) {
       if (!this.provider) {
         form.amount = withError(form.amount, 'Please connect a wallet.');
       } else {
         form.amount = withError(form.amount, `Please switch your wallet's network to ${this.requiredNetwork.network}.`);
       }
+    } else if (!amount) {
+      form.amount = withError(form.amount, 'Amount must be greater than 0.');
     } else {
       const ethAddress = this.provider!.account!;
       const pendingBalance = await this.accountUtils.getPendingBalance(this.asset.id, ethAddress);
       const publicBalance = await this.sdk.getPublicBalance(this.asset.id, ethAddress);
-      const amount = toBaseUnits(form.amount.value, this.asset.decimals);
-      const depositGasCost = await this.rollup.getDepositGasCost(this.asset.id, amount, this.provider!);
-      const maxAmount = min(max(0n, publicBalance + pendingBalance - fee - depositGasCost), this.txAmountLimit);
-      if (!amount) {
-        form.amount = withError(form.amount, 'Amount must be greater than 0.');
-      } else if (amount > maxAmount) {
+      const depositGasCost =
+        amount + fee > pendingBalance ? await this.rollup.getDepositGasCost(this.asset.id, amount, this.provider!) : 0n;
+      const requiredPublicFund = max(0n, amount + fee + depositGasCost - pendingBalance);
+      if (publicBalance < requiredPublicFund) {
         form.amount = withError(form.amount, `Insufficient ${this.asset.symbol} Balance.`);
       }
     }

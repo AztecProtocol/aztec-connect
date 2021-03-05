@@ -169,7 +169,12 @@ export const Login: React.FunctionComponent<LoginProps> = ({
               return <Connect wallet={wallet} onSubmit={onSelectWallet} />;
             case LoginStep.SET_SEED_PHRASE:
               return (
-                <SeedPhraseForm seedPhrase={seedPhrase} setSeedPhrase={setSeedPhrase} onSubmit={onSelectSeedPhrase} />
+                <SeedPhraseForm
+                  seedPhrase={seedPhrase}
+                  setSeedPhrase={setSeedPhrase}
+                  onSubmit={onSelectSeedPhrase}
+                  hasError={!!message && messageType === MessageType.ERROR}
+                />
               );
             case LoginStep.SET_ALIAS:
               return (

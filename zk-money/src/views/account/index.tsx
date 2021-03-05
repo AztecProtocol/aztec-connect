@@ -13,6 +13,7 @@ import {
   MergeStatus,
   ProviderState,
   Wallet,
+  WorldState,
 } from '../../app';
 import { Modal, PaddedBlock, Tab } from '../../components';
 import { breakpoints, spacings, Theme } from '../../styles';
@@ -64,6 +65,7 @@ const AssetCol = styled.div`
 
 interface AccountProps {
   theme?: Theme;
+  worldState: WorldState;
   accountState: AccountState;
   asset: Asset;
   assetState: AssetState;
@@ -92,6 +94,7 @@ interface AccountProps {
 
 export const Account: React.FunctionComponent<AccountProps> = ({
   theme = Theme.WHITE,
+  worldState,
   accountState,
   asset,
   assetState,
@@ -134,6 +137,7 @@ export const Account: React.FunctionComponent<AccountProps> = ({
       </AssetsRoot>
       {asset.enabled ? (
         <AccountAsset
+          worldState={worldState}
           accountState={accountState}
           asset={asset}
           assetState={assetState}
@@ -163,7 +167,7 @@ export const Account: React.FunctionComponent<AccountProps> = ({
                 return (
                   <Shield
                     theme={theme}
-                    asset={asset}
+                    assetState={assetState}
                     providerState={providerState}
                     form={activeAction.formValues as any}
                     explorerUrl={explorerUrl}
@@ -179,7 +183,7 @@ export const Account: React.FunctionComponent<AccountProps> = ({
                 return (
                   <Send
                     theme={theme}
-                    asset={asset}
+                    assetState={assetState}
                     form={activeAction.formValues as any}
                     explorerUrl={explorerUrl}
                     onChangeInputs={(inputs: Form) => onFormInputsChange(AccountAction.SEND, inputs)}

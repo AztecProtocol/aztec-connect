@@ -11,6 +11,7 @@ export interface AccountState {
 
 export interface AssetState {
   asset: Asset;
+  price: bigint;
   balance: bigint;
   spendableNotes: Note[];
   spendableBalance: bigint;
@@ -19,6 +20,7 @@ export interface AssetState {
 
 export const initialAssetState = {
   asset: assets[AssetId.ETH],
+  price: 0n,
   balance: 0n,
   spendableNotes: [],
   spendableBalance: 0n,

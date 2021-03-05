@@ -1,6 +1,6 @@
 import React from 'react';
 import styled, { css } from 'styled-components';
-import { Asset, fromBaseUnits } from '../../app';
+import { Asset, convertToPriceString, fromBaseUnits } from '../../app';
 import { Button, Dot, GradientBlock, Text, Tooltip } from '../../components';
 import { breakpoints, fontSizes, lineHeights, spacings } from '../../styles';
 
@@ -10,6 +10,15 @@ const ColContent = styled.div`
 
 const ColButton = styled.div`
   flex-shrink: 0;
+`;
+
+const Title = styled(Text)`
+  display: flex;
+  align-items: center;
+`;
+
+const SubTitle = styled(Text)`
+  padding-left: ${spacings.xs};
 `;
 
 const symbolClassName = 'symbol';
@@ -140,6 +149,7 @@ interface ValueSummaryProps {
   className?: string;
   title: string;
   value: bigint;
+  price?: bigint;
   pendingValue?: bigint;
   pendingTxs?: number;
   asset: Asset;
@@ -151,17 +161,25 @@ export const ValueSummary: React.FunctionComponent<ValueSummaryProps> = ({
   className,
   title,
   value,
+  price,
   pendingValue = 0n,
   pendingTxs = 0,
   asset,
   buttonText,
   onClick,
 }) => {
-  const valueStr = fromBaseUnits(value + pendingValue, asset.decimals);
+  const totalBalance = value + pendingValue;
+  const valueStr = fromBaseUnits(totalBalance, asset.decimals);
+
   return (
     <GradientBlock className={className}>
       <ColContent>
-        <Text text={title} size="m" nowrap />
+        <Title size="m" nowrap>
+          {title}
+          {!!price && !!totalBalance && (
+            <SubTitle size="s" text={`~$${convertToPriceString(totalBalance, asset.decimals, price)}`} inline />
+          )}
+        </Title>
         <ValueRoot len={getValueLen(valueStr)}>
           <Value text={valueStr} />
           <Text className={symbolClassName} text={`zk${asset.symbol}`} />

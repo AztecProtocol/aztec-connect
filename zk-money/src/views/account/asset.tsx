@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
-import { AccountAction, AccountState, Asset, AssetState, sum } from '../../app';
-import { BlockTitle, DisclaimerBlock, Spinner, Text, TextLink } from '../../components';
+import { AccountAction, AccountState, Asset, AssetState, sum, WorldState } from '../../app';
+import { BlockTitle, DisclaimerBlock, ProgressHandler, Spinner, Text, TextLink } from '../../components';
 import { breakpoints, spacings } from '../../styles';
 import { MergeBlock } from './merge_block';
 import { TransactionHistory } from './transaction_history';
@@ -62,6 +62,7 @@ const InitializationMessage = styled(Text)`
 `;
 
 interface AccountAssetProps {
+  worldState: WorldState;
   accountState: AccountState;
   asset: Asset;
   assetState: AssetState;
@@ -76,6 +77,7 @@ interface AccountAssetProps {
 }
 
 export const AccountAsset: React.FunctionComponent<AccountAssetProps> = ({
+  worldState,
   accountState,
   asset,
   assetState,
@@ -86,10 +88,16 @@ export const AccountAsset: React.FunctionComponent<AccountAssetProps> = ({
   isInitializing,
 }) => {
   if (isInitializing) {
+    const showProgress = worldState.latestRollup - worldState.accountSyncedToRollup > 10;
     return (
       <InitializationRoot>
         <Spinner theme="gradient" size="m" />
-        <InitializationMessage text="Getting things ready" size="s" />
+        <InitializationMessage size="s">
+          {showProgress ? 'Syncing Account Data ' : 'Getting things ready'}
+          {showProgress && (
+            <ProgressHandler worldState={worldState}>{(progress: number) => <>{`(${progress}%)`}</>}</ProgressHandler>
+          )}
+        </InitializationMessage>
       </InitializationRoot>
     );
   }
@@ -113,6 +121,7 @@ export const AccountAsset: React.FunctionComponent<AccountAssetProps> = ({
           <ValueSummary
             title="Total"
             value={balance}
+            price={assetState.price}
             pendingValue={pendingValue}
             pendingTxs={pendingTxs.length}
             asset={asset}

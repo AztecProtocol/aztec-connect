@@ -10,6 +10,7 @@ import { AppAssetId, assets } from './assets';
 import { Database } from './database';
 import { Form } from './form';
 import { Network } from './networks';
+import { PriceFeedService } from './price_feed_service';
 import { Provider } from './provider';
 import { RollupService, RollupServiceEvent, RollupStatus } from './rollup_service';
 
@@ -57,6 +58,7 @@ export class UserAccount extends EventEmitter {
     private coreProvider: Provider,
     private db: Database,
     private rollup: RollupService,
+    private priceFeedService: PriceFeedService,
     private accountUtils: AccountUtils,
     private readonly requiredNetwork: Network,
     private readonly explorerUrl: string,
@@ -119,6 +121,7 @@ export class UserAccount extends EventEmitter {
   async init(provider?: Provider) {
     this.provider = provider;
     this.sdk.on(SdkEvent.UPDATED_USER_STATE, this.handleUserStateChange);
+    this.priceFeedService.subscribe(this.activeAsset, this.onPriceChange);
     await this.refreshAccountState();
     await this.refreshAssetState();
   }
@@ -146,7 +149,9 @@ export class UserAccount extends EventEmitter {
     this.activeAction?.form.destroy();
     this.activeAction = undefined;
 
+    this.priceFeedService.unsubscribe(this.activeAsset, this.onPriceChange);
     this.activeAsset = assetId;
+    this.priceFeedService.subscribe(this.activeAsset, this.onPriceChange);
     await this.refreshAssetState();
   }
 
@@ -306,6 +311,7 @@ export class UserAccount extends EventEmitter {
       joinSplitTxs: uniqWith(userJoinSplitTxs, (tx0, tx1) => tx0.txHash.equals(tx1.txHash))
         .sort((a, b) => (!a.settled && b.settled ? -1 : 0))
         .map(tx => parseJoinSplitTx(tx, this.explorerUrl)),
+      price: this.priceFeedService.getPrice(asset.id),
     });
   };
 
@@ -314,6 +320,12 @@ export class UserAccount extends EventEmitter {
     if (nextPublishTime.getTime() !== this.nextPublishTime.getTime()) {
       this.nextPublishTime = nextPublishTime;
       this.emit(UserAccountEvent.UPDATED_TXS_PUBLISH_TIME);
+    }
+  };
+
+  private onPriceChange = (assetId: AppAssetId, price: bigint) => {
+    if (assetId === this.assetState.asset.id) {
+      this.updateAssetState({ price });
     }
   };
 

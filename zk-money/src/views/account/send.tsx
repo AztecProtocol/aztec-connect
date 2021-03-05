@@ -1,7 +1,15 @@
 import { EthAddress } from '@aztec/sdk';
 import React from 'react';
 import styled from 'styled-components';
-import { Asset, fromBaseUnits, isAddress, isValidForm, SendFormValues, SendStatus, ValueAvailability } from '../../app';
+import {
+  AssetState,
+  fromBaseUnits,
+  isAddress,
+  isValidForm,
+  SendFormValues,
+  SendStatus,
+  ValueAvailability,
+} from '../../app';
 import {
   BlockTitle,
   Button,
@@ -78,7 +86,7 @@ const ButtonRoot = styled(InputCol)`
 
 interface SendProps {
   theme: Theme;
-  asset: Asset;
+  assetState: AssetState;
   form: SendFormValues;
   explorerUrl: string;
   onChangeInputs(inputs: Partial<SendFormValues>): void;
@@ -90,7 +98,7 @@ interface SendProps {
 
 export const Send: React.FunctionComponent<SendProps> = ({
   theme,
-  asset,
+  assetState,
   form,
   explorerUrl,
   onChangeInputs,
@@ -99,9 +107,19 @@ export const Send: React.FunctionComponent<SendProps> = ({
   onSubmit,
   onClose,
 }) => {
+  const { asset, price } = assetState;
+
   if (form.status.value !== SendStatus.NADA) {
     return (
-      <SendProgress theme={theme} asset={asset} form={form} onGoBack={onGoBack} onSubmit={onSubmit} onClose={onClose} />
+      <SendProgress
+        theme={theme}
+        asset={asset}
+        assetPrice={price}
+        form={form}
+        onGoBack={onGoBack}
+        onSubmit={onSubmit}
+        onClose={onClose}
+      />
     );
   }
 

@@ -2,6 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import {
   Asset,
+  AssetState,
   EthAccountState,
   fromBaseUnits,
   isValidForm,
@@ -254,7 +255,7 @@ const WalletSelectInput: React.FunctionComponent<WalletSelectInputProps> = ({
 
 interface ShieldProps {
   theme: Theme;
-  asset: Asset;
+  assetState: AssetState;
   providerState?: ProviderState;
   explorerUrl: string;
   form: ShieldFormValues;
@@ -268,7 +269,7 @@ interface ShieldProps {
 
 export const Shield: React.FunctionComponent<ShieldProps> = ({
   theme,
-  asset,
+  assetState,
   providerState,
   explorerUrl,
   form,
@@ -279,11 +280,14 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
   onSubmit,
   onClose,
 }) => {
+  const { asset, price } = assetState;
+
   if (form.status.value !== ShieldStatus.NADA) {
     return (
       <ShieldProgress
         theme={theme}
         asset={asset}
+        assetPrice={price}
         form={form}
         onGoBack={onGoBack}
         onSubmit={onSubmit}

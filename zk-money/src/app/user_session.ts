@@ -13,6 +13,7 @@ import { Database, LinkedAccount } from './database';
 import { MessageType, SystemMessage, ValueAvailability } from './form';
 import { GraphQLService } from './graphql_service';
 import { Network } from './networks';
+import { PriceFeedService } from './price_feed_service';
 import { Provider, ProviderEvent, ProviderState, ProviderStatus } from './provider';
 import { RollupService } from './rollup_service';
 import { formatSeedPhraseInput, generateSeedPhrase, getSeedPhraseError, sliceSeedPhrase } from './seed_phrase';
@@ -88,6 +89,7 @@ export class UserSession extends EventEmitter {
   private provider?: Provider;
   private sdk!: WalletSdk;
   private rollupService!: RollupService;
+  private priceFeedService!: PriceFeedService;
   private linkedAccount?: LinkedAccount;
   private signedInAccount?: SignedInAccount;
   private loginState = initialLoginState;
@@ -142,6 +144,7 @@ export class UserSession extends EventEmitter {
     this.coreProvider?.destroy();
     this.provider?.destroy();
     this.rollupService?.destroy();
+    this.priceFeedService?.destroy();
     if (this.sdk) {
       this.sdk.removeAllListeners();
       // Can only safely destroy the sdk after it's fully initialized.
@@ -319,8 +322,6 @@ export class UserSession extends EventEmitter {
       return this.emitSystemMessage(error, MessageType.ERROR);
     }
 
-    this.emitSystemMessage('Checking account status...');
-
     this.signedInAccount = await this.createAccountFromSeedPhrase(seedPhraseInput);
 
     const accountNonce = await this.graphql.getAccountNonce(this.signedInAccount!.accountPublicKey);
@@ -407,20 +408,11 @@ export class UserSession extends EventEmitter {
 
       const { accountPublicKey } = this.linkedAccount || this.signedInAccount!;
       const userId = await this.signIn(new AccountId(accountPublicKey, accountNonce), alias);
-
       await this.createUserAccount(userId, alias);
-
-      const {
-        blockchainStatus: { nextRollupId },
-      } = await this.sdk.getRemoteStatus();
 
       proceed(LoginStep.SYNC_DATA);
 
-      const { syncedToRollup } = this.sdk.getLocalStatus();
-      this.handleWorldStateChange(syncedToRollup, nextRollupId - 1);
-      this.handleUserStateChange(userId);
-      this.sdk.on(SdkEvent.UPDATED_WORLD_STATE, this.handleWorldStateChange);
-      this.sdk.on(SdkEvent.UPDATED_USER_STATE, this.handleUserStateChange);
+      await this.subscribeToSyncProgress(userId);
 
       await this.sdk.awaitUserSynchronised(userId);
 
@@ -430,7 +422,7 @@ export class UserSession extends EventEmitter {
     } catch (e) {
       debug(e);
       this.emitSystemMessage(e.message, MessageType.ERROR);
-      // TODO - destroy or start from failed step.
+      await this.destroy();
     }
   }
 
@@ -487,14 +479,7 @@ export class UserSession extends EventEmitter {
       const userId = new AccountId(accountPublicKey, accountNonce);
       await this.createUserAccount(userId, alias);
 
-      const {
-        blockchainStatus: { nextRollupId },
-      } = await this.sdk.getRemoteStatus();
-      const { syncedToRollup } = this.sdk.getLocalStatus();
-      this.handleWorldStateChange(syncedToRollup, nextRollupId - 1);
-      this.handleUserStateChange(userId);
-      this.sdk.on(SdkEvent.UPDATED_WORLD_STATE, this.handleWorldStateChange);
-      this.sdk.on(SdkEvent.UPDATED_USER_STATE, this.handleUserStateChange);
+      await this.subscribeToSyncProgress(userId);
 
       await this.sdk.awaitUserSynchronised(userId);
 
@@ -511,7 +496,9 @@ export class UserSession extends EventEmitter {
     this.rollupService = new RollupService(this.sdk);
     await this.rollupService.init();
 
-    const { txAmountLimit, explorerUrl } = this.config;
+    const { priceFeedContractAddresses, infuraId, txAmountLimit, explorerUrl } = this.config;
+    this.priceFeedService = new PriceFeedService(priceFeedContractAddresses, infuraId, 'mainnet');
+    await this.priceFeedService.init();
 
     const accountUtils = new AccountUtils(this.sdk, this.graphql, this.requiredNetwork);
     this.account = new UserAccount(
@@ -522,6 +509,7 @@ export class UserSession extends EventEmitter {
       this.coreProvider,
       this.db,
       this.rollupService,
+      this.priceFeedService,
       accountUtils,
       this.requiredNetwork,
       explorerUrl,
@@ -532,6 +520,17 @@ export class UserSession extends EventEmitter {
       const event = (UserAccountEvent as any)[e];
       this.account.on(event, () => this.emit(UserSessionEvent.UPDATED_USER_ACCOUNT_DATA));
     }
+  }
+
+  private async subscribeToSyncProgress(userId: AccountId) {
+    const {
+      blockchainStatus: { nextRollupId },
+    } = await this.sdk.getRemoteStatus();
+    const { syncedToRollup } = this.sdk.getLocalStatus();
+    this.handleWorldStateChange(syncedToRollup, nextRollupId - 1);
+    this.handleUserStateChange(userId);
+    this.sdk.on(SdkEvent.UPDATED_WORLD_STATE, this.handleWorldStateChange);
+    this.sdk.on(SdkEvent.UPDATED_USER_STATE, this.handleUserStateChange);
   }
 
   private generateSeedPhrase() {

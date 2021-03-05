@@ -100,11 +100,16 @@ export class RollupService extends EventEmitter {
     const web3Provider = new Web3Provider(provider.ethereumProvider);
     const rollupProcessor = new Contract(this.rollupContractAddress.toString(), RollupABI, web3Provider.getSigner());
     const gasPrice = await rollupProcessor.provider.getGasPrice();
-    const gas = await rollupProcessor.estimateGas.depositPendingFunds(assetId, amount, provider.account!.toString(), {
-      value: amount,
-      gasPrice,
-    });
-    return BigInt(gas.mul(gasPrice).toString());
+    try {
+      const gas = await rollupProcessor.estimateGas.depositPendingFunds(assetId, amount, provider.account!.toString(), {
+        value: amount,
+        gasPrice,
+      });
+      return BigInt(gas.mul(gasPrice).toString());
+    } catch (e) {
+      debug(e);
+      return amount;
+    }
   }
 
   private subscribeToStatus() {

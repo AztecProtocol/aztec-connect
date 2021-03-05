@@ -1,5 +1,5 @@
 import React from 'react';
-import { Asset, formatValueString, isAddress, SendFormValues, SendStatus } from '../../app';
+import { Asset, isAddress, SendFormValues, SendStatus, toBaseUnits } from '../../app';
 import { Theme } from '../../styles';
 import { AssetInfoRow } from './asset_info_row';
 import { ProgressTemplate } from './progress_template';
@@ -14,6 +14,7 @@ const formatRecipient = (input: string) => {
 interface SendProgressProps {
   theme: Theme;
   asset: Asset;
+  assetPrice: bigint;
   form: SendFormValues;
   onGoBack(): void;
   onSubmit(): void;
@@ -23,6 +24,7 @@ interface SendProgressProps {
 export const SendProgress: React.FunctionComponent<SendProgressProps> = ({
   theme,
   asset,
+  assetPrice,
   form,
   onGoBack,
   onSubmit,
@@ -33,11 +35,11 @@ export const SendProgress: React.FunctionComponent<SendProgressProps> = ({
   const items = [
     {
       title: 'Amount',
-      content: <AssetInfoRow asset={asset} value={formatValueString(amount.value)} />,
+      content: <AssetInfoRow asset={asset} value={toBaseUnits(amount.value, asset.decimals)} price={assetPrice} />,
     },
     {
       title: 'Fee',
-      content: <AssetInfoRow asset={asset} value={formatValueString(fee.value)} />,
+      content: <AssetInfoRow asset={asset} value={toBaseUnits(fee.value, asset.decimals)} price={assetPrice} />,
     },
     {
       title: 'Recipient',

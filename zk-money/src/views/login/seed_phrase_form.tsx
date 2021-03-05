@@ -57,15 +57,18 @@ interface SeedPhraseFormProps {
   seedPhrase: string;
   setSeedPhrase: (seedPhrase: string) => void;
   onSubmit: (seedPhrase: string) => void;
+  hasError: boolean;
 }
 
 export const SeedPhraseForm: React.FunctionComponent<SeedPhraseFormProps> = ({
   seedPhrase,
   setSeedPhrase,
   onSubmit,
+  hasError,
 }) => {
-  const [confirmed, setConfirmed] = useState(false);
   const [justCopied, setJustCopied] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     let resetTimeout: number;
@@ -80,13 +83,20 @@ export const SeedPhraseForm: React.FunctionComponent<SeedPhraseFormProps> = ({
     };
   }, [justCopied, seedPhrase]);
 
+  useEffect(() => {
+    if (hasError && submitting) {
+      setSubmitting(false);
+    }
+  }, [hasError, submitting]);
+
   const handleCopy = () => {
     copy(formatSeedPhraseInput(seedPhrase));
     setJustCopied(true);
   };
 
   const handleSubmit = () => {
-    if (confirmed) {
+    if (confirmed && !submitting) {
+      setSubmitting(true);
       onSubmit(seedPhrase);
     }
   };
@@ -131,7 +141,13 @@ export const SeedPhraseForm: React.FunctionComponent<SeedPhraseFormProps> = ({
         />
       </PaddedBlock>
       <PaddedBlock>
-        <Button theme="white" text="Next" onClick={handleSubmit} disabled={!seedPhrase || !confirmed} />
+        <Button
+          theme="white"
+          text="Next"
+          onClick={handleSubmit}
+          disabled={!seedPhrase || !confirmed}
+          isLoading={submitting}
+        />
       </PaddedBlock>
     </Root>
   );

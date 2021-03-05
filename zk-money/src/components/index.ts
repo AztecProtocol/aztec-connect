@@ -14,6 +14,7 @@ export * from './modal';
 export * from './network_indicator';
 export * from './padded_block';
 export * from './pagination';
+export * from './progress_handler';
 export * from './rain_drops';
 export * from './select';
 export * from './spinner';

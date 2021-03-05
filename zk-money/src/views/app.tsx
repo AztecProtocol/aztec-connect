@@ -281,7 +281,6 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
     const { step } = loginState;
     const theme = action === AppAction.ACCOUNT ? Theme.WHITE : Theme.GRADIENT;
     const { requiredNetwork } = this.app;
-    const allowRestart = step === LoginStep.SET_SEED_PHRASE || step === LoginStep.SET_ALIAS;
     const rootUrl = this.app.hasSession() ? this.props.match.url : '/';
 
     return (
@@ -298,6 +297,9 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
           switch (action) {
             case AppAction.LOGIN: {
               const { step, wallet, seedPhrase, alias, aliasAvailability, rememberMe, accountNonce } = loginState;
+              const allowRestart =
+                [LoginStep.SET_SEED_PHRASE, LoginStep.SET_ALIAS].indexOf(step) >= 0 ||
+                (step !== LoginStep.CONNECT_WALLET && systemMessage.type === MessageType.ERROR);
               return (
                 <Login
                   currentStep={step!}
@@ -323,6 +325,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
               const { config } = this.props;
               return (
                 <Account
+                  worldState={worldState}
                   accountState={accountState!}
                   asset={assets[activeAsset]}
                   assetState={assetState!}
