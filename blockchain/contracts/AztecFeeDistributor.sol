@@ -17,6 +17,7 @@ contract AztecFeeDistributor is IFeeDistributor, Ownable {
     uint256 public constant ethAssetId = 0;
 
     address public rollupProcessor;
+    uint256 constant reimburseConstant = 16 * 51781;
 
     constructor(address _rollupProcessor) public {
         rollupProcessor = _rollupProcessor;
@@ -63,7 +64,7 @@ contract AztecFeeDistributor is IFeeDistributor, Ownable {
     ) external override returns (uint256 reimbursement) {
         require(msg.sender == rollupProcessor, 'Fee Distributor: INVALID_CALLER');
 
-        reimbursement = gasUsed.mul(tx.gasprice);
+        reimbursement = gasUsed.add(reimburseConstant).mul(tx.gasprice);
         require(reimbursement <= feeLimit, 'Fee Distributor: FEE_LIMIT_EXCEEDED');
 
         (bool success, ) = feeReceiver.call{value: reimbursement}('');

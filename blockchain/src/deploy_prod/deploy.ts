@@ -1,7 +1,7 @@
 import { ContractFactory, Signer } from 'ethers';
 import { TransactionResponse } from '@ethersproject/abstract-provider';
 import RollupProcessor from '../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
-import { deployFeeDistributor } from './deploy_fee_distributor';
+import { deployFeeDistributor } from './fee_distributor/deploy_fee_distributor';
 import { deployVerifier } from './deploy_verifier';
 
 export async function deploy(
