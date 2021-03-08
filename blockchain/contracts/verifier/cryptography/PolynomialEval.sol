@@ -114,19 +114,23 @@ library PolynomialEval {
         uint256 gamma = challenges.gamma;
         uint256 work_root = vk.work_root;
 
-        uint256 endpoint = (vk.num_inputs * 0x20) - 0x60;
+        uint256 endpoint = (vk.num_inputs * 0x20) - 0x20;
         uint256 public_inputs;
-        uint256 accumulating_root = challenges.beta;
+        uint256 root_1 = challenges.beta;
+        uint256 root_2 = challenges.beta;
         uint256 numerator_value = 1;
         uint256 denominator_value = 1;
 
         // we multiply length by 0x20 because our loop step size is 0x20 not 0x01
-        // we subtract 0x60 because our loop is unrolled 4 times an we don't want to overshoot
+        // we subtract 0x20 because our loop is unrolled 2 times an we don't want to overshoot
 
         // perform this computation in assembly to improve efficiency. We are sensitive to the cost of this loop as
         // it scales with the number of public inputs
         uint256 p = Bn254Crypto.r_mod;
+        bool valid = true;
         assembly {
+            root_1 := mulmod(root_1, 0x05, p)
+            root_2 := mulmod(root_2, 0x07, p)
             public_inputs := add(calldataload(0x04), 0x24)
 
             // get public inputs from calldata. N.B. If Contract ABI Changes this code will need to be updated!
@@ -134,49 +138,47 @@ library PolynomialEval {
             // Do some loop unrolling to reduce number of conditional jump operations
             for {} lt(public_inputs, endpoint) {}
             {
-                let N0 := add(mulmod(accumulating_root, 0x05, p), addmod(calldataload(public_inputs), gamma, p))
-                let D0 := add(mulmod(accumulating_root, 0x07, p), N0)
+                let input0 := calldataload(public_inputs)
+                let N0 := add(root_1, add(input0, gamma))
+                let D0 := add(root_2, N0) // 4x overloaded
 
-                accumulating_root := mulmod(accumulating_root, work_root, p)
+                root_1 := mulmod(root_1, work_root, p)
+                root_2 := mulmod(root_2, work_root, p)
 
-                let N1 := add(mulmod(accumulating_root, 0x05, p), addmod(calldataload(add(public_inputs, 0x20)), gamma, p))
-                let D1 := add(mulmod(accumulating_root, 0x07, p), N1)
+                let input1 := calldataload(add(public_inputs, 0x20))
+                let N1 := add(root_1, add(input1, gamma))
 
-                accumulating_root := mulmod(accumulating_root, work_root, p)
+                denominator_value := mulmod(mulmod(D0, denominator_value, p), add(N1, root_2), p)
+                numerator_value := mulmod(mulmod(N1, N0, p), numerator_value, p)
 
-                let N2 := add(mulmod(accumulating_root, 0x05, p), addmod(calldataload(add(public_inputs, 0x40)), gamma, p))
-                let D2 := add(mulmod(accumulating_root, 0x07, p), N2)
+                root_1 := mulmod(root_1, work_root, p)
+                root_2 := mulmod(root_2, work_root, p)
 
-                accumulating_root := mulmod(accumulating_root, work_root, p)
-
-                let N3 := add(mulmod(accumulating_root, 0x05, p), addmod(calldataload(add(public_inputs, 0x60)), gamma, p))
-
-                denominator_value := mulmod(mulmod(mulmod(mulmod(D2, D1, p), D0, p), denominator_value, p), add(N3, mulmod(accumulating_root, 0x07, p)), p)
-                numerator_value := mulmod(mulmod(mulmod(mulmod(N3, N2, p), N1, p), N0, p), numerator_value, p)
-
-                accumulating_root := mulmod(accumulating_root, work_root, p)
-
-                public_inputs := add(public_inputs, 0x80)
+                valid := and(valid, and(lt(input0, p), lt(input1, p)))
+                public_inputs := add(public_inputs, 0x40)
             }
 
-            endpoint := add(endpoint, 0x60)
+            endpoint := add(endpoint, 0x20)
             for {} lt(public_inputs, endpoint) { public_inputs := add(public_inputs, 0x20) }
             {
-                let T0 := addmod(calldataload(public_inputs), gamma, p)
+                let input0 := calldataload(public_inputs)
+                valid := and(valid, lt(input0, p))
+                let T0 := addmod(input0, gamma, p)
                 numerator_value := mulmod(
                     numerator_value,
-                    add(mulmod(accumulating_root, 0x05, p), T0), // 0x05 = coset_generator0
+                    add(root_1, T0), // 0x05 = coset_generator0
                     p
                 )
                 denominator_value := mulmod(
                     denominator_value,
-                    add(mulmod(accumulating_root, 0x0c, p), T0), // 0x0c = coset_generator7
+                    add(add(root_1, root_2), T0), // 0x0c = coset_generator7
                     p
                 )
-                accumulating_root := mulmod(accumulating_root, work_root, p)
+                root_1 := mulmod(root_1, work_root, p)
+                root_2 := mulmod(root_2, work_root, p)
             }
         }
-        
+        require(valid, "public inputs are greater than circuit modulus");
         return (numerator_value, denominator_value);
     }
 
