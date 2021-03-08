@@ -170,7 +170,11 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "FEE_GAS_PRICE",
-        "value": "0"
+        "value": "1150000000"
+      },
+      {
+        "name": "BASE_TX_GAS",
+        "value": "16000"
       },
       {
         "name": "PUBLISH_INTERVAL",

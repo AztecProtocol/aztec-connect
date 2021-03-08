@@ -111,26 +111,21 @@ export default class Server implements HashPathSource {
   }
 
   private async handleBlock(block: Block) {
-    const { rollupSize, rollupProofData, viewingKeysData, rollupId } = block;
+    const { rollupProofData, viewingKeysData, rollupId } = block;
     const { dataStartIndex, innerProofData } = RollupProofData.fromBuffer(rollupProofData, viewingKeysData);
 
     console.log(`Processing rollup ${rollupId}...`);
 
-    let i = 0;
-    for (; i < innerProofData.length; ++i) {
+    for (let i = 0; i < innerProofData.length; ++i) {
       const tx = innerProofData[i];
-      if (tx.isPadding()) {
-        break;
+      await this.worldStateDb.put(0, BigInt(dataStartIndex + i * 2), tx.newNote1);
+      await this.worldStateDb.put(0, BigInt(dataStartIndex + i * 2 + 1), tx.newNote2);
+      if (!tx.isPadding()) {
+        await this.worldStateDb.put(1, toBigIntBE(tx.nullifier1), toBufferBE(1n, 64));
+        await this.worldStateDb.put(1, toBigIntBE(tx.nullifier2), toBufferBE(1n, 64));
       }
+    }
 
-      await this.worldStateDb.put(0, BigInt(dataStartIndex + i * rollupSize), tx.newNote1);
-      await this.worldStateDb.put(0, BigInt(dataStartIndex + i * rollupSize + 1), tx.newNote2);
-      await this.worldStateDb.put(1, toBigIntBE(tx.nullifier1), toBufferBE(1n, 64));
-      await this.worldStateDb.put(1, toBigIntBE(tx.nullifier2), toBufferBE(1n, 64));
-    }
-    if (i < rollupSize) {
-      await this.worldStateDb.put(0, BigInt(dataStartIndex + rollupSize * 2 - 1), Buffer.alloc(64, 0));
-    }
     await this.worldStateDb.put(2, BigInt(rollupId + 1), this.worldStateDb.getRoot(0));
 
     await this.worldStateDb.commit();
