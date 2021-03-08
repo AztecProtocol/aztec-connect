@@ -19,7 +19,7 @@ export class AgentManager {
     private dbPath: string,
   ) {}
 
-  public async start() {
+  public async start(loop: boolean) {
     console.log('Starting wasabi...');
 
     const ethersProvider = new Web3Provider(this.provider);
@@ -63,8 +63,13 @@ export class AgentManager {
 
     this.agents = Array(this.numAgents)
       .fill(0)
-      .map((_, i) => new SimpleAgent(this.sdk, this.provider, masterWallet, i, this.queue));
+      .map((_, i) => new SimpleAgent(this.sdk, this.provider, masterWallet, i, this.queue, loop));
 
     await Promise.all(this.agents.map(a => a.run()));
+  }
+
+  public async shutdown() {
+    this.queue.cancel();
+    await this.sdk.destroy();
   }
 }

@@ -9,6 +9,7 @@ import {
   WalletSdkUser,
   WalletSdkUserAsset,
   MemoryFifo,
+  TxType,
 } from '@aztec/sdk';
 import { randomBytes } from 'crypto';
 import { Agent } from './agent';
@@ -26,10 +27,15 @@ export class SimpleAgent extends Agent {
     private masterWallet: Signer,
     id: number,
     queue: MemoryFifo<() => Promise<void>>,
+    private loop: boolean,
   ) {
     super(sdk, id, queue);
     this.wallet = Wallet.createRandom();
     this.address = provider.addEthersWallet(this.wallet);
+  }
+
+  private getRandomInt(max: number) {
+    return Math.floor(Math.random() * Math.floor(max));
   }
 
   public async run() {
@@ -37,38 +43,48 @@ export class SimpleAgent extends Agent {
     this.user = await this.sdk.addUser(privateKey, undefined, true);
     this.userAsset = this.user.getAsset(AssetId.ETH);
     this.signer = this.user.getSigner();
-
-    while (true) {
+    const numTransfers = 5 + this.getRandomInt(10);
+    do {
       try {
-        await this.fundAccount();
-        await this.serialize(this.transfer);
+        await this.fundAccount(numTransfers);
+
+        for (let i = 0; i < numTransfers; i++) {
+          await this.serialize(this.transfer);
+        }
+        await this.serialize(this.withdraw);
       } catch (err) {
         console.log(err.message);
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
-    }
+    } while (this.loop);
   }
 
-  private async fundAccount() {
+  private async fundAccount(numTransfers: number) {
     // Nothing to do if we have a balance.
     if (this.sdk.getBalance(AssetId.ETH, this.user.id)) {
       return;
     }
+    const depositFee = await this.userAsset.getFee(TxType.DEPOSIT);
+    const transferFee = await this.userAsset.getFee(TxType.TRANSFER);
+    const withdrawFee = await this.userAsset.getFee(TxType.WITHDRAW_TO_WALLET);
 
-    await this.fundEthAddress();
-    await this.depositToContract();
+    const totalDeposit = 1n + depositFee + BigInt(numTransfers) * transferFee + withdrawFee;
+    await this.fundEthAddress(totalDeposit);
+    await this.depositToContract(totalDeposit);
     await this.serialize(this.deposit);
   }
 
-  private async fundEthAddress() {
+  private async fundEthAddress(deposit: bigint) {
     // Fund enough to ensure we can pay tx fee to deposit to contract.
     const balance = await this.sdk.getPublicBalance(AssetId.ETH, this.address);
-    const toFund = toBaseUnits('0.01', 18);
-    if (balance >= toFund) {
+    const toFund = toBaseUnits('1', 16);
+    const required = toFund + deposit;
+
+    if (balance >= required) {
       return;
     }
 
-    const value = toFund - balance;
+    const value = required - balance;
     console.log(`Agent ${this.id} funding ${this.address} with ${value} wei...`);
 
     const tx = {
@@ -79,19 +95,31 @@ export class SimpleAgent extends Agent {
     await this.masterWallet.provider!.waitForTransaction(hash);
   }
 
-  private async depositToContract() {
+  private async depositToContract(deposit: bigint) {
     console.log(`Agent ${this.id} depositing to contract...`);
-    const txHash = await this.sdk.depositFundsToContract(AssetId.ETH, this.address, 1n);
+    const txHash = await this.sdk.depositFundsToContract(AssetId.ETH, this.address, deposit);
     await this.masterWallet.provider!.waitForTransaction(txHash.toString());
   }
 
   private deposit = async () => {
     console.log(`Agent ${this.id} depositing...`);
-    return await this.userAsset.deposit(1n, 0n, this.signer, this.address);
+    const fee = await this.userAsset.getFee(TxType.DEPOSIT);
+    const pendingDeposit = await this.sdk.getUserPendingDeposit(AssetId.ETH, this.address);
+    return await this.userAsset.deposit(pendingDeposit - fee, fee, this.signer, this.address);
   };
 
   private transfer = async () => {
     console.log(`Agent ${this.id} transferring...`);
-    return await this.userAsset.transfer(1n, 0n, this.signer, this.user.id);
+    const fee = await this.userAsset.getFee(TxType.TRANSFER);
+    const balance = this.userAsset.balance();
+    return await this.userAsset.transfer(balance - fee, fee, this.signer, this.user.id);
+  };
+
+  private withdraw = async () => {
+    console.log(`Agent ${this.id} withdrawing...`);
+    const masterAddress = await this.masterWallet.getAddress();
+    const fee = await this.userAsset.getFee(TxType.WITHDRAW_TO_WALLET);
+    const balance = this.userAsset.balance();
+    return await this.userAsset.withdraw(balance - fee, fee, this.signer, EthAddress.fromString(masterAddress));
   };
 }
