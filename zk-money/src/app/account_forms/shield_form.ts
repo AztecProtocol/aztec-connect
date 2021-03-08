@@ -598,10 +598,8 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     if (!this.ethAccount.isSameAddress(state?.account)) {
       this.renewEthAccount();
     }
-    if (!this.depositGasCost === this.accountUtils.isActiveProvider(this.provider)) {
-      this.unsubscribeToDepositGasCost();
-      this.subscribeToDepositGasCost();
-    }
+    this.unsubscribeToDepositGasCost();
+    this.subscribeToDepositGasCost();
   };
 
   private async subscribeToDepositGasCost() {
@@ -615,7 +613,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
 
       const isActive = this.accountUtils.isActiveProvider(this.provider);
       const depositGasCost = isActive
-        ? ((await this.rollup.getDepositGasCost(this.asset.id, this.txAmountLimit, this.provider!)) * 110n) / 100n // * 1.1)
+        ? ((await this.rollup.getDepositGasCost(this.asset.id, 1n, this.provider!)) * 110n) / 100n // * 1.1)
         : 0n;
       if (depositGasCost !== this.depositGasCost) {
         this.depositGasCost = depositGasCost;
