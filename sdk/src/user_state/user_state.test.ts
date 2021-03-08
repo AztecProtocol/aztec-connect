@@ -61,6 +61,7 @@ describe('user state', () => {
       nullifyNote: jest.fn(),
       getNoteByNullifier: jest.fn(),
       getUserNotes: jest.fn().mockResolvedValue([]),
+      getUser: jest.fn().mockResolvedValue(user),
       updateUser: jest.fn(),
       addUserSigningKey: jest.fn(),
       getUserSigningKeys: jest.fn().mockResolvedValue([]),

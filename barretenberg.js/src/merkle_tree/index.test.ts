@@ -4,6 +4,18 @@ import { MerkleTree, HashPath } from '.';
 import levelup from 'levelup';
 import memdown from 'memdown';
 
+const expectSameTrees = async (tree1: MerkleTree, tree2: MerkleTree) => {
+  const size = tree1.getSize();
+  expect(size).toBe(tree2.getSize());
+  expect(tree1.getRoot().toString('hex')).toBe(tree2.getRoot().toString('hex'));
+
+  for (let i = 0; i < size; ++i) {
+    const hashPath1 = await tree1.getHashPath(i);
+    const hashPath2 = await tree2.getHashPath(i);
+    expect(hashPath2).toStrictEqual(hashPath1);
+  }
+};
+
 describe('merkle_tree', () => {
   let barretenberg!: BarretenbergWasm;
   let pedersen!: Pedersen;
@@ -108,14 +120,7 @@ describe('merkle_tree', () => {
       await tree2.updateElements(i, values.slice(i, i + 32));
     }
 
-    expect(tree2.getRoot().toString('hex')).toEqual(tree1.getRoot().toString('hex'));
-    expect(tree2.getSize()).toEqual(values.length);
-
-    for (let i = 0; i < values.length; ++i) {
-      const hashPath1 = await tree1.getHashPath(i);
-      const hashPath2 = await tree2.getHashPath(i);
-      expect(hashPath2).toStrictEqual(hashPath1);
-    }
+    await expectSameTrees(tree1, tree2);
   });
 
   it('should update elements without over extending tree size', async () => {
@@ -134,14 +139,7 @@ describe('merkle_tree', () => {
     await tree2.updateElements(0, values.slice(0, 6));
     await tree2.updateElements(6, values.slice(6, 12));
 
-    expect(tree2.getRoot().toString('hex')).toEqual(tree1.getRoot().toString('hex'));
-    expect(tree2.getSize()).toEqual(12);
-
-    for (let i = 0; i < 12; ++i) {
-      const hashPath1 = await tree1.getHashPath(i);
-      const hashPath2 = await tree2.getHashPath(i);
-      expect(hashPath2).toStrictEqual(hashPath1);
-    }
+    await expectSameTrees(tree1, tree2);
   });
 
   it('should update elements, simulating escape hatch behaviour', async () => {
@@ -164,14 +162,7 @@ describe('merkle_tree', () => {
     await tree2.updateElements(8, values.slice(8, 10));
     await tree2.updateElements(16, values.slice(16, 24));
 
-    expect(tree2.getRoot().toString('hex')).toEqual(tree1.getRoot().toString('hex'));
-    expect(tree2.getSize()).toEqual(24);
-
-    for (let i = 0; i < 24; ++i) {
-      const hashPath1 = await tree1.getHashPath(i);
-      const hashPath2 = await tree2.getHashPath(i);
-      expect(hashPath2).toStrictEqual(hashPath1);
-    }
+    await expectSameTrees(tree1, tree2);
   });
 
   it('should update 0 values elements', async () => {
@@ -192,13 +183,56 @@ describe('merkle_tree', () => {
     await tree2.updateElements(0, values.slice(0, 6));
     expect(tree2.getSize()).toEqual(6);
 
-    expect(tree2.getRoot().toString('hex')).toEqual(tree1.getRoot().toString('hex'));
+    await expectSameTrees(tree1, tree2);
+  });
 
-    for (let i = 0; i < 6; ++i) {
-      const hashPath1 = await tree1.getHashPath(i);
-      const hashPath2 = await tree2.getHashPath(i);
-      expect(hashPath2).toStrictEqual(hashPath1);
+  it('should allow inserting same subtree twice', async () => {
+    const values: Buffer[] = [];
+    for (let i = 0; i < 64; ++i) {
+      const v = Buffer.alloc(64, 0);
+      v.writeUInt32LE(i, 0);
+      values[i] = v;
     }
+
+    // Create reference tree.
+    const db1 = levelup(memdown());
+    const tree1 = await MerkleTree.new(db1, pedersen, 'test', 10);
+    await tree1.updateElements(0, values);
+
+    // Create another tree
+    const db2 = levelup(memdown());
+    const tree2 = await MerkleTree.new(db2, pedersen, 'test', 10);
+    await tree2.updateElements(0, values);
+    await tree2.updateElements(0, values);
+
+    await expectSameTrees(tree1, tree2);
+  });
+
+  it('should allow inserting of larger subtree over smaller subtree', async () => {
+    const treeSize = 65;
+    const values: Buffer[] = [];
+    for (let i = 0; i < treeSize; ++i) {
+      const v = Buffer.alloc(64, 0);
+      v.writeUInt32LE(i, 0);
+      values[i] = v;
+    }
+
+    // Create reference tree.
+    const db1 = levelup(memdown());
+    const tree1 = await MerkleTree.new(db1, pedersen, 'test', 10);
+    await tree1.updateElements(0, values);
+
+    // Create another tree
+    const db2 = levelup(memdown());
+    const tree2 = await MerkleTree.new(db2, pedersen, 'test', 10);
+
+    // insert partial values to another tree
+    await tree2.updateElements(0, values.slice(0, treeSize - 7));
+
+    // insert exsiting values plus new values to another tree
+    await tree2.updateElements(0, values);
+
+    await expectSameTrees(tree1, tree2);
   });
 
   /*

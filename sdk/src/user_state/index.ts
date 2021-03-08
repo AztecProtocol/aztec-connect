@@ -49,7 +49,11 @@ export class UserState extends EventEmitter {
     super();
   }
 
+  /**
+   * Load/refresh user state.
+   */
   public async init() {
+    this.user = (await this.db.getUser(this.user.id))!;
     await this.refreshNotePicker();
   }
 

@@ -213,11 +213,6 @@ export class MerkleTree {
    * e.g. If we need insert 192 values, first a subtree of 128 is inserted, then a subtree of 32.
    */
   public async updateElements(index: number, values: Buffer[]) {
-    if (index < this.size) {
-      // Simply because we don't currently erase any existing data...
-      throw new Error(`Subtree insertion must be in empty part of the tree.`);
-    }
-
     while (values.length) {
       const batch = this.db.batch();
       let subtreeDepth = Math.ceil(Math.log2(values.length));
@@ -269,7 +264,10 @@ export class MerkleTree {
     const isRight = (index >> (height - 1)) & 0x1;
 
     if (data && data.length > 64) {
-      throw new Error('Attempting to update a subtree within a subtree not supported.');
+      if (!root.equals(hashes[hashes.length - 1])) {
+        throw new Error('Attempting to update pre-existing subtree.');
+      }
+      return root;
     }
 
     let left = data ? data.slice(0, 32) : this.zeroHashes[height - 1];
