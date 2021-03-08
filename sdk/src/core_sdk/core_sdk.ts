@@ -306,7 +306,7 @@ export class CoreSdk extends EventEmitter {
   public async destroy() {
     await this.stopSyncingUserStates();
     await this.stopReceivingBlocks();
-    await destroyWorker(this.worker);
+    this.worker && (await destroyWorker(this.worker));
     await this.workerPool?.destroy();
     await this.leveldb.close();
     await this.db.close();
@@ -387,6 +387,9 @@ export class CoreSdk extends EventEmitter {
     this.sdkStatus.latestRollupId = latestRollupId;
     this.sdkStatus.dataRoot = this.worldState.getRoot();
     this.sdkStatus.dataSize = this.worldState.getSize();
+
+    this.emit(CoreSdkEvent.UPDATED_WORLD_STATE, rollupId, latestRollupId);
+    this.emit(SdkEvent.UPDATED_WORLD_STATE, rollupId, latestRollupId);
   }
 
   private async stopReceivingBlocks() {
@@ -411,16 +414,12 @@ export class CoreSdk extends EventEmitter {
       await this.worldState.syncFromDb().catch(() => {});
       const rollup = RollupProofData.fromBuffer(block.rollupProofData);
       await this.worldState.processRollup(rollup);
+      await this.processAliases([rollup]);
       await this.updateStatusRollupInfo(rollup);
       await this.mutex?.unlock();
 
-      await this.processAliases([rollup]);
-
       // Forward the block on to each UserState for processing.
       this.userStates.forEach(us => us.processBlock(block));
-
-      this.emit(CoreSdkEvent.UPDATED_WORLD_STATE, rollup.rollupId, this.sdkStatus.latestRollupId);
-      this.emit(SdkEvent.UPDATED_WORLD_STATE, rollup.rollupId, this.sdkStatus.latestRollupId);
     }
   }
 
