@@ -9,6 +9,17 @@ import { getQuery, pickOne } from './query_builder';
 import { HexString } from './scalar_type';
 import { CachedRollupDb } from '../rollup_db';
 import { AccountDao } from '../entity/account';
+import { TxDao } from '../entity/tx';
+import { AccountProofData, ProofData } from 'barretenberg/client_proofs/proof_data';
+
+const txDaoToAccountDao = ({ proofData }: TxDao): AccountDao => {
+  const accountProof = new AccountProofData(new ProofData(proofData));
+  return {
+    accountPubKey: accountProof.publicKey,
+    aliasHash: accountProof.accountAliasId.aliasHash.toBuffer(),
+    nonce: accountProof.accountAliasId.nonce,
+  };
+};
 
 @Resolver(() => AccountTxType)
 export class AccountTxResolver {
@@ -49,6 +60,6 @@ export class AccountTxResolver {
 
   @Query(() => [AccountTxType!])
   async unsettledAccountTxs() {
-    return this.rollupDb.getUnsettledAccountTxs();
+    return (await this.rollupDb.getUnsettledAccountTxs()).map(txDaoToAccountDao);
   }
 }

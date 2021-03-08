@@ -1,14 +1,10 @@
-import { Length, Max } from 'class-validator';
+import { Max } from 'class-validator';
 import { ArgsType, Field, InputType, Int, ObjectType } from 'type-graphql';
 import { MAX_COUNT, Sort } from './query_builder';
 import { HexString, ISODateTime } from './scalar_type';
 
 @ObjectType()
 export class AccountTxType {
-  @Field(() => HexString)
-  @Length(32)
-  id!: string;
-
   @Field(() => HexString)
   accountPubKey!: string;
 
@@ -17,15 +13,6 @@ export class AccountTxType {
 
   @Field(() => Int)
   nonce!: number;
-
-  @Field(() => HexString)
-  spendingKey1!: string;
-
-  @Field(() => HexString)
-  spendingKey2!: string;
-
-  @Field(() => ISODateTime)
-  created!: Date;
 }
 
 @InputType()
