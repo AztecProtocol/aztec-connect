@@ -26,6 +26,8 @@ describe('end-to-end tests', () => {
       saveProvingKey: false,
       clearDb: true,
       dbPath: ':memory:',
+      minConfirmation: 1,
+      minConfirmationEHW: 1,
     });
     await sdk.init();
   });

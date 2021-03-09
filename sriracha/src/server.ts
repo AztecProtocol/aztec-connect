@@ -17,6 +17,7 @@ interface ServerState {
 export default class Server implements HashPathSource {
   private queue = new MemoryFifo<() => Promise<void>>();
   private serverState: ServerState = { lastBlock: -1, rollupContractAddress: EthAddress.ZERO };
+  private ready = false;
 
   public constructor(private worldStateDb: WorldStateDb, private blockchain: Blockchain) {}
 
@@ -49,11 +50,16 @@ export default class Server implements HashPathSource {
     this.queue.process(fn => fn());
 
     this.printState();
+    this.ready = true;
   }
 
   public async stop() {
     this.queue.cancel();
     this.blockchain.stop();
+  }
+
+  public isReady() {
+    return this.ready;
   }
 
   private async readState() {

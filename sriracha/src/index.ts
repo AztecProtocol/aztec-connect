@@ -73,13 +73,13 @@ async function main() {
   );
 
   const server = new Server(worldStateDb, ethereumBlockchain);
-  await server.start();
-
   const app = appFactory(server, API_PREFIX);
 
   const httpServer = http.createServer(app.callback());
   httpServer.listen(PORT);
   console.log(`Server listening on port ${PORT}.`);
+
+  await server.start();
 }
 
 main().catch(console.log);

@@ -1,4 +1,4 @@
-import { AssetId, createEthSdk, EthAddress, WalletProvider, TxType } from '@aztec/sdk';
+import { AssetId, createEthSdk, EthAddress, WalletProvider, TxType, SdkOptions } from '@aztec/sdk';
 import { EventEmitter } from 'events';
 import { advanceBlocks, blocksToAdvance } from './manipulate_block';
 import { topUpFeeDistributorContract } from './fee_distributor_contract';
@@ -34,14 +34,18 @@ describe('end-to-end falafel recovery tests', () => {
   });
 
   it('should succesfully mix normal and escape mode transactions', async () => {
+    const sdkOptions: SdkOptions = {
+      syncInstances: false,
+      saveProvingKey: false,
+      clearDb: true,
+      dbPath: ':memory:',
+      minConfirmation: 1,
+      minConfirmationEHW: 1,
+    };
+
     // Run a normal sdk and deposit.
     {
-      const sdk = await createEthSdk(provider, ROLLUP_HOST, {
-        syncInstances: false,
-        saveProvingKey: false,
-        clearDb: true,
-        dbPath: ':memory:',
-      });
+      const sdk = await createEthSdk(provider, ROLLUP_HOST, sdkOptions);
       await sdk.init();
 
       const {
@@ -73,12 +77,7 @@ describe('end-to-end falafel recovery tests', () => {
       const nextEscapeBlock = await blocksToAdvance(escapeBlockLowerBound, escapeBlockUpperBound, provider);
       await advanceBlocks(nextEscapeBlock, provider);
 
-      const sdk = await createEthSdk(provider, SRIRACHA_HOST, {
-        syncInstances: false,
-        saveProvingKey: false,
-        clearDb: true,
-        dbPath: ':memory:',
-      });
+      const sdk = await createEthSdk(provider, SRIRACHA_HOST, sdkOptions);
       await sdk.init();
       await sdk.awaitSynchronised();
 
@@ -98,12 +97,7 @@ describe('end-to-end falafel recovery tests', () => {
 
     {
       // Run a normal sdk and withdraw half.
-      const sdk = await createEthSdk(provider, ROLLUP_HOST, {
-        syncInstances: false,
-        saveProvingKey: false,
-        clearDb: true,
-        dbPath: ':memory:',
-      });
+      const sdk = await createEthSdk(provider, ROLLUP_HOST, sdkOptions);
       await sdk.init();
       await sdk.awaitSynchronised();
 

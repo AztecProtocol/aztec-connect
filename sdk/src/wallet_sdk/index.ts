@@ -357,7 +357,8 @@ export class WalletSdk extends EventEmitter {
   }
 
   public async depositFundsToContract(assetId: AssetId, from: EthAddress, value: bigint, permitArgs?: PermitArgs) {
-    return await this.blockchain.depositPendingFunds(assetId, value, from, permitArgs);
+    const txHash = await this.blockchain.depositPendingFunds(assetId, value, from, permitArgs);
+    return this.blockchain.getTransactionReceipt(txHash);
   }
 
   public async isContract(address: EthAddress) {

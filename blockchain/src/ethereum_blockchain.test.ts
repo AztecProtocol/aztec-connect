@@ -43,6 +43,8 @@ describe('ethereum_blockchain', () => {
 
     const config: EthereumBlockchainConfig = {
       console: false,
+      minConfirmation: 1,
+      minConfirmationEHW: 12,
     };
 
     blockchain = new EthereumBlockchain(config, contracts as any);

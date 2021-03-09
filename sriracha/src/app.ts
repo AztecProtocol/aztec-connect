@@ -11,9 +11,19 @@ import Server from './server';
 export function appFactory(server: Server, prefix: string) {
   const router = new Router({ prefix });
 
+  const checkReady = async (ctx: Koa.Context, next: () => Promise<void>) => {
+    if (!server.isReady()) {
+      ctx.status = 503;
+      ctx.body = { error: 'Server not ready.' };
+    } else {
+      await next();
+    }
+  };
+
   router.get('/', async (ctx: Koa.Context) => {
     ctx.body = {
       serviceName: 'sriracha',
+      isReady: server.isReady(),
     };
     ctx.response.status = 200;
   });
@@ -27,7 +37,7 @@ export function appFactory(server: Server, prefix: string) {
     ctx.response.status = 200;
   });
 
-  router.get('/get-tree-state/:treeIndex', async (ctx: Koa.Context) => {
+  router.get('/get-tree-state/:treeIndex', checkReady, async (ctx: Koa.Context) => {
     const treeIndex = +ctx.params.treeIndex;
     const { size, root } = await server.getTreeState(treeIndex);
     const response: GetTreeStateServerResponse = {
@@ -39,7 +49,7 @@ export function appFactory(server: Server, prefix: string) {
     ctx.response.status = 200;
   });
 
-  router.get('/get-hash-path/:treeIndex/:index', async (ctx: Koa.Context) => {
+  router.get('/get-hash-path/:treeIndex/:index', checkReady, async (ctx: Koa.Context) => {
     const index = BigInt(ctx.params.index);
     const treeIndex = +ctx.params.treeIndex;
     const path = await server.getHashPath(treeIndex, index);
@@ -51,7 +61,7 @@ export function appFactory(server: Server, prefix: string) {
     ctx.response.status = 200;
   });
 
-  router.post('/get-hash-paths/:treeIndex', async (ctx: Koa.Context) => {
+  router.post('/get-hash-paths/:treeIndex', checkReady, async (ctx: Koa.Context) => {
     const additions = ctx.request.body.map((addition: any) => {
       return { index: toBigIntBE(Buffer.from(addition.index, 'hex')), value: Buffer.from(addition.value, 'hex') };
     });

@@ -24,6 +24,9 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   private debug: any;
   private status!: BlockchainStatus;
 
+  private static readonly DEFAULT_MIN_CONFIRMATIONS = 3;
+  private static readonly DEFAULT_MIN_CONFIRMATIONS_EHW = 12;
+
   constructor(private config: EthereumBlockchainConfig, private contracts: Contracts) {
     super();
     this.debug = config.console === false ? createDebug('bb:ethereum_blockchain') : console.log;
@@ -226,9 +229,11 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   }
 
   private getRequiredConfirmations() {
-    const { escapeOpen, numEscapeBlocksRemaining, chainId } = this.status;
-    const defaultMinConfirmationEHW = chainId === 1337 || chainId === 31337 ? 1 : 12; // If ganache, just 1 confirmation.
-    const { minConfirmation = 1, minConfirmationEHW = defaultMinConfirmationEHW } = this.config;
+    const { escapeOpen, numEscapeBlocksRemaining } = this.status;
+    const {
+      minConfirmation = EthereumBlockchain.DEFAULT_MIN_CONFIRMATIONS,
+      minConfirmationEHW = EthereumBlockchain.DEFAULT_MIN_CONFIRMATIONS_EHW,
+    } = this.config;
     return escapeOpen || numEscapeBlocksRemaining <= minConfirmationEHW ? minConfirmationEHW : minConfirmation;
   }
 
@@ -244,9 +249,10 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    * Wait for given transaction to be mined, and return receipt.
    */
   public async getTransactionReceipt(txHash: TxHash) {
+    const confs = this.config.minConfirmation || EthereumBlockchain.DEFAULT_MIN_CONFIRMATIONS;
     this.debug(`Getting tx receipt for ${txHash}...`);
     let txReceipt = await this.contracts.getTransactionReceipt(txHash);
-    while (!txReceipt || !txReceipt.confirmations) {
+    while (!txReceipt || txReceipt.confirmations < confs) {
       await new Promise(resolve => setTimeout(resolve, 1000));
       txReceipt = await this.contracts.getTransactionReceipt(txHash);
     }
