@@ -6,16 +6,15 @@ export interface Network {
 }
 
 export const networks: Network[] = [
-  // {
-  //   name: 'mainnet',
-  //   baseUrl: '',
-  //   endpoint: 'https://api.aztec.network/falafel/graphql',
-  //   etherscanUrl: 'https://etherscan.io',
-  // },
+  {
+    name: 'mainnet',
+    baseUrl: '',
+    endpoint: 'https://api.aztec.network/falafel-mainnet/graphql',
+    etherscanUrl: 'https://etherscan.io',
+  },
   {
     name: 'goerli',
-    // baseUrl: '/goerli',
-    baseUrl: '',
+    baseUrl: '/goerli',
     endpoint: 'https://api.aztec.network/falafel/graphql',
     etherscanUrl: 'https://goerli.etherscan.io',
   },
