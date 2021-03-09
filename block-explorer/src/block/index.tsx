@@ -3,6 +3,7 @@ import { useQuery } from 'react-apollo';
 import styled from 'styled-components';
 import { BlockStatusIndicator, getBlockStatus } from '../block_status';
 import { Button, Text } from '../components';
+import { NetworkContext } from '../context';
 import { breakpoints, spacings } from '../styles';
 import { Sections, Section, SectionTitle } from '../template';
 import { TxList } from '../tx_list';
@@ -123,28 +124,34 @@ export const Block: React.FunctionComponent<BlockProps> = ({ id }) => {
   const status = getBlockStatus(block);
   const statusIndicator = <StyledBlockStatusIndicator status={status} size="s" />;
 
-  const titleNode = (
-    <BlockTitle>
-      <>{blockTitle}</>
-      {!!ethTxHash && (
-        <StatusLink href={getEtherscanLink(ethTxHash)} target="_blank">
-          {statusIndicator}
-        </StatusLink>
-      )}
-      {!ethTxHash && statusIndicator}
-    </BlockTitle>
-  );
-
   return (
-    <Sections>
-      <Section title={titleNode}>
-        <BlockDetails block={block} />
-        <TxListTitleRoot>
-          <Text text="Transactions" weight="semibold" />
-          <Text text={`${block.txs.length}`} />
-        </TxListTitleRoot>
-        <TxList txs={block.txs} />
-      </Section>
-    </Sections>
+    <NetworkContext.Consumer>
+      {network => {
+        const titleNode = (
+          <BlockTitle>
+            <>{blockTitle}</>
+            {!!ethTxHash && (
+              <StatusLink href={getEtherscanLink(network, ethTxHash)} target="_blank">
+                {statusIndicator}
+              </StatusLink>
+            )}
+            {!ethTxHash && statusIndicator}
+          </BlockTitle>
+        );
+
+        return (
+          <Sections>
+            <Section title={titleNode}>
+              <BlockDetails block={block} network={network} />
+              <TxListTitleRoot>
+                <Text text="Transactions" weight="semibold" />
+                <Text text={`${block.txs.length}`} />
+              </TxListTitleRoot>
+              <TxList txs={block.txs} />
+            </Section>
+          </Sections>
+        );
+      }}
+    </NetworkContext.Consumer>
   );
 };

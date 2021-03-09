@@ -1,6 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { Text } from '../components';
+import { NetworkContext } from '../context';
 import logo from '../images/logo.svg';
 import { borderRadius, spacings, gradients } from '../styles';
 
@@ -22,8 +23,12 @@ const Name = styled(Text)`
 `;
 
 export const NetworkIndicator: React.FunctionComponent = () => (
-  <Root>
-    <Name text="GOERLI" size="xs" weight="light" />
-    <Logo src={logo} />
-  </Root>
+  <NetworkContext.Consumer>
+    {network => (
+      <Root>
+        <Name text={network.toUpperCase()} size="xs" weight="light" />
+        <Logo src={logo} />
+      </Root>
+    )}
+  </NetworkContext.Consumer>
 );

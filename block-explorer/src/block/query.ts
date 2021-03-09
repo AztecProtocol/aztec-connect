@@ -1,5 +1,5 @@
 import { gql } from 'apollo-boost';
-import { POLL_INTERVAL } from '../queries';
+import { POLL_INTERVAL } from '../config';
 
 export interface Tx {
   id: string;

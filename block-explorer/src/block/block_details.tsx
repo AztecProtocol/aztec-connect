@@ -9,12 +9,16 @@ import {
   InfoValuePlaceholder,
   Value,
 } from '../block_summary';
+import { networks } from '../config';
 import { DetailsSection } from '../template';
 import etherscanIcon from '../images/etherscan.svg';
 import { ProofData, ProofDataPlaceholder } from '../proof_data';
 import { Block } from './query';
 
-export const getEtherscanLink = (ethTxHash: string) => `https://goerli.etherscan.io/tx/0x${ethTxHash}`;
+export const getEtherscanLink = (network: string, ethTxHash: string) => {
+  const { etherscanUrl } = networks.find(n => n.name === network)!;
+  return `${etherscanUrl}/tx/0x${ethTxHash}`;
+};
 
 const TimestampRoot = styled.div`
   display: flex;
@@ -58,9 +62,10 @@ export const BlockDetailsPlaceholder: React.FunctionComponent = () => {
 
 interface BlockDetailsProps {
   block: Block;
+  network: string;
 }
 
-export const BlockDetails: React.FunctionComponent<BlockDetailsProps> = ({ block }) => {
+export const BlockDetails: React.FunctionComponent<BlockDetailsProps> = ({ block, network }) => {
   const { hash, ethTxHash, dataRoot, proofData, nullifierRoot, created } = block;
 
   const summaryNode = (
@@ -69,7 +74,7 @@ export const BlockDetails: React.FunctionComponent<BlockDetailsProps> = ({ block
         {!!ethTxHash && (
           <TimestampRoot>
             <Timestamp time={created} />
-            <EtherScanLink href={getEtherscanLink(ethTxHash)} target="_blank">
+            <EtherScanLink href={getEtherscanLink(network, ethTxHash)} target="_blank">
               <EtherScanIcon src={etherscanIcon} />
             </EtherScanLink>
           </TimestampRoot>

@@ -14,7 +14,7 @@ export const SERVER_URL =
 
 export const BLOCK_EXPLORER_URL =
   process.env.NODE_ENV === 'development'
-    ? `${window.location.protocol}//${window.location.hostname}:3000`
+    ? `${window.location.protocol}//${window.location.hostname}:3000/ganache`
     : 'https://explorer.aztec.network';
 
 export class App extends EventEmitter {

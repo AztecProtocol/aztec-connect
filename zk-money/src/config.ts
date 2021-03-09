@@ -77,7 +77,7 @@ const developmentConfig: ConfigVars = {
   ...productionConfig,
   rollupProviderUrl: `${window.location.protocol}//${window.location.hostname}:8081`,
   graphqlEndpoint: `${window.location.protocol}//${window.location.hostname}:8081/graphql`,
-  explorerUrl: `${window.location.protocol}//${window.location.hostname}:3000`,
+  explorerUrl: `${window.location.protocol}//${window.location.hostname}:3000/ganache`,
   network: 'ganache',
   ethereumHost: 'http://localhost:8545',
   debug: true,
