@@ -5,8 +5,8 @@ dest*
 dist
 node_modules
 .terraform
-.env
 yarn.lock
+.env
 *.log
 *.swp
 .next

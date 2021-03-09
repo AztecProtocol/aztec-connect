@@ -5,5 +5,7 @@ COPY --from=0 /usr/src/sdk/dist /usr/src/sdk/dist
 WORKDIR /usr/src/zk-money
 COPY . .
 RUN apk add git
-RUN yarn install && yarn test && yarn build
+RUN cd lambda && yarn install
+RUN cd ..
+RUN yarn install && yarn test && yarn build && yarn build:lambda
 CMD []

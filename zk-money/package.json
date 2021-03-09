@@ -34,6 +34,7 @@
     "js-cookie": "^2.2.1",
     "lodash": "^4.17.20",
     "moment": "^2.29.1",
+    "node-fetch": "^2.6.1",
     "polished": "^4.1.0",
     "prettier": "^2.2.1",
     "react": "^16.14.0",
@@ -51,6 +52,7 @@
   "scripts": {
     "start": "export PORT=3001 && react-app-rewired start",
     "build": "react-app-rewired build && rm -rf dist && mv build dist",
+    "build:lambda": "tsc --target es5 --lib es6,dom,dom.iterable --downlevelIteration lambda/index.ts --outDir ./lambda",
     "test": "react-scripts test --watchAll=false  --passWithNoTests",
     "eject": "react-scripts eject"
   },
@@ -68,5 +70,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "source-map": "^0.7.3"
   }
 }
