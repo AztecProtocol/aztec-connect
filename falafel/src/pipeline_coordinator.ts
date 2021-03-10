@@ -36,6 +36,10 @@ export class PipelineCoordinator {
     this.stopPromise = new Promise(resolve => (this.cancel = resolve));
 
     const fn = async () => {
+      // Erase any outstanding rollups and proofs to release unsettled txs.
+      await this.rollupDb.deleteUnsettledRollups();
+      await this.rollupDb.deleteOrphanedRollupProofs();
+
       while (this.running) {
         const remainingTxSlots = this.numInnerRollupTxs * (this.numOuterRollupProofs - this.innerProofs.length);
         const pendingTxs = await this.rollupDb.getPendingTxs(remainingTxSlots);

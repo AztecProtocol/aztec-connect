@@ -208,7 +208,7 @@ export class TypeOrmRollupDb implements RollupDb {
 
   public async addRollup(rollup: RollupDao) {
     // We need to erase any existing rollup first, to ensure we don't get a unique violation when inserting a
-    // different rollup proof which as a one to one mapping with the rollup.
+    // different rollup proof which has a one to one mapping with the rollup.
     await this.connection.transaction(async transactionalEntityManager => {
       await transactionalEntityManager.delete(this.rollupRep.target, { id: rollup.id });
       await transactionalEntityManager.save(rollup);
