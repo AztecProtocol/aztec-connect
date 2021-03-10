@@ -52,7 +52,6 @@
   "scripts": {
     "start": "export PORT=3001 && react-app-rewired start",
     "build": "react-app-rewired build && rm -rf dist && mv build dist",
-    "build:lambda": "tsc --target es5 --lib es6,dom,dom.iterable --downlevelIteration lambda/index.ts --outDir ./lambda",
     "test": "react-scripts test --watchAll=false  --passWithNoTests",
     "eject": "react-scripts eject"
   },

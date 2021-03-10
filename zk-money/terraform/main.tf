@@ -1,10 +1,7 @@
-
 provider "aws" {
   profile = "default"
   region  = "eu-west-2"
 }
-
-
 
 terraform {
   backend "s3" {
@@ -35,7 +32,6 @@ resource "aws_acm_certificate" "zkmoney" {
     Name = "zk.money"
   }
 }
-
 
 # Certificate validation records.
 resource "aws_route53_record" "zkmoney" {
@@ -231,11 +227,11 @@ resource "aws_cloudfront_distribution" "old_zkmoney_distribution" {
   }
 }
 
-
 resource "aws_route53_record" "old_a_record" {
   zone_id = data.aws_route53_zone.zkmoney.zone_id
   name    = "old"
   type    = "A"
+
   alias {
     name                   = aws_cloudfront_distribution.old_zkmoney_distribution.domain_name
     zone_id                = aws_cloudfront_distribution.old_zkmoney_distribution.hosted_zone_id
@@ -245,10 +241,11 @@ resource "aws_route53_record" "old_a_record" {
 
 # AWS Cloudfront for caching
 resource "aws_cloudfront_distribution" "zkmoney_redirect_distribution" {
-  
+
   origin {
     domain_name = aws_s3_bucket.zkmoney_redirect.website_endpoint
     origin_id   = "redirect"
+
     custom_origin_config {
       http_port              = "80"
       https_port             = "443"
@@ -260,9 +257,8 @@ resource "aws_cloudfront_distribution" "zkmoney_redirect_distribution" {
   enabled         = true
   is_ipv6_enabled = true
   comment         = "Managed by Terraform"
+  aliases         = ["www.zk.money"]
 
-  aliases = ["www.zk.money"]
-  
   default_cache_behavior {
     allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
     cached_methods   = ["GET", "HEAD"]
@@ -276,9 +272,9 @@ resource "aws_cloudfront_distribution" "zkmoney_redirect_distribution" {
       }
     }
     viewer_protocol_policy = "allow-all"
-    min_ttl     = 0
-    default_ttl = 3600
-    max_ttl     = 86400
+    min_ttl                = 0
+    default_ttl            = 3600
+    max_ttl                = 86400
   }
 
   price_class = "PriceClass_100"
@@ -294,8 +290,6 @@ resource "aws_cloudfront_distribution" "zkmoney_redirect_distribution" {
     ssl_support_method  = "sni-only"
   }
 }
-
-
 
 # AWS Cloudfront for caching
 resource "aws_cloudfront_distribution" "zkmoney_distribution" {
@@ -310,17 +304,17 @@ resource "aws_cloudfront_distribution" "zkmoney_distribution" {
     }
   }
 
-  enabled         = true
-  is_ipv6_enabled = true
-  comment         = "Managed by Terraform"
+  enabled                = true
+  is_ipv6_enabled        = true
+  comment                = "Managed by Terraform"
+  aliases                = ["zk.money"]
 
-  aliases = ["zk.money"]
 
   default_cache_behavior {
-
     target_origin_id = "website"
-	  allowed_methods = ["GET", "HEAD"]
-	  cached_methods = ["GET", "HEAD"]
+    allowed_methods  = ["GET", "HEAD"]
+    cached_methods   = ["GET", "HEAD"]
+
     forwarded_values {
       query_string = true
 
@@ -328,18 +322,34 @@ resource "aws_cloudfront_distribution" "zkmoney_distribution" {
         forward = "none"
       }
     }
+    viewer_protocol_policy = "redirect-to-https"
+    min_ttl                = 0
+    default_ttl            = 3600
+    max_ttl                = 86400
+  }
+
+  ordered_cache_behavior {
+    path_pattern           = "/"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
+    cached_methods         = ["GET", "HEAD"]
+    target_origin_id       = "website"
+    viewer_protocol_policy = "redirect-to-https"
+    min_ttl                = 0
+    default_ttl            = 3600
+    max_ttl                = 86400
 
     lambda_function_association {
-      event_type   = "origin-response"
-      lambda_arn   = aws_lambda_function.twitter_meta_lambda.qualified_arn
+      event_type = "origin-response"
+      lambda_arn = aws_lambda_function.twitter_meta_lambda.qualified_arn
     }
 
-    viewer_protocol_policy = "redirect-to-https"
+    forwarded_values {
+      query_string = true
 
-    min_ttl     = 0
-    default_ttl = 3600
-    max_ttl     = 86400
-
+      cookies {
+        forward = "none"
+      }
+    }
   }
 
   price_class = "PriceClass_100"
@@ -354,7 +364,6 @@ resource "aws_cloudfront_distribution" "zkmoney_distribution" {
     acm_certificate_arn = aws_acm_certificate.zkmoney.arn
     ssl_support_method  = "sni-only"
   }
- 
 }
 
 resource "aws_route53_record" "www_a_record" {
@@ -391,65 +400,55 @@ resource "aws_route53_record" "root_aaaa_record" {
 }
 
 data "aws_iam_policy_document" "lambda" {
-	statement {
-		actions = ["sts:AssumeRole"]
-		principals {
-			type = "Service"
-			identifiers = [
-				"lambda.amazonaws.com",
-				"edgelambda.amazonaws.com"
-			]
-		}
-	}
+  statement {
+    actions = ["sts:AssumeRole"]
+    principals {
+      type = "Service"
+      identifiers = [
+        "lambda.amazonaws.com",
+        "edgelambda.amazonaws.com"
+      ]
+    }
+  }
 }
 
 resource "aws_iam_role" "main" {
-	name_prefix = var.lambda_function_name
-	assume_role_policy = data.aws_iam_policy_document.lambda.json
+  name_prefix        = var.lambda_function_name
+  assume_role_policy = data.aws_iam_policy_document.lambda.json
 }
 
 resource "aws_iam_role_policy_attachment" "basic" {
-	role = aws_iam_role.main.name
-	policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+  role       = aws_iam_role.main.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
 resource "aws_lambda_permission" "allow_cloudfront_invocation" {
-  statement_id   = "AllowExecutionFromCloudFront"
-  action         = "lambda:InvokeFunction"
-  function_name  = "${aws_lambda_function.twitter_meta_lambda.function_name}"
-  principal      = "edgelambda.amazonaws.com"
-  source_arn = aws_cloudfront_distribution.zkmoney_distribution.arn
+  statement_id  = "AllowExecutionFromCloudFront"
+  action        = "lambda:InvokeFunction"
+  function_name = "${aws_lambda_function.twitter_meta_lambda.function_name}"
+  principal     = "edgelambda.amazonaws.com"
+  source_arn    = aws_cloudfront_distribution.zkmoney_distribution.arn
 }
 
 resource "aws_lambda_permission" "allow_cloudfront" {
-  statement_id   = "AllowGetFromCloudFront"
-  action         = "lambda:GetFunction"
-  function_name  = "${aws_lambda_function.twitter_meta_lambda.function_name}"
-  principal      = "edgelambda.amazonaws.com"
-  source_arn = aws_cloudfront_distribution.zkmoney_distribution.arn
-
+  statement_id  = "AllowGetFromCloudFront"
+  action        = "lambda:GetFunction"
+  function_name = "${aws_lambda_function.twitter_meta_lambda.function_name}"
+  principal     = "edgelambda.amazonaws.com"
+  source_arn    = aws_cloudfront_distribution.zkmoney_distribution.arn
 }
-
 
 variable "lambda_function_name" {
   default = "twitter_meta_lambda"
 }
 
-data "archive_file" "zipit" {
-  type        = "zip"
-  source_dir = "../lambda"
-  output_path = "twitter_lambda.zip"
-}
-
 resource "aws_lambda_function" "twitter_meta_lambda" {
-  filename      = "twitter_lambda.zip"
-  function_name = var.lambda_function_name
-	role = aws_iam_role.main.arn
-  handler       = "index.main"
-  provider      = aws.acm
-  source_code_hash = "${data.archive_file.zipit.output_base64sha256}"
-  runtime = "nodejs12.x"
-  publish = true
+  filename         = "../dist/twitter_lambda.zip"
+  function_name    = var.lambda_function_name
+  role             = aws_iam_role.main.arn
+  handler          = "index.main"
+  provider         = aws.acm
+  source_code_hash = fileexists("../dist/twitter_lambda.zip") ? filebase64sha256("../dist/twitter_lambda.zip") : ""
+  runtime          = "nodejs12.x"
+  publish          = true
 }
-
-
