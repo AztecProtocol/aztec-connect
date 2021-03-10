@@ -1,4 +1,5 @@
 import { AccountId, Note, TxType, WalletSdk } from '@aztec/sdk';
+import { JoinSplitProofOutput } from '@aztec/sdk/proofs/proof_output';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { AccountState, AssetState } from '../account_state';
@@ -73,7 +74,8 @@ export class MergeForm extends EventEmitter implements AccountForm {
   private readonly asset: Asset;
 
   private values: MergeFormValues = initialMergeFormValues;
-  private status = FormStatus.ACTIVE;
+  private formStatus = FormStatus.ACTIVE;
+  private proofOutput?: JoinSplitProofOutput;
 
   private minFee = 0n;
 
@@ -90,11 +92,15 @@ export class MergeForm extends EventEmitter implements AccountForm {
   }
 
   get locked() {
-    return this.status === FormStatus.LOCKED || this.status === FormStatus.PROCESSING;
+    return this.formStatus === FormStatus.LOCKED || this.formStatus === FormStatus.PROCESSING;
   }
 
   get processing() {
-    return this.status === FormStatus.PROCESSING;
+    return this.formStatus === FormStatus.PROCESSING;
+  }
+
+  private get status() {
+    return this.values.status.value;
   }
 
   getValues() {
@@ -152,20 +158,20 @@ export class MergeForm extends EventEmitter implements AccountForm {
       status: { value: MergeStatus.NADA },
       submit: clearMessage({ value: false }),
     });
-    this.updateStatus(FormStatus.ACTIVE);
+    this.updateFormStatus(FormStatus.ACTIVE);
   }
 
   async lock() {
     this.updateFormValues({ submit: { value: true } });
 
-    this.updateStatus(FormStatus.LOCKED);
+    this.updateFormStatus(FormStatus.LOCKED);
 
     const validated = await this.validateValues();
     if (isValidForm(validated)) {
       this.updateFormValues({ status: { value: MergeStatus.CONFIRM } });
     } else {
       this.updateFormValues(mergeValues(validated, { submit: { value: false } }));
-      this.updateStatus(FormStatus.ACTIVE);
+      this.updateFormStatus(FormStatus.ACTIVE);
     }
   }
 
@@ -175,7 +181,8 @@ export class MergeForm extends EventEmitter implements AccountForm {
       return;
     }
 
-    this.updateFormValues({ status: { value: MergeStatus.VALIDATE } });
+    const status = Math.max(this.values.status.value, MergeStatus.VALIDATE);
+    this.updateFormValues({ status: { value: status }, submit: clearMessage({ value: true }) });
 
     const validated = await this.validateValues();
     if (!isValidForm(validated)) {
@@ -183,7 +190,7 @@ export class MergeForm extends EventEmitter implements AccountForm {
       return;
     }
 
-    this.updateStatus(FormStatus.PROCESSING);
+    this.updateFormStatus(FormStatus.PROCESSING);
 
     try {
       await this.merge();
@@ -196,7 +203,7 @@ export class MergeForm extends EventEmitter implements AccountForm {
       return;
     }
 
-    this.updateStatus(FormStatus.ACTIVE);
+    this.updateFormStatus(FormStatus.LOCKED);
   }
 
   private refreshValues(changes: Partial<MergeFormValues> = {}) {
@@ -238,27 +245,29 @@ export class MergeForm extends EventEmitter implements AccountForm {
       });
     };
 
-    proceed(MergeStatus.CREATE_PROOF);
+    if (this.status <= MergeStatus.CREATE_PROOF) {
+      proceed(MergeStatus.CREATE_PROOF);
 
-    const userData = this.sdk.getUserData(this.userId);
-    const signer = this.sdk.createSchnorrSigner(userData.privateKey);
-    const toMerge = sum(this.values.toMerge.value.slice(0, 2));
-    const fee = toBaseUnits(this.values.fee.value, this.asset.decimals);
-    const proofOutput = await this.sdk.createJoinSplitProof(
-      this.asset.id,
-      this.userId,
-      0n,
-      0n,
-      toMerge,
-      0n,
-      toMerge - fee,
-      signer,
-    );
+      const userData = this.sdk.getUserData(this.userId);
+      const signer = this.sdk.createSchnorrSigner(userData.privateKey);
+      const toMerge = sum(this.values.toMerge.value.slice(0, 2));
+      const fee = toBaseUnits(this.values.fee.value, this.asset.decimals);
+      this.proofOutput = await this.sdk.createJoinSplitProof(
+        this.asset.id,
+        this.userId,
+        0n,
+        0n,
+        toMerge,
+        0n,
+        toMerge - fee,
+        signer,
+      );
+    }
 
     proceed(MergeStatus.SEND_PROOF);
 
     try {
-      await this.sdk.sendProof(proofOutput);
+      await this.sdk.sendProof(this.proofOutput!);
     } catch (e) {
       debug(e);
       this.updateFormValues({
@@ -275,8 +284,8 @@ export class MergeForm extends EventEmitter implements AccountForm {
     }
   };
 
-  private updateStatus(status: FormStatus) {
-    this.status = status;
+  private updateFormStatus(status: FormStatus) {
+    this.formStatus = status;
     this.emit(AccountFormEvent.UPDATED_FORM_STATUS, status);
   }
 

@@ -19,6 +19,7 @@ import { Modal, PaddedBlock, Tab } from '../../components';
 import { breakpoints, spacings, Theme } from '../../styles';
 import { AccountAsset } from './asset';
 import { Merge } from './merge';
+import { Referral } from './referral';
 import { Send } from './send';
 import { Shield } from './shield';
 import { UnsupportedAsset } from './unsupported_asset';
@@ -152,6 +153,7 @@ export const Account: React.FunctionComponent<AccountProps> = ({
           <UnsupportedAsset asset={asset} />
         </PaddedBlock>
       )}
+      {!isInitializing && !activeAction && <Referral alias={accountState.alias} />}
       {activeAction && (
         <Modal
           title={

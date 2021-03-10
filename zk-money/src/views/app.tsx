@@ -1,6 +1,6 @@
 import { AssetId } from '@aztec/sdk';
 import { isEqual } from 'lodash';
-import React, { PureComponent } from 'react';
+import { PureComponent } from 'react';
 import { withApollo, WithApolloClient } from 'react-apollo';
 import { RouteComponentProps } from 'react-router';
 import {
@@ -47,6 +47,12 @@ const getAccountUrl = (assetId: AppAssetId) =>
   views.find(v => v.action === AppAction.ACCOUNT)!.path.replace(':assetSymbol', `${assets[assetId].symbol}`);
 
 export const appPaths = views.map(p => p.path);
+
+const isIOS = () =>
+  ['iPad Simulator', 'iPhone Simulator', 'iPod Simulator', 'iPad', 'iPhone', 'iPod'].includes(navigator.platform) ||
+  (navigator.userAgent.includes('Mac') && 'ontouchend' in document);
+
+const isUnsupportedDevice = () => isIOS();
 
 interface RouteParams {
   assetSymbol?: string;
@@ -119,6 +125,10 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
     this.app.on(AppEvent.UPDATED_USER_SESSION_DATA, this.onUserSessionDataChange);
     this.app.on(AppEvent.UPDATED_SYSTEM_MESSAGE, this.onSystemMessageChange);
     this.handleActionChange(this.state.action);
+
+    if (this.state.action !== AppAction.NADA && isUnsupportedDevice()) {
+      this.goToAction(AppAction.NADA);
+    }
   }
 
   componentDidUpdate(prevProps: AppPropsWithApollo, prevState: AppState) {
@@ -348,7 +358,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
               );
             }
             default:
-              return <Home onConnect={this.handleLogin} />;
+              return <Home onConnect={this.handleLogin} unsupported={isUnsupportedDevice()} />;
           }
         })()}
       </Template>

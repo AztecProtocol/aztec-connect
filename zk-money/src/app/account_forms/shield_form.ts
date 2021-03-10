@@ -1,4 +1,5 @@
 import { AccountId, TxType, WalletSdk } from '@aztec/sdk';
+import { JoinSplitProofOutput } from '@aztec/sdk/proofs/proof_output';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { debounce, DebouncedFunc } from 'lodash';
@@ -124,7 +125,8 @@ export class ShieldForm extends EventEmitter implements AccountForm {
   private readonly asset: Asset;
 
   private values: ShieldFormValues = initialShieldFormValues;
-  private status = FormStatus.ACTIVE;
+  private formStatus = FormStatus.ACTIVE;
+  private proofOutput?: JoinSplitProofOutput;
 
   private ethAccount!: EthAccount;
   private depositGasCost = 0n;
@@ -159,11 +161,15 @@ export class ShieldForm extends EventEmitter implements AccountForm {
   }
 
   get locked() {
-    return this.status === FormStatus.LOCKED || this.status === FormStatus.PROCESSING;
+    return this.formStatus === FormStatus.LOCKED || this.formStatus === FormStatus.PROCESSING;
   }
 
   get processing() {
-    return this.status === FormStatus.PROCESSING;
+    return this.formStatus === FormStatus.PROCESSING;
+  }
+
+  private get status() {
+    return this.values.status.value;
   }
 
   getValues() {
@@ -272,14 +278,14 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       status: { value: ShieldStatus.NADA },
       submit: clearMessage({ value: false }),
     });
-    this.updateStatus(FormStatus.ACTIVE);
+    this.updateFormStatus(FormStatus.ACTIVE);
     this.renewEthAccount();
   }
 
   async lock() {
     this.updateFormValues({ submit: { value: true } });
 
-    this.updateStatus(FormStatus.LOCKED);
+    this.updateFormStatus(FormStatus.LOCKED);
 
     const validated = await this.validateValues();
     if (isValidForm(validated)) {
@@ -287,7 +293,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       this.updateFormValues({ status: { value: ShieldStatus.CONFIRM } });
     } else {
       this.updateFormValues(mergeValues(validated, { submit: { value: false } }));
-      this.updateStatus(FormStatus.ACTIVE);
+      this.updateFormStatus(FormStatus.ACTIVE);
     }
   }
 
@@ -297,7 +303,8 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       return;
     }
 
-    this.updateFormValues({ status: { value: ShieldStatus.VALIDATE } });
+    const status = Math.max(this.values.status.value, ShieldStatus.VALIDATE);
+    this.updateFormValues({ status: { value: status }, submit: clearMessage({ value: true }) });
 
     const validated = await this.validateValues();
     if (!isValidForm(validated)) {
@@ -305,7 +312,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       return;
     }
 
-    this.updateStatus(FormStatus.PROCESSING);
+    this.updateFormStatus(FormStatus.PROCESSING);
 
     try {
       await this.shield();
@@ -318,7 +325,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       return;
     }
 
-    this.updateStatus(FormStatus.ACTIVE);
+    this.updateFormStatus(FormStatus.LOCKED);
   }
 
   private refreshValues(changes: Partial<ShieldFormValues> = {}) {
@@ -453,11 +460,12 @@ export class ShieldForm extends EventEmitter implements AccountForm {
   }
 
   private async shield() {
-    const proceed = (status: ShieldStatus, message = '') =>
+    const proceed = (status: ShieldStatus, message = '') => {
       this.updateFormValues({
         status: { value: status },
         submit: withMessage({ value: true }, message),
       });
+    };
 
     const prompt = (message: string) => {
       this.updateFormValues({
@@ -475,6 +483,8 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     const asset = this.asset;
     const recipient = form.recipient.value.input;
     const outputNoteOwner = (await this.accountUtils.getAccountId(recipient))!;
+    const userData = this.sdk.getUserData(this.userId);
+    const senderId = this.accountState.settled ? this.userId : new AccountId(userData.publicKey, 0);
     const amount = toBaseUnits(form.amount.value, asset.decimals);
     const fee = toBaseUnits(form.fee.value, asset.decimals);
     const publicInput = amount + fee;
@@ -482,9 +492,9 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     const pendingBalance = await this.accountUtils.getPendingBalance(asset.id, ethAddress);
     const toBeDeposited = max(publicInput - pendingBalance, 0n);
 
-    proceed(toBeDeposited ? ShieldStatus.DEPOSIT : ShieldStatus.CREATE_PROOF);
-
     if (toBeDeposited) {
+      proceed(ShieldStatus.DEPOSIT);
+      await new Promise(resolve => setTimeout(resolve, 1000));
       prompt(
         `Please make a deposit of ${fromBaseUnits(toBeDeposited, asset.decimals)} ${asset.symbol} from your wallet.`,
       );
@@ -500,62 +510,71 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       }
     }
 
-    proceed(ShieldStatus.CREATE_PROOF);
+    if (this.status <= ShieldStatus.CREATE_PROOF) {
+      proceed(ShieldStatus.CREATE_PROOF);
 
-    const userData = this.sdk.getUserData(this.userId);
-    const senderId = this.accountState.settled ? this.userId : new AccountId(userData.publicKey, 0);
-    const signer = this.sdk.createSchnorrSigner(userData.privateKey);
-    const privateInput =
-      form.enableAddToBalance.value && form.addToBalance.value
-        ? await this.sdk.getMaxSpendableValue(asset.id, senderId)
-        : 0n;
-    const toBeShielded = amount + privateInput;
-    const [recipientPrivateOutput, senderPrivateOutput] = senderId.equals(outputNoteOwner)
-      ? [0n, toBeShielded]
-      : [toBeShielded, 0n];
-    const proofOutput = await this.sdk.createJoinSplitProof(
-      asset.id,
-      senderId,
-      publicInput,
-      0n,
-      privateInput,
-      recipientPrivateOutput,
-      senderPrivateOutput,
-      signer,
-      outputNoteOwner,
-      ethAddress,
-    );
-
-    proceed(ShieldStatus.APPROVE_PROOF);
-
-    if (!this.provider) {
-      return abort('Wallet disconnected.');
+      const signer = this.sdk.createSchnorrSigner(userData.privateKey);
+      const privateInput =
+        form.enableAddToBalance.value && form.addToBalance.value
+          ? await this.sdk.getMaxSpendableValue(asset.id, senderId)
+          : 0n;
+      const toBeShielded = amount + privateInput;
+      const [recipientPrivateOutput, senderPrivateOutput] = senderId.equals(outputNoteOwner)
+        ? [0n, toBeShielded]
+        : [toBeShielded, 0n];
+      this.proofOutput = await this.sdk.createJoinSplitProof(
+        asset.id,
+        senderId,
+        publicInput,
+        0n,
+        privateInput,
+        recipientPrivateOutput,
+        senderPrivateOutput,
+        signer,
+        outputNoteOwner,
+        ethAddress,
+      );
     }
 
-    prompt('Please sign the proof data in your wallet.');
-    try {
-      const signer = new Web3Signer(this.provider.ethereumProvider);
-      await proofOutput.ethSign(signer as any, ethAddress);
-    } catch (e) {
-      debug(e);
-      return abort('Failed to sign the proof.');
+    if (this.status <= ShieldStatus.APPROVE_PROOF) {
+      proceed(ShieldStatus.APPROVE_PROOF);
+
+      if (!this.provider) {
+        return abort('Wallet disconnected.');
+      }
+
+      prompt('Please approve the proof data in your wallet.');
+      try {
+        const isContract = await this.sdk.isContract(ethAddress);
+        if (isContract) {
+          await this.sdk.approveProof(ethAddress, this.proofOutput!.signingData!);
+        } else {
+          const signer = new Web3Signer(this.provider.ethereumProvider);
+          await this.proofOutput!.ethSign(signer as any, ethAddress);
+        }
+      } catch (e) {
+        debug(e);
+        return abort('Failed to sign the proof.');
+      }
     }
 
-    proceed(ShieldStatus.SEND_PROOF);
+    if (this.status <= ShieldStatus.SEND_PROOF) {
+      proceed(ShieldStatus.SEND_PROOF);
 
-    try {
-      await this.sdk.sendProof(proofOutput);
-    } catch (e) {
-      debug(e);
-      return abort('Failed to send the proof.');
-    }
+      try {
+        await this.sdk.sendProof(this.proofOutput!);
+      } catch (e) {
+        debug(e);
+        return abort('Failed to send the proof.');
+      }
 
-    if (!senderId.equals(this.userId)) {
-      await this.db.addMigratingTx(senderId, {
-        ...proofOutput.tx,
-        userId: outputNoteOwner,
-        ownedByUser: false,
-      });
+      if (!senderId.equals(this.userId)) {
+        await this.db.addMigratingTx(senderId, {
+          ...this.proofOutput!.tx,
+          userId: outputNoteOwner,
+          ownedByUser: false,
+        });
+      }
     }
 
     proceed(ShieldStatus.DONE);
@@ -630,8 +649,8 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     this.depositGasCostSubscriber = undefined;
   }
 
-  private updateStatus(status: FormStatus) {
-    this.status = status;
+  private updateFormStatus(status: FormStatus) {
+    this.formStatus = status;
     this.emit(AccountFormEvent.UPDATED_FORM_STATUS, status);
   }
 

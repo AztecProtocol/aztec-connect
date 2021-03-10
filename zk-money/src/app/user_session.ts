@@ -148,7 +148,9 @@ export class UserSession extends EventEmitter {
     if (this.sdk) {
       this.sdk.removeAllListeners();
       // Can only safely destroy the sdk after it's fully initialized.
-      await this.awaitSdkInitialized(this.sdk);
+      if (this.sdk.getLocalStatus().initState === SdkInitState.INITIALIZING) {
+        await this.awaitSdkInitialized(this.sdk);
+      }
       await this.sdk.destroy();
     }
     this.destroyed = true;
@@ -195,8 +197,7 @@ export class UserSession extends EventEmitter {
     }
 
     try {
-      const { rollupProviderUrl, debug } = this.config;
-      this.sdk = await createWalletSdk(this.coreProvider.ethereumProvider, rollupProviderUrl, { debug });
+      await this.createSdk();
       // If local rollupContractAddress is empty, it is a new device or the data just got wiped out.
       if (!(await this.getLocalRollupContractAddress())) {
         await this.db.clear();
@@ -446,9 +447,7 @@ export class UserSession extends EventEmitter {
         await this.db.open();
       }
 
-      const { rollupProviderUrl, debug } = this.config;
-      this.sdk = await createWalletSdk(this.coreProvider.ethereumProvider, rollupProviderUrl, { debug });
-      // If local rollupContractAddress is empty, it is a new device or the data just got wiped out.
+      await this.createSdk();
       if (!(await this.getLocalRollupContractAddress())) {
         throw new Error('Require data reset.');
       }
@@ -490,6 +489,12 @@ export class UserSession extends EventEmitter {
       debug(e);
       await this.close();
     }
+  }
+
+  private async createSdk() {
+    const { rollupProviderUrl, network, debug } = this.config;
+    const minConfirmation = network === 'ganache' ? 1 : undefined; // If not ganache, use the default value.
+    this.sdk = await createWalletSdk(this.coreProvider.ethereumProvider, rollupProviderUrl, { minConfirmation, debug });
   }
 
   private async createUserAccount(userId: AccountId, alias: string) {

@@ -1,4 +1,5 @@
 import { AccountId, EthAddress, TxType, WalletSdk } from '@aztec/sdk';
+import { JoinSplitProofOutput } from '@aztec/sdk/proofs/proof_output';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { debounce, DebouncedFunc } from 'lodash';
@@ -100,7 +101,8 @@ export class SendForm extends EventEmitter implements AccountForm {
   private readonly asset: Asset;
 
   private values: SendFormValues = initialSendFormValues;
-  private status = FormStatus.ACTIVE;
+  private formStatus = FormStatus.ACTIVE;
+  private proofOutput?: JoinSplitProofOutput;
 
   private minFee = 0n;
 
@@ -128,11 +130,15 @@ export class SendForm extends EventEmitter implements AccountForm {
   }
 
   get locked() {
-    return this.status === FormStatus.LOCKED || this.status === FormStatus.PROCESSING;
+    return this.formStatus === FormStatus.LOCKED || this.formStatus === FormStatus.PROCESSING;
   }
 
   get processing() {
-    return this.status === FormStatus.PROCESSING;
+    return this.formStatus === FormStatus.PROCESSING;
+  }
+
+  private get status() {
+    return this.values.status.value;
   }
 
   getValues() {
@@ -231,20 +237,20 @@ export class SendForm extends EventEmitter implements AccountForm {
       status: { value: SendStatus.NADA },
       submit: clearMessage({ value: false }),
     });
-    this.updateStatus(FormStatus.ACTIVE);
+    this.updateFormStatus(FormStatus.ACTIVE);
   }
 
   async lock() {
     this.updateFormValues({ submit: { value: true } });
 
-    this.updateStatus(FormStatus.LOCKED);
+    this.updateFormStatus(FormStatus.LOCKED);
 
     const validated = await this.validateValues();
     if (isValidForm(validated)) {
       this.updateFormValues({ status: { value: SendStatus.CONFIRM } });
     } else {
       this.updateFormValues(mergeValues(validated, { submit: { value: false } }));
-      this.updateStatus(FormStatus.ACTIVE);
+      this.updateFormStatus(FormStatus.ACTIVE);
     }
   }
 
@@ -254,7 +260,8 @@ export class SendForm extends EventEmitter implements AccountForm {
       return;
     }
 
-    this.updateFormValues({ status: { value: SendStatus.VALIDATE } });
+    const status = Math.max(this.values.status.value, SendStatus.VALIDATE);
+    this.updateFormValues({ status: { value: status }, submit: clearMessage({ value: true }) });
 
     const validated = await this.validateValues();
     if (!isValidForm(validated)) {
@@ -262,7 +269,7 @@ export class SendForm extends EventEmitter implements AccountForm {
       return;
     }
 
-    this.updateStatus(FormStatus.PROCESSING);
+    this.updateFormStatus(FormStatus.PROCESSING);
 
     try {
       const recipient = this.values.recipient.value.input;
@@ -280,7 +287,7 @@ export class SendForm extends EventEmitter implements AccountForm {
       return;
     }
 
-    this.updateStatus(FormStatus.ACTIVE);
+    this.updateFormStatus(FormStatus.LOCKED);
   }
 
   private refreshValues(changes: Partial<SendFormValues> = {}) {
@@ -386,29 +393,31 @@ export class SendForm extends EventEmitter implements AccountForm {
   }
 
   private async privateSend(alias: string) {
-    this.proceed(SendStatus.CREATE_PROOF);
+    if (this.status <= SendStatus.CREATE_PROOF) {
+      this.proceed(SendStatus.CREATE_PROOF);
 
-    const userData = this.sdk.getUserData(this.userId);
-    const signer = this.sdk.createSchnorrSigner(userData.privateKey);
-    const noteRecipient = await this.accountUtils.getAccountId(alias);
-    const amount = toBaseUnits(this.values.amount.value, this.asset.decimals);
-    const fee = toBaseUnits(this.values.fee.value, this.asset.decimals);
-    const proofOutput = await this.sdk.createJoinSplitProof(
-      this.asset.id,
-      this.userId,
-      0n,
-      0n,
-      amount + fee,
-      amount,
-      0n,
-      signer,
-      noteRecipient,
-    );
+      const userData = this.sdk.getUserData(this.userId);
+      const signer = this.sdk.createSchnorrSigner(userData.privateKey);
+      const noteRecipient = await this.accountUtils.getAccountId(alias);
+      const amount = toBaseUnits(this.values.amount.value, this.asset.decimals);
+      const fee = toBaseUnits(this.values.fee.value, this.asset.decimals);
+      this.proofOutput = await this.sdk.createJoinSplitProof(
+        this.asset.id,
+        this.userId,
+        0n,
+        0n,
+        amount + fee,
+        amount,
+        0n,
+        signer,
+        noteRecipient,
+      );
+    }
 
     this.proceed(SendStatus.SEND_PROOF);
 
     try {
-      await this.sdk.sendProof(proofOutput);
+      await this.sdk.sendProof(this.proofOutput!);
     } catch (e) {
       debug(e);
       return this.abort('Failed to send the proof.');
@@ -418,30 +427,32 @@ export class SendForm extends EventEmitter implements AccountForm {
   }
 
   private async publicSend(ethAddress: EthAddress) {
-    this.proceed(SendStatus.CREATE_PROOF);
+    if (this.status <= SendStatus.CREATE_PROOF) {
+      this.proceed(SendStatus.CREATE_PROOF);
 
-    const userData = this.sdk.getUserData(this.userId);
-    const signer = this.sdk.createSchnorrSigner(userData.privateKey);
-    const amount = toBaseUnits(this.values.amount.value, this.asset.decimals);
-    const fee = toBaseUnits(this.values.fee.value, this.asset.decimals);
-    const proofOutput = await this.sdk.createJoinSplitProof(
-      this.asset.id,
-      this.userId,
-      0n,
-      amount,
-      amount + fee,
-      0n,
-      0n,
-      signer,
-      undefined,
-      undefined,
-      ethAddress,
-    );
+      const userData = this.sdk.getUserData(this.userId);
+      const signer = this.sdk.createSchnorrSigner(userData.privateKey);
+      const amount = toBaseUnits(this.values.amount.value, this.asset.decimals);
+      const fee = toBaseUnits(this.values.fee.value, this.asset.decimals);
+      this.proofOutput = await this.sdk.createJoinSplitProof(
+        this.asset.id,
+        this.userId,
+        0n,
+        amount,
+        amount + fee,
+        0n,
+        0n,
+        signer,
+        undefined,
+        undefined,
+        ethAddress,
+      );
+    }
 
     this.proceed(SendStatus.SEND_PROOF);
 
     try {
-      await this.sdk.sendProof(proofOutput);
+      await this.sdk.sendProof(this.proofOutput!);
     } catch (e) {
       debug(e);
       return this.abort('Failed to send the proof.');
@@ -483,8 +494,8 @@ export class SendForm extends EventEmitter implements AccountForm {
     }
   };
 
-  private updateStatus(status: FormStatus) {
-    this.status = status;
+  private updateFormStatus(status: FormStatus) {
+    this.formStatus = status;
     this.emit(AccountFormEvent.UPDATED_FORM_STATUS, status);
   }
 

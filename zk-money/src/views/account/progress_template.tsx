@@ -39,10 +39,12 @@ const FooterMessage = styled(InputMessage)`
 `;
 
 const FeedbackRoot = styled.div`
+  position: relative;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  width: 100%;
 `;
 
 interface FeedbackIconProps {
@@ -79,6 +81,17 @@ const FeedbackTitle = styled(FeedbackMessage)`
 
 const FeedbackButtonRoot = styled.div`
   padding: ${spacings.xs} 0;
+`;
+
+const RetryButtonsRoot = styled(FeedbackButtonRoot)`
+  display: flex;
+  justify-content: center;
+  width: 100%;
+
+  ${EditButton} {
+    position: absolute;
+    left: 0;
+  }
 `;
 
 interface ProgressStep {
@@ -175,9 +188,10 @@ export const ProgressTemplate: React.FunctionComponent<ProgressTemplateProps> = 
       return (
         <FeedbackRoot>
           <FooterMessage theme={inputTheme} message={message} type={messageType} />
-          <FeedbackButtonRoot>
-            <TextLink text="(Edit Transaction)" size="s" onClick={onGoBack} />
-          </FeedbackButtonRoot>
+          <RetryButtonsRoot>
+            <EditButton text="(Edit Transaction)" size="xs" onClick={onGoBack} />
+            <TextLink text="(Retry)" size="s" onClick={onSubmit} />
+          </RetryButtonsRoot>
         </FeedbackRoot>
       );
     }
