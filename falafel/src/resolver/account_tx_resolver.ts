@@ -12,12 +12,13 @@ import { AccountDao } from '../entity/account';
 import { TxDao } from '../entity/tx';
 import { AccountProofData, ProofData } from 'barretenberg/client_proofs/proof_data';
 
-const txDaoToAccountDao = ({ proofData }: TxDao): AccountDao => {
-  const accountProof = new AccountProofData(new ProofData(proofData));
+const txDaoToAccountDao = (txDao: TxDao): AccountDao => {
+  const accountProof = new AccountProofData(new ProofData(txDao.proofData));
   return {
     accountPubKey: accountProof.publicKey,
     aliasHash: accountProof.accountAliasId.aliasHash.toBuffer(),
     nonce: accountProof.accountAliasId.nonce,
+    tx: txDao,
   };
 };
 
