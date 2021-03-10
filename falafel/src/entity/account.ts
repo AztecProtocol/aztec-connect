@@ -1,11 +1,16 @@
-import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
+import { Column, Entity, Index, JoinColumn, OneToOne, PrimaryColumn } from 'typeorm';
+import { TxDao } from './tx';
 
 @Entity({ name: 'account' })
-@Index(['aliasHash', 'nonce'])
-@Index(['accountPubKey', 'nonce'])
+@Index(['aliasHash', 'nonce'], { unique: true })
+@Index(['accountPubKey', 'nonce'], { unique: true })
 export class AccountDao {
   @PrimaryColumn()
   public aliasHash!: Buffer;
+
+  @OneToOne(() => TxDao, tx => tx.id, { onDelete: 'CASCADE' })
+  @JoinColumn()
+  public tx!: TxDao;
 
   @Column()
   public accountPubKey!: Buffer;

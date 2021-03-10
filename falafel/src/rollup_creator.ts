@@ -74,7 +74,7 @@ export class RollupCreator {
     const oldDataPath = await worldStateDb.getHashPath(0, dataStartIndex);
     const oldNullRoot = worldStateDb.getRoot(1);
 
-    // Insert each txs elements into the db (modified state will be thrown away).
+    // Insert each txs elements into the db.
     let nextDataIndex = dataStartIndex;
     const newNullRoots: Buffer[] = [];
     const oldNullPaths: HashPath[] = [];

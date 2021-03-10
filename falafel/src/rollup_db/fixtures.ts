@@ -8,10 +8,18 @@ import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
 import moment from 'moment';
+import { TxType } from 'barretenberg/blockchain';
 
 const now = moment();
 
-export const randomTx = (signature?: Buffer, inputOwner?: EthAddress, publicInput?: bigint) => {
+interface RandomTxOpts {
+  signature?: Buffer;
+  inputOwner?: EthAddress;
+  publicInput?: bigint;
+  txType?: TxType;
+}
+
+export const randomTx = ({ signature, inputOwner, publicInput, txType }: RandomTxOpts = {}) => {
   const proofData = new ProofData(
     Buffer.concat([
       Buffer.alloc(32), // proofId
@@ -36,7 +44,7 @@ export const randomTx = (signature?: Buffer, inputOwner?: EthAddress, publicInpu
     dataRootsIndex: 0,
     created: now.add(1, 's').toDate(),
     signature,
-    txType: 0,
+    txType: txType || TxType.DEPOSIT,
   });
 };
 

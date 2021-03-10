@@ -31,6 +31,7 @@ export class TypeOrmRollupDb implements RollupDb {
         account.aliasHash = proofData.accountAliasId.aliasHash.toBuffer();
         account.nonce = proofData.accountAliasId.nonce;
         account.accountPubKey = proofData.publicKey;
+        account.tx = txDao;
         await transactionalEntityManager.save(account);
       }
       await transactionalEntityManager.save(txDao);
@@ -206,7 +207,12 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async addRollup(rollup: RollupDao) {
-    await this.rollupRep.save(rollup);
+    // We need to erase any existing rollup first, to ensure we don't get a unique violation when inserting a
+    // different rollup proof which as a one to one mapping with the rollup.
+    await this.connection.transaction(async transactionalEntityManager => {
+      await transactionalEntityManager.delete(this.rollupRep.target, { id: rollup.id });
+      await transactionalEntityManager.save(rollup);
+    });
   }
 
   public async setCallData(id: number, callData: Buffer) {

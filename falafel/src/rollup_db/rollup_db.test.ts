@@ -7,6 +7,8 @@ import { randomRollup, randomRollupProof, randomTx } from './fixtures';
 import { RollupDb, TypeOrmRollupDb } from './';
 import { EthAddress } from 'barretenberg/address';
 import { TxHash } from 'barretenberg/tx_hash';
+import { TxType } from 'barretenberg/blockchain';
+import { AccountDao } from '../entity/account';
 
 describe('rollup_db', () => {
   let connection: Connection;
@@ -16,7 +18,7 @@ describe('rollup_db', () => {
     connection = await createConnection({
       type: 'sqlite',
       database: ':memory:',
-      entities: [TxDao, RollupProofDao, RollupDao],
+      entities: [TxDao, RollupProofDao, RollupDao, AccountDao],
       dropSchema: true,
       synchronize: true,
       logging: false,
@@ -29,11 +31,19 @@ describe('rollup_db', () => {
   });
 
   it('should add tx with no rollup', async () => {
-    const txDao = randomTx(randomBytes(32));
+    const txDao = randomTx({ signature: randomBytes(32) });
     await rollupDb.addTx(txDao);
 
     const result = await rollupDb.getTx(txDao.id);
     expect(result!).toStrictEqual(txDao);
+  });
+
+  it('should add account tx', async () => {
+    const txDao = randomTx({ txType: TxType.ACCOUNT_REGISTRATION });
+    await rollupDb.addTx(txDao);
+
+    const result = await rollupDb.getAccountTxCount();
+    expect(result!).toBe(1);
   });
 
   it('should get rollup proof by id', async () => {
@@ -198,6 +208,31 @@ describe('rollup_db', () => {
     expect(newRollup).toStrictEqual(rollup);
   });
 
+  it('should update existing rollup', async () => {
+    const tx0 = randomTx();
+    const tx1 = randomTx();
+
+    {
+      const rollupProof = randomRollupProof([tx0, tx1], 0);
+      const rollup = randomRollup(0, rollupProof);
+
+      await rollupDb.addRollup(rollup);
+
+      const newRollup = (await rollupDb.getRollup(0))!;
+      expect(newRollup).toStrictEqual(rollup);
+    }
+
+    {
+      const rollupProof = randomRollupProof([tx0, tx1], 0);
+      const rollup = randomRollup(0, rollupProof);
+
+      await rollupDb.addRollup(rollup);
+
+      const newRollup = (await rollupDb.getRollup(0))!;
+      expect(newRollup).toStrictEqual(rollup);
+    }
+  });
+
   it('should get settled txs', async () => {
     const tx0 = randomTx();
     const tx1 = randomTx();
@@ -239,9 +274,9 @@ describe('rollup_db', () => {
 
   it('should get unsettled js txs', async () => {
     const addr = EthAddress.randomAddress();
-    const tx0 = randomTx(undefined, addr, 10n);
-    const tx1 = randomTx(undefined, addr, 20n);
-    const tx2 = randomTx(undefined, addr, 40n);
+    const tx0 = randomTx({ inputOwner: addr, publicInput: 10n });
+    const tx1 = randomTx({ inputOwner: addr, publicInput: 20n });
+    const tx2 = randomTx({ inputOwner: addr, publicInput: 40n });
     await rollupDb.addTx(tx0);
     await rollupDb.addTx(tx1);
     await rollupDb.addTx(tx2);
