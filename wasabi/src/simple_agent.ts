@@ -97,8 +97,7 @@ export class SimpleAgent extends Agent {
 
   private async depositToContract(deposit: bigint) {
     console.log(`Agent ${this.id} depositing to contract...`);
-    const txHash = await this.sdk.depositFundsToContract(AssetId.ETH, this.address, deposit);
-    await this.masterWallet.provider!.waitForTransaction(txHash.toString());
+    await this.sdk.depositFundsToContract(AssetId.ETH, this.address, deposit);
   }
 
   private deposit = async () => {
