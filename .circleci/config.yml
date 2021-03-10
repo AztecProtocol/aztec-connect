@@ -288,8 +288,8 @@ jobs:
           working_directory: blockchain
           command: |
             deploy_ecr blockchain:latest
-            if changed '.*\.sol$'; then
-              `docker run --env INFURA_API_KEY=$TF_VAR_INFURA_API_KEY --env PRIVATE_KEY=$TF_VAR_PRIVATE_KEY --env NETWORK=goerli 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:latest`
+            if changed '.*\.sol$' || changed .redeploy; then
+              `docker run --env ESCAPE_BLOCK_LOWER=60 --env ESCAPE_BLOCK_UPPER=120 --env INFURA_API_KEY=$TF_VAR_INFURA_API_KEY --env PRIVATE_KEY=$TF_VAR_PRIVATE_KEY --env NETWORK=goerli 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:latest`
               export TF_VAR_ROLLUP_CONTRACT_ADDRESS=$ROLLUP_CONTRACT_ADDRESS
               deploy_terraform
             fi
