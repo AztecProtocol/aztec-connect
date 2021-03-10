@@ -116,10 +116,12 @@ export class TxReceiver {
     }
 
     if (publicInput > 0n) {
-      const proofApproval = await this.blockchain.getUserProofApprovalStatus(inputOwner, depositSigningData);
-      if (!depositSignature && !proofApproval) {
-        throw new Error('Deposit proof not approved');
-      } else if (!(await this.blockchain.validateSignature(inputOwner, depositSignature!, depositSigningData))) {
+      if (!depositSignature) {
+        const proofApproval = await this.blockchain.getUserProofApprovalStatus(inputOwner, depositSigningData);
+        if (!proofApproval) {
+          throw new Error('Deposit proof not approved');
+        }
+      } else if (!(await this.blockchain.validateSignature(inputOwner, depositSignature, depositSigningData))) {
         throw new Error('Invalid deposit approval signature.');
       }
 
