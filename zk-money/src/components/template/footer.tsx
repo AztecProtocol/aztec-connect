@@ -1,5 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
+import { AccountState } from '../../app';
 import { colours, fontSizes, lineHeights, spacings, breakpoints } from '../../styles';
 import { PaddedBlock } from '../padded_block';
 import { Text } from '../text';
@@ -22,6 +23,10 @@ const helpItems = [
     href: 'https://discord.gg/Ge9scQ',
   },
   {
+    name: 'FAQ',
+    href: 'https://aztec-protocol.gitbook.io/zk-money/',
+  },
+  {
     name: 'Looking for V1?',
     href: 'https://old.zk.money/',
   },
@@ -37,7 +42,15 @@ const aboutItems = [
 const socialItems = [
   {
     name: 'Twitter',
-    href: 'https://twitter.com/aztecprotocol',
+    href: 'https://twitter.com/aztecnetwork',
+  },
+];
+
+const accountSocialItems = (alias: string) => [
+  ...socialItems,
+  {
+    name: 'Win 1 zkETH',
+    to: `?alias=${alias}`,
   },
 ];
 
@@ -103,13 +116,17 @@ const Foot = styled.div`
   }
 `;
 
-export const Footer: React.FunctionComponent = () => (
+interface FooterProps {
+  account?: AccountState;
+}
+
+export const Footer: React.FunctionComponent<FooterProps> = ({ account }) => (
   <FooterRoot>
     <ContentWrapper>
       <FooterContent>
         <FooterMenu title="Need Help?" menuItems={helpItems} />
         <FooterMenu title="About" menuItems={aboutItems} />
-        <FooterMenu title="Social" menuItems={socialItems} />
+        <FooterMenu title="Social" menuItems={account?.alias ? accountSocialItems(account.alias) : socialItems} />
       </FooterContent>
       <Foot>
         <Text text="Made in London" size="xs" />

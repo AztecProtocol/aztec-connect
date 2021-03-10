@@ -494,18 +494,16 @@ export class ShieldForm extends EventEmitter implements AccountForm {
 
     if (toBeDeposited) {
       proceed(ShieldStatus.DEPOSIT);
-      await new Promise(resolve => setTimeout(resolve, 1000));
       prompt(
         `Please make a deposit of ${fromBaseUnits(toBeDeposited, asset.decimals)} ${asset.symbol} from your wallet.`,
       );
 
       try {
-        await this.sdk.setProvider(this.provider!.ethereumProvider);
-        await this.sdk.depositFundsToContract(asset.id, ethAddress, toBeDeposited);
-        await this.sdk.setProvider(this.coreProvider.ethereumProvider);
+        await this.withUserProvider(
+          async () => await this.sdk.depositFundsToContract(asset.id, ethAddress, toBeDeposited),
+        );
       } catch (e) {
         debug(e);
-        await this.sdk.setProvider(this.coreProvider.ethereumProvider);
         return abort('Failed to deposit from your wallet.');
       }
     }
@@ -543,18 +541,27 @@ export class ShieldForm extends EventEmitter implements AccountForm {
         return abort('Wallet disconnected.');
       }
 
-      prompt('Please approve the proof data in your wallet.');
-      try {
-        const isContract = await this.sdk.isContract(ethAddress);
-        if (isContract) {
-          await this.sdk.approveProof(ethAddress, this.proofOutput!.signingData!);
-        } else {
+      const isContract = await this.sdk.isContract(ethAddress);
+      if (isContract) {
+        prompt('Please approve the proof data in your wallet.');
+        try {
+          await this.withUserProvider(
+            async () => await this.sdk.approveProof(ethAddress, this.proofOutput!.signingData!),
+          );
+        } catch (e) {
+          debug(e);
+          return abort('Failed to approve the proof.');
+        }
+      } else {
+        prompt('Please sign the proof data in your wallet.');
+
+        try {
           const signer = new Web3Signer(this.provider.ethereumProvider);
           await this.proofOutput!.ethSign(signer as any, ethAddress);
+        } catch (e) {
+          debug(e);
+          return abort('Failed to sign the proof.');
         }
-      } catch (e) {
-        debug(e);
-        return abort('Failed to sign the proof.');
       }
     }
 
@@ -657,5 +664,16 @@ export class ShieldForm extends EventEmitter implements AccountForm {
   private updateFormValues(changes: Partial<ShieldFormValues>) {
     this.values = mergeValues(this.values, changes);
     this.emit(AccountFormEvent.UPDATED_FORM_VALUES, this.values);
+  }
+
+  private async withUserProvider(action: () => any) {
+    try {
+      await this.sdk.setProvider(this.provider!.ethereumProvider);
+      await action();
+      await this.sdk.setProvider(this.coreProvider.ethereumProvider);
+    } catch (e) {
+      await this.sdk.setProvider(this.coreProvider.ethereumProvider);
+      throw e;
+    }
   }
 }

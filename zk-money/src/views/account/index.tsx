@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useHistory, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 import {
   AccountAction,
@@ -115,6 +116,20 @@ export const Account: React.FunctionComponent<AccountProps> = ({
   onSelectAction,
   onClearAction,
 }) => {
+  const [showReferral, setShowReferral] = useState(false);
+
+  const location = useLocation();
+  const history = useHistory();
+
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+
+    const showReferralByQuery = queryParams.get('alias') === accountState?.alias;
+    if (showReferralByQuery !== showReferral) {
+      setShowReferral(showReferralByQuery);
+    }
+  }, [location, accountState, showReferral]);
+
   const isInitializing = loginState.step !== LoginStep.DONE;
 
   const handleValidateMergeForm = (toMerge: bigint[]) => {
@@ -125,6 +140,16 @@ export const Account: React.FunctionComponent<AccountProps> = ({
   const handleSubmitMergeForm = (toMerge: bigint[]) => {
     onSelectAction(AccountAction.MERGE);
     handleValidateMergeForm(toMerge);
+  };
+
+  const handleCloseReferralModal = () => {
+    const queryParams = new URLSearchParams(location.search);
+    if (queryParams.has('alias')) {
+      queryParams.delete('alias');
+      history.replace({
+        search: queryParams.toString(),
+      });
+    }
   };
 
   return (
@@ -153,7 +178,9 @@ export const Account: React.FunctionComponent<AccountProps> = ({
           <UnsupportedAsset asset={asset} />
         </PaddedBlock>
       )}
-      {!isInitializing && !activeAction && <Referral alias={accountState.alias} />}
+      {(showReferral || (!isInitializing && !activeAction)) && (
+        <Referral alias={accountState.alias} overrideVisible={showReferral} onClose={handleCloseReferralModal} />
+      )}
       {activeAction && (
         <Modal
           title={

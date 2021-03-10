@@ -16,8 +16,8 @@ const Coupon = styled(GradientBlock)`
   justify-content: space-between;
   align-items: flex-start;
   width: auto;
-  min-width: 400px;
-  height: 240px;
+  min-width: 320px;
+  height: 200px;
 
   @media (max-width: ${breakpoints.s}) {
     width: 100%;
@@ -58,16 +58,18 @@ const referralStatusCookie = '_zm_referral';
 
 const expiration = new Date('2021-04-15 23:59:59').getTime();
 
-const visibilityWait = 45 * 1000;
+const visibilityWait = 15 * 1000;
 
 const reminderInterval = 7; // days
 
 interface ReferralProps {
   alias: string;
+  onClose(): void;
+  overrideVisible: boolean;
 }
 
-export const Referral: React.FunctionComponent<ReferralProps> = ({ alias }) => {
-  const [visible, setVisible] = useState(false);
+export const Referral: React.FunctionComponent<ReferralProps> = ({ alias, overrideVisible, onClose }) => {
+  const [visible, setVisible] = useState(overrideVisible);
 
   useEffect(() => {
     const status = Cookie.get(referralStatusCookie);
@@ -84,7 +86,7 @@ export const Referral: React.FunctionComponent<ReferralProps> = ({ alias }) => {
     };
   }, [visible]);
 
-  if (!visible) {
+  if (!visible && !overrideVisible) {
     return <></>;
   }
 
@@ -98,18 +100,19 @@ export const Referral: React.FunctionComponent<ReferralProps> = ({ alias }) => {
   const handleClose = () => {
     Cookie.set(referralStatusCookie, 'disabled', { expires: reminderInterval });
     setVisible(false);
+    onClose();
   };
 
   return (
     <Modal title="Tell your friends!" onClose={handleClose}>
-      <PaddedBlock size="l">
-        <Text size="m">
+      <PaddedBlock size="s">
+        <Text size="s">
           {'Great news '}
           <Text text={`@${alias}`} weight="bold" inline />
           {', you bagged a great username.'}
         </Text>
       </PaddedBlock>
-      <CouponRoot size="l">
+      <CouponRoot size="s">
         <Coupon>
           <Text text="zk.money" size="l" />
           <CouponFoot>
@@ -124,27 +127,25 @@ export const Referral: React.FunctionComponent<ReferralProps> = ({ alias }) => {
           </CouponFoot>
         </Coupon>
       </CouponRoot>
-      <PaddedBlock size="s">
-        <PaddedBlock size="s">
-          <Text size="m">
+      <PaddedBlock size="xs">
+        <PaddedBlock size="xs">
+          <Text size="s">
             {
-              'The more people who use zk.money the better the anonymity set is for everyone. To help grow the initial users, we are giving '
+              'The more people who use zk.money the better the privacy is for everyone. To kick things off, we are giving away '
             }
-            <Text text="1 zkETH away until April 15th." weight="bold" inline />
+            <Text text="1 zkETH per week until the 15th of April" weight="bold" inline />
+            {'. For your chance to win, share zk.money on Twitter below.'}
           </Text>
         </PaddedBlock>
-        <PaddedBlock size="s">
-          <Text
-            size="m"
-            text="For a chance to win, share zk.money on twitter using the link below. We will pick winners once a week and announce the winner on our twitter."
-          />
+        <PaddedBlock size="xs">
+          <Text size="s" text="We will pick winners once a week and announce the winner via Twitter." />
         </PaddedBlock>
-        <PaddedBlock size="s">
-          <Text size="m" text="Don’t worry your balances and transactions are 100% private!" />
+        <PaddedBlock size="xs">
+          <Text size="s" text="Don’t worry, your balances and transactions are 100% private!" />
         </PaddedBlock>
       </PaddedBlock>
-      <ButtonRoot size="l">
-        <Button theme="gradient" text="Share on twitter" size="l" onClick={shareOnTwitter} />
+      <ButtonRoot size="m">
+        <Button theme="gradient" text="Share on twitter" onClick={shareOnTwitter} />
       </ButtonRoot>
     </Modal>
   );

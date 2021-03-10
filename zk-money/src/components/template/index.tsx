@@ -98,7 +98,7 @@ export const Template: React.FunctionComponent<TemplateProps> = ({
         />
         {children}
       </ContentRoot>
-      {theme === Theme.WHITE && <Footer />}
+      {theme === Theme.WHITE && <Footer account={account} />}
       {!!systemMessage?.message && <SystemMessagePopup message={systemMessage.message} type={systemMessage.type} />}
       <CookiesFormRoot>
         <ContentWrapper>

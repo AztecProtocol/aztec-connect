@@ -135,7 +135,7 @@ export const Home: React.FunctionComponent<HomeProps> = ({ onConnect, unsupporte
                 text="We recommend using the latest browser on desktop or Android devices."
                 size="s"
               />
-              <Button theme="white" size="m" text="Fine" outlined onClick={() => setShowUnsupported(false)} />
+              <Button theme="white" size="m" text="Close" outlined onClick={() => setShowUnsupported(false)} />
             </UnsupportedPopup>
           </UnsupportedContentWrapper>
         </UnsupportedRoot>
