@@ -10,7 +10,6 @@ import {
   MaskedInput,
   PaddedBlock,
 } from '../../components';
-import { spacings } from '../../styles';
 
 const Root = styled.div`
   display: flex;
@@ -28,10 +27,6 @@ const InputPaddedBlock = styled(PaddedBlock)`
 const AliasInputWrapper = styled(InputWrapper)`
   width: 100%;
   max-width: 420px;
-`;
-
-const RememberMeRoot = styled.div`
-  padding-top: ${spacings.m};
 `;
 
 interface AliasFormProps {

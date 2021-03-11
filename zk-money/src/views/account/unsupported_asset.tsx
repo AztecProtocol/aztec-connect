@@ -23,11 +23,6 @@ const PaddedText = styled.div`
   width: 75%;
 `;
 
-const Social = styled.div`
-  padding: 0 ${spacings.m};
-  width: 50%;
-`;
-
 interface IconProps {
   size: number;
 }

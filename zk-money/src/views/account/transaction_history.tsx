@@ -73,7 +73,7 @@ export const TransactionHistory: React.FunctionComponent<TransactionHistoryProps
             />
           ))}
       </TxsRoot>
-      {numJs > txsPerPage && (
+      {numJs >= txsPerPage && (
         <PaginationRoot>
           <Pagination totalItems={numJs + numAc} page={page} itemsPerPage={txsPerPage} onChangePage={setPage} />
         </PaginationRoot>

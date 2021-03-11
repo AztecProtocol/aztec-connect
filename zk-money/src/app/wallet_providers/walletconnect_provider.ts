@@ -106,14 +106,12 @@ export class WalletConnectEthereumProvider implements EthereumProvider {
     let pollRequest = -1;
     let pollStartAt: number;
 
-    const confirmFromData = new Promise(resolve => {
+    const confirmFromData = new Promise<string>(resolve => {
       pollStartAt = Date.now();
       pollRequest = window.setInterval(async () => {
         const confirmed = await poll();
         if (confirmed) {
-          const provider = new Web3Provider(this.ethereumProvider);
-          const block = await provider.getBlock('latest');
-          resolve(block.transactions[0]);
+          resolve('');
         } else if (Date.now() - pollStartAt >= this.pollingTimeout) {
           throw new Error('Timeout awaiting tx settlement.');
         }
@@ -122,7 +120,12 @@ export class WalletConnectEthereumProvider implements EthereumProvider {
 
     try {
       const tx = await Promise.race([this.ethereumProvider.request(args), confirmFromData]);
-      return tx;
+      const provider = new Web3Provider(this.ethereumProvider);
+      if (tx && (await provider.getTransactionReceipt(tx))) {
+        return tx;
+      }
+      const block = await provider.getBlock('latest');
+      return block.transactions[0];
     } finally {
       clearInterval(pollRequest);
     }
