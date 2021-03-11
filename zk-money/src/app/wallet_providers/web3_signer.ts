@@ -1,27 +1,25 @@
 import { EthAddress, EthereumProvider } from '@aztec/sdk';
 import { Web3Provider } from '@ethersproject/providers';
-import WalletConnectProvider from '@walletconnect/web3-provider';
-import { utils } from 'ethers';
 
 export class Web3Signer {
   private web3provider: Web3Provider;
 
-  constructor(private provider: EthereumProvider) {
+  constructor(provider: EthereumProvider) {
     this.web3provider = new Web3Provider(provider);
   }
 
   async signMessage(message: Buffer, address: EthAddress) {
     const signer = this.web3provider.getSigner(address.toString());
-    let sig: string;
-    if (this.provider instanceof WalletConnectProvider) {
-      const toSign = [
-        ...utils.toUtf8Bytes(`\x19Ethereum Signed Message:\n${message.length}`),
-        ...new Uint8Array(message),
-      ];
-      sig = await this.provider.connector.signMessage([address.toString().toLowerCase(), utils.keccak256(toSign)]);
-    } else {
-      sig = await signer.signMessage(message);
+    const sig = await signer.signMessage(message);
+    const signature = Buffer.from(sig.slice(2), 'hex');
+
+    // Ganache is not signature standard compliant. Returns 00 or 01 as v.
+    // Need to adjust to make v 27 or 28.
+    const v = signature[signature.length - 1];
+    if (v <= 1) {
+      return Buffer.concat([signature.slice(0, -1), Buffer.from([v + 27])]);
     }
-    return Buffer.from(sig.slice(2), 'hex');
+
+    return signature;
   }
 }

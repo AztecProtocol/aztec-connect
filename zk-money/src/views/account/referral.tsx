@@ -145,7 +145,7 @@ export const Referral: React.FunctionComponent<ReferralProps> = ({ alias, overri
         </PaddedBlock>
       </PaddedBlock>
       <ButtonRoot size="m">
-        <Button theme="gradient" text="Share on twitter" onClick={shareOnTwitter} />
+        <Button theme="gradient" text="Share on Twitter" onClick={shareOnTwitter} />
       </ButtonRoot>
     </Modal>
   );

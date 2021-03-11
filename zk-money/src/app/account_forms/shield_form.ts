@@ -1,4 +1,4 @@
-import { AccountId, TxType, WalletSdk } from '@aztec/sdk';
+import { AccountId, AssetId, EthAddress, PermitArgs, TxHash, TxType, WalletSdk } from '@aztec/sdk';
 import { JoinSplitProofOutput } from '@aztec/sdk/proofs/proof_output';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
@@ -499,9 +499,11 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       );
 
       try {
-        await this.withUserProvider(
-          async () => await this.sdk.depositFundsToContract(asset.id, ethAddress, toBeDeposited),
-        );
+        await this.withUserProvider(async () => {
+          const txHash = await this.depositPendingFunds(asset.id, ethAddress, toBeDeposited);
+          prompt('Awaiting transaction confirmation...');
+          await this.getTransactionReceipt(txHash);
+        });
       } catch (e) {
         debug(e);
         return abort('Failed to deposit from your wallet.');
@@ -545,9 +547,11 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       if (isContract) {
         prompt('Please approve the proof data in your wallet.');
         try {
-          await this.withUserProvider(
-            async () => await this.sdk.approveProof(ethAddress, this.proofOutput!.signingData!),
-          );
+          await this.withUserProvider(async () => {
+            const txHash = await this.approveProof(ethAddress, this.proofOutput!.signingData!);
+            prompt('Awaiting transaction confirmation...');
+            await this.getTransactionReceipt(txHash);
+          });
         } catch (e) {
           debug(e);
           return abort('Failed to approve the proof.');
@@ -664,6 +668,23 @@ export class ShieldForm extends EventEmitter implements AccountForm {
   private updateFormValues(changes: Partial<ShieldFormValues>) {
     this.values = mergeValues(this.values, changes);
     this.emit(AccountFormEvent.UPDATED_FORM_VALUES, this.values);
+  }
+
+  private async depositPendingFunds(
+    assetId: AssetId,
+    from: EthAddress,
+    value: bigint,
+    permitArgs?: PermitArgs,
+  ): Promise<TxHash> {
+    return (this.sdk as any).blockchain.depositPendingFunds(assetId, value, from, permitArgs);
+  }
+
+  private async approveProof(account: EthAddress, signingData: Buffer) {
+    return (this.sdk as any).blockchain.approveProof(account, signingData);
+  }
+
+  private getTransactionReceipt(txHash: TxHash) {
+    return (this.sdk as any).blockchain.getTransactionReceipt(txHash);
   }
 
   private async withUserProvider(action: () => any) {

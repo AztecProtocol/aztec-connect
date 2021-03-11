@@ -23,7 +23,7 @@ export const createWalletProvider = (wallet: Wallet, { infuraId, ethereumHost, n
     case Wallet.METAMASK:
       return createMetamaskProvider();
     case Wallet.CONNECT:
-      return createWalletconnectProvider(infuraId, ethereumHost);
+      return createWalletconnectProvider(infuraId);
     default:
   }
   if (infuraId && network && network !== 'ganache') {

@@ -177,7 +177,7 @@ export const ValueSummary: React.FunctionComponent<ValueSummaryProps> = ({
         <Title size="m" nowrap>
           {title}
           {!!price && !!totalBalance && (
-            <SubTitle size="s" text={`~$${convertToPriceString(totalBalance, asset.decimals, price)}`} inline />
+            <SubTitle size="s" text={`$${convertToPriceString(totalBalance, asset.decimals, price)}`} inline />
           )}
         </Title>
         <ValueRoot len={getValueLen(valueStr)}>

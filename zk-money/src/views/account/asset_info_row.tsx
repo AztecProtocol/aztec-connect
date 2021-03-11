@@ -35,7 +35,7 @@ interface AssetInfoRowProps {
 
 export const AssetInfoRow: React.FunctionComponent<AssetInfoRowProps> = ({ asset, value, price }) => (
   <FlexRow>
-    {!!price && <PriceValue text={`~$${convertToPriceString(value, asset.decimals, price)}`} size="m" color="grey" />}
+    {!!price && <PriceValue text={`$${convertToPriceString(value, asset.decimals, price)}`} size="m" color="grey" />}
     <AssetIcon src={asset.icon} />
     {fromBaseUnits(value, asset.decimals)}
   </FlexRow>
