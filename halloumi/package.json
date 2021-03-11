@@ -8,6 +8,7 @@
     "build:dev": "tsc --watch",
     "start": "node ./dest",
     "start:dev": "tsc-watch -p tsconfig.prod.json --onSuccess 'yarn start'",
+    "start:e2e": "yarn clean && ./bootstrap.sh && yarn start:dev",
     "test": "jest",
     "clean": "rm -rf ./data"
   },

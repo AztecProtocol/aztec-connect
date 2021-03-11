@@ -1,4 +1,4 @@
-import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
+import { EthAddress } from 'barretenberg/address';
 import { AssetId } from 'barretenberg/asset';
 import { computeSigningData, JoinSplitTx } from 'barretenberg/client_proofs/join_split_proof';
 import { createEphemeralPrivKey, encryptNote, TreeNote } from 'barretenberg/client_proofs/note';
@@ -56,10 +56,7 @@ export class JoinSplitTxFactory {
     const inputNotePaths = await Promise.all(inputNoteIndices.map(async idx => this.worldState.getHashPath(idx)));
 
     const changeValue = max(BigInt(0), totalNoteInputValue - privateInput);
-    const newNoteOwner = receiver || {
-      publicKey: GrumpkinAddress.randomAddress(),
-      nonce: 0,
-    };
+    const newNoteOwner = receiver || id;
 
     const outputNote1EphKey = createEphemeralPrivKey();
     const outputNote2EphKey = createEphemeralPrivKey();

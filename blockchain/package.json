@@ -15,7 +15,7 @@
     "test:src": "jest",
     "test:ganache": "yarn hardhat --network ganache test",
     "deploy": "node ./dest/deploy/index.js",
-    "start:ganache": "ganache-cli -d -h 0.0.0.0 --chainId=1337 -l 12000000 -e 10000 -m 'test test test test test test test test test test test junk'",
+    "start:ganache": "yarn compile && ganache-cli -d -h 0.0.0.0 --chainId=1337 -l 12000000 -e 10000 -m 'test test test test test test test test test test test junk'",
     "start:hardhat": "hardhat node"
   },
   "bin": {

@@ -1,7 +1,7 @@
 import { Max } from 'class-validator';
 import { ArgsType, Field, InputType, Int, ObjectType } from 'type-graphql';
 import { MAX_COUNT, Sort } from './query_builder';
-import { HexString, ISODateTime } from './scalar_type';
+import { HexString } from './scalar_type';
 
 @ObjectType()
 export class AccountTxType {

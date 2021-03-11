@@ -20,6 +20,9 @@ export class GrumpkinAddress {
     return new GrumpkinAddress(Buffer.from(address.replace(/^0x/i, ''), 'hex'));
   }
 
+  /**
+   * NOT a valid address! Do not use in proofs.
+   */
   public static randomAddress() {
     return new GrumpkinAddress(randomBytes(64));
   }

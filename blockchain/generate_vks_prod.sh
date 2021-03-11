@@ -1,12 +1,9 @@
 #!/bin/bash
 set -e
-cd ../barretenberg/build
+pushd ../barretenberg/build
 make -j$(nproc) keygen
-./src/aztec/rollup/keygen/keygen 28 32 ../../blockchain/contracts/verifier/keys
+./src/aztec/rollup/keygen/keygen 28 4 ../../blockchain/contracts/verifier/keys
+popd
 
-./create_rollup_proof.sh 1 28 1
-./create_rollup_proof.sh 1 28 2
-./create_rollup_proof.sh 1 28 4
-./create_rollup_proof.sh 1 28 8
-./create_rollup_proof.sh 1 28 16
-./create_rollup_proof.sh 1 28 32
+# cd ./test/verifier/fixtures
+# ./create_prod_proofs.sh

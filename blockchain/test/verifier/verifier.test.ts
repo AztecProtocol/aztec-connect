@@ -51,16 +51,17 @@ describe('Verifier', function () {
     await validate(28, 4);
   });
 
-  it('should validate a 256 rollup proof (1 tx)', async () => {
-    await validate(28, 8);
-  });
+  // it('should validate a 256 rollup proof (1 tx)', async () => {
+  //   await validate(28, 8);
+  // });
 
-  it('should validate a 512 rollup proof (1 tx)', async () => {
-    await validate(28, 16);
-  });
+  // TODO ADD BACK IN ONCE WE RESOLVE MEMORY ISSUES
+  //   it('should validate a 512 rollup proof (1 tx)', async () => {
+  //     await validate(28, 16);
+  //   });
 
-// TODO ADD BACK IN ONCE WE RESOLVE MEMORY ISSUES
-//   it('should validate a 1024 rollup proof (896 txs)', async () => {
-//     await validate(28, 32);
-//   });
+  // TODO ADD BACK IN ONCE WE RESOLVE MEMORY ISSUES
+  //   it('should validate a 1024 rollup proof (896 txs)', async () => {
+  //     await validate(28, 32);
+  //   });
 });

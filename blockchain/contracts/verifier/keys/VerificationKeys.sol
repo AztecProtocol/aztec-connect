@@ -13,9 +13,9 @@ import {Rollup1x4Vk} from '../keys/Rollup1x4Vk.sol';
 import {Rollup28x1Vk} from '../keys/Rollup28x1Vk.sol';
 import {Rollup28x2Vk} from '../keys/Rollup28x2Vk.sol';
 import {Rollup28x4Vk} from '../keys/Rollup28x4Vk.sol';
-import {Rollup28x8Vk} from '../keys/Rollup28x8Vk.sol';
-import {Rollup28x16Vk} from '../keys/Rollup28x16Vk.sol';
-import {Rollup28x32Vk} from '../keys/Rollup28x32Vk.sol';
+// import {Rollup28x8Vk} from '../keys/Rollup28x8Vk.sol';
+// import {Rollup28x16Vk} from '../keys/Rollup28x16Vk.sol';
+// import {Rollup28x32Vk} from '../keys/Rollup28x32Vk.sol';
 
 import {EscapeHatchVk} from '../keys/EscapeHatchVk.sol';
 
@@ -46,12 +46,12 @@ library VerificationKeys {
             vk = Rollup28x2Vk.get_verification_key();
         } else if (_keyId == 128) {
             vk = Rollup28x4Vk.get_verification_key();
-        } else if (_keyId == 256) {
-            vk = Rollup28x8Vk.get_verification_key();
-        } else if (_keyId == 512) {
-            vk = Rollup28x16Vk.get_verification_key();
-        } else if (_keyId == 1024) {
-            vk = Rollup28x32Vk.get_verification_key();
+            // } else if (_keyId == 256) {
+            //     vk = Rollup28x8Vk.get_verification_key();
+            // } else if (_keyId == 512) {
+            //     vk = Rollup28x16Vk.get_verification_key();
+            // } else if (_keyId == 1024) {
+            //     vk = Rollup28x32Vk.get_verification_key();
         } else {
             require(false, 'UNKNOWN_KEY_ID');
         }
