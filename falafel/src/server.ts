@@ -26,6 +26,7 @@ export interface ServerConfig {
   readonly gasLimit?: number;
   readonly baseTxGas: number;
   readonly feeGasPrice: bigint;
+  readonly feeGasPriceMultiplier: number;
   readonly reimbursementFeeLimit: bigint;
   readonly maxUnsettledTxs: number;
 }
@@ -54,6 +55,7 @@ export class Server {
       reimbursementFeeLimit,
       baseTxGas,
       feeGasPrice,
+      feeGasPriceMultiplier,
     } = config;
 
     this.txFeeResolver = new TxFeeResolver(
@@ -75,6 +77,7 @@ export class Server {
       publishInterval,
       reimbursementFeeLimit,
       feeGasPrice,
+      feeGasPriceMultiplier,
       numInnerRollupTxs,
       numOuterRollupProofs,
       this.txFeeResolver,
@@ -135,14 +138,9 @@ export class Server {
     return {
       blockchainStatus: status,
       txFees: status.assets.map((_, i) => this.txFeeResolver.getFeeQuotes(i)),
-      nextPublishTime: await this.getNextPublishTime(),
+      nextPublishTime: await this.worldState.getNextPublishTime(),
       pendingTxCount: await this.rollupDb.getUnsettledTxCount(),
     };
-  }
-
-  private async getNextPublishTime() {
-    const lastRollup = await this.rollupDb.getLastSettledRollup();
-    return lastRollup ? moment(lastRollup.mined).add(this.config.publishInterval).toDate() : new Date();
   }
 
   public async getUnsettledNullifiers() {

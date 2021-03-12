@@ -32,6 +32,7 @@ async function main() {
       gasLimit,
       baseTxGas,
       feeGasPrice,
+      feeGasPriceMultiplier,
       reimbursementFeeLimit,
       maxUnsettledTxs,
     },
@@ -49,6 +50,7 @@ async function main() {
     gasLimit,
     baseTxGas,
     feeGasPrice,
+    feeGasPriceMultiplier,
     reimbursementFeeLimit,
     maxUnsettledTxs,
   };

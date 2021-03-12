@@ -24,6 +24,7 @@ export class RollupPublisher {
     private publishInterval: Duration,
     private feeLimit: bigint,
     private feeGasPrice: bigint,
+    private feeGasPriceMultiplier: number,
     provider: EthereumProvider,
     private metrics: Metrics,
   ) {
@@ -108,6 +109,10 @@ export class RollupPublisher {
 
   public async getNextPublishTime() {
     const lastRollup = await this.rollupDb.getLastSettledRollup();
+    const now = moment();
+    if (lastRollup && moment(lastRollup.mined).add(this.publishInterval).isBefore(now)) {
+      return now.add(this.publishInterval).toDate();
+    }
     return lastRollup ? moment(lastRollup.mined).add(this.publishInterval).toDate() : new Date();
   }
 
@@ -143,7 +148,7 @@ export class RollupPublisher {
   private async sendRollupProof(txData: Buffer) {
     while (!this.interrupted) {
       try {
-        const reportedPrice = await this.blockchain.getGasPrice();
+        const reportedPrice = (await this.blockchain.getGasPrice()) * BigInt(this.feeGasPriceMultiplier);
         const gasPrice = reportedPrice < this.feeGasPrice ? reportedPrice : this.feeGasPrice;
         return await this.blockchain.sendTx(txData, { gasPrice });
       } catch (err) {

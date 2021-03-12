@@ -30,7 +30,7 @@ export class PipelineCoordinator {
    * Starts monitoring for txs, and once conditions are met, creates a rollup.
    * Stops monitoring once a rollup has been successfully published or `stop` called.
    */
-  public start(nextRollupTime: Date) {
+  public start() {
     this.running = true;
     this.flush = false;
     this.stopPromise = new Promise(resolve => (this.cancel = resolve));
@@ -41,6 +41,7 @@ export class PipelineCoordinator {
       await this.rollupDb.deleteOrphanedRollupProofs();
 
       while (this.running) {
+        const nextRollupTime = await this.rollupPublisher.getNextPublishTime();
         const remainingTxSlots = this.numInnerRollupTxs * (this.numOuterRollupProofs - this.innerProofs.length);
         const pendingTxs = await this.rollupDb.getPendingTxs(remainingTxSlots);
         const count = pendingTxs.length;

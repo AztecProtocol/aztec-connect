@@ -25,6 +25,7 @@ export class RollupPipeline {
     publishInterval: Duration,
     feeLimit: bigint,
     feeGasPrice: bigint,
+    feeGasPriceMultiplier: number,
     numInnerRollupTxs: number,
     numOuterRollupProofs: number,
     feeResolver: TxFeeResolver,
@@ -42,6 +43,7 @@ export class RollupPipeline {
       publishInterval,
       feeLimit,
       feeGasPrice,
+      feeGasPriceMultiplier,
       provider,
       metrics,
     );
@@ -75,9 +77,12 @@ export class RollupPipeline {
     );
   }
 
+  public async getNextPublishTime() {
+    return this.rollupPublisher.getNextPublishTime();
+  }
+
   public async start() {
-    const nextPublishTime = await this.rollupPublisher.getNextPublishTime();
-    return this.pipelineCoordinator.start(nextPublishTime);
+    return this.pipelineCoordinator.start();
   }
 
   public async stop() {
@@ -100,6 +105,7 @@ export class RollupPipelineFactory {
     private publishInterval: Duration,
     private feeLimit: bigint,
     private feeGasPrice: bigint,
+    private feeGasPriceMultiplier: number,
     private numInnerRollupTxs: number,
     private numOuterRollupProofs: number,
     private txFeeResolver: TxFeeResolver,
@@ -121,6 +127,7 @@ export class RollupPipelineFactory {
       this.publishInterval,
       this.feeLimit,
       this.feeGasPrice,
+      this.feeGasPriceMultiplier,
       this.numInnerRollupTxs,
       this.numOuterRollupProofs,
       this.txFeeResolver,

@@ -52,6 +52,10 @@ export class WorldState {
     this.blockQueue.process(block => this.handleBlock(block));
   }
 
+  public async getNextPublishTime() {
+    return this.pipeline.getNextPublishTime();
+  }
+
   public async stop() {
     this.blockQueue.cancel();
     this.blockchain.stop();

@@ -27,6 +27,7 @@ interface ConfVars {
   serverAuthToken: string;
   baseTxGas: number;
   feeGasPrice: bigint;
+  feeGasPriceMultiplier: number;
   reimbursementFeeLimit: bigint;
   maxUnsettledTxs: number;
   typeOrmLogging: boolean;
@@ -53,6 +54,7 @@ function getConfVars(): ConfVars {
     BASE_TX_GAS,
     FEE_GAS_PRICE,
     REIMBURSEMENT_FEE_LIMIT,
+    FEE_GAS_PRICE_MULTIPLIER,
     MAX_UNSETTLED_TXS,
     TYPEORM_LOGGING,
   } = process.env;
@@ -79,6 +81,7 @@ function getConfVars(): ConfVars {
     serverAuthToken: SERVER_AUTH_TOKEN || '!changeme#',
     baseTxGas: +(BASE_TX_GAS || 0),
     feeGasPrice: BigInt(FEE_GAS_PRICE || 0),
+    feeGasPriceMultiplier: +(FEE_GAS_PRICE_MULTIPLIER || 1),
     reimbursementFeeLimit: REIMBURSEMENT_FEE_LIMIT ? BigInt(REIMBURSEMENT_FEE_LIMIT) : BigInt(10) ** BigInt(30),
     maxUnsettledTxs: +(MAX_UNSETTLED_TXS || 0),
     typeOrmLogging: !!TYPEORM_LOGGING,
