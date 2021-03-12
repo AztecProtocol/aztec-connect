@@ -108,12 +108,19 @@ export class RollupPublisher {
   }
 
   public async getNextPublishTime() {
-    const lastRollup = await this.rollupDb.getLastSettledRollup();
-    const now = moment();
-    if (lastRollup && moment(lastRollup.mined).add(this.publishInterval).isBefore(now)) {
-      return now.add(this.publishInterval).toDate();
+    const unsettledTxs = await this.rollupDb.getUnsettledTxCount();
+    if (!unsettledTxs) {
+      // No txs, report publish time is in publishInterval seconds (not necessarily true).
+      return moment().add(this.publishInterval).toDate();
     }
-    return lastRollup ? moment(lastRollup.mined).add(this.publishInterval).toDate() : new Date();
+    const lastRollup = await this.rollupDb.getLastSettledRollup();
+    if (!lastRollup) {
+      // We have a tx, but have not rolled up before. Rollup now.
+      return new Date();
+    }
+    // We have rolled up before. Rollup in publishInterval seconds from rollup, clamped no earlier than now.
+    const nextRollupTime = moment(lastRollup.mined).add(this.publishInterval);
+    return nextRollupTime.isSameOrBefore() ? new Date() : nextRollupTime.toDate();
   }
 
   private async generateSignature(

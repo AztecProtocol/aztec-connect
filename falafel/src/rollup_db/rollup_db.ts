@@ -16,11 +16,13 @@ export class TypeOrmRollupDb implements RollupDb {
   private txRep: Repository<TxDao>;
   private rollupProofRep: Repository<RollupProofDao>;
   private rollupRep: Repository<RollupDao>;
+  private accountRep: Repository<AccountDao>;
 
   constructor(private connection: Connection) {
     this.txRep = this.connection.getRepository(TxDao);
     this.rollupProofRep = this.connection.getRepository(RollupProofDao);
     this.rollupRep = this.connection.getRepository(RollupDao);
+    this.accountRep = this.connection.getRepository(AccountDao);
   }
 
   public async addTx(txDao: TxDao) {
@@ -77,6 +79,10 @@ export class TypeOrmRollupDb implements RollupDb {
 
   public async getAccountTxCount() {
     return this.txRep.count({ where: { txType: TxType.ACCOUNT } });
+  }
+
+  public async getAccountCount() {
+    return this.accountRep.count();
   }
 
   public async getTotalRollupsOfSize(rollupSize: number) {

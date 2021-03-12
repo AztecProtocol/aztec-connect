@@ -50,7 +50,7 @@ export class PipelineCoordinator {
         const feeAdjustedSecondsRemaining = (moment(nextRollupTime).diff(moment()) / 1000) * ratio;
         const feeAdjustedNextRollupTime = moment().add(feeAdjustedSecondsRemaining, 's');
 
-        if (moment().isAfter(feeAdjustedNextRollupTime) && (count || this.innerProofs.length)) {
+        if (moment().isSameOrAfter(feeAdjustedNextRollupTime) && (count || this.innerProofs.length)) {
           this.flush = true;
         }
 
