@@ -55,7 +55,7 @@ exports.main = async function (event: any) {
   } else {
     oldBody = oldBody.replace(
       '$IMAGE_CONTENT',
-      `https://res.cloudinary.com/df4pltas6/image/upload/c_scale,w_1459/g_south_west,l_e_colorize,co_white,l_text:lato_60:,x_165,y_115/v1615319371/Group_206_1_orgtk1.png`,
+      `https://res.cloudinary.com/df4pltas6/image/upload/c_scale,w_1459/v1615319371/Group_206_1_orgtk1.png`,
     );
     oldBody = oldBody.replace(
       '$TEXT_CONTENT',

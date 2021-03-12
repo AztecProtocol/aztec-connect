@@ -61,11 +61,11 @@ const fromEnvVars = (): ConfigVars => ({
 });
 
 const productionConfig: ConfigVars = {
-  rollupProviderUrl: 'https://api.aztec.network/falafel',
-  graphqlEndpoint: 'https://api.aztec.network/falafel/graphql',
+  rollupProviderUrl: 'https://api.aztec.network/falafel-mainnet',
+  graphqlEndpoint: 'https://api.aztec.network/falafel-mainnet/graphql',
   explorerUrl: 'https://explorer.aztec.network',
   infuraId: '6a04b7c89c5b421faefde663f787aa35',
-  network: 'goerli',
+  network: 'mainnet',
   ethereumHost: '',
   priceFeedContractAddress0: '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419',
   txAmountLimit: '1'.padEnd(19, '0'), // 10 ** 18

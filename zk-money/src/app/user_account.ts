@@ -297,7 +297,7 @@ export class UserAccount extends EventEmitter {
       const prevTxs = await this.getJoinSplitTxs(prevUserId);
       if (prevTxs.some(tx => !tx.settled)) {
         userJoinSplitTxs.push(...migratingTxs.concat(prevTxs));
-      } else if (this.accountState.settled) {
+      } else if (this.accountState.settled && !this.activeAction) {
         await this.db.removeMigratingTxs(this.userId);
         await this.sdk.removeUser(prevUserId);
       }

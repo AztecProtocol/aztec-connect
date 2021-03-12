@@ -480,7 +480,7 @@ export class UserSession extends EventEmitter {
 
       await this.subscribeToSyncProgress(userId);
 
-      await this.sdk.awaitUserSynchronised(userId);
+      await this.awaitUserSynchronised(userId);
 
       await this.account.init();
 
@@ -694,6 +694,18 @@ export class UserSession extends EventEmitter {
       await new Promise(resolve => setTimeout(resolve, 500));
     }
     return true;
+  }
+
+  private async awaitUserSynchronised(userId: AccountId) {
+    const { latestRollup, accountSyncedToRollup } = this.worldState;
+    if (accountSyncedToRollup > -1 || latestRollup === -1) {
+      await this.sdk.awaitUserSynchronised(userId);
+    } else {
+      // If sync from rollup 0, sdk.awaitUserSynchronised will resolve immediately.
+      while (this.worldState.accountSyncedToRollup < 0) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
   }
 
   // Remove the ugly workarounds below and make those apis utils that are ready to use without having to initialize the sdk.

@@ -124,11 +124,18 @@ export class WalletConnectEthereumProvider implements EthereumProvider {
       if (tx && (await provider.getTransactionReceipt(tx))) {
         return tx;
       }
-      const block = await provider.getBlock('latest');
-      return block.transactions[0];
+      return this.getLatestTxHash(provider);
     } finally {
       clearInterval(pollRequest);
     }
+  }
+
+  private async getLatestTxHash(provider: Web3Provider, blockNumber = 0): Promise<string> {
+    if (blockNumber < 0) {
+      throw new Error('Cannot find a nonempty block.');
+    }
+    const block = await provider.getBlock(blockNumber || 'latest');
+    return block.transactions[0] || (await this.getLatestTxHash(provider, block.number - 1));
   }
 }
 
@@ -140,7 +147,12 @@ class WalletconnectProvider implements WalletProvider {
   }
 
   async connect() {
-    await this.provider.enable();
+    const handleRejection = new Promise((_, reject) => {
+      this.provider.wc.on('disconnect', () => {
+        reject('Connection rejected.');
+      });
+    });
+    await Promise.race([this.provider.enable(), handleRejection]);
   }
 
   async disconnect() {
