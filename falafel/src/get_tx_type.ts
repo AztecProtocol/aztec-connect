@@ -1,13 +1,11 @@
 import { Blockchain, TxType } from 'barretenberg/blockchain';
-import { AccountAliasId } from 'barretenberg/client_proofs/account_alias_id';
-import { AccountProofData, JoinSplitProofData, ProofData, ProofId } from 'barretenberg/client_proofs/proof_data';
+import { JoinSplitProofData, ProofData, ProofId } from 'barretenberg/client_proofs/proof_data';
 import { InnerProofData } from 'barretenberg/rollup_proof';
 import { toBigIntBE } from 'bigint-buffer';
 
 export async function getTxTypeFromProofData(proofData: ProofData, blockchain: Blockchain) {
   if (proofData.proofId == ProofId.ACCOUNT) {
-    const { accountAliasId } = new AccountProofData(proofData);
-    return accountAliasId.nonce === 0 ? TxType.ACCOUNT_REGISTRATION : TxType.ACCOUNT_OTHER;
+    return TxType.ACCOUNT;
   }
 
   const { publicInput, publicOutput, outputOwner } = new JoinSplitProofData(proofData);
@@ -27,8 +25,7 @@ export async function getTxTypeFromProofData(proofData: ProofData, blockchain: B
  */
 export function getTxTypeFromInnerProofData(proofData: InnerProofData) {
   if (proofData.proofId == ProofId.ACCOUNT) {
-    const accountAliasId = AccountAliasId.fromBuffer(proofData.assetId);
-    return accountAliasId.nonce === 0 ? TxType.ACCOUNT_REGISTRATION : TxType.ACCOUNT_OTHER;
+    return TxType.ACCOUNT;
   }
 
   const publicInput = toBigIntBE(proofData.publicInput);

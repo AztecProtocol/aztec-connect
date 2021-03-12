@@ -52,11 +52,6 @@ describe('testnet escape test', () => {
   });
 
   it('should deposit', async () => {
-    const {
-      blockchainStatus: { escapeOpen },
-    } = await sdk.getRemoteStatus();
-    expect(escapeOpen).toBe(true);
-
     const user0Asset = users[0].getAsset(assetId);
     const fee = 0n;
 

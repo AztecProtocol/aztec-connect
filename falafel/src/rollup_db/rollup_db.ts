@@ -25,7 +25,7 @@ export class TypeOrmRollupDb implements RollupDb {
 
   public async addTx(txDao: TxDao) {
     await this.connection.transaction(async transactionalEntityManager => {
-      if (txDao.txType === TxType.ACCOUNT_REGISTRATION || txDao.txType === TxType.ACCOUNT_OTHER) {
+      if (txDao.txType === TxType.ACCOUNT) {
         const proofData = new AccountProofData(new ProofData(txDao.proofData));
         const account = new AccountDao();
         account.aliasHash = proofData.accountAliasId.aliasHash.toBuffer();
@@ -72,15 +72,11 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async getJoinSplitTxCount() {
-    return this.txRep.count({ where: { txType: Not(In([TxType.ACCOUNT_OTHER, TxType.ACCOUNT_REGISTRATION])) } });
+    return this.txRep.count({ where: { txType: Not(TxType.ACCOUNT) } });
   }
 
   public async getAccountTxCount() {
-    return this.txRep.count({ where: { txType: In([TxType.ACCOUNT_OTHER, TxType.ACCOUNT_REGISTRATION]) } });
-  }
-
-  public async getRegistrationTxCount() {
-    return this.txRep.count({ where: { txType: TxType.ACCOUNT_REGISTRATION } });
+    return this.txRep.count({ where: { txType: TxType.ACCOUNT } });
   }
 
   public async getTotalRollupsOfSize(rollupSize: number) {
@@ -101,13 +97,13 @@ export class TypeOrmRollupDb implements RollupDb {
 
   public async getUnsettledJoinSplitTxs() {
     return await this.txRep.find({
-      where: { txType: Not(In([TxType.ACCOUNT_OTHER, TxType.ACCOUNT_REGISTRATION])), mined: null },
+      where: { txType: Not(TxType.ACCOUNT), mined: null },
     });
   }
 
   public async getUnsettledAccountTxs() {
     return await this.txRep.find({
-      where: { txType: In([TxType.ACCOUNT_OTHER, TxType.ACCOUNT_REGISTRATION]), mined: null },
+      where: { txType: TxType.ACCOUNT, mined: null },
     });
   }
 

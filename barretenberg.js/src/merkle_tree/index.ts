@@ -210,7 +210,7 @@ export class MerkleTree {
    * values to insert, it will be chunked into the fewest number of subtrees required to grow the tree be precisely
    * that size. In normal operation (e.g. continuously inserting 64 values), we will be able to leverage single inserts.
    * Only when synching creates a non power of 2 set of values will the chunking mechanism come into play.
-   * e.g. If we need insert 192 values, first a subtree of 128 is inserted, then a subtree of 32.
+   * e.g. If we need insert 192 values, first a subtree of 128 is inserted, then a subtree of 64.
    */
   public async updateElements(index: number, values: Buffer[]) {
     while (values.length) {

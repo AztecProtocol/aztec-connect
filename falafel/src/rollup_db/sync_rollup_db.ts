@@ -46,10 +46,6 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.getAccountTxCount());
   }
 
-  public async getRegistrationTxCount() {
-    return this.synchronise(() => this.rollupDb.getRegistrationTxCount());
-  }
-
   public async getTotalRollupsOfSize(rollupSize: number) {
     return this.synchronise(() => this.rollupDb.getTotalRollupsOfSize(rollupSize));
   }

@@ -39,7 +39,7 @@ describe('rollup_db', () => {
   });
 
   it('should add account tx', async () => {
-    const txDao = randomTx({ txType: TxType.ACCOUNT_REGISTRATION });
+    const txDao = randomTx({ txType: TxType.ACCOUNT });
     await rollupDb.addTx(txDao);
 
     const result = await rollupDb.getAccountTxCount();

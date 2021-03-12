@@ -69,14 +69,6 @@ export class Metrics {
     });
 
     new Gauge({
-      name: 'tx_registrations_total',
-      help: 'Total registration transactions',
-      async collect() {
-        this.set(await rollupDb.getRegistrationTxCount());
-      },
-    });
-
-    new Gauge({
       name: 'world_state_data_size',
       help: 'Size of data tree',
       async collect() {

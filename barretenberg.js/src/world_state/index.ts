@@ -36,14 +36,21 @@ export class WorldState {
   public async processRollups(rollups: RollupProofData[]) {
     debug(`processing ${rollups.length} rollups from rollup ${rollups[0].rollupId}...`);
 
-    const dataStartIndex = rollups[0].dataStartIndex;
-    const leaves: Buffer[] = [];
+    let dataStartIndex = rollups[0].dataStartIndex;
+    let leaves: Buffer[] = [];
     for (const rollup of rollups) {
       if (rollup.dataStartIndex > dataStartIndex + leaves.length) {
         const padding = rollup.dataStartIndex - leaves.length;
         leaves.push(...new Array(padding).fill(Buffer.alloc(64, 0)));
       }
       leaves.push(...rollup.innerProofData.map(p => [p.newNote1, p.newNote2]).flat());
+    }
+
+    // Slice off any entries that already exist. Assumes that the values being removed are the same as already existing.
+    const currentSize = this.tree.getSize();
+    if (currentSize > dataStartIndex) {
+      leaves = leaves.slice(currentSize - dataStartIndex);
+      dataStartIndex = currentSize;
     }
 
     await this.tree.updateElements(dataStartIndex, leaves);

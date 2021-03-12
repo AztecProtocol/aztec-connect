@@ -22,7 +22,7 @@ export class TxFeeResolver {
   }
 
   public getTxFee(assetId: number, txType: TxType) {
-    if (txType === TxType.ACCOUNT_OTHER || txType === TxType.ACCOUNT_REGISTRATION) {
+    if (txType === TxType.ACCOUNT) {
       return 0n;
     }
     return BigInt(this.assets[assetId].gasConstants[txType] + this.baseTxGas) * this.feeGasPrice;
@@ -77,7 +77,7 @@ export class TxFeeResolver {
   public computeSurplusRatioFromTxDaos(txs: TxDao[]) {
     return this.computeSurplusRatio(
       txs
-        .filter(({ txType }) => txType !== TxType.ACCOUNT_OTHER && txType !== TxType.ACCOUNT_REGISTRATION)
+        .filter(({ txType }) => txType !== TxType.ACCOUNT)
         .map(tx => {
           const proofData = new JoinSplitProofData(new ProofData(tx.proofData));
           return {
