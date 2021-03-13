@@ -94,6 +94,7 @@ export class UserSession extends EventEmitter {
   private signedInAccount?: SignedInAccount;
   private loginState = initialLoginState;
   private worldState = initialWorldState;
+  private accountUtils!: AccountUtils;
   private account!: UserAccount;
   private debounceCheckAlias: DebouncedFunc<() => void>;
   private destroyed = false;
@@ -413,11 +414,7 @@ export class UserSession extends EventEmitter {
 
       proceed(LoginStep.SYNC_DATA);
 
-      await this.subscribeToSyncProgress(userId);
-
-      await this.sdk.awaitUserSynchronised(userId);
-
-      await this.account.init(this.provider);
+      await this.initUserAccount();
 
       proceed(LoginStep.DONE);
     } catch (e) {
@@ -477,12 +474,7 @@ export class UserSession extends EventEmitter {
 
       const userId = new AccountId(accountPublicKey, accountNonce);
       await this.createUserAccount(userId, alias);
-
-      await this.subscribeToSyncProgress(userId);
-
-      await this.awaitUserSynchronised(userId);
-
-      await this.account.init();
+      await this.initUserAccount();
 
       this.toStep(LoginStep.DONE);
     } catch (e) {
@@ -505,7 +497,7 @@ export class UserSession extends EventEmitter {
     this.priceFeedService = new PriceFeedService(priceFeedContractAddresses, infuraId, 'mainnet');
     await this.priceFeedService.init();
 
-    const accountUtils = new AccountUtils(this.sdk, this.graphql, this.requiredNetwork);
+    this.accountUtils = new AccountUtils(this.sdk, this.graphql, this.requiredNetwork);
     this.account = new UserAccount(
       userId,
       alias,
@@ -515,7 +507,7 @@ export class UserSession extends EventEmitter {
       this.db,
       this.rollupService,
       this.priceFeedService,
-      accountUtils,
+      this.accountUtils,
       this.requiredNetwork,
       explorerUrl,
       txAmountLimit,
@@ -525,6 +517,23 @@ export class UserSession extends EventEmitter {
       const event = (UserAccountEvent as any)[e];
       this.account.on(event, () => this.emit(UserSessionEvent.UPDATED_USER_ACCOUNT_DATA));
     }
+  }
+
+  private async initUserAccount() {
+    const userId = this.account.userId;
+
+    await this.subscribeToSyncProgress(userId);
+
+    await this.awaitUserSynchronised(userId);
+
+    const { nonce, privateKey, publicKey } = this.sdk.getUserData(userId);
+    const prevUserId = new AccountId(publicKey, nonce - 1);
+    if (!this.accountUtils.isUserAdded(prevUserId) && !(await this.accountUtils.isAccountSettled(userId))) {
+      debug(`Adding previous user with nonce ${nonce - 1}.`);
+      await this.sdk.addUser(privateKey, nonce - 1, true);
+    }
+
+    await this.account.init(this.provider);
   }
 
   private async subscribeToSyncProgress(userId: AccountId) {

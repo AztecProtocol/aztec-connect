@@ -57,6 +57,7 @@ export const MergeProgress: React.FunctionComponent<MergeProgressProps> = ({
       form={form as any}
       currentStatus={status.value}
       confirmStatus={MergeStatus.CONFIRM}
+      validateStatus={MergeStatus.VALIDATE}
       doneStatus={MergeStatus.DONE}
       message={submit.message}
       messageType={submit.messageType}

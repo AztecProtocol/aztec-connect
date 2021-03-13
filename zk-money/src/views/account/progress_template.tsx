@@ -106,6 +106,7 @@ interface ProgressTemplateProps {
   steps: ProgressStep[];
   form: Form;
   currentStatus: number;
+  validateStatus: number;
   confirmStatus: number;
   doneStatus: number;
   message?: string;
@@ -123,6 +124,7 @@ export const ProgressTemplate: React.FunctionComponent<ProgressTemplateProps> = 
   form,
   currentStatus,
   confirmStatus,
+  validateStatus,
   doneStatus,
   message,
   messageType,
@@ -132,6 +134,8 @@ export const ProgressTemplate: React.FunctionComponent<ProgressTemplateProps> = 
 }) => {
   const inputTheme = theme === Theme.WHITE ? InputTheme.WHITE : InputTheme.LIGHT;
 
+  const validating = currentStatus === validateStatus;
+  const pending = currentStatus === confirmStatus || validating;
   const failed = messageType === MessageType.ERROR && !!message;
   const success = currentStatus === doneStatus;
   const expired = currentStatus === confirmStatus && !isValidForm(form!);
@@ -165,11 +169,11 @@ export const ProgressTemplate: React.FunctionComponent<ProgressTemplateProps> = 
         </FeedbackRoot>
       );
     }
-    if (currentStatus === confirmStatus) {
+    if (pending) {
       return (
         <ConfirmRoot>
           <EditButton text="(Edit Transaction)" size="xs" onClick={onGoBack} />
-          <Button theme="gradient" text={`Confirm ${action}`} onClick={onSubmit} />
+          <Button theme="gradient" text={`Confirm ${action}`} onClick={onSubmit} isLoading={validating} />
         </ConfirmRoot>
       );
     }
@@ -208,11 +212,7 @@ export const ProgressTemplate: React.FunctionComponent<ProgressTemplateProps> = 
       </PaddedBlock>
       {!success && !expired && (
         <PaddedBlock size="s">
-          {currentStatus === confirmStatus ? (
-            <DisclaimerBlock />
-          ) : (
-            steps.map(({ text, status }) => createProgress(text, status))
-          )}
+          {pending ? <DisclaimerBlock /> : steps.map(({ text, status }) => createProgress(text, status))}
         </PaddedBlock>
       )}
       <Footer>{renderFooterContent()}</Footer>

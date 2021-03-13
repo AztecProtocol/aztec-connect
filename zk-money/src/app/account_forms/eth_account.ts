@@ -9,6 +9,7 @@ const debug = createDebug('zm:eth_account');
 
 export enum EthAccountEvent {
   UPDATED_STATE = 'UPDATED_STATE',
+  UPDATED_BALANCE = 'UPDATED_BALANCE',
 }
 
 export interface EthAccountState {
@@ -18,15 +19,21 @@ export interface EthAccountState {
   network?: Network;
 }
 
+export interface EthAccount {
+  on(event: EthAccountEvent.UPDATED_STATE, listener: (state: EthAccountState) => void): this;
+  on(event: EthAccountEvent.UPDATED_BALANCE, listener: (publicBalance: bigint) => void): this;
+}
+
 export class EthAccount extends EventEmitter {
   private readonly address?: EthAddress;
+  private isAddressContract!: boolean;
   private ethAccountState: EthAccountState;
   private balanceSubscriber?: number;
 
   private readonly balanceInterval = 10000;
 
   constructor(
-    private provider: Provider | undefined,
+    public provider: Provider | undefined,
     private sdk: WalletSdk,
     private accountUtils: AccountUtils,
     private assetId: AssetId,
@@ -45,6 +52,14 @@ export class EthAccount extends EventEmitter {
     return this.ethAccountState;
   }
 
+  get isActive() {
+    return this.accountUtils.isActiveProvider(this.provider);
+  }
+
+  get isContract() {
+    return this.isAddressContract;
+  }
+
   isSameAddress(ethAddress?: EthAddress) {
     return !this.address === !ethAddress && (!this.address || this.address.toString() === ethAddress?.toString());
   }
@@ -60,26 +75,27 @@ export class EthAccount extends EventEmitter {
 
     const pendingBalance = await this.accountUtils.getPendingBalance(this.assetId, this.address);
     const network = this.provider!.network;
-    await this.subscribeToBalance();
-    this.updateState({ pendingBalance, network });
+    const publicBalance = this.isActive ? await this.sdk.getPublicBalance(this.assetId, this.address) : 0n;
+    this.isAddressContract = await this.sdk.isContract(this.address);
+    this.updateState({ publicBalance, pendingBalance, network });
     this.provider!.on(ProviderEvent.UPDATED_PROVIDER_STATE, this.onProviderStateChange);
+    this.subscribeToBalance();
   }
 
-  private async subscribeToBalance() {
+  private subscribeToBalance() {
     if (this.balanceSubscriber !== undefined) {
       debug('Already subscribed to balance changes.');
       return;
     }
 
     const checkBalance = async () => {
-      const isActive = this.accountUtils.isActiveProvider(this.provider);
-      const publicBalance = isActive ? await this.sdk.getPublicBalance(this.assetId, this.address!) : 0n;
+      const publicBalance = this.isActive ? await this.sdk.getPublicBalance(this.assetId, this.address!) : 0n;
       if (publicBalance !== this.ethAccountState.publicBalance) {
         this.updateState({ publicBalance });
+        this.emit(EthAccountEvent.UPDATED_BALANCE, publicBalance);
       }
     };
 
-    await checkBalance();
     this.balanceSubscriber = window.setInterval(checkBalance, this.balanceInterval);
   }
 

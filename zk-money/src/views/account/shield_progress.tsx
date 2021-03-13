@@ -68,6 +68,7 @@ export const ShieldProgress: React.FunctionComponent<ShieldProgressProps> = ({
       form={form as any}
       currentStatus={status.value}
       confirmStatus={ShieldStatus.CONFIRM}
+      validateStatus={ShieldStatus.VALIDATE}
       doneStatus={ShieldStatus.DONE}
       message={submit.message}
       messageType={submit.messageType}

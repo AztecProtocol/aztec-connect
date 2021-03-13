@@ -7,8 +7,8 @@ import {
   TxType,
   WalletSdk,
 } from '@aztec/sdk';
-import createDebug from 'debug';
 import { Web3Provider } from '@ethersproject/providers';
+import createDebug from 'debug';
 import { Contract } from 'ethers';
 import EventEmitter from 'events';
 import { isEqual } from 'lodash';
@@ -54,7 +54,15 @@ const RollupABI = [
     stateMutability: 'payable',
     type: 'function',
   },
+  'function approveProof(bytes32 _proofHash)',
 ];
+
+export interface RollupService {
+  on(
+    event: RollupServiceEvent.UPDATED_STATUS,
+    listener: (status: RollupStatus, prevStatus: RollupStatus) => void,
+  ): this;
+}
 
 export class RollupService extends EventEmitter {
   private status!: RollupStatus;
@@ -96,19 +104,33 @@ export class RollupService extends EventEmitter {
     return baseFeeQuotes[speed !== undefined ? speed : SettlementTime.SLOW].time;
   }
 
-  async getDepositGasCost(assetId: AssetId, amount: bigint, provider: Provider) {
+  async getDepositGas(assetId: AssetId, amount: bigint, provider: Provider) {
     const web3Provider = new Web3Provider(provider.ethereumProvider);
     const rollupProcessor = new Contract(this.rollupContractAddress.toString(), RollupABI, web3Provider.getSigner());
-    const gasPrice = await rollupProcessor.provider.getGasPrice();
+    const ethAddress = provider.account!;
     try {
-      const gas = await rollupProcessor.estimateGas.depositPendingFunds(assetId, amount, provider.account!.toString(), {
-        value: amount,
-        gasPrice,
+      const gas = await rollupProcessor.estimateGas.depositPendingFunds(assetId, amount, ethAddress.toString(), {
+        value: assetId === AssetId.ETH ? amount : 0n,
       });
-      return BigInt(gas.mul(gasPrice).toString());
+      return BigInt(gas);
     } catch (e) {
       debug(e);
-      return amount;
+      // Probably not enough balance.
+      return 70000n;
+    }
+  }
+
+  async getApproveProofGas(provider: Provider) {
+    const web3Provider = new Web3Provider(provider.ethereumProvider);
+    const rollupProcessor = new Contract(this.rollupContractAddress.toString(), RollupABI, web3Provider.getSigner());
+    const proofHash = '0x'.padEnd(66, '0');
+    try {
+      const gas = await rollupProcessor.estimateGas.approveProof(proofHash.toString());
+      return BigInt(gas);
+    } catch (e) {
+      debug(e);
+      // Probably not enough balance.
+      return 50000n;
     }
   }
 
@@ -123,8 +145,9 @@ export class RollupService extends EventEmitter {
 
       const status = fromRollupProviderStatus(await this.sdk.getRemoteStatus());
       if (!isEqual(status, this.status)) {
+        const prevStatus = this.status;
         this.status = status;
-        this.emit(RollupServiceEvent.UPDATED_STATUS, this.status);
+        this.emit(RollupServiceEvent.UPDATED_STATUS, this.status, prevStatus);
       }
     };
 

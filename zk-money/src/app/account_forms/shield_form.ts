@@ -1,8 +1,9 @@
 import { AccountId, AssetId, EthAddress, PermitArgs, TxHash, TxType, WalletSdk } from '@aztec/sdk';
 import { JoinSplitProofOutput } from '@aztec/sdk/proofs/proof_output';
+import { Web3Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
-import { debounce, DebouncedFunc } from 'lodash';
+import { debounce, DebouncedFunc, isEqual } from 'lodash';
 import { AccountState, AssetState } from '../account_state';
 import { AccountUtils } from '../account_utils';
 import { isSameAlias, isValidAliasInput } from '../alias';
@@ -28,7 +29,7 @@ import {
 } from '../form';
 import { Network } from '../networks';
 import { Provider, ProviderEvent, ProviderState } from '../provider';
-import { RollupService, RollupServiceEvent } from '../rollup_service';
+import { RollupService, RollupServiceEvent, RollupStatus } from '../rollup_service';
 import { fromBaseUnits, max, min, toBaseUnits } from '../units';
 import { Web3Signer } from '../wallet_providers';
 import { AccountForm, AccountFormEvent } from './account_form';
@@ -119,6 +120,12 @@ const initialShieldFormValues = {
   },
 };
 
+interface AccountGasCost {
+  ethAddress?: EthAddress;
+  deposit: bigint;
+  approveProof: bigint;
+}
+
 export class ShieldForm extends EventEmitter implements AccountForm {
   private readonly userId: AccountId;
   private readonly alias: string;
@@ -127,15 +134,17 @@ export class ShieldForm extends EventEmitter implements AccountForm {
   private values: ShieldFormValues = initialShieldFormValues;
   private formStatus = FormStatus.ACTIVE;
   private proofOutput?: JoinSplitProofOutput;
+  private destroyed = false;
 
   private ethAccount!: EthAccount;
-  private depositGasCost = 0n;
+  private accountGasCost: AccountGasCost = { ethAddress: undefined, deposit: 0n, approveProof: 0n };
+  private gasPrice = 0n;
   private minFee = 0n;
 
   private debounceUpdateRecipient: DebouncedFunc<() => void>;
-  private depositGasCostSubscriber?: number;
+  private gasPriceSubscriber?: number;
 
-  private readonly depositGasCostInterval = 60000;
+  private readonly gasPriceInterval = 60000;
   private readonly aliasDebounceWait = 1000;
 
   constructor(
@@ -181,8 +190,9 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       throw new Error('Cannot destroy a form while it is being processed.');
     }
 
+    this.destroyed = true;
     this.removeAllListeners();
-    this.unsubscribeToDepositGasCost();
+    this.unsubscribeToGasPrice();
     this.ethAccount?.destroy();
     this.rollup.off(RollupServiceEvent.UPDATED_STATUS, this.onRollupStatusChange);
     this.provider?.off(ProviderEvent.UPDATED_PROVIDER_STATE, this.onProviderStateChange);
@@ -193,7 +203,6 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     this.rollup.on(RollupServiceEvent.UPDATED_STATUS, this.onRollupStatusChange);
     this.provider?.on(ProviderEvent.UPDATED_PROVIDER_STATE, this.onProviderStateChange);
     await this.renewEthAccount();
-    await this.subscribeToDepositGasCost();
     this.refreshValues();
     const maxAmount = this.values.maxAmount.value;
     if (maxAmount) {
@@ -289,6 +298,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
 
     const validated = await this.validateValues();
     if (isValidForm(validated)) {
+      this.unsubscribeToGasPrice();
       this.ethAccount.destroy();
       this.updateFormValues({ status: { value: ShieldStatus.CONFIRM } });
     } else {
@@ -322,7 +332,6 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       this.updateFormValues({
         submit: withError({ value: false }, `Something went wrong. This shouldn't happen.`),
       });
-      return;
     }
 
     this.updateFormStatus(FormStatus.LOCKED);
@@ -340,8 +349,9 @@ export class ShieldForm extends EventEmitter implements AccountForm {
 
     const { publicBalance, pendingBalance } = ethAccountState;
     const fee = changes.fee ? toBaseUnits(changes.fee.value, this.asset.decimals) : resetFee ? this.minFee : prevFee;
+    const gasCost = ((this.accountGasCost.deposit + this.accountGasCost.approveProof) * this.gasPrice * 110n) / 100n; // * 1.1
     const maxAmount = min(
-      max(0n, publicBalance + pendingBalance - fee - this.depositGasCost, pendingBalance - fee),
+      max(0n, publicBalance + pendingBalance - fee - gasCost, pendingBalance - fee),
       this.txAmountLimit,
     );
     const recipient = this.values.recipient.value.input;
@@ -442,9 +452,16 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       const ethAddress = this.provider!.account!;
       const pendingBalance = await this.accountUtils.getPendingBalance(this.asset.id, ethAddress);
       const publicBalance = await this.sdk.getPublicBalance(this.asset.id, ethAddress);
-      const depositGasCost =
-        amount + fee > pendingBalance ? await this.rollup.getDepositGasCost(this.asset.id, amount, this.provider!) : 0n;
-      const requiredPublicFund = max(0n, amount + fee + depositGasCost - pendingBalance);
+      const toBeDeposited = amount + fee - pendingBalance;
+      const depositGas =
+        toBeDeposited > 0n ? await this.rollup.getDepositGas(this.asset.id, toBeDeposited, this.provider!) : 0n;
+      const approveProofGas = (await this.sdk.isContract(ethAddress))
+        ? await this.rollup.getApproveProofGas(this.provider!)
+        : 0n;
+      const totalGas = depositGas + approveProofGas;
+      const gasPrice = totalGas ? BigInt(await new Web3Provider(this.provider!.ethereumProvider).getGasPrice()) : 0n;
+      const gasCost = totalGas * gasPrice;
+      const requiredPublicFund = max(0n, toBeDeposited + gasCost);
       if (publicBalance < requiredPublicFund) {
         form.amount = withError(form.amount, `Insufficient ${this.asset.symbol} Balance.`);
       }
@@ -460,31 +477,12 @@ export class ShieldForm extends EventEmitter implements AccountForm {
   }
 
   private async shield() {
-    const proceed = (status: ShieldStatus, message = '') => {
-      this.updateFormValues({
-        status: { value: status },
-        submit: withMessage({ value: true }, message),
-      });
-    };
-
-    const prompt = (message: string) => {
-      this.updateFormValues({
-        submit: withWarning({ value: true }, message),
-      });
-    };
-
-    const abort = (message: string) => {
-      this.updateFormValues({
-        submit: withError({ value: false }, message),
-      });
-    };
-
     const form = this.values;
     const asset = this.asset;
     const recipient = form.recipient.value.input;
     const outputNoteOwner = (await this.accountUtils.getAccountId(recipient))!;
-    const userData = this.sdk.getUserData(this.userId);
-    const senderId = this.accountState.settled ? this.userId : new AccountId(userData.publicKey, 0);
+    const { nonce, publicKey, privateKey } = this.sdk.getUserData(this.userId);
+    const senderId = this.accountState.settled ? this.userId : new AccountId(publicKey, nonce - 1);
     const amount = toBaseUnits(form.amount.value, asset.decimals);
     const fee = toBaseUnits(form.fee.value, asset.decimals);
     const publicInput = amount + fee;
@@ -493,27 +491,28 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     const toBeDeposited = max(publicInput - pendingBalance, 0n);
 
     if (toBeDeposited) {
-      proceed(ShieldStatus.DEPOSIT);
-      prompt(
+      this.proceed(ShieldStatus.DEPOSIT);
+
+      this.prompt(
         `Please make a deposit of ${fromBaseUnits(toBeDeposited, asset.decimals)} ${asset.symbol} from your wallet.`,
       );
 
       try {
         await this.withUserProvider(async () => {
           const txHash = await this.depositPendingFunds(asset.id, ethAddress, toBeDeposited);
-          prompt('Awaiting transaction confirmation...');
+          this.prompt('Awaiting transaction confirmation...');
           await this.getTransactionReceipt(txHash);
         });
       } catch (e) {
         debug(e);
-        return abort('Failed to deposit from your wallet.');
+        return this.abort('Failed to deposit from your wallet.');
       }
     }
 
     if (this.status <= ShieldStatus.CREATE_PROOF) {
-      proceed(ShieldStatus.CREATE_PROOF);
+      this.proceed(ShieldStatus.CREATE_PROOF);
 
-      const signer = this.sdk.createSchnorrSigner(userData.privateKey);
+      const signer = this.sdk.createSchnorrSigner(privateKey);
       const privateInput =
         form.enableAddToBalance.value && form.addToBalance.value
           ? await this.sdk.getMaxSpendableValue(asset.id, senderId)
@@ -537,46 +536,49 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     }
 
     if (this.status <= ShieldStatus.APPROVE_PROOF) {
-      proceed(ShieldStatus.APPROVE_PROOF);
+      this.proceed(ShieldStatus.APPROVE_PROOF);
 
-      if (!this.provider) {
-        return abort('Wallet disconnected.');
+      const inputOwner = new EthAddress(this.proofOutput!.proofData.slice(10 * 32, 10 * 32 + 32));
+      try {
+        await this.ensureNetworkAndAccount(inputOwner);
+      } catch (e) {
+        return this.abort('Wallet disconnected.');
       }
 
       const isContract = await this.sdk.isContract(ethAddress);
       if (isContract) {
-        prompt('Please approve the proof data in your wallet.');
+        this.prompt('Please approve the proof data in your wallet.');
         try {
           await this.withUserProvider(async () => {
             const txHash = await this.approveProof(ethAddress, this.proofOutput!.signingData!);
-            prompt('Awaiting transaction confirmation...');
+            this.prompt('Awaiting transaction confirmation...');
             await this.getTransactionReceipt(txHash);
           });
         } catch (e) {
           debug(e);
-          return abort('Failed to approve the proof.');
+          return this.abort('Failed to approve the proof.');
         }
       } else {
-        prompt('Please sign the proof data in your wallet.');
+        this.prompt('Please sign the proof data in your wallet.');
 
         try {
-          const signer = new Web3Signer(this.provider.ethereumProvider);
+          const signer = new Web3Signer(this.provider!.ethereumProvider);
           await this.proofOutput!.ethSign(signer as any, ethAddress);
         } catch (e) {
           debug(e);
-          return abort('Failed to sign the proof.');
+          return this.abort('Failed to sign the proof.');
         }
       }
     }
 
     if (this.status <= ShieldStatus.SEND_PROOF) {
-      proceed(ShieldStatus.SEND_PROOF);
+      this.proceed(ShieldStatus.SEND_PROOF);
 
       try {
         await this.sdk.sendProof(this.proofOutput!);
       } catch (e) {
         debug(e);
-        return abort('Failed to send the proof.');
+        return this.abort('Failed to send the proof.');
       }
 
       if (!senderId.equals(this.userId)) {
@@ -588,7 +590,38 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       }
     }
 
-    proceed(ShieldStatus.DONE);
+    this.proceed(ShieldStatus.DONE);
+  }
+
+  private async ensureNetworkAndAccount(account: EthAddress) {
+    let currentAccount = this.provider?.account;
+    let isSameAccount = currentAccount?.equals(account);
+    let isSameNetwork = this.provider?.chainId === this.requiredNetwork.chainId;
+
+    while (!isSameAccount || !isSameNetwork) {
+      if (this.destroyed) {
+        throw new Error('Form destroyed.');
+      }
+
+      if (!currentAccount) {
+        throw new Error('Wallet disconnected.');
+      }
+
+      if (!isSameAccount) {
+        this.prompt(
+          `Please switch your wallet's account back to 0x${account.toString().slice(0, 4)}...${account
+            .toString()
+            .slice(-4)}.`,
+        );
+      } else if (!isSameNetwork) {
+        this.prompt(`Please switch your wallet's network to ${this.requiredNetwork.network}...`);
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      currentAccount = this.provider?.account;
+      isSameAccount = currentAccount?.equals(account);
+      isSameNetwork = this.provider?.chainId === this.requiredNetwork.chainId;
+    }
   }
 
   private updateRecipientStatus = async () => {
@@ -605,19 +638,31 @@ export class ShieldForm extends EventEmitter implements AccountForm {
 
   private async renewEthAccount() {
     this.ethAccount.destroy();
-    this.ethAccount = new EthAccount(this.provider, this.sdk, this.accountUtils, this.asset.id);
+    const ethAccount = new EthAccount(this.provider, this.sdk, this.accountUtils, this.asset.id);
+    await ethAccount.init();
+    this.ethAccount = ethAccount;
     this.ethAccount.on(EthAccountEvent.UPDATED_STATE, this.onEthAccountStateChange);
-    await this.ethAccount.init();
+    this.ethAccount.on(EthAccountEvent.UPDATED_BALANCE, this.onEthAccountBalanceChange);
+    this.refreshValues();
+    await this.refreshGasCost();
   }
 
   private onEthAccountStateChange = () => {
-    if (!this.locked) {
-      this.refreshValues();
-    }
+    if (this.locked) return;
+
+    this.refreshValues();
   };
 
-  private onRollupStatusChange = () => {
-    if (!this.locked) {
+  private onEthAccountBalanceChange = () => {
+    if (this.locked) return;
+
+    this.refreshGasCost();
+  };
+
+  private onRollupStatusChange = (status: RollupStatus, prevStatus: RollupStatus) => {
+    if (this.locked) return;
+
+    if (!isEqual(status.txFees, prevStatus.txFees)) {
       this.refreshValues();
     }
   };
@@ -628,36 +673,62 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     if (!this.ethAccount.isSameAddress(state?.account)) {
       this.renewEthAccount();
     }
-    this.unsubscribeToDepositGasCost();
-    this.subscribeToDepositGasCost();
   };
 
-  private async subscribeToDepositGasCost() {
-    if (this.depositGasCostSubscriber !== undefined) {
+  private async refreshGasCost() {
+    const zeroGasCost = { ethAddress: undefined, deposit: 0n, approveProof: 0n };
+    if (!this.ethAccount.isActive) {
+      this.updateAccountGasCost(zeroGasCost);
+      return;
+    }
+
+    const { state, provider, isContract } = this.ethAccount;
+    const { ethAddress, publicBalance } = state;
+    const gasCost = publicBalance
+      ? {
+          deposit: await this.rollup.getDepositGas(this.asset.id, 1n, provider!),
+          approveProof: isContract ? await this.rollup.getApproveProofGas(provider!) : 0n,
+        }
+      : zeroGasCost;
+    if (this.ethAccount.isSameAddress(ethAddress)) {
+      this.updateAccountGasCost({ ...gasCost, ethAddress });
+      this.unsubscribeToGasPrice();
+      await this.subscribeToGasPrice();
+    }
+  }
+
+  private updateAccountGasCost(accountGasCost: AccountGasCost) {
+    this.accountGasCost = accountGasCost;
+    if (!this.locked) {
+      this.refreshValues();
+    }
+  }
+
+  private async subscribeToGasPrice() {
+    if (this.gasPriceSubscriber !== undefined) {
       debug('Already subscribed to deposit gas cost changes.');
       return;
     }
 
-    const checkDepositGasCost = async () => {
-      if (this.locked) return;
+    const totalGas = ({ deposit, approveProof } = this.accountGasCost) => deposit + approveProof;
 
-      const isActive = this.accountUtils.isActiveProvider(this.provider);
-      const depositGasCost = isActive
-        ? ((await this.rollup.getDepositGasCost(this.asset.id, 1n, this.provider!)) * 110n) / 100n // * 1.1)
-        : 0n;
-      if (depositGasCost !== this.depositGasCost) {
-        this.depositGasCost = depositGasCost;
+    const updateGasPrice = async () => {
+      if (this.locked || !this.ethAccount.isActive || !totalGas()) return;
+
+      const gasPrice = BigInt(await new Web3Provider(this.ethAccount.provider!.ethereumProvider).getGasPrice());
+      if (gasPrice !== this.gasPrice) {
+        this.gasPrice = gasPrice;
         this.refreshValues();
       }
     };
 
-    await checkDepositGasCost();
-    this.depositGasCostSubscriber = window.setInterval(checkDepositGasCost, this.depositGasCostInterval);
+    await updateGasPrice();
+    this.gasPriceSubscriber = window.setInterval(updateGasPrice, this.gasPriceInterval);
   }
 
-  private unsubscribeToDepositGasCost() {
-    clearInterval(this.depositGasCostSubscriber);
-    this.depositGasCostSubscriber = undefined;
+  private unsubscribeToGasPrice() {
+    clearInterval(this.gasPriceSubscriber);
+    this.gasPriceSubscriber = undefined;
   }
 
   private updateFormStatus(status: FormStatus) {
@@ -668,6 +739,25 @@ export class ShieldForm extends EventEmitter implements AccountForm {
   private updateFormValues(changes: Partial<ShieldFormValues>) {
     this.values = mergeValues(this.values, changes);
     this.emit(AccountFormEvent.UPDATED_FORM_VALUES, this.values);
+  }
+
+  private proceed(status: ShieldStatus, message = '') {
+    this.updateFormValues({
+      status: { value: status },
+      submit: withMessage({ value: true }, message),
+    });
+  }
+
+  private prompt(message: string) {
+    this.updateFormValues({
+      submit: withWarning({ value: true }, message),
+    });
+  }
+
+  private abort(message: string) {
+    this.updateFormValues({
+      submit: withError({ value: false }, message),
+    });
   }
 
   private async depositPendingFunds(

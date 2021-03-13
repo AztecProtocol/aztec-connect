@@ -21,6 +21,11 @@ export class AccountUtils {
     }
   }
 
+  async isAccountSettled(userId: AccountId) {
+    const accountTxs = await this.sdk.getAccountTxs(userId);
+    return accountTxs.length > 1 || !!accountTxs[0]?.settled;
+  }
+
   async getAccountId(aliasInput: string) {
     if (!isValidAliasInput(aliasInput)) {
       return undefined;

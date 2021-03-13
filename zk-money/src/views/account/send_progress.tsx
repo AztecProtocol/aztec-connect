@@ -67,6 +67,7 @@ export const SendProgress: React.FunctionComponent<SendProgressProps> = ({
       form={form as any}
       currentStatus={status.value}
       confirmStatus={SendStatus.CONFIRM}
+      validateStatus={SendStatus.VALIDATE}
       doneStatus={SendStatus.DONE}
       message={submit.message}
       messageType={submit.messageType}

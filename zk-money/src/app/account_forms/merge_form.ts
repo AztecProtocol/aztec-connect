@@ -200,7 +200,6 @@ export class MergeForm extends EventEmitter implements AccountForm {
       this.updateFormValues({
         submit: withError({ value: false }, `Something went wrong. This shouldn't happen.`),
       });
-      return;
     }
 
     this.updateFormStatus(FormStatus.LOCKED);
