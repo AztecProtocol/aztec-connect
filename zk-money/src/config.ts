@@ -70,7 +70,7 @@ const productionConfig: ConfigVars = {
   priceFeedContractAddress0: '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419',
   txAmountLimit: '1'.padEnd(19, '0'), // 10 ** 18
   sessionTimeout: '30', // days
-  debug: false,
+  debug: true,
 };
 
 const developmentConfig: ConfigVars = {

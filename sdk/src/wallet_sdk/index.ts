@@ -33,6 +33,10 @@ export async function createWalletSdk(
   serverUrl: string,
   sdkOptions: SdkOptions = {},
 ) {
+  if (sdkOptions.debug) {
+    createDebug.enable('bb:*');
+  }
+
   const { minConfirmation, minConfirmationEHW } = sdkOptions;
   const { rollupContractAddress, chainId } = await getBlockchainStatus(serverUrl);
 
