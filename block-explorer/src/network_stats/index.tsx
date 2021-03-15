@@ -1,5 +1,5 @@
 import moment from 'moment';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useQuery } from 'react-apollo';
 import styled from 'styled-components';
 import { Stat, DeviceWidth } from '../components';
@@ -35,11 +35,16 @@ const StyledStat = styled(Stat)`
 `;
 
 export const NetworkStats: React.FunctionComponent = () => {
-  const { loading, error, data, startPolling } = useQuery<NetworkStatsQueryData>(GET_NETWORK_STAT);
-  if (!data) {
+  const { loading, error, data, startPolling, stopPolling } = useQuery<NetworkStatsQueryData>(GET_NETWORK_STAT);
+
+  useEffect(() => {
     startPolling(NETWORK_STAT_POLL_INTERVAL);
-    return null;
-  }
+
+    return () => {
+      stopPolling();
+    };
+  }, [startPolling, stopPolling]);
+
   return (
     <DeviceWidth>
       {({ breakpoint }) => {
@@ -73,11 +78,11 @@ export const NetworkStats: React.FunctionComponent = () => {
               icon={blockTimeIcon}
               label={'NEXT BLOCK IN'}
               value={
-                error || loading || (data && !data.serverStatus.nextPublishTime) ? (
+                error || loading || !data || (data && !data.serverStatus.nextPublishTime) ? (
                   'Idle'
                 ) : (
                   <Countdown
-                    time={data && moment(data.serverStatus.nextPublishTime)}
+                    time={moment(data.serverStatus.nextPublishTime)}
                     size={statSize}
                     unitSize={statSize === 'l' ? 'm' : 'xs'}
                     gaps={[86400, 3600, 120, 0]}

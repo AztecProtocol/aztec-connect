@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useQuery } from 'react-apollo';
 import styled from 'styled-components';
 import { BlockStatusIndicator, getBlockStatus } from '../block_status';
@@ -62,13 +62,15 @@ export const Block: React.FunctionComponent<BlockProps> = ({ id }) => {
     variables: { id },
   });
 
-  if (!data) {
-    startPolling(BLOCK_POLL_INTERVAL);
-  }
+  useEffect(() => {
+    if (!data?.block?.mined) {
+      startPolling(BLOCK_POLL_INTERVAL);
+    }
 
-  if (data?.block?.mined) {
-    stopPolling();
-  }
+    return () => {
+      stopPolling();
+    };
+  }, [data, startPolling, stopPolling]);
 
   const blockTitle = (
     <StyledSectionTitle

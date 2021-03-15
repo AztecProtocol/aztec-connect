@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useQuery } from 'react-apollo';
 import styled from 'styled-components';
 import { Text } from '../components';
@@ -24,16 +24,22 @@ interface BlockListProps {
 }
 
 export const BlockList: React.FunctionComponent<BlockListProps> = ({ page, blocksPerPage }) => {
-  const { loading, error, data, startPolling } = useQuery<BlocksQueryData, BlocksQueryVars>(GET_BLOCKS, {
+  const { loading, error, data, startPolling, stopPolling } = useQuery<BlocksQueryData, BlocksQueryVars>(GET_BLOCKS, {
     variables: {
       take: blocksPerPage,
       skip: Math.max(0, blocksPerPage * (page - 1)),
     },
   });
 
-  if (!data && page === 1) {
-    startPolling(BLOCKS_POLL_INTERVAL);
-  }
+  useEffect(() => {
+    if (page === 1) {
+      startPolling(BLOCKS_POLL_INTERVAL);
+    }
+
+    return () => {
+      stopPolling();
+    };
+  }, [page, startPolling, stopPolling]);
 
   if (loading || !data) {
     return (

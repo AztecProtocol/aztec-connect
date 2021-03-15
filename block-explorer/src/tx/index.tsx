@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useQuery } from 'react-apollo';
 import styled from 'styled-components';
 import { BlockStatusIndicator, getBlockStatus } from '../block_status';
@@ -47,12 +47,15 @@ export const Tx: React.FunctionComponent<TxProps> = ({ id }) => {
     variables: { id },
   });
 
-  if (!data) {
-    startPolling(TX_POLL_INTERVAL);
-  }
-  if (data?.tx?.block?.mined) {
-    stopPolling();
-  }
+  useEffect(() => {
+    if (!data?.tx?.block?.mined) {
+      startPolling(TX_POLL_INTERVAL);
+    }
+
+    return () => {
+      stopPolling();
+    };
+  }, [data, startPolling, stopPolling]);
 
   const breadcrumbs = [
     {

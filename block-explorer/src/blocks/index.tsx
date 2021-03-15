@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useQuery } from 'react-apollo';
 import { useLocation } from 'react-router-dom';
 import styled from 'styled-components';
@@ -23,10 +23,17 @@ export const Blocks: React.FunctionComponent<BlocksProps> = ({ blocksPerPage = 5
   const urlQuery = new URLSearchParams(useLocation().search);
   const page = +(urlQuery.get('p') || 1);
 
-  const { loading, error, data, startPolling } = useQuery<NetworkStatsQueryData>(GET_NETWORK_STAT);
-  if (!data && page === 1) {
-    startPolling(TOTAL_BLOCKS_POLL_INTERVAL);
-  }
+  const { loading, error, data, startPolling, stopPolling } = useQuery<NetworkStatsQueryData>(GET_NETWORK_STAT);
+
+  useEffect(() => {
+    if (page === 1) {
+      startPolling(TOTAL_BLOCKS_POLL_INTERVAL);
+    }
+
+    return () => {
+      stopPolling();
+    };
+  }, [page, startPolling, stopPolling]);
 
   return (
     <>
