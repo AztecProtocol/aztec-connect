@@ -84,7 +84,6 @@ interface HomeProps {
 export const Home: React.FunctionComponent<HomeProps> = ({ onConnect, unsupported }) => {
   const [showUnsupported, setShowUnsupported] = useState(false);
 
-  const secretMode = localStorage.getItem('secret') === 'tortilla';
   const handleConnect = () => {
     if (unsupported) {
       setShowUnsupported(true);
@@ -105,24 +104,20 @@ export const Home: React.FunctionComponent<HomeProps> = ({ onConnect, unsupporte
             <Text weight="bold" text="private " inline></Text>
             {'crypto'}
           </Text>
-          <Text text={secretMode ? 'payments have arrived.' : 'payments are coming...'} />
+          <Text text="payments have arrived." />
         </SectionHead>
         <SectionCaption>
-          {secretMode && (
-            <Text size="m">
-              Connect{' '}
-              <Text weight="bold" inline>
-                your wallet
-              </Text>{' '}
-              to get started
-            </Text>
-          )}
-          {!secretMode && <Text size="m" text="We are busy updating to Aztec V2, stay tuned for updates!" />}
+          <Text size="m">
+            Connect{' '}
+            <Text weight="bold" inline>
+              your wallet
+            </Text>{' '}
+            to get started
+          </Text>
         </SectionCaption>
         {!showUnsupported && (
           <ButtonRoot>
-            {secretMode && <Button theme="white" text="Connect" onClick={handleConnect} />}
-            {!secretMode && <Button theme="white" text="Go to V1" href="https://old.zk.money/" />}
+            <Button theme="white" text="Connect" onClick={handleConnect} />
           </ButtonRoot>
         )}
       </ContentRoot>
