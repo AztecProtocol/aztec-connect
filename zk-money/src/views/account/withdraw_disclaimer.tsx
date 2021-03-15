@@ -65,7 +65,7 @@ export const WithdrawDisclaimer: React.FunctionComponent = () => (
       <Text size="s">
         {'Transfers to Ethereum address should sum to '}
         <Text text="0.1 or 1 zkETH inclusive of the fee" weight="bold" inline />
-        {' to acheive maximum privacy.'}
+        {' to achieve maximum privacy.'}
       </Text>
       <PaddedTop size="s">{'Sending different amounts will compromise privacy.'}</PaddedTop>
     </ColContent>

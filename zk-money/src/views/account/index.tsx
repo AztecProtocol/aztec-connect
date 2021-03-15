@@ -16,7 +16,7 @@ import {
   Wallet,
   WorldState,
 } from '../../app';
-import { Modal, PaddedBlock, Tab } from '../../components';
+import { Modal, PaddedBlock, Tab, Text } from '../../components';
 import { breakpoints, spacings, Theme } from '../../styles';
 import { AccountAsset } from './asset';
 import { Merge } from './merge';
@@ -117,6 +117,7 @@ export const Account: React.FunctionComponent<AccountProps> = ({
   onClearAction,
 }) => {
   const [showReferral, setShowReferral] = useState(false);
+  const [explainUnsettled, setExplainUnsettled] = useState(false);
 
   const location = useLocation();
   const history = useHistory();
@@ -171,6 +172,7 @@ export const Account: React.FunctionComponent<AccountProps> = ({
           txsPublishTime={txsPublishTime}
           onSubmitMergeForm={handleSubmitMergeForm}
           onSelectAction={onSelectAction}
+          onExplainUnsettled={() => setExplainUnsettled(true)}
           isInitializing={isInitializing}
         />
       ) : (
@@ -238,6 +240,28 @@ export const Account: React.FunctionComponent<AccountProps> = ({
                 return null;
             }
           })()}
+        </Modal>
+      )}
+      {explainUnsettled && (
+        <Modal title="About your balance" onClose={() => setExplainUnsettled(false)}>
+          <PaddedBlock>
+            <Text size="m">
+              <PaddedBlock>
+                <Text weight="bold" inline>
+                  zk.money
+                </Text>{' '}
+                uses Aztec for cheap private transactions.
+              </PaddedBlock>
+              <PaddedBlock>
+                Aztec represents your balance in an asset with UTXO notes. You can think of these as coins and notes in
+                your wallet.
+              </PaddedBlock>
+              <PaddedBlock>
+                Each note is owned by your username, you can't spend any of your shielded balance until your username
+                has been registered successfully. On busy times, this can take several hours.
+              </PaddedBlock>
+            </Text>
+          </PaddedBlock>
         </Modal>
       )}
     </AccountRoot>

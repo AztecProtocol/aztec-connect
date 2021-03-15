@@ -33,19 +33,27 @@ interface AliasFormProps {
   alias: string;
   aliasAvailability: ValueAvailability;
   rememberMe: boolean;
+  allowToProceed: boolean;
   setAlias: (alias: string) => void;
   setRememberMe: (rememberMe: boolean) => void;
   onSubmit: (alias: string) => void;
+  onRestart(): void;
   isNewAccount: boolean;
 }
 
 export const AliasForm: React.FunctionComponent<AliasFormProps> = ({
   alias,
   aliasAvailability,
+  allowToProceed,
   setAlias,
   onSubmit,
+  onRestart,
   isNewAccount,
 }) => {
+  if (!allowToProceed) {
+    return <Button theme="white" text="Try Again" onClick={onRestart} />;
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && (!isNewAccount || aliasAvailability !== ValueAvailability.PENDING)) {
       onSubmit(alias);

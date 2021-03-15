@@ -11,6 +11,7 @@ import {
   ProviderStatus,
   ShieldFormValues,
   ShieldStatus,
+  toBaseUnits,
   ValueAvailability,
   Wallet,
   wallets,
@@ -34,6 +35,7 @@ import {
   PaddedBlock,
   Select,
   Text,
+  TextButton,
   TextLink,
   Tooltip,
 } from '../../components';
@@ -195,7 +197,7 @@ const WalletSelectInput: React.FunctionComponent<WalletSelectInputProps> = ({
   const wallet = providerState?.wallet;
   const walletSelect = (
     <Select
-      trigger={<Text text={`(${ethAddress ? 'Change' : 'Connect'})`} size="xs" nowrap />}
+      trigger={<TextButton text={`(${ethAddress ? 'Change' : 'Connect'})`} size="xs" nowrap />}
       items={wallets
         .filter(({ id }) => id !== Wallet.HOT)
         .map(({ id, name, icon }) => ({
@@ -227,7 +229,7 @@ const WalletSelectInput: React.FunctionComponent<WalletSelectInputProps> = ({
             nowrap
           />
         </Tooltip>
-        <EthAddressText text={formatAddress(ethAddress.toString())} size="xs" italic />
+        <EthAddressText text={formatAddress(ethAddress.toString())} size="xs" />
         {walletSelect}
       </FlexRow>
     );
@@ -237,7 +239,7 @@ const WalletSelectInput: React.FunctionComponent<WalletSelectInputProps> = ({
     return (
       <FlexRow>
         <EthAddressStatus size="xs" color="orange" />
-        <EthAddressText text={`Connecting to ${wallets[providerState!.wallet].name}...`} size="xs" italic nowrap />
+        <EthAddressText text={`Connecting to ${wallets[providerState!.wallet].name}...`} size="xs" nowrap />
       </FlexRow>
     );
   }
@@ -247,7 +249,7 @@ const WalletSelectInput: React.FunctionComponent<WalletSelectInputProps> = ({
       <ErrorEthAddressRoot>
         <ErrorEthAddressIcon src={errorIcon} />
       </ErrorEthAddressRoot>
-      <EthAddressText text="Unknown Wallet" size="xs" italic nowrap />
+      <EthAddressText text="Unknown Wallet" size="xs" nowrap />
       {walletSelect}
     </FlexRow>
   );
@@ -343,13 +345,12 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
             </MaxButton>
           </AmountInputWrapper>
           {!!pendingBalance && (
-            <InputFoot
-              text={`You have ${fromBaseUnits(
-                pendingBalance,
+            <InputFoot size="xxs">
+              {`You have ${fromBaseUnits(
+                pendingBalance - toBaseUnits(fee.value, decimals),
                 decimals,
-              )} ETH pending on the contract, this will be used first.`}
-              size="xxs"
-            />
+              )} ETH pending on the contract, this will be used first. `}
+            </InputFoot>
           )}
           {amount.message && (
             <FixedInputMessage theme={inputTheme} message={amount.message} type={amount.messageType} />
@@ -396,7 +397,7 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
           <FlexExpand>
             <Text size="s" weight="semibold">
               {'Add to available balance '}
-              <TextLink text="(?)" weight="normal" href="/about_your_balance" target="_blank" inline />
+              <TextLink text="(?)" weight="normal" href="/about_your_balance" target="_blank" inline italic />
             </Text>
             <Text
               text="(This will make a portion of your balance unavailable until the transaction settles)"

@@ -23,6 +23,7 @@ export * from './tab';
 export * from './tag';
 export * from './template';
 export * from './text';
+export * from './text_button';
 export * from './text_link';
 export * from './tooltip';
 export * from './transaction_summary';

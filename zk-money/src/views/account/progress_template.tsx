@@ -10,7 +10,7 @@ import {
   InputTheme,
   PaddedBlock,
   Text,
-  TextLink,
+  TextButton,
   TxProgress,
 } from '../../components';
 import checkIcon from '../../images/check.svg';
@@ -30,7 +30,7 @@ const ConfirmRoot = styled.div`
   width: 100%;
 `;
 
-const EditButton = styled(TextLink)`
+const EditButton = styled(TextButton)`
   opacity: 0.5;
 `;
 
@@ -164,7 +164,7 @@ export const ProgressTemplate: React.FunctionComponent<ProgressTemplateProps> = 
             size="s"
           />
           <FeedbackButtonRoot>
-            <TextLink text="(Edit Transaction)" size="s" onClick={onGoBack} />
+            <TextButton text="(Edit Transaction)" size="s" onClick={onGoBack} />
           </FeedbackButtonRoot>
         </FeedbackRoot>
       );
@@ -184,7 +184,7 @@ export const ProgressTemplate: React.FunctionComponent<ProgressTemplateProps> = 
             <FeedbackIcon src={checkIcon} />
           </FeedbackIconRoot>
           <FeedbackTitle text="Transaction Sent!" size="xl" />
-          <TextLink text="(Close Window)" size="xs" onClick={onClose} />
+          <TextButton text="(Close Window)" size="xs" onClick={onClose} />
         </FeedbackRoot>
       );
     }
@@ -194,7 +194,7 @@ export const ProgressTemplate: React.FunctionComponent<ProgressTemplateProps> = 
           <FooterMessage theme={inputTheme} message={message} type={messageType} />
           <RetryButtonsRoot>
             <EditButton text="(Edit Transaction)" size="xs" onClick={onGoBack} />
-            <TextLink text="(Retry)" size="s" onClick={onSubmit} />
+            <TextButton text="Retry" size="xs" onClick={onSubmit} />
           </RetryButtonsRoot>
         </FeedbackRoot>
       );

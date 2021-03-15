@@ -73,6 +73,7 @@ interface AccountAssetProps {
   txsPublishTime?: Date;
   onSubmitMergeForm(toMerge: bigint[]): void;
   onSelectAction(action: AccountAction): void;
+  onExplainUnsettled(): void;
   isInitializing: boolean;
 }
 
@@ -85,6 +86,7 @@ export const AccountAsset: React.FunctionComponent<AccountAssetProps> = ({
   txsPublishTime,
   onSubmitMergeForm,
   onSelectAction,
+  onExplainUnsettled,
   isInitializing,
 }) => {
   if (isInitializing) {
@@ -103,10 +105,11 @@ export const AccountAsset: React.FunctionComponent<AccountAssetProps> = ({
   }
 
   const isLoading = asset.id !== assetState.asset.id;
-  const { accountTxs } = accountState;
+  const { accountTxs, settled } = accountState;
   const { balance, spendableBalance, joinSplitTxs } = assetState;
   const pendingTxs = joinSplitTxs.filter(tx => !tx.settled);
   const pendingValue = sum(pendingTxs.map(tx => tx.balanceDiff));
+  const sendableBalance = settled ? spendableBalance : 0n;
 
   return (
     <>
@@ -132,10 +135,10 @@ export const AccountAsset: React.FunctionComponent<AccountAssetProps> = ({
         <Col>
           <BlockTitle
             info={
-              spendableBalance < balance ? (
+              sendableBalance < balance ? (
                 <TextLink
-                  text="Why can’t I send my full balance?"
-                  onClick={() => onSelectAction(AccountAction.MERGE)}
+                  text={settled ? 'Why can’t I send my full balance?' : 'Why can’t I send my balance?'}
+                  onClick={settled ? () => onSelectAction(AccountAction.MERGE) : onExplainUnsettled}
                   size="xs"
                   italic
                 />
@@ -144,14 +147,14 @@ export const AccountAsset: React.FunctionComponent<AccountAssetProps> = ({
           />
           <ValueSummary
             title="Sendable Balance"
-            value={spendableBalance}
+            value={sendableBalance}
             asset={asset}
             buttonText="Send"
-            onClick={() => onSelectAction(AccountAction.SEND)}
+            onClick={sendableBalance && !settled ? undefined : () => onSelectAction(AccountAction.SEND)}
           />
         </Col>
       </PaddedRow>
-      {mergeForm && (
+      {settled && !!mergeForm && (
         <Row>
           <MergeBlock
             assetState={assetState}

@@ -288,6 +288,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
       worldState,
       systemMessage,
     } = this.state;
+    const { config } = this.props;
     const { step } = loginState;
     const theme = action === AppAction.ACCOUNT ? Theme.WHITE : Theme.GRADIENT;
     const { requiredNetwork } = this.app;
@@ -306,20 +307,16 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
         {(() => {
           switch (action) {
             case AppAction.LOGIN: {
-              const { step, wallet, seedPhrase, alias, aliasAvailability, rememberMe, accountNonce } = loginState;
+              const { step, accountNonce } = loginState;
               const allowRestart =
                 [LoginStep.SET_SEED_PHRASE, LoginStep.SET_ALIAS].indexOf(step) >= 0 ||
                 (step !== LoginStep.CONNECT_WALLET && systemMessage.type === MessageType.ERROR);
               return (
                 <Login
-                  currentStep={step!}
                   worldState={worldState}
-                  wallet={wallet}
-                  seedPhrase={seedPhrase}
-                  alias={alias}
-                  aliasAvailability={aliasAvailability}
-                  rememberMe={rememberMe}
+                  loginState={loginState}
                   isNewAccount={!accountNonce}
+                  explorerUrl={config.explorerUrl}
                   systemMessage={systemMessage}
                   setSeedPhrase={this.app.setSeedPhrase}
                   setAlias={this.app.setAlias}
@@ -332,7 +329,6 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
               );
             }
             case AppAction.ACCOUNT: {
-              const { config } = this.props;
               return (
                 <Account
                   worldState={worldState}

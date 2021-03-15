@@ -154,7 +154,7 @@ interface ValueSummaryProps {
   pendingTxs?: number;
   asset: Asset;
   buttonText: string;
-  onClick: () => void;
+  onClick?: () => void;
 }
 
 export const ValueSummary: React.FunctionComponent<ValueSummaryProps> = ({
@@ -196,7 +196,7 @@ export const ValueSummary: React.FunctionComponent<ValueSummaryProps> = ({
         </ValueRoot>
       </ColContent>
       <ColButton>
-        <Button theme="white" text={buttonText} onClick={onClick} size="l" outlined />
+        <Button theme="white" text={buttonText} onClick={onClick} disabled={!onClick} size="l" outlined />
       </ColButton>
     </GradientBlock>
   );

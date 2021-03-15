@@ -16,11 +16,11 @@ interface MenuItem {
 const helpItems = [
   {
     name: 'Block Explorer',
-    href: 'https://explorer.aztecprotocol.com/',
+    href: 'https://explorer.aztec.network/',
   },
   {
     name: 'Discord',
-    href: 'https://discord.gg/Ge9scQ',
+    href: 'https://discord.gg/QtnapCzE',
   },
   {
     name: 'FAQ',

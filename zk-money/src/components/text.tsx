@@ -71,6 +71,7 @@ export interface TextProps {
   inline?: boolean;
   text?: string;
   children?: React.ReactNode;
+  onClick?: () => void;
 }
 
 export const Text: React.FunctionComponent<TextProps> = ({
@@ -84,6 +85,7 @@ export const Text: React.FunctionComponent<TextProps> = ({
   inline,
   text,
   children,
+  onClick,
 }) => (
   <TextRoot
     className={className}
@@ -94,6 +96,7 @@ export const Text: React.FunctionComponent<TextProps> = ({
     monospace={monospace}
     nowrap={nowrap}
     inline={inline}
+    onClick={onClick}
   >
     {text || children}
   </TextRoot>

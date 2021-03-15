@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
-import { ValueAvailability, LoginStep, MessageType, Wallet, WorldState, SystemMessage } from '../../app';
-import { Text } from '../../components';
+import { LoginState, LoginStep, MessageType, SystemMessage, Wallet, WorldState } from '../../app';
+import { Text, TextLink } from '../../components';
 import { breakpoints, spacings } from '../../styles';
 import { AliasForm } from './alias_form';
 import { Connect } from './connect';
@@ -82,7 +82,7 @@ const signupSteps: LoginStepInfo[] = [
         <Text text="username" weight="bold" inline />
       </>
     ),
-    description: `Your username makes it simple for your friends to send you crypto. It lets them look up your end-to-end encryption keys so rest of the world can’t snoop on your data 👀`,
+    description: `Your username makes it simple for your friends to send you crypto. It lets them look up your end-to-end encryption keys, so the rest of the world can’t snoop on your data 👀`,
   },
   {
     step: 3,
@@ -96,6 +96,31 @@ const signupSteps: LoginStepInfo[] = [
     description: `This may take several minutes, please don’t close the window.`,
   },
 ];
+
+const busyStepInfo = (step: number, explorerUrl: string): LoginStepInfo => ({
+  step,
+  title: 'We are busy',
+  description: (
+    <>
+      {'There are too many transactions in the queue ahead of you. Please check back later and try again.'}
+      <PaddedTop>
+        <Text size="s">
+          {'In the meantime, check out the '}
+          <TextLink
+            text="block explorer"
+            href={explorerUrl}
+            color="white"
+            weight="bold"
+            target="_blank"
+            underline
+            inline
+          />
+          {' for live status updates.'}
+        </Text>
+      </PaddedTop>
+    </>
+  ),
+});
 
 const getStepInfo = (step: LoginStep, isNewAccount: boolean) => {
   const steps = isNewAccount ? signupSteps : loginSteps;
@@ -121,14 +146,10 @@ const Root = styled.div`
 `;
 
 interface LoginProps {
-  currentStep: LoginStep;
   worldState: WorldState;
-  wallet?: Wallet;
-  seedPhrase: string;
-  alias: string;
-  aliasAvailability: ValueAvailability;
-  rememberMe: boolean;
+  loginState: LoginState;
   isNewAccount: boolean;
+  explorerUrl: string;
   systemMessage: SystemMessage;
   setSeedPhrase: (seedPhrase: string) => void;
   setAlias: (alias: string) => void;
@@ -140,14 +161,10 @@ interface LoginProps {
 }
 
 export const Login: React.FunctionComponent<LoginProps> = ({
-  currentStep,
   worldState,
-  wallet,
-  seedPhrase,
-  alias,
-  aliasAvailability,
-  rememberMe,
+  loginState,
   isNewAccount,
+  explorerUrl,
   systemMessage,
   setSeedPhrase,
   setAlias,
@@ -157,7 +174,10 @@ export const Login: React.FunctionComponent<LoginProps> = ({
   onRestart,
   onSelectAlias,
 }) => {
-  const { step, title, description } = getStepInfo(currentStep, isNewAccount);
+  const { step: currentStep, wallet, seedPhrase, alias, aliasAvailability, rememberMe, allowToProceed } = loginState;
+  const { step, title, description } = allowToProceed
+    ? getStepInfo(currentStep, isNewAccount)
+    : busyStepInfo(currentStep, explorerUrl);
   const { message, type: messageType } = systemMessage;
 
   return (
@@ -182,9 +202,11 @@ export const Login: React.FunctionComponent<LoginProps> = ({
                   alias={alias}
                   aliasAvailability={aliasAvailability}
                   rememberMe={rememberMe}
+                  allowToProceed={allowToProceed}
                   setAlias={setAlias}
                   setRememberMe={setRememberMe}
                   onSubmit={onSelectAlias}
+                  onRestart={onRestart!}
                   isNewAccount={isNewAccount}
                 />
               );

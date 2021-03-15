@@ -46,6 +46,7 @@ export interface LoginState {
   aliasAvailability: ValueAvailability;
   rememberMe: boolean;
   accountNonce: number;
+  allowToProceed: boolean;
 }
 
 export const initialLoginState: LoginState = {
@@ -56,6 +57,7 @@ export const initialLoginState: LoginState = {
   aliasAvailability: ValueAvailability.INVALID,
   rememberMe: true,
   accountNonce: 0,
+  allowToProceed: true,
 };
 
 export interface WorldState {
