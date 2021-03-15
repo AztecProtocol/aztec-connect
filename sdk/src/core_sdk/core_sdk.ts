@@ -103,6 +103,10 @@ export class CoreSdk extends EventEmitter {
     super();
   }
 
+  private nextLowestPowerOf2(n: number) {
+    return Math.pow(2, Math.floor(Math.log(n) / Math.log(2)));
+  }
+
   public async init() {
     if (this.sdkStatus.initState !== SdkInitState.UNINITIALIZED) {
       throw new Error('Sdk is not UNINITIALIZED.');
@@ -114,7 +118,7 @@ export class CoreSdk extends EventEmitter {
     const crsData = await this.getCrsData(
       this.escapeHatchMode ? EscapeHatchProver.circuitSize : JoinSplitProver.circuitSize,
     );
-    const numWorkers = Math.min(this.numCPU || 1, 8);
+    const numWorkers = this.nextLowestPowerOf2(Math.min(this.numCPU || 1, 8));
     const workerPool = await WorkerPool.new(barretenberg, numWorkers);
     const pooledProverFactory = new PooledProverFactory(workerPool, crsData);
     const joinSplitProver = new JoinSplitProver(

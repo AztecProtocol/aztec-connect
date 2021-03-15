@@ -7,7 +7,6 @@ import { Duration } from 'moment';
 import { RollupDb } from './rollup_db';
 import { Tx, TxReceiver } from './tx_receiver';
 import { WorldState } from './world_state';
-import moment from 'moment';
 import { Metrics } from './metrics';
 import { Blockchain } from 'barretenberg/blockchain';
 import { Block } from 'barretenberg/block_source';

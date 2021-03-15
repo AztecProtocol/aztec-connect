@@ -168,6 +168,10 @@ resource "aws_ecs_task_definition" "falafel" {
         "value": "130000000000"
       },
       {
+        "name": "FEE_GAS_PRICE_MULTIPLIER",
+        "value": "1.2"
+      },
+      {
         "name": "BASE_TX_GAS",
         "value": "16000"
       },

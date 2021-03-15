@@ -155,7 +155,8 @@ export class RollupPublisher {
   private async sendRollupProof(txData: Buffer) {
     while (!this.interrupted) {
       try {
-        const reportedPrice = (await this.blockchain.getGasPrice()) * BigInt(this.feeGasPriceMultiplier);
+        const multiplier = BigInt(Math.floor(this.feeGasPriceMultiplier * 100));
+        const reportedPrice = ((await this.blockchain.getGasPrice()) * multiplier) / 100n;
         const gasPrice = reportedPrice < this.feeGasPrice ? reportedPrice : this.feeGasPrice;
         return await this.blockchain.sendTx(txData, { gasPrice });
       } catch (err) {
