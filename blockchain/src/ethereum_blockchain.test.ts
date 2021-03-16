@@ -45,6 +45,7 @@ describe('ethereum_blockchain', () => {
       console: false,
       minConfirmation: 1,
       minConfirmationEHW: 12,
+      pollInterval: 1000,
     };
 
     blockchain = new EthereumBlockchain(config, contracts as any);
