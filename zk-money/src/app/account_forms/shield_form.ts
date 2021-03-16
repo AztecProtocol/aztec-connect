@@ -62,6 +62,7 @@ interface EthAccountStateValue extends FormValue {
 export interface ShieldFormValues {
   amount: StrInput;
   maxAmount: BigIntValue;
+  gasCost: BigIntValue;
   fee: StrInput;
   settledIn: IntValue;
   ethAccount: EthAccountStateValue;
@@ -81,6 +82,9 @@ const initialShieldFormValues = {
     required: true,
   },
   maxAmount: {
+    value: 0n,
+  },
+  gasCost: {
     value: 0n,
   },
   fee: {
@@ -202,7 +206,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     await this.renewEthAccount();
     await this.updateGasPrice(this.coreProvider);
     this.refreshValues();
-    this.autoFillAmountInput();
+    this.autofillAmountInput();
   }
 
   changeAccountState(accountState: AccountState) {
@@ -352,6 +356,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
 
     const toUpdate = this.validateChanges({
       maxAmount: { value: maxAmount },
+      gasCost: { value: gasCost },
       ethAccount: { value: ethAccountState },
       enableAddToBalance: {
         value: isSameAlias(recipient, this.alias) && spendableBalance > 0n,
@@ -393,8 +398,17 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     if (changes.maxAmount && !toUpdate.amount?.message) {
       const amountInput = changes.amount || this.values.amount;
       const amountValue = toBaseUnits(amountInput.value, this.asset.decimals);
-      if (amountValue > changes.maxAmount.value) {
+      const { maxAmount, gasCost } = changes;
+      if (amountValue > maxAmount.value + gasCost!.value) {
         toUpdate.amount = withError(amountInput, `Insufficient ${this.asset.symbol} Balance.`);
+      } else if (amountValue > maxAmount.value) {
+        toUpdate.amount = withError(
+          amountInput,
+          `Insufficient ${this.asset.symbol} Balance. Please reserve at least ${fromBaseUnits(
+            gasCost!.value,
+            this.asset.decimals,
+          )} ${this.asset.symbol} for gas cost.`,
+        );
       }
     }
 
@@ -635,7 +649,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     this.updateFormValues({ amount: { value: '' } });
   }
 
-  private autoFillAmountInput() {
+  private autofillAmountInput() {
     let amount = 0n;
     const { pendingBalance } = this.ethAccount.state;
     if (pendingBalance) {
@@ -657,14 +671,13 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     this.ethAccount.on(EthAccountEvent.UPDATED_BALANCE, this.onEthAccountBalanceChange);
     this.refreshValues();
     await this.refreshGasCost();
-    this.autoFillAmountInput();
   }
 
   private onEthAccountStateChange = () => {
     if (this.locked) return;
 
     this.refreshValues();
-    this.autoFillAmountInput();
+    this.autofillAmountInput();
   };
 
   private onEthAccountBalanceChange = () => {
@@ -681,12 +694,13 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     }
   };
 
-  private onProviderStateChange = (state?: ProviderState) => {
+  private onProviderStateChange = async (state?: ProviderState) => {
     if (this.locked) return;
 
     if (!this.ethAccount.isSameAddress(state?.account)) {
       this.clearAmountInput();
-      this.renewEthAccount();
+      await this.renewEthAccount();
+      this.autofillAmountInput();
     }
   };
 
@@ -720,6 +734,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
   private async updateGasPrice(provider: Provider) {
     this.gasPrice = BigInt(await new Web3Provider(provider.ethereumProvider).getGasPrice());
   }
+
   private updateFormStatus(status: FormStatus) {
     this.formStatus = status;
     this.emit(AccountFormEvent.UPDATED_FORM_STATUS, status);

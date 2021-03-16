@@ -102,6 +102,8 @@ export class UserSession extends EventEmitter {
   private destroyed = false;
 
   private readonly debounceCheckAliasWait = 600;
+  private readonly MAX_ACCOUNT_TXS_PER_ROLLUP = 10; // TODO - fetch from server
+  private readonly TXS_PER_ROLLUP = 112;
 
   constructor(
     private config: Config,
@@ -265,7 +267,8 @@ export class UserSession extends EventEmitter {
     this.emitSystemMessage('Checking account status...');
 
     const accountNonce = await this.graphql.getAccountNonce(this.signedInAccount!.accountPublicKey);
-    this.updateLoginState({ accountNonce });
+    const allowToProceed = accountNonce > 0 || (await this.allowNewUser());
+    this.updateLoginState({ accountNonce, allowToProceed });
 
     this.toStep(LoginStep.SET_ALIAS);
   };
@@ -329,7 +332,8 @@ export class UserSession extends EventEmitter {
     this.signedInAccount = await this.createAccountFromSeedPhrase(seedPhraseInput);
 
     const accountNonce = await this.graphql.getAccountNonce(this.signedInAccount!.accountPublicKey);
-    this.updateLoginState({ accountNonce });
+    const allowToProceed = accountNonce > 0 || (await this.allowNewUser());
+    this.updateLoginState({ accountNonce, allowToProceed });
 
     await this.toStep(LoginStep.SET_ALIAS);
   }
@@ -717,6 +721,13 @@ export class UserSession extends EventEmitter {
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
+  }
+
+  private async allowNewUser() {
+    const { pendingTxCount } = await this.sdk.getRemoteStatus();
+    const unsettledAccountTxs = await this.graphql.getUnsettledAccountTxs();
+    const numRollups = Math.ceil(pendingTxCount / this.TXS_PER_ROLLUP);
+    return unsettledAccountTxs.length < numRollups * this.MAX_ACCOUNT_TXS_PER_ROLLUP;
   }
 
   // Remove the ugly workarounds below and make those apis utils that are ready to use without having to initialize the sdk.
