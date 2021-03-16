@@ -102,7 +102,7 @@ export class UserSession extends EventEmitter {
   private destroyed = false;
 
   private readonly debounceCheckAliasWait = 600;
-  private readonly MAX_ACCOUNT_TXS_PER_ROLLUP = 10; // TODO - fetch from server
+  private readonly MAX_ACCOUNT_TXS_PER_ROLLUP = 66; // TODO - fetch from server
   private readonly TXS_PER_ROLLUP = 112;
 
   constructor(
