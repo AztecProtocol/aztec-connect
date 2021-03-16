@@ -93,7 +93,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     this.running = true;
     (async () => {
       while (this.running) {
-        await new Promise(resolve => setTimeout(resolve, this.config.pollInterval || 1000));
+        await new Promise(resolve => setTimeout(resolve, this.config.pollInterval || 10000));
         await emitBlocks().catch(this.debug);
       }
     })();

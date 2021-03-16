@@ -23,6 +23,7 @@ export class Metrics {
   private totalFees: Gauge<string>;
   private feeDistributorBalance: Gauge<string>;
 
+  private httpEndpointCounter: Counter<string>;
   private txReceivedCounter: Counter<string>;
 
   constructor(worldStateDb: WorldStateDb, private rollupDb: RollupDb, private blockchain: Blockchain) {
@@ -175,6 +176,12 @@ export class Metrics {
       help: 'Time to process a received block',
     });
 
+    this.httpEndpointCounter = new Counter({
+      name: 'http_endpoint_request',
+      help: 'Http endpoint request counter',
+      labelNames: ['path'],
+    });
+
     this.txReceivedCounter = new Counter({
       name: 'tx_received',
       help: 'Transaction received counter',
@@ -204,6 +211,10 @@ export class Metrics {
 
   txSettlementDuration(ms: number) {
     this.txSettlementHistogram.observe(ms / 1000);
+  }
+
+  httpEndpoint(path: string) {
+    this.httpEndpointCounter.labels(path).inc();
   }
 
   txReceived(txType: TxType) {

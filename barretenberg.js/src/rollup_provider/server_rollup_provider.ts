@@ -6,8 +6,8 @@ import { TxHash } from '../tx_hash';
 import { blockchainStatusFromJson } from '../blockchain';
 
 export class ServerRollupProvider extends ServerBlockSource implements RollupProvider {
-  constructor(baseUrl: URL) {
-    super(baseUrl);
+  constructor(baseUrl: URL, pollInterval = 10000) {
+    super(baseUrl, pollInterval);
   }
 
   async sendProof({ proofData, viewingKeys, depositSignature, ...rest }: Proof) {

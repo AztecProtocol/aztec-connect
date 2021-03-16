@@ -40,6 +40,11 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     }
   };
 
+  const recordMetric = async (ctx: Koa.Context, next: () => Promise<void>) => {
+    metrics.httpEndpoint(ctx.URL.pathname);
+    await next();
+  };
+
   const checkReady = async (ctx: Koa.Context, next: () => Promise<void>) => {
     if (!server.isReady()) {
       ctx.status = 503;
@@ -59,7 +64,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     }
   };
 
-  router.get('/', async (ctx: Koa.Context) => {
+  router.get('/', recordMetric, async (ctx: Koa.Context) => {
     ctx.body = {
       serviceName: 'falafel',
       isReady: server.isReady(),
@@ -67,7 +72,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     ctx.status = 200;
   });
 
-  router.post('/tx', checkReady, async (ctx: Koa.Context) => {
+  router.post('/tx', recordMetric, checkReady, async (ctx: Koa.Context) => {
     const stream = new PromiseReadable(ctx.req);
     const { proofData, viewingKeys, depositSignature } = JSON.parse((await stream.readAll()) as string);
     const tx: Proof = {
@@ -83,7 +88,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     ctx.status = 200;
   });
 
-  router.get('/get-blocks', async (ctx: Koa.Context) => {
+  router.get('/get-blocks', recordMetric, async (ctx: Koa.Context) => {
     const blocks = await server.getBlocks(+ctx.query.from);
     const response: GetBlocksServerResponse = {
       latestRollupId: await server.getLatestRollupId(),
@@ -93,22 +98,22 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     ctx.status = 200;
   });
 
-  router.get('/remove-data', validateAuth, async (ctx: Koa.Context) => {
+  router.get('/remove-data', recordMetric, validateAuth, async (ctx: Koa.Context) => {
     await server.removeData();
     ctx.status = 200;
   });
 
-  router.get('/reset', validateAuth, async (ctx: Koa.Context) => {
+  router.get('/reset', recordMetric, validateAuth, async (ctx: Koa.Context) => {
     await server.resetPipline();
     ctx.status = 200;
   });
 
-  router.get('/flush', validateAuth, async (ctx: Koa.Context) => {
+  router.get('/flush', recordMetric, validateAuth, async (ctx: Koa.Context) => {
     await server.flushTxs();
     ctx.status = 200;
   });
 
-  router.get('/status', async (ctx: Koa.Context) => {
+  router.get('/status', recordMetric, async (ctx: Koa.Context) => {
     const status = await server.getStatus();
     const response = {
       ...status,
@@ -127,13 +132,13 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     ctx.status = 200;
   });
 
-  router.get('/get-pending-note-nullifiers', async (ctx: Koa.Context) => {
+  router.get('/get-pending-note-nullifiers', recordMetric, async (ctx: Koa.Context) => {
     const nullifiers = await server.getUnsettledNullifiers();
     ctx.body = nullifiers.map(n => n.toString('hex'));
     ctx.status = 200;
   });
 
-  router.get('/set-topology', validateAuth, async (ctx: Koa.Context) => {
+  router.get('/set-topology', recordMetric, validateAuth, async (ctx: Koa.Context) => {
     const numOuterRollupProofs = +(ctx.query['num-outer-proofs'] as string);
     if (!numOuterRollupProofs || numOuterRollupProofs > 32 || numOuterRollupProofs & (numOuterRollupProofs - 1)) {
       throw new Error('Bad topology, num-outer-proofs must be 1 to 32, powers of 2.');
@@ -142,12 +147,12 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     ctx.status = 200;
   });
 
-  router.get('/metrics', async (ctx: Koa.Context) => {
+  router.get('/metrics', recordMetric, async (ctx: Koa.Context) => {
     ctx.body = await metrics.getMetrics();
     ctx.status = 200;
   });
 
-  router.all('/playground', graphqlPlayground({ endpoint: `${prefix}/graphql` }));
+  router.all('/playground', recordMetric, graphqlPlayground({ endpoint: `${prefix}/graphql` }));
 
   const app = new Koa();
   app.proxy = true;

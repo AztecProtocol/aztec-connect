@@ -36,7 +36,7 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
   private latestRollupId = -1;
   protected baseUrl: string;
 
-  constructor(baseUrl: URL) {
+  constructor(baseUrl: URL, private pollInterval = 10000) {
     super();
     this.baseUrl = baseUrl.toString().replace(/\/$/, '');
   }
@@ -65,7 +65,7 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
     const poll = async () => {
       while (this.running) {
         await emitBlocks();
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, this.pollInterval));
       }
     };
     poll();
