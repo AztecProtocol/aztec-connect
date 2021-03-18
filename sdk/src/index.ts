@@ -2,6 +2,7 @@ export * from './sdk';
 export * from './core_sdk/create_sdk';
 export * from './ethereum_sdk';
 export * from './note';
+export * from './proofs/proof_output';
 export * from './signer';
 export * from './user';
 export * from './user_tx';
