@@ -570,7 +570,20 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       }
 
       const isContract = await this.sdk.isContract(ethAddress);
-      if (isContract) {
+      let validSignature = false;
+      if (!isContract) {
+        this.prompt('Please sign the proof data in your wallet.');
+        try {
+          const signer = new Web3Signer(this.ethAccount.provider!.ethereumProvider);
+          await this.proofOutput!.ethSign(signer as any, ethAddress);
+          const signature = this.proofOutput!.depositSignature!;
+          validSignature = this.validateSignature(ethAddress, signature, this.proofOutput!.signingData!);
+        } catch (e) {
+          debug(e);
+          return this.abort('Failed to sign the proof.');
+        }
+      }
+      if (!validSignature) {
         this.prompt('Please approve the proof data in your wallet.');
         try {
           await this.withUserProvider(async () => {
@@ -581,16 +594,6 @@ export class ShieldForm extends EventEmitter implements AccountForm {
         } catch (e) {
           debug(e);
           return this.abort('Failed to approve the proof.');
-        }
-      } else {
-        this.prompt('Please sign the proof data in your wallet.');
-
-        try {
-          const signer = new Web3Signer(this.ethAccount.provider!.ethereumProvider);
-          await this.proofOutput!.ethSign(signer as any, ethAddress);
-        } catch (e) {
-          debug(e);
-          return this.abort('Failed to sign the proof.');
         }
       }
     }
@@ -772,6 +775,10 @@ export class ShieldForm extends EventEmitter implements AccountForm {
 
   private getTransactionReceipt(txHash: TxHash) {
     return (this.sdk as any).blockchain.getTransactionReceipt(txHash);
+  }
+
+  private validateSignature(address: EthAddress, signature: Buffer, signingData: Buffer) {
+    return (this.sdk as any).blockchain.validateSignature(address, signature, signingData);
   }
 
   private async withUserProvider(action: () => any) {

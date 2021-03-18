@@ -39,7 +39,22 @@ export class WalletConnectEthereumProvider implements EthereumProvider {
       ...utils.toUtf8Bytes(`\x19Ethereum Signed Message:\n${message.length}`),
       ...new Uint8Array(message),
     ];
-    return (this.ethereumProvider as any).connector.signMessage([address.toLowerCase(), utils.keccak256(toSign)]);
+
+    const signature = await (this.ethereumProvider as any).connector.signMessage([
+      address.toLowerCase(),
+      utils.keccak256(toSign),
+    ]);
+
+    const signer = utils.recoverAddress(utils.arrayify(utils.keccak256(toSign)), signature);
+    if (signer.toLowerCase() === address.toLowerCase()) {
+      return signature;
+    } else {
+      const unsafeToSign = [...new Uint8Array(message)];
+      return (this.ethereumProvider as any).connector.signMessage([
+        address.toLowerCase(),
+        utils.keccak256(unsafeToSign),
+      ]);
+    }
   }
 
   private async handleSendTransaction(args: RequestArguments) {

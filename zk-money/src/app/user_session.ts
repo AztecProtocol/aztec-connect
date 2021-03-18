@@ -272,7 +272,7 @@ export class UserSession extends EventEmitter {
       }
     }
 
-    this.emitSystemMessage('Check for signature request in your wallet to link account...', MessageType.WARNING);
+    this.emitSystemMessage('Please sign the message in your wallet to login...', MessageType.WARNING);
 
     try {
       this.signedInAccount = await this.linkAccount(this.provider!);
