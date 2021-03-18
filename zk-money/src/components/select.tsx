@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import styled, { css } from 'styled-components';
-import { borderRadiuses, colours, fontSizes, spacings, Theme, themeColours } from '../styles';
+import { borderRadiuses, colours, defaultTextColour, fontSizes, spacings, Theme, themeColours } from '../styles';
 import { ClickOutside } from './click_outside';
 
 const Root = styled(ClickOutside)`
@@ -20,9 +20,11 @@ const Dropdown = styled.div`
   top: 100%;
   translate: translateY(${spacings.xs});
   background: ${colours.white};
+  color: ${defaultTextColour};
   box-shadow: 0px 1px 6px rgba(0, 0, 0, 0.15);
   border-radius: ${borderRadiuses.s};
   z-index: 99;
+  overflow: hidden;
 `;
 
 const itemClassname = 'zm-dropdown-item';

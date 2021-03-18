@@ -4,6 +4,10 @@ import { WalletProvider } from './wallet_provider';
 class MetamaskProvider implements WalletProvider {
   constructor(public ethereumProvider: EthereumProvider) {}
 
+  get connected() {
+    return !!window.ethereum.selectedAddress;
+  }
+
   async connect() {
     await this.ethereumProvider.request({ method: 'eth_requestAccounts' });
   }

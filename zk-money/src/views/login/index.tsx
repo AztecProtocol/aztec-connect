@@ -1,10 +1,20 @@
 import React from 'react';
 import styled from 'styled-components';
-import { LoginState, LoginStep, MessageType, SystemMessage, Wallet, WorldState } from '../../app';
+import {
+  DepositFormValues,
+  LoginState,
+  LoginStep,
+  MessageType,
+  ProviderState,
+  SystemMessage,
+  Wallet,
+  WorldState,
+} from '../../app';
 import { Text, TextLink } from '../../components';
 import { breakpoints, spacings } from '../../styles';
 import { AliasForm } from './alias_form';
 import { Connect } from './connect';
+import { DepositForm } from './deposit_form';
 import { LoginTemplate } from './login_template';
 import { Progress } from './progress';
 import { SeedPhraseForm } from './seed_phrase_form';
@@ -95,6 +105,22 @@ const signupSteps: LoginStepInfo[] = [
     ),
     description: `This may take several minutes, please don’t close the window.`,
   },
+  {
+    step: 4,
+    title: (
+      <>
+        {'Restoring '}
+        <Text text="your" weight="bold" inline />
+        {' account...'}
+      </>
+    ),
+    description: `Looks like you have tried to register before. We are restoring your account to see if you can still claim your desired username.`,
+  },
+  {
+    step: 4,
+    title: 'Deposit ETH', // TODO - Could be other assets.
+    description: `In order to prevent spam, you must deposit at the same time as claiming a username. Please deposit at least 0.01 ETH.`,
+  },
 ];
 
 const busyStepInfo = (step: number, explorerUrl: string): LoginStepInfo => ({
@@ -122,6 +148,43 @@ const busyStepInfo = (step: number, explorerUrl: string): LoginStepInfo => ({
   ),
 });
 
+const loginProgresses = [
+  {
+    step: LoginStep.INIT_SDK,
+    title: 'Creating Encryption Keys',
+  },
+  {
+    step: LoginStep.ADD_ACCOUNT,
+    title: 'Logging In',
+  },
+  {
+    step: LoginStep.SYNC_DATA,
+    title: 'Syncing Account Data',
+  },
+];
+
+const signupProgresses = [
+  {
+    step: LoginStep.INIT_SDK,
+    title: 'Encrypting Data',
+  },
+  {
+    step: LoginStep.CREATE_ACCOUNT,
+    title: 'Creating Registration Proof',
+  },
+];
+
+const recoveringProgresses = [
+  {
+    step: LoginStep.VALIDATE_DATA,
+    title: 'Encrypting Data',
+  },
+  {
+    step: LoginStep.RECOVER_ACCOUNT_PROOF,
+    title: 'Restoring Registration Proof',
+  },
+];
+
 const getStepInfo = (step: LoginStep, isNewAccount: boolean) => {
   const steps = isNewAccount ? signupSteps : loginSteps;
   switch (step) {
@@ -131,6 +194,11 @@ const getStepInfo = (step: LoginStep, isNewAccount: boolean) => {
       return steps[1];
     case LoginStep.SET_ALIAS:
       return steps[2];
+    case LoginStep.VALIDATE_DATA:
+    case LoginStep.RECOVER_ACCOUNT_PROOF:
+      return steps[4];
+    case LoginStep.CLAIM_USERNAME:
+      return steps[5];
     default:
       return steps[3];
   }
@@ -148,6 +216,8 @@ const Root = styled.div`
 interface LoginProps {
   worldState: WorldState;
   loginState: LoginState;
+  providerState?: ProviderState;
+  depositForm?: DepositFormValues;
   isNewAccount: boolean;
   explorerUrl: string;
   systemMessage: SystemMessage;
@@ -158,11 +228,16 @@ interface LoginProps {
   onRestart?: () => void;
   onSelectSeedPhrase: (seedPhrase: string) => void;
   onSelectAlias: (alias: string) => void;
+  onDepositFormInputsChange(inputs: Partial<DepositFormValues>): void;
+  onSubmitDepositForm(): void;
+  onChangeWallet(wallet: Wallet): void;
 }
 
 export const Login: React.FunctionComponent<LoginProps> = ({
   worldState,
   loginState,
+  providerState,
+  depositForm,
   isNewAccount,
   explorerUrl,
   systemMessage,
@@ -173,6 +248,9 @@ export const Login: React.FunctionComponent<LoginProps> = ({
   onSelectSeedPhrase,
   onRestart,
   onSelectAlias,
+  onDepositFormInputsChange,
+  onSubmitDepositForm,
+  onChangeWallet,
 }) => {
   const { step: currentStep, wallet, seedPhrase, alias, aliasAvailability, rememberMe, allowToProceed } = loginState;
   const { step, title, description } = allowToProceed
@@ -210,16 +288,33 @@ export const Login: React.FunctionComponent<LoginProps> = ({
                   isNewAccount={isNewAccount}
                 />
               );
-            default:
+            case LoginStep.CLAIM_USERNAME:
+              return (
+                <DepositForm
+                  providerState={providerState}
+                  form={depositForm!}
+                  onChangeInputs={onDepositFormInputsChange}
+                  onSubmit={onSubmitDepositForm}
+                  onChangeWallet={onChangeWallet}
+                />
+              );
+            default: {
+              const steps =
+                [LoginStep.VALIDATE_DATA, LoginStep.RECOVER_ACCOUNT_PROOF].indexOf(currentStep) >= 0
+                  ? recoveringProgresses
+                  : isNewAccount
+                  ? signupProgresses
+                  : loginProgresses;
               return (
                 <Progress
                   currentStep={currentStep}
                   worldState={worldState}
-                  isNewAccount={isNewAccount}
+                  steps={steps}
                   active={!message || messageType === MessageType.TEXT}
                   failed={!!message && messageType === MessageType.ERROR}
                 />
               );
+            }
           }
         })()}
       </LoginTemplate>

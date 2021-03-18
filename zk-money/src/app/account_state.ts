@@ -16,6 +16,7 @@ export interface AssetState {
   spendableNotes: Note[];
   spendableBalance: bigint;
   joinSplitTxs: JoinSplitTx[];
+  pendingBalance: bigint;
 }
 
 export const initialAssetState = {
@@ -25,4 +26,5 @@ export const initialAssetState = {
   spendableNotes: [],
   spendableBalance: 0n,
   joinSplitTxs: [],
+  pendingBalance: 0n,
 };

@@ -8,10 +8,11 @@ import { AccountAction, parseAccountTx, parseJoinSplitTx } from './account_txs';
 import { AccountUtils } from './account_utils';
 import { AppAssetId, assets } from './assets';
 import { Database } from './database';
+import { EthAccount, EthAccountEvent } from './eth_account';
 import { Form } from './form';
 import { Network } from './networks';
 import { PriceFeedService } from './price_feed_service';
-import { Provider } from './provider';
+import { Provider, ProviderEvent } from './provider';
 import { RollupService, RollupServiceEvent, RollupStatus } from './rollup_service';
 
 const debug = createDebug('zm:account');
@@ -42,6 +43,7 @@ export class UserAccount extends EventEmitter {
     form: AccountForm;
   };
   private provider?: Provider;
+  private ethAccount!: EthAccount;
   private nextPublishTime: Date;
 
   private debounceRefreshAccountState: DebouncedFunc<() => void>;
@@ -119,9 +121,9 @@ export class UserAccount extends EventEmitter {
   }
 
   async init(provider?: Provider) {
-    this.provider = provider;
     this.sdk.on(SdkEvent.UPDATED_USER_STATE, this.handleUserStateChange);
     this.priceFeedService.subscribe(this.activeAsset, this.onPriceChange);
+    await this.changeProvider(provider);
     await this.refreshAccountState();
     await this.refreshAssetState();
   }
@@ -133,7 +135,10 @@ export class UserAccount extends EventEmitter {
 
     this.removeAllListeners();
     this.activeAction?.form.destroy();
+    this.provider?.off(ProviderEvent.UPDATED_PROVIDER_STATE, this.onProviderStateChange);
+    this.ethAccount?.destroy();
     this.sdk.off(SdkEvent.UPDATED_USER_STATE, this.handleUserStateChange);
+    this.priceFeedService.unsubscribe(this.activeAsset, this.onPriceChange);
     this.debounceRefreshAccountState.cancel();
     this.debounceRefreshAssetState.cancel();
   }
@@ -156,8 +161,11 @@ export class UserAccount extends EventEmitter {
   }
 
   async changeProvider(provider?: Provider) {
+    this.provider?.off(ProviderEvent.UPDATED_PROVIDER_STATE, this.onProviderStateChange);
     this.provider = provider;
+    this.provider?.on(ProviderEvent.UPDATED_PROVIDER_STATE, this.onProviderStateChange);
     this.activeAction?.form.changeProvider(provider);
+    await this.renewEthAccount();
   }
 
   async selectAction(action: AccountAction) {
@@ -248,7 +256,7 @@ export class UserAccount extends EventEmitter {
           this.sdk,
           this.db,
           this.coreProvider,
-          this.provider,
+          this.ethAccount,
           this.rollup,
           this.accountUtils,
           this.requiredNetwork,
@@ -298,8 +306,9 @@ export class UserAccount extends EventEmitter {
       if (prevTxs.some(tx => !tx.settled)) {
         userJoinSplitTxs.push(...migratingTxs.concat(prevTxs));
       } else if (this.accountState.settled && !this.activeAction) {
+        debug(`Remove user ${prevUserId}`);
         await this.db.removeMigratingTxs(this.userId);
-        await this.sdk.removeUser(prevUserId);
+        await this.accountUtils.safeRemoveUser(prevUserId);
       }
     }
 
@@ -315,6 +324,19 @@ export class UserAccount extends EventEmitter {
     });
   };
 
+  private async renewEthAccount() {
+    this.ethAccount?.off(EthAccountEvent.UPDATED_PENDING_BALANCE, this.onPendingBalanceChange);
+    this.ethAccount = new EthAccount(
+      this.provider,
+      this.sdk,
+      this.accountUtils,
+      this.assetState.asset.id,
+      this.requiredNetwork,
+    );
+    this.ethAccount.on(EthAccountEvent.UPDATED_PENDING_BALANCE, this.onPendingBalanceChange);
+    this.activeAction?.form.changeEthAccount(this.ethAccount);
+  }
+
   private onRollupStatusChange = (status: RollupStatus) => {
     const { nextPublishTime } = status;
     if (nextPublishTime.getTime() !== this.nextPublishTime.getTime()) {
@@ -327,6 +349,16 @@ export class UserAccount extends EventEmitter {
     if (assetId === this.assetState.asset.id) {
       this.updateAssetState({ price });
     }
+  };
+
+  private onProviderStateChange = async () => {
+    if (!this.ethAccount?.isSameAccount(this.provider)) {
+      await this.renewEthAccount();
+    }
+  };
+
+  private onPendingBalanceChange = (pendingBalance: bigint) => {
+    this.updateAssetState({ pendingBalance });
   };
 
   private updateAccountState(accountState: Partial<AccountState>) {

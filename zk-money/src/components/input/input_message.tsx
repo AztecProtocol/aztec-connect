@@ -6,9 +6,16 @@ import { InputTheme } from './input_theme';
 import { Text } from '../text';
 
 const messageColours = {
-  [MessageType.TEXT]: defaultTextColour,
-  [MessageType.WARNING]: systemStates.warning,
-  [MessageType.ERROR]: systemStates.error,
+  [InputTheme.WHITE]: {
+    [MessageType.TEXT]: defaultTextColour,
+    [MessageType.WARNING]: systemStates.warning,
+    [MessageType.ERROR]: systemStates.error,
+  },
+  [InputTheme.LIGHT]: {
+    [MessageType.TEXT]: 'inherit',
+    [MessageType.WARNING]: 'inherit',
+    [MessageType.ERROR]: 'inherit',
+  },
 };
 
 const Root = styled.div`
@@ -21,7 +28,7 @@ interface MessageProps {
 }
 
 const Message = styled(Text)<MessageProps>`
-  color: ${({ type }) => messageColours[type]};
+  color: ${({ theme, type }: MessageProps) => messageColours[theme][type]};
 `;
 
 interface InputMessageProps {

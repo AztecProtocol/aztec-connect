@@ -91,7 +91,7 @@ export const Referral: React.FunctionComponent<ReferralProps> = ({ alias, overri
   }
 
   const shareOnTwitter = () => {
-    const url = `https://zk.money?alias=${alias}`;
+    const url = `https://zk.money?alias=${encodeURIComponent(alias)}`;
     const text =
       'I just signed up for zk.money. Sign up below to send crypto privately and a chance to win 1 zkETH. @aztecnetwork';
     window.open(`http://twitter.com/share?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`);

@@ -70,7 +70,7 @@ export class RollupService extends EventEmitter {
 
   private statusSubscriber?: number;
 
-  constructor(private sdk: WalletSdk, private readonly pollInterval = 5000) {
+  constructor(private sdk: WalletSdk, private readonly pollInterval = 60 * 1000) {
     super();
   }
 

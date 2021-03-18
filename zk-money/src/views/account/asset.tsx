@@ -4,9 +4,9 @@ import { AccountAction, AccountState, Asset, AssetState, sum, WorldState } from 
 import { BlockTitle, DisclaimerBlock, ProgressHandler, Spinner, Text, TextLink } from '../../components';
 import { breakpoints, spacings } from '../../styles';
 import { MergeBlock } from './merge_block';
+import { ShieldPrompt } from './shield_prompt';
 import { TransactionHistory } from './transaction_history';
 import { ValueSummary } from './value_summary';
-import { ZeroBalancePrompt } from './zero_balance_prompt';
 
 const Row = styled.div`
   padding: ${spacings.xl} 0;
@@ -106,16 +106,20 @@ export const AccountAsset: React.FunctionComponent<AccountAssetProps> = ({
 
   const isLoading = asset.id !== assetState.asset.id;
   const { accountTxs, settled } = accountState;
-  const { balance, spendableBalance, joinSplitTxs } = assetState;
+  const { balance, spendableBalance, joinSplitTxs, pendingBalance } = assetState;
   const pendingTxs = joinSplitTxs.filter(tx => !tx.settled);
   const pendingValue = sum(pendingTxs.map(tx => tx.balanceDiff));
   const sendableBalance = settled ? spendableBalance : 0n;
 
   return (
     <>
-      {!isLoading && !balance && !pendingValue && (
+      {!isLoading && (!(balance + pendingValue) || pendingBalance) && (
         <Row>
-          <ZeroBalancePrompt asset={asset} onSubmit={() => onSelectAction(AccountAction.SHIELD)} />
+          <ShieldPrompt
+            asset={asset}
+            pendingBalance={pendingBalance}
+            onSubmit={() => onSelectAction(AccountAction.SHIELD)}
+          />
         </Row>
       )}
       <PaddedRow>

@@ -1,30 +1,25 @@
+import { Web3Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
-import EventEmitter from 'events';
 import { AppAssetId, assets } from '../assets';
 import { PriceFeed, PriceFeedEvent } from './price_feed';
 
 const debug = createDebug('zm:price_feed_service');
 
-export enum PriceFeedServiceEvent {
-  UPDATED_PRICE = 'UPDATED_PRICE',
-}
-
 type PriceFeedSubscriber = (assetId: AppAssetId, price: bigint) => void;
 
-export class PriceFeedService extends EventEmitter {
+export class PriceFeedService {
   private priceFeeds: PriceFeed[];
   private subscribers: PriceFeedSubscriber[][] = [];
   private priceListeners: ((price: bigint) => void)[] = [];
 
   private readonly pollInterval = 5 * 60 * 1000; // 5 mins
 
-  constructor(priceFeedContractAddresses: string[], infuraId: string, network: string) {
-    super();
-    this.priceFeeds = priceFeedContractAddresses.map(a => new PriceFeed(a, infuraId, network, this.pollInterval));
+  constructor(priceFeedContractAddresses: string[], provider: Web3Provider) {
+    this.priceFeeds = priceFeedContractAddresses.map(a => new PriceFeed(a, provider, this.pollInterval));
     assets.forEach(({ id }) => {
       this.subscribers[id] = [];
       this.priceListeners[id] = (price: bigint) => {
-        this.emit(PriceFeedServiceEvent.UPDATED_PRICE, id, price);
+        this.emit(id, price);
       };
     });
   }
@@ -34,7 +29,6 @@ export class PriceFeedService extends EventEmitter {
   }
 
   destroy() {
-    this.removeAllListeners();
     this.priceFeeds.forEach(pf => pf.destroy());
   }
 
@@ -66,5 +60,9 @@ export class PriceFeedService extends EventEmitter {
     if (!this.subscribers[assetId].length) {
       this.priceFeeds[assetId].off(PriceFeedEvent.UPDATED_PRICE, this.priceListeners[assetId]);
     }
+  }
+
+  private emit(assetId: AppAssetId, price: bigint) {
+    this.subscribers[assetId].forEach(s => s(assetId, price));
   }
 }

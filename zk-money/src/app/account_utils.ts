@@ -1,8 +1,11 @@
 import { AccountId, AssetId, EthAddress, GrumpkinAddress, WalletSdk } from '@aztec/sdk';
+import createDebug from 'debug';
 import { formatAliasInput, isValidAliasInput } from './alias';
 import { GraphQLService } from './graphql_service';
 import { Network } from './networks';
 import { Provider, ProviderStatus } from './provider';
+
+const debug = createDebug('zm:account_utils');
 
 export class AccountUtils {
   constructor(private sdk: WalletSdk, private graphql: GraphQLService, private requiredNetwork: Network) {}
@@ -24,6 +27,34 @@ export class AccountUtils {
   async isAccountSettled(userId: AccountId) {
     const accountTxs = await this.sdk.getAccountTxs(userId);
     return accountTxs.length > 1 || !!accountTxs[0]?.settled;
+  }
+
+  async addUser(privateKey: Buffer, nonce: number, noSync = false) {
+    // No need to sync data for user with nonce 0.
+    // But it will start syncing if latest rollup id is greater than lastSynced.
+    return this.sdk.addUser(privateKey, nonce, !nonce || noSync);
+  }
+
+  async safeAddUser(privateKey: Buffer, nonce: number, noSync = false) {
+    const publicKey = this.sdk.derivePublicKey(privateKey);
+    const userId = new AccountId(publicKey, nonce);
+    if (!this.isUserAdded(userId)) {
+      await this.addUser(privateKey, nonce, noSync);
+    }
+
+    const userData = this.sdk.getUserData(userId);
+    return userData.id;
+  }
+
+  async safeRemoveUser(userId: AccountId) {
+    try {
+      await this.sdk.removeUser(userId);
+      debug(`Removed user ${userId}.`);
+    } catch (e) {
+      debug(e);
+      return false;
+    }
+    return true;
   }
 
   async getAccountId(aliasInput: string) {

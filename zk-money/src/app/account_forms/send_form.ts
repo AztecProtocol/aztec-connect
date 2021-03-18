@@ -1,5 +1,4 @@
-import { AccountId, EthAddress, TxType, WalletSdk } from '@aztec/sdk';
-import { JoinSplitProofOutput } from '@aztec/sdk/proofs/proof_output';
+import { AccountId, EthAddress, JoinSplitProofOutput, TxType, WalletSdk } from '@aztec/sdk';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { debounce, DebouncedFunc } from 'lodash';
@@ -178,6 +177,8 @@ export class SendForm extends EventEmitter implements AccountForm {
   }
 
   changeProvider() {}
+
+  changeEthAccount() {}
 
   changeValues(newValues: Partial<SendFormValues>) {
     if (this.locked) {

@@ -12,6 +12,7 @@ import {
   AppEvent,
   assets,
   AssetState,
+  DepositFormValues,
   Form,
   LoginState,
   LoginStep,
@@ -76,6 +77,7 @@ interface AppState {
     action: AccountAction;
     formValues: Form;
   };
+  depositForm?: DepositFormValues;
   processingAction: boolean;
   systemMessage: SystemMessage;
 }
@@ -111,6 +113,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
       accountState: this.app.accountState,
       assetState: this.app.assetState,
       activeAction: this.app.activeAction,
+      depositForm: this.app.depositForm,
       processingAction: this.app.isProcessingAction(),
       systemMessage: {
         message: '',
@@ -185,6 +188,8 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
       }
     } else if (this.app.hasSession()) {
       this.goToAction(AppAction.ACCOUNT);
+    } else if (action === AppAction.LOGIN && this.app.hasLocalAccountProof()) {
+      this.app.resumeLogin();
     }
   }
 
@@ -207,6 +212,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
       accountState: this.app.accountState,
       assetState: this.app.assetState,
       activeAction: this.app.activeAction,
+      depositForm: this.app.depositForm,
       processingAction: this.app.isProcessingAction(),
     });
   };
@@ -227,6 +233,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
       accountState: this.app.accountState,
       assetState: this.app.assetState,
       activeAction: this.app.activeAction,
+      depositForm: this.app.depositForm,
       processingAction: this.app.isProcessingAction(),
     });
   };
@@ -286,6 +293,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
       providerState,
       processingAction,
       worldState,
+      depositForm,
       systemMessage,
     } = this.state;
     const { config } = this.props;
@@ -309,12 +317,15 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
             case AppAction.LOGIN: {
               const { step, accountNonce } = loginState;
               const allowRestart =
-                [LoginStep.SET_SEED_PHRASE, LoginStep.SET_ALIAS].indexOf(step) >= 0 ||
-                (step !== LoginStep.CONNECT_WALLET && systemMessage.type === MessageType.ERROR);
+                !processingAction &&
+                ([LoginStep.SET_SEED_PHRASE, LoginStep.SET_ALIAS, LoginStep.CLAIM_USERNAME].indexOf(step) >= 0 ||
+                  (step !== LoginStep.CONNECT_WALLET && systemMessage.type === MessageType.ERROR));
               return (
                 <Login
                   worldState={worldState}
                   loginState={loginState}
+                  providerState={providerState}
+                  depositForm={depositForm}
                   isNewAccount={!accountNonce}
                   explorerUrl={config.explorerUrl}
                   systemMessage={systemMessage}
@@ -325,6 +336,9 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
                   onSelectSeedPhrase={this.app.confirmSeedPhrase}
                   onSelectAlias={this.app.confirmAlias}
                   onRestart={allowRestart ? this.handleRestart : undefined}
+                  onDepositFormInputsChange={this.app.changeDepositForm}
+                  onSubmitDepositForm={this.app.claimUserName}
+                  onChangeWallet={this.app.changeWallet}
                 />
               );
             }

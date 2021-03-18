@@ -3,6 +3,7 @@ import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import Cookie from 'js-cookie';
 import { Config } from '../config';
+import { DepositFormValues } from './account_forms';
 import { AccountAction } from './account_txs';
 import { AppAssetId } from './assets';
 import { Database } from './database';
@@ -35,6 +36,8 @@ export class App extends EventEmitter {
   private activeAsset: AppAssetId;
   public requiredNetwork: Network;
   private readonly sessionCookieName = '_zkmoney_session';
+  private readonly accountProofCacheName = 'zm_account_proof';
+  private readonly walletCacheName = 'zm_wallet';
 
   constructor(private config: Config, apollo: ApolloClient<any>, initialAsset: AppAssetId) {
     super();
@@ -64,6 +67,10 @@ export class App extends EventEmitter {
 
   hasCookie() {
     return !!Cookie.get(this.sessionCookieName);
+  }
+
+  hasLocalAccountProof() {
+    return !!localStorage.getItem(this.accountProofCacheName);
   }
 
   get loginState() {
@@ -98,8 +105,12 @@ export class App extends EventEmitter {
     return this.session?.getAccount()?.getMergeForm();
   }
 
+  get depositForm() {
+    return this.session?.getDepositForm()?.getValues();
+  }
+
   isProcessingAction() {
-    return this.session?.getAccount()?.isProcessingAction() || false;
+    return this.session?.isProcessingAction() || this.session?.getAccount()?.isProcessingAction() || false;
   }
 
   createSession = () => {
@@ -114,6 +125,8 @@ export class App extends EventEmitter {
       this.db,
       this.graphql,
       this.sessionCookieName,
+      this.accountProofCacheName,
+      this.walletCacheName,
     );
 
     for (const e in UserSessionEvent) {
@@ -171,6 +184,11 @@ export class App extends EventEmitter {
     await this.session!.backgroundLogin();
   };
 
+  resumeLogin = async () => {
+    this.createSession();
+    await this.session!.resumeLogin();
+  };
+
   logout = async () => {
     const session = this.session;
     this.session = undefined;
@@ -186,6 +204,14 @@ export class App extends EventEmitter {
   changeAsset = (assetId: AppAssetId) => {
     this.activeAsset = assetId;
     this.session?.changeAsset(assetId);
+  };
+
+  changeDepositForm = (inputs: DepositFormValues) => {
+    this.session!.changeDepositForm(inputs);
+  };
+
+  claimUserName = () => {
+    this.session!.claimUserName();
   };
 
   changeForm = (action: AccountAction, inputs: Form) => {

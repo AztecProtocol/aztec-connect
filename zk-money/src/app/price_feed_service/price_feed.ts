@@ -1,5 +1,4 @@
-import { EthersAdapter } from '@aztec/sdk';
-import { InfuraProvider, Web3Provider } from '@ethersproject/providers';
+import { Web3Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
 import { Contract } from 'ethers';
 import EventEmitter from 'events';
@@ -13,23 +12,16 @@ export enum PriceFeedEvent {
 const AggregatorABI = ['function latestAnswer() public view returns(int256)'];
 
 export class PriceFeed extends EventEmitter {
-  private state!: {
-    price: bigint;
-    lastSynced: number;
+  private state = {
+    price: 0n,
+    lastSynced: 0,
   };
   private contract: Contract;
   private priceSubscriber?: number;
 
-  constructor(
-    priceFeedContractAddress: string,
-    infuraId: string,
-    network: string,
-    private readonly pollInterval: number,
-  ) {
+  constructor(priceFeedContractAddress: string, provider: Web3Provider, private readonly pollInterval: number) {
     super();
-    const provider = new EthersAdapter(new InfuraProvider(network, infuraId));
-    const web3Provider = new Web3Provider(provider);
-    this.contract = new Contract(priceFeedContractAddress, AggregatorABI, web3Provider);
+    this.contract = new Contract(priceFeedContractAddress, AggregatorABI, provider);
   }
 
   get price() {
@@ -51,11 +43,19 @@ export class PriceFeed extends EventEmitter {
 
   async refresh() {
     this.unsubscribeToPrice();
+    await this.checkPrice();
+    this.subscribeToPrice();
+  }
+
+  private async checkPrice() {
+    const prevPrice = this.price;
     this.state = {
       price: BigInt(await this.contract.latestAnswer()),
       lastSynced: Date.now(),
     };
-    this.subscribeToPrice();
+    if (this.price !== prevPrice) {
+      this.emit(PriceFeedEvent.UPDATED_PRICE, this.price);
+    }
   }
 
   private subscribeToPrice() {
@@ -67,14 +67,7 @@ export class PriceFeed extends EventEmitter {
     const updatePrice = async () => {
       if (!this.listenerCount(PriceFeedEvent.UPDATED_PRICE)) return;
 
-      const prevPrice = this.price;
-      this.state = {
-        price: BigInt(await this.contract.latestAnswer()),
-        lastSynced: Date.now(),
-      };
-      if (this.price !== prevPrice) {
-        this.emit(PriceFeedEvent.UPDATED_PRICE, this.price);
-      }
+      await this.checkPrice();
     };
 
     this.priceSubscriber = window.setInterval(updatePrice, this.pollInterval);

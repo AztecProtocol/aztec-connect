@@ -146,6 +146,11 @@ class WalletconnectProvider implements WalletProvider {
     this.ethereumProvider = new WalletConnectEthereumProvider(provider as any);
   }
 
+  get connected() {
+    const session = JSON.parse(localStorage.getItem('walletconnect') || '{}');
+    return session?.connected;
+  }
+
   async connect() {
     const handleRejection = new Promise((_, reject) => {
       this.provider.wc.on('disconnect', () => {

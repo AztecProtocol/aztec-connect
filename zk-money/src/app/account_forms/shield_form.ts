@@ -1,5 +1,13 @@
-import { AccountId, AssetId, EthAddress, PermitArgs, TxHash, TxType, WalletSdk } from '@aztec/sdk';
-import { JoinSplitProofOutput } from '@aztec/sdk/proofs/proof_output';
+import {
+  AccountId,
+  AssetId,
+  EthAddress,
+  JoinSplitProofOutput,
+  PermitArgs,
+  TxHash,
+  TxType,
+  WalletSdk,
+} from '@aztec/sdk';
 import { Web3Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
@@ -9,6 +17,7 @@ import { AccountUtils } from '../account_utils';
 import { isSameAlias, isValidAliasInput } from '../alias';
 import { Asset } from '../assets';
 import { Database } from '../database';
+import { EthAccount, EthAccountEvent, EthAccountState } from '../eth_account';
 import {
   BigIntValue,
   BoolInput,
@@ -28,12 +37,11 @@ import {
   withWarning,
 } from '../form';
 import { Network } from '../networks';
-import { Provider, ProviderEvent, ProviderState } from '../provider';
+import { Provider, ProviderStatus } from '../provider';
 import { RollupService, RollupServiceEvent, RollupStatus } from '../rollup_service';
 import { fromBaseUnits, max, min, toBaseUnits } from '../units';
 import { Web3Signer } from '../wallet_providers';
 import { AccountForm, AccountFormEvent } from './account_form';
-import { EthAccount, EthAccountEvent, EthAccountState } from './eth_account';
 
 const debug = createDebug('zm:shield_form');
 
@@ -140,7 +148,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
   private proofOutput?: JoinSplitProofOutput;
   private destroyed = false;
 
-  private ethAccount!: EthAccount;
+  private isContract = false;
   private accountGasCost: AccountGasCost = { ethAddress: undefined, deposit: 0n, approveProof: 0n };
   private gasPrice = 0n;
   private minFee = 0n;
@@ -155,7 +163,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     private sdk: WalletSdk,
     private db: Database,
     private coreProvider: Provider,
-    private provider: Provider | undefined,
+    private ethAccount: EthAccount,
     private rollup: RollupService,
     private accountUtils: AccountUtils,
     private readonly requiredNetwork: Network,
@@ -165,7 +173,6 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     this.userId = accountState.userId;
     this.alias = accountState.alias;
     this.asset = assetState.asset;
-    this.ethAccount = new EthAccount(provider, sdk, accountUtils, this.asset.id);
     this.debounceUpdateRecipient = debounce(this.updateRecipientStatus, this.aliasDebounceWait);
     this.values.recipient = { value: { input: this.alias, valid: ValueAvailability.VALID } };
     this.refreshValues();
@@ -194,16 +201,16 @@ export class ShieldForm extends EventEmitter implements AccountForm {
 
     this.destroyed = true;
     this.removeAllListeners();
-    this.ethAccount?.destroy();
     this.rollup.off(RollupServiceEvent.UPDATED_STATUS, this.onRollupStatusChange);
-    this.provider?.off(ProviderEvent.UPDATED_PROVIDER_STATE, this.onProviderStateChange);
+    this.ethAccount.off(EthAccountEvent.UPDATED_PENDING_BALANCE, this.onPendingBalanceChange);
+    this.ethAccount.off(EthAccountEvent.UPDATED_PUBLIC_BALANCE, this.onPublicBalanceChange);
     this.debounceUpdateRecipient.cancel();
   }
 
   async init() {
     this.rollup.on(RollupServiceEvent.UPDATED_STATUS, this.onRollupStatusChange);
-    this.provider?.on(ProviderEvent.UPDATED_PROVIDER_STATE, this.onProviderStateChange);
-    await this.renewEthAccount();
+    this.ethAccount.on(EthAccountEvent.UPDATED_PENDING_BALANCE, this.onPendingBalanceChange);
+    this.ethAccount.on(EthAccountEvent.UPDATED_PUBLIC_BALANCE, this.onPublicBalanceChange);
     await this.updateGasPrice(this.coreProvider);
     this.refreshValues();
     this.autofillAmountInput();
@@ -231,16 +238,24 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     this.refreshValues();
   }
 
-  changeProvider(provider?: Provider) {
+  changeProvider() {}
+
+  async changeEthAccount(ethAccount: EthAccount) {
     if (this.processing) {
-      debug('Cannot change provider while a form is being processed.');
+      debug('Cannot change ethAccount while a form is being processed.');
       return;
     }
 
-    this.provider?.off(ProviderEvent.UPDATED_PROVIDER_STATE, this.onProviderStateChange);
-    this.provider = provider;
-    this.provider?.on(ProviderEvent.UPDATED_PROVIDER_STATE, this.onProviderStateChange);
-    this.onProviderStateChange(this.provider?.getState());
+    this.ethAccount.off(EthAccountEvent.UPDATED_PENDING_BALANCE, this.onPendingBalanceChange);
+    this.ethAccount.off(EthAccountEvent.UPDATED_PUBLIC_BALANCE, this.onPublicBalanceChange);
+    this.clearAmountInput();
+    this.ethAccount = ethAccount;
+    this.ethAccount.on(EthAccountEvent.UPDATED_PENDING_BALANCE, this.onPendingBalanceChange);
+    this.ethAccount.on(EthAccountEvent.UPDATED_PUBLIC_BALANCE, this.onPublicBalanceChange);
+    const { ethAddress } = ethAccount.state;
+    this.isContract = ethAddress ? await this.sdk.isContract(ethAddress) : false;
+    await this.refreshGasCost();
+    this.autofillAmountInput();
   }
 
   changeValues(newValues: Partial<ShieldFormValues>) {
@@ -287,7 +302,8 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       submit: clearMessage({ value: false }),
     });
     this.updateFormStatus(FormStatus.ACTIVE);
-    this.renewEthAccount();
+    this.ethAccount.on(EthAccountEvent.UPDATED_PENDING_BALANCE, this.onPendingBalanceChange);
+    this.ethAccount.on(EthAccountEvent.UPDATED_PUBLIC_BALANCE, this.onPublicBalanceChange);
   }
 
   async lock() {
@@ -297,7 +313,8 @@ export class ShieldForm extends EventEmitter implements AccountForm {
 
     const validated = await this.validateValues();
     if (isValidForm(validated)) {
-      this.ethAccount.destroy();
+      this.ethAccount.off(EthAccountEvent.UPDATED_PENDING_BALANCE, this.onPendingBalanceChange);
+      this.ethAccount.off(EthAccountEvent.UPDATED_PUBLIC_BALANCE, this.onPublicBalanceChange);
       this.updateFormValues({ status: { value: ShieldStatus.CONFIRM } });
     } else {
       this.updateFormValues(mergeValues(validated, { submit: { value: false } }));
@@ -378,26 +395,31 @@ export class ShieldForm extends EventEmitter implements AccountForm {
   private validateChanges(changes: Partial<ShieldFormValues>) {
     const toUpdate = clearMessages(changes);
 
-    if (changes.amount) {
-      const amountInput = changes.amount;
-      const amountValue = toBaseUnits(amountInput.value, this.asset.decimals);
-      if (amountValue > this.txAmountLimit) {
-        toUpdate.amount = withError(
-          amountInput,
-          `For security, amount is capped at ${fromBaseUnits(this.txAmountLimit, this.asset.decimals)} ${
-            this.asset.symbol
-          }.`,
-        );
-      } else if (!this.provider && changes.amount.value) {
-        toUpdate.amount = withError(amountInput, 'Please connect a wallet.');
-      }
-    } else if (this.accountUtils.isActiveProvider(this.provider)) {
-      toUpdate.amount = clearMessage(this.values.amount);
+    const amountInput = changes.amount || this.values.amount;
+    const { provider, isCorrectNetwork } = this.ethAccount;
+    if (!provider || provider.status === ProviderStatus.DESTROYED) {
+      toUpdate.amount = withError(amountInput, 'Please connect a wallet.');
+    } else if (!isCorrectNetwork) {
+      toUpdate.ethAccount = withError(changes.ethAccount!, 'Wrong network.');
+      toUpdate.amount = withError(
+        amountInput,
+        `Please switch your wallet's network to ${this.requiredNetwork.network}.`,
+      );
+    } else if (!changes.amount) {
+      toUpdate.amount = clearMessage(amountInput);
+    }
+
+    const amountValue = toBaseUnits(amountInput.value, this.asset.decimals);
+    if (amountValue > this.txAmountLimit && !toUpdate.amount?.message) {
+      toUpdate.amount = withError(
+        amountInput,
+        `For security, amount is capped at ${fromBaseUnits(this.txAmountLimit, this.asset.decimals)} ${
+          this.asset.symbol
+        }.`,
+      );
     }
 
     if (changes.maxAmount && !toUpdate.amount?.message) {
-      const amountInput = changes.amount || this.values.amount;
-      const amountValue = toBaseUnits(amountInput.value, this.asset.decimals);
       const { maxAmount, gasCost } = changes;
       if (amountValue > maxAmount.value + gasCost!.value) {
         toUpdate.amount = withError(amountInput, `Insufficient ${this.asset.symbol} Balance.`);
@@ -409,13 +431,6 @@ export class ShieldForm extends EventEmitter implements AccountForm {
             this.asset.decimals,
           )} ${this.asset.symbol} for gas cost.`,
         );
-      }
-    }
-
-    if (changes.ethAccount) {
-      const { network } = changes.ethAccount.value;
-      if (network && network.chainId !== this.requiredNetwork.chainId) {
-        toUpdate.ethAccount = withError(changes.ethAccount, 'Wrong network.');
       }
     }
 
@@ -446,10 +461,10 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       form.fee = withError(form.fee, `Fee cannot be less than ${fromBaseUnits(minFee, this.asset.decimals)}.`);
     }
 
-    const isActiveProvider = this.accountUtils.isActiveProvider(this.provider);
     const amount = toBaseUnits(form.amount.value, this.asset.decimals);
-    if (!isActiveProvider) {
-      if (!this.provider) {
+    const { provider } = this.ethAccount;
+    if (!this.ethAccount.active) {
+      if (!provider) {
         form.amount = withError(form.amount, 'Please connect a wallet.');
       } else {
         form.amount = withError(form.amount, `Please switch your wallet's network to ${this.requiredNetwork.network}.`);
@@ -457,18 +472,18 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     } else if (!amount) {
       form.amount = withError(form.amount, 'Amount must be greater than 0.');
     } else {
-      const ethAddress = this.provider!.account!;
-      const pendingBalance = await this.accountUtils.getPendingBalance(this.asset.id, ethAddress);
-      const publicBalance = await this.sdk.getPublicBalance(this.asset.id, ethAddress);
+      const ethAddress = this.ethAccount!.state.ethAddress!;
+      const pendingBalance = await this.ethAccount.refreshPendingBalance();
+      const publicBalance = await this.ethAccount.refreshPublicBalance();
       const toBeDeposited = amount + fee - pendingBalance;
       const depositGas =
-        toBeDeposited > 0n ? await this.rollup.getDepositGas(this.asset.id, toBeDeposited, this.provider!) : 0n;
+        toBeDeposited > 0n ? await this.rollup.getDepositGas(this.asset.id, toBeDeposited, provider!) : 0n;
       const approveProofGas = (await this.sdk.isContract(ethAddress))
-        ? await this.rollup.getApproveProofGas(this.provider!)
+        ? await this.rollup.getApproveProofGas(provider!)
         : 0n;
       const totalGas = depositGas + approveProofGas;
       if (totalGas) {
-        await this.updateGasPrice(this.provider!);
+        await this.updateGasPrice(provider!);
       }
       const requiredPublicFund = max(0n, toBeDeposited + totalGas * this.gasPrice);
       if (publicBalance < requiredPublicFund) {
@@ -495,7 +510,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     const amount = toBaseUnits(form.amount.value, asset.decimals);
     const fee = toBaseUnits(form.fee.value, asset.decimals);
     const publicInput = amount + fee;
-    const ethAddress = this.provider!.account!;
+    const ethAddress = this.ethAccount!.state.ethAddress!;
     const pendingBalance = await this.accountUtils.getPendingBalance(asset.id, ethAddress);
     const toBeDeposited = max(publicInput - pendingBalance, 0n);
 
@@ -571,7 +586,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
         this.prompt('Please sign the proof data in your wallet.');
 
         try {
-          const signer = new Web3Signer(this.provider!.ethereumProvider);
+          const signer = new Web3Signer(this.ethAccount.provider!.ethereumProvider);
           await this.proofOutput!.ethSign(signer as any, ethAddress);
         } catch (e) {
           debug(e);
@@ -603,9 +618,10 @@ export class ShieldForm extends EventEmitter implements AccountForm {
   }
 
   private async ensureNetworkAndAccount(account: EthAddress) {
-    let currentAccount = this.provider?.account;
+    const { provider } = this.ethAccount;
+    let currentAccount = provider?.account;
     let isSameAccount = currentAccount?.equals(account);
-    let isSameNetwork = this.provider?.chainId === this.requiredNetwork.chainId;
+    let isSameNetwork = provider?.network?.chainId === this.requiredNetwork.chainId;
 
     while (!isSameAccount || !isSameNetwork) {
       if (this.destroyed) {
@@ -627,9 +643,9 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       }
 
       await new Promise(resolve => setTimeout(resolve, 1000));
-      currentAccount = this.provider?.account;
+      currentAccount = provider?.account;
       isSameAccount = currentAccount?.equals(account);
-      isSameNetwork = this.provider?.chainId === this.requiredNetwork.chainId;
+      isSameNetwork = provider?.chainId === this.requiredNetwork.chainId;
     }
   }
 
@@ -662,25 +678,14 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     }
   }
 
-  private async renewEthAccount() {
-    this.ethAccount.destroy();
-    const ethAccount = new EthAccount(this.provider, this.sdk, this.accountUtils, this.asset.id);
-    await ethAccount.init();
-    this.ethAccount = ethAccount;
-    this.ethAccount.on(EthAccountEvent.UPDATED_STATE, this.onEthAccountStateChange);
-    this.ethAccount.on(EthAccountEvent.UPDATED_BALANCE, this.onEthAccountBalanceChange);
-    this.refreshValues();
-    await this.refreshGasCost();
-  }
-
-  private onEthAccountStateChange = () => {
+  private onPendingBalanceChange = () => {
     if (this.locked) return;
 
     this.refreshValues();
     this.autofillAmountInput();
   };
 
-  private onEthAccountBalanceChange = () => {
+  private onPublicBalanceChange = () => {
     if (this.locked) return;
 
     this.refreshGasCost();
@@ -694,34 +699,22 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     }
   };
 
-  private onProviderStateChange = async (state?: ProviderState) => {
-    if (this.locked) return;
-
-    if (!this.ethAccount.isSameAddress(state?.account)) {
-      this.clearAmountInput();
-      await this.renewEthAccount();
-      this.autofillAmountInput();
-    }
-  };
-
   private async refreshGasCost() {
     const zeroGasCost = { ethAddress: undefined, deposit: 0n, approveProof: 0n };
-    if (!this.ethAccount.isActive) {
+    if (!this.ethAccount.active) {
       this.updateAccountGasCost(zeroGasCost);
       return;
     }
 
-    const { state, provider, isContract } = this.ethAccount;
+    const { state, provider } = this.ethAccount;
     const { ethAddress, publicBalance } = state;
     const gasCost = publicBalance
       ? {
           deposit: await this.rollup.getDepositGas(this.asset.id, 1n, provider!),
-          approveProof: isContract ? await this.rollup.getApproveProofGas(provider!) : 0n,
+          approveProof: this.isContract ? await this.rollup.getApproveProofGas(provider!) : 0n,
         }
       : zeroGasCost;
-    if (this.ethAccount.isSameAddress(ethAddress)) {
-      this.updateAccountGasCost({ ...gasCost, ethAddress });
-    }
+    this.updateAccountGasCost({ ...gasCost, ethAddress });
   }
 
   private updateAccountGasCost(accountGasCost: AccountGasCost) {
@@ -783,7 +776,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
 
   private async withUserProvider(action: () => any) {
     try {
-      await this.sdk.setProvider(this.provider!.ethereumProvider);
+      await this.sdk.setProvider(this.ethAccount.provider!.ethereumProvider);
       await action();
       await this.sdk.setProvider(this.coreProvider.ethereumProvider);
     } catch (e) {

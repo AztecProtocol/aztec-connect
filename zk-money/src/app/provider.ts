@@ -28,7 +28,10 @@ export enum ProviderEvent {
 }
 
 export interface Provider {
-  on(event: ProviderEvent.UPDATED_PROVIDER_STATE, listener: (state: ProviderState) => void): this;
+  on(
+    event: ProviderEvent.UPDATED_PROVIDER_STATE,
+    listener: (state: ProviderState, prevState: ProviderState) => void,
+  ): this;
   on(event: ProviderEvent.LOG_MESSAGE, listener: (message: string, messageType: MessageType) => void): this;
 }
 
@@ -71,6 +74,10 @@ export class Provider extends EventEmitter {
     return this.state.status;
   }
 
+  get connected() {
+    return this.walletProvider.connected;
+  }
+
   getState() {
     return this.state;
   }
@@ -88,10 +95,13 @@ export class Provider extends EventEmitter {
     this.ethereumProvider = this.walletProvider.ethereumProvider;
     const ethersProvider = new Web3Provider(this.ethereumProvider);
 
-    this.log(`Please check ${walletName} to continue...`, MessageType.WARNING);
+    const promptTimeout = setTimeout(() => {
+      this.log(`Please check ${walletName} to continue...`, MessageType.WARNING);
+    }, 1000);
 
     try {
       await this.walletProvider.connect();
+      clearTimeout(promptTimeout);
     } catch (e) {
       debug(e);
       this.updateState({ status: ProviderStatus.UNINITIALIZED });
@@ -152,7 +162,8 @@ export class Provider extends EventEmitter {
   };
 
   private updateState(state: Partial<ProviderState>) {
+    const prevState = this.state;
     this.state = { ...this.state, ...state };
-    this.emit(ProviderEvent.UPDATED_PROVIDER_STATE, this.state);
+    this.emit(ProviderEvent.UPDATED_PROVIDER_STATE, this.state, prevState);
   }
 }

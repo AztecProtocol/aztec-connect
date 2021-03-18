@@ -1,4 +1,15 @@
-import { AccountId, createWalletSdk, GrumpkinAddress, SdkEvent, SdkInitState, WalletSdk } from '@aztec/sdk';
+import {
+  AccountId,
+  AccountProofOutput,
+  AssetId,
+  createWalletSdk,
+  EthersAdapter,
+  GrumpkinAddress,
+  SdkEvent,
+  SdkInitState,
+  WalletSdk,
+} from '@aztec/sdk';
+import { InfuraProvider, Web3Provider } from '@ethersproject/providers';
 import randomString from 'crypto-random-string';
 import createDebug from 'debug';
 import { utils } from 'ethers';
@@ -6,9 +17,10 @@ import { EventEmitter } from 'events';
 import Cookie from 'js-cookie';
 import { debounce, DebouncedFunc } from 'lodash';
 import { Config } from '../config';
+import { AccountFormEvent, DepositForm, DepositFormValues, DepositStatus } from './account_forms';
 import { AccountUtils } from './account_utils';
 import { formatAliasInput, getAliasError } from './alias';
-import { AppAssetId } from './assets';
+import { AppAssetId, assets } from './assets';
 import { Database, LinkedAccount } from './database';
 import { MessageType, SystemMessage, ValueAvailability } from './form';
 import { GraphQLService } from './graphql_service';
@@ -17,10 +29,11 @@ import { PriceFeedService } from './price_feed_service';
 import { Provider, ProviderEvent, ProviderState, ProviderStatus } from './provider';
 import { RollupService } from './rollup_service';
 import { formatSeedPhraseInput, generateSeedPhrase, getSeedPhraseError, sliceSeedPhrase } from './seed_phrase';
+import { toBaseUnits } from './units';
 import { UserAccount, UserAccountEvent } from './user_account';
 import { Wallet, wallets, Web3Signer } from './wallet_providers';
 
-const debug = createDebug('zm:login_handler');
+const debug = createDebug('zm:user_session');
 
 interface SignedInAccount {
   accountPublicKey: GrumpkinAddress;
@@ -33,6 +46,9 @@ export enum LoginStep {
   SET_ALIAS,
   INIT_SDK,
   CREATE_ACCOUNT,
+  VALIDATE_DATA,
+  RECOVER_ACCOUNT_PROOF,
+  CLAIM_USERNAME,
   ADD_ACCOUNT,
   SYNC_DATA,
   DONE,
@@ -73,6 +89,7 @@ export enum UserSessionEvent {
   UPDATED_PROVIDER_STATE = 'UPDATED_PROVIDER_STATE',
   UPDATED_WORLD_STATE = 'UPDATED_WORLD_STATE',
   UPDATED_USER_ACCOUNT_DATA = 'UPDATED_USER_ACCOUNT_DATA',
+  UPDATED_DEPOSIT_FORM = 'UPDATED_DEPOSIT_FORM',
   UPDATED_SYSTEM_MESSAGE = 'UPDATED_SYSTEM_MESSAGE',
   SESSION_CLOSED = 'SESSION_CLOSED',
 }
@@ -96,10 +113,14 @@ export class UserSession extends EventEmitter {
   private signedInAccount?: SignedInAccount;
   private loginState = initialLoginState;
   private worldState = initialWorldState;
+  private depositForm?: DepositForm;
   private accountUtils!: AccountUtils;
   private account!: UserAccount;
   private debounceCheckAlias: DebouncedFunc<() => void>;
   private destroyed = false;
+
+  private readonly accountProofDepositAsset = AssetId.ETH;
+  private readonly accountProofMinDeposit = toBaseUnits('0.01', assets[this.accountProofDepositAsset].decimals);
 
   private readonly debounceCheckAliasWait = 600;
   private readonly MAX_ACCOUNT_TXS_PER_ROLLUP = 112; // TODO - fetch from server
@@ -112,6 +133,8 @@ export class UserSession extends EventEmitter {
     private db: Database,
     private graphql: GraphQLService,
     private sessionCookieName: string,
+    private readonly accountProofCacheName: string,
+    private readonly walletCacheName: string,
   ) {
     super();
     this.debounceCheckAlias = debounce(this.updateAliasAvailability, this.debounceCheckAliasWait);
@@ -133,6 +156,14 @@ export class UserSession extends EventEmitter {
     return this.account;
   }
 
+  getDepositForm() {
+    return this.depositForm;
+  }
+
+  isProcessingAction() {
+    return !!this.depositForm && this.depositForm.locked;
+  }
+
   async close(message = '', messageType = MessageType.TEXT, clearSession = true) {
     this.emitSystemMessage(message, messageType);
     if (clearSession) {
@@ -149,7 +180,10 @@ export class UserSession extends EventEmitter {
     this.coreProvider?.destroy();
     this.provider?.destroy();
     this.rollupService?.destroy();
+    this.depositForm?.destroy();
     this.priceFeedService?.destroy();
+    this.clearLocalAccountProof();
+    await this.removeUnregisteredUsers();
     if (this.sdk) {
       this.sdk.removeAllListeners();
       // Can only safely destroy the sdk after it's fully initialized.
@@ -170,32 +204,15 @@ export class UserSession extends EventEmitter {
 
     this.updateLoginState({ wallet });
 
-    const { infuraId, network, ethereumHost } = this.config;
     const walletName = wallets[wallet].name;
     if (wallet !== Wallet.HOT) {
       this.emitSystemMessage(`Connecting to ${walletName}...`);
-
-      this.provider = new Provider(wallet, { infuraId, network, ethereumHost });
-      const relayMessage = (message: string, type: MessageType) => this.emitSystemMessage(message, type);
-      this.provider.on(ProviderEvent.LOG_MESSAGE, relayMessage);
-      this.provider.on(ProviderEvent.UPDATED_PROVIDER_STATE, this.handleProviderStateChange);
-
-      try {
-        await this.provider.init(this.requiredNetwork);
-      } catch (e) {
-        return this.abort(e.message);
-      }
-
-      this.provider.off(ProviderEvent.LOG_MESSAGE, relayMessage);
+      await this.changeWallet(wallet);
     }
 
     this.emitSystemMessage('Connecting to rollup provider...');
 
-    this.coreProvider = new Provider(Wallet.HOT, { infuraId, network, ethereumHost });
-    await this.coreProvider.init();
-    if (this.coreProvider.chainId !== this.requiredNetwork.chainId) {
-      return this.abort(`Wrong network. This shouldn't happen.`);
-    }
+    await this.createCoreProvider();
 
     if (!this.db.isOpen) {
       await this.db.open();
@@ -273,28 +290,25 @@ export class UserSession extends EventEmitter {
     this.toStep(LoginStep.SET_ALIAS);
   };
 
-  changeWallet = async (wallet: Wallet) => {
+  changeWallet = async (wallet: Wallet, checkNetwork = true) => {
     if (this.provider?.status === ProviderStatus.INITIALIZING) {
       debug('Cannot change wallet before the current one is initialized or destroyed.');
       return;
     }
-
-    const walletName = wallets[wallet].name;
-    this.emitSystemMessage(`Connecting to ${walletName}...`);
 
     const prevProvider = this.provider;
     prevProvider?.removeAllListeners();
 
     const { infuraId, network, ethereumHost } = this.config;
     this.provider = new Provider(wallet, { infuraId, network, ethereumHost });
-
     this.provider.on(ProviderEvent.LOG_MESSAGE, (message: string, type: MessageType) =>
       this.emitSystemMessage(message, type),
     );
     this.provider.on(ProviderEvent.UPDATED_PROVIDER_STATE, this.handleProviderStateChange);
 
     try {
-      await this.provider.init(this.requiredNetwork);
+      await this.provider.init(checkNetwork ? this.requiredNetwork : undefined);
+      this.saveWalletSession(wallet);
     } catch (e) {
       debug(e);
       await this.provider.destroy();
@@ -306,11 +320,11 @@ export class UserSession extends EventEmitter {
     this.provider?.on(ProviderEvent.UPDATED_PROVIDER_STATE, this.handleProviderStateChange);
     if (prevProvider !== this.provider) {
       await prevProvider?.destroy();
-      this.account.changeProvider(this.provider!);
       this.updateLoginState({ wallet });
-    } else {
-      this.handleProviderStateChange(this.provider?.getState());
     }
+    this.depositForm?.changeProvider(this.provider);
+    this.account?.changeProvider(this.provider);
+    this.handleProviderStateChange(this.provider?.getState());
   };
 
   changeAsset = (assetId: AppAssetId) => {
@@ -396,6 +410,74 @@ export class UserSession extends EventEmitter {
     await this.toStep(LoginStep.INIT_SDK);
   }
 
+  changeDepositForm(newInputs: Partial<DepositFormValues>) {
+    this.depositForm!.changeValues(newInputs);
+  }
+
+  async claimUserName() {
+    if (!this.depositForm) {
+      throw new Error('Deposit form uninitialized.');
+    }
+
+    if (this.depositForm.locked) {
+      debug('Duplicated call to claimUserName().');
+      return;
+    }
+
+    await this.depositForm.lock();
+    if (!this.depositForm.locked) return;
+
+    await this.depositForm.submit();
+    if (this.depositForm.status !== DepositStatus.DONE) return;
+
+    this.depositForm.destroy();
+
+    this.emitSystemMessage(`Sending registration proof...`);
+
+    const { proofOutput } = this.getLocalAccountProof() || {};
+    if (!proofOutput) {
+      this.emitSystemMessage('Session expired.', MessageType.ERROR);
+      return;
+    }
+
+    if (!this.provider?.account) {
+      this.emitSystemMessage('Wallet disconnected.', MessageType.ERROR);
+      return;
+    }
+
+    const pendingBalance = await this.accountUtils.getPendingBalance(
+      this.accountProofDepositAsset,
+      this.provider.account,
+    );
+    if (pendingBalance < this.accountProofMinDeposit) {
+      this.emitSystemMessage('Insufficient deposit.', MessageType.ERROR);
+      return;
+    }
+
+    // Add user to the sdk so that the accountTx could be added for it.
+    // But don't sync from the beginning.
+    const userId = proofOutput.tx.userId;
+    const { privateKey } = this.signedInAccount!;
+    await this.accountUtils.safeAddUser(privateKey, userId.nonce, true);
+
+    try {
+      await this.sdk.sendProof(proofOutput);
+      this.clearLocalAccountProof();
+    } catch (e) {
+      debug(e);
+      await this.accountUtils.safeRemoveUser(userId);
+      this.emitSystemMessage('Failed to send the proof. Please try again later.', MessageType.ERROR);
+      return;
+    }
+
+    await this.createUserAccount(userId, false);
+    await this.updateSession();
+
+    this.toStep(LoginStep.DONE);
+
+    this.depositForm = undefined;
+  }
+
   async initSdk() {
     if (!(await this.awaitSdkInitialized())) {
       return;
@@ -410,19 +492,31 @@ export class UserSession extends EventEmitter {
     };
 
     try {
-      const { accountNonce, alias } = this.loginState;
+      const { accountNonce } = this.loginState;
 
-      proceed(accountNonce ? LoginStep.ADD_ACCOUNT : LoginStep.CREATE_ACCOUNT);
+      if (!accountNonce) {
+        proceed(LoginStep.CREATE_ACCOUNT);
 
-      const { accountPublicKey } = this.linkedAccount || this.signedInAccount!;
-      const userId = await this.signIn(new AccountId(accountPublicKey, accountNonce), alias);
-      await this.createUserAccount(userId, alias);
+        await this.createAccountProof();
+        await this.createDepositForm();
 
-      proceed(LoginStep.SYNC_DATA);
+        proceed(LoginStep.CLAIM_USERNAME);
+      } else {
+        proceed(LoginStep.ADD_ACCOUNT);
 
-      await this.initUserAccount();
+        const { accountPublicKey } = this.linkedAccount || this.signedInAccount!;
+        const userId = new AccountId(accountPublicKey, accountNonce);
+        await this.createUserAccount(userId, false);
 
-      proceed(LoginStep.DONE);
+        proceed(LoginStep.SYNC_DATA);
+
+        await this.awaitUserSynchronised(userId);
+        if (this.signedInAccount) {
+          await this.updateSession();
+        }
+
+        proceed(LoginStep.DONE);
+      }
     } catch (e) {
       debug(e);
       this.emitSystemMessage(e.message, MessageType.ERROR);
@@ -439,12 +533,7 @@ export class UserSession extends EventEmitter {
     try {
       this.updateLoginState({ wallet });
 
-      const { infuraId, network, ethereumHost } = this.config;
-      this.coreProvider = new Provider(wallet, { infuraId, network, ethereumHost });
-      await this.coreProvider.init();
-      if (this.coreProvider.chainId !== this.requiredNetwork.chainId) {
-        return this.abort(`Wrong network. This shouldn't happen.`);
-      }
+      await this.createCoreProvider();
 
       if (!this.db.isOpen) {
         await this.db.open();
@@ -479,8 +568,7 @@ export class UserSession extends EventEmitter {
       });
 
       const userId = new AccountId(accountPublicKey, accountNonce);
-      await this.createUserAccount(userId, alias);
-      await this.initUserAccount();
+      await this.createUserAccount(userId);
 
       this.toStep(LoginStep.DONE);
     } catch (e) {
@@ -489,21 +577,155 @@ export class UserSession extends EventEmitter {
     }
   }
 
+  async resumeLogin() {
+    const { proofOutput, alias } = this.getLocalAccountProof() || {};
+    if (!proofOutput) {
+      debug('Local account proof undefined.');
+      return;
+    }
+
+    this.toStep(LoginStep.VALIDATE_DATA);
+
+    try {
+      await this.createCoreProvider();
+
+      if (!this.db.isOpen) {
+        await this.db.open();
+      }
+
+      await this.createSdk();
+      if (!(await this.getLocalRollupContractAddress())) {
+        debug('Data reset required.');
+        throw new Error('Session expired.');
+      }
+
+      const confirmUserStates = this.ensureUserStates();
+      this.sdk.init();
+      await confirmUserStates;
+
+      this.toStep(LoginStep.RECOVER_ACCOUNT_PROOF);
+
+      const userId = proofOutput.tx.userId;
+      const prevUserId = new AccountId(userId.publicKey, userId.nonce - 1);
+      if (!this.accountUtils.isUserAdded(prevUserId)) {
+        debug('User not added to the sdk.');
+        throw new Error('Session expired.');
+      }
+
+      if (!(await this.isAliasAvailable(alias))) {
+        throw new Error('Username has been taken.');
+      }
+
+      const { privateKey, publicKey } = this.sdk.getUserData(prevUserId);
+      this.signedInAccount = { privateKey, accountPublicKey: publicKey };
+
+      const accountPublicKey = proofOutput.tx.userId.publicKey;
+      const accountNonce = await this.graphql.getAccountNonce(accountPublicKey);
+      this.updateLoginState({
+        alias,
+        accountNonce,
+      });
+
+      await this.reviveUserProvider();
+
+      if (accountNonce > 0 && this.provider?.account && this.provider.chainId === this.requiredNetwork.chainId) {
+        const pendingBalance = await this.accountUtils.getPendingBalance(
+          this.accountProofDepositAsset,
+          this.provider.account,
+        );
+        if (pendingBalance >= this.accountProofDepositAsset) {
+          await this.createUserAccount(userId, false);
+          this.toStep(LoginStep.DONE);
+          return;
+        }
+      }
+
+      if (accountNonce > 0) {
+        throw new Error('Account has been registered. Please login with your wallet.');
+      }
+
+      await this.createDepositForm();
+
+      this.toStep(LoginStep.CLAIM_USERNAME);
+    } catch (e) {
+      debug(e);
+      this.clearLocalAccountProof();
+      await this.close(e.message, MessageType.ERROR);
+    }
+  }
+
+  private async reviveUserProvider() {
+    const wallet = this.getWalletSession();
+    if (wallet === undefined) return;
+
+    const { infuraId, network, ethereumHost } = this.config;
+    const provider = new Provider(wallet, { infuraId, network, ethereumHost });
+    if (provider.connected) {
+      await this.changeWallet(wallet, false);
+    }
+  }
+
+  private async createCoreProvider() {
+    const { infuraId, network, ethereumHost } = this.config;
+    this.coreProvider = new Provider(Wallet.HOT, { infuraId, network, ethereumHost });
+    await this.coreProvider.init();
+    if (this.coreProvider.chainId !== this.requiredNetwork.chainId) {
+      throw new Error(`Wrong network. This shouldn't happen.`);
+    }
+  }
+
+  private async createDepositForm() {
+    this.depositForm = new DepositForm(
+      assets[this.accountProofDepositAsset],
+      this.sdk,
+      this.coreProvider,
+      this.provider,
+      this.rollupService,
+      this.accountUtils,
+      this.requiredNetwork,
+      this.config.txAmountLimit,
+      this.accountProofMinDeposit,
+    );
+
+    for (const e in AccountFormEvent) {
+      const event = (AccountFormEvent as any)[e];
+      this.depositForm.on(event, () => this.emit(UserSessionEvent.UPDATED_DEPOSIT_FORM));
+      this.depositForm.on(AccountFormEvent.UPDATED_FORM_VALUES, (values: DepositFormValues) => {
+        const { message, messageType } = values.submit;
+        if (message !== undefined) {
+          this.emit(UserSessionEvent.UPDATED_SYSTEM_MESSAGE, { message, type: messageType });
+        }
+      });
+    }
+
+    await this.depositForm.init();
+  }
+
   private async createSdk() {
     const { rollupProviderUrl, network, debug } = this.config;
     const minConfirmation = network === 'ganache' ? 1 : undefined; // If not ganache, use the default value.
     this.sdk = await createWalletSdk(this.coreProvider.ethereumProvider, rollupProviderUrl, { minConfirmation, debug });
-  }
-
-  private async createUserAccount(userId: AccountId, alias: string) {
     this.rollupService = new RollupService(this.sdk);
     await this.rollupService.init();
+    this.accountUtils = new AccountUtils(this.sdk, this.graphql, this.requiredNetwork);
+  }
+
+  private async createUserAccount(userId: AccountId, awaitSynchronised = true) {
+    if (!userId.nonce) {
+      throw new Error('User not registered.');
+    }
+
+    if (!this.accountUtils.isUserAdded(userId)) {
+      await this.accountUtils.addUser(this.signedInAccount!.privateKey, userId.nonce);
+    }
 
     const { priceFeedContractAddresses, infuraId, txAmountLimit, explorerUrl } = this.config;
-    this.priceFeedService = new PriceFeedService(priceFeedContractAddresses, infuraId, 'mainnet');
+    const provider = new EthersAdapter(new InfuraProvider('mainnet', infuraId));
+    const web3Provider = new Web3Provider(provider);
+    this.priceFeedService = new PriceFeedService(priceFeedContractAddresses, web3Provider);
     await this.priceFeedService.init();
 
-    this.accountUtils = new AccountUtils(this.sdk, this.graphql, this.requiredNetwork);
+    const { alias } = this.loginState;
     this.account = new UserAccount(
       userId,
       alias,
@@ -523,20 +745,19 @@ export class UserSession extends EventEmitter {
       const event = (UserAccountEvent as any)[e];
       this.account.on(event, () => this.emit(UserSessionEvent.UPDATED_USER_ACCOUNT_DATA));
     }
-  }
-
-  private async initUserAccount() {
-    const userId = this.account.userId;
 
     await this.subscribeToSyncProgress(userId);
 
-    await this.awaitUserSynchronised(userId);
+    if (awaitSynchronised) {
+      await this.awaitUserSynchronised(userId);
+    }
 
     const { nonce, privateKey, publicKey } = this.sdk.getUserData(userId);
     const prevUserId = new AccountId(publicKey, nonce - 1);
     if (!this.accountUtils.isUserAdded(prevUserId) && !(await this.accountUtils.isAccountSettled(userId))) {
       debug(`Adding previous user with nonce ${nonce - 1}.`);
-      await this.sdk.addUser(privateKey, nonce - 1, true);
+      // We need to use previous acount to send proof before current account is settled.
+      await this.accountUtils.addUser(privateKey, nonce - 1);
     }
 
     await this.account.init(this.provider);
@@ -589,31 +810,66 @@ export class UserSession extends EventEmitter {
     return !!alias && !(await this.graphql.getAliasPublicKey(alias));
   }
 
-  private async signIn(userId: AccountId, aliasInput: string) {
-    if (!this.isUserAdded(userId)) {
-      await this.sdk.addUser(this.signedInAccount!.privateKey, userId.nonce);
+  private async createAccountProof() {
+    const aliasInput = this.loginState.alias;
+    const { privateKey } = this.signedInAccount!;
+    let userId;
+    try {
+      await this.removeUnregisteredUsers();
+      userId = await this.accountUtils.safeAddUser(privateKey, 0);
+      const alias = formatAliasInput(aliasInput);
+      const signer = this.sdk.createSchnorrSigner(privateKey);
+      const accountProof = await this.sdk.createAccountProof(userId, signer, alias, 0, true, userId.publicKey);
+      this.saveLocalAccountProof(accountProof, alias);
+    } catch (e) {
+      debug(e);
+      throw new Error('Failed to create account proof.');
+    }
+  }
+
+  private saveLocalAccountProof(accountProof: AccountProofOutput, alias: string) {
+    const proofData = accountProof.toBuffer().toString('hex');
+    localStorage.setItem(this.accountProofCacheName, JSON.stringify({ alias, proofData }));
+  }
+
+  private getLocalAccountProof() {
+    const rawData = localStorage.getItem(this.accountProofCacheName);
+    if (!rawData) {
+      return;
     }
 
-    if (!userId.nonce) {
-      try {
-        const alias = formatAliasInput(aliasInput);
-        await this.sdk.createAccount(userId, alias, userId.publicKey);
-      } catch (e) {
-        debug(e);
-        throw new Error(`Failed to create a new account. ${e.message}`);
-      }
+    const account = JSON.parse(rawData);
+    return {
+      alias: account.alias,
+      proofOutput: AccountProofOutput.fromBuffer(Buffer.from(account.proofData, 'hex')),
+    };
+  }
+
+  private clearLocalAccountProof() {
+    localStorage.removeItem(this.accountProofCacheName);
+  }
+
+  private saveWalletSession(wallet: Wallet) {
+    localStorage.setItem(this.walletCacheName, `${wallet}`);
+  }
+
+  private getWalletSession() {
+    const session = localStorage.getItem(this.walletCacheName);
+    return session ? +session : undefined;
+  }
+
+  private async updateSession() {
+    if (!this.signedInAccount) {
+      debug('Cannot renew session.');
+      return;
     }
 
-    if (this.signedInAccount) {
-      // User just generated a private key to sign in. Add the user to db or update its last logged in time
-      const { accountPublicKey } = this.signedInAccount;
-      await this.db.addAccount({ accountPublicKey, alias: aliasInput, timestamp: new Date() });
-      if (this.loginState.rememberMe) {
-        await this.setLinkedAccountToSession(accountPublicKey);
-      }
+    const { accountPublicKey } = this.signedInAccount;
+    const { alias, rememberMe } = this.loginState;
+    await this.db.addAccount({ accountPublicKey, alias, timestamp: new Date() });
+    if (rememberMe) {
+      await this.setLinkedAccountToSession(accountPublicKey);
     }
-
-    return new AccountId(userId.publicKey, Math.max(1, userId.nonce));
   }
 
   private async getLinkedAccountFromSession() {
@@ -643,6 +899,18 @@ export class UserSession extends EventEmitter {
 
   private generateLoginSessionKey(accountPublicKey: GrumpkinAddress) {
     return this.hashToField(accountPublicKey.toBuffer());
+  }
+
+  private async removeUnregisteredUsers() {
+    if (!this.sdk) return;
+
+    const users = this.sdk.getUsersData();
+    const userZeros = users.filter(u => !u.nonce);
+    for (const userZero of userZeros) {
+      if (!users.some(u => u.publicKey.equals(userZero.publicKey) && u.nonce > 0)) {
+        await this.accountUtils.safeRemoveUser(userZero.id);
+      }
+    }
   }
 
   private handleWorldStateChange = (syncedToRollup: number, latestRollup: number) => {
@@ -726,7 +994,7 @@ export class UserSession extends EventEmitter {
   private async allowNewUser() {
     const { pendingTxCount } = await this.sdk.getRemoteStatus();
     const unsettledAccountTxs = await this.graphql.getUnsettledAccountTxs();
-    const numRollups = Math.ceil(pendingTxCount / this.TXS_PER_ROLLUP);
+    const numRollups = Math.max(1, Math.ceil(pendingTxCount / this.TXS_PER_ROLLUP));
     return unsettledAccountTxs.length < numRollups * this.MAX_ACCOUNT_TXS_PER_ROLLUP;
   }
 
@@ -752,14 +1020,5 @@ export class UserSession extends EventEmitter {
   private getLatestLocalNonce(publicKey: GrumpkinAddress) {
     const users = this.sdk.getUsersData().filter(u => u.publicKey.equals(publicKey));
     return users.length ? users.reduce((n, { nonce }) => Math.max(n, nonce), 0) : undefined;
-  }
-
-  private isUserAdded(userId: AccountId) {
-    try {
-      this.sdk.getUserData(userId);
-      return true;
-    } catch (e) {
-      return false;
-    }
   }
 }

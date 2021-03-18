@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import { Asset } from '../../app';
+import { Asset, fromBaseUnits } from '../../app';
 import { Button, Text } from '../../components';
 import { breakpoints, spacings } from '../../styles';
 
@@ -28,17 +28,28 @@ const ButtonRoot = styled.div`
   flex-shrink: 0;
 `;
 
-interface ZeroBalancePromptProps {
+interface ShieldPromptProps {
   asset: Asset;
+  pendingBalance: bigint;
   onSubmit: () => void;
 }
 
-export const ZeroBalancePrompt: React.FunctionComponent<ZeroBalancePromptProps> = ({ asset, onSubmit }) => (
+export const ShieldPrompt: React.FunctionComponent<ShieldPromptProps> = ({ asset, pendingBalance, onSubmit }) => (
   <Root>
     <Message size="m">
-      {'You don’t have any '}
-      <Text text={`zk${asset.symbol}`} weight="bold" inline />
-      {`, shield ${asset.symbol} to get started!`}
+      {pendingBalance > 0n ? (
+        <>
+          {'You have '}
+          <Text text={`${fromBaseUnits(pendingBalance, asset.decimals)} ${asset.symbol}`} weight="bold" inline />
+          {` pending, shield to get started!`}
+        </>
+      ) : (
+        <>
+          {'You don’t have any '}
+          <Text text={`zk${asset.symbol}`} weight="bold" inline />
+          {`, shield ${asset.symbol} to get started!`}
+        </>
+      )}
     </Message>
     <ButtonRoot>
       <Button theme="gradient" text="Shield" onClick={onSubmit} />

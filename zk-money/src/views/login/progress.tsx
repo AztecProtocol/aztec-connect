@@ -5,35 +5,10 @@ import { Dot, Loader, LoaderTheme, PaddedBlock, ProgressHandler, Text } from '..
 import errorIcon from '../../images/exclamation_mark.svg';
 import { borderRadiuses, spacings } from '../../styles';
 
-const loginSteps = [
-  {
-    step: LoginStep.INIT_SDK,
-    title: 'Creating Encryption Keys',
-  },
-  {
-    step: LoginStep.ADD_ACCOUNT,
-    title: 'Logging In',
-  },
-  {
-    step: LoginStep.SYNC_DATA,
-    title: 'Syncing Account Data',
-  },
-];
-
-const signupSteps = [
-  {
-    step: LoginStep.INIT_SDK,
-    title: 'Encrypting Data',
-  },
-  {
-    step: LoginStep.CREATE_ACCOUNT,
-    title: 'Creating Registration Proof',
-  },
-  {
-    step: LoginStep.SYNC_DATA,
-    title: 'Syncing Account Data',
-  },
-];
+interface Step {
+  step: LoginStep;
+  title: string;
+}
 
 const Root = styled.div`
   padding: ${spacings.m} ${spacings.xxl};
@@ -75,7 +50,7 @@ const StepName = styled(Text)<StepNameProps>`
 interface ProgressProps {
   currentStep: LoginStep;
   worldState: WorldState;
-  isNewAccount: boolean;
+  steps: Step[];
   active: boolean;
   failed: boolean;
 }
@@ -83,35 +58,31 @@ interface ProgressProps {
 export const Progress: React.FunctionComponent<ProgressProps> = ({
   currentStep,
   worldState,
-  isNewAccount,
+  steps,
   active,
   failed,
-}) => {
-  const steps = isNewAccount ? signupSteps : loginSteps;
-
-  return (
-    <Root>
-      {steps.map(({ step, title }) => {
-        const isCurrentStep = step === currentStep;
-        let titleText: React.ReactNode = title;
-        if (isCurrentStep && step === LoginStep.SYNC_DATA) {
-          titleText = (
-            <ProgressHandler worldState={worldState}>{progress => <>{`${title} (${progress}%)`}</>}</ProgressHandler>
-          );
-        }
-        return (
-          <StepRoot key={step}>
-            <StepName size={isCurrentStep && active ? 'm' : 's'} active={step <= currentStep}>
-              {titleText}
-            </StepName>
-            <IconRoot>
-              {isCurrentStep && active && <Loader theme={LoaderTheme.WHITE} />}
-              {isCurrentStep && failed && <Icon src={errorIcon} />}
-              {step < currentStep && <Dot color="white" size="xs" />}
-            </IconRoot>
-          </StepRoot>
+}) => (
+  <Root>
+    {steps.map(({ step, title }) => {
+      const isCurrentStep = step === currentStep;
+      let titleText: React.ReactNode = title;
+      if (isCurrentStep && step === LoginStep.SYNC_DATA) {
+        titleText = (
+          <ProgressHandler worldState={worldState}>{progress => <>{`${title} (${progress}%)`}</>}</ProgressHandler>
         );
-      })}
-    </Root>
-  );
-};
+      }
+      return (
+        <StepRoot key={step}>
+          <StepName size={isCurrentStep && active ? 'm' : 's'} active={step <= currentStep}>
+            {titleText}
+          </StepName>
+          <IconRoot>
+            {isCurrentStep && active && <Loader theme={LoaderTheme.WHITE} />}
+            {isCurrentStep && failed && <Icon src={errorIcon} />}
+            {step < currentStep && <Dot color="white" size="xs" />}
+          </IconRoot>
+        </StepRoot>
+      );
+    })}
+  </Root>
+);

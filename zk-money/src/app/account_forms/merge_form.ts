@@ -1,5 +1,4 @@
-import { AccountId, Note, TxType, WalletSdk } from '@aztec/sdk';
-import { JoinSplitProofOutput } from '@aztec/sdk/proofs/proof_output';
+import { AccountId, JoinSplitProofOutput, Note, TxType, WalletSdk } from '@aztec/sdk';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { AccountState, AssetState } from '../account_state';
@@ -138,6 +137,8 @@ export class MergeForm extends EventEmitter implements AccountForm {
   }
 
   changeProvider() {}
+
+  changeEthAccount() {}
 
   changeValues(changes: Partial<MergeFormValues>) {
     if (this.locked) {
