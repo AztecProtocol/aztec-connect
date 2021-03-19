@@ -149,9 +149,8 @@ export class DepositForm extends EventEmitter implements AccountForm {
 
   async init() {
     this.provider?.on(ProviderEvent.UPDATED_PROVIDER_STATE, this.onProviderStateChange);
-    await this.renewEthAccount();
     await this.updateGasPrice(this.coreProvider);
-    this.autofillAmountInput();
+    await this.renewEthAccount();
     this.refreshValues();
   }
 
@@ -289,7 +288,7 @@ export class DepositForm extends EventEmitter implements AccountForm {
 
     const { pendingBalance } = this.ethAccount.state;
     const amountValue = toBaseUnits(amountInput.value, this.asset.decimals);
-    if (pendingBalance < this.minAmount && !toUpdate.amount?.message) {
+    if (pendingBalance < this.minAmount && amountInput.value && !toUpdate.amount?.message) {
       const { maxAmount, minAmount, gasCost } = changes;
       if (amountValue > this.txAmountLimit) {
         toUpdate.amount = withError(
@@ -308,7 +307,7 @@ export class DepositForm extends EventEmitter implements AccountForm {
             this.asset.decimals,
           )} ${this.asset.symbol} for gas cost.`,
         );
-      } else if (amountInput.value && amountValue < minAmount!.value) {
+      } else if (amountValue < minAmount!.value) {
         toUpdate.amount = withError(
           amountInput,
           `Please deposit at least ${fromBaseUnits(minAmount!.value, this.asset.decimals)} ${this.asset.symbol}.`,
@@ -382,9 +381,12 @@ export class DepositForm extends EventEmitter implements AccountForm {
     this.ethAccount.destroy();
     this.refreshValues({ submit: clearMessage(this.values.submit) });
     this.ethAccount = new EthAccount(this.provider, this.sdk, this.accountUtils, this.asset.id, this.requiredNetwork);
+    await this.ethAccount.refreshPublicBalance();
+    await this.ethAccount.refreshPendingBalance();
     this.ethAccount.on(EthAccountEvent.UPDATED_PENDING_BALANCE, this.onPendingBalanceChange);
     this.ethAccount.on(EthAccountEvent.UPDATED_PUBLIC_BALANCE, this.onPublicBalanceChange);
     await this.refreshGasCost();
+    this.autofillAmountInput();
   }
 
   private onPendingBalanceChange = (pendingBalance: bigint) => {
@@ -407,7 +409,6 @@ export class DepositForm extends EventEmitter implements AccountForm {
     if (!this.ethAccount?.isSameAccount(this.provider)) {
       this.clearAmountInput();
       await this.renewEthAccount();
-      this.autofillAmountInput();
     }
   };
 
@@ -418,7 +419,7 @@ export class DepositForm extends EventEmitter implements AccountForm {
   private autofillAmountInput() {
     if (!this.values.amount.value) {
       const { pendingBalance } = this.ethAccount.state;
-      const amount = pendingBalance >= this.minAmount ? 0n : this.values.minAmount.value;
+      const amount = pendingBalance >= this.minAmount ? 0n : this.minAmount;
       this.refreshValues({ amount: { value: fromBaseUnits(amount, this.asset.decimals) } });
     }
   }

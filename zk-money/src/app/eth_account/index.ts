@@ -159,13 +159,14 @@ export class EthAccount {
   }
 
   private resumePublicBalance() {
-    if (Date.now() - this.publicBalance.lastSynced > this.publicBalanceInterval) {
+    const isOutdated = Date.now() - this.publicBalance.lastSynced > this.publicBalanceInterval;
+    if (!this.publicBalanceSubscriber || isOutdated) {
       this.unsubscribeToPublicBalance();
-      this.subscribeToPublicBalance();
+      this.subscribeToPublicBalance(isOutdated);
     }
   }
 
-  private async subscribeToPublicBalance() {
+  private async subscribeToPublicBalance(checkOnLoad: boolean) {
     if (!this.address) {
       return;
     }
@@ -181,7 +182,9 @@ export class EthAccount {
       await this.checkPublicBalance();
     };
 
-    await checkBalance();
+    if (checkOnLoad) {
+      await checkBalance();
+    }
     this.publicBalanceSubscriber = window.setInterval(checkBalance, this.publicBalanceInterval);
   }
 
@@ -203,13 +206,14 @@ export class EthAccount {
   }
 
   private resumePendingBalance() {
-    if (Date.now() - this.pendingBalance.lastSynced > this.pendingBalanceInterval) {
+    const isOutdated = Date.now() - this.pendingBalance.lastSynced > this.pendingBalanceInterval;
+    if (!this.pendingBalanceSubscriber || isOutdated) {
       this.unsubscribeToPendingBalance();
-      this.subscribeToPendingBalance();
+      this.subscribeToPendingBalance(isOutdated);
     }
   }
 
-  private async subscribeToPendingBalance() {
+  private async subscribeToPendingBalance(checkOnLoad: boolean) {
     if (!this.address) {
       return;
     }
@@ -225,7 +229,9 @@ export class EthAccount {
       await this.checkPendingBalance();
     };
 
-    await this.checkPendingBalance();
+    if (checkOnLoad) {
+      await this.checkPendingBalance();
+    }
     this.pendingBalanceSubscriber = window.setInterval(checkBalance, this.pendingBalanceInterval);
   }
 
