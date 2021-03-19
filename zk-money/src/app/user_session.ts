@@ -665,7 +665,7 @@ export class UserSession extends EventEmitter {
 
   private async reviveUserProvider() {
     const wallet = this.getWalletSession();
-    if (wallet === undefined) return;
+    if (wallet === undefined || wallet === this.provider?.wallet) return;
 
     const { infuraId, network, ethereumHost } = this.config;
     const provider = new Provider(wallet, { infuraId, network, ethereumHost });
@@ -733,6 +733,8 @@ export class UserSession extends EventEmitter {
     const web3Provider = new Web3Provider(provider);
     this.priceFeedService = new PriceFeedService(priceFeedContractAddresses, web3Provider);
     await this.priceFeedService.init();
+
+    await this.reviveUserProvider();
 
     const { alias } = this.loginState;
     this.account = new UserAccount(

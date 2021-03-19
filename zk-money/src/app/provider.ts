@@ -41,7 +41,7 @@ export class Provider extends EventEmitter {
   private walletProvider!: WalletProvider;
   public ethereumProvider!: EthereumProvider;
 
-  constructor(private wallet: Wallet, config: ProviderConfig) {
+  constructor(public wallet: Wallet, config: ProviderConfig) {
     super();
     this.walletProvider = createWalletProvider(wallet, config)!;
     this.state = {
