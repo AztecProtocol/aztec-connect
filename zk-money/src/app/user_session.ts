@@ -305,6 +305,11 @@ export class UserSession extends EventEmitter {
       return;
     }
 
+    if (wallet === this.provider?.wallet) {
+      debug('Reconnecting to the same wallet.');
+      await this.provider.destroy();
+    }
+
     const prevProvider = this.provider;
     prevProvider?.removeAllListeners();
 
@@ -316,6 +321,7 @@ export class UserSession extends EventEmitter {
     this.provider.on(ProviderEvent.UPDATED_PROVIDER_STATE, this.handleProviderStateChange);
 
     try {
+      this.clearWalletSession();
       await this.provider.init(checkNetwork ? this.requiredNetwork : undefined);
       this.saveWalletSession(wallet);
     } catch (e) {
@@ -862,6 +868,10 @@ export class UserSession extends EventEmitter {
 
   private saveWalletSession(wallet: Wallet) {
     localStorage.setItem(this.walletCacheName, `${wallet}`);
+  }
+
+  private clearWalletSession() {
+    localStorage.removeItem(this.walletCacheName);
   }
 
   private getWalletSession() {

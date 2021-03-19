@@ -94,8 +94,8 @@ export const WalletSelect: React.FunctionComponent<WalletSelectInputProps> = ({
         .filter(({ id }) => id !== Wallet.HOT)
         .map(({ id, name, icon }) => ({
           id,
-          content: <WalletItem name={name} icon={icon} connected={id === wallet} />,
-          disabled: id === wallet,
+          content: <WalletItem name={name} icon={icon} connected={id === wallet && id !== Wallet.CONNECT} />,
+          disabled: id === wallet && id !== Wallet.CONNECT,
         }))}
       onSelect={id => onChangeWallet(id)}
     />
