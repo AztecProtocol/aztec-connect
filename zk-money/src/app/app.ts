@@ -190,6 +190,10 @@ export class App extends EventEmitter {
   };
 
   logout = async () => {
+    if (!this.session) {
+      debug('Attempt to logout before login.');
+      return;
+    }
     const session = this.session;
     this.session = undefined;
     session!.removeAllListeners();

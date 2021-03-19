@@ -54,6 +54,15 @@ export enum LoginStep {
   DONE,
 }
 
+const undisruptiveSteps = [
+  LoginStep.INIT_SDK,
+  LoginStep.CREATE_ACCOUNT,
+  LoginStep.VALIDATE_DATA,
+  LoginStep.RECOVER_ACCOUNT_PROOF,
+  LoginStep.ADD_ACCOUNT,
+  LoginStep.SYNC_DATA,
+];
+
 export interface LoginState {
   step: LoginStep;
   wallet?: Wallet;
@@ -161,7 +170,7 @@ export class UserSession extends EventEmitter {
   }
 
   isProcessingAction() {
-    return !!this.depositForm && this.depositForm.locked;
+    return !this.destroyed && (undisruptiveSteps.indexOf(this.loginState.step) >= 0 || !!this.depositForm?.locked);
   }
 
   async close(message = '', messageType = MessageType.TEXT, clearSession = true) {
@@ -174,6 +183,7 @@ export class UserSession extends EventEmitter {
   }
 
   async destroy() {
+    this.destroyed = true;
     this.removeAllListeners();
     this.debounceCheckAlias.cancel();
     this.account?.destroy();
@@ -192,7 +202,6 @@ export class UserSession extends EventEmitter {
       }
       await this.sdk.destroy();
     }
-    this.destroyed = true;
     debug('Session destroyed.');
   }
 
