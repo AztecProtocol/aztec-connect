@@ -335,8 +335,10 @@ export class UserAccount extends EventEmitter {
       this.assetState.asset.id,
       this.requiredNetwork,
     );
+    const pendingBalance = await this.ethAccount.refreshPendingBalance();
     this.ethAccount.on(EthAccountEvent.UPDATED_PENDING_BALANCE, this.onPendingBalanceChange);
     this.activeAction?.form.changeEthAccount(this.ethAccount);
+    this.onPendingBalanceChange(pendingBalance);
   }
 
   private onRollupStatusChange = (status: RollupStatus) => {
