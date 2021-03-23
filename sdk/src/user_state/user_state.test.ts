@@ -90,7 +90,7 @@ describe('user state', () => {
     rollupId = 0,
     isPadding = false,
   } = {}) => {
-    const ephPrivKey = createEphemeralPrivKey();
+    const ephPrivKey = createEphemeralPrivKey(grumpkin);
     const note1 = TreeNote.createFromEphPriv(
       user.publicKey,
       BigInt(outputNoteValue1),

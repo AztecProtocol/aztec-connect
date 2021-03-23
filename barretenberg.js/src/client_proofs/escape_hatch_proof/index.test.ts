@@ -94,8 +94,8 @@ describe('escape_hatch_proof', () => {
   });
 
   it('should construct and verify an escape hatch proof', async () => {
-    const inputNote1EphKey = createEphemeralPrivKey();
-    const inputNote2EphKey = createEphemeralPrivKey();
+    const inputNote1EphKey = createEphemeralPrivKey(grumpkin);
+    const inputNote2EphKey = createEphemeralPrivKey(grumpkin);
     const inputNote1 = TreeNote.createFromEphPriv(pubKey, BigInt(100), 0, 0, inputNote1EphKey, grumpkin);
     const inputNote2 = TreeNote.createFromEphPriv(pubKey, BigInt(50), 0, 0, inputNote2EphKey, grumpkin);
     const inputNotes = [inputNote1, inputNote2];
@@ -107,8 +107,8 @@ describe('escape_hatch_proof', () => {
     const nullifiers = encryptedNotes.map((encNote, index) => {
       return toBigIntBE(noteAlgos.computeNoteNullifier(encNote, inputIndexes[index], privateKey, true));
     });
-    const outputNote1EphKey = createEphemeralPrivKey();
-    const outputNote2EphKey = createEphemeralPrivKey();
+    const outputNote1EphKey = createEphemeralPrivKey(grumpkin);
+    const outputNote2EphKey = createEphemeralPrivKey(grumpkin);
 
     const outputNote1 = TreeNote.createFromEphPriv(pubKey, BigInt(20), 0, 0, outputNote1EphKey, grumpkin);
     const outputNote2 = TreeNote.createFromEphPriv(pubKey, BigInt(10), 0, 0, outputNote2EphKey, grumpkin);

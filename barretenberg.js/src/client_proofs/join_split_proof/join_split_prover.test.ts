@@ -98,10 +98,10 @@ describe('join_split_proof', () => {
     });
 
     it('should construct join split proof', async () => {
-      const inputNote1EphKey = createEphemeralPrivKey();
-      const inputNote2EphKey = createEphemeralPrivKey();
-      const outputNote1EphKey = createEphemeralPrivKey();
-      const outputNote2EphKey = createEphemeralPrivKey();
+      const inputNote1EphKey = createEphemeralPrivKey(grumpkin);
+      const inputNote2EphKey = createEphemeralPrivKey(grumpkin);
+      const outputNote1EphKey = createEphemeralPrivKey(grumpkin);
+      const outputNote2EphKey = createEphemeralPrivKey(grumpkin);
 
       const inputNote1 = TreeNote.createFromEphPriv(pubKey, BigInt(100), 0, 0, inputNote1EphKey, grumpkin);
       const inputNote2 = TreeNote.createFromEphPriv(pubKey, BigInt(50), 0, 0, inputNote2EphKey, grumpkin);

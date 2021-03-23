@@ -50,7 +50,7 @@ export class JoinSplitTxFactory {
     for (let i = notes.length; i < 2; ++i) {
       inputNoteIndices.push(maxNoteIndex + i); // notes can't have the same index
       inputNotes.push(
-        TreeNote.createFromEphPriv(publicKey, BigInt(0), assetId, nonce, createEphemeralPrivKey(), this.grumpkin),
+        TreeNote.createFromEphPriv(publicKey, BigInt(0), assetId, nonce, createEphemeralPrivKey(this.grumpkin), this.grumpkin),
       );
     }
     const inputNotePaths = await Promise.all(inputNoteIndices.map(async idx => this.worldState.getHashPath(idx)));
@@ -58,8 +58,8 @@ export class JoinSplitTxFactory {
     const changeValue = max(BigInt(0), totalNoteInputValue - privateInput);
     const newNoteOwner = receiver || id;
 
-    const outputNote1EphKey = createEphemeralPrivKey();
-    const outputNote2EphKey = createEphemeralPrivKey();
+    const outputNote1EphKey = createEphemeralPrivKey(this.grumpkin);
+    const outputNote2EphKey = createEphemeralPrivKey(this.grumpkin);
     const outputNotes = [
       TreeNote.createFromEphPriv(
         newNoteOwner.publicKey,

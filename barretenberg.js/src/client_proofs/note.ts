@@ -51,17 +51,15 @@ export class TreeNote {
   }
 }
 
-export function createEphemeralPrivKey() {
-  const key = randomBytes(32);
-  key[0] &= 0x03; // TODO PROPERLY REDUCE THIS MOD P
-  return key;
+export function createEphemeralPrivKey(grumpkin: Grumpkin) {
+  return grumpkin.getRandomFr();
 }
 
 function deriveNoteSecret(ecdhPubKey: GrumpkinAddress, ecdhPrivKey: Buffer, grumpkin: Grumpkin) {
   const sharedSecret = grumpkin.mul(ecdhPubKey.toBuffer(), ecdhPrivKey);
   const secretBuffer = Buffer.concat([sharedSecret, numToUInt8(0)]);
   const hash = createHash('sha256').update(secretBuffer).digest();
-  hash[0] &= 0x03; // TODO PROPERLY REDUCE THIS MOD P
+  hash[0] &= 0x03;
   return hash;
 }
 

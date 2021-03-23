@@ -40,7 +40,7 @@ describe.only('grumpkin', () => {
     }
 
     const start = new Date().getTime();
-    const result = grumpkin.batch_mul(pointBuf, exponent, numPoints);
+    const result = grumpkin.batchMul(pointBuf, exponent, numPoints);
     debug(`batch mul in: ${new Date().getTime() - start}ms`);
 
     const start2 = new Date().getTime();
