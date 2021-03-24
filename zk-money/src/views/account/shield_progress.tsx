@@ -23,7 +23,8 @@ export const ShieldProgress: React.FunctionComponent<ShieldProgressProps> = ({
   onSubmit,
   onClose,
 }) => {
-  const { amount, fee, recipient, status, submit } = form;
+  const { amount, speed, fees, recipient, status, submit } = form;
+  const fee = fees.value[speed.value].fee;
 
   const items = [
     {
@@ -32,7 +33,7 @@ export const ShieldProgress: React.FunctionComponent<ShieldProgressProps> = ({
     },
     {
       title: 'Fee',
-      content: <AssetInfoRow asset={asset} value={toBaseUnits(fee.value, asset.decimals)} price={assetPrice} />,
+      content: <AssetInfoRow asset={asset} value={fee} price={assetPrice} />,
     },
     {
       title: 'Recipient',

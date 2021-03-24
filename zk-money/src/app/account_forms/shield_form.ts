@@ -4,6 +4,7 @@ import {
   EthAddress,
   JoinSplitProofOutput,
   PermitArgs,
+  SettlementTime,
   TxHash,
   TxType,
   WalletSdk,
@@ -27,7 +28,6 @@ import {
   FormStatus,
   FormValue,
   IntValue,
-  isStrictValidDecimal,
   isValidForm,
   mergeValues,
   StrInput,
@@ -38,7 +38,7 @@ import {
 } from '../form';
 import { Network } from '../networks';
 import { Provider, ProviderStatus } from '../provider';
-import { RollupService, RollupServiceEvent, RollupStatus } from '../rollup_service';
+import { RollupService, RollupServiceEvent, RollupStatus, TxFee } from '../rollup_service';
 import { fromBaseUnits, max, min, toBaseUnits } from '../units';
 import { Web3Signer } from '../wallet_providers';
 import { AccountForm, AccountFormEvent } from './account_form';
@@ -67,12 +67,20 @@ interface EthAccountStateValue extends FormValue {
   value: EthAccountState;
 }
 
+interface TxFeesValue extends FormValue {
+  value: TxFee[];
+}
+
+interface TxSpeedInput extends IntValue {
+  value: SettlementTime;
+}
+
 export interface ShieldFormValues {
   amount: StrInput;
   maxAmount: BigIntValue;
   gasCost: BigIntValue;
-  fee: StrInput;
-  settledIn: IntValue;
+  fees: TxFeesValue;
+  speed: TxSpeedInput;
   ethAccount: EthAccountStateValue;
   recipient: RecipientInput;
   enableAddToBalance: BoolInput;
@@ -95,11 +103,11 @@ const initialShieldFormValues = {
   gasCost: {
     value: 0n,
   },
-  fee: {
-    value: '',
+  fees: {
+    value: [],
   },
-  settledIn: {
-    value: 0,
+  speed: {
+    value: SettlementTime.SLOW,
   },
   ethAccount: {
     value: {
@@ -151,7 +159,6 @@ export class ShieldForm extends EventEmitter implements AccountForm {
   private isContract = false;
   private accountGasCost: AccountGasCost = { ethAddress: undefined, deposit: 0n, approveProof: 0n };
   private gasPrice = 0n;
-  private minFee = 0n;
 
   private debounceUpdateRecipient: DebouncedFunc<() => void>;
 
@@ -175,6 +182,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     this.asset = assetState.asset;
     this.debounceUpdateRecipient = debounce(this.updateRecipientStatus, this.aliasDebounceWait);
     this.values.recipient = { value: { input: this.alias, valid: ValueAvailability.VALID } };
+    this.values.fees = { value: this.rollup.getTxFees(this.asset.id, TxType.DEPOSIT) };
     this.refreshValues();
   }
 
@@ -209,9 +217,11 @@ export class ShieldForm extends EventEmitter implements AccountForm {
 
   async init() {
     this.rollup.on(RollupServiceEvent.UPDATED_STATUS, this.onRollupStatusChange);
+    await this.updateGasPrice(this.coreProvider);
+    await this.ethAccount.refreshPublicBalance(false);
+    await this.onPublicBalanceChange();
     this.ethAccount.on(EthAccountEvent.UPDATED_PENDING_BALANCE, this.onPendingBalanceChange);
     this.ethAccount.on(EthAccountEvent.UPDATED_PUBLIC_BALANCE, this.onPublicBalanceChange);
-    await this.updateGasPrice(this.coreProvider);
     this.refreshValues();
     this.autofillAmountInput();
   }
@@ -267,9 +277,6 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     const changes = { ...newValues };
     if (changes.amount) {
       changes.amount = formatBigIntInput(changes.amount);
-    }
-    if (changes.fee) {
-      changes.fee = formatBigIntInput(changes.fee);
     }
     if (changes.recipient) {
       this.debounceUpdateRecipient.cancel();
@@ -355,15 +362,11 @@ export class ShieldForm extends EventEmitter implements AccountForm {
   private refreshValues(changes: Partial<ShieldFormValues> = {}) {
     const { spendableBalance } = this.assetState;
     const ethAccountState = this.ethAccount.state;
-    const txType = TxType.DEPOSIT;
-
-    const prevFee = toBaseUnits(this.values.fee.value, this.asset.decimals);
-    const prevMinFee = this.minFee;
-    const resetFee = !changes.fee && !this.locked && prevFee === prevMinFee;
-    this.minFee = this.rollup.getMinFee(this.asset.id, txType);
 
     const { publicBalance, pendingBalance } = ethAccountState;
-    const fee = changes.fee ? toBaseUnits(changes.fee.value, this.asset.decimals) : resetFee ? this.minFee : prevFee;
+    const fees = this.rollup.getTxFees(this.asset.id, TxType.DEPOSIT);
+    const speed = (changes.speed || this.values.speed).value;
+    const fee = fees[speed].fee;
     const gasCost = ((this.accountGasCost.deposit + this.accountGasCost.approveProof) * this.gasPrice * 110n) / 100n; // * 1.1
     const maxAmount = min(
       max(0n, publicBalance + pendingBalance - fee - gasCost, pendingBalance - fee),
@@ -378,15 +381,8 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       enableAddToBalance: {
         value: isSameAlias(recipient, this.alias) && spendableBalance > 0n,
       },
-      settledIn: {
-        value: this.rollup.getSettledIn(this.asset.id, txType, fee),
-      },
+      fees: { value: fees },
       ...changes,
-      ...(resetFee
-        ? {
-            fee: { value: fromBaseUnits(fee, this.asset.decimals) },
-          }
-        : {}),
     });
 
     this.updateFormValues(toUpdate);
@@ -434,17 +430,6 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       }
     }
 
-    if (changes.fee) {
-      const feeInput = changes.fee.value;
-      const fee = toBaseUnits(feeInput, this.asset.decimals);
-      if (isStrictValidDecimal(feeInput) && fee < this.minFee) {
-        toUpdate.fee = withError(
-          changes.fee,
-          `Fee cannot be less than ${fromBaseUnits(this.minFee, this.asset.decimals)}.`,
-        );
-      }
-    }
-
     return toUpdate;
   }
 
@@ -455,14 +440,23 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       form.confirmed = withError(form.confirmed, 'Please confirm that you understand the risk.');
     }
 
-    const minFee = await this.sdk.getFee(this.asset.id, TxType.DEPOSIT);
-    const fee = toBaseUnits(form.fee.value, this.asset.decimals);
-    if (fee < minFee) {
-      form.fee = withError(form.fee, `Fee cannot be less than ${fromBaseUnits(minFee, this.asset.decimals)}.`);
+    const fee = form.fees.value[form.speed.value].fee;
+    if (this.status === ShieldStatus.VALIDATE) {
+      // This error won't be displayed in the form but should trigger a "Session Expired" error in the confirm step.
+      const currentFee = this.rollup.getFee(this.asset.id, TxType.DEPOSIT, form.speed.value);
+      if (fee !== currentFee) {
+        form.fees = withError(
+          form.fees,
+          `Fee has changed from ${fromBaseUnits(fee, this.asset.decimals)} to ${fromBaseUnits(
+            currentFee,
+            this.asset.decimals,
+          )}.`,
+        );
+      }
     }
 
-    const amount = toBaseUnits(form.amount.value, this.asset.decimals);
     const { provider } = this.ethAccount;
+    const amount = toBaseUnits(form.amount.value, this.asset.decimals);
     if (!this.ethAccount.active) {
       if (!provider) {
         form.amount = withError(form.amount, 'Please connect a wallet.');
@@ -508,7 +502,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     const { nonce, publicKey, privateKey } = this.sdk.getUserData(this.userId);
     const senderId = this.accountState.settled ? this.userId : new AccountId(publicKey, nonce - 1);
     const amount = toBaseUnits(form.amount.value, asset.decimals);
-    const fee = toBaseUnits(form.fee.value, asset.decimals);
+    const fee = form.fees.value[form.speed.value].fee;
     const publicInput = amount + fee;
     const ethAddress = this.ethAccount!.state.ethAddress!;
     const pendingBalance = await this.accountUtils.getPendingBalance(asset.id, ethAddress);
@@ -615,6 +609,8 @@ export class ShieldForm extends EventEmitter implements AccountForm {
           ownedByUser: false,
         });
       }
+
+      await this.ethAccount.refreshPendingBalance();
     }
 
     this.proceed(ShieldStatus.DONE);
@@ -672,7 +668,8 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     let amount = 0n;
     const { pendingBalance } = this.ethAccount.state;
     if (pendingBalance) {
-      amount = pendingBalance - toBaseUnits(this.values.fee.value, this.asset.decimals);
+      const fee = this.values.fees.value[this.values.speed.value].fee;
+      amount = pendingBalance - fee;
     } else {
       amount = this.values.maxAmount.value;
     }
@@ -688,10 +685,10 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     this.autofillAmountInput();
   };
 
-  private onPublicBalanceChange = () => {
+  private onPublicBalanceChange = async () => {
     if (this.locked) return;
 
-    this.refreshGasCost();
+    await this.refreshGasCost();
   };
 
   private onRollupStatusChange = (status: RollupStatus, prevStatus: RollupStatus) => {

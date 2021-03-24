@@ -1,4 +1,4 @@
-import { AssetId, EthAddress, WalletSdk } from '@aztec/sdk';
+import { AssetId, EthAddress } from '@aztec/sdk';
 import { Web3Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
 import { AccountUtils } from '../account_utils';
@@ -52,7 +52,6 @@ export class EthAccount {
 
   constructor(
     public readonly provider: Provider | undefined,
-    private sdk: WalletSdk,
     private accountUtils: AccountUtils,
     private assetId: AssetId,
     private requiredNetwork: Network,
@@ -128,12 +127,22 @@ export class EthAccount {
     return this;
   }
 
-  async refreshPublicBalance() {
-    return this.checkPublicBalance();
+  async refreshPublicBalance(forceUpdate = true) {
+    if (!forceUpdate && Date.now() - this.publicBalance.lastSynced <= this.publicBalanceInterval) {
+      return this.publicBalance.value;
+    }
+    this.unsubscribeToPublicBalance();
+    await this.subscribeToPublicBalance(true);
+    return this.state.publicBalance;
   }
 
-  async refreshPendingBalance() {
-    return this.checkPendingBalance();
+  async refreshPendingBalance(forceUpdate = true) {
+    if (!forceUpdate && Date.now() - this.pendingBalance.lastSynced <= this.pendingBalanceInterval) {
+      return this.pendingBalance.value;
+    }
+    this.unsubscribeToPendingBalance();
+    await this.subscribeToPendingBalance(true);
+    return this.state.pendingBalance;
   }
 
   private async checkPublicBalance() {

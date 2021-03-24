@@ -30,7 +30,8 @@ export const SendProgress: React.FunctionComponent<SendProgressProps> = ({
   onSubmit,
   onClose,
 }) => {
-  const { amount, fee, recipient, submit, status } = form;
+  const { amount, fees, speed, recipient, submit, status } = form;
+  const fee = fees.value[speed.value].fee;
 
   const items = [
     {
@@ -39,7 +40,7 @@ export const SendProgress: React.FunctionComponent<SendProgressProps> = ({
     },
     {
       title: 'Fee',
-      content: <AssetInfoRow asset={asset} value={toBaseUnits(fee.value, asset.decimals)} price={assetPrice} />,
+      content: <AssetInfoRow asset={asset} value={fee} price={assetPrice} />,
     },
     {
       title: 'Recipient',

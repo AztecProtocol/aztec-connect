@@ -158,6 +158,7 @@ export class UserAccount extends EventEmitter {
     this.activeAsset = assetId;
     this.priceFeedService.subscribe(this.activeAsset, this.onPriceChange);
     await this.refreshAssetState();
+    await this.renewEthAccount();
   }
 
   async changeProvider(provider?: Provider) {
@@ -328,17 +329,13 @@ export class UserAccount extends EventEmitter {
 
   private async renewEthAccount() {
     this.ethAccount?.off(EthAccountEvent.UPDATED_PENDING_BALANCE, this.onPendingBalanceChange);
-    this.ethAccount = new EthAccount(
-      this.provider,
-      this.sdk,
-      this.accountUtils,
-      this.assetState.asset.id,
-      this.requiredNetwork,
-    );
-    const pendingBalance = await this.ethAccount.refreshPendingBalance();
-    this.ethAccount.on(EthAccountEvent.UPDATED_PENDING_BALANCE, this.onPendingBalanceChange);
+    this.ethAccount = new EthAccount(this.provider, this.accountUtils, this.assetState.asset.id, this.requiredNetwork);
+    if (this.assetState.asset.enabled) {
+      const pendingBalance = await this.ethAccount.refreshPendingBalance();
+      this.ethAccount.on(EthAccountEvent.UPDATED_PENDING_BALANCE, this.onPendingBalanceChange);
+      this.onPendingBalanceChange(pendingBalance);
+    }
     this.activeAction?.form.changeEthAccount(this.ethAccount);
-    this.onPendingBalanceChange(pendingBalance);
   }
 
   private onRollupStatusChange = (status: RollupStatus) => {

@@ -29,6 +29,7 @@ import {
   Text,
 } from '../../components';
 import { borderRadiuses, breakpoints, colours, spacings, Theme } from '../../styles';
+import { FeeSelect } from './fee_select';
 import { SendProgress } from './send_progress';
 import { SettledTime } from './settled_time';
 import { WithdrawDisclaimer } from './withdraw_disclaimer';
@@ -124,7 +125,8 @@ export const Send: React.FunctionComponent<SendProps> = ({
   }
 
   const inputTheme = theme === Theme.WHITE ? InputTheme.WHITE : InputTheme.LIGHT;
-  const { amount, fee, settledIn, maxAmount, recipient, confirmed, submit } = form;
+  const { amount, fees, speed, maxAmount, recipient, confirmed, submit } = form;
+  const txFee = fees.value[speed.value];
 
   return (
     <>
@@ -185,12 +187,14 @@ export const Send: React.FunctionComponent<SendProps> = ({
           )}
         </AmountCol>
         <FeeCol>
-          <BlockTitle title="Fee" info={<SettledTime settledIn={settledIn.value} explorerUrl={explorerUrl} />} />
-          <InputWrapper theme={inputTheme}>
-            <AssetIcon src={asset.icon} />
-            <Input theme={inputTheme} value={fee.value} onChangeValue={value => onChangeInputs({ fee: { value } })} />
-          </InputWrapper>
-          {fee.message && <FixedInputMessage theme={inputTheme} message={fee.message} type={fee.messageType} />}
+          <BlockTitle title="Fee" info={<SettledTime settledIn={txFee.time} explorerUrl={explorerUrl} />} />
+          <FeeSelect
+            inputTheme={inputTheme}
+            asset={asset}
+            selectedSpeed={speed.value}
+            fees={fees.value}
+            onSelect={speed => onChangeInputs({ speed: { value: speed } })}
+          />
         </FeeCol>
       </InputRow>
       <PaddedBlock size="m">

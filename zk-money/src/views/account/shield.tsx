@@ -7,7 +7,6 @@ import {
   ProviderState,
   ShieldFormValues,
   ShieldStatus,
-  toBaseUnits,
   ValueAvailability,
   Wallet,
 } from '../../app';
@@ -31,6 +30,7 @@ import {
   TextLink,
 } from '../../components';
 import { borderRadiuses, breakpoints, colours, spacings, Theme } from '../../styles';
+import { FeeSelect } from './fee_select';
 import { SettledTime } from './settled_time';
 import { ShieldProgress } from './shield_progress';
 import { WalletSelect } from './wallet_select';
@@ -159,8 +159,8 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
   const inputTheme = theme === Theme.WHITE ? InputTheme.WHITE : InputTheme.LIGHT;
   const {
     amount,
-    fee,
-    settledIn,
+    fees,
+    speed,
     maxAmount,
     ethAccount,
     recipient,
@@ -171,6 +171,7 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
   } = form;
   const { icon, decimals } = asset;
   const { pendingBalance } = ethAccount.value;
+  const txFee = fees.value[speed.value];
 
   return (
     <>
@@ -205,7 +206,7 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
           {!!pendingBalance && (
             <InputFoot size="xxs">
               {`You have ${fromBaseUnits(
-                pendingBalance - toBaseUnits(fee.value, decimals),
+                pendingBalance - txFee.fee,
                 decimals,
               )} ETH pending on the contract, this will be used first. `}
             </InputFoot>
@@ -215,12 +216,14 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
           )}
         </AmountCol>
         <FeeCol>
-          <BlockTitle title="Fee" info={<SettledTime settledIn={settledIn.value} explorerUrl={explorerUrl} />} />
-          <InputWrapper theme={inputTheme}>
-            <AssetIcon src={icon} />
-            <Input theme={inputTheme} value={fee.value} onChangeValue={value => onChangeInputs({ fee: { value } })} />
-          </InputWrapper>
-          {fee.message && <FixedInputMessage theme={inputTheme} message={fee.message} type={fee.messageType} />}
+          <BlockTitle title="Fee" info={<SettledTime settledIn={txFee.time} explorerUrl={explorerUrl} />} />
+          <FeeSelect
+            inputTheme={inputTheme}
+            asset={asset}
+            selectedSpeed={speed.value}
+            fees={fees.value}
+            onSelect={speed => onChangeInputs({ speed: { value: speed } })}
+          />
         </FeeCol>
       </InputRow>
       <InputRow>

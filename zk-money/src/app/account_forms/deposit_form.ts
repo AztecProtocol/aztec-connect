@@ -117,7 +117,7 @@ export class DepositForm extends EventEmitter implements AccountForm {
   ) {
     super();
     this.asset = asset;
-    this.ethAccount = new EthAccount(provider, sdk, accountUtils, asset.id, requiredNetwork);
+    this.ethAccount = new EthAccount(provider, accountUtils, asset.id, requiredNetwork);
     this.refreshValues();
   }
 
@@ -380,7 +380,7 @@ export class DepositForm extends EventEmitter implements AccountForm {
   private async renewEthAccount() {
     this.ethAccount.destroy();
     this.refreshValues({ submit: clearMessage(this.values.submit) });
-    this.ethAccount = new EthAccount(this.provider, this.sdk, this.accountUtils, this.asset.id, this.requiredNetwork);
+    this.ethAccount = new EthAccount(this.provider, this.accountUtils, this.asset.id, this.requiredNetwork);
     await this.ethAccount.refreshPublicBalance();
     await this.ethAccount.refreshPendingBalance();
     this.ethAccount.on(EthAccountEvent.UPDATED_PENDING_BALANCE, this.onPendingBalanceChange);

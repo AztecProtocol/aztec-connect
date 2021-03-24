@@ -20,6 +20,14 @@ export enum RollupServiceEvent {
   UPDATED_STATUS = 'UPDATED_STATUS',
 }
 
+const speeds = [SettlementTime.SLOW, SettlementTime.AVERAGE, SettlementTime.FAST, SettlementTime.INSTANT];
+
+export interface TxFee {
+  fee: bigint;
+  time: number;
+  speed: SettlementTime;
+}
+
 export interface RollupStatus {
   txFees: AssetFeeQuote[];
   nextPublishTime: Date;
@@ -90,6 +98,21 @@ export class RollupService extends EventEmitter {
     this.subscribeToStatus();
   }
 
+  getTxFees(assetId: AssetId, txType: TxType) {
+    const { feeConstants, baseFeeQuotes } = this.status.txFees[assetId];
+    const baseFee = feeConstants[txType];
+    const txFees: TxFee[] = [];
+    for (const speed of speeds) {
+      txFees[speed] = { speed, fee: baseFee + baseFeeQuotes[speed].fee, time: baseFeeQuotes[speed].time };
+    }
+    return txFees;
+  }
+
+  getFee(assetId: AssetId, txType: TxType, speed: SettlementTime) {
+    const { feeConstants, baseFeeQuotes } = this.status.txFees[assetId];
+    return feeConstants[txType] + baseFeeQuotes[speed].fee;
+  }
+
   getMinFee(assetId: AssetId, txType: TxType) {
     const { feeConstants, baseFeeQuotes } = this.status.txFees[assetId];
     return feeConstants[txType] + baseFeeQuotes[SettlementTime.SLOW].fee;
@@ -98,9 +121,7 @@ export class RollupService extends EventEmitter {
   getSettledIn(assetId: AssetId, type: TxType, fee: bigint) {
     const { feeConstants, baseFeeQuotes } = this.status.txFees[assetId];
     const extra = fee - feeConstants[type];
-    const speed = [SettlementTime.INSTANT, SettlementTime.FAST, SettlementTime.AVERAGE, SettlementTime.SLOW].find(
-      t => extra >= baseFeeQuotes[t].fee,
-    );
+    const speed = [...speeds].reverse().find(t => extra >= baseFeeQuotes[t].fee);
     return baseFeeQuotes[speed !== undefined ? speed : SettlementTime.SLOW].time;
   }
 

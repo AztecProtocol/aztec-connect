@@ -7,6 +7,7 @@ export * from './assets';
 export * from './eth_account';
 export * from './form';
 export * from './provider';
+export * from './rollup_service';
 export * from './seed_phrase';
 export * from './units';
 export * from './user_session';

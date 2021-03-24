@@ -45,6 +45,10 @@ const ErrorEthAddressIcon = styled.img`
   height: 8px;
 `;
 
+const WalletItemRoot = styled(FlexRow)`
+  padding: ${spacings.xs} 0;
+`;
+
 const WalletItemIcon = styled.img`
   width: 24px;
 `;
@@ -60,11 +64,11 @@ interface WalletItemProps {
 }
 
 const WalletItem: React.FunctionComponent<WalletItemProps> = ({ name, icon, connected }) => (
-  <FlexRow>
+  <WalletItemRoot>
     <WalletItemIcon src={icon} />
     <WalletItemText text={name} />
     {connected && <Text text="(Connected)" />}
-  </FlexRow>
+  </WalletItemRoot>
 );
 
 interface WalletSelectInputProps {

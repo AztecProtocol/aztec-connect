@@ -1,4 +1,4 @@
-import { AccountId, EthAddress, JoinSplitProofOutput, TxType, WalletSdk } from '@aztec/sdk';
+import { AccountId, EthAddress, JoinSplitProofOutput, SettlementTime, TxType, WalletSdk } from '@aztec/sdk';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { debounce, DebouncedFunc } from 'lodash';
@@ -15,7 +15,6 @@ import {
   FormStatus,
   FormValue,
   IntValue,
-  isStrictValidDecimal,
   isValidForm,
   mergeValues,
   StrInput,
@@ -23,7 +22,7 @@ import {
   withError,
   withMessage,
 } from '../form';
-import { RollupService, RollupServiceEvent } from '../rollup_service';
+import { RollupService, RollupServiceEvent, TxFee } from '../rollup_service';
 import { fromBaseUnits, max, min, toBaseUnits } from '../units';
 import { AccountForm, AccountFormEvent } from './account_form';
 
@@ -40,6 +39,14 @@ export enum SendStatus {
   DONE,
 }
 
+interface TxFeesValue extends FormValue {
+  value: TxFee[];
+}
+
+interface TxSpeedInput extends IntValue {
+  value: SettlementTime;
+}
+
 interface RecipientInput extends FormValue {
   value: {
     input: string;
@@ -51,8 +58,8 @@ interface RecipientInput extends FormValue {
 export interface SendFormValues {
   amount: StrInput;
   maxAmount: BigIntValue;
-  fee: StrInput;
-  settledIn: IntValue;
+  fees: TxFeesValue;
+  speed: TxSpeedInput;
   recipient: RecipientInput;
   confirmed: BoolInput;
   status: {
@@ -69,11 +76,11 @@ const initialSendFormValues = {
   maxAmount: {
     value: 0n,
   },
-  fee: {
-    value: '',
+  fees: {
+    value: [],
   },
-  settledIn: {
-    value: 0,
+  speed: {
+    value: SettlementTime.SLOW,
   },
   recipient: {
     value: {
@@ -103,8 +110,6 @@ export class SendForm extends EventEmitter implements AccountForm {
   private formStatus = FormStatus.ACTIVE;
   private proofOutput?: JoinSplitProofOutput;
 
-  private minFee = 0n;
-
   private debounceUpdateRecipientStatus: DebouncedFunc<() => void>;
   private debounceUpdateRecipientTxType: DebouncedFunc<() => void>;
 
@@ -125,6 +130,7 @@ export class SendForm extends EventEmitter implements AccountForm {
     this.asset = assetState.asset;
     this.debounceUpdateRecipientStatus = debounce(this.updateRecipientStatus, this.aliasDebounceWait);
     this.debounceUpdateRecipientTxType = debounce(this.updateRecipientTxType, this.txTypeDebounceWait);
+    this.values.fees = { value: this.rollup.getTxFees(this.asset.id, TxType.TRANSFER) };
     this.refreshValues();
   }
 
@@ -189,14 +195,6 @@ export class SendForm extends EventEmitter implements AccountForm {
     const changes = { ...newValues };
     if (changes.amount) {
       changes.amount = formatBigIntInput(changes.amount);
-    }
-    if (changes.fee) {
-      changes.fee = formatBigIntInput(changes.fee);
-
-      const fee = toBaseUnits(changes.fee.value, this.asset.decimals);
-      const { spendableBalance } = this.assetState;
-      const maxAmount = min(max(0n, spendableBalance - fee), this.txAmountLimit);
-      changes.maxAmount = { value: maxAmount };
     }
     if (changes.recipient) {
       this.debounceUpdateRecipientStatus.cancel();
@@ -292,26 +290,16 @@ export class SendForm extends EventEmitter implements AccountForm {
 
   private refreshValues(changes: Partial<SendFormValues> = {}) {
     const { txType } = (changes.recipient || this.values.recipient).value;
-    const prevMinFee = this.minFee;
-    const prevFee = toBaseUnits(this.values.fee.value, this.asset.decimals);
-    const resetFee = !changes.fee && !this.locked && prevFee === prevMinFee;
-    this.minFee = this.rollup.getMinFee(this.asset.id, txType);
 
     const { spendableBalance } = this.assetState;
-    const fee = changes.fee ? toBaseUnits(changes.fee.value, this.asset.decimals) : resetFee ? this.minFee : prevFee;
+    const fees = this.rollup.getTxFees(this.asset.id, txType);
+    const speed = (changes.speed || this.values.speed).value;
+    const fee = fees[speed].fee;
     const maxAmount = min(max(0n, spendableBalance - fee), this.txAmountLimit);
 
     const toUpdate = this.validateChanges({
       maxAmount: { value: maxAmount },
-      settledIn: {
-        value: this.rollup.getSettledIn(this.asset.id, txType, fee),
-      },
       ...changes,
-      ...(resetFee
-        ? {
-            fee: { value: fromBaseUnits(fee, this.asset.decimals) },
-          }
-        : {}),
     });
 
     this.updateFormValues(toUpdate);
@@ -341,17 +329,6 @@ export class SendForm extends EventEmitter implements AccountForm {
       }
     }
 
-    if (changes.fee) {
-      const feeInput = changes.fee.value;
-      const fee = toBaseUnits(feeInput, this.asset.decimals);
-      if (isStrictValidDecimal(feeInput) && fee < this.minFee) {
-        toUpdate.fee = withError(
-          changes.fee,
-          `Fee cannot be less than ${fromBaseUnits(this.minFee, this.asset.decimals)}.`,
-        );
-      }
-    }
-
     return toUpdate;
   }
 
@@ -367,11 +344,20 @@ export class SendForm extends EventEmitter implements AccountForm {
       form.recipient = withError(form.recipient, `Cannot find a user with username '${recipient}'.`);
     }
 
+    const fee = form.fees.value[form.speed.value].fee;
     const txType = await this.getRecipientTxType(recipient);
-    const minFee = await this.sdk.getFee(this.asset.id, txType);
-    const fee = toBaseUnits(form.fee.value, this.asset.decimals);
-    if (fee < minFee) {
-      form.fee = withError(form.fee, `Fee cannot be less than ${fromBaseUnits(minFee, this.asset.decimals)}.`);
+    if (this.status === SendStatus.VALIDATE) {
+      // This error won't be displayed in the form but should trigger a "Session Expired" error in the confirm step.
+      const currentFee = this.rollup.getFee(this.asset.id, txType, form.speed.value);
+      if (fee !== currentFee) {
+        form.fees = withError(
+          form.fees,
+          `Fee has changed from ${fromBaseUnits(fee, this.asset.decimals)} to ${fromBaseUnits(
+            currentFee,
+            this.asset.decimals,
+          )}.`,
+        );
+      }
     }
 
     const amount = toBaseUnits(form.amount.value, this.asset.decimals);
@@ -400,7 +386,7 @@ export class SendForm extends EventEmitter implements AccountForm {
       const signer = this.sdk.createSchnorrSigner(userData.privateKey);
       const noteRecipient = await this.accountUtils.getAccountId(alias);
       const amount = toBaseUnits(this.values.amount.value, this.asset.decimals);
-      const fee = toBaseUnits(this.values.fee.value, this.asset.decimals);
+      const fee = this.values.fees.value[this.values.speed.value].fee;
       this.proofOutput = await this.sdk.createJoinSplitProof(
         this.asset.id,
         this.userId,
@@ -433,7 +419,7 @@ export class SendForm extends EventEmitter implements AccountForm {
       const userData = this.sdk.getUserData(this.userId);
       const signer = this.sdk.createSchnorrSigner(userData.privateKey);
       const amount = toBaseUnits(this.values.amount.value, this.asset.decimals);
-      const fee = toBaseUnits(this.values.fee.value, this.asset.decimals);
+      const fee = this.values.fees.value[this.values.speed.value].fee;
       this.proofOutput = await this.sdk.createJoinSplitProof(
         this.asset.id,
         this.userId,

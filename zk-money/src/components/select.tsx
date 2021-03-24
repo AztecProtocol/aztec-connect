@@ -3,6 +3,8 @@ import styled, { css } from 'styled-components';
 import { borderRadiuses, colours, defaultTextColour, fontSizes, spacings, Theme, themeColours } from '../styles';
 import { ClickOutside } from './click_outside';
 
+type DropdownPosition = 'top' | 'bottom';
+
 const Root = styled(ClickOutside)`
   position: relative;
 `;
@@ -11,13 +13,18 @@ const TriggerRoot = styled.div`
   cursor: pointer;
 `;
 
-const Dropdown = styled.div`
+interface DropdownProps {
+  position: DropdownPosition;
+}
+
+const Dropdown = styled.div<DropdownProps>`
   display: flex;
   flex-direction: column;
   align-items: stretch;
   position: absolute;
   right: 0;
-  top: 100%;
+  top: ${({ position }) => (position === 'top' ? 0 : '100%')};
+  min-width: 100%;
   translate: translateY(${spacings.xs});
   background: ${colours.white};
   color: ${defaultTextColour};
@@ -43,7 +50,7 @@ interface ItemProps {
 
 const Item = styled.div<ItemProps>`
   display: flex;
-  padding: ${spacings.s} ${spacings.s};
+  padding: ${spacings.xs} ${spacings.s};
   font-size: ${fontSizes.xs};
   cursor: default;
   ${({ disabled }) => !disabled && activeItemStyle}
@@ -63,16 +70,24 @@ interface SelectProps {
   trigger: React.ReactNode;
   items: SelectItem[];
   onSelect(id: any): void;
+  position?: DropdownPosition;
 }
 
-export const Select: React.FunctionComponent<SelectProps> = ({ trigger, items, onSelect }) => {
+export const Select: React.FunctionComponent<SelectProps> = ({ trigger, items, onSelect, position = 'bottom' }) => {
   const [showDropdown, setShowDropdown] = useState(false);
 
   return (
     <Root onClickOutside={() => setShowDropdown(false)} disabled={!showDropdown}>
-      <TriggerRoot onClick={() => setShowDropdown(true)}>{trigger}</TriggerRoot>
+      <TriggerRoot
+        onClick={e => {
+          e.preventDefault();
+          setShowDropdown(true);
+        }}
+      >
+        {trigger}
+      </TriggerRoot>
       {showDropdown && (
-        <Dropdown>
+        <Dropdown position={position}>
           {items.map(({ id, content, disabled }) => (
             <Item
               key={id}
