@@ -312,6 +312,8 @@ export class UserAccount extends EventEmitter {
       }
     }
 
+    const minFee = this.rollup.getMinFee(asset.id, TxType.TRANSFER);
+
     this.updateAssetState({
       asset,
       balance,
@@ -319,7 +321,7 @@ export class UserAccount extends EventEmitter {
       spendableBalance,
       joinSplitTxs: uniqWith(userJoinSplitTxs, (tx0, tx1) => tx0.txHash.equals(tx1.txHash))
         .sort((a, b) => (!a.settled && b.settled ? -1 : 0))
-        .map(tx => parseJoinSplitTx(tx, this.explorerUrl)),
+        .map(tx => parseJoinSplitTx(tx, this.explorerUrl, minFee)),
       price: this.priceFeedService.getPrice(asset.id),
     });
   };
@@ -333,8 +335,10 @@ export class UserAccount extends EventEmitter {
       this.assetState.asset.id,
       this.requiredNetwork,
     );
+    const pendingBalance = await this.ethAccount.refreshPendingBalance();
     this.ethAccount.on(EthAccountEvent.UPDATED_PENDING_BALANCE, this.onPendingBalanceChange);
     this.activeAction?.form.changeEthAccount(this.ethAccount);
+    this.onPendingBalanceChange(pendingBalance);
   }
 
   private onRollupStatusChange = (status: RollupStatus) => {

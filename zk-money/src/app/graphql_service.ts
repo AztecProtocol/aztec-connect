@@ -43,12 +43,13 @@ export class GraphQLService {
   async getAliasPublicKey(alias: string) {
     const { data } = await this.apollo.query<AccountTxsResponse>({
       query: gql`
-        query Query {
-          accountTxs(take: 1, where: { alias: "${alias}" }, order: { nonce: "DESC" }) {
+        query Query($alias: String) {
+          accountTxs(take: 1, where: { alias: $alias }, order: { nonce: "DESC" }) {
             accountPubKey
           }
         }
       `,
+      variables: { alias },
       fetchPolicy: 'no-cache',
     });
     const tx = data?.accountTxs[0];

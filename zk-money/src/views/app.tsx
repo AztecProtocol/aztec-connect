@@ -78,7 +78,6 @@ interface AppState {
     formValues: Form;
   };
   depositForm?: DepositFormValues;
-  processingAction: boolean;
   systemMessage: SystemMessage;
 }
 
@@ -114,7 +113,6 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
       assetState: this.app.assetState,
       activeAction: this.app.activeAction,
       depositForm: this.app.depositForm,
-      processingAction: this.app.isProcessingAction(),
       systemMessage: {
         message: '',
         type: MessageType.TEXT,
@@ -165,15 +163,25 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
     }
   };
 
-  private handleUrlChange = ({ path, params }: { path: string; params: RouteParams }) => {
+  private handleUrlChange = async ({ path, params }: { path: string; params: RouteParams }) => {
     const action = views.find(v => v.path === path)?.action || AppAction.NADA;
     this.setState({ action });
 
-    if (action === AppAction.ACCOUNT) {
-      const activeAsset = assets.find(a => a.symbol.toLowerCase() === params.assetSymbol!.toLowerCase())?.id;
-      if (activeAsset !== this.state.activeAsset) {
-        this.handleChangeAssetThroughUrl(activeAsset);
+    switch (action) {
+      case AppAction.NADA:
+        if (this.app.hasSession()) {
+          this.setState({ systemMessage: { message: '', type: MessageType.TEXT } });
+          await this.app.logout();
+        }
+        break;
+      case AppAction.ACCOUNT: {
+        const activeAsset = assets.find(a => a.symbol.toLowerCase() === params.assetSymbol!.toLowerCase())?.id;
+        if (activeAsset !== this.state.activeAsset) {
+          this.handleChangeAssetThroughUrl(activeAsset);
+        }
+        break;
       }
+      default:
     }
   };
 
@@ -213,7 +221,6 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
       assetState: this.app.assetState,
       activeAction: this.app.activeAction,
       depositForm: this.app.depositForm,
-      processingAction: this.app.isProcessingAction(),
     });
   };
 
@@ -234,7 +241,6 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
       assetState: this.app.assetState,
       activeAction: this.app.activeAction,
       depositForm: this.app.depositForm,
-      processingAction: this.app.isProcessingAction(),
     });
   };
 
@@ -291,7 +297,6 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
       activeAction,
       loginState,
       providerState,
-      processingAction,
       worldState,
       depositForm,
       systemMessage,
@@ -300,7 +305,9 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
     const { step } = loginState;
     const theme = action === AppAction.ACCOUNT ? Theme.WHITE : Theme.GRADIENT;
     const { requiredNetwork } = this.app;
-    const rootUrl = this.app.hasSession() ? this.props.match.url : '/';
+    const processingAction = this.app.isProcessingAction();
+    const allowReset = action !== AppAction.ACCOUNT && !processingAction;
+    const rootUrl = allowReset ? '/' : this.props.match.url;
 
     return (
       <Template
@@ -315,11 +322,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
         {(() => {
           switch (action) {
             case AppAction.LOGIN: {
-              const { step, accountNonce } = loginState;
-              const allowRestart =
-                !processingAction &&
-                ([LoginStep.SET_SEED_PHRASE, LoginStep.SET_ALIAS, LoginStep.CLAIM_USERNAME].indexOf(step) >= 0 ||
-                  (step !== LoginStep.CONNECT_WALLET && systemMessage.type === MessageType.ERROR));
+              const { accountNonce } = loginState;
               return (
                 <Login
                   worldState={worldState}
@@ -335,7 +338,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
                   onSelectWallet={this.handleConnect}
                   onSelectSeedPhrase={this.app.confirmSeedPhrase}
                   onSelectAlias={this.app.confirmAlias}
-                  onRestart={allowRestart ? this.handleRestart : undefined}
+                  onRestart={allowReset && step !== LoginStep.CONNECT_WALLET ? this.handleRestart : undefined}
                   onDepositFormInputsChange={this.app.changeDepositForm}
                   onSubmitDepositForm={this.app.claimUserName}
                   onChangeWallet={this.app.changeWallet}

@@ -54,6 +54,15 @@ export enum LoginStep {
   DONE,
 }
 
+const undisruptiveSteps = [
+  LoginStep.INIT_SDK,
+  LoginStep.CREATE_ACCOUNT,
+  LoginStep.VALIDATE_DATA,
+  LoginStep.RECOVER_ACCOUNT_PROOF,
+  LoginStep.ADD_ACCOUNT,
+  LoginStep.SYNC_DATA,
+];
+
 export interface LoginState {
   step: LoginStep;
   wallet?: Wallet;
@@ -161,7 +170,7 @@ export class UserSession extends EventEmitter {
   }
 
   isProcessingAction() {
-    return !!this.depositForm && this.depositForm.locked;
+    return !this.destroyed && (undisruptiveSteps.indexOf(this.loginState.step) >= 0 || !!this.depositForm?.locked);
   }
 
   async close(message = '', messageType = MessageType.TEXT, clearSession = true) {
@@ -174,6 +183,7 @@ export class UserSession extends EventEmitter {
   }
 
   async destroy() {
+    this.destroyed = true;
     this.removeAllListeners();
     this.debounceCheckAlias.cancel();
     this.account?.destroy();
@@ -192,7 +202,6 @@ export class UserSession extends EventEmitter {
       }
       await this.sdk.destroy();
     }
-    this.destroyed = true;
     debug('Session destroyed.');
   }
 
@@ -296,6 +305,11 @@ export class UserSession extends EventEmitter {
       return;
     }
 
+    if (wallet === this.provider?.wallet) {
+      debug('Reconnecting to the same wallet.');
+      await this.provider.destroy();
+    }
+
     const prevProvider = this.provider;
     prevProvider?.removeAllListeners();
 
@@ -307,6 +321,7 @@ export class UserSession extends EventEmitter {
     this.provider.on(ProviderEvent.UPDATED_PROVIDER_STATE, this.handleProviderStateChange);
 
     try {
+      this.clearWalletSession();
       await this.provider.init(checkNetwork ? this.requiredNetwork : undefined);
       this.saveWalletSession(wallet);
     } catch (e) {
@@ -656,7 +671,7 @@ export class UserSession extends EventEmitter {
 
   private async reviveUserProvider() {
     const wallet = this.getWalletSession();
-    if (wallet === undefined) return;
+    if (wallet === undefined || wallet === this.provider?.wallet) return;
 
     const { infuraId, network, ethereumHost } = this.config;
     const provider = new Provider(wallet, { infuraId, network, ethereumHost });
@@ -724,6 +739,8 @@ export class UserSession extends EventEmitter {
     const web3Provider = new Web3Provider(provider);
     this.priceFeedService = new PriceFeedService(priceFeedContractAddresses, web3Provider);
     await this.priceFeedService.init();
+
+    await this.reviveUserProvider();
 
     const { alias } = this.loginState;
     this.account = new UserAccount(
@@ -851,6 +868,10 @@ export class UserSession extends EventEmitter {
 
   private saveWalletSession(wallet: Wallet) {
     localStorage.setItem(this.walletCacheName, `${wallet}`);
+  }
+
+  private clearWalletSession() {
+    localStorage.removeItem(this.walletCacheName);
   }
 
   private getWalletSession() {
