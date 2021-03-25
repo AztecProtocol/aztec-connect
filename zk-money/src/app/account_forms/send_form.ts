@@ -290,15 +290,15 @@ export class SendForm extends EventEmitter implements AccountForm {
 
   private refreshValues(changes: Partial<SendFormValues> = {}) {
     const { txType } = (changes.recipient || this.values.recipient).value;
-
-    const { spendableBalance } = this.assetState;
     const fees = this.rollup.getTxFees(this.asset.id, txType);
     const speed = (changes.speed || this.values.speed).value;
     const fee = fees[speed].fee;
+    const { spendableBalance } = this.assetState;
     const maxAmount = min(max(0n, spendableBalance - fee), this.txAmountLimit);
 
     const toUpdate = this.validateChanges({
       maxAmount: { value: maxAmount },
+      fees: { value: fees },
       ...changes,
     });
 
@@ -326,6 +326,8 @@ export class SendForm extends EventEmitter implements AccountForm {
       const amountValue = toBaseUnits(amountInput.value, this.asset.decimals);
       if (amountValue > (changes.maxAmount || this.values.maxAmount).value) {
         toUpdate.amount = withError(amountInput, `Insufficient zk${this.asset.symbol} Balance.`);
+      } else {
+        toUpdate.amount = clearMessage(amountInput);
       }
     }
 

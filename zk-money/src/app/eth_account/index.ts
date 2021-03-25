@@ -4,6 +4,9 @@ import createDebug from 'debug';
 import { AccountUtils } from '../account_utils';
 import { Network } from '../networks';
 import { Provider } from '../provider';
+import { PendingBalance } from './pending_balance';
+import { PublicBalance } from './public_balance';
+import { ValueSubscriber, ValueSubscriberEvent } from './value_subscriber';
 
 const debug = createDebug('zm:eth_account');
 
@@ -21,6 +24,8 @@ export interface EthAccountState {
 
 type Subscriber = (...args: any) => void;
 
+type ValueListener = (value: bigint) => void;
+
 export interface EthAccount {
   on(event: EthAccountEvent.UPDATED_PUBLIC_BALANCE, listener: (publicBalance: bigint) => void): this;
   on(event: EthAccountEvent.UPDATED_PENDING_BALANCE, listener: (pendingBalance: bigint) => void): this;
@@ -29,14 +34,16 @@ export interface EthAccount {
 export class EthAccount {
   private readonly address?: EthAddress;
   private readonly network?: Network;
-  private web3Provider?: Web3Provider;
-  private publicBalance = {
-    value: 0n,
-    lastSynced: 0,
-  };
-  private pendingBalance = {
-    value: 0n,
-    lastSynced: 0,
+
+  private readonly valueSubscribers: { [key in EthAccountEvent]: ValueSubscriber };
+
+  private readonly listeners: { [key in EthAccountEvent]: ValueListener } = {
+    [EthAccountEvent.UPDATED_PUBLIC_BALANCE]: (value: bigint) => {
+      this.emit(EthAccountEvent.UPDATED_PUBLIC_BALANCE, value);
+    },
+    [EthAccountEvent.UPDATED_PENDING_BALANCE]: (value: bigint) => {
+      this.emit(EthAccountEvent.UPDATED_PENDING_BALANCE, value);
+    },
   };
 
   private subscribers: { [key in EthAccountEvent]: Subscriber[] } = {
@@ -44,23 +51,33 @@ export class EthAccount {
     [EthAccountEvent.UPDATED_PENDING_BALANCE]: [],
   };
 
-  private publicBalanceSubscriber?: number;
-  private pendingBalanceSubscriber?: number;
-
   private readonly publicBalanceInterval = 15 * 1000;
   private readonly pendingBalanceInterval = 60 * 1000;
 
   constructor(
     public readonly provider: Provider | undefined,
     private accountUtils: AccountUtils,
-    private assetId: AssetId,
+    assetId: AssetId,
     private requiredNetwork: Network,
   ) {
     this.address = provider?.account;
     this.network = provider?.network;
-    if (this.isCorrectNetwork) {
-      this.web3Provider = new Web3Provider(provider!.ethereumProvider);
-    }
+
+    const enableSubscribe = this.address && this.isCorrectNetwork;
+    this.valueSubscribers = {
+      [EthAccountEvent.UPDATED_PUBLIC_BALANCE]: new PublicBalance(
+        assetId,
+        enableSubscribe ? this.address : undefined,
+        enableSubscribe ? new Web3Provider(provider!.ethereumProvider) : undefined,
+        this.publicBalanceInterval,
+      ),
+      [EthAccountEvent.UPDATED_PENDING_BALANCE]: new PendingBalance(
+        assetId,
+        enableSubscribe ? this.address : undefined,
+        accountUtils,
+        this.pendingBalanceInterval,
+      ),
+    };
   }
 
   get isCorrectNetwork() {
@@ -71,17 +88,13 @@ export class EthAccount {
     return {
       ethAddress: this.address,
       network: this.network,
-      publicBalance: this.publicBalance.value,
-      pendingBalance: this.pendingBalance.value,
+      publicBalance: this.valueSubscribers[EthAccountEvent.UPDATED_PUBLIC_BALANCE].value,
+      pendingBalance: this.valueSubscribers[EthAccountEvent.UPDATED_PENDING_BALANCE].value,
     };
   }
 
-  get outdated() {
-    return !this.isSameAccount(this.provider);
-  }
-
   get active() {
-    return !this.outdated && this.accountUtils.isActiveProvider(this.provider);
+    return this.isSameAccount(this.provider) && this.accountUtils.isActiveProvider(this.provider);
   }
 
   isSameAccount(provider?: Provider) {
@@ -96,8 +109,7 @@ export class EthAccount {
   }
 
   destroy() {
-    this.unsubscribeToPublicBalance();
-    this.unsubscribeToPendingBalance();
+    Object.values(this.valueSubscribers).forEach(s => s.destroy());
   }
 
   on(event: EthAccountEvent, subscriber: Subscriber) {
@@ -108,15 +120,8 @@ export class EthAccount {
 
     this.subscribers[event].push(subscriber);
     if (this.subscribers[event].length === 1) {
-      switch (event) {
-        case EthAccountEvent.UPDATED_PUBLIC_BALANCE:
-          this.resumePublicBalance();
-          break;
-        case EthAccountEvent.UPDATED_PENDING_BALANCE:
-          this.resumePendingBalance();
-          break;
-        default:
-      }
+      this.valueSubscribers[event].refresh(false);
+      this.valueSubscribers[event].on(ValueSubscriberEvent.UPDATED_VALUE, this.listeners[event]);
     }
 
     return this;
@@ -124,129 +129,18 @@ export class EthAccount {
 
   off(event: EthAccountEvent, subscriber: Subscriber) {
     this.subscribers[event] = this.subscribers[event].filter(s => s !== subscriber);
+    if (!this.subscribers[event].length) {
+      this.valueSubscribers[event].off(ValueSubscriberEvent.UPDATED_VALUE, this.listeners[event]);
+    }
     return this;
   }
 
   async refreshPublicBalance(forceUpdate = true) {
-    if (!forceUpdate && Date.now() - this.publicBalance.lastSynced <= this.publicBalanceInterval) {
-      return this.publicBalance.value;
-    }
-    this.unsubscribeToPublicBalance();
-    await this.subscribeToPublicBalance(true);
-    return this.state.publicBalance;
+    return this.valueSubscribers[EthAccountEvent.UPDATED_PUBLIC_BALANCE].refresh(forceUpdate);
   }
 
   async refreshPendingBalance(forceUpdate = true) {
-    if (!forceUpdate && Date.now() - this.pendingBalance.lastSynced <= this.pendingBalanceInterval) {
-      return this.pendingBalance.value;
-    }
-    this.unsubscribeToPendingBalance();
-    await this.subscribeToPendingBalance(true);
-    return this.state.pendingBalance;
-  }
-
-  private async checkPublicBalance() {
-    const value = this.active ? await this.getPublicBalance() : 0n;
-    if (this.active) {
-      this.publicBalance.lastSynced = Date.now();
-    }
-    if (value !== this.publicBalance.value) {
-      this.publicBalance.value = value;
-      this.emit(EthAccountEvent.UPDATED_PUBLIC_BALANCE, value);
-    }
-    return value;
-  }
-
-  private async getPublicBalance() {
-    if (!this.web3Provider) {
-      debug(`Web3Provider undefined`);
-      return 0n;
-    }
-
-    // TODO - handle token assets
-    return BigInt(await this.web3Provider.getBalance(this.address!.toString()));
-  }
-
-  private resumePublicBalance() {
-    const isOutdated = Date.now() - this.publicBalance.lastSynced > this.publicBalanceInterval;
-    if (!this.publicBalanceSubscriber || isOutdated) {
-      this.unsubscribeToPublicBalance();
-      this.subscribeToPublicBalance(isOutdated);
-    }
-  }
-
-  private async subscribeToPublicBalance(checkOnLoad: boolean) {
-    if (!this.address) {
-      return;
-    }
-
-    if (this.publicBalanceSubscriber !== undefined) {
-      debug('Already subscribed to public balance changes.');
-      return;
-    }
-
-    const checkBalance = async () => {
-      if (!this.subscribers[EthAccountEvent.UPDATED_PUBLIC_BALANCE].length) return;
-
-      await this.checkPublicBalance();
-    };
-
-    if (checkOnLoad) {
-      await checkBalance();
-    }
-    this.publicBalanceSubscriber = window.setInterval(checkBalance, this.publicBalanceInterval);
-  }
-
-  private unsubscribeToPublicBalance() {
-    clearInterval(this.publicBalanceSubscriber);
-    this.publicBalanceSubscriber = undefined;
-  }
-
-  private async checkPendingBalance() {
-    const value = this.active ? await this.accountUtils.getPendingBalance(this.assetId, this.address!) : 0n;
-    if (this.active) {
-      this.pendingBalance.lastSynced = Date.now();
-    }
-    if (value !== this.pendingBalance.value) {
-      this.pendingBalance.value = value;
-      this.emit(EthAccountEvent.UPDATED_PENDING_BALANCE, value);
-    }
-    return value;
-  }
-
-  private resumePendingBalance() {
-    const isOutdated = Date.now() - this.pendingBalance.lastSynced > this.pendingBalanceInterval;
-    if (!this.pendingBalanceSubscriber || isOutdated) {
-      this.unsubscribeToPendingBalance();
-      this.subscribeToPendingBalance(isOutdated);
-    }
-  }
-
-  private async subscribeToPendingBalance(checkOnLoad: boolean) {
-    if (!this.address) {
-      return;
-    }
-
-    if (this.pendingBalanceSubscriber !== undefined) {
-      debug('Already subscribed to pending balance changes.');
-      return;
-    }
-
-    const checkBalance = async () => {
-      if (!this.subscribers[EthAccountEvent.UPDATED_PENDING_BALANCE].length) return;
-
-      await this.checkPendingBalance();
-    };
-
-    if (checkOnLoad) {
-      await this.checkPendingBalance();
-    }
-    this.pendingBalanceSubscriber = window.setInterval(checkBalance, this.pendingBalanceInterval);
-  }
-
-  private unsubscribeToPendingBalance() {
-    clearInterval(this.pendingBalanceSubscriber);
-    this.pendingBalanceSubscriber = undefined;
+    return this.valueSubscribers[EthAccountEvent.UPDATED_PENDING_BALANCE].refresh(forceUpdate);
   }
 
   private emit(event: EthAccountEvent, ...args: any) {
