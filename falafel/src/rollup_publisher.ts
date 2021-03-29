@@ -8,7 +8,7 @@ import { EthereumProvider } from 'blockchain';
 import { Signer, utils } from 'ethers';
 import { RollupDao } from './entity/rollup';
 import { Metrics } from './metrics';
-import moment from 'moment';
+import moment, { invalid } from 'moment';
 import { Duration } from 'moment';
 import { RollupDb } from './rollup_db';
 import { TxDao } from './entity/tx';
@@ -88,17 +88,16 @@ export class RollupPublisher {
       .map(tx => [tx.viewingKey1, tx.viewingKey2])
       .flat()
       .map(vk => vk.toBuffer());
-    const signatures = txs
-      .filter(tx => tx.signature)
-      .filter(async (tx: TxDao) => {
-        const jsProofData = new JoinSplitProofData(new ProofData(tx.proofData));
-        return await this.blockchain.validateSignature(
-          jsProofData.inputOwner,
-          tx.signature!,
-          jsProofData.depositSigningData,
-        );
-      })
-      .map(tx => tx.signature!);
+    const signatures: Buffer[] = [];
+    for (const tx of txs) {
+      const { inputOwner, depositSigningData } = new JoinSplitProofData(new ProofData(tx.proofData));
+      const proofApproval = await this.blockchain.getUserProofApprovalStatus(inputOwner, depositSigningData);
+      const validSig = await this.blockchain.validateSignature(inputOwner, tx.signature!, depositSigningData);
+      if (!proofApproval && validSig) {
+        signatures.push(tx.signature!);
+      }
+    }
+
     const providerAddress = EthAddress.fromString(await this.signer.getAddress());
     const { feeDistributorContractAddress } = await this.blockchain.getBlockchainStatus();
     const providerSignature = await this.generateSignature(
