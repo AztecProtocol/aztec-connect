@@ -103,4 +103,26 @@ export class AccountUtils {
     const pendingDeposit = await this.getPendingDeposit(assetId, ethAddress);
     return deposited - pendingDeposit;
   }
+
+  async confirmPendingBalance(
+    assetId: AssetId,
+    ethAddress: EthAddress,
+    expectedPendingBalance: bigint,
+    pollInterval = (this.requiredNetwork.network === 'ganache' ? 1 : 10) * 1000,
+    timeout = 30 * 60 * 1000,
+  ) {
+    const started = Date.now();
+    while (true) {
+      if (Date.now() - started > timeout) {
+        throw new Error(`Timeout awaiting pending balance confirmation.`);
+      }
+
+      const pendingBalance = await this.getPendingBalance(assetId, ethAddress);
+      if (pendingBalance >= expectedPendingBalance) {
+        break;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, pollInterval));
+    }
+  }
 }

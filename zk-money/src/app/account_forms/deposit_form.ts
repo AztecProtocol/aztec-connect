@@ -362,16 +362,17 @@ export class DepositForm extends EventEmitter implements AccountForm {
         `Please make a deposit of ${fromBaseUnits(amount, asset.decimals)} ${asset.symbol} from your wallet.`,
       );
 
-      try {
-        await this.withUserProvider(async () => {
-          const txHash = await this.depositPendingFunds(asset.id, ethAddress, amount);
-          this.prompt('Awaiting transaction confirmation...');
-          await this.getTransactionReceipt(txHash);
-        });
-      } catch (e) {
-        debug(e);
-        throw new Error('Failed to deposit from your wallet.');
-      }
+      await this.withUserProvider(async () => {
+        try {
+          await this.depositPendingFunds(asset.id, ethAddress, amount);
+        } catch (e) {
+          debug(e);
+          throw new Error('Failed to deposit from your wallet.');
+        }
+
+        this.prompt('Awaiting transaction confirmation...');
+        await this.accountUtils.confirmPendingBalance(asset.id, ethAddress, pendingBalance + amount);
+      });
     }
 
     this.proceed(DepositStatus.DONE);
@@ -484,18 +485,12 @@ export class DepositForm extends EventEmitter implements AccountForm {
     return (this.sdk as any).blockchain.depositPendingFunds(assetId, value, from, permitArgs);
   }
 
-  private getTransactionReceipt(txHash: TxHash) {
-    return (this.sdk as any).blockchain.getTransactionReceipt(txHash);
-  }
-
   private async withUserProvider(action: () => any) {
     try {
       await this.sdk.setProvider(this.provider!.ethereumProvider);
       await action();
+    } finally {
       await this.sdk.setProvider(this.coreProvider.ethereumProvider);
-    } catch (e) {
-      await this.sdk.setProvider(this.coreProvider.ethereumProvider);
-      throw e;
     }
   }
 }
