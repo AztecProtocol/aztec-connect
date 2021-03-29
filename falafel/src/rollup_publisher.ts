@@ -8,10 +8,9 @@ import { EthereumProvider } from 'blockchain';
 import { Signer, utils } from 'ethers';
 import { RollupDao } from './entity/rollup';
 import { Metrics } from './metrics';
-import moment, { invalid } from 'moment';
+import moment from 'moment';
 import { Duration } from 'moment';
 import { RollupDb } from './rollup_db';
-import { TxDao } from './entity/tx';
 import { ProofData, JoinSplitProofData } from 'barretenberg/client_proofs/proof_data';
 
 export class RollupPublisher {
@@ -88,12 +87,12 @@ export class RollupPublisher {
       .map(tx => [tx.viewingKey1, tx.viewingKey2])
       .flat()
       .map(vk => vk.toBuffer());
+    const jsTxs = txs.filter(tx => tx.signature);
     const signatures: Buffer[] = [];
-    for (const tx of txs) {
+    for (const tx of jsTxs) {
       const { inputOwner, depositSigningData } = new JoinSplitProofData(new ProofData(tx.proofData));
       const proofApproval = await this.blockchain.getUserProofApprovalStatus(inputOwner, depositSigningData);
-      const validSig = await this.blockchain.validateSignature(inputOwner, tx.signature!, depositSigningData);
-      if (!proofApproval && validSig) {
+      if (!proofApproval) {
         signatures.push(tx.signature!);
       }
     }
