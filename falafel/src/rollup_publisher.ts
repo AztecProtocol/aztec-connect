@@ -11,6 +11,7 @@ import { Metrics } from './metrics';
 import moment from 'moment';
 import { Duration } from 'moment';
 import { RollupDb } from './rollup_db';
+import { ProofData, JoinSplitProofData } from 'barretenberg/client_proofs/proof_data';
 
 export class RollupPublisher {
   private interrupted = false;
@@ -86,7 +87,16 @@ export class RollupPublisher {
       .map(tx => [tx.viewingKey1, tx.viewingKey2])
       .flat()
       .map(vk => vk.toBuffer());
-    const signatures = txs.map(tx => tx.signature!).filter(s => !!s);
+    const jsTxs = txs.filter(tx => tx.signature);
+    const signatures: Buffer[] = [];
+    for (const tx of jsTxs) {
+      const { inputOwner, depositSigningData } = new JoinSplitProofData(new ProofData(tx.proofData));
+      const proofApproval = await this.blockchain.getUserProofApprovalStatus(inputOwner, depositSigningData);
+      if (!proofApproval) {
+        signatures.push(tx.signature!);
+      }
+    }
+
     const providerAddress = EthAddress.fromString(await this.signer.getAddress());
     const { feeDistributorContractAddress } = await this.blockchain.getBlockchainStatus();
     const providerSignature = await this.generateSignature(
