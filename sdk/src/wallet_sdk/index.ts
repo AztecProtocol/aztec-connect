@@ -528,6 +528,10 @@ export class WalletSdk extends EventEmitter {
     return this.core.getSigningKeys(userId);
   }
 
+  public async userExists(userId: AccountId) {
+    return this.core.userExists(userId);
+  }
+
   public getUserData(userId: AccountId) {
     return this.core.getUserData(userId);
   }

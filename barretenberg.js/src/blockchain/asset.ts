@@ -15,7 +15,7 @@ export interface Asset {
 
   mint(value: bigint, account: EthAddress): Promise<TxHash>;
 
-  fromBaseUnits(value: bigint, precision?: number);
+  fromBaseUnits(value: bigint, precision?: number): string;
 
-  toBaseUnits(value: string);
+  toBaseUnits(value: string): bigint;
 }

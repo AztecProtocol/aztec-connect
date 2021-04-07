@@ -22,20 +22,23 @@ export class BarretenbergWasm extends EventEmitter {
   private instance!: WebAssembly.Instance;
   public module!: WebAssembly.Module;
 
-  public static async new(name = 'wasm') {
+  public static async new(name = 'wasm', initial?: number) {
     const barretenberg = new BarretenbergWasm();
     barretenberg.on('log', createDebug(`bb:${name}`));
-    await barretenberg.init();
+    await barretenberg.init(undefined, initial);
     return barretenberg;
   }
 
-  public async init(module?: WebAssembly.Module) {
-    this.memory = new WebAssembly.Memory({ initial: 256, maximum: 65536 });
+  public async init(module?: WebAssembly.Module, initial = 256) {
+    this.emit('log', `intial mem: ${initial}`);
+    this.memory = new WebAssembly.Memory({ initial, maximum: 65536 });
     this.heap = new Uint8Array(this.memory.buffer);
 
     const importObj = {
       /* eslint-disable camelcase */
-      wasi_unstable: {
+      wasi_snapshot_preview1: {
+        environ_get: () => {},
+        environ_sizes_get: () => {},
         fd_close: () => {},
         fd_read: () => {},
         fd_write: () => {},
@@ -44,6 +47,7 @@ export class BarretenbergWasm extends EventEmitter {
         fd_fdstat_set_flags: () => {},
         path_open: () => {},
         path_filestat_get: () => {},
+        proc_exit: () => {},
         random_get: (arr, length) => {
           arr = arr >>> 0;
           const heap = new Uint8Array(this.memory.buffer);

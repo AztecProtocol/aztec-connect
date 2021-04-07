@@ -3,6 +3,7 @@ import debug from 'debug';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { createGlobalStyle } from 'styled-components';
+import { minDemo } from './min_demo';
 import { Terminal, TerminalComponent } from './terminal';
 
 declare global {
@@ -25,14 +26,18 @@ async function main() {
     location.reload();
   }
 
-  const app = new WebSdk(window.ethereum);
-  ReactDOM.render(
-    <>
-      <GlobalStyle />
-      <TerminalComponent app={app} terminal={new Terminal(12, 40)} />
-    </>,
-    document.getElementById('root'),
-  );
+  if (window.location.pathname === '/min-demo') {
+    await minDemo();
+  } else {
+    const app = new WebSdk(window.ethereum);
+    ReactDOM.render(
+      <>
+        <GlobalStyle />
+        <TerminalComponent app={app} terminal={new Terminal(12, 40)} />
+      </>,
+      document.getElementById('root'),
+    );
+  }
 }
 
 // tslint:disable-next-line:no-console

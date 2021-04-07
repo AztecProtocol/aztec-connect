@@ -17,6 +17,7 @@ export * from 'barretenberg/tx_hash';
 export * from 'barretenberg/blockchain';
 
 export {
+  JsonRpcProvider,
   WalletProvider,
   EthersAdapter,
   EthereumProvider,

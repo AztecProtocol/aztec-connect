@@ -73,7 +73,7 @@ export class CoreSdk extends EventEmitter {
   private userFactory!: UserDataFactory;
   private userStateFactory!: UserStateFactory;
   private mutex = !isNode ? new Mutex('world-state-mutex') : undefined;
-  private numCPU = !isNode ? navigator.hardwareConcurrency : os.cpus().length;
+  private numCPU = !isNode ? navigator.hardwareConcurrency || 2 : os.cpus().length;
   private sdkStatus: SdkStatus = {
     chainId: -1,
     rollupContractAddress: EthAddress.ZERO,
@@ -118,7 +118,7 @@ export class CoreSdk extends EventEmitter {
     const crsData = await this.getCrsData(
       this.escapeHatchMode ? EscapeHatchProver.circuitSize : JoinSplitProver.circuitSize,
     );
-    const numWorkers = this.nextLowestPowerOf2(Math.min(this.numCPU || 1, 8));
+    const numWorkers = this.nextLowestPowerOf2(Math.min(this.numCPU, 8));
     const workerPool = await WorkerPool.new(barretenberg, numWorkers);
     const pooledProverFactory = new PooledProverFactory(workerPool, crsData);
     const joinSplitProver = new JoinSplitProver(
@@ -803,6 +803,10 @@ export class CoreSdk extends EventEmitter {
       throw new Error(`User not found: ${userId}`);
     }
     return userState;
+  }
+
+  public async userExists(userId: AccountId) {
+    return !!(await this.db.getUser(userId));
   }
 
   public getUserData(userId: AccountId) {

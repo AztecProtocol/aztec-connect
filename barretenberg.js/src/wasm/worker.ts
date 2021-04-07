@@ -6,10 +6,10 @@ let wasm: BarretenbergWasm;
 const subject = new Subject();
 
 const worker = {
-  async init(module?: WebAssembly.Module) {
+  async init(module?: WebAssembly.Module, initial?: number) {
     wasm = new BarretenbergWasm();
     wasm.on('log', str => subject.next(str));
-    await wasm.init(module);
+    await wasm.init(module, initial);
   },
 
   async transferToHeap(buffer: Uint8Array, offset: number) {
