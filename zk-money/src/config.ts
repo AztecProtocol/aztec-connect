@@ -1,3 +1,5 @@
+import { isIOS } from './device_support';
+
 export interface Config {
   rollupProviderUrl: string;
   graphqlEndpoint: string;
@@ -9,6 +11,7 @@ export interface Config {
   txAmountLimit: bigint;
   sessionTimeout: number;
   debug: boolean;
+  saveProvingKey: boolean;
 }
 
 interface ConfigVars {
@@ -110,5 +113,6 @@ export const getConfig = (): Config => {
     txAmountLimit: BigInt(txAmountLimit || 0),
     sessionTimeout: +(sessionTimeout || 1),
     debug,
+    saveProvingKey: !isIOS(),
   };
 };

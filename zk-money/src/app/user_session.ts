@@ -718,9 +718,13 @@ export class UserSession extends EventEmitter {
   }
 
   private async createSdk() {
-    const { rollupProviderUrl, network, debug } = this.config;
+    const { rollupProviderUrl, network, debug, saveProvingKey } = this.config;
     const minConfirmation = network === 'ganache' ? 1 : undefined; // If not ganache, use the default value.
-    this.sdk = await createWalletSdk(this.coreProvider.ethereumProvider, rollupProviderUrl, { minConfirmation, debug });
+    this.sdk = await createWalletSdk(this.coreProvider.ethereumProvider, rollupProviderUrl, {
+      minConfirmation,
+      debug,
+      saveProvingKey,
+    });
     this.rollupService = new RollupService(this.sdk);
     await this.rollupService.init();
     this.accountUtils = new AccountUtils(this.sdk, this.graphql, this.requiredNetwork);

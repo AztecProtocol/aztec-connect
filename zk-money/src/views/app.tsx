@@ -24,6 +24,7 @@ import {
 import { ProviderState } from '../app/provider';
 import { Template } from '../components';
 import { Config } from '../config';
+import { isUnsupportedDevice } from '../device_support';
 import { Theme } from '../styles';
 import { Account } from '../views/account';
 import { Home } from '../views/home';
@@ -48,12 +49,6 @@ const getAccountUrl = (assetId: AppAssetId) =>
   views.find(v => v.action === AppAction.ACCOUNT)!.path.replace(':assetSymbol', `${assets[assetId].symbol}`);
 
 export const appPaths = views.map(p => p.path);
-
-const isIOS = () =>
-  ['iPad Simulator', 'iPhone Simulator', 'iPod Simulator', 'iPad', 'iPhone', 'iPod'].includes(navigator.platform) ||
-  (navigator.userAgent.includes('Mac') && 'ontouchend' in document);
-
-const isUnsupportedDevice = () => isIOS();
 
 interface RouteParams {
   assetSymbol?: string;
