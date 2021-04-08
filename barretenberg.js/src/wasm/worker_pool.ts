@@ -21,7 +21,7 @@ export class WorkerPool {
     this.workers = await Promise.all(
       Array(poolSize)
         .fill(0)
-        .map((_, i) => createWorker(`${i}`, module, i === 0 ? 13108 : 256)),
+        .map((_, i) => createWorker(`${i}`, module, i === 0 ? 10000 : 256)),
     );
     debug(`created workers: ${new Date().getTime() - start}ms`);
   }
