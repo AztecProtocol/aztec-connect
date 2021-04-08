@@ -1,30 +1,27 @@
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { AssetId } from 'barretenberg/asset';
+import { PermitArgs, Receipt, TxType } from 'barretenberg/blockchain';
 import { Rollup, Tx } from 'barretenberg/rollup_provider';
 import { getBlockchainStatus } from 'barretenberg/service';
-import { PermitArgs, TxType } from 'barretenberg/blockchain';
-import { EthereumBlockchain } from 'blockchain/ethereum_blockchain';
+import { TxHash } from 'barretenberg/tx_hash';
+import { ClientEthereumBlockchain, createPermitData, EthereumProvider, Web3Signer } from 'blockchain';
 import { randomBytes } from 'crypto';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { CoreSdk } from '../core_sdk/core_sdk';
 import { createSdk, SdkOptions } from '../core_sdk/create_sdk';
-import { JoinSplitTxOptions } from './tx_options';
-import { EthereumProvider } from 'blockchain';
+import { AccountProofOutput, JoinSplitProofOutput } from '../proofs/proof_output';
 import { Action, ActionState, SdkEvent, SdkInitState } from '../sdk';
 import { RecoverSignatureSigner, Signer } from '../signer';
-import { RecoveryData, RecoveryPayload, AccountId } from '../user';
+import { AccountId, RecoveryData, RecoveryPayload } from '../user';
+import { JoinSplitTxOptions } from './tx_options';
 import { WalletSdkUser } from './wallet_sdk_user';
-import { createPermitData } from './create_permit_data';
-import { TxHash } from 'barretenberg/tx_hash';
-import { AccountProofOutput, JoinSplitProofOutput } from '../proofs/proof_output';
 
+export * from 'barretenberg/asset';
+export * from './tx_options';
 export * from './wallet_sdk_user';
 export * from './wallet_sdk_user_asset';
-export * from './create_permit_data';
-export * from './tx_options';
-export * from 'barretenberg/asset';
 
 const debug = createDebug('bb:wallet_sdk');
 
@@ -37,18 +34,9 @@ export async function createWalletSdk(
     createDebug.enable('bb:*');
   }
 
-  const { minConfirmation, minConfirmationEHW } = sdkOptions;
-  const { rollupContractAddress, chainId } = await getBlockchainStatus(serverUrl);
+  const { assets, rollupContractAddress, chainId } = await getBlockchainStatus(serverUrl);
 
-  const config = {
-    console: false,
-    gasLimit: 7000000,
-    minConfirmation,
-    minConfirmationEHW,
-  };
-  const blockchain = await EthereumBlockchain.new(config, rollupContractAddress, ethereumProvider);
-
-  const core = await createSdk(serverUrl, sdkOptions, blockchain);
+  const core = await createSdk(serverUrl, sdkOptions, ethereumProvider);
 
   // Set erase flag if requested or contract changed.
   if (sdkOptions.clearDb || !(await core.getRollupContractAddress())?.equals(rollupContractAddress)) {
@@ -62,7 +50,10 @@ export async function createWalletSdk(
     throw new Error(`Provider chainId ${providerChainId} does not match rollup provider chainId ${chainId}.`);
   }
 
-  return new WalletSdk(core, blockchain);
+  const blockchain = new ClientEthereumBlockchain(rollupContractAddress, assets, ethereumProvider);
+  const ethSigner = new Web3Signer(provider);
+
+  return new WalletSdk(core, blockchain, ethSigner, sdkOptions);
 }
 
 export interface WalletSdk {
@@ -79,7 +70,12 @@ export interface WalletSdk {
 export class WalletSdk extends EventEmitter {
   private actionState?: ActionState;
 
-  constructor(private core: CoreSdk, private blockchain: EthereumBlockchain) {
+  constructor(
+    private core: CoreSdk,
+    private blockchain: ClientEthereumBlockchain,
+    private ethSigner: Web3Signer,
+    private sdkOptions: SdkOptions = {},
+  ) {
     super();
   }
 
@@ -108,10 +104,6 @@ export class WalletSdk extends EventEmitter {
 
   public async awaitSynchronised() {
     return this.core.awaitSynchronised();
-  }
-
-  public async setProvider(provider: EthereumProvider) {
-    await this.blockchain.setProvider(provider);
   }
 
   public isUserSynching(userId: AccountId) {
@@ -170,28 +162,21 @@ export class WalletSdk extends EventEmitter {
     return txHash;
   }
 
+  public async createPermitData(assetId: AssetId, from: EthAddress, value: bigint, deadline: bigint) {
+    const nonce = await this.blockchain.getAsset(assetId).getUserNonce(from);
+    const { rollupContractAddress, chainId, assets } = this.getLocalStatus();
+    const asset = assets[assetId];
+    return createPermitData(asset.name, from, rollupContractAddress, value, nonce, deadline, chainId, asset.address);
+  }
+
   public async createPermitArgs(assetId: AssetId, from: EthAddress, value: bigint, deadline?: bigint) {
     if (!deadline) {
       const currentTimeInt = Math.floor(new Date().getTime() / 1000);
       const expireIn = BigInt(300);
       deadline = BigInt(currentTimeInt) + expireIn;
     }
-
-    const nonce = await this.blockchain.getAsset(assetId).getUserNonce(from);
-    const { rollupContractAddress, chainId, assets } = this.getLocalStatus();
-    const asset = assets[assetId];
-    const permitData = createPermitData(
-      asset.name,
-      from,
-      rollupContractAddress,
-      value,
-      nonce,
-      deadline,
-      chainId,
-      asset.address,
-    );
-
-    const signature = await this.blockchain.signTypedData(permitData, from);
+    const permitData = await this.createPermitData(assetId, from, value, deadline);
+    const signature = await this.ethSigner.signTypedData(permitData, from);
     const permitArgs: PermitArgs = { approvalAmount: value, deadline, signature };
     return permitArgs;
   }
@@ -273,12 +258,11 @@ export class WalletSdk extends EventEmitter {
         }
 
         await this.checkPublicBalanceAndApproval(assetId, publicInput, inputOwner, permitArgs);
-        // await this.depositFundsToContractInternal(assetId, userId, inputOwner, publicInput, permitArgs);
         const userPendingDeposit = await this.getUserPendingDeposit(assetId, inputOwner);
         if (userPendingDeposit < publicInput) {
           this.emit(SdkEvent.LOG, 'Depositing funds to contract...');
-          const depositTxHash = await this.blockchain.depositPendingFunds(assetId, publicInput, inputOwner, permitArgs);
-          await this.blockchain.getTransactionReceipt(depositTxHash);
+          const depositTxHash = await this.depositFundsToContract(assetId, inputOwner, publicInput, permitArgs);
+          await this.getTransactionReceipt(depositTxHash);
           this.emit(SdkEvent.UPDATED_USER_STATE, userId);
           this.emit(SdkEvent.LOG, 'Generating proof...');
         }
@@ -296,6 +280,7 @@ export class WalletSdk extends EventEmitter {
         outputNoteOwner || userId,
         inputOwner,
         outputOwner,
+        this.ethSigner,
       );
     });
   }
@@ -355,18 +340,35 @@ export class WalletSdk extends EventEmitter {
     return this.core.sendProof(proofOutput);
   }
 
-  public async approveProof(address: EthAddress, publicInputs: Buffer) {
-    const txHash = await this.blockchain.approveProof(address, publicInputs);
-    return this.blockchain.getTransactionReceipt(txHash);
+  public async approveProof(address: EthAddress, signingData: Buffer, provider?: EthereumProvider) {
+    return this.blockchain.approveProof(address, signingData, provider);
   }
 
-  public async depositFundsToContract(assetId: AssetId, from: EthAddress, value: bigint, permitArgs?: PermitArgs) {
-    const txHash = await this.blockchain.depositPendingFunds(assetId, value, from, permitArgs);
-    return this.blockchain.getTransactionReceipt(txHash);
+  public async depositFundsToContract(
+    assetId: AssetId,
+    from: EthAddress,
+    value: bigint,
+    permitArgs?: PermitArgs,
+    provider?: EthereumProvider,
+  ) {
+    return this.blockchain.depositPendingFunds(assetId, value, from, permitArgs, provider);
+  }
+
+  public async getTransactionReceipt(txHash: TxHash, interval = 1, timeout = 300): Promise<Receipt> {
+    const { minConfirmation, minConfirmationEHW } = this.sdkOptions;
+    const confs =
+      minConfirmationEHW !== undefined && (await this.core.getRemoteStatus()).blockchainStatus.escapeOpen
+        ? minConfirmationEHW
+        : minConfirmation || 0;
+    return this.blockchain.getTransactionReceipt(txHash, interval, timeout, confs);
   }
 
   public async isContract(address: EthAddress) {
     return this.blockchain.isContract(address);
+  }
+
+  public async isProofApproved(account: EthAddress, signingData: Buffer) {
+    return !!(await this.blockchain.getUserProofApprovalStatus(account, signingData));
   }
 
   private async checkPublicBalanceAndApproval(

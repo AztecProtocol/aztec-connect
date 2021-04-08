@@ -5,17 +5,16 @@ import createDebug from 'debug';
 import isNode from 'detect-node';
 import { EventEmitter } from 'events';
 import { createSdk, SdkOptions } from '../core_sdk/create_sdk';
-import { EthereumProvider } from 'blockchain';
+import { ClientEthereumBlockchain, EthereumProvider, Web3Signer } from 'blockchain';
 import { SdkEvent } from '../sdk';
 import { AccountId } from '../user';
 import { WalletSdk } from '../wallet_sdk';
 import { Database, DexieDatabase, SQLDatabase, getOrmConfig } from './database';
 import { EthereumSdkUser } from './ethereum_sdk_user';
 import { createConnection } from 'typeorm';
-import { EthereumBlockchain } from 'blockchain';
 import { getBlockchainStatus } from 'barretenberg/service';
 import { TxHash } from 'barretenberg/tx_hash';
-import { TxType } from 'barretenberg/blockchain';
+import { EthereumSigner, TxType } from 'barretenberg/blockchain';
 
 export * from './ethereum_sdk_user';
 export * from './ethereum_sdk_user_asset';
@@ -33,18 +32,9 @@ async function getDb(dbPath = 'data') {
 }
 
 export async function createEthSdk(ethereumProvider: EthereumProvider, serverUrl: string, sdkOptions: SdkOptions = {}) {
-  const { minConfirmation, minConfirmationEHW } = sdkOptions;
-  const { rollupContractAddress, chainId } = await getBlockchainStatus(serverUrl);
+  const { assets, rollupContractAddress, chainId } = await getBlockchainStatus(serverUrl);
 
-  const config = {
-    console: false,
-    gasLimit: 7000000,
-    minConfirmation,
-    minConfirmationEHW,
-  };
-  const blockchain = await EthereumBlockchain.new(config, rollupContractAddress, ethereumProvider);
-
-  const core = await createSdk(serverUrl, sdkOptions, blockchain);
+  const core = await createSdk(serverUrl, sdkOptions, ethereumProvider);
 
   const db = await getDb(sdkOptions.dbPath);
   await db.init();
@@ -62,12 +52,14 @@ export async function createEthSdk(ethereumProvider: EthereumProvider, serverUrl
     throw new Error(`Provider chainId ${providerChainId} does not match rollup provider chainId ${chainId}.`);
   }
 
-  const walletSdk = new WalletSdk(core, blockchain);
-  return new EthereumSdk(blockchain, walletSdk, db);
+  const blockchain = new ClientEthereumBlockchain(rollupContractAddress, assets, ethereumProvider);
+  const ethSigner = new Web3Signer(provider);
+  const walletSdk = new WalletSdk(core, blockchain, ethSigner, sdkOptions);
+  return new EthereumSdk(walletSdk, db, ethSigner);
 }
 
 export class EthereumSdk extends EventEmitter {
-  constructor(private blockchain: EthereumBlockchain, private walletSdk: WalletSdk, private db: Database) {
+  constructor(private walletSdk: WalletSdk, private db: Database, private ethSigner: EthereumSigner) {
     super();
   }
 
@@ -178,7 +170,7 @@ export class EthereumSdk extends EventEmitter {
   }
 
   private async deriveGrumpkinPrivateKey(address: EthAddress) {
-    return (await this.blockchain.signMessage(Buffer.from('Link Aztec account.'), address)).slice(0, 32);
+    return (await this.ethSigner.signMessage(Buffer.from('Link Aztec account.'), address)).slice(0, 32);
   }
 
   public async addUser(ethAddress: EthAddress) {

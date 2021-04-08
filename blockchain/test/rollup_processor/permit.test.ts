@@ -7,6 +7,7 @@ import { signPermit, createLowLevelPermitSig } from './fixtures/create_permit_si
 import { EthAddress } from 'barretenberg/address';
 import { randomBytes } from 'crypto';
 import { AssetId } from 'barretenberg/asset';
+import { createPermitData } from '../../src/create_permit_data';
 
 use(solidity);
 
@@ -46,8 +47,7 @@ describe('rollup_processor: permit', () => {
     const deadline = BigInt('0xffffffff');
     const nonce = await erc20Permit.nonces(userAddress.toString());
     const name = await erc20Permit.name();
-    const { v, r, s } = await signPermit(
-      user,
+    const permitData = createPermitData(
       name,
       EthAddress.fromString(await user.getAddress()),
       EthAddress.fromString(rollupProcessor.address),
@@ -57,6 +57,7 @@ describe('rollup_processor: permit', () => {
       31337,
       EthAddress.fromString(erc20Permit.address),
     );
+    const { v, r, s } = await signPermit(user, permitData);
 
     await rollupProcessor.depositPendingFundsPermit(
       erc20PermitAssetId,

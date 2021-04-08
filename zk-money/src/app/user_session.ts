@@ -8,6 +8,7 @@ import {
   SdkEvent,
   SdkInitState,
   WalletSdk,
+  Web3Signer,
 } from '@aztec/sdk';
 import { InfuraProvider, Web3Provider } from '@ethersproject/providers';
 import randomString from 'crypto-random-string';
@@ -31,7 +32,7 @@ import { RollupService } from './rollup_service';
 import { formatSeedPhraseInput, generateSeedPhrase, getSeedPhraseError, sliceSeedPhrase } from './seed_phrase';
 import { toBaseUnits } from './units';
 import { UserAccount, UserAccountEvent } from './user_account';
-import { Wallet, wallets, Web3Signer } from './wallet_providers';
+import { Wallet, wallets } from './wallet_providers';
 
 const debug = createDebug('zm:user_session');
 
@@ -738,7 +739,8 @@ export class UserSession extends EventEmitter {
     const provider = new EthersAdapter(new InfuraProvider('mainnet', infuraId));
     const web3Provider = new Web3Provider(provider);
     this.priceFeedService = new PriceFeedService(priceFeedContractAddresses, web3Provider);
-    await this.priceFeedService.init();
+    // Leave it to run in the background.
+    this.priceFeedService.init();
 
     await this.reviveUserProvider();
 
@@ -805,7 +807,8 @@ export class UserSession extends EventEmitter {
 
   private async linkAccount(provider: Provider) {
     const ethAddress = provider.account!;
-    const signer = new Web3Signer(provider.ethereumProvider);
+    const web3Provider = new Web3Provider(provider.ethereumProvider);
+    const signer = new Web3Signer(web3Provider);
     const message = this.hashToField(ethAddress.toBuffer());
     const msgHash = utils.keccak256(message);
     const digest = utils.arrayify(msgHash);

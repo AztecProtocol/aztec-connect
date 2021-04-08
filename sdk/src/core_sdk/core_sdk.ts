@@ -96,7 +96,6 @@ export class CoreSdk extends EventEmitter {
     private db: Database,
     private rollupProvider: RollupProvider,
     private hashPathSource: HashPathSource | undefined,
-    private ethSigner: EthereumSigner,
     private options: CoreSdkOptions,
     private escapeHatchMode: boolean,
   ) {
@@ -115,20 +114,6 @@ export class CoreSdk extends EventEmitter {
     this.updateInitState(SdkInitState.INITIALIZING);
 
     const barretenberg = await BarretenbergWasm.new();
-    const crsData = await this.getCrsData(
-      this.escapeHatchMode ? EscapeHatchProver.circuitSize : JoinSplitProver.circuitSize,
-    );
-    const numWorkers = this.nextLowestPowerOf2(Math.min(this.numCPU, 8));
-    const workerPool = await WorkerPool.new(barretenberg, numWorkers);
-    const pooledProverFactory = new PooledProverFactory(workerPool, crsData);
-    const joinSplitProver = new JoinSplitProver(
-      await pooledProverFactory.createUnrolledProver(JoinSplitProver.circuitSize),
-    );
-    const accountProver = new AccountProver(await pooledProverFactory.createUnrolledProver(AccountProver.circuitSize));
-    const escapeHatchProver = new EscapeHatchProver(
-      await pooledProverFactory.createProver(EscapeHatchProver.circuitSize),
-    );
-
     this.worker = await createWorker('worker', barretenberg.module);
     const noteAlgos = new NoteAlgorithms(barretenberg, this.worker);
     this.blake2s = new Blake2s(barretenberg);
@@ -137,8 +122,9 @@ export class CoreSdk extends EventEmitter {
     this.schnorr = new Schnorr(barretenberg);
     this.userFactory = new UserDataFactory(this.grumpkin);
     this.userStateFactory = new UserStateFactory(this.grumpkin, this.pedersen, noteAlgos, this.db, this.rollupProvider);
-    this.workerPool = workerPool;
     this.worldState = new WorldState(this.leveldb, this.pedersen);
+
+    await this.initUserStates();
 
     await this.worldState.init();
 
@@ -161,9 +147,18 @@ export class CoreSdk extends EventEmitter {
       txFees,
     };
 
-    await this.initUserStates();
-
+    // Create provers
+    const numWorkers = this.nextLowestPowerOf2(Math.min(this.numCPU, 8));
+    this.workerPool = await WorkerPool.new(barretenberg, numWorkers);
+    const crsData = await this.getCrsData(
+      this.escapeHatchMode ? EscapeHatchProver.circuitSize : JoinSplitProver.circuitSize,
+    );
+    const pooledProverFactory = new PooledProverFactory(this.workerPool, crsData);
+    
     if (!this.escapeHatchMode) {
+      const joinSplitProver = new JoinSplitProver(
+        await pooledProverFactory.createUnrolledProver(JoinSplitProver.circuitSize),
+      );
       this.joinSplitProofCreator = new JoinSplitProofCreator(
         joinSplitProver,
         this.worldState,
@@ -172,10 +167,16 @@ export class CoreSdk extends EventEmitter {
         noteAlgos,
         this.db,
       );
+      const accountProver = new AccountProver(
+        await pooledProverFactory.createUnrolledProver(AccountProver.circuitSize),
+      );
       this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState, this.pedersen);
       await this.createJoinSplitProvingKey(joinSplitProver);
       await this.createAccountProvingKey(accountProver);
     } else {
+      const escapeHatchProver = new EscapeHatchProver(
+        await pooledProverFactory.createProver(EscapeHatchProver.circuitSize),
+      );
       this.joinSplitProofCreator = new EscapeHatchProofCreator(
         escapeHatchProver,
         this.worldState,
@@ -529,6 +530,7 @@ export class CoreSdk extends EventEmitter {
     noteRecipient?: AccountId,
     inputOwner?: EthAddress,
     outputOwner?: EthAddress,
+    ethSigner?: EthereumSigner,
   ) {
     const proofOutput = await this.createJoinSplitProof(
       assetId,
@@ -545,11 +547,11 @@ export class CoreSdk extends EventEmitter {
     );
 
     if (proofOutput.signingData) {
-      if (!inputOwner) {
+      if (!inputOwner || !ethSigner) {
         throw new Error('Signer undefined.');
       }
 
-      await proofOutput.ethSign(this.ethSigner, inputOwner);
+      await proofOutput.ethSign(ethSigner, inputOwner);
     }
 
     return this.sendProof(proofOutput);

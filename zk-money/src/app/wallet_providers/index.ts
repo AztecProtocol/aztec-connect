@@ -8,7 +8,6 @@ import { Wallet } from './wallets';
 
 export * from './wallets';
 export * from './wallet_provider';
-export * from './web3_signer';
 
 const debug = createDebug('zm:wallet_provider');
 

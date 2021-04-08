@@ -3,7 +3,7 @@ import { EthAddress } from 'barretenberg/address';
 import { AssetId } from 'barretenberg/asset';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
-import { Blockchain, BlockchainStatus, PermitArgs, Receipt, SendTxOptions, TypedData } from 'barretenberg/blockchain';
+import { Blockchain, BlockchainStatus, Receipt, SendTxOptions, TypedData } from 'barretenberg/blockchain';
 import { Contracts } from './contracts';
 import { TxHash } from 'barretenberg/tx_hash';
 import { validateSignature } from './validate_signature';
@@ -33,7 +33,8 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   }
 
   static async new(config: EthereumBlockchainConfig, rollupContractAddress: EthAddress, provider: EthereumProvider) {
-    const contracts = new Contracts(rollupContractAddress, provider);
+    const confirmations = config.minConfirmation || EthereumBlockchain.DEFAULT_MIN_CONFIRMATIONS;
+    const contracts = new Contracts(rollupContractAddress, provider, confirmations);
     await contracts.init();
     const eb = new EthereumBlockchain(config, contracts);
     await eb.init();
@@ -151,18 +152,6 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return this.latestRollupId;
   }
 
-  public async setProvider(provider: EthereumProvider) {
-    const rollupContractAddress = this.contracts.getRollupContractAddress();
-    const contracts = new Contracts(rollupContractAddress, provider);
-    await contracts.init();
-    this.contracts = contracts;
-  }
-
-  public async approveProof(account: EthAddress, signingData: Buffer) {
-    const proofHash = hashData(signingData);
-    return this.contracts.approveProof(account, proofHash);
-  }
-
   public async getUserPendingDeposit(assetId: AssetId, account: EthAddress) {
     return this.contracts.getUserPendingDeposit(assetId, account);
   }
@@ -174,19 +163,6 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
 
   public async setSupportedAsset(assetAddress: EthAddress, supportsPermit: boolean, signingAddress: EthAddress) {
     return this.contracts.setSupportedAsset(assetAddress, supportsPermit, signingAddress);
-  }
-
-  /**
-   * Deposit funds into the RollupProcessor contract. First stage of the two part deposit flow.
-   * If the asset supports the permit() flow, deposit via the permit signature flow
-   */
-  public async depositPendingFunds(
-    assetId: AssetId,
-    amount: bigint,
-    depositorAddress: EthAddress,
-    permitArgs?: PermitArgs,
-  ) {
-    return this.contracts.depositPendingFunds(assetId, amount, depositorAddress, permitArgs);
   }
 
   public async createRollupProofTx(
@@ -250,7 +226,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    */
   public async getTransactionReceipt(txHash: TxHash) {
     const confs = this.config.minConfirmation || EthereumBlockchain.DEFAULT_MIN_CONFIRMATIONS;
-    this.debug(`Getting tx receipt for ${txHash}...`);
+    this.debug(`Getting tx receipt for ${txHash}... (${confs} confirmations)`);
     let txReceipt = await this.contracts.getTransactionReceipt(txHash);
     while (!txReceipt || txReceipt.confirmations < confs) {
       await new Promise(resolve => setTimeout(resolve, 1000));

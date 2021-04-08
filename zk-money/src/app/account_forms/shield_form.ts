@@ -1,14 +1,4 @@
-import {
-  AccountId,
-  AssetId,
-  EthAddress,
-  JoinSplitProofOutput,
-  PermitArgs,
-  SettlementTime,
-  TxHash,
-  TxType,
-  WalletSdk,
-} from '@aztec/sdk';
+import { AccountId, EthAddress, JoinSplitProofOutput, SettlementTime, TxType, WalletSdk, Web3Signer } from '@aztec/sdk';
 import { Web3Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
@@ -40,7 +30,6 @@ import { Network } from '../networks';
 import { Provider, ProviderStatus } from '../provider';
 import { RollupService, RollupServiceEvent, RollupStatus, TxFee } from '../rollup_service';
 import { fromBaseUnits, max, min, toBaseUnits } from '../units';
-import { Web3Signer } from '../wallet_providers';
 import { AccountForm, AccountFormEvent } from './account_form';
 
 const debug = createDebug('zm:shield_form');
@@ -516,17 +505,22 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       );
 
       try {
-        await this.withUserProvider(async () => {
-          try {
-            await this.depositPendingFunds(asset.id, ethAddress, toBeDeposited);
-          } catch (e) {
-            debug(e);
-            throw new Error('Failed to deposit from your wallet.');
-          }
+        await this.sdk.depositFundsToContract(
+          asset.id,
+          ethAddress,
+          toBeDeposited,
+          undefined,
+          this.ethAccount.provider!.ethereumProvider,
+        );
+      } catch (e) {
+        debug(e);
+        throw new Error('Failed to deposit from your wallet.');
+      }
 
-          this.prompt('Awaiting transaction confirmation...');
-          await this.accountUtils.confirmPendingBalance(asset.id, ethAddress, publicInput);
-        });
+      this.prompt('Awaiting transaction confirmation...');
+
+      try {
+        await this.accountUtils.confirmPendingBalance(asset.id, ethAddress, publicInput);
       } catch (e) {
         return this.abort(e.message);
       }
@@ -574,29 +568,28 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       if (!isContract) {
         this.prompt('Please sign the proof data in your wallet.');
         try {
-          const signer = new Web3Signer(this.ethAccount.provider!.ethereumProvider);
-          await this.proofOutput!.ethSign(signer as any, ethAddress);
+          const web3Provider = new Web3Provider(this.ethAccount.provider!.ethereumProvider);
+          const signer = new Web3Signer(web3Provider);
+          await this.proofOutput!.ethSign(signer, ethAddress);
           const signature = this.proofOutput!.depositSignature!;
-          validSignature = this.validateSignature(ethAddress, signature, signingData);
+          validSignature = signer.validateSignature(ethAddress, signature, signingData);
         } catch (e) {
           debug(e);
           return this.abort('Failed to sign the proof.');
         }
       }
-      if (!validSignature && !(await this.proofApproved(ethAddress, signingData))) {
+      if (!validSignature && !(await this.sdk.isProofApproved(ethAddress, signingData))) {
         this.prompt('Please approve the proof data in your wallet.');
         try {
-          await this.withUserProvider(async () => {
-            try {
-              await this.approveProof(ethAddress, signingData);
-            } catch (e) {
-              debug(e);
-              throw new Error('Failed to approve the proof.');
-            }
+          await this.sdk.approveProof(ethAddress, signingData, this.ethAccount.provider!.ethereumProvider);
+        } catch (e) {
+          debug(e);
+          throw new Error('Failed to approve the proof.');
+        }
 
-            this.prompt('Awaiting transaction confirmation...');
-            await this.confirmApproveProof(ethAddress, signingData);
-          });
+        this.prompt('Awaiting transaction confirmation...');
+        try {
+          await this.confirmApproveProof(ethAddress, signingData);
         } catch (e) {
           return this.abort(e.message);
         }
@@ -678,8 +671,8 @@ export class ShieldForm extends EventEmitter implements AccountForm {
   private autofillAmountInput() {
     let amount = 0n;
     const { pendingBalance } = this.ethAccount.state;
-    if (pendingBalance) {
-      const fee = this.values.fees.value[this.values.speed.value].fee;
+    const fee = this.values.fees.value[this.values.speed.value].fee;
+    if (pendingBalance > fee) {
       amount = pendingBalance - fee;
     } else {
       amount = this.values.maxAmount.value;
@@ -768,23 +761,6 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     });
   }
 
-  private async depositPendingFunds(
-    assetId: AssetId,
-    from: EthAddress,
-    value: bigint,
-    permitArgs?: PermitArgs,
-  ): Promise<TxHash> {
-    return (this.sdk as any).blockchain.depositPendingFunds(assetId, value, from, permitArgs);
-  }
-
-  private async approveProof(account: EthAddress, signingData: Buffer) {
-    return (this.sdk as any).blockchain.approveProof(account, signingData);
-  }
-
-  private async proofApproved(account: EthAddress, signingData: Buffer) {
-    return (this.sdk as any).blockchain.getUserProofApprovalStatus(account, signingData);
-  }
-
   private async confirmApproveProof(
     account: EthAddress,
     signingData: Buffer,
@@ -797,24 +773,11 @@ export class ShieldForm extends EventEmitter implements AccountForm {
         throw new Error(`Timeout awaiting proof approval confirmation.`);
       }
 
-      if (await this.proofApproved(account, signingData)) {
+      if (await this.sdk.isProofApproved(account, signingData)) {
         break;
       }
 
       await new Promise(resolve => setTimeout(resolve, pollInterval));
-    }
-  }
-
-  private validateSignature(address: EthAddress, signature: Buffer, signingData: Buffer) {
-    return (this.sdk as any).blockchain.validateSignature(address, signature, signingData);
-  }
-
-  private async withUserProvider(action: () => any) {
-    try {
-      await this.sdk.setProvider(this.ethAccount.provider!.ethereumProvider);
-      await action();
-    } finally {
-      await this.sdk.setProvider(this.coreProvider.ethereumProvider);
     }
   }
 }

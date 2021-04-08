@@ -203,7 +203,7 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
               <Text text="MAX" size="xs" />
             </MaxButton>
           </AmountInputWrapper>
-          {!!pendingBalance && (
+          {pendingBalance > txFee.fee && (
             <InputFoot size="xxs">
               {`You have ${fromBaseUnits(
                 pendingBalance - txFee.fee,

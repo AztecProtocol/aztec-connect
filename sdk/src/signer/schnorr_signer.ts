@@ -1,6 +1,6 @@
 import { GrumpkinAddress } from 'barretenberg/address';
 import { Schnorr } from 'barretenberg/crypto/schnorr';
-import { Signer } from '.';
+import { Signer } from './signer';
 
 export class SchnorrSigner implements Signer {
   constructor(private schnorr: Schnorr, private publicKey: GrumpkinAddress, private privateKey: Buffer) {}

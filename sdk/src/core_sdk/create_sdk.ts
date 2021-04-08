@@ -11,9 +11,9 @@ import { SdkEvent, SdkInitState } from '../sdk';
 import { AccountId } from '../user';
 import { CoreSdk, CoreSdkEvent, CoreSdkOptions } from './core_sdk';
 import { AssetId } from 'barretenberg/asset';
-import { Blockchain } from 'barretenberg/blockchain';
 import { EscapeHatchRollupProvider } from '../escape_hatch_rollup_provider';
 import { getServiceName } from 'barretenberg/service';
+import { EthereumBlockchain, EthereumProvider } from 'blockchain';
 
 const debug = createDebug('bb:create_sdk');
 
@@ -52,7 +52,7 @@ export type SdkOptions = {
   minConfirmationEHW?: number;
 } & CoreSdkOptions;
 
-async function sdkFactory(hostStr: string, options: SdkOptions, blockchain: Blockchain) {
+async function sdkFactory(hostStr: string, options: SdkOptions, ethereumProvider: EthereumProvider) {
   if (options.debug) {
     createDebug.enable('bb:*');
   }
@@ -73,11 +73,22 @@ async function sdkFactory(hostStr: string, options: SdkOptions, blockchain: Bloc
 
   if (!escapeHatchMode) {
     const rollupProvider = new ServerRollupProvider(host);
-    return new CoreSdk(leveldb, db, rollupProvider, undefined, blockchain, options, escapeHatchMode);
+    return new CoreSdk(leveldb, db, rollupProvider, undefined, options, escapeHatchMode);
   } else {
     const srirachaProvider = new SrirachaProvider(host);
+    const {
+      blockchainStatus: { rollupContractAddress },
+    } = await srirachaProvider.getStatus();
+    const { minConfirmation, minConfirmationEHW } = options;
+    const config = {
+      console: false,
+      gasLimit: 7000000,
+      minConfirmation,
+      minConfirmationEHW,
+    };
+    const blockchain = await EthereumBlockchain.new(config, rollupContractAddress, ethereumProvider);
     const rollupProvider = new EscapeHatchRollupProvider(blockchain);
-    return new CoreSdk(leveldb, db, rollupProvider, srirachaProvider, blockchain, options, escapeHatchMode);
+    return new CoreSdk(leveldb, db, rollupProvider, srirachaProvider, options, escapeHatchMode);
   }
 }
 
@@ -86,9 +97,9 @@ async function sdkFactory(hostStr: string, options: SdkOptions, blockchain: Bloc
  * share events and synchronise instances. Only one instance will be the "leader" and that instance will receive
  * blocks from the block source and update the (shared) world state.
  */
-export async function createSdk(hostStr: string, options: SdkOptions = {}, blockchain: Blockchain) {
+export async function createSdk(hostStr: string, options: SdkOptions = {}, ethereumProvider: EthereumProvider) {
   options = { syncInstances: true, saveProvingKey: true, ...options };
-  const sdk = await sdkFactory(hostStr, options, blockchain);
+  const sdk = await sdkFactory(hostStr, options, ethereumProvider);
 
   if (!options.syncInstances) {
     // We're not going to sync across multiple instances. We should start recieving blocks once initialized.

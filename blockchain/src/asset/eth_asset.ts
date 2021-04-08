@@ -1,8 +1,8 @@
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from 'barretenberg/address';
-import { fromBaseUnits, toBaseUnits } from './units';
 import { Asset } from 'barretenberg/blockchain';
 import { TxHash } from 'barretenberg/tx_hash';
+import { fromBaseUnits, toBaseUnits } from '../units';
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 

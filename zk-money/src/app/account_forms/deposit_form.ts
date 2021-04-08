@@ -1,4 +1,4 @@
-import { AssetId, EthAddress, PermitArgs, TxHash, WalletSdk } from '@aztec/sdk';
+import { EthAddress, WalletSdk } from '@aztec/sdk';
 import { Web3Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
@@ -362,17 +362,21 @@ export class DepositForm extends EventEmitter implements AccountForm {
         `Please make a deposit of ${fromBaseUnits(amount, asset.decimals)} ${asset.symbol} from your wallet.`,
       );
 
-      await this.withUserProvider(async () => {
-        try {
-          await this.depositPendingFunds(asset.id, ethAddress, amount);
-        } catch (e) {
-          debug(e);
-          throw new Error('Failed to deposit from your wallet.');
-        }
+      try {
+        await this.sdk.depositFundsToContract(
+          asset.id,
+          ethAddress,
+          amount,
+          undefined,
+          this.ethAccount.provider!.ethereumProvider,
+        );
+      } catch (e) {
+        debug(e);
+        throw new Error('Failed to deposit from your wallet.');
+      }
 
-        this.prompt('Awaiting transaction confirmation...');
-        await this.accountUtils.confirmPendingBalance(asset.id, ethAddress, pendingBalance + amount);
-      });
+      this.prompt('Awaiting transaction confirmation...');
+      await this.accountUtils.confirmPendingBalance(asset.id, ethAddress, pendingBalance + amount);
     }
 
     this.proceed(DepositStatus.DONE);
@@ -474,23 +478,5 @@ export class DepositForm extends EventEmitter implements AccountForm {
     this.updateFormValues({
       submit: withWarning({ value: true }, message),
     });
-  }
-
-  private async depositPendingFunds(
-    assetId: AssetId,
-    from: EthAddress,
-    value: bigint,
-    permitArgs?: PermitArgs,
-  ): Promise<TxHash> {
-    return (this.sdk as any).blockchain.depositPendingFunds(assetId, value, from, permitArgs);
-  }
-
-  private async withUserProvider(action: () => any) {
-    try {
-      await this.sdk.setProvider(this.provider!.ethereumProvider);
-      await action();
-    } finally {
-      await this.sdk.setProvider(this.coreProvider.ethereumProvider);
-    }
   }
 }

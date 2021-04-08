@@ -1,10 +1,11 @@
 import { ContractTransaction } from '@ethersproject/contracts';
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from 'barretenberg/address';
+import { Asset, BlockchainAsset } from 'barretenberg/blockchain';
 import { TxHash } from 'barretenberg/tx_hash';
 import { Contract } from 'ethers';
-import { fromBaseUnits, toBaseUnits } from './units';
-import { Asset, BlockchainAsset } from 'barretenberg/blockchain';
+import { EthereumProvider } from '../provider';
+import { fromBaseUnits, toBaseUnits } from '../units';
 
 const abi = [
   'function decimals() public view returns (uint8)',
@@ -19,29 +20,28 @@ const abi = [
 
 export class TokenAsset implements Asset {
   private contract!: Contract;
-  private info!: BlockchainAsset;
   private precision = 2;
-  private confirmations = 2;
 
-  constructor(private ethersProvider: Web3Provider, private contractAddress: EthAddress) {
-    this.contract = new Contract(contractAddress.toString(), abi, ethersProvider);
+  constructor(private ethersProvider: Web3Provider, private info: BlockchainAsset, private minConfirmations = 1) {
+    this.contract = new Contract(info.address.toString(), abi, ethersProvider);
   }
 
-  async init(permitSupport: boolean) {
-    const chainId = (await this.ethersProvider.getNetwork()).chainId;
-    // If ganache, just 1 confirmation.
-    if (chainId === 1337 || chainId === 31337) {
-      this.confirmations = 1;
-    }
-
-    this.info = {
-      address: this.contractAddress,
-      name: await this.contract.name(),
-      symbol: await this.contract.symbol(),
-      decimals: +(await this.contract.decimals()),
+  static async fromAddress(
+    address: EthAddress,
+    ethersProvider: Web3Provider,
+    permitSupport: boolean,
+    minConfirmations = 1,
+  ) {
+    const contract = new Contract(address.toString(), abi, ethersProvider);
+    const info = {
+      address,
+      name: await contract.name(),
+      symbol: await contract.symbol(),
+      decimals: +(await contract.decimals()),
       permitSupport,
       gasConstants: [25000, 0, 25000, 25000],
     };
+    return new TokenAsset(ethersProvider, info, minConfirmations);
   }
 
   getStaticInfo() {
@@ -62,19 +62,17 @@ export class TokenAsset implements Asset {
     return BigInt(allowance);
   }
 
-  async approve(value: bigint, owner: EthAddress, receiver: EthAddress) {
-    const signer = this.ethersProvider.getSigner(owner.toString());
-    const contract = new Contract(this.contractAddress.toString(), abi, signer);
+  async approve(value: bigint, owner: EthAddress, receiver: EthAddress, provider?: EthereumProvider) {
+    const contract = this.getContractWithSigner(owner, provider);
     const res = (await contract.approve(receiver.toString(), value)) as ContractTransaction;
-    const receipt = await res.wait(this.confirmations);
+    const receipt = await res.wait(this.minConfirmations);
     return TxHash.fromString(receipt.transactionHash);
   }
 
-  async mint(value: bigint, account: EthAddress) {
-    const signer = this.ethersProvider.getSigner(account.toString());
-    const contract = new Contract(this.contractAddress.toString(), abi, signer);
-    const res = await contract.mint(account.toString(), value);
-    const receipt = await res.wait(this.confirmations);
+  async mint(value: bigint, account: EthAddress, provider?: EthereumProvider) {
+    const contract = this.getContractWithSigner(account, provider);
+    const res = await contract.mint(account, value);
+    const receipt = await res.wait(this.minConfirmations);
     return TxHash.fromString(receipt.transactionHash);
   }
 
@@ -84,5 +82,10 @@ export class TokenAsset implements Asset {
 
   public toBaseUnits(value: string) {
     return toBaseUnits(value, this.info.decimals);
+  }
+
+  private getContractWithSigner(account: EthAddress, provider?: EthereumProvider) {
+    const ethSigner = (provider ? new Web3Provider(provider) : this.contract).getSigner(account.toString());
+    return new Contract(this.info.address.toString(), abi, ethSigner);
   }
 }

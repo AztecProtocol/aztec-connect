@@ -23,6 +23,7 @@ export {
   EthereumProvider,
   Web3Adapter,
   Web3Provider,
+  Web3Signer,
   toBaseUnits,
   fromBaseUnits,
 } from 'blockchain';
