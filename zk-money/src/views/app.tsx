@@ -126,10 +126,6 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
     this.app.on(AppEvent.UPDATED_USER_SESSION_DATA, this.onUserSessionDataChange);
     this.app.on(AppEvent.UPDATED_SYSTEM_MESSAGE, this.onSystemMessageChange);
     this.handleActionChange(this.state.action);
-
-    if (this.state.action !== AppAction.NADA && isUnsupportedDevice()) {
-      this.goToAction(AppAction.NADA);
-    }
   }
 
   componentDidUpdate(prevProps: AppPropsWithApollo, prevState: AppState) {
