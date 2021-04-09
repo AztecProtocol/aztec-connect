@@ -218,6 +218,9 @@ export class UserSession extends EventEmitter {
     if (wallet !== Wallet.HOT) {
       this.emitSystemMessage(`Connecting to ${walletName}...`);
       await this.changeWallet(wallet);
+      if (!this.provider) {
+        return this.abort(`Unable to connect to ${walletName}.`);
+      }
     }
 
     this.emitSystemMessage('Connecting to rollup provider...');

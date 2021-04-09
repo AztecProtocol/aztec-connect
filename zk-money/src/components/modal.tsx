@@ -26,6 +26,7 @@ const PopupContent = styled(PaddedBlock)`
     border-radius: 0;
     max-height: 100vh;
     height: 100vh;
+    height: fill-available;
   }
 `;
 
@@ -37,6 +38,10 @@ const Header = styled.div`
 const TitleRoot = styled.div`
   flex: 1;
   padding-right: ${spacings.s};
+`;
+
+const Title = styled(Text)`
+  display: inline-block;
 `;
 
 const CloseButton = styled.div`
@@ -56,7 +61,7 @@ export const Modal: React.FunctionComponent<ModalProps> = ({ title, children, on
     const prevPosition = document.body.style.position;
     const scrollY = window.scrollY;
     document.body.style.position = 'fixed';
-    document.body.style.top = `-${scrollY}px`;
+    document.body.style.top = '0px';
 
     return () => {
       document.body.style.position = prevPosition;
@@ -73,9 +78,9 @@ export const Modal: React.FunctionComponent<ModalProps> = ({ title, children, on
             <Header>
               {!!title && (
                 <TitleRoot>
-                  <Text color="gradient" size="xl" inline>
+                  <Title color="gradient" size="xl">
                     {title}
-                  </Text>
+                  </Title>
                 </TitleRoot>
               )}
               {!!onClose && (

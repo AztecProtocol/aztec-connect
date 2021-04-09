@@ -173,6 +173,7 @@ export const Send: React.FunctionComponent<SendProps> = ({
             </AmountAssetIconRoot>
             <Input
               theme={inputTheme}
+              type="number"
               value={amount.value}
               onChangeValue={value => onChangeInputs({ amount: { value } })}
             />

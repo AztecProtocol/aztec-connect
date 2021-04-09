@@ -14,7 +14,10 @@ const outlinedStyle = css`
     content: '';
     position: absolute;
     border-radius: inherit;
-    inset: 1px;
+    top: 1px;
+    right: 1px;
+    bottom: 1px;
+    left: 1px;
     z-index: -1;
   }
 `;

@@ -101,11 +101,12 @@ export class Provider extends EventEmitter {
 
     try {
       await this.walletProvider.connect();
-      clearTimeout(promptTimeout);
     } catch (e) {
       debug(e);
       this.updateState({ status: ProviderStatus.UNINITIALIZED });
       throw new Error(`Unable to connect to ${walletName}.`);
+    } finally {
+      clearTimeout(promptTimeout);
     }
 
     this.ethereumProvider.on('disconnect', this.handleDisconnect);

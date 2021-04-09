@@ -15,10 +15,18 @@ const ColButton = styled.div`
 const Title = styled(Text)`
   display: flex;
   align-items: center;
+
+  @media (max-width: ${breakpoints.xs}) {
+    font-size: ${fontSizes.s};
+  }
 `;
 
 const SubTitle = styled(Text)`
   padding-left: ${spacings.xs};
+
+  @media (max-width: ${breakpoints.xs}) {
+    font-size: ${fontSizes.xs};
+  }
 `;
 
 const symbolClassName = 'symbol';

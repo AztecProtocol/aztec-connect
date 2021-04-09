@@ -84,6 +84,7 @@ const HexRoot = styled(Group)`
 
   @media (max-width: ${breakpoints.s}) {
     margin: 0 -${spacings.s};
+    padding-left: 0;
     order: 5;
   }
 `;

@@ -196,6 +196,7 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
             </AmountAssetIconRoot>
             <Input
               theme={inputTheme}
+              type="number"
               value={amount.value}
               onChangeValue={value => onChangeInputs({ amount: { value } })}
             />
