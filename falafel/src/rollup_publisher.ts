@@ -12,6 +12,7 @@ import moment from 'moment';
 import { Duration } from 'moment';
 import { RollupDb } from './rollup_db';
 import { ProofData, JoinSplitProofData } from 'barretenberg/client_proofs/proof_data';
+import { AssetId } from 'barretenberg/asset';
 
 export class RollupPublisher {
   private interrupted = false;
@@ -38,6 +39,14 @@ export class RollupPublisher {
     await this.rollupDb.setCallData(rollup.id, txData);
 
     while (!this.interrupted) {
+      // Check fee distributor has at least 0.5 ETH.
+      const { feeDistributorBalance } = await this.blockchain.getBlockchainStatus();
+      if (feeDistributorBalance[AssetId.ETH] < 5n ** 17n) {
+        console.log(`Fee distributor ETH balance too low, awaiting top up...`);
+        await this.sleepOrInterrupted(60000);
+        continue;
+      }
+
       const end = this.metrics.publishTimer();
       const txHash = await this.sendRollupProof(txData);
       if (!txHash) {
