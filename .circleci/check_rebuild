@@ -1,8 +1,15 @@
 #!/bin/bash
 set -e
 
+# If rebuild is forced.
+if [ "$REBUILD" == "true" ]; then
+  echo "Forced rebuild requested."
+  exit 0
+fi
+
 # If this is a tagged commit, rebuild.
 if [ -n "$CIRCLE_TAG" ]; then
+  echo "Rebuilding tagged commit."
   exit 0
 fi
 

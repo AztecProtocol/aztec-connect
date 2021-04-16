@@ -1,39 +1,14 @@
 setup_env: &setup_env
   run:
     name: 'Setup environment'
-    command: .circleci/setup_env
+    command: .circleci/setup_env << pipeline.parameters.rebuild >>
 
 version: 2.1
+parameters:
+  rebuild:
+    type: boolean
+    default: false
 jobs:
-  toolchains:
-    machine:
-      image: ubuntu-1604:201903-01
-    resource_class: large
-    steps:
-      - checkout
-      - *setup_env
-      - run:
-          name: 'cmake'
-          working_directory: barretenberg
-          command: |
-            if changed dockerfiles/Dockerfile.cmake; then
-              build cmake:3.16.5 dockerfiles/Dockerfile.cmake
-            fi
-      - run:
-          name: 'gcc'
-          working_directory: barretenberg
-          command: |
-            if changed dockerfiles/Dockerfile.gcc; then
-              build gcc:9 dockerfiles/Dockerfile.gcc
-            fi
-      - run:
-          name: 'clang'
-          working_directory: barretenberg
-          command: |
-            if changed dockerfiles/Dockerfile.clang; then
-              build clang:9.0.0 dockerfiles/Dockerfile.clang
-            fi
-
   x86_64-linux-gcc:
     machine:
       image: ubuntu-1604:201903-01
@@ -44,7 +19,7 @@ jobs:
       - run:
           name: 'Build and test'
           working_directory: barretenberg
-          command: build barretenberg:x86_64-linux-gcc ./dockerfiles/Dockerfile.x86_64-linux-gcc
+          command: build barretenberg-x86_64-linux-gcc ./dockerfiles/Dockerfile.x86_64-linux-gcc
 
   x86_64-linux-clang:
     machine:
@@ -56,7 +31,7 @@ jobs:
       - run:
           name: 'Build and test'
           working_directory: barretenberg
-          command: build barretenberg:x86_64-linux-clang ./dockerfiles/Dockerfile.x86_64-linux-clang
+          command: build barretenberg-x86_64-linux-clang ./dockerfiles/Dockerfile.x86_64-linux-clang
 
   wasm-linux-clang:
     machine:
@@ -68,7 +43,7 @@ jobs:
       - run:
           name: 'Build and test'
           working_directory: barretenberg
-          command: build barretenberg:wasm-linux-clang ./dockerfiles/Dockerfile.wasm-linux-clang
+          command: build barretenberg-wasm-linux-clang ./dockerfiles/Dockerfile.wasm-linux-clang
 
   barretenberg-js:
     machine:
@@ -80,7 +55,7 @@ jobs:
       - run:
           name: 'Build and test'
           working_directory: barretenberg.js
-          command: build barretenberg.js:latest
+          command: build barretenberg.js
 
   blockchain:
     docker:
@@ -92,7 +67,7 @@ jobs:
       - run:
           name: 'Build and test'
           working_directory: blockchain
-          command: build blockchain:latest
+          command: build blockchain
 
   halloumi:
     machine:
@@ -104,7 +79,7 @@ jobs:
       - run:
           name: 'Build and test'
           working_directory: halloumi
-          command: build halloumi:latest
+          command: build halloumi
 
   falafel:
     machine:
@@ -116,7 +91,7 @@ jobs:
       - run:
           name: 'Build and test'
           working_directory: falafel
-          command: build falafel:latest
+          command: build falafel
 
   sriracha:
     machine:
@@ -128,7 +103,7 @@ jobs:
       - run:
           name: 'Build and test'
           working_directory: sriracha
-          command: build sriracha:latest
+          command: build sriracha
 
   wasabi:
     machine:
@@ -140,7 +115,7 @@ jobs:
       - run:
           name: 'Build and test'
           working_directory: wasabi
-          command: build wasabi:latest
+          command: build wasabi
 
   sdk:
     docker:
@@ -152,7 +127,7 @@ jobs:
       - run:
           name: 'Build and test'
           working_directory: sdk
-          command: build sdk:latest
+          command: build sdk
 
   hummus:
     docker:
@@ -164,7 +139,7 @@ jobs:
       - run:
           name: 'Build and test'
           working_directory: hummus
-          command: build hummus:latest
+          command: build hummus
 
   block-explorer:
     docker:
@@ -176,7 +151,7 @@ jobs:
       - run:
           name: 'Build and test'
           working_directory: block-explorer
-          command: build block-explorer:latest
+          command: build block-explorer
 
   documentation:
     docker:
@@ -188,7 +163,7 @@ jobs:
       - run:
           name: 'Build and test'
           working_directory: documentation
-          command: build documentation:latest
+          command: build documentation
 
   end-to-end:
     machine:
@@ -202,12 +177,8 @@ jobs:
           working_directory: end-to-end
           command: |
             if check_rebuild; then
-              sudo fallocate -l 8G /swapfile
-              sudo chmod 600 /swapfile
-              sudo mkswap /swapfile
-              sudo swapon /swapfile
-              build end-to-end:latest
-              docker tag $ECR_URL/end-to-end:cache-$CIRCLE_SHA1-latest $ECR_DEPLOY_URL/end-to-end:latest
+              build end-to-end
+              docker tag $ECR_URL/end-to-end:cache-$CIRCLE_SHA1 $ECR_DEPLOY_URL/end-to-end:latest
               docker-compose up --exit-code-from end-to-end
             fi
 
@@ -221,7 +192,7 @@ jobs:
       - run:
           name: 'Build and test'
           working_directory: zk-money
-          command: build zk-money:latest
+          command: build zk-money
 
   website:
     docker:
@@ -233,7 +204,7 @@ jobs:
       - run:
           name: 'Build and test'
           working_directory: website
-          command: build website:latest
+          command: build website
 
   metrics:
     docker:
@@ -246,19 +217,19 @@ jobs:
       - run:
           name: 'Build coinbase-exporter'
           working_directory: metrics/coinbase-exporter
-          command: build coinbase-exporter:latest
+          command: build coinbase-exporter
       - run:
           name: 'Build sidecar'
           working_directory: metrics/sidecar
-          command: build metrics-sidecar:latest
+          command: build metrics-sidecar
       - run:
           name: 'Build prometheus'
           working_directory: metrics/prometheus
-          command: build prometheus:latest
+          command: build prometheus
       - run:
           name: 'Build grafana'
           working_directory: metrics/grafana
-          command: build grafana:latest
+          command: build grafana
 
   deploy:
     docker:
@@ -268,26 +239,10 @@ jobs:
       - *setup_env
       - setup_remote_docker
       - run:
-          name: 'barretenberg:x86_64-linux-gcc'
-          working_directory: barretenberg
-          command: deploy_ecr barretenberg:x86_64-linux-gcc
-      - run:
-          name: 'barretenberg:x86_64-linux-clang'
-          working_directory: barretenberg
-          command: deploy_ecr barretenberg:x86_64-linux-clang
-      - run:
-          name: 'barretenberg:wasm-linux-clang'
-          working_directory: barretenberg
-          command: deploy_ecr barretenberg:wasm-linux-clang
-      - run:
-          name: 'barretenberg.js'
-          working_directory: barretenberg.js
-          command: deploy_ecr barretenberg.js:latest
-      - run:
           name: 'blockchain'
           working_directory: blockchain
           command: |
-            deploy_ecr blockchain:latest
+            deploy_ecr blockchain
             if changed '.*\.sol$' || changed .redeploy; then
               `docker run --env ESCAPE_BLOCK_LOWER=60 --env ESCAPE_BLOCK_UPPER=120 --env INFURA_API_KEY=$TF_VAR_INFURA_API_KEY --env PRIVATE_KEY=$TF_VAR_PRIVATE_KEY --env NETWORK=goerli 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:latest`
               export TF_VAR_ROLLUP_CONTRACT_ADDRESS=$ROLLUP_CONTRACT_ADDRESS
@@ -297,80 +252,118 @@ jobs:
           name: 'sdk'
           working_directory: sdk
           command: |
-            deploy_ecr sdk:latest
-            deploy_npm sdk:latest
+            deploy_ecr sdk
       - run:
           name: 'halloumi'
           working_directory: halloumi
-          command: deploy halloumi:latest
+          command: deploy halloumi
       - run:
           name: 'falafel'
           working_directory: falafel
-          command: deploy falafel:latest
+          command: deploy falafel
       - run:
           name: 'sriracha'
           working_directory: sriracha
           command: |
-            deploy sriracha:latest
-            deploy_dockerhub sriracha:latest
+            deploy sriracha
+            deploy_dockerhub sriracha
       - run:
           name: 'wasabi'
           working_directory: wasabi
           command: |
-            deploy wasabi:latest
+            deploy wasabi
       - run:
           name: 'hummus'
           working_directory: hummus
           command: |
-            deploy hummus:latest
-            deploy_s3 hummus:latest
+            deploy hummus
+            deploy_s3 hummus
       - run:
           name: 'block-explorer'
           working_directory: block-explorer
           command: |
-            deploy block-explorer:latest
-            deploy_s3 block-explorer:latest
+            deploy block-explorer
+            deploy_s3 block-explorer
       - run:
           name: 'documentation'
           working_directory: documentation
           command: |
-            deploy documentation:latest
-            deploy_s3 documentation:latest
+            deploy documentation
+            deploy_s3 documentation
       - run:
           name: 'website'
           working_directory: website
           command: |
-            deploy website:latest
-            deploy_s3 website:latest
+            deploy website
+            deploy_s3 website
       - run:
           name: 'zk-money'
           working_directory: zk-money
           command: |
             deploy zk-money
-            deploy_s3 zk-money:latest
+            deploy_s3 zk-money
       - run:
           name: 'metrics'
           working_directory: metrics
           command: |
-            cd coinbase-exporter && deploy coinbase-exporter:latest && cd ..
+            cd coinbase-exporter && deploy coinbase-exporter && cd ..
             cd ecs-exporter && deploy_terraform && cd ..
-            cd sidecar && deploy metrics-sidecar:latest && cd ..
-            cd prometheus && deploy prometheus:latest && cd ..
-            cd grafana && deploy grafana:latest && cd ..
+            cd sidecar && deploy metrics-sidecar && cd ..
+            cd prometheus && deploy prometheus && cd ..
+            cd grafana && deploy grafana && cd ..
+
+  deploy-prod:
+    docker:
+      - image: aztecprotocol/build-image
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker
+      - run:
+          name: 'sdk'
+          working_directory: sdk
+          command: |
+            deploy_ecr sdk
+            deploy_npm sdk
+      # - run:
+      #     name: 'halloumi'
+      #     working_directory: halloumi
+      #     command: deploy halloumi
+      - run:
+          name: 'falafel'
+          working_directory: falafel
+          command: deploy falafel falafel-mainnet ./terraform/mainnet
+      # - run:
+      #     name: 'sriracha'
+      #     working_directory: sriracha
+      #     command: |
+      #       deploy sriracha
+      #       deploy_dockerhub sriracha
+      # - run:
+      #     name: 'block-explorer'
+      #     working_directory: block-explorer
+      #     command: |
+      #       deploy block-explorer
+      #       deploy_s3 block-explorer
+      # - run:
+      #     name: 'documentation'
+      #     working_directory: documentation
+      #     command: |
+      #       deploy documentation
+      #       deploy_s3 documentation
+      # - run:
+      #     name: 'zk-money'
+      #     working_directory: zk-money
+      #     command: |
+      #       deploy zk-money
+      #       deploy_s3 zk-money
 
 workflows:
   build:
     jobs:
-      - toolchains
-      - x86_64-linux-gcc:
-          requires:
-            - toolchains
-      - x86_64-linux-clang:
-          requires:
-            - toolchains
-      - wasm-linux-clang:
-          requires:
-            - toolchains
+      - x86_64-linux-gcc
+      - x86_64-linux-clang
+      - wasm-linux-clang
       - barretenberg-js:
           requires:
             - wasm-linux-clang
@@ -380,9 +373,10 @@ workflows:
             - barretenberg-js
       - halloumi:
           requires:
-            - blockchain
+            - barretenberg-js
       - falafel:
           requires:
+            - blockchain
             - halloumi
       - sriracha:
           requires:
@@ -424,3 +418,11 @@ workflows:
           filters:
             branches:
               only: master
+      - deploy-prod:
+          requires:
+            - zk-money
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /[0-9]+(\.[0-9]+)*/

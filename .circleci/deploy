@@ -1,14 +1,16 @@
 #!/bin/bash
 set -e
 
-IMAGE=$1
-REPOSITORY=${IMAGE%:*}
-TAG=${IMAGE#*:}
-IMAGE_COMMIT_TAG=cache-$CIRCLE_SHA1-$TAG
+REPOSITORY=$1
+SERVICE=${2:-$REPOSITORY}
+TF_DIR=$3
 
-# Do nothing if this wasn't rebuilt.
+# Regardless of whether the repo changed or not, we want to tag image with this commit hash.
+deploy_ecr $REPOSITORY
+
+# Bail out if nothing changed.
+IMAGE_COMMIT_TAG=cache-$CIRCLE_SHA1
 image_exists $REPOSITORY $IMAGE_COMMIT_TAG || { echo "No new image found." && exit 0; }
 
-deploy_ecr $1
-deploy_terraform
-deploy_service $REPOSITORY
+deploy_terraform $TF_DIR
+deploy_service $SERVICE

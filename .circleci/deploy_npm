@@ -1,10 +1,11 @@
 #!/bin/bash
 set -e
 
-readonly IMAGE=$1
-readonly REPOSITORY=${IMAGE%:*}
-readonly TAG=${IMAGE#*:}
-readonly IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:cache-$CIRCLE_SHA1-$TAG
+readonly REPOSITORY=$1
+readonly IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:cache-$CIRCLE_SHA1
+
+# Only publish tagged commits to npm.
+[ -n "$CIRCLE_TAG" ] || { echo "Only publish tagged commits to npm." && exit 0; }
 
 # Pull the built image, do nothing if this wasn't rebuilt.
 docker pull $IMAGE_COMMIT_URI > /dev/null 2>&1 || { echo "No new image found." && exit 0; }
@@ -19,20 +20,20 @@ cd $REPOSITORY
 # Publish npm package using given version number if higher than published, otherwise bump published.
 echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > .npmrc
 
-readonly LOCAL_VERSION=$(jq -r .version < package.json)
-readonly PUBLISHED_VERSION=$(npm show ./ version 2> /dev/null)
-readonly HIGHER_VERSION=$(npx semver ${LOCAL_VERSION} ${PUBLISHED_VERSION} | tail -1)
-
-if [ "$(npx semver $LOCAL_VERSION)" == "" ]; then
-  echo "$LOCAL_VERSION is not a semantic version."
+if [ "$(npx semver $CIRCLE_TAG)" == "" ]; then
+  echo "$CIRCLE_TAG is not a semantic version."
   exit 1
 fi
 
-if [ "$LOCAL_VERSION" == "$PUBLISHED_VERSION" ] || [ "$LOCAL_VERSION" != "$HIGHER_VERSION" ]; then
-  readonly NEW_VERSION=$(npx semver -i patch $PUBLISHED_VERSION)
-  echo "$LOCAL_VERSION is <= published version $PUBLISHED_VERSION, bumping to $NEW_VERSION."
-  tmp=$(mktemp)
-  jq --arg v $NEW_VERSION '.version = $v' package.json > $tmp && mv $tmp package.json
+readonly PUBLISHED_VERSION=$(npm show ./ version 2> /dev/null)
+readonly HIGHER_VERSION=$(npx semver ${CIRCLE_TAG} ${PUBLISHED_VERSION} | tail -1)
+
+if [ "$CIRCLE_TAG" == "$PUBLISHED_VERSION" ] || [ "$CIRCLE_TAG" != "$HIGHER_VERSION" ]; then
+  echo "Tagged version $CIRCLE_TAG is not greater than published version $PUBLISHED_VERSION."
+  exit 1
 fi
+
+TMP=$(mktemp)
+jq --arg v $CIRCLE_TAG '.version = $v' package.json > $TMP && mv $TMP package.json
 
 npm publish

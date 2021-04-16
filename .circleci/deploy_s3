@@ -6,12 +6,8 @@ if [ ! -d ./terraform ]; then
    exit 0
 fi
 
-IMAGE=$1
-REPOSITORY=${IMAGE%:*}
-TAG=${IMAGE#*:}
-IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:cache-$CIRCLE_SHA1-$TAG
-IMAGE_DEPLOY_COMMIT_URI=$ECR_URL/$REPOSITORY:$CIRCLE_SHA1-$TAG
-IMAGE_DEPLOY_URI=$ECR_DEPLOY_URL/$REPOSITORY:$TAG
+REPOSITORY=$1
+IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:cache-$CIRCLE_SHA1
 
 # Pull the built image, do nothing if this wasn't rebuilt.
 docker pull $IMAGE_COMMIT_URI > /dev/null 2>&1 || { echo "No new image found." && exit 0; }
@@ -21,11 +17,9 @@ docker cp $TEMP_CONTAINER:/usr/src/$REPOSITORY/dist $REPOSITORY
 docker rm -v $TEMP_CONTAINER
 
 # Apply terraform.
-ensure_terraform
-export TF_IN_AUTOMATION=1
+deploy_terraform
+
 cd terraform
-terraform init -input=false
-terraform apply -input=false -auto-approve
 AWS_BUCKET_NAME=$(terraform output s3)
 AWS_CLOUDFRONT_DISTRIBUTION=$(terraform output cloudfront)
 cd ..

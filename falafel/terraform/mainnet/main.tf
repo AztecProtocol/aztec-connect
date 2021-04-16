@@ -106,7 +106,7 @@ resource "aws_ecs_task_definition" "falafel" {
 [
   {
     "name": "falafel-mainnet",
-    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/falafel:latest",
+    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/falafel:${var.IMAGE_TAG}",
     "essential": true,
     "memoryReservation": 3840,
     "portMappings": [
@@ -145,7 +145,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "PRIVATE_KEY",
-        "value": "${var.PRIVATE_KEY}"
+        "value": "${var.PRIVATE_KEY_MAINNET}"
       },
       {
         "name": "SERVER_AUTH_TOKEN",

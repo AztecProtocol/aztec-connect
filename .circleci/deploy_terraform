@@ -7,7 +7,7 @@ TF_DIR=${1:-./terraform}
 if [ -d $TF_DIR ]; then
   ensure_terraform
   export TF_IN_AUTOMATION=1
-  cd terraform
+  cd $TF_DIR
   terraform init -input=false
   terraform apply -input=false -auto-approve
 fi

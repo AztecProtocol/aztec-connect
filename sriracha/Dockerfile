@@ -1,6 +1,6 @@
-FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/barretenberg:x86_64-linux-clang
-FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/barretenberg.js:latest
-FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:latest
+FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/barretenberg-x86_64-linux-clang
+FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/barretenberg.js
+FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain
 
 FROM node:12-alpine AS builder
 RUN apk update && apk add --no-cache build-base python llvm9-libs bash git

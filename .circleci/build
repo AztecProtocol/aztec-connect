@@ -1,55 +1,63 @@
 #!/bin/bash
+#
+# Builds a docker image and pushes it to it's repository. Leverages caches where possible.
+# Cached images include previous images built on this branch, otherwise use images from master at fork point.
+# The images output are cache images, meaning they will eventually get purged.
+# The deploy phase will tag the images such that they become permanent.
+#
+# usage: ./build <repository> [dockerfile]
+# example (branch cl/feature): ./build barretenberg-x86_64-linux-clang
+# output image tags:
+#   278380418400.dkr.ecr.us-east-2.amazonaws.com/barretenberg-x86_64-linux-clang:cache-cl_feature
+#   278380418400.dkr.ecr.us-east-2.amazonaws.com/barretenberg-x86_64-linux-clang:cache-deadbeefcafebabe1337c0d3
+
 set -e
 
-IMAGE=$1
-REPOSITORY=${IMAGE%:*}
-TAG=${IMAGE#*:}
+REPOSITORY=$1
 BRANCH=${CIRCLE_BRANCH//\//_}
-IMAGE_MASTER_URI=$ECR_URL/$REPOSITORY:master-$TAG
-IMAGE_BRANCH_URI=$ECR_URL/$REPOSITORY:cache-$BRANCH-$TAG
-IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:cache-$CIRCLE_SHA1-$TAG
+MASTER_TAG=master-$LAST_SUCCESSFUL_COMMIT
+IMAGE_MASTER_URI=$ECR_URL/$REPOSITORY:$MASTER_TAG
+IMAGE_BRANCH_URI=$ECR_URL/$REPOSITORY:cache-$BRANCH
+IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:cache-$CIRCLE_SHA1
 DOCKERFILE=${2:-./Dockerfile}
 
 # Ensure ECR repository exists.
 ensure_repo $REPOSITORY $ECR_REGION
 
 # Check if we should rebuild.
-check_rebuild || ! image_exists $REPOSITORY master-$TAG || { echo "No rebuild necessary." && exit 0; }
+check_rebuild || ! image_exists $REPOSITORY $MASTER_TAG || { echo "No rebuild necessary." && exit 0; }
+
+function fetch_image() {
+  echo "Pulling: $1"
+  if ! docker pull $1 > /dev/null 2>&1; then
+    echo "Image not found: $1"
+    return 1
+  fi
+  return 0
+}
 
 # Pull latest parents that are not ours.
 PARENTS=$(cat $DOCKERFILE | sed -n -e 's/^FROM \([^[:space:]]\+\).*/\1/p' | grep -v $ECR_DEPLOY_URL | sort | uniq)
 for PARENT in $PARENTS; do
-  echo "Pulling parent: $PARENT"
-  docker pull $PARENT > /dev/null
+  fetch_image $PARENT
 done
 
 # For each parent that's ours, pull in the newly rebuilt image if it's present.
 # If it's not present, there must be a master image to use.
 PARENTS=$(cat $DOCKERFILE | sed -n -e "s/^FROM $ECR_DEPLOY_URL\/\([^[:space:]]\+\)/\1/p")
 for PARENT in $PARENTS; do
-  [[ "$PARENT" =~ ":" ]] || PARENT="$PARENT:latest"
-  echo "Pulling parent: $PARENT"
   PARENT_REPO=${PARENT%:*}
-  PARENT_TAG=${PARENT#*:}
-  PARENT_IMAGE_URI=$ECR_URL/$PARENT_REPO:cache-$CIRCLE_SHA1-$PARENT_TAG
-  if ! docker pull $PARENT_IMAGE_URI > /dev/null 2>&1; then
-    PARENT_IMAGE_URI=$ECR_URL/$PARENT_REPO:master-$PARENT_TAG
-    docker pull $PARENT_IMAGE_URI > /dev/null
+  PARENT_IMAGE_URI=$ECR_URL/$PARENT_REPO:cache-$CIRCLE_SHA1
+  if ! fetch_image $PARENT_IMAGE_URI; then
+    PARENT_IMAGE_URI=$ECR_URL/$PARENT_REPO:$MASTER_TAG
+    fetch_image $PARENT_IMAGE_URI
   fi
   docker tag $PARENT_IMAGE_URI $ECR_DEPLOY_URL/$PARENT
 done
 
-function fetch_cache() {
-  if ! docker pull $1 > /dev/null 2>&1; then
-    echo "Nothing at: $1"
-    return 1
-  fi
-  return 0
-}
-
 # Pull image from cache.
-echo "Pulling previous build: $IMAGE"
-fetch_cache $IMAGE_BRANCH_URI || fetch_cache $IMAGE_MASTER_URI || true
+echo "Pulling previous build of $REPOSITORY..."
+fetch_image $IMAGE_BRANCH_URI || fetch_image $IMAGE_MASTER_URI || true
 CACHE_FROM="--cache-from $IMAGE_BRANCH_URI --cache-from $IMAGE_MASTER_URI"
 echo
 
@@ -57,10 +65,10 @@ echo
 STAGES=$(cat $DOCKERFILE | sed -n -e 's/^FROM .* AS \(.*\)/\1/p')
 for STAGE in $STAGES; do
   echo "Pulling stage: $STAGE"
-  STAGE_IMAGE_MASTER_URI=$ECR_URL/$REPOSITORY:cache-master-$TAG-$STAGE
-  STAGE_IMAGE_BRANCH_URI=$ECR_URL/$REPOSITORY:cache-$BRANCH-$TAG-$STAGE
+  STAGE_IMAGE_MASTER_URI=$ECR_URL/$REPOSITORY:cache-master-$STAGE
+  STAGE_IMAGE_BRANCH_URI=$ECR_URL/$REPOSITORY:cache-$BRANCH-$STAGE
 
-  fetch_cache $STAGE_IMAGE_BRANCH_URI || fetch_cache $STAGE_IMAGE_MASTER_URI || true
+  fetch_image $STAGE_IMAGE_BRANCH_URI || fetch_image $STAGE_IMAGE_MASTER_URI || true
   STAGE_CACHE_FROM="--cache-from $STAGE_IMAGE_BRANCH_URI --cache-from $STAGE_IMAGE_MASTER_URI"
   CACHE_FROM="$CACHE_FROM $STAGE_CACHE_FROM"
 
@@ -72,10 +80,11 @@ for STAGE in $STAGES; do
   echo
 done
 
-echo "Building image: $IMAGE"
+echo "Building image: $IMAGE_BRANCH_URI, $IMAGE_COMMIT_URI"
 docker build -t $IMAGE_BRANCH_URI -t $IMAGE_COMMIT_URI -f $DOCKERFILE $CACHE_FROM .
-echo "Pushing image: $IMAGE"
+echo "Pushing image: $IMAGE_BRANCH_URI"
 docker push $IMAGE_BRANCH_URI > /dev/null 2>&1
+echo "Pushing image: $IMAGE_COMMIT_URI"
 docker push $IMAGE_COMMIT_URI > /dev/null 2>&1
 echo
 
