@@ -20,20 +20,22 @@ cd $REPOSITORY
 # Publish npm package using given version number if higher than published, otherwise bump published.
 echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > .npmrc
 
-if [ "$(npx semver $CIRCLE_TAG)" == "" ]; then
-  echo "$CIRCLE_TAG is not a semantic version."
+VERSION=$(echo "$CIRCLE_TAG" | grep -oP "\d+(.\d+)*")
+
+if [ "$(npx semver $VERSION)" == "" ]; then
+  echo "$VERSION is not a semantic version."
   exit 1
 fi
 
 readonly PUBLISHED_VERSION=$(npm show ./ version 2> /dev/null)
-readonly HIGHER_VERSION=$(npx semver ${CIRCLE_TAG} ${PUBLISHED_VERSION} | tail -1)
+readonly HIGHER_VERSION=$(npx semver ${VERSION} ${PUBLISHED_VERSION} | tail -1)
 
-if [ "$CIRCLE_TAG" == "$PUBLISHED_VERSION" ] || [ "$CIRCLE_TAG" != "$HIGHER_VERSION" ]; then
-  echo "Tagged version $CIRCLE_TAG is not greater than published version $PUBLISHED_VERSION."
+if [ "$VERSION" == "$PUBLISHED_VERSION" ] || [ "$VERSION" != "$HIGHER_VERSION" ]; then
+  echo "Tagged version $VERSION is not greater than published version $PUBLISHED_VERSION."
   exit 1
 fi
 
 TMP=$(mktemp)
-jq --arg v $CIRCLE_TAG '.version = $v' package.json > $TMP && mv $TMP package.json
+jq --arg v $VERSION '.version = $v' package.json > $TMP && mv $TMP package.json
 
 npm publish
