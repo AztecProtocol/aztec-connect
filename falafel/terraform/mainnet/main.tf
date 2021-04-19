@@ -133,7 +133,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "HALLOUMI_HOST",
-        "value": "http://halloumi.local"
+        "value": "http://halloumi-mainnet.local"
       },
       {
         "name": "ROLLUP_CONTRACT_ADDRESS",

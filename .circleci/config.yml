@@ -325,10 +325,10 @@ jobs:
           command: |
             deploy_ecr sdk
             deploy_npm sdk
-      # - run:
-      #     name: 'halloumi'
-      #     working_directory: halloumi
-      #     command: deploy halloumi
+      - run:
+          name: 'halloumi'
+          working_directory: halloumi
+          command: deploy halloumi halloumi-mainnet ./terraform/mainnet
       - run:
           name: 'falafel'
           working_directory: falafel

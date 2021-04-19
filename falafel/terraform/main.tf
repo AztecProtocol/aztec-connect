@@ -162,11 +162,11 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "NUM_INNER_ROLLUP_TXS",
-        "value": "28"
+        "value": "7"
       },
       {
         "name": "NUM_OUTER_ROLLUP_PROOFS",
-        "value": "4"
+        "value": "1"
       },
       {
         "name": "FEE_GAS_PRICE",
