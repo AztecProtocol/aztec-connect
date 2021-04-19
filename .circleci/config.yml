@@ -351,12 +351,13 @@ jobs:
       #     command: |
       #       deploy documentation
       #       deploy_s3 documentation
-      # - run:
-      #     name: 'zk-money'
-      #     working_directory: zk-money
-      #     command: |
-      #       deploy zk-money
-      #       deploy_s3 zk-money
+      - run:
+          name: 'zk-money'
+          working_directory: zk-money
+          command: |
+            deploy_ecr zk-money
+            deploy_terraform ./terraform/mainnet
+            deploy_s3 zk-money
 
 workflows:
   build:

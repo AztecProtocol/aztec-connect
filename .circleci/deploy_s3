@@ -1,11 +1,6 @@
 #!/bin/bash
 set -e
 
-if [ ! -d ./terraform ]; then
-   echo "No terraform found."
-   exit 0
-fi
-
 REPOSITORY=$1
 IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:cache-$CIRCLE_SHA1
 
@@ -15,9 +10,6 @@ TEMP_CONTAINER=$(docker create $IMAGE_COMMIT_URI)
 
 docker cp $TEMP_CONTAINER:/usr/src/$REPOSITORY/dist $REPOSITORY
 docker rm -v $TEMP_CONTAINER
-
-# Apply terraform.
-deploy_terraform
 
 cd terraform
 AWS_BUCKET_NAME=$(terraform output s3)
