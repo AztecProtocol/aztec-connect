@@ -11,13 +11,6 @@ fi
 
 extract_repo $REPOSITORY /usr/src/$REPOSITORY/dist ./dist
 
-if [ ! -d ./build/$REPOSITORY/dist ]; then
-   echo "Expected dist folder at ./build/$REPOSITORY/dist"
-   echo "Repository contents:"
-   ls -al ./build/$REPOSITORY
-   exit 1
-fi
-
 deploy_terraform $TF_DIR
 
 pushd $TF_DIR > /dev/null
@@ -26,7 +19,7 @@ AWS_CLOUDFRONT_DISTRIBUTION=$(terraform output cloudfront)
 popd > /dev/null
 
 aws s3 rm s3://$AWS_BUCKET_NAME --recursive
-aws s3 cp ./build/$REPOSITORY/dist s3://$AWS_BUCKET_NAME --recursive --metadata-directive REPLACE --cache-control "max-age=3600" --acl public-read
+aws s3 cp ./dist s3://$AWS_BUCKET_NAME --recursive --metadata-directive REPLACE --cache-control "max-age=3600" --acl public-read
 aws s3 cp \
        s3://$AWS_BUCKET_NAME \
        s3://$AWS_BUCKET_NAME \
