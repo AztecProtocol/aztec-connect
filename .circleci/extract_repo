@@ -19,4 +19,4 @@ fi
 echo "Created container $TEMP_CONTAINER"
 echo "Extracting build for $REPOSITORY to $EXTRACT_PATH..."
 docker cp $TEMP_CONTAINER:/usr/src $EXTRACT_PATH
-docker rm -v $TEMP_CONTAINER
+docker rm -v $TEMP_CONTAINER > /dev/null

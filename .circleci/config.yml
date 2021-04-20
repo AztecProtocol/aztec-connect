@@ -356,8 +356,7 @@ jobs:
           working_directory: zk-money
           command: |
             deploy_ecr zk-money
-            deploy_terraform ./terraform/mainnet
-            deploy_s3 zk-money
+            deploy_s3 zk-money ./terraform/mainnet
 
 workflows:
   build:
