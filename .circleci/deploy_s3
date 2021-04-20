@@ -2,10 +2,10 @@
 set -e
 
 REPOSITORY=$1
-TF_DIR=$2
+TF_DIR=${2:-./terraform}
 
-if [ ! -d ./terraform ]; then
-   echo "No terraform found. Required for bucket and cloudfront outputs."
+if [ ! -d $TF_DIR ]; then
+   echo "No terraform dir at $TF_DIR. Required for bucket and cloudfront outputs."
    exit 1
 fi
 
@@ -20,10 +20,10 @@ fi
 
 deploy_terraform $TF_DIR
 
-pushd $TF_DIR
+pushd $TF_DIR > /dev/null
 AWS_BUCKET_NAME=$(terraform output s3)
 AWS_CLOUDFRONT_DISTRIBUTION=$(terraform output cloudfront)
-popd
+popd > /dev/null
 
 aws s3 rm s3://$AWS_BUCKET_NAME --recursive
 aws s3 cp ./build/$REPOSITORY/dist s3://$AWS_BUCKET_NAME --recursive --metadata-directive REPLACE --cache-control "max-age=3600" --acl public-read
