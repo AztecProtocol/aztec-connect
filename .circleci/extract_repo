@@ -5,11 +5,15 @@ set -e
 REPOSITORY=$1
 PATH=${2:-/usr/src/$REPOSITORY}
 IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:cache-$CIRCLE_SHA1
-IMAGE_MASTER_URI=$ECR_URL/$REPOSITORY:master-$LAST_SUCCESSFUL_COMMIT
+IMAGE_MASTER_URI=$ECR_URL/$REPOSITORY:master-$CIRCLE_SHA1
 
+echo "Extracting build for $REPOSITORY to $PATH..."
+
+echo "Pulling $IMAGE_COMMIT_URI..."
 if docker pull $IMAGE_COMMIT_URI > /dev/null 2>&1; then
   TEMP_CONTAINER=$(docker create $IMAGE_COMMIT_URI)
 else
+  echo "Pulling $IMAGE_MASTER_URI..."
   docker pull $IMAGE_MASTER_URI > /dev/null 2>&1
   TEMP_CONTAINER=$(docker create $IMAGE_MASTER_URI)
 fi
