@@ -3,7 +3,8 @@
 set -e
 
 REPOSITORY=$1
-EXTRACT_PATH=${2:-./}
+EXTRACT_FROM=${2:-/usr/src}
+EXTRACT_TO=${3:-./}
 IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:cache-$CIRCLE_SHA1
 IMAGE_MASTER_URI=$ECR_URL/$REPOSITORY:master-$CIRCLE_SHA1
 
@@ -16,7 +17,6 @@ else
   TEMP_CONTAINER=$(docker create $IMAGE_MASTER_URI)
 fi
 
-echo "Created container $TEMP_CONTAINER"
-echo "Extracting build for $REPOSITORY to $EXTRACT_PATH..."
-docker cp $TEMP_CONTAINER:/usr/src $EXTRACT_PATH
+echo "Extracting $EXTRACT_FROM from $REPOSITORY to $EXTRACT_TO..."
+docker cp $TEMP_CONTAINER:$EXTRACT_FROM $EXTRACT_TO
 docker rm -v $TEMP_CONTAINER > /dev/null

@@ -9,7 +9,7 @@ if [ ! -d $TF_DIR ]; then
    exit 1
 fi
 
-extract_repo $REPOSITORY ./build
+extract_repo $REPOSITORY /usr/src/$REPOSITORY/dist ./dist
 
 if [ ! -d ./build/$REPOSITORY/dist ]; then
    echo "Expected dist folder at ./build/$REPOSITORY/dist"
