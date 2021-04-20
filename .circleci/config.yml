@@ -276,31 +276,31 @@ jobs:
           name: 'hummus'
           working_directory: hummus
           command: |
-            deploy hummus
+            deploy_ecr hummus
             deploy_s3 hummus
       - run:
           name: 'block-explorer'
           working_directory: block-explorer
           command: |
-            deploy block-explorer
+            deploy_ecr block-explorer
             deploy_s3 block-explorer
       - run:
           name: 'documentation'
           working_directory: documentation
           command: |
-            deploy documentation
+            deploy_ecr documentation
             deploy_s3 documentation
       - run:
           name: 'website'
           working_directory: website
           command: |
-            deploy website
+            deploy_ecr website
             deploy_s3 website
       - run:
           name: 'zk-money'
           working_directory: zk-money
           command: |
-            deploy zk-money
+            deploy_ecr zk-money
             deploy_s3 zk-money
       - run:
           name: 'metrics'

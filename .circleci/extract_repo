@@ -1,0 +1,18 @@
+#!/bin/bash
+# Given a repository, extracts that latest build to given path or /usr/src/<repo>.
+set -e
+
+REPOSITORY=$1
+PATH=${2:-/usr/src/$REPOSITORY}
+IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:cache-$CIRCLE_SHA1
+IMAGE_MASTER_URI=$ECR_URL/$REPOSITORY:master-$LAST_SUCCESSFUL_COMMIT
+
+if docker pull $IMAGE_COMMIT_URI > /dev/null 2>&1; then
+  TEMP_CONTAINER=$(docker create $IMAGE_COMMIT_URI)
+else
+  docker pull $IMAGE_MASTER_URI > /dev/null 2>&1; then
+  TEMP_CONTAINER=$(docker create $IMAGE_MASTER_URI)
+fi
+
+docker cp $TEMP_CONTAINER:/usr/src/$REPOSITORY $PATH
+docker rm -v $TEMP_CONTAINER

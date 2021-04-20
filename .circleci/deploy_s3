@@ -2,14 +2,20 @@
 set -e
 
 REPOSITORY=$1
-IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:cache-$CIRCLE_SHA1
 
-# Pull the built image, do nothing if this wasn't rebuilt.
-docker pull $IMAGE_COMMIT_URI > /dev/null 2>&1 || { echo "No new image found." && exit 0; }
-TEMP_CONTAINER=$(docker create $IMAGE_COMMIT_URI)
+if [ ! -d ./terraform ]; then
+   echo "No terraform found. Required for bucket and cloudfront outputs."
+   exit 1
+fi
 
-docker cp $TEMP_CONTAINER:/usr/src/$REPOSITORY/dist $REPOSITORY
-docker rm -v $TEMP_CONTAINER
+extract_repo zk-money /usr/src/$REPOSITORY
+
+if [ ! -d /usr/src/$REPOSITORY/dist ]; then
+   echo "Expected dist folder at /usr/src/$REPOSITORY/dist"
+   echo "Repository contents:"
+   ls -al /usr/src/$REPOSITORY
+   exit 1
+fi
 
 cd terraform
 AWS_BUCKET_NAME=$(terraform output s3)
@@ -17,7 +23,7 @@ AWS_CLOUDFRONT_DISTRIBUTION=$(terraform output cloudfront)
 cd ..
 
 aws s3 rm s3://$AWS_BUCKET_NAME --recursive
-aws s3 cp $REPOSITORY s3://$AWS_BUCKET_NAME --recursive --metadata-directive REPLACE --cache-control "max-age=3600" --acl public-read
+aws s3 cp /usr/src/$REPOSITORY/dist s3://$AWS_BUCKET_NAME --recursive --metadata-directive REPLACE --cache-control "max-age=3600" --acl public-read
 aws s3 cp \
        s3://$AWS_BUCKET_NAME \
        s3://$AWS_BUCKET_NAME \
