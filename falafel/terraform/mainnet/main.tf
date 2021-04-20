@@ -177,7 +177,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "PUBLISH_INTERVAL",
-        "value": "14400"
+        "value": "21600"
       }
     ],
     "mountPoints": [

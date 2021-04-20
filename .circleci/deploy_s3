@@ -8,12 +8,12 @@ if [ ! -d ./terraform ]; then
    exit 1
 fi
 
-extract_repo $REPOSITORY /usr/src/$REPOSITORY
+extract_repo $REPOSITORY ./build
 
-if [ ! -d /usr/src/$REPOSITORY/dist ]; then
-   echo "Expected dist folder at /usr/src/$REPOSITORY/dist"
+if [ ! -d ./build/$REPOSITORY/dist ]; then
+   echo "Expected dist folder at ./build/$REPOSITORY/dist"
    echo "Repository contents:"
-   ls -al /usr/src/$REPOSITORY
+   ls -al ./build/$REPOSITORY
    exit 1
 fi
 
@@ -23,7 +23,7 @@ AWS_CLOUDFRONT_DISTRIBUTION=$(terraform output cloudfront)
 cd ..
 
 aws s3 rm s3://$AWS_BUCKET_NAME --recursive
-aws s3 cp /usr/src/$REPOSITORY/dist s3://$AWS_BUCKET_NAME --recursive --metadata-directive REPLACE --cache-control "max-age=3600" --acl public-read
+aws s3 cp ./build/$REPOSITORY/dist s3://$AWS_BUCKET_NAME --recursive --metadata-directive REPLACE --cache-control "max-age=3600" --acl public-read
 aws s3 cp \
        s3://$AWS_BUCKET_NAME \
        s3://$AWS_BUCKET_NAME \

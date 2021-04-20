@@ -1,9 +1,9 @@
 #!/bin/bash
-# Given a repository, extracts that latest build to given path or /usr/src/<repo>.
+# Given a repository, extracts the builds entire /usr/src dir to the given path.
 set -e
 
 REPOSITORY=$1
-PATH=${2:-/usr/src/$REPOSITORY}
+PATH=${2:-./}
 IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:cache-$CIRCLE_SHA1
 IMAGE_MASTER_URI=$ECR_URL/$REPOSITORY:master-$CIRCLE_SHA1
 
@@ -18,5 +18,5 @@ else
   TEMP_CONTAINER=$(docker create $IMAGE_MASTER_URI)
 fi
 
-docker cp $TEMP_CONTAINER:/usr/src/$REPOSITORY $PATH
+docker cp $TEMP_CONTAINER:/usr/src $PATH
 docker rm -v $TEMP_CONTAINER
