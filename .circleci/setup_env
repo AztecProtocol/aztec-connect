@@ -20,9 +20,8 @@ else
   git branch -f master origin/master
 
   if [ -n "$CIRCLE_TAG" ]; then
-    # CIRCLE_BRANCH is not set for tagged builds. Figure out which version branch this tag is on.
-    CIRCLE_BRANCH=$(git branch --contains $CIRCLE_TAG | grep -oP 'v\d+(.\d+)*')
-    [ -n "$CIRCLE_BRANCH" ] || { echo "Unable to determine version branch tag is on." && exit 1; }
+    # CIRCLE_BRANCH is not set for tagged builds. The branch name should match the tag without the patch version.
+    CIRCLE_BRANCH=$(echo $CIRCLE_TAG | grep -oP 'v\d+.\d+')
   fi
 
   # The last successful commit is the commit at which we forked off master.
