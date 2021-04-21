@@ -2,6 +2,7 @@
 [ -n "$CIRCLE_TOKEN" ] || (echo "No CIRCLE_TOKEN available." && exit 1)
 
 if [ "$CIRCLE_BRANCH" == "master" ]; then
+  # Find the last successful commit. This is the last master that deployed successfully.
   LAST_SUCCESSFUL_BUILD_URL="https://circleci.com/api/v1.1/project/github/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/tree/master?filter=successful&limit=100"
   LAST_SUCCESSFUL_COMMIT=`curl -Ss -u "$CIRCLE_TOKEN:" $LAST_SUCCESSFUL_BUILD_URL | jq -r '[.[] | select(.build_parameters.CIRCLE_JOB == "deploy")][0].vcs_revision'`
   OFFSET=0
@@ -14,12 +15,21 @@ if [ "$CIRCLE_BRANCH" == "master" ]; then
     LAST_SUCCESSFUL_BUILD_URL="https://circleci.com/api/v1.1/project/github/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/tree/master?filter=successful&limit=100&offset=$OFFSET"
     LAST_SUCCESSFUL_COMMIT=`curl -Ss -u "$CIRCLE_TOKEN:" $LAST_SUCCESSFUL_BUILD_URL | jq -r '[.[] | select(.build_parameters.CIRCLE_JOB == "deploy")][0].vcs_revision'`
   done
-  echo export LAST_SUCCESSFUL_COMMIT=$LAST_SUCCESSFUL_COMMIT >> $BASH_ENV
 else
   # CircleCI checkout mangles master for some reason. Reset it.
   git branch -f master origin/master
-  echo export LAST_SUCCESSFUL_COMMIT=`git merge-base master $CIRCLE_BRANCH` >> $BASH_ENV
+
+  if [ -n "$CIRCLE_TAG" ]; then
+    # CIRCLE_BRANCH is not set for tagged builds. Figure out which version branch this tag is on.
+    CIRCLE_BRANCH=$(git branch --contains $CIRCLE_TAG | grep -oP 'v\d+(.\d+)*')
+    [ -n "$CIRCLE_BRANCH" ] || { echo "Unable to determine version branch tag is on." && exit 1; }
+  fi
+
+  # The last successful commit is the commit at which we forked off master.
+  LAST_SUCCESSFUL_COMMIT=`git merge-base master $CIRCLE_BRANCH`
 fi
+
+[ -n "$LAST_SUCCESSFUL_COMMIT" ] || { echo "Unable to determine the last successful commit." && exit 1; }
 
 echo export PATH=$PATH:$(pwd)/.circleci >> $BASH_ENV
 echo export AWS_DEFAULT_REGION=eu-west-2 >> $BASH_ENV
@@ -29,4 +39,6 @@ echo export ECR_DEPLOY_REGION=eu-west-2 >> $BASH_ENV
 echo export ECR_DEPLOY_URL=278380418400.dkr.ecr.eu-west-2.amazonaws.com >> $BASH_ENV
 echo export REBUILD=$1 >> $BASH_ENV
 echo export TF_VAR_IMAGE_TAG=$CIRCLE_TAG >> $BASH_ENV
+echo export CIRCLE_BRANCH=$CIRCLE_BRANCH >> $BASH_ENV
+echo export LAST_SUCCESSFUL_COMMIT=$LAST_SUCCESSFUL_COMMIT >> $BASH_ENV
 cat $BASH_ENV
