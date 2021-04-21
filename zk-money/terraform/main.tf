@@ -190,21 +190,6 @@ resource "aws_iam_role_policy_attachment" "basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-resource "aws_lambda_permission" "allow_cloudfront_invocation" {
-  statement_id  = "AllowExecutionFromCloudFront"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.twitter_meta_lambda_testnet.function_name
-  principal     = "edgelambda.amazonaws.com"
-  source_arn    = aws_cloudfront_distribution.zkmoney_testnet_distribution.arn
-}
-
-resource "aws_lambda_permission" "allow_cloudfront" {
-  statement_id  = "AllowGetFromCloudFront"
-  action        = "lambda:GetFunction"
-  function_name = aws_lambda_function.twitter_meta_lambda_testnet.function_name
-  principal     = "edgelambda.amazonaws.com"
-  source_arn    = aws_cloudfront_distribution.zkmoney_testnet_distribution.arn
-}
 
 variable "lambda_function_name" {
   default = "twitter_meta_lambda_testnet"
@@ -219,4 +204,23 @@ resource "aws_lambda_function" "twitter_meta_lambda_testnet" {
   source_code_hash = fileexists("../dist/twitter_lambda.zip") ? filebase64sha256("../dist/twitter_lambda.zip") : ""
   runtime          = "nodejs12.x"
   publish          = true
+}
+
+resource "aws_lambda_permission" "allow_cloudfront_invocation" {
+  statement_id  = "AllowExecutionFromCloudFront"
+  action        = "lambda:InvokeFunction"
+  function_name = var.lambda_function_name
+  principal     = "edgelambda.amazonaws.com"
+  source_arn    = aws_cloudfront_distribution.zkmoney_testnet_distribution.arn
+  provider = aws.acm
+
+}
+
+resource "aws_lambda_permission" "allow_cloudfront" {
+  provider = aws.acm
+  statement_id  = "AllowGetFromCloudFront"
+  action        = "lambda:GetFunction"
+  function_name = var.lambda_function_name
+  principal     = "edgelambda.amazonaws.com"
+  source_arn    = aws_cloudfront_distribution.zkmoney_testnet_distribution.arn
 }
