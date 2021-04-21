@@ -40,6 +40,7 @@ if [ -z "$CIRCLE_TAG" ]; then
   docker push $IMAGE_DEPLOY_COMMIT_URI
 else
   # This is tagged release.
+  docker pull $IMAGE_COMMIT_URI > /dev/null 2>&1
 
   # Ensure ECR repository exists in deployment region.
   ensure_repo $REPOSITORY $ECR_DEPLOY_REGION
