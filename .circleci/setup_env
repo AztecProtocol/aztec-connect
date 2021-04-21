@@ -1,4 +1,6 @@
 #!/bin/bash
+set -e
+
 [ -n "$CIRCLE_TOKEN" ] || (echo "No CIRCLE_TOKEN available." && exit 1)
 
 if [ "$CIRCLE_BRANCH" == "master" ]; then
@@ -22,7 +24,7 @@ else
   if [ -n "$CIRCLE_TAG" ]; then
     # CIRCLE_BRANCH is not set for tagged builds. The branch name should match the tag without the patch version.
     CIRCLE_BRANCH=$(echo $CIRCLE_TAG | grep -oP 'v\d+.\d+')
-    git fetch
+    git checkout $CIRCLE_BRANCH
   fi
 
   # The last successful commit is the commit at which we forked off master.
