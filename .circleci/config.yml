@@ -358,33 +358,46 @@ jobs:
             deploy_ecr zk-money
             deploy_s3 zk-money ./terraform/mainnet
 
+tag_filter: &tag_filter
+  tags:
+    only: /v[0-9]+(\.[0-9]+)*/
+
 workflows:
   build:
     jobs:
-      - x86_64-linux-gcc
-      - x86_64-linux-clang
-      - wasm-linux-clang
+      - x86_64-linux-gcc:
+          filters: *tag_filter
+      - x86_64-linux-clang:
+          filters: *tag_filter
+      - wasm-linux-clang:
+          filters: *tag_filter
       - barretenberg-js:
           requires:
             - wasm-linux-clang
             - x86_64-linux-clang
+          filters: *tag_filter
       - blockchain:
           requires:
             - barretenberg-js
+          filters: *tag_filter
       - halloumi:
           requires:
             - barretenberg-js
+          filters: *tag_filter
       - falafel:
           requires:
             - blockchain
             - halloumi
+          filters: *tag_filter
       - sriracha:
           requires:
             - blockchain
+          filters: *tag_filter
       - sdk:
           requires:
             - falafel
             - sriracha
+          filters: *tag_filter
       - hummus:
           requires:
             - sdk
@@ -397,12 +410,14 @@ workflows:
       - zk-money:
           requires:
             - sdk
+          filters: *tag_filter
       - documentation:
           requires:
             - sdk
       - end-to-end:
           requires:
             - sdk
+          filters: *tag_filter
       - website
       - metrics
       - deploy:
@@ -421,6 +436,4 @@ workflows:
       - deploy-prod:
           requires:
             - zk-money
-          filters:
-            tags:
-              only: /v[0-9]+(\.[0-9]+)*/
+          filters: *tag_filter
