@@ -39,6 +39,7 @@ export async function deploy(
   const uniswapRouter = uniswapRouterAddress
     ? new Contract(uniswapRouterAddress, UniswapV2Router02Json.abi, signer)
     : await deployUniswap(signer);
+  await uniswapRouter.deployed();
 
   const feeDistributor = feeDistributorAddress
     ? new Contract(feeDistributorAddress, FeeDistributor.abi, signer)
