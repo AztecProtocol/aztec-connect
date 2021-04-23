@@ -162,7 +162,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "NUM_INNER_ROLLUP_TXS",
-        "value": "7"
+        "value": "3"
       },
       {
         "name": "NUM_OUTER_ROLLUP_PROOFS",
