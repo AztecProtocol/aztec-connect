@@ -10,12 +10,14 @@ export async function addAsset(rollup: Contract, signer: Signer, supportsPermit:
     const erc20 = await erc20Factory.deploy();
     console.error(`ERC20 contract address: ${erc20.address}`);
     await setSupportedAsset(rollup, erc20.address, supportsPermit);
+    return erc20;
   } else {
     console.error('Deploying ERC20...');
     const erc20Factory = new ContractFactory(ERC20Mintable.abi, ERC20Mintable.bytecode, signer);
     const erc20 = await erc20Factory.deploy();
     console.error(`ERC20 contract address: ${erc20.address}`);
     await setSupportedAsset(rollup, erc20.address, supportsPermit);
+    return erc20;
   }
 }
 

@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 import { Contract, ContractFactory, Signer } from 'ethers';
 import { parseEther } from '@ethersproject/units';
+import UniswapV2Router02Json from '@uniswap/v2-periphery/build/UniswapV2Router02.json';
 import RollupProcessor from '../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
 import FeeDistributor from '../artifacts/contracts/interfaces/IFeeDistributor.sol/IFeeDistributor.json';
 import { deployFeeDistributor } from './deploy_fee_distributor';
 import { deployVerifier } from './deploy_verifier';
 import { addAsset } from './add_asset/add_asset';
+import { createPair, deployUniswap } from './deploy_uniswap';
 
 export async function deploy(
   escapeHatchBlockLower: number,
@@ -13,6 +15,9 @@ export async function deploy(
   signer: Signer,
   initialFee?: string,
   feeDistributorAddress?: string,
+  uniswapRouterAddress?: string,
+  initialTokenSupply?: bigint,
+  initialEthSupply?: bigint,
 ) {
   const verifier = await deployVerifier(signer);
   console.error('Deploying RollupProcessor...');
@@ -31,9 +36,13 @@ export async function deploy(
   await rollup.deployed();
   console.error(`Rollup contract address: ${rollup.address}`);
 
+  const uniswapRouter = uniswapRouterAddress
+    ? new Contract(uniswapRouterAddress, UniswapV2Router02Json.abi, signer)
+    : await deployUniswap(signer);
+
   const feeDistributor = feeDistributorAddress
     ? new Contract(feeDistributorAddress, FeeDistributor.abi, signer)
-    : await deployFeeDistributor(signer, rollup);
+    : await deployFeeDistributor(signer, rollup, uniswapRouter);
   rollup.setFeeDistributor(feeDistributor.address);
 
   if (initialFee) {
@@ -43,7 +52,8 @@ export async function deploy(
   }
 
   // Add test asset with permit support.
-  await addAsset(rollup, signer, true);
+  const asset = await addAsset(rollup, signer, true);
+  await createPair(signer, uniswapRouter, asset, initialTokenSupply, initialEthSupply);
 
-  return { rollup, feeDistributor };
+  return { rollup, feeDistributor, uniswapRouter };
 }

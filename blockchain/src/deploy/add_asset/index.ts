@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 import { Contract, ethers, Signer } from 'ethers';
+import IUniswapV2Router02 from '../../artifacts/@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol/IUniswapV2Router02.json';
+import IFeeDistributor from '../../artifacts/contracts/interfaces/IFeeDistributor.sol/IFeeDistributor.json';
 import RollupProcessor from '../../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
+import ERC20Mintable from '../../artifacts/contracts/test/ERC20Mintable.sol/ERC20Mintable.json';
+import { createPair } from '../deploy_uniswap';
 import { addAsset } from './add_asset';
 
 const { ETHEREUM_HOST, INFURA_API_KEY, NETWORK, PRIVATE_KEY, ROLLUP_CONTRACT_ADDRESS } = process.env;
@@ -17,7 +21,7 @@ function getSigner() {
   }
 }
 async function main() {
-  const [, , erc20Address, supportsPermitStr] = process.argv;
+  const [, , erc20Address, supportsPermitStr, initialTokenSupplyStr, initialEthSupplyStr] = process.argv;
   const supportsPermit = !!supportsPermitStr;
 
   const signer = getSigner();
@@ -30,7 +34,16 @@ async function main() {
   }
 
   const rollup = new Contract(ROLLUP_CONTRACT_ADDRESS, RollupProcessor.abi, signer);
-  erc20Address ? erc20Address : await addAsset(rollup, signer, supportsPermit);
+  const asset = erc20Address
+    ? new Contract(erc20Address, ERC20Mintable.abi, signer)
+    : await addAsset(rollup, signer, supportsPermit);
+
+  const feeDistributorAddress = await rollup.feeDistributor();
+  const feeDistributor = new Contract(feeDistributorAddress, IFeeDistributor.abi, signer);
+  const uniswapRouter = new Contract(await feeDistributor.router(), IUniswapV2Router02.abi, signer);
+  const initialTokenSupply = initialTokenSupplyStr ? BigInt(initialTokenSupplyStr) : undefined;
+  const initialEthSupply = initialEthSupplyStr ? BigInt(initialEthSupplyStr) : undefined;
+  await createPair(signer, uniswapRouter, asset, initialTokenSupply, initialEthSupply);
 }
 
 main().catch(error => {

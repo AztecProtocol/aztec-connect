@@ -12,6 +12,9 @@ const {
 
 const MULTI_SIG_ADDRESS = '0xE298a76986336686CC3566469e3520d23D1a8aaD';
 
+// https://uniswap.org/docs/v2/smart-contracts/router02/#address
+const UNISWAP_ROUTER_ADDRESS = '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D';
+
 function getSigner() {
   if (!PRIVATE_KEY) {
     throw new Error('Specify PRIVATE_KEY.');
@@ -25,6 +28,7 @@ async function main() {
   const { rollup, feeDistributor } = await deploy(
     +ESCAPE_BLOCK_LOWER,
     +ESCAPE_BLOCK_UPPER,
+    UNISWAP_ROUTER_ADDRESS,
     MULTI_SIG_ADDRESS,
     getSigner(),
   );
