@@ -54,8 +54,10 @@ export class Contracts {
     this.assets = [new EthAsset(this.provider), ...tokenAssets];
 
     const [gasPriceFeedAddress, ...tokenPriceFeedAddresses] = this.priceFeedContractAddresses;
-    this.gasPriceFeed = new GasPriceFeed(gasPriceFeedAddress, this.provider);
-    this.priceFeeds = [new EthPriceFeed(), ...tokenPriceFeedAddresses.map(a => new TokenPriceFeed(a, this.provider))];
+    if (gasPriceFeedAddress) {
+      this.gasPriceFeed = new GasPriceFeed(gasPriceFeedAddress, this.provider);
+      this.priceFeeds = [new EthPriceFeed(), ...tokenPriceFeedAddresses.map(a => new TokenPriceFeed(a, this.provider))];
+    }
   }
 
   public async setSupportedAsset(assetAddress: EthAddress, supportsPermit: boolean, signingAddress?: EthAddress) {
