@@ -71,7 +71,7 @@ export class TokenAsset implements Asset {
 
   async mint(value: bigint, account: EthAddress, provider?: EthereumProvider) {
     const contract = this.getContractWithSigner(account, provider);
-    const res = await contract.mint(account, value);
+    const res = await contract.mint(account.toString(), value);
     const receipt = await res.wait(this.minConfirmations);
     return TxHash.fromString(receipt.transactionHash);
   }
