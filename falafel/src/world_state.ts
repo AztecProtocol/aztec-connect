@@ -52,7 +52,7 @@ export class WorldState {
     this.blockQueue.process(block => this.handleBlock(block));
   }
 
-  public async getNextPublishTime() {
+  public getNextPublishTime() {
     return this.pipeline.getNextPublishTime();
   }
 

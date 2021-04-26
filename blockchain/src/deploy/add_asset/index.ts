@@ -4,6 +4,7 @@ import IUniswapV2Router02 from '../../artifacts/@uniswap/v2-periphery/contracts/
 import IFeeDistributor from '../../artifacts/contracts/interfaces/IFeeDistributor.sol/IFeeDistributor.json';
 import RollupProcessor from '../../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
 import ERC20Mintable from '../../artifacts/contracts/test/ERC20Mintable.sol/ERC20Mintable.json';
+import { deployPriceFeed } from '../deploy_price_feed';
 import { createPair } from '../deploy_uniswap';
 import { addAsset } from './add_asset';
 
@@ -21,7 +22,15 @@ function getSigner() {
   }
 }
 async function main() {
-  const [, , erc20Address, supportsPermitStr, initialTokenSupplyStr, initialEthSupplyStr] = process.argv;
+  const [
+    ,
+    ,
+    erc20Address,
+    supportsPermitStr,
+    initialTokenSupplyStr,
+    initialEthSupplyStr,
+    initialPriceStr,
+  ] = process.argv;
   const supportsPermit = !!supportsPermitStr;
 
   const signer = getSigner();
@@ -44,6 +53,8 @@ async function main() {
   const initialTokenSupply = initialTokenSupplyStr ? BigInt(initialTokenSupplyStr) : undefined;
   const initialEthSupply = initialEthSupplyStr ? BigInt(initialEthSupplyStr) : undefined;
   await createPair(signer, uniswapRouter, asset, initialTokenSupply, initialEthSupply);
+  const initialPrice = initialPriceStr ? BigInt(initialPriceStr) : undefined;
+  await deployPriceFeed(signer, initialPrice);
 }
 
 main().catch(error => {

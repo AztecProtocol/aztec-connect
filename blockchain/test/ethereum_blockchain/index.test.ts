@@ -20,6 +20,7 @@ import {
 import { createLowLevelPermitSig, signPermit } from '../rollup_processor/fixtures/create_permit_signature';
 import { setupRollupProcessor } from '../rollup_processor/fixtures/setup_rollup_processor';
 import { createPermitData } from '../../src/create_permit_data';
+import { setupPriceFeeds } from './setup_price_feeds';
 
 use(solidity);
 
@@ -40,6 +41,7 @@ describe('ethereum_blockchain', () => {
   let rollupProvider: Signer;
   let rollupProviderAddress: EthAddress;
   let feeDistributorAddress: EthAddress;
+  let priceFeedContracts: Contract[];
   let userA: Signer;
   let userB: Signer;
   let userAAddress: EthAddress;
@@ -53,6 +55,7 @@ describe('ethereum_blockchain', () => {
   const depositAmount = 30;
   const withdrawalAmount = 10;
   const permitAssetId = 2;
+  const initialPrices = [100n, 250n, 360n];
   let waitOnBlockProcessed: any;
 
   const sendRollupProof = async (
@@ -114,6 +117,8 @@ describe('ethereum_blockchain', () => {
     erc20UserA = erc20.connect(userA);
     feeDistributorAddress = EthAddress.fromString(feeDistributor.address);
 
+    priceFeedContracts = await setupPriceFeeds(rollupProvider, initialPrices);
+
     ethereumBlockchain = await EthereumBlockchain.new(
       {
         gasLimit: 5000000,
@@ -122,6 +127,7 @@ describe('ethereum_blockchain', () => {
         console: false,
       },
       EthAddress.fromString(rollupProcessor.address),
+      priceFeedContracts.map(contract => EthAddress.fromString(contract.address)),
       provider,
     );
     await ethereumBlockchain.start();
@@ -404,5 +410,22 @@ describe('ethereum_blockchain', () => {
     await expect(sendEscapeHatchProof(proofData, viewingKeys, signatures[0])).to.be.revertedWith(
       'Rollup Processor: INSUFFICIENT_DEPOSIT',
     );
+  });
+
+  it('should get gas price feed', async () => {
+    const gasPriceFeed = ethereumBlockchain.getGasPriceFeed();
+    expect(await gasPriceFeed.price()).to.equal(100n);
+  });
+
+  it('should get asset price feed', async () => {
+    expect(await ethereumBlockchain.getPriceFeed(0).price()).to.equal(10n ** 18n);
+    expect(await ethereumBlockchain.getPriceFeed(1).price()).to.equal(250n);
+    expect(await ethereumBlockchain.getPriceFeed(2).price()).to.equal(360n);
+  });
+
+  it('should get asset prices', async () => {
+    expect(await ethereumBlockchain.getAssetPrice(0)).to.equal(10n ** 18n);
+    expect(await ethereumBlockchain.getAssetPrice(1)).to.equal(250n);
+    expect(await ethereumBlockchain.getAssetPrice(2)).to.equal(360n);
   });
 });

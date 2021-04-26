@@ -69,6 +69,7 @@ async function main() {
   const ethereumBlockchain = await EthereumBlockchain.new(
     ethConfig,
     EthAddress.fromString(ROLLUP_CONTRACT_ADDRESS!),
+    [],
     provider,
   );
 

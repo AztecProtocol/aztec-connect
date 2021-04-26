@@ -23,6 +23,7 @@ async function main() {
     confVars: {
       halloumiHost,
       rollupContractAddress,
+      priceFeedContractAddresses,
       numInnerRollupTxs,
       numOuterRollupProofs,
       publishInterval,
@@ -33,13 +34,19 @@ async function main() {
       baseTxGas,
       feeGasPrice,
       feeGasPriceMultiplier,
+      providerGasPriceMultiplier,
       reimbursementFeeLimit,
       maxUnsettledTxs,
     },
   } = await getConfig();
 
   const connection = await createConnection(ormConfig);
-  const blockchain = await EthereumBlockchain.new(ethConfig, EthAddress.fromString(rollupContractAddress!), provider);
+  const blockchain = await EthereumBlockchain.new(
+    ethConfig,
+    EthAddress.fromString(rollupContractAddress!),
+    priceFeedContractAddresses.map(a => EthAddress.fromString(a)),
+    provider,
+  );
   const barretenberg = await BarretenbergWasm.new();
 
   const serverConfig: ServerConfig = {
@@ -51,6 +58,7 @@ async function main() {
     baseTxGas,
     feeGasPrice,
     feeGasPriceMultiplier,
+    providerGasPriceMultiplier,
     reimbursementFeeLimit,
     maxUnsettledTxs,
   };

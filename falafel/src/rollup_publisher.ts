@@ -8,8 +8,6 @@ import { EthereumProvider } from 'blockchain';
 import { Signer, utils } from 'ethers';
 import { RollupDao } from './entity/rollup';
 import { Metrics } from './metrics';
-import moment from 'moment';
-import { Duration } from 'moment';
 import { RollupDb } from './rollup_db';
 import { ProofData, JoinSplitProofData } from 'barretenberg/client_proofs/proof_data';
 import { AssetId } from 'barretenberg/asset';
@@ -23,10 +21,9 @@ export class RollupPublisher {
   constructor(
     private rollupDb: RollupDb,
     private blockchain: Blockchain,
-    private publishInterval: Duration,
     private feeLimit: bigint,
     private feeGasPrice: bigint,
-    private feeGasPriceMultiplier: number,
+    private providerGasPriceMultiplier: number,
     provider: EthereumProvider,
     private metrics: Metrics,
   ) {
@@ -126,22 +123,6 @@ export class RollupPublisher {
     );
   }
 
-  public async getNextPublishTime() {
-    const unsettledTxs = await this.rollupDb.getUnsettledTxCount();
-    if (!unsettledTxs) {
-      // No txs, report publish time is in publishInterval seconds (not necessarily true).
-      return moment().add(this.publishInterval).toDate();
-    }
-    const lastRollup = await this.rollupDb.getLastSettledRollup();
-    if (!lastRollup) {
-      // We have a tx, but have not rolled up before. Rollup now.
-      return new Date();
-    }
-    // We have rolled up before. Rollup in publishInterval seconds from rollup, clamped no earlier than now.
-    const nextRollupTime = moment(lastRollup.mined).add(this.publishInterval);
-    return nextRollupTime.isSameOrBefore() ? new Date() : nextRollupTime.toDate();
-  }
-
   private async generateSignature(
     rollupProof: Buffer,
     feeReceiver: EthAddress,
@@ -174,7 +155,7 @@ export class RollupPublisher {
   private async sendRollupProof(txData: Buffer) {
     while (!this.interrupted) {
       try {
-        const multiplier = BigInt(Math.floor(this.feeGasPriceMultiplier * 100));
+        const multiplier = BigInt(Math.floor(this.providerGasPriceMultiplier * 100));
         const reportedPrice = ((await this.blockchain.getGasPrice()) * multiplier) / 100n;
         const gasPrice = reportedPrice < this.feeGasPrice ? reportedPrice : this.feeGasPrice;
         return await this.blockchain.sendTx(txData, { gasPrice });

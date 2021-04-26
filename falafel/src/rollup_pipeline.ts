@@ -13,7 +13,6 @@ import { TxFeeResolver } from './tx_fee_resolver';
 
 export class RollupPipeline {
   private pipelineCoordinator: PipelineCoordinator;
-  private rollupPublisher: RollupPublisher;
 
   constructor(
     proofGenerator: ProofGenerator,
@@ -25,7 +24,7 @@ export class RollupPipeline {
     publishInterval: Duration,
     feeLimit: bigint,
     feeGasPrice: bigint,
-    feeGasPriceMultiplier: number,
+    providerGasPriceMultiplier: number,
     numInnerRollupTxs: number,
     numOuterRollupProofs: number,
     feeResolver: TxFeeResolver,
@@ -37,13 +36,12 @@ export class RollupPipeline {
       `Pipeline inner_txs/outer_txs/rollup_size: ${numInnerRollupTxs}/${numOuterRollupProofs}/${outerRollupSize}`,
     );
 
-    this.rollupPublisher = new RollupPublisher(
+    const rollupPublisher = new RollupPublisher(
       rollupDb,
       blockchain,
-      publishInterval,
       feeLimit,
       feeGasPrice,
-      feeGasPriceMultiplier,
+      providerGasPriceMultiplier,
       provider,
       metrics,
     );
@@ -56,7 +54,6 @@ export class RollupPipeline {
       numOuterRollupProofs,
       metrics,
     );
-
     const rollupCreator = new RollupCreator(
       rollupDb,
       worldStateDb,
@@ -69,16 +66,17 @@ export class RollupPipeline {
     this.pipelineCoordinator = new PipelineCoordinator(
       rollupCreator,
       rollupAggregator,
-      this.rollupPublisher,
+      rollupPublisher,
       rollupDb,
       numInnerRollupTxs,
       numOuterRollupProofs,
+      publishInterval,
       feeResolver,
     );
   }
 
-  public async getNextPublishTime() {
-    return this.rollupPublisher.getNextPublishTime();
+  public getNextPublishTime() {
+    return this.pipelineCoordinator.getNextPublishTime();
   }
 
   public async start() {
@@ -105,7 +103,7 @@ export class RollupPipelineFactory {
     private publishInterval: Duration,
     private feeLimit: bigint,
     private feeGasPrice: bigint,
-    private feeGasPriceMultiplier: number,
+    private providerGasPriceMultiplier: number,
     private numInnerRollupTxs: number,
     private numOuterRollupProofs: number,
     private txFeeResolver: TxFeeResolver,
@@ -127,7 +125,7 @@ export class RollupPipelineFactory {
       this.publishInterval,
       this.feeLimit,
       this.feeGasPrice,
-      this.feeGasPriceMultiplier,
+      this.providerGasPriceMultiplier,
       this.numInnerRollupTxs,
       this.numOuterRollupProofs,
       this.txFeeResolver,

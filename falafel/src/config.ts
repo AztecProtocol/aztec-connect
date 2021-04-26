@@ -11,6 +11,7 @@ import { AccountDao } from './entity/account';
 interface ConfVars {
   port: number;
   rollupContractAddress?: string;
+  priceFeedContractAddresses: string[];
   ethereumHost?: string;
   ethereumPollInterval?: number;
   halloumiHost: string;
@@ -28,6 +29,7 @@ interface ConfVars {
   baseTxGas: number;
   feeGasPrice: bigint;
   feeGasPriceMultiplier: number;
+  providerGasPriceMultiplier: number;
   reimbursementFeeLimit: bigint;
   maxUnsettledTxs: number;
   typeOrmLogging: boolean;
@@ -36,6 +38,7 @@ interface ConfVars {
 function getConfVars(): ConfVars {
   const {
     ROLLUP_CONTRACT_ADDRESS,
+    PRICE_FEED_CONTRACT_ADDRESSES,
     ETHEREUM_HOST,
     ETHEREUM_POLL_INTERVAL,
     HALLOUMI_HOST,
@@ -55,6 +58,7 @@ function getConfVars(): ConfVars {
     FEE_GAS_PRICE,
     REIMBURSEMENT_FEE_LIMIT,
     FEE_GAS_PRICE_MULTIPLIER,
+    PROVIDER_GAS_PRICE_MULTIPLIER,
     MAX_UNSETTLED_TXS,
     TYPEORM_LOGGING,
   } = process.env;
@@ -62,6 +66,7 @@ function getConfVars(): ConfVars {
   return {
     port: +(PORT || 8081),
     rollupContractAddress: ROLLUP_CONTRACT_ADDRESS,
+    priceFeedContractAddresses: (PRICE_FEED_CONTRACT_ADDRESSES || '').split(','),
     ethereumHost: ETHEREUM_HOST,
     ethereumPollInterval: +(ETHEREUM_POLL_INTERVAL || 10000),
     halloumiHost: HALLOUMI_HOST || 'http://localhost:8083',
@@ -82,6 +87,7 @@ function getConfVars(): ConfVars {
     baseTxGas: +(BASE_TX_GAS || 0),
     feeGasPrice: BigInt(FEE_GAS_PRICE || 0),
     feeGasPriceMultiplier: +(FEE_GAS_PRICE_MULTIPLIER || 1),
+    providerGasPriceMultiplier: +(PROVIDER_GAS_PRICE_MULTIPLIER || 1),
     reimbursementFeeLimit: REIMBURSEMENT_FEE_LIMIT ? BigInt(REIMBURSEMENT_FEE_LIMIT) : BigInt(10) ** BigInt(30),
     maxUnsettledTxs: +(MAX_UNSETTLED_TXS || 0),
     typeOrmLogging: !!TYPEORM_LOGGING,

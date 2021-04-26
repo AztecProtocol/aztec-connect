@@ -1,12 +1,13 @@
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from 'barretenberg/address';
 import { AssetId } from 'barretenberg/asset';
-import { Asset, SendTxOptions, TypedData } from 'barretenberg/blockchain';
+import { Asset, PriceFeed, SendTxOptions, TypedData } from 'barretenberg/blockchain';
 import { TxHash } from 'barretenberg/tx_hash';
 import { Contract, ethers } from 'ethers';
 import { abi as FeeDistributorABI } from './artifacts/contracts/interfaces/IFeeDistributor.sol/IFeeDistributor.json';
 import { EthAsset, TokenAsset } from './asset';
 import { EthereumProvider } from './ethereum_provider';
+import { EthPriceFeed, GasPriceFeed, TokenPriceFeed } from './price_feed';
 import { RollupProcessor } from './rollup_processor';
 import { Web3Signer } from './signer';
 
@@ -15,11 +16,14 @@ export class Contracts {
   private feeDistributorContract!: Contract;
   private feeDistributorContractAddress!: EthAddress;
   private assets!: Asset[];
+  private gasPriceFeed!: GasPriceFeed;
+  private priceFeeds!: PriceFeed[];
   private provider!: Web3Provider;
   private signer!: Web3Signer;
 
   constructor(
     private rollupContractAddress: EthAddress,
+    private priceFeedContractAddresses: EthAddress[],
     ethereumProvider: EthereumProvider,
     private confirmations: number,
   ) {
@@ -48,6 +52,10 @@ export class Contracts {
       ),
     );
     this.assets = [new EthAsset(this.provider), ...tokenAssets];
+
+    const [gasPriceFeedAddress, ...tokenPriceFeedAddresses] = this.priceFeedContractAddresses;
+    this.gasPriceFeed = new GasPriceFeed(gasPriceFeedAddress, this.provider);
+    this.priceFeeds = [new EthPriceFeed(), ...tokenPriceFeedAddresses.map(a => new TokenPriceFeed(a, this.provider))];
   }
 
   public async setSupportedAsset(assetAddress: EthAddress, supportsPermit: boolean, signingAddress?: EthAddress) {
@@ -201,6 +209,18 @@ export class Contracts {
 
   public getAsset(assetId: AssetId) {
     return this.assets[assetId];
+  }
+
+  public async getAssetPrice(assetId: AssetId) {
+    return this.priceFeeds[assetId].price();
+  }
+
+  public getPriceFeed(assetId: AssetId) {
+    return this.priceFeeds[assetId];
+  }
+
+  public getGasPriceFeed() {
+    return this.gasPriceFeed;
   }
 
   public async getUserProofApprovalStatus(address: EthAddress, proofHash: string) {

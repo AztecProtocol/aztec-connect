@@ -8,6 +8,7 @@ import { deployFeeDistributor } from './deploy_fee_distributor';
 import { deployVerifier } from './deploy_verifier';
 import { addAsset } from './add_asset/add_asset';
 import { createPair, deployUniswap } from './deploy_uniswap';
+import { deployPriceFeed } from './deploy_price_feed';
 
 export async function deploy(
   escapeHatchBlockLower: number,
@@ -52,9 +53,12 @@ export async function deploy(
     await feeDistributor.deposit(0, amount, { value: amount });
   }
 
+  const gasPriceFeed = await deployPriceFeed(signer, 100000000000n);
+
   // Add test asset with permit support.
   const asset = await addAsset(rollup, signer, true);
   await createPair(signer, uniswapRouter, asset, initialTokenSupply, initialEthSupply);
+  const priceFeeds = [gasPriceFeed, await deployPriceFeed(signer)];
 
-  return { rollup, feeDistributor, uniswapRouter };
+  return { rollup, feeDistributor, uniswapRouter, priceFeeds };
 }
