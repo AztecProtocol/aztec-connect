@@ -113,7 +113,7 @@ export const AccountAsset: React.FunctionComponent<AccountAssetProps> = ({
 
   return (
     <>
-      {!isLoading && (!(balance + pendingValue) || pendingBalance) && (
+      {!isLoading && (!(balance + pendingValue) || !!pendingBalance) && (
         <Row>
           <ShieldPrompt
             asset={asset}
@@ -134,6 +134,7 @@ export const AccountAsset: React.FunctionComponent<AccountAssetProps> = ({
             asset={asset}
             buttonText="Shield"
             onClick={() => onSelectAction(AccountAction.SHIELD)}
+            isLoading={isLoading}
           />
         </Col>
         <Col>
@@ -155,6 +156,7 @@ export const AccountAsset: React.FunctionComponent<AccountAssetProps> = ({
             asset={asset}
             buttonText="Send"
             onClick={sendableBalance && !settled ? undefined : () => onSelectAction(AccountAction.SEND)}
+            isLoading={isLoading}
           />
         </Col>
       </PaddedRow>
@@ -169,7 +171,7 @@ export const AccountAsset: React.FunctionComponent<AccountAssetProps> = ({
         </Row>
       )}
       <Row>
-        <DisclaimerBlock />
+        <DisclaimerBlock assetState={assetState} />
       </Row>
       <Row>
         <BlockTitle title="Transaction History" />

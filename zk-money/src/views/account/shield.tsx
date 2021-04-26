@@ -140,14 +140,11 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
   onSubmit,
   onClose,
 }) => {
-  const { asset, price } = assetState;
-
   if (form.status.value !== ShieldStatus.NADA) {
     return (
       <ShieldProgress
         theme={theme}
-        asset={asset}
-        assetPrice={price}
+        assetState={assetState}
         form={form}
         onGoBack={onGoBack}
         onSubmit={onSubmit}
@@ -157,6 +154,7 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
   }
 
   const inputTheme = theme === Theme.WHITE ? InputTheme.WHITE : InputTheme.LIGHT;
+  const { asset } = assetState;
   const {
     amount,
     fees,
@@ -169,7 +167,7 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
     confirmed,
     submit,
   } = form;
-  const { icon, decimals } = asset;
+  const { icon, decimals, symbol } = asset;
   const { pendingBalance } = ethAccount.value;
   const txFee = fees.value[speed.value];
 
@@ -209,7 +207,7 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
               {`You have ${fromBaseUnits(
                 pendingBalance - txFee.fee,
                 decimals,
-              )} ETH pending on the contract, this will be used first. `}
+              )} ${symbol} pending on the contract, this will be used first. `}
             </InputFoot>
           )}
           {amount.message && (
@@ -275,7 +273,7 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
         </FlexPaddedRow>
       )}
       <PaddedBlock size="m">
-        <DisclaimerBlock />
+        <DisclaimerBlock assetState={assetState} />
       </PaddedBlock>
       <InputRow>
         <ConfirmRoot>

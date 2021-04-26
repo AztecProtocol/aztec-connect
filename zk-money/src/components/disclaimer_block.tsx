@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import warningIcon from '../images/warning.svg';
 import { Text } from './text';
 import { borderRadiuses, breakpoints, spacings, Theme, themeColours } from '../styles';
+import { AssetState, fromBaseUnits } from '../app';
 
 const Root = styled.div`
   display: flex;
@@ -57,7 +58,11 @@ const WarningFootnote = styled(Text)`
   }
 `;
 
-export const DisclaimerBlock: React.FunctionComponent = () => {
+interface DisclaimerBlockProps {
+  assetState: AssetState;
+}
+
+export const DisclaimerBlock: React.FunctionComponent<DisclaimerBlockProps> = ({ assetState }) => {
   return (
     <Root>
       <ColIcon>
@@ -66,9 +71,10 @@ export const DisclaimerBlock: React.FunctionComponent = () => {
       </ColIcon>
       <ColContent>
         <Text size="s">
-          {
-            'This is experimental software that hasn’t been externally audited yet. Your private key is stored in the browser. For security, amounts are capped at 1 ETH. '
-          }
+          {`This is experimental software that hasn’t been externally audited yet. Your private key is stored in the browser. For security, amounts are capped at ${fromBaseUnits(
+            assetState.txAmountLimit,
+            assetState.asset.decimals,
+          )} ${assetState.asset.symbol}. `}
           <WarningFootnote text="Use at your own risk." weight="bold" inline />
         </Text>
       </ColContent>

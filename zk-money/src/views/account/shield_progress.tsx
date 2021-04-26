@@ -1,14 +1,13 @@
 import React from 'react';
-import { Asset, ShieldFormValues, ShieldStatus, toBaseUnits } from '../../app';
+import { AssetState, ShieldFormValues, ShieldStatus, toBaseUnits } from '../../app';
 import { Theme } from '../../styles';
 import { AssetInfoRow } from './asset_info_row';
 import { ProgressTemplate } from './progress_template';
 
 interface ShieldProgressProps {
   theme: Theme;
-  asset: Asset;
-  assetPrice: bigint;
   form: ShieldFormValues;
+  assetState: AssetState;
   onGoBack(): void;
   onSubmit(): void;
   onClose(): void;
@@ -16,24 +15,24 @@ interface ShieldProgressProps {
 
 export const ShieldProgress: React.FunctionComponent<ShieldProgressProps> = ({
   theme,
-  asset,
-  assetPrice,
+  assetState,
   form,
   onGoBack,
   onSubmit,
   onClose,
 }) => {
+  const { asset, price } = assetState;
   const { amount, speed, fees, recipient, status, submit } = form;
   const fee = fees.value[speed.value].fee;
 
   const items = [
     {
       title: 'Amount',
-      content: <AssetInfoRow asset={asset} value={toBaseUnits(amount.value, asset.decimals)} price={assetPrice} />,
+      content: <AssetInfoRow asset={asset} value={toBaseUnits(amount.value, asset.decimals)} price={price} />,
     },
     {
       title: 'Fee',
-      content: <AssetInfoRow asset={asset} value={fee} price={assetPrice} />,
+      content: <AssetInfoRow asset={asset} value={fee} price={price} />,
     },
     {
       title: 'Recipient',
@@ -67,6 +66,7 @@ export const ShieldProgress: React.FunctionComponent<ShieldProgressProps> = ({
       items={items}
       steps={steps}
       form={form as any}
+      assetState={assetState}
       currentStatus={status.value}
       confirmStatus={ShieldStatus.CONFIRM}
       validateStatus={ShieldStatus.VALIDATE}

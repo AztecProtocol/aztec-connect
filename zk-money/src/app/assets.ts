@@ -35,7 +35,7 @@ export const assets: Asset[] = [
     icon: daiIcon,
     iconWhite: daiWhiteIcon,
     decimals: 18,
-    enabled: false,
+    enabled: true,
   },
   {
     id: 2, // TODO

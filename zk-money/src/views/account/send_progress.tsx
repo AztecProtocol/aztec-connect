@@ -1,20 +1,20 @@
 import React from 'react';
-import { Asset, isAddress, SendFormValues, SendStatus, toBaseUnits } from '../../app';
-import { Theme } from '../../styles';
+import { AssetState, isAddress, SendFormValues, SendStatus, toBaseUnits } from '../../app';
+import { breakpoints, Theme } from '../../styles';
 import { AssetInfoRow } from './asset_info_row';
 import { ProgressTemplate } from './progress_template';
 
-const formatRecipient = (input: string) => {
+const formatRecipient = (input: string, truncate = false) => {
   if (!isAddress(input)) {
     return `@${input}`;
   }
-  return `0x${input.replace(/^0x/i, '')}`;
+  const address = input.replace(/^0x/i, '');
+  return !truncate ? `0x${address}` : `0x${address.slice(0, 6)}...${address.slice(-4)}`;
 };
 
 interface SendProgressProps {
   theme: Theme;
-  asset: Asset;
-  assetPrice: bigint;
+  assetState: AssetState;
   form: SendFormValues;
   onGoBack(): void;
   onSubmit(): void;
@@ -23,28 +23,28 @@ interface SendProgressProps {
 
 export const SendProgress: React.FunctionComponent<SendProgressProps> = ({
   theme,
-  asset,
-  assetPrice,
+  assetState,
   form,
   onGoBack,
   onSubmit,
   onClose,
 }) => {
+  const { asset, price } = assetState;
   const { amount, fees, speed, recipient, submit, status } = form;
   const fee = fees.value[speed.value].fee;
 
   const items = [
     {
       title: 'Amount',
-      content: <AssetInfoRow asset={asset} value={toBaseUnits(amount.value, asset.decimals)} price={assetPrice} />,
+      content: <AssetInfoRow asset={asset} value={toBaseUnits(amount.value, asset.decimals)} price={price} />,
     },
     {
       title: 'Fee',
-      content: <AssetInfoRow asset={asset} value={fee} price={assetPrice} />,
+      content: <AssetInfoRow asset={asset} value={fee} price={price} />,
     },
     {
       title: 'Recipient',
-      content: formatRecipient(recipient.value.input),
+      content: formatRecipient(recipient.value.input, window.innerWidth <= parseInt(breakpoints.m)),
     },
   ];
 
@@ -63,6 +63,7 @@ export const SendProgress: React.FunctionComponent<SendProgressProps> = ({
     <ProgressTemplate
       theme={theme}
       action="Send"
+      assetState={assetState}
       items={items}
       steps={steps}
       form={form as any}

@@ -60,7 +60,7 @@ export const UnsupportedAsset: React.FunctionComponent<UnsupportedAssetProps> = 
             size="s"
             weight="bold"
             inline
-            href="https://discord.gg/H3zKj94T"
+            href="https://discord.gg/c7kaz9s5kr"
             target="_blank"
           />
           {`for updates.`}

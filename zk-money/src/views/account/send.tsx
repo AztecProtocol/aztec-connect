@@ -108,14 +108,11 @@ export const Send: React.FunctionComponent<SendProps> = ({
   onSubmit,
   onClose,
 }) => {
-  const { asset, price } = assetState;
-
   if (form.status.value !== SendStatus.NADA) {
     return (
       <SendProgress
         theme={theme}
-        asset={asset}
-        assetPrice={price}
+        assetState={assetState}
         form={form}
         onGoBack={onGoBack}
         onSubmit={onSubmit}
@@ -125,6 +122,7 @@ export const Send: React.FunctionComponent<SendProps> = ({
   }
 
   const inputTheme = theme === Theme.WHITE ? InputTheme.WHITE : InputTheme.LIGHT;
+  const { asset } = assetState;
   const { amount, fees, speed, maxAmount, recipient, confirmed, submit } = form;
   const txFee = fees.value[speed.value];
 
@@ -159,9 +157,9 @@ export const Send: React.FunctionComponent<SendProps> = ({
           )}
         </InputCol>
       </InputRow>
-      {isAddress(recipient.value.input) && (
+      {isAddress(recipient.value.input) && assetState.withdrawSafeAmounts.length > 0 && (
         <PaddedBlock size="m">
-          <WithdrawDisclaimer />
+          <WithdrawDisclaimer assetState={assetState} />
         </PaddedBlock>
       )}
       <InputRow>
@@ -199,7 +197,7 @@ export const Send: React.FunctionComponent<SendProps> = ({
         </FeeCol>
       </InputRow>
       <PaddedBlock size="m">
-        <DisclaimerBlock />
+        <DisclaimerBlock assetState={assetState} />
       </PaddedBlock>
       <InputRow>
         <ConfirmRoot>

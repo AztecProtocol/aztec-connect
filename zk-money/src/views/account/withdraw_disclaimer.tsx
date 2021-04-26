@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import invisibleIcon from '../../images/invisible.svg';
 import { Text } from '../../components';
 import { borderRadiuses, breakpoints, spacings, Theme, themeColours } from '../../styles';
+import { AssetState, fromBaseUnits } from '../../app';
 
 const Root = styled.div`
   display: flex;
@@ -55,7 +56,13 @@ const PaddedTop = styled(Text)`
   padding-top: ${spacings.s};
 `;
 
-export const WithdrawDisclaimer: React.FunctionComponent = () => (
+interface WithdrawDisclaimerProps {
+  assetState: AssetState;
+}
+
+export const WithdrawDisclaimer: React.FunctionComponent<WithdrawDisclaimerProps> = ({
+  assetState: { asset, withdrawSafeAmounts },
+}) => (
   <Root>
     <ColIcon>
       <WarningTitle text="Security Advice" size="m" weight="bold" />
@@ -64,7 +71,13 @@ export const WithdrawDisclaimer: React.FunctionComponent = () => (
     <ColContent>
       <Text size="s">
         {'Transfers to Ethereum address should sum to '}
-        <Text text="0.1 or 1 zkETH inclusive of the fee" weight="bold" inline />
+        <Text
+          text={`${withdrawSafeAmounts.map(a => fromBaseUnits(a, asset.decimals)).join(' or ')} zk${
+            asset.symbol
+          } inclusive of the fee`}
+          weight="bold"
+          inline
+        />
         {' to achieve maximum privacy.'}
       </Text>
       <PaddedTop size="s">{'Sending different amounts will compromise privacy.'}</PaddedTop>

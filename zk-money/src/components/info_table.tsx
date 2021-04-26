@@ -12,6 +12,7 @@ const itemClassname = 'item';
 
 const ItemRoot = styled.div`
   display: flex;
+  flex-wrap: wrap;
   padding: ${spacings.s} ${spacings.m};
   width: 100%;
 
@@ -28,6 +29,7 @@ const ContentRoot = styled.div`
   display: flex;
   justify-content: flex-end;
   flex-shrink: 0;
+  margin-left: auto;
 `;
 
 export interface InfoItem {

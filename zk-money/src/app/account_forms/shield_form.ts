@@ -1,4 +1,14 @@
-import { AccountId, EthAddress, JoinSplitProofOutput, SettlementTime, TxType, WalletSdk, Web3Signer } from '@aztec/sdk';
+import {
+  AccountId,
+  AssetId,
+  EthAddress,
+  JoinSplitProofOutput,
+  PermitArgs,
+  SettlementTime,
+  TxType,
+  WalletSdk,
+  Web3Signer,
+} from '@aztec/sdk';
 import { Web3Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
@@ -187,6 +197,10 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     return this.values.status.value;
   }
 
+  private get requireGas() {
+    return this.asset.id === AssetId.ETH;
+  }
+
   getValues() {
     return { ...this.values };
   }
@@ -206,13 +220,14 @@ export class ShieldForm extends EventEmitter implements AccountForm {
 
   async init() {
     this.rollup.on(RollupServiceEvent.UPDATED_STATUS, this.onRollupStatusChange);
-    await this.updateGasPrice(this.coreProvider);
+    if (this.requireGas) {
+      await this.updateGasPrice(this.coreProvider);
+    }
     await this.ethAccount.refreshPublicBalance(false);
+    await this.ethAccount.refreshPendingBalance(false);
     await this.onPublicBalanceChange();
     this.ethAccount.on(EthAccountEvent.UPDATED_PENDING_BALANCE, this.onPendingBalanceChange);
     this.ethAccount.on(EthAccountEvent.UPDATED_PUBLIC_BALANCE, this.onPublicBalanceChange);
-    this.refreshValues();
-    this.autofillAmountInput();
   }
 
   changeAccountState(accountState: AccountState) {
@@ -249,12 +264,13 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     this.ethAccount.off(EthAccountEvent.UPDATED_PUBLIC_BALANCE, this.onPublicBalanceChange);
     this.clearAmountInput();
     this.ethAccount = ethAccount;
-    this.ethAccount.on(EthAccountEvent.UPDATED_PENDING_BALANCE, this.onPendingBalanceChange);
-    this.ethAccount.on(EthAccountEvent.UPDATED_PUBLIC_BALANCE, this.onPublicBalanceChange);
     const { ethAddress } = ethAccount.state;
     this.isContract = ethAddress ? await this.sdk.isContract(ethAddress) : false;
-    await this.refreshGasCost();
-    this.autofillAmountInput();
+    await this.ethAccount.refreshPublicBalance(false);
+    await this.ethAccount.refreshPendingBalance(false);
+    await this.onPublicBalanceChange();
+    this.ethAccount.on(EthAccountEvent.UPDATED_PENDING_BALANCE, this.onPendingBalanceChange);
+    this.ethAccount.on(EthAccountEvent.UPDATED_PUBLIC_BALANCE, this.onPublicBalanceChange);
   }
 
   changeValues(newValues: Partial<ShieldFormValues>) {
@@ -460,10 +476,13 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       const publicBalance = await this.ethAccount.refreshPublicBalance();
       const toBeDeposited = amount + fee - pendingBalance;
       const depositGas =
-        toBeDeposited > 0n ? await this.rollup.getDepositGas(this.asset.id, toBeDeposited, provider!) : 0n;
-      const approveProofGas = (await this.sdk.isContract(ethAddress))
-        ? await this.rollup.getApproveProofGas(provider!)
-        : 0n;
+        this.requireGas && toBeDeposited > 0n
+          ? await this.rollup.getDepositGas(this.asset.id, toBeDeposited, provider!)
+          : 0n;
+      const approveProofGas =
+        this.requireGas && (await this.sdk.isContract(ethAddress))
+          ? await this.rollup.getApproveProofGas(provider!)
+          : 0n;
       const totalGas = depositGas + approveProofGas;
       if (totalGas) {
         await this.updateGasPrice(provider!);
@@ -500,27 +519,53 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     if (toBeDeposited) {
       this.proceed(ShieldStatus.DEPOSIT);
 
-      this.prompt(
-        `Please make a deposit of ${fromBaseUnits(toBeDeposited, asset.decimals)} ${asset.symbol} from your wallet.`,
-      );
+      let permitArgs: PermitArgs | undefined;
+      const allowance =
+        asset.id !== AssetId.ETH ? await this.sdk.getPublicAllowance(asset.id, ethAddress) : toBeDeposited;
+      const approvalAmount = toBeDeposited - allowance;
+      if (approvalAmount > 0n) {
+        this.prompt(`Please approve a deposit of ${fromBaseUnits(toBeDeposited, asset.decimals)} ${asset.symbol}.`);
+        try {
+          if (this.sdk.getAssetInfo(asset.id).permitSupport) {
+            const expireIn = BigInt(300); // seconds
+            const deadline = BigInt(Math.floor(Date.now() / 1000)) + expireIn;
+            const permitData = await this.sdk.createPermitData(asset.id, ethAddress, approvalAmount, deadline);
+            const web3Provider = new Web3Provider(this.ethAccount.provider!.ethereumProvider);
+            const signer = new Web3Signer(web3Provider);
+            const signature = await signer.signTypedData(permitData, ethAddress);
+            permitArgs = { signature, deadline, approvalAmount };
+          } else {
+            // TODO - separate approve and await confirmation
+            await this.sdk.approve(asset.id, senderId, approvalAmount, ethAddress);
+          }
+        } catch (e) {
+          debug(e);
+          return this.abort('Deposit approval denied.');
+        }
+      }
 
       try {
+        this.prompt(
+          `Please make a deposit of ${fromBaseUnits(toBeDeposited, asset.decimals)} ${asset.symbol} from your wallet.`,
+        );
+
         await this.sdk.depositFundsToContract(
           asset.id,
           ethAddress,
           toBeDeposited,
-          undefined,
+          permitArgs,
           this.ethAccount.provider!.ethereumProvider,
         );
       } catch (e) {
         debug(e);
-        throw new Error('Failed to deposit from your wallet.');
+        return this.abort('Failed to deposit from your wallet.');
       }
 
       this.prompt('Awaiting transaction confirmation...');
 
       try {
         await this.accountUtils.confirmPendingBalance(asset.id, ethAddress, publicInput);
+        await this.ethAccount.refreshPendingBalance(true);
       } catch (e) {
         return this.abort(e.message);
       }
@@ -559,7 +604,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       try {
         await this.ensureNetworkAndAccount(inputOwner);
       } catch (e) {
-        return this.abort('Wallet disconnected.');
+        return this.abort(e.message);
       }
 
       const isContract = await this.sdk.isContract(ethAddress);
@@ -584,7 +629,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
           await this.sdk.approveProof(ethAddress, signingData, this.ethAccount.provider!.ethereumProvider);
         } catch (e) {
           debug(e);
-          throw new Error('Failed to approve the proof.');
+          return this.abort('Failed to approve the proof.');
         }
 
         this.prompt('Awaiting transaction confirmation...');
@@ -693,6 +738,8 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     if (this.locked) return;
 
     await this.refreshGasCost();
+    this.refreshValues();
+    this.autofillAmountInput();
   };
 
   private onRollupStatusChange = (status: RollupStatus, prevStatus: RollupStatus) => {
@@ -704,28 +751,16 @@ export class ShieldForm extends EventEmitter implements AccountForm {
   };
 
   private async refreshGasCost() {
-    const zeroGasCost = { ethAddress: undefined, deposit: 0n, approveProof: 0n };
-    if (!this.ethAccount.active) {
-      this.updateAccountGasCost(zeroGasCost);
-      return;
-    }
-
     const { state, provider } = this.ethAccount;
     const { ethAddress, publicBalance } = state;
-    const gasCost = publicBalance
-      ? {
-          deposit: await this.rollup.getDepositGas(this.asset.id, 1n, provider!),
-          approveProof: this.isContract ? await this.rollup.getApproveProofGas(provider!) : 0n,
-        }
-      : zeroGasCost;
-    this.updateAccountGasCost({ ...gasCost, ethAddress });
-  }
-
-  private updateAccountGasCost(accountGasCost: AccountGasCost) {
-    this.accountGasCost = accountGasCost;
-    if (!this.locked) {
-      this.refreshValues();
+    let gasCost = { deposit: 0n, approveProof: 0n };
+    if (this.requireGas && this.ethAccount.active && publicBalance) {
+      gasCost = {
+        deposit: await this.rollup.getDepositGas(this.asset.id, 1n, provider!),
+        approveProof: this.isContract ? await this.rollup.getApproveProofGas(provider!) : 0n,
+      };
     }
+    this.accountGasCost = { ...gasCost, ethAddress };
   }
 
   private async updateGasPrice(provider: Provider) {

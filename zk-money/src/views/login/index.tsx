@@ -56,7 +56,7 @@ const loginSteps: LoginStepInfo[] = [
         <Text text="seed phrase" weight="bold" inline />
       </>
     ),
-    description: `Hot wallets can not be re-generated, make sure you store your seed phrase or you will loose access to your assets.`,
+    description: `Hot wallets can not be re-generated, make sure you store your seed phrase or you will lose access to your assets.`,
   },
   {
     step: 2,

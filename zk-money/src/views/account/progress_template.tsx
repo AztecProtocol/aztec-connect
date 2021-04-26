@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import { Form, isValidForm, MessageType } from '../../app';
+import { AssetState, Form, isValidForm, MessageType } from '../../app';
 import {
   Button,
   DisclaimerBlock,
@@ -102,6 +102,7 @@ interface ProgressStep {
 interface ProgressTemplateProps {
   theme: Theme;
   action: string;
+  assetState: AssetState;
   items: InfoItem[];
   steps: ProgressStep[];
   form: Form;
@@ -119,6 +120,7 @@ interface ProgressTemplateProps {
 export const ProgressTemplate: React.FunctionComponent<ProgressTemplateProps> = ({
   theme,
   action,
+  assetState,
   items,
   steps,
   form,
@@ -212,7 +214,11 @@ export const ProgressTemplate: React.FunctionComponent<ProgressTemplateProps> = 
       </PaddedBlock>
       {!success && !expired && (
         <PaddedBlock size="s">
-          {pending ? <DisclaimerBlock /> : steps.map(({ text, status }) => createProgress(text, status))}
+          {pending ? (
+            <DisclaimerBlock assetState={assetState} />
+          ) : (
+            steps.map(({ text, status }) => createProgress(text, status))
+          )}
         </PaddedBlock>
       )}
       <Footer>{renderFooterContent()}</Footer>

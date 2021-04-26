@@ -702,7 +702,7 @@ export class UserSession extends EventEmitter {
       this.rollupService,
       this.accountUtils,
       this.requiredNetwork,
-      this.config.txAmountLimit,
+      this.config.txAmountLimits[AssetId.ETH],
       this.accountProofMinDeposit,
     );
 
@@ -742,7 +742,7 @@ export class UserSession extends EventEmitter {
       await this.accountUtils.addUser(this.signedInAccount!.privateKey, userId.nonce);
     }
 
-    const { priceFeedContractAddresses, infuraId, txAmountLimit, explorerUrl } = this.config;
+    const { priceFeedContractAddresses, infuraId, txAmountLimits, withdrawSafeAmounts, explorerUrl } = this.config;
     const provider = new EthersAdapter(new InfuraProvider('mainnet', infuraId));
     const web3Provider = new Web3Provider(provider);
     this.priceFeedService = new PriceFeedService(priceFeedContractAddresses, web3Provider);
@@ -764,7 +764,8 @@ export class UserSession extends EventEmitter {
       this.accountUtils,
       this.requiredNetwork,
       explorerUrl,
-      txAmountLimit,
+      txAmountLimits,
+      withdrawSafeAmounts,
     );
 
     for (const e in UserAccountEvent) {
