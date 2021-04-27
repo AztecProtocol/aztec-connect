@@ -155,6 +155,7 @@ export class Contracts {
     const from = await signer.getAddress();
     const gasPrice = options.gasPrice || (await this.getGasPrice());
     const txRequest = {
+      chainId: await signer.getChainId(),
       to: this.rollupContractAddress.toString(),
       from,
       gasLimit,
