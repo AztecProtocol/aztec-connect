@@ -162,6 +162,7 @@ export class Contracts {
       gasPrice: `0x${gasPrice.toString(16)}`,
       data,
     };
+    console.log({ txRequest });
     const txResponse = await signer.sendTransaction(txRequest);
     return TxHash.fromString(txResponse.hash);
   }
