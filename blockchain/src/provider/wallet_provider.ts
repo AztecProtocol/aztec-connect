@@ -108,6 +108,7 @@ export class WalletProvider implements EthereumProvider {
       value,
       nonce,
     };
+    console.log({ toSign });
     return await account.signTransaction(toSign);
   }
 
