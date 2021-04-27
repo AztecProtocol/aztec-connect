@@ -155,14 +155,12 @@ export class Contracts {
     const from = await signer.getAddress();
     const gasPrice = options.gasPrice || (await this.getGasPrice());
     const txRequest = {
-      chainId: await signer.getChainId(),
       to: this.rollupContractAddress.toString(),
       from,
       gasLimit,
       gasPrice: `0x${gasPrice.toString(16)}`,
       data,
     };
-    console.log({ txRequest });
     const txResponse = await signer.sendTransaction(txRequest);
     return TxHash.fromString(txResponse.hash);
   }

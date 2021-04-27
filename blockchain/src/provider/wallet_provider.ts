@@ -95,11 +95,12 @@ export class WalletProvider implements EthereumProvider {
     const gasLimit = tx.gas || 7000000;
     const gasPrice = tx.gasPrice || (await this.provider.request({ method: 'eth_gasPrice' }));
     const value = tx.value || 0;
+    const chainId = await this.provider.request({ method: 'net_version' });
     const nonce =
       tx.nonce || (await this.provider.request({ method: 'eth_getTransactionCount', params: [tx.from, 'latest'] }));
 
     const toSign: TransactionRequest = {
-      chainId: tx.chainId,
+      chainId,
       from: tx.from,
       to: tx.to,
       data: tx.data,
@@ -108,7 +109,6 @@ export class WalletProvider implements EthereumProvider {
       value,
       nonce,
     };
-    console.log({ toSign });
     return await account.signTransaction(toSign);
   }
 
