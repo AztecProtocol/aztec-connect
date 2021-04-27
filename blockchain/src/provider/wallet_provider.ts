@@ -95,7 +95,7 @@ export class WalletProvider implements EthereumProvider {
     const gasLimit = tx.gas || 7000000;
     const gasPrice = tx.gasPrice || (await this.provider.request({ method: 'eth_gasPrice' }));
     const value = tx.value || 0;
-    const chainId = await this.provider.request({ method: 'net_version' });
+    const chainId = +(await this.provider.request({ method: 'eth_chainId' }));
     const nonce =
       tx.nonce || (await this.provider.request({ method: 'eth_getTransactionCount', params: [tx.from, 'latest'] }));
 
