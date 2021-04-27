@@ -99,6 +99,8 @@ resource "aws_cloudfront_distribution" "zkmoney_testnet_distribution" {
   is_ipv6_enabled = true
   comment         = "Managed by Terraform"
   aliases         = ["testnet.zk.money"]
+  default_root_object = "/"
+
 
   default_cache_behavior {
     target_origin_id = "website"
