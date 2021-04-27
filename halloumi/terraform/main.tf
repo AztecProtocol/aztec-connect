@@ -65,7 +65,7 @@ resource "aws_ecs_task_definition" "halloumi" {
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   cpu                      = "4096"
-  memory                   = "8192"
+  memory                   = "30720"
   execution_role_arn       = data.terraform_remote_state.setup_iac.outputs.ecs_task_execution_role_arn
 
   container_definitions = <<DEFINITIONS
@@ -74,7 +74,7 @@ resource "aws_ecs_task_definition" "halloumi" {
     "name": "halloumi",
     "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/halloumi:latest",
     "essential": true,
-    "memoryReservation": 7936,
+    "memoryReservation": 30464,
     "portMappings": [
       {
         "containerPort": 80
