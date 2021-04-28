@@ -212,6 +212,9 @@ export class TypeOrmRollupDb implements RollupDb {
     // We need to erase any existing rollup first, to ensure we don't get a unique violation when inserting a
     // different rollup proof which has a one to one mapping with the rollup.
     await this.connection.transaction(async transactionalEntityManager => {
+      for (const tx of rollup.rollupProof.txs) {
+        await transactionalEntityManager.delete(this.txRep.target, { id: tx.id });
+      }
       await transactionalEntityManager.delete(this.rollupRep.target, { id: rollup.id });
       await transactionalEntityManager.save(rollup);
     });

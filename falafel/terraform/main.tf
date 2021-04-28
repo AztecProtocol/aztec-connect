@@ -166,11 +166,11 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "NUM_INNER_ROLLUP_TXS",
-        "value": "3"
+        "value": "1"
       },
       {
         "name": "NUM_OUTER_ROLLUP_PROOFS",
-        "value": "1"
+        "value": "2"
       },
       {
         "name": "FEE_GAS_PRICE",
@@ -181,12 +181,20 @@ resource "aws_ecs_task_definition" "falafel" {
         "value": "1.5"
       },
       {
+        "name": "PROVIDER_GAS_PRICE_MULTIPLIER",
+        "value": "1.2"
+      },
+      {
         "name": "BASE_TX_GAS",
         "value": "16000"
       },
       {
         "name": "PUBLISH_INTERVAL",
-        "value": "1800"
+        "value": "60"
+      },
+      {
+        "name": "MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW",
+        "value": "1"
       }
     ],
     "mountPoints": [
