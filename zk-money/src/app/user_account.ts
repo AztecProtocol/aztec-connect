@@ -302,11 +302,11 @@ export class UserAccount extends EventEmitter {
     const balance = this.sdk.getBalance(asset.id, this.userId);
     const spendableNotes = await this.sdk.getSpendableNotes(asset.id, this.userId);
     const spendableBalance = sumNotes(spendableNotes.slice(-2));
-    const userJoinSplitTxs = await this.getJoinSplitTxs(this.userId);
+    const userJoinSplitTxs = await this.getJoinSplitTxs(asset.id, this.userId);
     const prevUserId = new AccountId(this.userId.publicKey, this.userId.nonce - 1);
     if (this.accountUtils.isUserAdded(prevUserId)) {
-      const migratingTxs = await this.db.getMigratingTxs(this.userId);
-      const prevTxs = await this.getJoinSplitTxs(prevUserId);
+      const migratingTxs = (await this.db.getMigratingTxs(this.userId)).filter(tx => tx.assetId === asset.id);
+      const prevTxs = await this.getJoinSplitTxs(asset.id, prevUserId);
       if (prevTxs.some(tx => !tx.settled)) {
         userJoinSplitTxs.push(...migratingTxs.concat(prevTxs));
       } else if (this.accountState.settled && !this.activeAction) {
@@ -397,9 +397,9 @@ export class UserAccount extends EventEmitter {
     this.emit(UserAccountEvent.UPDATED_ACCOUNT_ACTION);
   }
 
-  private async getJoinSplitTxs(userId: AccountId) {
+  private async getJoinSplitTxs(assetId: AppAssetId, userId: AccountId) {
     return this.accountUtils.isUserAdded(userId)
-      ? (await this.sdk.getJoinSplitTxs(userId)).filter(tx => tx.assetId === this.activeAsset)
+      ? (await this.sdk.getJoinSplitTxs(userId)).filter(tx => tx.assetId === assetId)
       : [];
   }
 }
