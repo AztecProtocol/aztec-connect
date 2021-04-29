@@ -85,7 +85,7 @@ const productionConfig: ConfigVars = {
   priceFeedContractAddress1: '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9', // DAI/USD
   txAmountLimits: JSON.stringify([
     '1'.padEnd(19, '0'), // 10 ** 18
-    '1'.padEnd(22, '0'), // 1000 * 10 ** 18
+    '2'.padEnd(22, '0'), // 2000 * 10 ** 18
   ]),
   withdrawSafeAmounts: JSON.stringify([
     [
@@ -93,8 +93,8 @@ const productionConfig: ConfigVars = {
       '1'.padEnd(19, '0'), // 1 zkETH
     ],
     [
-      '1'.padEnd(21, '0'), // 100 zkDAI
-      '1'.padEnd(22, '0'), // 1000 zkDAI
+      '2'.padEnd(21, '0'), // 200 zkDAI
+      '2'.padEnd(22, '0'), // 2000 zkDAI
     ],
   ]),
   sessionTimeout: '30', // days

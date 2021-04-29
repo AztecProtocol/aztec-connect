@@ -24,7 +24,7 @@ export interface ServerConfig {
   readonly publishInterval: Duration;
   readonly gasLimit?: number;
   readonly baseTxGas: number;
-  readonly feeGasPrice: bigint;
+  readonly maxFeeGasPrice: bigint;
   readonly feeGasPriceMultiplier: number;
   readonly providerGasPriceMultiplier: number;
   readonly reimbursementFeeLimit: bigint;
@@ -54,7 +54,7 @@ export class Server {
       publishInterval,
       reimbursementFeeLimit,
       baseTxGas,
-      feeGasPrice,
+      maxFeeGasPrice,
       feeGasPriceMultiplier,
       providerGasPriceMultiplier,
     } = config;
@@ -63,6 +63,7 @@ export class Server {
       blockchain,
       rollupDb,
       baseTxGas,
+      maxFeeGasPrice,
       feeGasPriceMultiplier,
       numInnerRollupTxs * numOuterRollupProofs,
       publishInterval.asSeconds(),
@@ -77,7 +78,7 @@ export class Server {
       provider,
       publishInterval,
       reimbursementFeeLimit,
-      feeGasPrice,
+      maxFeeGasPrice,
       providerGasPriceMultiplier,
       numInnerRollupTxs,
       numOuterRollupProofs,

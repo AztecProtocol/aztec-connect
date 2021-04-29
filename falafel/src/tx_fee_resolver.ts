@@ -22,6 +22,7 @@ export class TxFeeResolver {
     private blockchain: Blockchain,
     private rollupDb: RollupDb,
     private baseTxGas: number,
+    private maxFeeGasPrice: bigint,
     private feeGasPriceMultiplier: number,
     private txsPerRollup: number,
     private publishInterval: number,
@@ -114,13 +115,18 @@ export class TxFeeResolver {
   }
 
   private toAssetPrice(rollupId: number, assetId: AssetId, gas: bigint) {
-    const { gasPrice, assetPrices } = this.rollupPrices.find(p => p.rollupId === rollupId) || this.rollupPrices[0];
+    const { assetPrices } = this.rollupPrices.find(p => p.rollupId === rollupId) || this.rollupPrices[0];
     const decimals = this.assets[assetId].decimals;
     return !assetPrices[assetId]
       ? 0n
-      : (gas * gasPrice * BigInt(this.feeGasPriceMultiplier * 100) * 10n ** BigInt(decimals)) /
-          assetPrices[assetId] /
-          100n;
+      : this.applyGasPrice(rollupId, (gas * 10n ** BigInt(decimals)) / assetPrices[assetId]);
+  }
+
+  private applyGasPrice(rollupId: number, value: bigint) {
+    const { gasPrice } = this.rollupPrices.find(p => p.rollupId === rollupId) || this.rollupPrices[0];
+    const expectedValue = (value * gasPrice * BigInt(this.feeGasPriceMultiplier * 100)) / 100n;
+    const maxValue = this.maxFeeGasPrice ? value * this.maxFeeGasPrice : expectedValue;
+    return expectedValue > maxValue ? maxValue : expectedValue;
   }
 
   private async restorePrices() {

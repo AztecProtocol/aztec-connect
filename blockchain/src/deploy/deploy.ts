@@ -55,8 +55,8 @@ export async function deploy(
 
   const gasPriceFeed = await deployPriceFeed(signer, 100000000000n);
 
-  // Add test asset with permit support.
-  const asset = await addAsset(rollup, signer, true);
+  // Add test asset without permit support.
+  const asset = await addAsset(rollup, signer, false);
   await createPair(signer, uniswapRouter, asset, initialTokenSupply, initialEthSupply);
   const priceFeeds = [gasPriceFeed, await deployPriceFeed(signer)];
 

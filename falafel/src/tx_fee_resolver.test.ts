@@ -28,6 +28,7 @@ const toRollupDaos = (rollups: MinimalRollupDao[]) => rollups.map(toRollupDao);
 
 describe('tx fee resolver', () => {
   const baseTxGas = 1000;
+  const maxFeeGasPrice = 0n;
   const feeGasPriceMultiplier = 1;
   const txsPerRollup = 10;
   const publishInterval = 100;
@@ -98,6 +99,7 @@ describe('tx fee resolver', () => {
       blockchain,
       rollupDb,
       baseTxGas,
+      maxFeeGasPrice,
       feeGasPriceMultiplier,
       txsPerRollup,
       publishInterval,
@@ -202,6 +204,7 @@ describe('tx fee resolver', () => {
           blockchain,
           rollupDb,
           baseTxGas,
+          maxFeeGasPrice,
           feeGasPriceMultiplier,
           txsPerRollup,
           publishInterval,
@@ -287,6 +290,7 @@ describe('tx fee resolver', () => {
           blockchain,
           rollupDb,
           baseTxGas,
+          maxFeeGasPrice,
           feeGasPriceMultiplier,
           txsPerRollup,
           publishInterval,
@@ -328,6 +332,53 @@ describe('tx fee resolver', () => {
       }
     });
 
+    it('return correct tx fee and fee quotes with max gas price', async () => {
+      const maxFeeGasPrice = 6n;
+      const txFeeResolver = await startNewResolver(
+        new TxFeeResolver(
+          blockchain,
+          rollupDb,
+          baseTxGas,
+          maxFeeGasPrice,
+          feeGasPriceMultiplier,
+          txsPerRollup,
+          publishInterval,
+          surplusRatios,
+        ),
+      );
+      const cappedValue = (value: bigint) => (value * 6n) / 10n;
+
+      {
+        const assetId = AssetId.ETH;
+        expect(txFeeResolver.getFeeQuotes(assetId)).toEqual({
+          feeConstants: [50000n, 0n, 80000n, 300000n].map(cappedValue),
+          baseFeeQuotes: [
+            expect.objectContaining({ fee: cappedValue(10000n) }),
+            expect.objectContaining({ fee: cappedValue(10000n * 2n) }),
+            expect.objectContaining({ fee: cappedValue(10000n * 6n) }),
+            expect.objectContaining({ fee: cappedValue(10000n * 11n) }),
+          ],
+        });
+        expect(txFeeResolver.getMinTxFee(assetId, TxType.DEPOSIT)).toBe(36000n);
+        expect(txFeeResolver.getTxFee(assetId, TxType.WITHDRAW_TO_WALLET, SettlementTime.FAST)).toBe(84000n);
+      }
+
+      {
+        const assetId = AssetId.DAI;
+        expect(txFeeResolver.getFeeQuotes(assetId)).toEqual({
+          feeConstants: [25000n * 5n, 1000n * 5n, 50000n * 5n, 75000n * 5n].map(cappedValue),
+          baseFeeQuotes: [
+            expect.objectContaining({ fee: cappedValue(1000n * 5n) }),
+            expect.objectContaining({ fee: cappedValue(1000n * 5n * 2n) }),
+            expect.objectContaining({ fee: cappedValue(1000n * 5n * 6n) }),
+            expect.objectContaining({ fee: cappedValue(1000n * 5n * 11n) }),
+          ],
+        });
+        expect(txFeeResolver.getMinTxFee(assetId, TxType.DEPOSIT)).toBe(78000n);
+        expect(txFeeResolver.getTxFee(assetId, TxType.WITHDRAW_TO_WALLET, SettlementTime.FAST)).toBe(168000n);
+      }
+    });
+
     it('return correct tx fee and fee quotes for asset with decimals', async () => {
       jest.spyOn(blockchain, 'getBlockchainStatus').mockImplementation(
         async () =>
@@ -349,6 +400,7 @@ describe('tx fee resolver', () => {
           blockchain,
           rollupDb,
           baseTxGas,
+          maxFeeGasPrice,
           feeGasPriceMultiplier,
           txsPerRollup,
           publishInterval,
@@ -381,6 +433,7 @@ describe('tx fee resolver', () => {
           blockchain,
           rollupDb,
           baseTxGas,
+          maxFeeGasPrice,
           feeGasPriceMultiplier,
           txsPerRollup,
           newPublishInterval,

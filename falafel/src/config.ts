@@ -27,7 +27,7 @@ interface ConfVars {
   apiPrefix: string;
   serverAuthToken: string;
   baseTxGas: number;
-  feeGasPrice: bigint;
+  maxFeeGasPrice: bigint;
   feeGasPriceMultiplier: number;
   providerGasPriceMultiplier: number;
   reimbursementFeeLimit: bigint;
@@ -55,7 +55,7 @@ function getConfVars(): ConfVars {
     GAS_LIMIT,
     SERVER_AUTH_TOKEN,
     BASE_TX_GAS,
-    FEE_GAS_PRICE,
+    MAX_FEE_GAS_PRICE,
     REIMBURSEMENT_FEE_LIMIT,
     FEE_GAS_PRICE_MULTIPLIER,
     PROVIDER_GAS_PRICE_MULTIPLIER,
@@ -85,7 +85,7 @@ function getConfVars(): ConfVars {
     apiPrefix: API_PREFIX || '',
     serverAuthToken: SERVER_AUTH_TOKEN || '!changeme#',
     baseTxGas: +(BASE_TX_GAS || 0),
-    feeGasPrice: BigInt(FEE_GAS_PRICE || 0),
+    maxFeeGasPrice: BigInt(MAX_FEE_GAS_PRICE || 0),
     feeGasPriceMultiplier: +(FEE_GAS_PRICE_MULTIPLIER || 1),
     providerGasPriceMultiplier: +(PROVIDER_GAS_PRICE_MULTIPLIER || 1),
     reimbursementFeeLimit: REIMBURSEMENT_FEE_LIMIT ? BigInt(REIMBURSEMENT_FEE_LIMIT) : BigInt(10) ** BigInt(30),
@@ -155,7 +155,7 @@ async function loadConfVars(path: string) {
     // fs-extra can't process bigint (#765) but will be able to do so in the next major release (10.0).
     // https://github.com/jprichardson/node-fs-extra/issues/846
     reimbursementFeeLimit: state.reimbursementFeeLimit.toString(),
-    feeGasPrice: state.feeGasPrice.toString(),
+    maxFeeGasPrice: state.maxFeeGasPrice.toString(),
   });
 
   return state;
