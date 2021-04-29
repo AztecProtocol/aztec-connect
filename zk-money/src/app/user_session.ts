@@ -726,7 +726,14 @@ export class UserSession extends EventEmitter {
       await this.accountUtils.addUser(this.signedInAccount!.privateKey, userId.nonce);
     }
 
-    const { priceFeedContractAddresses, infuraId, txAmountLimits, withdrawSafeAmounts, explorerUrl } = this.config;
+    const {
+      priceFeedContractAddresses,
+      infuraId,
+      txAmountLimits,
+      withdrawSafeAmounts,
+      explorerUrl,
+      maxAvailableAssetId,
+    } = this.config;
     const provider = new EthersAdapter(new InfuraProvider('mainnet', infuraId));
     const web3Provider = new Web3Provider(provider);
     this.priceFeedService = new PriceFeedService(priceFeedContractAddresses, web3Provider);
@@ -750,6 +757,7 @@ export class UserSession extends EventEmitter {
       explorerUrl,
       txAmountLimits,
       withdrawSafeAmounts,
+      maxAvailableAssetId,
     );
 
     for (const e in UserAccountEvent) {

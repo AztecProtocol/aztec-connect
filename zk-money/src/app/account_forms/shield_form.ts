@@ -535,8 +535,12 @@ export class ShieldForm extends EventEmitter implements AccountForm {
             const signature = await signer.signTypedData(permitData, ethAddress);
             permitArgs = { signature, deadline, approvalAmount };
           } else {
-            // TODO - separate approve and await confirmation
-            await this.sdk.approve(asset.id, senderId, approvalAmount, ethAddress);
+            const { rollupContractAddress } = this.sdk.getLocalStatus();
+            await (this.sdk as any).blockchain
+              .getAsset(asset.id)
+              .approve(approvalAmount, ethAddress, rollupContractAddress, this.ethAccount.provider!.ethereumProvider);
+            this.prompt('Awaiting transaction confirmation...');
+            await this.confirmApproveDeposit(asset.id, approvalAmount, ethAddress);
           }
         } catch (e) {
           debug(e);
@@ -794,6 +798,28 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     this.updateFormValues({
       submit: withError({ value: false }, message),
     });
+  }
+
+  private async confirmApproveDeposit(
+    assetId: AssetId,
+    amount: bigint,
+    account: EthAddress,
+    pollInterval = (this.requiredNetwork.network === 'ganache' ? 1 : 10) * 1000,
+    timeout = 30 * 60 * 1000,
+  ) {
+    const started = Date.now();
+    while (true) {
+      if (Date.now() - started > timeout) {
+        throw new Error(`Timeout awaiting proof approval confirmation.`);
+      }
+
+      const allowance = await this.sdk.getPublicAllowance(assetId, account);
+      if (allowance >= amount) {
+        break;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, pollInterval));
+    }
   }
 
   private async confirmApproveProof(

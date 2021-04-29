@@ -70,6 +70,7 @@ interface AccountProps {
   worldState: WorldState;
   accountState: AccountState;
   asset: Asset;
+  assetEnabled: boolean;
   assetState: AssetState;
   loginState: LoginState;
   providerState?: ProviderState;
@@ -99,6 +100,7 @@ export const Account: React.FunctionComponent<AccountProps> = ({
   worldState,
   accountState,
   asset,
+  assetEnabled,
   assetState,
   loginState,
   providerState,
@@ -162,7 +164,7 @@ export const Account: React.FunctionComponent<AccountProps> = ({
           </AssetCol>
         ))}
       </AssetsRoot>
-      {asset.enabled ? (
+      {assetEnabled ? (
         <AccountAsset
           worldState={worldState}
           accountState={accountState}

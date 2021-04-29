@@ -66,6 +66,7 @@ export class UserAccount extends EventEmitter {
     private readonly explorerUrl: string,
     private readonly txAmountLimits: bigint[],
     private readonly withdrawSafeAmounts: bigint[][],
+    private readonly maxAvailableAssetId: number,
   ) {
     super();
     this.accountState = {
@@ -103,7 +104,7 @@ export class UserAccount extends EventEmitter {
   }
 
   getMergeForm() {
-    if (!assets[this.activeAsset].enabled) return;
+    if (!this.isAssetEnabled(this.activeAsset)) return;
 
     const fee = this.rollup.getMinFee(this.activeAsset, TxType.TRANSFER);
     const mergeOptions = getMergeOptions(this.assetState, fee);
@@ -291,7 +292,7 @@ export class UserAccount extends EventEmitter {
 
   private refreshAssetState = async () => {
     const asset = assets[this.activeAsset];
-    if (!asset.enabled) {
+    if (!this.isAssetEnabled(asset.id)) {
       await this.updateAssetState({
         ...initialAssetState,
         asset,
@@ -342,7 +343,7 @@ export class UserAccount extends EventEmitter {
       this.rollup.supportedAssets[asset.id]?.address,
       this.requiredNetwork,
     );
-    if (asset.enabled) {
+    if (this.isAssetEnabled(asset.id)) {
       const pendingBalance = await this.ethAccount.refreshPendingBalance();
       this.ethAccount.on(EthAccountEvent.UPDATED_PENDING_BALANCE, this.onPendingBalanceChange);
       this.onPendingBalanceChange(pendingBalance);
@@ -401,5 +402,9 @@ export class UserAccount extends EventEmitter {
     return this.accountUtils.isUserAdded(userId)
       ? (await this.sdk.getJoinSplitTxs(userId)).filter(tx => tx.assetId === assetId)
       : [];
+  }
+
+  private isAssetEnabled(assetId: AppAssetId) {
+    return assetId <= this.maxAvailableAssetId;
   }
 }

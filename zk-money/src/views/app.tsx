@@ -341,6 +341,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
                   worldState={worldState}
                   accountState={accountState!}
                   asset={assets[activeAsset]}
+                  assetEnabled={activeAsset <= config.maxAvailableAssetId}
                   assetState={assetState!}
                   loginState={loginState}
                   providerState={providerState}

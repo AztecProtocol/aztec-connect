@@ -13,6 +13,7 @@ export interface Config {
   sessionTimeout: number;
   debug: boolean;
   saveProvingKey: boolean;
+  maxAvailableAssetId: number;
 }
 
 interface ConfigVars {
@@ -27,6 +28,7 @@ interface ConfigVars {
   txAmountLimits: string;
   withdrawSafeAmounts: string;
   sessionTimeout: string;
+  maxAvailableAssetId: string;
   debug: boolean;
 }
 
@@ -52,6 +54,7 @@ const fromLocalStorage = (): ConfigVars => ({
   txAmountLimits: localStorage.getItem('zm_txAmountLimit') || '',
   withdrawSafeAmounts: localStorage.getItem('zm_withdrawSafeAmounts') || '',
   sessionTimeout: localStorage.getItem('zm_sessionTimeout') || '',
+  maxAvailableAssetId: localStorage.getItem('zm_maxAvailableAssetId') || '',
   debug: !!localStorage.getItem('zm_debug'),
 });
 
@@ -67,6 +70,7 @@ const fromEnvVars = (): ConfigVars => ({
   txAmountLimits: process.env.REACT_APP_TX_AMOUNT_LIMIT || '',
   withdrawSafeAmounts: process.env.REACT_APP_WITHDRAW_SAFE_AMOUNT || '',
   sessionTimeout: process.env.REACT_APP_SESSION_TIMEOUT || '',
+  maxAvailableAssetId: process.env.REACT_APP_MAX_AVAILABLE_ASSET_ID || '',
   debug: !!process.env.REACT_APP_DEBUG,
 });
 
@@ -94,6 +98,7 @@ const productionConfig: ConfigVars = {
     ],
   ]),
   sessionTimeout: '30', // days
+  maxAvailableAssetId: '0',
   debug: true,
 };
 
@@ -122,6 +127,7 @@ export const getConfig = (): Config => {
     txAmountLimits,
     withdrawSafeAmounts,
     sessionTimeout,
+    maxAvailableAssetId,
     debug,
   } = { ...defaultConfig, ...removeEmptyValues(fromEnvVars()), ...removeEmptyValues(fromLocalStorage()) };
 
@@ -138,6 +144,7 @@ export const getConfig = (): Config => {
       amounts.map((a: string) => BigInt(a)),
     ),
     sessionTimeout: +(sessionTimeout || 1),
+    maxAvailableAssetId: +maxAvailableAssetId,
     debug,
     saveProvingKey: !isIOS(),
   };
