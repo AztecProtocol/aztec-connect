@@ -5,6 +5,7 @@ import { TxHash } from '../tx_hash';
 import { BlockchainStatusSource } from './blockchain_status';
 import { EthereumSignature, EthereumSigner } from './ethereum_signer';
 import { Asset } from './asset';
+import { PriceFeed } from './price_feed';
 
 export interface Receipt {
   status: boolean;
@@ -49,6 +50,12 @@ export interface Blockchain extends BlockSource, BlockchainStatusSource, Ethereu
   sendTx(tx: Buffer, options?: SendTxOptions): Promise<TxHash>;
 
   getAsset(assetId: AssetId): Asset;
+
+  getAssetPrice(assetId: AssetId): Promise<bigint>;
+
+  getPriceFeed(assetId: AssetId): PriceFeed;
+
+  getGasPriceFeed(): PriceFeed;
 
   isContract(address: EthAddress): Promise<boolean>;
 

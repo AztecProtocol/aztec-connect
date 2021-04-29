@@ -7,6 +7,7 @@ import { deployVerifier } from './deploy_verifier';
 export async function deploy(
   escapeHatchBlockLower: number,
   escapeHatchBlockUpper: number,
+  uniswapRouterAddress: string,
   multiSigAddr: string,
   signer: Signer,
 ) {
@@ -26,7 +27,7 @@ export async function deploy(
   await rollup.deployed();
   console.error(`Rollup contract address: ${rollup.address}`);
 
-  const feeDistributor = await deployFeeDistributor(signer, rollup.address);
+  const feeDistributor = await deployFeeDistributor(signer, rollup.address, uniswapRouterAddress);
   rollup.setFeeDistributor(feeDistributor.address);
 
   const response: TransactionResponse = await rollup.transferOwnership(multiSigAddr);

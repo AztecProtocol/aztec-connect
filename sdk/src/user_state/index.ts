@@ -181,7 +181,8 @@ export class UserState extends EventEmitter {
       });
     }
 
-    if (!this.user.aliasHash) {
+    if (!this.user.aliasHash || !this.user.aliasHash.equals(tx.aliasHash)) {
+      debug(`user ${this.user.id} updates alias hash ${tx.aliasHash.toString()}.`);
       this.user = { ...this.user, aliasHash: tx.aliasHash };
       await this.db.updateUser(this.user);
     }

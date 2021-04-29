@@ -3,7 +3,7 @@ import { TxDao } from './tx';
 
 @Entity({ name: 'account' })
 @Index(['aliasHash', 'nonce'], { unique: true })
-@Index(['accountPubKey', 'nonce'], { unique: true })
+@Index(['accountPubKey', 'nonce'], { unique: false })
 export class AccountDao {
   @PrimaryColumn()
   public aliasHash!: Buffer;

@@ -20,7 +20,7 @@ const helpItems = [
   },
   {
     name: 'Discord',
-    href: 'https://discord.gg/QtnapCzE',
+    href: 'https://discord.gg/c7kaz9s5kr',
   },
   {
     name: 'FAQ',

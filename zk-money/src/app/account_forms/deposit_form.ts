@@ -117,7 +117,13 @@ export class DepositForm extends EventEmitter implements AccountForm {
   ) {
     super();
     this.asset = asset;
-    this.ethAccount = new EthAccount(provider, accountUtils, asset.id, requiredNetwork);
+    this.ethAccount = new EthAccount(
+      provider,
+      accountUtils,
+      asset.id,
+      this.rollup.supportedAssets[asset.id].address,
+      requiredNetwork,
+    );
     this.refreshValues();
   }
 
@@ -143,7 +149,7 @@ export class DepositForm extends EventEmitter implements AccountForm {
     }
 
     this.removeAllListeners();
-    this.ethAccount?.destroy();
+    this.ethAccount.destroy();
     this.provider?.off(ProviderEvent.UPDATED_PROVIDER_STATE, this.onProviderStateChange);
   }
 
@@ -385,7 +391,13 @@ export class DepositForm extends EventEmitter implements AccountForm {
   private async renewEthAccount() {
     this.ethAccount.destroy();
     this.refreshValues({ submit: clearMessage(this.values.submit) });
-    this.ethAccount = new EthAccount(this.provider, this.accountUtils, this.asset.id, this.requiredNetwork);
+    this.ethAccount = new EthAccount(
+      this.provider,
+      this.accountUtils,
+      this.asset.id,
+      this.rollup.supportedAssets[this.asset.id].address,
+      this.requiredNetwork,
+    );
     await this.ethAccount.refreshPublicBalance();
     await this.ethAccount.refreshPendingBalance();
     this.ethAccount.on(EthAccountEvent.UPDATED_PENDING_BALANCE, this.onPendingBalanceChange);
@@ -411,7 +423,7 @@ export class DepositForm extends EventEmitter implements AccountForm {
   };
 
   private onProviderStateChange = async () => {
-    if (!this.ethAccount?.isSameAccount(this.provider)) {
+    if (!this.ethAccount.isSameAccount(this.provider)) {
       this.clearAmountInput();
       await this.renewEthAccount();
     }

@@ -64,6 +64,8 @@ export class WalletConnectEthereumProvider implements EthereumProvider {
         return this.depositFundsToContract(args);
       case 'e3936355':
         return this.approveProof(args);
+      case '095ea7b3':
+        return this.approveDeposit(args);
       default:
         return this.ethereumProvider.request(args);
     }
@@ -115,6 +117,33 @@ export class WalletConnectEthereumProvider implements EthereumProvider {
       ],
     });
     return !approved.match(/^0x0{64}$/i);
+  }
+
+  private async approveDeposit(args: RequestArguments) {
+    const { data, from, to } = args.params![0];
+    const recipient = data.slice(34, 74);
+    const amount = BigInt(`0x${data.slice(74)}`);
+    return this.sendTransactionAndPoll(args, async () => {
+      const allowance = await this.getUserAllowance(from, to, recipient);
+      return allowance >= amount;
+    });
+  }
+
+  private async getUserAllowance(userAddress: string, assetAddress: string, recipientAddress: string) {
+    const sender = userAddress.replace(/^0x/i, '').padStart(64, '0');
+    const recipient = recipientAddress.replace(/^0x/i, '').padStart(64, '0');
+    const allowance = await this.ethereumProvider.request({
+      method: 'eth_call',
+      params: [
+        {
+          data: `0xdd62ed3e${sender}${recipient}`,
+          from: userAddress,
+          to: assetAddress,
+        },
+        'latest',
+      ],
+    });
+    return BigInt(allowance);
   }
 
   private async sendTransactionAndPoll(args: RequestArguments, poll: () => Promise<boolean>) {

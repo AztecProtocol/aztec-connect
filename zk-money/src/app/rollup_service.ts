@@ -1,6 +1,7 @@
 import {
   AssetFeeQuote,
   AssetId,
+  BlockchainAsset,
   EthAddress,
   RollupProviderStatus,
   SettlementTime,
@@ -75,6 +76,7 @@ export interface RollupService {
 export class RollupService extends EventEmitter {
   private status!: RollupStatus;
   private rollupContractAddress!: EthAddress;
+  private assets!: BlockchainAsset[];
 
   private statusSubscriber?: number;
 
@@ -86,6 +88,10 @@ export class RollupService extends EventEmitter {
     return this.status;
   }
 
+  get supportedAssets() {
+    return this.assets;
+  }
+
   destroy() {
     this.removeAllListeners();
     clearInterval(this.statusSubscriber);
@@ -94,6 +100,7 @@ export class RollupService extends EventEmitter {
   async init() {
     const status = await this.sdk.getRemoteStatus();
     this.rollupContractAddress = status.blockchainStatus.rollupContractAddress;
+    this.assets = status.blockchainStatus.assets;
     this.status = fromRollupProviderStatus(status);
     this.subscribeToStatus();
   }

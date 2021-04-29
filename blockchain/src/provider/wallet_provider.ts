@@ -8,7 +8,7 @@ import {
 import { Wallet } from 'ethers';
 import { EthAddress } from 'barretenberg/address';
 import { EthersAdapter } from './ethers_adapter';
-import { JsonRpcProvider } from '@ethersproject/providers';
+import { JsonRpcProvider, TransactionRequest } from '@ethersproject/providers';
 
 /**
  * Given an EIP1193 provider, wraps it, and provides the ability to add local accounts.
@@ -95,10 +95,12 @@ export class WalletProvider implements EthereumProvider {
     const gasLimit = tx.gas || 7000000;
     const gasPrice = tx.gasPrice || (await this.provider.request({ method: 'eth_gasPrice' }));
     const value = tx.value || 0;
+    const chainId = +(await this.provider.request({ method: 'eth_chainId' }));
     const nonce =
       tx.nonce || (await this.provider.request({ method: 'eth_getTransactionCount', params: [tx.from, 'latest'] }));
 
-    const toSign = {
+    const toSign: TransactionRequest = {
+      chainId,
       from: tx.from,
       to: tx.to,
       data: tx.data,

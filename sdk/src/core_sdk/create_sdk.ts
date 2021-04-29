@@ -86,7 +86,7 @@ async function sdkFactory(hostStr: string, options: SdkOptions, ethereumProvider
       minConfirmation,
       minConfirmationEHW,
     };
-    const blockchain = await EthereumBlockchain.new(config, rollupContractAddress, ethereumProvider);
+    const blockchain = await EthereumBlockchain.new(config, rollupContractAddress, [], ethereumProvider);
     const rollupProvider = new EscapeHatchRollupProvider(blockchain);
     return new CoreSdk(leveldb, db, rollupProvider, srirachaProvider, options, escapeHatchMode);
   }

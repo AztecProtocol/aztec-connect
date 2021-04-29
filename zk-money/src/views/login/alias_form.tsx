@@ -9,6 +9,7 @@ import {
   InputWrapper,
   MaskedInput,
   PaddedBlock,
+  TextLink,
 } from '../../components';
 
 const Root = styled.div`
@@ -38,7 +39,9 @@ interface AliasFormProps {
   setRememberMe: (rememberMe: boolean) => void;
   onSubmit: (alias: string) => void;
   onRestart(): void;
+  onForgotAlias(): void;
   isNewAccount: boolean;
+  isNewAlias: boolean;
 }
 
 export const AliasForm: React.FunctionComponent<AliasFormProps> = ({
@@ -48,14 +51,16 @@ export const AliasForm: React.FunctionComponent<AliasFormProps> = ({
   setAlias,
   onSubmit,
   onRestart,
+  onForgotAlias,
   isNewAccount,
+  isNewAlias,
 }) => {
   if (!allowToProceed) {
     return <Button theme="white" text="Try Again" onClick={onRestart} />;
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && (!isNewAccount || aliasAvailability !== ValueAvailability.PENDING)) {
+    if (e.key === 'Enter' && (!isNewAlias || aliasAvailability !== ValueAvailability.PENDING)) {
       onSubmit(alias);
     }
   };
@@ -64,7 +69,7 @@ export const AliasForm: React.FunctionComponent<AliasFormProps> = ({
     <Root>
       <InputPaddedBlock>
         <AliasInputWrapper theme={InputTheme.LIGHT}>
-          {isNewAccount && (
+          {isNewAlias && (
             <InputStatusIcon
               status={
                 aliasAvailability === ValueAvailability.INVALID && !!alias
@@ -89,11 +94,16 @@ export const AliasForm: React.FunctionComponent<AliasFormProps> = ({
       <PaddedBlock>
         <Button
           theme="white"
-          text={isNewAccount ? 'Register' : 'Login'}
+          text={isNewAlias ? 'Register' : 'Login'}
           onClick={() => onSubmit(alias)}
-          disabled={isNewAccount && aliasAvailability !== ValueAvailability.VALID}
+          disabled={isNewAlias && aliasAvailability !== ValueAvailability.VALID}
         />
       </PaddedBlock>
+      {!isNewAccount && !isNewAlias && (
+        <PaddedBlock>
+          <TextLink text="(Forgot Username)" onClick={onForgotAlias} color="white" size="xxs" italic />
+        </PaddedBlock>
+      )}
     </Root>
   );
 };

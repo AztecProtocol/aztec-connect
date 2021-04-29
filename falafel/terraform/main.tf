@@ -145,6 +145,10 @@ resource "aws_ecs_task_definition" "falafel" {
         "value": "${data.terraform_remote_state.blockchain.outputs.rollup_contract_address}"
       },
       {
+        "name": "PRICE_FEED_CONTRACT_ADDRESSES",
+        "value": "${data.terraform_remote_state.blockchain.outputs.price_feed_contract_addresses}"
+      },
+      {
         "name": "GAS_LIMIT",
         "value": "8000000"
       },
@@ -162,15 +166,23 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "NUM_INNER_ROLLUP_TXS",
-        "value": "7"
-      },
-      {
-        "name": "NUM_OUTER_ROLLUP_PROOFS",
         "value": "1"
       },
       {
-        "name": "FEE_GAS_PRICE",
-        "value": "1150000000"
+        "name": "NUM_OUTER_ROLLUP_PROOFS",
+        "value": "2"
+      },
+      {
+        "name": "MAX_FEE_GAS_PRICE",
+        "value": "250000000000"
+      },
+      {
+        "name": "FEE_GAS_PRICE_MULTIPLIER",
+        "value": "2.5"
+      },
+      {
+        "name": "PROVIDER_GAS_PRICE_MULTIPLIER",
+        "value": "1.2"
       },
       {
         "name": "BASE_TX_GAS",
@@ -178,7 +190,11 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "PUBLISH_INTERVAL",
-        "value": "1800"
+        "value": "60"
+      },
+      {
+        "name": "MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW",
+        "value": "1"
       }
     ],
     "mountPoints": [

@@ -106,7 +106,7 @@ export class TxReceiver {
     const jsProofData = new JoinSplitProofData(proofData);
     const { publicInput, inputOwner, assetId, depositSigningData } = jsProofData;
 
-    const minFee = this.txFeeResolver.getTxFee(assetId, txType);
+    const minFee = this.txFeeResolver.getMinTxFee(assetId, txType);
     if (jsProofData.proofData.txFee < minFee) {
       throw new Error('Insufficient fee.');
     }

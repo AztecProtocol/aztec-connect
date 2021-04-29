@@ -1,91 +1,181 @@
-import { Blockchain, BlockchainAsset, TxType } from 'barretenberg/blockchain';
-import { AssetFeeQuote } from 'barretenberg/rollup_provider';
 import { AssetId } from 'barretenberg/asset';
-import { fromBaseUnits } from 'blockchain';
-import { TxDao } from './entity/tx';
+import { Blockchain, BlockchainAsset, PriceFeed, TxType } from 'barretenberg/blockchain';
 import { JoinSplitProofData, ProofData } from 'barretenberg/client_proofs/proof_data';
+import { AssetFeeQuote, SettlementTime } from 'barretenberg/rollup_provider';
+import { TxDao } from './entity/tx';
+import { RollupDb } from './rollup_db';
+
+interface RollupPrice {
+  rollupId: number;
+  gasPrice: bigint;
+  assetPrices: bigint[];
+}
 
 export class TxFeeResolver {
   private assets!: BlockchainAsset[];
+  private rollupPrices: RollupPrice[] = [];
+  private latestRollupId = 0;
+  private running = false;
+  private runningPromise!: Promise<void>;
 
   constructor(
     private blockchain: Blockchain,
+    private rollupDb: RollupDb,
     private baseTxGas: number,
-    private feeGasPrice: bigint,
+    private maxFeeGasPrice: bigint,
+    private feeGasPriceMultiplier: number,
     private txsPerRollup: number,
     private publishInterval: number,
+    private surplusRatios = [1, 0.9, 0.5, 0],
+    private feeFreeAssets = [AssetId.DAI],
   ) {}
 
-  public async init() {
+  public async start() {
     const { assets } = await this.blockchain.getBlockchainStatus();
     this.assets = assets;
+
+    await this.restorePrices();
+
+    this.running = true;
+    this.runningPromise = (async () => {
+      while (this.running) {
+        await this.recordRollupPrices();
+        await new Promise(resolve => setTimeout(resolve, 1000 * +this.running));
+      }
+    })();
   }
 
-  public getTxFee(assetId: number, txType: TxType) {
+  public async stop() {
+    this.running = false;
+    await this.runningPromise;
+  }
+
+  public getMinTxFee(assetId: number, txType: TxType, rollupId = this.latestRollupId) {
     if (txType === TxType.ACCOUNT) {
       return 0n;
     }
-    return BigInt(this.assets[assetId].gasConstants[txType] + this.baseTxGas) * this.feeGasPrice;
+    return this.getFeeConstant(assetId, txType, rollupId) + this.getBaseFee(assetId, rollupId);
   }
 
-  public getFeeQuotes(assetId: number): AssetFeeQuote {
-    const baseFee = BigInt(this.baseTxGas) * this.feeGasPrice;
+  public getTxFee(assetId: number, txType: TxType, speed: SettlementTime, rollupId = this.latestRollupId) {
+    if (txType === TxType.ACCOUNT) {
+      return 0n;
+    }
+    const { feeConstants, baseFeeQuotes } = this.getFeeQuotes(assetId, rollupId);
+    return feeConstants[txType] + baseFeeQuotes[speed].fee;
+  }
+
+  public getFeeQuotes(assetId: number, rollupId = this.latestRollupId): AssetFeeQuote {
+    const baseFee = this.getBaseFee(assetId, rollupId);
     return {
-      feeConstants: this.assets[assetId].gasConstants.map(c => BigInt(c) * this.feeGasPrice),
-      baseFeeQuotes: [
-        {
-          // slow
-          fee: baseFee,
-          time: this.publishInterval,
-        },
-        {
-          // average
-          fee: baseFee * BigInt(Math.round(this.txsPerRollup * 0.1) || 1),
-          time: this.publishInterval * 0.9,
-        },
-        {
-          // fast
-          fee: baseFee * BigInt(Math.round(this.txsPerRollup * 0.5) || 1),
-          time: this.publishInterval * 0.5,
-        },
-        {
-          // instant
-          fee: baseFee * BigInt(this.txsPerRollup),
-          time: 5 * 60,
-        },
-      ],
+      feeConstants: [
+        TxType.DEPOSIT,
+        TxType.TRANSFER,
+        TxType.WITHDRAW_TO_WALLET,
+        TxType.WITHDRAW_TO_CONTRACT,
+      ].map(txType => this.getFeeConstant(assetId, txType, rollupId)),
+      baseFeeQuotes: this.surplusRatios.map(ratio => ({
+        fee: baseFee * (1n + BigInt(Math.round(this.txsPerRollup * (1 - ratio)))),
+        time: Math.max(5 * 60, this.publishInterval * ratio),
+      })),
     };
   }
 
-  private computeSurplusTxFees(txs: { assetId: AssetId; fee: bigint; txType: TxType }[]) {
-    return txs.reduce((acc, tx) => {
-      const expectedFee = this.getTxFee(tx.assetId, tx.txType);
-      return acc + (tx.fee - expectedFee);
-    }, 0n);
-  }
-
-  public computeSurplusRatio(txs: { assetId: AssetId; fee: bigint; txType: TxType }[]) {
-    const baseRollupFee = BigInt(this.txsPerRollup * this.baseTxGas) * this.feeGasPrice;
-    if (baseRollupFee === 0n) {
+  public computeSurplusRatio(txs: TxDao[], rollupId = this.latestRollupId) {
+    const baseFee = this.getBaseFee(AssetId.ETH, rollupId);
+    if (!baseFee) {
       return 1;
     }
-    const feeSurplus = this.computeSurplusTxFees(txs);
-    const ratio = Math.max(1 - +fromBaseUnits(feeSurplus, 18) / +fromBaseUnits(baseRollupFee, 18), 0);
-    return Math.min(ratio, 1);
+
+    const feeSurplus = txs
+      .map(tx => this.getFeeForTxDao(tx, rollupId))
+      .reduce((acc, { fee, minFee }) => acc + (fee - minFee), 0n);
+    const ratio = 1 - Number(feeSurplus / baseFee) / this.txsPerRollup;
+    return Math.min(1, Math.max(0, ratio));
   }
 
-  public computeSurplusRatioFromTxDaos(txs: TxDao[]) {
-    return this.computeSurplusRatio(
-      txs
-        .filter(({ txType }) => txType !== TxType.ACCOUNT)
-        .map(tx => {
-          const proofData = new JoinSplitProofData(new ProofData(tx.proofData));
-          return {
-            fee: proofData.proofData.txFee,
-            assetId: proofData.assetId,
-            txType: tx.txType,
-          };
-        }),
+  private getFeeForTxDao(tx: TxDao, rollupId: number) {
+    if (tx.txType === TxType.ACCOUNT) {
+      return { fee: 0n, minFee: 0n };
+    }
+
+    const {
+      assetId,
+      proofData: { txFee },
+    } = new JoinSplitProofData(new ProofData(tx.proofData));
+    const minFee = this.getMinTxFee(assetId, tx.txType, rollupId);
+    return { fee: txFee, minFee };
+  }
+
+  private getBaseFee(assetId: AssetId, rollupId = this.latestRollupId) {
+    return this.toAssetPrice(rollupId, assetId, BigInt(this.baseTxGas));
+  }
+
+  private getFeeConstant(assetId: AssetId, txType: TxType, rollupId = this.latestRollupId) {
+    return this.toAssetPrice(rollupId, assetId, BigInt(this.assets[assetId].gasConstants[txType]));
+  }
+
+  private toAssetPrice(rollupId: number, assetId: AssetId, gas: bigint) {
+    const { assetPrices } = this.rollupPrices.find(p => p.rollupId === rollupId) || this.rollupPrices[0];
+    const decimals = this.assets[assetId].decimals;
+    return !assetPrices[assetId]
+      ? 0n
+      : this.applyGasPrice(rollupId, (gas * 10n ** BigInt(decimals)) / assetPrices[assetId]);
+  }
+
+  private applyGasPrice(rollupId: number, value: bigint) {
+    const { gasPrice } = this.rollupPrices.find(p => p.rollupId === rollupId) || this.rollupPrices[0];
+    const expectedValue = (value * gasPrice * BigInt(this.feeGasPriceMultiplier * 100)) / 100n;
+    const maxValue = this.maxFeeGasPrice ? value * this.maxFeeGasPrice : expectedValue;
+    return expectedValue > maxValue ? maxValue : expectedValue;
+  }
+
+  private async restorePrices() {
+    const [latestRollup] = await this.rollupDb.getRollups(1, 0, true);
+    const rollupId = latestRollup ? latestRollup.id + 1 : 0;
+    const latestTimestamp = Math.floor((latestRollup ? latestRollup.created.getTime() : Date.now()) / 1000);
+    const [gasPrice, ...assetPrices] = await Promise.all(
+      [
+        this.blockchain.getGasPriceFeed(),
+        ...this.assets.map((_, assetId) => this.blockchain.getPriceFeed(assetId)),
+      ].map((priceFeed, i) =>
+        this.feeFreeAssets.indexOf(i - 1) >= 0 ? 0n : this.restoreAssetPrices(priceFeed, latestTimestamp),
+      ),
     );
+    this.rollupPrices = [
+      {
+        rollupId,
+        gasPrice,
+        assetPrices,
+      },
+    ];
+  }
+
+  private async restoreAssetPrices(priceFeed: PriceFeed, latestTimestamp: number) {
+    let data = await priceFeed.getRoundData(await priceFeed.latestRound());
+    let prevPrice = 0n;
+    while (data.timestamp > latestTimestamp && data.roundId >= 0) {
+      prevPrice = data.price;
+      data = await priceFeed.getRoundData(data.roundId - 1n);
+    }
+    return data.price || prevPrice;
+  }
+
+  private async recordRollupPrices() {
+    const [latestRollup] = await this.rollupDb.getRollups(1, 0, true);
+    const rollupId = latestRollup ? latestRollup.id + 1 : 0;
+    if (!this.rollupPrices.find(r => r.rollupId === rollupId)) {
+      const [gasPrice, ...assetPrices] = await Promise.all([
+        this.blockchain.getGasPriceFeed().price(),
+        ...this.assets.map((_, id) => (this.feeFreeAssets.indexOf(id) >= 0 ? 0n : this.blockchain.getAssetPrice(id))),
+      ]);
+      const rollupPrice = {
+        rollupId,
+        gasPrice,
+        assetPrices,
+      };
+      this.rollupPrices = [rollupPrice, ...this.rollupPrices].slice(0, 10); // Keep prices for the latest 10 rollups.
+      this.latestRollupId = rollupId;
+    }
   }
 }

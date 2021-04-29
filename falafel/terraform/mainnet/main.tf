@@ -140,6 +140,10 @@ resource "aws_ecs_task_definition" "falafel" {
         "value": "0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba"
       },
       {
+        "name": "PRICE_FEED_CONTRACT_ADDRESSES",
+        "value": "0x169E633A2D1E6c10dD91238Ba11c4A708dfEF37C,0x773616E4d11A78F511299002da57A0a94577F1f4"
+      },
+      {
         "name": "GAS_LIMIT",
         "value": "4000000"
       },
@@ -164,11 +168,15 @@ resource "aws_ecs_task_definition" "falafel" {
         "value": "1"
       },
       {
-        "name": "FEE_GAS_PRICE",
+        "name": "MAX_FEE_GAS_PRICE",
         "value": "250000000000"
       },
       {
         "name": "FEE_GAS_PRICE_MULTIPLIER",
+        "value": "2.5"
+      },
+      {
+        "name": "PROVIDER_GAS_PRICE_MULTIPLIER",
         "value": "1.2"
       },
       {

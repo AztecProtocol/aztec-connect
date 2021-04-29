@@ -7,10 +7,10 @@
   "scripts": {
     "build": "yarn clean && yarn compile && tsc -p tsconfig.cjs.json && tsc -p tsconfig.es.json && node ./package.js && chmod +x ./dest/deploy/index.js",
     "build:dev": "tsc -p tsconfig.cjs.json --watch & tsc -p tsconfig.es.json --watch",
-    "compile": "yarn hardhat compile",
+    "compile": "node ./ensure_versions && yarn hardhat compile",
     "clean": "rm -rf ./cache ./dest ./dest-es",
     "test": "yarn test:src && yarn test:contract",
-    "test:contract": "hardhat test ./test/**/*.test.ts",
+    "test:contract": "node ./ensure_versions && hardhat test ./test/**/*.test.ts",
     "test:verifier": "hardhat test ./test/verifier/verifier.test.ts",
     "test:src": "jest",
     "test:ganache": "yarn hardhat --network ganache test",
@@ -39,6 +39,8 @@
   },
   "dependencies": {
     "@ethersproject/experimental": "^5.0.8",
+    "@uniswap/v2-core": "^1.0.1",
+    "@uniswap/v2-periphery": "^1.1.0-beta.0",
     "barretenberg": "../barretenberg.js/dest",
     "bigint-buffer": "^1.1.5",
     "debug": "^4.1.1",

@@ -52,7 +52,7 @@ export class WorldState {
     this.blockQueue.process(block => this.handleBlock(block));
   }
 
-  public async getNextPublishTime() {
+  public getNextPublishTime() {
     return this.pipeline.getNextPublishTime();
   }
 
@@ -135,11 +135,15 @@ export class WorldState {
     const end = this.metrics.processBlockTimer();
     const { rollupProofData: rawRollupData, viewingKeysData } = block;
     const rollupProofData = RollupProofData.fromBuffer(rawRollupData, viewingKeysData);
-    const { rollupId, rollupHash, newDataRoot } = rollupProofData;
+    const { rollupId, rollupHash, newDataRoot, newNullRoot, newDataRootsRoot } = rollupProofData;
 
     console.log(`Processing rollup ${rollupId}: ${rollupHash.toString('hex')}...`);
 
-    if (newDataRoot.equals(this.worldStateDb.getRoot(0))) {
+    if (
+      newDataRoot.equals(this.worldStateDb.getRoot(0)) &&
+      newNullRoot.equals(this.worldStateDb.getRoot(1)) &&
+      newDataRootsRoot.equals(this.worldStateDb.getRoot(2))
+    ) {
       // This must be the rollup we just published. Commit the world state.
       await this.worldStateDb.commit();
     } else {

@@ -313,14 +313,12 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
         {(() => {
           switch (action) {
             case AppAction.LOGIN: {
-              const { accountNonce } = loginState;
               return (
                 <Login
                   worldState={worldState}
                   loginState={loginState}
                   providerState={providerState}
                   depositForm={depositForm}
-                  isNewAccount={!accountNonce}
                   explorerUrl={config.explorerUrl}
                   systemMessage={systemMessage}
                   setSeedPhrase={this.app.setSeedPhrase}
@@ -330,6 +328,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
                   onSelectSeedPhrase={this.app.confirmSeedPhrase}
                   onSelectAlias={this.app.confirmAlias}
                   onRestart={allowReset && step !== LoginStep.CONNECT_WALLET ? this.handleRestart : undefined}
+                  onForgotAlias={this.app.forgotAlias}
                   onDepositFormInputsChange={this.app.changeDepositForm}
                   onSubmitDepositForm={this.app.claimUserName}
                   onChangeWallet={this.app.changeWallet}
@@ -342,6 +341,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
                   worldState={worldState}
                   accountState={accountState!}
                   asset={assets[activeAsset]}
+                  assetEnabled={activeAsset <= config.maxAvailableAssetId}
                   assetState={assetState!}
                   loginState={loginState}
                   providerState={providerState}

@@ -3,7 +3,12 @@ import { ethers, Signer } from 'ethers';
 import { NonceManager } from '@ethersproject/experimental';
 import { deployFeeDistributor } from './deploy_fee_distributor';
 
-const { ETHEREUM_HOST = 'http://localhost:8545', PRIVATE_KEY, ROLLUP_CONTRACT_ADDRESS } = process.env;
+const {
+  ETHEREUM_HOST = 'http://localhost:8545',
+  PRIVATE_KEY,
+  ROLLUP_CONTRACT_ADDRESS,
+  UNISWAP_ROUTER_ADDRESS,
+} = process.env;
 
 function getSigner() {
   if (!PRIVATE_KEY) {
@@ -18,7 +23,10 @@ async function main() {
   if (!ROLLUP_CONTRACT_ADDRESS) {
     throw new Error('Specify ROLLUP_CONTRACT_ADDRESS.');
   }
-  const feeDistributor = await deployFeeDistributor(getSigner(), ROLLUP_CONTRACT_ADDRESS);
+  if (!UNISWAP_ROUTER_ADDRESS) {
+    throw new Error('Specify UNISWAP_ROUTER_ADDRESS.');
+  }
+  const feeDistributor = await deployFeeDistributor(getSigner(), ROLLUP_CONTRACT_ADDRESS, UNISWAP_ROUTER_ADDRESS);
   console.log(`FEE_DISTRIBUTOR_ADDRESS: ${feeDistributor.address}`);
 }
 

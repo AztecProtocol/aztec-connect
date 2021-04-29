@@ -11,6 +11,8 @@ export interface AccountState {
 
 export interface AssetState {
   asset: Asset;
+  txAmountLimit: bigint;
+  withdrawSafeAmounts: bigint[];
   price: bigint;
   balance: bigint;
   spendableNotes: Note[];
@@ -27,4 +29,6 @@ export const initialAssetState = {
   spendableBalance: 0n,
   joinSplitTxs: [],
   pendingBalance: 0n,
+  txAmountLimit: 0n,
+  withdrawSafeAmounts: [],
 };

@@ -3,7 +3,7 @@ import { Web3Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
 import { AccountUtils } from '../account_utils';
 import { Network } from '../networks';
-import { Provider } from '../provider';
+import { Provider, ProviderStatus } from '../provider';
 import { PendingBalance } from './pending_balance';
 import { PublicBalance } from './public_balance';
 import { ValueSubscriber, ValueSubscriberEvent } from './value_subscriber';
@@ -56,8 +56,9 @@ export class EthAccount {
 
   constructor(
     public readonly provider: Provider | undefined,
-    private accountUtils: AccountUtils,
+    accountUtils: AccountUtils,
     assetId: AssetId,
+    assetAddress: EthAddress | undefined,
     private requiredNetwork: Network,
   ) {
     this.address = provider?.account;
@@ -66,9 +67,10 @@ export class EthAccount {
     const enableSubscribe = this.address && this.isCorrectNetwork;
     this.valueSubscribers = {
       [EthAccountEvent.UPDATED_PUBLIC_BALANCE]: new PublicBalance(
-        assetId,
         enableSubscribe ? this.address : undefined,
         enableSubscribe ? new Web3Provider(provider!.ethereumProvider) : undefined,
+        assetId,
+        assetAddress,
         this.publicBalanceInterval,
       ),
       [EthAccountEvent.UPDATED_PENDING_BALANCE]: new PendingBalance(
@@ -94,7 +96,13 @@ export class EthAccount {
   }
 
   get active() {
-    return this.isSameAccount(this.provider) && this.accountUtils.isActiveProvider(this.provider);
+    const { status, account, network } = this.provider?.getState() || {};
+    return (
+      status === ProviderStatus.INITIALIZED &&
+      !!account &&
+      account.toString() === this.address?.toString() &&
+      network!.chainId === this.requiredNetwork.chainId
+    );
   }
 
   isSameAccount(provider?: Provider) {

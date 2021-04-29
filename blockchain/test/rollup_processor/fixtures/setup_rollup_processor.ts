@@ -1,6 +1,7 @@
 import { ViewingKey } from 'barretenberg/viewing_key';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
+import { setupFeeDistributor } from '../../fee_distributor/fixtures/setup_fee_distributor';
 import { advanceBlocks, blocksToAdvance } from './advance_block';
 
 export async function setupRollupProcessor(rollupProvider: Signer, users: Signer[], mintAmount: bigint | number) {
@@ -27,15 +28,13 @@ export async function setupRollupProcessor(rollupProvider: Signer, users: Signer
     ownerAddress,
   );
 
-  const AztecFeeDistributor = await ethers.getContractFactory('AztecFeeDistributor');
-  const feeDistributor = await AztecFeeDistributor.deploy(rollupProcessor.address);
-
-  await rollupProcessor.setFeeDistributor(feeDistributor.address);
+  const { feeDistributor, createPair } = await setupFeeDistributor(rollupProvider, rollupProcessor);
 
   const ethAssetId = 0;
 
   await rollupProcessor.setSupportedAsset(erc20.address, false);
   const erc20AssetId = 1;
+  await createPair({ id: erc20AssetId, contract: erc20 });
 
   // advance into block region where escapeHatch is active
   const blocks = await blocksToAdvance(80, 100, ethers.provider);

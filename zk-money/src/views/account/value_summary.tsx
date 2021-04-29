@@ -163,6 +163,7 @@ interface ValueSummaryProps {
   asset: Asset;
   buttonText: string;
   onClick?: () => void;
+  isLoading: boolean;
 }
 
 export const ValueSummary: React.FunctionComponent<ValueSummaryProps> = ({
@@ -175,6 +176,7 @@ export const ValueSummary: React.FunctionComponent<ValueSummaryProps> = ({
   asset,
   buttonText,
   onClick,
+  isLoading,
 }) => {
   const totalBalance = value + pendingValue;
   const valueStr = fromBaseUnits(totalBalance, asset.decimals);
@@ -184,12 +186,12 @@ export const ValueSummary: React.FunctionComponent<ValueSummaryProps> = ({
       <ColContent>
         <Title size="m" nowrap>
           {title}
-          {!!price && !!totalBalance && (
+          {!isLoading && !!price && !!totalBalance && (
             <SubTitle size="s" text={`$${convertToPriceString(totalBalance, asset.decimals, price)}`} inline />
           )}
         </Title>
         <ValueRoot len={getValueLen(valueStr)}>
-          <Value text={valueStr} />
+          {!isLoading && <Value text={valueStr} />}
           <Text className={symbolClassName} text={`zk${asset.symbol}`} />
           {pendingTxs > 0 && (
             <PendingTxsTooltip trigger={<Dot size="xs" color="yellow" />}>

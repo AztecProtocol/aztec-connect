@@ -24,8 +24,9 @@ export interface ServerConfig {
   readonly publishInterval: Duration;
   readonly gasLimit?: number;
   readonly baseTxGas: number;
-  readonly feeGasPrice: bigint;
+  readonly maxFeeGasPrice: bigint;
   readonly feeGasPriceMultiplier: number;
+  readonly providerGasPriceMultiplier: number;
   readonly reimbursementFeeLimit: bigint;
   readonly maxUnsettledTxs: number;
 }
@@ -53,18 +54,20 @@ export class Server {
       publishInterval,
       reimbursementFeeLimit,
       baseTxGas,
-      feeGasPrice,
+      maxFeeGasPrice,
       feeGasPriceMultiplier,
+      providerGasPriceMultiplier,
     } = config;
 
     this.txFeeResolver = new TxFeeResolver(
       blockchain,
+      rollupDb,
       baseTxGas,
-      feeGasPrice,
+      maxFeeGasPrice,
+      feeGasPriceMultiplier,
       numInnerRollupTxs * numOuterRollupProofs,
       publishInterval.asSeconds(),
     );
-
     this.proofGenerator = new ServerProofGenerator(config.halloumiHost);
     this.pipelineFactory = new RollupPipelineFactory(
       this.proofGenerator,
@@ -75,8 +78,8 @@ export class Server {
       provider,
       publishInterval,
       reimbursementFeeLimit,
-      feeGasPrice,
-      feeGasPriceMultiplier,
+      maxFeeGasPrice,
+      providerGasPriceMultiplier,
       numInnerRollupTxs,
       numOuterRollupProofs,
       this.txFeeResolver,
@@ -98,7 +101,7 @@ export class Server {
     console.log('Waiting until halloumi is ready...');
     await this.proofGenerator.awaitReady();
 
-    await this.txFeeResolver.init();
+    await this.txFeeResolver.start();
     await this.worldState.start();
     await this.txReceiver.init();
 
@@ -111,6 +114,7 @@ export class Server {
     this.ready = false;
     await this.txReceiver.destroy();
     await this.worldState.stop();
+    await this.txFeeResolver.stop();
   }
 
   public getUnsettledTxCount() {
@@ -137,7 +141,7 @@ export class Server {
     return {
       blockchainStatus: status,
       txFees: status.assets.map((_, i) => this.txFeeResolver.getFeeQuotes(i)),
-      nextPublishTime: await this.worldState.getNextPublishTime(),
+      nextPublishTime: this.worldState.getNextPublishTime(),
       pendingTxCount: await this.rollupDb.getUnsettledTxCount(),
     };
   }

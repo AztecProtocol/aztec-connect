@@ -22,7 +22,7 @@ import { AccountFormEvent, DepositForm, DepositFormValues, DepositStatus } from 
 import { AccountUtils } from './account_utils';
 import { formatAliasInput, getAliasError } from './alias';
 import { AppAssetId, assets } from './assets';
-import { Database, LinkedAccount } from './database';
+import { Database } from './database';
 import { MessageType, SystemMessage, ValueAvailability } from './form';
 import { GraphQLService } from './graphql_service';
 import { Network } from './networks';
@@ -39,6 +39,7 @@ const debug = createDebug('zm:user_session');
 interface SignedInAccount {
   accountPublicKey: GrumpkinAddress;
   privateKey: Buffer;
+  nonce: number;
 }
 
 export enum LoginStep {
@@ -71,7 +72,8 @@ export interface LoginState {
   alias: string;
   aliasAvailability: ValueAvailability;
   rememberMe: boolean;
-  accountNonce: number;
+  isNewAlias: boolean;
+  isNewAccount: boolean;
   allowToProceed: boolean;
 }
 
@@ -82,7 +84,8 @@ export const initialLoginState: LoginState = {
   alias: '',
   aliasAvailability: ValueAvailability.INVALID,
   rememberMe: true,
-  accountNonce: 0,
+  isNewAlias: false,
+  isNewAccount: true,
   allowToProceed: true,
 };
 
@@ -119,7 +122,6 @@ export class UserSession extends EventEmitter {
   private sdk!: WalletSdk;
   private rollupService!: RollupService;
   private priceFeedService!: PriceFeedService;
-  private linkedAccount?: LinkedAccount;
   private signedInAccount?: SignedInAccount;
   private loginState = initialLoginState;
   private worldState = initialWorldState;
@@ -245,26 +247,7 @@ export class UserSession extends EventEmitter {
     const confirmUserStates = this.ensureUserStates();
     // Leave it to run in the background so that it won't block the ui.
     this.sdk.init();
-
     await confirmUserStates;
-
-    const linkedAccount = await this.getLinkedAccountFromSession();
-    if (linkedAccount) {
-      const { accountPublicKey, alias } = linkedAccount;
-      const accountNonce = this.getLatestLocalNonce(accountPublicKey);
-      if (accountNonce) {
-        this.linkedAccount = linkedAccount;
-        this.clearSystemMessage();
-        this.updateLoginState({
-          alias,
-          accountNonce,
-        });
-        return this.toStep(LoginStep.INIT_SDK);
-      }
-
-      await this.db.deleteAccount(linkedAccount.accountPublicKey);
-      this.clearSession();
-    }
 
     if (wallet === Wallet.HOT) {
       const seedPhrase = this.generateSeedPhrase();
@@ -288,19 +271,12 @@ export class UserSession extends EventEmitter {
     this.emitSystemMessage('Please sign the message in your wallet to login...', MessageType.WARNING);
 
     try {
-      this.signedInAccount = await this.linkAccount(this.provider!);
+      const account = await this.linkAccount(this.provider!);
+      await this.signIn(account);
     } catch (e) {
       debug(e);
       return this.abort('Unable to link your account.');
     }
-
-    this.emitSystemMessage('Checking account status...');
-
-    const accountNonce = await this.graphql.getAccountNonce(this.signedInAccount!.accountPublicKey);
-    const allowToProceed = accountNonce > 0 || (await this.allowNewUser());
-    this.updateLoginState({ accountNonce, allowToProceed });
-
-    this.toStep(LoginStep.SET_ALIAS);
   };
 
   changeWallet = async (wallet: Wallet, checkNetwork = true) => {
@@ -362,17 +338,17 @@ export class UserSession extends EventEmitter {
       return this.emitSystemMessage(error, MessageType.ERROR);
     }
 
-    this.signedInAccount = await this.createAccountFromSeedPhrase(seedPhraseInput);
+    const account = await this.createAccountFromSeedPhrase(seedPhraseInput);
+    await this.signIn(account);
+  }
 
-    const accountNonce = await this.graphql.getAccountNonce(this.signedInAccount!.accountPublicKey);
-    const allowToProceed = accountNonce > 0 || (await this.allowNewUser());
-    this.updateLoginState({ accountNonce, allowToProceed });
-
-    await this.toStep(LoginStep.SET_ALIAS);
+  async forgotAlias() {
+    this.updateLoginState({ isNewAlias: true });
+    await this.setAlias('');
   }
 
   async setAlias(aliasInput: string) {
-    if (this.loginState.accountNonce) {
+    if (!this.loginState.isNewAlias) {
       this.clearSystemMessage();
       return this.updateLoginState({ alias: aliasInput, aliasAvailability: ValueAvailability.PENDING });
     }
@@ -407,20 +383,20 @@ export class UserSession extends EventEmitter {
   }
 
   async confirmAlias(aliasInput: string) {
-    const { accountNonce } = this.loginState;
+    const { isNewAlias } = this.loginState;
     const error = getAliasError(aliasInput);
     if (error) {
-      return this.emitSystemMessage(accountNonce ? 'Incorrect username' : error, MessageType.ERROR);
+      return this.emitSystemMessage(!isNewAlias ? 'Incorrect username' : error, MessageType.ERROR);
     }
 
-    if (!accountNonce) {
+    if (isNewAlias) {
       if (!(await this.isAliasAvailable(aliasInput))) {
         return this.emitSystemMessage('This username has been taken.', MessageType.ERROR);
       }
     } else {
       const alias = formatAliasInput(aliasInput);
       const address = await this.graphql.getAliasPublicKey(alias);
-      const { accountPublicKey } = this.linkedAccount || this.signedInAccount!;
+      const { accountPublicKey } = this.signedInAccount!;
       if (!address?.equals(accountPublicKey)) {
         return this.emitSystemMessage('Incorrect username.', MessageType.ERROR);
       }
@@ -473,11 +449,12 @@ export class UserSession extends EventEmitter {
       return;
     }
 
-    // Add user to the sdk so that the accountTx could be added for it.
-    // But don't sync from the beginning.
+    // Add the new user to the sdk so that the accountTx could be added for it.
+    // Don't sync from the beginning if it's a new account.
     const userId = proofOutput.tx.userId;
-    const { privateKey } = this.signedInAccount!;
-    await this.accountUtils.safeAddUser(privateKey, userId.nonce, true);
+    const { privateKey, nonce } = this.signedInAccount!;
+    const noSync = !nonce;
+    await this.accountUtils.safeAddUser(privateKey, userId.nonce, noSync);
 
     try {
       await this.sdk.sendProof(proofOutput);
@@ -511,9 +488,9 @@ export class UserSession extends EventEmitter {
     };
 
     try {
-      const { accountNonce } = this.loginState;
+      const { isNewAlias } = this.loginState;
 
-      if (!accountNonce) {
+      if (isNewAlias) {
         proceed(LoginStep.CREATE_ACCOUNT);
 
         await this.createAccountProof();
@@ -523,8 +500,8 @@ export class UserSession extends EventEmitter {
       } else {
         proceed(LoginStep.ADD_ACCOUNT);
 
-        const { accountPublicKey } = this.linkedAccount || this.signedInAccount!;
-        const userId = new AccountId(accountPublicKey, accountNonce);
+        const { accountPublicKey, nonce } = this.signedInAccount!;
+        const userId = new AccountId(accountPublicKey, nonce);
         await this.createUserAccount(userId, false);
 
         proceed(LoginStep.SYNC_DATA);
@@ -569,24 +546,23 @@ export class UserSession extends EventEmitter {
 
       await confirmUserStates;
 
-      this.linkedAccount = await this.getLinkedAccountFromSession();
-      if (!this.linkedAccount) {
+      const linkedAccount = await this.getLinkedAccountFromSession();
+      if (!linkedAccount) {
         throw new Error('Session data not exists.');
       }
 
-      const { accountPublicKey, alias } = this.linkedAccount;
-      const accountNonce = this.getLatestLocalNonce(accountPublicKey);
-      if (!accountNonce) {
+      const { accountPublicKey, alias } = linkedAccount;
+      const nonce = this.getLatestLocalNonce(accountPublicKey);
+      if (!nonce) {
         await this.db.deleteAccount(accountPublicKey);
         throw new Error('Account not exists.');
       }
 
       this.updateLoginState({
         alias,
-        accountNonce,
       });
 
-      const userId = new AccountId(accountPublicKey, accountNonce);
+      const userId = new AccountId(accountPublicKey, nonce);
       await this.createUserAccount(userId);
 
       this.toStep(LoginStep.DONE);
@@ -636,18 +612,17 @@ export class UserSession extends EventEmitter {
       }
 
       const { privateKey, publicKey } = this.sdk.getUserData(prevUserId);
-      this.signedInAccount = { privateKey, accountPublicKey: publicKey };
-
       const accountPublicKey = proofOutput.tx.userId.publicKey;
-      const accountNonce = await this.graphql.getAccountNonce(accountPublicKey);
+      const nonce = await this.graphql.getAccountNonce(accountPublicKey);
+      this.signedInAccount = { privateKey, accountPublicKey: publicKey, nonce };
+
       this.updateLoginState({
         alias,
-        accountNonce,
       });
 
       await this.reviveUserProvider();
 
-      if (accountNonce > 0 && this.provider?.account && this.provider.chainId === this.requiredNetwork.chainId) {
+      if (nonce > 0 && this.provider?.account && this.provider.chainId === this.requiredNetwork.chainId) {
         const pendingBalance = await this.accountUtils.getPendingBalance(
           this.accountProofDepositAsset,
           this.provider.account,
@@ -659,7 +634,7 @@ export class UserSession extends EventEmitter {
         }
       }
 
-      if (accountNonce > 0) {
+      if (nonce > 0) {
         throw new Error('Account has been registered. Please login with your wallet.');
       }
 
@@ -693,6 +668,15 @@ export class UserSession extends EventEmitter {
     }
   }
 
+  private async signIn(account: SignedInAccount) {
+    const { accountPublicKey, nonce } = account;
+    const allowToProceed = nonce > 0 || (await this.allowNewUser());
+    const { alias } = (nonce > 0 && (await this.db.getAccount(accountPublicKey))) || {};
+    this.signedInAccount = account;
+    this.updateLoginState({ allowToProceed, alias: alias || '', isNewAccount: !nonce, isNewAlias: !nonce });
+    this.toStep(alias ? LoginStep.INIT_SDK : LoginStep.SET_ALIAS);
+  }
+
   private async createDepositForm() {
     this.depositForm = new DepositForm(
       assets[this.accountProofDepositAsset],
@@ -702,7 +686,7 @@ export class UserSession extends EventEmitter {
       this.rollupService,
       this.accountUtils,
       this.requiredNetwork,
-      this.config.txAmountLimit,
+      this.config.txAmountLimits[AssetId.ETH],
       this.accountProofMinDeposit,
     );
 
@@ -742,7 +726,14 @@ export class UserSession extends EventEmitter {
       await this.accountUtils.addUser(this.signedInAccount!.privateKey, userId.nonce);
     }
 
-    const { priceFeedContractAddresses, infuraId, txAmountLimit, explorerUrl } = this.config;
+    const {
+      priceFeedContractAddresses,
+      infuraId,
+      txAmountLimits,
+      withdrawSafeAmounts,
+      explorerUrl,
+      maxAvailableAssetId,
+    } = this.config;
     const provider = new EthersAdapter(new InfuraProvider('mainnet', infuraId));
     const web3Provider = new Web3Provider(provider);
     this.priceFeedService = new PriceFeedService(priceFeedContractAddresses, web3Provider);
@@ -764,7 +755,9 @@ export class UserSession extends EventEmitter {
       this.accountUtils,
       this.requiredNetwork,
       explorerUrl,
-      txAmountLimit,
+      txAmountLimits,
+      withdrawSafeAmounts,
+      maxAvailableAssetId,
     );
 
     for (const e in UserAccountEvent) {
@@ -808,8 +801,7 @@ export class UserSession extends EventEmitter {
   private async createAccountFromSeedPhrase(seedPhraseInput: string) {
     const seedPhrase = formatSeedPhraseInput(seedPhraseInput);
     const privateKey = this.hashToField(Buffer.from(seedPhrase));
-    const accountPublicKey = this.sdk.derivePublicKey(privateKey);
-    return { accountPublicKey, privateKey };
+    return this.createAccountFromPrivateKey(privateKey);
   }
 
   private async linkAccount(provider: Provider) {
@@ -820,8 +812,13 @@ export class UserSession extends EventEmitter {
     const msgHash = utils.keccak256(message);
     const digest = utils.arrayify(msgHash);
     const privateKey = (await signer.signMessage(Buffer.from(digest), ethAddress)).slice(0, 32);
+    return this.createAccountFromPrivateKey(privateKey);
+  }
+
+  private async createAccountFromPrivateKey(privateKey: Buffer) {
     const accountPublicKey = this.sdk.derivePublicKey(privateKey);
-    return { accountPublicKey, privateKey };
+    const nonce = await this.graphql.getAccountNonce(accountPublicKey);
+    return { accountPublicKey, privateKey, nonce };
   }
 
   private updateAliasAvailability = async () => {
@@ -840,10 +837,9 @@ export class UserSession extends EventEmitter {
   private async createAccountProof() {
     const aliasInput = this.loginState.alias;
     const { privateKey } = this.signedInAccount!;
-    let userId;
     try {
       await this.removeUnregisteredUsers();
-      userId = await this.accountUtils.safeAddUser(privateKey, 0);
+      const userId = await this.accountUtils.safeAddUser(privateKey, 0);
       const alias = formatAliasInput(aliasInput);
       const signer = this.sdk.createSchnorrSigner(privateKey);
       const accountProof = await this.sdk.createAccountProof(userId, signer, alias, 0, true, userId.publicKey);
@@ -1023,6 +1019,9 @@ export class UserSession extends EventEmitter {
   }
 
   private async allowNewUser() {
+    if (this.MAX_ACCOUNT_TXS_PER_ROLLUP >= this.TXS_PER_ROLLUP) {
+      return true;
+    }
     const { pendingTxCount } = await this.sdk.getRemoteStatus();
     const unsettledAccountTxs = await this.graphql.getUnsettledAccountTxs();
     const numRollups = Math.max(1, Math.ceil(pendingTxCount / this.TXS_PER_ROLLUP));

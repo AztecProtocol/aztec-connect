@@ -13,3 +13,11 @@ variable "ROLLUP_CONTRACT_ADDRESS" {
 output "rollup_contract_address" {
   value = "${var.ROLLUP_CONTRACT_ADDRESS}"
 }
+
+variable "PRICE_FEED_CONTRACT_ADDRESSES" {
+  type = string
+}
+
+output "price_feed_contract_addresses" {
+  value = "${var.PRICE_FEED_CONTRACT_ADDRESSES}"
+}

@@ -3,17 +3,11 @@ import createDebug from 'debug';
 import { formatAliasInput, isValidAliasInput } from './alias';
 import { GraphQLService } from './graphql_service';
 import { Network } from './networks';
-import { Provider, ProviderStatus } from './provider';
 
 const debug = createDebug('zm:account_utils');
 
 export class AccountUtils {
   constructor(private sdk: WalletSdk, private graphql: GraphQLService, private requiredNetwork: Network) {}
-
-  isActiveProvider(provider?: Provider) {
-    const { status, account, network } = provider?.getState() || {};
-    return !!account && network?.chainId === this.requiredNetwork.chainId && status === ProviderStatus.INITIALIZED;
-  }
 
   isUserAdded(userId: AccountId) {
     try {

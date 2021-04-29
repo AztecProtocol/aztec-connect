@@ -28,6 +28,18 @@ export const resetInputStyle = css`
     font-weight: inherit;
     line-height: inherit;
   }
+
+  // Hide arrows from number input
+  /* Chrome, Safari, Edge, Opera */
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  /* Firefox */
+  &[type='number'] {
+    -moz-appearance: textfield;
+  }
 `;
 
 interface StyledInputProps {

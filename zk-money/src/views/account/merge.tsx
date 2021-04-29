@@ -31,14 +31,11 @@ export const Merge: React.FunctionComponent<MergeProps> = ({
   onSubmit,
   onClose,
 }) => {
-  const { asset, price } = assetState;
-
   if (form.status.value !== MergeStatus.NADA) {
     return (
       <MergeProgress
         theme={theme}
-        asset={asset}
-        assetPrice={price}
+        assetState={assetState}
         form={form}
         onGoBack={onGoBack}
         onSubmit={onSubmit}
@@ -47,7 +44,7 @@ export const Merge: React.FunctionComponent<MergeProps> = ({
     );
   }
 
-  const { spendableBalance } = assetState;
+  const { asset, spendableBalance } = assetState;
   const { mergeOptions, fee } = form;
 
   return (

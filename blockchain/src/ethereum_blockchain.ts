@@ -32,9 +32,14 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     this.debug = config.console === false ? createDebug('bb:ethereum_blockchain') : console.log;
   }
 
-  static async new(config: EthereumBlockchainConfig, rollupContractAddress: EthAddress, provider: EthereumProvider) {
+  static async new(
+    config: EthereumBlockchainConfig,
+    rollupContractAddress: EthAddress,
+    priceFeedContractAddresses: EthAddress[],
+    provider: EthereumProvider,
+  ) {
     const confirmations = config.minConfirmation || EthereumBlockchain.DEFAULT_MIN_CONFIRMATIONS;
-    const contracts = new Contracts(rollupContractAddress, provider, confirmations);
+    const contracts = new Contracts(rollupContractAddress, priceFeedContractAddresses, provider, confirmations);
     await contracts.init();
     const eb = new EthereumBlockchain(config, contracts);
     await eb.init();
@@ -263,6 +268,18 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
 
   public getAsset(assetId: AssetId) {
     return this.contracts.getAsset(assetId);
+  }
+
+  public async getAssetPrice(assetId: AssetId) {
+    return this.contracts.getAssetPrice(assetId);
+  }
+
+  public getPriceFeed(assetId: AssetId) {
+    return this.contracts.getPriceFeed(assetId);
+  }
+
+  public getGasPriceFeed() {
+    return this.contracts.getGasPriceFeed();
   }
 
   public async isContract(address: EthAddress) {

@@ -15,7 +15,6 @@ export interface Asset {
   icon: string;
   iconWhite: string;
   decimals: number;
-  enabled: boolean;
 }
 
 export const assets: Asset[] = [
@@ -26,7 +25,6 @@ export const assets: Asset[] = [
     icon: ethIcon,
     iconWhite: ethWhiteIcon,
     decimals: 18,
-    enabled: true,
   },
   {
     id: AssetId.DAI,
@@ -35,7 +33,6 @@ export const assets: Asset[] = [
     icon: daiIcon,
     iconWhite: daiWhiteIcon,
     decimals: 18,
-    enabled: false,
   },
   {
     id: 2, // TODO
@@ -44,6 +41,5 @@ export const assets: Asset[] = [
     icon: wbtcIcon,
     iconWhite: wbtcWhiteIcon,
     decimals: 18,
-    enabled: false,
   },
 ];

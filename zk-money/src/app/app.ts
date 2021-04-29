@@ -175,6 +175,10 @@ export class App extends EventEmitter {
     await this.session!.confirmAlias(aliasInput);
   };
 
+  forgotAlias = () => {
+    this.session!.forgotAlias();
+  };
+
   initSdk = async () => {
     await this.session!.initSdk();
   };
