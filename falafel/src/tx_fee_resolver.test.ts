@@ -33,6 +33,7 @@ describe('tx fee resolver', () => {
   const txsPerRollup = 10;
   const publishInterval = 100;
   const surplusRatios = [1, 0.9, 0.5, 0];
+  const feeFreeAssets: AssetId[] = [];
   let dateSpy: jest.SpyInstance<number>;
   let mockGasPriceFeed: PriceFeed;
   let mockTokenPriceFeed: PriceFeed;
@@ -104,6 +105,7 @@ describe('tx fee resolver', () => {
       txsPerRollup,
       publishInterval,
       surplusRatios,
+      feeFreeAssets,
     );
   });
 
@@ -209,6 +211,7 @@ describe('tx fee resolver', () => {
           txsPerRollup,
           publishInterval,
           surplusRatios,
+          feeFreeAssets,
         ),
       );
 
@@ -295,6 +298,7 @@ describe('tx fee resolver', () => {
           txsPerRollup,
           publishInterval,
           surplusRatios,
+          feeFreeAssets,
         ),
       );
       const withMultiplier = (value: bigint) => (value * BigInt(feeGasPriceMultiplier * 100)) / 100n;
@@ -344,6 +348,7 @@ describe('tx fee resolver', () => {
           txsPerRollup,
           publishInterval,
           surplusRatios,
+          feeFreeAssets,
         ),
       );
       const cappedValue = (value: bigint) => (value * 6n) / 10n;
@@ -405,6 +410,7 @@ describe('tx fee resolver', () => {
           txsPerRollup,
           publishInterval,
           surplusRatios,
+          feeFreeAssets,
         ),
       );
 
@@ -438,6 +444,7 @@ describe('tx fee resolver', () => {
           txsPerRollup,
           newPublishInterval,
           surplusRatios,
+          feeFreeAssets,
         ),
       );
 

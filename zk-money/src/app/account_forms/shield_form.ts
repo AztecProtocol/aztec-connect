@@ -522,25 +522,24 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       let permitArgs: PermitArgs | undefined;
       const allowance =
         asset.id !== AssetId.ETH ? await this.sdk.getPublicAllowance(asset.id, ethAddress) : toBeDeposited;
-      const approvalAmount = toBeDeposited - allowance;
-      if (approvalAmount > 0n) {
+      if (allowance < toBeDeposited) {
         this.prompt(`Please approve a deposit of ${fromBaseUnits(toBeDeposited, asset.decimals)} ${asset.symbol}.`);
         try {
           if (this.sdk.getAssetInfo(asset.id).permitSupport) {
             const expireIn = BigInt(300); // seconds
             const deadline = BigInt(Math.floor(Date.now() / 1000)) + expireIn;
-            const permitData = await this.sdk.createPermitData(asset.id, ethAddress, approvalAmount, deadline);
+            const permitData = await this.sdk.createPermitData(asset.id, ethAddress, toBeDeposited, deadline);
             const web3Provider = new Web3Provider(this.ethAccount.provider!.ethereumProvider);
             const signer = new Web3Signer(web3Provider);
             const signature = await signer.signTypedData(permitData, ethAddress);
-            permitArgs = { signature, deadline, approvalAmount };
+            permitArgs = { signature, deadline, approvalAmount: toBeDeposited };
           } else {
             const { rollupContractAddress } = this.sdk.getLocalStatus();
             await (this.sdk as any).blockchain
               .getAsset(asset.id)
-              .approve(approvalAmount, ethAddress, rollupContractAddress, this.ethAccount.provider!.ethereumProvider);
+              .approve(toBeDeposited, ethAddress, rollupContractAddress, this.ethAccount.provider!.ethereumProvider);
             this.prompt('Awaiting transaction confirmation...');
-            await this.confirmApproveDeposit(asset.id, approvalAmount, ethAddress);
+            await this.confirmApproveDeposit(asset.id, toBeDeposited, ethAddress);
           }
         } catch (e) {
           debug(e);

@@ -27,6 +27,7 @@ export class TxFeeResolver {
     private txsPerRollup: number,
     private publishInterval: number,
     private surplusRatios = [1, 0.9, 0.5, 0],
+    private feeFreeAssets = [AssetId.DAI],
   ) {}
 
   public async start() {
@@ -137,7 +138,9 @@ export class TxFeeResolver {
       [
         this.blockchain.getGasPriceFeed(),
         ...this.assets.map((_, assetId) => this.blockchain.getPriceFeed(assetId)),
-      ].map(priceFeed => this.restoreAssetPrices(priceFeed, latestTimestamp)),
+      ].map((priceFeed, i) =>
+        this.feeFreeAssets.indexOf(i - 1) >= 0 ? 0n : this.restoreAssetPrices(priceFeed, latestTimestamp),
+      ),
     );
     this.rollupPrices = [
       {
@@ -164,7 +167,7 @@ export class TxFeeResolver {
     if (!this.rollupPrices.find(r => r.rollupId === rollupId)) {
       const [gasPrice, ...assetPrices] = await Promise.all([
         this.blockchain.getGasPriceFeed().price(),
-        ...this.assets.map((_, id) => this.blockchain.getAssetPrice(id)),
+        ...this.assets.map((_, id) => (this.feeFreeAssets.indexOf(id) >= 0 ? 0n : this.blockchain.getAssetPrice(id))),
       ]);
       const rollupPrice = {
         rollupId,
