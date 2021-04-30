@@ -98,7 +98,7 @@ const productionConfig: ConfigVars = {
     ],
   ]),
   sessionTimeout: '30', // days
-  maxAvailableAssetId: '0',
+  maxAvailableAssetId: '1',
   debug: true,
 };
 
