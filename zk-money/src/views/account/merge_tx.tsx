@@ -3,7 +3,20 @@ import styled from 'styled-components';
 import { Asset, fromBaseUnits } from '../../app';
 import { Button, Text } from '../../components';
 import mergeIcon from '../../images/merge.svg';
-import { breakpoints, gradients, spacings } from '../../styles';
+import { breakpoints, FontSize, gradients, spacings } from '../../styles';
+
+const getPricision = (value: bigint, decimals: number) => (value >= 100n * 10n ** BigInt(decimals) ? 0 : 2);
+
+const getValueFontSize = (valueStr: string): FontSize => {
+  const len = valueStr.replace('.', '').length;
+  if (len >= 5) {
+    return 'xxs';
+  }
+  if (len >= 4) {
+    return 'xs';
+  }
+  return 's';
+};
 
 const Root = styled.div`
   display: flex;
@@ -74,26 +87,31 @@ export const MergeTx: React.FunctionComponent<MergeTxProps> = ({
   amount,
   fee,
   onSubmit,
-}) => (
-  <div className={className}>
-    <Root>
-      <ValuesRoot>
-        <OldValue>
-          <Text text={fromBaseUnits(prevAmount, asset.decimals, 2)} size="s" />
-        </OldValue>
-        <MergeIconRoot>
-          <MergeIcon src={mergeIcon} alt=">" />
-        </MergeIconRoot>
-        <NewValue>
-          <Text text={fromBaseUnits(amount, asset.decimals, 2)} color="white" size="s" />
-        </NewValue>
-      </ValuesRoot>
-      <FeeRoot>
-        <Text text={`Fee: ${fee} zk${asset.symbol}`} size="s" />
-      </FeeRoot>
-      <Item>
-        <Button theme="gradient" text="Merge" onClick={onSubmit} />
-      </Item>
-    </Root>
-  </div>
-);
+}) => {
+  const oldValueStr = fromBaseUnits(prevAmount, asset.decimals, getPricision(prevAmount, asset.decimals));
+  const newValueStr = fromBaseUnits(amount, asset.decimals, getPricision(amount, asset.decimals));
+  const valueFontSize = getValueFontSize(newValueStr.length > oldValueStr.length ? newValueStr : oldValueStr);
+  return (
+    <div className={className}>
+      <Root>
+        <ValuesRoot>
+          <OldValue>
+            <Text text={oldValueStr} size={valueFontSize} />
+          </OldValue>
+          <MergeIconRoot>
+            <MergeIcon src={mergeIcon} alt=">" />
+          </MergeIconRoot>
+          <NewValue>
+            <Text text={newValueStr} color="white" size={valueFontSize} />
+          </NewValue>
+        </ValuesRoot>
+        <FeeRoot>
+          <Text text={`Fee: ${fee} zk${asset.symbol}`} size="s" />
+        </FeeRoot>
+        <Item>
+          <Button theme="gradient" text="Merge" onClick={onSubmit} />
+        </Item>
+      </Root>
+    </div>
+  );
+};

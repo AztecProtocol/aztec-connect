@@ -65,18 +65,20 @@ export const FeeSelect: React.FunctionComponent<FeeSelectProps> = ({
         <InputButton value={fromBaseUnits(fees[selectedSpeed].fee, asset.decimals)} readOnly />
       </InputWrapper>
     }
-    items={fees.map(({ fee, time, speed }) => ({
-      id: speed,
-      content: (
-        <ItemRoot>
-          <InfoRoot>
-            <AssetIcon src={asset.icon} />
-            <Value text={fromBaseUnits(fee, asset.decimals)} />
-          </InfoRoot>
-          <Text text={formatTime(time)} color="grey" size="s" italic nowrap />
-        </ItemRoot>
-      ),
-    }))}
+    items={fees
+      .filter((f1, i) => !fees.some((f2, j) => i > j && f1.fee === f2.fee))
+      .map(({ fee, time, speed }) => ({
+        id: speed,
+        content: (
+          <ItemRoot>
+            <InfoRoot>
+              <AssetIcon src={asset.icon} />
+              <Value text={fromBaseUnits(fee, asset.decimals)} />
+            </InfoRoot>
+            <Text text={formatTime(time)} color="grey" size="s" italic nowrap />
+          </ItemRoot>
+        ),
+      }))}
     onSelect={onSelect}
     position="top"
   />
