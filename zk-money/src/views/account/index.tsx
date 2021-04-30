@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { useHistory, useLocation } from 'react-router-dom';
+import { AssetId } from '@aztec/sdk';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 import {
   AccountAction,
@@ -18,9 +18,9 @@ import {
 } from '../../app';
 import { Modal, PaddedBlock, Tab, Text } from '../../components';
 import { breakpoints, spacings, Theme } from '../../styles';
+import { FreeDaiTxs } from '../promotion/free_dai_txs';
 import { AccountAsset } from './asset';
 import { Merge } from './merge';
-import { Referral } from './referral';
 import { Send } from './send';
 import { Shield } from './shield';
 import { UnsupportedAsset } from './unsupported_asset';
@@ -93,6 +93,7 @@ interface AccountProps {
   onChangeAsset(assetId: AppAssetId): void;
   onSelectAction(action: AccountAction): void;
   onClearAction(): void;
+  isDaiTxFree: boolean;
 }
 
 export const Account: React.FunctionComponent<AccountProps> = ({
@@ -117,21 +118,9 @@ export const Account: React.FunctionComponent<AccountProps> = ({
   onChangeAsset,
   onSelectAction,
   onClearAction,
+  isDaiTxFree,
 }) => {
-  const [showReferral, setShowReferral] = useState(false);
   const [explainUnsettled, setExplainUnsettled] = useState(false);
-
-  const location = useLocation();
-  const history = useHistory();
-
-  useEffect(() => {
-    const queryParams = new URLSearchParams(location.search);
-
-    const showReferralByQuery = queryParams.get('alias') === accountState?.alias;
-    if (showReferralByQuery !== showReferral) {
-      setShowReferral(showReferralByQuery);
-    }
-  }, [location, accountState, showReferral]);
 
   const isInitializing = loginState.step !== LoginStep.DONE;
 
@@ -143,16 +132,6 @@ export const Account: React.FunctionComponent<AccountProps> = ({
   const handleSubmitMergeForm = (toMerge: bigint[]) => {
     onSelectAction(AccountAction.MERGE);
     handleValidateMergeForm(toMerge);
-  };
-
-  const handleCloseReferralModal = () => {
-    const queryParams = new URLSearchParams(location.search);
-    if (queryParams.has('alias')) {
-      queryParams.delete('alias');
-      history.replace({
-        search: queryParams.toString(),
-      });
-    }
   };
 
   return (
@@ -182,8 +161,8 @@ export const Account: React.FunctionComponent<AccountProps> = ({
           <UnsupportedAsset asset={asset} />
         </PaddedBlock>
       )}
-      {(showReferral || (!isInitializing && !activeAction)) && (
-        <Referral alias={accountState.alias} overrideVisible={showReferral} onClose={handleCloseReferralModal} />
+      {isDaiTxFree && !isInitializing && !activeAction && (
+        <FreeDaiTxs activeAsset={asset.id} onSubmit={() => onChangeAsset(AssetId.DAI)} />
       )}
       {activeAction && (
         <Modal

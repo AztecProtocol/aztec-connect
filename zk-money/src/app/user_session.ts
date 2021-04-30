@@ -7,6 +7,8 @@ import {
   GrumpkinAddress,
   SdkEvent,
   SdkInitState,
+  SettlementTime,
+  TxType,
   WalletSdk,
   Web3Signer,
 } from '@aztec/sdk';
@@ -174,6 +176,10 @@ export class UserSession extends EventEmitter {
 
   isProcessingAction() {
     return !this.destroyed && (undisruptiveSteps.indexOf(this.loginState.step) >= 0 || !!this.depositForm?.locked);
+  }
+
+  isDaiTxFree() {
+    return this.rollupService ? !this.rollupService.getFee(AssetId.DAI, TxType.DEPOSIT, SettlementTime.SLOW) : false;
   }
 
   async close(message = '', messageType = MessageType.TEXT, clearSession = true) {
