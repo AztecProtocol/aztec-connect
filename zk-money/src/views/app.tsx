@@ -358,6 +358,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
                   onChangeAsset={this.handleChangeAsset}
                   onSelectAction={this.app.selectAction}
                   onClearAction={this.app.clearAction}
+                  isDaiTxFree={this.app.isDaiTxFree()}
                 />
               );
             }

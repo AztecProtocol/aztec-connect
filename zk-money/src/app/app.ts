@@ -109,6 +109,10 @@ export class App extends EventEmitter {
     return this.session?.getDepositForm()?.getValues();
   }
 
+  isDaiTxFree() {
+    return !!this.session?.isDaiTxFree();
+  }
+
   isProcessingAction() {
     return this.session?.isProcessingAction() || this.session?.getAccount()?.isProcessingAction() || false;
   }

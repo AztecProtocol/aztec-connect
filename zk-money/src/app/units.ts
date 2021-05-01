@@ -14,6 +14,8 @@ export const fromBaseUnits = (value: bigint, decimals: number, precision?: numbe
   let fractional = valStr.slice(-decimals);
   if (precision === undefined) {
     fractional = fractional.replace(/0{1,}$/, '');
+  } else if (!precision) {
+    fractional = '';
   }
   return (neg ? '-' : '') + (fractional ? `${integer}.${fractional.slice(0, precision)}` : integer);
 };
