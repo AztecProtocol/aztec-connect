@@ -34,4 +34,4 @@ async function demoFormatValue(aztecSdk) {
 
 ## See Also
 
-- **[Get Balance](/#/ERC20%20Tokens/getBalance)**
+- **[Get Balance](/#/zkAssets/getBalance)**

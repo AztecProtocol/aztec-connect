@@ -1,24 +1,24 @@
 This method sends funds privately on layer 2, the transfer is private and confidential.
 
-@spec sdk.ts transfer
+@spec sdk.ts createTransferProof
 
 ```js
-import { AssetId, GrumpkinAddress } from '@aztec/sdk';
+import { AssetId, GrumpkinAddress, TxType } from '@aztec/sdk';
 
 async function demoTransfer(aztecSdk, userId, signer) {
   const assetId = AssetId.DAI;
+  const value = aztecSdk.toBaseUnits(assetId, '2');
+  const fee = await aztecSdk.getFee(assetId, TxType.TRANSFER);
 
   const balanceBefore = aztecSdk.getBalance(assetId, userId);
   console.info('Balance before transfer:', aztecSdk.fromBaseUnits(assetId, balanceBefore));
-
-  const value = aztecSdk.toBaseUnits(assetId, '2');
-  const fee = await aztecSdk.getFee(assetId, TxType.TRANSFER);
 
   const recipientPublicKey = GrumpkinAddress.fromString('RECIPIENT_PUBLIC_KEY');
   const recipientId = await aztecSdk.getAccountId(recipientPublicKey);
 
   console.info('Creating transfer proof...');
-  const txHash = await aztecSdk.transfer(assetId, userId, value, fee, signer, recipientId);
+  const proof = await aztecSdk.createTransferProof(assetId, userId, value, fee, signer, recipientId);
+  const txHash = await aztecSdk.sendProof(proof);
   console.info(`Proof accepted by server. Tx hash: ${txHash}`);
 
   console.info('Waiting for tx to settle...');
@@ -34,20 +34,18 @@ async function demoTransfer(aztecSdk, userId, signer) {
 Each [UserAsset](/#/Types/WalletSdkUserAsset) is bound to a user id and an asset id so that we don't have to pass these values around when we call the methods on it.
 
 ```js
-import { AssetId, GrumpkinAddress } from '@aztec/sdk';
+import { AssetId, TxType } from '@aztec/sdk';
 
 async function demoTransfer(aztecSdk, userId, signer) {
   const user = aztecSdk.getUser(userId);
   const asset = user.getAsset(AssetId.DAI);
+  const value = asset.toBaseUnits('2');
+  const fee = await asset.getFee(TxType.TRANSFER);
 
   const balanceBefore = asset.balance();
   console.info('Balance before transfer:', asset.fromBaseUnits(balanceBefore));
 
-  const value = asset.toBaseUnits('2');
-  const fee = await asset.getFee(TxType.TRANSFER);
-
   const recipientAlias = 'RECIPIENT_ALIAS';
-
   if (await aztecSdk.isAliasAvailable(recipientAlias)) {
     console.error('Unknown user.');
     return;
@@ -55,7 +53,8 @@ async function demoTransfer(aztecSdk, userId, signer) {
 
   console.info('Creating transfer proof...');
   const recipientId = await aztecSdk.getAccountId(recipientAlias);
-  const txHash = await asset.transfer(value, fee, signer, recipientId);
+  const proof = await asset.createTransferProof(value, fee, signer, recipientId);
+  const txHash = await aztecSdk.sendProof(proof);
   console.info(`Proof accepted by server. Tx hash: ${txHash}`);
 
   console.info('Waiting for tx to settle...');
@@ -68,7 +67,8 @@ async function demoTransfer(aztecSdk, userId, signer) {
 
 ## See Also
 
-- **[Get Balance](/#/ERC20%20Tokens/getBalance)**
-- **[Deposit](/#/ERC20%20Tokens/deposit)**
-- **[Withdraw](/#/ERC20%20Tokens/withdraw)**
-- **[Emergency Withdraw](/#/ERC20%20Tokens/emergencyWithdraw)**
+- **[Get Balance](/#/zkAssets/getBalance)**
+- **[Deposit](/#/zkAssets/createDepositProof)**
+- **[Withdraw](/#/zkAssets/createWithdrawProof)**
+- **[Join Split](/#/zkAssets/createJoinSplitProof)**
+- **[Emergency Withdraw](/#/zkAssets/emergencyWithdraw)**

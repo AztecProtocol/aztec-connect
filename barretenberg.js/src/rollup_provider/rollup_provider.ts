@@ -3,24 +3,27 @@ import { TxHash } from '../tx_hash';
 import { BlockchainStatus } from '../blockchain';
 import { ViewingKey } from '../viewing_key';
 
-export interface Proof {
-  proofData: Buffer;
-  viewingKeys: ViewingKey[];
-  depositSignature?: Buffer;
-}
-export interface FeeQuote {
-  fee: bigint;
-  time: number;
-}
-export interface AssetFeeQuote {
-  feeConstants: bigint[];
-  baseFeeQuotes: FeeQuote[];
-}
 export enum SettlementTime {
   SLOW,
   AVERAGE,
   FAST,
   INSTANT,
+}
+
+export interface Proof {
+  proofData: Buffer;
+  viewingKeys: ViewingKey[];
+  depositSignature?: Buffer;
+}
+
+export interface FeeQuote {
+  fee: bigint;
+  time: SettlementTime;
+}
+
+export interface AssetFeeQuote {
+  feeConstants: bigint[];
+  baseFeeQuotes: FeeQuote[];
 }
 
 export interface RollupProviderStatus {

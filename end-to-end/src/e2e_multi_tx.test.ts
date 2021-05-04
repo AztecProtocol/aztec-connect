@@ -1,7 +1,6 @@
-import { AssetId, createWalletSdk, WalletSdk, WalletSdkUser, EthAddress, WalletProvider, TxType } from '@aztec/sdk';
+import { AssetId, createWalletSdk, EthAddress, TxType, WalletProvider, WalletSdk, WalletSdkUser } from '@aztec/sdk';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
-import { getFeeDistributorContract } from './fee_distributor_contract';
 
 jest.setTimeout(10 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
@@ -16,12 +15,23 @@ const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost
  * end-to-end: yarn test ./src/e2e_multi_tx.test.ts
  */
 
-describe('end-to-end wallet tests', () => {
+describe('end-to-end multi tx tests', () => {
   let provider: WalletProvider;
   let sdk: WalletSdk;
   let accounts: EthAddress[] = [];
   const users: WalletSdkUser[] = [];
   const assetId = AssetId.ETH;
+
+  const deposit = async (userIndex: number, amount: bigint) => {
+    const userAsset = users[userIndex].getAsset(assetId);
+    const depositor = accounts[userIndex];
+    const depositFee = await sdk.getFee(assetId, TxType.DEPOSIT);
+    const schnorrSigner = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[userIndex])!);
+    await sdk.depositFundsToContract(assetId, depositor, amount + depositFee);
+    const proofOutput = await userAsset.createDepositProof(amount, depositFee, schnorrSigner, depositor);
+    const signature = await sdk.signProof(proofOutput, depositor);
+    return sdk.sendProof(proofOutput, signature);
+  };
 
   beforeAll(async () => {
     provider = await createFundedWalletProvider(ETHEREUM_HOST, 4, '2');
@@ -42,11 +52,6 @@ describe('end-to-end wallet tests', () => {
       const user = await sdk.addUser(provider.getPrivateKeyForAddress(accounts[i])!);
       users.push(user);
     }
-
-    const {
-      blockchainStatus: { rollupContractAddress },
-    } = await sdk.getRemoteStatus();
-    await getFeeDistributorContract(rollupContractAddress, provider, accounts[2]);
   });
 
   afterAll(async () => {
@@ -54,31 +59,24 @@ describe('end-to-end wallet tests', () => {
   });
 
   it('should deposit to three accounts', async () => {
-    const user0Asset = users[0].getAsset(assetId);
-    const txFee = await sdk.getFee(assetId, TxType.DEPOSIT);
+    expect(users[0].getAsset(assetId).balance()).toBe(0n);
+    expect(users[1].getAsset(assetId).balance()).toBe(0n);
+    expect(users[2].getAsset(assetId).balance()).toBe(0n);
 
-    expect(user0Asset.balance()).toBe(0n);
-    const schnorrSigner0 = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[0])!);
-    const schnorrSigner1 = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[1])!);
-    const schnorrSigner2 = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[2])!);
-
-    const tx1Hash = await sdk.deposit(AssetId.ETH, accounts[0], users[0].id, 1n, txFee, schnorrSigner0);
-    const tx2Hash = await sdk.deposit(AssetId.ETH, accounts[1], users[1].id, 2n, txFee, schnorrSigner1);
-    const tx3Hash = await sdk.deposit(AssetId.ETH, accounts[2], users[2].id, 3n, txFee, schnorrSigner2);
+    const tx1Hash = await deposit(0, 1n);
+    const tx2Hash = await deposit(1, 2n);
+    const tx3Hash = await deposit(2, 3n);
 
     await sdk.awaitSettlement(tx1Hash, 300);
     await sdk.awaitSettlement(tx2Hash, 300);
     await sdk.awaitSettlement(tx3Hash, 300);
+
     await sdk.awaitUserSynchronised(users[0].id);
     await sdk.awaitUserSynchronised(users[1].id);
     await sdk.awaitUserSynchronised(users[2].id);
 
-    const user0Balance = await sdk.getBalance(AssetId.ETH, users[0].id);
-    const user1Balance = await sdk.getBalance(AssetId.ETH, users[1].id);
-    const user2Balance = await sdk.getBalance(AssetId.ETH, users[2].id);
-
-    expect(user0Balance).toEqual(1n);
-    expect(user1Balance).toEqual(2n);
-    expect(user2Balance).toEqual(3n);
+    expect(users[0].getAsset(assetId).balance()).toBe(1n);
+    expect(users[1].getAsset(assetId).balance()).toBe(2n);
+    expect(users[2].getAsset(assetId).balance()).toBe(3n);
   });
 });

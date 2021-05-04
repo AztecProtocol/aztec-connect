@@ -85,7 +85,7 @@ export class TokenAsset implements Asset {
   }
 
   private getContractWithSigner(account: EthAddress, provider?: EthereumProvider) {
-    const ethSigner = (provider ? new Web3Provider(provider) : this.contract).getSigner(account.toString());
+    const ethSigner = (provider ? new Web3Provider(provider) : this.ethersProvider).getSigner(account.toString());
     return new Contract(this.info.address.toString(), abi, ethSigner);
   }
 }

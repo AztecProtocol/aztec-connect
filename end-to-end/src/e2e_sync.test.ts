@@ -1,4 +1,4 @@
-import { createEthSdk, EthereumSdk, EthersAdapter, WalletProvider } from '@aztec/sdk';
+import { createWalletSdk, EthersAdapter, WalletProvider, WalletSdk } from '@aztec/sdk';
 import { JsonRpcProvider } from '@ethersproject/providers';
 import { EventEmitter } from 'events';
 
@@ -13,15 +13,15 @@ const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost
  * Then run this test and watch it sync.
  */
 
-describe('end-to-end tests', () => {
-  let sdk: EthereumSdk;
+describe('end-to-end sync tests', () => {
+  let sdk: WalletSdk;
 
   beforeAll(async () => {
     const ethersProvider = new JsonRpcProvider(ETHEREUM_HOST);
     const ethereumProvider = new EthersAdapter(ethersProvider);
     const walletProvider = new WalletProvider(ethereumProvider);
 
-    sdk = await createEthSdk(walletProvider, ROLLUP_HOST, {
+    sdk = await createWalletSdk(walletProvider, ROLLUP_HOST, {
       syncInstances: false,
       saveProvingKey: false,
       clearDb: true,

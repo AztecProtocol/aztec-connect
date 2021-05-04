@@ -1,6 +1,6 @@
 This flexible api allows users to do more than a simple deposit, withdraw, or transfer in one transaction.
 
-@spec sdk.ts joinSplit
+@spec sdk.ts createJoinSplitProof
 
 ## Deposit and Transfer
 
@@ -41,7 +41,7 @@ async function demoJoinSplit(aztecSdk, userId, signer) {
   console.info('Balance:', asset.fromBaseUnits(initialBalance));
 
   console.info('Creating join split proof...');
-  const txHash = await aztecSdk.joinSplit(
+  const proof = await aztecSdk.createJoinSplitProof(
     assetId,
     userId,
     valueToDeposit,
@@ -50,12 +50,15 @@ async function demoJoinSplit(aztecSdk, userId, signer) {
     valueToSendPrivately,
     noteValueToKeep,
     signer,
-    {
-      ethSigner,
-      outputNoteOwner: recipientId,
-      outputOwner: recipientEthAddress,
-    },
+    recipientId,
+    senderEthAddress,
+    recipientEthAddress,
   );
+
+  console.info('Signing proof data...');
+  const signature = await aztecSdk.signProof(proof, senderEthAddress);
+
+  const txHash = await aztecSdk.sendProof(proof, signature);
   console.info(`Proof accepted by server. Tx hash: ${txHash}`);
 
   console.info('Waiting for tx to settle...');
@@ -69,8 +72,8 @@ async function demoJoinSplit(aztecSdk, userId, signer) {
 
 ## See Also
 
-- **[Deposit](/#/ERC20%20Tokens/withdraw)**
-- **[Withdraw](/#/ERC20%20Tokens/withdraw)**
-- **[Transfer](/#/ERC20%20Tokens/transfer)**
-- **[Emergency Withdraw](/#/ERC20%20Tokens/emergencyWithdraw)**
+- **[Deposit](/#/zkAssets/createDepositProof)**
+- **[Withdraw](/#/zkAssets/createWithdrawProof)**
+- **[Transfer](/#/zkAssets/createTransferProof)**
+- **[Emergency Withdraw](/#/zkAssets/emergencyWithdraw)**
 - **[WalletSDK Interface](/#/Types/WalletSdk)**

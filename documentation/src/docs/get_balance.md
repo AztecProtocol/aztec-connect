@@ -29,4 +29,4 @@ async function demoGetBalance(aztecSdk, userId) {
 
 ## See Also
 
-- **[Units](/#/ERC20%20Tokens/units)**
+- **[Units](/#/zkAssets/units)**

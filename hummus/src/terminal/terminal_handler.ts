@@ -318,7 +318,21 @@ export class TerminalHandler {
     const userAsset = this.app.getUser().getAsset(this.assetId);
     const value = userAsset.toBaseUnits(valueStr);
     const fee = await this.app.getSdk().getFee(this.assetId, TxType.DEPOSIT);
-    await userAsset.deposit(value, fee);
+    const publicInput = value + fee;
+    const assetBalance = await userAsset.balance();
+    const pendingBalance = await userAsset.pendingDeposit();
+    if (assetBalance + pendingBalance < publicInput) {
+      throw new Error('insufficient balance.');
+    }
+    if (publicInput > pendingBalance) {
+      this.printQueue.put(`depositing funds to contract...\n`);
+      await userAsset.depositFundsToContract(value);
+    }
+    this.printQueue.put(`generating proof...\n`);
+    const proof = await userAsset.createDepositProof(value, fee);
+    this.printQueue.put(`signing proof...\n`);
+    const signature = await userAsset.signProof(proof);
+    await this.app.getSdk().sendProof(proof, signature);
     this.printQueue.put(`deposit proof sent.\n`);
   }
 
@@ -326,7 +340,8 @@ export class TerminalHandler {
     this.assertRegistered();
     const userAsset = this.app.getUser().getAsset(this.assetId);
     const fee = await this.app.getSdk().getFee(this.assetId, TxType.WITHDRAW_TO_WALLET);
-    await userAsset.withdraw(userAsset.toBaseUnits(value) - fee, fee);
+    const proof = await userAsset.createWithdrawProof(userAsset.toBaseUnits(value) - fee, fee);
+    await this.app.getSdk().sendProof(proof);
     this.printQueue.put(`withdrawl proof sent.\n`);
   }
 
@@ -339,7 +354,8 @@ export class TerminalHandler {
     const userAsset = this.app.getUser().getAsset(this.assetId);
     const fee = await this.app.getSdk().getFee(this.assetId, TxType.TRANSFER);
 
-    await userAsset.transfer(userAsset.toBaseUnits(value), fee, to);
+    const proof = await userAsset.createTransferProof(userAsset.toBaseUnits(value), fee, to);
+    await this.app.getSdk().sendProof(proof);
     this.printQueue.put(`transfer proof sent.\n`);
   }
 
@@ -376,7 +392,7 @@ export class TerminalHandler {
     const userAsset = this.app.getUser().getAsset(this.assetId);
     this.printQueue.put(`public: ${userAsset.fromBaseUnits(await userAsset.publicBalance())}\n`);
     this.printQueue.put(`private: ${userAsset.fromBaseUnits(userAsset.balance())}\n`);
-    const fundsPendingDeposit = await userAsset.getUserPendingDeposit();
+    const fundsPendingDeposit = await userAsset.pendingDeposit();
     if (fundsPendingDeposit > 0) {
       this.printQueue.put(`pending deposit: ${userAsset.fromBaseUnits(fundsPendingDeposit)}\n`);
     }
@@ -384,7 +400,7 @@ export class TerminalHandler {
 
   private async fees() {
     const { symbol } = this.app.getSdk().getAssetInfo(this.assetId);
-    const { txFees } = this.app.getSdk().getLocalStatus();
+    const { txFees } = await this.app.getSdk().getRemoteStatus();
     const feeNames = ['DEPOSIT', 'TRANSFER', 'WALLET WITHDRAW', 'CONTRACT WITHDRAW'];
     const baseFee = txFees[this.assetId].baseFeeQuotes[0].fee;
     txFees[this.assetId].feeConstants.forEach((fee, index) => {

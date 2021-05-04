@@ -1,1 +1,1 @@
-@spec @aztec/sdk/signer/index.d.ts EthereumSignature
+@spec barretenberg/blockchain/ethereum_signer.d.ts EthereumSignature

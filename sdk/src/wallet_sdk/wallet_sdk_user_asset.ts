@@ -1,10 +1,9 @@
 import { EthAddress } from 'barretenberg/address';
 import { AssetId } from 'barretenberg/asset';
+import { PermitArgs, TxType } from 'barretenberg/blockchain';
 import { Signer } from '../signer';
 import { AccountId } from '../user';
-import { JoinSplitTxOptions } from './tx_options';
 import { WalletSdk } from '.';
-import { TxType } from 'barretenberg/blockchain';
 
 export class WalletSdkUserAsset {
   constructor(public userId: AccountId, public assetId: AssetId, private sdk: WalletSdk) {}
@@ -17,50 +16,44 @@ export class WalletSdkUserAsset {
     return this.sdk.getBalance(this.assetId, this.userId);
   }
 
+  async publicBalance(account: EthAddress) {
+    return this.sdk.getPublicBalance(this.assetId, account);
+  }
+
+  async publicAllowance(account: EthAddress) {
+    return this.sdk.getPublicAllowance(this.assetId, account);
+  }
+
+  async pendingDeposit(account: EthAddress) {
+    return this.sdk.getUserPendingDeposit(this.assetId, account);
+  }
+
   async getMaxSpendableValue() {
     return this.sdk.getMaxSpendableValue(this.assetId, this.userId);
   }
 
   async mint(value: bigint, account: EthAddress) {
-    return this.sdk.mint(this.assetId, this.userId, value, account);
+    return this.sdk.mint(this.assetId, value, account);
   }
 
   async approve(value: bigint, account: EthAddress) {
-    return this.sdk.approve(this.assetId, this.userId, value, account);
+    return this.sdk.approve(this.assetId, value, account);
   }
 
-  async deposit(value: bigint, fee: bigint, signer: Signer, from: EthAddress) {
-    return this.sdk.deposit(this.assetId, from, this.userId, value, fee, signer);
+  async depositFundsToContract(from: EthAddress, value: bigint, permitArgs?: PermitArgs) {
+    return this.sdk.depositFundsToContract(this.assetId, from, value, permitArgs);
   }
 
-  async withdraw(value: bigint, fee: bigint, signer: Signer, to: EthAddress) {
-    return this.sdk.withdraw(this.assetId, this.userId, value, fee, signer, to);
+  async createDepositProof(value: bigint, fee: bigint, signer: Signer, from: EthAddress) {
+    return this.sdk.createDepositProof(this.assetId, from, this.userId, value, fee, signer);
   }
 
-  async transfer(value: bigint, fee: bigint, signer: Signer, to: AccountId) {
-    return this.sdk.transfer(this.assetId, this.userId, value, fee, signer, to);
+  async createWithdrawProof(value: bigint, fee: bigint, signer: Signer, to: EthAddress) {
+    return this.sdk.createWithdrawProof(this.assetId, this.userId, value, fee, signer, to);
   }
 
-  async joinSplit(
-    publicInput: bigint,
-    publicOutput: bigint,
-    privateInput: bigint,
-    recipientPrivateOutput: bigint,
-    senderPrivateOutput: bigint,
-    signer: Signer,
-    options?: JoinSplitTxOptions,
-  ) {
-    return this.sdk.joinSplit(
-      this.assetId,
-      this.userId,
-      publicInput,
-      publicOutput,
-      privateInput,
-      recipientPrivateOutput,
-      senderPrivateOutput,
-      signer,
-      options,
-    );
+  async createTransferProof(value: bigint, fee: bigint, signer: Signer, to: AccountId) {
+    return this.sdk.createTransferProof(this.assetId, this.userId, value, fee, signer, to);
   }
 
   public fromBaseUnits(value: bigint, precision?: number) {

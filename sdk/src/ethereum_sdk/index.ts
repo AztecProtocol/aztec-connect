@@ -14,7 +14,9 @@ import { EthereumSdkUser } from './ethereum_sdk_user';
 import { createConnection } from 'typeorm';
 import { getBlockchainStatus } from 'barretenberg/service';
 import { TxHash } from 'barretenberg/tx_hash';
-import { EthereumSigner, TxType } from 'barretenberg/blockchain';
+import { EthereumSigner, PermitArgs, TxType } from 'barretenberg/blockchain';
+import { SettlementTime } from 'barretenberg/rollup_provider';
+import { ProofOutput } from '../proofs/proof_output';
 
 export * from './ethereum_sdk_user';
 export * from './ethereum_sdk_user_asset';
@@ -109,8 +111,8 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.getRemoteStatus();
   }
 
-  public async getFee(assetId: AssetId, txType: TxType) {
-    return this.walletSdk.getFee(assetId, txType);
+  public async getFee(assetId: AssetId, txType: TxType, speed = SettlementTime.SLOW) {
+    return this.walletSdk.getFee(assetId, txType, speed);
   }
 
   public getUserPendingDeposit(assetId: AssetId, account: EthAddress) {
@@ -126,30 +128,34 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.isAliasAvailable(alias);
   }
 
-  public async approve(assetId: AssetId, accountId: AccountId, value: bigint, ethAddress: EthAddress) {
-    return this.walletSdk.approve(assetId, accountId, value, ethAddress);
+  public async approve(assetId: AssetId, value: bigint, ethAddress: EthAddress) {
+    return this.walletSdk.approve(assetId, value, ethAddress);
   }
 
-  public async mint(assetId: AssetId, accountId: AccountId, value: bigint, ethAddress: EthAddress) {
-    return this.walletSdk.mint(assetId, accountId, value, ethAddress);
+  public async mint(assetId: AssetId, value: bigint, ethAddress: EthAddress) {
+    return this.walletSdk.mint(assetId, value, ethAddress);
   }
 
-  public async deposit(assetId: AssetId, from: EthAddress, to: AccountId, value: bigint, fee: bigint) {
+  public async depositFundsToContract(assetId: AssetId, from: EthAddress, value: bigint, permitArgs?: PermitArgs) {
+    return this.walletSdk.depositFundsToContract(assetId, from, value, permitArgs);
+  }
+
+  public async createDepositProof(assetId: AssetId, from: EthAddress, to: AccountId, value: bigint, fee: bigint) {
     const userData = this.walletSdk.getUserData(to);
     const aztecSigner = this.walletSdk.createSchnorrSigner(userData.privateKey);
-    return this.walletSdk.deposit(assetId, from, to, value, fee, aztecSigner);
+    return this.walletSdk.createDepositProof(assetId, from, to, value, fee, aztecSigner);
   }
 
-  public async withdraw(assetId: AssetId, from: AccountId, to: EthAddress, value: bigint, fee: bigint) {
+  public async createWithdrawProof(assetId: AssetId, from: AccountId, to: EthAddress, value: bigint, fee: bigint) {
     const userData = this.walletSdk.getUserData(from);
     const aztecSigner = this.walletSdk.createSchnorrSigner(userData.privateKey);
-    return this.walletSdk.withdraw(assetId, from, value, fee, aztecSigner, to);
+    return this.walletSdk.createWithdrawProof(assetId, from, value, fee, aztecSigner, to);
   }
 
-  public async transfer(assetId: AssetId, from: AccountId, to: AccountId, value: bigint, fee: bigint) {
+  public async createTransferProof(assetId: AssetId, from: AccountId, to: AccountId, value: bigint, fee: bigint) {
     const userData = this.walletSdk.getUserData(from);
     const aztecSigner = this.walletSdk.createSchnorrSigner(userData.privateKey);
-    return this.walletSdk.transfer(assetId, from, value, fee, aztecSigner, to);
+    return this.walletSdk.createTransferProof(assetId, from, value, fee, aztecSigner, to);
   }
 
   public async createAccount(
@@ -159,6 +165,14 @@ export class EthereumSdk extends EventEmitter {
     recoveryPublicKey?: GrumpkinAddress,
   ) {
     return await this.walletSdk.createAccount(accountId, alias, newSigningPublicKey, recoveryPublicKey);
+  }
+
+  public async signProof(proofOutput: ProofOutput, inputOwner: EthAddress, provider?: EthereumProvider) {
+    return this.walletSdk.signProof(proofOutput, inputOwner, provider);
+  }
+
+  public async sendProof(proofOutput: ProofOutput, signature?: Buffer) {
+    return this.walletSdk.sendProof(proofOutput, signature);
   }
 
   public getUserData(accountId: AccountId) {

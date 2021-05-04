@@ -1,9 +1,15 @@
 import { EthereumProvider } from '@aztec/sdk';
-import { EthereumProviderNotifications, RequestArguments } from '@aztec/sdk/blockchain';
 import { Web3Provider } from '@ethersproject/providers';
 import WalletConnectProvider from '@walletconnect/web3-provider';
 import { utils } from 'ethers';
 import { WalletProvider } from './wallet_provider';
+
+type EthereumProviderNotifications = 'connect' | 'disconnect' | 'chainChanged' | 'accountsChanged' | 'message';
+
+interface RequestArguments {
+  readonly method: string;
+  readonly params?: any[];
+}
 
 export class WalletConnectEthereumProvider implements EthereumProvider {
   private readonly pollingInterval = 15 * 1000;

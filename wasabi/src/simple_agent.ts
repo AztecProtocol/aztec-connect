@@ -103,15 +103,18 @@ export class SimpleAgent extends Agent {
   private deposit = async () => {
     console.log(`Agent ${this.id} depositing...`);
     const fee = await this.userAsset.getFee(TxType.DEPOSIT);
-    const pendingDeposit = await this.sdk.getUserPendingDeposit(AssetId.ETH, this.address);
-    return await this.userAsset.deposit(pendingDeposit - fee, fee, this.signer, this.address);
+    const pendingDeposit = await this.userAsset.pendingDeposit(this.address);
+    const proof = await this.userAsset.createDepositProof(pendingDeposit - fee, fee, this.signer, this.address);
+    const signature = await this.sdk.signProof(proof, this.address);
+    return await this.sdk.sendProof(proof, signature);
   };
 
   private transfer = async () => {
     console.log(`Agent ${this.id} transferring...`);
     const fee = await this.userAsset.getFee(TxType.TRANSFER);
     const balance = this.userAsset.balance();
-    return await this.userAsset.transfer(balance - fee, fee, this.signer, this.user.id);
+    const proof = await this.userAsset.createTransferProof(balance - fee, fee, this.signer, this.user.id);
+    return await this.sdk.sendProof(proof);
   };
 
   private withdraw = async () => {
@@ -119,6 +122,12 @@ export class SimpleAgent extends Agent {
     const masterAddress = await this.masterWallet.getAddress();
     const fee = await this.userAsset.getFee(TxType.WITHDRAW_TO_WALLET);
     const balance = this.userAsset.balance();
-    return await this.userAsset.withdraw(balance - fee, fee, this.signer, EthAddress.fromString(masterAddress));
+    const proof = await this.userAsset.createWithdrawProof(
+      balance - fee,
+      fee,
+      this.signer,
+      EthAddress.fromString(masterAddress),
+    );
+    return await this.sdk.sendProof(proof);
   };
 }

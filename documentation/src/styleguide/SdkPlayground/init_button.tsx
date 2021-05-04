@@ -83,7 +83,7 @@ const InitButtonRenderer: React.FunctionComponent<InitButtonProps> = ({ classes,
     return <Button classes={classes} text="Initialize SDK" onClick={() => app.createSdk()} />;
   }
 
-  if (initStatus.initAction === AppInitAction.AWAIT_LINK_AZTEC_ACCOUNT) {
+  if (initStatus.initAction === AppInitAction.AWAITING_PERMISSION_TO_LINK) {
     const account = sdk.getAddress();
     return (
       <Button
@@ -102,11 +102,11 @@ const InitButtonRenderer: React.FunctionComponent<InitButtonProps> = ({ classes,
     return <Button classes={classes} text="Check MetaMask to link Ethereum account..." loading />;
   }
 
-  if (initStatus.initAction === AppInitAction.LINK_AZTEC_ACCOUNT) {
+  if (initStatus.initAction === AppInitAction.AWAITING_PROVIDER_SIGNATURE) {
     return <Button classes={classes} text="Check for MetaMask signature request to link Aztec account..." loading />;
   }
 
-  return <Button classes={classes} text={initStatus.message || 'Initializing...'} loading />;
+  return <Button classes={classes} text="Initializing..." loading />;
 };
 
 export const InitButton = Styled<InitButtonProps>(styles)(InitButtonRenderer);
