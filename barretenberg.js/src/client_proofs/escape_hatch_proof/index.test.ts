@@ -1,7 +1,7 @@
 import { EscapeHatchProver, EscapeHatchTx, EscapeHatchVerifier } from './index';
 import createDebug from 'debug';
 import { BarretenbergWasm } from '../../wasm';
-import { createEphemeralPrivKey, TreeNote } from '../note';
+import { createEphemeralPrivKey, TreeNote } from '../tree_note';
 import { EventEmitter } from 'events';
 import { Crs } from '../../crs';
 import { WorkerPool } from '../../wasm/worker_pool';
@@ -101,8 +101,8 @@ describe('escape_hatch_proof', () => {
     const inputNotes = [inputNote1, inputNote2];
 
     const inputIndexes = [0, 1];
-    const inputNote1Enc = await noteAlgos.encryptNote(inputNote1);
-    const inputNote2Enc = await noteAlgos.encryptNote(inputNote2);
+    const inputNote1Enc = await noteAlgos.encryptNote(inputNote1.toBuffer());
+    const inputNote2Enc = await noteAlgos.encryptNote(inputNote2.toBuffer());
     const encryptedNotes = [inputNote1Enc, inputNote2Enc];
     const nullifiers = encryptedNotes.map((encNote, index) => {
       return toBigIntBE(noteAlgos.computeNoteNullifier(encNote, inputIndexes[index], privateKey, true));
@@ -131,8 +131,8 @@ describe('escape_hatch_proof', () => {
 
     // Add the output notes to the tree
     let nextDataStartIndex = worldStateDb.getSize(dataTreeId);
-    const outputNote1Enc = await noteAlgos.encryptNote(outputNote1);
-    const outputNote2Enc = await noteAlgos.encryptNote(outputNote2);
+    const outputNote1Enc = await noteAlgos.encryptNote(outputNote1.toBuffer());
+    const outputNote2Enc = await noteAlgos.encryptNote(outputNote2.toBuffer());
 
     await worldStateDb.put(dataTreeId, nextDataStartIndex++, outputNote1Enc);
     await worldStateDb.put(dataTreeId, nextDataStartIndex++, outputNote2Enc);

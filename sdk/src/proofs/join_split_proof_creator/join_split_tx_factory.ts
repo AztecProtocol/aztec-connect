@@ -1,7 +1,7 @@
 import { EthAddress } from 'barretenberg/address';
 import { AssetId } from 'barretenberg/asset';
 import { computeSigningData, JoinSplitTx } from 'barretenberg/client_proofs/join_split_proof';
-import { createEphemeralPrivKey, encryptNote, TreeNote } from 'barretenberg/client_proofs/note';
+import { createEphemeralPrivKey, encryptNote, TreeNote } from 'barretenberg/client_proofs/tree_note';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
@@ -50,7 +50,14 @@ export class JoinSplitTxFactory {
     for (let i = notes.length; i < 2; ++i) {
       inputNoteIndices.push(maxNoteIndex + i); // notes can't have the same index
       inputNotes.push(
-        TreeNote.createFromEphPriv(publicKey, BigInt(0), assetId, nonce, createEphemeralPrivKey(this.grumpkin), this.grumpkin),
+        TreeNote.createFromEphPriv(
+          publicKey,
+          BigInt(0),
+          assetId,
+          nonce,
+          createEphemeralPrivKey(this.grumpkin),
+          this.grumpkin,
+        ),
       );
     }
     const inputNotePaths = await Promise.all(inputNoteIndices.map(async idx => this.worldState.getHashPath(idx)));

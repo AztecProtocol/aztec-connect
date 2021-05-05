@@ -1,10 +1,11 @@
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
-import { createHash, randomBytes, createCipheriv, createDecipheriv } from 'crypto';
+import { createHash, createCipheriv, createDecipheriv } from 'crypto';
 import { Grumpkin } from '../ecc/grumpkin';
 import { GrumpkinAddress } from '../address';
 import { numToUInt8, numToUInt32BE } from '../serialize';
 import { AssetId } from '../asset';
 import { ViewingKey } from '../viewing_key';
+import { NoteAlgorithms } from './note_algorithms';
 
 export class TreeNote {
   constructor(
@@ -15,31 +16,6 @@ export class TreeNote {
     public noteSecret: Buffer,
   ) {}
 
-  static createFromEphPub(
-    ownerPubKey: GrumpkinAddress,
-    value: bigint,
-    assetId: AssetId,
-    nonce: number,
-    ephPubKey: GrumpkinAddress,
-    ownerPrivKey: Buffer,
-    grumpkin: Grumpkin,
-  ) {
-    const noteSecret = deriveNoteSecret(ephPubKey, ownerPrivKey, grumpkin);
-    return new TreeNote(ownerPubKey, value, assetId, nonce, noteSecret);
-  }
-
-  static createFromEphPriv(
-    ownerPubKey: GrumpkinAddress,
-    value: bigint,
-    assetId: AssetId,
-    nonce: number,
-    ephPrivKey: Buffer,
-    grumpkin: Grumpkin,
-  ) {
-    const noteSecret = deriveNoteSecret(ownerPubKey, ephPrivKey, grumpkin);
-    return new TreeNote(ownerPubKey, value, assetId, nonce, noteSecret);
-  }
-
   toBuffer() {
     return Buffer.concat([
       toBufferBE(this.value, 32),
@@ -49,13 +25,50 @@ export class TreeNote {
       this.noteSecret,
     ]);
   }
+
+  static createFromEphPriv(
+    ownerPubKey: GrumpkinAddress,
+    value: bigint,
+    assetId: AssetId,
+    nonce: number,
+    ephPrivKey: Buffer,
+    grumpkin: Grumpkin,
+    noteVersion = 1,
+  ) {
+    const noteSecret = deriveNoteSecret(ownerPubKey, ephPrivKey, grumpkin, noteVersion);
+    return new TreeNote(ownerPubKey, value, assetId, nonce, noteSecret);
+  }
+
+  static createFromEphPub(
+    ownerPubKey: GrumpkinAddress,
+    value: bigint,
+    assetId: AssetId,
+    nonce: number,
+    ephPubKey: GrumpkinAddress,
+    ownerPrivKey: Buffer,
+    grumpkin: Grumpkin,
+    noteVersion = 1,
+  ) {
+    const noteSecret = deriveNoteSecret(ephPubKey, ownerPrivKey, grumpkin, noteVersion);
+    return new TreeNote(ownerPubKey, value, assetId, nonce, noteSecret);
+  }
 }
 
 export function createEphemeralPrivKey(grumpkin: Grumpkin) {
   return grumpkin.getRandomFr();
 }
 
-function deriveNoteSecret(ecdhPubKey: GrumpkinAddress, ecdhPrivKey: Buffer, grumpkin: Grumpkin) {
+export function deriveNoteSecret(ecdhPubKey: GrumpkinAddress, ecdhPrivKey: Buffer, grumpkin: Grumpkin, version = 1) {
+  if (version == 1) {
+    const sharedSecret = grumpkin.mul(ecdhPubKey.toBuffer(), ecdhPrivKey);
+    const secretBufferA = Buffer.concat([sharedSecret, numToUInt8(2)]);
+    const secretBufferB = Buffer.concat([sharedSecret, numToUInt8(3)]);
+    const hashA = createHash('sha256').update(secretBufferA).digest();
+    const hashB = createHash('sha256').update(secretBufferB).digest();
+    const hash = Buffer.concat([hashA, hashB]);
+    return grumpkin.reduce512BufferToFr(hash);
+  }
+
   const sharedSecret = grumpkin.mul(ecdhPubKey.toBuffer(), ecdhPrivKey);
   const secretBuffer = Buffer.concat([sharedSecret, numToUInt8(0)]);
   const hash = createHash('sha256').update(secretBuffer).digest();
@@ -88,7 +101,7 @@ export function encryptNote(note: TreeNote, ephPrivKey: Buffer, grumpkin: Grumpk
   return result;
 }
 
-export function decryptNote(viewingKey: ViewingKey, privateKey: Buffer, grumpkin: Grumpkin) {
+export function decryptNote(viewingKey: ViewingKey, privateKey: Buffer, grumpkin: Grumpkin, noteVersion = 1) {
   const encryptedNote = viewingKey.toBuffer();
   const ephPubKey = new GrumpkinAddress(encryptedNote.slice(-64));
   const aesSecret = deriveAESSecret(ephPubKey, privateKey, grumpkin);
@@ -99,10 +112,14 @@ export function decryptNote(viewingKey: ViewingKey, privateKey: Buffer, grumpkin
     const decipher = createDecipheriv('aes-128-cbc', aesKey, iv);
     decipher.setAutoPadding(false); // plaintext is already a multiple of 16 bytes
     const plaintext = Buffer.concat([decipher.update(encryptedNote.slice(0, -64)), decipher.final()]);
+    const testIvSlice = plaintext.slice(0, 8);
+    if (!testIvSlice.equals(iv.slice(0, 8))) {
+      return undefined;
+    }
 
     const noteBuf = plaintext.slice(8);
     const ownerPubKey = grumpkin.mul(Grumpkin.one, privateKey);
-    const note = TreeNote.createFromEphPub(
+    const noteType = TreeNote.createFromEphPub(
       new GrumpkinAddress(ownerPubKey),
       toBigIntBE(noteBuf.slice(0, 32)),
       noteBuf.readUInt32BE(32),
@@ -110,11 +127,48 @@ export function decryptNote(viewingKey: ViewingKey, privateKey: Buffer, grumpkin
       ephPubKey,
       privateKey,
       grumpkin,
+      noteVersion,
     );
-
-    const testIvSlice = plaintext.slice(0, 8);
-    return testIvSlice.equals(iv.slice(0, 8)) ? note : undefined;
+    return noteType;
   } catch (err) {
     return;
   }
+}
+
+export async function batchDecryptNotes(
+  viewingKeys: Buffer,
+  privateKey: Buffer,
+  grumpkin: Grumpkin,
+  noteCommitments: Buffer[],
+  noteAlgorithms: NoteAlgorithms,
+) {
+  const decryptedNoteLength = 41;
+  const dataBuf = await noteAlgorithms.batchDecryptNotes(viewingKeys, privateKey);
+  const ownerPubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, privateKey));
+
+  const notes = noteCommitments.map((noteCommitment, i) => {
+    const noteBuf = dataBuf.slice(i * decryptedNoteLength, i * decryptedNoteLength + decryptedNoteLength);
+    if (noteBuf.length === 0) {
+      return;
+    }
+    const success = noteBuf[0];
+    const value = toBigIntBE(noteBuf.slice(1, 33));
+    const assetId = noteBuf.readUInt32BE(33);
+    const nonce = noteBuf.readUInt32BE(37);
+    const ephPubKey = new GrumpkinAddress(viewingKeys.slice((i + 1) * ViewingKey.SIZE - 64, (i + 1) * ViewingKey.SIZE));
+
+    if (success) {
+      const noteV0 = TreeNote.createFromEphPub(ownerPubKey, value, assetId, nonce, ephPubKey, privateKey, grumpkin, 0);
+      const noteV1 = TreeNote.createFromEphPub(ownerPubKey, value, assetId, nonce, ephPubKey, privateKey, grumpkin, 1);
+      const noteV0Commitment = noteAlgorithms.encryptNote(noteV0.toBuffer());
+      const noteV1Commitment = noteAlgorithms.encryptNote(noteV1.toBuffer());
+      if (noteV0Commitment.equals(noteCommitment)) {
+        return noteV0;
+      } else if (noteV1Commitment.equals(noteCommitment)) {
+        return noteV1;
+      }
+    }
+  });
+
+  return notes;
 }

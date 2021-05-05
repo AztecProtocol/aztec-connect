@@ -6,7 +6,7 @@ import { MerkleTree } from '../../merkle_tree';
 import levelup from 'levelup';
 import memdown from 'memdown';
 import { Pedersen } from '../../crypto/pedersen';
-import { TreeNote, createEphemeralPrivKey } from '../note';
+import { createEphemeralPrivKey, TreeNote } from '../tree_note';
 import { EventEmitter } from 'events';
 import { Crs } from '../../crs';
 import { WorkerPool } from '../../wasm/worker_pool';
@@ -108,8 +108,8 @@ describe('join_split_proof', () => {
       const outputNote1 = TreeNote.createFromEphPriv(pubKey, BigInt(80), 0, 0, outputNote1EphKey, grumpkin);
       const outputNote2 = TreeNote.createFromEphPriv(pubKey, BigInt(70), 0, 0, outputNote2EphKey, grumpkin);
 
-      const inputNote1Enc = noteAlgos.encryptNote(inputNote1);
-      const inputNote2Enc = noteAlgos.encryptNote(inputNote2);
+      const inputNote1Enc = noteAlgos.encryptNote(inputNote1.toBuffer());
+      const inputNote2Enc = noteAlgos.encryptNote(inputNote2.toBuffer());
 
       const tree = new MerkleTree(levelup(memdown()), pedersen, 'data', 32);
       await tree.updateElement(0, inputNote1Enc);

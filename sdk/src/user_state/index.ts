@@ -1,6 +1,6 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { Block } from 'barretenberg/block_source';
-import { TreeNote } from 'barretenberg/client_proofs/note';
+import { TreeNote, batchDecryptNotes } from 'barretenberg/client_proofs/tree_note';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { computeAccountAliasIdNullifier } from 'barretenberg/client_proofs/account_proof';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
@@ -108,11 +108,21 @@ export class UserState extends EventEmitter {
 
     const balancesBefore = AssetIds.map(assetId => this.getBalance(assetId));
     const viewingKeys = Buffer.concat(blocks.map(b => b.viewingKeysData));
-    const notes = await this.noteAlgos.batchDecryptNotes(viewingKeys, this.user.privateKey, this.grumpkin);
+    const rollupProofData = blocks.map(b => RollupProofData.fromBuffer(b.rollupProofData, b.viewingKeysData));
+    const noteCommitments = rollupProofData.map(p => p.innerProofData.map(i => [i.newNote1, i.newNote2])).flat(2);
+
+    const notes = await batchDecryptNotes(
+      viewingKeys,
+      this.user.privateKey,
+      this.grumpkin,
+      noteCommitments,
+      this.noteAlgos,
+    );
 
     let jsCount = 0;
-    for (const block of blocks) {
-      const proofData = RollupProofData.fromBuffer(block.rollupProofData, block.viewingKeysData);
+    for (let blockIndex = 0; blockIndex < blocks.length; ++blockIndex) {
+      const block = blocks[blockIndex];
+      const proofData = rollupProofData[blockIndex];
 
       for (let i = 0; i < proofData.innerProofData.length; ++i) {
         const proof = proofData.innerProofData[i];

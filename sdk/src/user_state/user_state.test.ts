@@ -1,6 +1,6 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { computeAccountAliasIdNullifier } from 'barretenberg/client_proofs/account_proof/compute_nullifier';
-import { createEphemeralPrivKey, encryptNote, TreeNote } from 'barretenberg/client_proofs/note';
+import { createEphemeralPrivKey, deriveNoteSecret, encryptNote, TreeNote } from 'barretenberg/client_proofs/tree_note';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { Blake2s } from 'barretenberg/crypto/blake2s';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
@@ -76,20 +76,23 @@ describe('user state', () => {
     await userState.startSync();
   });
 
-  const generateRollup = ({
-    validNewNote = true,
-    validChangeNote = true,
-    assetId = 1,
-    publicInput = 0n,
-    publicOutput = 0n,
-    outputNoteValue1 = 0n,
-    outputNoteValue2 = 0n,
-    inputOwner = EthAddress.ZERO,
-    outputOwner = EthAddress.ZERO,
-    newNoteNonce = user.nonce,
-    rollupId = 0,
-    isPadding = false,
-  } = {}) => {
+  const generateRollup = (
+    {
+      validNewNote = true,
+      validChangeNote = true,
+      assetId = 1,
+      publicInput = 0n,
+      publicOutput = 0n,
+      outputNoteValue1 = 0n,
+      outputNoteValue2 = 0n,
+      inputOwner = EthAddress.ZERO,
+      outputOwner = EthAddress.ZERO,
+      newNoteNonce = user.nonce,
+      rollupId = 0,
+      isPadding = false,
+    } = {},
+    createValidNoteEncryptions = true,
+  ) => {
     const ephPrivKey = createEphemeralPrivKey(grumpkin);
     const note1 = TreeNote.createFromEphPriv(
       user.publicKey,
@@ -99,6 +102,10 @@ describe('user state', () => {
       ephPrivKey,
       grumpkin,
     );
+    // Set the first output note secret to use the old secret derivation method.
+    // We want to validate that we can correctl decruyt notes that use the old 2050-bit secret keys
+    note1.noteSecret = deriveNoteSecret(user.publicKey, ephPrivKey, grumpkin, 0);
+
     const note2 = TreeNote.createFromEphPriv(
       user.publicKey,
       BigInt(outputNoteValue2),
@@ -108,8 +115,8 @@ describe('user state', () => {
       grumpkin,
     );
     const gibberishNote = TreeNote.createFromEphPriv(GrumpkinAddress.randomAddress(), 0n, 0, 0, ephPrivKey, grumpkin);
-    const encryptedNote1 = randomBytes(64);
-    const encryptedNote2 = randomBytes(64);
+    const encryptedNote1 = createValidNoteEncryptions ? noteAlgos.encryptNote(note1.toBuffer()) : randomBytes(64);
+    const encryptedNote2 = createValidNoteEncryptions ? noteAlgos.encryptNote(note2.toBuffer()) : randomBytes(64);
     const nullifier1 = isPadding
       ? Buffer.alloc(32)
       : noteAlgos.computeNoteNullifier(randomBytes(64), 0, user.privateKey);
@@ -550,5 +557,29 @@ describe('user state', () => {
       migrated: false,
       settled: blockCreated,
     });
+  });
+
+  it('should not add notes with incorrect commitments', async () => {
+    const outputNoteValue1 = 36n;
+    const outputNoteValue2 = 64n;
+    const inputNoteIndex = 123;
+
+    const rollupProofData = generateRollup(
+      {
+        outputNoteValue1,
+        outputNoteValue2,
+      },
+      false,
+    );
+    const blockCreated = new Date();
+    const block = createBlock(rollupProofData, blockCreated);
+
+    db.getJoinSplitTx.mockResolvedValue({ txHash: '', settled: undefined });
+    db.getNoteByNullifier.mockResolvedValueOnce({ index: inputNoteIndex, owner: user.id });
+
+    userState.processBlock(block);
+    await userState.stopSync(true);
+
+    expect(db.addNote).toHaveBeenCalledTimes(0);
   });
 });
