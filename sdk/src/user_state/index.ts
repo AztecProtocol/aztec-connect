@@ -19,6 +19,7 @@ import { AccountAliasId, UserData } from '../user';
 import { isJoinSplitTx, UserAccountTx, UserJoinSplitTx } from '../user_tx';
 import { AccountId } from '../user/account_id';
 import { TxHash } from 'barretenberg/tx_hash';
+import { ProofId } from 'barretenberg/client_proofs/proof_data';
 
 const debug = createDebug('bb:user_state');
 
@@ -109,13 +110,19 @@ export class UserState extends EventEmitter {
     const balancesBefore = AssetIds.map(assetId => this.getBalance(assetId));
     const viewingKeys = Buffer.concat(blocks.map(b => b.viewingKeysData));
     const rollupProofData = blocks.map(b => RollupProofData.fromBuffer(b.rollupProofData, b.viewingKeysData));
-    const noteCommitments = rollupProofData.map(p => p.innerProofData.map(i => [i.newNote1, i.newNote2])).flat(2);
+    const joinSplitNoteCommitments = rollupProofData
+      .map(p =>
+        p.innerProofData
+          .filter(i => i.proofId === ProofId.JOIN_SPLIT && !i.isPadding())
+          .map(i => [i.newNote1, i.newNote2]),
+      )
+      .flat(2);
 
     const notes = await batchDecryptNotes(
       viewingKeys,
       this.user.privateKey,
       this.grumpkin,
-      noteCommitments,
+      joinSplitNoteCommitments,
       this.noteAlgos,
     );
 
@@ -262,7 +269,6 @@ export class UserState extends EventEmitter {
       value,
       dataEntry,
       secret: noteSecret,
-      // viewingKey,
       nullifier,
       nullified: false,
       owner: this.user.id,

@@ -3,6 +3,7 @@ import { EventEmitter } from 'events';
 import { fetch } from '../iso_fetch';
 import { TxHash } from '../tx_hash';
 // import createDebug from 'debug';
+// const debug = createDebug('bb:server_block_source');
 
 export interface BlockServerResponse {
   txHash: string;
@@ -33,6 +34,9 @@ const toBlock = (block: BlockServerResponse): Block => ({
 
 export class ServerBlockSource extends EventEmitter implements BlockSource {
   private running = false;
+  private runningPromise = Promise.resolve();
+  private interruptPromise = Promise.resolve();
+  private interruptResolve = () => {};
   private latestRollupId = -1;
   protected baseUrl: string;
 
@@ -47,6 +51,7 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
 
   public async start(from = 0) {
     this.running = true;
+    this.interruptPromise = new Promise(resolve => (this.interruptResolve = resolve));
 
     const emitBlocks = async () => {
       try {
@@ -65,14 +70,16 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
     const poll = async () => {
       while (this.running) {
         await emitBlocks();
-        await new Promise(resolve => setTimeout(resolve, this.pollInterval));
+        await this.sleepOrInterrupted(this.pollInterval);
       }
     };
-    poll();
+    this.runningPromise = poll();
   }
 
   public stop() {
     this.running = false;
+    this.interruptResolve();
+    return this.runningPromise;
   }
 
   private async awaitSucceed(fn: () => Promise<Response>) {
@@ -97,5 +104,12 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
     const result = (await response.json()) as GetBlocksServerResponse;
     this.latestRollupId = result.latestRollupId;
     return result.blocks.map(toBlock);
+  }
+
+  private async sleepOrInterrupted(ms: number) {
+    let timeout!: NodeJS.Timeout;
+    const promise = new Promise(resolve => (timeout = setTimeout(resolve, ms)));
+    await Promise.race([promise, this.interruptPromise]);
+    clearTimeout(timeout);
   }
 }

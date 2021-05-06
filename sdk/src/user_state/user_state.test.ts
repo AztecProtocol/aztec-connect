@@ -16,6 +16,7 @@ import { Database } from '../database';
 import { UserData, AccountId, AccountAliasId } from '../user';
 import { UserState } from './index';
 import { Block } from 'barretenberg/block_source';
+import { ViewingKey } from 'barretenberg/viewing_key';
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;
@@ -76,23 +77,20 @@ describe('user state', () => {
     await userState.startSync();
   });
 
-  const generateRollup = (
-    {
-      validNewNote = true,
-      validChangeNote = true,
-      assetId = 1,
-      publicInput = 0n,
-      publicOutput = 0n,
-      outputNoteValue1 = 0n,
-      outputNoteValue2 = 0n,
-      inputOwner = EthAddress.ZERO,
-      outputOwner = EthAddress.ZERO,
-      newNoteNonce = user.nonce,
-      rollupId = 0,
-      isPadding = false,
-    } = {},
+  const generateJoinSplitProof = ({
+    validNewNote = true,
+    validChangeNote = true,
+    assetId = 1,
+    publicInput = 0n,
+    publicOutput = 0n,
+    outputNoteValue1 = 0n,
+    outputNoteValue2 = 0n,
+    inputOwner = EthAddress.ZERO,
+    outputOwner = EthAddress.ZERO,
+    newNoteNonce = user.nonce,
+    isPadding = false,
     createValidNoteEncryptions = true,
-  ) => {
+  } = {}) => {
     const ephPrivKey = createEphemeralPrivKey(grumpkin);
     const note1 = TreeNote.createFromEphPriv(
       user.publicKey,
@@ -121,12 +119,11 @@ describe('user state', () => {
       ? Buffer.alloc(32)
       : noteAlgos.computeNoteNullifier(randomBytes(64), 0, user.privateKey);
     const nullifier2 = noteAlgos.computeNoteNullifier(randomBytes(64), 1, user.privateKey);
-    const totalTxFees = new Array(RollupProofData.NUMBER_OF_ASSETS).fill(0).map(() => randomBytes(32));
     const viewingKeys = [
       encryptNote(validNewNote ? note1 : gibberishNote, ephPrivKey, grumpkin),
       encryptNote(validChangeNote ? note2 : gibberishNote, ephPrivKey, grumpkin),
     ];
-    const innerProofData = new InnerProofData(
+    const proofData = new InnerProofData(
       0,
       toBufferBE(publicInput, 32),
       toBufferBE(publicOutput, 32),
@@ -138,25 +135,10 @@ describe('user state', () => {
       inputOwner.toBuffer32(),
       outputOwner.toBuffer32(),
     );
-    return new RollupProofData(
-      rollupId,
-      1,
-      0,
-      randomBytes(32),
-      randomBytes(32),
-      randomBytes(32),
-      randomBytes(32),
-      randomBytes(32),
-      randomBytes(32),
-      totalTxFees,
-      1,
-      [innerProofData],
-      randomBytes(32 * 16),
-      [viewingKeys],
-    );
+    return { proofData, viewingKeys };
   };
 
-  const generateAccountRollup = ({
+  const generateAccountProof = ({
     accountCreator = user,
     alias = 'god',
     newSigningPubKey1 = GrumpkinAddress.randomAddress(),
@@ -170,8 +152,7 @@ describe('user state', () => {
     const newAccountAliasId = new AccountAliasId(aliasHash!, nonce + +migrate);
     const nullifier1 = migrate ? computeAccountAliasIdNullifier(newAccountAliasId, pedersen) : randomBytes(32);
     const nullifier2 = randomBytes(32);
-    const totalTxFees = new Array(RollupProofData.NUMBER_OF_ASSETS).fill(0).map(() => randomBytes(32));
-    const innerProofData = new InnerProofData(
+    return new InnerProofData(
       1,
       publicKey.x(),
       publicKey.y(),
@@ -183,9 +164,15 @@ describe('user state', () => {
       newSigningPubKey1.x(),
       newSigningPubKey2.x(),
     );
+  };
+
+  const generateAccountRollup = (options: any = {}) => generateRollup(0, [generateAccountProof(options)], []);
+
+  const generateRollup = (rollupId = 0, innerProofData: InnerProofData[] = [], viewingKeys: ViewingKey[][] = []) => {
+    const totalTxFees = new Array(RollupProofData.NUMBER_OF_ASSETS).fill(0).map(() => randomBytes(32));
     return new RollupProofData(
-      0,
-      1,
+      rollupId,
+      innerProofData.length,
       0,
       randomBytes(32),
       randomBytes(32),
@@ -195,10 +182,15 @@ describe('user state', () => {
       randomBytes(32),
       totalTxFees,
       1,
-      [innerProofData],
+      innerProofData,
       randomBytes(32 * 16),
-      [],
+      viewingKeys,
     );
+  };
+
+  const generateJoinSplitRollup = (rollupId = 0, options: any = {}) => {
+    const { proofData, viewingKeys } = generateJoinSplitProof(options);
+    return generateRollup(rollupId, [proofData], [viewingKeys]);
   };
 
   const createBlock = (rollupProofData: RollupProofData, created = new Date()): Block => ({
@@ -217,10 +209,7 @@ describe('user state', () => {
     const outputNoteValue2 = 64n;
     const inputNoteIndex = 123;
 
-    const rollupProofData = generateRollup({
-      outputNoteValue1,
-      outputNoteValue2,
-    });
+    const rollupProofData = generateJoinSplitRollup(0, { outputNoteValue1, outputNoteValue2 });
     const blockCreated = new Date();
     const block = createBlock(rollupProofData, blockCreated);
 
@@ -246,19 +235,20 @@ describe('user state', () => {
   });
 
   it('should correctly process multiple blocks', async () => {
-    const rollupProofData1 = generateRollup({
-      rollupId: 0,
-      outputNoteValue1: 1n,
-      outputNoteValue2: 2n,
-    });
+    const jsProof1 = generateJoinSplitProof({ outputNoteValue1: 1n, outputNoteValue2: 2n });
+    const padding = generateJoinSplitProof({ isPadding: true });
+    const rollupProofData1 = generateRollup(0, [jsProof1.proofData, padding.proofData], [jsProof1.viewingKeys]);
     const blockCreated = new Date();
     const block1 = createBlock(rollupProofData1, blockCreated);
 
-    const rollupProofData2 = generateRollup({
-      rollupId: 1,
+    const accountProof = generateAccountProof({
+      accountCreator: { ...user, publicKey: GrumpkinAddress.randomAddress() },
+    });
+    const jsProof2 = generateJoinSplitProof({
       outputNoteValue1: 3n,
       outputNoteValue2: 4n,
     });
+    const rollupProofData2 = generateRollup(1, [accountProof, jsProof2.proofData], [jsProof2.viewingKeys]);
     const block2 = createBlock(rollupProofData2, blockCreated);
 
     db.getJoinSplitTx.mockResolvedValue({ txHash: '', settled: undefined });
@@ -270,7 +260,7 @@ describe('user state', () => {
     await userState.handleBlocks([block1, block2]);
 
     const innerProofData1 = rollupProofData1.innerProofData[0];
-    const innerProofData2 = rollupProofData2.innerProofData[0];
+    const innerProofData2 = rollupProofData2.innerProofData[1];
     expect(db.addNote).toHaveBeenCalledTimes(4);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({ dataEntry: innerProofData1.newNote1, value: 1n });
     expect(db.addNote.mock.calls[1][0]).toMatchObject({ dataEntry: innerProofData1.newNote2, value: 2n });
@@ -285,6 +275,7 @@ describe('user state', () => {
     expect(db.settleJoinSplitTx).toHaveBeenCalledWith(new TxHash(innerProofData1.txId), blockCreated);
     expect(db.settleJoinSplitTx).toHaveBeenCalledWith(new TxHash(innerProofData2.txId), blockCreated);
     expect(db.addJoinSplitTx).toHaveBeenCalledTimes(0);
+    expect(db.updateUser).toHaveBeenCalledTimes(1);
     expect(db.updateUser).toHaveBeenLastCalledWith({
       ...user,
       syncedToRollup: block2.rollupId,
@@ -297,13 +288,7 @@ describe('user state', () => {
 
     const blocks = Array(5)
       .fill(0)
-      .map((_, i) =>
-        createBlock(
-          generateRollup({
-            rollupId: i,
-          }),
-        ),
-      );
+      .map((_, i) => createBlock(generateJoinSplitRollup(i)));
     await userState.handleBlocks(blocks);
 
     const user = userState.getUser();
@@ -314,8 +299,7 @@ describe('user state', () => {
       .fill(0)
       .map((_, i) =>
         createBlock(
-          generateRollup({
-            rollupId: blocks.length + i,
+          generateJoinSplitRollup(blocks.length + i, {
             isPadding: true,
           }),
         ),
@@ -326,7 +310,7 @@ describe('user state', () => {
   });
 
   it('do nothing if it cannot decrypt new notes', async () => {
-    const rollupProofData = generateRollup({ validChangeNote: false, validNewNote: false });
+    const rollupProofData = generateJoinSplitRollup(0, { validChangeNote: false, validNewNote: false });
     const block = createBlock(rollupProofData);
 
     userState.processBlock(block);
@@ -350,7 +334,7 @@ describe('user state', () => {
   });
 
   it('should not add new note to db if it has different nonce', async () => {
-    const rollupProofData = generateRollup({
+    const rollupProofData = generateJoinSplitRollup(0, {
       outputNoteValue1: 10n,
       outputNoteValue2: 20n,
       newNoteNonce: user.nonce + 1,
@@ -378,7 +362,7 @@ describe('user state', () => {
     const inputOwner = EthAddress.randomAddress();
     const outputOwner = EthAddress.randomAddress();
 
-    const rollupProofData = generateRollup({
+    const rollupProofData = generateJoinSplitRollup(0, {
       assetId,
       outputNoteValue1,
       outputNoteValue2,
@@ -422,7 +406,7 @@ describe('user state', () => {
 
   it('restore a join split tx sent from another user to us', async () => {
     const outputNoteValue1 = 56n;
-    const rollupProofData = generateRollup({ validChangeNote: false, outputNoteValue1 });
+    const rollupProofData = generateJoinSplitRollup(0, { validChangeNote: false, outputNoteValue1 });
     const blockCreated = new Date();
     const block = createBlock(rollupProofData, blockCreated);
 
@@ -564,13 +548,11 @@ describe('user state', () => {
     const outputNoteValue2 = 64n;
     const inputNoteIndex = 123;
 
-    const rollupProofData = generateRollup(
-      {
-        outputNoteValue1,
-        outputNoteValue2,
-      },
-      false,
-    );
+    const rollupProofData = generateJoinSplitRollup(0, {
+      outputNoteValue1,
+      outputNoteValue2,
+      createValidNoteEncryptions: false,
+    });
     const blockCreated = new Date();
     const block = createBlock(rollupProofData, blockCreated);
 

@@ -25,7 +25,7 @@ export interface BlockSource {
    */
   start(fromBlock?: number);
 
-  stop();
+  stop(): Promise<void>;
 
   on(event: 'block', fn: (block: Block) => void);
 

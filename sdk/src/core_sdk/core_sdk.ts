@@ -395,7 +395,7 @@ export class CoreSdk extends EventEmitter {
   }
 
   private async stopReceivingBlocks() {
-    this.rollupProvider.stop();
+    await this.rollupProvider.stop();
     this.rollupProvider.removeAllListeners();
     this.blockQueue?.cancel();
     await this.processBlocksPromise;
