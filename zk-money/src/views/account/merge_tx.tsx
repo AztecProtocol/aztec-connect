@@ -5,7 +5,7 @@ import { Button, Text } from '../../components';
 import mergeIcon from '../../images/merge.svg';
 import { breakpoints, FontSize, gradients, spacings } from '../../styles';
 
-const getPricision = (value: bigint, decimals: number) => (value >= 100n * 10n ** BigInt(decimals) ? 0 : 2);
+const getPricision = (value: bigint, decimals: number) => (value >= 100n * BigInt('1'.padEnd(decimals + 1, '0')) ? 0 : 2);
 
 const getValueFontSize = (valueStr: string): FontSize => {
   const len = valueStr.replace('.', '').length;
