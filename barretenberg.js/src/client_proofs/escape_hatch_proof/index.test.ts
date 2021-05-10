@@ -23,6 +23,7 @@ import { AccountAliasId } from '../account_alias_id';
 import { computeSigningData } from '../join_split_proof/compute_signing_data';
 import { AssetId } from '../../asset';
 import { TreeClaimNote } from '../tree_claim_note';
+import { randomBytes } from 'crypto';
 
 const debug = createDebug('bb:escape_hatch_proof');
 
@@ -83,7 +84,7 @@ describe('escape_hatch_proof', () => {
 
     pubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, privateKey));
 
-    worldStateDb = new WorldStateDb('/tmp/world_state_eh.db');
+    worldStateDb = new WorldStateDb(`/tmp/world_state_eh_${randomBytes(32).toString('hex')}.db`);
     worldStateDb.destroy();
     await worldStateDb.start();
   });
@@ -102,8 +103,8 @@ describe('escape_hatch_proof', () => {
     const inputNotes = [inputNote1, inputNote2];
 
     const inputIndexes = [0, 1];
-    const inputNote1Enc = await noteAlgos.encryptNote(inputNote1.toBuffer());
-    const inputNote2Enc = await noteAlgos.encryptNote(inputNote2.toBuffer());
+    const inputNote1Enc = noteAlgos.encryptNote(inputNote1.toBuffer());
+    const inputNote2Enc = noteAlgos.encryptNote(inputNote2.toBuffer());
     const encryptedNotes = [inputNote1Enc, inputNote2Enc];
     const nullifiers = encryptedNotes.map((encNote, index) => {
       return toBigIntBE(noteAlgos.computeNoteNullifier(encNote, inputIndexes[index], privateKey, true));
@@ -126,21 +127,21 @@ describe('escape_hatch_proof', () => {
     const inputNote2Path = await worldStateDb.getHashPath(dataTreeId, BigInt(inputIndexes[1]));
 
     // Get starting info - oldDataRoot, dataStartIndex, oldDataPath
-    const oldDataRoot = await worldStateDb.getRoot(dataTreeId);
+    const oldDataRoot = worldStateDb.getRoot(dataTreeId);
     const dataStartIndex = worldStateDb.getSize(dataTreeId);
     const oldDataPath = await worldStateDb.getHashPath(dataTreeId, dataStartIndex);
 
     // Add the output notes to the tree
     let nextDataStartIndex = worldStateDb.getSize(dataTreeId);
-    const outputNote1Enc = await noteAlgos.encryptNote(outputNote1.toBuffer());
-    const outputNote2Enc = await noteAlgos.encryptNote(outputNote2.toBuffer());
+    const outputNote1Enc = noteAlgos.encryptNote(outputNote1.toBuffer());
+    const outputNote2Enc = noteAlgos.encryptNote(outputNote2.toBuffer());
 
     await worldStateDb.put(dataTreeId, nextDataStartIndex++, outputNote1Enc);
     await worldStateDb.put(dataTreeId, nextDataStartIndex++, outputNote2Enc);
 
     // Get the newDataPath and newDataRoot now that output notes have been added
     const newDataPath = await worldStateDb.getHashPath(dataTreeId, BigInt(dataStartIndex));
-    const newDataRoot = await worldStateDb.getRoot(dataTreeId);
+    const newDataRoot = worldStateDb.getRoot(dataTreeId);
 
     const inputOwner = EthAddress.randomAddress();
     const outputOwner = EthAddress.randomAddress();
