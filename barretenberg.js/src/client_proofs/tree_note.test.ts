@@ -1,5 +1,6 @@
 import { Grumpkin } from '../ecc/grumpkin';
-import { TreeNote, encryptNote, decryptNote, deriveNoteSecret, batchDecryptNotes } from './tree_note';
+import { TreeNote, encryptNote, decryptNote, batchDecryptNotes } from './tree_note';
+import { deriveNoteSecret } from './derive_note_secret';
 import { randomBytes } from 'crypto';
 import { BarretenbergWasm } from '../wasm';
 import { GrumpkinAddress } from '../address';

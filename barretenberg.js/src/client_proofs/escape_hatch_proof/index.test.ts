@@ -22,6 +22,7 @@ import { Blake2s } from '../../crypto/blake2s';
 import { AccountAliasId } from '../account_alias_id';
 import { computeSigningData } from '../join_split_proof/compute_signing_data';
 import { AssetId } from '../../asset';
+import { TreeClaimNote } from '../tree_claim_note';
 
 const debug = createDebug('bb:escape_hatch_proof');
 
@@ -50,7 +51,7 @@ describe('escape_hatch_proof', () => {
   // prettier-ignore
   const privateKey = Buffer.from([
     0x0b, 0x9b, 0x3a, 0xde, 0xe6, 0xb3, 0xd8, 0x1b, 0x28, 0xa0, 0x88, 0x6b, 0x2a, 0x84, 0x15, 0xc7,
-    0xda, 0x31, 0x29, 0x1a, 0x5e, 0x96, 0xbb, 0x7a, 0x56, 0x63, 0x9e, 0x17, 0x7d, 0x30, 0x1b, 0xeb ]);
+    0xda, 0x31, 0x29, 0x1a, 0x5e, 0x96, 0xbb, 0x7a, 0x56, 0x63, 0x9e, 0x17, 0x7d, 0x30, 0x1b, 0xeb]);
 
   beforeEach(async () => {
     EventEmitter.defaultMaxListeners = 32;
@@ -199,6 +200,7 @@ describe('escape_hatch_proof', () => {
       [inputNote1Path, inputNote2Path],
       inputNotes,
       outputNotes,
+      new TreeClaimNote(BigInt(0), BigInt(0), Buffer.alloc(32), 0),
       privateKey,
       accountAliasId,
       accountIndex,

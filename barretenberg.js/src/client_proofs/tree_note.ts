@@ -6,6 +6,7 @@ import { numToUInt8, numToUInt32BE } from '../serialize';
 import { AssetId } from '../asset';
 import { ViewingKey } from '../viewing_key';
 import { NoteAlgorithms } from './note_algorithms';
+import { deriveNoteSecret } from './derive_note_secret';
 
 export class TreeNote {
   constructor(
@@ -14,7 +15,7 @@ export class TreeNote {
     public assetId: AssetId,
     public nonce: number,
     public noteSecret: Buffer,
-  ) {}
+  ) { }
 
   toBuffer() {
     return Buffer.concat([
@@ -56,24 +57,6 @@ export class TreeNote {
 
 export function createEphemeralPrivKey(grumpkin: Grumpkin) {
   return grumpkin.getRandomFr();
-}
-
-export function deriveNoteSecret(ecdhPubKey: GrumpkinAddress, ecdhPrivKey: Buffer, grumpkin: Grumpkin, version = 1) {
-  if (version == 1) {
-    const sharedSecret = grumpkin.mul(ecdhPubKey.toBuffer(), ecdhPrivKey);
-    const secretBufferA = Buffer.concat([sharedSecret, numToUInt8(2)]);
-    const secretBufferB = Buffer.concat([sharedSecret, numToUInt8(3)]);
-    const hashA = createHash('sha256').update(secretBufferA).digest();
-    const hashB = createHash('sha256').update(secretBufferB).digest();
-    const hash = Buffer.concat([hashA, hashB]);
-    return grumpkin.reduce512BufferToFr(hash);
-  }
-
-  const sharedSecret = grumpkin.mul(ecdhPubKey.toBuffer(), ecdhPrivKey);
-  const secretBuffer = Buffer.concat([sharedSecret, numToUInt8(0)]);
-  const hash = createHash('sha256').update(secretBuffer).digest();
-  hash[0] &= 0x03;
-  return hash;
 }
 
 function deriveAESSecret(ecdhPubKey: GrumpkinAddress, ecdhPrivKey: Buffer, grumpkin: Grumpkin) {
