@@ -1,6 +1,7 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { computeAccountAliasIdNullifier } from 'barretenberg/client_proofs/account_proof/compute_nullifier';
-import { createEphemeralPrivKey, deriveNoteSecret, encryptNote, TreeNote } from 'barretenberg/client_proofs/tree_note';
+import { createEphemeralPrivKey, encryptNote, TreeNote } from 'barretenberg/client_proofs/tree_note';
+import { deriveNoteSecret } from 'barretenberg/client_proofs/derive_note_secret';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { Blake2s } from 'barretenberg/crypto/blake2s';
 import { Pedersen } from 'barretenberg/crypto/pedersen';

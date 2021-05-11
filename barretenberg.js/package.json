@@ -6,9 +6,7 @@
   "scripts": {
     "build": "yarn clean && tsc -p tsconfig.cjs.json && tsc -p tsconfig.es.json && node ./package.js",
     "clean": "rm -rf ./dest ./dest-es",
-    "test": "tsc && cp -R ./src/wasm/barretenberg.wasm ./dest/wasm && jest",
-    "test:notes": "tsc && cp -R ./src/wasm/barretenberg.wasm ./dest/wasm && jest ./dest/client_proofs/note_algorithms/index.test.js",
-    "test:sha": "tsc && cp -R ./src/wasm/barretenberg.wasm ./dest/wasm && jest ./dest/crypto/sha256/index.test.js",
+    "test": "yarn clean && tsc && cp -R ./src/wasm/barretenberg.wasm ./dest/wasm && jest",
     "build:dev": "yarn build:dev:cjs & yarn build:dev:es",
     "build:dev:cjs": "tsc --watch",
     "build:dev:es": "tsc -p tsconfig.es.json --watch",

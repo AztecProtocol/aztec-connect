@@ -10,6 +10,7 @@ import { Database } from '../../database';
 import { Signer } from '../../signer';
 import { AccountAliasId, AccountId } from '../../user';
 import { UserState } from '../../user_state';
+import { TreeClaimNote } from 'barretenberg/client_proofs/tree_claim_note';
 
 export class JoinSplitTxFactory {
   constructor(
@@ -119,11 +120,6 @@ export class JoinSplitTxFactory {
     const accountPath = await this.worldState.getHashPath(accountIndex);
     const signingPubKey = signer.getPublicKey();
 
-    // console.log({ dataRoot, dataSize, accountIndex });
-    // console.log(inputNotePaths[0]);
-    // console.log(inputNotePaths[1]);
-    // console.log(accountPath);
-
     const tx = new JoinSplitTx(
       publicInput,
       publicOutput,
@@ -134,6 +130,7 @@ export class JoinSplitTxFactory {
       inputNotePaths,
       inputNotes,
       outputNotes,
+      new TreeClaimNote(BigInt(0), BigInt(0), Buffer.alloc(32), 0),
       privateKey,
       accountAliasId,
       accountIndex,

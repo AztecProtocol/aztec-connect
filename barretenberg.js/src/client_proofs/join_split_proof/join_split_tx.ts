@@ -5,6 +5,7 @@ import { numToUInt32BE } from '../../serialize';
 import { AccountAliasId } from '../account_alias_id';
 import { AssetId } from '../../asset';
 import { TreeNote } from '../tree_note';
+import { TreeClaimNote } from '../tree_claim_note';
 import { Signature } from '../signature';
 
 export class JoinSplitTx {
@@ -18,6 +19,7 @@ export class JoinSplitTx {
     public inputNotePaths: HashPath[],
     public inputNotes: TreeNote[],
     public outputNotes: TreeNote[],
+    public claimNote: TreeClaimNote,
     public accountPrivateKey: Buffer,
     public accountAliasId: AccountAliasId,
     public accountIndex: number,
@@ -26,7 +28,7 @@ export class JoinSplitTx {
     public signature: Signature,
     public inputOwner: EthAddress,
     public outputOwner: EthAddress,
-  ) {}
+  ) { }
 
   toBuffer() {
     const pathBuffer = Buffer.concat(this.inputNotePaths.map(p => p.toBuffer()));
@@ -42,6 +44,7 @@ export class JoinSplitTx {
       this.merkleRoot,
       pathBuffer,
       noteBuffer,
+      this.claimNote.toBuffer(),
 
       this.accountPrivateKey,
       this.accountAliasId.aliasHash.toBuffer32(),
