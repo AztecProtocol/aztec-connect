@@ -84,11 +84,6 @@ export class Contracts {
     const totalWithdrawn = await this.getAssetValues(this.rollupProcessor.totalWithdrawn());
     const totalFees = await this.getAssetValues(this.rollupProcessor.totalFees());
 
-    const feeDistributorBalance: bigint[] = [];
-    for (let i = 0; i < this.assets.length; ++i) {
-      feeDistributorBalance[i] = BigInt(await this.feeDistributorContract.txFeeBalance(i));
-    }
-
     return {
       nextRollupId,
       dataRoot,
@@ -98,17 +93,23 @@ export class Contracts {
       totalDeposited,
       totalWithdrawn,
       totalFees,
-      feeDistributorBalance,
     };
   }
 
   public async getPerBlockState() {
     const { escapeOpen, blocksRemaining } = await this.rollupProcessor.getEscapeHatchStatus();
     const totalPendingDeposit = await this.getAssetValues(this.rollupProcessor.totalPendingDeposit());
+    const feeDistributorBalance: bigint[] = [];
+
+    for (let i = 0; i < this.assets.length; ++i) {
+      feeDistributorBalance[i] = BigInt(await this.feeDistributorContract.txFeeBalance(i));
+    }
+
     return {
       escapeOpen,
       numEscapeBlocksRemaining: blocksRemaining,
       totalPendingDeposit,
+      feeDistributorBalance,
     };
   }
 
