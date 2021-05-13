@@ -108,7 +108,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   /**
    * Stop polling for RollupProcessed events
    */
-  public stop() {
+  public async stop() {
     this.running = false;
     this.removeAllListeners();
   }

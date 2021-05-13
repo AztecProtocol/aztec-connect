@@ -7,7 +7,6 @@ import {
   SettlementTime,
   TxType,
   WalletSdk,
-  Web3Signer,
 } from '@aztec/sdk';
 import { Web3Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
@@ -152,7 +151,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
 
   private values: ShieldFormValues = initialShieldFormValues;
   private formStatus = FormStatus.ACTIVE;
-  private proofOutput?: JoinSplitProofOutput;
+  private depositProof: { proofOutput?: JoinSplitProofOutput; signature?: Buffer; validSignatue?: boolean } = {};
   private destroyed = false;
 
   private isContract = false;
@@ -528,11 +527,13 @@ export class ShieldForm extends EventEmitter implements AccountForm {
           if (this.sdk.getAssetInfo(asset.id).permitSupport) {
             const expireIn = BigInt(300); // seconds
             const deadline = BigInt(Math.floor(Date.now() / 1000)) + expireIn;
-            const permitData = await this.sdk.createPermitData(asset.id, ethAddress, toBeDeposited, deadline);
-            const web3Provider = new Web3Provider(this.ethAccount.provider!.ethereumProvider);
-            const signer = new Web3Signer(web3Provider);
-            const signature = await signer.signTypedData(permitData, ethAddress);
-            permitArgs = { signature, deadline, approvalAmount: toBeDeposited };
+            permitArgs = await this.sdk.createPermitArgs(
+              asset.id,
+              ethAddress,
+              toBeDeposited,
+              deadline,
+              this.ethAccount.provider!.ethereumProvider,
+            );
           } else {
             const { rollupContractAddress } = this.sdk.getLocalStatus();
             await (this.sdk as any).blockchain
@@ -586,24 +587,27 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       const [recipientPrivateOutput, senderPrivateOutput] = senderId.equals(outputNoteOwner)
         ? [0n, toBeShielded]
         : [toBeShielded, 0n];
-      this.proofOutput = await this.sdk.createJoinSplitProof(
-        asset.id,
-        senderId,
-        publicInput,
-        0n,
-        privateInput,
-        recipientPrivateOutput,
-        senderPrivateOutput,
-        signer,
-        outputNoteOwner,
-        ethAddress,
-      );
+      this.depositProof = {
+        proofOutput: await this.sdk.createJoinSplitProof(
+          asset.id,
+          senderId,
+          publicInput,
+          0n,
+          privateInput,
+          recipientPrivateOutput,
+          senderPrivateOutput,
+          signer,
+          outputNoteOwner,
+          ethAddress,
+        ),
+      };
     }
 
+    const proofOutput = this.depositProof.proofOutput!;
     if (this.status <= ShieldStatus.APPROVE_PROOF) {
       this.proceed(ShieldStatus.APPROVE_PROOF);
 
-      const inputOwner = new EthAddress(this.proofOutput!.proofData.slice(10 * 32, 10 * 32 + 32));
+      const inputOwner = new EthAddress(proofOutput.proofData.slice(10 * 32, 10 * 32 + 32));
       try {
         await this.ensureNetworkAndAccount(inputOwner);
       } catch (e) {
@@ -611,22 +615,26 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       }
 
       const isContract = await this.sdk.isContract(ethAddress);
-      const signingData = this.proofOutput!.signingData!;
-      let validSignature = false;
-      if (!isContract) {
+      const signingData = proofOutput.signingData!;
+      if (!isContract && !this.depositProof.signature) {
         this.prompt('Please sign the proof data in your wallet.');
         try {
-          const web3Provider = new Web3Provider(this.ethAccount.provider!.ethereumProvider);
-          const signer = new Web3Signer(web3Provider);
-          await this.proofOutput!.ethSign(signer, ethAddress);
-          const signature = this.proofOutput!.depositSignature!;
-          validSignature = signer.validateSignature(ethAddress, signature, signingData);
+          this.depositProof.signature = await this.sdk.signProof(
+            proofOutput,
+            inputOwner,
+            this.ethAccount.provider!.ethereumProvider,
+          );
+          this.depositProof.validSignatue = this.sdk.validateSignature(
+            ethAddress,
+            this.depositProof.signature,
+            signingData,
+          );
         } catch (e) {
           debug(e);
           return this.abort('Failed to sign the proof.');
         }
       }
-      if (!validSignature && !(await this.sdk.isProofApproved(ethAddress, signingData))) {
+      if (!this.depositProof.validSignatue && !(await this.sdk.isProofApproved(ethAddress, signingData))) {
         this.prompt('Please approve the proof data in your wallet.');
         try {
           await this.sdk.approveProof(ethAddress, signingData, this.ethAccount.provider!.ethereumProvider);
@@ -648,7 +656,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       this.proceed(ShieldStatus.SEND_PROOF);
 
       try {
-        await this.sdk.sendProof(this.proofOutput!);
+        await this.sdk.sendProof(proofOutput, this.depositProof.signature);
       } catch (e) {
         debug(e);
         return this.abort('Failed to send the proof.');
@@ -656,7 +664,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
 
       if (!senderId.equals(this.userId)) {
         await this.db.addMigratingTx(senderId, {
-          ...this.proofOutput!.tx,
+          ...proofOutput.tx,
           userId: outputNoteOwner,
           ownedByUser: false,
         });

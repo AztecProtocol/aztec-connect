@@ -38,7 +38,7 @@ export class RollupPublisher {
     while (!this.interrupted) {
       // Check fee distributor has at least 0.5 ETH.
       const { feeDistributorBalance } = await this.blockchain.getBlockchainStatus();
-      if (feeDistributorBalance[AssetId.ETH] < 5n ** 17n) {
+      if (feeDistributorBalance[AssetId.ETH] < 5n * 10n ** 17n) {
         console.log(`Fee distributor ETH balance too low, awaiting top up...`);
         await this.sleepOrInterrupted(60000);
         continue;

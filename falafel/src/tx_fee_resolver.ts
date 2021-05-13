@@ -27,7 +27,7 @@ export class TxFeeResolver {
     private txsPerRollup: number,
     private publishInterval: number,
     private surplusRatios = [1, 0.9, 0.5, 0],
-    private feeFreeAssets = [AssetId.DAI],
+    private feeFreeAssets: AssetId[] = [],
   ) {}
 
   public async start() {

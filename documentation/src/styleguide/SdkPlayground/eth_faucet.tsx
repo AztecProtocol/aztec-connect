@@ -1,6 +1,6 @@
+import { EthAddress } from '@aztec/sdk';
 import { formatUnits } from '@ethersproject/units';
-import { ActionState, EthAddress, SdkEvent } from '@aztec/sdk';
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'react-styleguidist/lib/client/rsg-components/Link';
 import Styled from 'react-styleguidist/lib/client/rsg-components/Styled';
 import { JssInjectedProps } from 'react-styleguidist/lib/client/rsg-components/Styled/Styled';
@@ -24,19 +24,16 @@ const EthBalance = ({ classes, app, address }: EthBalanceProps) => {
       setBalance(balance);
     };
 
-    refreshBalance();
-    setInitialized(true);
+    refreshBalance().then(() => {
+      setInitialized(true);
+    });
 
-    const handleActionState = (actionState: ActionState) => {
-      if (['APPROVE', 'MINT'].indexOf(actionState.action) >= 0) {
-        refreshBalance();
-      }
-    };
-
-    sdk.on(SdkEvent.UPDATED_ACTION_STATE, handleActionState);
+    const refreshInterval = setInterval(() => {
+      refreshBalance();
+    }, 15 * 1000);
 
     return () => {
-      sdk.off(SdkEvent.UPDATED_ACTION_STATE, handleActionState);
+      clearInterval(refreshInterval);
     };
   }, [sdk, address]);
 

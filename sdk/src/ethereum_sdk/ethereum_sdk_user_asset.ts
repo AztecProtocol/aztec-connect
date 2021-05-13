@@ -1,6 +1,7 @@
 import { EthAddress } from 'barretenberg/address';
 import { AssetId } from 'barretenberg/asset';
-import { TxType } from 'barretenberg/blockchain';
+import { PermitArgs, TxType } from 'barretenberg/blockchain';
+import { ProofOutput } from '../proofs/proof_output';
 import { AccountId } from '../user';
 import { EthereumSdk } from './';
 
@@ -16,15 +17,15 @@ export class EthereumSdkUserAsset {
     return this.sdk.getAssetInfo(this.assetId);
   }
 
-  publicBalance() {
+  async publicBalance() {
     return this.sdk.getPublicBalance(this.assetId, this.address);
   }
 
-  publicAllowance() {
+  async publicAllowance() {
     return this.sdk.getPublicAllowance(this.assetId, this.address);
   }
 
-  getUserPendingDeposit() {
+  async pendingDeposit() {
     return this.sdk.getUserPendingDeposit(this.assetId, this.address);
   }
 
@@ -37,23 +38,31 @@ export class EthereumSdkUserAsset {
   }
 
   async mint(value: bigint) {
-    return this.sdk.mint(this.assetId, this.accountId, value, this.address);
+    return this.sdk.mint(this.assetId, value, this.address);
   }
 
   async approve(value: bigint) {
-    return this.sdk.approve(this.assetId, this.accountId, value, this.address);
+    return this.sdk.approve(this.assetId, value, this.address);
   }
 
-  async deposit(value: bigint, fee: bigint) {
-    return this.sdk.deposit(this.assetId, this.address, this.accountId, value, fee);
+  async depositFundsToContract(value: bigint, permitArgs?: PermitArgs) {
+    return this.sdk.depositFundsToContract(this.assetId, this.address, value, permitArgs);
   }
 
-  async withdraw(value: bigint, fee: bigint) {
-    return this.sdk.withdraw(this.assetId, this.accountId, this.address, value, fee);
+  async createDepositProof(value: bigint, fee: bigint) {
+    return this.sdk.createDepositProof(this.assetId, this.address, this.accountId, value, fee);
   }
 
-  async transfer(value: bigint, fee: bigint, to: AccountId) {
-    return this.sdk.transfer(this.assetId, this.accountId, to, value, fee);
+  async createWithdrawProof(value: bigint, fee: bigint) {
+    return this.sdk.createWithdrawProof(this.assetId, this.accountId, this.address, value, fee);
+  }
+
+  async createTransferProof(value: bigint, fee: bigint, to: AccountId) {
+    return this.sdk.createTransferProof(this.assetId, this.accountId, to, value, fee);
+  }
+
+  async signProof(proofOutput: ProofOutput) {
+    return this.sdk.signProof(proofOutput, this.address);
   }
 
   public fromBaseUnits(value: bigint, precision?: number) {

@@ -19,6 +19,7 @@ const debug = createDebug('bb:escape_hatch_proof_creator');
 
 export class EscapeHatchProofCreator {
   private joinSplitTxFactory: JoinSplitTxFactory;
+  private grumpkin!: Grumpkin;
 
   // TODO: Make WorldState and HashPathSource unify into a WorldStateSource.
   // Currently we use WorldState for fetching js data paths, but need a HashPathSource for the other trees.
@@ -32,6 +33,7 @@ export class EscapeHatchProofCreator {
     db: Database,
   ) {
     this.joinSplitTxFactory = new JoinSplitTxFactory(worldState, grumpkin, pedersen, noteAlgos, db);
+    this.grumpkin = grumpkin;
   }
 
   public async createProof(
@@ -72,8 +74,8 @@ export class EscapeHatchProofCreator {
 
     const oldDataPath = await this.hashPathSource.getHashPath(0, dataStartIndex);
     const [output1, output2] = joinSplitTx.outputNotes;
-    const encryptedOutput1 = this.noteAlgos.encryptNote(output1);
-    const encryptedOutput2 = this.noteAlgos.encryptNote(output2);
+    const encryptedOutput1 = this.noteAlgos.encryptNote(output1.toBuffer());
+    const encryptedOutput2 = this.noteAlgos.encryptNote(output2.toBuffer());
 
     const dataResponse = await this.hashPathSource.getHashPaths(0, [
       { index: dataStartIndex, value: encryptedOutput1 },
@@ -86,8 +88,8 @@ export class EscapeHatchProofCreator {
     const nullTreeState = await this.hashPathSource.getTreeState(1);
     const oldNullifierRoot = nullTreeState.root;
     const [input1, input2] = joinSplitTx.inputNotes;
-    const encryptedInput1 = this.noteAlgos.encryptNote(input1);
-    const encryptedInput2 = this.noteAlgos.encryptNote(input2);
+    const encryptedInput1 = this.noteAlgos.encryptNote(input1.toBuffer());
+    const encryptedInput2 = this.noteAlgos.encryptNote(input2.toBuffer());
     const { privateKey } = userState.getUser();
     const nullifier1 = this.noteAlgos.computeNoteNullifierBigInt(
       encryptedInput1,

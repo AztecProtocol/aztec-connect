@@ -76,4 +76,4 @@ Users can pay a transaction fee to decrease the finality to the next block. Plea
 
 - **[WalletSDK Interface](/#/Types/WalletSdk)**
 - **[User](/#/User)**
-- **[ERC20 Tokens](/#/ERC20%20Tokens)**
+- **[ERC20 Tokens](/#/zkAssets)**

@@ -1,6 +1,16 @@
-import { AssetId, createEthSdk, EthereumSdk, EthereumSdkUser, EthersAdapter, WalletProvider } from '@aztec/sdk';
-import { EventEmitter } from 'events';
+import {
+  AssetId,
+  createWalletSdk,
+  EthAddress,
+  EthersAdapter,
+  SchnorrSigner,
+  TxType,
+  WalletProvider,
+  WalletSdk,
+  WalletSdkUser,
+} from '@aztec/sdk';
 import { JsonRpcProvider } from '@ethersproject/providers';
+import { EventEmitter } from 'events';
 
 jest.setTimeout(10 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
@@ -15,8 +25,10 @@ const {
  * Set PRIVATE_KEY environment variable to an address key with > 0.1 goerli ETH. No 0x prefix.
  */
 describe('testnet escape test', () => {
-  let sdk: EthereumSdk;
-  const users: EthereumSdkUser[] = [];
+  let sdk: WalletSdk;
+  let user!: WalletSdkUser;
+  let userAddress: EthAddress;
+  let signer!: SchnorrSigner;
   const assetId = AssetId.ETH;
 
   if (!PRIVATE_KEY) {
@@ -27,10 +39,10 @@ describe('testnet escape test', () => {
     const ethersProvider = new JsonRpcProvider(ETHEREUM_HOST);
     const ethereumProvider = new EthersAdapter(ethersProvider);
     const walletProvider = new WalletProvider(ethereumProvider);
-    walletProvider.addAccount(Buffer.from(PRIVATE_KEY, 'hex'));
-    const accounts = walletProvider.getAccounts();
+    const privateKey = Buffer.from(PRIVATE_KEY, 'hex');
+    userAddress = walletProvider.addAccount(privateKey);
 
-    sdk = await createEthSdk(walletProvider, SRIRACHA_HOST, {
+    sdk = await createWalletSdk(walletProvider, SRIRACHA_HOST, {
       syncInstances: false,
       saveProvingKey: false,
       clearDb: true,
@@ -39,12 +51,8 @@ describe('testnet escape test', () => {
     await sdk.init();
     await sdk.awaitSynchronised();
 
-    // Get user addresses.
-    const userAddresses = accounts.slice(0, 2);
-    for (const address of userAddresses) {
-      const user = await sdk.addUser(address);
-      users.push(user);
-    }
+    user = await sdk.addUser(privateKey);
+    signer = sdk.createSchnorrSigner(privateKey);
   });
 
   afterAll(async () => {
@@ -52,11 +60,22 @@ describe('testnet escape test', () => {
   });
 
   it('should deposit', async () => {
-    const user0Asset = users[0].getAsset(assetId);
-    const fee = 0n;
-
+    const user0Asset = user.getAsset(assetId);
     const depositValue = user0Asset.toBaseUnits('0.1');
-    const txHash = await user0Asset.deposit(depositValue, fee);
+    const fee = await user0Asset.getFee(TxType.DEPOSIT);
+
+    const initialPublicBalance = await sdk.getPublicBalance(assetId, userAddress);
+    const initialBalance = user0Asset.balance();
+
+    await sdk.depositFundsToContract(assetId, userAddress, depositValue + fee);
+
+    const proofOutput = await user0Asset.createDepositProof(depositValue, fee, signer, userAddress);
+    const txHash = await sdk.sendProof(proofOutput);
     await sdk.awaitSettlement(txHash);
+
+    const publicBalance = await sdk.getPublicBalance(assetId, userAddress);
+    const expectedPublicBalance = initialPublicBalance - depositValue - fee;
+    expect(publicBalance < expectedPublicBalance).toBe(true);
+    expect(user0Asset.balance()).toBe(initialBalance + depositValue);
   });
 });

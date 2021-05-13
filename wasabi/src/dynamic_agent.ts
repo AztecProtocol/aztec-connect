@@ -97,20 +97,45 @@ export class Agent {
   private async deposit() {
     console.log(`Agent ${this.id} depositing...`);
     const value = 1n;
-    await this.sdk.deposit(AssetId.ETH, this.address, this.aztecUserId, value, 0n, this.signer);
+    const proof = await this.sdk.createDepositProof(
+      AssetId.ETH,
+      this.address,
+      this.aztecUserId,
+      value,
+      0n,
+      this.signer,
+    );
+    const signature = await this.sdk.signProof(proof, this.address);
+    await this.sdk.sendProof(proof, signature);
   }
 
   private async transfer() {
     console.log(`Agent ${this.id} transferring...`);
     const value = 1n;
-    return await this.sdk.transfer(AssetId.ETH, this.aztecUserId, value, 0n, this.signer, this.aztecUserId);
+    const proof = await this.sdk.createTransferProof(
+      AssetId.ETH,
+      this.aztecUserId,
+      value,
+      0n,
+      this.signer,
+      this.aztecUserId,
+    );
+    return await this.sdk.sendProof(proof);
   }
 
   private async withdraw() {
     console.log(`Agent ${this.id} withdrawing...`);
     const masterAddress = EthAddress.fromString(this.masterWallet.address);
     const value = 1n;
-    return await this.sdk.withdraw(AssetId.ETH, this.aztecUserId!, value, 0n, this.signer, masterAddress);
+    const proof = await this.sdk.createWithdrawProof(
+      AssetId.ETH,
+      this.aztecUserId!,
+      value,
+      0n,
+      this.signer,
+      masterAddress,
+    );
+    return await this.sdk.sendProof(proof);
   }
 
   public async advanceAgent() {

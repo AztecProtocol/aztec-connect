@@ -19,20 +19,25 @@ export class Grumpkin {
   }
 
   public batchMul(points: Uint8Array, scalar: Uint8Array, numPoints: number) {
-      const mem = this.wasm.call('bbmalloc', points.length * 2);
+    const mem = this.wasm.call('bbmalloc', points.length * 2);
 
-      this.wasm.transferToHeap(points, mem);
-      this.wasm.transferToHeap(scalar, 0);
-      this.wasm.call('ecc_grumpkin__batch_mul', mem, 0, numPoints, mem + points.length);
+    this.wasm.transferToHeap(points, mem);
+    this.wasm.transferToHeap(scalar, 0);
+    this.wasm.call('ecc_grumpkin__batch_mul', mem, 0, numPoints, mem + points.length);
 
-      const result: Buffer = Buffer.from(this.wasm.sliceMemory(mem + points.length, mem + points.length + points.length));
-      this.wasm.call('bbfree', mem);
-      return result;
+    const result: Buffer = Buffer.from(this.wasm.sliceMemory(mem + points.length, mem + points.length + points.length));
+    this.wasm.call('bbfree', mem);
+    return result;
   }
 
-  public getRandomFr()
-  {
-      this.wasm.call('ecc_grumpkin__get_random_fr', 0);
-      return Buffer.from(this.wasm.sliceMemory(0, 32));
+  public getRandomFr() {
+    this.wasm.call('ecc_grumpkin__get_random_scalar_mod_circuit_modulus', 0);
+    return Buffer.from(this.wasm.sliceMemory(0, 32));
+  }
+
+  public reduce512BufferToFr(uint512Buf: Buffer) {
+    this.wasm.transferToHeap(uint512Buf, 0);
+    this.wasm.call('ecc_grumpkin__reduce512_buffer_mod_circuit_modulus', 0, 64);
+    return Buffer.from(this.wasm.sliceMemory(64, 96));
   }
 }

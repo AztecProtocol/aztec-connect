@@ -1,7 +1,7 @@
 import { toBufferBE } from 'bigint-buffer';
 import { EthAddress } from '../../address';
 import { Pedersen } from '../../crypto/pedersen';
-import { TreeNote } from '../note';
+import { TreeNote } from '../tree_note';
 import { NoteAlgorithms } from '../note_algorithms';
 import { numToUInt32BE } from '../../serialize';
 import { AssetId } from '../../asset';
@@ -20,7 +20,7 @@ export function computeSigningData(
   pedersen: Pedersen,
   noteAlgos: NoteAlgorithms,
 ) {
-  const encryptedNotes = notes.map(note => noteAlgos.encryptNote(note));
+  const encryptedNotes = notes.map(note => noteAlgos.encryptNote(note.toBuffer()));
 
   const nullifier1 = noteAlgos.computeNoteNullifier(
     encryptedNotes[0],

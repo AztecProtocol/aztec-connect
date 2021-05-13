@@ -22,22 +22,20 @@ export interface Sdk {
   /**
    * Deposit.
    * @param assetId - [AssetId] See the list of assets we currently support [here](/#/Types/AssetId).
-   * @param userId - [AccountId] The account id of the proof sender.
+   * @param from - [EthAddress] The Ethereum address of the user depositing funds.
+   * @param to - [AccountId] The account id of the note recipient.
    * @param value - [bigint] The amount to deposit in ERC20 units.
    * @param fee - [bigint] The amount charged by rollup provider.
    * @param signer - [Signer] An aztec signer used to create signatures.
-   * @param ethSigner - [EthereumSigner] An ethereum signer used to create signatures to authorize the tx.
-   * @param permitArgs - [PermitArgs]? Options for the erc20 permit function.
    * @returns Promise<TxHash> - Resolves to [TxHash](/#/Types/TxHash).
    */
-  deposit(
+  createDepositProof(
     assetId: AssetId,
-    userId: AccountId,
+    from: EthAddress,
+    to: AccountId,
     value: bigint,
     fee: bigint,
     signer: Signer,
-    ethSigner: EthereumSigner,
-    permitArgs?: PermitArgs,
   ): Promise<TxHash>;
 
   /**
@@ -48,16 +46,16 @@ export interface Sdk {
    * @param fee - [bigint] The amount charged by rollup provider.
    * @param signer - [Signer] An aztec signer used to create signatures.
    * @param to - [EthAddress] The Ethereum address of the user receiving funds.
-   * @returns Promise<TxHash> - Resolves to [TxHash](/#/Types/TxHash).
+   * @returns Promise<ProofOutput> - Resolves to [ProofOutput](/#/Types/ProofOutput).
    */
-  withdraw(
+  createWithdrawProof(
     assetId: AssetId,
     userId: AccountId,
     value: bigint,
     fee: bigint,
     signer: Signer,
     to: EthAddress,
-  ): Promise<TxHash>;
+  ): Promise<ProofOutput>;
 
   /**
    * Transfer
@@ -67,16 +65,16 @@ export interface Sdk {
    * @param fee - [bigint] The amount charged by rollup provider.
    * @param signer - [Signer] An aztec signer used to create signatures.
    * @param to - [AccountId] The account id of the user receiving funds.
-   * @returns Promise<TxHash> - Resolves to [TxHash](/#/Types/TxHash).
+   * @returns Promise<ProofOutput> - Resolves to [ProofOutput](/#/Types/ProofOutput).
    */
-  transfer(
+  createTransferProof(
     assetId: AssetId,
     userId: AccountId,
     value: bigint,
     fee: bigint,
     signer: Signer,
     to: AccountId,
-  ): Promise<TxHash>;
+  ): Promise<ProofOutput>;
 
   /**
    * Join Split
@@ -85,21 +83,27 @@ export interface Sdk {
    * @param publicInput - [bigint] The amount to deposit in ERC20 units.
    * @param publicOutput - [bigint] The amount to withdraw in ERC20 units.
    * @param privateInput - [bigint] The amount of notes to be destroyed.
-   * @param privateOutput - [bigint] The amount of new notes to be created.
+   * @param recipientPrivateOutput - [bigint] The amount of new notes to be created for recipient.
+   * @param senderPrivateOutput - [bigint] The amount of new notes to be created for the sender.
    * @param signer - [Signer] An aztec signer used to create signatures.
-   * @param options - [JoinSplitTxOptions]? Options for various use cases.
-   * @returns Promise<TxHash> - Resolves to [TxHash](/#/Types/TxHash).
+   * @param noteRecipient - [AccountId]? The account id of the user receiving funds.
+   * @param inputOwner - [EthAddress] The Ethereum address of the user depositing funds.
+   * @param outputOwner - [EthAddress] The Ethereum address of the user receiving funds.
+   * @returns Promise<ProofOutput> - Resolves to [ProofOutput](/#/Types/ProofOutput).
    */
-  joinSplit(
+  createJoinSplitProof(
     assetId: AssetId,
     userId: AccountId,
     publicInput: bigint,
     publicOutput: bigint,
     privateInput: bigint,
-    privateOutput: bigint,
+    recipientPrivateOutput: bigint,
+    senderPrivateOutput: bigint,
     signer: Signer,
-    options: JoinSplitTxOptions = {},
-  ): Promise<TxHash>;
+    noteRecipient?: AccountId,
+    inputOwner?: EthAddress,
+    outputOwner?: EthAddress,
+  ): Promise<ProofOutput>;
 
   /**
    * Await Settlement

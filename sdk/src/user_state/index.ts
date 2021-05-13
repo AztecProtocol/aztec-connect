@@ -1,6 +1,6 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
 import { Block } from 'barretenberg/block_source';
-import { TreeNote } from 'barretenberg/client_proofs/note';
+import { TreeNote, batchDecryptNotes } from 'barretenberg/client_proofs/tree_note';
 import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { computeAccountAliasIdNullifier } from 'barretenberg/client_proofs/account_proof';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
@@ -19,6 +19,7 @@ import { AccountAliasId, UserData } from '../user';
 import { isJoinSplitTx, UserAccountTx, UserJoinSplitTx } from '../user_tx';
 import { AccountId } from '../user/account_id';
 import { TxHash } from 'barretenberg/tx_hash';
+import { ProofId } from 'barretenberg/client_proofs/proof_data';
 
 const debug = createDebug('bb:user_state');
 
@@ -108,11 +109,27 @@ export class UserState extends EventEmitter {
 
     const balancesBefore = AssetIds.map(assetId => this.getBalance(assetId));
     const viewingKeys = Buffer.concat(blocks.map(b => b.viewingKeysData));
-    const notes = await this.noteAlgos.batchDecryptNotes(viewingKeys, this.user.privateKey, this.grumpkin);
+    const rollupProofData = blocks.map(b => RollupProofData.fromBuffer(b.rollupProofData, b.viewingKeysData));
+    const joinSplitNoteCommitments = rollupProofData
+      .map(p =>
+        p.innerProofData
+          .filter(i => i.proofId === ProofId.JOIN_SPLIT && !i.isPadding())
+          .map(i => [i.newNote1, i.newNote2]),
+      )
+      .flat(2);
+
+    const notes = await batchDecryptNotes(
+      viewingKeys,
+      this.user.privateKey,
+      this.grumpkin,
+      joinSplitNoteCommitments,
+      this.noteAlgos,
+    );
 
     let jsCount = 0;
-    for (const block of blocks) {
-      const proofData = RollupProofData.fromBuffer(block.rollupProofData, block.viewingKeysData);
+    for (let blockIndex = 0; blockIndex < blocks.length; ++blockIndex) {
+      const block = blocks[blockIndex];
+      const proofData = rollupProofData[blockIndex];
 
       for (let i = 0; i < proofData.innerProofData.length; ++i) {
         const proof = proofData.innerProofData[i];
@@ -252,7 +269,6 @@ export class UserState extends EventEmitter {
       value,
       dataEntry,
       secret: noteSecret,
-      // viewingKey,
       nullifier,
       nullified: false,
       owner: this.user.id,
@@ -268,10 +284,11 @@ export class UserState extends EventEmitter {
 
   private async nullifyNote(nullifier: Buffer) {
     const note = await this.db.getNoteByNullifier(nullifier);
-    if (note?.owner.equals(this.user.id)) {
-      await this.db.nullifyNote(note.index);
-      debug(`user ${this.user.id} nullified note at index ${note.index} with value ${note.value}.`);
+    if (!note || !note.owner.equals(this.user.id)) {
+      return;
     }
+    await this.db.nullifyNote(note.index);
+    debug(`user ${this.user.id} nullified note at index ${note.index} with value ${note.value}.`);
     return note;
   }
 

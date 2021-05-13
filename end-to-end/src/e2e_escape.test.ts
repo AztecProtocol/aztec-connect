@@ -1,4 +1,4 @@
-import { AssetId, createEthSdk, EthereumSdk, EthereumSdkUser } from '@aztec/sdk';
+import { AssetId, createWalletSdk, EthAddress, TxType, WalletProvider, WalletSdk, WalletSdkUser } from '@aztec/sdk';
 import { EventEmitter } from 'events';
 import { advanceBlocks, blocksToAdvance } from './manipulate_block';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
@@ -20,18 +20,21 @@ const { ETHEREUM_HOST = 'http://localhost:8545', SRIRACHA_HOST = 'http://localho
  */
 
 describe('end-to-end escape tests', () => {
-  let sdk: EthereumSdk;
-  const users: EthereumSdkUser[] = [];
+  let sdk: WalletSdk;
+  let provider: WalletProvider;
+  let accounts: EthAddress[] = [];
+  const users: WalletSdkUser[] = [];
   const assetId = AssetId.DAI;
   const escapeBlockLowerBound = 10;
   const escapeBlockUpperBound = 100;
+  const awaitSettlementTimeout = 600;
 
   beforeAll(async () => {
     // Init sdk.
-    const walletProvider = await createFundedWalletProvider(ETHEREUM_HOST, 2, '1');
-    const accounts = walletProvider.getAccounts();
+    provider = await createFundedWalletProvider(ETHEREUM_HOST, 2, '1');
+    accounts = provider.getAccounts();
 
-    sdk = await createEthSdk(walletProvider, SRIRACHA_HOST, {
+    sdk = await createWalletSdk(provider, SRIRACHA_HOST, {
       syncInstances: false,
       saveProvingKey: false,
       clearDb: true,
@@ -43,14 +46,13 @@ describe('end-to-end escape tests', () => {
     await sdk.awaitSynchronised();
 
     // Get user addresses.
-    const userAddresses = accounts.slice(0, 2);
-    for (const address of userAddresses) {
-      const user = await sdk.addUser(address);
+    for (const account of accounts) {
+      const user = await sdk.addUser(provider.getPrivateKeyForAddress(account)!);
       users.push(user);
     }
 
-    const nextEscapeBlock = await blocksToAdvance(escapeBlockLowerBound, escapeBlockUpperBound, walletProvider);
-    await advanceBlocks(nextEscapeBlock, walletProvider);
+    const nextEscapeBlock = await blocksToAdvance(escapeBlockLowerBound, escapeBlockUpperBound, provider);
+    await advanceBlocks(nextEscapeBlock, provider);
   });
 
   afterAll(async () => {
@@ -65,51 +67,60 @@ describe('end-to-end escape tests', () => {
 
     const user0Asset = users[0].getAsset(assetId);
     const user1Asset = users[1].getAsset(assetId);
-    const fee = 0n;
 
     // Deposit to user 0.
     {
+      const depositor = accounts[0];
       const depositValue = user0Asset.toBaseUnits('1000');
+      const fee = await user0Asset.getFee(TxType.DEPOSIT);
+      const totalInput = depositValue + fee;
 
-      await user0Asset.mint(depositValue);
-      await user0Asset.approve(depositValue);
-      expect(await user0Asset.publicBalance()).toBe(depositValue);
-      expect(await user0Asset.publicAllowance()).toBe(depositValue);
+      await user0Asset.mint(totalInput, depositor);
+      await user0Asset.approve(totalInput, depositor);
+
       expect(user0Asset.balance()).toBe(0n);
 
-      const txHash = await user0Asset.deposit(depositValue, fee);
-      await sdk.awaitSettlement(txHash);
+      await user0Asset.depositFundsToContract(depositor, totalInput);
+      const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
+      const proofOutput = await user0Asset.createDepositProof(depositValue, fee, signer, depositor);
+      const signature = await sdk.signProof(proofOutput, depositor);
+      const txHash = await sdk.sendProof(proofOutput, signature);
+      await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
 
-      expect(await user0Asset.publicBalance()).toBe(0n);
       expect(user0Asset.balance()).toBe(depositValue);
     }
 
     // Transfer to user 1.
     {
       const transferValue = user0Asset.toBaseUnits('800');
+      const fee = await user0Asset.getFee(TxType.TRANSFER);
 
       const initialBalance0 = user0Asset.balance();
       const initialBalance1 = user1Asset.balance();
 
-      const transferTxHash = await user0Asset.transfer(transferValue, fee, users[1].getUserData().id);
-      await sdk.awaitSettlement(transferTxHash);
+      const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[0])!);
+      const proofOutput = await user0Asset.createTransferProof(transferValue, fee, signer, users[1].id);
+      const txHash = await sdk.sendProof(proofOutput);
+      await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
 
-      expect(user0Asset.balance()).toBe(initialBalance0 - transferValue);
+      expect(user0Asset.balance()).toBe(initialBalance0 - transferValue - fee);
       expect(user1Asset.balance()).toBe(initialBalance1 + transferValue);
     }
 
     // Withdraw to user 1.
     {
-      const withdrawValue = user0Asset.toBaseUnits('300');
-
-      const initialPublicBalance = await user1Asset.publicBalance();
+      const recipient = accounts[1];
+      const withdrawValue = user1Asset.toBaseUnits('300');
+      const fee = await user1Asset.getFee(TxType.WITHDRAW_TO_WALLET);
       const initialBalance = user1Asset.balance();
 
-      const withdrawTxHash = await user1Asset.withdraw(withdrawValue, fee);
-      await sdk.awaitSettlement(withdrawTxHash);
+      const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(recipient)!);
+      const proofOutput = await user1Asset.createWithdrawProof(withdrawValue, fee, signer, recipient);
+      const txHash = await sdk.sendProof(proofOutput);
+      await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
 
-      expect(await user1Asset.publicBalance()).toBe(initialPublicBalance + withdrawValue);
-      expect(user1Asset.balance()).toBe(initialBalance - withdrawValue);
+      expect(user1Asset.balance()).toBe(initialBalance - withdrawValue - fee);
+      expect(await user1Asset.publicBalance(recipient)).toBe(withdrawValue);
     }
   });
 });

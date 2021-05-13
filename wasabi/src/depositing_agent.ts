@@ -78,6 +78,8 @@ export class DepositingAgent extends Agent {
   private deposit = async () => {
     console.log(`Agent ${this.id} depositing...`);
     const value = 1n;
-    await this.sdk.deposit(AssetId.ETH, this.address, this.user.id, value, 0n, this.signer);
+    const proof = await this.sdk.createDepositProof(AssetId.ETH, this.address, this.user.id, value, 0n, this.signer);
+    const signature = await this.sdk.signProof(proof, this.address);
+    await this.sdk.sendProof(proof, signature);
   };
 }

@@ -93,7 +93,8 @@ async function demoEmergencyWithdraw(userId, signer) {
 
 ## See Also
 
-- **[Get Balance](/#/ERC20%20Tokens/getBalance)**
-- **[Deposit](/#/ERC20%20Tokens/deposit)**
-- **[Withdraw](/#/ERC20%20Tokens/withdraw)**
-- **[Transfer](/#/ERC20%20Tokens/transfer)**
+- **[Get Balance](/#/zkAssets/getBalance)**
+- **[Deposit](/#/zkAssets/createDepositProof)**
+- **[Withdraw](/#/zkAssets/createWithdrawProof)**
+- **[Transfer](/#/zkAssets/createTransferProof)**
+- **[Join Split](/#/zkAssets/createJoinSplitProof)**

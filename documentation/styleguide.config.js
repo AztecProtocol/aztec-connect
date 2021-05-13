@@ -189,22 +189,22 @@ module.exports = {
           content: 'src/docs/tokens.md',
           sections: [
             {
-              name: 'deposit',
+              name: 'createDepositProof',
               content: 'src/docs/deposit.md',
               exampleMode: 'hide',
             },
             {
-              name: 'withdraw',
+              name: 'createWithdrawProof',
               content: 'src/docs/withdraw.md',
               exampleMode: 'hide',
             },
             {
-              name: 'transfer',
+              name: 'createTransferProof',
               content: 'src/docs/transfer.md',
               exampleMode: 'hide',
             },
             {
-              name: 'joinSplit',
+              name: 'createJoinSplitProof',
               content: 'src/docs/join_split.md',
               exampleMode: 'hide',
             },
@@ -245,13 +245,8 @@ module.exports = {
               exampleMode: 'hide',
             },
             {
-              name: 'Action',
-              content: 'src/docs/types/action.md',
-              exampleMode: 'hide',
-            },
-            {
-              name: 'ActionState',
-              content: 'src/docs/types/action_state.md',
+              name: 'AccountProofOutput',
+              content: 'src/docs/types/account_proof_output.md',
               exampleMode: 'hide',
             },
             {
@@ -265,8 +260,23 @@ module.exports = {
               exampleMode: 'hide',
             },
             {
+              name: 'AssetFeeQuote',
+              content: 'src/docs/types/asset_fee_quote.md',
+              exampleMode: 'hide',
+            },
+            {
               name: 'AssetId',
               content: 'src/docs/types/asset_id.md',
+              exampleMode: 'hide',
+            },
+            {
+              name: 'BlockchainAsset',
+              content: 'src/docs/types/blockchain_asset.md',
+              exampleMode: 'hide',
+            },
+            {
+              name: 'BlockchainStatus',
+              content: 'src/docs/types/blockchain_status.md',
               exampleMode: 'hide',
             },
             {
@@ -277,21 +287,6 @@ module.exports = {
             {
               name: 'EthereumProvider',
               content: 'src/docs/types/ethereum_provider.md',
-              exampleMode: 'hide',
-            },
-            {
-              name: 'EthereumSdk',
-              content: 'src/docs/types/ethereum_sdk.md',
-              exampleMode: 'hide',
-            },
-            {
-              name: 'EthereumSdkUser',
-              content: 'src/docs/types/ethereum_sdk_user.md',
-              exampleMode: 'hide',
-            },
-            {
-              name: 'EthereumSdkUserAsset',
-              content: 'src/docs/types/ethereum_sdk_user_asset.md',
               exampleMode: 'hide',
             },
             {
@@ -310,8 +305,13 @@ module.exports = {
               exampleMode: 'hide',
             },
             {
-              name: 'JoinSplitTxOptions',
-              content: 'src/docs/types/join_split_tx_options.md',
+              name: 'JoinSplitProofOutput',
+              content: 'src/docs/types/join_split_proof_output.md',
+              exampleMode: 'hide',
+            },
+            {
+              name: 'Note',
+              content: 'src/docs/types/note.md',
               exampleMode: 'hide',
             },
             {
@@ -320,23 +320,28 @@ module.exports = {
               exampleMode: 'hide',
             },
             {
+              name: 'ProofOutput',
+              content: 'src/docs/types/proof_output.md',
+              exampleMode: 'hide',
+            },
+            {
+              name: 'Receipt',
+              content: 'src/docs/types/receipt.md',
+              exampleMode: 'hide',
+            },
+            {
+              name: 'RecoveryData',
+              content: 'src/docs/types/recovery_data.md',
+              exampleMode: 'hide',
+            },
+            {
               name: 'RecoveryPayload',
               content: 'src/docs/types/recovery_payload.md',
               exampleMode: 'hide',
             },
             {
-              name: 'Rollup',
-              content: 'src/docs/types/rollup.md',
-              exampleMode: 'hide',
-            },
-            {
               name: 'RollupProviderStatus',
               content: 'src/docs/types/rollup_provider_status.md',
-              exampleMode: 'hide',
-            },
-            {
-              name: 'RollupStatus',
-              content: 'src/docs/types/rollup_status.md',
               exampleMode: 'hide',
             },
             {
@@ -350,6 +355,11 @@ module.exports = {
               exampleMode: 'hide',
             },
             {
+              name: 'SettlementTime',
+              content: 'src/docs/types/settlement_time.md',
+              exampleMode: 'hide',
+            },
+            {
               name: 'Signature',
               content: 'src/docs/types/signature.md',
               exampleMode: 'hide',
@@ -360,18 +370,18 @@ module.exports = {
               exampleMode: 'hide',
             },
             {
-              name: 'TokenContract',
-              content: 'src/docs/types/token_contract.md',
-              exampleMode: 'hide',
-            },
-            {
-              name: 'Tx',
-              content: 'src/docs/types/tx.md',
-              exampleMode: 'hide',
-            },
-            {
               name: 'TxHash',
               content: 'src/docs/types/tx_hash.md',
+              exampleMode: 'hide',
+            },
+            {
+              name: 'TxType',
+              content: 'src/docs/types/tx_type.md',
+              exampleMode: 'hide',
+            },
+            {
+              name: 'TypedData',
+              content: 'src/docs/types/typed_data.md',
               exampleMode: 'hide',
             },
             {

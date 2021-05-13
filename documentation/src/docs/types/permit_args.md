@@ -1,1 +1,1 @@
-@spec blockchain/contracts.d.ts PermitArgs
+@spec barretenberg/blockchain/blockchain.d.ts PermitArgs

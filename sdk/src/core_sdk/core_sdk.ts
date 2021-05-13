@@ -35,7 +35,7 @@ import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
 import { UserAccountTx, UserJoinSplitTx } from '../user_tx';
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { ProofData } from 'barretenberg/client_proofs/proof_data';
-import { EthereumSigner, TxType } from 'barretenberg/blockchain';
+import { TxType } from 'barretenberg/blockchain';
 import { TxHash } from 'barretenberg/tx_hash';
 import { AccountProofOutput, JoinSplitProofOutput, ProofOutput } from '../proofs/proof_output';
 import { BarretenbergWorker } from 'barretenberg/wasm/worker';
@@ -83,7 +83,6 @@ export class CoreSdk extends EventEmitter {
     dataRoot: Buffer.alloc(0),
     dataSize: 0,
     assets: [],
-    txFees: [],
   };
   private processBlocksPromise?: Promise<void>;
   private blake2s!: Blake2s;
@@ -130,7 +129,6 @@ export class CoreSdk extends EventEmitter {
 
     const {
       blockchainStatus: { chainId, rollupContractAddress, assets },
-      txFees,
     } = await this.getRemoteStatus();
     await this.leveldb.put('rollupContractAddress', rollupContractAddress.toBuffer());
 
@@ -144,7 +142,6 @@ export class CoreSdk extends EventEmitter {
       syncedToRollup: +(await this.leveldb.get('syncedToRollup').catch(() => -1)),
       latestRollupId: +(await this.leveldb.get('latestRollupId').catch(() => -1)),
       assets,
-      txFees,
     };
 
     // Create provers
@@ -154,7 +151,7 @@ export class CoreSdk extends EventEmitter {
       this.escapeHatchMode ? EscapeHatchProver.circuitSize : JoinSplitProver.circuitSize,
     );
     const pooledProverFactory = new PooledProverFactory(this.workerPool, crsData);
-    
+
     if (!this.escapeHatchMode) {
       const joinSplitProver = new JoinSplitProver(
         await pooledProverFactory.createUnrolledProver(JoinSplitProver.circuitSize),
@@ -337,8 +334,8 @@ export class CoreSdk extends EventEmitter {
     return await this.rollupProvider.getStatus();
   }
 
-  public async getFee(assetId: AssetId, transactionType: TxType, speed = SettlementTime.SLOW) {
-    const { txFees } = this.getLocalStatus();
+  public async getFee(assetId: AssetId, transactionType: TxType, speed: SettlementTime) {
+    const { txFees } = await this.getRemoteStatus();
     return txFees[assetId].feeConstants[transactionType] + txFees[assetId].baseFeeQuotes[speed].fee;
   }
 
@@ -398,7 +395,7 @@ export class CoreSdk extends EventEmitter {
   }
 
   private async stopReceivingBlocks() {
-    this.rollupProvider.stop();
+    await this.rollupProvider.stop();
     this.rollupProvider.removeAllListeners();
     this.blockQueue?.cancel();
     await this.processBlocksPromise;
@@ -518,45 +515,6 @@ export class CoreSdk extends EventEmitter {
     return new SchnorrSigner(this.schnorr, publicKey, privateKey);
   }
 
-  public async sendJoinSplitProof(
-    assetId: AssetId,
-    userId: AccountId,
-    publicInput: bigint,
-    publicOutput: bigint,
-    privateInput: bigint,
-    recipientPrivateOutput: bigint,
-    senderPrivateOutput: bigint,
-    signer: Signer,
-    noteRecipient?: AccountId,
-    inputOwner?: EthAddress,
-    outputOwner?: EthAddress,
-    ethSigner?: EthereumSigner,
-  ) {
-    const proofOutput = await this.createJoinSplitProof(
-      assetId,
-      userId,
-      publicInput,
-      publicOutput,
-      privateInput,
-      recipientPrivateOutput,
-      senderPrivateOutput,
-      signer,
-      noteRecipient,
-      inputOwner,
-      outputOwner,
-    );
-
-    if (proofOutput.signingData) {
-      if (!inputOwner || !ethSigner) {
-        throw new Error('Signer undefined.');
-      }
-
-      await proofOutput.ethSign(ethSigner, inputOwner);
-    }
-
-    return this.sendProof(proofOutput);
-  }
-
   public async createJoinSplitProof(
     assetId: AssetId,
     userId: AccountId,
@@ -636,50 +594,6 @@ export class CoreSdk extends EventEmitter {
     );
   }
 
-  public async sendAccountProof(
-    userId: AccountId,
-    signer: Signer,
-    aliasHash: AliasHash,
-    nonce: number,
-    migrate: boolean,
-    newSigningPublicKey1?: GrumpkinAddress,
-    newSigningPublicKey2?: GrumpkinAddress,
-    newAccountPrivateKey?: Buffer,
-  ) {
-    const proofOutput = await this.createAccountProof(
-      userId,
-      signer,
-      aliasHash,
-      nonce,
-      migrate,
-      newSigningPublicKey1,
-      newSigningPublicKey2,
-      newAccountPrivateKey,
-    );
-
-    let newUser;
-    const { tx } = proofOutput;
-    if (tx.migrated) {
-      const { privateKey } = this.getUserData(userId);
-      const userData = await this.userFactory.createUser(
-        newAccountPrivateKey || privateKey,
-        tx.userId.nonce,
-        aliasHash,
-      );
-      newUser = await this.addUserFromUserData(userData);
-    }
-
-    try {
-      const txId = await this.sendProof(proofOutput);
-      return txId;
-    } catch (e) {
-      if (newUser) {
-        await this.removeUser(newUser.id);
-      }
-      throw e;
-    }
-  }
-
   public async createAccountProof(
     userId: AccountId,
     signer: Signer,
@@ -732,12 +646,16 @@ export class CoreSdk extends EventEmitter {
     return new AccountProofOutput(tx, rawProofData);
   }
 
-  public async sendProof(proofOutput: ProofOutput) {
+  public async sendProof(proofOutput: ProofOutput, depositSignature?: Buffer) {
     if (this.escapeHatchMode) {
       await this.validateEscapeOpen();
     }
 
-    const { depositSignature } = proofOutput;
+    const { signingData } = proofOutput;
+    if (signingData && !depositSignature) {
+      throw new Error('Proof not signed.');
+    }
+
     const { tx } = proofOutput;
     const { userId } = tx;
     const userState = this.getUserState(userId);

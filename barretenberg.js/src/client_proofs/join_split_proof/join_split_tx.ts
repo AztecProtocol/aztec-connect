@@ -4,7 +4,7 @@ import { HashPath } from '../../merkle_tree';
 import { numToUInt32BE } from '../../serialize';
 import { AccountAliasId } from '../account_alias_id';
 import { AssetId } from '../../asset';
-import { TreeNote } from '../note';
+import { TreeNote } from '../tree_note';
 import { Signature } from '../signature';
 
 export class JoinSplitTx {
