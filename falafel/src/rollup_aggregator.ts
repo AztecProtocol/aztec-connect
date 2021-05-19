@@ -1,5 +1,5 @@
 import { RollupProofData } from 'barretenberg/rollup_proof';
-import { WorldStateDb } from 'barretenberg/world_state_db';
+import { RollupTreeId, WorldStateDb } from 'barretenberg/world_state_db';
 import { ProofGenerator, RootRollup, RootRollupProofRequest } from 'halloumi/proof_generator';
 import { RollupDao } from './entity/rollup';
 import { RollupProofDao } from './entity/rollup_proof';
@@ -70,19 +70,27 @@ export class RollupAggregator {
   private async createRootRollup(rollupProofs: RollupProofDao[]) {
     const worldStateDb = this.worldStateDb;
 
-    // Get root tree data.
+    const rollupId = await this.rollupDb.getNextRollupId();
+
+    // Root tree update.
     const newDataRoot = worldStateDb.getRoot(0);
-    const oldDataRootsRoot = worldStateDb.getRoot(2);
-    const rootTreeSize = worldStateDb.getSize(2);
-    const oldDataRootsPath = await worldStateDb.getHashPath(2, rootTreeSize);
-    await worldStateDb.put(2, rootTreeSize, newDataRoot);
-    const newDataRootsRoot = worldStateDb.getRoot(2);
-    const newDataRootsPath = await worldStateDb.getHashPath(2, rootTreeSize);
+    const oldDataRootsRoot = worldStateDb.getRoot(RollupTreeId.ROOT);
+    const rootTreeSize = worldStateDb.getSize(RollupTreeId.ROOT);
+    const oldDataRootsPath = await worldStateDb.getHashPath(RollupTreeId.ROOT, rootTreeSize);
+    await worldStateDb.put(RollupTreeId.ROOT, rootTreeSize, newDataRoot);
+    const newDataRootsRoot = worldStateDb.getRoot(RollupTreeId.ROOT);
+    const newDataRootsPath = await worldStateDb.getHashPath(RollupTreeId.ROOT, rootTreeSize);
+
+    // Defi tree update.
+    const oldDefiRoot = worldStateDb.getRoot(RollupTreeId.DEFI);
+    const oldDefiPath = await worldStateDb.getHashPath(RollupTreeId.DEFI, rootTreeSize);
+    const newDefiRoot = worldStateDb.getRoot(RollupTreeId.DEFI);
+    const newDefiPath = await worldStateDb.getHashPath(RollupTreeId.DEFI, rootTreeSize);
 
     if (rollupProofs.length < this.numOuterRollupProofs) {
       const endIndex = rollupProofs[0].dataStartIndex + this.outerRollupSize * 2 - 1;
       // Grows the data tree by inserting 0 at last subtree position.
-      await worldStateDb.put(0, BigInt(endIndex), Buffer.alloc(64, 0));
+      await worldStateDb.put(RollupTreeId.DATA, BigInt(endIndex), Buffer.alloc(64, 0));
     }
 
     const rootRollup = new RootRollup(
@@ -92,6 +100,13 @@ export class RollupAggregator {
       newDataRootsRoot,
       oldDataRootsPath,
       newDataRootsPath,
+      oldDefiRoot,
+      newDefiRoot,
+      oldDefiPath,
+      newDefiPath,
+      0,
+      [],
+      []
     );
 
     return rootRollup;

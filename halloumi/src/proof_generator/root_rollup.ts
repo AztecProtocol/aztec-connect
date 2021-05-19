@@ -1,6 +1,8 @@
 import { HashPath } from 'barretenberg/merkle_tree';
+import { toBufferBE } from 'bigint-buffer';
 import {
   deserializeArrayFromVector,
+  deserializeBigInt,
   deserializeBufferFromVector,
   deserializeField,
   numToUInt32BE,
@@ -16,6 +18,13 @@ export class RootRollup {
     public newDataRootsRoot: Buffer,
     public oldDataRootsPath: HashPath,
     public newDataRootsPath: HashPath,
+    public oldDefiRoot: Buffer,
+    public newDefiRoot: Buffer,
+    public oldDefiPath: HashPath,
+    public newDefiPath: HashPath,
+    public defiInteractionNonce: number,
+    public bridgeIds: bigint[],
+    public defiInteractionNotes: Buffer[],
   ) {}
 
   public toBuffer() {
@@ -27,6 +36,14 @@ export class RootRollup {
       this.newDataRootsRoot,
       this.oldDataRootsPath.toBuffer(),
       this.newDataRootsPath.toBuffer(),
+      numToUInt32BE(this.bridgeIds.length),
+      this.oldDefiRoot,
+      this.newDefiRoot,
+      this.oldDefiPath.toBuffer(),
+      this.newDefiPath.toBuffer(),
+      numToUInt32BE(this.defiInteractionNonce),
+      serializeBufferArrayToVector(this.bridgeIds.map(b => toBufferBE(b, 32))),
+      serializeBufferArrayToVector(this.defiInteractionNotes),
     ]);
   }
 
@@ -35,6 +52,7 @@ export class RootRollup {
     let offset = 8;
     const proofs = deserializeArrayFromVector(deserializeBufferFromVector, buf, offset);
     offset += proofs.adv;
+
     const oldDataRootsRoot = deserializeField(buf, offset);
     offset += oldDataRootsRoot.adv;
     const newDataRootsRoot = deserializeField(buf, offset);
@@ -44,6 +62,23 @@ export class RootRollup {
     const newDataRootsPath = HashPath.deserialize(buf, offset);
     offset += newDataRootsPath.adv;
 
+    const defiInteractionNonce = buf.readUInt32BE(offset);
+    offset += 4;
+
+    const oldDefiRoot = deserializeField(buf, offset);
+    offset += oldDataRootsRoot.adv;
+    const newDefiRoot = deserializeField(buf, offset);
+    offset += newDataRootsRoot.adv;
+    const oldDefiPath = HashPath.deserialize(buf, offset);
+    offset += oldDataRootsPath.adv;
+    const newDefiPath = HashPath.deserialize(buf, offset);
+    offset += newDataRootsPath.adv;
+
+    const bridgeIds = deserializeArrayFromVector(deserializeBigInt, buf, offset);
+    offset += bridgeIds.adv;
+
+    const defiInteractionNotes = deserializeArrayFromVector(deserializeField, buf, offset);
+
     return new RootRollup(
       rollupId,
       proofs.elem,
@@ -51,6 +86,13 @@ export class RootRollup {
       newDataRootsRoot.elem,
       oldDataRootsPath.elem,
       newDataRootsPath.elem,
+      oldDefiRoot.elem,
+      newDefiRoot.elem,
+      oldDefiPath.elem,
+      newDefiPath.elem,
+      defiInteractionNonce,
+      bridgeIds.elem,
+      defiInteractionNotes.elem,
     );
   }
 }

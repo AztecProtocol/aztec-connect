@@ -1,3 +1,5 @@
+import { toBigIntBE } from 'bigint-buffer';
+
 // For serializing numbers to 32 bit big-endian form.
 export function numToUInt32BE(n: number, bufferSize = 4) {
   const buf = Buffer.alloc(bufferSize);
@@ -29,6 +31,11 @@ export function deserializeBufferFromVector(vector: Buffer, offset = 0) {
 export function deserializeUInt32(buf: Buffer, offset = 0) {
   const adv = 4;
   return { elem: buf.readUInt32BE(offset), adv };
+}
+
+export function deserializeBigInt(buf: Buffer, offset = 0) {
+  const adv = 32;
+  return { elem: toBigIntBE(buf.slice(offset, 32)), adv };
 }
 
 export function deserializeField(buf: Buffer, offset = 0) {

@@ -9,7 +9,21 @@ describe('Rollup', () => {
   it('serialize rollup data to buffer and deserialize it back', () => {
     const numberOfTxs = 2;
     const proofs = [...Array(numberOfTxs)].map(() => randomBytes(300));
-    const rollup = new RootRollup(0, proofs, randomRoot(), randomRoot(), randomDataPath(), randomDataPath());
+    const rollup = new RootRollup(
+      0,
+      proofs,
+      randomRoot(),
+      randomRoot(),
+      randomDataPath(),
+      randomDataPath(),
+      randomRoot(),
+      randomRoot(),
+      randomDataPath(),
+      randomDataPath(),
+      0,
+      [],
+      [],
+    );
 
     const buf = rollup.toBuffer();
     expect(buf).toBeInstanceOf(Buffer);
