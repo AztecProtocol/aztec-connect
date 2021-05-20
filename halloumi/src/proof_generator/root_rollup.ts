@@ -22,7 +22,6 @@ export class RootRollup {
     public newDefiRoot: Buffer,
     public oldDefiPath: HashPath,
     public newDefiPath: HashPath,
-    public defiInteractionNonce: number,
     public bridgeIds: bigint[],
     public defiInteractionNotes: Buffer[],
   ) {}
@@ -41,7 +40,6 @@ export class RootRollup {
       this.newDefiRoot,
       this.oldDefiPath.toBuffer(),
       this.newDefiPath.toBuffer(),
-      numToUInt32BE(this.defiInteractionNonce),
       serializeBufferArrayToVector(this.bridgeIds.map(b => toBufferBE(b, 32))),
       serializeBufferArrayToVector(this.defiInteractionNotes),
     ]);
@@ -61,9 +59,6 @@ export class RootRollup {
     offset += oldDataRootsPath.adv;
     const newDataRootsPath = HashPath.deserialize(buf, offset);
     offset += newDataRootsPath.adv;
-
-    const defiInteractionNonce = buf.readUInt32BE(offset);
-    offset += 4;
 
     const oldDefiRoot = deserializeField(buf, offset);
     offset += oldDataRootsRoot.adv;
@@ -90,7 +85,6 @@ export class RootRollup {
       newDefiRoot.elem,
       oldDefiPath.elem,
       newDefiPath.elem,
-      defiInteractionNonce,
       bridgeIds.elem,
       defiInteractionNotes.elem,
     );

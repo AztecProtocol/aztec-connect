@@ -20,7 +20,6 @@ describe('Rollup', () => {
       randomRoot(),
       randomDataPath(),
       randomDataPath(),
-      0,
       [],
       [],
     );

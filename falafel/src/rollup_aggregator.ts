@@ -83,9 +83,9 @@ export class RollupAggregator {
 
     // Defi tree update.
     const oldDefiRoot = worldStateDb.getRoot(RollupTreeId.DEFI);
-    const oldDefiPath = await worldStateDb.getHashPath(RollupTreeId.DEFI, rootTreeSize);
+    const oldDefiPath = await worldStateDb.getHashPath(RollupTreeId.DEFI, BigInt(rollupId * 4));
     const newDefiRoot = worldStateDb.getRoot(RollupTreeId.DEFI);
-    const newDefiPath = await worldStateDb.getHashPath(RollupTreeId.DEFI, rootTreeSize);
+    const newDefiPath = await worldStateDb.getHashPath(RollupTreeId.DEFI, BigInt(rollupId * 4));
 
     if (rollupProofs.length < this.numOuterRollupProofs) {
       const endIndex = rollupProofs[0].dataStartIndex + this.outerRollupSize * 2 - 1;
@@ -94,7 +94,7 @@ export class RollupAggregator {
     }
 
     const rootRollup = new RootRollup(
-      await this.rollupDb.getNextRollupId(),
+      rollupId,
       rollupProofs.map(tx => tx.proofData),
       oldDataRootsRoot,
       newDataRootsRoot,
@@ -104,9 +104,8 @@ export class RollupAggregator {
       newDefiRoot,
       oldDefiPath,
       newDefiPath,
-      0,
       [],
-      []
+      [],
     );
 
     return rootRollup;
