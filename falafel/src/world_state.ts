@@ -94,6 +94,7 @@ export class WorldState {
     console.log(`Data root: ${this.worldStateDb.getRoot(0).toString('hex')}`);
     console.log(`Null root: ${this.worldStateDb.getRoot(1).toString('hex')}`);
     console.log(`Root root: ${this.worldStateDb.getRoot(2).toString('hex')}`);
+    console.log(`Defi root: ${this.worldStateDb.getRoot(3).toString('hex')}`);
   }
 
   /**

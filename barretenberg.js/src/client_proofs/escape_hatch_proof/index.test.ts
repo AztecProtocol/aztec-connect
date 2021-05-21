@@ -247,12 +247,11 @@ describe('escape_hatch_proof', () => {
     expect(escapeHatchProof.oldDataRoot).toEqual(oldDataRoot);
     expect(escapeHatchProof.newDataRoot).toEqual(newDataRoot);
     expect(escapeHatchProof.oldNullRoot).toEqual(oldNullifierRoot);
-    expect(escapeHatchProof.newNullRoot).toEqual(newNullifierRoots[1]); // TODO
+    expect(escapeHatchProof.newNullRoot).toEqual(newNullifierRoots[1]);
     expect(escapeHatchProof.oldDataRootsRoot).toEqual(oldDataRootsRoot);
     expect(escapeHatchProof.newDataRootsRoot).toEqual(newDataRootsRoot);
     for (let i = 0; i < RollupProofData.NUMBER_OF_ASSETS; ++i) {
       expect(escapeHatchProof.totalTxFees[i]).toEqual(Buffer.alloc(32));
     }
-    expect(escapeHatchProof.numTxs).toEqual(1);
   });
 });

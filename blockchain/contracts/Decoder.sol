@@ -17,7 +17,7 @@ contract Decoder {
         internal
         pure
         returns (
-            uint256[4] memory nums,
+            uint256[3] memory nums,
             bytes32 oldDataRoot,
             bytes32 newDataRoot,
             bytes32 oldNullRoot,
@@ -29,7 +29,6 @@ contract Decoder {
         uint256 rollupId;
         uint256 rollupSize;
         uint256 dataStartIndex;
-        uint256 numTxs;
         assembly {
             let dataStart := add(proofData, 0x20) // jump over first word, it's length of data
             rollupId := mload(dataStart)
@@ -41,10 +40,9 @@ contract Decoder {
             newNullRoot := mload(add(dataStart, 0xc0))
             oldRootRoot := mload(add(dataStart, 0xe0))
             newRootRoot := mload(add(dataStart, 0x100))
-            numTxs := mload(add(add(dataStart, 0x120), mul(0x20, numberOfAssets)))
         }
         return (
-            [rollupId, rollupSize, dataStartIndex, numTxs],
+            [rollupId, rollupSize, dataStartIndex],
             oldDataRoot,
             newDataRoot,
             oldNullRoot,

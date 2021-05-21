@@ -6,6 +6,22 @@ import { ChildProcess, execSync, spawn } from 'child_process';
 import { PromiseReadable } from 'promise-readable';
 import { serializeBufferArrayToVector, serializeBufferToVector } from '../serialize';
 
+enum Command {
+  GET,
+  PUT,
+  COMMIT,
+  ROLLBACK,
+  GET_PATH,
+  BATCH_PUT,
+}
+
+export enum RollupTreeId {
+  DATA,
+  NULL,
+  ROOT,
+  DEFI,
+}
+
 export interface PutEntry {
   treeId: number;
   index: bigint;
@@ -47,7 +63,7 @@ export class WorldStateDb {
   }
 
   private async get_(treeId: number, index: bigint) {
-    const buffer = Buffer.concat([Buffer.alloc(1, 0), Buffer.alloc(1, treeId), toBufferBE(index, 32)]);
+    const buffer = Buffer.concat([Buffer.from([Command.GET, treeId]), toBufferBE(index, 32)]);
 
     this.proc!.stdin!.write(buffer);
 
@@ -68,7 +84,7 @@ export class WorldStateDb {
   }
 
   private async getHashPath_(treeId: number, index: bigint) {
-    const buffer = Buffer.concat([Buffer.alloc(1, 4), Buffer.alloc(1, treeId), toBufferBE(index, 32)]);
+    const buffer = Buffer.concat([Buffer.from([Command.GET_PATH, treeId]), toBufferBE(index, 32)]);
 
     this.proc!.stdin!.write(buffer);
 
@@ -90,8 +106,7 @@ export class WorldStateDb {
 
   private async put_(treeId: number, index: bigint, value: Buffer) {
     const buffer = Buffer.concat([
-      Buffer.alloc(1, 1),
-      Buffer.alloc(1, treeId),
+      Buffer.from([Command.PUT, treeId]),
       toBufferBE(index, 32),
       serializeBufferToVector(value),
     ]);
@@ -113,9 +128,9 @@ export class WorldStateDb {
 
   private async batchPut_(entries: PutEntry[]) {
     const bufs = entries.map(e =>
-      Buffer.concat([Buffer.alloc(1, e.treeId), toBufferBE(e.index, 32), serializeBufferToVector(e.value)]),
+      Buffer.concat([Buffer.from([e.treeId]), toBufferBE(e.index, 32), serializeBufferToVector(e.value)]),
     );
-    const buffer = Buffer.concat([Buffer.alloc(1, 5), serializeBufferArrayToVector(bufs)]);
+    const buffer = Buffer.concat([Buffer.from([Command.BATCH_PUT]), serializeBufferArrayToVector(bufs)]);
 
     this.proc!.stdin!.write(buffer);
 
@@ -125,7 +140,7 @@ export class WorldStateDb {
   public async commit() {
     await new Promise<void>(resolve => {
       this.stdioQueue.put(async () => {
-        const buffer = Buffer.from([0x02]);
+        const buffer = Buffer.from([Command.COMMIT]);
         this.proc!.stdin!.write(buffer);
         await this.readMetadata();
         resolve();
@@ -136,7 +151,7 @@ export class WorldStateDb {
   public async rollback() {
     await new Promise<void>(resolve => {
       this.stdioQueue.put(async () => {
-        const buffer = Buffer.from([0x03]);
+        const buffer = Buffer.from([Command.ROLLBACK]);
         this.proc!.stdin!.write(buffer);
         await this.readMetadata();
         resolve();
@@ -171,12 +186,15 @@ export class WorldStateDb {
     this.roots[0] = await this.stdout.read(32);
     this.roots[1] = await this.stdout.read(32);
     this.roots[2] = await this.stdout.read(32);
+    this.roots[3] = await this.stdout.read(32);
     const dataSize = await this.stdout.read(32);
     const nullifierSize = await this.stdout.read(32);
     const rootSize = await this.stdout.read(32);
+    const defiSize = await this.stdout.read(32);
     this.sizes[0] = toBigIntBE(dataSize);
     this.sizes[1] = toBigIntBE(nullifierSize);
     this.sizes[2] = toBigIntBE(rootSize);
+    this.sizes[3] = toBigIntBE(defiSize);
   }
 
   private async processStdioQueue() {

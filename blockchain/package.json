@@ -13,10 +13,9 @@
     "test:contract": "node ./ensure_versions && hardhat test ./test/**/*.test.ts",
     "test:verifier": "hardhat test ./test/verifier/verifier.test.ts",
     "test:src": "jest",
-    "test:ganache": "yarn hardhat --network ganache test",
     "deploy": "node ./dest/deploy/index.js",
     "start:ganache": "yarn compile && ganache-cli -d -h 0.0.0.0 --chainId=1337 -l 12000000 -e 10000 -m 'test test test test test test test test test test test junk'",
-    "start:hardhat": "hardhat node"
+    "generate:dev": "./generate_vks.sh && cd ./test/verifier/fixtures && ./create_proofs.sh dev"
   },
   "bin": {
     "deploy_rollup_processor": "./deploy/index.js",

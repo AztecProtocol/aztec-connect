@@ -75,7 +75,7 @@ export class InnerProofData {
 
 export class RollupProofData {
   static NUMBER_OF_ASSETS = 4;
-  static NUM_ROLLUP_PUBLIC_INPUTS = 14;
+  static NUM_ROLLUP_PUBLIC_INPUTS = 13;
   static LENGTH_ROLLUP_PUBLIC = RollupProofData.NUM_ROLLUP_PUBLIC_INPUTS * 32;
   public rollupHash: Buffer;
 
@@ -90,7 +90,6 @@ export class RollupProofData {
     public oldDataRootsRoot: Buffer,
     public newDataRootsRoot: Buffer,
     public totalTxFees: Buffer[],
-    public numTxs: number,
     public innerProofData: InnerProofData[],
     public recursiveProofOutput: Buffer,
     public viewingKeys: ViewingKey[][],
@@ -114,7 +113,6 @@ export class RollupProofData {
       this.oldDataRootsRoot,
       this.newDataRootsRoot,
       ...this.totalTxFees,
-      numToUInt32BE(this.numTxs, 32),
       ...this.innerProofData.map(p => p.toBuffer()),
       this.recursiveProofOutput,
     ]);
@@ -146,7 +144,6 @@ export class RollupProofData {
     for (let i = 0; i < RollupProofData.NUMBER_OF_ASSETS; ++i) {
       totalTxFees.push(proofData.slice((9 + i) * 32, (9 + i) * 32 + 32));
     }
-    const numTxs = proofData.readUInt32BE((9 + RollupProofData.NUMBER_OF_ASSETS) * 32 + 28);
 
     const innerProofSize = Math.max(rollupSize, 1); // Escape hatch is demarked 0, but has size 1.
     const innerProofData: InnerProofData[] = [];
@@ -185,7 +182,6 @@ export class RollupProofData {
       oldDataRootsRoot,
       newDataRootsRoot,
       totalTxFees,
-      numTxs,
       innerProofData,
       recursiveProofOutput,
       viewingKeys,

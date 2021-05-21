@@ -65,7 +65,7 @@ describe('world_state_db', () => {
 
   it('should update multiple values', async () => {
     const num = 1024;
-    const values = new Array(num).fill(0).map(_ => randomBytes(64));
+    const values = new Array(num).fill(0).map(() => randomBytes(64));
     for (let i = 0; i < num; ++i) {
       await worldStateDb.put(0, BigInt(i), values[i]);
     }
@@ -92,7 +92,7 @@ describe('world_state_db', () => {
   });
 
   it('should be able to rollback to the previous commit', async () => {
-    const values = new Array(3).fill(0).map(_ => randomBytes(64));
+    const values = new Array(3).fill(0).map(() => randomBytes(64));
 
     const rootEmpty = worldStateDb.getRoot(0);
     await worldStateDb.put(0, BigInt(0), values[0]);
@@ -114,7 +114,7 @@ describe('world_state_db', () => {
 
   it('should read and write standard I/O sequentially', async () => {
     const num = 10;
-    const values = new Array(num).fill(0).map(_ => randomBytes(64));
+    const values = new Array(num).fill(0).map(() => randomBytes(64));
     await Promise.all(
       values.map(async (value, i) => {
         await worldStateDb.put(0, BigInt(i), value);

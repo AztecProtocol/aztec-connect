@@ -33,7 +33,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
 
     uint256 public constant numberOfAssets = 4;
     uint256 public constant txNumPubInputs = 12;
-    uint256 public constant rollupNumPubInputs = 10 + numberOfAssets;
+    uint256 public constant rollupNumPubInputs = 9 + numberOfAssets;
     uint256 public constant txPubInputLength = txNumPubInputs * 32; // public inputs length for of each inner proof tx
     uint256 public constant rollupPubInputLength = rollupNumPubInputs * 32;
     uint256 public constant ethAssetId = 0;
@@ -498,8 +498,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             // 0: rollupId
             // 1: rollupSize
             // 2: dataStartIndex
-            // 3: numTxs
-            uint256[4] memory nums,
+            uint256[3] memory nums,
             bytes32 oldDataRoot,
             bytes32 newDataRoot,
             bytes32 oldNullRoot,
@@ -508,11 +507,11 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             bytes32 newRootRoot
         ) = decodeProof(proofData, numberOfAssets);
 
-        // Escape hatch denominated by a rollup size of 0, which means inserting 2 new entries.
-        nums[3] = nums[1] == 0 ? 1 : nums[1];
+        // Escape hatch denominated by a rollup size of 0, which contains 1 tx.
+        uint256 numTxs = nums[1] == 0 ? 1 : nums[1];
 
         // Ensure we are inserting at the next subtree boundary.
-        uint256 toInsert = nums[3].mul(2);
+        uint256 toInsert = numTxs.mul(2);
         if (dataSize % toInsert == 0) {
             require(nums[2] == dataSize, 'Rollup Processor: INCORRECT_DATA_START_INDEX');
         } else {
@@ -526,7 +525,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         require(oldRootRoot == rootRoot, 'Rollup Processor: INCORRECT_ROOT_ROOT');
         require(nums[0] == nextRollupId, 'Rollup Processor: ID_NOT_SEQUENTIAL');
 
-        return (newDataRoot, newNullRoot, nums[0], nums[1], newRootRoot, nums[3], nums[2] + toInsert);
+        return (newDataRoot, newNullRoot, nums[0], nums[1], newRootRoot, numTxs, nums[2] + toInsert);
     }
 
     /**
