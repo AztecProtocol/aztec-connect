@@ -141,7 +141,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "PRICE_FEED_CONTRACT_ADDRESSES",
-        "value": "0x169E633A2D1E6c10dD91238Ba11c4A708dfEF37C,0x773616E4d11A78F511299002da57A0a94577F1f4"
+        "value": "0x169E633A2D1E6c10dD91238Ba11c4A708dfEF37C,0x773616E4d11A78F511299002da57A0a94577F1f4,0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c"
       },
       {
         "name": "GAS_LIMIT",

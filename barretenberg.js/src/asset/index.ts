@@ -1,6 +1,7 @@
 export enum AssetId {
   ETH,
   DAI,
+  renBTC,
 }
 
 const enumValues = <T>(e: T): T[keyof T][] =>
