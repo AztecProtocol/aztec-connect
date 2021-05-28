@@ -61,7 +61,11 @@ export async function deploy(
   await createPair(signer, uniswapRouter, asset, initialTokenSupply, initialEthSupply);
   await createPair(signer, uniswapRouter, asset2, initialTokenSupply, initialEthSupply);
 
-  const priceFeeds = [gasPriceFeed, await deployPriceFeed(signer), await deployPriceFeed(signer)];
+  const priceFeeds = [
+    gasPriceFeed,
+    await deployPriceFeed(signer),
+    await deployPriceFeed(signer, 14000000000000000000n),
+  ];
 
   return { rollup, feeDistributor, uniswapRouter, priceFeeds };
 }

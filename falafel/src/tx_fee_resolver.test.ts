@@ -58,7 +58,7 @@ describe('tx fee resolver', () => {
       latestRound: () => 10n,
       getRoundData: (roundId: bigint) => ({
         roundId,
-        price: 1n,
+        price: 20n,
         timestamp: Math.floor(Date.now() / 1000),
       }),
     } as any) as PriceFeed;
@@ -474,10 +474,9 @@ describe('tx fee resolver', () => {
     const float = (value: number) => +value.toFixed(2); // deal with float precision
 
     beforeEach(async () => {
-      jest.spyOn(txFeeResolver as any, 'getFeeForTxDao').mockImplementation(((tx: MinimalTxDao, rollupId: number) => ({
-        fee: tx.fee,
-        minFee: txFeeResolver.getMinTxFee(tx.assetId, tx.txType, rollupId),
-      })) as any);
+      jest
+        .spyOn(txFeeResolver as any, 'getFeeForTxDao')
+        .mockImplementation((({ assetId, fee }: MinimalTxDao) => ({ assetId, txFee: fee })) as any);
 
       await txFeeResolver.start();
     });
@@ -595,6 +594,44 @@ describe('tx fee resolver', () => {
         },
       ]);
       expect(float(txFeeResolver.computeSurplusRatio(txs))).toBe(0.2);
+    });
+
+    it('should compute correct surplus ratio for token asset', () => {
+      const minFee = txFeeResolver.getMinTxFee(AssetId.DAI, TxType.TRANSFER);
+      const baseFee = txFeeResolver.getFeeQuotes(AssetId.DAI).baseFeeQuotes[SettlementTime.SLOW].fee;
+      const txs = toTxDaos([
+        {
+          assetId: AssetId.DAI,
+          txType: TxType.TRANSFER,
+          fee: minFee + baseFee * 2n,
+        },
+      ]);
+      expect(float(txFeeResolver.computeSurplusRatio(txs))).toBe(0.8);
+    });
+
+    it('should compute correct surplus ratio for mixed assets', () => {
+      const minEthFee = txFeeResolver.getMinTxFee(AssetId.ETH, TxType.TRANSFER);
+      const baseEthFee = txFeeResolver.getFeeQuotes(AssetId.ETH).baseFeeQuotes[SettlementTime.SLOW].fee;
+      const minFee = txFeeResolver.getMinTxFee(AssetId.DAI, TxType.TRANSFER);
+      const baseFee = txFeeResolver.getFeeQuotes(AssetId.DAI).baseFeeQuotes[SettlementTime.SLOW].fee;
+      const txs = toTxDaos([
+        {
+          assetId: AssetId.DAI,
+          txType: TxType.TRANSFER,
+          fee: minFee + baseFee * 2n,
+        },
+        {
+          assetId: AssetId.ETH,
+          txType: TxType.TRANSFER,
+          fee: minEthFee + baseEthFee * 7n,
+        },
+        {
+          assetId: AssetId.DAI,
+          txType: TxType.TRANSFER,
+          fee: minFee - baseFee * 3n,
+        },
+      ]);
+      expect(float(txFeeResolver.computeSurplusRatio(txs))).toBe(0.4);
     });
   });
 
