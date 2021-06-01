@@ -6,6 +6,25 @@ import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {Types} from './verifier/cryptography/Types.sol';
 import {Bn254Crypto} from './verifier/cryptography/Bn254Crypto.sol';
 
+/**
+ * Rollup proof decoder. proofData structure is as follows:
+ *
+ * length
+ * rollupId
+ * rollupSize
+ * dataStartIndex
+ * oldDataRoot
+ * newDataRoot
+ * oldNullRoot
+ * newNullRoot
+ * oldDataRootsRoot
+ * newDataRootsRoot
+ * prevDefiInteractionHash
+ * interactionData[numberOfBridgeCalls]
+ * txFees[numberOfAssets]
+ * numTxs
+ * innerProofData[rollupSize]
+ */
 contract Decoder {
     using SafeMath for uint256;
 
@@ -13,17 +32,18 @@ contract Decoder {
      * @dev Decode the public inputs component of proofData. Required to update state variables
      * @param proofData - cryptographic proofData associated with a rollup
      */
-    function decodeProof(bytes memory proofData, uint256 numberOfAssets)
+    function decodeProof(
+        bytes memory proofData,
+        uint256 numberOfAssets,
+        uint256 numberOfBridgeCalls
+    )
         internal
         pure
         returns (
             uint256[4] memory nums,
-            bytes32 oldDataRoot,
-            bytes32 newDataRoot,
-            bytes32 oldNullRoot,
-            bytes32 newNullRoot,
-            bytes32 oldRootRoot,
-            bytes32 newRootRoot
+            bytes32[2] memory dataRoots,
+            bytes32[2] memory nullRoots,
+            bytes32[2] memory rootRoots
         )
     {
         uint256 rollupId;
@@ -35,30 +55,63 @@ contract Decoder {
             rollupId := mload(dataStart)
             rollupSize := mload(add(dataStart, 0x20))
             dataStartIndex := mload(add(dataStart, 0x40))
-            oldDataRoot := mload(add(dataStart, 0x60))
-            newDataRoot := mload(add(dataStart, 0x80))
-            oldNullRoot := mload(add(dataStart, 0xa0))
-            newNullRoot := mload(add(dataStart, 0xc0))
-            oldRootRoot := mload(add(dataStart, 0xe0))
-            newRootRoot := mload(add(dataStart, 0x100))
-            numTxs := mload(add(add(dataStart, 0x120), mul(0x20, numberOfAssets)))
+            mstore(dataRoots, mload(add(dataStart, 0x60)))
+            mstore(add(dataRoots, 0x20), mload(add(dataStart, 0x80)))
+            mstore(nullRoots, mload(add(dataStart, 0xa0)))
+            mstore(add(nullRoots, 0x20), mload(add(dataStart, 0xc0)))
+            mstore(rootRoots, mload(add(dataStart, 0xe0)))
+            mstore(add(rootRoots, 0x20), mload(add(dataStart, 0x100)))
+            let offset := mul(0x20, gt(numberOfBridgeCalls, 0)) // TODO: x
+            numTxs := mload(
+                add(add(add(dataStart, add(0x120, offset)), mul(0x20, numberOfAssets)), mul(0x40, numberOfBridgeCalls))
+            )
         }
-        return (
-            [rollupId, rollupSize, dataStartIndex, numTxs],
-            oldDataRoot,
-            newDataRoot,
-            oldNullRoot,
-            newNullRoot,
-            oldRootRoot,
-            newRootRoot
-        );
+        return ([rollupId, rollupSize, dataStartIndex, numTxs], dataRoots, nullRoots, rootRoots);
     }
 
-    function extractTotalTxFee(bytes memory proofData, uint256 assetId) internal pure returns (uint256) {
-        uint256 totalTxFee;
+    function extractPrevDefiInteractionHash(bytes memory proofData)
+        internal
+        pure
+        returns (bytes32 prevDefiInteractionHash)
+    {
         assembly {
-            totalTxFee := mload(add(add(proofData, 0x140), mul(0x20, assetId)))
+            prevDefiInteractionHash := mload(add(proofData, 0x140))
         }
-        return totalTxFee;
+    }
+
+    function extractInteractionData(bytes memory proofData, uint256 idx)
+        internal
+        pure
+        returns (
+            uint256 bridgeId,
+            address bridgeAddress,
+            uint256[3] memory assetIds,
+            uint32 numOutputAssets,
+            uint256 totalInputValue
+        )
+    {
+        assembly {
+            let dataStart := add(add(proofData, 0x160), mul(0x40, idx))
+            bridgeId := mload(dataStart)
+            bridgeAddress := shr(92, bridgeId)
+            numOutputAssets := and(shr(90, bridgeId), 3)
+            mstore(assetIds, and(shr(58, bridgeId), 0xffffffff))
+            mstore(add(assetIds, 0x20), and(shr(26, bridgeId), 0xffffffff))
+            mstore(add(assetIds, 0x40), and(bridgeId, 0x3ffffff))
+            totalInputValue := mload(add(dataStart, 0x20))
+        }
+    }
+
+    function extractTotalTxFee(
+        bytes memory proofData,
+        uint256 assetId,
+        uint256 numberOfBridgeCalls
+    ) internal pure returns (uint256 totalTxFee) {
+        assembly {
+            let offset := mul(0x20, gt(numberOfBridgeCalls, 0)) // TODO: x
+            totalTxFee := mload(
+                add(add(add(proofData, add(0x140, offset)), mul(0x20, assetId)), mul(0x40, numberOfBridgeCalls))
+            )
+        }
     }
 }
