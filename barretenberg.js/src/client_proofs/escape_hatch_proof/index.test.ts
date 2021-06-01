@@ -22,8 +22,8 @@ import { Blake2s } from '../../crypto/blake2s';
 import { AccountAliasId } from '../account_alias_id';
 import { computeSigningData } from '../join_split_proof/compute_signing_data';
 import { AssetId } from '../../asset';
-import { TreeClaimNote } from '../tree_claim_note';
 import { randomBytes } from 'crypto';
+import { ClaimNoteTxData } from '../notes/claim_note_tx_data';
 
 const debug = createDebug('bb:escape_hatch_proof');
 
@@ -140,7 +140,6 @@ describe('escape_hatch_proof', () => {
     await worldStateDb.put(dataTreeId, nextDataStartIndex++, outputNote2Enc);
 
     // Get the newDataPath and newDataRoot now that output notes have been added
-    const newDataPath = await worldStateDb.getHashPath(dataTreeId, BigInt(dataStartIndex));
     const newDataRoot = worldStateDb.getRoot(dataTreeId);
 
     const inputOwner = EthAddress.randomAddress();
@@ -188,7 +187,6 @@ describe('escape_hatch_proof', () => {
     const oldDataRootsPath = await worldStateDb.getHashPath(rootTreeId, rootTreeSize);
     await worldStateDb.put(rootTreeId, rootTreeSize, newDataRoot);
     const newDataRootsRoot = worldStateDb.getRoot(rootTreeId);
-    const newDataRootsPath = await worldStateDb.getHashPath(rootTreeId, rootTreeSize);
     const rollupId = 0;
 
     const joinSplitTx = new JoinSplitTx(
@@ -201,7 +199,7 @@ describe('escape_hatch_proof', () => {
       [inputNote1Path, inputNote2Path],
       inputNotes,
       outputNotes,
-      new TreeClaimNote(BigInt(0), BigInt(0), Buffer.alloc(32), 0),
+      ClaimNoteTxData.EMPTY,
       privateKey,
       accountAliasId,
       accountIndex,
@@ -214,21 +212,20 @@ describe('escape_hatch_proof', () => {
 
     const tx = new EscapeHatchTx(
       joinSplitTx,
+
       rollupId,
       Number(dataStartIndex),
+
       newDataRoot,
       oldDataPath,
-      newDataPath,
 
       oldNullifierRoot,
       newNullifierRoots,
       oldNullifierPaths,
-      newNullifierPaths,
 
       oldDataRootsRoot,
       newDataRootsRoot,
       oldDataRootsPath,
-      newDataRootsPath,
     );
     await escapeHatchProver.computeKey();
     debug('creating proof...');

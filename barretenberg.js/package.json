@@ -6,19 +6,23 @@
   "scripts": {
     "build": "yarn clean && tsc -p tsconfig.cjs.json && tsc -p tsconfig.es.json && node ./package.js",
     "clean": "rm -rf ./dest ./dest-es",
-    "test": "yarn clean && tsc && cp -R ./src/wasm/barretenberg.wasm ./dest/wasm && jest",
+    "test": "jest",
     "build:dev": "yarn build:dev:cjs & yarn build:dev:es",
     "build:dev:cjs": "tsc --watch",
     "build:dev:es": "tsc -p tsconfig.es.json --watch",
     "symlink-wasm": "cp -R ./src/wasm/barretenberg.wasm ./dest/wasm && cp -R ./src/wasm/barretenberg.wasm ./dest-es/wasm"
   },
   "jest": {
-    "rootDir": "dest",
-    "testRegex": "dest/.*\\.test\\.js$",
+    "testEnvironment": "jsdom",
+    "transform": {
+      "^.+\\.ts$": "ts-jest"
+    },
+    "testRegex": ".*\\.test\\.(tsx?|js)$",
     "moduleFileExtensions": [
       "ts",
       "js"
-    ]
+    ],
+    "rootDir": "./src"
   },
   "dependencies": {
     "@types/levelup": "^4.3.0",
@@ -27,11 +31,11 @@
     "detect-node": "^2.0.4",
     "fs-extra": "9.0.1",
     "levelup": "^4.4.0",
-    "memdown": "^5.1.0",
+    "memdown": "^6.0.0",
     "node-fetch": "^2.6.0",
     "promise-readable": "^6.0.0",
     "sha3": "^2.1.3",
-    "threads": "1.3.1",
+    "threads": "1.6.4",
     "tslib": "^2.0.0"
   },
   "devDependencies": {
@@ -44,8 +48,10 @@
     "@typescript-eslint/parser": "^4.1.1",
     "eslint": "^7.9.0",
     "eslint-config-prettier": "^6.11.0",
-    "jest": "^26.6.3",
+    "jest": "^27.0.3",
     "prettier": "^2.0.5",
+    "ts-jest": "^27.0.2",
+    "ts-node": "^10.0.0",
     "typescript": "^3.8.3"
   }
 }

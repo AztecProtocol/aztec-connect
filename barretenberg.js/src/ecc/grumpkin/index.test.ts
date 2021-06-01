@@ -5,38 +5,29 @@ import createDebug from 'debug';
 
 const debug = createDebug('bb:grumpkin_test');
 
-// import { MerkleTree, HashPath } from '.';
-// import levelup from 'levelup';
-// import memdown from 'memdown';
-
 describe.only('grumpkin', () => {
   let barretenberg!: BarretenbergWasm;
   let grumpkin!: Grumpkin;
-  const values: Buffer[] = [];
 
   beforeAll(async () => {
     barretenberg = new BarretenbergWasm();
     await barretenberg.init();
     grumpkin = new Grumpkin(barretenberg);
-
   });
 
   it('should correctly perform scalar muls', async () => {
-
     const exponent = randomBytes(32);
 
     const numPoints = 2048;
 
     const points: Buffer[] = [];
-    for (let i = 0; i < numPoints; ++i)
-    {
-        points.push(grumpkin.mul(Grumpkin.one, randomBytes(32)));
+    for (let i = 0; i < numPoints; ++i) {
+      points.push(grumpkin.mul(Grumpkin.one, randomBytes(32)));
     }
     let pointBuf: Buffer = points[0];
 
-    for (let i = 1; i < numPoints; ++i)
-    {
-        pointBuf = Buffer.concat([pointBuf, points[i]]);
+    for (let i = 1; i < numPoints; ++i) {
+      pointBuf = Buffer.concat([pointBuf, points[i]]);
     }
 
     const start = new Date().getTime();
@@ -44,17 +35,15 @@ describe.only('grumpkin', () => {
     debug(`batch mul in: ${new Date().getTime() - start}ms`);
 
     const start2 = new Date().getTime();
-    for (let i = 0; i < numPoints; ++i)
-    {
-        grumpkin.mul(points[i], exponent);
+    for (let i = 0; i < numPoints; ++i) {
+      grumpkin.mul(points[i], exponent);
     }
     debug(`regular mul in: ${new Date().getTime() - start2}ms`);
 
-    for (let i = 0; i < numPoints; ++i)
-    {
-        const lhs: Buffer = Buffer.from(result.slice(i * 64, i * 64 + 64));
-        const rhs = grumpkin.mul(points[i], exponent);
-        expect(lhs).toEqual(rhs);
+    for (let i = 0; i < numPoints; ++i) {
+      const lhs: Buffer = Buffer.from(result.slice(i * 64, i * 64 + 64));
+      const rhs = grumpkin.mul(points[i], exponent);
+      expect(lhs).toEqual(rhs);
     }
   });
 });
