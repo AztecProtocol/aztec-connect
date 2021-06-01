@@ -53,6 +53,9 @@ export class PipelineCoordinator {
     const fn = async () => {
       await this.reset();
 
+      // this.addPreviousRollupInteractionNotes();
+      // this.claimTxs = this.createClaimProofs();
+
       while (this.running) {
         await this.aggregateAndPublish();
         await new Promise(resolve => setTimeout(resolve, 1000 * +this.running));
