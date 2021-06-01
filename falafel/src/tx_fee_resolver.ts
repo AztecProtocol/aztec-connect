@@ -88,39 +88,51 @@ export class TxFeeResolver {
     }
 
     const feeSurplus = txs
-      .map(tx => this.getFeeForTxDao(tx, rollupId))
-      .reduce((acc, { fee, minFee }) => acc + (fee - minFee), 0n);
+      .map(tx => {
+        const { assetId, txFee } = this.getFeeForTxDao(tx);
+        const minFee = this.getMinTxFee(assetId, tx.txType, rollupId);
+        return this.toEthPrice(assetId, txFee - minFee, rollupId);
+      })
+      .reduce((acc, surplus) => acc + surplus, 0n);
     const ratio = 1 - Number(feeSurplus / baseFee) / this.txsPerRollup;
     return Math.min(1, Math.max(0, ratio));
   }
 
-  private getFeeForTxDao(tx: TxDao, rollupId: number) {
+  private getFeeForTxDao(tx: TxDao) {
     if (tx.txType === TxType.ACCOUNT) {
-      return { fee: 0n, minFee: 0n };
+      return { assetId: AssetId.ETH, txFee: 0n };
     }
 
     const {
       assetId,
       proofData: { txFee },
     } = new JoinSplitProofData(new ProofData(tx.proofData));
-    const minFee = this.getMinTxFee(assetId, tx.txType, rollupId);
-    return { fee: txFee, minFee };
+    return { assetId, txFee };
   }
 
   private getBaseFee(assetId: AssetId, rollupId = this.latestRollupId) {
-    return this.toAssetPrice(rollupId, assetId, BigInt(this.baseTxGas));
+    return this.toAssetPrice(assetId, BigInt(this.baseTxGas), rollupId);
   }
 
   private getFeeConstant(assetId: AssetId, txType: TxType, rollupId = this.latestRollupId) {
-    return this.toAssetPrice(rollupId, assetId, BigInt(this.assets[assetId].gasConstants[txType]));
+    return this.toAssetPrice(assetId, BigInt(this.assets[assetId].gasConstants[txType]), rollupId);
   }
 
-  private toAssetPrice(rollupId: number, assetId: AssetId, gas: bigint) {
+  private toAssetPrice(assetId: AssetId, gas: bigint, rollupId: number) {
     const { assetPrices } = this.rollupPrices.find(p => p.rollupId === rollupId) || this.rollupPrices[0];
     const decimals = this.assets[assetId].decimals;
     return !assetPrices[assetId]
       ? 0n
       : this.applyGasPrice(rollupId, (gas * 10n ** BigInt(decimals)) / assetPrices[assetId]);
+  }
+
+  private toEthPrice(assetId: AssetId, price: bigint, rollupId: number) {
+    if (assetId === AssetId.ETH || !price) {
+      return price;
+    }
+
+    const { assetPrices } = this.rollupPrices.find(p => p.rollupId === rollupId) || this.rollupPrices[0];
+    return price * assetPrices[assetId];
   }
 
   private applyGasPrice(rollupId: number, value: bigint) {

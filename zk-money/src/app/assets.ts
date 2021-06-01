@@ -3,10 +3,10 @@ import daiIcon from '../images/dai.svg';
 import daiWhiteIcon from '../images/dai_white.svg';
 import ethIcon from '../images/ethereum.svg';
 import ethWhiteIcon from '../images/ethereum_white.svg';
-import wbtcIcon from '../images/wbtc.svg';
-import wbtcWhiteIcon from '../images/wbtc_white.svg';
+import rbtcIcon from '../images/renBTC.svg';
+import rbtcWhiteIcon from '../images/renBTC_white.svg';
 
-export type AppAssetId = AssetId.ETH | AssetId.DAI | 2;
+export type AppAssetId = AssetId.ETH | AssetId.DAI | AssetId.renBTC;
 
 export interface Asset {
   id: AppAssetId;
@@ -35,11 +35,11 @@ export const assets: Asset[] = [
     decimals: 18,
   },
   {
-    id: 2, // TODO
-    name: 'Wrapped Bitcoin',
-    symbol: 'WBTC',
-    icon: wbtcIcon,
-    iconWhite: wbtcWhiteIcon,
+    id: AssetId.renBTC,
+    name: 'renBTC',
+    symbol: 'renBTC',
+    icon: rbtcIcon,
+    iconWhite: rbtcWhiteIcon,
     decimals: 18,
   },
 ];
