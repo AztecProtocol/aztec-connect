@@ -5,7 +5,7 @@ import { numToUInt32BE } from '../../serialize';
 import { AccountAliasId } from '../account_alias_id';
 import { AssetId } from '../../asset';
 import { TreeNote } from '../tree_note';
-import { ClaimNoteTxData } from '../notes/claim_note_tx_data';
+import { ClaimNoteTxData } from './claim_note_tx_data';
 import { Signature } from '../signature';
 
 export class JoinSplitTx {

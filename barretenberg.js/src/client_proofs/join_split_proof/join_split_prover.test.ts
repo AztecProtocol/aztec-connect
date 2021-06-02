@@ -21,7 +21,7 @@ import { UnrolledProver } from '../prover';
 import { computeSigningData } from './compute_signing_data';
 import { Blake2s } from '../../crypto/blake2s';
 import { AccountAliasId } from '../account_alias_id';
-import { ClaimNoteTxData } from '../notes/claim_note_tx_data';
+import { ClaimNoteTxData } from './claim_note_tx_data';
 
 const debug = createDebug('bb:join_split_proof_test');
 

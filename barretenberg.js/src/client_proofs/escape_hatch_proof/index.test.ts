@@ -23,7 +23,7 @@ import { AccountAliasId } from '../account_alias_id';
 import { computeSigningData } from '../join_split_proof/compute_signing_data';
 import { AssetId } from '../../asset';
 import { randomBytes } from 'crypto';
-import { ClaimNoteTxData } from '../notes/claim_note_tx_data';
+import { ClaimNoteTxData } from '../join_split_proof/claim_note_tx_data';
 
 const debug = createDebug('bb:escape_hatch_proof');
 
