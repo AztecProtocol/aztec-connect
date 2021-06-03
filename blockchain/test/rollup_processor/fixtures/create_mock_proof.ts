@@ -33,10 +33,9 @@ function publicInputData(
   numberOfAssets: number,
   dataStartIndex?: number,
 ) {
-  const { innerProofs, totalTxFees } = innerProofOutput;
+  const { totalTxFees } = innerProofOutput;
   const rollupId = numToBuffer(id);
   const rollupSizeBuf = numToBuffer(rollupSize);
-  const numTxsBuf = numToBuffer(innerProofs.length);
   const dataStartIndexBuf = numToBuffer(dataStartIndex === undefined ? id * rollupSize * 2 : dataStartIndex);
 
   const totalTxFeePublicInputs: Buffer[] = [];
@@ -57,7 +56,6 @@ function publicInputData(
       oldDataRootsRoot,
       newDataRootsRoot,
       ...totalTxFeePublicInputs,
-      numTxsBuf,
     ];
   } else if (id === 1) {
     allPublicInputs = [
@@ -71,7 +69,6 @@ function publicInputData(
       newDataRootsRoot,
       secondProofNewDataRootsRoot,
       ...totalTxFeePublicInputs,
-      numTxsBuf,
     ];
   } else if (id === 2) {
     allPublicInputs = [
@@ -85,7 +82,6 @@ function publicInputData(
       secondProofNewDataRootsRoot,
       randomBytes(32),
       ...totalTxFeePublicInputs,
-      numTxsBuf,
     ];
   } else {
     allPublicInputs = [Buffer.alloc(32)];

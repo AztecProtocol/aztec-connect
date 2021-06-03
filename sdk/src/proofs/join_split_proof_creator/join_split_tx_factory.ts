@@ -10,7 +10,7 @@ import { Database } from '../../database';
 import { Signer } from '../../signer';
 import { AccountAliasId, AccountId } from '../../user';
 import { UserState } from '../../user_state';
-import { TreeClaimNote } from 'barretenberg/client_proofs/tree_claim_note';
+import { ClaimNoteTxData } from 'barretenberg/client_proofs/join_split_proof/claim_note_tx_data';
 
 export class JoinSplitTxFactory {
   constructor(
@@ -130,7 +130,7 @@ export class JoinSplitTxFactory {
       inputNotePaths,
       inputNotes,
       outputNotes,
-      new TreeClaimNote(BigInt(0), BigInt(0), Buffer.alloc(32), 0),
+      ClaimNoteTxData.EMPTY,
       privateKey,
       accountAliasId,
       accountIndex,
