@@ -4,7 +4,7 @@ import createDebug from 'debug';
 
 export async function createWorker(id?: string, module?: WebAssembly.Module, initial?: number) {
   const debug = createDebug(`bb:wasm${id ? ':' + id : ''}`);
-  const thread = await spawn<BarretenbergWorker>(new Worker('./worker'));
+  const thread = await spawn<BarretenbergWorker>(new Worker('./worker.js'));
   thread.logs().subscribe(debug);
   await thread.init(module, initial);
   return thread;
