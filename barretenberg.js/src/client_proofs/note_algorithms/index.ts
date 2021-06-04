@@ -1,6 +1,7 @@
 import { toBigIntBE } from 'bigint-buffer';
-import { BarretenbergWasm } from '../../wasm';
+import { GrumpkinAddress } from '../../address';
 import { ViewingKey } from '../../viewing_key';
+import { BarretenbergWasm } from '../../wasm';
 import { BarretenbergWorker } from '../../wasm/worker';
 
 export class NoteAlgorithms {
@@ -23,6 +24,21 @@ export class NoteAlgorithms {
     this.wasm.call('notes__encrypt_note', mem, 0);
     this.wasm.call('bbfree', mem);
     return Buffer.from(this.wasm.sliceMemory(0, 64));
+  }
+
+  public encryptClaimNote(noteBuf: Buffer, publicKey: GrumpkinAddress, nonce: number) {
+    const mem = this.wasm.call('bbmalloc', noteBuf.length + 64);
+    this.wasm.transferToHeap(noteBuf, mem);
+    this.wasm.transferToHeap(publicKey.toBuffer(), mem + noteBuf.length);
+    this.wasm.call('notes__encrypt_claim_note', mem, mem + noteBuf.length, nonce, 0);
+    this.wasm.call('bbfree', mem);
+    return Buffer.from(this.wasm.sliceMemory(0, 64));
+  }
+
+  public computeClaimNoteNullifier(encryptedNote: Buffer, index: number) {
+    this.wasm.transferToHeap(encryptedNote, 0);
+    this.wasm.call('notes__compute_claim_note_nullifier', 0, index, 0);
+    return Buffer.from(this.wasm.sliceMemory(0, 32));
   }
 
   public async batchDecryptNotes(keysBuf: Buffer, privateKey: Buffer) {

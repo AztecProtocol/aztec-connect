@@ -22,9 +22,17 @@ import './libraries/RollupProcessorLibrary.sol';
 contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     using SafeMath for uint256;
 
+    bytes4 private constant GET_INFO_SELECTOR = 0x5a9b0b89; // bytes4(keccak256('getInfo()'));
+    bytes4 private constant DEPOSIT_SELECTOR = 0xb6b55f25; // bytes4(keccak256('deposit(uint256)'));
+    bytes4 private constant APPROVE_SELECTOR = 0x095ea7b3; // bytes4(keccak256('approve(address,uint256)'));
+    bytes4 private constant CONVERT_SELECTOR = 0xa3908e1b; // bytes4(keccak256('convert(uint256)'));
+    bytes4 private constant WITHDRAW_SELECTOR = 0x2e1a7d4d; // bytes4(keccak256('withdraw(uint256)'));
+    bytes4 private constant TRANSFER_FROM_SELECTOR = 0x23b872dd; // bytes4(keccak256('transferFrom(address,address,uint256)'));
+
     bytes32 public dataRoot = 0x2708a627d38d74d478f645ec3b4e91afa325331acf1acebe9077891146b75e39;
     bytes32 public nullRoot = 0x2694dbe3c71a25d92213422d392479e7b8ef437add81e1e17244462e6edca9b1;
     bytes32 public rootRoot = 0x2d264e93dc455751a721aead9dba9ee2a9fef5460921aeede73f63f6210e6851;
+    bytes32 public defiInteractionHash = 0x0f115a0e0c15cdc41958ca46b5b14b456115f4baec5e3ca68599d2a8f435e3b8;
 
     uint256 public dataSize;
     uint256 public nextRollupId;
@@ -38,6 +46,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     uint256 public constant txPubInputLength = txNumPubInputs * 32; // public inputs length for of each inner proof tx
     uint256 public constant rollupPubInputLength = rollupNumPubInputs * 32;
     uint256 public constant ethAssetId = 0;
+    address public immutable weth = address(0); // TODO: set from constructor
     uint256 public immutable escapeBlockLowerBound;
     uint256 public immutable escapeBlockUpperBound;
 
@@ -47,6 +56,14 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         bytes32 nullRoot,
         bytes32 rootRoot,
         uint256 dataSize
+    );
+    event DefiBridgeProcessed(
+        uint256 indexed bridgeId,
+        uint256 indexed nonce,
+        uint256 totalInputValue,
+        uint256 totalOutputValueA,
+        uint256 totalOutputValueB,
+        bool result
     );
     event Deposit(uint256 assetId, address depositorAddress, uint256 depositValue);
     event Withdraw(uint256 assetId, address withdrawAddress, uint256 withdrawValue);
@@ -93,6 +110,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         totalFees.push(0);
         transferOwnership(_contractOwner);
     }
+
+    // To withdraw from WETH.
+    receive() external payable {}
 
     function setRollupProvider(address providerAddress, bool valid) public override onlyOwner {
         rollupProviders[providerAddress] = valid;
@@ -395,6 +415,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     ) internal {
         uint256 numTxs = verifyProofAndUpdateState(proofData);
         processDepositsAndWithdrawals(proofData, numTxs, signatures);
+        processDefiBridges(proofData);
     }
 
     /**
@@ -500,13 +521,10 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             // 1: rollupSize
             // 2: dataStartIndex
             uint256[3] memory nums,
-            bytes32 oldDataRoot,
-            bytes32 newDataRoot,
-            bytes32 oldNullRoot,
-            bytes32 newNullRoot,
-            bytes32 oldRootRoot,
-            bytes32 newRootRoot
-        ) = decodeProof(proofData, numberOfAssets);
+            bytes32[2] memory dataRoots,
+            bytes32[2] memory nullRoots,
+            bytes32[2] memory rootRoots
+        ) = decodeProof(proofData);
 
         // Escape hatch denominated by a rollup size of 0, which contains 1 tx.
         uint256 numTxs = nums[1] == 0 ? 1 : nums[1];
@@ -521,12 +539,12 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         }
 
         // Data validation checks.
-        require(oldDataRoot == dataRoot, 'Rollup Processor: INCORRECT_DATA_ROOT');
-        require(oldNullRoot == nullRoot, 'Rollup Processor: INCORRECT_NULL_ROOT');
-        require(oldRootRoot == rootRoot, 'Rollup Processor: INCORRECT_ROOT_ROOT');
+        require(dataRoots[0] == dataRoot, 'Rollup Processor: INCORRECT_DATA_ROOT');
+        require(nullRoots[0] == nullRoot, 'Rollup Processor: INCORRECT_NULL_ROOT');
+        require(rootRoots[0] == rootRoot, 'Rollup Processor: INCORRECT_ROOT_ROOT');
         require(nums[0] == nextRollupId, 'Rollup Processor: ID_NOT_SEQUENTIAL');
 
-        return (newDataRoot, newNullRoot, nums[0], nums[1], newRootRoot, numTxs, nums[2] + toInsert);
+        return (dataRoots[1], nullRoots[1], nums[0], nums[1], rootRoots[1], numTxs, nums[2] + toInsert);
     }
 
     /**
@@ -620,9 +638,161 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         }
     }
 
+    function processDefiBridges(bytes memory proofData) internal {
+        bytes32 prevDefiInteractionHash =
+            extractPrevDefiInteractionHash(proofData, rollupPubInputLength, txPubInputLength);
+        require(
+            prevDefiInteractionHash == defiInteractionHash,
+            'Rollup Processor: INCORRECT_PREV_DEFI_INTERACTION_HASH'
+        );
+
+        uint256[24] memory interactionResult; // TODO: uint256[6 * numberOfBridgeCalls] memory interactionResult;
+        uint256 interactionNonce = (nextRollupId - 1) * numberOfBridgeCalls;
+        for (uint256 i = 0; i < numberOfBridgeCalls; ++i) {
+            (
+                uint256 bridgeId,
+                address bridgeAddress,
+                uint256[3] memory assetIds,
+                uint32 numOutputAssets,
+                uint256 totalInputValue
+            ) = extractInteractionData(proofData, i, numberOfBridgeCalls);
+
+            // Do nothing if no bridge id.
+            // Rollup circuit makes sure that totalInputValue is 0 for zero bridge id.
+            if (bridgeId == 0) {
+                break;
+            }
+
+            require(totalInputValue > 0, 'Rollup Processor: ZERO_TOTAL_INPUT_VALUE');
+            require(numOutputAssets > 0, 'Rollup Processor: ZERO_NUM_OUTPUT_ASSETS');
+
+            uint256 outputValueA;
+            uint256 outputValueB;
+            bool success;
+
+            // Get ERC20 contract addresses for bridge assets.
+            address[3] memory assetAddresses =
+                [
+                    getDefiBridgeSupportedAsset(assetIds[0]),
+                    getDefiBridgeSupportedAsset(assetIds[1]),
+                    numOutputAssets == 2 ? getDefiBridgeSupportedAsset(assetIds[2]) : address(0)
+                ];
+
+            // Gas efficient call to getInfo(), check response matches interaction data.
+            assembly {
+                let ptr := mload(0x40)
+                mstore(ptr, GET_INFO_SELECTOR)
+                success := staticcall(gas(), bridgeAddress, ptr, 0x4, ptr, 0x80)
+                success := and(success, eq(numOutputAssets, mload(ptr)))
+                success := and(success, eq(mload(assetAddresses), mload(add(ptr, 0x20))))
+                success := and(success, eq(mload(add(assetAddresses, 0x20)), mload(add(ptr, 0x40))))
+                success := and(success, eq(mload(add(assetAddresses, 0x40)), mload(add(ptr, 0x60))))
+            }
+            require(success, 'Rollup Processor: INVALID_BRIDGE_ID');
+
+            // If dealing with ETH, we first send the ETH to the WETH contract.
+            if (assetAddresses[0] == weth) {
+                assembly {
+                    let ptr := mload(0x40)
+                    mstore(ptr, DEPOSIT_SELECTOR)
+                    mstore(add(ptr, 0x4), totalInputValue)
+                    success := call(gas(), mload(assetAddresses), totalInputValue, ptr, 0x24, ptr, 0x0)
+                }
+            }
+
+            // Approve the bridge contract withdraw funds from this rollup contract to the amount of totalInputValue.
+            assembly {
+                let ptr := mload(0x40)
+                mstore(ptr, APPROVE_SELECTOR)
+                mstore(add(ptr, 0x4), bridgeAddress)
+                mstore(add(ptr, 0x24), totalInputValue)
+                success := and(success, call(gas(), mload(assetAddresses), 0, ptr, 0x44, ptr, 0x0))
+            }
+
+            // Call convert, which will return the two output values for the output assets.
+            assembly {
+                let ptr := mload(0x40)
+                mstore(ptr, CONVERT_SELECTOR)
+                mstore(add(ptr, 0x4), totalInputValue)
+                success := and(success, call(gas(), bridgeAddress, 0, ptr, 0x24, ptr, 0x40))
+                if eq(success, 1) {
+                    outputValueA := mload(ptr)
+                    outputValueB := mload(add(ptr, 0x20))
+                }
+            }
+
+            if (success) {
+                require(outputValueA > 0 || outputValueB > 0, 'Rollup Processor: ZERO_OUTPUT_VALUES');
+
+                if (outputValueA > 0) {
+                    transferFromBridge(bridgeAddress, assetAddresses[1], outputValueA);
+                }
+                if (outputValueB > 0) {
+                    require(numOutputAssets == 2, 'Rollup Processor: WRONG_NUM_OUTPUT_ASSETS');
+
+                    transferFromBridge(bridgeAddress, assetAddresses[2], outputValueB);
+                }
+            } else if (assetAddresses[0] == weth) {
+                (bool withdrawn, ) = weth.call(abi.encodeWithSelector(WITHDRAW_SELECTOR, totalInputValue));
+                require(withdrawn, 'Rollup Processor: RESTORE_ETH_FAILED');
+            }
+
+            emit DefiBridgeProcessed(bridgeId, interactionNonce, totalInputValue, outputValueA, outputValueB, success);
+
+            assembly {
+                let insertStart := mul(i, 0xc0)
+                mstore(add(interactionResult, insertStart), bridgeId)
+                mstore(add(interactionResult, add(insertStart, 0x20)), interactionNonce)
+                mstore(add(interactionResult, add(insertStart, 0x40)), totalInputValue)
+                mstore(add(interactionResult, add(insertStart, 0x60)), outputValueA)
+                mstore(add(interactionResult, add(insertStart, 0x80)), outputValueB)
+                mstore(add(interactionResult, add(insertStart, 0xa0)), success)
+            }
+
+            interactionNonce++;
+        }
+
+        defiInteractionHash = sha256(abi.encodePacked(interactionResult));
+    }
+
+    function getDefiBridgeSupportedAsset(uint256 assetId) internal view returns (address) {
+        if (assetId == ethAssetId) {
+            return weth;
+        }
+
+        return supportedAssets[assetId - 1];
+    }
+
+    function transferFromBridge(
+        address bridgeAddress,
+        address assetAddress,
+        uint256 amount
+    ) internal {
+        bool success;
+        assembly {
+            let ptr := mload(0x40)
+            mstore(ptr, TRANSFER_FROM_SELECTOR)
+            mstore(add(ptr, 0x4), bridgeAddress)
+            mstore(add(ptr, 0x24), address())
+            mstore(add(ptr, 0x44), amount)
+            success := call(gas(), assetAddress, 0, ptr, 0x64, ptr, 0x0)
+        }
+        require(success, 'Rollup Processor: TRANSFER_FROM_BRIDGE_FAILED');
+
+        if (assetAddress == weth) {
+            assembly {
+                let ptr := mload(0x40)
+                mstore(ptr, WITHDRAW_SELECTOR)
+                mstore(add(ptr, 0x4), amount)
+                success := call(gas(), assetAddress, 0, ptr, 0x24, ptr, 0x0)
+            }
+            require(success, 'Rollup Processor: WITHDRAW_ETH_FAILED');
+        }
+    }
+
     function transferFee(bytes memory proofData) internal {
         for (uint256 i = 0; i < numberOfAssets; ++i) {
-            uint256 txFee = extractTotalTxFee(proofData, i);
+            uint256 txFee = extractTotalTxFee(proofData, i, numberOfBridgeCalls);
             if (txFee > 0) {
                 bool success;
                 if (i == ethAssetId) {
