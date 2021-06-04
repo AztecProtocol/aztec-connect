@@ -1,6 +1,6 @@
 import { ProofData } from 'barretenberg/client_proofs/proof_data';
 import { HashPath } from 'barretenberg/merkle_tree';
-import { WorldStateDb } from 'barretenberg/world_state_db';
+import { RollupTreeId, WorldStateDb } from 'barretenberg/world_state_db';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { ProofGenerator, TxRollup, TxRollupProofRequest } from 'halloumi/proof_generator';
 import { RollupProofDao } from './entity/rollup_proof';
@@ -60,6 +60,8 @@ export class RollupCreator {
   }
 
   private async createRollup(txs: TxDao[]) {
+    const rollupId = await this.rollupDb.getNextRollupId();
+
     // To find the correct data start index, we need to position ourselves on:
     // - an outer rollup size boundary for the first inner proof.
     // - an inner rollup size boundary for any other proofs.
@@ -116,27 +118,29 @@ export class RollupCreator {
     }
 
     // Get new data.
-    const newDataPath = await worldStateDb.getHashPath(0, dataStartIndex);
     const newDataRoot = worldStateDb.getRoot(0);
     const dataRootsRoot = worldStateDb.getRoot(2);
+    const newDefiRoot = worldStateDb.getRoot(RollupTreeId.DEFI);
 
     return new TxRollup(
+      rollupId,
       Number(dataStartIndex),
       txs.map(tx => tx.proofData),
 
       oldDataRoot,
       newDataRoot,
       oldDataPath,
-      newDataPath,
 
       oldNullRoot,
       newNullRoots,
       oldNullPaths,
-      newNullPaths,
 
       dataRootsRoot,
       dataRootsPaths,
       dataRootsIndicies,
+
+      newDefiRoot,
+      [],
     );
   }
 }
