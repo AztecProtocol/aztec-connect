@@ -34,7 +34,8 @@
     ],
     "transformIgnorePatterns": [
       "/node_modules/(?!barretenberg).+\\.js$"
-    ]
+    ],
+    "rootDir": "./src"
   },
   "dependencies": {
     "barretenberg": "file:../barretenberg.js/dest-es",

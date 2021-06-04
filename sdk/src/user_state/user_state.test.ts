@@ -182,7 +182,6 @@ describe('user state', () => {
       randomBytes(32),
       randomBytes(32),
       totalTxFees,
-      1,
       innerProofData,
       randomBytes(32 * 16),
       viewingKeys,
