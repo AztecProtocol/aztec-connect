@@ -1,6 +1,5 @@
-import 'threads/register';
 import { BarretenbergWorker } from './worker';
-import { spawn, Thread } from 'threads';
+import { spawn, Thread, Worker } from 'threads';
 import createDebug from 'debug';
 
 export async function createWorker(id?: string, module?: WebAssembly.Module, initial?: number) {

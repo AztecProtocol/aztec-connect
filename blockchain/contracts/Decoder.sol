@@ -19,11 +19,14 @@ import {Bn254Crypto} from './verifier/cryptography/Bn254Crypto.sol';
  * newNullRoot
  * oldDataRootsRoot
  * newDataRootsRoot
- * prevDefiInteractionHash
- * interactionData[numberOfBridgeCalls]
+ * oldDefiRoot
+ * newDefiRoot
+ * bridgeIds[numberOfBridgeCalls]
+ * depositSums[numberOfBridgeCalls]
  * txFees[numberOfAssets]
- * numTxs
  * innerProofData[rollupSize]
+ * interactionData[numberOfBridgeCalls]
+ * prevDefiInteractionHash
  */
 contract Decoder {
     using SafeMath for uint256;
@@ -32,15 +35,11 @@ contract Decoder {
      * @dev Decode the public inputs component of proofData. Required to update state variables
      * @param proofData - cryptographic proofData associated with a rollup
      */
-    function decodeProof(
-        bytes memory proofData,
-        uint256 numberOfAssets,
-        uint256 numberOfBridgeCalls
-    )
+    function decodeProof(bytes memory proofData)
         internal
         pure
         returns (
-            uint256[4] memory nums,
+            uint256[3] memory nums,
             bytes32[2] memory dataRoots,
             bytes32[2] memory nullRoots,
             bytes32[2] memory rootRoots
@@ -49,7 +48,6 @@ contract Decoder {
         uint256 rollupId;
         uint256 rollupSize;
         uint256 dataStartIndex;
-        uint256 numTxs;
         assembly {
             let dataStart := add(proofData, 0x20) // jump over first word, it's length of data
             rollupId := mload(dataStart)
@@ -61,25 +59,31 @@ contract Decoder {
             mstore(add(nullRoots, 0x20), mload(add(dataStart, 0xc0)))
             mstore(rootRoots, mload(add(dataStart, 0xe0)))
             mstore(add(rootRoots, 0x20), mload(add(dataStart, 0x100)))
-            let offset := mul(0x20, gt(numberOfBridgeCalls, 0)) // TODO: x
-            numTxs := mload(
-                add(add(add(dataStart, add(0x120, offset)), mul(0x20, numberOfAssets)), mul(0x40, numberOfBridgeCalls))
+        }
+        return ([rollupId, rollupSize, dataStartIndex], dataRoots, nullRoots, rootRoots);
+    }
+
+    function extractPrevDefiInteractionHash(
+        bytes memory proofData,
+        uint256 rollupPubInputLength,
+        uint256 txPubInputLength
+    ) internal pure returns (bytes32 prevDefiInteractionHash) {
+        uint256 rollupSize;
+        assembly {
+            let dataStart := add(proofData, 0x20) // jump over first word, it's length of data
+            rollupSize := mload(add(dataStart, 0x20))
+            // Skip over rollup pub inputs, tx pub inputs, recursion point and defi notes.
+            prevDefiInteractionHash := mload(
+                add(add(add(dataStart, rollupPubInputLength), mul(rollupSize, txPubInputLength)), 0x300)
             )
         }
-        return ([rollupId, rollupSize, dataStartIndex, numTxs], dataRoots, nullRoots, rootRoots);
     }
 
-    function extractPrevDefiInteractionHash(bytes memory proofData)
-        internal
-        pure
-        returns (bytes32 prevDefiInteractionHash)
-    {
-        assembly {
-            prevDefiInteractionHash := mload(add(proofData, 0x140))
-        }
-    }
-
-    function extractInteractionData(bytes memory proofData, uint256 idx)
+    function extractInteractionData(
+        bytes memory proofData,
+        uint256 idx,
+        uint256 numberOfBridgeCalls
+    )
         internal
         pure
         returns (
@@ -91,14 +95,14 @@ contract Decoder {
         )
     {
         assembly {
-            let dataStart := add(add(proofData, 0x160), mul(0x40, idx))
+            let dataStart := add(add(proofData, 0x180), mul(0x20, idx))
             bridgeId := mload(dataStart)
             bridgeAddress := shr(92, bridgeId)
             numOutputAssets := and(shr(90, bridgeId), 3)
             mstore(assetIds, and(shr(58, bridgeId), 0xffffffff))
             mstore(add(assetIds, 0x20), and(shr(26, bridgeId), 0xffffffff))
             mstore(add(assetIds, 0x40), and(bridgeId, 0x3ffffff))
-            totalInputValue := mload(add(dataStart, 0x20))
+            totalInputValue := mload(add(dataStart, mul(0x20, numberOfBridgeCalls)))
         }
     }
 
@@ -108,10 +112,7 @@ contract Decoder {
         uint256 numberOfBridgeCalls
     ) internal pure returns (uint256 totalTxFee) {
         assembly {
-            let offset := mul(0x20, gt(numberOfBridgeCalls, 0)) // TODO: x
-            totalTxFee := mload(
-                add(add(add(proofData, add(0x140, offset)), mul(0x20, assetId)), mul(0x40, numberOfBridgeCalls))
-            )
+            totalTxFee := mload(add(add(add(proofData, 0x180), mul(0x40, numberOfBridgeCalls)), mul(0x20, assetId)))
         }
     }
 }

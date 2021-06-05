@@ -35,8 +35,8 @@ describe('compute_nullifier', () => {
     const nullifier1 = noteAlgos.computeNoteNullifier(inputNote1Enc, 1, privateKey);
     const nullifier2 = noteAlgos.computeNoteNullifier(inputNote2Enc, 0, privateKey);
 
-    const expected1 = '192bcf51d4d8384907f17ab851a19299615c5bd9d048a4b5633bf884580a6ac2';
-    const expected2 = '1e1e11ce93adb2af718da9b135956f23240fe9db91f646e00862635a0a488de4';
+    const expected1 = '21a8207de37f3944240ed70dcbe26962620c1a81e5a4da47022f151dedded09b';
+    const expected2 = '1c88c6bcb5625348efb20adb67689fb88a1f92fda41007387cf013a96f21a14e';
 
     expect(nullifier1.toString('hex')).toEqual(expected1);
     expect(nullifier2.toString('hex')).toEqual(expected2);

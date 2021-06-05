@@ -21,7 +21,7 @@ import { UnrolledProver } from '../prover';
 import { computeSigningData } from './compute_signing_data';
 import { Blake2s } from '../../crypto/blake2s';
 import { AccountAliasId } from '../account_alias_id';
-import { TreeClaimNote } from '../tree_claim_note';
+import { ClaimNoteTxData } from './claim_note_tx_data';
 
 const debug = createDebug('bb:join_split_proof_test');
 
@@ -153,7 +153,7 @@ describe('join_split_proof', () => {
         [inputNote1Path, inputNote2Path],
         [inputNote1, inputNote2],
         [outputNote1, outputNote2],
-        new TreeClaimNote(BigInt(0), BigInt(0), Buffer.alloc(32), 0),
+        ClaimNoteTxData.EMPTY,
         privateKey,
         accountAliasId,
         2,

@@ -1,6 +1,6 @@
 import { MemoryFifo } from 'barretenberg/fifo';
 import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
-import { WorldStateDb } from 'barretenberg/world_state_db';
+import { RollupTreeId, WorldStateDb } from 'barretenberg/world_state_db';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { Blockchain, TxType } from 'barretenberg/blockchain';
 import { RollupDao } from './entity/rollup';
@@ -90,10 +90,11 @@ export class WorldState {
   }
 
   public printState() {
-    console.log(`Data size: ${this.worldStateDb.getSize(0)}`);
-    console.log(`Data root: ${this.worldStateDb.getRoot(0).toString('hex')}`);
-    console.log(`Null root: ${this.worldStateDb.getRoot(1).toString('hex')}`);
-    console.log(`Root root: ${this.worldStateDb.getRoot(2).toString('hex')}`);
+    console.log(`Data size: ${this.worldStateDb.getSize(RollupTreeId.DATA)}`);
+    console.log(`Data root: ${this.worldStateDb.getRoot(RollupTreeId.DATA).toString('hex')}`);
+    console.log(`Null root: ${this.worldStateDb.getRoot(RollupTreeId.NULL).toString('hex')}`);
+    console.log(`Root root: ${this.worldStateDb.getRoot(RollupTreeId.ROOT).toString('hex')}`);
+    console.log(`Defi root: ${this.worldStateDb.getRoot(RollupTreeId.DEFI).toString('hex')}`);
   }
 
   /**
@@ -149,7 +150,8 @@ export class WorldState {
     } else {
       // Someone elses rollup. Discard any of our world state modifications and update world state with new rollup.
       await this.worldStateDb.rollback();
-      await this.addRollupToWorldState(rollupProofData);
+      // const interactionNotes = this.rollupDb.getPreviousRollupInteractionNotes();
+      await this.addRollupToWorldState(rollupProofData /*, interactionNotes*/);
     }
 
     await this.confirmOrAddRollupToDb(rollupProofData, block);

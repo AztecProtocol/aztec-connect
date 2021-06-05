@@ -11,25 +11,24 @@ describe('Rollup', () => {
     const numberOfTxs = 2;
     const proofs = [...Array(numberOfTxs)].map(() => randomBytes(300));
     const oldDataPath = randomDataPath();
-    const newDataPath = randomDataPath();
     const newNullRoots = [...Array(numberOfTxs * 2)].map(randomRoot);
     const oldNullPaths = [...Array(numberOfTxs * 2)].map(randomNullPath);
-    const newNullPaths = [...Array(numberOfTxs * 2)].map(randomNullPath);
     const dataRootsPaths = [...Array(numberOfTxs)].map(randomDataPath);
     const rollup = new TxRollup(
+      0,
       1,
       proofs,
       randomRoot(),
       randomRoot(),
       oldDataPath,
-      newDataPath,
       randomRoot(),
       newNullRoots,
       oldNullPaths,
-      newNullPaths,
       randomRoot(),
       dataRootsPaths,
       [1, 2],
+      randomRoot(),
+      [],
     );
 
     const buf = rollup.toBuffer();

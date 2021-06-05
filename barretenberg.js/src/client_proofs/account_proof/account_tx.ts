@@ -35,7 +35,7 @@ export class AccountTx {
       this.newSigningPubKey2.toBuffer(),
       this.accountAliasId.aliasHash.toBuffer32(),
       numToUInt32BE(this.accountAliasId.nonce),
-      Buffer.from([!!this.migrate]),
+      Buffer.from([this.migrate ? 1 : 0]),
       this.gibberish,
       numToUInt32BE(this.accountIndex),
       this.accountPath.toBuffer(),

@@ -1,4 +1,5 @@
 import { randomBytes } from 'crypto';
+import { Grumpkin } from '../ecc/grumpkin';
 
 export class GrumpkinAddress {
   public static ZERO = new GrumpkinAddress(Buffer.alloc(64));
@@ -25,6 +26,13 @@ export class GrumpkinAddress {
    */
   public static randomAddress() {
     return new GrumpkinAddress(randomBytes(64));
+  }
+
+  /**
+   * A valid address (is a point on the curve).
+   */
+  public static one() {
+    return new GrumpkinAddress(Grumpkin.one);
   }
 
   public equals(rhs: GrumpkinAddress) {

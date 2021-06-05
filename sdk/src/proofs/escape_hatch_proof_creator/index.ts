@@ -83,7 +83,6 @@ export class EscapeHatchProofCreator {
     ]);
 
     const newDataRoot = dataResponse.newRoots[1];
-    const newDataPath = dataResponse.newHashPaths[1];
 
     const nullTreeState = await this.hashPathSource.getTreeState(1);
     const oldNullifierRoot = nullTreeState.root;
@@ -117,15 +116,12 @@ export class EscapeHatchProofCreator {
       Number(dataStartIndex),
       newDataRoot,
       oldDataPath,
-      newDataPath,
       oldNullifierRoot,
       nullResponse.newRoots,
       nullResponse.oldHashPaths,
-      nullResponse.newHashPaths,
       rootResponse.oldRoot,
       rootResponse.newRoots[0],
       rootResponse.oldHashPaths[0],
-      rootResponse.newHashPaths[0],
     );
 
     debug('creating proof...');

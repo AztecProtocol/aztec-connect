@@ -32,7 +32,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     bytes32 public dataRoot = 0x2708a627d38d74d478f645ec3b4e91afa325331acf1acebe9077891146b75e39;
     bytes32 public nullRoot = 0x2694dbe3c71a25d92213422d392479e7b8ef437add81e1e17244462e6edca9b1;
     bytes32 public rootRoot = 0x2d264e93dc455751a721aead9dba9ee2a9fef5460921aeede73f63f6210e6851;
-    bytes32 public defiInteractionHash = 0xef115a0e0c15cdc41958ca46b5b14b456115f4baec5e3ca68599d2a8f435e3b8;
+    bytes32 public defiInteractionHash = 0x0f115a0e0c15cdc41958ca46b5b14b456115f4baec5e3ca68599d2a8f435e3b8;
 
     uint256 public dataSize;
     uint256 public nextRollupId;
@@ -40,9 +40,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     IVerifier public verifier;
 
     uint256 public constant numberOfAssets = 4;
-    uint256 public constant numberOfBridgeCalls = 0; // TODO
+    uint256 public constant numberOfBridgeCalls = 4;
     uint256 public constant txNumPubInputs = 12;
-    uint256 public constant rollupNumPubInputs = 10 + numberOfAssets + numberOfBridgeCalls * 2; // TODO: 11 + numberOfAssets + numberOfBridgeCalls * 2
+    uint256 public constant rollupNumPubInputs = 11 + (numberOfBridgeCalls * 2) + numberOfAssets;
     uint256 public constant txPubInputLength = txNumPubInputs * 32; // public inputs length for of each inner proof tx
     uint256 public constant rollupPubInputLength = rollupNumPubInputs * 32;
     uint256 public constant ethAssetId = 0;
@@ -520,18 +520,17 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             // 0: rollupId
             // 1: rollupSize
             // 2: dataStartIndex
-            // 3: numTxs
-            uint256[4] memory nums,
+            uint256[3] memory nums,
             bytes32[2] memory dataRoots,
             bytes32[2] memory nullRoots,
             bytes32[2] memory rootRoots
-        ) = decodeProof(proofData, numberOfAssets, numberOfBridgeCalls);
+        ) = decodeProof(proofData);
 
-        // Escape hatch denominated by a rollup size of 0, which means inserting 2 new entries.
-        nums[3] = nums[1] == 0 ? 1 : nums[1];
+        // Escape hatch denominated by a rollup size of 0, which contains 1 tx.
+        uint256 numTxs = nums[1] == 0 ? 1 : nums[1];
 
         // Ensure we are inserting at the next subtree boundary.
-        uint256 toInsert = nums[3].mul(2);
+        uint256 toInsert = numTxs.mul(2);
         if (dataSize % toInsert == 0) {
             require(nums[2] == dataSize, 'Rollup Processor: INCORRECT_DATA_START_INDEX');
         } else {
@@ -545,7 +544,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         require(rootRoots[0] == rootRoot, 'Rollup Processor: INCORRECT_ROOT_ROOT');
         require(nums[0] == nextRollupId, 'Rollup Processor: ID_NOT_SEQUENTIAL');
 
-        return (dataRoots[1], nullRoots[1], nums[0], nums[1], rootRoots[1], nums[3], nums[2] + toInsert);
+        return (dataRoots[1], nullRoots[1], nums[0], nums[1], rootRoots[1], numTxs, nums[2] + toInsert);
     }
 
     /**
@@ -640,11 +639,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     }
 
     function processDefiBridges(bytes memory proofData) internal {
-        if (numberOfBridgeCalls == 0) {
-            return; // TODO: x
-        }
-
-        bytes32 prevDefiInteractionHash = extractPrevDefiInteractionHash(proofData);
+        bytes32 prevDefiInteractionHash =
+            extractPrevDefiInteractionHash(proofData, rollupPubInputLength, txPubInputLength);
         require(
             prevDefiInteractionHash == defiInteractionHash,
             'Rollup Processor: INCORRECT_PREV_DEFI_INTERACTION_HASH'
@@ -659,7 +655,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                 uint256[3] memory assetIds,
                 uint32 numOutputAssets,
                 uint256 totalInputValue
-            ) = extractInteractionData(proofData, i);
+            ) = extractInteractionData(proofData, i, numberOfBridgeCalls);
 
             // Do nothing if no bridge id.
             // Rollup circuit makes sure that totalInputValue is 0 for zero bridge id.
