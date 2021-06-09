@@ -95,6 +95,7 @@ export class TxRollup {
     const dataRootsPaths = deserializeArrayFromVector(HashPath.deserialize, buf, offset);
     offset += dataRootsPaths.adv;
     const dataRootsIndicies = deserializeArrayFromVector(deserializeUInt32, buf, offset);
+    offset += dataRootsIndicies.adv;
 
     const newDefiRoot = deserializeField(buf, offset);
     offset += newDefiRoot.adv;

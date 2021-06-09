@@ -181,9 +181,15 @@ describe('user state', () => {
       randomBytes(32),
       randomBytes(32),
       randomBytes(32),
+      randomBytes(32),
+      randomBytes(32),
+      [randomBytes(32), randomBytes(32), randomBytes(32), randomBytes(32)],
+      [randomBytes(32), randomBytes(32), randomBytes(32), randomBytes(32)],
       totalTxFees,
       innerProofData,
       randomBytes(32 * 16),
+      [randomBytes(64), randomBytes(64), randomBytes(64), randomBytes(64)],
+      randomBytes(32),
       viewingKeys,
     );
   };

@@ -3,6 +3,8 @@ import { GrumpkinAddress } from '../../address';
 import { ViewingKey } from '../../viewing_key';
 import { BarretenbergWasm } from '../../wasm';
 import { BarretenbergWorker } from '../../wasm/worker';
+import { ClaimNoteTxData } from '../join_split_proof/claim_note_tx_data';
+import { TreeClaimNote } from '../tree_claim_note';
 
 export class NoteAlgorithms {
   constructor(private wasm: BarretenbergWasm, private worker: BarretenbergWorker = wasm as any) {}
@@ -26,11 +28,21 @@ export class NoteAlgorithms {
     return Buffer.from(this.wasm.sliceMemory(0, 64));
   }
 
-  public encryptClaimNote(noteBuf: Buffer, publicKey: GrumpkinAddress, nonce: number) {
+  public computePartialState(note: ClaimNoteTxData, publicKey: GrumpkinAddress, nonce: number) {
+    const noteBuf = note.toBuffer();
     const mem = this.wasm.call('bbmalloc', noteBuf.length + 64);
     this.wasm.transferToHeap(noteBuf, mem);
     this.wasm.transferToHeap(publicKey.toBuffer(), mem + noteBuf.length);
-    this.wasm.call('notes__encrypt_claim_note', mem, mem + noteBuf.length, nonce, 0);
+    this.wasm.call('notes__create_partial_value_note', mem, mem + noteBuf.length, nonce, 0);
+    this.wasm.call('bbfree', mem);
+    return Buffer.from(this.wasm.sliceMemory(0, 64));
+  }
+
+  public encryptClaimNote(note: TreeClaimNote) {
+    const noteBuf = note.toBuffer();
+    const mem = this.wasm.call('bbmalloc', noteBuf.length);
+    this.wasm.transferToHeap(noteBuf, mem);
+    this.wasm.call('notes__encrypt_claim_note', mem, 0);
     this.wasm.call('bbfree', mem);
     return Buffer.from(this.wasm.sliceMemory(0, 64));
   }

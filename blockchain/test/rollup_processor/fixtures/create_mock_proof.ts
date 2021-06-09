@@ -17,6 +17,12 @@ export const oldDataRootsRoot = Buffer.from('2d264e93dc455751a721aead9dba9ee2a9f
 export const secondProofNewDataRoot = randomBytes(32);
 export const secondProofNewNullifierRoot = randomBytes(32);
 export const secondProofNewDataRootsRoot = randomBytes(32);
+const oldDefiRoot = randomBytes(32);
+const newDefiRoot = randomBytes(32);
+const previousDefiInteractionHash = Buffer.from(
+  '0f115a0e0c15cdc41958ca46b5b14b456115f4baec5e3ca68599d2a8f435e3b8',
+  'hex',
+);
 
 export const newDataRootsRoot = newDataRoot;
 
@@ -31,6 +37,7 @@ function publicInputData(
   innerProofOutput: InnerProofOutput,
   rollupSize: number,
   numberOfAssets: number,
+  numberOfBridgeCalls: number,
   dataStartIndex?: number,
 ) {
   const { totalTxFees } = innerProofOutput;
@@ -42,6 +49,9 @@ function publicInputData(
   for (let i = 0; i < numberOfAssets; ++i) {
     totalTxFeePublicInputs.push(numToBuffer(totalTxFees[i] || 0));
   }
+
+  const bridgeIds = Buffer.alloc(numberOfBridgeCalls * 32);
+  const defiDepositSums = Buffer.alloc(numberOfBridgeCalls * 32);
 
   let allPublicInputs: Buffer[];
   if (id === 0) {
@@ -55,6 +65,10 @@ function publicInputData(
       newNullifierRoot,
       oldDataRootsRoot,
       newDataRootsRoot,
+      oldDefiRoot,
+      newDefiRoot,
+      bridgeIds,
+      defiDepositSums,
       ...totalTxFeePublicInputs,
     ];
   } else if (id === 1) {
@@ -68,6 +82,10 @@ function publicInputData(
       secondProofNewNullifierRoot,
       newDataRootsRoot,
       secondProofNewDataRootsRoot,
+      oldDefiRoot,
+      newDefiRoot,
+      bridgeIds,
+      defiDepositSums,
       ...totalTxFeePublicInputs,
     ];
   } else if (id === 2) {
@@ -81,6 +99,10 @@ function publicInputData(
       randomBytes(32),
       secondProofNewDataRootsRoot,
       randomBytes(32),
+      oldDefiRoot,
+      newDefiRoot,
+      bridgeIds,
+      defiDepositSums,
       ...totalTxFeePublicInputs,
     ];
   } else {
@@ -221,6 +243,7 @@ interface RollupProofOptions {
   rollupId?: number;
   rollupSize?: number;
   numberOfAssets?: number;
+  numberOfBridgeCalls?: number;
   dataStartIndex?: number;
   feeLimit?: bigint;
   feeDistributorAddress?: EthAddress;
@@ -233,17 +256,34 @@ export async function createRollupProof(
     rollupId = 0,
     rollupSize = 2,
     numberOfAssets = 4,
+    numberOfBridgeCalls = 4,
     dataStartIndex,
     feeLimit = BigInt(0),
     feeDistributorAddress = EthAddress.randomAddress(),
   }: RollupProofOptions = {},
 ) {
   const { innerProofs } = innerProofOutput;
-  const publicInputs = publicInputData(rollupId, innerProofOutput, rollupSize, numberOfAssets, dataStartIndex);
+  const publicInputs = publicInputData(
+    rollupId,
+    innerProofOutput,
+    rollupSize,
+    numberOfAssets,
+    numberOfBridgeCalls,
+    dataStartIndex,
+  );
   // Escape hatch is demarked 0, but has size 1.
   rollupSize = rollupSize || 1;
   const padding = Buffer.alloc(32 * InnerProofData.NUM_PUBLIC_INPUTS * (rollupSize - innerProofs.length), 0);
-  const proofData = Buffer.concat([...publicInputs, ...innerProofs, padding]);
+  const recursiveProofOutput = Buffer.alloc(16 * 32);
+  const defiInteractionNotes = Buffer.alloc(numberOfBridgeCalls * 32 * 2);
+  const proofData = Buffer.concat([
+    ...publicInputs,
+    ...innerProofs,
+    padding,
+    recursiveProofOutput,
+    defiInteractionNotes,
+    previousDefiInteractionHash,
+  ]);
 
   const providerAddress = await rollupProvider.getAddress();
   const sigData = Buffer.concat([

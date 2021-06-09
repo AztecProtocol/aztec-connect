@@ -4,6 +4,7 @@ import { GrumpkinAddress } from '../../address';
 import { NoteAlgorithms } from '.';
 import { TreeNote } from '../tree_note';
 import { TreeClaimNote } from '../tree_claim_note';
+import { ClaimNoteTxData } from '../join_split_proof/claim_note_tx_data';
 // import createDebug from 'debug';
 
 // const debug = createDebug('bb:decrypt_test');
@@ -43,9 +44,12 @@ describe('compute_nullifier', () => {
   });
 
   it('should encrypt claim note and compute its nullifier', async () => {
-    const inputNote = new TreeClaimNote(BigInt(100), BigInt(234), noteSecret, 0);
-    const inputNoteEnc = noteAlgos.encryptClaimNote(inputNote.toBuffer(), pubKey, 0);
+    const bridgeId = BigInt(456);
+    const claimNoteTxData = new ClaimNoteTxData(BigInt(100), bridgeId, pubKey, 0, noteSecret);
+    const partialState = noteAlgos.computePartialState(claimNoteTxData, pubKey, 0);
+    const inputNote = new TreeClaimNote(claimNoteTxData.value, claimNoteTxData.bridgeId, 0, partialState);
+    const inputNoteEnc = noteAlgos.encryptClaimNote(inputNote);
     const nullifier = noteAlgos.computeClaimNoteNullifier(inputNoteEnc, 1);
-    expect(nullifier).toEqual(Buffer.from('06c772265c0e55bd0b15ec6fe660926161954775a52926457a44e1eafe501e03', 'hex'));
+    expect(nullifier).toEqual(Buffer.from('12e53e3931dba11ee820780e321b68743bef348b762c10c79f41455af920f8be', 'hex'));
   });
 });

@@ -68,10 +68,10 @@ contract Decoder {
         uint256 rollupPubInputLength,
         uint256 txPubInputLength
     ) internal pure returns (bytes32 prevDefiInteractionHash) {
-        uint256 rollupSize;
         assembly {
             let dataStart := add(proofData, 0x20) // jump over first word, it's length of data
-            rollupSize := mload(add(dataStart, 0x20))
+            let rollupSize := mload(add(dataStart, 0x20))
+            rollupSize := add(rollupSize, iszero(rollupSize))
             // Skip over rollup pub inputs, tx pub inputs, recursion point and defi notes.
             prevDefiInteractionHash := mload(
                 add(add(add(dataStart, rollupPubInputLength), mul(rollupSize, txPubInputLength)), 0x300)

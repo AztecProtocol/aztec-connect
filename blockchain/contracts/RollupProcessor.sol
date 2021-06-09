@@ -646,7 +646,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             'Rollup Processor: INCORRECT_PREV_DEFI_INTERACTION_HASH'
         );
 
-        uint256[24] memory interactionResult; // TODO: uint256[6 * numberOfBridgeCalls] memory interactionResult;
+        uint256[6 * numberOfBridgeCalls] memory interactionResult;
         uint256 interactionNonce = (nextRollupId - 1) * numberOfBridgeCalls;
         for (uint256 i = 0; i < numberOfBridgeCalls; ++i) {
             (
@@ -753,6 +753,10 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         }
 
         defiInteractionHash = sha256(abi.encodePacked(interactionResult));
+        assembly {
+            // Zero the first 4 bits to ensure field conversion doesn't wrap around prime.
+            sstore(defiInteractionHash_slot, and(sload(defiInteractionHash_slot), sub(shl(252, 1), 1)))
+        }
     }
 
     function getDefiBridgeSupportedAsset(uint256 assetId) internal view returns (address) {

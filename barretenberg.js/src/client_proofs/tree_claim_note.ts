@@ -5,16 +5,16 @@ export class TreeClaimNote {
   constructor(
     public value: bigint,
     public bridgeId: bigint,
-    public noteSecret: Buffer,
     public defiInteractionNonce: number,
+    public partialState: Buffer,
   ) {}
 
   toBuffer() {
     return Buffer.concat([
       toBufferBE(this.value, 32),
       toBufferBE(this.bridgeId, 32),
-      this.noteSecret,
       numToUInt32BE(this.defiInteractionNonce),
+      this.partialState,
     ]);
   }
 }

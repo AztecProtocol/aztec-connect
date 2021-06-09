@@ -41,7 +41,7 @@ export class RootRollup {
   }
 
   public static fromBuffer(buf: Buffer) {
-    const rollupId = buf.readUInt32BE(4);
+    const rollupId = buf.readUInt32BE(0);
     let offset = 8;
     const proofs = deserializeArrayFromVector(deserializeBufferFromVector, buf, offset);
     offset += proofs.adv;

@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import { ProofId } from '../client_proofs/proof_data';
 import { numToUInt32BE } from '../serialize';
 import { ViewingKey } from '../viewing_key';
 
@@ -9,7 +10,7 @@ export class InnerProofData {
   public txId: Buffer;
 
   constructor(
-    public proofId: number,
+    public proofId: ProofId,
     public publicInput: Buffer,
     public publicOutput: Buffer,
     public assetId: Buffer,
@@ -75,8 +76,11 @@ export class InnerProofData {
 
 export class RollupProofData {
   static NUMBER_OF_ASSETS = 4;
-  static NUM_ROLLUP_PUBLIC_INPUTS = 13;
+  static NUM_BRIDGE_CALLS_PER_BLOCK = 4;
+  static NUM_ROLLUP_PUBLIC_INPUTS =
+    12 + RollupProofData.NUMBER_OF_ASSETS + RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK * 4;
   static LENGTH_ROLLUP_PUBLIC = RollupProofData.NUM_ROLLUP_PUBLIC_INPUTS * 32;
+  static LENGTH_RECURSIVE_PROOF_OUTPUT = 16 * 32;
   public rollupHash: Buffer;
 
   constructor(
@@ -89,9 +93,15 @@ export class RollupProofData {
     public newNullRoot: Buffer,
     public oldDataRootsRoot: Buffer,
     public newDataRootsRoot: Buffer,
+    public oldDefiRoot: Buffer,
+    public newDefiRoot: Buffer,
+    public bridgeIds: Buffer[],
+    public defiDepositSums: Buffer[],
     public totalTxFees: Buffer[],
     public innerProofData: InnerProofData[],
     public recursiveProofOutput: Buffer,
+    public defiInteractionNotes: Buffer[],
+    public prevDefiInteractionHash: Buffer,
     public viewingKeys: ViewingKey[][],
   ) {
     const allTxIds = this.innerProofData.map(innerProof => innerProof.txId);
@@ -112,9 +122,15 @@ export class RollupProofData {
       this.newNullRoot,
       this.oldDataRootsRoot,
       this.newDataRootsRoot,
+      this.oldDefiRoot,
+      this.newDefiRoot,
+      ...this.bridgeIds,
+      ...this.defiDepositSums.map(s => s),
       ...this.totalTxFees,
       ...this.innerProofData.map(p => p.toBuffer()),
       this.recursiveProofOutput,
+      ...this.defiInteractionNotes,
+      this.prevDefiInteractionHash,
     ]);
   }
 
@@ -140,18 +156,49 @@ export class RollupProofData {
     const newNullRoot = proofData.slice(6 * 32, 6 * 32 + 32);
     const oldDataRootsRoot = proofData.slice(7 * 32, 7 * 32 + 32);
     const newDataRootsRoot = proofData.slice(8 * 32, 8 * 32 + 32);
+    const oldDefiRoot = proofData.slice(9 * 32, 9 * 32 + 32);
+    const newDefiRoot = proofData.slice(10 * 32, 10 * 32 + 32);
+
+    let startIndex = 11 * 32;
+    const bridgeIds: Buffer[] = [];
+    for (let i = 0; i < RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK; ++i) {
+      bridgeIds.push(proofData.slice(startIndex, startIndex + 32));
+      startIndex += 32;
+    }
+
+    const defiDepositSums: Buffer[] = [];
+    for (let i = 0; i < RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK; ++i) {
+      defiDepositSums.push(proofData.slice(startIndex, startIndex + 32));
+      startIndex += 32;
+    }
+
     const totalTxFees: Buffer[] = [];
     for (let i = 0; i < RollupProofData.NUMBER_OF_ASSETS; ++i) {
-      totalTxFees.push(proofData.slice((9 + i) * 32, (9 + i) * 32 + 32));
+      totalTxFees.push(proofData.slice(startIndex, startIndex + 32));
+      startIndex += 32;
     }
 
     const innerProofSize = Math.max(rollupSize, 1); // Escape hatch is demarked 0, but has size 1.
     const innerProofData: InnerProofData[] = [];
     for (let i = 0; i < innerProofSize; ++i) {
-      const startIndex = RollupProofData.LENGTH_ROLLUP_PUBLIC + i * InnerProofData.LENGTH;
       const innerData = proofData.slice(startIndex, startIndex + InnerProofData.LENGTH);
       innerProofData[i] = InnerProofData.fromBuffer(innerData);
+      startIndex += InnerProofData.LENGTH;
     }
+
+    const recursiveProofOutput = proofData.slice(
+      startIndex,
+      startIndex + RollupProofData.LENGTH_RECURSIVE_PROOF_OUTPUT,
+    );
+    startIndex += RollupProofData.LENGTH_RECURSIVE_PROOF_OUTPUT;
+
+    const defiInteractionNotes: Buffer[] = [];
+    for (let i = 0; i < RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK; ++i) {
+      defiInteractionNotes.push(proofData.slice(startIndex, startIndex + 64));
+      startIndex += 64;
+    }
+
+    const prevDefiInteractionHash = proofData.slice(startIndex, startIndex + 32);
 
     // Populate j/s tx viewingKey data.
     const viewingKeys: ViewingKey[][] = [];
@@ -169,8 +216,6 @@ export class RollupProofData {
       }
     }
 
-    const recursiveStartIndex = RollupProofData.LENGTH_ROLLUP_PUBLIC + innerProofSize * InnerProofData.LENGTH;
-    const recursiveProofOutput = proofData.slice(recursiveStartIndex, recursiveStartIndex + 16 * 32);
     return new RollupProofData(
       rollupId,
       rollupSize,
@@ -181,9 +226,15 @@ export class RollupProofData {
       newNullRoot,
       oldDataRootsRoot,
       newDataRootsRoot,
+      oldDefiRoot,
+      newDefiRoot,
+      bridgeIds,
+      defiDepositSums,
       totalTxFees,
       innerProofData,
       recursiveProofOutput,
+      defiInteractionNotes,
+      prevDefiInteractionHash,
       viewingKeys,
     );
   }
