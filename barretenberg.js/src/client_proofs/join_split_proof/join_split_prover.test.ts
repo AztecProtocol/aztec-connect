@@ -1,27 +1,28 @@
-import { JoinSplitProver, JoinSplitVerifier } from './index';
 import createDebug from 'debug';
-import { BarretenbergWasm } from '../../wasm';
-import { JoinSplitTx } from './join_split_tx';
-import { MerkleTree } from '../../merkle_tree';
+import { EventEmitter } from 'events';
 import levelup from 'levelup';
 import memdown from 'memdown';
-import { Pedersen } from '../../crypto/pedersen';
-import { createEphemeralPrivKey, TreeNote } from '../tree_note';
-import { EventEmitter } from 'events';
+import { EthAddress, GrumpkinAddress } from '../../address';
 import { Crs } from '../../crs';
-import { WorkerPool } from '../../wasm/worker_pool';
-import { PooledPippenger } from '../../pippenger';
-import { PooledFft } from '../../fft';
-import { ProofData } from '../proof_data';
-import { Grumpkin } from '../../ecc/grumpkin';
-import { NoteAlgorithms } from '../note_algorithms';
-import { GrumpkinAddress, EthAddress } from '../../address';
-import { Schnorr } from '../../crypto/schnorr';
-import { UnrolledProver } from '../prover';
-import { computeSigningData } from './compute_signing_data';
 import { Blake2s } from '../../crypto/blake2s';
+import { Pedersen } from '../../crypto/pedersen';
+import { Schnorr } from '../../crypto/schnorr';
+import { Grumpkin } from '../../ecc/grumpkin';
+import { PooledFft } from '../../fft';
+import { MerkleTree } from '../../merkle_tree';
+import { PooledPippenger } from '../../pippenger';
+import { BarretenbergWasm } from '../../wasm';
+import { WorkerPool } from '../../wasm/worker_pool';
 import { AccountAliasId } from '../account_alias_id';
+import { createEphemeralPrivKey } from '../create_ephemeral_priv_key';
+import { TreeNote } from '../notes';
+import { NoteAlgorithms } from '../note_algorithms';
+import { ProofData } from '../proof_data';
+import { UnrolledProver } from '../prover';
 import { ClaimNoteTxData } from './claim_note_tx_data';
+import { computeSigningData } from './compute_signing_data';
+import { JoinSplitProver, JoinSplitVerifier } from './index';
+import { JoinSplitTx } from './join_split_tx';
 
 const debug = createDebug('bb:join_split_proof_test');
 
@@ -109,8 +110,8 @@ describe('join_split_proof', () => {
       const outputNote1 = TreeNote.createFromEphPriv(pubKey, BigInt(80), 0, 0, outputNote1EphKey, grumpkin);
       const outputNote2 = TreeNote.createFromEphPriv(pubKey, BigInt(70), 0, 0, outputNote2EphKey, grumpkin);
 
-      const inputNote1Enc = noteAlgos.encryptNote(inputNote1.toBuffer());
-      const inputNote2Enc = noteAlgos.encryptNote(inputNote2.toBuffer());
+      const inputNote1Enc = noteAlgos.encryptNote(inputNote1);
+      const inputNote2Enc = noteAlgos.encryptNote(inputNote2);
 
       const tree = new MerkleTree(levelup(memdown()), pedersen, 'data', 32);
       await tree.updateElement(0, inputNote1Enc);

@@ -1,13 +1,11 @@
-import { BarretenbergWasm } from '../../wasm';
-import { Grumpkin } from '../../ecc/grumpkin';
-import { GrumpkinAddress } from '../../address';
 import { NoteAlgorithms } from '.';
-import { TreeNote } from '../tree_note';
-import { TreeClaimNote } from '../tree_claim_note';
-import { ClaimNoteTxData } from '../join_split_proof/claim_note_tx_data';
-// import createDebug from 'debug';
-
-// const debug = createDebug('bb:decrypt_test');
+import { GrumpkinAddress } from '../../address';
+import { Grumpkin } from '../../ecc/grumpkin';
+import { BarretenbergWasm } from '../../wasm';
+import { AccountId } from '../account_id';
+import { BridgeId } from '../bridge_id';
+import { ClaimNoteTxData } from '../join_split_proof';
+import { TreeClaimNote, TreeNote } from '../notes';
 
 describe('compute_nullifier', () => {
   let grumpkin!: Grumpkin;
@@ -30,8 +28,8 @@ describe('compute_nullifier', () => {
     inputNote1.noteSecret = noteSecret;
     inputNote2.noteSecret = noteSecret;
 
-    const inputNote1Enc = noteAlgos.encryptNote(inputNote1.toBuffer());
-    const inputNote2Enc = noteAlgos.encryptNote(inputNote2.toBuffer());
+    const inputNote1Enc = noteAlgos.encryptNote(inputNote1);
+    const inputNote2Enc = noteAlgos.encryptNote(inputNote2);
 
     const nullifier1 = noteAlgos.computeNoteNullifier(inputNote1Enc, 1, privateKey);
     const nullifier2 = noteAlgos.computeNoteNullifier(inputNote2Enc, 0, privateKey);
@@ -44,9 +42,10 @@ describe('compute_nullifier', () => {
   });
 
   it('should encrypt claim note and compute its nullifier', async () => {
-    const bridgeId = BigInt(456);
-    const claimNoteTxData = new ClaimNoteTxData(BigInt(100), bridgeId, pubKey, 0, noteSecret);
-    const partialState = noteAlgos.computePartialState(claimNoteTxData, pubKey, 0);
+    const bridgeId = BridgeId.fromBigInt(BigInt(456));
+    const ownerId = new AccountId(pubKey, 0);
+    const claimNoteTxData = new ClaimNoteTxData(BigInt(100), bridgeId, ownerId.publicKey, ownerId.nonce, noteSecret);
+    const partialState = noteAlgos.computePartialState(claimNoteTxData, ownerId);
     const inputNote = new TreeClaimNote(claimNoteTxData.value, claimNoteTxData.bridgeId, 0, partialState);
     const inputNoteEnc = noteAlgos.encryptClaimNote(inputNote);
     const nullifier = noteAlgos.computeClaimNoteNullifier(inputNoteEnc, 1);

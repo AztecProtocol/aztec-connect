@@ -1,29 +1,30 @@
-import { EscapeHatchProver, EscapeHatchTx, EscapeHatchVerifier } from './index';
+import { toBigIntBE, toBufferBE } from 'bigint-buffer';
+import { randomBytes } from 'crypto';
 import createDebug from 'debug';
-import { BarretenbergWasm } from '../../wasm';
-import { createEphemeralPrivKey, TreeNote } from '../tree_note';
 import { EventEmitter } from 'events';
+import { EthAddress, GrumpkinAddress } from '../../address';
+import { AssetId } from '../../asset';
 import { Crs } from '../../crs';
-import { WorkerPool } from '../../wasm/worker_pool';
+import { Blake2s } from '../../crypto/blake2s';
 import { Pedersen } from '../../crypto/pedersen';
 import { Schnorr } from '../../crypto/schnorr';
-import { PooledPippenger } from '../../pippenger';
-import { PooledFft } from '../../fft';
-import { Prover } from '../prover';
 import { Grumpkin } from '../../ecc/grumpkin';
-import { EthAddress, GrumpkinAddress } from '../../address';
+import { PooledFft } from '../../fft';
 import { HashPath } from '../../merkle_tree';
-import { JoinSplitTx } from '../join_split_proof';
-import { WorldStateDb } from '../../world_state_db';
-import { toBigIntBE, toBufferBE } from 'bigint-buffer';
-import { NoteAlgorithms } from '../note_algorithms';
+import { PooledPippenger } from '../../pippenger';
 import { RollupProofData } from '../../rollup_proof';
-import { Blake2s } from '../../crypto/blake2s';
+import { BarretenbergWasm } from '../../wasm';
+import { WorkerPool } from '../../wasm/worker_pool';
+import { WorldStateDb } from '../../world_state_db';
 import { AccountAliasId } from '../account_alias_id';
-import { computeSigningData } from '../join_split_proof/compute_signing_data';
-import { AssetId } from '../../asset';
-import { randomBytes } from 'crypto';
+import { createEphemeralPrivKey } from '../create_ephemeral_priv_key';
+import { JoinSplitTx } from '../join_split_proof';
 import { ClaimNoteTxData } from '../join_split_proof/claim_note_tx_data';
+import { computeSigningData } from '../join_split_proof/compute_signing_data';
+import { TreeNote } from '../notes';
+import { NoteAlgorithms } from '../note_algorithms';
+import { Prover } from '../prover';
+import { EscapeHatchProver, EscapeHatchTx, EscapeHatchVerifier } from './index';
 
 const debug = createDebug('bb:escape_hatch_proof');
 
@@ -103,8 +104,8 @@ describe('escape_hatch_proof', () => {
     const inputNotes = [inputNote1, inputNote2];
 
     const inputIndexes = [0, 1];
-    const inputNote1Enc = noteAlgos.encryptNote(inputNote1.toBuffer());
-    const inputNote2Enc = noteAlgos.encryptNote(inputNote2.toBuffer());
+    const inputNote1Enc = noteAlgos.encryptNote(inputNote1);
+    const inputNote2Enc = noteAlgos.encryptNote(inputNote2);
     const encryptedNotes = [inputNote1Enc, inputNote2Enc];
     const nullifiers = encryptedNotes.map((encNote, index) => {
       return toBigIntBE(noteAlgos.computeNoteNullifier(encNote, inputIndexes[index], privateKey, true));
@@ -133,8 +134,8 @@ describe('escape_hatch_proof', () => {
 
     // Add the output notes to the tree
     let nextDataStartIndex = worldStateDb.getSize(dataTreeId);
-    const outputNote1Enc = noteAlgos.encryptNote(outputNote1.toBuffer());
-    const outputNote2Enc = noteAlgos.encryptNote(outputNote2.toBuffer());
+    const outputNote1Enc = noteAlgos.encryptNote(outputNote1);
+    const outputNote2Enc = noteAlgos.encryptNote(outputNote2);
 
     await worldStateDb.put(dataTreeId, nextDataStartIndex++, outputNote1Enc);
     await worldStateDb.put(dataTreeId, nextDataStartIndex++, outputNote2Enc);

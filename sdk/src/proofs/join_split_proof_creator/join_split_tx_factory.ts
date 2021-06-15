@@ -1,8 +1,12 @@
 import { EthAddress } from 'barretenberg/address';
 import { AssetId } from 'barretenberg/asset';
-import { computeSigningData, JoinSplitTx } from 'barretenberg/client_proofs/join_split_proof';
-import { createEphemeralPrivKey, encryptNote, TreeNote } from 'barretenberg/client_proofs/tree_note';
-import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
+import {
+  NoteAlgorithms,
+  createEphemeralPrivKey,
+  TreeNote,
+  computeSigningData,
+  JoinSplitTx,
+} from 'barretenberg/client_proofs';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { WorldState } from 'barretenberg/world_state';
@@ -142,13 +146,7 @@ export class JoinSplitTxFactory {
     );
 
     const ephemeralPrivateKeys = [outputNote1EphKey, outputNote2EphKey];
-    const viewingKeys = this.createViewingKeys(tx.outputNotes, ephemeralPrivateKeys);
+    const viewingKeys = tx.outputNotes.map((n, i) => n.getViewingKey(ephemeralPrivateKeys[i], this.grumpkin));
     return { tx, viewingKeys };
-  }
-
-  private createViewingKeys(notes: TreeNote[], ephemeralPrivateKeys: Buffer[]) {
-    const encViewingKey1 = encryptNote(notes[0], ephemeralPrivateKeys[0], this.grumpkin);
-    const encViewingKey2 = encryptNote(notes[1], ephemeralPrivateKeys[1], this.grumpkin);
-    return [encViewingKey1, encViewingKey2];
   }
 }

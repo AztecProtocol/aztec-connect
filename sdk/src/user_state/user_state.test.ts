@@ -1,23 +1,27 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { computeAccountAliasIdNullifier } from 'barretenberg/client_proofs/account_proof/compute_nullifier';
-import { createEphemeralPrivKey, encryptNote, TreeNote } from 'barretenberg/client_proofs/tree_note';
-import { deriveNoteSecret } from 'barretenberg/client_proofs/derive_note_secret';
-import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
+import { Block } from 'barretenberg/block_source';
+import {
+  AccountAliasId,
+  AccountId,
+  AliasHash,
+  computeAccountAliasIdNullifier,
+  createEphemeralPrivKey,
+  NoteAlgorithms,
+  TreeNote,
+} from 'barretenberg/client_proofs';
 import { Blake2s } from 'barretenberg/crypto/blake2s';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
 import { numToUInt32BE } from 'barretenberg/serialize';
-import { BarretenbergWasm } from 'barretenberg/wasm';
-import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { TxHash } from 'barretenberg/tx_hash';
+import { ViewingKey } from 'barretenberg/viewing_key';
+import { BarretenbergWasm } from 'barretenberg/wasm';
 import { toBufferBE } from 'bigint-buffer';
 import { randomBytes } from 'crypto';
 import { Database } from '../database';
-import { UserData, AccountId, AccountAliasId } from '../user';
+import { UserData } from '../user';
 import { UserState } from './index';
-import { Block } from 'barretenberg/block_source';
-import { ViewingKey } from 'barretenberg/viewing_key';
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;
@@ -78,6 +82,18 @@ describe('user state', () => {
     await userState.startSync();
   });
 
+  const createNote = (assetId: number, value: bigint, user: AccountId, version = 1) => {
+    const ephPrivKey = createEphemeralPrivKey(grumpkin);
+    const note = TreeNote.createFromEphPriv(user.publicKey, value, assetId, user.nonce, ephPrivKey, grumpkin, version);
+    const viewingKey = note.getViewingKey(ephPrivKey, grumpkin);
+    return { note, viewingKey };
+  };
+
+  const createGibberishNote = () => ({
+    note: TreeNote.createFromEphPriv(GrumpkinAddress.randomAddress(), 0n, 0, 0, randomBytes(32), grumpkin),
+    viewingKey: ViewingKey.random(),
+  });
+
   const generateJoinSplitProof = ({
     validNewNote = true,
     validChangeNote = true,
@@ -92,38 +108,21 @@ describe('user state', () => {
     isPadding = false,
     createValidNoteEncryptions = true,
   } = {}) => {
-    const ephPrivKey = createEphemeralPrivKey(grumpkin);
-    const note1 = TreeNote.createFromEphPriv(
-      user.publicKey,
-      BigInt(outputNoteValue1),
-      assetId,
-      newNoteNonce,
-      ephPrivKey,
-      grumpkin,
-    );
-    // Set the first output note secret to use the old secret derivation method.
-    // We want to validate that we can correctl decruyt notes that use the old 2050-bit secret keys
-    note1.noteSecret = deriveNoteSecret(user.publicKey, ephPrivKey, grumpkin, 0);
-
-    const note2 = TreeNote.createFromEphPriv(
-      user.publicKey,
-      BigInt(outputNoteValue2),
-      assetId,
-      newNoteNonce,
-      ephPrivKey,
-      grumpkin,
-    );
-    const gibberishNote = TreeNote.createFromEphPriv(GrumpkinAddress.randomAddress(), 0n, 0, 0, ephPrivKey, grumpkin);
-    const encryptedNote1 = createValidNoteEncryptions ? noteAlgos.encryptNote(note1.toBuffer()) : randomBytes(64);
-    const encryptedNote2 = createValidNoteEncryptions ? noteAlgos.encryptNote(note2.toBuffer()) : randomBytes(64);
+    const notes = [
+      validNewNote
+        ? createNote(assetId, outputNoteValue1, new AccountId(user.publicKey, newNoteNonce), 0)
+        : createGibberishNote(),
+      validChangeNote
+        ? createNote(assetId, outputNoteValue2, new AccountId(user.publicKey, newNoteNonce))
+        : createGibberishNote(),
+    ];
+    const encryptedNote1 = createValidNoteEncryptions ? noteAlgos.encryptNote(notes[0].note) : randomBytes(64);
+    const encryptedNote2 = createValidNoteEncryptions ? noteAlgos.encryptNote(notes[1].note) : randomBytes(64);
     const nullifier1 = isPadding
       ? Buffer.alloc(32)
       : noteAlgos.computeNoteNullifier(randomBytes(64), 0, user.privateKey);
     const nullifier2 = noteAlgos.computeNoteNullifier(randomBytes(64), 1, user.privateKey);
-    const viewingKeys = [
-      encryptNote(validNewNote ? note1 : gibberishNote, ephPrivKey, grumpkin),
-      encryptNote(validChangeNote ? note2 : gibberishNote, ephPrivKey, grumpkin),
-    ];
+    const viewingKeys = notes.map(n => n.viewingKey);
     const proofData = new InnerProofData(
       0,
       toBufferBE(publicInput, 32),
@@ -431,6 +430,30 @@ describe('user state', () => {
       recipientPrivateOutput: outputNoteValue1,
       senderPrivateOutput: 0n,
       ownedByUser: false,
+      settled: blockCreated,
+    });
+  });
+
+  it('restore a join split tx sent to another user', async () => {
+    const outputNoteValue1 = 56n;
+    const outputNoteValue2 = 78n;
+    const rollupProofData = generateJoinSplitRollup(0, { validNewNote: false, outputNoteValue1, outputNoteValue2 });
+    const blockCreated = new Date();
+    const block = createBlock(rollupProofData, blockCreated);
+
+    userState.processBlock(block);
+    await userState.stopSync(true);
+
+    const innerProofData = rollupProofData.innerProofData[0];
+
+    expect(db.addNote).toHaveBeenCalledTimes(1);
+    expect(db.addNote.mock.calls[0][0]).toMatchObject({ dataEntry: innerProofData.newNote2, value: outputNoteValue2 });
+    expect(db.addJoinSplitTx).toHaveBeenCalledTimes(1);
+    expect(db.addJoinSplitTx.mock.calls[0][0]).toMatchObject({
+      userId: user.id,
+      recipientPrivateOutput: 0n,
+      senderPrivateOutput: 78n,
+      ownedByUser: true,
       settled: blockCreated,
     });
   });

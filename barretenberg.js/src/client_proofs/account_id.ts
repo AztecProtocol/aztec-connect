@@ -1,4 +1,4 @@
-import { GrumpkinAddress } from 'barretenberg/address';
+import { GrumpkinAddress } from '../address';
 
 export class AccountId {
   constructor(public publicKey: GrumpkinAddress, public nonce: number) {}

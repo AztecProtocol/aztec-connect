@@ -1,6 +1,5 @@
 import { GrumpkinAddress } from 'barretenberg/address';
-import { Signature } from 'barretenberg/client_proofs/signature';
-import { AccountId } from './account_id';
+import { AccountId, Signature } from 'barretenberg/client_proofs';
 
 export class RecoveryData {
   constructor(public accountId: AccountId, public signature: Signature) {}

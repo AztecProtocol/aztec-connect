@@ -74,8 +74,8 @@ export class EscapeHatchProofCreator {
 
     const oldDataPath = await this.hashPathSource.getHashPath(0, dataStartIndex);
     const [output1, output2] = joinSplitTx.outputNotes;
-    const encryptedOutput1 = this.noteAlgos.encryptNote(output1.toBuffer());
-    const encryptedOutput2 = this.noteAlgos.encryptNote(output2.toBuffer());
+    const encryptedOutput1 = this.noteAlgos.encryptNote(output1);
+    const encryptedOutput2 = this.noteAlgos.encryptNote(output2);
 
     const dataResponse = await this.hashPathSource.getHashPaths(0, [
       { index: dataStartIndex, value: encryptedOutput1 },
@@ -87,8 +87,8 @@ export class EscapeHatchProofCreator {
     const nullTreeState = await this.hashPathSource.getTreeState(1);
     const oldNullifierRoot = nullTreeState.root;
     const [input1, input2] = joinSplitTx.inputNotes;
-    const encryptedInput1 = this.noteAlgos.encryptNote(input1.toBuffer());
-    const encryptedInput2 = this.noteAlgos.encryptNote(input2.toBuffer());
+    const encryptedInput1 = this.noteAlgos.encryptNote(input1);
+    const encryptedInput2 = this.noteAlgos.encryptNote(input2);
     const { privateKey } = userState.getUser();
     const nullifier1 = this.noteAlgos.computeNoteNullifierBigInt(
       encryptedInput1,

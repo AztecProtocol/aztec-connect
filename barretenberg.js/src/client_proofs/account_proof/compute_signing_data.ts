@@ -2,7 +2,7 @@ import { GrumpkinAddress } from '../../address';
 import { Pedersen } from '../../crypto/pedersen';
 import { AccountAliasId } from '../account_alias_id';
 
-export function computeSigningData(
+export function computeAccountProofSigningData(
   accountAliasId: AccountAliasId,
   accountPublicKey: GrumpkinAddress,
   newAccountPublicKey: GrumpkinAddress,

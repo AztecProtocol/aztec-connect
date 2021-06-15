@@ -7,6 +7,8 @@ import { AccountAliasId } from '../account_alias_id';
 export enum ProofId {
   JOIN_SPLIT,
   ACCOUNT,
+  DEFI_DEPOSIT,
+  DEFI_CLAIM,
 }
 
 /**

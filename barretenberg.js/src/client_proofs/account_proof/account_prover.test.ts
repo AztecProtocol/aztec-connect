@@ -17,7 +17,7 @@ import { AliasHash } from '../alias_hash';
 import { UnrolledProver } from '../prover';
 import { AccountProver, AccountVerifier, AccountTx } from './index';
 import { GrumpkinAddress } from '../../address';
-import { computeSigningData } from './compute_signing_data';
+import { computeAccountProofSigningData } from './compute_signing_data';
 import { ProofData } from '../proof_data';
 import { computeAccountAliasIdNullifier } from './compute_nullifier';
 
@@ -106,7 +106,7 @@ describe('account proof', () => {
     const accountIndex = 0;
     const accountPath = await tree.getHashPath(0);
 
-    const message = computeSigningData(
+    const message = computeAccountProofSigningData(
       accountAliasId,
       user.publicKey,
       user.publicKey,

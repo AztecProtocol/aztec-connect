@@ -1,25 +1,24 @@
 import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { Block } from 'barretenberg/block_source';
-import { TreeNote, batchDecryptNotes } from 'barretenberg/client_proofs/tree_note';
-import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
-import { computeAccountAliasIdNullifier } from 'barretenberg/client_proofs/account_proof';
-import { Grumpkin } from 'barretenberg/ecc/grumpkin';
-import { Pedersen } from 'barretenberg/crypto/pedersen';
-import { MemoryFifo } from 'barretenberg/fifo';
 import { AssetId, AssetIds } from 'barretenberg/asset';
+import { Block } from 'barretenberg/block_source';
+import { AccountAliasId, AccountId, ProofId, recoverTreeNotes, TreeNote } from 'barretenberg/client_proofs';
+import { computeAccountAliasIdNullifier } from 'barretenberg/client_proofs/account_proof';
+import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
+import { Pedersen } from 'barretenberg/crypto/pedersen';
+import { Grumpkin } from 'barretenberg/ecc/grumpkin';
+import { MemoryFifo } from 'barretenberg/fifo';
 import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
 import { RollupProvider } from 'barretenberg/rollup_provider';
+import { TxHash } from 'barretenberg/tx_hash';
+import { batchDecryptNotes, DecryptedNote } from 'barretenberg/viewing_key';
 import { toBigIntBE } from 'bigint-buffer';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { Database } from '../database';
 import { Note } from '../note';
 import { NotePicker } from '../note_picker';
-import { AccountAliasId, UserData } from '../user';
+import { UserData } from '../user';
 import { isJoinSplitTx, UserAccountTx, UserJoinSplitTx } from '../user_tx';
-import { AccountId } from '../user/account_id';
-import { TxHash } from 'barretenberg/tx_hash';
-import { ProofId } from 'barretenberg/client_proofs/proof_data';
 
 const debug = createDebug('bb:user_state');
 
@@ -108,21 +107,28 @@ export class UserState extends EventEmitter {
     }
 
     const balancesBefore = AssetIds.map(assetId => this.getBalance(assetId));
-    const viewingKeys = Buffer.concat(blocks.map(b => b.viewingKeysData));
-    const rollupProofData = blocks.map(b => RollupProofData.fromBuffer(b.rollupProofData, b.viewingKeysData));
-    const joinSplitNoteCommitments = rollupProofData
-      .map(p =>
-        p.innerProofData
-          .filter(i => i.proofId === ProofId.JOIN_SPLIT && !i.isPadding())
-          .map(i => [i.newNote1, i.newNote2]),
-      )
-      .flat(2);
 
-    const notes = await batchDecryptNotes(
-      viewingKeys,
+    const viewingKeys = Buffer.concat(blocks.map(b => b.viewingKeysData));
+    const decryptedNotes = await batchDecryptNotes(viewingKeys, this.user.privateKey, this.noteAlgos, this.grumpkin);
+
+    const rollupProofData = blocks.map(b => RollupProofData.fromBuffer(b.rollupProofData, b.viewingKeysData));
+    const proofsWithDecryptedNotes = rollupProofData
+      .map(p => p.innerProofData.filter(i => !i.isPadding()))
+      .flat()
+      .filter(p => [ProofId.JOIN_SPLIT].includes(p.proofId));
+
+    const noteCommitments: Buffer[] = [];
+    const decryptedTreeNote: (DecryptedNote | undefined)[] = [];
+    proofsWithDecryptedNotes.forEach(({ newNote1, newNote2 }, i) => {
+      noteCommitments.push(newNote1);
+      noteCommitments.push(newNote2);
+      decryptedTreeNote.push(...decryptedNotes.slice(i * 2, i * 2 + 2));
+    });
+    const notes = recoverTreeNotes(
+      decryptedTreeNote,
+      noteCommitments,
       this.user.privateKey,
       this.grumpkin,
-      joinSplitNoteCommitments,
       this.noteAlgos,
     );
 

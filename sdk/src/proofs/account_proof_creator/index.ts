@@ -1,6 +1,5 @@
 import { GrumpkinAddress } from 'barretenberg/address';
-import { AccountProver, AccountTx, computeSigningData } from 'barretenberg/client_proofs/account_proof';
-import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
+import { AccountProver, AccountTx, AliasHash, computeAccountProofSigningData } from 'barretenberg/client_proofs';
 import { Pedersen } from 'barretenberg/crypto/pedersen';
 import { WorldState } from 'barretenberg/world_state';
 import { randomBytes } from 'crypto';
@@ -30,7 +29,7 @@ export class AccountProofCreator {
     const accountPath = await this.worldState.getHashPath(accountIndex);
     const accountAliasId = new AccountAliasId(aliasHash, nonce);
     const gibberish = randomBytes(32);
-    const sigMsg = computeSigningData(
+    const sigMsg = computeAccountProofSigningData(
       accountAliasId,
       accountPublicKey,
       newAccountPublicKey || accountPublicKey,
