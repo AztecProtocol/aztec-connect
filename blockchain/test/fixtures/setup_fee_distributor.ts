@@ -1,13 +1,8 @@
 import { Contract, Signer } from 'ethers';
 import { ethers } from 'hardhat';
-import { setupUniswap } from './setup_uniswap';
+import { TokenAsset } from './assets';
 
-export interface TokenAsset {
-  id: number;
-  contract: Contract;
-}
-
-export const createFeeClaimer = async (publisher: Signer, assets: Contract[]) => {
+export const createFeeClaimer = async (publisher: Signer, weth: Contract, assets: Contract[]) => {
   const MockVerifier = await ethers.getContractFactory('MockVerifier');
   const mockVerifier = await MockVerifier.deploy();
 
@@ -18,6 +13,7 @@ export const createFeeClaimer = async (publisher: Signer, assets: Contract[]) =>
     mockVerifier.address,
     escapeBlockLowerBound,
     escapeBlockUpperBound,
+    weth.address,
     await publisher.getAddress(),
   );
 
@@ -30,17 +26,12 @@ export const createFeeClaimer = async (publisher: Signer, assets: Contract[]) =>
   return { feeClaimer, tokenAssets };
 };
 
-export const setupFeeDistributor = async (publisher: Signer, rollupProcessor: Contract) => {
-  const { router, createPair } = await setupUniswap(publisher);
-
-  const AztecFeeDistributor = await ethers.getContractFactory('AztecFeeDistributor');
-  const feeDistributor = await AztecFeeDistributor.deploy(rollupProcessor.address, router.address);
-
+export const setupFeeDistributor = async (publisher: Signer, rollupProcessor: Contract, uniswapRouter: Contract) => {
+  const AztecFeeDistributor = await ethers.getContractFactory('AztecFeeDistributor', publisher);
+  const feeDistributor = await AztecFeeDistributor.deploy(rollupProcessor.address, uniswapRouter.address);
   await rollupProcessor.setFeeDistributor(feeDistributor.address);
 
   return {
     feeDistributor,
-    router,
-    createPair,
   };
 };

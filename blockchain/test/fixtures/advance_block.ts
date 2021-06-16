@@ -17,7 +17,7 @@ export async function blocksToAdvance(target: number, accuracy: number, provider
 export async function advanceBlocks(blocks: number, provider: JsonRpcProvider) {
   const blockArray = new Array(blocks).fill(1);
   await Promise.all(
-    blockArray.map(async value => {
+    blockArray.map(async () => {
       await sleep(50);
       await provider.send('evm_mine', []);
     }),

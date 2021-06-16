@@ -3,14 +3,14 @@ import { expect, use } from 'chai';
 import { solidity } from 'ethereum-waffle';
 import { Contract, Signer } from 'ethers';
 import { ethers } from 'hardhat';
+import { solidityFormatSignatures } from '../../src/solidity_format_signatures';
 import {
   createDepositProof,
   createRollupProof,
-  createTwoDepositsProof,
   createWithdrawProof,
-} from './fixtures/create_mock_proof';
-import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
-import { solidityFormatSignatures } from '../../src/solidity_format_signatures';
+  mergeInnerProofs,
+} from '../fixtures/create_mock_proof';
+import { setupRollupProcessor } from '../fixtures/setup_rollup_processor';
 
 use(solidity);
 
@@ -26,9 +26,9 @@ describe('rollup_processor: multi assets', () => {
   let erc20AssetId: number;
   let ethAssetId: number;
 
-  const mintAmount = 100;
-  const userADepositAmount = 60;
-  const userBDepositAmount = 15;
+  const mintAmount = 100n;
+  const userADepositAmount = 60n;
+  const userBDepositAmount = 15n;
 
   beforeEach(async () => {
     [userA, userB, rollupProvider] = await ethers.getSigners();
@@ -85,16 +85,10 @@ describe('rollup_processor: multi assets', () => {
     const assetBId = 2;
     const { proofData, signatures } = await createRollupProof(
       rollupProvider,
-      await createTwoDepositsProof(
-        userADepositAmount,
-        userAAddress,
-        userA,
-        assetAId,
-        userBDepositAmount,
-        userBAddress,
-        userB,
-        assetBId,
-      ),
+      mergeInnerProofs([
+        await createDepositProof(userADepositAmount, userAAddress, userA, assetAId),
+        await createDepositProof(userBDepositAmount, userBAddress, userB, assetBId),
+      ]),
     );
 
     await erc20A.approve(rollupProcessor.address, userADepositAmount);
@@ -144,7 +138,7 @@ describe('rollup_processor: multi assets', () => {
 
     // withdraw funds to userB - this is not expected to perform a transfer (as the ERC20 is faulty)
     // so we don't expect the withdraw funds to be transferred, and expect an error event emission
-    const withdrawAmount = 5;
+    const withdrawAmount = 5n;
     const { proofData: withdrawProofData } = await createRollupProof(
       rollupProvider,
       await createWithdrawProof(withdrawAmount, userBAddress, faultyERC20Id),

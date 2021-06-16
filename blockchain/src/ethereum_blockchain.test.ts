@@ -19,6 +19,7 @@ describe('ethereum_blockchain', () => {
     rollupSize: 2,
     rollupProofData: Buffer.alloc(0),
     viewingKeysData: Buffer.alloc(0),
+    interactionResult: [],
     gasPrice: BigInt(0),
     gasUsed: 0,
   });
@@ -28,6 +29,7 @@ describe('ethereum_blockchain', () => {
   beforeEach(async () => {
     contracts = {
       getAssets: jest.fn().mockReturnValue([]),
+      getStaticState: jest.fn().mockResolvedValue({ numberOfAssets: 4, numberOfBridgeCalls: 4 }),
       getPerRollupState: jest.fn().mockResolvedValue({ nextRollupId: 0 }),
       getPerBlockState: jest.fn().mockResolvedValue({
         escapeOpen: false,

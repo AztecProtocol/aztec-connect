@@ -3,20 +3,24 @@ import { expect, use } from 'chai';
 import { solidity } from 'ethereum-waffle';
 import { Contract, Signer } from 'ethers';
 import { ethers } from 'hardhat';
+import { solidityFormatSignatures } from '../../src/solidity_format_signatures';
 import {
   createDepositProof,
   createRollupProof,
   createSendProof,
-  createTwoDepositsProof,
   createWithdrawProof,
-  newDataRoot,
-  newDataRootsRoot,
-  newNullifierRoot,
-} from './fixtures/create_mock_proof';
-import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
-import { solidityFormatSignatures } from '../../src/solidity_format_signatures';
+  dataRootRoots,
+  dataRoots,
+  mergeInnerProofs,
+  nullifierRoots,
+} from '../fixtures/create_mock_proof';
+import { setupRollupProcessor } from '../fixtures/setup_rollup_processor';
 
 use(solidity);
+
+const randInt = () => {
+  return Math.floor(Math.random() * 1000);
+};
 
 describe('rollup_processor: core', () => {
   let rollupProcessor: Contract;
@@ -33,9 +37,9 @@ describe('rollup_processor: core', () => {
   let erc20AssetId: number;
   let ethAssetId: number;
 
-  const mintAmount = 100;
-  const depositAmount = 60;
-  const withdrawalAmount = 20;
+  const mintAmount = 100n;
+  const depositAmount = 60n;
+  const withdrawalAmount = 20n;
 
   beforeEach(async () => {
     [userA, userB, rollupProvider] = await ethers.getSigners();
@@ -184,12 +188,12 @@ describe('rollup_processor: core', () => {
 
         await rollupProcessor.escapeHatch(proofData, solidityFormatSignatures(signatures), Buffer.concat(viewingKeys));
 
-        expect(await provider.getBalance(rollupProcessor.address)).to.equal(BigInt(depositAmount));
+        expect(await provider.getBalance(rollupProcessor.address)).to.equal(depositAmount);
       }
 
       // Withdraw
       {
-        const userBalance = BigInt(await provider.getBalance(userAAddress.toString()));
+        const userBalance = BigInt((await provider.getBalance(userAAddress.toString())).toString());
 
         const { proofData, signatures } = await createRollupProof(
           rollupProvider,
@@ -200,10 +204,10 @@ describe('rollup_processor: core', () => {
         );
         await rollupProcessor.escapeHatch(proofData, solidityFormatSignatures(signatures), Buffer.concat(viewingKeys));
 
-        expect(await provider.getBalance(rollupProcessor.address)).to.equal(BigInt(depositAmount - withdrawalAmount));
+        expect(await provider.getBalance(rollupProcessor.address)).to.equal(depositAmount - withdrawalAmount);
 
-        const userBalanceAfterWithdraw = BigInt(await provider.getBalance(userAAddress.toString()));
-        expect(userBalanceAfterWithdraw).to.equal(userBalance + BigInt(withdrawalAmount));
+        const userBalanceAfterWithdraw = BigInt((await provider.getBalance(userAAddress.toString())).toString());
+        expect(userBalanceAfterWithdraw).to.equal(userBalance + withdrawalAmount);
       }
     });
 
@@ -262,7 +266,7 @@ describe('rollup_processor: core', () => {
         await createDepositProof(depositAmount, userAAddress, userA),
       );
       await erc20.approve(rollupProcessor.address, depositAmount);
-      await rollupProcessor.depositPendingFunds(erc20AssetId, depositAmount - 1, userAAddress.toString());
+      await rollupProcessor.depositPendingFunds(erc20AssetId, depositAmount - 1n, userAAddress.toString());
       await expect(
         rollupProcessor.escapeHatch(proofData, solidityFormatSignatures(signatures), Buffer.concat(viewingKeys)),
       ).to.be.revertedWith('Rollup Processor: INSUFFICIENT_DEPOSIT');
@@ -271,31 +275,25 @@ describe('rollup_processor: core', () => {
 
   describe('Multi transaction rollup', async () => {
     it('should process user A deposit tx and user B deposit tx in one rollup', async () => {
-      const initialUserABalance = await erc20.balanceOf(userAAddress.toString());
+      const initialUserABalance = BigInt(await erc20.balanceOf(userAAddress.toString()));
       expect(initialUserABalance).to.equal(mintAmount);
 
-      const initialUserBBalance = await erc20.balanceOf(userBAddress.toString());
+      const initialUserBBalance = BigInt(await erc20.balanceOf(userBAddress.toString()));
       expect(initialUserBBalance).to.equal(mintAmount);
 
-      const initialContractBalance = await erc20.balanceOf(rollupProcessor.address);
-      expect(initialContractBalance).to.equal(0);
+      const initialContractBalance = BigInt(await erc20.balanceOf(rollupProcessor.address));
+      expect(initialContractBalance).to.equal(0n);
 
-      const userBDepositAmount = 15;
+      const userBDepositAmount = 15n;
       const fourViewingKeys = [Buffer.alloc(32, 1), Buffer.alloc(32, 2), Buffer.alloc(32, 3), Buffer.alloc(32, 4)];
 
       // transfer tokens from userA to contract, and then also withdraw those funds to
       const { proofData, signatures } = await createRollupProof(
         rollupProvider,
-        await createTwoDepositsProof(
-          depositAmount,
-          userAAddress,
-          userA,
-          erc20AssetId,
-          userBDepositAmount,
-          userBAddress,
-          userB,
-          erc20AssetId,
-        ),
+        mergeInnerProofs([
+          await createDepositProof(depositAmount, userAAddress, userA, erc20AssetId),
+          await createDepositProof(userBDepositAmount, userBAddress, userB, erc20AssetId),
+        ]),
       );
 
       await erc20.approve(rollupProcessor.address, depositAmount);
@@ -319,9 +317,7 @@ describe('rollup_processor: core', () => {
       expect(postDepositUserBBalance).to.equal(initialUserBBalance - userBDepositAmount);
 
       const postDepositContractBalance = await erc20.balanceOf(rollupProcessor.address);
-      expect(postDepositContractBalance).to.equal(
-        parseInt(initialContractBalance, 10) + depositAmount + userBDepositAmount,
-      );
+      expect(postDepositContractBalance).to.equal(initialContractBalance + depositAmount + userBDepositAmount);
     });
   });
 
@@ -340,9 +336,9 @@ describe('rollup_processor: core', () => {
       const nullRoot = await rollupProcessor.nullRoot();
       const rootRoot = await rollupProcessor.rootRoot();
 
-      expect(dataRoot.slice(2)).to.equal(newDataRoot.toString('hex'));
-      expect(nullRoot.slice(2)).to.equal(newNullifierRoot.toString('hex'));
-      expect(rootRoot.slice(2)).to.equal(newDataRootsRoot.toString('hex'));
+      expect(dataRoot.slice(2)).to.equal(dataRoots[1].toString('hex'));
+      expect(nullRoot.slice(2)).to.equal(nullifierRoots[1].toString('hex'));
+      expect(rootRoot.slice(2)).to.equal(dataRootRoots[1].toString('hex'));
     });
 
     it('should reject for non-sequential rollupId', async () => {
@@ -350,7 +346,7 @@ describe('rollup_processor: core', () => {
         rollupProvider,
         await createDepositProof(depositAmount, userAAddress, userA),
       );
-      proofData.writeUInt32BE(666, 0); // make ID non-sequential
+      proofData.writeUInt32BE(randInt(), 0); // make ID non-sequential
       await expect(
         rollupProcessor.escapeHatch(proofData, solidityFormatSignatures(signatures), Buffer.concat(viewingKeys)),
       ).to.be.revertedWith('Rollup Processor: ID_NOT_SEQUENTIAL');
@@ -361,7 +357,7 @@ describe('rollup_processor: core', () => {
         rollupProvider,
         await createDepositProof(depositAmount, userAAddress, userA),
       );
-      proofData.writeUInt32BE(666, 32 * 2); // malform data start index
+      proofData.writeUInt32BE(randInt(), 32 * 2); // malform data start index
       await expect(
         rollupProcessor.escapeHatch(proofData, solidityFormatSignatures(signatures), Buffer.concat(viewingKeys)),
       ).to.be.revertedWith('Rollup Processor: INCORRECT_DATA_START_INDEX');
@@ -372,7 +368,7 @@ describe('rollup_processor: core', () => {
         rollupProvider,
         await createDepositProof(depositAmount, userAAddress, userA),
       );
-      proofData.writeUInt32BE(666, 32 * 3); // malform data start index
+      proofData.writeUInt32BE(randInt(), 32 * 3); // malform data start index
       await expect(
         rollupProcessor.escapeHatch(proofData, solidityFormatSignatures(signatures), Buffer.concat(viewingKeys)),
       ).to.be.revertedWith('Rollup Processor: INCORRECT_DATA_ROOT');
@@ -383,7 +379,7 @@ describe('rollup_processor: core', () => {
         rollupProvider,
         await createDepositProof(depositAmount, userAAddress, userA),
       );
-      proofData.writeUInt32BE(666, 32 * 5); // malform oldNullRoot
+      proofData.writeUInt32BE(randInt(), 32 * 5); // malform oldNullRoot
       await expect(
         rollupProcessor.escapeHatch(proofData, solidityFormatSignatures(signatures), Buffer.concat(viewingKeys)),
       ).to.be.revertedWith('Rollup Processor: INCORRECT_NULL_ROOT');
@@ -394,7 +390,7 @@ describe('rollup_processor: core', () => {
         rollupProvider,
         await createDepositProof(depositAmount, userAAddress, userA),
       );
-      proofData.writeUInt32BE(666, 32 * 7); // malform oldRootRoot
+      proofData.writeUInt32BE(randInt(), 32 * 7); // malform oldRootRoot
       await expect(
         rollupProcessor.escapeHatch(proofData, solidityFormatSignatures(signatures), Buffer.concat(viewingKeys)),
       ).to.be.revertedWith('Rollup Processor: INCORRECT_ROOT_ROOT');
@@ -404,7 +400,7 @@ describe('rollup_processor: core', () => {
   describe('Transactions with fee', () => {
     it('should process a tx with fee and signature', async () => {
       const provider = userA.provider!;
-      const txFee = 10;
+      const txFee = 10n;
       const publicInput = depositAmount + txFee;
       const feeLimit = BigInt(10) ** BigInt(18);
       const prepaidFee = feeLimit;
@@ -435,7 +431,7 @@ describe('rollup_processor: core', () => {
         { feeLimit, feeDistributorAddress },
       );
 
-      const providerInitialBalance = await provider.getBalance(rollupProviderAddress.toString());
+      const providerInitialBalance = BigInt((await provider.getBalance(rollupProviderAddress.toString())).toString());
 
       const tx = await rollupProcessor.processRollup(
         proofData,
@@ -447,19 +443,19 @@ describe('rollup_processor: core', () => {
         feeLimit,
       );
       const receipt = await rollupProvider.provider!.getTransactionReceipt(tx.hash);
-      const gasCost = receipt.gasUsed.mul(tx.gasPrice);
-      const feeRefund = prepaidFee + BigInt(txFee) - BigInt(await feeDistributor.txFeeBalance(ethAssetId));
+      const gasCost = BigInt(receipt.gasUsed.mul(tx.gasPrice).toString());
+      const feeRefund = prepaidFee + txFee - BigInt(await feeDistributor.txFeeBalance(ethAssetId));
 
       expect(await rollupProcessor.getUserPendingDeposit(ethAssetId, userAAddress.toString())).to.equal(0);
       expect(await provider.getBalance(rollupProcessor.address)).to.equal(depositAmount);
       expect(await provider.getBalance(rollupProviderAddress.toString())).to.equal(
-        BigInt(providerInitialBalance) + feeRefund - BigInt(gasCost),
+        providerInitialBalance + feeRefund - gasCost,
       );
     });
 
     it('should allow anyone to top up the fee distributor contract', async () => {
       const provider = userA.provider!;
-      const txFee = 0;
+      const txFee = 0n;
       const publicInput = depositAmount + txFee;
       const feeLimit = BigInt(10) ** BigInt(18);
       const prepaidFee = feeLimit;
@@ -485,7 +481,7 @@ describe('rollup_processor: core', () => {
         { feeLimit, feeDistributorAddress },
       );
 
-      const providerInitialBalance = await provider.getBalance(rollupProviderAddress.toString());
+      const providerInitialBalance = BigInt((await provider.getBalance(rollupProviderAddress.toString())).toString());
 
       const tx = await rollupProcessor.processRollup(
         proofData,
@@ -497,18 +493,18 @@ describe('rollup_processor: core', () => {
         feeLimit,
       );
       const receipt = await rollupProvider.provider!.getTransactionReceipt(tx.hash);
-      const gasCost = receipt.gasUsed.mul(tx.gasPrice);
-      const feeRefund = prepaidFee + BigInt(txFee) - BigInt(await feeDistributor.txFeeBalance(ethAssetId));
+      const gasCost = BigInt(receipt.gasUsed.mul(tx.gasPrice).toString());
+      const feeRefund = prepaidFee + txFee - BigInt(await feeDistributor.txFeeBalance(ethAssetId));
 
       expect(await rollupProcessor.getUserPendingDeposit(ethAssetId, userAAddress.toString())).to.equal(0);
       expect(await provider.getBalance(rollupProcessor.address)).to.equal(depositAmount);
       expect(await provider.getBalance(rollupProviderAddress.toString())).to.equal(
-        BigInt(providerInitialBalance) + feeRefund - BigInt(gasCost),
+        providerInitialBalance + feeRefund - gasCost,
       );
     });
 
     it('should reject a tx if the distributor contract is different than expected', async () => {
-      const txFee = 10;
+      const txFee = 10n;
       const publicInput = depositAmount + txFee;
       const feeLimit = BigInt(10) ** BigInt(18);
       const prepaidFee = feeLimit;
@@ -543,7 +539,7 @@ describe('rollup_processor: core', () => {
     });
 
     it('should reject a tx if it causes more than the fee limit', async () => {
-      const txFee = 10;
+      const txFee = 10n;
       const publicInput = depositAmount + txFee;
       const feeLimit = BigInt(10);
       const prepaidFee = BigInt(10) ** BigInt(18);
@@ -577,7 +573,7 @@ describe('rollup_processor: core', () => {
     });
 
     it('should reject a tx that spends more than the remaining tx fee balance', async () => {
-      const txFee = 10;
+      const txFee = 10n;
       const publicInput = depositAmount + txFee;
       const feeLimit = BigInt(10) ** BigInt(18);
       const prepaidFee = BigInt(10);
@@ -612,7 +608,7 @@ describe('rollup_processor: core', () => {
 
     it('should be able to pay fee with erc20 tokens', async () => {
       const assetId = erc20AssetId;
-      const txFee = 10;
+      const txFee = 10n;
       const publicInput = depositAmount + txFee;
       const feeLimit = BigInt(10) ** BigInt(18);
       const prepaidFee = feeLimit;

@@ -8,6 +8,7 @@ export async function deploy(
   escapeHatchBlockLower: number,
   escapeHatchBlockUpper: number,
   uniswapRouterAddress: string,
+  wethAddress: string,
   multiSigAddr: string,
   signer: Signer,
 ) {
@@ -20,6 +21,7 @@ export async function deploy(
     verifier.address,
     escapeHatchBlockLower,
     escapeHatchBlockUpper,
+    wethAddress,
     ownerAddress,
   );
 

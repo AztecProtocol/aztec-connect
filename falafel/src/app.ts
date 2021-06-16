@@ -20,6 +20,7 @@ const toBlockResponse = (block: Block): BlockServerResponse => ({
   txHash: block.txHash.toString(),
   rollupProofData: block.rollupProofData.toString('hex'),
   viewingKeysData: block.viewingKeysData.toString('hex'),
+  interactionResult: block.interactionResult.map(r => r.toBuffer().toString('hex')),
   created: block.created.toISOString(),
   gasPrice: block.gasPrice.toString(),
 });

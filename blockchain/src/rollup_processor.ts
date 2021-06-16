@@ -4,11 +4,16 @@ import { EthAddress } from 'barretenberg/address';
 import { AssetId } from 'barretenberg/asset';
 import { PermitArgs } from 'barretenberg/blockchain';
 import { Block } from 'barretenberg/block_source';
+import { BridgeId, DefiInteractionNote } from 'barretenberg/client_proofs';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { TxHash } from 'barretenberg/tx_hash';
-import { Contract, ethers, Signer } from 'ethers';
+import { Contract, Signer, utils } from 'ethers';
 import { abi as RollupABI } from './artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
 import { solidityFormatSignatures } from './solidity_format_signatures';
+
+const IDefiBridgeEvent = new utils.Interface([
+  'event DefiBridgeProcessed(uint256 indexed bridgeId, uint256 indexed nonce, uint256 totalInputValue, uint256 totalOutputValueA, uint256 totalOutputValueB, bool result)',
+]);
 
 const fixEthersStackTrace = (err: Error) => {
   err.stack! += new Error().stack;
@@ -19,7 +24,7 @@ export class RollupProcessor {
   private rollupProcessor: Contract;
 
   constructor(private rollupContractAddress: EthAddress, private provider: Web3Provider) {
-    this.rollupProcessor = new ethers.Contract(rollupContractAddress.toString(), RollupABI, this.provider);
+    this.rollupProcessor = new Contract(rollupContractAddress.toString(), RollupABI, this.provider);
   }
 
   get address() {
@@ -28,6 +33,14 @@ export class RollupProcessor {
 
   async feeDistributor() {
     return EthAddress.fromString(await this.rollupProcessor.feeDistributor());
+  }
+
+  async numberOfAssets() {
+    return +(await this.rollupProcessor.numberOfAssets());
+  }
+
+  async numberOfBridgeCalls() {
+    return +(await this.rollupProcessor.numberOfBridgeCalls());
   }
 
   async nextRollupId() {
@@ -50,6 +63,10 @@ export class RollupProcessor {
     return Buffer.from((await this.rollupProcessor.rootRoot()).slice(2), 'hex');
   }
 
+  async defiInteractionHash() {
+    return Buffer.from((await this.rollupProcessor.defiInteractionHash()).slice(2), 'hex');
+  }
+
   async totalDeposited() {
     return ((await this.rollupProcessor.getTotalDeposited()) as string[]).map(v => BigInt(v));
   }
@@ -64,6 +81,10 @@ export class RollupProcessor {
 
   async totalPendingDeposit() {
     return ((await this.rollupProcessor.getTotalPendingDeposit()) as string[]).map(v => BigInt(v));
+  }
+
+  async weth() {
+    return EthAddress.fromString(await this.rollupProcessor.weth());
   }
 
   async getSupportedAssets() {
@@ -176,16 +197,51 @@ export class RollupProcessor {
     }
     const filter = this.rollupProcessor.filters.RollupProcessed();
     const rollupEvents = await this.rollupProcessor.queryFilter(filter, rollupEvent.blockNumber);
+    if (!rollupEvents.length) {
+      return [];
+    }
     const txs = (await Promise.all(rollupEvents.map(event => event.getTransaction()))).filter(
       tx => tx.confirmations >= minConfirmations,
     );
     const receipts = await Promise.all(txs.map(tx => this.provider.getTransactionReceipt(tx.hash)));
     const blocks = await Promise.all(txs.map(tx => this.provider.getBlock(tx.blockNumber!)));
-    return txs.map((tx, i) => this.decodeBlock({ ...tx, timestamp: blocks[i].timestamp }, receipts[0]));
+    const interactionResultMap = await this.getDefiBridgeEvents(rollupEvent.blockNumber);
+    return txs.map((tx, i) =>
+      this.decodeBlock({ ...tx, timestamp: blocks[i].timestamp }, receipts[0], interactionResultMap[tx.blockNumber!]),
+    );
   }
 
-  private decodeBlock(tx: TransactionResponse, receipt: TransactionReceipt): Block {
-    const rollupAbi = new ethers.utils.Interface(RollupABI);
+  private async getDefiBridgeEvents(fromBlock: number) {
+    const filter = this.rollupProcessor.filters.DefiBridgeProcessed();
+    const defiBridgeEvents = await this.rollupProcessor.queryFilter(filter, fromBlock);
+    const interactionResultMap: { [blockNumber: number]: DefiInteractionNote[] } = {};
+    defiBridgeEvents.forEach((log: { blockNumber: number; topics: string[]; data: string }) => {
+      const {
+        args: { bridgeId, nonce, totalInputValue, totalOutputValueA, totalOutputValueB, result },
+      } = IDefiBridgeEvent.parseLog(log);
+      if (!interactionResultMap[log.blockNumber]) {
+        interactionResultMap[log.blockNumber] = [];
+      }
+      interactionResultMap[log.blockNumber].push(
+        new DefiInteractionNote(
+          BridgeId.fromBigInt(BigInt(bridgeId)),
+          nonce,
+          BigInt(totalInputValue),
+          BigInt(totalOutputValueA),
+          BigInt(totalOutputValueB),
+          result,
+        ),
+      );
+    });
+    return interactionResultMap;
+  }
+
+  private decodeBlock(
+    tx: TransactionResponse,
+    receipt: TransactionReceipt,
+    interactionResult: DefiInteractionNote[],
+  ): Block {
+    const rollupAbi = new utils.Interface(RollupABI);
     const result = rollupAbi.parseTransaction({ data: tx.data });
     const rollupProofData = Buffer.from(result.args.proofData.slice(2), 'hex');
     const viewingKeysData = Buffer.from(result.args.viewingKeys.slice(2), 'hex');
@@ -195,6 +251,7 @@ export class RollupProcessor {
       txHash: TxHash.fromString(tx.hash),
       rollupProofData,
       viewingKeysData,
+      interactionResult,
       rollupId: RollupProofData.getRollupIdFromBuffer(rollupProofData),
       rollupSize: RollupProofData.getRollupSizeFromBuffer(rollupProofData),
       gasPrice: BigInt(tx.gasPrice.toString()),

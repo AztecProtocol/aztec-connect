@@ -19,6 +19,6 @@ describe('defi interaction note', () => {
   it('hash an array of empty interaction note', () => {
     const notes = [...Array(4)].map(() => DefiInteractionNote.EMPTY);
     const hash = packInteractionNotes(notes);
-    expect(hash).toEqual(Buffer.from('ef115a0e0c15cdc41958ca46b5b14b456115f4baec5e3ca68599d2a8f435e3b8', 'hex'));
+    expect(hash).toEqual(Buffer.from('0f115a0e0c15cdc41958ca46b5b14b456115f4baec5e3ca68599d2a8f435e3b8', 'hex'));
   });
 });

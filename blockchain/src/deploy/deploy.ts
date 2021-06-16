@@ -20,6 +20,12 @@ export async function deploy(
   initialTokenSupply?: bigint,
   initialEthSupply?: bigint,
 ) {
+  const uniswapRouter = uniswapRouterAddress
+    ? new Contract(uniswapRouterAddress, UniswapV2Router02Json.abi, signer)
+    : await deployUniswap(signer);
+  await uniswapRouter.deployed();
+  const weth = await uniswapRouter.WETH();
+
   const verifier = await deployVerifier(signer);
   console.error('Deploying RollupProcessor...');
   const rollupFactory = new ContractFactory(RollupProcessor.abi, RollupProcessor.bytecode, signer);
@@ -30,17 +36,13 @@ export async function deploy(
     verifier.address,
     escapeHatchBlockLower,
     escapeHatchBlockUpper,
+    weth,
     ownerAddress,
   );
 
   console.error(`Awaiting deployment...`);
   await rollup.deployed();
   console.error(`Rollup contract address: ${rollup.address}`);
-
-  const uniswapRouter = uniswapRouterAddress
-    ? new Contract(uniswapRouterAddress, UniswapV2Router02Json.abi, signer)
-    : await deployUniswap(signer);
-  await uniswapRouter.deployed();
 
   const feeDistributor = feeDistributorAddress
     ? new Contract(feeDistributorAddress, FeeDistributor.abi, signer)

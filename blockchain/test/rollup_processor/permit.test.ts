@@ -1,13 +1,13 @@
+import { EthAddress } from 'barretenberg/address';
+import { AssetId } from 'barretenberg/asset';
 import { expect, use } from 'chai';
+import { randomBytes } from 'crypto';
 import { solidity } from 'ethereum-waffle';
 import { Contract, Signer, Wallet } from 'ethers';
 import { ethers } from 'hardhat';
-import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
-import { signPermit, createLowLevelPermitSig } from './fixtures/create_permit_signature';
-import { EthAddress } from 'barretenberg/address';
-import { randomBytes } from 'crypto';
-import { AssetId } from 'barretenberg/asset';
 import { createPermitData } from '../../src/create_permit_data';
+import { createLowLevelPermitSig, signPermit } from '../fixtures/create_permit_signature';
+import { setupRollupProcessor } from '../fixtures/setup_rollup_processor';
 
 use(solidity);
 

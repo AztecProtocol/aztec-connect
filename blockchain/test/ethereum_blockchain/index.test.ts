@@ -1,14 +1,17 @@
 import { EthAddress } from 'barretenberg/address';
 import { AssetId } from 'barretenberg/asset';
+import { Blockchain } from 'barretenberg/blockchain';
+import { BridgeId, DefiInteractionNote, packInteractionNotes } from 'barretenberg/client_proofs';
 import { RollupProofData } from 'barretenberg/rollup_proof';
+import { toBigIntBE } from 'bigint-buffer';
 import { expect, use } from 'chai';
 import { randomBytes } from 'crypto';
 import { solidity } from 'ethereum-waffle';
 import { Contract, Signer, Wallet } from 'ethers';
 import { ethers, network } from 'hardhat';
 import sinon from 'sinon';
-import { Blockchain } from 'barretenberg/blockchain';
 import { ClientEthereumBlockchain } from '../../src';
+import { createPermitData } from '../../src/create_permit_data';
 import { EthereumBlockchain } from '../../src/ethereum_blockchain';
 import { EthersAdapter, WalletProvider } from '../../src/provider';
 import {
@@ -16,11 +19,12 @@ import {
   createRollupProof,
   createSendProof,
   createWithdrawProof,
-} from '../rollup_processor/fixtures/create_mock_proof';
-import { createLowLevelPermitSig, signPermit } from '../rollup_processor/fixtures/create_permit_signature';
-import { setupRollupProcessor } from '../rollup_processor/fixtures/setup_rollup_processor';
-import { createPermitData } from '../../src/create_permit_data';
-import { setupPriceFeeds } from './setup_price_feeds';
+  DefiInteractionData,
+} from '../fixtures/create_mock_proof';
+import { createLowLevelPermitSig, signPermit } from '../fixtures/create_permit_signature';
+import { DefiBridge, deployMockDefiBridge } from '../fixtures/setup_defi_bridges';
+import { setupPriceFeeds } from '../fixtures/setup_price_feeds';
+import { setupRollupProcessor } from '../fixtures/setup_rollup_processor';
 
 use(solidity);
 
@@ -42,6 +46,8 @@ describe('ethereum_blockchain', () => {
   let rollupProviderAddress: EthAddress;
   let feeDistributorAddress: EthAddress;
   let priceFeedContracts: Contract[];
+  let assetAddresses: EthAddress[];
+  let uniswapBridges: { [key: number]: DefiBridge }[];
   let userA: Signer;
   let userB: Signer;
   let userAAddress: EthAddress;
@@ -51,9 +57,9 @@ describe('ethereum_blockchain', () => {
   let erc20AssetId: AssetId;
   let ethAssetId: AssetId;
 
-  const mintAmount = 100;
-  const depositAmount = 30;
-  const withdrawalAmount = 10;
+  const mintAmount = 100n;
+  const depositAmount = 30n;
+  const withdrawalAmount = 10n;
   const permitAssetId = 2;
   const initialPrices = [100n, 250n, 360n];
   let waitOnBlockProcessed: any;
@@ -109,11 +115,16 @@ describe('ethereum_blockchain', () => {
 
     userAAddress = EthAddress.fromString(await userA.getAddress());
     userBAddress = EthAddress.fromString(await userB.getAddress());
-    ({ erc20, rollupProcessor, feeDistributor, viewingKeys, erc20AssetId, ethAssetId } = await setupRollupProcessor(
-      rollupProvider,
-      [userA, userB],
-      mintAmount,
-    ));
+    ({
+      erc20,
+      rollupProcessor,
+      feeDistributor,
+      assetAddresses,
+      uniswapBridges,
+      viewingKeys,
+      erc20AssetId,
+      ethAssetId,
+    } = await setupRollupProcessor(rollupProvider, [userA, userB], mintAmount));
     erc20UserA = erc20.connect(userA);
     feeDistributorAddress = EthAddress.fromString(feeDistributor.address);
 
@@ -147,9 +158,25 @@ describe('ethereum_blockchain', () => {
   });
 
   it('should get status', async () => {
-    const { rollupContractAddress, assets } = await ethereumBlockchain.getBlockchainStatus();
-    expect(rollupContractAddress.toString().length).to.be.greaterThan(0);
-    expect(assets.length).to.be.greaterThan(0);
+    const status = await ethereumBlockchain.getBlockchainStatus();
+    expect(status).to.deep.include({
+      rollupContractAddress: EthAddress.fromString(rollupProcessor.address),
+      feeDistributorContractAddress: feeDistributorAddress,
+      numberOfAssets: 4,
+      numberOfBridgeCalls: 4,
+      nextRollupId: 0,
+      dataSize: 0,
+      dataRoot: Buffer.from('2708a627d38d74d478f645ec3b4e91afa325331acf1acebe9077891146b75e39', 'hex'),
+      nullRoot: Buffer.from('2694dbe3c71a25d92213422d392479e7b8ef437add81e1e17244462e6edca9b1', 'hex'),
+      rootRoot: Buffer.from('2d264e93dc455751a721aead9dba9ee2a9fef5460921aeede73f63f6210e6851', 'hex'),
+      defiInteractionHash: Buffer.from('0f115a0e0c15cdc41958ca46b5b14b456115f4baec5e3ca68599d2a8f435e3b8', 'hex'),
+      totalDeposited: [0n, 0n],
+      totalWithdrawn: [0n, 0n],
+      totalPendingDeposit: [0n, 0n],
+      totalFees: [0n, 0n],
+      feeDistributorBalance: [0n, 0n],
+    });
+    expect(status.assets.length).to.equals(2);
   });
 
   it('should set new supported asset', async () => {
@@ -171,14 +198,14 @@ describe('ethereum_blockchain', () => {
   });
 
   it('should get user pending deposit', async () => {
-    expect(await ethereumBlockchain.getUserPendingDeposit(erc20AssetId, userAAddress)).to.equal(BigInt(0));
+    expect(await ethereumBlockchain.getUserPendingDeposit(erc20AssetId, userAAddress)).to.equal(0n);
 
-    const amount = BigInt(50);
+    const amount = 50n;
     await erc20UserA.approve(rollupProcessor.address, amount);
     await clientBlockchain.depositPendingFunds(erc20AssetId, amount, userAAddress);
     expect(await ethereumBlockchain.getUserPendingDeposit(erc20AssetId, userAAddress)).to.equal(amount);
 
-    const amount2 = BigInt(30);
+    const amount2 = 30n;
     await erc20UserA.approve(rollupProcessor.address, amount2);
     await clientBlockchain.depositPendingFunds(erc20AssetId, amount2, userAAddress);
     expect(await ethereumBlockchain.getUserPendingDeposit(erc20AssetId, userAAddress)).to.equal(amount + amount2);
@@ -195,7 +222,7 @@ describe('ethereum_blockchain', () => {
 
   it('should get user nonce', async () => {
     const nonce = await ethereumBlockchain.getAsset(permitAssetId).getUserNonce(userAAddress);
-    expect(nonce).to.equal(BigInt(0));
+    expect(nonce).to.equal(0n);
   });
 
   it('should deposit funds via permit flow', async () => {
@@ -207,20 +234,20 @@ describe('ethereum_blockchain', () => {
       name,
       localAddress,
       EthAddress.fromString(rollupProcessor.address),
-      BigInt(depositAmount),
+      depositAmount,
       nonce,
       deadline,
       31337,
       EthAddress.fromString(erc20Permit.address),
     );
     const signature = await signPermit(localUser, permitData);
-    const permitArgs = { deadline, approvalAmount: BigInt(depositAmount), signature };
-    await clientBlockchain.depositPendingFunds(permitAssetId, BigInt(depositAmount), localAddress, permitArgs);
+    const permitArgs = { deadline, approvalAmount: depositAmount, signature };
+    await clientBlockchain.depositPendingFunds(permitAssetId, depositAmount, localAddress, permitArgs);
     const deposited = await ethereumBlockchain.getUserPendingDeposit(permitAssetId, localAddress);
-    expect(deposited).to.equal(BigInt(depositAmount));
+    expect(deposited).to.equal(depositAmount);
 
     const newNonce = await ethereumBlockchain.getAsset(permitAssetId).getUserNonce(localAddress);
-    expect(newNonce).to.equal(BigInt(1));
+    expect(newNonce).to.equal(1n);
   });
 
   it('should deposit via low level signature permit flow', async () => {
@@ -233,18 +260,18 @@ describe('ethereum_blockchain', () => {
       localAddress,
       name,
       EthAddress.fromString(rollupProcessor.address),
-      BigInt(depositAmount),
+      depositAmount,
       nonce,
       deadline,
       31337,
       EthAddress.fromString(erc20Permit.address),
     );
 
-    const permitArgs = { deadline, approvalAmount: BigInt(depositAmount), signature: { v, r, s } };
+    const permitArgs = { deadline, approvalAmount: depositAmount, signature: { v, r, s } };
 
-    await clientBlockchain.depositPendingFunds(permitAssetId, BigInt(depositAmount), localAddress, permitArgs);
+    await clientBlockchain.depositPendingFunds(permitAssetId, depositAmount, localAddress, permitArgs);
     const deposited = await ethereumBlockchain.getUserPendingDeposit(permitAssetId, localAddress);
-    expect(deposited).to.equal(BigInt(depositAmount));
+    expect(deposited).to.equal(depositAmount);
 
     const newNonce = await ethereumBlockchain.getAsset(permitAssetId).getUserNonce(localAddress);
     expect(parseInt(newNonce.toString(), 10)).to.equal(1);
@@ -258,7 +285,7 @@ describe('ethereum_blockchain', () => {
 
     await erc20UserA.approve(rollupProcessor.address, depositAmount);
 
-    const depositTxHash = await clientBlockchain.depositPendingFunds(erc20AssetId, BigInt(depositAmount), userAAddress);
+    const depositTxHash = await clientBlockchain.depositPendingFunds(erc20AssetId, depositAmount, userAAddress);
     const depositReceipt = await ethereumBlockchain.getTransactionReceipt(depositTxHash);
     expect(depositReceipt.blockNum).to.be.above(0);
 
@@ -268,9 +295,9 @@ describe('ethereum_blockchain', () => {
   });
 
   it('should process a deposit proof with signature', async () => {
-    const txFee = 10;
+    const txFee = 10n;
     const publicInput = depositAmount + txFee;
-    const feeLimit = BigInt(10) ** BigInt(18);
+    const feeLimit = 10n ** 18n;
     const prepaidFee = feeLimit;
 
     await feeDistributor.deposit(ethAssetId, prepaidFee, { value: prepaidFee });
@@ -284,7 +311,7 @@ describe('ethereum_blockchain', () => {
       },
     );
 
-    const depositTxHash = await clientBlockchain.depositPendingFunds(ethAssetId, BigInt(publicInput), userAAddress);
+    const depositTxHash = await clientBlockchain.depositPendingFunds(ethAssetId, publicInput, userAAddress);
     const depositReceipt = await ethereumBlockchain.getTransactionReceipt(depositTxHash);
     expect(depositReceipt.blockNum).to.be.above(0);
 
@@ -315,7 +342,7 @@ describe('ethereum_blockchain', () => {
       await createDepositProof(depositAmount, userAAddress, userA),
     );
     await erc20UserA.approve(rollupProcessor.address, depositAmount);
-    await clientBlockchain.depositPendingFunds(erc20AssetId, BigInt(depositAmount), userAAddress);
+    await clientBlockchain.depositPendingFunds(erc20AssetId, depositAmount, userAAddress);
     const depositTxHash = await sendEscapeHatchProof(depositProofData, viewingKeys, depositSignatures[0]);
     await waitOnBlockProcessed;
 
@@ -345,7 +372,7 @@ describe('ethereum_blockchain', () => {
     ethereumBlockchain.on('block', spy);
 
     await erc20UserA.approve(rollupProcessor.address, depositAmount);
-    await clientBlockchain.depositPendingFunds(erc20AssetId, BigInt(depositAmount), userAAddress);
+    await clientBlockchain.depositPendingFunds(erc20AssetId, depositAmount, userAAddress);
     await sendEscapeHatchProof(proofData, viewingKeys, signatures[0]);
     await waitOnBlockProcessed;
 
@@ -360,43 +387,77 @@ describe('ethereum_blockchain', () => {
   });
 
   it('should get specified blocks', async () => {
+    const bridge = await deployMockDefiBridge(
+      rollupProvider,
+      1,
+      assetAddresses[ethAssetId],
+      assetAddresses[erc20AssetId],
+      EthAddress.ZERO,
+      0n,
+      2n,
+      0n,
+      true,
+      10n,
+    );
+    const bridgeId = new BridgeId(EthAddress.fromString(bridge.address), 1, ethAssetId, erc20AssetId, 0);
+
+    // Top up rollup processor to transfer eth to defi bridges.
+    await rollupProvider.sendTransaction({ to: rollupProcessor.address, value: 10 });
+
     const { proofData: depositProofData, signatures: depositSignatures } = await createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAAddress, userA),
+      {
+        defiInteractionData: [new DefiInteractionData(bridgeId, 1n), new DefiInteractionData(bridgeId, 1n)],
+      },
     );
     await erc20UserA.approve(rollupProcessor.address, depositAmount);
-    await clientBlockchain.depositPendingFunds(1, BigInt(depositAmount), userAAddress);
+    await clientBlockchain.depositPendingFunds(1, depositAmount, userAAddress);
     await sendEscapeHatchProof(depositProofData, viewingKeys, depositSignatures[0]);
     await waitOnBlockProcessed;
+
+    const interactionResult0 = [...Array(2)].map((_, i) => new DefiInteractionNote(bridgeId, i, 1n, 2n, 0n, true));
+    const previousDefiInteractionHash = packInteractionNotes([
+      ...interactionResult0,
+      ...[...Array(2)].map(() => DefiInteractionNote.EMPTY),
+    ]);
 
     const { proofData: withdrawProofData } = await createRollupProof(
       rollupProvider,
       await createWithdrawProof(withdrawalAmount, userAAddress),
       {
         rollupId: 1,
+        previousDefiInteractionHash,
+        defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
       },
     );
     await erc20UserA.approve(rollupProcessor.address, depositAmount);
     await sendEscapeHatchProof(withdrawProofData, viewingKeys);
     await waitOnBlockProcessed;
+    const interactionResult1 = [new DefiInteractionNote(bridgeId, 4, 1n, 2n, 0n, true)];
 
     const rollupIdStart = 0;
     const blocks = await ethereumBlockchain.getBlocks(rollupIdStart);
 
     const rollup0 = RollupProofData.fromBuffer(blocks[0].rollupProofData, blocks[0].viewingKeysData);
     expect(blocks[0].rollupSize).to.equal(2);
+    expect(blocks[0].interactionResult.length).to.equal(2);
+    expect(blocks[0].interactionResult[0].equals(interactionResult0[0])).to.equal(true);
+    expect(blocks[0].interactionResult[1].equals(interactionResult0[1])).to.equal(true);
     expect(rollup0.rollupId).to.equal(0);
     expect(rollup0.dataStartIndex).to.equal(0);
-    expect(rollup0.innerProofData[0].publicInput.readInt32BE(28)).to.equal(depositAmount);
-    expect(rollup0.innerProofData[0].publicOutput.readInt32BE(28)).to.equal(0);
+    expect(toBigIntBE(rollup0.innerProofData[0].publicInput)).to.equal(depositAmount);
+    expect(toBigIntBE(rollup0.innerProofData[0].publicOutput)).to.equal(0n);
     expect(rollup0.innerProofData[0].inputOwner.toString('hex')).to.equal(userAAddress.toBuffer32().toString('hex'));
 
     const rollup1 = RollupProofData.fromBuffer(blocks[1].rollupProofData, blocks[1].viewingKeysData);
     expect(blocks[1].rollupSize).to.equal(2);
+    expect(blocks[1].interactionResult.length).to.equal(1);
+    expect(blocks[1].interactionResult[0].equals(interactionResult1[0])).to.equal(true);
     expect(rollup1.rollupId).to.equal(1);
     expect(rollup1.dataStartIndex).to.equal(4);
-    expect(rollup1.innerProofData[0].publicInput.readInt32BE(28)).to.equal(0);
-    expect(rollup1.innerProofData[0].publicOutput.readInt32BE(28)).to.equal(withdrawalAmount);
+    expect(toBigIntBE(rollup1.innerProofData[0].publicInput)).to.equal(0n);
+    expect(toBigIntBE(rollup1.innerProofData[0].publicOutput)).to.equal(withdrawalAmount);
     expect(rollup1.innerProofData[0].outputOwner.toString('hex')).to.equal(userAAddress.toBuffer32().toString('hex'));
   });
 
@@ -427,5 +488,28 @@ describe('ethereum_blockchain', () => {
     expect(await ethereumBlockchain.getAssetPrice(0)).to.equal(10n ** 18n);
     expect(await ethereumBlockchain.getAssetPrice(1)).to.equal(250n);
     expect(await ethereumBlockchain.getAssetPrice(2)).to.equal(360n);
+  });
+
+  it('should get bridge id from contract address', async () => {
+    const bridge = uniswapBridges[AssetId.ETH][AssetId.DAI];
+    const bridgeId = await ethereumBlockchain.getBridgeId(EthAddress.fromString(bridge.contract.address));
+    expect(bridgeId).deep.equals(bridge.id);
+  });
+
+  it('should return zero bridge id if contract address does not exist', async () => {
+    const bridgeId = await ethereumBlockchain.getBridgeId(EthAddress.randomAddress());
+    expect(bridgeId).deep.equals(BridgeId.ZERO);
+  });
+
+  it('should return zero bridge id if asset does not defined in rollup processor', async () => {
+    const invalidBridge = await deployMockDefiBridge(
+      rollupProvider,
+      1,
+      assetAddresses[ethAssetId],
+      EthAddress.randomAddress(),
+      EthAddress.randomAddress(),
+    );
+    const bridgeId = await ethereumBlockchain.getBridgeId(EthAddress.fromString(invalidBridge.address));
+    expect(bridgeId).deep.equals(BridgeId.ZERO);
   });
 });

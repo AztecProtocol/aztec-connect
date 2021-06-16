@@ -58,8 +58,8 @@ export class DefiInteractionNote {
   }
 }
 
-export const packInteractionNotes = (notes: DefiInteractionNote[]) =>
-  createHash('sha256')
+export const packInteractionNotes = (notes: DefiInteractionNote[]) => {
+  const hash = createHash('sha256')
     .update(
       Buffer.concat(
         notes.map(note =>
@@ -76,3 +76,7 @@ export const packInteractionNotes = (notes: DefiInteractionNote[]) =>
       ),
     )
     .digest();
+  // Zero the first 4 bits.
+  hash[0] &= 15;
+  return hash;
+};

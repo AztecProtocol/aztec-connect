@@ -3,7 +3,7 @@ import { solidity } from 'ethereum-waffle';
 import { Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import { deployVerifier } from '../../src/deploy/deploy_verifier';
-import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
+import { setupRollupProcessor } from '../fixtures/setup_rollup_processor';
 
 use(solidity);
 

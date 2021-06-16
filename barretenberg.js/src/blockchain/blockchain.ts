@@ -1,10 +1,11 @@
 import { EthAddress } from '../address';
-import { BlockSource } from '../block_source';
 import { AssetId } from '../asset';
+import { BlockSource } from '../block_source';
+import { BridgeId } from '../client_proofs';
 import { TxHash } from '../tx_hash';
+import { Asset } from './asset';
 import { BlockchainStatusSource } from './blockchain_status';
 import { EthereumSignature, EthereumSigner } from './ethereum_signer';
-import { Asset } from './asset';
 import { PriceFeed } from './price_feed';
 
 export interface Receipt {
@@ -64,4 +65,6 @@ export interface Blockchain extends BlockSource, BlockchainStatusSource, Ethereu
   getGasPrice(): Promise<bigint>;
 
   estimateGas(data: Buffer): Promise<number>;
+
+  getBridgeId(address: EthAddress): Promise<BridgeId>;
 }

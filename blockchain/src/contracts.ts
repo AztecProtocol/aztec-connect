@@ -2,8 +2,10 @@ import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from 'barretenberg/address';
 import { AssetId } from 'barretenberg/asset';
 import { Asset, PriceFeed, SendTxOptions, TypedData } from 'barretenberg/blockchain';
+import { BridgeId } from 'barretenberg/client_proofs';
 import { TxHash } from 'barretenberg/tx_hash';
-import { Contract, ethers } from 'ethers';
+import { Contract } from 'ethers';
+import { abi as DefiBridgeABI } from './artifacts/contracts/interfaces/IDefiBridge.sol/IDefiBridge.json';
 import { abi as FeeDistributorABI } from './artifacts/contracts/interfaces/IFeeDistributor.sol/IFeeDistributor.json';
 import { EthAsset, TokenAsset } from './asset';
 import { EthereumProvider } from './ethereum_provider';
@@ -34,7 +36,7 @@ export class Contracts {
 
   public async init() {
     this.feeDistributorContractAddress = await this.rollupProcessor.feeDistributor();
-    this.feeDistributorContract = new ethers.Contract(
+    this.feeDistributorContract = new Contract(
       this.feeDistributorContractAddress.toString(),
       FeeDistributorABI,
       this.provider,
@@ -73,12 +75,21 @@ export class Contracts {
     return [...(await promise), ...padding].slice(0, padding.length);
   }
 
+  public async getStaticState() {
+    return {
+      numberOfAssets: await this.rollupProcessor.numberOfAssets(),
+      numberOfBridgeCalls: await this.rollupProcessor.numberOfBridgeCalls(),
+    };
+  }
+
   public async getPerRollupState() {
     const nextRollupId = await this.rollupProcessor.nextRollupId();
     const dataSize = await this.rollupProcessor.dataSize();
     const dataRoot = await this.rollupProcessor.dataRoot();
     const nullRoot = await this.rollupProcessor.nullRoot();
     const rootRoot = await this.rollupProcessor.rootRoot();
+
+    const defiInteractionHash = await this.rollupProcessor.defiInteractionHash();
 
     const totalDeposited = await this.getAssetValues(this.rollupProcessor.totalDeposited());
     const totalWithdrawn = await this.getAssetValues(this.rollupProcessor.totalWithdrawn());
@@ -95,6 +106,7 @@ export class Contracts {
       nullRoot,
       rootRoot,
       dataSize,
+      defiInteractionHash,
       totalDeposited,
       totalWithdrawn,
       totalFees,
@@ -223,6 +235,35 @@ export class Contracts {
 
   public getGasPriceFeed() {
     return this.gasPriceFeed;
+  }
+
+  public async getBridgeId(address: EthAddress) {
+    let info: { numOutputAssets: number; inputAsset: string; outputAssetA: string; outputAssetB: string };
+    try {
+      const contract = new Contract(address.toString(), DefiBridgeABI, this.provider);
+      info = await contract.getInfo();
+    } catch (e) {
+      throw new Error(`Unknown bridge contract: ${address}.`);
+    }
+
+    const wethAddress = await this.rollupProcessor.weth();
+    const assetAddresses = [
+      wethAddress,
+      ...this.getAssets()
+        .slice(1)
+        .map(a => a.getStaticInfo().address),
+    ];
+    const getAssetIdOrThrow = (assetAddress: string) => {
+      const id = assetAddresses.findIndex(a => a.equals(EthAddress.fromString(assetAddress)));
+      if (id < 0) {
+        throw new Error(`Unknown asset address: ${assetAddress}.`);
+      }
+      return id;
+    };
+    const inputAssetId = getAssetIdOrThrow(info.inputAsset);
+    const outputAssetIdA = getAssetIdOrThrow(info.outputAssetA);
+    const outputAssetIdB = info.numOutputAssets > 1 ? getAssetIdOrThrow(info.outputAssetB) : 0;
+    return new BridgeId(address, info.numOutputAssets, inputAssetId, outputAssetIdA, outputAssetIdB);
   }
 
   public async getUserProofApprovalStatus(address: EthAddress, proofHash: string) {

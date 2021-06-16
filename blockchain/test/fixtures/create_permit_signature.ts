@@ -1,8 +1,7 @@
-import { Wallet } from 'ethers';
-import { utils } from 'ethers';
 import { EthAddress } from 'barretenberg/address';
-import { ecsign } from 'ethereumjs-util';
 import { TypedData } from 'barretenberg/blockchain';
+import { ecsign } from 'ethereumjs-util';
+import { utils, Wallet } from 'ethers';
 
 const { keccak256, defaultAbiCoder, toUtf8Bytes, solidityPack } = utils;
 

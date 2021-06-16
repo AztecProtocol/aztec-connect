@@ -6,7 +6,7 @@ import { Contract, Wallet } from 'ethers';
 import { ethers, network } from 'hardhat';
 import { TokenPriceFeed } from '../../src/price_feed';
 import { EthersAdapter, WalletProvider } from '../../src/provider';
-import { setupPriceFeeds } from './setup_price_feeds';
+import { setupPriceFeeds } from '../fixtures/setup_price_feeds';
 
 describe('price_feed', () => {
   let priceFeedContract: Contract;

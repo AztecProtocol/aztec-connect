@@ -204,6 +204,7 @@ describe('user state', () => {
     rollupSize: 1,
     rollupProofData: rollupProofData.toBuffer(),
     viewingKeysData: rollupProofData.getViewingKeyData(),
+    interactionResult: [],
     created,
     gasUsed: 0,
     gasPrice: 0n,

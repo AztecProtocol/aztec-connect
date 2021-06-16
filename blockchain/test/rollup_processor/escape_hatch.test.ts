@@ -3,15 +3,15 @@ import { expect, use } from 'chai';
 import { solidity } from 'ethereum-waffle';
 import { Contract, Signer } from 'ethers';
 import { ethers } from 'hardhat';
-import { advanceBlocks, blocksToAdvance } from './fixtures/advance_block';
+import { solidityFormatSignatures } from '../../src/solidity_format_signatures';
+import { advanceBlocks, blocksToAdvance } from '../fixtures/advance_block';
 import {
   createDepositProof,
   createEscapeHatchProof,
   createRollupProof,
   createWithdrawProof,
-} from './fixtures/create_mock_proof';
-import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
-import { solidityFormatSignatures } from '../../src/solidity_format_signatures';
+} from '../fixtures/create_mock_proof';
+import { setupRollupProcessor } from '../fixtures/setup_rollup_processor';
 
 use(solidity);
 
@@ -28,9 +28,9 @@ describe('rollup_processor: escape hatch', () => {
   let erc20AssetId!: number;
 
   const provider = ethers.provider;
-  const mintAmount = 100;
-  const depositAmount = 60;
-  const withdrawalAmount = 20;
+  const mintAmount = 100n;
+  const depositAmount = 60n;
+  const withdrawalAmount = 20n;
 
   beforeEach(async () => {
     [userA, userB, rollupProvider] = await ethers.getSigners();

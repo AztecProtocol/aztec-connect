@@ -21,11 +21,14 @@ export interface BlockchainStatus {
   chainId: number;
   rollupContractAddress: EthAddress;
   feeDistributorContractAddress: EthAddress;
+  numberOfAssets: number;
+  numberOfBridgeCalls: number;
   nextRollupId: number;
   dataSize: number;
   dataRoot: Buffer;
   nullRoot: Buffer;
   rootRoot: Buffer;
+  defiInteractionHash: Buffer;
   escapeOpen: boolean;
   numEscapeBlocksRemaining: number;
   totalDeposited: bigint[];
@@ -40,11 +43,14 @@ export interface BlockchainStatusJson {
   chainId: number;
   rollupContractAddress: string;
   feeDistributorContractAddress: string;
+  numberOfAssets: number;
+  numberOfBridgeCalls: number;
   nextRollupId: number;
   dataSize: number;
   dataRoot: string;
   nullRoot: string;
   rootRoot: string;
+  defiInteractionHash: string;
   escapeOpen: boolean;
   numEscapeBlocksRemaining: number;
   totalDeposited: string[];
@@ -70,6 +76,7 @@ export function blockchainStatusToJson(status: BlockchainStatus): BlockchainStat
     dataRoot: status.dataRoot.toString('hex'),
     nullRoot: status.nullRoot.toString('hex'),
     rootRoot: status.rootRoot.toString('hex'),
+    defiInteractionHash: status.defiInteractionHash.toString('hex'),
     totalDeposited: status.totalDeposited.map(f => f.toString()),
     totalWithdrawn: status.totalWithdrawn.map(f => f.toString()),
     totalPendingDeposit: status.totalPendingDeposit.map(f => f.toString()),
@@ -90,6 +97,7 @@ export function blockchainStatusFromJson(json: BlockchainStatusJson): Blockchain
     dataRoot: Buffer.from(json.dataRoot, 'hex'),
     nullRoot: Buffer.from(json.nullRoot, 'hex'),
     rootRoot: Buffer.from(json.rootRoot, 'hex'),
+    defiInteractionHash: Buffer.from(json.defiInteractionHash, 'hex'),
     totalDeposited: json.totalDeposited.map(f => BigInt(f)),
     totalWithdrawn: json.totalWithdrawn.map(f => BigInt(f)),
     totalPendingDeposit: json.totalPendingDeposit.map(f => BigInt(f)),

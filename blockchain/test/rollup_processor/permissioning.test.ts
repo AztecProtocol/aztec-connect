@@ -1,16 +1,15 @@
 import { EthAddress } from 'barretenberg/address';
+import { RollupProofData } from 'barretenberg/rollup_proof';
 import { expect, use } from 'chai';
 import { randomBytes } from 'crypto';
 import { solidity } from 'ethereum-waffle';
-import { Contract, Signer } from 'ethers';
+import { Contract, Signer, utils } from 'ethers';
 import { ethers } from 'hardhat';
-import { utils } from 'ethers';
-import { RollupProofData } from 'barretenberg/rollup_proof';
-import { createDepositProof, createRollupProof } from './fixtures/create_mock_proof';
-import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
-import { ethSign } from './fixtures/eth_sign';
-import { solidityFormatSignatures } from '../../src/solidity_format_signatures';
 import { hashData } from '../../src/hash_data';
+import { solidityFormatSignatures } from '../../src/solidity_format_signatures';
+import { createDepositProof, createRollupProof, createSigData } from '../fixtures/create_mock_proof';
+import { ethSign } from '../fixtures/eth_sign';
+import { setupRollupProcessor } from '../fixtures/setup_rollup_processor';
 
 use(solidity);
 
@@ -27,8 +26,8 @@ describe('rollup_processor: permissioning', () => {
   let ethAssetId!: number;
   let erc20AssetId!: number;
 
-  const mintAmount = 100;
-  const depositAmount = 60;
+  const mintAmount = 100n;
+  const depositAmount = 60n;
   const soliditySignatureLength = 32 * 3;
 
   beforeEach(async () => {
@@ -143,7 +142,7 @@ describe('rollup_processor: permissioning', () => {
 
   it('should reject a rollup with invalid signature', async () => {
     const feeLimit = BigInt(10) ** BigInt(18);
-    const { proofData, signatures, publicInputs } = await createRollupProof(
+    const { proofData, signatures } = await createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAAddress, userA),
       {
@@ -152,9 +151,10 @@ describe('rollup_processor: permissioning', () => {
       },
     );
 
-    const fakeReceiver = randomBytes(20);
-    const invalidSignature = (await ethSign(rollupProvider, Buffer.concat([...publicInputs, fakeReceiver]))).signature;
+    const fakeReceiver = EthAddress.randomAddress();
     const providerAddress = await rollupProvider.getAddress();
+    const sigData = createSigData(proofData, EthAddress.fromString(providerAddress), feeLimit, fakeReceiver);
+    const invalidSignature = (await ethSign(rollupProvider, sigData)).signature;
 
     await expect(
       rollupProcessor.processRollup(
@@ -171,7 +171,7 @@ describe('rollup_processor: permissioning', () => {
 
   it('should all proof appoval queries', async () => {
     const proof = await createDepositProof(depositAmount, userAAddress, userA);
-    const proofHash = hashData(proof.innerProofs[0]);
+    const proofHash = hashData(proof.innerProofs[0].toBuffer());
     const approval = await rollupProcessor.depositProofApprovals(userA.getAddress(), proofHash);
     expect(Boolean(approval)).to.be.false;
     await rollupProcessor.connect(userA).approveProof(proofHash);
@@ -181,7 +181,7 @@ describe('rollup_processor: permissioning', () => {
 
   it('should reject a rollup with signature not signed by the provider', async () => {
     const feeLimit = BigInt(10) ** BigInt(18);
-    const { proofData, signatures, publicInputs } = await createRollupProof(
+    const { proofData, signatures, sigData } = await createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAAddress, userA),
       {
@@ -191,9 +191,7 @@ describe('rollup_processor: permissioning', () => {
     );
 
     const feeReceiver = userAAddress.toString();
-    const providerSignature = (
-      await ethSign(userA, Buffer.concat([...publicInputs, Buffer.from(feeReceiver.slice(2), 'hex')]))
-    ).signature;
+    const providerSignature = (await ethSign(userA, sigData)).signature;
 
     const rollupProcessorUserA = rollupProcessor.connect(userA);
     const rollupProviderAddress = await rollupProvider.getAddress();
@@ -213,7 +211,7 @@ describe('rollup_processor: permissioning', () => {
 
   it('should reject a rollup from an unknown provider', async () => {
     const feeLimit = BigInt(10) ** BigInt(18);
-    const { proofData, signatures, publicInputs } = await createRollupProof(
+    const { proofData, signatures } = await createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAAddress, userA),
       {
@@ -222,10 +220,10 @@ describe('rollup_processor: permissioning', () => {
       },
     );
 
-    const feeReceiver = userAAddress.toString();
-    const providerSignature = (
-      await ethSign(userA, Buffer.concat([...publicInputs, Buffer.from(feeReceiver.slice(2), 'hex')]))
-    ).signature;
+    const providerAddress = userAAddress;
+    const feeReceiver = userAAddress;
+    const sigData = createSigData(proofData, providerAddress, feeLimit, feeReceiver);
+    const providerSignature = (await ethSign(userA, sigData)).signature;
 
     const rollupProcessorUserA = rollupProcessor.connect(userA);
     const signerAddress = await userA.getAddress();
@@ -237,7 +235,7 @@ describe('rollup_processor: permissioning', () => {
         Buffer.concat(viewingKeys),
         providerSignature,
         signerAddress,
-        feeReceiver,
+        feeReceiver.toString(),
         feeLimit,
       ),
     ).to.be.revertedWith('Rollup Processor: UNKNOWN_PROVIDER');

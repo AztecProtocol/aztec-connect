@@ -1,3 +1,4 @@
+import { DefiInteractionNote } from '../client_proofs';
 import { TxHash } from '../tx_hash';
 
 export interface Block {
@@ -7,6 +8,7 @@ export interface Block {
   rollupSize: number;
   rollupProofData: Buffer;
   viewingKeysData: Buffer;
+  interactionResult: DefiInteractionNote[];
   gasUsed: number;
   gasPrice: bigint;
 }

@@ -46,7 +46,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     uint256 public constant txPubInputLength = txNumPubInputs * 32; // public inputs length for of each inner proof tx
     uint256 public constant rollupPubInputLength = rollupNumPubInputs * 32;
     uint256 public constant ethAssetId = 0;
-    address public immutable weth = address(0); // TODO: set from constructor
+    address public immutable weth;
     uint256 public immutable escapeBlockLowerBound;
     uint256 public immutable escapeBlockUpperBound;
 
@@ -98,9 +98,11 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         address _verifierAddress,
         uint256 _escapeBlockLowerBound,
         uint256 _escapeBlockUpperBound,
+        address _weth,
         address _contractOwner
     ) public {
         verifier = IVerifier(_verifierAddress);
+        weth = _weth;
         escapeBlockLowerBound = _escapeBlockLowerBound;
         escapeBlockUpperBound = _escapeBlockUpperBound;
         rollupProviders[msg.sender] = true;

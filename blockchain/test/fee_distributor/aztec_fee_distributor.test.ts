@@ -1,9 +1,9 @@
 import { expect } from 'chai';
 import { Contract, Signer } from 'ethers';
 import { ethers } from 'hardhat';
-import { createAssets } from './fixtures/assets';
-import { createFeeClaimer, setupFeeDistributor, TokenAsset } from './fixtures/setup_fee_distributor';
-import { Pair } from './fixtures/setup_uniswap';
+import { createAssets, createWeth, TokenAsset } from '../fixtures/assets';
+import { createFeeClaimer, setupFeeDistributor } from '../fixtures/setup_fee_distributor';
+import { Pair, setupUniswap } from '../fixtures/setup_uniswap';
 
 describe('aztec_fee_distributor', () => {
   let feeDistributor: Contract;
@@ -32,9 +32,11 @@ describe('aztec_fee_distributor', () => {
   beforeEach(async () => {
     const [publisher, ...signers] = await ethers.getSigners();
     users = signers.slice(0, 2);
+    const weth = await createWeth(publisher);
     const assets = await createAssets(publisher, users, initialUserTokenBalance);
-    ({ feeClaimer, tokenAssets } = await createFeeClaimer(publisher, assets));
-    ({ feeDistributor, router, createPair } = await setupFeeDistributor(publisher, feeClaimer));
+    ({ feeClaimer, tokenAssets } = await createFeeClaimer(publisher, weth, assets));
+    ({ router, createPair } = await setupUniswap(publisher, weth));
+    ({ feeDistributor } = await setupFeeDistributor(publisher, feeClaimer, router));
     pairs = await Promise.all(tokenAssets.map(a => createPair(a, initialTotalSupply)));
   });
 
@@ -139,7 +141,7 @@ describe('aztec_fee_distributor', () => {
 
       expect(await feeDistributor.txFeeBalance(ethAssetId)).to.equal(initialFeeDistributorBalance);
 
-      const initialUserBalance = BigInt(await user.getBalance());
+      const initialUserBalance = BigInt((await user.getBalance()).toString());
       const gasUsed = 123n;
       const expected = (gasUsed + reimburseConstant) * gasPrice;
 

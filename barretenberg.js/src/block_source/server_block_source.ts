@@ -1,5 +1,6 @@
 import { BlockSource, Block } from '.';
 import { EventEmitter } from 'events';
+import { DefiInteractionNote } from '../client_proofs';
 import { fetch } from '../iso_fetch';
 import { TxHash } from '../tx_hash';
 // import createDebug from 'debug';
@@ -12,6 +13,7 @@ export interface BlockServerResponse {
   rollupSize: number;
   rollupProofData: string;
   viewingKeysData: string;
+  interactionResult: string[];
   gasPrice: string;
   gasUsed: number;
 }
@@ -28,6 +30,7 @@ const toBlock = (block: BlockServerResponse): Block => ({
   txHash: TxHash.fromString(block.txHash),
   rollupProofData: Buffer.from(block.rollupProofData, 'hex'),
   viewingKeysData: Buffer.from(block.viewingKeysData, 'hex'),
+  interactionResult: block.interactionResult.map(r => DefiInteractionNote.fromBuffer(Buffer.from(r, 'hex'))),
   created: new Date(block.created),
   gasPrice: BigInt(block.gasPrice),
 });

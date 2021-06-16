@@ -1,6 +1,7 @@
 import { EthereumProvider } from './ethereum_provider';
 import { EthAddress } from 'barretenberg/address';
 import { AssetId } from 'barretenberg/asset';
+import { BridgeId } from 'barretenberg/client_proofs';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { Blockchain, BlockchainStatus, Receipt, SendTxOptions, TypedData } from 'barretenberg/blockchain';
@@ -127,11 +128,11 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     await this.updatePerRollupState();
     await this.updatePerBlockState();
     const { chainId } = await this.contracts.getNetwork();
-
+    const staticState = await this.contracts.getStaticState();
     const assets = this.contracts.getAssets().map(a => a.getStaticInfo());
-
     this.status = {
       ...this.status,
+      ...staticState,
       chainId,
       rollupContractAddress: this.contracts.getRollupContractAddress(),
       feeDistributorContractAddress: this.contracts.getFeeDistributorContractAddress(),
@@ -280,6 +281,15 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
 
   public getGasPriceFeed() {
     return this.contracts.getGasPriceFeed();
+  }
+
+  public async getBridgeId(address: EthAddress) {
+    try {
+      return await this.contracts.getBridgeId(address);
+    } catch (e) {
+      this.debug(e);
+      return BridgeId.ZERO;
+    }
   }
 
   public async isContract(address: EthAddress) {
