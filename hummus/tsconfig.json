@@ -5,7 +5,7 @@
     "lib": ["es2020", "dom"],
     "moduleResolution": "node",
     "jsx": "react",
-    "outDir": "dest",
+    "noEmit": true,
     "strict": true,
     "noImplicitAny": true,
     "allowSyntheticDefaultImports": true,

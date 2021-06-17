@@ -1,4 +1,4 @@
-import { RollupProofData } from 'barretenberg/rollup_proof';
+import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { expect, use } from 'chai';
 import { solidity } from 'ethereum-waffle';
 import { Contract } from 'ethers';

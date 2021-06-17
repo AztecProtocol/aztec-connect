@@ -76,8 +76,8 @@ make -j$(nproc) barretenberg.wasm
 ### Barrentenberg.js
 
 TypeScript wrapper around `barretenberg.wasm`. There is a symlink to the built WASM file at
-`./src/wasm/barretenberg.wasm`. The build directories `dest` and `dest-es` by default will end up with copies of the
-actual artifact. Running `yarn symlink-wasm` replaces them with symlinks. The bootstrap script does this as default.
+`./src/wasm/barretenberg.wasm`. The build directory `dest` will end up with copies of the
+actual artifact. Running `yarn symlink-wasm` replaces it with a symlink. The bootstrap script does this as default.
 
 During development you'll want to run `yarn build:dev` to watch and rebuild both builds as files change.
 

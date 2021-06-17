@@ -117,7 +117,6 @@ library Types {
         bool contains_recursive_proof;
         uint256 recursive_proof_indices;
         G2Point g2_x;
-
         // zeta challenge raised to the power of the circuit size.
         // Not actually part of the verification key, but we put it here to prevent stack depth errors
         uint256 zeta_pow_n;

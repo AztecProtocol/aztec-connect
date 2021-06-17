@@ -1,6 +1,6 @@
-import { EthAddress } from 'barretenberg/address';
-import { AssetId } from 'barretenberg/asset';
-import { PermitArgs, TxType } from 'barretenberg/blockchain';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { AssetId } from '@aztec/barretenberg/asset';
+import { PermitArgs, TxType } from '@aztec/barretenberg/blockchain';
 import { Signer } from '../signer';
 import { AccountId } from '../user';
 import { WalletSdk } from '.';

@@ -5,9 +5,9 @@ import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
 import { randomRollup, randomRollupProof, randomTx } from './fixtures';
 import { RollupDb, TypeOrmRollupDb } from './';
-import { EthAddress } from 'barretenberg/address';
-import { TxHash } from 'barretenberg/tx_hash';
-import { TxType } from 'barretenberg/blockchain';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { TxType } from '@aztec/barretenberg/blockchain';
 import { AccountDao } from '../entity/account';
 
 describe('rollup_db', () => {

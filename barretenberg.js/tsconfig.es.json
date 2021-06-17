@@ -1,8 +1,0 @@
-{
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "module": "es6",
-    "outDir": "dest-es"
-  },
-  "exclude": ["src/**/*.test.ts", "src/**/mock-*.ts", "src/**/fixtures/*"]
-}

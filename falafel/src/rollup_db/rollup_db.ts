@@ -1,6 +1,6 @@
-import { TxType } from 'barretenberg/blockchain';
-import { AccountProofData, ProofData } from 'barretenberg/client_proofs/proof_data';
-import { TxHash } from 'barretenberg/tx_hash';
+import { TxType } from '@aztec/barretenberg/blockchain';
+import { AccountProofData, ProofData } from '@aztec/barretenberg/client_proofs/proof_data';
+import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { toBufferBE } from 'bigint-buffer';
 import { Connection, In, IsNull, MoreThanOrEqual, Not, Repository } from 'typeorm';
 import { AccountDao } from '../entity/account';

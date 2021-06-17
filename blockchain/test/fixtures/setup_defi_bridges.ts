@@ -1,6 +1,6 @@
-import { EthAddress } from 'barretenberg/address';
-import { AssetId } from 'barretenberg/asset';
-import { BridgeId } from 'barretenberg/client_proofs';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { AssetId } from '@aztec/barretenberg/asset';
+import { BridgeId } from '@aztec/barretenberg/client_proofs';
 import { Contract, Signer } from 'ethers';
 import { ethers } from 'hardhat';
 import WETH9 from '../../src/contracts/WETH9.json';

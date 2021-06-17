@@ -1,4 +1,4 @@
-import { RollupProofData } from 'barretenberg/rollup_proof';
+import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { Arg, Args, FieldResolver, Int, Query, Resolver, Root } from 'type-graphql';
 import { Inject } from 'typedi';
 import { Repository, Connection } from 'typeorm';

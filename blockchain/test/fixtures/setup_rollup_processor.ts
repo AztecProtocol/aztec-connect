@@ -1,5 +1,5 @@
-import { EthAddress } from 'barretenberg/address';
-import { ViewingKey } from 'barretenberg/viewing_key';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
 import { advanceBlocks, blocksToAdvance } from './advance_block';

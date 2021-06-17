@@ -1,5 +1,5 @@
-import { EthAddress } from 'barretenberg/address';
-import { TypedData } from 'barretenberg/blockchain';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { TypedData } from '@aztec/barretenberg/blockchain';
 import { ecsign } from 'ethereumjs-util';
 import { utils, Wallet } from 'ethers';
 

@@ -1,4 +1,4 @@
-import { EthAddress } from 'barretenberg/address';
+import { EthAddress } from '@aztec/barretenberg/address';
 import { ValueTransformer } from 'typeorm';
 
 export const ethAddressTransformer: ValueTransformer = {

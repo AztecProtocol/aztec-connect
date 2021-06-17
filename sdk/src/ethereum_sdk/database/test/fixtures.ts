@@ -1,4 +1,4 @@
-import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
+import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { DbAccount } from '../database';
 
 export const randomAccount = (): DbAccount => ({

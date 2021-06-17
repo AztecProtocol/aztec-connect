@@ -1,4 +1,4 @@
-import { numToUInt32BE } from 'barretenberg/serialize';
+import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { RootRollup } from './root_rollup';
 import { TxRollup } from './tx_rollup';
 

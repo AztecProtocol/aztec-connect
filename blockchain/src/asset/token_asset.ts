@@ -1,8 +1,8 @@
 import { ContractTransaction } from '@ethersproject/contracts';
 import { Web3Provider } from '@ethersproject/providers';
-import { EthAddress } from 'barretenberg/address';
-import { Asset, BlockchainAsset } from 'barretenberg/blockchain';
-import { TxHash } from 'barretenberg/tx_hash';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { Asset, BlockchainAsset } from '@aztec/barretenberg/blockchain';
+import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { Contract } from 'ethers';
 import { EthereumProvider } from '../provider';
 import { fromBaseUnits, toBaseUnits } from '../units';

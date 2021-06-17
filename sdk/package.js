@@ -1,17 +1,16 @@
-const package = require('./package.json');
 const { writeFileSync, copyFileSync } = require('fs');
 
+copyFileSync('README.md', './dest/README.md');
+
+const package = require('./package.json');
 const { jest, scripts, devDependencies, ...pkg } = package;
 
-package.dependencies.barretenberg = 'file:../../barretenberg.js/dest';
-package.dependencies.blockchain = 'file:../../blockchain/dest';
-package.dependencies.sriracha = 'file:../../sriracha/dest';
+package.dependencies['@aztec/barretenberg'] = 'file:../../barretenberg.js/dest';
+package.dependencies['@aztec/blockchain'] = 'file:../../blockchain/dest';
+package.dependencies['@aztec/sriracha'] = 'file:../../sriracha/dest';
 writeFileSync('./dest/package.json', JSON.stringify(pkg, null, '  '));
 
-package.dependencies.barretenberg = 'file:../../barretenberg.js/dest-es';
-package.dependencies.blockchain = 'file:../../blockchain/dest-es';
-package.dependencies.sriracha = 'file:../../sriracha/dest-es';
-writeFileSync('./dest-es/package.json', JSON.stringify(pkg, null, '  '));
-
-copyFileSync('README.md', './dest/README.md');
-copyFileSync('README.md', './dest-es/README.md');
+package.dependencies['@aztec/barretenberg'] = '^2.0.0';
+package.dependencies['@aztec/blockchain'] = '^2.0.0';
+package.dependencies['@aztec/sriracha'] = '^2.0.0';
+writeFileSync('./dest/package.npm.json', JSON.stringify(pkg, null, '  '));

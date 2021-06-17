@@ -1,5 +1,5 @@
-import { EthAddress } from 'barretenberg/address';
-import { BlockchainAsset } from 'barretenberg/blockchain';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { BlockchainAsset } from '@aztec/barretenberg/blockchain';
 
 export enum SdkEvent {
   // Initialization state changes.

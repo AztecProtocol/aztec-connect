@@ -1,14 +1,14 @@
-import { EthAddress } from 'barretenberg/address';
-import { ProofData } from 'barretenberg/client_proofs/proof_data';
-import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
-import { ViewingKey } from 'barretenberg/viewing_key';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { ProofData } from '@aztec/barretenberg/client_proofs/proof_data';
+import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { toBufferBE } from 'bigint-buffer';
 import { randomBytes } from 'crypto';
 import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
 import moment from 'moment';
-import { TxType } from 'barretenberg/blockchain';
+import { TxType } from '@aztec/barretenberg/blockchain';
 
 const now = moment();
 

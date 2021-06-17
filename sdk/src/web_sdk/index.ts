@@ -1,5 +1,5 @@
-import { EthAddress } from 'barretenberg/address';
-import { getBlockchainStatus } from 'barretenberg/service';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { getBlockchainStatus } from '@aztec/barretenberg/service';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { SdkOptions } from '../core_sdk/create_sdk';

@@ -1,5 +1,5 @@
 import { Web3Provider } from '@ethersproject/providers';
-import { EthAddress } from 'barretenberg/address';
+import { EthAddress } from '@aztec/barretenberg/address';
 import { expect } from 'chai';
 import { randomBytes } from 'crypto';
 import { Contract, Wallet } from 'ethers';

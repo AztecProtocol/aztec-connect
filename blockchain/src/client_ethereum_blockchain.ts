@@ -1,8 +1,8 @@
 import { Web3Provider } from '@ethersproject/providers';
-import { EthAddress } from 'barretenberg/address';
-import { AssetId } from 'barretenberg/asset';
-import { Asset, BlockchainAsset, PermitArgs } from 'barretenberg/blockchain';
-import { TxHash } from 'barretenberg/tx_hash';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { AssetId } from '@aztec/barretenberg/asset';
+import { Asset, BlockchainAsset, PermitArgs } from '@aztec/barretenberg/blockchain';
+import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { EthAsset, TokenAsset } from './asset';
 import { EthereumProvider } from './ethereum_provider';
 import { hashData } from './hash_data';

@@ -1,5 +1,5 @@
-import { EthAddress } from 'barretenberg/address';
-import { TxHash } from 'barretenberg/tx_hash';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 import { AccountId } from '../../user';
 import { UserJoinSplitTx } from '../../user_tx';

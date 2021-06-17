@@ -1,7 +1,7 @@
-import { AssetId } from 'barretenberg/asset';
-import { Blockchain, BlockchainAsset, PriceFeed, TxType } from 'barretenberg/blockchain';
-import { JoinSplitProofData, ProofData } from 'barretenberg/client_proofs/proof_data';
-import { AssetFeeQuote, SettlementTime } from 'barretenberg/rollup_provider';
+import { AssetId } from '@aztec/barretenberg/asset';
+import { Blockchain, BlockchainAsset, PriceFeed, TxType } from '@aztec/barretenberg/blockchain';
+import { JoinSplitProofData, ProofData } from '@aztec/barretenberg/client_proofs/proof_data';
+import { AssetFeeQuote, SettlementTime } from '@aztec/barretenberg/rollup_provider';
 import { TxDao } from './entity/tx';
 import { RollupDb } from './rollup_db';
 

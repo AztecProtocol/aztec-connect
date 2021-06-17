@@ -24,10 +24,10 @@
     "rootDir": "./src"
   },
   "dependencies": {
+    "@aztec/sdk": "file:../sdk/dest",
     "@ethersproject/contracts": "^5.0.9",
     "@ethersproject/providers": "^5.0.18",
     "@ethersproject/units": "^5.0.9",
-    "@aztec/sdk": "file:../sdk/dest",
     "typescript": "^3.5.3"
   },
   "devDependencies": {
@@ -40,7 +40,6 @@
     "jest": "^24.8.0",
     "prettier": "^2.0.5",
     "ts-jest": "^24.0.2",
-    "tsc-watch": "^2.2.1",
-    "web3x-codegen": "^4.0.6"
+    "tsc-watch": "^2.2.1"
   }
 }

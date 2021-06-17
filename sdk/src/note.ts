@@ -1,5 +1,5 @@
-import { AssetId } from 'barretenberg/asset';
-// import { ViewingKey } from 'barretenberg/viewing_key';
+import { AssetId } from '@aztec/barretenberg/asset';
+// import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { AccountId } from './user';
 
 export interface Note {

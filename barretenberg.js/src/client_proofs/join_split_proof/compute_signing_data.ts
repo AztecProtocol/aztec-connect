@@ -3,8 +3,7 @@ import { EthAddress } from '../../address';
 import { AssetId } from '../../asset';
 import { Pedersen } from '../../crypto/pedersen';
 import { numToUInt32BE } from '../../serialize';
-import { TreeNote } from '../notes';
-import { NoteAlgorithms } from '../note_algorithms';
+import { NoteAlgorithms, TreeNote } from '../note_algorithms';
 
 export function computeSigningData(
   notes: TreeNote[],

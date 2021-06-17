@@ -1,6 +1,6 @@
 import { Web3Provider } from '@ethersproject/providers';
-import { EthAddress } from 'barretenberg/address';
-import { PriceFeed } from 'barretenberg/blockchain';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { PriceFeed } from '@aztec/barretenberg/blockchain';
 import { Contract } from 'ethers';
 
 const abi = [

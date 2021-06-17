@@ -1,4 +1,4 @@
-import { HashPath } from 'barretenberg/merkle_tree';
+import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { randomBytes } from 'crypto';
 import { RootRollup } from './root_rollup';
 

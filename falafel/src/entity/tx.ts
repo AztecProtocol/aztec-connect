@@ -1,4 +1,4 @@
-import { ViewingKey } from 'barretenberg/viewing_key';
+import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import {
   AfterInsert,
   AfterLoad,

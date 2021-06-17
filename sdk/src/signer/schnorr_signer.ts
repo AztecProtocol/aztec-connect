@@ -1,5 +1,5 @@
-import { GrumpkinAddress } from 'barretenberg/address';
-import { Schnorr } from 'barretenberg/crypto/schnorr';
+import { GrumpkinAddress } from '@aztec/barretenberg/address';
+import { Schnorr } from '@aztec/barretenberg/crypto/schnorr';
 import { Signer } from './signer';
 
 export class SchnorrSigner implements Signer {

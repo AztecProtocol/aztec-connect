@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events';
 import createDebug from 'debug';
-import { EthAddress } from 'barretenberg/address';
-import { EthereumProvider } from 'blockchain';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { EthereumProvider } from '@aztec/blockchain';
 import { Web3Provider } from '@ethersproject/providers';
 
 const debug = createDebug('bb:eth_provider');

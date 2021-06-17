@@ -1,5 +1,5 @@
-import { GrumpkinAddress } from 'barretenberg/address';
-import { AssetId } from 'barretenberg/asset';
+import { GrumpkinAddress } from '@aztec/barretenberg/address';
+import { AssetId } from '@aztec/barretenberg/asset';
 import { AccountId, RecoveryPayload } from '../user';
 import { WalletSdk } from '.';
 import { WalletSdkUserAsset } from './wallet_sdk_user_asset';

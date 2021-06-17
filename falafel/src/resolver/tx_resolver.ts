@@ -1,4 +1,4 @@
-import { ProofData } from 'barretenberg/client_proofs/proof_data';
+import { ProofData } from '@aztec/barretenberg/client_proofs/proof_data';
 import { Arg, Args, FieldResolver, Int, Query, Resolver, Root } from 'type-graphql';
 import { Inject } from 'typedi';
 import { Connection, LessThanOrEqual, Repository } from 'typeorm';

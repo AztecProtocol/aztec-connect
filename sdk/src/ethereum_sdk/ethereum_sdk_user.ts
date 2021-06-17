@@ -1,5 +1,5 @@
-import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { AssetId } from 'barretenberg/asset';
+import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
+import { AssetId } from '@aztec/barretenberg/asset';
 import { AccountId } from '../user';
 import { EthereumSdk } from './';
 import { EthereumSdkUserAsset } from './ethereum_sdk_user_asset';

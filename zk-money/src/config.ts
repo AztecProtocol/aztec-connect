@@ -113,8 +113,7 @@ const developmentConfig: ConfigVars = {
 };
 
 export const getConfig = (): Config => {
-  const { NODE_ENV } = process.env;
-  const defaultConfig = NODE_ENV === 'development' ? developmentConfig : productionConfig;
+  const defaultConfig = process.env.NODE_ENV === 'development' ? developmentConfig : productionConfig;
   const {
     rollupProviderUrl,
     graphqlEndpoint,

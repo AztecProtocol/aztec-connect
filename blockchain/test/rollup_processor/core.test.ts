@@ -1,4 +1,4 @@
-import { EthAddress } from 'barretenberg/address';
+import { EthAddress } from '@aztec/barretenberg/address';
 import { expect, use } from 'chai';
 import { solidity } from 'ethereum-waffle';
 import { Contract, Signer } from 'ethers';

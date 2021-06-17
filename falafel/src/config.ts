@@ -1,4 +1,4 @@
-import { EthereumBlockchainConfig, EthersAdapter, WalletProvider } from 'blockchain';
+import { EthereumBlockchainConfig, EthersAdapter, WalletProvider } from '@aztec/blockchain';
 import { emptyDir, mkdirp, pathExists, readJson, writeJson } from 'fs-extra';
 import { dirname } from 'path';
 import { JsonRpcProvider, InfuraProvider } from '@ethersproject/providers';

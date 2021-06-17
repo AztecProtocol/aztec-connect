@@ -1,5 +1,5 @@
-import { WorldStateDb } from 'barretenberg/world_state_db';
-import { EthereumBlockchain } from 'blockchain';
+import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
+import { EthereumBlockchain } from '@aztec/blockchain';
 import http from 'http';
 import moment from 'moment';
 import 'reflect-metadata';
@@ -9,9 +9,9 @@ import { appFactory } from './app';
 import { Server, ServerConfig } from './server';
 import 'log-timestamp';
 import { getConfig } from './config';
-import { EthAddress } from 'barretenberg/address';
+import { EthAddress } from '@aztec/barretenberg/address';
 import { Metrics } from './metrics';
-import { BarretenbergWasm } from 'barretenberg/wasm';
+import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { Container } from 'typedi';
 import { CachedRollupDb, TypeOrmRollupDb } from './rollup_db';
 

@@ -1,4 +1,4 @@
-import { EthAddress } from 'barretenberg/address';
+import { EthAddress } from '@aztec/barretenberg/address';
 import { ethers } from 'ethers';
 import { hashData } from './hash_data';
 

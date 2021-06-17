@@ -1,6 +1,6 @@
-import { EthAddress } from 'barretenberg/address';
-import { Block } from 'barretenberg/block_source';
-import { TxHash } from 'barretenberg/tx_hash';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { Block } from '@aztec/barretenberg/block_source';
+import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { Contracts } from './contracts';
 import { EthereumBlockchain, EthereumBlockchainConfig } from './ethereum_blockchain';
 

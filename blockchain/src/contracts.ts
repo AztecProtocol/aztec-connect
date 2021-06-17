@@ -1,9 +1,8 @@
 import { Web3Provider } from '@ethersproject/providers';
-import { EthAddress } from 'barretenberg/address';
-import { AssetId } from 'barretenberg/asset';
-import { Asset, PriceFeed, SendTxOptions, TypedData } from 'barretenberg/blockchain';
-import { BridgeId } from 'barretenberg/client_proofs';
-import { TxHash } from 'barretenberg/tx_hash';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { AssetId } from '@aztec/barretenberg/asset';
+import { Asset, PriceFeed, SendTxOptions, TypedData } from '@aztec/barretenberg/blockchain';
+import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { Contract } from 'ethers';
 import { abi as DefiBridgeABI } from './artifacts/contracts/interfaces/IDefiBridge.sol/IDefiBridge.json';
 import { abi as FeeDistributorABI } from './artifacts/contracts/interfaces/IFeeDistributor.sol/IFeeDistributor.json';
@@ -12,6 +11,7 @@ import { EthereumProvider } from './ethereum_provider';
 import { EthPriceFeed, GasPriceFeed, TokenPriceFeed } from './price_feed';
 import { RollupProcessor } from './rollup_processor';
 import { Web3Signer } from './signer';
+import { BridgeId } from '@aztec/barretenberg/client_proofs';
 
 export class Contracts {
   private rollupProcessor: RollupProcessor;

@@ -1,5 +1,5 @@
-import { RollupProofData } from 'barretenberg/rollup_proof';
-import { RollupTreeId, WorldStateDb } from 'barretenberg/world_state_db';
+import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { ProofGenerator, RootRollup, RootRollupProofRequest } from 'halloumi/proof_generator';
 import { RollupDao } from './entity/rollup';
 import { RollupProofDao } from './entity/rollup_proof';

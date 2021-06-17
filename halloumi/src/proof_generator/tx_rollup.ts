@@ -1,5 +1,5 @@
-import { ProofData } from 'barretenberg/client_proofs/proof_data';
-import { HashPath } from 'barretenberg/merkle_tree';
+import { ProofData } from '@aztec/barretenberg/client_proofs/proof_data';
+import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import {
   deserializeArrayFromVector,
   deserializeBufferFromVector,
@@ -8,7 +8,7 @@ import {
   numToUInt32BE,
   serializeBufferArrayToVector,
   serializeBufferToVector,
-} from 'barretenberg/serialize';
+} from '@aztec/barretenberg/serialize';
 import { createHash } from 'crypto';
 
 export class TxRollup {

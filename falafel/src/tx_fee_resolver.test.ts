@@ -1,11 +1,11 @@
 import { TxFeeResolver } from './tx_fee_resolver';
-import { AssetId } from 'barretenberg/asset';
-import { Blockchain, PriceFeed, TxType } from 'barretenberg/blockchain';
+import { AssetId } from '@aztec/barretenberg/asset';
+import { Blockchain, PriceFeed, TxType } from '@aztec/barretenberg/blockchain';
 import { TxDao } from './entity/tx';
 import { RollupDb } from './rollup_db';
-import { SettlementTime } from 'barretenberg/rollup_provider';
+import { SettlementTime } from '@aztec/barretenberg/rollup_provider';
 import { RollupDao } from './entity/rollup';
-import { EthPriceFeed } from 'blockchain';
+import { EthPriceFeed } from '@aztec/blockchain';
 
 jest.useFakeTimers();
 

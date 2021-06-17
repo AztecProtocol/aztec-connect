@@ -1,8 +1,8 @@
 import { ApolloServer } from 'apollo-server-koa';
-import { blockchainStatusToJson } from 'barretenberg/blockchain';
-import { Block, BlockServerResponse, GetBlocksServerResponse } from 'barretenberg/block_source';
-import { Proof } from 'barretenberg/rollup_provider';
-import { ViewingKey } from 'barretenberg/viewing_key';
+import { blockchainStatusToJson } from '@aztec/barretenberg/blockchain';
+import { Block, BlockServerResponse, GetBlocksServerResponse } from '@aztec/barretenberg/block_source';
+import { Proof } from '@aztec/barretenberg/rollup_provider';
+import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import graphqlPlayground from 'graphql-playground-middleware-koa';
 import Koa, { Context, DefaultState } from 'koa';
 import compress from 'koa-compress';

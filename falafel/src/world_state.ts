@@ -1,15 +1,15 @@
-import { MemoryFifo } from 'barretenberg/fifo';
-import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
-import { RollupTreeId, WorldStateDb } from 'barretenberg/world_state_db';
+import { MemoryFifo } from '@aztec/barretenberg/fifo';
+import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
-import { Blockchain, TxType } from 'barretenberg/blockchain';
+import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
 import { RollupDao } from './entity/rollup';
 import { RollupProofDao } from './entity/rollup_proof';
 import { TxDao } from './entity/tx';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
-import { Block } from 'barretenberg/block_source';
-import { ViewingKey } from 'barretenberg/viewing_key';
+import { Block } from '@aztec/barretenberg/block_source';
+import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { RollupPipeline, RollupPipelineFactory } from './rollup_pipeline';
 import { getTxTypeFromInnerProofData } from './get_tx_type';
 

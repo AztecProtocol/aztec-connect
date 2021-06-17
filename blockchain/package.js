@@ -1,11 +1,13 @@
-const package = require('./package.json');
-const { writeFileSync, copyFileSync } = require('fs');
+const { writeFileSync, copyFileSync, mkdirSync } = require('fs');
 
-const { jest, devDependencies, ...pkg } = package;
-pkg.dependencies.barretenberg = 'file:../../barretenberg.js/dest';
-writeFileSync('./dest/package.json', JSON.stringify(pkg, null, '  '));
+mkdirSync('./dest', { recursive: true });
 copyFileSync('README.md', './dest/README.md');
 
-package.dependencies.barretenberg = 'file:../../barretenberg.js/dest-es';
-writeFileSync('./dest-es/package.json', JSON.stringify(pkg, null, '  '));
-copyFileSync('README.md', './dest-es/README.md');
+const package = require('./package.json');
+const { jest, devDependencies, ...pkg } = package;
+
+pkg.dependencies['@aztec/barretenberg'] = 'file:../../barretenberg.js/dest';
+writeFileSync('./dest/package.json', JSON.stringify(pkg, null, '  '));
+
+pkg.dependencies['@aztec/barretenberg'] = '^2.0.0';
+writeFileSync('./dest/package.npm.json', JSON.stringify(pkg, null, '  '));

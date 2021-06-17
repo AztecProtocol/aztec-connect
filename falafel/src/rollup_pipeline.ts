@@ -1,6 +1,6 @@
-import { Blockchain } from 'barretenberg/blockchain';
-import { WorldStateDb } from 'barretenberg/world_state_db';
-import { EthereumProvider } from 'blockchain';
+import { Blockchain } from '@aztec/barretenberg/blockchain';
+import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
+import { EthereumProvider } from '@aztec/blockchain';
 import { ProofGenerator } from 'halloumi/proof_generator';
 import { Duration } from 'moment';
 import { Metrics } from './metrics';

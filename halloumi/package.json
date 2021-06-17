@@ -4,13 +4,14 @@
   "main": "dest/index.js",
   "license": "GPL-2.0",
   "scripts": {
-    "build": "rm -rf ./dest && tsc -p tsconfig.prod.json && node package.js",
-    "build:dev": "tsc --watch",
+    "build": "yarn clean && tsc -p tsconfig.dest.json && node package.js",
+    "build:dev": "node package.js && tsc -p tsconfig.dest.json --watch",
     "start": "node ./dest",
-    "start:dev": "tsc-watch -p tsconfig.prod.json --onSuccess 'yarn start'",
-    "start:e2e": "yarn clean && ./bootstrap.sh && yarn start",
+    "start:dev": "tsc-watch -p tsconfig.dest.json --onSuccess 'yarn start'",
+    "start:e2e": "yarn clean_data && ./bootstrap.sh && yarn start",
     "test": "jest",
-    "clean": "rm -rf ./data"
+    "clean": "rm -rf ./dest",
+    "clean_data": "rm -rf ./data"
   },
   "jest": {
     "transform": {
@@ -28,7 +29,7 @@
     "rootDir": "./src"
   },
   "dependencies": {
-    "barretenberg": "file:../barretenberg.js/dest",
+    "@aztec/barretenberg": "file:../barretenberg.js/dest",
     "fs-extra": "9.0.1",
     "koa": "^2.7.0",
     "koa-router": "^7.4.0",

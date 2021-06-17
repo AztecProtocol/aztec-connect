@@ -1,7 +1,7 @@
-import { EthAddress } from 'barretenberg/address';
-import { BridgeId, ProofId } from 'barretenberg/client_proofs';
-import { InnerProofData } from 'barretenberg/rollup_proof';
-import { numToUInt32BE } from 'barretenberg/serialize';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { BridgeId, ProofId } from '@aztec/barretenberg/client_proofs';
+import { InnerProofData } from '@aztec/barretenberg/rollup_proof';
+import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { toBufferBE } from 'bigint-buffer';
 import { randomBytes } from 'crypto';
 import { Signer } from 'ethers';

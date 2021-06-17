@@ -239,6 +239,22 @@ jobs:
       - *setup_env
       - setup_remote_docker
       - run:
+          name: 'barretenberg-x86_64-linux-gcc'
+          working_directory: barretenberg
+          command: deploy_ecr barretenberg-x86_64-linux-gcc
+      - run:
+          name: 'barretenberg-x86_64-linux-clang'
+          working_directory: barretenberg
+          command: deploy_ecr barretenberg-x86_64-linux-clang
+      - run:
+          name: 'barretenberg-wasm-linux-clang'
+          working_directory: barretenberg
+          command: deploy_ecr barretenberg-wasm-linux-clang
+      - run:
+          name: 'barretenberg.js'
+          working_directory: barretenberg.js
+          command: deploy_ecr barretenberg.js
+      - run:
           name: 'blockchain'
           working_directory: blockchain
           command: |
@@ -320,6 +336,24 @@ jobs:
       - checkout
       - *setup_env
       - setup_remote_docker
+      - run:
+          name: 'barretenberg.js'
+          working_directory: barretenberg.js
+          command: |
+            deploy_ecr barretenberg.js
+            deploy_npm barretenberg.js
+      - run:
+          name: 'blockchain'
+          working_directory: blockchain
+          command: |
+            deploy_ecr blockchain
+            deploy_npm blockchain
+      - run:
+          name: 'sriracha'
+          working_directory: sriracha
+          command: |
+            deploy_ecr sriracha
+            deploy_npm sriracha
       - run:
           name: 'sdk'
           working_directory: sdk

@@ -1,0 +1,9 @@
+{
+  "extends": ".",
+  "compilerOptions": {
+    "types": []
+  },
+  "include": ["src"],
+  "exclude": ["**/*.test.*"],
+  "files": []
+}

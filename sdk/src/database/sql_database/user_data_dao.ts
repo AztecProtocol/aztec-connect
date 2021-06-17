@@ -1,4 +1,4 @@
-import { GrumpkinAddress } from 'barretenberg/address';
+import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 import { UserData, AccountId, AliasHash } from '../../user';
 import { grumpkinAddressTransformer, accountIdTransformer, aliasHashTransformer } from './transformer';

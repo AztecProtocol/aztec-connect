@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { PriceFeed } from 'barretenberg/blockchain';
+import { PriceFeed } from '@aztec/barretenberg/blockchain';
 
 export class EthPriceFeed implements PriceFeed {
   constructor() {}

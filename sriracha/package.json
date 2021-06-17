@@ -1,16 +1,16 @@
 {
-  "name": "sriracha",
+  "name": "@aztec/sriracha",
   "version": "1.0.0",
   "main": "dest/index.js",
   "license": "GPL-2.0",
   "scripts": {
-    "build": "yarn clean && tsc -p tsconfig.cjs.json && tsc -p tsconfig.es.json && node package.js",
-    "build:dev": "tsc -p tsconfig.cjs.json --watch & tsc -p tsconfig.es.json --watch",
+    "build": "yarn clean && tsc -p tsconfig.dest.json && node package.js",
+    "build:dev": "tsc -p tsconfig.dest.json --watch",
     "start": "node ./dest",
-    "start:dev": "tsc-watch -p tsconfig.cjs.json --onSuccess 'yarn start'",
+    "start:dev": "tsc-watch --onSuccess 'yarn start'",
     "start:e2e": "yarn clean_data && yarn start:dev",
     "test": "jest --passWithNoTests",
-    "clean": "rm -rf ./dest ./dest-es",
+    "clean": "rm -rf ./dest",
     "clean_data": "rm -rf ./data"
   },
   "jest": {
@@ -30,9 +30,9 @@
   },
   "dependencies": {
     "@koa/cors": "^3.0.0",
-    "barretenberg": "file:../barretenberg.js/dest",
+    "@aztec/barretenberg": "file:../barretenberg.js/dest",
     "bigint-buffer": "^1.1.5",
-    "blockchain": "file:../blockchain/dest",
+    "@aztec/blockchain": "file:../blockchain/dest",
     "ethers": "5.0.29",
     "fs-extra": "9.0.1",
     "koa": "^2.7.0",

@@ -1,7 +1,7 @@
-import { GrumpkinAddress } from 'barretenberg/address';
-import { AccountProver, AccountTx, AliasHash, computeAccountProofSigningData } from 'barretenberg/client_proofs';
-import { Pedersen } from 'barretenberg/crypto/pedersen';
-import { WorldState } from 'barretenberg/world_state';
+import { GrumpkinAddress } from '@aztec/barretenberg/address';
+import { AccountProver, AccountTx, AliasHash, computeAccountProofSigningData } from '@aztec/barretenberg/client_proofs';
+import { Pedersen } from '@aztec/barretenberg/crypto/pedersen';
+import { WorldState } from '@aztec/barretenberg/world_state';
 import { randomBytes } from 'crypto';
 import createDebug from 'debug';
 import { Signer } from '../../signer';

@@ -5,7 +5,7 @@ describe('world_state_db', () => {
   let worldStateDb: WorldStateDb;
 
   beforeEach(async () => {
-    worldStateDb = new WorldStateDb('/tmp/world_state.db');
+    worldStateDb = new WorldStateDb(`/tmp/world_state_db_${randomBytes(32).toString('hex')}.db`);
     worldStateDb.destroy();
     await worldStateDb.start();
   });

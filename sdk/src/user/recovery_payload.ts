@@ -1,5 +1,5 @@
-import { GrumpkinAddress } from 'barretenberg/address';
-import { AccountId, Signature } from 'barretenberg/client_proofs';
+import { GrumpkinAddress } from '@aztec/barretenberg/address';
+import { AccountId, Signature } from '@aztec/barretenberg/client_proofs';
 
 export class RecoveryData {
   constructor(public accountId: AccountId, public signature: Signature) {}

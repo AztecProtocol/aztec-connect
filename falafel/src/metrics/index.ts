@@ -1,7 +1,7 @@
-import { AssetId, AssetIds } from 'barretenberg/asset';
-import { Blockchain, TxType } from 'barretenberg/blockchain';
-import { fromBaseUnits } from 'blockchain';
-import { WorldStateDb } from 'barretenberg/world_state_db';
+import { AssetId, AssetIds } from '@aztec/barretenberg/asset';
+import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
+import { fromBaseUnits } from '@aztec/blockchain';
+import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { toBigIntBE } from 'bigint-buffer';
 import client, { Counter, Gauge, Histogram } from 'prom-client';
 import { RollupDb } from '../rollup_db';

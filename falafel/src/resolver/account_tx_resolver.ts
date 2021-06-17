@@ -1,6 +1,6 @@
-import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
-import { Blake2s } from 'barretenberg/crypto/blake2s';
-import { BarretenbergWasm } from 'barretenberg/wasm';
+import { AliasHash } from '@aztec/barretenberg/client_proofs/alias_hash';
+import { Blake2s } from '@aztec/barretenberg/crypto/blake2s';
+import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { Arg, Args, Query, Resolver } from 'type-graphql';
 import { Inject } from 'typedi';
 import { Connection, Repository } from 'typeorm';
@@ -10,7 +10,7 @@ import { HexString } from './scalar_type';
 import { CachedRollupDb } from '../rollup_db';
 import { AccountDao } from '../entity/account';
 import { TxDao } from '../entity/tx';
-import { AccountProofData, ProofData } from 'barretenberg/client_proofs/proof_data';
+import { AccountProofData, ProofData } from '@aztec/barretenberg/client_proofs/proof_data';
 
 const txDaoToAccountDao = (txDao: TxDao): AccountDao => {
   const accountProof = new AccountProofData(new ProofData(txDao.proofData));

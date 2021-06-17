@@ -6,7 +6,7 @@ import {
   RequestArguments,
 } from './ethereum_provider';
 import { Wallet } from 'ethers';
-import { EthAddress } from 'barretenberg/address';
+import { EthAddress } from '@aztec/barretenberg/address';
 import { EthersAdapter } from './ethers_adapter';
 import { JsonRpcProvider, TransactionRequest } from '@ethersproject/providers';
 

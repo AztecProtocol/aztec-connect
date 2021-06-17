@@ -1,4 +1,4 @@
-import { HashPath } from 'barretenberg/merkle_tree';
+import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { toBufferBE } from 'bigint-buffer';
 import {
   deserializeArrayFromVector,
@@ -8,7 +8,7 @@ import {
   numToUInt32BE,
   serializeBufferArrayToVector,
   serializeBufferToVector,
-} from 'barretenberg/serialize';
+} from '@aztec/barretenberg/serialize';
 
 export class RootRollup {
   constructor(

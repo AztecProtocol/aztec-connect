@@ -1,8 +1,8 @@
-import { EthAddress } from 'barretenberg/address';
-import { AssetId } from 'barretenberg/asset';
-import { Blockchain } from 'barretenberg/blockchain';
-import { BridgeId, DefiInteractionNote, packInteractionNotes } from 'barretenberg/client_proofs';
-import { RollupProofData } from 'barretenberg/rollup_proof';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { AssetId } from '@aztec/barretenberg/asset';
+import { Blockchain } from '@aztec/barretenberg/blockchain';
+import { BridgeId, DefiInteractionNote, packInteractionNotes } from '@aztec/barretenberg/client_proofs';
+import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { toBigIntBE } from 'bigint-buffer';
 import { expect, use } from 'chai';
 import { randomBytes } from 'crypto';

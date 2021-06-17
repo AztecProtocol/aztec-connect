@@ -1,5 +1,5 @@
-import { EthAddress } from 'barretenberg/address';
-import { ViewingKey } from 'barretenberg/viewing_key';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { ValueTransformer } from 'typeorm';
 
 export const bigintTransformer: ValueTransformer = {

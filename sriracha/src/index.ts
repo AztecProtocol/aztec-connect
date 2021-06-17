@@ -1,6 +1,6 @@
-import { EthAddress } from 'barretenberg/address';
-import { WorldStateDb } from 'barretenberg/world_state_db';
-import { EthereumBlockchain, EthersAdapter } from 'blockchain';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
+import { EthereumBlockchain, EthersAdapter } from '@aztec/blockchain';
 import { ethers } from 'ethers';
 import http from 'http';
 import 'reflect-metadata';

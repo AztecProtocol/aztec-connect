@@ -1,4 +1,4 @@
-import { fetch } from 'barretenberg/iso_fetch';
+import { fetch } from '@aztec/barretenberg/iso_fetch';
 import { ProofGenerator } from './proof_generator';
 
 export class ServerProofGenerator implements ProofGenerator {

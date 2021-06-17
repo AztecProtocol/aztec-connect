@@ -1,13 +1,13 @@
-import { EthAddress } from 'barretenberg/address';
-import { Blockchain } from 'barretenberg/blockchain';
-import { Block } from 'barretenberg/block_source';
-import { MemoryFifo } from 'barretenberg/fifo';
-import { HashPath } from 'barretenberg/merkle_tree';
-import { RollupProofData } from 'barretenberg/rollup_proof';
-import { WorldStateDb } from 'barretenberg/world_state_db';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { Blockchain } from '@aztec/barretenberg/blockchain';
+import { Block } from '@aztec/barretenberg/block_source';
+import { MemoryFifo } from '@aztec/barretenberg/fifo';
+import { HashPath } from '@aztec/barretenberg/merkle_tree';
+import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { pathExists, readJson, writeJson } from 'fs-extra';
-import { GetHashPathsResponse, HashPathSource } from './hash_path_source';
+import { GetHashPathsResponse, HashPathSource } from '@aztec/barretenberg/hash_path_source';
 
 interface ServerState {
   lastBlock: number;

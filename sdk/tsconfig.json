@@ -1,6 +1,8 @@
 {
   "compilerOptions": {
     "target": "es2020",
+    "module": "commonjs",
+    "outDir": "dest",
     "moduleResolution": "node",
     "lib": ["dom", "esnext", "es2017.object"],
     "strict": true,

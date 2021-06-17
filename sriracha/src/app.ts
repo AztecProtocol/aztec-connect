@@ -1,11 +1,11 @@
 import cors from '@koa/cors';
-import { blockchainStatusToJson } from 'barretenberg/blockchain';
+import { blockchainStatusToJson } from '@aztec/barretenberg/blockchain';
 import { toBigIntBE } from 'bigint-buffer';
 import Koa from 'koa';
 import bodyParser from 'koa-bodyparser';
 import compress from 'koa-compress';
 import Router from 'koa-router';
-import { GetHashPathServerResponse, GetHashPathsServerResponse, GetTreeStateServerResponse } from './hash_path_source';
+import { GetHashPathServerResponse, GetHashPathsServerResponse, GetTreeStateServerResponse } from './sriracha_provider';
 import Server from './server';
 
 export function appFactory(server: Server, prefix: string) {

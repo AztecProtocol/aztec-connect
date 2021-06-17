@@ -11,7 +11,7 @@
     "test": "jest"
   },
   "devDependencies": {
-    "@aztec/sdk": "file:../sdk/dist",
+    "@aztec/sdk": "file:../sdk/dest",
     "@babel/plugin-proposal-class-properties": "^7.10.4",
     "@babel/plugin-proposal-optional-chaining": "^7.11.0",
     "@babel/preset-react": "^7.10.4",

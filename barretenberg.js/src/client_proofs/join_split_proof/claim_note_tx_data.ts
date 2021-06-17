@@ -5,7 +5,7 @@ import { numToUInt32BE } from '../../serialize';
 import { ViewingKey } from '../../viewing_key';
 import { AccountId } from '../account_id';
 import { BridgeId } from '../bridge_id';
-import { deriveNoteSecret } from '../derive_note_secret';
+import { deriveNoteSecret } from '../note_algorithms/derive_note_secret';
 
 export class ClaimNoteTxData {
   static EMPTY = new ClaimNoteTxData(BigInt(0), BridgeId.ZERO, GrumpkinAddress.one(), 0, Buffer.alloc(32));

@@ -12,10 +12,11 @@ docker pull $IMAGE_COMMIT_URI > /dev/null 2>&1 || { echo "No new image found." &
 
 # Copy docker container to local file system.
 readonly TEMP_CONTAINER=$(docker create $IMAGE_COMMIT_URI)
-docker cp $TEMP_CONTAINER:/usr/src/$REPOSITORY/dist $REPOSITORY
+docker cp $TEMP_CONTAINER:/usr/src/$REPOSITORY/dest $REPOSITORY
 docker rm -v $TEMP_CONTAINER
 
 cd $REPOSITORY
+mv package.npm.json package.json
 
 # Publish npm package using given version number if higher than published, otherwise bump published.
 echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > .npmrc

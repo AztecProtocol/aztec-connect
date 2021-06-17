@@ -1,18 +1,18 @@
 import { Web3Provider } from '@ethersproject/providers';
-import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { AssetId } from 'barretenberg/asset';
-import { EthereumSigner, PermitArgs, Receipt, TxType } from 'barretenberg/blockchain';
-import { SettlementTime } from 'barretenberg/rollup_provider';
-import { getBlockchainStatus } from 'barretenberg/service';
-import { TxHash } from 'barretenberg/tx_hash';
+import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
+import { AssetId } from '@aztec/barretenberg/asset';
+import { EthereumSigner, PermitArgs, Receipt, TxType } from '@aztec/barretenberg/blockchain';
+import { SettlementTime } from '@aztec/barretenberg/rollup_provider';
+import { getBlockchainStatus } from '@aztec/barretenberg/service';
+import { TxHash } from '@aztec/barretenberg/tx_hash';
 import {
   ClientEthereumBlockchain,
   createPermitData,
   EthereumProvider,
   validateSignature,
   Web3Signer,
-} from 'blockchain';
-import { TokenAsset } from 'blockchain/asset';
+} from '@aztec/blockchain';
+import { TokenAsset } from '@aztec/blockchain/asset';
 import { randomBytes } from 'crypto';
 import createDebug from 'debug';
 import { utils } from 'ethers';
@@ -25,7 +25,7 @@ import { RecoverSignatureSigner, Signer } from '../signer';
 import { AccountId, AliasHash, RecoveryData, RecoveryPayload } from '../user';
 import { WalletSdkUser } from './wallet_sdk_user';
 
-export * from 'barretenberg/asset';
+export * from '@aztec/barretenberg/asset';
 export * from './wallet_sdk_user';
 export * from './wallet_sdk_user_asset';
 

@@ -1,6 +1,5 @@
 import { Wallet } from 'ethers';
-import { WalletSdk, WalletProvider, SchnorrSigner, AccountId, AssetId, EthAddress } from '@aztec/sdk';
-import { TxHash } from 'barretenberg/tx_hash';
+import { TxHash, WalletSdk, WalletProvider, SchnorrSigner, AccountId, AssetId, EthAddress } from '@aztec/sdk';
 import { utils } from 'ethers';
 
 export class Agent {

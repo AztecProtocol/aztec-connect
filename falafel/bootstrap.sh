@@ -7,7 +7,7 @@ cd ../build-wasm
 make -j$(nproc) barretenberg.wasm
 popd
 yarn install
-yarn link barretenberg
-yarn link blockchain
+yarn link @aztec/barretenberg
+yarn link @aztec/blockchain
 yarn link halloumi
 yarn build

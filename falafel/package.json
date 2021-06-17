@@ -6,7 +6,7 @@
   "scripts": {
     "build": "rm -rf ./dest && tsc -p tsconfig.prod.json",
     "start": "node ./dest",
-    "start:dev": "tsc-watch -p tsconfig.prod.json --onSuccess 'yarn start'",
+    "start:dev": "`yarn -s deploy_rollup_processor 1` && tsc-watch -p tsconfig.prod.json --onSuccess 'yarn start'",
     "test": "jest",
     "clean_db": "rm -rf ./data/db.sqlite ./data/world_state.db",
     "clean_keys": "rm -rf ./data/account ./data/join_split ./data/*rollup*",
@@ -18,24 +18,16 @@
     "transform": {
       "^.+\\.ts$": "ts-jest"
     },
-    "testRegex": ".*\\.test\\.(tsx?|js)$",
-    "moduleFileExtensions": [
-      "ts",
-      "tsx",
-      "js",
-      "jsx",
-      "json",
-      "node"
-    ],
+    "testRegex": ".*\\.test\\.ts$",
     "rootDir": "./src"
   },
   "dependencies": {
     "@koa/cors": "^3.0.0",
     "apollo-server-koa": "^2.17.0",
     "async-mutex": "^0.2.6",
-    "barretenberg": "file:../barretenberg.js/dest",
+    "@aztec/barretenberg": "file:../barretenberg.js/dest",
     "bigint-buffer": "^1.1.5",
-    "blockchain": "file:../blockchain/dest",
+    "@aztec/blockchain": "file:../blockchain/dest",
     "bn.js": "^5.0.0",
     "class-validator": "^0.12.2",
     "dotenv": "^8.2.0",

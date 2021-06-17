@@ -1,5 +1,5 @@
 import { Mutex } from 'async-mutex';
-import { TxHash } from 'barretenberg/tx_hash';
+import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';

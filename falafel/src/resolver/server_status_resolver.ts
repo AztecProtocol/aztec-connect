@@ -1,4 +1,4 @@
-import { BlockchainStatus } from 'barretenberg/blockchain';
+import { BlockchainStatus } from '@aztec/barretenberg/blockchain';
 import { FieldResolver, Query, Resolver, Root } from 'type-graphql';
 import { Inject } from 'typedi';
 import { Server } from '../server';

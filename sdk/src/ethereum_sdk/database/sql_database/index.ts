@@ -1,4 +1,4 @@
-import { EthAddress } from 'barretenberg/address';
+import { EthAddress } from '@aztec/barretenberg/address';
 import { Connection, ConnectionOptions, Repository } from 'typeorm';
 import { Database, DbAccount } from '../database';
 import { AccountDao } from './account_dao';

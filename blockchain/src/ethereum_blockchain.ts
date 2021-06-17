@@ -1,12 +1,12 @@
 import { EthereumProvider } from './ethereum_provider';
-import { EthAddress } from 'barretenberg/address';
-import { AssetId } from 'barretenberg/asset';
-import { BridgeId } from 'barretenberg/client_proofs';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { AssetId } from '@aztec/barretenberg/asset';
+import { BridgeId } from '@aztec/barretenberg/client_proofs';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
-import { Blockchain, BlockchainStatus, Receipt, SendTxOptions, TypedData } from 'barretenberg/blockchain';
+import { Blockchain, BlockchainStatus, Receipt, SendTxOptions, TypedData } from '@aztec/barretenberg/blockchain';
 import { Contracts } from './contracts';
-import { TxHash } from 'barretenberg/tx_hash';
+import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { validateSignature } from './validate_signature';
 import { hashData } from './hash_data';
 

@@ -4,7 +4,7 @@ import UniswapV2FactoryJson from '@uniswap/v2-core/build/UniswapV2Factory.json';
 import UniswapV2PairJson from '@uniswap/v2-core/build/UniswapV2Pair.json';
 import IWETH from '@uniswap/v2-periphery/build/IWETH.json';
 import UniswapV2Router02Json from '@uniswap/v2-periphery/build/UniswapV2Router02.json';
-import { EthAddress } from 'barretenberg/address';
+import { EthAddress } from '@aztec/barretenberg/address';
 import { Contract, ContractFactory, Signer } from 'ethers';
 import WETH9 from '../contracts/WETH9.json';
 

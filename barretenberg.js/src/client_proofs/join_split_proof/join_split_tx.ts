@@ -4,7 +4,7 @@ import { AssetId } from '../../asset';
 import { HashPath } from '../../merkle_tree';
 import { numToUInt32BE } from '../../serialize';
 import { AccountAliasId } from '../account_alias_id';
-import { TreeNote } from '../notes';
+import { TreeNote } from '../note_algorithms';
 import { Signature } from '../signature';
 import { ClaimNoteTxData } from './claim_note_tx_data';
 

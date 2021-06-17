@@ -1,10 +1,10 @@
 import { pathExists, mkdirp, rename } from 'fs-extra';
-import { fetch } from 'barretenberg/iso_fetch';
+import { fetch } from '@aztec/barretenberg/iso_fetch';
 import { ChildProcess, spawn } from 'child_process';
 import { createWriteStream } from 'fs';
 import { PromiseReadable } from 'promise-readable';
 import { createInterface } from 'readline';
-import { MemoryFifo } from 'barretenberg/fifo';
+import { MemoryFifo } from '@aztec/barretenberg/fifo';
 
 export class CliProofGenerator {
   private proc?: ChildProcess;

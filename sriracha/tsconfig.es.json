@@ -1,8 +1,0 @@
-{
-  "extends": ".",
-  "compilerOptions": {
-    "module": "es6",
-    "outDir": "dest-es"
-  },
-  "exclude": ["**/*.test.ts"]
-}

@@ -1,10 +1,10 @@
-import { GrumpkinAddress } from 'barretenberg/address';
-import { AccountId, AliasHash } from 'barretenberg/client_proofs';
-import { Grumpkin } from 'barretenberg/ecc/grumpkin';
+import { GrumpkinAddress } from '@aztec/barretenberg/address';
+import { AccountId, AliasHash } from '@aztec/barretenberg/client_proofs';
+import { Grumpkin } from '@aztec/barretenberg/ecc/grumpkin';
 
-export * from 'barretenberg/client_proofs/account_alias_id';
-export * from 'barretenberg/client_proofs/account_id';
-export * from 'barretenberg/client_proofs/alias_hash';
+export * from '@aztec/barretenberg/client_proofs/account_alias_id';
+export * from '@aztec/barretenberg/client_proofs/account_id';
+export * from '@aztec/barretenberg/client_proofs/alias_hash';
 export * from './recovery_payload';
 
 export interface UserData {

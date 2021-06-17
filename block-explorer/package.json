@@ -3,9 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@testing-library/jest-dom": "^4.2.4",
-    "@testing-library/react": "^9.3.2",
-    "@testing-library/user-event": "^7.1.2",
     "@types/bn.js": "^4.11.6",
     "@types/classnames": "^2.2.10",
     "@types/jest": "^24.0.0",
@@ -22,22 +19,22 @@
     "graphql": "^15.3.0",
     "js-cookie": "^2.2.1",
     "moment": "^2.27.0",
+    "parcel-bundler": "^1.12.5",
+    "parcel-plugin-static-files-copy": "^2.6.0",
     "polished": "^3.6.6",
     "react": "^16.13.1",
     "react-apollo": "^3.1.5",
     "react-dom": "^16.13.1",
     "react-router-dom": "^5.2.0",
-    "react-scripts": "3.4.3",
     "styled-components": "^5.2.0",
     "styled-reset": "^4.2.3",
     "type-graphql": "^1.0.0",
     "typescript": "^4.0.2"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build && rm -rf dist && mv build dist",
-    "test": "react-scripts test --watchAll=false",
-    "eject": "react-scripts eject"
+    "start:dev": "parcel --port 8080 ./src/index.html",
+    "build": "yarn clean && parcel build ./src/index.html",
+    "clean": "rm -rf ./dist"
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -52,6 +49,13 @@
       "last 1 chrome version",
       "last 1 firefox version",
       "last 1 safari version"
+    ]
+  },
+  "staticFiles": {
+    "staticPath": [
+      "src/public/robots.txt",
+      "src/public/browserconfig.xml",
+      "src/public/mstile-150x150.png"
     ]
   }
 }

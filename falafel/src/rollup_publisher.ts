@@ -1,16 +1,16 @@
 import { Web3Provider } from '@ethersproject/providers';
-import { EthAddress } from 'barretenberg/address';
-import { Blockchain } from 'barretenberg/blockchain';
-import { RollupProofData } from 'barretenberg/rollup_proof';
-import { TxHash } from 'barretenberg/tx_hash';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { Blockchain } from '@aztec/barretenberg/blockchain';
+import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { toBufferBE } from 'bigint-buffer';
-import { EthereumProvider } from 'blockchain';
+import { EthereumProvider } from '@aztec/blockchain';
 import { Signer, utils } from 'ethers';
 import { RollupDao } from './entity/rollup';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
-import { ProofData, JoinSplitProofData } from 'barretenberg/client_proofs/proof_data';
-import { AssetId } from 'barretenberg/asset';
+import { ProofData, JoinSplitProofData } from '@aztec/barretenberg/client_proofs/proof_data';
+import { AssetId } from '@aztec/barretenberg/asset';
 
 export class RollupPublisher {
   private interrupted = false;

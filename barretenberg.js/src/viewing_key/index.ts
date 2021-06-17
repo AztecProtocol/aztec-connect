@@ -1,7 +1,5 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
+import { createCipheriv, createHash, randomBytes } from 'crypto';
 import { GrumpkinAddress } from '../address';
-import { deriveNoteSecret } from '../client_proofs';
-import { NoteAlgorithms } from '../client_proofs/note_algorithms';
 import { Grumpkin } from '../ecc/grumpkin';
 import { numToUInt8 } from '../serialize';
 
@@ -70,56 +68,4 @@ export class ViewingKey {
   toString() {
     return this.toBuffer().toString('hex');
   }
-
-  decrypt(privateKey: Buffer, grumpkin: Grumpkin, version = 1): DecryptedNote | undefined {
-    const encryptedNote = this.toBuffer();
-    const ephPubKey = new GrumpkinAddress(encryptedNote.slice(-64));
-    const aesSecret = deriveAESSecret(ephPubKey, privateKey, grumpkin);
-    const aesKey = aesSecret.slice(0, 16);
-    const iv = aesSecret.slice(16, 32);
-
-    try {
-      const decipher = createDecipheriv('aes-128-cbc', aesKey, iv);
-      decipher.setAutoPadding(false); // plaintext is already a multiple of 16 bytes
-      const plaintext = Buffer.concat([decipher.update(encryptedNote.slice(0, -64)), decipher.final()]);
-      const testIvSlice = plaintext.slice(0, 8);
-      if (!testIvSlice.equals(iv.slice(0, 8))) {
-        return undefined;
-      }
-
-      const noteBuf = plaintext.slice(8);
-      const noteSecret = deriveNoteSecret(ephPubKey, privateKey, grumpkin, version);
-      return { noteBuf, ephPubKey, noteSecret };
-    } catch (err) {
-      return;
-    }
-  }
 }
-
-export interface DecryptedNote {
-  noteBuf: Buffer;
-  ephPubKey: GrumpkinAddress;
-  noteSecret: Buffer;
-}
-
-export const batchDecryptNotes = async (
-  viewingKeys: Buffer,
-  privateKey: Buffer,
-  noteAlgorithms: NoteAlgorithms,
-  grumpkin: Grumpkin,
-) => {
-  const decryptedNoteLength = 41;
-  const dataBuf = await noteAlgorithms.batchDecryptNotes(viewingKeys, privateKey);
-  const notes: (DecryptedNote | undefined)[] = [];
-  for (let i = 0, startIndex = 0; startIndex < dataBuf.length; ++i, startIndex += decryptedNoteLength) {
-    const noteBuf = dataBuf.slice(startIndex, startIndex + decryptedNoteLength);
-    if (noteBuf.length > 0 && noteBuf[0]) {
-      const ephPubKey = new GrumpkinAddress(
-        viewingKeys.slice((i + 1) * ViewingKey.SIZE - 64, (i + 1) * ViewingKey.SIZE),
-      );
-      const noteSecret = deriveNoteSecret(ephPubKey, privateKey, grumpkin);
-      notes[i] = { noteBuf: noteBuf.slice(1), ephPubKey, noteSecret };
-    }
-  }
-  return notes;
-};

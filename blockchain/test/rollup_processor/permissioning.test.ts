@@ -1,5 +1,5 @@
-import { EthAddress } from 'barretenberg/address';
-import { RollupProofData } from 'barretenberg/rollup_proof';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { expect, use } from 'chai';
 import { randomBytes } from 'crypto';
 import { solidity } from 'ethereum-waffle';

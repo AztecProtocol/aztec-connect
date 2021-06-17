@@ -2,8 +2,8 @@ import { TxDao } from '../entity/tx';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { RollupDao } from '../entity/rollup';
 import { SyncRollupDb } from './sync_rollup_db';
-import { TxHash } from 'barretenberg/tx_hash';
-import { ProofData, ProofId } from 'barretenberg/client_proofs/proof_data';
+import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs/proof_data';
 import { toBigIntBE } from 'bigint-buffer';
 
 export class CachedRollupDb extends SyncRollupDb {

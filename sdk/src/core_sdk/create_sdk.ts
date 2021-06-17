@@ -1,19 +1,19 @@
-import { ServerRollupProvider } from 'barretenberg/rollup_provider';
+import { ServerRollupProvider } from '@aztec/barretenberg/rollup_provider';
 import { BroadcastChannel, createLeaderElection } from 'broadcast-channel';
 import createDebug from 'debug';
 import isNode from 'detect-node';
 import { mkdirSync } from 'fs';
 import levelup from 'levelup';
-import { SrirachaProvider } from 'sriracha/hash_path_source';
+import { SrirachaProvider } from '@aztec/sriracha/sriracha_provider';
 import { createConnection } from 'typeorm';
 import { DexieDatabase, SQLDatabase, getOrmConfig } from '../database';
 import { SdkEvent, SdkInitState } from '../sdk';
 import { AccountId } from '../user';
 import { CoreSdk, CoreSdkEvent, CoreSdkOptions } from './core_sdk';
-import { AssetId } from 'barretenberg/asset';
+import { AssetId } from '@aztec/barretenberg/asset';
 import { EscapeHatchRollupProvider } from '../escape_hatch_rollup_provider';
-import { getServiceName } from 'barretenberg/service';
-import { EthereumBlockchain, EthereumProvider } from 'blockchain';
+import { getServiceName } from '@aztec/barretenberg/service';
+import { EthereumBlockchain, EthereumProvider } from '@aztec/blockchain';
 
 const debug = createDebug('bb:create_sdk');
 

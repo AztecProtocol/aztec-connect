@@ -1,6 +1,6 @@
-import { GrumpkinAddress } from 'barretenberg/address';
-import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
-import { TxHash } from 'barretenberg/tx_hash';
+import { GrumpkinAddress } from '@aztec/barretenberg/address';
+import { AliasHash } from '@aztec/barretenberg/client_proofs/alias_hash';
+import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { randomBytes } from 'crypto';
 import { Note } from '../../note';
 import { UserData, AccountId } from '../../user';

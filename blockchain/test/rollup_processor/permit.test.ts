@@ -1,5 +1,5 @@
-import { EthAddress } from 'barretenberg/address';
-import { AssetId } from 'barretenberg/asset';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { AssetId } from '@aztec/barretenberg/asset';
 import { expect, use } from 'chai';
 import { randomBytes } from 'crypto';
 import { solidity } from 'ethereum-waffle';

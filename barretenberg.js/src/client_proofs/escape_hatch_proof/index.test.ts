@@ -21,8 +21,7 @@ import { createEphemeralPrivKey } from '../create_ephemeral_priv_key';
 import { JoinSplitTx } from '../join_split_proof';
 import { ClaimNoteTxData } from '../join_split_proof/claim_note_tx_data';
 import { computeSigningData } from '../join_split_proof/compute_signing_data';
-import { TreeNote } from '../notes';
-import { NoteAlgorithms } from '../note_algorithms';
+import { NoteAlgorithms, TreeNote } from '../note_algorithms';
 import { Prover } from '../prover';
 import { EscapeHatchProver, EscapeHatchTx, EscapeHatchVerifier } from './index';
 

@@ -1,8 +1,8 @@
-import { GrumpkinAddress } from 'barretenberg/address';
-import { AccountProofData, ProofData } from 'barretenberg/client_proofs/proof_data';
-import { Proof } from 'barretenberg/rollup_provider';
-import { TxHash } from 'barretenberg/tx_hash';
-import { ViewingKey } from 'barretenberg/viewing_key';
+import { GrumpkinAddress } from '@aztec/barretenberg/address';
+import { AccountProofData, ProofData } from '@aztec/barretenberg/client_proofs/proof_data';
+import { Proof } from '@aztec/barretenberg/rollup_provider';
+import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { AccountId } from '../user';
 import { UserAccountTx, UserJoinSplitTx } from '../user_tx';
 

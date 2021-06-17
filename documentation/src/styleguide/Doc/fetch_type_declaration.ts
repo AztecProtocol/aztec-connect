@@ -5,9 +5,9 @@ export const fetchTypeDeclaration = (srcName: string) => {
     case '@aztec/sdk':
       return require(`!!raw-loader!../../../node_modules/@aztec/sdk/${filePath}.d.ts`).default;
     case 'barretenberg':
-      return require(`!!raw-loader!../../../node_modules/@aztec/sdk/barretenberg/${filePath}.d.ts`).default;
+      return require(`!!raw-loader!../../../node_modules/@aztec/barretenberg/${filePath}.d.ts`).default;
     case 'blockchain':
-      return require(`!!raw-loader!../../../node_modules/@aztec/sdk/blockchain/${filePath}.d.ts`).default;
+      return require(`!!raw-loader!../../../node_modules/@aztec/blockchain/${filePath}.d.ts`).default;
     default:
   }
   return '';

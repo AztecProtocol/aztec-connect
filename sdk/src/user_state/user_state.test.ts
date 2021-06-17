@@ -1,27 +1,22 @@
-import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
-import { Block } from 'barretenberg/block_source';
-import {
-  AccountAliasId,
-  AccountId,
-  AliasHash,
-  computeAccountAliasIdNullifier,
-  createEphemeralPrivKey,
-  NoteAlgorithms,
-  TreeNote,
-} from 'barretenberg/client_proofs';
-import { Blake2s } from 'barretenberg/crypto/blake2s';
-import { Pedersen } from 'barretenberg/crypto/pedersen';
-import { Grumpkin } from 'barretenberg/ecc/grumpkin';
-import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
-import { numToUInt32BE } from 'barretenberg/serialize';
-import { TxHash } from 'barretenberg/tx_hash';
-import { ViewingKey } from 'barretenberg/viewing_key';
-import { BarretenbergWasm } from 'barretenberg/wasm';
+import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
+import { computeAccountAliasIdNullifier } from '@aztec/barretenberg/client_proofs/account_proof/compute_nullifier';
+import { NoteAlgorithms, TreeNote } from '@aztec/barretenberg/client_proofs/note_algorithms';
+import { Blake2s } from '@aztec/barretenberg/crypto/blake2s';
+import { Pedersen } from '@aztec/barretenberg/crypto/pedersen';
+import { Grumpkin } from '@aztec/barretenberg/ecc/grumpkin';
+import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { numToUInt32BE } from '@aztec/barretenberg/serialize';
+import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
+import { AliasHash } from '@aztec/barretenberg/client_proofs/alias_hash';
+import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { toBufferBE } from 'bigint-buffer';
 import { randomBytes } from 'crypto';
 import { Database } from '../database';
-import { UserData } from '../user';
+import { AccountId, UserData } from '../user';
 import { UserState } from './index';
+import { Block } from '@aztec/barretenberg/block_source';
+import { ViewingKey } from '@aztec/barretenberg/viewing_key';
+import { AccountAliasId, createEphemeralPrivKey } from '@aztec/barretenberg/client_proofs';
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;

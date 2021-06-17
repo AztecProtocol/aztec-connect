@@ -1,6 +1,6 @@
-import { EthAddress } from 'barretenberg/address';
-import { AssetId } from 'barretenberg/asset';
-import { TxHash } from 'barretenberg/tx_hash';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { AssetId } from '@aztec/barretenberg/asset';
+import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { AccountId } from '../user';
 
 export interface UserJoinSplitTx {

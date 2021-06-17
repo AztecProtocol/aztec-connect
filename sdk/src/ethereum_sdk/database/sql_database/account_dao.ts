@@ -1,4 +1,4 @@
-import { EthAddress, GrumpkinAddress } from 'barretenberg/address';
+import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { Column, Entity, PrimaryColumn } from 'typeorm';
 import { grumpkinAddressTransformer } from '../../../database/sql_database/transformer';
 import { DbAccount } from '../database';
