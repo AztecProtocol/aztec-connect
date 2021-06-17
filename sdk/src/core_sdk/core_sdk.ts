@@ -651,11 +651,6 @@ export class CoreSdk extends EventEmitter {
       await this.validateEscapeOpen();
     }
 
-    const { signingData } = proofOutput;
-    if (signingData && !depositSignature) {
-      throw new Error('Proof not signed.');
-    }
-
     const { tx } = proofOutput;
     const { userId } = tx;
     const userState = this.getUserState(userId);

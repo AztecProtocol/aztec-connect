@@ -394,12 +394,21 @@ describe('tx fee resolver', () => {
                 gasConstants: [5000, 0, 8000, 30000],
               },
               {
-                decimals: 16,
+                decimals: 2,
+                gasConstants: [25000, 1000, 50000, 75000],
+              },
+              {
+                decimals: 24,
                 gasConstants: [25000, 1000, 50000, 75000],
               },
             ],
           } as any),
       );
+      jest.spyOn(mockTokenPriceFeed, 'getRoundData').mockImplementation(async (roundId: bigint) => ({
+        roundId,
+        price: 1000000n,
+        timestamp: Math.floor(Date.now() / 1000),
+      }));
       const txFeeResolver = await startNewResolver(
         new TxFeeResolver(
           blockchain,
@@ -414,22 +423,70 @@ describe('tx fee resolver', () => {
         ),
       );
 
-      const withDecimals = (value: bigint) => value * 10n ** 16n;
-      const assetId = AssetId.DAI;
-      expect(txFeeResolver.getFeeQuotes(assetId)).toEqual({
-        feeConstants: [25000n * 5n, 1000n * 5n, 50000n * 5n, 75000n * 5n].map(withDecimals),
-        baseFeeQuotes: [
-          expect.objectContaining({ fee: withDecimals(1000n * 5n) }),
-          expect.objectContaining({ fee: withDecimals(1000n * 5n * 2n) }),
-          expect.objectContaining({ fee: withDecimals(1000n * 5n * 6n) }),
-          expect.objectContaining({ fee: withDecimals(1000n * 5n * 11n) }),
-        ],
-      });
+      {
+        const assetId = 1;
+        expect(txFeeResolver.getFeeQuotes(assetId)).toEqual({
+          feeConstants: [25n, 1n, 50n, 75n],
+          baseFeeQuotes: [
+            expect.objectContaining({ fee: 1n }),
+            expect.objectContaining({ fee: 2n }),
+            expect.objectContaining({ fee: 6n }),
+            expect.objectContaining({ fee: 11n }),
+          ],
+        });
 
-      expect(txFeeResolver.getMinTxFee(assetId, TxType.DEPOSIT)).toBe(130000n * 10n ** 16n);
-      expect(txFeeResolver.getTxFee(assetId, TxType.WITHDRAW_TO_WALLET, SettlementTime.FAST)).toBe(
-        280000n * 10n ** 16n,
+        expect(txFeeResolver.getMinTxFee(assetId, TxType.DEPOSIT)).toBe(26n);
+        expect(txFeeResolver.getTxFee(assetId, TxType.WITHDRAW_TO_WALLET, SettlementTime.FAST)).toBe(56n);
+      }
+
+      {
+        const assetId = 2;
+        const withDecimals = (value: bigint) => value * 10n ** 22n;
+        expect(txFeeResolver.getFeeQuotes(assetId)).toEqual({
+          feeConstants: [25n, 1n, 50n, 75n].map(withDecimals),
+          baseFeeQuotes: [
+            expect.objectContaining({ fee: withDecimals(1n) }),
+            expect.objectContaining({ fee: withDecimals(2n) }),
+            expect.objectContaining({ fee: withDecimals(6n) }),
+            expect.objectContaining({ fee: withDecimals(11n) }),
+          ],
+        });
+
+        expect(txFeeResolver.getMinTxFee(assetId, TxType.DEPOSIT)).toBe(26n * 10n ** 22n);
+        expect(txFeeResolver.getTxFee(assetId, TxType.WITHDRAW_TO_WALLET, SettlementTime.FAST)).toBe(56n * 10n ** 22n);
+      }
+    });
+
+    it('return correct tx fee for tx free assets', async () => {
+      const feeFreeAssets = [AssetId.DAI];
+      const txFeeResolver = await startNewResolver(
+        new TxFeeResolver(
+          blockchain,
+          rollupDb,
+          baseTxGas,
+          maxFeeGasPrice,
+          feeGasPriceMultiplier,
+          txsPerRollup,
+          publishInterval,
+          surplusRatios,
+          feeFreeAssets,
+        ),
       );
+
+      {
+        const assetId = AssetId.DAI;
+        expect(txFeeResolver.getFeeQuotes(assetId)).toEqual({
+          feeConstants: [0n, 0n, 0n, 0n],
+          baseFeeQuotes: [
+            expect.objectContaining({ fee: 0n }),
+            expect.objectContaining({ fee: 0n }),
+            expect.objectContaining({ fee: 0n }),
+            expect.objectContaining({ fee: 0n }),
+          ],
+        });
+        expect(txFeeResolver.getMinTxFee(assetId, TxType.DEPOSIT)).toBe(0n);
+        expect(txFeeResolver.getTxFee(assetId, TxType.WITHDRAW_TO_WALLET, SettlementTime.FAST)).toBe(0n);
+      }
     });
 
     it('time in fee quotes should never be less than 5 mins', async () => {
@@ -473,12 +530,15 @@ describe('tx fee resolver', () => {
 
     const float = (value: number) => +value.toFixed(2); // deal with float precision
 
-    beforeEach(async () => {
+    const startNewResolver = async (resolver: TxFeeResolver) => {
       jest
-        .spyOn(txFeeResolver as any, 'getFeeForTxDao')
+        .spyOn(resolver as any, 'getFeeForTxDao')
         .mockImplementation((({ assetId, fee }: MinimalTxDao) => ({ assetId, txFee: fee })) as any);
+      await resolver.start();
+    };
 
-      await txFeeResolver.start();
+    beforeEach(async () => {
+      await startNewResolver(txFeeResolver);
     });
 
     it('should compute correct surplus ratio for a tx with fee', () => {
@@ -632,6 +692,53 @@ describe('tx fee resolver', () => {
         },
       ]);
       expect(float(txFeeResolver.computeSurplusRatio(txs))).toBe(0.4);
+    });
+
+    it('should compute correct surplus ratio for free assets', async () => {
+      const feeFreeAssets = [AssetId.DAI];
+      const txFeeResolver = new TxFeeResolver(
+        blockchain,
+        rollupDb,
+        baseTxGas,
+        maxFeeGasPrice,
+        feeGasPriceMultiplier,
+        txsPerRollup,
+        publishInterval,
+        surplusRatios,
+        feeFreeAssets,
+      );
+      await startNewResolver(txFeeResolver);
+
+      const assetId = AssetId.DAI;
+      const minFee = txFeeResolver.getMinTxFee(assetId, TxType.TRANSFER);
+      const baseFee = txFeeResolver.getFeeQuotes(assetId).baseFeeQuotes[SettlementTime.SLOW].fee;
+      expect(
+        float(
+          txFeeResolver.computeSurplusRatio(
+            toTxDaos([
+              {
+                assetId,
+                txType: TxType.TRANSFER,
+                fee: minFee,
+              },
+            ]),
+          ),
+        ),
+      ).toBe(1);
+
+      expect(
+        float(
+          txFeeResolver.computeSurplusRatio(
+            toTxDaos([
+              {
+                assetId,
+                txType: TxType.TRANSFER,
+                fee: minFee + baseFee * 10n,
+              },
+            ]),
+          ),
+        ),
+      ).toBe(1);
     });
   });
 

@@ -123,7 +123,7 @@ export class TxFeeResolver {
     const decimals = this.assets[assetId].decimals;
     return !assetPrices[assetId]
       ? 0n
-      : this.applyGasPrice(rollupId, (gas * 10n ** BigInt(decimals)) / assetPrices[assetId]);
+      : this.applyGasPrice(rollupId, gas * 10n ** BigInt(decimals)) / assetPrices[assetId];
   }
 
   private toEthPrice(assetId: AssetId, price: bigint, rollupId: number) {
