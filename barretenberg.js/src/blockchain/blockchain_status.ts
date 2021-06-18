@@ -6,6 +6,8 @@ export enum TxType {
   WITHDRAW_TO_WALLET,
   WITHDRAW_TO_CONTRACT,
   ACCOUNT,
+  DEFI_DEPOSIT,
+  DEFI_CLAIM,
 }
 
 export interface BlockchainAsset {
@@ -21,8 +23,6 @@ export interface BlockchainStatus {
   chainId: number;
   rollupContractAddress: EthAddress;
   feeDistributorContractAddress: EthAddress;
-  numberOfAssets: number;
-  numberOfBridgeCalls: number;
   nextRollupId: number;
   dataSize: number;
   dataRoot: Buffer;
@@ -43,8 +43,6 @@ export interface BlockchainStatusJson {
   chainId: number;
   rollupContractAddress: string;
   feeDistributorContractAddress: string;
-  numberOfAssets: number;
-  numberOfBridgeCalls: number;
   nextRollupId: number;
   dataSize: number;
   dataRoot: string;

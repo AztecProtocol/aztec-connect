@@ -1,7 +1,7 @@
 import { NoteAlgorithms } from './note_algorithms';
-import { GrumpkinAddress } from '../../address';
-import { Grumpkin } from '../../ecc/grumpkin';
-import { ViewingKey } from '../../viewing_key';
+import { GrumpkinAddress } from '../address';
+import { Grumpkin } from '../ecc/grumpkin';
+import { ViewingKey } from '../viewing_key';
 import { deriveNoteSecret } from './derive_note_secret';
 import { DecryptedNote } from './decrypted_note';
 

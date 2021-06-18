@@ -1,10 +1,11 @@
-import { TxDao } from '../entity/tx';
-import { RollupProofDao } from '../entity/rollup_proof';
-import { RollupDao } from '../entity/rollup';
-import { SyncRollupDb } from './sync_rollup_db';
+import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
+import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
-import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs/proof_data';
 import { toBigIntBE } from 'bigint-buffer';
+import { RollupDao } from '../entity/rollup';
+import { RollupProofDao } from '../entity/rollup_proof';
+import { TxDao } from '../entity/tx';
+import { SyncRollupDb } from './sync_rollup_db';
 
 export class CachedRollupDb extends SyncRollupDb {
   private pendingTxCount!: number;
@@ -23,7 +24,7 @@ export class CachedRollupDb extends SyncRollupDb {
     this.rollups
       .map(r => r.rollupProof.txs.map(tx => [tx.nullifier1, tx.nullifier2]).flat())
       .flat()
-      .forEach(n => this.settledNullifiers.add(toBigIntBE(n)));
+      .forEach(n => n && this.settledNullifiers.add(toBigIntBE(n)));
     console.log(
       `Db cache loaded ${this.rollups.length} rollups and ${this.settledNullifiers.size} nullifiers from db...`,
     );
@@ -138,7 +139,7 @@ export class CachedRollupDb extends SyncRollupDb {
       rollup.rollupProof.txs
         .map(tx => [tx.nullifier1, tx.nullifier2])
         .flat()
-        .forEach(n => this.settledNullifiers.add(toBigIntBE(n)));
+        .forEach(n => n && this.settledNullifiers.add(toBigIntBE(n)));
     }
 
     await this.refresh();
@@ -150,15 +151,16 @@ export class CachedRollupDb extends SyncRollupDb {
     gasPrice: bigint,
     mined: Date,
     ethTxHash: TxHash,
+    interactionResult: DefiInteractionNote[],
     txIds: Buffer[],
   ) {
-    const rollup = await super.confirmMined(id, gasUsed, gasPrice, mined, ethTxHash, txIds);
+    const rollup = await super.confirmMined(id, gasUsed, gasPrice, mined, ethTxHash, interactionResult, txIds);
     this.rollups[rollup.id] = rollup;
     this.settledRollups[rollup.id] = rollup;
     rollup.rollupProof.txs
       .map(tx => [tx.nullifier1, tx.nullifier2])
       .flat()
-      .forEach(n => this.settledNullifiers.add(toBigIntBE(n)));
+      .forEach(n => n && this.settledNullifiers.add(toBigIntBE(n)));
     await this.refresh();
     return rollup;
   }

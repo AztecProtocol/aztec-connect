@@ -1,8 +1,8 @@
-import { BarretenbergWasm } from '../../wasm';
-import { Pedersen } from '../../crypto/pedersen';
-import { computeAccountAliasIdNullifier } from './compute_nullifier';
+import { AccountAliasId } from '../../account_id';
 import { Blake2s } from '../../crypto/blake2s';
-import { AccountAliasId } from '../account_alias_id';
+import { Pedersen } from '../../crypto/pedersen';
+import { BarretenbergWasm } from '../../wasm';
+import { computeAccountAliasIdNullifier } from './compute_nullifier';
 
 describe('account_proof_compute_nullifier', () => {
   let barretenberg!: BarretenbergWasm;

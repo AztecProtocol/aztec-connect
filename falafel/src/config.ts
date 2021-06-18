@@ -7,6 +7,7 @@ import { RollupProofDao } from './entity/rollup_proof';
 import { TxDao } from './entity/tx';
 import { ConnectionOptions } from 'typeorm';
 import { AccountDao } from './entity/account';
+import { ClaimDao } from './entity/claim';
 
 interface ConfVars {
   port: number;
@@ -165,7 +166,7 @@ function getOrmConfig(logging: boolean): ConnectionOptions {
   return {
     type: 'sqlite',
     database: 'data/db.sqlite',
-    entities: [TxDao, RollupProofDao, RollupDao, AccountDao],
+    entities: [TxDao, RollupProofDao, RollupDao, AccountDao, ClaimDao],
     synchronize: true,
     logging,
   };

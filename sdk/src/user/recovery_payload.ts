@@ -1,12 +1,13 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
-import { AccountId, Signature } from '@aztec/barretenberg/client_proofs';
+import { AccountId } from '@aztec/barretenberg/account_id';
+import { SchnorrSignature } from '@aztec/barretenberg/crypto/schnorr';
 
 export class RecoveryData {
-  constructor(public accountId: AccountId, public signature: Signature) {}
+  constructor(public accountId: AccountId, public signature: SchnorrSignature) {}
 
   static fromBuffer(data: Buffer) {
     const accountId = AccountId.fromBuffer(data.slice(0, 32));
-    const signature = new Signature(data.slice(32, 96));
+    const signature = new SchnorrSignature(data.slice(32, 96));
     return new RecoveryData(accountId, signature);
   }
 

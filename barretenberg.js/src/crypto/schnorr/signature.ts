@@ -1,6 +1,6 @@
 import { randomBytes } from 'crypto';
 
-export class Signature {
+export class SchnorrSignature {
   constructor(private buffer: Buffer) {
     if (buffer.length !== 64) {
       throw new Error('Invalid signature buffer.');
@@ -12,14 +12,14 @@ export class Signature {
   }
 
   public static fromString(signature: string) {
-    if (!Signature.isSignature(signature)) {
+    if (!SchnorrSignature.isSignature(signature)) {
       throw new Error(`Invalid signature string: ${signature}`);
     }
-    return new Signature(Buffer.from(signature.replace(/^0x/i, ''), 'hex'));
+    return new SchnorrSignature(Buffer.from(signature.replace(/^0x/i, ''), 'hex'));
   }
 
   public static randomSignature() {
-    return new Signature(randomBytes(64));
+    return new SchnorrSignature(randomBytes(64));
   }
 
   s() {

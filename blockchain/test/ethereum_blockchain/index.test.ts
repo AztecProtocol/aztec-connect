@@ -1,7 +1,8 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
 import { Blockchain } from '@aztec/barretenberg/blockchain';
-import { BridgeId, DefiInteractionNote, packInteractionNotes } from '@aztec/barretenberg/client_proofs';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { DefiInteractionNote, packInteractionNotes } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { toBigIntBE } from 'bigint-buffer';
 import { expect, use } from 'chai';
@@ -162,8 +163,6 @@ describe('ethereum_blockchain', () => {
     expect(status).to.deep.include({
       rollupContractAddress: EthAddress.fromString(rollupProcessor.address),
       feeDistributorContractAddress: feeDistributorAddress,
-      numberOfAssets: 4,
-      numberOfBridgeCalls: 4,
       nextRollupId: 0,
       dataSize: 0,
       dataRoot: Buffer.from('2708a627d38d74d478f645ec3b4e91afa325331acf1acebe9077891146b75e39', 'hex'),
@@ -400,65 +399,94 @@ describe('ethereum_blockchain', () => {
       10n,
     );
     const bridgeId = new BridgeId(EthAddress.fromString(bridge.address), 1, ethAssetId, erc20AssetId, 0);
+    const numberOfBridgeCalls = RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
 
     // Top up rollup processor to transfer eth to defi bridges.
     await rollupProvider.sendTransaction({ to: rollupProcessor.address, value: 10 });
 
-    const { proofData: depositProofData, signatures: depositSignatures } = await createRollupProof(
-      rollupProvider,
-      await createDepositProof(depositAmount, userAAddress, userA),
-      {
-        defiInteractionData: [new DefiInteractionData(bridgeId, 1n), new DefiInteractionData(bridgeId, 1n)],
-      },
-    );
-    await erc20UserA.approve(rollupProcessor.address, depositAmount);
-    await clientBlockchain.depositPendingFunds(1, depositAmount, userAAddress);
-    await sendEscapeHatchProof(depositProofData, viewingKeys, depositSignatures[0]);
-    await waitOnBlockProcessed;
+    {
+      const { proofData, signatures } = await createRollupProof(
+        rollupProvider,
+        await createDepositProof(depositAmount, userAAddress, userA),
+      );
+      await erc20UserA.approve(rollupProcessor.address, depositAmount);
+      await clientBlockchain.depositPendingFunds(1, depositAmount, userAAddress);
+      await sendEscapeHatchProof(proofData, viewingKeys, signatures[0]);
+      await waitOnBlockProcessed;
+    }
 
-    const interactionResult0 = [...Array(2)].map((_, i) => new DefiInteractionNote(bridgeId, i, 1n, 2n, 0n, true));
+    {
+      const { proofData } = await createRollupProof(
+        rollupProvider,
+        await createWithdrawProof(withdrawalAmount, userAAddress),
+        {
+          rollupId: 1,
+          defiInteractionData: [new DefiInteractionData(bridgeId, 1n), new DefiInteractionData(bridgeId, 1n)],
+        },
+      );
+      await sendEscapeHatchProof(proofData, []);
+      await waitOnBlockProcessed;
+    }
+    const interactionResult0 = [...Array(2)].map(
+      (_, i) => new DefiInteractionNote(bridgeId, i + numberOfBridgeCalls, 1n, 2n, 0n, true),
+    );
     const previousDefiInteractionHash = packInteractionNotes([
       ...interactionResult0,
-      ...[...Array(2)].map(() => DefiInteractionNote.EMPTY),
+      ...[...Array(numberOfBridgeCalls - 2)].map(() => DefiInteractionNote.EMPTY),
     ]);
 
-    const { proofData: withdrawProofData } = await createRollupProof(
-      rollupProvider,
-      await createWithdrawProof(withdrawalAmount, userAAddress),
-      {
-        rollupId: 1,
+    {
+      const { proofData } = await createRollupProof(rollupProvider, await createSendProof(AssetId.ETH), {
+        rollupId: 2,
         previousDefiInteractionHash,
         defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
-      },
-    );
-    await erc20UserA.approve(rollupProcessor.address, depositAmount);
-    await sendEscapeHatchProof(withdrawProofData, viewingKeys);
-    await waitOnBlockProcessed;
-    const interactionResult1 = [new DefiInteractionNote(bridgeId, 4, 1n, 2n, 0n, true)];
+      });
+      await sendEscapeHatchProof(proofData, []);
+      await waitOnBlockProcessed;
+    }
+    const interactionResult1 = [new DefiInteractionNote(bridgeId, numberOfBridgeCalls * 2, 1n, 2n, 0n, true)];
 
     const rollupIdStart = 0;
     const blocks = await ethereumBlockchain.getBlocks(rollupIdStart);
+    expect(blocks.length).to.equal(3);
 
-    const rollup0 = RollupProofData.fromBuffer(blocks[0].rollupProofData, blocks[0].viewingKeysData);
-    expect(blocks[0].rollupSize).to.equal(2);
-    expect(blocks[0].interactionResult.length).to.equal(2);
-    expect(blocks[0].interactionResult[0].equals(interactionResult0[0])).to.equal(true);
-    expect(blocks[0].interactionResult[1].equals(interactionResult0[1])).to.equal(true);
-    expect(rollup0.rollupId).to.equal(0);
-    expect(rollup0.dataStartIndex).to.equal(0);
-    expect(toBigIntBE(rollup0.innerProofData[0].publicInput)).to.equal(depositAmount);
-    expect(toBigIntBE(rollup0.innerProofData[0].publicOutput)).to.equal(0n);
-    expect(rollup0.innerProofData[0].inputOwner.toString('hex')).to.equal(userAAddress.toBuffer32().toString('hex'));
+    {
+      const block = blocks[0];
+      const rollup = RollupProofData.fromBuffer(block.rollupProofData, block.viewingKeysData);
+      expect(block.rollupSize).to.equal(2);
+      expect(block.interactionResult.length).to.equal(0);
+      expect(rollup.rollupId).to.equal(0);
+      expect(rollup.dataStartIndex).to.equal(0);
+      expect(toBigIntBE(rollup.innerProofData[0].publicInput)).to.equal(depositAmount);
+      expect(toBigIntBE(rollup.innerProofData[0].publicOutput)).to.equal(0n);
+      expect(rollup.innerProofData[0].inputOwner.toString('hex')).to.equal(userAAddress.toBuffer32().toString('hex'));
+    }
 
-    const rollup1 = RollupProofData.fromBuffer(blocks[1].rollupProofData, blocks[1].viewingKeysData);
-    expect(blocks[1].rollupSize).to.equal(2);
-    expect(blocks[1].interactionResult.length).to.equal(1);
-    expect(blocks[1].interactionResult[0].equals(interactionResult1[0])).to.equal(true);
-    expect(rollup1.rollupId).to.equal(1);
-    expect(rollup1.dataStartIndex).to.equal(4);
-    expect(toBigIntBE(rollup1.innerProofData[0].publicInput)).to.equal(0n);
-    expect(toBigIntBE(rollup1.innerProofData[0].publicOutput)).to.equal(withdrawalAmount);
-    expect(rollup1.innerProofData[0].outputOwner.toString('hex')).to.equal(userAAddress.toBuffer32().toString('hex'));
+    {
+      const block = blocks[1];
+      const rollup = RollupProofData.fromBuffer(block.rollupProofData, block.viewingKeysData);
+      expect(block.rollupSize).to.equal(2);
+      expect(block.interactionResult.length).to.equal(2);
+      expect(block.interactionResult[0].equals(interactionResult0[0])).to.equal(true);
+      expect(block.interactionResult[1].equals(interactionResult0[1])).to.equal(true);
+      expect(rollup.rollupId).to.equal(1);
+      expect(rollup.dataStartIndex).to.equal(4);
+      expect(toBigIntBE(rollup.innerProofData[0].publicInput)).to.equal(0n);
+      expect(toBigIntBE(rollup.innerProofData[0].publicOutput)).to.equal(withdrawalAmount);
+      expect(rollup.innerProofData[0].outputOwner.toString('hex')).to.equal(userAAddress.toBuffer32().toString('hex'));
+    }
+
+    {
+      const block = blocks[2];
+      const rollup = RollupProofData.fromBuffer(block.rollupProofData, block.viewingKeysData);
+      expect(block.rollupSize).to.equal(2);
+      expect(block.interactionResult.length).to.equal(1);
+      expect(block.interactionResult[0].equals(interactionResult1[0])).to.equal(true);
+      expect(rollup.rollupId).to.equal(2);
+      expect(rollup.dataStartIndex).to.equal(8);
+      expect(toBigIntBE(rollup.innerProofData[0].publicInput)).to.equal(0n);
+      expect(toBigIntBE(rollup.innerProofData[0].publicOutput)).to.equal(0n);
+    }
   });
 
   it('should reject sending proof if depositor has insufficient approval ', async () => {

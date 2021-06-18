@@ -1,11 +1,16 @@
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
-import { JoinSplitProofData, ProofData, ProofId } from '@aztec/barretenberg/client_proofs/proof_data';
+import { JoinSplitProofData, ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { InnerProofData } from '@aztec/barretenberg/rollup_proof';
 import { toBigIntBE } from 'bigint-buffer';
 
 export async function getTxTypeFromProofData(proofData: ProofData, blockchain: Blockchain) {
-  if (proofData.proofId == ProofId.ACCOUNT) {
-    return TxType.ACCOUNT;
+  switch (proofData.proofId) {
+    case ProofId.ACCOUNT:
+      return TxType.ACCOUNT;
+    case ProofId.DEFI_DEPOSIT:
+      return TxType.DEFI_DEPOSIT;
+    case ProofId.DEFI_CLAIM:
+      return TxType.DEFI_CLAIM;
   }
 
   const { publicInput, publicOutput, outputOwner } = new JoinSplitProofData(proofData);
@@ -24,8 +29,13 @@ export async function getTxTypeFromProofData(proofData: ProofData, blockchain: B
  * querying the blockchain and just set it as a wallet withdraw.
  */
 export function getTxTypeFromInnerProofData(proofData: InnerProofData) {
-  if (proofData.proofId == ProofId.ACCOUNT) {
-    return TxType.ACCOUNT;
+  switch (proofData.proofId) {
+    case ProofId.ACCOUNT:
+      return TxType.ACCOUNT;
+    case ProofId.DEFI_DEPOSIT:
+      return TxType.DEFI_DEPOSIT;
+    case ProofId.DEFI_CLAIM:
+      return TxType.DEFI_CLAIM;
   }
 
   const publicInput = toBigIntBE(proofData.publicInput);

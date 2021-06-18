@@ -1,9 +1,9 @@
-import { GrumpkinAddress } from '../../address';
-import { Grumpkin } from '../../ecc/grumpkin';
-import { TreeNote } from './tree_note';
+import { GrumpkinAddress } from '../address';
+import { Grumpkin } from '../ecc/grumpkin';
 import { DecryptedNote } from './decrypted_note';
 import { deriveNoteSecret } from './derive_note_secret';
 import { NoteAlgorithms } from './note_algorithms';
+import { TreeNote } from './tree_note';
 
 export const recoverTreeNotes = (
   decryptedNotes: (DecryptedNote | undefined)[],

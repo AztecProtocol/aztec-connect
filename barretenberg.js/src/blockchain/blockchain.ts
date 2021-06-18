@@ -1,7 +1,7 @@
 import { EthAddress } from '../address';
 import { AssetId } from '../asset';
 import { BlockSource } from '../block_source';
-import { BridgeId } from '../client_proofs';
+import { BridgeId } from '../bridge_id';
 import { TxHash } from '../tx_hash';
 import { Asset } from './asset';
 import { BlockchainStatusSource } from './blockchain_status';

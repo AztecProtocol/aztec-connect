@@ -19,7 +19,7 @@ export class BridgeId {
   ) {}
 
   static random() {
-    return new BridgeId(EthAddress.randomAddress(), randomInt(2), randomInt(), randomInt(), randomInt());
+    return new BridgeId(EthAddress.randomAddress(), 1 + randomInt(1), randomInt(), randomInt(), randomInt());
   }
 
   static fromBigInt(val: bigint) {

@@ -1,5 +1,5 @@
 import { EthAddress } from '../address';
-import { BridgeId } from './bridge_id';
+import { BridgeId } from './';
 
 describe('bridge id', () => {
   const bridgeId = new BridgeId(EthAddress.randomAddress(), 2, 123, 456, 7890);

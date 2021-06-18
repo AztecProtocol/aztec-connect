@@ -10,7 +10,7 @@ export * from './wallet_sdk';
 export * from './web_sdk';
 export * from '@aztec/barretenberg/address';
 export * from '@aztec/barretenberg/asset';
-export * from '@aztec/barretenberg/client_proofs/signature';
+export * from '@aztec/barretenberg/crypto/schnorr/signature';
 export * from '@aztec/barretenberg/rollup_provider';
 export * from '@aztec/barretenberg/fifo';
 export * from '@aztec/barretenberg/tx_hash';

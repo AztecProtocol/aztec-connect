@@ -1,5 +1,7 @@
-import { Signature } from '../../client_proofs/signature';
 import { BarretenbergWasm } from '../../wasm';
+import { SchnorrSignature } from './signature';
+
+export * from './signature';
 
 export class Schnorr {
   constructor(private wasm: BarretenbergWasm) {}
@@ -8,7 +10,7 @@ export class Schnorr {
     this.wasm.transferToHeap(pk, 64);
     this.wasm.transferToHeap(msg, 96);
     this.wasm.call('construct_signature', 96, msg.length, 64, 0, 32);
-    return new Signature(Buffer.from(this.wasm.sliceMemory(0, 64)));
+    return new SchnorrSignature(Buffer.from(this.wasm.sliceMemory(0, 64)));
   }
 
   public computePublicKey(pk: Uint8Array) {
@@ -17,7 +19,7 @@ export class Schnorr {
     return Buffer.from(this.wasm.sliceMemory(32, 96));
   }
 
-  public verifySignature(msg: Uint8Array, pubKey: Uint8Array, sig: Signature) {
+  public verifySignature(msg: Uint8Array, pubKey: Uint8Array, sig: SchnorrSignature) {
     this.wasm.transferToHeap(pubKey, 0);
     this.wasm.transferToHeap(sig.s(), 64);
     this.wasm.transferToHeap(sig.e(), 96);

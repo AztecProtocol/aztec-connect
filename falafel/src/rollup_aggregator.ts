@@ -1,3 +1,6 @@
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { HashPath } from '@aztec/barretenberg/merkle_tree';
+import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { ProofGenerator, RootRollup, RootRollupProofRequest } from 'halloumi/proof_generator';
@@ -17,10 +20,22 @@ export class RollupAggregator {
     private metrics: Metrics,
   ) {}
 
-  public async aggregateRollupProofs(innerProofs: RollupProofDao[]) {
+  public async aggregateRollupProofs(
+    innerProofs: RollupProofDao[],
+    oldDefiRoot: Buffer,
+    oldDefiPath: HashPath,
+    defiInteractionNotes: DefiInteractionNote[],
+    bridgeIds: BridgeId[],
+  ) {
     console.log(`Creating root rollup proof ${innerProofs.length} inner proofs...`);
 
-    const rootRollup = await this.createRootRollup(innerProofs);
+    const rootRollup = await this.createRootRollup(
+      innerProofs,
+      oldDefiRoot,
+      oldDefiPath,
+      defiInteractionNotes,
+      bridgeIds,
+    );
     const end = this.metrics.rootRollupTimer();
     const rootRollupRequest = new RootRollupProofRequest(this.numInnerRollupTxs, this.numOuterRollupProofs, rootRollup);
     const proofData = await this.proofGenerator.createProof(rootRollupRequest.toBuffer());
@@ -67,13 +82,19 @@ export class RollupAggregator {
     // TODO: Interrupt proof creation.
   }
 
-  private async createRootRollup(rollupProofs: RollupProofDao[]) {
+  private async createRootRollup(
+    rollupProofs: RollupProofDao[],
+    oldDefiRoot: Buffer,
+    oldDefiPath: HashPath,
+    defiInteractionNotes: DefiInteractionNote[],
+    bridgeIds: BridgeId[],
+  ) {
     const worldStateDb = this.worldStateDb;
 
     const rollupId = await this.rollupDb.getNextRollupId();
 
     // Root tree update.
-    const newDataRoot = worldStateDb.getRoot(0);
+    const newDataRoot = worldStateDb.getRoot(RollupTreeId.DATA);
     const oldDataRootsRoot = worldStateDb.getRoot(RollupTreeId.ROOT);
     const rootTreeSize = worldStateDb.getSize(RollupTreeId.ROOT);
     const oldDataRootsPath = await worldStateDb.getHashPath(RollupTreeId.ROOT, rootTreeSize);
@@ -81,8 +102,6 @@ export class RollupAggregator {
     const newDataRootsRoot = worldStateDb.getRoot(RollupTreeId.ROOT);
 
     // Defi tree update.
-    const oldDefiRoot = worldStateDb.getRoot(RollupTreeId.DEFI);
-    const oldDefiPath = await worldStateDb.getHashPath(RollupTreeId.DEFI, BigInt(rollupId * 4));
     const newDefiRoot = worldStateDb.getRoot(RollupTreeId.DEFI);
 
     if (rollupProofs.length < this.numOuterRollupProofs) {
@@ -100,8 +119,8 @@ export class RollupAggregator {
       oldDefiRoot,
       newDefiRoot,
       oldDefiPath,
-      [],
-      [],
+      bridgeIds.map(id => id.toBigInt()),
+      defiInteractionNotes.map(n => n.toBuffer()),
     );
 
     return rootRollup;

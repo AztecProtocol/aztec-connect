@@ -1,10 +1,10 @@
-import { NoteAlgorithms } from '.';
-import { GrumpkinAddress } from '../../address';
-import { Grumpkin } from '../../ecc/grumpkin';
-import { BarretenbergWasm } from '../../wasm';
 import { AccountId } from '../account_id';
+import { GrumpkinAddress } from '../address';
 import { BridgeId } from '../bridge_id';
-import { ClaimNoteTxData } from '../join_split_proof';
+import { Grumpkin } from '../ecc/grumpkin';
+import { BarretenbergWasm } from '../wasm';
+import { ClaimNoteTxData } from './claim_note_tx_data';
+import { NoteAlgorithms } from './note_algorithms';
 import { TreeClaimNote } from './tree_claim_note';
 import { TreeNote } from './tree_note';
 

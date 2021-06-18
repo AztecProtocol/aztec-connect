@@ -1,9 +1,9 @@
 import { randomBytes } from 'crypto';
-import { GrumpkinAddress } from '../../address';
+import { GrumpkinAddress } from '../address';
 import { NoteAlgorithms } from './note_algorithms';
-import { Grumpkin } from '../../ecc/grumpkin';
-import { BarretenbergWasm } from '../../wasm';
-import { ViewingKey } from '../../viewing_key';
+import { Grumpkin } from '../ecc/grumpkin';
+import { BarretenbergWasm } from '../wasm';
+import { ViewingKey } from '../viewing_key';
 import { batchDecryptNotes } from './batch_decrypt_notes';
 
 describe('batch_decypt_notes', () => {

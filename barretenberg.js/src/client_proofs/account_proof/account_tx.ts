@@ -1,8 +1,8 @@
+import { AccountAliasId } from '../../account_id';
+import { GrumpkinAddress } from '../../address';
+import { SchnorrSignature } from '../../crypto/schnorr';
 import { HashPath } from '../../merkle_tree';
 import { numToUInt32BE } from '../../serialize';
-import { Signature } from '../signature';
-import { GrumpkinAddress } from '../../address';
-import { AccountAliasId } from '../account_alias_id';
 
 export class AccountTx {
   constructor(
@@ -18,7 +18,7 @@ export class AccountTx {
     public accountIndex: number,
     public accountPath: HashPath,
     public signingPubKey: GrumpkinAddress,
-    public signature: Signature,
+    public signature: SchnorrSignature,
   ) {
     if (gibberish.length !== 32) {
       throw new Error('gibberish should be 32-byte long.');

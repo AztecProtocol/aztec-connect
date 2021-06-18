@@ -2,6 +2,7 @@ import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import levelup from 'levelup';
 import memdown from 'memdown';
+import { AccountAliasId } from '../../account_id';
 import { EthAddress, GrumpkinAddress } from '../../address';
 import { Crs } from '../../crs';
 import { Blake2s } from '../../crypto/blake2s';
@@ -10,15 +11,12 @@ import { Schnorr } from '../../crypto/schnorr';
 import { Grumpkin } from '../../ecc/grumpkin';
 import { PooledFft } from '../../fft';
 import { MerkleTree } from '../../merkle_tree';
+import { ClaimNoteTxData, NoteAlgorithms, TreeNote } from '../../note_algorithms';
 import { PooledPippenger } from '../../pippenger';
 import { BarretenbergWasm } from '../../wasm';
 import { WorkerPool } from '../../wasm/worker_pool';
-import { AccountAliasId } from '../account_alias_id';
-import { createEphemeralPrivKey } from '../create_ephemeral_priv_key';
-import { NoteAlgorithms, TreeNote } from '../note_algorithms';
 import { ProofData } from '../proof_data';
 import { UnrolledProver } from '../prover';
-import { ClaimNoteTxData } from './claim_note_tx_data';
 import { computeSigningData } from './compute_signing_data';
 import { JoinSplitProver, JoinSplitVerifier } from './index';
 import { JoinSplitTx } from './join_split_tx';
@@ -45,6 +43,8 @@ describe('join_split_proof', () => {
   const privateKey = Buffer.from([
     0x0b, 0x9b, 0x3a, 0xde, 0xe6, 0xb3, 0xd8, 0x1b, 0x28, 0xa0, 0x88, 0x6b, 0x2a, 0x84, 0x15, 0xc7,
     0xda, 0x31, 0x29, 0x1a, 0x5e, 0x96, 0xbb, 0x7a, 0x56, 0x63, 0x9e, 0x17, 0x7d, 0x30, 0x1b, 0xeb]);
+
+  const createEphemeralPrivKey = (grumpkin: Grumpkin) => grumpkin.getRandomFr();
 
   beforeAll(async () => {
     EventEmitter.defaultMaxListeners = 32;

@@ -1,9 +1,9 @@
 import { toBigIntBE } from 'bigint-buffer';
-import { ViewingKey } from '../../viewing_key';
-import { BarretenbergWasm } from '../../wasm';
-import { BarretenbergWorker } from '../../wasm/worker';
 import { AccountId } from '../account_id';
-import { ClaimNoteTxData } from '../join_split_proof';
+import { ViewingKey } from '../viewing_key';
+import { BarretenbergWasm } from '../wasm';
+import { BarretenbergWorker } from '../wasm/worker';
+import { ClaimNoteTxData } from './claim_note_tx_data';
 import { TreeClaimNote } from './tree_claim_note';
 import { TreeNote } from './tree_note';
 

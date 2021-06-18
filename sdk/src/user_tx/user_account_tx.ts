@@ -1,4 +1,4 @@
-import { AliasHash } from '@aztec/barretenberg/client_proofs/alias_hash';
+import { AliasHash } from '@aztec/barretenberg/account_id';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { AccountId } from '../user';
 

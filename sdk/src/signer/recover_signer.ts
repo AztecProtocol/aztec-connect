@@ -1,9 +1,9 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
-import { Signature } from '@aztec/barretenberg/client_proofs/signature';
+import { SchnorrSignature } from '@aztec/barretenberg/crypto/schnorr';
 import { Signer } from './signer';
 
 export class RecoverSignatureSigner implements Signer {
-  constructor(private publicKey: GrumpkinAddress, private signature: Signature) {}
+  constructor(private publicKey: GrumpkinAddress, private signature: SchnorrSignature) {}
 
   getPublicKey() {
     return this.publicKey;

@@ -1,18 +1,19 @@
 import { toBufferBE } from 'bigint-buffer';
 import { randomBytes } from 'crypto';
-import { GrumpkinAddress } from '../../address';
-import { Grumpkin } from '../../ecc/grumpkin';
-import { InnerProofData } from '../../rollup_proof';
-import { ViewingKey } from '../../viewing_key';
-import { BarretenbergWasm } from '../../wasm';
 import { AccountId } from '../account_id';
+import { GrumpkinAddress } from '../address';
 import { BridgeId } from '../bridge_id';
-import { ClaimNoteTxData } from '../join_split_proof';
+import { ProofId } from '../client_proofs';
+import { Grumpkin } from '../ecc/grumpkin';
 import { NoteAlgorithms } from '../note_algorithms';
-import { ProofId } from '../proof_data';
-import { recoverTreeClaimNotes, TreeClaimNote } from './tree_claim_note';
-import { TreeNote } from './tree_note';
+import { InnerProofData } from '../rollup_proof';
+import { ViewingKey } from '../viewing_key';
+import { BarretenbergWasm } from '../wasm';
 import { batchDecryptNotes } from './batch_decrypt_notes';
+import { ClaimNoteTxData } from './claim_note_tx_data';
+import { recoverTreeClaimNotes } from './recover_tree_claim_notes';
+import { TreeClaimNote } from './tree_claim_note';
+import { TreeNote } from './tree_note';
 
 describe('tree_claim_note', () => {
   let grumpkin: Grumpkin;

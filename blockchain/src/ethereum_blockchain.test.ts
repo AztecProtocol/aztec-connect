@@ -29,7 +29,6 @@ describe('ethereum_blockchain', () => {
   beforeEach(async () => {
     contracts = {
       getAssets: jest.fn().mockReturnValue([]),
-      getStaticState: jest.fn().mockResolvedValue({ numberOfAssets: 4, numberOfBridgeCalls: 4 }),
       getPerRollupState: jest.fn().mockResolvedValue({ nextRollupId: 0 }),
       getPerBlockState: jest.fn().mockResolvedValue({
         escapeOpen: false,

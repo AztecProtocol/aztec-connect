@@ -1,5 +1,5 @@
+import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
-import { AliasHash } from '@aztec/barretenberg/client_proofs/alias_hash';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { ValueTransformer } from 'typeorm';

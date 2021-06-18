@@ -1,8 +1,8 @@
+import { AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
-import { AliasHash } from '@aztec/barretenberg/client_proofs/alias_hash';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { Note } from '../note';
-import { UserData, AccountId } from '../user';
+import { AccountId, UserData } from '../user';
 import { UserAccountTx, UserJoinSplitTx } from '../user_tx';
 
 export interface SigningKey {

@@ -1,7 +1,7 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
-import { Signature } from '@aztec/barretenberg/client_proofs/signature';
+import { SchnorrSignature } from '@aztec/barretenberg/crypto/schnorr';
 
 export interface Signer {
   getPublicKey(): GrumpkinAddress;
-  signMessage(message: Buffer): Promise<Signature>;
+  signMessage(message: Buffer): Promise<SchnorrSignature>;
 }

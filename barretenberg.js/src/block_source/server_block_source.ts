@@ -1,6 +1,6 @@
 import { BlockSource, Block } from '.';
 import { EventEmitter } from 'events';
-import { DefiInteractionNote } from '../client_proofs';
+import { DefiInteractionNote } from '../note_algorithms';
 import { fetch } from '../iso_fetch';
 import { TxHash } from '../tx_hash';
 // import createDebug from 'debug';

@@ -1,22 +1,21 @@
+import { AccountAliasId, AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
+import { Block } from '@aztec/barretenberg/block_source';
 import { computeAccountAliasIdNullifier } from '@aztec/barretenberg/client_proofs/account_proof/compute_nullifier';
-import { NoteAlgorithms, TreeNote } from '@aztec/barretenberg/client_proofs/note_algorithms';
 import { Blake2s } from '@aztec/barretenberg/crypto/blake2s';
 import { Pedersen } from '@aztec/barretenberg/crypto/pedersen';
 import { Grumpkin } from '@aztec/barretenberg/ecc/grumpkin';
+import { NoteAlgorithms, TreeNote } from '@aztec/barretenberg/note_algorithms';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
-import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
-import { AliasHash } from '@aztec/barretenberg/client_proofs/alias_hash';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { ViewingKey } from '@aztec/barretenberg/viewing_key';
+import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { toBufferBE } from 'bigint-buffer';
 import { randomBytes } from 'crypto';
 import { Database } from '../database';
 import { AccountId, UserData } from '../user';
 import { UserState } from './index';
-import { Block } from '@aztec/barretenberg/block_source';
-import { ViewingKey } from '@aztec/barretenberg/viewing_key';
-import { AccountAliasId, createEphemeralPrivKey } from '@aztec/barretenberg/client_proofs';
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;
@@ -78,7 +77,7 @@ describe('user state', () => {
   });
 
   const createNote = (assetId: number, value: bigint, user: AccountId, version = 1) => {
-    const ephPrivKey = createEphemeralPrivKey(grumpkin);
+    const ephPrivKey = grumpkin.getRandomFr();
     const note = TreeNote.createFromEphPriv(user.publicKey, value, assetId, user.nonce, ephPrivKey, grumpkin, version);
     const viewingKey = note.getViewingKey(ephPrivKey, grumpkin);
     return { note, viewingKey };

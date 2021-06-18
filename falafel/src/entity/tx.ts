@@ -53,8 +53,8 @@ export class TxDao {
   @Column({ unique: true })
   public nullifier1!: Buffer;
 
-  @Column({ unique: true })
-  public nullifier2!: Buffer;
+  @Column({ unique: true, nullable: true })
+  public nullifier2?: Buffer;
 
   // Nullable, as txs discovered on chain have no data root.
   @Column({ nullable: true })
@@ -69,7 +69,7 @@ export class TxDao {
 
   @Column({ nullable: true })
   @Index()
-  public mined!: Date;
+  public mined?: Date;
 
   @AfterLoad()
   @AfterInsert()

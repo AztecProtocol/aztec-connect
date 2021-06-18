@@ -3,12 +3,13 @@ import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { EthereumProvider } from '@aztec/blockchain';
 import { ProofGenerator } from 'halloumi/proof_generator';
 import { Duration } from 'moment';
+import { ClaimProofCreator } from './claim_proof_creator';
 import { Metrics } from './metrics';
+import { PipelineCoordinator } from './pipeline_coordinator';
 import { RollupAggregator } from './rollup_aggregator';
 import { RollupCreator } from './rollup_creator';
 import { RollupDb } from './rollup_db';
 import { RollupPublisher } from './rollup_publisher';
-import { PipelineCoordinator } from './pipeline_coordinator';
 import { TxFeeResolver } from './tx_fee_resolver';
 
 export class RollupPipeline {
@@ -63,10 +64,13 @@ export class RollupPipeline {
       outerRollupSize,
       metrics,
     );
+    const claimProofCreator = new ClaimProofCreator(rollupDb, worldStateDb, proofGenerator);
     this.pipelineCoordinator = new PipelineCoordinator(
       rollupCreator,
       rollupAggregator,
       rollupPublisher,
+      claimProofCreator,
+      worldStateDb,
       rollupDb,
       numInnerRollupTxs,
       numOuterRollupProofs,

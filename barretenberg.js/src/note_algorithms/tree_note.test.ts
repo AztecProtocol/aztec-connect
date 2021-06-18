@@ -1,9 +1,9 @@
 import { randomBytes } from 'crypto';
-import { GrumpkinAddress } from '../../address';
-import { Grumpkin } from '../../ecc/grumpkin';
-import { ViewingKey } from '../../viewing_key';
-import { BarretenbergWasm } from '../../wasm';
+import { GrumpkinAddress } from '../address';
+import { Grumpkin } from '../ecc/grumpkin';
 import { batchDecryptNotes, NoteAlgorithms, recoverTreeNotes, TreeNote } from '../note_algorithms';
+import { ViewingKey } from '../viewing_key';
+import { BarretenbergWasm } from '../wasm';
 
 describe('tree_note', () => {
   let grumpkin: Grumpkin;

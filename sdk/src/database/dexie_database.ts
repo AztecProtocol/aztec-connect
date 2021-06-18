@@ -1,9 +1,9 @@
+import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
-import { AliasHash } from '@aztec/barretenberg/client_proofs/alias_hash';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import Dexie from 'dexie';
 import { Note } from '../note';
-import { UserData, AccountId } from '../user';
+import { AccountId, UserData } from '../user';
 import { UserAccountTx, UserJoinSplitTx } from '../user_tx';
 import { Alias, Database, SigningKey } from './database';
 

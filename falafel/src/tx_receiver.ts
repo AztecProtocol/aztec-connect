@@ -1,19 +1,24 @@
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
-import { AccountVerifier } from '@aztec/barretenberg/client_proofs/account_proof';
-import { JoinSplitVerifier } from '@aztec/barretenberg/client_proofs/join_split_proof';
-import { ProofId, ProofData, JoinSplitProofData } from '@aztec/barretenberg/client_proofs/proof_data';
+import {
+  AccountVerifier,
+  DefiDepositProofData,
+  JoinSplitProofData,
+  JoinSplitVerifier,
+  ProofData,
+  ProofId,
+} from '@aztec/barretenberg/client_proofs';
 import { Crs } from '@aztec/barretenberg/crs';
+import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { BarretenbergWorker } from '@aztec/barretenberg/wasm/worker';
 import { createWorker, destroyWorker } from '@aztec/barretenberg/wasm/worker_factory';
-import { TxDao } from './entity/tx';
-import { RollupDb } from './rollup_db';
 import { Mutex } from 'async-mutex';
-import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { ProofGenerator } from 'halloumi/proof_generator';
-import { TxFeeResolver } from './tx_fee_resolver';
-import { Metrics } from './metrics';
+import { TxDao } from './entity/tx';
 import { getTxTypeFromProofData } from './get_tx_type';
+import { Metrics } from './metrics';
+import { RollupDb } from './rollup_db';
+import { TxFeeResolver } from './tx_fee_resolver';
 
 export interface Tx {
   proofData: Buffer;
@@ -77,15 +82,21 @@ export class TxReceiver {
         case ProofId.ACCOUNT:
           await this.validateAccountTx(proof);
           break;
+        case ProofId.DEFI_DEPOSIT:
+          await this.validateDefiBridgeTx(proof, txType);
+          break;
+        default:
+          throw new Error('Unknown proof id.');
       }
 
       const dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
+      const hasViewingKeys = [ProofId.JOIN_SPLIT, ProofId.DEFI_DEPOSIT].includes(proof.proofId);
 
       const txDao = new TxDao({
         id: proof.txId,
         proofData,
-        viewingKey1: proof.proofId == ProofId.JOIN_SPLIT ? viewingKeys[0] : ViewingKey.EMPTY,
-        viewingKey2: proof.proofId == ProofId.JOIN_SPLIT ? viewingKeys[1] : ViewingKey.EMPTY,
+        viewingKey1: hasViewingKeys ? viewingKeys[0] : ViewingKey.EMPTY,
+        viewingKey2: hasViewingKeys ? viewingKeys[1] : ViewingKey.EMPTY,
         signature: depositSignature,
         nullifier1: proof.nullifier1,
         nullifier2: proof.nullifier2,
@@ -145,6 +156,26 @@ export class TxReceiver {
   private async validateAccountTx(proof: ProofData) {
     if (!(await this.accountVerifier.verifyProof(proof.rawProofData))) {
       throw new Error('Account proof verification failed.');
+    }
+  }
+
+  private async validateDefiBridgeTx(proofData: ProofData, txType: TxType) {
+    const defiBridgeProof = new DefiDepositProofData(proofData);
+    const { bridgeId } = defiBridgeProof;
+
+    // TODO - Use a whitelist.
+    const remoteBridgeId = await this.blockchain.getBridgeId(bridgeId.address);
+    if (!bridgeId.equals(remoteBridgeId)) {
+      throw new Error('Invalid bridge id.');
+    }
+
+    const minFee = this.txFeeResolver.getMinTxFee(bridgeId.inputAssetId, txType);
+    if (defiBridgeProof.proofData.txFee < minFee) {
+      throw new Error('Insufficient fee.');
+    }
+
+    if (!(await this.joinSplitVerifier.verifyProof(defiBridgeProof.proofData.rawProofData))) {
+      throw new Error('Defi-bridge proof verification failed.');
     }
   }
 }

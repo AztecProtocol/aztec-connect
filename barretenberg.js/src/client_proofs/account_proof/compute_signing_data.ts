@@ -1,6 +1,6 @@
 import { GrumpkinAddress } from '../../address';
 import { Pedersen } from '../../crypto/pedersen';
-import { AccountAliasId } from '../account_alias_id';
+import { AccountAliasId } from '../../account_id';
 
 export function computeAccountProofSigningData(
   accountAliasId: AccountAliasId,

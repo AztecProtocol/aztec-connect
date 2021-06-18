@@ -1,14 +1,14 @@
-import { EthereumProvider } from './ethereum_provider';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
-import { BridgeId } from '@aztec/barretenberg/client_proofs';
+import { Blockchain, BlockchainStatus, Receipt, SendTxOptions, TypedData } from '@aztec/barretenberg/blockchain';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { TxHash } from '@aztec/barretenberg/tx_hash';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
-import { Blockchain, BlockchainStatus, Receipt, SendTxOptions, TypedData } from '@aztec/barretenberg/blockchain';
 import { Contracts } from './contracts';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
-import { validateSignature } from './validate_signature';
+import { EthereumProvider } from './ethereum_provider';
 import { hashData } from './hash_data';
+import { validateSignature } from './validate_signature';
 
 export interface EthereumBlockchainConfig {
   console?: boolean;
@@ -128,11 +128,9 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     await this.updatePerRollupState();
     await this.updatePerBlockState();
     const { chainId } = await this.contracts.getNetwork();
-    const staticState = await this.contracts.getStaticState();
     const assets = this.contracts.getAssets().map(a => a.getStaticInfo());
     this.status = {
       ...this.status,
-      ...staticState,
       chainId,
       rollupContractAddress: this.contracts.getRollupContractAddress(),
       feeDistributorContractAddress: this.contracts.getFeeDistributorContractAddress(),

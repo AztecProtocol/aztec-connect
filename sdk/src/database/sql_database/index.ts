@@ -1,17 +1,17 @@
+import { AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
-import { AliasHash } from '@aztec/barretenberg/client_proofs/alias_hash';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { Connection, ConnectionOptions, MoreThan, MoreThanOrEqual, Repository } from 'typeorm';
 import { Note } from '../../note';
-import { UserData, AccountId } from '../../user';
+import { AccountId, UserData } from '../../user';
 import { UserAccountTx, UserJoinSplitTx } from '../../user_tx';
 import { Alias, Database, SigningKey } from '../database';
+import { AccountTxDao } from './account_tx_dao';
 import { AliasDao } from './alias_dao';
+import { JoinSplitTxDao } from './join_split_tx_dao';
 import { KeyDao } from './key_dao';
 import { NoteDao } from './note_dao';
-import { AccountTxDao } from './account_tx_dao';
 import { UserDataDao } from './user_data_dao';
-import { JoinSplitTxDao } from './join_split_tx_dao';
 import { UserKeyDao } from './user_key_dao';
 
 export const getOrmConfig = (dbPath?: string): ConnectionOptions => ({

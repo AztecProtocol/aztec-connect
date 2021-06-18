@@ -67,9 +67,6 @@ describe('RollupProofData', () => {
     ];
     const rollupProofData = createRollupProofData([accountInnerProofData, jsInnerProofData], viewingKeys);
     const buffer = rollupProofData.toBuffer();
-    expect(buffer.length).toBe(
-      RollupProofData.LENGTH_ROLLUP_PUBLIC + RollupProofData.LENGTH_RECURSIVE_PROOF_OUTPUT + 2 * InnerProofData.LENGTH,
-    );
 
     const recoveredRollup = RollupProofData.fromBuffer(buffer, rollupProofData.getViewingKeyData());
     expect(recoveredRollup).toEqual(rollupProofData);

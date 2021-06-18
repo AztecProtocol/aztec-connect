@@ -1,14 +1,14 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
 import { EscapeHatchProver, EscapeHatchTx } from '@aztec/barretenberg/client_proofs/escape_hatch_proof';
-import { NoteAlgorithms } from '@aztec/barretenberg/client_proofs/note_algorithms';
 import { Pedersen } from '@aztec/barretenberg/crypto/pedersen';
 import { Grumpkin } from '@aztec/barretenberg/ecc/grumpkin';
+import { HashPathSource } from '@aztec/barretenberg/hash_path_source';
+import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { WorldState } from '@aztec/barretenberg/world_state';
 import { toBufferBE } from 'bigint-buffer';
 import createDebug from 'debug';
-import { HashPathSource } from '@aztec/barretenberg/hash_path_source';
 import { Database } from '../../database';
 import { Signer } from '../../signer';
 import { AccountId } from '../../user';

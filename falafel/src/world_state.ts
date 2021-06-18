@@ -1,17 +1,19 @@
+import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
+import { Block } from '@aztec/barretenberg/block_source';
+import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
-import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { NoteAlgorithms, TreeClaimNote } from '@aztec/barretenberg/note_algorithms';
+import { DefiDepositProofData, InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
-import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
 import { RollupDao } from './entity/rollup';
 import { RollupProofDao } from './entity/rollup_proof';
 import { TxDao } from './entity/tx';
+import { getTxTypeFromInnerProofData } from './get_tx_type';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
-import { Block } from '@aztec/barretenberg/block_source';
-import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { RollupPipeline, RollupPipelineFactory } from './rollup_pipeline';
-import { getTxTypeFromInnerProofData } from './get_tx_type';
 
 const innerProofDataToTxDao = (tx: InnerProofData, viewingKeys: ViewingKey[], created: Date, txType: TxType) => {
   const txDao = new TxDao();
@@ -36,6 +38,7 @@ export class WorldState {
     public worldStateDb: WorldStateDb,
     private blockchain: Blockchain,
     private pipelineFactory: RollupPipelineFactory,
+    private noteAlgo: NoteAlgorithms,
     private metrics: Metrics,
   ) {}
 
@@ -150,14 +153,43 @@ export class WorldState {
     } else {
       // Someone elses rollup. Discard any of our world state modifications and update world state with new rollup.
       await this.worldStateDb.rollback();
-      // const interactionNotes = this.rollupDb.getPreviousRollupInteractionNotes();
-      await this.addRollupToWorldState(rollupProofData /*, interactionNotes*/);
+      await this.addRollupToWorldState(rollupProofData);
     }
+
+    await this.processDefiProofs(rollupProofData, block);
 
     await this.confirmOrAddRollupToDb(rollupProofData, block);
 
     this.printState();
     end();
+  }
+
+  private async processDefiProofs(rollup: RollupProofData, block: Block) {
+    const { innerProofData, dataStartIndex } = rollup;
+    const { interactionResult } = block;
+    for (let i = 0; i < innerProofData.length; ++i) {
+      const proofData = innerProofData[i];
+      switch (proofData.proofId) {
+        case ProofId.DEFI_DEPOSIT: {
+          const proof = new DefiDepositProofData(proofData);
+          const index = dataStartIndex + i * 2;
+          const interactionNonce = interactionResult.find(r => r.bridgeId.equals(proof.bridgeId))!.nonce;
+          const note = new TreeClaimNote(proof.depositValue, proof.bridgeId, interactionNonce, proof.partialState);
+          const nullifier = this.noteAlgo.computeClaimNoteNullifier(this.noteAlgo.encryptClaimNote(note), index);
+          await this.rollupDb.addClaim({
+            id: index,
+            txId: proofData.txId,
+            nullifier,
+            interactionNonce,
+            created: new Date(),
+          });
+          break;
+        }
+        case ProofId.DEFI_CLAIM:
+          await this.rollupDb.confirmClaimed(proofData.nullifier1, block.created);
+          break;
+      }
+    }
   }
 
   private async confirmOrAddRollupToDb(rollup: RollupProofData, block: Block) {
@@ -174,6 +206,7 @@ export class WorldState {
         block.gasPrice,
         block.created,
         block.txHash,
+        block.interactionResult,
         txIds,
       );
 

@@ -1,5 +1,7 @@
-import { Mutex } from 'async-mutex';
+import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { Mutex } from 'async-mutex';
+import { ClaimDao } from '../entity/claim';
 import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
@@ -140,9 +142,12 @@ export class SyncRollupDb {
     gasPrice: bigint,
     mined: Date,
     ethTxHash: TxHash,
+    interactionResult: DefiInteractionNote[],
     txIds: Buffer[],
   ) {
-    return this.synchronise(() => this.rollupDb.confirmMined(id, gasUsed, gasPrice, mined, ethTxHash, txIds));
+    return this.synchronise(() =>
+      this.rollupDb.confirmMined(id, gasUsed, gasPrice, mined, ethTxHash, interactionResult, txIds),
+    );
   }
 
   public getSettledRollups(from = 0) {
@@ -167,6 +172,22 @@ export class SyncRollupDb {
 
   public async getDataRootsIndex(root: Buffer) {
     return this.synchronise(() => this.rollupDb.getDataRootsIndex(root));
+  }
+
+  public async addClaim(claim: ClaimDao) {
+    return this.synchronise(() => this.rollupDb.addClaim(claim));
+  }
+
+  public async getPendingClaims(take?: number) {
+    return this.synchronise(() => this.rollupDb.getPendingClaims(take));
+  }
+
+  public async confirmClaimed(nullifier: Buffer, claimed: Date) {
+    return this.synchronise(() => this.rollupDb.confirmClaimed(nullifier, claimed));
+  }
+
+  public async deleteUnsettledClaimTxs() {
+    return this.synchronise(() => this.rollupDb.deleteUnsettledClaimTxs());
   }
 
   private async synchronise<T>(fn: () => Promise<T>) {

@@ -3,12 +3,13 @@ import { Connection, createConnection } from 'typeorm';
 import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
-import { randomRollup, randomRollupProof, randomTx } from './fixtures';
+import { randomClaim, randomRollup, randomRollupProof, randomTx } from './fixtures';
 import { RollupDb, TypeOrmRollupDb } from './';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { AccountDao } from '../entity/account';
+import { ClaimDao } from '../entity/claim';
 
 describe('rollup_db', () => {
   let connection: Connection;
@@ -18,7 +19,7 @@ describe('rollup_db', () => {
     connection = await createConnection({
       type: 'sqlite',
       database: ':memory:',
-      entities: [TxDao, RollupProofDao, RollupDao, AccountDao],
+      entities: [TxDao, RollupProofDao, RollupDao, AccountDao, ClaimDao],
       dropSchema: true,
       synchronize: true,
       logging: false,
@@ -111,6 +112,33 @@ describe('rollup_db', () => {
 
       expect(await rollupDb.getPendingTxs()).toStrictEqual([tx2]);
     }
+  });
+
+  it('get nullifiers of unsettled txs', async () => {
+    const tx0 = randomTx();
+    tx0.nullifier2 = undefined;
+    await rollupDb.addTx(tx0);
+
+    const tx1 = randomTx();
+    {
+      await rollupDb.addTx(tx1);
+      const rollupProof = randomRollupProof([tx1], 0);
+      const rollup = randomRollup(0, rollupProof);
+      await rollupDb.addRollup(rollup);
+    }
+
+    const tx2 = randomTx();
+    {
+      await rollupDb.addTx(tx2);
+      const rollupProof = randomRollupProof([tx2], 1);
+      const rollup = randomRollup(0, rollupProof);
+      await rollupDb.addRollup(rollup);
+      await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random(), [], [tx2.id]);
+    }
+
+    const nullifiers = await rollupDb.getUnsettledNullifiers();
+    expect(nullifiers.length).toBe(3);
+    expect(nullifiers).toEqual(expect.arrayContaining([tx0.nullifier1, tx1.nullifier1, tx1.nullifier2]));
   });
 
   it('should update rollup id for txs when newer proof added', async () => {
@@ -244,7 +272,7 @@ describe('rollup_db', () => {
     const settledRollups1 = await rollupDb.getSettledRollups();
     expect(settledRollups1.length).toBe(0);
 
-    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random(), [tx0.id, tx1.id]);
+    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random(), [], [tx0.id, tx1.id]);
 
     const settledRollups2 = await rollupDb.getSettledRollups();
     expect(settledRollups2.length).toBe(1);
@@ -267,7 +295,7 @@ describe('rollup_db', () => {
 
     expect(await rollupDb.getUnsettledTxCount()).toBe(1);
 
-    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random(), [tx0.id]);
+    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random(), [], [tx0.id]);
 
     expect(await rollupDb.getUnsettledTxCount()).toBe(0);
   });
@@ -305,5 +333,53 @@ describe('rollup_db', () => {
 
     expect(await rollupDb.getUnsettledTxCount()).toBe(1);
     expect(await rollupDb.getUnsettledRollups()).toHaveLength(0);
+  });
+
+  it('should add and get pending claims', async () => {
+    const pendingClaims: ClaimDao[] = [];
+    for (let i = 0; i < 8; ++i) {
+      const claim = randomClaim(randomBytes(32));
+      if (i % 2) {
+        claim.claimed = new Date();
+      } else {
+        pendingClaims.push(claim);
+      }
+      await rollupDb.addClaim(claim);
+    }
+
+    expect(await rollupDb.getPendingClaims()).toEqual(pendingClaims);
+
+    await rollupDb.confirmClaimed(pendingClaims[0].nullifier, new Date());
+
+    expect(await rollupDb.getPendingClaims()).toEqual(pendingClaims.slice(1));
+  });
+
+  it('should delete unsettled claim txs', async () => {
+    const claimedTxs: TxDao[] = [];
+    const unclaimedTxs: TxDao[] = [];
+    for (let i = 0; i < 8; ++i) {
+      const claim = randomClaim(randomBytes(32));
+      const tx = randomTx();
+      tx.nullifier1 = claim.nullifier;
+      if (i % 2) {
+        tx.mined = new Date();
+        claim.claimed = tx.mined;
+        claimedTxs.push(tx);
+      } else {
+        unclaimedTxs.push(tx);
+      }
+      await rollupDb.addClaim(claim);
+      await rollupDb.addTx(tx);
+    }
+
+    const txs = await rollupDb.getLatestTxs(10);
+    expect(txs).toEqual(
+      [...claimedTxs, ...unclaimedTxs].sort((a, b) => (a.created.getTime() > b.created.getTime() ? -1 : 1)),
+    );
+
+    await rollupDb.deleteUnsettledClaimTxs();
+
+    const saved = await rollupDb.getLatestTxs(10);
+    expect(saved).toEqual(claimedTxs.sort((a, b) => (a.created.getTime() > b.created.getTime() ? -1 : 1)));
   });
 });

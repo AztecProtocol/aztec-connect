@@ -1,21 +1,23 @@
-import { emptyDir } from 'fs-extra';
-import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
-import { RollupProviderStatus } from '@aztec/barretenberg/rollup_provider';
-import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
-import { EthereumProvider } from '@aztec/blockchain';
-import { Duration } from 'moment';
-import { RollupDb } from './rollup_db';
-import { Tx, TxReceiver } from './tx_receiver';
-import { WorldState } from './world_state';
-import { Metrics } from './metrics';
 import { Blockchain } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
-import { toBigIntBE } from 'bigint-buffer';
+import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
+import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { RollupProviderStatus } from '@aztec/barretenberg/rollup_provider';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
+import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
+import { EthereumProvider } from '@aztec/blockchain';
+import { toBigIntBE } from 'bigint-buffer';
+import { emptyDir } from 'fs-extra';
 import { ProofGenerator, ServerProofGenerator } from 'halloumi/proof_generator';
-import { TxFeeResolver } from './tx_fee_resolver';
+import { Duration } from 'moment';
+import { Metrics } from './metrics';
+import { RollupDb } from './rollup_db';
+import { parseInteractionResult } from './rollup_db/parse_interaction_result';
 import { RollupPipelineFactory } from './rollup_pipeline';
+import { TxFeeResolver } from './tx_fee_resolver';
+import { Tx, TxReceiver } from './tx_receiver';
+import { WorldState } from './world_state';
 
 export interface ServerConfig {
   readonly halloumiHost: string;
@@ -84,7 +86,8 @@ export class Server {
       numOuterRollupProofs,
       this.txFeeResolver,
     );
-    this.worldState = new WorldState(rollupDb, worldStateDb, blockchain, this.pipelineFactory, metrics);
+    const noteAlgo = new NoteAlgorithms(barretenberg);
+    this.worldState = new WorldState(rollupDb, worldStateDb, blockchain, this.pipelineFactory, noteAlgo, metrics);
     this.txReceiver = new TxReceiver(
       barretenberg,
       rollupDb,
@@ -164,7 +167,7 @@ export class Server {
       rollupSize: RollupProofData.getRollupSizeFromBuffer(dao.rollupProof.proofData!),
       rollupProofData: dao.rollupProof.proofData!,
       viewingKeysData: dao.viewingKeys,
-      interactionResult: [],
+      interactionResult: parseInteractionResult(dao.interactionResult),
       gasPrice: toBigIntBE(dao.gasPrice),
       gasUsed: dao.gasUsed,
     }));

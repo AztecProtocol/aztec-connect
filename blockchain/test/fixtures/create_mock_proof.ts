@@ -1,5 +1,6 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { BridgeId, ProofId } from '@aztec/barretenberg/client_proofs';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { InnerProofData } from '@aztec/barretenberg/rollup_proof';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { toBufferBE } from 'bigint-buffer';
@@ -17,16 +18,19 @@ export const dataRoots = [
   Buffer.from('2708a627d38d74d478f645ec3b4e91afa325331acf1acebe9077891146b75e39', 'hex'),
   Buffer.from('a8f6bde50516dd1201088fd8dda84c97eda5652428d1c7e86af529cc5e0eb821', 'hex'),
   randomBytes(32),
+  randomBytes(32),
 ];
 
 export const nullifierRoots = [
   Buffer.from('2694dbe3c71a25d92213422d392479e7b8ef437add81e1e17244462e6edca9b1', 'hex'),
   Buffer.from('a82175cffcb23dfbd80262802e32efe7db5fdcb91ba0a0527ab1ffb323bf3fc0', 'hex'),
   randomBytes(32),
+  randomBytes(32),
 ];
 
 export const dataRootRoots = [
   Buffer.from('2d264e93dc455751a721aead9dba9ee2a9fef5460921aeede73f63f6210e6851', 'hex'),
+  randomBytes(32),
   randomBytes(32),
   randomBytes(32),
 ];
@@ -35,9 +39,11 @@ export const defiRoots = [
   Buffer.from('2d264e93dc455751a721aead9dba9ee2a9fef5460921aeede73f63f6210e6851', 'hex'),
   randomBytes(32),
   randomBytes(32),
+  randomBytes(32),
 ];
 
 export const interactionHashes = [
+  Buffer.from('0f115a0e0c15cdc41958ca46b5b14b456115f4baec5e3ca68599d2a8f435e3b8', 'hex'),
   Buffer.from('0f115a0e0c15cdc41958ca46b5b14b456115f4baec5e3ca68599d2a8f435e3b8', 'hex'),
   Buffer.from('0f115a0e0c15cdc41958ca46b5b14b456115f4baec5e3ca68599d2a8f435e3b8', 'hex'),
   Buffer.from('0f115a0e0c15cdc41958ca46b5b14b456115f4baec5e3ca68599d2a8f435e3b8', 'hex'),

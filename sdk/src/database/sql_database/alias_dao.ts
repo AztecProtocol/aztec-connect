@@ -1,5 +1,5 @@
+import { AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
-import { AliasHash } from '@aztec/barretenberg/client_proofs/alias_hash';
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 import { Alias } from '../database';
 import { aliasHashTransformer, grumpkinAddressTransformer } from './transformer';

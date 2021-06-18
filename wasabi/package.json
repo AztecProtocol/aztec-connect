@@ -29,12 +29,12 @@
   },
   "dependencies": {
     "@aztec/sdk": "file:../sdk/dest",
-    "@ethersproject/contracts": "^5.0.9",
-    "@ethersproject/experimental": "^5.0.9",
-    "@ethersproject/providers": "^5.0.18",
-    "@ethersproject/units": "^5.0.9",
+    "@ethersproject/contracts": "5.0.9",
+    "@ethersproject/experimental": "5.0.9",
+    "@ethersproject/providers": "5.0.18",
+    "@ethersproject/units": "5.0.9",
     "bigint-buffer": "^1.1.5",
-    "ethers": "5.0.19",
+    "ethers": "5.0.29",
     "log-timestamp": "^0.3.0",
     "source-map-support": "^0.5.19",
     "typescript": "^3.5.3"
@@ -49,5 +49,8 @@
     "ts-jest": "^24.0.2",
     "ts-node": "^8.9.1",
     "tsc-watch": "^2.2.1"
+  },
+  "resolutions": {
+    "ethers": "5.0.29"
   }
 }

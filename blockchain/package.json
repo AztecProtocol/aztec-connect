@@ -36,10 +36,11 @@
     "rootDir": "./src"
   },
   "dependencies": {
-    "@ethersproject/experimental": "^5.0.8",
+    "@aztec/barretenberg": "../barretenberg.js/dest",
+    "@ethersproject/experimental": "5.0.9",
+    "@ethersproject/providers": "5.0.18",
     "@uniswap/v2-core": "^1.0.1",
     "@uniswap/v2-periphery": "^1.1.0-beta.0",
-    "@aztec/barretenberg": "../barretenberg.js/dest",
     "bigint-buffer": "^1.1.5",
     "debug": "^4.1.1",
     "dotenv": "^8.2.0",

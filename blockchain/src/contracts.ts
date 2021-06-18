@@ -11,7 +11,7 @@ import { EthereumProvider } from './ethereum_provider';
 import { EthPriceFeed, GasPriceFeed, TokenPriceFeed } from './price_feed';
 import { RollupProcessor } from './rollup_processor';
 import { Web3Signer } from './signer';
-import { BridgeId } from '@aztec/barretenberg/client_proofs';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
 
 export class Contracts {
   private rollupProcessor: RollupProcessor;
@@ -73,13 +73,6 @@ export class Contracts {
   private async getAssetValues(promise: Promise<bigint[]>) {
     const padding = Array<bigint>(this.assets.length).fill(BigInt(0));
     return [...(await promise), ...padding].slice(0, padding.length);
-  }
-
-  public async getStaticState() {
-    return {
-      numberOfAssets: await this.rollupProcessor.numberOfAssets(),
-      numberOfBridgeCalls: await this.rollupProcessor.numberOfBridgeCalls(),
-    };
   }
 
   public async getPerRollupState() {

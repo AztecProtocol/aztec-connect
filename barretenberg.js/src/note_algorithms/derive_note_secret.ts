@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
-import { GrumpkinAddress } from '../../address';
-import { Grumpkin } from '../../ecc/grumpkin';
-import { numToUInt8 } from '../../serialize';
+import { GrumpkinAddress } from '../address';
+import { Grumpkin } from '../ecc/grumpkin';
+import { numToUInt8 } from '../serialize';
 
 export function deriveNoteSecret(ecdhPubKey: GrumpkinAddress, ecdhPrivKey: Buffer, grumpkin: Grumpkin, version = 1) {
   if (version == 1) {

@@ -1,21 +1,16 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
-import {
-  NoteAlgorithms,
-  createEphemeralPrivKey,
-  TreeNote,
-  computeSigningData,
-  JoinSplitTx,
-} from '@aztec/barretenberg/client_proofs';
+import { computeSigningData, JoinSplitTx } from '@aztec/barretenberg/client_proofs';
 import { Pedersen } from '@aztec/barretenberg/crypto/pedersen';
 import { Grumpkin } from '@aztec/barretenberg/ecc/grumpkin';
+import { ClaimNoteTxData, NoteAlgorithms, TreeNote } from '@aztec/barretenberg/note_algorithms';
 import { WorldState } from '@aztec/barretenberg/world_state';
 import { Database } from '../../database';
 import { Signer } from '../../signer';
 import { AccountAliasId, AccountId } from '../../user';
 import { UserState } from '../../user_state';
-import { ClaimNoteTxData } from '@aztec/barretenberg/client_proofs/join_split_proof/claim_note_tx_data';
 
+const createEphemeralPrivKey = (grumpkin: Grumpkin) => grumpkin.getRandomFr();
 export class JoinSplitTxFactory {
   constructor(
     private worldState: WorldState,

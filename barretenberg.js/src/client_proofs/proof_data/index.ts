@@ -1,8 +1,9 @@
 import { toBigIntBE } from 'bigint-buffer';
 import { createHash } from 'crypto';
+import { AccountAliasId } from '../../account_id';
 import { EthAddress } from '../../address';
 import { AssetId } from '../../asset';
-import { AccountAliasId } from '../account_alias_id';
+import { BridgeId } from '../../bridge_id';
 
 export enum ProofId {
   JOIN_SPLIT,
@@ -66,6 +67,10 @@ export class JoinSplitProofData {
   public depositSigningData: Buffer;
 
   constructor(public proofData: ProofData) {
+    if (proofData.proofId !== ProofId.JOIN_SPLIT) {
+      throw new Error('Not a join split proof.');
+    }
+
     this.assetId = this.proofData.assetId.readUInt32BE(28);
     this.publicInput = toBigIntBE(this.proofData.publicInput);
     this.publicOutput = toBigIntBE(this.proofData.publicOutput);
@@ -87,7 +92,35 @@ export class AccountProofData {
   public publicKey: Buffer;
 
   constructor(public proofData: ProofData) {
+    if (proofData.proofId !== ProofId.ACCOUNT) {
+      throw new Error('Not an account proof.');
+    }
+
     this.accountAliasId = AccountAliasId.fromBuffer(proofData.assetId);
     this.publicKey = Buffer.concat([proofData.publicInput, proofData.publicOutput]);
+  }
+}
+
+export class DefiDepositProofData {
+  public bridgeId: BridgeId;
+
+  constructor(public proofData: ProofData) {
+    if (proofData.proofId !== ProofId.DEFI_DEPOSIT) {
+      throw new Error('Not a defi deposit proof.');
+    }
+
+    this.bridgeId = BridgeId.fromBuffer(this.proofData.assetId);
+  }
+}
+
+export class DefiClaimProofData {
+  public bridgeId: BridgeId;
+
+  constructor(public proofData: ProofData) {
+    if (proofData.proofId !== ProofId.DEFI_CLAIM) {
+      throw new Error('Not a defi claim proof.');
+    }
+
+    this.bridgeId = BridgeId.fromBuffer(this.proofData.assetId);
   }
 }

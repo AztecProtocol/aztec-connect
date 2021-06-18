@@ -1,6 +1,6 @@
 import { Pedersen } from '../../crypto/pedersen';
 import { numToUInt32BE } from '../../serialize';
-import { AccountAliasId } from '../account_alias_id';
+import { AccountAliasId } from '../../account_id';
 
 export function computeAccountAliasIdNullifier(accountAliasId: AccountAliasId, pedersen: Pedersen) {
   // Note that the accountAliasIdIndex should match the constant ACCOUNT_ALIAS_ID_NULLIFIER in 'notes/constants.hpp'

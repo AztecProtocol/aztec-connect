@@ -1,4 +1,4 @@
-import { DefiInteractionNote } from '../client_proofs';
+import { DefiInteractionNote } from '../note_algorithms';
 import { TxHash } from '../tx_hash';
 
 export interface Block {

@@ -1,12 +1,19 @@
+import { AccountAliasId, AccountId } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetId, AssetIds } from '@aztec/barretenberg/asset';
 import { Block } from '@aztec/barretenberg/block_source';
-import { AccountAliasId, AccountId, ProofId, recoverTreeNotes, TreeNote } from '@aztec/barretenberg/client_proofs';
+import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { computeAccountAliasIdNullifier } from '@aztec/barretenberg/client_proofs/account_proof';
-import { batchDecryptNotes, DecryptedNote, NoteAlgorithms } from '@aztec/barretenberg/client_proofs/note_algorithms';
 import { Pedersen } from '@aztec/barretenberg/crypto/pedersen';
 import { Grumpkin } from '@aztec/barretenberg/ecc/grumpkin';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
+import {
+  batchDecryptNotes,
+  DecryptedNote,
+  NoteAlgorithms,
+  recoverTreeNotes,
+  TreeNote,
+} from '@aztec/barretenberg/note_algorithms';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupProvider } from '@aztec/barretenberg/rollup_provider';
 import { TxHash } from '@aztec/barretenberg/tx_hash';

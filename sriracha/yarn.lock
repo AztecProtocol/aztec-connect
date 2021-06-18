@@ -21,8 +21,9 @@
 "@aztec/blockchain@file:../blockchain/dest":
   version "2.0.0"
   dependencies:
-    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-c2428cf5-b214-4e55-9146-f092decea43f-1623430798327/node_modules/barretenberg.js/dest"
-    "@ethersproject/experimental" "^5.0.8"
+    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-0e67bae5-12a7-4a03-8fbf-117dadababa9-1623954556313/node_modules/barretenberg.js/dest"
+    "@ethersproject/experimental" "5.0.9"
+    "@ethersproject/providers" "5.0.18"
     "@uniswap/v2-core" "^1.0.1"
     "@uniswap/v2-periphery" "^1.1.0-beta.0"
     bigint-buffer "^1.1.5"
@@ -397,7 +398,7 @@
     "@ethersproject/logger" "^5.0.8"
     "@ethersproject/properties" "^5.0.7"
 
-"@ethersproject/experimental@^5.0.8":
+"@ethersproject/experimental@5.0.9":
   version "5.0.9"
   resolved "https://registry.yarnpkg.com/@ethersproject/experimental/-/experimental-5.0.9.tgz#8e62229e066387bd28134a75af289d5597502fea"
   integrity sha512-o+iNdHd0j7BwY8H9XUSupSOcxfhTAcoNIB27heH1Sm3Sq/pEn/jYe49prC+eatRaVs1en4ig5cpCgwBAXExcrQ==
@@ -491,6 +492,31 @@
   integrity sha512-zEnLMze2Eu2VDPj/05QwCwMKHh506gpT9PP9KPVd4dDB+5d6AcROUYVLoIIQgBYK7X/Gw0UJmG3oVtnxOQafAw==
   dependencies:
     "@ethersproject/logger" "^5.0.8"
+
+"@ethersproject/providers@5.0.18":
+  version "5.0.18"
+  resolved "https://registry.yarnpkg.com/@ethersproject/providers/-/providers-5.0.18.tgz#96c4f6cb361a57e73bd166509c80f25da695c402"
+  integrity sha512-VYKj11ZRnBX5mPDFJOcMQOS4GYP0rlqAgWHBntXSK4wqAJeuK451KfxqW92fQHb8yWSBKIERwwlj24K+P9g8Xw==
+  dependencies:
+    "@ethersproject/abstract-provider" "^5.0.8"
+    "@ethersproject/abstract-signer" "^5.0.10"
+    "@ethersproject/address" "^5.0.9"
+    "@ethersproject/basex" "^5.0.7"
+    "@ethersproject/bignumber" "^5.0.13"
+    "@ethersproject/bytes" "^5.0.9"
+    "@ethersproject/constants" "^5.0.8"
+    "@ethersproject/hash" "^5.0.10"
+    "@ethersproject/logger" "^5.0.8"
+    "@ethersproject/networks" "^5.0.7"
+    "@ethersproject/properties" "^5.0.7"
+    "@ethersproject/random" "^5.0.7"
+    "@ethersproject/rlp" "^5.0.7"
+    "@ethersproject/sha2" "^5.0.7"
+    "@ethersproject/strings" "^5.0.8"
+    "@ethersproject/transactions" "^5.0.9"
+    "@ethersproject/web" "^5.0.12"
+    bech32 "1.1.4"
+    ws "7.2.3"
 
 "@ethersproject/providers@5.0.21":
   version "5.0.21"

@@ -1,8 +1,7 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
-import { JoinSplitProver } from '@aztec/barretenberg/client_proofs/join_split_proof';
-import { NoteAlgorithms } from '@aztec/barretenberg/client_proofs/note_algorithms';
-import { JoinSplitProofData, ProofData } from '@aztec/barretenberg/client_proofs/proof_data';
+import { JoinSplitProver, JoinSplitProofData, ProofData } from '@aztec/barretenberg/client_proofs';
+import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { Pedersen } from '@aztec/barretenberg/crypto/pedersen';
 import { Grumpkin } from '@aztec/barretenberg/ecc/grumpkin';
 import { WorldState } from '@aztec/barretenberg/world_state';

@@ -29,11 +29,10 @@
     "rootDir": "./src"
   },
   "dependencies": {
-    "@koa/cors": "^3.0.0",
     "@aztec/barretenberg": "file:../barretenberg.js/dest",
-    "bigint-buffer": "^1.1.5",
     "@aztec/blockchain": "file:../blockchain/dest",
-    "ethers": "5.0.29",
+    "@koa/cors": "^3.0.0",
+    "bigint-buffer": "^1.1.5",
     "fs-extra": "9.0.1",
     "koa": "^2.7.0",
     "koa-bodyparser": "^4.3.0",

@@ -1,4 +1,4 @@
-import { GrumpkinAddress } from '../../address';
+import { GrumpkinAddress } from '../address';
 
 export interface DecryptedNote {
   noteBuf: Buffer;

@@ -1,7 +1,6 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
-import { EthereumBlockchain, EthersAdapter } from '@aztec/blockchain';
-import { ethers } from 'ethers';
+import { EthereumBlockchain, JsonRpcProvider } from '@aztec/blockchain';
 import http from 'http';
 import 'reflect-metadata';
 import { appFactory } from './app';
@@ -14,23 +13,15 @@ const {
   ROLLUP_CONTRACT_ADDRESS,
   ETHEREUM_HOST = 'http://localhost:8545',
   API_PREFIX = '',
-  INFURA_API_KEY,
-  NETWORK,
   MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW,
 } = process.env;
 
 function getEthereumBlockchainConfig() {
   const minConfirmationEHW = MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW ? +MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW : undefined;
-  if (INFURA_API_KEY && NETWORK && ROLLUP_CONTRACT_ADDRESS) {
-    console.log(`Infura network: ${NETWORK}`);
-    console.log(`Rollup contract address: ${ROLLUP_CONTRACT_ADDRESS}`);
-    const provider = new EthersAdapter(new ethers.providers.InfuraProvider(NETWORK, INFURA_API_KEY));
-    const ethConfig = { minConfirmationEHW };
-    return { provider, ethConfig };
-  } else if (ETHEREUM_HOST && ROLLUP_CONTRACT_ADDRESS) {
+  if (ETHEREUM_HOST && ROLLUP_CONTRACT_ADDRESS) {
     console.log(`Ethereum host: ${ETHEREUM_HOST}`);
     console.log(`Rollup contract address: ${ROLLUP_CONTRACT_ADDRESS}`);
-    const provider = new EthersAdapter(new ethers.providers.JsonRpcProvider(ETHEREUM_HOST));
+    const provider = new JsonRpcProvider(ETHEREUM_HOST);
     const ethConfig = { minConfirmationEHW };
     return { provider, ethConfig };
   }

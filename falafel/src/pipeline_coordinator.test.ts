@@ -1,4 +1,12 @@
+import { EthAddress } from '@aztec/barretenberg/address';
+import { TxType } from '@aztec/barretenberg/blockchain';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
+import { numToUInt32BE } from '@aztec/barretenberg/serialize';
+import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
+import { randomBytes } from 'crypto';
 import moment from 'moment';
+import { ClaimProofCreator } from './claim_proof_creator';
 import { TxDao } from './entity/tx';
 import { PipelineCoordinator } from './pipeline_coordinator';
 import { RollupAggregator } from './rollup_aggregator';
@@ -16,7 +24,9 @@ describe('pipeline_coordinator', () => {
   let rollupCreator: RollupCreator;
   let rollupAggregator: RollupAggregator;
   let rollupPublisher: RollupPublisher;
+  let claimProofCreator: ClaimProofCreator;
   let rollupDb: RollupDb;
+  let worldStateDb: WorldStateDb;
   let feeResolver: TxFeeResolver;
   let coordinator: PipelineCoordinator;
   let dateSpy: jest.SpyInstance<number>;
@@ -39,12 +49,23 @@ describe('pipeline_coordinator', () => {
       interrupt: jest.fn(),
     } as any) as RollupPublisher;
 
+    claimProofCreator = ({
+      create: jest.fn(),
+    } as any) as ClaimProofCreator;
+
+    worldStateDb = ({
+      getRoot: jest.fn().mockRejectedValue(Buffer.alloc(32)),
+      getHashPath: jest.fn(),
+    } as any) as WorldStateDb;
+
     rollupDb = ({
       deleteUnsettledRollups: jest.fn(),
       deleteOrphanedRollupProofs: jest.fn(),
+      deleteUnsettledClaimTxs: jest.fn(),
       getNextRollupId: jest.fn().mockResolvedValue(0),
       getLastSettledRollup: jest.fn().mockResolvedValue(undefined),
       getPendingTxs: jest.fn().mockResolvedValue([]),
+      getRollup: jest.fn(),
     } as any) as RollupDb;
 
     feeResolver = ({
@@ -55,6 +76,8 @@ describe('pipeline_coordinator', () => {
       rollupCreator,
       rollupAggregator,
       rollupPublisher,
+      claimProofCreator,
+      worldStateDb,
       rollupDb,
       numInnerRollupTxs,
       numOuterRollupProofs,
@@ -69,17 +92,33 @@ describe('pipeline_coordinator', () => {
 
   describe('start and stop', () => {
     it('should reset data and trigger aggregateAndPublish()', async () => {
-      const reset = jest.spyOn(coordinator as any, 'reset').mockImplementation(jest.fn());
+      const lastSettledRollup = {};
+      const nextRollupId = 123;
+      const root = randomBytes(32);
+      const hashPath = [] as any;
+      jest.spyOn(rollupDb, 'getLastSettledRollup').mockImplementationOnce(() => lastSettledRollup as any);
+      jest.spyOn(rollupDb, 'getNextRollupId').mockImplementationOnce(async () => nextRollupId);
+      jest.spyOn(worldStateDb, 'getRoot').mockImplementationOnce(() => root);
+      jest.spyOn(worldStateDb, 'getHashPath').mockImplementationOnce(async () => hashPath);
+      const reset = jest.spyOn(coordinator as any, 'reset');
+      const createClaimProof = jest.spyOn(claimProofCreator, 'create');
+
       let resolveAggregateAndPublish: () => void;
       const aggregateAndPublishPromise = new Promise<void>(resolve => (resolveAggregateAndPublish = resolve));
       const aggregateAndPublish = jest.spyOn(coordinator as any, 'aggregateAndPublish').mockImplementation(async () => {
-        // reset() should have been called before aggregateAndPublish()
+        // reset() and create() should have been called before aggregateAndPublish()
         expect(reset).toHaveBeenCalledTimes(1);
+        expect(createClaimProof).toHaveBeenCalledTimes(1);
         resolveAggregateAndPublish();
       });
       coordinator.start();
       await aggregateAndPublishPromise;
+
       expect(aggregateAndPublish).toHaveBeenCalledTimes(1);
+      expect((coordinator as any).lastRollup).toBe(lastSettledRollup);
+      expect((coordinator as any).rollupId).toBe(nextRollupId);
+      expect((coordinator as any).oldDefiRoot).toBe(root);
+      expect((coordinator as any).oldDefiPath).toBe(hashPath);
     });
 
     it('cannot start when it is already started', () => {
@@ -187,6 +226,37 @@ describe('pipeline_coordinator', () => {
       (coordinator as any).lastRollup = { mined: lastRollupTime };
     };
 
+    const mockDefiProofData = (proofId: ProofId.DEFI_DEPOSIT | ProofId.DEFI_CLAIM, bridgeId = BridgeId.random()) =>
+      Buffer.concat([
+        numToUInt32BE(proofId, 32),
+        randomBytes(2 * 32),
+        bridgeId.toBuffer(),
+        randomBytes(6 * 32),
+        EthAddress.randomAddress().toBuffer32(),
+        EthAddress.randomAddress().toBuffer32(),
+        randomBytes(2 * 32),
+      ]);
+
+    const mockTx = (id: number, txType = TxType.DEPOSIT) =>
+      (({
+        id,
+        txType,
+        proofData: [TxType.DEFI_DEPOSIT, TxType.DEFI_CLAIM].includes(txType)
+          ? mockDefiProofData(txType - 3)
+          : Buffer.concat([
+              Buffer.alloc(28),
+              numToUInt32BE(Math.max(0, txType - 3)),
+              randomBytes((ProofData.NUM_PUBLIC_INPUTS - 1) * 32),
+            ]),
+      } as any) as TxDao);
+
+    const mockDefiBridgeTx = (id: number, bridgeId: BridgeId) =>
+      (({
+        id,
+        txType: TxType.DEFI_DEPOSIT,
+        proofData: mockDefiProofData(ProofId.DEFI_DEPOSIT, bridgeId),
+      } as any) as TxDao);
+
     const mockProcessedTxs = (numberOfTxs = 1) => {
       (coordinator as any).innerProofs.push(...Array(Math.ceil(numberOfTxs / numInnerRollupTxs)).fill({}));
       (coordinator as any).txs = Array(numberOfTxs)
@@ -198,12 +268,8 @@ describe('pipeline_coordinator', () => {
       jest.spyOn(rollupDb, 'getPendingTxs').mockImplementation(async () =>
         Array(numberOfTxs)
           .fill(0)
-          .map((_, i) => (({ id: offset + i } as any) as TxDao)),
+          .map((_, i) => mockTx(offset + i)),
       );
-    };
-
-    const mockInnerProofs = (numberOfProofs = 1) => {
-      (coordinator as any).innerProofs = Array(numberOfProofs).fill({});
     };
 
     const aggregateAndPublish = async () => (coordinator as any).aggregateAndPublish();
@@ -337,6 +403,38 @@ describe('pipeline_coordinator', () => {
       expect(isRunning()).toBe(false);
     });
 
+    it('will not rollup defi proofs with more than the allowed distinct bridge ids', async () => {
+      const bridgeIds = Array(6)
+        .fill(0)
+        .map(() => BridgeId.random());
+      const txs = [
+        mockDefiBridgeTx(0, bridgeIds[0]),
+        mockDefiBridgeTx(1, bridgeIds[1]),
+        mockDefiBridgeTx(2, bridgeIds[2]),
+        mockDefiBridgeTx(3, bridgeIds[3]),
+        mockDefiBridgeTx(4, bridgeIds[4]),
+        mockDefiBridgeTx(5, bridgeIds[5]),
+        mockTx(6),
+        mockDefiBridgeTx(7, bridgeIds[4]),
+        mockDefiBridgeTx(8, bridgeIds[3]),
+        mockDefiBridgeTx(9, bridgeIds[5]),
+        mockTx(10),
+      ];
+      jest.spyOn(rollupDb, 'getPendingTxs').mockImplementationOnce(async () => txs);
+
+      await aggregateAndPublish();
+
+      expect(processedTxs()).toBe(6);
+      expect(processedTxIds()).toEqual([0, 1, 2, 3, 6, 8]);
+      expect(innerProofs()).toBe(3);
+      expect((coordinator as any).bridgeIds).toEqual(bridgeIds.slice(0, 4));
+
+      expect(createProof).toHaveBeenCalledTimes(3);
+      expect(aggregateRollupProofs).toHaveBeenCalledTimes(0);
+      expect(publishRollup).toHaveBeenCalledTimes(0);
+      expect(isRunning()).toBe(true);
+    });
+
     it('will not process new incoming txs while it is creating inner proofs', async () => {
       mockPendingTxs(5);
       jest.spyOn(rollupCreator, 'create').mockImplementation((() => {
@@ -373,21 +471,6 @@ describe('pipeline_coordinator', () => {
       expect(isRunning()).toBe(false);
     });
 
-    it('will not fetch more pending txs than it should', async () => {
-      const getPendingTxs = jest.spyOn(rollupDb, 'getPendingTxs').mockImplementation(async () => []);
-
-      await aggregateAndPublish();
-      expect(getPendingTxs).toHaveBeenLastCalledWith(8);
-
-      mockInnerProofs(1);
-      await aggregateAndPublish();
-      expect(getPendingTxs).toHaveBeenLastCalledWith(6);
-
-      mockInnerProofs(4);
-      await aggregateAndPublish();
-      expect(getPendingTxs).toHaveBeenLastCalledWith(0);
-    });
-
     it('will create and publish proof if flush is set to true ', async () => {
       mockPendingTxs(1);
       coordinator.flushTxs();
@@ -401,6 +484,27 @@ describe('pipeline_coordinator', () => {
       expect(aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(publishRollup).toHaveBeenCalledTimes(1);
       expect(isRunning()).toBe(false);
+    });
+
+    it('will rollup claim proofs first', async () => {
+      jest
+        .spyOn(rollupDb, 'getPendingTxs')
+        .mockImplementation(async () => [
+          mockTx(0, TxType.DEPOSIT),
+          mockTx(1, TxType.ACCOUNT),
+          mockTx(2, TxType.DEFI_DEPOSIT),
+          mockTx(3, TxType.DEFI_CLAIM),
+          mockTx(4, TxType.WITHDRAW_TO_CONTRACT),
+          mockTx(5, TxType.DEFI_CLAIM),
+          mockTx(6, TxType.TRANSFER),
+          mockTx(7, TxType.WITHDRAW_TO_WALLET),
+          mockTx(8, TxType.DEPOSIT),
+        ]);
+
+      await aggregateAndPublish();
+
+      expect(processedTxs()).toBe(8);
+      expect(processedTxIds()).toEqual([3, 5, 0, 1, 2, 4, 6, 7]);
     });
 
     it('will not aggregate proofs when flush is true but there are no inner proofs ', async () => {

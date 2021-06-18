@@ -1,6 +1,6 @@
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { createHash, randomBytes } from 'crypto';
-import { numToUInt32BE } from '../../serialize';
+import { numToUInt32BE } from '../serialize';
 import { BridgeId } from '../bridge_id';
 
 export class DefiInteractionNote {

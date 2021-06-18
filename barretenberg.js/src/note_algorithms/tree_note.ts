@@ -1,9 +1,9 @@
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
-import { GrumpkinAddress } from '../../address';
-import { AssetId } from '../../asset';
-import { Grumpkin } from '../../ecc/grumpkin';
-import { numToUInt32BE } from '../../serialize';
-import { ViewingKey } from '../../viewing_key';
+import { GrumpkinAddress } from '../address';
+import { AssetId } from '../asset';
+import { Grumpkin } from '../ecc/grumpkin';
+import { numToUInt32BE } from '../serialize';
+import { ViewingKey } from '../viewing_key';
 import { DecryptedNote } from './decrypted_note';
 import { deriveNoteSecret } from './derive_note_secret';
 

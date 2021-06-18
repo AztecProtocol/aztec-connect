@@ -2,6 +2,7 @@ import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { randomBytes } from 'crypto';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
+import { AccountAliasId } from '../../account_id';
 import { EthAddress, GrumpkinAddress } from '../../address';
 import { AssetId } from '../../asset';
 import { Crs } from '../../crs';
@@ -11,17 +12,14 @@ import { Schnorr } from '../../crypto/schnorr';
 import { Grumpkin } from '../../ecc/grumpkin';
 import { PooledFft } from '../../fft';
 import { HashPath } from '../../merkle_tree';
+import { ClaimNoteTxData, NoteAlgorithms, TreeNote } from '../../note_algorithms';
 import { PooledPippenger } from '../../pippenger';
 import { RollupProofData } from '../../rollup_proof';
 import { BarretenbergWasm } from '../../wasm';
 import { WorkerPool } from '../../wasm/worker_pool';
 import { WorldStateDb } from '../../world_state_db';
-import { AccountAliasId } from '../account_alias_id';
-import { createEphemeralPrivKey } from '../create_ephemeral_priv_key';
 import { JoinSplitTx } from '../join_split_proof';
-import { ClaimNoteTxData } from '../join_split_proof/claim_note_tx_data';
 import { computeSigningData } from '../join_split_proof/compute_signing_data';
-import { NoteAlgorithms, TreeNote } from '../note_algorithms';
 import { Prover } from '../prover';
 import { EscapeHatchProver, EscapeHatchTx, EscapeHatchVerifier } from './index';
 
@@ -53,6 +51,8 @@ describe('escape_hatch_proof', () => {
   const privateKey = Buffer.from([
     0x0b, 0x9b, 0x3a, 0xde, 0xe6, 0xb3, 0xd8, 0x1b, 0x28, 0xa0, 0x88, 0x6b, 0x2a, 0x84, 0x15, 0xc7,
     0xda, 0x31, 0x29, 0x1a, 0x5e, 0x96, 0xbb, 0x7a, 0x56, 0x63, 0x9e, 0x17, 0x7d, 0x30, 0x1b, 0xeb]);
+
+  const createEphemeralPrivKey = (grumpkin: Grumpkin) => grumpkin.getRandomFr();
 
   beforeEach(async () => {
     EventEmitter.defaultMaxListeners = 32;

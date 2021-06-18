@@ -1,9 +1,11 @@
 import { TxType } from '@aztec/barretenberg/blockchain';
-import { AccountProofData, ProofData } from '@aztec/barretenberg/client_proofs/proof_data';
+import { AccountProofData, ProofData } from '@aztec/barretenberg/client_proofs';
+import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { toBufferBE } from 'bigint-buffer';
 import { Connection, In, IsNull, MoreThanOrEqual, Not, Repository } from 'typeorm';
 import { AccountDao } from '../entity/account';
+import { ClaimDao } from '../entity/claim';
 import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
@@ -17,12 +19,14 @@ export class TypeOrmRollupDb implements RollupDb {
   private rollupProofRep: Repository<RollupProofDao>;
   private rollupRep: Repository<RollupDao>;
   private accountRep: Repository<AccountDao>;
+  private claimRep: Repository<ClaimDao>;
 
   constructor(private connection: Connection) {
     this.txRep = this.connection.getRepository(TxDao);
     this.rollupProofRep = this.connection.getRepository(RollupProofDao);
     this.rollupRep = this.connection.getRepository(RollupDao);
     this.accountRep = this.connection.getRepository(AccountDao);
+    this.claimRep = this.connection.getRepository(ClaimDao);
   }
 
   public async addTx(txDao: TxDao) {
@@ -123,7 +127,10 @@ export class TypeOrmRollupDb implements RollupDb {
 
   public async getUnsettledNullifiers() {
     const unsettledTxs = await this.getUnsettledTxs();
-    return unsettledTxs.map(tx => [tx.nullifier1, tx.nullifier2]).flat();
+    return unsettledTxs
+      .map(tx => [tx.nullifier1, tx.nullifier2])
+      .flat()
+      .filter((n): n is Buffer => !!n);
   }
 
   public async nullifiersExist(n1: Buffer, n2: Buffer) {
@@ -234,6 +241,7 @@ export class TypeOrmRollupDb implements RollupDb {
     gasPrice: bigint,
     mined: Date,
     ethTxHash: TxHash,
+    interactionResult: DefiInteractionNote[],
     txIds: Buffer[],
   ) {
     await this.connection.transaction(async transactionalEntityManager => {
@@ -241,7 +249,13 @@ export class TypeOrmRollupDb implements RollupDb {
       await transactionalEntityManager.update(
         this.rollupRep.target,
         { id },
-        { mined, gasUsed, gasPrice: toBufferBE(gasPrice, 32), ethTxHash: ethTxHash.toBuffer() },
+        {
+          mined,
+          gasUsed,
+          gasPrice: toBufferBE(gasPrice, 32),
+          ethTxHash: ethTxHash.toBuffer(),
+          interactionResult: Buffer.concat(interactionResult.map(r => r.toBuffer())),
+        },
       );
     });
     return (await this.getRollup(id))!;
@@ -292,5 +306,29 @@ export class TypeOrmRollupDb implements RollupDb {
       throw new Error(`Rollup not found for merkle root: ${root.toString('hex')}`);
     }
     return rollup.id + 1;
+  }
+
+  public async addClaim(claim: ClaimDao) {
+    await this.claimRep.save(claim);
+  }
+
+  public async getPendingClaims(take?: number) {
+    return this.claimRep.find({
+      where: { claimed: IsNull() },
+      order: { created: 'ASC' },
+      take,
+    });
+  }
+
+  public async confirmClaimed(nullifier: Buffer, claimed: Date) {
+    await this.claimRep.update({ nullifier }, { claimed });
+  }
+
+  public async deleteUnsettledClaimTxs() {
+    const unsettledClaim = await this.claimRep.find({
+      where: { claimed: IsNull() },
+    });
+    const nullifiers = unsettledClaim.map(c => c.nullifier);
+    await this.txRep.delete({ nullifier1: In(nullifiers) });
   }
 }

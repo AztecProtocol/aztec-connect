@@ -1,14 +1,16 @@
 import { EthAddress } from '@aztec/barretenberg/address';
+import { TxType } from '@aztec/barretenberg/blockchain';
 import { ProofData } from '@aztec/barretenberg/client_proofs/proof_data';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { toBufferBE } from 'bigint-buffer';
 import { randomBytes } from 'crypto';
+import moment from 'moment';
+import { ClaimDao } from '../entity/claim';
 import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
-import moment from 'moment';
-import { TxType } from '@aztec/barretenberg/blockchain';
 
 const now = moment();
 
@@ -19,10 +21,11 @@ interface RandomTxOpts {
   txType?: TxType;
 }
 
-export const randomTx = ({ signature, inputOwner, publicInput, txType }: RandomTxOpts = {}) => {
+export const randomTx = ({ signature, inputOwner, publicInput, txType = TxType.DEPOSIT }: RandomTxOpts = {}) => {
+  const proofId = Math.max(0, txType - 3);
   const proofData = new ProofData(
     Buffer.concat([
-      Buffer.alloc(32), // proofId
+      numToUInt32BE(proofId, 32),
       publicInput ? toBufferBE(publicInput, 32) : randomBytes(32), // publicInput
       randomBytes(32), // publicOutput
       Buffer.alloc(32), // assetId
@@ -44,7 +47,7 @@ export const randomTx = ({ signature, inputOwner, publicInput, txType }: RandomT
     dataRootsIndex: 0,
     created: now.add(1, 's').toDate(),
     signature,
-    txType: txType || TxType.DEPOSIT,
+    txType,
   });
 };
 
@@ -102,5 +105,14 @@ export const randomRollup = (rollupId: number, rollupProof: RollupProofDao) =>
         .flat()
         .map(vk => vk.toBuffer()),
     ),
+    created: new Date(),
+  });
+
+export const randomClaim = (txId: Buffer) =>
+  new ClaimDao({
+    id: randomBytes(4).readUInt32BE(0),
+    txId,
+    nullifier: randomBytes(32),
+    interactionNonce: randomBytes(4).readUInt32BE(0),
     created: new Date(),
   });

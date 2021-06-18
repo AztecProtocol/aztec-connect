@@ -27,6 +27,10 @@ export class RollupDao {
   @Column({ nullable: true })
   public callData!: Buffer;
 
+  // Null until mined and events fetched.
+  @Column({ nullable: true })
+  public interactionResult!: Buffer;
+
   // Null until tx sent.
   @Column({ nullable: true })
   public ethTxHash!: Buffer;

@@ -42,9 +42,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     uint256 public constant numberOfAssets = 4;
     uint256 public constant numberOfBridgeCalls = 4;
     uint256 public constant txNumPubInputs = 12;
-    uint256 public constant rollupNumPubInputs = 11 + (numberOfBridgeCalls * 2) + numberOfAssets;
+    uint256 public constant rollupNumHeaderInputs = 11 + (numberOfBridgeCalls * 2) + numberOfAssets;
     uint256 public constant txPubInputLength = txNumPubInputs * 32; // public inputs length for of each inner proof tx
-    uint256 public constant rollupPubInputLength = rollupNumPubInputs * 32;
+    uint256 public constant rollupHeaderInputLength = rollupNumHeaderInputs * 32;
     uint256 public constant ethAssetId = 0;
     address public immutable weth;
     uint256 public immutable escapeBlockLowerBound;
@@ -391,7 +391,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
 
         require(rollupProviders[provider], 'Rollup Processor: UNKNOWN_PROVIDER');
         bytes memory sigData =
-            abi.encodePacked(proofData[0:rollupPubInputLength], feeReceiver, feeLimit, feeDistributor);
+            abi.encodePacked(proofData[0:rollupHeaderInputLength], feeReceiver, feeLimit, feeDistributor);
         RollupProcessorLibrary.validateSignature(keccak256(sigData), providerSignature, provider);
 
         processRollupProof(proofData, signatures, viewingKeys);
@@ -565,7 +565,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         assembly {
             proofDataPtr := add(proofData, 0x20) // add 0x20 to skip over 1st field in bytes array (the length field)
         }
-        proofDataPtr += rollupPubInputLength; // update pointer to skip over rollup public inputs and point to inner tx public inputs
+        proofDataPtr += rollupHeaderInputLength; // update pointer to skip over rollup public inputs and point to inner tx public inputs
         uint256 end = proofDataPtr + (numTxs * txPubInputLength);
         uint256 stepSize = txPubInputLength;
 
@@ -642,7 +642,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
 
     function processDefiBridges(bytes memory proofData) internal {
         bytes32 prevDefiInteractionHash =
-            extractPrevDefiInteractionHash(proofData, rollupPubInputLength, txPubInputLength);
+            extractPrevDefiInteractionHash(proofData, rollupHeaderInputLength, txPubInputLength);
         require(
             prevDefiInteractionHash == defiInteractionHash,
             'Rollup Processor: INCORRECT_PREV_DEFI_INTERACTION_HASH'

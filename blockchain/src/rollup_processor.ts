@@ -1,12 +1,13 @@
-import { TransactionReceipt, TransactionResponse } from '@ethersproject/abstract-provider';
-import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
 import { PermitArgs } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
-import { BridgeId, DefiInteractionNote } from '@aztec/barretenberg/client_proofs';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { TransactionReceipt, TransactionResponse } from '@ethersproject/abstract-provider';
+import { Web3Provider } from '@ethersproject/providers';
 import { Contract, Signer, utils } from 'ethers';
 import { abi as RollupABI } from './artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
 import { solidityFormatSignatures } from './solidity_format_signatures';
@@ -207,7 +208,11 @@ export class RollupProcessor {
     const blocks = await Promise.all(txs.map(tx => this.provider.getBlock(tx.blockNumber!)));
     const interactionResultMap = await this.getDefiBridgeEvents(rollupEvent.blockNumber);
     return txs.map((tx, i) =>
-      this.decodeBlock({ ...tx, timestamp: blocks[i].timestamp }, receipts[0], interactionResultMap[tx.blockNumber!]),
+      this.decodeBlock(
+        { ...tx, timestamp: blocks[i].timestamp },
+        receipts[0],
+        interactionResultMap[tx.blockNumber!] || [],
+      ),
     );
   }
 

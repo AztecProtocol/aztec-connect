@@ -3,10 +3,9 @@ import { EthAddress, GrumpkinAddress } from '../../address';
 import { AssetId } from '../../asset';
 import { HashPath } from '../../merkle_tree';
 import { numToUInt32BE } from '../../serialize';
-import { AccountAliasId } from '../account_alias_id';
-import { TreeNote } from '../note_algorithms';
-import { Signature } from '../signature';
-import { ClaimNoteTxData } from './claim_note_tx_data';
+import { AccountAliasId } from '../../account_id';
+import { TreeNote, ClaimNoteTxData } from '../../note_algorithms';
+import { SchnorrSignature } from '../../crypto/schnorr';
 
 export class JoinSplitTx {
   constructor(
@@ -25,7 +24,7 @@ export class JoinSplitTx {
     public accountIndex: number,
     public accountPath: HashPath,
     public signingPubKey: GrumpkinAddress,
-    public signature: Signature,
+    public signature: SchnorrSignature,
     public inputOwner: EthAddress,
     public outputOwner: EthAddress,
   ) {}

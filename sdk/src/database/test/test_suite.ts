@@ -1,5 +1,5 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
-import { AliasHash } from '@aztec/barretenberg/client_proofs/alias_hash';
+import { AliasHash } from '@aztec/barretenberg/account_id';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { randomBytes } from 'crypto';
 import { Note } from '../../note';
