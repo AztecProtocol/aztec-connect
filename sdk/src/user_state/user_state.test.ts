@@ -429,6 +429,35 @@ describe('user state', () => {
     });
   });
 
+  it('restore a join split tx sent from another local user to us', async () => {
+    const outputNoteValue1 = 56n;
+    const rollupProofData = generateJoinSplitRollup(0, { validChangeNote: false, outputNoteValue1 });
+    const blockCreated = new Date();
+    const block = createBlock(rollupProofData, blockCreated);
+
+    const owner = AccountId.random();
+    db.getNoteByNullifier.mockResolvedValueOnce({ index: 1, owner });
+    db.getNoteByNullifier.mockResolvedValueOnce({ index: 2, owner });
+
+    userState.processBlock(block);
+    await userState.stopSync(true);
+
+    const innerProofData = rollupProofData.innerProofData[0];
+
+    expect(db.addNote).toHaveBeenCalledTimes(1);
+    expect(db.addNote.mock.calls[0][0]).toMatchObject({ dataEntry: innerProofData.newNote1, value: outputNoteValue1 });
+    expect(db.nullifyNote).toHaveBeenCalledTimes(0);
+    expect(db.addJoinSplitTx).toHaveBeenCalledTimes(1);
+    expect(db.addJoinSplitTx.mock.calls[0][0]).toMatchObject({
+      userId: user.id,
+      privateInput: 0n,
+      recipientPrivateOutput: outputNoteValue1,
+      senderPrivateOutput: 0n,
+      ownedByUser: false,
+      settled: blockCreated,
+    });
+  });
+
   it('restore a join split tx sent to another user', async () => {
     const outputNoteValue1 = 56n;
     const outputNoteValue2 = 78n;

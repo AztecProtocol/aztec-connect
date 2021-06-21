@@ -4,7 +4,6 @@ export class Sha256 {
   constructor(private wasm: BarretenbergWasm) {}
 
   public hash(data: Uint8Array) {
-    const rawLength = data.length;
     const mem = this.wasm.call('bbmalloc', data.length + 32);
     this.wasm.transferToHeap(data, mem);
     this.wasm.call('sha256__hash', mem, data.length, mem + data.length);

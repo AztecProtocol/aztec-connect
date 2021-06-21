@@ -235,25 +235,6 @@ describe('merkle_tree', () => {
     await expectSameTrees(tree1, tree2);
   });
 
-  /*
-  it('benchmark', async () => {
-    const values: Buffer[] = [];
-    for (let i = 0; i < 64; ++i) {
-      const v = Buffer.alloc(64, 0);
-      v.writeUInt32LE(i, 0);
-      values[i] = v;
-    }
-
-    const db = levelup(memdown());
-    const tree = await MerkleTree.new(db, pedersen, 'test', 32);
-
-    const start = new Date().getTime();
-    await tree.updateElements(0, values);
-    const end = new Date().getTime() - start;
-    console.log(end);
-  });
-  */
-
   it('should be able to restore from previous data', async () => {
     const levelDown = memdown();
     const db = levelup(levelDown);

@@ -37,7 +37,7 @@ const recoverJoinSplitValues = (
   minFee: bigint,
 ) => {
   const fee = publicInput + privateInput - publicOutput - recipientPrivateOutput - senderPrivateOutput;
-  const balanceDiff = (ownedByUser ? senderPrivateOutput : recipientPrivateOutput) - privateInput;
+  const balanceDiff = ownedByUser ? senderPrivateOutput - privateInput : recipientPrivateOutput;
 
   const recoverTx = (action: JoinSplitTxAction, value: bigint, feeUnknown = false) => ({
     action,

@@ -25,6 +25,7 @@ interface ConfigVars {
   ethereumHost: string;
   priceFeedContractAddress0: string;
   priceFeedContractAddress1: string;
+  priceFeedContractAddress2: string;
   txAmountLimits: string;
   withdrawSafeAmounts: string;
   sessionTimeout: string;
@@ -51,6 +52,7 @@ const fromLocalStorage = (): ConfigVars => ({
   ethereumHost: localStorage.getItem('zm_ethereumHost') || '',
   priceFeedContractAddress0: localStorage.getItem('zm_priceFeedContractAddress0') || '',
   priceFeedContractAddress1: localStorage.getItem('zm_priceFeedContractAddress1') || '',
+  priceFeedContractAddress2: localStorage.getItem('zm_priceFeedContractAddress2') || '',
   txAmountLimits: localStorage.getItem('zm_txAmountLimit') || '',
   withdrawSafeAmounts: localStorage.getItem('zm_withdrawSafeAmounts') || '',
   sessionTimeout: localStorage.getItem('zm_sessionTimeout') || '',
@@ -67,6 +69,7 @@ const fromEnvVars = (): ConfigVars => ({
   ethereumHost: process.env.REACT_APP_ETHEREUM_HOST || '',
   priceFeedContractAddress0: process.env.REACT_APP_PRICE_FEED_CONTRACT_ADDRESS_0 || '',
   priceFeedContractAddress1: process.env.REACT_APP_PRICE_FEED_CONTRACT_ADDRESS_1 || '',
+  priceFeedContractAddress2: process.env.REACT_APP_PRICE_FEED_CONTRACT_ADDRESS_2 || '',
   txAmountLimits: process.env.REACT_APP_TX_AMOUNT_LIMIT || '',
   withdrawSafeAmounts: process.env.REACT_APP_WITHDRAW_SAFE_AMOUNT || '',
   sessionTimeout: process.env.REACT_APP_SESSION_TIMEOUT || '',
@@ -83,9 +86,11 @@ const productionConfig: ConfigVars = {
   ethereumHost: '',
   priceFeedContractAddress0: '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419', // ETH/USD
   priceFeedContractAddress1: '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9', // DAI/USD
+  priceFeedContractAddress2: '0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c', // BTC/USD
   txAmountLimits: JSON.stringify([
     '1'.padEnd(19, '0'), // 10 ** 18
     '2'.padEnd(22, '0'), // 2000 * 10 ** 18
+    '1'.padEnd(18, '0'), // 1 ** 17
   ]),
   withdrawSafeAmounts: JSON.stringify([
     [
@@ -96,9 +101,13 @@ const productionConfig: ConfigVars = {
       '2'.padEnd(21, '0'), // 200 zkDAI
       '2'.padEnd(22, '0'), // 2000 zkDAI
     ],
+    [
+      '1'.padEnd(17, '0'), // 0.01 BTC
+      '1'.padEnd(18, '0'), // 0.01 BTC
+    ],
   ]),
   sessionTimeout: '30', // days
-  maxAvailableAssetId: '1',
+  maxAvailableAssetId: '2',
   debug: true,
 };
 
@@ -123,6 +132,7 @@ export const getConfig = (): Config => {
     ethereumHost,
     priceFeedContractAddress0,
     priceFeedContractAddress1,
+    priceFeedContractAddress2,
     txAmountLimits,
     withdrawSafeAmounts,
     sessionTimeout,
@@ -137,7 +147,7 @@ export const getConfig = (): Config => {
     infuraId,
     network,
     ethereumHost,
-    priceFeedContractAddresses: [priceFeedContractAddress0, priceFeedContractAddress1],
+    priceFeedContractAddresses: [priceFeedContractAddress0, priceFeedContractAddress1, priceFeedContractAddress2],
     txAmountLimits: JSON.parse(txAmountLimits).map((amount: string) => BigInt(amount)),
     withdrawSafeAmounts: JSON.parse(withdrawSafeAmounts).map((amounts: string[]) =>
       amounts.map((a: string) => BigInt(a)),

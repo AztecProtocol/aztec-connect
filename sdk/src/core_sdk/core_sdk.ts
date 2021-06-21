@@ -8,7 +8,7 @@ import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { PooledProverFactory } from '@aztec/barretenberg/client_proofs/prover';
 import { Crs } from '@aztec/barretenberg/crs';
 import { Blake2s } from '@aztec/barretenberg/crypto/blake2s';
-import { Pedersen } from '@aztec/barretenberg/crypto/pedersen';
+import { Pedersen, PooledPedersen } from '@aztec/barretenberg/crypto/pedersen';
 import { Schnorr } from '@aztec/barretenberg/crypto/schnorr';
 import { Grumpkin } from '@aztec/barretenberg/ecc/grumpkin';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
@@ -113,10 +113,14 @@ export class CoreSdk extends EventEmitter {
     this.updateInitState(SdkInitState.INITIALIZING);
 
     const barretenberg = await BarretenbergWasm.new();
+    const numWorkers = this.nextLowestPowerOf2(Math.min(this.numCPU, 8));
+    this.workerPool = await WorkerPool.new(barretenberg, numWorkers);
+    // TODO: Remember why we have this additional worker for batch decrypt notes and don't just use pool...
     this.worker = await createWorker('worker', barretenberg.module);
+
     const noteAlgos = new NoteAlgorithms(barretenberg, this.worker);
     this.blake2s = new Blake2s(barretenberg);
-    this.pedersen = new Pedersen(barretenberg, this.worker);
+    this.pedersen = new PooledPedersen(barretenberg, this.workerPool);
     this.grumpkin = new Grumpkin(barretenberg);
     this.schnorr = new Schnorr(barretenberg);
     this.userFactory = new UserDataFactory(this.grumpkin);
@@ -145,8 +149,6 @@ export class CoreSdk extends EventEmitter {
     };
 
     // Create provers
-    const numWorkers = this.nextLowestPowerOf2(Math.min(this.numCPU, 8));
-    this.workerPool = await WorkerPool.new(barretenberg, numWorkers);
     const crsData = await this.getCrsData(
       this.escapeHatchMode ? EscapeHatchProver.circuitSize : JoinSplitProver.circuitSize,
     );
@@ -649,11 +651,6 @@ export class CoreSdk extends EventEmitter {
   public async sendProof(proofOutput: ProofOutput, depositSignature?: Buffer) {
     if (this.escapeHatchMode) {
       await this.validateEscapeOpen();
-    }
-
-    const { signingData } = proofOutput;
-    if (signingData && !depositSignature) {
-      throw new Error('Proof not signed.');
     }
 
     const { tx } = proofOutput;

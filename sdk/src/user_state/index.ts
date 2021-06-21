@@ -296,10 +296,11 @@ export class UserState extends EventEmitter {
 
   private async nullifyNote(nullifier: Buffer) {
     const note = await this.db.getNoteByNullifier(nullifier);
-    if (note?.owner.equals(this.user.id)) {
-      await this.db.nullifyNote(note.index);
-      debug(`user ${this.user.id} nullified note at index ${note.index} with value ${note.value}.`);
+    if (!note || !note.owner.equals(this.user.id)) {
+      return;
     }
+    await this.db.nullifyNote(note.index);
+    debug(`user ${this.user.id} nullified note at index ${note.index} with value ${note.value}.`);
     return note;
   }
 

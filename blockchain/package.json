@@ -14,7 +14,8 @@
     "test:verifier": "hardhat test ./test/verifier/verifier.test.ts",
     "test:src": "jest",
     "start:ganache": "yarn compile && ganache-cli -d -h 0.0.0.0 --chainId=1337 -l 12000000 -e 10000 -m 'test test test test test test test test test test test junk'",
-    "generate:dev": "./generate_vks.sh && cd ./test/verifier/fixtures && ./create_proofs.sh dev"
+    "generate:dev": "./generate_vks_dev.sh && cd ./test/verifier/fixtures && ./create_proofs_dev.sh",
+    "generate:prod": "./generate_vks_prod.sh && cd ./test/verifier/fixtures && ./create_proofs_prod.sh"
   },
   "bin": {
     "deploy_rollup_processor": "./deploy/index.js",
