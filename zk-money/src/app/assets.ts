@@ -40,6 +40,6 @@ export const assets: Asset[] = [
     symbol: 'renBTC',
     icon: rbtcIcon,
     iconWhite: rbtcWhiteIcon,
-    decimals: 18,
+    decimals: 8,
   },
 ];
