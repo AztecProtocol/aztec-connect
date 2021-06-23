@@ -1,4 +1,5 @@
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
+import { bigintTransformer } from './transformer';
 
 @Entity({ name: 'claim' })
 export class ClaimDao {
@@ -10,11 +11,17 @@ export class ClaimDao {
   public id!: number;
 
   @Column({ unique: true })
-  public txId!: Buffer;
-
-  @Column({ unique: true })
   @Index()
   public nullifier!: Buffer;
+
+  @Column('text', { transformer: [bigintTransformer] })
+  public bridgeId!: bigint;
+
+  @Column('text', { transformer: [bigintTransformer] })
+  public depositValue!: bigint;
+
+  @Column()
+  public partialState!: Buffer;
 
   @Column()
   public interactionNonce!: number;

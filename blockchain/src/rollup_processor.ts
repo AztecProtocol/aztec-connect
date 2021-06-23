@@ -64,6 +64,10 @@ export class RollupProcessor {
     return Buffer.from((await this.rollupProcessor.rootRoot()).slice(2), 'hex');
   }
 
+  async defiRoot() {
+    return Buffer.from((await this.rollupProcessor.defiRoot()).slice(2), 'hex');
+  }
+
   async defiInteractionHash() {
     return Buffer.from((await this.rollupProcessor.defiInteractionHash()).slice(2), 'hex');
   }

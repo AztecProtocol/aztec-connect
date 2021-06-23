@@ -60,6 +60,7 @@ export class Server {
       feeGasPriceMultiplier,
       providerGasPriceMultiplier,
     } = config;
+    const noteAlgo = new NoteAlgorithms(barretenberg);
 
     this.txFeeResolver = new TxFeeResolver(
       blockchain,
@@ -76,6 +77,8 @@ export class Server {
       blockchain,
       rollupDb,
       worldStateDb,
+      this.txFeeResolver,
+      noteAlgo,
       metrics,
       provider,
       publishInterval,
@@ -84,9 +87,7 @@ export class Server {
       providerGasPriceMultiplier,
       numInnerRollupTxs,
       numOuterRollupProofs,
-      this.txFeeResolver,
     );
-    const noteAlgo = new NoteAlgorithms(barretenberg);
     this.worldState = new WorldState(rollupDb, worldStateDb, blockchain, this.pipelineFactory, noteAlgo, metrics);
     this.txReceiver = new TxReceiver(
       barretenberg,

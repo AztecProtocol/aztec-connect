@@ -1,7 +1,8 @@
 import { TxType } from '@aztec/barretenberg/blockchain';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
 import { DefiInteractionNote, TreeClaimNote } from '@aztec/barretenberg/note_algorithms';
-import { DefiDepositProofData, InnerProofData } from '@aztec/barretenberg/rollup_proof';
+import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { ClaimProof, ClaimProofRequest, ProofGenerator } from 'halloumi/proof_generator';
@@ -22,14 +23,21 @@ export class ClaimProofCreator {
       return;
     }
 
-    const txIds = claims.map(c => c.txId);
-    const txs = await this.rollupDb.getTxsByTxIds(txIds);
     const dataRoot = this.worldStateDb.getRoot(RollupTreeId.DATA);
     const defiRoot = this.worldStateDb.getRoot(RollupTreeId.DEFI);
 
+    const rollupIds: Set<number> = new Set();
     for (const claim of claims) {
-      const tx = txs.find(t => t.id.equals(claim.txId))!;
-      const proofData = await this.createClaimProof(dataRoot, defiRoot, claim, tx);
+      const { interactionNonce } = claim;
+      const rollupId = Math.floor(interactionNonce / RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK);
+      rollupIds.add(rollupId);
+    }
+    const rollups = await this.rollupDb.getRollupsByRollupIds([...rollupIds]);
+    const interactionNotes = rollups.map(({ interactionResult }) => parseInteractionResult(interactionResult)).flat();
+
+    for (const claim of claims) {
+      const interactionNote = interactionNotes.find(n => n.nonce === claim.interactionNonce)!;
+      const proofData = await this.createClaimProof(dataRoot, defiRoot, claim, interactionNote);
       if (!proofData) {
         // TODO: Once we correctly handle interrupts, this is not a panic scenario.
         throw new Error('Failed to create claim proof. This should not happen.');
@@ -55,21 +63,17 @@ export class ClaimProofCreator {
     // TODO: Interrupt proof creation.
   }
 
-  private async createClaimProof(dataRoot: Buffer, defiRoot: Buffer, claim: ClaimDao, tx: TxDao) {
-    const { id, txId, interactionNonce } = claim;
-    console.log(`Creating claim proof for tx ${txId.toString('hex')}...`);
-    const interactionNote = parseInteractionResult(tx.rollupProof!.rollup.interactionResult).find(
-      n => n.nonce === interactionNonce,
-    )!;
+  private async createClaimProof(
+    dataRoot: Buffer,
+    defiRoot: Buffer,
+    claim: ClaimDao,
+    interactionNote: DefiInteractionNote,
+  ) {
+    const { id, depositValue, bridgeId, partialState, interactionNonce } = claim;
+    console.log(`Creating claim proof for note ${id}...`);
     const claimNoteIndex = id;
     const claimNotePath = await this.worldStateDb.getHashPath(RollupTreeId.DATA, BigInt(claimNoteIndex));
-    const proofData = new DefiDepositProofData(InnerProofData.fromBuffer(tx.proofData));
-    const claimNote = new TreeClaimNote(
-      proofData.depositValue,
-      proofData.bridgeId,
-      interactionNonce,
-      proofData.partialState,
-    );
+    const claimNote = new TreeClaimNote(depositValue, BridgeId.fromBigInt(bridgeId), interactionNonce, partialState);
     const interactionNotePath = await this.worldStateDb.getHashPath(RollupTreeId.DEFI, BigInt(interactionNonce));
     const { outputValueA, outputValueB } = this.getOutputValues(claimNote, interactionNote);
     const claimProof = new ClaimProof(

@@ -171,15 +171,17 @@ export class WorldState {
       const proofData = innerProofData[i];
       switch (proofData.proofId) {
         case ProofId.DEFI_DEPOSIT: {
-          const proof = new DefiDepositProofData(proofData);
+          const { bridgeId, depositValue, partialState } = new DefiDepositProofData(proofData);
           const index = dataStartIndex + i * 2;
-          const interactionNonce = interactionResult.find(r => r.bridgeId.equals(proof.bridgeId))!.nonce;
-          const note = new TreeClaimNote(proof.depositValue, proof.bridgeId, interactionNonce, proof.partialState);
+          const interactionNonce = interactionResult.find(r => r.bridgeId.equals(bridgeId))!.nonce;
+          const note = new TreeClaimNote(depositValue, bridgeId, interactionNonce, partialState);
           const nullifier = this.noteAlgo.computeClaimNoteNullifier(this.noteAlgo.encryptClaimNote(note), index);
           await this.rollupDb.addClaim({
             id: index,
-            txId: proofData.txId,
             nullifier,
+            bridgeId: bridgeId.toBigInt(),
+            depositValue,
+            partialState,
             interactionNonce,
             created: new Date(),
           });

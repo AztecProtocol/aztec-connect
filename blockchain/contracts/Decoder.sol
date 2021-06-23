@@ -40,9 +40,8 @@ contract Decoder {
         pure
         returns (
             uint256[3] memory nums,
-            bytes32[2] memory dataRoots,
-            bytes32[2] memory nullRoots,
-            bytes32[2] memory rootRoots
+            bytes32[4] memory oldRoots,
+            bytes32[4] memory newRoots
         )
     {
         uint256 rollupId;
@@ -53,14 +52,16 @@ contract Decoder {
             rollupId := mload(dataStart)
             rollupSize := mload(add(dataStart, 0x20))
             dataStartIndex := mload(add(dataStart, 0x40))
-            mstore(dataRoots, mload(add(dataStart, 0x60)))
-            mstore(add(dataRoots, 0x20), mload(add(dataStart, 0x80)))
-            mstore(nullRoots, mload(add(dataStart, 0xa0)))
-            mstore(add(nullRoots, 0x20), mload(add(dataStart, 0xc0)))
-            mstore(rootRoots, mload(add(dataStart, 0xe0)))
-            mstore(add(rootRoots, 0x20), mload(add(dataStart, 0x100)))
+            mstore(oldRoots, mload(add(dataStart, 0x60)))
+            mstore(newRoots, mload(add(dataStart, 0x80)))
+            mstore(add(oldRoots, 0x20), mload(add(dataStart, 0xa0)))
+            mstore(add(newRoots, 0x20), mload(add(dataStart, 0xc0)))
+            mstore(add(oldRoots, 0x40), mload(add(dataStart, 0xe0)))
+            mstore(add(newRoots, 0x40), mload(add(dataStart, 0x100)))
+            mstore(add(oldRoots, 0x60), mload(add(dataStart, 0x120)))
+            mstore(add(newRoots, 0x60), mload(add(dataStart, 0x140)))
         }
-        return ([rollupId, rollupSize, dataStartIndex], dataRoots, nullRoots, rootRoots);
+        return ([rollupId, rollupSize, dataStartIndex], oldRoots, newRoots);
     }
 
     function extractPrevDefiInteractionHash(

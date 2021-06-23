@@ -4,6 +4,7 @@ import { ViewingKey } from '../viewing_key';
 import { BarretenbergWasm } from '../wasm';
 import { BarretenbergWorker } from '../wasm/worker';
 import { ClaimNoteTxData } from './claim_note_tx_data';
+import { DefiInteractionNote } from './defi_interaction_note';
 import { TreeClaimNote } from './tree_claim_note';
 import { TreeNote } from './tree_note';
 
@@ -13,7 +14,7 @@ export class NoteAlgorithms {
   public computeNoteNullifier(encryptedNote: Buffer, index: number, accountPrivateKey: Buffer, real = true) {
     this.wasm.transferToHeap(encryptedNote, 0);
     this.wasm.transferToHeap(accountPrivateKey, 64);
-    this.wasm.call('notes__compute_nullifier', 0, 64, index, real, 0);
+    this.wasm.call('notes__compute_value_note_nullifier', 0, 64, index, real, 0);
     return Buffer.from(this.wasm.sliceMemory(0, 32));
   }
 
@@ -25,7 +26,7 @@ export class NoteAlgorithms {
     const noteBuf = note.toBuffer();
     const mem = this.wasm.call('bbmalloc', noteBuf.length);
     this.wasm.transferToHeap(noteBuf, mem);
-    this.wasm.call('notes__encrypt_note', mem, 0);
+    this.wasm.call('notes__encrypt_value_note', mem, 0);
     this.wasm.call('bbfree', mem);
     return Buffer.from(this.wasm.sliceMemory(0, 64));
   }
@@ -53,6 +54,15 @@ export class NoteAlgorithms {
     this.wasm.transferToHeap(encryptedNote, 0);
     this.wasm.call('notes__compute_claim_note_nullifier', 0, index, 0);
     return Buffer.from(this.wasm.sliceMemory(0, 32));
+  }
+
+  public encryptDefiInteractionNote(note: DefiInteractionNote) {
+    const noteBuf = note.toBuffer();
+    const mem = this.wasm.call('bbmalloc', noteBuf.length);
+    this.wasm.transferToHeap(noteBuf, mem);
+    this.wasm.call('notes__encrypt_defi_interaction_note', mem, 0);
+    this.wasm.call('bbfree', mem);
+    return Buffer.from(this.wasm.sliceMemory(0, 64));
   }
 
   public async batchDecryptNotes(keysBuf: Buffer, privateKey: Buffer) {

@@ -215,6 +215,12 @@ export class TypeOrmRollupDb implements RollupDb {
     return result;
   }
 
+  public async getRollupsByRollupIds(ids: number[]) {
+    return this.rollupRep.find({
+      where: { id: In(ids) },
+    });
+  }
+
   public async addRollup(rollup: RollupDao) {
     // We need to erase any existing rollup first, to ensure we don't get a unique violation when inserting a
     // different rollup proof which has a one to one mapping with the rollup.

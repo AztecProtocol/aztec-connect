@@ -11,6 +11,7 @@ import {
   createWithdrawProof,
   dataRootRoots,
   dataRoots,
+  defiRoots,
   mergeInnerProofs,
   nullifierRoots,
 } from '../fixtures/create_mock_proof';
@@ -335,10 +336,12 @@ describe('rollup_processor: core', () => {
       const dataRoot = await rollupProcessor.dataRoot();
       const nullRoot = await rollupProcessor.nullRoot();
       const rootRoot = await rollupProcessor.rootRoot();
+      const defiRoot = await rollupProcessor.defiRoot();
 
       expect(dataRoot.slice(2)).to.equal(dataRoots[1].toString('hex'));
       expect(nullRoot.slice(2)).to.equal(nullifierRoots[1].toString('hex'));
       expect(rootRoot.slice(2)).to.equal(dataRootRoots[1].toString('hex'));
+      expect(defiRoot.slice(2)).to.equal(defiRoots[1].toString('hex'));
     });
 
     it('should reject for non-sequential rollupId', async () => {

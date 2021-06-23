@@ -57,6 +57,21 @@ describe('rollup_db', () => {
     expect(rollupDao.created).toStrictEqual(rollup.created);
   });
 
+  it('should get rollups by an array of rollup ids', async () => {
+    const rollups: RollupDao[] = [];
+    for (let i = 0; i < 6; ++i) {
+      const rollupProof = randomRollupProof([]);
+      await rollupDb.addRollupProof(rollupProof);
+      const rollup = randomRollup(i, rollupProof);
+      await rollupDb.addRollup(rollup);
+      rollups.push(rollup);
+    }
+
+    const saved = await rollupDb.getRollupsByRollupIds([1, 2, 5]);
+    expect(saved.length).toBe(3);
+    expect(saved.map(r => r.id)).toEqual(expect.arrayContaining([1, 2, 5]));
+  });
+
   it('should add rollup proof and insert its txs', async () => {
     const tx0 = randomTx();
     const tx1 = randomTx();
@@ -338,7 +353,7 @@ describe('rollup_db', () => {
   it('should add and get pending claims', async () => {
     const pendingClaims: ClaimDao[] = [];
     for (let i = 0; i < 8; ++i) {
-      const claim = randomClaim(randomBytes(32));
+      const claim = randomClaim();
       if (i % 2) {
         claim.claimed = new Date();
       } else {
@@ -358,7 +373,7 @@ describe('rollup_db', () => {
     const claimedTxs: TxDao[] = [];
     const unclaimedTxs: TxDao[] = [];
     for (let i = 0; i < 8; ++i) {
-      const claim = randomClaim(randomBytes(32));
+      const claim = randomClaim();
       const tx = randomTx();
       tx.nullifier1 = claim.nullifier;
       if (i % 2) {

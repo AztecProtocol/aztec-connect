@@ -32,6 +32,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     bytes32 public dataRoot = 0x2708a627d38d74d478f645ec3b4e91afa325331acf1acebe9077891146b75e39;
     bytes32 public nullRoot = 0x2694dbe3c71a25d92213422d392479e7b8ef437add81e1e17244462e6edca9b1;
     bytes32 public rootRoot = 0x2d264e93dc455751a721aead9dba9ee2a9fef5460921aeede73f63f6210e6851;
+    bytes32 public defiRoot = 0x086b0997270f9b150571171148d63a2a9d33028e5840d03bbfe481fd9f9a1b03;
     bytes32 public defiInteractionHash = 0x0f115a0e0c15cdc41958ca46b5b14b456115f4baec5e3ca68599d2a8f435e3b8;
 
     uint256 public dataSize;
@@ -425,15 +426,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
      * @param proofData - cryptographic zk proof data. Passed to the verifier for verification.
      */
     function verifyProofAndUpdateState(bytes memory proofData) internal returns (uint256) {
-        (
-            bytes32 newDataRoot,
-            bytes32 newNullRoot,
-            uint256 rollupId,
-            uint256 rollupSize,
-            bytes32 newRootRoot,
-            uint256 numTxs,
-            uint256 newDataSize
-        ) = validateMerkleRoots(proofData);
+        (bytes32[4] memory newRoots, uint256 rollupId, uint256 rollupSize, uint256 numTxs, uint256 newDataSize) =
+            validateMerkleRoots(proofData);
 
         // Verify the rollup proof.
         //
@@ -490,10 +484,11 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         require(proof_verified, 'proof verification failed');
 
         // Update state variables.
-        dataRoot = newDataRoot;
-        nullRoot = newNullRoot;
+        dataRoot = newRoots[0];
+        nullRoot = newRoots[1];
+        rootRoot = newRoots[2];
+        defiRoot = newRoots[3];
         nextRollupId = rollupId.add(1);
-        rootRoot = newRootRoot;
         dataSize = newDataSize;
 
         emit RollupProcessed(rollupId, dataRoot, nullRoot, rootRoot, dataSize);
@@ -508,11 +503,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         internal
         view
         returns (
-            bytes32,
-            bytes32,
+            bytes32[4] memory,
             uint256,
             uint256,
-            bytes32,
             uint256,
             uint256
         )
@@ -523,9 +516,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             // 1: rollupSize
             // 2: dataStartIndex
             uint256[3] memory nums,
-            bytes32[2] memory dataRoots,
-            bytes32[2] memory nullRoots,
-            bytes32[2] memory rootRoots
+            bytes32[4] memory oldRoots,
+            bytes32[4] memory newRoots
         ) = decodeProof(proofData);
 
         // Escape hatch denominated by a rollup size of 0, which contains 1 tx.
@@ -541,12 +533,13 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         }
 
         // Data validation checks.
-        require(dataRoots[0] == dataRoot, 'Rollup Processor: INCORRECT_DATA_ROOT');
-        require(nullRoots[0] == nullRoot, 'Rollup Processor: INCORRECT_NULL_ROOT');
-        require(rootRoots[0] == rootRoot, 'Rollup Processor: INCORRECT_ROOT_ROOT');
+        require(oldRoots[0] == dataRoot, 'Rollup Processor: INCORRECT_DATA_ROOT');
+        require(oldRoots[1] == nullRoot, 'Rollup Processor: INCORRECT_NULL_ROOT');
+        require(oldRoots[2] == rootRoot, 'Rollup Processor: INCORRECT_ROOT_ROOT');
+        require(oldRoots[3] == defiRoot, 'Rollup Processor: INCORRECT_DEFI_ROOT');
         require(nums[0] == nextRollupId, 'Rollup Processor: ID_NOT_SEQUENTIAL');
 
-        return (dataRoots[1], nullRoots[1], nums[0], nums[1], rootRoots[1], numTxs, nums[2] + toInsert);
+        return (newRoots, nums[0], nums[1], numTxs, nums[2] + toInsert);
     }
 
     /**

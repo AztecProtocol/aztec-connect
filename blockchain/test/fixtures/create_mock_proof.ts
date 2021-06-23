@@ -36,7 +36,7 @@ export const dataRootRoots = [
 ];
 
 export const defiRoots = [
-  Buffer.from('2d264e93dc455751a721aead9dba9ee2a9fef5460921aeede73f63f6210e6851', 'hex'),
+  Buffer.from('086b0997270f9b150571171148d63a2a9d33028e5840d03bbfe481fd9f9a1b03', 'hex'),
   randomBytes(32),
   randomBytes(32),
   randomBytes(32),

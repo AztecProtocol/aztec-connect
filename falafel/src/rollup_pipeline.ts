@@ -1,4 +1,5 @@
 import { Blockchain } from '@aztec/barretenberg/blockchain';
+import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { EthereumProvider } from '@aztec/blockchain';
 import { ProofGenerator } from 'halloumi/proof_generator';
@@ -20,6 +21,8 @@ export class RollupPipeline {
     blockchain: Blockchain,
     rollupDb: RollupDb,
     worldStateDb: WorldStateDb,
+    feeResolver: TxFeeResolver,
+    noteAlgo: NoteAlgorithms,
     metrics: Metrics,
     provider: EthereumProvider,
     publishInterval: Duration,
@@ -28,7 +31,6 @@ export class RollupPipeline {
     providerGasPriceMultiplier: number,
     numInnerRollupTxs: number,
     numOuterRollupProofs: number,
-    feeResolver: TxFeeResolver,
   ) {
     const innerRollupSize = 1 << Math.ceil(Math.log2(numInnerRollupTxs));
     const outerRollupSize = 1 << Math.ceil(Math.log2(innerRollupSize * numOuterRollupProofs));
@@ -70,12 +72,13 @@ export class RollupPipeline {
       rollupAggregator,
       rollupPublisher,
       claimProofCreator,
+      feeResolver,
       worldStateDb,
       rollupDb,
+      noteAlgo,
       numInnerRollupTxs,
       numOuterRollupProofs,
       publishInterval,
-      feeResolver,
     );
   }
 
@@ -102,6 +105,8 @@ export class RollupPipelineFactory {
     private blockchain: Blockchain,
     private rollupDb: RollupDb,
     private worldStateDb: WorldStateDb,
+    private txFeeResolver: TxFeeResolver,
+    private noteAlgo: NoteAlgorithms,
     private metrics: Metrics,
     private provider: EthereumProvider,
     private publishInterval: Duration,
@@ -110,7 +115,6 @@ export class RollupPipelineFactory {
     private providerGasPriceMultiplier: number,
     private numInnerRollupTxs: number,
     private numOuterRollupProofs: number,
-    private txFeeResolver: TxFeeResolver,
   ) {}
 
   public setTopology(numInnerRollupTxs: number, numOuterRollupProofs: number) {
@@ -124,6 +128,8 @@ export class RollupPipelineFactory {
       this.blockchain,
       this.rollupDb,
       this.worldStateDb,
+      this.txFeeResolver,
+      this.noteAlgo,
       this.metrics,
       this.provider,
       this.publishInterval,
@@ -132,7 +138,6 @@ export class RollupPipelineFactory {
       this.providerGasPriceMultiplier,
       this.numInnerRollupTxs,
       this.numOuterRollupProofs,
-      this.txFeeResolver,
     );
   }
 }

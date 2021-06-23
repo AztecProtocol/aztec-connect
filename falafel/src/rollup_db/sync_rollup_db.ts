@@ -120,6 +120,10 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.getRollups(take, skip, descending));
   }
 
+  public async getRollupsByRollupIds(ids: number[]) {
+    return this.synchronise(() => this.rollupDb.getRollupsByRollupIds(ids));
+  }
+
   public async getNumSettledRollups() {
     return this.synchronise(() => this.rollupDb.getNumSettledRollups());
   }

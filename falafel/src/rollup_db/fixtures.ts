@@ -1,10 +1,11 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { TxType } from '@aztec/barretenberg/blockchain';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofData } from '@aztec/barretenberg/client_proofs/proof_data';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { ViewingKey } from '@aztec/barretenberg/viewing_key';
-import { toBufferBE } from 'bigint-buffer';
+import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { randomBytes } from 'crypto';
 import moment from 'moment';
 import { ClaimDao } from '../entity/claim';
@@ -108,11 +109,13 @@ export const randomRollup = (rollupId: number, rollupProof: RollupProofDao) =>
     created: new Date(),
   });
 
-export const randomClaim = (txId: Buffer) =>
+export const randomClaim = () =>
   new ClaimDao({
     id: randomBytes(4).readUInt32BE(0),
-    txId,
     nullifier: randomBytes(32),
+    bridgeId: BridgeId.random().toBigInt(),
+    depositValue: toBigIntBE(randomBytes(32)),
+    partialState: randomBytes(32),
     interactionNonce: randomBytes(4).readUInt32BE(0),
     created: new Date(),
   });

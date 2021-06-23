@@ -4,6 +4,7 @@ import { BridgeId } from '../bridge_id';
 import { Grumpkin } from '../ecc/grumpkin';
 import { BarretenbergWasm } from '../wasm';
 import { ClaimNoteTxData } from './claim_note_tx_data';
+import { DefiInteractionNote } from './defi_interaction_note';
 import { NoteAlgorithms } from './note_algorithms';
 import { TreeClaimNote } from './tree_claim_note';
 import { TreeNote } from './tree_note';
@@ -51,5 +52,17 @@ describe('compute_nullifier', () => {
     const inputNoteEnc = noteAlgos.encryptClaimNote(inputNote);
     const nullifier = noteAlgos.computeClaimNoteNullifier(inputNoteEnc, 1);
     expect(nullifier).toEqual(Buffer.from('12e53e3931dba11ee820780e321b68743bef348b762c10c79f41455af920f8be', 'hex'));
+  });
+
+  it('should encrypt defi interaction note', async () => {
+    const bridgeId = BridgeId.fromBigInt(BigInt(456));
+    const note = new DefiInteractionNote(bridgeId, 1, BigInt(123), BigInt(456), BigInt(789), true);
+    const encrypted = noteAlgos.encryptDefiInteractionNote(note);
+    expect(encrypted).toEqual(
+      Buffer.from(
+        '2b537a469402ddae2e72fcdd826b28c336d522981eb06cf87a26ff88c6108c1f0905d7cfe073d238f056544aaa064625c6a7df12dddb8c41307d7257e5b21c88',
+        'hex',
+      ),
+    );
   });
 });
