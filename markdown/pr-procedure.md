@@ -9,8 +9,7 @@ tags: process-guidelines
 - If your PR touches circuit code you should make an additional commit that recomputes the root rollup fixtures:
      - delete the directory `src/aztec/rollup/proofs/root_rollup/fixtures` 
     - run (in the build directory) `src/aztec/rollup/proofs/rollup_proofs_tests --gtest_filter=*root_rollup*`
-    - Increment the version number in the file `sdk/package.json`
-    - Run `./blockchain/generate_vks.sh`  to regenerate verification keys in the smart contracts
+    - Run `./blockchain/yarn generate:dev`  to regenerate verification keys in the smart contracts
 
 
 ## Additional guidelines:
