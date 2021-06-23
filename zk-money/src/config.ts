@@ -90,7 +90,7 @@ const productionConfig: ConfigVars = {
   txAmountLimits: JSON.stringify([
     '1'.padEnd(19, '0'), // 10 ** 18
     '2'.padEnd(22, '0'), // 2000 * 10 ** 18
-    '1'.padEnd(18, '0'), // 1 ** 17
+    '1'.padEnd(8, '0'), // 0.1 * 10 ** 8
   ]),
   withdrawSafeAmounts: JSON.stringify([
     [
@@ -102,8 +102,8 @@ const productionConfig: ConfigVars = {
       '2'.padEnd(22, '0'), // 2000 zkDAI
     ],
     [
-      '1'.padEnd(17, '0'), // 0.01 BTC
-      '1'.padEnd(18, '0'), // 0.01 BTC
+      '1'.padEnd(7, '0'), // 0.01 BTC
+      '1'.padEnd(8, '0'), // 0.1 BTC
     ],
   ]),
   sessionTimeout: '30', // days
