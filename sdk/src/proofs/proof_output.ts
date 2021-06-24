@@ -4,10 +4,10 @@ import { Proof } from '@aztec/barretenberg/rollup_provider';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { AccountId } from '../user';
-import { UserAccountTx, UserJoinSplitTx } from '../user_tx';
+import { UserAccountTx, UserDefiTx, UserJoinSplitTx } from '../user_tx';
 
 export interface ProofOutput extends Proof {
-  tx: UserJoinSplitTx | UserAccountTx;
+  tx: UserJoinSplitTx | UserAccountTx | UserDefiTx;
   signingData?: Buffer;
 }
 
@@ -31,19 +31,23 @@ export class AccountProofOutput implements ProofOutput {
     const accountProof = new AccountProofData(proofData);
     const publicKey = new GrumpkinAddress(accountProof.publicKey);
     const { nonce, aliasHash } = accountProof.accountAliasId;
-    const tx = {
-      txHash: new TxHash(proofData.txId),
-      userId: new AccountId(publicKey, nonce),
+    const tx = new UserAccountTx(
+      new TxHash(proofData.txId),
+      new AccountId(publicKey, nonce),
       aliasHash,
-      newSigningPubKey1: proofData.inputOwner,
-      newSigningPubKey2: proofData.outputOwner,
-      migrated: !migratedBuf.equals(Buffer.alloc(1)),
-      created: new Date(),
-    };
+      proofData.inputOwner,
+      proofData.outputOwner,
+      !migratedBuf.equals(Buffer.alloc(1)),
+      new Date(),
+    );
     return new AccountProofOutput(tx, rawProofData);
   }
 
   toBuffer() {
     return Buffer.concat([Buffer.from([+this.tx.migrated]), this.proofData]);
   }
+}
+
+export class DefiProofOutput implements ProofOutput {
+  constructor(public tx: UserDefiTx, public proofData: Buffer, public viewingKeys: ViewingKey[]) {}
 }

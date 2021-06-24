@@ -1,11 +1,10 @@
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 import { AccountId, AliasHash } from '../../user';
-import { UserAccountTx } from '../../user_tx';
 import { accountIdTransformer, aliasHashTransformer, txHashTransformer } from './transformer';
 
 @Entity({ name: 'accountTx' })
-export class AccountTxDao implements UserAccountTx {
+export class AccountTxDao {
   @PrimaryColumn('blob', { transformer: [txHashTransformer] })
   public txHash!: TxHash;
 

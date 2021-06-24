@@ -2,12 +2,11 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 import { AccountId } from '../../user';
-import { UserJoinSplitTx } from '../../user_tx';
 import { accountIdTransformer, bigintTransformer, ethAddressTransformer, txHashTransformer } from './transformer';
 
 @Entity({ name: 'joinSplitTx' })
 @Index(['txHash', 'userId'], { unique: true })
-export class JoinSplitTxDao implements UserJoinSplitTx {
+export class JoinSplitTxDao {
   @PrimaryColumn('blob', { transformer: [txHashTransformer] })
   public txHash!: TxHash;
 

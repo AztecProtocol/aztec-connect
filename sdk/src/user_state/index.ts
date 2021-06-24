@@ -2,6 +2,7 @@ import { AccountAliasId, AccountId } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetId, AssetIds } from '@aztec/barretenberg/asset';
 import { Block } from '@aztec/barretenberg/block_source';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { computeAccountAliasIdNullifier } from '@aztec/barretenberg/client_proofs/account_proof';
 import { Pedersen } from '@aztec/barretenberg/crypto/pedersen';
@@ -10,11 +11,13 @@ import { MemoryFifo } from '@aztec/barretenberg/fifo';
 import {
   batchDecryptNotes,
   DecryptedNote,
+  DefiInteractionNote,
   NoteAlgorithms,
+  recoverTreeClaimNotes,
   recoverTreeNotes,
   TreeNote,
 } from '@aztec/barretenberg/note_algorithms';
-import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { DefiDepositProofData, InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupProvider } from '@aztec/barretenberg/rollup_provider';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { toBigIntBE } from 'bigint-buffer';
@@ -24,7 +27,7 @@ import { Database } from '../database';
 import { Note } from '../note';
 import { NotePicker } from '../note_picker';
 import { UserData } from '../user';
-import { isJoinSplitTx, UserAccountTx, UserJoinSplitTx } from '../user_tx';
+import { UserAccountTx, UserDefiTx, UserJoinSplitTx } from '../user_tx';
 
 const debug = createDebug('bb:user_state');
 
@@ -116,21 +119,25 @@ export class UserState extends EventEmitter {
 
     const viewingKeys = Buffer.concat(blocks.map(b => b.viewingKeysData));
     const decryptedNotes = await batchDecryptNotes(viewingKeys, this.user.privateKey, this.noteAlgos, this.grumpkin);
-
     const rollupProofData = blocks.map(b => RollupProofData.fromBuffer(b.rollupProofData, b.viewingKeysData));
     const proofsWithDecryptedNotes = rollupProofData
       .map(p => p.innerProofData.filter(i => !i.isPadding()))
       .flat()
-      .filter(p => [ProofId.JOIN_SPLIT].includes(p.proofId));
+      .filter(p => [ProofId.JOIN_SPLIT, ProofId.DEFI_DEPOSIT].includes(p.proofId));
 
+    // Recover tree notes
     const noteCommitments: Buffer[] = [];
     const decryptedTreeNote: (DecryptedNote | undefined)[] = [];
-    proofsWithDecryptedNotes.forEach(({ newNote1, newNote2 }, i) => {
-      noteCommitments.push(newNote1);
+    proofsWithDecryptedNotes.forEach(({ proofId, newNote1, newNote2 }, i) => {
+      if (proofId !== ProofId.DEFI_DEPOSIT) {
+        noteCommitments.push(newNote1);
+        decryptedTreeNote.push(decryptedNotes[i * 2]);
+      }
+
       noteCommitments.push(newNote2);
-      decryptedTreeNote.push(...decryptedNotes.slice(i * 2, i * 2 + 2));
+      decryptedTreeNote.push(decryptedNotes[i * 2 + 1]);
     });
-    const notes = recoverTreeNotes(
+    const treeNotes = recoverTreeNotes(
       decryptedTreeNote,
       noteCommitments,
       this.user.privateKey,
@@ -138,7 +145,18 @@ export class UserState extends EventEmitter {
       this.noteAlgos,
     );
 
-    let jsCount = 0;
+    // Recover tree claim notes
+    const defiDepositProofs = proofsWithDecryptedNotes.filter(p => p.proofId === ProofId.DEFI_DEPOSIT);
+    const decryptedClaimNotes: (DecryptedNote | undefined)[] = [];
+    proofsWithDecryptedNotes.map(({ proofId }, i) => {
+      if (proofId === ProofId.DEFI_DEPOSIT) {
+        decryptedClaimNotes.push(decryptedNotes[i * 2]);
+      }
+    });
+    const treeClaimNotes = recoverTreeClaimNotes(decryptedClaimNotes, defiDepositProofs);
+
+    let treeNoteStartIndex = 0;
+    let treeClaimNoteStartIndex = 0;
     for (let blockIndex = 0; blockIndex < blocks.length; ++blockIndex) {
       const block = blocks[blockIndex];
       const proofData = rollupProofData[blockIndex];
@@ -150,18 +168,42 @@ export class UserState extends EventEmitter {
         }
 
         const noteStartIndex = proofData.dataStartIndex + i * 2;
-
-        if (proof.proofId === 0) {
-          const [note1, note2] = notes.slice(jsCount * 2, jsCount * 2 + 2);
-          ++jsCount;
-          if (!note1 && !note2) {
-            continue;
+        switch (proof.proofId) {
+          case ProofId.JOIN_SPLIT: {
+            const [note1, note2] = treeNotes.slice(treeNoteStartIndex, treeNoteStartIndex + 2);
+            treeNoteStartIndex += 2;
+            if (!note1 && !note2) {
+              continue;
+            }
+            await this.handleJoinSplitTx(proof, noteStartIndex, block.created, note1, note2);
+            break;
           }
-          await this.handleJoinSplitTx(proof, noteStartIndex, block.created, note1, note2);
-        }
-
-        if (proof.proofId === 1) {
-          await this.handleAccountTx(proof, noteStartIndex, block.created);
+          case ProofId.ACCOUNT:
+            await this.handleAccountTx(proof, noteStartIndex, block.created);
+            break;
+          case ProofId.DEFI_DEPOSIT: {
+            const note = treeNotes[treeNoteStartIndex];
+            treeNoteStartIndex++;
+            const claimNote = treeClaimNotes[treeClaimNoteStartIndex];
+            const decrypted = decryptedClaimNotes[treeClaimNoteStartIndex];
+            treeClaimNoteStartIndex++;
+            if (!claimNote || !note) {
+              // Both notes should be owned by the same user.
+              continue;
+            }
+            await this.handleDefiDepositTx(
+              proof,
+              noteStartIndex,
+              block.interactionResult,
+              block.created,
+              decrypted!.noteSecret,
+              note,
+            );
+            break;
+          }
+          case ProofId.DEFI_CLAIM:
+            await this.handleDefiClaimTx(proof, noteStartIndex, block.created);
+            break;
         }
       }
 
@@ -186,9 +228,6 @@ export class UserState extends EventEmitter {
     if (!tx.userId.equals(this.user.id)) {
       return;
     }
-
-    const txHash = new TxHash(proof.txId);
-    const savedTx = await this.db.getAccountTx(txHash);
 
     const accountId = new AccountId(tx.userId.publicKey, tx.userId.nonce);
 
@@ -216,9 +255,13 @@ export class UserState extends EventEmitter {
       await this.db.updateUser(this.user);
     }
 
+    const txHash = new TxHash(proof.txId);
+    const savedTx = await this.db.getAccountTx(txHash);
     if (savedTx) {
+      debug(`settling account tx: ${txHash.toString()}`);
       await this.db.settleAccountTx(txHash, blockCreated);
     } else {
+      debug(`recovered account tx: ${txHash.toString()}`);
       await this.db.addAccountTx(tx);
     }
   }
@@ -257,6 +300,80 @@ export class UserState extends EventEmitter {
       debug(`recovered tx: ${tx.txHash.toString()}`);
       await this.db.addJoinSplitTx(tx);
     }
+  }
+
+  private async handleDefiDepositTx(
+    proof: InnerProofData,
+    noteStartIndex: number,
+    interactionResult: DefiInteractionNote[],
+    blockCreated: Date,
+    claimNoteSecret: Buffer,
+    treeNote: TreeNote,
+  ) {
+    const { txId, newNote1, newNote2 } = proof;
+    const newNote = await this.processNewNote(noteStartIndex + 1, newNote2, treeNote);
+    if (!newNote) {
+      // Owned by the account with a different nonce.
+      return;
+    }
+
+    const { bridgeId, depositValue } = new DefiDepositProofData(proof);
+    const txHash = new TxHash(txId);
+    const { totalInputValue, totalOutputValueA, totalOutputValueB, result } = interactionResult.find(r =>
+      r.bridgeId.equals(bridgeId),
+    )!;
+    const outputValueA = !result ? BigInt(0) : (totalOutputValueA * depositValue) / totalInputValue;
+    const outputValueB = !result ? BigInt(0) : (totalOutputValueB * depositValue) / totalInputValue;
+    await this.addClaim(noteStartIndex, txHash, newNote1, claimNoteSecret);
+    const { nullifier1, nullifier2 } = proof;
+    const destroyedNote1 = await this.nullifyNote(nullifier1);
+    const destroyedNote2 = await this.nullifyNote(nullifier2);
+
+    await this.refreshNotePicker();
+
+    const savedTx = await this.db.getDefiTx(txHash);
+    if (savedTx) {
+      debug(`settling defi tx: ${txHash.toString()}`);
+      await this.db.settleDefiTx(txHash, outputValueA, outputValueB, blockCreated);
+    } else {
+      const tx = this.recoverDefiTx(
+        proof,
+        outputValueA,
+        outputValueB,
+        blockCreated,
+        newNote,
+        destroyedNote1,
+        destroyedNote2,
+      );
+      debug(`recovered defi tx: ${txHash.toString()}`);
+      await this.db.addDefiTx(tx);
+    }
+  }
+
+  private async handleDefiClaimTx(proof: InnerProofData, noteStartIndex: number, blockCreated: Date) {
+    const { nullifier1 } = proof;
+    const claim = await this.db.getClaim(nullifier1);
+    if (!claim?.owner.equals(this.user.id)) {
+      return;
+    }
+
+    const { txHash, secret, owner } = claim;
+    const { newNote1, newNote2 } = proof;
+    const { bridgeId, depositValue, outputValueA, outputValueB } = (await this.db.getDefiTx(txHash))!;
+    if (!outputValueA && !outputValueB) {
+      const treeNote = new TreeNote(owner.publicKey, depositValue, bridgeId.inputAssetId, owner.nonce, secret);
+      await this.processNewNote(noteStartIndex, newNote1, treeNote);
+    }
+    if (outputValueA) {
+      const treeNote = new TreeNote(owner.publicKey, outputValueA, bridgeId.outputAssetIdA, owner.nonce, secret);
+      await this.processNewNote(noteStartIndex, newNote1, treeNote);
+    }
+    if (outputValueB) {
+      const treeNote = new TreeNote(owner.publicKey, outputValueB, bridgeId.outputAssetIdB, owner.nonce, secret);
+      await this.processNewNote(noteStartIndex + 1, newNote2, treeNote);
+    }
+
+    await this.db.claimDefiTx(txHash, blockCreated);
   }
 
   private async processNewNote(index: number, dataEntry: Buffer, treeNote?: TreeNote) {
@@ -304,6 +421,17 @@ export class UserState extends EventEmitter {
     return note;
   }
 
+  private async addClaim(index: number, txHash: TxHash, dataEntry: Buffer, noteSecret: Buffer) {
+    const nullifier = this.noteAlgos.computeClaimNoteNullifier(dataEntry, index);
+    await this.db.addClaim({
+      txHash,
+      secret: noteSecret,
+      nullifier,
+      owner: this.user.id,
+    });
+    debug(`user ${this.user.id} successfully decrypted claim note at index ${index}.`);
+  }
+
   private recoverJoinSplitTx(
     proof: InnerProofData,
     blockCreated: Date,
@@ -311,7 +439,7 @@ export class UserState extends EventEmitter {
     changeNote?: Note,
     destroyedNote1?: Note,
     destroyedNote2?: Note,
-  ): UserJoinSplitTx {
+  ) {
     const assetId = proof.assetId.readUInt32BE(28);
 
     const noteValue = (note?: Note) => (note ? note.value : BigInt(0));
@@ -327,9 +455,9 @@ export class UserState extends EventEmitter {
     const inputOwner = nonEmptyAddress(proof.inputOwner);
     const outputOwner = nonEmptyAddress(proof.outputOwner);
 
-    return {
-      txHash: new TxHash(proof.txId),
-      userId: this.user.id,
+    return new UserJoinSplitTx(
+      new TxHash(proof.txId),
+      this.user.id,
       assetId,
       publicInput,
       publicOutput,
@@ -338,13 +466,13 @@ export class UserState extends EventEmitter {
       senderPrivateOutput,
       inputOwner,
       outputOwner,
-      ownedByUser: !!changeNote,
-      created: new Date(),
-      settled: blockCreated,
-    };
+      !!changeNote,
+      new Date(),
+      blockCreated,
+    );
   }
 
-  private recoverAccountTx(proof: InnerProofData, blockCreated: Date): UserAccountTx {
+  private recoverAccountTx(proof: InnerProofData, blockCreated: Date) {
     const { txId, publicInput, publicOutput, assetId, inputOwner, outputOwner, nullifier1 } = proof;
 
     const txHash = new TxHash(txId);
@@ -359,16 +487,48 @@ export class UserState extends EventEmitter {
 
     const migrated = nonce !== 0 && nullifier1.equals(computeAccountAliasIdNullifier(accountAliasId, this.pedersen));
 
-    return {
+    return new UserAccountTx(
       txHash,
       userId,
       aliasHash,
       newSigningPubKey1,
       newSigningPubKey2,
       migrated,
-      created: new Date(),
-      settled: blockCreated,
-    };
+      new Date(),
+      blockCreated,
+    );
+  }
+
+  private recoverDefiTx(
+    proof: InnerProofData,
+    outputValueA: bigint,
+    outputValueB: bigint,
+    blockCreated,
+    newNote?: Note,
+    destroyedNote1?: Note,
+    destroyedNote2?: Note,
+  ) {
+    const { txId, assetId, publicOutput } = proof;
+    const txHash = new TxHash(txId);
+    const bridgeId = BridgeId.fromBuffer(assetId);
+    const depositValue = toBigIntBE(publicOutput);
+
+    const noteValue = (note?: Note) => (note ? note.value : BigInt(0));
+    const privateInput = noteValue(destroyedNote1) + noteValue(destroyedNote2);
+    const privateOutput = noteValue(newNote);
+
+    return new UserDefiTx(
+      txHash,
+      this.user.id,
+      bridgeId,
+      privateInput,
+      privateOutput,
+      depositValue,
+      new Date(),
+      outputValueA,
+      outputValueB,
+      blockCreated,
+    );
   }
 
   private async refreshNotePicker() {
@@ -404,13 +564,20 @@ export class UserState extends EventEmitter {
     return this.notePickers[assetId].getSum();
   }
 
-  public async addTx(tx: UserJoinSplitTx | UserAccountTx) {
-    if (isJoinSplitTx(tx)) {
-      debug(`adding join split tx: ${tx.txHash}`);
-      await this.db.addJoinSplitTx(tx);
-    } else {
-      debug(`adding account tx: ${tx.txHash}`);
-      await this.db.addAccountTx(tx);
+  public async addTx(tx: UserJoinSplitTx | UserAccountTx | UserDefiTx) {
+    switch (tx.proofId) {
+      case ProofId.JOIN_SPLIT:
+        debug(`adding join split tx: ${tx.txHash}`);
+        await this.db.addJoinSplitTx(tx);
+        break;
+      case ProofId.ACCOUNT:
+        debug(`adding account tx: ${tx.txHash}`);
+        await this.db.addAccountTx(tx);
+        break;
+      case ProofId.DEFI_DEPOSIT:
+        debug(`adding defi tx: ${tx.txHash}`);
+        await this.db.addDefiTx(tx);
+        break;
     }
     this.emit(UserStateEvent.UPDATED_USER_STATE, this.user.id);
   }

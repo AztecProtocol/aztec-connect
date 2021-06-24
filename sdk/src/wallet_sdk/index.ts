@@ -1,7 +1,7 @@
-import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
 import { EthereumSigner, PermitArgs, Receipt, TxType } from '@aztec/barretenberg/blockchain';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { SettlementTime } from '@aztec/barretenberg/rollup_provider';
 import { getBlockchainStatus } from '@aztec/barretenberg/service';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
@@ -13,6 +13,7 @@ import {
   Web3Signer,
 } from '@aztec/blockchain';
 import { TokenAsset } from '@aztec/blockchain/asset';
+import { Web3Provider } from '@ethersproject/providers';
 import { randomBytes } from 'crypto';
 import createDebug from 'debug';
 import { utils } from 'ethers';
@@ -309,6 +310,27 @@ export class WalletSdk extends EventEmitter {
     );
   }
 
+  public async createDefiProof(
+    bridgeId: BridgeId,
+    userId: AccountId,
+    privateInput: bigint,
+    privateOutput: bigint,
+    depositValue: bigint,
+    signer: Signer,
+  ) {
+    if (!depositValue) {
+      throw new Error('Deposit value must be greater than 0.');
+    }
+
+    if (depositValue + privateOutput > privateInput) {
+      throw new Error('Insufficient private input.');
+    }
+
+    await this.checkNoteBalance(bridgeId.inputAssetId, userId, privateInput);
+
+    return this.core.createDefiProof(bridgeId, userId, privateInput, privateOutput, depositValue, signer);
+  }
+
   public async signProof(proofOutput: ProofOutput, inputOwner: EthAddress, provider?: EthereumProvider) {
     const { signingData } = proofOutput;
     if (!signingData) {
@@ -556,6 +578,10 @@ export class WalletSdk extends EventEmitter {
 
   public async getAccountTxs(userId: AccountId) {
     return this.core.getAccountTxs(userId);
+  }
+
+  public async getDefiTxs(userId: AccountId) {
+    return this.core.getDefiTxs(userId);
   }
 
   public async getNotes(userId: AccountId) {

@@ -4,10 +4,13 @@ import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { Connection, ConnectionOptions, MoreThan, MoreThanOrEqual, Repository } from 'typeorm';
 import { Note } from '../../note';
 import { AccountId, UserData } from '../../user';
-import { UserAccountTx, UserJoinSplitTx } from '../../user_tx';
+import { UserAccountTx, UserDefiTx, UserJoinSplitTx } from '../../user_tx';
+import { Claim } from '../claim';
 import { Alias, Database, SigningKey } from '../database';
 import { AccountTxDao } from './account_tx_dao';
 import { AliasDao } from './alias_dao';
+import { ClaimDao } from './claim_dao';
+import { DefiTxDao } from './defi_tx_dao';
 import { JoinSplitTxDao } from './join_split_tx_dao';
 import { KeyDao } from './key_dao';
 import { NoteDao } from './note_dao';
@@ -18,23 +21,71 @@ export const getOrmConfig = (dbPath?: string): ConnectionOptions => ({
   name: 'aztec2-sdk',
   type: 'sqlite',
   database: dbPath === ':memory:' ? dbPath : `${dbPath || '.'}/aztec2-sdk.sqlite`,
-  entities: [AccountTxDao, AliasDao, JoinSplitTxDao, KeyDao, NoteDao, UserDataDao, UserKeyDao],
+  entities: [AccountTxDao, AliasDao, ClaimDao, DefiTxDao, JoinSplitTxDao, KeyDao, NoteDao, UserDataDao, UserKeyDao],
   synchronize: true,
   logging: false,
 });
 
+const toUserJoinSplitTx = (tx: JoinSplitTxDao) =>
+  new UserJoinSplitTx(
+    tx.txHash,
+    tx.userId,
+    tx.assetId,
+    tx.publicInput,
+    tx.publicOutput,
+    tx.privateInput,
+    tx.recipientPrivateOutput,
+    tx.senderPrivateOutput,
+    tx.inputOwner,
+    tx.outputOwner,
+    tx.ownedByUser,
+    tx.created,
+    tx.settled,
+  );
+
+const toUserAccountTx = (tx: AccountTxDao) =>
+  new UserAccountTx(
+    tx.txHash,
+    tx.userId,
+    tx.aliasHash,
+    tx.newSigningPubKey1,
+    tx.newSigningPubKey2,
+    tx.migrated,
+    tx.created,
+    tx.settled,
+  );
+
+const toUserDefiTx = (tx: DefiTxDao) =>
+  new UserDefiTx(
+    tx.txHash,
+    tx.userId,
+    tx.bridgeId,
+    tx.privateInput,
+    tx.privateOutput,
+    tx.depositValue,
+    tx.created,
+    tx.outputValueA,
+    tx.outputValueB,
+    tx.settled,
+    tx.claimed,
+  );
+
 export class SQLDatabase implements Database {
   private accountTxRep: Repository<AccountTxDao>;
   private aliasRep: Repository<AliasDao>;
+  private claimRep: Repository<ClaimDao>;
+  private defiTxRep: Repository<DefiTxDao>;
+  private joinSplitTxRep: Repository<JoinSplitTxDao>;
   private keyRep: Repository<KeyDao>;
   private noteRep: Repository<NoteDao>;
   private userDataRep: Repository<UserDataDao>;
   private userKeyRep: Repository<UserKeyDao>;
-  private joinSplitTxRep: Repository<JoinSplitTxDao>;
 
   constructor(private connection: Connection) {
     this.accountTxRep = this.connection.getRepository(AccountTxDao);
     this.aliasRep = this.connection.getRepository(AliasDao);
+    this.claimRep = this.connection.getRepository(ClaimDao);
+    this.defiTxRep = this.connection.getRepository(DefiTxDao);
     this.joinSplitTxRep = this.connection.getRepository(JoinSplitTxDao);
     this.keyRep = this.connection.getRepository(KeyDao);
     this.noteRep = this.connection.getRepository(NoteDao);
@@ -70,6 +121,14 @@ export class SQLDatabase implements Database {
 
   async getUserNotes(userId: AccountId) {
     return this.noteRep.find({ where: { owner: userId, nullified: false } });
+  }
+
+  async addClaim(claim: Claim) {
+    await this.claimRep.save(claim);
+  }
+
+  async getClaim(nullifier: Buffer) {
+    return this.claimRep.findOne({ nullifier });
   }
 
   async getUser(userId: AccountId) {
@@ -113,18 +172,19 @@ export class SQLDatabase implements Database {
   }
 
   async getJoinSplitTx(userId: AccountId, txHash: TxHash) {
-    return this.joinSplitTxRep.findOne({ txHash, userId });
+    const tx = await this.joinSplitTxRep.findOne({ txHash, userId });
+    return tx ? toUserJoinSplitTx(tx) : undefined;
   }
 
   async getJoinSplitTxs(userId) {
     const txs = await this.joinSplitTxRep.find({ where: { userId }, order: { settled: 'DESC' } });
     const unsettled = txs.filter(tx => !tx.settled).sort((a, b) => (a.created < b.created ? 1 : -1));
     const settled = txs.filter(tx => tx.settled);
-    return [...unsettled, ...settled];
+    return [...unsettled, ...settled].map(toUserJoinSplitTx);
   }
 
   async getJoinSplitTxsByTxHash(txHash: TxHash) {
-    return this.joinSplitTxRep.find({ where: { txHash } });
+    return (await this.joinSplitTxRep.find({ where: { txHash } })).map(toUserJoinSplitTx);
   }
 
   async settleJoinSplitTx(txHash: TxHash, settled: Date) {
@@ -136,18 +196,43 @@ export class SQLDatabase implements Database {
   }
 
   async getAccountTx(txHash: TxHash) {
-    return this.accountTxRep.findOne({ txHash });
+    const tx = await this.accountTxRep.findOne({ txHash });
+    return tx ? toUserAccountTx(tx) : undefined;
   }
 
   async getAccountTxs(userId) {
     const txs = await this.accountTxRep.find({ where: { userId }, order: { settled: 'DESC' } });
     const unsettled = txs.filter(tx => !tx.settled).sort((a, b) => (a.created < b.created ? 1 : -1));
     const settled = txs.filter(tx => tx.settled);
-    return [...unsettled, ...settled];
+    return [...unsettled, ...settled].map(toUserAccountTx);
   }
 
   async settleAccountTx(txHash: TxHash, settled: Date) {
     await this.accountTxRep.update({ txHash }, { settled });
+  }
+
+  async addDefiTx(tx: UserDefiTx) {
+    await this.defiTxRep.save({ ...tx }); // save() will mutate tx, changing undefined values to null.
+  }
+
+  async getDefiTx(txHash: TxHash) {
+    const tx = await this.defiTxRep.findOne({ txHash });
+    return tx ? toUserDefiTx(tx) : undefined;
+  }
+
+  async getDefiTxs(userId) {
+    const txs = await this.defiTxRep.find({ where: { userId }, order: { settled: 'DESC' } });
+    const unsettled = txs.filter(tx => !tx.settled).sort((a, b) => (a.created < b.created ? 1 : -1));
+    const settled = txs.filter(tx => tx.settled);
+    return [...unsettled, ...settled].map(toUserDefiTx);
+  }
+
+  async settleDefiTx(txHash: TxHash, outputValueA: bigint, outputValueB: bigint, settled: Date) {
+    await this.defiTxRep.update({ txHash }, { outputValueA, outputValueB, settled });
+  }
+
+  async claimDefiTx(txHash: TxHash, claimed: Date) {
+    await this.defiTxRep.update({ txHash }, { claimed });
   }
 
   async addUserSigningKey(signingKey: SigningKey) {

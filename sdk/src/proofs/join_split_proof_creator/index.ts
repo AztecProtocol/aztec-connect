@@ -1,9 +1,10 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
-import { JoinSplitProver, JoinSplitProofData, ProofData } from '@aztec/barretenberg/client_proofs';
-import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { JoinSplitProofData, JoinSplitProver, ProofData } from '@aztec/barretenberg/client_proofs';
 import { Pedersen } from '@aztec/barretenberg/crypto/pedersen';
 import { Grumpkin } from '@aztec/barretenberg/ecc/grumpkin';
+import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { WorldState } from '@aztec/barretenberg/world_state';
 import createDebug from 'debug';
 import { Database } from '../../database';
@@ -35,11 +36,13 @@ export class JoinSplitProofCreator {
     privateInput: bigint,
     recipientPrivateOutput: bigint,
     senderPrivateOutput: bigint,
+    defiDepositValue: bigint,
     assetId: AssetId,
     signer: Signer,
-    receiver?: AccountId,
+    newNoteOwner?: AccountId,
     inputOwner?: EthAddress,
     outputOwner?: EthAddress,
+    bridgeId?: BridgeId,
   ) {
     if (publicInput && !inputOwner) {
       throw new Error('Input owner undefined.');
@@ -52,11 +55,13 @@ export class JoinSplitProofCreator {
       privateInput,
       recipientPrivateOutput,
       senderPrivateOutput,
+      defiDepositValue,
       assetId,
       signer,
-      receiver,
+      newNoteOwner,
       inputOwner,
       outputOwner,
+      bridgeId,
     );
 
     debug('creating proof...');

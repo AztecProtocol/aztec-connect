@@ -2,7 +2,7 @@ import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import levelup from 'levelup';
 import memdown from 'memdown';
-import { AccountAliasId } from '../../account_id';
+import { AccountAliasId, AccountId } from '../../account_id';
 import { EthAddress, GrumpkinAddress } from '../../address';
 import { Crs } from '../../crs';
 import { Blake2s } from '../../crypto/blake2s';
@@ -18,8 +18,9 @@ import { WorkerPool } from '../../wasm/worker_pool';
 import { ProofData } from '../proof_data';
 import { UnrolledProver } from '../prover';
 import { computeSigningData } from './compute_signing_data';
-import { JoinSplitProver, JoinSplitVerifier } from './index';
+import { JoinSplitProver } from './join_split_prover';
 import { JoinSplitTx } from './join_split_tx';
+import { JoinSplitVerifier } from './join_split_verifier';
 
 const debug = createDebug('bb:join_split_proof_test');
 
@@ -122,6 +123,7 @@ describe('join_split_proof', () => {
 
       const nonce = 0;
       const accountAliasId = AccountAliasId.fromAlias('user_zero', nonce, blake2s);
+      const accountId = new AccountId(pubKey, nonce);
 
       const inputOwner = EthAddress.randomAddress();
       const outputOwner = EthAddress.randomAddress();
@@ -129,6 +131,7 @@ describe('join_split_proof', () => {
       const numInputNotes = 2;
       const sigMsg = computeSigningData(
         [inputNote1, inputNote2, outputNote1, outputNote2],
+        ClaimNoteTxData.EMPTY,
         0,
         1,
         inputOwner,
@@ -137,6 +140,7 @@ describe('join_split_proof', () => {
         BigInt(0),
         0,
         numInputNotes,
+        accountId,
         privateKey,
         pedersen,
         noteAlgos,

@@ -1,6 +1,7 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
-import { EscapeHatchProver, EscapeHatchTx } from '@aztec/barretenberg/client_proofs/escape_hatch_proof';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { EscapeHatchProver, EscapeHatchTx } from '@aztec/barretenberg/client_proofs';
 import { Pedersen } from '@aztec/barretenberg/crypto/pedersen';
 import { Grumpkin } from '@aztec/barretenberg/ecc/grumpkin';
 import { HashPathSource } from '@aztec/barretenberg/hash_path_source';
@@ -43,11 +44,13 @@ export class EscapeHatchProofCreator {
     privateInput: bigint,
     recipientPrivateOutput: bigint,
     senderPrivateOutput: bigint,
+    defiDepositValue: bigint,
     assetId: AssetId,
     signer: Signer,
     receiver?: AccountId,
     inputOwner?: EthAddress,
     outputOwner?: EthAddress,
+    bridgeId?: BridgeId,
   ) {
     if (publicInput && !inputOwner) {
       throw new Error('Input owner undefined.');
@@ -60,11 +63,13 @@ export class EscapeHatchProofCreator {
       privateInput,
       recipientPrivateOutput,
       senderPrivateOutput,
+      defiDepositValue,
       assetId,
       signer,
       receiver,
       inputOwner,
       outputOwner,
+      bridgeId,
     );
 
     const dataTreeState = await this.hashPathSource.getTreeState(0);

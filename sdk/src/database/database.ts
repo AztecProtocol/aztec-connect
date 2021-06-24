@@ -3,7 +3,8 @@ import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { Note } from '../note';
 import { AccountId, UserData } from '../user';
-import { UserAccountTx, UserJoinSplitTx } from '../user_tx';
+import { UserAccountTx, UserDefiTx, UserJoinSplitTx } from '../user_tx';
+import { Claim } from './claim';
 
 export interface SigningKey {
   accountId: AccountId;
@@ -28,6 +29,9 @@ export interface Database {
   nullifyNote(index: number): Promise<void>;
   getUserNotes(userId: AccountId): Promise<Note[]>;
 
+  addClaim(note: Claim): Promise<void>;
+  getClaim(nullifier: Buffer): Promise<Claim | undefined>;
+
   getUser(userId: AccountId): Promise<UserData | undefined>;
   getUsers(): Promise<UserData[]>;
   addUser(user: UserData): Promise<void>;
@@ -45,6 +49,12 @@ export interface Database {
   getAccountTx(txHash: TxHash): Promise<UserAccountTx | undefined>;
   getAccountTxs(userId): Promise<UserAccountTx[]>;
   settleAccountTx(txHash: TxHash, settled: Date): Promise<void>;
+
+  addDefiTx(tx: UserDefiTx): Promise<void>;
+  getDefiTx(txHash: TxHash): Promise<UserDefiTx | undefined>;
+  getDefiTxs(userId): Promise<UserDefiTx[]>;
+  settleDefiTx(txHash: TxHash, outputValueA: bigint, outputValueB: bigint, settled: Date): Promise<void>;
+  claimDefiTx(txHash: TxHash, claimed: Date): Promise<void>;
 
   addUserSigningKey(signingKey: SigningKey): Promise<void>;
   getUserSigningKeys(accountId: AccountId): Promise<SigningKey[]>;

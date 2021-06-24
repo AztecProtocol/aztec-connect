@@ -1,10 +1,13 @@
+import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
-import { Block } from '@aztec/barretenberg/block_source';
 import { AssetId } from '@aztec/barretenberg/asset';
+import { TxType } from '@aztec/barretenberg/blockchain';
+import { Block } from '@aztec/barretenberg/block_source';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { AccountProver } from '@aztec/barretenberg/client_proofs/account_proof';
 import { EscapeHatchProver } from '@aztec/barretenberg/client_proofs/escape_hatch_proof';
 import { JoinSplitProver } from '@aztec/barretenberg/client_proofs/join_split_proof';
-import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
+import { ProofData } from '@aztec/barretenberg/client_proofs/proof_data';
 import { PooledProverFactory } from '@aztec/barretenberg/client_proofs/prover';
 import { Crs } from '@aztec/barretenberg/crs';
 import { Blake2s } from '@aztec/barretenberg/crypto/blake2s';
@@ -12,33 +15,30 @@ import { Pedersen, PooledPedersen } from '@aztec/barretenberg/crypto/pedersen';
 import { Schnorr } from '@aztec/barretenberg/crypto/schnorr';
 import { Grumpkin } from '@aztec/barretenberg/ecc/grumpkin';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
+import { HashPathSource } from '@aztec/barretenberg/hash_path_source';
+import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupProvider, SettlementTime } from '@aztec/barretenberg/rollup_provider';
+import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { BarretenbergWasm, createWorker, destroyWorker, WorkerPool } from '@aztec/barretenberg/wasm';
+import { BarretenbergWorker } from '@aztec/barretenberg/wasm/worker';
 import { WorldState } from '@aztec/barretenberg/world_state';
 import createDebug from 'debug';
 import isNode from 'detect-node';
-import os from 'os';
 import { EventEmitter } from 'events';
 import Mutex from 'idb-mutex';
 import { LevelUp } from 'levelup';
-import { HashPathSource } from '@aztec/barretenberg/hash_path_source';
+import os from 'os';
 import { Database } from '../database';
 import { AccountProofCreator } from '../proofs/account_proof_creator';
 import { EscapeHatchProofCreator } from '../proofs/escape_hatch_proof_creator';
 import { JoinSplitProofCreator } from '../proofs/join_split_proof_creator';
+import { AccountProofOutput, DefiProofOutput, JoinSplitProofOutput, ProofOutput } from '../proofs/proof_output';
 import { SdkEvent, SdkInitState, SdkStatus } from '../sdk';
-import { Signer } from '../signer';
-import { SchnorrSigner } from '../signer';
-import { AccountAliasId, UserDataFactory, AccountId, UserData } from '../user';
+import { SchnorrSigner, Signer } from '../signer';
+import { AccountAliasId, AccountId, UserData, UserDataFactory } from '../user';
 import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
-import { UserAccountTx, UserJoinSplitTx } from '../user_tx';
-import { AliasHash } from '@aztec/barretenberg/account_id';
-import { ProofData } from '@aztec/barretenberg/client_proofs/proof_data';
-import { TxType } from '@aztec/barretenberg/blockchain';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
-import { AccountProofOutput, JoinSplitProofOutput, ProofOutput } from '../proofs/proof_output';
-import { BarretenbergWorker } from '@aztec/barretenberg/wasm/worker';
+import { UserAccountTx, UserDefiTx, UserJoinSplitTx } from '../user_tx';
 
 const debug = createDebug('bb:core_sdk');
 
@@ -543,6 +543,7 @@ export class CoreSdk extends EventEmitter {
       privateInput,
       recipientPrivateOutput,
       senderPrivateOutput,
+      BigInt(0),
       assetId,
       signer,
       noteRecipient,
@@ -551,7 +552,7 @@ export class CoreSdk extends EventEmitter {
     );
 
     const txHash = new TxHash(txId);
-    const tx: UserJoinSplitTx = {
+    const tx = new UserJoinSplitTx(
       txHash,
       userId,
       assetId,
@@ -562,9 +563,9 @@ export class CoreSdk extends EventEmitter {
       senderPrivateOutput,
       inputOwner,
       outputOwner,
-      ownedByUser: true,
-      created: new Date(),
-    };
+      true,
+      new Date(),
+    );
 
     return new JoinSplitProofOutput(tx, proofData, viewingKeys, publicInput ? depositSigningData : undefined);
   }
@@ -635,17 +636,52 @@ export class CoreSdk extends EventEmitter {
 
     const { txId } = new ProofData(rawProofData);
     const txHash = new TxHash(txId);
-    const tx: UserAccountTx = {
+    const tx = new UserAccountTx(
       txHash,
-      userId: new AccountId(newAccountPublicKey, newNonce),
+      new AccountId(newAccountPublicKey, newNonce),
       aliasHash,
-      newSigningPubKey1: newSigningPublicKey1?.x(),
-      newSigningPubKey2: newSigningPublicKey2?.x(),
-      migrated: migrate,
-      created: new Date(),
-    };
+      newSigningPublicKey1?.x(),
+      newSigningPublicKey2?.x(),
+      migrate,
+      new Date(),
+    );
 
     return new AccountProofOutput(tx, rawProofData);
+  }
+
+  public async createDefiProof(
+    bridgeId: BridgeId,
+    userId: AccountId,
+    privateInput: bigint,
+    privateOutput: bigint,
+    depositValue: bigint,
+    signer: Signer,
+  ) {
+    if (this.escapeHatchMode) {
+      await this.validateEscapeOpen();
+    }
+
+    const userState = this.getUserState(userId);
+    const { txId, proofData, viewingKeys } = await this.joinSplitProofCreator.createProof(
+      userState,
+      BigInt(0),
+      BigInt(0),
+      privateInput,
+      BigInt(0),
+      privateOutput,
+      depositValue,
+      bridgeId.inputAssetId,
+      signer,
+      undefined,
+      undefined,
+      undefined,
+      bridgeId,
+    );
+
+    const txHash = new TxHash(txId);
+    const tx = new UserDefiTx(txHash, userId, bridgeId, privateInput, privateOutput, depositValue, new Date());
+
+    return new DefiProofOutput(tx, proofData, viewingKeys);
   }
 
   public async sendProof(proofOutput: ProofOutput, depositSignature?: Buffer) {
@@ -816,6 +852,10 @@ export class CoreSdk extends EventEmitter {
 
   public async getAccountTxs(userId: AccountId) {
     return this.db.getAccountTxs(userId);
+  }
+
+  public async getDefiTxs(userId: AccountId) {
+    return this.db.getDefiTxs(userId);
   }
 
   public async getNotes(userId: AccountId) {

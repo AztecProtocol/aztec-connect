@@ -2,7 +2,7 @@ import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { randomBytes } from 'crypto';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
-import { AccountAliasId } from '../../account_id';
+import { AccountAliasId, AccountId } from '../../account_id';
 import { EthAddress, GrumpkinAddress } from '../../address';
 import { AssetId } from '../../asset';
 import { Crs } from '../../crs';
@@ -145,8 +145,16 @@ describe('escape_hatch_proof', () => {
     const inputOwner = EthAddress.randomAddress();
     const outputOwner = EthAddress.randomAddress();
 
+    const nonce = 0;
+    const accountAliasId = AccountAliasId.fromAlias('user_zero', nonce, blake2s);
+    const accountId = new AccountId(pubKey, nonce);
+
+    const accountIndex = 0;
+    const accountNotePath = await worldStateDb.getHashPath(dataTreeId, BigInt(accountIndex));
+
     const sigMsg = computeSigningData(
       [inputNote1, inputNote2, outputNote1, outputNote2],
+      ClaimNoteTxData.EMPTY,
       0,
       1,
       inputOwner,
@@ -155,17 +163,12 @@ describe('escape_hatch_proof', () => {
       publicOutput,
       0,
       2,
+      accountId,
       privateKey,
       pedersen,
       noteAlgos,
     );
     const signature = schnorr.constructSignature(sigMsg, privateKey);
-
-    const nonce = 0;
-    const accountAliasId = AccountAliasId.fromAlias('user_zero', nonce, blake2s);
-
-    const accountIndex = 0;
-    const accountNotePath = await worldStateDb.getHashPath(dataTreeId, BigInt(accountIndex));
 
     // Get value note nullifier data
     const oldNullifierRoot = worldStateDb.getRoot(nullifierTreeId);

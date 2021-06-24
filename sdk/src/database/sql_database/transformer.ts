@@ -1,5 +1,6 @@
 import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { ValueTransformer } from 'typeorm';
@@ -43,4 +44,9 @@ export const ethAddressTransformer: ValueTransformer = {
 export const viewingKeyTransformer: ValueTransformer = {
   to: (entityValue?: ViewingKey) => entityValue?.toBuffer(),
   from: (dbValue?: Buffer) => (dbValue ? new ViewingKey(dbValue) : undefined),
+};
+
+export const bridgeIdTransformer: ValueTransformer = {
+  to: (entityValue?: BridgeId) => entityValue?.toBuffer(),
+  from: (dbValue?: Buffer) => (dbValue ? BridgeId.fromBuffer(dbValue) : undefined),
 };

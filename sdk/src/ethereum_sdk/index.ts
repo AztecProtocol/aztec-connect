@@ -1,22 +1,22 @@
-import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
+import { EthereumSigner, PermitArgs, TxType } from '@aztec/barretenberg/blockchain';
+import { SettlementTime } from '@aztec/barretenberg/rollup_provider';
+import { getBlockchainStatus } from '@aztec/barretenberg/service';
+import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { ClientEthereumBlockchain, EthereumProvider, Web3Signer } from '@aztec/blockchain';
+import { Web3Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
 import isNode from 'detect-node';
 import { EventEmitter } from 'events';
+import { createConnection } from 'typeorm';
 import { createSdk, SdkOptions } from '../core_sdk/create_sdk';
-import { ClientEthereumBlockchain, EthereumProvider, Web3Signer } from '@aztec/blockchain';
+import { ProofOutput } from '../proofs/proof_output';
 import { SdkEvent } from '../sdk';
 import { AccountId } from '../user';
 import { WalletSdk } from '../wallet_sdk';
-import { Database, DexieDatabase, SQLDatabase, getOrmConfig } from './database';
+import { Database, DexieDatabase, getOrmConfig, SQLDatabase } from './database';
 import { EthereumSdkUser } from './ethereum_sdk_user';
-import { createConnection } from 'typeorm';
-import { getBlockchainStatus } from '@aztec/barretenberg/service';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
-import { EthereumSigner, PermitArgs, TxType } from '@aztec/barretenberg/blockchain';
-import { SettlementTime } from '@aztec/barretenberg/rollup_provider';
-import { ProofOutput } from '../proofs/proof_output';
 
 export * from './ethereum_sdk_user';
 export * from './ethereum_sdk_user_asset';
@@ -242,6 +242,10 @@ export class EthereumSdk extends EventEmitter {
 
   public async getAccountTxs(accountId: AccountId) {
     return this.walletSdk.getAccountTxs(accountId);
+  }
+
+  public async getDefiTxs(accountId: AccountId) {
+    return this.walletSdk.getDefiTxs(accountId);
   }
 
   public async getNotes(accountId: AccountId) {
