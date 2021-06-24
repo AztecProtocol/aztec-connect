@@ -42,14 +42,14 @@ library EscapeHatchVk {
             mstore(add(mload(add(vk, 0x1c0)), 0x20), 0x0270bec7a34ff77a8b9c708c36d8bcbfb85ddf26fd057e156cce01ba43d343ac)
             mstore(mload(add(vk, 0x1e0)), 0x0f985e5ece3addbb14e9d46cd60181cb3dc80e0f2be384ef9aa427db9b3faa6d)//vk.QLOGIC
             mstore(add(mload(add(vk, 0x1e0)), 0x20), 0x18051d5b3398b90c212760dc75485351c594f7f39a0fc1cc909ade48faef6399)
-            mstore(mload(add(vk, 0x200)), 0x2633379b5f67f55e2fde28830b283cc4021ac2c2e5ca25edc17f5e745ac861af)//vk.SIGMA1
-            mstore(add(mload(add(vk, 0x200)), 0x20), 0x147f12f3f4611d37da96864a5a7d5dbb75b1489bb0aba3c5a643ed92c091fb8e)
+            mstore(mload(add(vk, 0x200)), 0x003a8b775e0dd938258926c70fa551e5a611a0d49cd0c2e12d22aa302b45bef4)//vk.SIGMA1
+            mstore(add(mload(add(vk, 0x200)), 0x20), 0x212fc5d0f021ebbf8f31bf2c4be3b25412d078a6423e7862e2818e4591a9cb3e)
             mstore(mload(add(vk, 0x220)), 0x1d38300c356c74b5d363d3ecac778e9893fc2c70c530680e7598f5a492534841)//vk.SIGMA2
             mstore(add(mload(add(vk, 0x220)), 0x20), 0x2c35b00506f42d534b3a1c76b71596474756a778836c7bb7aad4daf39e2c0d37)
-            mstore(mload(add(vk, 0x240)), 0x194e5f5a9ced7111e5ef9c3400e45ff902b2f5a5441ad7d43196131dce32b561)//vk.SIGMA3
-            mstore(add(mload(add(vk, 0x240)), 0x20), 0x134ab47260953a258b78bee3b191ca663d16b43715d9aee26d0f59a6de25b765)
-            mstore(mload(add(vk, 0x260)), 0x1e500813d59759cabceebeee5854536242acd633953ffc2aca70178c9d76c1ef)//vk.SIGMA4
-            mstore(add(mload(add(vk, 0x260)), 0x20), 0x2c96f502a1c91ef068cb9338b7335c2c017cad68b073b5aab95bac15ed7385d2)
+            mstore(mload(add(vk, 0x240)), 0x248788e15f8dfe614f241d25c87035b72088032656d32023ed6206c9e36088af)//vk.SIGMA3
+            mstore(add(mload(add(vk, 0x240)), 0x20), 0x0ce87f21ea617e44a8acdc70c600dc3e3effa65750632dcf78c541b91844a6b8)
+            mstore(mload(add(vk, 0x260)), 0x2cdceafacbca232d6ba085b204be64f10bc69801b0eed0534b4cbabfdc7f51dc)//vk.SIGMA4
+            mstore(add(mload(add(vk, 0x260)), 0x20), 0x201a03944939ccc280bf692ca5da220952e2fdd34a15636699a29fb3edae11b8)
             mstore(add(vk, 0x280), 0x00) // vk.contains_recursive_proof
             mstore(add(vk, 0x2a0), 0) // vk.recursive_proof_public_input_indices
             mstore(mload(add(vk, 0x2c0)), 0x260e01b251f6f1c7e7ff4e580791dee8ea51d87a358e038b4efe30fac09383c1) // vk.g2_x.X.c1
