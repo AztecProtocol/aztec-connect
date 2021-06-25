@@ -5,7 +5,7 @@ import { AccountTx } from './account_tx';
 export class AccountProver {
   constructor(private prover: UnrolledProver) {}
 
-  static circuitSize = (32 * 1024);
+  static circuitSize = 32 * 1024;
 
   public async computeKey() {
     const worker = this.prover.getWorker();
@@ -22,11 +22,16 @@ export class AccountProver {
 
   public async getKey() {
     const worker = this.prover.getWorker();
-    const keySize = await worker.call('account__get_new_proving_key_data', 0);
-    const keyPtr = Buffer.from(await worker.sliceMemory(0, 4)).readUInt32LE(0);
-    const buf = Buffer.from(await worker.sliceMemory(keyPtr, keyPtr + keySize));
-    await worker.call('bbfree', keyPtr);
-    return buf;
+    await worker.acquire();
+    try {
+      const keySize = await worker.call('account__get_new_proving_key_data', 0);
+      const keyPtr = Buffer.from(await worker.sliceMemory(0, 4)).readUInt32LE(0);
+      const buf = Buffer.from(await worker.sliceMemory(keyPtr, keyPtr + keySize));
+      await worker.call('bbfree', keyPtr);
+      return buf;
+    } finally {
+      await worker.release();
+    }
   }
 
   public async createAccountProof(tx: AccountTx) {
