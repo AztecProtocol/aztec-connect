@@ -9,24 +9,24 @@ import { TreeClaimNote } from './tree_claim_note';
 import { TreeNote } from './tree_note';
 
 export class NoteAlgorithms {
-  constructor(private wasm: BarretenbergWasm, private worker: BarretenbergWorker = wasm as any) {}
+  constructor(private wasm: BarretenbergWasm, private worker: BarretenbergWorker = wasm as any) { }
 
-  public computeNoteNullifier(encryptedNote: Buffer, index: number, accountPrivateKey: Buffer, real = true) {
-    this.wasm.transferToHeap(encryptedNote, 0);
+  public computeNoteNullifier(noteCommitment: Buffer, index: number, accountPrivateKey: Buffer, real = true) {
+    this.wasm.transferToHeap(noteCommitment, 0);
     this.wasm.transferToHeap(accountPrivateKey, 64);
     this.wasm.call('notes__compute_value_note_nullifier', 0, 64, index, real, 0);
     return Buffer.from(this.wasm.sliceMemory(0, 32));
   }
 
-  public computeNoteNullifierBigInt(encryptedNote: Buffer, index: number, accountPrivateKey: Buffer, real = true) {
-    return toBigIntBE(this.computeNoteNullifier(encryptedNote, index, accountPrivateKey, real));
+  public computeNoteNullifierBigInt(noteCommitment: Buffer, index: number, accountPrivateKey: Buffer, real = true) {
+    return toBigIntBE(this.computeNoteNullifier(noteCommitment, index, accountPrivateKey, real));
   }
 
-  public encryptNote(note: TreeNote) {
+  public commitNote(note: TreeNote) {
     const noteBuf = note.toBuffer();
     const mem = this.wasm.call('bbmalloc', noteBuf.length);
     this.wasm.transferToHeap(noteBuf, mem);
-    this.wasm.call('notes__encrypt_value_note', mem, 0);
+    this.wasm.call('notes__commit_value_note', mem, 0);
     this.wasm.call('bbfree', mem);
     return Buffer.from(this.wasm.sliceMemory(0, 64));
   }
@@ -41,26 +41,26 @@ export class NoteAlgorithms {
     return Buffer.from(this.wasm.sliceMemory(0, 64));
   }
 
-  public encryptClaimNote(note: TreeClaimNote) {
+  public commitClaimNote(note: TreeClaimNote) {
     const noteBuf = note.toBuffer();
     const mem = this.wasm.call('bbmalloc', noteBuf.length);
     this.wasm.transferToHeap(noteBuf, mem);
-    this.wasm.call('notes__encrypt_claim_note', mem, 0);
+    this.wasm.call('notes__commit_claim_note', mem, 0);
     this.wasm.call('bbfree', mem);
     return Buffer.from(this.wasm.sliceMemory(0, 64));
   }
 
-  public computeClaimNoteNullifier(encryptedNote: Buffer, index: number) {
-    this.wasm.transferToHeap(encryptedNote, 0);
+  public computeClaimNoteNullifier(noteCommitment: Buffer, index: number) {
+    this.wasm.transferToHeap(noteCommitment, 0);
     this.wasm.call('notes__compute_claim_note_nullifier', 0, index, 0);
     return Buffer.from(this.wasm.sliceMemory(0, 32));
   }
 
-  public encryptDefiInteractionNote(note: DefiInteractionNote) {
+  public commitDefiInteractionNote(note: DefiInteractionNote) {
     const noteBuf = note.toBuffer();
     const mem = this.wasm.call('bbmalloc', noteBuf.length);
     this.wasm.transferToHeap(noteBuf, mem);
-    this.wasm.call('notes__encrypt_defi_interaction_note', mem, 0);
+    this.wasm.call('notes__commit_defi_interaction_note', mem, 0);
     this.wasm.call('bbfree', mem);
     return Buffer.from(this.wasm.sliceMemory(0, 64));
   }

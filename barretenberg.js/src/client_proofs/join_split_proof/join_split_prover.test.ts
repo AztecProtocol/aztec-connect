@@ -110,8 +110,8 @@ describe('join_split_proof', () => {
       const outputNote1 = TreeNote.createFromEphPriv(pubKey, BigInt(80), 0, 0, outputNote1EphKey, grumpkin);
       const outputNote2 = TreeNote.createFromEphPriv(pubKey, BigInt(70), 0, 0, outputNote2EphKey, grumpkin);
 
-      const inputNote1Enc = noteAlgos.encryptNote(inputNote1);
-      const inputNote2Enc = noteAlgos.encryptNote(inputNote2);
+      const inputNote1Enc = noteAlgos.commitNote(inputNote1);
+      const inputNote2Enc = noteAlgos.commitNote(inputNote2);
 
       const tree = new MerkleTree(levelup(memdown()), pedersen, 'data', 32);
       await tree.updateElement(0, inputNote1Enc);

@@ -73,7 +73,7 @@ describe('pipeline_coordinator', () => {
     } as any;
 
     noteAlgo = {
-      encryptDefiInteractionNote: jest.fn(),
+      commitDefiInteractionNote: jest.fn(),
     } as any;
 
     coordinator = new PipelineCoordinator(

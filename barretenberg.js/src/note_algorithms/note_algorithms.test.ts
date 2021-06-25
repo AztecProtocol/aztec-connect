@@ -30,8 +30,8 @@ describe('compute_nullifier', () => {
     inputNote1.noteSecret = noteSecret;
     inputNote2.noteSecret = noteSecret;
 
-    const inputNote1Enc = noteAlgos.encryptNote(inputNote1);
-    const inputNote2Enc = noteAlgos.encryptNote(inputNote2);
+    const inputNote1Enc = noteAlgos.commitNote(inputNote1);
+    const inputNote2Enc = noteAlgos.commitNote(inputNote2);
 
     const nullifier1 = noteAlgos.computeNoteNullifier(inputNote1Enc, 1, privateKey);
     const nullifier2 = noteAlgos.computeNoteNullifier(inputNote2Enc, 0, privateKey);
@@ -43,22 +43,22 @@ describe('compute_nullifier', () => {
     expect(nullifier2.toString('hex')).toEqual(expected2);
   });
 
-  it('should encrypt claim note and compute its nullifier', async () => {
+  it('should commit to claim note and compute its nullifier', async () => {
     const bridgeId = BridgeId.fromBigInt(BigInt(456));
     const ownerId = new AccountId(pubKey, 0);
     const claimNoteTxData = new ClaimNoteTxData(BigInt(100), bridgeId, ownerId.publicKey, ownerId.nonce, noteSecret);
     const partialState = noteAlgos.computePartialState(claimNoteTxData, ownerId);
     const inputNote = new TreeClaimNote(claimNoteTxData.value, claimNoteTxData.bridgeId, 0, partialState);
-    const inputNoteEnc = noteAlgos.encryptClaimNote(inputNote);
+    const inputNoteEnc = noteAlgos.commitClaimNote(inputNote);
     const nullifier = noteAlgos.computeClaimNoteNullifier(inputNoteEnc, 1);
     expect(nullifier).toEqual(Buffer.from('12e53e3931dba11ee820780e321b68743bef348b762c10c79f41455af920f8be', 'hex'));
   });
 
-  it('should encrypt defi interaction note', async () => {
+  it('should commit to defi interaction note', async () => {
     const bridgeId = BridgeId.fromBigInt(BigInt(456));
     const note = new DefiInteractionNote(bridgeId, 1, BigInt(123), BigInt(456), BigInt(789), true);
-    const encrypted = noteAlgos.encryptDefiInteractionNote(note);
-    expect(encrypted).toEqual(
+    const commited = noteAlgos.commitDefiInteractionNote(note);
+    expect(commited).toEqual(
       Buffer.from(
         '2b537a469402ddae2e72fcdd826b28c336d522981eb06cf87a26ff88c6108c1f0905d7cfe073d238f056544aaa064625c6a7df12dddb8c41307d7257e5b21c88',
         'hex',

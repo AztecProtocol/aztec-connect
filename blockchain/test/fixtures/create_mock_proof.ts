@@ -216,9 +216,9 @@ export const createRollupProof = async (
   const bridgeIds = interactionData.map(d => d.bridgeId);
   const defiDepositSums = interactionData.map(d => d.totalInputValue);
 
-  const encryptedInteractionNotes = [...prevInteractionResult];
+  const interactionNoteCommitments = [...prevInteractionResult];
   for (let i = prevInteractionResult.length; i < numberOfDefiInteraction; ++i) {
-    encryptedInteractionNotes.push(Buffer.alloc(64));
+    interactionNoteCommitments.push(Buffer.alloc(64));
   }
 
   // Escape hatch is demarked 0, but has size 1.
@@ -246,7 +246,7 @@ export const createRollupProof = async (
     ...innerProofs.map(p => p.toBuffer()),
     padding,
     recursiveProofOutput,
-    ...encryptedInteractionNotes,
+    ...interactionNoteCommitments,
     previousDefiInteractionHash || interactionHashes[rollupId],
   ]);
 

@@ -134,7 +134,7 @@ describe('user state', () => {
     outputOwner = EthAddress.ZERO,
     newNoteNonce = user.nonce,
     isPadding = false,
-    createValidNoteEncryptions = true,
+    createValidNoteCommitments = true,
   } = {}) => {
     const notes = [
       validNewNote
@@ -144,8 +144,8 @@ describe('user state', () => {
         ? createNote(assetId, outputNoteValue2, new AccountId(user.publicKey, newNoteNonce))
         : createGibberishNote(),
     ];
-    const encryptedNote1 = createValidNoteEncryptions ? noteAlgos.encryptNote(notes[0].note) : randomBytes(64);
-    const encryptedNote2 = createValidNoteEncryptions ? noteAlgos.encryptNote(notes[1].note) : randomBytes(64);
+    const note1Commitment = createValidNoteCommitments ? noteAlgos.commitNote(notes[0].note) : randomBytes(64);
+    const note2Commitment = createValidNoteCommitments ? noteAlgos.commitNote(notes[1].note) : randomBytes(64);
     const nullifier1 = isPadding
       ? Buffer.alloc(32)
       : noteAlgos.computeNoteNullifier(randomBytes(64), 0, user.privateKey);
@@ -156,8 +156,8 @@ describe('user state', () => {
       toBufferBE(publicInput, 32),
       toBufferBE(publicOutput, 32),
       numToUInt32BE(assetId, 32),
-      encryptedNote1,
-      encryptedNote2,
+      note1Commitment,
+      note2Commitment,
       nullifier1,
       nullifier2,
       inputOwner.toBuffer32(),
@@ -208,7 +208,7 @@ describe('user state', () => {
       ? createClaimNote(bridgeId, depositValue, claimNoteRecipient)
       : createGibberishClaimNote();
     const newNote = validNewNote ? createNote(assetId, outputNoteValue, proofSender.id) : createGibberishNote();
-    const encryptedNotes = [noteAlgos.encryptClaimNote(claimNote.note), noteAlgos.encryptNote(newNote.note)];
+    const noteCommitments = [noteAlgos.commitClaimNote(claimNote.note), noteAlgos.commitNote(newNote.note)];
     const nullifier1 = noteAlgos.computeNoteNullifier(randomBytes(64), 0, proofSender.privateKey);
     const nullifier2 = noteAlgos.computeNoteNullifier(randomBytes(64), 1, proofSender.privateKey);
     const viewingKeys = [claimNote.viewingKey, newNote.viewingKey];
@@ -217,8 +217,8 @@ describe('user state', () => {
       toBufferBE(0n, 32),
       toBufferBE(depositValue, 32),
       bridgeId.toBuffer(),
-      encryptedNotes[0],
-      encryptedNotes[1],
+      noteCommitments[0],
+      noteCommitments[1],
       nullifier1,
       nullifier2,
       EthAddress.ZERO.toBuffer32(),
@@ -240,14 +240,14 @@ describe('user state', () => {
       validNewNote1 ? createNote(assetId, outputValueA, user.id, 0) : createGibberishNote(),
       validNewNote2 ? createNote(assetId, outputValueB, user.id) : createGibberishNote(),
     ];
-    const encryptedNotes = [noteAlgos.encryptNote(notes[0].note), noteAlgos.encryptNote(notes[1].note)];
+    const noteCommitments = [noteAlgos.commitNote(notes[0].note), noteAlgos.commitNote(notes[1].note)];
     const proofData = new InnerProofData(
       ProofId.DEFI_CLAIM,
       toBufferBE(0n, 32),
       toBufferBE(0n, 32),
       bridgeId.toBuffer(),
-      encryptedNotes[0],
-      encryptedNotes[1],
+      noteCommitments[0],
+      noteCommitments[1],
       nullifier,
       Buffer.alloc(32),
       EthAddress.ZERO.toBuffer32(),
@@ -919,7 +919,7 @@ describe('user state', () => {
     const rollupProofData = generateJoinSplitRollup(0, {
       outputNoteValue1,
       outputNoteValue2,
-      createValidNoteEncryptions: false,
+      createValidNoteCommitments: false,
     });
     const blockCreated = new Date();
     const block = createBlock(rollupProofData, blockCreated);

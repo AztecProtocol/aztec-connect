@@ -40,7 +40,7 @@ export class WorldState {
     private pipelineFactory: RollupPipelineFactory,
     private noteAlgo: NoteAlgorithms,
     private metrics: Metrics,
-  ) {}
+  ) { }
 
   public async start() {
     await this.worldStateDb.start();
@@ -175,7 +175,7 @@ export class WorldState {
           const index = dataStartIndex + i * 2;
           const interactionNonce = interactionResult.find(r => r.bridgeId.equals(bridgeId))!.nonce;
           const note = new TreeClaimNote(depositValue, bridgeId, interactionNonce, partialState);
-          const nullifier = this.noteAlgo.computeClaimNoteNullifier(this.noteAlgo.encryptClaimNote(note), index);
+          const nullifier = this.noteAlgo.computeClaimNoteNullifier(this.noteAlgo.commitClaimNote(note), index);
           await this.rollupDb.addClaim({
             id: index,
             nullifier,

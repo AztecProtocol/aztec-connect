@@ -38,8 +38,8 @@ describe('tree_claim_note', () => {
   const mockInnerProofs = (notes: TreeNote[], claimNotes: TreeClaimNote[]) => {
     const proofs: InnerProofData[] = [];
     for (let i = 0; i < notes.length; ++i) {
-      const newNote1 = noteAlgos.encryptNote(notes[i]);
-      const newNote2 = noteAlgos.encryptClaimNote(claimNotes[i]);
+      const newNote1 = noteAlgos.commitNote(notes[i]);
+      const newNote2 = noteAlgos.commitClaimNote(claimNotes[i]);
       const { value, bridgeId, partialState } = claimNotes[i];
       proofs.push({
         proofId: ProofId.DEFI_DEPOSIT,
