@@ -1,12 +1,13 @@
-import { pathExists, mkdirp, rename } from 'fs-extra';
+import { readFile, pathExists, mkdirp, rename } from 'fs-extra';
 import { fetch } from '@aztec/barretenberg/iso_fetch';
 import { ChildProcess, spawn } from 'child_process';
 import { createWriteStream } from 'fs';
 import { PromiseReadable } from 'promise-readable';
 import { createInterface } from 'readline';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
+import { ProofGenerator } from './proof_generator';
 
-export class CliProofGenerator {
+export class CliProofGenerator implements ProofGenerator {
   private proc?: ChildProcess;
   private stdout: any;
   private runningPromise?: Promise<void>;
@@ -16,6 +17,23 @@ export class CliProofGenerator {
     if (!maxCircuitSize) {
       throw new Error('Rollup sizes must be greater than 0.');
     }
+  }
+
+  public async awaitReady() {
+    await this.start();
+  }
+
+  public async reset() {
+    await this.stop();
+    await this.start();
+  }
+
+  public async getJoinSplitVk() {
+    return await readFile('./data/join_split/verification_key');
+  }
+
+  public async getAccountVk() {
+    return await readFile('./data/account/verification_key');
   }
 
   public async start() {

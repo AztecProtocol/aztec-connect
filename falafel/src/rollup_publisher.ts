@@ -129,7 +129,6 @@ export class RollupPublisher {
     feeLimit: bigint,
     feeDistributorAddress: EthAddress,
   ) {
-    // TODO: hardcoding to get passing. update constant.
     const publicInputs = rollupProof.slice(0, RollupProofData.LENGTH_ROLLUP_HEADER_INPUTS);
     const msgHash = utils.solidityKeccak256(
       ['bytes'],

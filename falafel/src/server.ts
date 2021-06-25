@@ -9,7 +9,7 @@ import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { EthereumProvider } from '@aztec/blockchain';
 import { toBigIntBE } from 'bigint-buffer';
 import { emptyDir } from 'fs-extra';
-import { ProofGenerator, ServerProofGenerator } from 'halloumi/proof_generator';
+import { CliProofGenerator, ProofGenerator, ServerProofGenerator } from 'halloumi/proof_generator';
 import { Duration } from 'moment';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
@@ -20,7 +20,7 @@ import { Tx, TxReceiver } from './tx_receiver';
 import { WorldState } from './world_state';
 
 export interface ServerConfig {
-  readonly halloumiHost: string;
+  readonly halloumiHost?: string;
   readonly numInnerRollupTxs: number;
   readonly numOuterRollupProofs: number;
   readonly publishInterval: Duration;
@@ -59,6 +59,7 @@ export class Server {
       maxFeeGasPrice,
       feeGasPriceMultiplier,
       providerGasPriceMultiplier,
+      halloumiHost,
     } = config;
     const noteAlgo = new NoteAlgorithms(barretenberg);
 
@@ -71,7 +72,7 @@ export class Server {
       numInnerRollupTxs * numOuterRollupProofs,
       publishInterval.asSeconds(),
     );
-    this.proofGenerator = new ServerProofGenerator(config.halloumiHost);
+    this.proofGenerator = halloumiHost ? new ServerProofGenerator(halloumiHost) : new CliProofGenerator(2 ** 21);
     this.pipelineFactory = new RollupPipelineFactory(
       this.proofGenerator,
       blockchain,

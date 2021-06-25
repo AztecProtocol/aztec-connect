@@ -101,7 +101,7 @@ export class RollupCreator {
       newNullRoots.push(worldStateDb.getRoot(1));
       newNullPaths.push(await worldStateDb.getHashPath(1, nullifier2));
 
-      dataRootsPaths.push(await worldStateDb.getHashPath(2, BigInt(tx.dataRootsIndex)));
+      dataRootsPaths.push(await worldStateDb.getHashPath(2, BigInt(tx.dataRootsIndex!)));
       dataRootsIndicies.push(tx.dataRootsIndex!);
     }
 

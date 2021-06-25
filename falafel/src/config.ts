@@ -15,7 +15,7 @@ interface ConfVars {
   priceFeedContractAddresses: string[];
   ethereumHost?: string;
   ethereumPollInterval?: number;
-  halloumiHost: string;
+  halloumiHost?: string;
   infuraApiKey?: string;
   network?: string;
   privateKey: Buffer;
@@ -70,7 +70,7 @@ function getConfVars(): ConfVars {
     priceFeedContractAddresses: (PRICE_FEED_CONTRACT_ADDRESSES || '').split(','),
     ethereumHost: ETHEREUM_HOST,
     ethereumPollInterval: +(ETHEREUM_POLL_INTERVAL || 10000),
-    halloumiHost: HALLOUMI_HOST || 'http://localhost:8083',
+    halloumiHost: HALLOUMI_HOST,
     infuraApiKey: INFURA_API_KEY,
     network: NETWORK,
     privateKey: PRIVATE_KEY

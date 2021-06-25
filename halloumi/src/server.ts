@@ -1,4 +1,3 @@
-import { readFile } from 'fs-extra';
 import { CliProofGenerator } from './proof_generator';
 
 export interface ServerConfig {
@@ -32,11 +31,11 @@ export class Server {
   }
 
   public async getJoinSplitVerificationKey() {
-    return await readFile('./data/join_split/verification_key');
+    return await this.proofGenerator.getJoinSplitVk();
   }
 
   public async getAccountVerificationKey() {
-    return await readFile('./data/account/verification_key');
+    return await this.proofGenerator.getAccountVk();
   }
 
   public async createProof(data: Buffer) {
@@ -44,7 +43,6 @@ export class Server {
   }
 
   public async reset() {
-    await this.proofGenerator.stop();
-    await this.proofGenerator.start();
+    await this.proofGenerator.reset();
   }
 }

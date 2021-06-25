@@ -268,8 +268,7 @@ jobs:
       - run:
           name: 'sdk'
           working_directory: sdk
-          command: |
-            deploy_ecr sdk
+          command: deploy_ecr sdk
       - run:
           name: 'halloumi'
           working_directory: halloumi
@@ -281,14 +280,11 @@ jobs:
       - run:
           name: 'sriracha'
           working_directory: sriracha
-          command: |
-            deploy sriracha
-            deploy_dockerhub sriracha
+          command: deploy sriracha
       - run:
           name: 'wasabi'
           working_directory: wasabi
-          command: |
-            deploy wasabi
+          command: deploy wasabi
       - run:
           name: 'hummus'
           working_directory: hummus
@@ -354,6 +350,7 @@ jobs:
           command: |
             deploy_ecr sriracha
             deploy_npm sriracha
+            deploy_dockerhub sriracha
       - run:
           name: 'sdk'
           working_directory: sdk
@@ -367,25 +364,9 @@ jobs:
       - run:
           name: 'falafel'
           working_directory: falafel
-          command: deploy falafel falafel-mainnet ./terraform/mainnet
-      # - run:
-      #     name: 'sriracha'
-      #     working_directory: sriracha
-      #     command: |
-      #       deploy sriracha
-      #       deploy_dockerhub sriracha
-      # - run:
-      #     name: 'block-explorer'
-      #     working_directory: block-explorer
-      #     command: |
-      #       deploy block-explorer
-      #       deploy_s3 block-explorer
-      # - run:
-      #     name: 'documentation'
-      #     working_directory: documentation
-      #     command: |
-      #       deploy documentation
-      #       deploy_s3 documentation
+          command: |
+            deploy falafel falafel-mainnet ./terraform/mainnet
+            deploy_dockerhub falafel
       - run:
           name: 'zk-money'
           working_directory: zk-money

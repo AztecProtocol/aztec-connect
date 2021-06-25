@@ -1,15 +1,20 @@
 #!/bin/bash
 set -e
 
+if [ -z "$CIRCLE_TAG" ]; then
+  echo "Can only push tagged builds to dockerhub."
+  exit 1
+fi
+
 REPOSITORY=$1
-IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:cache-$CIRCLE_SHA1
-IMAGE_DEPLOY_URI=aztecprotocol/$REPOSITORY
+IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:$CIRCLE_SHA1
+IMAGE_DEPLOY_URI=aztecprotocol/$REPOSITORY:$CIRCLE_TAG
 
 # Login.
-ensure_repo $REPOSITORY $ECR_REGION
+ensure_repo $REPOSITORY $ECR_DEPLOY_REGION
 
-# Do nothing if this wasn't rebuilt.
-docker pull $IMAGE_COMMIT_URI > /dev/null 2>&1 || { echo "No new image found." && exit 0; }
+# Pull image.
+docker pull $IMAGE_COMMIT_URI
 
 # Login to dockerhub.
 docker login -u aztecprotocolci -p "${DOCKERHUB_PASSWORD}"
