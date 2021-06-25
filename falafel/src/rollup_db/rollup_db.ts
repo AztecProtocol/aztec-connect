@@ -237,8 +237,8 @@ export class TypeOrmRollupDb implements RollupDb {
     await this.rollupRep.update({ id }, { callData });
   }
 
-  public async confirmSent(id: number, txHash: TxHash) {
-    await this.rollupRep.update({ id }, { ethTxHash: txHash.toBuffer() });
+  public async confirmSent(id: number, ethTxHash: TxHash) {
+    await this.rollupRep.update({ id }, { ethTxHash } as Partial<RollupDao>);
   }
 
   public async confirmMined(
@@ -251,18 +251,15 @@ export class TypeOrmRollupDb implements RollupDb {
     txIds: Buffer[],
   ) {
     await this.connection.transaction(async transactionalEntityManager => {
-      await transactionalEntityManager.update(this.txRep.target, { id: In(txIds) }, { mined });
-      await transactionalEntityManager.update(
-        this.rollupRep.target,
-        { id },
-        {
-          mined,
-          gasUsed,
-          gasPrice: toBufferBE(gasPrice, 32),
-          ethTxHash: ethTxHash.toBuffer(),
-          interactionResult: Buffer.concat(interactionResult.map(r => r.toBuffer())),
-        },
-      );
+      await transactionalEntityManager.update<TxDao>(this.txRep.target, { id: In(txIds) }, { mined });
+      const dao: Partial<RollupDao> = {
+        mined,
+        gasUsed,
+        gasPrice: toBufferBE(gasPrice, 32),
+        ethTxHash,
+        interactionResult: Buffer.concat(interactionResult.map(r => r.toBuffer())),
+      };
+      await transactionalEntityManager.update<RollupDao>(this.rollupRep.target, { id }, dao);
     });
     return (await this.getRollup(id))!;
   }

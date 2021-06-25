@@ -3,7 +3,6 @@ import { Block } from '@aztec/barretenberg/block_source';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupProviderStatus } from '@aztec/barretenberg/rollup_provider';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { EthereumProvider } from '@aztec/blockchain';
@@ -162,17 +161,19 @@ export class Server {
     }
 
     const rollups = await this.rollupDb.getSettledRollups(from);
-    return rollups.map(dao => ({
-      txHash: new TxHash(dao.ethTxHash!),
-      created: dao.created,
-      rollupId: dao.id,
-      rollupSize: RollupProofData.getRollupSizeFromBuffer(dao.rollupProof.proofData!),
-      rollupProofData: dao.rollupProof.proofData!,
-      viewingKeysData: dao.viewingKeys,
-      interactionResult: parseInteractionResult(dao.interactionResult),
-      gasPrice: toBigIntBE(dao.gasPrice),
-      gasUsed: dao.gasUsed,
-    }));
+    return rollups.map(dao => {
+      return {
+        txHash: dao.ethTxHash!,
+        created: dao.created,
+        rollupId: dao.id,
+        rollupSize: RollupProofData.getRollupSizeFromBuffer(dao.rollupProof.proofData!),
+        rollupProofData: dao.rollupProof.proofData!,
+        viewingKeysData: dao.viewingKeys,
+        interactionResult: parseInteractionResult(dao.interactionResult),
+        gasPrice: toBigIntBE(dao.gasPrice!),
+        gasUsed: dao.gasUsed!,
+      };
+    });
   }
 
   public async getLatestRollupId() {

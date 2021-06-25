@@ -243,8 +243,8 @@ export class Metrics {
     const rollup = await this.rollupDb.getLastSettledRollup();
     if (rollup) {
       this.rollupSize.set(rollup.rollupProof.rollupSize);
-      this.rollupGasUsed.set(rollup.gasUsed);
-      this.rollupGasPrice.set(Number(toBigIntBE(rollup.gasPrice)));
+      this.rollupGasUsed.set(rollup.gasUsed!);
+      this.rollupGasPrice.set(Number(toBigIntBE(rollup.gasPrice!)));
     }
 
     return client.register.metrics();

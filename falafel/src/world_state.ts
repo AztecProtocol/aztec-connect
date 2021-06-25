@@ -241,7 +241,7 @@ export class WorldState {
         id: rollup.rollupId,
         dataRoot: rollup.newDataRoot,
         rollupProof: rollupProofDao,
-        ethTxHash: txHash.toBuffer(),
+        ethTxHash: txHash,
         mined: block.created,
         created: block.created,
         viewingKeys: Buffer.concat(rollup.viewingKeys.flat().map(vk => vk.toBuffer())),

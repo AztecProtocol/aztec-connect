@@ -1,5 +1,7 @@
-import { Column, Entity, Index, OneToOne, PrimaryColumn } from 'typeorm';
+import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { AfterInsert, AfterLoad, AfterUpdate, Column, Entity, Index, OneToOne, PrimaryColumn } from 'typeorm';
 import { RollupProofDao } from './rollup_proof';
+import { txHashTransformer } from './transformer';
 
 @Entity({ name: 'rollup' })
 export class RollupDao {
@@ -25,25 +27,46 @@ export class RollupDao {
 
   // Null until calldata computed.
   @Column({ nullable: true })
-  public callData!: Buffer;
+  public callData?: Buffer;
 
   // Null until mined and events fetched.
   @Column({ nullable: true })
   public interactionResult!: Buffer;
 
   // Null until tx sent.
-  @Column({ nullable: true })
-  public ethTxHash!: Buffer;
+  @Column('blob', { nullable: true, transformer: [txHashTransformer] })
+  public ethTxHash?: TxHash;
 
   // Null until mined.
   @Column({ nullable: true })
-  public gasPrice!: Buffer;
+  public gasPrice?: Buffer;
 
   // Null until mined.
   @Column({ nullable: true })
-  public gasUsed!: number;
+  public gasUsed?: number;
 
   // Null until mined.
   @Column({ nullable: true })
-  public mined!: Date;
+  public mined?: Date;
+
+  @AfterLoad()
+  @AfterInsert()
+  @AfterUpdate()
+  afterLoad() {
+    if (!this.callData) {
+      delete this.callData;
+    }
+    if (!this.ethTxHash) {
+      delete this.ethTxHash;
+    }
+    if (this.gasPrice === null) {
+      delete this.gasPrice;
+    }
+    if (this.gasUsed === null) {
+      delete this.gasUsed;
+    }
+    if (!this.mined) {
+      delete this.mined;
+    }
+  }
 }
