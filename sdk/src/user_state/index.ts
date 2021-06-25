@@ -3,10 +3,9 @@ import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetId, AssetIds } from '@aztec/barretenberg/asset';
 import { Block } from '@aztec/barretenberg/block_source';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { ProofId } from '@aztec/barretenberg/client_proofs';
-import { computeAccountAliasIdNullifier } from '@aztec/barretenberg/client_proofs/account_proof';
-import { Pedersen } from '@aztec/barretenberg/crypto/pedersen';
-import { Grumpkin } from '@aztec/barretenberg/ecc/grumpkin';
+import { ProofId, computeAccountAliasIdNullifier } from '@aztec/barretenberg/client_proofs';
+import { Pedersen } from '@aztec/barretenberg/crypto';
+import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
 import {
   batchDecryptNotes,

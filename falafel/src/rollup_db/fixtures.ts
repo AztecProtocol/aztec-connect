@@ -1,7 +1,7 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { ProofData } from '@aztec/barretenberg/client_proofs/proof_data';
+import { ProofData } from '@aztec/barretenberg/client_proofs';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { ViewingKey } from '@aztec/barretenberg/viewing_key';

@@ -1,6 +1,6 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AccountProver, AccountTx, computeAccountProofSigningData } from '@aztec/barretenberg/client_proofs';
-import { Pedersen } from '@aztec/barretenberg/crypto/pedersen';
+import { Pedersen } from '@aztec/barretenberg/crypto';
 import { WorldState } from '@aztec/barretenberg/world_state';
 import { AliasHash } from '@aztec/barretenberg/account_id';
 import { randomBytes } from 'crypto';

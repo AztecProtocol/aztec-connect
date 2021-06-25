@@ -4,16 +4,16 @@ import { AssetId } from '@aztec/barretenberg/asset';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { AccountProver } from '@aztec/barretenberg/client_proofs/account_proof';
-import { EscapeHatchProver } from '@aztec/barretenberg/client_proofs/escape_hatch_proof';
-import { JoinSplitProver } from '@aztec/barretenberg/client_proofs/join_split_proof';
-import { ProofData } from '@aztec/barretenberg/client_proofs/proof_data';
-import { PooledProverFactory } from '@aztec/barretenberg/client_proofs/prover';
+import {
+  AccountProver,
+  EscapeHatchProver,
+  JoinSplitProver,
+  ProofData,
+  PooledProverFactory,
+} from '@aztec/barretenberg/client_proofs';
 import { Crs } from '@aztec/barretenberg/crs';
-import { Blake2s } from '@aztec/barretenberg/crypto/blake2s';
-import { Pedersen, PooledPedersen } from '@aztec/barretenberg/crypto/pedersen';
-import { Schnorr } from '@aztec/barretenberg/crypto/schnorr';
-import { Grumpkin } from '@aztec/barretenberg/ecc/grumpkin';
+import { Blake2s, Pedersen, PooledPedersen, Schnorr } from '@aztec/barretenberg/crypto';
+import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
 import { HashPathSource } from '@aztec/barretenberg/hash_path_source';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
@@ -21,7 +21,7 @@ import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupProvider, SettlementTime } from '@aztec/barretenberg/rollup_provider';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { BarretenbergWasm, createWorker, destroyWorker, WorkerPool } from '@aztec/barretenberg/wasm';
-import { BarretenbergWorker } from '@aztec/barretenberg/wasm/worker';
+import { BarretenbergWorker } from '@aztec/barretenberg/wasm';
 import { WorldState } from '@aztec/barretenberg/world_state';
 import createDebug from 'debug';
 import isNode from 'detect-node';

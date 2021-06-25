@@ -1,4 +1,4 @@
-import { ProofData } from '@aztec/barretenberg/client_proofs/proof_data';
+import { ProofData } from '@aztec/barretenberg/client_proofs';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';

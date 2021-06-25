@@ -9,9 +9,7 @@ import {
 } from '@aztec/barretenberg/client_proofs';
 import { Crs } from '@aztec/barretenberg/crs';
 import { ViewingKey } from '@aztec/barretenberg/viewing_key';
-import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
-import { BarretenbergWorker } from '@aztec/barretenberg/wasm/worker';
-import { createWorker, destroyWorker } from '@aztec/barretenberg/wasm/worker_factory';
+import { createWorker, destroyWorker, BarretenbergWasm, BarretenbergWorker } from '@aztec/barretenberg/wasm';
 import { Mutex } from 'async-mutex';
 import { ProofGenerator } from 'halloumi/proof_generator';
 import { TxDao } from './entity/tx';

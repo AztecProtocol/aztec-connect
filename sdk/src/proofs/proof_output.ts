@@ -1,5 +1,5 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
-import { AccountProofData, ProofData } from '@aztec/barretenberg/client_proofs/proof_data';
+import { AccountProofData, ProofData } from '@aztec/barretenberg/client_proofs';
 import { Proof } from '@aztec/barretenberg/rollup_provider';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { ViewingKey } from '@aztec/barretenberg/viewing_key';

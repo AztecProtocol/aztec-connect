@@ -6,6 +6,7 @@ import { EventEmitter } from 'events';
 export * from './barretenberg_wasm';
 export * from './worker_pool';
 export * from './worker_factory';
+export { BarretenbergWorker } from './worker';
 
 EventEmitter.defaultMaxListeners = 30;
 

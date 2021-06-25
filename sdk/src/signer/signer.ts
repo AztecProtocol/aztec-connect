@@ -1,5 +1,5 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
-import { SchnorrSignature } from '@aztec/barretenberg/crypto/schnorr';
+import { SchnorrSignature } from '@aztec/barretenberg/crypto';
 
 export interface Signer {
   getPublicKey(): GrumpkinAddress;

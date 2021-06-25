@@ -9,7 +9,7 @@ import { Signer, utils } from 'ethers';
 import { RollupDao } from './entity/rollup';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
-import { ProofData, JoinSplitProofData } from '@aztec/barretenberg/client_proofs/proof_data';
+import { ProofData, JoinSplitProofData } from '@aztec/barretenberg/client_proofs';
 import { AssetId } from '@aztec/barretenberg/asset';
 
 export class RollupPublisher {

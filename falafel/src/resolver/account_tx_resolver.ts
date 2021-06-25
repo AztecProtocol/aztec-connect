@@ -1,6 +1,6 @@
 import { AliasHash } from '@aztec/barretenberg/account_id';
 import { AccountProofData, ProofData } from '@aztec/barretenberg/client_proofs';
-import { Blake2s } from '@aztec/barretenberg/crypto/blake2s';
+import { Blake2s } from '@aztec/barretenberg/crypto';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { Arg, Args, Query, Resolver } from 'type-graphql';
 import { Inject } from 'typedi';

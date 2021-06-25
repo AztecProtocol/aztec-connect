@@ -2,11 +2,9 @@ import { AccountAliasId, AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { Block } from '@aztec/barretenberg/block_source';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { ProofId } from '@aztec/barretenberg/client_proofs';
-import { computeAccountAliasIdNullifier } from '@aztec/barretenberg/client_proofs/account_proof/compute_nullifier';
-import { Blake2s } from '@aztec/barretenberg/crypto/blake2s';
-import { Pedersen } from '@aztec/barretenberg/crypto/pedersen';
-import { Grumpkin } from '@aztec/barretenberg/ecc/grumpkin';
+import { ProofId, computeAccountAliasIdNullifier } from '@aztec/barretenberg/client_proofs';
+import { Blake2s, Pedersen } from '@aztec/barretenberg/crypto';
+import { Grumpkin } from '@aztec/barretenberg/ecc';
 import {
   batchDecryptNotes,
   ClaimNoteTxData,

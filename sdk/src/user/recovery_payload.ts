@@ -1,6 +1,6 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AccountId } from '@aztec/barretenberg/account_id';
-import { SchnorrSignature } from '@aztec/barretenberg/crypto/schnorr';
+import { SchnorrSignature } from '@aztec/barretenberg/crypto';
 
 export class RecoveryData {
   constructor(public accountId: AccountId, public signature: SchnorrSignature) {}

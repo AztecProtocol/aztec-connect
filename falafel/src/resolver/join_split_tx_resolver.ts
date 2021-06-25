@@ -1,4 +1,4 @@
-import { ProofData, JoinSplitProofData } from '@aztec/barretenberg/client_proofs/proof_data';
+import { ProofData, JoinSplitProofData } from '@aztec/barretenberg/client_proofs';
 import { Query, Resolver, FieldResolver, Root } from 'type-graphql';
 import { Inject } from 'typedi';
 import { CachedRollupDb } from '../rollup_db';
