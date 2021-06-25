@@ -109,7 +109,9 @@ export class RollupProofData {
       startIndex += 32;
     }
 
-    const innerProofSize = Math.max(rollupSize, 1); // Escape hatch is demarked 0, but has size 1.
+    //! We should have some assertion that rollupSize shouldn't be 0.
+
+    const innerProofSize = rollupSize;
     const innerProofData: InnerProofData[] = [];
     for (let i = 0; i < innerProofSize; ++i) {
       const innerData = proofData.slice(startIndex, startIndex + InnerProofData.LENGTH);

@@ -4,13 +4,7 @@ import { AssetId } from '@aztec/barretenberg/asset';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import {
-  AccountProver,
-  EscapeHatchProver,
-  JoinSplitProver,
-  ProofData,
-  PooledProverFactory,
-} from '@aztec/barretenberg/client_proofs';
+import { AccountProver, JoinSplitProver, ProofData, PooledProverFactory } from '@aztec/barretenberg/client_proofs';
 import { Crs } from '@aztec/barretenberg/crs';
 import { Blake2s, Pedersen, PooledPedersen, Schnorr } from '@aztec/barretenberg/crypto';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
@@ -31,7 +25,6 @@ import { LevelUp } from 'levelup';
 import os from 'os';
 import { Database } from '../database';
 import { AccountProofCreator } from '../proofs/account_proof_creator';
-import { EscapeHatchProofCreator } from '../proofs/escape_hatch_proof_creator';
 import { JoinSplitProofCreator } from '../proofs/join_split_proof_creator';
 import { AccountProofOutput, DefiProofOutput, JoinSplitProofOutput, ProofOutput } from '../proofs/proof_output';
 import { SdkEvent, SdkInitState, SdkStatus } from '../sdk';
@@ -67,7 +60,7 @@ export class CoreSdk extends EventEmitter {
   private workerPool!: WorkerPool;
   // Used for other long running tasks (data tree hash computation and note decryption).
   private worker!: BarretenbergWorker;
-  private joinSplitProofCreator!: JoinSplitProofCreator | EscapeHatchProofCreator;
+  private joinSplitProofCreator!: JoinSplitProofCreator;
   private accountProofCreator!: AccountProofCreator;
   private blockQueue!: MemoryFifo<Block>;
   private userFactory!: UserDataFactory;
@@ -94,9 +87,7 @@ export class CoreSdk extends EventEmitter {
     private leveldb: LevelUp,
     private db: Database,
     private rollupProvider: RollupProvider,
-    private hashPathSource: HashPathSource | undefined,
     private options: CoreSdkOptions,
-    private escapeHatchMode: boolean,
   ) {
     super();
   }
@@ -149,44 +140,24 @@ export class CoreSdk extends EventEmitter {
     };
 
     // Create provers
-    const crsData = await this.getCrsData(
-      this.escapeHatchMode ? EscapeHatchProver.circuitSize : JoinSplitProver.circuitSize,
-    );
+    const crsData = await this.getCrsData(JoinSplitProver.circuitSize);
     const pooledProverFactory = new PooledProverFactory(this.workerPool, crsData);
 
-    if (!this.escapeHatchMode) {
-      const joinSplitProver = new JoinSplitProver(
-        await pooledProverFactory.createUnrolledProver(JoinSplitProver.circuitSize),
-      );
-      this.joinSplitProofCreator = new JoinSplitProofCreator(
-        joinSplitProver,
-        this.worldState,
-        this.grumpkin,
-        this.pedersen,
-        noteAlgos,
-        this.db,
-      );
-      const accountProver = new AccountProver(
-        await pooledProverFactory.createUnrolledProver(AccountProver.circuitSize),
-      );
-      this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState, this.pedersen);
-      await this.createJoinSplitProvingKey(joinSplitProver);
-      await this.createAccountProvingKey(accountProver);
-    } else {
-      const escapeHatchProver = new EscapeHatchProver(
-        await pooledProverFactory.createProver(EscapeHatchProver.circuitSize),
-      );
-      this.joinSplitProofCreator = new EscapeHatchProofCreator(
-        escapeHatchProver,
-        this.worldState,
-        this.grumpkin,
-        this.pedersen,
-        noteAlgos,
-        this.hashPathSource!,
-        this.db,
-      );
-      await this.createEscapeHatchProvingKey(escapeHatchProver);
-    }
+    const joinSplitProver = new JoinSplitProver(
+      await pooledProverFactory.createUnrolledProver(JoinSplitProver.circuitSize),
+    );
+    this.joinSplitProofCreator = new JoinSplitProofCreator(
+      joinSplitProver,
+      this.worldState,
+      this.grumpkin,
+      this.pedersen,
+      noteAlgos,
+      this.db,
+    );
+    const accountProver = new AccountProver(await pooledProverFactory.createUnrolledProver(AccountProver.circuitSize));
+    this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState, this.pedersen);
+    await this.createJoinSplitProvingKey(joinSplitProver);
+    await this.createAccountProvingKey(accountProver);
 
     this.updateInitState(SdkInitState.INITIALIZED);
   }
@@ -194,10 +165,6 @@ export class CoreSdk extends EventEmitter {
   public async getRollupContractAddress() {
     const result: Buffer | undefined = await this.leveldb.get('rollupContractAddress').catch(() => undefined);
     return result ? new EthAddress(result) : undefined;
-  }
-
-  public isEscapeHatchMode() {
-    return this.escapeHatchMode;
   }
 
   public async eraseDb() {
@@ -298,13 +265,6 @@ export class CoreSdk extends EventEmitter {
       }
       debug(`complete: ${new Date().getTime() - start}ms`);
     }
-  }
-
-  private async createEscapeHatchProvingKey(escapeProver: EscapeHatchProver) {
-    const start = new Date().getTime();
-    this.logInitMsgAndDebug('Computing escape hatch proving key...');
-    await escapeProver.computeKey();
-    debug(`complete: ${new Date().getTime() - start}ms`);
   }
 
   public async destroy() {
@@ -464,15 +424,6 @@ export class CoreSdk extends EventEmitter {
     this.emit(SdkEvent.UPDATED_USER_STATE, userId, balanceAfter, diff, assetId);
   }
 
-  public async validateEscapeOpen() {
-    const {
-      blockchainStatus: { escapeOpen, numEscapeBlocksRemaining },
-    } = await this.rollupProvider.getStatus();
-    if (!escapeOpen) {
-      throw new Error(`Escape hatch window closed. Opens in ${numEscapeBlocksRemaining} blocks`);
-    }
-  }
-
   /**
    * Return the latest nonce for a given public key, derived from chain data.
    */
@@ -530,10 +481,6 @@ export class CoreSdk extends EventEmitter {
     inputOwner?: EthAddress,
     outputOwner?: EthAddress,
   ) {
-    if (this.escapeHatchMode) {
-      await this.validateEscapeOpen();
-    }
-
     const userState = this.getUserState(userId);
 
     const { txId, proofData, viewingKeys, depositSigningData } = await this.joinSplitProofCreator.createProof(
@@ -607,10 +554,6 @@ export class CoreSdk extends EventEmitter {
     newSigningPublicKey2?: GrumpkinAddress,
     newAccountPrivateKey?: Buffer,
   ) {
-    if (this.escapeHatchMode) {
-      throw new Error('Account modifications not supported in escape hatch mode.');
-    }
-
     const userState = this.getUserState(userId);
     const { publicKey } = userState.getUser();
 
@@ -657,10 +600,6 @@ export class CoreSdk extends EventEmitter {
     depositValue: bigint,
     signer: Signer,
   ) {
-    if (this.escapeHatchMode) {
-      await this.validateEscapeOpen();
-    }
-
     const userState = this.getUserState(userId);
     const { txId, proofData, viewingKeys } = await this.joinSplitProofCreator.createProof(
       userState,
@@ -685,10 +624,6 @@ export class CoreSdk extends EventEmitter {
   }
 
   public async sendProof(proofOutput: ProofOutput, depositSignature?: Buffer) {
-    if (this.escapeHatchMode) {
-      await this.validateEscapeOpen();
-    }
-
     const { tx } = proofOutput;
     const { userId } = tx;
     const userState = this.getUserState(userId);

@@ -520,8 +520,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             bytes32[4] memory newRoots
         ) = decodeProof(proofData);
 
-        // Escape hatch denominated by a rollup size of 0, which contains 1 tx.
-        uint256 numTxs = nums[1] == 0 ? 1 : nums[1];
+        //! Assertion that rollup size cannot be 0?
+        uint256 numTxs = nums[1];
 
         // Ensure we are inserting at the next subtree boundary.
         uint256 toInsert = numTxs.mul(2);

@@ -272,8 +272,8 @@ export class RollupProcessor {
     const ethSigner = !signer
       ? this.provider.getSigner(0)
       : signer instanceof EthAddress
-      ? this.provider.getSigner(signer.toString())
-      : signer;
+        ? this.provider.getSigner(signer.toString())
+        : signer;
     return new Contract(this.rollupContractAddress.toString(), RollupABI, ethSigner);
   }
 }

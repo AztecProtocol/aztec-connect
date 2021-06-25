@@ -11,7 +11,6 @@ import { SdkEvent, SdkInitState } from '../sdk';
 import { AccountId } from '../user';
 import { CoreSdk, CoreSdkEvent, CoreSdkOptions } from './core_sdk';
 import { AssetId } from '@aztec/barretenberg/asset';
-import { EscapeHatchRollupProvider } from '../escape_hatch_rollup_provider';
 import { getServiceName } from '@aztec/barretenberg/service';
 import { EthereumBlockchain, EthereumProvider } from '@aztec/blockchain';
 
@@ -68,28 +67,8 @@ async function sdkFactory(hostStr: string, options: SdkOptions, ethereumProvider
     await db.clear();
   }
 
-  const serviceName = await getServiceName(hostStr);
-  const escapeHatchMode = serviceName === 'sriracha';
-
-  if (!escapeHatchMode) {
-    const rollupProvider = new ServerRollupProvider(host);
-    return new CoreSdk(leveldb, db, rollupProvider, undefined, options, escapeHatchMode);
-  } else {
-    const srirachaProvider = new SrirachaProvider(host);
-    const {
-      blockchainStatus: { rollupContractAddress },
-    } = await srirachaProvider.getStatus();
-    const { minConfirmation, minConfirmationEHW } = options;
-    const config = {
-      console: false,
-      gasLimit: 7000000,
-      minConfirmation,
-      minConfirmationEHW,
-    };
-    const blockchain = await EthereumBlockchain.new(config, rollupContractAddress, [], ethereumProvider);
-    const rollupProvider = new EscapeHatchRollupProvider(blockchain);
-    return new CoreSdk(leveldb, db, rollupProvider, srirachaProvider, options, escapeHatchMode);
-  }
+  const rollupProvider = new ServerRollupProvider(host);
+  return new CoreSdk(leveldb, db, rollupProvider, options);
 }
 
 /**

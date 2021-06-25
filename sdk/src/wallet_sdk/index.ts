@@ -116,10 +116,6 @@ export class WalletSdk extends EventEmitter {
     return this.core.awaitSettlement(txHash, timeout);
   }
 
-  public isEscapeHatchMode() {
-    return this.core.isEscapeHatchMode();
-  }
-
   public getLocalStatus() {
     return this.core.getLocalStatus();
   }

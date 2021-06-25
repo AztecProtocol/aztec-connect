@@ -13,11 +13,10 @@ import {Rollup1x4Vk} from '../keys/Rollup1x4Vk.sol';
 import {Rollup28x1Vk} from '../keys/Rollup28x1Vk.sol';
 import {Rollup28x2Vk} from '../keys/Rollup28x2Vk.sol';
 import {Rollup28x4Vk} from '../keys/Rollup28x4Vk.sol';
+
 // import {Rollup28x8Vk} from '../keys/Rollup28x8Vk.sol';
 // import {Rollup28x16Vk} from '../keys/Rollup28x16Vk.sol';
 // import {Rollup28x32Vk} from '../keys/Rollup28x32Vk.sol';
-
-import {EscapeHatchVk} from '../keys/EscapeHatchVk.sol';
 
 /**
  * @title Verification keys library
@@ -32,9 +31,7 @@ library VerificationKeys {
         // added in order: qL, qR, qO, qC, qM. x coord first, followed by y coord
         Types.VerificationKey memory vk;
 
-        if (_keyId == 0) {
-            vk = EscapeHatchVk.get_verification_key();
-        } else if (_keyId == 1) {
+        if (_keyId == 1) {
             vk = Rollup1x1Vk.get_verification_key();
         } else if (_keyId == 2) {
             vk = Rollup1x2Vk.get_verification_key();

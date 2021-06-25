@@ -50,7 +50,7 @@ export const interactionHashes = [
 ];
 
 class InnerProofOutput {
-  constructor(public innerProofs: InnerProofData[], public signatures: Buffer[], public totalTxFees: bigint[]) {}
+  constructor(public innerProofs: InnerProofData[], public signatures: Buffer[], public totalTxFees: bigint[]) { }
 }
 
 export const createDepositProof = async (
@@ -155,7 +155,7 @@ export const mergeInnerProofs = (output: InnerProofOutput[]) => {
 export class DefiInteractionData {
   static EMPTY = new DefiInteractionData(BridgeId.ZERO, BigInt(0));
 
-  constructor(public readonly bridgeId: BridgeId, public readonly totalInputValue: bigint) {}
+  constructor(public readonly bridgeId: BridgeId, public readonly totalInputValue: bigint) { }
 }
 
 interface RollupProofOptions {
@@ -222,7 +222,8 @@ export const createRollupProof = async (
   }
 
   // Escape hatch is demarked 0, but has size 1.
-  const innerProofLen = rollupSize || 1;
+  //! rollupSize shouldn't be 0
+  const innerProofLen = rollupSize;
   const padding = Buffer.alloc(32 * InnerProofData.NUM_PUBLIC_INPUTS * (innerProofLen - innerProofs.length), 0);
 
   const recursiveProofOutput = Buffer.alloc(16 * 32);
@@ -261,7 +262,8 @@ export const createRollupProof = async (
   };
 };
 
-// Same as rollup proof, except rollupSize is set to 0.
+// Same as rollup proof, except rollupSize is set to 1.
+// Since escape hatch circuit isn't used anymore, rollupSize doesn't matter much.
 export const createEscapeHatchProof = async (
   signer: Signer,
   innerProofOutput: InnerProofOutput,
@@ -274,6 +276,6 @@ export const createEscapeHatchProof = async (
 
   return createRollupProof(signer, innerProofOutput, {
     ...options,
-    rollupSize: 0,
+    rollupSize: 1,
   });
 };
