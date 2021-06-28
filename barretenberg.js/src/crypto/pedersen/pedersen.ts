@@ -49,18 +49,23 @@ export class Pedersen {
   }
 
   public async hashValuesToTree(values: Buffer[]) {
-    const data = Buffer.concat(values);
-    const inputPtr = await this.worker.call('bbmalloc', data.length);
-    await this.worker.transferToHeap(data, inputPtr);
-    const resultSize = await this.worker.call('pedersen__hash_values_to_tree', inputPtr, data.length, 0);
-    const resultPtr = Buffer.from(await this.worker.sliceMemory(0, 4)).readUInt32LE(0);
-    const result = Buffer.from(await this.worker.sliceMemory(resultPtr, resultPtr + resultSize));
-    await this.worker.call('bbfree', inputPtr);
-    await this.worker.call('bbfree', resultPtr);
-    const results: Buffer[] = [];
-    for (let i = 0; i < result.length; i += 32) {
-      results.push(result.slice(i, i + 32));
+    await this.worker.acquire();
+    try {
+      const data = Buffer.concat(values);
+      const inputPtr = await this.worker.call('bbmalloc', data.length);
+      await this.worker.transferToHeap(data, inputPtr);
+      const resultSize = await this.worker.call('pedersen__hash_values_to_tree', inputPtr, data.length, 0);
+      const resultPtr = Buffer.from(await this.worker.sliceMemory(0, 4)).readUInt32LE(0);
+      const result = Buffer.from(await this.worker.sliceMemory(resultPtr, resultPtr + resultSize));
+      await this.worker.call('bbfree', inputPtr);
+      await this.worker.call('bbfree', resultPtr);
+      const results: Buffer[] = [];
+      for (let i = 0; i < result.length; i += 32) {
+        results.push(result.slice(i, i + 32));
+      }
+      return results;
+    } finally {
+      await this.worker.release();
     }
-    return results;
   }
 }

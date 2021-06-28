@@ -63,7 +63,8 @@ jobs:
     steps:
       - checkout
       - *setup_env
-      - setup_remote_docker
+      - setup_remote_docker:
+          version: 19.03.13
       - run:
           name: 'Build and test'
           working_directory: blockchain
@@ -123,7 +124,8 @@ jobs:
     steps:
       - checkout
       - *setup_env
-      - setup_remote_docker
+      - setup_remote_docker:
+          version: 19.03.13
       - run:
           name: 'Build and test'
           working_directory: sdk
@@ -135,7 +137,8 @@ jobs:
     steps:
       - checkout
       - *setup_env
-      - setup_remote_docker
+      - setup_remote_docker:
+          version: 19.03.13
       - run:
           name: 'Build and test'
           working_directory: hummus
@@ -147,7 +150,8 @@ jobs:
     steps:
       - checkout
       - *setup_env
-      - setup_remote_docker
+      - setup_remote_docker:
+          version: 19.03.13
       - run:
           name: 'Build and test'
           working_directory: block-explorer
@@ -159,7 +163,8 @@ jobs:
     steps:
       - checkout
       - *setup_env
-      - setup_remote_docker
+      - setup_remote_docker:
+          version: 19.03.13
       - run:
           name: 'Build and test'
           working_directory: documentation
@@ -188,7 +193,8 @@ jobs:
     steps:
       - checkout
       - *setup_env
-      - setup_remote_docker
+      - setup_remote_docker:
+          version: 19.03.13
       - run:
           name: 'Build and test'
           working_directory: zk-money
@@ -200,7 +206,8 @@ jobs:
     steps:
       - checkout
       - *setup_env
-      - setup_remote_docker
+      - setup_remote_docker:
+          version: 19.03.13
       - run:
           name: 'Build and test'
           working_directory: website
@@ -237,7 +244,8 @@ jobs:
     steps:
       - checkout
       - *setup_env
-      - setup_remote_docker
+      - setup_remote_docker:
+          version: 19.03.13
       - run:
           name: 'barretenberg-x86_64-linux-gcc'
           working_directory: barretenberg
@@ -331,7 +339,8 @@ jobs:
     steps:
       - checkout
       - *setup_env
-      - setup_remote_docker
+      - setup_remote_docker:
+          version: 19.03.13
       - run:
           name: 'barretenberg.js'
           working_directory: barretenberg.js

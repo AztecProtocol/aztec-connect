@@ -4,6 +4,7 @@ import { promisify } from 'util';
 import { EventEmitter } from 'events';
 import createDebug from 'debug';
 import { getRandomBytes } from '../crypto/random';
+import { MemoryFifo } from '../fifo';
 
 EventEmitter.defaultMaxListeners = 30;
 
@@ -20,6 +21,7 @@ export class BarretenbergWasm extends EventEmitter {
   private memory!: WebAssembly.Memory;
   private heap!: Uint8Array;
   private instance!: WebAssembly.Instance;
+  private mutexQ = new MemoryFifo<boolean>();
   public module!: WebAssembly.Module;
 
   public static async new(name = 'wasm', initial?: number) {
@@ -27,6 +29,11 @@ export class BarretenbergWasm extends EventEmitter {
     barretenberg.on('log', createDebug(`bb:${name}`));
     await barretenberg.init(undefined, initial);
     return barretenberg;
+  }
+
+  constructor() {
+    super();
+    this.mutexQ.put(true);
   }
 
   public async init(module?: WebAssembly.Module, initial = 256) {
@@ -115,5 +122,22 @@ export class BarretenbergWasm extends EventEmitter {
     for (let i = 0; i < arr.length; i++) {
       mem[i + offset] = arr[i];
     }
+  }
+
+  /**
+   * When calling the wasm, sometimes a caller will require exclusive access over a series of calls.
+   * e.g. When a result is written to address 0, one cannot have another caller writing to the same address via
+   * transferToHeap before the result is read via sliceMemory.
+   * acquire() gets a single token from a fifo. The caller must call release() to add the token back.
+   */
+  async acquire() {
+    await this.mutexQ.get();
+  }
+
+  async release() {
+    if (this.mutexQ.length() !== 0) {
+      throw new Error('Release called but not acquired.');
+    }
+    this.mutexQ.put(true);
   }
 }

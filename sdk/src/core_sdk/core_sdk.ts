@@ -9,12 +9,11 @@ import { Crs } from '@aztec/barretenberg/crs';
 import { Blake2s, Pedersen, PooledPedersen, Schnorr } from '@aztec/barretenberg/crypto';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
-import { HashPathSource } from '@aztec/barretenberg/hash_path_source';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupProvider, SettlementTime } from '@aztec/barretenberg/rollup_provider';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
-import { BarretenbergWasm, createWorker, destroyWorker, WorkerPool } from '@aztec/barretenberg/wasm';
+import { BarretenbergWasm, WorkerPool } from '@aztec/barretenberg/wasm';
 import { BarretenbergWorker } from '@aztec/barretenberg/wasm';
 import { WorldState } from '@aztec/barretenberg/world_state';
 import createDebug from 'debug';
@@ -56,10 +55,7 @@ export interface CoreSdkOptions {
 export class CoreSdk extends EventEmitter {
   private worldState!: WorldState;
   private userStates: UserState[] = [];
-  // Used for proof construction.
   private workerPool!: WorkerPool;
-  // Used for other long running tasks (data tree hash computation and note decryption).
-  private worker!: BarretenbergWorker;
   private joinSplitProofCreator!: JoinSplitProofCreator;
   private accountProofCreator!: AccountProofCreator;
   private blockQueue!: MemoryFifo<Block>;
@@ -106,10 +102,8 @@ export class CoreSdk extends EventEmitter {
     const barretenberg = await BarretenbergWasm.new();
     const numWorkers = this.nextLowestPowerOf2(Math.min(this.numCPU, 8));
     this.workerPool = await WorkerPool.new(barretenberg, numWorkers);
-    // TODO: Remember why we have this additional worker for batch decrypt notes and don't just use pool...
-    this.worker = await createWorker('worker', barretenberg.module);
 
-    const noteAlgos = new NoteAlgorithms(barretenberg, this.worker);
+    const noteAlgos = new NoteAlgorithms(barretenberg, this.workerPool.workers[0]);
     this.blake2s = new Blake2s(barretenberg);
     this.pedersen = new PooledPedersen(barretenberg, this.workerPool);
     this.grumpkin = new Grumpkin(barretenberg);
@@ -127,10 +121,9 @@ export class CoreSdk extends EventEmitter {
     } = await this.getRemoteStatus();
     await this.leveldb.put('rollupContractAddress', rollupContractAddress.toBuffer());
 
-    // If chainId is 0 (falafel is using simulated blockchain) pretend it needs to be goerli.
     this.sdkStatus = {
       ...this.sdkStatus,
-      chainId: chainId || 5,
+      chainId,
       rollupContractAddress: rollupContractAddress,
       dataSize: this.worldState.getSize(),
       dataRoot: this.worldState.getRoot(),
@@ -270,7 +263,6 @@ export class CoreSdk extends EventEmitter {
   public async destroy() {
     await this.stopSyncingUserStates();
     await this.stopReceivingBlocks();
-    this.worker && (await destroyWorker(this.worker));
     await this.workerPool?.destroy();
     await this.leveldb.close();
     await this.db.close();

@@ -32,6 +32,20 @@ const worker = {
   logs() {
     return Observable.from(subject);
   },
+
+  /**
+   * When calling the wasm, sometimes a caller will require exclusive access over a series of calls.
+   * e.g. When a result is written to address 0, one cannot have another caller writing to the same address via
+   * transferToHeap before the result is read via sliceMemory.
+   * acquire() gets a single token from a fifo. The caller must call release() to add the token back.
+   */
+  async acquire() {
+    await wasm.acquire();
+  },
+
+  async release() {
+    await wasm.release();
+  },
 };
 
 export type BarretenbergWorker = typeof worker;
