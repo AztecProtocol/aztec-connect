@@ -4,7 +4,9 @@ import { MerkleTree } from '.';
 import levelup from 'levelup';
 import memdown from 'memdown';
 
-describe('merkle_tree_benchmark', () => {
+jest.setTimeout(10000);
+
+describe.skip('merkle_tree_benchmark', () => {
   let barretenberg!: BarretenbergWasm;
   const values: Buffer[] = [];
 

@@ -1,5 +1,5 @@
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
-import { toBufferBE } from 'bigint-buffer';
+import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import {
   deserializeArrayFromVector,
   deserializeBigInt,

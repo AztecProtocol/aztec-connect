@@ -19,9 +19,6 @@ describe('account_proof_compute_nullifier', () => {
     const nonce = 1;
     const accountAliasId = AccountAliasId.fromAlias('pebble', nonce, blake2s);
     const nullifier = computeAccountAliasIdNullifier(accountAliasId, pedersen);
-
-    const expected = '2be15bf88b9f26dd3502a8647949f5d197afbe7cd772917e7b0d21c16cba0a14';
-
-    expect(nullifier.toString('hex')).toEqual(expected);
+    expect(nullifier.toString('hex')).toEqual('23f20f5a15b822bb8316f4d8d8aac49708b83b0ec99b14cbea3530de6a2379f3');
   });
 });

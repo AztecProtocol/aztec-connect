@@ -21,7 +21,7 @@
 "@aztec/blockchain@file:../blockchain/dest":
   version "2.0.0"
   dependencies:
-    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-0e67bae5-12a7-4a03-8fbf-117dadababa9-1623954556313/node_modules/barretenberg.js/dest"
+    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-52e32132-db04-4bf5-bda5-f954eba0fc91-1624831780711/node_modules/barretenberg.js/dest"
     "@ethersproject/experimental" "5.0.9"
     "@ethersproject/providers" "5.0.18"
     "@uniswap/v2-core" "^1.0.1"

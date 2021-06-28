@@ -3,7 +3,7 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { Blockchain } from '@aztec/barretenberg/blockchain';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
-import { toBufferBE } from 'bigint-buffer';
+import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { EthereumProvider } from '@aztec/blockchain';
 import { Signer, utils } from 'ethers';
 import { RollupDao } from './entity/rollup';

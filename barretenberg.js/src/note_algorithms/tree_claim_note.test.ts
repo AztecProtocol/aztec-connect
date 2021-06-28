@@ -1,4 +1,4 @@
-import { toBufferBE } from 'bigint-buffer';
+import { toBufferBE } from '../bigint_buffer';
 import { randomBytes } from 'crypto';
 import { AccountId } from '../account_id';
 import { GrumpkinAddress } from '../address';

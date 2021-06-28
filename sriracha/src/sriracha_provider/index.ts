@@ -1,7 +1,7 @@
 import { blockchainStatusFromJson } from '@aztec/barretenberg/blockchain';
 import { fetch } from '@aztec/barretenberg/iso_fetch';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
-import { toBufferBE } from 'bigint-buffer';
+import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { HashPathSource } from '@aztec/barretenberg/hash_path_source';
 
 export interface GetHashPathServerResponse {

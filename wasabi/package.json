@@ -33,7 +33,6 @@
     "@ethersproject/experimental": "5.0.9",
     "@ethersproject/providers": "5.0.18",
     "@ethersproject/units": "5.0.9",
-    "bigint-buffer": "^1.1.5",
     "ethers": "5.0.29",
     "log-timestamp": "^0.3.0",
     "source-map-support": "^0.5.19",

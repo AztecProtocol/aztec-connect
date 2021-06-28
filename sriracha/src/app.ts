@@ -1,6 +1,6 @@
 import cors from '@koa/cors';
 import { blockchainStatusToJson } from '@aztec/barretenberg/blockchain';
-import { toBigIntBE } from 'bigint-buffer';
+import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import Koa from 'koa';
 import bodyParser from 'koa-bodyparser';
 import compress from 'koa-compress';

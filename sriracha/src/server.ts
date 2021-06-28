@@ -5,7 +5,7 @@ import { MemoryFifo } from '@aztec/barretenberg/fifo';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
-import { toBigIntBE, toBufferBE } from 'bigint-buffer';
+import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { pathExists, readJson, writeJson } from 'fs-extra';
 import { GetHashPathsResponse, HashPathSource } from '@aztec/barretenberg/hash_path_source';
 

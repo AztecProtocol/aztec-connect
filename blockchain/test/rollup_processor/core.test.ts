@@ -19,10 +19,6 @@ import { setupRollupProcessor } from '../fixtures/setup_rollup_processor';
 
 use(solidity);
 
-const randInt = () => {
-  return Math.floor(Math.random() * 1000);
-};
-
 describe('rollup_processor: core', () => {
   let rollupProcessor: Contract;
   let feeDistributor: Contract;
@@ -349,7 +345,7 @@ describe('rollup_processor: core', () => {
         rollupProvider,
         await createDepositProof(depositAmount, userAAddress, userA),
       );
-      proofData.writeUInt32BE(randInt(), 0); // make ID non-sequential
+      proofData.writeUInt32BE(666, 0); // make ID non-sequential
       await expect(
         rollupProcessor.escapeHatch(proofData, solidityFormatSignatures(signatures), Buffer.concat(viewingKeys)),
       ).to.be.revertedWith('Rollup Processor: ID_NOT_SEQUENTIAL');
@@ -360,7 +356,7 @@ describe('rollup_processor: core', () => {
         rollupProvider,
         await createDepositProof(depositAmount, userAAddress, userA),
       );
-      proofData.writeUInt32BE(randInt(), 32 * 2); // malform data start index
+      proofData.writeUInt32BE(666, 32 * 2); // malform data start index
       await expect(
         rollupProcessor.escapeHatch(proofData, solidityFormatSignatures(signatures), Buffer.concat(viewingKeys)),
       ).to.be.revertedWith('Rollup Processor: INCORRECT_DATA_START_INDEX');
@@ -371,7 +367,7 @@ describe('rollup_processor: core', () => {
         rollupProvider,
         await createDepositProof(depositAmount, userAAddress, userA),
       );
-      proofData.writeUInt32BE(randInt(), 32 * 3); // malform data start index
+      proofData.writeUInt32BE(666, 32 * 3); // malform data start index
       await expect(
         rollupProcessor.escapeHatch(proofData, solidityFormatSignatures(signatures), Buffer.concat(viewingKeys)),
       ).to.be.revertedWith('Rollup Processor: INCORRECT_DATA_ROOT');
@@ -382,7 +378,7 @@ describe('rollup_processor: core', () => {
         rollupProvider,
         await createDepositProof(depositAmount, userAAddress, userA),
       );
-      proofData.writeUInt32BE(randInt(), 32 * 5); // malform oldNullRoot
+      proofData.writeUInt32BE(666, 32 * 5); // malform oldNullRoot
       await expect(
         rollupProcessor.escapeHatch(proofData, solidityFormatSignatures(signatures), Buffer.concat(viewingKeys)),
       ).to.be.revertedWith('Rollup Processor: INCORRECT_NULL_ROOT');
@@ -393,7 +389,7 @@ describe('rollup_processor: core', () => {
         rollupProvider,
         await createDepositProof(depositAmount, userAAddress, userA),
       );
-      proofData.writeUInt32BE(randInt(), 32 * 7); // malform oldRootRoot
+      proofData.writeUInt32BE(666, 32 * 7); // malform oldRootRoot
       await expect(
         rollupProcessor.escapeHatch(proofData, solidityFormatSignatures(signatures), Buffer.concat(viewingKeys)),
       ).to.be.revertedWith('Rollup Processor: INCORRECT_ROOT_ROOT');

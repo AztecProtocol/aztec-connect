@@ -2,7 +2,7 @@ import { BarretenbergWasm, WorkerPool } from '../../wasm';
 import { PooledPedersen } from './pooled_pedersen';
 import { Pedersen } from './pedersen';
 
-jest.setTimeout(10000);
+jest.setTimeout(20000);
 
 describe('pedersen', () => {
   let barretenberg!: BarretenbergWasm;
@@ -21,17 +21,19 @@ describe('pedersen', () => {
 
   it('hasher_consistency_and_benchmark', async () => {
     const singlePedersen = new Pedersen(barretenberg);
+    await singlePedersen.init();
     const start1 = new Date().getTime();
     const singleResults = await singlePedersen.hashValuesToTree(values);
     const end1 = new Date().getTime() - start1;
 
     const pool = await WorkerPool.new(barretenberg, 4);
     const pedersen = new PooledPedersen(barretenberg, pool);
+    await pedersen.init();
     const start2 = new Date().getTime();
     const poolResults = await pedersen.hashValuesToTree(values);
     const end2 = new Date().getTime() - start2;
 
-    console.log(`Singled hasher: ~${end1 / values.length}ms / value`);
+    console.log(`Single hasher: ~${end1 / values.length}ms / value`);
     console.log(`Pooled hasher: ~${end2 / values.length}ms / value`);
     console.log(`Pooled improvement: ${(end1 / end2).toFixed(2)}x`);
 

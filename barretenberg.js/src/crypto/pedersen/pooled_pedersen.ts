@@ -20,6 +20,10 @@ export class PooledPedersen extends Pedersen {
     this.pool = pool.workers.map(w => new Pedersen(wasm, w));
   }
 
+  public async init() {
+    await Promise.all(this.pool.map(p => p.init()));
+  }
+
   public async hashValuesToTree(values: Buffer[]) {
     const isPowerOf2 = (v: number) => v && !(v & (v - 1));
     if (!isPowerOf2(values.length)) {

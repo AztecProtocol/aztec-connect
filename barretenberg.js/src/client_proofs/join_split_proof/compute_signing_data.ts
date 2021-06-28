@@ -1,4 +1,4 @@
-import { toBufferBE } from 'bigint-buffer';
+import { toBufferBE } from '../../bigint_buffer';
 import { AccountId } from '../../account_id';
 import { EthAddress } from '../../address';
 import { AssetId } from '../../asset';

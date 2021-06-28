@@ -1,7 +1,7 @@
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
 import { JoinSplitProofData, ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { InnerProofData } from '@aztec/barretenberg/rollup_proof';
-import { toBigIntBE } from 'bigint-buffer';
+import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 
 export async function getTxTypeFromProofData(proofData: ProofData, blockchain: Blockchain) {
   switch (proofData.proofId) {

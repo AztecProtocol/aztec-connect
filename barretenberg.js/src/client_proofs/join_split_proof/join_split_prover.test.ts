@@ -5,10 +5,8 @@ import memdown from 'memdown';
 import { AccountAliasId, AccountId } from '../../account_id';
 import { EthAddress, GrumpkinAddress } from '../../address';
 import { Crs } from '../../crs';
-import { Blake2s } from '../../crypto/blake2s';
-import { Pedersen } from '../../crypto/pedersen';
-import { Schnorr } from '../../crypto/schnorr';
-import { Grumpkin } from '../../ecc/grumpkin';
+import { Sha256, Blake2s, Pedersen, Schnorr } from '../../crypto';
+import { Grumpkin } from '../../ecc';
 import { PooledFft } from '../../fft';
 import { MerkleTree } from '../../merkle_tree';
 import { ClaimNoteTxData, NoteAlgorithms, TreeNote } from '../../note_algorithms';
@@ -31,6 +29,7 @@ describe('join_split_proof', () => {
   let pool!: WorkerPool;
   let joinSplitProver!: JoinSplitProver;
   let joinSplitVerifier!: JoinSplitVerifier;
+  let sha256!: Sha256;
   let blake2s!: Blake2s;
   let pedersen!: Pedersen;
   let schnorr!: Schnorr;
@@ -67,6 +66,7 @@ describe('join_split_proof', () => {
 
     const prover = new UnrolledProver(pool.workers[0], pippenger, fft);
 
+    sha256 = new Sha256(barretenberg);
     blake2s = new Blake2s(barretenberg);
     pedersen = new Pedersen(barretenberg);
     schnorr = new Schnorr(barretenberg);
@@ -89,6 +89,7 @@ describe('join_split_proof', () => {
       await joinSplitProver.computeKey();
       await joinSplitVerifier.computeKey(pippenger.pool[0], crs.getG2Data());
       debug(`created circuit keys: ${new Date().getTime() - start}ms`);
+      debug(`vk hash: ${sha256.hash(await joinSplitVerifier.getKey()).toString('hex')}`);
     });
 
     it('should get key data', async () => {

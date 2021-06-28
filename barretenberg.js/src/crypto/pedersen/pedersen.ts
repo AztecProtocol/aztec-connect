@@ -14,6 +14,11 @@ export class Pedersen {
    */
   constructor(private wasm: BarretenbergWasm, private worker: BarretenbergWorker = wasm as any) {}
 
+  public async init() {
+    this.wasm.call('pedersen__init');
+    await this.worker.call('pedersen__init');
+  }
+
   public compress(lhs: Uint8Array, rhs: Uint8Array) {
     this.wasm.transferToHeap(lhs, 0);
     this.wasm.transferToHeap(rhs, 32);

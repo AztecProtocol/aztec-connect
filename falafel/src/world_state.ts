@@ -6,7 +6,7 @@ import { NoteAlgorithms, TreeClaimNote } from '@aztec/barretenberg/note_algorith
 import { DefiDepositProofData, InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
-import { toBigIntBE, toBufferBE } from 'bigint-buffer';
+import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { RollupDao } from './entity/rollup';
 import { RollupProofDao } from './entity/rollup_proof';
 import { TxDao } from './entity/tx';
@@ -40,7 +40,7 @@ export class WorldState {
     private pipelineFactory: RollupPipelineFactory,
     private noteAlgo: NoteAlgorithms,
     private metrics: Metrics,
-  ) { }
+  ) {}
 
   public async start() {
     await this.worldStateDb.start();

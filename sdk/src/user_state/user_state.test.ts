@@ -18,7 +18,7 @@ import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
-import { toBufferBE } from 'bigint-buffer';
+import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { randomBytes } from 'crypto';
 import { Database } from '../database';
 import { AccountId, UserData } from '../user';

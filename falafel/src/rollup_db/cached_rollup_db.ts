@@ -1,7 +1,7 @@
 import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
-import { toBigIntBE } from 'bigint-buffer';
+import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';

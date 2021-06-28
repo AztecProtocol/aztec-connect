@@ -5,7 +5,7 @@ import { ProofData } from '@aztec/barretenberg/client_proofs';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { ViewingKey } from '@aztec/barretenberg/viewing_key';
-import { toBigIntBE, toBufferBE } from 'bigint-buffer';
+import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { randomBytes } from 'crypto';
 import moment from 'moment';
 import { ClaimDao } from '../entity/claim';

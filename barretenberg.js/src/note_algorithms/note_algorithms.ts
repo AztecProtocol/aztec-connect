@@ -1,4 +1,4 @@
-import { toBigIntBE } from 'bigint-buffer';
+import { toBigIntBE } from '../bigint_buffer';
 import { AccountId } from '../account_id';
 import { ViewingKey } from '../viewing_key';
 import { BarretenbergWasm } from '../wasm';
@@ -9,7 +9,7 @@ import { TreeClaimNote } from './tree_claim_note';
 import { TreeNote } from './tree_note';
 
 export class NoteAlgorithms {
-  constructor(private wasm: BarretenbergWasm, private worker: BarretenbergWorker = wasm as any) { }
+  constructor(private wasm: BarretenbergWasm, private worker: BarretenbergWorker = wasm as any) {}
 
   public computeNoteNullifier(noteCommitment: Buffer, index: number, accountPrivateKey: Buffer, real = true) {
     this.wasm.transferToHeap(noteCommitment, 0);

@@ -23,12 +23,11 @@
     "rootDir": "./src"
   },
   "dependencies": {
+    "@aztec/barretenberg": "file:../barretenberg.js/dest",
+    "@aztec/blockchain": "file:../blockchain/dest",
     "@koa/cors": "^3.0.0",
     "apollo-server-koa": "^2.17.0",
     "async-mutex": "^0.2.6",
-    "@aztec/barretenberg": "file:../barretenberg.js/dest",
-    "bigint-buffer": "^1.1.5",
-    "@aztec/blockchain": "file:../blockchain/dest",
     "bn.js": "^5.0.0",
     "class-validator": "^0.12.2",
     "dotenv": "^8.2.0",

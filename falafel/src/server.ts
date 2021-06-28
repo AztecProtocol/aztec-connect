@@ -6,7 +6,7 @@ import { RollupProviderStatus } from '@aztec/barretenberg/rollup_provider';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { EthereumProvider } from '@aztec/blockchain';
-import { toBigIntBE } from 'bigint-buffer';
+import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { emptyDir } from 'fs-extra';
 import { CliProofGenerator, ProofGenerator, ServerProofGenerator } from 'halloumi/proof_generator';
 import { Duration } from 'moment';

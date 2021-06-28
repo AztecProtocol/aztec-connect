@@ -36,11 +36,8 @@ describe('compute_nullifier', () => {
     const nullifier1 = noteAlgos.computeNoteNullifier(inputNote1Enc, 1, privateKey);
     const nullifier2 = noteAlgos.computeNoteNullifier(inputNote2Enc, 0, privateKey);
 
-    const expected1 = '21a8207de37f3944240ed70dcbe26962620c1a81e5a4da47022f151dedded09b';
-    const expected2 = '1c88c6bcb5625348efb20adb67689fb88a1f92fda41007387cf013a96f21a14e';
-
-    expect(nullifier1.toString('hex')).toEqual(expected1);
-    expect(nullifier2.toString('hex')).toEqual(expected2);
+    expect(nullifier1.toString('hex')).toEqual('0ce5122c0eaedd9f92818264f59d79477b1bdb1941cef071ae5ecf7a1dad0a88');
+    expect(nullifier2.toString('hex')).toEqual('232dcd46cdcc3de3219e323fedb5fb4e3640596cd14f764be4b3480794daf564');
   });
 
   it('should commit to claim note and compute its nullifier', async () => {
@@ -51,18 +48,15 @@ describe('compute_nullifier', () => {
     const inputNote = new TreeClaimNote(claimNoteTxData.value, claimNoteTxData.bridgeId, 0, partialState);
     const inputNoteEnc = noteAlgos.commitClaimNote(inputNote);
     const nullifier = noteAlgos.computeClaimNoteNullifier(inputNoteEnc, 1);
-    expect(nullifier).toEqual(Buffer.from('12e53e3931dba11ee820780e321b68743bef348b762c10c79f41455af920f8be', 'hex'));
+    expect(nullifier.toString('hex')).toEqual('15a41ad9053ec91aa28799e1787ba7a7ee5989520ed2ee6241da832877643b7f');
   });
 
-  it('should commit to defi interaction note', async () => {
+  it('should create correct commitment for defi interaction note', async () => {
     const bridgeId = BridgeId.fromBigInt(BigInt(456));
     const note = new DefiInteractionNote(bridgeId, 1, BigInt(123), BigInt(456), BigInt(789), true);
-    const commited = noteAlgos.commitDefiInteractionNote(note);
-    expect(commited).toEqual(
-      Buffer.from(
-        '2b537a469402ddae2e72fcdd826b28c336d522981eb06cf87a26ff88c6108c1f0905d7cfe073d238f056544aaa064625c6a7df12dddb8c41307d7257e5b21c88',
-        'hex',
-      ),
-    );
+    const expected =
+      '28abee83d6e5fd094b8305724149c9f762135730d578386632ccffb1fdd1f6082e6db7be8d0824b8d5692a8822af16a1adad7a33c2fd8294042ab5e0364cf28e';
+    const commitment = noteAlgos.commitDefiInteractionNote(note).toString('hex');
+    expect(commitment).toEqual(expected);
   });
 });

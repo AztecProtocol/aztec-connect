@@ -1,4 +1,4 @@
-import { toBigIntBE } from 'bigint-buffer';
+import { toBigIntBE } from '../bigint_buffer';
 import { BridgeId } from '../bridge_id';
 import { ProofId } from '../client_proofs';
 import { InnerProofData } from '../rollup_proof';

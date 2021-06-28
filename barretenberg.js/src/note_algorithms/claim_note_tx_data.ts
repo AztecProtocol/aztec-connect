@@ -1,4 +1,4 @@
-import { toBufferBE } from 'bigint-buffer';
+import { toBufferBE } from '../bigint_buffer';
 import { GrumpkinAddress } from '../address';
 import { Grumpkin } from '../ecc/grumpkin';
 import { numToUInt32BE } from '../serialize';

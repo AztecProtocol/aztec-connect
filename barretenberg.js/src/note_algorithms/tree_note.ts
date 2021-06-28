@@ -1,4 +1,4 @@
-import { toBigIntBE, toBufferBE } from 'bigint-buffer';
+import { toBigIntBE, toBufferBE } from '../bigint_buffer';
 import { GrumpkinAddress } from '../address';
 import { AssetId } from '../asset';
 import { Grumpkin } from '../ecc/grumpkin';

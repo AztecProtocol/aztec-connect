@@ -1,7 +1,7 @@
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { DefiInteractionNote, TreeClaimNote } from '@aztec/barretenberg/note_algorithms';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
-import { toBigIntBE, toBufferBE } from 'bigint-buffer';
+import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 
 export class ClaimProof {
   constructor(

@@ -1,5 +1,5 @@
 import { EthAddress } from '../address';
-import { toBigIntBE, toBufferBE } from 'bigint-buffer';
+import { toBigIntBE, toBufferBE } from '../bigint_buffer';
 
 const randomInt = (to = 2 ** 26 - 1) => Math.floor(Math.random() * (to + 1));
 

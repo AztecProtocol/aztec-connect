@@ -1,4 +1,4 @@
-import { toBigIntBE } from 'bigint-buffer';
+import { toBigIntBE } from '../bigint_buffer';
 import { createHash } from 'crypto';
 import { EthAddress } from '../address';
 import { AssetId } from '../asset';

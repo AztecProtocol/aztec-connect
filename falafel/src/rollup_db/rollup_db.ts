@@ -2,7 +2,7 @@ import { TxType } from '@aztec/barretenberg/blockchain';
 import { AccountProofData, ProofData } from '@aztec/barretenberg/client_proofs';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
-import { toBufferBE } from 'bigint-buffer';
+import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { Connection, In, IsNull, MoreThanOrEqual, Not, Repository } from 'typeorm';
 import { AccountDao } from '../entity/account';
 import { ClaimDao } from '../entity/claim';

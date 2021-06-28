@@ -4,7 +4,7 @@ import { Blockchain } from '@aztec/barretenberg/blockchain';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { DefiInteractionNote, packInteractionNotes } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
-import { toBigIntBE } from 'bigint-buffer';
+import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { expect, use } from 'chai';
 import { randomBytes } from 'crypto';
 import { solidity } from 'ethereum-waffle';

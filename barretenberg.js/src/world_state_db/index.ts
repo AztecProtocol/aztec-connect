@@ -1,7 +1,7 @@
 import { MemoryFifo } from '../fifo';
 import { mkdirp } from 'fs-extra';
 import { HashPath } from '../merkle_tree';
-import { toBigIntBE, toBufferBE } from 'bigint-buffer';
+import { toBigIntBE, toBufferBE } from '../bigint_buffer';
 import { ChildProcess, execSync, spawn } from 'child_process';
 import { PromiseReadable } from 'promise-readable';
 import { serializeBufferArrayToVector, serializeBufferToVector } from '../serialize';

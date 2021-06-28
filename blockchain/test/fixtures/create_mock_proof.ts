@@ -3,7 +3,7 @@ import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { InnerProofData } from '@aztec/barretenberg/rollup_proof';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
-import { toBufferBE } from 'bigint-buffer';
+import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { randomBytes } from 'crypto';
 import { Signer } from 'ethers';
 import { ethSign } from './eth_sign';
@@ -50,7 +50,7 @@ export const interactionHashes = [
 ];
 
 class InnerProofOutput {
-  constructor(public innerProofs: InnerProofData[], public signatures: Buffer[], public totalTxFees: bigint[]) { }
+  constructor(public innerProofs: InnerProofData[], public signatures: Buffer[], public totalTxFees: bigint[]) {}
 }
 
 export const createDepositProof = async (
@@ -155,7 +155,7 @@ export const mergeInnerProofs = (output: InnerProofOutput[]) => {
 export class DefiInteractionData {
   static EMPTY = new DefiInteractionData(BridgeId.ZERO, BigInt(0));
 
-  constructor(public readonly bridgeId: BridgeId, public readonly totalInputValue: bigint) { }
+  constructor(public readonly bridgeId: BridgeId, public readonly totalInputValue: bigint) {}
 }
 
 interface RollupProofOptions {

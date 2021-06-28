@@ -1,4 +1,4 @@
-import { toBigIntBE, toBufferBE } from 'bigint-buffer';
+import { toBigIntBE, toBufferBE } from '../bigint_buffer';
 import { createHash, randomBytes } from 'crypto';
 import { numToUInt32BE } from '../serialize';
 import { BridgeId } from '../bridge_id';

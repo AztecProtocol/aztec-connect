@@ -1,4 +1,4 @@
-import { toBufferBE } from 'bigint-buffer';
+import { toBufferBE } from '../../bigint_buffer';
 import { EthAddress, GrumpkinAddress } from '../../address';
 import { AssetId } from '../../asset';
 import { HashPath } from '../../merkle_tree';
