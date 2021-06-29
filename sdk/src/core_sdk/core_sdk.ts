@@ -8,13 +8,13 @@ import { NoteAlgorithms } from 'barretenberg/client_proofs/note_algorithms';
 import { PooledProverFactory } from 'barretenberg/client_proofs/prover';
 import { Crs } from 'barretenberg/crs';
 import { Blake2s } from 'barretenberg/crypto/blake2s';
-import { Pedersen } from 'barretenberg/crypto/pedersen';
+import { Pedersen, PooledPedersen } from 'barretenberg/crypto/pedersen';
 import { Schnorr } from 'barretenberg/crypto/schnorr';
 import { Grumpkin } from 'barretenberg/ecc/grumpkin';
 import { MemoryFifo } from 'barretenberg/fifo';
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { RollupProvider, SettlementTime } from 'barretenberg/rollup_provider';
-import { BarretenbergWasm, createWorker, destroyWorker, WorkerPool } from 'barretenberg/wasm';
+import { BarretenbergWasm, WorkerPool } from 'barretenberg/wasm';
 import { WorldState } from 'barretenberg/world_state';
 import createDebug from 'debug';
 import isNode from 'detect-node';
@@ -65,8 +65,6 @@ export class CoreSdk extends EventEmitter {
   private userStates: UserState[] = [];
   // Used for proof construction.
   private workerPool!: WorkerPool;
-  // Used for other long running tasks (data tree hash computation and note decryption).
-  private worker!: BarretenbergWorker;
   private joinSplitProofCreator!: JoinSplitProofCreator | EscapeHatchProofCreator;
   private accountProofCreator!: AccountProofCreator;
   private blockQueue!: MemoryFifo<Block>;
@@ -113,10 +111,12 @@ export class CoreSdk extends EventEmitter {
     this.updateInitState(SdkInitState.INITIALIZING);
 
     const barretenberg = await BarretenbergWasm.new();
-    this.worker = await createWorker('worker', barretenberg.module);
-    const noteAlgos = new NoteAlgorithms(barretenberg, this.worker);
+    const numWorkers = this.nextLowestPowerOf2(Math.min(this.numCPU, 8));
+    this.workerPool = await WorkerPool.new(barretenberg, numWorkers);
+
+    const noteAlgos = new NoteAlgorithms(barretenberg, this.workerPool.workers[0]);
     this.blake2s = new Blake2s(barretenberg);
-    this.pedersen = new Pedersen(barretenberg, this.worker);
+    this.pedersen = new PooledPedersen(barretenberg, this.workerPool);
     this.grumpkin = new Grumpkin(barretenberg);
     this.schnorr = new Schnorr(barretenberg);
     this.userFactory = new UserDataFactory(this.grumpkin);
@@ -132,10 +132,9 @@ export class CoreSdk extends EventEmitter {
     } = await this.getRemoteStatus();
     await this.leveldb.put('rollupContractAddress', rollupContractAddress.toBuffer());
 
-    // If chainId is 0 (falafel is using simulated blockchain) pretend it needs to be goerli.
     this.sdkStatus = {
       ...this.sdkStatus,
-      chainId: chainId || 5,
+      chainId,
       rollupContractAddress: rollupContractAddress,
       dataSize: this.worldState.getSize(),
       dataRoot: this.worldState.getRoot(),
@@ -145,8 +144,6 @@ export class CoreSdk extends EventEmitter {
     };
 
     // Create provers
-    const numWorkers = this.nextLowestPowerOf2(Math.min(this.numCPU, 8));
-    this.workerPool = await WorkerPool.new(barretenberg, numWorkers);
     const crsData = await this.getCrsData(
       this.escapeHatchMode ? EscapeHatchProver.circuitSize : JoinSplitProver.circuitSize,
     );
@@ -308,7 +305,6 @@ export class CoreSdk extends EventEmitter {
   public async destroy() {
     await this.stopSyncingUserStates();
     await this.stopReceivingBlocks();
-    this.worker && (await destroyWorker(this.worker));
     await this.workerPool?.destroy();
     await this.leveldb.close();
     await this.db.close();

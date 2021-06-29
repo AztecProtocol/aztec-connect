@@ -50,38 +50,43 @@ export class Prover {
   }
 
   public async createProof(proverPtr: number) {
-    const circuitSize = await this.proverCall('prover_get_circuit_size', proverPtr);
-    const timer = new Timer('enter createProof');
-    await this.proverCall('prover_execute_preamble_round', proverPtr);
-    timer.mark('preamble end');
-    await this.processProverQueue(proverPtr, circuitSize);
-    timer.mark('first round start');
-    await this.proverCall('prover_execute_first_round', proverPtr);
-    timer.mark('first round end');
-    await this.processProverQueue(proverPtr, circuitSize);
-    timer.mark('second round start');
-    await this.proverCall('prover_execute_second_round', proverPtr);
-    timer.mark('second round end');
-    await this.processProverQueue(proverPtr, circuitSize);
-    timer.mark('third round start');
-    await this.proverCall('prover_execute_third_round', proverPtr);
-    timer.mark('third round end');
-    await this.processProverQueue(proverPtr, circuitSize);
-    timer.mark('fourth round start');
-    await this.proverCall('prover_execute_fourth_round', proverPtr);
-    timer.mark('fourth round end');
-    await this.processProverQueue(proverPtr, circuitSize);
-    timer.mark('fifth round start');
-    await this.proverCall('prover_execute_fifth_round', proverPtr);
-    timer.mark('fifth round end');
-    timer.mark('sixth round start');
-    await this.proverCall('prover_execute_sixth_round', proverPtr);
-    timer.mark('sixth round end');
-    await this.processProverQueue(proverPtr, circuitSize);
-    timer.mark('done');
-    const proofSize = await this.proverCall('prover_export_proof', proverPtr, 0);
-    const proofPtr = Buffer.from(await this.wasm.sliceMemory(0, 4)).readUInt32LE(0);
-    return Buffer.from(await this.wasm.sliceMemory(proofPtr, proofPtr + proofSize));
+    await this.wasm.acquire();
+    try {
+      const circuitSize = await this.proverCall('prover_get_circuit_size', proverPtr);
+      const timer = new Timer('enter createProof');
+      await this.proverCall('prover_execute_preamble_round', proverPtr);
+      timer.mark('preamble end');
+      await this.processProverQueue(proverPtr, circuitSize);
+      timer.mark('first round start');
+      await this.proverCall('prover_execute_first_round', proverPtr);
+      timer.mark('first round end');
+      await this.processProverQueue(proverPtr, circuitSize);
+      timer.mark('second round start');
+      await this.proverCall('prover_execute_second_round', proverPtr);
+      timer.mark('second round end');
+      await this.processProverQueue(proverPtr, circuitSize);
+      timer.mark('third round start');
+      await this.proverCall('prover_execute_third_round', proverPtr);
+      timer.mark('third round end');
+      await this.processProverQueue(proverPtr, circuitSize);
+      timer.mark('fourth round start');
+      await this.proverCall('prover_execute_fourth_round', proverPtr);
+      timer.mark('fourth round end');
+      await this.processProverQueue(proverPtr, circuitSize);
+      timer.mark('fifth round start');
+      await this.proverCall('prover_execute_fifth_round', proverPtr);
+      timer.mark('fifth round end');
+      timer.mark('sixth round start');
+      await this.proverCall('prover_execute_sixth_round', proverPtr);
+      timer.mark('sixth round end');
+      await this.processProverQueue(proverPtr, circuitSize);
+      timer.mark('done');
+      const proofSize = await this.proverCall('prover_export_proof', proverPtr, 0);
+      const proofPtr = Buffer.from(await this.wasm.sliceMemory(0, 4)).readUInt32LE(0);
+      return Buffer.from(await this.wasm.sliceMemory(proofPtr, proofPtr + proofSize));
+    } finally {
+      await this.wasm.release();
+    }
   }
 
   private async processProverQueue(proverPtr: number, circuitSize: number) {
