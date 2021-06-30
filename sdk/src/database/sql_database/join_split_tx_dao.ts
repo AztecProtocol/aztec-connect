@@ -1,6 +1,6 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
-import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
+import { AfterInsert, AfterLoad, AfterUpdate, Column, Entity, Index, PrimaryColumn } from 'typeorm';
 import { AccountId } from '../../user';
 import { accountIdTransformer, bigintTransformer, ethAddressTransformer, txHashTransformer } from './transformer';
 
@@ -45,4 +45,13 @@ export class JoinSplitTxDao {
 
   @Column({ nullable: true })
   public settled?: Date;
+
+  @AfterLoad()
+  @AfterInsert()
+  @AfterUpdate()
+  afterLoad() {
+    if (this.settled === null) {
+      delete this.settled;
+    }
+  }
 }

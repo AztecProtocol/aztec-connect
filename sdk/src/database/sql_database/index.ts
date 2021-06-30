@@ -60,14 +60,12 @@ const toUserDefiTx = (tx: DefiTxDao) =>
     tx.txHash,
     tx.userId,
     tx.bridgeId,
-    tx.privateInput,
-    tx.privateOutput,
     tx.depositValue,
+    tx.txFee,
     tx.created,
     tx.outputValueA,
     tx.outputValueB,
     tx.settled,
-    tx.claimed,
   );
 
 export class SQLDatabase implements Database {
@@ -168,10 +166,10 @@ export class SQLDatabase implements Database {
   }
 
   async addJoinSplitTx(tx: UserJoinSplitTx) {
-    await this.joinSplitTxRep.save(tx);
+    await this.joinSplitTxRep.save({ ...tx }); // save() will mutate tx, changing undefined values to null.
   }
 
-  async getJoinSplitTx(userId: AccountId, txHash: TxHash) {
+  async getJoinSplitTx(txHash: TxHash, userId: AccountId) {
     const tx = await this.joinSplitTxRep.findOne({ txHash, userId });
     return tx ? toUserJoinSplitTx(tx) : undefined;
   }
@@ -183,16 +181,12 @@ export class SQLDatabase implements Database {
     return [...unsettled, ...settled].map(toUserJoinSplitTx);
   }
 
-  async getJoinSplitTxsByTxHash(txHash: TxHash) {
-    return (await this.joinSplitTxRep.find({ where: { txHash } })).map(toUserJoinSplitTx);
-  }
-
-  async settleJoinSplitTx(txHash: TxHash, settled: Date) {
-    await this.joinSplitTxRep.update({ txHash }, { settled });
+  async settleJoinSplitTx(txHash: TxHash, userId: AccountId, settled: Date) {
+    await this.joinSplitTxRep.update({ txHash, userId }, { settled });
   }
 
   async addAccountTx(tx: UserAccountTx) {
-    await this.accountTxRep.save(tx);
+    await this.accountTxRep.save({ ...tx }); // save() will mutate tx, changing undefined values to null.
   }
 
   async getAccountTx(txHash: TxHash) {
@@ -227,12 +221,27 @@ export class SQLDatabase implements Database {
     return [...unsettled, ...settled].map(toUserDefiTx);
   }
 
-  async settleDefiTx(txHash: TxHash, outputValueA: bigint, outputValueB: bigint, settled: Date) {
-    await this.defiTxRep.update({ txHash }, { outputValueA, outputValueB, settled });
+  async updateDefiTx(txHash: TxHash, outputValueA: bigint, outputValueB: bigint) {
+    await this.defiTxRep.update({ txHash }, { outputValueA, outputValueB });
   }
 
-  async claimDefiTx(txHash: TxHash, claimed: Date) {
-    await this.defiTxRep.update({ txHash }, { claimed });
+  async settleDefiTx(txHash: TxHash, settled: Date) {
+    await this.defiTxRep.update({ txHash }, { settled });
+  }
+
+  async isUserTxSettled(txHash: TxHash) {
+    const jsTxs = await this.joinSplitTxRep.find({ where: { txHash } });
+    if (jsTxs.length > 0) {
+      return jsTxs.every(tx => tx.settled);
+    }
+
+    const defiTx = await this.defiTxRep.findOne({ where: { txHash } });
+    if (defiTx) {
+      return !!defiTx.settled;
+    }
+
+    const accountTx = await this.accountTxRep.findOne({ where: { txHash } });
+    return !!accountTx?.settled;
   }
 
   async addUserSigningKey(signingKey: SigningKey) {

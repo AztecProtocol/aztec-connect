@@ -40,10 +40,9 @@ export interface Database {
   resetUsers(): Promise<void>;
 
   addJoinSplitTx(tx: UserJoinSplitTx): Promise<void>;
-  getJoinSplitTx(userId: AccountId, txHash: TxHash): Promise<UserJoinSplitTx | undefined>;
+  getJoinSplitTx(txHash: TxHash, userId: AccountId): Promise<UserJoinSplitTx | undefined>;
   getJoinSplitTxs(userId): Promise<UserJoinSplitTx[]>;
-  getJoinSplitTxsByTxHash(txHash: TxHash): Promise<UserJoinSplitTx[]>;
-  settleJoinSplitTx(txHash: TxHash, settled: Date): Promise<void>;
+  settleJoinSplitTx(txHash: TxHash, userId: AccountId, settled: Date): Promise<void>;
 
   addAccountTx(tx: UserAccountTx): Promise<void>;
   getAccountTx(txHash: TxHash): Promise<UserAccountTx | undefined>;
@@ -53,8 +52,10 @@ export interface Database {
   addDefiTx(tx: UserDefiTx): Promise<void>;
   getDefiTx(txHash: TxHash): Promise<UserDefiTx | undefined>;
   getDefiTxs(userId): Promise<UserDefiTx[]>;
-  settleDefiTx(txHash: TxHash, outputValueA: bigint, outputValueB: bigint, settled: Date): Promise<void>;
-  claimDefiTx(txHash: TxHash, claimed: Date): Promise<void>;
+  updateDefiTx(txHash: TxHash, outputValueA: bigint, outputValueB: bigint): Promise<void>;
+  settleDefiTx(txHash: TxHash, settled: Date): Promise<void>;
+
+  isUserTxSettled(txHash: TxHash): Promise<boolean>;
 
   addUserSigningKey(signingKey: SigningKey): Promise<void>;
   getUserSigningKeys(accountId: AccountId): Promise<SigningKey[]>;

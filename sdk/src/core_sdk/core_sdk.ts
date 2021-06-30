@@ -4,7 +4,7 @@ import { AssetId } from '@aztec/barretenberg/asset';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { AccountProver, JoinSplitProver, ProofData, PooledProverFactory } from '@aztec/barretenberg/client_proofs';
+import { AccountProver, JoinSplitProver, PooledProverFactory, ProofData } from '@aztec/barretenberg/client_proofs';
 import { Crs } from '@aztec/barretenberg/crs';
 import { Blake2s, Pedersen, PooledPedersen, Schnorr } from '@aztec/barretenberg/crypto';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
@@ -14,7 +14,6 @@ import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupProvider, SettlementTime } from '@aztec/barretenberg/rollup_provider';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { BarretenbergWasm, WorkerPool } from '@aztec/barretenberg/wasm';
-import { BarretenbergWorker } from '@aztec/barretenberg/wasm';
 import { WorldState } from '@aztec/barretenberg/world_state';
 import createDebug from 'debug';
 import isNode from 'detect-node';
@@ -587,9 +586,8 @@ export class CoreSdk extends EventEmitter {
   public async createDefiProof(
     bridgeId: BridgeId,
     userId: AccountId,
-    privateInput: bigint,
-    privateOutput: bigint,
     depositValue: bigint,
+    txFee: bigint,
     signer: Signer,
   ) {
     const userState = this.getUserState(userId);
@@ -597,9 +595,9 @@ export class CoreSdk extends EventEmitter {
       userState,
       BigInt(0),
       BigInt(0),
-      privateInput,
+      depositValue + txFee,
       BigInt(0),
-      privateOutput,
+      BigInt(0),
       depositValue,
       bridgeId.inputAssetId,
       signer,
@@ -610,7 +608,7 @@ export class CoreSdk extends EventEmitter {
     );
 
     const txHash = new TxHash(txId);
-    const tx = new UserDefiTx(txHash, userId, bridgeId, privateInput, privateOutput, depositValue, new Date());
+    const tx = new UserDefiTx(txHash, userId, bridgeId, depositValue, txFee, new Date());
 
     return new DefiProofOutput(tx, proofData, viewingKeys);
   }
@@ -662,16 +660,9 @@ export class CoreSdk extends EventEmitter {
       if (timeout && new Date().getTime() - started > timeout * 1000) {
         throw new Error(`Timeout awaiting tx settlement: ${txHash}`);
       }
-      const accountTx = await this.db.getAccountTx(txHash);
-      if (accountTx) {
-        if (accountTx.settled) {
-          break;
-        }
-      } else {
-        const txs = await this.db.getJoinSplitTxsByTxHash(txHash);
-        if (txs.every(tx => tx.settled)) {
-          break;
-        }
+
+      if (await this.db.isUserTxSettled(txHash)) {
+        break;
       }
       await new Promise(resolve => setTimeout(resolve, 1000));
     }

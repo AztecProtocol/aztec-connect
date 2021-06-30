@@ -22,6 +22,7 @@ export function computeSigningData(
   pedersen: Pedersen,
   noteAlgos: NoteAlgorithms,
 ) {
+  const isDefiBridge = !claimNote.equals(ClaimNoteTxData.EMPTY);
   const noteCommitments = notes.map(note => noteAlgos.commitNote(note));
 
   const partialState = noteAlgos.computePartialState(claimNote, accountId);
@@ -41,22 +42,17 @@ export function computeSigningData(
     numInputNotes >= 2,
   );
 
-  const outputNotes = [
-    claimNote.equals(ClaimNoteTxData.EMPTY) ? noteCommitments[2] : claimNoteCommitment,
-    noteCommitments[3],
-  ];
+  const outputNotes = [isDefiBridge ? claimNoteCommitment : noteCommitments[2], noteCommitments[3]];
 
   const totalInputValue = notes[0].value + notes[1].value + inputValue;
-  const totalOutputValue = notes[2].value + notes[3].value + outputValue;
+  const publicOutput = isDefiBridge ? claimNote.value : outputValue;
+  const totalOutputValue = notes[2].value + notes[3].value + publicOutput;
   const txFee = totalInputValue - totalOutputValue;
   const toCompress = [
     toBufferBE(inputValue, 32),
-    toBufferBE(outputValue, 32),
-    numToUInt32BE(assetId, 32),
-    ...noteCommitments
-      .slice(2)
-      .map(note => [note.slice(0, 32), note.slice(32, 64)])
-      .flat(),
+    toBufferBE(publicOutput, 32),
+    isDefiBridge ? claimNote.bridgeId.toBuffer() : numToUInt32BE(assetId, 32),
+    ...outputNotes.map(note => [note.slice(0, 32), note.slice(32, 64)]).flat(),
     nullifier1,
     nullifier2,
     Buffer.concat([Buffer.alloc(12), inputOwner.toBuffer()]),

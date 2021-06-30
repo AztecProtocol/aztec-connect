@@ -5,15 +5,16 @@
   "license": "GPL-2.0",
   "scripts": {
     "build": "rm -rf ./dest && tsc -p tsconfig.prod.json",
-    "start": "node ./dest",
-    "start:dev": "`yarn -s deploy_rollup_processor 1` && tsc-watch -p tsconfig.prod.json --onSuccess 'yarn start'",
-    "test": "jest",
+    "clean": "rm -rf ./data",
     "clean_db": "rm -rf ./data/db.sqlite ./data/world_state.db",
     "clean_keys": "rm -rf ./data/account ./data/join_split ./data/*rollup*",
-    "clean": "rm -rf ./data",
+    "start": "node ./dest",
+    "start:dev": "`yarn -s deploy_rollup_processor` && yarn start:dev_server",
+    "start:dev_server": "tsc-watch -p tsconfig.prod.json --onSuccess 'yarn start'",
+    "start:e2e": "yarn clean_db && yarn build && `ESCAPE_BLOCK_LOWER=10 ESCAPE_BLOCK_UPPER=100 yarn -s deploy_rollup_processor` && MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW=1 NUM_OUTER_ROLLUP_PROOFS=2 HALLOUMI_HOST=http://localhost:8083 yarn start",
     "start:escape": "yarn clean_db && yarn build && `ESCAPE_BLOCK_LOWER=10 ESCAPE_BLOCK_UPPER=100 yarn -s deploy_rollup_processor 1` && MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW=1 yarn start",
-    "start:e2e": "yarn clean_db && yarn build && `ESCAPE_BLOCK_LOWER=10 ESCAPE_BLOCK_UPPER=100 yarn -s deploy_rollup_processor 1` && MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW=1 NUM_OUTER_ROLLUP_PROOFS=2 HALLOUMI_HOST=http://localhost:8083 yarn start",
-    "start:wasabi": "yarn clean_db && `yarn -s deploy_rollup_processor 1` && PUBLISH_INTERVAL=3600 NUM_INNER_ROLLUP_TXS=28 NUM_OUTER_ROLLUP_PROOFS=2 HALLOUMI_HOST=http://localhost:8083 yarn start:dev"
+    "start:wasabi": "yarn clean_db && yarn build && `yarn -s deploy_rollup_processor` && PUBLISH_INTERVAL=3600 NUM_INNER_ROLLUP_TXS=28 NUM_OUTER_ROLLUP_PROOFS=2 HALLOUMI_HOST=http://localhost:8083 yarn start",
+    "test": "jest"
   },
   "jest": {
     "transform": {

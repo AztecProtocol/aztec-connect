@@ -115,23 +115,23 @@ describe('RollupProofData', () => {
     ).toThrow();
   });
 
-  it('should generate the same txId from inner proof as from join split proof', () => {
-    const innerProofData = new InnerProofData(
-      0,
-      randomBytes(32),
-      randomBytes(32),
-      randomBytes(32),
-      randomBytes(64),
-      randomBytes(64),
-      randomBytes(32),
-      randomBytes(32),
-      randomBytes(32),
-      randomBytes(32),
-    );
-
-    const joinSplitProofData = Buffer.concat([innerProofData.toBuffer(), randomBytes(32), randomBytes(32)]);
-    const joinSplitProof = new ProofData(joinSplitProofData);
-
-    expect(innerProofData.txId).toEqual(joinSplitProof.txId);
+  it('should generate the same txId for all proof types', () => {
+    [ProofId.JOIN_SPLIT, ProofId.ACCOUNT, ProofId.DEFI_CLAIM, ProofId.DEFI_CLAIM].forEach(proofId => {
+      const innerProofData = new InnerProofData(
+        proofId,
+        randomBytes(32),
+        randomBytes(32),
+        randomBytes(32),
+        randomBytes(64),
+        randomBytes(64),
+        randomBytes(32),
+        randomBytes(32),
+        randomBytes(32),
+        randomBytes(32),
+      );
+      const rawClientProof = Buffer.concat([innerProofData.toBuffer(), randomBytes(32), randomBytes(32)]);
+      const clientProofData = new ProofData(rawClientProof);
+      expect(innerProofData.txId).toEqual(clientProofData.txId);
+    });
   });
 });

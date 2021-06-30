@@ -280,7 +280,7 @@ export class RollupProcessor {
       } = IDefiBridgeEvent.parseLog(log);
       return new DefiInteractionNote(
         BridgeId.fromBigInt(BigInt(bridgeId)),
-        nonce,
+        +nonce,
         BigInt(totalInputValue),
         BigInt(totalOutputValueA),
         BigInt(totalOutputValueB),
@@ -316,8 +316,8 @@ export class RollupProcessor {
     const ethSigner = !signer
       ? this.provider.getSigner(0)
       : signer instanceof EthAddress
-        ? this.provider.getSigner(signer.toString())
-        : signer;
+      ? this.provider.getSigner(signer.toString())
+      : signer;
     return new Contract(this.rollupContractAddress.toString(), RollupABI, ethSigner);
   }
 }

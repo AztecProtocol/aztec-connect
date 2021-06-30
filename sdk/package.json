@@ -21,7 +21,6 @@
   "dependencies": {
     "@aztec/barretenberg": "file:../barretenberg.js/dest",
     "@aztec/blockchain": "file:../blockchain/dest",
-    "@aztec/sriracha": "file:../sriracha/dest",
     "@types/levelup": "^4.3.0",
     "broadcast-channel": "^3.1.0",
     "detect-node": "^2.0.4",

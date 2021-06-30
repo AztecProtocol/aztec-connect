@@ -24,11 +24,11 @@ export class BridgeId {
 
   static fromBigInt(val: bigint) {
     return new BridgeId(
-      new EthAddress(toBufferBE(val >> BigInt(92), 32)),
-      getNumber(val, 90, 2),
-      getNumber(val, 58, 32),
-      getNumber(val, 26, 32),
-      getNumber(val, 0, 26),
+      new EthAddress(toBufferBE(val & ((BigInt(1) << BigInt(160)) - BigInt(1)), 32)),
+      getNumber(val, 160, 2),
+      getNumber(val, 162, 32),
+      getNumber(val, 194, 32),
+      getNumber(val, 226, 26),
     );
   }
 
@@ -45,18 +45,17 @@ export class BridgeId {
   }
 
   toBigInt() {
-    return toBigIntBE(this.toBuffer());
+    return (
+      BigInt(this.address.toString()) +
+      (BigInt(this.numOutputAssets) << BigInt(160)) +
+      (BigInt(this.inputAssetId) << BigInt(162)) +
+      (BigInt(this.outputAssetIdA) << BigInt(194)) +
+      (BigInt(this.outputAssetIdB) << BigInt(226))
+    );
   }
 
   toBuffer() {
-    return toBufferBE(
-      (BigInt(this.address.toString()) << BigInt(92)) +
-        (BigInt(this.numOutputAssets) << BigInt(90)) +
-        (BigInt(this.inputAssetId) << BigInt(58)) +
-        (BigInt(this.outputAssetIdA) << BigInt(26)) +
-        BigInt(this.outputAssetIdB),
-      32,
-    );
+    return toBufferBE(this.toBigInt(), 32);
   }
 
   toString() {

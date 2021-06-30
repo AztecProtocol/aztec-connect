@@ -1,11 +1,5 @@
-import { toBigIntBE } from '../bigint_buffer';
-import { createHash } from 'crypto';
-import { EthAddress } from '../address';
-import { AssetId } from '../asset';
-import { BridgeId } from '../bridge_id';
-import { AccountAliasId } from '../account_id';
+import { createTxId, ProofId } from '../client_proofs';
 import { numToUInt32BE } from '../serialize';
-import { ProofId } from '../client_proofs';
 
 export class InnerProofData {
   static NUM_PUBLIC_INPUTS = 12;
@@ -25,7 +19,7 @@ export class InnerProofData {
     public inputOwner: Buffer,
     public outputOwner: Buffer,
   ) {
-    this.txId = createHash('sha256').update(this.toBuffer()).digest();
+    this.txId = createTxId(this.toBuffer());
   }
 
   getDepositSigningData() {
@@ -75,70 +69,5 @@ export class InnerProofData {
       inputOwner,
       outputOwner,
     );
-  }
-}
-
-export class JoinSplitProofData {
-  public assetId: AssetId;
-  public publicInput: bigint;
-  public publicOutput: bigint;
-  public inputOwner: EthAddress;
-  public outputOwner: EthAddress;
-
-  constructor(public proofData: InnerProofData) {
-    if (proofData.proofId !== ProofId.JOIN_SPLIT) {
-      throw new Error('Not a join split proof.');
-    }
-
-    this.assetId = this.proofData.assetId.readUInt32BE(28);
-    this.publicInput = toBigIntBE(this.proofData.publicInput);
-    this.publicOutput = toBigIntBE(this.proofData.publicOutput);
-
-    this.inputOwner = new EthAddress(this.proofData.inputOwner.slice(12));
-    this.outputOwner = new EthAddress(this.proofData.outputOwner.slice(12));
-  }
-}
-
-export class AccountProofData {
-  public accountAliasId: AccountAliasId;
-  public publicKey: Buffer;
-
-  constructor(public proofData: InnerProofData) {
-    if (proofData.proofId !== ProofId.ACCOUNT) {
-      throw new Error('Not an account proof.');
-    }
-
-    this.accountAliasId = AccountAliasId.fromBuffer(proofData.assetId);
-    this.publicKey = Buffer.concat([proofData.publicInput, proofData.publicOutput]);
-  }
-}
-
-export class DefiDepositProofData {
-  public bridgeId: BridgeId;
-  public depositValue: bigint;
-  public partialState: Buffer;
-
-  constructor(public proofData: InnerProofData) {
-    if (proofData.proofId !== ProofId.DEFI_DEPOSIT) {
-      throw new Error('Not a defi deposit proof.');
-    }
-
-    const { assetId, publicOutput, inputOwner, outputOwner } = proofData;
-    this.bridgeId = BridgeId.fromBuffer(assetId);
-    this.depositValue = toBigIntBE(publicOutput);
-    this.partialState = Buffer.concat([inputOwner, outputOwner]);
-  }
-}
-
-export class DefiClaimProofData {
-  public bridgeId: BridgeId;
-
-  constructor(public proofData: InnerProofData) {
-    if (proofData.proofId !== ProofId.DEFI_CLAIM) {
-      throw new Error('Not a defi claim proof.');
-    }
-
-    const { assetId } = proofData;
-    this.bridgeId = BridgeId.fromBuffer(assetId);
   }
 }

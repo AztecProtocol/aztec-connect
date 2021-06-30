@@ -80,14 +80,12 @@ export const randomUserDefiTx = (tx: Partial<UserDefiTx> = {}) =>
     tx.txHash || TxHash.random(),
     tx.userId || AccountId.random(),
     tx.bridgeId || BridgeId.random(),
-    inputOrDefault(tx.privateInput, BigInt(randomInt())),
-    inputOrDefault(tx.privateOutput, BigInt(randomInt())),
     inputOrDefault(tx.depositValue, BigInt(randomInt())),
+    inputOrDefault(tx.txFee, BigInt(randomInt())),
     tx.created || new Date(),
     tx.outputValueA || BigInt(0),
     tx.outputValueB || BigInt(0),
     tx.settled,
-    tx.claimed,
   );
 
 export const randomAccountAliasId = () => new AccountAliasId(AliasHash.random(), randomInt());

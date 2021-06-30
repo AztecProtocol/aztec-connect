@@ -1,28 +1,16 @@
 #!/usr/bin/env node
-import { Contract, ContractFactory, Signer } from 'ethers';
 import { parseEther } from '@ethersproject/units';
-import UniswapV2Router02Json from '@uniswap/v2-periphery/build/UniswapV2Router02.json';
+import { ContractFactory, Signer } from 'ethers';
 import RollupProcessor from '../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
-import FeeDistributor from '../artifacts/contracts/interfaces/IFeeDistributor.sol/IFeeDistributor.json';
-import { deployFeeDistributor } from './deploy_fee_distributor';
-import { deployVerifier } from './deploy_verifier';
 import { addAsset } from './add_asset/add_asset';
-import { createPair, deployUniswap } from './deploy_uniswap';
+import { deployDefiBridge } from './deploy_defi_bridge';
+import { deployFeeDistributor } from './deploy_fee_distributor';
 import { deployPriceFeed } from './deploy_price_feed';
+import { createPair, deployUniswap } from './deploy_uniswap';
+import { deployVerifier } from './deploy_verifier';
 
-export async function deploy(
-  escapeHatchBlockLower: number,
-  escapeHatchBlockUpper: number,
-  signer: Signer,
-  initialFee?: string,
-  feeDistributorAddress?: string,
-  uniswapRouterAddress?: string,
-  initialTokenSupply?: bigint,
-  initialEthSupply?: bigint,
-) {
-  const uniswapRouter = uniswapRouterAddress
-    ? new Contract(uniswapRouterAddress, UniswapV2Router02Json.abi, signer)
-    : await deployUniswap(signer);
+export async function deploy(escapeHatchBlockLower: number, escapeHatchBlockUpper: number, signer: Signer) {
+  const uniswapRouter = await deployUniswap(signer);
   await uniswapRouter.deployed();
   const weth = await uniswapRouter.WETH();
 
@@ -44,30 +32,52 @@ export async function deploy(
   await rollup.deployed();
   console.error(`Rollup contract address: ${rollup.address}`);
 
-  const feeDistributor = feeDistributorAddress
-    ? new Contract(feeDistributorAddress, FeeDistributor.abi, signer)
-    : await deployFeeDistributor(signer, rollup, uniswapRouter);
+  const feeDistributor = await deployFeeDistributor(signer, rollup, uniswapRouter);
   rollup.setFeeDistributor(feeDistributor.address);
 
-  if (initialFee) {
-    console.error(`Depositing ${initialFee} ETH to FeeDistributor.`);
-    const amount = parseEther(initialFee);
-    await feeDistributor.deposit(0, amount, { value: amount });
+  const initialFee = '1';
+  console.error(`Depositing ${initialFee} ETH to FeeDistributor.`);
+  const amount = parseEther(initialFee);
+  await feeDistributor.deposit(0, amount, { value: amount });
+
+  const permitSupport = false;
+  const asset1 = await addAsset(rollup, signer, permitSupport);
+  const decimals2 = 8;
+  const asset2 = await addAsset(rollup, signer, permitSupport, decimals2);
+
+  const gasPrice = 200000000000n; // 50 gwei
+  const assetPrice1 = 500000000000000n; // 2000 DAI/ETH
+  const assetPrice2 = 15n * 10n ** 18n; // 15 ETH/BTC
+  {
+    const initialEthSupply = 10n * 10n ** 18n;
+    // 20000 DAI - 10 ETH
+    await createPair(signer, uniswapRouter, asset1, (initialEthSupply * 10n ** 18n) / assetPrice1, initialEthSupply);
+  }
+  {
+    const initialEthSupply = 150n * 10n ** 18n;
+    // 10 BTC - 150 ETH
+    await createPair(
+      signer,
+      uniswapRouter,
+      asset2,
+      (initialEthSupply * 10n ** BigInt(decimals2)) / assetPrice2,
+      initialEthSupply,
+    );
   }
 
-  const gasPriceFeed = await deployPriceFeed(signer, 100000000000n);
-
-  // Add test asset without permit support.
-  const asset = await addAsset(rollup, signer, false);
-  const asset2 = await addAsset(rollup, signer, false);
-  await createPair(signer, uniswapRouter, asset, initialTokenSupply, initialEthSupply);
-  await createPair(signer, uniswapRouter, asset2, initialTokenSupply, initialEthSupply);
-
   const priceFeeds = [
-    gasPriceFeed,
-    await deployPriceFeed(signer),
-    await deployPriceFeed(signer, 14000000000000000000n),
+    await deployPriceFeed(signer, gasPrice),
+    await deployPriceFeed(signer, assetPrice1),
+    await deployPriceFeed(signer, assetPrice2),
   ];
 
-  return { rollup, feeDistributor, uniswapRouter, priceFeeds };
+  // Defi bridge
+  const defiBridges = [
+    await deployDefiBridge(signer, rollup, uniswapRouter, weth, asset1.address),
+    await deployDefiBridge(signer, rollup, uniswapRouter, weth, asset2.address),
+    await deployDefiBridge(signer, rollup, uniswapRouter, asset1.address, weth),
+    await deployDefiBridge(signer, rollup, uniswapRouter, asset2.address, weth),
+  ];
+
+  return { rollup, feeDistributor, uniswapRouter, priceFeeds, defiBridges };
 }

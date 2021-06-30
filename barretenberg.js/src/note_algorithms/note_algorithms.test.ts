@@ -54,9 +54,12 @@ describe('compute_nullifier', () => {
   it('should create correct commitment for defi interaction note', async () => {
     const bridgeId = BridgeId.fromBigInt(BigInt(456));
     const note = new DefiInteractionNote(bridgeId, 1, BigInt(123), BigInt(456), BigInt(789), true);
-    const expected =
-      '28abee83d6e5fd094b8305724149c9f762135730d578386632ccffb1fdd1f6082e6db7be8d0824b8d5692a8822af16a1adad7a33c2fd8294042ab5e0364cf28e';
-    const commitment = noteAlgos.commitDefiInteractionNote(note).toString('hex');
-    expect(commitment).toEqual(expected);
+    const commitment = noteAlgos.commitDefiInteractionNote(note);
+    expect(commitment).toEqual(
+      Buffer.from(
+        '29eb5d21b6e1d7ad640d9a868411bec2c37e882848a04e37895347026744319d012fa95e4dcfcd1c0660f9f317ae74c0ee83b59ba272faea8159a5e4189835f7',
+        'hex',
+      ),
+    );
   });
 });

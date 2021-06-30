@@ -106,7 +106,7 @@ export class PipelineCoordinator {
     const oldDefiRoot = this.worldStateDb.getRoot(RollupTreeId.DEFI);
     const oldDefiPath = await this.worldStateDb.getHashPath(
       RollupTreeId.DEFI,
-      BigInt(rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK),
+      BigInt(Math.max(0, rollupId - 1) * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK),
     );
     const defiInteractionNotes = lastRollup ? parseInteractionResult(lastRollup.interactionResult) : [];
     await this.updateDefiTree(defiInteractionNotes);

@@ -38,7 +38,7 @@ services:
     command: >
       sh -c "
       while ! nc -z ganache 8545; do sleep 1; done;
-      `yarn -s deploy_rollup_processor 1`;
+      `yarn -s deploy_rollup_processor`;
       yarn start
       "
     ports:

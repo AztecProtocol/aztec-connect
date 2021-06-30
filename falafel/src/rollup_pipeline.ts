@@ -61,6 +61,7 @@ export class RollupPipeline {
       rollupDb,
       worldStateDb,
       proofGenerator,
+      noteAlgo,
       numInnerRollupTxs,
       innerRollupSize,
       outerRollupSize,

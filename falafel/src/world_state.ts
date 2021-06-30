@@ -244,6 +244,7 @@ export class WorldState {
         ethTxHash: txHash,
         mined: block.created,
         created: block.created,
+        interactionResult: Buffer.concat(block.interactionResult.map(r => r.toBuffer())),
         viewingKeys: Buffer.concat(rollup.viewingKeys.flat().map(vk => vk.toBuffer())),
         gasPrice: toBufferBE(block.gasPrice, 32),
         gasUsed: block.gasUsed,

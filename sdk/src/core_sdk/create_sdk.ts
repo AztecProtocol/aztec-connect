@@ -1,18 +1,15 @@
+import { AssetId } from '@aztec/barretenberg/asset';
 import { ServerRollupProvider } from '@aztec/barretenberg/rollup_provider';
 import { BroadcastChannel, createLeaderElection } from 'broadcast-channel';
 import createDebug from 'debug';
 import isNode from 'detect-node';
 import { mkdirSync } from 'fs';
 import levelup from 'levelup';
-import { SrirachaProvider } from '@aztec/sriracha/sriracha_provider';
 import { createConnection } from 'typeorm';
-import { DexieDatabase, SQLDatabase, getOrmConfig } from '../database';
+import { DexieDatabase, getOrmConfig, SQLDatabase } from '../database';
 import { SdkEvent, SdkInitState } from '../sdk';
 import { AccountId } from '../user';
 import { CoreSdk, CoreSdkEvent, CoreSdkOptions } from './core_sdk';
-import { AssetId } from '@aztec/barretenberg/asset';
-import { getServiceName } from '@aztec/barretenberg/service';
-import { EthereumBlockchain, EthereumProvider } from '@aztec/blockchain';
 
 const debug = createDebug('bb:create_sdk');
 
@@ -51,7 +48,7 @@ export type SdkOptions = {
   minConfirmationEHW?: number;
 } & CoreSdkOptions;
 
-async function sdkFactory(hostStr: string, options: SdkOptions, ethereumProvider: EthereumProvider) {
+async function sdkFactory(hostStr: string, options: SdkOptions) {
   if (options.debug) {
     createDebug.enable('bb:*');
   }
@@ -76,9 +73,9 @@ async function sdkFactory(hostStr: string, options: SdkOptions, ethereumProvider
  * share events and synchronise instances. Only one instance will be the "leader" and that instance will receive
  * blocks from the block source and update the (shared) world state.
  */
-export async function createSdk(hostStr: string, options: SdkOptions = {}, ethereumProvider: EthereumProvider) {
+export async function createSdk(hostStr: string, options: SdkOptions = {}) {
   options = { syncInstances: true, saveProvingKey: true, ...options };
-  const sdk = await sdkFactory(hostStr, options, ethereumProvider);
+  const sdk = await sdkFactory(hostStr, options);
 
   if (!options.syncInstances) {
     // We're not going to sync across multiple instances. We should start recieving blocks once initialized.

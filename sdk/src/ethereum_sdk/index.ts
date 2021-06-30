@@ -36,7 +36,7 @@ async function getDb(dbPath = 'data') {
 export async function createEthSdk(ethereumProvider: EthereumProvider, serverUrl: string, sdkOptions: SdkOptions = {}) {
   const { assets, rollupContractAddress, chainId } = await getBlockchainStatus(serverUrl);
 
-  const core = await createSdk(serverUrl, sdkOptions, ethereumProvider);
+  const core = await createSdk(serverUrl, sdkOptions);
 
   const db = await getDb(sdkOptions.dbPath);
   await db.init();

@@ -17,13 +17,10 @@ export class DefiTxDao {
   public bridgeId!: BridgeId;
 
   @Column('text', { transformer: [bigintTransformer] })
-  public privateInput!: bigint;
-
-  @Column('text', { transformer: [bigintTransformer] })
-  public privateOutput!: bigint;
-
-  @Column('text', { transformer: [bigintTransformer] })
   public depositValue!: bigint;
+
+  @Column('text', { transformer: [bigintTransformer] })
+  public txFee!: bigint;
 
   @Column('text', { transformer: [bigintTransformer] })
   public outputValueA!: bigint;
@@ -37,18 +34,12 @@ export class DefiTxDao {
   @Column({ nullable: true })
   public settled?: Date;
 
-  @Column({ nullable: true })
-  public claimed?: Date;
-
   @AfterLoad()
   @AfterInsert()
   @AfterUpdate()
   afterLoad() {
     if (this.settled === null) {
       delete this.settled;
-    }
-    if (this.claimed === null) {
-      delete this.claimed;
     }
   }
 }

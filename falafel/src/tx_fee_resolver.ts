@@ -1,6 +1,12 @@
 import { AssetId } from '@aztec/barretenberg/asset';
 import { Blockchain, BlockchainAsset, PriceFeed, TxType } from '@aztec/barretenberg/blockchain';
-import { JoinSplitProofData, ProofData } from '@aztec/barretenberg/client_proofs';
+import {
+  DefiClaimProofData,
+  DefiDepositProofData,
+  JoinSplitProofData,
+  ProofData,
+  ProofId,
+} from '@aztec/barretenberg/client_proofs';
 import { AssetFeeQuote, SettlementTime } from '@aztec/barretenberg/rollup_provider';
 import { TxDao } from './entity/tx';
 import { RollupDb } from './rollup_db';
@@ -73,6 +79,9 @@ export class TxFeeResolver {
         TxType.TRANSFER,
         TxType.WITHDRAW_TO_WALLET,
         TxType.WITHDRAW_TO_CONTRACT,
+        TxType.ACCOUNT,
+        TxType.DEFI_DEPOSIT,
+        TxType.DEFI_CLAIM,
       ].map(txType => this.getFeeConstant(assetId, txType, rollupId)),
       baseFeeQuotes: this.surplusRatios.map(ratio => ({
         fee: baseFee * (1n + BigInt(Math.round(this.txsPerRollup * (1 - ratio)))),
@@ -103,10 +112,28 @@ export class TxFeeResolver {
       return { assetId: AssetId.ETH, txFee: 0n };
     }
 
+    const proofData = new ProofData(tx.proofData);
+    switch (proofData.proofId) {
+      case ProofId.DEFI_DEPOSIT: {
+        const {
+          bridgeId,
+          proofData: { txFee },
+        } = new DefiDepositProofData(proofData);
+        return { assetId: bridgeId.inputAssetId, txFee };
+      }
+      case ProofId.DEFI_CLAIM: {
+        const {
+          bridgeId,
+          proofData: { txFee },
+        } = new DefiClaimProofData(proofData);
+        return { assetId: bridgeId.inputAssetId, txFee };
+      }
+    }
+
     const {
       assetId,
       proofData: { txFee },
-    } = new JoinSplitProofData(new ProofData(tx.proofData));
+    } = new JoinSplitProofData(proofData);
     return { assetId, txFee };
   }
 

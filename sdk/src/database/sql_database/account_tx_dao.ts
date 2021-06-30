@@ -1,5 +1,5 @@
 import { TxHash } from '@aztec/barretenberg/tx_hash';
-import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
+import { AfterInsert, AfterLoad, AfterUpdate, Column, Entity, Index, PrimaryColumn } from 'typeorm';
 import { AccountId, AliasHash } from '../../user';
 import { accountIdTransformer, aliasHashTransformer, txHashTransformer } from './transformer';
 
@@ -29,4 +29,13 @@ export class AccountTxDao {
 
   @Column({ nullable: true })
   public settled?: Date;
+
+  @AfterLoad()
+  @AfterInsert()
+  @AfterUpdate()
+  afterLoad() {
+    if (this.settled === null) {
+      delete this.settled;
+    }
+  }
 }

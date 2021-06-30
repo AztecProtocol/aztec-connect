@@ -25,21 +25,12 @@ function getSigner() {
 }
 
 async function main() {
-  const [, , initialFee, feeDistributorAddress, uniswapRouterAddress] = process.argv;
-
   const signer = getSigner();
   if (!signer) {
     throw new Error('Failed to create signer. Set ETHEREUM_HOST or INFURA_API_KEY, NETWORK, PRIVATE_KEY.');
   }
 
-  const { rollup, priceFeeds } = await deploy(
-    +ESCAPE_BLOCK_LOWER,
-    +ESCAPE_BLOCK_UPPER,
-    signer,
-    initialFee,
-    feeDistributorAddress,
-    uniswapRouterAddress,
-  );
+  const { rollup, priceFeeds } = await deploy(+ESCAPE_BLOCK_LOWER, +ESCAPE_BLOCK_UPPER, signer);
 
   console.log(`export ROLLUP_CONTRACT_ADDRESS=${rollup.address}`);
   console.log(`export PRICE_FEED_CONTRACT_ADDRESSES=${priceFeeds.map(p => p.address).join(',')}`);

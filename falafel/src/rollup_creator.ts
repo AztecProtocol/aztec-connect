@@ -1,5 +1,7 @@
-import { ProofData } from '@aztec/barretenberg/client_proofs';
+import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
+import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
+import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { ProofGenerator, TxRollup, TxRollupProofRequest } from 'halloumi/proof_generator';
@@ -13,6 +15,7 @@ export class RollupCreator {
     private rollupDb: RollupDb,
     private worldStateDb: WorldStateDb,
     private proofGenerator: ProofGenerator,
+    private noteAlgo: NoteAlgorithms,
     private numInnerRollupTxs: number,
     private innerRollupSize: number,
     private outerRollupSize: number,
@@ -67,14 +70,14 @@ export class RollupCreator {
     // - an inner rollup size boundary for any other proofs.
     const firstInner = (await this.rollupDb.getNumRollupProofsBySize(this.innerRollupSize)) === 0;
     const worldStateDb = this.worldStateDb;
-    const dataSize = worldStateDb.getSize(0);
+    const dataSize = worldStateDb.getSize(RollupTreeId.DATA);
     const subtreeSize = BigInt(firstInner ? this.outerRollupSize * 2 : this.innerRollupSize * 2);
     const dataStartIndex = dataSize % subtreeSize === 0n ? dataSize : dataSize + subtreeSize - (dataSize % subtreeSize);
 
     // Get old data.
-    const oldDataRoot = worldStateDb.getRoot(0);
-    const oldDataPath = await worldStateDb.getHashPath(0, dataStartIndex);
-    const oldNullRoot = worldStateDb.getRoot(1);
+    const oldDataRoot = worldStateDb.getRoot(RollupTreeId.DATA);
+    const oldDataPath = await worldStateDb.getHashPath(RollupTreeId.DATA, dataStartIndex);
+    const oldNullRoot = worldStateDb.getRoot(RollupTreeId.NULL);
 
     // Insert each txs elements into the db.
     let nextDataIndex = dataStartIndex;
@@ -83,43 +86,62 @@ export class RollupCreator {
     const newNullPaths: HashPath[] = [];
     const dataRootsPaths: HashPath[] = [];
     const dataRootsIndicies: number[] = [];
+    const bridgeIds: Buffer[] = [];
 
     for (const tx of txs) {
       const proof = new ProofData(tx.proofData);
-      await worldStateDb.put(0, nextDataIndex++, proof.newNote1);
-      await worldStateDb.put(0, nextDataIndex++, proof.newNote2);
+
+      if (proof.proofId !== ProofId.DEFI_DEPOSIT) {
+        await worldStateDb.put(RollupTreeId.DATA, nextDataIndex++, proof.newNote1);
+      } else {
+        if (!bridgeIds.some(id => id.equals(proof.assetId))) {
+          bridgeIds.push(proof.assetId);
+        }
+        const interactionNonce =
+          rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK + bridgeIds.findIndex(id => id.equals(proof.assetId));
+        const encNote = this.noteAlgo.completePartialClaimNote(proof.newNote1, interactionNonce);
+        await worldStateDb.put(RollupTreeId.DATA, nextDataIndex++, encNote);
+      }
+      await worldStateDb.put(RollupTreeId.DATA, nextDataIndex++, proof.newNote2);
+
       const nullifier1 = toBigIntBE(proof.nullifier1);
       const nullifier2 = toBigIntBE(proof.nullifier2);
 
-      oldNullPaths.push(await worldStateDb.getHashPath(1, nullifier1));
-      await worldStateDb.put(1, nullifier1, toBufferBE(1n, 64));
-      newNullRoots.push(worldStateDb.getRoot(1));
-      newNullPaths.push(await worldStateDb.getHashPath(1, nullifier1));
+      oldNullPaths.push(await worldStateDb.getHashPath(RollupTreeId.NULL, nullifier1));
+      await worldStateDb.put(RollupTreeId.NULL, nullifier1, toBufferBE(1n, 64));
+      newNullRoots.push(worldStateDb.getRoot(RollupTreeId.NULL));
+      newNullPaths.push(await worldStateDb.getHashPath(RollupTreeId.NULL, nullifier1));
 
-      oldNullPaths.push(await worldStateDb.getHashPath(1, nullifier2));
-      await worldStateDb.put(1, nullifier2, toBufferBE(1n, 64));
-      newNullRoots.push(worldStateDb.getRoot(1));
-      newNullPaths.push(await worldStateDb.getHashPath(1, nullifier2));
+      oldNullPaths.push(await worldStateDb.getHashPath(RollupTreeId.NULL, nullifier2));
+      if (nullifier2) {
+        await worldStateDb.put(RollupTreeId.NULL, nullifier2, toBufferBE(1n, 64));
+      }
+      newNullRoots.push(worldStateDb.getRoot(RollupTreeId.NULL));
+      newNullPaths.push(await worldStateDb.getHashPath(RollupTreeId.NULL, nullifier2));
 
-      dataRootsPaths.push(await worldStateDb.getHashPath(2, BigInt(tx.dataRootsIndex!)));
+      dataRootsPaths.push(await worldStateDb.getHashPath(RollupTreeId.ROOT, BigInt(tx.dataRootsIndex!)));
       dataRootsIndicies.push(tx.dataRootsIndex!);
     }
 
     if (txs.length < this.numInnerRollupTxs) {
       // Grows the data tree by inserting 0 at last subtree position.
-      await worldStateDb.put(0, dataStartIndex + BigInt(this.innerRollupSize) * 2n - 1n, Buffer.alloc(64, 0));
+      await worldStateDb.put(
+        RollupTreeId.DATA,
+        dataStartIndex + BigInt(this.innerRollupSize) * 2n - 1n,
+        Buffer.alloc(64, 0),
+      );
 
       // Add padding data. The vectors that are shorter than their expected size, will be grown to their full circuit
       // size using the last element in the vector as the value. Padding transactions will use nullifier index 0, and
       // expect the value at index 0 to be unchanged.
-      const zeroNullPath = await worldStateDb.getHashPath(1, BigInt(0));
+      const zeroNullPath = await worldStateDb.getHashPath(RollupTreeId.NULL, BigInt(0));
       oldNullPaths.push(zeroNullPath);
       newNullPaths.push(zeroNullPath);
     }
 
     // Get new data.
-    const newDataRoot = worldStateDb.getRoot(0);
-    const dataRootsRoot = worldStateDb.getRoot(2);
+    const newDataRoot = worldStateDb.getRoot(RollupTreeId.DATA);
+    const dataRootsRoot = worldStateDb.getRoot(RollupTreeId.ROOT);
     const newDefiRoot = worldStateDb.getRoot(RollupTreeId.DEFI);
 
     return new TxRollup(
@@ -140,7 +162,7 @@ export class RollupCreator {
       dataRootsIndicies,
 
       newDefiRoot,
-      [],
+      bridgeIds,
     );
   }
 }

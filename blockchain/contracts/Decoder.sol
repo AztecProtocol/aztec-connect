@@ -98,11 +98,11 @@ contract Decoder {
         assembly {
             let dataStart := add(add(proofData, 0x180), mul(0x20, idx))
             bridgeId := mload(dataStart)
-            bridgeAddress := shr(92, bridgeId)
-            numOutputAssets := and(shr(90, bridgeId), 3)
-            mstore(assetIds, and(shr(58, bridgeId), 0xffffffff))
-            mstore(add(assetIds, 0x20), and(shr(26, bridgeId), 0xffffffff))
-            mstore(add(assetIds, 0x40), and(bridgeId, 0x3ffffff))
+            bridgeAddress := and(bridgeId, 0xffffffffffffffffffffffffffffffffffffffff)
+            numOutputAssets := and(shr(160, bridgeId), 3)
+            mstore(assetIds, and(shr(162, bridgeId), 0xffffffff))
+            mstore(add(assetIds, 0x20), and(shr(194, bridgeId), 0xffffffff))
+            mstore(add(assetIds, 0x40), and(shr(226, bridgeId), 0x3ffffff))
             totalInputValue := mload(add(dataStart, mul(0x20, numberOfBridgeCalls)))
         }
     }

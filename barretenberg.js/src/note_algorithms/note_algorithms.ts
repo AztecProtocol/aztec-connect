@@ -56,6 +56,12 @@ export class NoteAlgorithms {
     return Buffer.from(this.wasm.sliceMemory(0, 32));
   }
 
+  public completePartialClaimNote(partialNote: Buffer, interactionNonce: number) {
+    this.wasm.transferToHeap(partialNote, 0);
+    this.wasm.call('notes__complete_partial_claim_note', 0, interactionNonce, 0);
+    return Buffer.from(this.wasm.sliceMemory(0, 64));
+  }
+
   public commitDefiInteractionNote(note: DefiInteractionNote) {
     const noteBuf = note.toBuffer();
     const mem = this.wasm.call('bbmalloc', noteBuf.length);

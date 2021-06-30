@@ -190,14 +190,7 @@ export class UserState extends EventEmitter {
               // Both notes should be owned by the same user.
               continue;
             }
-            await this.handleDefiDepositTx(
-              proof,
-              noteStartIndex,
-              block.interactionResult,
-              block.created,
-              decrypted!.noteSecret,
-              note,
-            );
+            await this.handleDefiDepositTx(proof, noteStartIndex, block.interactionResult, decrypted!.noteSecret, note);
             break;
           }
           case ProofId.DEFI_CLAIM:
@@ -272,12 +265,6 @@ export class UserState extends EventEmitter {
     note1?: TreeNote,
     note2?: TreeNote,
   ) {
-    const txHash = new TxHash(proof.txId);
-    const savedTx = await this.db.getJoinSplitTx(this.user.id, txHash);
-    if (savedTx?.settled) {
-      return;
-    }
-
     const { newNote1, newNote2, nullifier1, nullifier2 } = proof;
     const newNote = await this.processNewNote(noteStartIndex, newNote1, note1);
     const changeNote = await this.processNewNote(noteStartIndex + 1, newNote2, note2);
@@ -291,9 +278,11 @@ export class UserState extends EventEmitter {
 
     await this.refreshNotePicker();
 
+    const txHash = new TxHash(proof.txId);
+    const savedTx = await this.db.getJoinSplitTx(txHash, this.user.id);
     if (savedTx) {
       debug(`settling tx: ${savedTx.txHash.toString()}`);
-      await this.db.settleJoinSplitTx(txHash, blockCreated);
+      await this.db.settleJoinSplitTx(txHash, this.user.id, blockCreated);
     } else {
       const tx = this.recoverJoinSplitTx(proof, blockCreated, newNote, changeNote, destroyedNote1, destroyedNote2);
       debug(`recovered tx: ${tx.txHash.toString()}`);
@@ -305,7 +294,6 @@ export class UserState extends EventEmitter {
     proof: InnerProofData,
     noteStartIndex: number,
     interactionResult: DefiInteractionNote[],
-    blockCreated: Date,
     claimNoteSecret: Buffer,
     treeNote: TreeNote,
   ) {
@@ -333,17 +321,9 @@ export class UserState extends EventEmitter {
     const savedTx = await this.db.getDefiTx(txHash);
     if (savedTx) {
       debug(`settling defi tx: ${txHash.toString()}`);
-      await this.db.settleDefiTx(txHash, outputValueA, outputValueB, blockCreated);
+      await this.db.updateDefiTx(txHash, outputValueA, outputValueB);
     } else {
-      const tx = this.recoverDefiTx(
-        proof,
-        outputValueA,
-        outputValueB,
-        blockCreated,
-        newNote,
-        destroyedNote1,
-        destroyedNote2,
-      );
+      const tx = this.recoverDefiTx(proof, outputValueA, outputValueB, newNote, destroyedNote1, destroyedNote2);
       debug(`recovered defi tx: ${txHash.toString()}`);
       await this.db.addDefiTx(tx);
     }
@@ -372,7 +352,9 @@ export class UserState extends EventEmitter {
       await this.processNewNote(noteStartIndex + 1, newNote2, treeNote);
     }
 
-    await this.db.claimDefiTx(txHash, blockCreated);
+    await this.refreshNotePicker();
+
+    await this.db.settleDefiTx(txHash, blockCreated);
   }
 
   private async processNewNote(index: number, dataEntry: Buffer, treeNote?: TreeNote) {
@@ -502,7 +484,6 @@ export class UserState extends EventEmitter {
     proof: InnerProofData,
     outputValueA: bigint,
     outputValueB: bigint,
-    blockCreated,
     newNote?: Note,
     destroyedNote1?: Note,
     destroyedNote2?: Note,
@@ -515,19 +496,9 @@ export class UserState extends EventEmitter {
     const noteValue = (note?: Note) => (note ? note.value : BigInt(0));
     const privateInput = noteValue(destroyedNote1) + noteValue(destroyedNote2);
     const privateOutput = noteValue(newNote);
+    const txFee = privateInput - privateOutput - depositValue;
 
-    return new UserDefiTx(
-      txHash,
-      this.user.id,
-      bridgeId,
-      privateInput,
-      privateOutput,
-      depositValue,
-      new Date(),
-      outputValueA,
-      outputValueB,
-      blockCreated,
-    );
+    return new UserDefiTx(txHash, this.user.id, bridgeId, depositValue, txFee, new Date(), outputValueA, outputValueB);
   }
 
   private async refreshNotePicker() {

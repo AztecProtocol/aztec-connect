@@ -30,14 +30,14 @@ export class DefiInteractionNote {
   static fromBuffer(buf: Buffer) {
     const bridgeId = BridgeId.fromBuffer(buf.slice(0, 32));
     let offset = 32;
-    const nonce = buf.readUInt32BE(offset);
-    offset += 4;
     const totalInputValue = toBigIntBE(buf.slice(offset, offset + 32));
     offset += 32;
     const totalOutputValueA = toBigIntBE(buf.slice(offset, offset + 32));
     offset += 32;
     const totalOutputValueB = toBigIntBE(buf.slice(offset, offset + 32));
     offset += 32;
+    const nonce = buf.readUInt32BE(offset);
+    offset += 4;
     const result = !!buf[offset];
     return new DefiInteractionNote(bridgeId, nonce, totalInputValue, totalOutputValueA, totalOutputValueB, result);
   }
@@ -45,10 +45,10 @@ export class DefiInteractionNote {
   toBuffer() {
     return Buffer.concat([
       this.bridgeId.toBuffer(),
-      numToUInt32BE(this.nonce),
       toBufferBE(this.totalInputValue, 32),
       toBufferBE(this.totalOutputValueA, 32),
       toBufferBE(this.totalOutputValueB, 32),
+      numToUInt32BE(this.nonce),
       Buffer.from([+this.result]),
     ]);
   }

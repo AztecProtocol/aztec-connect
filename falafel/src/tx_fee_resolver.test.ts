@@ -68,11 +68,11 @@ describe('tx fee resolver', () => {
         assets: [
           {
             decimals: 18,
-            gasConstants: [5000, 0, 8000, 30000],
+            gasConstants: [5000, 0, 8000, 30000, 0, 0, 0],
           },
           {
             decimals: 0,
-            gasConstants: [25000, 1000, 50000, 75000],
+            gasConstants: [25000, 1000, 50000, 75000, 0, 0, 0],
           },
         ],
       }),
@@ -218,7 +218,7 @@ describe('tx fee resolver', () => {
       {
         const assetId = AssetId.ETH;
         expect(txFeeResolver.getFeeQuotes(assetId)).toEqual({
-          feeConstants: [50000n, 0n, 80000n, 300000n],
+          feeConstants: [50000n, 0n, 80000n, 300000n, 0n, 0n, 0n],
           baseFeeQuotes: [
             {
               fee: 10000n,
@@ -253,7 +253,7 @@ describe('tx fee resolver', () => {
       {
         const assetId = AssetId.DAI;
         expect(txFeeResolver.getFeeQuotes(assetId)).toEqual({
-          feeConstants: [25000n * 5n, 1000n * 5n, 50000n * 5n, 75000n * 5n], // * feeGasPrice / assetPrice
+          feeConstants: [25000n * 5n, 1000n * 5n, 50000n * 5n, 75000n * 5n, 0n, 0n, 0n], // * feeGasPrice / assetPrice
           baseFeeQuotes: [
             {
               fee: 1000n * 5n,
@@ -306,7 +306,7 @@ describe('tx fee resolver', () => {
       {
         const assetId = AssetId.ETH;
         expect(txFeeResolver.getFeeQuotes(assetId)).toEqual({
-          feeConstants: [50000n, 0n, 80000n, 300000n].map(withMultiplier),
+          feeConstants: [50000n, 0n, 80000n, 300000n, 0n, 0n, 0n].map(withMultiplier),
           baseFeeQuotes: [
             expect.objectContaining({ fee: withMultiplier(10000n) }),
             expect.objectContaining({ fee: withMultiplier(10000n * 2n) }),
@@ -322,7 +322,7 @@ describe('tx fee resolver', () => {
       {
         const assetId = AssetId.DAI;
         expect(txFeeResolver.getFeeQuotes(assetId)).toEqual({
-          feeConstants: [25000n * 5n, 1000n * 5n, 50000n * 5n, 75000n * 5n].map(withMultiplier),
+          feeConstants: [25000n * 5n, 1000n * 5n, 50000n * 5n, 75000n * 5n, 0n, 0n, 0n].map(withMultiplier),
           baseFeeQuotes: [
             expect.objectContaining({ fee: withMultiplier(1000n * 5n) }),
             expect.objectContaining({ fee: withMultiplier(1000n * 5n * 2n) }),
@@ -356,7 +356,7 @@ describe('tx fee resolver', () => {
       {
         const assetId = AssetId.ETH;
         expect(txFeeResolver.getFeeQuotes(assetId)).toEqual({
-          feeConstants: [50000n, 0n, 80000n, 300000n].map(cappedValue),
+          feeConstants: [50000n, 0n, 80000n, 300000n, 0n, 0n, 0n].map(cappedValue),
           baseFeeQuotes: [
             expect.objectContaining({ fee: cappedValue(10000n) }),
             expect.objectContaining({ fee: cappedValue(10000n * 2n) }),
@@ -371,7 +371,7 @@ describe('tx fee resolver', () => {
       {
         const assetId = AssetId.DAI;
         expect(txFeeResolver.getFeeQuotes(assetId)).toEqual({
-          feeConstants: [25000n * 5n, 1000n * 5n, 50000n * 5n, 75000n * 5n].map(cappedValue),
+          feeConstants: [25000n * 5n, 1000n * 5n, 50000n * 5n, 75000n * 5n, 0n, 0n, 0n].map(cappedValue),
           baseFeeQuotes: [
             expect.objectContaining({ fee: cappedValue(1000n * 5n) }),
             expect.objectContaining({ fee: cappedValue(1000n * 5n * 2n) }),
@@ -391,15 +391,15 @@ describe('tx fee resolver', () => {
             assets: [
               {
                 decimals: 18,
-                gasConstants: [5000, 0, 8000, 30000],
+                gasConstants: [5000, 0, 8000, 30000, 0, 0, 0],
               },
               {
                 decimals: 2,
-                gasConstants: [25000, 1000, 50000, 75000],
+                gasConstants: [25000, 1000, 50000, 75000, 0, 0, 0],
               },
               {
                 decimals: 24,
-                gasConstants: [25000, 1000, 50000, 75000],
+                gasConstants: [25000, 1000, 50000, 75000, 0, 0, 0],
               },
             ],
           } as any),
@@ -426,7 +426,7 @@ describe('tx fee resolver', () => {
       {
         const assetId = 1;
         expect(txFeeResolver.getFeeQuotes(assetId)).toEqual({
-          feeConstants: [25n, 1n, 50n, 75n],
+          feeConstants: [25n, 1n, 50n, 75n, 0n, 0n, 0n],
           baseFeeQuotes: [
             expect.objectContaining({ fee: 1n }),
             expect.objectContaining({ fee: 2n }),
@@ -443,7 +443,7 @@ describe('tx fee resolver', () => {
         const assetId = 2;
         const withDecimals = (value: bigint) => value * 10n ** 22n;
         expect(txFeeResolver.getFeeQuotes(assetId)).toEqual({
-          feeConstants: [25n, 1n, 50n, 75n].map(withDecimals),
+          feeConstants: [25n, 1n, 50n, 75n, 0n, 0n, 0n].map(withDecimals),
           baseFeeQuotes: [
             expect.objectContaining({ fee: withDecimals(1n) }),
             expect.objectContaining({ fee: withDecimals(2n) }),
@@ -476,7 +476,7 @@ describe('tx fee resolver', () => {
       {
         const assetId = AssetId.DAI;
         expect(txFeeResolver.getFeeQuotes(assetId)).toEqual({
-          feeConstants: [0n, 0n, 0n, 0n],
+          feeConstants: [0n, 0n, 0n, 0n, 0n, 0n, 0n],
           baseFeeQuotes: [
             expect.objectContaining({ fee: 0n }),
             expect.objectContaining({ fee: 0n }),

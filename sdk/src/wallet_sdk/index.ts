@@ -43,7 +43,7 @@ export async function createWalletSdk(
 
   const { assets, rollupContractAddress, chainId } = await getBlockchainStatus(serverUrl);
 
-  const core = await createSdk(serverUrl, sdkOptions, ethereumProvider);
+  const core = await createSdk(serverUrl, sdkOptions);
 
   // Set erase flag if requested or contract changed.
   if (sdkOptions.clearDb || !(await core.getRollupContractAddress())?.equals(rollupContractAddress)) {
@@ -309,22 +309,17 @@ export class WalletSdk extends EventEmitter {
   public async createDefiProof(
     bridgeId: BridgeId,
     userId: AccountId,
-    privateInput: bigint,
-    privateOutput: bigint,
     depositValue: bigint,
+    txFee: bigint,
     signer: Signer,
   ) {
     if (!depositValue) {
       throw new Error('Deposit value must be greater than 0.');
     }
 
-    if (depositValue + privateOutput > privateInput) {
-      throw new Error('Insufficient private input.');
-    }
+    await this.checkNoteBalance(bridgeId.inputAssetId, userId, depositValue + txFee);
 
-    await this.checkNoteBalance(bridgeId.inputAssetId, userId, privateInput);
-
-    return this.core.createDefiProof(bridgeId, userId, privateInput, privateOutput, depositValue, signer);
+    return this.core.createDefiProof(bridgeId, userId, depositValue, txFee, signer);
   }
 
   public async signProof(proofOutput: ProofOutput, inputOwner: EthAddress, provider?: EthereumProvider) {

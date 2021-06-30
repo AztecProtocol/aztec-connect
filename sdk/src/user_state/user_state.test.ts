@@ -70,8 +70,8 @@ describe('user state', () => {
       settleAccountTx: jest.fn(),
       addAccountTx: jest.fn(),
       getDefiTx: jest.fn(),
+      updateDefiTx: jest.fn(),
       settleDefiTx: jest.fn(),
-      claimDefiTx: jest.fn(),
       addDefiTx: jest.fn(),
       getNote: jest.fn(),
       addNote: jest.fn(),
@@ -336,7 +336,7 @@ describe('user state', () => {
     expect(db.nullifyNote).toHaveBeenCalledTimes(1);
     expect(db.nullifyNote).toHaveBeenCalledWith(inputNoteIndex);
     expect(db.settleJoinSplitTx).toHaveBeenCalledTimes(1);
-    expect(db.settleJoinSplitTx).toHaveBeenCalledWith(new TxHash(innerProofData.txId), blockCreated);
+    expect(db.settleJoinSplitTx).toHaveBeenCalledWith(new TxHash(innerProofData.txId), user.id, blockCreated);
     expect(db.addJoinSplitTx).toHaveBeenCalledTimes(0);
     expect(db.updateUser).toHaveBeenLastCalledWith({
       ...user,
@@ -382,8 +382,8 @@ describe('user state', () => {
     expect(db.nullifyNote).toHaveBeenCalledWith(2);
     expect(db.nullifyNote).toHaveBeenCalledWith(3);
     expect(db.settleJoinSplitTx).toHaveBeenCalledTimes(2);
-    expect(db.settleJoinSplitTx).toHaveBeenCalledWith(new TxHash(innerProofData1.txId), blockCreated);
-    expect(db.settleJoinSplitTx).toHaveBeenCalledWith(new TxHash(innerProofData2.txId), blockCreated);
+    expect(db.settleJoinSplitTx).toHaveBeenCalledWith(new TxHash(innerProofData1.txId), user.id, blockCreated);
+    expect(db.settleJoinSplitTx).toHaveBeenCalledWith(new TxHash(innerProofData2.txId), user.id, blockCreated);
     expect(db.addJoinSplitTx).toHaveBeenCalledTimes(0);
     expect(db.updateUser).toHaveBeenCalledTimes(1);
     expect(db.updateUser).toHaveBeenLastCalledWith({
@@ -706,7 +706,7 @@ describe('user state', () => {
     });
   });
 
-  it('settle a defi tx, add claim to db and nullify old notes', async () => {
+  it('update a defi tx, add claim to db and nullify old notes', async () => {
     const inputNoteIndex = 123;
     const outputNoteValue = 36n;
     const bridgeId = BridgeId.random();
@@ -752,15 +752,16 @@ describe('user state', () => {
     expect(db.addNote.mock.calls[0][0]).toMatchObject({ dataEntry: innerProofData.newNote2, value: outputNoteValue });
     expect(db.nullifyNote).toHaveBeenCalledTimes(1);
     expect(db.nullifyNote).toHaveBeenCalledWith(inputNoteIndex);
-    expect(db.settleDefiTx).toHaveBeenCalledTimes(1);
-    expect(db.settleDefiTx).toHaveBeenCalledWith(txHash, outputValueA, outputValueB, blockCreated);
+    expect(db.updateDefiTx).toHaveBeenCalledTimes(1);
+    expect(db.updateDefiTx).toHaveBeenCalledWith(txHash, outputValueA, outputValueB);
     expect(db.addDefiTx).toHaveBeenCalledTimes(0);
+    expect(db.settleDefiTx).toHaveBeenCalledTimes(0);
   });
 
   it('restore a defi tx and save to db, nullify input notes', async () => {
     const inputNoteIndexes = [123, 124];
     const inputNoteValues = [70n, 30n];
-    const outputNoteValue = 36n;
+    const outputNoteValue = 20n;
     const bridgeId = BridgeId.random();
     const depositValue = 64n;
     const totalInputValue = depositValue * 5n;
@@ -802,24 +803,24 @@ describe('user state', () => {
     expect(db.nullifyNote).toHaveBeenCalledTimes(2);
     expect(db.nullifyNote).toHaveBeenCalledWith(inputNoteIndexes[0]);
     expect(db.nullifyNote).toHaveBeenCalledWith(inputNoteIndexes[1]);
-    expect(db.settleDefiTx).toHaveBeenCalledTimes(0);
+    expect(db.updateDefiTx).toHaveBeenCalledTimes(0);
     expect(db.addDefiTx).toHaveBeenCalledTimes(1);
     expect(db.addDefiTx).toHaveBeenCalledWith(
       expect.objectContaining({
         txHash,
         userId: user.id,
         bridgeId,
-        privateInput: 100n,
-        privateOutput: outputNoteValue,
         depositValue,
+        txFee: inputNoteValues[0] + inputNoteValues[1] - outputNoteValue - depositValue,
         outputValueA,
         outputValueB,
-        settled: blockCreated,
+        settled: undefined,
       }),
     );
+    expect(db.settleDefiTx).toHaveBeenCalledTimes(0);
   });
 
-  it('mark a defi tx as claimed and add new notes', async () => {
+  it('settle a defi tx and add new notes', async () => {
     const bridgeId = BridgeId.random();
     const depositValue = 12n;
     const outputValueA = 34n;
@@ -850,11 +851,11 @@ describe('user state', () => {
       value: outputValueB,
       secret,
     });
-    expect(db.claimDefiTx).toHaveBeenCalledTimes(1);
-    expect(db.claimDefiTx).toHaveBeenCalledWith(txHash, blockCreated);
+    expect(db.settleDefiTx).toHaveBeenCalledTimes(1);
+    expect(db.settleDefiTx).toHaveBeenCalledWith(txHash, blockCreated);
   });
 
-  it('mark a defi tx as claimed and add refund note', async () => {
+  it('settle a defi tx and add refund note', async () => {
     const bridgeId = BridgeId.random();
     const depositValue = 12n;
     const outputValueA = 0n;
@@ -880,8 +881,8 @@ describe('user state', () => {
       value: depositValue,
       secret,
     });
-    expect(db.claimDefiTx).toHaveBeenCalledTimes(1);
-    expect(db.claimDefiTx).toHaveBeenCalledWith(txHash, blockCreated);
+    expect(db.settleDefiTx).toHaveBeenCalledTimes(1);
+    expect(db.settleDefiTx).toHaveBeenCalledWith(txHash, blockCreated);
   });
 
   it('ignore a defi claim proof for account with a different nonce', async () => {
@@ -908,7 +909,7 @@ describe('user state', () => {
     await userState.stopSync(true);
 
     expect(db.addNote).toHaveBeenCalledTimes(0);
-    expect(db.claimDefiTx).toHaveBeenCalledTimes(0);
+    expect(db.settleDefiTx).toHaveBeenCalledTimes(0);
   });
 
   it('should not add notes with incorrect commitments', async () => {
