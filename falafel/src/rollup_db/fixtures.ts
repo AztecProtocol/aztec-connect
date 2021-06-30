@@ -1,7 +1,7 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { ProofData } from '@aztec/barretenberg/client_proofs';
+import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { ViewingKey } from '@aztec/barretenberg/viewing_key';
@@ -29,7 +29,7 @@ export const randomTx = ({ signature, inputOwner, publicInput, txType = TxType.D
       numToUInt32BE(proofId, 32),
       publicInput ? toBufferBE(publicInput, 32) : randomBytes(32), // publicInput
       randomBytes(32), // publicOutput
-      Buffer.alloc(32), // assetId
+      proofId === ProofId.JOIN_SPLIT ? Buffer.alloc(32) : randomBytes(32), // assetId / accountAliasId / bridgeId
       randomBytes(64), // note1
       randomBytes(64), // note2
       randomBytes(32), // nullifier1

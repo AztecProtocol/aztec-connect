@@ -1,26 +1,15 @@
 import { AliasHash } from '@aztec/barretenberg/account_id';
-import { AccountProofData, ProofData } from '@aztec/barretenberg/client_proofs';
 import { Blake2s } from '@aztec/barretenberg/crypto';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { Arg, Args, Query, Resolver } from 'type-graphql';
 import { Inject } from 'typedi';
 import { Connection, Repository } from 'typeorm';
 import { AccountDao } from '../entity/account';
-import { TxDao } from '../entity/tx';
 import { CachedRollupDb } from '../rollup_db';
+import { txDaoToAccountDao } from '../rollup_db/tx_dao_to_account_dao';
 import { AccountTxsArgs, AccountTxType } from './account_tx_type';
 import { getQuery, pickOne } from './query_builder';
 import { HexString } from './scalar_type';
-
-const txDaoToAccountDao = (txDao: TxDao): AccountDao => {
-  const accountProof = new AccountProofData(new ProofData(txDao.proofData));
-  return {
-    accountPubKey: accountProof.publicKey,
-    aliasHash: accountProof.accountAliasId.aliasHash.toBuffer(),
-    nonce: accountProof.accountAliasId.nonce,
-    tx: txDao,
-  };
-};
 
 @Resolver(() => AccountTxType)
 export class AccountTxResolver {

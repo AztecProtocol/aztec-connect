@@ -240,15 +240,48 @@ describe('rollup_db', () => {
   });
 
   it('should add and get rollup with txs', async () => {
-    const tx0 = randomTx();
-    const tx1 = randomTx();
-    const rollupProof = randomRollupProof([tx0, tx1], 0);
+    const txs = [
+      TxType.DEPOSIT,
+      TxType.WITHDRAW_TO_WALLET,
+      TxType.ACCOUNT,
+      TxType.DEFI_DEPOSIT,
+      TxType.TRANSFER,
+      TxType.WITHDRAW_TO_CONTRACT,
+      TxType.ACCOUNT,
+      TxType.DEFI_CLAIM,
+    ].map(txType => randomTx({ txType }));
+    const rollupProof = randomRollupProof(txs, 0);
     const rollup = randomRollup(0, rollupProof);
 
     await rollupDb.addRollup(rollup);
 
     const newRollup = (await rollupDb.getRollup(0))!;
     expect(newRollup).toStrictEqual(rollup);
+
+    expect(await rollupDb.getTotalTxCount()).toBe(8);
+    expect(await rollupDb.getJoinSplitTxCount()).toBe(4);
+    expect(await rollupDb.getDefiTxCount()).toBe(1);
+    expect(await rollupDb.getAccountTxCount()).toBe(2);
+    expect(await rollupDb.getAccountCount()).toBe(2);
+  });
+
+  it('should add rollup with account txs that have already in db', async () => {
+    const txs = [randomTx({ txType: TxType.ACCOUNT }), randomTx({ txType: TxType.ACCOUNT })];
+    for (const tx of txs) {
+      await rollupDb.addTx(tx);
+    }
+
+    const rollupProof = randomRollupProof(txs, 0);
+    const rollup = randomRollup(0, rollupProof);
+
+    expect(await rollupDb.getAccountCount()).toBe(2);
+
+    await rollupDb.addRollup(rollup);
+
+    const newRollup = (await rollupDb.getRollup(0))!;
+    expect(newRollup).toStrictEqual(rollup);
+
+    expect(await rollupDb.getAccountCount()).toBe(2);
   });
 
   it('should update existing rollup', async () => {

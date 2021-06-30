@@ -5,6 +5,10 @@ import { TxDao } from './tx';
 @Index(['aliasHash', 'nonce'], { unique: true })
 @Index(['accountPubKey', 'nonce'], { unique: false })
 export class AccountDao {
+  public constructor(init?: AccountDao) {
+    Object.assign(this, init);
+  }
+
   @PrimaryColumn()
   public aliasHash!: Buffer;
 

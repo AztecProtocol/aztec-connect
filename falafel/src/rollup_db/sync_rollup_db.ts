@@ -44,6 +44,10 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.getJoinSplitTxCount());
   }
 
+  public async getDefiTxCount() {
+    return this.synchronise(() => this.rollupDb.getDefiTxCount());
+  }
+
   public async getAccountTxCount() {
     return this.synchronise(() => this.rollupDb.getAccountTxCount());
   }

@@ -62,6 +62,14 @@ export class Metrics {
     });
 
     new Gauge({
+      name: 'tx_defi_total',
+      help: 'Total defi transactions',
+      async collect() {
+        this.set(await rollupDb.getDefiTxCount());
+      },
+    });
+
+    new Gauge({
       name: 'tx_account_total',
       help: 'Total account transactions',
       async collect() {

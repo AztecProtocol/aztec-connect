@@ -1,14 +1,14 @@
+import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxType } from '@aztec/barretenberg/blockchain';
-import { AccountProofData, ProofData } from '@aztec/barretenberg/client_proofs';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
-import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
-import { Connection, In, IsNull, MoreThanOrEqual, Not, Repository } from 'typeorm';
+import { Connection, In, IsNull, LessThan, MoreThanOrEqual, Not, Repository } from 'typeorm';
 import { AccountDao } from '../entity/account';
 import { ClaimDao } from '../entity/claim';
 import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
+import { txDaoToAccountDao } from './tx_dao_to_account_dao';
 
 export type RollupDb = {
   [P in keyof TypeOrmRollupDb]: TypeOrmRollupDb[P];
@@ -32,13 +32,7 @@ export class TypeOrmRollupDb implements RollupDb {
   public async addTx(txDao: TxDao) {
     await this.connection.transaction(async transactionalEntityManager => {
       if (txDao.txType === TxType.ACCOUNT) {
-        const proofData = new AccountProofData(new ProofData(txDao.proofData));
-        const account = new AccountDao();
-        account.aliasHash = proofData.accountAliasId.aliasHash.toBuffer();
-        account.nonce = proofData.accountAliasId.nonce;
-        account.accountPubKey = proofData.publicKey;
-        account.tx = txDao;
-        await transactionalEntityManager.save(account);
+        await transactionalEntityManager.save(txDaoToAccountDao(txDao));
       }
       await transactionalEntityManager.save(txDao);
     });
@@ -78,7 +72,11 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async getJoinSplitTxCount() {
-    return this.txRep.count({ where: { txType: Not(TxType.ACCOUNT) } });
+    return this.txRep.count({ where: { txType: LessThan(TxType.ACCOUNT) } });
+  }
+
+  public async getDefiTxCount() {
+    return this.txRep.count({ where: { txType: TxType.DEFI_DEPOSIT } });
   }
 
   public async getAccountTxCount() {
@@ -230,6 +228,8 @@ export class TypeOrmRollupDb implements RollupDb {
       }
       await transactionalEntityManager.delete(this.rollupRep.target, { id: rollup.id });
       await transactionalEntityManager.save(rollup);
+      const accountDaos = rollup.rollupProof.txs.filter(tx => tx.txType === TxType.ACCOUNT).map(txDaoToAccountDao);
+      await transactionalEntityManager.save(accountDaos);
     });
   }
 
