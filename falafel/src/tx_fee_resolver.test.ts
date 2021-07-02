@@ -694,6 +694,43 @@ describe('tx fee resolver', () => {
       expect(float(txFeeResolver.computeSurplusRatio(txs))).toBe(0.4);
     });
 
+    it('should compute correct surplus ratio for mixed assets with decimals', () => {
+      jest.spyOn(blockchain, 'getBlockchainStatus').mockResolvedValue({
+        assets: [
+          {
+            decimals: 18,
+            gasConstants: [5000, 0, 8000, 30000],
+          },
+          {
+            decimals: 12,
+            gasConstants: [25000, 1000, 50000, 75000],
+          },
+        ],
+      } as any);
+      const minEthFee = txFeeResolver.getMinTxFee(AssetId.ETH, TxType.TRANSFER);
+      const baseEthFee = txFeeResolver.getFeeQuotes(AssetId.ETH).baseFeeQuotes[SettlementTime.SLOW].fee;
+      const minFee = txFeeResolver.getMinTxFee(AssetId.DAI, TxType.TRANSFER);
+      const baseFee = txFeeResolver.getFeeQuotes(AssetId.DAI).baseFeeQuotes[SettlementTime.SLOW].fee;
+      const txs = toTxDaos([
+        {
+          assetId: AssetId.DAI,
+          txType: TxType.TRANSFER,
+          fee: minFee + baseFee * 2n,
+        },
+        {
+          assetId: AssetId.ETH,
+          txType: TxType.TRANSFER,
+          fee: minEthFee + baseEthFee * 7n,
+        },
+        {
+          assetId: AssetId.DAI,
+          txType: TxType.TRANSFER,
+          fee: minFee - baseFee * 3n,
+        },
+      ]);
+      expect(float(txFeeResolver.computeSurplusRatio(txs))).toBe(0.4);
+    });
+
     it('should compute correct surplus ratio for free assets', async () => {
       const feeFreeAssets = [AssetId.DAI];
       const txFeeResolver = new TxFeeResolver(

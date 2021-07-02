@@ -132,7 +132,8 @@ export class TxFeeResolver {
     }
 
     const { assetPrices } = this.rollupPrices.find(p => p.rollupId === rollupId) || this.rollupPrices[0];
-    return price * assetPrices[assetId];
+    const { decimals } = this.assets[assetId];
+    return (price * assetPrices[assetId]) / 10n ** BigInt(decimals);
   }
 
   private applyGasPrice(rollupId: number, value: bigint) {
