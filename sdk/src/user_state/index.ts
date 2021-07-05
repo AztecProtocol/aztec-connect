@@ -218,12 +218,6 @@ export class UserState extends EventEmitter {
     note1?: TreeNote,
     note2?: TreeNote,
   ) {
-    const txHash = new TxHash(proof.txId);
-    const savedTx = await this.db.getJoinSplitTx(this.user.id, txHash);
-    if (savedTx?.settled) {
-      return;
-    }
-
     const { newNote1, newNote2, nullifier1, nullifier2 } = proof;
     const newNote = await this.processNewNote(noteStartIndex, newNote1, note1);
     const changeNote = await this.processNewNote(noteStartIndex + 1, newNote2, note2);
@@ -237,6 +231,8 @@ export class UserState extends EventEmitter {
 
     await this.refreshNotePicker();
 
+    const txHash = new TxHash(proof.txId);
+    const savedTx = await this.db.getJoinSplitTx(this.user.id, txHash);
     if (savedTx) {
       debug(`settling tx: ${savedTx.txHash.toString()}`);
       await this.db.settleJoinSplitTx(txHash, blockCreated);
