@@ -14,10 +14,15 @@ export async function setupRollupProcessor(
   mintAmount: bigint | number,
   numberOfTokenAssets = 1,
 ) {
+  const weth = await createWeth(rollupProvider);
+
   const MockVerifier = await ethers.getContractFactory('MockVerifier');
   const mockVerifier = await MockVerifier.deploy();
+
+  const DefiBridgeProxy = await ethers.getContractFactory('DefiBridgeProxy');
+  const defiBridgeProxy = await DefiBridgeProxy.deploy(weth.address);
+
   const ownerAddress = rollupProvider.getAddress();
-  const weth = await createWeth(rollupProvider);
 
   const RollupProcessor = await ethers.getContractFactory('RollupProcessor', rollupProvider);
   const escapeBlockLowerBound = 80;
@@ -26,6 +31,7 @@ export async function setupRollupProcessor(
     mockVerifier.address,
     escapeBlockLowerBound,
     escapeBlockUpperBound,
+    defiBridgeProxy.address,
     weth.address,
     ownerAddress,
   );

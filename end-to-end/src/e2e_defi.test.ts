@@ -80,7 +80,7 @@ describe('end-to-end defi tests', () => {
 
     // Defi deposit - swap ETH to DAI
     {
-      const defiBridge = EthAddress.fromString('0x09635F643e140090A9A8Dcd712eD6285858ceBef');
+      const defiBridge = EthAddress.fromString('0xc5a5C42992dECbae36851359345FE25997F5C42d');
       const inputAssetId = AssetId.ETH;
       const outputAssetIdA = AssetId.DAI;
       const outputAssetIdB = 0;
@@ -112,7 +112,7 @@ describe('end-to-end defi tests', () => {
 
     // Defi deposit - swap DAI to ETH
     {
-      const defiBridge = EthAddress.fromString('0x67d269191c92Caf3cD7723F116c85e6E9bf55933');
+      const defiBridge = EthAddress.fromString('0xE6E340D132b5f46d1e472DebcD681B2aBc16e57E');
       const inputAssetId = AssetId.DAI;
       const bridgeId = new BridgeId(defiBridge, 1, inputAssetId, AssetId.ETH, 0);
       const txFee = await sdk.getFee(inputAssetId, TxType.DEFI_DEPOSIT);

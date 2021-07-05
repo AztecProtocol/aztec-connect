@@ -4,6 +4,7 @@ import { ContractFactory, Signer } from 'ethers';
 import RollupProcessor from '../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
 import { addAsset } from './add_asset/add_asset';
 import { deployDefiBridge } from './deploy_defi_bridge';
+import { deployDefiBridgeProxy } from './deploy_defi_bridge_proxy';
 import { deployFeeDistributor } from './deploy_fee_distributor';
 import { deployPriceFeed } from './deploy_price_feed';
 import { createPair, deployUniswap } from './deploy_uniswap';
@@ -18,12 +19,15 @@ export async function deploy(escapeHatchBlockLower: number, escapeHatchBlockUppe
   console.error('Deploying RollupProcessor...');
   const rollupFactory = new ContractFactory(RollupProcessor.abi, RollupProcessor.bytecode, signer);
 
+  const defiProxy = await deployDefiBridgeProxy(signer, weth);
+
   // note we need to change this address for production to the multisig
   const ownerAddress = await signer.getAddress();
   const rollup = await rollupFactory.deploy(
     verifier.address,
     escapeHatchBlockLower,
     escapeHatchBlockUpper,
+    defiProxy.address,
     weth,
     ownerAddress,
   );

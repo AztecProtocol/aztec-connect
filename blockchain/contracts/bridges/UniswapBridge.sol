@@ -13,9 +13,7 @@ contract UniswapBridge is IDefiBridge {
 
     bytes4 private constant FACTORY_SELECTOR = bytes4(keccak256('factory()'));
     bytes4 private constant SWAP_SELECTOR = bytes4(keccak256('swap(uint256,uint256,address,bytes)'));
-    bytes4 private constant APPROVE_SELECTOR = bytes4(keccak256('approve(address,uint256)'));
     bytes4 private constant TRANSFER_SELECTOR = bytes4(keccak256('transfer(address,uint256)'));
-    bytes4 private constant TRANSFER_FROM_SELECTOR = bytes4(keccak256('transferFrom(address,address,uint256)'));
     bytes4 private constant GET_RESERVES_SELECTOR = bytes4(keccak256('getReserves()'));
 
     address public immutable rollupProcessor;
@@ -59,11 +57,6 @@ contract UniswapBridge is IDefiBridge {
 
         bool success;
 
-        (success, ) = inputAsset.call(
-            abi.encodeWithSelector(TRANSFER_FROM_SELECTOR, msg.sender, address(this), inputValue)
-        );
-        require(success, 'UniswapBridge: INSUFFICIENT_FUND');
-
         (success, ) = inputAsset.call(abi.encodeWithSelector(TRANSFER_SELECTOR, pair, inputValue));
         require(success, 'UniswapBridge: TRANSFER_FAILED');
 
@@ -72,12 +65,9 @@ contract UniswapBridge is IDefiBridge {
             inputAsset < outputAsset ? (uint256(0), outputValueA) : (outputValueA, uint256(0));
 
         (success, ) = pair.call(
-            abi.encodeWithSelector(SWAP_SELECTOR, amountOut0, amountOut1, address(this), new bytes(0))
+            abi.encodeWithSelector(SWAP_SELECTOR, amountOut0, amountOut1, rollupProcessor, new bytes(0))
         );
         require(success, 'UniswapBridge: SWAP_FAILED');
-
-        (success, ) = outputAsset.call(abi.encodeWithSelector(APPROVE_SELECTOR, msg.sender, outputValueA));
-        require(success, 'UniswapBridge: APPROVE_FAILED');
     }
 
     function getAmountOut(uint256 inputValue) internal view returns (uint256 outputValue) {

@@ -6,6 +6,9 @@ export const createFeeClaimer = async (publisher: Signer, weth: Contract, assets
   const MockVerifier = await ethers.getContractFactory('MockVerifier');
   const mockVerifier = await MockVerifier.deploy();
 
+  const DefiBridgeProxy = await ethers.getContractFactory('DefiBridgeProxy');
+  const defiBridgeProxy = await DefiBridgeProxy.deploy(weth.address);
+
   const FeeClaimer = await ethers.getContractFactory('FeeClaimer', publisher);
   const escapeBlockLowerBound = 80;
   const escapeBlockUpperBound = 100;
@@ -13,6 +16,7 @@ export const createFeeClaimer = async (publisher: Signer, weth: Contract, assets
     mockVerifier.address,
     escapeBlockLowerBound,
     escapeBlockUpperBound,
+    defiBridgeProxy.address,
     weth.address,
     await publisher.getAddress(),
   );

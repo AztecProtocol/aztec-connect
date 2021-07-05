@@ -53,14 +53,14 @@ contract MockDefiBridge is IDefiBridge {
     function convert(uint256 inputValue) external override returns (uint256, uint256) {
         require(inputValue >= minInputValue);
 
-        IERC20(inputAsset).transferFrom(msg.sender, address(this), inputValue);
-
         if (outputValueA > 0 && outputAssetA != address(0)) {
-            IERC20(outputAssetA).approve(msg.sender, outputValueA);
+            uint256 balance = IERC20(outputAssetA).balanceOf(address(this));
+            IERC20(outputAssetA).transfer(msg.sender, balance >= outputValueA ? outputValueA : balance);
         }
 
         if (outputValueB > 0 && outputAssetB != address(0)) {
-            IERC20(outputAssetB).approve(msg.sender, outputValueB);
+            uint256 balance = IERC20(outputAssetB).balanceOf(address(this));
+            IERC20(outputAssetB).transfer(msg.sender, balance >= outputValueB ? outputValueB : balance);
         }
 
         return (outputValueA, outputValueB);

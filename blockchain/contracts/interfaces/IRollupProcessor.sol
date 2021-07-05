@@ -3,6 +3,8 @@
 pragma solidity >=0.6.10 <0.8.0;
 
 interface IRollupProcessor {
+    function defiBridgeProxy() external view returns (address);
+
     function feeDistributor() external view returns (address);
 
     function escapeHatch(
@@ -42,6 +44,8 @@ interface IRollupProcessor {
     function setRollupProvider(address provderAddress, bool valid) external;
 
     function approveProof(bytes32 _proofHash) external;
+
+    function setDefiBridgeProxy(address feeDistributorAddress) external;
 
     function setFeeDistributor(address feeDistributorAddress) external;
 

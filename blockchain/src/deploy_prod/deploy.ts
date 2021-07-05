@@ -3,6 +3,7 @@ import { TransactionResponse } from '@ethersproject/abstract-provider';
 import RollupProcessor from '../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
 import { deployFeeDistributor } from './fee_distributor/deploy_fee_distributor';
 import { deployVerifier } from './deploy_verifier';
+import { deployDefiBridgeProxy } from '../deploy/deploy_defi_bridge_proxy';
 
 export async function deploy(
   escapeHatchBlockLower: number,
@@ -13,14 +14,17 @@ export async function deploy(
   signer: Signer,
 ) {
   const verifier = await deployVerifier(signer);
+
+  const defiBridgeProxy = await deployDefiBridgeProxy(signer, wethAddress);
+
   console.error('Deploying RollupProcessor...');
   const rollupFactory = new ContractFactory(RollupProcessor.abi, RollupProcessor.bytecode, signer);
-
   const ownerAddress = await signer.getAddress();
   const rollup = await rollupFactory.deploy(
     verifier.address,
     escapeHatchBlockLower,
     escapeHatchBlockUpper,
+    defiBridgeProxy.address,
     wethAddress,
     ownerAddress,
   );

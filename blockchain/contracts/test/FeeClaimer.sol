@@ -15,9 +15,20 @@ contract FeeClaimer is RollupProcessor {
         address _verifierAddress,
         uint256 _escapeBlockLowerBound,
         uint256 _escapeBlockUpperBound,
+        address _defiBridgeProxy,
         address _weth,
         address _contractOwner
-    ) public RollupProcessor(_verifierAddress, _escapeBlockLowerBound, _escapeBlockUpperBound, _weth, _contractOwner) {}
+    )
+        public
+        RollupProcessor(
+            _verifierAddress,
+            _escapeBlockLowerBound,
+            _escapeBlockUpperBound,
+            _defiBridgeProxy,
+            _weth,
+            _contractOwner
+        )
+    {}
 
     function claimFee(
         uint256 amount,
