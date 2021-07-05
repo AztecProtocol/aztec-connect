@@ -9,4 +9,4 @@ Please include a summary of the change including relevant motivation and context
 - [ ] There are no unexpected formatting changes.
 - [ ] There are no superfluous debug logs.
 - [ ] The branch has been rebased against the head of its merge target.
-- [ ] I'm happy for PR to be merged at reviewers next convenience.
+- [ ] I'm happy for the PR to be merged at the reviewers next convenience.
