@@ -33,6 +33,18 @@ jobs:
           working_directory: barretenberg
           command: build barretenberg-x86_64-linux-clang ./dockerfiles/Dockerfile.x86_64-linux-clang
 
+  x86_64-linux-clang-assert:
+    machine:
+      image: ubuntu-1604:201903-01
+    resource_class: large
+    steps:
+      - checkout
+      - *setup_env
+      - run:
+          name: 'Build and test'
+          working_directory: barretenberg
+          command: build barretenberg-x86_64-linux-clang-assert ./dockerfiles/Dockerfile.x86_64-linux-clang-assert
+
   wasm-linux-clang:
     machine:
       image: ubuntu-1604:201903-01
@@ -394,12 +406,15 @@ workflows:
           filters: *tag_filter
       - x86_64-linux-clang:
           filters: *tag_filter
+      - x86_64-linux-clang-assert:
+          filters: *tag_filter
       - wasm-linux-clang:
           filters: *tag_filter
       - barretenberg-js:
           requires:
             - wasm-linux-clang
             - x86_64-linux-clang
+            - x86_64-linux-clang-assert
           filters: *tag_filter
       - blockchain:
           requires:
