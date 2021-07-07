@@ -135,6 +135,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       chainId,
       rollupContractAddress: this.contracts.getRollupContractAddress(),
       feeDistributorContractAddress: this.contracts.getFeeDistributorContractAddress(),
+      verifierContractAddress: this.contracts.getVerifierContractAddress(),
       assets,
     };
   }

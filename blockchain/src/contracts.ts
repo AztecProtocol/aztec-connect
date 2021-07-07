@@ -15,6 +15,7 @@ export class Contracts {
   private rollupProcessor: RollupProcessor;
   private feeDistributorContract!: Contract;
   private feeDistributorContractAddress!: EthAddress;
+  private verifierContractAddress!: EthAddress;
   private assets!: Asset[];
   private gasPriceFeed!: GasPriceFeed;
   private priceFeeds!: PriceFeed[];
@@ -34,6 +35,7 @@ export class Contracts {
 
   public async init() {
     this.feeDistributorContractAddress = await this.rollupProcessor.feeDistributor();
+    this.verifierContractAddress = await this.rollupProcessor.verifier();
     this.feeDistributorContract = new ethers.Contract(
       this.feeDistributorContractAddress.toString(),
       FeeDistributorABI,
@@ -119,6 +121,10 @@ export class Contracts {
 
   public getFeeDistributorContractAddress() {
     return this.feeDistributorContractAddress;
+  }
+
+  public getVerifierContractAddress() {
+    return this.verifierContractAddress;
   }
 
   public async createEscapeHatchProofTx(

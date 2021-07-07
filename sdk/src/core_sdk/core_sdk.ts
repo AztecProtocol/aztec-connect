@@ -38,7 +38,6 @@ import { ProofData } from 'barretenberg/client_proofs/proof_data';
 import { TxType } from 'barretenberg/blockchain';
 import { TxHash } from 'barretenberg/tx_hash';
 import { AccountProofOutput, JoinSplitProofOutput, ProofOutput } from '../proofs/proof_output';
-import { BarretenbergWorker } from 'barretenberg/wasm/worker';
 
 const debug = createDebug('bb:core_sdk');
 
@@ -128,9 +127,17 @@ export class CoreSdk extends EventEmitter {
     await this.worldState.init();
 
     const {
-      blockchainStatus: { chainId, rollupContractAddress, assets },
+      blockchainStatus: { chainId, rollupContractAddress, verifierContractAddress, assets },
     } = await this.getRemoteStatus();
+
+    const currentVerifierContractAddress = await this.getVerifierContractAddress();
+    const verifierContractChanged = currentVerifierContractAddress
+      ? !currentVerifierContractAddress.equals(verifierContractAddress)
+      : true;
+
+    // TODO: Refactor all leveldb saved config into a little PersistentConfig class with getters/setters.
     await this.leveldb.put('rollupContractAddress', rollupContractAddress.toBuffer());
+    await this.leveldb.put('verifierContractAddress', verifierContractAddress.toBuffer());
 
     this.sdkStatus = {
       ...this.sdkStatus,
@@ -165,8 +172,8 @@ export class CoreSdk extends EventEmitter {
         await pooledProverFactory.createUnrolledProver(AccountProver.circuitSize),
       );
       this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState, this.pedersen);
-      await this.createJoinSplitProvingKey(joinSplitProver);
-      await this.createAccountProvingKey(accountProver);
+      await this.createJoinSplitProvingKey(joinSplitProver, verifierContractChanged);
+      await this.createAccountProvingKey(accountProver, verifierContractChanged);
     } else {
       const escapeHatchProver = new EscapeHatchProver(
         await pooledProverFactory.createProver(EscapeHatchProver.circuitSize),
@@ -188,6 +195,11 @@ export class CoreSdk extends EventEmitter {
 
   public async getRollupContractAddress() {
     const result: Buffer | undefined = await this.leveldb.get('rollupContractAddress').catch(() => undefined);
+    return result ? new EthAddress(result) : undefined;
+  }
+
+  private async getVerifierContractAddress() {
+    const result: Buffer | undefined = await this.leveldb.get('verifierContractAddress').catch(() => undefined);
     return result ? new EthAddress(result) : undefined;
   }
 
@@ -259,40 +271,45 @@ export class CoreSdk extends EventEmitter {
     }
   }
 
-  private async createJoinSplitProvingKey(joinSplitProver: JoinSplitProver) {
-    const start = new Date().getTime();
-    const provingKey = await this.db.getKey('join-split-proving-key');
-    if (provingKey) {
-      this.logInitMsgAndDebug('Loading join-split proving key...');
-      await joinSplitProver.loadKey(provingKey);
-    } else {
-      this.logInitMsgAndDebug('Computing join-split proving key...');
-      await joinSplitProver.computeKey();
-      if (this.options.saveProvingKey) {
-        this.logInitMsgAndDebug('Saving join-split proving key...');
-        const newProvingKey = await joinSplitProver.getKey();
-        await this.db.addKey('join-split-proving-key', newProvingKey);
+  private async createJoinSplitProvingKey(joinSplitProver: JoinSplitProver, forceCreate: boolean) {
+    if (!forceCreate) {
+      const provingKey = await this.db.getKey('join-split-proving-key');
+      if (provingKey) {
+        this.logInitMsgAndDebug('Loading join-split proving key...');
+        await joinSplitProver.loadKey(provingKey);
+        return;
       }
-      debug(`complete: ${new Date().getTime() - start}ms`);
     }
+
+    this.logInitMsgAndDebug('Computing join-split proving key...');
+    const start = new Date().getTime();
+    await joinSplitProver.computeKey();
+    if (this.options.saveProvingKey) {
+      this.logInitMsgAndDebug('Saving join-split proving key...');
+      const newProvingKey = await joinSplitProver.getKey();
+      await this.db.addKey('join-split-proving-key', newProvingKey);
+    }
+    debug(`complete: ${new Date().getTime() - start}ms`);
   }
 
-  private async createAccountProvingKey(accountProver: AccountProver) {
-    const start = new Date().getTime();
-    const provingKey = await this.db.getKey('account-proving-key');
-    if (provingKey) {
-      this.logInitMsgAndDebug('Loading account proving key...');
-      await accountProver.loadKey(provingKey);
-    } else {
-      this.logInitMsgAndDebug('Computing account proving key...');
-      await accountProver.computeKey();
-      if (this.options.saveProvingKey) {
-        this.logInitMsgAndDebug('Saving account proving key...');
-        const newProvingKey = await accountProver.getKey();
-        await this.db.addKey('account-proving-key', newProvingKey);
+  private async createAccountProvingKey(accountProver: AccountProver, forceCreate: boolean) {
+    if (!forceCreate) {
+      const provingKey = await this.db.getKey('account-proving-key');
+      if (provingKey) {
+        this.logInitMsgAndDebug('Loading account proving key...');
+        await accountProver.loadKey(provingKey);
       }
-      debug(`complete: ${new Date().getTime() - start}ms`);
     }
+
+    this.logInitMsgAndDebug('Computing account proving key...');
+    const start = new Date().getTime();
+    await accountProver.computeKey();
+    if (this.options.saveProvingKey) {
+      this.logInitMsgAndDebug('Saving account proving key...');
+      const newProvingKey = await accountProver.getKey();
+      await this.db.addKey('account-proving-key', newProvingKey);
+    }
+    debug(`complete: ${new Date().getTime() - start}ms`);
   }
 
   private async createEscapeHatchProvingKey(escapeProver: EscapeHatchProver) {
