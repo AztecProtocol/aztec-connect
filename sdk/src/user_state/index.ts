@@ -55,6 +55,7 @@ export class UserState extends EventEmitter {
    */
   public async init() {
     this.user = (await this.db.getUser(this.user.id))!;
+    await this.resetData();
     await this.refreshNotePicker();
   }
 
@@ -167,6 +168,16 @@ export class UserState extends EventEmitter {
     });
 
     this.emit(UserStateEvent.UPDATED_USER_STATE, this.user.id);
+  }
+
+  private async resetData() {
+    const pendingUserTxIds = await this.db.getUnsettledUserTxs(this.user.id);
+    const pendingTxIds = await this.rollupProvider.getPendingTxs();
+    for (const userTxId of pendingUserTxIds) {
+      if (!pendingTxIds.some(txId => txId.equals(userTxId))) {
+        await this.db.removeUserTx(userTxId, this.user.id);
+      }
+    }
   }
 
   private async handleAccountTx(proof: InnerProofData, noteStartIndex: number, blockCreated: Date) {

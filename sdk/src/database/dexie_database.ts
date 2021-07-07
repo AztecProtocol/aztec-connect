@@ -364,6 +364,26 @@ export class DexieDatabase implements Database {
     await this.accountTx.where({ txHash: new Uint8Array(txHash.toBuffer()) }).modify({ settled });
   }
 
+  async getUnsettledUserTxs(userId: AccountId) {
+    const unsettledTxs = await Promise.all([
+      this.accountTx.where({ settled: 0 }).toArray(),
+      this.joinSplitTx.where({ settled: 0 }).toArray(),
+    ]);
+    return unsettledTxs
+      .flat()
+      .filter(tx => AccountId.fromBuffer(Buffer.from(tx.userId)).equals(userId))
+      .map(({ txHash }) => new TxHash(Buffer.from(txHash)));
+  }
+
+  async removeUserTx(txHash: TxHash, userId: AccountId) {
+    await Promise.all([
+      this.accountTx.where({ txHash: new Uint8Array(txHash.toBuffer()) }).delete(),
+      this.joinSplitTx
+        .where({ txHash: new Uint8Array(txHash.toBuffer()), userId: new Uint8Array(userId.toBuffer()) })
+        .delete(),
+    ]);
+  }
+
   async removeUser(userId: AccountId) {
     const user = await this.getUser(userId);
     if (!user) return;

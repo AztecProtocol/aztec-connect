@@ -48,6 +48,10 @@ export class EscapeHatchRollupProvider implements RollupProvider {
     return this.blockchain.getLatestRollupId();
   }
 
+  async getPendingTxs() {
+    return [];
+  }
+
   async getPendingNoteNullifiers() {
     return [];
   }

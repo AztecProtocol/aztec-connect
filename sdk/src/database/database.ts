@@ -46,6 +46,9 @@ export interface Database {
   getAccountTxs(userId): Promise<UserAccountTx[]>;
   settleAccountTx(txHash: TxHash, settled: Date): Promise<void>;
 
+  getUnsettledUserTxs(userId: AccountId): Promise<TxHash[]>;
+  removeUserTx(txHash: TxHash, userId: AccountId): Promise<void>;
+
   addUserSigningKey(signingKey: SigningKey): Promise<void>;
   getUserSigningKeys(accountId: AccountId): Promise<SigningKey[]>;
   getUserSigningKeyIndex(accountId: AccountId, signingKey: GrumpkinAddress): Promise<number | undefined>;

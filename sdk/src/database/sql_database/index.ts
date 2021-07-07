@@ -1,7 +1,7 @@
 import { GrumpkinAddress } from 'barretenberg/address';
 import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { TxHash } from 'barretenberg/tx_hash';
-import { Connection, ConnectionOptions, MoreThan, MoreThanOrEqual, Repository } from 'typeorm';
+import { Connection, ConnectionOptions, IsNull, MoreThan, MoreThanOrEqual, Repository } from 'typeorm';
 import { Note } from '../../note';
 import { UserData, AccountId } from '../../user';
 import { UserAccountTx, UserJoinSplitTx } from '../../user_tx';
@@ -148,6 +148,18 @@ export class SQLDatabase implements Database {
 
   async settleAccountTx(txHash: TxHash, settled: Date) {
     await this.accountTxRep.update({ txHash }, { settled });
+  }
+
+  async getUnsettledUserTxs(userId: AccountId) {
+    const unsettledTxs = await Promise.all([
+      this.accountTxRep.find({ where: { userId, settled: IsNull() } }),
+      this.joinSplitTxRep.find({ where: { userId, settled: IsNull() } }),
+    ]);
+    return unsettledTxs.flat().map(({ txHash }) => txHash);
+  }
+
+  async removeUserTx(txHash: TxHash, userId: AccountId) {
+    await Promise.all([this.accountTxRep.delete({ txHash }), this.joinSplitTxRep.delete({ txHash, userId })]);
   }
 
   async addUserSigningKey(signingKey: SigningKey) {

@@ -132,6 +132,12 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     ctx.status = 200;
   });
 
+  router.get('/get-pending-txs', recordMetric, async (ctx: Koa.Context) => {
+    const txIds = await server.getUnsettledTxs();
+    ctx.body = txIds.map(txId => txId.toString('hex'));
+    ctx.status = 200;
+  });
+
   router.get('/get-pending-note-nullifiers', recordMetric, async (ctx: Koa.Context) => {
     const nullifiers = await server.getUnsettledNullifiers();
     ctx.body = nullifiers.map(n => n.toString('hex'));

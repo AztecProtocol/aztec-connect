@@ -30,6 +30,10 @@ export class RollupProcessor {
     return EthAddress.fromString(await this.rollupProcessor.feeDistributor());
   }
 
+  async verifier() {
+    return EthAddress.fromString(await this.rollupProcessor.verifier());
+  }
+
   async nextRollupId() {
     return +(await this.rollupProcessor.nextRollupId());
   }
