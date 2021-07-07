@@ -36,5 +36,6 @@ export interface RollupProviderStatus {
 export interface RollupProvider extends BlockSource {
   sendProof(proof: Proof): Promise<TxHash>;
   getStatus(): Promise<RollupProviderStatus>;
+  getPendingTxs: () => Promise<TxHash[]>;
   getPendingNoteNullifiers: () => Promise<Buffer[]>;
 }

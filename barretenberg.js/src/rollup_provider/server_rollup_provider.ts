@@ -59,6 +59,18 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
     }
   }
 
+  async getPendingTxs() {
+    const url = new URL(`${this.baseUrl}/get-pending-txs`);
+
+    const response = await fetch(url.toString());
+    if (response.status !== 200) {
+      throw new Error(`Bad response code ${response.status}.`);
+    }
+
+    const txIds = (await response.json()) as string[];
+    return txIds.map(txId => TxHash.fromString(txId));
+  }
+
   async getPendingNoteNullifiers() {
     const url = new URL(`${this.baseUrl}/get-pending-note-nullifiers`);
 

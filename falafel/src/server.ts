@@ -146,6 +146,13 @@ export class Server {
     };
   }
 
+  public async getUnsettledTxs() {
+    const txs = (
+      await Promise.all([this.rollupDb.getUnsettledAccountTxs(), this.rollupDb.getUnsettledJoinSplitTxs()])
+    ).flat();
+    return txs.map(tx => tx.id);
+  }
+
   public async getUnsettledNullifiers() {
     return this.rollupDb.getUnsettledNullifiers();
   }

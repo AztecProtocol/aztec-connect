@@ -34,9 +34,9 @@ export const randomUser = (): UserData => {
   };
 };
 
-export const randomUserAccountTx = (): UserAccountTx => ({
-  txHash: TxHash.random(),
-  userId: AccountId.random(),
+export const randomUserAccountTx = ({ txHash = TxHash.random(), userId = AccountId.random() } = {}): UserAccountTx => ({
+  txHash,
+  userId,
   aliasHash: AliasHash.random(),
   newSigningPubKey1: randomBytes(32),
   newSigningPubKey2: randomBytes(32),
@@ -44,9 +44,12 @@ export const randomUserAccountTx = (): UserAccountTx => ({
   created: new Date(),
 });
 
-export const randomUserJoinSplitTx = (): UserJoinSplitTx => ({
-  txHash: TxHash.random(),
-  userId: AccountId.random(),
+export const randomUserJoinSplitTx = ({
+  txHash = TxHash.random(),
+  userId = AccountId.random(),
+} = {}): UserJoinSplitTx => ({
+  txHash,
+  userId,
   assetId: randomInt(),
   publicInput: BigInt(randomInt()),
   publicOutput: BigInt(randomInt()),

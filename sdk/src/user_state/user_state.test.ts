@@ -17,6 +17,7 @@ import { UserData, AccountId, AccountAliasId } from '../user';
 import { UserState } from './index';
 import { Block } from 'barretenberg/block_source';
 import { ViewingKey } from 'barretenberg/viewing_key';
+import { RollupProvider } from 'barretenberg/rollup_provider';
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;
@@ -28,6 +29,7 @@ describe('user state', () => {
   let pedersen: Pedersen;
   let noteAlgos: NoteAlgorithms;
   let db: Mockify<Database>;
+  let rollupProvider: Mockify<RollupProvider>;
   let userState: UserState;
   let user: UserData;
 
@@ -57,6 +59,8 @@ describe('user state', () => {
       getAccountTx: jest.fn(),
       settleAccountTx: jest.fn(),
       addAccountTx: jest.fn(),
+      getUnsettledUserTxs: jest.fn().mockResolvedValue([]),
+      removeUserTx: jest.fn(),
       getNote: jest.fn(),
       addNote: jest.fn(),
       nullifyNote: jest.fn(),
@@ -68,11 +72,12 @@ describe('user state', () => {
       getUserSigningKeys: jest.fn().mockResolvedValue([]),
     } as any;
 
-    const blockSource = {
+    rollupProvider = {
       getBlocks: jest.fn().mockResolvedValue([]),
-    };
+      getPendingTxs: jest.fn().mockResolvedValue([]),
+    } as any;
 
-    userState = new UserState(user, grumpkin, pedersen, noteAlgos, db as any, blockSource as any);
+    userState = new UserState(user, grumpkin, pedersen, noteAlgos, db as any, rollupProvider as any);
     await userState.init();
     await userState.startSync();
   });
@@ -592,5 +597,20 @@ describe('user state', () => {
     await userState.stopSync(true);
 
     expect(db.addNote).toHaveBeenCalledTimes(0);
+  });
+
+  it('remove orphaned txs', async () => {
+    const unsettledUserTxs = [TxHash.random(), TxHash.random(), TxHash.random()];
+    db.getUnsettledUserTxs.mockResolvedValue(unsettledUserTxs);
+
+    const pendingTxs = [TxHash.random(), TxHash.random(), unsettledUserTxs[1]];
+    rollupProvider.getPendingTxs.mockResolvedValue(pendingTxs);
+
+    userState = new UserState(user, grumpkin, pedersen, noteAlgos, db as any, rollupProvider as any);
+    await userState.init();
+
+    expect(db.removeUserTx).toHaveBeenCalledTimes(2);
+    expect(db.removeUserTx).toHaveBeenCalledWith(unsettledUserTxs[0], user.id);
+    expect(db.removeUserTx).toHaveBeenCalledWith(unsettledUserTxs[2], user.id);
   });
 });
