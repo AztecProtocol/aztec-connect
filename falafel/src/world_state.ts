@@ -175,7 +175,7 @@ export class WorldState {
           const index = dataStartIndex + i * 2;
           const interactionNonce = interactionResult.find(r => r.bridgeId.equals(bridgeId))!.nonce;
           const note = new TreeClaimNote(depositValue, bridgeId, interactionNonce, partialState);
-          const nullifier = this.noteAlgo.computeClaimNoteNullifier(this.noteAlgo.commitClaimNote(note), index);
+          const nullifier = this.noteAlgo.claimNoteNullifier(this.noteAlgo.claimNoteCommitment(note), index);
           await this.rollupDb.addClaim({
             id: index,
             nullifier,
@@ -271,8 +271,8 @@ export class WorldState {
     const { rollupId, dataStartIndex, innerProofData } = rollup;
     for (let i = 0; i < innerProofData.length; ++i) {
       const tx = innerProofData[i];
-      await this.worldStateDb.put(0, BigInt(dataStartIndex + i * 2), tx.newNote1);
-      await this.worldStateDb.put(0, BigInt(dataStartIndex + i * 2 + 1), tx.newNote2);
+      await this.worldStateDb.put(0, BigInt(dataStartIndex + i * 2), tx.noteCommitment1);
+      await this.worldStateDb.put(0, BigInt(dataStartIndex + i * 2 + 1), tx.noteCommitment2);
       if (!tx.isPadding()) {
         await this.worldStateDb.put(1, toBigIntBE(tx.nullifier1), toBufferBE(1n, 64));
         await this.worldStateDb.put(1, toBigIntBE(tx.nullifier2), toBufferBE(1n, 64));

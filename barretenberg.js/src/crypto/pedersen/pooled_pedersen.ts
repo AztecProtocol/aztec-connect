@@ -24,7 +24,7 @@ export class PooledPedersen extends Pedersen {
     await Promise.all(this.pool.map(p => p.init()));
   }
 
-  public async hashValuesToTree(values: Buffer[]) {
+  public async hashToTree(values: Buffer[]) {
     const isPowerOf2 = (v: number) => v && !(v & (v - 1));
     if (!isPowerOf2(values.length)) {
       throw new Error('PooledPedersen::hashValuesToTree can only handle powers of 2.');
@@ -34,7 +34,7 @@ export class PooledPedersen extends Pedersen {
     const numPerThread = values.length / workers.length;
 
     const results = await Promise.all(
-      workers.map((pedersen, i) => pedersen.hashValuesToTree(values.slice(i * numPerThread, (i + 1) * numPerThread))),
+      workers.map((pedersen, i) => pedersen.hashToTree(values.slice(i * numPerThread, (i + 1) * numPerThread))),
     );
 
     const sliced = results.map(hashes => {

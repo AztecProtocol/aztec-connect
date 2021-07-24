@@ -2,7 +2,6 @@ import { LevelUp, LevelUpChain } from 'levelup';
 import { serializeBufferArrayToVector, deserializeArrayFromVector } from '../serialize';
 
 const MAX_DEPTH = 32;
-const LEAF_BYTES = 64;
 
 function keepNLsb(input: number, numBits: number) {
   return numBits >= MAX_DEPTH ? input : input & ((1 << numBits) - 1);
@@ -11,7 +10,7 @@ function keepNLsb(input: number, numBits: number) {
 export interface Hasher {
   compress(lhs: Uint8Array, rhs: Uint8Array): Buffer;
   hashToField(data: Uint8Array): Buffer;
-  hashValuesToTree(values: Buffer[]): Promise<Buffer[]>;
+  hashToTree(leaves: Buffer[]): Promise<Buffer[]>;
 }
 
 export class HashPath {
@@ -38,7 +37,7 @@ export class HashPath {
 }
 
 export class MerkleTree {
-  private static ZERO_ELEMENT = Buffer.alloc(64, 0);
+  public static ZERO_ELEMENT = Buffer.from('30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000000', 'hex');
   private root!: Buffer;
   private zeroHashes: Buffer[] = [];
 
@@ -55,7 +54,7 @@ export class MerkleTree {
     }
 
     // Compute the zero values at each layer.
-    let current = this.hasher.hashToField(Buffer.alloc(LEAF_BYTES, 0));
+    let current = MerkleTree.ZERO_ELEMENT;
     for (let i = 0; i < depth; ++i) {
       this.zeroHashes[i] = current;
       current = hasher.compress(current, current);
@@ -150,9 +149,12 @@ export class MerkleTree {
   }
 
   public async updateElement(index: number, value: Buffer) {
+    return this.updateLeafHash(index, value.equals(Buffer.alloc(32, 0)) ? MerkleTree.ZERO_ELEMENT : value);
+  }
+
+  public async updateLeafHash(index: number, leafHash: Buffer) {
     const batch = this.db.batch();
-    const shaLeaf = this.hasher.hashToField(value);
-    this.root = await this.updateElementInternal(this.root, shaLeaf, index, this.depth, batch);
+    this.root = await this.updateElementInternal(this.root, leafHash, index, this.depth, batch);
 
     this.size = Math.max(this.size, index + 1);
 
@@ -198,6 +200,14 @@ export class MerkleTree {
     return newRoot;
   }
 
+  public async updateElements(index: number, values: Buffer[]) {
+    const zeroBuf = Buffer.alloc(32, 0);
+    return this.updateLeafHashes(
+      index,
+      values.map(v => (v.equals(zeroBuf) ? MerkleTree.ZERO_ELEMENT : v)),
+    );
+  }
+
   /**
    * Updates all the given values, starting at index. This is optimal when inserting multiple values, as it can
    * compute a single subtree and insert it in one go.
@@ -212,27 +222,27 @@ export class MerkleTree {
    * Only when synching creates a non power of 2 set of values will the chunking mechanism come into play.
    * e.g. If we need insert 192 values, first a subtree of 128 is inserted, then a subtree of 64.
    */
-  public async updateElements(index: number, values: Buffer[]) {
-    while (values.length) {
+  public async updateLeafHashes(index: number, leafHashes: Buffer[]) {
+    while (leafHashes.length) {
       const batch = this.db.batch();
-      let subtreeDepth = Math.ceil(Math.log2(values.length));
+      let subtreeDepth = Math.ceil(Math.log2(leafHashes.length));
       let subtreeSize = 2 ** subtreeDepth;
 
       // We need to reduce the size of the subtree being inserted until it is:
       // a) Less than or equal in size to the number of values being inserted.
       // b) Fits in a subtree, with a size that is a multiple of the insertion index.
-      while (values.length < subtreeSize || index % subtreeSize !== 0) {
+      while (leafHashes.length < subtreeSize || index % subtreeSize !== 0) {
         subtreeSize >>= 1;
         subtreeDepth--;
       }
 
-      const toInsert = values.slice(0, subtreeSize);
-      const hashes = await this.hasher.hashValuesToTree(toInsert);
+      const toInsert = leafHashes.slice(0, subtreeSize);
+      const hashes = await this.hasher.hashToTree(toInsert);
 
       this.root = await this.updateElementsInternal(this.root, hashes, index, this.depth, subtreeDepth, batch);
 
       // Slice off inserted values and adjust next insertion index.
-      values = values.slice(subtreeSize);
+      leafHashes = leafHashes.slice(subtreeSize);
       index += subtreeSize;
       this.size = index;
 

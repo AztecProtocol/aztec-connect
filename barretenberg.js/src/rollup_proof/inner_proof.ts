@@ -2,7 +2,7 @@ import { createTxId, ProofId } from '../client_proofs';
 import { numToUInt32BE } from '../serialize';
 
 export class InnerProofData {
-  static NUM_PUBLIC_INPUTS = 12;
+  static NUM_PUBLIC_INPUTS = 10;
   static LENGTH = InnerProofData.NUM_PUBLIC_INPUTS * 32;
 
   public txId: Buffer;
@@ -12,8 +12,8 @@ export class InnerProofData {
     public publicInput: Buffer,
     public publicOutput: Buffer,
     public assetId: Buffer,
-    public newNote1: Buffer,
-    public newNote2: Buffer,
+    public noteCommitment1: Buffer,
+    public noteCommitment2: Buffer,
     public nullifier1: Buffer,
     public nullifier2: Buffer,
     public inputOwner: Buffer,
@@ -32,8 +32,8 @@ export class InnerProofData {
       this.publicInput,
       this.publicOutput,
       this.assetId,
-      this.newNote1,
-      this.newNote2,
+      this.noteCommitment1,
+      this.noteCommitment2,
       this.nullifier1,
       this.nullifier2,
       this.inputOwner,
@@ -50,20 +50,20 @@ export class InnerProofData {
     const publicInput = innerPublicInputs.slice(1 * 32, 1 * 32 + 32);
     const publicOutput = innerPublicInputs.slice(2 * 32, 2 * 32 + 32);
     const assetId = innerPublicInputs.slice(3 * 32, 3 * 32 + 32);
-    const newNote1 = innerPublicInputs.slice(4 * 32, 4 * 32 + 64);
-    const newNote2 = innerPublicInputs.slice(6 * 32, 6 * 32 + 64);
-    const nullifier1 = innerPublicInputs.slice(8 * 32, 8 * 32 + 32);
-    const nullifier2 = innerPublicInputs.slice(9 * 32, 9 * 32 + 32);
-    const inputOwner = innerPublicInputs.slice(10 * 32, 10 * 32 + 32);
-    const outputOwner = innerPublicInputs.slice(11 * 32, 11 * 32 + 32);
+    const noteCommitment1 = innerPublicInputs.slice(4 * 32, 4 * 32 + 32);
+    const noteCommitment2 = innerPublicInputs.slice(5 * 32, 5 * 32 + 32);
+    const nullifier1 = innerPublicInputs.slice(6 * 32, 6 * 32 + 32);
+    const nullifier2 = innerPublicInputs.slice(7 * 32, 7 * 32 + 32);
+    const inputOwner = innerPublicInputs.slice(8 * 32, 8 * 32 + 32);
+    const outputOwner = innerPublicInputs.slice(9 * 32, 9 * 32 + 32);
 
     return new InnerProofData(
       proofId,
       publicInput,
       publicOutput,
       assetId,
-      newNote1,
-      newNote2,
+      noteCommitment1,
+      noteCommitment2,
       nullifier1,
       nullifier2,
       inputOwner,

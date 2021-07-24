@@ -4,8 +4,8 @@ import { numToUInt32BE } from '../serialize';
 import { BridgeId } from '../bridge_id';
 
 export class DefiInteractionNote {
-  static LENGTH = 133;
   static EMPTY = new DefiInteractionNote(BridgeId.ZERO, 0, BigInt(0), BigInt(0), BigInt(0), false);
+  static LENGTH = DefiInteractionNote.EMPTY.toBuffer().length;
 
   constructor(
     public readonly bridgeId: BridgeId,

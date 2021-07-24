@@ -23,7 +23,7 @@ export const recoverTreeNotes = (
     // Note version 1
     {
       const note = TreeNote.recover(decrypted, ownerPubKey);
-      const commitment = noteAlgorithms.commitNote(note);
+      const commitment = noteAlgorithms.valueNoteCommitment(note);
       if (commitment.equals(noteCommitment)) {
         return note;
       }
@@ -33,7 +33,7 @@ export const recoverTreeNotes = (
     {
       const noteSecret = deriveNoteSecret(decrypted.ephPubKey, privateKey, grumpkin, 0);
       const note = TreeNote.recover({ ...decrypted, noteSecret }, ownerPubKey);
-      const commitment = noteAlgorithms.commitNote(note);
+      const commitment = noteAlgorithms.valueNoteCommitment(note);
       if (commitment.equals(noteCommitment)) {
         return note;
       }

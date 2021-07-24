@@ -33,7 +33,7 @@ describe('tree_note', () => {
       const note = TreeNote.createFromEphPriv(receiver.pubKey, BigInt(100 + i), 0, 1, ephPrivKey, grumpkin);
       notes.push(note);
       encryptedNotes.push(note.getViewingKey(ephPrivKey, grumpkin));
-      noteCommitments.push(noteAlgos.commitNote(note));
+      noteCommitments.push(noteAlgos.valueNoteCommitment(note));
     }
 
     const keyBuf = Buffer.concat(encryptedNotes.map(vk => vk.toBuffer()));
@@ -58,7 +58,7 @@ describe('tree_note', () => {
       const note = TreeNote.createFromEphPriv(owner.pubKey, BigInt(200), 0, 1, ephPrivKey, grumpkin);
       notes.push(note);
       encryptedNotes.push(note.getViewingKey(ephPrivKey, grumpkin));
-      noteCommitments.push(noteAlgos.commitNote(note));
+      noteCommitments.push(noteAlgos.valueNoteCommitment(note));
     }
 
     const keyBuf = Buffer.concat(encryptedNotes.map(vk => vk.toBuffer()));
@@ -87,7 +87,7 @@ describe('tree_note', () => {
       const note = TreeNote.createFromEphPriv(receiver.pubKey, BigInt(200), 0, 1, ephPrivKey, grumpkin, noteVersion);
       notes.push(note);
       encryptedNotes.push(note.getViewingKey(ephPrivKey, grumpkin));
-      noteCommitments.push(noteAlgos.commitNote(note));
+      noteCommitments.push(noteAlgos.valueNoteCommitment(note));
     }
 
     const keyBuf = Buffer.concat(encryptedNotes.map(vk => vk.toBuffer()));
@@ -110,7 +110,7 @@ describe('tree_note', () => {
       const note = TreeNote.createFromEphPriv(receiver.pubKey, BigInt(100 + i), 0, 1, ephPrivKey, grumpkin);
       notes.push(note);
       encryptedNotes.push(note.getViewingKey(ephPrivKey, grumpkin));
-      noteCommitments.push(noteAlgos.commitNote(note));
+      noteCommitments.push(noteAlgos.valueNoteCommitment(note));
     }
 
     const keyBuf = Buffer.concat(encryptedNotes.map(vk => vk.toBuffer()));

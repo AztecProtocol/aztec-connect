@@ -110,7 +110,7 @@ describe('user state', () => {
   const createClaimNote = (bridgeId: BridgeId, value: bigint, user: AccountId) => {
     const ephPrivKey = createEphemeralPrivKey();
     const txData = ClaimNoteTxData.createFromEphPriv(value, bridgeId, user, ephPrivKey, grumpkin);
-    const partialState = noteAlgos.computePartialState(txData, user);
+    const partialState = noteAlgos.valueNotePartialCommitment(txData.noteSecret, user);
     return {
       note: new TreeClaimNote(value, bridgeId, 0, partialState),
       viewingKey: txData.getViewingKey(user.publicKey, ephPrivKey, grumpkin),
@@ -118,7 +118,7 @@ describe('user state', () => {
   };
 
   const createGibberishClaimNote = () => ({
-    note: new TreeClaimNote(0n, BridgeId.random(), 0, randomBytes(64)),
+    note: new TreeClaimNote(0n, BridgeId.random(), 0, randomBytes(32)),
     viewingKey: ViewingKey.random(),
   });
 
@@ -132,24 +132,22 @@ describe('user state', () => {
     outputNoteValue2 = 0n,
     inputOwner = EthAddress.ZERO,
     outputOwner = EthAddress.ZERO,
-    newNoteNonce = user.nonce,
+    noteCommitmentNonce = user.nonce,
     isPadding = false,
     createValidNoteCommitments = true,
   } = {}) => {
     const notes = [
       validNewNote
-        ? createNote(assetId, outputNoteValue1, new AccountId(user.publicKey, newNoteNonce), 0)
+        ? createNote(assetId, outputNoteValue1, new AccountId(user.publicKey, noteCommitmentNonce), 0)
         : createGibberishNote(),
       validChangeNote
-        ? createNote(assetId, outputNoteValue2, new AccountId(user.publicKey, newNoteNonce))
+        ? createNote(assetId, outputNoteValue2, new AccountId(user.publicKey, noteCommitmentNonce))
         : createGibberishNote(),
     ];
-    const note1Commitment = createValidNoteCommitments ? noteAlgos.commitNote(notes[0].note) : randomBytes(64);
-    const note2Commitment = createValidNoteCommitments ? noteAlgos.commitNote(notes[1].note) : randomBytes(64);
-    const nullifier1 = isPadding
-      ? Buffer.alloc(32)
-      : noteAlgos.computeNoteNullifier(randomBytes(64), 0, user.privateKey);
-    const nullifier2 = noteAlgos.computeNoteNullifier(randomBytes(64), 1, user.privateKey);
+    const note1Commitment = createValidNoteCommitments ? noteAlgos.valueNoteCommitment(notes[0].note) : randomBytes(32);
+    const note2Commitment = createValidNoteCommitments ? noteAlgos.valueNoteCommitment(notes[1].note) : randomBytes(32);
+    const nullifier1 = isPadding ? Buffer.alloc(32) : noteAlgos.valueNoteNullifier(randomBytes(32), 0, user.privateKey);
+    const nullifier2 = noteAlgos.valueNoteNullifier(randomBytes(32), 1, user.privateKey);
     const viewingKeys = notes.map(n => n.viewingKey);
     const proofData = new InnerProofData(
       ProofId.JOIN_SPLIT,
@@ -175,8 +173,8 @@ describe('user state', () => {
   } = {}) => {
     const { publicKey, nonce } = accountCreator;
     const aliasHash = AliasHash.fromAlias(alias, blake2s);
-    const note1 = Buffer.concat([publicKey.x(), newSigningPubKey1.x()]);
-    const note2 = Buffer.concat([publicKey.x(), newSigningPubKey2.x()]);
+    const note1 = randomBytes(32);
+    const note2 = randomBytes(32);
     const newAccountAliasId = new AccountAliasId(aliasHash!, nonce + +migrate);
     const nullifier1 = migrate ? computeAccountAliasIdNullifier(newAccountAliasId, pedersen) : randomBytes(32);
     const nullifier2 = randomBytes(32);
@@ -207,11 +205,14 @@ describe('user state', () => {
     const claimNote = validClaimNote
       ? createClaimNote(bridgeId, depositValue, claimNoteRecipient)
       : createGibberishClaimNote();
-    const newNote = validNewNote ? createNote(assetId, outputNoteValue, proofSender.id) : createGibberishNote();
-    const noteCommitments = [noteAlgos.commitClaimNote(claimNote.note), noteAlgos.commitNote(newNote.note)];
-    const nullifier1 = noteAlgos.computeNoteNullifier(randomBytes(64), 0, proofSender.privateKey);
-    const nullifier2 = noteAlgos.computeNoteNullifier(randomBytes(64), 1, proofSender.privateKey);
-    const viewingKeys = [claimNote.viewingKey, newNote.viewingKey];
+    const noteCommitment = validNewNote ? createNote(assetId, outputNoteValue, proofSender.id) : createGibberishNote();
+    const noteCommitments = [
+      noteAlgos.claimNotePartialCommitment(claimNote.note),
+      noteAlgos.valueNoteCommitment(noteCommitment.note),
+    ];
+    const nullifier1 = noteAlgos.valueNoteNullifier(randomBytes(32), 0, proofSender.privateKey);
+    const nullifier2 = noteAlgos.valueNoteNullifier(randomBytes(32), 1, proofSender.privateKey);
+    const viewingKeys = [claimNote.viewingKey, noteCommitment.viewingKey];
     const proofData = new InnerProofData(
       ProofId.DEFI_DEPOSIT,
       toBufferBE(0n, 32),
@@ -240,7 +241,10 @@ describe('user state', () => {
       validNewNote1 ? createNote(assetId, outputValueA, user.id, 0) : createGibberishNote(),
       validNewNote2 ? createNote(assetId, outputValueB, user.id) : createGibberishNote(),
     ];
-    const noteCommitments = [noteAlgos.commitNote(notes[0].note), noteAlgos.commitNote(notes[1].note)];
+    const noteCommitments = [
+      noteAlgos.valueNoteCommitment(notes[0].note),
+      noteAlgos.valueNoteCommitment(notes[1].note),
+    ];
     const proofData = new InnerProofData(
       ProofId.DEFI_CLAIM,
       toBufferBE(0n, 32),
@@ -275,7 +279,7 @@ describe('user state', () => {
       totalTxFees,
       innerProofData,
       randomBytes(32 * 16),
-      Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK).fill(Buffer.alloc(64)),
+      Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK).fill(Buffer.alloc(32)),
       randomBytes(32),
       viewingKeys,
     );
@@ -331,8 +335,14 @@ describe('user state', () => {
 
     const innerProofData = rollupProofData.innerProofData[0];
     expect(db.addNote).toHaveBeenCalledTimes(2);
-    expect(db.addNote.mock.calls[0][0]).toMatchObject({ dataEntry: innerProofData.newNote1, value: outputNoteValue1 });
-    expect(db.addNote.mock.calls[1][0]).toMatchObject({ dataEntry: innerProofData.newNote2, value: outputNoteValue2 });
+    expect(db.addNote.mock.calls[0][0]).toMatchObject({
+      dataEntry: innerProofData.noteCommitment1,
+      value: outputNoteValue1,
+    });
+    expect(db.addNote.mock.calls[1][0]).toMatchObject({
+      dataEntry: innerProofData.noteCommitment2,
+      value: outputNoteValue2,
+    });
     expect(db.nullifyNote).toHaveBeenCalledTimes(1);
     expect(db.nullifyNote).toHaveBeenCalledWith(inputNoteIndex);
     expect(db.settleJoinSplitTx).toHaveBeenCalledTimes(1);
@@ -372,10 +382,10 @@ describe('user state', () => {
     const innerProofData1 = rollupProofData1.innerProofData[0];
     const innerProofData2 = rollupProofData2.innerProofData[1];
     expect(db.addNote).toHaveBeenCalledTimes(4);
-    expect(db.addNote.mock.calls[0][0]).toMatchObject({ dataEntry: innerProofData1.newNote1, value: 1n });
-    expect(db.addNote.mock.calls[1][0]).toMatchObject({ dataEntry: innerProofData1.newNote2, value: 2n });
-    expect(db.addNote.mock.calls[2][0]).toMatchObject({ dataEntry: innerProofData2.newNote1, value: 3n });
-    expect(db.addNote.mock.calls[3][0]).toMatchObject({ dataEntry: innerProofData2.newNote2, value: 4n });
+    expect(db.addNote.mock.calls[0][0]).toMatchObject({ dataEntry: innerProofData1.noteCommitment1, value: 1n });
+    expect(db.addNote.mock.calls[1][0]).toMatchObject({ dataEntry: innerProofData1.noteCommitment2, value: 2n });
+    expect(db.addNote.mock.calls[2][0]).toMatchObject({ dataEntry: innerProofData2.noteCommitment1, value: 3n });
+    expect(db.addNote.mock.calls[3][0]).toMatchObject({ dataEntry: innerProofData2.noteCommitment2, value: 4n });
     expect(db.nullifyNote).toHaveBeenCalledTimes(4);
     expect(db.nullifyNote).toHaveBeenCalledWith(0);
     expect(db.nullifyNote).toHaveBeenCalledWith(1);
@@ -447,7 +457,7 @@ describe('user state', () => {
     const rollupProofData = generateJoinSplitRollup(0, {
       outputNoteValue1: 10n,
       outputNoteValue2: 20n,
-      newNoteNonce: user.nonce + 1,
+      noteCommitmentNonce: user.nonce + 1,
     });
     const block = createBlock(rollupProofData);
 
@@ -492,8 +502,14 @@ describe('user state', () => {
     const innerProofData = rollupProofData.innerProofData[0];
     const txHash = new TxHash(innerProofData.txId);
     expect(db.addNote).toHaveBeenCalledTimes(2);
-    expect(db.addNote.mock.calls[0][0]).toMatchObject({ dataEntry: innerProofData.newNote1, value: outputNoteValue1 });
-    expect(db.addNote.mock.calls[1][0]).toMatchObject({ dataEntry: innerProofData.newNote2, value: outputNoteValue2 });
+    expect(db.addNote.mock.calls[0][0]).toMatchObject({
+      dataEntry: innerProofData.noteCommitment1,
+      value: outputNoteValue1,
+    });
+    expect(db.addNote.mock.calls[1][0]).toMatchObject({
+      dataEntry: innerProofData.noteCommitment2,
+      value: outputNoteValue2,
+    });
     expect(db.nullifyNote).toHaveBeenCalledTimes(1);
     expect(db.nullifyNote).toHaveBeenCalledWith(123);
     expect(db.settleJoinSplitTx).toHaveBeenCalledTimes(0);
@@ -526,7 +542,10 @@ describe('user state', () => {
     const innerProofData = rollupProofData.innerProofData[0];
 
     expect(db.addNote).toHaveBeenCalledTimes(1);
-    expect(db.addNote.mock.calls[0][0]).toMatchObject({ dataEntry: innerProofData.newNote1, value: outputNoteValue1 });
+    expect(db.addNote.mock.calls[0][0]).toMatchObject({
+      dataEntry: innerProofData.noteCommitment1,
+      value: outputNoteValue1,
+    });
     expect(db.nullifyNote).toHaveBeenCalledTimes(0);
     expect(db.addJoinSplitTx).toHaveBeenCalledTimes(1);
     expect(db.addJoinSplitTx.mock.calls[0][0]).toMatchObject({
@@ -555,7 +574,10 @@ describe('user state', () => {
     const innerProofData = rollupProofData.innerProofData[0];
 
     expect(db.addNote).toHaveBeenCalledTimes(1);
-    expect(db.addNote.mock.calls[0][0]).toMatchObject({ dataEntry: innerProofData.newNote1, value: outputNoteValue1 });
+    expect(db.addNote.mock.calls[0][0]).toMatchObject({
+      dataEntry: innerProofData.noteCommitment1,
+      value: outputNoteValue1,
+    });
     expect(db.nullifyNote).toHaveBeenCalledTimes(0);
     expect(db.addJoinSplitTx).toHaveBeenCalledTimes(1);
     expect(db.addJoinSplitTx.mock.calls[0][0]).toMatchObject({
@@ -581,7 +603,10 @@ describe('user state', () => {
     const innerProofData = rollupProofData.innerProofData[0];
 
     expect(db.addNote).toHaveBeenCalledTimes(1);
-    expect(db.addNote.mock.calls[0][0]).toMatchObject({ dataEntry: innerProofData.newNote2, value: outputNoteValue2 });
+    expect(db.addNote.mock.calls[0][0]).toMatchObject({
+      dataEntry: innerProofData.noteCommitment2,
+      value: outputNoteValue2,
+    });
     expect(db.addJoinSplitTx).toHaveBeenCalledTimes(1);
     expect(db.addJoinSplitTx.mock.calls[0][0]).toMatchObject({
       userId: user.id,
@@ -729,7 +754,7 @@ describe('user state', () => {
     const txHash = new TxHash(innerProofData.txId);
     const viewingKey = rollupProofData.viewingKeys[0][0];
     const [decrypted] = await batchDecryptNotes(viewingKey.toBuffer(), user.privateKey, noteAlgos, grumpkin);
-    const claimNoteNullifer = noteAlgos.computeClaimNoteNullifier(innerProofData.newNote1, 0);
+    const claimNoteNullifer = noteAlgos.claimNoteNullifier(innerProofData.noteCommitment1, 0);
 
     db.getDefiTx.mockResolvedValue({ txHash, settled: undefined });
     db.getNoteByNullifier.mockResolvedValueOnce({
@@ -749,7 +774,10 @@ describe('user state', () => {
       owner: user.id,
     });
     expect(db.addNote).toHaveBeenCalledTimes(1);
-    expect(db.addNote.mock.calls[0][0]).toMatchObject({ dataEntry: innerProofData.newNote2, value: outputNoteValue });
+    expect(db.addNote.mock.calls[0][0]).toMatchObject({
+      dataEntry: innerProofData.noteCommitment2,
+      value: outputNoteValue,
+    });
     expect(db.nullifyNote).toHaveBeenCalledTimes(1);
     expect(db.nullifyNote).toHaveBeenCalledWith(inputNoteIndex);
     expect(db.updateDefiTx).toHaveBeenCalledTimes(1);
@@ -799,7 +827,10 @@ describe('user state', () => {
       owner: user.id,
     });
     expect(db.addNote).toHaveBeenCalledTimes(1);
-    expect(db.addNote.mock.calls[0][0]).toMatchObject({ dataEntry: innerProofData.newNote2, value: outputNoteValue });
+    expect(db.addNote.mock.calls[0][0]).toMatchObject({
+      dataEntry: innerProofData.noteCommitment2,
+      value: outputNoteValue,
+    });
     expect(db.nullifyNote).toHaveBeenCalledTimes(2);
     expect(db.nullifyNote).toHaveBeenCalledWith(inputNoteIndexes[0]);
     expect(db.nullifyNote).toHaveBeenCalledWith(inputNoteIndexes[1]);
@@ -842,12 +873,12 @@ describe('user state', () => {
     const innerProofData = rollupProofData.innerProofData[0];
     expect(db.addNote).toHaveBeenCalledTimes(2);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
-      dataEntry: innerProofData.newNote1,
+      dataEntry: innerProofData.noteCommitment1,
       value: outputValueA,
       secret,
     });
     expect(db.addNote.mock.calls[1][0]).toMatchObject({
-      dataEntry: innerProofData.newNote2,
+      dataEntry: innerProofData.noteCommitment2,
       value: outputValueB,
       secret,
     });
@@ -877,7 +908,7 @@ describe('user state', () => {
     const innerProofData = rollupProofData.innerProofData[0];
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
-      dataEntry: innerProofData.newNote1,
+      dataEntry: innerProofData.noteCommitment1,
       value: depositValue,
       secret,
     });

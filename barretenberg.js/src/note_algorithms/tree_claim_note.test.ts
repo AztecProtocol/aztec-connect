@@ -28,7 +28,7 @@ describe('tree_claim_note', () => {
   const createClaimNote = (value: bigint, bridgeId: BridgeId, ownerPubKey: GrumpkinAddress, ephPrivKey: Buffer) => {
     const ownerId = new AccountId(ownerPubKey, 0);
     const txData = ClaimNoteTxData.createFromEphPriv(value, bridgeId, ownerId, ephPrivKey, grumpkin);
-    const partialState = noteAlgos.computePartialState(txData, ownerId);
+    const partialState = noteAlgos.valueNotePartialCommitment(txData.noteSecret, ownerId);
     return {
       claimNote: new TreeClaimNote(value, bridgeId, 0, partialState),
       viewingKey: txData.getViewingKey(ownerPubKey, ephPrivKey, grumpkin),
@@ -38,15 +38,15 @@ describe('tree_claim_note', () => {
   const mockInnerProofs = (notes: TreeNote[], claimNotes: TreeClaimNote[]) => {
     const proofs: InnerProofData[] = [];
     for (let i = 0; i < notes.length; ++i) {
-      const newNote1 = noteAlgos.commitNote(notes[i]);
-      const newNote2 = noteAlgos.commitClaimNote(claimNotes[i]);
+      const noteCommitment1 = noteAlgos.valueNoteCommitment(notes[i]);
+      const noteCommitment2 = noteAlgos.claimNotePartialCommitment(claimNotes[i]);
       const { value, bridgeId, partialState } = claimNotes[i];
       proofs.push({
         proofId: ProofId.DEFI_DEPOSIT,
         assetId: bridgeId.toBuffer(),
         publicOutput: toBufferBE(value, 32),
-        newNote1,
-        newNote2,
+        noteCommitment1,
+        noteCommitment2,
         inputOwner: partialState.slice(0, 32),
         outputOwner: partialState.slice(32),
       } as InnerProofData);

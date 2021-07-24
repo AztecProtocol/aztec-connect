@@ -3,6 +3,7 @@ import { TxType } from '@aztec/barretenberg/blockchain';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { Connection, In, IsNull, LessThan, MoreThanOrEqual, Not, Repository } from 'typeorm';
+import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { AccountDao } from '../entity/account';
 import { ClaimDao } from '../entity/claim';
 import { RollupDao } from '../entity/rollup';
@@ -299,8 +300,7 @@ export class TypeOrmRollupDb implements RollupDb {
 
   public async getDataRootsIndex(root: Buffer) {
     // Lookup and save the proofs data root index (for old root support).
-    const emptyDataRoot = Buffer.from('2708a627d38d74d478f645ec3b4e91afa325331acf1acebe9077891146b75e39', 'hex');
-    if (root.equals(emptyDataRoot)) {
+    if (root.equals(WorldStateConstants.EMPTY_DATA_ROOT)) {
       return 0;
     }
 

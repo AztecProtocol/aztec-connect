@@ -3,14 +3,13 @@
 pragma solidity >=0.6.10 <0.8.0;
 
 library RollupProcessorLibrary {
-
     /**
-    * Extracts the address of the signer with ECDSA. Performs checks on `s` and `v` to
-    * to prevent signature malleability based attacks
-    * @param digest - Hashed data being signed over.
-    * @param signature - ECDSA signature over the secp256k1 elliptic curve.
-    * @param signer - Address that signs the signature.
-    */
+     * Extracts the address of the signer with ECDSA. Performs checks on `s` and `v` to
+     * to prevent signature malleability based attacks
+     * @param digest - Hashed data being signed over.
+     * @param signature - ECDSA signature over the secp256k1 elliptic curve.
+     * @param signer - Address that signs the signature.
+     */
     function validateSignature(
         bytes32 digest,
         bytes memory signature,
@@ -20,11 +19,10 @@ library RollupProcessorLibrary {
         address recoveredSigner = address(0x0);
         require(signer != address(0x0), 'validateSignature: ZERO_ADDRESS');
 
-
         // prepend "\x19Ethereum Signed Message:\n32" to the digest to create the signed message
         bytes32 message;
         assembly {
-            mstore(0, "\x19Ethereum Signed Message:\n32")
+            mstore(0, '\x19Ethereum Signed Message:\n32')
             mstore(add(0, 28), digest)
             message := keccak256(0, 60)
         }
@@ -41,19 +39,19 @@ library RollupProcessorLibrary {
             let s := mload(add(signature, 0x40))
 
             /**
-            * Original memory map for input to precompile
-            *
-            * signature : signature + 0x20            message
-            * signature + 0x20 : signature + 0x40     r
-            * signature + 0x40 : signature + 0x60     s
-            * signature + 0x60 : signature + 0x80     v
-            * Desired memory map for input to precompile
-            *
-            * signature : signature + 0x20            message
-            * signature + 0x20 : signature + 0x40     v
-            * signature + 0x40 : signature + 0x60     r
-            * signature + 0x60 : signature + 0x80     s
-            */
+             * Original memory map for input to precompile
+             *
+             * signature : signature + 0x20            message
+             * signature + 0x20 : signature + 0x40     r
+             * signature + 0x40 : signature + 0x60     s
+             * signature + 0x60 : signature + 0x80     v
+             * Desired memory map for input to precompile
+             *
+             * signature : signature + 0x20            message
+             * signature + 0x20 : signature + 0x40     v
+             * signature + 0x40 : signature + 0x60     r
+             * signature + 0x60 : signature + 0x80     s
+             */
 
             // store s
             mstore(add(mPtr, 0x60), s)
@@ -78,11 +76,11 @@ library RollupProcessorLibrary {
 
             // save the recoveredSigner only if the first word in signature is not `message` anymore
             switch eq(message, mload(mPtr))
-            case 0 {
-                recoveredSigner := mload(mPtr)
-            }
+                case 0 {
+                    recoveredSigner := mload(mPtr)
+                }
             mstore(mPtr, byteLength) // and put the byte length back where it belongs
-        
+
             // validate that recoveredSigner is not address(0x00)
             result := and(result, not(iszero(recoveredSigner)))
         }
@@ -92,14 +90,14 @@ library RollupProcessorLibrary {
     }
 
     /**
-    * Extracts the address of the signer with ECDSA. Performs checks on `s` and `v` to
-    * to prevent signature malleability based attacks
-    * This 'Unpacked' version expects 'signature' to be a 92-byte array.
-    * i.e. the `v` parameter occupies a full 32 bytes of memory, not 1 byte 
-    * @param digest - Hashed data being signed over.
-    * @param signature - ECDSA signature over the secp256k1 elliptic curve.
-    * @param signer - Address that signs the signature.
-    */
+     * Extracts the address of the signer with ECDSA. Performs checks on `s` and `v` to
+     * to prevent signature malleability based attacks
+     * This 'Unpacked' version expects 'signature' to be a 92-byte array.
+     * i.e. the `v` parameter occupies a full 32 bytes of memory, not 1 byte
+     * @param digest - Hashed data being signed over.
+     * @param signature - ECDSA signature over the secp256k1 elliptic curve.
+     * @param signer - Address that signs the signature.
+     */
     function validateUnpackedSignature(
         bytes32 digest,
         bytes memory signature,
@@ -109,11 +107,10 @@ library RollupProcessorLibrary {
         address recoveredSigner = address(0x0);
         require(signer != address(0x0), 'validateSignature: ZERO_ADDRESS');
 
-
         // prepend "\x19Ethereum Signed Message:\n32" to the digest to create the signed message
         bytes32 message;
         assembly {
-            mstore(0, "\x19Ethereum Signed Message:\n32")
+            mstore(0, '\x19Ethereum Signed Message:\n32')
             mstore(28, digest)
             message := keccak256(0, 60)
         }
@@ -134,19 +131,19 @@ library RollupProcessorLibrary {
             let s := mload(add(signature, 0x40))
 
             /**
-            * Original memory map for input to precompile
-            *
-            * signature : signature + 0x20            message
-            * signature + 0x20 : signature + 0x40     r
-            * signature + 0x40 : signature + 0x60     s
-            * signature + 0x60 : signature + 0x80     v
-            * Desired memory map for input to precompile
-            *
-            * signature : signature + 0x20            message
-            * signature + 0x20 : signature + 0x40     v
-            * signature + 0x40 : signature + 0x60     r
-            * signature + 0x60 : signature + 0x80     s
-            */
+             * Original memory map for input to precompile
+             *
+             * signature : signature + 0x20            message
+             * signature + 0x20 : signature + 0x40     r
+             * signature + 0x40 : signature + 0x60     s
+             * signature + 0x60 : signature + 0x80     v
+             * Desired memory map for input to precompile
+             *
+             * signature : signature + 0x20            message
+             * signature + 0x20 : signature + 0x40     v
+             * signature + 0x40 : signature + 0x60     r
+             * signature + 0x60 : signature + 0x80     s
+             */
 
             // move s to v position
             mstore(add(signature, 0x60), s)
@@ -171,16 +168,16 @@ library RollupProcessorLibrary {
 
             // save the recoveredSigner only if the first word in signature is not `message` anymore
             switch eq(message, mload(signature))
-            case 0 {
-                recoveredSigner := mload(signature)
-            }
+                case 0 {
+                    recoveredSigner := mload(signature)
+                }
             mstore(signature, byteLength) // and put the byte length back where it belongs
-        
+
             // validate that recoveredSigner is not address(0x00)
             result := and(result, not(iszero(recoveredSigner)))
         }
 
-        require(result, 'validateSignature: signature recovery failed');
-        require(recoveredSigner == signer, 'validateSignature: INVALID_SIGNATURE');
+        require(result, 'validateUnpackedSignature: signature recovery failed');
+        require(recoveredSigner == signer, 'validateUnpackedSignature: INVALID_SIGNATURE');
     }
 }

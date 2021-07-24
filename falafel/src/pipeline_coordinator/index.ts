@@ -30,7 +30,7 @@ export class PipelineCoordinator {
     private numInnerRollupTxs: number,
     private numOuterRollupProofs: number,
     private publishInterval: Duration,
-  ) { }
+  ) {}
 
   public getNextPublishTime() {
     if (!this.running || !this.publishTimeManager) {
@@ -128,7 +128,7 @@ export class PipelineCoordinator {
       await this.worldStateDb.put(
         RollupTreeId.DEFI,
         BigInt(note.nonce),
-        this.noteAlgo.commitDefiInteractionNote(note),
+        this.noteAlgo.defiInteractionNoteCommitment(note),
       );
     }
   }

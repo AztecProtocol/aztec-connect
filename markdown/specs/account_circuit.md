@@ -1,6 +1,7 @@
 ---
 tags: Specs
 ---
+
 [edit](https://hackmd.io/1jn-lUazQcWjIaY7x6WZzg)
 
 # Account Circuit
@@ -8,7 +9,7 @@ tags: Specs
 ### ◈ Circuit Description
 
 The Account Circuit allows the transfer of keys that control notes.
-Unlike the Rollup Circuit, which *always* adds nullifiers to the tree, the Account Circuit *conditionally* adds nullifiers to the tree.
+Unlike the Rollup Circuit, which _always_ adds nullifiers to the tree, the Account Circuit _conditionally_ adds nullifiers to the tree.
 
 #### Gibberish Nullifiers
 
@@ -17,7 +18,7 @@ This condition is emulated via the production of **Gibberish Nullifiers** where 
 1. Different circuits cannot produce identical nullifiers
 2. Gibberish nullfiers are distinct from real nullifiers
 
-We achieve outcome 1. by including the `proof_id` in each nullifier computation. 
+We achieve outcome 1. by including the `proof_id` in each nullifier computation.
 
 Ensuring outcome 2. is harder. The circuit must have a flag variable, `is_nullifier_fake`, that we use to modify the input data being hashed.
 
@@ -35,7 +36,7 @@ Ensuring outcome 2. is harder. The circuit must have a flag variable, `is_nullif
 
 The inputs for the account circuit are:
 
-$$ \text{Account Inputs} = (\text{Public Inputs}, \text{Private Inputs}) \in \mathbb{F}_p^{13} \times \mathbb{F}_p^{25}$$
+$$ \text{Account Inputs} = (\text{Public Inputs}, \text{Private Inputs}) \in \mathbb{F}\_p^{13} \times \mathbb{F}\_p^{25}$$
 
 As previously, the field $\mathbb{F}_p$ is from the BN254 specification.
 
@@ -43,21 +44,19 @@ As previously, the field $\mathbb{F}_p$ is from the BN254 specification.
 
 Recall that all inner circuits must have the **same number of public inputs** as they will be used homogenously by the rollup circuit.
 
-However, we repurpose and rename *some* inputs for to describe the inner circuit. We denote the renaming of a given input with the notation `[old name] --> [new name]`
+However, we repurpose and rename _some_ inputs to describe the inner circuit. We denote the renaming of a given input with the notation `[old name] --> [new name]`
 
 1. `proof_id`
-2. `public_input --> acccount_pubkey_x`
-3. `public_output --> account_pubkey_y`
-4. `public_asset_id --> account_id`
-5. `output_nc_1_x`  (nc is short for note commitment)
-6. `output_nc_1_y`
-7. `output_nc_2_x`
-8. `output_nc_2_y`
-9. `nullifier_1`
-10. `nullifier_2`
-11. `input_owner`
-12. `output_owner`
-13. `data_tree_root`
+1. `public_input --> acccount_pubkey_x`
+1. `public_output --> account_pubkey_y`
+1. `public_asset_id --> account_id`
+1. `output_nc_1` (nc is short for note commitment)
+1. `output_nc_2`
+1. `nullifier_1`
+1. `nullifier_2`
+1. `input_owner`
+1. `output_owner`
+1. `data_tree_root`
 
 ### ◈ Private Inputs: Detail
 
@@ -79,20 +78,19 @@ However, we repurpose and rename *some* inputs for to describe the inner circuit
 16. `output_note_2.secret`
 17. `output_note_2.account_id`
 18. `output_note_2.asset_id`
-19.  `account_note.account_id`
-20.  `account_note.npk` (npk=nullifier public key)
-21.  `account_note.spk` (spk=spending public key)
-22.  `index_ac`
-23.  `note_num`
-24.  `nk` (nullifier private key)
-25.  `signature`
+19. `account_note.account_id`
+20. `account_note.npk` (npk=nullifier public key)
+21. `account_note.spk` (spk=spending public key)
+22. `index_ac`
+23. `note_num`
+24. `nk` (nullifier private key)
+25. `signature`
 
 ### ◈ Index of Functions
 
 None
 
 ### ◈ Circuit Logic (Pseudocode)
-
 
 Computed vars:
 
@@ -107,12 +105,14 @@ Computed vars:
 - `is_nullifier_fake` = `migrate == 0`
 
 Computed public inputs:
-- `output_note_1_x/y` = `pedersen(output_account_id, account_public_key.x, account_public_key.y, spending_public_key_1.x, spending_public_key_1.y)`
-- `output_note_2_x/y` = `pedersen(output_account_id, account_public_key.x, account_public_key.y, spending_public_key_2.x, spending_public_key_2.y)`
-- `nullifier_1` = `pedersen(proof_id + (is_nullifier_fake * 2^250), account_id, !migrate * gibberish)`
-- `nullifier_2` = `pedersen(proof_id + (1 * 2^250), gibberish)`
+
+- `output_note_1` = `pedersen(output_account_id, account_public_key.x, spending_public_key_1.x)`
+- `output_note_2` = `pedersen(output_account_id, account_public_key.x, spending_public_key_2.x)`
+- `nullifier_1` = `pedersen(proof_id, account_id, !migrate * gibberish)`
+- `nullifier_2` = `pedersen(proof_id, gibberish)`
 
 Circuit constraints:
+
 - `migrate == 1 || migrate == 0`
 - `verify_signature(message, signer, signature) == 1`
 - `membership_check(account_note_data, account_note_index, account_note_path, data_tree_root) == assert_account_exists`

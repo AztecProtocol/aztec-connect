@@ -58,12 +58,15 @@ export class JoinSplitTxFactory {
     const inputNoteIndices = notes.map(n => n.index);
     const inputNotes = notes.map(n => new TreeNote(n.owner.publicKey, n.value, n.assetId, n.owner.nonce, n.secret));
     const maxNoteIndex = Math.max(...inputNoteIndices, 0);
+
+    // Add gibberish notes to ensure we have two notes.
     for (let i = notes.length; i < 2; ++i) {
       inputNoteIndices.push(maxNoteIndex + i); // notes can't have the same index
       inputNotes.push(
         TreeNote.createFromEphPriv(publicKey, BigInt(0), assetId, nonce, this.createEphemeralPrivKey(), this.grumpkin),
       );
     }
+
     const inputNotePaths = await Promise.all(inputNoteIndices.map(async idx => this.worldState.getHashPath(idx)));
 
     const changeValue = totalNoteInputValue > privateInput ? totalNoteInputValue - privateInput : BigInt(0);

@@ -25,10 +25,10 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     bytes4 private constant GET_INFO_SELECTOR = 0x5a9b0b89; // bytes4(keccak256('getInfo()'));
     bytes4 private constant CONVERT_SELECTOR = 0x8a8ad2d7; // bytes4(keccak256('convert(address,address,address,address,uint256)'));
 
-    bytes32 public dataRoot = 0x2708a627d38d74d478f645ec3b4e91afa325331acf1acebe9077891146b75e39;
-    bytes32 public nullRoot = 0x2694dbe3c71a25d92213422d392479e7b8ef437add81e1e17244462e6edca9b1;
-    bytes32 public rootRoot = 0x2d264e93dc455751a721aead9dba9ee2a9fef5460921aeede73f63f6210e6851;
-    bytes32 public defiRoot = 0x086b0997270f9b150571171148d63a2a9d33028e5840d03bbfe481fd9f9a1b03;
+    bytes32 public dataRoot = 0x11977941a807ca96cf02d1b15830a53296170bf8ac7d96e5cded7615d18ec607;
+    bytes32 public nullRoot = 0x1b831fad9b940f7d02feae1e9824c963ae45b3223e721138c6f73261e690c96a;
+    bytes32 public rootRoot = 0x1b435f036fc17f4cc3862f961a8644839900a8e4f1d0b318a7046dd88b10be75;
+    bytes32 public defiRoot = 0x0170467ae338aaf3fd093965165b8636446f09eeb15ab3d36df2e31dd718883d;
     bytes32 public defiInteractionHash = 0x0f115a0e0c15cdc41958ca46b5b14b456115f4baec5e3ca68599d2a8f435e3b8;
 
     uint256 public dataSize;
@@ -38,7 +38,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
 
     uint256 public constant numberOfAssets = 4;
     uint256 public constant numberOfBridgeCalls = 4;
-    uint256 public constant txNumPubInputs = 12;
+    uint256 public constant txNumPubInputs = 10;
     uint256 public constant rollupNumHeaderInputs = 11 + (numberOfBridgeCalls * 2) + numberOfAssets;
     uint256 public constant txPubInputLength = txNumPubInputs * 32; // public inputs length for of each inner proof tx
     uint256 public constant rollupHeaderInputLength = rollupNumHeaderInputs * 32;
@@ -594,7 +594,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                     address inputOwner;
                     bytes32 digest;
                     assembly {
-                        inputOwner := mload(add(proofDataPtr, 0x140))
+                        inputOwner := mload(add(proofDataPtr, 0x100))
 
                         // compute the message digest to check if user has approved tx
                         digest := keccak256(proofDataPtr, stepSize)
@@ -628,7 +628,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                 if (publicOutput > 0) {
                     address outputOwner;
                     assembly {
-                        outputOwner := mload(add(proofDataPtr, 0x160))
+                        outputOwner := mload(add(proofDataPtr, 0x120))
                     }
                     withdraw(publicOutput, outputOwner, assetId);
                 }
@@ -639,7 +639,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
 
     function processDefiBridges(bytes memory proofData) internal {
         bytes32 prevDefiInteractionHash =
-            extractPrevDefiInteractionHash(proofData, rollupHeaderInputLength, txPubInputLength);
+            extractPrevDefiInteractionHash(proofData, rollupHeaderInputLength, txPubInputLength, numberOfBridgeCalls);
         require(
             prevDefiInteractionHash == defiInteractionHash,
             'Rollup Processor: INCORRECT_PREV_DEFI_INTERACTION_HASH'

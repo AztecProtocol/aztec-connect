@@ -28,6 +28,7 @@ export interface BlockchainStatus {
   dataRoot: Buffer;
   nullRoot: Buffer;
   rootRoot: Buffer;
+  defiRoot: Buffer;
   defiInteractionHash: Buffer;
   escapeOpen: boolean;
   numEscapeBlocksRemaining: number;
@@ -48,6 +49,7 @@ export interface BlockchainStatusJson {
   dataRoot: string;
   nullRoot: string;
   rootRoot: string;
+  defiRoot: string;
   defiInteractionHash: string;
   escapeOpen: boolean;
   numEscapeBlocksRemaining: number;
@@ -74,6 +76,7 @@ export function blockchainStatusToJson(status: BlockchainStatus): BlockchainStat
     dataRoot: status.dataRoot.toString('hex'),
     nullRoot: status.nullRoot.toString('hex'),
     rootRoot: status.rootRoot.toString('hex'),
+    defiRoot: status.defiRoot.toString('hex'),
     defiInteractionHash: status.defiInteractionHash.toString('hex'),
     totalDeposited: status.totalDeposited.map(f => f.toString()),
     totalWithdrawn: status.totalWithdrawn.map(f => f.toString()),
@@ -95,6 +98,7 @@ export function blockchainStatusFromJson(json: BlockchainStatusJson): Blockchain
     dataRoot: Buffer.from(json.dataRoot, 'hex'),
     nullRoot: Buffer.from(json.nullRoot, 'hex'),
     rootRoot: Buffer.from(json.rootRoot, 'hex'),
+    defiRoot: Buffer.from(json.defiRoot, 'hex'),
     defiInteractionHash: Buffer.from(json.defiInteractionHash, 'hex'),
     totalDeposited: json.totalDeposited.map(f => BigInt(f)),
     totalWithdrawn: json.totalWithdrawn.map(f => BigInt(f)),

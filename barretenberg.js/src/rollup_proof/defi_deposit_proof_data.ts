@@ -13,9 +13,9 @@ export class DefiDepositProofData {
       throw new Error('Not a defi deposit proof.');
     }
 
-    const { assetId, publicOutput, inputOwner, outputOwner } = proofData;
+    const { assetId, publicOutput, inputOwner } = proofData;
     this.bridgeId = BridgeId.fromBuffer(assetId);
     this.depositValue = toBigIntBE(publicOutput);
-    this.partialState = Buffer.concat([inputOwner, outputOwner]);
+    this.partialState = inputOwner;
   }
 }

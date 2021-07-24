@@ -130,17 +130,13 @@ export class RollupPublisher {
     feeDistributorAddress: EthAddress,
   ) {
     const publicInputs = rollupProof.slice(0, RollupProofData.LENGTH_ROLLUP_HEADER_INPUTS);
-    const msgHash = utils.solidityKeccak256(
-      ['bytes'],
-      [
-        Buffer.concat([
-          publicInputs,
-          feeReceiver.toBuffer(),
-          toBufferBE(feeLimit, 32),
-          feeDistributorAddress.toBuffer(),
-        ]),
-      ],
-    );
+    const toSign = Buffer.concat([
+      publicInputs,
+      feeReceiver.toBuffer(),
+      toBufferBE(feeLimit, 32),
+      feeDistributorAddress.toBuffer(),
+    ]);
+    const msgHash = utils.solidityKeccak256(['bytes'], [toSign]);
     const digest = utils.arrayify(msgHash);
     const signature = await this.signer.signMessage(digest);
     let signatureBuf = Buffer.from(signature.slice(2), 'hex');

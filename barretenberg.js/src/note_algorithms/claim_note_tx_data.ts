@@ -48,7 +48,6 @@ export class ClaimNoteTxData {
       this.ownerPubKey.toBuffer(),
       numToUInt32BE(this.ownerNonce),
       this.noteSecret,
-      numToUInt32BE(0),
     ]);
   }
 

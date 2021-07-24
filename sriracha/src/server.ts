@@ -124,8 +124,8 @@ export default class Server implements HashPathSource {
 
     for (let i = 0; i < innerProofData.length; ++i) {
       const tx = innerProofData[i];
-      await this.worldStateDb.put(0, BigInt(dataStartIndex + i * 2), tx.newNote1);
-      await this.worldStateDb.put(0, BigInt(dataStartIndex + i * 2 + 1), tx.newNote2);
+      await this.worldStateDb.put(0, BigInt(dataStartIndex + i * 2), tx.noteCommitment1);
+      await this.worldStateDb.put(0, BigInt(dataStartIndex + i * 2 + 1), tx.noteCommitment2);
       if (!tx.isPadding()) {
         await this.worldStateDb.put(1, toBigIntBE(tx.nullifier1), toBufferBE(1n, 64));
         await this.worldStateDb.put(1, toBigIntBE(tx.nullifier2), toBufferBE(1n, 64));

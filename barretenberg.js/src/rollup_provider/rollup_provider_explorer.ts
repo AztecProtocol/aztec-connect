@@ -11,8 +11,8 @@ export interface Tx {
   txHash: TxHash;
   rollup?: LinkedRollup;
   merkleRoot: Buffer;
-  newNote1: Buffer;
-  newNote2: Buffer;
+  noteCommitment1: Buffer;
+  noteCommitment2: Buffer;
   nullifier1: Buffer;
   nullifier2: Buffer;
   publicInput: Buffer;

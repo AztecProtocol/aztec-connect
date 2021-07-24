@@ -92,29 +92,29 @@ export class RollupCreator {
       const proof = new ProofData(tx.proofData);
 
       if (proof.proofId !== ProofId.DEFI_DEPOSIT) {
-        await worldStateDb.put(RollupTreeId.DATA, nextDataIndex++, proof.newNote1);
+        await worldStateDb.put(RollupTreeId.DATA, nextDataIndex++, proof.noteCommitment1);
       } else {
         if (!bridgeIds.some(id => id.equals(proof.assetId))) {
           bridgeIds.push(proof.assetId);
         }
         const interactionNonce =
           rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK + bridgeIds.findIndex(id => id.equals(proof.assetId));
-        const encNote = this.noteAlgo.completePartialClaimNote(proof.newNote1, interactionNonce);
+        const encNote = this.noteAlgo.claimNoteCompletePartialCommitment(proof.noteCommitment1, interactionNonce);
         await worldStateDb.put(RollupTreeId.DATA, nextDataIndex++, encNote);
       }
-      await worldStateDb.put(RollupTreeId.DATA, nextDataIndex++, proof.newNote2);
+      await worldStateDb.put(RollupTreeId.DATA, nextDataIndex++, proof.noteCommitment2);
 
       const nullifier1 = toBigIntBE(proof.nullifier1);
       const nullifier2 = toBigIntBE(proof.nullifier2);
 
       oldNullPaths.push(await worldStateDb.getHashPath(RollupTreeId.NULL, nullifier1));
-      await worldStateDb.put(RollupTreeId.NULL, nullifier1, toBufferBE(1n, 64));
+      await worldStateDb.put(RollupTreeId.NULL, nullifier1, toBufferBE(1n, 32));
       newNullRoots.push(worldStateDb.getRoot(RollupTreeId.NULL));
       newNullPaths.push(await worldStateDb.getHashPath(RollupTreeId.NULL, nullifier1));
 
       oldNullPaths.push(await worldStateDb.getHashPath(RollupTreeId.NULL, nullifier2));
       if (nullifier2) {
-        await worldStateDb.put(RollupTreeId.NULL, nullifier2, toBufferBE(1n, 64));
+        await worldStateDb.put(RollupTreeId.NULL, nullifier2, toBufferBE(1n, 32));
       }
       newNullRoots.push(worldStateDb.getRoot(RollupTreeId.NULL));
       newNullPaths.push(await worldStateDb.getHashPath(RollupTreeId.NULL, nullifier2));

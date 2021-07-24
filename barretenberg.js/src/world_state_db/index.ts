@@ -4,7 +4,7 @@ import { HashPath } from '../merkle_tree';
 import { toBigIntBE, toBufferBE } from '../bigint_buffer';
 import { ChildProcess, execSync, spawn } from 'child_process';
 import { PromiseReadable } from 'promise-readable';
-import { serializeBufferArrayToVector, serializeBufferToVector } from '../serialize';
+import { serializeBufferArrayToVector } from '../serialize';
 
 enum Command {
   GET,
@@ -67,14 +67,7 @@ export class WorldStateDb {
 
     this.proc!.stdin!.write(buffer);
 
-    const lengthBuf = await this.stdout.read(4);
-    if (!lengthBuf) {
-      throw new Error('Failed to read length.');
-    }
-
-    const length = lengthBuf.readUInt32BE(0);
-
-    const result = await this.stdout.read(length);
+    const result = await this.stdout.read(32);
 
     return result;
   }
@@ -101,15 +94,14 @@ export class WorldStateDb {
   }
 
   public async put(treeId: number, index: bigint, value: Buffer): Promise<Buffer> {
+    if (value.length !== 32) {
+      throw Error('Values must be 32 bytes.');
+    }
     return new Promise(resolve => this.stdioQueue.put(async () => resolve(await this.put_(treeId, index, value))));
   }
 
   private async put_(treeId: number, index: bigint, value: Buffer) {
-    const buffer = Buffer.concat([
-      Buffer.from([Command.PUT, treeId]),
-      toBufferBE(index, 32),
-      serializeBufferToVector(value),
-    ]);
+    const buffer = Buffer.concat([Buffer.from([Command.PUT, treeId]), toBufferBE(index, 32), value]);
 
     this.proc!.stdin!.write(buffer);
 
@@ -127,9 +119,7 @@ export class WorldStateDb {
   }
 
   private async batchPut_(entries: PutEntry[]) {
-    const bufs = entries.map(e =>
-      Buffer.concat([Buffer.from([e.treeId]), toBufferBE(e.index, 32), serializeBufferToVector(e.value)]),
-    );
+    const bufs = entries.map(e => Buffer.concat([Buffer.from([e.treeId]), toBufferBE(e.index, 32), e.value]));
     const buffer = Buffer.concat([Buffer.from([Command.BATCH_PUT]), serializeBufferArrayToVector(bufs)]);
 
     this.proc!.stdin!.write(buffer);

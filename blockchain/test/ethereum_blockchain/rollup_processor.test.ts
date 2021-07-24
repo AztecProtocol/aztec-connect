@@ -1,6 +1,7 @@
 import { Contract } from '@ethersproject/contracts';
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from '@aztec/barretenberg/address';
+import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { expect, use } from 'chai';
 import { solidity } from 'ethereum-waffle';
 import { ethers, network } from 'hardhat';
@@ -40,21 +41,11 @@ describe('rollup_processor', () => {
     expect(await rollupProcessor.numberOfBridgeCalls()).equals(4);
     expect(await rollupProcessor.nextRollupId()).equals(0);
     expect(await rollupProcessor.dataSize()).equals(0);
-    expect(await rollupProcessor.dataRoot()).deep.equals(
-      Buffer.from('2708a627d38d74d478f645ec3b4e91afa325331acf1acebe9077891146b75e39', 'hex'),
-    );
-    expect(await rollupProcessor.nullRoot()).deep.equals(
-      Buffer.from('2694dbe3c71a25d92213422d392479e7b8ef437add81e1e17244462e6edca9b1', 'hex'),
-    );
-    expect(await rollupProcessor.rootRoot()).deep.equals(
-      Buffer.from('2d264e93dc455751a721aead9dba9ee2a9fef5460921aeede73f63f6210e6851', 'hex'),
-    );
-    expect(await rollupProcessor.defiRoot()).deep.equals(
-      Buffer.from('086b0997270f9b150571171148d63a2a9d33028e5840d03bbfe481fd9f9a1b03', 'hex'),
-    );
-    expect(await rollupProcessor.defiInteractionHash()).deep.equals(
-      Buffer.from('0f115a0e0c15cdc41958ca46b5b14b456115f4baec5e3ca68599d2a8f435e3b8', 'hex'),
-    );
+    expect(await rollupProcessor.dataRoot()).deep.equals(WorldStateConstants.EMPTY_DATA_ROOT);
+    expect(await rollupProcessor.nullRoot()).deep.equals(WorldStateConstants.EMPTY_NULL_ROOT);
+    expect(await rollupProcessor.rootRoot()).deep.equals(WorldStateConstants.EMPTY_ROOT_ROOT);
+    expect(await rollupProcessor.defiRoot()).deep.equals(WorldStateConstants.EMPTY_DEFI_ROOT);
+    expect(await rollupProcessor.defiInteractionHash()).deep.equals(WorldStateConstants.INITIAL_INTERACTION_HASH);
     expect(await rollupProcessor.totalDeposited()).deep.equals([0n, 0n]);
     expect(await rollupProcessor.totalWithdrawn()).deep.equals([0n, 0n]);
     expect(await rollupProcessor.totalFees()).deep.equals([0n, 0n]);

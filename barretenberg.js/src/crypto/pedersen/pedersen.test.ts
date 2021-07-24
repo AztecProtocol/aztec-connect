@@ -13,7 +13,7 @@ describe('pedersen', () => {
     await barretenberg.init();
 
     for (let i = 0; i < 2 ** 12; ++i) {
-      const v = Buffer.alloc(64, 0);
+      const v = Buffer.alloc(32, 0);
       v.writeUInt32LE(i, 0);
       values[i] = v;
     }
@@ -23,14 +23,14 @@ describe('pedersen', () => {
     const singlePedersen = new Pedersen(barretenberg);
     await singlePedersen.init();
     const start1 = new Date().getTime();
-    const singleResults = await singlePedersen.hashValuesToTree(values);
+    const singleResults = await singlePedersen.hashToTree(values);
     const end1 = new Date().getTime() - start1;
 
     const pool = await WorkerPool.new(barretenberg, 4);
     const pedersen = new PooledPedersen(barretenberg, pool);
     await pedersen.init();
     const start2 = new Date().getTime();
-    const poolResults = await pedersen.hashValuesToTree(values);
+    const poolResults = await pedersen.hashToTree(values);
     const end2 = new Date().getTime() - start2;
 
     console.log(`Single hasher: ~${end1 / values.length}ms / value`);

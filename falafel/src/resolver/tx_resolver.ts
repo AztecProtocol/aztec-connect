@@ -58,13 +58,13 @@ export class TxResolver {
   @FieldResolver()
   async newNote1(@Root() { proofData }: TxDao) {
     const joinSplit = new ProofData(proofData);
-    return joinSplit.newNote1;
+    return joinSplit.noteCommitment1;
   }
 
   @FieldResolver()
   async newNote2(@Root() { proofData }: TxDao) {
     const joinSplit = new ProofData(proofData);
-    return joinSplit.newNote2;
+    return joinSplit.noteCommitment2;
   }
 
   @FieldResolver()

@@ -111,8 +111,8 @@ describe('join_split_proof', () => {
       const outputNote1 = TreeNote.createFromEphPriv(pubKey, BigInt(80), 0, 0, outputNote1EphKey, grumpkin);
       const outputNote2 = TreeNote.createFromEphPriv(pubKey, BigInt(70), 0, 0, outputNote2EphKey, grumpkin);
 
-      const inputNote1Enc = noteAlgos.commitNote(inputNote1);
-      const inputNote2Enc = noteAlgos.commitNote(inputNote2);
+      const inputNote1Enc = noteAlgos.valueNoteCommitment(inputNote1);
+      const inputNote2Enc = noteAlgos.valueNoteCommitment(inputNote2);
 
       const tree = new MerkleTree(levelup(memdown()), pedersen, 'data', 32);
       await tree.updateElement(0, inputNote1Enc);
@@ -169,8 +169,8 @@ describe('join_split_proof', () => {
         outputOwner,
       );
 
-      const expectedNullifier1 = noteAlgos.computeNoteNullifier(inputNote1Enc, 0, privateKey);
-      const expectedNullifier2 = noteAlgos.computeNoteNullifier(inputNote2Enc, 1, privateKey);
+      const expectedNullifier1 = noteAlgos.valueNoteNullifier(inputNote1Enc, 0, privateKey);
+      const expectedNullifier2 = noteAlgos.valueNoteNullifier(inputNote2Enc, 1, privateKey);
 
       debug('creating proof...');
       const start = new Date().getTime();

@@ -23,36 +23,36 @@ export function computeSigningData(
   noteAlgos: NoteAlgorithms,
 ) {
   const isDefiBridge = !claimNote.equals(ClaimNoteTxData.EMPTY);
-  const noteCommitments = notes.map(note => noteAlgos.commitNote(note));
+  const noteCommitments = notes.map(note => noteAlgos.valueNoteCommitment(note));
 
-  const partialState = noteAlgos.computePartialState(claimNote, accountId);
+  const partialState = noteAlgos.valueNotePartialCommitment(claimNote.noteSecret, accountId);
   const treeClaimNote = new TreeClaimNote(claimNote.value, claimNote.bridgeId, 0, partialState);
-  const claimNoteCommitment = noteAlgos.commitClaimNote(treeClaimNote);
+  const claimNoteCommitment = noteAlgos.claimNotePartialCommitment(treeClaimNote);
 
-  const nullifier1 = noteAlgos.computeNoteNullifier(
+  const nullifier1 = noteAlgos.valueNoteNullifier(
     noteCommitments[0],
     inputNote1Index,
     nullifierKey,
     numInputNotes >= 1,
   );
-  const nullifier2 = noteAlgos.computeNoteNullifier(
+  const nullifier2 = noteAlgos.valueNoteNullifier(
     noteCommitments[1],
     inputNote2Index,
     nullifierKey,
     numInputNotes >= 2,
   );
 
-  const outputNotes = [isDefiBridge ? claimNoteCommitment : noteCommitments[2], noteCommitments[3]];
-
   const totalInputValue = notes[0].value + notes[1].value + inputValue;
   const publicOutput = isDefiBridge ? claimNote.value : outputValue;
   const totalOutputValue = notes[2].value + notes[3].value + publicOutput;
   const txFee = totalInputValue - totalOutputValue;
+
   const toCompress = [
     toBufferBE(inputValue, 32),
     toBufferBE(publicOutput, 32),
     isDefiBridge ? claimNote.bridgeId.toBuffer() : numToUInt32BE(assetId, 32),
-    ...outputNotes.map(note => [note.slice(0, 32), note.slice(32, 64)]).flat(),
+    isDefiBridge ? claimNoteCommitment : noteCommitments[2],
+    noteCommitments[3],
     nullifier1,
     nullifier2,
     Buffer.concat([Buffer.alloc(12), inputOwner.toBuffer()]),

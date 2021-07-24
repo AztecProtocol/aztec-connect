@@ -27,8 +27,8 @@ describe('merkle_tree', () => {
     pedersen = new Pedersen(barretenberg);
 
     for (let i = 0; i < 32; ++i) {
-      const v = Buffer.alloc(64, 0);
-      v.writeUInt32LE(i, 0);
+      const v = Buffer.alloc(32, 0);
+      v.writeUInt32BE(i, 28);
       values[i] = v;
     }
   });
@@ -36,10 +36,10 @@ describe('merkle_tree', () => {
   it('should have correct root', async () => {
     const db = levelup(memdown());
 
-    const e00 = pedersen.hashToField(values[0]);
-    const e01 = pedersen.hashToField(values[1]);
-    const e02 = pedersen.hashToField(values[2]);
-    const e03 = pedersen.hashToField(values[3]);
+    const e00 = MerkleTree.ZERO_ELEMENT;
+    const e01 = values[1];
+    const e02 = values[2];
+    const e03 = values[3];
     const e10 = pedersen.compress(e00, e01);
     const e11 = pedersen.compress(e02, e03);
     const root = pedersen.compress(e10, e11);
@@ -68,15 +68,15 @@ describe('merkle_tree', () => {
     expect(tree.getRoot()).toEqual(root);
     expect(tree.getSize()).toBe(4);
 
-    // Lifted from memory_store.test.cpp to ensure consistency.
-    expect(root).toEqual(Buffer.from('28b8173e6d85156fbc33826f1905d42f524f5f77ad5f7433fa1091aa06b52441', 'hex'));
+    // Lifted from memory_tree.test.cpp to ensure consistency.
+    expect(root.toString('hex')).toEqual('27b435721cc92641c18797c3a806ee39a93230bd98005288a978f9f889c721c8');
   });
 
-  it('should have correct empty tree root for depth 10', async () => {
+  it('should have correct empty tree root for depth 32', async () => {
     const db = levelup(memdown());
-    const tree = await MerkleTree.new(db, pedersen, 'test', 10);
+    const tree = await MerkleTree.new(db, pedersen, 'test', 32);
     const root = tree.getRoot();
-    expect(root).toEqual(Buffer.from('2d5a54bd09fb2f40e03689cbe46bcbc42a7b64632fa4ebb76d351c558a51be53', 'hex'));
+    expect(root.toString('hex')).toEqual('11977941a807ca96cf02d1b15830a53296170bf8ac7d96e5cded7615d18ec607');
   });
 
   it('should have same result when setting same values', async () => {
@@ -99,8 +99,8 @@ describe('merkle_tree', () => {
   it('should get same result when using subtree insertion', async () => {
     const values: Buffer[] = [];
     for (let i = 0; i < 32 * 8; ++i) {
-      const v = Buffer.alloc(64, 0);
-      v.writeUInt32LE(i, 0);
+      const v = Buffer.alloc(32, 0);
+      v.writeUInt32BE(i, 28);
       values[i] = v;
     }
 
@@ -166,7 +166,7 @@ describe('merkle_tree', () => {
   });
 
   it('should update 0 values elements', async () => {
-    const values: Buffer[] = Array(6).fill(Buffer.alloc(64, 0));
+    const values: Buffer[] = Array(6).fill(Buffer.alloc(32, 0));
 
     // Create reference tree.
     const db1 = levelup(memdown());

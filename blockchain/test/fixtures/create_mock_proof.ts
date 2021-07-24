@@ -4,49 +4,27 @@ import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { InnerProofData } from '@aztec/barretenberg/rollup_proof';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
+import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { randomBytes } from 'crypto';
 import { Signer } from 'ethers';
 import { ethSign } from './eth_sign';
 
 export const numToBuffer = (num: number) => numToUInt32BE(num, 32);
 
-const randomNote = () => randomBytes(64);
+const randomLeafHash = () => randomBytes(32);
 
 const randomNullifier = () => Buffer.concat([Buffer.alloc(16), randomBytes(16)]);
 
-export const dataRoots = [
-  Buffer.from('2708a627d38d74d478f645ec3b4e91afa325331acf1acebe9077891146b75e39', 'hex'),
-  Buffer.from('a8f6bde50516dd1201088fd8dda84c97eda5652428d1c7e86af529cc5e0eb821', 'hex'),
-  randomBytes(32),
-  randomBytes(32),
-];
-
-export const nullifierRoots = [
-  Buffer.from('2694dbe3c71a25d92213422d392479e7b8ef437add81e1e17244462e6edca9b1', 'hex'),
-  Buffer.from('a82175cffcb23dfbd80262802e32efe7db5fdcb91ba0a0527ab1ffb323bf3fc0', 'hex'),
-  randomBytes(32),
-  randomBytes(32),
-];
-
-export const dataRootRoots = [
-  Buffer.from('2d264e93dc455751a721aead9dba9ee2a9fef5460921aeede73f63f6210e6851', 'hex'),
-  randomBytes(32),
-  randomBytes(32),
-  randomBytes(32),
-];
-
-export const defiRoots = [
-  Buffer.from('086b0997270f9b150571171148d63a2a9d33028e5840d03bbfe481fd9f9a1b03', 'hex'),
-  randomBytes(32),
-  randomBytes(32),
-  randomBytes(32),
-];
+export const dataRoots = [WorldStateConstants.EMPTY_DATA_ROOT, randomBytes(32), randomBytes(32), randomBytes(32)];
+export const nullifierRoots = [WorldStateConstants.EMPTY_NULL_ROOT, randomBytes(32), randomBytes(32), randomBytes(32)];
+export const dataRootRoots = [WorldStateConstants.EMPTY_ROOT_ROOT, randomBytes(32), randomBytes(32), randomBytes(32)];
+export const defiRoots = [WorldStateConstants.EMPTY_DEFI_ROOT, randomBytes(32), randomBytes(32), randomBytes(32)];
 
 export const interactionHashes = [
-  Buffer.from('0f115a0e0c15cdc41958ca46b5b14b456115f4baec5e3ca68599d2a8f435e3b8', 'hex'),
-  Buffer.from('0f115a0e0c15cdc41958ca46b5b14b456115f4baec5e3ca68599d2a8f435e3b8', 'hex'),
-  Buffer.from('0f115a0e0c15cdc41958ca46b5b14b456115f4baec5e3ca68599d2a8f435e3b8', 'hex'),
-  Buffer.from('0f115a0e0c15cdc41958ca46b5b14b456115f4baec5e3ca68599d2a8f435e3b8', 'hex'),
+  WorldStateConstants.INITIAL_INTERACTION_HASH,
+  WorldStateConstants.INITIAL_INTERACTION_HASH,
+  WorldStateConstants.INITIAL_INTERACTION_HASH,
+  WorldStateConstants.INITIAL_INTERACTION_HASH,
 ];
 
 class InnerProofOutput {
@@ -65,8 +43,8 @@ export const createDepositProof = async (
     toBufferBE(amount + txFee, 32),
     toBufferBE(0n, 32),
     numToBuffer(assetId),
-    randomNote(),
-    randomNote(),
+    randomLeafHash(),
+    randomLeafHash(),
     randomNullifier(),
     randomNullifier(),
     depositorAddress.toBuffer32(),
@@ -86,8 +64,8 @@ export const createWithdrawProof = (amount: bigint, withdrawalAddress: EthAddres
     toBufferBE(0n, 32),
     toBufferBE(amount + txFee, 32),
     numToBuffer(assetId),
-    randomNote(),
-    randomNote(),
+    randomLeafHash(),
+    randomLeafHash(),
     randomNullifier(),
     randomNullifier(),
     Buffer.alloc(32),
@@ -105,8 +83,8 @@ export const createSendProof = (assetId = 1, txFee = 0n) => {
     toBufferBE(0n, 32),
     toBufferBE(0n, 32),
     numToBuffer(assetId),
-    randomNote(),
-    randomNote(),
+    randomLeafHash(),
+    randomLeafHash(),
     randomNullifier(),
     randomNullifier(),
     Buffer.alloc(32),
@@ -124,8 +102,8 @@ export const createDefiProof = (bridgeId: BridgeId, inputValue: bigint, txFee = 
     toBufferBE(0n, 32),
     toBufferBE(inputValue, 32),
     bridgeId.toBuffer(),
-    randomNote(),
-    randomNote(),
+    randomLeafHash(),
+    randomLeafHash(),
     randomNullifier(),
     randomNullifier(),
     Buffer.alloc(32),
@@ -218,7 +196,7 @@ export const createRollupProof = async (
 
   const interactionNoteCommitments = [...prevInteractionResult];
   for (let i = prevInteractionResult.length; i < numberOfDefiInteraction; ++i) {
-    interactionNoteCommitments.push(Buffer.alloc(64));
+    interactionNoteCommitments.push(Buffer.alloc(32));
   }
 
   // Escape hatch is demarked 0, but has size 1.

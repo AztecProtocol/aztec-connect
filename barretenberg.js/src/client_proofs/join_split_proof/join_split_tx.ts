@@ -30,9 +30,6 @@ export class JoinSplitTx {
   ) {}
 
   toBuffer() {
-    const pathBuffer = Buffer.concat(this.inputNotePaths.map(p => p.toBuffer()));
-    const noteBuffer = Buffer.concat([...this.inputNotes, ...this.outputNotes].map(n => n.toBuffer()));
-
     return Buffer.concat([
       toBufferBE(this.publicInput, 32),
       toBufferBE(this.publicOutput, 32),
@@ -41,8 +38,13 @@ export class JoinSplitTx {
       numToUInt32BE(this.inputNoteIndices[0]),
       numToUInt32BE(this.inputNoteIndices[1]),
       this.merkleRoot,
-      pathBuffer,
-      noteBuffer,
+
+      this.inputNotePaths[0].toBuffer(),
+      this.inputNotePaths[1].toBuffer(),
+      this.inputNotes[0].toBuffer(),
+      this.inputNotes[1].toBuffer(),
+      this.outputNotes[0].toBuffer(),
+      this.outputNotes[1].toBuffer(),
       this.claimNote.toBuffer(),
 
       this.accountPrivateKey,

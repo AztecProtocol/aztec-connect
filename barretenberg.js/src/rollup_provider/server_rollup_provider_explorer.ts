@@ -34,14 +34,13 @@ const toRollup = ({ id, status, dataRoot, proofData, txHashes, ethTxHash, create
 });
 
 const toTx = ({ txHash, proofData, rollup, created }: TxServerResponse): Tx => {
-  const { newNote1, newNote2, nullifier1, nullifier2, publicInput, publicOutput, noteTreeRoot } = new ProofData(
-    Buffer.from(proofData, 'hex'),
-  );
+  const { noteCommitment1, noteCommitment2, nullifier1, nullifier2, publicInput, publicOutput, noteTreeRoot } =
+    new ProofData(Buffer.from(proofData, 'hex'));
   return {
     txHash: TxHash.fromString(txHash),
     merkleRoot: noteTreeRoot,
-    newNote1,
-    newNote2,
+    noteCommitment1,
+    noteCommitment2,
     nullifier1,
     nullifier2,
     publicInput,

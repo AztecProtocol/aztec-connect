@@ -1,5 +1,13 @@
 import { randomBytes } from 'crypto';
 import { WorldStateDb } from './index';
+import { WorldStateConstants } from '../world_state';
+import { MerkleTree } from '../merkle_tree';
+
+const randomFr = () => {
+  const bytes = randomBytes(32);
+  bytes.writeUInt32BE(0);
+  return bytes;
+};
 
 describe('world_state_db', () => {
   let worldStateDb: WorldStateDb;
@@ -16,56 +24,51 @@ describe('world_state_db', () => {
   });
 
   it('should be initialized with correct metadata', async () => {
-    const expectedDataRoot = Buffer.from('2708a627d38d74d478f645ec3b4e91afa325331acf1acebe9077891146b75e39', 'hex');
-    const expectedNullRoot = Buffer.from('2694dbe3c71a25d92213422d392479e7b8ef437add81e1e17244462e6edca9b1', 'hex');
-    const expectedRootRoot = Buffer.from('2d264e93dc455751a721aead9dba9ee2a9fef5460921aeede73f63f6210e6851', 'hex');
-
-    expect(worldStateDb.getRoot(0)).toEqual(expectedDataRoot);
-    expect(worldStateDb.getRoot(1)).toEqual(expectedNullRoot);
-    expect(worldStateDb.getRoot(2)).toEqual(expectedRootRoot);
+    expect(worldStateDb.getRoot(0)).toEqual(WorldStateConstants.EMPTY_DATA_ROOT);
+    expect(worldStateDb.getRoot(1)).toEqual(WorldStateConstants.EMPTY_NULL_ROOT);
+    expect(worldStateDb.getRoot(2)).toEqual(WorldStateConstants.EMPTY_ROOT_ROOT);
+    expect(worldStateDb.getRoot(3)).toEqual(WorldStateConstants.EMPTY_DEFI_ROOT);
     expect(worldStateDb.getSize(0)).toBe(BigInt(0));
     expect(worldStateDb.getSize(1)).toBe(BigInt(0));
     expect(worldStateDb.getSize(2)).toBe(BigInt(1));
+    expect(worldStateDb.getSize(3)).toBe(BigInt(0));
   });
 
   it('should get correct value', async () => {
     const buffer = await worldStateDb.get(0, BigInt(0));
-    expect(buffer).toEqual(Buffer.alloc(64, 0));
+    expect(buffer).toEqual(Buffer.alloc(32, 0));
   });
 
   it('should get correct hash path', async () => {
     const path = (await worldStateDb.getHashPath(0, BigInt(0))).data;
 
-    const expectedFirst = Buffer.from('0000000000000000000000000000000000000000000000000000000000000040', 'hex');
-    const expectedLast = Buffer.from('0a4feb3207e1113f42f22232e53b13da0624a46b3779338e7f2ed9dfde4a5ba8', 'hex');
+    const expectedFirst = MerkleTree.ZERO_ELEMENT;
+    const expectedLast = '02a12922daa0fe8d05620d98096220a86d9ebf4d9552dc0fbd3862b9c48f7ab9';
 
     expect(path.length).toEqual(32);
     expect(path[0][0]).toEqual(expectedFirst);
     expect(path[0][1]).toEqual(expectedFirst);
-    expect(path[31][0]).toEqual(expectedLast);
-    expect(path[31][1]).toEqual(expectedLast);
+    expect(path[31][0].toString('hex')).toEqual(expectedLast);
+    expect(path[31][1].toString('hex')).toEqual(expectedLast);
 
     const nullPath = (await worldStateDb.getHashPath(1, BigInt(0))).data;
     expect(nullPath.length).toEqual(256);
   });
 
   it('should update value', async () => {
-    const value = Buffer.alloc(64, 5);
+    const value = Buffer.alloc(32, 0);
+    value.writeUInt32BE(5, 28);
     const root = await worldStateDb.put(0, BigInt(0), value);
 
     const result = await worldStateDb.get(0, BigInt(0));
     expect(result).toEqual(value);
-
-    // prettier-ignore
-    expect(root).toEqual(Buffer.from('0b8df4d2715e0cca64c24d704b58de179ac2c3ca8162f5e78f59c1443d922bc5', 'hex'));
-
     expect(worldStateDb.getRoot(0)).toEqual(root);
     expect(worldStateDb.getSize(0)).toEqual(BigInt(1));
   });
 
   it('should update multiple values', async () => {
     const num = 1024;
-    const values = new Array(num).fill(0).map(() => randomBytes(64));
+    const values = new Array(num).fill(0).map(randomFr);
     for (let i = 0; i < num; ++i) {
       await worldStateDb.put(0, BigInt(i), values[i]);
     }
@@ -79,8 +82,8 @@ describe('world_state_db', () => {
   }, 60000);
 
   it('should update same value in both trees', async () => {
-    const value1 = Buffer.alloc(64, 5);
-    const value2 = Buffer.alloc(64, 6);
+    const value1 = randomFr();
+    const value2 = randomFr();
     await worldStateDb.put(0, BigInt(10), value1);
     await worldStateDb.put(1, BigInt(10), value2);
 
@@ -92,7 +95,7 @@ describe('world_state_db', () => {
   });
 
   it('should be able to rollback to the previous commit', async () => {
-    const values = new Array(3).fill(0).map(() => randomBytes(64));
+    const values = new Array(3).fill(0).map(randomFr);
 
     const rootEmpty = worldStateDb.getRoot(0);
     await worldStateDb.put(0, BigInt(0), values[0]);
@@ -114,7 +117,7 @@ describe('world_state_db', () => {
 
   it('should read and write standard I/O sequentially', async () => {
     const num = 10;
-    const values = new Array(num).fill(0).map(() => randomBytes(64));
+    const values = new Array(num).fill(0).map(randomFr);
     await Promise.all(
       values.map(async (value, i) => {
         await worldStateDb.put(0, BigInt(i), value);

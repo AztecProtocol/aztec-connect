@@ -67,16 +67,17 @@ contract Decoder {
     function extractPrevDefiInteractionHash(
         bytes memory proofData,
         uint256 rollupHeaderInputLength,
-        uint256 txPubInputLength
+        uint256 txPubInputLength,
+        uint256 numberOfBridgeCalls
     ) internal pure returns (bytes32 prevDefiInteractionHash) {
+        // Skip over header, recursion point and defi notes.
+        // 0x200 = recursion points.
+        uint256 partOffset = rollupHeaderInputLength + 0x200 + (numberOfBridgeCalls * 32);
         assembly {
             let dataStart := add(proofData, 0x20) // jump over first word, it's length of data
             let rollupSize := mload(add(dataStart, 0x20))
-            rollupSize := add(rollupSize, iszero(rollupSize))
-            // Skip over rollup pub inputs, tx pub inputs, recursion point and defi notes.
-            prevDefiInteractionHash := mload(
-                add(add(add(dataStart, rollupHeaderInputLength), mul(rollupSize, txPubInputLength)), 0x300)
-            )
+            // Skip over rollup pub inputs.
+            prevDefiInteractionHash := mload(add(dataStart, add(partOffset, mul(rollupSize, txPubInputLength))))
         }
     }
 

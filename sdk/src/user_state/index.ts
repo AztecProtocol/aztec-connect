@@ -127,13 +127,13 @@ export class UserState extends EventEmitter {
     // Recover tree notes
     const noteCommitments: Buffer[] = [];
     const decryptedTreeNote: (DecryptedNote | undefined)[] = [];
-    proofsWithDecryptedNotes.forEach(({ proofId, newNote1, newNote2 }, i) => {
+    proofsWithDecryptedNotes.forEach(({ proofId, noteCommitment1, noteCommitment2 }, i) => {
       if (proofId !== ProofId.DEFI_DEPOSIT) {
-        noteCommitments.push(newNote1);
+        noteCommitments.push(noteCommitment1);
         decryptedTreeNote.push(decryptedNotes[i * 2]);
       }
 
-      noteCommitments.push(newNote2);
+      noteCommitments.push(noteCommitment2);
       decryptedTreeNote.push(decryptedNotes[i * 2 + 1]);
     });
     const treeNotes = recoverTreeNotes(
@@ -265,10 +265,10 @@ export class UserState extends EventEmitter {
     note1?: TreeNote,
     note2?: TreeNote,
   ) {
-    const { newNote1, newNote2, nullifier1, nullifier2 } = proof;
-    const newNote = await this.processNewNote(noteStartIndex, newNote1, note1);
-    const changeNote = await this.processNewNote(noteStartIndex + 1, newNote2, note2);
-    if (!newNote && !changeNote) {
+    const { noteCommitment1, noteCommitment2, nullifier1, nullifier2 } = proof;
+    const noteCommitment = await this.processNewNote(noteStartIndex, noteCommitment1, note1);
+    const changeNote = await this.processNewNote(noteStartIndex + 1, noteCommitment2, note2);
+    if (!noteCommitment && !changeNote) {
       // Neither note was decrypted (change note should always belong to us for txs we created).
       return;
     }
@@ -284,7 +284,14 @@ export class UserState extends EventEmitter {
       debug(`settling tx: ${savedTx.txHash.toString()}`);
       await this.db.settleJoinSplitTx(txHash, this.user.id, blockCreated);
     } else {
-      const tx = this.recoverJoinSplitTx(proof, blockCreated, newNote, changeNote, destroyedNote1, destroyedNote2);
+      const tx = this.recoverJoinSplitTx(
+        proof,
+        blockCreated,
+        noteCommitment,
+        changeNote,
+        destroyedNote1,
+        destroyedNote2,
+      );
       debug(`recovered tx: ${tx.txHash.toString()}`);
       await this.db.addJoinSplitTx(tx);
     }
@@ -297,9 +304,9 @@ export class UserState extends EventEmitter {
     claimNoteSecret: Buffer,
     treeNote: TreeNote,
   ) {
-    const { txId, newNote1, newNote2 } = proof;
-    const newNote = await this.processNewNote(noteStartIndex + 1, newNote2, treeNote);
-    if (!newNote) {
+    const { txId, noteCommitment1, noteCommitment2 } = proof;
+    const noteCommitment = await this.processNewNote(noteStartIndex + 1, noteCommitment2, treeNote);
+    if (!noteCommitment) {
       // Owned by the account with a different nonce.
       return;
     }
@@ -311,7 +318,7 @@ export class UserState extends EventEmitter {
     )!;
     const outputValueA = !result ? BigInt(0) : (totalOutputValueA * depositValue) / totalInputValue;
     const outputValueB = !result ? BigInt(0) : (totalOutputValueB * depositValue) / totalInputValue;
-    await this.addClaim(noteStartIndex, txHash, newNote1, claimNoteSecret);
+    await this.addClaim(noteStartIndex, txHash, noteCommitment1, claimNoteSecret);
     const { nullifier1, nullifier2 } = proof;
     const destroyedNote1 = await this.nullifyNote(nullifier1);
     const destroyedNote2 = await this.nullifyNote(nullifier2);
@@ -323,7 +330,7 @@ export class UserState extends EventEmitter {
       debug(`settling defi tx: ${txHash.toString()}`);
       await this.db.updateDefiTx(txHash, outputValueA, outputValueB);
     } else {
-      const tx = this.recoverDefiTx(proof, outputValueA, outputValueB, newNote, destroyedNote1, destroyedNote2);
+      const tx = this.recoverDefiTx(proof, outputValueA, outputValueB, noteCommitment, destroyedNote1, destroyedNote2);
       debug(`recovered defi tx: ${txHash.toString()}`);
       await this.db.addDefiTx(tx);
     }
@@ -337,19 +344,19 @@ export class UserState extends EventEmitter {
     }
 
     const { txHash, secret, owner } = claim;
-    const { newNote1, newNote2 } = proof;
+    const { noteCommitment1, noteCommitment2 } = proof;
     const { bridgeId, depositValue, outputValueA, outputValueB } = (await this.db.getDefiTx(txHash))!;
     if (!outputValueA && !outputValueB) {
       const treeNote = new TreeNote(owner.publicKey, depositValue, bridgeId.inputAssetId, owner.nonce, secret);
-      await this.processNewNote(noteStartIndex, newNote1, treeNote);
+      await this.processNewNote(noteStartIndex, noteCommitment1, treeNote);
     }
     if (outputValueA) {
       const treeNote = new TreeNote(owner.publicKey, outputValueA, bridgeId.outputAssetIdA, owner.nonce, secret);
-      await this.processNewNote(noteStartIndex, newNote1, treeNote);
+      await this.processNewNote(noteStartIndex, noteCommitment1, treeNote);
     }
     if (outputValueB) {
       const treeNote = new TreeNote(owner.publicKey, outputValueB, bridgeId.outputAssetIdB, owner.nonce, secret);
-      await this.processNewNote(noteStartIndex + 1, newNote2, treeNote);
+      await this.processNewNote(noteStartIndex + 1, noteCommitment2, treeNote);
     }
 
     await this.refreshNotePicker();
@@ -372,7 +379,7 @@ export class UserState extends EventEmitter {
       return;
     }
 
-    const nullifier = this.noteAlgos.computeNoteNullifier(dataEntry, index, this.user.privateKey);
+    const nullifier = this.noteAlgos.valueNoteNullifier(dataEntry, index, this.user.privateKey);
     const note: Note = {
       index,
       assetId,
@@ -403,7 +410,7 @@ export class UserState extends EventEmitter {
   }
 
   private async addClaim(index: number, txHash: TxHash, dataEntry: Buffer, noteSecret: Buffer) {
-    const nullifier = this.noteAlgos.computeClaimNoteNullifier(dataEntry, index);
+    const nullifier = this.noteAlgos.claimNoteNullifier(dataEntry, index);
     await this.db.addClaim({
       txHash,
       secret: noteSecret,
@@ -416,7 +423,7 @@ export class UserState extends EventEmitter {
   private recoverJoinSplitTx(
     proof: InnerProofData,
     blockCreated: Date,
-    newNote?: Note,
+    noteCommitment?: Note,
     changeNote?: Note,
     destroyedNote1?: Note,
     destroyedNote2?: Note,
@@ -425,7 +432,7 @@ export class UserState extends EventEmitter {
 
     const noteValue = (note?: Note) => (note ? note.value : BigInt(0));
     const privateInput = noteValue(destroyedNote1) + noteValue(destroyedNote2);
-    const recipientPrivateOutput = noteValue(newNote);
+    const recipientPrivateOutput = noteValue(noteCommitment);
     const senderPrivateOutput = noteValue(changeNote);
 
     const publicInput = toBigIntBE(proof.publicInput);
@@ -484,7 +491,7 @@ export class UserState extends EventEmitter {
     proof: InnerProofData,
     outputValueA: bigint,
     outputValueB: bigint,
-    newNote?: Note,
+    noteCommitment?: Note,
     destroyedNote1?: Note,
     destroyedNote2?: Note,
   ) {
@@ -495,7 +502,7 @@ export class UserState extends EventEmitter {
 
     const noteValue = (note?: Note) => (note ? note.value : BigInt(0));
     const privateInput = noteValue(destroyedNote1) + noteValue(destroyedNote2);
-    const privateOutput = noteValue(newNote);
+    const privateOutput = noteValue(noteCommitment);
     const txFee = privateInput - privateOutput - depositValue;
 
     return new UserDefiTx(txHash, this.user.id, bridgeId, depositValue, txFee, new Date(), outputValueA, outputValueB);

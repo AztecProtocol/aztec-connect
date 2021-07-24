@@ -72,7 +72,7 @@ describe('rollup_processor: permissioning', () => {
 
     await expect(
       rollupProcessor.escapeHatch(proofData, solidityFormatSignatures([fakeSignature]), Buffer.concat(viewingKeys)),
-    ).to.be.revertedWith('validateSignature: INVALID_SIGNATURE');
+    ).to.be.revertedWith('validateUnpackedSignature: INVALID_SIGNATURE');
   });
 
   it('should reject transfer with zero signature', async () => {

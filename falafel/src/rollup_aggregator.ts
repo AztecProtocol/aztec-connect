@@ -107,7 +107,7 @@ export class RollupAggregator {
     if (rollupProofs.length < this.numOuterRollupProofs) {
       const endIndex = rollupProofs[0].dataStartIndex + this.outerRollupSize * 2 - 1;
       // Grows the data tree by inserting 0 at last subtree position.
-      await worldStateDb.put(RollupTreeId.DATA, BigInt(endIndex), Buffer.alloc(64, 0));
+      await worldStateDb.put(RollupTreeId.DATA, BigInt(endIndex), Buffer.alloc(32, 0));
     }
 
     const rootRollup = new RootRollup(

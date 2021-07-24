@@ -1,3 +1,4 @@
+import { WorldStateConstants } from '../world_state';
 import { DefiInteractionNote, packInteractionNotes } from './defi_interaction_note';
 
 describe('defi interaction note', () => {
@@ -19,6 +20,6 @@ describe('defi interaction note', () => {
   it('hash an array of empty interaction note', () => {
     const notes = [...Array(4)].map(() => DefiInteractionNote.EMPTY);
     const hash = packInteractionNotes(notes);
-    expect(hash).toEqual(Buffer.from('0f115a0e0c15cdc41958ca46b5b14b456115f4baec5e3ca68599d2a8f435e3b8', 'hex'));
+    expect(hash).toEqual(WorldStateConstants.INITIAL_INTERACTION_HASH);
   });
 });

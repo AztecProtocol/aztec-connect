@@ -5,6 +5,7 @@ import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { DefiInteractionNote, packInteractionNotes } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
+import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { expect, use } from 'chai';
 import { randomBytes } from 'crypto';
 import { solidity } from 'ethereum-waffle';
@@ -165,10 +166,11 @@ describe('ethereum_blockchain', () => {
       feeDistributorContractAddress: feeDistributorAddress,
       nextRollupId: 0,
       dataSize: 0,
-      dataRoot: Buffer.from('2708a627d38d74d478f645ec3b4e91afa325331acf1acebe9077891146b75e39', 'hex'),
-      nullRoot: Buffer.from('2694dbe3c71a25d92213422d392479e7b8ef437add81e1e17244462e6edca9b1', 'hex'),
-      rootRoot: Buffer.from('2d264e93dc455751a721aead9dba9ee2a9fef5460921aeede73f63f6210e6851', 'hex'),
-      defiInteractionHash: Buffer.from('0f115a0e0c15cdc41958ca46b5b14b456115f4baec5e3ca68599d2a8f435e3b8', 'hex'),
+      dataRoot: WorldStateConstants.EMPTY_DATA_ROOT,
+      nullRoot: WorldStateConstants.EMPTY_NULL_ROOT,
+      rootRoot: WorldStateConstants.EMPTY_ROOT_ROOT,
+      defiRoot: WorldStateConstants.EMPTY_DEFI_ROOT,
+      defiInteractionHash: WorldStateConstants.INITIAL_INTERACTION_HASH,
       totalDeposited: [0n, 0n],
       totalWithdrawn: [0n, 0n],
       totalPendingDeposit: [0n, 0n],

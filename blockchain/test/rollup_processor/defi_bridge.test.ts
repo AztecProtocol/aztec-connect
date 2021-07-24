@@ -127,7 +127,7 @@ describe('rollup_processor: defi bridge', () => {
     ));
   });
 
-  describe('Defi bridge', async () => {
+  describe('Defi bridge', () => {
     it('process defi interaction data that converts token to eth', async () => {
       const asset = tokenAssets[0];
       const bridge = uniswapBridges[asset.id][AssetId.ETH];

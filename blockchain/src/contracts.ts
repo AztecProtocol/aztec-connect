@@ -81,6 +81,7 @@ export class Contracts {
     const dataRoot = await this.rollupProcessor.dataRoot();
     const nullRoot = await this.rollupProcessor.nullRoot();
     const rootRoot = await this.rollupProcessor.rootRoot();
+    const defiRoot = await this.rollupProcessor.defiRoot();
 
     const defiInteractionHash = await this.rollupProcessor.defiInteractionHash();
 
@@ -93,6 +94,7 @@ export class Contracts {
       dataRoot,
       nullRoot,
       rootRoot,
+      defiRoot,
       dataSize,
       defiInteractionHash,
       totalDeposited,
