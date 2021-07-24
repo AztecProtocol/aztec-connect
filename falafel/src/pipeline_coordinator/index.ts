@@ -97,7 +97,6 @@ export class PipelineCoordinator {
     const rollupId = lastRollup ? lastRollup.id + 1 : 0;
 
     this.publishTimeManager = new PublishTimeManager(
-      lastRollup,
       this.numInnerRollupTxs * this.numOuterRollupProofs,
       this.publishInterval,
       this.feeResolver,

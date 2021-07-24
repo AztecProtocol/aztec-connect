@@ -1,6 +1,5 @@
 import moment from 'moment';
 import { Duration } from 'moment';
-import { RollupDao } from '../entity/rollup';
 import { TxDao } from '../entity/tx';
 import { TxFeeResolver } from '../tx_fee_resolver';
 
@@ -8,7 +7,6 @@ export class PublishTimeManager {
   private publishTime?: moment.Moment;
 
   constructor(
-    private readonly lastRollup: RollupDao | undefined,
     private readonly numTxs: number,
     private readonly publishInterval: Duration,
     private readonly feeResolver: TxFeeResolver,
@@ -34,16 +32,13 @@ export class PublishTimeManager {
       return;
     }
 
-    // Rollup now if
-    // - we have a tx, but have not rolled up before.
-    // - txs is full.
-    if (!this.lastRollup || txs.length >= this.numTxs) {
+    // Rollup now if txs is full.
+    if (txs.length >= this.numTxs) {
       return moment();
     }
 
-    // We have rolled up before. Rollup in publishInterval seconds from latest rollup.
-    // Or at the time no later than all txs's expected publish time.
-    const nextRollupTime = moment(this.lastRollup.mined).add(this.publishInterval);
+    // Rollup at the earliest tx expected publish time.
+    const nextRollupTime = moment().add(this.publishInterval);
     return txs
       .map(tx => {
         const ratio = this.feeResolver.computeSurplusRatio([tx]);

@@ -92,7 +92,7 @@ describe('pipeline_coordinator', () => {
   });
 
   it('should publish a rollup', async () => {
-    rollupDb.getPendingTxs.mockImplementation(() => [mockTx()]);
+    rollupDb.getPendingTxs.mockImplementation(() => [mockTx(moment().subtract(publishInterval))]);
     await coordinator.start();
     expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
   });
