@@ -3,6 +3,7 @@ import { AssetId } from '@aztec/barretenberg/asset';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { ProofData } from '@aztec/barretenberg/client_proofs';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { randomBytes } from 'crypto';
 import { TxDao } from '../entity/tx';
@@ -16,7 +17,7 @@ export const mockTx = (assetId: AssetId, txType: TxType, txFee: bigint) =>
       [TxType.DEFI_DEPOSIT, TxType.DEFI_CLAIM].includes(txType)
         ? new BridgeId(EthAddress.randomAddress(), 1, assetId, 0, 0).toBuffer()
         : numToUInt32BE(assetId, 32),
-      randomBytes(9 * 32),
+      randomBytes((ProofData.NUM_PUBLIC_INPUTS - 5) * 32),
       toBufferBE(txFee, 32),
     ]),
   } as any) as TxDao);
