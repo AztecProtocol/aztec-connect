@@ -276,6 +276,7 @@ describe('user state', () => {
       randomBytes(32),
       Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK).fill(BridgeId.ZERO.toBuffer()),
       Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK).fill(Buffer.alloc(32)),
+      Array(RollupProofData.NUMBER_OF_ASSETS).fill(Buffer.alloc(32)),
       totalTxFees,
       innerProofData,
       randomBytes(32 * 16),

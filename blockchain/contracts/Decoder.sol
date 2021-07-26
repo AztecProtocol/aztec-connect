@@ -23,6 +23,7 @@ import {Bn254Crypto} from './verifier/cryptography/Bn254Crypto.sol';
  * newDefiRoot
  * bridgeIds[numberOfBridgeCalls]
  * depositSums[numberOfBridgeCalls]
+ * assetIds[numberOfAssets]
  * txFees[numberOfAssets]
  * innerProofData[rollupSize]
  * interactionData[numberOfBridgeCalls]
@@ -114,7 +115,7 @@ contract Decoder {
         uint256 numberOfBridgeCalls
     ) internal pure returns (uint256 totalTxFee) {
         assembly {
-            totalTxFee := mload(add(add(add(proofData, 0x180), mul(0x40, numberOfBridgeCalls)), mul(0x20, assetId)))
+            totalTxFee := mload(add(add(add(proofData, 0x200), mul(0x40, numberOfBridgeCalls)), mul(0x20, assetId)))
         }
     }
 }

@@ -33,6 +33,8 @@ export class TxRollup {
 
     public newDefiRoot: Buffer,
     public bridgeIds: Buffer[],
+
+    public assetIds: Buffer[],
   ) {
     const txIds = proofs.map(p => new ProofData(p).txId);
     this.rollupHash = createHash('sha256').update(Buffer.concat(txIds)).digest();
@@ -65,6 +67,8 @@ export class TxRollup {
 
       this.newDefiRoot,
       serializeBufferArrayToVector(this.bridgeIds),
+
+      serializeBufferArrayToVector(this.assetIds),
     ]);
   }
 
@@ -100,6 +104,9 @@ export class TxRollup {
     const newDefiRoot = deserializeField(buf, offset);
     offset += newDefiRoot.adv;
     const bridgeIds = deserializeArrayFromVector(deserializeField, buf, offset);
+    offset += bridgeIds.adv;
+
+    const assetIds = deserializeArrayFromVector(deserializeField, buf, offset);
 
     return new TxRollup(
       rollupId,
@@ -116,6 +123,7 @@ export class TxRollup {
       dataRootsIndicies.elem,
       newDefiRoot.elem,
       bridgeIds.elem,
+      assetIds.elem,
     );
   }
 }

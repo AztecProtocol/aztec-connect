@@ -29,7 +29,7 @@
     "levelup": "^5.0.0",
     "memdown": "^6.0.0",
     "node-fetch": "^2.6.0",
-    "promise-readable": "^6.0.0",
+    "promise-readable": "^5.0.4",
     "sha3": "^2.1.3",
     "threads": "1.3.1",
     "tslib": "^2.0.0"

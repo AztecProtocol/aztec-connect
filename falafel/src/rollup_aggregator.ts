@@ -4,10 +4,12 @@ import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { ProofGenerator, RootRollup, RootRollupProofRequest } from 'halloumi/proof_generator';
+import { AssetId } from '@aztec/barretenberg/asset';
 import { RollupDao } from './entity/rollup';
 import { RollupProofDao } from './entity/rollup_proof';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
+import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 
 export class RollupAggregator {
   constructor(
@@ -18,7 +20,7 @@ export class RollupAggregator {
     private numInnerRollupTxs: number,
     private numOuterRollupProofs: number,
     private metrics: Metrics,
-  ) {}
+  ) { }
 
   public async aggregateRollupProofs(
     innerProofs: RollupProofDao[],
@@ -26,6 +28,7 @@ export class RollupAggregator {
     oldDefiPath: HashPath,
     defiInteractionNotes: DefiInteractionNote[],
     bridgeIds: BridgeId[],
+    assetIds: AssetId[],
   ) {
     console.log(`Creating root rollup proof ${innerProofs.length} inner proofs...`);
 
@@ -35,6 +38,7 @@ export class RollupAggregator {
       oldDefiPath,
       defiInteractionNotes,
       bridgeIds,
+      assetIds,
     );
     const end = this.metrics.rootRollupTimer();
     const rootRollupRequest = new RootRollupProofRequest(this.numInnerRollupTxs, this.numOuterRollupProofs, rootRollup);
@@ -88,6 +92,7 @@ export class RollupAggregator {
     oldDefiPath: HashPath,
     defiInteractionNotes: DefiInteractionNote[],
     bridgeIds: BridgeId[],
+    assetIds: AssetId[],
   ) {
     const worldStateDb = this.worldStateDb;
 
@@ -120,6 +125,7 @@ export class RollupAggregator {
       newDefiRoot,
       oldDefiPath,
       bridgeIds.map(id => id.toBigInt()),
+      assetIds.filter(id => id).map(id => numToUInt32BE(id, 32)),
       defiInteractionNotes.map(n => n.toBuffer()),
     );
 

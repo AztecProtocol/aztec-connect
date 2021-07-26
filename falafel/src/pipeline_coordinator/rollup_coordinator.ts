@@ -11,6 +11,7 @@ import { RollupAggregator } from '../rollup_aggregator';
 import { RollupCreator } from '../rollup_creator';
 import { RollupPublisher } from '../rollup_publisher';
 import { PublishTimeManager } from './publish_time_manager';
+import { AssetId } from '@aztec/barretenberg/asset';
 
 export class RollupCoordinator {
   private interrupted = false;
@@ -19,6 +20,7 @@ export class RollupCoordinator {
   private innerProofs: RollupProofDao[] = [];
   private txs: TxDao[] = [];
   private bridgeIds: BridgeId[] = [];
+  private assetIds: Set<AssetId> = new Set([AssetId.ETH]);
 
   constructor(
     private publishTimeManager: PublishTimeManager,
@@ -30,7 +32,7 @@ export class RollupCoordinator {
     private oldDefiRoot: Buffer,
     private oldDefiPath: HashPath,
     private defiInteractionNotes: DefiInteractionNote[] = [],
-  ) {}
+  ) { }
 
   get processedTxs() {
     return this.txs;
@@ -66,15 +68,28 @@ export class RollupCoordinator {
     const txs: TxDao[] = [];
     for (let i = 0; i < sortedTxs.length && txs.length < remainingTxSlots; ++i) {
       const tx = sortedTxs[i];
-      if (tx.txType !== TxType.DEFI_DEPOSIT) {
+      const proofData = new ProofData(tx.proofData);
+      const assetId = tx.txType === TxType.ACCOUNT
+        ? 0
+        : [TxType.DEFI_DEPOSIT, TxType.DEFI_CLAIM].includes(tx.txType)
+          ? BridgeId.fromBuffer(proofData.assetId).inputAssetId
+          : proofData.assetId.readUInt32BE(28);
+      if (!this.assetIds.has(assetId) && this.assetIds.size === RollupProofData.NUMBER_OF_ASSETS) {
+        continue;
+      }
+      const addTx = (tx: TxDao) => {
+        this.assetIds.add(assetId);
         txs.push(tx);
+      }
+      if (tx.txType !== TxType.DEFI_DEPOSIT) {
+        addTx(tx);
       } else {
-        const { bridgeId } = new DefiDepositProofData(new ProofData(tx.proofData));
+        const { bridgeId } = new DefiDepositProofData(proofData);
         if (this.bridgeIds.some(id => id.equals(bridgeId))) {
-          txs.push(tx);
+          addTx(tx);
         } else if (this.bridgeIds.length < RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK) {
           this.bridgeIds.push(bridgeId);
-          txs.push(tx);
+          addTx(tx);
         }
       }
     }
@@ -111,6 +126,7 @@ export class RollupCoordinator {
         this.bridgeIds.concat(
           Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK - this.bridgeIds.length).fill(BridgeId.ZERO),
         ),
+        [...this.assetIds],
       );
       if (!this.interrupted) {
         this.published = await this.rollupPublisher.publishRollup(rollupDao);

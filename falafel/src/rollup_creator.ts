@@ -9,6 +9,9 @@ import { RollupProofDao } from './entity/rollup_proof';
 import { TxDao } from './entity/tx';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
+import { AssetId } from '@aztec/barretenberg/asset';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 
 export class RollupCreator {
   constructor(
@@ -20,7 +23,7 @@ export class RollupCreator {
     private innerRollupSize: number,
     private outerRollupSize: number,
     private metrics: Metrics,
-  ) {}
+  ) { }
 
   /**
    * Creates a rollup from the given txs and publishes it.
@@ -87,9 +90,17 @@ export class RollupCreator {
     const dataRootsPaths: HashPath[] = [];
     const dataRootsIndicies: number[] = [];
     const bridgeIds: Buffer[] = [];
+    const assetIds: Set<AssetId> = new Set();
 
     for (const tx of txs) {
       const proof = new ProofData(tx.proofData);
+
+      if ([ProofId.DEFI_DEPOSIT, ProofId.DEFI_CLAIM].includes(proof.proofId)) {
+        const bridgeId = BridgeId.fromBuffer(proof.assetId);
+        assetIds.add(bridgeId.inputAssetId);
+      } else if (proof.proofId !== ProofId.ACCOUNT) {
+        assetIds.add(proof.assetId.readUInt32BE(28));
+      }
 
       if (proof.proofId !== ProofId.DEFI_DEPOSIT) {
         await worldStateDb.put(RollupTreeId.DATA, nextDataIndex++, proof.noteCommitment1);
@@ -163,6 +174,8 @@ export class RollupCreator {
 
       newDefiRoot,
       bridgeIds,
+
+      [...assetIds].filter(id => id).map(id => numToUInt32BE(id, 32)),
     );
   }
 }

@@ -72,5 +72,9 @@
     "ts-jest": "^26.4.2",
     "ts-node": "^8.9.1",
     "tsc-watch": "^2.2.1"
+  },
+  "resolutions": {
+    "ethers": "5.0.29",
+    "@ethersproject/abstract-signer": "5.0.13"
   }
 }

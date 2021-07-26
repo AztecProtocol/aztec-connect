@@ -39,7 +39,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     uint256 public constant numberOfAssets = 4;
     uint256 public constant numberOfBridgeCalls = 4;
     uint256 public constant txNumPubInputs = 10;
-    uint256 public constant rollupNumHeaderInputs = 11 + (numberOfBridgeCalls * 2) + numberOfAssets;
+    uint256 public constant rollupNumHeaderInputs = 11 + (numberOfBridgeCalls * 2) + (numberOfAssets * 2);
     uint256 public constant txPubInputLength = txNumPubInputs * 32; // public inputs length for of each inner proof tx
     uint256 public constant rollupHeaderInputLength = rollupNumHeaderInputs * 32;
     uint256 public constant ethAssetId = 0;

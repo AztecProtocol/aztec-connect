@@ -1,5 +1,6 @@
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
+import { randomBytes } from 'crypto';
 import moment from 'moment';
 import { PipelineCoordinator } from '.';
 import { ClaimProofCreator } from '../claim_proof_creator';
@@ -30,7 +31,20 @@ describe('pipeline_coordinator', () => {
 
   const mockRollup = () => ({ id: 0, interactionResult: Buffer.alloc(0), mined: moment() });
 
-  const mockTx = (created = moment()) => ({ created: created.toDate() } as TxDao);
+  const mockTx = (created = moment()) => ({
+    proofData: Buffer.concat([
+      randomBytes(32),
+      randomBytes(32),
+      randomBytes(32),
+      Buffer.alloc(32),
+      randomBytes(64),
+      randomBytes(64),
+      randomBytes(32),
+      randomBytes(32),
+      randomBytes(32),
+      randomBytes(32),
+    ]), created: created.toDate()
+  } as TxDao);
 
   beforeEach(() => {
     jest.spyOn(Date, 'now').mockImplementation(() => 1618226000000);

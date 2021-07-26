@@ -29,6 +29,7 @@ describe('Rollup', () => {
       [1, 2],
       randomRoot(),
       [],
+      [],
     );
 
     const buf = rollup.toBuffer();

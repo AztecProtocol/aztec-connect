@@ -23,6 +23,7 @@ describe('RollupProofData', () => {
 
   const createRollupProofData = (innerProofs: InnerProofData[], viewingKeys: ViewingKey[][] = []) => {
     const bridgeIds = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => randomBytes(32));
+    const assetIds = [...Array(RollupProofData.NUMBER_OF_ASSETS)].map(() => randomBytes(32));
     const defiDepositSums = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => randomBytes(32));
     const defiInteractionNotes = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => randomBytes(64));
     const totalTxFees = [...Array(RollupProofData.NUMBER_OF_ASSETS)].map(() => randomBytes(32));
@@ -40,6 +41,7 @@ describe('RollupProofData', () => {
       randomBytes(32),
       bridgeIds,
       defiDepositSums,
+      assetIds,
       totalTxFees,
       innerProofs,
       randomBytes(RollupProofData.LENGTH_RECURSIVE_PROOF_OUTPUT),
@@ -103,6 +105,7 @@ describe('RollupProofData', () => {
           randomBytes(32),
           randomBytes(32),
           randomBytes(32),
+          [randomBytes(32)],
           [randomBytes(32)],
           [randomBytes(32)],
           totalTxFees,

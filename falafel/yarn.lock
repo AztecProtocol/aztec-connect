@@ -52,7 +52,6 @@
   version "2.0.0"
   dependencies:
     "@types/levelup" "^4.3.0"
-    bigint-buffer "^1.1.5"
     debug "^4.1.1"
     detect-node "^2.0.4"
     fs-extra "10.0.0"
@@ -67,12 +66,11 @@
 "@aztec/blockchain@file:../blockchain/dest":
   version "2.0.0"
   dependencies:
-    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-6ba652d4-b9f5-47a2-a552-15e61fca0f3d-1624831556751/node_modules/barretenberg.js/dest"
+    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-f68eff29-209a-483a-8fb5-c33b2a738d37-1625305485321/node_modules/barretenberg.js/dest"
     "@ethersproject/experimental" "5.0.9"
     "@ethersproject/providers" "5.0.18"
     "@uniswap/v2-core" "^1.0.1"
     "@uniswap/v2-periphery" "^1.1.0-beta.0"
-    bigint-buffer "^1.1.5"
     debug "^4.1.1"
     dotenv "^8.2.0"
     ethers "5.0.29"
@@ -2153,20 +2151,6 @@ bech32@1.1.4:
   resolved "https://registry.yarnpkg.com/bech32/-/bech32-1.1.4.tgz#e38c9f37bf179b8eb16ae3a772b40c356d4832e9"
   integrity sha512-s0IrSOzLlbvX7yp4WBfPITzpAU8sqQcpsmwXDiKwrG4r491vwCO/XpejasRNl0piBMe/DvP4Tz0mIS/X1DPJBQ==
 
-bigint-buffer@^1.1.5:
-  version "1.1.5"
-  resolved "https://registry.yarnpkg.com/bigint-buffer/-/bigint-buffer-1.1.5.tgz#d038f31c8e4534c1f8d0015209bf34b4fa6dd442"
-  integrity sha512-trfYco6AoZ+rKhKnxA0hgX0HAbVP/s808/EuDSe2JDzUnCp/xAsli35Orvk67UrTEcwuxZqYZDmfA2RXJgxVvA==
-  dependencies:
-    bindings "^1.3.0"
-
-bindings@^1.3.0:
-  version "1.5.0"
-  resolved "https://registry.yarnpkg.com/bindings/-/bindings-1.5.0.tgz#10353c9e945334bc0511a6d90b38fbc7c9c504df"
-  integrity sha512-p2q/t/mhvuOj/UeLlV6566GD/guowlr0hHxClI0W9m7MWYkL1F0hLo+0Aexs9HSPCtR1SXQ0TD3MMKrXZajbiQ==
-  dependencies:
-    file-uri-to-path "1.0.0"
-
 bintrees@1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/bintrees/-/bintrees-1.0.1.tgz#0e655c9b9c2435eaab68bf4027226d2b55a34524"
@@ -3381,11 +3365,6 @@ file-entry-cache@^6.0.1:
   dependencies:
     flat-cache "^3.0.4"
 
-file-uri-to-path@1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/file-uri-to-path/-/file-uri-to-path-1.0.0.tgz#553a7b8446ff6f684359c445f1e37a05dacc33dd"
-  integrity sha512-0Zt+s3L7Vf1biwWZ29aARiVYLx7iMGnEUl9x33fbB/j3jR81u/O2LbqK+Bm1CDSNDKVtJ/YjwY7TUd5SkeLQLw==
-
 fill-range@^4.0.0:
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/fill-range/-/fill-range-4.0.0.tgz#d544811d428f98eb06a63dc402d2403c328c38f7"
@@ -3729,8 +3708,8 @@ growly@^1.3.0:
 "halloumi@file:../halloumi/dest":
   version "1.0.0"
   dependencies:
-    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-halloumi-1.0.0-d83a66c5-9da4-403c-b280-6fc3d821ca08-1624831556856/barretenberg.js/dest"
-    "@aztec/blockchain" "file:../../.cache/yarn/v6/npm-halloumi-1.0.0-d83a66c5-9da4-403c-b280-6fc3d821ca08-1624831556856/blockchain/dest"
+    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-halloumi-1.0.0-2fcb8f5a-0030-4df2-b1cd-274498e897a0-1625305485439/barretenberg.js/dest"
+    "@aztec/blockchain" "file:../../.cache/yarn/v6/npm-halloumi-1.0.0-2fcb8f5a-0030-4df2-b1cd-274498e897a0-1625305485439/blockchain/dest"
     fs-extra "9.0.1"
     koa "^2.7.0"
     koa-router "^7.4.0"

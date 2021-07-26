@@ -28,7 +28,7 @@ export const interactionHashes = [
 ];
 
 class InnerProofOutput {
-  constructor(public innerProofs: InnerProofData[], public signatures: Buffer[], public totalTxFees: bigint[]) {}
+  constructor(public innerProofs: InnerProofData[], public signatures: Buffer[], public totalTxFees: bigint[]) { }
 }
 
 export const createDepositProof = async (
@@ -133,7 +133,7 @@ export const mergeInnerProofs = (output: InnerProofOutput[]) => {
 export class DefiInteractionData {
   static EMPTY = new DefiInteractionData(BridgeId.ZERO, BigInt(0));
 
-  constructor(public readonly bridgeId: BridgeId, public readonly totalInputValue: bigint) {}
+  constructor(public readonly bridgeId: BridgeId, public readonly totalInputValue: bigint) { }
 }
 
 interface RollupProofOptions {
@@ -156,7 +156,7 @@ export const createSigData = (
   feeDistributorAddress: EthAddress,
 ) =>
   Buffer.concat([
-    proofData.slice(0, 23 * 32),
+    proofData.slice(0, 27 * 32),
     providerAddress.toBuffer(),
     toBufferBE(feeLimit, 32),
     feeDistributorAddress.toBuffer(),
@@ -220,6 +220,7 @@ export const createRollupProof = async (
     defiRoots[rollupId + 1],
     ...bridgeIds.map(id => id.toBuffer()),
     ...defiDepositSums.map(sum => toBufferBE(sum, 32)),
+    Buffer.alloc(32 * numberOfAssets),
     ...totalTxFeePublicInputs,
     ...innerProofs.map(p => p.toBuffer()),
     padding,

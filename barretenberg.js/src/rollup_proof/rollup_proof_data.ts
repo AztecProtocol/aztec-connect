@@ -7,7 +7,7 @@ export class RollupProofData {
   static NUMBER_OF_ASSETS = 4;
   static NUM_BRIDGE_CALLS_PER_BLOCK = 4;
   static NUM_ROLLUP_HEADER_INPUTS =
-    11 + RollupProofData.NUMBER_OF_ASSETS + RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK * 2;
+    11 + RollupProofData.NUMBER_OF_ASSETS * 2 + RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK * 2;
   static LENGTH_ROLLUP_HEADER_INPUTS = RollupProofData.NUM_ROLLUP_HEADER_INPUTS * 32;
   static LENGTH_RECURSIVE_PROOF_OUTPUT = 16 * 32;
   public rollupHash: Buffer;
@@ -26,6 +26,7 @@ export class RollupProofData {
     public newDefiRoot: Buffer,
     public bridgeIds: Buffer[],
     public defiDepositSums: Buffer[],
+    public assetIds: Buffer[],
     public totalTxFees: Buffer[],
     public innerProofData: InnerProofData[],
     public recursiveProofOutput: Buffer,
@@ -55,6 +56,7 @@ export class RollupProofData {
       this.newDefiRoot,
       ...this.bridgeIds,
       ...this.defiDepositSums.map(s => s),
+      ...this.assetIds,
       ...this.totalTxFees,
       ...this.innerProofData.map(p => p.toBuffer()),
       this.recursiveProofOutput,
@@ -98,6 +100,12 @@ export class RollupProofData {
     const defiDepositSums: Buffer[] = [];
     for (let i = 0; i < RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK; ++i) {
       defiDepositSums.push(proofData.slice(startIndex, startIndex + 32));
+      startIndex += 32;
+    }
+
+    const assetIds: Buffer[] = [];
+    for (let i = 0; i < RollupProofData.NUMBER_OF_ASSETS; ++i) {
+      assetIds.push(proofData.slice(startIndex, startIndex + 32));
       startIndex += 32;
     }
 
@@ -161,6 +169,7 @@ export class RollupProofData {
       newDefiRoot,
       bridgeIds,
       defiDepositSums,
+      assetIds,
       totalTxFees,
       innerProofData,
       recursiveProofOutput,

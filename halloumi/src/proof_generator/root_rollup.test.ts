@@ -20,6 +20,7 @@ describe('Rollup', () => {
       randomDataPath(),
       [],
       [],
+      [],
     );
 
     const buf = rollup.toBuffer();
