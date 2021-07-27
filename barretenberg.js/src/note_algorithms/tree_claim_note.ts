@@ -4,13 +4,14 @@ import { BridgeId } from '../bridge_id';
 import { numToUInt32BE } from '../serialize';
 
 export class TreeClaimNote {
-  static EMPTY = new TreeClaimNote(BigInt(0), BridgeId.ZERO, 0, Buffer.alloc(32));
+  static EMPTY = new TreeClaimNote(BigInt(0), BridgeId.ZERO, 0, BigInt(0), Buffer.alloc(32));
   static LENGTH = TreeClaimNote.EMPTY.toBuffer().length;
 
   constructor(
     public value: bigint,
     public bridgeId: BridgeId,
     public defiInteractionNonce: number,
+    public fee: bigint,
     public partialState: Buffer,
   ) {}
 
@@ -19,6 +20,7 @@ export class TreeClaimNote {
       toBigIntBE(randomBytes(32)),
       BridgeId.random(),
       randomBytes(4).readUInt32BE(),
+      toBigIntBE(randomBytes(32)),
       randomBytes(32),
     );
   }
@@ -30,8 +32,10 @@ export class TreeClaimNote {
     offset += 32;
     const defiInteractionNonce = buf.readUInt32BE(offset);
     offset += 4;
+    const fee = toBigIntBE(buf.slice(offset, offset + 32));
+    offset += 32;
     const partialState = buf.slice(offset, offset + 32);
-    return new TreeClaimNote(value, bridgeId, defiInteractionNonce, partialState);
+    return new TreeClaimNote(value, bridgeId, defiInteractionNonce, fee, partialState);
   }
 
   toBuffer() {
@@ -39,6 +43,7 @@ export class TreeClaimNote {
       toBufferBE(this.value, 32),
       this.bridgeId.toBuffer(),
       numToUInt32BE(this.defiInteractionNonce),
+      toBufferBE(this.fee, 32),
       this.partialState,
     ]);
   }

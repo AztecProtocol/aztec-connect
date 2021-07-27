@@ -112,13 +112,13 @@ describe('user state', () => {
     const txData = ClaimNoteTxData.createFromEphPriv(value, bridgeId, user, ephPrivKey, grumpkin);
     const partialState = noteAlgos.valueNotePartialCommitment(txData.noteSecret, user);
     return {
-      note: new TreeClaimNote(value, bridgeId, 0, partialState),
+      note: new TreeClaimNote(value, bridgeId, 0, BigInt(0), partialState),
       viewingKey: txData.getViewingKey(user.publicKey, ephPrivKey, grumpkin),
     };
   };
 
   const createGibberishClaimNote = () => ({
-    note: new TreeClaimNote(0n, BridgeId.random(), 0, randomBytes(32)),
+    note: new TreeClaimNote(0n, BridgeId.random(), 0, BigInt(0), randomBytes(32)),
     viewingKey: ViewingKey.random(),
   });
 

@@ -118,5 +118,6 @@ export const randomClaim = () =>
     depositValue: toBigIntBE(randomBytes(32)),
     partialState: randomBytes(32),
     interactionNonce: randomBytes(4).readUInt32BE(0),
+    fee: toBigIntBE(randomBytes(32)),
     created: new Date(),
   });

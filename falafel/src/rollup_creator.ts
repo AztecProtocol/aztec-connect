@@ -23,7 +23,7 @@ export class RollupCreator {
     private innerRollupSize: number,
     private outerRollupSize: number,
     private metrics: Metrics,
-  ) { }
+  ) {}
 
   /**
    * Creates a rollup from the given txs and publishes it.
@@ -110,7 +110,12 @@ export class RollupCreator {
         }
         const interactionNonce =
           rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK + bridgeIds.findIndex(id => id.equals(proof.assetId));
-        const encNote = this.noteAlgo.claimNoteCompletePartialCommitment(proof.noteCommitment1, interactionNonce);
+        const claimFee = proof.txFee - (proof.txFee >> BigInt(1));
+        const encNote = this.noteAlgo.claimNoteCompletePartialCommitment(
+          proof.noteCommitment1,
+          interactionNonce,
+          claimFee,
+        );
         await worldStateDb.put(RollupTreeId.DATA, nextDataIndex++, encNote);
       }
       await worldStateDb.put(RollupTreeId.DATA, nextDataIndex++, proof.noteCommitment2);

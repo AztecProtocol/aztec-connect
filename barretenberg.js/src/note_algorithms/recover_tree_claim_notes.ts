@@ -20,5 +20,5 @@ export const recoverTreeClaimNotes = (decryptedNotes: (DecryptedNote | undefined
     const bridgeId = BridgeId.fromBuffer(proof.assetId);
     const partialState = Buffer.concat([proof.inputOwner, proof.outputOwner]);
     const defiInteractionNonce = 0;
-    return new TreeClaimNote(value, bridgeId, defiInteractionNonce, partialState);
+    return new TreeClaimNote(value, bridgeId, defiInteractionNonce, BigInt(0), partialState);
   });

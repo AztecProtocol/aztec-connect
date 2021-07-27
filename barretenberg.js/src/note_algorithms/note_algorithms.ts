@@ -1,4 +1,4 @@
-import { toBigIntBE } from '../bigint_buffer';
+import { toBigIntBE, toBufferBE } from '../bigint_buffer';
 import { AccountId } from '../account_id';
 import { ViewingKey } from '../viewing_key';
 import { BarretenbergWasm } from '../wasm';
@@ -6,6 +6,7 @@ import { BarretenbergWorker } from '../wasm/worker';
 import { DefiInteractionNote } from './defi_interaction_note';
 import { TreeClaimNote } from './tree_claim_note';
 import { TreeNote } from './tree_note';
+import debug from 'debug';
 
 export class NoteAlgorithms {
   constructor(private wasm: BarretenbergWasm, private worker: BarretenbergWorker = wasm as any) {}
@@ -46,15 +47,16 @@ export class NoteAlgorithms {
     return Buffer.from(this.wasm.sliceMemory(0, 32));
   }
 
-  public claimNoteCompletePartialCommitment(partialNote: Buffer, interactionNonce: number) {
+  public claimNoteCompletePartialCommitment(partialNote: Buffer, interactionNonce: number, fee: bigint) {
     this.wasm.transferToHeap(partialNote, 0);
-    this.wasm.call('notes__claim_note_complete_partial_commitment', 0, interactionNonce, 0);
+    this.wasm.transferToHeap(toBufferBE(fee, 32), 32);
+    this.wasm.call('notes__claim_note_complete_partial_commitment', 0, interactionNonce, 32, 0);
     return Buffer.from(this.wasm.sliceMemory(0, 32));
   }
 
   public claimNoteCommitment(note: TreeClaimNote) {
     const partial = this.claimNotePartialCommitment(note);
-    return this.claimNoteCompletePartialCommitment(partial, note.defiInteractionNonce);
+    return this.claimNoteCompletePartialCommitment(partial, note.defiInteractionNonce, note.fee);
   }
 
   public claimNoteNullifier(noteCommitment: Buffer, index: number) {

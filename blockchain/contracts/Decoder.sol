@@ -102,9 +102,9 @@ contract Decoder {
             bridgeId := mload(dataStart)
             bridgeAddress := and(bridgeId, 0xffffffffffffffffffffffffffffffffffffffff)
             numOutputAssets := and(shr(160, bridgeId), 3)
-            mstore(assetIds, and(shr(162, bridgeId), 0xffffffff))
-            mstore(add(assetIds, 0x20), and(shr(194, bridgeId), 0xffffffff))
-            mstore(add(assetIds, 0x40), and(shr(226, bridgeId), 0x3ffffff))
+            mstore(assetIds, and(shr(162, bridgeId), 0x3fffffff))
+            mstore(add(assetIds, 0x20), and(shr(192, bridgeId), 0x3fffffff))
+            mstore(add(assetIds, 0x40), and(shr(222, bridgeId), 0x3fffffff))
             totalInputValue := mload(add(dataStart, mul(0x20, numberOfBridgeCalls)))
         }
     }

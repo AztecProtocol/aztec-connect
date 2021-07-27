@@ -1,6 +1,6 @@
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
-import { ProofId } from '@aztec/barretenberg/client_proofs';
+import { ProofId, ProofData } from '@aztec/barretenberg/client_proofs';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
 import { NoteAlgorithms, TreeClaimNote } from '@aztec/barretenberg/note_algorithms';
 import { DefiDepositProofData, InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
@@ -172,9 +172,17 @@ export class WorldState {
       switch (proofData.proofId) {
         case ProofId.DEFI_DEPOSIT: {
           const { bridgeId, depositValue, partialState } = new DefiDepositProofData(proofData);
+          const { txId } = proofData;
+          // TODO - fetch tx from tx pool or somewhere.
+          const tx = await this.rollupDb.getTx(txId);
+          if (!tx) {
+            continue;
+          }
+          const totalFee = tx ? new ProofData(tx.proofData).txFee : BigInt(0);
+          const fee = totalFee - (totalFee >> BigInt(1));
           const index = dataStartIndex + i * 2;
           const interactionNonce = interactionResult.find(r => r.bridgeId.equals(bridgeId))!.nonce;
-          const note = new TreeClaimNote(depositValue, bridgeId, interactionNonce, partialState);
+          const note = new TreeClaimNote(depositValue, bridgeId, interactionNonce, fee, partialState);
           const nullifier = this.noteAlgo.claimNoteNullifier(this.noteAlgo.claimNoteCommitment(note), index);
           await this.rollupDb.addClaim({
             id: index,
@@ -183,6 +191,7 @@ export class WorldState {
             depositValue,
             partialState,
             interactionNonce,
+            fee,
             created: new Date(),
           });
           break;

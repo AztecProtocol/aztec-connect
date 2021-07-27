@@ -40,7 +40,7 @@ describe('compute_nullifier', () => {
     const ownerId = new AccountId(pubKey, 0);
     const claimNoteTxData = new ClaimNoteTxData(BigInt(100), bridgeId, ownerId.publicKey, ownerId.nonce, noteSecret);
     const partialState = noteAlgos.valueNotePartialCommitment(claimNoteTxData.noteSecret, ownerId);
-    const inputNote = new TreeClaimNote(claimNoteTxData.value, claimNoteTxData.bridgeId, 0, partialState);
+    const inputNote = new TreeClaimNote(claimNoteTxData.value, claimNoteTxData.bridgeId, 0, BigInt(0), partialState);
     const inputNoteEnc = noteAlgos.claimNotePartialCommitment(inputNote);
     const nullifier = noteAlgos.claimNoteNullifier(inputNoteEnc, 1);
     expect(nullifier.toString('hex')).toEqual('19eb0092121cea45882270797bb8f1c2707e3109710012ac9e4d7509ce229406');

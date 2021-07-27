@@ -26,6 +26,9 @@ export class ClaimDao {
   @Column()
   public interactionNonce!: number;
 
+  @Column('text', { transformer: [bigintTransformer] })
+  public fee!: bigint;
+
   @Column()
   public created!: Date;
 

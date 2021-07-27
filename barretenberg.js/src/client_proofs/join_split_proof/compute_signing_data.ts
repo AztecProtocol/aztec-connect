@@ -26,7 +26,7 @@ export function computeSigningData(
   const noteCommitments = notes.map(note => noteAlgos.valueNoteCommitment(note));
 
   const partialState = noteAlgos.valueNotePartialCommitment(claimNote.noteSecret, accountId);
-  const treeClaimNote = new TreeClaimNote(claimNote.value, claimNote.bridgeId, 0, partialState);
+  const treeClaimNote = new TreeClaimNote(claimNote.value, claimNote.bridgeId, 0, BigInt(0), partialState);
   const claimNoteCommitment = noteAlgos.claimNotePartialCommitment(treeClaimNote);
 
   const nullifier1 = noteAlgos.valueNoteNullifier(
@@ -46,7 +46,6 @@ export function computeSigningData(
   const publicOutput = isDefiBridge ? claimNote.value : outputValue;
   const totalOutputValue = notes[2].value + notes[3].value + publicOutput;
   const txFee = totalInputValue - totalOutputValue;
-
   const toCompress = [
     toBufferBE(inputValue, 32),
     toBufferBE(publicOutput, 32),
