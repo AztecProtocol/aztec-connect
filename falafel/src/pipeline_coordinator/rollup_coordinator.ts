@@ -20,7 +20,7 @@ export class RollupCoordinator {
   private innerProofs: RollupProofDao[] = [];
   private txs: TxDao[] = [];
   private bridgeIds: BridgeId[] = [];
-  private assetIds: Set<AssetId> = new Set([AssetId.ETH]);
+  private assetIds: Set<AssetId> = new Set();
 
   constructor(
     private publishTimeManager: PublishTimeManager,
@@ -68,19 +68,23 @@ export class RollupCoordinator {
     const txs: TxDao[] = [];
     for (let i = 0; i < sortedTxs.length && txs.length < remainingTxSlots; ++i) {
       const tx = sortedTxs[i];
+      if (tx.txType === TxType.ACCOUNT) {
+        txs.push(tx);
+        continue;
+      }
+
       const proofData = new ProofData(tx.proofData);
-      const assetId = tx.txType === TxType.ACCOUNT
-        ? 0
-        : [TxType.DEFI_DEPOSIT, TxType.DEFI_CLAIM].includes(tx.txType)
-          ? BridgeId.fromBuffer(proofData.assetId).inputAssetId
-          : proofData.assetId.readUInt32BE(28);
+      const assetId = [TxType.DEFI_DEPOSIT, TxType.DEFI_CLAIM].includes(tx.txType)
+        ? BridgeId.fromBuffer(proofData.assetId).inputAssetId
+        : proofData.assetId.readUInt32BE(28);
       if (!this.assetIds.has(assetId) && this.assetIds.size === RollupProofData.NUMBER_OF_ASSETS) {
         continue;
       }
+
       const addTx = (tx: TxDao) => {
         this.assetIds.add(assetId);
         txs.push(tx);
-      }
+      };
       if (tx.txType !== TxType.DEFI_DEPOSIT) {
         addTx(tx);
       } else {

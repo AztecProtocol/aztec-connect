@@ -109,13 +109,23 @@ contract Decoder {
         }
     }
 
-    function extractTotalTxFee(
+    function extractAssetId(
         bytes memory proofData,
-        uint256 assetId,
+        uint256 idx,
         uint256 numberOfBridgeCalls
     ) internal pure returns (uint256 totalTxFee) {
         assembly {
-            totalTxFee := mload(add(add(add(proofData, 0x200), mul(0x40, numberOfBridgeCalls)), mul(0x20, assetId)))
+            totalTxFee := mload(add(add(add(proofData, 0x180), mul(0x40, numberOfBridgeCalls)), mul(0x20, idx)))
+        }
+    }
+
+    function extractTotalTxFee(
+        bytes memory proofData,
+        uint256 idx,
+        uint256 numberOfBridgeCalls
+    ) internal pure returns (uint256 totalTxFee) {
+        assembly {
+            totalTxFee := mload(add(add(add(proofData, 0x200), mul(0x40, numberOfBridgeCalls)), mul(0x20, idx)))
         }
     }
 }

@@ -37,6 +37,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     IVerifier public verifier;
 
     uint256 public constant numberOfAssets = 4;
+    uint256 public constant maxNumberOfAssets = 100;
     uint256 public constant numberOfBridgeCalls = 4;
     uint256 public constant txNumPubInputs = 10;
     uint256 public constant rollupNumHeaderInputs = 11 + (numberOfBridgeCalls * 2) + (numberOfAssets * 2);
@@ -259,7 +260,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         assetPermitSupport[linkedToken] = supportsPermit;
 
         uint256 assetId = supportedAssets.length;
-        require(assetId < numberOfAssets, 'Rollup Processor: MAX_ASSET_REACHED');
+        require(assetId < maxNumberOfAssets, 'Rollup Processor: MAX_ASSET_REACHED');
 
         totalPendingDeposit.push(0);
         totalDeposited.push(0);
@@ -741,18 +742,19 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
 
     function transferFee(bytes memory proofData) internal {
         for (uint256 i = 0; i < numberOfAssets; ++i) {
+            uint256 assetId = extractAssetId(proofData, i, numberOfBridgeCalls);
             uint256 txFee = extractTotalTxFee(proofData, i, numberOfBridgeCalls);
             if (txFee > 0) {
                 bool success;
-                if (i == ethAssetId) {
+                if (assetId == ethAssetId) {
                     (success, ) = payable(feeDistributor).call{value: txFee}('');
                 } else {
-                    address assetAddress = getSupportedAsset(i);
+                    address assetAddress = getSupportedAsset(assetId);
                     IERC20(assetAddress).approve(feeDistributor, txFee);
-                    (success, ) = feeDistributor.call(abi.encodeWithSignature('deposit(uint256,uint256)', i, txFee));
+                    (success, ) = feeDistributor.call(abi.encodeWithSignature('deposit(uint256,uint256)', assetId, txFee));
                 }
                 require(success, 'Rollup Processor: DEPOSIT_TX_FEE_FAILED');
-                totalFees[i] = totalFees[i].add(txFee);
+                totalFees[assetId] = totalFees[assetId].add(txFee);
             }
         }
     }

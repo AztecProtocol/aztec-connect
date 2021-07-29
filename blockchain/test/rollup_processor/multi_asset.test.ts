@@ -63,17 +63,6 @@ describe('rollup_processor: multi assets', () => {
     expect(supportedAssetBAddress).to.equal(erc20B.address);
   });
 
-  it('should revert if trying to set more assets than it is allowed', async () => {
-    const maxAssets = 4;
-    const existingAssets = await rollupProcessor.getSupportedAssets();
-    for (let i = existingAssets.length + 1; i < maxAssets; ++i) {
-      await rollupProcessor.setSupportedAsset(erc20B.address, false);
-    }
-    await expect(rollupProcessor.setSupportedAsset(erc20B.address, false)).to.be.revertedWith(
-      'Rollup Processor: MAX_ASSET_REACHED',
-    );
-  });
-
   it('should process asset A deposit tx and assetB deposit tx in one rollup', async () => {
     // set new supported asset
     await rollupProcessor.setSupportedAsset(erc20B.address, false);

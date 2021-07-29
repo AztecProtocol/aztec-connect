@@ -125,7 +125,7 @@ export class RollupAggregator {
       newDefiRoot,
       oldDefiPath,
       bridgeIds.map(id => id.toBigInt()),
-      assetIds.filter(id => id).map(id => numToUInt32BE(id, 32)),
+      assetIds.map(id => numToUInt32BE(id, 32)),
       defiInteractionNotes.map(n => n.toBuffer()),
     );
 

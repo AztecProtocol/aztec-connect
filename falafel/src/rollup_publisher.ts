@@ -5,7 +5,7 @@ import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { EthereumProvider } from '@aztec/blockchain';
-import { Signer, utils } from 'ethers';
+import { Contract, Signer, utils } from 'ethers';
 import { RollupDao } from './entity/rollup';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
@@ -24,7 +24,7 @@ export class RollupPublisher {
     private feeLimit: bigint,
     private maxFeeGasPrice: bigint,
     private providerGasPriceMultiplier: number,
-    provider: EthereumProvider,
+    private provider: EthereumProvider,
     private metrics: Metrics,
   ) {
     this.signer = new Web3Provider(provider).getSigner();

@@ -180,7 +180,7 @@ export class RollupCreator {
       newDefiRoot,
       bridgeIds,
 
-      [...assetIds].filter(id => id).map(id => numToUInt32BE(id, 32)),
+      [...assetIds].map(id => numToUInt32BE(id, 32)),
     );
   }
 }

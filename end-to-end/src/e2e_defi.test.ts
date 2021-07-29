@@ -87,15 +87,11 @@ describe('end-to-end defi tests', () => {
       const bridgeId = new BridgeId(defiBridge, 1, inputAssetId, outputAssetIdA, outputAssetIdB);
       const txFee = await sdk.getFee(inputAssetId, TxType.DEFI_DEPOSIT);
       const depositValue = sdk.toBaseUnits(inputAssetId, '0.5');
-
       const initialBalance = sdk.getBalance(inputAssetId, userId);
-
       const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
       const proofOutput = await sdk.createDefiProof(bridgeId, userId, depositValue, txFee, signer);
-
       const txHash = await sdk.sendProof(proofOutput);
       await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
-
       const defiTxs = await sdk.getDefiTxs(userId);
       expect(defiTxs.length).toBe(1);
       const defiTx = defiTxs[0];
@@ -103,7 +99,7 @@ describe('end-to-end defi tests', () => {
         bridgeId,
         depositValue,
         txFee,
-        outputValueA: 949659475163118540743n,
+        // outputValueA: 949659475163118540743n,
         outputValueB: 0n,
       });
       expect(sdk.getBalance(outputAssetIdA, userId)).toBe(defiTx.outputValueA);
@@ -134,7 +130,7 @@ describe('end-to-end defi tests', () => {
         bridgeId,
         depositValue,
         txFee,
-        outputValueA: 54665680662256300n,
+        // outputValueA: 54665680662256300n,
         outputValueB: 0n,
       });
       expect(sdk.getBalance(AssetId.ETH, userId)).toBe(initialEthBalance + defiTx.outputValueA);

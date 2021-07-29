@@ -182,9 +182,9 @@ export const createRollupProof = async (
 
   const dataStartIndexBuf = numToBuffer(dataStartIndex === undefined ? rollupId * rollupSize * 2 : dataStartIndex);
 
-  const totalTxFeePublicInputs: Buffer[] = [];
-  for (let i = 0; i < numberOfAssets; ++i) {
-    totalTxFeePublicInputs.push(toBufferBE(totalTxFees[i] || 0n, 32));
+  const totalTxFeePublicInputs = totalTxFees.filter(fee => fee).map(fee => toBufferBE(fee, 32));
+  for (let i = totalTxFeePublicInputs.length; i < numberOfAssets; ++i) {
+    totalTxFeePublicInputs.push(toBufferBE(0n, 32));
   }
 
   const interactionData = [...defiInteractionData];
@@ -198,6 +198,21 @@ export const createRollupProof = async (
   for (let i = prevInteractionResult.length; i < numberOfDefiInteraction; ++i) {
     interactionNoteCommitments.push(Buffer.alloc(32));
   }
+
+  const assetIds: Set<number> = new Set();
+  innerProofs.forEach(proof => {
+    switch (proof.proofId) {
+      case ProofId.DEFI_DEPOSIT:
+      case ProofId.DEFI_CLAIM: {
+        const bridgeId = BridgeId.fromBuffer(proof.assetId);
+        assetIds.add(bridgeId.inputAssetId);
+        break;
+      }
+      case ProofId.JOIN_SPLIT:
+        assetIds.add(proof.assetId.readUInt32BE(28));
+        break;
+    }
+  });
 
   // Escape hatch is demarked 0, but has size 1.
   //! rollupSize shouldn't be 0
@@ -220,7 +235,8 @@ export const createRollupProof = async (
     defiRoots[rollupId + 1],
     ...bridgeIds.map(id => id.toBuffer()),
     ...defiDepositSums.map(sum => toBufferBE(sum, 32)),
-    Buffer.alloc(32 * numberOfAssets),
+    ...[...assetIds].map(assetId => numToBuffer(assetId)),
+    ...Array(numberOfAssets - assetIds.size).fill(numToBuffer(2 ** 30)),
     ...totalTxFeePublicInputs,
     ...innerProofs.map(p => p.toBuffer()),
     padding,
