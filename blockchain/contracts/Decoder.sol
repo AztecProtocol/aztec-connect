@@ -125,7 +125,7 @@ contract Decoder {
         uint256 numberOfBridgeCalls
     ) internal pure returns (uint256 totalTxFee) {
         assembly {
-            totalTxFee := mload(add(add(add(proofData, 0x200), mul(0x40, numberOfBridgeCalls)), mul(0x20, idx)))
+            totalTxFee := mload(add(add(add(proofData, 0x380), mul(0x40, numberOfBridgeCalls)), mul(0x20, idx)))
         }
     }
 }

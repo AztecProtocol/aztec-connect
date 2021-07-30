@@ -36,8 +36,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
 
     IVerifier public verifier;
 
-    uint256 public constant numberOfAssets = 4;
-    uint256 public constant maxNumberOfAssets = 100;
+    uint256 public constant numberOfAssets = 16;
     uint256 public constant numberOfBridgeCalls = 4;
     uint256 public constant txNumPubInputs = 10;
     uint256 public constant rollupNumHeaderInputs = 11 + (numberOfBridgeCalls * 2) + (numberOfAssets * 2);
@@ -260,7 +259,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         assetPermitSupport[linkedToken] = supportsPermit;
 
         uint256 assetId = supportedAssets.length;
-        require(assetId < maxNumberOfAssets, 'Rollup Processor: MAX_ASSET_REACHED');
 
         totalPendingDeposit.push(0);
         totalDeposited.push(0);

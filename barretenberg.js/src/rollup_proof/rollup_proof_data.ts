@@ -4,7 +4,7 @@ import { ViewingKey } from '../viewing_key';
 import { InnerProofData } from './inner_proof';
 
 export class RollupProofData {
-  static NUMBER_OF_ASSETS = 4;
+  static NUMBER_OF_ASSETS = 16;
   static NUM_BRIDGE_CALLS_PER_BLOCK = 4;
   static NUM_ROLLUP_HEADER_INPUTS =
     11 + RollupProofData.NUMBER_OF_ASSETS * 2 + RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK * 2;

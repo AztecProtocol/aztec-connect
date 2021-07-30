@@ -37,7 +37,7 @@ describe('rollup_processor', () => {
   it('should get contract status', async () => {
     expect(rollupProcessor.address).deep.equals(EthAddress.fromString(rollupProcessorContract.address));
     expect(await rollupProcessor.feeDistributor()).deep.equals(EthAddress.fromString(feeDistributor.address));
-    expect(await rollupProcessor.numberOfAssets()).equals(4);
+    expect(await rollupProcessor.numberOfAssets()).equals(16);
     expect(await rollupProcessor.numberOfBridgeCalls()).equals(4);
     expect(await rollupProcessor.nextRollupId()).equals(0);
     expect(await rollupProcessor.dataSize()).equals(0);

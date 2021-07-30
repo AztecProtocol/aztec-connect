@@ -156,7 +156,7 @@ export const createSigData = (
   feeDistributorAddress: EthAddress,
 ) =>
   Buffer.concat([
-    proofData.slice(0, 27 * 32),
+    proofData.slice(0, 51 * 32),
     providerAddress.toBuffer(),
     toBufferBE(feeLimit, 32),
     feeDistributorAddress.toBuffer(),
@@ -169,7 +169,7 @@ export const createRollupProof = async (
     rollupId = 0,
     rollupSize = 2,
     dataStartIndex,
-    numberOfAssets = 4,
+    numberOfAssets = 16,
     numberOfDefiInteraction = 4,
     previousDefiInteractionHash,
     defiInteractionData = [],
