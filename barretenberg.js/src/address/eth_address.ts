@@ -50,6 +50,10 @@ export class EthAddress {
     }
   }
 
+  public isZero() {
+    return this.equals(EthAddress.ZERO);
+  }
+
   public static checkAddressChecksum(address: string) {
     address = address.replace(/^0x/i, '');
     const addressHash = sha3(address.toLowerCase());

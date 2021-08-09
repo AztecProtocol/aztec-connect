@@ -38,7 +38,7 @@ describe('ethereum_blockchain', () => {
       getRollupContractAddress: jest.fn().mockReturnValue(EthAddress.randomAddress()),
       getFeeDistributorContractAddress: jest.fn().mockReturnValue(EthAddress.randomAddress()),
       getBlockNumber: jest.fn().mockResolvedValue(blocks.length),
-      getNetwork: jest.fn().mockResolvedValue({ chainId: 999 }),
+      getChainId: jest.fn().mockResolvedValue(999),
       getTransactionReceipt: jest.fn(),
     } as any;
 
@@ -53,8 +53,8 @@ describe('ethereum_blockchain', () => {
     await blockchain.init();
   });
 
-  afterEach(() => {
-    blockchain.stop();
+  afterEach(async () => {
+    await blockchain.stop();
   });
 
   it('emit all historical blocks, then new blocks', async () => {

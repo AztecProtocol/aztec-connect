@@ -11,7 +11,7 @@ import {
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
 
-jest.setTimeout(10 * 60 * 1000);
+jest.setTimeout(20 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
 
 const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost:8081' } = process.env;
@@ -32,7 +32,7 @@ describe('end-to-end defi tests', () => {
   const awaitSettlementTimeout = 600;
 
   beforeAll(async () => {
-    provider = await createFundedWalletProvider(ETHEREUM_HOST, 2, '1');
+    provider = await createFundedWalletProvider(ETHEREUM_HOST, 2);
     accounts = provider.getAccounts();
 
     sdk = await createWalletSdk(provider, ROLLUP_HOST, {
@@ -99,7 +99,6 @@ describe('end-to-end defi tests', () => {
         bridgeId,
         depositValue,
         txFee,
-        // outputValueA: 949659475163118540743n,
         outputValueB: 0n,
       });
       expect(sdk.getBalance(outputAssetIdA, userId)).toBe(defiTx.outputValueA);
@@ -130,7 +129,6 @@ describe('end-to-end defi tests', () => {
         bridgeId,
         depositValue,
         txFee,
-        // outputValueA: 54665680662256300n,
         outputValueB: 0n,
       });
       expect(sdk.getBalance(AssetId.ETH, userId)).toBe(initialEthBalance + defiTx.outputValueA);

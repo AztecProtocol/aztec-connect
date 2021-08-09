@@ -1,20 +1,15 @@
-import { JsonRpcProvider } from '@ethersproject/providers';
-import { parseEther } from '@ethersproject/units';
-import { EthersAdapter, WalletProvider } from '@aztec/sdk';
+import { EthAsset, JsonRpcProvider, WalletProvider } from '@aztec/sdk';
 import { randomBytes } from 'crypto';
 
-export async function createFundedWalletProvider(host: string, accounts: number, initialBalance = '1') {
-  const ethersProvider = new JsonRpcProvider(host);
-  const ethereumProvider = new EthersAdapter(ethersProvider);
-  const funder = ethersProvider.getSigner(0);
+export async function createFundedWalletProvider(host: string, accounts: number, initialBalance = 10n ** 18n) {
+  const ethereumProvider = new JsonRpcProvider(host);
+  const funder = (await ethereumProvider.getAccounts())[0];
+  const ethAsset = new EthAsset(ethereumProvider);
 
   const walletProvider = new WalletProvider(ethereumProvider);
   for (let i = 0; i < accounts; ++i) {
     const to = walletProvider.addAccount(randomBytes(32));
-    await funder.sendTransaction({
-      to: to.toString(),
-      value: parseEther(initialBalance),
-    });
+    await ethAsset.transfer(initialBalance, funder, to);
   }
 
   return walletProvider;

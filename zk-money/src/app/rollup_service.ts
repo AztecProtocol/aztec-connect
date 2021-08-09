@@ -140,7 +140,7 @@ export class RollupService extends EventEmitter {
       const gas = await rollupProcessor.estimateGas.depositPendingFunds(assetId, amount, ethAddress.toString(), {
         value: assetId === AssetId.ETH ? amount : 0n,
       });
-      return BigInt(gas);
+      return BigInt(gas.toString());
     } catch (e) {
       debug(e);
       // Probably not enough balance.
@@ -154,7 +154,7 @@ export class RollupService extends EventEmitter {
     const proofHash = '0x'.padEnd(66, '0');
     try {
       const gas = await rollupProcessor.estimateGas.approveProof(proofHash.toString());
-      return BigInt(gas);
+      return BigInt(gas.toString());
     } catch (e) {
       debug(e);
       // Probably not enough balance.

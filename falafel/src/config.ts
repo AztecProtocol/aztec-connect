@@ -121,15 +121,15 @@ function getBaseProvider({ infuraApiKey, network, ethereumHost }: ConfVars) {
 
 function getProvider(confVars: ConfVars) {
   const { privateKey } = confVars;
-  const provider = getBaseProvider(confVars);
-  if (!provider) {
+  const baseProvider = getBaseProvider(confVars);
+  if (!baseProvider) {
     throw new Error('Provider is undefined.');
   }
 
-  const walletProvider = new WalletProvider(provider);
-  const signingAddress = walletProvider.addAccount(privateKey);
+  const provider = new WalletProvider(baseProvider);
+  const signingAddress = provider.addAccount(privateKey);
   console.log(`Signing address: ${signingAddress}`);
-  return walletProvider;
+  return { provider, signingAddress };
 }
 
 async function loadConfVars(path: string) {
@@ -181,5 +181,5 @@ export async function getConfig() {
   console.log(`Gas limit: ${gasLimit || 'default'}`);
   console.log(`Rollup contract address: ${rollupContractAddress || 'none'}`);
 
-  return { confVars, ormConfig, provider: getProvider(confVars), ethConfig: getEthereumBlockchainConfig(confVars) };
+  return { confVars, ormConfig, ...getProvider(confVars), ethConfig: getEthereumBlockchainConfig(confVars) };
 }

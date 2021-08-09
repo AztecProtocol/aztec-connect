@@ -39,5 +39,6 @@
       "./node_modules/@aztec/barretenberg/wasm/barretenberg.wasm",
       "./node_modules/@aztec/barretenberg/worker.js"
     ]
-  }
+  },
+  "dependencies": {}
 }

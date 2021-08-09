@@ -1,4 +1,4 @@
-import { EthereumProvider, RequestArguments } from './ethereum_provider';
+import { EthereumProvider, RequestArguments } from '@aztec/barretenberg/blockchain/ethereum_provider';
 import { Web3Provider } from './web3_provider';
 
 /**

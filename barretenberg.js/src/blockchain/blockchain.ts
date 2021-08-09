@@ -6,7 +6,9 @@ import { TxHash } from '../tx_hash';
 import { Asset } from './asset';
 import { BlockchainStatusSource } from './blockchain_status';
 import { EthereumSignature, EthereumSigner } from './ethereum_signer';
+import { EthereumProvider } from './ethereum_provider';
 import { PriceFeed } from './price_feed';
+import { ViewingKey } from '../viewing_key';
 
 export interface Receipt {
   status: boolean;
@@ -17,6 +19,7 @@ export interface SendTxOptions {
   gasPrice?: bigint;
   gasLimit?: number;
   signingAddress?: EthAddress;
+  provider?: EthereumProvider;
 }
 
 export type PermitArgs = { deadline: bigint; approvalAmount: bigint; signature: EthereumSignature };
@@ -34,7 +37,7 @@ export interface Blockchain extends BlockSource, BlockchainStatusSource, Ethereu
   createRollupProofTx(
     proof: Buffer,
     signatures: Buffer[],
-    viewingKeys: Buffer[],
+    viewingKeys: ViewingKey[],
     providerSignature: Buffer,
     providerAddress: EthAddress,
     feeReceiver: EthAddress,
@@ -43,7 +46,7 @@ export interface Blockchain extends BlockSource, BlockchainStatusSource, Ethereu
 
   createEscapeHatchProofTx(
     proofData: Buffer,
-    viewingKeys: Buffer[],
+    viewingKeys: ViewingKey[],
     depositSignature?: Buffer,
     signingAddress?: EthAddress,
   ): Promise<Buffer>;
@@ -60,11 +63,13 @@ export interface Blockchain extends BlockSource, BlockchainStatusSource, Ethereu
 
   isContract(address: EthAddress): Promise<boolean>;
 
-  getUserProofApprovalStatus(address: EthAddress, proofData: Buffer): Promise<boolean>;
+  getUserProofApprovalStatus(address: EthAddress, txId: Buffer): Promise<boolean>;
 
   getGasPrice(): Promise<bigint>;
 
   estimateGas(data: Buffer): Promise<number>;
 
   getBridgeId(address: EthAddress): Promise<BridgeId>;
+
+  getChainId(): Promise<number>;
 }

@@ -1,5 +1,4 @@
-import { createWalletSdk, EthersAdapter, WalletProvider, WalletSdk } from '@aztec/sdk';
-import { JsonRpcProvider } from '@ethersproject/providers';
+import { JsonRpcProvider, createWalletSdk, WalletProvider, WalletSdk } from '@aztec/sdk';
 import { EventEmitter } from 'events';
 
 jest.setTimeout(10 * 60 * 1000);
@@ -17,8 +16,7 @@ describe('end-to-end sync tests', () => {
   let sdk: WalletSdk;
 
   beforeAll(async () => {
-    const ethersProvider = new JsonRpcProvider(ETHEREUM_HOST);
-    const ethereumProvider = new EthersAdapter(ethersProvider);
+    const ethereumProvider = new JsonRpcProvider(ETHEREUM_HOST);
     const walletProvider = new WalletProvider(ethereumProvider);
 
     sdk = await createWalletSdk(walletProvider, ROLLUP_HOST, {

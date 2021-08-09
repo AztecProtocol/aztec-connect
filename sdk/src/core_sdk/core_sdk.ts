@@ -474,7 +474,7 @@ export class CoreSdk extends EventEmitter {
   ) {
     const userState = this.getUserState(userId);
 
-    const { txId, proofData, viewingKeys, depositSigningData } = await this.joinSplitProofCreator.createProof(
+    const { txId, proofData, viewingKeys } = await this.joinSplitProofCreator.createProof(
       userState,
       publicInput,
       publicOutput,
@@ -505,7 +505,7 @@ export class CoreSdk extends EventEmitter {
       new Date(),
     );
 
-    return new JoinSplitProofOutput(tx, proofData, viewingKeys, publicInput ? depositSigningData : undefined);
+    return new JoinSplitProofOutput(tx, proofData, viewingKeys);
   }
 
   public async createAccountTx(

@@ -1,8 +1,15 @@
-import { WalletSdk, EthereumProvider, EthersAdapter, GrumpkinAddress, createWalletSdk, AccountId } from '@aztec/sdk';
+import {
+  JsonRpcProvider,
+  FeeDistributor,
+  WalletSdk,
+  EthereumProvider,
+  GrumpkinAddress,
+  createWalletSdk,
+  AccountId,
+  EthAddress,
+} from '@aztec/sdk';
 import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
-import { JsonRpcProvider } from '@ethersproject/providers';
-import { topUpFeeDistributorContract } from './fee_distributor_contract';
 
 jest.setTimeout(20 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
@@ -15,8 +22,7 @@ describe('end-to-end account tests', () => {
 
   beforeAll(async () => {
     // Init sdk.
-    const ethersProvider = new JsonRpcProvider(ETHEREUM_HOST);
-    provider = new EthersAdapter(ethersProvider);
+    provider = new JsonRpcProvider(ETHEREUM_HOST);
     sdk = await createWalletSdk(provider, ROLLUP_HOST, {
       syncInstances: false,
       saveProvingKey: false,
@@ -29,11 +35,12 @@ describe('end-to-end account tests', () => {
     await sdk.awaitSynchronised();
 
     const {
-      blockchainStatus: { rollupContractAddress },
+      blockchainStatus: { feeDistributorContractAddress },
     } = await sdk.getRemoteStatus();
 
-    const tenEth = BigInt(10) ** BigInt(19);
-    await topUpFeeDistributorContract(tenEth, rollupContractAddress, provider);
+    const feeDistributor = new FeeDistributor(feeDistributorContractAddress, provider);
+    const tenEth = 10n ** 19n;
+    await feeDistributor.deposit(EthAddress.ZERO, tenEth);
   });
 
   afterAll(async () => {

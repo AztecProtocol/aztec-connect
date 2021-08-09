@@ -615,7 +615,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       }
 
       const isContract = await this.sdk.isContract(ethAddress);
-      const signingData = proofOutput.signingData!;
+      const signingData = proofOutput.tx.txHash.toBuffer();
       if (!isContract && !this.depositProof.signature) {
         this.prompt('Please sign the proof data in your wallet.');
         try {
@@ -775,7 +775,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
   }
 
   private async updateGasPrice(provider: Provider) {
-    this.gasPrice = BigInt(await new Web3Provider(provider.ethereumProvider).getGasPrice());
+    this.gasPrice = BigInt((await new Web3Provider(provider.ethereumProvider).getGasPrice()).toString());
   }
 
   private updateFormStatus(status: FormStatus) {

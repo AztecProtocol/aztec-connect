@@ -25,7 +25,7 @@ describe('end-to-end permit tests', () => {
   const assetId = AssetId.DAI;
 
   beforeAll(async () => {
-    provider = await createFundedWalletProvider(ETHEREUM_HOST, 1, '1');
+    provider = await createFundedWalletProvider(ETHEREUM_HOST, 1);
     userAddress = provider.getAccount(0);
 
     sdk = await createWalletSdk(provider, ROLLUP_HOST, {

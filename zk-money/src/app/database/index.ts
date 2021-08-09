@@ -68,21 +68,25 @@ const fromDexieMigratingTx = ({
   created,
   inputOwner,
   outputOwner,
-  proofSender, // eslint-disable-line @typescript-eslint/no-unused-vars
-  ...rest
-}: DexieMigratingTx): UserJoinSplitTx => ({
-  ...rest,
-  txHash: new TxHash(Buffer.from(txHash)),
-  userId: AccountId.fromBuffer(Buffer.from(userId)),
-  publicInput: BigInt(publicInput),
-  publicOutput: BigInt(publicOutput),
-  privateInput: BigInt(privateInput),
-  recipientPrivateOutput: BigInt(recipientPrivateOutput),
-  senderPrivateOutput: BigInt(senderPrivateOutput),
-  created: new Date(created),
-  inputOwner: inputOwner ? new EthAddress(Buffer.from(inputOwner)) : undefined,
-  outputOwner: outputOwner ? new EthAddress(Buffer.from(outputOwner)) : undefined,
-});
+  assetId,
+  ownedByUser,
+  settled,
+}: DexieMigratingTx) =>
+  new UserJoinSplitTx(
+    new TxHash(Buffer.from(txHash)),
+    AccountId.fromBuffer(Buffer.from(userId)),
+    assetId,
+    BigInt(publicInput),
+    BigInt(publicOutput),
+    BigInt(privateInput),
+    BigInt(recipientPrivateOutput),
+    BigInt(senderPrivateOutput),
+    inputOwner ? new EthAddress(Buffer.from(inputOwner)) : undefined,
+    outputOwner ? new EthAddress(Buffer.from(outputOwner)) : undefined,
+    ownedByUser,
+    new Date(created),
+    settled,
+  );
 
 export class Database {
   private db!: Dexie;

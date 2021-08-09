@@ -1,8 +1,15 @@
-import { AccountId, AssetId, createWalletSdk, EthAddress, TxType, WalletProvider, WalletSdk } from '@aztec/sdk';
-import { Contract } from '@ethersproject/contracts';
+import {
+  AccountId,
+  AssetId,
+  createWalletSdk,
+  EthAddress,
+  TxType,
+  WalletProvider,
+  WalletSdk,
+  FeeDistributor,
+} from '@aztec/sdk';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
-import { getFeeDistributorContract } from './fee_distributor_contract';
 
 jest.setTimeout(10 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
@@ -19,15 +26,16 @@ const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost
 
 describe('end-to-end tests', () => {
   let provider: WalletProvider;
-  let feeDistributor: Contract;
+  let feeDistributor: FeeDistributor;
   let sdk: WalletSdk;
   let accounts: EthAddress[] = [];
+  let assetAddr: EthAddress;
   const userIds: AccountId[] = [];
   const assetId = AssetId.ETH;
   const awaitSettlementTimeout = 600;
 
   beforeAll(async () => {
-    provider = await createFundedWalletProvider(ETHEREUM_HOST, 2, '1');
+    provider = await createFundedWalletProvider(ETHEREUM_HOST, 2);
     accounts = provider.getAccounts();
 
     sdk = await createWalletSdk(provider, ROLLUP_HOST, {
@@ -47,21 +55,15 @@ describe('end-to-end tests', () => {
     }
 
     const {
-      blockchainStatus: { rollupContractAddress },
+      blockchainStatus: { feeDistributorContractAddress, assets },
     } = await sdk.getRemoteStatus();
-    feeDistributor = await getFeeDistributorContract(rollupContractAddress, provider, accounts[2]);
+    assetAddr = assets[0].address;
+    feeDistributor = new FeeDistributor(feeDistributorContractAddress, provider);
   });
 
   afterAll(async () => {
     await sdk.destroy();
   });
-
-  const getLastReimbursement = async () => {
-    const eventFilter = feeDistributor.filters.FeeReimbursed();
-    const events = await feeDistributor.queryFilter(eventFilter);
-    const lastEvent = events[events.length - 1];
-    return BigInt(lastEvent.args!.amount);
-  };
 
   it('should deposit, transfer and withdraw funds', async () => {
     // Deposit to user 0.
@@ -71,7 +73,7 @@ describe('end-to-end tests', () => {
       const value = sdk.toBaseUnits(assetId, '0.2');
       const txFee = await sdk.getFee(assetId, TxType.DEPOSIT);
 
-      const initialTxFeeBalance = BigInt(await feeDistributor.txFeeBalance(assetId));
+      const initialTxFeeBalance = await feeDistributor.txFeeBalance(assetAddr);
       const initialPublicBalance = await sdk.getPublicBalance(assetId, depositor);
       const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
       const proofOutput = await sdk.createDepositProof(assetId, depositor, userId, value, txFee, signer);
@@ -93,8 +95,8 @@ describe('end-to-end tests', () => {
       expect(await sdk.getPublicBalance(assetId, depositor)).toBe(publicBalance);
       expect(sdk.getBalance(assetId, userId)).toBe(value);
 
-      const reimbursement = BigInt(await getLastReimbursement());
-      const txFeeBalance = BigInt(await feeDistributor.txFeeBalance(assetId));
+      const reimbursement = await feeDistributor.getLastReimbursement();
+      const txFeeBalance = await feeDistributor.txFeeBalance(assetAddr);
       expect(txFeeBalance).toEqual(initialTxFeeBalance + txFee - reimbursement);
     }
 
@@ -108,7 +110,7 @@ describe('end-to-end tests', () => {
 
       const initialSenderPublicBalance = await sdk.getPublicBalance(assetId, senderAddress);
       const initialSenderBalance = sdk.getBalance(assetId, sender);
-      const initialTxFeeBalance = BigInt(await feeDistributor.txFeeBalance(assetId));
+      const initialTxFeeBalance = await feeDistributor.txFeeBalance(assetAddr);
 
       expect(sdk.getBalance(assetId, recipient)).toBe(0n);
 
@@ -121,8 +123,8 @@ describe('end-to-end tests', () => {
       expect(sdk.getBalance(assetId, sender)).toBe(initialSenderBalance - value - txFee);
       expect(sdk.getBalance(assetId, recipient)).toBe(value);
 
-      const reimbursement = BigInt(await getLastReimbursement());
-      const txFeeBalance = BigInt(await feeDistributor.txFeeBalance(assetId));
+      const reimbursement = await feeDistributor.getLastReimbursement();
+      const txFeeBalance = await feeDistributor.txFeeBalance(assetAddr);
       expect(txFeeBalance).toEqual(initialTxFeeBalance + txFee - reimbursement);
     }
 
@@ -135,7 +137,7 @@ describe('end-to-end tests', () => {
 
       const initialPublicBalance = await sdk.getPublicBalance(assetId, userAddress);
       const initialBalance = sdk.getBalance(assetId, userId);
-      const initialTxFeeBalance = BigInt(await feeDistributor.txFeeBalance(assetId));
+      const initialTxFeeBalance = await feeDistributor.txFeeBalance(assetAddr);
 
       const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(userAddress)!);
       const proofOutput = await sdk.createWithdrawProof(assetId, userId, value, txFee, signer, userAddress);
@@ -145,8 +147,8 @@ describe('end-to-end tests', () => {
       expect(await sdk.getPublicBalance(assetId, userAddress)).toBe(initialPublicBalance + value);
       expect(sdk.getBalance(assetId, userId)).toBe(initialBalance - value - txFee);
 
-      const reimbursement = await getLastReimbursement();
-      const txFeeBalance = BigInt(await feeDistributor.txFeeBalance(assetId));
+      const reimbursement = await feeDistributor.getLastReimbursement();
+      const txFeeBalance = await feeDistributor.txFeeBalance(assetAddr);
       expect(txFeeBalance).toEqual(initialTxFeeBalance + txFee - reimbursement);
     }
   });

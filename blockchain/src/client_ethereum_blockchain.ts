@@ -1,12 +1,10 @@
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
-import { Asset, BlockchainAsset, PermitArgs } from '@aztec/barretenberg/blockchain';
+import { EthereumProvider, Asset, BlockchainAsset, PermitArgs } from '@aztec/barretenberg/blockchain';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
-import { EthAsset, TokenAsset } from './asset';
-import { EthereumProvider } from './ethereum_provider';
-import { hashData } from './hash_data';
-import { RollupProcessor } from './rollup_processor';
+import { EthAsset, TokenAsset } from './contracts/asset';
+import { RollupProcessor } from './contracts/rollup_processor';
 
 export class ClientEthereumBlockchain {
   private provider: Web3Provider;
@@ -20,11 +18,11 @@ export class ClientEthereumBlockchain {
     private minConfirmation = 1,
   ) {
     this.provider = new Web3Provider(this.ethereumProvider);
-    this.rollupProcessor = new RollupProcessor(rollupContractAddress, this.provider);
+    this.rollupProcessor = new RollupProcessor(rollupContractAddress, ethereumProvider);
     this.assets = assetInfos.map(info =>
       info.address.equals(EthAddress.ZERO)
-        ? new EthAsset(this.provider)
-        : new TokenAsset(this.provider, info, minConfirmation),
+        ? new EthAsset(ethereumProvider)
+        : new TokenAsset(ethereumProvider, info, minConfirmation),
     );
   }
 
@@ -36,9 +34,8 @@ export class ClientEthereumBlockchain {
     return this.rollupProcessor.getUserPendingDeposit(assetId, account);
   }
 
-  public async getUserProofApprovalStatus(account: EthAddress, signingData: Buffer) {
-    const proofHash = hashData(signingData);
-    return this.rollupProcessor.getUserProofApprovalStatus(account, proofHash);
+  public async getUserProofApprovalStatus(account: EthAddress, txId: Buffer) {
+    return this.rollupProcessor.getProofApprovalStatus(account, txId);
   }
 
   public async depositPendingFunds(
@@ -48,12 +45,11 @@ export class ClientEthereumBlockchain {
     permitArgs?: PermitArgs,
     provider?: EthereumProvider,
   ) {
-    return this.rollupProcessor.depositPendingFunds(assetId, amount, permitArgs, this.getEthSigner(from, provider));
+    return this.rollupProcessor.depositPendingFunds(assetId, amount, permitArgs, { signingAddress: from, provider });
   }
 
-  public async approveProof(account: EthAddress, signingData: Buffer, provider?: EthereumProvider) {
-    const proofHash = hashData(signingData);
-    return this.rollupProcessor.approveProof(proofHash, this.getEthSigner(account, provider));
+  public async approveProof(account: EthAddress, txId: Buffer, provider?: EthereumProvider) {
+    return this.rollupProcessor.approveProof(txId, { signingAddress: account, provider });
   }
 
   /**
@@ -86,7 +82,8 @@ export class ClientEthereumBlockchain {
     return (await this.provider.getCode(address.toString())) !== '0x';
   }
 
-  private getEthSigner(address: EthAddress, provider?: EthereumProvider) {
-    return (provider ? new Web3Provider(provider) : this.provider).getSigner(address.toString());
+  public async getChainId() {
+    const { chainId } = await this.provider.getNetwork();
+    return chainId;
   }
 }

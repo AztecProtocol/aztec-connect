@@ -34,7 +34,7 @@ describe('end-to-end multi tx tests', () => {
   };
 
   beforeAll(async () => {
-    provider = await createFundedWalletProvider(ETHEREUM_HOST, 4, '2');
+    provider = await createFundedWalletProvider(ETHEREUM_HOST, 4);
     accounts = provider.getAccounts();
 
     sdk = await createWalletSdk(provider, ROLLUP_HOST, {

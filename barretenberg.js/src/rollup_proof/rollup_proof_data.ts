@@ -3,6 +3,34 @@ import { numToUInt32BE } from '../serialize';
 import { ViewingKey } from '../viewing_key';
 import { InnerProofData } from './inner_proof';
 
+export enum RollupProofDataFields {
+  ROLLUP_ID,
+  ROLLUP_SIZE,
+  DATA_START_INDEX,
+  OLD_DATA_ROOT,
+  NEW_DATA_ROOT,
+  OLD_NULL_ROOT,
+  NEW_NULL_ROOT,
+  OLD_ROOT_ROOT,
+  NEW_ROOT_ROOT,
+  OLD_DEFI_ROOT,
+  NEW_DEFI_ROOT,
+}
+
+export enum RollupProofDataOffsets {
+  ROLLUP_ID = RollupProofDataFields.ROLLUP_ID * 32,
+  ROLLUP_SIZE = RollupProofDataFields.ROLLUP_SIZE * 32,
+  DATA_START_INDEX = RollupProofDataFields.DATA_START_INDEX * 32,
+  OLD_DATA_ROOT = RollupProofDataFields.OLD_DATA_ROOT * 32,
+  NEW_DATA_ROOT = RollupProofDataFields.NEW_DATA_ROOT * 32,
+  OLD_NULL_ROOT = RollupProofDataFields.OLD_NULL_ROOT * 32,
+  NEW_NULL_ROOT = RollupProofDataFields.NEW_NULL_ROOT * 32,
+  OLD_ROOT_ROOT = RollupProofDataFields.OLD_ROOT_ROOT * 32,
+  NEW_ROOT_ROOT = RollupProofDataFields.NEW_ROOT_ROOT * 32,
+  OLD_DEFI_ROOT = RollupProofDataFields.OLD_DEFI_ROOT * 32,
+  NEW_DEFI_ROOT = RollupProofDataFields.NEW_DEFI_ROOT * 32,
+}
+
 export class RollupProofData {
   static NUMBER_OF_ASSETS = 16;
   static NUM_BRIDGE_CALLS_PER_BLOCK = 4;

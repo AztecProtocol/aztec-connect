@@ -113,7 +113,7 @@ export class TxReceiver {
 
   private async validateJoinSplitTx(proofData: ProofData, txType: TxType, depositSignature?: Buffer) {
     const jsProofData = new JoinSplitProofData(proofData);
-    const { publicInput, inputOwner, assetId, depositSigningData } = jsProofData;
+    const { publicInput, inputOwner, assetId, txId } = jsProofData;
 
     const minFee = this.txFeeResolver.getMinTxFee(assetId, txType);
     if (jsProofData.proofData.txFee < minFee) {
@@ -125,13 +125,13 @@ export class TxReceiver {
     }
 
     if (publicInput > 0n) {
-      let proofApproval = await this.blockchain.getUserProofApprovalStatus(inputOwner, depositSigningData);
+      let proofApproval = await this.blockchain.getUserProofApprovalStatus(inputOwner, txId);
 
       if (!proofApproval && depositSignature) {
-        proofApproval = this.blockchain.validateSignature(inputOwner, depositSignature, depositSigningData);
+        proofApproval = this.blockchain.validateSignature(inputOwner, depositSignature, txId);
       }
       if (!proofApproval) {
-        throw new Error('Proof not approved');
+        throw new Error(`Tx not approved or invalid signature: ${txId.toString('hex')}`);
       }
 
       // WARNING! Need to check the sum of all deposits in txs remains <= the amount pending deposit on contract.

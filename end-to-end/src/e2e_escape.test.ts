@@ -31,7 +31,7 @@ describe('end-to-end escape tests', () => {
 
   beforeAll(async () => {
     // Init sdk.
-    provider = await createFundedWalletProvider(ETHEREUM_HOST, 2, '1');
+    provider = await createFundedWalletProvider(ETHEREUM_HOST, 2);
     accounts = provider.getAccounts();
 
     sdk = await createWalletSdk(provider, SRIRACHA_HOST, {

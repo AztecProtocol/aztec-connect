@@ -1,14 +1,13 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
 import { Blockchain, BlockchainStatus, Receipt, SendTxOptions, TypedData } from '@aztec/barretenberg/blockchain';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
-import { Contracts } from './contracts';
-import { EthereumProvider } from './ethereum_provider';
-import { hashData } from './hash_data';
+import { Contracts } from './contracts/contracts';
+import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 import { validateSignature } from './validate_signature';
+import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 
 export interface EthereumBlockchainConfig {
   console?: boolean;
@@ -20,6 +19,7 @@ export interface EthereumBlockchainConfig {
 
 export class EthereumBlockchain extends EventEmitter implements Blockchain {
   private running = false;
+  private runningPromise?: Promise<void>;
   private latestEthBlock = -1;
   private latestRollupId = -1;
   private debug: any;
@@ -40,8 +40,12 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     provider: EthereumProvider,
   ) {
     const confirmations = config.minConfirmation || EthereumBlockchain.DEFAULT_MIN_CONFIRMATIONS;
-    const contracts = new Contracts(rollupContractAddress, priceFeedContractAddresses, provider, confirmations);
-    await contracts.init();
+    const contracts = await Contracts.fromAddresses(
+      rollupContractAddress,
+      priceFeedContractAddresses,
+      provider,
+      confirmations,
+    );
     const eb = new EthereumBlockchain(config, contracts);
     await eb.init();
     return eb;
@@ -98,7 +102,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
 
     // After which, we asynchronously kick off a polling loop for the latest blocks.
     this.running = true;
-    (async () => {
+    this.runningPromise = (async () => {
       while (this.running) {
         await new Promise(resolve => setTimeout(resolve, this.config.pollInterval || 10000));
         await emitBlocks().catch(this.debug);
@@ -112,6 +116,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   public async stop() {
     this.running = false;
     this.removeAllListeners();
+    await this.runningPromise;
   }
 
   /**
@@ -127,7 +132,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   private async initStatus() {
     await this.updatePerRollupState();
     await this.updatePerBlockState();
-    const { chainId } = await this.contracts.getNetwork();
+    const chainId = await this.contracts.getChainId();
     const assets = this.contracts.getAssets().map(a => a.getStaticInfo());
     this.status = {
       ...this.status,
@@ -160,19 +165,14 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return this.contracts.getUserPendingDeposit(assetId, account);
   }
 
-  public async getUserProofApprovalStatus(account: EthAddress, signingData: Buffer) {
-    const proofHash = hashData(signingData);
-    return this.contracts.getUserProofApprovalStatus(account, proofHash);
-  }
-
-  public async setSupportedAsset(assetAddress: EthAddress, supportsPermit: boolean, signingAddress: EthAddress) {
-    return this.contracts.setSupportedAsset(assetAddress, supportsPermit, signingAddress);
+  public async getUserProofApprovalStatus(account: EthAddress, txId: Buffer) {
+    return this.contracts.getUserProofApprovalStatus(account, txId);
   }
 
   public async createRollupProofTx(
     proofData: Buffer,
     signatures: Buffer[],
-    viewingKeys: Buffer[],
+    viewingKeys: ViewingKey[],
     providerSignature: Buffer,
     providerAddress: EthAddress,
     feeReceiver: EthAddress,
@@ -189,17 +189,11 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     );
   }
 
-  public async createEscapeHatchProofTx(
-    proofData: Buffer,
-    viewingKeys: Buffer[],
-    depositSignature?: Buffer,
-    signingAddress?: EthAddress,
-  ) {
+  public async createEscapeHatchProofTx(proofData: Buffer, viewingKeys: ViewingKey[], depositSignature?: Buffer) {
     return await this.contracts.createEscapeHatchProofTx(
       proofData,
       viewingKeys,
       depositSignature ? [depositSignature] : [],
-      signingAddress,
     );
   }
 
@@ -282,12 +276,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   }
 
   public async getBridgeId(address: EthAddress) {
-    try {
-      return await this.contracts.getBridgeId(address);
-    } catch (e) {
-      this.debug(e);
-      return BridgeId.ZERO;
-    }
+    return await this.contracts.getBridgeId(address);
   }
 
   public async isContract(address: EthAddress) {
@@ -300,5 +289,9 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
 
   public async estimateGas(data: Buffer) {
     return this.contracts.estimateGas(data);
+  }
+
+  public async getChainId() {
+    return this.contracts.getChainId();
   }
 }

@@ -1,9 +1,6 @@
 import { HardhatUserConfig } from 'hardhat/config';
-import dotenv from 'dotenv';
 import '@nomiclabs/hardhat-waffle';
 import '@nomiclabs/hardhat-ethers';
-
-dotenv.config();
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -18,7 +15,7 @@ const config: HardhatUserConfig = {
       url: `http://${process.env.GANACHE_HOST || 'localhost'}:8545`,
     },
     hardhat: {
-      blockGasLimit: 10000000,
+      blockGasLimit: 15000000,
       gasPrice: 10,
       hardfork: 'istanbul',
     },

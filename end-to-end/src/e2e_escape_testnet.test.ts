@@ -2,14 +2,13 @@ import {
   AssetId,
   createWalletSdk,
   EthAddress,
-  EthersAdapter,
+  JsonRpcProvider,
   SchnorrSigner,
   TxType,
   WalletProvider,
   WalletSdk,
   WalletSdkUser,
 } from '@aztec/sdk';
-import { JsonRpcProvider } from '@ethersproject/providers';
 import { EventEmitter } from 'events';
 
 jest.setTimeout(10 * 60 * 1000);
@@ -36,8 +35,7 @@ describe('testnet escape test', () => {
   }
 
   beforeAll(async () => {
-    const ethersProvider = new JsonRpcProvider(ETHEREUM_HOST);
-    const ethereumProvider = new EthersAdapter(ethersProvider);
+    const ethereumProvider = new JsonRpcProvider(ETHEREUM_HOST);
     const walletProvider = new WalletProvider(ethereumProvider);
     const privateKey = Buffer.from(PRIVATE_KEY, 'hex');
     userAddress = walletProvider.addAccount(privateKey);

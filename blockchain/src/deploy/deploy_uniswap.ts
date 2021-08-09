@@ -6,7 +6,7 @@ import IWETH from '@uniswap/v2-periphery/build/IWETH.json';
 import UniswapV2Router02Json from '@uniswap/v2-periphery/build/UniswapV2Router02.json';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Contract, ContractFactory, Signer } from 'ethers';
-import WETH9 from '../contracts/WETH9.json';
+import WETH9 from '../abis/WETH9.json';
 
 export const createPair = async (
   owner: Signer,

@@ -1,7 +1,8 @@
+import { EthAddress } from '@aztec/barretenberg/address';
 import { Blockchain } from '@aztec/barretenberg/blockchain';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
-import { EthereumProvider } from '@aztec/blockchain';
+import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 import { ProofGenerator } from 'halloumi/proof_generator';
 import { Duration } from 'moment';
 import { ClaimProofCreator } from './claim_proof_creator';
@@ -25,6 +26,7 @@ export class RollupPipeline {
     noteAlgo: NoteAlgorithms,
     metrics: Metrics,
     provider: EthereumProvider,
+    signingAddress: EthAddress,
     publishInterval: Duration,
     feeLimit: bigint,
     maxFeeGasPrice: bigint,
@@ -46,6 +48,7 @@ export class RollupPipeline {
       maxFeeGasPrice,
       providerGasPriceMultiplier,
       provider,
+      signingAddress,
       metrics,
     );
     const rollupAggregator = new RollupAggregator(
@@ -110,6 +113,7 @@ export class RollupPipelineFactory {
     private noteAlgo: NoteAlgorithms,
     private metrics: Metrics,
     private provider: EthereumProvider,
+    private signingAddress: EthAddress,
     private publishInterval: Duration,
     private feeLimit: bigint,
     private maxFeeGasPrice: bigint,
@@ -133,6 +137,7 @@ export class RollupPipelineFactory {
       this.noteAlgo,
       this.metrics,
       this.provider,
+      this.signingAddress,
       this.publishInterval,
       this.feeLimit,
       this.maxFeeGasPrice,

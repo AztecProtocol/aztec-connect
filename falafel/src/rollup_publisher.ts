@@ -1,22 +1,21 @@
-import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Blockchain } from '@aztec/barretenberg/blockchain';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
-import { EthereumProvider } from '@aztec/blockchain';
-import { Contract, Signer, utils } from 'ethers';
+import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 import { RollupDao } from './entity/rollup';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
 import { ProofData, JoinSplitProofData } from '@aztec/barretenberg/client_proofs';
 import { AssetId } from '@aztec/barretenberg/asset';
+import { Web3Signer } from '@aztec/blockchain';
+import { Keccak } from 'sha3';
 
 export class RollupPublisher {
   private interrupted = false;
   private interruptPromise = Promise.resolve();
   private interruptResolve = () => {};
-  private signer: Signer;
 
   constructor(
     private rollupDb: RollupDb,
@@ -25,9 +24,9 @@ export class RollupPublisher {
     private maxFeeGasPrice: bigint,
     private providerGasPriceMultiplier: number,
     private provider: EthereumProvider,
+    private providerAddress: EthAddress,
     private metrics: Metrics,
   ) {
-    this.signer = new Web3Provider(provider).getSigner();
     this.interruptPromise = new Promise(resolve => (this.interruptResolve = resolve));
   }
 
@@ -89,25 +88,21 @@ export class RollupPublisher {
   private async createTxData(rollup: RollupDao) {
     const proof = rollup.rollupProof.proofData;
     const txs = rollup.rollupProof.txs;
-    const viewingKeys = txs
-      .map(tx => [tx.viewingKey1, tx.viewingKey2])
-      .flat()
-      .map(vk => vk.toBuffer());
+    const viewingKeys = txs.map(tx => [tx.viewingKey1, tx.viewingKey2]).flat();
     const jsTxs = txs.filter(tx => tx.signature);
     const signatures: Buffer[] = [];
     for (const tx of jsTxs) {
-      const { inputOwner, depositSigningData } = new JoinSplitProofData(new ProofData(tx.proofData));
-      const proofApproval = await this.blockchain.getUserProofApprovalStatus(inputOwner, depositSigningData);
+      const { inputOwner, txId } = new JoinSplitProofData(new ProofData(tx.proofData));
+      const proofApproval = await this.blockchain.getUserProofApprovalStatus(inputOwner, txId);
       if (!proofApproval) {
         signatures.push(tx.signature!);
       }
     }
 
-    const providerAddress = EthAddress.fromString(await this.signer.getAddress());
     const { feeDistributorContractAddress } = await this.blockchain.getBlockchainStatus();
     const providerSignature = await this.generateSignature(
       proof,
-      providerAddress,
+      this.providerAddress,
       this.feeLimit,
       feeDistributorContractAddress,
     );
@@ -117,8 +112,8 @@ export class RollupPublisher {
       signatures,
       viewingKeys,
       providerSignature,
-      providerAddress,
-      providerAddress,
+      this.providerAddress,
+      this.providerAddress,
       this.feeLimit,
     );
   }
@@ -130,22 +125,14 @@ export class RollupPublisher {
     feeDistributorAddress: EthAddress,
   ) {
     const publicInputs = rollupProof.slice(0, RollupProofData.LENGTH_ROLLUP_HEADER_INPUTS);
-    const toSign = Buffer.concat([
+    const message = Buffer.concat([
       publicInputs,
       feeReceiver.toBuffer(),
       toBufferBE(feeLimit, 32),
       feeDistributorAddress.toBuffer(),
     ]);
-    const msgHash = utils.solidityKeccak256(['bytes'], [toSign]);
-    const digest = utils.arrayify(msgHash);
-    const signature = await this.signer.signMessage(digest);
-    let signatureBuf = Buffer.from(signature.slice(2), 'hex');
-    const v = signatureBuf[signatureBuf.length - 1];
-    if (v <= 1) {
-      signatureBuf = Buffer.concat([signatureBuf.slice(0, -1), Buffer.from([v + 27])]);
-    }
-
-    return signatureBuf;
+    const digest = new Keccak(256).update(message).digest();
+    return await new Web3Signer(this.provider).signMessage(digest, this.providerAddress);
   }
 
   private async sendRollupProof(txData: Buffer) {

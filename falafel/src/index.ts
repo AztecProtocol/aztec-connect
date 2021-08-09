@@ -19,6 +19,7 @@ async function main() {
   const {
     ormConfig,
     provider,
+    signingAddress,
     ethConfig,
     confVars: {
       halloumiHost,
@@ -61,6 +62,7 @@ async function main() {
     providerGasPriceMultiplier,
     reimbursementFeeLimit,
     maxUnsettledTxs,
+    signingAddress,
   };
   const rollupDb = new CachedRollupDb(new TypeOrmRollupDb(connection));
   await rollupDb.init();

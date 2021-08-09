@@ -16,6 +16,6 @@
     "declarationMap": true,
     "resolveJsonModule": true
   },
-  "include": ["src", "test"],
+  "include": ["src"],
   "files": ["./hardhat.config.ts"]
 }

@@ -595,7 +595,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                     assembly {
                         inputOwner := mload(add(proofDataPtr, 0x100))
 
-                        // compute the message digest to check if user has approved tx
+                        // compute the tx id to check if user has approved tx
                         digest := keccak256(proofDataPtr, stepSize)
                     }
                     if (!depositProofApprovals[inputOwner][digest]) {
@@ -749,7 +749,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                 } else {
                     address assetAddress = getSupportedAsset(assetId);
                     IERC20(assetAddress).approve(feeDistributor, txFee);
-                    (success, ) = feeDistributor.call(abi.encodeWithSignature('deposit(uint256,uint256)', assetId, txFee));
+                    (success, ) = feeDistributor.call(
+                        abi.encodeWithSignature('deposit(address,uint256)', assetAddress, txFee)
+                    );
                 }
                 require(success, 'Rollup Processor: DEPOSIT_TX_FEE_FAILED');
                 totalFees[assetId] = totalFees[assetId].add(txFee);

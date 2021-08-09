@@ -4,6 +4,6 @@
     "types": []
   },
   "include": ["src"],
-  "exclude": ["**/*.test.*"],
+  "exclude": ["**/*.test.*", "**/fixtures/*"],
   "files": []
 }

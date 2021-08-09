@@ -16,7 +16,7 @@ describe('end-to-end bad signature tests', () => {
   const assetId = AssetId.ETH;
 
   beforeAll(async () => {
-    provider = await createFundedWalletProvider(ETHEREUM_HOST, 2, '3');
+    provider = await createFundedWalletProvider(ETHEREUM_HOST, 2);
     accounts = provider.getAccounts();
 
     sdk = await createWalletSdk(provider, ROLLUP_HOST, {
@@ -72,12 +72,12 @@ describe('end-to-end bad signature tests', () => {
 
     // 3. create invalid signature
     const signature = await sdk.signProof(proofOutput, accounts[2], provider);
-    const validSignature = sdk.validateSignature(depositor, signature, proofOutput.signingData!);
+    const validSignature = sdk.validateSignature(depositor, signature, proofOutput.tx.txHash.toBuffer());
     expect(validSignature).toBe(false);
     await expect(sdk.sendProof(proofOutput, signature)).rejects.toThrow();
 
     // 4. approve proof
-    await sdk.approveProof(depositor, proofOutput.signingData!);
+    await sdk.approveProof(depositor, proofOutput.tx.txHash.toBuffer());
 
     // 5. send proof
     const txHash1 = await sdk.sendProof(proofOutput, signature);

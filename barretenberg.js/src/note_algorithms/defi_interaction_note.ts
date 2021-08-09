@@ -58,7 +58,8 @@ export class DefiInteractionNote {
   }
 }
 
-export const packInteractionNotes = (notes: DefiInteractionNote[]) => {
+export const packInteractionNotes = (notes: DefiInteractionNote[], padTo = notes.length) => {
+  notes = [...notes, ...Array(padTo - notes.length).fill(DefiInteractionNote.EMPTY)];
   const hash = createHash('sha256')
     .update(
       Buffer.concat(

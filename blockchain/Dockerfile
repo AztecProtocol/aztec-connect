@@ -4,8 +4,11 @@ FROM node:14-alpine AS builder
 RUN apk update && apk add --no-cache build-base git python
 COPY --from=0 /usr/src/barretenberg.js/dest /usr/src/barretenberg.js/dest
 WORKDIR /usr/src/blockchain
+COPY package.json yarn.lock ./
+RUN yarn install
 COPY . .
-RUN yarn install && yarn build && yarn test && rm -rf node_modules && yarn install --production && yarn cache clean
+RUN yarn build && yarn test
+RUN rm -rf node_modules && yarn install --production
 
 FROM node:14-alpine
 COPY --from=builder /usr/src/blockchain /usr/src/blockchain

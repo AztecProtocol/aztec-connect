@@ -4,7 +4,7 @@ import {
   ProviderMessage,
   ProviderRpcError,
   RequestArguments,
-} from './ethereum_provider';
+} from '@aztec/barretenberg/blockchain/ethereum_provider';
 import { Wallet } from 'ethers';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { EthersAdapter } from './ethers_adapter';

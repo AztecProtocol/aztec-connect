@@ -50,7 +50,7 @@
   },
   "scripts": {
     "start:dev": "parcel ./src/index.html --port 8080 --hmr-port 41337 --no-source-maps",
-    "build": "yarn clean && parcel build ./src/index.html --no-source-maps",
+    "build": "yarn clean && tsc && parcel build ./src/index.html --no-source-maps",
     "clean": "rm -rf ./dist"
   },
   "browserslist": [

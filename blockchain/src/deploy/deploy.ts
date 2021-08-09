@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { parseEther } from '@ethersproject/units';
 import { ContractFactory, Signer } from 'ethers';
+import { EthAddress } from '@aztec/barretenberg/address';
 import RollupProcessor from '../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
 import { addAsset } from './add_asset/add_asset';
 import { deployDefiBridge } from './deploy_defi_bridge';
@@ -42,7 +43,7 @@ export async function deploy(escapeHatchBlockLower: number, escapeHatchBlockUppe
   const initialFee = '1';
   console.error(`Depositing ${initialFee} ETH to FeeDistributor.`);
   const amount = parseEther(initialFee);
-  await feeDistributor.deposit(0, amount, { value: amount });
+  await feeDistributor.deposit(EthAddress.ZERO.toString(), amount, { value: amount });
 
   const permitSupport = false;
   const asset1 = await addAsset(rollup, signer, permitSupport);

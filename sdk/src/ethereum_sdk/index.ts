@@ -1,10 +1,10 @@
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
-import { EthereumSigner, PermitArgs, TxType } from '@aztec/barretenberg/blockchain';
+import { EthereumProvider, EthereumSigner, PermitArgs, TxType } from '@aztec/barretenberg/blockchain';
 import { SettlementTime } from '@aztec/barretenberg/rollup_provider';
 import { getBlockchainStatus } from '@aztec/barretenberg/service';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
-import { ClientEthereumBlockchain, EthereumProvider, Web3Signer } from '@aztec/blockchain';
+import { ClientEthereumBlockchain, Web3Signer } from '@aztec/blockchain';
 import { Web3Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
 import isNode from 'detect-node';
@@ -55,7 +55,7 @@ export async function createEthSdk(ethereumProvider: EthereumProvider, serverUrl
   }
 
   const blockchain = new ClientEthereumBlockchain(rollupContractAddress, assets, ethereumProvider);
-  const ethSigner = new Web3Signer(provider);
+  const ethSigner = new Web3Signer(ethereumProvider);
   const walletSdk = new WalletSdk(core, blockchain, ethSigner, sdkOptions);
   return new EthereumSdk(walletSdk, db, ethSigner);
 }

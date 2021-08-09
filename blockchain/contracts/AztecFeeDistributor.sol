@@ -12,22 +12,19 @@ import {IWETH} from '@uniswap/v2-periphery/contracts/interfaces/IWETH.sol';
 import {UniswapV2Library} from '@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol';
 
 import {IFeeDistributor} from './interfaces/IFeeDistributor.sol';
-import {IRollupProcessor} from './interfaces/IRollupProcessor.sol';
 
 contract AztecFeeDistributor is IFeeDistributor, Ownable {
     using SafeMath for uint256;
 
-    uint256 constant ethAssetId = 0;
-
     uint256 public override reimburseConstant = 16 * 51781;
     uint256 public override convertConstant = 157768 * 20; // gas for calling convert() / 5%
-    address public immutable override rollupProcessor;
+    address public immutable override feeClaimer;
     address public immutable override router;
     address public immutable override factory;
     address public immutable override WETH;
 
-    constructor(address _rollupProcessor, address _router) public {
-        rollupProcessor = _rollupProcessor;
+    constructor(address _feeClaimer, address _router) public {
+        feeClaimer = _feeClaimer;
         router = _router;
         factory = IUniswapV2Router02(_router).factory();
         WETH = IUniswapV2Router02(_router).WETH();
@@ -43,22 +40,20 @@ contract AztecFeeDistributor is IFeeDistributor, Ownable {
         convertConstant = _convertConstant;
     }
 
-    function txFeeBalance(uint256 assetId) public view override returns (uint256) {
-        if (assetId == ethAssetId) {
+    function txFeeBalance(address assetAddress) public view override returns (uint256) {
+        if (assetAddress == address(0)) {
             return address(this).balance;
         } else {
-            address assetAddress = IRollupProcessor(rollupProcessor).getSupportedAsset(assetId);
             return IERC20(assetAddress).balanceOf(address(this));
         }
     }
 
-    function deposit(uint256 assetId, uint256 amount) external payable override returns (uint256 depositedAmount) {
-        if (assetId == ethAssetId) {
+    function deposit(address assetAddress, uint256 amount) external payable override returns (uint256 depositedAmount) {
+        if (assetAddress == address(0)) {
             require(amount == msg.value, 'Fee Distributor: WRONG_AMOUNT');
         } else {
             require(msg.value == 0, 'Fee Distributor: WRONG_PAYMENT_TYPE');
 
-            address assetAddress = IRollupProcessor(rollupProcessor).getSupportedAsset(assetId);
             IERC20(assetAddress).transferFrom(msg.sender, address(this), amount);
 
             uint256 balance = IERC20(assetAddress).balanceOf(address(this));
@@ -66,7 +61,7 @@ contract AztecFeeDistributor is IFeeDistributor, Ownable {
             if (outputValue >= convertConstant.mul(tx.gasprice)) {
                 swapTokensForETH(assetAddress, balance, outputValue);
 
-                emit Convert(assetId, balance, outputValue);
+                emit Convert(assetAddress, balance, outputValue);
             }
         }
 
@@ -78,7 +73,7 @@ contract AztecFeeDistributor is IFeeDistributor, Ownable {
         uint256 feeLimit,
         address payable feeReceiver
     ) external override returns (uint256 reimbursement) {
-        require(msg.sender == rollupProcessor, 'Fee Distributor: INVALID_CALLER');
+        require(msg.sender == feeClaimer, 'Fee Distributor: INVALID_CALLER');
 
         reimbursement = gasUsed.add(reimburseConstant).mul(tx.gasprice);
         require(reimbursement <= feeLimit, 'Fee Distributor: FEE_LIMIT_EXCEEDED');
@@ -89,10 +84,14 @@ contract AztecFeeDistributor is IFeeDistributor, Ownable {
         emit FeeReimbursed(feeReceiver, reimbursement);
     }
 
-    function convert(uint256 assetId, uint256 minOutputValue) public override onlyOwner returns (uint256 outputValue) {
-        require(assetId != ethAssetId, 'Fee Distributor: NOT_A_TOKEN_ASSET');
+    function convert(address assetAddress, uint256 minOutputValue)
+        public
+        override
+        onlyOwner
+        returns (uint256 outputValue)
+    {
+        require(assetAddress != address(0), 'Fee Distributor: NOT_A_TOKEN_ASSET');
 
-        address assetAddress = IRollupProcessor(rollupProcessor).getSupportedAsset(assetId);
         uint256 inputValue = IERC20(assetAddress).balanceOf(address(this));
         require(inputValue > 0, 'Fee Distributor: EMPTY_BALANCE');
 
@@ -101,7 +100,7 @@ contract AztecFeeDistributor is IFeeDistributor, Ownable {
 
         swapTokensForETH(assetAddress, inputValue, outputValue);
 
-        emit Convert(assetId, inputValue, outputValue);
+        emit Convert(assetAddress, inputValue, outputValue);
     }
 
     function getAmountOut(address assetAddress, uint256 inputValue) internal view returns (uint256 outputValue) {

@@ -27,7 +27,7 @@ export class PublicBalance extends ValueSubscriber {
     }
 
     if (this.assetId === AssetId.ETH) {
-      return BigInt(await this.web3Provider!.getBalance(this.address.toString()));
+      return BigInt((await this.web3Provider!.getBalance(this.address.toString())).toString());
     }
 
     return this.contract ? BigInt(await this.contract.balanceOf(this.address.toString())) : 0n;

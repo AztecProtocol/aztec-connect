@@ -4,13 +4,13 @@ pragma solidity >=0.6.10 <0.8.0;
 
 interface IFeeDistributor {
     event FeeReimbursed(address receiver, uint256 amount);
-    event Convert(uint256 assetId, uint256 inputValue, uint256 outputValue);
+    event Convert(address assetAddress, uint256 inputValue, uint256 outputValue);
 
     function reimburseConstant() external pure returns (uint256);
 
     function convertConstant() external pure returns (uint256);
 
-    function rollupProcessor() external pure returns (address);
+    function feeClaimer() external pure returns (address);
 
     function router() external pure returns (address);
 
@@ -22,9 +22,9 @@ interface IFeeDistributor {
 
     function setConvertConstant(uint256 _convertConstant) external;
 
-    function txFeeBalance(uint256 assetId) external view returns (uint256);
+    function txFeeBalance(address assetAddress) external view returns (uint256);
 
-    function deposit(uint256 assetId, uint256 amount) external payable returns (uint256 depositedAmount);
+    function deposit(address assetAddress, uint256 amount) external payable returns (uint256 depositedAmount);
 
     function reimburseGas(
         uint256 gasUsed,
@@ -32,5 +32,5 @@ interface IFeeDistributor {
         address payable feeReceiver
     ) external returns (uint256 reimbursement);
 
-    function convert(uint256 assetId, uint256 minOutputValue) external returns (uint256 outputValue);
+    function convert(address assetAddress, uint256 minOutputValue) external returns (uint256 outputValue);
 }

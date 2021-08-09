@@ -22,10 +22,12 @@ export {
   JsonRpcProvider,
   WalletProvider,
   EthersAdapter,
-  EthereumProvider,
   Web3Adapter,
   Web3Provider,
   Web3Signer,
   toBaseUnits,
   fromBaseUnits,
+  FeeDistributor,
+  RollupProcessor,
+  EthAsset,
 } from '@aztec/blockchain';

@@ -8,7 +8,6 @@ import { UserAccountTx, UserDefiTx, UserJoinSplitTx } from '../user_tx';
 
 export interface ProofOutput extends Proof {
   tx: UserJoinSplitTx | UserAccountTx | UserDefiTx;
-  signingData?: Buffer;
 }
 
 export class JoinSplitProofOutput implements ProofOutput {
@@ -16,7 +15,6 @@ export class JoinSplitProofOutput implements ProofOutput {
     public tx: UserJoinSplitTx,
     public proofData: Buffer,
     public viewingKeys: ViewingKey[],
-    public signingData?: Buffer,
   ) {}
 }
 

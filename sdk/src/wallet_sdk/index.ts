@@ -1,22 +1,13 @@
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
-import { EthereumSigner, PermitArgs, Receipt, TxType } from '@aztec/barretenberg/blockchain';
+import { EthereumProvider, EthereumSigner, PermitArgs, Receipt, TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { SettlementTime } from '@aztec/barretenberg/rollup_provider';
 import { getBlockchainStatus } from '@aztec/barretenberg/service';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
-import {
-  ClientEthereumBlockchain,
-  createPermitData,
-  EthereumProvider,
-  validateSignature,
-  Web3Signer,
-} from '@aztec/blockchain';
-import { TokenAsset } from '@aztec/blockchain/asset';
-import { Web3Provider } from '@ethersproject/providers';
+import { ClientEthereumBlockchain, createPermitData, validateSignature, Web3Signer } from '@aztec/blockchain';
 import { randomBytes } from 'crypto';
 import createDebug from 'debug';
-import { utils } from 'ethers';
 import { EventEmitter } from 'events';
 import { CoreSdk } from '../core_sdk/core_sdk';
 import { createSdk, SdkOptions } from '../core_sdk/create_sdk';
@@ -51,14 +42,13 @@ export async function createWalletSdk(
     await core.eraseDb();
   }
 
-  const provider = new Web3Provider(ethereumProvider);
-  const { chainId: providerChainId } = await provider.getNetwork();
+  const blockchain = new ClientEthereumBlockchain(rollupContractAddress, assets, ethereumProvider);
+  const ethSigner = new Web3Signer(ethereumProvider);
+
+  const providerChainId = await blockchain.getChainId();
   if (chainId !== providerChainId) {
     throw new Error(`Provider chainId ${providerChainId} does not match rollup provider chainId ${chainId}.`);
   }
-
-  const blockchain = new ClientEthereumBlockchain(rollupContractAddress, assets, ethereumProvider);
-  const ethSigner = new Web3Signer(provider);
 
   return new WalletSdk(core, blockchain, ethSigner, sdkOptions);
 }
@@ -145,12 +135,12 @@ export class WalletSdk extends EventEmitter {
   }
 
   public async mint(assetId: AssetId, value: bigint, account: EthAddress, provider?: EthereumProvider) {
-    return (this.blockchain.getAsset(assetId) as TokenAsset).mint(value, account, provider);
+    return this.blockchain.getAsset(assetId).mint(value, account, { provider });
   }
 
   public async approve(assetId: AssetId, value: bigint, account: EthAddress, provider?: EthereumProvider) {
     const { rollupContractAddress } = this.getLocalStatus();
-    return (this.blockchain.getAsset(assetId) as TokenAsset).approve(value, account, rollupContractAddress, provider);
+    return this.blockchain.getAsset(assetId).approve(value, account, rollupContractAddress, { provider });
   }
 
   public async createPermitData(assetId: AssetId, from: EthAddress, value: bigint, deadline: bigint) {
@@ -173,7 +163,7 @@ export class WalletSdk extends EventEmitter {
       deadline = BigInt(currentTimeInt) + expireIn;
     }
     const permitData = await this.createPermitData(assetId, from, value, deadline);
-    const ethSigner = provider ? new Web3Signer(new Web3Provider(provider)) : this.ethSigner;
+    const ethSigner = provider ? new Web3Signer(provider) : this.ethSigner;
     const signature = await ethSigner.signTypedData(permitData, from);
     const permitArgs: PermitArgs = { approvalAmount: value, deadline, signature };
     return permitArgs;
@@ -323,15 +313,10 @@ export class WalletSdk extends EventEmitter {
   }
 
   public async signProof(proofOutput: ProofOutput, inputOwner: EthAddress, provider?: EthereumProvider) {
-    const { signingData } = proofOutput;
-    if (!signingData) {
-      throw new Error('This proof does not require a signature.');
-    }
+    const { txHash } = proofOutput.tx;
 
-    const msgHash = utils.keccak256(signingData);
-    const digest = utils.arrayify(msgHash);
-    const ethSigner = provider ? new Web3Signer(new Web3Provider(provider)) : this.ethSigner;
-    return ethSigner.signMessage(Buffer.from(digest), inputOwner);
+    const ethSigner = provider ? new Web3Signer(provider) : this.ethSigner;
+    return await ethSigner.signMessage(txHash.toBuffer(), inputOwner);
   }
 
   public async sendProof(proofOutput: ProofOutput, signature?: Buffer) {
@@ -365,8 +350,8 @@ export class WalletSdk extends EventEmitter {
     return this.blockchain.isContract(address);
   }
 
-  public async isProofApproved(account: EthAddress, signingData: Buffer) {
-    return !!(await this.blockchain.getUserProofApprovalStatus(account, signingData));
+  public async isProofApproved(account: EthAddress, txId: Buffer) {
+    return !!(await this.blockchain.getUserProofApprovalStatus(account, txId));
   }
 
   private async checkNoteBalance(assetId: AssetId, userId: AccountId, value: bigint) {

@@ -1,3 +1,4 @@
+import { EthAddress } from '@aztec/barretenberg/address';
 import { Blockchain } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
@@ -5,7 +6,7 @@ import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupProviderStatus } from '@aztec/barretenberg/rollup_provider';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
-import { EthereumProvider } from '@aztec/blockchain';
+import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { emptyDir } from 'fs-extra';
 import { CliProofGenerator, ProofGenerator, ServerProofGenerator } from 'halloumi/proof_generator';
@@ -30,6 +31,7 @@ export interface ServerConfig {
   readonly providerGasPriceMultiplier: number;
   readonly reimbursementFeeLimit: bigint;
   readonly maxUnsettledTxs: number;
+  readonly signingAddress: EthAddress;
 }
 
 export class Server {
@@ -59,6 +61,7 @@ export class Server {
       feeGasPriceMultiplier,
       providerGasPriceMultiplier,
       halloumiHost,
+      signingAddress,
     } = config;
     const noteAlgo = new NoteAlgorithms(barretenberg);
 
@@ -81,6 +84,7 @@ export class Server {
       noteAlgo,
       metrics,
       provider,
+      signingAddress,
       publishInterval,
       reimbursementFeeLimit,
       maxFeeGasPrice,

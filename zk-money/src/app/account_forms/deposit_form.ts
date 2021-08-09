@@ -466,7 +466,7 @@ export class DepositForm extends EventEmitter implements AccountForm {
   }
 
   private async updateGasPrice(provider: Provider) {
-    this.gasPrice = BigInt(await new Web3Provider(provider.ethereumProvider).getGasPrice());
+    this.gasPrice = BigInt((await new Web3Provider(provider.ethereumProvider).getGasPrice()).toString());
   }
 
   private updateFormStatus(status: FormStatus) {

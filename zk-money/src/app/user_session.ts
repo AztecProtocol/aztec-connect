@@ -812,8 +812,7 @@ export class UserSession extends EventEmitter {
 
   private async linkAccount(provider: Provider) {
     const ethAddress = provider.account!;
-    const web3Provider = new Web3Provider(provider.ethereumProvider);
-    const signer = new Web3Signer(web3Provider);
+    const signer = new Web3Signer(provider.ethereumProvider);
     const message = this.hashToField(ethAddress.toBuffer());
     const msgHash = utils.keccak256(message);
     const digest = utils.arrayify(msgHash);

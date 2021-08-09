@@ -1,7 +1,7 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { JoinSplitProofData, JoinSplitProver, ProofData } from '@aztec/barretenberg/client_proofs';
+import { JoinSplitProver, ProofData } from '@aztec/barretenberg/client_proofs';
 import { Pedersen } from '@aztec/barretenberg/crypto';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
@@ -70,12 +70,8 @@ export class JoinSplitProofCreator {
     debug(`created proof: ${new Date().getTime() - start}ms`);
     debug(`proof size: ${proofData.length}`);
 
-    const joinSplitProof = new JoinSplitProofData(new ProofData(proofData));
-    const {
-      depositSigningData,
-      proofData: { txId },
-    } = joinSplitProof;
+    const { txId } = new ProofData(proofData);
 
-    return { proofData, viewingKeys, depositSigningData, txId };
+    return { proofData, viewingKeys, txId };
   }
 }

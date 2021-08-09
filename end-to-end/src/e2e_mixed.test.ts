@@ -28,7 +28,7 @@ describe('end-to-end mixed tests', () => {
   const awaitSettlementTimeout = 600;
 
   beforeAll(async () => {
-    provider = await createFundedWalletProvider(ETHEREUM_HOST, 2, '1');
+    provider = await createFundedWalletProvider(ETHEREUM_HOST, 2);
     accounts = provider.getAccounts();
   });
 

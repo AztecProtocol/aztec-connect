@@ -6,7 +6,7 @@
   "scripts": {
     "build": "rm -rf ./dest && tsc -p tsconfig.prod.json",
     "clean": "rm -rf ./data",
-    "clean_db": "rm -rf ./data/db.sqlite ./data/world_state.db",
+    "clean_db": "rm -rf ./data/db.sqlite ./data/world_state.db ./data/config",
     "clean_keys": "rm -rf ./data/account ./data/join_split ./data/*rollup*",
     "start": "node ./dest",
     "start:dev": "`yarn -s deploy_rollup_processor` && yarn start:dev_server",
@@ -32,7 +32,6 @@
     "bn.js": "^5.0.0",
     "class-validator": "^0.12.2",
     "dotenv": "^8.2.0",
-    "ethers": "5.0.29",
     "fs-extra": "9.0.1",
     "graphql": "^15.3.0",
     "graphql-playground-middleware-koa": "^1.6.19",

@@ -10,6 +10,7 @@ import { ProofId } from './proof_id';
  */
 export class ProofData {
   static readonly NUM_PUBLIC_INPUTS = 12;
+  static readonly NUM_PUBLISHED_PUBLIC_INPUTS = 10;
 
   public readonly txId: Buffer;
   public readonly proofId: ProofId;
@@ -41,6 +42,6 @@ export class ProofData {
     this.noteTreeRoot = rawProofData.slice(10 * 32, 10 * 32 + 32);
     this.txFee = toBigIntBE(rawProofData.slice(11 * 32, 11 * 32 + 32));
 
-    this.txId = createTxId(rawProofData);
+    this.txId = createTxId(rawProofData.slice(0, ProofData.NUM_PUBLISHED_PUBLIC_INPUTS * 32));
   }
 }

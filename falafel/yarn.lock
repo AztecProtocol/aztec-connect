@@ -58,7 +58,7 @@
     levelup "^5.0.0"
     memdown "^6.0.0"
     node-fetch "^2.6.0"
-    promise-readable "^6.0.0"
+    promise-readable "^5.0.4"
     sha3 "^2.1.3"
     threads "1.3.1"
     tslib "^2.0.0"
@@ -66,7 +66,7 @@
 "@aztec/blockchain@file:../blockchain/dest":
   version "2.0.0"
   dependencies:
-    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-f68eff29-209a-483a-8fb5-c33b2a738d37-1625305485321/node_modules/barretenberg.js/dest"
+    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-e8fb662d-42df-4718-82d2-a52a5f29b454-1628428139844/node_modules/barretenberg.js/dest"
     "@ethersproject/experimental" "5.0.9"
     "@ethersproject/providers" "5.0.18"
     "@uniswap/v2-core" "^1.0.1"
@@ -2569,7 +2569,7 @@ copy-to@^2.0.1:
   resolved "https://registry.yarnpkg.com/copy-to/-/copy-to-2.0.1.tgz#2680fbb8068a48d08656b6098092bdafc906f4a5"
   integrity sha1-JoD7uAaKSNCGVrYJgJK9r8kG9KU=
 
-core-js@^3.0.1, core-js@^3.6.1, core-js@^3.6.5:
+core-js@^3.0.1, core-js@^3.6.1:
   version "3.9.1"
   resolved "https://registry.yarnpkg.com/core-js/-/core-js-3.9.1.tgz#cec8de593db8eb2a85ffb0dbdeb312cb6e5460ae"
   integrity sha512-gSjRvzkxQc1zjM/5paAmL4idJBFzuJoo+jDjF1tStYFMV2ERfD02HhahhCGXUyHxQRG4yFKVSdO6g62eoRMcDg==
@@ -3708,8 +3708,8 @@ growly@^1.3.0:
 "halloumi@file:../halloumi/dest":
   version "1.0.0"
   dependencies:
-    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-halloumi-1.0.0-2fcb8f5a-0030-4df2-b1cd-274498e897a0-1625305485439/barretenberg.js/dest"
-    "@aztec/blockchain" "file:../../.cache/yarn/v6/npm-halloumi-1.0.0-2fcb8f5a-0030-4df2-b1cd-274498e897a0-1625305485439/blockchain/dest"
+    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-halloumi-1.0.0-83f0a353-72cb-4ddf-96d2-c8b705f7bee4-1628428139950/barretenberg.js/dest"
+    "@aztec/blockchain" "file:../../.cache/yarn/v6/npm-halloumi-1.0.0-83f0a353-72cb-4ddf-96d2-c8b705f7bee4-1628428139950/blockchain/dest"
     fs-extra "9.0.1"
     koa "^2.7.0"
     koa-router "^7.4.0"
@@ -5748,13 +5748,6 @@ promise-readable@^5.0.4:
   integrity sha512-v1MqYyLQvopoi+FOVL+HErz4TB7lpaZf7H+pQo8vW6yAmJ1QZVDww7XTTwK+gqzQZylmhrlS3CaHQzLkKorZjA==
   dependencies:
     core-js "^3.6.1"
-
-promise-readable@^6.0.0:
-  version "6.0.0"
-  resolved "https://registry.yarnpkg.com/promise-readable/-/promise-readable-6.0.0.tgz#ab1ec1a3daa53ed8764b61902fb7f3de3242025a"
-  integrity sha512-5NxtmUswijvX5cAM0zPSy6yiCXH/eKBpiiBq6JfAUrmngMquMbzcBhF2qA+ocs4rYYKdvAfv3cOvZxADLtL1CA==
-  dependencies:
-    core-js "^3.6.5"
 
 prompts@^2.0.1:
   version "2.4.0"
