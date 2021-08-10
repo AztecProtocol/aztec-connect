@@ -108,7 +108,7 @@ export class CoreSdk extends EventEmitter {
     this.grumpkin = new Grumpkin(barretenberg);
     this.schnorr = new Schnorr(barretenberg);
     this.userFactory = new UserDataFactory(this.grumpkin);
-    this.userStateFactory = new UserStateFactory(this.grumpkin, this.pedersen, noteAlgos, this.db, this.rollupProvider);
+    this.userStateFactory = new UserStateFactory(this.grumpkin, noteAlgos, this.db, this.rollupProvider);
     this.worldState = new WorldState(this.leveldb, this.pedersen);
 
     await this.initUserStates();
@@ -138,16 +138,9 @@ export class CoreSdk extends EventEmitter {
     const joinSplitProver = new JoinSplitProver(
       await pooledProverFactory.createUnrolledProver(JoinSplitProver.circuitSize),
     );
-    this.joinSplitProofCreator = new JoinSplitProofCreator(
-      joinSplitProver,
-      this.worldState,
-      this.grumpkin,
-      this.pedersen,
-      noteAlgos,
-      this.db,
-    );
+    this.joinSplitProofCreator = new JoinSplitProofCreator(joinSplitProver, this.worldState, this.grumpkin, this.db);
     const accountProver = new AccountProver(await pooledProverFactory.createUnrolledProver(AccountProver.circuitSize));
-    this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState, this.pedersen);
+    this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState);
     await this.createJoinSplitProvingKey(joinSplitProver);
     await this.createAccountProvingKey(accountProver);
 
@@ -508,8 +501,8 @@ export class CoreSdk extends EventEmitter {
     return new JoinSplitProofOutput(tx, proofData, viewingKeys);
   }
 
-  public async createAccountTx(
-    signer: Signer,
+  public async createAccountProofSigningData(
+    signingPubKey: GrumpkinAddress,
     alias: string,
     nonce: number,
     migrate: boolean,
@@ -520,10 +513,9 @@ export class CoreSdk extends EventEmitter {
   ) {
     const aliasHash = this.computeAliasHash(alias);
     const accountId = nonce ? new AccountId(accountPublicKey, nonce) : undefined;
-    const accountIndex = accountId ? await this.db.getUserSigningKeyIndex(accountId, signer.getPublicKey()) : undefined;
-
-    return this.accountProofCreator.createAccountTx(
-      signer,
+    const accountIndex = accountId ? await this.db.getUserSigningKeyIndex(accountId, signingPubKey) : undefined;
+    const tx = await this.accountProofCreator.createAccountTx(
+      signingPubKey,
       aliasHash,
       nonce,
       migrate,
@@ -533,6 +525,7 @@ export class CoreSdk extends EventEmitter {
       newSigningPubKey2,
       accountIndex,
     );
+    return this.accountProofCreator.computeSigningData(tx);
   }
 
   public async createAccountProof(

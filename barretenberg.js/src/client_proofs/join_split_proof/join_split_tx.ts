@@ -5,7 +5,6 @@ import { HashPath } from '../../merkle_tree';
 import { numToUInt32BE } from '../../serialize';
 import { AccountAliasId } from '../../account_id';
 import { TreeNote, ClaimNoteTxData } from '../../note_algorithms';
-import { SchnorrSignature } from '../../crypto/schnorr';
 
 export class JoinSplitTx {
   constructor(
@@ -24,7 +23,6 @@ export class JoinSplitTx {
     public accountIndex: number,
     public accountPath: HashPath,
     public signingPubKey: GrumpkinAddress,
-    public signature: SchnorrSignature,
     public inputOwner: EthAddress,
     public outputOwner: EthAddress,
   ) {}
@@ -53,7 +51,6 @@ export class JoinSplitTx {
       numToUInt32BE(this.accountIndex),
       this.accountPath.toBuffer(),
       this.signingPubKey.toBuffer(),
-      this.signature.toBuffer(),
 
       this.inputOwner.toBuffer32(),
       this.outputOwner.toBuffer32(),

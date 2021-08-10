@@ -1,10 +1,10 @@
 import { AccountAliasId, AccountId } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetId, AssetIds } from '@aztec/barretenberg/asset';
+import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { Block } from '@aztec/barretenberg/block_source';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { ProofId, computeAccountAliasIdNullifier } from '@aztec/barretenberg/client_proofs';
-import { Pedersen } from '@aztec/barretenberg/crypto';
+import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
 import {
@@ -19,7 +19,6 @@ import {
 import { DefiDepositProofData, InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupProvider } from '@aztec/barretenberg/rollup_provider';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
-import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { Database } from '../database';
@@ -49,7 +48,6 @@ export class UserState extends EventEmitter {
   constructor(
     private user: UserData,
     private grumpkin: Grumpkin,
-    private pedersen: Pedersen,
     private noteAlgos: NoteAlgorithms,
     private db: Database,
     private rollupProvider: RollupProvider,
@@ -473,7 +471,7 @@ export class UserState extends EventEmitter {
     const newSigningPubKey1 = nonEmptyKey(inputOwner);
     const newSigningPubKey2 = nonEmptyKey(outputOwner);
 
-    const migrated = nonce !== 0 && nullifier1.equals(computeAccountAliasIdNullifier(accountAliasId, this.pedersen));
+    const migrated = nonce !== 0 && nullifier1.equals(this.noteAlgos.accountAliasIdNullifier(accountAliasId));
 
     return new UserAccountTx(
       txHash,
@@ -569,13 +567,12 @@ export class UserState extends EventEmitter {
 export class UserStateFactory {
   constructor(
     private grumpkin: Grumpkin,
-    private pedersen: Pedersen,
     private noteAlgos: NoteAlgorithms,
     private db: Database,
     private rollupProvider: RollupProvider,
   ) {}
 
   createUserState(user: UserData) {
-    return new UserState(user, this.grumpkin, this.pedersen, this.noteAlgos, this.db, this.rollupProvider);
+    return new UserState(user, this.grumpkin, this.noteAlgos, this.db, this.rollupProvider);
   }
 }

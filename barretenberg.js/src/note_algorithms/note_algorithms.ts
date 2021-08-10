@@ -1,12 +1,11 @@
 import { toBigIntBE, toBufferBE } from '../bigint_buffer';
-import { AccountId } from '../account_id';
+import { AccountAliasId, AccountId } from '../account_id';
 import { ViewingKey } from '../viewing_key';
 import { BarretenbergWasm } from '../wasm';
 import { BarretenbergWorker } from '../wasm/worker';
 import { DefiInteractionNote } from './defi_interaction_note';
 import { TreeClaimNote } from './tree_claim_note';
 import { TreeNote } from './tree_note';
-import debug from 'debug';
 
 export class NoteAlgorithms {
   constructor(private wasm: BarretenbergWasm, private worker: BarretenbergWorker = wasm as any) {}
@@ -71,6 +70,12 @@ export class NoteAlgorithms {
     this.wasm.transferToHeap(noteBuf, mem);
     this.wasm.call('notes__defi_interaction_note_commitment', mem, 0);
     this.wasm.call('bbfree', mem);
+    return Buffer.from(this.wasm.sliceMemory(0, 32));
+  }
+
+  public accountAliasIdNullifier(accountAliasId: AccountAliasId) {
+    this.wasm.transferToHeap(accountAliasId.toBuffer(), 0);
+    this.wasm.call('notes__compute_account_alias_id_nullifier', 0, 0);
     return Buffer.from(this.wasm.sliceMemory(0, 32));
   }
 

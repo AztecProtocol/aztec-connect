@@ -1,4 +1,5 @@
 import { Transfer } from 'threads';
+import { SchnorrSignature } from '../../crypto';
 import { UnrolledProver } from '../prover';
 import { AccountTx } from './account_tx';
 
@@ -34,9 +35,16 @@ export class AccountProver {
     }
   }
 
-  public async createAccountProof(tx: AccountTx) {
+  public async computeSigningData(tx: AccountTx) {
     const worker = this.prover.getWorker();
-    const buf = tx.toBuffer();
+    await worker.transferToHeap(tx.toBuffer(), 0);
+    await worker.call('account__compute_signing_data', 0, 0);
+    return Buffer.from(await worker.sliceMemory(0, 32));
+  }
+
+  public async createAccountProof(tx: AccountTx, signature: SchnorrSignature) {
+    const worker = this.prover.getWorker();
+    const buf = Buffer.concat([tx.toBuffer(), signature.toBuffer()]);
     const txPtr = await worker.call('bbmalloc', buf.length);
     await worker.transferToHeap(buf, txPtr);
     const proverPtr = await worker.call('account__new_prover', txPtr);

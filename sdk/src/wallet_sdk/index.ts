@@ -385,8 +385,8 @@ export class WalletSdk extends EventEmitter {
 
     return Promise.all(
       trustedThirdPartyPublicKeys.map(async trustedThirdPartyPublicKey => {
-        const { signature } = await this.core.createAccountTx(
-          socialRecoverySigner,
+        const signingData = await this.core.createAccountProofSigningData(
+          recoveryPublicKey,
           alias,
           accountNonce,
           false,
@@ -394,6 +394,7 @@ export class WalletSdk extends EventEmitter {
           undefined,
           trustedThirdPartyPublicKey,
         );
+        const signature = await socialRecoverySigner.signMessage(signingData);
         const recoveryData = new RecoveryData(accountId, signature);
         return new RecoveryPayload(trustedThirdPartyPublicKey, recoveryPublicKey, recoveryData);
       }),

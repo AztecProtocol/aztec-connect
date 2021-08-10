@@ -1,25 +1,17 @@
-import { EthAddress } from '@aztec/barretenberg/address';
+import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { computeSigningData, JoinSplitTx } from '@aztec/barretenberg/client_proofs';
-import { Pedersen } from '@aztec/barretenberg/crypto';
+import { JoinSplitTx } from '@aztec/barretenberg/client_proofs';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
-import { ClaimNoteTxData, NoteAlgorithms, TreeNote } from '@aztec/barretenberg/note_algorithms';
+import { ClaimNoteTxData, TreeNote } from '@aztec/barretenberg/note_algorithms';
 import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { WorldState } from '@aztec/barretenberg/world_state';
 import { Database } from '../../database';
-import { Signer } from '../../signer';
 import { AccountAliasId, AccountId } from '../../user';
 import { UserState } from '../../user_state';
 
 export class JoinSplitTxFactory {
-  constructor(
-    private worldState: WorldState,
-    private grumpkin: Grumpkin,
-    private pedersen: Pedersen,
-    private noteAlgos: NoteAlgorithms,
-    private db: Database,
-  ) {}
+  constructor(private worldState: WorldState, private grumpkin: Grumpkin, private db: Database) {}
 
   public async createJoinSplitTx(
     userState: UserState,
@@ -30,7 +22,7 @@ export class JoinSplitTxFactory {
     senderPrivateOutput: bigint,
     defiDepositValue: bigint,
     assetId: AssetId,
-    signer: Signer,
+    signingPubKey: GrumpkinAddress,
     newNoteOwner?: AccountId,
     inputOwnerAddress?: EthAddress,
     outputOwnerAddress?: EthAddress,
@@ -39,14 +31,13 @@ export class JoinSplitTxFactory {
     const isDefiBridge = defiDepositValue > BigInt(0);
 
     const { id, aliasHash, publicKey, nonce } = userState.getUser();
-    const accountIndex = nonce !== 0 ? await this.db.getUserSigningKeyIndex(id, signer.getPublicKey()) : 0;
+    const accountIndex = nonce !== 0 ? await this.db.getUserSigningKeyIndex(id, signingPubKey) : 0;
     if (accountIndex === undefined) {
       throw new Error('Unknown signing key.');
     }
 
     const accountAliasId = aliasHash ? new AccountAliasId(aliasHash, nonce) : AccountAliasId.random();
     const accountPath = await this.worldState.getHashPath(accountIndex);
-    const signingPubKey = signer.getPublicKey();
 
     const notes = privateInput ? await userState.pickNotes(assetId, privateInput) : [];
     if (!notes) {
@@ -88,23 +79,6 @@ export class JoinSplitTxFactory {
 
     // For now, we will use the account key as the signing key (no account note required).
     const { privateKey } = userState.getUser();
-    const message = computeSigningData(
-      [...inputNotes, ...outputNotes.map(n => n.note)],
-      claimNote.note,
-      inputNoteIndices[0],
-      inputNoteIndices[1],
-      inputOwner,
-      outputOwner,
-      publicInput,
-      publicOutput,
-      assetId,
-      numInputNotes,
-      id,
-      privateKey,
-      this.pedersen,
-      this.noteAlgos,
-    );
-    const signature = await signer.signMessage(message);
 
     const tx = new JoinSplitTx(
       publicInput,
@@ -122,7 +96,6 @@ export class JoinSplitTxFactory {
       accountIndex,
       accountPath,
       signingPubKey,
-      signature,
       inputOwner,
       outputOwner,
     );
@@ -141,7 +114,7 @@ export class JoinSplitTxFactory {
 
   private createClaimNote(bridgeId: BridgeId, value: bigint, owner: AccountId) {
     const ephKey = this.createEphemeralPrivKey();
-    const note = ClaimNoteTxData.createFromEphPriv(value, bridgeId, owner, ephKey, this.grumpkin);
+    const note = ClaimNoteTxData.createFromEphPriv(value, bridgeId, owner.publicKey, ephKey, this.grumpkin);
     const viewingKey = note.getViewingKey(owner.publicKey, ephKey, this.grumpkin);
     return { note, viewingKey };
   }

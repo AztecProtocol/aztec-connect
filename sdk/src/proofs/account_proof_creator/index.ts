@@ -1,8 +1,7 @@
-import { GrumpkinAddress } from '@aztec/barretenberg/address';
-import { AccountProver, AccountTx, computeAccountProofSigningData } from '@aztec/barretenberg/client_proofs';
-import { Pedersen } from '@aztec/barretenberg/crypto';
-import { WorldState } from '@aztec/barretenberg/world_state';
 import { AliasHash } from '@aztec/barretenberg/account_id';
+import { GrumpkinAddress } from '@aztec/barretenberg/address';
+import { AccountProver, AccountTx } from '@aztec/barretenberg/client_proofs';
+import { WorldState } from '@aztec/barretenberg/world_state';
 import { randomBytes } from 'crypto';
 import createDebug from 'debug';
 import { Signer } from '../../signer';
@@ -11,10 +10,10 @@ import { AccountAliasId } from '../../user';
 const debug = createDebug('bb:account_proof');
 
 export class AccountProofCreator {
-  constructor(private accountProver: AccountProver, private worldState: WorldState, private pedersen: Pedersen) {}
+  constructor(private accountProver: AccountProver, private worldState: WorldState) {}
 
   public async createAccountTx(
-    signer: Signer,
+    signingPubKey: GrumpkinAddress,
     aliasHash: AliasHash,
     nonce: number,
     migrate: boolean,
@@ -26,19 +25,9 @@ export class AccountProofCreator {
   ) {
     const merkleRoot = this.worldState.getRoot();
     const numNewKeys = [newSigningPubKey1, newSigningPubKey2].filter(k => !!k).length;
-    const signingPubKey = signer.getPublicKey();
     const accountPath = await this.worldState.getHashPath(accountIndex);
     const accountAliasId = new AccountAliasId(aliasHash, nonce);
     const gibberish = randomBytes(32);
-    const sigMsg = computeAccountProofSigningData(
-      accountAliasId,
-      accountPublicKey,
-      newAccountPublicKey || accountPublicKey,
-      newSigningPubKey1 || GrumpkinAddress.ZERO,
-      newSigningPubKey2 || GrumpkinAddress.ZERO,
-      this.pedersen,
-    );
-    const signature = await signer.signMessage(sigMsg);
 
     return new AccountTx(
       merkleRoot,
@@ -53,8 +42,11 @@ export class AccountProofCreator {
       accountIndex,
       accountPath,
       signingPubKey,
-      signature,
     );
+  }
+
+  public async computeSigningData(tx: AccountTx) {
+    return this.accountProver.computeSigningData(tx);
   }
 
   public async createProof(
@@ -69,7 +61,7 @@ export class AccountProofCreator {
     accountIndex?: number,
   ) {
     const tx = await this.createAccountTx(
-      signer,
+      signer.getPublicKey(),
       aliasHash,
       nonce,
       migrate,
@@ -80,9 +72,12 @@ export class AccountProofCreator {
       accountIndex,
     );
 
+    const signingData = await this.accountProver.computeSigningData(tx);
+    const signature = await signer.signMessage(signingData);
+
     debug('creating proof...');
     const start = new Date().getTime();
-    const proofData = await this.accountProver.createAccountProof(tx);
+    const proofData = await this.accountProver.createAccountProof(tx, signature);
     debug(`created proof: ${new Date().getTime() - start}ms`);
     debug(`proof size: ${proofData.length}`);
 

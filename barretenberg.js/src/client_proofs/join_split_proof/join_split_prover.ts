@@ -1,4 +1,5 @@
 import { Transfer } from 'threads';
+import { SchnorrSignature } from '../../crypto';
 import { UnrolledProver } from '../prover';
 import { JoinSplitTx } from './join_split_tx';
 
@@ -34,8 +35,15 @@ export class JoinSplitProver {
     }
   }
 
-  public async createProof(tx: JoinSplitTx) {
-    const buf = tx.toBuffer();
+  public async computeSigningData(tx: JoinSplitTx) {
+    const worker = this.prover.getWorker();
+    await worker.transferToHeap(tx.toBuffer(), 0);
+    await worker.call('join_split__compute_signing_data', 0, 0);
+    return Buffer.from(await worker.sliceMemory(0, 32));
+  }
+
+  public async createProof(tx: JoinSplitTx, signature: SchnorrSignature) {
+    const buf = Buffer.concat([tx.toBuffer(), signature.toBuffer()]);
     const worker = this.prover.getWorker();
     const mem = await worker.call('bbmalloc', buf.length);
     await worker.transferToHeap(buf, mem);

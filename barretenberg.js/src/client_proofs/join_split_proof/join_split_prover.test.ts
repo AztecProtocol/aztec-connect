@@ -2,10 +2,10 @@ import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import levelup from 'levelup';
 import memdown from 'memdown';
-import { AccountAliasId, AccountId } from '../../account_id';
+import { AccountAliasId } from '../../account_id';
 import { EthAddress, GrumpkinAddress } from '../../address';
 import { Crs } from '../../crs';
-import { Sha256, Blake2s, Pedersen, Schnorr } from '../../crypto';
+import { Blake2s, Pedersen, Schnorr, Sha256 } from '../../crypto';
 import { Grumpkin } from '../../ecc';
 import { PooledFft } from '../../fft';
 import { MerkleTree } from '../../merkle_tree';
@@ -15,7 +15,6 @@ import { BarretenbergWasm } from '../../wasm';
 import { WorkerPool } from '../../wasm/worker_pool';
 import { ProofData } from '../proof_data';
 import { UnrolledProver } from '../prover';
-import { computeSigningData } from './compute_signing_data';
 import { JoinSplitProver } from './join_split_prover';
 import { JoinSplitTx } from './join_split_tx';
 import { JoinSplitVerifier } from './join_split_verifier';
@@ -124,30 +123,11 @@ describe('join_split_proof', () => {
 
       const nonce = 0;
       const accountAliasId = AccountAliasId.fromAlias('user_zero', nonce, blake2s);
-      const accountId = new AccountId(pubKey, nonce);
 
       const inputOwner = EthAddress.randomAddress();
       const outputOwner = EthAddress.randomAddress();
 
       const numInputNotes = 2;
-      const sigMsg = computeSigningData(
-        [inputNote1, inputNote2, outputNote1, outputNote2],
-        ClaimNoteTxData.EMPTY,
-        0,
-        1,
-        inputOwner,
-        outputOwner,
-        BigInt(0),
-        BigInt(0),
-        0,
-        numInputNotes,
-        accountId,
-        privateKey,
-        pedersen,
-        noteAlgos,
-      );
-      const signature = schnorr.constructSignature(sigMsg, privateKey);
-
       const tx = new JoinSplitTx(
         BigInt(0),
         BigInt(0),
@@ -164,17 +144,18 @@ describe('join_split_proof', () => {
         2,
         accountNotePath,
         pubKey,
-        signature,
         inputOwner,
         outputOwner,
       );
+      const signingData = await joinSplitProver.computeSigningData(tx);
+      const signature = schnorr.constructSignature(signingData, privateKey);
 
       const expectedNullifier1 = noteAlgos.valueNoteNullifier(inputNote1Enc, 0, privateKey);
       const expectedNullifier2 = noteAlgos.valueNoteNullifier(inputNote2Enc, 1, privateKey);
 
       debug('creating proof...');
       const start = new Date().getTime();
-      const proof = await joinSplitProver.createProof(tx);
+      const proof = await joinSplitProver.createProof(tx, signature);
       debug(`created proof: ${new Date().getTime() - start}ms`);
       debug(`proof size: ${proof.length}`);
 

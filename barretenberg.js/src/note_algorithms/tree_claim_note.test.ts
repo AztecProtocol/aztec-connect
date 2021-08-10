@@ -27,7 +27,7 @@ describe('tree_claim_note', () => {
 
   const createClaimNote = (value: bigint, bridgeId: BridgeId, ownerPubKey: GrumpkinAddress, ephPrivKey: Buffer) => {
     const ownerId = new AccountId(ownerPubKey, 0);
-    const txData = ClaimNoteTxData.createFromEphPriv(value, bridgeId, ownerId, ephPrivKey, grumpkin);
+    const txData = ClaimNoteTxData.createFromEphPriv(value, bridgeId, ownerId.publicKey, ephPrivKey, grumpkin);
     const partialState = noteAlgos.valueNotePartialCommitment(txData.noteSecret, ownerId);
     return {
       claimNote: new TreeClaimNote(value, bridgeId, 0, BigInt(0), partialState),

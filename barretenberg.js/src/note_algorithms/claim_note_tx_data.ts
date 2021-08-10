@@ -1,54 +1,39 @@
-import { toBufferBE } from '../bigint_buffer';
 import { GrumpkinAddress } from '../address';
-import { Grumpkin } from '../ecc/grumpkin';
-import { numToUInt32BE } from '../serialize';
-import { ViewingKey } from '../viewing_key';
-import { AccountId } from '../account_id';
+import { toBufferBE } from '../bigint_buffer';
 import { BridgeId } from '../bridge_id';
+import { Grumpkin } from '../ecc/grumpkin';
+import { ViewingKey } from '../viewing_key';
 import { deriveNoteSecret } from './derive_note_secret';
 
 export class ClaimNoteTxData {
-  static EMPTY = new ClaimNoteTxData(BigInt(0), BridgeId.ZERO, GrumpkinAddress.one(), 0, Buffer.alloc(32));
+  static EMPTY = new ClaimNoteTxData(BigInt(0), BridgeId.ZERO, Buffer.alloc(32));
 
-  constructor(
-    public value: bigint,
-    public bridgeId: BridgeId,
-    public ownerPubKey: GrumpkinAddress,
-    public ownerNonce: number,
-    public noteSecret: Buffer,
-  ) {}
+  constructor(public value: bigint, public bridgeId: BridgeId, public noteSecret: Buffer) {}
 
   static createFromEphPriv(
     value: bigint,
     bridgeId: BridgeId,
-    owner: AccountId,
+    ownerPubKey: GrumpkinAddress,
     ephPrivKey: Buffer,
     grumpkin: Grumpkin,
   ) {
-    const noteSecret = deriveNoteSecret(owner.publicKey, ephPrivKey, grumpkin);
-    return new ClaimNoteTxData(value, bridgeId, owner.publicKey, owner.nonce, noteSecret);
+    const noteSecret = deriveNoteSecret(ownerPubKey, ephPrivKey, grumpkin);
+    return new ClaimNoteTxData(value, bridgeId, noteSecret);
   }
 
   static createFromEphPub(
     value: bigint,
     bridgeId: BridgeId,
-    owner: AccountId,
     ephPubKey: GrumpkinAddress,
     ownerPrivKey: Buffer,
     grumpkin: Grumpkin,
   ) {
     const noteSecret = deriveNoteSecret(ephPubKey, ownerPrivKey, grumpkin);
-    return new ClaimNoteTxData(value, bridgeId, owner.publicKey, owner.nonce, noteSecret);
+    return new ClaimNoteTxData(value, bridgeId, noteSecret);
   }
 
   toBuffer() {
-    return Buffer.concat([
-      toBufferBE(this.value, 32),
-      this.bridgeId.toBuffer(),
-      this.ownerPubKey.toBuffer(),
-      numToUInt32BE(this.ownerNonce),
-      this.noteSecret,
-    ]);
+    return Buffer.concat([toBufferBE(this.value, 32), this.bridgeId.toBuffer(), this.noteSecret]);
   }
 
   equals(note: ClaimNoteTxData) {

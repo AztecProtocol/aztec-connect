@@ -3,22 +3,18 @@ import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import levelup from 'levelup';
 import memdown from 'memdown';
-import { Schnorr } from '../../crypto/schnorr';
-import { BarretenbergWasm } from '../../wasm';
-import { MerkleTree } from '../../merkle_tree';
-import { Blake2s } from '../../crypto/blake2s';
-import { Pedersen } from '../../crypto/pedersen';
-import { Crs } from '../../crs';
-import { WorkerPool } from '../../wasm/worker_pool';
-import { PooledPippenger } from '../../pippenger';
-import { PooledFft } from '../../fft';
 import { AccountAliasId, AliasHash } from '../../account_id';
-import { UnrolledProver } from '../prover';
-import { AccountProver, AccountVerifier, AccountTx } from './index';
 import { GrumpkinAddress } from '../../address';
-import { computeAccountProofSigningData } from './compute_signing_data';
+import { Crs } from '../../crs';
+import { Blake2s, Pedersen, Schnorr } from '../../crypto';
+import { PooledFft } from '../../fft';
+import { MerkleTree } from '../../merkle_tree';
+import { NoteAlgorithms } from '../../note_algorithms';
+import { PooledPippenger } from '../../pippenger';
+import { BarretenbergWasm, WorkerPool } from '../../wasm';
 import { ProofData } from '../proof_data';
-import { computeAccountAliasIdNullifier } from './compute_nullifier';
+import { UnrolledProver } from '../prover';
+import { AccountProver, AccountTx, AccountVerifier } from './index';
 
 const debug = createDebug('bb:account_proof_test');
 
@@ -27,6 +23,7 @@ jest.setTimeout(120000);
 describe('account proof', () => {
   let barretenberg!: BarretenbergWasm;
   let pool!: WorkerPool;
+  let noteAlgos: NoteAlgorithms;
   let accountProver!: AccountProver;
   let accountVerifier!: AccountVerifier;
   let blake2s!: Blake2s;
@@ -53,12 +50,13 @@ describe('account proof', () => {
     const fft = new PooledFft(pool);
     await fft.init(circuitSize);
 
-    const prover = new UnrolledProver(pool.workers[0], pippenger, fft);
-
     blake2s = new Blake2s(barretenberg);
     pedersen = new Pedersen(barretenberg);
     schnorr = new Schnorr(barretenberg);
 
+    noteAlgos = new NoteAlgorithms(barretenberg);
+
+    const prover = new UnrolledProver(pool.workers[0], pippenger, fft);
     accountProver = new AccountProver(prover);
     accountVerifier = new AccountVerifier();
 
@@ -105,16 +103,6 @@ describe('account proof', () => {
     const accountIndex = 0;
     const accountPath = await tree.getHashPath(0);
 
-    const message = computeAccountProofSigningData(
-      accountAliasId,
-      user.publicKey,
-      user.publicKey,
-      signingKey0.publicKey,
-      signingKey1.publicKey,
-      pedersen,
-    );
-    const signature = schnorr.constructSignature(message, user.privateKey);
-
     const tx = new AccountTx(
       merkleRoot,
       user.publicKey,
@@ -128,12 +116,13 @@ describe('account proof', () => {
       accountIndex,
       accountPath,
       user.publicKey,
-      signature,
     );
+    const signingData = await accountProver.computeSigningData(tx);
+    const signature = schnorr.constructSignature(signingData, user.privateKey);
 
     debug('creating proof...');
     const start = new Date().getTime();
-    const proof = await accountProver.createAccountProof(tx);
+    const proof = await accountProver.createAccountProof(tx, signature);
     debug(`created proof: ${new Date().getTime() - start}ms`);
     debug(`proof size: ${proof.length}`);
 
@@ -143,10 +132,11 @@ describe('account proof', () => {
     // Check public inputs
     const accountProof = new ProofData(proof);
     const newAccountAliasId = new AccountAliasId(aliasHash, nonce + 1);
+    const accountAliasIdNullifier = noteAlgos.accountAliasIdNullifier(accountAliasId);
     expect(accountProof.publicInput).toEqual(newAccountPublicKey.x());
     expect(accountProof.publicOutput).toEqual(newAccountPublicKey.y());
     expect(accountProof.assetId).toEqual(newAccountAliasId.toBuffer());
-    expect(accountProof.nullifier1).toEqual(computeAccountAliasIdNullifier(accountAliasId, pedersen));
+    expect(accountProof.nullifier1).toEqual(accountAliasIdNullifier);
     expect(accountProof.inputOwner).toEqual(signingKey0.publicKey.x());
     expect(accountProof.outputOwner).toEqual(signingKey1.publicKey.x());
   });

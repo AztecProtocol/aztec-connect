@@ -2,9 +2,7 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { JoinSplitProver, ProofData } from '@aztec/barretenberg/client_proofs';
-import { Pedersen } from '@aztec/barretenberg/crypto';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
-import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { WorldState } from '@aztec/barretenberg/world_state';
 import createDebug from 'debug';
 import { Database } from '../../database';
@@ -18,15 +16,8 @@ const debug = createDebug('bb:join_split_proof_creator');
 export class JoinSplitProofCreator {
   private txFactory: JoinSplitTxFactory;
 
-  constructor(
-    private joinSplitProver: JoinSplitProver,
-    worldState: WorldState,
-    grumpkin: Grumpkin,
-    pedersen: Pedersen,
-    noteAlgos: NoteAlgorithms,
-    db: Database,
-  ) {
-    this.txFactory = new JoinSplitTxFactory(worldState, grumpkin, pedersen, noteAlgos, db);
+  constructor(private joinSplitProver: JoinSplitProver, worldState: WorldState, grumpkin: Grumpkin, db: Database) {
+    this.txFactory = new JoinSplitTxFactory(worldState, grumpkin, db);
   }
 
   public async createProof(
@@ -57,16 +48,18 @@ export class JoinSplitProofCreator {
       senderPrivateOutput,
       defiDepositValue,
       assetId,
-      signer,
+      signer.getPublicKey(),
       newNoteOwner,
       inputOwner,
       outputOwner,
       bridgeId,
     );
+    const signingData = await this.joinSplitProver.computeSigningData(tx);
+    const signature = await signer.signMessage(signingData);
 
     debug('creating proof...');
     const start = new Date().getTime();
-    const proofData = await this.joinSplitProver.createProof(tx);
+    const proofData = await this.joinSplitProver.createProof(tx, signature);
     debug(`created proof: ${new Date().getTime() - start}ms`);
     debug(`proof size: ${proofData.length}`);
 

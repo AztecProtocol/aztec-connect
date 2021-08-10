@@ -1,6 +1,5 @@
 import { AccountAliasId } from '../../account_id';
 import { GrumpkinAddress } from '../../address';
-import { SchnorrSignature } from '../../crypto/schnorr';
 import { HashPath } from '../../merkle_tree';
 import { numToUInt32BE } from '../../serialize';
 
@@ -18,7 +17,6 @@ export class AccountTx {
     public accountIndex: number,
     public accountPath: HashPath,
     public signingPubKey: GrumpkinAddress,
-    public signature: SchnorrSignature,
   ) {
     if (gibberish.length !== 32) {
       throw new Error('gibberish should be 32-byte long.');
@@ -40,7 +38,6 @@ export class AccountTx {
       numToUInt32BE(this.accountIndex),
       this.accountPath.toBuffer(),
       this.signingPubKey.toBuffer(),
-      this.signature.toBuffer(),
     ]);
   }
 }
