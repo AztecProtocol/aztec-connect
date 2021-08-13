@@ -233,13 +233,7 @@ export class Contracts {
       const contract = new Contract(address.toString(), DefiBridgeABI, this.provider);
       info = await contract.getInfo();
 
-      const wethAddress = await this.rollupProcessor.weth();
-      const assetAddresses = [
-        wethAddress,
-        ...this.getAssets()
-          .slice(1)
-          .map(a => a.getStaticInfo().address),
-      ];
+      const assetAddresses = this.getAssets().map(a => a.getStaticInfo().address);
       const getAssetIdOrThrow = (assetAddress: string) => {
         const id = assetAddresses.findIndex(a => a.equals(EthAddress.fromString(assetAddress)));
         if (id < 0) {

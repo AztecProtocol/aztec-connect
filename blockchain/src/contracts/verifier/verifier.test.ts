@@ -1,25 +1,22 @@
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
-import { Contract } from 'ethers';
 import { ethers } from 'hardhat';
-import { deployVerifier } from '../../deploy/deploy_verifier';
+import { Verifier } from './verifier';
 import { getRollupData } from './fixtures/get_rollup_data';
+import { EthersAdapter } from '../../provider';
 
 describe('Verifier', function () {
-  let verifier: Contract;
+  let verifier: Verifier;
   const gasLimit = 10000000;
 
   beforeAll(async () => {
-    const [signer] = await ethers.getSigners();
-    verifier = await deployVerifier(signer);
+    verifier = await Verifier.deploy(new EthersAdapter(ethers.provider));
   });
 
   async function validate(inner: number, outer: number) {
     const proof = await getRollupData(inner, outer);
     const proofData = RollupProofData.fromBuffer(proof);
-    const tx = await verifier.verify(proof, proofData.rollupSize, { gasLimit });
-    const receipt = await tx.wait();
-    console.log(`gasUsed: ${receipt.gasUsed.toString()}`);
-    expect(receipt.status).toBe(1);
+    const gasUsed = await verifier.verify(proof, proofData.rollupSize, { gasLimit });
+    // console.log(`gasUsed: ${gasUsed}`);
   }
 
   it('should validate a 1 rollup proof (1 tx)', async () => {

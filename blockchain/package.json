@@ -26,8 +26,7 @@
     "testRegex": ".*\\.test\\.ts$",
     "rootDir": "./src",
     "testTimeout": 20000,
-    "slowTestThreshold": 60,
-    "silent": true
+    "slowTestThreshold": 60
   },
   "dependencies": {
     "@aztec/barretenberg": "../barretenberg.js/dest",

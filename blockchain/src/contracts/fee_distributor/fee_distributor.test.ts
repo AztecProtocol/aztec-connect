@@ -2,7 +2,7 @@ import { Contract, Signer } from 'ethers';
 import { ethers } from 'hardhat';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset } from '@aztec/barretenberg/blockchain';
-import { createWeth, setupAssets } from '../asset/fixtures/setup_assets';
+import { setupAssets } from '../asset/fixtures/setup_assets';
 import { setupFeeDistributor } from './fixtures/setup_fee_distributor';
 import { setupUniswap } from './fixtures/setup_uniswap';
 import { FeeDistributor } from './fee_distributor';
@@ -24,8 +24,7 @@ describe('fee_distributor', () => {
     signers = await ethers.getSigners();
     addresses = await Promise.all(signers.map(async u => EthAddress.fromString(await u.getAddress())));
 
-    const weth = await createWeth(signers[0]);
-    ({ uniswapRouter, createPair } = await setupUniswap(signers[0], weth));
+    ({ uniswapRouter, createPair } = await setupUniswap(signers[0]));
     ({ feeDistributor } = await setupFeeDistributor(
       signers[0],
       addresses[0],

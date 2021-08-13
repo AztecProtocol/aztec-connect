@@ -9,13 +9,12 @@ export async function deploy(
   escapeHatchBlockLower: number,
   escapeHatchBlockUpper: number,
   uniswapRouterAddress: string,
-  wethAddress: string,
   multiSigAddr: string,
   signer: Signer,
 ) {
   const verifier = await deployVerifier(signer);
 
-  const defiBridgeProxy = await deployDefiBridgeProxy(signer, wethAddress);
+  const defiBridgeProxy = await deployDefiBridgeProxy(signer);
 
   console.error('Deploying RollupProcessor...');
   const rollupFactory = new ContractFactory(RollupProcessor.abi, RollupProcessor.bytecode, signer);
@@ -25,7 +24,6 @@ export async function deploy(
     escapeHatchBlockLower,
     escapeHatchBlockUpper,
     defiBridgeProxy.address,
-    wethAddress,
     ownerAddress,
   );
 

@@ -13,5 +13,5 @@ interface IDefiBridge {
             address outputAssetB
         );
 
-    function convert(uint256 inputValue) external returns (uint256 outputValueA, uint256 outputValueB);
+    function convert(uint256 inputValue) external payable returns (uint256 outputValueA, uint256 outputValueB);
 }

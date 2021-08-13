@@ -14,6 +14,8 @@ import {IERC20Permit} from './interfaces/IERC20Permit.sol';
 import {Decoder} from './Decoder.sol';
 import './libraries/RollupProcessorLibrary.sol';
 
+// import 'hardhat/console.sol';
+
 /**
  * @title Rollup Processor
  * @dev Smart contract responsible for processing Aztec zkRollups, including relaying them to a verifier
@@ -43,7 +45,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     uint256 public constant txPubInputLength = txNumPubInputs * 32; // public inputs length for of each inner proof tx
     uint256 public constant rollupHeaderInputLength = rollupNumHeaderInputs * 32;
     uint256 public constant ethAssetId = 0;
-    address public immutable weth;
     uint256 public immutable escapeBlockLowerBound;
     uint256 public immutable escapeBlockUpperBound;
 
@@ -93,17 +94,17 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     uint256[] public totalWithdrawn;
     uint256[] public totalFees;
 
+    receive() external payable {}
+
     constructor(
         address _verifierAddress,
         uint256 _escapeBlockLowerBound,
         uint256 _escapeBlockUpperBound,
         address _defiBridgeProxy,
-        address _weth,
         address _contractOwner
     ) public {
         verifier = IVerifier(_verifierAddress);
         defiBridgeProxy = _defiBridgeProxy;
-        weth = _weth;
         escapeBlockLowerBound = _escapeBlockLowerBound;
         escapeBlockUpperBound = _escapeBlockUpperBound;
         rollupProviders[msg.sender] = true;
@@ -113,9 +114,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         totalFees.push(0);
         transferOwnership(_contractOwner);
     }
-
-    // To withdraw from WETH.
-    receive() external payable {}
 
     function setRollupProvider(address providerAddress, bool valid) public override onlyOwner {
         rollupProviders[providerAddress] = valid;
@@ -669,9 +667,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             // Get ERC20 contract addresses for bridge assets.
             address[3] memory assetAddresses =
                 [
-                    getDefiBridgeSupportedAsset(assetIds[0]),
-                    getDefiBridgeSupportedAsset(assetIds[1]),
-                    numOutputAssets == 2 ? getDefiBridgeSupportedAsset(assetIds[2]) : address(0)
+                    getSupportedAsset(assetIds[0]),
+                    getSupportedAsset(assetIds[1]),
+                    numOutputAssets == 2 ? getSupportedAsset(assetIds[2]) : address(0)
                 ];
 
             // Gas efficient call to getInfo(), check response matches interaction data.
@@ -683,6 +681,10 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                 success := and(success, eq(mload(assetAddresses), mload(add(ptr, 0x20))))
                 success := and(success, eq(mload(add(assetAddresses, 0x20)), mload(add(ptr, 0x40))))
                 success := and(success, eq(mload(add(assetAddresses, 0x40)), mload(add(ptr, 0x60))))
+                success := and(
+                    success,
+                    or(eq(numOutputAssets, 1), not(eq(mload(add(ptr, 0x40)), mload(add(ptr, 0x60)))))
+                )
             }
             require(success, 'Rollup Processor: INVALID_BRIDGE_ID');
 
@@ -701,7 +703,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                 success := delegatecall(gas(), sload(defiBridgeProxy_slot), ptr, 0xa4, ptr, 0x40)
                 if eq(success, 1) {
                     outputValueA := mload(ptr)
-                    outputValueB := mload(add(ptr, 0x20))
+                    outputValueB := mul(mload(add(ptr, 0x20)), gt(numOutputAssets, 1))
                 }
             }
 
@@ -728,14 +730,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                 and(mload(defiInteractionHash_slot), 0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
             )
         }
-    }
-
-    function getDefiBridgeSupportedAsset(uint256 assetId) internal view returns (address) {
-        if (assetId == ethAssetId) {
-            return weth;
-        }
-
-        return supportedAssets[assetId - 1];
     }
 
     function transferFee(bytes memory proofData) internal {

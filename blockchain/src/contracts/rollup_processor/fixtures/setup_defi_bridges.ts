@@ -4,7 +4,6 @@ import { Asset } from '@aztec/barretenberg/blockchain';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { Contract, Signer } from 'ethers';
 import { ethers } from 'hardhat';
-import WETH9 from '../../../abis/WETH9.json';
 
 export interface DefiBridge {
   id: BridgeId;
@@ -35,22 +34,18 @@ export const deployMockDefiBridge = async (
   );
 
   const mint = async (assetAddress: EthAddress, amount: bigint) => {
-    const ERC20Mintable = await ethers.getContractFactory('ERC20Mintable');
-    const erc20 = new ethers.Contract(assetAddress.toString(), ERC20Mintable.interface, publisher);
-    const balanceBefore = BigInt(await erc20.balanceOf(bridge.address));
-    await erc20.mint(bridge.address, amount);
-    const balanceAfter = BigInt(await erc20.balanceOf(bridge.address));
-    if (balanceAfter === balanceBefore) {
-      // Not a mintable contract. Transfer WETH instead.
-      const weth = new Contract(assetAddress.toString(), WETH9.abi, publisher);
-      await weth.deposit({ value: amount });
-      await weth.transfer(bridge.address, amount);
+    if (assetAddress.equals(EthAddress.ZERO)) {
+      await publisher.sendTransaction({ value: `0x${amount.toString(16)}`, to: bridge.address });
+    } else {
+      const ERC20Mintable = await ethers.getContractFactory('ERC20Mintable');
+      const erc20 = new ethers.Contract(assetAddress.toString(), ERC20Mintable.interface, publisher);
+      await erc20.mint(bridge.address, amount);
     }
   };
-  if (topup && outputValueA > 0 && !outputAssetA.equals(EthAddress.ZERO)) {
+  if (topup && outputValueA > 0) {
     await mint(outputAssetA, topupValue !== undefined ? topupValue : outputValueA);
   }
-  if (topup && outputValueB > 0 && !outputAssetB.equals(EthAddress.ZERO)) {
+  if (topup && outputValueB > 0) {
     await mint(outputAssetB, topupValue !== undefined ? topupValue : outputValueB);
   }
 
@@ -64,41 +59,25 @@ export const setupDefiBridges = async (
   assets: Asset[],
 ) => {
   const UniswapBridge = await ethers.getContractFactory('UniswapBridge', publisher);
-  const weth = await uniswapRouter.WETH();
   const uniswapBridgeIds: BridgeId[][] = [...Array(assets.length)].map(() => []);
   const uniswapBridgeAddrs: EthAddress[][] = [...Array(assets.length)].map(() => []);
 
-  for (let assetId = 1; assetId < assets.length; ++assetId) {
-    const asset = assets[assetId];
-    const ethToToken = await UniswapBridge.deploy(
-      rollupProcessor.address,
-      uniswapRouter.address,
-      weth,
-      asset.getStaticInfo().address.toString(),
-    );
-    uniswapBridgeIds[AssetId.ETH][assetId] = new BridgeId(
-      EthAddress.fromString(ethToToken.address),
-      1,
-      AssetId.ETH,
-      assetId,
-      0,
-    );
-    uniswapBridgeAddrs[AssetId.ETH][assetId] = EthAddress.fromString(ethToToken.address);
-
-    const tokenToEth = await UniswapBridge.deploy(
-      rollupProcessor.address,
-      uniswapRouter.address,
-      asset.getStaticInfo().address.toString(),
-      weth,
-    );
-    uniswapBridgeIds[assetId][AssetId.ETH] = new BridgeId(
-      EthAddress.fromString(tokenToEth.address),
-      1,
-      assetId,
-      AssetId.ETH,
-      0,
-    );
-    uniswapBridgeAddrs[assetId][AssetId.ETH] = EthAddress.fromString(tokenToEth.address);
+  for (let i = 0; i < assets.length; ++i) {
+    for (let j = 0; j < assets.length; ++j) {
+      if (i == j) {
+        continue;
+      }
+      const assetA = assets[i];
+      const assetB = assets[j];
+      const uniswapBridge = await UniswapBridge.deploy(
+        rollupProcessor.address,
+        uniswapRouter.address,
+        assetA.getStaticInfo().address.toString(),
+        assetB.getStaticInfo().address.toString(),
+      );
+      uniswapBridgeIds[i][j] = new BridgeId(EthAddress.fromString(uniswapBridge.address), 1, i, j, 0);
+      uniswapBridgeAddrs[i][j] = EthAddress.fromString(uniswapBridge.address);
+    }
   }
 
   return {

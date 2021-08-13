@@ -16,11 +16,12 @@ contract MockVerifier is IVerifier {
      * @dev Mock verify a Plonk proof
      * @param serialized_proof - array of serialized proof data
      */
-    function verify(bytes memory serialized_proof, uint256 rollup_size) public override {
+    function verify(bytes memory serialized_proof, uint256 rollup_size) external override returns (bool) {
         uint256 rollupSize;
         assembly {
             rollupSize := mload(add(serialized_proof, 0x40))
         }
         require(rollupSize == rollup_size, 'Verifier: Wrong rollup size.');
+        return true;
     }
 }

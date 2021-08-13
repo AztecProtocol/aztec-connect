@@ -115,14 +115,14 @@ describe('rollup_processor: defi bridge', () => {
   });
 
   it('process defi interaction data that converts eth to token', async () => {
-    const bridgeId = uniswapBridgeIds[AssetId.ETH][AssetId.DAI];
+    const bridgeId = uniswapBridgeIds[AssetId.ETH][AssetId.renBTC];
     const inputValue = 20n;
     const expectedOutputValue = 19n;
 
     await topupEth(inputValue);
 
     await expectBalance(AssetId.ETH, inputValue);
-    await expectBalance(AssetId.DAI, 0n);
+    await expectBalance(AssetId.renBTC, 0n);
 
     const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
@@ -130,8 +130,31 @@ describe('rollup_processor: defi bridge', () => {
     const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
     const txHash = await rollupProcessor.sendTx(tx);
 
-    await expectBalance(AssetId.DAI, expectedOutputValue);
+    await expectBalance(AssetId.renBTC, expectedOutputValue);
     await expectBalance(AssetId.ETH, 0n);
+
+    await expectResult([new DefiInteractionNote(bridgeId, 0, inputValue, expectedOutputValue, 0n, true)], txHash);
+  });
+
+  it('process defi interaction data that converts token to token', async () => {
+    const bridgeId = uniswapBridgeIds[AssetId.DAI][AssetId.renBTC];
+    const inputValue = 20n;
+    // As there is no direct pair, we'll trade via ETH, and get charged a higher fee, so 18 rather than 19.
+    const expectedOutputValue = 18n;
+
+    await topupToken(AssetId.DAI, inputValue);
+
+    await expectBalance(AssetId.DAI, inputValue);
+    await expectBalance(AssetId.renBTC, 0n);
+
+    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+      defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
+    });
+    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
+    const txHash = await rollupProcessor.sendTx(tx);
+
+    await expectBalance(AssetId.renBTC, expectedOutputValue);
+    await expectBalance(AssetId.DAI, 0n);
 
     await expectResult([new DefiInteractionNote(bridgeId, 0, inputValue, expectedOutputValue, 0n, true)], txHash);
   });

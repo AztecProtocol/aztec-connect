@@ -3,14 +3,8 @@ import { ethers } from 'hardhat';
 import { Asset } from '@aztec/barretenberg/blockchain';
 import { TokenAsset } from '../token_asset';
 import { EthAddress } from '@aztec/barretenberg/address';
-import WETH9 from '../../../abis/WETH9.json';
 import { EthersAdapter } from '../../../provider';
 import { EthAsset } from '../eth_asset';
-
-export const createWeth = async (publisher: Signer) => {
-  const WETHFactory = new ethers.ContractFactory(WETH9.abi, WETH9.bytecode, publisher);
-  return WETHFactory.deploy();
-};
 
 export const setupAssets = async (publisher: Signer, mintUsers: Signer[], mintAmount: bigint, numAssets = 1) => {
   const ERC20 = await ethers.getContractFactory('ERC20Permit', publisher);

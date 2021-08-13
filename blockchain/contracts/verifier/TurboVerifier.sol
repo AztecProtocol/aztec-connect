@@ -38,7 +38,7 @@ contract TurboVerifier is IVerifier {
      * @param - array of serialized proof data
      * @param rollup_size - number of transactions in the rollup
      */
-    function verify(bytes calldata, uint256 rollup_size) external override {
+    function verify(bytes calldata, uint256 rollup_size) external override returns (bool result) {
         // extract the correct rollup verification key
         Types.VerificationKey memory vk = VerificationKeys.getKeyById(rollup_size);
         uint256 num_public_inputs = vk.num_inputs;
@@ -53,7 +53,13 @@ contract TurboVerifier is IVerifier {
         Types.ChallengeTranscript memory challenges;
         transcript.generate_beta_gamma_challenges(challenges, vk.num_inputs);
         transcript.generate_alpha_challenge(challenges, decoded_proof.Z);
-        transcript.generate_zeta_challenge(challenges, decoded_proof.T1, decoded_proof.T2, decoded_proof.T3, decoded_proof.T4);
+        transcript.generate_zeta_challenge(
+            challenges,
+            decoded_proof.T1,
+            decoded_proof.T2,
+            decoded_proof.T3,
+            decoded_proof.T4
+        );
 
         /**
          * Compute all inverses that will be needed throughout the program here.
@@ -72,35 +78,18 @@ contract TurboVerifier is IVerifier {
         //reset 'alpha base'
         challenges.alpha_base = challenges.alpha;
 
-        Types.G1Point memory linearised_contribution = PolynomialEval.compute_linearised_opening_terms(
-            challenges,
-            L1,
-            vk,
-            decoded_proof
-        );
+        Types.G1Point memory linearised_contribution =
+            PolynomialEval.compute_linearised_opening_terms(challenges, L1, vk, decoded_proof);
 
-        Types.G1Point memory batch_opening_commitment = PolynomialEval.compute_batch_opening_commitment(
-            challenges,
-            vk,
-            linearised_contribution,
-            decoded_proof
-        );
+        Types.G1Point memory batch_opening_commitment =
+            PolynomialEval.compute_batch_opening_commitment(challenges, vk, linearised_contribution, decoded_proof);
 
-        uint256 batch_evaluation_g1_scalar = PolynomialEval.compute_batch_evaluation_scalar_multiplier(
-            decoded_proof,
-            challenges
-        );
+        uint256 batch_evaluation_g1_scalar =
+            PolynomialEval.compute_batch_evaluation_scalar_multiplier(decoded_proof, challenges);
 
-        bool result = perform_pairing(
-            batch_opening_commitment,
-            batch_evaluation_g1_scalar,
-            challenges,
-            decoded_proof,
-            vk
-        );
+        result = perform_pairing(batch_opening_commitment, batch_evaluation_g1_scalar, challenges, decoded_proof, vk);
         require(result, 'Proof failed');
     }
-
 
     /**
      * @dev Compute partial state of the verifier, specifically: public input delta evaluation, zero polynomial
@@ -132,10 +121,8 @@ contract TurboVerifier is IVerifier {
         uint256 l_start;
         uint256 l_end;
         {
-            (uint256 public_input_numerator, uint256 public_input_denominator) = PolynomialEval.compute_public_input_delta(
-                challenges,
-                vk
-            );
+            (uint256 public_input_numerator, uint256 public_input_denominator) =
+                PolynomialEval.compute_public_input_delta(challenges, vk);
 
             (
                 uint256 vanishing_numerator,
@@ -144,7 +131,6 @@ contract TurboVerifier is IVerifier {
                 uint256 l_start_denominator,
                 uint256 l_end_denominator
             ) = PolynomialEval.compute_lagrange_and_vanishing_fractions(vk, challenges.zeta);
-
 
             (zero_polynomial_eval, public_input_delta, l_start, l_end) = PolynomialEval.compute_batch_inversions(
                 public_input_numerator,
@@ -157,18 +143,18 @@ contract TurboVerifier is IVerifier {
             );
         }
 
-        uint256 quotient_eval = PolynomialEval.compute_quotient_polynomial(
-            zero_polynomial_eval,
-            public_input_delta,
-            challenges,
-            l_start,
-            l_end,
-            decoded_proof
-        );
+        uint256 quotient_eval =
+            PolynomialEval.compute_quotient_polynomial(
+                zero_polynomial_eval,
+                public_input_delta,
+                challenges,
+                l_start,
+                l_end,
+                decoded_proof
+            );
 
         return (quotient_eval, l_start);
     }
-
 
     /**
      * @dev Perform the pairing check
@@ -187,16 +173,15 @@ contract TurboVerifier is IVerifier {
         Types.Proof memory decoded_proof,
         Types.VerificationKey memory vk
     ) internal view returns (bool) {
-
         uint256 u = challenges.u;
         bool success;
         uint256 p = Bn254Crypto.r_mod;
-        Types.G1Point memory rhs;     
+        Types.G1Point memory rhs;
         Types.G1Point memory PI_Z_OMEGA = decoded_proof.PI_Z_OMEGA;
         Types.G1Point memory PI_Z = decoded_proof.PI_Z;
         PI_Z.validateG1Point();
         PI_Z_OMEGA.validateG1Point();
-    
+
         // rhs = zeta.[PI_Z] + u.zeta.omega.[PI_Z_OMEGA] + [batch_opening_commitment] - batch_evaluation_g1_scalar.[1]
         // scope this block to prevent stack depth errors
         {
@@ -239,7 +224,7 @@ contract TurboVerifier is IVerifier {
             }
         }
 
-        Types.G1Point memory lhs;   
+        Types.G1Point memory lhs;
         assembly {
             // store accumulator point at mptr
             let mPtr := mload(0x40)
@@ -253,7 +238,7 @@ contract TurboVerifier is IVerifier {
             mstore(add(mPtr, 0x60), mload(add(PI_Z_OMEGA, 0x20)))
             mstore(add(mPtr, 0x80), u)
             success := and(success, staticcall(gas(), 7, add(mPtr, 0x40), 0x60, add(mPtr, 0x40), 0x40))
-            
+
             // add [PI_Z] + u.[PI_Z_OMEGA] and write result into lhs
             success := and(success, staticcall(gas(), 6, mPtr, 0x80, lhs, 0x40))
         }
@@ -264,8 +249,7 @@ contract TurboVerifier is IVerifier {
             mstore(add(lhs, 0x20), sub(q, mload(add(lhs, 0x20))))
         }
 
-        if (vk.contains_recursive_proof)
-        {
+        if (vk.contains_recursive_proof) {
             // If the proof itself contains an accumulated proof,
             // we will have extracted two G1 elements `recursive_P1`, `recursive_p2` from the public inputs
 
@@ -308,7 +292,7 @@ contract TurboVerifier is IVerifier {
             }
         }
 
-        require(success, "perform_pairing G1 operations preamble fail");
+        require(success, 'perform_pairing G1 operations preamble fail');
 
         return Bn254Crypto.pairingProd2(rhs, Bn254Crypto.P2(), lhs, vk.g2_x);
     }
@@ -366,7 +350,7 @@ contract TurboVerifier is IVerifier {
         assembly {
             let public_input_byte_length := mul(num_public_inputs, 0x20)
             data_ptr := add(data_ptr, public_input_byte_length)
-  
+
             // proof.W1
             mstore(mload(proof_ptr), mod(calldataload(add(data_ptr, 0x20)), q))
             mstore(add(mload(proof_ptr), 0x20), mod(calldataload(data_ptr), q))
@@ -374,7 +358,7 @@ contract TurboVerifier is IVerifier {
             // proof.W2
             mstore(mload(add(proof_ptr, 0x20)), mod(calldataload(add(data_ptr, 0x60)), q))
             mstore(add(mload(add(proof_ptr, 0x20)), 0x20), mod(calldataload(add(data_ptr, 0x40)), q))
- 
+
             // proof.W3
             mstore(mload(add(proof_ptr, 0x40)), mod(calldataload(add(data_ptr, 0xa0)), q))
             mstore(add(mload(add(proof_ptr, 0x40)), 0x20), mod(calldataload(add(data_ptr, 0x80)), q))
@@ -382,11 +366,11 @@ contract TurboVerifier is IVerifier {
             // proof.W4
             mstore(mload(add(proof_ptr, 0x60)), mod(calldataload(add(data_ptr, 0xe0)), q))
             mstore(add(mload(add(proof_ptr, 0x60)), 0x20), mod(calldataload(add(data_ptr, 0xc0)), q))
-  
+
             // proof.Z
             mstore(mload(add(proof_ptr, 0x80)), mod(calldataload(add(data_ptr, 0x120)), q))
             mstore(add(mload(add(proof_ptr, 0x80)), 0x20), mod(calldataload(add(data_ptr, 0x100)), q))
-  
+
             // proof.T1
             mstore(mload(add(proof_ptr, 0xa0)), mod(calldataload(add(data_ptr, 0x160)), q))
             mstore(add(mload(add(proof_ptr, 0xa0)), 0x20), mod(calldataload(add(data_ptr, 0x140)), q))
@@ -402,13 +386,13 @@ contract TurboVerifier is IVerifier {
             // proof.T4
             mstore(mload(add(proof_ptr, 0x100)), mod(calldataload(add(data_ptr, 0x220)), q))
             mstore(add(mload(add(proof_ptr, 0x100)), 0x20), mod(calldataload(add(data_ptr, 0x200)), q))
-  
+
             // proof.w1 to proof.w4
             mstore(add(proof_ptr, 0x120), mod(calldataload(add(data_ptr, 0x240)), p))
             mstore(add(proof_ptr, 0x140), mod(calldataload(add(data_ptr, 0x260)), p))
             mstore(add(proof_ptr, 0x160), mod(calldataload(add(data_ptr, 0x280)), p))
             mstore(add(proof_ptr, 0x180), mod(calldataload(add(data_ptr, 0x2a0)), p))
- 
+
             // proof.sigma1
             mstore(add(proof_ptr, 0x1a0), mod(calldataload(add(data_ptr, 0x2c0)), p))
 
@@ -426,7 +410,7 @@ contract TurboVerifier is IVerifier {
 
             // proof.q_c
             mstore(add(proof_ptr, 0x240), mod(calldataload(add(data_ptr, 0x360)), p))
- 
+
             // proof.linearization_polynomial
             mstore(add(proof_ptr, 0x260), mod(calldataload(add(data_ptr, 0x380)), p))
 
@@ -438,7 +422,7 @@ contract TurboVerifier is IVerifier {
             mstore(add(proof_ptr, 0x2c0), mod(calldataload(add(data_ptr, 0x3e0)), p))
             mstore(add(proof_ptr, 0x2e0), mod(calldataload(add(data_ptr, 0x400)), p))
             mstore(add(proof_ptr, 0x300), mod(calldataload(add(data_ptr, 0x420)), p))
-  
+
             // proof.PI_Z
             mstore(mload(add(proof_ptr, 0x320)), mod(calldataload(add(data_ptr, 0x460)), q))
             mstore(add(mload(add(proof_ptr, 0x320)), 0x20), mod(calldataload(add(data_ptr, 0x440)), q))

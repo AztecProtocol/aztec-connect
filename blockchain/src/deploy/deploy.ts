@@ -14,13 +14,12 @@ import { deployVerifier } from './deploy_verifier';
 export async function deploy(escapeHatchBlockLower: number, escapeHatchBlockUpper: number, signer: Signer) {
   const uniswapRouter = await deployUniswap(signer);
   await uniswapRouter.deployed();
-  const weth = await uniswapRouter.WETH();
 
   const verifier = await deployVerifier(signer);
   console.error('Deploying RollupProcessor...');
   const rollupFactory = new ContractFactory(RollupProcessor.abi, RollupProcessor.bytecode, signer);
 
-  const defiProxy = await deployDefiBridgeProxy(signer, weth);
+  const defiProxy = await deployDefiBridgeProxy(signer);
 
   // note we need to change this address for production to the multisig
   const ownerAddress = await signer.getAddress();
@@ -29,7 +28,6 @@ export async function deploy(escapeHatchBlockLower: number, escapeHatchBlockUppe
     escapeHatchBlockLower,
     escapeHatchBlockUpper,
     defiProxy.address,
-    weth,
     ownerAddress,
   );
 
@@ -78,10 +76,10 @@ export async function deploy(escapeHatchBlockLower: number, escapeHatchBlockUppe
 
   // Defi bridge
   const defiBridges = [
-    await deployDefiBridge(signer, rollup, uniswapRouter, weth, asset1.address),
-    await deployDefiBridge(signer, rollup, uniswapRouter, weth, asset2.address),
-    await deployDefiBridge(signer, rollup, uniswapRouter, asset1.address, weth),
-    await deployDefiBridge(signer, rollup, uniswapRouter, asset2.address, weth),
+    await deployDefiBridge(signer, rollup, uniswapRouter, EthAddress.ZERO.toString(), asset1.address),
+    await deployDefiBridge(signer, rollup, uniswapRouter, EthAddress.ZERO.toString(), asset2.address),
+    await deployDefiBridge(signer, rollup, uniswapRouter, asset1.address, EthAddress.ZERO.toString()),
+    await deployDefiBridge(signer, rollup, uniswapRouter, asset2.address, EthAddress.ZERO.toString()),
   ];
 
   return { rollup, feeDistributor, uniswapRouter, priceFeeds, defiBridges };

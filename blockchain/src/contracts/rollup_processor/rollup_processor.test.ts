@@ -1,4 +1,3 @@
-import { Contract } from '@ethersproject/contracts';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
 import { Asset } from '@aztec/barretenberg/blockchain';
@@ -31,13 +30,12 @@ describe('rollup_processor', () => {
   let rollupProcessor: RollupProcessor;
   let signers: Signer[];
   let addresses: EthAddress[];
-  let weth: Contract;
   let assets: Asset[];
 
   beforeEach(async () => {
     signers = await ethers.getSigners();
     addresses = await Promise.all(signers.map(async u => EthAddress.fromString(await u.getAddress())));
-    ({ rollupProcessor, feeDistributor, assets, weth } = await setupRollupProcessor(signers, 1));
+    ({ rollupProcessor, feeDistributor, assets } = await setupRollupProcessor(signers, 1));
   });
 
   it('should get contract status', async () => {
@@ -56,7 +54,6 @@ describe('rollup_processor', () => {
     expect(await rollupProcessor.totalWithdrawn()).toEqual([0n, 0n]);
     expect(await rollupProcessor.totalFees()).toEqual([0n, 0n]);
     expect(await rollupProcessor.totalPendingDeposit()).toEqual([0n, 0n]);
-    expect(await rollupProcessor.weth()).toEqual(EthAddress.fromString(weth.address));
     expect(await rollupProcessor.getSupportedAssets()).toEqual(assets.map(a => a.getStaticInfo().address));
     expect(await rollupProcessor.getEscapeHatchStatus()).toEqual({ escapeOpen: true, blocksRemaining: 20 });
   });
@@ -179,7 +176,7 @@ describe('rollup_processor', () => {
     const bridge = await deployMockDefiBridge(
       signers[0],
       1,
-      await rollupProcessor.weth(),
+      EthAddress.ZERO,
       assets[AssetId.DAI].getStaticInfo().address,
       EthAddress.ZERO,
       0n,

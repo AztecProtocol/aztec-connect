@@ -6,6 +6,8 @@ import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 import {IDefiBridge} from '../interfaces/IDefiBridge.sol';
 
+// import 'hardhat/console.sol';
+
 /**
  * @dev Warning: do not deploy in real environments, for testing only
  */
@@ -17,6 +19,8 @@ contract MockDefiBridge is IDefiBridge {
     uint256 minInputValue;
     uint256 outputValueA;
     uint256 outputValueB;
+
+    receive() external payable {}
 
     constructor(
         uint32 _numOutputAssets,
@@ -50,17 +54,25 @@ contract MockDefiBridge is IDefiBridge {
         return (numOutputAssets, inputAsset, outputAssetA, outputAssetB);
     }
 
-    function convert(uint256 inputValue) external override returns (uint256, uint256) {
+    function convert(uint256 inputValue) external payable override returns (uint256, uint256) {
         require(inputValue >= minInputValue);
 
-        if (outputValueA > 0 && outputAssetA != address(0)) {
-            uint256 balance = IERC20(outputAssetA).balanceOf(address(this));
-            IERC20(outputAssetA).transfer(msg.sender, balance >= outputValueA ? outputValueA : balance);
+        if (outputValueA > 0) {
+            if (outputAssetA == address(0)) {
+                msg.sender.call{value: outputValueA}('');
+            } else {
+                uint256 balance = IERC20(outputAssetA).balanceOf(address(this));
+                IERC20(outputAssetA).transfer(msg.sender, balance >= outputValueA ? outputValueA : balance);
+            }
         }
 
-        if (outputValueB > 0 && outputAssetB != address(0)) {
-            uint256 balance = IERC20(outputAssetB).balanceOf(address(this));
-            IERC20(outputAssetB).transfer(msg.sender, balance >= outputValueB ? outputValueB : balance);
+        if (outputValueB > 0) {
+            if (outputAssetB == address(0)) {
+                msg.sender.call{value: outputValueB}('');
+            } else {
+                uint256 balance = IERC20(outputAssetB).balanceOf(address(this));
+                IERC20(outputAssetB).transfer(msg.sender, balance >= outputValueB ? outputValueB : balance);
+            }
         }
 
         return (outputValueA, outputValueB);
