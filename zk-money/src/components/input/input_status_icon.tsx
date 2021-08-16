@@ -2,18 +2,21 @@ import React from 'react';
 import styled from 'styled-components';
 import successIcon from '../../images/check.svg';
 import errorIcon from '../../images/exclamation_mark.svg';
+import warningIcon from '../../images/warning.svg';
 import { gradients, spacings, systemStates } from '../../styles';
 import { Loader, LoaderTheme } from '../loader';
 import { InputTheme } from './input_theme';
 
 export enum InputStatus {
   SUCCESS,
+  WARNING,
   ERROR,
   LOADING,
 }
 
 const statusIcon: { [key in InputStatus]: string } = {
   [InputStatus.SUCCESS]: successIcon,
+  [InputStatus.WARNING]: warningIcon,
   [InputStatus.ERROR]: errorIcon,
   [InputStatus.LOADING]: '',
 };
@@ -45,8 +48,12 @@ const Root = styled.div<RootProps>`
   }};
 `;
 
-const Icon = styled.img`
-  width: 16px;
+interface IconProps {
+  status: InputStatus;
+}
+
+const Icon = styled.img<IconProps>`
+  width: ${({ status }) => (status === InputStatus.WARNING ? 32 : 16)}px;
 `;
 
 interface InputStatusIconProps {
@@ -66,7 +73,7 @@ export const InputStatusIcon: React.FunctionComponent<InputStatusIconProps> = ({
     {status === InputStatus.LOADING ? (
       <Loader theme={theme === InputTheme.WHITE ? LoaderTheme.DARK : LoaderTheme.WHITE} size="m" />
     ) : (
-      <Icon src={statusIcon[status]} />
+      <Icon src={statusIcon[status]} status={status} />
     )}
   </Root>
 );

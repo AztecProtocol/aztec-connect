@@ -71,7 +71,7 @@ export const DisclaimerBlock: React.FunctionComponent<DisclaimerBlockProps> = ({
       </ColIcon>
       <ColContent>
         <Text size="s">
-          {`This is experimental software that hasn’t been externally audited yet. Your private key is stored in the browser. For security, amounts are capped at ${fromBaseUnits(
+          {`This is experimental software that hasn’t been externally audited yet. For security, amounts are capped at ${fromBaseUnits(
             assetState.txAmountLimit,
             assetState.asset.decimals,
           )} ${assetState.asset.symbol}. `}

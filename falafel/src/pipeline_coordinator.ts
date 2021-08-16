@@ -107,7 +107,7 @@ export class PipelineCoordinator {
     const nextRollupTime = moment(this.lastRollup.mined).add(this.publishInterval);
     this.txsPublishTime = txs
       .map(tx => {
-        const ratio = this.feeResolver.computeSurplusRatio([tx], this.rollupId);
+        const ratio = this.feeResolver.computeSurplusRatio([tx]);
         return moment(tx.created).add(this.publishInterval.asSeconds() * ratio, 's');
       })
       .reduce((time, txTime) => (time.isBefore(txTime) ? time : txTime), nextRollupTime);

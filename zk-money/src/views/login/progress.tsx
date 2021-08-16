@@ -1,13 +1,13 @@
 import React from 'react';
 import styled from 'styled-components';
-import { LoginStep, WorldState } from '../../app';
-import { Dot, Loader, LoaderTheme, PaddedBlock, ProgressHandler, Text } from '../../components';
+import { LoginStep } from '../../app';
+import { Dot, Loader, LoaderTheme, PaddedBlock, Text } from '../../components';
 import errorIcon from '../../images/exclamation_mark.svg';
 import { borderRadiuses, spacings } from '../../styles';
 
-interface Step {
+export interface Step {
   step: LoginStep;
-  title: string;
+  title: React.ReactNode;
 }
 
 const Root = styled.div`
@@ -49,32 +49,19 @@ const StepName = styled(Text)<StepNameProps>`
 
 interface ProgressProps {
   currentStep: LoginStep;
-  worldState: WorldState;
   steps: Step[];
   active: boolean;
   failed: boolean;
 }
 
-export const Progress: React.FunctionComponent<ProgressProps> = ({
-  currentStep,
-  worldState,
-  steps,
-  active,
-  failed,
-}) => (
+export const Progress: React.FunctionComponent<ProgressProps> = ({ currentStep, steps, active, failed }) => (
   <Root>
     {steps.map(({ step, title }) => {
       const isCurrentStep = step === currentStep;
-      let titleText: React.ReactNode = title;
-      if (isCurrentStep && step === LoginStep.SYNC_DATA) {
-        titleText = (
-          <ProgressHandler worldState={worldState}>{progress => <>{`${title} (${progress}%)`}</>}</ProgressHandler>
-        );
-      }
       return (
         <StepRoot key={step}>
           <StepName size={isCurrentStep && active ? 'm' : 's'} active={step <= currentStep}>
-            {titleText}
+            {title}
           </StepName>
           <IconRoot>
             {isCurrentStep && active && <Loader theme={LoaderTheme.WHITE} />}

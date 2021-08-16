@@ -231,7 +231,7 @@ export class DexieDatabase implements Database {
   private createTables() {
     this.dexie = new Dexie(this.dbName);
     this.dexie.version(this.version).stores({
-      user: '&id, privateKey',
+      user: '&id',
       userKeys: '&[accountId+key], accountId',
       joinSplitTx: '&[txHash+userId], txHash, userId, settled',
       accountTx: '&txHash, userId, settled',

@@ -1,3 +1,4 @@
+import { toBaseUnits } from '@aztec/sdk';
 import { isIOS } from './device_support';
 
 export interface Config {
@@ -88,22 +89,25 @@ const productionConfig: ConfigVars = {
   priceFeedContractAddress1: '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9', // DAI/USD
   priceFeedContractAddress2: '0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c', // BTC/USD
   txAmountLimits: JSON.stringify([
-    '1'.padEnd(19, '0'), // 10 ** 18
-    '2'.padEnd(22, '0'), // 2000 * 10 ** 18
-    '1'.padEnd(8, '0'), // 0.1 * 10 ** 8
+    `${toBaseUnits('10', 18)}`, // 10 ETH
+    `${toBaseUnits('20000', 18)}`, // 20000 DAI
+    `${toBaseUnits('1', 8)}`, // 1 renBTC
   ]),
   withdrawSafeAmounts: JSON.stringify([
     [
-      '1'.padEnd(18, '0'), // 0.1 zkETH
-      '1'.padEnd(19, '0'), // 1 zkETH
+      `${toBaseUnits('0.1', 18)}`, // 0.1 zkETH
+      `${toBaseUnits('1', 18)}`, // 1 zkETH
+      `${toBaseUnits('10', 18)}`, // 10 zkETH
     ],
     [
-      '2'.padEnd(21, '0'), // 200 zkDAI
-      '2'.padEnd(22, '0'), // 2000 zkDAI
+      `${toBaseUnits('200', 18)}`, // 200 zkDAI
+      `${toBaseUnits('2000', 18)}`, // 2000 zkDAI
+      `${toBaseUnits('20000', 18)}`, // 20000 zkDAI
     ],
     [
-      '1'.padEnd(7, '0'), // 0.01 BTC
-      '1'.padEnd(8, '0'), // 0.1 BTC
+      `${toBaseUnits('0.01', 8)}`, // 0.01 zkrenBTC
+      `${toBaseUnits('0.1', 8)}`, // 0.1 zkrenBTC
+      `${toBaseUnits('1', 8)}`, // 1 zkrenBTC
     ],
   ]),
   sessionTimeout: '30', // days

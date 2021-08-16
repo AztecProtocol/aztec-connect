@@ -1,7 +1,7 @@
 import React from 'react';
 import styled, { css } from 'styled-components';
 import { borderRadiuses, inputSizes, inputFontSizeKeys, InputSize, spacings, gradients, colours } from '../styles';
-import { Spinner } from './spinner';
+import { Spinner, SpinnerTheme } from './spinner';
 import { TextLink } from './text_link';
 
 export type ButtonTheme = 'gradient' | 'white';
@@ -54,7 +54,7 @@ const StyledButton = styled(TextLink)<StyledButtonProps>`
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: ${spacings.s} ${spacings.l};
+  padding: ${spacings.s} ${({ inputSize }: StyledButtonProps) => spacings[inputSize === 's' ? 'm' : 'l']};
   height: ${({ inputSize }: StyledButtonProps) => inputSizes[inputSize]};
   border-radius: ${borderRadiuses.s};
   line-height: 1;
@@ -112,6 +112,10 @@ interface ContentRootProps {
 }
 
 const ContentRoot = styled.div<ContentRootProps>`
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+
   ${({ isLoading }) =>
     isLoading &&
     `
@@ -176,7 +180,7 @@ export const Button: React.FunctionComponent<ButtonProps> = ({
     <ContentRoot isLoading={isLoading}>{text || children}</ContentRoot>
     {isLoading && (
       <SpinnerRoot>
-        <Spinner theme={(theme === 'gradient') !== outlined ? 'white' : 'gradient'} size="xs" />
+        <Spinner theme={(theme === 'gradient') !== outlined ? SpinnerTheme.WHITE : SpinnerTheme.GRADIENT} size="xs" />
       </SpinnerRoot>
     )}
   </StyledButton>

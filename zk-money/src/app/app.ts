@@ -1,3 +1,4 @@
+import { GrumpkinAddress } from '@aztec/sdk';
 import { ApolloClient } from 'apollo-boost';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
@@ -10,10 +11,23 @@ import { Database } from './database';
 import { Form, SystemMessage } from './form';
 import { GraphQLService } from './graphql_service';
 import { getNetwork, Network } from './networks';
-import { initialLoginState, initialWorldState, LoginState, UserSession, UserSessionEvent } from './user_session';
-import { Wallet } from './wallet_providers';
+import {
+  initialLoginState,
+  initialWorldState,
+  LoginMode,
+  LoginState,
+  UserSession,
+  UserSessionEvent,
+} from './user_session';
+import { WalletId, wallets } from './wallet_providers';
 
 const debug = createDebug('zm:app');
+
+export enum AppAction {
+  NADA,
+  LOGIN,
+  ACCOUNT,
+}
 
 export enum AppEvent {
   SESSION_CLOSED = 'SESSION_CLOSED',
@@ -34,12 +48,18 @@ export class App extends EventEmitter {
   private graphql: GraphQLService;
   private session?: UserSession;
   private activeAsset: AppAssetId;
-  public requiredNetwork: Network;
-  private readonly sessionCookieName = '_zkmoney_session';
-  private readonly accountProofCacheName = 'zm_account_proof';
+  private loginMode = LoginMode.SIGNUP;
+  public readonly requiredNetwork: Network;
+  private readonly sessionCookieName = '_zkmoney_session_v1';
+  private readonly accountProofCacheName = 'zm_account_proof_v1';
   private readonly walletCacheName = 'zm_wallet';
 
-  constructor(private config: Config, apollo: ApolloClient<any>, initialAsset: AppAssetId) {
+  constructor(
+    private readonly config: Config,
+    apollo: ApolloClient<any>,
+    initialAsset: AppAssetId,
+    initialLoginMode: LoginMode,
+  ) {
     super();
     if (config.debug) {
       createDebug.enable('zm:*');
@@ -51,6 +71,7 @@ export class App extends EventEmitter {
     this.db = new Database();
     this.graphql = new GraphQLService(apollo);
     this.activeAsset = initialAsset;
+    this.loginMode = initialLoginMode;
   }
 
   async destroy() {
@@ -73,8 +94,21 @@ export class App extends EventEmitter {
     return !!localStorage.getItem(this.accountProofCacheName);
   }
 
+  get availableWallets() {
+    const supportedWallets = window.ethereum ? wallets : wallets.filter(w => w.id !== WalletId.METAMASK);
+    return this.loginMode !== LoginMode.MIGRATE
+      ? supportedWallets.filter(w => w.id !== WalletId.HOT)
+      : supportedWallets;
+  }
+
   get loginState() {
-    return this.session?.getLoginState() || initialLoginState;
+    return (
+      this.session?.getLoginState() || {
+        ...initialLoginState,
+        mode: this.loginMode,
+        isNewAlias: this.loginMode === LoginMode.SIGNUP,
+      }
+    );
   }
 
   get providerState() {
@@ -117,6 +151,37 @@ export class App extends EventEmitter {
     return this.session?.isProcessingAction() || this.session?.getAccount()?.isProcessingAction() || false;
   }
 
+  async getLocalAccountV0() {
+    if (!this.db.isOpen) {
+      await this.db.open();
+    }
+
+    const [accountV0] = (await this.db.getAccountV0s()).sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1));
+    return accountV0;
+  }
+
+  async migrateFromLocalAccountV0(accountV0: { alias: string; accountPublicKey: GrumpkinAddress }) {
+    if (!this.session) {
+      this.createSession();
+    }
+    await this.session!.migrateFromLocalAccountV0(accountV0.alias, accountV0.accountPublicKey);
+  }
+
+  async clearLocalAccountV0s() {
+    this.session!.clearLocalAccountV0s();
+  }
+
+  changeLoginMode(mode: LoginMode) {
+    if (mode === this.loginMode) return;
+
+    this.loginMode = mode;
+    if (this.session) {
+      this.session.changeLoginMode(mode);
+    } else {
+      this.emit(AppEvent.UPDATED_LOGIN_STATE, this.loginState);
+    }
+  }
+
   createSession = () => {
     if (this.session) {
       throw new Error('Previous session not destroyed.');
@@ -126,6 +191,7 @@ export class App extends EventEmitter {
       this.config,
       this.requiredNetwork,
       this.activeAsset,
+      this.loginMode,
       this.db,
       this.graphql,
       this.sessionCookieName,
@@ -155,8 +221,12 @@ export class App extends EventEmitter {
     }
   };
 
-  connectWallet = async (wallet: Wallet) => {
-    await this.session!.connectWallet(wallet);
+  connectWallet = async (walletId: WalletId) => {
+    await this.session!.connectWallet(walletId);
+  };
+
+  disconnectWallet = async () => {
+    await this.session!.disconnectWallet();
   };
 
   setSeedPhrase = async (seedPhrase: string) => {
@@ -167,8 +237,16 @@ export class App extends EventEmitter {
     await this.session!.confirmSeedPhrase(seedPhrase);
   };
 
-  setAlias = async (aliasInput: string) => {
-    await this.session!.setAlias(aliasInput);
+  migrateToWallet = async (walletId: WalletId) => {
+    await this.session!.migrateToWallet(walletId);
+  };
+
+  migrateNotes = async () => {
+    await this.session!.confirmMigrateNotes();
+  };
+
+  setAlias = (aliasInput: string) => {
+    this.session!.setAlias(aliasInput);
   };
 
   setRememberMe = (rememberMe: boolean) => {
@@ -183,6 +261,10 @@ export class App extends EventEmitter {
     this.session!.forgotAlias();
   };
 
+  migrateAccount = async () => {
+    await this.session!.migrateAccount();
+  };
+
   initSdk = async () => {
     await this.session!.initSdk();
   };
@@ -192,9 +274,9 @@ export class App extends EventEmitter {
     await this.session!.backgroundLogin();
   };
 
-  resumeLogin = async () => {
+  resumeSignup = async () => {
     this.createSession();
-    await this.session!.resumeLogin();
+    await this.session!.resumeSignup();
   };
 
   logout = async () => {
@@ -209,8 +291,8 @@ export class App extends EventEmitter {
     await session!.close();
   };
 
-  changeWallet = async (wallet: Wallet) => {
-    await this.session!.changeWallet(wallet);
+  changeWallet = async (walletId: WalletId) => {
+    await this.session!.changeWallet(walletId);
   };
 
   changeAsset = (assetId: AppAssetId) => {
@@ -222,28 +304,28 @@ export class App extends EventEmitter {
     this.session!.changeDepositForm(inputs);
   };
 
-  claimUserName = () => {
-    this.session!.claimUserName();
+  claimUserName = async () => {
+    await this.session!.claimUserName();
   };
 
   changeForm = (action: AccountAction, inputs: Form) => {
     this.session!.getAccount().changeForm(action, inputs);
   };
 
-  validateForm = (action: AccountAction) => {
-    this.session!.getAccount().validateForm(action);
+  validateForm = async (action: AccountAction) => {
+    await this.session!.getAccount().validateForm(action);
   };
 
-  resetFormStep = (action: AccountAction) => {
-    this.session!.getAccount().resetFormStep(action);
+  resetFormStep = async (action: AccountAction) => {
+    await this.session!.getAccount().resetFormStep(action);
   };
 
-  submitForm = (action: AccountAction) => {
-    this.session!.getAccount().submitForm(action);
+  submitForm = async (action: AccountAction) => {
+    await this.session!.getAccount().submitForm(action);
   };
 
-  selectAction = (action: AccountAction) => {
-    this.session!.getAccount().selectAction(action);
+  selectAction = async (action: AccountAction) => {
+    await this.session!.getAccount().selectAction(action);
   };
 
   clearAction = () => {

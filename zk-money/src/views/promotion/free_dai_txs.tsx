@@ -1,114 +1,10 @@
 import { AssetId } from '@aztec/sdk';
 import Cookie from 'js-cookie';
 import moment from 'moment';
-import { rgba } from 'polished';
 import React, { useEffect, useState } from 'react';
-import styled, { keyframes } from 'styled-components';
-import { Button, Modal, PaddedBlock, Text, TextLink } from '../../components';
-import bubble from '../../images/bubble.svg';
+import styled from 'styled-components';
+import { BubbleTheme, Button, Modal, MovingBubble, PaddedBlock, Text, TextLink } from '../../components';
 import dai from '../../images/dai_white.svg';
-import { colours, spacings } from '../../styles';
-
-const move = keyframes`
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(240px);
-  }
-`;
-
-const BubbleRoot = styled(PaddedBlock)`
-  display: flex;
-  justify-content: center;
-`;
-
-const BubbleWrap = styled.div`
-  position: relative;
-  padding: ${spacings.s} ${spacings.m};
-`;
-
-const Bubble = styled.img`
-  position: absolute;
-  margin-top: 3px; // extra space at the bottom of the svg
-  top: 50%;
-  left: 50%;
-  transform: translateX(-50%) translateY(-50%);
-  height: 120px;
-`;
-
-const BubbleContent = styled.div`
-  display: flex;
-  align-items: center;
-  position: relative;
-  z-index: 1;
-`;
-
-const Circle = styled.div`
-  width: 80px;
-  height: 80px;
-  border-radius: 100%;
-  z-index: 2;
-`;
-
-const CircleLeft = styled(Circle)`
-  background-image: linear-gradient(0deg, #bcf24a, #44ff6d);
-`;
-
-const CircleRight = styled(Circle)`
-  background-image: linear-gradient(0deg, #f24a4a, #ffb444);
-`;
-
-const DotsRoot = styled.div`
-  display: flex;
-  align-items: center;
-  padding: ${spacings.s};
-`;
-
-const Dot = styled.div`
-  margin: 0 ${spacings.xxs};
-  width: 4px;
-  height: 4px;
-  border-radius: 100%;
-  background: ${colours.grey};
-  opacity: 0.3;
-`;
-
-const CargoRoot = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: absolute;
-  left: 40px;
-  width: 32px;
-  height: 32px;
-  border-radius: 100%;
-  background: ${rgba(colours.black, 0.75)};
-  z-index: 1;
-  animation: ${move} 2s infinite linear 2s;
-
-  &:before {
-    content: '';
-    position: absolute;
-    left: -${spacings.xxs};
-    transform: translateX(-100%);
-    width: 16px;
-    height: 16px;
-    border-radius: 100%;
-    background: ${rgba(colours.black, 0.5)};
-  }
-
-  &:after {
-    content: '';
-    position: absolute;
-    left: -${parseInt(spacings.xs) + 16}px;
-    transform: translateX(-100%);
-    width: 8px;
-    height: 8px;
-    border-radius: 100%;
-    background: ${rgba(colours.black, 0.3)};
-  }
-`;
 
 const ButtonRoot = styled(PaddedBlock)`
   display: flex;
@@ -182,25 +78,7 @@ export const FreeDaiTxs: React.FunctionComponent<FreeDaiTxsProps> = ({ activeAss
           </Text>
         </PaddedBlock>
       </PaddedBlock>
-      <BubbleRoot size="s">
-        <BubbleWrap>
-          <Bubble src={bubble} />
-          <BubbleContent>
-            <CircleLeft />
-            <DotsRoot>
-              {Array(10)
-                .fill(0)
-                .map((_, i) => (
-                  <Dot key={i} />
-                ))}
-            </DotsRoot>
-            <CircleRight />
-            <CargoRoot>
-              <img src={dai} alt="" height={16} />
-            </CargoRoot>
-          </BubbleContent>
-        </BubbleWrap>
-      </BubbleRoot>
+      <MovingBubble theme={BubbleTheme.SECONDARY} icon={dai} />
       <PaddedBlock size="s">
         <PaddedBlock size="xs">
           <Text size="s">

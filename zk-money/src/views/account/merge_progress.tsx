@@ -1,13 +1,17 @@
 import React from 'react';
-import { AssetState, MergeFormValues, MergeStatus, sum, toBaseUnits } from '../../app';
+import { AssetState, MergeFormValues, MergeStatus, ProviderState, sum, toBaseUnits, WalletId } from '../../app';
 import { Theme } from '../../styles';
 import { AssetInfoRow } from './asset_info_row';
 import { ProgressTemplate } from './progress_template';
+import { SigningKeyForm } from './signing_key_form';
 
 interface MergeProgressProps {
   theme: Theme;
   assetState: AssetState;
+  providerState?: ProviderState;
   form: MergeFormValues;
+  onChangeWallet(walletId: WalletId): void;
+  onDisconnectWallet(): void;
   onGoBack(): void;
   onSubmit(): void;
   onClose(): void;
@@ -16,13 +20,30 @@ interface MergeProgressProps {
 export const MergeProgress: React.FunctionComponent<MergeProgressProps> = ({
   theme,
   assetState,
+  providerState,
   form,
+  onChangeWallet,
+  onDisconnectWallet,
   onGoBack,
   onSubmit,
   onClose,
 }) => {
-  const { asset, price } = assetState;
   const { toMerge, fee, submit, status } = form;
+
+  if (status.value === MergeStatus.GENERATE_KEY) {
+    return (
+      <SigningKeyForm
+        providerState={providerState}
+        message={submit.message}
+        messageType={submit.messageType}
+        onChangeWallet={onChangeWallet}
+        onDisconnectWallet={onDisconnectWallet}
+        onGoBack={onGoBack}
+      />
+    );
+  }
+
+  const { asset, price } = assetState;
   const newSpendableBalance = sum(toMerge.value) - toBaseUnits(fee.value, asset.decimals);
 
   const items = [

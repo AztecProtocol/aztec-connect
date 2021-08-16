@@ -204,6 +204,10 @@ export class Contracts {
     return this.provider.getBlockNumber();
   }
 
+  public async signPersonalMessage(message: Buffer, address: EthAddress) {
+    return this.signer.signPersonalMessage(message, address);
+  }
+
   public async signMessage(message: Buffer, address: EthAddress) {
     return this.signer.signMessage(message, address);
   }

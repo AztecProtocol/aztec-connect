@@ -3,6 +3,7 @@ import {
   AccountProofOutput,
   AssetId,
   createWalletSdk,
+  EthAddress,
   EthersAdapter,
   GrumpkinAddress,
   SdkEvent,
@@ -10,44 +11,56 @@ import {
   SettlementTime,
   TxType,
   WalletSdk,
-  Web3Signer,
 } from '@aztec/sdk';
 import { InfuraProvider, Web3Provider } from '@ethersproject/providers';
-import randomString from 'crypto-random-string';
+import { createHash } from 'crypto';
 import createDebug from 'debug';
-import { utils } from 'ethers';
 import { EventEmitter } from 'events';
+import Mutex from 'idb-mutex';
 import Cookie from 'js-cookie';
 import { debounce, DebouncedFunc } from 'lodash';
 import { Config } from '../config';
-import { AccountFormEvent, DepositForm, DepositFormValues, DepositStatus } from './account_forms';
+import {
+  AccountFormEvent,
+  DepositForm,
+  DepositFormValues,
+  DepositStatus,
+  getMigratableValues,
+  MigratingAsset,
+} from './account_forms';
+import { AccountVersion } from './account_state';
 import { AccountUtils } from './account_utils';
 import { formatAliasInput, getAliasError } from './alias';
 import { AppAssetId, assets } from './assets';
 import { Database } from './database';
 import { MessageType, SystemMessage, ValueAvailability } from './form';
 import { GraphQLService } from './graphql_service';
+import { createSigningKeys, KeyVault } from './key_vault';
 import { Network } from './networks';
 import { PriceFeedService } from './price_feed_service';
 import { Provider, ProviderEvent, ProviderState, ProviderStatus } from './provider';
 import { RollupService } from './rollup_service';
-import { formatSeedPhraseInput, generateSeedPhrase, getSeedPhraseError, sliceSeedPhrase } from './seed_phrase';
 import { toBaseUnits } from './units';
 import { UserAccount, UserAccountEvent } from './user_account';
-import { Wallet, wallets } from './wallet_providers';
+import { WalletId, wallets } from './wallet_providers';
 
 const debug = createDebug('zm:user_session');
 
-interface SignedInAccount {
-  accountPublicKey: GrumpkinAddress;
-  privateKey: Buffer;
-  nonce: number;
+export enum LoginMode {
+  SIGNUP,
+  LOGIN,
+  MIGRATE,
 }
 
 export enum LoginStep {
   CONNECT_WALLET,
   SET_SEED_PHRASE,
   SET_ALIAS,
+  CONFIRM_MIGRATION,
+  MIGRATE_WALLET,
+  MIGRATE_ACCOUNT,
+  SYNC_ACCOUNT,
+  MIGRATE_NOTES,
   INIT_SDK,
   CREATE_ACCOUNT,
   VALIDATE_DATA,
@@ -59,6 +72,9 @@ export enum LoginStep {
 }
 
 const undisruptiveSteps = [
+  LoginStep.MIGRATE_ACCOUNT,
+  LoginStep.SYNC_ACCOUNT,
+  LoginStep.MIGRATE_NOTES,
   LoginStep.INIT_SDK,
   LoginStep.CREATE_ACCOUNT,
   LoginStep.VALIDATE_DATA,
@@ -69,26 +85,29 @@ const undisruptiveSteps = [
 
 export interface LoginState {
   step: LoginStep;
-  wallet?: Wallet;
+  mode: LoginMode;
+  walletId?: WalletId;
   seedPhrase: string;
   alias: string;
   aliasAvailability: ValueAvailability;
-  rememberMe: boolean;
   isNewAlias: boolean;
-  isNewAccount: boolean;
+  rememberMe: boolean;
   allowToProceed: boolean;
+  migratingAssets: MigratingAsset[];
+  accountV0?: GrumpkinAddress; // To be deprecated
 }
 
 export const initialLoginState: LoginState = {
   step: LoginStep.CONNECT_WALLET,
-  wallet: undefined,
+  mode: LoginMode.SIGNUP,
+  walletId: undefined,
   seedPhrase: '',
   alias: '',
   aliasAvailability: ValueAvailability.INVALID,
+  isNewAlias: true,
   rememberMe: true,
-  isNewAlias: false,
-  isNewAccount: true,
   allowToProceed: true,
+  migratingAssets: [],
 };
 
 export interface WorldState {
@@ -124,15 +143,19 @@ export class UserSession extends EventEmitter {
   private sdk!: WalletSdk;
   private rollupService!: RollupService;
   private priceFeedService!: PriceFeedService;
-  private signedInAccount?: SignedInAccount;
-  private loginState = initialLoginState;
+  private loginState: LoginState;
   private worldState = initialWorldState;
+  private keyVault!: KeyVault;
+  private keyVaultV0!: KeyVault;
   private depositForm?: DepositForm;
   private accountUtils!: AccountUtils;
   private account!: UserAccount;
+  private activeAsset: AppAssetId;
   private debounceCheckAlias: DebouncedFunc<() => void>;
+  private createSdkMutex = new Mutex('create-sdk-mutex');
   private destroyed = false;
 
+  private readonly accountProofTimeout = 60 * 60 * 1000; // 1 hour
   private readonly accountProofDepositAsset = AssetId.ETH;
   private readonly accountProofMinDeposit = toBaseUnits('0.01', assets[this.accountProofDepositAsset].decimals);
 
@@ -141,17 +164,24 @@ export class UserSession extends EventEmitter {
   private readonly TXS_PER_ROLLUP = 112;
 
   constructor(
-    private config: Config,
-    private requiredNetwork: Network,
-    private activeAsset: AppAssetId,
-    private db: Database,
-    private graphql: GraphQLService,
-    private sessionCookieName: string,
+    private readonly config: Config,
+    private readonly requiredNetwork: Network,
+    initialActiveAsset: AppAssetId,
+    initialLoginMode: LoginMode,
+    private readonly db: Database,
+    private readonly graphql: GraphQLService,
+    private readonly sessionCookieName: string,
     private readonly accountProofCacheName: string,
     private readonly walletCacheName: string,
   ) {
     super();
     this.debounceCheckAlias = debounce(this.updateAliasAvailability, this.debounceCheckAliasWait);
+    this.loginState = {
+      ...initialLoginState,
+      mode: initialLoginMode,
+      isNewAlias: initialLoginMode === LoginMode.SIGNUP,
+    };
+    this.activeAsset = initialActiveAsset;
   }
 
   getProviderState() {
@@ -185,7 +215,7 @@ export class UserSession extends EventEmitter {
   async close(message = '', messageType = MessageType.TEXT, clearSession = true) {
     this.emitSystemMessage(message, messageType);
     if (clearSession) {
-      this.clearSession();
+      this.clearLinkedAccountSession();
     }
     this.emit(UserSessionEvent.SESSION_CLOSED);
     await this.destroy();
@@ -202,9 +232,9 @@ export class UserSession extends EventEmitter {
     this.depositForm?.destroy();
     this.priceFeedService?.destroy();
     this.clearLocalAccountProof();
-    await this.removeUnregisteredUsers();
-    if (this.sdk) {
+    if (this.sdk && this.sdk.getLocalStatus().initState !== SdkInitState.DESTROYED) {
       this.sdk.removeAllListeners();
+      await this.removeUnregisteredUsers();
       // Can only safely destroy the sdk after it's fully initialized.
       if (this.sdk.getLocalStatus().initState === SdkInitState.INITIALIZING) {
         await this.awaitSdkInitialized(this.sdk);
@@ -214,18 +244,35 @@ export class UserSession extends EventEmitter {
     debug('Session destroyed.');
   }
 
-  connectWallet = async (wallet: Wallet) => {
-    if (this.loginState.wallet !== undefined) {
+  changeLoginMode(mode: LoginMode) {
+    this.updateLoginState({ ...initialLoginState, mode, isNewAlias: mode === LoginMode.SIGNUP });
+  }
+
+  async migrateFromLocalAccountV0(alias: string, accountPublicKey: GrumpkinAddress) {
+    this.updateLoginState({ alias, mode: LoginMode.MIGRATE, isNewAlias: false, accountV0: accountPublicKey });
+    this.toStep(LoginStep.CONFIRM_MIGRATION);
+  }
+
+  async clearLocalAccountV0s() {
+    const { accountV0 } = this.loginState;
+    if (accountV0) {
+      this.updateLoginState({ accountV0: undefined });
+    }
+    await this.db.deleteAccountV0s();
+  }
+
+  async connectWallet(walletId: WalletId) {
+    if (this.loginState.walletId !== undefined) {
       debug('Duplicated call to connectWallet()');
       return;
     }
 
-    this.updateLoginState({ wallet });
+    this.updateLoginState({ walletId });
 
-    const walletName = wallets[wallet].name;
-    if (wallet !== Wallet.HOT) {
+    const walletName = wallets[walletId].name;
+    if (walletId !== WalletId.HOT) {
       this.emitSystemMessage(`Connecting to ${walletName}...`);
-      await this.changeWallet(wallet);
+      await this.changeWallet(walletId);
       if (!this.provider) {
         return this.abort(`Unable to connect to ${walletName}.`);
       }
@@ -233,31 +280,13 @@ export class UserSession extends EventEmitter {
 
     this.emitSystemMessage('Connecting to rollup provider...');
 
-    await this.createCoreProvider();
-
-    if (!this.db.isOpen) {
-      await this.db.open();
-    }
-
     try {
-      await this.createSdk();
-      // If local rollupContractAddress is empty, it is a new device or the data just got wiped out.
-      if (!(await this.getLocalRollupContractAddress())) {
-        await this.db.clear();
-      }
+      await this.createSdk(true);
     } catch (e) {
-      debug(e);
       return this.abort(`Something went wrong. This shouldn't happen.`);
     }
 
-    const confirmUserStates = this.ensureUserStates();
-    // Leave it to run in the background so that it won't block the ui.
-    this.sdk.init();
-    await confirmUserStates;
-
-    if (wallet === Wallet.HOT) {
-      const seedPhrase = this.generateSeedPhrase();
-      this.updateLoginState({ seedPhrase: sliceSeedPhrase(seedPhrase) });
+    if (walletId === WalletId.HOT) {
       return this.toStep(LoginStep.SET_SEED_PHRASE);
     }
 
@@ -269,29 +298,152 @@ export class UserSession extends EventEmitter {
       while (this.provider!.chainId !== this.requiredNetwork.chainId) {
         await new Promise(resolve => setTimeout(resolve, 500));
         if (this.destroyed) {
-          return;
+          throw new Error('Session destroyed.');
         }
       }
     }
 
+    try {
+      const { mode } = this.loginState;
+      switch (mode) {
+        case LoginMode.SIGNUP:
+          await this.signupWithWallet();
+          break;
+        case LoginMode.LOGIN:
+          await this.loginWithWallet();
+          break;
+        case LoginMode.MIGRATE:
+          await this.migrateWithWallet();
+          break;
+      }
+    } catch (e) {
+      this.disconnectWallet();
+      this.emitSystemMessage(e.message, MessageType.ERROR);
+    }
+  }
+
+  private async signupWithWallet() {
+    this.emitSystemMessage('Please sign the message in your wallet to create a new account...', MessageType.WARNING);
+
+    try {
+      this.keyVault = await KeyVault.create(this.provider!, this.sdk);
+    } catch (e) {
+      debug(e);
+      throw new Error('Failed to link your account.');
+    }
+
+    const { accountPublicKey } = this.keyVault;
+    const nonce = await this.accountUtils.getAccountNonce(accountPublicKey);
+
+    if (!nonce) {
+      this.toStep(LoginStep.SET_ALIAS);
+    } else {
+      // Attempt to sign up with a registered wallet.
+      this.updateLoginState({ mode: LoginMode.LOGIN, isNewAlias: false });
+      const { alias } = (await this.db.getAccount(accountPublicKey)) || {};
+      if (!alias) {
+        this.toStep(LoginStep.SET_ALIAS);
+      } else {
+        // Log in to previously logged in account.
+        this.updateLoginState({ alias });
+        this.toStep(LoginStep.INIT_SDK);
+      }
+    }
+  }
+
+  private async loginWithWallet() {
     this.emitSystemMessage('Please sign the message in your wallet to login...', MessageType.WARNING);
 
     try {
-      const account = await this.linkAccount(this.provider!);
-      await this.signIn(account);
+      this.keyVault = await KeyVault.create(this.provider!, this.sdk);
     } catch (e) {
       debug(e);
-      return this.abort('Unable to link your account.');
+      throw new Error('Unable to link your account.');
     }
-  };
 
-  changeWallet = async (wallet: Wallet, checkNetwork = true) => {
+    const { accountPublicKey } = this.keyVault;
+    const nonce = await this.accountUtils.getAccountNonce(accountPublicKey);
+
+    // Attempt to log in with unknown pubKey.
+    if (!nonce) {
+      const signingMessage = KeyVault.signingMessageV0(this.provider!.account!, this.sdk).toString('hex');
+      this.emitSystemMessage(
+        `To check if you have a migratable account, please sign the following hash in your wallet: 0x${signingMessage.slice(
+          0,
+          6,
+        )}...${signingMessage.slice(-4)}`,
+        MessageType.WARNING,
+      );
+
+      try {
+        this.keyVaultV0 = await KeyVault.createV0(this.provider!, this.sdk);
+      } catch (e) {
+        debug(e);
+        throw new Error('Failed to sign the message.');
+      }
+
+      const prevNonce = await this.accountUtils.getAccountNonce(this.keyVaultV0.accountPublicKey);
+      if (prevNonce) {
+        // User has a migratable account.
+        const prevAlias = (await this.db.getAccountV0(this.keyVaultV0.accountPublicKey))?.alias || '';
+        this.updateLoginState({ alias: prevAlias, mode: LoginMode.MIGRATE });
+        this.toStep(prevAlias ? LoginStep.CONFIRM_MIGRATION : LoginStep.SET_ALIAS);
+        return;
+      }
+
+      // TODO - show a signup link in error message.
+      throw new Error('Account not registered.');
+    }
+
+    // TODO - different aliases might have the same accountPublicKey
+    const { alias } = (await this.db.getAccount(accountPublicKey)) || {};
+    if (!alias) {
+      this.toStep(LoginStep.SET_ALIAS);
+    } else {
+      // Log in to previously logged in account.
+      this.updateLoginState({ alias });
+      this.toStep(LoginStep.INIT_SDK);
+    }
+  }
+
+  private async migrateWithWallet() {
+    const signingMessage = KeyVault.signingMessageV0(this.provider!.account!, this.sdk).toString('hex');
+    this.emitSystemMessage(
+      `To check if you have a migratable account, please sign the following hash in your wallet: 0x${signingMessage.slice(
+        0,
+        6,
+      )}...${signingMessage.slice(-4)}`,
+      MessageType.WARNING,
+    );
+
+    try {
+      this.keyVaultV0 = await KeyVault.createV0(this.provider!, this.sdk);
+    } catch (e) {
+      debug(e);
+      throw new Error('Failed to sign the message.');
+    }
+
+    const nonce = await this.accountUtils.getAccountNonce(this.keyVaultV0.accountPublicKey);
+    if (!nonce) {
+      throw new Error('Account not found.');
+    }
+
+    const { alias } = (await this.db.getAccountV0(this.keyVaultV0.accountPublicKey)) || {};
+    if (!alias) {
+      this.toStep(LoginStep.SET_ALIAS);
+    } else {
+      this.updateLoginState({ alias });
+      this.toStep(LoginStep.CONFIRM_MIGRATION);
+    }
+  }
+
+  async changeWallet(walletId: WalletId, checkNetwork = true) {
     if (this.provider?.status === ProviderStatus.INITIALIZING) {
       debug('Cannot change wallet before the current one is initialized or destroyed.');
       return;
     }
 
-    if (wallet === this.provider?.wallet) {
+    if (walletId === this.provider?.walletId) {
       debug('Reconnecting to the same wallet.');
       await this.provider.destroy();
     }
@@ -300,7 +452,7 @@ export class UserSession extends EventEmitter {
     prevProvider?.removeAllListeners();
 
     const { infuraId, network, ethereumHost } = this.config;
-    this.provider = new Provider(wallet, { infuraId, network, ethereumHost });
+    this.provider = new Provider(walletId, { infuraId, network, ethereumHost });
     this.provider.on(ProviderEvent.LOG_MESSAGE, (message: string, type: MessageType) =>
       this.emitSystemMessage(message, type),
     );
@@ -309,7 +461,7 @@ export class UserSession extends EventEmitter {
     try {
       this.clearWalletSession();
       await this.provider.init(checkNetwork ? this.requiredNetwork : undefined);
-      this.saveWalletSession(wallet);
+      this.saveWalletSession(walletId);
     } catch (e) {
       debug(e);
       await this.provider.destroy();
@@ -321,17 +473,25 @@ export class UserSession extends EventEmitter {
     this.provider?.on(ProviderEvent.UPDATED_PROVIDER_STATE, this.handleProviderStateChange);
     if (prevProvider !== this.provider) {
       await prevProvider?.destroy();
-      this.updateLoginState({ wallet });
+      this.updateLoginState({ walletId });
     }
     this.depositForm?.changeProvider(this.provider);
     this.account?.changeProvider(this.provider);
     this.handleProviderStateChange(this.provider?.getState());
-  };
+  }
 
-  changeAsset = (assetId: AppAssetId) => {
+  async disconnectWallet() {
+    await this.provider?.destroy();
+    this.clearWalletSession();
+    this.provider = undefined;
+    this.updateLoginState({ walletId: undefined });
+    this.handleProviderStateChange();
+  }
+
+  changeAsset(assetId: AppAssetId) {
     this.activeAsset = assetId;
     this.account?.changeAsset(assetId);
-  };
+  }
 
   async setSeedPhrase(seedPhrase: string) {
     this.clearSystemMessage();
@@ -339,21 +499,28 @@ export class UserSession extends EventEmitter {
   }
 
   async confirmSeedPhrase(seedPhraseInput: string) {
-    const error = getSeedPhraseError(seedPhraseInput);
-    if (error) {
-      return this.emitSystemMessage(error, MessageType.ERROR);
+    this.keyVaultV0 = KeyVault.fromSeedPhrase(seedPhraseInput, this.sdk);
+    const nonce = await this.accountUtils.getAccountNonce(this.keyVaultV0.accountPublicKey);
+    if (!nonce) {
+      this.emitSystemMessage('Account not found.', MessageType.ERROR);
+      return;
     }
 
-    const account = await this.createAccountFromSeedPhrase(seedPhraseInput);
-    await this.signIn(account);
+    const { alias } = (nonce > 0 && (await this.db.getAccountV0(this.keyVaultV0.accountPublicKey))) || {};
+    if (alias) {
+      this.updateLoginState({ alias });
+      this.toStep(LoginStep.CONFIRM_MIGRATION);
+    } else {
+      this.toStep(LoginStep.SET_ALIAS);
+    }
   }
 
-  async forgotAlias() {
+  forgotAlias() {
     this.updateLoginState({ isNewAlias: true });
-    await this.setAlias('');
+    this.setAlias('');
   }
 
-  async setAlias(aliasInput: string) {
+  setAlias(aliasInput: string) {
     if (!this.loginState.isNewAlias) {
       this.clearSystemMessage();
       return this.updateLoginState({ alias: aliasInput, aliasAvailability: ValueAvailability.PENDING });
@@ -389,26 +556,188 @@ export class UserSession extends EventEmitter {
   }
 
   async confirmAlias(aliasInput: string) {
-    const { isNewAlias } = this.loginState;
+    const { isNewAlias, mode } = this.loginState;
     const error = getAliasError(aliasInput);
     if (error) {
-      return this.emitSystemMessage(!isNewAlias ? 'Incorrect username' : error, MessageType.ERROR);
+      return this.emitSystemMessage(!isNewAlias ? 'Incorrect username.' : error, MessageType.ERROR);
     }
 
     if (isNewAlias) {
-      if (!(await this.isAliasAvailable(aliasInput))) {
+      if (!(await this.accountUtils.isAliasAvailable(aliasInput))) {
         return this.emitSystemMessage('This username has been taken.', MessageType.ERROR);
       }
+      const allowToProceed = await this.allowNewUser();
+      if (!allowToProceed) {
+        this.updateLoginState({ allowToProceed });
+        return;
+      }
+    } else if (this.loginState.seedPhrase) {
+      const address = await this.accountUtils.getAliasPublicKey(aliasInput);
+      if (!address?.equals(this.keyVaultV0.accountPublicKey)) {
+        return this.emitSystemMessage('Incorrect username.', MessageType.ERROR);
+      }
+
+      this.toStep(LoginStep.MIGRATE_WALLET);
     } else {
-      const alias = formatAliasInput(aliasInput);
-      const address = await this.graphql.getAliasPublicKey(alias);
-      const { accountPublicKey } = this.signedInAccount!;
-      if (!address?.equals(accountPublicKey)) {
+      const address = await this.accountUtils.getAliasPublicKey(aliasInput);
+      const keyVault = mode === LoginMode.MIGRATE ? this.keyVaultV0 : this.keyVault;
+      if (!address?.equals(keyVault.accountPublicKey)) {
         return this.emitSystemMessage('Incorrect username.', MessageType.ERROR);
       }
     }
 
-    await this.toStep(LoginStep.INIT_SDK);
+    this.toStep(mode === LoginMode.MIGRATE ? LoginStep.CONFIRM_MIGRATION : LoginStep.INIT_SDK);
+  }
+
+  async migrateToWallet(walletId: WalletId, reconnect = false) {
+    if (!reconnect && this.loginState.walletId !== undefined) {
+      debug('Duplicated call to migrateToWallet()');
+      return;
+    }
+
+    try {
+      this.updateLoginState({ walletId });
+
+      const walletName = wallets[walletId].name;
+      await this.changeWallet(walletId);
+      if (!this.provider) {
+        throw new Error(`Unable to connect to ${walletName}.`);
+      }
+
+      if (this.provider!.chainId !== this.requiredNetwork.chainId) {
+        this.emitSystemMessage(
+          `Please switch your wallet's network to ${this.requiredNetwork.network}...`,
+          MessageType.WARNING,
+        );
+        while (this.provider!.chainId !== this.requiredNetwork.chainId) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          if (this.destroyed) {
+            throw new Error('Session destroyed.');
+          }
+        }
+      }
+
+      this.emitSystemMessage('Please sign the message in your wallet to create a new account...', MessageType.WARNING);
+
+      try {
+        this.keyVault = await KeyVault.create(this.provider!, this.sdk);
+      } catch (e) {
+        debug(e);
+        throw new Error('Unable to link your account.');
+      }
+
+      const nonce = await this.accountUtils.getAccountNonce(this.keyVault.accountPublicKey);
+      if (nonce > 0) {
+        const signerAddress = this.keyVault.signerAddress.toString();
+        throw new Error(
+          `An account has been linked to ${signerAddress.slice(0, 6)}...${signerAddress.slice(
+            -4,
+          )}. Please switch to another address.`,
+        );
+      }
+    } catch (e) {
+      this.emitSystemMessage(e.message, MessageType.ERROR);
+      await this.disconnectWallet();
+      return;
+    }
+
+    await this.migrateAccount();
+  }
+
+  async migrateAccount() {
+    if (!this.sdk) {
+      await this.createSdk();
+    }
+
+    if (!this.keyVaultV0) {
+      if (!this.loginState.accountV0) {
+        this.close('Account not found.');
+        return;
+      }
+
+      const nonce = 1;
+      const prevUserId = new AccountId(this.loginState.accountV0, nonce);
+      const prevUser = await this.sdk.getUserData(prevUserId);
+      this.keyVaultV0 = new KeyVault(prevUser.privateKey, EthAddress.ZERO, this.sdk, AccountVersion.V0);
+    }
+
+    if (!this.keyVault) {
+      this.toStep(LoginStep.MIGRATE_WALLET);
+      const { walletId } = this.loginState;
+      if (walletId === WalletId.HOT) {
+        await this.disconnectWallet();
+      } else if (walletId !== undefined) {
+        this.migrateToWallet(walletId, true);
+      }
+      return;
+    }
+
+    this.toStep(LoginStep.MIGRATE_ACCOUNT);
+
+    try {
+      // Add the old account to the sdk.
+      const nonce = 1;
+      const prevUserId = new AccountId(this.keyVaultV0.accountPublicKey, nonce);
+      await this.accountUtils.addUser(this.keyVaultV0.accountPrivateKey, prevUserId.nonce);
+
+      const signingKey = await this.requestSigningKey();
+
+      const signer = this.sdk.createSchnorrSigner(this.keyVaultV0.accountPrivateKey);
+      const alias = formatAliasInput(this.loginState.alias);
+      const proof = await this.sdk.createAccountProof(
+        prevUserId,
+        signer,
+        alias,
+        nonce,
+        true,
+        signingKey,
+        undefined,
+        this.keyVault.accountPrivateKey,
+      );
+
+      // Add the user to the sdk so that the account tx could be added to it.
+      // Don't sync from the beginning. It's a new account so it doesn't have any txs from previous blocks.
+      const userId = new AccountId(this.keyVault.accountPublicKey, nonce + 1);
+      await this.accountUtils.addUser(this.keyVault.accountPrivateKey, userId.nonce, true);
+
+      await this.sdk.sendProof(proof);
+
+      await this.db.deleteAccountV0(prevUserId.publicKey);
+
+      this.toStep(LoginStep.SYNC_ACCOUNT);
+
+      await this.syncOldAccount(prevUserId);
+
+      const { migratingAssets } = this.loginState;
+      if (migratingAssets.every(a => !a.migratableValues.length)) {
+        await this.initUserAccount(userId, false);
+        await this.accountUtils.removeUser(prevUserId);
+        this.toStep(LoginStep.DONE);
+        return;
+      }
+
+      const totalFee = migratingAssets.reduce((sum, a) => sum + a.totalFee, 0n);
+      if (!totalFee) {
+        this.confirmMigrateNotes();
+      }
+    } catch (e) {
+      debug(e);
+      this.emitSystemMessage('Failed to migrate account.', MessageType.ERROR);
+      await this.destroy();
+    }
+  }
+
+  async confirmMigrateNotes() {
+    this.toStep(LoginStep.MIGRATE_NOTES);
+
+    const nonce = 2;
+    const userId = new AccountId(this.keyVault.accountPublicKey, nonce);
+    const prevUserId = new AccountId(this.keyVaultV0.accountPublicKey, nonce - 1);
+    await this.migrateNotes(prevUserId, userId);
+    await this.accountUtils.removeUser(prevUserId);
+    await this.initUserAccount(userId, false);
+
+    this.toStep(LoginStep.DONE);
   }
 
   changeDepositForm(newInputs: Partial<DepositFormValues>) {
@@ -455,25 +784,22 @@ export class UserSession extends EventEmitter {
       return;
     }
 
-    // Add the new user to the sdk so that the accountTx could be added for it.
-    // Don't sync from the beginning if it's a new account.
-    const userId = proofOutput.tx.userId;
-    const { privateKey, nonce } = this.signedInAccount!;
-    const noSync = !nonce;
-    await this.accountUtils.safeAddUser(privateKey, userId.nonce, noSync);
+    // Add the user to the sdk so that the accountTx could be added for it.
+    // Don't sync from the beginning. It's a new account so it doesn't have any txs from previous blocks.
+    const { userId } = proofOutput.tx;
+    await this.accountUtils.addUser(this.keyVault.accountPrivateKey, userId.nonce, true);
 
     try {
       await this.sdk.sendProof(proofOutput);
       this.clearLocalAccountProof();
     } catch (e) {
       debug(e);
-      await this.accountUtils.safeRemoveUser(userId);
+      await this.accountUtils.removeUser(userId);
       this.emitSystemMessage('Failed to send the proof. Please try again later.', MessageType.ERROR);
       return;
     }
 
-    await this.createUserAccount(userId, false);
-    await this.updateSession();
+    await this.initUserAccount(userId, false);
 
     this.toStep(LoginStep.DONE);
 
@@ -494,7 +820,7 @@ export class UserSession extends EventEmitter {
     };
 
     try {
-      const { isNewAlias } = this.loginState;
+      const { isNewAlias, alias } = this.loginState;
 
       if (isNewAlias) {
         proceed(LoginStep.CREATE_ACCOUNT);
@@ -506,16 +832,14 @@ export class UserSession extends EventEmitter {
       } else {
         proceed(LoginStep.ADD_ACCOUNT);
 
-        const { accountPublicKey, nonce } = this.signedInAccount!;
+        const accountPublicKey = this.keyVault.accountPublicKey;
+        const nonce = await this.accountUtils.getAliasNonce(alias);
         const userId = new AccountId(accountPublicKey, nonce);
-        await this.createUserAccount(userId, false);
+        await this.initUserAccount(userId, false);
 
         proceed(LoginStep.SYNC_DATA);
 
         await this.awaitUserSynchronised(userId);
-        if (this.signedInAccount) {
-          await this.updateSession();
-        }
 
         proceed(LoginStep.DONE);
       }
@@ -526,50 +850,39 @@ export class UserSession extends EventEmitter {
     }
   }
 
-  async backgroundLogin(wallet = Wallet.HOT) {
-    if (this.loginState.wallet !== undefined) {
+  async backgroundLogin(walletId = WalletId.HOT) {
+    if (this.loginState.walletId !== undefined) {
       debug('Attempt to login again.');
       return;
     }
 
     try {
-      this.updateLoginState({ wallet });
-
-      await this.createCoreProvider();
-
-      if (!this.db.isOpen) {
-        await this.db.open();
-      }
+      this.updateLoginState({ walletId });
 
       await this.createSdk();
-      if (!(await this.getLocalRollupContractAddress())) {
-        throw new Error('Require data reset.');
-      }
-
-      const confirmUserStates = this.ensureUserStates();
-      // Leave it to run in the background so that it won't block the ui.
-      this.sdk.init();
-
-      await confirmUserStates;
 
       const linkedAccount = await this.getLinkedAccountFromSession();
       if (!linkedAccount) {
-        throw new Error('Session data not exists.');
+        throw new Error('Account not logged in.');
       }
 
-      const { accountPublicKey, alias } = linkedAccount;
-      const nonce = this.getLatestLocalNonce(accountPublicKey);
+      const { accountPublicKey, signerAddress, alias, version } = linkedAccount;
+
+      const nonce = await this.accountUtils.getAliasNonce(alias);
       if (!nonce) {
         await this.db.deleteAccount(accountPublicKey);
-        throw new Error('Account not exists.');
+        throw new Error('Account not registered.');
       }
+
+      const userId = new AccountId(accountPublicKey, nonce);
+      const { privateKey } = await this.sdk.getUserData(userId);
+      this.keyVault = new KeyVault(privateKey, signerAddress, this.sdk, version);
 
       this.updateLoginState({
         alias,
       });
 
-      const userId = new AccountId(accountPublicKey, nonce);
-      await this.createUserAccount(userId);
+      await this.initUserAccount(userId);
 
       this.toStep(LoginStep.DONE);
     } catch (e) {
@@ -578,70 +891,71 @@ export class UserSession extends EventEmitter {
     }
   }
 
-  async resumeLogin() {
-    const { proofOutput, alias } = this.getLocalAccountProof() || {};
+  async resumeSignup() {
+    const { proofOutput, alias, timestamp } = this.getLocalAccountProof() || {};
     if (!proofOutput) {
       debug('Local account proof undefined.');
+      await this.close();
       return;
     }
 
     this.toStep(LoginStep.VALIDATE_DATA);
 
     try {
-      await this.createCoreProvider();
-
-      if (!this.db.isOpen) {
-        await this.db.open();
+      if (Date.now() - timestamp > this.accountProofTimeout) {
+        throw new Error('Proof expired.');
       }
 
       await this.createSdk();
-      if (!(await this.getLocalRollupContractAddress())) {
-        debug('Data reset required.');
-        throw new Error('Session expired.');
+
+      await this.reviveUserProvider();
+      if (!this.provider?.initialized) {
+        throw new Error('Wallet disconnected.');
       }
+    } catch (e) {
+      debug(e);
+      this.clearLocalAccountProof();
+      // Go back to signup page. Don't show error message.
+      await this.close();
+      return;
+    }
 
-      const confirmUserStates = this.ensureUserStates();
-      this.sdk.init();
-      await confirmUserStates;
-
+    try {
       this.toStep(LoginStep.RECOVER_ACCOUNT_PROOF);
 
+      this.emitSystemMessage(
+        `Please sign the message in your wallet to register username @${alias}...`,
+        MessageType.WARNING,
+      );
+      this.keyVault = await KeyVault.create(this.provider, this.sdk);
+
       const userId = proofOutput.tx.userId;
-      const prevUserId = new AccountId(userId.publicKey, userId.nonce - 1);
-      if (!this.accountUtils.isUserAdded(prevUserId)) {
-        debug('User not added to the sdk.');
-        throw new Error('Session expired.');
+      if (!userId.publicKey.equals(this.keyVault.accountPublicKey)) {
+        throw new Error('Wallet address does not match the one you used to sign up.');
       }
-
-      if (!(await this.isAliasAvailable(alias))) {
-        throw new Error('Username has been taken.');
-      }
-
-      const { privateKey, publicKey } = this.sdk.getUserData(prevUserId);
-      const accountPublicKey = proofOutput.tx.userId.publicKey;
-      const nonce = await this.graphql.getAccountNonce(accountPublicKey);
-      this.signedInAccount = { privateKey, accountPublicKey: publicKey, nonce };
 
       this.updateLoginState({
         alias,
       });
 
-      await this.reviveUserProvider();
-
+      const nonce = await this.accountUtils.getAliasNonce(alias);
       if (nonce > 0 && this.provider?.account && this.provider.chainId === this.requiredNetwork.chainId) {
         const pendingBalance = await this.accountUtils.getPendingBalance(
           this.accountProofDepositAsset,
           this.provider.account,
         );
-        if (pendingBalance >= this.accountProofDepositAsset) {
-          await this.createUserAccount(userId, false);
+        if (pendingBalance >= this.accountProofMinDeposit) {
+          await this.initUserAccount(userId, false);
+          this.clearLocalAccountProof();
           this.toStep(LoginStep.DONE);
           return;
         }
       }
 
       if (nonce > 0) {
-        throw new Error('Account has been registered. Please login with your wallet.');
+        throw new Error(
+          `@${alias} has been taken. Please log in with your wallet or sign up with a different username.`,
+        );
       }
 
       await this.createDepositForm();
@@ -655,32 +969,23 @@ export class UserSession extends EventEmitter {
   }
 
   private async reviveUserProvider() {
-    const wallet = this.getWalletSession();
-    if (wallet === undefined || wallet === this.provider?.wallet) return;
+    const walletId = this.getWalletSession();
+    if (walletId === undefined || walletId === this.provider?.walletId) return;
 
     const { infuraId, network, ethereumHost } = this.config;
-    const provider = new Provider(wallet, { infuraId, network, ethereumHost });
+    const provider = new Provider(walletId, { infuraId, network, ethereumHost });
     if (provider.connected) {
-      await this.changeWallet(wallet, false);
+      await this.changeWallet(walletId, false);
     }
   }
 
   private async createCoreProvider() {
     const { infuraId, network, ethereumHost } = this.config;
-    this.coreProvider = new Provider(Wallet.HOT, { infuraId, network, ethereumHost });
+    this.coreProvider = new Provider(WalletId.HOT, { infuraId, network, ethereumHost });
     await this.coreProvider.init();
     if (this.coreProvider.chainId !== this.requiredNetwork.chainId) {
       throw new Error(`Wrong network. This shouldn't happen.`);
     }
-  }
-
-  private async signIn(account: SignedInAccount) {
-    const { accountPublicKey, nonce } = account;
-    const allowToProceed = nonce > 0 || (await this.allowNewUser());
-    const { alias } = (nonce > 0 && (await this.db.getAccount(accountPublicKey))) || {};
-    this.signedInAccount = account;
-    this.updateLoginState({ allowToProceed, alias: alias || '', isNewAccount: !nonce, isNewAlias: !nonce });
-    this.toStep(alias ? LoginStep.INIT_SDK : LoginStep.SET_ALIAS);
   }
 
   private async createDepositForm() {
@@ -710,27 +1015,62 @@ export class UserSession extends EventEmitter {
     await this.depositForm.init();
   }
 
-  private async createSdk() {
-    const { rollupProviderUrl, network, debug, saveProvingKey } = this.config;
-    const minConfirmation = network === 'ganache' ? 1 : undefined; // If not ganache, use the default value.
-    this.sdk = await createWalletSdk(this.coreProvider.ethereumProvider, rollupProviderUrl, {
-      minConfirmation,
-      debug,
-      saveProvingKey,
-    });
+  private async createSdk(autoReset = false) {
+    await this.createSdkMutex.lock();
+
+    if (this.sdk) {
+      return;
+    }
+
+    if (!this.coreProvider) {
+      await this.createCoreProvider();
+    }
+
+    if (!this.db.isOpen) {
+      await this.db.open();
+    }
+
+    try {
+      const { rollupProviderUrl, network, debug, saveProvingKey } = this.config;
+      const minConfirmation = network === 'ganache' ? 1 : undefined; // If not ganache, use the default value.
+      this.sdk = await createWalletSdk(this.coreProvider.ethereumProvider, rollupProviderUrl, {
+        minConfirmation,
+        debug,
+        saveProvingKey,
+      });
+    } catch (e) {
+      debug(e);
+      throw new Error(`Failed to create sdk.`);
+    }
+
+    // If local rollupContractAddress is empty, it is a new device or the data just got wiped out.
+    if (!(await this.getLocalRollupContractAddress())) {
+      if (autoReset) {
+        await this.db.clear();
+      } else {
+        throw new Error('Require data reset.');
+      }
+    }
+
+    this.rollupService?.destroy();
     this.rollupService = new RollupService(this.sdk);
     await this.rollupService.init();
     this.accountUtils = new AccountUtils(this.sdk, this.graphql, this.requiredNetwork);
+
+    const confirmUserStates = this.ensureUserStates();
+    // Leave it to run in the background so that it won't block the ui.
+    this.sdk.init();
+    await confirmUserStates;
+
+    await this.createSdkMutex.unlock();
   }
 
-  private async createUserAccount(userId: AccountId, awaitSynchronised = true) {
+  private async initUserAccount(userId: AccountId, awaitSynchronised = true) {
     if (!userId.nonce) {
       throw new Error('User not registered.');
     }
 
-    if (!this.accountUtils.isUserAdded(userId)) {
-      await this.accountUtils.addUser(this.signedInAccount!.privateKey, userId.nonce);
-    }
+    await this.accountUtils.addUser(this.keyVault.accountPrivateKey, userId.nonce);
 
     const {
       priceFeedContractAddresses,
@@ -753,6 +1093,7 @@ export class UserSession extends EventEmitter {
       userId,
       alias,
       this.activeAsset,
+      this.keyVault,
       this.sdk,
       this.coreProvider,
       this.db,
@@ -777,15 +1118,70 @@ export class UserSession extends EventEmitter {
       await this.awaitUserSynchronised(userId);
     }
 
-    const { nonce, privateKey, publicKey } = this.sdk.getUserData(userId);
-    const prevUserId = new AccountId(publicKey, nonce - 1);
-    if (!this.accountUtils.isUserAdded(prevUserId) && !(await this.accountUtils.isAccountSettled(userId))) {
-      debug(`Adding previous user with nonce ${nonce - 1}.`);
-      // We need to use previous acount to send proof before current account is settled.
-      await this.accountUtils.addUser(privateKey, nonce - 1);
-    }
-
     await this.account.init(this.provider);
+
+    await this.updateSession();
+  }
+
+  private async syncOldAccount(prevUserId: AccountId) {
+    await this.awaitUserSynchronised(prevUserId);
+
+    const migratingAssets = await Promise.all(
+      assets.map(async ({ id }) => {
+        const notes = (await this.sdk.getSpendableNotes(id, prevUserId)).sort((a, b) => (a.value < b.value ? 1 : -1));
+        const values = notes.map(n => n.value);
+        const fee = await this.sdk.getFee(id, TxType.TRANSFER);
+        const migratableValues = getMigratableValues(values, fee);
+        return {
+          assetId: id,
+          fee,
+          totalFee: fee * BigInt(Math.ceil(migratableValues.length / 2)),
+          values,
+          migratableValues,
+          migratedValues: [],
+        };
+      }),
+    );
+    this.updateLoginState({ migratingAssets });
+  }
+
+  private async migrateNotes(prevUserId: AccountId, userId: AccountId) {
+    const updateMigratingAssets = (assetId: AppAssetId, migratedValue: bigint) => {
+      const migratingAssets = this.loginState.migratingAssets.map(asset => {
+        if (asset.assetId !== assetId) {
+          return asset;
+        }
+
+        const { migratedValues } = asset;
+        return {
+          ...asset,
+          migratedValues: [...migratedValues, migratedValue],
+        };
+      });
+      this.updateLoginState({ migratingAssets });
+    };
+
+    const { migratingAssets } = this.loginState;
+    const signer = this.sdk.createSchnorrSigner(this.keyVaultV0.accountPrivateKey);
+    for (const asset of migratingAssets) {
+      const { assetId, fee, migratableValues } = asset;
+      for (let i = 0; i < migratableValues.length; i += 2) {
+        if (this.destroyed) {
+          return;
+        }
+
+        const amount = migratableValues.slice(i, i + 2).reduce((sum, value) => sum + value, 0n) - fee;
+        // Create private send proof.
+        const proof = await this.sdk.createTransferProof(assetId, prevUserId, amount, fee, signer, userId);
+        await this.sdk.sendProof(proof);
+        await this.db.addMigratingTx({
+          ...proof.tx,
+          userId,
+        });
+
+        updateMigratingAssets(assetId, amount);
+      }
+    }
   }
 
   private async subscribeToSyncProgress(userId: AccountId) {
@@ -799,66 +1195,60 @@ export class UserSession extends EventEmitter {
     this.sdk.on(SdkEvent.UPDATED_USER_STATE, this.handleUserStateChange);
   }
 
-  private generateSeedPhrase() {
-    const entropy = this.hashToField(Buffer.from(randomString({ length: 64, type: 'base64' })));
-    return generateSeedPhrase(entropy);
-  }
-
-  private async createAccountFromSeedPhrase(seedPhraseInput: string) {
-    const seedPhrase = formatSeedPhraseInput(seedPhraseInput);
-    const privateKey = this.hashToField(Buffer.from(seedPhrase));
-    return this.createAccountFromPrivateKey(privateKey);
-  }
-
-  private async linkAccount(provider: Provider) {
-    const ethAddress = provider.account!;
-    const web3Provider = new Web3Provider(provider.ethereumProvider);
-    const signer = new Web3Signer(web3Provider);
-    const message = this.hashToField(ethAddress.toBuffer());
-    const msgHash = utils.keccak256(message);
-    const digest = utils.arrayify(msgHash);
-    const privateKey = (await signer.signMessage(Buffer.from(digest), ethAddress)).slice(0, 32);
-    return this.createAccountFromPrivateKey(privateKey);
-  }
-
-  private async createAccountFromPrivateKey(privateKey: Buffer) {
-    const accountPublicKey = this.sdk.derivePublicKey(privateKey);
-    const nonce = await this.graphql.getAccountNonce(accountPublicKey);
-    return { accountPublicKey, privateKey, nonce };
-  }
-
   private updateAliasAvailability = async () => {
     const aliasInput = this.loginState.alias;
-    const available = await this.isAliasAvailable(aliasInput);
+    const nonce = await this.accountUtils.getAliasNonce(aliasInput);
     if (aliasInput !== this.loginState.alias) return;
 
-    this.updateLoginState({ aliasAvailability: available ? ValueAvailability.VALID : ValueAvailability.INVALID });
+    this.updateLoginState({
+      aliasAvailability: nonce === 0 ? ValueAvailability.VALID : ValueAvailability.INVALID,
+    });
   };
 
-  private async isAliasAvailable(aliasInput: string) {
-    const alias = formatAliasInput(aliasInput);
-    return !!alias && !(await this.graphql.getAliasPublicKey(alias));
-  }
-
   private async createAccountProof() {
-    const aliasInput = this.loginState.alias;
-    const { privateKey } = this.signedInAccount!;
+    const { accountPublicKey, accountPrivateKey } = this.keyVault;
+    const nonce = 0;
+    const userId = new AccountId(accountPublicKey, nonce);
     try {
-      await this.removeUnregisteredUsers();
-      const userId = await this.accountUtils.safeAddUser(privateKey, 0);
+      const spendingPublicKey = await this.requestSigningKey();
+      const signer = this.sdk.createSchnorrSigner(accountPrivateKey);
+      const aliasInput = this.loginState.alias;
       const alias = formatAliasInput(aliasInput);
-      const signer = this.sdk.createSchnorrSigner(privateKey);
-      const accountProof = await this.sdk.createAccountProof(userId, signer, alias, 0, true, userId.publicKey);
+      await this.accountUtils.addUser(accountPrivateKey, userId.nonce);
+      const accountProof = await this.sdk.createAccountProof(userId, signer, alias, 0, true, spendingPublicKey);
       this.saveLocalAccountProof(accountProof, alias);
     } catch (e) {
       debug(e);
       throw new Error('Failed to create account proof.');
+    } finally {
+      await this.accountUtils.removeUser(userId);
     }
+  }
+
+  private async requestSigningKey() {
+    const { signerAddress } = this.keyVault;
+    while (!this.provider!.account?.equals(signerAddress)) {
+      this.emitSystemMessage(
+        `Please switch your wallet's account to ${signerAddress
+          .toString()
+          .slice(0, 6)}...${signerAddress.toString().slice(-4)}.`,
+        MessageType.WARNING,
+      );
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (this.destroyed) {
+        throw new Error('Session destroyed.');
+      }
+    }
+
+    this.emitSystemMessage('Please sign the message in your wallet to create a signing key...', MessageType.WARNING);
+    const { publicKey } = await createSigningKeys(this.provider!, this.sdk);
+    this.clearSystemMessage();
+    return publicKey;
   }
 
   private saveLocalAccountProof(accountProof: AccountProofOutput, alias: string) {
     const proofData = accountProof.toBuffer().toString('hex');
-    localStorage.setItem(this.accountProofCacheName, JSON.stringify({ alias, proofData }));
+    localStorage.setItem(this.accountProofCacheName, JSON.stringify({ alias, proofData, timestamp: Date.now() }));
   }
 
   private getLocalAccountProof() {
@@ -867,10 +1257,11 @@ export class UserSession extends EventEmitter {
       return;
     }
 
-    const account = JSON.parse(rawData);
+    const { alias, proofData, timestamp } = JSON.parse(rawData);
     return {
-      alias: account.alias,
-      proofOutput: AccountProofOutput.fromBuffer(Buffer.from(account.proofData, 'hex')),
+      alias,
+      proofOutput: AccountProofOutput.fromBuffer(Buffer.from(proofData, 'hex')),
+      timestamp,
     };
   }
 
@@ -878,8 +1269,8 @@ export class UserSession extends EventEmitter {
     localStorage.removeItem(this.accountProofCacheName);
   }
 
-  private saveWalletSession(wallet: Wallet) {
-    localStorage.setItem(this.walletCacheName, `${wallet}`);
+  private saveWalletSession(walletId: WalletId) {
+    localStorage.setItem(this.walletCacheName, `${walletId}`);
   }
 
   private clearWalletSession() {
@@ -892,14 +1283,15 @@ export class UserSession extends EventEmitter {
   }
 
   private async updateSession() {
-    if (!this.signedInAccount) {
-      debug('Cannot renew session.');
-      return;
-    }
-
-    const { accountPublicKey } = this.signedInAccount;
+    const { accountPublicKey, signerAddress, version } = this.keyVault;
     const { alias, rememberMe } = this.loginState;
-    await this.db.addAccount({ accountPublicKey, alias, timestamp: new Date() });
+    await this.db.addAccount({
+      accountPublicKey,
+      signerAddress,
+      alias,
+      version,
+      timestamp: new Date(),
+    });
     if (rememberMe) {
       await this.setLinkedAccountToSession(accountPublicKey);
     }
@@ -926,22 +1318,20 @@ export class UserSession extends EventEmitter {
     Cookie.set(this.sessionCookieName, sessionKey.toString('hex'), { expires: this.config.sessionTimeout });
   }
 
-  private clearSession() {
+  private clearLinkedAccountSession() {
     Cookie.remove(this.sessionCookieName);
   }
 
   private generateLoginSessionKey(accountPublicKey: GrumpkinAddress) {
-    return this.hashToField(accountPublicKey.toBuffer());
+    return createHash('sha256').update(accountPublicKey.toBuffer()).digest();
   }
 
   private async removeUnregisteredUsers() {
-    if (!this.sdk) return;
-
     const users = this.sdk.getUsersData();
     const userZeros = users.filter(u => !u.nonce);
     for (const userZero of userZeros) {
       if (!users.some(u => u.publicKey.equals(userZero.publicKey) && u.nonce > 0)) {
-        await this.accountUtils.safeRemoveUser(userZero.id);
+        await this.accountUtils.removeUser(userZero.id);
       }
     }
   }
@@ -961,6 +1351,7 @@ export class UserSession extends EventEmitter {
   private handleProviderStateChange = (state?: ProviderState) => {
     if (!state || state.status === ProviderStatus.DESTROYED) {
       this.provider = undefined;
+      this.depositForm?.changeProvider();
       this.account?.changeProvider();
     }
     this.emit(UserSessionEvent.UPDATED_PROVIDER_STATE, state);
@@ -975,7 +1366,7 @@ export class UserSession extends EventEmitter {
     const { step } = this.loginState;
     switch (step) {
       case LoginStep.CONNECT_WALLET:
-        this.updateLoginState({ wallet: undefined });
+        this.updateLoginState({ walletId: undefined });
         break;
     }
     this.emitSystemMessage(message, messageType);
@@ -1013,13 +1404,20 @@ export class UserSession extends EventEmitter {
   }
 
   private async awaitUserSynchronised(userId: AccountId) {
+    if (!userId.nonce) {
+      return;
+    }
+
     const { latestRollup, accountSyncedToRollup } = this.worldState;
     if (accountSyncedToRollup > -1 || latestRollup === -1) {
       await this.sdk.awaitUserSynchronised(userId);
     } else {
       // If sync from rollup 0, sdk.awaitUserSynchronised will resolve immediately.
-      while (this.worldState.accountSyncedToRollup < 0) {
+      while (this.sdk.getUserData(userId).syncedToRollup < latestRollup) {
         await new Promise(resolve => setTimeout(resolve, 1000));
+        if (this.destroyed) {
+          throw new Error('Session destroyed.');
+        }
       }
     }
   }
@@ -1034,27 +1432,17 @@ export class UserSession extends EventEmitter {
     return unsettledAccountTxs.length < numRollups * this.MAX_ACCOUNT_TXS_PER_ROLLUP;
   }
 
-  // Remove the ugly workarounds below and make those apis utils that are ready to use without having to initialize the sdk.
+  // Remove the following ugly workarounds.
   private async ensureUserStates() {
-    return new Promise(resolve => {
-      const confirmUserStatesUpdated = () => {
-        this.sdk.off(SdkEvent.UPDATED_USERS, confirmUserStatesUpdated);
-        resolve(true);
-      };
-      this.sdk.on(SdkEvent.UPDATED_USERS, confirmUserStatesUpdated);
-    });
-  }
-
-  private hashToField(value: Buffer) {
-    return (this.sdk as any).core.blake2s.hashToField(value) as Buffer;
+    while (!(this.sdk as any).core.userStateFactory) {
+      await new Promise(resolve => setTimeout(resolve, 200));
+      if (this.destroyed) {
+        throw new Error('Session destroyed.');
+      }
+    }
   }
 
   private async getLocalRollupContractAddress() {
     return (this.sdk as any).core.getRollupContractAddress();
-  }
-
-  private getLatestLocalNonce(publicKey: GrumpkinAddress) {
-    const users = this.sdk.getUsersData().filter(u => u.publicKey.equals(publicKey));
-    return users.length ? users.reduce((n, { nonce }) => Math.max(n, nonce), 0) : undefined;
   }
 }

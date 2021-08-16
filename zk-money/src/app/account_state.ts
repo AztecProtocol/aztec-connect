@@ -2,8 +2,15 @@ import { AccountId, AssetId, Note } from '@aztec/sdk';
 import { AccountTx, JoinSplitTx } from './account_txs';
 import { Asset, assets } from './assets';
 
+export enum AccountVersion {
+  V0 = 0,
+  V1 = 1,
+  UNKNOWN = -1,
+}
+
 export interface AccountState {
   userId: AccountId;
+  version: AccountVersion;
   alias: string;
   accountTxs: AccountTx[];
   settled: boolean;

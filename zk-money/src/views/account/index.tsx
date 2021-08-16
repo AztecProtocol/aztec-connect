@@ -1,4 +1,3 @@
-import { AssetId } from '@aztec/sdk';
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import {
@@ -13,28 +12,53 @@ import {
   LoginStep,
   MergeStatus,
   ProviderState,
-  Wallet,
+  SendStatus,
+  ShieldStatus,
+  WalletId,
   WorldState,
 } from '../../app';
 import { Modal, PaddedBlock, Tab, Text } from '../../components';
 import { breakpoints, spacings, Theme } from '../../styles';
-import { FreeDaiTxs } from '../promotion/free_dai_txs';
 import { AccountAsset } from './asset';
 import { Merge } from './merge';
+import { Migrate } from './migrate';
 import { Send } from './send';
 import { Shield } from './shield';
 import { UnsupportedAsset } from './unsupported_asset';
 
-const popupInfos = {
-  [AccountAction.SHIELD]: {
-    title: 'Shield',
-  },
-  [AccountAction.SEND]: {
-    title: 'Send',
-  },
-  [AccountAction.MERGE]: {
-    title: 'Merge',
-  },
+const getPopupInfo = (action: AccountAction, formValues: Form) => {
+  switch (action) {
+    case AccountAction.SHIELD: {
+      const generatingKey = formValues.status.value === ShieldStatus.GENERATE_KEY;
+      return {
+        theme: generatingKey ? Theme.GRADIENT : Theme.WHITE,
+        generatingKey,
+        title: 'Shield',
+      };
+    }
+    case AccountAction.SEND: {
+      const generatingKey = formValues.status.value === SendStatus.GENERATE_KEY;
+      return {
+        theme: generatingKey ? Theme.GRADIENT : Theme.WHITE,
+        generatingKey,
+        title: 'Send',
+      };
+    }
+    case AccountAction.MERGE: {
+      const generatingKey = formValues.status.value === MergeStatus.GENERATE_KEY;
+      return {
+        theme: generatingKey ? Theme.GRADIENT : Theme.WHITE,
+        generatingKey,
+        title: formValues.status.value === MergeStatus.NADA ? 'About your balance' : 'Merge',
+      };
+    }
+    case AccountAction.MIGRATE:
+      return {
+        theme: Theme.GRADIENT,
+        generatingKey: false,
+        title: 'Migrate balance',
+      };
+  }
 };
 
 const AccountRoot = styled.div`
@@ -66,7 +90,6 @@ const AssetCol = styled.div`
 `;
 
 interface AccountProps {
-  theme?: Theme;
   worldState: WorldState;
   accountState: AccountState;
   asset: Asset;
@@ -87,17 +110,16 @@ interface AccountProps {
   txsPublishTime?: Date;
   onFormInputsChange(action: AccountAction, inputs: Form): void;
   onValidate(action: AccountAction): void;
-  onChangeWallet(wallet: Wallet): void;
+  onChangeWallet(walletId: WalletId): void;
+  onDisconnectWallet(): void;
   onGoBack(action: AccountAction): void;
   onSubmit(action: AccountAction): void;
   onChangeAsset(assetId: AppAssetId): void;
   onSelectAction(action: AccountAction): void;
   onClearAction(): void;
-  isDaiTxFree: boolean;
 }
 
 export const Account: React.FunctionComponent<AccountProps> = ({
-  theme = Theme.WHITE,
   worldState,
   accountState,
   asset,
@@ -113,12 +135,12 @@ export const Account: React.FunctionComponent<AccountProps> = ({
   onFormInputsChange,
   onValidate,
   onChangeWallet,
+  onDisconnectWallet,
   onGoBack,
   onSubmit,
   onChangeAsset,
   onSelectAction,
   onClearAction,
-  isDaiTxFree,
 }) => {
   const [explainUnsettled, setExplainUnsettled] = useState(false);
 
@@ -161,68 +183,85 @@ export const Account: React.FunctionComponent<AccountProps> = ({
           <UnsupportedAsset asset={asset} />
         </PaddedBlock>
       )}
-      {isDaiTxFree && !isInitializing && !activeAction && (
-        <FreeDaiTxs activeAsset={asset.id} onSubmit={() => onChangeAsset(AssetId.DAI)} />
-      )}
-      {activeAction && (
-        <Modal
-          title={
-            activeAction.action === AccountAction.MERGE && activeAction.formValues!.status.value === MergeStatus.NADA
-              ? 'About your balance'
-              : popupInfos[activeAction.action].title
-          }
-          onClose={!processingAction ? onClearAction : undefined}
-        >
-          {(() => {
-            switch (activeAction.action) {
-              case AccountAction.SHIELD:
-                return (
-                  <Shield
-                    theme={theme}
-                    assetState={assetState}
-                    providerState={providerState}
-                    form={activeAction.formValues as any}
-                    explorerUrl={explorerUrl}
-                    onChangeInputs={(inputs: Form) => onFormInputsChange(AccountAction.SHIELD, inputs)}
-                    onValidate={() => onValidate(AccountAction.SHIELD)}
-                    onChangeWallet={onChangeWallet}
-                    onGoBack={() => onGoBack(AccountAction.SHIELD)}
-                    onSubmit={() => onSubmit(AccountAction.SHIELD)}
-                    onClose={onClearAction}
-                  />
-                );
-              case AccountAction.SEND:
-                return (
-                  <Send
-                    theme={theme}
-                    assetState={assetState}
-                    form={activeAction.formValues as any}
-                    explorerUrl={explorerUrl}
-                    onChangeInputs={(inputs: Form) => onFormInputsChange(AccountAction.SEND, inputs)}
-                    onValidate={() => onValidate(AccountAction.SEND)}
-                    onGoBack={() => onGoBack(AccountAction.SEND)}
-                    onSubmit={() => onSubmit(AccountAction.SEND)}
-                    onClose={onClearAction}
-                  />
-                );
-              case AccountAction.MERGE:
-                return (
-                  <Merge
-                    theme={theme}
-                    assetState={assetState}
-                    form={activeAction.formValues as any}
-                    onValidate={handleValidateMergeForm}
-                    onGoBack={() => onGoBack(AccountAction.MERGE)}
-                    onSubmit={() => onSubmit(AccountAction.MERGE)}
-                    onClose={onClearAction}
-                  />
-                );
-              default:
-                return null;
-            }
-          })()}
-        </Modal>
-      )}
+      {activeAction &&
+        (() => {
+          const { theme, generatingKey, title } = getPopupInfo(activeAction.action, activeAction.formValues);
+          return (
+            <Modal
+              theme={theme}
+              title={generatingKey ? 'Create Signing Key' : title}
+              onClose={!processingAction && !generatingKey ? onClearAction : undefined}
+            >
+              {(() => {
+                switch (activeAction.action) {
+                  case AccountAction.SHIELD:
+                    return (
+                      <Shield
+                        theme={theme}
+                        assetState={assetState}
+                        providerState={providerState}
+                        form={activeAction.formValues as any}
+                        explorerUrl={explorerUrl}
+                        onChangeInputs={(inputs: Form) => onFormInputsChange(AccountAction.SHIELD, inputs)}
+                        onValidate={() => onValidate(AccountAction.SHIELD)}
+                        onChangeWallet={onChangeWallet}
+                        onDisconnectWallet={onDisconnectWallet}
+                        onGoBack={() => onGoBack(AccountAction.SHIELD)}
+                        onSubmit={() => onSubmit(AccountAction.SHIELD)}
+                        onClose={onClearAction}
+                      />
+                    );
+                  case AccountAction.SEND: {
+                    return (
+                      <Send
+                        theme={theme}
+                        assetState={assetState}
+                        providerState={providerState}
+                        form={activeAction.formValues as any}
+                        explorerUrl={explorerUrl}
+                        onChangeInputs={(inputs: Form) => onFormInputsChange(AccountAction.SEND, inputs)}
+                        onChangeWallet={onChangeWallet}
+                        onDisconnectWallet={onDisconnectWallet}
+                        onValidate={() => onValidate(AccountAction.SEND)}
+                        onGoBack={() => onGoBack(AccountAction.SEND)}
+                        onSubmit={() => onSubmit(AccountAction.SEND)}
+                        onClose={onClearAction}
+                      />
+                    );
+                  }
+                  case AccountAction.MERGE:
+                    return (
+                      <Merge
+                        theme={theme}
+                        assetState={assetState}
+                        providerState={providerState}
+                        form={activeAction.formValues as any}
+                        onChangeWallet={onChangeWallet}
+                        onDisconnectWallet={onDisconnectWallet}
+                        onValidate={handleValidateMergeForm}
+                        onGoBack={() => onGoBack(AccountAction.MERGE)}
+                        onSubmit={() => onSubmit(AccountAction.MERGE)}
+                        onClose={onClearAction}
+                      />
+                    );
+                  case AccountAction.MIGRATE:
+                    return (
+                      <Migrate
+                        providerState={providerState}
+                        form={activeAction.formValues as any}
+                        onChangeWallet={onChangeWallet}
+                        onDisconnectWallet={onDisconnectWallet}
+                        onSubmit={() => onSubmit(AccountAction.MIGRATE)}
+                        onClose={onClearAction}
+                      />
+                    );
+                  default:
+                    return null;
+                }
+              })()}
+            </Modal>
+          );
+        })()}
       {explainUnsettled && (
         <Modal title="About your balance" onClose={() => setExplainUnsettled(false)}>
           <PaddedBlock>
