@@ -20,7 +20,7 @@ export class RollupAggregator {
     private numInnerRollupTxs: number,
     private numOuterRollupProofs: number,
     private metrics: Metrics,
-  ) { }
+  ) {}
 
   public async aggregateRollupProofs(
     innerProofs: RollupProofDao[],
