@@ -4,6 +4,7 @@ import { numToUInt32BE } from '../serialize';
 export class InnerProofData {
   static NUM_PUBLIC_INPUTS = 10;
   static LENGTH = InnerProofData.NUM_PUBLIC_INPUTS * 32;
+  static PADDING = InnerProofData.fromBuffer(Buffer.alloc(InnerProofData.LENGTH));
 
   public txId: Buffer;
 

@@ -136,7 +136,7 @@ describe('user state', () => {
       ? Buffer.alloc(32)
       : noteAlgos.valueNoteNullifier(randomBytes(32), 0, proofSender.privateKey);
     const nullifier2 = noteAlgos.valueNoteNullifier(randomBytes(32), 1, proofSender.privateKey);
-    const viewingKeys = notes.map(n => n.viewingKey);
+    const viewingKeys = isPadding ? [] : notes.map(n => n.viewingKey);
     const proofData = new InnerProofData(
       ProofId.JOIN_SPLIT,
       toBufferBE(publicInput, 32),
@@ -346,7 +346,7 @@ describe('user state', () => {
       outputNoteValue1: 3n,
       outputNoteValue2: 4n,
     });
-    const rollupProofData2 = generateRollup(1, [accountProof, jsProof2.proofData], [jsProof2.viewingKeys]);
+    const rollupProofData2 = generateRollup(1, [accountProof, jsProof2.proofData], [[], jsProof2.viewingKeys]);
     const block2 = createBlock(rollupProofData2);
 
     db.getJoinSplitTx.mockResolvedValue({ txHash: '', settled: undefined });

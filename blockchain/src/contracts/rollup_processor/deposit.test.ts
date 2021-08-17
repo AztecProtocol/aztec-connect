@@ -1,15 +1,14 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { AssetId } from '@aztec/barretenberg/asset';
+import { Asset } from '@aztec/barretenberg/blockchain';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
-import { RollupProcessor } from './rollup_processor';
+import { createPermitData } from '../../create_permit_data';
+import { EthersAdapter } from '../../provider';
+import { Web3Signer } from '../../signer';
 import { createDepositProof, createRollupProof, mergeInnerProofs } from './fixtures/create_mock_proof';
 import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
-import { Asset } from '@aztec/barretenberg/blockchain';
-import { AssetId } from '@aztec/barretenberg/asset';
-import { createPermitData } from '../../create_permit_data';
-import { Web3Signer } from '../../signer';
-import { EthersAdapter } from '../../provider';
+import { RollupProcessor } from './rollup_processor';
 
 describe('rollup_processor: deposit', () => {
   const ethereumProvider = new EthersAdapter(ethers.provider);
@@ -162,13 +161,10 @@ describe('rollup_processor: deposit', () => {
     await erc20.approve(depositAmount, userAddresses[0], rollupProcessor.address);
     await rollupProcessor.depositPendingFunds(AssetId.DAI, depositAmount, undefined, { signingAddress });
 
-    const { proofData, viewingKeys } = await createRollupProof(
-      rollupProvider,
-      await createDepositProof(depositAmount, signingAddress, userSigners[0], AssetId.DAI),
-    );
+    const innerProofData = await createDepositProof(depositAmount, signingAddress, userSigners[0], AssetId.DAI);
+    const { proofData, viewingKeys } = await createRollupProof(rollupProvider, innerProofData);
 
-    const { innerProofData } = RollupProofData.fromBuffer(proofData);
-    await rollupProcessor.approveProof(innerProofData[0].txId, { signingAddress });
+    await rollupProcessor.approveProof(innerProofData.innerProofs[0].txId, { signingAddress });
 
     const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, viewingKeys, []);
     await rollupProcessor.sendTx(tx);
@@ -183,14 +179,11 @@ describe('rollup_processor: deposit', () => {
     await erc20.approve(depositAmount, userAddresses[0], rollupProcessor.address);
     await rollupProcessor.depositPendingFunds(AssetId.DAI, depositAmount, undefined, { signingAddress });
 
-    const { proofData, viewingKeys } = await createRollupProof(
-      rollupProvider,
-      await createDepositProof(depositAmount, signingAddress, userSigners[0], AssetId.DAI),
-    );
+    const innerProofData = await createDepositProof(depositAmount, signingAddress, userSigners[0], AssetId.DAI);
+    const { proofData, viewingKeys } = await createRollupProof(rollupProvider, innerProofData);
 
-    const { innerProofData } = RollupProofData.fromBuffer(proofData);
     const badSignature = await new Web3Signer(ethereumProvider).signMessage(
-      innerProofData[0].getDepositSigningData(),
+      innerProofData.innerProofs[0].getDepositSigningData(),
       userAddresses[1],
     );
 

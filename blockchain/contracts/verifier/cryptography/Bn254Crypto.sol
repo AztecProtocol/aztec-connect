@@ -3,7 +3,7 @@
 pragma solidity >=0.6.0 <0.8.0;
 pragma experimental ABIEncoderV2;
 
-import {Types} from "./Types.sol";
+import {Types} from './Types.sol';
 
 /**
  * @title Bn254 elliptic curve crypto
@@ -26,8 +26,11 @@ library Bn254Crypto {
 
         assembly {
             let endpoint := add(exponent, 0x01)
-            for {} lt(count, endpoint) { count := add(count, count) }
-            {
+            for {
+
+            } lt(count, endpoint) {
+                count := add(count, count)
+            } {
                 if and(exponent, count) {
                     result := mulmod(result, input, modulus)
                 }
@@ -38,8 +41,7 @@ library Bn254Crypto {
         return result;
     }
 
-    function invert(uint256 fr) internal view returns (uint256)
-    {
+    function invert(uint256 fr) internal view returns (uint256) {
         uint256 output;
         bool success;
         uint256 p = r_mod;
@@ -54,15 +56,11 @@ library Bn254Crypto {
             success := staticcall(gas(), 0x05, mPtr, 0xc0, 0x00, 0x20)
             output := mload(0x00)
         }
-        require(success, "pow precompile call failed!");
+        require(success, 'pow precompile call failed!');
         return output;
     }
 
-    function new_g1(uint256 x, uint256 y)
-        internal
-        pure
-        returns (Types.G1Point memory)
-    {
+    function new_g1(uint256 x, uint256 y) internal pure returns (Types.G1Point memory) {
         uint256 xValue;
         uint256 yValue;
         assembly {
@@ -72,11 +70,12 @@ library Bn254Crypto {
         return Types.G1Point(xValue, yValue);
     }
 
-    function new_g2(uint256 x0, uint256 x1, uint256 y0, uint256 y1)
-        internal
-        pure
-        returns (Types.G2Point memory)
-    {
+    function new_g2(
+        uint256 x0,
+        uint256 x1,
+        uint256 y0,
+        uint256 y1
+    ) internal pure returns (Types.G2Point memory) {
         return Types.G2Point(x0, x1, y0, y1);
     }
 
@@ -85,14 +84,14 @@ library Bn254Crypto {
     }
 
     function P2() internal pure returns (Types.G2Point memory) {
-        return Types.G2Point({
-            x0: 0x198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c2,
-            x1: 0x1800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed,
-            y0: 0x090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b,
-            y1: 0x12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa
-        });
+        return
+            Types.G2Point({
+                x0: 0x198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c2,
+                x1: 0x1800deef121f1e76426a00665e5c4479674322d4f75edadd46debd5cd992f6ed,
+                y0: 0x090689d0585ff075ec9e99ad690c3395bc4b313370b38ef355acdadcd122975b,
+                y1: 0x12c85ea5db8c6deb4aab71808dcb408fe3d1e7690c43d37b4ce6cc0166fa7daa
+            });
     }
-
 
     /// Evaluate the following pairing product:
     /// e(a1, a2).e(-b1, b2) == 1
@@ -121,28 +120,21 @@ library Bn254Crypto {
             mstore(add(mPtr, 0x120), mload(add(b2, 0x20)))
             mstore(add(mPtr, 0x140), mload(add(b2, 0x40)))
             mstore(add(mPtr, 0x160), mload(add(b2, 0x60)))
-            success := staticcall(
-                gas(),
-                8,
-                mPtr,
-                0x180,
-                0x00,
-                0x20
-            )
+            success := staticcall(gas(), 8, mPtr, 0x180, 0x00, 0x20)
             out := mload(0x00)
         }
-        require(success, "Pairing check failed!");
+        require(success, 'Pairing check failed!');
         return (out != 0);
     }
 
     /**
-    * validate the following:
-    *   x != 0
-    *   y != 0
-    *   x < p
-    *   y < p
-    *   y^2 = x^3 + 3 mod p
-    */
+     * validate the following:
+     *   x != 0
+     *   y != 0
+     *   x < p
+     *   y < p
+     *   y^2 = x^3 + 3 mod p
+     */
     function validateG1Point(Types.G1Point memory point) internal pure {
         bool is_well_formed;
         uint256 p = p_mod;
@@ -151,13 +143,10 @@ library Bn254Crypto {
             let y := mload(add(point, 0x20))
 
             is_well_formed := and(
-                and(
-                    and(lt(x, p), lt(y, p)),
-                    not(or(iszero(x), iszero(y)))
-                ),
+                and(and(lt(x, p), lt(y, p)), not(or(iszero(x), iszero(y)))),
                 eq(mulmod(y, y, p), addmod(mulmod(x, mulmod(x, x, p), p), 3, p))
             )
         }
-        require(is_well_formed, "Bn254: G1 point not on curve, or is malformed");
+        require(is_well_formed, 'Bn254: G1 point not on curve, or is malformed');
     }
 }

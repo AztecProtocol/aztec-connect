@@ -238,6 +238,10 @@ export class WalletSdk extends EventEmitter {
     inputOwner?: EthAddress,
     outputOwner?: EthAddress,
   ) {
+    if (publicInput && publicOutput) {
+      throw new Error('Public values cannot be both greater than zero.');
+    }
+
     if (publicOutput + recipientPrivateOutput + senderPrivateOutput > publicInput + privateInput) {
       throw new Error('Total output cannot be larger than total input.');
     }

@@ -1,6 +1,9 @@
 import { createHash } from 'crypto';
+import { getNumViewKeys } from '../client_proofs';
 import { numToUInt32BE } from '../serialize';
 import { ViewingKey } from '../viewing_key';
+import { decodeInnerProof } from './decode_inner_proof';
+import { encodeInnerProof, getEncodedLength } from './encode_inner_proof';
 import { InnerProofData } from './inner_proof';
 
 export enum RollupProofDataFields {
@@ -18,9 +21,9 @@ export enum RollupProofDataFields {
 }
 
 export enum RollupProofDataOffsets {
-  ROLLUP_ID = RollupProofDataFields.ROLLUP_ID * 32,
-  ROLLUP_SIZE = RollupProofDataFields.ROLLUP_SIZE * 32,
-  DATA_START_INDEX = RollupProofDataFields.DATA_START_INDEX * 32,
+  ROLLUP_ID = RollupProofDataFields.ROLLUP_ID * 32 + 28,
+  ROLLUP_SIZE = RollupProofDataFields.ROLLUP_SIZE * 32 + 28,
+  DATA_START_INDEX = RollupProofDataFields.DATA_START_INDEX * 32 + 28,
   OLD_DATA_ROOT = RollupProofDataFields.OLD_DATA_ROOT * 32,
   NEW_DATA_ROOT = RollupProofDataFields.NEW_DATA_ROOT * 32,
   OLD_NULL_ROOT = RollupProofDataFields.OLD_NULL_ROOT * 32,
@@ -30,6 +33,114 @@ export enum RollupProofDataOffsets {
   OLD_DEFI_ROOT = RollupProofDataFields.OLD_DEFI_ROOT * 32,
   NEW_DEFI_ROOT = RollupProofDataFields.NEW_DEFI_ROOT * 32,
 }
+
+const parseHeaderInputs = (proofData: Buffer) => {
+  const rollupId = RollupProofData.getRollupIdFromBuffer(proofData);
+  const rollupSize = proofData.readUInt32BE(RollupProofDataOffsets.ROLLUP_SIZE);
+  const dataStartIndex = proofData.readUInt32BE(RollupProofDataOffsets.DATA_START_INDEX);
+  const oldDataRoot = proofData.slice(RollupProofDataOffsets.OLD_DATA_ROOT, RollupProofDataOffsets.OLD_DATA_ROOT + 32);
+  const newDataRoot = proofData.slice(RollupProofDataOffsets.NEW_DATA_ROOT, RollupProofDataOffsets.NEW_DATA_ROOT + 32);
+  const oldNullRoot = proofData.slice(RollupProofDataOffsets.OLD_NULL_ROOT, RollupProofDataOffsets.OLD_NULL_ROOT + 32);
+  const newNullRoot = proofData.slice(RollupProofDataOffsets.NEW_NULL_ROOT, RollupProofDataOffsets.NEW_NULL_ROOT + 32);
+  const oldDataRootsRoot = proofData.slice(
+    RollupProofDataOffsets.OLD_ROOT_ROOT,
+    RollupProofDataOffsets.OLD_ROOT_ROOT + 32,
+  );
+  const newDataRootsRoot = proofData.slice(
+    RollupProofDataOffsets.NEW_ROOT_ROOT,
+    RollupProofDataOffsets.NEW_ROOT_ROOT + 32,
+  );
+  const oldDefiRoot = proofData.slice(RollupProofDataOffsets.OLD_DEFI_ROOT, RollupProofDataOffsets.OLD_DEFI_ROOT + 32);
+  const newDefiRoot = proofData.slice(RollupProofDataOffsets.NEW_DEFI_ROOT, RollupProofDataOffsets.NEW_DEFI_ROOT + 32);
+
+  let startIndex = 11 * 32;
+  const bridgeIds: Buffer[] = [];
+  for (let i = 0; i < RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK; ++i) {
+    bridgeIds.push(proofData.slice(startIndex, startIndex + 32));
+    startIndex += 32;
+  }
+
+  const defiDepositSums: Buffer[] = [];
+  for (let i = 0; i < RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK; ++i) {
+    defiDepositSums.push(proofData.slice(startIndex, startIndex + 32));
+    startIndex += 32;
+  }
+
+  const assetIds: Buffer[] = [];
+  for (let i = 0; i < RollupProofData.NUMBER_OF_ASSETS; ++i) {
+    assetIds.push(proofData.slice(startIndex, startIndex + 32));
+    startIndex += 32;
+  }
+
+  const totalTxFees: Buffer[] = [];
+  for (let i = 0; i < RollupProofData.NUMBER_OF_ASSETS; ++i) {
+    totalTxFees.push(proofData.slice(startIndex, startIndex + 32));
+    startIndex += 32;
+  }
+
+  return {
+    rollupId,
+    rollupSize,
+    dataStartIndex,
+    oldDataRoot,
+    newDataRoot,
+    oldNullRoot,
+    newNullRoot,
+    oldDataRootsRoot,
+    newDataRootsRoot,
+    oldDefiRoot,
+    newDefiRoot,
+    bridgeIds,
+    defiDepositSums,
+    assetIds,
+    totalTxFees,
+  };
+};
+
+const parseTailInputs = (proofData: Buffer, startIndex: number) => {
+  const recursiveProofOutput = proofData.slice(startIndex, startIndex + RollupProofData.LENGTH_RECURSIVE_PROOF_OUTPUT);
+  startIndex += RollupProofData.LENGTH_RECURSIVE_PROOF_OUTPUT;
+
+  const defiInteractionNotes: Buffer[] = [];
+  for (let i = 0; i < RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK; ++i) {
+    defiInteractionNotes.push(proofData.slice(startIndex, startIndex + 64));
+    startIndex += 64;
+  }
+
+  const prevDefiInteractionHash = proofData.slice(startIndex, startIndex + 32);
+
+  return {
+    recursiveProofOutput,
+    defiInteractionNotes,
+    prevDefiInteractionHash,
+  };
+};
+
+const parseViewingKeys = (innerProofData: InnerProofData[], viewingKeyData: Buffer) => {
+  let offset = 0;
+  return innerProofData.map(p => {
+    const numViewKeys = !p.isPadding() ? getNumViewKeys(p.proofId) : 0;
+    const viewingKeys = Array(2).fill(ViewingKey.EMPTY);
+    for (let j = 0; j < numViewKeys; ++j) {
+      const buf = viewingKeyData.slice(offset, offset + ViewingKey.SIZE);
+      if (!buf.length) {
+        throw new Error('Empty viewing key data.');
+      }
+      viewingKeys[j] = new ViewingKey(buf);
+      offset += ViewingKey.SIZE;
+    }
+    return viewingKeys;
+  });
+};
+
+const validateNumViewKeys = (innerProofData: InnerProofData[], viewingKeys: ViewingKey[][]) =>
+  innerProofData.forEach((p, i) => {
+    const keys = (viewingKeys[i] || []).filter(vk => vk && !vk.isEmpty());
+    const numViewKeys = !p.isPadding() ? getNumViewKeys(p.proofId) : 0;
+    if (keys.length !== numViewKeys) {
+      throw new Error('Invalid number of viewing keys.');
+    }
+  });
 
 export class RollupProofData {
   static NUMBER_OF_ASSETS = 16;
@@ -62,11 +173,26 @@ export class RollupProofData {
     public prevDefiInteractionHash: Buffer,
     public viewingKeys: ViewingKey[][],
   ) {
-    const allTxIds = this.innerProofData.map(innerProof => innerProof.txId);
-    this.rollupHash = createHash('sha256').update(Buffer.concat(allTxIds)).digest();
     if (totalTxFees.length !== RollupProofData.NUMBER_OF_ASSETS) {
       throw new Error(`Expect totalTxFees to be an array of size ${RollupProofData.NUMBER_OF_ASSETS}.`);
     }
+    if (bridgeIds.length !== RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK) {
+      throw new Error(`Expect bridgeIds to be an array of size ${RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK}.`);
+    }
+    if (defiDepositSums.length !== RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK) {
+      throw new Error(`Expect defiDepositSums to be an array of size ${RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK}.`);
+    }
+    if (defiInteractionNotes.length !== RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK) {
+      throw new Error(
+        `Expect defiInteractionNotes to be an array of size ${RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK}.`,
+      );
+    }
+    if (viewingKeys.length) {
+      validateNumViewKeys(innerProofData, viewingKeys);
+    }
+
+    const allTxIds = this.innerProofData.map(innerProof => innerProof.txId);
+    this.rollupHash = createHash('sha256').update(Buffer.concat(allTxIds)).digest();
   }
 
   toBuffer() {
@@ -97,54 +223,65 @@ export class RollupProofData {
     return Buffer.concat(this.viewingKeys.flat().map(vk => vk.toBuffer()));
   }
 
-  public static getRollupIdFromBuffer(proofData: Buffer) {
-    return proofData.readUInt32BE(28);
+  encode() {
+    const realInnerProofs = this.innerProofData.filter(p => !p.isPadding());
+    const encodedInnerProof = realInnerProofs.map(p => encodeInnerProof(p));
+    return Buffer.concat([
+      numToUInt32BE(this.rollupId, 32),
+      numToUInt32BE(this.rollupSize, 32),
+      numToUInt32BE(this.dataStartIndex, 32),
+      this.oldDataRoot,
+      this.newDataRoot,
+      this.oldNullRoot,
+      this.newNullRoot,
+      this.oldDataRootsRoot,
+      this.newDataRootsRoot,
+      this.oldDefiRoot,
+      this.newDefiRoot,
+      ...this.bridgeIds,
+      ...this.defiDepositSums.map(s => s),
+      ...this.assetIds,
+      ...this.totalTxFees,
+      numToUInt32BE(Buffer.concat(encodedInnerProof).length),
+      ...encodedInnerProof,
+      this.recursiveProofOutput,
+      ...this.defiInteractionNotes,
+      this.prevDefiInteractionHash,
+    ]);
   }
 
-  public static getRollupSizeFromBuffer(proofData: Buffer) {
-    return proofData.readUInt32BE(32 + 28);
+  static getRollupIdFromBuffer(proofData: Buffer) {
+    return proofData.readUInt32BE(RollupProofDataOffsets.ROLLUP_ID);
   }
 
-  public static fromBuffer(proofData: Buffer, viewingKeyData?: Buffer) {
-    const rollupId = RollupProofData.getRollupIdFromBuffer(proofData);
-    const rollupSize = proofData.readUInt32BE(1 * 32 + 28);
-    const dataStartIndex = proofData.readUInt32BE(2 * 32 + 28);
-    const oldDataRoot = proofData.slice(3 * 32, 3 * 32 + 32);
-    const newDataRoot = proofData.slice(4 * 32, 4 * 32 + 32);
-    const oldNullRoot = proofData.slice(5 * 32, 5 * 32 + 32);
-    const newNullRoot = proofData.slice(6 * 32, 6 * 32 + 32);
-    const oldDataRootsRoot = proofData.slice(7 * 32, 7 * 32 + 32);
-    const newDataRootsRoot = proofData.slice(8 * 32, 8 * 32 + 32);
-    const oldDefiRoot = proofData.slice(9 * 32, 9 * 32 + 32);
-    const newDefiRoot = proofData.slice(10 * 32, 10 * 32 + 32);
+  static getRollupSizeFromBuffer(proofData: Buffer) {
+    return proofData.readUInt32BE(RollupProofDataOffsets.ROLLUP_SIZE);
+  }
 
-    let startIndex = 11 * 32;
-    const bridgeIds: Buffer[] = [];
-    for (let i = 0; i < RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK; ++i) {
-      bridgeIds.push(proofData.slice(startIndex, startIndex + 32));
-      startIndex += 32;
+  static fromBuffer(proofData: Buffer, viewingKeyData?: Buffer) {
+    const {
+      rollupId,
+      rollupSize,
+      dataStartIndex,
+      oldDataRoot,
+      newDataRoot,
+      oldNullRoot,
+      newNullRoot,
+      oldDataRootsRoot,
+      newDataRootsRoot,
+      oldDefiRoot,
+      newDefiRoot,
+      bridgeIds,
+      defiDepositSums,
+      assetIds,
+      totalTxFees,
+    } = parseHeaderInputs(proofData);
+
+    if (!rollupSize) {
+      throw new Error('Empty rollup.');
     }
 
-    const defiDepositSums: Buffer[] = [];
-    for (let i = 0; i < RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK; ++i) {
-      defiDepositSums.push(proofData.slice(startIndex, startIndex + 32));
-      startIndex += 32;
-    }
-
-    const assetIds: Buffer[] = [];
-    for (let i = 0; i < RollupProofData.NUMBER_OF_ASSETS; ++i) {
-      assetIds.push(proofData.slice(startIndex, startIndex + 32));
-      startIndex += 32;
-    }
-
-    const totalTxFees: Buffer[] = [];
-    for (let i = 0; i < RollupProofData.NUMBER_OF_ASSETS; ++i) {
-      totalTxFees.push(proofData.slice(startIndex, startIndex + 32));
-      startIndex += 32;
-    }
-
-    //! We should have some assertion that rollupSize shouldn't be 0.
-
+    let startIndex = RollupProofData.LENGTH_ROLLUP_HEADER_INPUTS;
     const innerProofSize = rollupSize;
     const innerProofData: InnerProofData[] = [];
     for (let i = 0; i < innerProofSize; ++i) {
@@ -153,35 +290,81 @@ export class RollupProofData {
       startIndex += InnerProofData.LENGTH;
     }
 
-    const recursiveProofOutput = proofData.slice(
+    const { recursiveProofOutput, defiInteractionNotes, prevDefiInteractionHash } = parseTailInputs(
+      proofData,
       startIndex,
-      startIndex + RollupProofData.LENGTH_RECURSIVE_PROOF_OUTPUT,
     );
-    startIndex += RollupProofData.LENGTH_RECURSIVE_PROOF_OUTPUT;
 
-    const defiInteractionNotes: Buffer[] = [];
-    for (let i = 0; i < RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK; ++i) {
-      defiInteractionNotes.push(proofData.slice(startIndex, startIndex + 64));
-      startIndex += 64;
+    const viewingKeys = viewingKeyData ? parseViewingKeys(innerProofData, viewingKeyData) : [];
+
+    return new RollupProofData(
+      rollupId,
+      rollupSize,
+      dataStartIndex,
+      oldDataRoot,
+      newDataRoot,
+      oldNullRoot,
+      newNullRoot,
+      oldDataRootsRoot,
+      newDataRootsRoot,
+      oldDefiRoot,
+      newDefiRoot,
+      bridgeIds,
+      defiDepositSums,
+      assetIds,
+      totalTxFees,
+      innerProofData,
+      recursiveProofOutput,
+      defiInteractionNotes,
+      prevDefiInteractionHash,
+      viewingKeys,
+    );
+  }
+
+  static decode(encoded: Buffer, viewingKeyData?: Buffer) {
+    const {
+      rollupId,
+      rollupSize,
+      dataStartIndex,
+      oldDataRoot,
+      newDataRoot,
+      oldNullRoot,
+      newNullRoot,
+      oldDataRootsRoot,
+      newDataRootsRoot,
+      oldDefiRoot,
+      newDefiRoot,
+      bridgeIds,
+      defiDepositSums,
+      assetIds,
+      totalTxFees,
+    } = parseHeaderInputs(encoded);
+
+    if (!rollupSize) {
+      throw new Error('Empty rollup.');
     }
 
-    const prevDefiInteractionHash = proofData.slice(startIndex, startIndex + 32);
-
-    // Populate j/s tx viewingKey data.
-    const viewingKeys: ViewingKey[][] = [];
-    if (viewingKeyData) {
-      for (let i = 0, jsCount = 0; i < innerProofSize; ++i) {
-        if (innerProofData[i].proofId === 0 && !innerProofData[i].isPadding()) {
-          const offset = jsCount * ViewingKey.SIZE * 2;
-          const vk1 = new ViewingKey(viewingKeyData.slice(offset, offset + ViewingKey.SIZE));
-          const vk2 = new ViewingKey(viewingKeyData.slice(offset + ViewingKey.SIZE, offset + ViewingKey.SIZE * 2));
-          jsCount++;
-          viewingKeys.push([vk1, vk2]);
-        } else {
-          viewingKeys.push([ViewingKey.EMPTY, ViewingKey.EMPTY]);
-        }
-      }
+    let startIndex = RollupProofData.LENGTH_ROLLUP_HEADER_INPUTS;
+    let innerProofDataLength = encoded.readUInt32BE(startIndex);
+    startIndex += 4;
+    const innerProofData: InnerProofData[] = [];
+    while (innerProofDataLength > 0) {
+      const innerData = encoded.slice(startIndex, startIndex + InnerProofData.LENGTH);
+      innerProofData.push(decodeInnerProof(innerData));
+      const encodedLength = getEncodedLength(innerData.readUInt8(0));
+      startIndex += encodedLength;
+      innerProofDataLength -= encodedLength;
     }
+    for (let i = innerProofData.length; i < rollupSize; ++i) {
+      innerProofData.push(InnerProofData.PADDING);
+    }
+
+    const { recursiveProofOutput, defiInteractionNotes, prevDefiInteractionHash } = parseTailInputs(
+      encoded,
+      startIndex,
+    );
+
+    const viewingKeys = viewingKeyData ? parseViewingKeys(innerProofData, viewingKeyData) : [];
 
     return new RollupProofData(
       rollupId,

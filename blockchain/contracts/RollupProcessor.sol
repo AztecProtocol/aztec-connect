@@ -356,7 +356,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     /**
      * @dev Process a rollup - decode the rollup, update relevant state variables and
      * verify the proof
-     * @param proofData - cryptographic proof data associated with a rollup
+     * @param - cryptographic proof data associated with a rollup
      * @param signatures - bytes array of secp256k1 ECDSA signatures, authorising a transfer of tokens
      * from the publicOwner for the particular inner proof in question. There is a signature for each
      * inner proof.
@@ -366,24 +366,25 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
      * 0x20 - 0x40 : s
      * 0x40 - 0x60 : v (in form: 0x0000....0001b for example)
      *
-     * @param viewingKeys - viewingKeys for the notes submitted in the rollup. Note: not used in the logic
+     * @param - viewingKeys for the notes submitted in the rollup. Note: not used in the logic
      * of the rollupProcessor contract, but called here as a convenient to place data on chain
      */
     function escapeHatch(
-        bytes calldata proofData,
+        bytes calldata, /* encodedProofData */
         bytes calldata signatures,
-        bytes calldata viewingKeys
+        bytes calldata /* viewingKeys */
     ) external override whenNotPaused {
         (bool isOpen, ) = getEscapeHatchStatus();
         require(isOpen, 'Rollup Processor: ESCAPE_BLOCK_RANGE_INCORRECT');
 
-        processRollupProof(proofData, signatures, viewingKeys);
+        (bytes memory proofData, uint256 numTxs) = decodeProof(rollupHeaderInputLength, txNumPubInputs);
+        processRollupProof(proofData, signatures, numTxs);
     }
 
     function processRollup(
-        bytes calldata proofData,
+        bytes calldata, /* encodedProofData */
         bytes calldata signatures,
-        bytes calldata viewingKeys,
+        bytes calldata, /* viewingKeys */
         bytes calldata providerSignature,
         address provider,
         address payable feeReceiver,
@@ -392,11 +393,30 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         uint256 initialGas = gasleft();
 
         require(rollupProviders[provider], 'Rollup Processor: UNKNOWN_PROVIDER');
-        bytes memory sigData =
-            abi.encodePacked(proofData[0:rollupHeaderInputLength], feeReceiver, feeLimit, feeDistributor);
-        RollupProcessorLibrary.validateSignature(keccak256(sigData), providerSignature, provider);
 
-        processRollupProof(proofData, signatures, viewingKeys);
+        (bytes memory proofData, uint256 numTxs) = decodeProof(rollupHeaderInputLength, txNumPubInputs);
+
+        bytes32 digest;
+        uint256 headerSize = rollupHeaderInputLength;
+        assembly {
+            let ptr := add(proofData, add(headerSize, 0x20))
+            let tmp0 := mload(ptr)
+            let tmp1 := mload(add(ptr, 0x20))
+            let tmp2 := mload(add(ptr, 0x40))
+
+            mstore(ptr, shl(0x60, feeReceiver))
+            mstore(add(ptr, 0x14), feeLimit)
+            mstore(add(ptr, 0x34), shl(0x60, sload(feeDistributor_slot)))
+
+            digest := keccak256(add(proofData, 0x20), add(headerSize, 0x48))
+
+            mstore(ptr, tmp0)
+            mstore(add(ptr, 0x20), tmp1)
+            mstore(add(ptr, 0x40), tmp2)
+        }
+        RollupProcessorLibrary.validateSignature(digest, providerSignature, provider);
+
+        processRollupProof(proofData, signatures, numTxs);
 
         transferFee(proofData);
 
@@ -415,9 +435,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     function processRollupProof(
         bytes memory proofData,
         bytes memory signatures,
-        bytes calldata /*viewingKeys*/
+        uint256 numTxs
     ) internal {
-        uint256 numTxs = verifyProofAndUpdateState(proofData);
+        verifyProofAndUpdateState(proofData);
         processDepositsAndWithdrawals(proofData, numTxs, signatures);
         processDefiBridges(proofData);
     }
@@ -426,8 +446,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
      * @dev Verify the zk proof and update the contract state variables with those provided by the rollup.
      * @param proofData - cryptographic zk proof data. Passed to the verifier for verification.
      */
-    function verifyProofAndUpdateState(bytes memory proofData) internal returns (uint256) {
-        (bytes32[4] memory newRoots, uint256 rollupId, uint256 rollupSize, uint256 numTxs, uint256 newDataSize) =
+    function verifyProofAndUpdateState(bytes memory proofData) internal {
+        (bytes32[4] memory newRoots, uint256 rollupId, uint256 rollupSize, uint256 newDataSize) =
             validateMerkleRoots(proofData);
 
         // Verify the rollup proof.
@@ -493,7 +513,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         dataSize = newDataSize;
 
         emit RollupProcessed(rollupId, dataRoot, nullRoot, rootRoot, dataSize);
-        return numTxs;
     }
 
     /**
@@ -507,7 +526,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             bytes32[4] memory,
             uint256,
             uint256,
-            uint256,
             uint256
         )
     {
@@ -519,13 +537,12 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             uint256[3] memory nums,
             bytes32[4] memory oldRoots,
             bytes32[4] memory newRoots
-        ) = decodeProof(proofData);
+        ) = extractRoots(proofData);
 
         //! Assertion that rollup size cannot be 0?
-        uint256 numTxs = nums[1];
 
         // Ensure we are inserting at the next subtree boundary.
-        uint256 toInsert = numTxs.mul(2);
+        uint256 toInsert = nums[1].mul(2);
         if (dataSize % toInsert == 0) {
             require(nums[2] == dataSize, 'Rollup Processor: INCORRECT_DATA_START_INDEX');
         } else {
@@ -540,7 +557,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         require(oldRoots[3] == defiRoot, 'Rollup Processor: INCORRECT_DEFI_ROOT');
         require(nums[0] == nextRollupId, 'Rollup Processor: ID_NOT_SEQUENTIAL');
 
-        return (newRoots, nums[0], nums[1], numTxs, nums[2] + toInsert);
+        return (newRoots, nums[0], nums[1], nums[2] + toInsert);
     }
 
     /**
@@ -636,7 +653,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
 
     function processDefiBridges(bytes memory proofData) internal {
         bytes32 prevDefiInteractionHash =
-            extractPrevDefiInteractionHash(proofData, rollupHeaderInputLength, txPubInputLength, numberOfBridgeCalls);
+            extractPrevDefiInteractionHash(proofData, rollupHeaderInputLength, numberOfBridgeCalls, txNumPubInputs);
         require(
             prevDefiInteractionHash == defiInteractionHash,
             'Rollup Processor: INCORRECT_PREV_DEFI_INTERACTION_HASH'

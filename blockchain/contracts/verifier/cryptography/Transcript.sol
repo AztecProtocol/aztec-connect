@@ -12,18 +12,17 @@ import {Bn254Crypto} from './Bn254Crypto.sol';
  * @dev Generates Plonk random challenges
  */
 library Transcript {
-
     struct TranscriptData {
         bytes32 current_challenge;
     }
-    
+
     /**
      * Compute keccak256 hash of 2 4-byte variables (circuit_size, num_public_inputs)
      */
     function generate_initial_challenge(
-                TranscriptData memory self,
-                uint256 circuit_size,
-                uint256 num_public_inputs
+        TranscriptData memory self,
+        uint256 circuit_size,
+        uint256 num_public_inputs
     ) internal pure {
         bytes32 challenge;
         assembly {
@@ -31,7 +30,7 @@ library Transcript {
             mstore8(add(mPtr, 0x20), shr(24, circuit_size))
             mstore8(add(mPtr, 0x21), shr(16, circuit_size))
             mstore8(add(mPtr, 0x22), shr(8, circuit_size))
-            mstore8(add(mPtr, 0x23), circuit_size)           
+            mstore8(add(mPtr, 0x23), circuit_size)
             mstore8(add(mPtr, 0x24), shr(24, num_public_inputs))
             mstore8(add(mPtr, 0x25), shr(16, num_public_inputs))
             mstore8(add(mPtr, 0x26), shr(8, num_public_inputs))
@@ -50,7 +49,7 @@ library Transcript {
         TranscriptData memory self,
         Types.ChallengeTranscript memory challenges,
         uint256 num_public_inputs
-    ) internal pure  {
+    ) internal pure {
         bytes32 challenge;
         bytes32 old_challenge = self.current_challenge;
         uint256 p = Bn254Crypto.r_mod;
@@ -90,7 +89,7 @@ library Transcript {
         TranscriptData memory self,
         Types.ChallengeTranscript memory challenges,
         Types.G1Point memory Z
-    ) internal pure  {
+    ) internal pure {
         bytes32 challenge;
         bytes32 old_challenge = self.current_challenge;
         uint256 p = Bn254Crypto.r_mod;
@@ -115,7 +114,7 @@ library Transcript {
         Types.G1Point memory T2,
         Types.G1Point memory T3,
         Types.G1Point memory T4
-    ) internal pure  {
+    ) internal pure {
         bytes32 challenge;
         bytes32 old_challenge = self.current_challenge;
         uint256 p = Bn254Crypto.r_mod;
@@ -147,8 +146,12 @@ library Transcript {
      * These values are placed linearly in the proofData, we can extract them with a calldatacopy call
      *
      */
-    function generate_nu_challenges(TranscriptData memory self, Types.ChallengeTranscript memory challenges, uint256 quotient_poly_eval, uint256 num_public_inputs) internal pure
-    {
+    function generate_nu_challenges(
+        TranscriptData memory self,
+        Types.ChallengeTranscript memory challenges,
+        uint256 quotient_poly_eval,
+        uint256 num_public_inputs
+    ) internal pure {
         uint256 p = Bn254Crypto.r_mod;
         bytes32 current_challenge = self.current_challenge;
         uint256 base_v_challenge;
@@ -241,7 +244,7 @@ library Transcript {
         Types.ChallengeTranscript memory challenges,
         Types.G1Point memory PI_Z,
         Types.G1Point memory PI_Z_OMEGA
-    ) internal pure  {
+    ) internal pure {
         bytes32 challenge;
         bytes32 old_challenge = self.current_challenge;
         uint256 p = Bn254Crypto.r_mod;

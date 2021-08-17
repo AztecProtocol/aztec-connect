@@ -19,20 +19,23 @@ const randomLeafHash = () => randomBytes(32);
 
 const randomNullifier = () => Buffer.concat([Buffer.alloc(16), randomBytes(16)]);
 
-const dataRoots = [WorldStateConstants.EMPTY_DATA_ROOT, randomBytes(32), randomBytes(32), randomBytes(32)];
-const nullifierRoots = [WorldStateConstants.EMPTY_NULL_ROOT, randomBytes(32), randomBytes(32), randomBytes(32)];
-const dataRootRoots = [WorldStateConstants.EMPTY_ROOT_ROOT, randomBytes(32), randomBytes(32), randomBytes(32)];
-const defiRoots = [WorldStateConstants.EMPTY_DEFI_ROOT, randomBytes(32), randomBytes(32), randomBytes(32)];
-
-const interactionHashes = [
-  WorldStateConstants.INITIAL_INTERACTION_HASH,
-  WorldStateConstants.INITIAL_INTERACTION_HASH,
-  WorldStateConstants.INITIAL_INTERACTION_HASH,
-  WorldStateConstants.INITIAL_INTERACTION_HASH,
+const extendRoots = (roots: Buffer[], size = 10) => [
+  ...roots,
+  ...[...Array(size - roots.length)].map(() => randomBytes(32)),
 ];
 
+const dataRoots = extendRoots([WorldStateConstants.EMPTY_DATA_ROOT]);
+const nullifierRoots = extendRoots([WorldStateConstants.EMPTY_NULL_ROOT]);
+const dataRootRoots = extendRoots([WorldStateConstants.EMPTY_ROOT_ROOT]);
+const defiRoots = extendRoots([WorldStateConstants.EMPTY_DEFI_ROOT]);
+
 class InnerProofOutput {
-  constructor(public innerProofs: InnerProofData[], public signatures: Buffer[], public totalTxFees: bigint[]) {}
+  constructor(
+    public innerProofs: InnerProofData[],
+    public signatures: Buffer[],
+    public totalTxFees: bigint[],
+    public viewingKeys: ViewingKey[] = [],
+  ) {}
 }
 
 export const createDepositProof = async (
@@ -60,7 +63,7 @@ export const createDepositProof = async (
   const totalTxFees: bigint[] = [];
   totalTxFees[assetId] = txFee;
 
-  return new InnerProofOutput([innerProof], [signature], totalTxFees);
+  return new InnerProofOutput([innerProof], [signature], totalTxFees, [ViewingKey.random(), ViewingKey.random()]);
 };
 
 export const createWithdrawProof = (amount: bigint, withdrawalAddress: EthAddress, assetId: number, txFee = 0n) => {
@@ -79,7 +82,7 @@ export const createWithdrawProof = (amount: bigint, withdrawalAddress: EthAddres
   const totalTxFees: bigint[] = [];
   totalTxFees[assetId] = txFee;
 
-  return new InnerProofOutput([innerProof], [], totalTxFees);
+  return new InnerProofOutput([innerProof], [], totalTxFees, [ViewingKey.random(), ViewingKey.random()]);
 };
 
 export const createSendProof = (assetId = 1, txFee = 0n) => {
@@ -98,10 +101,27 @@ export const createSendProof = (assetId = 1, txFee = 0n) => {
   const totalTxFees: bigint[] = [];
   totalTxFees[assetId] = txFee;
 
-  return new InnerProofOutput([innerProof], [], totalTxFees);
+  return new InnerProofOutput([innerProof], [], totalTxFees, [ViewingKey.random(), ViewingKey.random()]);
 };
 
-export const createDefiProof = (bridgeId: BridgeId, inputValue: bigint, txFee = 0n) => {
+export const createAccountProof = () => {
+  const innerProof = new InnerProofData(
+    ProofId.ACCOUNT,
+    randomBytes(32),
+    randomBytes(32),
+    randomBytes(32),
+    randomLeafHash(),
+    randomLeafHash(),
+    randomNullifier(),
+    randomNullifier(),
+    randomBytes(32),
+    randomBytes(32),
+  );
+
+  return new InnerProofOutput([innerProof], [], []);
+};
+
+export const createDefiDepositProof = (bridgeId: BridgeId, inputValue: bigint, txFee = 0n) => {
   const innerProof = new InnerProofData(
     ProofId.DEFI_DEPOSIT,
     toBufferBE(0n, 32),
@@ -111,7 +131,26 @@ export const createDefiProof = (bridgeId: BridgeId, inputValue: bigint, txFee = 
     randomLeafHash(),
     randomNullifier(),
     randomNullifier(),
+    randomBytes(32),
     Buffer.alloc(32),
+  );
+  const totalTxFees: bigint[] = [];
+  totalTxFees[bridgeId.inputAssetId] = txFee;
+
+  return new InnerProofOutput([innerProof], [], totalTxFees, [ViewingKey.random(), ViewingKey.random()]);
+};
+
+export const createDefiClaimProof = (bridgeId: BridgeId, txFee = 0n) => {
+  const innerProof = new InnerProofData(
+    ProofId.DEFI_CLAIM,
+    Buffer.alloc(32),
+    Buffer.alloc(32),
+    bridgeId.toBuffer(),
+    randomLeafHash(),
+    randomLeafHash(),
+    randomNullifier(),
+    Buffer.alloc(32),
+    randomBytes(32),
     Buffer.alloc(32),
   );
   const totalTxFees: bigint[] = [];
@@ -132,6 +171,7 @@ export const mergeInnerProofs = (output: InnerProofOutput[]) => {
       .filter(s => s)
       .flat(),
     totalTxFees,
+    output.map(o => o.viewingKeys).flat(),
   );
 };
 
@@ -185,7 +225,7 @@ export const createRollupProof = async (
     feeDistributorAddress = EthAddress.randomAddress(),
   }: RollupProofOptions = {},
 ) => {
-  const { innerProofs, totalTxFees } = innerProofOutput;
+  const { innerProofs, totalTxFees, viewingKeys } = innerProofOutput;
 
   const dataStartIndexBuf = numToBuffer(dataStartIndex === undefined ? rollupId * rollupSize * 2 : dataStartIndex);
 
@@ -247,7 +287,7 @@ export const createRollupProof = async (
     padding,
     recursiveProofOutput,
     ...interactionNoteCommitments,
-    previousDefiInteractionHash || interactionHashes[rollupId],
+    previousDefiInteractionHash || WorldStateConstants.INITIAL_INTERACTION_HASH,
   ]);
 
   const providerAddress = EthAddress.fromString(await rollupProvider.getAddress());
@@ -266,6 +306,6 @@ export const createRollupProof = async (
     providerSignature,
     sigData,
     rollupProofData,
-    viewingKeys: [ViewingKey.random(), ViewingKey.random()],
+    viewingKeys,
   };
 };

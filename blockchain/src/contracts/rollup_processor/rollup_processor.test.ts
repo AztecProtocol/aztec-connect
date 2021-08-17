@@ -1,28 +1,33 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
 import { Asset } from '@aztec/barretenberg/blockchain';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { DefiInteractionNote, packInteractionNotes } from '@aztec/barretenberg/note_algorithms';
+import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
-import { ethers } from 'hardhat';
-import { RollupProcessor } from './rollup_processor';
-import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
-import { FeeDistributor } from '../fee_distributor';
-import { Signer } from 'ethers';
+import { Contract } from '@ethersproject/contracts';
 import { randomBytes } from 'crypto';
+import { Signer } from 'ethers';
+import { ethers } from 'hardhat';
+import { EthersAdapter } from '../../provider';
+import { Web3Signer } from '../../signer';
+import { FeeDistributor } from '../fee_distributor';
+import { advanceBlocks, blocksToAdvance } from './fixtures/advance_block';
 import {
+  createAccountProof,
+  createDefiClaimProof,
+  createDefiDepositProof,
   createDepositProof,
   createRollupProof,
   createSendProof,
   createWithdrawProof,
   DefiInteractionData,
+  mergeInnerProofs,
 } from './fixtures/create_mock_proof';
-import { Web3Signer } from '../../signer';
-import { EthersAdapter } from '../../provider';
-import { advanceBlocks, blocksToAdvance } from './fixtures/advance_block';
 import { deployMockDefiBridge } from './fixtures/setup_defi_bridges';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
-import { DefiInteractionNote, packInteractionNotes } from '@aztec/barretenberg/note_algorithms';
-import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
+import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
+import { RollupProcessor } from './rollup_processor';
 
 describe('rollup_processor', () => {
   const ethereumProvider = new EthersAdapter(ethers.provider);
@@ -172,12 +177,13 @@ describe('rollup_processor', () => {
     );
   });
 
-  it('should get specified blocks', async () => {
+  it('should process all proof types and get specified blocks', async () => {
+    const inputAssetId = AssetId.DAI;
     const bridge = await deployMockDefiBridge(
       signers[0],
       1,
-      EthAddress.ZERO,
       assets[AssetId.DAI].getStaticInfo().address,
+      EthAddress.ZERO,
       EthAddress.ZERO,
       0n,
       2n,
@@ -185,102 +191,145 @@ describe('rollup_processor', () => {
       true,
       10n,
     );
-    const bridgeId = new BridgeId(EthAddress.fromString(bridge.address), 1, AssetId.ETH, AssetId.DAI, 0);
+    const bridgeId = new BridgeId(EthAddress.fromString(bridge.address), 1, AssetId.DAI, AssetId.ETH, 0);
     const numberOfBridgeCalls = RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
 
-    // Top up rollup processor to transfer eth to defi bridges.
-    await assets[0].transfer(10n, addresses[0], rollupProcessor.address);
-
-    const depositAmount = 30n;
-    const withdrawalAmount = 10n;
     const userAAddress = addresses[1];
     const userA = signers[1];
 
-    // Rollup block 0.
-    {
-      const { proofData, signatures } = await createRollupProof(
-        signers[0],
-        await createDepositProof(depositAmount, userAAddress, userA, AssetId.DAI),
-      );
-      await assets[AssetId.DAI].approve(depositAmount, userAAddress, rollupProcessor.address);
-      await rollupProcessor.depositPendingFunds(AssetId.DAI, depositAmount, undefined, {
-        signingAddress: userAAddress,
-      });
-      const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], signatures);
-      await rollupProcessor.sendTx(tx);
-    }
+    const depositAmount = 30n;
+    const sendAmount = 6n;
+    const defiDepositAmount0 = 12n;
+    const defiDepositAmount1 = 8n;
+    const withdrawalAmount = 10n;
 
-    // Rollup block 1.
-    {
-      const { proofData } = await createRollupProof(
-        signers[0],
-        createWithdrawProof(withdrawalAmount, userAAddress, AssetId.DAI),
-        {
-          rollupId: 1,
-          defiInteractionData: [new DefiInteractionData(bridgeId, 1n), new DefiInteractionData(bridgeId, 1n)],
-        },
-      );
-      const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
-      await rollupProcessor.sendTx(tx);
-    }
-
-    const interactionResult0 = [
-      new DefiInteractionNote(bridgeId, 4, 1n, 2n, 0n, true),
-      new DefiInteractionNote(bridgeId, 5, 1n, 2n, 0n, true),
+    const innerProofOutputs = [
+      await createDepositProof(depositAmount, userAAddress, userA, inputAssetId),
+      mergeInnerProofs([createAccountProof(), createSendProof(inputAssetId, sendAmount)]),
+      mergeInnerProofs([
+        createDefiDepositProof(bridgeId, defiDepositAmount0),
+        createDefiDepositProof(bridgeId, defiDepositAmount1),
+      ]),
+      createWithdrawProof(withdrawalAmount, userAAddress, inputAssetId),
+      createDefiClaimProof(bridgeId),
     ];
 
-    // Rollup block 2.
-    {
-      const { proofData } = await createRollupProof(signers[0], createSendProof(AssetId.ETH), {
-        rollupId: 2,
-        previousDefiInteractionHash: packInteractionNotes(interactionResult0, numberOfBridgeCalls),
-        defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
+    const expectedInteractionResult = [
+      new DefiInteractionNote(bridgeId, numberOfBridgeCalls * 2, 12n, 2n, 0n, true),
+      new DefiInteractionNote(bridgeId, numberOfBridgeCalls * 2 + 1, 8n, 2n, 0n, true),
+    ];
+    const previousDefiInteractionHash = packInteractionNotes(expectedInteractionResult, numberOfBridgeCalls);
+
+    // Deposit to contract.
+    await assets[inputAssetId].approve(depositAmount, userAAddress, rollupProcessor.address);
+    await rollupProcessor.depositPendingFunds(inputAssetId, depositAmount, undefined, {
+      signingAddress: userAAddress,
+    });
+
+    for (let i = 0; i < innerProofOutputs.length; ++i) {
+      const { proofData, viewingKeys, signatures } = await createRollupProof(signers[0], innerProofOutputs[i], {
+        rollupId: i,
+        defiInteractionData:
+          i === 2
+            ? [
+                new DefiInteractionData(bridgeId, defiDepositAmount0),
+                new DefiInteractionData(bridgeId, defiDepositAmount1),
+              ]
+            : [],
+        previousDefiInteractionHash: i === 3 ? previousDefiInteractionHash : undefined,
       });
-      const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
+      const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, viewingKeys, signatures);
       await rollupProcessor.sendTx(tx);
     }
 
-    const rollupIdStart = 0;
-    const blocks = await rollupProcessor.getRollupBlocksFrom(rollupIdStart, 1);
-    expect(blocks.length).toBe(3);
+    const blocks = await rollupProcessor.getRollupBlocksFrom(0, 1);
+    expect(blocks.length).toBe(5);
+
+    const emptyViewingKeys = [ViewingKey.EMPTY, ViewingKey.EMPTY];
 
     {
       const block = blocks[0];
       const rollup = RollupProofData.fromBuffer(block.rollupProofData, block.viewingKeysData);
-      expect(block.rollupSize).toBe(2);
-      expect(block.interactionResult.length).toBe(0);
-      expect(rollup.rollupId).toBe(0);
-      expect(rollup.dataStartIndex).toBe(0);
-      expect(toBigIntBE(rollup.innerProofData[0].publicInput)).toBe(depositAmount);
-      expect(toBigIntBE(rollup.innerProofData[0].publicOutput)).toBe(0n);
-      expect(rollup.innerProofData[0].inputOwner.toString('hex')).toBe(userAAddress.toBuffer32().toString('hex'));
+      const { innerProofs, viewingKeys } = innerProofOutputs[0];
+      expect(block).toMatchObject({
+        rollupId: 0,
+        rollupSize: 2,
+        interactionResult: [],
+      });
+      expect(rollup).toMatchObject({
+        rollupId: 0,
+        dataStartIndex: 0,
+        innerProofData: [innerProofs[0], InnerProofData.PADDING],
+        viewingKeys: [viewingKeys, emptyViewingKeys],
+      });
     }
 
     {
       const block = blocks[1];
       const rollup = RollupProofData.fromBuffer(block.rollupProofData, block.viewingKeysData);
-      expect(block.rollupSize).toBe(2);
-      expect(block.interactionResult.length).toBe(2);
-      expect(block.interactionResult[0].equals(interactionResult0[0])).toBe(true);
-      expect(block.interactionResult[1].equals(interactionResult0[1])).toBe(true);
-      expect(rollup.rollupId).toBe(1);
-      expect(rollup.dataStartIndex).toBe(4);
-      expect(toBigIntBE(rollup.innerProofData[0].publicInput)).toBe(0n);
-      expect(toBigIntBE(rollup.innerProofData[0].publicOutput)).toBe(withdrawalAmount);
-      expect(rollup.innerProofData[0].outputOwner.toString('hex')).toBe(userAAddress.toBuffer32().toString('hex'));
+      const { innerProofs, viewingKeys } = innerProofOutputs[1];
+      expect(block).toMatchObject({
+        rollupId: 1,
+        rollupSize: 2,
+        interactionResult: [],
+      });
+      expect(rollup).toMatchObject({
+        rollupId: 1,
+        dataStartIndex: 4,
+        innerProofData: innerProofs,
+        viewingKeys: [emptyViewingKeys, viewingKeys],
+      });
     }
 
     {
-      const interactionResult = new DefiInteractionNote(bridgeId, numberOfBridgeCalls * 2, 1n, 2n, 0n, true);
       const block = blocks[2];
       const rollup = RollupProofData.fromBuffer(block.rollupProofData, block.viewingKeysData);
-      expect(block.rollupSize).toBe(2);
-      expect(block.interactionResult.length).toBe(1);
-      expect(block.interactionResult[0].equals(interactionResult)).toBe(true);
-      expect(rollup.rollupId).toBe(2);
-      expect(rollup.dataStartIndex).toBe(8);
-      expect(toBigIntBE(rollup.innerProofData[0].publicInput)).toBe(0n);
-      expect(toBigIntBE(rollup.innerProofData[0].publicOutput)).toBe(0n);
+      const { innerProofs, viewingKeys } = innerProofOutputs[2];
+      expect(block).toMatchObject({
+        rollupId: 2,
+        rollupSize: 2,
+        interactionResult: expectedInteractionResult,
+      });
+      expect(rollup).toMatchObject({
+        rollupId: 2,
+        dataStartIndex: 8,
+        innerProofData: innerProofs,
+        viewingKeys: [viewingKeys.slice(0, 2), viewingKeys.slice(2)],
+      });
+    }
+
+    {
+      const block = blocks[3];
+      const rollup = RollupProofData.fromBuffer(block.rollupProofData, block.viewingKeysData);
+      const { innerProofs, viewingKeys } = innerProofOutputs[3];
+      expect(block).toMatchObject({
+        rollupId: 3,
+        rollupSize: 2,
+        interactionResult: [],
+      });
+      expect(rollup).toMatchObject({
+        rollupId: 3,
+        dataStartIndex: 12,
+        innerProofData: [innerProofs[0], InnerProofData.PADDING],
+        viewingKeys: [viewingKeys, emptyViewingKeys],
+      });
+    }
+
+    {
+      const block = blocks[4];
+      const rollup = RollupProofData.fromBuffer(block.rollupProofData, block.viewingKeysData);
+      const { innerProofs } = innerProofOutputs[4];
+      expect(block).toMatchObject({
+        rollupId: 4,
+        rollupSize: 2,
+        interactionResult: [],
+      });
+      expect(rollup).toMatchObject({
+        rollupId: 4,
+        dataStartIndex: 16,
+        innerProofData: [innerProofs[0], InnerProofData.PADDING],
+        viewingKeys: [emptyViewingKeys, emptyViewingKeys],
+      });
     }
   });
 });

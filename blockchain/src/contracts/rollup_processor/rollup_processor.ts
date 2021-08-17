@@ -137,10 +137,13 @@ export class RollupProcessor {
   }
 
   async createEscapeHatchProofTx(proofData: Buffer, viewingKeys: ViewingKey[], signatures: Buffer[]) {
+    const rollupProofData = RollupProofData.fromBuffer(proofData);
+    const trailingData = proofData.slice(rollupProofData.toBuffer().length);
+    const encodedProof = Buffer.concat([rollupProofData.encode(), trailingData]);
     const formattedSignatures = solidityFormatSignatures(signatures);
     const tx = await this.rollupProcessor.populateTransaction
       .escapeHatch(
-        `0x${proofData.toString('hex')}`,
+        `0x${encodedProof.toString('hex')}`,
         formattedSignatures,
         Buffer.concat(viewingKeys.map(vk => vk.toBuffer())),
       )
@@ -157,10 +160,13 @@ export class RollupProcessor {
     feeReceiver: EthAddress,
     feeLimit = BigInt(10) ** BigInt(18),
   ) {
+    const rollupProofData = RollupProofData.fromBuffer(proofData);
+    const trailingData = proofData.slice(rollupProofData.toBuffer().length);
+    const encodedProof = Buffer.concat([rollupProofData.encode(), trailingData]);
     const formattedSignatures = solidityFormatSignatures(signatures);
     const tx = await this.rollupProcessor.populateTransaction
       .processRollup(
-        `0x${proofData.toString('hex')}`,
+        `0x${encodedProof.toString('hex')}`,
         formattedSignatures,
         Buffer.concat(viewingKeys.map(vk => vk.toBuffer())),
         providerSignature,
@@ -336,8 +342,9 @@ export class RollupProcessor {
   ): Block {
     const rollupAbi = new utils.Interface(abi);
     const result = rollupAbi.parseTransaction({ data: tx.data });
-    const rollupProofData = Buffer.from(result.args.proofData.slice(2), 'hex');
-    const viewingKeysData = Buffer.from(result.args.viewingKeys.slice(2), 'hex');
+    const [proofData, , viewingKeys] = result.args;
+    const rollupProofData = RollupProofData.decode(Buffer.from(proofData.slice(2), 'hex')).toBuffer();
+    const viewingKeysData = Buffer.from(viewingKeys.slice(2), 'hex');
 
     return {
       created: new Date(tx.timestamp! * 1000),
