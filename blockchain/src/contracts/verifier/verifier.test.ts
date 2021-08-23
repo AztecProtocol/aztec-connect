@@ -16,7 +16,11 @@ describe('Verifier', function () {
     const proof = await getRollupData(inner, outer);
     const proofData = RollupProofData.fromBuffer(proof);
     const gasUsed = await verifier.verify(proof, proofData.rollupSize, { gasLimit });
-    // console.log(`gasUsed: ${gasUsed}`);
+
+    // const proof = await getRollupData(inner, outer);
+    // const proofData = RollupProofData.fromBuffer(proof);
+    // const gasUsed = await verifier.verify(proof, proofData.rollupSize, { gasLimit });
+    // // console.log(`gasUsed: ${gasUsed}`);
   }
 
   it('should validate a 1 rollup proof (1 tx)', async () => {
