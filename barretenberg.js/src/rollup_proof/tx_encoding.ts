@@ -5,4 +5,5 @@ export enum TxEncoding {
   ACCOUNT,
   DEFI_DEPOSIT,
   DEFI_CLAIM,
+  PADDING,
 }

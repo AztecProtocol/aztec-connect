@@ -38,13 +38,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
 
     IVerifier public verifier;
 
-    uint256 public constant numberOfAssets = 16;
-    uint256 public constant numberOfBridgeCalls = 4;
-    uint256 public constant txNumPubInputs = 10;
-    uint256 public constant rollupNumHeaderInputs = 11 + (numberOfBridgeCalls * 2) + (numberOfAssets * 2);
-    uint256 public constant txPubInputLength = txNumPubInputs * 32; // public inputs length for of each inner proof tx
-    uint256 public constant rollupHeaderInputLength = rollupNumHeaderInputs * 32;
-    uint256 public constant ethAssetId = 0;
     uint256 public immutable escapeBlockLowerBound;
     uint256 public immutable escapeBlockUpperBound;
 
@@ -377,8 +370,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         (bool isOpen, ) = getEscapeHatchStatus();
         require(isOpen, 'Rollup Processor: ESCAPE_BLOCK_RANGE_INCORRECT');
 
-        (bytes memory proofData, uint256 numTxs) = decodeProof(rollupHeaderInputLength, txNumPubInputs);
-        processRollupProof(proofData, signatures, numTxs);
+        (bytes memory proofData, uint256 numTxs, uint256 publicInputsHash) = decodeProof(rollupHeaderInputLength, txNumPubInputs);
+        processRollupProof(proofData, signatures, numTxs, publicInputsHash);
     }
 
     function processRollup(
@@ -394,29 +387,30 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
 
         require(rollupProviders[provider], 'Rollup Processor: UNKNOWN_PROVIDER');
 
-        (bytes memory proofData, uint256 numTxs) = decodeProof(rollupHeaderInputLength, txNumPubInputs);
+        (bytes memory proofData, uint256 numTxs, uint256 publicInputsHash) = decodeProof(rollupHeaderInputLength, txNumPubInputs);
 
-        bytes32 digest;
-        uint256 headerSize = rollupHeaderInputLength;
-        assembly {
-            let ptr := add(proofData, add(headerSize, 0x20))
-            let tmp0 := mload(ptr)
-            let tmp1 := mload(add(ptr, 0x20))
-            let tmp2 := mload(add(ptr, 0x40))
+        {
+            bytes32 digest;
+            uint256 headerSize = rollupHeaderInputLength;
+            assembly {
+                let ptr := add(proofData, add(headerSize, 0x20))
+                let tmp0 := mload(ptr)
+                let tmp1 := mload(add(ptr, 0x20))
+                let tmp2 := mload(add(ptr, 0x40))
 
-            mstore(ptr, shl(0x60, feeReceiver))
-            mstore(add(ptr, 0x14), feeLimit)
-            mstore(add(ptr, 0x34), shl(0x60, sload(feeDistributor_slot)))
+                mstore(ptr, shl(0x60, feeReceiver))
+                mstore(add(ptr, 0x14), feeLimit)
+                mstore(add(ptr, 0x34), shl(0x60, sload(feeDistributor_slot)))
 
-            digest := keccak256(add(proofData, 0x20), add(headerSize, 0x48))
+                digest := keccak256(add(proofData, 0x20), add(headerSize, 0x48))
 
-            mstore(ptr, tmp0)
-            mstore(add(ptr, 0x20), tmp1)
-            mstore(add(ptr, 0x40), tmp2)
+                mstore(ptr, tmp0)
+                mstore(add(ptr, 0x20), tmp1)
+                mstore(add(ptr, 0x40), tmp2)
+            }
+            RollupProcessorLibrary.validateSignature(digest, providerSignature, provider);
         }
-        RollupProcessorLibrary.validateSignature(digest, providerSignature, provider);
-
-        processRollupProof(proofData, signatures, numTxs);
+        processRollupProof(proofData, signatures, numTxs, publicInputsHash);
 
         transferFee(proofData);
 
@@ -435,9 +429,10 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     function processRollupProof(
         bytes memory proofData,
         bytes memory signatures,
-        uint256 numTxs
+        uint256 numTxs,
+        uint256 publicInputsHash
     ) internal {
-        verifyProofAndUpdateState(proofData);
+        verifyProofAndUpdateState(proofData, publicInputsHash);
         processDepositsAndWithdrawals(proofData, numTxs, signatures);
         processDefiBridges(proofData);
     }
@@ -446,7 +441,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
      * @dev Verify the zk proof and update the contract state variables with those provided by the rollup.
      * @param proofData - cryptographic zk proof data. Passed to the verifier for verification.
      */
-    function verifyProofAndUpdateState(bytes memory proofData) internal {
+    function verifyProofAndUpdateState(bytes memory proofData, uint256 publicInputsHash) internal {
         (bytes32[4] memory newRoots, uint256 rollupId, uint256 rollupSize, uint256 newDataSize) =
             validateMerkleRoots(proofData);
 
@@ -456,49 +451,76 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         // redundant copy of `proofData` into memory, which costs between 100,000 to 1,000,000 gas
         // depending on the rollup size!
         bool proof_verified = false;
-        address verifierAddress;
-        uint256 temp1;
-        uint256 temp2;
-        uint256 temp3;
+        uint256 broadcastedDataSize = rollupHeaderInputLength + 4;
+        uint256 rollupHeaderInputLengthLocal = rollupHeaderInputLength;
         assembly {
-            // Step 1: we need to insert 68 bytes of verifier 'calldata' just prior to proofData
-            // Start by defining the start of our 'calldata'. Also grab the verifier contract address from storage
-            let inputPtr := sub(proofData, 0x44)
-            verifierAddress := sload(verifier_slot)
 
-            // Step 2: we need to overwrite the memory between `inputPtr` and `inputPtr + 68`
-            // we load the existing 68 bytes of memory into stack variables temp1, temp2, temp3
-            // Once we have called the verifier contract, we will write this data back into memory
-            temp1 := mload(inputPtr)
-            temp2 := mload(add(inputPtr, 0x20))
-            temp3 := mload(add(inputPtr, 0x40))
+            /**
+             * Validate correctness of zk proof.
+             *
+             * 1st Item is to format verifier calldata.
+             **/
 
-            // Step 3: insert our calldata into memory
-            // We call the function `verify(bytes,uint256)`
-            // The function signature is 0xac318c5d
+            // Our first input param `encodedProofData` contains the concatenation of
+            // encoded 'broadcasted inputs' and the actual zk proof data.
+            // (The `boadcasted inputs` is converted into a 32-byte SHA256 hash, which is
+            // validated to equal the first public inputs of the zk proof. This is done in `Decoder.sol`).
+            // We need to identify the location in calldata that points to the start of the zk proof data.
+
+            // Step 1: compute size of zk proof data and its calldata pointer.
+            /**
+                Data layout for `bytes encodedProofData`...
+
+                0x00 : 0x20 : length of array
+                0x20 : 0x20 + header : root rollup header data
+                0x20 + header : 0x24 + header : X, the length of encoded inner join-split public inputs
+                0x24 + header : 0x24 + header + X : (inner join-split public inputs)
+                0x24 + header + X : 0x28 + header + X : Y, the length of the zk proof data
+                0x28 + header + X : 0x28 + haeder + X + Y : zk proof data
+
+                We need to recover the numeric value of `0x28 + header + X` and `Y`
+             **/
+            // Begin by getting length of encoded inner join-split public inputs.
+            // `calldataload(0x04)` points to start of bytes array. Add 0x24 to skip over length param and function signature.
+            // The calldata param *after* the header is the length of the pub inputs array. However it is a packed 4-byte param.
+            // To extract it, we subtract 28 bytes from the calldata pointer and mask off all but the 4 least significant bytes.
+            let encodedInnerDataSize := and(calldataload(add(add(calldataload(0x04), 0x24), sub(rollupHeaderInputLengthLocal, 0x1c))), 0xffffffff)
+
+            // broadcastedDataSize = inner join-split pubinput size + header size + 4 bytes (skip over zk proof length param)
+            broadcastedDataSize := add(broadcastedDataSize, encodedInnerDataSize)
+
+            // Compute zk proof data size by subtracting broadcastedDataSize from overall length of bytes encodedProofsData
+            let zkProofDataSize := sub(calldataload(add(calldataload(0x04), 0x04)), broadcastedDataSize)
+
+            // Compute calldata pointer to start of zk proof data by adding calldata offset to broadcastedDataSize
+            // (+0x24 skips over function signature and length param of bytes encodedProofData)
+            let zkProofDataPtr := add(broadcastedDataSize, add(calldataload(0x04), 0x24))
+
+            // Step 2: Format calldata for verifier contract call.
+
+            // Get free memory pointer - we copy calldata into memory starting here
+            let dataPtr := mload(0x40)
+
+            // We call the function `verify(bytes,uint256,uint256)`
+            // The function signature is 0x198e744a
             // Calldata map is:
-            // 0x00 - 0x04 : 0xac318c5d
+            // 0x00 - 0x04 : 0x198e744a
             // 0x04 - 0x24 : 0x40 (number of bytes between 0x04 and the start of the `proofData` array at 0x44)
-            // 0x24 - 0x44 : rollupSize
-            // 0x44 - .... : proofData (already present in memory)
-            mstore8(inputPtr, 0xac)
-            mstore8(add(inputPtr, 0x01), 0x31)
-            mstore8(add(inputPtr, 0x02), 0x8c)
-            mstore8(add(inputPtr, 0x03), 0x5d)
-            mstore(add(inputPtr, 0x04), 0x40)
-            mstore(add(inputPtr, 0x24), rollupSize)
+            // 0x24 - 0x44 : numTxs
+            // 0x44 - .... : proofData
+            mstore8(dataPtr, 0x19)
+            mstore8(add(dataPtr, 0x01), 0x8e)
+            mstore8(add(dataPtr, 0x02), 0x74)
+            mstore8(add(dataPtr, 0x03), 0x4a)
+            mstore(add(dataPtr, 0x04), 0x60)
+            mstore(add(dataPtr, 0x24), calldataload(add(calldataload(0x04), 0x44))) // numTxs
+            mstore(add(dataPtr, 0x44), publicInputsHash) // computed SHA256 hash of broadcasted data
+            mstore(add(dataPtr, 0x64), zkProofDataSize) // length of zkProofData bytes array
+            calldatacopy(add(dataPtr, 0x84), zkProofDataPtr, zkProofDataSize) // copy the zk proof data into memory
 
-            // Total calldata size is proofData.length + 96 bytes (the 66 bytes we just wrote, plus the 32 byte 'length' field of proofData)
-            let callSize := add(mload(proofData), 0x64)
-
-            // Step 4: Call our verifier contract. If does not return any values, but will throw an error if the proof is not valid
+            // Step 3: Call our verifier contract. If does not return any values, but will throw an error if the proof is not valid
             // i.e. verified == false if proof is not valid
-            proof_verified := staticcall(gas(), verifierAddress, inputPtr, callSize, 0x00, 0x00)
-
-            // Step 5: Restore the memory we overwrote with our 'calldata'
-            mstore(inputPtr, temp1)
-            mstore(add(inputPtr, 0x20), temp2)
-            mstore(add(inputPtr, 0x40), temp3)
+            proof_verified := staticcall(gas(), sload(verifier_slot), dataPtr, add(zkProofDataSize, 0x84), 0x00, 0x00)
         }
 
         // Check the proof is valid!
@@ -653,7 +675,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
 
     function processDefiBridges(bytes memory proofData) internal {
         bytes32 prevDefiInteractionHash =
-            extractPrevDefiInteractionHash(proofData, rollupHeaderInputLength, numberOfBridgeCalls, txNumPubInputs);
+            extractPrevDefiInteractionHash(proofData, rollupHeaderInputLength);
         require(
             prevDefiInteractionHash == defiInteractionHash,
             'Rollup Processor: INCORRECT_PREV_DEFI_INTERACTION_HASH'

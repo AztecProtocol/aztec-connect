@@ -71,7 +71,7 @@ export const randomInnerProofData = (proofId = ProofId.JOIN_SPLIT) => {
 export const createRollupProofData = (innerProofs: InnerProofData[], viewingKeys: ViewingKey[][] = []) => {
   const bridgeIds = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => randomBytes(32));
   const defiDepositSums = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => randomBytes(32));
-  const defiInteractionNotes = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => randomBytes(64));
+  const defiInteractionNotes = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => randomBytes(32));
   const assetIds = [...Array(RollupProofData.NUMBER_OF_ASSETS)].map(() => randomBytes(32));
   const totalTxFees = [...Array(RollupProofData.NUMBER_OF_ASSETS)].map(() => randomBytes(32));
   return new RollupProofData(
@@ -90,10 +90,10 @@ export const createRollupProofData = (innerProofs: InnerProofData[], viewingKeys
     defiDepositSums,
     assetIds,
     totalTxFees,
-    innerProofs,
-    randomBytes(RollupProofData.LENGTH_RECURSIVE_PROOF_OUTPUT),
     defiInteractionNotes,
     randomBytes(32),
+    randomBytes(32),
+    innerProofs,
     viewingKeys,
   );
 };

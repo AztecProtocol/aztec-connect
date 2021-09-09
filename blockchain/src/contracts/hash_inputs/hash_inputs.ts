@@ -2,8 +2,7 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { EthereumProvider, SendTxOptions } from '@aztec/barretenberg/blockchain';
 import { Web3Provider } from '@ethersproject/providers';
 import { ContractFactory, Contract } from 'ethers';
-import TurboVerifier from '../../artifacts/contracts/verifier/TurboVerifier.sol/TurboVerifier.json';
-import VerificationKeys from '../../artifacts/contracts/verifier/keys/VerificationKeys.sol/VerificationKeys.json';
+import HashInputsContract from '../../artifacts/contracts/HashInputs.sol/HashInputs.json';
 
 const fixEthersStackTrace = (err: Error) => {
   err.stack! += new Error().stack;
@@ -33,17 +32,17 @@ function linkBytecode(artifact: any, libraries: any) {
   return bytecode;
 }
 
-export class Verifier {
-  public verifier: Contract;
+export class HashInputs {
+  public hashInputs: Contract;
 
   constructor(
-    private verifierContractAddress: EthAddress,
+    private hashInputsContractAddress: EthAddress,
     private provider: EthereumProvider,
     private defaults: SendTxOptions = {},
   ) {
-    this.verifier = new Contract(
-      verifierContractAddress.toString(),
-      TurboVerifier.abi,
+    this.hashInputs = new Contract(
+      hashInputsContractAddress.toString(),
+      HashInputsContract.abi,
       new Web3Provider(this.provider),
     );
   }
@@ -52,30 +51,35 @@ export class Verifier {
     const { signingAddress } = defaults;
     const signer = new Web3Provider(provider).getSigner(signingAddress ? signingAddress.toString() : 0);
 
-    const verificationKeysLibrary = new ContractFactory(VerificationKeys.abi, VerificationKeys.bytecode, signer);
-    const verificationKeysLib = await verificationKeysLibrary.deploy().catch(fixEthersStackTrace);
 
-    const linkedVBytecode = linkBytecode(TurboVerifier, {
-      VerificationKeys: verificationKeysLib.address,
-    });
-    const verifierFactory = new ContractFactory(TurboVerifier.abi, linkedVBytecode, signer);
-    const verifier = await verifierFactory.deploy().catch(fixEthersStackTrace);
-    return new Verifier(EthAddress.fromString(verifier.address), provider, defaults);
+
+    const hashInputsFactory = new ContractFactory(HashInputsContract.abi, HashInputsContract.bytecode, signer);
+    const hashInputs = await hashInputsFactory.deploy().catch(fixEthersStackTrace);
+    return new HashInputs(EthAddress.fromString(hashInputs.address), provider, defaults);
   }
 
   get address() {
-    return this.verifierContractAddress;
+    return this.hashInputsContractAddress;
   }
 
   get contract() {
-    return this.verifier;
+    return this.hashInputs;
   }
 
-  async verify(proofData: Buffer, rollupSize: number, pubInputsHash: Buffer, options: SendTxOptions = {}) {
+  async computePublicInputHash(proofData: Buffer, options: SendTxOptions = {}) {
     const { signingAddress, gasLimit } = { ...options, ...this.defaults };
     const signer = new Web3Provider(this.provider).getSigner(signingAddress ? signingAddress.toString() : 0);
-    const verifier = new Contract(this.verifierContractAddress.toString(), TurboVerifier.abi, signer);
-    const txResponse = await verifier.verify(proofData, rollupSize, pubInputsHash, { gasLimit }).catch(fixEthersStackTrace);
+    const hashInputs = new Contract(this.hashInputsContractAddress.toString(), HashInputsContract.abi, signer);
+    const txResponse = await hashInputs.computePublicInputHash(proofData, { gasLimit }).catch(fixEthersStackTrace);
+    const receipt = await txResponse.wait();
+    return receipt.gasUsed.toNumber();
+  }
+
+  async validate(proofData: Buffer, options: SendTxOptions = {}) {
+    const { signingAddress, gasLimit } = { ...options, ...this.defaults };
+    const signer = new Web3Provider(this.provider).getSigner(signingAddress ? signingAddress.toString() : 0);
+    const hashInputs = new Contract(this.hashInputsContractAddress.toString(), HashInputsContract.abi, signer);
+    const txResponse = await hashInputs.verifyProofTest(proofData, { gasLimit }).catch(fixEthersStackTrace);
     const receipt = await txResponse.wait();
     return receipt.gasUsed.toNumber();
   }

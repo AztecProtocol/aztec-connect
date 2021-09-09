@@ -14,13 +14,13 @@ Each inner circuit has 13 public inputs. The rollup circuit will execute several
 
 ### ◈ Public Inputs: Detail
 
-There are $27 + 12 \times \text{rollup_size}$ public inputs, in three sections:
+There are $28 + 12 \times \text{rollup_size}$ public inputs, in three sections:
 
-1. **Rollup Proof Data:** (13 + 2 \* `NUM_BRIDGE_CALLS_PER_BLOCK`) elements from $\mathbb{F}_p$ that define the rollup block information (described below)
+1. **Rollup Proof Data:** (14 + 2 \* `NUM_BRIDGE_CALLS_PER_BLOCK`) elements from $\mathbb{F}_p$ that define the rollup block information (described below)
 2. **Rolled-Up Transactions Data:** Inner-circuit public inputs with `txFee` and `MerkleRoot` omitted ($12 \times \text{rollup_size}$ inputs; $12$ inputs per rolled up transaction)
 3. **Recursive Proof Data:** $4$ elements from $\mathbb{F}_q$, represented as $16$ elements from $\mathbb{F}_p$, whose values are $<2^{68}$; see [here](https://hackmd.io/LoEG5nRHQe-PvstVaD51Yw) for explanation.
 
-All are field elements. The first (13 + 2 \* `NUM_BRIDGE_CALLS_PER_BLOCK`) public inputs are the following:
+All are field elements. The first (14 + 2 \* `NUM_BRIDGE_CALLS_PER_BLOCK`) public inputs are the following:
 
 1. `rollup_id`
 2. `rollup_size`
@@ -37,6 +37,20 @@ All are field elements. The first (13 + 2 \* `NUM_BRIDGE_CALLS_PER_BLOCK`) publi
 13. `defi_deposit_sums` (size: `NUM_BRIDGE_CALLS_PER_BLOCK`)
 14. `total_tx_fee`
 15. `num_txs`
+16. `public_inputs_hash`
+
+The `public_inputs_hash` value is a SHA256 hash of the set of all join-split public inputs that will be broadcasted on-chain. These are:
+
+1. `proof_id`
+1. `public_input`
+1. `public_output`
+1. `public_asset_id`
+1. `output_nc_1` (nc is short for note commitment)
+1. `output_nc_2`
+1. `nullifier_1`
+1. `nullifier_2`
+1. `input_owner`
+1. `output_owner`
 
 ### ◈ Private Inputs: Detail
 

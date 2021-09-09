@@ -161,7 +161,7 @@ contract StandardVerifier is IVerifier {
      * @param - array of serialized proof data
      * @param - number of transactions in the rollup
      */
-    function verify(bytes calldata, uint256 rollup_size) external override returns (bool) {
+    function verify(bytes calldata, uint256 rollup_size, uint256) external override returns (bool) {
 
         StandardTypes.VerificationKey memory vk = StandardVerificationKeys.getKeyById(rollup_size);
 

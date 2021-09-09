@@ -71,28 +71,69 @@ export class CliProofGenerator implements ProofGenerator {
 
   private async createProofInternal(buffer: Buffer) {
     // this.proc!.stdin!.write(numToUInt32BE(proofId));
-    this.proc!.stdin!.write(buffer);
 
-    const header = (await this.stdout.read(4)) as Buffer | undefined;
+    const proofId = buffer.readUInt32BE(0);
+    if (proofId == 1)
+    {
+      // If proofId is a root rollup, compute broadcasted inputs (i.e. former public inputs now SHA256 hashed together) and concatenate with proof!
+      this.proc!.stdin!.write(buffer);
 
-    if (!header) {
-      throw new Error('Failed to read length.');
+      const header = (await this.stdout.read(4)) as Buffer | undefined;
+  
+      if (!header) {
+        throw new Error('Failed to read length.');
+      }
+  
+      const encodedInputsLength = header.readUInt32BE(0);
+      const encodedInputs = (await this.stdout.read(encodedInputsLength)) as Buffer | undefined;
+      if (!encodedInputs) {
+        throw new Error('Failed to read encoded inputs.');
+      }  
+      const header2 = (await this.stdout.read(4)) as Buffer | undefined;
+  
+      if (!header2) {
+        throw new Error('Failed to read length.');
+      }
+      const proofLength = header2.readUInt32BE(0);
+  
+      const data = (await this.stdout.read(proofLength + 1)) as Buffer | undefined;
+  
+      if (!data) {
+        throw new Error('Failed to read data.');
+      }
+  
+      const verified = data.readUInt8(proofLength);
+      if (!verified) {
+        throw new Error('Proof invalid.');
+      }
+  
+      return Buffer.concat([encodedInputs, data.slice(0, -1)]);  
     }
+    else
+    {
+      this.proc!.stdin!.write(buffer);
 
-    const proofLength = header.readUInt32BE(0);
-
-    const data = (await this.stdout.read(proofLength + 1)) as Buffer | undefined;
-
-    if (!data) {
-      throw new Error('Failed to read data.');
+      const header = (await this.stdout.read(4)) as Buffer | undefined;
+  
+      if (!header) {
+        throw new Error('Failed to read length.');
+      }
+  
+      const proofLength = header.readUInt32BE(0);
+  
+      const data = (await this.stdout.read(proofLength + 1)) as Buffer | undefined;
+  
+      if (!data) {
+        throw new Error('Failed to read data.');
+      }
+  
+      const verified = data.readUInt8(proofLength);
+      if (!verified) {
+        throw new Error('Proof invalid.');
+      }
+  
+      return data.slice(0, -1);
     }
-
-    const verified = data.readUInt8(proofLength);
-    if (!verified) {
-      throw new Error('Proof invalid.');
-    }
-
-    return data.slice(0, -1);
   }
 
   public async createProof(data: Buffer) {

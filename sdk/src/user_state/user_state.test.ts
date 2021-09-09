@@ -261,12 +261,12 @@ describe('user state', () => {
       Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK).fill(Buffer.alloc(32)),
       Array(RollupProofData.NUMBER_OF_ASSETS).fill(Buffer.alloc(32, 1 << 30)),
       totalTxFees,
-      innerProofData,
-      randomBytes(32 * 16),
       Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK).fill(Buffer.alloc(32)),
       randomBytes(32),
+      randomBytes(32),
+      innerProofData,
       viewingKeys,
-    );
+      );
   };
 
   const generateJoinSplitRollup = (rollupId = 0, options: any = {}) => {

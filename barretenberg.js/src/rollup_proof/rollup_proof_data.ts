@@ -78,6 +78,18 @@ const parseHeaderInputs = (proofData: Buffer) => {
     startIndex += 32;
   }
 
+  const defiInteractionNotes: Buffer[] = [];
+  for (let i = 0; i < RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK; ++i) {
+    defiInteractionNotes.push(proofData.slice(startIndex, startIndex + 32));
+    startIndex += 32;
+  }
+
+  const prevDefiInteractionHash = proofData.slice(startIndex, startIndex + 32);
+  startIndex += 32;
+
+  const numRollupTxs = proofData.slice(startIndex, startIndex + 32);
+  startIndex += 32;
+
   return {
     rollupId,
     rollupSize,
@@ -94,25 +106,9 @@ const parseHeaderInputs = (proofData: Buffer) => {
     defiDepositSums,
     assetIds,
     totalTxFees,
-  };
-};
-
-const parseTailInputs = (proofData: Buffer, startIndex: number) => {
-  const recursiveProofOutput = proofData.slice(startIndex, startIndex + RollupProofData.LENGTH_RECURSIVE_PROOF_OUTPUT);
-  startIndex += RollupProofData.LENGTH_RECURSIVE_PROOF_OUTPUT;
-
-  const defiInteractionNotes: Buffer[] = [];
-  for (let i = 0; i < RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK; ++i) {
-    defiInteractionNotes.push(proofData.slice(startIndex, startIndex + 64));
-    startIndex += 64;
-  }
-
-  const prevDefiInteractionHash = proofData.slice(startIndex, startIndex + 32);
-
-  return {
-    recursiveProofOutput,
     defiInteractionNotes,
     prevDefiInteractionHash,
+    numRollupTxs,
   };
 };
 
@@ -146,9 +142,8 @@ export class RollupProofData {
   static NUMBER_OF_ASSETS = 16;
   static NUM_BRIDGE_CALLS_PER_BLOCK = 4;
   static NUM_ROLLUP_HEADER_INPUTS =
-    11 + RollupProofData.NUMBER_OF_ASSETS * 2 + RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK * 2;
+    13 + RollupProofData.NUMBER_OF_ASSETS * 2 + RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK * 3;
   static LENGTH_ROLLUP_HEADER_INPUTS = RollupProofData.NUM_ROLLUP_HEADER_INPUTS * 32;
-  static LENGTH_RECURSIVE_PROOF_OUTPUT = 16 * 32;
   public rollupHash: Buffer;
 
   constructor(
@@ -167,10 +162,10 @@ export class RollupProofData {
     public defiDepositSums: Buffer[],
     public assetIds: Buffer[],
     public totalTxFees: Buffer[],
-    public innerProofData: InnerProofData[],
-    public recursiveProofOutput: Buffer,
     public defiInteractionNotes: Buffer[],
     public prevDefiInteractionHash: Buffer,
+    public numRollupTxs: Buffer,
+    public innerProofData: InnerProofData[],
     public viewingKeys: ViewingKey[][],
   ) {
     if (totalTxFees.length !== RollupProofData.NUMBER_OF_ASSETS) {
@@ -212,10 +207,10 @@ export class RollupProofData {
       ...this.defiDepositSums.map(s => s),
       ...this.assetIds,
       ...this.totalTxFees,
-      ...this.innerProofData.map(p => p.toBuffer()),
-      this.recursiveProofOutput,
       ...this.defiInteractionNotes,
       this.prevDefiInteractionHash,
+      this.numRollupTxs,
+      ...this.innerProofData.map(p => p.toBuffer())
     ]);
   }
 
@@ -224,8 +219,7 @@ export class RollupProofData {
   }
 
   encode() {
-    const realInnerProofs = this.innerProofData.filter(p => !p.isPadding());
-    const encodedInnerProof = realInnerProofs.map(p => encodeInnerProof(p));
+    const encodedInnerProof = this.innerProofData.map(p => encodeInnerProof(p));
     return Buffer.concat([
       numToUInt32BE(this.rollupId, 32),
       numToUInt32BE(this.rollupSize, 32),
@@ -242,11 +236,11 @@ export class RollupProofData {
       ...this.defiDepositSums.map(s => s),
       ...this.assetIds,
       ...this.totalTxFees,
-      numToUInt32BE(Buffer.concat(encodedInnerProof).length),
-      ...encodedInnerProof,
-      this.recursiveProofOutput,
       ...this.defiInteractionNotes,
       this.prevDefiInteractionHash,
+      this.numRollupTxs,
+      numToUInt32BE(Buffer.concat(encodedInnerProof).length),
+      ...encodedInnerProof,
     ]);
   }
 
@@ -275,6 +269,9 @@ export class RollupProofData {
       defiDepositSums,
       assetIds,
       totalTxFees,
+      defiInteractionNotes,
+      prevDefiInteractionHash,
+      numRollupTxs
     } = parseHeaderInputs(proofData);
 
     if (!rollupSize) {
@@ -290,10 +287,6 @@ export class RollupProofData {
       startIndex += InnerProofData.LENGTH;
     }
 
-    const { recursiveProofOutput, defiInteractionNotes, prevDefiInteractionHash } = parseTailInputs(
-      proofData,
-      startIndex,
-    );
 
     const viewingKeys = viewingKeyData ? parseViewingKeys(innerProofData, viewingKeyData) : [];
 
@@ -313,10 +306,10 @@ export class RollupProofData {
       defiDepositSums,
       assetIds,
       totalTxFees,
-      innerProofData,
-      recursiveProofOutput,
       defiInteractionNotes,
       prevDefiInteractionHash,
+      numRollupTxs,
+      innerProofData,
       viewingKeys,
     );
   }
@@ -338,6 +331,9 @@ export class RollupProofData {
       defiDepositSums,
       assetIds,
       totalTxFees,
+      defiInteractionNotes,
+      prevDefiInteractionHash,
+      numRollupTxs,
     } = parseHeaderInputs(encoded);
 
     if (!rollupSize) {
@@ -359,10 +355,6 @@ export class RollupProofData {
       innerProofData.push(InnerProofData.PADDING);
     }
 
-    const { recursiveProofOutput, defiInteractionNotes, prevDefiInteractionHash } = parseTailInputs(
-      encoded,
-      startIndex,
-    );
 
     const viewingKeys = viewingKeyData ? parseViewingKeys(innerProofData, viewingKeyData) : [];
 
@@ -382,10 +374,10 @@ export class RollupProofData {
       defiDepositSums,
       assetIds,
       totalTxFees,
-      innerProofData,
-      recursiveProofOutput,
       defiInteractionNotes,
       prevDefiInteractionHash,
+      numRollupTxs,
+      innerProofData,
       viewingKeys,
     );
   }

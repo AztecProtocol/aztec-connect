@@ -283,11 +283,12 @@ export const createRollupProof = async (
     ...[...assetIds].map(assetId => numToBuffer(assetId)),
     ...Array(numberOfAssets - assetIds.size).fill(numToBuffer(2 ** 30)),
     ...totalTxFeePublicInputs,
-    ...innerProofs.map(p => p.toBuffer()),
-    padding,
-    recursiveProofOutput,
     ...interactionNoteCommitments,
     previousDefiInteractionHash || WorldStateConstants.INITIAL_INTERACTION_HASH,
+    numToBuffer(rollupSize), // ??
+    ...innerProofs.map(p => p.toBuffer()),
+    padding
+    // recursiveProofOutput,
   ]);
 
   const providerAddress = EthAddress.fromString(await rollupProvider.getAddress());

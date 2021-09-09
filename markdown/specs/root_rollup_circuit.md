@@ -14,30 +14,47 @@ It is defined by a parameter `rollup_num`, of inner rollups. Let's also denote $
 
 The inputs for the root rollup circuit are:
 
-$$ \text{Rool Rollup Inputs} = (\text{Public Inputs}, \text{Private Inputs}) \in \mathbb{F}_p^{27 + M * (12 * 32)} \times \mathbb{F}_p^{27M}$$
+$$ \text{Root Rollup Inputs} = (\text{Public Inputs}, \text{Private Inputs}) \in \mathbb{F}_p^{27 + M * (12 * 32)} \times \mathbb{F}_p^{27M}$$
 
 As previously, the field $\mathbb{F}_p$ is from the BN254 specification.
 
 ### ◈ Public Inputs 
 
+The root rollup circuit contains `17` public inputs.
+
+The first pubic input is a SHA256 hash (reduced modulo the BN254 group order) of the following parameters:
+
+1. `rollup_id` (The location where `new_root_M` will be inserted in the roots tree)
+1. `rollup_size`
+1. `data_start_index`
+1. `old_data_root`
+1. `new_data_root`
+1. `old_null_root`
+1. `new_null_root`
+1. `old_root_root`
+1. `new_root_root`
+1. `old_defi_root`
+1. `new_defi_root`
+1. `bridge_ids` (size is `NUM_BRIDGE_CALLS_PER_BLOCK`)
+1. `defi_deposit_sums` (size is `NUM_BRIDGE_CALLS_PER_BLOCK`)
+1. `encrypted_defi_interaction_notes` (size is `NUM_BRIDGE_CALLS_PER_BLOCK`)
+1. `previous_defi_interaction_hash`
 1. For $i=1,..,M$
-    1. A set $PI_i$ of public inputs of the roll-up circuit's inner-circuit proofs.
-2. A pair of points $Q_{M+1}$ (given as 16 field elements as described in the rollup circuit)
-3. `rollup_id` (The location where `new_root_M` will be inserted in the roots tree)
-4. `rollup_size`
-5. `data_start_index`
-6. `old_data_root`
-7. `new_data_root`
-8. `old_null_root`
-9. `new_null_root`
-10. `old_root_root`
-11. `new_root_root`
-12. `old_defi_root`
-13. `new_defi_root`
-14. `bridge_ids` (size is `NUM_BRIDGE_CALLS_PER_BLOCK`)
-15. `defi_deposit_sums` (size is `NUM_BRIDGE_CALLS_PER_BLOCK`)
-16. `encrypted_defi_interaction_notes` (size is `NUM_BRIDGE_CALLS_PER_BLOCK`)
-17. `previous_defi_interaction_hash`
+    1. The `public_inputs_hash` of the rollup
+
+The remaining 16 public inputs are 68-bit limbs of two BN254 $\mathbb{G}_1$ elements. Each element is split into two $\mathbb{F}_q$ elements, which is in turn split into 4 68-bit limbs. 
+
+The two $\mathbb{G}_1$ elements, $[P_1], [P_2]$, represent the `recursive_proof_output` - group elements that must satisfy the following pairing check in order for the set of recursive proofs in the root rollup circuit to be valid:
+
+$e([P_1], [x]) == e([P_2], [1])$, where $[x]$ is the $\mathbb{G}_2$ element produced by the Ignition trusted setup ceremony.
+
+### ◈ Broadcasted Inputs
+
+In addition to the public inputs, the preimage to the above SHA256 hash is also broadcasted with the proof.
+
+The purpose of the SHA256 compression is not to hide information, it is solely to reduce the number of public inputs to the circuit.
+
+This is because, for a verifier smart contract on the Ethereum blockchain network, the computational cost of processing a public input is ~160 gas. The computational cost of including a 32-byte value in a SHA256 hash is 6 gas. Therefore reducing the public inputs via SHA256 hashing represents a significant gas saving, lowering the cost of processing a rollup block.
 
 ### ◈ Private Inputs
 

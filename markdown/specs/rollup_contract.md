@@ -311,3 +311,117 @@ If `interactionResult` is *false*, both `outputValueA` and `outputValueB` must b
 
 [^1]: The escape hatch window is open when:
 `block.number % escapeBlockUpperBound >= escapeBlockLowerBound`.
+
+### Encoding and Decoding proof data
+
+Each inner transaction is described by 10 32-byte field elements, which are required in order to produce the root rollup circuit's broadcasted inputs hash. These fields are:
+
+1. `proof_id`
+1. `public_input`
+1. `public_output`
+1. `public_asset_id`
+1. `output_nc_1`
+1. `output_nc_2`
+1. `nullifier_1`
+1. `nullifier_2`
+1. `input_owner`
+1. `output_owner`
+
+
+To reduce the data payload of a rollup proof, these broadcasted inputs are compressed according to the transaction type being represented. The types used are:
+
+1. Deposit
+2. Withdraw
+3. Send
+4. Account
+5. DefiDeposit
+6. DefiClaim
+7. Padding (an empty transaction)
+
+The data payload for a transaction consists of 1 encoding byte (the transaction type) followed by a string of fixed length, where the length is specific to the tx type.
+
+The padding transaction data payload is empty other than the encoding byte. For all other transactions, the encoding is the following (excluding the encoding byte):
+
+##### Deposit encoding
+
+tx length: 212 bytes.
+
+1. `public_output`
+2. `public_asset_id`
+3. `output_nc_1`
+4. `output_nc_2`
+5. `nullifier_1`
+6. `nullifier_2`
+7. `input_owner` (20 bytes)
+
+All other fields are 0
+
+##### Withdraw encoding
+
+tx length: 212 bytes.
+
+1. `public_input`
+2. `public_asset_id`
+3. `output_nc_1`
+4. `output_nc_2`
+5. `nullifier_1`
+6. `nullifier_2`
+7. `output_owner` (20 bytes)
+
+All other fields are 0
+
+##### Send encoding
+
+tx length: 160 bytes
+
+1. `public_asset_id`
+3. `output_nc_1`
+4. `output_nc_2`
+5. `nullifier_1`
+6. `nullifier_2`
+
+All other fields are 0
+
+##### Account encoding
+
+tx length: 288 bytes
+
+1. `public_input`
+1. `public_output`
+1. `public_asset_id`
+1. `output_nc_1`
+1. `output_nc_2`
+1. `nullifier_1`
+1. `nullifier_2`
+1. `input_owner`
+1. `output_owner`
+
+##### Defi Deposit encoding
+
+tx length: 224 bytes.
+
+1. `public_output`
+2. `public_asset_id`
+3. `output_nc_1`
+4. `output_nc_2`
+5. `nullifier_1`
+6. `nullifier_2`
+7. `input_owner` (32 bytes)
+
+All other fields are 0
+
+##### Defi Claim encoding
+
+tx length: 161 bytes.
+
+2. `public_asset_id`
+3. `output_nc_1`
+4. `output_nc_2`
+5. `nullifier_1`
+7. `input_owner` (32 bytes)
+
+All other fields are 0
+
+### Tx Decoding
+
+The function `decodeProof` converts the encoded proof into the full set of 32-byte field elements that are SHA256 hashed as part of producing the root rollup public inputs.

@@ -66,11 +66,11 @@ describe('RollupProofData', () => {
           defiDepositSums,
           assetIds,
           totalTxFees,
-          [randomInnerProofData()],
-          randomBytes(RollupProofData.LENGTH_RECURSIVE_PROOF_OUTPUT),
           defiInteractionNotes,
           randomBytes(32),
-          [],
+          randomBytes(32),
+          [randomInnerProofData()],
+          []
         ),
     ).toThrow();
   });
@@ -101,10 +101,10 @@ describe('RollupProofData', () => {
           defiDepositSums,
           assetIds,
           totalTxFees,
-          [randomInnerProofData()],
-          randomBytes(RollupProofData.LENGTH_RECURSIVE_PROOF_OUTPUT),
           defiInteractionNotes,
           randomBytes(32),
+          randomBytes(32),
+          [randomInnerProofData()],
           [],
         ),
     ).toThrow();

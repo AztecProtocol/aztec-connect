@@ -52,7 +52,6 @@ export class StandardVerifier {
     const { signingAddress } = defaults;
     const signer = new Web3Provider(provider).getSigner(signingAddress ? signingAddress.toString() : 0);
     
-    console.error('Deploying StandardVerificationKeys...');
     const StandardverificationKeysLibrary = new ContractFactory(StandardVerificationKeys.abi, StandardVerificationKeys.bytecode, signer);
     const StandardverificationKeysLib = await StandardverificationKeysLibrary.deploy();
   
@@ -77,7 +76,7 @@ export class StandardVerifier {
     const { signingAddress, gasLimit } = { ...options, ...this.defaults };
     const signer = new Web3Provider(this.provider).getSigner(signingAddress ? signingAddress.toString() : 0);
     const verifier = new Contract(this.verifierContractAddress.toString(), StandardVerifierContract.abi, signer);
-    const txResponse = await verifier.verify(proofData, rollupSize, { gasLimit }).catch(fixEthersStackTrace);
+    const txResponse = await verifier.verify(proofData, rollupSize, 0, { gasLimit }).catch(fixEthersStackTrace);
     const receipt = await txResponse.wait();
     return receipt.gasUsed.toNumber();
   }

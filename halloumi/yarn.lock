@@ -6,14 +6,13 @@
   version "2.0.0"
   dependencies:
     "@types/levelup" "^4.3.0"
-    bigint-buffer "^1.1.5"
     debug "^4.1.1"
     detect-node "^2.0.4"
     fs-extra "10.0.0"
     levelup "^5.0.0"
     memdown "^6.0.0"
     node-fetch "^2.6.0"
-    promise-readable "^6.0.0"
+    promise-readable "^5.0.4"
     sha3 "^2.1.3"
     threads "1.3.1"
     tslib "^2.0.0"
@@ -1019,14 +1018,7 @@ bcrypt-pbkdf@^1.0.0:
   dependencies:
     tweetnacl "^0.14.3"
 
-bigint-buffer@^1.1.5:
-  version "1.1.5"
-  resolved "https://registry.yarnpkg.com/bigint-buffer/-/bigint-buffer-1.1.5.tgz#d038f31c8e4534c1f8d0015209bf34b4fa6dd442"
-  integrity sha512-trfYco6AoZ+rKhKnxA0hgX0HAbVP/s808/EuDSe2JDzUnCp/xAsli35Orvk67UrTEcwuxZqYZDmfA2RXJgxVvA==
-  dependencies:
-    bindings "^1.3.0"
-
-bindings@^1.3.0, bindings@^1.5.0:
+bindings@^1.5.0:
   version "1.5.0"
   resolved "https://registry.yarnpkg.com/bindings/-/bindings-1.5.0.tgz#10353c9e945334bc0511a6d90b38fbc7c9c504df"
   integrity sha512-p2q/t/mhvuOj/UeLlV6566GD/guowlr0hHxClI0W9m7MWYkL1F0hLo+0Aexs9HSPCtR1SXQ0TD3MMKrXZajbiQ==
@@ -1314,7 +1306,7 @@ copy-descriptor@^0.1.0:
   resolved "https://registry.yarnpkg.com/copy-descriptor/-/copy-descriptor-0.1.1.tgz#676f6eb3c39997c2ee1ac3a924fd6124748f578d"
   integrity sha1-Z29us8OZl8LuGsOpJP1hJHSPV40=
 
-core-js@^3.6.1, core-js@^3.6.5:
+core-js@^3.6.1:
   version "3.9.1"
   resolved "https://registry.yarnpkg.com/core-js/-/core-js-3.9.1.tgz#cec8de593db8eb2a85ffb0dbdeb312cb6e5460ae"
   integrity sha512-gSjRvzkxQc1zjM/5paAmL4idJBFzuJoo+jDjF1tStYFMV2ERfD02HhahhCGXUyHxQRG4yFKVSdO6g62eoRMcDg==
@@ -3860,13 +3852,6 @@ promise-readable@^5.0.4:
   integrity sha512-v1MqYyLQvopoi+FOVL+HErz4TB7lpaZf7H+pQo8vW6yAmJ1QZVDww7XTTwK+gqzQZylmhrlS3CaHQzLkKorZjA==
   dependencies:
     core-js "^3.6.1"
-
-promise-readable@^6.0.0:
-  version "6.0.0"
-  resolved "https://registry.yarnpkg.com/promise-readable/-/promise-readable-6.0.0.tgz#ab1ec1a3daa53ed8764b61902fb7f3de3242025a"
-  integrity sha512-5NxtmUswijvX5cAM0zPSy6yiCXH/eKBpiiBq6JfAUrmngMquMbzcBhF2qA+ocs4rYYKdvAfv3cOvZxADLtL1CA==
-  dependencies:
-    core-js "^3.6.5"
 
 prompts@^2.0.1:
   version "2.4.0"

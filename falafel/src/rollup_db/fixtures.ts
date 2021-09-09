@@ -108,6 +108,9 @@ export const randomRollupProof = (txs: TxDao[], dataStartIndex = 0, rollupSize =
         Buffer.alloc(32),
         Buffer.alloc(32),
       ],
+      [randomBytes(64), randomBytes(64), randomBytes(64), randomBytes(64)],
+      randomBytes(32),
+      randomBytes(32),
       [
         new InnerProofData(
           0,
@@ -122,9 +125,6 @@ export const randomRollupProof = (txs: TxDao[], dataStartIndex = 0, rollupSize =
           randomBytes(32),
         ),
       ],
-      randomBytes(32),
-      [randomBytes(64), randomBytes(64), randomBytes(64), randomBytes(64)],
-      randomBytes(32),
       [],
     ).toBuffer(),
     created: new Date(),

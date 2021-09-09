@@ -38,7 +38,15 @@ contract TurboVerifier is IVerifier {
      * @param - array of serialized proof data
      * @param rollup_size - number of transactions in the rollup
      */
-    function verify(bytes calldata, uint256 rollup_size) external override returns (bool result) {
+    function verify(bytes calldata, uint256 rollup_size, uint256 public_inputs_hash) external override returns (bool result) {
+        // validate the correctness of the public inputs hash
+        {
+            bool hash_matches_input;
+            assembly {
+                hash_matches_input := eq(calldataload(add(calldataload(0x04), 0x24)), public_inputs_hash)
+            }
+            require(hash_matches_input, "computed public input hash does not match value in proof!");
+        }
         // extract the correct rollup verification key
         Types.VerificationKey memory vk = VerificationKeys.getKeyById(rollup_size);
         uint256 num_public_inputs = vk.num_inputs;
