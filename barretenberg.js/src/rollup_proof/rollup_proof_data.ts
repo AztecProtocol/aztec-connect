@@ -219,7 +219,8 @@ export class RollupProofData {
   }
 
   encode() {
-    const encodedInnerProof = this.innerProofData.map(p => encodeInnerProof(p));
+    const realInnerProofs = this.innerProofData.filter(p => !p.isPadding());
+    const encodedInnerProof = realInnerProofs.map(p => encodeInnerProof(p));
     return Buffer.concat([
       numToUInt32BE(this.rollupId, 32),
       numToUInt32BE(this.rollupSize, 32),

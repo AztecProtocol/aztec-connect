@@ -2,7 +2,7 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { EthereumProvider, SendTxOptions } from '@aztec/barretenberg/blockchain';
 import { Web3Provider } from '@ethersproject/providers';
 import { ContractFactory, Contract } from 'ethers';
-import HashInputsContract from '../../artifacts/contracts/HashInputs.sol/HashInputs.json';
+import HashInputsContract from '../../artifacts/contracts/test/HashInputs.sol/HashInputs.json';
 
 const fixEthersStackTrace = (err: Error) => {
   err.stack! += new Error().stack;

@@ -26,7 +26,7 @@ describe('Verifier', function () {
   });
 
   it('should validate a 4 rollup proof (2 tx)', async () => {
-    await validate(2, 2);
+    await validate(1, 4);
   });
 
   it('should validate a 32 rollup proof (1 tx)', async () => {

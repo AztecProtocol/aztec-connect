@@ -33,27 +33,12 @@ export class JoinSplitProofData {
 
   static decode(encoded: Buffer) {
     const encoding = encoded.readUInt8(0);
-    if (![TxEncoding.DEPOSIT, TxEncoding.WITHDRAW, TxEncoding.SEND, TxEncoding.PADDING].includes(encoding)) {
+    if (![TxEncoding.DEPOSIT, TxEncoding.WITHDRAW, TxEncoding.SEND].includes(encoding)) {
       throw new Error('Not a join split proof.');
     }
 
     let offset = 1;
-    if (encoding === TxEncoding.PADDING) {
-      return new JoinSplitProofData(
-        new InnerProofData(
-          ProofId.JOIN_SPLIT,
-          Buffer.alloc(32),
-          Buffer.alloc(32),
-          Buffer.alloc(32),
-          Buffer.alloc(32),
-          Buffer.alloc(32),
-          Buffer.alloc(32),
-          Buffer.alloc(32),
-          Buffer.alloc(32),
-          Buffer.alloc(32),
-        ),
-      );
-    } else if (encoding === TxEncoding.SEND) {
+    if (encoding === TxEncoding.SEND) {
       const assetId = encoded.slice(offset, offset + 32);
       offset += 32;
       const noteCommitment1 = encoded.slice(offset, offset + 32);
@@ -110,9 +95,6 @@ export class JoinSplitProofData {
   }
 
   encode() {
-    if (this.proofData.isPadding()) {
-      return Buffer.from([TxEncoding.PADDING]);
-    }
     const { assetId, noteCommitment1, noteCommitment2, nullifier1, nullifier2 } = this.proofData;
     if (!this.publicInput && !this.publicOutput) {
       return Buffer.concat([

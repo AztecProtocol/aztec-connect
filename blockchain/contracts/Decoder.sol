@@ -103,11 +103,6 @@ contract Decoder {
         return (inPtr + 0xa1);
     }
 
-    function paddingTx(uint inPtr, uint outPtr) internal pure returns (uint) {
-        // tx data is all zeros, memory will already be all zeros so no need to do anything here
-        return (inPtr + 0x01);
-    }
-
     function invalidTx(uint, uint) internal pure returns (uint) {
         require(false, "encoding byte is invalid!");
     }
@@ -143,8 +138,7 @@ contract Decoder {
             function(uint, uint) pure returns (uint) t4 = accountTx;
             function(uint, uint) pure returns (uint) t5 = defiDepositTx;
             function(uint, uint) pure returns (uint) t6 = defiClaimTx;
-            function(uint, uint) pure returns (uint) t7 = paddingTx;
-            function(uint, uint) pure returns (uint) t8 = invalidTx;
+            function(uint, uint) pure returns (uint) t7 = invalidTx;
 
             // Step 3: write function pointers into the table!
             assembly {
@@ -155,7 +149,7 @@ contract Decoder {
                 mstore(add(functionTable, 0x80), t5)
                 mstore(add(functionTable, 0xa0), t6)
                 mstore(add(functionTable, 0xc0), t7)
-                mstore(add(functionTable, 0xe0), t8)
+                mstore(add(functionTable, 0xe0), t7)
             }
         }
  

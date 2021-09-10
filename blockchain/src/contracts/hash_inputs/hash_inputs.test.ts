@@ -31,25 +31,12 @@ describe('hashInputs', function () {
     // hashInputs = await HashInputs.deploy(new EthersAdapter(ethers.provider));
   });
 
-  async function computeHash(inner: number, outer: number) {
-    const { proofBytes, pubInputHash } = await getRollupDataAsHalloumi(inner, outer);
-
-    const gasUsed = await hashInputs.computePublicInputHash(proofBytes, { gasLimit });
-    console.log(`gasUsed: ${gasUsed}`);
-  }
-
-  
   async function validate(inner: number, outer: number) {
     const { proofBytes, pubInputHash } = await getRollupDataAsHalloumi(inner, outer);
 
     const gasUsed = await hashInputs.validate(proofBytes, { gasLimit });
     console.log(`gasUsed: ${gasUsed}`);
   }
-
-  it('public input hashes should match', async () => {
-    await computeHash(1, 1);
-  });
-
   
   it('should verify a 1 encoded proof (1 tx)', async () => {
     await validate(1, 1);
@@ -60,7 +47,7 @@ describe('hashInputs', function () {
   });
 
   it('should verify a 4 encoded proof (2 tx)', async () => {
-    await validate(2, 2);
+    await validate(1, 4);
   });
 
 });

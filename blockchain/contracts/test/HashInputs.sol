@@ -3,12 +3,12 @@
 pragma solidity >=0.6.10 <0.8.0;
 
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
-import {Types} from './verifier/cryptography/Types.sol';
-import {Bn254Crypto} from './verifier/cryptography/Bn254Crypto.sol';
-import {Decoder} from './Decoder.sol';
+import {Types} from '../verifier/cryptography/Types.sol';
+import {Bn254Crypto} from '../verifier/cryptography/Bn254Crypto.sol';
+import {Decoder} from '../Decoder.sol';
 import 'hardhat/console.sol';
 
-import {IVerifier} from './interfaces/IVerifier.sol';
+import {IVerifier} from '../interfaces/IVerifier.sol';
 
 contract HashInputs is Decoder
 {
