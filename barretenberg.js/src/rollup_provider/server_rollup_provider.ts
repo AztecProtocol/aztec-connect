@@ -10,11 +10,11 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
     super(baseUrl, pollInterval);
   }
 
-  async sendProof({ proofData, viewingKeys, depositSignature, ...rest }: Proof) {
+  async sendProof({ proofData, offchainTxData, depositSignature, ...rest }: Proof) {
     const url = new URL(`${this.baseUrl}/tx`);
     const data = {
       proofData: proofData.toString('hex'),
-      viewingKeys: viewingKeys.map(v => v.toString()),
+      offchainTxData: offchainTxData.toString('hex'),
       depositSignature: depositSignature ? depositSignature.toString('hex') : undefined,
       ...rest,
     };

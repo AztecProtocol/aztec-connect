@@ -1,10 +1,10 @@
 import { AssetId } from '@aztec/barretenberg/asset';
 import { BlockchainAsset, TxType } from '@aztec/barretenberg/blockchain';
 import {
-  DefiClaimProofData,
-  DefiDepositProofData,
-  JoinSplitProofData,
-  ProofData,
+  ClientProofData,
+  DefiClaimClientProofData,
+  DefiDepositClientProofData,
+  JoinSplitClientProofData,
   ProofId,
 } from '@aztec/barretenberg/client_proofs';
 import { AssetFeeQuote } from '@aztec/barretenberg/rollup_provider';
@@ -107,28 +107,19 @@ export class FeeCalculator {
       return { assetId: AssetId.ETH, txFee: 0n };
     }
 
-    const proofData = new ProofData(tx.proofData);
+    const proofData = new ClientProofData(tx.proofData);
     switch (proofData.proofId) {
       case ProofId.DEFI_DEPOSIT: {
-        const {
-          bridgeId,
-          proofData: { txFee },
-        } = new DefiDepositProofData(proofData);
+        const { bridgeId, txFee } = new DefiDepositClientProofData(proofData);
         return { assetId: bridgeId.inputAssetId, txFee };
       }
       case ProofId.DEFI_CLAIM: {
-        const {
-          bridgeId,
-          proofData: { txFee },
-        } = new DefiClaimProofData(proofData);
+        const { bridgeId, txFee } = new DefiClaimClientProofData(proofData);
         return { assetId: bridgeId.inputAssetId, txFee };
       }
     }
 
-    const {
-      assetId,
-      proofData: { txFee },
-    } = new JoinSplitProofData(proofData);
+    const { assetId, txFee } = new JoinSplitClientProofData(proofData);
     return { assetId, txFee };
   }
 }

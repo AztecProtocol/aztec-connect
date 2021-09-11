@@ -1,9 +1,9 @@
-import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
-import { JoinSplitProofData, ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
-import { InnerProofData } from '@aztec/barretenberg/rollup_proof';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
+import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
+import { ClientProofData, JoinSplitClientProofData, ProofId } from '@aztec/barretenberg/client_proofs';
+import { InnerProofData } from '@aztec/barretenberg/rollup_proof';
 
-export async function getTxTypeFromProofData(proofData: ProofData, blockchain: Blockchain) {
+export async function getTxTypeFromProofData(proofData: ClientProofData, blockchain: Blockchain) {
   switch (proofData.proofId) {
     case ProofId.ACCOUNT:
       return TxType.ACCOUNT;
@@ -13,7 +13,7 @@ export async function getTxTypeFromProofData(proofData: ProofData, blockchain: B
       return TxType.DEFI_CLAIM;
   }
 
-  const { publicInput, publicOutput, outputOwner } = new JoinSplitProofData(proofData);
+  const { publicInput, publicOutput, outputOwner } = new JoinSplitClientProofData(proofData);
 
   if (publicInput > 0) {
     return TxType.DEPOSIT;

@@ -13,7 +13,7 @@ import { ClaimNoteTxData, NoteAlgorithms, TreeNote } from '../../note_algorithms
 import { PooledPippenger } from '../../pippenger';
 import { BarretenbergWasm } from '../../wasm';
 import { WorkerPool } from '../../wasm/worker_pool';
-import { ProofData } from '../proof_data';
+import { ClientProofData } from '../proof_data';
 import { UnrolledProver } from '../prover';
 import { JoinSplitProver } from './join_split_prover';
 import { JoinSplitTx } from './join_split_tx';
@@ -162,7 +162,7 @@ describe('join_split_proof', () => {
       const verified = await joinSplitVerifier.verifyProof(proof);
       expect(verified).toBe(true);
 
-      const joinSplitProof = new ProofData(proof);
+      const joinSplitProof = new ClientProofData(proof);
       expect(joinSplitProof.nullifier1).toEqual(expectedNullifier1);
       expect(joinSplitProof.nullifier2).toEqual(expectedNullifier2);
       expect(joinSplitProof.inputOwner).toEqual(inputOwner.toBuffer32());

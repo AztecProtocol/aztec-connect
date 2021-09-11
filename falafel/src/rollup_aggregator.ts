@@ -67,12 +67,6 @@ export class RollupAggregator {
       dataRoot: this.worldStateDb.getRoot(0),
       rollupProof: rollupProofDao,
       created: new Date(),
-      viewingKeys: Buffer.concat(
-        rollupProofDao.txs
-          .map(tx => [tx.viewingKey1, tx.viewingKey2])
-          .flat()
-          .map(vk => vk.toBuffer()),
-      ),
     });
 
     await this.rollupDb.addRollup(rollupDao);

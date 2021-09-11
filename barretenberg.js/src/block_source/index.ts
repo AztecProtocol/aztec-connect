@@ -7,7 +7,7 @@ export interface Block {
   rollupId: number;
   rollupSize: number;
   rollupProofData: Buffer;
-  viewingKeysData: Buffer;
+  offchainTxData: Buffer[];
   interactionResult: DefiInteractionNote[];
   gasUsed: number;
   gasPrice: bigint;

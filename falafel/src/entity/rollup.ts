@@ -20,9 +20,6 @@ export class RollupDao {
   public rollupProof!: RollupProofDao;
 
   @Column()
-  public viewingKeys!: Buffer;
-
-  @Column()
   public created!: Date;
 
   // Null until calldata computed.
@@ -31,7 +28,7 @@ export class RollupDao {
 
   // Null until mined and events fetched.
   @Column({ nullable: true })
-  public interactionResult!: Buffer;
+  public interactionResult?: Buffer;
 
   // Null until tx sent.
   @Column('blob', { nullable: true, transformer: [txHashTransformer] })

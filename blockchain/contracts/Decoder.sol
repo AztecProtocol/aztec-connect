@@ -5,7 +5,6 @@ pragma solidity >=0.6.10 <0.8.0;
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {Types} from './verifier/cryptography/Types.sol';
 import {Bn254Crypto} from './verifier/cryptography/Bn254Crypto.sol';
-import 'hardhat/console.sol';
 
 /**
  * Rollup proof decoder. Encoded proofData structure is as follows:
@@ -49,25 +48,29 @@ contract Decoder {
     function depositTx(uint256 inPtr, uint256 outPtr) internal pure returns (uint256) {
         assembly {
             calldatacopy(add(outPtr, 0x20), add(inPtr, 0x1), 0x20) // publicInput
-            calldatacopy(add(outPtr, 0x60), add(inPtr, 0x21), 0xa0) // assetId ... nullifier2
-            mstore(add(outPtr, 0x100), and(calldataload(add(inPtr, 0xb5)), 0xffffffffffffffffffffffffffffffffffffffff)) // inputOwner
+            calldatacopy(add(outPtr, 0x7c), add(inPtr, 0x21), 0x4) // assetId
+            calldatacopy(add(outPtr, 0x80), add(inPtr, 0x25), 0x80) // noteCommitment1 ... nullifier2
+            calldatacopy(add(outPtr, 0x10c), add(inPtr, 0xa5), 0x14) // inputOwner
         }
-        return (inPtr + 0xd5);
+        return (inPtr + 0xb9);
     }
 
     function withdrawTx(uint256 inPtr, uint256 outPtr) internal pure returns (uint256) {
         assembly {
-            calldatacopy(add(outPtr, 0x40), add(inPtr, 0x1), 0xc0) // publicOutput ... nullifier2
-            mstore(add(outPtr, 0x120), and(calldataload(add(inPtr, 0xb5)), 0xffffffffffffffffffffffffffffffffffffffff)) // outputOwner
+            calldatacopy(add(outPtr, 0x40), add(inPtr, 0x1), 0x20) // publicOutput
+            calldatacopy(add(outPtr, 0x7c), add(inPtr, 0x21), 0x4) // assetId
+            calldatacopy(add(outPtr, 0x80), add(inPtr, 0x25), 0x80) // noteCommitment1 ... nullifier2
+            calldatacopy(add(outPtr, 0x12c), add(inPtr, 0xa5), 0x14) // outputOwner
         }
-        return (inPtr + 0xd5);
+        return (inPtr + 0xb9);
     }
 
     function sendTx(uint256 inPtr, uint256 outPtr) internal pure returns (uint256) {
         assembly {
-            calldatacopy(add(outPtr, 0x60), add(inPtr, 0x1), 0xa0) // assetId ... nullifier2
+            calldatacopy(add(outPtr, 0x7c), add(inPtr, 0x1), 0x4) // assetId
+            calldatacopy(add(outPtr, 0x80), add(inPtr, 0x5), 0x80) // noteCommitment1 ... nullifier2
         }
-        return (inPtr + 0xa1);
+        return (inPtr + 0x85);
     }
 
     function accountTx(uint256 inPtr, uint256 outPtr) internal pure returns (uint256) {

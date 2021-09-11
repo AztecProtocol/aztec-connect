@@ -4,7 +4,6 @@ import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { JoinSplitTx } from '@aztec/barretenberg/client_proofs';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { ClaimNoteTxData, TreeNote } from '@aztec/barretenberg/note_algorithms';
-import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { WorldState } from '@aztec/barretenberg/world_state';
 import { Database } from '../../database';
 import { AccountAliasId, AccountId } from '../../user';
@@ -66,11 +65,8 @@ export class JoinSplitTxFactory {
       this.createNote(assetId, changeValue + senderPrivateOutput, id),
     ];
     const claimNote = isDefiBridge
-      ? this.createClaimNote(bridgeId!, defiDepositValue, id)
-      : {
-          note: ClaimNoteTxData.EMPTY,
-          viewingKey: ViewingKey.EMPTY,
-        };
+      ? new ClaimNoteTxData(defiDepositValue, bridgeId!, outputNotes[1].note.noteSecret)
+      : ClaimNoteTxData.EMPTY;
 
     const dataRoot = this.worldState.getRoot();
 
@@ -90,7 +86,7 @@ export class JoinSplitTxFactory {
       inputNotePaths,
       inputNotes,
       outputNotes.map(n => n.note),
-      claimNote.note,
+      claimNote,
       privateKey,
       accountAliasId,
       accountIndex,
@@ -100,7 +96,9 @@ export class JoinSplitTxFactory {
       outputOwner,
     );
 
-    const viewingKeys = [isDefiBridge ? claimNote.viewingKey : outputNotes[0].viewingKey, outputNotes[1].viewingKey];
+    const viewingKeys = isDefiBridge
+      ? [outputNotes[1].viewingKey]
+      : [outputNotes[0].viewingKey, outputNotes[1].viewingKey];
 
     return { tx, viewingKeys };
   }
@@ -109,13 +107,6 @@ export class JoinSplitTxFactory {
     const ephKey = this.createEphemeralPrivKey();
     const note = TreeNote.createFromEphPriv(owner.publicKey, value, assetId, owner.nonce, ephKey, this.grumpkin);
     const viewingKey = note.getViewingKey(ephKey, this.grumpkin);
-    return { note, viewingKey };
-  }
-
-  private createClaimNote(bridgeId: BridgeId, value: bigint, owner: AccountId) {
-    const ephKey = this.createEphemeralPrivKey();
-    const note = ClaimNoteTxData.createFromEphPriv(value, bridgeId, owner.publicKey, ephKey, this.grumpkin);
-    const viewingKey = note.getViewingKey(owner.publicKey, ephKey, this.grumpkin);
     return { note, viewingKey };
   }
 

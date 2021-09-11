@@ -165,19 +165,17 @@ export class Server {
     }
 
     const rollups = await this.rollupDb.getSettledRollups(from);
-    return rollups.map(dao => {
-      return {
-        txHash: dao.ethTxHash!,
-        created: dao.created,
-        rollupId: dao.id,
-        rollupSize: RollupProofData.getRollupSizeFromBuffer(dao.rollupProof.proofData!),
-        rollupProofData: dao.rollupProof.proofData!,
-        viewingKeysData: dao.viewingKeys,
-        interactionResult: parseInteractionResult(dao.interactionResult),
-        gasPrice: toBigIntBE(dao.gasPrice!),
-        gasUsed: dao.gasUsed!,
-      };
-    });
+    return rollups.map(dao => ({
+      txHash: dao.ethTxHash!,
+      created: dao.created,
+      rollupId: dao.id,
+      rollupSize: RollupProofData.getRollupSizeFromBuffer(dao.rollupProof.proofData!),
+      rollupProofData: dao.rollupProof.proofData!,
+      offchainTxData: dao.rollupProof.txs.map(tx => tx.offchainTxData),
+      interactionResult: parseInteractionResult(dao.interactionResult!),
+      gasPrice: toBigIntBE(dao.gasPrice!),
+      gasUsed: dao.gasUsed!,
+    }));
   }
 
   public async getLatestRollupId() {

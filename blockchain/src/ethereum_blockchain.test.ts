@@ -18,7 +18,7 @@ describe('ethereum_blockchain', () => {
     rollupId,
     rollupSize: 2,
     rollupProofData: Buffer.alloc(0),
-    viewingKeysData: Buffer.alloc(0),
+    offchainTxData: [],
     interactionResult: [],
     gasPrice: BigInt(0),
     gasUsed: 0,

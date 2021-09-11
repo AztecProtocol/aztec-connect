@@ -1,7 +1,6 @@
 import { BlockSource } from '../block_source';
 import { TxHash } from '../tx_hash';
 import { BlockchainStatus } from '../blockchain';
-import { ViewingKey } from '../viewing_key';
 
 export enum SettlementTime {
   SLOW,
@@ -12,7 +11,7 @@ export enum SettlementTime {
 
 export interface Proof {
   proofData: Buffer;
-  viewingKeys: ViewingKey[];
+  offchainTxData: Buffer;
   depositSignature?: Buffer;
 }
 

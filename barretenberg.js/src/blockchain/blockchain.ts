@@ -5,10 +5,9 @@ import { BridgeId } from '../bridge_id';
 import { TxHash } from '../tx_hash';
 import { Asset } from './asset';
 import { BlockchainStatusSource } from './blockchain_status';
-import { EthereumSignature, EthereumSigner } from './ethereum_signer';
 import { EthereumProvider } from './ethereum_provider';
+import { EthereumSignature, EthereumSigner } from './ethereum_signer';
 import { PriceFeed } from './price_feed';
-import { ViewingKey } from '../viewing_key';
 
 export interface Receipt {
   status: boolean;
@@ -37,7 +36,7 @@ export interface Blockchain extends BlockSource, BlockchainStatusSource, Ethereu
   createRollupProofTx(
     proof: Buffer,
     signatures: Buffer[],
-    viewingKeys: ViewingKey[],
+    offchainTxData: Buffer[],
     providerSignature: Buffer,
     providerAddress: EthAddress,
     feeReceiver: EthAddress,
@@ -46,8 +45,8 @@ export interface Blockchain extends BlockSource, BlockchainStatusSource, Ethereu
 
   createEscapeHatchProofTx(
     proofData: Buffer,
-    viewingKeys: ViewingKey[],
     depositSignature?: Buffer,
+    offchainTxData?: Buffer,
     signingAddress?: EthAddress,
   ): Promise<Buffer>;
 

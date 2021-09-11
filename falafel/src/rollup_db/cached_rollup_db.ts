@@ -1,7 +1,7 @@
-import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
+import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
+import { ClientProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
-import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
@@ -105,7 +105,7 @@ export class CachedRollupDb extends SyncRollupDb {
 
   public async addTx(txDao: TxDao) {
     await super.addTx(txDao);
-    const { proofId, nullifier1, nullifier2 } = new ProofData(txDao.proofData);
+    const { proofId, nullifier1, nullifier2 } = new ClientProofData(txDao.proofData);
 
     this.unsettledNullifiers.push(nullifier1, nullifier2);
 

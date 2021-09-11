@@ -1,15 +1,16 @@
 import { randomBytes } from 'crypto';
 import { EthAddress } from '../address';
 import { ProofId } from '../client_proofs/proof_data';
-import { ViewingKey } from '../viewing_key';
 import { InnerProofData, RollupProofData } from './';
+
+const randomInt = () => Buffer.concat([Buffer.alloc(28), randomBytes(4)]);
 
 export const randomDepositProofData = () =>
   new InnerProofData(
     ProofId.JOIN_SPLIT,
     randomBytes(32),
     Buffer.alloc(32),
-    randomBytes(32),
+    randomInt(),
     randomBytes(32),
     randomBytes(32),
     randomBytes(32),
@@ -23,7 +24,7 @@ export const randomSendProofData = () =>
     ProofId.JOIN_SPLIT,
     Buffer.alloc(32),
     Buffer.alloc(32),
-    randomBytes(32),
+    randomInt(),
     randomBytes(32),
     randomBytes(32),
     randomBytes(32),
@@ -37,7 +38,7 @@ export const randomWithdrawProofData = () =>
     ProofId.JOIN_SPLIT,
     Buffer.alloc(32),
     randomBytes(32),
-    randomBytes(32),
+    randomInt(),
     randomBytes(32),
     randomBytes(32),
     randomBytes(32),
@@ -68,7 +69,7 @@ export const randomInnerProofData = (proofId = ProofId.JOIN_SPLIT) => {
   }
 };
 
-export const createRollupProofData = (innerProofs: InnerProofData[], viewingKeys: ViewingKey[][] = []) => {
+export const createRollupProofData = (innerProofs: InnerProofData[]) => {
   const bridgeIds = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => randomBytes(32));
   const defiDepositSums = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => randomBytes(32));
   const defiInteractionNotes = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => randomBytes(32));
@@ -94,6 +95,5 @@ export const createRollupProofData = (innerProofs: InnerProofData[], viewingKeys
     randomBytes(32),
     randomBytes(32),
     innerProofs,
-    viewingKeys,
   );
 };

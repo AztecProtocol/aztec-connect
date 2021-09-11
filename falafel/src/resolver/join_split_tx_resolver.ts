@@ -1,5 +1,5 @@
-import { ProofData, JoinSplitProofData } from '@aztec/barretenberg/client_proofs';
-import { Query, Resolver, FieldResolver, Root } from 'type-graphql';
+import { JoinSplitClientProofData } from '@aztec/barretenberg/client_proofs';
+import { FieldResolver, Query, Resolver, Root } from 'type-graphql';
 import { Inject } from 'typedi';
 import { CachedRollupDb } from '../rollup_db';
 import { JoinSplitTxType } from './join_split_tx_type';
@@ -12,7 +12,7 @@ export class JoinSplitTxResolver {
   async unsettledJoinSplitTxs() {
     const txs = await this.rollupDb.getUnsettledJoinSplitTxs();
     return txs.map(({ proofData, ...rest }) => {
-      const joinSplitProofData = new JoinSplitProofData(new ProofData(proofData));
+      const joinSplitProofData = JoinSplitClientProofData.fromBuffer(proofData);
       return {
         ...rest,
         proofData,

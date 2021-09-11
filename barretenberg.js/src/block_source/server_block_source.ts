@@ -12,7 +12,7 @@ export interface BlockServerResponse {
   rollupId: number;
   rollupSize: number;
   rollupProofData: string;
-  viewingKeysData: string;
+  offchainTxData: string[];
   interactionResult: string[];
   gasPrice: string;
   gasUsed: number;
@@ -29,7 +29,7 @@ const toBlock = (block: BlockServerResponse): Block => ({
   ...block,
   txHash: TxHash.fromString(block.txHash),
   rollupProofData: Buffer.from(block.rollupProofData, 'hex'),
-  viewingKeysData: Buffer.from(block.viewingKeysData, 'hex'),
+  offchainTxData: block.offchainTxData.map(p => Buffer.from(p, 'hex')),
   interactionResult: block.interactionResult.map(r => DefiInteractionNote.fromBuffer(Buffer.from(r, 'hex'))),
   created: new Date(block.created),
   gasPrice: BigInt(block.gasPrice),

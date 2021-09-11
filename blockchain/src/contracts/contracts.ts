@@ -1,17 +1,16 @@
-import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
-import { EthereumProvider, Asset, PriceFeed, SendTxOptions, TypedData } from '@aztec/barretenberg/blockchain';
+import { Asset, EthereumProvider, PriceFeed, SendTxOptions, TypedData } from '@aztec/barretenberg/blockchain';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { Web3Provider } from '@ethersproject/providers';
 import { Contract } from 'ethers';
 import { abi as DefiBridgeABI } from '../artifacts/contracts/interfaces/IDefiBridge.sol/IDefiBridge.json';
+import { Web3Signer } from '../signer';
 import { EthAsset, TokenAsset } from './asset';
+import { FeeDistributor } from './fee_distributor';
 import { EthPriceFeed, GasPriceFeed, TokenPriceFeed } from './price_feed';
 import { RollupProcessor } from './rollup_processor';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { Web3Signer } from '../signer';
-import { ViewingKey } from '@aztec/barretenberg/viewing_key';
-import { FeeDistributor } from './fee_distributor';
 
 export class Contracts {
   private provider!: Web3Provider;
@@ -136,14 +135,14 @@ export class Contracts {
     return this.feeDistributor.address;
   }
 
-  public async createEscapeHatchProofTx(proofData: Buffer, viewingKeys: ViewingKey[], signatures: Buffer[]) {
-    return this.rollupProcessor.createEscapeHatchProofTx(proofData, viewingKeys, signatures);
+  public async createEscapeHatchProofTx(proofData: Buffer, signatures: Buffer[], offchainTxData: Buffer[]) {
+    return this.rollupProcessor.createEscapeHatchProofTx(proofData, signatures, offchainTxData);
   }
 
   public async createRollupProofTx(
     proofData: Buffer,
     signatures: Buffer[],
-    viewingKeys: ViewingKey[],
+    offchainTxData: Buffer[],
     providerSignature: Buffer,
     providerAddress: EthAddress,
     feeReceiver: EthAddress,
@@ -152,7 +151,7 @@ export class Contracts {
     return this.rollupProcessor.createRollupProofTx(
       proofData,
       signatures,
-      viewingKeys,
+      offchainTxData,
       providerSignature,
       providerAddress,
       feeReceiver,

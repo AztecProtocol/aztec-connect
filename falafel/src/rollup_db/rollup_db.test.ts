@@ -349,16 +349,25 @@ describe('rollup_db', () => {
   });
 
   it('should get unsettled js txs', async () => {
-    const addr = EthAddress.randomAddress();
-    const tx0 = randomTx({ inputOwner: addr, publicInput: 10n });
-    const tx1 = randomTx({ inputOwner: addr, publicInput: 20n });
-    const tx2 = randomTx({ inputOwner: addr, publicInput: 40n });
-    await rollupDb.addTx(tx0);
-    await rollupDb.addTx(tx1);
-    await rollupDb.addTx(tx2);
+    const inputOwner = EthAddress.randomAddress();
+    const txs = [
+      TxType.DEFI_CLAIM,
+      TxType.WITHDRAW_TO_WALLET,
+      TxType.DEPOSIT,
+      TxType.ACCOUNT,
+      TxType.WITHDRAW_TO_CONTRACT,
+      TxType.DEFI_DEPOSIT,
+      TxType.TRANSFER,
+    ].map(txType => randomTx({ txType, inputOwner }));
+    for (const tx of txs) {
+      await rollupDb.addTx(tx);
+    }
 
     const result = await rollupDb.getUnsettledJoinSplitTxs();
-    expect(result.length).toBe(3);
+    expect(result.length).toBe(4);
+    expect(result.map(r => r.txType)).toEqual(
+      expect.arrayContaining([TxType.DEPOSIT, TxType.TRANSFER, TxType.WITHDRAW_TO_CONTRACT, TxType.WITHDRAW_TO_WALLET]),
+    );
   });
 
   it('should delete unsettled rollups', async () => {

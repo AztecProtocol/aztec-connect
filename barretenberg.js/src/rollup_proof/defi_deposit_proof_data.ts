@@ -58,7 +58,7 @@ export class DefiDepositProofData {
   }
 
   encode() {
-    const { publicOutput, assetId, noteCommitment1, noteCommitment2, nullifier1, nullifier2, inputOwner, outputOwner } =
+    const { publicOutput, assetId, noteCommitment1, noteCommitment2, nullifier1, nullifier2, inputOwner } =
       this.proofData;
     return Buffer.concat([
       Buffer.from([TxEncoding.DEFI_DEPOSIT]),

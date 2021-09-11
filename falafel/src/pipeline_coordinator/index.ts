@@ -107,7 +107,7 @@ export class PipelineCoordinator {
       RollupTreeId.DEFI,
       BigInt(Math.max(0, rollupId - 1) * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK),
     );
-    const defiInteractionNotes = lastRollup ? parseInteractionResult(lastRollup.interactionResult) : [];
+    const defiInteractionNotes = lastRollup ? parseInteractionResult(lastRollup.interactionResult!) : [];
     await this.updateDefiTree(defiInteractionNotes);
     this.rollupCoordinator = new RollupCoordinator(
       this.publishTimeManager,

@@ -1,13 +1,13 @@
-import { AccountProofData, ProofData } from '@aztec/barretenberg/client_proofs';
+import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
 import { AccountDao } from '../entity/account';
 import { TxDao } from '../entity/tx';
 
 export const txDaoToAccountDao = (txDao: TxDao) => {
-  const accountProof = new AccountProofData(new ProofData(txDao.proofData));
+  const { accountPublicKey, accountAliasId } = OffchainAccountData.fromBuffer(txDao.offchainTxData);
   return new AccountDao({
-    aliasHash: accountProof.accountAliasId.aliasHash.toBuffer(),
+    aliasHash: accountAliasId.aliasHash.toBuffer(),
     tx: txDao,
-    accountPubKey: accountProof.publicKey,
-    nonce: accountProof.accountAliasId.nonce,
+    accountPubKey: accountPublicKey.toBuffer(),
+    nonce: accountAliasId.nonce,
   });
 };

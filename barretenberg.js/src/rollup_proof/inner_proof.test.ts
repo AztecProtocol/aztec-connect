@@ -1,5 +1,5 @@
 import { randomBytes } from 'crypto';
-import { ProofData, ProofId } from '../client_proofs/proof_data';
+import { ClientProofData, ProofId } from '../client_proofs';
 import { randomInnerProofData } from './fixtures';
 import { InnerProofData } from './inner_proof';
 
@@ -21,7 +21,7 @@ describe('InnerProofData', () => {
         randomBytes(32), // noteTreeRoot
         randomBytes(32), // txFee
       ]);
-      const clientProofData = new ProofData(rawClientProof);
+      const clientProofData = new ClientProofData(rawClientProof);
       expect(innerProofData.txId).toEqual(clientProofData.txId);
     });
   });

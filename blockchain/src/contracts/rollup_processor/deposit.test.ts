@@ -40,12 +40,12 @@ describe('rollup_processor: deposit', () => {
       expect(rollupBalance).toBe(depositAmount);
     }
 
-    const { proofData, signatures, viewingKeys } = await createRollupProof(
+    const { proofData, signatures } = await createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAddresses[0], userSigners[0], AssetId.ETH),
     );
 
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, viewingKeys, signatures);
+    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, []);
     await rollupProcessor.sendTx(tx);
 
     {
@@ -72,12 +72,12 @@ describe('rollup_processor: deposit', () => {
       expect(rollupBalance).toBe(depositAmount);
     }
 
-    const { proofData, signatures, viewingKeys } = await createRollupProof(
+    const { proofData, signatures } = await createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAddresses[0], userSigners[0], AssetId.DAI),
     );
 
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, viewingKeys, signatures);
+    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, []);
     await rollupProcessor.sendTx(tx);
 
     {
@@ -95,7 +95,7 @@ describe('rollup_processor: deposit', () => {
     const erc20A = assets[AssetId.DAI];
     const erc20B = assets[AssetId.renBTC];
 
-    const { proofData, signatures, viewingKeys } = await createRollupProof(
+    const { proofData, signatures } = await createRollupProof(
       rollupProvider,
       mergeInnerProofs([
         await createDepositProof(userADepositAmount, userAddresses[0], userSigners[0], AssetId.DAI),
@@ -112,7 +112,7 @@ describe('rollup_processor: deposit', () => {
       signingAddress: userAddresses[1],
     });
 
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, viewingKeys, signatures);
+    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, []);
     await rollupProcessor.sendTx(tx);
 
     const postDepositUserABalance = await rollupProcessor.getUserPendingDeposit(AssetId.DAI, userAddresses[0]);
@@ -162,11 +162,11 @@ describe('rollup_processor: deposit', () => {
     await rollupProcessor.depositPendingFunds(AssetId.DAI, depositAmount, undefined, { signingAddress });
 
     const innerProofData = await createDepositProof(depositAmount, signingAddress, userSigners[0], AssetId.DAI);
-    const { proofData, viewingKeys } = await createRollupProof(rollupProvider, innerProofData);
+    const { proofData } = await createRollupProof(rollupProvider, innerProofData);
 
     await rollupProcessor.approveProof(innerProofData.innerProofs[0].txId, { signingAddress });
 
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, viewingKeys, []);
+    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
     await rollupProcessor.sendTx(tx);
 
     expect(await rollupProcessor.getUserPendingDeposit(AssetId.DAI, signingAddress)).toBe(0n);
@@ -180,14 +180,14 @@ describe('rollup_processor: deposit', () => {
     await rollupProcessor.depositPendingFunds(AssetId.DAI, depositAmount, undefined, { signingAddress });
 
     const innerProofData = await createDepositProof(depositAmount, signingAddress, userSigners[0], AssetId.DAI);
-    const { proofData, viewingKeys } = await createRollupProof(rollupProvider, innerProofData);
+    const { proofData } = await createRollupProof(rollupProvider, innerProofData);
 
     const badSignature = await new Web3Signer(ethereumProvider).signMessage(
       innerProofData.innerProofs[0].getDepositSigningData(),
       userAddresses[1],
     );
 
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, viewingKeys, [badSignature]);
+    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [badSignature], []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('validateUnpackedSignature: INVALID_SIGNATURE');
   });
 
@@ -199,12 +199,12 @@ describe('rollup_processor: deposit', () => {
       signingAddress: userAddresses[0],
     });
 
-    const { proofData, signatures, viewingKeys } = await createRollupProof(
+    const { proofData, signatures } = await createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAddresses[0], userSigners[0], AssetId.DAI),
     );
 
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, viewingKeys, signatures);
+    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: INSUFFICIENT_DEPOSIT');
   });
 

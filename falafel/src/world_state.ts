@@ -1,12 +1,12 @@
+import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
-import { ProofId, ProofData } from '@aztec/barretenberg/client_proofs';
+import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
 import { NoteAlgorithms, TreeClaimNote } from '@aztec/barretenberg/note_algorithms';
-import { DefiDepositProofData, InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
-import { ViewingKey } from '@aztec/barretenberg/viewing_key';
+import { OffchainDefiDepositData } from '@aztec/barretenberg/offchain_tx_data';
+import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
-import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { RollupDao } from './entity/rollup';
 import { RollupProofDao } from './entity/rollup_proof';
 import { TxDao } from './entity/tx';
@@ -15,12 +15,11 @@ import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
 import { RollupPipeline, RollupPipelineFactory } from './rollup_pipeline';
 
-const innerProofDataToTxDao = (tx: InnerProofData, viewingKeys: ViewingKey[], created: Date, txType: TxType) => {
+const innerProofDataToTxDao = (tx: InnerProofData, offchainTxData: Buffer, created: Date, txType: TxType) => {
   const txDao = new TxDao();
   txDao.id = tx.txId;
   txDao.proofData = tx.toBuffer();
-  txDao.viewingKey1 = viewingKeys[0];
-  txDao.viewingKey2 = viewingKeys[1];
+  txDao.offchainTxData = offchainTxData;
   txDao.nullifier1 = tx.nullifier1;
   txDao.nullifier2 = tx.nullifier2;
   txDao.created = created;
@@ -137,8 +136,8 @@ export class WorldState {
    */
   private async updateDbs(block: Block) {
     const end = this.metrics.processBlockTimer();
-    const { rollupProofData: rawRollupData, viewingKeysData } = block;
-    const rollupProofData = RollupProofData.fromBuffer(rawRollupData, viewingKeysData);
+    const { rollupProofData: rawRollupData, offchainTxData } = block;
+    const rollupProofData = RollupProofData.fromBuffer(rawRollupData);
     const { rollupId, rollupHash, newDataRoot, newNullRoot, newDataRootsRoot } = rollupProofData;
 
     console.log(`Processing rollup ${rollupId}: ${rollupHash.toString('hex')}...`);
@@ -156,30 +155,23 @@ export class WorldState {
       await this.addRollupToWorldState(rollupProofData);
     }
 
-    await this.processDefiProofs(rollupProofData, block);
+    await this.processDefiProofs(rollupProofData, offchainTxData, block);
 
-    await this.confirmOrAddRollupToDb(rollupProofData, block);
+    await this.confirmOrAddRollupToDb(rollupProofData, offchainTxData, block);
 
     this.printState();
     end();
   }
 
-  private async processDefiProofs(rollup: RollupProofData, block: Block) {
+  private async processDefiProofs(rollup: RollupProofData, offchainTxData: Buffer[], block: Block) {
     const { innerProofData, dataStartIndex } = rollup;
     const { interactionResult } = block;
     for (let i = 0; i < innerProofData.length; ++i) {
       const proofData = innerProofData[i];
       switch (proofData.proofId) {
         case ProofId.DEFI_DEPOSIT: {
-          const { bridgeId, depositValue, partialState } = new DefiDepositProofData(proofData);
-          const { txId } = proofData;
-          // TODO - fetch tx from tx pool or somewhere.
-          const tx = await this.rollupDb.getTx(txId);
-          if (!tx) {
-            continue;
-          }
-          const totalFee = tx ? new ProofData(tx.proofData).txFee : BigInt(0);
-          const fee = totalFee - (totalFee >> BigInt(1));
+          const { bridgeId, depositValue, partialState, txFee } = OffchainDefiDepositData.fromBuffer(offchainTxData[i]);
+          const fee = txFee - (txFee >> BigInt(1));
           const index = dataStartIndex + i * 2;
           const interactionNonce = interactionResult.find(r => r.bridgeId.equals(bridgeId))!.nonce;
           const note = new TreeClaimNote(depositValue, bridgeId, interactionNonce, fee, partialState);
@@ -203,7 +195,7 @@ export class WorldState {
     }
   }
 
-  private async confirmOrAddRollupToDb(rollup: RollupProofData, block: Block) {
+  private async confirmOrAddRollupToDb(rollup: RollupProofData, offchainTxData: Buffer[], block: Block) {
     const { txHash, rollupProofData: proofData, created } = block;
 
     // Get by rollup hash, as a competing rollup may have the same rollup number.
@@ -236,7 +228,7 @@ export class WorldState {
       // Not a rollup we created. Add or replace rollup.
       const txs = rollup.innerProofData
         .filter(tx => !tx.isPadding())
-        .map((p, i) => innerProofDataToTxDao(p, rollup.viewingKeys[i], created, getTxTypeFromInnerProofData(p)));
+        .map((p, i) => innerProofDataToTxDao(p, offchainTxData[i], created, getTxTypeFromInnerProofData(p)));
       const rollupProofDao = new RollupProofDao({
         id: rollup.rollupHash,
         txs,
@@ -254,7 +246,6 @@ export class WorldState {
         mined: block.created,
         created: block.created,
         interactionResult: Buffer.concat(block.interactionResult.map(r => r.toBuffer())),
-        viewingKeys: Buffer.concat(rollup.viewingKeys.flat().map(vk => vk.toBuffer())),
         gasPrice: toBufferBE(block.gasPrice, 32),
         gasUsed: block.gasUsed,
       });

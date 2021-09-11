@@ -14,10 +14,15 @@ import {
   TreeClaimNote,
   TreeNote,
 } from '@aztec/barretenberg/note_algorithms';
+import {
+  OffchainAccountData,
+  OffchainDefiClaimData,
+  OffchainDefiDepositData,
+  OffchainJoinSplitData,
+} from '@aztec/barretenberg/offchain_tx_data';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
-import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { randomBytes } from 'crypto';
 import { Database } from '../database';
@@ -102,14 +107,10 @@ describe('user state', () => {
     return { note, viewingKey };
   };
 
-  const createClaimNote = (bridgeId: BridgeId, value: bigint, user: AccountId) => {
-    const ephPrivKey = createEphemeralPrivKey();
-    const txData = ClaimNoteTxData.createFromEphPriv(value, bridgeId, user.publicKey, ephPrivKey, grumpkin);
+  const createClaimNote = (bridgeId: BridgeId, value: bigint, user: AccountId, noteSecret: Buffer) => {
+    const txData = new ClaimNoteTxData(value, bridgeId, noteSecret);
     const partialState = noteAlgos.valueNotePartialCommitment(txData.noteSecret, user);
-    return {
-      note: new TreeClaimNote(value, bridgeId, 0, BigInt(0), partialState),
-      viewingKey: txData.getViewingKey(user.publicKey, ephPrivKey, grumpkin),
-    };
+    return new TreeClaimNote(value, bridgeId, 0, BigInt(0), partialState);
   };
 
   const generateJoinSplitProof = ({
@@ -149,7 +150,8 @@ describe('user state', () => {
       inputOwner.toBuffer32(),
       outputOwner.toBuffer32(),
     );
-    return { proofData, viewingKeys };
+    const offchainTxData = new OffchainJoinSplitData(viewingKeys);
+    return { proofData, offchainTxData };
   };
 
   const generateAccountProof = ({
@@ -163,10 +165,11 @@ describe('user state', () => {
     const aliasHash = AliasHash.fromAlias(alias, blake2s);
     const note1 = randomBytes(32);
     const note2 = randomBytes(32);
+    const accountAliasId = new AccountAliasId(aliasHash!, nonce);
     const newAccountAliasId = new AccountAliasId(aliasHash!, nonce + +migrate);
-    const nullifier1 = migrate ? noteAlgos.accountAliasIdNullifier(newAccountAliasId) : randomBytes(32);
+    const nullifier1 = migrate ? noteAlgos.accountAliasIdNullifier(accountAliasId) : randomBytes(32);
     const nullifier2 = randomBytes(32);
-    return new InnerProofData(
+    const proofData = new InnerProofData(
       ProofId.ACCOUNT,
       publicKey.x(),
       publicKey.y(),
@@ -178,6 +181,16 @@ describe('user state', () => {
       newSigningPubKey1.x(),
       newSigningPubKey2.x(),
     );
+    const offchainTxData = new OffchainAccountData(
+      publicKey,
+      newAccountAliasId,
+      newSigningPubKey1.x(),
+      newSigningPubKey2.x(),
+    );
+    return {
+      proofData,
+      offchainTxData,
+    };
   };
 
   const generateDefiDepositProof = ({
@@ -188,15 +201,15 @@ describe('user state', () => {
     claimNoteRecipient = user.id,
   } = {}) => {
     const assetId = bridgeId.inputAssetId;
-    const claimNote = createClaimNote(bridgeId, depositValue, claimNoteRecipient);
     const newNote = createNote(assetId, outputNoteValue, proofSender.id);
+    const claimNote = createClaimNote(bridgeId, depositValue, claimNoteRecipient, newNote.note.noteSecret);
     const noteCommitments = [
-      noteAlgos.claimNotePartialCommitment(claimNote.note),
+      noteAlgos.claimNotePartialCommitment(claimNote),
       noteAlgos.valueNoteCommitment(newNote.note),
     ];
     const nullifier1 = noteAlgos.valueNoteNullifier(randomBytes(32), 0, proofSender.privateKey);
     const nullifier2 = noteAlgos.valueNoteNullifier(randomBytes(32), 1, proofSender.privateKey);
-    const viewingKeys = [claimNote.viewingKey, newNote.viewingKey];
+    const viewingKeys = [newNote.viewingKey];
     const proofData = new InnerProofData(
       ProofId.DEFI_DEPOSIT,
       toBufferBE(0n, 32),
@@ -209,7 +222,9 @@ describe('user state', () => {
       EthAddress.ZERO.toBuffer32(),
       EthAddress.ZERO.toBuffer32(),
     );
-    return { proofData, viewingKeys };
+    const partialState = randomBytes(32);
+    const offchainTxData = new OffchainDefiDepositData(bridgeId, partialState, depositValue, 0n, viewingKeys[0]);
+    return { proofData, offchainTxData };
   };
 
   const generateDefiClaimProof = ({
@@ -240,14 +255,19 @@ describe('user state', () => {
       EthAddress.ZERO.toBuffer32(),
       EthAddress.ZERO.toBuffer32(),
     );
-    return { proofData };
+    const offchainTxData = new OffchainDefiClaimData();
+    return { proofData, offchainTxData };
   };
 
-  const generateRollup = (rollupId = 0, innerProofData: InnerProofData[] = [], viewingKeys: ViewingKey[][] = []) => {
+  const generateRollup = (rollupId = 0, innerProofs: InnerProofData[] = [], rollupSize = innerProofs.length) => {
     const totalTxFees = new Array(RollupProofData.NUMBER_OF_ASSETS).fill(0).map(() => randomBytes(32));
+    const innerProofData = [...innerProofs];
+    for (let i = innerProofs.length; i < rollupSize; ++i) {
+      innerProofData.push(InnerProofData.PADDING);
+    }
     return new RollupProofData(
       rollupId,
-      innerProofData.length,
+      rollupSize,
       0,
       randomBytes(32),
       randomBytes(32),
@@ -265,46 +285,45 @@ describe('user state', () => {
       randomBytes(32),
       randomBytes(32),
       innerProofData,
-      viewingKeys,
     );
   };
 
-  const generateJoinSplitRollup = (rollupId = 0, options: any = {}) => {
-    const { proofData, viewingKeys } = generateJoinSplitProof(options);
-    return generateRollup(rollupId, [proofData], [viewingKeys]);
-  };
-
-  const generateAccountRollup = (options: any = {}) => generateRollup(0, [generateAccountProof(options)], []);
-
-  const generateDefiDepositRollup = (rollupId = 0, options: any = {}) => {
-    const { proofData, viewingKeys } = generateDefiDepositProof(options);
-    return generateRollup(rollupId, [proofData], [viewingKeys]);
-  };
-
-  const generateDefiClaimRollup = (rollupId = 0, options: any = {}) => {
-    const { proofData } = generateDefiClaimProof(options);
-    return generateRollup(rollupId, [proofData]);
-  };
-
-  const createBlock = (rollupProofData: RollupProofData, interactionResult: DefiInteractionNote[] = []): Block => ({
+  const createBlock = (
+    rollupProofData: RollupProofData,
+    offchainTxData: Buffer[],
+    interactionResult: DefiInteractionNote[] = [],
+  ): Block => ({
     txHash: TxHash.random(),
     rollupId: rollupProofData.rollupId,
     rollupSize: 1,
     rollupProofData: rollupProofData.toBuffer(),
-    viewingKeysData: rollupProofData.getViewingKeyData(),
+    offchainTxData,
     interactionResult,
     created: new Date(),
     gasUsed: 0,
     gasPrice: 0n,
   });
 
+  const createRollupBlock = (
+    innerProofs: { proofData: InnerProofData; offchainTxData: { toBuffer(): Buffer } }[] = [],
+    { rollupId = 0, rollupSize = innerProofs.length, interactionResult = [] as DefiInteractionNote[] } = {},
+  ) => {
+    const rollup = generateRollup(
+      rollupId,
+      innerProofs.map(p => p.proofData),
+      rollupSize,
+    );
+    const offchainTxData = innerProofs.map(p => p.offchainTxData.toBuffer());
+    return createBlock(rollup, offchainTxData, interactionResult);
+  };
+
   it('settle existing join split tx, add new note to db and nullify old note', async () => {
     const outputNoteValue1 = 36n;
     const outputNoteValue2 = 64n;
     const inputNoteIndex = 123;
 
-    const rollupProofData = generateJoinSplitRollup(0, { outputNoteValue1, outputNoteValue2 });
-    const block = createBlock(rollupProofData);
+    const jsProof = generateJoinSplitProof({ outputNoteValue1, outputNoteValue2 });
+    const block = createRollupBlock([jsProof]);
 
     db.getJoinSplitTx.mockResolvedValue({ txHash: '', settled: undefined });
     db.getNoteByNullifier.mockResolvedValueOnce({ index: inputNoteIndex, owner: user.id });
@@ -312,20 +331,19 @@ describe('user state', () => {
     userState.processBlock(block);
     await userState.stopSync(true);
 
-    const innerProofData = rollupProofData.innerProofData[0];
     expect(db.addNote).toHaveBeenCalledTimes(2);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
-      dataEntry: innerProofData.noteCommitment1,
+      dataEntry: jsProof.proofData.noteCommitment1,
       value: outputNoteValue1,
     });
     expect(db.addNote.mock.calls[1][0]).toMatchObject({
-      dataEntry: innerProofData.noteCommitment2,
+      dataEntry: jsProof.proofData.noteCommitment2,
       value: outputNoteValue2,
     });
     expect(db.nullifyNote).toHaveBeenCalledTimes(1);
     expect(db.nullifyNote).toHaveBeenCalledWith(inputNoteIndex);
     expect(db.settleJoinSplitTx).toHaveBeenCalledTimes(1);
-    expect(db.settleJoinSplitTx).toHaveBeenCalledWith(new TxHash(innerProofData.txId), user.id, block.created);
+    expect(db.settleJoinSplitTx).toHaveBeenCalledWith(new TxHash(jsProof.proofData.txId), user.id, block.created);
     expect(db.addJoinSplitTx).toHaveBeenCalledTimes(0);
     expect(db.updateUser).toHaveBeenLastCalledWith({
       ...user,
@@ -335,9 +353,7 @@ describe('user state', () => {
 
   it('should correctly process multiple blocks', async () => {
     const jsProof1 = generateJoinSplitProof({ outputNoteValue1: 1n, outputNoteValue2: 2n });
-    const padding = generateJoinSplitProof({ isPadding: true });
-    const rollupProofData1 = generateRollup(0, [jsProof1.proofData, padding.proofData], [jsProof1.viewingKeys]);
-    const block1 = createBlock(rollupProofData1);
+    const block1 = createRollupBlock([jsProof1], { rollupId: 0, rollupSize: 2 });
 
     const accountProof = generateAccountProof({
       migrate: true,
@@ -346,8 +362,7 @@ describe('user state', () => {
       outputNoteValue1: 3n,
       outputNoteValue2: 4n,
     });
-    const rollupProofData2 = generateRollup(1, [accountProof, jsProof2.proofData], [[], jsProof2.viewingKeys]);
-    const block2 = createBlock(rollupProofData2);
+    const block2 = createRollupBlock([accountProof, jsProof2], { rollupId: 1, rollupSize: 2 });
 
     db.getJoinSplitTx.mockResolvedValue({ txHash: '', settled: undefined });
     db.getNoteByNullifier.mockResolvedValueOnce({ index: 0, owner: user.id });
@@ -357,21 +372,19 @@ describe('user state', () => {
 
     await userState.handleBlocks([block1, block2]);
 
-    const innerProofData1 = rollupProofData1.innerProofData[0];
-    const innerProofData2 = rollupProofData2.innerProofData[1];
     expect(db.addNote).toHaveBeenCalledTimes(4);
-    expect(db.addNote.mock.calls[0][0]).toMatchObject({ dataEntry: innerProofData1.noteCommitment1, value: 1n });
-    expect(db.addNote.mock.calls[1][0]).toMatchObject({ dataEntry: innerProofData1.noteCommitment2, value: 2n });
-    expect(db.addNote.mock.calls[2][0]).toMatchObject({ dataEntry: innerProofData2.noteCommitment1, value: 3n });
-    expect(db.addNote.mock.calls[3][0]).toMatchObject({ dataEntry: innerProofData2.noteCommitment2, value: 4n });
+    expect(db.addNote.mock.calls[0][0]).toMatchObject({ dataEntry: jsProof1.proofData.noteCommitment1, value: 1n });
+    expect(db.addNote.mock.calls[1][0]).toMatchObject({ dataEntry: jsProof1.proofData.noteCommitment2, value: 2n });
+    expect(db.addNote.mock.calls[2][0]).toMatchObject({ dataEntry: jsProof2.proofData.noteCommitment1, value: 3n });
+    expect(db.addNote.mock.calls[3][0]).toMatchObject({ dataEntry: jsProof2.proofData.noteCommitment2, value: 4n });
     expect(db.nullifyNote).toHaveBeenCalledTimes(4);
     expect(db.nullifyNote).toHaveBeenCalledWith(0);
     expect(db.nullifyNote).toHaveBeenCalledWith(1);
     expect(db.nullifyNote).toHaveBeenCalledWith(2);
     expect(db.nullifyNote).toHaveBeenCalledWith(3);
     expect(db.settleJoinSplitTx).toHaveBeenCalledTimes(2);
-    expect(db.settleJoinSplitTx).toHaveBeenCalledWith(new TxHash(innerProofData1.txId), user.id, block1.created);
-    expect(db.settleJoinSplitTx).toHaveBeenCalledWith(new TxHash(innerProofData2.txId), user.id, block2.created);
+    expect(db.settleJoinSplitTx).toHaveBeenCalledWith(new TxHash(jsProof1.proofData.txId), user.id, block1.created);
+    expect(db.settleJoinSplitTx).toHaveBeenCalledWith(new TxHash(jsProof2.proofData.txId), user.id, block2.created);
     expect(db.addJoinSplitTx).toHaveBeenCalledTimes(0);
     expect(db.updateUser).toHaveBeenCalledTimes(1);
     expect(db.updateUser).toHaveBeenLastCalledWith({
@@ -386,7 +399,7 @@ describe('user state', () => {
 
     const blocks = Array(5)
       .fill(0)
-      .map((_, i) => createBlock(generateJoinSplitRollup(i)));
+      .map((_, i) => createRollupBlock([generateJoinSplitProof()], { rollupId: i }));
     await userState.handleBlocks(blocks);
 
     const user = userState.getUser();
@@ -395,13 +408,7 @@ describe('user state', () => {
 
     const paddingBlocks = Array(3)
       .fill(0)
-      .map((_, i) =>
-        createBlock(
-          generateJoinSplitRollup(blocks.length + i, {
-            isPadding: true,
-          }),
-        ),
-      );
+      .map((_, i) => createRollupBlock([], { rollupId: 5 + i, rollupSize: 1 }));
     await userState.handleBlocks(paddingBlocks);
 
     expect(userState.getUser().syncedToRollup).toBe(7);
@@ -409,8 +416,7 @@ describe('user state', () => {
 
   it('do nothing if it cannot decrypt new notes', async () => {
     const stranger = createUser();
-    const rollupProofData = generateJoinSplitRollup(0, { proofSender: stranger, newNoteOwner: stranger });
-    const block = createBlock(rollupProofData);
+    const block = createRollupBlock([generateJoinSplitProof({ proofSender: stranger, newNoteOwner: stranger })]);
 
     userState.processBlock(block);
     await userState.stopSync(true);
@@ -423,14 +429,15 @@ describe('user state', () => {
 
   it('do nothing if new notes owner has a different nonce', async () => {
     const newUserId = new AccountId(user.publicKey, 1);
-    const rollupProofData = generateJoinSplitRollup(0, {
-      outputNoteValue1: 10n,
-      outputNoteValue2: 20n,
-      noteCommitmentNonce: user.nonce + 1,
-      proofSender: { ...user, id: newUserId, nonce: newUserId.nonce },
-      newNoteOwner: { ...user, id: newUserId, nonce: newUserId.nonce },
-    });
-    const block = createBlock(rollupProofData);
+    const block = createRollupBlock([
+      generateJoinSplitProof({
+        outputNoteValue1: 10n,
+        outputNoteValue2: 20n,
+        noteCommitmentNonce: user.nonce + 1,
+        proofSender: { ...user, id: newUserId, nonce: newUserId.nonce },
+        newNoteOwner: { ...user, id: newUserId, nonce: newUserId.nonce },
+      }),
+    ]);
 
     userState.processBlock(block);
     await userState.stopSync(true);
@@ -451,7 +458,7 @@ describe('user state', () => {
     const inputOwner = EthAddress.randomAddress();
     const outputOwner = EthAddress.randomAddress();
 
-    const rollupProofData = generateJoinSplitRollup(0, {
+    const jsProof = generateJoinSplitProof({
       assetId,
       outputNoteValue1,
       outputNoteValue2,
@@ -460,22 +467,21 @@ describe('user state', () => {
       inputOwner,
       outputOwner,
     });
-    const block = createBlock(rollupProofData);
+    const block = createRollupBlock([jsProof]);
 
     db.getNoteByNullifier.mockResolvedValueOnce({ index: 123, owner: user.id, value: inputNoteValue });
 
     userState.processBlock(block);
     await userState.stopSync(true);
 
-    const innerProofData = rollupProofData.innerProofData[0];
-    const txHash = new TxHash(innerProofData.txId);
+    const txHash = new TxHash(jsProof.proofData.txId);
     expect(db.addNote).toHaveBeenCalledTimes(2);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
-      dataEntry: innerProofData.noteCommitment1,
+      dataEntry: jsProof.proofData.noteCommitment1,
       value: outputNoteValue1,
     });
     expect(db.addNote.mock.calls[1][0]).toMatchObject({
-      dataEntry: innerProofData.noteCommitment2,
+      dataEntry: jsProof.proofData.noteCommitment2,
       value: outputNoteValue2,
     });
     expect(db.nullifyNote).toHaveBeenCalledTimes(1);
@@ -502,21 +508,19 @@ describe('user state', () => {
     const proofSender = createUser();
     const outputNoteValue1 = 56n;
     const outputNoteValue2 = 78n;
-    const rollupProofData = generateJoinSplitRollup(0, {
+    const jsProof = generateJoinSplitProof({
       proofSender,
       outputNoteValue1,
       outputNoteValue2,
     });
-    const block = createBlock(rollupProofData);
+    const block = createRollupBlock([jsProof]);
 
     userState.processBlock(block);
     await userState.stopSync(true);
 
-    const innerProofData = rollupProofData.innerProofData[0];
-
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
-      dataEntry: innerProofData.noteCommitment1,
+      dataEntry: jsProof.proofData.noteCommitment1,
       value: outputNoteValue1,
     });
     expect(db.nullifyNote).toHaveBeenCalledTimes(0);
@@ -535,8 +539,8 @@ describe('user state', () => {
     const proofSender = createUser();
     const outputNoteValue1 = 56n;
     const outputNoteValue2 = 78n;
-    const rollupProofData = generateJoinSplitRollup(0, { proofSender, outputNoteValue1, outputNoteValue2 });
-    const block = createBlock(rollupProofData);
+    const jsProof = generateJoinSplitProof({ proofSender, outputNoteValue1, outputNoteValue2 });
+    const block = createRollupBlock([jsProof]);
 
     db.getNoteByNullifier.mockResolvedValueOnce({ index: 1, owner: proofSender.id, value: 12n });
     db.getNoteByNullifier.mockResolvedValueOnce({ index: 2, owner: proofSender.id, value: 34n });
@@ -544,11 +548,9 @@ describe('user state', () => {
     userState.processBlock(block);
     await userState.stopSync(true);
 
-    const innerProofData = rollupProofData.innerProofData[0];
-
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
-      dataEntry: innerProofData.noteCommitment1,
+      dataEntry: jsProof.proofData.noteCommitment1,
       value: outputNoteValue1,
     });
     expect(db.nullifyNote).toHaveBeenCalledTimes(0);
@@ -566,21 +568,19 @@ describe('user state', () => {
   it('restore a join split tx sent to another user', async () => {
     const outputNoteValue1 = 56n;
     const outputNoteValue2 = 78n;
-    const rollupProofData = generateJoinSplitRollup(0, {
+    const jsProof = generateJoinSplitProof({
       newNoteOwner: createUser(),
       outputNoteValue1,
       outputNoteValue2,
     });
-    const block = createBlock(rollupProofData);
+    const block = createRollupBlock([jsProof]);
 
     userState.processBlock(block);
     await userState.stopSync(true);
 
-    const innerProofData = rollupProofData.innerProofData[0];
-
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
-      dataEntry: innerProofData.noteCommitment2,
+      dataEntry: jsProof.proofData.noteCommitment2,
       value: outputNoteValue2,
     });
     expect(db.addJoinSplitTx).toHaveBeenCalledTimes(1);
@@ -596,8 +596,8 @@ describe('user state', () => {
   it('should settle account tx and add signing keys for user', async () => {
     const newSigningPubKey1 = GrumpkinAddress.randomAddress();
     const newSigningPubKey2 = GrumpkinAddress.randomAddress();
-    const rollupProofData = generateAccountRollup({ newSigningPubKey1, newSigningPubKey2 });
-    const block = createBlock(rollupProofData);
+    const accountProof = generateAccountProof({ newSigningPubKey1, newSigningPubKey2 });
+    const block = createRollupBlock([accountProof]);
 
     db.getAccountTx.mockResolvedValue({
       settled: undefined,
@@ -606,8 +606,7 @@ describe('user state', () => {
     userState.processBlock(block);
     await userState.stopSync(true);
 
-    const innerProofData = rollupProofData.innerProofData[0];
-    const txHash = new TxHash(innerProofData.txId);
+    const txHash = new TxHash(accountProof.proofData.txId);
     const accountId = new AccountId(user.publicKey, user.nonce);
 
     expect(db.addUserSigningKey).toHaveBeenCalledTimes(2);
@@ -628,8 +627,8 @@ describe('user state', () => {
 
   it('should ignore account proof that is not us', async () => {
     const randomUser = createUser();
-    const rollupProofData = generateAccountRollup({ accountCreator: randomUser });
-    const block = createBlock(rollupProofData);
+    const accountProof = generateAccountProof({ accountCreator: randomUser.id });
+    const block = createRollupBlock([accountProof]);
 
     userState.processBlock(block);
     await userState.stopSync(true);
@@ -643,10 +642,10 @@ describe('user state', () => {
     const newSigningPubKey1 = GrumpkinAddress.randomAddress();
     const newSigningPubKey2 = GrumpkinAddress.randomAddress();
     const alias = 'fairy';
-    const rollupProofData = generateAccountRollup({ alias, newSigningPubKey1, newSigningPubKey2, migrate: true });
+    const accountProof = generateAccountProof({ alias, newSigningPubKey1, newSigningPubKey2, migrate: true });
     const aliasHash = AliasHash.fromAlias(alias, blake2s);
 
-    const block = createBlock(rollupProofData);
+    const block = createRollupBlock([accountProof]);
 
     {
       userState.processBlock(block);
@@ -675,8 +674,7 @@ describe('user state', () => {
       newUserState.processBlock(block);
       await newUserState.stopSync(true);
 
-      const innerProofData = rollupProofData.innerProofData[0];
-      const txHash = new TxHash(innerProofData.txId);
+      const txHash = new TxHash(accountProof.proofData.txId);
 
       expect(newUserState.getUser().aliasHash).toEqual(aliasHash);
       expect(db.updateUser).toHaveBeenLastCalledWith({
@@ -719,18 +717,17 @@ describe('user state', () => {
     const outputValueA = depositValue / 5n;
     const outputValueB = totalOutputValueB / 5n;
 
-    const rollupProofData = generateDefiDepositRollup(0, { bridgeId, outputNoteValue, depositValue });
+    const defiProof = generateDefiDepositProof({ bridgeId, outputNoteValue, depositValue });
     const interactionResult = [
       new DefiInteractionNote(bridgeId, 0, totalInputValue, totalOutputValueA, totalOutputValueB, true),
       new DefiInteractionNote(BridgeId.random(), 1, 12n, 34n, 56n, true),
     ];
-    const block = createBlock(rollupProofData, interactionResult);
+    const block = createRollupBlock([defiProof], { interactionResult });
 
-    const innerProofData = rollupProofData.innerProofData[0];
-    const txHash = new TxHash(innerProofData.txId);
-    const viewingKey = rollupProofData.viewingKeys[0][0];
+    const txHash = new TxHash(defiProof.proofData.txId);
+    const viewingKey = defiProof.offchainTxData.viewingKey;
     const [decrypted] = await batchDecryptNotes(viewingKey.toBuffer(), user.privateKey, noteAlgos, grumpkin);
-    const claimNoteNullifer = noteAlgos.claimNoteNullifier(innerProofData.noteCommitment1, 0);
+    const claimNoteNullifer = noteAlgos.claimNoteNullifier(defiProof.proofData.noteCommitment1, 0);
 
     db.getDefiTx.mockResolvedValue({ txHash, settled: undefined });
     db.getNoteByNullifier.mockResolvedValueOnce({
@@ -751,7 +748,7 @@ describe('user state', () => {
     });
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
-      dataEntry: innerProofData.noteCommitment2,
+      dataEntry: defiProof.proofData.noteCommitment2,
       value: outputNoteValue,
     });
     expect(db.nullifyNote).toHaveBeenCalledTimes(1);
@@ -774,12 +771,12 @@ describe('user state', () => {
     const outputValueA = depositValue / 5n;
     const outputValueB = totalOutputValueB / 5n;
 
-    const rollupProofData = generateDefiDepositRollup(0, { bridgeId, outputNoteValue, depositValue });
+    const defiProof = generateDefiDepositProof({ bridgeId, outputNoteValue, depositValue });
     const interactionResult = [
       new DefiInteractionNote(BridgeId.random(), 0, 12n, 34n, 56n, true),
       new DefiInteractionNote(bridgeId, 1, totalInputValue, totalOutputValueA, totalOutputValueB, true),
     ];
-    const block = createBlock(rollupProofData, interactionResult);
+    const block = createRollupBlock([defiProof], { interactionResult });
 
     db.getNoteByNullifier.mockResolvedValueOnce({
       index: inputNoteIndexes[0],
@@ -795,15 +792,14 @@ describe('user state', () => {
     userState.processBlock(block);
     await userState.stopSync(true);
 
-    const innerProofData = rollupProofData.innerProofData[0];
-    const txHash = new TxHash(innerProofData.txId);
+    const txHash = new TxHash(defiProof.proofData.txId);
     expect(db.addClaim.mock.calls[0][0]).toMatchObject({
       txHash,
       owner: user.id,
     });
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
-      dataEntry: innerProofData.noteCommitment2,
+      dataEntry: defiProof.proofData.noteCommitment2,
       value: outputNoteValue,
     });
     expect(db.nullifyNote).toHaveBeenCalledTimes(2);
@@ -838,21 +834,20 @@ describe('user state', () => {
     db.getClaim.mockImplementation(() => ({ txHash, owner: user.id, secret }));
     db.getDefiTx.mockImplementation(() => ({ bridgeId, depositValue, outputValueA, outputValueB }));
 
-    const rollupProofData = generateDefiClaimRollup(0, { bridgeId, outputValueA, outputValueB, nullifier });
-    const block = createBlock(rollupProofData);
+    const claimProof = generateDefiClaimProof({ bridgeId, outputValueA, outputValueB, nullifier });
+    const block = createRollupBlock([claimProof]);
 
     userState.processBlock(block);
     await userState.stopSync(true);
 
-    const innerProofData = rollupProofData.innerProofData[0];
     expect(db.addNote).toHaveBeenCalledTimes(2);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
-      dataEntry: innerProofData.noteCommitment1,
+      dataEntry: claimProof.proofData.noteCommitment1,
       value: outputValueA,
       secret,
     });
     expect(db.addNote.mock.calls[1][0]).toMatchObject({
-      dataEntry: innerProofData.noteCommitment2,
+      dataEntry: claimProof.proofData.noteCommitment2,
       value: outputValueB,
       secret,
     });
@@ -872,16 +867,15 @@ describe('user state', () => {
     db.getClaim.mockImplementation(() => ({ txHash, owner: user.id, secret }));
     db.getDefiTx.mockImplementation(() => ({ bridgeId, depositValue, outputValueA, outputValueB }));
 
-    const rollupProofData = generateDefiClaimRollup(0, { bridgeId, outputValueA, outputValueB, nullifier });
-    const block = createBlock(rollupProofData);
+    const claimProof = generateDefiClaimProof({ bridgeId, outputValueA, outputValueB, nullifier });
+    const block = createRollupBlock([claimProof]);
 
     userState.processBlock(block);
     await userState.stopSync(true);
 
-    const innerProofData = rollupProofData.innerProofData[0];
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
-      dataEntry: innerProofData.noteCommitment1,
+      dataEntry: claimProof.proofData.noteCommitment1,
       value: depositValue,
       secret,
     });
@@ -905,8 +899,8 @@ describe('user state', () => {
     }));
     db.getDefiTx.mockImplementation(() => ({ bridgeId, depositValue, outputValueA, outputValueB }));
 
-    const rollupProofData = generateDefiClaimRollup(0, { bridgeId, outputValueA, outputValueB, nullifier });
-    const block = createBlock(rollupProofData);
+    const claimProof = generateDefiClaimProof({ bridgeId, outputValueA, outputValueB, nullifier });
+    const block = createRollupBlock([claimProof]);
 
     userState.processBlock(block);
     await userState.stopSync(true);
@@ -920,12 +914,12 @@ describe('user state', () => {
     const outputNoteValue2 = 64n;
     const inputNoteIndex = 123;
 
-    const rollupProofData = generateJoinSplitRollup(0, {
+    const jsProof = generateJoinSplitProof({
       outputNoteValue1,
       outputNoteValue2,
       createValidNoteCommitments: false,
     });
-    const block = createBlock(rollupProofData);
+    const block = createRollupBlock([jsProof]);
 
     db.getJoinSplitTx.mockResolvedValue({ txHash: '', settled: undefined });
     db.getNoteByNullifier.mockResolvedValueOnce({ index: inputNoteIndex, owner: user.id });

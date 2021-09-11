@@ -50,10 +50,7 @@ export class TxType {
   outputOwner!: string;
 
   @Field(() => HexString)
-  viewingKey1!: string;
-
-  @Field(() => HexString)
-  viewingKey2!: string;
+  offchainTxData!: string;
 
   @Field(() => HexString, { nullable: true })
   signature?: string;
@@ -67,7 +64,7 @@ export class TxType {
 class TxFilter {
   @Field(() => HexString, { nullable: true })
   id_starts_with?: string;
-  
+
   @Field({ nullable: true })
   rollup_null?: boolean;
 }

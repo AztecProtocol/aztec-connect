@@ -1,13 +1,12 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { ViewingKey } from '@aztec/barretenberg/viewing_key';
+import { AssetId } from '@aztec/barretenberg/asset';
+import { Asset } from '@aztec/barretenberg/blockchain';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
-import { RollupProcessor } from './rollup_processor';
+import { FeeDistributor } from '../fee_distributor';
 import { createDepositProof, createRollupProof, createSendProof } from './fixtures/create_mock_proof';
 import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
-import { Asset } from '@aztec/barretenberg/blockchain';
-import { AssetId } from '@aztec/barretenberg/asset';
-import { FeeDistributor } from '../fee_distributor';
+import { RollupProcessor } from './rollup_processor';
 
 describe('rollup_processor: deposit', () => {
   let rollupProcessor: RollupProcessor;
@@ -18,7 +17,6 @@ describe('rollup_processor: deposit', () => {
   let feeDistributorAddress: EthAddress;
   let userSigners: Signer[];
   let userAddresses: EthAddress[];
-  const viewingKeys = [ViewingKey.random(), ViewingKey.random()];
   const depositAmount = 60n;
 
   beforeEach(async () => {
@@ -53,7 +51,7 @@ describe('rollup_processor: deposit', () => {
     const tx = await rollupProcessor.createRollupProofTx(
       proofData,
       signatures,
-      viewingKeys,
+      [],
       providerSignature,
       rollupProviderAddress,
       rollupProviderAddress,
@@ -83,7 +81,7 @@ describe('rollup_processor: deposit', () => {
     const tx = await rollupProcessor.createRollupProofTx(
       proofData,
       signatures,
-      viewingKeys,
+      [],
       providerSignature,
       rollupProviderAddress,
       rollupProviderAddress,
@@ -105,7 +103,7 @@ describe('rollup_processor: deposit', () => {
     const tx = await rollupProcessor.createRollupProofTx(
       proofData,
       signatures,
-      viewingKeys,
+      [],
       providerSignature,
       rollupProviderAddress,
       rollupProviderAddress,
@@ -123,7 +121,7 @@ describe('rollup_processor: deposit', () => {
     const tx = await rollupProcessor.createRollupProofTx(
       proofData,
       signatures,
-      viewingKeys,
+      [],
       providerSignature,
       rollupProviderAddress,
       rollupProviderAddress,
@@ -153,7 +151,7 @@ describe('rollup_processor: deposit', () => {
     const tx = await rollupProcessor.createRollupProofTx(
       proofData,
       signatures,
-      viewingKeys,
+      [],
       providerSignature,
       rollupProviderAddress,
       rollupProviderAddress,

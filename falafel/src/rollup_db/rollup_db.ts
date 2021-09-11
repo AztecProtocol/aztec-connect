@@ -106,7 +106,7 @@ export class TypeOrmRollupDb implements RollupDb {
 
   public async getUnsettledJoinSplitTxs() {
     return await this.txRep.find({
-      where: { txType: Not(TxType.ACCOUNT), mined: null },
+      where: { txType: LessThan(TxType.ACCOUNT), mined: null },
     });
   }
 
@@ -265,15 +265,19 @@ export class TypeOrmRollupDb implements RollupDb {
     return (await this.getRollup(id))!;
   }
 
-  public getSettledRollups(from = 0) {
-    return this.rollupRep.find({
+  public async getSettledRollups(from = 0) {
+    const rollups = await this.rollupRep.find({
       where: { id: MoreThanOrEqual(from), mined: Not(IsNull()) },
       order: { id: 'ASC' },
       relations: ['rollupProof'],
     });
+    for (const rollup of rollups) {
+      rollup.rollupProof.txs = await this.txRep.find({ where: { rollupProof: rollup.rollupProof } });
+    }
+    return rollups;
   }
 
-  public getLastSettledRollup() {
+  public async getLastSettledRollup() {
     return this.rollupRep.findOne(
       { mined: Not(IsNull()) },
       {
@@ -283,7 +287,7 @@ export class TypeOrmRollupDb implements RollupDb {
     );
   }
 
-  public getUnsettledRollups() {
+  public async getUnsettledRollups() {
     return this.rollupRep.find({
       where: { mined: IsNull() },
       order: { id: 'ASC' },

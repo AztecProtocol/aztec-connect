@@ -1,7 +1,5 @@
 import { createHash } from 'crypto';
-import { getNumViewKeys } from '../client_proofs';
 import { numToUInt32BE } from '../serialize';
-import { ViewingKey } from '../viewing_key';
 import { decodeInnerProof } from './decode_inner_proof';
 import { encodeInnerProof, getEncodedLength } from './encode_inner_proof';
 import { InnerProofData } from './inner_proof';
@@ -112,32 +110,6 @@ const parseHeaderInputs = (proofData: Buffer) => {
   };
 };
 
-const parseViewingKeys = (innerProofData: InnerProofData[], viewingKeyData: Buffer) => {
-  let offset = 0;
-  return innerProofData.map(p => {
-    const numViewKeys = !p.isPadding() ? getNumViewKeys(p.proofId) : 0;
-    const viewingKeys = Array(2).fill(ViewingKey.EMPTY);
-    for (let j = 0; j < numViewKeys; ++j) {
-      const buf = viewingKeyData.slice(offset, offset + ViewingKey.SIZE);
-      if (!buf.length) {
-        throw new Error('Empty viewing key data.');
-      }
-      viewingKeys[j] = new ViewingKey(buf);
-      offset += ViewingKey.SIZE;
-    }
-    return viewingKeys;
-  });
-};
-
-const validateNumViewKeys = (innerProofData: InnerProofData[], viewingKeys: ViewingKey[][]) =>
-  innerProofData.forEach((p, i) => {
-    const keys = (viewingKeys[i] || []).filter(vk => vk && !vk.isEmpty());
-    const numViewKeys = !p.isPadding() ? getNumViewKeys(p.proofId) : 0;
-    if (keys.length !== numViewKeys) {
-      throw new Error('Invalid number of viewing keys.');
-    }
-  });
-
 export class RollupProofData {
   static NUMBER_OF_ASSETS = 16;
   static NUM_BRIDGE_CALLS_PER_BLOCK = 4;
@@ -166,24 +138,20 @@ export class RollupProofData {
     public prevDefiInteractionHash: Buffer,
     public numRollupTxs: Buffer,
     public innerProofData: InnerProofData[],
-    public viewingKeys: ViewingKey[][],
   ) {
-    if (totalTxFees.length !== RollupProofData.NUMBER_OF_ASSETS) {
-      throw new Error(`Expect totalTxFees to be an array of size ${RollupProofData.NUMBER_OF_ASSETS}.`);
-    }
     if (bridgeIds.length !== RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK) {
       throw new Error(`Expect bridgeIds to be an array of size ${RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK}.`);
     }
     if (defiDepositSums.length !== RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK) {
       throw new Error(`Expect defiDepositSums to be an array of size ${RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK}.`);
     }
+    if (totalTxFees.length !== RollupProofData.NUMBER_OF_ASSETS) {
+      throw new Error(`Expect totalTxFees to be an array of size ${RollupProofData.NUMBER_OF_ASSETS}.`);
+    }
     if (defiInteractionNotes.length !== RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK) {
       throw new Error(
         `Expect defiInteractionNotes to be an array of size ${RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK}.`,
       );
-    }
-    if (viewingKeys.length) {
-      validateNumViewKeys(innerProofData, viewingKeys);
     }
 
     const allTxIds = this.innerProofData.map(innerProof => innerProof.txId);
@@ -210,12 +178,8 @@ export class RollupProofData {
       ...this.defiInteractionNotes,
       this.prevDefiInteractionHash,
       this.numRollupTxs,
-      ...this.innerProofData.map(p => p.toBuffer())
+      ...this.innerProofData.map(p => p.toBuffer()),
     ]);
-  }
-
-  getViewingKeyData() {
-    return Buffer.concat(this.viewingKeys.flat().map(vk => vk.toBuffer()));
   }
 
   encode() {
@@ -253,7 +217,7 @@ export class RollupProofData {
     return proofData.readUInt32BE(RollupProofDataOffsets.ROLLUP_SIZE);
   }
 
-  static fromBuffer(proofData: Buffer, viewingKeyData?: Buffer) {
+  static fromBuffer(proofData: Buffer) {
     const {
       rollupId,
       rollupSize,
@@ -272,7 +236,7 @@ export class RollupProofData {
       totalTxFees,
       defiInteractionNotes,
       prevDefiInteractionHash,
-      numRollupTxs
+      numRollupTxs,
     } = parseHeaderInputs(proofData);
 
     if (!rollupSize) {
@@ -287,9 +251,6 @@ export class RollupProofData {
       innerProofData[i] = InnerProofData.fromBuffer(innerData);
       startIndex += InnerProofData.LENGTH;
     }
-
-
-    const viewingKeys = viewingKeyData ? parseViewingKeys(innerProofData, viewingKeyData) : [];
 
     return new RollupProofData(
       rollupId,
@@ -311,11 +272,10 @@ export class RollupProofData {
       prevDefiInteractionHash,
       numRollupTxs,
       innerProofData,
-      viewingKeys,
     );
   }
 
-  static decode(encoded: Buffer, viewingKeyData?: Buffer) {
+  static decode(encoded: Buffer) {
     const {
       rollupId,
       rollupSize,
@@ -356,9 +316,6 @@ export class RollupProofData {
       innerProofData.push(InnerProofData.PADDING);
     }
 
-
-    const viewingKeys = viewingKeyData ? parseViewingKeys(innerProofData, viewingKeyData) : [];
-
     return new RollupProofData(
       rollupId,
       rollupSize,
@@ -379,7 +336,6 @@ export class RollupProofData {
       prevDefiInteractionHash,
       numRollupTxs,
       innerProofData,
-      viewingKeys,
     );
   }
 }

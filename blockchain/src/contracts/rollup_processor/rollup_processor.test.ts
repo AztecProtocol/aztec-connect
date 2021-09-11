@@ -4,9 +4,7 @@ import { Asset } from '@aztec/barretenberg/blockchain';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { DefiInteractionNote, packInteractionNotes } from '@aztec/barretenberg/note_algorithms';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
-import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
-import { Contract } from '@ethersproject/contracts';
 import { randomBytes } from 'crypto';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
@@ -105,15 +103,13 @@ describe('rollup_processor', () => {
   });
 
   it('should reject a rollup from an unknown provider', async () => {
-    const { proofData, signatures, providerSignature, viewingKeys } = await createRollupProof(
-      signers[0],
-      createSendProof(),
-      { feeDistributorAddress: feeDistributor.address },
-    );
+    const { proofData, signatures, providerSignature } = await createRollupProof(signers[0], createSendProof(), {
+      feeDistributorAddress: feeDistributor.address,
+    });
     const tx = await rollupProcessor.createRollupProofTx(
       proofData,
       signatures,
-      viewingKeys,
+      [],
       providerSignature,
       addresses[1],
       addresses[0],
@@ -122,7 +118,7 @@ describe('rollup_processor', () => {
   });
 
   it('should reject a rollup with a bad provider signature', async () => {
-    const { proofData, signatures, viewingKeys, sigData } = await createRollupProof(signers[0], createSendProof(), {
+    const { proofData, signatures, sigData } = await createRollupProof(signers[0], createSendProof(), {
       feeDistributorAddress: feeDistributor.address,
     });
 
@@ -131,7 +127,7 @@ describe('rollup_processor', () => {
     const tx = await rollupProcessor.createRollupProofTx(
       proofData,
       signatures,
-      viewingKeys,
+      [],
       providerSignature,
       addresses[0],
       addresses[0],
@@ -168,10 +164,10 @@ describe('rollup_processor', () => {
   });
 
   it('should reject escape hatch outside valid block window', async () => {
-    const { proofData, viewingKeys } = await createRollupProof(signers[1], createSendProof());
+    const { proofData } = await createRollupProof(signers[1], createSendProof());
     const escapeBlock = await blocksToAdvance(0, 100, ethers.provider);
     await advanceBlocks(escapeBlock, ethers.provider);
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, viewingKeys, []);
+    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
     await expect(rollupProcessor.sendTx(tx, { signingAddress: addresses[1] })).rejects.toThrow(
       'Rollup Processor: ESCAPE_BLOCK_RANGE_INCORRECT',
     );
@@ -227,7 +223,7 @@ describe('rollup_processor', () => {
     });
 
     for (let i = 0; i < innerProofOutputs.length; ++i) {
-      const { proofData, viewingKeys, signatures } = await createRollupProof(signers[0], innerProofOutputs[i], {
+      const { proofData, signatures, offchainTxData } = await createRollupProof(signers[0], innerProofOutputs[i], {
         rollupId: i,
         defiInteractionData:
           i === 2
@@ -238,97 +234,95 @@ describe('rollup_processor', () => {
             : [],
         previousDefiInteractionHash: i === 3 ? previousDefiInteractionHash : undefined,
       });
-      const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, viewingKeys, signatures);
+      const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, offchainTxData);
       await rollupProcessor.sendTx(tx);
     }
 
     const blocks = await rollupProcessor.getRollupBlocksFrom(0, 1);
     expect(blocks.length).toBe(5);
 
-    const emptyViewingKeys = [ViewingKey.EMPTY, ViewingKey.EMPTY];
-
     {
       const block = blocks[0];
-      const rollup = RollupProofData.fromBuffer(block.rollupProofData, block.viewingKeysData);
-      const { innerProofs, viewingKeys } = innerProofOutputs[0];
+      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
+      const { innerProofs, offchainTxData } = innerProofOutputs[0];
       expect(block).toMatchObject({
         rollupId: 0,
         rollupSize: 2,
         interactionResult: [],
+        offchainTxData,
       });
       expect(rollup).toMatchObject({
         rollupId: 0,
         dataStartIndex: 0,
         innerProofData: [innerProofs[0], InnerProofData.PADDING],
-        viewingKeys: [viewingKeys, emptyViewingKeys],
       });
     }
 
     {
       const block = blocks[1];
-      const rollup = RollupProofData.fromBuffer(block.rollupProofData, block.viewingKeysData);
-      const { innerProofs, viewingKeys } = innerProofOutputs[1];
+      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
+      const { innerProofs, offchainTxData } = innerProofOutputs[1];
       expect(block).toMatchObject({
         rollupId: 1,
         rollupSize: 2,
         interactionResult: [],
+        offchainTxData,
       });
       expect(rollup).toMatchObject({
         rollupId: 1,
         dataStartIndex: 4,
         innerProofData: innerProofs,
-        viewingKeys: [emptyViewingKeys, viewingKeys],
       });
     }
 
     {
       const block = blocks[2];
-      const rollup = RollupProofData.fromBuffer(block.rollupProofData, block.viewingKeysData);
-      const { innerProofs, viewingKeys } = innerProofOutputs[2];
+      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
+      const { innerProofs, offchainTxData } = innerProofOutputs[2];
       expect(block).toMatchObject({
         rollupId: 2,
         rollupSize: 2,
+        offchainTxData,
         interactionResult: expectedInteractionResult,
       });
       expect(rollup).toMatchObject({
         rollupId: 2,
         dataStartIndex: 8,
         innerProofData: innerProofs,
-        viewingKeys: [viewingKeys.slice(0, 2), viewingKeys.slice(2)],
       });
     }
 
     {
       const block = blocks[3];
-      const rollup = RollupProofData.fromBuffer(block.rollupProofData, block.viewingKeysData);
-      const { innerProofs, viewingKeys } = innerProofOutputs[3];
+      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
+      const { innerProofs, offchainTxData } = innerProofOutputs[3];
       expect(block).toMatchObject({
         rollupId: 3,
         rollupSize: 2,
+        offchainTxData,
         interactionResult: [],
       });
       expect(rollup).toMatchObject({
         rollupId: 3,
         dataStartIndex: 12,
         innerProofData: [innerProofs[0], InnerProofData.PADDING],
-        viewingKeys: [viewingKeys, emptyViewingKeys],
       });
     }
 
     {
       const block = blocks[4];
-      const rollup = RollupProofData.fromBuffer(block.rollupProofData, block.viewingKeysData);
-      const { innerProofs } = innerProofOutputs[4];
+      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
+      const { innerProofs, offchainTxData } = innerProofOutputs[4];
       expect(block).toMatchObject({
         rollupId: 4,
         rollupSize: 2,
+        offchainTxData,
         interactionResult: [],
       });
       expect(rollup).toMatchObject({
         rollupId: 4,
         dataStartIndex: 16,
         innerProofData: [innerProofs[0], InnerProofData.PADDING],
-        viewingKeys: [emptyViewingKeys, emptyViewingKeys],
       });
     }
   });

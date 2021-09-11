@@ -1,17 +1,24 @@
-import { EthAddress } from '@aztec/barretenberg/address';
-import { ViewingKey } from '@aztec/barretenberg/viewing_key';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { ProofId } from '@aztec/barretenberg/client_proofs';
-import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
-import { numToUInt32BE } from '@aztec/barretenberg/serialize';
+import { AccountAliasId } from '@aztec/barretenberg/account_id';
+import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { ProofId } from '@aztec/barretenberg/client_proofs';
+import {
+  OffchainAccountData,
+  OffchainDefiClaimData,
+  OffchainDefiDepositData,
+  OffchainJoinSplitData,
+} from '@aztec/barretenberg/offchain_tx_data';
+import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { numToUInt32BE } from '@aztec/barretenberg/serialize';
+import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { randomBytes } from 'crypto';
 import { Signer } from 'ethers';
-import { Web3Signer } from '../../../signer';
-import { EthersAdapter } from '../../../provider';
 import { Keccak } from 'sha3';
+import { EthersAdapter } from '../../../provider';
+import { Web3Signer } from '../../../signer';
 
 const numToBuffer = (num: number) => numToUInt32BE(num, 32);
 
@@ -34,7 +41,7 @@ class InnerProofOutput {
     public innerProofs: InnerProofData[],
     public signatures: Buffer[],
     public totalTxFees: bigint[],
-    public viewingKeys: ViewingKey[] = [],
+    public offchainTxData: Buffer[],
   ) {}
 }
 
@@ -63,7 +70,9 @@ export const createDepositProof = async (
   const totalTxFees: bigint[] = [];
   totalTxFees[assetId] = txFee;
 
-  return new InnerProofOutput([innerProof], [signature], totalTxFees, [ViewingKey.random(), ViewingKey.random()]);
+  const offchainTxData = new OffchainJoinSplitData([ViewingKey.random(), ViewingKey.random()]);
+
+  return new InnerProofOutput([innerProof], [signature], totalTxFees, [offchainTxData.toBuffer()]);
 };
 
 export const createWithdrawProof = (amount: bigint, withdrawalAddress: EthAddress, assetId: number, txFee = 0n) => {
@@ -82,7 +91,9 @@ export const createWithdrawProof = (amount: bigint, withdrawalAddress: EthAddres
   const totalTxFees: bigint[] = [];
   totalTxFees[assetId] = txFee;
 
-  return new InnerProofOutput([innerProof], [], totalTxFees, [ViewingKey.random(), ViewingKey.random()]);
+  const offchainTxData = new OffchainJoinSplitData([ViewingKey.random(), ViewingKey.random()]);
+
+  return new InnerProofOutput([innerProof], [], totalTxFees, [offchainTxData.toBuffer()]);
 };
 
 export const createSendProof = (assetId = 1, txFee = 0n) => {
@@ -101,7 +112,9 @@ export const createSendProof = (assetId = 1, txFee = 0n) => {
   const totalTxFees: bigint[] = [];
   totalTxFees[assetId] = txFee;
 
-  return new InnerProofOutput([innerProof], [], totalTxFees, [ViewingKey.random(), ViewingKey.random()]);
+  const offchainTxData = new OffchainJoinSplitData([ViewingKey.random(), ViewingKey.random()]);
+
+  return new InnerProofOutput([innerProof], [], totalTxFees, [offchainTxData.toBuffer()]);
 };
 
 export const createAccountProof = () => {
@@ -118,7 +131,9 @@ export const createAccountProof = () => {
     randomBytes(32),
   );
 
-  return new InnerProofOutput([innerProof], [], []);
+  const offchainTxData = new OffchainAccountData(GrumpkinAddress.randomAddress(), AccountAliasId.random());
+
+  return new InnerProofOutput([innerProof], [], [], [offchainTxData.toBuffer()]);
 };
 
 export const createDefiDepositProof = (bridgeId: BridgeId, inputValue: bigint, txFee = 0n) => {
@@ -137,7 +152,9 @@ export const createDefiDepositProof = (bridgeId: BridgeId, inputValue: bigint, t
   const totalTxFees: bigint[] = [];
   totalTxFees[bridgeId.inputAssetId] = txFee;
 
-  return new InnerProofOutput([innerProof], [], totalTxFees, [ViewingKey.random(), ViewingKey.random()]);
+  const offchainTxData = new OffchainDefiDepositData(bridgeId, randomBytes(32), inputValue, txFee, ViewingKey.random());
+
+  return new InnerProofOutput([innerProof], [], totalTxFees, [offchainTxData.toBuffer()]);
 };
 
 export const createDefiClaimProof = (bridgeId: BridgeId, txFee = 0n) => {
@@ -156,7 +173,9 @@ export const createDefiClaimProof = (bridgeId: BridgeId, txFee = 0n) => {
   const totalTxFees: bigint[] = [];
   totalTxFees[bridgeId.inputAssetId] = txFee;
 
-  return new InnerProofOutput([innerProof], [], totalTxFees);
+  const offchainTxData = new OffchainDefiClaimData();
+
+  return new InnerProofOutput([innerProof], [], totalTxFees, [offchainTxData.toBuffer()]);
 };
 
 export const mergeInnerProofs = (output: InnerProofOutput[]) => {
@@ -171,7 +190,7 @@ export const mergeInnerProofs = (output: InnerProofOutput[]) => {
       .filter(s => s)
       .flat(),
     totalTxFees,
-    output.map(o => o.viewingKeys).flat(),
+    output.map(o => o.offchainTxData).flat(),
   );
 };
 
@@ -225,7 +244,7 @@ export const createRollupProof = async (
     feeDistributorAddress = EthAddress.randomAddress(),
   }: RollupProofOptions = {},
 ) => {
-  const { innerProofs, totalTxFees, viewingKeys } = innerProofOutput;
+  const { innerProofs, totalTxFees, offchainTxData } = innerProofOutput;
 
   const dataStartIndexBuf = numToBuffer(dataStartIndex === undefined ? rollupId * rollupSize * 2 : dataStartIndex);
 
@@ -287,7 +306,7 @@ export const createRollupProof = async (
     previousDefiInteractionHash || WorldStateConstants.INITIAL_INTERACTION_HASH,
     numToBuffer(rollupSize), // ??
     ...innerProofs.map(p => p.toBuffer()),
-    padding
+    padding,
     // recursiveProofOutput,
   ]);
 
@@ -307,6 +326,6 @@ export const createRollupProof = async (
     providerSignature,
     sigData,
     rollupProofData,
-    viewingKeys,
+    offchainTxData,
   };
 };

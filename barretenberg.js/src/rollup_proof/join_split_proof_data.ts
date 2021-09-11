@@ -8,9 +8,9 @@ import { TxEncoding } from './tx_encoding';
 export class JoinSplitProofData {
   static ENCODED_LENGTH = (encoding: TxEncoding) => {
     if (encoding === TxEncoding.SEND) {
-      return 1 + 5 * 32;
+      return 1 + 4 * 32 + 4;
     }
-    return 1 + 6 * 32 + 20;
+    return 1 + 5 * 32 + 4 + 20;
   };
 
   public assetId: AssetId;
@@ -39,8 +39,8 @@ export class JoinSplitProofData {
 
     let offset = 1;
     if (encoding === TxEncoding.SEND) {
-      const assetId = encoded.slice(offset, offset + 32);
-      offset += 32;
+      const assetId = Buffer.concat([Buffer.alloc(28), encoded.slice(offset, offset + 4)]);
+      offset += 4;
       const noteCommitment1 = encoded.slice(offset, offset + 32);
       offset += 32;
       const noteCommitment2 = encoded.slice(offset, offset + 32);
@@ -66,8 +66,8 @@ export class JoinSplitProofData {
       const isDeposit = encoding === TxEncoding.DEPOSIT;
       const publicValue = encoded.slice(offset, offset + 32);
       offset += 32;
-      const assetId = encoded.slice(offset, offset + 32);
-      offset += 32;
+      const assetId = Buffer.concat([Buffer.alloc(28), encoded.slice(offset, offset + 4)]);
+      offset += 4;
       const noteCommitment1 = encoded.slice(offset, offset + 32);
       offset += 32;
       const noteCommitment2 = encoded.slice(offset, offset + 32);
@@ -96,10 +96,11 @@ export class JoinSplitProofData {
 
   encode() {
     const { assetId, noteCommitment1, noteCommitment2, nullifier1, nullifier2 } = this.proofData;
+    const encodedAssetId = assetId.slice(28, 32);
     if (!this.publicInput && !this.publicOutput) {
       return Buffer.concat([
         Buffer.from([TxEncoding.SEND]),
-        assetId,
+        encodedAssetId,
         noteCommitment1,
         noteCommitment2,
         nullifier1,
@@ -111,7 +112,7 @@ export class JoinSplitProofData {
     return Buffer.concat([
       Buffer.from([this.publicInput ? TxEncoding.DEPOSIT : TxEncoding.WITHDRAW]),
       this.publicInput ? publicInput : publicOutput,
-      assetId,
+      encodedAssetId,
       noteCommitment1,
       noteCommitment2,
       nullifier1,

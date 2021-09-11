@@ -359,25 +359,26 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
      * 0x20 - 0x40 : s
      * 0x40 - 0x60 : v (in form: 0x0000....0001b for example)
      *
-     * @param - viewingKeys for the notes submitted in the rollup. Note: not used in the logic
+     * @param - offchainTxData Note: not used in the logic
      * of the rollupProcessor contract, but called here as a convenient to place data on chain
      */
     function escapeHatch(
         bytes calldata, /* encodedProofData */
         bytes calldata signatures,
-        bytes calldata /* viewingKeys */
+        bytes calldata /* offchainTxData */
     ) external override whenNotPaused {
         (bool isOpen, ) = getEscapeHatchStatus();
         require(isOpen, 'Rollup Processor: ESCAPE_BLOCK_RANGE_INCORRECT');
 
-        (bytes memory proofData, uint256 numTxs, uint256 publicInputsHash) = decodeProof(rollupHeaderInputLength, txNumPubInputs);
+        (bytes memory proofData, uint256 numTxs, uint256 publicInputsHash) =
+            decodeProof(rollupHeaderInputLength, txNumPubInputs);
         processRollupProof(proofData, signatures, numTxs, publicInputsHash);
     }
 
     function processRollup(
         bytes calldata, /* encodedProofData */
         bytes calldata signatures,
-        bytes calldata, /* viewingKeys */
+        bytes calldata, /* offchainTxData */
         bytes calldata providerSignature,
         address provider,
         address payable feeReceiver,
@@ -387,7 +388,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
 
         require(rollupProviders[provider], 'Rollup Processor: UNKNOWN_PROVIDER');
 
-        (bytes memory proofData, uint256 numTxs, uint256 publicInputsHash) = decodeProof(rollupHeaderInputLength, txNumPubInputs);
+        (bytes memory proofData, uint256 numTxs, uint256 publicInputsHash) =
+            decodeProof(rollupHeaderInputLength, txNumPubInputs);
 
         {
             bytes32 digest;
@@ -454,7 +456,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         uint256 broadcastedDataSize = rollupHeaderInputLength + 4;
         uint256 rollupHeaderInputLengthLocal = rollupHeaderInputLength;
         assembly {
-
             /**
              * Validate correctness of zk proof.
              *
@@ -484,7 +485,10 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             // `calldataload(0x04)` points to start of bytes array. Add 0x24 to skip over length param and function signature.
             // The calldata param *after* the header is the length of the pub inputs array. However it is a packed 4-byte param.
             // To extract it, we subtract 28 bytes from the calldata pointer and mask off all but the 4 least significant bytes.
-            let encodedInnerDataSize := and(calldataload(add(add(calldataload(0x04), 0x24), sub(rollupHeaderInputLengthLocal, 0x1c))), 0xffffffff)
+            let encodedInnerDataSize := and(
+                calldataload(add(add(calldataload(0x04), 0x24), sub(rollupHeaderInputLengthLocal, 0x1c))),
+                0xffffffff
+            )
 
             // broadcastedDataSize = inner join-split pubinput size + header size + 4 bytes (skip over zk proof length param)
             broadcastedDataSize := add(broadcastedDataSize, encodedInnerDataSize)
@@ -674,8 +678,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     }
 
     function processDefiBridges(bytes memory proofData) internal {
-        bytes32 prevDefiInteractionHash =
-            extractPrevDefiInteractionHash(proofData, rollupHeaderInputLength);
+        bytes32 prevDefiInteractionHash = extractPrevDefiInteractionHash(proofData, rollupHeaderInputLength);
         require(
             prevDefiInteractionHash == defiInteractionHash,
             'Rollup Processor: INCORRECT_PREV_DEFI_INTERACTION_HASH'

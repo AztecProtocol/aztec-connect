@@ -1,8 +1,8 @@
-import { ApolloServer } from 'apollo-server-koa';
 import { blockchainStatusToJson } from '@aztec/barretenberg/blockchain';
 import { Block, BlockServerResponse, GetBlocksServerResponse } from '@aztec/barretenberg/block_source';
 import { Proof } from '@aztec/barretenberg/rollup_provider';
-import { ViewingKey } from '@aztec/barretenberg/viewing_key';
+import cors from '@koa/cors';
+import { ApolloServer } from 'apollo-server-koa';
 import graphqlPlayground from 'graphql-playground-middleware-koa';
 import Koa, { Context, DefaultState } from 'koa';
 import compress from 'koa-compress';
@@ -11,15 +11,14 @@ import { PromiseReadable } from 'promise-readable';
 import { buildSchemaSync } from 'type-graphql';
 import { Container } from 'typedi';
 import { Metrics } from './metrics';
-import { JoinSplitTxResolver, AccountTxResolver, RollupResolver, ServerStatusResolver, TxResolver } from './resolver';
+import { AccountTxResolver, JoinSplitTxResolver, RollupResolver, ServerStatusResolver, TxResolver } from './resolver';
 import { Server } from './server';
-import cors from '@koa/cors';
 
 const toBlockResponse = (block: Block): BlockServerResponse => ({
   ...block,
   txHash: block.txHash.toString(),
   rollupProofData: block.rollupProofData.toString('hex'),
-  viewingKeysData: block.viewingKeysData.toString('hex'),
+  offchainTxData: block.offchainTxData.map(d => d.toString('hex')),
   interactionResult: block.interactionResult.map(r => r.toBuffer().toString('hex')),
   created: block.created.toISOString(),
   gasPrice: block.gasPrice.toString(),
@@ -75,10 +74,10 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
 
   router.post('/tx', recordMetric, checkReady, async (ctx: Koa.Context) => {
     const stream = new PromiseReadable(ctx.req);
-    const { proofData, viewingKeys, depositSignature } = JSON.parse((await stream.readAll()) as string);
+    const { proofData, offchainTxData, depositSignature } = JSON.parse((await stream.readAll()) as string);
     const tx: Proof = {
       proofData: bufferFromHex(proofData),
-      viewingKeys: viewingKeys.map((v: string) => ViewingKey.fromString(v)),
+      offchainTxData: bufferFromHex(offchainTxData),
       depositSignature: depositSignature ? bufferFromHex(depositSignature) : undefined,
     };
     const txId = await server.receiveTx(tx);

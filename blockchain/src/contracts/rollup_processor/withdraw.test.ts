@@ -1,8 +1,10 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { ViewingKey } from '@aztec/barretenberg/viewing_key';
+import { AssetId } from '@aztec/barretenberg/asset';
+import { Asset } from '@aztec/barretenberg/blockchain';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
-import { RollupProcessor } from './rollup_processor';
+import { EthersAdapter } from '../../provider';
+import { TokenAsset } from '../asset';
 import {
   createDepositProof,
   createRollupProof,
@@ -10,10 +12,7 @@ import {
   mergeInnerProofs,
 } from './fixtures/create_mock_proof';
 import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
-import { Asset } from '@aztec/barretenberg/blockchain';
-import { AssetId } from '@aztec/barretenberg/asset';
-import { TokenAsset } from '../asset';
-import { EthersAdapter } from '../../provider';
+import { RollupProcessor } from './rollup_processor';
 
 describe('rollup_processor: withdraw', () => {
   let rollupProcessor: RollupProcessor;
@@ -21,7 +20,6 @@ describe('rollup_processor: withdraw', () => {
   let rollupProvider: Signer;
   let userSigners: Signer[];
   let userAddresses: EthAddress[];
-  const viewingKeys = [ViewingKey.random(), ViewingKey.random()];
   const depositAmount = 60n;
 
   beforeEach(async () => {
@@ -45,7 +43,7 @@ describe('rollup_processor: withdraw', () => {
     await rollupProcessor.depositPendingFunds(AssetId.DAI, depositAmount, undefined, {
       signingAddress: userAddresses[1],
     });
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, viewingKeys, signatures);
+    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, []);
     await rollupProcessor.sendTx(tx);
   });
 
@@ -59,7 +57,7 @@ describe('rollup_processor: withdraw', () => {
       { rollupId: 1 },
     );
 
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, viewingKeys, signatures);
+    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, []);
     await rollupProcessor.sendTx(tx);
 
     const postWithdrawalRollupBalance = await assets[0].balanceOf(rollupProcessor.address);
@@ -79,7 +77,7 @@ describe('rollup_processor: withdraw', () => {
       { rollupId: 1 },
     );
 
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, viewingKeys, signatures);
+    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, []);
     await rollupProcessor.sendTx(tx);
 
     const postWithdrawalRollupBalance = await assets[1].balanceOf(rollupProcessor.address);
@@ -112,7 +110,7 @@ describe('rollup_processor: withdraw', () => {
       await rollupProcessor.depositPendingFunds(assetId, depositAmount, undefined, {
         signingAddress: userAddresses[0],
       });
-      const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, viewingKeys, signatures);
+      const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, []);
       await rollupProcessor.sendTx(tx);
     }
 
@@ -121,7 +119,7 @@ describe('rollup_processor: withdraw', () => {
       createWithdrawProof(depositAmount, userAddresses[0], assetId),
       { rollupId: 2 },
     );
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, viewingKeys, []);
+    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('ERC20FaultyTransfer: FAILED');
   });
 });

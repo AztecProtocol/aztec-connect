@@ -1,13 +1,18 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
-import { Blockchain, BlockchainStatus, Receipt, SendTxOptions, TypedData } from '@aztec/barretenberg/blockchain';
+import {
+  Blockchain,
+  BlockchainStatus,
+  EthereumProvider,
+  Receipt,
+  SendTxOptions,
+  TypedData,
+} from '@aztec/barretenberg/blockchain';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { Contracts } from './contracts/contracts';
-import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 import { validateSignature } from './validate_signature';
-import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 
 export interface EthereumBlockchainConfig {
   console?: boolean;
@@ -172,7 +177,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   public async createRollupProofTx(
     proofData: Buffer,
     signatures: Buffer[],
-    viewingKeys: ViewingKey[],
+    offchainTxData: Buffer[],
     providerSignature: Buffer,
     providerAddress: EthAddress,
     feeReceiver: EthAddress,
@@ -181,7 +186,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return await this.contracts.createRollupProofTx(
       proofData,
       signatures,
-      viewingKeys,
+      offchainTxData,
       providerSignature,
       providerAddress,
       feeReceiver,
@@ -189,11 +194,11 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     );
   }
 
-  public async createEscapeHatchProofTx(proofData: Buffer, viewingKeys: ViewingKey[], depositSignature?: Buffer) {
+  public async createEscapeHatchProofTx(proofData: Buffer, depositSignature?: Buffer, offchainTxData?: Buffer) {
     return await this.contracts.createEscapeHatchProofTx(
       proofData,
-      viewingKeys,
       depositSignature ? [depositSignature] : [],
+      offchainTxData ? [offchainTxData] : [],
     );
   }
 

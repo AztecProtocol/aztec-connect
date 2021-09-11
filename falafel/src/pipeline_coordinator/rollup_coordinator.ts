@@ -1,6 +1,7 @@
+import { AssetId } from '@aztec/barretenberg/asset';
 import { TxType } from '@aztec/barretenberg/blockchain';
-import { DefiDepositProofData, ProofData } from '@aztec/barretenberg/client_proofs';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { ClientProofData, DefiDepositClientProofData } from '@aztec/barretenberg/client_proofs';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
@@ -11,7 +12,6 @@ import { RollupAggregator } from '../rollup_aggregator';
 import { RollupCreator } from '../rollup_creator';
 import { RollupPublisher } from '../rollup_publisher';
 import { PublishTimeManager } from './publish_time_manager';
-import { AssetId } from '@aztec/barretenberg/asset';
 
 export class RollupCoordinator {
   private interrupted = false;
@@ -32,7 +32,7 @@ export class RollupCoordinator {
     private oldDefiRoot: Buffer,
     private oldDefiPath: HashPath,
     private defiInteractionNotes: DefiInteractionNote[] = [],
-  ) { }
+  ) {}
 
   get processedTxs() {
     return this.txs;
@@ -73,9 +73,9 @@ export class RollupCoordinator {
         continue;
       }
 
-      const proofData = new ProofData(tx.proofData);
+      const proofData = new ClientProofData(tx.proofData);
       const assetId = [TxType.DEFI_DEPOSIT, TxType.DEFI_CLAIM].includes(tx.txType)
-        ? BridgeId.fromBuffer(proofData.assetId).inputAssetId
+        ? BridgeId.fromBuffer(proofData.bridgeId).inputAssetId
         : proofData.assetId.readUInt32BE(28);
       if (!this.assetIds.has(assetId) && this.assetIds.size === RollupProofData.NUMBER_OF_ASSETS) {
         continue;
@@ -88,7 +88,7 @@ export class RollupCoordinator {
       if (tx.txType !== TxType.DEFI_DEPOSIT) {
         addTx(tx);
       } else {
-        const { bridgeId } = new DefiDepositProofData(proofData);
+        const { bridgeId } = new DefiDepositClientProofData(proofData);
         if (this.bridgeIds.some(id => id.equals(bridgeId))) {
           addTx(tx);
         } else if (this.bridgeIds.length < RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK) {

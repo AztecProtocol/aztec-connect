@@ -117,8 +117,8 @@ export default class Server implements HashPathSource {
   }
 
   private async handleBlock(block: Block) {
-    const { rollupProofData, viewingKeysData, rollupId } = block;
-    const { dataStartIndex, innerProofData } = RollupProofData.fromBuffer(rollupProofData, viewingKeysData);
+    const { rollupProofData, rollupId } = block;
+    const { dataStartIndex, innerProofData } = RollupProofData.fromBuffer(rollupProofData);
 
     console.log(`Processing rollup ${rollupId}...`);
 

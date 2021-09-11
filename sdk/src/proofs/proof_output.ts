@@ -1,8 +1,12 @@
-import { GrumpkinAddress } from '@aztec/barretenberg/address';
-import { AccountProofData, ProofData } from '@aztec/barretenberg/client_proofs';
+import { ClientProofData } from '@aztec/barretenberg/client_proofs';
+import {
+  OffchainAccountData,
+  OffchainDefiDepositData,
+  OffchainJoinSplitData,
+} from '@aztec/barretenberg/offchain_tx_data';
 import { Proof } from '@aztec/barretenberg/rollup_provider';
+import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
-import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { AccountId } from '../user';
 import { UserAccountTx, UserDefiTx, UserJoinSplitTx } from '../user_tx';
 
@@ -11,41 +15,60 @@ export interface ProofOutput extends Proof {
 }
 
 export class JoinSplitProofOutput implements ProofOutput {
-  constructor(
-    public tx: UserJoinSplitTx,
-    public proofData: Buffer,
-    public viewingKeys: ViewingKey[],
-  ) {}
+  public offchainTxData: Buffer;
+
+  constructor(public tx: UserJoinSplitTx, public proofData: Buffer, offchainTxData: OffchainJoinSplitData) {
+    this.offchainTxData = offchainTxData.toBuffer();
+  }
 }
 
 export class AccountProofOutput implements ProofOutput {
-  public readonly viewingKeys = [];
+  public offchainTxData: Buffer;
 
-  constructor(public tx: UserAccountTx, public proofData: Buffer) {}
+  constructor(public tx: UserAccountTx, public proofData: Buffer, offchainTxData: OffchainAccountData) {
+    this.offchainTxData = offchainTxData.toBuffer();
+  }
 
   static fromBuffer(buf: Buffer) {
-    const [migratedBuf, rawProofData] = [buf.slice(0, 1), buf.slice(1)];
-    const proofData = new ProofData(rawProofData);
-    const accountProof = new AccountProofData(proofData);
-    const publicKey = new GrumpkinAddress(accountProof.publicKey);
-    const { nonce, aliasHash } = accountProof.accountAliasId;
+    let dataStart = 0;
+    const migratedBuf = buf.slice(dataStart, dataStart + 1);
+    dataStart += 1;
+    const rawProofDataLen = buf.slice(dataStart, dataStart + 4).readUInt32BE();
+    dataStart += 4;
+    const rawProofData = buf.slice(dataStart, dataStart + rawProofDataLen);
+    dataStart += rawProofDataLen;
+    const rawOffchainAccountData = buf.slice(dataStart);
+
+    const proofData = new ClientProofData(rawProofData);
+    const offchainTxData = OffchainAccountData.fromBuffer(rawOffchainAccountData);
+    const { accountPublicKey, accountAliasId, spendingPublicKey1, spendingPublicKey2 } = offchainTxData;
     const tx = new UserAccountTx(
       new TxHash(proofData.txId),
-      new AccountId(publicKey, nonce),
-      aliasHash,
-      proofData.inputOwner,
-      proofData.outputOwner,
+      new AccountId(accountPublicKey, accountAliasId.nonce),
+      accountAliasId.aliasHash,
+      spendingPublicKey1,
+      spendingPublicKey2,
       !migratedBuf.equals(Buffer.alloc(1)),
       new Date(),
     );
-    return new AccountProofOutput(tx, rawProofData);
+
+    return new AccountProofOutput(tx, rawProofData, offchainTxData);
   }
 
   toBuffer() {
-    return Buffer.concat([Buffer.from([+this.tx.migrated]), this.proofData]);
+    return Buffer.concat([
+      Buffer.from([+this.tx.migrated]),
+      numToUInt32BE(this.proofData.length),
+      this.proofData,
+      this.offchainTxData,
+    ]);
   }
 }
 
 export class DefiProofOutput implements ProofOutput {
-  constructor(public tx: UserDefiTx, public proofData: Buffer, public viewingKeys: ViewingKey[]) {}
+  public offchainTxData: Buffer;
+
+  constructor(public tx: UserDefiTx, public proofData: Buffer, offchainTxData: OffchainDefiDepositData) {
+    this.offchainTxData = offchainTxData.toBuffer();
+  }
 }

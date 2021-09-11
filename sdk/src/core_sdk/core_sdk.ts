@@ -4,12 +4,13 @@ import { AssetId } from '@aztec/barretenberg/asset';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { AccountProver, JoinSplitProver, PooledProverFactory, ProofData } from '@aztec/barretenberg/client_proofs';
+import { AccountProver, JoinSplitProver, PooledProverFactory, ProofId } from '@aztec/barretenberg/client_proofs';
 import { Crs } from '@aztec/barretenberg/crs';
 import { Blake2s, Pedersen, PooledPedersen, Schnorr } from '@aztec/barretenberg/crypto';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
+import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupProvider, SettlementTime } from '@aztec/barretenberg/rollup_provider';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
@@ -23,13 +24,13 @@ import { LevelUp } from 'levelup';
 import os from 'os';
 import { Database } from '../database';
 import { AccountProofCreator } from '../proofs/account_proof_creator';
+import { DefiDepositProofCreator } from '../proofs/defi_deposit_proof_creator';
 import { JoinSplitProofCreator } from '../proofs/join_split_proof_creator';
-import { AccountProofOutput, DefiProofOutput, JoinSplitProofOutput, ProofOutput } from '../proofs/proof_output';
+import { ProofOutput } from '../proofs/proof_output';
 import { SdkEvent, SdkInitState, SdkStatus } from '../sdk';
 import { SchnorrSigner, Signer } from '../signer';
-import { AccountAliasId, AccountId, UserData, UserDataFactory } from '../user';
+import { AccountId, UserData, UserDataFactory } from '../user';
 import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
-import { UserAccountTx, UserDefiTx, UserJoinSplitTx } from '../user_tx';
 
 const debug = createDebug('bb:core_sdk');
 
@@ -57,6 +58,7 @@ export class CoreSdk extends EventEmitter {
   private workerPool!: WorkerPool;
   private joinSplitProofCreator!: JoinSplitProofCreator;
   private accountProofCreator!: AccountProofCreator;
+  private defiDepositProofCreator!: DefiDepositProofCreator;
   private blockQueue!: MemoryFifo<Block>;
   private userFactory!: UserDataFactory;
   private userStateFactory!: UserStateFactory;
@@ -139,8 +141,15 @@ export class CoreSdk extends EventEmitter {
       await pooledProverFactory.createUnrolledProver(JoinSplitProver.circuitSize),
     );
     this.joinSplitProofCreator = new JoinSplitProofCreator(joinSplitProver, this.worldState, this.grumpkin, this.db);
+    this.defiDepositProofCreator = new DefiDepositProofCreator(
+      joinSplitProver,
+      noteAlgos,
+      this.worldState,
+      this.grumpkin,
+      this.db,
+    );
     const accountProver = new AccountProver(await pooledProverFactory.createUnrolledProver(AccountProver.circuitSize));
-    this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState);
+    this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState, this.db);
     await this.createJoinSplitProvingKey(joinSplitProver);
     await this.createAccountProvingKey(accountProver);
 
@@ -311,9 +320,10 @@ export class CoreSdk extends EventEmitter {
     }
 
     const rollups = blocks.map(b => RollupProofData.fromBuffer(b.rollupProofData));
+    const offchainTxData = blocks.map(b => b.offchainTxData).flat();
     debug('synchronising data...');
     await this.worldState.processRollups(rollups);
-    await this.processAliases(rollups);
+    await this.processAliases(rollups, offchainTxData);
     if (rollups.length) {
       await this.updateStatusRollupInfo(rollups[rollups.length - 1]);
     }
@@ -362,7 +372,7 @@ export class CoreSdk extends EventEmitter {
       await this.worldState.syncFromDb().catch(() => {});
       const rollup = RollupProofData.fromBuffer(block.rollupProofData);
       await this.worldState.processRollup(rollup);
-      await this.processAliases([rollup]);
+      await this.processAliases([rollup], block.offchainTxData);
       await this.updateStatusRollupInfo(rollup);
       await this.mutex?.unlock();
 
@@ -371,18 +381,17 @@ export class CoreSdk extends EventEmitter {
     }
   }
 
-  private async processAliases(rollups: RollupProofData[]) {
+  private async processAliases(rollups: RollupProofData[], offchainTxData: Buffer[]) {
     const aliases = rollups
       .map(r => r.innerProofData)
       .flat()
-      .filter(ip => ip.proofId === 1)
-      .map(ip => {
-        const { publicInput, publicOutput, assetId } = ip;
-        const { aliasHash, nonce } = AccountAliasId.fromBuffer(assetId);
-        const address = new GrumpkinAddress(Buffer.concat([publicInput, publicOutput]));
-        // debug(`setting alias: ${aliasHash} -> ${address} (${nonce}).`);
-        return { aliasHash, address, latestNonce: nonce };
-      });
+      .map((ip, i) => (ip.proofId === ProofId.ACCOUNT ? OffchainAccountData.fromBuffer(offchainTxData[i]) : undefined))
+      .filter((p): p is OffchainAccountData => !!p)
+      .map(({ accountPublicKey, accountAliasId }) => ({
+        address: accountPublicKey,
+        aliasHash: accountAliasId.aliasHash,
+        latestNonce: accountAliasId.nonce,
+      }));
     await this.db.setAliases(aliases);
   }
 
@@ -466,39 +475,19 @@ export class CoreSdk extends EventEmitter {
     outputOwner?: EthAddress,
   ) {
     const userState = this.getUserState(userId);
-
-    const { txId, proofData, viewingKeys } = await this.joinSplitProofCreator.createProof(
+    return this.joinSplitProofCreator.createProof(
       userState,
       publicInput,
       publicOutput,
       privateInput,
       recipientPrivateOutput,
       senderPrivateOutput,
-      BigInt(0),
       assetId,
       signer,
       noteRecipient,
       inputOwner,
       outputOwner,
     );
-
-    const txHash = new TxHash(txId);
-    const tx = new UserJoinSplitTx(
-      txHash,
-      userId,
-      assetId,
-      publicInput,
-      publicOutput,
-      privateInput,
-      recipientPrivateOutput,
-      senderPrivateOutput,
-      inputOwner,
-      outputOwner,
-      true,
-      new Date(),
-    );
-
-    return new JoinSplitProofOutput(tx, proofData, viewingKeys);
   }
 
   public async createAccountProofSigningData(
@@ -512,8 +501,6 @@ export class CoreSdk extends EventEmitter {
     newSigningPubKey2?: GrumpkinAddress,
   ) {
     const aliasHash = this.computeAliasHash(alias);
-    const accountId = nonce ? new AccountId(accountPublicKey, nonce) : undefined;
-    const accountIndex = accountId ? await this.db.getUserSigningKeyIndex(accountId, signingPubKey) : undefined;
     const tx = await this.accountProofCreator.createAccountTx(
       signingPubKey,
       aliasHash,
@@ -523,7 +510,6 @@ export class CoreSdk extends EventEmitter {
       newAccountPublicKey,
       newSigningPubKey1,
       newSigningPubKey2,
-      accountIndex,
     );
     return this.accountProofCreator.computeSigningData(tx);
   }
@@ -538,42 +524,19 @@ export class CoreSdk extends EventEmitter {
     newSigningPublicKey2?: GrumpkinAddress,
     newAccountPrivateKey?: Buffer,
   ) {
-    const userState = this.getUserState(userId);
-    const { publicKey } = userState.getUser();
-
-    const signerPublicKey = signer.getPublicKey();
-    const accountId = nonce ? new AccountId(publicKey, nonce) : undefined;
-    const accountIndex = accountId ? await this.db.getUserSigningKeyIndex(accountId, signerPublicKey) : undefined;
-    const newAccountPublicKey = newAccountPrivateKey ? this.derivePublicKey(newAccountPrivateKey) : publicKey;
-    const newNonce = nonce + +migrate;
-
     this.emit(SdkEvent.LOG, 'Generating proof...');
 
-    const rawProofData = await this.accountProofCreator.createProof(
+    const newAccountPublicKey = newAccountPrivateKey ? this.derivePublicKey(newAccountPrivateKey) : undefined;
+    return this.accountProofCreator.createProof(
       signer,
       aliasHash,
       nonce,
       migrate,
-      publicKey,
+      userId.publicKey,
       newAccountPublicKey,
       newSigningPublicKey1,
       newSigningPublicKey2,
-      accountIndex,
     );
-
-    const { txId } = new ProofData(rawProofData);
-    const txHash = new TxHash(txId);
-    const tx = new UserAccountTx(
-      txHash,
-      new AccountId(newAccountPublicKey, newNonce),
-      aliasHash,
-      newSigningPublicKey1?.x(),
-      newSigningPublicKey2?.x(),
-      migrate,
-      new Date(),
-    );
-
-    return new AccountProofOutput(tx, rawProofData);
   }
 
   public async createDefiProof(
@@ -584,26 +547,7 @@ export class CoreSdk extends EventEmitter {
     signer: Signer,
   ) {
     const userState = this.getUserState(userId);
-    const { txId, proofData, viewingKeys } = await this.joinSplitProofCreator.createProof(
-      userState,
-      BigInt(0),
-      BigInt(0),
-      depositValue + txFee,
-      BigInt(0),
-      BigInt(0),
-      depositValue,
-      bridgeId.inputAssetId,
-      signer,
-      undefined,
-      undefined,
-      undefined,
-      bridgeId,
-    );
-
-    const txHash = new TxHash(txId);
-    const tx = new UserDefiTx(txHash, userId, bridgeId, depositValue, txFee, new Date());
-
-    return new DefiProofOutput(tx, proofData, viewingKeys);
+    return this.defiDepositProofCreator.createProof(userState, bridgeId, depositValue, txFee, signer);
   }
 
   public async sendProof(proofOutput: ProofOutput, depositSignature?: Buffer) {
@@ -611,8 +555,8 @@ export class CoreSdk extends EventEmitter {
     const { userId } = tx;
     const userState = this.getUserState(userId);
 
-    const { proofData, viewingKeys } = proofOutput;
-    await this.rollupProvider.sendProof({ proofData, viewingKeys, depositSignature });
+    const { proofData, offchainTxData } = proofOutput;
+    await this.rollupProvider.sendProof({ proofData, offchainTxData, depositSignature });
 
     await userState.addTx(tx);
 

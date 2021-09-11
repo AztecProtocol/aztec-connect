@@ -1,24 +1,27 @@
 import { AccountAliasId, AccountId } from '@aztec/barretenberg/account_id';
-import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
+import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId, AssetIds } from '@aztec/barretenberg/asset';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { Block } from '@aztec/barretenberg/block_source';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
 import {
   batchDecryptNotes,
-  DecryptedNote,
   DefiInteractionNote,
   NoteAlgorithms,
-  recoverTreeClaimNotes,
   recoverTreeNotes,
   TreeNote,
 } from '@aztec/barretenberg/note_algorithms';
-import { DefiDepositProofData, InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import {
+  OffchainAccountData,
+  OffchainDefiDepositData,
+  OffchainJoinSplitData,
+} from '@aztec/barretenberg/offchain_tx_data';
+import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupProvider } from '@aztec/barretenberg/rollup_provider';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { Database } from '../database';
@@ -114,26 +117,45 @@ export class UserState extends EventEmitter {
 
     const balancesBefore = AssetIds.map(assetId => this.getBalance(assetId));
 
-    const viewingKeys = Buffer.concat(blocks.map(b => b.viewingKeysData));
-    const decryptedNotes = await batchDecryptNotes(viewingKeys, this.user.privateKey, this.noteAlgos, this.grumpkin);
-    const rollupProofData = blocks.map(b => RollupProofData.fromBuffer(b.rollupProofData, b.viewingKeysData));
-    const proofsWithDecryptedNotes = rollupProofData
-      .map(p => p.innerProofData.filter(i => !i.isPadding()))
-      .flat()
-      .filter(p => [ProofId.JOIN_SPLIT, ProofId.DEFI_DEPOSIT].includes(p.proofId));
-
-    // Recover tree notes
+    const rollupProofData = blocks.map(b => RollupProofData.fromBuffer(b.rollupProofData));
+    const innerProofs = rollupProofData.map(p => p.innerProofData.filter(i => !i.isPadding())).flat();
+    const offchainTxDataBuffers = blocks.map(b => b.offchainTxData).flat();
+    const viewingKeys: ViewingKey[] = [];
     const noteCommitments: Buffer[] = [];
-    const decryptedTreeNote: (DecryptedNote | undefined)[] = [];
-    proofsWithDecryptedNotes.forEach(({ proofId, noteCommitment1, noteCommitment2 }, i) => {
-      if (proofId !== ProofId.DEFI_DEPOSIT) {
-        noteCommitments.push(noteCommitment1);
-        decryptedTreeNote.push(decryptedNotes[i * 2]);
+    const offchainAccountData: OffchainAccountData[] = [];
+    const offchainDefiDepositData: OffchainDefiDepositData[] = [];
+    innerProofs.forEach((proof, i) => {
+      switch (proof.proofId) {
+        case ProofId.JOIN_SPLIT: {
+          const offchainTxData = OffchainJoinSplitData.fromBuffer(offchainTxDataBuffers[i]);
+          viewingKeys.push(...offchainTxData.viewingKeys);
+          const { noteCommitment1, noteCommitment2 } = innerProofs[i];
+          noteCommitments.push(noteCommitment1);
+          noteCommitments.push(noteCommitment2);
+          break;
+        }
+        case ProofId.ACCOUNT: {
+          offchainAccountData.push(OffchainAccountData.fromBuffer(offchainTxDataBuffers[i]));
+          break;
+        }
+        case ProofId.DEFI_DEPOSIT: {
+          const offchainTxData = OffchainDefiDepositData.fromBuffer(offchainTxDataBuffers[i]);
+          viewingKeys.push(offchainTxData.viewingKey);
+          const { noteCommitment2 } = innerProofs[i];
+          noteCommitments.push(noteCommitment2);
+          offchainDefiDepositData.push(offchainTxData);
+          break;
+        }
       }
-
-      noteCommitments.push(noteCommitment2);
-      decryptedTreeNote.push(decryptedNotes[i * 2 + 1]);
     });
+
+    const viewingKeysBuf = Buffer.concat(viewingKeys.flat().map(vk => vk.toBuffer()));
+    const decryptedTreeNote = await batchDecryptNotes(
+      viewingKeysBuf,
+      this.user.privateKey,
+      this.noteAlgos,
+      this.grumpkin,
+    );
     const treeNotes = recoverTreeNotes(
       decryptedTreeNote,
       noteCommitments,
@@ -142,18 +164,7 @@ export class UserState extends EventEmitter {
       this.noteAlgos,
     );
 
-    // Recover tree claim notes
-    const defiDepositProofs = proofsWithDecryptedNotes.filter(p => p.proofId === ProofId.DEFI_DEPOSIT);
-    const decryptedClaimNotes: (DecryptedNote | undefined)[] = [];
-    proofsWithDecryptedNotes.map(({ proofId }, i) => {
-      if (proofId === ProofId.DEFI_DEPOSIT) {
-        decryptedClaimNotes.push(decryptedNotes[i * 2]);
-      }
-    });
-    const treeClaimNotes = recoverTreeClaimNotes(decryptedClaimNotes, defiDepositProofs);
-
     let treeNoteStartIndex = 0;
-    let treeClaimNoteStartIndex = 0;
     for (let blockIndex = 0; blockIndex < blocks.length; ++blockIndex) {
       const block = blocks[blockIndex];
       const proofData = rollupProofData[blockIndex];
@@ -175,20 +186,20 @@ export class UserState extends EventEmitter {
             await this.handleJoinSplitTx(proof, noteStartIndex, block.created, note1, note2);
             break;
           }
-          case ProofId.ACCOUNT:
-            await this.handleAccountTx(proof, noteStartIndex, block.created);
+          case ProofId.ACCOUNT: {
+            const [offchainTxData] = offchainAccountData.splice(0, 1);
+            await this.handleAccountTx(proof, offchainTxData, noteStartIndex, block.created);
             break;
+          }
           case ProofId.DEFI_DEPOSIT: {
             const note = treeNotes[treeNoteStartIndex];
             treeNoteStartIndex++;
-            const claimNote = treeClaimNotes[treeClaimNoteStartIndex];
-            const decrypted = decryptedClaimNotes[treeClaimNoteStartIndex];
-            treeClaimNoteStartIndex++;
-            if (!claimNote || !note) {
+            if (!note) {
               // Both notes should be owned by the same user.
               continue;
             }
-            await this.handleDefiDepositTx(proof, noteStartIndex, block.interactionResult, decrypted!.noteSecret, note);
+            const [offchainTxData] = offchainDefiDepositData.splice(0, 1);
+            await this.handleDefiDepositTx(proof, offchainTxData, noteStartIndex, block.interactionResult, note);
             break;
           }
           case ProofId.DEFI_CLAIM:
@@ -213,39 +224,43 @@ export class UserState extends EventEmitter {
     this.emit(UserStateEvent.UPDATED_USER_STATE, this.user.id);
   }
 
-  private async handleAccountTx(proof: InnerProofData, noteStartIndex: number, blockCreated: Date) {
-    const tx = this.recoverAccountTx(proof, blockCreated);
+  private async handleAccountTx(
+    proof: InnerProofData,
+    offchainTxData: OffchainAccountData,
+    noteStartIndex: number,
+    blockCreated: Date,
+  ) {
+    const tx = this.recoverAccountTx(proof, offchainTxData, blockCreated);
     if (!tx.userId.equals(this.user.id)) {
       return;
     }
 
-    const accountId = new AccountId(tx.userId.publicKey, tx.userId.nonce);
+    const { txHash, userId, newSigningPubKey1, newSigningPubKey2, aliasHash } = tx;
 
-    if (tx.newSigningPubKey1) {
-      debug(`user ${this.user.id} adds signing key ${tx.newSigningPubKey1.toString('hex')}.`);
+    if (newSigningPubKey1) {
+      debug(`user ${this.user.id} adds signing key ${newSigningPubKey1.toString('hex')}.`);
       await this.db.addUserSigningKey({
-        accountId,
-        key: tx.newSigningPubKey1,
+        accountId: userId,
+        key: newSigningPubKey1,
         treeIndex: noteStartIndex,
       });
     }
 
-    if (tx.newSigningPubKey2) {
-      debug(`user ${this.user.id} adds signing key ${tx.newSigningPubKey2.toString('hex')}.`);
+    if (newSigningPubKey2) {
+      debug(`user ${this.user.id} adds signing key ${newSigningPubKey2.toString('hex')}.`);
       await this.db.addUserSigningKey({
-        accountId,
-        key: tx.newSigningPubKey2,
+        accountId: userId,
+        key: newSigningPubKey2,
         treeIndex: noteStartIndex + 1,
       });
     }
 
-    if (!this.user.aliasHash || !this.user.aliasHash.equals(tx.aliasHash)) {
-      debug(`user ${this.user.id} updates alias hash ${tx.aliasHash.toString()}.`);
-      this.user = { ...this.user, aliasHash: tx.aliasHash };
+    if (!this.user.aliasHash || !this.user.aliasHash.equals(aliasHash)) {
+      debug(`user ${this.user.id} updates alias hash ${aliasHash.toString()}.`);
+      this.user = { ...this.user, aliasHash };
       await this.db.updateUser(this.user);
     }
 
-    const txHash = new TxHash(proof.txId);
     const savedTx = await this.db.getAccountTx(txHash);
     if (savedTx) {
       debug(`settling account tx: ${txHash.toString()}`);
@@ -297,9 +312,9 @@ export class UserState extends EventEmitter {
 
   private async handleDefiDepositTx(
     proof: InnerProofData,
+    offchainTxData: OffchainDefiDepositData,
     noteStartIndex: number,
     interactionResult: DefiInteractionNote[],
-    claimNoteSecret: Buffer,
     treeNote: TreeNote,
   ) {
     const { txId, noteCommitment1, noteCommitment2 } = proof;
@@ -309,14 +324,14 @@ export class UserState extends EventEmitter {
       return;
     }
 
-    const { bridgeId, depositValue } = new DefiDepositProofData(proof);
+    const { bridgeId, depositValue } = offchainTxData;
     const txHash = new TxHash(txId);
     const { totalInputValue, totalOutputValueA, totalOutputValueB, result } = interactionResult.find(r =>
       r.bridgeId.equals(bridgeId),
     )!;
     const outputValueA = !result ? BigInt(0) : (totalOutputValueA * depositValue) / totalInputValue;
     const outputValueB = !result ? BigInt(0) : (totalOutputValueB * depositValue) / totalInputValue;
-    await this.addClaim(noteStartIndex, txHash, noteCommitment1, claimNoteSecret);
+    await this.addClaim(noteStartIndex, txHash, noteCommitment1, treeNote.noteSecret);
     const { nullifier1, nullifier2 } = proof;
     const destroyedNote1 = await this.nullifyNote(nullifier1);
     const destroyedNote2 = await this.nullifyNote(nullifier2);
@@ -328,7 +343,15 @@ export class UserState extends EventEmitter {
       debug(`settling defi tx: ${txHash.toString()}`);
       await this.db.updateDefiTx(txHash, outputValueA, outputValueB);
     } else {
-      const tx = this.recoverDefiTx(proof, outputValueA, outputValueB, noteCommitment, destroyedNote1, destroyedNote2);
+      const tx = this.recoverDefiTx(
+        proof,
+        offchainTxData,
+        outputValueA,
+        outputValueB,
+        noteCommitment,
+        destroyedNote1,
+        destroyedNote2,
+      );
       debug(`recovered defi tx: ${txHash.toString()}`);
       await this.db.addDefiTx(tx);
     }
@@ -458,27 +481,21 @@ export class UserState extends EventEmitter {
     );
   }
 
-  private recoverAccountTx(proof: InnerProofData, blockCreated: Date) {
-    const { txId, publicInput, publicOutput, assetId, inputOwner, outputOwner, nullifier1 } = proof;
-
+  private recoverAccountTx(proof: InnerProofData, offchainTxData: OffchainAccountData, blockCreated: Date) {
+    const { txId, nullifier1 } = proof;
+    const { accountPublicKey, accountAliasId, spendingPublicKey1, spendingPublicKey2 } = offchainTxData;
     const txHash = new TxHash(txId);
-    const publicKey = new GrumpkinAddress(Buffer.concat([publicInput, publicOutput]));
-    const accountAliasId = AccountAliasId.fromBuffer(assetId);
-    const { aliasHash, nonce } = accountAliasId;
-    const userId = new AccountId(publicKey, nonce);
-
-    const nonEmptyKey = (address: Buffer) => (!address.equals(Buffer.alloc(32)) ? address : undefined);
-    const newSigningPubKey1 = nonEmptyKey(inputOwner);
-    const newSigningPubKey2 = nonEmptyKey(outputOwner);
-
-    const migrated = nonce !== 0 && nullifier1.equals(this.noteAlgos.accountAliasIdNullifier(accountAliasId));
+    const userId = new AccountId(accountPublicKey, accountAliasId.nonce);
+    const prevAccountAliasId = new AccountAliasId(accountAliasId.aliasHash, accountAliasId.nonce - 1);
+    const migrated =
+      prevAccountAliasId.nonce >= 0 && nullifier1.equals(this.noteAlgos.accountAliasIdNullifier(prevAccountAliasId));
 
     return new UserAccountTx(
       txHash,
       userId,
-      aliasHash,
-      newSigningPubKey1,
-      newSigningPubKey2,
+      accountAliasId.aliasHash,
+      spendingPublicKey1,
+      spendingPublicKey2,
       migrated,
       new Date(),
       blockCreated,
@@ -487,16 +504,16 @@ export class UserState extends EventEmitter {
 
   private recoverDefiTx(
     proof: InnerProofData,
+    offchainTxData: OffchainDefiDepositData,
     outputValueA: bigint,
     outputValueB: bigint,
     noteCommitment?: Note,
     destroyedNote1?: Note,
     destroyedNote2?: Note,
   ) {
-    const { txId, assetId, publicOutput } = proof;
+    const { txId } = proof;
+    const { bridgeId, depositValue } = offchainTxData;
     const txHash = new TxHash(txId);
-    const bridgeId = BridgeId.fromBuffer(assetId);
-    const depositValue = toBigIntBE(publicOutput);
 
     const noteValue = (note?: Note) => (note ? note.value : BigInt(0));
     const privateInput = noteValue(destroyedNote1) + noteValue(destroyedNote2);

@@ -1,11 +1,10 @@
 import { EthAddress } from '@aztec/barretenberg/address';
+import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
+import { ClientProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
-import { ViewingKey } from '@aztec/barretenberg/viewing_key';
-import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { randomBytes } from 'crypto';
 import moment from 'moment';
 import { ClaimDao } from '../entity/claim';
@@ -24,7 +23,7 @@ interface RandomTxOpts {
 
 export const randomTx = ({ signature, inputOwner, publicInput, txType = TxType.DEPOSIT }: RandomTxOpts = {}) => {
   const proofId = Math.max(0, txType - 3);
-  const proofData = new ProofData(
+  const proofData = new ClientProofData(
     Buffer.concat([
       numToUInt32BE(proofId, 32),
       publicInput ? toBufferBE(publicInput, 32) : randomBytes(32), // publicInput
@@ -41,8 +40,7 @@ export const randomTx = ({ signature, inputOwner, publicInput, txType = TxType.D
   return new TxDao({
     id: proofData.txId,
     proofData: proofData.rawProofData,
-    viewingKey1: ViewingKey.random(),
-    viewingKey2: ViewingKey.random(),
+    offchainTxData: randomBytes(160),
     nullifier1: proofData.nullifier1,
     nullifier2: proofData.nullifier2,
     dataRootsIndex: 0,
@@ -125,7 +123,6 @@ export const randomRollupProof = (txs: TxDao[], dataStartIndex = 0, rollupSize =
           randomBytes(32),
         ),
       ],
-      [],
     ).toBuffer(),
     created: new Date(),
   });
@@ -135,12 +132,6 @@ export const randomRollup = (rollupId: number, rollupProof: RollupProofDao) =>
     id: rollupId,
     dataRoot: randomBytes(32),
     rollupProof,
-    viewingKeys: Buffer.concat(
-      rollupProof.txs
-        .map(tx => [tx.viewingKey1, tx.viewingKey2])
-        .flat()
-        .map(vk => vk.toBuffer()),
-    ),
     created: new Date(),
   });
 

@@ -4,12 +4,12 @@ import { EthereumProvider, PermitArgs, SendTxOptions } from '@aztec/barretenberg
 import { Block } from '@aztec/barretenberg/block_source';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
+import { sliceOffchainTxData } from '@aztec/barretenberg/offchain_tx_data';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { TransactionReceipt, TransactionResponse } from '@ethersproject/abstract-provider';
 import { Web3Provider } from '@ethersproject/providers';
-import { Contract, utils, Event } from 'ethers';
-import { ViewingKey } from '@aztec/barretenberg/viewing_key';
+import { Contract, Event, utils } from 'ethers';
 import { abi } from '../../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
 import { solidityFormatSignatures } from './solidity_format_signatures';
 
@@ -136,7 +136,7 @@ export class RollupProcessor {
     return { escapeOpen, blocksRemaining: +blocksRemaining };
   }
 
-  async createEscapeHatchProofTx(proofData: Buffer, viewingKeys: ViewingKey[], signatures: Buffer[]) {
+  async createEscapeHatchProofTx(proofData: Buffer, signatures: Buffer[], offchainTxData: Buffer[]) {
     const rollupProofData = RollupProofData.fromBuffer(proofData);
     const trailingData = proofData.slice(rollupProofData.toBuffer().length);
     const encodedProof = Buffer.concat([rollupProofData.encode(), trailingData]);
@@ -145,7 +145,7 @@ export class RollupProcessor {
       .escapeHatch(
         `0x${encodedProof.toString('hex')}`,
         formattedSignatures,
-        Buffer.concat(viewingKeys.map(vk => vk.toBuffer())),
+        `0x${Buffer.concat(offchainTxData).toString('hex')}`,
       )
       .catch(fixEthersStackTrace);
     return Buffer.from(tx.data!.slice(2), 'hex');
@@ -154,7 +154,7 @@ export class RollupProcessor {
   async createRollupProofTx(
     proofData: Buffer,
     signatures: Buffer[],
-    viewingKeys: ViewingKey[],
+    offchainTxData: Buffer[],
     providerSignature: Buffer,
     providerAddress: EthAddress,
     feeReceiver: EthAddress,
@@ -168,7 +168,7 @@ export class RollupProcessor {
       .processRollup(
         `0x${encodedProof.toString('hex')}`,
         formattedSignatures,
-        Buffer.concat(viewingKeys.map(vk => vk.toBuffer())),
+        `0x${Buffer.concat(offchainTxData).toString('hex')}`,
         providerSignature,
         providerAddress.toString(),
         feeReceiver.toString(),
@@ -342,18 +342,19 @@ export class RollupProcessor {
   ): Block {
     const rollupAbi = new utils.Interface(abi);
     const result = rollupAbi.parseTransaction({ data: tx.data });
-    const [proofData, , viewingKeys] = result.args;
-    const rollupProofData = RollupProofData.decode(Buffer.from(proofData.slice(2), 'hex')).toBuffer();
-    const viewingKeysData = Buffer.from(viewingKeys.slice(2), 'hex');
+    const [proofData, , offchainTxDataBuf] = result.args;
+    const rollupProofData = RollupProofData.decode(Buffer.from(proofData.slice(2), 'hex'));
+    const proofIds = rollupProofData.innerProofData.filter(p => !p.isPadding()).map(p => p.proofId);
+    const offchainTxData = sliceOffchainTxData(proofIds, Buffer.from(offchainTxDataBuf.slice(2), 'hex'));
 
     return {
       created: new Date(tx.timestamp! * 1000),
       txHash: TxHash.fromString(tx.hash),
-      rollupProofData,
-      viewingKeysData,
+      rollupProofData: rollupProofData.toBuffer(),
+      offchainTxData,
       interactionResult,
-      rollupId: RollupProofData.getRollupIdFromBuffer(rollupProofData),
-      rollupSize: RollupProofData.getRollupSizeFromBuffer(rollupProofData),
+      rollupId: rollupProofData.rollupId,
+      rollupSize: rollupProofData.rollupSize,
       gasPrice: BigInt(tx.gasPrice!.toString()),
       gasUsed: receipt.gasUsed.toNumber(),
     };

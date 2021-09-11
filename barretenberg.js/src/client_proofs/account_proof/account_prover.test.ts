@@ -12,7 +12,7 @@ import { MerkleTree } from '../../merkle_tree';
 import { NoteAlgorithms } from '../../note_algorithms';
 import { PooledPippenger } from '../../pippenger';
 import { BarretenbergWasm, WorkerPool } from '../../wasm';
-import { ProofData } from '../proof_data';
+import { ClientProofData } from '../proof_data';
 import { UnrolledProver } from '../prover';
 import { AccountProver, AccountTx, AccountVerifier } from './index';
 
@@ -90,7 +90,6 @@ describe('account proof', () => {
 
     const merkleRoot = tree.getRoot();
 
-    const numNewKeys = 2;
     const signingKey0 = createKeyPair();
     const signingKey1 = createKeyPair();
 
@@ -107,7 +106,6 @@ describe('account proof', () => {
       merkleRoot,
       user.publicKey,
       newAccountPublicKey,
-      numNewKeys,
       signingKey0.publicKey,
       signingKey1.publicKey,
       accountAliasId,
@@ -130,7 +128,7 @@ describe('account proof', () => {
     expect(verified).toBe(true);
 
     // Check public inputs
-    const accountProof = new ProofData(proof);
+    const accountProof = new ClientProofData(proof);
     const newAccountAliasId = new AccountAliasId(aliasHash, nonce + 1);
     const accountAliasIdNullifier = noteAlgos.accountAliasIdNullifier(accountAliasId);
     expect(accountProof.publicInput).toEqual(newAccountPublicKey.x());

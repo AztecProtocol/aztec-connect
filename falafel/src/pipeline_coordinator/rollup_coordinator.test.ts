@@ -1,18 +1,18 @@
-import { HashPath } from '@aztec/barretenberg/merkle_tree';
-import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
-import { randomBytes } from 'crypto';
-import moment from 'moment';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { TxType } from '@aztec/barretenberg/blockchain';
-import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { ClientProofData, ProofId } from '@aztec/barretenberg/client_proofs';
+import { HashPath } from '@aztec/barretenberg/merkle_tree';
+import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
+import { randomBytes } from 'crypto';
+import moment from 'moment';
 import { TxDao } from '../entity/tx';
 import { RollupAggregator } from '../rollup_aggregator';
 import { RollupCreator } from '../rollup_creator';
 import { RollupPublisher } from '../rollup_publisher';
 import { PublishTimeManager } from './publish_time_manager';
 import { RollupCoordinator } from './rollup_coordinator';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
 
 jest.useFakeTimers();
 
@@ -32,7 +32,10 @@ describe('rollup_coordinator', () => {
   let rollupPublisher: Mockify<RollupPublisher>;
   let coordinator: RollupCoordinator;
 
-  const mockDefiProofData = (proofId: ProofId.DEFI_DEPOSIT | ProofId.DEFI_CLAIM, bridgeId = new BridgeId(EthAddress.randomAddress(), 1, 0, 1, 0)) =>
+  const mockDefiProofData = (
+    proofId: ProofId.DEFI_DEPOSIT | ProofId.DEFI_CLAIM,
+    bridgeId = new BridgeId(EthAddress.randomAddress(), 1, 0, 1, 0),
+  ) =>
     Buffer.concat([
       numToUInt32BE(proofId, 32),
       randomBytes(2 * 32),
@@ -44,20 +47,20 @@ describe('rollup_coordinator', () => {
     ]);
 
   const mockTx = (id: number, txType = TxType.DEPOSIT) =>
-  (({
-    id,
-    txType,
-    proofData: [TxType.DEFI_DEPOSIT, TxType.DEFI_CLAIM].includes(txType)
-      ? mockDefiProofData(txType - 3)
-      : Buffer.concat([
-        Buffer.alloc(28),
-        numToUInt32BE(Math.max(0, txType - 3)),
-        randomBytes(32),
-        randomBytes(32),
-        Buffer.alloc(32),
-        randomBytes((ProofData.NUM_PUBLIC_INPUTS - 4) * 32),
-      ]),
-  } as any) as TxDao);
+    (({
+      id,
+      txType,
+      proofData: [TxType.DEFI_DEPOSIT, TxType.DEFI_CLAIM].includes(txType)
+        ? mockDefiProofData(txType - 3)
+        : Buffer.concat([
+            Buffer.alloc(28),
+            numToUInt32BE(Math.max(0, txType - 3)),
+            randomBytes(32),
+            randomBytes(32),
+            Buffer.alloc(32),
+            randomBytes((ClientProofData.NUM_PUBLIC_INPUTS - 4) * 32),
+          ]),
+    } as any) as TxDao);
 
   beforeEach(() => {
     jest.spyOn(Date, 'now').mockImplementation(() => 1618226000000);
@@ -207,11 +210,11 @@ describe('rollup_coordinator', () => {
 
   describe('picking txs to rollup', () => {
     const mockDefiBridgeTx = (id: number, bridgeId: BridgeId) =>
-    (({
-      id,
-      txType: TxType.DEFI_DEPOSIT,
-      proofData: mockDefiProofData(ProofId.DEFI_DEPOSIT, bridgeId),
-    } as any) as TxDao);
+      (({
+        id,
+        txType: TxType.DEFI_DEPOSIT,
+        proofData: mockDefiProofData(ProofId.DEFI_DEPOSIT, bridgeId),
+      } as any) as TxDao);
 
     it('will not rollup defi deposit proofs with more than the allowed distinct bridge ids', async () => {
       const bridgeIds = Array(6)

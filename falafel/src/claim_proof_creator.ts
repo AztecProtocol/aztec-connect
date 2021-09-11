@@ -1,9 +1,9 @@
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { ProofData } from '@aztec/barretenberg/client_proofs';
+import { ClientProofData } from '@aztec/barretenberg/client_proofs';
 import { DefiInteractionNote, TreeClaimNote } from '@aztec/barretenberg/note_algorithms';
+import { OffchainDefiClaimData } from '@aztec/barretenberg/offchain_tx_data';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
-import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { ClaimProof, ClaimProofRequest, ProofGenerator } from 'halloumi/proof_generator';
 import { ClaimDao } from './entity/claim';
@@ -12,7 +12,7 @@ import { RollupDb } from './rollup_db';
 import { parseInteractionResult } from './rollup_db/parse_interaction_result';
 
 export class ClaimProofCreator {
-  constructor(private rollupDb: RollupDb, private worldStateDb: WorldStateDb, private proofGenerator: ProofGenerator) { }
+  constructor(private rollupDb: RollupDb, private worldStateDb: WorldStateDb, private proofGenerator: ProofGenerator) {}
 
   /**
    * Creates claim proofs for the defi deposit txs with the interaction result from previous rollups.
@@ -33,7 +33,7 @@ export class ClaimProofCreator {
       rollupIds.add(rollupId);
     }
     const rollups = await this.rollupDb.getRollupsByRollupIds([...rollupIds]);
-    const interactionNotes = rollups.map(({ interactionResult }) => parseInteractionResult(interactionResult)).flat();
+    const interactionNotes = rollups.map(({ interactionResult }) => parseInteractionResult(interactionResult!)).flat();
 
     for (const claim of claims) {
       const interactionNote = interactionNotes.find(n => n.nonce === claim.interactionNonce)!;
@@ -43,15 +43,15 @@ export class ClaimProofCreator {
         throw new Error('Failed to create claim proof. This should not happen.');
       }
 
-      const proof = new ProofData(proofData);
+      const proof = new ClientProofData(proofData);
       const dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
+      const offchainTxData = new OffchainDefiClaimData();
       const claimTx = new TxDao({
         id: proof.txId,
         txType: TxType.DEFI_CLAIM,
         proofData,
+        offchainTxData: offchainTxData.toBuffer(),
         nullifier1: proof.nullifier1,
-        viewingKey1: ViewingKey.EMPTY,
-        viewingKey2: ViewingKey.EMPTY,
         dataRootsIndex,
         created: new Date(),
       });
@@ -73,7 +73,13 @@ export class ClaimProofCreator {
     console.log(`Creating claim proof for note ${id}...`);
     const claimNoteIndex = id;
     const claimNotePath = await this.worldStateDb.getHashPath(RollupTreeId.DATA, BigInt(claimNoteIndex));
-    const claimNote = new TreeClaimNote(depositValue, BridgeId.fromBigInt(bridgeId), interactionNonce, fee, partialState);
+    const claimNote = new TreeClaimNote(
+      depositValue,
+      BridgeId.fromBigInt(bridgeId),
+      interactionNonce,
+      fee,
+      partialState,
+    );
     const interactionNotePath = await this.worldStateDb.getHashPath(RollupTreeId.DEFI, BigInt(interactionNonce));
     const { outputValueA, outputValueB } = this.getOutputValues(claimNote, interactionNote);
     const claimProof = new ClaimProof(

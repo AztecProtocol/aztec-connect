@@ -1,15 +1,13 @@
-import { ViewingKey } from '@aztec/barretenberg/viewing_key';
-import { ethers } from 'hardhat';
-import { Signer } from 'ethers';
-import { RollupProcessor } from './rollup_processor';
-import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
-import { createRollupProof, createSendProof } from './fixtures/create_mock_proof';
 import { RollupProofDataOffsets } from '@aztec/barretenberg/rollup_proof';
+import { Signer } from 'ethers';
+import { ethers } from 'hardhat';
+import { createRollupProof, createSendProof } from './fixtures/create_mock_proof';
+import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
+import { RollupProcessor } from './rollup_processor';
 
 describe('rollup_processor: state', () => {
   let rollupProvider: Signer;
   let rollupProcessor: RollupProcessor;
-  const viewingKeys = [ViewingKey.random(), ViewingKey.random()];
 
   beforeEach(async () => {
     const signers = await ethers.getSigners();
@@ -20,7 +18,7 @@ describe('rollup_processor: state', () => {
   it('should update merkle tree state', async () => {
     const { proofData, signatures, rollupProofData } = await createRollupProof(rollupProvider, createSendProof());
 
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, viewingKeys, signatures);
+    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, []);
     await rollupProcessor.sendTx(tx);
 
     expect(await rollupProcessor.dataRoot()).toEqual(rollupProofData.newDataRoot);
@@ -33,7 +31,7 @@ describe('rollup_processor: state', () => {
     const { proofData, signatures } = await createRollupProof(rollupProvider, createSendProof());
     proofData.writeUInt32BE(666, RollupProofDataOffsets.ROLLUP_ID);
 
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, viewingKeys, signatures);
+    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: ID_NOT_SEQUENTIAL');
   });
 
@@ -41,7 +39,7 @@ describe('rollup_processor: state', () => {
     const { proofData, signatures } = await createRollupProof(rollupProvider, createSendProof());
     proofData.writeUInt32BE(666, RollupProofDataOffsets.DATA_START_INDEX);
 
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, viewingKeys, signatures);
+    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: INCORRECT_DATA_START_INDEX');
   });
 
@@ -49,7 +47,7 @@ describe('rollup_processor: state', () => {
     const { proofData, signatures } = await createRollupProof(rollupProvider, createSendProof());
     proofData.writeUInt32BE(666, RollupProofDataOffsets.OLD_DATA_ROOT);
 
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, viewingKeys, signatures);
+    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: INCORRECT_DATA_ROOT');
   });
 
@@ -57,7 +55,7 @@ describe('rollup_processor: state', () => {
     const { proofData, signatures } = await createRollupProof(rollupProvider, createSendProof());
     proofData.writeUInt32BE(666, RollupProofDataOffsets.OLD_NULL_ROOT);
 
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, viewingKeys, signatures);
+    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: INCORRECT_NULL_ROOT');
   });
 
@@ -65,7 +63,7 @@ describe('rollup_processor: state', () => {
     const { proofData, signatures } = await createRollupProof(rollupProvider, createSendProof());
     proofData.writeUInt32BE(666, RollupProofDataOffsets.OLD_ROOT_ROOT);
 
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, viewingKeys, signatures);
+    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: INCORRECT_ROOT_ROOT');
   });
 });

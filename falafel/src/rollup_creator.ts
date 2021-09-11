@@ -1,17 +1,16 @@
-import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
+import { AssetId } from '@aztec/barretenberg/asset';
+import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
+import { ClientProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
-import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { ProofGenerator, TxRollup, TxRollupProofRequest } from 'halloumi/proof_generator';
 import { RollupProofDao } from './entity/rollup_proof';
 import { TxDao } from './entity/tx';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
-import { AssetId } from '@aztec/barretenberg/asset';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 
 export class RollupCreator {
   constructor(
@@ -93,24 +92,22 @@ export class RollupCreator {
     const assetIds: Set<AssetId> = new Set();
 
     for (const tx of txs) {
-      const proof = new ProofData(tx.proofData);
+      const proof = new ClientProofData(tx.proofData);
 
-      if ([ProofId.DEFI_DEPOSIT, ProofId.DEFI_CLAIM].includes(proof.proofId)) {
-        const bridgeId = BridgeId.fromBuffer(proof.assetId);
-        assetIds.add(bridgeId.inputAssetId);
-      } else if (proof.proofId !== ProofId.ACCOUNT) {
-        assetIds.add(proof.assetId.readUInt32BE(28));
+      if (proof.proofId !== ProofId.ACCOUNT) {
+        assetIds.add(proof.txFeeAssetId.readUInt32BE(28));
       }
 
       if (proof.proofId !== ProofId.DEFI_DEPOSIT) {
         await worldStateDb.put(RollupTreeId.DATA, nextDataIndex++, proof.noteCommitment1);
       } else {
-        if (!bridgeIds.some(id => id.equals(proof.assetId))) {
-          bridgeIds.push(proof.assetId);
+        if (!bridgeIds.some(id => id.equals(proof.bridgeId))) {
+          bridgeIds.push(proof.bridgeId);
         }
         const interactionNonce =
-          rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK + bridgeIds.findIndex(id => id.equals(proof.assetId));
-        const claimFee = proof.txFee - (proof.txFee >> BigInt(1));
+          rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK + bridgeIds.findIndex(id => id.equals(proof.bridgeId));
+        const txFee = toBigIntBE(proof.txFee);
+        const claimFee = txFee - (txFee >> BigInt(1));
         const encNote = this.noteAlgo.claimNoteCompletePartialCommitment(
           proof.noteCommitment1,
           interactionNonce,

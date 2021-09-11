@@ -1,16 +1,15 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { Blockchain } from '@aztec/barretenberg/blockchain';
+import { AssetId } from '@aztec/barretenberg/asset';
+import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
+import { Blockchain, EthereumProvider } from '@aztec/barretenberg/blockchain';
+import { JoinSplitClientProofData } from '@aztec/barretenberg/client_proofs';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
-import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
-import { EthereumProvider } from '@aztec/barretenberg/blockchain';
+import { Web3Signer } from '@aztec/blockchain';
+import { Keccak } from 'sha3';
 import { RollupDao } from './entity/rollup';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
-import { ProofData, JoinSplitProofData } from '@aztec/barretenberg/client_proofs';
-import { AssetId } from '@aztec/barretenberg/asset';
-import { Web3Signer } from '@aztec/blockchain';
-import { Keccak } from 'sha3';
 
 export class RollupPublisher {
   private interrupted = false;
@@ -88,11 +87,11 @@ export class RollupPublisher {
   private async createTxData(rollup: RollupDao) {
     const proof = rollup.rollupProof.proofData;
     const txs = rollup.rollupProof.txs;
-    const viewingKeys = txs.map(tx => [tx.viewingKey1, tx.viewingKey2]).flat();
+    const offchainTxData = txs.map(tx => tx.offchainTxData);
     const jsTxs = txs.filter(tx => tx.signature);
     const signatures: Buffer[] = [];
     for (const tx of jsTxs) {
-      const { inputOwner, txId } = new JoinSplitProofData(new ProofData(tx.proofData));
+      const { inputOwner, txId } = JoinSplitClientProofData.fromBuffer(tx.proofData);
       const proofApproval = await this.blockchain.getUserProofApprovalStatus(inputOwner, txId);
       if (!proofApproval) {
         signatures.push(tx.signature!);
@@ -110,7 +109,7 @@ export class RollupPublisher {
     return await this.blockchain.createRollupProofTx(
       proof,
       signatures,
-      viewingKeys,
+      offchainTxData,
       providerSignature,
       this.providerAddress,
       this.providerAddress,

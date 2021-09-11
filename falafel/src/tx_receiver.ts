@@ -1,15 +1,14 @@
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
 import {
   AccountVerifier,
-  DefiDepositProofData,
-  JoinSplitProofData,
+  ClientProofData,
+  DefiDepositClientProofData,
+  JoinSplitClientProofData,
   JoinSplitVerifier,
-  ProofData,
   ProofId,
 } from '@aztec/barretenberg/client_proofs';
 import { Crs } from '@aztec/barretenberg/crs';
-import { ViewingKey } from '@aztec/barretenberg/viewing_key';
-import { createWorker, destroyWorker, BarretenbergWasm, BarretenbergWorker } from '@aztec/barretenberg/wasm';
+import { BarretenbergWasm, BarretenbergWorker, createWorker, destroyWorker } from '@aztec/barretenberg/wasm';
 import { Mutex } from 'async-mutex';
 import { ProofGenerator } from 'halloumi/proof_generator';
 import { TxDao } from './entity/tx';
@@ -20,7 +19,7 @@ import { TxFeeResolver } from './tx_fee_resolver';
 
 export interface Tx {
   proofData: Buffer;
-  viewingKeys: ViewingKey[];
+  offchainTxData: Buffer;
   depositSignature?: Buffer;
 }
 
@@ -58,11 +57,11 @@ export class TxReceiver {
     await destroyWorker(this.worker);
   }
 
-  public async receiveTx({ proofData, depositSignature, viewingKeys }: Tx) {
+  public async receiveTx({ proofData, depositSignature, offchainTxData }: Tx) {
     // We mutex this entire receive call until we move to "deposit to proof hash". Read more below.
     await this.mutex.acquire();
     try {
-      const proof = new ProofData(proofData);
+      const proof = new ClientProofData(proofData);
       const txType = await getTxTypeFromProofData(proof, this.blockchain);
       this.metrics.txReceived(txType);
 
@@ -88,13 +87,11 @@ export class TxReceiver {
       }
 
       const dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
-      const hasViewingKeys = [ProofId.JOIN_SPLIT, ProofId.DEFI_DEPOSIT].includes(proof.proofId);
 
       const txDao = new TxDao({
         id: proof.txId,
         proofData,
-        viewingKey1: hasViewingKeys ? viewingKeys[0] : ViewingKey.EMPTY,
-        viewingKey2: hasViewingKeys ? viewingKeys[1] : ViewingKey.EMPTY,
+        offchainTxData,
         signature: depositSignature,
         nullifier1: proof.nullifier1,
         nullifier2: proof.nullifier2,
@@ -111,16 +108,15 @@ export class TxReceiver {
     }
   }
 
-  private async validateJoinSplitTx(proofData: ProofData, txType: TxType, depositSignature?: Buffer) {
-    const jsProofData = new JoinSplitProofData(proofData);
-    const { publicInput, inputOwner, assetId, txId } = jsProofData;
+  private async validateJoinSplitTx(proofData: ClientProofData, txType: TxType, depositSignature?: Buffer) {
+    const { publicInput, inputOwner, assetId, txId, txFee } = new JoinSplitClientProofData(proofData);
 
     const minFee = this.txFeeResolver.getMinTxFee(assetId, txType);
-    if (jsProofData.proofData.txFee < minFee) {
+    if (txFee < minFee) {
       throw new Error('Insufficient fee.');
     }
 
-    if (!(await this.joinSplitVerifier.verifyProof(jsProofData.proofData.rawProofData))) {
+    if (!(await this.joinSplitVerifier.verifyProof(proofData.rawProofData))) {
       throw new Error('Join-split proof verification failed.');
     }
 
@@ -139,7 +135,7 @@ export class TxReceiver {
       // TODO: Move to a system where you only ever deposit against a proof hash!
       const total =
         (await this.rollupDb.getUnsettledJoinSplitTxs())
-          .map(tx => new JoinSplitProofData(new ProofData(tx.proofData)))
+          .map(tx => JoinSplitClientProofData.fromBuffer(tx.proofData))
           .filter(proofData => proofData.inputOwner.equals(inputOwner) && proofData.assetId === assetId)
           .reduce((acc, proofData) => acc + proofData.publicInput, 0n) + publicInput;
 
@@ -151,15 +147,14 @@ export class TxReceiver {
     }
   }
 
-  private async validateAccountTx(proof: ProofData) {
+  private async validateAccountTx(proof: ClientProofData) {
     if (!(await this.accountVerifier.verifyProof(proof.rawProofData))) {
       throw new Error('Account proof verification failed.');
     }
   }
 
-  private async validateDefiBridgeTx(proofData: ProofData, txType: TxType) {
-    const defiBridgeProof = new DefiDepositProofData(proofData);
-    const { bridgeId } = defiBridgeProof;
+  private async validateDefiBridgeTx(proofData: ClientProofData, txType: TxType) {
+    const { bridgeId, txFee } = new DefiDepositClientProofData(proofData);
 
     // TODO - Use a whitelist.
     const remoteBridgeId = await this.blockchain.getBridgeId(bridgeId.address);
@@ -168,11 +163,11 @@ export class TxReceiver {
     }
 
     const minFee = this.txFeeResolver.getMinTxFee(bridgeId.inputAssetId, txType);
-    if (defiBridgeProof.proofData.txFee < minFee) {
+    if (txFee < minFee) {
       throw new Error('Insufficient fee.');
     }
 
-    if (!(await this.joinSplitVerifier.verifyProof(defiBridgeProof.proofData.rawProofData))) {
+    if (!(await this.joinSplitVerifier.verifyProof(proofData.rawProofData))) {
       throw new Error('Defi-bridge proof verification failed.');
     }
   }
