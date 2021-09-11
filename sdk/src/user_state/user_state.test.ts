@@ -266,7 +266,7 @@ describe('user state', () => {
       randomBytes(32),
       innerProofData,
       viewingKeys,
-      );
+    );
   };
 
   const generateJoinSplitRollup = (rollupId = 0, options: any = {}) => {

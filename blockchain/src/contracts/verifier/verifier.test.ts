@@ -12,8 +12,8 @@ describe('Verifier', function () {
   });
 
   async function validate(inner: number, outer: number) {
-    const { proof, proofData } = await getRollupData(inner, outer);
-    const gasUsed = await verifier.verify(proof, proofData.rollupSize, proof.slice(0, 32), { gasLimit });
+    const { proofData, broadcastData, inputHash } = await getRollupData(inner, outer);
+    const gasUsed = await verifier.verify(proofData, broadcastData.rollupSize, inputHash, { gasLimit });
     console.log(`gasUsed: ${gasUsed}`);
   }
 
