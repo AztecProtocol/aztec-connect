@@ -89,25 +89,28 @@ const productionConfig: ConfigVars = {
   priceFeedContractAddress1: '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9', // DAI/USD
   priceFeedContractAddress2: '0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c', // BTC/USD
   txAmountLimits: JSON.stringify([
-    `${toBaseUnits('10', 18)}`, // 10 ETH
-    `${toBaseUnits('20000', 18)}`, // 20000 DAI
-    `${toBaseUnits('1', 8)}`, // 1 renBTC
+    `${toBaseUnits('30', 18)}`, // 30 ETH
+    `${toBaseUnits('100000', 18)}`, // 100000 DAI
+    `${toBaseUnits('2', 8)}`, // 2 renBTC
   ]),
   withdrawSafeAmounts: JSON.stringify([
     [
       `${toBaseUnits('0.1', 18)}`, // 0.1 zkETH
       `${toBaseUnits('1', 18)}`, // 1 zkETH
       `${toBaseUnits('10', 18)}`, // 10 zkETH
+      `${toBaseUnits('30', 18)}`, // 30 zkETH
     ],
     [
       `${toBaseUnits('200', 18)}`, // 200 zkDAI
       `${toBaseUnits('2000', 18)}`, // 2000 zkDAI
       `${toBaseUnits('20000', 18)}`, // 20000 zkDAI
+      `${toBaseUnits('100000', 18)}`, // 100000 zkDAI
     ],
     [
       `${toBaseUnits('0.01', 8)}`, // 0.01 zkrenBTC
       `${toBaseUnits('0.1', 8)}`, // 0.1 zkrenBTC
       `${toBaseUnits('1', 8)}`, // 1 zkrenBTC
+      `${toBaseUnits('2', 8)}`, // 2 zkrenBTC
     ],
   ]),
   sessionTimeout: '30', // days
