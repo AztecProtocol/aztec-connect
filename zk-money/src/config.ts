@@ -1,4 +1,4 @@
-import { toBaseUnits } from '@aztec/sdk';
+import { toBaseUnits } from './app/units';
 import { isIOS } from './device_support';
 
 export interface Config {

@@ -31,6 +31,7 @@ export enum AppAction {
 
 export enum AppEvent {
   SESSION_CLOSED = 'SESSION_CLOSED',
+  SESSION_OPEN = 'SESSION_OPEN',
   UPDATED_LOGIN_STATE = 'UPDATED_LOGIN_STATE',
   UPDATED_USER_SESSION_DATA = 'UPDATED_USER_SESSION_DATA',
   UPDATED_SYSTEM_MESSAGE = 'UPDATED_SYSTEM_MESSAGE',
@@ -38,6 +39,7 @@ export enum AppEvent {
 
 export interface App {
   on(event: AppEvent.SESSION_CLOSED, listener: () => void): this;
+  on(event: AppEvent.SESSION_OPEN, listener: () => void): this;
   on(event: AppEvent.UPDATED_LOGIN_STATE, listener: (state: LoginState) => void): this;
   on(event: AppEvent.UPDATED_USER_SESSION_DATA, listener: () => void): this;
   on(event: AppEvent.UPDATED_SYSTEM_MESSAGE, listener: (message: SystemMessage) => void): this;
@@ -207,6 +209,9 @@ export class App extends EventEmitter {
             this.session = undefined;
             debug('Session closed.');
             this.emit(AppEvent.SESSION_CLOSED);
+            break;
+          case UserSessionEvent.SESSION_OPEN:
+            this.emit(AppEvent.SESSION_OPEN);
             break;
           case UserSessionEvent.UPDATED_LOGIN_STATE:
             this.emit(AppEvent.UPDATED_LOGIN_STATE, ...args);

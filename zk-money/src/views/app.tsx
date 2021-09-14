@@ -1,4 +1,5 @@
 import { AssetId } from '@aztec/sdk';
+import { BroadcastChannel } from 'broadcast-channel';
 import { isEqual } from 'lodash';
 import { PureComponent } from 'react';
 import { withApollo, WithApolloClient } from 'react-apollo';
@@ -59,8 +60,14 @@ interface AppState {
   isLoading: boolean;
 }
 
+enum CrossTabEvent {
+  LOGGED_IN = 'CROSS_TAB_LOGGED_IN',
+  LOGGED_OUT = 'CROSS_TAB_LOGGED_OUT',
+}
+
 class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
   private app: App;
+  private channel = new BroadcastChannel('zk-money');
 
   private readonly defaultAsset = AssetId.ETH;
 
@@ -103,10 +110,24 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
   }
 
   async componentDidMount() {
-    this.app.on(AppEvent.SESSION_CLOSED, this.onSessionClosed);
+    this.app.on(AppEvent.SESSION_CLOSED, () => {
+      this.onSessionClosed();
+      this.channel.postMessage({ name: CrossTabEvent.LOGGED_OUT });
+    });
+    this.app.on(AppEvent.SESSION_OPEN, () => this.channel.postMessage({ name: CrossTabEvent.LOGGED_IN }));
     this.app.on(AppEvent.UPDATED_LOGIN_STATE, this.onLoginStateChange);
     this.app.on(AppEvent.UPDATED_USER_SESSION_DATA, this.onUserSessionDataChange);
     this.app.on(AppEvent.UPDATED_SYSTEM_MESSAGE, this.onSystemMessageChange);
+    this.channel.onmessage = async msg => {
+      switch (msg.name) {
+        case CrossTabEvent.LOGGED_IN:
+          this.goToAction(AppAction.ACCOUNT);
+          break;
+        case CrossTabEvent.LOGGED_OUT:
+          this.handleLogout();
+          break;
+      }
+    };
     await this.handleActionChange(this.state.action);
     this.setState({ isLoading: false });
   }
@@ -126,6 +147,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
 
   componentWillUnmount() {
     this.app.destroy();
+    this.channel.close();
   }
 
   private goToAction = (action: AppAction) => {
@@ -146,23 +168,20 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
     const action = getActionFromUrl(path);
     this.setState({ action, systemMessage: { message: '', type: MessageType.TEXT } });
 
-    const { action: prevAction } = this.state;
-    if (action === prevAction) {
-      switch (action) {
-        case AppAction.LOGIN: {
-          const loginMode = getLoginModeFromUrl(path);
-          this.app.changeLoginMode(loginMode);
-          break;
-        }
-        case AppAction.ACCOUNT: {
-          const activeAsset = assets.find(a => a.symbol.toLowerCase() === params.assetSymbol!.toLowerCase())?.id;
-          if (activeAsset !== this.state.activeAsset) {
-            this.handleChangeAssetThroughUrl(activeAsset);
-          }
-          break;
-        }
-        default:
+    switch (action) {
+      case AppAction.LOGIN: {
+        const loginMode = getLoginModeFromUrl(path);
+        this.app.changeLoginMode(loginMode);
+        break;
       }
+      case AppAction.ACCOUNT: {
+        const activeAsset = assets.find(a => a.symbol.toLowerCase() === params.assetSymbol!.toLowerCase())?.id;
+        if (activeAsset !== this.state.activeAsset) {
+          this.handleChangeAssetThroughUrl(activeAsset);
+        }
+        break;
+      }
+      default:
     }
   };
 
@@ -206,6 +225,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
 
   private onUserSessionDataChange = () => {
     this.setState({
+      loginState: this.app.loginState,
       providerState: this.app.providerState,
       worldState: this.app.worldState,
       accountState: this.app.accountState,
@@ -224,15 +244,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
     if (action === AppAction.ACCOUNT) {
       this.goToAction(AppAction.LOGIN);
     }
-    this.setState({
-      loginState: this.app.loginState,
-      worldState: this.app.worldState,
-      providerState: this.app.providerState,
-      accountState: this.app.accountState,
-      assetState: this.app.assetState,
-      activeAction: this.app.activeAction,
-      depositForm: this.app.depositForm,
-    });
+    this.onUserSessionDataChange();
   };
 
   private handleConnect = () => {
@@ -256,6 +268,9 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
   };
 
   private handleLogout = () => {
+    if (!this.app.hasSession()) {
+      return;
+    }
     this.setState({ systemMessage: { message: '', type: MessageType.TEXT } }, () => this.app.logout());
   };
 

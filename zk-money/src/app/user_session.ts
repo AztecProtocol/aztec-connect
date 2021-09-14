@@ -126,6 +126,7 @@ export enum UserSessionEvent {
   UPDATED_DEPOSIT_FORM = 'UPDATED_DEPOSIT_FORM',
   UPDATED_SYSTEM_MESSAGE = 'UPDATED_SYSTEM_MESSAGE',
   SESSION_CLOSED = 'SESSION_CLOSED',
+  SESSION_OPEN = 'SESSION_OPEN',
 }
 
 export interface UserSession {
@@ -1121,6 +1122,8 @@ export class UserSession extends EventEmitter {
     await this.account.init(this.provider);
 
     await this.updateSession();
+
+    this.emit(UserSessionEvent.SESSION_OPEN);
   }
 
   private async syncOldAccount(prevUserId: AccountId) {
