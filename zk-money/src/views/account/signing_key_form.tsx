@@ -51,7 +51,7 @@ export const SigningKeyForm: React.FunctionComponent<SigningKeyFormProps> = ({
       <Description>
         <Text
           size="s"
-          text="Please connect the wallet you used to register and sign a message to create a signing key."
+          text="Please connect the wallet you used to register and sign a message to create your Aztec Spending Key."
         />
       </Description>
       <WalletPicker wallets={availableWallets} walletId={providerState?.walletId} onSubmit={onChangeWallet} />

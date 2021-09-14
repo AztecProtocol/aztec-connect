@@ -1243,7 +1243,10 @@ export class UserSession extends EventEmitter {
       }
     }
 
-    this.emitSystemMessage('Please sign the message in your wallet to create a signing key...', MessageType.WARNING);
+    this.emitSystemMessage(
+      'Please sign the message in your wallet to create your Aztec Spending Key...',
+      MessageType.WARNING,
+    );
     const { publicKey } = await createSigningKeys(this.provider!, this.sdk);
     this.clearSystemMessage();
     return publicKey;

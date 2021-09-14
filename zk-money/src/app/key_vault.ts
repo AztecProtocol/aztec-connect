@@ -9,17 +9,21 @@ const hashToField = (value: Buffer, sdk: WalletSdk): Buffer => (sdk as any).core
 const formatSeedPhraseInput = (seedPhrase: string) => seedPhrase.replace(/\s+/g, ' ').trim();
 
 export const createSigningKeys = async (provider: Provider, sdk: WalletSdk) => {
-  const message = 'Create signing key.';
+  const message = Buffer.from(
+    `Sign this message to generate your Aztec Spending Key. This key lets you spend funds on Aztec.\n\n----------------\nIMPORTANT!\n----------------\nOnly sign this message if you trust the website asking you to sign this message.`,
+  );
   const ethAddress = provider.account!;
   const web3Provider = new Web3Provider(provider.ethereumProvider);
   const signer = new Web3Signer(web3Provider);
-  const privateKey = (await signer.signPersonalMessage(Buffer.from(message), ethAddress)).slice(0, 32);
+  const privateKey = (await signer.signPersonalMessage(message, ethAddress)).slice(0, 32);
   const publicKey = sdk.derivePublicKey(privateKey);
   return { privateKey, publicKey };
 };
 
 export class KeyVault {
-  static signingMessage = Buffer.from('Link Aztec account.');
+  static signingMessage = Buffer.from(
+    `Sign this message to generate your Aztec Privacy Key. This key lets you decrypt your balance on Aztec.\n\n----------------\nIMPORTANT!\n----------------\nOnly sign this message if you trust the website asking you to sign this message.`,
+  );
 
   // To be deprecated.
   static signingMessageV0(signerAddress: EthAddress, sdk: WalletSdk) {

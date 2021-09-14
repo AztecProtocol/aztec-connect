@@ -189,7 +189,7 @@ export const Account: React.FunctionComponent<AccountProps> = ({
           return (
             <Modal
               theme={theme}
-              title={generatingKey ? 'Create Signing Key' : title}
+              title={generatingKey ? 'Create Aztec Spending Key' : title}
               onClose={!processingAction && !generatingKey ? onClearAction : undefined}
             >
               {(() => {

@@ -849,7 +849,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       return;
     }
 
-    this.prompt('Please sign the message in your wallet.');
+    this.prompt('Please sign the message in your wallet to generate your Aztec Spending Key.');
 
     try {
       const { privateKey } = await createSigningKeys(provider, this.sdk);
