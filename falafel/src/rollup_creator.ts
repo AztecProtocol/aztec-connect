@@ -117,20 +117,15 @@ export class RollupCreator {
       }
       await worldStateDb.put(RollupTreeId.DATA, nextDataIndex++, proof.noteCommitment2);
 
-      const nullifier1 = toBigIntBE(proof.nullifier1);
-      const nullifier2 = toBigIntBE(proof.nullifier2);
-
-      oldNullPaths.push(await worldStateDb.getHashPath(RollupTreeId.NULL, nullifier1));
-      await worldStateDb.put(RollupTreeId.NULL, nullifier1, toBufferBE(1n, 32));
-      newNullRoots.push(worldStateDb.getRoot(RollupTreeId.NULL));
-      newNullPaths.push(await worldStateDb.getHashPath(RollupTreeId.NULL, nullifier1));
-
-      oldNullPaths.push(await worldStateDb.getHashPath(RollupTreeId.NULL, nullifier2));
-      if (nullifier2) {
-        await worldStateDb.put(RollupTreeId.NULL, nullifier2, toBufferBE(1n, 32));
+      for (const nullifierBuf of [proof.nullifier1, proof.nullifier2]) {
+        const nullifier = toBigIntBE(nullifierBuf);
+        oldNullPaths.push(await worldStateDb.getHashPath(RollupTreeId.NULL, nullifier));
+        if (nullifier) {
+          await worldStateDb.put(RollupTreeId.NULL, nullifier, toBufferBE(1n, 32));
+        }
+        newNullRoots.push(worldStateDb.getRoot(RollupTreeId.NULL));
+        newNullPaths.push(await worldStateDb.getHashPath(RollupTreeId.NULL, nullifier));
       }
-      newNullRoots.push(worldStateDb.getRoot(RollupTreeId.NULL));
-      newNullPaths.push(await worldStateDb.getHashPath(RollupTreeId.NULL, nullifier2));
 
       dataRootsPaths.push(await worldStateDb.getHashPath(RollupTreeId.ROOT, BigInt(tx.dataRootsIndex!)));
       dataRootsIndicies.push(tx.dataRootsIndex!);

@@ -1,13 +1,13 @@
 import { EthAddress } from '@aztec/barretenberg/address';
+import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { Blockchain } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
+import { GetHashPathsResponse, HashPathSource } from '@aztec/barretenberg/hash_path_source';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
-import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
-import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
+import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { pathExists, readJson, writeJson } from 'fs-extra';
-import { GetHashPathsResponse, HashPathSource } from '@aztec/barretenberg/hash_path_source';
 
 interface ServerState {
   lastBlock: number;
@@ -124,15 +124,21 @@ export default class Server implements HashPathSource {
 
     for (let i = 0; i < innerProofData.length; ++i) {
       const tx = innerProofData[i];
-      await this.worldStateDb.put(0, BigInt(dataStartIndex + i * 2), tx.noteCommitment1);
-      await this.worldStateDb.put(0, BigInt(dataStartIndex + i * 2 + 1), tx.noteCommitment2);
+      await this.worldStateDb.put(RollupTreeId.DATA, BigInt(dataStartIndex + i * 2), tx.noteCommitment1);
+      await this.worldStateDb.put(RollupTreeId.DATA, BigInt(dataStartIndex + i * 2 + 1), tx.noteCommitment2);
       if (!tx.isPadding()) {
-        await this.worldStateDb.put(1, toBigIntBE(tx.nullifier1), toBufferBE(1n, 64));
-        await this.worldStateDb.put(1, toBigIntBE(tx.nullifier2), toBufferBE(1n, 64));
+        const nullifier1 = toBigIntBE(tx.nullifier1);
+        if (nullifier1) {
+          await this.worldStateDb.put(RollupTreeId.NULL, nullifier1, toBufferBE(1n, 32));
+        }
+        const nullifier2 = toBigIntBE(tx.nullifier2);
+        if (nullifier2) {
+          await this.worldStateDb.put(RollupTreeId.NULL, nullifier2, toBufferBE(1n, 32));
+        }
       }
     }
 
-    await this.worldStateDb.put(2, BigInt(rollupId + 1), this.worldStateDb.getRoot(0));
+    await this.worldStateDb.put(RollupTreeId.ROOT, BigInt(rollupId + 1), this.worldStateDb.getRoot(0));
 
     await this.worldStateDb.commit();
 

@@ -11,17 +11,6 @@ tags: Specs
 The Account Circuit allows the transfer of keys that control notes.
 Unlike the Rollup Circuit, which _always_ adds nullifiers to the tree, the Account Circuit _conditionally_ adds nullifiers to the tree.
 
-#### Gibberish Nullifiers
-
-This condition is emulated via the production of **Gibberish Nullifiers** where we do not wish to add a nullifier to the nullifier set. In doing so, we must ensure that:
-
-1. Different circuits cannot produce identical nullifiers
-2. Gibberish nullfiers are distinct from real nullifiers
-
-We achieve outcome 1. by including the `proof_id` in each nullifier computation.
-
-Ensuring outcome 2. is harder. The circuit must have a flag variable, `is_nullifier_fake`, that we use to modify the input data being hashed.
-
 #### Account Circuit: Worked Example
 
 1. Alice generates a grumpkin key pair (`account_key`)
@@ -102,14 +91,13 @@ Computed vars:
 - `signer` = `nonce == 0 ? account_public_key : signing_public_key`
 - `message` = `pedersen(account_public_key, account_id, spending_public_key_1.x, spending_public_key_2.x)`
 - `account_note_data` = `pedersen(account_id, account_public_key.x, signer.x)`
-- `is_nullifier_fake` = `migrate == 0`
 
 Computed public inputs:
 
 - `output_note_1` = `pedersen(output_account_id, account_public_key.x, spending_public_key_1.x)`
 - `output_note_2` = `pedersen(output_account_id, account_public_key.x, spending_public_key_2.x)`
-- `nullifier_1` = `pedersen(proof_id, account_id, !migrate * gibberish)`
-- `nullifier_2` = `pedersen(proof_id, gibberish)`
+- `nullifier_1` = `pedersen(proof_id, account_id) * migrate`
+- `nullifier_2` = `0`
 
 Circuit constraints:
 

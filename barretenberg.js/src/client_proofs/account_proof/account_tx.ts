@@ -12,15 +12,10 @@ export class AccountTx {
     public newSigningPubKey2: GrumpkinAddress,
     public accountAliasId: AccountAliasId,
     public migrate: boolean,
-    public gibberish: Buffer,
     public accountIndex: number,
     public accountPath: HashPath,
     public signingPubKey: GrumpkinAddress,
-  ) {
-    if (gibberish.length !== 32) {
-      throw new Error('gibberish should be 32-byte long.');
-    }
-  }
+  ) {}
 
   toBuffer() {
     return Buffer.concat([
@@ -32,7 +27,6 @@ export class AccountTx {
       this.accountAliasId.aliasHash.toBuffer32(),
       numToUInt32BE(this.accountAliasId.nonce),
       Buffer.from([this.migrate ? 1 : 0]),
-      this.gibberish,
       numToUInt32BE(this.accountIndex),
       this.accountPath.toBuffer(),
       this.signingPubKey.toBuffer(),

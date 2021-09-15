@@ -20,8 +20,8 @@ const innerProofDataToTxDao = (tx: InnerProofData, offchainTxData: Buffer, creat
   txDao.id = tx.txId;
   txDao.proofData = tx.toBuffer();
   txDao.offchainTxData = offchainTxData;
-  txDao.nullifier1 = tx.nullifier1;
-  txDao.nullifier2 = tx.nullifier2;
+  txDao.nullifier1 = toBigIntBE(tx.nullifier1) ? tx.nullifier1 : undefined;
+  txDao.nullifier2 = toBigIntBE(tx.nullifier2) ? tx.nullifier2 : undefined;
   txDao.created = created;
   txDao.mined = created;
   txDao.txType = txType;
@@ -271,15 +271,21 @@ export class WorldState {
     const { rollupId, dataStartIndex, innerProofData } = rollup;
     for (let i = 0; i < innerProofData.length; ++i) {
       const tx = innerProofData[i];
-      await this.worldStateDb.put(0, BigInt(dataStartIndex + i * 2), tx.noteCommitment1);
-      await this.worldStateDb.put(0, BigInt(dataStartIndex + i * 2 + 1), tx.noteCommitment2);
+      await this.worldStateDb.put(RollupTreeId.DATA, BigInt(dataStartIndex + i * 2), tx.noteCommitment1);
+      await this.worldStateDb.put(RollupTreeId.DATA, BigInt(dataStartIndex + i * 2 + 1), tx.noteCommitment2);
       if (!tx.isPadding()) {
-        await this.worldStateDb.put(1, toBigIntBE(tx.nullifier1), toBufferBE(1n, 64));
-        await this.worldStateDb.put(1, toBigIntBE(tx.nullifier2), toBufferBE(1n, 64));
+        const nullifier1 = toBigIntBE(tx.nullifier1);
+        if (nullifier1) {
+          await this.worldStateDb.put(RollupTreeId.NULL, nullifier1, toBufferBE(1n, 32));
+        }
+        const nullifier2 = toBigIntBE(tx.nullifier2);
+        if (nullifier2) {
+          await this.worldStateDb.put(RollupTreeId.NULL, nullifier2, toBufferBE(1n, 32));
+        }
       }
     }
 
-    await this.worldStateDb.put(2, BigInt(rollupId + 1), this.worldStateDb.getRoot(0));
+    await this.worldStateDb.put(RollupTreeId.ROOT, BigInt(rollupId + 1), this.worldStateDb.getRoot(0));
 
     await this.worldStateDb.commit();
   }

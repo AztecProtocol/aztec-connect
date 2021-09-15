@@ -107,7 +107,7 @@ export class CachedRollupDb extends SyncRollupDb {
     await super.addTx(txDao);
     const { proofId, nullifier1, nullifier2 } = new ClientProofData(txDao.proofData);
 
-    this.unsettledNullifiers.push(nullifier1, nullifier2);
+    [nullifier1, nullifier2].filter(n => !!toBigIntBE(n)).forEach(n => this.unsettledNullifiers.push(n));
 
     switch (proofId) {
       case ProofId.JOIN_SPLIT: {

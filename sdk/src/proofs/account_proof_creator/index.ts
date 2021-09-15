@@ -4,7 +4,6 @@ import { AccountProver, AccountTx, ClientProofData } from '@aztec/barretenberg/c
 import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { WorldState } from '@aztec/barretenberg/world_state';
-import { randomBytes } from 'crypto';
 import createDebug from 'debug';
 import { Database } from '../../database';
 import { Signer } from '../../signer';
@@ -31,7 +30,6 @@ export class AccountProofCreator {
     const merkleRoot = this.worldState.getRoot();
     const accountPath = await this.worldState.getHashPath(accountIndex);
     const accountAliasId = new AccountAliasId(aliasHash, nonce);
-    const gibberish = randomBytes(32);
 
     return new AccountTx(
       merkleRoot,
@@ -41,7 +39,6 @@ export class AccountProofCreator {
       newSigningPubKey2 || GrumpkinAddress.ZERO,
       accountAliasId,
       migrate,
-      gibberish,
       accountIndex,
       accountPath,
       signingPubKey,

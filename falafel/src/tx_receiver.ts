@@ -1,3 +1,4 @@
+import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
 import {
   AccountVerifier,
@@ -93,8 +94,8 @@ export class TxReceiver {
         proofData,
         offchainTxData,
         signature: depositSignature,
-        nullifier1: proof.nullifier1,
-        nullifier2: proof.nullifier2,
+        nullifier1: toBigIntBE(proof.nullifier1) ? proof.nullifier1 : undefined,
+        nullifier2: toBigIntBE(proof.nullifier2) ? proof.nullifier2 : undefined,
         dataRootsIndex,
         created: new Date(),
         txType,

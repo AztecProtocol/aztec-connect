@@ -45,8 +45,8 @@ export class TxDao {
   @Column({ nullable: true })
   public signature?: Buffer;
 
-  @Column({ unique: true })
-  public nullifier1!: Buffer;
+  @Column({ unique: true, nullable: true })
+  public nullifier1?: Buffer;
 
   @Column({ unique: true, nullable: true })
   public nullifier2?: Buffer;

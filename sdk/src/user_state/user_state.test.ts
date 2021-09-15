@@ -167,8 +167,7 @@ describe('user state', () => {
     const note2 = randomBytes(32);
     const accountAliasId = new AccountAliasId(aliasHash!, nonce);
     const newAccountAliasId = new AccountAliasId(aliasHash!, nonce + +migrate);
-    const nullifier1 = migrate ? noteAlgos.accountAliasIdNullifier(accountAliasId) : randomBytes(32);
-    const nullifier2 = randomBytes(32);
+    const nullifier1 = migrate ? noteAlgos.accountAliasIdNullifier(accountAliasId) : Buffer.alloc(32);
     const proofData = new InnerProofData(
       ProofId.ACCOUNT,
       publicKey.x(),
@@ -177,7 +176,7 @@ describe('user state', () => {
       note1,
       note2,
       nullifier1,
-      nullifier2,
+      Buffer.alloc(32),
       newSigningPubKey1.x(),
       newSigningPubKey2.x(),
     );

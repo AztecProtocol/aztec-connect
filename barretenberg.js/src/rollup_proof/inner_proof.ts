@@ -43,7 +43,7 @@ export class InnerProofData {
   }
 
   isPadding() {
-    return this.nullifier1.equals(Buffer.alloc(32, 0));
+    return this.noteCommitment1.equals(Buffer.alloc(32, 0));
   }
 
   static fromBuffer(innerPublicInputs: Buffer) {

@@ -110,7 +110,6 @@ describe('account proof', () => {
       signingKey1.publicKey,
       accountAliasId,
       migrate,
-      randomBytes(32),
       accountIndex,
       accountPath,
       user.publicKey,
@@ -135,6 +134,7 @@ describe('account proof', () => {
     expect(accountProof.publicOutput).toEqual(newAccountPublicKey.y());
     expect(accountProof.assetId).toEqual(newAccountAliasId.toBuffer());
     expect(accountProof.nullifier1).toEqual(accountAliasIdNullifier);
+    expect(accountProof.nullifier2).toEqual(Buffer.alloc(32));
     expect(accountProof.inputOwner).toEqual(signingKey0.publicKey.x());
     expect(accountProof.outputOwner).toEqual(signingKey1.publicKey.x());
   });

@@ -1,4 +1,4 @@
-import { AccountAliasId, AccountId } from '@aztec/barretenberg/account_id';
+import { AccountId } from '@aztec/barretenberg/account_id';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId, AssetIds } from '@aztec/barretenberg/asset';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
@@ -486,9 +486,7 @@ export class UserState extends EventEmitter {
     const { accountPublicKey, accountAliasId, spendingPublicKey1, spendingPublicKey2 } = offchainTxData;
     const txHash = new TxHash(txId);
     const userId = new AccountId(accountPublicKey, accountAliasId.nonce);
-    const prevAccountAliasId = new AccountAliasId(accountAliasId.aliasHash, accountAliasId.nonce - 1);
-    const migrated =
-      prevAccountAliasId.nonce >= 0 && nullifier1.equals(this.noteAlgos.accountAliasIdNullifier(prevAccountAliasId));
+    const migrated = !!toBigIntBE(nullifier1);
 
     return new UserAccountTx(
       txHash,
