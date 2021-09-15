@@ -10,7 +10,7 @@ const formatSeedPhraseInput = (seedPhrase: string) => seedPhrase.replace(/\s+/g,
 
 export const createSigningKeys = async (provider: Provider, sdk: WalletSdk) => {
   const message = Buffer.from(
-    `Sign this message to generate your Aztec Spending Key. This key lets you spend funds on Aztec.\n\n----------------\nIMPORTANT!\n----------------\nOnly sign this message if you trust the website asking you to sign this message.`,
+    `Sign this message to generate your Aztec Spending Key. This key lets the application spend your funds on Aztec.\n\nIMPORTANT: Only sign this message if you trust the application.`,
   );
   const ethAddress = provider.account!;
   const web3Provider = new Web3Provider(provider.ethereumProvider);
@@ -22,7 +22,7 @@ export const createSigningKeys = async (provider: Provider, sdk: WalletSdk) => {
 
 export class KeyVault {
   static signingMessage = Buffer.from(
-    `Sign this message to generate your Aztec Privacy Key. This key lets you decrypt your balance on Aztec.\n\n----------------\nIMPORTANT!\n----------------\nOnly sign this message if you trust the website asking you to sign this message.`,
+    `Sign this message to generate your Aztec Privacy Key. This key lets the application decrypt your balance on Aztec.\n\nIMPORTANT: Only sign this message if you trust the application.`,
   );
 
   // To be deprecated.
