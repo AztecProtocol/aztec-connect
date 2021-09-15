@@ -18,6 +18,10 @@ const fixEthersStackTrace = (err: Error) => {
   throw err;
 };
 
+/**
+ * Thin wrapper around the rollup processor contract. Provides a direct 1 to 1 interface for
+ * querying contract state, creating and sending transactions, and querying for rollup blocks.
+ */
 export class RollupProcessor {
   public rollupProcessor: Contract;
   private lastQueriedRollupId?: number;
@@ -58,32 +62,16 @@ export class RollupProcessor {
     return +(await this.rollupProcessor.numberOfBridgeCalls());
   }
 
-  async nextRollupId() {
-    return +(await this.rollupProcessor.nextRollupId());
-  }
-
   async dataSize() {
     return +(await this.rollupProcessor.dataSize());
   }
 
-  async dataRoot() {
-    return Buffer.from((await this.rollupProcessor.dataRoot()).slice(2), 'hex');
-  }
-
-  async nullRoot() {
-    return Buffer.from((await this.rollupProcessor.nullRoot()).slice(2), 'hex');
-  }
-
-  async rootRoot() {
-    return Buffer.from((await this.rollupProcessor.rootRoot()).slice(2), 'hex');
-  }
-
-  async defiRoot() {
-    return Buffer.from((await this.rollupProcessor.defiRoot()).slice(2), 'hex');
-  }
-
   async defiInteractionHash() {
     return Buffer.from((await this.rollupProcessor.defiInteractionHash()).slice(2), 'hex');
+  }
+
+  async stateHash() {
+    return Buffer.from((await this.rollupProcessor.stateHash()).slice(2), 'hex');
   }
 
   async totalDeposited() {
@@ -298,6 +286,27 @@ export class RollupProcessor {
       events.filter(e => e.args!.rollupId.toNumber() >= rollupId),
       minConfirmations,
     );
+  }
+
+  /**
+   * The same as getRollupBlocksFrom, but just search for a specific rollup.
+   * If `rollupId == -1` return the latest rollup.
+   */
+  public async getRollupBlock(rollupId: number) {
+    const earliestBlock = await this.getEarliestBlock();
+    let end = await this.provider.getBlockNumber();
+    const chunk = 100000;
+    let start = Math.max(end - chunk, 0);
+
+    while (end > earliestBlock) {
+      const rollupFilter = this.rollupProcessor.filters.RollupProcessed(rollupId == -1 ? undefined : rollupId);
+      const events = await this.rollupProcessor.queryFilter(rollupFilter, start, end);
+      if (events.length) {
+        return (await this.getRollupBlocksFromEvents(events, 1))[0];
+      }
+      end = Math.max(start - 1, 0);
+      start = Math.max(end - chunk, 0);
+    }
   }
 
   private async getRollupBlocksFromEvents(rollupEvents: Event[], minConfirmations: number) {

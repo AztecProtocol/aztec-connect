@@ -2,8 +2,10 @@
 set -e
 
 pushd ../barretenberg/build
+cmake ..
 make -j$(nproc) db_cli
 cd ../build-wasm
+cmake ..
 make -j$(nproc) barretenberg.wasm
 popd
 yarn install

@@ -1,6 +1,7 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Block } from '@aztec/barretenberg/block_source';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { Contracts } from './contracts';
 import { EthereumBlockchain, EthereumBlockchainConfig } from './ethereum_blockchain';
 
@@ -17,7 +18,7 @@ describe('ethereum_blockchain', () => {
     created: new Date(),
     rollupId,
     rollupSize: 2,
-    rollupProofData: Buffer.alloc(0),
+    rollupProofData: RollupProofData.randomData(1, 2).toBuffer(),
     offchainTxData: [],
     interactionResult: [],
     gasPrice: BigInt(0),
@@ -35,6 +36,7 @@ describe('ethereum_blockchain', () => {
         numEscapeBlocksRemaining: 100,
       }),
       getRollupBlocksFrom: jest.fn().mockResolvedValue(blocks),
+      getRollupBlock: jest.fn().mockResolvedValue(blocks[blocks.length - 1]),
       getRollupContractAddress: jest.fn().mockReturnValue(EthAddress.randomAddress()),
       getFeeDistributorContractAddress: jest.fn().mockReturnValue(EthAddress.randomAddress()),
       getBlockNumber: jest.fn().mockResolvedValue(blocks.length),
@@ -55,6 +57,15 @@ describe('ethereum_blockchain', () => {
 
   afterEach(async () => {
     await blockchain.stop();
+  });
+
+  it('correct initial state', async () => {
+    const status = await blockchain.getBlockchainStatus();
+    const lastRollup = RollupProofData.fromBuffer(blocks[blocks.length - 1].rollupProofData);
+    expect(status.dataRoot).toEqual(lastRollup.newDataRoot);
+    expect(status.nullRoot).toEqual(lastRollup.newNullRoot);
+    expect(status.rootRoot).toEqual(lastRollup.newDataRootsRoot);
+    expect(status.defiRoot).toEqual(lastRollup.newDefiRoot);
   });
 
   it('emit all historical blocks, then new blocks', async () => {

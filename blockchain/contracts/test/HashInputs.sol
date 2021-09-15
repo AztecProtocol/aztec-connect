@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2020 Spilsbury Holdings Ltd
-pragma solidity >=0.6.10 <0.8.0;
+pragma solidity >=0.6.10;
 
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {Types} from '../verifier/cryptography/Types.sol';
@@ -10,48 +10,16 @@ import 'hardhat/console.sol';
 
 import {IVerifier} from '../interfaces/IVerifier.sol';
 
-contract HashInputs is Decoder
-{
-
+contract HashInputs is Decoder {
     IVerifier public verifier;
 
-    constructor(
-        address _verifierAddress
-    ) public {
+    constructor(address _verifierAddress) public {
         verifier = IVerifier(_verifierAddress);
-    }
-    function validateMerkleRoots(bytes memory proofData)
-        internal
-        view
-        returns (
-            bytes32[4] memory,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
-        (
-            // Stack to deep workaround:
-            // 0: rollupId
-            // 1: rollupSize
-            // 2: dataStartIndex
-            uint256[3] memory nums,
-            bytes32[4] memory oldRoots,
-            bytes32[4] memory newRoots
-        ) = extractRoots(proofData);
-
-        //! Assertion that rollup size cannot be 0?
-
-        // Ensure we are inserting at the next subtree boundary.
-        uint256 toInsert = nums[1].mul(2);
-
-        return (newRoots, nums[0], nums[1], nums[2] + toInsert);
     }
 
     function computePublicInputHash(
         bytes calldata /* encodedProofData */
     ) external returns (bytes32) {
-
         decodeProof(rollupHeaderInputLength, txNumPubInputs);
         return 0;
     }
@@ -59,12 +27,11 @@ contract HashInputs is Decoder
     function verifyProofTest(
         bytes calldata /* encodedProofData */
     ) external {
-         (, , uint256 publicInputsHash) = decodeProof(rollupHeaderInputLength, txNumPubInputs);
+        (, , uint256 publicInputsHash) = decodeProof(rollupHeaderInputLength, txNumPubInputs);
         uint256 broadcastedDataSize = rollupHeaderInputLength + 4;
         uint256 rollupHeaderInputLengthLocal = rollupHeaderInputLength;
         bool proof_verified;
         assembly {
-
             /**
              * Validate correctness of zk proof.
              *
@@ -94,7 +61,10 @@ contract HashInputs is Decoder
             // `calldataload(0x04)` points to start of bytes array. Add 0x24 to skip over length param and function signature.
             // The calldata param *after* the header is the length of the pub inputs array. However it is a packed 4-byte param.
             // To extract it, we subtract 28 bytes from the calldata pointer and mask off all but the 4 least significant bytes.
-            let encodedInnerDataSize := and(calldataload(add(add(calldataload(0x04), 0x24), sub(rollupHeaderInputLengthLocal, 0x1c))), 0xffffffff)
+            let encodedInnerDataSize := and(
+                calldataload(add(add(calldataload(0x04), 0x24), sub(rollupHeaderInputLengthLocal, 0x1c))),
+                0xffffffff
+            )
 
             // broadcastedDataSize = inner join-split pubinput size + header size + 4 bytes (skip over zk proof length param)
             broadcastedDataSize := add(broadcastedDataSize, encodedInnerDataSize)
@@ -133,6 +103,5 @@ contract HashInputs is Decoder
             proof_verified := staticcall(gas(), sload(verifier_slot), dataPtr, add(zkProofDataSize, 0x84), 0x00, 0x00)
         }
         require(proof_verified, 'proof verification failed');
-
     }
 }

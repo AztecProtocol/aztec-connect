@@ -283,7 +283,7 @@ describe('user state', () => {
       totalTxFees,
       Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK).fill(Buffer.alloc(32)),
       randomBytes(32),
-      randomBytes(32),
+      1,
       innerProofData,
     );
   };

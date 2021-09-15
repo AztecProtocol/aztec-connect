@@ -12,6 +12,11 @@ import { FeeDistributor } from './fee_distributor';
 import { EthPriceFeed, GasPriceFeed, TokenPriceFeed } from './price_feed';
 import { RollupProcessor } from './rollup_processor';
 
+/**
+ * Facade around all Aztec smart contract classes.
+ * Provides a factory function `fromAddresses` to simplify construction of all contract classes.
+ * Exposes a more holistic interface to clients, than having to deal with individual contract classes.
+ */
 export class Contracts {
   private provider!: Web3Provider;
 
@@ -83,13 +88,6 @@ export class Contracts {
   }
 
   public async getPerRollupState() {
-    const nextRollupId = await this.rollupProcessor.nextRollupId();
-    const dataSize = await this.rollupProcessor.dataSize();
-    const dataRoot = await this.rollupProcessor.dataRoot();
-    const nullRoot = await this.rollupProcessor.nullRoot();
-    const rootRoot = await this.rollupProcessor.rootRoot();
-    const defiRoot = await this.rollupProcessor.defiRoot();
-
     const defiInteractionHash = await this.rollupProcessor.defiInteractionHash();
 
     const totalDeposited = await this.getAssetValues(this.rollupProcessor.totalDeposited());
@@ -97,12 +95,6 @@ export class Contracts {
     const totalFees = await this.getAssetValues(this.rollupProcessor.totalFees());
 
     return {
-      nextRollupId,
-      dataRoot,
-      nullRoot,
-      rootRoot,
-      defiRoot,
-      dataSize,
       defiInteractionHash,
       totalDeposited,
       totalWithdrawn,
@@ -177,6 +169,10 @@ export class Contracts {
 
   public async getRollupBlocksFrom(rollupId: number, minConfirmations = this.confirmations) {
     return this.rollupProcessor.getRollupBlocksFrom(rollupId, minConfirmations);
+  }
+
+  public async getRollupBlock(rollupId: number) {
+    return this.rollupProcessor.getRollupBlock(rollupId);
   }
 
   public async getUserPendingDeposit(assetId: AssetId, account: EthAddress) {

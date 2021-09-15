@@ -1,8 +1,10 @@
 import { createHash } from 'crypto';
+import { ProofId } from '../client_proofs';
 import { numToUInt32BE } from '../serialize';
 import { decodeInnerProof } from './decode_inner_proof';
 import { encodeInnerProof, getEncodedLength } from './encode_inner_proof';
 import { InnerProofData } from './inner_proof';
+import { toBigIntBE } from '../bigint_buffer';
 
 export enum RollupProofDataFields {
   ROLLUP_ID,
@@ -85,7 +87,7 @@ const parseHeaderInputs = (proofData: Buffer) => {
   const prevDefiInteractionHash = proofData.slice(startIndex, startIndex + 32);
   startIndex += 32;
 
-  const numRollupTxs = proofData.slice(startIndex, startIndex + 32);
+  const numRollupTxs = proofData.readUInt32BE(startIndex + 28);
   startIndex += 32;
 
   return {
@@ -136,7 +138,7 @@ export class RollupProofData {
     public totalTxFees: Buffer[],
     public defiInteractionNotes: Buffer[],
     public prevDefiInteractionHash: Buffer,
-    public numRollupTxs: Buffer,
+    public numRollupTxs: number,
     public innerProofData: InnerProofData[],
   ) {
     if (bridgeIds.length !== RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK) {
@@ -177,9 +179,25 @@ export class RollupProofData {
       ...this.totalTxFees,
       ...this.defiInteractionNotes,
       this.prevDefiInteractionHash,
-      this.numRollupTxs,
+      numToUInt32BE(this.numRollupTxs, 32),
       ...this.innerProofData.map(p => p.toBuffer()),
     ]);
+  }
+
+  getTotalDeposited(deposits: bigint[]) {
+    const realInnerProofs = this.innerProofData.filter(p => !p.isPadding() && p.proofId === ProofId.JOIN_SPLIT);
+    realInnerProofs.forEach(p => {
+      deposits[p.assetId.readUInt32BE()] += toBigIntBE(p.publicInput);
+    });
+    return deposits;
+  }
+
+  getTotalWithdrawn(withdraws: bigint[]) {
+    const realInnerProofs = this.innerProofData.filter(p => !p.isPadding() && p.proofId === ProofId.JOIN_SPLIT);
+    realInnerProofs.forEach(p => {
+      withdraws[p.assetId.readUInt32BE()] += toBigIntBE(p.publicOutput);
+    });
+    return withdraws;
   }
 
   encode() {
@@ -203,7 +221,7 @@ export class RollupProofData {
       ...this.totalTxFees,
       ...this.defiInteractionNotes,
       this.prevDefiInteractionHash,
-      this.numRollupTxs,
+      numToUInt32BE(this.numRollupTxs, 32),
       numToUInt32BE(Buffer.concat(encodedInnerProof).length),
       ...encodedInnerProof,
     ]);
@@ -272,6 +290,30 @@ export class RollupProofData {
       prevDefiInteractionHash,
       numRollupTxs,
       innerProofData,
+    );
+  }
+
+  static randomData(rollupId: number, numTxs: number) {
+    return new RollupProofData(
+      rollupId,
+      numTxs,
+      0,
+      Buffer.alloc(32),
+      Buffer.alloc(32),
+      Buffer.alloc(32),
+      Buffer.alloc(32),
+      Buffer.alloc(32),
+      Buffer.alloc(32),
+      Buffer.alloc(32),
+      Buffer.alloc(32),
+      new Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK).fill(0).map(() => Buffer.alloc(32)),
+      new Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK).fill(0).map(() => Buffer.alloc(32)),
+      new Array(RollupProofData.NUMBER_OF_ASSETS).fill(0).map(() => Buffer.alloc(32)),
+      new Array(RollupProofData.NUMBER_OF_ASSETS).fill(0).map(() => Buffer.alloc(32)),
+      new Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK).fill(0).map(() => Buffer.alloc(32)),
+      Buffer.alloc(32),
+      1,
+      new Array(numTxs).fill(0).map(() => InnerProofData.fromBuffer(Buffer.alloc(InnerProofData.LENGTH))),
     );
   }
 

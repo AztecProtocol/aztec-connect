@@ -93,7 +93,7 @@ export const createRollupProofData = (innerProofs: InnerProofData[]) => {
     totalTxFees,
     defiInteractionNotes,
     randomBytes(32),
-    randomBytes(32),
+    innerProofs.length,
     innerProofs,
   );
 };

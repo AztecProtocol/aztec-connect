@@ -6,6 +6,8 @@ import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 import {Types} from './verifier/cryptography/Types.sol';
 import {Bn254Crypto} from './verifier/cryptography/Bn254Crypto.sol';
 
+// import 'hardhat/console.sol';
+
 /**
  * Rollup proof decoder. Encoded proofData structure is as follows:
  *
@@ -26,7 +28,7 @@ import {Bn254Crypto} from './verifier/cryptography/Bn254Crypto.sol';
  * txFees[numberOfAssets]
  * interactionNotes[numberOfBridgeCalls]
  * prevDefiInteractionHash
- * numRollupTxs <-- new
+ * numRollupTxs
  * encodedInnerProofData.length (4 bytes)
  * encodedInnerProofData
  */
@@ -37,7 +39,7 @@ contract Decoder {
     uint256 public constant numberOfBridgeCalls = 4;
     uint256 public constant txNumPubInputs = 10;
     uint256 public constant rollupNumHeaderInputs = 13 + (numberOfBridgeCalls * 3) + (numberOfAssets * 2);
-    uint256 public constant txPubInputLength = txNumPubInputs * 32; // public inputs length for of each inner proof tx
+    uint256 public constant txPubInputLength = txNumPubInputs * 32;
     uint256 public constant rollupHeaderInputLength = rollupNumHeaderInputs * 32;
     uint256 public constant ethAssetId = 0;
     uint256 public constant numRollupTxsOffset = rollupNumHeaderInputs - 1;
@@ -253,37 +255,64 @@ contract Decoder {
         }
     }
 
+    function getRollupId(bytes memory proofData) internal pure returns (uint256 nextRollupId) {
+        assembly {
+            nextRollupId := mload(add(proofData, 0x20))
+        }
+    }
+
     /**
-     * @dev Decode the public inputs component of proofData. Required to update state variables
+     * @dev Decode the public inputs component of proofData and compute sha3 hash of merkle roots && dataStartIndex
+     *      The rollup's state is uniquely defined by the following variables:
+     *          * The next empty location in the data root tree (rollupId + 1)
+     *          * The next empty location in the data tree (dataStartIndex + rollupSize)
+     *          * The root of the data tree
+     *          * The root of the nullifier set
+     *          * The root of the data root tree (tree containing all previous roots of the data tree)
+     *          * The root of the defi tree
+     *      Instead of storing all of these variables in storage (expensive!), we store a keccak256 hash of them.
+     *      To validate the correctness of a block's state transition, we must perform the following:
+     *          * Use proof broadcasted inputs to reconstruct the "old" state hash
+     *          * Use proof broadcasted inputs to reconstruct the "new" state hash
+     *          * Validate the old state hash matches what is in storage
+     *          * Set the old state hash to the new state hash
+     *      N.B. we still store dataSize as a separate storage var as proofData does not contain all
+     *           neccessary information to reconstruct its old value.
      * @param proofData - cryptographic proofData associated with a rollup
      */
-    function extractRoots(bytes memory proofData)
+    function computeRootHashes(bytes memory proofData)
         internal
         pure
         returns (
-            uint256[3] memory nums,
-            bytes32[4] memory oldRoots,
-            bytes32[4] memory newRoots
+            uint256 rollupId,
+            bytes32 oldStateHash,
+            bytes32 newStateHash,
+            uint256 numDataLeaves,
+            uint256 dataStartIndex
         )
     {
-        uint256 rollupId;
-        uint256 rollupSize;
-        uint256 dataStartIndex;
         assembly {
             let dataStart := add(proofData, 0x20) // jump over first word, it's length of data
-            rollupId := mload(dataStart)
-            rollupSize := mload(add(dataStart, 0x20))
+            numDataLeaves := shl(1, mload(add(dataStart, 0x20))) // rollupSize * 2 (2 notes per tx)
             dataStartIndex := mload(add(dataStart, 0x40))
-            mstore(oldRoots, mload(add(dataStart, 0x60)))
-            mstore(newRoots, mload(add(dataStart, 0x80)))
-            mstore(add(oldRoots, 0x20), mload(add(dataStart, 0xa0)))
-            mstore(add(newRoots, 0x20), mload(add(dataStart, 0xc0)))
-            mstore(add(oldRoots, 0x40), mload(add(dataStart, 0xe0)))
-            mstore(add(newRoots, 0x40), mload(add(dataStart, 0x100)))
-            mstore(add(oldRoots, 0x60), mload(add(dataStart, 0x120)))
-            mstore(add(newRoots, 0x60), mload(add(dataStart, 0x140)))
+            rollupId := mload(dataStart)
+
+            let mPtr := mload(0x40)
+
+            mstore(mPtr, rollupId) // old nextRollupId
+            mstore(add(mPtr, 0x20), mload(add(dataStart, 0x60))) // oldDataRoot
+            mstore(add(mPtr, 0x40), mload(add(dataStart, 0xa0))) // oldNullRoot
+            mstore(add(mPtr, 0x60), mload(add(dataStart, 0xe0))) // oldRootRoot
+            mstore(add(mPtr, 0x80), mload(add(dataStart, 0x120))) // oldDefiRoot
+            oldStateHash := keccak256(mPtr, 0xa0)
+
+            mstore(mPtr, add(rollupId, 0x01)) // new nextRollupId
+            mstore(add(mPtr, 0x20), mload(add(dataStart, 0x80))) // newDataRoot
+            mstore(add(mPtr, 0x40), mload(add(dataStart, 0xc0))) // newNullRoot
+            mstore(add(mPtr, 0x60), mload(add(dataStart, 0x100))) // newRootRoot
+            mstore(add(mPtr, 0x80), mload(add(dataStart, 0x140))) // newDefiRoot
+            newStateHash := keccak256(mPtr, 0xa0)
         }
-        return ([rollupId, rollupSize, dataStartIndex], oldRoots, newRoots);
     }
 
     function extractPrevDefiInteractionHash(bytes memory proofData, uint256 rollupHeaderInputLength)

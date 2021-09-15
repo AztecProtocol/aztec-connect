@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2020 Spilsbury Holdings Ltd.
-pragma solidity >=0.6.10 <0.8.0;
+pragma solidity >=0.6.10;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
@@ -27,27 +27,31 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     bytes4 private constant GET_INFO_SELECTOR = 0x5a9b0b89; // bytes4(keccak256('getInfo()'));
     bytes4 private constant CONVERT_SELECTOR = 0x8a8ad2d7; // bytes4(keccak256('convert(address,address,address,address,uint256)'));
 
-    bytes32 public dataRoot = 0x11977941a807ca96cf02d1b15830a53296170bf8ac7d96e5cded7615d18ec607;
-    bytes32 public nullRoot = 0x1b831fad9b940f7d02feae1e9824c963ae45b3223e721138c6f73261e690c96a;
-    bytes32 public rootRoot = 0x1b435f036fc17f4cc3862f961a8644839900a8e4f1d0b318a7046dd88b10be75;
-    bytes32 public defiRoot = 0x0170467ae338aaf3fd093965165b8636446f09eeb15ab3d36df2e31dd718883d;
+    bytes32 private constant INIT_DATA_ROOT = 0x11977941a807ca96cf02d1b15830a53296170bf8ac7d96e5cded7615d18ec607;
+    bytes32 private constant INIT_NULL_ROOT = 0x1b831fad9b940f7d02feae1e9824c963ae45b3223e721138c6f73261e690c96a;
+    bytes32 private constant INIT_ROOT_ROOT = 0x1b435f036fc17f4cc3862f961a8644839900a8e4f1d0b318a7046dd88b10be75;
+    bytes32 private constant INIT_DEFI_ROOT = 0x0170467ae338aaf3fd093965165b8636446f09eeb15ab3d36df2e31dd718883d;
     bytes32 public defiInteractionHash = 0x0f115a0e0c15cdc41958ca46b5b14b456115f4baec5e3ca68599d2a8f435e3b8;
 
-    uint256 public dataSize;
-    uint256 public nextRollupId;
+    uint256 public dataSize = 0;
+    bytes32 public stateHash =
+        keccak256(
+            abi.encodePacked(
+                uint256(0), // nextRollupId
+                INIT_DATA_ROOT,
+                INIT_NULL_ROOT,
+                INIT_ROOT_ROOT,
+                INIT_DEFI_ROOT
+            )
+        );
 
     IVerifier public verifier;
 
     uint256 public immutable escapeBlockLowerBound;
     uint256 public immutable escapeBlockUpperBound;
 
-    event RollupProcessed(
-        uint256 indexed rollupId,
-        bytes32 dataRoot,
-        bytes32 nullRoot,
-        bytes32 rootRoot,
-        uint256 dataSize
-    );
+    event RollupProcessed(uint256 indexed rollupId);
+
     event DefiBridgeProcessed(
         uint256 indexed bridgeId,
         uint256 indexed nonce,
@@ -81,7 +85,15 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
 
     address public override feeDistributor;
 
-    // Metrics
+    // Used to guard against re-entrancy attacks when processing DeFi bridge transactions
+    bool private reentrancyMutex = false;
+
+    // We need to cap the amount of gas sent to the DeFi bridge contract for two reasons.
+    // 1: To provide consistency to rollup providers around costs.
+    // 2: To prevent griefing attacks where a bridge consumes all our gas.
+    uint256 private gasSentToBridgeProxy = 300000;
+
+    // Metrics: TODO REMOVE. Requires falafel to track and accumulate.
     uint256[] public totalPendingDeposit;
     uint256[] public totalDeposited;
     uint256[] public totalWithdrawn;
@@ -124,6 +136,10 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
 
     function setFeeDistributor(address feeDistributorAddress) public override onlyOwner {
         feeDistributor = feeDistributorAddress;
+    }
+
+    function setGasSentToDefiBridgeProxy(uint256 _gasSentToBridgeProxy) public override onlyOwner {
+        gasSentToBridgeProxy = _gasSentToBridgeProxy;
     }
 
     /**
@@ -283,9 +299,10 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         uint256 amount,
         address depositorAddress
     ) external payable override whenNotPaused {
+        require(reentrancyMutex == false, 'Rollup Processor: REENTRANCY_MUTEX_SET_ON_DEPOSIT');
+
         if (assetId == ethAssetId) {
             require(msg.value == amount, 'Rollup Processor: WRONG_AMOUNT');
-
             increasePendingDepositBalance(assetId, depositorAddress, amount);
         } else {
             require(msg.value == 0, 'Rollup Processor: WRONG_PAYMENT_TYPE');
@@ -434,9 +451,12 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         uint256 numTxs,
         uint256 publicInputsHash
     ) internal {
+        require(reentrancyMutex == false, 'Rollup Processor: REENTRANCY_MUTEX_SET_ON_PROCESS_ROLLUP');
+        reentrancyMutex = true;
         verifyProofAndUpdateState(proofData, publicInputsHash);
         processDepositsAndWithdrawals(proofData, numTxs, signatures);
         processDefiBridges(proofData);
+        reentrancyMutex = false;
     }
 
     /**
@@ -444,9 +464,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
      * @param proofData - cryptographic zk proof data. Passed to the verifier for verification.
      */
     function verifyProofAndUpdateState(bytes memory proofData, uint256 publicInputsHash) internal {
-        (bytes32[4] memory newRoots, uint256 rollupId, uint256 rollupSize, uint256 newDataSize) =
-            validateMerkleRoots(proofData);
-
         // Verify the rollup proof.
         //
         // We manually call the verifier contract via assembly. This is to prevent a
@@ -530,60 +547,36 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         // Check the proof is valid!
         require(proof_verified, 'proof verification failed');
 
-        // Update state variables.
-        dataRoot = newRoots[0];
-        nullRoot = newRoots[1];
-        rootRoot = newRoots[2];
-        defiRoot = newRoots[3];
-        nextRollupId = rollupId.add(1);
-        dataSize = newDataSize;
+        // Validate and update state hash
+        uint256 rollupId = validateAndUpdateMerkleRoots(proofData);
 
-        emit RollupProcessed(rollupId, dataRoot, nullRoot, rootRoot, dataSize);
+        emit RollupProcessed(rollupId);
     }
 
     /**
      * @dev Extract public inputs and validate they are inline with current contract state.
      * @param proofData - Rollup proof data.
      */
-    function validateMerkleRoots(bytes memory proofData)
-        internal
-        view
-        returns (
-            bytes32[4] memory,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
-        (
-            // Stack to deep workaround:
-            // 0: rollupId
-            // 1: rollupSize
-            // 2: dataStartIndex
-            uint256[3] memory nums,
-            bytes32[4] memory oldRoots,
-            bytes32[4] memory newRoots
-        ) = extractRoots(proofData);
+    function validateAndUpdateMerkleRoots(bytes memory proofData) internal returns (uint256) {
+        (uint256 rollupId, bytes32 oldStateHash, bytes32 newStateHash, uint256 numDataLeaves, uint256 dataStartIndex) =
+            computeRootHashes(proofData);
 
-        //! Assertion that rollup size cannot be 0?
+        require(oldStateHash == stateHash, 'Rollup Processor: INCORRECT_STATE_HASH');
 
+        uint256 storedDataSize = dataSize;
         // Ensure we are inserting at the next subtree boundary.
-        uint256 toInsert = nums[1].mul(2);
-        if (dataSize % toInsert == 0) {
-            require(nums[2] == dataSize, 'Rollup Processor: INCORRECT_DATA_START_INDEX');
+        if (storedDataSize % numDataLeaves == 0) {
+            require(dataStartIndex == storedDataSize, 'Rollup Processor: INCORRECT_DATA_START_INDEX');
         } else {
-            uint256 expected = dataSize + toInsert - (dataSize % toInsert);
-            require(nums[2] == expected, 'Rollup Processor: INCORRECT_DATA_START_INDEX');
+            uint256 expected = storedDataSize + numDataLeaves - (storedDataSize % numDataLeaves);
+            require(dataStartIndex == expected, 'Rollup Processor: INCORRECT_DATA_START_INDEX');
         }
 
-        // Data validation checks.
-        require(oldRoots[0] == dataRoot, 'Rollup Processor: INCORRECT_DATA_ROOT');
-        require(oldRoots[1] == nullRoot, 'Rollup Processor: INCORRECT_NULL_ROOT');
-        require(oldRoots[2] == rootRoot, 'Rollup Processor: INCORRECT_ROOT_ROOT');
-        require(oldRoots[3] == defiRoot, 'Rollup Processor: INCORRECT_DEFI_ROOT');
-        require(nums[0] == nextRollupId, 'Rollup Processor: ID_NOT_SEQUENTIAL');
-
-        return (newRoots, nums[0], nums[1], nums[2] + toInsert);
+        assembly {
+            sstore(stateHash_slot, newStateHash)
+            sstore(dataSize_slot, add(dataStartIndex, numDataLeaves))
+        }
+        return rollupId;
     }
 
     /**
@@ -685,7 +678,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         );
 
         uint256[6 * numberOfBridgeCalls] memory interactionResult;
-        uint256 interactionNonce = (nextRollupId - 1) * numberOfBridgeCalls;
+        uint256 interactionNonce = getRollupId(proofData) * numberOfBridgeCalls;
         for (uint256 i = 0; i < numberOfBridgeCalls; ++i) {
             (
                 uint256 bridgeId,
@@ -742,7 +735,14 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                 mstore(add(ptr, 0x44), mload(add(assetAddresses, 0x20)))
                 mstore(add(ptr, 0x64), mload(add(assetAddresses, 0x40)))
                 mstore(add(ptr, 0x84), totalInputValue)
-                success := delegatecall(gas(), sload(defiBridgeProxy_slot), ptr, 0xa4, ptr, 0x40)
+                success := delegatecall(
+                    sload(gasSentToBridgeProxy_slot),
+                    sload(defiBridgeProxy_slot),
+                    ptr,
+                    0xa4,
+                    ptr,
+                    0x40
+                )
                 if eq(success, 1) {
                     outputValueA := mload(ptr)
                     outputValueB := mul(mload(add(ptr, 0x20)), gt(numOutputAssets, 1))

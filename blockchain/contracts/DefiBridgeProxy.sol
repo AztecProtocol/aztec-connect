@@ -17,15 +17,20 @@ contract DefiBridgeProxy {
 
     function getBalance(address assetAddress) internal view returns (uint256 result) {
         assembly {
-            let isEth := eq(assetAddress, 0)
-            if eq(isEth, 1) {
+            // Is this Eth?
+            if iszero(assetAddress) {
                 result := balance(address())
             }
-            if eq(isEth, 0) {
+            // Is this a token? i.e. assetAddress nonzero
+            if assetAddress {
                 let ptr := mload(0x40)
                 mstore(ptr, BALANCE_OF_SELECTOR)
                 mstore(add(ptr, 0x4), address())
-                pop(staticcall(gas(), assetAddress, ptr, 0x24, ptr, 0x20))
+                if iszero(staticcall(gas(), assetAddress, ptr, 0x24, ptr, 0x20))
+                {
+                    // ruh roh call failed
+                    revert(0x00, 0x00)
+                }
                 result := mload(ptr)
             }
         }
@@ -47,7 +52,11 @@ contract DefiBridgeProxy {
                 mstore(ptr, TRANSFER_SELECTOR)
                 mstore(add(ptr, 0x4), bridgeAddress)
                 mstore(add(ptr, 0x24), totalInputValue)
-                pop(call(gas(), inputAssetAddress, 0, ptr, 0x44, ptr, 0))
+                if iszero(call(gas(), inputAssetAddress, 0, ptr, 0x44, ptr, 0))
+                {
+                    // transfer failed, let's get out of here
+                    revert(0x00, 0x00)
+                }
             }
         }
 

@@ -46,12 +46,7 @@ describe('rollup_processor', () => {
     expect(await rollupProcessor.feeDistributor()).toEqual(feeDistributor.address);
     expect(await rollupProcessor.numberOfAssets()).toBe(16);
     expect(await rollupProcessor.numberOfBridgeCalls()).toBe(4);
-    expect(await rollupProcessor.nextRollupId()).toBe(0);
     expect(await rollupProcessor.dataSize()).toBe(0);
-    expect(await rollupProcessor.dataRoot()).toEqual(WorldStateConstants.EMPTY_DATA_ROOT);
-    expect(await rollupProcessor.nullRoot()).toEqual(WorldStateConstants.EMPTY_NULL_ROOT);
-    expect(await rollupProcessor.rootRoot()).toEqual(WorldStateConstants.EMPTY_ROOT_ROOT);
-    expect(await rollupProcessor.defiRoot()).toEqual(WorldStateConstants.EMPTY_DEFI_ROOT);
     expect(await rollupProcessor.defiInteractionHash()).toEqual(WorldStateConstants.INITIAL_INTERACTION_HASH);
     expect(await rollupProcessor.totalDeposited()).toEqual([0n, 0n]);
     expect(await rollupProcessor.totalWithdrawn()).toEqual([0n, 0n]);

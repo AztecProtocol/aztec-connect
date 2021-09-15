@@ -1,5 +1,6 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
+import { Block } from '@aztec/barretenberg/block_source';
 import {
   Blockchain,
   BlockchainStatus,
@@ -9,10 +10,11 @@ import {
   TypedData,
 } from '@aztec/barretenberg/blockchain';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
-import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { Contracts } from './contracts/contracts';
 import { validateSignature } from './validate_signature';
+import { WorldStateConstants } from '@aztec/barretenberg/world_state/world_state_constants';
+import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 
 export interface EthereumBlockchainConfig {
   console?: boolean;
@@ -22,20 +24,36 @@ export interface EthereumBlockchainConfig {
   pollInterval?: number;
 }
 
+/**
+ * Implementation of primary blockchain interface.
+ * Provides higher level functionality above directly interfacing with contracts, e.g.:
+ * - An asynchronous interface for subscribing to rollup events.
+ * - A status query method for providing a complete snapshot of current rollup blockchain state.
+ * - Abstracts away chain re-org concerns by ensuring appropriate confirmations for given situations.
+ */
 export class EthereumBlockchain extends EventEmitter implements Blockchain {
   private running = false;
   private runningPromise?: Promise<void>;
   private latestEthBlock = -1;
   private latestRollupId = -1;
-  private debug: any;
   private status!: BlockchainStatus;
+  private log = console.log;
 
   private static readonly DEFAULT_MIN_CONFIRMATIONS = 3;
   private static readonly DEFAULT_MIN_CONFIRMATIONS_EHW = 12;
 
   constructor(private config: EthereumBlockchainConfig, private contracts: Contracts) {
     super();
-    this.debug = config.console === false ? createDebug('bb:ethereum_blockchain') : console.log;
+    this.status = {
+      ...this.status,
+      dataRoot: WorldStateConstants.EMPTY_DATA_ROOT,
+      nullRoot: WorldStateConstants.EMPTY_NULL_ROOT,
+      rootRoot: WorldStateConstants.EMPTY_ROOT_ROOT,
+      defiRoot: WorldStateConstants.EMPTY_DEFI_ROOT,
+    };
+    if (config.console === false) {
+      this.log = () => {};
+    }
   }
 
   static async new(
@@ -56,9 +74,30 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return eb;
   }
 
+  /**
+   * Initialises the status object. Requires querying for the latest rollup block from the blockchain.
+   * This could take some time given how `getRollupBlock` searches backwards over the chain.
+   */
   public async init() {
-    await this.initStatus();
-    this.debug(`Ethereum blockchain initialized with assets: ${this.status.assets.map(a => a.symbol)}`);
+    this.log('Seeking latest rollup...');
+    const latestBlock = await this.contracts.getRollupBlock(-1);
+    if (latestBlock) {
+      this.log(`Found latest rollup id ${latestBlock.rollupId}.`);
+    } else {
+      this.log('No rollup found, assuming pristine state.');
+    }
+    await this.updatePerRollupState(latestBlock);
+    await this.updatePerEthBlockState();
+    const chainId = await this.contracts.getChainId();
+    const assets = this.contracts.getAssets().map(a => a.getStaticInfo());
+    this.status = {
+      ...this.status,
+      chainId,
+      rollupContractAddress: this.contracts.getRollupContractAddress(),
+      feeDistributorContractAddress: this.contracts.getFeeDistributorContractAddress(),
+      assets,
+    };
+    this.log(`Ethereum blockchain initialized with assets: ${this.status.assets.map(a => a.symbol)}`);
   }
 
   /**
@@ -66,14 +105,14 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    * All historical blocks will have been emitted before this function returns.
    */
   public async start(fromRollup = 0) {
-    this.debug(`Ethereum blockchain starting from rollup: ${fromRollup}`);
+    this.log(`Ethereum blockchain starting from rollup: ${fromRollup}`);
 
     const getBlocks = async (fromRollup: number) => {
       while (true) {
         try {
           return await this.getBlocks(fromRollup);
         } catch (err) {
-          this.debug(`getBlocks failed, will retry: ${err.message}`);
+          this.log(`getBlocks failed, will retry: ${err.message}`);
           await new Promise(resolve => setTimeout(resolve, 5000));
         }
       }
@@ -81,21 +120,22 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
 
     const emitBlocks = async () => {
       const latestBlock = await this.contracts.getBlockNumber().catch(err => {
-        this.debug(`getBlockNumber failed: ${err.code}`);
+        this.log(`getBlockNumber failed: ${err.code}`);
         return this.latestEthBlock;
       });
       if (latestBlock === this.latestEthBlock) {
         return;
       }
       this.latestEthBlock = latestBlock;
-      await this.updatePerBlockState();
+      await this.updatePerEthBlockState();
 
       const blocks = await getBlocks(fromRollup);
       if (blocks.length) {
-        await this.updatePerRollupState();
+        await this.updatePerRollupState(blocks[blocks.length - 1]);
       }
+
       for (const block of blocks) {
-        this.debug(`Block received: ${block.rollupId}`);
+        this.log(`Block received: ${block.rollupId}`);
         this.latestRollupId = block.rollupId;
         this.emit('block', block);
         fromRollup = block.rollupId + 1;
@@ -110,7 +150,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     this.runningPromise = (async () => {
       while (this.running) {
         await new Promise(resolve => setTimeout(resolve, this.config.pollInterval || 10000));
-        await emitBlocks().catch(this.debug);
+        await emitBlocks().catch(this.log);
       }
     })();
   }
@@ -127,35 +167,30 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   /**
    * Get the status of the rollup contract
    */
-  public async getBlockchainStatus(refresh = false) {
-    if (refresh) {
-      await this.initStatus();
-    }
+  public async getBlockchainStatus() {
     return this.status;
   }
 
-  private async initStatus() {
-    await this.updatePerRollupState();
-    await this.updatePerBlockState();
-    const chainId = await this.contracts.getChainId();
-    const assets = this.contracts.getAssets().map(a => a.getStaticInfo());
-    this.status = {
-      ...this.status,
-      chainId,
-      rollupContractAddress: this.contracts.getRollupContractAddress(),
-      feeDistributorContractAddress: this.contracts.getFeeDistributorContractAddress(),
-      assets,
-    };
-  }
-
-  private async updatePerRollupState() {
+  private async updatePerRollupState(block?: Block) {
     this.status = {
       ...this.status,
       ...(await this.contracts.getPerRollupState()),
     };
+    if (block) {
+      const rollupProofData = RollupProofData.fromBuffer(block.rollupProofData);
+      this.status = {
+        ...this.status,
+        nextRollupId: rollupProofData.rollupId + 1,
+        dataSize: rollupProofData.dataStartIndex + rollupProofData.rollupSize,
+        dataRoot: rollupProofData.newDataRoot,
+        nullRoot: rollupProofData.newNullRoot,
+        rootRoot: rollupProofData.newDataRootsRoot,
+        defiRoot: rollupProofData.newDefiRoot,
+      };
+    }
   }
 
-  private async updatePerBlockState() {
+  private async updatePerEthBlockState() {
     this.status = {
       ...this.status,
       ...(await this.contracts.getPerBlockState()),
@@ -229,7 +264,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    */
   public async getTransactionReceipt(txHash: TxHash) {
     const confs = this.config.minConfirmation || EthereumBlockchain.DEFAULT_MIN_CONFIRMATIONS;
-    this.debug(`Getting tx receipt for ${txHash}... (${confs} confirmations)`);
+    this.log(`Getting tx receipt for ${txHash}... (${confs} confirmations)`);
     let txReceipt = await this.contracts.getTransactionReceipt(txHash);
     while (!txReceipt || txReceipt.confirmations < confs) {
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -240,7 +275,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
 
   public async getTransactionReceiptSafe(txHash: TxHash) {
     const confs = this.getRequiredConfirmations();
-    this.debug(`Getting tx receipt for ${txHash} (${confs} confs)...`);
+    this.log(`Getting tx receipt for ${txHash} (${confs} confs)...`);
     let txReceipt = await this.contracts.getTransactionReceipt(txHash);
     while (!txReceipt || txReceipt.confirmations < confs) {
       await new Promise(resolve => setTimeout(resolve, 1000));

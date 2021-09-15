@@ -108,7 +108,7 @@ export const randomRollupProof = (txs: TxDao[], dataStartIndex = 0, rollupSize =
       ],
       [randomBytes(64), randomBytes(64), randomBytes(64), randomBytes(64)],
       randomBytes(32),
-      randomBytes(32),
+      1,
       [
         new InnerProofData(
           0,

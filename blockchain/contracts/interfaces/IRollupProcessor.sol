@@ -49,6 +49,8 @@ interface IRollupProcessor {
 
     function setFeeDistributor(address feeDistributorAddress) external;
 
+    function setGasSentToDefiBridgeProxy(uint256 _gasSentToBridgeProxy) external;
+
     function setVerifier(address verifierAddress) external;
 
     function setSupportedAsset(address linkedToken, bool supportsPermit) external;

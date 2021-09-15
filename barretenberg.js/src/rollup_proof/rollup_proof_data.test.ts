@@ -53,7 +53,7 @@ describe('RollupProofData', () => {
           totalTxFees,
           defiInteractionNotes,
           randomBytes(32),
-          randomBytes(32),
+          1,
           [randomInnerProofData()],
         ),
     ).toThrow();
@@ -87,7 +87,7 @@ describe('RollupProofData', () => {
           totalTxFees,
           defiInteractionNotes,
           randomBytes(32),
-          randomBytes(32),
+          1,
           [randomInnerProofData()],
         ),
     ).toThrow();

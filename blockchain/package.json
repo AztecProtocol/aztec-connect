@@ -10,6 +10,7 @@
     "compile": "node ./ensure_versions && yarn hardhat compile",
     "clean": "rm -rf ./cache ./dest ./src/artifacts",
     "test": "yarn compile && NODE_NO_WARNINGS=1 yarn jest --runInBand",
+    "test:parallel": "yarn compile && NODE_NO_WARNINGS=1 yarn jest",
     "start:ganache": "yarn compile && ganache-cli -d -h 0.0.0.0 --chainId=1337 -l 12000000 -e 10000 -m 'test test test test test test test test test test test junk'",
     "generate:dev": "./generate_vks_dev.sh && cd ./src/contracts/verifier/fixtures && ./create_proofs_dev.sh",
     "generate:prod": "./generate_vks_prod.sh && cd ./src/contracts/verifier/fixtures && ./create_proofs_prod.sh",
