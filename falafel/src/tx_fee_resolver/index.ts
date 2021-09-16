@@ -2,7 +2,6 @@ import { AssetId } from 'barretenberg/asset';
 import { Blockchain, BlockchainAsset, TxType } from 'barretenberg/blockchain';
 import { AssetFeeQuote } from 'barretenberg/rollup_provider';
 import { TxDao } from '../entity/tx';
-import { RollupDb } from '../rollup_db';
 import { FeeCalculator } from './fee_calculator';
 import { PriceTracker } from './price_tracker';
 
@@ -13,7 +12,6 @@ export class TxFeeResolver {
 
   constructor(
     private blockchain: Blockchain,
-    private rollupDb: RollupDb,
     private baseTxGas: number,
     private maxFeeGasPrice: bigint,
     private feeGasPriceMultiplier: number,
@@ -29,7 +27,7 @@ export class TxFeeResolver {
     const { assets } = await this.blockchain.getBlockchainStatus();
     this.assets = assets;
     const assetIds = assets.map((_, id) => id);
-    this.priceTracker = new PriceTracker(this.blockchain, this.rollupDb, assetIds);
+    this.priceTracker = new PriceTracker(this.blockchain, assetIds);
     this.feeCalculator = new FeeCalculator(
       this.priceTracker,
       this.assets,
