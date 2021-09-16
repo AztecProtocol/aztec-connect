@@ -2,9 +2,8 @@ import { AssetId } from 'barretenberg/asset';
 import { Blockchain, PriceFeed, TxType } from 'barretenberg/blockchain';
 import { SettlementTime } from 'barretenberg/rollup_provider';
 import { EthPriceFeed } from 'blockchain';
-import { TxFeeResolver } from './index';
-import { RollupDb } from '../rollup_db';
 import { mockTx } from './fixtures';
+import { TxFeeResolver } from './index';
 
 jest.useFakeTimers();
 
@@ -26,7 +25,6 @@ describe('tx fee resolver', () => {
   let gasPriceFeed: Mockify<PriceFeed>;
   let tokenPriceFeed: Mockify<PriceFeed>;
   let blockchain: Mockify<Blockchain>;
-  let rollupDb: Mockify<RollupDb>;
   let txFeeResolver!: TxFeeResolver;
 
   beforeEach(() => {
@@ -74,13 +72,8 @@ describe('tx fee resolver', () => {
       }),
     } as any;
 
-    rollupDb = {
-      getRollups: jest.fn().mockResolvedValue([]),
-    } as any;
-
     txFeeResolver = new TxFeeResolver(
       blockchain,
-      rollupDb,
       baseTxGas,
       maxFeeGasPrice,
       feeGasPriceMultiplier,

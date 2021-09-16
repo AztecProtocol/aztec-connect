@@ -63,7 +63,6 @@ export class Server {
 
     this.txFeeResolver = new TxFeeResolver(
       blockchain,
-      rollupDb,
       baseTxGas,
       maxFeeGasPrice,
       feeGasPriceMultiplier,
