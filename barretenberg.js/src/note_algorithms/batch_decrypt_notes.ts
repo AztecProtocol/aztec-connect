@@ -11,7 +11,7 @@ export const batchDecryptNotes = async (
   noteAlgorithms: NoteAlgorithms,
   grumpkin: Grumpkin,
 ) => {
-  const decryptedNoteLength = 41;
+  const decryptedNoteLength = 73;
   const dataBuf = await noteAlgorithms.batchDecryptNotes(viewingKeys, privateKey);
   const notes: (DecryptedNote | undefined)[] = [];
   for (let i = 0, startIndex = 0; startIndex < dataBuf.length; ++i, startIndex += decryptedNoteLength) {

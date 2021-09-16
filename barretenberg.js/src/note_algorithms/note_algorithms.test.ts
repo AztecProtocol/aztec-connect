@@ -28,7 +28,7 @@ describe('compute_nullifier', () => {
   });
 
   it('should compute correct nullifier', async () => {
-    const inputNote1 = new TreeNote(pubKey, BigInt(100), 0, 0, noteSecret);
+    const inputNote1 = new TreeNote(pubKey, BigInt(100), 0, 0, noteSecret, Buffer.alloc(32));
     inputNote1.noteSecret = noteSecret;
 
     const inputNote1Enc = noteAlgos.valueNoteCommitment(inputNote1);

@@ -24,6 +24,7 @@ class DexieNote {
     public nullifier: Uint8Array,
     public nullified: 0 | 1,
     public owner: Uint8Array,
+    public creatorPubKey: Uint8Array
   ) {}
 }
 
@@ -37,9 +38,10 @@ const noteToDexieNote = (note: Note) =>
     note.nullifier,
     note.nullified ? 1 : 0,
     new Uint8Array(note.owner.toBuffer()),
+    new Uint8Array(note.creatorPubKey)
   );
 
-const dexieNoteToNote = ({ id, value, dataEntry, secret, nullifier, nullified, owner, ...rest }: DexieNote): Note => ({
+const dexieNoteToNote = ({ id, value, dataEntry, secret, nullifier, nullified, owner, creatorPubKey, ...rest }: DexieNote): Note => ({
   ...rest,
   index: id,
   value: BigInt(value),
@@ -48,6 +50,7 @@ const dexieNoteToNote = ({ id, value, dataEntry, secret, nullifier, nullified, o
   nullifier: Buffer.from(nullifier),
   nullified: !!nullified,
   owner: AccountId.fromBuffer(Buffer.from(owner)),
+  creatorPubKey : Buffer.from(creatorPubKey),
 });
 
 class DexieClaim {

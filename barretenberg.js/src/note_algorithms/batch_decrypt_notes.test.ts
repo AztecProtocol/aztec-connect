@@ -27,7 +27,7 @@ describe('batch_decypt_notes', () => {
     const eph = createKeyPair();
     const noteBufs = Array(4)
       .fill(0)
-      .map(() => randomBytes(40));
+      .map(() => randomBytes(72));
     const keys = noteBufs.map(noteBuf => ViewingKey.createFromEphPriv(noteBuf, owner.pubKey, eph.privKey, grumpkin));
     const keysBuf = Buffer.concat(keys.map(k => k.toBuffer()));
     const decryptedNotes = await batchDecryptNotes(keysBuf, owner.privKey, noteAlgos, grumpkin);
@@ -44,7 +44,7 @@ describe('batch_decypt_notes', () => {
     const eph = createKeyPair();
     const noteBufs = Array(4)
       .fill(0)
-      .map(() => randomBytes(40));
+      .map(() => randomBytes(72));
     const keys = noteBufs.map(noteBuf => ViewingKey.createFromEphPriv(noteBuf, owner.pubKey, eph.privKey, grumpkin));
     // Replace the thrid key with a random key.
     keys.splice(2, 1, ViewingKey.random());

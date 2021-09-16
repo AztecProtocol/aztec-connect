@@ -46,7 +46,7 @@ export class JoinSplitTxFactory {
     const numInputNotes = notes.length;
     const totalNoteInputValue = notes.reduce((sum, note) => sum + note.value, BigInt(0));
     const inputNoteIndices = notes.map(n => n.index);
-    const inputNotes = notes.map(n => new TreeNote(n.owner.publicKey, n.value, n.assetId, n.owner.nonce, n.secret));
+    const inputNotes = notes.map(n => new TreeNote(n.owner.publicKey, n.value, n.assetId, n.owner.nonce, n.secret, n.creatorPubKey));
     const maxNoteIndex = Math.max(...inputNoteIndices, 0);
 
     // Add gibberish notes to ensure we have two notes.
@@ -103,9 +103,10 @@ export class JoinSplitTxFactory {
     return { tx, viewingKeys };
   }
 
-  private createNote(assetId: AssetId, value: bigint, owner: AccountId) {
+  private createNote(assetId: AssetId, value: bigint, owner: AccountId, sender?: AccountId) {
     const ephKey = this.createEphemeralPrivKey();
-    const note = TreeNote.createFromEphPriv(owner.publicKey, value, assetId, owner.nonce, ephKey, this.grumpkin);
+    const creatorPubKey : Buffer = sender ? sender.publicKey.x() : Buffer.alloc(32);
+    const note = TreeNote.createFromEphPriv(owner.publicKey, value, assetId, owner.nonce, ephKey, this.grumpkin, TreeNote.LATEST_VERSION, creatorPubKey);
     const viewingKey = note.getViewingKey(ephKey, this.grumpkin);
     return { note, viewingKey };
   }

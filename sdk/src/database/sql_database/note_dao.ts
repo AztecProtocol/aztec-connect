@@ -30,4 +30,7 @@ export class NoteDao implements Note {
 
   @Column('blob', { transformer: [accountIdTransformer] })
   public owner!: AccountId;
+
+  @Column()
+  public creatorPubKey!: Buffer;
 }

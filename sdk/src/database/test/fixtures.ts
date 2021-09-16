@@ -25,6 +25,7 @@ export const randomNote = (): Note => ({
   nullifier: randomBytes(32),
   nullified: false,
   owner: AccountId.random(),
+  creatorPubKey: randomBytes(32),
 });
 
 export const randomClaim = (): Claim => ({

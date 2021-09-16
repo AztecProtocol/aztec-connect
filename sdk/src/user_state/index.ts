@@ -367,16 +367,17 @@ export class UserState extends EventEmitter {
     const { txHash, secret, owner } = claim;
     const { noteCommitment1, noteCommitment2 } = proof;
     const { bridgeId, depositValue, outputValueA, outputValueB } = (await this.db.getDefiTx(txHash))!;
+    // When generating output notes, set creatorPubKey to 0 (it's a DeFi txn, recipient of note is same as creator of claim note)
     if (!outputValueA && !outputValueB) {
-      const treeNote = new TreeNote(owner.publicKey, depositValue, bridgeId.inputAssetId, owner.nonce, secret);
+      const treeNote = new TreeNote(owner.publicKey, depositValue, bridgeId.inputAssetId, owner.nonce, secret, Buffer.alloc(32));
       await this.processNewNote(noteStartIndex, noteCommitment1, treeNote);
     }
     if (outputValueA) {
-      const treeNote = new TreeNote(owner.publicKey, outputValueA, bridgeId.outputAssetIdA, owner.nonce, secret);
+      const treeNote = new TreeNote(owner.publicKey, outputValueA, bridgeId.outputAssetIdA, owner.nonce, secret, Buffer.alloc(32));
       await this.processNewNote(noteStartIndex, noteCommitment1, treeNote);
     }
     if (outputValueB) {
-      const treeNote = new TreeNote(owner.publicKey, outputValueB, bridgeId.outputAssetIdB, owner.nonce, secret);
+      const treeNote = new TreeNote(owner.publicKey, outputValueB, bridgeId.outputAssetIdB, owner.nonce, secret, Buffer.alloc(32));
       await this.processNewNote(noteStartIndex + 1, noteCommitment2, treeNote);
     }
 
@@ -395,7 +396,7 @@ export class UserState extends EventEmitter {
       return savedNote.owner.equals(this.user.id) ? savedNote : undefined;
     }
 
-    const { noteSecret, value, assetId, nonce } = treeNote;
+    const { noteSecret, value, assetId, nonce, creatorPubKey } = treeNote;
     if (nonce !== this.user.id.nonce) {
       return;
     }
@@ -410,6 +411,7 @@ export class UserState extends EventEmitter {
       nullifier,
       nullified: false,
       owner: this.user.id,
+      creatorPubKey,
     };
 
     if (value) {

@@ -33,7 +33,10 @@ export class NoteAlgorithms {
   public valueNotePartialCommitment(noteSecret: Buffer, owner: AccountId) {
     this.wasm.transferToHeap(noteSecret, 0);
     this.wasm.transferToHeap(owner.publicKey.toBuffer(), 32);
-    this.wasm.call('notes__value_note_partial_commitment', 0, 32, owner.nonce, 0);
+    // Currently this is only used for creating the value notes from a claim note.
+    // Given these notes are owned by the creator of the claim note, we can leave creator pubkey as 0.
+    this.wasm.transferToHeap(Buffer.alloc(32), 96);
+    this.wasm.call('notes__value_note_partial_commitment', 0, 32, 96, owner.nonce, 0);
     return Buffer.from(this.wasm.sliceMemory(0, 32));
   }
 
@@ -80,7 +83,7 @@ export class NoteAlgorithms {
   }
 
   public async batchDecryptNotes(keysBuf: Buffer, privateKey: Buffer) {
-    const decryptedNoteLength = 41;
+    const decryptedNoteLength = 73;
     const numKeys = keysBuf.length / ViewingKey.SIZE;
 
     const mem = await this.worker.call('bbmalloc', keysBuf.length + privateKey.length);

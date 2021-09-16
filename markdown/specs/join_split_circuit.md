@@ -40,10 +40,12 @@ Where the field $\mathbb{F}_p$ is from the BN254 specification.
 1. `input_note_1.secret`
 1. `input_note_1.account_id`
 1. `input_note_1.asset_id`
+1. `input_note_1.creator_pk` (creator_pk = optional public key of note creator)
 1. `input_note_2.val`
 1. `input_note_2.secret`
 1. `input_note_2.account_id`
 1. `input_note_2.asset_id`
+1. `input_note_2.creator_pk`
 1. `index_1`
 1. `index_2`
 1. `input_note_2.asset_id`
@@ -52,11 +54,13 @@ Where the field $\mathbb{F}_p$ is from the BN254 specification.
 1. `output_note_1.account_id`
 1. `output_note_1.asset_id`
 1. `output_note_1.nonce`
+1. `output_note_1.creator_pk`
 1. `output_note_2.val`
 1. `output_note_2.secret`
 1. `output_note_2.account_id`
 1. `output_note_2.asset_id`
 1. `output_note_2.nonce`
+1. `output_note_2.creator_pk`
 1. `account_note.account_id`
 1. `account_note.npk` (npk=nullifier public key)
 1. `account_note.spk` (spk=spending public key)
@@ -204,4 +208,13 @@ check
   public_asset_id == input_note_1.asset_id
   ⟺
   (public_input != 0 || public_output != 0)
+```
+### 8. Conditional `creator_pk` Checks
+
+```
+check
+  output_note_1.creator_pk == 0 || output_note_1.creator_pk == account_note.npk.x
+
+check
+  output_note_2.creator_pk == 0 || output_note_2.creator_pk == account_note.npk.x
 ```

@@ -11,7 +11,7 @@ function deriveAESSecret(ecdhPubKey: GrumpkinAddress, ecdhPrivKey: Buffer, grump
 }
 
 export class ViewingKey {
-  static SIZE = 112;
+  static SIZE = 144;
   static EMPTY = new ViewingKey();
   private buffer: Buffer;
 
@@ -39,7 +39,7 @@ export class ViewingKey {
    * [AES:[64 bytes owner public key][32 bytes value][32 bytes secret]][64 bytes ephemeral public key]
    */
   static createFromEphPriv(noteBuf: Buffer, ownerPubKey: GrumpkinAddress, ephPrivKey: Buffer, grumpkin: Grumpkin) {
-    if (noteBuf.length !== 40) {
+    if (noteBuf.length !== 72) {
       throw new Error('Invalid note buffer.');
     }
 
