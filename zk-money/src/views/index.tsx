@@ -1,12 +1,13 @@
 import React from 'react';
-import { Switch, Route } from 'react-router-dom';
+import { Route, Switch } from 'react-router-dom';
 import { Template } from '../components';
 import { Config } from '../config';
 import { PageTransitionHandler } from '../page_transition_handler';
 import { Theme } from '../styles';
 import { AboutBalance } from './about_balance';
-import { appPaths, AppView } from './app';
+import { AppView } from './app';
 import { NotFound } from './not_found';
+import { appPaths } from './views';
 
 interface ViewsProps {
   config: Config;

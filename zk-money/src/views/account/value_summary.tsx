@@ -39,19 +39,19 @@ type ValueLen = 'ss' | 's' | 'm' | 'l' | 'll' | 'lll';
 
 const getValueLen = (value: string): ValueLen => {
   const len = value.replace(/\./, '').length;
-  if (len <= 4) {
+  if (len <= 9) {
     return 'ss';
   }
-  if (len <= 7) {
+  if (len <= 12) {
     return 's';
   }
-  if (len <= 10) {
+  if (len <= 15) {
     return 'm';
   }
-  if (len <= 12) {
+  if (len <= 17) {
     return 'l';
   }
-  if (len <= 15) {
+  if (len <= 20) {
     return 'll';
   }
   return 'lll';
@@ -190,7 +190,7 @@ export const ValueSummary: React.FunctionComponent<ValueSummaryProps> = ({
             <SubTitle size="s" text={`$${convertToPriceString(totalBalance, asset.decimals, price)}`} inline />
           )}
         </Title>
-        <ValueRoot len={getValueLen(valueStr)}>
+        <ValueRoot len={getValueLen(`${valueStr} zk${asset.symbol}`)}>
           {!isLoading && <Value text={valueStr} />}
           <Text className={symbolClassName} text={`zk${asset.symbol}`} />
           {pendingTxs > 0 && (

@@ -1,4 +1,5 @@
 import { AssetId } from '@aztec/sdk';
+import { BroadcastChannel } from 'broadcast-channel';
 import { isEqual } from 'lodash';
 import { PureComponent } from 'react';
 import { withApollo, WithApolloClient } from 'react-apollo';
@@ -14,11 +15,12 @@ import {
   AssetState,
   DepositFormValues,
   Form,
+  LoginMode,
   LoginState,
   LoginStep,
   MessageType,
   SystemMessage,
-  Wallet,
+  WalletId,
   WorldState,
 } from '../app';
 import { ProviderState } from '../app/provider';
@@ -29,26 +31,7 @@ import { Theme } from '../styles';
 import { Account } from '../views/account';
 import { Home } from '../views/home';
 import { Login } from '../views/login';
-
-const views = [
-  {
-    path: '/',
-    action: AppAction.NADA,
-  },
-  {
-    path: '/signin',
-    action: AppAction.LOGIN,
-  },
-  {
-    path: '/asset/:assetSymbol',
-    action: AppAction.ACCOUNT,
-  },
-];
-
-const getAccountUrl = (assetId: AppAssetId) =>
-  views.find(v => v.action === AppAction.ACCOUNT)!.path.replace(':assetSymbol', `${assets[assetId].symbol}`);
-
-export const appPaths = views.map(p => p.path);
+import { getAccountUrl, getActionFromUrl, getLoginModeFromUrl, getUrlFromAction, getUrlFromLoginMode } from './views';
 
 interface RouteParams {
   assetSymbol?: string;
@@ -74,10 +57,17 @@ interface AppState {
   };
   depositForm?: DepositFormValues;
   systemMessage: SystemMessage;
+  isLoading: boolean;
+}
+
+enum CrossTabEvent {
+  LOGGED_IN = 'CROSS_TAB_LOGGED_IN',
+  LOGGED_OUT = 'CROSS_TAB_LOGGED_OUT',
 }
 
 class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
   private app: App;
+  private channel = new BroadcastChannel('zk-money');
 
   private readonly defaultAsset = AssetId.ETH;
 
@@ -86,7 +76,8 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
 
     const { match, client, config } = props;
     const { path, params } = match;
-    const initialAction = views.find(v => v.path === path)?.action || AppAction.NADA;
+    const initialAction = getActionFromUrl(path);
+
     let activeAsset = params?.assetSymbol
       ? assets.find(a => a.symbol.toLowerCase() === params.assetSymbol!.toLowerCase())?.id
       : this.defaultAsset;
@@ -96,7 +87,9 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
       this.props.history.push(url);
     }
 
-    this.app = new App(config, client, activeAsset);
+    const loginMode = getLoginModeFromUrl(path);
+
+    this.app = new App(config, client, activeAsset, loginMode);
 
     this.state = {
       action: initialAction,
@@ -112,15 +105,31 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
         message: '',
         type: MessageType.TEXT,
       },
+      isLoading: true,
     };
   }
 
-  componentDidMount() {
-    this.app.on(AppEvent.SESSION_CLOSED, this.onSessionClosed);
+  async componentDidMount() {
+    this.app.on(AppEvent.SESSION_CLOSED, () => {
+      this.onSessionClosed();
+      this.channel.postMessage({ name: CrossTabEvent.LOGGED_OUT });
+    });
+    this.app.on(AppEvent.SESSION_OPEN, () => this.channel.postMessage({ name: CrossTabEvent.LOGGED_IN }));
     this.app.on(AppEvent.UPDATED_LOGIN_STATE, this.onLoginStateChange);
     this.app.on(AppEvent.UPDATED_USER_SESSION_DATA, this.onUserSessionDataChange);
     this.app.on(AppEvent.UPDATED_SYSTEM_MESSAGE, this.onSystemMessageChange);
-    this.handleActionChange(this.state.action);
+    this.channel.onmessage = async msg => {
+      switch (msg.name) {
+        case CrossTabEvent.LOGGED_IN:
+          this.goToAction(AppAction.ACCOUNT);
+          break;
+        case CrossTabEvent.LOGGED_OUT:
+          this.handleLogout();
+          break;
+      }
+    };
+    await this.handleActionChange(this.state.action);
+    this.setState({ isLoading: false });
   }
 
   componentDidUpdate(prevProps: AppPropsWithApollo, prevState: AppState) {
@@ -138,6 +147,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
 
   componentWillUnmount() {
     this.app.destroy();
+    this.channel.close();
   }
 
   private goToAction = (action: AppAction) => {
@@ -149,22 +159,21 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
       const url = getAccountUrl(this.state.activeAsset);
       this.props.history.push(url);
     } else {
-      const { path } = views.find(v => v.action === action)!;
-      this.props.history.push(path);
+      const url = getUrlFromAction(action);
+      this.props.history.push(url);
     }
   };
 
   private handleUrlChange = async ({ path, params }: { path: string; params: RouteParams }) => {
-    const action = views.find(v => v.path === path)?.action || AppAction.NADA;
-    this.setState({ action });
+    const action = getActionFromUrl(path);
+    this.setState({ action, systemMessage: { message: '', type: MessageType.TEXT } });
 
     switch (action) {
-      case AppAction.NADA:
-        if (this.app.hasSession()) {
-          this.setState({ systemMessage: { message: '', type: MessageType.TEXT } });
-          await this.app.logout();
-        }
+      case AppAction.LOGIN: {
+        const loginMode = getLoginModeFromUrl(path);
+        this.app.changeLoginMode(loginMode);
         break;
+      }
       case AppAction.ACCOUNT: {
         const activeAsset = assets.find(a => a.symbol.toLowerCase() === params.assetSymbol!.toLowerCase())?.id;
         if (activeAsset !== this.state.activeAsset) {
@@ -176,7 +185,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
     }
   };
 
-  private handleActionChange(action: AppAction) {
+  private async handleActionChange(action: AppAction) {
     if (action === AppAction.ACCOUNT) {
       if (!this.app.hasSession()) {
         if (this.app.hasCookie()) {
@@ -185,10 +194,20 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
           this.goToAction(AppAction.LOGIN);
         }
       }
-    } else if (this.app.hasSession()) {
+    } else if (this.app.hasCookie()) {
       this.goToAction(AppAction.ACCOUNT);
-    } else if (action === AppAction.LOGIN && this.app.hasLocalAccountProof()) {
-      this.app.resumeLogin();
+    } else if (action === AppAction.LOGIN) {
+      if (this.app.hasLocalAccountProof()) {
+        this.app.resumeSignup();
+        return;
+      }
+
+      const accountV0 = await this.app.getLocalAccountV0();
+      if (accountV0) {
+        const url = getUrlFromLoginMode(LoginMode.MIGRATE);
+        this.props.history.push(url);
+        this.app.migrateFromLocalAccountV0(accountV0);
+      }
     }
   }
 
@@ -206,6 +225,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
 
   private onUserSessionDataChange = () => {
     this.setState({
+      loginState: this.app.loginState,
       providerState: this.app.providerState,
       worldState: this.app.worldState,
       accountState: this.app.accountState,
@@ -224,39 +244,38 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
     if (action === AppAction.ACCOUNT) {
       this.goToAction(AppAction.LOGIN);
     }
-    this.setState({
-      loginState: this.app.loginState,
-      worldState: this.app.worldState,
-      providerState: this.app.providerState,
-      accountState: this.app.accountState,
-      assetState: this.app.assetState,
-      activeAction: this.app.activeAction,
-      depositForm: this.app.depositForm,
-    });
+    this.onUserSessionDataChange();
   };
 
-  private handleLogin = () => {
-    if (this.app.hasCookie()) {
-      this.goToAction(AppAction.ACCOUNT);
-    } else if (this.state.action !== AppAction.LOGIN) {
-      this.goToAction(AppAction.LOGIN);
-    }
+  private handleConnect = () => {
+    const url = getUrlFromLoginMode(LoginMode.SIGNUP);
+    this.props.history.push(url);
   };
 
-  private handleConnect = (wallet: Wallet) => {
+  private handleConnectWallet = (walletId: WalletId) => {
     if (!this.app.hasSession()) {
       this.app.createSession();
     }
-    this.app.connectWallet(wallet);
+    this.app.connectWallet(walletId);
   };
 
   private handleRestart = () => {
+    if (this.state.loginState.accountV0) {
+      const url = getUrlFromLoginMode(LoginMode.SIGNUP);
+      this.props.history.push(url);
+    }
     this.setState({ systemMessage: { message: '', type: MessageType.TEXT } }, () => this.app.logout());
   };
 
   private handleLogout = () => {
-    this.goToAction(AppAction.NADA);
+    if (!this.app.hasSession()) {
+      return;
+    }
     this.setState({ systemMessage: { message: '', type: MessageType.TEXT } }, () => this.app.logout());
+  };
+
+  private handleMigrateBalance = () => {
+    this.app.selectAction(AccountAction.MIGRATE);
   };
 
   private handleChangeAsset = (assetId: AppAssetId) => {
@@ -279,6 +298,12 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
     }
   }
 
+  private handleClearAccountV0s = async () => {
+    const url = getUrlFromLoginMode(LoginMode.SIGNUP);
+    this.props.history.push(url);
+    await this.app.clearLocalAccountV0s();
+  };
+
   render() {
     const {
       action,
@@ -291,13 +316,14 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
       worldState,
       depositForm,
       systemMessage,
+      isLoading,
     } = this.state;
     const { config } = this.props;
     const { step } = loginState;
     const theme = action === AppAction.ACCOUNT ? Theme.WHITE : Theme.GRADIENT;
     const { requiredNetwork } = this.app;
     const processingAction = this.app.isProcessingAction();
-    const allowReset = action !== AppAction.ACCOUNT && !processingAction;
+    const allowReset = action !== AppAction.ACCOUNT && (!processingAction || systemMessage.type === MessageType.ERROR);
     const rootUrl = allowReset ? '/' : this.props.match.url;
 
     return (
@@ -308,7 +334,9 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
         worldState={worldState}
         account={step === LoginStep.DONE ? accountState : undefined}
         systemMessage={systemMessage}
+        onMigrateBalance={this.handleMigrateBalance}
         onLogout={this.handleLogout}
+        isLoading={isLoading}
       >
         {(() => {
           switch (action) {
@@ -318,17 +346,22 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
                   worldState={worldState}
                   loginState={loginState}
                   providerState={providerState}
+                  availableWallets={this.app.availableWallets}
                   depositForm={depositForm}
                   explorerUrl={config.explorerUrl}
                   systemMessage={systemMessage}
                   setSeedPhrase={this.app.setSeedPhrase}
                   setAlias={this.app.setAlias}
                   setRememberMe={this.app.setRememberMe}
-                  onSelectWallet={this.handleConnect}
+                  onSelectWallet={this.handleConnectWallet}
                   onSelectSeedPhrase={this.app.confirmSeedPhrase}
+                  onMigrateToWallet={this.app.migrateToWallet}
+                  onMigrateNotes={this.app.migrateNotes}
                   onSelectAlias={this.app.confirmAlias}
                   onRestart={allowReset && step !== LoginStep.CONNECT_WALLET ? this.handleRestart : undefined}
                   onForgotAlias={this.app.forgotAlias}
+                  onMigrateAccount={this.app.migrateAccount}
+                  onClearAccountV0s={this.handleClearAccountV0s}
                   onDepositFormInputsChange={this.app.changeDepositForm}
                   onSubmitDepositForm={this.app.claimUserName}
                   onChangeWallet={this.app.changeWallet}
@@ -353,17 +386,17 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
                   onFormInputsChange={this.app.changeForm}
                   onValidate={this.app.validateForm}
                   onChangeWallet={this.app.changeWallet}
+                  onDisconnectWallet={this.app.disconnectWallet}
                   onGoBack={this.app.resetFormStep}
                   onSubmit={this.app.submitForm}
                   onChangeAsset={this.handleChangeAsset}
                   onSelectAction={this.app.selectAction}
                   onClearAction={this.app.clearAction}
-                  isDaiTxFree={this.app.isDaiTxFree()}
                 />
               );
             }
             default:
-              return <Home onConnect={this.handleLogin} unsupported={isUnsupportedDevice()} />;
+              return <Home onConnect={this.handleConnect} unsupported={isUnsupportedDevice()} />;
           }
         })()}
       </Template>

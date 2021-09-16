@@ -1,8 +1,9 @@
 import React from 'react';
-import { AssetState, isAddress, SendFormValues, SendStatus, toBaseUnits } from '../../app';
+import { AssetState, isAddress, ProviderState, SendFormValues, SendStatus, toBaseUnits, WalletId } from '../../app';
 import { breakpoints, Theme } from '../../styles';
 import { AssetInfoRow } from './asset_info_row';
 import { ProgressTemplate } from './progress_template';
+import { SigningKeyForm } from './signing_key_form';
 
 const formatRecipient = (input: string, truncate = false) => {
   if (!isAddress(input)) {
@@ -15,7 +16,10 @@ const formatRecipient = (input: string, truncate = false) => {
 interface SendProgressProps {
   theme: Theme;
   assetState: AssetState;
+  providerState?: ProviderState;
   form: SendFormValues;
+  onChangeWallet(walletId: WalletId): void;
+  onDisconnectWallet(): void;
   onGoBack(): void;
   onSubmit(): void;
   onClose(): void;
@@ -24,13 +28,30 @@ interface SendProgressProps {
 export const SendProgress: React.FunctionComponent<SendProgressProps> = ({
   theme,
   assetState,
+  providerState,
   form,
+  onChangeWallet,
+  onDisconnectWallet,
   onGoBack,
   onSubmit,
   onClose,
 }) => {
-  const { asset, price } = assetState;
   const { amount, fees, speed, recipient, submit, status } = form;
+
+  if (status.value === SendStatus.GENERATE_KEY) {
+    return (
+      <SigningKeyForm
+        providerState={providerState}
+        message={submit.message}
+        messageType={submit.messageType}
+        onChangeWallet={onChangeWallet}
+        onDisconnectWallet={onDisconnectWallet}
+        onGoBack={onGoBack}
+      />
+    );
+  }
+
+  const { asset, price } = assetState;
   const fee = fees.value[speed.value].fee;
 
   const items = [

@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import { AssetState, MergeFormValues, MergeStatus, toBaseUnits } from '../../app';
+import { AssetState, MergeFormValues, MergeStatus, ProviderState, toBaseUnits, WalletId } from '../../app';
 import { BlockTitle, PaddedBlock, Text } from '../../components';
 import { spacings, Theme, themeColours } from '../../styles';
 import { MergeProgress } from './merge_progress';
@@ -15,7 +15,10 @@ const MergeTxRow = styled(MergeTx)`
 interface MergeProps {
   theme: Theme;
   assetState: AssetState;
+  providerState?: ProviderState;
   form: MergeFormValues;
+  onChangeWallet(walletId: WalletId): void;
+  onDisconnectWallet(): void;
   onValidate(toMerge: bigint[]): void;
   onGoBack(): void;
   onSubmit(): void;
@@ -25,7 +28,10 @@ interface MergeProps {
 export const Merge: React.FunctionComponent<MergeProps> = ({
   theme,
   assetState,
+  providerState,
   form,
+  onChangeWallet,
+  onDisconnectWallet,
   onValidate,
   onGoBack,
   onSubmit,
@@ -36,7 +42,10 @@ export const Merge: React.FunctionComponent<MergeProps> = ({
       <MergeProgress
         theme={theme}
         assetState={assetState}
+        providerState={providerState}
         form={form}
+        onChangeWallet={onChangeWallet}
+        onDisconnectWallet={onDisconnectWallet}
         onGoBack={onGoBack}
         onSubmit={onSubmit}
         onClose={onClose}

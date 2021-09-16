@@ -806,7 +806,7 @@ export class CoreSdk extends EventEmitter {
     return userState.getBalance(assetId);
   }
 
-  public getMaxSpendableValue(assetId: AssetId, userId: AccountId) {
+  public async getMaxSpendableValue(assetId: AssetId, userId: AccountId) {
     const userState = this.getUserState(userId);
     return userState.getMaxSpendableValue(assetId);
   }

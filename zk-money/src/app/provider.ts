@@ -4,7 +4,7 @@ import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { MessageType } from './form';
 import { chainIdToNetwork, Network } from './networks';
-import { createWalletProvider, ProviderConfig, Wallet, WalletProvider, wallets } from './wallet_providers';
+import { createWalletProvider, ProviderConfig, WalletId, WalletProvider, wallets } from './wallet_providers';
 
 const debug = createDebug('zm:provider');
 
@@ -16,7 +16,7 @@ export enum ProviderStatus {
 }
 
 export interface ProviderState {
-  wallet: Wallet;
+  walletId: WalletId;
   status: ProviderStatus;
   account?: EthAddress;
   network?: Network;
@@ -41,11 +41,11 @@ export class Provider extends EventEmitter {
   private walletProvider!: WalletProvider;
   public ethereumProvider!: EthereumProvider;
 
-  constructor(public wallet: Wallet, config: ProviderConfig) {
+  constructor(public walletId: WalletId, config: ProviderConfig) {
     super();
-    this.walletProvider = createWalletProvider(wallet, config)!;
+    this.walletProvider = createWalletProvider(walletId, config)!;
     this.state = {
-      wallet,
+      walletId,
       status: ProviderStatus.UNINITIALIZED,
     };
   }
@@ -85,7 +85,7 @@ export class Provider extends EventEmitter {
   async init(requiredNetwork?: Network) {
     this.updateState({ status: ProviderStatus.INITIALIZING });
 
-    const walletName = wallets[this.wallet].name;
+    const walletName = wallets[this.walletId].name;
 
     if (!this.walletProvider) {
       this.updateState({ status: ProviderStatus.UNINITIALIZED });
@@ -121,14 +121,15 @@ export class Provider extends EventEmitter {
 
     if (requiredNetwork && this.chainId !== requiredNetwork.chainId) {
       this.log(`Please switch your wallet's network to ${requiredNetwork.network}...`, MessageType.WARNING);
-      while (this.chainId !== requiredNetwork.chainId && !this.destroyed) {
+      while (this.chainId !== requiredNetwork.chainId) {
         await new Promise(resolve => setTimeout(resolve, 500));
+        if (this.destroyed) {
+          throw new Error('Wallet disconnected.');
+        }
       }
     }
 
-    if (!this.destroyed) {
-      this.updateState({ status: ProviderStatus.INITIALIZED });
-    }
+    this.updateState({ status: ProviderStatus.INITIALIZED });
   }
 
   async destroy() {

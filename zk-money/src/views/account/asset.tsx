@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { AccountAction, AccountState, Asset, AssetState, sum, WorldState } from '../../app';
-import { BlockTitle, DisclaimerBlock, ProgressHandler, Spinner, Text, TextLink } from '../../components';
+import { BlockTitle, DisclaimerBlock, ProgressHandler, Spinner, SpinnerTheme, Text, TextLink } from '../../components';
 import { breakpoints, spacings } from '../../styles';
 import { MergeBlock } from './merge_block';
 import { ShieldPrompt } from './shield_prompt';
@@ -93,7 +93,7 @@ export const AccountAsset: React.FunctionComponent<AccountAssetProps> = ({
     const showProgress = worldState.latestRollup - worldState.accountSyncedToRollup > 10;
     return (
       <InitializationRoot>
-        <Spinner theme="gradient" size="m" />
+        <Spinner theme={SpinnerTheme.GRADIENT} size="m" />
         <InitializationMessage size="s">
           {showProgress ? 'Syncing Account Data ' : 'Getting things ready'}
           {showProgress && (
@@ -109,7 +109,6 @@ export const AccountAsset: React.FunctionComponent<AccountAssetProps> = ({
   const { balance, spendableBalance, joinSplitTxs, pendingBalance } = assetState;
   const pendingTxs = joinSplitTxs.filter(tx => !tx.settled);
   const pendingValue = sum(pendingTxs.map(tx => tx.balanceDiff));
-  const sendableBalance = settled ? spendableBalance : 0n;
 
   return (
     <>
@@ -140,7 +139,7 @@ export const AccountAsset: React.FunctionComponent<AccountAssetProps> = ({
         <Col>
           <BlockTitle
             info={
-              sendableBalance < balance ? (
+              spendableBalance < balance ? (
                 <TextLink
                   text={settled ? 'Why can’t I send my full balance?' : 'Why can’t I send my balance?'}
                   onClick={settled ? () => onSelectAction(AccountAction.MERGE) : onExplainUnsettled}
@@ -152,10 +151,10 @@ export const AccountAsset: React.FunctionComponent<AccountAssetProps> = ({
           />
           <ValueSummary
             title="Sendable Balance"
-            value={sendableBalance}
+            value={spendableBalance}
             asset={asset}
             buttonText="Send"
-            onClick={sendableBalance && !settled ? undefined : () => onSelectAction(AccountAction.SEND)}
+            onClick={() => onSelectAction(AccountAction.SEND)}
             isLoading={isLoading}
           />
         </Col>

@@ -259,6 +259,10 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return validateSignature(publicOwner, signature, signingData);
   }
 
+  public async signPersonalMessage(message: Buffer, address: EthAddress) {
+    return this.contracts.signPersonalMessage(message, address);
+  }
+
   public async signMessage(message: Buffer, address: EthAddress) {
     return this.contracts.signMessage(message, address);
   }

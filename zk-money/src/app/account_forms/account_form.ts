@@ -1,4 +1,4 @@
-import { AccountState, AssetState } from '../account_state';
+import { AssetState } from '../account_state';
 import { EthAccount } from '../eth_account';
 import { Form, FormStatus } from '../form';
 import { Provider } from '../provider';
@@ -17,7 +17,6 @@ export interface AccountForm {
 
   getValues(): Form;
 
-  changeAccountState(accountState: AccountState): void;
   changeAssetState(assetState: AssetState): void;
   changeProvider(provider?: Provider): void;
   changeEthAccount(ethAccount: EthAccount): void;

@@ -26,6 +26,7 @@ export interface ServerConfig {
   readonly baseTxGas: number;
   readonly maxFeeGasPrice: bigint;
   readonly feeGasPriceMultiplier: number;
+  readonly maxProviderGasPrice: bigint;
   readonly providerGasPriceMultiplier: number;
   readonly reimbursementFeeLimit: bigint;
   readonly maxUnsettledTxs: number;
@@ -56,6 +57,7 @@ export class Server {
       baseTxGas,
       maxFeeGasPrice,
       feeGasPriceMultiplier,
+      maxProviderGasPrice,
       providerGasPriceMultiplier,
     } = config;
 
@@ -78,7 +80,7 @@ export class Server {
       provider,
       publishInterval,
       reimbursementFeeLimit,
-      maxFeeGasPrice,
+      maxProviderGasPrice,
       providerGasPriceMultiplier,
       numInnerRollupTxs,
       numOuterRollupProofs,

@@ -8,7 +8,7 @@ import {
   ShieldFormValues,
   ShieldStatus,
   ValueAvailability,
-  Wallet,
+  WalletId,
 } from '../../app';
 import {
   BlockTitle,
@@ -121,7 +121,8 @@ interface ShieldProps {
   form: ShieldFormValues;
   onChangeInputs(inputs: Partial<ShieldFormValues>): void;
   onValidate(): void;
-  onChangeWallet(wallet: Wallet): void;
+  onChangeWallet(walletId: WalletId): void;
+  onDisconnectWallet(): void;
   onGoBack(): void;
   onSubmit(): void;
   onClose(): void;
@@ -136,6 +137,7 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
   onChangeInputs,
   onValidate,
   onChangeWallet,
+  onDisconnectWallet,
   onGoBack,
   onSubmit,
   onClose,
@@ -145,7 +147,10 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
       <ShieldProgress
         theme={theme}
         assetState={assetState}
+        providerState={providerState}
         form={form}
+        onChangeWallet={onChangeWallet}
+        onDisconnectWallet={onDisconnectWallet}
         onGoBack={onGoBack}
         onSubmit={onSubmit}
         onClose={onClose}

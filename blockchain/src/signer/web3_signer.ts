@@ -1,10 +1,17 @@
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from 'barretenberg/address';
 import { EthereumSignature, EthereumSigner, TypedData } from 'barretenberg/blockchain';
+import { utils } from 'ethers';
 import { validateSignature } from '../validate_signature';
 
 export class Web3Signer implements EthereumSigner {
   constructor(private provider: Web3Provider) {}
+
+  public async signPersonalMessage(message: Buffer, address: EthAddress) {
+    const toSign = utils.hexlify(utils.toUtf8Bytes(message.toString()));
+    const result = await this.provider.send('personal_sign', [toSign, address.toString()]);
+    return Buffer.from(result.slice(2), 'hex');
+  }
 
   public async signMessage(message: Buffer, address: EthAddress) {
     const signer = this.provider.getSigner(address.toString());
