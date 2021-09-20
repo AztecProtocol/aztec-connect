@@ -53,16 +53,14 @@ export const createDepositProof = async (
   txFee = 0n,
 ) => {
   const innerProof = new InnerProofData(
-    ProofId.JOIN_SPLIT,
+    ProofId.DEPOSIT,
+    randomLeafHash(),
+    randomLeafHash(),
+    randomNullifier(),
+    randomNullifier(),
     toBufferBE(amount + txFee, 32),
-    toBufferBE(0n, 32),
-    numToBuffer(assetId),
-    randomLeafHash(),
-    randomLeafHash(),
-    randomNullifier(),
-    randomNullifier(),
     depositorAddress.toBuffer32(),
-    Buffer.alloc(32),
+    numToBuffer(assetId),
   );
   const userAddr = EthAddress.fromString(await user.getAddress());
   const signature = await new Web3Signer(new EthersAdapter(user)).signMessage(innerProof.txId, userAddr);
@@ -77,16 +75,14 @@ export const createDepositProof = async (
 
 export const createWithdrawProof = (amount: bigint, withdrawalAddress: EthAddress, assetId: number, txFee = 0n) => {
   const innerProof = new InnerProofData(
-    ProofId.JOIN_SPLIT,
-    toBufferBE(0n, 32),
+    ProofId.WITHDRAW,
+    randomLeafHash(),
+    randomLeafHash(),
+    randomNullifier(),
+    randomNullifier(),
     toBufferBE(amount + txFee, 32),
-    numToBuffer(assetId),
-    randomLeafHash(),
-    randomLeafHash(),
-    randomNullifier(),
-    randomNullifier(),
-    Buffer.alloc(32),
     withdrawalAddress.toBuffer32(),
+    numToBuffer(assetId),
   );
   const totalTxFees: bigint[] = [];
   totalTxFees[assetId] = txFee;
@@ -98,14 +94,12 @@ export const createWithdrawProof = (amount: bigint, withdrawalAddress: EthAddres
 
 export const createSendProof = (assetId = 1, txFee = 0n) => {
   const innerProof = new InnerProofData(
-    ProofId.JOIN_SPLIT,
-    toBufferBE(0n, 32),
-    toBufferBE(0n, 32),
-    numToBuffer(assetId),
+    ProofId.SEND,
     randomLeafHash(),
     randomLeafHash(),
     randomNullifier(),
     randomNullifier(),
+    Buffer.alloc(32),
     Buffer.alloc(32),
     Buffer.alloc(32),
   );
@@ -120,15 +114,13 @@ export const createSendProof = (assetId = 1, txFee = 0n) => {
 export const createAccountProof = () => {
   const innerProof = new InnerProofData(
     ProofId.ACCOUNT,
-    randomBytes(32),
-    randomBytes(32),
-    randomBytes(32),
     randomLeafHash(),
     randomLeafHash(),
     randomNullifier(),
-    randomNullifier(),
-    randomBytes(32),
-    randomBytes(32),
+    Buffer.alloc(32),
+    Buffer.alloc(32),
+    Buffer.alloc(32),
+    Buffer.alloc(32),
   );
 
   const offchainTxData = new OffchainAccountData(GrumpkinAddress.randomAddress(), AccountAliasId.random());
@@ -139,14 +131,12 @@ export const createAccountProof = () => {
 export const createDefiDepositProof = (bridgeId: BridgeId, inputValue: bigint, txFee = 0n) => {
   const innerProof = new InnerProofData(
     ProofId.DEFI_DEPOSIT,
-    toBufferBE(0n, 32),
-    toBufferBE(inputValue, 32),
-    bridgeId.toBuffer(),
     randomLeafHash(),
     randomLeafHash(),
     randomNullifier(),
     randomNullifier(),
-    randomBytes(32),
+    Buffer.alloc(32),
+    Buffer.alloc(32),
     Buffer.alloc(32),
   );
   const totalTxFees: bigint[] = [];
@@ -160,14 +150,12 @@ export const createDefiDepositProof = (bridgeId: BridgeId, inputValue: bigint, t
 export const createDefiClaimProof = (bridgeId: BridgeId, txFee = 0n) => {
   const innerProof = new InnerProofData(
     ProofId.DEFI_CLAIM,
-    Buffer.alloc(32),
-    Buffer.alloc(32),
-    bridgeId.toBuffer(),
     randomLeafHash(),
     randomLeafHash(),
     randomNullifier(),
     Buffer.alloc(32),
-    randomBytes(32),
+    Buffer.alloc(32),
+    Buffer.alloc(32),
     Buffer.alloc(32),
   );
   const totalTxFees: bigint[] = [];
@@ -274,16 +262,15 @@ export const createRollupProof = async (
         assetIds.add(bridgeId.inputAssetId);
         break;
       }
-      case ProofId.JOIN_SPLIT:
-        assetIds.add(proof.assetId.readUInt32BE(28));
+      case ProofId.ACCOUNT:
         break;
+      default:
+        assetIds.add(proof.assetId.readUInt32BE(28));
     }
   });
 
   const innerProofLen = rollupSize;
   const padding = Buffer.alloc(32 * InnerProofData.NUM_PUBLIC_INPUTS * (innerProofLen - innerProofs.length), 0);
-
-  const recursiveProofOutput = Buffer.alloc(16 * 32);
 
   const proofData = Buffer.concat([
     numToBuffer(rollupId),
@@ -307,7 +294,6 @@ export const createRollupProof = async (
     numToBuffer(rollupSize), // ??
     ...innerProofs.map(p => p.toBuffer()),
     padding,
-    // recursiveProofOutput,
   ]);
 
   const providerAddress = EthAddress.fromString(await rollupProvider.getAddress());

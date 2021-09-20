@@ -1,4 +1,4 @@
-import { ClientProofData } from '@aztec/barretenberg/client_proofs';
+import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { Arg, Args, FieldResolver, Int, Query, Resolver, Root } from 'type-graphql';
 import { Inject } from 'typedi';
 import { Connection, LessThanOrEqual, Repository } from 'typeorm';
@@ -33,62 +33,62 @@ export class TxResolver {
 
   @FieldResolver(() => Int)
   async proofId(@Root() { proofData }: TxDao) {
-    const joinSplit = new ClientProofData(proofData);
+    const joinSplit = new ProofData(proofData);
     return joinSplit.proofId;
   }
 
   @FieldResolver()
   async publicInput(@Root() { proofData }: TxDao) {
-    const joinSplit = new ClientProofData(proofData);
-    return joinSplit.publicInput;
+    const { proofId, publicValue } = new ProofData(proofData);
+    return proofId === ProofId.DEPOSIT ? publicValue : Buffer.alloc(32);
   }
 
   @FieldResolver()
   async publicOutput(@Root() { proofData }: TxDao) {
-    const joinSplit = new ClientProofData(proofData);
-    return joinSplit.publicOutput;
+    const { proofId, publicValue } = new ProofData(proofData);
+    return proofId === ProofId.WITHDRAW ? publicValue : Buffer.alloc(32);
   }
 
   @FieldResolver()
   async assetId(@Root() { proofData }: TxDao) {
-    const joinSplit = new ClientProofData(proofData);
+    const joinSplit = new ProofData(proofData);
     return joinSplit.assetId;
   }
 
   @FieldResolver()
   async newNote1(@Root() { proofData }: TxDao) {
-    const joinSplit = new ClientProofData(proofData);
+    const joinSplit = new ProofData(proofData);
     return joinSplit.noteCommitment1;
   }
 
   @FieldResolver()
   async newNote2(@Root() { proofData }: TxDao) {
-    const joinSplit = new ClientProofData(proofData);
+    const joinSplit = new ProofData(proofData);
     return joinSplit.noteCommitment2;
   }
 
   @FieldResolver()
   async nullifier1(@Root() { proofData }: TxDao) {
-    const joinSplit = new ClientProofData(proofData);
+    const joinSplit = new ProofData(proofData);
     return joinSplit.nullifier1;
   }
 
   @FieldResolver()
   async nullifier2(@Root() { proofData }: TxDao) {
-    const joinSplit = new ClientProofData(proofData);
+    const joinSplit = new ProofData(proofData);
     return joinSplit.nullifier2;
   }
 
   @FieldResolver()
   async inputOwner(@Root() { proofData }: TxDao) {
-    const joinSplit = new ClientProofData(proofData);
-    return joinSplit.inputOwner;
+    const { proofId, publicOwner } = new ProofData(proofData);
+    return proofId === ProofId.DEPOSIT ? publicOwner : Buffer.alloc(32);
   }
 
   @FieldResolver()
   async outputOwner(@Root() { proofData }: TxDao) {
-    const joinSplit = new ClientProofData(proofData);
-    return joinSplit.outputOwner;
+    const { proofId, publicOwner } = new ProofData(proofData);
+    return proofId === ProofId.WITHDRAW ? publicOwner : Buffer.alloc(32);
   }
 
   @FieldResolver()

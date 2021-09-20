@@ -1,7 +1,7 @@
 import { AssetId } from '@aztec/barretenberg/asset';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { ClientProofData, DefiDepositClientProofData } from '@aztec/barretenberg/client_proofs';
+import { ProofData } from '@aztec/barretenberg/client_proofs';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
@@ -73,10 +73,8 @@ export class RollupCoordinator {
         continue;
       }
 
-      const proofData = new ClientProofData(tx.proofData);
-      const assetId = [TxType.DEFI_DEPOSIT, TxType.DEFI_CLAIM].includes(tx.txType)
-        ? BridgeId.fromBuffer(proofData.bridgeId).inputAssetId
-        : proofData.assetId.readUInt32BE(28);
+      const proofData = new ProofData(tx.proofData);
+      const assetId = proofData.txFeeAssetId.readUInt32BE(28);
       if (!this.assetIds.has(assetId) && this.assetIds.size === RollupProofData.NUMBER_OF_ASSETS) {
         continue;
       }
@@ -88,7 +86,7 @@ export class RollupCoordinator {
       if (tx.txType !== TxType.DEFI_DEPOSIT) {
         addTx(tx);
       } else {
-        const { bridgeId } = new DefiDepositClientProofData(proofData);
+        const bridgeId = BridgeId.fromBuffer(proofData.bridgeId);
         if (this.bridgeIds.some(id => id.equals(bridgeId))) {
           addTx(tx);
         } else if (this.bridgeIds.length < RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK) {

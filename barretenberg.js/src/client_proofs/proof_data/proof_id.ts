@@ -1,5 +1,8 @@
 export enum ProofId {
-  JOIN_SPLIT,
+  PADDING,
+  DEPOSIT,
+  WITHDRAW,
+  SEND,
   ACCOUNT,
   DEFI_DEPOSIT,
   DEFI_CLAIM,

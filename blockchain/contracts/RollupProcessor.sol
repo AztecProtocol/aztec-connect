@@ -14,8 +14,6 @@ import {IERC20Permit} from './interfaces/IERC20Permit.sol';
 import {Decoder} from './Decoder.sol';
 import './libraries/RollupProcessorLibrary.sol';
 
-// import 'hardhat/console.sol';
-
 /**
  * @title Rollup Processor
  * @dev Smart contract responsible for processing Aztec zkRollups, including relaying them to a verifier
@@ -602,37 +600,28 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         // This is a bit of a hot loop, we iterate over every tx to determine whether to process deposits or withdrawals.
         while (proofDataPtr < end) {
             // extract the minimum information we need to determine whether to skip this iteration
-            uint256 proofId;
-            uint256 publicInput;
-            uint256 publicOutput;
-            bool txNeedsProcessing;
+            uint256 publicValue;
             assembly {
-                proofId := mload(proofDataPtr)
-                publicInput := mload(add(proofDataPtr, 0x20))
-                publicOutput := mload(add(proofDataPtr, 0x40))
-                // only process deposits and withdrawals iff
-                // the proofId == 0 (not an account proof) and publicInput > 0 OR publicOutput > 0
-                txNeedsProcessing := and(iszero(proofId), or(not(iszero(publicInput)), not(iszero(publicOutput))))
+                publicValue := mload(add(proofDataPtr, 0xa0))
             }
-
-            if (txNeedsProcessing) {
-                // extract asset Id
+            if (publicValue > 0) {
+                uint256 proofId;
                 uint256 assetId;
+                address publicOwner;
                 assembly {
-                    assetId := mload(add(proofDataPtr, 0x60))
+                    proofId := mload(proofDataPtr)
+                    assetId := mload(add(proofDataPtr, 0xe0))
+                    publicOwner := mload(add(proofDataPtr, 0xc0))
                 }
 
-                if (publicInput > 0) {
+                if (proofId == 1) {
                     // validate user has approved deposit
-                    address inputOwner;
                     bytes32 digest;
                     assembly {
-                        inputOwner := mload(add(proofDataPtr, 0x100))
-
                         // compute the tx id to check if user has approved tx
                         digest := keccak256(proofDataPtr, stepSize)
                     }
-                    if (!depositProofApprovals[inputOwner][digest]) {
+                    if (!depositProofApprovals[publicOwner][digest]) {
                         // extract and validate signature
                         // we can create a bytes memory container for the signature without allocating new memory,
                         // by overwriting the previous 32 bytes in the `signatures` array with the 'length' of our synthetic byte array (92)
@@ -648,22 +637,18 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                             mstore(signature, 0x60)
                         }
                         // validate the signature
-                        RollupProcessorLibrary.validateUnpackedSignature(digest, signature, inputOwner);
+                        RollupProcessorLibrary.validateUnpackedSignature(digest, signature, publicOwner);
                         // restore the memory we overwrote
                         assembly {
                             mstore(signature, temp)
                             sigIndex := add(sigIndex, 0x60)
                         }
                     }
-                    decreasePendingDepositBalance(assetId, inputOwner, publicInput);
+                    decreasePendingDepositBalance(assetId, publicOwner, publicValue);
                 }
 
-                if (publicOutput > 0) {
-                    address outputOwner;
-                    assembly {
-                        outputOwner := mload(add(proofDataPtr, 0x120))
-                    }
-                    withdraw(publicOutput, outputOwner, assetId);
+                if (proofId == 2) {
+                    withdraw(publicValue, publicOwner, assetId);
                 }
             }
             proofDataPtr += txPubInputLength;

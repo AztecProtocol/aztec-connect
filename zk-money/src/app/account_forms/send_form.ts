@@ -432,7 +432,6 @@ export class SendForm extends EventEmitter implements AccountForm {
         0n,
         signer,
         undefined,
-        undefined,
         ethAddress,
       );
     }

@@ -1,5 +1,5 @@
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { ClientProofData, JoinSplitProver } from '@aztec/barretenberg/client_proofs';
+import { JoinSplitProver, ProofData } from '@aztec/barretenberg/client_proofs';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { OffchainDefiDepositData } from '@aztec/barretenberg/offchain_tx_data';
@@ -47,7 +47,6 @@ export class DefiDepositProofCreator {
       signer.getPublicKey(),
       undefined,
       undefined,
-      undefined,
       bridgeId,
     );
     const signingData = await this.prover.computeSigningData(tx);
@@ -59,7 +58,7 @@ export class DefiDepositProofCreator {
     debug(`created proof: ${new Date().getTime() - start}ms`);
     debug(`proof size: ${proofData.length}`);
 
-    const { txId } = new ClientProofData(proofData);
+    const { txId } = new ProofData(proofData);
     const txHash = new TxHash(txId);
     const userId = userState.getUser().id;
     const userTx = new UserDefiTx(txHash, userId, bridgeId, depositValue, txFee, new Date());

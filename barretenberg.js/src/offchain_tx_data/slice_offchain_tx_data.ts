@@ -9,7 +9,9 @@ export const sliceOffchainTxData = (proofIds: ProofId[], offchainTxData: Buffer)
   return proofIds.map(proofId => {
     dataStart = dataEnd;
     switch (proofId) {
-      case ProofId.JOIN_SPLIT:
+      case ProofId.DEPOSIT:
+      case ProofId.WITHDRAW:
+      case ProofId.SEND:
         dataEnd += OffchainJoinSplitData.SIZE;
         return offchainTxData.slice(dataStart, dataEnd);
       case ProofId.ACCOUNT:

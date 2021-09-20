@@ -37,7 +37,7 @@ contract Decoder {
 
     uint256 public constant numberOfAssets = 16;
     uint256 public constant numberOfBridgeCalls = 4;
-    uint256 public constant txNumPubInputs = 10;
+    uint256 public constant txNumPubInputs = 8;
     uint256 public constant rollupNumHeaderInputs = 13 + (numberOfBridgeCalls * 3) + (numberOfAssets * 2);
     uint256 public constant txPubInputLength = txNumPubInputs * 32;
     uint256 public constant rollupHeaderInputLength = rollupNumHeaderInputs * 32;
@@ -49,58 +49,48 @@ contract Decoder {
 
     function depositTx(uint256 inPtr, uint256 outPtr) internal pure returns (uint256) {
         assembly {
-            calldatacopy(add(outPtr, 0x20), add(inPtr, 0x1), 0x20) // publicInput
-            calldatacopy(add(outPtr, 0x7c), add(inPtr, 0x21), 0x4) // assetId
-            calldatacopy(add(outPtr, 0x80), add(inPtr, 0x25), 0x80) // noteCommitment1 ... nullifier2
-            calldatacopy(add(outPtr, 0x10c), add(inPtr, 0xa5), 0x14) // inputOwner
+            calldatacopy(add(outPtr, 0x20), add(inPtr, 0x1), 0xa0) // noteCommitment1 ... publicValue
+            calldatacopy(add(outPtr, 0xcc), add(inPtr, 0xa1), 0x14) // publicOwner
+            calldatacopy(add(outPtr, 0xfc), add(inPtr, 0xb5), 0x4) // assetId
         }
         return (inPtr + 0xb9);
     }
 
     function withdrawTx(uint256 inPtr, uint256 outPtr) internal pure returns (uint256) {
         assembly {
-            calldatacopy(add(outPtr, 0x40), add(inPtr, 0x1), 0x20) // publicOutput
-            calldatacopy(add(outPtr, 0x7c), add(inPtr, 0x21), 0x4) // assetId
-            calldatacopy(add(outPtr, 0x80), add(inPtr, 0x25), 0x80) // noteCommitment1 ... nullifier2
-            calldatacopy(add(outPtr, 0x12c), add(inPtr, 0xa5), 0x14) // outputOwner
+            calldatacopy(add(outPtr, 0x20), add(inPtr, 0x1), 0xa0) // noteCommitment1 ... publicValue
+            calldatacopy(add(outPtr, 0xcc), add(inPtr, 0xa1), 0x14) // publicOwner
+            calldatacopy(add(outPtr, 0xfc), add(inPtr, 0xb5), 0x4) // assetId
         }
         return (inPtr + 0xb9);
     }
 
     function sendTx(uint256 inPtr, uint256 outPtr) internal pure returns (uint256) {
         assembly {
-            calldatacopy(add(outPtr, 0x7c), add(inPtr, 0x1), 0x4) // assetId
-            calldatacopy(add(outPtr, 0x80), add(inPtr, 0x5), 0x80) // noteCommitment1 ... nullifier2
+            calldatacopy(add(outPtr, 0x20), add(inPtr, 0x1), 0x80) // noteCommitment1 ... nullifier2
         }
-        return (inPtr + 0x85);
+        return (inPtr + 0x81);
     }
 
     function accountTx(uint256 inPtr, uint256 outPtr) internal pure returns (uint256) {
         assembly {
-            // Account
-            mstore(outPtr, 1) // proofId
-            calldatacopy(add(outPtr, 0x20), add(inPtr, 0x1), 0x120) // publicInput ... outputOwner
+            calldatacopy(add(outPtr, 0x20), add(inPtr, 0x1), 0x60) // noteCommitment1 ... nullifier1
         }
-        return (inPtr + 0x121);
+        return (inPtr + 0x61);
     }
 
     function defiDepositTx(uint256 inPtr, uint256 outPtr) internal pure returns (uint256) {
         assembly {
-            // Defi Deposit
-            mstore(outPtr, 2) // proofId
-            calldatacopy(add(outPtr, 0x40), add(inPtr, 0x1), 0xe0) // publicOutput ... inputOwner
+            calldatacopy(add(outPtr, 0x20), add(inPtr, 0x1), 0x80) // noteCommitment1 ... nullifier2
         }
-        return (inPtr + 0xe1);
+        return (inPtr + 0x81);
     }
 
     function defiClaimTx(uint256 inPtr, uint256 outPtr) internal pure returns (uint256) {
         assembly {
-            // Defi Claim
-            mstore(outPtr, 3) // proofId
-            calldatacopy(add(outPtr, 0x60), add(inPtr, 0x1), 0x80) // assetId ... nullifier1
-            calldatacopy(add(outPtr, 0x100), add(inPtr, 0x81), 0x20) // inputOwner
+            calldatacopy(add(outPtr, 0x20), add(inPtr, 0x1), 0x60) // noteCommitment1 ... nullifier1
         }
-        return (inPtr + 0xa1);
+        return (inPtr + 0x61);
     }
 
     function invalidTx(uint256, uint256) internal pure returns (uint256) {
@@ -146,13 +136,13 @@ contract Decoder {
 
                 // Step 3: write function pointers into the table!
                 assembly {
-                    mstore(functionTable, t1)
-                    mstore(add(functionTable, 0x20), t2)
-                    mstore(add(functionTable, 0x40), t3)
-                    mstore(add(functionTable, 0x60), t4)
-                    mstore(add(functionTable, 0x80), t5)
-                    mstore(add(functionTable, 0xa0), t6)
-                    mstore(add(functionTable, 0xc0), t7)
+                    mstore(functionTable, t7)
+                    mstore(add(functionTable, 0x20), t1)
+                    mstore(add(functionTable, 0x40), t2)
+                    mstore(add(functionTable, 0x60), t3)
+                    mstore(add(functionTable, 0x80), t4)
+                    mstore(add(functionTable, 0xa0), t5)
+                    mstore(add(functionTable, 0xc0), t6)
                     mstore(add(functionTable, 0xe0), t7)
                 }
             }
@@ -200,10 +190,11 @@ contract Decoder {
                     // For each tx, the encoding byte determines how we decode the tx calldata
                     // The encoding byte can take values from 0 to 7; we want to turn these into offsets that can index our function table.
                     // 1. Access encoding byte via `calldataload(inPtr)`. The most significant byte is our encoding byte.
-                    // 2. Shift right by 243 bits. This is equivalent to isolating the encoding byte and multiplying by 32.
-                    // 3. Take this value and AND with 0xe0 (11100000 in binary). This masks off all but the 3 most significant bits of the byte.
+                    // 2. Shift left by 5 bits. This is equivalent to multiplying the encoding byte by 32.
                     // 4. The result will be 1 of 8 offset values (0x00, 0x20, ..., 0xe0) which we can use to retrieve the relevant function pointer from `functionTable`
-                    callfunc := mload(add(functionTable, and(shr(243, calldataload(inPtr)), 0xe0)))
+                    let encoding := byte(0, calldataload(inPtr))
+                    mstore(outPtr, encoding) // proofId
+                    callfunc := mload(add(functionTable, shl(5, encoding)))
                 }
                 inPtr = callfunc(inPtr, outPtr);
                 outPtr += txSize;

@@ -121,8 +121,7 @@ describe('user state', () => {
     publicOutput = 0n,
     outputNoteValue1 = 0n,
     outputNoteValue2 = 0n,
-    inputOwner = EthAddress.ZERO,
-    outputOwner = EthAddress.ZERO,
+    publicOwner = EthAddress.ZERO,
     noteCommitmentNonce = user.nonce,
     isPadding = false,
     createValidNoteCommitments = true,
@@ -139,16 +138,14 @@ describe('user state', () => {
     const nullifier2 = noteAlgos.valueNoteNullifier(randomBytes(32), 1, proofSender.privateKey);
     const viewingKeys = isPadding ? [] : notes.map(n => n.viewingKey);
     const proofData = new InnerProofData(
-      ProofId.JOIN_SPLIT,
-      toBufferBE(publicInput, 32),
-      toBufferBE(publicOutput, 32),
-      numToUInt32BE(assetId, 32),
+      publicInput ? ProofId.DEPOSIT : publicOutput ? ProofId.WITHDRAW : ProofId.SEND,
       note1Commitment,
       note2Commitment,
       nullifier1,
       nullifier2,
-      inputOwner.toBuffer32(),
-      outputOwner.toBuffer32(),
+      toBufferBE(publicInput + publicOutput, 32),
+      publicOwner.toBuffer32(),
+      numToUInt32BE(assetId, 32),
     );
     const offchainTxData = new OffchainJoinSplitData(viewingKeys);
     return { proofData, offchainTxData };
@@ -170,15 +167,13 @@ describe('user state', () => {
     const nullifier1 = migrate ? noteAlgos.accountAliasIdNullifier(accountAliasId) : Buffer.alloc(32);
     const proofData = new InnerProofData(
       ProofId.ACCOUNT,
-      publicKey.x(),
-      publicKey.y(),
-      newAccountAliasId.toBuffer(),
       note1,
       note2,
       nullifier1,
       Buffer.alloc(32),
-      newSigningPubKey1.x(),
-      newSigningPubKey2.x(),
+      Buffer.alloc(32),
+      Buffer.alloc(32),
+      Buffer.alloc(32),
     );
     const offchainTxData = new OffchainAccountData(
       publicKey,
@@ -211,15 +206,13 @@ describe('user state', () => {
     const viewingKeys = [newNote.viewingKey];
     const proofData = new InnerProofData(
       ProofId.DEFI_DEPOSIT,
-      toBufferBE(0n, 32),
-      toBufferBE(depositValue, 32),
-      bridgeId.toBuffer(),
       noteCommitments[0],
       noteCommitments[1],
       nullifier1,
       nullifier2,
-      EthAddress.ZERO.toBuffer32(),
-      EthAddress.ZERO.toBuffer32(),
+      Buffer.alloc(32),
+      Buffer.alloc(32),
+      Buffer.alloc(32),
     );
     const partialState = randomBytes(32);
     const offchainTxData = new OffchainDefiDepositData(bridgeId, partialState, depositValue, 0n, viewingKeys[0]);
@@ -244,15 +237,13 @@ describe('user state', () => {
     ];
     const proofData = new InnerProofData(
       ProofId.DEFI_CLAIM,
-      toBufferBE(0n, 32),
-      toBufferBE(0n, 32),
-      bridgeId.toBuffer(),
       noteCommitments[0],
       noteCommitments[1],
       nullifier,
       Buffer.alloc(32),
-      EthAddress.ZERO.toBuffer32(),
-      EthAddress.ZERO.toBuffer32(),
+      Buffer.alloc(32),
+      Buffer.alloc(32),
+      Buffer.alloc(32),
     );
     const offchainTxData = new OffchainDefiClaimData();
     return { proofData, offchainTxData };
@@ -453,9 +444,8 @@ describe('user state', () => {
     const outputNoteValue2 = 64n;
     const inputNoteValue = 70n;
     const publicInput = 60n;
-    const publicOutput = 40n;
-    const inputOwner = EthAddress.randomAddress();
-    const outputOwner = EthAddress.randomAddress();
+    const publicOutput = 0n;
+    const publicOwner = EthAddress.randomAddress();
 
     const jsProof = generateJoinSplitProof({
       assetId,
@@ -463,8 +453,7 @@ describe('user state', () => {
       outputNoteValue2,
       publicInput,
       publicOutput,
-      inputOwner,
-      outputOwner,
+      publicOwner,
     });
     const block = createRollupBlock([jsProof]);
 
@@ -496,8 +485,8 @@ describe('user state', () => {
       privateInput: inputNoteValue,
       recipientPrivateOutput: outputNoteValue1,
       senderPrivateOutput: outputNoteValue2,
-      inputOwner,
-      outputOwner,
+      inputOwner: publicOwner,
+      outputOwner: undefined,
       ownedByUser: true,
       settled: block.created,
     });

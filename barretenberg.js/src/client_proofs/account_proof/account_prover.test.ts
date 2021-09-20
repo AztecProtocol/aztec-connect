@@ -12,7 +12,7 @@ import { MerkleTree } from '../../merkle_tree';
 import { NoteAlgorithms } from '../../note_algorithms';
 import { PooledPippenger } from '../../pippenger';
 import { BarretenbergWasm, WorkerPool } from '../../wasm';
-import { ClientProofData } from '../proof_data';
+import { ProofData, ProofId } from '../proof_data';
 import { UnrolledProver } from '../prover';
 import { AccountProver, AccountTx, AccountVerifier } from './index';
 
@@ -127,15 +127,24 @@ describe('account proof', () => {
     expect(verified).toBe(true);
 
     // Check public inputs
-    const accountProof = new ClientProofData(proof);
+    const accountProof = new ProofData(proof);
     const newAccountAliasId = new AccountAliasId(aliasHash, nonce + 1);
+    const noteCommitment1 = noteAlgos.accountNoteCommitment(newAccountAliasId, user.publicKey, signingKey0.publicKey);
+    const noteCommitment2 = noteAlgos.accountNoteCommitment(newAccountAliasId, user.publicKey, signingKey1.publicKey);
     const accountAliasIdNullifier = noteAlgos.accountAliasIdNullifier(accountAliasId);
-    expect(accountProof.publicInput).toEqual(newAccountPublicKey.x());
-    expect(accountProof.publicOutput).toEqual(newAccountPublicKey.y());
-    expect(accountProof.assetId).toEqual(newAccountAliasId.toBuffer());
+    expect(accountProof.proofId).toBe(ProofId.ACCOUNT);
+    expect(accountProof.noteCommitment1).toEqual(noteCommitment1);
+    expect(accountProof.noteCommitment2).toEqual(noteCommitment2);
     expect(accountProof.nullifier1).toEqual(accountAliasIdNullifier);
     expect(accountProof.nullifier2).toEqual(Buffer.alloc(32));
-    expect(accountProof.inputOwner).toEqual(signingKey0.publicKey.x());
-    expect(accountProof.outputOwner).toEqual(signingKey1.publicKey.x());
+    expect(accountProof.publicValue).toEqual(Buffer.alloc(32));
+    expect(accountProof.publicOwner).toEqual(Buffer.alloc(32));
+    expect(accountProof.assetId).toEqual(Buffer.alloc(32));
+    expect(accountProof.noteTreeRoot).toEqual(merkleRoot);
+    expect(accountProof.txFee).toEqual(Buffer.alloc(32));
+    expect(accountProof.txFeeAssetId).toEqual(Buffer.alloc(32));
+    expect(accountProof.bridgeId).toEqual(Buffer.alloc(32));
+    expect(accountProof.defiDepositValue).toEqual(Buffer.alloc(32));
+    expect(accountProof.defiRoot).toEqual(Buffer.alloc(32));
   });
 });

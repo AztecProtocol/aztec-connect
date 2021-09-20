@@ -2,7 +2,7 @@ import { createHash } from 'crypto';
 import { ProofId } from '../client_proofs';
 import { numToUInt32BE } from '../serialize';
 import { decodeInnerProof } from './decode_inner_proof';
-import { encodeInnerProof, getEncodedLength } from './encode_inner_proof';
+import { encodeInnerProof } from './encode_inner_proof';
 import { InnerProofData } from './inner_proof';
 import { toBigIntBE } from '../bigint_buffer';
 
@@ -174,7 +174,7 @@ export class RollupProofData {
       this.oldDefiRoot,
       this.newDefiRoot,
       ...this.bridgeIds,
-      ...this.defiDepositSums.map(s => s),
+      ...this.defiDepositSums,
       ...this.assetIds,
       ...this.totalTxFees,
       ...this.defiInteractionNotes,
@@ -184,18 +184,20 @@ export class RollupProofData {
     ]);
   }
 
-  getTotalDeposited(deposits: bigint[]) {
-    const realInnerProofs = this.innerProofData.filter(p => !p.isPadding() && p.proofId === ProofId.JOIN_SPLIT);
+  getTotalDeposited() {
+    const deposits: bigint[] = [];
+    const realInnerProofs = this.innerProofData.filter(p => p.proofId === ProofId.DEPOSIT);
     realInnerProofs.forEach(p => {
-      deposits[p.assetId.readUInt32BE()] += toBigIntBE(p.publicInput);
+      deposits[p.assetId.readUInt32BE()] += toBigIntBE(p.publicValue);
     });
     return deposits;
   }
 
-  getTotalWithdrawn(withdraws: bigint[]) {
-    const realInnerProofs = this.innerProofData.filter(p => !p.isPadding() && p.proofId === ProofId.JOIN_SPLIT);
+  getTotalWithdrawn() {
+    const withdraws: bigint[] = [];
+    const realInnerProofs = this.innerProofData.filter(p => p.proofId === ProofId.WITHDRAW);
     realInnerProofs.forEach(p => {
-      withdraws[p.assetId.readUInt32BE()] += toBigIntBE(p.publicOutput);
+      withdraws[p.assetId.readUInt32BE()] += toBigIntBE(p.publicValue);
     });
     return withdraws;
   }
@@ -216,7 +218,7 @@ export class RollupProofData {
       this.oldDefiRoot,
       this.newDefiRoot,
       ...this.bridgeIds,
-      ...this.defiDepositSums.map(s => s),
+      ...this.defiDepositSums,
       ...this.assetIds,
       ...this.totalTxFees,
       ...this.defiInteractionNotes,
@@ -348,11 +350,10 @@ export class RollupProofData {
     startIndex += 4;
     const innerProofData: InnerProofData[] = [];
     while (innerProofDataLength > 0) {
-      const innerData = encoded.slice(startIndex, startIndex + InnerProofData.LENGTH);
-      innerProofData.push(decodeInnerProof(innerData));
-      const encodedLength = getEncodedLength(innerData.readUInt8(0));
-      startIndex += encodedLength;
-      innerProofDataLength -= encodedLength;
+      const innerProof = decodeInnerProof(encoded.slice(startIndex));
+      innerProofData.push(innerProof.proofData);
+      startIndex += innerProof.ENCODED_LENGTH;
+      innerProofDataLength -= innerProof.ENCODED_LENGTH;
     }
     for (let i = innerProofData.length; i < rollupSize; ++i) {
       innerProofData.push(InnerProofData.PADDING);

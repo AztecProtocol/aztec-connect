@@ -164,9 +164,9 @@ describe('tx fee resolver', () => {
     const minFee = txFeeResolver.getMinTxFee(AssetId.DAI, TxType.DEPOSIT);
     const baseFee = txFeeResolver.getFeeQuotes(AssetId.DAI).baseFeeQuotes[SettlementTime.SLOW].fee;
     const txs = [
-      mockTx(AssetId.DAI, TxType.DEPOSIT, minFee + baseFee * 3n),
+      mockTx(AssetId.DAI, TxType.DEPOSIT, minFee + baseFee * 2n),
       mockTx(AssetId.ETH, TxType.DEPOSIT, minEthFee + baseEthFee * 5n),
-      mockTx(AssetId.DAI, TxType.DEPOSIT, minFee - baseFee * 2n),
+      mockTx(AssetId.DAI, TxType.DEPOSIT, minFee - baseFee),
     ];
     expect(txFeeResolver.computeSurplusRatio(txs)).toBe(0.4);
   });

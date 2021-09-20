@@ -1,6 +1,6 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
-import { ClientProofData, JoinSplitProver } from '@aztec/barretenberg/client_proofs';
+import { JoinSplitProver, ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { OffchainJoinSplitData } from '@aztec/barretenberg/offchain_tx_data';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
@@ -33,13 +33,8 @@ export class JoinSplitProofCreator {
     assetId: AssetId,
     signer: Signer,
     newNoteOwner?: AccountId,
-    inputOwner?: EthAddress,
-    outputOwner?: EthAddress,
+    publicOwner?: EthAddress,
   ) {
-    if (publicInput && !inputOwner) {
-      throw new Error('Input owner undefined.');
-    }
-
     const { tx, viewingKeys } = await this.txFactory.createJoinSplitTx(
       userState,
       publicInput,
@@ -51,8 +46,7 @@ export class JoinSplitProofCreator {
       assetId,
       signer.getPublicKey(),
       newNoteOwner,
-      inputOwner,
-      outputOwner,
+      publicOwner,
     );
     const signingData = await this.joinSplitProver.computeSigningData(tx);
     const signature = await signer.signMessage(signingData);
@@ -63,7 +57,7 @@ export class JoinSplitProofCreator {
     debug(`created proof: ${new Date().getTime() - start}ms`);
     debug(`proof size: ${proofData.length}`);
 
-    const { txId } = new ClientProofData(proofData);
+    const { txId, proofId } = new ProofData(proofData);
     const txHash = new TxHash(txId);
     const userId = userState.getUser().id;
     const userTx = new UserJoinSplitTx(
@@ -75,8 +69,8 @@ export class JoinSplitProofCreator {
       privateInput,
       recipientPrivateOutput,
       senderPrivateOutput,
-      inputOwner,
-      outputOwner,
+      proofId === ProofId.DEPOSIT ? publicOwner : undefined,
+      proofId === ProofId.WITHDRAW ? publicOwner : undefined,
       true,
       new Date(),
     );

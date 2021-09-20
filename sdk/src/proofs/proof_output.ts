@@ -1,4 +1,4 @@
-import { ClientProofData } from '@aztec/barretenberg/client_proofs';
+import { ProofData } from '@aztec/barretenberg/client_proofs';
 import {
   OffchainAccountData,
   OffchainDefiDepositData,
@@ -39,7 +39,7 @@ export class AccountProofOutput implements ProofOutput {
     dataStart += rawProofDataLen;
     const rawOffchainAccountData = buf.slice(dataStart);
 
-    const proofData = new ClientProofData(rawProofData);
+    const proofData = new ProofData(rawProofData);
     const offchainTxData = OffchainAccountData.fromBuffer(rawOffchainAccountData);
     const { accountPublicKey, accountAliasId, spendingPublicKey1, spendingPublicKey2 } = offchainTxData;
     const tx = new UserAccountTx(

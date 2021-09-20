@@ -2,10 +2,10 @@ import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
 import {
   AccountVerifier,
-  ClientProofData,
-  DefiDepositClientProofData,
-  JoinSplitClientProofData,
+  DefiDepositProofData,
+  JoinSplitProofData,
   JoinSplitVerifier,
+  ProofData,
   ProofId,
 } from '@aztec/barretenberg/client_proofs';
 import { Crs } from '@aztec/barretenberg/crs';
@@ -62,7 +62,7 @@ export class TxReceiver {
     // We mutex this entire receive call until we move to "deposit to proof hash". Read more below.
     await this.mutex.acquire();
     try {
-      const proof = new ClientProofData(proofData);
+      const proof = new ProofData(proofData);
       const txType = await getTxTypeFromProofData(proof, this.blockchain);
       this.metrics.txReceived(txType);
 
@@ -71,12 +71,14 @@ export class TxReceiver {
       if (await this.rollupDb.nullifiersExist(proof.nullifier1, proof.nullifier2)) {
         throw new Error('Nullifier already exists.');
       }
+
       // Check the proof is valid.
       switch (proof.proofId) {
-        case ProofId.JOIN_SPLIT: {
+        case ProofId.DEPOSIT:
+        case ProofId.WITHDRAW:
+        case ProofId.SEND:
           await this.validateJoinSplitTx(proof, txType, depositSignature);
           break;
-        }
         case ProofId.ACCOUNT:
           await this.validateAccountTx(proof);
           break;
@@ -93,7 +95,7 @@ export class TxReceiver {
         id: proof.txId,
         proofData,
         offchainTxData,
-        signature: depositSignature,
+        signature: proof.proofId === ProofId.DEPOSIT ? depositSignature : undefined,
         nullifier1: toBigIntBE(proof.nullifier1) ? proof.nullifier1 : undefined,
         nullifier2: toBigIntBE(proof.nullifier2) ? proof.nullifier2 : undefined,
         dataRootsIndex,
@@ -109,10 +111,10 @@ export class TxReceiver {
     }
   }
 
-  private async validateJoinSplitTx(proofData: ClientProofData, txType: TxType, depositSignature?: Buffer) {
-    const { publicInput, inputOwner, assetId, txId, txFee } = new JoinSplitClientProofData(proofData);
+  private async validateJoinSplitTx(proofData: ProofData, txType: TxType, depositSignature?: Buffer) {
+    const { assetId, txId, txFeeAssetId, txFee, publicOwner, publicValue } = new JoinSplitProofData(proofData);
 
-    const minFee = this.txFeeResolver.getMinTxFee(assetId, txType);
+    const minFee = this.txFeeResolver.getMinTxFee(txFeeAssetId, txType);
     if (txFee < minFee) {
       throw new Error('Insufficient fee.');
     }
@@ -121,11 +123,11 @@ export class TxReceiver {
       throw new Error('Join-split proof verification failed.');
     }
 
-    if (publicInput > 0n) {
-      let proofApproval = await this.blockchain.getUserProofApprovalStatus(inputOwner, txId);
+    if (proofData.proofId === ProofId.DEPOSIT) {
+      let proofApproval = await this.blockchain.getUserProofApprovalStatus(publicOwner, txId);
 
       if (!proofApproval && depositSignature) {
-        proofApproval = this.blockchain.validateSignature(inputOwner, depositSignature, txId);
+        proofApproval = this.blockchain.validateSignature(publicOwner, depositSignature, txId);
       }
       if (!proofApproval) {
         throw new Error(`Tx not approved or invalid signature: ${txId.toString('hex')}`);
@@ -136,11 +138,11 @@ export class TxReceiver {
       // TODO: Move to a system where you only ever deposit against a proof hash!
       const total =
         (await this.rollupDb.getUnsettledJoinSplitTxs())
-          .map(tx => JoinSplitClientProofData.fromBuffer(tx.proofData))
-          .filter(proofData => proofData.inputOwner.equals(inputOwner) && proofData.assetId === assetId)
-          .reduce((acc, proofData) => acc + proofData.publicInput, 0n) + publicInput;
+          .map(tx => JoinSplitProofData.fromBuffer(tx.proofData))
+          .filter(proofData => proofData.publicOwner.equals(publicOwner) && proofData.assetId === assetId)
+          .reduce((acc, proofData) => acc + proofData.publicValue, 0n) + publicValue;
 
-      const pendingDeposit = await this.blockchain.getUserPendingDeposit(assetId, inputOwner);
+      const pendingDeposit = await this.blockchain.getUserPendingDeposit(assetId, publicOwner);
 
       if (pendingDeposit < total) {
         throw new Error('User insufficient pending deposit balance.');
@@ -148,14 +150,14 @@ export class TxReceiver {
     }
   }
 
-  private async validateAccountTx(proof: ClientProofData) {
+  private async validateAccountTx(proof: ProofData) {
     if (!(await this.accountVerifier.verifyProof(proof.rawProofData))) {
       throw new Error('Account proof verification failed.');
     }
   }
 
-  private async validateDefiBridgeTx(proofData: ClientProofData, txType: TxType) {
-    const { bridgeId, txFee } = new DefiDepositClientProofData(proofData);
+  private async validateDefiBridgeTx(proofData: ProofData, txType: TxType) {
+    const { bridgeId, txFeeAssetId, txFee } = new DefiDepositProofData(proofData);
 
     // TODO - Use a whitelist.
     const remoteBridgeId = await this.blockchain.getBridgeId(bridgeId.address);
@@ -163,7 +165,7 @@ export class TxReceiver {
       throw new Error('Invalid bridge id.');
     }
 
-    const minFee = this.txFeeResolver.getMinTxFee(bridgeId.inputAssetId, txType);
+    const minFee = this.txFeeResolver.getMinTxFee(txFeeAssetId, txType);
     if (txFee < minFee) {
       throw new Error('Insufficient fee.');
     }

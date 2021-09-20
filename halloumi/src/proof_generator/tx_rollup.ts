@@ -1,4 +1,4 @@
-import { ClientProofData } from '@aztec/barretenberg/client_proofs';
+import { ProofData } from '@aztec/barretenberg/client_proofs';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import {
   deserializeArrayFromVector,
@@ -36,7 +36,7 @@ export class TxRollup {
 
     public assetIds: Buffer[],
   ) {
-    const txIds = proofs.map(p => new ClientProofData(p).txId);
+    const txIds = proofs.map(p => new ProofData(p).txId);
     this.rollupHash = createHash('sha256').update(Buffer.concat(txIds)).digest();
   }
 

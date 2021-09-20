@@ -2,7 +2,7 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { ClientProofData, ProofId } from '@aztec/barretenberg/client_proofs';
+import { ProofData } from '@aztec/barretenberg/client_proofs';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { randomBytes } from 'crypto';
@@ -21,18 +21,20 @@ interface RandomTxOpts {
   txType?: TxType;
 }
 
+const txTypeToProofId = (txType: TxType) => (txType < TxType.WITHDRAW_TO_CONTRACT ? txType + 1 : txType);
+
 export const randomTx = ({ signature, inputOwner, publicInput, txType = TxType.DEPOSIT }: RandomTxOpts = {}) => {
-  const proofId = Math.max(0, txType - 3);
-  const proofData = new ClientProofData(
+  const proofId = txTypeToProofId(txType);
+  const proofData = new ProofData(
     Buffer.concat([
       numToUInt32BE(proofId, 32),
-      publicInput ? toBufferBE(publicInput, 32) : randomBytes(32), // publicInput
-      randomBytes(32), // publicOutput
-      proofId === ProofId.JOIN_SPLIT ? Buffer.alloc(32) : randomBytes(32), // assetId / accountAliasId / bridgeId
-      randomBytes(64), // note1
-      randomBytes(64), // note2
+      randomBytes(32), // note1
+      randomBytes(32), // note2
       randomBytes(32), // nullifier1
       randomBytes(32), // nullifier2
+      publicInput ? toBufferBE(publicInput, 32) : randomBytes(32), // publicInput
+      randomBytes(32), // publicOutput
+      randomBytes(32), // assetId / accountAliasId / bridgeId
       inputOwner ? inputOwner.toBuffer32() : Buffer.concat([Buffer.alloc(12), randomBytes(20)]),
       Buffer.concat([Buffer.alloc(12), randomBytes(20)]),
     ]),
@@ -115,8 +117,6 @@ export const randomRollupProof = (txs: TxDao[], dataStartIndex = 0, rollupSize =
           randomBytes(32),
           randomBytes(32),
           randomBytes(32),
-          randomBytes(64),
-          randomBytes(64),
           randomBytes(32),
           randomBytes(32),
           randomBytes(32),

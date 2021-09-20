@@ -13,9 +13,11 @@ import { RollupProofData } from './rollup_proof_data';
 describe('RollupProofData', () => {
   it('can convert a rollup proof object to buffer and back', () => {
     const innerProofs = [
+      randomInnerProofData(ProofId.WITHDRAW),
       randomInnerProofData(ProofId.DEFI_CLAIM),
-      randomInnerProofData(ProofId.JOIN_SPLIT),
+      randomInnerProofData(ProofId.DEPOSIT),
       randomInnerProofData(ProofId.ACCOUNT),
+      randomInnerProofData(ProofId.SEND),
       randomInnerProofData(ProofId.DEFI_DEPOSIT),
     ];
     const rollupProofData = createRollupProofData(innerProofs);

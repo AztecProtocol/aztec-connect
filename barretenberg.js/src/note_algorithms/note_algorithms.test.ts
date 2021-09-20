@@ -60,7 +60,7 @@ describe('compute_nullifier', () => {
     const nonce = 1;
     const accountAliasId = AccountAliasId.fromAlias('pebble', nonce, blake2s);
     const nullifier = noteAlgos.accountAliasIdNullifier(accountAliasId);
-    const expected = Buffer.from('19696f728d7cf702cbf1ed6611a3a50387ee6dbd4ad15cfad39c1976663dc5aa', 'hex');
+    const expected = Buffer.from('224e858e256231793201058f10a1408dbc3dd1ed70cf172df0d675737993bda9', 'hex');
     expect(nullifier).toEqual(expected);
   });
 });

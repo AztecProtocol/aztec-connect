@@ -1,5 +1,5 @@
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
-import { ClientProofData, ProofId } from '@aztec/barretenberg/client_proofs';
+import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { RollupDao } from '../entity/rollup';
@@ -105,15 +105,16 @@ export class CachedRollupDb extends SyncRollupDb {
 
   public async addTx(txDao: TxDao) {
     await super.addTx(txDao);
-    const { proofId, nullifier1, nullifier2 } = new ClientProofData(txDao.proofData);
+    const { proofId, nullifier1, nullifier2 } = new ProofData(txDao.proofData);
 
     [nullifier1, nullifier2].filter(n => !!toBigIntBE(n)).forEach(n => this.unsettledNullifiers.push(n));
 
     switch (proofId) {
-      case ProofId.JOIN_SPLIT: {
+      case ProofId.DEPOSIT:
+      case ProofId.WITHDRAW:
+      case ProofId.SEND:
         this.unsettledJoinSplitTxs.push(txDao);
         break;
-      }
       case ProofId.ACCOUNT: {
         this.unsettledAccountTxs.push(txDao);
         break;

@@ -471,8 +471,7 @@ export class CoreSdk extends EventEmitter {
     senderPrivateOutput: bigint,
     signer: Signer,
     noteRecipient?: AccountId,
-    inputOwner?: EthAddress,
-    outputOwner?: EthAddress,
+    publicOwner?: EthAddress,
   ) {
     const userState = this.getUserState(userId);
     return this.joinSplitProofCreator.createProof(
@@ -485,8 +484,7 @@ export class CoreSdk extends EventEmitter {
       assetId,
       signer,
       noteRecipient,
-      inputOwner,
-      outputOwner,
+      publicOwner,
     );
   }
 

@@ -33,19 +33,20 @@ As previously, the field $\mathbb{F}_p$ is from the BN254 specification.
 
 Recall that all inner circuits must have the **same number of public inputs** as they will be used homogenously by the rollup circuit.
 
-However, we repurpose and rename _some_ inputs to describe the inner circuit. We denote the renaming of a given input with the notation `[old name] --> [new name]`
-
 1. `proof_id`
-1. `public_input --> acccount_pubkey_x`
-1. `public_output --> account_pubkey_y`
-1. `public_asset_id --> account_id`
 1. `output_nc_1` (nc is short for note commitment)
 1. `output_nc_2`
 1. `nullifier_1`
 1. `nullifier_2`
-1. `input_owner`
-1. `output_owner`
+1. `public_value`
+1. `public_owner`
+1. `public_asset_id`
 1. `data_tree_root`
+1. `tx_fee`
+1. `tx_fee_asset_id`
+1. `bridge_id`
+1. `defi_deposit_value`
+1. `defi_root`
 
 ### ◈ Private Inputs: Detail
 
@@ -98,6 +99,14 @@ Computed public inputs:
 - `output_note_2` = `pedersen(output_account_id, account_public_key.x, spending_public_key_2.x)`
 - `nullifier_1` = `pedersen(proof_id, account_id) * migrate`
 - `nullifier_2` = `0`
+- `public_value` = `0`
+- `public_owner` = `0`
+- `asset_id` = `0`
+- `tx_fee` = `0`
+- `tx_fee_asset_id` = `0`
+- `bridge_id` = `0`
+- `defi_deposit_value` = `0`
+- `defi_root` = `0`
 
 Circuit constraints:
 

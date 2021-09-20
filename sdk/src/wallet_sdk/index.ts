@@ -209,7 +209,6 @@ export class WalletSdk extends EventEmitter {
       BigInt(0),
       signer,
       undefined,
-      undefined,
       to,
     );
   }
@@ -235,31 +234,10 @@ export class WalletSdk extends EventEmitter {
     senderPrivateOutput: bigint,
     signer: Signer,
     noteRecipient?: AccountId,
-    inputOwner?: EthAddress,
-    outputOwner?: EthAddress,
+    publicOwner?: EthAddress,
   ) {
-    if (publicInput && publicOutput) {
-      throw new Error('Public values cannot be both greater than zero.');
-    }
-
-    if (publicOutput + recipientPrivateOutput + senderPrivateOutput > publicInput + privateInput) {
-      throw new Error('Total output cannot be larger than total input.');
-    }
-
     if (privateInput) {
       await this.checkNoteBalance(assetId, userId, privateInput);
-    }
-
-    if (recipientPrivateOutput && !noteRecipient) {
-      throw new Error('No note recipient specified.');
-    }
-
-    if (publicOutput && !outputOwner) {
-      throw new Error('No output address specified.');
-    }
-
-    if (publicInput && !inputOwner) {
-      throw new Error('No input address specified.');
     }
 
     return this.core.createJoinSplitProof(
@@ -272,8 +250,7 @@ export class WalletSdk extends EventEmitter {
       senderPrivateOutput,
       signer,
       noteRecipient,
-      inputOwner,
-      outputOwner,
+      publicOwner,
     );
   }
 

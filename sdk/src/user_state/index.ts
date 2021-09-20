@@ -126,7 +126,9 @@ export class UserState extends EventEmitter {
     const offchainDefiDepositData: OffchainDefiDepositData[] = [];
     innerProofs.forEach((proof, i) => {
       switch (proof.proofId) {
-        case ProofId.JOIN_SPLIT: {
+        case ProofId.DEPOSIT:
+        case ProofId.WITHDRAW:
+        case ProofId.SEND: {
           const offchainTxData = OffchainJoinSplitData.fromBuffer(offchainTxDataBuffers[i]);
           viewingKeys.push(...offchainTxData.viewingKeys);
           const { noteCommitment1, noteCommitment2 } = innerProofs[i];
@@ -177,7 +179,9 @@ export class UserState extends EventEmitter {
 
         const noteStartIndex = proofData.dataStartIndex + i * 2;
         switch (proof.proofId) {
-          case ProofId.JOIN_SPLIT: {
+          case ProofId.DEPOSIT:
+          case ProofId.WITHDRAW:
+          case ProofId.SEND: {
             const [note1, note2] = treeNotes.slice(treeNoteStartIndex, treeNoteStartIndex + 2);
             treeNoteStartIndex += 2;
             if (!note1 && !note2) {
@@ -458,13 +462,12 @@ export class UserState extends EventEmitter {
     const recipientPrivateOutput = noteValue(noteCommitment);
     const senderPrivateOutput = noteValue(changeNote);
 
-    const publicInput = toBigIntBE(proof.publicInput);
-    const publicOutput = toBigIntBE(proof.publicOutput);
+    const publicValue = toBigIntBE(proof.publicValue);
+    const publicInput = publicValue * BigInt(proof.proofId === ProofId.DEPOSIT);
+    const publicOutput = publicValue * BigInt(proof.proofId === ProofId.WITHDRAW);
 
-    const nonEmptyAddress = (address: Buffer) =>
-      !address.equals(Buffer.alloc(address.length)) ? new EthAddress(address) : undefined;
-    const inputOwner = nonEmptyAddress(proof.inputOwner);
-    const outputOwner = nonEmptyAddress(proof.outputOwner);
+    const inputOwner = proof.proofId === ProofId.DEPOSIT ? new EthAddress(proof.publicOwner) : undefined;
+    const outputOwner = proof.proofId === ProofId.WITHDRAW ? new EthAddress(proof.publicOwner) : undefined;
 
     return new UserJoinSplitTx(
       new TxHash(proof.txId),
@@ -558,7 +561,9 @@ export class UserState extends EventEmitter {
 
   public async addTx(tx: UserJoinSplitTx | UserAccountTx | UserDefiTx) {
     switch (tx.proofId) {
-      case ProofId.JOIN_SPLIT:
+      case ProofId.DEPOSIT:
+      case ProofId.WITHDRAW:
+      case ProofId.SEND:
         debug(`adding join split tx: ${tx.txHash}`);
         await this.db.addJoinSplitTx(tx);
         break;

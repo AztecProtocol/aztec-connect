@@ -1,21 +1,27 @@
-import { AccountProofData } from './account_proof_data';
-import { DefiClaimProofData } from './defi_claim_proof_data';
-import { DefiDepositProofData } from './defi_deposit_proof_data';
-import { JoinSplitProofData } from './join_split_proof_data';
-import { TxEncoding } from './tx_encoding';
+import { ProofId } from '../client_proofs';
+import { RollupAccountProofData } from './rollup_account_proof_data';
+import { RollupDefiClaimProofData } from './rollup_defi_claim_proof_data';
+import { RollupDefiDepositProofData } from './rollup_defi_deposit_proof_data';
+import { RollupDepositProofData } from './rollup_deposit_proof_data';
+import { RollupSendProofData } from './rollup_send_proof_data';
+import { RollupWithdrawProofData } from './rollup_withdraw_proof_data';
 
 const recoverProof = (encoded: Buffer) => {
-  const encoding = encoded.readUInt8(0);
-  switch (encoding) {
-    case TxEncoding.ACCOUNT:
-      return AccountProofData.decode(encoded);
-    case TxEncoding.DEFI_DEPOSIT:
-      return DefiDepositProofData.decode(encoded);
-    case TxEncoding.DEFI_CLAIM:
-      return DefiClaimProofData.decode(encoded);
-    default:
-      return JoinSplitProofData.decode(encoded);
+  const proofId = encoded.readUInt8(0);
+  switch (proofId) {
+    case ProofId.DEPOSIT:
+      return RollupDepositProofData.decode(encoded);
+    case ProofId.WITHDRAW:
+      return RollupWithdrawProofData.decode(encoded);
+    case ProofId.SEND:
+      return RollupSendProofData.decode(encoded);
+    case ProofId.ACCOUNT:
+      return RollupAccountProofData.decode(encoded);
+    case ProofId.DEFI_DEPOSIT:
+      return RollupDefiDepositProofData.decode(encoded);
+    case ProofId.DEFI_CLAIM:
+      return RollupDefiClaimProofData.decode(encoded);
   }
 };
 
-export const decodeInnerProof = (encoded: Buffer) => recoverProof(encoded).proofData;
+export const decodeInnerProof = (encoded: Buffer) => recoverProof(encoded)!;

@@ -1,10 +1,13 @@
-import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
-import { ClientProofData, JoinSplitClientProofData, ProofId } from '@aztec/barretenberg/client_proofs';
+import { JoinSplitProofData, ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { InnerProofData } from '@aztec/barretenberg/rollup_proof';
 
-export async function getTxTypeFromProofData(proofData: ClientProofData, blockchain: Blockchain) {
+export async function getTxTypeFromProofData(proofData: ProofData, blockchain: Blockchain) {
   switch (proofData.proofId) {
+    case ProofId.DEPOSIT:
+      return TxType.DEPOSIT;
+    case ProofId.SEND:
+      return TxType.TRANSFER;
     case ProofId.ACCOUNT:
       return TxType.ACCOUNT;
     case ProofId.DEFI_DEPOSIT:
@@ -13,15 +16,8 @@ export async function getTxTypeFromProofData(proofData: ClientProofData, blockch
       return TxType.DEFI_CLAIM;
   }
 
-  const { publicInput, publicOutput, outputOwner } = new JoinSplitClientProofData(proofData);
-
-  if (publicInput > 0) {
-    return TxType.DEPOSIT;
-  } else if (publicOutput > 0) {
-    return (await blockchain.isContract(outputOwner)) ? TxType.WITHDRAW_TO_CONTRACT : TxType.WITHDRAW_TO_WALLET;
-  } else {
-    return TxType.TRANSFER;
-  }
+  const { publicOwner } = new JoinSplitProofData(proofData);
+  return (await blockchain.isContract(publicOwner)) ? TxType.WITHDRAW_TO_CONTRACT : TxType.WITHDRAW_TO_WALLET;
 }
 
 /**
@@ -30,6 +26,10 @@ export async function getTxTypeFromProofData(proofData: ClientProofData, blockch
  */
 export function getTxTypeFromInnerProofData(proofData: InnerProofData) {
   switch (proofData.proofId) {
+    case ProofId.DEPOSIT:
+      return TxType.DEPOSIT;
+    case ProofId.SEND:
+      return TxType.TRANSFER;
     case ProofId.ACCOUNT:
       return TxType.ACCOUNT;
     case ProofId.DEFI_DEPOSIT:
@@ -38,14 +38,5 @@ export function getTxTypeFromInnerProofData(proofData: InnerProofData) {
       return TxType.DEFI_CLAIM;
   }
 
-  const publicInput = toBigIntBE(proofData.publicInput);
-  const publicOutput = toBigIntBE(proofData.publicOutput);
-
-  if (publicInput > 0) {
-    return TxType.DEPOSIT;
-  } else if (publicOutput > 0) {
-    return TxType.WITHDRAW_TO_WALLET;
-  } else {
-    return TxType.TRANSFER;
-  }
+  return TxType.WITHDRAW_TO_WALLET;
 }

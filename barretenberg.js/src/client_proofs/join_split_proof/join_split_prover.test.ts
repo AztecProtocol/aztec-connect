@@ -4,6 +4,7 @@ import levelup from 'levelup';
 import memdown from 'memdown';
 import { AccountAliasId } from '../../account_id';
 import { EthAddress, GrumpkinAddress } from '../../address';
+import { toBufferBE } from '../../bigint_buffer';
 import { Crs } from '../../crs';
 import { Blake2s, Pedersen, Schnorr, Sha256 } from '../../crypto';
 import { Grumpkin } from '../../ecc';
@@ -11,9 +12,10 @@ import { PooledFft } from '../../fft';
 import { MerkleTree } from '../../merkle_tree';
 import { ClaimNoteTxData, NoteAlgorithms, TreeNote } from '../../note_algorithms';
 import { PooledPippenger } from '../../pippenger';
+import { numToUInt32BE } from '../../serialize';
 import { BarretenbergWasm } from '../../wasm';
 import { WorkerPool } from '../../wasm/worker_pool';
-import { ClientProofData } from '../proof_data';
+import { ProofData, ProofId } from '../proof_data';
 import { UnrolledProver } from '../prover';
 import { JoinSplitProver } from './join_split_prover';
 import { JoinSplitTx } from './join_split_tx';
@@ -100,15 +102,28 @@ describe('join_split_proof', () => {
     });
 
     it('should construct join split proof', async () => {
+      const assetId = 1;
+      const publicInput = BigInt(20);
+      const publicOutput = BigInt(0);
+      const txFee = BigInt(10);
+      const publicOwner = EthAddress.randomAddress();
+
       const inputNote1EphKey = createEphemeralPrivKey(grumpkin);
       const inputNote2EphKey = createEphemeralPrivKey(grumpkin);
       const outputNote1EphKey = createEphemeralPrivKey(grumpkin);
       const outputNote2EphKey = createEphemeralPrivKey(grumpkin);
 
-      const inputNote1 = TreeNote.createFromEphPriv(pubKey, BigInt(100), 0, 0, inputNote1EphKey, grumpkin);
-      const inputNote2 = TreeNote.createFromEphPriv(pubKey, BigInt(50), 0, 0, inputNote2EphKey, grumpkin);
-      const outputNote1 = TreeNote.createFromEphPriv(pubKey, BigInt(80), 0, 0, outputNote1EphKey, grumpkin);
-      const outputNote2 = TreeNote.createFromEphPriv(pubKey, BigInt(70), 0, 0, outputNote2EphKey, grumpkin);
+      const inputNote1 = TreeNote.createFromEphPriv(pubKey, BigInt(100), assetId, 0, inputNote1EphKey, grumpkin);
+      const inputNote2 = TreeNote.createFromEphPriv(pubKey, BigInt(50), assetId, 0, inputNote2EphKey, grumpkin);
+      const outputNote1 = TreeNote.createFromEphPriv(pubKey, BigInt(90), assetId, 0, outputNote1EphKey, grumpkin);
+      const outputNote2 = TreeNote.createFromEphPriv(
+        pubKey,
+        BigInt(60) + publicInput - txFee,
+        assetId,
+        0,
+        outputNote2EphKey,
+        grumpkin,
+      );
 
       const inputNote1Enc = noteAlgos.valueNoteCommitment(inputNote1);
       const inputNote2Enc = noteAlgos.valueNoteCommitment(inputNote2);
@@ -124,14 +139,12 @@ describe('join_split_proof', () => {
       const nonce = 0;
       const accountAliasId = AccountAliasId.fromAlias('user_zero', nonce, blake2s);
 
-      const inputOwner = EthAddress.randomAddress();
-      const outputOwner = EthAddress.randomAddress();
-
       const numInputNotes = 2;
       const tx = new JoinSplitTx(
-        BigInt(0),
-        BigInt(0),
-        0,
+        publicInput,
+        publicOutput,
+        publicOwner,
+        assetId,
         numInputNotes,
         [0, 1],
         tree.getRoot(),
@@ -144,14 +157,9 @@ describe('join_split_proof', () => {
         2,
         accountNotePath,
         pubKey,
-        inputOwner,
-        outputOwner,
       );
       const signingData = await joinSplitProver.computeSigningData(tx);
       const signature = schnorr.constructSignature(signingData, privateKey);
-
-      const expectedNullifier1 = noteAlgos.valueNoteNullifier(inputNote1Enc, 0, privateKey);
-      const expectedNullifier2 = noteAlgos.valueNoteNullifier(inputNote2Enc, 1, privateKey);
 
       debug('creating proof...');
       const start = new Date().getTime();
@@ -162,11 +170,25 @@ describe('join_split_proof', () => {
       const verified = await joinSplitVerifier.verifyProof(proof);
       expect(verified).toBe(true);
 
-      const joinSplitProof = new ClientProofData(proof);
+      const joinSplitProof = new ProofData(proof);
+      const noteCommitment1 = noteAlgos.valueNoteCommitment(outputNote1);
+      const noteCommitment2 = noteAlgos.valueNoteCommitment(outputNote2);
+      const expectedNullifier1 = noteAlgos.valueNoteNullifier(inputNote1Enc, 0, privateKey);
+      const expectedNullifier2 = noteAlgos.valueNoteNullifier(inputNote2Enc, 1, privateKey);
+      expect(joinSplitProof.proofId).toEqual(ProofId.DEPOSIT);
+      expect(joinSplitProof.noteCommitment1).toEqual(noteCommitment1);
+      expect(joinSplitProof.noteCommitment2).toEqual(noteCommitment2);
       expect(joinSplitProof.nullifier1).toEqual(expectedNullifier1);
       expect(joinSplitProof.nullifier2).toEqual(expectedNullifier2);
-      expect(joinSplitProof.inputOwner).toEqual(inputOwner.toBuffer32());
-      expect(joinSplitProof.outputOwner).toEqual(outputOwner.toBuffer32());
+      expect(joinSplitProof.publicValue).toEqual(toBufferBE(publicInput, 32));
+      expect(joinSplitProof.publicOwner).toEqual(publicOwner.toBuffer32());
+      expect(joinSplitProof.assetId).toEqual(numToUInt32BE(assetId, 32));
+      expect(joinSplitProof.noteTreeRoot).toEqual(tree.getRoot());
+      expect(joinSplitProof.txFee).toEqual(toBufferBE(txFee, 32));
+      expect(joinSplitProof.txFeeAssetId).toEqual(numToUInt32BE(assetId, 32));
+      expect(joinSplitProof.bridgeId).toEqual(Buffer.alloc(32));
+      expect(joinSplitProof.defiDepositValue).toEqual(Buffer.alloc(32));
+      expect(joinSplitProof.defiRoot).toEqual(Buffer.alloc(32));
     });
   });
 });

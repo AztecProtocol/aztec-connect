@@ -1,6 +1,6 @@
 import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
-import { AccountProver, AccountTx, ClientProofData } from '@aztec/barretenberg/client_proofs';
+import { AccountProver, AccountTx, ProofData } from '@aztec/barretenberg/client_proofs';
 import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { WorldState } from '@aztec/barretenberg/world_state';
@@ -87,7 +87,7 @@ export class AccountProofCreator {
     debug(`created proof: ${new Date().getTime() - start}ms`);
     debug(`proof size: ${proofData.length}`);
 
-    const { txId } = new ClientProofData(proofData);
+    const { txId } = new ProofData(proofData);
     const txHash = new TxHash(txId);
     const newNonce = nonce + +migrate;
     const accountOwner = new AccountId(newAccountPublicKey || accountPublicKey, newNonce);

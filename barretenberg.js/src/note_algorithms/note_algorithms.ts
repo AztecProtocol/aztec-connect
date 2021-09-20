@@ -6,6 +6,7 @@ import { BarretenbergWorker } from '../wasm/worker';
 import { DefiInteractionNote } from './defi_interaction_note';
 import { TreeClaimNote } from './tree_claim_note';
 import { TreeNote } from './tree_note';
+import { GrumpkinAddress } from '../address';
 
 export class NoteAlgorithms {
   constructor(private wasm: BarretenbergWasm, private worker: BarretenbergWorker = wasm as any) {}
@@ -73,6 +74,18 @@ export class NoteAlgorithms {
     this.wasm.transferToHeap(noteBuf, mem);
     this.wasm.call('notes__defi_interaction_note_commitment', mem, 0);
     this.wasm.call('bbfree', mem);
+    return Buffer.from(this.wasm.sliceMemory(0, 32));
+  }
+
+  public accountNoteCommitment(
+    accountAliasId: AccountAliasId,
+    publicKey: GrumpkinAddress,
+    signingKey: GrumpkinAddress,
+  ) {
+    this.wasm.transferToHeap(accountAliasId.toBuffer(), 0);
+    this.wasm.transferToHeap(publicKey.toBuffer(), 32);
+    this.wasm.transferToHeap(signingKey.toBuffer(), 96);
+    this.wasm.call('notes__account_note_commitment', 0, 32, 96, 0);
     return Buffer.from(this.wasm.sliceMemory(0, 32));
   }
 

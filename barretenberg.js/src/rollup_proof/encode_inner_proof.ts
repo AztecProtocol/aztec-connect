@@ -1,35 +1,27 @@
 import { ProofId } from '../client_proofs';
-import { AccountProofData } from './account_proof_data';
-import { DefiClaimProofData } from './defi_claim_proof_data';
-import { DefiDepositProofData } from './defi_deposit_proof_data';
 import { InnerProofData } from './inner_proof';
-import { JoinSplitProofData } from './join_split_proof_data';
-import { TxEncoding } from './tx_encoding';
+import { RollupAccountProofData } from './rollup_account_proof_data';
+import { RollupDefiClaimProofData } from './rollup_defi_claim_proof_data';
+import { RollupDefiDepositProofData } from './rollup_defi_deposit_proof_data';
+import { RollupDepositProofData } from './rollup_deposit_proof_data';
+import { RollupSendProofData } from './rollup_send_proof_data';
+import { RollupWithdrawProofData } from './rollup_withdraw_proof_data';
 
 const recoverInnerProof = (proof: InnerProofData) => {
   switch (proof.proofId) {
-    case ProofId.JOIN_SPLIT:
-      return new JoinSplitProofData(proof);
+    case ProofId.DEPOSIT:
+      return new RollupDepositProofData(proof);
+    case ProofId.WITHDRAW:
+      return new RollupWithdrawProofData(proof);
+    case ProofId.SEND:
+      return new RollupSendProofData(proof);
     case ProofId.ACCOUNT:
-      return new AccountProofData(proof);
+      return new RollupAccountProofData(proof);
     case ProofId.DEFI_DEPOSIT:
-      return new DefiDepositProofData(proof);
+      return new RollupDefiDepositProofData(proof);
     case ProofId.DEFI_CLAIM:
-      return new DefiClaimProofData(proof);
+      return new RollupDefiClaimProofData(proof);
   }
 };
 
-export const encodeInnerProof = (proof: InnerProofData) => recoverInnerProof(proof).encode();
-
-export const getEncodedLength = (encoding: TxEncoding) => {
-  switch (encoding) {
-    case TxEncoding.ACCOUNT:
-      return AccountProofData.ENCODED_LENGTH;
-    case TxEncoding.DEFI_DEPOSIT:
-      return DefiDepositProofData.ENCODED_LENGTH;
-    case TxEncoding.DEFI_CLAIM:
-      return DefiClaimProofData.ENCODED_LENGTH;
-    default:
-      return JoinSplitProofData.ENCODED_LENGTH(encoding);
-  }
-};
+export const encodeInnerProof = (proof: InnerProofData) => recoverInnerProof(proof)!.encode();

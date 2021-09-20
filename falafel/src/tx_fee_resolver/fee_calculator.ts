@@ -1,12 +1,7 @@
 import { AssetId } from '@aztec/barretenberg/asset';
+import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { BlockchainAsset, TxType } from '@aztec/barretenberg/blockchain';
-import {
-  ClientProofData,
-  DefiClaimClientProofData,
-  DefiDepositClientProofData,
-  JoinSplitClientProofData,
-  ProofId,
-} from '@aztec/barretenberg/client_proofs';
+import { ProofData } from '@aztec/barretenberg/client_proofs';
 import { AssetFeeQuote } from '@aztec/barretenberg/rollup_provider';
 import { TxDao } from '../entity/tx';
 import { PriceTracker } from './price_tracker';
@@ -58,9 +53,11 @@ export class FeeCalculator {
 
     const feeSurplus = txs
       .map(tx => {
-        const { assetId, txFee } = this.getFeeForTxDao(tx);
-        const minFee = this.getMinTxFee(assetId, tx.txType);
-        return this.toEthPrice(assetId, txFee - minFee);
+        const proofData = new ProofData(tx.proofData);
+        const txFeeAssetId = proofData.txFeeAssetId.readUInt32BE(28);
+        const txFee = toBigIntBE(proofData.txFee);
+        const minFee = this.getMinTxFee(txFeeAssetId, tx.txType);
+        return this.toEthPrice(txFeeAssetId, txFee - minFee);
       })
       .reduce((acc, surplus) => acc + surplus, 0n);
     const ratio = 1 - Number(feeSurplus / baseFee) / this.txsPerRollup;
@@ -100,26 +97,5 @@ export class FeeCalculator {
     const expectedValue = (value * gasPrice * BigInt(this.feeGasPriceMultiplier * 100)) / 100n;
     const maxValue = this.maxFeeGasPrice ? value * this.maxFeeGasPrice : expectedValue;
     return expectedValue > maxValue ? maxValue : expectedValue;
-  }
-
-  private getFeeForTxDao(tx: TxDao) {
-    if (tx.txType === TxType.ACCOUNT) {
-      return { assetId: AssetId.ETH, txFee: 0n };
-    }
-
-    const proofData = new ClientProofData(tx.proofData);
-    switch (proofData.proofId) {
-      case ProofId.DEFI_DEPOSIT: {
-        const { bridgeId, txFee } = new DefiDepositClientProofData(proofData);
-        return { assetId: bridgeId.inputAssetId, txFee };
-      }
-      case ProofId.DEFI_CLAIM: {
-        const { bridgeId, txFee } = new DefiClaimClientProofData(proofData);
-        return { assetId: bridgeId.inputAssetId, txFee };
-      }
-    }
-
-    const { assetId, txFee } = new JoinSplitClientProofData(proofData);
-    return { assetId, txFee };
   }
 }

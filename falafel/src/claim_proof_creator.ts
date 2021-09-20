@@ -1,6 +1,6 @@
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { ClientProofData } from '@aztec/barretenberg/client_proofs';
+import { ProofData } from '@aztec/barretenberg/client_proofs';
 import { DefiInteractionNote, TreeClaimNote } from '@aztec/barretenberg/note_algorithms';
 import { OffchainDefiClaimData } from '@aztec/barretenberg/offchain_tx_data';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
@@ -43,7 +43,7 @@ export class ClaimProofCreator {
         throw new Error('Failed to create claim proof. This should not happen.');
       }
 
-      const proof = new ClientProofData(proofData);
+      const proof = new ProofData(proofData);
       const dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
       const offchainTxData = new OffchainDefiClaimData();
       const claimTx = new TxDao({

@@ -1,6 +1,6 @@
 import { AssetId } from '@aztec/barretenberg/asset';
 import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
-import { ClientProofData, ProofId } from '@aztec/barretenberg/client_proofs';
+import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
@@ -92,7 +92,7 @@ export class RollupCreator {
     const assetIds: Set<AssetId> = new Set();
 
     for (const tx of txs) {
-      const proof = new ClientProofData(tx.proofData);
+      const proof = new ProofData(tx.proofData);
 
       if (proof.proofId !== ProofId.ACCOUNT) {
         assetIds.add(proof.txFeeAssetId.readUInt32BE(28));

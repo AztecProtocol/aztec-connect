@@ -1,18 +1,18 @@
 import { AssetId } from '../../asset';
 import { toBigIntBE } from '../../bigint_buffer';
 import { BridgeId } from '../../bridge_id';
-import { ClientProofData } from './client_proof_data';
+import { ProofData } from './proof_data';
 import { ProofId } from './proof_id';
 
-export class DefiClaimClientProofData {
-  constructor(public readonly proofData: ClientProofData) {
-    if (proofData.proofId !== ProofId.DEFI_CLAIM) {
-      throw new Error('Not a defi claim proof.');
+export class DefiDepositProofData {
+  constructor(public readonly proofData: ProofData) {
+    if (proofData.proofId !== ProofId.DEFI_DEPOSIT) {
+      throw new Error('Not a defi deposit proof.');
     }
   }
 
   static fromBuffer(rawProofData: Buffer) {
-    return new DefiClaimClientProofData(new ClientProofData(rawProofData));
+    return new DefiDepositProofData(new ProofData(rawProofData));
   }
 
   get txFee() {
@@ -25,5 +25,9 @@ export class DefiClaimClientProofData {
 
   get bridgeId() {
     return BridgeId.fromBuffer(this.proofData.bridgeId);
+  }
+
+  get defiDepositValue() {
+    return toBigIntBE(this.proofData.defiDepositValue);
   }
 }

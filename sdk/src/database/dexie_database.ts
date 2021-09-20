@@ -137,7 +137,7 @@ const toDexieJoinSplitTx = (tx: UserJoinSplitTx) =>
   new DexieJoinSplitTx(
     new Uint8Array(tx.txHash.toBuffer()),
     new Uint8Array(tx.userId.toBuffer()),
-    ProofId.JOIN_SPLIT,
+    tx.proofId,
     tx.assetId,
     tx.publicInput.toString(),
     tx.publicOutput.toString(),
@@ -417,14 +417,18 @@ export class DexieDatabase implements Database {
       txHash: new Uint8Array(txHash.toBuffer()),
       userId: new Uint8Array(userId.toBuffer()),
     });
-    return tx?.proofId === ProofId.JOIN_SPLIT ? fromDexieJoinSplitTx(tx as DexieJoinSplitTx) : undefined;
+    return tx && [ProofId.DEPOSIT, ProofId.WITHDRAW, ProofId.SEND].includes(tx.proofId)
+      ? fromDexieJoinSplitTx(tx as DexieJoinSplitTx)
+      : undefined;
   }
 
   async getJoinSplitTxs(userId: AccountId) {
-    const txs = (await this.userTx
-      .where({ proofId: ProofId.JOIN_SPLIT, userId: new Uint8Array(userId.toBuffer()) })
-      .reverse()
-      .sortBy('settled')) as DexieJoinSplitTx[];
+    const txs = (
+      await this.userTx
+        .where({ userId: new Uint8Array(userId.toBuffer()) })
+        .reverse()
+        .sortBy('settled')
+    ).filter(p => [ProofId.DEPOSIT, ProofId.WITHDRAW, ProofId.SEND].includes(p.proofId)) as DexieJoinSplitTx[];
     const unsettled = txs.filter(tx => !tx.settled).sort((a, b) => (a.created < b.created ? 1 : -1));
     const settled = txs.filter(tx => tx.settled);
     return [...unsettled, ...settled].map(fromDexieJoinSplitTx);

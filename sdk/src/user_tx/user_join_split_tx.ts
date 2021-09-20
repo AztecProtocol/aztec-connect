@@ -5,7 +5,7 @@ import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { AccountId } from '../user';
 
 export class UserJoinSplitTx {
-  public readonly proofId = ProofId.JOIN_SPLIT;
+  public readonly proofId: ProofId.DEPOSIT | ProofId.WITHDRAW | ProofId.SEND;
 
   constructor(
     public readonly txHash: TxHash,
@@ -21,5 +21,13 @@ export class UserJoinSplitTx {
     public readonly ownedByUser: boolean,
     public readonly created: Date,
     public readonly settled?: Date,
-  ) {}
+  ) {
+    if (publicInput) {
+      this.proofId = ProofId.DEPOSIT;
+    } else if (publicOutput) {
+      this.proofId = ProofId.WITHDRAW;
+    } else {
+      this.proofId = ProofId.SEND;
+    }
+  }
 }

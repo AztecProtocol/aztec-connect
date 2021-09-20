@@ -10,6 +10,7 @@ export class JoinSplitTx {
   constructor(
     public publicInput: bigint,
     public publicOutput: bigint,
+    public publicOwner: EthAddress,
     public assetId: AssetId,
     public numInputNotes: number,
     public inputNoteIndices: number[],
@@ -23,14 +24,13 @@ export class JoinSplitTx {
     public accountIndex: number,
     public accountPath: HashPath,
     public signingPubKey: GrumpkinAddress,
-    public inputOwner: EthAddress,
-    public outputOwner: EthAddress,
   ) {}
 
   toBuffer() {
     return Buffer.concat([
       toBufferBE(this.publicInput, 32),
       toBufferBE(this.publicOutput, 32),
+      this.publicOwner.toBuffer32(),
       numToUInt32BE(this.assetId),
       numToUInt32BE(this.numInputNotes),
       numToUInt32BE(this.inputNoteIndices[0]),
@@ -51,9 +51,6 @@ export class JoinSplitTx {
       numToUInt32BE(this.accountIndex),
       this.accountPath.toBuffer(),
       this.signingPubKey.toBuffer(),
-
-      this.inputOwner.toBuffer32(),
-      this.outputOwner.toBuffer32(),
     ]);
   }
 }

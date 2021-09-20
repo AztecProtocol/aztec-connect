@@ -2,7 +2,7 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { Blockchain, EthereumProvider } from '@aztec/barretenberg/blockchain';
-import { JoinSplitClientProofData } from '@aztec/barretenberg/client_proofs';
+import { JoinSplitProofData } from '@aztec/barretenberg/client_proofs';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { Web3Signer } from '@aztec/blockchain';
@@ -91,8 +91,8 @@ export class RollupPublisher {
     const jsTxs = txs.filter(tx => tx.signature);
     const signatures: Buffer[] = [];
     for (const tx of jsTxs) {
-      const { inputOwner, txId } = JoinSplitClientProofData.fromBuffer(tx.proofData);
-      const proofApproval = await this.blockchain.getUserProofApprovalStatus(inputOwner, txId);
+      const { publicOwner, txId } = JoinSplitProofData.fromBuffer(tx.proofData);
+      const proofApproval = await this.blockchain.getUserProofApprovalStatus(publicOwner, txId);
       if (!proofApproval) {
         signatures.push(tx.signature!);
       }

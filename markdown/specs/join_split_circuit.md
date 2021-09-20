@@ -23,19 +23,25 @@ Where the field $\mathbb{F}_p$ is from the BN254 specification.
 ### ◈ Public Inputs: Detail
 
 1. `proof_id`
-1. `public_input`
-1. `public_output`
-1. `public_asset_id`
 1. `output_nc_1` (nc is short for note commitment)
 1. `output_nc_2`
 1. `nullifier_1`
 1. `nullifier_2`
-1. `input_owner`
-1. `output_owner`
+1. `public_value`
+1. `public_owner`
+1. `public_asset_id`
 1. `data_tree_root`
+1. `tx_fee`
+1. `tx_fee_asset_id`
+1. `bridge_id`
+1. `defi_deposit_value`
+1. `defi_root`
 
 ### ◈ Private Inputs: Detail
 
+1. `proof_id`
+1. `public_value`
+1. `public_owner`
 1. `input_note_1.val`
 1. `input_note_1.secret`
 1. `input_note_1.account_id`

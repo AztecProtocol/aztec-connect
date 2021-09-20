@@ -1,5 +1,5 @@
 import { randomBytes } from 'crypto';
-import { ClientProofData, ProofId } from '../client_proofs';
+import { ProofData, ProofId } from '../client_proofs';
 import { randomInnerProofData } from './fixtures';
 import { InnerProofData } from './inner_proof';
 
@@ -14,15 +14,16 @@ describe('InnerProofData', () => {
   });
 
   it('should generate the same txId for all proof types', () => {
-    [ProofId.JOIN_SPLIT, ProofId.ACCOUNT, ProofId.DEFI_CLAIM, ProofId.DEFI_CLAIM].forEach(proofId => {
-      const innerProofData = randomInnerProofData(proofId);
-      const rawClientProof = Buffer.concat([
-        innerProofData.toBuffer(),
-        randomBytes(32), // noteTreeRoot
-        randomBytes(32), // txFee
-      ]);
-      const clientProofData = new ClientProofData(rawClientProof);
-      expect(innerProofData.txId).toEqual(clientProofData.txId);
-    });
+    [ProofId.DEPOSIT, ProofId.WITHDRAW, ProofId.SEND, ProofId.ACCOUNT, ProofId.DEFI_CLAIM, ProofId.DEFI_CLAIM].forEach(
+      proofId => {
+        const innerProofData = randomInnerProofData(proofId);
+        const rawClientProof = Buffer.concat([
+          innerProofData.toBuffer(),
+          randomBytes(32 * (ProofData.NUM_PUBLIC_INPUTS - InnerProofData.NUM_PUBLIC_INPUTS)),
+        ]);
+        const clientProofData = new ProofData(rawClientProof);
+        expect(innerProofData.txId).toEqual(clientProofData.txId);
+      },
+    );
   });
 });

@@ -23,10 +23,25 @@ export class JoinSplitTxFactory {
     assetId: AssetId,
     signingPubKey: GrumpkinAddress,
     newNoteOwner?: AccountId,
-    inputOwnerAddress?: EthAddress,
-    outputOwnerAddress?: EthAddress,
+    publicOwner?: EthAddress,
     bridgeId?: BridgeId,
   ) {
+    if (publicInput && publicOutput) {
+      throw new Error('Public values cannot be both greater than zero.');
+    }
+
+    if (publicOutput + recipientPrivateOutput + senderPrivateOutput > publicInput + privateInput) {
+      throw new Error('Total output cannot be larger than total input.');
+    }
+
+    if (publicInput + publicOutput && !publicOwner) {
+      throw new Error('Public owner undefined.');
+    }
+
+    if (recipientPrivateOutput && !newNoteOwner) {
+      throw new Error('Note recipient undefined.');
+    }
+
     const isDefiBridge = defiDepositValue > BigInt(0);
 
     const { id, aliasHash, publicKey, nonce } = userState.getUser();
@@ -70,15 +85,13 @@ export class JoinSplitTxFactory {
 
     const dataRoot = this.worldState.getRoot();
 
-    const inputOwner = inputOwnerAddress || EthAddress.ZERO;
-    const outputOwner = outputOwnerAddress || EthAddress.ZERO;
-
     // For now, we will use the account key as the signing key (no account note required).
     const { privateKey } = userState.getUser();
 
     const tx = new JoinSplitTx(
       publicInput,
       publicOutput,
+      publicOwner || EthAddress.ZERO,
       assetId,
       numInputNotes,
       inputNoteIndices,
@@ -92,8 +105,6 @@ export class JoinSplitTxFactory {
       accountIndex,
       accountPath,
       signingPubKey,
-      inputOwner,
-      outputOwner,
     );
 
     const viewingKeys = isDefiBridge

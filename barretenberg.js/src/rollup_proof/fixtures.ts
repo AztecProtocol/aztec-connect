@@ -3,68 +3,64 @@ import { EthAddress } from '../address';
 import { ProofId } from '../client_proofs/proof_data';
 import { InnerProofData, RollupProofData } from './';
 
+const randomCommitment = () => randomBytes(32);
+const randomNullifier = () => randomBytes(32);
 const randomInt = () => Buffer.concat([Buffer.alloc(28), randomBytes(4)]);
 
 export const randomDepositProofData = () =>
   new InnerProofData(
-    ProofId.JOIN_SPLIT,
-    randomBytes(32),
-    Buffer.alloc(32),
+    ProofId.DEPOSIT,
+    randomCommitment(),
+    randomCommitment(),
+    randomNullifier(),
+    randomNullifier(),
     randomInt(),
-    randomBytes(32),
-    randomBytes(32),
-    randomBytes(32),
-    randomBytes(32),
     EthAddress.randomAddress().toBuffer32(),
-    Buffer.alloc(32),
+    randomInt(),
   );
 
 export const randomSendProofData = () =>
   new InnerProofData(
-    ProofId.JOIN_SPLIT,
+    ProofId.SEND,
+    randomCommitment(),
+    randomCommitment(),
+    randomNullifier(),
+    randomNullifier(),
     Buffer.alloc(32),
-    Buffer.alloc(32),
-    randomInt(),
-    randomBytes(32),
-    randomBytes(32),
-    randomBytes(32),
-    randomBytes(32),
     Buffer.alloc(32),
     Buffer.alloc(32),
   );
 
 export const randomWithdrawProofData = () =>
   new InnerProofData(
-    ProofId.JOIN_SPLIT,
-    Buffer.alloc(32),
-    randomBytes(32),
+    ProofId.WITHDRAW,
+    randomCommitment(),
+    randomCommitment(),
+    randomNullifier(),
+    randomNullifier(),
     randomInt(),
-    randomBytes(32),
-    randomBytes(32),
-    randomBytes(32),
-    randomBytes(32),
-    Buffer.alloc(32),
     EthAddress.randomAddress().toBuffer32(),
+    randomInt(),
   );
 
-export const randomInnerProofData = (proofId = ProofId.JOIN_SPLIT) => {
+export const randomInnerProofData = (proofId = ProofId.SEND) => {
   switch (proofId) {
-    case ProofId.JOIN_SPLIT:
-      return [randomDepositProofData(), randomSendProofData(), randomWithdrawProofData()][
-        Math.floor(Math.random() * 3)
-      ];
+    case ProofId.DEPOSIT:
+      return randomDepositProofData();
+    case ProofId.WITHDRAW:
+      return randomWithdrawProofData();
+    case ProofId.SEND:
+      return randomSendProofData();
     default:
       return new InnerProofData(
         proofId,
-        [ProofId.DEFI_DEPOSIT, ProofId.DEFI_CLAIM].includes(proofId) ? Buffer.alloc(32) : randomBytes(32),
-        proofId === ProofId.DEFI_CLAIM ? Buffer.alloc(32) : randomBytes(32),
-        randomBytes(32),
-        randomBytes(32),
-        randomBytes(32),
-        randomBytes(32),
-        proofId === ProofId.DEFI_CLAIM ? Buffer.alloc(32) : randomBytes(32),
-        randomBytes(32),
-        [ProofId.DEFI_DEPOSIT, ProofId.DEFI_CLAIM].includes(proofId) ? Buffer.alloc(32) : randomBytes(32),
+        randomCommitment(),
+        randomCommitment(),
+        randomNullifier(),
+        proofId === ProofId.DEFI_DEPOSIT ? randomNullifier() : Buffer.alloc(32),
+        Buffer.alloc(32),
+        Buffer.alloc(32),
+        Buffer.alloc(32),
       );
   }
 };
