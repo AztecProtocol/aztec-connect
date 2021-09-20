@@ -67,9 +67,10 @@ export class CoreSdk extends EventEmitter {
   private joinSplitProofCreator!: JoinSplitProofCreator | EscapeHatchProofCreator;
   private accountProofCreator!: AccountProofCreator;
   private blockQueue!: MemoryFifo<Block>;
+  private serialQueue = new MemoryFifo<() => Promise<void>>();
   private userFactory!: UserDataFactory;
   private userStateFactory!: UserStateFactory;
-  private mutex = !isNode ? new Mutex('world-state-mutex') : undefined;
+  private mutex = !isNode ? new Mutex('core-sdk-mutex', undefined, { expiry: 300 * 1000, spinDelay: 1000 }) : undefined;
   private numCPU = !isNode ? navigator.hardwareConcurrency || 2 : os.cpus().length;
   private sdkStatus: SdkStatus = {
     chainId: -1,
@@ -108,6 +109,9 @@ export class CoreSdk extends EventEmitter {
     }
 
     this.updateInitState(SdkInitState.INITIALIZING);
+
+    // Start processing serialization queue.
+    this.serialQueue.process(fn => fn());
 
     const barretenberg = await BarretenbergWasm.new();
     const numWorkers = this.nextLowestPowerOf2(Math.min(this.numCPU, 8));
@@ -207,6 +211,9 @@ export class CoreSdk extends EventEmitter {
     return this.escapeHatchMode;
   }
 
+  /**
+   * Erase both leveldb and sql db. Must be called before calling init().
+   */
   public async eraseDb() {
     await this.leveldb.clear();
     await this.db.clear();
@@ -236,16 +243,18 @@ export class CoreSdk extends EventEmitter {
    * Public, as it will be called in the event of another instance emitting CoreSdkEvent.UPDATED_USERS.
    */
   public async initUserStates() {
-    debug('initializing user states...');
-    await this.stopSyncingUserStates();
+    this.serialExecute(async () => {
+      debug('initializing user states...');
+      await this.stopSyncingUserStates();
 
-    const users = await this.db.getUsers();
-    this.userStates = users.map(u => this.userStateFactory.createUserState(u));
-    await Promise.all(this.userStates.map(us => us.init()));
+      const users = await this.db.getUsers();
+      this.userStates = users.map(u => this.userStateFactory.createUserState(u));
+      await Promise.all(this.userStates.map(us => us.init()));
 
-    this.emit(SdkEvent.UPDATED_USERS);
+      this.emit(SdkEvent.UPDATED_USERS);
 
-    this.userStates.forEach(us => this.startSyncingUserState(us));
+      this.userStates.forEach(us => this.startSyncingUserState(us));
+    });
   }
 
   private startSyncingUserState(userState: UserState) {
@@ -325,6 +334,7 @@ export class CoreSdk extends EventEmitter {
     await this.workerPool?.destroy();
     await this.leveldb.close();
     await this.db.close();
+    this.serialQueue.cancel();
     this.updateInitState(SdkInitState.DESTROYED);
     this.removeAllListeners();
   }
@@ -352,39 +362,118 @@ export class CoreSdk extends EventEmitter {
     return txFees[assetId].feeConstants[transactionType] + txFees[assetId].baseFeeQuotes[speed].fee;
   }
 
-  public async startReceivingBlocks() {
-    if (this.processBlocksPromise) {
-      return;
-    }
+  private serialExecute<T>(fn: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      this.serialQueue.put(async () => {
+        try {
+          // We use a mutex to ensure only one tab will process a queue element at a time.
+          await this.mutex?.lock();
+          const res = await fn();
+          await this.mutex?.unlock();
+          resolve(res);
+        } catch (e) {
+          await this.mutex?.unlock();
+          reject(e);
+        }
+      });
+    });
+  }
 
-    this.blockQueue = new MemoryFifo<Block>();
-    this.rollupProvider.on('block', b => this.blockQueue.put(b));
-    this.userStates.forEach(us => us.startSync());
-    this.processBlocksPromise = this.processBlockQueue();
+  public async startReceivingBlocks() {
+    this.serialExecute(async () => {
+      if (this.processBlocksPromise) {
+        return;
+      }
+
+      this.blockQueue = new MemoryFifo<Block>();
+      this.rollupProvider.on('block', b => this.blockQueue.put(b));
+      this.userStates.forEach(us => us.startSync());
+      this.processBlocksPromise = this.processBlockQueue();
+
+      await this.sync();
+
+      const syncedToRollup = await this.leveldb.get('syncedToRollup').catch(() => -1);
+      await this.rollupProvider.start(+syncedToRollup + 1);
+
+      debug('started processing blocks.');
+    });
+  }
+
+  /**
+   * Called when data root is not as expected. We need to save parts of leveldb we don't want to lose, erase the db,
+   * and call sync() to rebuild the merkle tree.
+   */
+  private async eraseAndRebuildDataTree() {
+    debug('Erasing and rebuilding data tree...');
+
+    const rca = await this.getRollupContractAddress();
+    const rva = await this.getVerifierContractAddress();
+    await this.leveldb.clear();
+    await this.leveldb.put('rollupContractAddress', rca!.toBuffer());
+    await this.leveldb.put('verifierContractAddress', rva!.toBuffer());
+
+    await this.worldState.init();
 
     await this.sync();
-
-    const syncedToRollup = await this.leveldb.get('syncedToRollup').catch(() => -1);
-    await this.rollupProvider.start(+syncedToRollup + 1);
-
-    debug('started processing blocks.');
   }
 
   private async sync() {
     const syncedToRollup = +(await this.leveldb.get('syncedToRollup').catch(() => -1));
     const blocks = await this.rollupProvider.getBlocks(syncedToRollup + 1);
+
+    // For debugging.
+    const oldRoot = this.worldState.getRoot();
+    const oldSize = this.worldState.getSize();
+
     if (!blocks.length) {
+      // TODO: Ugly hotfix. Find root cause.
+      // If no new blocks, we expect our local data root to be equal to that on falafel.
+      const { dataRoot: expectedDataRoot, dataSize: expectedDataSize } = (await this.getRemoteStatus())
+        .blockchainStatus;
+      if (!oldRoot.equals(expectedDataRoot)) {
+        await this.eraseAndRebuildDataTree();
+        await this.rollupProvider.clientLog({
+          message: 'Invalid dataRoot.',
+          synchingFromRollup: syncedToRollup,
+          blocksReceived: blocks.length,
+          currentRoot: oldRoot.toString('hex'),
+          currentSize: oldSize,
+          expectedDataRoot: expectedDataRoot.toString('hex'),
+          expectedDataSize,
+        });
+      }
       return;
     }
 
     const rollups = blocks.map(b => RollupProofData.fromBuffer(b.rollupProofData));
+
+    // For debugging.
+    const expectedDataRoot = rollups[rollups.length - 1].newDataRoot;
+    const expectedDataSize = rollups[0].dataStartIndex + rollups.reduce((a, r) => a + r.rollupSize * 2, 0);
+
     debug('synchronising data...');
     await this.worldState.processRollups(rollups);
     await this.processAliases(rollups);
-    if (rollups.length) {
-      await this.updateStatusRollupInfo(rollups[rollups.length - 1]);
-    }
+    await this.updateStatusRollupInfo(rollups[rollups.length - 1]);
     debug('done.');
+
+    // TODO: Ugly hotfix. Find root cause.
+    // We expect our data root to be equal to the new data root in the last block we processed.
+    if (!this.worldState.getRoot().equals(expectedDataRoot)) {
+      await this.eraseAndRebuildDataTree();
+      this.rollupProvider.clientLog({
+        message: 'Invalid dataRoot.',
+        synchingFromRollup: syncedToRollup,
+        blocksReceived: blocks.length,
+        oldRoot: oldRoot.toString('hex'),
+        oldSize,
+        newRoot: this.worldState.getRoot().toString('hex'),
+        newSize: this.worldState.getSize(),
+        expectedDataRoot: expectedDataRoot.toString('hex'),
+        expectedDataSize,
+      });
+      return;
+    }
 
     // Forward the block on to each UserState for processing.
     for (const block of blocks) {
@@ -422,19 +511,16 @@ export class CoreSdk extends EventEmitter {
         break;
       }
 
-      // We use a mutex to ensure only one tab will process a block at a time (to prevent merkle tree corruption).
-      // This is only a safety mechanism for if two tabs are processing blocks at once. Correct behaviour would
-      // be for only one tab to process the block, and to alert the others to sync.
-      await this.mutex?.lock();
-      await this.worldState.syncFromDb().catch(() => {});
-      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
-      await this.worldState.processRollup(rollup);
-      await this.processAliases([rollup]);
-      await this.updateStatusRollupInfo(rollup);
-      await this.mutex?.unlock();
+      this.serialExecute(async () => {
+        await this.worldState.syncFromDb().catch(() => {});
+        const rollup = RollupProofData.fromBuffer(block.rollupProofData);
+        await this.worldState.processRollup(rollup);
+        await this.processAliases([rollup]);
+        await this.updateStatusRollupInfo(rollup);
 
-      // Forward the block on to each UserState for processing.
-      this.userStates.forEach(us => us.processBlock(block));
+        // Forward the block on to each UserState for processing.
+        this.userStates.forEach(us => us.processBlock(block));
+      });
     }
   }
 
@@ -456,13 +542,15 @@ export class CoreSdk extends EventEmitter {
   /**
    * Called when another instance of the sdk has updated the world state db.
    */
-  public async notifyWorldStateUpdated() {
-    await this.worldState.syncFromDb();
-    this.sdkStatus.dataRoot = this.worldState.getRoot();
-    this.sdkStatus.dataSize = this.worldState.getSize();
-    this.sdkStatus.syncedToRollup = +(await this.leveldb.get('syncedToRollup').catch(() => -1));
-    this.sdkStatus.latestRollupId = +(await this.leveldb.get('latestRollupId').catch(() => -1));
-    this.emit(SdkEvent.UPDATED_WORLD_STATE, this.sdkStatus.syncedToRollup, this.sdkStatus.latestRollupId);
+  public notifyWorldStateUpdated() {
+    this.serialExecute(async () => {
+      await this.worldState.syncFromDb();
+      this.sdkStatus.dataRoot = this.worldState.getRoot();
+      this.sdkStatus.dataSize = this.worldState.getSize();
+      this.sdkStatus.syncedToRollup = +(await this.leveldb.get('syncedToRollup').catch(() => -1));
+      this.sdkStatus.latestRollupId = +(await this.leveldb.get('latestRollupId').catch(() => -1));
+      this.emit(SdkEvent.UPDATED_WORLD_STATE, this.sdkStatus.syncedToRollup, this.sdkStatus.latestRollupId);
+    });
   }
 
   /**
@@ -541,43 +629,45 @@ export class CoreSdk extends EventEmitter {
     inputOwner?: EthAddress,
     outputOwner?: EthAddress,
   ) {
-    if (this.escapeHatchMode) {
-      await this.validateEscapeOpen();
-    }
+    return this.serialExecute(async () => {
+      if (this.escapeHatchMode) {
+        await this.validateEscapeOpen();
+      }
 
-    const userState = this.getUserState(userId);
+      const userState = this.getUserState(userId);
 
-    const { txId, proofData, viewingKeys, depositSigningData } = await this.joinSplitProofCreator.createProof(
-      userState,
-      publicInput,
-      publicOutput,
-      privateInput,
-      recipientPrivateOutput,
-      senderPrivateOutput,
-      assetId,
-      signer,
-      noteRecipient,
-      inputOwner,
-      outputOwner,
-    );
+      const { txId, proofData, viewingKeys, depositSigningData } = await this.joinSplitProofCreator.createProof(
+        userState,
+        publicInput,
+        publicOutput,
+        privateInput,
+        recipientPrivateOutput,
+        senderPrivateOutput,
+        assetId,
+        signer,
+        noteRecipient,
+        inputOwner,
+        outputOwner,
+      );
 
-    const txHash = new TxHash(txId);
-    const tx: UserJoinSplitTx = {
-      txHash,
-      userId,
-      assetId,
-      publicInput,
-      publicOutput,
-      privateInput,
-      recipientPrivateOutput,
-      senderPrivateOutput,
-      inputOwner,
-      outputOwner,
-      ownedByUser: true,
-      created: new Date(),
-    };
+      const txHash = new TxHash(txId);
+      const tx: UserJoinSplitTx = {
+        txHash,
+        userId,
+        assetId,
+        publicInput,
+        publicOutput,
+        privateInput,
+        recipientPrivateOutput,
+        senderPrivateOutput,
+        inputOwner,
+        outputOwner,
+        ownedByUser: true,
+        created: new Date(),
+      };
 
-    return new JoinSplitProofOutput(tx, proofData, viewingKeys, publicInput ? depositSigningData : undefined);
+      return new JoinSplitProofOutput(tx, proofData, viewingKeys, publicInput ? depositSigningData : undefined);
+    });
   }
 
   public async createAccountTx(
@@ -590,21 +680,24 @@ export class CoreSdk extends EventEmitter {
     newSigningPubKey1?: GrumpkinAddress,
     newSigningPubKey2?: GrumpkinAddress,
   ) {
-    const aliasHash = this.computeAliasHash(alias);
-    const accountId = nonce ? new AccountId(accountPublicKey, nonce) : undefined;
-    const accountIndex = accountId ? await this.db.getUserSigningKeyIndex(accountId, signer.getPublicKey()) : undefined;
-
-    return this.accountProofCreator.createAccountTx(
-      signer,
-      aliasHash,
-      nonce,
-      migrate,
-      accountPublicKey,
-      newAccountPublicKey,
-      newSigningPubKey1,
-      newSigningPubKey2,
-      accountIndex,
-    );
+    return this.serialExecute(async () => {
+      const aliasHash = this.computeAliasHash(alias);
+      const accountId = nonce ? new AccountId(accountPublicKey, nonce) : undefined;
+      const accountIndex = accountId
+        ? await this.db.getUserSigningKeyIndex(accountId, signer.getPublicKey())
+        : undefined;
+      return await this.accountProofCreator.createAccountTx(
+        signer,
+        aliasHash,
+        nonce,
+        migrate,
+        accountPublicKey,
+        newAccountPublicKey,
+        newSigningPubKey1,
+        newSigningPubKey2,
+        accountIndex,
+      );
+    });
   }
 
   public async createAccountProof(
@@ -617,46 +710,48 @@ export class CoreSdk extends EventEmitter {
     newSigningPublicKey2?: GrumpkinAddress,
     newAccountPrivateKey?: Buffer,
   ) {
-    if (this.escapeHatchMode) {
-      throw new Error('Account modifications not supported in escape hatch mode.');
-    }
+    return this.serialExecute(async () => {
+      if (this.escapeHatchMode) {
+        throw new Error('Account modifications not supported in escape hatch mode.');
+      }
 
-    const userState = this.getUserState(userId);
-    const { publicKey } = userState.getUser();
+      const userState = this.getUserState(userId);
+      const { publicKey } = userState.getUser();
 
-    const signerPublicKey = signer.getPublicKey();
-    const accountId = nonce ? new AccountId(publicKey, nonce) : undefined;
-    const accountIndex = accountId ? await this.db.getUserSigningKeyIndex(accountId, signerPublicKey) : undefined;
-    const newAccountPublicKey = newAccountPrivateKey ? this.derivePublicKey(newAccountPrivateKey) : publicKey;
-    const newNonce = nonce + +migrate;
+      const signerPublicKey = signer.getPublicKey();
+      const accountId = nonce ? new AccountId(publicKey, nonce) : undefined;
+      const accountIndex = accountId ? await this.db.getUserSigningKeyIndex(accountId, signerPublicKey) : undefined;
+      const newAccountPublicKey = newAccountPrivateKey ? this.derivePublicKey(newAccountPrivateKey) : publicKey;
+      const newNonce = nonce + +migrate;
 
-    this.emit(SdkEvent.LOG, 'Generating proof...');
+      this.emit(SdkEvent.LOG, 'Generating proof...');
 
-    const rawProofData = await this.accountProofCreator.createProof(
-      signer,
-      aliasHash,
-      nonce,
-      migrate,
-      publicKey,
-      newAccountPublicKey,
-      newSigningPublicKey1,
-      newSigningPublicKey2,
-      accountIndex,
-    );
+      const rawProofData = await this.accountProofCreator.createProof(
+        signer,
+        aliasHash,
+        nonce,
+        migrate,
+        publicKey,
+        newAccountPublicKey,
+        newSigningPublicKey1,
+        newSigningPublicKey2,
+        accountIndex,
+      );
 
-    const { txId } = new ProofData(rawProofData);
-    const txHash = new TxHash(txId);
-    const tx: UserAccountTx = {
-      txHash,
-      userId: new AccountId(newAccountPublicKey, newNonce),
-      aliasHash,
-      newSigningPubKey1: newSigningPublicKey1?.x(),
-      newSigningPubKey2: newSigningPublicKey2?.x(),
-      migrated: migrate,
-      created: new Date(),
-    };
+      const { txId } = new ProofData(rawProofData);
+      const txHash = new TxHash(txId);
+      const tx: UserAccountTx = {
+        txHash,
+        userId: new AccountId(newAccountPublicKey, newNonce),
+        aliasHash,
+        newSigningPubKey1: newSigningPublicKey1?.x(),
+        newSigningPubKey2: newSigningPublicKey2?.x(),
+        migrated: migrate,
+        created: new Date(),
+      };
 
-    return new AccountProofOutput(tx, rawProofData);
+      return new AccountProofOutput(tx, rawProofData);
+    });
   }
 
   public async sendProof(proofOutput: ProofOutput, depositSignature?: Buffer) {

@@ -14,6 +14,7 @@ import { Metrics } from './metrics';
 import { JoinSplitTxResolver, AccountTxResolver, RollupResolver, ServerStatusResolver, TxResolver } from './resolver';
 import { Server } from './server';
 import cors from '@koa/cors';
+import requestIp from 'request-ip';
 
 const toBlockResponse = (block: Block): BlockServerResponse => ({
   ...block,
@@ -85,6 +86,20 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
       txHash: txId.toString('hex'),
     };
     ctx.body = response;
+    ctx.status = 200;
+  });
+
+  router.post('/client-log', async (ctx: Koa.Context) => {
+    const stream = new PromiseReadable(ctx.req);
+    const log = JSON.parse((await stream.readAll()) as string);
+    const clientIp = requestIp.getClientIp(ctx.request);
+    const userAgent = ctx.request.header['user-agent'];
+    const data = {
+      ...log,
+      clientIp,
+      userAgent,
+    };
+    console.log(`Client log for: ${JSON.stringify(data)}`);
     ctx.status = 200;
   });
 

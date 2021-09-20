@@ -38,4 +38,5 @@ export interface RollupProvider extends BlockSource {
   getStatus(): Promise<RollupProviderStatus>;
   getPendingTxs: () => Promise<TxHash[]>;
   getPendingNoteNullifiers: () => Promise<Buffer[]>;
+  clientLog: (msg: any) => Promise<void>;
 }
