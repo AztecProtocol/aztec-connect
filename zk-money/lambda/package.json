@@ -4,7 +4,7 @@
   "main": "index.js",
   "license": "MIT",
   "dependencies": {
-    "node-fetch": "^2.6.1"
+    "node-fetch": "2.6.1"
   },
   "scripts": {
     "build": "tsc && cp package.json dest && cd dest && yarn install --production && zip -r ../twitter_lambda.zip ."
