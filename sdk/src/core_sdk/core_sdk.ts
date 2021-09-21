@@ -243,7 +243,7 @@ export class CoreSdk extends EventEmitter {
    * Public, as it will be called in the event of another instance emitting CoreSdkEvent.UPDATED_USERS.
    */
   public async initUserStates() {
-    this.serialExecute(async () => {
+    await this.serialExecute(async () => {
       debug('initializing user states...');
       await this.stopSyncingUserStates();
 
@@ -380,7 +380,7 @@ export class CoreSdk extends EventEmitter {
   }
 
   public async startReceivingBlocks() {
-    this.serialExecute(async () => {
+    await this.serialExecute(async () => {
       if (this.processBlocksPromise) {
         return;
       }
@@ -511,7 +511,7 @@ export class CoreSdk extends EventEmitter {
         break;
       }
 
-      this.serialExecute(async () => {
+      await this.serialExecute(async () => {
         await this.worldState.syncFromDb().catch(() => {});
         const rollup = RollupProofData.fromBuffer(block.rollupProofData);
         await this.worldState.processRollup(rollup);
