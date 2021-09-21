@@ -24,6 +24,8 @@ export class EscapeHatchRollupProvider implements RollupProvider {
     } as RollupProviderStatus;
   }
 
+  async clientLog() {}
+
   getBlocks(from: number) {
     return this.blockchain.getBlocks(from);
   }

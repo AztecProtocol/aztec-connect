@@ -1039,6 +1039,8 @@ export class UserSession extends EventEmitter {
         debug,
         saveProvingKey,
       });
+      // For testing.
+      (window as any).aztec = this.sdk;
     } catch (e) {
       debug(e);
       throw new Error(`Failed to create sdk.`);
