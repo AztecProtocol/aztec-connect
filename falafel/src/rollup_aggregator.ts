@@ -3,7 +3,7 @@ import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
-import { ProofGenerator, RootRollup, RootRollupProofRequest } from 'halloumi/proof_generator';
+import { ProofGenerator, RootRollup, RootRollupProofRequest, RootVerifier, RootVerifierProofRequest } from 'halloumi/proof_generator';
 import { AssetId } from '@aztec/barretenberg/asset';
 import { RollupDao } from './entity/rollup';
 import { RollupProofDao } from './entity/rollup_proof';
@@ -42,22 +42,25 @@ export class RollupAggregator {
     );
     const end = this.metrics.rootRollupTimer();
     const rootRollupRequest = new RootRollupProofRequest(this.numInnerRollupTxs, this.numOuterRollupProofs, rootRollup);
-    const proofData = await this.proofGenerator.createProof(rootRollupRequest.toBuffer());
+    const rootRollupProofBuf = await this.proofGenerator.createProof(rootRollupRequest.toBuffer());
+
+    const rootVerifier = await this.createRootVerifier(rootRollupProofBuf);
+    const rootVerifierRequest = new RootVerifierProofRequest(this.numInnerRollupTxs, this.numOuterRollupProofs, rootVerifier);
+    const finalProofData = await this.proofGenerator.createProof(rootVerifierRequest.toBuffer());
     end();
 
-    if (!proofData) {
+    if (!finalProofData) {
       throw new Error('Failed to create valid aggregate rollup.');
-    }
+    };
 
-    const rollupProofData = RollupProofData.fromBuffer(proofData);
-
+    const rollupProofData = RollupProofData.fromBuffer(finalProofData);
     const rollupProofDao = new RollupProofDao();
     rollupProofDao.id = rollupProofData.rollupHash;
     // TypeOrm is bugged using Buffers as primaries, so there's an internalId that's a string.
     // I've mostly hidden this workaround in the entities but it's needed here.
     rollupProofDao.internalId = rollupProofData.rollupHash.toString('hex');
     rollupProofDao.txs = innerProofs.map(p => p.txs).flat();
-    rollupProofDao.proofData = proofData;
+    rollupProofDao.proofData = finalProofData;
     rollupProofDao.rollupSize = this.outerRollupSize;
     rollupProofDao.created = new Date();
     rollupProofDao.dataStartIndex = innerProofs[0].dataStartIndex;
@@ -124,5 +127,10 @@ export class RollupAggregator {
     );
 
     return rootRollup;
+  }
+
+  private async createRootVerifier(rootRollupProofBuf: Buffer) {
+    const rootVerifier = new RootVerifier(rootRollupProofBuf);
+    return rootVerifier;
   }
 }

@@ -2,11 +2,13 @@ import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { ClaimProof } from './claim_proof';
 import { RootRollup } from './root_rollup';
 import { TxRollup } from './tx_rollup';
+import { RootVerifier } from './root_verifier';
 
 export enum ProofId {
   TX_ROLLUP,
   ROOT_ROLLUP,
   CLAIM,
+  ROOT_VERIFIER,
 }
 
 export class TxRollupProofRequest {
@@ -43,3 +45,19 @@ export class ClaimProofRequest {
     return Buffer.concat([numToUInt32BE(this.proofId), this.claimProof.toBuffer()]);
   }
 }
+
+export class RootVerifierProofRequest {
+  proofId = ProofId.ROOT_VERIFIER;
+
+  constructor(public txRollupSize: number, public rootRollupSize: number, public rootVerifier: RootVerifier) {}
+
+  toBuffer() {
+    return Buffer.concat([
+      numToUInt32BE(this.proofId),
+      numToUInt32BE(this.txRollupSize),
+      numToUInt32BE(this.rootRollupSize),
+      this.rootVerifier.toBuffer(),
+    ]);
+  }
+}
+

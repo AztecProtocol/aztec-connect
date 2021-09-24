@@ -1,6 +1,6 @@
 import { ethers } from 'hardhat';
-import { Verifier } from './verifier';
-import { getRollupData } from './fixtures/get_rollup_data';
+import { Verifier } from './turbo_verifier';
+import { getRollupDataTurbo } from './fixtures/get_rollup_data';
 import { EthersAdapter } from '../../provider';
 
 describe('Verifier', function () {
@@ -12,7 +12,7 @@ describe('Verifier', function () {
   });
 
   async function validate(inner: number, outer: number) {
-    const { proofData, broadcastData, inputHash } = await getRollupData(inner, outer);
+    const { proofData, broadcastData, inputHash } = await getRollupDataTurbo(inner, outer);
     const gasUsed = await verifier.verify(proofData, broadcastData.rollupSize, inputHash, { gasLimit });
     console.log(`gasUsed: ${gasUsed}`);
   }

@@ -72,11 +72,11 @@ export class StandardVerifier {
     return this.verifier;
   }
 
-  async verify(proofData: Buffer, rollupSize: number, options: SendTxOptions = {}) {
+  async verify(proofData: Buffer, rollupSize: number, pubInputsHash: Buffer, options: SendTxOptions = {}) {
     const { signingAddress, gasLimit } = { ...options, ...this.defaults };
     const signer = new Web3Provider(this.provider).getSigner(signingAddress ? signingAddress.toString() : 0);
     const verifier = new Contract(this.verifierContractAddress.toString(), StandardVerifierContract.abi, signer);
-    const txResponse = await verifier.verify(proofData, rollupSize, 0, { gasLimit }).catch(fixEthersStackTrace);
+    const txResponse = await verifier.verify(proofData, rollupSize, pubInputsHash, { gasLimit }).catch(fixEthersStackTrace);
     const receipt = await txResponse.wait();
     return receipt.gasUsed.toNumber();
   }

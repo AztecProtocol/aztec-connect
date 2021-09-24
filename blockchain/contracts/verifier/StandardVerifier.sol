@@ -10,7 +10,7 @@ import {StandardVerificationKeys} from './keys/StandardVerificationKeys.sol';
 import {StandardTypes} from './cryptography/StandardTypes.sol';
 
 /**
- * @title Turbo Plonk proof verification contract
+ * @title Standard Plonk proof verification contract
  * @dev Top level Plonk proof verification contract, which allows Plonk proof to be verified
  *
  * Copyright 2020 Aztec
@@ -136,10 +136,14 @@ contract StandardVerifier is IVerifier {
     // 3
 
     // ### RECURSION VARIABLE MEMORY LOCATIONS
+
+
     uint256 constant RECURSIVE_P1_X_LOC = 0x200 + 0x340 + 0x320 + 0x1a0 + 0x200 + 0xe0 + 0x60;
     uint256 constant RECURSIVE_P1_Y_LOC = 0x200 + 0x340 + 0x320 + 0x1a0 + 0x200 + 0xe0 + 0x80;
     uint256 constant RECURSIVE_P2_X_LOC = 0x200 + 0x340 + 0x320 + 0x1a0 + 0x200 + 0xe0 + 0xa0;
     uint256 constant RECURSIVE_P2_Y_LOC = 0x200 + 0x340 + 0x320 + 0x1a0 + 0x200 + 0xe0 + 0xc0;
+
+    uint256 constant PUBLIC_INPUTS_HASH_LOCATION = 0x200 + 0x340 + 0x320 + 0x1a0 + 0x200 + 0xe0 + 0xe0;
 
     // location of lookup table values when computing a modular inverse via the `invert` method
     uint256 constant II_POS = 0x00;
@@ -161,8 +165,16 @@ contract StandardVerifier is IVerifier {
      * @param - array of serialized proof data
      * @param - number of transactions in the rollup
      */
-    function verify(bytes calldata, uint256 rollup_size, uint256) external override returns (bool) {
-
+    function verify(bytes calldata, uint256 rollup_size, uint256 public_inputs_hash) external override returns (bool) {
+        // validate the correctness of the public inputs hash
+        {
+            bool hash_matches_input;
+            assembly {
+                hash_matches_input := eq(calldataload(add(calldataload(0x04), 0x24)), public_inputs_hash)
+            }
+            require(hash_matches_input, "computed public input hash does not match value in proof!");
+        }
+        
         StandardTypes.VerificationKey memory vk = StandardVerificationKeys.getKeyById(rollup_size);
 
 
@@ -196,7 +208,7 @@ contract StandardVerifier is IVerifier {
                 mstore(SIGMA3_X_LOC,        mload(mload(add(vk, 0x180))))
                 mstore(SIGMA3_Y_LOC,        mload(add(mload(add(vk, 0x180)), 0x20)))
                 mstore(CONTAINS_RECURSIVE_PROOF_LOC, mload(add(vk, 0x1a0)))
-                mstore(RECURSIVE_PROOF_PUBLIC_INPUT_INDICES_LOC, mload(add(vk, 0x1e0)))
+                mstore(RECURSIVE_PROOF_PUBLIC_INPUT_INDICES_LOC, mload(add(vk, 0x1c0)))
                 mstore(G2X_X0_LOC, 0x260e01b251f6f1c7e7ff4e580791dee8ea51d87a358e038b4efe30fac09383c1)
                 mstore(G2X_X1_LOC, 0x0118c4d5b837bcc2bc89b5b398b5974e9f5944073b32078b7e231fec938883b0)
                 mstore(G2X_Y0_LOC, 0x04fc6369f7110fe3d25156c1bb9a72859cf2a04641f99ba4ee413c80da6a5fe4)
@@ -575,7 +587,6 @@ contract StandardVerifier is IVerifier {
              */
             {
                 let data_ptr := add(calldataload(0x04), 0x24)
-
                 if mload(CONTAINS_RECURSIVE_PROOF_LOC)
                 {
                     let index_counter := add(mul(mload(RECURSIVE_PROOF_PUBLIC_INPUT_INDICES_LOC), 32), data_ptr)
@@ -596,7 +607,6 @@ contract StandardVerifier is IVerifier {
                     y1 := add(y1, shl(68, calldataload(add(index_counter, 0x1a0))))
                     y1 := add(y1, shl(136, calldataload(add(index_counter, 0x1c0))))
                     y1 := add(y1, shl(204, calldataload(add(index_counter, 0x1e0))))
-                    
                     mstore(RECURSIVE_P1_X_LOC, x0)
                     mstore(RECURSIVE_P1_Y_LOC, y0)
                     mstore(RECURSIVE_P2_X_LOC, x1)
@@ -646,12 +656,12 @@ contract StandardVerifier is IVerifier {
             /**
              * Generate beta, gamma challenges
              */
-            mstore(0x00, challenge)
+            mstore(PUBLIC_INPUTS_HASH_LOCATION, challenge)
             let inputs_start := add(calldataload(0x04), 0x24)
             let num_calldata_bytes := add(0xc0, mul(mload(NUM_INPUTS_LOC), 0x20))
-            calldatacopy(0x20, inputs_start, num_calldata_bytes)
+            calldatacopy(add(PUBLIC_INPUTS_HASH_LOCATION, 0x20), inputs_start, num_calldata_bytes)
 
-            challenge := keccak256(0x00, add(num_calldata_bytes, 0x20))
+            challenge := keccak256(PUBLIC_INPUTS_HASH_LOCATION, add(num_calldata_bytes, 0x20))
 
             mstore(C_BETA_LOC, mod(challenge, p))
 
@@ -1313,7 +1323,8 @@ contract StandardVerifier is IVerifier {
                         staticcall(gas(), 7, 0x40, 0x60, 0x40, 0x40)
                     )
                 )
-
+                // negate lhs y-coordinate
+                mstore(PAIRING_LHS_Y_LOC, sub(q, mload(PAIRING_LHS_Y_LOC)))
 
                 if mload(CONTAINS_RECURSIVE_PROOF_LOC)
                 {
@@ -1326,6 +1337,7 @@ contract StandardVerifier is IVerifier {
                         mstore(0x00, x)
                         mstore(0x20, y)
                     }
+
                     // compute u.u.[recursive_p1] and write into 0x60
                     mstore(0x40, mulmod(u, u, p))
                     success := and(success, staticcall(gas(), 7, 0x00, 0x60, 0x60, 0x40))
@@ -1353,9 +1365,6 @@ contract StandardVerifier is IVerifier {
                     success := and(success, staticcall(gas(), 6, 0x00, 0x80, PAIRING_LHS_X_LOC, 0x40))
                 }
         
-                // negate lhs y-coordinate
-                mstore(PAIRING_LHS_Y_LOC, sub(q, mload(PAIRING_LHS_Y_LOC)))
-
                 if iszero(success)
                 {
                     revert(0x00, 0x00)

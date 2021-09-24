@@ -11,12 +11,14 @@ import {
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
 
-jest.setTimeout(10 * 60 * 1000);
+jest.setTimeout(15 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
 
 const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost:8081' } = process.env;
 
 /**
+ * If necessary, install ganache-cli: yarn global add ganache-cli
+ * Set ETHEREUM_HOST: export ETHEREUM_HOST = http://localhost:8545
  * Run the following:
  * blockchain: yarn start:ganache
  * halloumi: yarn start:e2e

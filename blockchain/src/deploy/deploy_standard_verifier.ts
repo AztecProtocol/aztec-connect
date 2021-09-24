@@ -25,10 +25,12 @@ function linkBytecode(artifact: any, libraries: any) {
   return bytecode;
 }
 
-export async function deployStandardVerifier(signer: Signer) {
+export async function deployVerifier(signer: Signer) {
+  // console.error('Deploying StandardVerificationKeys...');
   const StandardverificationKeysLibrary = new ContractFactory(StandardVerificationKeys.abi, StandardVerificationKeys.bytecode, signer);
   const StandardverificationKeysLib = await StandardverificationKeysLibrary.deploy();
 
+  // console.error('Deploying StandardVerifier...');
   const linkedVBytecode = linkBytecode(StandardVerifier, {
     StandardVerificationKeys: StandardverificationKeysLib.address,
   });

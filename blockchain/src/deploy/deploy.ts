@@ -9,7 +9,7 @@ import { deployDefiBridgeProxy } from './deploy_defi_bridge_proxy';
 import { deployFeeDistributor } from './deploy_fee_distributor';
 import { deployPriceFeed } from './deploy_price_feed';
 import { createPair, deployUniswap } from './deploy_uniswap';
-import { deployVerifier } from './deploy_verifier';
+import { deployVerifier } from './deploy_standard_verifier';
 
 export async function deploy(escapeHatchBlockLower: number, escapeHatchBlockUpper: number, signer: Signer) {
   const uniswapRouter = await deployUniswap(signer);

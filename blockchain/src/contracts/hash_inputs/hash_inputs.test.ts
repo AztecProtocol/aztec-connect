@@ -1,14 +1,14 @@
 import { ethers } from 'hardhat';
 import { HashInputs } from './hash_inputs';
-import { getRollupData } from '../verifier/fixtures/get_rollup_data';
+import { getRollupDataStandard } from '../verifier/fixtures/get_rollup_data';
 import { EthersAdapter } from '../../provider';
 import { EthAddress } from '@aztec/barretenberg/address';
-import { Verifier } from '../verifier/verifier';
+import { StandardVerifier } from '../verifier/standard_verifier';
 
 async function setupHashInputs() {
   const signers = await ethers.getSigners();
 
-  const verifier = await Verifier.deploy(new EthersAdapter(ethers.provider));
+  const verifier = await StandardVerifier.deploy(new EthersAdapter(ethers.provider));
 
   const HashInputsContract = await ethers.getContractFactory('HashInputs', signers[0]);
   const hashInputsContract = await HashInputsContract.deploy(verifier.address.toString());
@@ -25,7 +25,7 @@ describe('hashInputs', function () {
   });
 
   async function validate(inner: number, outer: number) {
-    const { proofData, broadcastData } = await getRollupData(inner, outer);
+    const { proofData, broadcastData } = await getRollupDataStandard(inner, outer);
     const proofBytes = Buffer.concat([broadcastData.encode(), proofData]);
 
     const gasUsed = await hashInputs.validate(proofBytes, { gasLimit });

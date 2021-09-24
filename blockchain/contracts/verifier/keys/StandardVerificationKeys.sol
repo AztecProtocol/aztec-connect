@@ -7,9 +7,17 @@ pragma experimental ABIEncoderV2;
 import {StandardTypes} from '../cryptography/StandardTypes.sol';
 
 import {StandardPlonkVk} from '../keys/StandardPlonkVk.sol';
-// import {Rollup28x8Vk} from '../keys/Rollup28x8Vk.sol';
-// import {Rollup28x16Vk} from '../keys/Rollup28x16Vk.sol';
-// import {Rollup28x32Vk} from '../keys/Rollup28x32Vk.sol';
+import {Rollup1x1VkStandard} from '../keys/Rollup1x1VkStandard.sol';
+import {Rollup1x2VkStandard} from '../keys/Rollup1x2VkStandard.sol';
+import {Rollup1x4VkStandard} from '../keys/Rollup1x4VkStandard.sol';
+
+// import {Rollup28x1VkStandard} from '../keys/Rollup28x1VkStandard.sol';
+// import {Rollup28x2VkStandard} from '../keys/Rollup28x2VkStandard.sol';
+// import {Rollup28x4VkStandard} from '../keys/Rollup28x4VkStandard.sol';
+
+// import {Rollup28x8VkStandard} from '../keys/Rollup28x8VkStandard.sol';
+// import {Rollup28x16VkStandard} from '../keys/Rollup28x16VkStandard.sol';
+// import {Rollup28x32VkStandard} from '../keys/Rollup28x32VkStandard.sol';
 
 /**
  * @title Verification keys library
@@ -24,24 +32,26 @@ library StandardVerificationKeys {
         // added in order: qL, qR, qO, qC, qM. x coord first, followed by y coord
         StandardTypes.VerificationKey memory vk;
 
-        if (_keyId == 1) {
+        if (_keyId == 0) {
             vk = StandardPlonkVk.get_verification_key();
+        } else if (_keyId == 1) {
+            vk = Rollup1x1VkStandard.get_verification_key();
         } else if (_keyId == 2) {
-            vk = StandardPlonkVk.get_verification_key();
+            vk = Rollup1x2VkStandard.get_verification_key();
         } else if (_keyId == 4) {
-            vk = StandardPlonkVk.get_verification_key();
-        } else if (_keyId == 32) {
-            vk = StandardPlonkVk.get_verification_key();
-        } else if (_keyId == 64) {
-            vk = StandardPlonkVk.get_verification_key();
-        } else if (_keyId == 128) {
-            vk = StandardPlonkVk.get_verification_key();
-            // } else if (_keyId == 256) {
-            //     vk = StandardPlonkVk.get_verification_key();
-            // } else if (_keyId == 512) {
-            //     vk = Rollup28x16Vk.get_verification_key();
-            // } else if (_keyId == 1024) {
-            //     vk = Rollup28x32Vk.get_verification_key();
+            vk = Rollup1x4VkStandard.get_verification_key();
+        // } else if (_keyId == 32) {
+        //     vk = Rollup28x1VkStandard.get_verification_key();
+        // } else if (_keyId == 64) {
+        //     vk = Rollup28x2VkStandard.get_verification_key();
+        // } else if (_keyId == 128) {
+        //     vk = Rollup28x4VkStandard.get_verification_key();
+        // } else if (_keyId == 256) {
+        //     vk = Rollup28x8VkStandard.get_verification_key();
+        // } else if (_keyId == 512) {
+        //     vk = Rollup28x16VkStandard.get_verification_key();
+        // } else if (_keyId == 1024) {
+        //     vk = Rollup28x32VkStandard.get_verification_key();
         } else {
             require(false, 'UNKNOWN_KEY_ID');
         }

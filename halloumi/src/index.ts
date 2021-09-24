@@ -4,7 +4,7 @@ import { appFactory } from './app';
 import { Server, ServerConfig } from './server';
 import 'log-timestamp';
 
-const { PORT = '8083', MAX_CIRCUIT_SIZE = '4194304', API_PREFIX = '' } = process.env;
+const { PORT = '8083', MAX_CIRCUIT_SIZE = '8388608', API_PREFIX = '' } = process.env;
 
 async function main() {
   const serverConfig: ServerConfig = {
