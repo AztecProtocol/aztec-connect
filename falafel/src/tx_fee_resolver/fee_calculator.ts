@@ -8,20 +8,27 @@ import { roundUp } from './round_up';
 
 export class FeeCalculator {
   constructor(
-    private priceTracker: PriceTracker,
-    private assets: BlockchainAsset[],
-    private baseTxGas: number,
-    private maxFeeGasPrice: bigint,
-    private feeGasPriceMultiplier: number,
-    private txsPerRollup: number,
-    private publishInterval: number,
-    private surplusRatios = [1, 0.9, 0.5, 0],
-    private feeFreeAssets: AssetId[] = [],
-    private freeTxTypes: TxType[] = [],
-    private numSignificantFigures = 0,
+    private readonly priceTracker: PriceTracker,
+    private readonly assets: BlockchainAsset[],
+    private readonly baseTxGas: number,
+    private readonly maxFeeGasPrice: bigint,
+    private readonly feeGasPriceMultiplier: number,
+    private readonly txsPerRollup: number,
+    private readonly publishInterval: number,
+    private readonly surplusRatios = [1, 0.9, 0.5, 0],
+    private readonly feeFreeAssets: AssetId[] = [],
+    private readonly freeTxTypes: TxType[] = [],
+    private readonly numSignificantFigures = 0,
   ) {}
 
   getMinTxFee(assetId: number, txType: TxType) {
+    if (this.freeTxTypes.includes(txType)) {
+      return 0n;
+    }
+    return this.getFeeConstant(assetId, txType, true) + this.getBaseFee(assetId, true);
+  }
+
+  getTxFee(assetId: number, txType: TxType) {
     if (this.freeTxTypes.includes(txType)) {
       return 0n;
     }
@@ -53,36 +60,38 @@ export class FeeCalculator {
         if (!baseFees[assetId]) {
           return 0;
         }
-        const minFee = this.getMinTxFee(assetId, tx.txType);
-        return Number((txFee - minFee) / baseFees[assetId]);
+        const currentFee = this.getTxFee(assetId, tx.txType);
+        return Number((txFee - currentFee) / baseFees[assetId]);
       })
       .reduce((acc, exc) => acc + exc, 0);
     const ratio = +(1 - surplus / this.txsPerRollup).toFixed(2);
     return Math.min(1, Math.max(0, ratio));
   }
 
-  getBaseFee(assetId: AssetId) {
+  getBaseFee(assetId: AssetId, minPrice = false) {
     if (this.feeFreeAssets.includes(assetId)) {
       return 0n;
     }
-    return this.toAssetPrice(assetId, BigInt(this.baseTxGas));
+    return this.toAssetPrice(assetId, BigInt(this.baseTxGas), minPrice);
   }
 
-  private getFeeConstant(assetId: AssetId, txType: TxType) {
+  private getFeeConstant(assetId: AssetId, txType: TxType, minPrice = false) {
     if (this.feeFreeAssets.includes(assetId)) {
       return 0n;
     }
-    return this.toAssetPrice(assetId, BigInt(this.assets[assetId].gasConstants[txType]));
+    return this.toAssetPrice(assetId, BigInt(this.assets[assetId].gasConstants[txType]), minPrice);
   }
 
-  private toAssetPrice(assetId: AssetId, gas: bigint) {
-    const price = this.priceTracker.getAssetPrice(assetId);
+  private toAssetPrice(assetId: AssetId, gas: bigint, minPrice: boolean) {
+    const price = minPrice ? this.priceTracker.getMinAssetPrice(assetId) : this.priceTracker.getAssetPrice(assetId);
     const { decimals } = this.assets[assetId];
-    return !price ? 0n : roundUp(this.applyGasPrice(gas * 10n ** BigInt(decimals)) / price, this.numSignificantFigures);
+    return !price
+      ? 0n
+      : roundUp(this.applyGasPrice(gas * 10n ** BigInt(decimals), minPrice) / price, this.numSignificantFigures);
   }
 
-  private applyGasPrice(value: bigint) {
-    const gasPrice = this.priceTracker.getGasPrice();
+  private applyGasPrice(value: bigint, minPrice: boolean) {
+    const gasPrice = minPrice ? this.priceTracker.getMinGasPrice() : this.priceTracker.getGasPrice();
     const expectedValue = (value * gasPrice * BigInt(this.feeGasPriceMultiplier * 100)) / 100n;
     const maxValue = this.maxFeeGasPrice ? value * this.maxFeeGasPrice : expectedValue;
     return expectedValue > maxValue ? maxValue : expectedValue;
