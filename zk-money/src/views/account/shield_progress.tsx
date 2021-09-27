@@ -1,13 +1,17 @@
 import React from 'react';
-import { AssetState, ShieldFormValues, ShieldStatus, toBaseUnits } from '../../app';
+import { AssetState, ProviderState, ShieldFormValues, ShieldStatus, toBaseUnits, WalletId } from '../../app';
 import { Theme } from '../../styles';
 import { AssetInfoRow } from './asset_info_row';
 import { ProgressTemplate } from './progress_template';
+import { SigningKeyForm } from './signing_key_form';
 
 interface ShieldProgressProps {
   theme: Theme;
   form: ShieldFormValues;
   assetState: AssetState;
+  providerState?: ProviderState;
+  onChangeWallet(walletId: WalletId): void;
+  onDisconnectWallet(): void;
   onGoBack(): void;
   onSubmit(): void;
   onClose(): void;
@@ -16,13 +20,30 @@ interface ShieldProgressProps {
 export const ShieldProgress: React.FunctionComponent<ShieldProgressProps> = ({
   theme,
   assetState,
+  providerState,
   form,
+  onChangeWallet,
+  onDisconnectWallet,
   onGoBack,
   onSubmit,
   onClose,
 }) => {
-  const { asset, price } = assetState;
   const { amount, speed, fees, recipient, status, submit } = form;
+
+  if (status.value === ShieldStatus.GENERATE_KEY) {
+    return (
+      <SigningKeyForm
+        providerState={providerState}
+        message={submit.message}
+        messageType={submit.messageType}
+        onChangeWallet={onChangeWallet}
+        onDisconnectWallet={onDisconnectWallet}
+        onGoBack={onGoBack}
+      />
+    );
+  }
+
+  const { asset, price } = assetState;
   const fee = fees.value[speed.value].fee;
 
   const items = [

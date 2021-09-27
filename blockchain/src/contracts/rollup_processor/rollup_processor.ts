@@ -49,6 +49,10 @@ export class RollupProcessor {
     return EthAddress.fromString(await this.rollupProcessor.feeDistributor());
   }
 
+  async verifier() {
+    return EthAddress.fromString(await this.rollupProcessor.verifier());
+  }
+
   async setFeeDistributor(addr: EthAddress, options: SendTxOptions = {}) {
     const contract = this.getContractWithSigner(options);
     await contract.setFeeDistributor(addr.toString());

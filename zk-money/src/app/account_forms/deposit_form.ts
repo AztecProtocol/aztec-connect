@@ -160,8 +160,6 @@ export class DepositForm extends EventEmitter implements AccountForm {
     this.refreshValues();
   }
 
-  changeAccountState() {}
-
   changeAssetState(assetState: AssetState) {
     if (this.processing) {
       debug('Cannot change asset state while a form is being processed.');

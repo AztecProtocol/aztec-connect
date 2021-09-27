@@ -9,38 +9,23 @@ const debug = createDebug('zm:account_utils');
 export class AccountUtils {
   constructor(private sdk: WalletSdk, private graphql: GraphQLService, private requiredNetwork: Network) {}
 
-  isUserAdded(userId: AccountId) {
-    try {
-      this.sdk.getUserData(userId);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
   async isAccountSettled(userId: AccountId) {
     const accountTxs = await this.sdk.getAccountTxs(userId);
     return accountTxs.length > 1 || !!accountTxs[0]?.settled;
   }
 
-  async addUser(privateKey: Buffer, nonce: number, noSync = false) {
-    // No need to sync data for user with nonce 0.
-    // But it will start syncing if latest rollup id is greater than lastSynced.
-    return this.sdk.addUser(privateKey, nonce, !nonce || noSync);
-  }
-
-  async safeAddUser(privateKey: Buffer, nonce: number, noSync = false) {
+  async addUser(privateKey: Buffer, nonce: number, noSync = !nonce) {
     const publicKey = this.sdk.derivePublicKey(privateKey);
     const userId = new AccountId(publicKey, nonce);
-    if (!this.isUserAdded(userId)) {
-      await this.addUser(privateKey, nonce, noSync);
+    try {
+      await this.sdk.addUser(privateKey, nonce, noSync);
+      debug(`Added user ${userId}.`);
+    } catch (e) {
+      // Do nothing if user is already added to the sdk.
     }
-
-    const userData = this.sdk.getUserData(userId);
-    return userData.id;
   }
 
-  async safeRemoveUser(userId: AccountId) {
+  async removeUser(userId: AccountId) {
     try {
       await this.sdk.removeUser(userId);
       debug(`Removed user ${userId}.`);
@@ -51,12 +36,61 @@ export class AccountUtils {
     return true;
   }
 
+  async isAliasAvailable(aliasInput: string) {
+    const alias = formatAliasInput(aliasInput);
+    return !!alias && !(await this.graphql.getAliasPublicKey(alias));
+  }
+
+  async getAliasPublicKey(aliasInput: string) {
+    const alias = formatAliasInput(aliasInput);
+    return this.graphql.getAliasPublicKey(alias);
+  }
+
+  async getAliasNonce(aliasInput: string) {
+    const alias = formatAliasInput(aliasInput);
+    return this.graphql.getAliasNonce(alias);
+  }
+
+  async isValidRecipient(aliasInput: string) {
+    if (!isValidAliasInput(aliasInput)) {
+      return false;
+    }
+
+    const alias = formatAliasInput(aliasInput);
+    try {
+      const accountId = await this.sdk.getAccountId(alias);
+      if (accountId.nonce > 0) {
+        return true;
+      }
+    } catch (e) {
+      // getAccountId will throw if alias is not registered.
+    }
+
+    const aliasHash = (this.sdk as any).core.computeAliasHash(alias).toString().replace(/^0x/i, '');
+    const unsettled = await this.graphql.getUnsettledAccountTxs();
+    return unsettled.some(tx => tx.aliasHash === aliasHash);
+  }
+
   async getAccountId(aliasInput: string) {
     if (!isValidAliasInput(aliasInput)) {
       return undefined;
     }
 
     const alias = formatAliasInput(aliasInput);
+
+    // Get the latest nonce from unsettled account txs.
+    // TODO - Find a way to get pending account's public key without having to compute its alias hash or send the alias to server.
+    const aliasHash = (this.sdk as any).core.computeAliasHash(alias).toString().replace(/^0x/i, '');
+    const unsettled = await this.graphql.getUnsettledAccountTxs();
+    const account = unsettled.find(tx => tx.aliasHash === aliasHash);
+    if (account) {
+      const { accountPubKey, nonce } = account;
+      const publicKey = GrumpkinAddress.fromString(accountPubKey);
+      return new AccountId(publicKey, nonce);
+    }
+
+    await this.sdk.awaitSynchronised();
+
     try {
       const accountId = await this.sdk.getAccountId(alias);
       if (accountId.nonce > 0) {
@@ -65,20 +99,11 @@ export class AccountUtils {
     } catch (e) {
       // getAccountId will throw if alias is not registered.
     }
-
-    return this.getPendingAccountId(alias);
   }
 
-  // TODO - Find a way to get pending account's public key without having to compute its alias hash or send the alias to server.
-  private async getPendingAccountId(alias: string) {
-    const aliasHash = (this.sdk as any).core.computeAliasHash(alias).toString().replace(/^0x/i, '');
-    const unsettled = await this.graphql.getUnsettledAccountTxs();
-    const account = unsettled.find(tx => tx.aliasHash === aliasHash);
-    if (!account) return;
-
-    const { accountPubKey, nonce } = account;
-    const publicKey = GrumpkinAddress.fromString(accountPubKey);
-    return new AccountId(publicKey, nonce);
+  async getAccountNonce(publicKey: GrumpkinAddress) {
+    // Falafel will override [alias+oldPubKey] with [alias+newPubKey] so the nonce for oldPubKey will always be 0.
+    return this.graphql.getAccountNonce(publicKey);
   }
 
   async getPendingDeposit(assetId: AssetId, inputOwner: EthAddress) {

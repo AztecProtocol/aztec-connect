@@ -9,7 +9,7 @@ import { TxDao } from '../entity/tx';
 const txTypeToProofId = (txType: TxType) => (txType < TxType.WITHDRAW_TO_CONTRACT ? txType + 1 : txType);
 
 export const mockTx = (txFeeAssetId: AssetId, txType: TxType, txFee: bigint) =>
-  (({
+  ({
     txType,
     proofData: Buffer.concat([
       numToUInt32BE(txTypeToProofId(txType), 32),
@@ -18,4 +18,4 @@ export const mockTx = (txFeeAssetId: AssetId, txType: TxType, txFee: bigint) =>
       numToUInt32BE(txFeeAssetId, 32),
       randomBytes((ProofData.NUM_PUBLIC_INPUTS - 11) * 32),
     ]),
-  } as any) as TxDao);
+  } as any as TxDao);

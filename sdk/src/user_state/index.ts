@@ -63,6 +63,7 @@ export class UserState extends EventEmitter {
    */
   public async init() {
     this.user = (await this.db.getUser(this.user.id))!;
+    await this.resetData();
     await this.refreshNotePicker();
   }
 
@@ -228,6 +229,16 @@ export class UserState extends EventEmitter {
     this.emit(UserStateEvent.UPDATED_USER_STATE, this.user.id);
   }
 
+  private async resetData() {
+    const pendingUserTxIds = await this.db.getUnsettledUserTxs(this.user.id);
+    const pendingTxIds = await this.rollupProvider.getPendingTxs();
+    for (const userTxId of pendingUserTxIds) {
+      if (!pendingTxIds.some(txId => txId.equals(userTxId))) {
+        await this.db.removeUserTx(userTxId, this.user.id);
+      }
+    }
+  }
+
   private async handleAccountTx(
     proof: InnerProofData,
     offchainTxData: OffchainAccountData,
@@ -373,15 +384,36 @@ export class UserState extends EventEmitter {
     const { bridgeId, depositValue, outputValueA, outputValueB } = (await this.db.getDefiTx(txHash))!;
     // When generating output notes, set creatorPubKey to 0 (it's a DeFi txn, recipient of note is same as creator of claim note)
     if (!outputValueA && !outputValueB) {
-      const treeNote = new TreeNote(owner.publicKey, depositValue, bridgeId.inputAssetId, owner.nonce, secret, Buffer.alloc(32));
+      const treeNote = new TreeNote(
+        owner.publicKey,
+        depositValue,
+        bridgeId.inputAssetId,
+        owner.nonce,
+        secret,
+        Buffer.alloc(32),
+      );
       await this.processNewNote(noteStartIndex, noteCommitment1, treeNote);
     }
     if (outputValueA) {
-      const treeNote = new TreeNote(owner.publicKey, outputValueA, bridgeId.outputAssetIdA, owner.nonce, secret, Buffer.alloc(32));
+      const treeNote = new TreeNote(
+        owner.publicKey,
+        outputValueA,
+        bridgeId.outputAssetIdA,
+        owner.nonce,
+        secret,
+        Buffer.alloc(32),
+      );
       await this.processNewNote(noteStartIndex, noteCommitment1, treeNote);
     }
     if (outputValueB) {
-      const treeNote = new TreeNote(owner.publicKey, outputValueB, bridgeId.outputAssetIdB, owner.nonce, secret, Buffer.alloc(32));
+      const treeNote = new TreeNote(
+        owner.publicKey,
+        outputValueB,
+        bridgeId.outputAssetIdB,
+        owner.nonce,
+        secret,
+        Buffer.alloc(32),
+      );
       await this.processNewNote(noteStartIndex + 1, noteCommitment2, treeNote);
     }
 

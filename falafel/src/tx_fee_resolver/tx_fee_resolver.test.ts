@@ -2,9 +2,8 @@ import { AssetId } from '@aztec/barretenberg/asset';
 import { Blockchain, PriceFeed, TxType } from '@aztec/barretenberg/blockchain';
 import { SettlementTime } from '@aztec/barretenberg/rollup_provider';
 import { EthPriceFeed } from '@aztec/blockchain';
-import { TxFeeResolver } from '.';
-import { RollupDb } from '../rollup_db';
 import { mockTx } from './fixtures';
+import { TxFeeResolver } from './index';
 
 jest.useFakeTimers();
 
@@ -20,11 +19,12 @@ describe('tx fee resolver', () => {
   const publishInterval = 3600;
   const surplusRatios = [1, 0.9, 0.5, 0];
   const feeFreeAssets: AssetId[] = [];
+  const freeTxTypes: TxType[] = [];
+  const numSignificantFigures = 0;
   let dateSpy: jest.SpyInstance<number>;
   let gasPriceFeed: Mockify<PriceFeed>;
   let tokenPriceFeed: Mockify<PriceFeed>;
   let blockchain: Mockify<Blockchain>;
-  let rollupDb: Mockify<RollupDb>;
   let txFeeResolver!: TxFeeResolver;
 
   beforeEach(() => {
@@ -72,13 +72,8 @@ describe('tx fee resolver', () => {
       }),
     } as any;
 
-    rollupDb = {
-      getRollups: jest.fn().mockResolvedValue([]),
-    } as any;
-
     txFeeResolver = new TxFeeResolver(
       blockchain,
-      rollupDb,
       baseTxGas,
       maxFeeGasPrice,
       feeGasPriceMultiplier,
@@ -86,6 +81,8 @@ describe('tx fee resolver', () => {
       publishInterval,
       surplusRatios,
       feeFreeAssets,
+      freeTxTypes,
+      numSignificantFigures,
     );
   });
 
@@ -99,50 +96,50 @@ describe('tx fee resolver', () => {
     await txFeeResolver.start();
     expect(txFeeResolver.getFeeQuotes(AssetId.ETH)).toEqual({
       feeConstants: [
-        625000000000000n,
-        0n,
-        375000000000000n,
-        3750000000000000n,
-        0n,
+        2625000000000000n,
+        2000000000000000n,
+        2375000000000000n,
+        5750000000000000n,
+        2000000000000000n,
+        6500000000000000n,
         4500000000000000n,
-        2500000000000000n,
       ],
       baseFeeQuotes: [
         {
-          fee: 2000000000000000n,
+          fee: 0n,
           time: 3600,
         },
         {
-          fee: 4000000000000000n,
+          fee: 2000000000000000n,
           time: 3600 * 0.9,
         },
         {
-          fee: 12000000000000000n,
+          fee: 10000000000000000n,
           time: 3600 * 0.5,
         },
         {
-          fee: 22000000000000000n,
+          fee: 20000000000000000n,
           time: 5 * 60,
         },
       ],
     });
     expect(txFeeResolver.getFeeQuotes(AssetId.DAI)).toEqual({
-      feeConstants: [6250n, 0n, 4500n, 45000n, 0n, 0n, 0n],
+      feeConstants: [26250n, 20000n, 24500n, 65000n, 20000n, 20000n, 20000n],
       baseFeeQuotes: [
         {
-          fee: 20000n,
+          fee: 0n,
           time: 3600,
         },
         {
-          fee: 40000n,
+          fee: 20000n,
           time: 3600 * 0.9,
         },
         {
-          fee: 120000n,
+          fee: 100000n,
           time: 3600 * 0.5,
         },
         {
-          fee: 220000n,
+          fee: 200000n,
           time: 5 * 60,
         },
       ],
@@ -159,14 +156,24 @@ describe('tx fee resolver', () => {
 
   it('return correct surplus ratio', async () => {
     await txFeeResolver.start();
-    const minEthFee = txFeeResolver.getMinTxFee(AssetId.ETH, TxType.DEPOSIT);
-    const baseEthFee = txFeeResolver.getFeeQuotes(AssetId.ETH).baseFeeQuotes[SettlementTime.SLOW].fee;
-    const minFee = txFeeResolver.getMinTxFee(AssetId.DAI, TxType.DEPOSIT);
-    const baseFee = txFeeResolver.getFeeQuotes(AssetId.DAI).baseFeeQuotes[SettlementTime.SLOW].fee;
+    const ethQuotes = txFeeResolver.getFeeQuotes(AssetId.ETH);
+    const daiQuotes = txFeeResolver.getFeeQuotes(AssetId.DAI);
     const txs = [
-      mockTx(AssetId.DAI, TxType.DEPOSIT, minFee + baseFee * 2n),
-      mockTx(AssetId.ETH, TxType.DEPOSIT, minEthFee + baseEthFee * 5n),
-      mockTx(AssetId.DAI, TxType.DEPOSIT, minFee - baseFee),
+      mockTx(
+        AssetId.DAI,
+        TxType.DEPOSIT,
+        daiQuotes.feeConstants[TxType.DEPOSIT] + daiQuotes.baseFeeQuotes[SettlementTime.SLOW].fee,
+      ),
+      mockTx(
+        AssetId.ETH,
+        TxType.DEPOSIT,
+        ethQuotes.feeConstants[TxType.DEPOSIT] + ethQuotes.baseFeeQuotes[SettlementTime.AVERAGE].fee,
+      ),
+      mockTx(
+        AssetId.DAI,
+        TxType.DEPOSIT,
+        daiQuotes.feeConstants[TxType.DEPOSIT] + daiQuotes.baseFeeQuotes[SettlementTime.FAST].fee,
+      ),
     ];
     expect(txFeeResolver.computeSurplusRatio(txs)).toBe(0.4);
   });

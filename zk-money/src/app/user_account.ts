@@ -2,14 +2,23 @@ import { AccountId, Note, SdkEvent, TxType, WalletSdk } from '@aztec/sdk';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { debounce, DebouncedFunc, uniqWith } from 'lodash';
-import { AccountForm, AccountFormEvent, getMergeOptions, MergeForm, SendForm, ShieldForm } from './account_forms';
+import {
+  AccountForm,
+  AccountFormEvent,
+  getMergeOptions,
+  MergeForm,
+  MigrateForm,
+  SendForm,
+  ShieldForm,
+} from './account_forms';
 import { AccountState, AssetState, initialAssetState } from './account_state';
 import { AccountAction, parseAccountTx, parseJoinSplitTx } from './account_txs';
 import { AccountUtils } from './account_utils';
 import { AppAssetId, assets } from './assets';
-import { Database } from './database';
+import { Database, DatabaseEvent } from './database';
 import { EthAccount, EthAccountEvent } from './eth_account';
 import { Form } from './form';
+import { KeyVault } from './key_vault';
 import { Network } from './networks';
 import { PriceFeedService } from './price_feed_service';
 import { Provider, ProviderEvent } from './provider';
@@ -54,14 +63,15 @@ export class UserAccount extends EventEmitter {
 
   constructor(
     readonly userId: AccountId,
-    alias: string,
+    readonly alias: string,
     private activeAsset: AppAssetId,
-    private sdk: WalletSdk,
-    private coreProvider: Provider,
-    private db: Database,
-    private rollup: RollupService,
-    private priceFeedService: PriceFeedService,
-    private accountUtils: AccountUtils,
+    private readonly keyVault: KeyVault,
+    private readonly sdk: WalletSdk,
+    private readonly coreProvider: Provider,
+    private readonly db: Database,
+    private readonly rollup: RollupService,
+    private readonly priceFeedService: PriceFeedService,
+    private readonly accountUtils: AccountUtils,
     private readonly requiredNetwork: Network,
     private readonly explorerUrl: string,
     private readonly txAmountLimits: bigint[],
@@ -71,6 +81,7 @@ export class UserAccount extends EventEmitter {
     super();
     this.accountState = {
       userId,
+      version: keyVault.version,
       alias,
       accountTxs: [],
       settled: false,
@@ -126,6 +137,7 @@ export class UserAccount extends EventEmitter {
 
   async init(provider?: Provider) {
     this.sdk.on(SdkEvent.UPDATED_USER_STATE, this.handleUserStateChange);
+    this.db.on(DatabaseEvent.UPDATED_MIGRATING_TX, this.handleMigratingTxChange);
     this.priceFeedService.subscribe(this.activeAsset, this.onPriceChange);
     await this.changeProvider(provider);
     await this.refreshAccountState();
@@ -142,6 +154,7 @@ export class UserAccount extends EventEmitter {
     this.provider?.off(ProviderEvent.UPDATED_PROVIDER_STATE, this.onProviderStateChange);
     this.ethAccount?.destroy();
     this.sdk.off(SdkEvent.UPDATED_USER_STATE, this.handleUserStateChange);
+    this.db.off(DatabaseEvent.UPDATED_MIGRATING_TX, this.handleMigratingTxChange);
     this.priceFeedService.unsubscribe(this.activeAsset, this.onPriceChange);
     this.debounceRefreshAccountState.cancel();
     this.debounceRefreshAssetState.cancel();
@@ -247,21 +260,27 @@ export class UserAccount extends EventEmitter {
         return new SendForm(
           this.accountState,
           this.assetState,
+          this.provider,
+          this.keyVault,
           this.sdk,
           this.rollup,
           this.accountUtils,
           this.txAmountLimits[this.assetState.asset.id],
         );
       case AccountAction.MERGE:
-        return new MergeForm(this.accountState, this.assetState, this.sdk, this.rollup);
+        return new MergeForm(this.accountState, this.assetState, this.provider, this.keyVault, this.sdk, this.rollup);
+      case AccountAction.MIGRATE:
+        return new MigrateForm(this.accountState, this.provider, this.sdk, this.db, this.accountUtils);
       default:
         return new ShieldForm(
           this.accountState,
           this.assetState,
+          this.provider,
+          this.ethAccount,
+          this.keyVault,
           this.sdk,
           this.db,
           this.coreProvider,
-          this.ethAccount,
           this.rollup,
           this.accountUtils,
           this.requiredNetwork,
@@ -278,6 +297,15 @@ export class UserAccount extends EventEmitter {
 
     this.debounceRefreshAccountState();
     this.debounceRefreshAssetState();
+  };
+
+  private handleMigratingTxChange = async (assetId?: AppAssetId) => {
+    if (assetId !== this.activeAsset) {
+      return;
+    }
+
+    const joinSplitTxs = await this.getJoinSplitTxs(this.activeAsset, this.userId);
+    this.updateAssetState({ joinSplitTxs });
   };
 
   private refreshAccountState = async () => {
@@ -303,30 +331,14 @@ export class UserAccount extends EventEmitter {
     const balance = this.sdk.getBalance(asset.id, this.userId);
     const spendableNotes = await this.sdk.getSpendableNotes(asset.id, this.userId);
     const spendableBalance = sumNotes(spendableNotes.slice(-2));
-    const userJoinSplitTxs = await this.getJoinSplitTxs(asset.id, this.userId);
-    const prevUserId = new AccountId(this.userId.publicKey, this.userId.nonce - 1);
-    if (this.accountUtils.isUserAdded(prevUserId)) {
-      const migratingTxs = (await this.db.getMigratingTxs(this.userId)).filter(tx => tx.assetId === asset.id);
-      const prevTxs = await this.getJoinSplitTxs(asset.id, prevUserId);
-      if (prevTxs.some(tx => !tx.settled)) {
-        userJoinSplitTxs.push(...migratingTxs.concat(prevTxs));
-      } else if (this.accountState.settled && !this.activeAction) {
-        debug(`Remove user ${prevUserId}`);
-        await this.db.removeMigratingTxs(this.userId);
-        await this.accountUtils.safeRemoveUser(prevUserId);
-      }
-    }
-
-    const minFee = this.rollup.getMinFee(asset.id, TxType.TRANSFER);
+    const joinSplitTxs = await this.getJoinSplitTxs(asset.id, this.userId);
 
     this.updateAssetState({
       asset,
       balance,
       spendableNotes,
       spendableBalance,
-      joinSplitTxs: uniqWith(userJoinSplitTxs, (tx0, tx1) => tx0.txHash.equals(tx1.txHash))
-        .sort((a, b) => (!a.settled && b.settled ? -1 : 0))
-        .map(tx => parseJoinSplitTx(tx, this.explorerUrl, minFee)),
+      joinSplitTxs,
       price: this.priceFeedService.getPrice(asset.id),
       txAmountLimit: this.txAmountLimits[asset.id],
       withdrawSafeAmounts: this.withdrawSafeAmounts[asset.id],
@@ -377,7 +389,6 @@ export class UserAccount extends EventEmitter {
 
   private updateAccountState(accountState: Partial<AccountState>) {
     this.accountState = { ...this.accountState, ...accountState };
-    this.activeAction?.form.changeAccountState(this.accountState);
     this.emit(UserAccountEvent.UPDATED_ACCOUNT_STATE, this.accountState);
   }
 
@@ -399,9 +410,19 @@ export class UserAccount extends EventEmitter {
   }
 
   private async getJoinSplitTxs(assetId: AppAssetId, userId: AccountId) {
-    return this.accountUtils.isUserAdded(userId)
-      ? (await this.sdk.getJoinSplitTxs(userId)).filter(tx => tx.assetId === assetId)
-      : [];
+    const userJoinSplitTxs = (await this.sdk.getJoinSplitTxs(userId)).filter(tx => tx.assetId === assetId);
+    const migratingTxs = (await this.db.getMigratingTxs(this.userId)).filter(tx => tx.assetId === assetId);
+    // TODO - deal with orphaned tx
+    for (const tx of migratingTxs) {
+      if (userJoinSplitTxs.some(uTx => uTx.txHash.equals(tx.txHash))) {
+        await this.db.removeMigratingTx(tx.txHash);
+      }
+    }
+
+    const minFee = this.rollup.getMinFee(assetId, TxType.TRANSFER);
+    return uniqWith([userJoinSplitTxs, migratingTxs].flat(), (tx0, tx1) => tx0.txHash.equals(tx1.txHash))
+      .sort((a, b) => (!a.settled && b.settled ? -1 : 0))
+      .map(tx => parseJoinSplitTx(tx, this.explorerUrl, minFee));
   }
 
   private isAssetEnabled(assetId: AppAssetId) {

@@ -30,6 +30,7 @@ interface ConfVars {
   baseTxGas: number;
   maxFeeGasPrice: bigint;
   feeGasPriceMultiplier: number;
+  maxProviderGasPrice: bigint;
   providerGasPriceMultiplier: number;
   reimbursementFeeLimit: bigint;
   maxUnsettledTxs: number;
@@ -59,6 +60,7 @@ function getConfVars(): ConfVars {
     MAX_FEE_GAS_PRICE,
     REIMBURSEMENT_FEE_LIMIT,
     FEE_GAS_PRICE_MULTIPLIER,
+    MAX_PROVIDER_GAS_PRICE,
     PROVIDER_GAS_PRICE_MULTIPLIER,
     MAX_UNSETTLED_TXS,
     TYPEORM_LOGGING,
@@ -88,6 +90,7 @@ function getConfVars(): ConfVars {
     baseTxGas: +(BASE_TX_GAS || 0),
     maxFeeGasPrice: BigInt(MAX_FEE_GAS_PRICE || 0),
     feeGasPriceMultiplier: +(FEE_GAS_PRICE_MULTIPLIER || 1),
+    maxProviderGasPrice: BigInt(MAX_PROVIDER_GAS_PRICE || 0),
     providerGasPriceMultiplier: +(PROVIDER_GAS_PRICE_MULTIPLIER || 1),
     reimbursementFeeLimit: REIMBURSEMENT_FEE_LIMIT ? BigInt(REIMBURSEMENT_FEE_LIMIT) : BigInt(10) ** BigInt(30),
     maxUnsettledTxs: +(MAX_UNSETTLED_TXS || 0),
@@ -157,6 +160,7 @@ async function loadConfVars(path: string) {
     // https://github.com/jprichardson/node-fs-extra/issues/846
     reimbursementFeeLimit: state.reimbursementFeeLimit.toString(),
     maxFeeGasPrice: state.maxFeeGasPrice.toString(),
+    maxProviderGasPrice: state.maxProviderGasPrice.toString(),
   });
 
   return state;

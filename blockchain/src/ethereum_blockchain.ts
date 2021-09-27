@@ -95,6 +95,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       chainId,
       rollupContractAddress: this.contracts.getRollupContractAddress(),
       feeDistributorContractAddress: this.contracts.getFeeDistributorContractAddress(),
+      verifierContractAddress: await this.contracts.getVerifierContractAddress(),
       assets,
     };
     this.log(`Ethereum blockchain initialized with assets: ${this.status.assets.map(a => a.symbol)}`);
@@ -289,6 +290,10 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
    */
   public validateSignature(publicOwner: EthAddress, signature: Buffer, signingData: Buffer) {
     return validateSignature(publicOwner, signature, signingData);
+  }
+
+  public async signPersonalMessage(message: Buffer, address: EthAddress) {
+    return this.contracts.signPersonalMessage(message, address);
   }
 
   public async signMessage(message: Buffer, address: EthAddress) {

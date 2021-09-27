@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import { AccountState, WorldState } from '../../app';
+import { AccountState, AccountVersion, WorldState } from '../../app';
 import closeIcon from '../../images/close.svg';
 import personIcon from '../../images/snowman.svg';
 import { borderRadiuses, breakpoints, colours, fontSizes, spacings, Theme, themeColours } from '../../styles';
@@ -136,6 +136,7 @@ const Divider = styled.div`
 const DropdownTitle = styled.div`
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   padding: ${spacings.s} 0;
   border-bottom: 1px solid ${themeColours[Theme.WHITE].border};
 
@@ -149,6 +150,7 @@ const DropdownTitle = styled.div`
 
   @media (max-width: ${breakpoints.s}) {
     flex-wrap: wrap;
+    justify-content: flex-start;
 
     ${SyncStatusRoot} {
       order: 3;
@@ -165,13 +167,23 @@ const DropdownTitle = styled.div`
   }
 `;
 
+const DropdownItemRoot = styled.div`
+  display: flex;
+  flex-direction: column;
+  padding: ${spacings.xs} 0;
+  align-items: flex-end;
+
+  @media (max-width: ${breakpoints.s}) {
+    align-items: flex-start;
+  }
+`;
+
 const DropdownItem = styled.div`
   display: flex;
-  padding: ${spacings.s} 0;
+  padding: ${spacings.xs} 0;
   font-size: ${fontSizes.xs};
 
   @media (max-width: ${breakpoints.s}) {
-    padding: ${spacings.s} 0;
     font-size: ${fontSizes.s};
   }
 `;
@@ -179,10 +191,16 @@ const DropdownItem = styled.div`
 interface UserAccountProps {
   account: AccountState;
   worldState: WorldState;
-  onLogout: () => void;
+  onMigrateBalance(): void;
+  onLogout(): void;
 }
 
-export const UserAccount: React.FunctionComponent<UserAccountProps> = ({ account, worldState, onLogout }) => {
+export const UserAccount: React.FunctionComponent<UserAccountProps> = ({
+  account,
+  worldState,
+  onMigrateBalance,
+  onLogout,
+}) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const isSynced = worldState.accountSyncedToRollup === worldState.latestRollup;
 
@@ -212,9 +230,25 @@ export const UserAccount: React.FunctionComponent<UserAccountProps> = ({ account
               </UserNameTitleRoot>
               <Divider />
             </DropdownTitle>
-            <DropdownItem>
-              <TextLink text="Sign out" onClick={onLogout} color="indigo" weight="semibold" nowrap />
-            </DropdownItem>
+            <DropdownItemRoot>
+              {account.version === AccountVersion.V1 && (
+                <DropdownItem>
+                  <TextLink
+                    text="Migrate balance"
+                    onClick={() => {
+                      setShowDropdown(false);
+                      onMigrateBalance();
+                    }}
+                    color="indigo"
+                    weight="semibold"
+                    nowrap
+                  />
+                </DropdownItem>
+              )}
+              <DropdownItem>
+                <TextLink text="Sign out" onClick={onLogout} color="indigo" weight="semibold" nowrap />
+              </DropdownItem>
+            </DropdownItemRoot>
           </Dropdown>
         </>
       )}

@@ -1,5 +1,6 @@
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
-import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
+import { TxType } from '@aztec/barretenberg/blockchain';
+import { ProofData } from '@aztec/barretenberg/client_proofs';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { RollupDao } from '../entity/rollup';
@@ -9,12 +10,10 @@ import { SyncRollupDb } from './sync_rollup_db';
 
 export class CachedRollupDb extends SyncRollupDb {
   private pendingTxCount!: number;
-  private unsettledTxCount!: number;
   private totalTxCount!: number;
   private rollups: RollupDao[] = [];
   private settledRollups: RollupDao[] = [];
-  private unsettledJoinSplitTxs!: TxDao[];
-  private unsettledAccountTxs!: TxDao[];
+  private unsettledTxs!: TxDao[];
   private settledNullifiers = new Set<bigint>();
   private unsettledNullifiers: Buffer[] = [];
 
@@ -32,13 +31,11 @@ export class CachedRollupDb extends SyncRollupDb {
     await this.refresh();
   }
 
-  public async refresh() {
+  private async refresh() {
     const start = new Date().getTime();
     this.totalTxCount = await super.getTotalTxCount();
     this.pendingTxCount = await super.getPendingTxCount();
-    this.unsettledTxCount = await super.getUnsettledTxCount();
-    this.unsettledJoinSplitTxs = await super.getUnsettledJoinSplitTxs();
-    this.unsettledAccountTxs = await super.getUnsettledAccountTxs();
+    this.unsettledTxs = await super.getUnsettledTxs();
     this.unsettledNullifiers = await super.getUnsettledNullifiers();
     console.log(`Refreshed db cache in ${new Date().getTime() - start}ms.`);
   }
@@ -61,15 +58,19 @@ export class CachedRollupDb extends SyncRollupDb {
   }
 
   public async getUnsettledTxCount() {
-    return this.unsettledTxCount;
+    return this.unsettledTxs.length;
+  }
+
+  public async getUnsettledTxs() {
+    return this.unsettledTxs;
   }
 
   public async getUnsettledJoinSplitTxs() {
-    return this.unsettledJoinSplitTxs;
+    return this.unsettledTxs.filter(tx => tx.txType < TxType.ACCOUNT);
   }
 
   public async getUnsettledAccountTxs() {
-    return this.unsettledAccountTxs;
+    return this.unsettledTxs.filter(tx => tx.txType === TxType.ACCOUNT);
   }
 
   public async getUnsettledNullifiers() {
@@ -105,24 +106,12 @@ export class CachedRollupDb extends SyncRollupDb {
 
   public async addTx(txDao: TxDao) {
     await super.addTx(txDao);
-    const { proofId, nullifier1, nullifier2 } = new ProofData(txDao.proofData);
 
+    const { nullifier1, nullifier2 } = new ProofData(txDao.proofData);
     [nullifier1, nullifier2].filter(n => !!toBigIntBE(n)).forEach(n => this.unsettledNullifiers.push(n));
 
-    switch (proofId) {
-      case ProofId.DEPOSIT:
-      case ProofId.WITHDRAW:
-      case ProofId.SEND:
-        this.unsettledJoinSplitTxs.push(txDao);
-        break;
-      case ProofId.ACCOUNT: {
-        this.unsettledAccountTxs.push(txDao);
-        break;
-      }
-    }
-
+    this.unsettledTxs.push(txDao);
     this.pendingTxCount++;
-    this.unsettledTxCount++;
     this.totalTxCount++;
   }
 

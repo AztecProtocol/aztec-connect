@@ -81,12 +81,19 @@ const PopupContent = styled(PaddedBlock)`
   width: 100%;
 `;
 
+const FootnoteRoot = styled.div`
+  display: flex;
+  justify-content: center;
+  padding-top: ${spacings.s};
+`;
+
 interface LoginTemplateProps {
   totalSteps: number;
   currentStep: number;
   title: string | React.ReactNode;
   description: string | React.ReactNode;
   children: React.ReactNode;
+  footnote?: React.ReactNode;
   onRestart?(): void;
 }
 
@@ -96,29 +103,35 @@ export const LoginTemplate: React.FunctionComponent<LoginTemplateProps> = ({
   title,
   description,
   children,
+  footnote,
   onRestart,
 }) => (
-  <Root>
-    <StepsRoot size="m">
-      {!!onRestart && (
-        <BackButtonHead onClick={onRestart} title="Change wallet">
-          <BackIcon src={backIcon} />
-        </BackButtonHead>
+  <>
+    <Root>
+      <StepsRoot size="m">
+        {!!onRestart && (
+          <BackButtonHead onClick={onRestart} title="Change wallet">
+            <BackIcon src={backIcon} />
+          </BackButtonHead>
+        )}
+        <Steps totalSteps={totalSteps} currentStep={currentStep} />
+      </StepsRoot>
+      <TitleRoot>
+        <Text size="xl">{title}</Text>
+      </TitleRoot>
+      {!!description && (
+        <Description>
+          <Text size="s">{description}</Text>
+        </Description>
       )}
-      <Steps totalSteps={totalSteps} currentStep={currentStep} />
-    </StepsRoot>
-    <TitleRoot>
-      <Text size="xl">{title}</Text>
-    </TitleRoot>
-    <Description>
-      <Text size="s">{description}</Text>
-    </Description>
-    <PopupContent size="m">{children}</PopupContent>
-    {!!onRestart && (
-      <BackButtonFoot onClick={onRestart}>
-        <BackIcon src={backIcon} />
-        <BackText text="Change wallet" size="s" />
-      </BackButtonFoot>
-    )}
-  </Root>
+      <PopupContent size="m">{children}</PopupContent>
+      {!!onRestart && (
+        <BackButtonFoot onClick={onRestart}>
+          <BackIcon src={backIcon} />
+          <BackText text="Change wallet" size="s" />
+        </BackButtonFoot>
+      )}
+    </Root>
+    {!!footnote && <FootnoteRoot>{footnote}</FootnoteRoot>}
+  </>
 );

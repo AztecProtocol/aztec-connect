@@ -21,10 +21,14 @@ import {
   ValueAvailability,
   withError,
   withMessage,
+  withWarning,
 } from '../form';
+import { createSigningKeys, KeyVault } from '../key_vault';
+import { Provider, ProviderEvent } from '../provider';
 import { RollupService, RollupServiceEvent, TxFee } from '../rollup_service';
 import { fromBaseUnits, max, min, toBaseUnits } from '../units';
 import { AccountForm, AccountFormEvent } from './account_form';
+import { TransactionGraph } from './transaction_graph';
 
 const debug = createDebug('zm:send_form');
 
@@ -34,6 +38,7 @@ export enum SendStatus {
   NADA,
   CONFIRM,
   VALIDATE,
+  GENERATE_KEY,
   CREATE_PROOF,
   SEND_PROOF,
   DONE,
@@ -47,7 +52,7 @@ interface TxSpeedInput extends IntValue {
   value: SettlementTime;
 }
 
-interface RecipientInput extends FormValue {
+export interface RecipientInput extends FormValue {
   value: {
     input: string;
     txType: TxType;
@@ -56,6 +61,7 @@ interface RecipientInput extends FormValue {
 }
 
 export interface SendFormValues {
+  selectedAmount: BigIntValue;
   amount: StrInput;
   maxAmount: BigIntValue;
   fees: TxFeesValue;
@@ -69,6 +75,9 @@ export interface SendFormValues {
 }
 
 const initialSendFormValues = {
+  selectedAmount: {
+    value: 0n,
+  },
   amount: {
     value: '',
     required: true,
@@ -109,6 +118,9 @@ export class SendForm extends EventEmitter implements AccountForm {
   private values: SendFormValues = initialSendFormValues;
   private formStatus = FormStatus.ACTIVE;
   private proofOutput?: JoinSplitProofOutput;
+  private destroyed = false;
+
+  private transactionGraph!: TransactionGraph;
 
   private debounceUpdateRecipientStatus: DebouncedFunc<() => void>;
   private debounceUpdateRecipientTxType: DebouncedFunc<() => void>;
@@ -119,9 +131,11 @@ export class SendForm extends EventEmitter implements AccountForm {
   constructor(
     accountState: AccountState,
     private assetState: AssetState,
-    private sdk: WalletSdk,
-    private rollup: RollupService,
-    private accountUtils: AccountUtils,
+    private provider: Provider | undefined,
+    private readonly keyVault: KeyVault,
+    private readonly sdk: WalletSdk,
+    private readonly rollup: RollupService,
+    private readonly accountUtils: AccountUtils,
     private readonly txAmountLimit: bigint,
   ) {
     super();
@@ -130,8 +144,9 @@ export class SendForm extends EventEmitter implements AccountForm {
     this.asset = assetState.asset;
     this.debounceUpdateRecipientStatus = debounce(this.updateRecipientStatus, this.aliasDebounceWait);
     this.debounceUpdateRecipientTxType = debounce(this.updateRecipientTxType, this.txTypeDebounceWait);
-    this.values.fees = { value: this.rollup.getTxFees(this.asset.id, TxType.TRANSFER) };
-    this.refreshValues();
+    this.refreshValues({
+      fees: { value: this.rollup.getTxFees(this.asset.id, TxType.TRANSFER) },
+    });
   }
 
   get locked() {
@@ -155,18 +170,20 @@ export class SendForm extends EventEmitter implements AccountForm {
       throw new Error('Cannot destroy a form while it is being processed.');
     }
 
+    this.destroyed = true;
     this.removeAllListeners();
     this.rollup.off(RollupServiceEvent.UPDATED_STATUS, this.onRollupStatusChange);
+    this.provider?.off(ProviderEvent.UPDATED_PROVIDER_STATE, this.onProviderStateChange);
     this.debounceUpdateRecipientStatus.cancel();
     this.debounceUpdateRecipientTxType.cancel();
   }
 
   async init() {
     this.rollup.on(RollupServiceEvent.UPDATED_STATUS, this.onRollupStatusChange);
+    this.provider?.on(ProviderEvent.UPDATED_PROVIDER_STATE, this.onProviderStateChange);
     this.refreshValues();
+    await this.initTransactionGraph();
   }
-
-  changeAccountState() {}
 
   changeAssetState(assetState: AssetState) {
     if (this.processing) {
@@ -182,7 +199,17 @@ export class SendForm extends EventEmitter implements AccountForm {
     this.refreshValues();
   }
 
-  changeProvider() {}
+  changeProvider(provider?: Provider) {
+    if (this.processing) {
+      debug('Cannot change provider while a form is being processed.');
+      return;
+    }
+
+    this.provider?.off(ProviderEvent.UPDATED_PROVIDER_STATE, this.onProviderStateChange);
+    this.provider = provider;
+    this.provider?.on(ProviderEvent.UPDATED_PROVIDER_STATE, this.onProviderStateChange);
+    this.onProviderStateChange();
+  }
 
   changeEthAccount() {}
 
@@ -195,6 +222,7 @@ export class SendForm extends EventEmitter implements AccountForm {
     const changes = { ...newValues };
     if (changes.amount) {
       changes.amount = formatBigIntInput(changes.amount);
+      changes.selectedAmount = { value: 0n };
     }
     if (changes.recipient) {
       this.debounceUpdateRecipientStatus.cancel();
@@ -205,6 +233,13 @@ export class SendForm extends EventEmitter implements AccountForm {
       let txType = this.values.recipient.value.txType;
       if (isAddress(recipient)) {
         valid = ValueAvailability.VALID;
+        const prevRecipient = this.values.recipient.value.input;
+        if (!isAddress(prevRecipient)) {
+          // Only reset selectedAmount when previous recipient is not an address.
+          // In case the user has changed it to other value.
+          const { withdrawSafeAmounts } = this.assetState;
+          changes.selectedAmount = { value: withdrawSafeAmounts[0] };
+        }
       } else if (isSameAlias(recipient, this.alias) || !isValidAliasInput(recipient)) {
         valid = ValueAvailability.INVALID;
       } else {
@@ -259,8 +294,7 @@ export class SendForm extends EventEmitter implements AccountForm {
       return;
     }
 
-    const status = Math.max(this.values.status.value, SendStatus.VALIDATE);
-    this.updateFormValues({ status: { value: status }, submit: clearMessage({ value: true }) });
+    this.updateFormValues({ status: { value: SendStatus.VALIDATE }, submit: clearMessage({ value: true }) });
 
     const validated = await this.validateValues();
     if (!isValidForm(validated)) {
@@ -268,24 +302,8 @@ export class SendForm extends EventEmitter implements AccountForm {
       return;
     }
 
-    this.updateFormStatus(FormStatus.PROCESSING);
-
-    try {
-      const recipient = this.values.recipient.value.input;
-      if (isAddress(recipient)) {
-        await this.publicSend(EthAddress.fromString(recipient.trim()));
-      } else {
-        await this.privateSend(formatAliasInput(recipient));
-      }
-      this.updateFormValues({ submit: { value: false } });
-    } catch (e) {
-      debug(e);
-      this.updateFormValues({
-        submit: withError({ value: false }, `Something went wrong. This shouldn't happen.`),
-      });
-    }
-
-    this.updateFormStatus(FormStatus.LOCKED);
+    this.updateFormValues({ status: { value: SendStatus.GENERATE_KEY } });
+    await this.requestSigningKey();
   }
 
   private refreshValues(changes: Partial<SendFormValues> = {}) {
@@ -295,11 +313,17 @@ export class SendForm extends EventEmitter implements AccountForm {
     const fee = fees[speed].fee;
     const { spendableBalance } = this.assetState;
     const maxAmount = min(max(0n, spendableBalance - fee), this.txAmountLimit);
+    const selectedAmount = (changes.selectedAmount || this.values.selectedAmount).value;
+    const amountInput = changes.amount || this.values.amount;
+    const amount = selectedAmount
+      ? fromBaseUnits(max(0n, selectedAmount - fee), this.asset.decimals)
+      : amountInput.value;
 
     const toUpdate = this.validateChanges({
       maxAmount: { value: maxAmount },
       fees: { value: fees },
       ...changes,
+      amount: { ...amountInput, value: amount },
     });
 
     this.updateFormValues(toUpdate);
@@ -331,6 +355,26 @@ export class SendForm extends EventEmitter implements AccountForm {
       }
     }
 
+    if (changes.recipient && isAddress(changes.recipient.value.input)) {
+      const recipient = EthAddress.fromString(changes.recipient.value.input);
+      if (this.transactionGraph.isDepositor(recipient)) {
+        toUpdate.recipient = withWarning(
+          changes.recipient,
+          'You have deposited from this address before. Sending funds to this address may compromise privacy.',
+        );
+      } else if (this.transactionGraph.isRecipient(recipient)) {
+        toUpdate.recipient = withWarning(
+          changes.recipient,
+          'This address has received funds before. Sending funds to this address again may compromise privacy.',
+        );
+      } else {
+        toUpdate.recipient = withMessage(
+          changes.recipient,
+          `To achieve maximum privacy, make sure this address has never deposited or received funds before.`,
+        );
+      }
+    }
+
     return toUpdate;
   }
 
@@ -342,7 +386,7 @@ export class SendForm extends EventEmitter implements AccountForm {
       form.recipient = withError(form.recipient, `Please enter recipient's username or ethereum address.`);
     } else if (isSameAlias(recipient, this.alias)) {
       form.recipient = withError(form.recipient, 'Cannot send fund to yourself.');
-    } else if (!isAddress(recipient) && !(await this.accountUtils.getAccountId(recipient))) {
+    } else if (!isAddress(recipient) && !(await this.accountUtils.isValidRecipient(recipient))) {
       form.recipient = withError(form.recipient, `Cannot find a user with username '${recipient}'.`);
     }
 
@@ -380,12 +424,40 @@ export class SendForm extends EventEmitter implements AccountForm {
     return form;
   }
 
-  private async privateSend(alias: string) {
+  private async createProof(privateKey: Buffer) {
+    this.updateFormValues({ status: { value: SendStatus.VALIDATE }, submit: clearMessage({ value: true }) });
+
+    const validated = await this.validateValues();
+    if (!isValidForm(validated)) {
+      this.updateFormValues(mergeValues(validated, { status: { value: SendStatus.CONFIRM } }));
+      return;
+    }
+
+    this.updateFormStatus(FormStatus.PROCESSING);
+
+    try {
+      const recipient = this.values.recipient.value.input;
+      if (isAddress(recipient)) {
+        await this.publicSend(EthAddress.fromString(recipient.trim()), privateKey);
+      } else {
+        await this.privateSend(formatAliasInput(recipient), privateKey);
+      }
+      this.updateFormValues({ submit: { value: false } });
+    } catch (e) {
+      debug(e);
+      this.updateFormValues({
+        submit: withError({ value: false }, `Something went wrong. This shouldn't happen.`),
+      });
+    }
+
+    this.updateFormStatus(FormStatus.LOCKED);
+  }
+
+  private async privateSend(alias: string, privateKey: Buffer) {
     if (this.status <= SendStatus.CREATE_PROOF) {
       this.proceed(SendStatus.CREATE_PROOF);
 
-      const userData = this.sdk.getUserData(this.userId);
-      const signer = this.sdk.createSchnorrSigner(userData.privateKey);
+      const signer = this.sdk.createSchnorrSigner(privateKey);
       const noteRecipient = await this.accountUtils.getAccountId(alias);
       const amount = toBaseUnits(this.values.amount.value, this.asset.decimals);
       const fee = this.values.fees.value[this.values.speed.value].fee;
@@ -414,12 +486,11 @@ export class SendForm extends EventEmitter implements AccountForm {
     this.proceed(SendStatus.DONE);
   }
 
-  private async publicSend(ethAddress: EthAddress) {
+  private async publicSend(ethAddress: EthAddress, privateKey: Buffer) {
     if (this.status <= SendStatus.CREATE_PROOF) {
       this.proceed(SendStatus.CREATE_PROOF);
 
-      const userData = this.sdk.getUserData(this.userId);
-      const signer = this.sdk.createSchnorrSigner(userData.privateKey);
+      const signer = this.sdk.createSchnorrSigner(privateKey);
       const amount = toBaseUnits(this.values.amount.value, this.asset.decimals);
       const fee = this.values.fees.value[this.values.speed.value].fee;
       this.proofOutput = await this.sdk.createJoinSplitProof(
@@ -457,17 +528,64 @@ export class SendForm extends EventEmitter implements AccountForm {
     return isContract ? TxType.WITHDRAW_TO_CONTRACT : TxType.WITHDRAW_TO_WALLET;
   }
 
+  private async initTransactionGraph() {
+    const userIds = this.sdk.getUsersData().map(u => u.id);
+    const jsTxs = (await Promise.all(userIds.map(userId => this.sdk.getJoinSplitTxs(userId)))).flat();
+    this.transactionGraph = new TransactionGraph(jsTxs);
+    this.refreshValues();
+  }
+
   private onRollupStatusChange = () => {
     if (!this.locked) {
       this.refreshValues();
     }
   };
 
+  private onProviderStateChange = async () => {
+    if (this.status === SendStatus.GENERATE_KEY) {
+      await this.requestSigningKey();
+    }
+  };
+
+  private async requestSigningKey() {
+    if (!this.provider) {
+      this.updateFormValues({
+        submit: clearMessage({ value: true }),
+      });
+      return;
+    }
+
+    const provider = this.provider;
+    const { account } = provider;
+    const { signerAddress } = this.keyVault;
+    if (!account?.equals(signerAddress)) {
+      this.prompt(
+        `Please switch your wallet's account to ${signerAddress
+          .toString()
+          .slice(0, 6)}...${signerAddress.toString().slice(-4)}.`,
+      );
+      return;
+    }
+
+    this.prompt('Please sign the message in your wallet.');
+
+    try {
+      const { privateKey } = await createSigningKeys(provider, this.sdk);
+      if (!this.destroyed && this.status === SendStatus.GENERATE_KEY && provider === this.provider) {
+        await this.createProof(privateKey);
+      }
+    } catch (e) {
+      if (this.status === SendStatus.GENERATE_KEY && provider === this.provider) {
+        this.updateFormValues({ status: { value: SendStatus.CONFIRM }, submit: clearMessage({ value: true }) });
+      }
+    }
+  }
+
   private updateRecipientStatus = async () => {
     const recipient = this.values.recipient.value.input;
     if (isAddress(recipient)) return;
 
-    const valid = (await this.accountUtils.getAccountId(recipient))
+    const valid = (await this.accountUtils.isValidRecipient(recipient))
       ? ValueAvailability.VALID
       : ValueAvailability.INVALID;
     this.updateFormValues({ recipient: { value: { ...this.values.recipient.value, valid } } });
@@ -495,6 +613,12 @@ export class SendForm extends EventEmitter implements AccountForm {
     this.updateFormValues({
       status: { value: status },
       submit: withMessage({ value: true }, message),
+    });
+  }
+
+  private prompt(message: string) {
+    this.updateFormValues({
+      submit: withWarning({ value: true }, message),
     });
   }
 

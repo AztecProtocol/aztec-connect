@@ -8,6 +8,7 @@ import Koa, { Context, DefaultState } from 'koa';
 import compress from 'koa-compress';
 import Router from 'koa-router';
 import { PromiseReadable } from 'promise-readable';
+import requestIp from 'request-ip';
 import { buildSchemaSync } from 'type-graphql';
 import { Container } from 'typedi';
 import { Metrics } from './metrics';
@@ -88,6 +89,20 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     ctx.status = 200;
   });
 
+  router.post('/client-log', async (ctx: Koa.Context) => {
+    const stream = new PromiseReadable(ctx.req);
+    const log = JSON.parse((await stream.readAll()) as string);
+    const clientIp = requestIp.getClientIp(ctx.request);
+    const userAgent = ctx.request.header['user-agent'];
+    const data = {
+      ...log,
+      clientIp,
+      userAgent,
+    };
+    console.log(`Client log for: ${JSON.stringify(data)}`);
+    ctx.status = 200;
+  });
+
   router.get('/get-blocks', recordMetric, async (ctx: Koa.Context) => {
     const blocks = await server.getBlocks(+ctx.query.from);
     const response: GetBlocksServerResponse = {
@@ -129,6 +144,12 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
 
     ctx.set('content-type', 'application/json');
     ctx.body = response;
+    ctx.status = 200;
+  });
+
+  router.get('/get-pending-txs', recordMetric, async (ctx: Koa.Context) => {
+    const txIds = await server.getUnsettledTxs();
+    ctx.body = txIds.map(txId => txId.toString('hex'));
     ctx.status = 200;
   });
 

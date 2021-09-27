@@ -6,15 +6,20 @@ import {
   fromBaseUnits,
   isAddress,
   isValidForm,
+  MessageType,
+  ProviderState,
+  RecipientInput,
   SendFormValues,
   SendStatus,
   ValueAvailability,
+  WalletId,
 } from '../../app';
 import {
   BlockTitle,
   Button,
   Checkbox,
   DisclaimerBlock,
+  Dot,
   FixedInputMessage,
   Input,
   InputCol,
@@ -27,12 +32,30 @@ import {
   MaskedInput,
   PaddedBlock,
   Text,
+  Tooltip,
 } from '../../components';
 import { borderRadiuses, breakpoints, colours, spacings, Theme } from '../../styles';
 import { FeeSelect } from './fee_select';
+import { PrivacySetSelect } from './privacy_set_select';
 import { SendProgress } from './send_progress';
 import { SettledTime } from './settled_time';
-import { WithdrawDisclaimer } from './withdraw_disclaimer';
+
+const getRecipientInputStatus = (recipient: RecipientInput) => {
+  if (recipient.messageType === MessageType.WARNING) {
+    return InputStatus.WARNING;
+  }
+  if (recipient.value.valid === ValueAvailability.PENDING) {
+    return InputStatus.LOADING;
+  }
+  return (recipient.value.input || recipient.message) && recipient.value.valid === ValueAvailability.INVALID
+    ? InputStatus.ERROR
+    : InputStatus.SUCCESS;
+};
+
+const RecipientMessage = styled(Text)`
+  padding-top: ${spacings.xs};
+  text-align: right;
+`;
 
 const AssetIcon = styled.img`
   padding: 0 ${spacings.s};
@@ -53,6 +76,15 @@ const FeeCol = styled(InputCol)`
   @media (max-width: ${breakpoints.s}) {
     width: 100%;
   }
+`;
+
+const SpendableBalanceRoot = styled.div`
+  display: flex;
+  align-items: center;
+`;
+
+const SpendableBalance = styled(Text)`
+  padding-left: ${spacings.xs};
 `;
 
 const AmountInputWrapper = styled(InputWrapper)`
@@ -88,9 +120,12 @@ const ButtonRoot = styled(InputCol)`
 interface SendProps {
   theme: Theme;
   assetState: AssetState;
+  providerState?: ProviderState;
   form: SendFormValues;
   explorerUrl: string;
   onChangeInputs(inputs: Partial<SendFormValues>): void;
+  onChangeWallet(walletId: WalletId): void;
+  onDisconnectWallet(): void;
   onValidate(): void;
   onGoBack(): void;
   onSubmit(): void;
@@ -100,9 +135,12 @@ interface SendProps {
 export const Send: React.FunctionComponent<SendProps> = ({
   theme,
   assetState,
+  providerState,
   form,
   explorerUrl,
   onChangeInputs,
+  onChangeWallet,
+  onDisconnectWallet,
   onValidate,
   onGoBack,
   onSubmit,
@@ -113,7 +151,10 @@ export const Send: React.FunctionComponent<SendProps> = ({
       <SendProgress
         theme={theme}
         assetState={assetState}
+        providerState={providerState}
         form={form}
+        onChangeWallet={onChangeWallet}
+        onDisconnectWallet={onDisconnectWallet}
         onGoBack={onGoBack}
         onSubmit={onSubmit}
         onClose={onClose}
@@ -122,8 +163,8 @@ export const Send: React.FunctionComponent<SendProps> = ({
   }
 
   const inputTheme = theme === Theme.WHITE ? InputTheme.WHITE : InputTheme.LIGHT;
-  const { asset } = assetState;
-  const { amount, fees, speed, maxAmount, recipient, confirmed, submit } = form;
+  const { asset, spendableBalance } = assetState;
+  const { selectedAmount, amount, fees, speed, maxAmount, recipient, confirmed, submit } = form;
   const txFee = fees.value[speed.value];
 
   return (
@@ -133,38 +174,53 @@ export const Send: React.FunctionComponent<SendProps> = ({
           <BlockTitle title="Recipient" />
           <InputWrapper theme={inputTheme}>
             <InputStatusIcon
-              status={
-                recipient.value.valid === ValueAvailability.PENDING
-                  ? InputStatus.LOADING
-                  : (recipient.value.input || recipient.message) && recipient.value.valid === ValueAvailability.INVALID
-                  ? InputStatus.ERROR
-                  : InputStatus.SUCCESS
-              }
+              status={getRecipientInputStatus(recipient)}
               inactive={!recipient.value.input && !recipient.message}
             />
             <MaskedInput
               theme={inputTheme}
               value={recipient.value.input}
-              prefix={EthAddress.isAddress(recipient.value.input.trim()) ? '' : '@'}
+              prefix={EthAddress.isAddress(recipient.value.input.trim()) || !recipient.value.input ? '' : '@'}
               onChangeValue={value =>
                 onChangeInputs({ recipient: { value: { ...recipient.value, input: value.replace(/^@+/, '') } } })
               }
               placeholder="username or ethereum address"
             />
           </InputWrapper>
-          {recipient.message && (
-            <FixedInputMessage theme={inputTheme} message={recipient.message} type={recipient.messageType} />
-          )}
+          {recipient.message &&
+            (recipient.messageType === MessageType.ERROR ? (
+              <FixedInputMessage theme={inputTheme} message={recipient.message} type={recipient.messageType} />
+            ) : (
+              <RecipientMessage text={recipient.message} size="xs" />
+            ))}
         </InputCol>
       </InputRow>
       {isAddress(recipient.value.input) && assetState.withdrawSafeAmounts.length > 0 && (
         <PaddedBlock size="m">
-          <WithdrawDisclaimer assetState={assetState} />
+          <PrivacySetSelect
+            asset={assetState.asset}
+            values={assetState.withdrawSafeAmounts}
+            value={selectedAmount.value}
+            onSelect={value => onChangeInputs({ selectedAmount: { value } })}
+          />
         </PaddedBlock>
       )}
       <InputRow>
         <AmountCol>
-          <BlockTitle title="Amount" />
+          <BlockTitle
+            title="Amount"
+            info={
+              <SpendableBalanceRoot>
+                <Tooltip trigger={<Dot size="xs" color="green" />}>
+                  <Text text="Sendable balance" size="xxs" nowrap />
+                </Tooltip>
+                <SpendableBalance
+                  text={`${fromBaseUnits(spendableBalance, asset.decimals)} zk${asset.symbol}`}
+                  size="xs"
+                />
+              </SpendableBalanceRoot>
+            }
+          />
           <AmountInputWrapper theme={inputTheme}>
             <AmountAssetIconRoot>
               <AssetIcon src={asset.icon} />

@@ -56,6 +56,8 @@ export interface Database {
   settleDefiTx(txHash: TxHash, settled: Date): Promise<void>;
 
   isUserTxSettled(txHash: TxHash): Promise<boolean>;
+  getUnsettledUserTxs(userId: AccountId): Promise<TxHash[]>;
+  removeUserTx(txHash: TxHash, userId: AccountId): Promise<void>;
 
   addUserSigningKey(signingKey: SigningKey): Promise<void>;
   getUserSigningKeys(accountId: AccountId): Promise<SigningKey[]>;

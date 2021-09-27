@@ -24,7 +24,7 @@ class DexieNote {
     public nullifier: Uint8Array,
     public nullified: 0 | 1,
     public owner: Uint8Array,
-    public creatorPubKey: Uint8Array
+    public creatorPubKey: Uint8Array,
   ) {}
 }
 
@@ -38,10 +38,20 @@ const noteToDexieNote = (note: Note) =>
     note.nullifier,
     note.nullified ? 1 : 0,
     new Uint8Array(note.owner.toBuffer()),
-    new Uint8Array(note.creatorPubKey)
+    new Uint8Array(note.creatorPubKey),
   );
 
-const dexieNoteToNote = ({ id, value, dataEntry, secret, nullifier, nullified, owner, creatorPubKey, ...rest }: DexieNote): Note => ({
+const dexieNoteToNote = ({
+  id,
+  value,
+  dataEntry,
+  secret,
+  nullifier,
+  nullified,
+  owner,
+  creatorPubKey,
+  ...rest
+}: DexieNote): Note => ({
   ...rest,
   index: id,
   value: BigInt(value),
@@ -50,7 +60,7 @@ const dexieNoteToNote = ({ id, value, dataEntry, secret, nullifier, nullified, o
   nullifier: Buffer.from(nullifier),
   nullified: !!nullified,
   owner: AccountId.fromBuffer(Buffer.from(owner)),
-  creatorPubKey : Buffer.from(creatorPubKey),
+  creatorPubKey: Buffer.from(creatorPubKey),
 });
 
 class DexieClaim {
@@ -334,7 +344,7 @@ export class DexieDatabase implements Database {
       claim: '&nullifier',
       key: '&name',
       note: '++id, [owner+nullified], nullifier, owner',
-      user: '&id, privateKey',
+      user: '&id',
       userKeys: '&[accountId+key], accountId',
       userTx: '&[txHash+userId], txHash, [txHash+proofId], [userId+proofId], proofId, settled',
     });
@@ -508,6 +518,20 @@ export class DexieDatabase implements Database {
   async isUserTxSettled(txHash: TxHash) {
     const txs = await this.userTx.where({ txHash: new Uint8Array(txHash.toBuffer()) }).toArray();
     return txs.length > 0 && txs.every(tx => tx.settled);
+  }
+
+  async getUnsettledUserTxs(userId: AccountId) {
+    const unsettledTxs = await this.userTx.where({ settled: 0 }).toArray();
+    return unsettledTxs
+      .flat()
+      .filter(tx => AccountId.fromBuffer(Buffer.from(tx.userId)).equals(userId))
+      .map(({ txHash }) => new TxHash(Buffer.from(txHash)));
+  }
+
+  async removeUserTx(txHash: TxHash, userId: AccountId) {
+    await this.userTx
+      .where({ txHash: new Uint8Array(txHash.toBuffer()), userId: new Uint8Array(userId.toBuffer()) })
+      .delete();
   }
 
   async removeUser(userId: AccountId) {

@@ -1,22 +1,71 @@
 import { AccountId, EthAddress, GrumpkinAddress, TxHash, UserJoinSplitTx } from '@aztec/sdk';
 import Dexie from 'dexie';
+import { AccountVersion } from '../account_state';
+import createDebug from 'debug';
+import { EventEmitter } from 'events';
+import { AppAssetId } from '../assets';
 
-export interface LinkedAccount {
+const debug = createDebug('zm:user_database');
+
+export enum DatabaseEvent {
+  UPDATED_ACCOUNT = 'DATABASE_UPDATED_ACCOUNT',
+  UPDATED_MIGRATING_TX = 'DATABASE_UPDATED_MIGRATING_TX',
+}
+
+export interface AccountV0 {
   accountPublicKey: GrumpkinAddress;
   alias: string;
   timestamp: Date;
 }
 
-class DexieAccount {
+export interface LinkedAccount {
+  accountPublicKey: GrumpkinAddress;
+  signerAddress: EthAddress;
+  alias: string;
+  version: AccountVersion;
+  timestamp: Date;
+}
+
+class DexieAccountV0 {
   constructor(public accountPublicKey: Uint8Array, public alias: string, public timestamp: Date) {}
 }
 
-const toDexieAccount = ({ accountPublicKey, alias, timestamp }: LinkedAccount) =>
-  new DexieAccount(new Uint8Array(accountPublicKey.toBuffer()), alias, timestamp);
-
-const fromDexieAccount = ({ accountPublicKey, alias, timestamp }: DexieAccount): LinkedAccount => ({
+const fromDexieAccountV0 = ({ accountPublicKey, alias, timestamp }: DexieAccountV0): AccountV0 => ({
   accountPublicKey: new GrumpkinAddress(Buffer.from(accountPublicKey)),
   alias,
+  timestamp,
+});
+
+class DexieLinkedAccount {
+  constructor(
+    public accountPublicKey: Uint8Array,
+    public signerAddress: Uint8Array,
+    public alias: string,
+    public version: AccountVersion,
+    public timestamp: Date,
+  ) {}
+}
+
+const toDexieLinkedAccount = ({ accountPublicKey, signerAddress, alias, version, timestamp }: LinkedAccount) =>
+  new DexieLinkedAccount(
+    new Uint8Array(accountPublicKey.toBuffer()),
+    new Uint8Array(signerAddress.toBuffer()),
+    alias,
+    version,
+    timestamp,
+  );
+
+const fromDexieLinkedAccount = ({
+  accountPublicKey,
+  signerAddress,
+  alias,
+  version,
+  timestamp,
+}: DexieLinkedAccount): LinkedAccount => ({
+  accountPublicKey: new GrumpkinAddress(Buffer.from(accountPublicKey)),
+  signerAddress: new EthAddress(Buffer.from(signerAddress)),
+  alias,
+  version,
   timestamp,
 });
 
@@ -32,14 +81,13 @@ class DexieMigratingTx {
     public senderPrivateOutput: string,
     public ownedByUser: boolean,
     public created: number,
-    public proofSender: Uint8Array,
     public settled?: Date,
     public inputOwner?: Uint8Array,
     public outputOwner?: Uint8Array,
   ) {}
 }
 
-const toDexieMigratingTx = (proofSender: AccountId, tx: UserJoinSplitTx) =>
+const toDexieMigratingTx = (tx: UserJoinSplitTx) =>
   new DexieMigratingTx(
     new Uint8Array(tx.txHash.toBuffer()),
     new Uint8Array(tx.userId.toBuffer()),
@@ -51,7 +99,6 @@ const toDexieMigratingTx = (proofSender: AccountId, tx: UserJoinSplitTx) =>
     tx.senderPrivateOutput.toString(),
     tx.ownedByUser,
     tx.created.getTime(),
-    new Uint8Array(proofSender.toBuffer()),
     tx.settled,
     tx.inputOwner ? new Uint8Array(tx.inputOwner.toBuffer()) : undefined,
     tx.outputOwner ? new Uint8Array(tx.outputOwner.toBuffer()) : undefined,
@@ -88,12 +135,20 @@ const fromDexieMigratingTx = ({
     settled,
   );
 
-export class Database {
+export interface Database {
+  on(event: DatabaseEvent.UPDATED_ACCOUNT, listener: () => void): this;
+  on(event: DatabaseEvent.UPDATED_MIGRATING_TX, listener: (assetId?: AppAssetId) => void): this;
+}
+
+export class Database extends EventEmitter {
   private db!: Dexie;
-  private account!: Dexie.Table<DexieAccount, Uint8Array>;
+  private accountV0!: Dexie.Table<DexieAccountV0, Uint8Array>; // To be deprecated.
+  private linkedAccount!: Dexie.Table<DexieLinkedAccount, Uint8Array>;
   private migratingTx!: Dexie.Table<DexieMigratingTx, Uint8Array>;
 
-  constructor(private dbName = 'zk-money', private version = 1) {}
+  constructor(private dbName = 'zk-money', private version = 2) {
+    super();
+  }
 
   get isOpen() {
     return this.db?.isOpen();
@@ -103,8 +158,9 @@ export class Database {
     this.createTables();
 
     try {
-      await this.getAccount(GrumpkinAddress.randomAddress());
+      await this.getAccounts();
     } catch (e) {
+      debug('Clear entire database due to significant schema changes.');
       await this.db.delete();
       this.createTables();
     }
@@ -114,11 +170,14 @@ export class Database {
     this.db = new Dexie(this.dbName);
     this.db.version(this.version).stores({
       account: '&accountPublicKey',
-      migratingTx: '&txHash, userId, proofSender',
+      linkedAccount: '&accountPublicKey',
+      migratingTx: '&txHash, userId',
     });
 
-    this.account = this.db.table('account');
-    this.account.mapToClass(DexieAccount);
+    this.accountV0 = this.db.table('account');
+    this.accountV0.mapToClass(DexieAccountV0);
+    this.linkedAccount = this.db.table('linkedAccount');
+    this.linkedAccount.mapToClass(DexieLinkedAccount);
     this.migratingTx = this.db.table('migratingTx');
     this.migratingTx.mapToClass(DexieMigratingTx);
   }
@@ -133,26 +192,49 @@ export class Database {
     await this.db?.close();
   }
 
+  async getAccountV0(accountPublicKey: GrumpkinAddress) {
+    const account = await this.accountV0.get({ accountPublicKey: new Uint8Array(accountPublicKey.toBuffer()) });
+    return account ? fromDexieAccountV0(account) : undefined;
+  }
+
+  async getAccountV0s() {
+    const accounts = await this.accountV0.toArray();
+    return accounts.map(fromDexieAccountV0);
+  }
+
+  async deleteAccountV0(accountPublicKey: GrumpkinAddress) {
+    await this.accountV0.delete(new Uint8Array(accountPublicKey.toBuffer()));
+  }
+
+  async deleteAccountV0s() {
+    await this.accountV0.clear();
+  }
+
   async addAccount(account: LinkedAccount) {
-    await this.account.put(toDexieAccount(account));
+    await this.linkedAccount.put(toDexieLinkedAccount(account));
+    this.emit(DatabaseEvent.UPDATED_ACCOUNT);
   }
 
   async getAccount(accountPublicKey: GrumpkinAddress) {
-    const account = await this.account.get({ accountPublicKey: new Uint8Array(accountPublicKey.toBuffer()) });
-    return account ? fromDexieAccount(account) : undefined;
+    const linkedAccount = await this.linkedAccount.get({
+      accountPublicKey: new Uint8Array(accountPublicKey.toBuffer()),
+    });
+    return linkedAccount ? fromDexieLinkedAccount(linkedAccount) : undefined;
   }
 
   async getAccounts() {
-    const accounts = await this.account.toArray();
-    return accounts.map(fromDexieAccount);
+    const linkedAccounts = await this.linkedAccount.toArray();
+    return linkedAccounts.map(fromDexieLinkedAccount);
   }
 
   async deleteAccount(accountPublicKey: GrumpkinAddress) {
-    await this.account.delete(new Uint8Array(accountPublicKey.toBuffer()));
+    await this.linkedAccount.delete(new Uint8Array(accountPublicKey.toBuffer()));
+    this.emit(DatabaseEvent.UPDATED_ACCOUNT);
   }
 
-  async addMigratingTx(proofSender: AccountId, tx: UserJoinSplitTx) {
-    await this.migratingTx.put(toDexieMigratingTx(proofSender, tx));
+  async addMigratingTx(tx: UserJoinSplitTx) {
+    await this.migratingTx.put(toDexieMigratingTx({ ...tx, ownedByUser: false }));
+    this.emit(DatabaseEvent.UPDATED_MIGRATING_TX, tx.assetId);
   }
 
   async getMigratingTxs(userId: AccountId) {
@@ -164,7 +246,8 @@ export class Database {
     ).map(fromDexieMigratingTx);
   }
 
-  async removeMigratingTxs(proofSender: AccountId) {
-    await this.migratingTx.where({ proofSender: new Uint8Array(proofSender.toBuffer()) }).delete();
+  async removeMigratingTx(txHash: TxHash) {
+    await this.migratingTx.where({ txHash: new Uint8Array(txHash.toBuffer()) }).delete();
+    this.emit(DatabaseEvent.UPDATED_MIGRATING_TX);
   }
 }

@@ -23,6 +23,8 @@ interface LogoRootProps {
 }
 
 const LogoRoot = styled.div<LogoRootProps>`
+  display: flex;
+  align-items: center;
   flex-shrink: 0;
   line-height: 0;
 
@@ -65,6 +67,7 @@ interface HeaderProps {
   network?: string;
   worldState?: WorldState;
   account?: AccountState;
+  onMigrateBalance?: () => void;
   onLogout?: () => void;
 }
 
@@ -74,6 +77,7 @@ export const Header: React.FunctionComponent<HeaderProps> = ({
   network,
   worldState,
   account,
+  onMigrateBalance,
   onLogout,
 }) => (
   <HeaderRoot>
@@ -90,7 +94,12 @@ export const Header: React.FunctionComponent<HeaderProps> = ({
       )}
       {!!account && (
         <AccountItem>
-          <UserAccount account={account} worldState={worldState!} onLogout={onLogout!} />
+          <UserAccount
+            account={account}
+            worldState={worldState!}
+            onMigrateBalance={onMigrateBalance!}
+            onLogout={onLogout!}
+          />
         </AccountItem>
       )}
     </AccountRoot>

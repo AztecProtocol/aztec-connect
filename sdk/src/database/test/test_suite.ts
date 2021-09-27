@@ -458,6 +458,61 @@ export const databaseTestSuite = (
       });
     });
 
+    describe('UserTx', () => {
+      it('get unsettled user txs', async () => {
+        const unsettledTxHashes: TxHash[] = [];
+        const userId = AccountId.random();
+        for (let i = 0; i < 10; ++i) {
+          const jsTx = randomUserJoinSplitTx({ userId: i % 3 ? userId : AccountId.random() });
+          await db.addJoinSplitTx(jsTx);
+          if (i % 2) {
+            await db.settleJoinSplitTx(jsTx.txHash, jsTx.userId, new Date());
+          } else if (i % 3) {
+            unsettledTxHashes.push(jsTx.txHash);
+          }
+
+          const accountTx = randomUserAccountTx({ userId: i % 3 ? userId : AccountId.random() });
+          await db.addAccountTx(accountTx);
+          if (!(i % 2)) {
+            await db.settleAccountTx(accountTx.txHash, new Date());
+          } else if (i % 3) {
+            unsettledTxHashes.push(accountTx.txHash);
+          }
+        }
+
+        const txHashes = await db.getUnsettledUserTxs(userId);
+        expect(txHashes.length).toBe(unsettledTxHashes.length);
+        expect(txHashes).toEqual(expect.arrayContaining(unsettledTxHashes));
+      });
+
+      it('remove tx by txHash and userId', async () => {
+        const userA = AccountId.random();
+        const userB = AccountId.random();
+
+        const jsTx0 = randomUserJoinSplitTx({ userId: userA });
+        await db.addJoinSplitTx(jsTx0);
+        await db.addJoinSplitTx({ ...jsTx0, userId: userB });
+
+        const jsTx1 = randomUserJoinSplitTx({ userId: userA });
+        await db.addJoinSplitTx(jsTx1);
+        await db.addJoinSplitTx({ ...jsTx1, userId: userB });
+
+        const accountTx0 = randomUserAccountTx({ userId: userA });
+        const accountTx1 = randomUserAccountTx({ userId: userB });
+        await db.addAccountTx(accountTx0);
+        await db.addAccountTx(accountTx1);
+
+        await db.removeUserTx(jsTx0.txHash, userA);
+        await db.removeUserTx(jsTx1.txHash, userB);
+        await db.removeUserTx(accountTx0.txHash, userA);
+
+        expect(await db.getJoinSplitTxs(userA)).toEqual([expect.objectContaining({ ...jsTx1, userId: userA })]);
+        expect(await db.getJoinSplitTxs(userB)).toEqual([expect.objectContaining({ ...jsTx0, userId: userB })]);
+        expect(await db.getAccountTxs(userA)).toEqual([]);
+        expect(await db.getAccountTxs(userB)).toEqual([accountTx1]);
+      });
+    });
+
     describe('UserKey', () => {
       it('add signing key and get all keys for a user', async () => {
         const accountId = AccountId.random();
