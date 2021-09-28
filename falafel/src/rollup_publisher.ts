@@ -20,7 +20,7 @@ export class RollupPublisher {
     private rollupDb: RollupDb,
     private blockchain: Blockchain,
     private feeLimit: bigint,
-    private maxFeeGasPrice: bigint,
+    private maxProviderGasPrice: bigint,
     private providerGasPriceMultiplier: number,
     private provider: EthereumProvider,
     private providerAddress: EthAddress,
@@ -139,7 +139,7 @@ export class RollupPublisher {
       try {
         const multiplier = BigInt(Math.floor(this.providerGasPriceMultiplier * 100));
         const reportedPrice = ((await this.blockchain.getGasPrice()) * multiplier) / 100n;
-        const gasPrice = reportedPrice < this.maxFeeGasPrice ? reportedPrice : this.maxFeeGasPrice;
+        const gasPrice = reportedPrice < this.maxProviderGasPrice ? reportedPrice : this.maxProviderGasPrice;
         return await this.blockchain.sendTx(txData, { gasPrice });
       } catch (err) {
         console.log(err.message.slice(0, 200));

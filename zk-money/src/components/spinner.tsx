@@ -15,7 +15,11 @@ const spinnerThemes = {
   gradient: `linear-gradient(134.14deg, ${gradients.primary.from} 18.37%, ${gradients.primary.to} 82.04%)`,
   white: `linear-gradient(134.14deg, ${colours.white} 18.37%, ${rgba(colours.white, 0.3)} 82.04%)`,
 };
-export type SpinnerTheme = keyof typeof spinnerThemes;
+
+export enum SpinnerTheme {
+  GRADIENT = 'GRADIENT',
+  WHITE = 'WHITE',
+}
 
 const spin = keyframes`
   from {
@@ -35,7 +39,7 @@ interface SpinnerProps {
 export const Spinner = styled.div<SpinnerProps>`
   position: relative;
   border-radius: 100%;
-  background: ${({ theme }: SpinnerProps) => spinnerThemes[theme]};
+  background: ${({ theme }: SpinnerProps) => spinnerThemes[theme === SpinnerTheme.GRADIENT ? 'gradient' : 'white']};
   animation: ${spin} 0.7s infinite linear;
 
   ${({ size }) => {

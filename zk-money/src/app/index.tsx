@@ -8,13 +8,6 @@ export * from './eth_account';
 export * from './form';
 export * from './provider';
 export * from './rollup_service';
-export * from './seed_phrase';
 export * from './units';
 export * from './user_session';
-export { Wallet, wallets } from './wallet_providers';
-
-export enum AppAction {
-  NADA,
-  LOGIN,
-  ACCOUNT,
-}
+export * from './wallet_providers/wallets';

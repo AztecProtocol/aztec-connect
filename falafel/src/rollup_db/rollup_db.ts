@@ -100,7 +100,7 @@ export class TypeOrmRollupDb implements RollupDb {
     return await this.txRep.count({ where: { mined: null } });
   }
 
-  private async getUnsettledTxs() {
+  public async getUnsettledTxs() {
     return await this.txRep.find({ where: { mined: null } });
   }
 

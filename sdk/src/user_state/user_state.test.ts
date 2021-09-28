@@ -21,6 +21,7 @@ import {
   OffchainJoinSplitData,
 } from '@aztec/barretenberg/offchain_tx_data';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { RollupProvider } from '@aztec/barretenberg/rollup_provider';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
@@ -37,8 +38,8 @@ describe('user state', () => {
   let grumpkin: Grumpkin;
   let blake2s: Blake2s;
   let noteAlgos: NoteAlgorithms;
-  let blockSource: BlockSource;
   let db: Mockify<Database>;
+  let rollupProvider: Mockify<RollupProvider>;
   let userState: UserState;
   let user: UserData;
 
@@ -78,6 +79,8 @@ describe('user state', () => {
       updateDefiTx: jest.fn(),
       settleDefiTx: jest.fn(),
       addDefiTx: jest.fn(),
+      getUnsettledUserTxs: jest.fn().mockResolvedValue([]),
+      removeUserTx: jest.fn(),
       getNote: jest.fn(),
       addNote: jest.fn(),
       nullifyNote: jest.fn(),
@@ -91,11 +94,12 @@ describe('user state', () => {
       getUserSigningKeys: jest.fn().mockResolvedValue([]),
     } as any;
 
-    blockSource = {
+    rollupProvider = {
       getBlocks: jest.fn().mockResolvedValue([]),
+      getPendingTxs: jest.fn().mockResolvedValue([]),
     } as any;
 
-    userState = new UserState(user, grumpkin, noteAlgos, db as any, blockSource as any);
+    userState = new UserState(user, grumpkin, noteAlgos, db as any, rollupProvider as any);
     await userState.init();
     await userState.startSync();
   });
@@ -651,7 +655,7 @@ describe('user state', () => {
 
     {
       const newUser = { ...user, nonce: 1, id: new AccountId(user.publicKey, 1) };
-      const newUserState = new UserState(newUser, grumpkin, noteAlgos, db as any, blockSource as any);
+      const newUserState = new UserState(newUser, grumpkin, noteAlgos, db as any, rollupProvider as any);
 
       db.getUser.mockResolvedValueOnce(newUser);
       await newUserState.init();
@@ -916,5 +920,20 @@ describe('user state', () => {
     await userState.stopSync(true);
 
     expect(db.addNote).toHaveBeenCalledTimes(0);
+  });
+
+  it('remove orphaned txs', async () => {
+    const unsettledUserTxs = [TxHash.random(), TxHash.random(), TxHash.random()];
+    db.getUnsettledUserTxs.mockResolvedValue(unsettledUserTxs);
+
+    const pendingTxs = [TxHash.random(), TxHash.random(), unsettledUserTxs[1]];
+    rollupProvider.getPendingTxs.mockResolvedValue(pendingTxs);
+
+    userState = new UserState(user, grumpkin, noteAlgos, db as any, rollupProvider as any);
+    await userState.init();
+
+    expect(db.removeUserTx).toHaveBeenCalledTimes(2);
+    expect(db.removeUserTx).toHaveBeenCalledWith(unsettledUserTxs[0], user.id);
+    expect(db.removeUserTx).toHaveBeenCalledWith(unsettledUserTxs[2], user.id);
   });
 });

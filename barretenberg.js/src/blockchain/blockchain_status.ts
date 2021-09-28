@@ -23,6 +23,7 @@ export interface BlockchainStatus {
   chainId: number;
   rollupContractAddress: EthAddress;
   feeDistributorContractAddress: EthAddress;
+  verifierContractAddress: EthAddress;
   nextRollupId: number;
   dataSize: number;
   dataRoot: Buffer;
@@ -44,6 +45,7 @@ export interface BlockchainStatusJson {
   chainId: number;
   rollupContractAddress: string;
   feeDistributorContractAddress: string;
+  verifierContractAddress: string;
   nextRollupId: number;
   dataSize: number;
   dataRoot: string;
@@ -73,6 +75,7 @@ export function blockchainStatusToJson(status: BlockchainStatus): BlockchainStat
     ...status,
     rollupContractAddress: status.rollupContractAddress.toString(),
     feeDistributorContractAddress: status.feeDistributorContractAddress.toString(),
+    verifierContractAddress: status.verifierContractAddress.toString(),
     dataRoot: status.dataRoot.toString('hex'),
     nullRoot: status.nullRoot.toString('hex'),
     rootRoot: status.rootRoot.toString('hex'),
@@ -95,6 +98,7 @@ export function blockchainStatusFromJson(json: BlockchainStatusJson): Blockchain
     ...json,
     rollupContractAddress: EthAddress.fromString(json.rollupContractAddress),
     feeDistributorContractAddress: EthAddress.fromString(json.feeDistributorContractAddress),
+    verifierContractAddress: EthAddress.fromString(json.feeDistributorContractAddress),
     dataRoot: Buffer.from(json.dataRoot, 'hex'),
     nullRoot: Buffer.from(json.nullRoot, 'hex'),
     rootRoot: Buffer.from(json.rootRoot, 'hex'),

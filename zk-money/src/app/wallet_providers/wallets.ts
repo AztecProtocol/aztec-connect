@@ -2,27 +2,34 @@ import metamaskIcon from '../../images/metamask.png';
 import connectIcon from '../../images/connect.png';
 import hotIcon from '../../images/hot_wallet.svg';
 
-export enum Wallet {
+export enum WalletId {
   METAMASK,
   CONNECT,
   HOT,
 }
 
-export const wallets = [
+export interface Wallet {
+  id: WalletId;
+  name: string;
+  nameShort: string;
+  icon: string;
+}
+
+export const wallets: Wallet[] = [
   {
-    id: Wallet.METAMASK,
+    id: WalletId.METAMASK,
     name: 'Metamask',
     nameShort: 'Metamask',
     icon: metamaskIcon,
   },
   {
-    id: Wallet.CONNECT,
+    id: WalletId.CONNECT,
     name: 'WalletConnect',
     nameShort: 'Connect',
     icon: connectIcon,
   },
   {
-    id: Wallet.HOT,
+    id: WalletId.HOT,
     name: 'Hot Wallet',
     nameShort: 'Hot Wallet',
     icon: hotIcon,

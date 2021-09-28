@@ -1,6 +1,7 @@
-import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from '@aztec/barretenberg/address';
-import { EthereumSignature, EthereumSigner, TypedData, EthereumProvider } from '@aztec/barretenberg/blockchain';
+import { EthereumProvider, EthereumSignature, EthereumSigner, TypedData } from '@aztec/barretenberg/blockchain';
+import { Web3Provider } from '@ethersproject/providers';
+import { utils } from 'ethers';
 import { validateSignature } from '../validate_signature';
 
 export class Web3Signer implements EthereumSigner {
@@ -8,6 +9,12 @@ export class Web3Signer implements EthereumSigner {
 
   constructor(provider: EthereumProvider) {
     this.provider = new Web3Provider(provider);
+  }
+
+  public async signPersonalMessage(message: Buffer, address: EthAddress) {
+    const toSign = utils.hexlify(utils.toUtf8Bytes(message.toString()));
+    const result = await this.provider.send('personal_sign', [toSign, address.toString()]);
+    return Buffer.from(result.slice(2), 'hex');
   }
 
   public async signMessage(message: Buffer, address: EthAddress) {

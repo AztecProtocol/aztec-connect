@@ -10,6 +10,7 @@ import { SystemMessagePopup } from './system_message_popup';
 
 export * from './content_wrapper';
 export * from './section';
+export * from './system_message_popup';
 
 const rootStyle = css`
   position: relative;
@@ -69,7 +70,9 @@ interface TemplateProps {
   account?: AccountState;
   rootUrl?: string;
   systemMessage?: SystemMessage;
+  onMigrateBalance?: () => void;
   onLogout?: () => void;
+  isLoading?: boolean;
 }
 
 export const Template: React.FunctionComponent<TemplateProps> = ({
@@ -80,7 +83,9 @@ export const Template: React.FunctionComponent<TemplateProps> = ({
   account,
   rootUrl = '/',
   systemMessage,
+  onMigrateBalance,
   onLogout,
+  isLoading = false,
 }) => {
   const [withCookie, setWithCookie] = useState(!isCookieAccepted());
   const TemplateRoot = theme === Theme.GRADIENT ? GradientRoot : WhiteRoot;
@@ -94,17 +99,22 @@ export const Template: React.FunctionComponent<TemplateProps> = ({
           network={network}
           worldState={worldState}
           account={account}
+          onMigrateBalance={onMigrateBalance}
           onLogout={onLogout}
         />
-        {children}
+        {!isLoading && children}
       </ContentRoot>
-      {theme === Theme.WHITE && <Footer account={account} />}
-      {!!systemMessage?.message && <SystemMessagePopup message={systemMessage.message} type={systemMessage.type} />}
-      <CookiesFormRoot>
-        <ContentWrapper>
-          <CookiesForm theme={theme} onClose={() => setWithCookie(false)} />
-        </ContentWrapper>
-      </CookiesFormRoot>
+      {!isLoading && (
+        <>
+          {theme === Theme.WHITE && <Footer account={account} />}
+          {!!systemMessage?.message && <SystemMessagePopup message={systemMessage.message} type={systemMessage.type} />}
+          <CookiesFormRoot>
+            <ContentWrapper>
+              <CookiesForm theme={theme} onClose={() => setWithCookie(false)} />
+            </ContentWrapper>
+          </CookiesFormRoot>
+        </>
+      )}
     </TemplateRoot>
   );
 };

@@ -64,6 +64,10 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.getUnsettledTxCount());
   }
 
+  public async getUnsettledTxs() {
+    return this.synchronise(() => this.rollupDb.getUnsettledTxs());
+  }
+
   public async getUnsettledJoinSplitTxs() {
     return this.synchronise(() => this.rollupDb.getUnsettledJoinSplitTxs());
   }

@@ -12,7 +12,10 @@ import {
   StrInput,
   withError,
   withMessage,
+  withWarning,
 } from '../form';
+import { createSigningKeys, KeyVault } from '../key_vault';
+import { Provider, ProviderEvent } from '../provider';
 import { RollupService, RollupServiceEvent } from '../rollup_service';
 import { fromBaseUnits, sum, toBaseUnits } from '../units';
 import { AccountForm, AccountFormEvent } from './account_form';
@@ -31,6 +34,7 @@ export enum MergeStatus {
   NADA,
   CONFIRM,
   VALIDATE,
+  GENERATE_KEY,
   CREATE_PROOF,
   SEND_PROOF,
   DONE,
@@ -75,14 +79,17 @@ export class MergeForm extends EventEmitter implements AccountForm {
   private values: MergeFormValues = initialMergeFormValues;
   private formStatus = FormStatus.ACTIVE;
   private proofOutput?: JoinSplitProofOutput;
+  private destroyed = false;
 
   private minFee = 0n;
 
   constructor(
     accountState: AccountState,
     private assetState: AssetState,
-    private sdk: WalletSdk,
-    private rollup: RollupService,
+    private provider: Provider | undefined,
+    private readonly keyVault: KeyVault,
+    private readonly sdk: WalletSdk,
+    private readonly rollup: RollupService,
   ) {
     super();
     this.userId = accountState.userId;
@@ -111,16 +118,17 @@ export class MergeForm extends EventEmitter implements AccountForm {
       throw new Error('Cannot destroy a form while it is being processed.');
     }
 
+    this.destroyed = true;
     this.removeAllListeners();
     this.rollup.off(RollupServiceEvent.UPDATED_STATUS, this.onRollupStatusChange);
+    this.provider?.off(ProviderEvent.UPDATED_PROVIDER_STATE, this.onProviderStateChange);
   }
 
   async init() {
     this.rollup.on(RollupServiceEvent.UPDATED_STATUS, this.onRollupStatusChange);
+    this.provider?.on(ProviderEvent.UPDATED_PROVIDER_STATE, this.onProviderStateChange);
     this.refreshValues();
   }
-
-  changeAccountState() {}
 
   changeAssetState(assetState: AssetState) {
     if (this.processing) {
@@ -136,7 +144,17 @@ export class MergeForm extends EventEmitter implements AccountForm {
     this.refreshValues();
   }
 
-  changeProvider() {}
+  changeProvider(provider?: Provider) {
+    if (this.processing) {
+      debug('Cannot change provider while a form is being processed.');
+      return;
+    }
+
+    this.provider?.off(ProviderEvent.UPDATED_PROVIDER_STATE, this.onProviderStateChange);
+    this.provider = provider;
+    this.provider?.on(ProviderEvent.UPDATED_PROVIDER_STATE, this.onProviderStateChange);
+    this.onProviderStateChange();
+  }
 
   changeEthAccount() {}
 
@@ -182,8 +200,7 @@ export class MergeForm extends EventEmitter implements AccountForm {
       return;
     }
 
-    const status = Math.max(this.values.status.value, MergeStatus.VALIDATE);
-    this.updateFormValues({ status: { value: status }, submit: clearMessage({ value: true }) });
+    this.updateFormValues({ status: { value: MergeStatus.VALIDATE }, submit: clearMessage({ value: true }) });
 
     const validated = await this.validateValues();
     if (!isValidForm(validated)) {
@@ -191,19 +208,8 @@ export class MergeForm extends EventEmitter implements AccountForm {
       return;
     }
 
-    this.updateFormStatus(FormStatus.PROCESSING);
-
-    try {
-      await this.merge();
-      this.updateFormValues({ submit: { value: false } });
-    } catch (e) {
-      debug(e);
-      this.updateFormValues({
-        submit: withError({ value: false }, `Something went wrong. This shouldn't happen.`),
-      });
-    }
-
-    this.updateFormStatus(FormStatus.LOCKED);
+    this.updateFormValues({ status: { value: MergeStatus.GENERATE_KEY } });
+    await this.requestSigningKey();
   }
 
   private refreshValues(changes: Partial<MergeFormValues> = {}) {
@@ -237,7 +243,31 @@ export class MergeForm extends EventEmitter implements AccountForm {
     return form;
   }
 
-  private async merge() {
+  private async createProof(privateKey: Buffer) {
+    this.updateFormValues({ status: { value: MergeStatus.VALIDATE }, submit: clearMessage({ value: true }) });
+
+    const validated = await this.validateValues();
+    if (!isValidForm(validated)) {
+      this.updateFormValues(mergeValues(validated, { status: { value: MergeStatus.CONFIRM } }));
+      return;
+    }
+
+    this.updateFormStatus(FormStatus.PROCESSING);
+
+    try {
+      await this.merge(privateKey);
+      this.updateFormValues({ submit: { value: false } });
+    } catch (e) {
+      debug(e);
+      this.updateFormValues({
+        submit: withError({ value: false }, `Something went wrong. This shouldn't happen.`),
+      });
+    }
+
+    this.updateFormStatus(FormStatus.LOCKED);
+  }
+
+  private async merge(privateKey: Buffer) {
     const proceed = (status: MergeStatus, message = '') => {
       this.updateFormValues({
         status: { value: status },
@@ -248,8 +278,7 @@ export class MergeForm extends EventEmitter implements AccountForm {
     if (this.status <= MergeStatus.CREATE_PROOF) {
       proceed(MergeStatus.CREATE_PROOF);
 
-      const userData = this.sdk.getUserData(this.userId);
-      const signer = this.sdk.createSchnorrSigner(userData.privateKey);
+      const signer = this.sdk.createSchnorrSigner(privateKey);
       const toMerge = sum(this.values.toMerge.value.slice(0, 2));
       const fee = toBaseUnits(this.values.fee.value, this.asset.decimals);
       this.proofOutput = await this.sdk.createJoinSplitProof(
@@ -284,6 +313,46 @@ export class MergeForm extends EventEmitter implements AccountForm {
     }
   };
 
+  private onProviderStateChange = async () => {
+    if (this.status === MergeStatus.GENERATE_KEY) {
+      await this.requestSigningKey();
+    }
+  };
+
+  private async requestSigningKey() {
+    if (!this.provider) {
+      this.updateFormValues({
+        submit: clearMessage({ value: true }),
+      });
+      return;
+    }
+
+    const provider = this.provider;
+    const { account } = provider;
+    const { signerAddress } = this.keyVault;
+    if (!account?.equals(signerAddress)) {
+      this.prompt(
+        `Please switch your wallet's account to ${signerAddress
+          .toString()
+          .slice(0, 6)}...${signerAddress.toString().slice(-4)}.`,
+      );
+      return;
+    }
+
+    this.prompt('Please sign the message in your wallet.');
+
+    try {
+      const { privateKey } = await createSigningKeys(provider, this.sdk);
+      if (!this.destroyed && this.status === MergeStatus.GENERATE_KEY && provider === this.provider) {
+        await this.createProof(privateKey);
+      }
+    } catch (e) {
+      if (this.status === MergeStatus.GENERATE_KEY && provider === this.provider) {
+        this.updateFormValues({ status: { value: MergeStatus.CONFIRM }, submit: clearMessage({ value: true }) });
+      }
+    }
+  }
+
   private updateFormStatus(status: FormStatus) {
     this.formStatus = status;
     this.emit(AccountFormEvent.UPDATED_FORM_STATUS, status);
@@ -292,5 +361,11 @@ export class MergeForm extends EventEmitter implements AccountForm {
   private updateFormValues(changes: Partial<MergeFormValues>) {
     this.values = mergeValues(this.values, changes);
     this.emit(AccountFormEvent.UPDATED_FORM_VALUES, this.values);
+  }
+
+  private prompt(message: string) {
+    this.updateFormValues({
+      submit: withWarning({ value: true }, message),
+    });
   }
 }

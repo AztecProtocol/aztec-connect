@@ -39,6 +39,7 @@ describe('ethereum_blockchain', () => {
       getRollupBlock: jest.fn().mockResolvedValue(blocks[blocks.length - 1]),
       getRollupContractAddress: jest.fn().mockReturnValue(EthAddress.randomAddress()),
       getFeeDistributorContractAddress: jest.fn().mockReturnValue(EthAddress.randomAddress()),
+      getVerifierContractAddress: jest.fn().mockReturnValue(EthAddress.randomAddress()),
       getBlockNumber: jest.fn().mockResolvedValue(blocks.length),
       getChainId: jest.fn().mockResolvedValue(999),
       getTransactionReceipt: jest.fn(),

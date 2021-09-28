@@ -4,7 +4,7 @@ import { EthersAdapter } from './ethers_adapter';
 import { createMetamaskProvider } from './metamask_provider';
 import { createStandardProvider } from './standard_provider';
 import { createWalletconnectProvider } from './walletconnect_provider';
-import { Wallet } from './wallets';
+import { WalletId } from './wallets';
 
 export * from './wallets';
 export * from './wallet_provider';
@@ -17,11 +17,11 @@ export interface ProviderConfig {
   network: string;
 }
 
-export const createWalletProvider = (wallet: Wallet, { infuraId, ethereumHost, network }: ProviderConfig) => {
-  switch (wallet) {
-    case Wallet.METAMASK:
+export const createWalletProvider = (walletId: WalletId, { infuraId, ethereumHost, network }: ProviderConfig) => {
+  switch (walletId) {
+    case WalletId.METAMASK:
       return createMetamaskProvider();
-    case Wallet.CONNECT:
+    case WalletId.CONNECT:
       return createWalletconnectProvider(infuraId);
     default:
   }

@@ -2,7 +2,6 @@ import { AssetId } from '@aztec/barretenberg/asset';
 import { Blockchain, BlockchainAsset, TxType } from '@aztec/barretenberg/blockchain';
 import { AssetFeeQuote } from '@aztec/barretenberg/rollup_provider';
 import { TxDao } from '../entity/tx';
-import { RollupDb } from '../rollup_db';
 import { FeeCalculator } from './fee_calculator';
 import { PriceTracker } from './price_tracker';
 
@@ -12,22 +11,25 @@ export class TxFeeResolver {
   private feeCalculator!: FeeCalculator;
 
   constructor(
-    private blockchain: Blockchain,
-    private rollupDb: RollupDb,
-    private baseTxGas: number,
-    private maxFeeGasPrice: bigint,
-    private feeGasPriceMultiplier: number,
-    private txsPerRollup: number,
-    private publishInterval: number,
-    private surplusRatios = [1, 0.9, 0.5, 0],
-    private feeFreeAssets: AssetId[] = [],
+    private readonly blockchain: Blockchain,
+    private readonly baseTxGas: number,
+    private readonly maxFeeGasPrice: bigint,
+    private readonly feeGasPriceMultiplier: number,
+    private readonly txsPerRollup: number,
+    private readonly publishInterval: number,
+    private readonly surplusRatios = [1, 0.9, 0.5, 0],
+    private readonly feeFreeAssets: AssetId[] = [],
+    private readonly freeTxTypes = [TxType.ACCOUNT, TxType.TRANSFER],
+    private readonly numSignificantFigures = 2,
+    private readonly refreshInterval = 5 * 60 * 1000, // 5 mins
+    private readonly minFeeDuration = refreshInterval * 2, // 10 mins
   ) {}
 
   async start() {
     const { assets } = await this.blockchain.getBlockchainStatus();
     this.assets = assets;
     const assetIds = assets.map((_, id) => id);
-    this.priceTracker = new PriceTracker(this.blockchain, this.rollupDb, assetIds);
+    this.priceTracker = new PriceTracker(this.blockchain, assetIds, this.refreshInterval, this.minFeeDuration);
     this.feeCalculator = new FeeCalculator(
       this.priceTracker,
       this.assets,
@@ -38,6 +40,8 @@ export class TxFeeResolver {
       this.publishInterval,
       this.surplusRatios,
       this.feeFreeAssets,
+      this.freeTxTypes,
+      this.numSignificantFigures,
     );
     await this.priceTracker.start();
   }

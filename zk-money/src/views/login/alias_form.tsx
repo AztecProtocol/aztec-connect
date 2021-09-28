@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import { ValueAvailability } from '../../app';
+import { LoginMode, ValueAvailability } from '../../app';
 import {
   Button,
   InputStatus,
@@ -9,8 +9,11 @@ import {
   InputWrapper,
   MaskedInput,
   PaddedBlock,
+  Text,
   TextLink,
 } from '../../components';
+import { spacings } from '../../styles';
+import { getUrlFromLoginMode } from '../views';
 
 const Root = styled.div`
   display: flex;
@@ -28,6 +31,11 @@ const InputPaddedBlock = styled(PaddedBlock)`
 const AliasInputWrapper = styled(InputWrapper)`
   width: 100%;
   max-width: 420px;
+`;
+
+const Description = styled.div`
+  padding-top: ${spacings.s};
+  text-align: center;
 `;
 
 interface AliasFormProps {
@@ -72,7 +80,7 @@ export const AliasForm: React.FunctionComponent<AliasFormProps> = ({
           {isNewAlias && (
             <InputStatusIcon
               status={
-                aliasAvailability === ValueAvailability.INVALID && !!alias
+                !!alias && aliasAvailability === ValueAvailability.INVALID
                   ? InputStatus.ERROR
                   : aliasAvailability === ValueAvailability.PENDING
                   ? InputStatus.LOADING
@@ -94,7 +102,7 @@ export const AliasForm: React.FunctionComponent<AliasFormProps> = ({
       <PaddedBlock>
         <Button
           theme="white"
-          text={isNewAlias ? 'Register' : 'Login'}
+          text={isNewAlias ? 'Register' : 'Log in'}
           onClick={() => onSubmit(alias)}
           disabled={isNewAlias && aliasAvailability !== ValueAvailability.VALID}
         />
@@ -103,6 +111,23 @@ export const AliasForm: React.FunctionComponent<AliasFormProps> = ({
         <PaddedBlock>
           <TextLink text="(Forgot Username)" onClick={onForgotAlias} color="white" size="xxs" italic />
         </PaddedBlock>
+      )}
+      {isNewAccount && !!alias && aliasAvailability === ValueAvailability.INVALID && (
+        <Description>
+          <Text size="xs" inline>
+            {'This username has been taken. '}
+            <TextLink
+              text="Log in"
+              color="white"
+              size="xs"
+              weight="bold"
+              to={getUrlFromLoginMode(LoginMode.LOGIN)}
+              inline
+              underline
+            />
+            {'.'}
+          </Text>
+        </Description>
       )}
     </Root>
   );

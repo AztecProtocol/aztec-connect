@@ -1,18 +1,29 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
 import { colours, defaultTextColour } from '../styles';
 import { Text, TextColour, TextProps } from './text';
 import { Link } from './link';
 
+type HoverEffect = 'underline';
+
+const hoverEffects = {
+  underline: css`
+    text-decoration: underline;
+  `,
+};
+
 interface StyledTextLinkProps {
   color: TextColour;
   underline: boolean;
+  inline: boolean;
+  hover?: HoverEffect;
 }
 
 const StyledLink = styled(Link)<StyledTextLinkProps>`
+  ${({ inline }) => inline && 'display: inline-block;'}
   ${({ underline }) => underline && 'text-decoration: underline;'};
 
-  ${({ color }: StyledTextLinkProps) => {
+  ${({ color, hover }) => {
     if (color === 'gradient') return '';
 
     return `
@@ -21,6 +32,7 @@ const StyledLink = styled(Link)<StyledTextLinkProps>`
       &:hover,
       &:active {
         color: ${colours[color]};
+        ${hover ? hoverEffects[hover] : ''}
       }
     `;
   }}
@@ -34,6 +46,7 @@ export interface TextLinkProps extends TextProps {
   onClick?: () => void;
   color?: TextColour;
   underline?: boolean;
+  hover?: HoverEffect;
 }
 
 export const TextLink: React.FunctionComponent<TextLinkProps> = ({
@@ -44,12 +57,16 @@ export const TextLink: React.FunctionComponent<TextLinkProps> = ({
   onClick,
   color = defaultTextColour,
   underline = false,
+  inline = false,
+  hover,
   ...textProps
 }) => (
   <StyledLink
     className={className}
     color={color}
     underline={underline}
+    inline={inline}
+    hover={hover}
     to={to}
     href={href}
     target={target}

@@ -56,6 +56,22 @@ export class GraphQLService {
     return tx ? GrumpkinAddress.fromString(tx.accountPubKey) : undefined;
   }
 
+  async getAliasNonce(alias: string) {
+    const { data } = await this.apollo.query<AccountTxsResponse>({
+      query: gql`
+        query Query($alias: String) {
+          accountTxs(take: 1, where: { alias: $alias }, order: { nonce: "DESC" }) {
+            nonce
+          }
+        }
+      `,
+      variables: { alias },
+      fetchPolicy: 'no-cache',
+    });
+    const tx = data?.accountTxs[0];
+    return tx ? tx.nonce : 0;
+  }
+
   async getUnsettledAccountTxs() {
     const { data } = await this.apollo.query<AccountTxsResponse>({
       query: gql`

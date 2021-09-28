@@ -7,7 +7,7 @@ import {
   MessageType,
   ProviderState,
   ProviderStatus,
-  Wallet,
+  WalletId,
   wallets,
 } from '../../app';
 import { Dot, Select, Text, TextButton, Tooltip } from '../../components';
@@ -77,7 +77,7 @@ interface WalletSelectInputProps {
   ethAccount: EthAccountState;
   message?: string;
   messageType?: MessageType;
-  onChangeWallet(wallet: Wallet): void;
+  onChangeWallet(walletId: WalletId): void;
 }
 
 export const WalletSelect: React.FunctionComponent<WalletSelectInputProps> = ({
@@ -90,16 +90,16 @@ export const WalletSelect: React.FunctionComponent<WalletSelectInputProps> = ({
 }) => {
   const { ethAddress, publicBalance } = ethAccount;
 
-  const wallet = providerState?.wallet;
+  const walletId = providerState?.walletId;
   const walletSelect = (
     <Select
       trigger={<TextButton text={`(${ethAddress ? 'Change' : 'Connect'})`} size="xs" nowrap />}
       items={wallets
-        .filter(({ id }) => id !== Wallet.HOT)
+        .filter(({ id }) => id !== WalletId.HOT)
         .map(({ id, name, icon }) => ({
           id,
-          content: <WalletItem name={name} icon={icon} connected={id === wallet && id !== Wallet.CONNECT} />,
-          disabled: id === wallet && id !== Wallet.CONNECT,
+          content: <WalletItem name={name} icon={icon} connected={id === walletId && id !== WalletId.CONNECT} />,
+          disabled: id === walletId && id !== WalletId.CONNECT,
         }))}
       onSelect={id => onChangeWallet(id)}
     />
@@ -135,7 +135,7 @@ export const WalletSelect: React.FunctionComponent<WalletSelectInputProps> = ({
     return (
       <FlexRow>
         <EthAddressStatus size="xs" color="orange" />
-        <EthAddressText text={`Connecting to ${wallets[providerState!.wallet].name}...`} size="xs" nowrap />
+        <EthAddressText text={`Connecting to ${wallets[providerState!.walletId].name}...`} size="xs" nowrap />
       </FlexRow>
     );
   }

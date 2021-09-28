@@ -127,6 +127,10 @@ export class Contracts {
     return this.feeDistributor.address;
   }
 
+  public async getVerifierContractAddress() {
+    return this.rollupProcessor.verifier();
+  }
+
   public async createEscapeHatchProofTx(proofData: Buffer, signatures: Buffer[], offchainTxData: Buffer[]) {
     return this.rollupProcessor.createEscapeHatchProofTx(proofData, signatures, offchainTxData);
   }
@@ -190,6 +194,11 @@ export class Contracts {
 
   public async getBlockNumber() {
     return this.provider.getBlockNumber();
+  }
+
+  public async signPersonalMessage(message: Buffer, address: EthAddress) {
+    const signer = new Web3Signer(this.ethereumProvider);
+    return signer.signPersonalMessage(message, address);
   }
 
   public async signMessage(message: Buffer, address: EthAddress) {

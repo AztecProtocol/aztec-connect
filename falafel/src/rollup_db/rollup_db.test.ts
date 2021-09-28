@@ -348,6 +348,29 @@ describe('rollup_db', () => {
     expect(await rollupDb.getUnsettledTxCount()).toBe(0);
   });
 
+  it('should get unsettled txs', async () => {
+    const tx0 = randomTx();
+    const tx1 = randomTx();
+    const tx2 = randomTx();
+    await rollupDb.addTx(tx0);
+    await rollupDb.addTx(tx1);
+    await rollupDb.addTx(tx2);
+
+    const rollupProof0 = randomRollupProof([tx0], 0);
+    const rollup0 = randomRollup(0, rollupProof0);
+    const rollupProof1 = randomRollupProof([tx1], 1);
+    const rollup1 = randomRollup(1, rollupProof1);
+
+    await rollupDb.addRollup(rollup0);
+    await rollupDb.addRollup(rollup1);
+
+    await rollupDb.confirmMined(rollup0.id, 0, 0n, new Date(), TxHash.random(), [], [tx0.id]);
+
+    const unsettledTxs = await rollupDb.getUnsettledTxs();
+    expect(unsettledTxs.length).toBe(2);
+    expect(unsettledTxs.map(tx => tx.id)).toEqual(expect.arrayContaining([tx1.id, tx2.id]));
+  });
+
   it('should get unsettled js txs', async () => {
     const inputOwner = EthAddress.randomAddress();
     const txs = [

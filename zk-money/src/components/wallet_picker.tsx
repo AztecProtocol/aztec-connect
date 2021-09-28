@@ -1,9 +1,9 @@
 import { rgba } from 'polished';
 import React from 'react';
 import styled, { css } from 'styled-components';
-import { Wallet, wallets } from '../../app';
-import { Text } from '../../components';
-import { borderRadiuses, breakpoints, colours, defaultTextColour, lineHeights, spacings } from '../../styles';
+import { Wallet, WalletId } from '../app';
+import { borderRadiuses, breakpoints, colours, defaultTextColour, lineHeights, spacings } from '../styles';
+import { Text } from './text';
 
 const Root = styled.div`
   display: flex;
@@ -124,36 +124,39 @@ export const Option: React.FunctionComponent<OptionProps> = ({
   </OptionRoot>
 );
 
-interface ConnectProps {
-  wallet?: Wallet;
-  onSubmit: (wallet: Wallet) => any;
+interface WalletPickerProps {
+  wallets: Wallet[];
+  walletId?: WalletId;
+  onSubmit: (walletId: WalletId) => any;
+  moreComingSoon?: boolean;
 }
 
-export const Connect: React.FunctionComponent<ConnectProps> = ({ wallet, onSubmit }) => {
-  const availableWallets = window.ethereum ? wallets : wallets.filter(w => w.id !== Wallet.METAMASK);
-
-  return (
-    <Root>
-      <OptionsRoot>
-        {availableWallets.map(({ id, nameShort, icon }) => (
-          <Option
-            key={id}
-            name={nameShort}
-            icon={icon}
-            iconHeight={id === Wallet.CONNECT ? 60 : 80}
-            onClick={() => onSubmit(id)}
-            active={wallet === id}
-            disabled={wallet !== undefined && wallet !== id}
-          />
-        ))}
-        {availableWallets.length < 3 && (
-          <StaticOption>
-            <StaticText>
-              More <br /> Coming <br /> Soon
-            </StaticText>
-          </StaticOption>
-        )}
-      </OptionsRoot>
-    </Root>
-  );
-};
+export const WalletPicker: React.FunctionComponent<WalletPickerProps> = ({
+  wallets,
+  walletId,
+  onSubmit,
+  moreComingSoon,
+}) => (
+  <Root>
+    <OptionsRoot>
+      {wallets.map(({ id, nameShort, icon }) => (
+        <Option
+          key={id}
+          name={nameShort}
+          icon={icon}
+          iconHeight={id === WalletId.CONNECT ? 60 : 80}
+          onClick={() => onSubmit(id)}
+          active={walletId === id}
+          disabled={walletId !== undefined && walletId !== id}
+        />
+      ))}
+      {moreComingSoon && (
+        <StaticOption>
+          <StaticText>
+            More <br /> Coming <br /> Soon
+          </StaticText>
+        </StaticOption>
+      )}
+    </OptionsRoot>
+  </Root>
+);

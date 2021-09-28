@@ -1,7 +1,7 @@
 import { AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
-import { Connection, ConnectionOptions, MoreThan, MoreThanOrEqual, Repository } from 'typeorm';
+import { Connection, ConnectionOptions, IsNull, MoreThan, MoreThanOrEqual, Repository } from 'typeorm';
 import { Note } from '../../note';
 import { AccountId, UserData } from '../../user';
 import { UserAccountTx, UserDefiTx, UserJoinSplitTx } from '../../user_tx';
@@ -242,6 +242,18 @@ export class SQLDatabase implements Database {
 
     const accountTx = await this.accountTxRep.findOne({ where: { txHash } });
     return !!accountTx?.settled;
+  }
+
+  async getUnsettledUserTxs(userId: AccountId) {
+    const unsettledTxs = await Promise.all([
+      this.accountTxRep.find({ where: { userId, settled: IsNull() } }),
+      this.joinSplitTxRep.find({ where: { userId, settled: IsNull() } }),
+    ]);
+    return unsettledTxs.flat().map(({ txHash }) => txHash);
+  }
+
+  async removeUserTx(txHash: TxHash, userId: AccountId) {
+    await Promise.all([this.accountTxRep.delete({ txHash }), this.joinSplitTxRep.delete({ txHash, userId })]);
   }
 
   async addUserSigningKey(signingKey: SigningKey) {

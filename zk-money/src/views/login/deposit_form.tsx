@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import { DepositFormValues, DepositStatus, fromBaseUnits, isValidForm, ProviderState, Wallet } from '../../app';
+import { DepositFormValues, DepositStatus, fromBaseUnits, isValidForm, ProviderState, WalletId } from '../../app';
 import {
   Button,
   Input,
@@ -90,7 +90,7 @@ interface DepositFormProps {
   providerState?: ProviderState;
   onChangeInputs(inputs: Partial<DepositFormValues>): void;
   onSubmit(): void;
-  onChangeWallet(wallet: Wallet): void;
+  onChangeWallet(walletId: WalletId): void;
 }
 
 export const DepositForm: React.FunctionComponent<DepositFormProps> = ({
