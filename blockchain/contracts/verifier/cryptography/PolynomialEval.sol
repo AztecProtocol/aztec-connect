@@ -64,7 +64,7 @@ library PolynomialEval {
         // store denominators in mPtr -> mPtr + 0x80
         assembly {
             mstore(mPtr, public_input_delta_denominator) // store denominator
-            mstore(add(mPtr, 0x20), vanishing_numerator) // store numerator, because we want the inverse of the zero poly
+            mstore(add(mPtr, 0x20), vanishing_denominator) // store denominator
             mstore(add(mPtr, 0x40), l_start_denominator) // store denominator
             mstore(add(mPtr, 0x60), l_end_denominator) // store denominator
 
@@ -99,7 +99,7 @@ library PolynomialEval {
 
             public_input_delta := mulmod(public_input_delta_numerator, mload(mPtr), p)
 
-            zero_polynomial_eval := mulmod(vanishing_denominator, mload(add(mPtr, 0x20)), p)
+            zero_polynomial_eval := mulmod(vanishing_numerator, mload(add(mPtr, 0x20)), p)
 
             l_start := mulmod(lagrange_numerator, mload(add(mPtr, 0x40)), p)
 
@@ -252,7 +252,7 @@ library PolynomialEval {
     function compute_arithmetic_gate_quotient_contribution(
         Types.ChallengeTranscript memory challenges,
         Types.Proof memory proof
-    ) internal pure returns (uint256) {
+    ) internal view returns (uint256) {
         uint256 q_arith = proof.q_arith;
         uint256 wire3 = proof.w3;
         uint256 wire4 = proof.w4;
@@ -286,7 +286,7 @@ library PolynomialEval {
     function compute_pedersen_gate_quotient_contribution(
         Types.ChallengeTranscript memory challenges,
         Types.Proof memory proof
-    ) internal pure returns (uint256) {
+    ) internal view returns (uint256) {
         uint256 alpha = challenges.alpha;
         uint256 gate_id = 0;
         uint256 alpha_base = challenges.alpha_base;
@@ -421,7 +421,7 @@ library PolynomialEval {
         uint256 lagrange_start,
         uint256 lagrange_end,
         Types.Proof memory proof
-    ) internal pure returns (uint256) {
+    ) internal view returns (uint256) {
         uint256 numerator_collector;
         uint256 alpha = challenges.alpha;
         uint256 beta = challenges.beta;
@@ -460,7 +460,6 @@ library PolynomialEval {
             uint256 lstart = lagrange_start;
             uint256 lend = lagrange_end;
             uint256 public_delta = public_input_delta;
-            uint256 linearization_poly = proof.linearization_polynomial;
             assembly {
                 let alpha_squared := mulmod(alpha, alpha, p)
                 let alpha_cubed := mulmod(alpha, alpha_squared, p)
@@ -472,9 +471,9 @@ library PolynomialEval {
 
                 numerator_collector := addmod(numerator_collector, sub(p, t0), p)
                 numerator_collector := addmod(numerator_collector, t1, p)
-                numerator_collector := addmod(numerator_collector, linearization_poly, p)
                 alpha_base := mulmod(alpha_base, alpha_cubed, p)
             }
+
         }
 
         challenges.alpha_base = alpha_base;
@@ -482,34 +481,34 @@ library PolynomialEval {
         return numerator_collector;
     }
 
-    function compute_quotient_polynomial(
+    // compute_r_0
+    function compute_linear_polynomial_constant(
         uint256 zero_poly_inverse,
         uint256 public_input_delta,
         Types.ChallengeTranscript memory challenges,
         uint256 lagrange_start,
         uint256 lagrange_end,
         Types.Proof memory proof
-    ) internal pure returns (uint256) {
-        uint256 t0 =
-            compute_permutation_quotient_contribution(
-                public_input_delta,
-                challenges,
-                lagrange_start,
-                lagrange_end,
-                proof
-            );
+    ) internal view returns (uint256) {
+        uint256 t0 = compute_permutation_quotient_contribution(
+            public_input_delta,
+            challenges,
+            lagrange_start,
+            lagrange_end,
+            proof
+        );
 
         uint256 t1 = compute_arithmetic_gate_quotient_contribution(challenges, proof);
 
         uint256 t2 = compute_pedersen_gate_quotient_contribution(challenges, proof);
 
-        uint256 quotient_eval;
+        uint256 r_0;
         uint256 p = Bn254Crypto.r_mod;
         assembly {
-            quotient_eval := addmod(t0, addmod(t1, t2, p), p)
-            quotient_eval := mulmod(quotient_eval, zero_poly_inverse, p)
+            r_0 := addmod(t0, addmod(t1, t2, p), p)
+            // r_0 := mulmod(r_0, zero_poly_inverse, p) // not necessary for the simplified Plonk 
         }
-        return quotient_eval;
+        return r_0;
     }
 
     function compute_linearised_opening_terms(
@@ -579,13 +578,19 @@ library PolynomialEval {
             accumulator_ptr := mload(0x40)
             mstore(0x40, add(accumulator_ptr, 0xa0))
         }
-
+        // For the simplified plonk, we need to multiply -Z_H(z) with [T1],
+        // proof.zero_poly_eval = Z_H(z)
+        uint256 zero_poly_eval_neg = p - vk.zero_polynomial_eval;
+        // [T2], [T3], [T4]
         // first term
         Types.G1Point memory work_point = proof.T1;
         work_point.validateG1Point();
         assembly {
             mstore(accumulator_ptr, mload(work_point))
             mstore(add(accumulator_ptr, 0x20), mload(add(work_point, 0x20)))
+            mstore(add(accumulator_ptr, 0x40), zero_poly_eval_neg)
+            // computing zero_poly_eval_neg * [T1]
+            success := staticcall(gas(), 7, accumulator_ptr, 0x60, accumulator_ptr, 0x40)
         }
 
         // second term
@@ -596,9 +601,9 @@ library PolynomialEval {
         assembly {
             mstore(add(accumulator_ptr, 0x40), mload(work_point))
             mstore(add(accumulator_ptr, 0x60), mload(add(work_point, 0x20)))
-            mstore(add(accumulator_ptr, 0x80), scalar_multiplier)
+            mstore(add(accumulator_ptr, 0x80), mulmod(scalar_multiplier, zero_poly_eval_neg, p))
 
-            // compute zeta_n.[T2]
+            // compute zero_poly_eval_neg * zeta_n * [T2]
             success := staticcall(gas(), 7, add(accumulator_ptr, 0x40), 0x60, add(accumulator_ptr, 0x40), 0x40)
 
             // add scalar mul output into accumulator
@@ -613,9 +618,9 @@ library PolynomialEval {
 
             mstore(add(accumulator_ptr, 0x40), mload(work_point))
             mstore(add(accumulator_ptr, 0x60), mload(add(work_point, 0x20)))
-            mstore(add(accumulator_ptr, 0x80), scalar_multiplier)
+            mstore(add(accumulator_ptr, 0x80), mulmod(scalar_multiplier, zero_poly_eval_neg, p))
 
-            // compute zeta_n^2.[T3]
+            // compute zero_poly_eval_neg * zeta_n^2 * [T3]
             success := and(
                 success,
                 staticcall(gas(), 7, add(accumulator_ptr, 0x40), 0x60, add(accumulator_ptr, 0x40), 0x40)
@@ -633,9 +638,9 @@ library PolynomialEval {
 
             mstore(add(accumulator_ptr, 0x40), mload(work_point))
             mstore(add(accumulator_ptr, 0x60), mload(add(work_point, 0x20)))
-            mstore(add(accumulator_ptr, 0x80), scalar_multiplier)
+            mstore(add(accumulator_ptr, 0x80), mulmod(scalar_multiplier, zero_poly_eval_neg, p))
 
-            // compute zeta_n^3.[T4]
+            // compute zero_poly_eval_neg * zeta_n^3 * [T4]
             success := and(
                 success,
                 staticcall(gas(), 7, add(accumulator_ptr, 0x40), 0x60, add(accumulator_ptr, 0x40), 0x40)
@@ -847,11 +852,11 @@ library PolynomialEval {
     function compute_batch_evaluation_scalar_multiplier(
         Types.Proof memory proof,
         Types.ChallengeTranscript memory challenges
-    ) internal pure returns (uint256) {
+    ) internal view returns (uint256) {
         uint256 p = Bn254Crypto.r_mod;
         uint256 opening_scalar;
-        uint256 lhs;
-        uint256 rhs;
+        uint256 lhs; // stores nu challenges
+        uint256 rhs; // stores evaluations of polynomials
 
         lhs = challenges.v0;
         rhs = proof.w1;
@@ -913,16 +918,16 @@ library PolynomialEval {
             opening_scalar := addmod(opening_scalar, mulmod(lhs, rhs, p), p)
         }
 
-        lhs = challenges.v10;
-        rhs = proof.linearization_polynomial;
+        // lhs = 1;    //challenges.v10; (should be -1 for simplified Plonk)
+        rhs = proof.r_0; // linearization_polynomial should be r_0 for simplified Plonk
         assembly {
-            opening_scalar := addmod(opening_scalar, mulmod(lhs, rhs, p), p)
+            opening_scalar := addmod(opening_scalar, sub(p, rhs), p)
         }
-
-        lhs = proof.quotient_polynomial_eval;
-        assembly {
-            opening_scalar := addmod(opening_scalar, lhs, p)
-        }
+        // should be removed for simplified Plonk
+        // lhs = proof.quotient_polynomial_eval;
+        // assembly {
+        //     opening_scalar := addmod(opening_scalar, lhs, p)
+        // }
 
         lhs = challenges.v0;
         rhs = proof.w1_omega;
@@ -973,7 +978,6 @@ library PolynomialEval {
     ) internal view returns (Types.G1Point memory) {
         uint256 q_arith = proof.q_arith;
         uint256 q_ecc = proof.q_ecc;
-        uint256 linear_challenge = challenges.v10;
         uint256 alpha_base = challenges.alpha_base;
         uint256 scaling_alpha = challenges.alpha_base;
         uint256 alpha = challenges.alpha;
@@ -998,7 +1002,7 @@ library PolynomialEval {
                 uint256 w1 = proof.w1;
 
                 assembly {
-                    scalar_multiplier := mulmod(w1, linear_challenge, p)
+                    scalar_multiplier := w1
                     scalar_multiplier := mulmod(scalar_multiplier, alpha_base, p)
                     scalar_multiplier := mulmod(scalar_multiplier, q_arith, p)
 
@@ -1009,7 +1013,7 @@ library PolynomialEval {
                     t0 := mulmod(t0, q_ecc, p)
                     t0 := mulmod(t0, scaling_alpha, p)
 
-                    scalar_multiplier := addmod(scalar_multiplier, mulmod(t0, linear_challenge, p), p)
+                    scalar_multiplier := addmod(scalar_multiplier, t0, p)
                 }
                 Types.G1Point memory Q1 = vk.Q1;
                 Q1.validateG1Point();
@@ -1028,12 +1032,12 @@ library PolynomialEval {
             {
                 uint256 w2 = proof.w2;
                 assembly {
-                    scalar_multiplier := mulmod(w2, linear_challenge, p)
+                    scalar_multiplier := w2
                     scalar_multiplier := mulmod(scalar_multiplier, alpha_base, p)
                     scalar_multiplier := mulmod(scalar_multiplier, q_arith, p)
 
                     let t0 := mulmod(scaling_alpha, q_ecc, p)
-                    scalar_multiplier := addmod(scalar_multiplier, mulmod(t0, linear_challenge, p), p)
+                    scalar_multiplier := addmod(scalar_multiplier, t0, p)
                 }
 
                 Types.G1Point memory Q2 = vk.Q2;
@@ -1059,7 +1063,7 @@ library PolynomialEval {
                 {
                     uint256 w3 = proof.w3;
                     assembly {
-                        scalar_multiplier := mulmod(w3, linear_challenge, p)
+                        scalar_multiplier := w3
                         scalar_multiplier := mulmod(scalar_multiplier, alpha_base, p)
                         scalar_multiplier := mulmod(scalar_multiplier, q_arith, p)
                     }
@@ -1082,7 +1086,7 @@ library PolynomialEval {
                             t1 := addmod(t1, t1, p)
                             t1 := mulmod(t1, q_ecc, p)
 
-                            scalar_multiplier := addmod(scalar_multiplier, mulmod(t1, linear_challenge, p), p)
+                            scalar_multiplier := addmod(scalar_multiplier, t1, p)
                         }
                     }
                 }
@@ -1102,7 +1106,7 @@ library PolynomialEval {
 
                     t0 := mulmod(t0, q_ecc, p)
 
-                    scalar_multiplier := addmod(scalar_multiplier, mulmod(t0, linear_challenge, p), p)
+                    scalar_multiplier := addmod(scalar_multiplier, t0, p)
                 }
             }
 
@@ -1130,7 +1134,7 @@ library PolynomialEval {
             uint256 w4 = proof.w4;
             uint256 q_c = proof.q_c;
             assembly {
-                scalar_multiplier := mulmod(w4, linear_challenge, p)
+                scalar_multiplier := w4
                 scalar_multiplier := mulmod(scalar_multiplier, alpha_base, p)
                 scalar_multiplier := mulmod(scalar_multiplier, q_arith, p)
 
@@ -1139,7 +1143,7 @@ library PolynomialEval {
                 t0 := mulmod(t0, q_c, p)
                 t0 := mulmod(t0, scaling_alpha, p)
 
-                scalar_multiplier := addmod(scalar_multiplier, mulmod(t0, linear_challenge, p), p)
+                scalar_multiplier := addmod(scalar_multiplier, t0, p)
             }
 
             Types.G1Point memory Q4 = vk.Q4;
@@ -1172,14 +1176,13 @@ library PolynomialEval {
                 scalar_multiplier := mulmod(scalar_multiplier, alpha_base, p)
                 scalar_multiplier := mulmod(scalar_multiplier, alpha, p)
                 scalar_multiplier := mulmod(scalar_multiplier, q_arith, p)
-                scalar_multiplier := mulmod(scalar_multiplier, linear_challenge, p)
-
+                
                 let t0 := addmod(0x01, neg_w4, p)
                 t0 := mulmod(t0, q_ecc, p)
                 t0 := mulmod(t0, q_c, p)
                 t0 := mulmod(t0, scaling_alpha, p)
 
-                scalar_multiplier := addmod(scalar_multiplier, mulmod(t0, linear_challenge, p), p)
+                scalar_multiplier := addmod(scalar_multiplier, t0, p)
             }
 
             Types.G1Point memory Q5 = vk.Q5;
@@ -1208,7 +1211,6 @@ library PolynomialEval {
 
                 assembly {
                     scalar_multiplier := mulmod(w1, w2, p)
-                    scalar_multiplier := mulmod(scalar_multiplier, linear_challenge, p)
                     scalar_multiplier := mulmod(scalar_multiplier, alpha_base, p)
                     scalar_multiplier := mulmod(scalar_multiplier, q_arith, p)
                 }
@@ -1221,7 +1223,7 @@ library PolynomialEval {
                 t0 := mulmod(t0, q_c, p)
                 t0 := mulmod(t0, scaling_alpha, p)
 
-                scalar_multiplier := addmod(scalar_multiplier, mulmod(t0, linear_challenge, p), p)
+                scalar_multiplier := addmod(scalar_multiplier, t0, p)
             }
 
             Types.G1Point memory QM = vk.QM;
@@ -1247,7 +1249,7 @@ library PolynomialEval {
         {
             uint256 q_c_challenge = challenges.v9;
             assembly {
-                scalar_multiplier := mulmod(linear_challenge, alpha_base, p)
+                scalar_multiplier := alpha_base    
                 scalar_multiplier := mulmod(scalar_multiplier, q_arith, p)
 
                 // TurboPlonk requires an explicit evaluation of q_c
@@ -1412,12 +1414,10 @@ library PolynomialEval {
                     identity := addmod(identity, t2, p)
                 }
             }
-            uint256 linear_nu = challenges.v10;
             uint256 alpha_base = challenges.alpha_base;
 
             assembly {
                 identity := mulmod(identity, alpha_base, p)
-                identity := mulmod(identity, linear_nu, p)
             }
         }
         // update alpha
@@ -1448,7 +1448,6 @@ library PolynomialEval {
         uint256 alpha_base = challenges.alpha_base;
         uint256 range_acc;
         uint256 p = Bn254Crypto.r_mod;
-        uint256 linear_challenge = challenges.v10;
         assembly {
             let delta_1 := addmod(wire3, sub(p, mulmod(wire4, 0x04, p)), p)
             let delta_2 := addmod(wire2, sub(p, mulmod(wire3, 0x04, p)), p)
@@ -1496,7 +1495,6 @@ library PolynomialEval {
             range_acc := addmod(range_acc, t0, p)
             alpha_base := mulmod(alpha_base, alpha, p)
 
-            range_acc := mulmod(range_acc, linear_challenge, p)
         }
 
         challenges.alpha_base = alpha_base;
@@ -1565,7 +1563,6 @@ library PolynomialEval {
             }
         }
         {
-            uint256 linear_challenge = challenges.v10;
             uint256 alpha_base = challenges.alpha_base;
             uint256 alpha = challenges.alpha;
             uint256 separator_challenge = challenges.u;
@@ -1575,19 +1572,15 @@ library PolynomialEval {
                 partial_grand_product := mulmod(partial_grand_product, alpha_base, p)
 
                 sigma_multiplier := mulmod(
-                    mulmod(
                         sub(p, mulmod(mulmod(sigma_multiplier, grand_product_at_z_omega, p), alpha_base, p)),
                         beta,
                         p
-                    ),
-                    linear_challenge,
-                    p
-                )
+                    )
 
                 alpha_base := mulmod(mulmod(alpha_base, alpha, p), alpha, p)
 
                 partial_grand_product := addmod(
-                    mulmod(addmod(partial_grand_product, mulmod(l_start, alpha_base, p), p), linear_challenge, p),
+                    addmod(partial_grand_product, mulmod(l_start, alpha_base, p), p),
                     separator_challenge,
                     p
                 )
@@ -1596,7 +1589,7 @@ library PolynomialEval {
             }
             challenges.alpha_base = alpha_base;
         }
-
+        //Need to understand the below code:
         Types.G1Point memory Z = proof.Z;
         Types.G1Point memory SIGMA4 = vk.SIGMA4;
         Types.G1Point memory accumulator;
@@ -1614,6 +1607,11 @@ library PolynomialEval {
             mstore(add(mPtr, 0x60), mload(add(SIGMA4, 0x20)))
             mstore(add(mPtr, 0x80), sigma_multiplier)
             success := and(success, staticcall(gas(), 7, add(mPtr, 0x40), 0x60, add(mPtr, 0x40), 0x40))
+
+            // mload(mPtr) : (partial_grand_product * [Z]).x
+            // mload(mPtr + 32) : (partial_grand_product * [Z]).y
+            // mload(mPtr + 64) : (sigma_multiplier * [SIGMA_4]).x
+            // mload(mPtr + 96) : (sigma_multiplier * [SIGMA_4]).y
 
             success := and(success, staticcall(gas(), 6, mPtr, 0x80, accumulator, 0x40))
         }

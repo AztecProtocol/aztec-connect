@@ -149,7 +149,7 @@ library Transcript {
     function generate_nu_challenges(
         TranscriptData memory self,
         Types.ChallengeTranscript memory challenges,
-        uint256 quotient_poly_eval,
+       // uint256 quotient_poly_eval,
         uint256 num_public_inputs
     ) internal pure {
         uint256 p = Bn254Crypto.r_mod;
@@ -169,9 +169,9 @@ library Transcript {
 
             let m_ptr := mload(0x40)
             mstore(m_ptr, current_challenge)
-            mstore(add(m_ptr, 0x20), quotient_poly_eval)
-            calldatacopy(add(m_ptr, 0x40), calldata_ptr, 0x200) // 16 * 0x20 = 0x200
-            base_v_challenge := keccak256(m_ptr, 0x240) // hash length = 0x240, we include the previous challenge in the hash
+            // mstore(add(m_ptr, 0x20), quotient_poly_eval)
+            calldatacopy(add(m_ptr, 0x20), calldata_ptr, 0x1e0) // 15 * 0x20 = 0x1e0
+            base_v_challenge := keccak256(m_ptr, 0x200) // hash length = 0x200, we include the previous challenge in the hash
             updated_v := mod(base_v_challenge, p)
         }
 

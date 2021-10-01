@@ -76,74 +76,70 @@ contract StandardVerifier is IVerifier {
     uint256 constant W3_EVAL_LOC =                              0x200 + 0x340 + 0x200;
     uint256 constant SIGMA1_EVAL_LOC =                          0x200 + 0x340 + 0x220;
     uint256 constant SIGMA2_EVAL_LOC =                          0x200 + 0x340 + 0x240;
-    uint256 constant R_EVAL_LOC =                               0x200 + 0x340 + 0x260;
-    uint256 constant Z_OMEGA_EVAL_LOC =                         0x200 + 0x340 + 0x280;
-    uint256 constant PI_Z_X_LOC =                               0x200 + 0x340 + 0x2a0;
-    uint256 constant PI_Z_Y_LOC =                               0x200 + 0x340 + 0x2c0;
-    uint256 constant PI_Z_OMEGA_X_LOC =                         0x200 + 0x340 + 0x2e0;
-    uint256 constant PI_Z_OMEGA_Y_LOC =                         0x200 + 0x340 + 0x300;
+    uint256 constant Z_OMEGA_EVAL_LOC =                         0x200 + 0x340 + 0x260;
+    uint256 constant PI_Z_X_LOC =                               0x200 + 0x340 + 0x280;
+    uint256 constant PI_Z_Y_LOC =                               0x200 + 0x340 + 0x2a0;
+    uint256 constant PI_Z_OMEGA_X_LOC =                         0x200 + 0x340 + 0x2c0;
+    uint256 constant PI_Z_OMEGA_Y_LOC =                         0x200 + 0x340 + 0x2e0;
     // 25
 
     // ### CHALLENGES MEMORY OFFSETS
-    uint256 constant C_BETA_LOC =                               0x200 + 0x340 + 0x320 + 0x00;
-    uint256 constant C_GAMMA_LOC =                              0x200 + 0x340 + 0x320 + 0x20;
-    uint256 constant C_ALPHA_LOC =                              0x200 + 0x340 + 0x320 + 0x40;
-    uint256 constant C_ARITHMETIC_ALPHA_LOC =                   0x200 + 0x340 + 0x320 + 0x60;
-    uint256 constant C_ZETA_LOC =                               0x200 + 0x340 + 0x320 + 0x80;
-    uint256 constant C_CURRENT_LOC =                            0x200 + 0x340 + 0x320 + 0xa0;
-    uint256 constant C_V0_LOC =                                 0x200 + 0x340 + 0x320 + 0xc0;
-    uint256 constant C_V1_LOC =                                 0x200 + 0x340 + 0x320 + 0xe0;
-    uint256 constant C_V2_LOC =                                 0x200 + 0x340 + 0x320 + 0x100;
-    uint256 constant C_V3_LOC =                                 0x200 + 0x340 + 0x320 + 0x120;
-    uint256 constant C_V4_LOC =                                 0x200 + 0x340 + 0x320 + 0x140;
-    uint256 constant C_V5_LOC =                                 0x200 + 0x340 + 0x320 + 0x160;
-    uint256 constant C_U_LOC =                                  0x200 + 0x340 + 0x320 + 0x180;
+    uint256 constant C_BETA_LOC =                               0x200 + 0x340 + 0x300 + 0x00;
+    uint256 constant C_GAMMA_LOC =                              0x200 + 0x340 + 0x300 + 0x20;
+    uint256 constant C_ALPHA_LOC =                              0x200 + 0x340 + 0x300 + 0x40;
+    uint256 constant C_ARITHMETIC_ALPHA_LOC =                   0x200 + 0x340 + 0x300 + 0x60; 
+    uint256 constant C_ZETA_LOC =                               0x200 + 0x340 + 0x300 + 0x80;
+    uint256 constant C_CURRENT_LOC =                            0x200 + 0x340 + 0x300 + 0xa0;
+    uint256 constant C_V0_LOC =                                 0x200 + 0x340 + 0x300 + 0xc0;
+    uint256 constant C_V1_LOC =                                 0x200 + 0x340 + 0x300 + 0xe0;
+    uint256 constant C_V2_LOC =                                 0x200 + 0x340 + 0x300 + 0x100;
+    uint256 constant C_V3_LOC =                                 0x200 + 0x340 + 0x300 + 0x120;
+    uint256 constant C_V4_LOC =                                 0x200 + 0x340 + 0x300 + 0x140;
+    uint256 constant C_V5_LOC =                                 0x200 + 0x340 + 0x300 + 0x160;
+    uint256 constant C_U_LOC =                                  0x200 + 0x340 + 0x300 + 0x180;
     // 13
 
     // ### LOCAL VARIABLES MEMORY OFFSETS
-    uint256 constant DELTA_NUMERATOR_LOC =                      0x200 + 0x340 + 0x320 + 0x1a0 + 0x00;
-    uint256 constant DELTA_DENOMINATOR_LOC =                    0x200 + 0x340 + 0x320 + 0x1a0 + 0x20;
-    uint256 constant ZETA_POW_N_LOC =                           0x200 + 0x340 + 0x320 + 0x1a0 + 0x40;
-    uint256 constant PUBLIC_INPUT_DELTA_LOC =                   0x200 + 0x340 + 0x320 + 0x1a0 + 0x60;
-    uint256 constant ZERO_POLY_LOC =                            0x200 + 0x340 + 0x320 + 0x1a0 + 0x80;
-    uint256 constant L_START_LOC =                              0x200 + 0x340 + 0x320 + 0x1a0 + 0xa0;
-    uint256 constant L_END_LOC =                                0x200 + 0x340 + 0x320 + 0x1a0 + 0xc0;
-    uint256 constant QUOTIENT_EVAL_LOC =                        0x200 + 0x340 + 0x320 + 0x1a0 + 0xe0;
-    uint256 constant ACCUMULATOR_X_LOC =                        0x200 + 0x340 + 0x320 + 0x1a0 + 0x100;
-    uint256 constant ACCUMULATOR_Y_LOC =                        0x200 + 0x340 + 0x320 + 0x1a0 + 0x120;
-    uint256 constant ACCUMULATOR2_X_LOC =                       0x200 + 0x340 + 0x320 + 0x1a0 + 0x140;
-    uint256 constant ACCUMULATOR2_Y_LOC =                       0x200 + 0x340 + 0x320 + 0x1a0 + 0x160;
-    uint256 constant PAIRING_LHS_X_LOC =                        0x200 + 0x340 + 0x320 + 0x1a0 + 0x180;
-    uint256 constant PAIRING_LHS_Y_LOC =                        0x200 + 0x340 + 0x320 + 0x1a0 + 0x1a0;
-    uint256 constant PAIRING_RHS_X_LOC =                        0x200 + 0x340 + 0x320 + 0x1a0 + 0x1c0;
-    uint256 constant PAIRING_RHS_Y_LOC =                        0x200 + 0x340 + 0x320 + 0x1a0 + 0x1e0;
+    uint256 constant DELTA_NUMERATOR_LOC =                      0x200 + 0x340 + 0x300 + 0x1a0 + 0x00;
+    uint256 constant DELTA_DENOMINATOR_LOC =                    0x200 + 0x340 + 0x300 + 0x1a0 + 0x20;
+    uint256 constant ZETA_POW_N_LOC =                           0x200 + 0x340 + 0x300 + 0x1a0 + 0x40;
+    uint256 constant PUBLIC_INPUT_DELTA_LOC =                   0x200 + 0x340 + 0x300 + 0x1a0 + 0x60;
+    uint256 constant ZERO_POLY_LOC =                            0x200 + 0x340 + 0x300 + 0x1a0 + 0x80;
+    uint256 constant L_START_LOC =                              0x200 + 0x340 + 0x300 + 0x1a0 + 0xa0;
+    uint256 constant L_END_LOC =                                0x200 + 0x340 + 0x300 + 0x1a0 + 0xc0;
+    uint256 constant R_ZERO_EVAL_LOC =                          0x200 + 0x340 + 0x300 + 0x1a0 + 0xe0; 
+    uint256 constant ACCUMULATOR_X_LOC =                        0x200 + 0x340 + 0x300 + 0x1a0 + 0x100;
+    uint256 constant ACCUMULATOR_Y_LOC =                        0x200 + 0x340 + 0x300 + 0x1a0 + 0x120;
+    uint256 constant ACCUMULATOR2_X_LOC =                       0x200 + 0x340 + 0x300 + 0x1a0 + 0x140;
+    uint256 constant ACCUMULATOR2_Y_LOC =                       0x200 + 0x340 + 0x300 + 0x1a0 + 0x160;
+    uint256 constant PAIRING_LHS_X_LOC =                        0x200 + 0x340 + 0x300 + 0x1a0 + 0x180;
+    uint256 constant PAIRING_LHS_Y_LOC =                        0x200 + 0x340 + 0x300 + 0x1a0 + 0x1a0;
+    uint256 constant PAIRING_RHS_X_LOC =                        0x200 + 0x340 + 0x300 + 0x1a0 + 0x1c0;
+    uint256 constant PAIRING_RHS_Y_LOC =                        0x200 + 0x340 + 0x300 + 0x1a0 + 0x1e0;
     // 21
 
     // ### SUCCESS FLAG MEMORY LOCATIONS
-    uint256 constant GRAND_PRODUCT_SUCCESS_FLAG =               0x200 + 0x340 + 0x320 + 0x1a0 + 0x200 + 0x00;
-    uint256 constant ARITHMETIC_TERM_SUCCESS_FLAG =             0x200 + 0x340 + 0x320 + 0x1a0 + 0x200 + 0x20;
-    uint256 constant BATCH_OPENING_SUCCESS_FLAG =               0x200 + 0x340 + 0x320 + 0x1a0 + 0x200 + 0x40;
-    uint256 constant OPENING_COMMITMENT_SUCCESS_FLAG =          0x200 + 0x340 + 0x320 + 0x1a0 + 0x200 + 0x60;
-    uint256 constant PAIRING_PREAMBLE_SUCCESS_FLAG =            0x200 + 0x340 + 0x320 + 0x1a0 + 0x200 + 0x80;
-    uint256 constant PAIRING_SUCCESS_FLAG =                     0x200 + 0x340 + 0x320 + 0x1a0 + 0x200 + 0xa0;
-    uint256 constant RESULT_FLAG =                              0x200 + 0x340 + 0x320 + 0x1a0 + 0x200 + 0xc0;
+    uint256 constant GRAND_PRODUCT_SUCCESS_FLAG =               0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0x00;
+    uint256 constant ARITHMETIC_TERM_SUCCESS_FLAG =             0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0x20;
+    uint256 constant BATCH_OPENING_SUCCESS_FLAG =               0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0x40;
+    uint256 constant OPENING_COMMITMENT_SUCCESS_FLAG =          0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0x60;
+    uint256 constant PAIRING_PREAMBLE_SUCCESS_FLAG =            0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0x80;
+    uint256 constant PAIRING_SUCCESS_FLAG =                     0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0xa0;
+    uint256 constant RESULT_FLAG =                              0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0xc0;
     // 7
 
     // misc stuff
-    uint256 constant ZERO_POLY_INVERSE_LOC = 0x200 + 0x340 + 0x320 + 0x1a0 + 0x200 + 0xe0;
-    uint256 constant OMEGA_INVERSE_LOC = 0x200 + 0x340 + 0x320 + 0x1a0 + 0x200 + 0xe0 + 0x20;
-    uint256 constant C_ALPHA_SQR_LOC = 0x200 + 0x340 + 0x320 + 0x1a0 + 0x200 + 0xe0 + 0x40;
+    uint256 constant OMEGA_INVERSE_LOC = 0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0xe0;
+    uint256 constant C_ALPHA_SQR_LOC = 0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0xe0 + 0x20;
     // 3
 
     // ### RECURSION VARIABLE MEMORY LOCATIONS
+    uint256 constant RECURSIVE_P1_X_LOC = 0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0xe0 + 0x40;
+    uint256 constant RECURSIVE_P1_Y_LOC = 0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0xe0 + 0x60;
+    uint256 constant RECURSIVE_P2_X_LOC = 0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0xe0 + 0x80;
+    uint256 constant RECURSIVE_P2_Y_LOC = 0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0xe0 + 0xa0;
 
-
-    uint256 constant RECURSIVE_P1_X_LOC = 0x200 + 0x340 + 0x320 + 0x1a0 + 0x200 + 0xe0 + 0x60;
-    uint256 constant RECURSIVE_P1_Y_LOC = 0x200 + 0x340 + 0x320 + 0x1a0 + 0x200 + 0xe0 + 0x80;
-    uint256 constant RECURSIVE_P2_X_LOC = 0x200 + 0x340 + 0x320 + 0x1a0 + 0x200 + 0xe0 + 0xa0;
-    uint256 constant RECURSIVE_P2_Y_LOC = 0x200 + 0x340 + 0x320 + 0x1a0 + 0x200 + 0xe0 + 0xc0;
-
-    uint256 constant PUBLIC_INPUTS_HASH_LOCATION = 0x200 + 0x340 + 0x320 + 0x1a0 + 0x200 + 0xe0 + 0xe0;
+    uint256 constant PUBLIC_INPUTS_HASH_LOCATION = 0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0xe0 + 0xc0;
 
     // location of lookup table values when computing a modular inverse via the `invert` method
     uint256 constant II_POS = 0x00;
@@ -208,7 +204,7 @@ contract StandardVerifier is IVerifier {
                 mstore(SIGMA3_X_LOC,        mload(mload(add(vk, 0x180))))
                 mstore(SIGMA3_Y_LOC,        mload(add(mload(add(vk, 0x180)), 0x20)))
                 mstore(CONTAINS_RECURSIVE_PROOF_LOC, mload(add(vk, 0x1a0)))
-                mstore(RECURSIVE_PROOF_PUBLIC_INPUT_INDICES_LOC, mload(add(vk, 0x1c0)))
+                mstore(RECURSIVE_PROOF_PUBLIC_INPUT_INDICES_LOC, mload(add(vk, 0x1c0))) 
                 mstore(G2X_X0_LOC, 0x260e01b251f6f1c7e7ff4e580791dee8ea51d87a358e038b4efe30fac09383c1)
                 mstore(G2X_X1_LOC, 0x0118c4d5b837bcc2bc89b5b398b5974e9f5944073b32078b7e231fec938883b0)
                 mstore(G2X_Y0_LOC, 0x04fc6369f7110fe3d25156c1bb9a72859cf2a04641f99ba4ee413c80da6a5fe4)
@@ -217,6 +213,7 @@ contract StandardVerifier is IVerifier {
 
             /**
              * Compute modular inverse of a prime field element whose characteristic matches the bn254 group order
+             * computes `I^{p-2}`
              */
             function invert(I) -> acc {
                 let p := 21888242871839275222246405745257275088548364400416034343698204186575808495617
@@ -577,9 +574,9 @@ contract StandardVerifier is IVerifier {
                     let t8 := mulmod(t7, t7, p)
                     acc := mulmod(mulmod(t8, t8, p), mload(IIIII_POS), p)
                 }
-            }
-            let q := 21888242871839275222246405745257275088696311157297823662689037894645226208583
-            let p := 21888242871839275222246405745257275088548364400416034343698204186575808495617
+            }  // End of the invert function
+            let q := 21888242871839275222246405745257275088696311157297823662689037894645226208583 // EC group order
+            let p := 21888242871839275222246405745257275088548364400416034343698204186575808495617 // Prime field order
 
 
             /**
@@ -636,12 +633,11 @@ contract StandardVerifier is IVerifier {
             mstore(W3_EVAL_LOC, mod(calldataload(add(data_ptr, 0x200)), p))
             mstore(SIGMA1_EVAL_LOC, mod(calldataload(add(data_ptr, 0x220)), p))
             mstore(SIGMA2_EVAL_LOC, mod(calldataload(add(data_ptr, 0x240)), p))
-            mstore(R_EVAL_LOC, mod(calldataload(add(data_ptr, 0x260)), p))
-            mstore(Z_OMEGA_EVAL_LOC, mod(calldataload(add(data_ptr, 0x280)), p))
-            mstore(PI_Z_X_LOC, mod(calldataload(add(data_ptr, 0x2c0)), q))
-            mstore(PI_Z_Y_LOC, mod(calldataload(add(data_ptr, 0x2a0)), q))
-            mstore(PI_Z_OMEGA_X_LOC, mod(calldataload(add(data_ptr, 0x300)), q))
-            mstore(PI_Z_OMEGA_Y_LOC, mod(calldataload(add(data_ptr, 0x2e0)), q))
+            mstore(Z_OMEGA_EVAL_LOC, mod(calldataload(add(data_ptr, 0x260)), p))
+            mstore(PI_Z_X_LOC, mod(calldataload(add(data_ptr, 0x2a0)), q))
+            mstore(PI_Z_Y_LOC, mod(calldataload(add(data_ptr, 0x280)), q))
+            mstore(PI_Z_OMEGA_X_LOC, mod(calldataload(add(data_ptr, 0x2e0)), q))
+            mstore(PI_Z_OMEGA_Y_LOC, mod(calldataload(add(data_ptr, 0x2c0)), q))
             }
 
             {
@@ -821,7 +817,7 @@ contract StandardVerifier is IVerifier {
              */
                 let accumulator := mload(DELTA_DENOMINATOR_LOC)
                 let t0 := accumulator
-                accumulator := mulmod(accumulator, vanishing_numerator, p)
+                accumulator := mulmod(accumulator, vanishing_denominator, p)
                 let t1 := accumulator
                 accumulator := mulmod(accumulator, l_start_denominator, p)
                 let t2 := accumulator
@@ -835,24 +831,24 @@ contract StandardVerifier is IVerifier {
                 accumulator := mulmod(accumulator, l_start_denominator, p)
 
                 t0 := mulmod(accumulator, t0, p)
-                accumulator := mulmod(accumulator, vanishing_numerator, p)
+                accumulator := mulmod(accumulator, vanishing_denominator, p)
 
                 accumulator := mulmod(mulmod(accumulator, accumulator, p), mload(DELTA_DENOMINATOR_LOC), p)
 
                 mstore(PUBLIC_INPUT_DELTA_LOC, mulmod(mload(DELTA_NUMERATOR_LOC), accumulator, p))
-                mstore(ZERO_POLY_LOC, mulmod(vanishing_denominator, t0, p))
+                mstore(ZERO_POLY_LOC, mulmod(vanishing_numerator, t0, p))
                 mstore(L_START_LOC, mulmod(lagrange_numerator, t1, p))
                 mstore(L_END_LOC, mulmod(lagrange_numerator, t2, p))
             }
 
             /**
-             * COMPUTE QUOTIENT POLYNOMIAL
+             * COMPUTE CONSTANT TERM (r_0) OF LINEARISATION POLYNOMIAL
              */
             {
                 let alpha := mload(C_ALPHA_LOC)
                 let beta := mload(C_BETA_LOC)
                 let gamma := mload(C_GAMMA_LOC)
-                let quotient_eval := sub(p,
+                let r_0 := sub(p,
                     mulmod(
                         mulmod(
                             mulmod(
@@ -867,31 +863,23 @@ contract StandardVerifier is IVerifier {
                         p
                     )
                 )
-
+                // r_0 = -(ā + βs̄_σ1 + γ)( b̄ + βs̄_σ2 + γ)(c̄ + γ)z̄_ω
                 let alpha_sqr := mulmod(alpha, alpha, p)
                 mstore(C_ALPHA_SQR_LOC, alpha_sqr)
                 mstore(C_ARITHMETIC_ALPHA_LOC, mulmod(alpha_sqr, alpha_sqr, p))
 
-                mstore(QUOTIENT_EVAL_LOC,
-                    mulmod(
-                        addmod(
+                mstore(R_ZERO_EVAL_LOC,    
                             mulmod(
                                 addmod(
-                                    addmod(quotient_eval, sub(p, mulmod(mload(L_START_LOC), alpha_sqr, p)), p),
+                                    addmod(r_0, sub(p, mulmod(mload(L_START_LOC), alpha_sqr, p)), p),
                                     mulmod(
                                         mulmod(mload(L_END_LOC), alpha, p),
                                         addmod(mload(Z_OMEGA_EVAL_LOC), sub(p, mload(PUBLIC_INPUT_DELTA_LOC)), p), p
                                     ), p
                                 ),
                                 alpha, p
-                            ),
-                            mload(R_EVAL_LOC),
-                            p
-                        ),
-                        mload(ZERO_POLY_LOC),
-                        p
-                    )
-                )
+                            )
+                        )
             }
 
 
@@ -909,9 +897,8 @@ contract StandardVerifier is IVerifier {
                 calldata_ptr := add(calldata_ptr, 0x1c0) // 7 * 0x40 = 0x1c0
 
                 mstore(0x00, current_challenge)
-                mstore(0x20, mload(QUOTIENT_EVAL_LOC))
-                calldatacopy(0x40, calldata_ptr, 0xe0) // 7 * 0x20 = 0xe0
-                let challenge := keccak256(0x00, 0x120) // hash length = 0x120 (0x40 + num field elements), we include the previous challenge in the hash
+                calldatacopy(0x20, calldata_ptr, 0xc0) // 6 * 0x20 = 0xc0
+                let challenge := keccak256(0x00, 0xe0) // hash length = 0xe0 (0x20 + num field elements), we include the previous challenge in the hash
 
                 mstore(C_V0_LOC, mod(challenge, p))
 
@@ -963,18 +950,19 @@ contract StandardVerifier is IVerifier {
                 witness_term := addmod(mload(W2_EVAL_LOC), gamma, p)
                 sigma_multiplier := mulmod(sigma_multiplier, addmod(mulmod(mload(SIGMA2_EVAL_LOC), beta, p), witness_term, p), p)
                 let k1_beta_zeta := mulmod(0x05, beta_zeta, p)
+                //  partial_grand_product = mulmod( mulmod( partial_grand_product, w2 + k1.beta.zeta + gamma , p), k2.beta.zeta + gamma + w3, p)
                 partial_grand_product := mulmod(
                     mulmod(
                         partial_grand_product,
                         addmod(k1_beta_zeta, witness_term, p), // w2 + k1.beta.zeta + gamma 
                         p
                     ),
-                    addmod(addmod(add(k1_beta_zeta, beta_zeta), gamma, p), mload(W3_EVAL_LOC), p), // k2.beta.zeta + gamma + w3
+                    addmod(addmod(add(k1_beta_zeta, beta_zeta), gamma, p), mload(W3_EVAL_LOC), p), // k2.beta.zeta + gamma + w3 where k2 = k1+1
                     p
                 )
 
             
-                let linear_challenge := mulmod(mload(C_V5_LOC), alpha, p)
+                let linear_challenge := alpha // Owing to the simplified Plonk, nu =1, linear_challenge = nu * alpha = alpha
 
             
                 mstore(0x00, mload(SIGMA3_X_LOC))
@@ -1007,13 +995,20 @@ contract StandardVerifier is IVerifier {
                     mload(C_U_LOC),
                     p
                 ))
-
-
+            // 0x00 = SIGMA3_X_LOC, 
+            // 0x20 = SIGMA3_Y_LOC, 
+            // 0x40 = −(ā + βs̄_σ1 + γ)( b̄ + βs̄_σ2 + γ)αβz̄_ω,
+            // 0x60 = Z_X_LOC, 
+            // 0x80 = Z_Y_LOC, 
+            // 0xa0 = (ā + βz + γ)( b̄ + βk_1 z + γ)(c̄ + βk_2 z + γ)α + L_1(z)α^3 + u 
                 success := and(success, and(
                     staticcall(gas(), 6, ACCUMULATOR_X_LOC, 0x80, ACCUMULATOR_X_LOC, 0x40),
+                    // Why ACCUMULATOR_X_LOC := ACCUMULATOR_X_LOC + ACCUMULATOR2_X_LOC? Inner parenthesis is executed before?
                     and(
                         staticcall(gas(), 7, 0x60, 0x60, ACCUMULATOR_X_LOC, 0x40),
+                        // [ACCUMULATOR_X_LOC, ACCUMULATOR_X_LOC + 0x40) = ((ā + βz + γ)( b̄ + βk_1 z + γ)(c̄ + βk_2 z + γ)α + L_1(z)α^3 + u)*[z]_1 
                         staticcall(gas(), 7, 0x00, 0x60, ACCUMULATOR2_X_LOC, 0x40)
+                        // [ACCUMULATOR2_X_LOC, ACCUMULATOR2_X_LOC + 0x40) = −(ā + βs̄_σ1 + γ)( b̄ + βs̄_σ2 + γ)αβz̄_ω * [s_σ3]_1
                     )
                 ))
                 
@@ -1025,7 +1020,7 @@ contract StandardVerifier is IVerifier {
              * COMPUTE ARITHMETIC SELECTOR OPENING GROUP ELEMENT
              */
             {
-                let linear_challenge := mulmod(mload(C_V5_LOC), mload(C_ARITHMETIC_ALPHA_LOC), p)
+                let linear_challenge := mload(C_ARITHMETIC_ALPHA_LOC) // Owing to simplified Plonk, nu = 1,  linear_challenge = C_ARITHMETIC_ALPHA (= alpha^4)
 
                 let t1 := mulmod(mload(W1_EVAL_LOC), linear_challenge, p) // reuse this for QM scalar multiplier
                 // Q1
@@ -1034,9 +1029,13 @@ contract StandardVerifier is IVerifier {
                 mstore(0x40, t1)
 
                 // add Q1 scalar mul into grand product scalar mul
+                // Observe that ACCUMULATOR_X_LOC and ACCUMULATOR2_X_LOC are 0x40 bytes apart. Below, ACCUMULATOR2_X_LOC
+                // captures new terms Q1, Q2, and so on and they get accumulated to ACCUMULATOR_X_LOC
                 let success := and(
                     staticcall(gas(), 6, ACCUMULATOR_X_LOC, 0x80, ACCUMULATOR_X_LOC, 0x40),
+                    // [ACCUMULATOR_X_LOC, ACCUMULATOR_X_LOC + 0x40) = ((ā + βz + γ)( b̄ + βk_1 z + γ)(c̄ + βk_2 z + γ)α + L_1(z)α^3 + u)*[z]_1 −(ā + βs̄_σ1 + γ)( b̄ + βs̄_σ2 + γ)αβz̄_ω * [s_σ3]_1 
                     staticcall(gas(), 7, 0x00, 0x60, ACCUMULATOR2_X_LOC, 0x40)
+                    // [ACCUMULATOR2_X_LOC, ACCUMULATOR2_X_LOC + 0x40) = ā * [q_L]_1
                 )
 
                 // Q2
@@ -1094,17 +1093,26 @@ contract StandardVerifier is IVerifier {
              * COMPUTE BATCH OPENING COMMITMENT
              */
             {
-                // VALIDATE T1
+                // previous scalar_multiplier = 1, z^n, z^2n
+                // scalar_multiplier owing to the simplified Plonk = 1 * -Z_H(z), z^n * -Z_H(z), z^2n * -Z_H(z)
+                // VALIDATE T1 
                 let success
                 {
                     let x := mload(T1_X_LOC)
                     let y := mload(T1_Y_LOC)
                     let xx := mulmod(x, x, q)
                     success := eq(mulmod(y, y, q), addmod(mulmod(x, xx, q), 3, q))
-                    mstore(ACCUMULATOR2_X_LOC, x)
-                    mstore(ACCUMULATOR2_Y_LOC, y)
+                    mstore(0x00, x)
+                    mstore(0x20, y)
+                    mstore(0x40, sub(p, mload(ZERO_POLY_LOC)))
+                    // mstore(ACCUMULATOR2_X_LOC, x)
+                    // mstore(ACCUMULATOR2_Y_LOC, y)
                 }
-                success := and(success, staticcall(gas(), 6, ACCUMULATOR_X_LOC, 0x80, ACCUMULATOR_X_LOC, 0x40))
+                success := and(success, 
+                and(
+                    staticcall(gas(), 6, ACCUMULATOR_X_LOC, 0x80, ACCUMULATOR_X_LOC, 0x40),
+                    staticcall(gas(), 7, 0x00, 0x60, ACCUMULATOR2_X_LOC, 0x40)
+                ))
 
                 // VALIDATE T2
                 let scalar_multiplier := mload(ZETA_POW_N_LOC)
@@ -1116,7 +1124,7 @@ contract StandardVerifier is IVerifier {
                     mstore(0x00, x)
                     mstore(0x20, y)
                 }
-                mstore(0x40, scalar_multiplier)
+                mstore(0x40, mulmod(scalar_multiplier, sub(p, mload(ZERO_POLY_LOC)), p))
 
                 success := and(
                     staticcall(gas(), 6, ACCUMULATOR_X_LOC, 0x80, ACCUMULATOR_X_LOC, 0x40),
@@ -1135,7 +1143,7 @@ contract StandardVerifier is IVerifier {
                     mstore(0x00, x)
                     mstore(0x20, y)
                 }
-                mstore(0x40, mulmod(scalar_multiplier, scalar_multiplier, p))
+                mstore(0x40, mulmod(scalar_multiplier, mulmod(scalar_multiplier, sub(p, mload(ZERO_POLY_LOC)), p), p))
                 success := and(
                     staticcall(gas(), 6, ACCUMULATOR_X_LOC, 0x80, ACCUMULATOR_X_LOC, 0x40),
                     and(
@@ -1235,9 +1243,7 @@ contract StandardVerifier is IVerifier {
                     addmod(
                         mulmod(mload(C_U_LOC), mload(Z_OMEGA_EVAL_LOC), p),
                         addmod(
-                            mload(QUOTIENT_EVAL_LOC),
-                            addmod(
-                                mulmod(mload(C_V5_LOC), mload(R_EVAL_LOC), p), 
+                            sub(p, mload(R_ZERO_EVAL_LOC)), // Change owing to the simplified Plonk
                                 addmod(
                                     mulmod(mload(C_V4_LOC), mload(SIGMA2_EVAL_LOC), p),
                                     addmod(
@@ -1258,10 +1264,10 @@ contract StandardVerifier is IVerifier {
                                 p
                             ),
                             p
-                        ),
-                        p
+                        )
                     )
-                ))
+                )
+                
                 let success := and(
                     staticcall(gas(), 6, ACCUMULATOR_X_LOC, 0x80, ACCUMULATOR_X_LOC, 0x40),
                     staticcall(gas(), 7, 0x00, 0x60, ACCUMULATOR2_X_LOC, 0x40)
@@ -1424,12 +1430,14 @@ contract StandardVerifier is IVerifier {
                 mload(GRAND_PRODUCT_SUCCESS_FLAG)
             ))
             {
-                revert(0x00, 0x00) // Proof failed :(
+               revert(0x00, 0x00) // Proof failed :(
             }
             {
                 mstore(0x00, 0x01)
                 return(0x00, 0x20) // Proof succeeded!
             }
+
+
         }
     }
 }

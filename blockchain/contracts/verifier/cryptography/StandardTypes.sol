@@ -53,13 +53,13 @@ library StandardTypes {
         uint256 w3;
         uint256 sigma1;
         uint256 sigma2;
-        uint256 linearization_polynomial;
+    //    uint256 linearization_polynomial;
         uint256 grand_product_at_z_omega;
         G1Point PI_Z;
         G1Point PI_Z_OMEGA;
         G1Point recursive_P1;
         G1Point recursive_P2;
-        uint256 quotient_polynomial_eval;
+        uint256 r_0;  // Changes owing to the simplified Plonk
     }
 
     struct ChallengeTranscript {

@@ -60,7 +60,7 @@ library Types {
         uint256 q_arith;
         uint256 q_ecc;
         uint256 q_c;
-        uint256 linearization_polynomial;
+       // uint256 linearization_polynomial;
         uint256 grand_product_at_z_omega;
         uint256 w1_omega;
         uint256 w2_omega;
@@ -70,7 +70,8 @@ library Types {
         G1Point PI_Z_OMEGA;
         G1Point recursive_P1;
         G1Point recursive_P2;
-        uint256 quotient_polynomial_eval;
+    //    uint256 quotient_polynomial_eval;
+        uint256 r_0;
     }
 
     struct ChallengeTranscript {
@@ -120,5 +121,7 @@ library Types {
         // zeta challenge raised to the power of the circuit size.
         // Not actually part of the verification key, but we put it here to prevent stack depth errors
         uint256 zeta_pow_n;
+        // necessary fot the simplified plonk
+        uint256 zero_polynomial_eval;
     }
 }

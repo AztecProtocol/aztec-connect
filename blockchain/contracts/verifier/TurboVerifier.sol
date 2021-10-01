@@ -11,6 +11,7 @@ import {VerificationKeys} from './keys/VerificationKeys.sol';
 import {Transcript} from './cryptography/Transcript.sol';
 import {IVerifier} from '../interfaces/IVerifier.sol';
 
+
 /**
  * @title Turbo Plonk proof verification contract
  * @dev Top level Plonk proof verification contract, which allows Plonk proof to be verified
@@ -33,6 +34,15 @@ contract TurboVerifier is IVerifier {
     using Bn254Crypto for Types.G2Point;
     using Transcript for Transcript.TranscriptData;
 
+    /**
+        Calldata formatting:
+
+        0x00 - 0x04 : function signature
+        0x04 - 0x24 : proof_data pointer (location in calldata that contains the proof_data array)
+        0x24 - 0x44 : rollup_size
+        0x44 - 0x64 : length of `proof_data` array
+        0x64 - ???? : array containing our zk proof data
+    **/
     /**
      * @dev Verify a Plonk proof
      * @param - array of serialized proof data
@@ -76,24 +86,36 @@ contract TurboVerifier is IVerifier {
          * which allows all inversions to be replaced with one inversion operation, at the expense of a few
          * additional multiplications
          **/
-        (uint256 quotient_eval, uint256 L1) = evalaute_field_operations(decoded_proof, vk, challenges);
-        decoded_proof.quotient_polynomial_eval = quotient_eval;
+        (uint256 r_0, uint256 L1) = evalaute_field_operations(decoded_proof, vk, challenges);
+        decoded_proof.r_0 = r_0;
 
         // reconstruct the nu and u challenges
-        transcript.generate_nu_challenges(challenges, decoded_proof.quotient_polynomial_eval, vk.num_inputs);
+        // Need to change nu and u according to the simplified Plonk
+        transcript.generate_nu_challenges(challenges, vk.num_inputs);
+
         transcript.generate_separator_challenge(challenges, decoded_proof.PI_Z, decoded_proof.PI_Z_OMEGA);
 
         //reset 'alpha base'
         challenges.alpha_base = challenges.alpha;
+        // Computes step 9 -> [D]_1
+        Types.G1Point memory linearised_contribution = PolynomialEval.compute_linearised_opening_terms(
+            challenges,
+            L1,
+            vk,
+            decoded_proof
+        );
+        // Computes step 10 -> [F]_1
+        Types.G1Point memory batch_opening_commitment = PolynomialEval.compute_batch_opening_commitment(
+            challenges,
+            vk,
+            linearised_contribution,
+            decoded_proof
+        );
 
-        Types.G1Point memory linearised_contribution =
-            PolynomialEval.compute_linearised_opening_terms(challenges, L1, vk, decoded_proof);
-
-        Types.G1Point memory batch_opening_commitment =
-            PolynomialEval.compute_batch_opening_commitment(challenges, vk, linearised_contribution, decoded_proof);
-
-        uint256 batch_evaluation_g1_scalar =
-            PolynomialEval.compute_batch_evaluation_scalar_multiplier(decoded_proof, challenges);
+        uint256 batch_evaluation_g1_scalar = PolynomialEval.compute_batch_evaluation_scalar_multiplier(
+            decoded_proof,
+            challenges
+        );
 
         result = perform_pairing(batch_opening_commitment, batch_evaluation_g1_scalar, challenges, decoded_proof, vk);
         require(result, 'Proof failed');
@@ -129,8 +151,8 @@ contract TurboVerifier is IVerifier {
         uint256 l_start;
         uint256 l_end;
         {
-            (uint256 public_input_numerator, uint256 public_input_denominator) =
-                PolynomialEval.compute_public_input_delta(challenges, vk);
+            (uint256 public_input_numerator, uint256 public_input_denominator) = PolynomialEval
+                .compute_public_input_delta(challenges, vk);
 
             (
                 uint256 vanishing_numerator,
@@ -149,19 +171,19 @@ contract TurboVerifier is IVerifier {
                 l_start_denominator,
                 l_end_denominator
             );
+            vk.zero_polynomial_eval = zero_polynomial_eval;
         }
 
-        uint256 quotient_eval =
-            PolynomialEval.compute_quotient_polynomial(
-                zero_polynomial_eval,
-                public_input_delta,
-                challenges,
-                l_start,
-                l_end,
-                decoded_proof
-            );
+        uint256 r_0 = PolynomialEval.compute_linear_polynomial_constant(
+            zero_polynomial_eval,
+            public_input_delta,
+            challenges,
+            l_start,
+            l_end,
+            decoded_proof
+        );
 
-        return (quotient_eval, l_start);
+        return (r_0, l_start);
     }
 
     /**
@@ -420,24 +442,25 @@ contract TurboVerifier is IVerifier {
             mstore(add(proof_ptr, 0x240), mod(calldataload(add(data_ptr, 0x360)), p))
 
             // proof.linearization_polynomial
-            mstore(add(proof_ptr, 0x260), mod(calldataload(add(data_ptr, 0x380)), p))
+            // mstore(add(proof_ptr, 0x260), mod(calldataload(add(data_ptr, 0x380)), p))
 
             // proof.grand_product_at_z_omega
-            mstore(add(proof_ptr, 0x280), mod(calldataload(add(data_ptr, 0x3a0)), p))
+            mstore(add(proof_ptr, 0x260), mod(calldataload(add(data_ptr, 0x380)), p))
 
             // proof.w1_omega to proof.w4_omega
+            mstore(add(proof_ptr, 0x280), mod(calldataload(add(data_ptr, 0x3a0)), p))
             mstore(add(proof_ptr, 0x2a0), mod(calldataload(add(data_ptr, 0x3c0)), p))
             mstore(add(proof_ptr, 0x2c0), mod(calldataload(add(data_ptr, 0x3e0)), p))
             mstore(add(proof_ptr, 0x2e0), mod(calldataload(add(data_ptr, 0x400)), p))
-            mstore(add(proof_ptr, 0x300), mod(calldataload(add(data_ptr, 0x420)), p))
 
             // proof.PI_Z
-            mstore(mload(add(proof_ptr, 0x320)), mod(calldataload(add(data_ptr, 0x460)), q))
-            mstore(add(mload(add(proof_ptr, 0x320)), 0x20), mod(calldataload(add(data_ptr, 0x440)), q))
+            //Order of x and y coordinate are reverse in case of serialization
+            mstore(mload(add(proof_ptr, 0x300)), mod(calldataload(add(data_ptr, 0x440)), q))
+            mstore(add(mload(add(proof_ptr, 0x300)), 0x20), mod(calldataload(add(data_ptr, 0x420)), q))
 
             // proof.PI_Z_OMEGA
-            mstore(mload(add(proof_ptr, 0x340)), mod(calldataload(add(data_ptr, 0x4a0)), q))
-            mstore(add(mload(add(proof_ptr, 0x340)), 0x20), mod(calldataload(add(data_ptr, 0x480)), q))
+            mstore(mload(add(proof_ptr, 0x320)), mod(calldataload(add(data_ptr, 0x480)), q))
+            mstore(add(mload(add(proof_ptr, 0x320)), 0x20), mod(calldataload(add(data_ptr, 0x460)), q))
         }
     }
 }

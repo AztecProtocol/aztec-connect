@@ -103,6 +103,7 @@ If running against a real blockchain such as ganache, you'll want to deploy to g
 
 ```
 export ETHEREUM_HOST=http://localhost:8545
+export ROLLUP_HOST: http://localhost:8081
 yarn clean_db && `yarn -s deploy_rollup_processor` && ROLLUP_SIZE=1 MAX_ROLLUP_WAIT_TIME=0 yarn start:dev
 ```
 
