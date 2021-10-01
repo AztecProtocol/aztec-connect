@@ -50,6 +50,7 @@ export enum LoginMode {
   SIGNUP,
   LOGIN,
   MIGRATE,
+  NEW_ALIAS,
 }
 
 export enum LoginStep {
@@ -90,7 +91,6 @@ export interface LoginState {
   seedPhrase: string;
   alias: string;
   aliasAvailability: ValueAvailability;
-  isNewAlias: boolean;
   rememberMe: boolean;
   allowToProceed: boolean;
   migratingAssets: MigratingAsset[];
@@ -104,7 +104,6 @@ export const initialLoginState: LoginState = {
   seedPhrase: '',
   alias: '',
   aliasAvailability: ValueAvailability.INVALID,
-  isNewAlias: true,
   rememberMe: true,
   allowToProceed: true,
   migratingAssets: [],
@@ -180,7 +179,6 @@ export class UserSession extends EventEmitter {
     this.loginState = {
       ...initialLoginState,
       mode: initialLoginMode,
-      isNewAlias: initialLoginMode === LoginMode.SIGNUP,
     };
     this.activeAsset = initialActiveAsset;
   }
@@ -246,11 +244,12 @@ export class UserSession extends EventEmitter {
   }
 
   changeLoginMode(mode: LoginMode) {
-    this.updateLoginState({ ...initialLoginState, mode, isNewAlias: mode === LoginMode.SIGNUP });
+    this.updateLoginState({ ...initialLoginState, mode });
+    this.clearSystemMessage();
   }
 
   async migrateFromLocalAccountV0(alias: string, accountPublicKey: GrumpkinAddress) {
-    this.updateLoginState({ alias, mode: LoginMode.MIGRATE, isNewAlias: false, accountV0: accountPublicKey });
+    this.updateLoginState({ alias, mode: LoginMode.MIGRATE, accountV0: accountPublicKey });
     this.toStep(LoginStep.CONFIRM_MIGRATION);
   }
 
@@ -340,7 +339,7 @@ export class UserSession extends EventEmitter {
       this.toStep(LoginStep.SET_ALIAS);
     } else {
       // Attempt to sign up with a registered wallet.
-      this.updateLoginState({ mode: LoginMode.LOGIN, isNewAlias: false });
+      this.updateLoginState({ mode: LoginMode.LOGIN });
       const { alias } = (await this.db.getAccount(accountPublicKey)) || {};
       if (!alias) {
         this.toStep(LoginStep.SET_ALIAS);
@@ -517,12 +516,14 @@ export class UserSession extends EventEmitter {
   }
 
   forgotAlias() {
-    this.updateLoginState({ isNewAlias: true });
+    this.updateLoginState({ mode: LoginMode.NEW_ALIAS });
     this.setAlias('');
   }
 
   setAlias(aliasInput: string) {
-    if (!this.loginState.isNewAlias) {
+    const { mode } = this.loginState;
+    const isNewAlias = [LoginMode.SIGNUP, LoginMode.NEW_ALIAS].includes(mode);
+    if (!isNewAlias) {
       this.clearSystemMessage();
       return this.updateLoginState({ alias: aliasInput, aliasAvailability: ValueAvailability.PENDING });
     }
@@ -557,7 +558,9 @@ export class UserSession extends EventEmitter {
   }
 
   async confirmAlias(aliasInput: string) {
-    const { isNewAlias, mode } = this.loginState;
+    const { mode } = this.loginState;
+    const isNewAlias = [LoginMode.SIGNUP, LoginMode.NEW_ALIAS].includes(mode);
+
     const error = getAliasError(aliasInput);
     if (error) {
       return this.emitSystemMessage(!isNewAlias ? 'Incorrect username.' : error, MessageType.ERROR);
@@ -786,9 +789,10 @@ export class UserSession extends EventEmitter {
     }
 
     // Add the user to the sdk so that the accountTx could be added for it.
-    // Don't sync from the beginning. It's a new account so it doesn't have any txs from previous blocks.
+    // Need to sync from the beginning when "migrating" account to a new alias.
     const { userId } = proofOutput.tx;
-    await this.accountUtils.addUser(this.keyVault.accountPrivateKey, userId.nonce, true);
+    const noSync = [LoginMode.SIGNUP, LoginMode.MIGRATE].includes(this.loginState.mode);
+    await this.accountUtils.addUser(this.keyVault.accountPrivateKey, userId.nonce, noSync);
 
     try {
       await this.sdk.sendProof(proofOutput);
@@ -821,7 +825,8 @@ export class UserSession extends EventEmitter {
     };
 
     try {
-      const { isNewAlias, alias } = this.loginState;
+      const { mode, alias } = this.loginState;
+      const isNewAlias = [LoginMode.SIGNUP, LoginMode.NEW_ALIAS].includes(mode);
 
       if (isNewAlias) {
         proceed(LoginStep.CREATE_ACCOUNT);

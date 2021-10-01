@@ -462,7 +462,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     if (this.status === ShieldStatus.VALIDATE) {
       // This error won't be displayed in the form but should trigger a "Session Expired" error in the confirm step.
       const currentFee = this.rollup.getFee(this.asset.id, TxType.DEPOSIT, form.speed.value);
-      if (fee !== currentFee) {
+      if (fee < currentFee) {
         form.fees = withError(
           form.fees,
           `Fee has changed from ${fromBaseUnits(fee, this.asset.decimals)} to ${fromBaseUnits(
@@ -607,7 +607,9 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       const signingData = proofOutput.signingData!;
       if (!isContract && !this.depositProof.signature) {
         const msgHash = Buffer.from(utils.arrayify(utils.keccak256(signingData))).toString('hex');
-        this.prompt(`Please sign the proof data in your wallet: 0x${msgHash.slice(0, 8)}...${msgHash.slice(-4)}`);
+        this.prompt(
+          `Please sign the following proof data in your wallet: 0x${msgHash.slice(0, 8)}...${msgHash.slice(-4)}`,
+        );
         try {
           this.depositProof.signature = await this.sdk.signProof(
             proofOutput,
@@ -649,7 +651,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
         await this.sdk.sendProof(proofOutput, this.depositProof.signature);
       } catch (e) {
         debug(e);
-        return this.abort('Failed to send the proof.');
+        return this.abort(`Failed to send the proof: ${e.message}`);
       }
 
       if (!senderId.equals(this.userId)) {

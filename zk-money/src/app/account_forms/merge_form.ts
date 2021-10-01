@@ -300,7 +300,7 @@ export class MergeForm extends EventEmitter implements AccountForm {
     } catch (e) {
       debug(e);
       this.updateFormValues({
-        submit: withError({ value: false }, 'Failed to send the proof.'),
+        submit: withError({ value: false }, `Failed to send the proof: ${e.message}`),
       });
     }
 
@@ -339,7 +339,7 @@ export class MergeForm extends EventEmitter implements AccountForm {
       return;
     }
 
-    this.prompt('Please sign the message in your wallet.');
+    this.prompt('Please sign the message in your wallet to generate your Aztec Spending Key.');
 
     try {
       const { privateKey } = await createSigningKeys(provider, this.sdk);

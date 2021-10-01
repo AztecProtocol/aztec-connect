@@ -215,7 +215,7 @@ export class MigrateForm extends EventEmitter implements AccountForm {
     this.updateFormValues({ status: { value: MigrateStatus.SYNC } });
 
     const { accountPublicKey, accountPrivateKey } = this.keyVault!;
-    const prevUserId = new AccountId(accountPublicKey, this.userId.nonce - 1);
+    const prevUserId = new AccountId(accountPublicKey, 1);
     await this.accountUtils.addUser(accountPrivateKey, prevUserId.nonce);
     await this.sdk.awaitUserSynchronised(prevUserId);
 
@@ -267,7 +267,7 @@ export class MigrateForm extends EventEmitter implements AccountForm {
 
     const migratingAssets = this.values.migratingAssets.value;
     const { accountPublicKey, accountPrivateKey } = this.keyVault!;
-    const prevUserId = new AccountId(accountPublicKey, this.userId.nonce - 1);
+    const prevUserId = new AccountId(accountPublicKey, 1);
     const signer = this.sdk.createSchnorrSigner(accountPrivateKey);
     for (const asset of migratingAssets) {
       const { assetId, fee, migratableValues } = asset;

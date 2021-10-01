@@ -110,7 +110,7 @@ interface StepInfo {
 }
 
 const getStepInfo = ({
-  loginState: { step, mode, isNewAlias, seedPhrase, allowToProceed, migratingAssets, accountV0 },
+  loginState: { step, mode, seedPhrase, allowToProceed, migratingAssets, accountV0 },
   explorerUrl,
   onClearAccountV0s,
 }: LoginProps): StepInfo => {
@@ -181,7 +181,7 @@ const getStepInfo = ({
         description: `Please enter the seed phrase you used to register your zk.money account.`,
       };
     case LoginStep.SET_ALIAS: {
-      if (!isNewAlias) {
+      if ([LoginMode.LOGIN, LoginMode.MIGRATE].includes(mode)) {
         return {
           stepNo: 2,
           title: (
@@ -297,29 +297,24 @@ const getStepInfo = ({
         description: `In order to prevent spam, you must deposit at the same time as claiming a username. Please deposit at least 0.01 ETH.`,
       };
     default:
-      return isNewAlias
-        ? {
-            stepNo: 3,
-            title: (
-              <>
-                {'Creating '}
-                <Text text="your" weight="bold" inline />
-                {' account...'}
-              </>
-            ),
-            description: `This may take several minutes. Please don’t close the window.`,
-          }
-        : {
-            stepNo: 3,
-            title: (
-              <>
-                {'Logging '}
-                <Text text="you" weight="bold" inline />
-                {' in...'}
-              </>
-            ),
-            description: `This may take several minutes, please don’t close the window.`,
-          };
+      return {
+        stepNo: 3,
+        title:
+          mode === LoginMode.LOGIN ? (
+            <>
+              {'Logging '}
+              <Text text="you" weight="bold" inline />
+              {' in...'}
+            </>
+          ) : (
+            <>
+              {'Creating '}
+              <Text text="your" weight="bold" inline />
+              {' account...'}
+            </>
+          ),
+        description: `This may take several minutes, please don’t close the window.`,
+      };
   }
 };
 
@@ -363,7 +358,6 @@ export const Login: React.FunctionComponent<LoginProps> = props => {
     alias,
     aliasAvailability,
     rememberMe,
-    isNewAlias,
     allowToProceed,
     migratingAssets,
   } = loginState;
@@ -414,7 +408,7 @@ export const Login: React.FunctionComponent<LoginProps> = props => {
                   onRestart={onRestart!}
                   onForgotAlias={onForgotAlias}
                   isNewAccount={mode === LoginMode.SIGNUP}
-                  isNewAlias={isNewAlias}
+                  isNewAlias={[LoginMode.SIGNUP, LoginMode.NEW_ALIAS].includes(mode)}
                 />
               );
             case LoginStep.CLAIM_USERNAME:
@@ -471,9 +465,9 @@ export const Login: React.FunctionComponent<LoginProps> = props => {
               const steps =
                 [LoginStep.VALIDATE_DATA, LoginStep.RECOVER_ACCOUNT_PROOF].indexOf(step) >= 0
                   ? recoveringProgresses
-                  : isNewAlias
-                  ? signupProgresses
-                  : loginProgresses;
+                  : mode === LoginMode.LOGIN
+                  ? loginProgresses
+                  : signupProgresses;
               return (
                 <InitDataForm
                   currentStep={step}
