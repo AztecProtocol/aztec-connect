@@ -26,13 +26,15 @@ interface IRollupProcessor {
     function depositPendingFunds(
         uint256 assetId,
         uint256 amount,
-        address owner
+        address owner,
+        bytes32 proofHash
     ) external payable;
 
     function depositPendingFundsPermit(
         uint256 assetId,
         uint256 amount,
         address owner,
+        bytes32 proofHash,
         address spender,
         uint256 permitApprovalAmount,
         uint256 deadline,

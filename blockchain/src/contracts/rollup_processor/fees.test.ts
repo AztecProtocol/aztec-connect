@@ -33,7 +33,7 @@ describe('rollup_processor: deposit', () => {
     const prepaidFee = 10n ** 18n;
 
     // User deposits funds.
-    await rollupProcessor.depositPendingFunds(AssetId.ETH, publicInput, undefined, {
+    await rollupProcessor.depositPendingFunds(AssetId.ETH, publicInput, undefined, undefined, {
       signingAddress: userAddresses[0],
     });
 
@@ -137,7 +137,7 @@ describe('rollup_processor: deposit', () => {
     const prepaidFee = 10n ** 18n;
 
     await asset.approve(publicInput, userAddresses[0], rollupProcessor.address);
-    await rollupProcessor.depositPendingFunds(AssetId.DAI, publicInput, undefined, {
+    await rollupProcessor.depositPendingFunds(AssetId.DAI, publicInput, undefined, undefined, {
       signingAddress: userAddresses[0],
     });
     await feeDistributor.deposit(EthAddress.ZERO, prepaidFee);

@@ -187,7 +187,13 @@ export class RollupProcessor {
     return TxHash.fromString(txResponse.hash);
   }
 
-  async depositPendingFunds(assetId: AssetId, amount: bigint, permitArgs?: PermitArgs, options: SendTxOptions = {}) {
+  async depositPendingFunds(
+    assetId: AssetId,
+    amount: bigint,
+    proofHash: Buffer = Buffer.alloc(32),
+    permitArgs?: PermitArgs,
+    options: SendTxOptions = {},
+  ) {
     const { gasPrice, gasLimit } = { ...options, ...this.defaults };
     const rollupProcessor = this.getContractWithSigner(options);
     const depositorAddress = await rollupProcessor.signer.getAddress();
@@ -197,6 +203,7 @@ export class RollupProcessor {
           assetId,
           amount,
           depositorAddress,
+          proofHash,
           this.rollupProcessor.address,
           permitArgs.approvalAmount,
           permitArgs.deadline,
@@ -209,7 +216,7 @@ export class RollupProcessor {
       return TxHash.fromString(tx.hash);
     } else {
       const tx = await rollupProcessor
-        .depositPendingFunds(assetId, amount, depositorAddress, {
+        .depositPendingFunds(assetId, amount, depositorAddress, proofHash, {
           value: assetId === 0 ? amount : undefined,
           gasPrice,
           gasLimit,

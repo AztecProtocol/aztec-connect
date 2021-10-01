@@ -28,7 +28,7 @@ describe('rollup_processor: deposit', () => {
 
   it('should deposit eth and convert to notes', async () => {
     const ethAsset = assets[AssetId.ETH];
-    await rollupProcessor.depositPendingFunds(AssetId.ETH, depositAmount, undefined, {
+    await rollupProcessor.depositPendingFunds(AssetId.ETH, depositAmount, undefined, undefined, {
       signingAddress: userAddresses[0],
     });
 
@@ -60,7 +60,7 @@ describe('rollup_processor: deposit', () => {
   it('should deposit erc20 and convert to notes', async () => {
     const erc20Asset = assets[AssetId.DAI];
     await erc20Asset.approve(depositAmount, userAddresses[0], rollupProcessor.address);
-    await rollupProcessor.depositPendingFunds(AssetId.DAI, depositAmount, undefined, {
+    await rollupProcessor.depositPendingFunds(AssetId.DAI, depositAmount, undefined, undefined, {
       signingAddress: userAddresses[0],
     });
 
@@ -105,10 +105,10 @@ describe('rollup_processor: deposit', () => {
 
     await erc20A.approve(userADepositAmount, userAddresses[0], rollupProcessor.address);
     await erc20B.approve(userBDepositAmount, userAddresses[1], rollupProcessor.address);
-    await rollupProcessor.depositPendingFunds(AssetId.DAI, userADepositAmount, undefined, {
+    await rollupProcessor.depositPendingFunds(AssetId.DAI, userADepositAmount, undefined, undefined, {
       signingAddress: userAddresses[0],
     });
-    await rollupProcessor.depositPendingFunds(AssetId.renBTC, userBDepositAmount, undefined, {
+    await rollupProcessor.depositPendingFunds(AssetId.renBTC, userBDepositAmount, undefined, undefined, {
       signingAddress: userAddresses[1],
     });
 
@@ -148,7 +148,9 @@ describe('rollup_processor: deposit', () => {
     const signature = await signer.signTypedData(permitData, userAddress);
     const permitArgs = { deadline, approvalAmount: depositAmount, signature };
 
-    await rollupProcessor.depositPendingFunds(AssetId.DAI, depositAmount, permitArgs, { signingAddress: userAddress });
+    await rollupProcessor.depositPendingFunds(AssetId.DAI, depositAmount, undefined, permitArgs, {
+      signingAddress: userAddress,
+    });
 
     expect(await rollupProcessor.getUserPendingDeposit(AssetId.DAI, userAddress)).toBe(depositAmount);
     expect(await asset.getUserNonce(userAddress)).toBe(1n);
@@ -159,7 +161,7 @@ describe('rollup_processor: deposit', () => {
     const signingAddress = userAddresses[0];
 
     await erc20.approve(depositAmount, userAddresses[0], rollupProcessor.address);
-    await rollupProcessor.depositPendingFunds(AssetId.DAI, depositAmount, undefined, { signingAddress });
+    await rollupProcessor.depositPendingFunds(AssetId.DAI, depositAmount, undefined, undefined, { signingAddress });
 
     const innerProofData = await createDepositProof(depositAmount, signingAddress, userSigners[0], AssetId.DAI);
     const { proofData } = await createRollupProof(rollupProvider, innerProofData);
@@ -177,7 +179,7 @@ describe('rollup_processor: deposit', () => {
     const signingAddress = userAddresses[0];
 
     await erc20.approve(depositAmount, userAddresses[0], rollupProcessor.address);
-    await rollupProcessor.depositPendingFunds(AssetId.DAI, depositAmount, undefined, { signingAddress });
+    await rollupProcessor.depositPendingFunds(AssetId.DAI, depositAmount, undefined, undefined, { signingAddress });
 
     const innerProofData = await createDepositProof(depositAmount, signingAddress, userSigners[0], AssetId.DAI);
     const { proofData } = await createRollupProof(rollupProvider, innerProofData);
@@ -195,7 +197,7 @@ describe('rollup_processor: deposit', () => {
     const erc20Asset = assets[AssetId.DAI];
     await erc20Asset.mint(depositAmount, userAddresses[0]);
     await erc20Asset.approve(depositAmount, userAddresses[0], rollupProcessor.address);
-    await rollupProcessor.depositPendingFunds(AssetId.DAI, depositAmount - 1n, undefined, {
+    await rollupProcessor.depositPendingFunds(AssetId.DAI, depositAmount - 1n, undefined, undefined, {
       signingAddress: userAddresses[0],
     });
 
@@ -212,7 +214,7 @@ describe('rollup_processor: deposit', () => {
     await expect(
       rollupProcessor.contract
         .connect(userSigners[0])
-        .depositPendingFunds(AssetId.ETH, 2, userAddresses[0].toString(), { value: 1 }),
+        .depositPendingFunds(AssetId.ETH, 2, userAddresses[0].toString(), Buffer.alloc(32), { value: 1 }),
     ).rejects.toThrow('Rollup Processor: WRONG_AMOUNT');
   });
 
@@ -222,7 +224,7 @@ describe('rollup_processor: deposit', () => {
     await expect(
       rollupProcessor.contract
         .connect(userSigners[0])
-        .depositPendingFunds(AssetId.DAI, 1, userAddresses[0].toString(), { value: 1 }),
+        .depositPendingFunds(AssetId.DAI, 1, userAddresses[0].toString(), Buffer.alloc(32), { value: 1 }),
     ).rejects.toThrow('Rollup Processor: WRONG_PAYMENT_TYPE');
   });
 
@@ -234,5 +236,22 @@ describe('rollup_processor: deposit', () => {
         .connect(userSigners[0])
         .depositPendingFunds(unknownAssetId, 1, userAddresses[0].toString()),
     ).rejects.toThrow();
+  });
+
+  it('should allow depositing to a proof hash', async () => {
+    const erc20 = assets[AssetId.DAI];
+    const signingAddress = userAddresses[0];
+
+    await erc20.approve(depositAmount, userAddresses[0], rollupProcessor.address);
+    const innerProofData = await createDepositProof(depositAmount, signingAddress, userSigners[0], AssetId.DAI);
+    const txId = innerProofData.innerProofs[0].txId;
+    await rollupProcessor.depositPendingFunds(AssetId.DAI, depositAmount, txId, undefined, { signingAddress });
+
+    const { proofData } = await createRollupProof(rollupProvider, innerProofData);
+
+    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
+    await rollupProcessor.sendTx(tx);
+
+    expect(await rollupProcessor.getUserPendingDeposit(AssetId.DAI, signingAddress)).toBe(0n);
   });
 });

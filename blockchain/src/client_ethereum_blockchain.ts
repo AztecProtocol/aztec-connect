@@ -42,10 +42,14 @@ export class ClientEthereumBlockchain {
     assetId: AssetId,
     amount: bigint,
     from: EthAddress,
+    proofHash?: Buffer,
     permitArgs?: PermitArgs,
     provider?: EthereumProvider,
   ) {
-    return this.rollupProcessor.depositPendingFunds(assetId, amount, permitArgs, { signingAddress: from, provider });
+    return this.rollupProcessor.depositPendingFunds(assetId, amount, proofHash, permitArgs, {
+      signingAddress: from,
+      provider,
+    });
   }
 
   public async approveProof(account: EthAddress, txId: Buffer, provider?: EthereumProvider) {

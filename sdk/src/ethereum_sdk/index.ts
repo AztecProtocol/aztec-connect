@@ -136,8 +136,14 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.mint(assetId, value, ethAddress);
   }
 
-  public async depositFundsToContract(assetId: AssetId, from: EthAddress, value: bigint, permitArgs?: PermitArgs) {
-    return this.walletSdk.depositFundsToContract(assetId, from, value, permitArgs);
+  public async depositFundsToContract(
+    assetId: AssetId,
+    from: EthAddress,
+    value: bigint,
+    proofHash?: Buffer,
+    permitArgs?: PermitArgs,
+  ) {
+    return this.walletSdk.depositFundsToContract(assetId, from, value, proofHash, permitArgs);
   }
 
   public async createDepositProof(assetId: AssetId, from: EthAddress, to: AccountId, value: bigint, fee: bigint) {

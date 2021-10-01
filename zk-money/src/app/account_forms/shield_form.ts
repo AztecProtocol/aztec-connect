@@ -719,6 +719,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
           asset.id,
           depositor,
           toBeDeposited,
+          undefined,
           permitArgs,
           this.ethAccount.provider!.ethereumProvider,
         );

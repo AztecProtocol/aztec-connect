@@ -40,8 +40,8 @@ export class WalletSdkUserAsset {
     return this.sdk.approve(this.assetId, value, account);
   }
 
-  async depositFundsToContract(from: EthAddress, value: bigint, permitArgs?: PermitArgs) {
-    return this.sdk.depositFundsToContract(this.assetId, from, value, permitArgs);
+  async depositFundsToContract(from: EthAddress, value: bigint, proofHash: Buffer, permitArgs?: PermitArgs) {
+    return this.sdk.depositFundsToContract(this.assetId, from, value, proofHash, permitArgs);
   }
 
   async createDepositProof(value: bigint, fee: bigint, signer: Signer, from: EthAddress) {

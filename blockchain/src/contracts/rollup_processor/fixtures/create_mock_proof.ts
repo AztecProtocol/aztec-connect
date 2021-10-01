@@ -63,7 +63,12 @@ export const createDepositProof = async (
     numToBuffer(assetId),
   );
   const userAddr = EthAddress.fromString(await user.getAddress());
-  const signature = await new Web3Signer(new EthersAdapter(user)).signMessage(innerProof.txId, userAddr);
+  const message = Buffer.concat([
+    Buffer.from('Signing this message will allow your pending funds to be spent in Aztec transaction:\n'),
+    innerProof.txId,
+    Buffer.from('\nIMPORTANT: Only sign the message if you trust the client'),
+  ]);
+  const signature = await new Web3Signer(new EthersAdapter(user)).signMessage(message, userAddr);
 
   const totalTxFees: bigint[] = [];
   totalTxFees[assetId] = txFee;

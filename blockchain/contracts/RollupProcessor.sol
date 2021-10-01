@@ -291,11 +291,13 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
      * @param assetId - unique ID of the asset
      * @param amount - number of tokens being deposited
      * @param depositorAddress - address from which funds are being transferred to the contract
+     * @param proofHash - the 32 byte transaction id that can spend the deposited funds
      */
     function depositPendingFunds(
         uint256 assetId,
         uint256 amount,
-        address depositorAddress
+        address depositorAddress,
+        bytes32 proofHash
     ) external payable override whenNotPaused {
         require(reentrancyMutex == false, 'Rollup Processor: REENTRANCY_MUTEX_SET_ON_DEPOSIT');
 
@@ -308,6 +310,10 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             address assetAddress = getSupportedAsset(assetId);
             internalDeposit(assetId, assetAddress, depositorAddress, amount);
         }
+        
+        if(proofHash != 0)  {
+          approveProof(proofHash);
+        }
     }
 
     /**
@@ -315,6 +321,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
      * @param assetId - unique ID of the asset
      * @param amount - number of tokens being deposited
      * @param depositorAddress - address from which funds are being transferred to the contract
+     * @param proofHash - the 32 byte transaction id that can spend the deposited funds
      * @param spender - address being granted approval to spend the funds
      * @param permitApprovalAmount - amount permit signature is approving
      * @param deadline - when the permit signature expires
@@ -326,6 +333,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         uint256 assetId,
         uint256 amount,
         address depositorAddress,
+        bytes32 proofHash,
         address spender,
         uint256 permitApprovalAmount,
         uint256 deadline,
@@ -336,6 +344,10 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         address assetAddress = getSupportedAsset(assetId);
         IERC20Permit(assetAddress).permit(depositorAddress, spender, permitApprovalAmount, deadline, v, r, s);
         internalDeposit(assetId, assetAddress, depositorAddress, amount);
+
+        if(proofHash != '')  {
+          approveProof(proofHash);
+        }
     }
 
     /**
@@ -636,8 +648,21 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                             // write in a 92-byte 'length' parameter into the `signature` bytes array
                             mstore(signature, 0x60)
                         }
-                        // validate the signature
-                        RollupProcessorLibrary.validateUnpackedSignature(digest, signature, publicOwner);
+
+                        bytes32 hashedMessage;
+                        assembly {
+                            let mPtr := mload(0x40)
+                            mstore(add(mPtr, 32), "\x19Ethereum Signed Message:\n174")
+                            mstore(add(mPtr, 61), "Signing this message will allow ")
+                            mstore(add(mPtr, 93), "your pending funds to be spent i")
+                            mstore(add(mPtr, 125), "n Aztec transaction:\n")
+                            mstore(add(mPtr, 146), digest)
+                            mstore(add(mPtr, 178), "\nIMPORTANT: Only sign the messag")
+                            mstore(add(mPtr, 210), "e if you trust the client")
+                            hashedMessage := keccak256(add(mPtr, 32), 203)
+                        }
+
+                        RollupProcessorLibrary.validateSheildSignatureUnpacked(hashedMessage, signature, publicOwner);
                         // restore the memory we overwrote
                         assembly {
                             mstore(signature, temp)

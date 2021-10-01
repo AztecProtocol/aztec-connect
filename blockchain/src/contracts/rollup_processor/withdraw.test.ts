@@ -37,10 +37,10 @@ describe('rollup_processor: withdraw', () => {
     );
 
     await assets[1].approve(depositAmount, userAddresses[1], rollupProcessor.address);
-    await rollupProcessor.depositPendingFunds(AssetId.ETH, depositAmount, undefined, {
+    await rollupProcessor.depositPendingFunds(AssetId.ETH, depositAmount, undefined, undefined, {
       signingAddress: userAddresses[0],
     });
-    await rollupProcessor.depositPendingFunds(AssetId.DAI, depositAmount, undefined, {
+    await rollupProcessor.depositPendingFunds(AssetId.DAI, depositAmount, undefined, undefined, {
       signingAddress: userAddresses[1],
     });
     const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, []);
@@ -107,7 +107,7 @@ describe('rollup_processor: withdraw', () => {
       await asset.mint(depositAmount, userAddresses[0]);
       await asset.approve(depositAmount, userAddresses[0], rollupProcessor.address);
 
-      await rollupProcessor.depositPendingFunds(assetId, depositAmount, undefined, {
+      await rollupProcessor.depositPendingFunds(assetId, depositAmount, undefined, undefined, {
         signingAddress: userAddresses[0],
       });
       const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, []);

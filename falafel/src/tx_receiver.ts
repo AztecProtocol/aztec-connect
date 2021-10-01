@@ -127,7 +127,12 @@ export class TxReceiver {
       let proofApproval = await this.blockchain.getUserProofApprovalStatus(publicOwner, txId);
 
       if (!proofApproval && depositSignature) {
-        proofApproval = this.blockchain.validateSignature(publicOwner, depositSignature, txId);
+        const message = Buffer.concat([
+          Buffer.from('Signing this message will allow your pending funds to be spent in Aztec transaction:\n'),
+          txId,
+          Buffer.from('\nIMPORTANT: Only sign the message if you trust the client'),
+        ]);
+        proofApproval = this.blockchain.validateSignature(publicOwner, depositSignature, message);
       }
       if (!proofApproval) {
         throw new Error(`Tx not approved or invalid signature: ${txId.toString('hex')}`);

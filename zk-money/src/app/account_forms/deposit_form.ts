@@ -372,6 +372,7 @@ export class DepositForm extends EventEmitter implements AccountForm {
           ethAddress,
           amount,
           undefined,
+          undefined,
           this.ethAccount.provider!.ethereumProvider,
         );
       } catch (e) {

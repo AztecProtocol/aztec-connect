@@ -295,9 +295,15 @@ export class WalletSdk extends EventEmitter {
 
   public async signProof(proofOutput: ProofOutput, inputOwner: EthAddress, provider?: EthereumProvider) {
     const { txHash } = proofOutput.tx;
-
     const ethSigner = provider ? new Web3Signer(provider) : this.ethSigner;
-    return await ethSigner.signMessage(txHash.toBuffer(), inputOwner);
+    return await ethSigner.signMessage(
+      Buffer.concat([
+        Buffer.from('Signing this message will allow your pending funds to be spent in Aztec transaction:\n'),
+        txHash.toBuffer(),
+        Buffer.from('\nIMPORTANT: Only sign the message if you trust the client'),
+      ]),
+      inputOwner,
+    );
   }
 
   public async sendProof(proofOutput: ProofOutput, signature?: Buffer) {
@@ -312,10 +318,11 @@ export class WalletSdk extends EventEmitter {
     assetId: AssetId,
     from: EthAddress,
     value: bigint,
+    proofHash?: Buffer,
     permitArgs?: PermitArgs,
     provider?: EthereumProvider,
   ) {
-    return this.blockchain.depositPendingFunds(assetId, value, from, permitArgs, provider);
+    return this.blockchain.depositPendingFunds(assetId, value, from, proofHash, permitArgs, provider);
   }
 
   public async getTransactionReceipt(txHash: TxHash, interval = 1, timeout = 300): Promise<Receipt> {

@@ -46,7 +46,7 @@ export class EthereumSdkUserAsset {
   }
 
   async depositFundsToContract(value: bigint, permitArgs?: PermitArgs) {
-    return this.sdk.depositFundsToContract(this.assetId, this.address, value, permitArgs);
+    return this.sdk.depositFundsToContract(this.assetId, this.address, value, undefined, permitArgs);
   }
 
   async createDepositProof(value: bigint, fee: bigint) {
