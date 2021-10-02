@@ -38,14 +38,14 @@
     "rootDir": "./src"
   },
   "dependencies": {
-    "@ethersproject/experimental": "^5.0.8",
+    "@ethersproject/experimental": "5.4.0",
     "@uniswap/v2-core": "^1.0.1",
     "@uniswap/v2-periphery": "^1.1.0-beta.0",
     "barretenberg": "../barretenberg.js/dest",
     "bigint-buffer": "^1.1.5",
     "debug": "^4.1.1",
     "dotenv": "^8.2.0",
-    "ethers": "5.0.29",
+    "ethers": "5.4.7",
     "typescript": "^3.5.3"
   },
   "devDependencies": {

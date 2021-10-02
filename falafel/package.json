@@ -39,7 +39,7 @@
     "bn.js": "^5.0.0",
     "class-validator": "^0.12.2",
     "dotenv": "^8.2.0",
-    "ethers": "5.0.29",
+    "ethers": "5.4.7",
     "fs-extra": "9.0.1",
     "graphql": "^15.3.0",
     "graphql-playground-middleware-koa": "^1.6.19",
