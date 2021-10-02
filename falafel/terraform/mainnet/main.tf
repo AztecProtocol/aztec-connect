@@ -290,9 +290,9 @@ resource "aws_alb_target_group" "falafel" {
   health_check {
     path                = "/falafel-mainnet"
     matcher             = "200"
-    interval            = 10
+    interval            = 30
     healthy_threshold   = 2
-    unhealthy_threshold = 5
+    unhealthy_threshold = 10
     timeout             = 5
   }
 
