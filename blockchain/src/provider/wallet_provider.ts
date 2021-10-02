@@ -109,6 +109,8 @@ export class WalletProvider implements EthereumProvider {
       value,
       nonce,
     };
+    console.log(`Signing transaction locally: `);
+    console.log({ toSign });
     return await account.signTransaction(toSign);
   }
 
@@ -122,10 +124,12 @@ export class WalletProvider implements EthereumProvider {
   }
 
   private async sendTransaction(args: RequestArguments) {
+    console.log(`WalletProvider sendTransaction: ${args}`);
     const tx = args.params![0];
     const account = this.accounts.find(a => a.address.toLowerCase() === tx.from.toLowerCase());
     if (account) {
       const result = await this.signTxLocally(tx, account);
+      console.log(`WalletProvider sending raw transaction: ${result}`);
       return this.provider.request({ method: 'eth_sendRawTransaction', params: [result] });
     }
     return this.provider.request(args);

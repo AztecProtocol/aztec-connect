@@ -171,6 +171,7 @@ export class Contracts {
     };
     console.log({ txRequest });
     const txResponse = await signer.sendTransaction(txRequest);
+    console.log({ txResponse });
     return TxHash.fromString(txResponse.hash);
   }
 
