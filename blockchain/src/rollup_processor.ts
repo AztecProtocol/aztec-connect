@@ -1,5 +1,4 @@
-import { TransactionReceipt, TransactionResponse } from '@ethersproject/abstract-provider';
-import { Web3Provider } from '@ethersproject/providers';
+import { Web3Provider, TransactionResponse, TransactionReceipt } from '@ethersproject/providers';
 import { EthAddress } from 'barretenberg/address';
 import { AssetId } from 'barretenberg/asset';
 import { PermitArgs } from 'barretenberg/blockchain';
@@ -201,7 +200,7 @@ export class RollupProcessor {
       viewingKeysData,
       rollupId: RollupProofData.getRollupIdFromBuffer(rollupProofData),
       rollupSize: RollupProofData.getRollupSizeFromBuffer(rollupProofData),
-      gasPrice: BigInt(tx.gasPrice.toString()),
+      gasPrice: BigInt(tx.gasPrice!.toString()),
       gasUsed: receipt.gasUsed.toNumber(),
     };
   }
