@@ -1,5 +1,6 @@
 import { Connection, createConnection, Repository } from 'typeorm';
 import { AccountDao } from '../entity/account';
+import { AssetMetricsDao } from '../entity/asset_metrics';
 import { ClaimDao } from '../entity/claim';
 import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
@@ -17,7 +18,7 @@ describe('Query Builder', () => {
     connection = await createConnection({
       type: 'sqlite',
       database: ':memory:',
-      entities: [TxDao, RollupProofDao, RollupDao, AccountDao, ClaimDao],
+      entities: [TxDao, RollupProofDao, RollupDao, AccountDao, ClaimDao, AssetMetricsDao],
       dropSchema: true,
       synchronize: true,
       logging: false,

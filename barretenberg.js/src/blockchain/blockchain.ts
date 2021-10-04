@@ -71,4 +71,8 @@ export interface Blockchain extends BlockSource, BlockchainStatusSource, Ethereu
   getBridgeId(address: EthAddress): Promise<BridgeId>;
 
   getChainId(): Promise<number>;
+
+  getRollupBalance(assetId: number): Promise<bigint>;
+
+  getFeeDistributorBalance(assetId: number): Promise<bigint>;
 }

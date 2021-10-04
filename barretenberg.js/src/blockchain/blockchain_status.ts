@@ -33,11 +33,6 @@ export interface BlockchainStatus {
   defiInteractionHash: Buffer;
   escapeOpen: boolean;
   numEscapeBlocksRemaining: number;
-  totalDeposited: bigint[];
-  totalWithdrawn: bigint[];
-  totalPendingDeposit: bigint[];
-  totalFees: bigint[];
-  feeDistributorBalance: bigint[];
   assets: BlockchainAsset[];
 }
 
@@ -55,11 +50,6 @@ export interface BlockchainStatusJson {
   defiInteractionHash: string;
   escapeOpen: boolean;
   numEscapeBlocksRemaining: number;
-  totalDeposited: string[];
-  totalWithdrawn: string[];
-  totalPendingDeposit: string[];
-  totalFees: string[];
-  feeDistributorBalance: string[];
   assets: {
     address: string;
     permitSupport: boolean;
@@ -81,11 +71,6 @@ export function blockchainStatusToJson(status: BlockchainStatus): BlockchainStat
     rootRoot: status.rootRoot.toString('hex'),
     defiRoot: status.defiRoot.toString('hex'),
     defiInteractionHash: status.defiInteractionHash.toString('hex'),
-    totalDeposited: status.totalDeposited.map(f => f.toString()),
-    totalWithdrawn: status.totalWithdrawn.map(f => f.toString()),
-    totalPendingDeposit: status.totalPendingDeposit.map(f => f.toString()),
-    totalFees: status.totalFees.map(f => f.toString()),
-    feeDistributorBalance: status.feeDistributorBalance.map(f => f.toString()),
     assets: status.assets.map(a => ({
       ...a,
       address: a.address.toString(),
@@ -104,11 +89,6 @@ export function blockchainStatusFromJson(json: BlockchainStatusJson): Blockchain
     rootRoot: Buffer.from(json.rootRoot, 'hex'),
     defiRoot: Buffer.from(json.defiRoot, 'hex'),
     defiInteractionHash: Buffer.from(json.defiInteractionHash, 'hex'),
-    totalDeposited: json.totalDeposited.map(f => BigInt(f)),
-    totalWithdrawn: json.totalWithdrawn.map(f => BigInt(f)),
-    totalPendingDeposit: json.totalPendingDeposit.map(f => BigInt(f)),
-    totalFees: json.totalFees.map(f => BigInt(f)),
-    feeDistributorBalance: json.feeDistributorBalance.map(f => BigInt(f)),
     assets: json.assets.map(a => ({
       ...a,
       address: EthAddress.fromString(a.address),

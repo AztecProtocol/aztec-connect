@@ -1,3 +1,5 @@
+import { toBigIntBE } from '../bigint_buffer';
+import { BridgeId } from '../bridge_id';
 import { ProofId } from '../client_proofs';
 import { InnerProofData } from './inner_proof';
 
@@ -12,6 +14,14 @@ export class RollupDefiDepositProofData {
 
   get ENCODED_LENGTH() {
     return RollupDefiDepositProofData.ENCODED_LENGTH;
+  }
+
+  get bridgeId() {
+    return BridgeId.fromBuffer(this.proofData.assetId);
+  }
+
+  get deposit() {
+    return toBigIntBE(this.proofData.publicValue);
   }
 
   static decode(encoded: Buffer) {

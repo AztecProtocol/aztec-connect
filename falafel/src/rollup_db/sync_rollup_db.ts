@@ -1,6 +1,7 @@
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { Mutex } from 'async-mutex';
+import { AssetMetricsDao } from '../entity/asset_metrics';
 import { ClaimDao } from '../entity/claim';
 import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
@@ -156,9 +157,10 @@ export class SyncRollupDb {
     ethTxHash: TxHash,
     interactionResult: DefiInteractionNote[],
     txIds: Buffer[],
+    assetMetrics: AssetMetricsDao[],
   ) {
     return this.synchronise(() =>
-      this.rollupDb.confirmMined(id, gasUsed, gasPrice, mined, ethTxHash, interactionResult, txIds),
+      this.rollupDb.confirmMined(id, gasUsed, gasPrice, mined, ethTxHash, interactionResult, txIds, assetMetrics),
     );
   }
 
@@ -200,6 +202,10 @@ export class SyncRollupDb {
 
   public async deleteUnsettledClaimTxs() {
     return this.synchronise(() => this.rollupDb.deleteUnsettledClaimTxs());
+  }
+
+  public async getAssetMetrics(assetId: number) {
+    return this.synchronise(() => this.rollupDb.getAssetMetrics(assetId));
   }
 
   private async synchronise<T>(fn: () => Promise<T>) {

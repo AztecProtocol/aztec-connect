@@ -78,22 +78,6 @@ export class RollupProcessor {
     return Buffer.from((await this.rollupProcessor.stateHash()).slice(2), 'hex');
   }
 
-  async totalDeposited() {
-    return ((await this.rollupProcessor.getTotalDeposited()) as string[]).map(v => BigInt(v));
-  }
-
-  async totalWithdrawn() {
-    return ((await this.rollupProcessor.getTotalWithdrawn()) as string[]).map(v => BigInt(v));
-  }
-
-  async totalFees() {
-    return ((await this.rollupProcessor.getTotalFees()) as string[]).map(v => BigInt(v));
-  }
-
-  async totalPendingDeposit() {
-    return ((await this.rollupProcessor.getTotalPendingDeposit()) as string[]).map(v => BigInt(v));
-  }
-
   async getSupportedAsset(assetId: AssetId) {
     return EthAddress.fromString(await this.rollupProcessor.getSupportedAsset(assetId));
   }

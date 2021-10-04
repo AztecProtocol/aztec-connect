@@ -16,7 +16,7 @@ export const randomDepositProofData = () =>
     randomNullifier(),
     randomInt(),
     EthAddress.randomAddress().toBuffer32(),
-    randomInt(),
+    Buffer.alloc(32),
   );
 
 export const randomSendProofData = () =>
@@ -67,10 +67,10 @@ export const randomInnerProofData = (proofId = ProofId.SEND) => {
 
 export const createRollupProofData = (innerProofs: InnerProofData[]) => {
   const bridgeIds = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => randomBytes(32));
-  const defiDepositSums = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => randomBytes(32));
+  const defiDepositSums = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => BigInt(0));
   const defiInteractionNotes = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => randomBytes(32));
-  const assetIds = [...Array(RollupProofData.NUMBER_OF_ASSETS)].map(() => randomBytes(32));
-  const totalTxFees = [...Array(RollupProofData.NUMBER_OF_ASSETS)].map(() => randomBytes(32));
+  const assetIds = [...Array(RollupProofData.NUMBER_OF_ASSETS)].map(() => 0);
+  const totalTxFees = [...Array(RollupProofData.NUMBER_OF_ASSETS)].map(() => BigInt(0));
   return new RollupProofData(
     randomBytes(4).readUInt32BE(0),
     innerProofs.length,

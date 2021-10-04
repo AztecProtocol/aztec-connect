@@ -63,14 +63,6 @@ interface IRollupProcessor {
 
     function getSupportedAssets() external view returns (address[] memory);
 
-    function getTotalDeposited() external view returns (uint256[] memory);
-
-    function getTotalWithdrawn() external view returns (uint256[] memory);
-
-    function getTotalPendingDeposit() external view returns (uint256[] memory);
-
-    function getTotalFees() external view returns (uint256[] memory);
-
     function getAssetPermitSupport(uint256 assetId) external view returns (bool);
 
     function getEscapeHatchStatus() external view returns (bool, uint256);

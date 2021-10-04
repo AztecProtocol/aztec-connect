@@ -10,6 +10,7 @@ import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
 import { txDaoToAccountDao } from './tx_dao_to_account_dao';
+import { AssetMetricsDao } from '../entity/asset_metrics';
 
 export type RollupDb = {
   [P in keyof TypeOrmRollupDb]: TypeOrmRollupDb[P];
@@ -21,6 +22,7 @@ export class TypeOrmRollupDb implements RollupDb {
   private rollupRep: Repository<RollupDao>;
   private accountRep: Repository<AccountDao>;
   private claimRep: Repository<ClaimDao>;
+  private assetMetricsRep: Repository<AssetMetricsDao>;
 
   constructor(private connection: Connection) {
     this.txRep = this.connection.getRepository(TxDao);
@@ -28,6 +30,7 @@ export class TypeOrmRollupDb implements RollupDb {
     this.rollupRep = this.connection.getRepository(RollupDao);
     this.accountRep = this.connection.getRepository(AccountDao);
     this.claimRep = this.connection.getRepository(ClaimDao);
+    this.assetMetricsRep = this.connection.getRepository(AssetMetricsDao);
   }
 
   public async addTx(txDao: TxDao) {
@@ -196,7 +199,11 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async getRollup(id: number) {
-    return this.rollupRep.findOne({ id }, { relations: ['rollupProof', 'rollupProof.txs'] });
+    return this.rollupRep.findOne({ id }, { relations: ['rollupProof', 'rollupProof.txs', 'assetMetrics'] });
+  }
+
+  public async getAssetMetrics(assetId: number) {
+    return await this.assetMetricsRep.findOne({ assetId }, { order: { rollupId: 'DESC' } });
   }
 
   public async getRollups(take?: number, skip?: number, descending = false) {
@@ -250,6 +257,7 @@ export class TypeOrmRollupDb implements RollupDb {
     ethTxHash: TxHash,
     interactionResult: DefiInteractionNote[],
     txIds: Buffer[],
+    assetMetrics: AssetMetricsDao[],
   ) {
     await this.connection.transaction(async transactionalEntityManager => {
       await transactionalEntityManager.update<TxDao>(this.txRep.target, { id: In(txIds) }, { mined });
@@ -261,6 +269,7 @@ export class TypeOrmRollupDb implements RollupDb {
         interactionResult: Buffer.concat(interactionResult.map(r => r.toBuffer())),
       };
       await transactionalEntityManager.update<RollupDao>(this.rollupRep.target, { id }, dao);
+      await transactionalEntityManager.insert<AssetMetricsDao>(this.assetMetricsRep.target, assetMetrics);
     });
     return (await this.getRollup(id))!;
   }

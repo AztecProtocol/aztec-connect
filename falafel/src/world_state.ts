@@ -3,10 +3,11 @@ import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
-import { NoteAlgorithms, TreeClaimNote } from '@aztec/barretenberg/note_algorithms';
+import { DefiInteractionNote, NoteAlgorithms, TreeClaimNote } from '@aztec/barretenberg/note_algorithms';
 import { OffchainDefiDepositData } from '@aztec/barretenberg/offchain_tx_data';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
+import { AssetMetricsDao } from './entity/asset_metrics';
 import { RollupDao } from './entity/rollup';
 import { RollupProofDao } from './entity/rollup_proof';
 import { TxDao } from './entity/tx';
@@ -198,12 +199,14 @@ export class WorldState {
   private async confirmOrAddRollupToDb(rollup: RollupProofData, offchainTxData: Buffer[], block: Block) {
     const { txHash, rollupProofData: proofData, created } = block;
 
+    const assetMetrics = await this.getAssetMetrics(rollup, block.interactionResult);
+
     // Get by rollup hash, as a competing rollup may have the same rollup number.
     const rollupProof = await this.rollupDb.getRollupProof(rollup.rollupHash, true);
     if (rollupProof) {
       // Our rollup. Confirm mined and track settlement times.
       const txIds = rollupProof.txs.map(tx => tx.id);
-      await this.rollupDb.confirmMined(
+      const rollupDao = await this.rollupDb.confirmMined(
         rollup.rollupId,
         block.gasUsed,
         block.gasPrice,
@@ -211,6 +214,7 @@ export class WorldState {
         block.txHash,
         block.interactionResult,
         txIds,
+        assetMetrics,
       );
 
       for (const inner of rollup.innerProofData) {
@@ -224,6 +228,8 @@ export class WorldState {
         }
         this.metrics.txSettlementDuration(block.created.getTime() - tx.created.getTime());
       }
+
+      this.metrics.rollupReceived(rollupDao!);
     } else {
       // Not a rollup we created. Add or replace rollup.
       const txs = rollup.innerProofData
@@ -248,10 +254,38 @@ export class WorldState {
         interactionResult: Buffer.concat(block.interactionResult.map(r => r.toBuffer())),
         gasPrice: toBufferBE(block.gasPrice, 32),
         gasUsed: block.gasUsed,
+        assetMetrics,
       });
 
       await this.rollupDb.addRollup(rollupDao);
+      this.metrics.rollupReceived(rollupDao!);
     }
+  }
+
+  private async getAssetMetrics(rollup: RollupProofData, interactionResults: DefiInteractionNote[]) {
+    const result: AssetMetricsDao[] = [];
+    for (const assetId of rollup.assetIds.filter(id => id != 1 << 30)) {
+      const previous = await this.rollupDb.getAssetMetrics(assetId);
+      const assetMetrics = previous ? previous : new AssetMetricsDao();
+      assetMetrics.rollup = new RollupDao();
+      assetMetrics.rollup.id = rollup.rollupId;
+      assetMetrics.rollupId = rollup.rollupId;
+      assetMetrics.assetId = assetId;
+      assetMetrics.contractBalance = await this.blockchain.getRollupBalance(assetId);
+      assetMetrics.totalDeposited += rollup.getTotalDeposited(assetId);
+      assetMetrics.totalWithdrawn += rollup.getTotalWithdrawn(assetId);
+      assetMetrics.totalDefiDeposited += rollup.getTotalDefiDeposit(assetId);
+      assetMetrics.totalDefiClaimed += interactionResults.reduce(
+        (a, v) =>
+          a +
+          (v.bridgeId.outputAssetIdA == assetId ? v.totalOutputValueA : BigInt(0)) +
+          (v.bridgeId.outputAssetIdB == assetId ? v.totalOutputValueB : BigInt(0)),
+        BigInt(0),
+      );
+      assetMetrics.totalFees += rollup.getTotalFees(assetId);
+      result.push(assetMetrics);
+    }
+    return result;
   }
 
   private async addRollupToWorldState(rollup: RollupProofData) {

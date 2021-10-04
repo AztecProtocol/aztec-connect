@@ -3,6 +3,7 @@ import { TxType } from '@aztec/barretenberg/blockchain';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { AssetMetricsDao } from '../entity/asset_metrics';
 import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
@@ -143,8 +144,18 @@ export class CachedRollupDb extends SyncRollupDb {
     ethTxHash: TxHash,
     interactionResult: DefiInteractionNote[],
     txIds: Buffer[],
+    assetMetrics: AssetMetricsDao[],
   ) {
-    const rollup = await super.confirmMined(id, gasUsed, gasPrice, mined, ethTxHash, interactionResult, txIds);
+    const rollup = await super.confirmMined(
+      id,
+      gasUsed,
+      gasPrice,
+      mined,
+      ethTxHash,
+      interactionResult,
+      txIds,
+      assetMetrics,
+    );
     this.rollups[rollup.id] = rollup;
     this.settledRollups[rollup.id] = rollup;
     rollup.rollupProof.txs

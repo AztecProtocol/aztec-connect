@@ -1,10 +1,10 @@
-import { AssetId, AssetIds } from '@aztec/barretenberg/asset';
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
 import { fromBaseUnits } from '@aztec/blockchain';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import client, { Counter, Gauge, Histogram } from 'prom-client';
 import { RollupDb } from '../rollup_db';
+import { RollupDao } from '../entity/rollup';
 
 export class Metrics {
   private receiveTxDuration: Histogram<string>;
@@ -18,10 +18,12 @@ export class Metrics {
   private rollupGasPrice: Gauge<string>;
   private rollupSize: Gauge<string>;
   private totalDeposited: Gauge<string>;
-  private totalPendingDeposit: Gauge<string>;
   private totalWithdrawn: Gauge<string>;
+  private totalDefiDeposited: Gauge<string>;
+  private totalDefiClaimed: Gauge<string>;
   private totalFees: Gauge<string>;
-  private feeDistributorBalance: Gauge<string>;
+  private rollupContractBalance: Gauge<string>;
+  private feeDistributorContractBalance: Gauge<string>;
 
   private httpEndpointCounter: Counter<string>;
   private txReceivedCounter: Counter<string>;
@@ -125,30 +127,42 @@ export class Metrics {
     });
 
     this.totalDeposited = new Gauge({
-      name: 'rollup_contract_total_deposited',
+      name: 'total_deposited',
       help: 'Total deposited',
       labelNames: ['symbol'],
     });
 
-    this.totalPendingDeposit = new Gauge({
-      name: 'rollup_contract_total_pending_deposit',
-      help: 'Total pending deposit',
-      labelNames: ['symbol'],
-    });
-
     this.totalWithdrawn = new Gauge({
-      name: 'rollup_contract_total_withdrawn',
+      name: 'total_withdrawn',
       help: 'Total withdrawn',
       labelNames: ['symbol'],
     });
 
+    this.totalDefiDeposited = new Gauge({
+      name: 'total_defi_deposited',
+      help: 'Total defi deposited',
+      labelNames: ['symbol'],
+    });
+
+    this.totalDefiClaimed = new Gauge({
+      name: 'total_defi_claimed',
+      help: 'Total defi claimed',
+      labelNames: ['symbol'],
+    });
+
     this.totalFees = new Gauge({
-      name: 'rollup_contract_total_fees',
+      name: 'total_fees',
       help: 'Total fees',
       labelNames: ['symbol'],
     });
 
-    this.feeDistributorBalance = new Gauge({
+    this.rollupContractBalance = new Gauge({
+      name: 'rollup_contract_balance',
+      help: 'Current balance on rollup contract',
+      labelNames: ['symbol'],
+    });
+
+    this.feeDistributorContractBalance = new Gauge({
       name: 'fee_contract_balance',
       help: 'Current balance on fee distributor contract',
       labelNames: ['symbol'],
@@ -229,32 +243,42 @@ export class Metrics {
     this.txReceivedCounter.labels(TxType[txType]).inc();
   }
 
-  async getMetrics() {
+  async rollupReceived(rollup: RollupDao) {
     const status = await this.blockchain.getBlockchainStatus();
-    for (const asset of AssetIds) {
-      const totalDeposited = +fromBaseUnits(status.totalDeposited[asset], status.assets[asset].decimals);
-      this.totalDeposited.labels(AssetId[asset].toString()).set(totalDeposited);
+    for (const assetMetric of rollup.assetMetrics) {
+      const assetId = assetMetric.assetId;
+      const assetName = status.assets[assetId].symbol;
+      const assetDecimals = status.assets[assetId].decimals;
 
-      const totalPendingDeposit = +fromBaseUnits(status.totalPendingDeposit[asset], status.assets[asset].decimals);
-      this.totalPendingDeposit.labels(AssetId[asset].toString()).set(totalPendingDeposit);
+      const contractBalance = +fromBaseUnits(assetMetric.contractBalance, assetDecimals);
+      this.rollupContractBalance.labels(assetName).set(contractBalance);
 
-      const totalWithdrawn = +fromBaseUnits(status.totalWithdrawn[asset], status.assets[asset].decimals);
-      this.totalWithdrawn.labels(AssetId[asset].toString()).set(totalWithdrawn);
+      const totalDeposited = +fromBaseUnits(assetMetric.totalDeposited, assetDecimals);
+      this.totalDeposited.labels(assetName).set(totalDeposited);
 
-      const totalFees = +fromBaseUnits(status.totalFees[asset], status.assets[asset].decimals);
-      this.totalFees.labels(AssetId[asset].toString()).set(totalFees);
+      const totalWithdrawn = +fromBaseUnits(assetMetric.totalWithdrawn, assetDecimals);
+      this.totalWithdrawn.labels(assetName).set(totalWithdrawn);
 
-      const feeDistributorBalance = +fromBaseUnits(status.feeDistributorBalance[asset], status.assets[asset].decimals);
-      this.feeDistributorBalance.labels(AssetId[asset].toString()).set(feeDistributorBalance);
+      const totalDefiDeposited = +fromBaseUnits(assetMetric.totalDefiDeposited, assetDecimals);
+      this.totalDefiDeposited.labels(assetName).set(totalDefiDeposited);
+
+      const totalDefiClaimed = +fromBaseUnits(assetMetric.totalDefiClaimed, assetDecimals);
+      this.totalDefiClaimed.labels(assetName).set(totalDefiClaimed);
+
+      const totalFees = +fromBaseUnits(assetMetric.totalFees, assetDecimals);
+      this.totalFees.labels(assetName).set(totalFees);
+
+      const feeDistributorBalanceInt = await this.blockchain.getFeeDistributorBalance(assetId);
+      const feeDistributorBalance = +fromBaseUnits(feeDistributorBalanceInt, assetDecimals);
+      this.feeDistributorContractBalance.labels(assetName).set(feeDistributorBalance);
     }
 
-    const rollup = await this.rollupDb.getLastSettledRollup();
-    if (rollup) {
-      this.rollupSize.set(rollup.rollupProof.rollupSize);
-      this.rollupGasUsed.set(rollup.gasUsed!);
-      this.rollupGasPrice.set(Number(toBigIntBE(rollup.gasPrice!)));
-    }
+    this.rollupSize.set(rollup.rollupProof.rollupSize);
+    this.rollupGasUsed.set(rollup.gasUsed!);
+    this.rollupGasPrice.set(Number(toBigIntBE(rollup.gasPrice!)));
+  }
 
+  async getMetrics() {
     return client.register.metrics();
   }
 }

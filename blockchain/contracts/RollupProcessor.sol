@@ -91,12 +91,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     // 2: To prevent griefing attacks where a bridge consumes all our gas.
     uint256 private gasSentToBridgeProxy = 300000;
 
-    // Metrics: TODO REMOVE. Requires falafel to track and accumulate.
-    uint256[] public totalPendingDeposit;
-    uint256[] public totalDeposited;
-    uint256[] public totalWithdrawn;
-    uint256[] public totalFees;
-
     receive() external payable {}
 
     constructor(
@@ -111,10 +105,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         escapeBlockLowerBound = _escapeBlockLowerBound;
         escapeBlockUpperBound = _escapeBlockUpperBound;
         rollupProviders[msg.sender] = true;
-        totalPendingDeposit.push(0);
-        totalDeposited.push(0);
-        totalWithdrawn.push(0);
-        totalFees.push(0);
         transferOwnership(_contractOwner);
     }
 
@@ -168,22 +158,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         return supportedAssets;
     }
 
-    function getTotalDeposited() external view override returns (uint256[] memory) {
-        return totalDeposited;
-    }
-
-    function getTotalWithdrawn() external view override returns (uint256[] memory) {
-        return totalWithdrawn;
-    }
-
-    function getTotalPendingDeposit() external view override returns (uint256[] memory) {
-        return totalPendingDeposit;
-    }
-
-    function getTotalFees() external view override returns (uint256[] memory) {
-        return totalFees;
-    }
-
     /**
      * @dev Get the status of whether an asset supports the permit ERC-2612 approval flow
      * @param assetId - unique identifier of the supported asset
@@ -232,7 +206,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         uint256 amount
     ) internal {
         userPendingDeposits[assetId][depositorAddress] = userPendingDeposits[assetId][depositorAddress].add(amount);
-        totalPendingDeposit[assetId] = totalPendingDeposit[assetId].add(amount);
     }
 
     /**
@@ -247,8 +220,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         require(userBalance >= amount, 'Rollup Processor: INSUFFICIENT_DEPOSIT');
 
         userPendingDeposits[assetId][transferFromAddress] = userBalance.sub(amount);
-        totalPendingDeposit[assetId] = totalPendingDeposit[assetId].sub(amount);
-        totalDeposited[assetId] = totalDeposited[assetId].add(amount);
     }
 
     /**
@@ -264,12 +235,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         assetPermitSupport[linkedToken] = supportsPermit;
 
         uint256 assetId = supportedAssets.length;
-
-        totalPendingDeposit.push(0);
-        totalDeposited.push(0);
-        totalWithdrawn.push(0);
-        totalFees.push(0);
-
         emit AssetAdded(assetId, linkedToken);
     }
 
@@ -800,7 +765,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                     );
                 }
                 require(success, 'Rollup Processor: DEPOSIT_TX_FEE_FAILED');
-                totalFees[assetId] = totalFees[assetId].add(txFee);
             }
         }
     }
@@ -825,6 +789,5 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             address assetAddress = getSupportedAsset(assetId);
             IERC20(assetAddress).transfer(receiverAddress, withdrawValue);
         }
-        totalWithdrawn[assetId] = totalWithdrawn[assetId].add(withdrawValue);
     }
 }

@@ -1,5 +1,16 @@
 import { TxHash } from '@aztec/barretenberg/tx_hash';
-import { AfterInsert, AfterLoad, AfterUpdate, Column, Entity, Index, OneToOne, PrimaryColumn } from 'typeorm';
+import {
+  AfterInsert,
+  AfterLoad,
+  AfterUpdate,
+  Column,
+  Entity,
+  Index,
+  OneToMany,
+  OneToOne,
+  PrimaryColumn,
+} from 'typeorm';
+import { AssetMetricsDao } from './asset_metrics';
 import { RollupProofDao } from './rollup_proof';
 import { txHashTransformer } from './transformer';
 
@@ -18,6 +29,9 @@ export class RollupDao {
 
   @OneToOne(() => RollupProofDao, rollupPoof => rollupPoof.rollup, { cascade: true })
   public rollupProof!: RollupProofDao;
+
+  @OneToMany(() => AssetMetricsDao, am => am.rollup, { cascade: true })
+  public assetMetrics!: AssetMetricsDao[];
 
   @Column()
   public created!: Date;

@@ -4,7 +4,8 @@ import { numToUInt32BE } from '../serialize';
 import { decodeInnerProof } from './decode_inner_proof';
 import { encodeInnerProof } from './encode_inner_proof';
 import { InnerProofData } from './inner_proof';
-import { toBigIntBE } from '../bigint_buffer';
+import { RollupDepositProofData, RollupWithdrawProofData } from '.';
+import { toBigIntBE, toBufferBE } from '../bigint_buffer';
 
 export enum RollupProofDataFields {
   ROLLUP_ID,
@@ -60,21 +61,21 @@ const parseHeaderInputs = (proofData: Buffer) => {
     startIndex += 32;
   }
 
-  const defiDepositSums: Buffer[] = [];
+  const defiDepositSums: bigint[] = [];
   for (let i = 0; i < RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK; ++i) {
-    defiDepositSums.push(proofData.slice(startIndex, startIndex + 32));
+    defiDepositSums.push(toBigIntBE(proofData.slice(startIndex, startIndex + 32)));
     startIndex += 32;
   }
 
-  const assetIds: Buffer[] = [];
+  const assetIds: number[] = [];
   for (let i = 0; i < RollupProofData.NUMBER_OF_ASSETS; ++i) {
-    assetIds.push(proofData.slice(startIndex, startIndex + 32));
+    assetIds.push(proofData.readUInt32BE(startIndex + 28));
     startIndex += 32;
   }
 
-  const totalTxFees: Buffer[] = [];
+  const totalTxFees: bigint[] = [];
   for (let i = 0; i < RollupProofData.NUMBER_OF_ASSETS; ++i) {
-    totalTxFees.push(proofData.slice(startIndex, startIndex + 32));
+    totalTxFees.push(toBigIntBE(proofData.slice(startIndex, startIndex + 32)));
     startIndex += 32;
   }
 
@@ -133,9 +134,9 @@ export class RollupProofData {
     public oldDefiRoot: Buffer,
     public newDefiRoot: Buffer,
     public bridgeIds: Buffer[],
-    public defiDepositSums: Buffer[],
-    public assetIds: Buffer[],
-    public totalTxFees: Buffer[],
+    public defiDepositSums: bigint[],
+    public assetIds: number[],
+    public totalTxFees: bigint[],
     public defiInteractionNotes: Buffer[],
     public prevDefiInteractionHash: Buffer,
     public numRollupTxs: number,
@@ -174,9 +175,9 @@ export class RollupProofData {
       this.oldDefiRoot,
       this.newDefiRoot,
       ...this.bridgeIds,
-      ...this.defiDepositSums,
-      ...this.assetIds,
-      ...this.totalTxFees,
+      ...this.defiDepositSums.map(v => toBufferBE(v, 32)),
+      ...this.assetIds.map(a => numToUInt32BE(a, 32)),
+      ...this.totalTxFees.map(a => toBufferBE(a, 32)),
       ...this.defiInteractionNotes,
       this.prevDefiInteractionHash,
       numToUInt32BE(this.numRollupTxs, 32),
@@ -184,22 +185,30 @@ export class RollupProofData {
     ]);
   }
 
-  getTotalDeposited() {
-    const deposits: bigint[] = [];
-    const realInnerProofs = this.innerProofData.filter(p => p.proofId === ProofId.DEPOSIT);
-    realInnerProofs.forEach(p => {
-      deposits[p.assetId.readUInt32BE()] += toBigIntBE(p.publicValue);
-    });
-    return deposits;
+  getTotalDeposited(assetId: number) {
+    return this.innerProofData
+      .filter(p => p.proofId === ProofId.DEPOSIT)
+      .map(p => new RollupDepositProofData(p))
+      .filter(p => p.assetId == assetId)
+      .reduce((a: bigint, p) => a + p.publicValue, BigInt(0));
   }
 
-  getTotalWithdrawn() {
-    const withdraws: bigint[] = [];
-    const realInnerProofs = this.innerProofData.filter(p => p.proofId === ProofId.WITHDRAW);
-    realInnerProofs.forEach(p => {
-      withdraws[p.assetId.readUInt32BE()] += toBigIntBE(p.publicValue);
-    });
-    return withdraws;
+  getTotalWithdrawn(assetId: number) {
+    return this.innerProofData
+      .filter(p => p.proofId === ProofId.WITHDRAW)
+      .map(p => new RollupWithdrawProofData(p))
+      .filter(p => p.assetId == assetId)
+      .reduce((a: bigint, p) => a + p.publicValue, BigInt(0));
+  }
+
+  getTotalDefiDeposit(assetId: number) {
+    const index = this.assetIds.indexOf(assetId);
+    return index < 0 ? BigInt(0) : this.defiDepositSums[index];
+  }
+
+  getTotalFees(assetId: number) {
+    const index = this.assetIds.indexOf(assetId);
+    return index < 0 ? BigInt(0) : this.totalTxFees[index];
   }
 
   encode() {
@@ -218,9 +227,9 @@ export class RollupProofData {
       this.oldDefiRoot,
       this.newDefiRoot,
       ...this.bridgeIds,
-      ...this.defiDepositSums,
-      ...this.assetIds,
-      ...this.totalTxFees,
+      ...this.defiDepositSums.map(v => toBufferBE(v, 32)),
+      ...this.assetIds.map(a => numToUInt32BE(a, 32)),
+      ...this.totalTxFees.map(a => toBufferBE(a, 32)),
       ...this.defiInteractionNotes,
       this.prevDefiInteractionHash,
       numToUInt32BE(this.numRollupTxs, 32),
@@ -295,11 +304,15 @@ export class RollupProofData {
     );
   }
 
-  static randomData(rollupId: number, numTxs: number) {
+  static randomData(rollupId: number, numTxs: number, dataStartIndex = 0, innerProofData?: InnerProofData[]) {
+    const ipd =
+      innerProofData === undefined
+        ? new Array(numTxs).fill(0).map(() => InnerProofData.fromBuffer(Buffer.alloc(InnerProofData.LENGTH)))
+        : innerProofData;
     return new RollupProofData(
       rollupId,
       numTxs,
-      0,
+      dataStartIndex,
       Buffer.alloc(32),
       Buffer.alloc(32),
       Buffer.alloc(32),
@@ -309,13 +322,13 @@ export class RollupProofData {
       Buffer.alloc(32),
       Buffer.alloc(32),
       new Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK).fill(0).map(() => Buffer.alloc(32)),
-      new Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK).fill(0).map(() => Buffer.alloc(32)),
-      new Array(RollupProofData.NUMBER_OF_ASSETS).fill(0).map(() => Buffer.alloc(32)),
-      new Array(RollupProofData.NUMBER_OF_ASSETS).fill(0).map(() => Buffer.alloc(32)),
+      new Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK).fill(BigInt(0)),
+      new Array(RollupProofData.NUMBER_OF_ASSETS).fill(0),
+      new Array(RollupProofData.NUMBER_OF_ASSETS).fill(BigInt(0)),
       new Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK).fill(0).map(() => Buffer.alloc(32)),
       Buffer.alloc(32),
-      1,
-      new Array(numTxs).fill(0).map(() => InnerProofData.fromBuffer(Buffer.alloc(InnerProofData.LENGTH))),
+      ipd.length,
+      ipd,
     );
   }
 

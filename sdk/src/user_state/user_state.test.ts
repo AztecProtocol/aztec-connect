@@ -1,7 +1,7 @@
 import { AccountAliasId, AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
-import { Block, BlockSource } from '@aztec/barretenberg/block_source';
+import { Block } from '@aztec/barretenberg/block_source';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { Blake2s } from '@aztec/barretenberg/crypto';
@@ -254,32 +254,11 @@ describe('user state', () => {
   };
 
   const generateRollup = (rollupId = 0, innerProofs: InnerProofData[] = [], rollupSize = innerProofs.length) => {
-    const totalTxFees = new Array(RollupProofData.NUMBER_OF_ASSETS).fill(0).map(() => randomBytes(32));
     const innerProofData = [...innerProofs];
     for (let i = innerProofs.length; i < rollupSize; ++i) {
       innerProofData.push(InnerProofData.PADDING);
     }
-    return new RollupProofData(
-      rollupId,
-      rollupSize,
-      0,
-      randomBytes(32),
-      randomBytes(32),
-      randomBytes(32),
-      randomBytes(32),
-      randomBytes(32),
-      randomBytes(32),
-      randomBytes(32),
-      randomBytes(32),
-      Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK).fill(BridgeId.ZERO.toBuffer()),
-      Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK).fill(Buffer.alloc(32)),
-      Array(RollupProofData.NUMBER_OF_ASSETS).fill(Buffer.alloc(32, 1 << 30)),
-      totalTxFees,
-      Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK).fill(Buffer.alloc(32)),
-      randomBytes(32),
-      1,
-      innerProofData,
-    );
+    return RollupProofData.randomData(rollupId, rollupSize, 0, innerProofData);
   };
 
   const createBlock = (

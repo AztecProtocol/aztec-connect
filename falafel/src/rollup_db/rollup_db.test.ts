@@ -10,6 +10,7 @@ import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { AccountDao } from '../entity/account';
 import { ClaimDao } from '../entity/claim';
+import { AssetMetricsDao } from '../entity/asset_metrics';
 
 describe('rollup_db', () => {
   let connection: Connection;
@@ -19,7 +20,7 @@ describe('rollup_db', () => {
     connection = await createConnection({
       type: 'sqlite',
       database: ':memory:',
-      entities: [TxDao, RollupProofDao, RollupDao, AccountDao, ClaimDao],
+      entities: [TxDao, RollupProofDao, RollupDao, AccountDao, ClaimDao, AssetMetricsDao],
       dropSchema: true,
       synchronize: true,
       logging: false,
@@ -148,7 +149,7 @@ describe('rollup_db', () => {
       const rollupProof = randomRollupProof([tx2], 1);
       const rollup = randomRollup(0, rollupProof);
       await rollupDb.addRollup(rollup);
-      await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random(), [], [tx2.id]);
+      await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random(), [], [tx2.id], []);
     }
 
     const nullifiers = await rollupDb.getUnsettledNullifiers();
@@ -320,7 +321,7 @@ describe('rollup_db', () => {
     const settledRollups1 = await rollupDb.getSettledRollups();
     expect(settledRollups1.length).toBe(0);
 
-    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random(), [], [tx0.id, tx1.id]);
+    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random(), [], [tx0.id, tx1.id], []);
 
     const settledRollups2 = await rollupDb.getSettledRollups();
     expect(settledRollups2.length).toBe(1);
@@ -343,7 +344,7 @@ describe('rollup_db', () => {
 
     expect(await rollupDb.getUnsettledTxCount()).toBe(1);
 
-    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random(), [], [tx0.id]);
+    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random(), [], [tx0.id], []);
 
     expect(await rollupDb.getUnsettledTxCount()).toBe(0);
   });
@@ -364,7 +365,7 @@ describe('rollup_db', () => {
     await rollupDb.addRollup(rollup0);
     await rollupDb.addRollup(rollup1);
 
-    await rollupDb.confirmMined(rollup0.id, 0, 0n, new Date(), TxHash.random(), [], [tx0.id]);
+    await rollupDb.confirmMined(rollup0.id, 0, 0n, new Date(), TxHash.random(), [], [tx0.id], []);
 
     const unsettledTxs = await rollupDb.getUnsettledTxs();
     expect(unsettledTxs.length).toBe(2);

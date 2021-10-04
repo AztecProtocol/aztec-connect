@@ -48,10 +48,6 @@ describe('rollup_processor', () => {
     expect(await rollupProcessor.numberOfBridgeCalls()).toBe(4);
     expect(await rollupProcessor.dataSize()).toBe(0);
     expect(await rollupProcessor.defiInteractionHash()).toEqual(WorldStateConstants.INITIAL_INTERACTION_HASH);
-    expect(await rollupProcessor.totalDeposited()).toEqual([0n, 0n]);
-    expect(await rollupProcessor.totalWithdrawn()).toEqual([0n, 0n]);
-    expect(await rollupProcessor.totalFees()).toEqual([0n, 0n]);
-    expect(await rollupProcessor.totalPendingDeposit()).toEqual([0n, 0n]);
     expect(await rollupProcessor.getSupportedAssets()).toEqual(assets.map(a => a.getStaticInfo().address));
     expect(await rollupProcessor.getEscapeHatchStatus()).toEqual({ escapeOpen: true, blocksRemaining: 20 });
   });

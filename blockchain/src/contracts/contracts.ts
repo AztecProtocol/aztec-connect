@@ -82,41 +82,28 @@ export class Contracts {
     return tx;
   }
 
-  private async getAssetValues(promise: Promise<bigint[]>) {
-    const padding = Array<bigint>(this.assets.length).fill(BigInt(0));
-    return [...(await promise), ...padding].slice(0, padding.length);
-  }
-
   public async getPerRollupState() {
     const defiInteractionHash = await this.rollupProcessor.defiInteractionHash();
-
-    const totalDeposited = await this.getAssetValues(this.rollupProcessor.totalDeposited());
-    const totalWithdrawn = await this.getAssetValues(this.rollupProcessor.totalWithdrawn());
-    const totalFees = await this.getAssetValues(this.rollupProcessor.totalFees());
-
     return {
       defiInteractionHash,
-      totalDeposited,
-      totalWithdrawn,
-      totalFees,
     };
   }
 
   public async getPerBlockState() {
     const { escapeOpen, blocksRemaining } = await this.rollupProcessor.getEscapeHatchStatus();
-    const totalPendingDeposit = await this.getAssetValues(this.rollupProcessor.totalPendingDeposit());
-    const feeDistributorBalance: bigint[] = [];
-
-    for (let i = 0; i < this.assets.length; ++i) {
-      feeDistributorBalance[i] = await this.feeDistributor.txFeeBalance(this.assets[i].getStaticInfo().address);
-    }
 
     return {
       escapeOpen,
       numEscapeBlocksRemaining: blocksRemaining,
-      totalPendingDeposit,
-      feeDistributorBalance,
     };
+  }
+
+  public getRollupBalance(assetId: number) {
+    return this.assets[assetId].balanceOf(this.rollupProcessor.address);
+  }
+
+  public getFeeDistributorBalance(assetId: number) {
+    return this.assets[assetId].balanceOf(this.feeDistributor.address);
   }
 
   public getRollupContractAddress() {

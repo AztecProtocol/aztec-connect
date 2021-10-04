@@ -1,4 +1,5 @@
 import { randomBytes } from 'crypto';
+import { RollupDepositProofData } from '.';
 import { ProofId } from '../client_proofs/proof_data';
 import {
   createRollupProofData,
@@ -28,11 +29,11 @@ describe('RollupProofData', () => {
   });
 
   it('should throw if the number of totalTxFees is wrong', () => {
-    const assetIds = [...Array(RollupProofData.NUMBER_OF_ASSETS)].map(() => randomBytes(32));
-    const totalTxFees = [...Array(RollupProofData.NUMBER_OF_ASSETS)].map(() => randomBytes(32));
-    totalTxFees.push(randomBytes(32));
+    const assetIds = [...Array(RollupProofData.NUMBER_OF_ASSETS)].map(() => 0);
+    const totalTxFees = [...Array(RollupProofData.NUMBER_OF_ASSETS)].map(() => BigInt(0));
+    totalTxFees.push(BigInt(0));
     const bridgeIds = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => randomBytes(32));
-    const defiDepositSums = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => randomBytes(32));
+    const defiDepositSums = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => BigInt(0));
     const defiInteractionNotes = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => randomBytes(64));
 
     expect(
@@ -62,11 +63,11 @@ describe('RollupProofData', () => {
   });
 
   it('should throw if the number of bridgeIds is wrong', () => {
-    const assetIds = [...Array(RollupProofData.NUMBER_OF_ASSETS)].map(() => randomBytes(32));
-    const totalTxFees = [...Array(RollupProofData.NUMBER_OF_ASSETS)].map(() => randomBytes(32));
+    const assetIds = [...Array(RollupProofData.NUMBER_OF_ASSETS)].map(() => 0);
+    const totalTxFees = [...Array(RollupProofData.NUMBER_OF_ASSETS)].map(() => BigInt(0));
     const bridgeIds = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => randomBytes(32));
     bridgeIds.push(randomBytes(32));
-    const defiDepositSums = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => randomBytes(32));
+    const defiDepositSums = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => BigInt(0));
     const defiInteractionNotes = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => randomBytes(64));
 
     expect(
@@ -122,5 +123,12 @@ describe('RollupProofData', () => {
     const encoded = rollupProofData.encode();
     expect(encoded.length < buffer.length).toBe(true);
     expect(RollupProofData.decode(encoded)).toEqual(rollupProofData);
+  });
+
+  it('should have correct deposit sum', () => {
+    const inners = [randomDepositProofData(), randomDepositProofData()];
+    const rollupProofData = createRollupProofData(inners);
+    const expected = inners.map(i => new RollupDepositProofData(i)).reduce((a, i) => a + i.publicValue, BigInt(0));
+    expect(rollupProofData.getTotalDeposited(0)).toEqual(expected);
   });
 });
