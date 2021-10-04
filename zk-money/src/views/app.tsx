@@ -260,9 +260,14 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
   };
 
   private handleRestart = () => {
-    if (this.state.loginState.accountV0) {
-      const url = getUrlFromLoginMode(LoginMode.SIGNUP);
-      this.props.history.push(url);
+    const prevMode = this.state.loginState.mode;
+    switch (prevMode) {
+      case LoginMode.MIGRATE:
+      case LoginMode.NEW_ALIAS: {
+        const url = getUrlFromLoginMode(LoginMode.SIGNUP);
+        this.props.history.push(url);
+        break;
+      }
     }
     this.setState({ systemMessage: { message: '', type: MessageType.TEXT } }, () => this.app.logout());
   };

@@ -68,6 +68,9 @@ export class TxReceiver {
       if (await this.rollupDb.nullifiersExist(proof.nullifier1, proof.nullifier2)) {
         throw new Error('Nullifier already exists.');
       }
+
+      const dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
+
       // Check the proof is valid.
       switch (proof.proofId) {
         case ProofId.JOIN_SPLIT: {
@@ -78,8 +81,6 @@ export class TxReceiver {
           await this.validateAccountTx(proof);
           break;
       }
-
-      const dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
 
       const txDao = new TxDao({
         id: proof.txId,
