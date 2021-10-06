@@ -18,14 +18,6 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.getTx(txId));
   }
 
-  public async getTxsByTxIds(txIds: Buffer[]) {
-    return this.synchronise(() => this.rollupDb.getTxsByTxIds(txIds));
-  }
-
-  public async getLatestTxs(take: number) {
-    return this.synchronise(() => this.rollupDb.getLatestTxs(take));
-  }
-
   public async getPendingTxCount() {
     return this.synchronise(() => this.rollupDb.getPendingTxCount());
   }
@@ -40,6 +32,14 @@ export class SyncRollupDb {
 
   public async getJoinSplitTxCount() {
     return this.synchronise(() => this.rollupDb.getJoinSplitTxCount());
+  }
+
+  public async getAccountTx(aliasHash: Buffer) {
+    return this.synchronise(() => this.rollupDb.getAccountTx(aliasHash));
+  }
+
+  public async getLatestAccountTx(accountPubKey: Buffer) {
+    return this.synchronise(() => this.rollupDb.getLatestAccountTx(accountPubKey));
   }
 
   public async getAccountTxCount() {

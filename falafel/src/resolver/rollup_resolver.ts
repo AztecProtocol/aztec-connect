@@ -1,22 +1,18 @@
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { Arg, Args, FieldResolver, Int, Query, Resolver, Root } from 'type-graphql';
 import { Inject } from 'typedi';
-import { Repository, Connection } from 'typeorm';
-import { RollupProofDao } from '../entity/rollup_proof';
 import { RollupDao } from '../entity/rollup';
-import { getQuery, pickOne, FieldAliases } from './query_builder';
-import { RollupsArgs, SearchRollupsArgs, RollupType } from './rollup_type';
 import { CachedRollupDb } from '../rollup_db';
+import { FieldAliases } from './query_builder';
+import { RollupsArgs, RollupType } from './rollup_type';
 
 @Resolver(() => RollupType)
 export class RollupResolver {
-  private readonly rollupRep: Repository<RollupProofDao>;
   private rollupDb: CachedRollupDb;
 
   private fieldAliases: FieldAliases = {};
 
-  constructor(@Inject('rollupDb') rollupDb: CachedRollupDb, @Inject('connection') connection: Connection) {
-    this.rollupRep = connection.getRepository(RollupProofDao);
+  constructor(@Inject('rollupDb') rollupDb: CachedRollupDb) {
     this.rollupDb = rollupDb;
 
     this.fieldAliases.hash = 'id';
@@ -31,14 +27,6 @@ export class RollupResolver {
   async rollups(@Args() { take, skip }: RollupsArgs) {
     const data = await this.rollupDb.getRollups(take!, skip!, true);
     return data;
-  }
-
-  @Query(() => [RollupType!])
-  async searchRollups(@Args() { where, ...args }: SearchRollupsArgs) {
-    return getQuery(
-      this.rollupRep,
-      { where: { ...pickOne(where || {}), rollup_not_null: true }, ...args }, // eslint-disable-line camelcase
-    ).getMany();
   }
 
   @FieldResolver()
@@ -103,8 +91,8 @@ export class RollupResolver {
   }
 
   @FieldResolver(() => Int)
-  async txs(@Root() { rollupProof: { txs } }: RollupDao) {
-    return txs;
+  async txs(@Root() { rollupProof }: RollupDao) {
+    return rollupProof?.txs || [];
   }
 
   @Query(() => Int)

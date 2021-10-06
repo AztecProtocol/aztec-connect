@@ -183,18 +183,6 @@ export class Server {
     return (await this.rollupDb.getNextRollupId()) - 1;
   }
 
-  public async getRollup(id: number) {
-    return this.rollupDb.getRollup(id);
-  }
-
-  public async getTxs(txIds: Buffer[]) {
-    return this.rollupDb.getTxsByTxIds(txIds);
-  }
-
-  public async getTx(txId: Buffer) {
-    return this.rollupDb.getTx(txId);
-  }
-
   public async receiveTx(tx: Tx) {
     const { maxUnsettledTxs } = this.config;
     const unsettled = await this.getUnsettledTxCount();
