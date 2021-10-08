@@ -1,8 +1,24 @@
-import { Length, Max } from 'class-validator';
-import { ArgsType, Field, InputType, Int, ObjectType } from 'type-graphql';
-import { MAX_COUNT } from './query_builder';
-import { RollupType } from './rollup_type';
+import { Length } from 'class-validator';
+import { Field, Int, ObjectType } from 'type-graphql';
 import { HexString, ISODateTime } from './scalar_type';
+
+@ObjectType()
+export class MinimalRollupType {
+  @Field(() => Int)
+  id!: number;
+
+  @Field(() => HexString)
+  hash!: string;
+
+  @Field(() => HexString, { nullable: true })
+  ethTxHash?: string;
+
+  @Field(() => ISODateTime)
+  created!: Date;
+
+  @Field(() => ISODateTime, { nullable: true })
+  mined!: Date;
+}
 
 @ObjectType()
 export class TxType {
@@ -10,11 +26,8 @@ export class TxType {
   @Length(32)
   id!: string;
 
-  @Field(() => Int)
-  txNo!: number;
-
-  @Field(() => RollupType, { nullable: true })
-  rollup?: RollupType;
+  @Field(() => MinimalRollupType, { nullable: true })
+  rollup?: MinimalRollupType;
 
   @Field(() => HexString)
   proofData!: string;
@@ -60,28 +73,4 @@ export class TxType {
 
   @Field(() => ISODateTime)
   created!: Date;
-}
-
-/* eslint-disable camelcase */
-@InputType()
-class TxFilter {
-  @Field(() => HexString, { nullable: true })
-  id_starts_with?: string;
-  
-  @Field({ nullable: true })
-  rollup_null?: boolean;
-}
-/* eslint-enable */
-
-@ArgsType()
-export class TxsArgs {
-  @Field(() => TxFilter, { nullable: true })
-  where?: TxFilter;
-
-  @Field(() => Int, { defaultValue: 0 })
-  skip?: number;
-
-  @Field(() => Int, { defaultValue: MAX_COUNT })
-  @Max(MAX_COUNT)
-  take?: number;
 }

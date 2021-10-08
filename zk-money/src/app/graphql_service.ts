@@ -7,6 +7,10 @@ interface AccountTx {
   nonce: number;
 }
 
+interface AccountTxResponse {
+  accountTx: AccountTx;
+}
+
 interface AccountTxsResponse {
   accountTxs: AccountTx[];
 }
@@ -27,24 +31,24 @@ export class GraphQLService {
   constructor(private apollo: ApolloClient<any>) {}
 
   async getAccountNonce(accountPublicKey: GrumpkinAddress) {
-    const { data } = await this.apollo.query<AccountTxsResponse>({
+    const { data } = await this.apollo.query<AccountTxResponse>({
       query: gql`
         query Query {
-          accountTxs(take: 1, where: { accountPubKey: "${accountPublicKey.toString()}" }, order: { nonce: "DESC" }) {
+          accountTx(accountPubKey: "${accountPublicKey.toString()}") {
             nonce
           }
         }
       `,
       fetchPolicy: 'no-cache',
     });
-    return data?.accountTxs[0]?.nonce || 0;
+    return data?.accountTx?.nonce || 0;
   }
 
   async getAliasPublicKey(alias: string) {
-    const { data } = await this.apollo.query<AccountTxsResponse>({
+    const { data } = await this.apollo.query<AccountTxResponse>({
       query: gql`
         query Query($alias: String) {
-          accountTxs(take: 1, where: { alias: $alias }, order: { nonce: "DESC" }) {
+          accountTx(alias: $alias) {
             accountPubKey
           }
         }
@@ -52,15 +56,15 @@ export class GraphQLService {
       variables: { alias },
       fetchPolicy: 'no-cache',
     });
-    const tx = data?.accountTxs[0];
+    const tx = data?.accountTx;
     return tx ? GrumpkinAddress.fromString(tx.accountPubKey) : undefined;
   }
 
   async getAliasNonce(alias: string) {
-    const { data } = await this.apollo.query<AccountTxsResponse>({
+    const { data } = await this.apollo.query<AccountTxResponse>({
       query: gql`
         query Query($alias: String) {
-          accountTxs(take: 1, where: { alias: $alias }, order: { nonce: "DESC" }) {
+          accountTx(alias: $alias) {
             nonce
           }
         }
@@ -68,8 +72,7 @@ export class GraphQLService {
       variables: { alias },
       fetchPolicy: 'no-cache',
     });
-    const tx = data?.accountTxs[0];
-    return tx ? tx.nonce : 0;
+    return data?.accountTx?.nonce || 0;
   }
 
   async getUnsettledAccountTxs() {

@@ -21,27 +21,15 @@ const SEARCH_BY_HASH = gql`
   }
 `;
 
-const SEARCH_BY_PARTIAL_HASH = gql`
-  query Search($hash: HexString!) {
-    txs(take: 1, where: { id_starts_with: $hash }) {
-      id
-    }
-    searchRollups(take: 1, where: { hash_starts_with: $hash }) {
-      id
-    }
-  }
-`;
-
 export const SearchBar: React.FunctionComponent = () => {
   const history = useHistory();
   const [searchById, { data: idData }] = useLazyQuery(SEARCH_BY_ID);
   const [searchByHash, { data: hashData }] = useLazyQuery(SEARCH_BY_HASH);
-  const [searchByPartialHash, { data: partialHashData }] = useLazyQuery(SEARCH_BY_PARTIAL_HASH);
   const [value, setValue] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    if (!history || !searchTerm || (!idData && !hashData && !partialHashData)) return;
+    if (!history || !searchTerm || (!idData && !hashData)) return;
 
     if (idData?.rollup) {
       history.push(`/block/${idData.rollup.id}`);
@@ -49,14 +37,10 @@ export const SearchBar: React.FunctionComponent = () => {
       history.push(`/tx/${hashData.tx.id}`);
     } else if (hashData?.rollup || hashData?.publishedRollup) {
       history.push(`/block/${(hashData.rollup || hashData.publishedRollup).id}`);
-    } else if (partialHashData?.txs.length) {
-      history.push(`/tx/${partialHashData.txs[0].id}`);
-    } else if (partialHashData?.searchRollups.length) {
-      history.push(`/block/${partialHashData.rollups[0]}`);
     } else {
       history.push(`/search?q=${encodeURIComponent(searchTerm)}`);
     }
-  }, [history, searchTerm, idData, hashData, partialHashData]);
+  }, [history, searchTerm, idData, hashData]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter' || searchTerm) return;
@@ -72,8 +56,6 @@ export const SearchBar: React.FunctionComponent = () => {
       searchById({ variables: { id: +value } });
     } else if (term.match(/^(0x)?[0-9a-f]{64}$/i)) {
       searchByHash({ variables: { hash: value } });
-    } else if (term.match(/^(0x)?[0-9a-f]+$/i)) {
-      searchByPartialHash({ variables: { hash: value } });
     } else {
       history.push(`/search?q=${encodeURIComponent(term)}`);
     }

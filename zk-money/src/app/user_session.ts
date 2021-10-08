@@ -688,6 +688,7 @@ export class UserSession extends EventEmitter {
 
       const signer = this.sdk.createSchnorrSigner(this.keyVaultV0.accountPrivateKey);
       const alias = formatAliasInput(this.loginState.alias);
+      await this.awaitUserSynchronised(prevUserId);
       const proof = await this.sdk.createAccountProof(
         prevUserId,
         signer,
