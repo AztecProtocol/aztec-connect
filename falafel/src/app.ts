@@ -49,7 +49,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   const checkReady = async (ctx: Koa.Context, next: () => Promise<void>) => {
     if (!server.isReady()) {
       ctx.status = 503;
-      ctx.body = { error: 'Server not ready.' };
+      ctx.body = { error: 'Server not ready. Try again later.' };
     } else {
       await next();
     }
@@ -120,6 +120,12 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
 
   router.get('/reset', recordMetric, validateAuth, async (ctx: Koa.Context) => {
     await server.resetPipline();
+    ctx.status = 200;
+  });
+
+  router.get('/ready', recordMetric, validateAuth, async (ctx: Koa.Context) => {
+    const ready = !!+ctx.query.ready;
+    server.setReady(ready);
     ctx.status = 200;
   });
 

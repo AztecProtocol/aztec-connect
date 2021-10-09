@@ -126,6 +126,10 @@ export class Server {
     return this.ready;
   }
 
+  public setReady(ready: boolean) {
+    this.ready = ready;
+  }
+
   public async removeData() {
     console.log('Removing data dir and signal to shutdown...');
     await emptyDir('./data');
