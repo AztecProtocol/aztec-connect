@@ -1,7 +1,7 @@
 import { ApolloServer } from 'apollo-server-koa';
 import { blockchainStatusToJson } from 'barretenberg/blockchain';
 import { Block, BlockServerResponse, GetBlocksServerResponse } from 'barretenberg/block_source';
-import { Proof } from 'barretenberg/rollup_provider';
+import { Proof, RuntimeConfig } from 'barretenberg/rollup_provider';
 import { ViewingKey } from 'barretenberg/viewing_key';
 import graphqlPlayground from 'graphql-playground-middleware-koa';
 import Koa, { Context, DefaultState } from 'koa';
@@ -47,7 +47,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   };
 
   const checkReady = async (ctx: Koa.Context, next: () => Promise<void>) => {
-    if (!server.isReady()) {
+    if (!server.getRuntimeConfig().ready) {
       ctx.status = 503;
       ctx.body = { error: 'Server not ready. Try again later.' };
     } else {
@@ -68,7 +68,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   router.get('/', recordMetric, async (ctx: Koa.Context) => {
     ctx.body = {
       serviceName: 'falafel',
-      isReady: server.isReady(),
+      isReady: server.getRuntimeConfig().ready,
     };
     ctx.status = 200;
   });
@@ -123,14 +123,21 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     ctx.status = 200;
   });
 
-  router.get('/ready', recordMetric, validateAuth, async (ctx: Koa.Context) => {
-    const ready = !!+ctx.query.ready;
-    server.setReady(ready);
+  router.patch('/runtime-config', recordMetric, validateAuth, async (ctx: Koa.Context) => {
+    const stream = new PromiseReadable(ctx.req);
+    const runtimeConfig: Partial<RuntimeConfig> = JSON.parse((await stream.readAll()) as string);
+    const { numOuterRollupProofs } = runtimeConfig;
+    if (numOuterRollupProofs !== undefined) {
+      if (!numOuterRollupProofs || numOuterRollupProofs > 32 || numOuterRollupProofs & (numOuterRollupProofs - 1)) {
+        throw new Error('Bad topology, num-outer-proofs must be 1 to 32, powers of 2.');
+      }
+    }
+    server.setRuntimeConfig(runtimeConfig);
     ctx.status = 200;
   });
 
   router.get('/flush', recordMetric, validateAuth, async (ctx: Koa.Context) => {
-    await server.flushTxs();
+    server.flushTxs();
     ctx.status = 200;
   });
 
@@ -162,15 +169,6 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   router.get('/get-pending-note-nullifiers', recordMetric, async (ctx: Koa.Context) => {
     const nullifiers = await server.getUnsettledNullifiers();
     ctx.body = nullifiers.map(n => n.toString('hex'));
-    ctx.status = 200;
-  });
-
-  router.get('/set-topology', recordMetric, validateAuth, async (ctx: Koa.Context) => {
-    const numOuterRollupProofs = +(ctx.query['num-outer-proofs'] as string);
-    if (!numOuterRollupProofs || numOuterRollupProofs > 32 || numOuterRollupProofs & (numOuterRollupProofs - 1)) {
-      throw new Error('Bad topology, num-outer-proofs must be 1 to 32, powers of 2.');
-    }
-    server.setTopology(numOuterRollupProofs);
     ctx.status = 200;
   });
 
