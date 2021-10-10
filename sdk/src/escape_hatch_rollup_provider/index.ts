@@ -21,6 +21,7 @@ export class EscapeHatchRollupProvider implements RollupProvider {
       txsPerRollup: 0,
       pendingTxCount: 0,
       nextPublishTime: new Date(0),
+      runtimeConfig: { useKeyCache: true, numOuterRollupProofs: 0, ready: true },
     } as RollupProviderStatus;
   }
 
