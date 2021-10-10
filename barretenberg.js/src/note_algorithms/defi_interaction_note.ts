@@ -6,6 +6,7 @@ import { BridgeId } from '../bridge_id';
 export class DefiInteractionNote {
   static EMPTY = new DefiInteractionNote(BridgeId.ZERO, 0, BigInt(0), BigInt(0), BigInt(0), false);
   static LENGTH = DefiInteractionNote.EMPTY.toBuffer().length;
+  static groupModulus = BigInt('21888242871839275222246405745257275088548364400416034343698204186575808495617');
 
   constructor(
     public readonly bridgeId: BridgeId,
@@ -58,26 +59,32 @@ export class DefiInteractionNote {
   }
 }
 
-export const packInteractionNotes = (notes: DefiInteractionNote[], padTo = notes.length) => {
+export const computeInteractionHashes = (notes: DefiInteractionNote[], padTo = notes.length) => {
   notes = [...notes, ...Array(padTo - notes.length).fill(DefiInteractionNote.EMPTY)];
+
+  const hash = notes.map(note =>
+    createHash('sha256')
+      .update(
+        Buffer.concat([
+          note.bridgeId.toBuffer(),
+          numToUInt32BE(note.nonce, 32),
+          toBufferBE(note.totalInputValue, 32),
+          toBufferBE(note.totalOutputValueA, 32),
+          toBufferBE(note.totalOutputValueB, 32),
+          Buffer.alloc(31),
+          Buffer.from([+note.result]),
+        ]),
+      )
+      .digest(),
+  );
+
+  return hash.map(h => toBufferBE(BigInt('0x' + h.toString('hex')) % DefiInteractionNote.groupModulus, 32));
+};
+
+export const packInteractionNotes = (notes: DefiInteractionNote[], padTo = notes.length) => {
   const hash = createHash('sha256')
-    .update(
-      Buffer.concat(
-        notes.map(note =>
-          Buffer.concat([
-            note.bridgeId.toBuffer(),
-            numToUInt32BE(note.nonce, 32),
-            toBufferBE(note.totalInputValue, 32),
-            toBufferBE(note.totalOutputValueA, 32),
-            toBufferBE(note.totalOutputValueB, 32),
-            Buffer.alloc(31),
-            Buffer.from([+note.result]),
-          ]),
-        ),
-      ),
-    )
+    .update(Buffer.concat(computeInteractionHashes(notes, padTo)))
     .digest();
-  // Zero the first 4 bits.
-  hash[0] &= 15;
-  return hash;
+
+  return toBufferBE(BigInt('0x' + hash.toString('hex')) % DefiInteractionNote.groupModulus, 32);
 };

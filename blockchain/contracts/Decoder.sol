@@ -43,9 +43,18 @@ contract Decoder {
     uint256 public constant rollupHeaderInputLength = rollupNumHeaderInputs * 32;
     uint256 public constant ethAssetId = 0;
     uint256 public constant numRollupTxsOffset = rollupNumHeaderInputs - 1;
-
+    uint256 public constant CIRCUIT_MODULUS =
+        21888242871839275222246405745257275088548364400416034343698204186575808495617;
     // offset we add to `proofData` to point to the bridgeIds
     uint256 public constant bridgeIdsOffset = 0x180;
+
+    uint256 public constant DATASIZE_BIT_OFFSET = 202;
+    uint256 public constant ASYNCDEFIINTERACTIONHASHES_BIT_OFFSET = 235;
+    uint256 public constant DEFIINTERACTIONHASHES_BIT_OFFSET = 245;
+    uint256 public constant REENTRANCY_MUTEX_BIT_OFFSET = 255;
+    uint256 public constant STATE_HASH_MASK = 0x3ffffffffffffffffffffffffffffffffffffffffffffffffff;
+    uint256 public constant ARRAY_LENGTH_MASK = 0x3ff;
+    uint256 public constant DATASIZE_MASK = 0xffffffff;
 
     function depositTx(uint256 inPtr, uint256 outPtr) internal pure returns (uint256) {
         assembly {
@@ -295,14 +304,14 @@ contract Decoder {
             mstore(add(mPtr, 0x40), mload(add(dataStart, 0xa0))) // oldNullRoot
             mstore(add(mPtr, 0x60), mload(add(dataStart, 0xe0))) // oldRootRoot
             mstore(add(mPtr, 0x80), mload(add(dataStart, 0x120))) // oldDefiRoot
-            oldStateHash := keccak256(mPtr, 0xa0)
+            oldStateHash := and(STATE_HASH_MASK, keccak256(mPtr, 0xa0))
 
             mstore(mPtr, add(rollupId, 0x01)) // new nextRollupId
             mstore(add(mPtr, 0x20), mload(add(dataStart, 0x80))) // newDataRoot
             mstore(add(mPtr, 0x40), mload(add(dataStart, 0xc0))) // newNullRoot
             mstore(add(mPtr, 0x60), mload(add(dataStart, 0x100))) // newRootRoot
             mstore(add(mPtr, 0x80), mload(add(dataStart, 0x140))) // newDefiRoot
-            newStateHash := keccak256(mPtr, 0xa0)
+            newStateHash := and(STATE_HASH_MASK, keccak256(mPtr, 0xa0))
         }
     }
 

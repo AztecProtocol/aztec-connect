@@ -30,7 +30,7 @@ export interface BlockchainStatus {
   nullRoot: Buffer;
   rootRoot: Buffer;
   defiRoot: Buffer;
-  defiInteractionHash: Buffer;
+  defiInteractionHashes: Buffer[];
   escapeOpen: boolean;
   numEscapeBlocksRemaining: number;
   assets: BlockchainAsset[];
@@ -47,7 +47,7 @@ export interface BlockchainStatusJson {
   nullRoot: string;
   rootRoot: string;
   defiRoot: string;
-  defiInteractionHash: string;
+  defiInteractionHashes: string[];
   escapeOpen: boolean;
   numEscapeBlocksRemaining: number;
   assets: {
@@ -70,7 +70,7 @@ export function blockchainStatusToJson(status: BlockchainStatus): BlockchainStat
     nullRoot: status.nullRoot.toString('hex'),
     rootRoot: status.rootRoot.toString('hex'),
     defiRoot: status.defiRoot.toString('hex'),
-    defiInteractionHash: status.defiInteractionHash.toString('hex'),
+    defiInteractionHashes: status.defiInteractionHashes.map(v => v.toString('hex')),
     assets: status.assets.map(a => ({
       ...a,
       address: a.address.toString(),
@@ -88,7 +88,7 @@ export function blockchainStatusFromJson(json: BlockchainStatusJson): Blockchain
     nullRoot: Buffer.from(json.nullRoot, 'hex'),
     rootRoot: Buffer.from(json.rootRoot, 'hex'),
     defiRoot: Buffer.from(json.defiRoot, 'hex'),
-    defiInteractionHash: Buffer.from(json.defiInteractionHash, 'hex'),
+    defiInteractionHashes: json.defiInteractionHashes.map(f => Buffer.from(f, 'hex')),
     assets: json.assets.map(a => ({
       ...a,
       address: EthAddress.fromString(a.address),

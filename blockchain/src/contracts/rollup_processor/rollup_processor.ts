@@ -26,12 +26,12 @@ export class RollupProcessor {
   public rollupProcessor: Contract;
   private lastQueriedRollupId?: number;
   private lastQueriedRollupBlockNum?: number;
-  private provider: Web3Provider;
+  protected provider: Web3Provider;
 
   constructor(
-    private rollupContractAddress: EthAddress,
+    protected rollupContractAddress: EthAddress,
     provider: EthereumProvider,
-    private defaults: SendTxOptions = { gasLimit: 1000000 },
+    protected defaults: SendTxOptions = { gasLimit: 1000000 },
   ) {
     this.provider = new Web3Provider(provider);
     this.rollupProcessor = new Contract(rollupContractAddress.toString(), abi, this.provider);
@@ -67,15 +67,21 @@ export class RollupProcessor {
   }
 
   async dataSize() {
-    return +(await this.rollupProcessor.dataSize());
+    return +(await this.rollupProcessor.getDataSize());
   }
 
-  async defiInteractionHash() {
-    return Buffer.from((await this.rollupProcessor.defiInteractionHash()).slice(2), 'hex');
+  async defiInteractionHashes() {
+    const res = (await this.rollupProcessor.getDefiInteractionHashes()) as string[];
+    return res.map(v => Buffer.from(v.slice(2), 'hex'));
+  }
+
+  async asyncDefiInteractionHashes() {
+    const res = (await this.rollupProcessor.getAsyncDefiInteractionHashes()) as string[];
+    return res.map(v => Buffer.from(v.slice(2), 'hex'));
   }
 
   async stateHash() {
-    return Buffer.from((await this.rollupProcessor.stateHash()).slice(2), 'hex');
+    return Buffer.from((await this.rollupProcessor.getStateHash()).slice(2), 'hex');
   }
 
   async getSupportedAsset(assetId: AssetId) {
@@ -339,6 +345,26 @@ export class RollupProcessor {
     });
   }
 
+  getRollupStateFromBlock(block: Block) {
+    const rollupProofData = RollupProofData.fromBuffer(block.rollupProofData);
+
+    const nextRollupId = rollupProofData.rollupId + 1;
+    const dataSize = rollupProofData.dataStartIndex + rollupProofData.rollupSize;
+    const dataRoot = rollupProofData.newDataRoot;
+    const nullRoot = rollupProofData.newNullRoot;
+    const rootRoot = rollupProofData.newDataRootsRoot;
+    const defiRoot = rollupProofData.newDefiRoot;
+
+    return {
+      nextRollupId,
+      dataSize,
+      dataRoot,
+      nullRoot,
+      rootRoot,
+      defiRoot,
+    };
+  }
+
   private decodeBlock(
     tx: TransactionResponse,
     receipt: TransactionReceipt,
@@ -364,7 +390,7 @@ export class RollupProcessor {
     };
   }
 
-  private getContractWithSigner(options: SendTxOptions) {
+  protected getContractWithSigner(options: SendTxOptions) {
     const { signingAddress } = options;
     const provider = options.provider ? new Web3Provider(options.provider) : this.provider;
     const ethSigner = provider.getSigner(signingAddress ? signingAddress.toString() : 0);

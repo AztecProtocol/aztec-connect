@@ -6,7 +6,7 @@ const config: HardhatUserConfig = {
   solidity: {
     version: '0.6.10',
     settings: {
-      evmVersion: 'istanbul',
+      evmVersion: 'berlin',
       optimizer: { enabled: true, runs: 200 },
     },
   },
@@ -17,7 +17,7 @@ const config: HardhatUserConfig = {
     hardhat: {
       blockGasLimit: 15000000,
       gasPrice: 10,
-      hardfork: 'istanbul',
+      hardfork: 'berlin',
     },
   },
   paths: {

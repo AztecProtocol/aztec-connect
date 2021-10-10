@@ -1,15 +1,16 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
-import { RollupProcessor } from '..';
-import { advanceBlocks, blocksToAdvance } from './advance_block';
+import { TestRollupProcessor } from './test_rollup_processor';
+import { EthersAdapter } from '../../../provider';
 import { setupAssets } from '../../asset/fixtures/setup_assets';
-import { setupDefiBridges } from './setup_defi_bridges';
 import { setupFeeDistributor } from '../../fee_distributor/fixtures/setup_fee_distributor';
 import { setupUniswap } from '../../fee_distributor/fixtures/setup_uniswap';
-import { EthersAdapter } from '../../../provider';
 
-export async function setupRollupProcessor(signers: Signer[], numberOfTokenAssets: number) {
+export async function setupTestRollupProcessor(
+  signers: Signer[],
+  { numberOfTokenAssets = 2, escapeBlockLowerBound = 0, escapeBlockUpperBound = 1 } = {},
+) {
   const rollupProvider = signers[0];
   const MockVerifier = await ethers.getContractFactory('MockVerifier');
   const mockVerifier = await MockVerifier.deploy();
@@ -19,9 +20,7 @@ export async function setupRollupProcessor(signers: Signer[], numberOfTokenAsset
 
   const ownerAddress = rollupProvider.getAddress();
 
-  const RollupProcessorContract = await ethers.getContractFactory('RollupProcessor', rollupProvider);
-  const escapeBlockLowerBound = 80;
-  const escapeBlockUpperBound = 100;
+  const RollupProcessorContract = await ethers.getContractFactory('TestRollupProcessor', rollupProvider);
   const rollupProcessorContract = await RollupProcessorContract.deploy(
     mockVerifier.address,
     escapeBlockLowerBound,
@@ -30,7 +29,7 @@ export async function setupRollupProcessor(signers: Signer[], numberOfTokenAsset
     ownerAddress,
   );
 
-  const rollupProcessor = new RollupProcessor(
+  const rollupProcessor = new TestRollupProcessor(
     EthAddress.fromString(rollupProcessorContract.address),
     new EthersAdapter(ethers.provider),
   );
@@ -50,26 +49,13 @@ export async function setupRollupProcessor(signers: Signer[], numberOfTokenAsset
   await Promise.all(tokenAssets.map(a => rollupProcessor.setSupportedAsset(a.getStaticInfo().address, true)));
   await Promise.all(tokenAssets.map(a => createPair(a, initialTotalSupply)));
 
-  const { uniswapBridgeIds, uniswapBridgeAddrs } = await setupDefiBridges(
-    rollupProvider,
-    rollupProcessorContract,
-    uniswapRouter,
-    assets,
-  );
   const assetAddresses = assets.map(a => a.getStaticInfo().address);
-
-  // Advance into block region where escapeHatch is active.
-  const blocks = await blocksToAdvance(80, 100, ethers.provider);
-  await advanceBlocks(blocks, ethers.provider);
 
   return {
     rollupProcessor,
     rollupProcessorAddress: rollupProcessor.address,
     feeDistributor,
     feeDistributorAddress: feeDistributor.address,
-    uniswapRouter,
-    uniswapBridgeIds,
-    uniswapBridgeAddrs,
     assets,
     assetAddresses,
   };

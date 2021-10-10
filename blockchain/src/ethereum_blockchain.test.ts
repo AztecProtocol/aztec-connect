@@ -27,6 +27,24 @@ describe('ethereum_blockchain', () => {
 
   const blocks: Block[] = [generateBlock(0), generateBlock(1), generateBlock(2)];
 
+  const getRollupStateFromBlock = (block: Block) => {
+    const nextRollupId = block.rollupId + 1;
+    const dataSize = 16
+    const dataRoot = Buffer.alloc(32);
+    const nullRoot = Buffer.alloc(32);
+    const rootRoot = Buffer.alloc(32);
+    const defiRoot = Buffer.alloc(32);
+
+    return {
+      nextRollupId,
+      dataSize,
+      dataRoot,
+      nullRoot,
+      rootRoot,
+      defiRoot,
+    };
+  };
+
   beforeEach(async () => {
     contracts = {
       getAssets: jest.fn().mockReturnValue([]),
@@ -43,6 +61,7 @@ describe('ethereum_blockchain', () => {
       getBlockNumber: jest.fn().mockResolvedValue(blocks.length),
       getChainId: jest.fn().mockResolvedValue(999),
       getTransactionReceipt: jest.fn(),
+      getRollupStateFromBlock: jest.fn().mockReturnValue(getRollupStateFromBlock(blocks[2])),
     } as any;
 
     const config: EthereumBlockchainConfig = {

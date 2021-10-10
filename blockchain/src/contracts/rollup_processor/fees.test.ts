@@ -5,7 +5,7 @@ import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
 import { FeeDistributor } from '../fee_distributor';
 import { createDepositProof, createRollupProof, createSendProof } from './fixtures/create_mock_proof';
-import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
+import { setupTestRollupProcessor } from './fixtures/setup_test_rollup_processor';
 import { RollupProcessor } from './rollup_processor';
 
 describe('rollup_processor: deposit', () => {
@@ -24,7 +24,7 @@ describe('rollup_processor: deposit', () => {
     [rollupProvider, ...userSigners] = signers;
     rollupProviderAddress = EthAddress.fromString(await rollupProvider.getAddress());
     userAddresses = await Promise.all(userSigners.map(async u => EthAddress.fromString(await u.getAddress())));
-    ({ assets, rollupProcessor, feeDistributor, feeDistributorAddress } = await setupRollupProcessor(signers, 2));
+    ({ assets, rollupProcessor, feeDistributor, feeDistributorAddress } = await setupTestRollupProcessor(signers));
   });
 
   it('should process a tx with fee', async () => {

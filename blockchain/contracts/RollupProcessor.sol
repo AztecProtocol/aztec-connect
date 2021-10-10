@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0-only
-// Copyright 2020 Spilsbury Holdings Ltd.
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2021 Spilsbury Holdings Ltd.
 pragma solidity >=0.6.10;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
@@ -13,6 +13,7 @@ import {IFeeDistributor} from './interfaces/IFeeDistributor.sol';
 import {IERC20Permit} from './interfaces/IERC20Permit.sol';
 import {Decoder} from './Decoder.sol';
 import './libraries/RollupProcessorLibrary.sol';
+import {Error} from './Error.sol';
 
 /**
  * @title Rollup Processor
@@ -23,25 +24,12 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     using SafeMath for uint256;
 
     bytes4 private constant GET_INFO_SELECTOR = 0x5a9b0b89; // bytes4(keccak256('getInfo()'));
-    bytes4 private constant CONVERT_SELECTOR = 0x8a8ad2d7; // bytes4(keccak256('convert(address,address,address,address,uint256)'));
-
+    bytes4 private constant DEFI_BRIDGE_PROXY_CONVERT_SELECTOR = 0xc2a8a5be; // bytes4(keccak256('convert(address,address,address,address,uint256,uint256,uint256)'));
+    bytes4 private constant TRANSFER_FROM_SELECTOR = 0x23b872dd; // bytes4(keccak256('transferFrom(address,address,uint256)'));
     bytes32 private constant INIT_DATA_ROOT = 0x11977941a807ca96cf02d1b15830a53296170bf8ac7d96e5cded7615d18ec607;
     bytes32 private constant INIT_NULL_ROOT = 0x1b831fad9b940f7d02feae1e9824c963ae45b3223e721138c6f73261e690c96a;
     bytes32 private constant INIT_ROOT_ROOT = 0x1b435f036fc17f4cc3862f961a8644839900a8e4f1d0b318a7046dd88b10be75;
     bytes32 private constant INIT_DEFI_ROOT = 0x0170467ae338aaf3fd093965165b8636446f09eeb15ab3d36df2e31dd718883d;
-    bytes32 public defiInteractionHash = 0x0f115a0e0c15cdc41958ca46b5b14b456115f4baec5e3ca68599d2a8f435e3b8;
-
-    uint256 public dataSize = 0;
-    bytes32 public stateHash =
-        keccak256(
-            abi.encodePacked(
-                uint256(0), // nextRollupId
-                INIT_DATA_ROOT,
-                INIT_NULL_ROOT,
-                INIT_ROOT_ROOT,
-                INIT_DEFI_ROOT
-            )
-        );
 
     IVerifier public verifier;
 
@@ -50,7 +38,17 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
 
     event RollupProcessed(uint256 indexed rollupId);
 
+    bytes32 private constant DEFI_BRIDGE_PROCESSED_SIGHASH = 0x1ccb5390975e3d07503983a09c3b6a5d11a0e40c4cb4094a7187655f643ef7b4;
     event DefiBridgeProcessed(
+        uint256 indexed bridgeId,
+        uint256 indexed nonce,
+        uint256 totalInputValue,
+        uint256 totalOutputValueA,
+        uint256 totalOutputValueB,
+        bool result
+    );
+
+    event AsyncDefiBridgeProcessed(
         uint256 indexed bridgeId,
         uint256 indexed nonce,
         uint256 totalInputValue,
@@ -83,13 +81,118 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
 
     address public override feeDistributor;
 
-    // Used to guard against re-entrancy attacks when processing DeFi bridge transactions
-    bool private reentrancyMutex = false;
-
     // We need to cap the amount of gas sent to the DeFi bridge contract for two reasons.
     // 1: To provide consistency to rollup providers around costs.
     // 2: To prevent griefing attacks where a bridge consumes all our gas.
     uint256 private gasSentToBridgeProxy = 300000;
+    struct PendingDefiBridgeInteraction
+    {
+        uint256 bridgeId;
+        uint256 totalInputValueA;
+        uint256 totalInputValueB;
+    }
+    // map defiInteractionNonce to PendingDefiBridgeInteraction
+    mapping(uint256 => PendingDefiBridgeInteraction) pendingDefiInteractions;
+
+    /**
+     * rollupState storage slot contains the following data:
+     *
+     * | bit offset   | num bits    | description |
+     * | 0             | 202           | rollup state hash |
+     * | 202            | 32            | datasize: number of filled entries in note tree |
+     * | 235            | 10            | asyncDefiInteractionHashes.length : number of entries in asyncDefiInteractionHashes array |
+     * | 245            | 10            | defiInteractionHashes.length : number of entries in defiInteractionHashes array |
+     * | 255            | 1             | reentrancyMutex used to guard against reentrancy attacks
+     */
+    bytes32 public rollupState =
+        bytes32(
+            uint256(
+                keccak256(
+                    abi.encodePacked(
+                        uint256(0), // nextRollupId
+                        INIT_DATA_ROOT,
+                        INIT_NULL_ROOT,
+                        INIT_ROOT_ROOT,
+                        INIT_DEFI_ROOT
+                    )
+                )
+            ) & STATE_HASH_MASK
+        );
+
+    function getStateHash() public view returns (bytes32 stateHash) {
+        assembly {
+            stateHash := and(STATE_HASH_MASK, sload(rollupState_slot))
+        }
+    }
+
+    function getDataSize() public view returns (uint256 dataSize) {
+        assembly {
+            dataSize := and(DATASIZE_MASK, shr(DATASIZE_BIT_OFFSET, sload(rollupState_slot)))
+        }
+    }
+
+    function setStateHash(bytes32 newStateHash) internal {
+        assembly {
+            let oldState := and(not(STATE_HASH_MASK), sload(rollupState_slot))
+            let updatedState := or(oldState, and(newStateHash, STATE_HASH_MASK))
+            sstore(rollupState_slot, updatedState)
+        }
+    }
+
+    function setDataSize(uint256 newDataSize) internal {
+        assembly {
+            let oldState := and(not(shl(DATASIZE_BIT_OFFSET, DATASIZE_MASK)), sload(rollupState_slot))
+            let updatedState := or(oldState, shl(DATASIZE_BIT_OFFSET, and(newDataSize, DATASIZE_MASK)))
+            sstore(rollupState_slot, updatedState)
+        }
+    }
+
+    function setReentrancyMutex() internal {
+        assembly {
+            let oldState := sload(rollupState_slot)
+            let updatedState := or(shl(REENTRANCY_MUTEX_BIT_OFFSET, 1), oldState)
+            sstore(rollupState_slot, updatedState)
+        }
+    }
+
+    function clearReentrancyMutex() internal {
+        assembly {
+            let oldState := sload(rollupState_slot)
+            let updatedState := and(not(shl(REENTRANCY_MUTEX_BIT_OFFSET, 1)), oldState)
+            sstore(rollupState_slot, updatedState)
+        }
+    }
+
+    function reentrancyMutexCheck() internal {
+        bool mutexValue;
+        assembly {
+            mutexValue := shr(REENTRANCY_MUTEX_BIT_OFFSET, sload(rollupState_slot))
+        }
+        require(mutexValue == false, 'REENTRANCY MUTEX IS SET');
+    }
+
+    function getDefiInteractionHashesLength() internal view returns (uint256 res) {
+        assembly {
+            res := and(ARRAY_LENGTH_MASK, shr(DEFIINTERACTIONHASHES_BIT_OFFSET, sload(rollupState_slot)))
+        }
+    }
+
+    function getAsyncDefiInteractionHashesLength() internal view returns (uint256 res) {
+        assembly {
+            res := and(ARRAY_LENGTH_MASK, shr(ASYNCDEFIINTERACTIONHASHES_BIT_OFFSET, sload(rollupState_slot)))
+        }
+    }
+
+    /**
+     * asyncDefiInteractionHashes and defiInteractionHashes are custom implementations of an array type!!
+     *
+     * we store the length fields for each array inside the `rollupState` storage slot
+     * we access array elements in the traditional manner: array_slot[i] = keccak256(array_slot + i)
+     * this reduces the number of storage slots we write to when processing a rollup
+     * (each slot costs 5,000 gas to update. Repeated modifications to the same slot in a tx only cost 100 gas after the first)
+     */
+    bytes32 internal asyncDefiInteractionHashes; // defi interaction hashes to be transferred into pending defi interaction hashes
+    bytes32 internal defiInteractionHashes;
 
     receive() external payable {}
 
@@ -148,7 +251,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             return address(0x0);
         }
 
-        return supportedAssets[assetId - 1];
+        address result = supportedAssets[assetId - 1];
+        require(result != address(0), 'Rollup Processor: INVALID_ASSET_ADDRESS');
+        return result;
     }
 
     /**
@@ -156,6 +261,48 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
      */
     function getSupportedAssets() external view override returns (address[] memory) {
         return supportedAssets;
+    }
+
+    function getDefiInteractionHashes() external view returns (bytes32[] memory res) {
+        uint256 len = getDefiInteractionHashesLength();
+        assembly {
+            mstore(0x00, defiInteractionHashes_slot)
+            let slot := keccak256(0x00, 0x20)
+            res := mload(0x40)
+            mstore(0x40, add(res, add(0x20, mul(len, 0x20))))
+            mstore(res, len)
+            let ptr := add(res, 0x20)
+            for {
+                let i := 0
+            } lt(i, len) {
+                i := add(i, 0x01)
+            } {
+                mstore(ptr, sload(add(slot, i)))
+                ptr := add(ptr, 0x20)
+            }
+        }
+        return res;
+    }
+
+    function getAsyncDefiInteractionHashes() external view returns (bytes32[] memory res) {
+        uint256 len = getAsyncDefiInteractionHashesLength();
+        assembly {
+            mstore(0x00, asyncDefiInteractionHashes_slot)
+            let slot := keccak256(0x00, 0x20)
+            res := mload(0x40)
+            mstore(0x40, add(res, add(0x20, mul(len, 0x20))))
+            mstore(res, len)
+            let ptr := add(res, 0x20)
+            for {
+                let i := 0
+            } lt(i, len) {
+                i := add(i, 0x01)
+            } {
+                mstore(ptr, sload(add(slot, i)))
+                ptr := add(ptr, 0x20)
+            }
+        }
+        return res;
     }
 
     /**
@@ -264,7 +411,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         address depositorAddress,
         bytes32 proofHash
     ) external payable override whenNotPaused {
-        require(reentrancyMutex == false, 'Rollup Processor: REENTRANCY_MUTEX_SET_ON_DEPOSIT');
+        reentrancyMutexCheck();
 
         if (assetId == ethAssetId) {
             require(msg.value == amount, 'Rollup Processor: WRONG_AMOUNT');
@@ -359,12 +506,15 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         bytes calldata signatures,
         bytes calldata /* offchainTxData */
     ) external override whenNotPaused {
+        reentrancyMutexCheck();
+        setReentrancyMutex();
         (bool isOpen, ) = getEscapeHatchStatus();
         require(isOpen, 'Rollup Processor: ESCAPE_BLOCK_RANGE_INCORRECT');
 
         (bytes memory proofData, uint256 numTxs, uint256 publicInputsHash) =
             decodeProof(rollupHeaderInputLength, txNumPubInputs);
         processRollupProof(proofData, signatures, numTxs, publicInputsHash);
+        clearReentrancyMutex();
     }
 
     function processRollup(
@@ -376,6 +526,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         address payable feeReceiver,
         uint256 feeLimit
     ) external override whenNotPaused {
+        reentrancyMutexCheck();
+        setReentrancyMutex();
         uint256 initialGas = gasleft();
 
         require(rollupProviders[provider], 'Rollup Processor: UNKNOWN_PROVIDER');
@@ -418,6 +570,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                 )
             );
         require(success, 'Rollup Processor: REIMBURSE_GAS_FAILED');
+        clearReentrancyMutex();
     }
 
     function processRollupProof(
@@ -426,12 +579,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         uint256 numTxs,
         uint256 publicInputsHash
     ) internal {
-        require(reentrancyMutex == false, 'Rollup Processor: REENTRANCY_MUTEX_SET_ON_PROCESS_ROLLUP');
-        reentrancyMutex = true;
         verifyProofAndUpdateState(proofData, publicInputsHash);
         processDepositsAndWithdrawals(proofData, numTxs, signatures);
         processDefiBridges(proofData);
-        reentrancyMutex = false;
     }
 
     /**
@@ -536,9 +686,10 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         (uint256 rollupId, bytes32 oldStateHash, bytes32 newStateHash, uint256 numDataLeaves, uint256 dataStartIndex) =
             computeRootHashes(proofData);
 
-        require(oldStateHash == stateHash, 'Rollup Processor: INCORRECT_STATE_HASH');
+        bytes32 expectedStateHash = getStateHash();
+        require(oldStateHash == expectedStateHash, 'Rollup Processor: INCORRECT_STATE_HASH');
 
-        uint256 storedDataSize = dataSize;
+        uint256 storedDataSize = getDataSize();
         // Ensure we are inserting at the next subtree boundary.
         if (storedDataSize % numDataLeaves == 0) {
             require(dataStartIndex == storedDataSize, 'Rollup Processor: INCORRECT_DATA_START_INDEX');
@@ -547,10 +698,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             require(dataStartIndex == expected, 'Rollup Processor: INCORRECT_DATA_START_INDEX');
         }
 
-        assembly {
-            sstore(stateHash_slot, newStateHash)
-            sstore(dataSize_slot, add(dataStartIndex, numDataLeaves))
-        }
+        setStateHash(newStateHash);
+        setDataSize(dataStartIndex + numDataLeaves);
         return rollupId;
     }
 
@@ -645,108 +794,443 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         }
     }
 
+    /**
+     * @dev Process defi interactions.
+     *      1. pop 4 (if available) interaction hashes off of `defiInteractionHashes`,
+     *         validate their hash equals `numPendingInteractions`
+     *         (this validates that rollup block has added these interaction results into the L2 data tree)
+     *      2. iterate over rollup block's new defi interactions (up to 4). Trigger interactions by
+     *         calling DefiBridgeProxy contract. Record results in either `defiInteractionHashes` (for synchrohnous txns)
+     *         or, for async txns, the `pendingDefiInteractions` mapping
+     *      3. copy the contents of `asyncInteractionHashes` into `defiInteractionHashes` && clear `asyncInteractionHashes`
+     * @param proofData - the proof data
+     */
     function processDefiBridges(bytes memory proofData) internal {
+        // pop off 4 defi interactions from defiInteractionHashes && SHA2 them
+        bytes32 expectedDefiInteractionHash;
+        {
+            assembly {
+                // Compute the offset we use to index `defiInteractionHashes[]`
+                // If defiInteractionHashes.length > 4, offset = defiInteractionhashes.length - 4
+                // Else offset = 0
+                let numPendingInteractions
+                let offset
+                let state := sload(rollupState_slot)
+                {
+                    let defiInteractionHashesLength := and(ARRAY_LENGTH_MASK, shr(DEFIINTERACTIONHASHES_BIT_OFFSET, state))
+                    numPendingInteractions := defiInteractionHashesLength
+                    if gt(numPendingInteractions, numberOfBridgeCalls)
+                    {
+                        numPendingInteractions := numberOfBridgeCalls
+                    }
+                    offset := sub(defiInteractionHashesLength, numPendingInteractions)
+                }
+
+                mstore(0x00, defiInteractionHashes_slot)
+                let sloadOffset := keccak256(0x00, 0x20)
+                let mPtr := mload(0x40)
+                let i := 0
+
+                // Iterate over numPendingInteractions (will be between 0 and 4)
+                // Load defiInteractionHashes[offset + i] and store in memory
+                // in order to compute SHA2 hash (expectedDefiInteractionHash)
+                for {
+
+                } lt(i, numPendingInteractions) {
+                    i := add(i, 0x01)
+                } {
+                    mstore(add(mPtr, mul(i, 0x20)), sload(add(sloadOffset, add(offset, i))))
+                }
+
+                // If numPendingInteractions < 4, continue iterating up to 4, this time
+                // inserting the "zero hash", the result of sha256(emptyDefiInteractionResult)
+                for {
+
+                } lt(i, numberOfBridgeCalls) {
+                    i := add(i, 0x01)
+                } {
+                    mstore(add(mPtr, mul(i, 0x20)), 0x2d25a1e3a51eb293004c4b56abe12ed0da6bca2b4a21936752a85d102593c1b4)
+                }
+                pop(staticcall(gas(), 0x2, mPtr, 0x80, 0x00, 0x20))
+                expectedDefiInteractionHash := mod(mload(0x00), CIRCUIT_MODULUS)
+
+                // Update DefiInteractionHashes.length (we've reduced length by up to 4)
+                let oldState := and(not(shl(DEFIINTERACTIONHASHES_BIT_OFFSET, ARRAY_LENGTH_MASK)), state)
+                let newState := or(oldState, shl(DEFIINTERACTIONHASHES_BIT_OFFSET, offset))
+                sstore(rollupState_slot, newState)
+            }
+        }
+
         bytes32 prevDefiInteractionHash = extractPrevDefiInteractionHash(proofData, rollupHeaderInputLength);
+
+        // Validate the computed interactionHash matches the value in the rollup proof!
         require(
-            prevDefiInteractionHash == defiInteractionHash,
+            prevDefiInteractionHash == expectedDefiInteractionHash,
             'Rollup Processor: INCORRECT_PREV_DEFI_INTERACTION_HASH'
         );
 
-        uint256[6 * numberOfBridgeCalls] memory interactionResult;
         uint256 interactionNonce = getRollupId(proofData) * numberOfBridgeCalls;
-        for (uint256 i = 0; i < numberOfBridgeCalls; ++i) {
-            (
-                uint256 bridgeId,
-                address bridgeAddress,
-                uint256[3] memory assetIds,
-                uint32 numOutputAssets,
-                uint256 totalInputValue
-            ) = extractInteractionData(proofData, i, numberOfBridgeCalls);
 
-            // Do nothing if no bridge id.
-            // Rollup circuit makes sure that totalInputValue is 0 for zero bridge id.
-            if (bridgeId == 0) {
-                break;
-            }
-
-            require(totalInputValue > 0, 'Rollup Processor: ZERO_TOTAL_INPUT_VALUE');
-            require(numOutputAssets > 0, 'Rollup Processor: ZERO_NUM_OUTPUT_ASSETS');
-
-            bool success;
-
-            // Get ERC20 contract addresses for bridge assets.
-            address[3] memory assetAddresses =
-                [
-                    getSupportedAsset(assetIds[0]),
-                    getSupportedAsset(assetIds[1]),
-                    numOutputAssets == 2 ? getSupportedAsset(assetIds[2]) : address(0)
-                ];
-
-            // Gas efficient call to getInfo(), check response matches interaction data.
-            assembly {
-                let ptr := mload(0x40)
-                mstore(ptr, GET_INFO_SELECTOR)
-                success := staticcall(gas(), bridgeAddress, ptr, 0x4, ptr, 0x80)
-                success := and(success, eq(numOutputAssets, mload(ptr)))
-                success := and(success, eq(mload(assetAddresses), mload(add(ptr, 0x20))))
-                success := and(success, eq(mload(add(assetAddresses, 0x20)), mload(add(ptr, 0x40))))
-                success := and(success, eq(mload(add(assetAddresses, 0x40)), mload(add(ptr, 0x60))))
-                success := and(
-                    success,
-                    or(eq(numOutputAssets, 1), not(eq(mload(add(ptr, 0x40)), mload(add(ptr, 0x60)))))
-                )
-            }
-            require(success, 'Rollup Processor: INVALID_BRIDGE_ID');
-
-            // Call bridge proxy, which will transfer totalInputValue to the bridge, call convert,
-            // and return output values for the two output assets.
-            uint256 outputValueA;
-            uint256 outputValueB;
-            assembly {
-                let ptr := mload(0x40)
-                mstore(ptr, CONVERT_SELECTOR)
-                mstore(add(ptr, 0x4), bridgeAddress)
-                mstore(add(ptr, 0x24), mload(assetAddresses))
-                mstore(add(ptr, 0x44), mload(add(assetAddresses, 0x20)))
-                mstore(add(ptr, 0x64), mload(add(assetAddresses, 0x40)))
-                mstore(add(ptr, 0x84), totalInputValue)
-                success := delegatecall(
-                    sload(gasSentToBridgeProxy_slot),
-                    sload(defiBridgeProxy_slot),
-                    ptr,
-                    0xa4,
-                    ptr,
-                    0x40
-                )
-                if eq(success, 1) {
-                    outputValueA := mload(ptr)
-                    outputValueB := mul(mload(add(ptr, 0x20)), gt(numOutputAssets, 1))
-                }
-            }
-
-            emit DefiBridgeProcessed(bridgeId, interactionNonce, totalInputValue, outputValueA, outputValueB, success);
-
-            assembly {
-                let insertStart := mul(i, 0xc0)
-                mstore(add(interactionResult, insertStart), bridgeId)
-                mstore(add(interactionResult, add(insertStart, 0x20)), interactionNonce)
-                mstore(add(interactionResult, add(insertStart, 0x40)), totalInputValue)
-                mstore(add(interactionResult, add(insertStart, 0x60)), outputValueA)
-                mstore(add(interactionResult, add(insertStart, 0x80)), outputValueB)
-                mstore(add(interactionResult, add(insertStart, 0xa0)), success)
-            }
-
-            interactionNonce++;
-        }
-
+        /**
+         * Process DeFi bridge calls
+         */
         assembly {
-            pop(staticcall(gas(), 0x2, interactionResult, 0x300, defiInteractionHash_slot, 0x20))
-            // Zero the first 4 bits to ensure field conversion doesn't wrap around prime.
-            sstore(
-                defiInteractionHash_slot,
-                and(mload(defiInteractionHash_slot), 0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+            // Initialize variables...
+            // We need defiInteractionHashes.length
+            // and proofDataPtr (location in memory where our DefiInteraction data is stored, extracted from the rollup proof)
+            let proofDataPtr := add(proofData, bridgeIdsOffset)
+            let defiInteractionHashesLength
+            {
+                mstore(0x00, defiInteractionHashes_slot)
+                let slotBase := keccak256(0x00, 0x20)
+                // length variable for defiInteractionHashes is stored inside rollupState variable! Reduces number of unique sload/sstore locations (saves gas)
+                let state := sload(rollupState_slot)
+                defiInteractionHashesLength := and(ARRAY_LENGTH_MASK, shr(DEFIINTERACTIONHASHES_BIT_OFFSET, state))
+            }
+
+            // Iterate over the number of bridge calls
+            for { let i := 0 } lt(i, numberOfBridgeCalls) { i := add(i, 0x01) }
+            {
+                let bridgeId := mload(proofDataPtr)
+                // If the bridgeId is zero, we have no more bridge calls to make, exit this loop!
+                if iszero(bridgeId)
+                {
+                    break
+                }
+
+                // Extract total input value from the proofData. Validate is > 0.
+                let totalInputValue := mload(add(proofDataPtr, mul(0x20, numberOfBridgeCalls)))
+                if iszero(totalInputValue)
+                {
+                    let x := mload(0x40)
+                    mstore(x, 0x08c379a000000000000000000000000000000000000000000000000000000000)
+                    mstore(add(x, 0x04), 0x20)
+                    mstore(add(x, 0x24), 40)
+                    mstore(add(x, 0x44), "Rollup Processor: ZERO_TOTAL_INP")
+                    mstore(add(x, 0x64), "UT_VALUE")
+                    revert(x, 0x84)
+                }
+
+                // extract numOutputAssets, inputAssetId and two outputAssetIds from bridgeId
+                let numOutputAssets := and(shr(160, bridgeId), 3)
+                let assetIdA := and(shr(162, bridgeId), 0x3fffffff)
+                let assetIdB := and(shr(192, bridgeId), 0x3fffffff)
+                let assetIdC := mul(eq(numOutputAssets, 2), and(shr(222, bridgeId), 0x3fffffff))
+
+                // Validate bridgeId is correctly formatted
+                // 1. numOutputAssets must be > 0
+                // 2. if numOutputAssets == 2, both output asset ids cannot match one another
+                {
+                    let validBridgeId := and(
+                        gt(numOutputAssets, 0),
+                        iszero(and(eq(assetIdB, assetIdC), eq(numOutputAssets, 2)))
+                    )
+                    if iszero(validBridgeId)
+                    {
+                        mstore(0x00, 0x08c379a000000000000000000000000000000000000000000000000000000000)
+                        mstore(0x04, 0x20)
+                        mstore(0x24, 0x20)
+                        mstore(0x44, "Rollup Processor: INVALID_BRIDGE")
+                        revert(0x00, 0x64)
+                    }
+                }
+
+                // convert our three asset IDs into contract addresses
+                // (store in same variable to reduce number of vars on stack)
+                mstore(0x00, supportedAssets_slot)
+                let assetSlot := keccak256(0x00, 0x20)
+
+                if sub(assetIdA, ethAssetId)
+                {
+                    assetIdA := sload(add(assetSlot, sub(assetIdA, 0x01)))
+                          if iszero(assetIdA)
+                    {
+                        revert(0x00, 0x00)
+                    }
+                }
+                if sub(assetIdB, ethAssetId)
+                {
+                    assetIdB := sload(add(assetSlot, sub(assetIdB, 0x01)))
+                  if iszero(assetIdB)
+                    {
+                        revert(0x00, 0x00)
+                    }
+                }
+                if sub(assetIdC, ethAssetId)
+                {
+                    assetIdC := sload(add(assetSlot, sub(assetIdC, 0x01)))
+                    if iszero(assetIdC)
+                    {
+                        revert(0x00, 0x00)
+                    }
+                }
+
+                // call to getInfo(), check response matches interaction data.
+                let bridgeAddress := and(bridgeId, 0xffffffffffffffffffffffffffffffffffffffff)
+                let mPtr := mload(0x40)
+
+                let outputValueA := 0
+                let outputValueB := 0
+                let isAsync
+
+                // call Bridge.convert(assetIdA, assetIdB, assetIdC, numOutputAssets, totalInputValue, interactionNonce)
+                mstore(mPtr, DEFI_BRIDGE_PROXY_CONVERT_SELECTOR)
+                mstore(add(mPtr, 0x4), bridgeAddress)
+                mstore(add(mPtr, 0x24), assetIdA)
+                mstore(add(mPtr, 0x44), assetIdB)
+                mstore(add(mPtr, 0x64), assetIdC)
+                mstore(add(mPtr, 0x84), numOutputAssets)
+                mstore(add(mPtr, 0xa4), totalInputValue)
+                mstore(add(mPtr, 0xc4), interactionNonce)
+                let success := delegatecall(sload(gasSentToBridgeProxy_slot), sload(defiBridgeProxy_slot), mPtr, 0xe4, mPtr, 0x60)
+                if success {
+                    outputValueA := mload(mPtr)
+                    outputValueB := mul(mload(add(mPtr, 0x20)), gt(numOutputAssets, 1))
+                    isAsync := mload(add(mPtr, 0x40))
+                }
+
+                // emit DefiBridgeProcessed(indexed bridgeId, indexed interactionNonce, totalInputValue, outputValueA, outputValueB, success)
+                {
+                    mstore(mPtr, totalInputValue)
+                    mstore(add(mPtr, 0x20), outputValueA)
+                    mstore(add(mPtr, 0x40), outputValueB)
+                    mstore(add(mPtr, 0x60), success)
+                    log3(mPtr, 0x80, DEFI_BRIDGE_PROCESSED_SIGHASH, bridgeId, interactionNonce)
+                }
+
+                // if interaction is Async, update pendingDefiInteractions
+                // if interaction is synchronous, compute the interaction hash and add to defiInteractionHashes
+                switch isAsync
+                case 1 {
+                    // pendingDefiInteractions[interactionNonce] = PendingDefiBridgeInteraction(bridgeId, totalInputValue, 0)
+                    mstore(0x00, interactionNonce)
+                    mstore(0x20, pendingDefiInteractions_slot)
+                    let pendingDefiInteractionsSlotBase := keccak256(0x00, 0x40)
+                    sstore(pendingDefiInteractionsSlotBase, bridgeId)
+                    sstore(add(pendingDefiInteractionsSlotBase, 0x01), totalInputValue)
+                    sstore(add(pendingDefiInteractionsSlotBase, 0x02), 0) // TODO REMOVE
+                }
+                default {
+                    // compute defiInteractionnHash
+                    mstore(mPtr, bridgeId)
+                    mstore(add(mPtr, 0x20), interactionNonce)
+                    mstore(add(mPtr, 0x40), totalInputValue)
+                    mstore(add(mPtr, 0x60), outputValueA)
+                    mstore(add(mPtr, 0x80), outputValueB)
+                    mstore(add(mPtr, 0xa0), success)
+                    pop(staticcall(gas(), 0x2, mPtr, 0xc0, 0x00, 0x20))
+                    let defiInteractionHash := mod(mload(0x00), CIRCUIT_MODULUS)
+
+                    // defiInteractionHashes.push(defiInteractionHash) (don't update length, will do this outside of loop)
+                    // reentrancy attacks that modify defiInteractionHashes array should be ruled out because of reentrancyMutex
+                    mstore(0x00, defiInteractionHashes_slot)
+                    sstore(add(keccak256(0x00, 0x20), defiInteractionHashesLength), defiInteractionHash)
+                    defiInteractionHashesLength := add(defiInteractionHashesLength, 0x01)
+                }
+
+                // advance interactionNonce and proofDataPtr
+                interactionNonce := add(interactionNonce, 0x01)
+                proofDataPtr := add(proofDataPtr, 0x20)
+            }
+
+            /**
+            * Cleanup
+            *
+            * 1. Copy asyncDefiInteractionHashes into defiInteractionHashes
+            * 2. Update defiInteractionHashes.length
+            * 2. Clear asyncDefiInteractionHashes.length
+            * 3. Clear reentrancyMutex
+            */
+            let state := sload(rollupState_slot)
+
+            let asyncDefiInteractionHashesLength := and(
+                ARRAY_LENGTH_MASK,
+                shr(ASYNCDEFIINTERACTIONHASHES_BIT_OFFSET, state)
             )
+
+            // Validate we are not overflowing our 1024 array size
+            // Actually check against a max array size of 1019
+            // (this is to more easily test this failure condition!)
+            // (can set the array length to max of 1023, send a rollup
+            //  proof with 1 defi txn and trigger this error state)
+            let valid := lt(
+                add(asyncDefiInteractionHashesLength, defiInteractionHashesLength),
+                sub(ARRAY_LENGTH_MASK, 0x03)
+            )
+
+            // should never hit this! If block `i` generates synchronous txns,
+            // block 'i + 1' must process them.
+            // Only way this array size hits 1024 is if we produce a glut of async interaction results
+            // between blocks. HOWEVER we ensure that async interaction callbacks fail iff they would increase
+            // defiInteractionHashes length to be >= 512
+            if iszero(valid) {
+                let mPtr := mload(0x40)
+                mstore(mPtr, 0x08c379a000000000000000000000000000000000000000000000000000000000)
+                mstore(add(mPtr, 0x04), 0x20)
+                mstore(add(mPtr, 0x24), 32)
+                mstore(add(mPtr, 0x44), "Rollup Processor: ARRAY_OVERFLOW")
+                revert(mPtr, 0x64)
+            }
+
+            // copy async hashes into defiInteractionHashes
+            mstore(0x00, defiInteractionHashes_slot)
+            let defiSlotBase := add(keccak256(0x00, 0x20), defiInteractionHashesLength)
+            mstore(0x00, asyncDefiInteractionHashes_slot)
+            let asyncDefiSlotBase := keccak256(0x00, 0x20)
+            for {
+                let i := 0
+            } lt(i, asyncDefiInteractionHashesLength) {
+                i := add(i, 0x01)
+            } {
+                sstore(add(defiSlotBase, i), sload(add(asyncDefiSlotBase, i)))
+            }
+
+            // clear defiInteractionHashesLength in state
+            state := and(not(shl(DEFIINTERACTIONHASHES_BIT_OFFSET, ARRAY_LENGTH_MASK)), state)
+
+            // write new defiInteractionHashesLength in state
+            state := or(
+                shl(
+                    DEFIINTERACTIONHASHES_BIT_OFFSET,
+                    add(asyncDefiInteractionHashesLength, defiInteractionHashesLength)
+                ),
+                state
+            )
+
+            // clear asyncDefiInteractionHashesLength in state
+            state := and(not(shl(ASYNCDEFIINTERACTIONHASHES_BIT_OFFSET, ARRAY_LENGTH_MASK)), state)
+
+            // write new state
+            sstore(rollupState_slot, state)
         }
+    }
+
+    /**
+     * @dev Process asyncdefi interactions.
+     *      Callback function for asynchronous bridge interactions.
+     *      Can only be called by the bridge contract linked to the interactionNonce
+     * @param interactionNonce - unique id of the interaection
+     * @param outputValueA - number of tokens of type A (token id recorded in bridge id)
+     * @param outputValueB - number of tokens of type B (token id recorded in bridge id)
+     */
+    function processAsyncDefiInteraction(
+        uint256 interactionNonce,
+        uint256 outputValueA,
+        uint256 outputValueB
+    ) external payable {
+        reentrancyMutexCheck();
+        setReentrancyMutex();
+        uint256 bridgeId;
+        uint256 totalInputValue;
+        bool result;
+        bytes32 defiInteractionHash;
+        assembly {
+            mstore(0x00, interactionNonce)
+            mstore(0x20, pendingDefiInteractions_slot)
+            let interactionPtr := keccak256(0x00, 0x40)
+
+            bridgeId := sload(interactionPtr)
+            totalInputValue := sload(add(interactionPtr, 0x01))
+
+            // delete pendingDefiInteractions[interactionNonce]
+            // N.B. only need to delete 1st slot value `bridgeId`. Deleting vars costs gas post-London
+            // setting bridgeId to 0 is enough to cause future calls with this interaction nonce to fail
+            sstore(interactionPtr, 0x00)
+
+            let bridgeAddress := and(bridgeId, 0xffffffffffffffffffffffffffffffffffffffff)
+            if iszero(eq(bridgeAddress, caller())) {
+                let mPtr := mload(0x40)
+                mstore(mPtr, 0x08c379a000000000000000000000000000000000000000000000000000000000)
+                mstore(add(mPtr, 0x04), 0x20)
+                mstore(add(mPtr, 0x24), 55)
+                mstore(add(mPtr, 0x44), "Rollup Processor: ASYNC_CALLBACK")
+                mstore(add(mPtr, 0x64), "_WITH_INVALID_BRIDGE_ID")
+                revert(mPtr, 0x84)
+            }
+
+            function transferTokens(assetId, outputValue) -> success {
+                // we using Eth here?
+                if iszero(assetId) {
+                    success := eq(outputValue, callvalue())
+                    leave
+                }
+
+                mstore(0x00, supportedAssets_slot)
+                let supportedAssetsSlotBase := keccak256(0x00, 0x20)
+                let tokenAddress := sload(add(supportedAssetsSlotBase, sub(assetId, 0x01)))
+
+                // call token.transferFrom(bridgeAddress, this, outputValue)
+                let mPtr := mload(0x40)
+                mstore(mPtr, TRANSFER_FROM_SELECTOR)
+                mstore(add(mPtr, 0x04), caller())
+                mstore(add(mPtr, 0x24), address())
+                mstore(add(mPtr, 0x44), outputValue)
+                success := call(gas(), tokenAddress, 0, mPtr, 0x64, 0x00, 0x20)
+            }
+
+            let numOutputAssets := and(shr(160, bridgeId), 3)
+            let success := or(eq(numOutputAssets, 2), eq(outputValueB, 0))
+
+            let hasOutputValueA := gt(outputValueA, 0)
+            let hasOutputValueB := gt(outputValueB, 0)
+            result := or(hasOutputValueA, hasOutputValueB)
+            if iszero(result) {
+                let inputAssetId := and(shr(162, bridgeId), 0x3fffffff)
+                success := transferTokens(inputAssetId, totalInputValue)
+            }
+            if and(success, hasOutputValueA) {
+                let assetIdA := and(shr(192, bridgeId), 0x3fffffff)
+                success := transferTokens(assetIdA, outputValueA)
+            }
+            if and(success, hasOutputValueB) {
+                let assetIdB := and(shr(222, bridgeId), 0x3fffffff)
+                success := transferTokens(assetIdB, outputValueB)
+            }
+            if iszero(success) {
+                revert(0x00, 0x00)
+            }
+
+            // Compute defiInteractionHash.
+            let mPtr := mload(0x40)
+            mstore(mPtr, bridgeId)
+            mstore(add(mPtr, 0x20), interactionNonce)
+            mstore(add(mPtr, 0x40), totalInputValue)
+            mstore(add(mPtr, 0x60), outputValueA)
+            mstore(add(mPtr, 0x80), outputValueB)
+            mstore(add(mPtr, 0xa0), result)
+            pop(staticcall(gas(), 0x2, mPtr, 0xc0, 0x00, 0x20))
+            defiInteractionHash := mod(mload(0x00), CIRCUIT_MODULUS)
+            
+            // push async defi interaction hash
+            mstore(0x00, asyncDefiInteractionHashes_slot)
+            let slotBase := keccak256(0x00, 0x20)
+
+            let state := sload(rollupState_slot)
+            let asyncArrayLen := and(ARRAY_LENGTH_MASK, shr(ASYNCDEFIINTERACTIONHASHES_BIT_OFFSET, state))
+            let defiArrayLen := and(ARRAY_LENGTH_MASK, shr(DEFIINTERACTIONHASHES_BIT_OFFSET, state))
+            
+            // check that size of asyncDefiInteractionHashes isn't such that
+            // adding 1 to it will make the next block's defiInteractionHashes length hit 512
+            if gt(add(add(1, asyncArrayLen), defiArrayLen), 512)
+            {
+                mstore(mPtr, 0x08c379a000000000000000000000000000000000000000000000000000000000)
+                mstore(add(mPtr, 0x04), 0x20)
+                mstore(add(mPtr, 0x24), 32)
+                mstore(add(mPtr, 0x44), "Rollup Processor: ARRAY_OVERFLOW")
+                revert(mPtr, 0x84)
+            }
+
+            // asyncDefiInteractionHashes.push(defiInteractionHash)
+            sstore(add(slotBase, asyncArrayLen), defiInteractionHash)
+
+            // update asyncDefiInteractionHashes.length by 1
+            let oldState := and(not(shl(ASYNCDEFIINTERACTIONHASHES_BIT_OFFSET, ARRAY_LENGTH_MASK)), state)
+            let newState := or(oldState, shl(ASYNCDEFIINTERACTIONHASHES_BIT_OFFSET, add(asyncArrayLen, 0x01)))
+
+            sstore(rollupState_slot, newState)
+        }
+        emit AsyncDefiBridgeProcessed(bridgeId, interactionNonce, totalInputValue, outputValueA, outputValueB, result);
+        clearReentrancyMutex();
     }
 
     function transferFee(bytes memory proofData) internal {

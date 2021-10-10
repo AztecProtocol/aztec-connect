@@ -1,10 +1,8 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
 import { Asset } from '@aztec/barretenberg/blockchain';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { DefiInteractionNote, packInteractionNotes } from '@aztec/barretenberg/note_algorithms';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
-import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { randomBytes } from 'crypto';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
@@ -23,8 +21,8 @@ import {
   DefiInteractionData,
   mergeInnerProofs,
 } from './fixtures/create_mock_proof';
-import { deployMockDefiBridge } from './fixtures/setup_defi_bridges';
-import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
+import { deployMockBridge, MockBridgeParams } from './fixtures/setup_defi_bridges';
+import { setupTestRollupProcessor } from './fixtures/setup_test_rollup_processor';
 import { RollupProcessor } from './rollup_processor';
 
 describe('rollup_processor', () => {
@@ -34,11 +32,25 @@ describe('rollup_processor', () => {
   let signers: Signer[];
   let addresses: EthAddress[];
   let assets: Asset[];
+  let assetAddresses: EthAddress[];
+
+  const escapeBlockLowerBound = 80;
+  const escapeBlockUpperBound = 100;
+
+  const mockBridge = async (params: MockBridgeParams = {}) =>
+    deployMockBridge(signers[0], rollupProcessor.address, assetAddresses, params);
 
   beforeEach(async () => {
     signers = await ethers.getSigners();
     addresses = await Promise.all(signers.map(async u => EthAddress.fromString(await u.getAddress())));
-    ({ rollupProcessor, feeDistributor, assets } = await setupRollupProcessor(signers, 1));
+    ({ rollupProcessor, feeDistributor, assets, assetAddresses } = await setupTestRollupProcessor(signers, {
+      numberOfTokenAssets: 1,
+      escapeBlockLowerBound,
+      escapeBlockUpperBound,
+    }));
+    // Advance into block region where escapeHatch is active.
+    const blocks = await blocksToAdvance(escapeBlockLowerBound, escapeBlockUpperBound, ethers.provider);
+    await advanceBlocks(blocks, ethers.provider);
   });
 
   it('should get contract status', async () => {
@@ -47,7 +59,6 @@ describe('rollup_processor', () => {
     expect(await rollupProcessor.numberOfAssets()).toBe(16);
     expect(await rollupProcessor.numberOfBridgeCalls()).toBe(4);
     expect(await rollupProcessor.dataSize()).toBe(0);
-    expect(await rollupProcessor.defiInteractionHash()).toEqual(WorldStateConstants.INITIAL_INTERACTION_HASH);
     expect(await rollupProcessor.getSupportedAssets()).toEqual(assets.map(a => a.getStaticInfo().address));
     expect(await rollupProcessor.getEscapeHatchStatus()).toEqual({ escapeOpen: true, blocksRemaining: 20 });
   });
@@ -166,19 +177,12 @@ describe('rollup_processor', () => {
 
   it('should process all proof types and get specified blocks', async () => {
     const inputAssetId = AssetId.DAI;
-    const bridge = await deployMockDefiBridge(
-      signers[0],
-      1,
-      assets[AssetId.DAI].getStaticInfo().address,
-      EthAddress.ZERO,
-      EthAddress.ZERO,
-      0n,
-      2n,
-      0n,
-      true,
-      10n,
-    );
-    const bridgeId = new BridgeId(EthAddress.fromString(bridge.address), 1, AssetId.DAI, AssetId.ETH, 0);
+    const outputValueA = 7n;
+    const bridgeId = await mockBridge({
+      inputAssetId,
+      outputAssetIdA: AssetId.ETH,
+      outputValueA,
+    });
     const numberOfBridgeCalls = RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
 
     const userAAddress = addresses[1];
@@ -202,8 +206,8 @@ describe('rollup_processor', () => {
     ];
 
     const expectedInteractionResult = [
-      new DefiInteractionNote(bridgeId, numberOfBridgeCalls * 2, 12n, 2n, 0n, true),
-      new DefiInteractionNote(bridgeId, numberOfBridgeCalls * 2 + 1, 8n, 2n, 0n, true),
+      new DefiInteractionNote(bridgeId, numberOfBridgeCalls * 2, 12n, outputValueA, 0n, true),
+      new DefiInteractionNote(bridgeId, numberOfBridgeCalls * 2 + 1, 8n, outputValueA, 0n, true),
     ];
     const previousDefiInteractionHash = packInteractionNotes(expectedInteractionResult, numberOfBridgeCalls);
 

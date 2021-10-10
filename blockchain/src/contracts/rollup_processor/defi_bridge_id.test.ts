@@ -4,28 +4,30 @@ import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
 import { createRollupProof, createSendProof, DefiInteractionData } from './fixtures/create_mock_proof';
-import { deployMockBridge } from './fixtures/setup_defi_bridges';
-import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
+import { deployMockBridge, MockBridgeParams } from './fixtures/setup_defi_bridges';
+import { setupTestRollupProcessor } from './fixtures/setup_test_rollup_processor';
 import { RollupProcessor } from './rollup_processor';
 
 describe('rollup_processor: defi bridge', () => {
   let rollupProcessor: RollupProcessor;
-  let uniswapBridgeIds: BridgeId[][];
   let signers: Signer[];
   let rollupProvider: Signer;
   let assetAddresses: EthAddress[];
 
   const dummyProof = () => createSendProof(AssetId.ETH);
 
+  const mockBridge = async (params: MockBridgeParams = {}) =>
+    deployMockBridge(rollupProvider, rollupProcessor.address, assetAddresses, params);
+
   beforeEach(async () => {
     signers = await ethers.getSigners();
     rollupProvider = signers[0];
-    ({ rollupProcessor, assetAddresses, uniswapBridgeIds } = await setupRollupProcessor(signers, 2));
+    ({ rollupProcessor, assetAddresses } = await setupTestRollupProcessor(signers));
   });
 
   const cloneId = (
+    bridgeId: BridgeId,
     { address, numOutputAssets, inputAssetId, outputAssetIdA, outputAssetIdB }: Partial<BridgeId> = {},
-    bridgeId = uniswapBridgeIds[AssetId.DAI][AssetId.ETH],
   ) => {
     return new BridgeId(
       address || bridgeId.address,
@@ -36,75 +38,25 @@ describe('rollup_processor: defi bridge', () => {
     );
   };
 
-  it('revert if bridge address does not exist', async () => {
-    const bridgeId = cloneId({ address: EthAddress.randomAddress() });
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
-    });
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: INVALID_BRIDGE_ID');
-  });
-
-  it('revert if number of output assets do not match', async () => {
-    const bridgeId = cloneId({ numOutputAssets: 2 });
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
-    });
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: INVALID_BRIDGE_ID');
-  });
-
   it('revert if number of output assets is zero', async () => {
-    const bridgeId = cloneId({ numOutputAssets: 0 });
+    const bridgeId = await mockBridge({ numOutputAssets: 0 });
     const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
     });
     const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: ZERO_NUM_OUTPUT_ASSETS');
+    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: INVALID_BRIDGE');
   });
 
-  it('revert if input asset addresses do not match', async () => {
-    const bridgeId = cloneId({ inputAssetId: AssetId.ETH });
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
-    });
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: INVALID_BRIDGE_ID');
-  });
-
-  it('revert if first output asset addresses do not match', async () => {
-    const bridgeId = cloneId({ outputAssetIdA: AssetId.DAI });
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
-    });
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: INVALID_BRIDGE_ID');
-  });
-
-  it('revert if second output asset addresses do not match', async () => {
-    const bridgeId = await deployMockBridge(rollupProvider, assetAddresses, {
+  it('revert if output assets are the same', async () => {
+    const bridgeId = await mockBridge({
       numOutputAssets: 2,
-      outputAssetIdB: AssetId.ETH,
-    });
-    const invalidBridgeId = cloneId({ outputAssetIdB: AssetId.DAI }, bridgeId);
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(invalidBridgeId, 1n)],
-    });
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: INVALID_BRIDGE_ID');
-  });
-
-  it('revert if a bridge contract with one output asset returns a non zero second output asset address', async () => {
-    const bridgeId = await deployMockBridge(rollupProvider, assetAddresses, {
-      numOutputAssets: 1,
-      inputAssetId: AssetId.ETH,
-      outputAssetIdA: AssetId.DAI,
-      outputAssetIdB: AssetId.DAI,
+      outputAssetIdA: AssetId.renBTC,
+      outputAssetIdB: AssetId.renBTC,
     });
     const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
     });
     const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: INVALID_BRIDGE_ID');
+    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: INVALID_BRIDGE');
   });
 });

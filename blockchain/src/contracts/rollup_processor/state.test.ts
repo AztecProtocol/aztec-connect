@@ -3,7 +3,7 @@ import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { Signer, utils } from 'ethers';
 import { ethers } from 'hardhat';
 import { createRollupProof, createSendProof } from './fixtures/create_mock_proof';
-import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
+import { setupTestRollupProcessor } from './fixtures/setup_test_rollup_processor';
 import { RollupProcessor } from './rollup_processor';
 
 describe('rollup_processor: state', () => {
@@ -13,7 +13,7 @@ describe('rollup_processor: state', () => {
   beforeEach(async () => {
     const signers = await ethers.getSigners();
     [rollupProvider] = signers;
-    ({ rollupProcessor } = await setupRollupProcessor(signers, 1));
+    ({ rollupProcessor } = await setupTestRollupProcessor(signers));
   });
 
   it('should update merkle tree state', async () => {
@@ -22,14 +22,24 @@ describe('rollup_processor: state', () => {
     const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, []);
     await rollupProcessor.sendTx(tx);
 
-    const expectedStateHash = utils.keccak256(Buffer.concat([
-      numToUInt32BE(rollupProofData.rollupId + 1, 32),
-      rollupProofData.newDataRoot,
-      rollupProofData.newNullRoot,
-      rollupProofData.newDataRootsRoot,
-      rollupProofData.newDefiRoot
-    ]));
-    expect(await rollupProcessor.stateHash()).toEqual(Buffer.from(expectedStateHash.slice(2), 'hex'));
+    const expectedStateHash = utils.keccak256(
+      Buffer.concat([
+        numToUInt32BE(rollupProofData.rollupId + 1, 32),
+        rollupProofData.newDataRoot,
+        rollupProofData.newNullRoot,
+        rollupProofData.newDataRootsRoot,
+        rollupProofData.newDefiRoot,
+      ]),
+    );
+    const expected = Buffer.from(expectedStateHash.slice(2), 'hex');
+    expected[0] = 0; // mask 54 bits to align with smart contract data format
+    expected[1] = 0; // (54 bits of the relevant storage slot are used for other variables)
+    expected[2] = 0;
+    expected[3] = 0;
+    expected[4] = 0;
+    expected[5] = 0;
+    expected[6] = expected[6] & 3;
+    expect(await rollupProcessor.stateHash()).toEqual(expected);
   });
 
   it('should reject for incorrect rollupId', async () => {

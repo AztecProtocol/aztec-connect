@@ -50,9 +50,18 @@ contract UniswapBridge is IDefiBridge {
         return (1, inputAsset, outputAsset, address(0));
     }
 
-    function convert(uint256 inputValue) external payable override returns (uint256 outputValueA, uint256) {
+    function convert(uint256 inputValue, uint256)
+        external
+        payable
+        override
+        returns (
+            uint256 outputValueA,
+            uint256,
+            bool isAsync
+        )
+    {
         require(msg.sender == rollupProcessor, 'UniswapBridge: INVALID_CALLER');
-
+        isAsync = false;
         uint256[] memory amounts;
         uint256 deadline = block.timestamp;
         if (inputAsset == address(0)) {
@@ -77,5 +86,17 @@ contract UniswapBridge is IDefiBridge {
             amounts = router.swapExactTokensForTokens(inputValue, 0, path, rollupProcessor, deadline);
             outputValueA = amounts[2];
         }
+    }
+
+    function canFinalise(
+        uint256 /*interactionNonce*/
+    ) external view override returns (bool) {
+        return false;
+    }
+
+    function finalise(
+        uint256 /*interactionNonce*/
+    ) external payable override {
+        require(false);
     }
 }

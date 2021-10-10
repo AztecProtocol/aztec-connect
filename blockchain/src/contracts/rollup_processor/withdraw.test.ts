@@ -11,7 +11,7 @@ import {
   createWithdrawProof,
   mergeInnerProofs,
 } from './fixtures/create_mock_proof';
-import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
+import { setupTestRollupProcessor } from './fixtures/setup_test_rollup_processor';
 import { RollupProcessor } from './rollup_processor';
 
 describe('rollup_processor: withdraw', () => {
@@ -26,7 +26,7 @@ describe('rollup_processor: withdraw', () => {
     const signers = await ethers.getSigners();
     [rollupProvider, ...userSigners] = signers;
     userAddresses = await Promise.all(userSigners.map(async u => EthAddress.fromString(await u.getAddress())));
-    ({ assets, rollupProcessor } = await setupRollupProcessor(signers, 2));
+    ({ assets, rollupProcessor } = await setupTestRollupProcessor(signers));
 
     const { proofData, signatures } = await createRollupProof(
       rollupProvider,

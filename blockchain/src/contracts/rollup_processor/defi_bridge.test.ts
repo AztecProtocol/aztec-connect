@@ -1,16 +1,17 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { Asset } from '@aztec/barretenberg/blockchain';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { computeInteractionHashes, DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
-import { DefiInteractionNote, packInteractionNotes } from '@aztec/barretenberg/note_algorithms';
+import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { Signer } from 'ethers';
+import { LogDescription } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import { createRollupProof, createSendProof, DefiInteractionData } from './fixtures/create_mock_proof';
-import { deployMockBridge } from './fixtures/setup_defi_bridges';
-import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
-import { RollupProcessor } from './rollup_processor';
-import { LogDescription } from 'ethers/lib/utils';
+import { deployMockBridge, MockBridgeParams } from './fixtures/setup_defi_bridges';
+import { setupTestRollupProcessor } from './fixtures/setup_test_rollup_processor';
+import { TestRollupProcessor } from './fixtures/test_rollup_processor';
 
 const parseInteractionResultFromLog = (log: LogDescription) => {
   const {
@@ -27,9 +28,8 @@ const parseInteractionResultFromLog = (log: LogDescription) => {
 };
 
 describe('rollup_processor: defi bridge', () => {
-  let rollupProcessor: RollupProcessor;
+  let rollupProcessor: TestRollupProcessor;
   let assets: Asset[];
-  let uniswapBridgeIds: BridgeId[][];
   let signers: Signer[];
   let addresses: EthAddress[];
   let rollupProvider: Signer;
@@ -43,25 +43,8 @@ describe('rollup_processor: defi bridge', () => {
 
   const dummyProof = () => createSendProof(AssetId.ETH);
 
-  const mockBridge = async (
-    bridgeId: Partial<BridgeId>,
-    minInputValue = 0n,
-    outputValueA = 0n,
-    outputValueB = 0n,
-    topup = true,
-    topupValue?: bigint,
-  ) => {
-    return deployMockBridge(
-      rollupProvider,
-      assetAddresses,
-      bridgeId,
-      minInputValue,
-      outputValueA,
-      outputValueB,
-      topup,
-      topupValue,
-    );
-  };
+  const mockBridge = async (params: MockBridgeParams = {}) =>
+    deployMockBridge(rollupProvider, rollupProcessor.address, assetAddresses, params);
 
   const expectResult = async (expectedResult: DefiInteractionNote[], txHash: TxHash) => {
     const receipt = await ethers.provider.getTransactionReceipt(txHash.toString());
@@ -75,11 +58,17 @@ describe('rollup_processor: defi bridge', () => {
       expect(interactionResult[i]).toEqual(expectedResult[i]);
     }
 
-    const expectedHash = packInteractionNotes([
+    const expectedHashes = computeInteractionHashes([
       ...expectedResult,
       ...[...Array(4 - expectedResult.length)].map(() => DefiInteractionNote.EMPTY),
     ]);
-    expect(await rollupProcessor.defiInteractionHash()).toEqual(expectedHash);
+    const hashes = await rollupProcessor.defiInteractionHashes();
+    const resultHashes = [
+      ...hashes,
+      ...[...Array(4 - hashes.length)].map(() => WorldStateConstants.EMPTY_INTERACTION_HASH),
+    ];
+
+    expect(expectedHashes).toEqual(resultHashes);
   };
 
   const expectBalance = async (assetId: AssetId, balance: bigint) =>
@@ -89,13 +78,17 @@ describe('rollup_processor: defi bridge', () => {
     signers = await ethers.getSigners();
     rollupProvider = signers[0];
     addresses = await Promise.all(signers.map(async u => EthAddress.fromString(await u.getAddress())));
-    ({ rollupProcessor, assets, assetAddresses, uniswapBridgeIds } = await setupRollupProcessor(signers, 2));
+    ({ rollupProcessor, assets, assetAddresses } = await setupTestRollupProcessor(signers));
   });
 
   it('process defi interaction data that converts token to eth', async () => {
-    const bridgeId = uniswapBridgeIds[AssetId.DAI][AssetId.ETH];
+    const outputValueA = 15n;
+    const bridgeId = await mockBridge({
+      inputAssetId: AssetId.DAI,
+      outputAssetIdA: AssetId.ETH,
+      outputValueA,
+    });
     const inputValue = 20n;
-    const expectedOutputValue = 19n;
 
     await topupToken(AssetId.DAI, inputValue);
 
@@ -109,15 +102,43 @@ describe('rollup_processor: defi bridge', () => {
     const txHash = await rollupProcessor.sendTx(tx);
 
     await expectBalance(AssetId.DAI, 0n);
-    await expectBalance(AssetId.ETH, expectedOutputValue);
+    await expectBalance(AssetId.ETH, outputValueA);
 
-    await expectResult([new DefiInteractionNote(bridgeId, 0, inputValue, expectedOutputValue, 0n, true)], txHash);
+    await expectResult([new DefiInteractionNote(bridgeId, 0, inputValue, outputValueA, 0n, true)], txHash);
+  });
+
+  it('process defi interaction data if defiInteractionHash is 1 from max size', async () => {
+    const outputValueA = 15n;
+    const bridgeId = await mockBridge({
+      inputAssetId: AssetId.DAI,
+      outputAssetIdA: AssetId.ETH,
+      outputValueA,
+    });
+    const inputValue = 20n;
+
+    await topupToken(AssetId.DAI, inputValue);
+
+    await expectBalance(AssetId.DAI, inputValue);
+    await expectBalance(AssetId.ETH, 0n);
+
+    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+      defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
+    });
+
+    await rollupProcessor.stubTransactionHashes(1022);
+
+    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
+    await rollupProcessor.sendTx(tx);
   });
 
   it('process defi interaction data that converts eth to token', async () => {
-    const bridgeId = uniswapBridgeIds[AssetId.ETH][AssetId.renBTC];
+    const outputValueA = 15n;
+    const bridgeId = await mockBridge({
+      inputAssetId: AssetId.ETH,
+      outputAssetIdA: AssetId.renBTC,
+      outputValueA,
+    });
     const inputValue = 20n;
-    const expectedOutputValue = 19n;
 
     await topupEth(inputValue);
 
@@ -130,17 +151,20 @@ describe('rollup_processor: defi bridge', () => {
     const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
     const txHash = await rollupProcessor.sendTx(tx);
 
-    await expectBalance(AssetId.renBTC, expectedOutputValue);
     await expectBalance(AssetId.ETH, 0n);
+    await expectBalance(AssetId.renBTC, outputValueA);
 
-    await expectResult([new DefiInteractionNote(bridgeId, 0, inputValue, expectedOutputValue, 0n, true)], txHash);
+    await expectResult([new DefiInteractionNote(bridgeId, 0, inputValue, outputValueA, 0n, true)], txHash);
   });
 
   it('process defi interaction data that converts token to token', async () => {
-    const bridgeId = uniswapBridgeIds[AssetId.DAI][AssetId.renBTC];
+    const outputValueA = 15n;
+    const bridgeId = await mockBridge({
+      inputAssetId: AssetId.DAI,
+      outputAssetIdA: AssetId.renBTC,
+      outputValueA,
+    });
     const inputValue = 20n;
-    // As there is no direct pair, we'll trade via ETH, and get charged a higher fee, so 18 rather than 19.
-    const expectedOutputValue = 18n;
 
     await topupToken(AssetId.DAI, inputValue);
 
@@ -153,42 +177,52 @@ describe('rollup_processor: defi bridge', () => {
     const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
     const txHash = await rollupProcessor.sendTx(tx);
 
-    await expectBalance(AssetId.renBTC, expectedOutputValue);
     await expectBalance(AssetId.DAI, 0n);
+    await expectBalance(AssetId.renBTC, outputValueA);
 
-    await expectResult([new DefiInteractionNote(bridgeId, 0, inputValue, expectedOutputValue, 0n, true)], txHash);
+    await expectResult([new DefiInteractionNote(bridgeId, 0, inputValue, outputValueA, 0n, true)], txHash);
   });
 
   it('process more than one defi interaction data', async () => {
-    await topupEth(60n);
-    await topupToken(AssetId.DAI, 100n);
-    await topupToken(AssetId.renBTC, 80n);
+    const bridge0 = await mockBridge({ inputAssetId: AssetId.ETH, outputAssetIdA: AssetId.DAI, outputValueA: 21n });
+    const bridge1 = await mockBridge({ inputAssetId: AssetId.DAI, outputAssetIdA: AssetId.ETH, outputValueA: 22n });
+    const bridge2 = await mockBridge({
+      inputAssetId: AssetId.DAI,
+      outputAssetIdA: AssetId.renBTC,
+      outputValueA: 23n,
+      canConvert: false,
+    });
+    const bridge3 = await mockBridge({ inputAssetId: AssetId.renBTC, outputAssetIdA: AssetId.DAI, outputValueA: 24n });
 
-    await expectBalance(AssetId.ETH, 60n);
+    await topupEth(100n);
+    await topupToken(AssetId.DAI, 100n);
+    await topupToken(AssetId.renBTC, 100n);
+
+    await expectBalance(AssetId.ETH, 100n);
     await expectBalance(AssetId.DAI, 100n);
-    await expectBalance(AssetId.renBTC, 80n);
+    await expectBalance(AssetId.renBTC, 100n);
 
     const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [
-        new DefiInteractionData(uniswapBridgeIds[AssetId.DAI][AssetId.ETH], 78n),
-        new DefiInteractionData(uniswapBridgeIds[AssetId.renBTC][AssetId.ETH], 56n),
-        new DefiInteractionData(uniswapBridgeIds[AssetId.ETH][AssetId.DAI], 34n),
-        new DefiInteractionData(uniswapBridgeIds[AssetId.ETH][AssetId.renBTC], 12n),
+        new DefiInteractionData(bridge0, 11n),
+        new DefiInteractionData(bridge1, 12n),
+        new DefiInteractionData(bridge2, 13n),
+        new DefiInteractionData(bridge3, 14n),
       ],
     });
     const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
     const txHash = await rollupProcessor.sendTx(tx);
 
-    await expectBalance(AssetId.ETH, 60n - 12n - 34n + 55n + 77n);
-    await expectBalance(AssetId.DAI, 100n - 78n + 33n);
-    await expectBalance(AssetId.renBTC, 80n - 56n + 11n);
+    await expectBalance(AssetId.ETH, 100n - 11n + 22n);
+    await expectBalance(AssetId.DAI, 100n - 12n + 21n + 24n);
+    await expectBalance(AssetId.renBTC, 100n - 14n);
 
     await expectResult(
       [
-        new DefiInteractionNote(uniswapBridgeIds[AssetId.DAI][AssetId.ETH], 0, 78n, 77n, 0n, true),
-        new DefiInteractionNote(uniswapBridgeIds[AssetId.renBTC][AssetId.ETH], 1, 56n, 55n, 0n, true),
-        new DefiInteractionNote(uniswapBridgeIds[AssetId.ETH][AssetId.DAI], 2, 34n, 33n, 0n, true),
-        new DefiInteractionNote(uniswapBridgeIds[AssetId.ETH][AssetId.renBTC], 3, 12n, 11n, 0n, true),
+        new DefiInteractionNote(bridge0, 0, 11n, 21n, 0n, true),
+        new DefiInteractionNote(bridge1, 1, 12n, 22n, 0n, true),
+        new DefiInteractionNote(bridge2, 2, 13n, 0n, 0n, false),
+        new DefiInteractionNote(bridge3, 3, 14n, 24n, 0n, true),
       ],
       txHash,
     );
@@ -196,19 +230,16 @@ describe('rollup_processor: defi bridge', () => {
 
   it('process defi interaction data that has two output assets', async () => {
     const inputValue = 20n;
-    const expectedOutputValueA = 12n;
-    const expectedOutputValueB = 7n;
-    const bridgeId = await mockBridge(
-      {
-        numOutputAssets: 2,
-        inputAssetId: AssetId.DAI,
-        outputAssetIdA: AssetId.ETH,
-        outputAssetIdB: AssetId.renBTC,
-      },
-      0n,
-      expectedOutputValueA,
-      expectedOutputValueB,
-    );
+    const outputValueA = 12n;
+    const outputValueB = 7n;
+    const bridgeId = await mockBridge({
+      numOutputAssets: 2,
+      inputAssetId: AssetId.DAI,
+      outputAssetIdA: AssetId.ETH,
+      outputAssetIdB: AssetId.renBTC,
+      outputValueA,
+      outputValueB,
+    });
 
     const initialTokenBalance = 50n;
     await topupToken(AssetId.DAI, initialTokenBalance);
@@ -223,13 +254,10 @@ describe('rollup_processor: defi bridge', () => {
     const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
     const txHash = await rollupProcessor.sendTx(tx);
 
-    await expectBalance(AssetId.ETH, expectedOutputValueA);
+    await expectBalance(AssetId.ETH, outputValueA);
     await expectBalance(AssetId.DAI, initialTokenBalance - inputValue);
-    await expectBalance(AssetId.renBTC, expectedOutputValueB);
+    await expectBalance(AssetId.renBTC, outputValueB);
 
-    await expectResult(
-      [new DefiInteractionNote(bridgeId, 0, inputValue, expectedOutputValueA, expectedOutputValueB, true)],
-      txHash,
-    );
+    await expectResult([new DefiInteractionNote(bridgeId, 0, inputValue, outputValueA, outputValueB, true)], txHash);
   });
 });

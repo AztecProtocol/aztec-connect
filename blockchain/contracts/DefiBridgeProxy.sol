@@ -13,7 +13,7 @@ contract DefiBridgeProxy {
     bytes4 private constant DEPOSIT_SELECTOR = 0xb6b55f25; // bytes4(keccak256('deposit(uint256)'));
     bytes4 private constant TRANSFER_SELECTOR = 0xa9059cbb; // bytes4(keccak256('transfer(address,uint256)'));
     bytes4 private constant WITHDRAW_SELECTOR = 0x2e1a7d4d; // bytes4(keccak256('withdraw(uint256)'));
-    bytes4 private constant CONVERT_SELECTOR = 0xa3908e1b; // bytes4(keccak256('convert(uint256)'));
+    bytes4 private constant CONVERT_SELECTOR = 0x96e4ee3d; // bytes4(keccak256('convert(uint256,uint256)'));
 
     function getBalance(address assetAddress) internal view returns (uint256 result) {
         assembly {
@@ -26,8 +26,7 @@ contract DefiBridgeProxy {
                 let ptr := mload(0x40)
                 mstore(ptr, BALANCE_OF_SELECTOR)
                 mstore(add(ptr, 0x4), address())
-                if iszero(staticcall(gas(), assetAddress, ptr, 0x24, ptr, 0x20))
-                {
+                if iszero(staticcall(gas(), assetAddress, ptr, 0x24, ptr, 0x20)) {
                     // ruh roh call failed
                     revert(0x00, 0x00)
                 }
@@ -41,10 +40,17 @@ contract DefiBridgeProxy {
         address inputAssetAddress,
         address outputAssetAddressA,
         address outputAssetAddressB,
-        uint256 totalInputValue
-    ) external returns (uint256 outputValueA, uint256 outputValueB) {
-        bool success;
-
+        uint256 numOutputAssets,
+        uint256 totalInputValue,
+        uint256 interactionNonce
+    )
+        external
+        returns (
+            uint256 outputValueA,
+            uint256 outputValueB,
+            bool isAsync
+        )
+    {
         assembly {
             // Transfer totalInputValue to the bridge contract if erc20. ETH is sent on call to convert.
             if not(eq(inputAssetAddress, 0)) {
@@ -52,28 +58,45 @@ contract DefiBridgeProxy {
                 mstore(ptr, TRANSFER_SELECTOR)
                 mstore(add(ptr, 0x4), bridgeAddress)
                 mstore(add(ptr, 0x24), totalInputValue)
-                if iszero(call(gas(), inputAssetAddress, 0, ptr, 0x44, ptr, 0))
-                {
+                if iszero(call(gas(), inputAssetAddress, 0, ptr, 0x44, ptr, 0)) {
                     // transfer failed, let's get out of here
                     revert(0x00, 0x00)
                 }
             }
         }
 
-        uint256 initialBalanceA = getBalance(outputAssetAddressA);
-        uint256 initialBalanceB = getBalance(outputAssetAddressB);
+        outputValueA = getBalance(outputAssetAddressA);
+        outputValueB = numOutputAssets == 2 ? getBalance(outputAssetAddressB) : 0;
 
         // Call bridge.convert(), which will return output values for the two output assets.
         // If input is ETH, send it along with call to convert.
         assembly {
-            let ptr := mload(0x40)
-            mstore(ptr, CONVERT_SELECTOR)
-            mstore(add(ptr, 0x4), totalInputValue)
-            success := call(gas(), bridgeAddress, mul(totalInputValue, eq(inputAssetAddress, 0)), ptr, 0x24, ptr, 0x40)
+            mstore(mload(0x40), CONVERT_SELECTOR)
+            mstore(add(mload(0x40), 0x4), totalInputValue)
+            mstore(add(mload(0x40), 0x24), interactionNonce)
+            if iszero(
+                call(
+                    gas(),
+                    bridgeAddress,
+                    mul(totalInputValue, eq(inputAssetAddress, 0)),
+                    mload(0x40),
+                    0x44,
+                    mload(0x40),
+                    0x60
+                )
+            ) {
+                revert(0x00, 0x00) // TODO add err msg
+            }
+            isAsync := mload(add(mload(0x40), 0x40))
         }
-        require(success, 'DefiBridgeProxy: CONVERT_FAILED');
 
-        outputValueA = getBalance(outputAssetAddressA) - initialBalanceA;
-        outputValueB = getBalance(outputAssetAddressB) - initialBalanceB;
+        outputValueA = getBalance(outputAssetAddressA) - outputValueA;
+        outputValueB = numOutputAssets == 2 ? getBalance(outputAssetAddressB) - outputValueB : 0;
+
+        if (isAsync) {
+            require(outputValueA == 0 && outputValueB == 0, 'DefiBridgeProxy: ASYNC_NONZERO_OUTPUT_VALUES');
+        } else {
+            require(outputValueA > 0 || outputValueB > 0, 'DefiBridgeProxy: ZERO_OUTPUT_VALUES');
+        }
     }
 }

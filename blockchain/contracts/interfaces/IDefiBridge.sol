@@ -13,5 +13,16 @@ interface IDefiBridge {
             address outputAssetB
         );
 
-    function convert(uint256 inputValue) external payable returns (uint256 outputValueA, uint256 outputValueB);
+    function convert(uint256 inputValue, uint256 interactionNonce)
+        external
+        payable
+        returns (
+            uint256 outputValueA,
+            uint256 outputValueB,
+            bool
+        );
+
+    function canFinalise(uint256 interactionNonce) external view returns (bool);
+
+    function finalise(uint256 interactionNonce) external payable;
 }

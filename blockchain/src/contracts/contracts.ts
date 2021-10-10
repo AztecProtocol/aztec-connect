@@ -11,6 +11,7 @@ import { EthAsset, TokenAsset } from './asset';
 import { FeeDistributor } from './fee_distributor';
 import { EthPriceFeed, GasPriceFeed, TokenPriceFeed } from './price_feed';
 import { RollupProcessor } from './rollup_processor';
+import { Block } from '@aztec/barretenberg/block_source';
 
 /**
  * Facade around all Aztec smart contract classes.
@@ -83,9 +84,10 @@ export class Contracts {
   }
 
   public async getPerRollupState() {
-    const defiInteractionHash = await this.rollupProcessor.defiInteractionHash();
+    const defiInteractionHashes = await this.rollupProcessor.defiInteractionHashes();
+
     return {
-      defiInteractionHash,
+      defiInteractionHashes,
     };
   }
 

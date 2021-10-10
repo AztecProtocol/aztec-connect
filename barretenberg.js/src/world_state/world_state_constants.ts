@@ -15,8 +15,16 @@ export class WorldStateConstants {
     '0170467ae338aaf3fd093965165b8636446f09eeb15ab3d36df2e31dd718883d',
     'hex',
   );
+
+  // value of a single empty interaction hash
+  public static EMPTY_INTERACTION_HASH = Buffer.from(
+    '2d25a1e3a51eb293004c4b56abe12ed0da6bca2b4a21936752a85d102593c1b4',
+    'hex',
+  );
+
+  // value of a SHA256 of NUM_BRIDGE_CALLS of empty interaction hashes
   public static INITIAL_INTERACTION_HASH = Buffer.from(
-    '0f115a0e0c15cdc41958ca46b5b14b456115f4baec5e3ca68599d2a8f435e3b8',
+    '1aea0db5ca43c22acdd5c4173782382f3abdfb601bcf12fe6eac451ad154e37d',
     'hex',
   );
 }

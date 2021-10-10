@@ -7,12 +7,12 @@ import { createPermitData } from '../../create_permit_data';
 import { EthersAdapter } from '../../provider';
 import { Web3Signer } from '../../signer';
 import { createDepositProof, createRollupProof, mergeInnerProofs } from './fixtures/create_mock_proof';
-import { setupRollupProcessor } from './fixtures/setup_rollup_processor';
-import { RollupProcessor } from './rollup_processor';
+import { setupTestRollupProcessor } from './fixtures/setup_test_rollup_processor';
+import { TestRollupProcessor } from './fixtures/test_rollup_processor';
 
 describe('rollup_processor: deposit', () => {
   const ethereumProvider = new EthersAdapter(ethers.provider);
-  let rollupProcessor: RollupProcessor;
+  let rollupProcessor: TestRollupProcessor;
   let assets: Asset[];
   let rollupProvider: Signer;
   let userSigners: Signer[];
@@ -23,7 +23,7 @@ describe('rollup_processor: deposit', () => {
     const signers = await ethers.getSigners();
     [rollupProvider, ...userSigners] = signers;
     userAddresses = await Promise.all(userSigners.map(async u => EthAddress.fromString(await u.getAddress())));
-    ({ assets, rollupProcessor } = await setupRollupProcessor(signers, 2));
+    ({ assets, rollupProcessor } = await setupTestRollupProcessor(signers));
   });
 
   it('should deposit eth and convert to notes', async () => {
@@ -253,5 +253,19 @@ describe('rollup_processor: deposit', () => {
     await rollupProcessor.sendTx(tx);
 
     expect(await rollupProcessor.getUserPendingDeposit(AssetId.DAI, signingAddress)).toBe(0n);
+  });
+
+  it('should revert on deposit if reentrancy guard is set', async () => {
+    const signingAddress = userAddresses[0];
+
+    const erc20Asset = assets[AssetId.DAI];
+    await erc20Asset.approve(depositAmount, userAddresses[0], rollupProcessor.address);
+
+    await rollupProcessor.stubReentrancyGuard(true);
+    await expect(
+      rollupProcessor.depositPendingFunds(AssetId.DAI, depositAmount, undefined, undefined, {
+        signingAddress,
+      }),
+    ).rejects.toThrow();
   });
 });
