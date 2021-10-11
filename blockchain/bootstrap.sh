@@ -1,7 +1,9 @@
 #!/bin/bash
 set -e
 
+LINK_FOLDER="--link-folder `pwd`/../.yarn"
+
 yarn install
-yarn link @aztec/barretenberg
+yarn link $LINK_FOLDER @aztec/barretenberg
 yarn build
-cd dest && { yarn unlink 2> /dev/null || true; } && yarn link
+cd dest && yarn link $LINK_FOLDER

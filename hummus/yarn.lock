@@ -11,7 +11,7 @@
     fs-extra "10.0.0"
     levelup "^5.0.0"
     memdown "^6.0.0"
-    node-fetch "^2.6.0"
+    node-fetch "2.6.1"
     promise-readable "^5.0.4"
     sha3 "^2.1.3"
     threads "1.3.1"
@@ -20,7 +20,7 @@
 "@aztec/blockchain@file:../blockchain/dest":
   version "2.0.0"
   dependencies:
-    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-532710bc-a3da-4abc-b7d3-dfcfdd48985e-1628353435567/node_modules/barretenberg.js/dest"
+    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-91ba46be-aae7-4da5-895a-57eadde5e8bc-1633944766555/node_modules/barretenberg.js/dest"
     "@ethersproject/experimental" "5.0.9"
     "@ethersproject/providers" "5.0.18"
     "@uniswap/v2-core" "^1.0.1"
@@ -33,13 +33,12 @@
 "@aztec/sdk@file:../sdk/dest":
   version "2.0.16"
   dependencies:
-    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-693a6de1-784a-4433-87fa-c3f1accc49bf-1628353435441/node_modules/barretenberg.js/dest"
-    "@aztec/blockchain" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-693a6de1-784a-4433-87fa-c3f1accc49bf-1628353435441/node_modules/blockchain/dest"
+    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-0b541113-d66b-4d4f-a789-81ba66a83d47-1633944766451/node_modules/barretenberg.js/dest"
+    "@aztec/blockchain" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-0b541113-d66b-4d4f-a789-81ba66a83d47-1633944766451/node_modules/blockchain/dest"
     "@types/levelup" "^4.3.0"
     broadcast-channel "^3.1.0"
     detect-node "^2.0.4"
     dexie "^3.0.1"
-    ethers "5.0.29"
     idb-mutex "^0.11.0"
     level-js "^5.0.2"
     leveldown "^5.6.0"
@@ -5603,7 +5602,7 @@ node-addon-api@^1.7.1:
   resolved "https://registry.yarnpkg.com/node-addon-api/-/node-addon-api-1.7.2.tgz#3df30b95720b53c24e59948b49532b662444f54d"
   integrity sha512-ibPK3iA+vaY1eEjESkQkM0BbCqFOaZMiXRTtdB0u7b4djtY6JnsjvPdUHVMg6xQt3B8fpTTWHI9A+ADjM9frzg==
 
-node-fetch@^2.6.0:
+node-fetch@2.6.1:
   version "2.6.1"
   resolved "https://registry.yarnpkg.com/node-fetch/-/node-fetch-2.6.1.tgz#045bd323631f76ed2e2b55573394416b639a0052"
   integrity sha512-V4aYg89jEoVRxRb2fJdAg8FHvI7cEyYdVAh94HH0UIK8oJxUfkjlDQN9RbMx+bEjP7+ggMiFRprSti032Oipxw==

@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+LINK_FOLDER="--link-folder `pwd`/../.yarn"
+
 pushd ../barretenberg/build
 cmake ..
 make -j$(nproc) db_cli
@@ -11,4 +13,4 @@ popd
 yarn install
 yarn build
 yarn symlink-wasm
-cd dest && { yarn unlink 2> /dev/null || true; } && yarn link
+cd dest && yarn link $LINK_FOLDER

@@ -1,6 +1,7 @@
 .vscode
 .viscode
 .cache
+.yarn
 dest*
 dist
 node_modules

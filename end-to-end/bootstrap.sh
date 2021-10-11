@@ -1,7 +1,9 @@
 #!/bin/bash
 set -e
 
+LINK_FOLDER="--link-folder `pwd`/../.yarn"
+
 yarn install
-yarn link @aztec/sdk
-yarn link @aztec/barretenberg
-yarn link @aztec/blockchain
+yarn link $LINK_FOLDER @aztec/sdk
+yarn link $LINK_FOLDER @aztec/barretenberg
+yarn link $LINK_FOLDER @aztec/blockchain
