@@ -65,11 +65,9 @@ describe('end-to-end defi tests', () => {
       const assetId = AssetId.ETH;
       const value = sdk.toBaseUnits(assetId, '0.8');
       const txFee = await sdk.getFee(assetId, TxType.DEPOSIT);
-
       const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
       const proofOutput = await sdk.createDepositProof(assetId, depositor, userId, value, txFee, signer);
       const signature = await sdk.signProof(proofOutput, depositor);
-
       await sdk.depositFundsToContract(assetId, depositor, value + txFee);
 
       const txHash = await sdk.sendProof(proofOutput, signature);
@@ -115,7 +113,6 @@ describe('end-to-end defi tests', () => {
 
       const initialEthBalance = sdk.getBalance(AssetId.ETH, userId);
       const initialDaiBalance = sdk.getBalance(AssetId.DAI, userId);
-
       const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
       const proofOutput = await sdk.createDefiProof(bridgeId, userId, depositValue, txFee, signer);
 

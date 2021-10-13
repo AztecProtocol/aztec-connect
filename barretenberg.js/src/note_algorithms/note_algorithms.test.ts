@@ -18,6 +18,7 @@ describe('compute_nullifier', () => {
 
   const privateKey = Buffer.from('0b9b3adee6b3d81b28a0886b2a8415c7da31291a5e96bb7a56639e177d301beb', 'hex');
   const noteSecret = Buffer.from('0000000011111111000000001111111100000000111111110000000011111111', 'hex');
+  const dummyNullifier = Buffer.from('0000000000000000000000000000000000000000000000000000000000000001', 'hex');
 
   beforeAll(async () => {
     const barretenberg = await BarretenbergWasm.new();
@@ -28,25 +29,32 @@ describe('compute_nullifier', () => {
   });
 
   it('should compute correct nullifier', async () => {
-    const inputNote1 = new TreeNote(pubKey, BigInt(100), 0, 0, noteSecret, Buffer.alloc(32));
+    const inputNote1 = new TreeNote(pubKey, BigInt(100), 0, 0, noteSecret, Buffer.alloc(32), dummyNullifier);
     inputNote1.noteSecret = noteSecret;
 
     const inputNote1Enc = noteAlgos.valueNoteCommitment(inputNote1);
 
-    const nullifier1 = noteAlgos.valueNoteNullifier(inputNote1Enc, 1, privateKey);
+    const nullifier1 = noteAlgos.valueNoteNullifier(inputNote1Enc, privateKey);
 
-    expect(nullifier1.toString('hex')).toEqual('2a6a842dda2ba35337123794d6ac6fc8910b6920ebc991fafb3f5233f8071764');
+    expect(nullifier1.toString('hex')).toEqual('22e9dc570e100f8f59a70772ab88d4f325a999d2216cca0e2812c6b18adec46a');
   });
 
   it('should commit to claim note and compute its nullifier', async () => {
     const bridgeId = BridgeId.fromBigInt(BigInt(456));
     const ownerId = new AccountId(pubKey, 0);
-    const claimNoteTxData = new ClaimNoteTxData(BigInt(100), bridgeId, noteSecret);
-    const partialState = noteAlgos.valueNotePartialCommitment(claimNoteTxData.noteSecret, ownerId);
-    const inputNote = new TreeClaimNote(claimNoteTxData.value, claimNoteTxData.bridgeId, 0, BigInt(0), partialState);
+    const claimNoteTxData = new ClaimNoteTxData(BigInt(100), bridgeId, noteSecret, dummyNullifier);
+    const partialState = noteAlgos.valueNotePartialCommitment(claimNoteTxData.partialStateSecret, ownerId);
+    const inputNote = new TreeClaimNote(
+      claimNoteTxData.value,
+      claimNoteTxData.bridgeId,
+      0,
+      BigInt(0),
+      partialState,
+      claimNoteTxData.inputNullifier,
+    );
     const inputNoteEnc = noteAlgos.claimNotePartialCommitment(inputNote);
-    const nullifier = noteAlgos.claimNoteNullifier(inputNoteEnc, 1);
-    expect(nullifier.toString('hex')).toEqual('19eb0092121cea45882270797bb8f1c2707e3109710012ac9e4d7509ce229406');
+    const nullifier = noteAlgos.claimNoteNullifier(inputNoteEnc);
+    expect(nullifier.toString('hex')).toEqual('11860dcc7dafe734ac85aed7d7e9bd127b2dd8c655607429bce7275ac9d3f22c');
   });
 
   it('should create correct commitment for defi interaction note', async () => {
@@ -60,7 +68,6 @@ describe('compute_nullifier', () => {
     const nonce = 1;
     const accountAliasId = AccountAliasId.fromAlias('pebble', nonce, blake2s);
     const nullifier = noteAlgos.accountAliasIdNullifier(accountAliasId);
-    const expected = Buffer.from('224e858e256231793201058f10a1408dbc3dd1ed70cf172df0d675737993bda9', 'hex');
-    expect(nullifier).toEqual(expected);
+    expect(nullifier.toString('hex')).toEqual('0a9efa20ae80ee7fe70c9624854784176e04f76abd8780bca2607dafee953aa8');
   });
 });

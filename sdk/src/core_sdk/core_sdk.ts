@@ -152,7 +152,13 @@ export class CoreSdk extends EventEmitter {
     const joinSplitProver = new JoinSplitProver(
       await pooledProverFactory.createUnrolledProver(JoinSplitProver.circuitSize),
     );
-    this.joinSplitProofCreator = new JoinSplitProofCreator(joinSplitProver, this.worldState, this.grumpkin, this.db);
+    this.joinSplitProofCreator = new JoinSplitProofCreator(
+      joinSplitProver,
+      noteAlgos,
+      this.worldState,
+      this.grumpkin,
+      this.db,
+    );
     this.defiDepositProofCreator = new DefiDepositProofCreator(
       joinSplitProver,
       noteAlgos,
@@ -741,7 +747,7 @@ export class CoreSdk extends EventEmitter {
 
   public async addUser(privateKey: Buffer, nonce?: number, noSync = false) {
     const publicKey = this.derivePublicKey(privateKey);
-    const accountNonce = nonce !== undefined ? nonce : await this.getLatestUserNonce(publicKey);
+    const accountNonce = nonce ?? (await this.getLatestUserNonce(publicKey));
 
     let syncedToRollup = -1;
     if (noSync) {

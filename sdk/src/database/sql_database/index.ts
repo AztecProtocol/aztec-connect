@@ -61,6 +61,7 @@ const toUserDefiTx = (tx: DefiTxDao) =>
     tx.userId,
     tx.bridgeId,
     tx.depositValue,
+    tx.partialStateSecret,
     tx.txFee,
     tx.created,
     tx.outputValueA,

@@ -36,7 +36,10 @@ export class ViewingKey {
 
   /**
    * Returns the AES encrypted "viewing key".
-   * [AES:[64 bytes owner public key][32 bytes value][32 bytes secret]][64 bytes ephemeral public key]
+   * [AES: [32 bytes value][4 bytes assetId][4 bytes nonce][32 bytes creatorPubKey]] [64 bytes ephPubKey]
+   * @param noteBuf = Buffer.concat([value, assetId, nonce, creatorPubKey]);
+   * @param ownerPubKey - the public key contained within a value note
+   * @param ephPrivKey - a random field element (also used alongside the ownerPubKey in deriving a value note's secret)
    */
   static createFromEphPriv(noteBuf: Buffer, ownerPubKey: GrumpkinAddress, ephPrivKey: Buffer, grumpkin: Grumpkin) {
     if (noteBuf.length !== 72) {

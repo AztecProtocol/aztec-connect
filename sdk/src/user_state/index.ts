@@ -9,6 +9,7 @@ import { MemoryFifo } from '@aztec/barretenberg/fifo';
 import {
   batchDecryptNotes,
   DefiInteractionNote,
+  deriveNoteSecret,
   NoteAlgorithms,
   recoverTreeNotes,
   TreeNote,
@@ -123,6 +124,7 @@ export class UserState extends EventEmitter {
     const offchainTxDataBuffers = blocks.map(b => b.offchainTxData).flat();
     const viewingKeys: ViewingKey[] = [];
     const noteCommitments: Buffer[] = [];
+    const inputNullifiers: Buffer[] = [];
     const offchainAccountData: OffchainAccountData[] = [];
     const offchainDefiDepositData: OffchainDefiDepositData[] = [];
     innerProofs.forEach((proof, i) => {
@@ -132,9 +134,16 @@ export class UserState extends EventEmitter {
         case ProofId.SEND: {
           const offchainTxData = OffchainJoinSplitData.fromBuffer(offchainTxDataBuffers[i]);
           viewingKeys.push(...offchainTxData.viewingKeys);
-          const { noteCommitment1, noteCommitment2 } = innerProofs[i];
+          const {
+            noteCommitment1,
+            noteCommitment2,
+            nullifier1: inputNullifier1,
+            nullifier2: inputNullifier2,
+          } = innerProofs[i];
           noteCommitments.push(noteCommitment1);
           noteCommitments.push(noteCommitment2);
+          inputNullifiers.push(inputNullifier1);
+          inputNullifiers.push(inputNullifier2);
           break;
         }
         case ProofId.ACCOUNT: {
@@ -144,8 +153,9 @@ export class UserState extends EventEmitter {
         case ProofId.DEFI_DEPOSIT: {
           const offchainTxData = OffchainDefiDepositData.fromBuffer(offchainTxDataBuffers[i]);
           viewingKeys.push(offchainTxData.viewingKey);
-          const { noteCommitment2 } = innerProofs[i];
+          const { noteCommitment2, nullifier2: inputNullifier2 } = innerProofs[i];
           noteCommitments.push(noteCommitment2);
+          inputNullifiers.push(inputNullifier2);
           offchainDefiDepositData.push(offchainTxData);
           break;
         }
@@ -153,14 +163,15 @@ export class UserState extends EventEmitter {
     });
 
     const viewingKeysBuf = Buffer.concat(viewingKeys.flat().map(vk => vk.toBuffer()));
-    const decryptedTreeNote = await batchDecryptNotes(
+    const decryptedTreeNotes = await batchDecryptNotes(
       viewingKeysBuf,
+      inputNullifiers,
       this.user.privateKey,
       this.noteAlgos,
       this.grumpkin,
     );
     const treeNotes = recoverTreeNotes(
-      decryptedTreeNote,
+      decryptedTreeNotes,
       noteCommitments,
       this.user.privateKey,
       this.grumpkin,
@@ -197,14 +208,14 @@ export class UserState extends EventEmitter {
             break;
           }
           case ProofId.DEFI_DEPOSIT: {
-            const note = treeNotes[treeNoteStartIndex];
+            const note2 = treeNotes[treeNoteStartIndex];
             treeNoteStartIndex++;
-            if (!note) {
+            if (!note2) {
               // Both notes should be owned by the same user.
               continue;
             }
             const [offchainTxData] = offchainDefiDepositData.splice(0, 1);
-            await this.handleDefiDepositTx(proof, offchainTxData, noteStartIndex, block.interactionResult, note);
+            await this.handleDefiDepositTx(proof, offchainTxData, noteStartIndex, block.interactionResult, note2);
             break;
           }
           case ProofId.DEFI_CLAIM:
@@ -330,23 +341,29 @@ export class UserState extends EventEmitter {
     offchainTxData: OffchainDefiDepositData,
     noteStartIndex: number,
     interactionResult: DefiInteractionNote[],
-    treeNote: TreeNote,
+    treeNote2: TreeNote,
   ) {
     const { txId, noteCommitment1, noteCommitment2 } = proof;
-    const noteCommitment = await this.processNewNote(noteStartIndex + 1, noteCommitment2, treeNote);
-    if (!noteCommitment) {
+    const note2 = await this.processNewNote(noteStartIndex + 1, noteCommitment2, treeNote2);
+    if (!note2) {
       // Owned by the account with a different nonce.
       return;
     }
-
-    const { bridgeId, depositValue } = offchainTxData;
+    const { bridgeId, depositValue, partialStateSecretEphPubKey } = offchainTxData;
+    const partialStateSecret = deriveNoteSecret(
+      partialStateSecretEphPubKey,
+      this.user.privateKey,
+      this.grumpkin,
+      TreeNote.LATEST_VERSION,
+    );
     const txHash = new TxHash(txId);
     const { totalInputValue, totalOutputValueA, totalOutputValueB, result } = interactionResult.find(r =>
       r.bridgeId.equals(bridgeId),
     )!;
     const outputValueA = !result ? BigInt(0) : (totalOutputValueA * depositValue) / totalInputValue;
     const outputValueB = !result ? BigInt(0) : (totalOutputValueB * depositValue) / totalInputValue;
-    await this.addClaim(noteStartIndex, txHash, noteCommitment1, treeNote.noteSecret);
+    await this.addClaim(noteStartIndex, txHash, noteCommitment1, partialStateSecret);
+
     const { nullifier1, nullifier2 } = proof;
     const destroyedNote1 = await this.nullifyNote(nullifier1);
     const destroyedNote2 = await this.nullifyNote(nullifier2);
@@ -363,7 +380,7 @@ export class UserState extends EventEmitter {
         offchainTxData,
         outputValueA,
         outputValueB,
-        noteCommitment,
+        note2,
         destroyedNote1,
         destroyedNote2,
       );
@@ -380,7 +397,7 @@ export class UserState extends EventEmitter {
     }
 
     const { txHash, secret, owner } = claim;
-    const { noteCommitment1, noteCommitment2 } = proof;
+    const { noteCommitment1, noteCommitment2, nullifier1: inputNullifier1, nullifier2: inputNullifier2 } = proof;
     const { bridgeId, depositValue, outputValueA, outputValueB } = (await this.db.getDefiTx(txHash))!;
     // When generating output notes, set creatorPubKey to 0 (it's a DeFi txn, recipient of note is same as creator of claim note)
     if (!outputValueA && !outputValueB) {
@@ -391,6 +408,7 @@ export class UserState extends EventEmitter {
         owner.nonce,
         secret,
         Buffer.alloc(32),
+        inputNullifier1,
       );
       await this.processNewNote(noteStartIndex, noteCommitment1, treeNote);
     }
@@ -402,6 +420,7 @@ export class UserState extends EventEmitter {
         owner.nonce,
         secret,
         Buffer.alloc(32),
+        inputNullifier1,
       );
       await this.processNewNote(noteStartIndex, noteCommitment1, treeNote);
     }
@@ -413,6 +432,7 @@ export class UserState extends EventEmitter {
         owner.nonce,
         secret,
         Buffer.alloc(32),
+        inputNullifier2,
       );
       await this.processNewNote(noteStartIndex + 1, noteCommitment2, treeNote);
     }
@@ -432,12 +452,12 @@ export class UserState extends EventEmitter {
       return savedNote.owner.equals(this.user.id) ? savedNote : undefined;
     }
 
-    const { noteSecret, value, assetId, nonce, creatorPubKey } = treeNote;
+    const { noteSecret, value, assetId, nonce, creatorPubKey, inputNullifier } = treeNote;
     if (nonce !== this.user.id.nonce) {
       return;
     }
 
-    const nullifier = this.noteAlgos.valueNoteNullifier(dataEntry, index, this.user.privateKey);
+    const nullifier = this.noteAlgos.valueNoteNullifier(dataEntry, this.user.privateKey);
     const note: Note = {
       index,
       assetId,
@@ -448,6 +468,7 @@ export class UserState extends EventEmitter {
       nullified: false,
       owner: this.user.id,
       creatorPubKey,
+      inputNullifier,
     };
 
     if (value) {
@@ -468,8 +489,9 @@ export class UserState extends EventEmitter {
     return note;
   }
 
+  // dataEntry is the partial claim note's commitment
   private async addClaim(index: number, txHash: TxHash, dataEntry: Buffer, noteSecret: Buffer) {
-    const nullifier = this.noteAlgos.claimNoteNullifier(dataEntry, index);
+    const nullifier = this.noteAlgos.claimNoteNullifier(dataEntry);
     await this.db.addClaim({
       txHash,
       secret: noteSecret,
@@ -542,20 +564,31 @@ export class UserState extends EventEmitter {
     offchainTxData: OffchainDefiDepositData,
     outputValueA: bigint,
     outputValueB: bigint,
-    noteCommitment?: Note,
+    changeNote?: Note,
     destroyedNote1?: Note,
     destroyedNote2?: Note,
   ) {
     const { txId } = proof;
-    const { bridgeId, depositValue } = offchainTxData;
+    const { bridgeId, depositValue, partialStateSecretEphPubKey } = offchainTxData;
     const txHash = new TxHash(txId);
+    const partialStateSecret = deriveNoteSecret(partialStateSecretEphPubKey, this.user.privateKey, this.grumpkin);
 
     const noteValue = (note?: Note) => (note ? note.value : BigInt(0));
     const privateInput = noteValue(destroyedNote1) + noteValue(destroyedNote2);
-    const privateOutput = noteValue(noteCommitment);
+    const privateOutput = noteValue(changeNote);
     const txFee = privateInput - privateOutput - depositValue;
 
-    return new UserDefiTx(txHash, this.user.id, bridgeId, depositValue, txFee, new Date(), outputValueA, outputValueB);
+    return new UserDefiTx(
+      txHash,
+      this.user.id,
+      bridgeId,
+      depositValue,
+      partialStateSecret,
+      txFee,
+      new Date(),
+      outputValueA,
+      outputValueB,
+    );
   }
 
   private async refreshNotePicker() {

@@ -97,9 +97,9 @@ contract Decoder {
 
     function defiClaimTx(uint256 inPtr, uint256 outPtr) internal pure returns (uint256) {
         assembly {
-            calldatacopy(add(outPtr, 0x20), add(inPtr, 0x1), 0x60) // noteCommitment1 ... nullifier1
+            calldatacopy(add(outPtr, 0x20), add(inPtr, 0x1), 0x80) // noteCommitment1 ... nullifier2
         }
-        return (inPtr + 0x61);
+        return (inPtr + 0x81);
     }
 
     function invalidTx(uint256, uint256) internal pure returns (uint256) {

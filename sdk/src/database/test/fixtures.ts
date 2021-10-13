@@ -26,6 +26,7 @@ export const randomNote = (): Note => ({
   nullified: false,
   owner: AccountId.random(),
   creatorPubKey: randomBytes(32),
+  inputNullifier: randomBytes(32),
 });
 
 export const randomClaim = (): Claim => ({
@@ -82,6 +83,7 @@ export const randomUserDefiTx = (tx: Partial<UserDefiTx> = {}) =>
     tx.userId || AccountId.random(),
     tx.bridgeId || BridgeId.random(),
     inputOrDefault(tx.depositValue, BigInt(randomInt())),
+    tx.partialStateSecret || randomBytes(32),
     inputOrDefault(tx.txFee, BigInt(randomInt())),
     tx.created || new Date(),
     tx.outputValueA || BigInt(0),

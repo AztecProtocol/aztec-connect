@@ -23,6 +23,9 @@ export class TxRollup {
     public newDataRoot: Buffer,
     public oldDataPath: HashPath,
 
+    public linkedCommitmentPaths: HashPath[],
+    public linkedCommitmentIndices: number[],
+
     public oldNullRoot: Buffer,
     public newNullRoots: Buffer[],
     public oldNullPaths: HashPath[],
@@ -50,6 +53,8 @@ export class TxRollup {
       this.oldDataRoot,
       this.newDataRoot,
       this.oldDataPath.toBuffer(),
+      serializeBufferArrayToVector(this.linkedCommitmentPaths.map(path => path.toBuffer())),
+      serializeBufferArrayToVector(this.linkedCommitmentIndices.map(numToUInt32BE)),
 
       this.oldNullRoot,
       serializeBufferArrayToVector(this.newNullRoots),
@@ -86,6 +91,10 @@ export class TxRollup {
     offset += newDataRoot.adv;
     const oldDataPath = HashPath.deserialize(buf, offset);
     offset += oldDataPath.adv;
+    const linkedCommitmentPaths = deserializeArrayFromVector(HashPath.deserialize, buf, offset);
+    offset += linkedCommitmentPaths.adv;
+    const linkedCommitmentIndices = deserializeArrayFromVector(deserializeUInt32, buf, offset);
+    offset += linkedCommitmentIndices.adv;
 
     const oldNullRoot = deserializeField(buf, offset);
     offset += oldNullRoot.adv;
@@ -115,6 +124,8 @@ export class TxRollup {
       oldDataRoot.elem,
       newDataRoot.elem,
       oldDataPath.elem,
+      linkedCommitmentPaths.elem,
+      linkedCommitmentIndices.elem,
       oldNullRoot.elem,
       newNullRoots.elem,
       oldNullPaths.elem,

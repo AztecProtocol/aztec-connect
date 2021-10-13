@@ -29,6 +29,7 @@ export const recoverTreeNotes = (
       }
     }
 
+    // TODO: Deprecate for defi bridge?
     // Note version 0
     {
       const noteSecret = deriveNoteSecret(decrypted.ephPubKey, privateKey, grumpkin, 0);

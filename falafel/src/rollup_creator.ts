@@ -160,6 +160,8 @@ export class RollupCreator {
       oldDataRoot,
       newDataRoot,
       oldDataPath,
+      [],
+      [],
 
       oldNullRoot,
       newNullRoots,

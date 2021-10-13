@@ -179,15 +179,15 @@ export class WalletSdk extends EventEmitter {
   ) {
     return this.createJoinSplitProof(
       assetId,
-      to,
-      value + fee,
-      BigInt(0),
-      BigInt(0),
-      BigInt(0),
-      value,
+      to, // userId
+      value + fee, // publicInput
+      BigInt(0), // publicOutput
+      BigInt(0), // privateInput
+      BigInt(0), // recipientPrivateOutput
+      value, // senderPrivateOutput
       signer,
-      to,
-      from,
+      to, // noteRecipient
+      from, // publicOwner
     );
   }
 

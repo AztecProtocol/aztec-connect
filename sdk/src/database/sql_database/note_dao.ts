@@ -33,4 +33,7 @@ export class NoteDao implements Note {
 
   @Column()
   public creatorPubKey!: Buffer;
+
+  @Column()
+  public inputNullifier!: Buffer;
 }

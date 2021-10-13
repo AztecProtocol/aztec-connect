@@ -17,6 +17,7 @@ describe('Claim Proof', () => {
       TreeClaimNote.random(),
       randomDataPath(),
       DefiInteractionNote.random(),
+      randomBytes(32),
       randomBigInt(),
       randomBigInt(),
     );

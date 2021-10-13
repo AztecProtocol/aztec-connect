@@ -2,6 +2,7 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
 import { JoinSplitProver, ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
+import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { OffchainJoinSplitData } from '@aztec/barretenberg/offchain_tx_data';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { WorldState } from '@aztec/barretenberg/world_state';
@@ -19,8 +20,14 @@ const debug = createDebug('bb:join_split_proof_creator');
 export class JoinSplitProofCreator {
   private txFactory: JoinSplitTxFactory;
 
-  constructor(private joinSplitProver: JoinSplitProver, worldState: WorldState, grumpkin: Grumpkin, db: Database) {
-    this.txFactory = new JoinSplitTxFactory(worldState, grumpkin, db);
+  constructor(
+    private joinSplitProver: JoinSplitProver,
+    noteAlgos: NoteAlgorithms,
+    worldState: WorldState,
+    grumpkin: Grumpkin,
+    db: Database,
+  ) {
+    this.txFactory = new JoinSplitTxFactory(noteAlgos, worldState, grumpkin, db);
   }
 
   public async createProof(
@@ -34,6 +41,9 @@ export class JoinSplitProofCreator {
     signer: Signer,
     newNoteOwner?: AccountId,
     publicOwner?: EthAddress,
+    propagatedInputIndex?: number,
+    backwardLink?: Buffer,
+    allowChain?: number,
   ) {
     const { tx, viewingKeys } = await this.txFactory.createJoinSplitTx(
       userState,
@@ -42,11 +52,14 @@ export class JoinSplitProofCreator {
       privateInput,
       recipientPrivateOutput,
       senderPrivateOutput,
-      BigInt(0),
+      BigInt(0), // defiDepositValue
       assetId,
       signer.getPublicKey(),
       newNoteOwner,
       publicOwner,
+      propagatedInputIndex,
+      backwardLink,
+      allowChain,
     );
     const signingData = await this.joinSplitProver.computeSigningData(tx);
     const signature = await signer.signMessage(signingData);
@@ -71,7 +84,7 @@ export class JoinSplitProofCreator {
       senderPrivateOutput,
       proofId === ProofId.DEPOSIT ? publicOwner : undefined,
       proofId === ProofId.WITHDRAW ? publicOwner : undefined,
-      true,
+      true, // ownedByUser
       new Date(),
     );
     const offchainTxData = new OffchainJoinSplitData(viewingKeys);

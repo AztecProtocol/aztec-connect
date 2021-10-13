@@ -24,6 +24,9 @@ export class JoinSplitTx {
     public accountIndex: number,
     public accountPath: HashPath,
     public signingPubKey: GrumpkinAddress,
+    public propagatedInputIndex: number,
+    public backwardLink: Buffer,
+    public allowChain: number,
   ) {}
 
   toBuffer() {
@@ -51,6 +54,10 @@ export class JoinSplitTx {
       numToUInt32BE(this.accountIndex),
       this.accountPath.toBuffer(),
       this.signingPubKey.toBuffer(),
+
+      numToUInt32BE(this.propagatedInputIndex),
+      this.backwardLink,
+      numToUInt32BE(this.allowChain),
     ]);
   }
 }

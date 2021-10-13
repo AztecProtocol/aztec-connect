@@ -171,18 +171,27 @@ export class WorldState {
       const proofData = innerProofData[i];
       switch (proofData.proofId) {
         case ProofId.DEFI_DEPOSIT: {
-          const { bridgeId, depositValue, partialState, txFee } = OffchainDefiDepositData.fromBuffer(offchainTxData[i]);
+          const {
+            bridgeId,
+            depositValue,
+            partialState,
+            partialStateSecretEphPubKey,
+            txFee,
+          } = OffchainDefiDepositData.fromBuffer(offchainTxData[i]);
           const fee = txFee - (txFee >> BigInt(1));
           const index = dataStartIndex + i * 2;
           const interactionNonce = interactionResult.find(r => r.bridgeId.equals(bridgeId))!.nonce;
-          const note = new TreeClaimNote(depositValue, bridgeId, interactionNonce, fee, partialState);
-          const nullifier = this.noteAlgo.claimNoteNullifier(this.noteAlgo.claimNoteCommitment(note), index);
+          const inputNullifier = proofData.nullifier1;
+          const note = new TreeClaimNote(depositValue, bridgeId, interactionNonce, fee, partialState, inputNullifier);
+          const nullifier = this.noteAlgo.claimNoteNullifier(this.noteAlgo.claimNoteCommitment(note));
           await this.rollupDb.addClaim({
             id: index,
             nullifier,
             bridgeId: bridgeId.toBigInt(),
             depositValue,
             partialState,
+            partialStateSecretEphPubKey: partialStateSecretEphPubKey.toBuffer(),
+            inputNullifier,
             interactionNonce,
             fee,
             created: new Date(),

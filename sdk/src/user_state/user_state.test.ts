@@ -7,9 +7,8 @@ import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { Blake2s } from '@aztec/barretenberg/crypto';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import {
-  batchDecryptNotes,
-  ClaimNoteTxData,
   DefiInteractionNote,
+  deriveNoteSecret,
   NoteAlgorithms,
   TreeClaimNote,
   TreeNote,
@@ -44,6 +43,12 @@ describe('user state', () => {
   let user: UserData;
 
   const createEphemeralPrivKey = () => grumpkin.getRandomFr();
+
+  const createEphemeralKeyPair = () => {
+    const ephPrivKey = grumpkin.getRandomFr();
+    const ephPubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, ephPrivKey));
+    return { ephPrivKey, ephPubKey };
+  };
 
   const createUser = () => {
     const privateKey = randomBytes(32);
@@ -104,17 +109,37 @@ describe('user state', () => {
     await userState.startSync();
   });
 
-  const createNote = (assetId: number, value: bigint, user: AccountId, version = 1) => {
+  const createNote = (assetId: number, value: bigint, user: AccountId, inputNullifier: Buffer, version = 1) => {
     const ephPrivKey = createEphemeralPrivKey();
-    const note = TreeNote.createFromEphPriv(user.publicKey, value, assetId, user.nonce, ephPrivKey, grumpkin, version);
-    const viewingKey = note.getViewingKey(ephPrivKey, grumpkin);
+    const note = TreeNote.createFromEphPriv(
+      user.publicKey,
+      value,
+      assetId,
+      user.nonce,
+      inputNullifier,
+      ephPrivKey,
+      grumpkin,
+      version,
+    );
+    const viewingKey = note.createViewingKey(ephPrivKey, grumpkin);
     return { note, viewingKey };
   };
 
-  const createClaimNote = (bridgeId: BridgeId, value: bigint, user: AccountId, noteSecret: Buffer) => {
-    const txData = new ClaimNoteTxData(value, bridgeId, noteSecret);
-    const partialState = noteAlgos.valueNotePartialCommitment(txData.noteSecret, user);
-    return new TreeClaimNote(value, bridgeId, 0, BigInt(0), partialState);
+  const createClaimNote = (bridgeId: BridgeId, value: bigint, user: AccountId, inputNullifier: Buffer, version = 1) => {
+    const { ephPrivKey, ephPubKey } = createEphemeralKeyPair();
+
+    const partialStateSecret = deriveNoteSecret(user.publicKey, ephPrivKey, grumpkin, version);
+
+    const partialState = noteAlgos.valueNotePartialCommitment(partialStateSecret, user);
+    const partialClaimNote = new TreeClaimNote(
+      value,
+      bridgeId,
+      0, // defiInteractionNonce
+      BigInt(0), // fee
+      partialState,
+      inputNullifier,
+    );
+    return { partialClaimNote, partialStateSecretEphPubKey: ephPubKey };
   };
 
   const generateJoinSplitProof = ({
@@ -130,16 +155,16 @@ describe('user state', () => {
     isPadding = false,
     createValidNoteCommitments = true,
   } = {}) => {
+    const nullifier1 = isPadding
+      ? Buffer.alloc(32)
+      : noteAlgos.valueNoteNullifier(randomBytes(32), proofSender.privateKey);
+    const nullifier2 = noteAlgos.valueNoteNullifier(randomBytes(32), proofSender.privateKey);
     const notes = [
-      createNote(assetId, outputNoteValue1, new AccountId(newNoteOwner.publicKey, noteCommitmentNonce), 0),
-      createNote(assetId, outputNoteValue2, new AccountId(proofSender.publicKey, noteCommitmentNonce)),
+      createNote(assetId, outputNoteValue1, new AccountId(newNoteOwner.publicKey, noteCommitmentNonce), nullifier1, 0),
+      createNote(assetId, outputNoteValue2, new AccountId(proofSender.publicKey, noteCommitmentNonce), nullifier2),
     ];
     const note1Commitment = createValidNoteCommitments ? noteAlgos.valueNoteCommitment(notes[0].note) : randomBytes(32);
     const note2Commitment = createValidNoteCommitments ? noteAlgos.valueNoteCommitment(notes[1].note) : randomBytes(32);
-    const nullifier1 = isPadding
-      ? Buffer.alloc(32)
-      : noteAlgos.valueNoteNullifier(randomBytes(32), 0, proofSender.privateKey);
-    const nullifier2 = noteAlgos.valueNoteNullifier(randomBytes(32), 1, proofSender.privateKey);
     const viewingKeys = isPadding ? [] : notes.map(n => n.viewingKey);
     const proofData = new InnerProofData(
       publicInput ? ProofId.DEPOSIT : publicOutput ? ProofId.WITHDRAW : ProofId.SEND,
@@ -199,27 +224,37 @@ describe('user state', () => {
     claimNoteRecipient = user.id,
   } = {}) => {
     const assetId = bridgeId.inputAssetId;
-    const newNote = createNote(assetId, outputNoteValue, proofSender.id);
-    const claimNote = createClaimNote(bridgeId, depositValue, claimNoteRecipient, newNote.note.noteSecret);
-    const noteCommitments = [
-      noteAlgos.claimNotePartialCommitment(claimNote),
-      noteAlgos.valueNoteCommitment(newNote.note),
-    ];
-    const nullifier1 = noteAlgos.valueNoteNullifier(randomBytes(32), 0, proofSender.privateKey);
-    const nullifier2 = noteAlgos.valueNoteNullifier(randomBytes(32), 1, proofSender.privateKey);
-    const viewingKeys = [newNote.viewingKey];
+    const nullifier1 = noteAlgos.valueNoteNullifier(randomBytes(32), proofSender.privateKey);
+    const nullifier2 = noteAlgos.valueNoteNullifier(randomBytes(32), proofSender.privateKey);
+    const changeNote = createNote(assetId, outputNoteValue, proofSender.id, nullifier2);
+    const { partialClaimNote, partialStateSecretEphPubKey } = createClaimNote(
+      bridgeId,
+      depositValue,
+      claimNoteRecipient,
+      nullifier1,
+    );
+    const partialClaimNoteCommitment = noteAlgos.claimNotePartialCommitment(partialClaimNote);
+    const changeNoteCommitment = noteAlgos.valueNoteCommitment(changeNote.note);
+    const viewingKeys = [changeNote.viewingKey];
     const proofData = new InnerProofData(
       ProofId.DEFI_DEPOSIT,
-      noteCommitments[0],
-      noteCommitments[1],
+      partialClaimNoteCommitment,
+      changeNoteCommitment,
       nullifier1,
       nullifier2,
       Buffer.alloc(32),
       Buffer.alloc(32),
       Buffer.alloc(32),
     );
-    const partialState = randomBytes(32);
-    const offchainTxData = new OffchainDefiDepositData(bridgeId, partialState, depositValue, 0n, viewingKeys[0]);
+
+    const offchainTxData = new OffchainDefiDepositData(
+      bridgeId,
+      partialClaimNote.partialState,
+      partialStateSecretEphPubKey,
+      depositValue,
+      0n,
+      viewingKeys[0],
+    );
     return { proofData, offchainTxData };
   };
 
@@ -228,12 +263,13 @@ describe('user state', () => {
     bridgeId = BridgeId.random(),
     outputValueA = 0n,
     outputValueB = 0n,
-    nullifier = randomBytes(32),
+    nullifier1 = randomBytes(32),
+    nullifier2 = randomBytes(32),
   } = {}) => {
     const assetId = bridgeId.inputAssetId;
     const notes = [
-      createNote(assetId, outputValueA, noteRecipient.id, 0),
-      createNote(assetId, outputValueB, noteRecipient.id),
+      createNote(assetId, outputValueA, noteRecipient.id, nullifier1, 0),
+      createNote(assetId, outputValueB, noteRecipient.id, nullifier2),
     ];
     const noteCommitments = [
       noteAlgos.valueNoteCommitment(notes[0].note),
@@ -243,8 +279,8 @@ describe('user state', () => {
       ProofId.DEFI_CLAIM,
       noteCommitments[0],
       noteCommitments[1],
-      nullifier,
-      Buffer.alloc(32),
+      nullifier1,
+      nullifier2,
       Buffer.alloc(32),
       Buffer.alloc(32),
       Buffer.alloc(32),
@@ -696,9 +732,7 @@ describe('user state', () => {
     const block = createRollupBlock([defiProof], { interactionResult });
 
     const txHash = new TxHash(defiProof.proofData.txId);
-    const viewingKey = defiProof.offchainTxData.viewingKey;
-    const [decrypted] = await batchDecryptNotes(viewingKey.toBuffer(), user.privateKey, noteAlgos, grumpkin);
-    const claimNoteNullifer = noteAlgos.claimNoteNullifier(defiProof.proofData.noteCommitment1, 0);
+    const claimNoteNullifer = noteAlgos.claimNoteNullifier(defiProof.proofData.noteCommitment1);
 
     db.getDefiTx.mockResolvedValue({ txHash, settled: undefined });
     db.getNoteByNullifier.mockResolvedValueOnce({
@@ -711,10 +745,13 @@ describe('user state', () => {
     userState.processBlock(block);
     await userState.stopSync(true);
 
+    const { partialStateSecretEphPubKey } = defiProof.offchainTxData;
+    const partialStateSecret = deriveNoteSecret(partialStateSecretEphPubKey, user.privateKey, grumpkin);
+
     expect(db.addClaim).toHaveBeenCalledTimes(1);
     expect(db.addClaim.mock.calls[0][0]).toMatchObject({
       txHash,
-      secret: decrypted!.noteSecret,
+      secret: partialStateSecret,
       owner: user.id,
     });
     expect(db.addNote).toHaveBeenCalledTimes(1);
@@ -800,12 +837,13 @@ describe('user state', () => {
     const outputValueB = 56n;
     const txHash = TxHash.random();
     const secret = randomBytes(32);
-    const nullifier = randomBytes(32);
+    const nullifier1 = randomBytes(32);
+    const nullifier2 = randomBytes(32);
 
     db.getClaim.mockImplementation(() => ({ txHash, owner: user.id, secret }));
     db.getDefiTx.mockImplementation(() => ({ bridgeId, depositValue, outputValueA, outputValueB }));
 
-    const claimProof = generateDefiClaimProof({ bridgeId, outputValueA, outputValueB, nullifier });
+    const claimProof = generateDefiClaimProof({ bridgeId, outputValueA, outputValueB, nullifier1, nullifier2 });
     const block = createRollupBlock([claimProof]);
 
     userState.processBlock(block);
@@ -833,12 +871,13 @@ describe('user state', () => {
     const outputValueB = 0n;
     const txHash = TxHash.random();
     const secret = randomBytes(32);
-    const nullifier = randomBytes(32);
+    const nullifier1 = randomBytes(32);
+    const nullifier2 = randomBytes(32);
 
     db.getClaim.mockImplementation(() => ({ txHash, owner: user.id, secret }));
     db.getDefiTx.mockImplementation(() => ({ bridgeId, depositValue, outputValueA, outputValueB }));
 
-    const claimProof = generateDefiClaimProof({ bridgeId, outputValueA, outputValueB, nullifier });
+    const claimProof = generateDefiClaimProof({ bridgeId, outputValueA, outputValueB, nullifier1, nullifier2 });
     const block = createRollupBlock([claimProof]);
 
     userState.processBlock(block);
@@ -861,7 +900,8 @@ describe('user state', () => {
     const outputValueB = 56n;
     const txHash = TxHash.random();
     const secret = randomBytes(32);
-    const nullifier = randomBytes(32);
+    const nullifier1 = randomBytes(32);
+    const nullifier2 = randomBytes(32);
 
     db.getClaim.mockImplementation(() => ({
       txHash,
@@ -870,7 +910,7 @@ describe('user state', () => {
     }));
     db.getDefiTx.mockImplementation(() => ({ bridgeId, depositValue, outputValueA, outputValueB }));
 
-    const claimProof = generateDefiClaimProof({ bridgeId, outputValueA, outputValueB, nullifier });
+    const claimProof = generateDefiClaimProof({ bridgeId, outputValueA, outputValueB, nullifier1, nullifier2 });
     const block = createRollupBlock([claimProof]);
 
     userState.processBlock(block);

@@ -8,10 +8,11 @@ import { ProofId } from './proof_id';
  * Fields that are always of fixed type/meaning are converted.
  */
 export class ProofData {
-  static readonly NUM_PUBLIC_INPUTS = 14;
+  static readonly NUM_PUBLIC_INPUTS = 17;
   static readonly NUM_PUBLISHED_PUBLIC_INPUTS = 8;
 
   public readonly txId: Buffer;
+
   public readonly proofId: ProofId;
   public readonly noteCommitment1: Buffer;
   public readonly noteCommitment2: Buffer;
@@ -20,12 +21,17 @@ export class ProofData {
   public readonly publicValue: Buffer;
   public readonly publicOwner: Buffer;
   public readonly assetId: Buffer;
+
   public readonly noteTreeRoot: Buffer;
   public readonly txFee: Buffer;
   public readonly txFeeAssetId: Buffer;
   public readonly bridgeId: Buffer;
   public readonly defiDepositValue: Buffer;
   public readonly defiRoot: Buffer;
+
+  public readonly propagatedInputIndex: Buffer;
+  public readonly backwardLink: Buffer;
+  public readonly allowChain: Buffer;
 
   constructor(public rawProofData: Buffer) {
     let dataStart = 0;
@@ -58,6 +64,13 @@ export class ProofData {
     this.defiDepositValue = rawProofData.slice(dataStart, dataStart + 32);
     dataStart += 32;
     this.defiRoot = rawProofData.slice(dataStart, dataStart + 32);
+    dataStart += 32;
+    this.propagatedInputIndex = rawProofData.slice(dataStart, dataStart + 32);
+    dataStart += 32;
+    this.backwardLink = rawProofData.slice(dataStart, dataStart + 32);
+    dataStart += 32;
+    this.allowChain = rawProofData.slice(dataStart, dataStart + 32);
+    dataStart += 32;
 
     this.txId = createTxId(rawProofData.slice(0, ProofData.NUM_PUBLISHED_PUBLIC_INPUTS * 32));
   }

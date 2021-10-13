@@ -25,6 +25,7 @@ class DexieNote {
     public nullified: 0 | 1,
     public owner: Uint8Array,
     public creatorPubKey: Uint8Array,
+    public inputNullifier: Uint8Array,
   ) {}
 }
 
@@ -39,6 +40,7 @@ const noteToDexieNote = (note: Note) =>
     note.nullified ? 1 : 0,
     new Uint8Array(note.owner.toBuffer()),
     new Uint8Array(note.creatorPubKey),
+    new Uint8Array(note.inputNullifier),
   );
 
 const dexieNoteToNote = ({
@@ -50,6 +52,7 @@ const dexieNoteToNote = ({
   nullified,
   owner,
   creatorPubKey,
+  inputNullifier,
   ...rest
 }: DexieNote): Note => ({
   ...rest,
@@ -61,6 +64,7 @@ const dexieNoteToNote = ({
   nullified: !!nullified,
   owner: AccountId.fromBuffer(Buffer.from(owner)),
   creatorPubKey: Buffer.from(creatorPubKey),
+  inputNullifier: Buffer.from(inputNullifier),
 });
 
 class DexieClaim {
@@ -247,6 +251,7 @@ class DexieDefiTx implements DexieUserTx {
     public proofId: number,
     public bridgeId: Uint8Array,
     public depositValue: string,
+    public partialStateSecret: Uint8Array,
     public txFee: string,
     public outputValueA: string,
     public outputValueB: string,
@@ -262,6 +267,7 @@ const toDexieDefiTx = (tx: UserDefiTx) =>
     ProofId.DEFI_DEPOSIT,
     new Uint8Array(tx.bridgeId.toBuffer()),
     tx.depositValue.toString(),
+    new Uint8Array(tx.partialStateSecret),
     tx.txFee.toString(),
     tx.outputValueA.toString(),
     tx.outputValueB.toString(),
@@ -274,6 +280,7 @@ const fromDexieDefiTx = ({
   userId,
   bridgeId,
   depositValue,
+  partialStateSecret,
   txFee,
   outputValueA,
   outputValueB,
@@ -285,6 +292,7 @@ const fromDexieDefiTx = ({
     AccountId.fromBuffer(Buffer.from(userId)),
     BridgeId.fromBuffer(Buffer.from(bridgeId)),
     BigInt(depositValue),
+    Buffer.from(partialStateSecret),
     BigInt(txFee),
     created,
     BigInt(outputValueA),

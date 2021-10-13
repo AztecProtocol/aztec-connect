@@ -30,7 +30,10 @@ describe('batch_decypt_notes', () => {
       .map(() => randomBytes(72));
     const keys = noteBufs.map(noteBuf => ViewingKey.createFromEphPriv(noteBuf, owner.pubKey, eph.privKey, grumpkin));
     const keysBuf = Buffer.concat(keys.map(k => k.toBuffer()));
-    const decryptedNotes = await batchDecryptNotes(keysBuf, owner.privKey, noteAlgos, grumpkin);
+    const inputNullifiers: Buffer[] = Array(4)
+      .fill(0)
+      .map(() => randomBytes(32));
+    const decryptedNotes = await batchDecryptNotes(keysBuf, inputNullifiers, owner.privKey, noteAlgos, grumpkin);
 
     expect(decryptedNotes.length).toBe(noteBufs.length);
     decryptedNotes.forEach((decrypted, i) => {
@@ -51,7 +54,10 @@ describe('batch_decypt_notes', () => {
     // Append an extra random key.
     keys.push(ViewingKey.random());
     const keysBuf = Buffer.concat(keys.map(k => k.toBuffer()));
-    const decryptedNotes = await batchDecryptNotes(keysBuf, owner.privKey, noteAlgos, grumpkin);
+    const inputNullifiers: Buffer[] = Array(4)
+      .fill(0)
+      .map(() => randomBytes(32));
+    const decryptedNotes = await batchDecryptNotes(keysBuf, inputNullifiers, owner.privKey, noteAlgos, grumpkin);
 
     expect(decryptedNotes.length).toBe(noteBufs.length);
     decryptedNotes.forEach((decrypted, i) => {

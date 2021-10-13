@@ -11,6 +11,7 @@ export class UserDefiTx {
     public readonly userId: AccountId,
     public readonly bridgeId: BridgeId,
     public readonly depositValue: bigint,
+    public readonly partialStateSecret: Buffer,
     public readonly txFee: bigint,
     public readonly created: Date,
     public readonly outputValueA = BigInt(0),

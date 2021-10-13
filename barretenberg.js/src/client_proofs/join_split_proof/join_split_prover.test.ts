@@ -105,7 +105,7 @@ describe('join_split_proof', () => {
       const assetId = 1;
       const publicInput = BigInt(20);
       const publicOutput = BigInt(0);
-      const txFee = BigInt(10);
+      const txFee = BigInt(20);
       const publicOwner = EthAddress.randomAddress();
 
       const inputNote1EphKey = createEphemeralPrivKey(grumpkin);
@@ -113,20 +113,52 @@ describe('join_split_proof', () => {
       const outputNote1EphKey = createEphemeralPrivKey(grumpkin);
       const outputNote2EphKey = createEphemeralPrivKey(grumpkin);
 
-      const inputNote1 = TreeNote.createFromEphPriv(pubKey, BigInt(100), assetId, 0, inputNote1EphKey, grumpkin);
-      const inputNote2 = TreeNote.createFromEphPriv(pubKey, BigInt(50), assetId, 0, inputNote2EphKey, grumpkin);
-      const outputNote1 = TreeNote.createFromEphPriv(pubKey, BigInt(90), assetId, 0, outputNote1EphKey, grumpkin);
-      const outputNote2 = TreeNote.createFromEphPriv(
+      const inputNoteNullifier1 = numToUInt32BE(1, 32);
+      const inputNoteNullifier2 = numToUInt32BE(2, 32);
+
+      const inputNote1 = TreeNote.createFromEphPriv(
         pubKey,
-        BigInt(60) + publicInput - txFee,
-        assetId,
+        BigInt(100),
+        1,
         0,
-        outputNote2EphKey,
+        inputNoteNullifier1,
+        inputNote1EphKey,
+        grumpkin,
+      );
+      const inputNote2 = TreeNote.createFromEphPriv(
+        pubKey,
+        BigInt(50),
+        1,
+        0,
+        inputNoteNullifier2,
+        inputNote2EphKey,
         grumpkin,
       );
 
       const inputNote1Enc = noteAlgos.valueNoteCommitment(inputNote1);
       const inputNote2Enc = noteAlgos.valueNoteCommitment(inputNote2);
+
+      const expectedNullifier1 = noteAlgos.valueNoteNullifier(inputNote1Enc, privateKey);
+      const expectedNullifier2 = noteAlgos.valueNoteNullifier(inputNote2Enc, privateKey);
+
+      const outputNote1 = TreeNote.createFromEphPriv(
+        pubKey,
+        BigInt(80),
+        1,
+        0,
+        expectedNullifier1,
+        outputNote1EphKey,
+        grumpkin,
+      );
+      const outputNote2 = TreeNote.createFromEphPriv(
+        pubKey,
+        BigInt(70),
+        1,
+        0,
+        expectedNullifier2,
+        outputNote2EphKey,
+        grumpkin,
+      );
 
       const tree = new MerkleTree(levelup(memdown()), pedersen, 'data', 32);
       await tree.updateElement(0, inputNote1Enc);
@@ -157,6 +189,9 @@ describe('join_split_proof', () => {
         2,
         accountNotePath,
         pubKey,
+        0,
+        Buffer.alloc(32),
+        0,
       );
       const signingData = await joinSplitProver.computeSigningData(tx);
       const signature = schnorr.constructSignature(signingData, privateKey);
@@ -173,8 +208,6 @@ describe('join_split_proof', () => {
       const joinSplitProof = new ProofData(proof);
       const noteCommitment1 = noteAlgos.valueNoteCommitment(outputNote1);
       const noteCommitment2 = noteAlgos.valueNoteCommitment(outputNote2);
-      const expectedNullifier1 = noteAlgos.valueNoteNullifier(inputNote1Enc, 0, privateKey);
-      const expectedNullifier2 = noteAlgos.valueNoteNullifier(inputNote2Enc, 1, privateKey);
       expect(joinSplitProof.proofId).toEqual(ProofId.DEPOSIT);
       expect(joinSplitProof.noteCommitment1).toEqual(noteCommitment1);
       expect(joinSplitProof.noteCommitment2).toEqual(noteCommitment2);
@@ -189,6 +222,9 @@ describe('join_split_proof', () => {
       expect(joinSplitProof.bridgeId).toEqual(Buffer.alloc(32));
       expect(joinSplitProof.defiDepositValue).toEqual(Buffer.alloc(32));
       expect(joinSplitProof.defiRoot).toEqual(Buffer.alloc(32));
+      expect(joinSplitProof.propagatedInputIndex).toEqual(Buffer.alloc(32));
+      expect(joinSplitProof.backwardLink).toEqual(Buffer.alloc(32));
+      expect(joinSplitProof.allowChain).toEqual(Buffer.alloc(32));
     });
   });
 });

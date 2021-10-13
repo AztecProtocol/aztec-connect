@@ -1,10 +1,12 @@
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
+import { GrumpkinAddress } from '@aztec/barretenberg/address/grumpkin_address';
 import { DefiInteractionNote, TreeClaimNote } from '@aztec/barretenberg/note_algorithms';
 import { OffchainDefiClaimData } from '@aztec/barretenberg/offchain_tx_data';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
+import { randomBytes } from 'crypto';
 import { ClaimProof, ClaimProofRequest, ProofGenerator } from 'halloumi/proof_generator';
 import { ClaimDao } from './entity/claim';
 import { TxDao } from './entity/tx';
@@ -52,6 +54,7 @@ export class ClaimProofCreator {
         proofData,
         offchainTxData: offchainTxData.toBuffer(),
         nullifier1: proof.nullifier1,
+        nullifier2: proof.nullifier2,
         dataRootsIndex,
         created: new Date(),
       });
@@ -69,7 +72,7 @@ export class ClaimProofCreator {
     claim: ClaimDao,
     interactionNote: DefiInteractionNote,
   ) {
-    const { id, depositValue, bridgeId, partialState, interactionNonce, fee } = claim;
+    const { id, depositValue, bridgeId, partialState, inputNullifier, interactionNonce, fee } = claim;
     console.log(`Creating claim proof for note ${id}...`);
     const claimNoteIndex = id;
     const claimNotePath = await this.worldStateDb.getHashPath(RollupTreeId.DATA, BigInt(claimNoteIndex));
@@ -79,9 +82,12 @@ export class ClaimProofCreator {
       interactionNonce,
       fee,
       partialState,
+      inputNullifier,
     );
     const interactionNotePath = await this.worldStateDb.getHashPath(RollupTreeId.DEFI, BigInt(interactionNonce));
     const { outputValueA, outputValueB } = this.getOutputValues(claimNote, interactionNote);
+    const defiInteractionNoteDummyNullifierNonce = randomBytes(32); // WARNING: we might want to inject this randomness from a different part of the repo, and using a different random number generator?
+
     const claimProof = new ClaimProof(
       dataRoot,
       defiRoot,
@@ -90,6 +96,7 @@ export class ClaimProofCreator {
       claimNote,
       interactionNotePath,
       interactionNote,
+      defiInteractionNoteDummyNullifierNonce,
       outputValueA,
       outputValueB,
     );

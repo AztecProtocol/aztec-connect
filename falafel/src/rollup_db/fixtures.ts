@@ -78,6 +78,8 @@ export const randomClaim = () =>
     bridgeId: BridgeId.random().toBigInt(),
     depositValue: toBigIntBE(randomBytes(32)),
     partialState: randomBytes(32),
+    partialStateSecretEphPubKey: randomBytes(64),
+    inputNullifier: randomBytes(32),
     interactionNonce: randomBytes(4).readUInt32BE(0),
     fee: toBigIntBE(randomBytes(32)),
     created: new Date(),

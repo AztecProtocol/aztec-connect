@@ -11,4 +11,5 @@ export interface Note {
   nullified: boolean;
   owner: AccountId;
   creatorPubKey: Buffer; // x-coord of note creator public key. Optional, default value 0
+  inputNullifier: Buffer;
 }

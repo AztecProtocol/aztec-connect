@@ -19,6 +19,9 @@ export class DefiTxDao {
   @Column('text', { transformer: [bigintTransformer] })
   public depositValue!: bigint;
 
+  @Column()
+  public partialStateSecret!: Buffer;
+
   @Column('text', { transformer: [bigintTransformer] })
   public txFee!: bigint;
 

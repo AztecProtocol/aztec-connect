@@ -25,7 +25,7 @@ export class DefiDepositProofCreator {
     grumpkin: Grumpkin,
     db: Database,
   ) {
-    this.txFactory = new JoinSplitTxFactory(worldState, grumpkin, db);
+    this.txFactory = new JoinSplitTxFactory(noteAlgos, worldState, grumpkin, db);
   }
 
   public async createProof(
@@ -34,19 +34,25 @@ export class DefiDepositProofCreator {
     depositValue: bigint,
     txFee: bigint,
     signer: Signer,
+    propagatedInputIndex?: number,
+    backwardLink?: Buffer,
+    allowChain?: number,
   ) {
-    const { tx, viewingKeys } = await this.txFactory.createJoinSplitTx(
+    const { tx, viewingKeys, partialStateSecretEphPubKey } = await this.txFactory.createJoinSplitTx(
       userState,
-      BigInt(0),
-      BigInt(0),
-      depositValue + txFee,
-      BigInt(0),
-      BigInt(0),
-      depositValue,
+      BigInt(0), // publicInput
+      BigInt(0), // publicOutput
+      depositValue + txFee, // privateInput
+      BigInt(0), // recipientPrivateOutput
+      BigInt(0), // senderPrivateOutput
+      depositValue, // defiDepositValue
       bridgeId.inputAssetId,
       signer.getPublicKey(),
-      undefined,
-      undefined,
+      undefined, // newNoteOwner
+      undefined, // publicOwner
+      propagatedInputIndex,
+      backwardLink,
+      allowChain,
       bridgeId,
     );
     const signingData = await this.prover.computeSigningData(tx);
@@ -61,9 +67,19 @@ export class DefiDepositProofCreator {
     const { txId } = new ProofData(proofData);
     const txHash = new TxHash(txId);
     const userId = userState.getUser().id;
-    const userTx = new UserDefiTx(txHash, userId, bridgeId, depositValue, txFee, new Date());
-    const partialState = this.noteAlgos.valueNotePartialCommitment(tx.claimNote.noteSecret, userId);
-    const offchainTxData = new OffchainDefiDepositData(bridgeId, partialState, depositValue, txFee, viewingKeys[0]);
+    const {
+      claimNote: { partialStateSecret },
+    } = tx;
+    const userTx = new UserDefiTx(txHash, userId, bridgeId, depositValue, partialStateSecret, txFee, new Date());
+    const partialState = this.noteAlgos.valueNotePartialCommitment(partialStateSecret, userId);
+    const offchainTxData = new OffchainDefiDepositData(
+      bridgeId,
+      partialState,
+      partialStateSecretEphPubKey!,
+      depositValue,
+      txFee,
+      viewingKeys[0], // contains [value, asset_id, nonce, creatorPubKey] of the change note (returned to the sender)
+    );
 
     return new DefiProofOutput(userTx, proofData, offchainTxData);
   }

@@ -4,6 +4,13 @@ import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { AccountId } from '../user';
 
+/**
+ * Comprises data which will be stored in the user's db.
+ * Note: we must be able to restore output notes (etc.) without relying on the db
+ * (since local browser data might be cleared, or the user might login from other devices),
+ * so crucial data which enables such restoration must not be solely stored here;
+ * it must also be contained in either the viewingKey or the offchainTxData.
+ */
 export class UserJoinSplitTx {
   public readonly proofId: ProofId.DEPOSIT | ProofId.WITHDRAW | ProofId.SEND;
 

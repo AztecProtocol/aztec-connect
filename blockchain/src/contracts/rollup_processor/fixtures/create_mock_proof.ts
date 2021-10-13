@@ -147,7 +147,14 @@ export const createDefiDepositProof = (bridgeId: BridgeId, inputValue: bigint, t
   const totalTxFees: bigint[] = [];
   totalTxFees[bridgeId.inputAssetId] = txFee;
 
-  const offchainTxData = new OffchainDefiDepositData(bridgeId, randomBytes(32), inputValue, txFee, ViewingKey.random());
+  const offchainTxData = new OffchainDefiDepositData(
+    bridgeId,
+    randomBytes(32),
+    new GrumpkinAddress(randomBytes(64)),
+    inputValue,
+    txFee,
+    ViewingKey.random(),
+  );
 
   return new InnerProofOutput([innerProof], [], totalTxFees, [offchainTxData.toBuffer()]);
 };
@@ -158,7 +165,7 @@ export const createDefiClaimProof = (bridgeId: BridgeId, txFee = 0n) => {
     randomLeafHash(),
     randomLeafHash(),
     randomNullifier(),
-    Buffer.alloc(32),
+    randomNullifier(),
     Buffer.alloc(32),
     Buffer.alloc(32),
     Buffer.alloc(32),

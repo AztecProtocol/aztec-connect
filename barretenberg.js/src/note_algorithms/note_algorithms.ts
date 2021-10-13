@@ -11,15 +11,15 @@ import { GrumpkinAddress } from '../address';
 export class NoteAlgorithms {
   constructor(private wasm: BarretenbergWasm, private worker: BarretenbergWorker = wasm as any) {}
 
-  public valueNoteNullifier(noteCommitment: Buffer, index: number, accountPrivateKey: Buffer, real = true) {
+  public valueNoteNullifier(noteCommitment: Buffer, accountPrivateKey: Buffer, real = true) {
     this.wasm.transferToHeap(noteCommitment, 0);
     this.wasm.transferToHeap(accountPrivateKey, 64);
-    this.wasm.call('notes__value_note_nullifier', 0, 64, index, real, 0);
+    this.wasm.call('notes__value_note_nullifier', 0, 64, real, 0);
     return Buffer.from(this.wasm.sliceMemory(0, 32));
   }
 
-  public valueNoteNullifierBigInt(noteCommitment: Buffer, index: number, accountPrivateKey: Buffer, real = true) {
-    return toBigIntBE(this.valueNoteNullifier(noteCommitment, index, accountPrivateKey, real));
+  public valueNoteNullifierBigInt(noteCommitment: Buffer, accountPrivateKey: Buffer, real = true) {
+    return toBigIntBE(this.valueNoteNullifier(noteCommitment, accountPrivateKey, real));
   }
 
   public valueNoteCommitment(note: TreeNote) {
@@ -62,9 +62,9 @@ export class NoteAlgorithms {
     return this.claimNoteCompletePartialCommitment(partial, note.defiInteractionNonce, note.fee);
   }
 
-  public claimNoteNullifier(noteCommitment: Buffer, index: number) {
+  public claimNoteNullifier(noteCommitment: Buffer) {
     this.wasm.transferToHeap(noteCommitment, 0);
-    this.wasm.call('notes__claim_note_nullifier', 0, index, 0);
+    this.wasm.call('notes__claim_note_nullifier', 0, 0);
     return Buffer.from(this.wasm.sliceMemory(0, 32));
   }
 

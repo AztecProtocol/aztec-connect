@@ -4,6 +4,7 @@ import { Grumpkin } from '../ecc/grumpkin';
 import { batchDecryptNotes, NoteAlgorithms, recoverTreeNotes, TreeNote } from '../note_algorithms';
 import { ViewingKey } from '../viewing_key';
 import { BarretenbergWasm } from '../wasm';
+import { numToUInt32BE } from '../serialize';
 
 describe('tree_note', () => {
   let grumpkin: Grumpkin;
@@ -26,18 +27,29 @@ describe('tree_note', () => {
 
     const numNotes = 8;
     const encryptedNotes: ViewingKey[] = [];
+    const inputNullifiers: Buffer[] = [];
     const notes: TreeNote[] = [];
     const noteCommitments: Buffer[] = [];
     for (let i = 0; i < numNotes; ++i) {
       const ephPrivKey = grumpkin.getRandomFr();
-      const note = TreeNote.createFromEphPriv(receiver.pubKey, BigInt(100 + i), 0, 1, ephPrivKey, grumpkin);
+      const inputNullifier = numToUInt32BE(i, 32);
+      inputNullifiers.push(inputNullifier);
+      const note = TreeNote.createFromEphPriv(
+        receiver.pubKey,
+        BigInt(100 + i),
+        0,
+        1,
+        inputNullifier,
+        ephPrivKey,
+        grumpkin,
+      );
       notes.push(note);
-      encryptedNotes.push(note.getViewingKey(ephPrivKey, grumpkin));
+      encryptedNotes.push(note.createViewingKey(ephPrivKey, grumpkin));
       noteCommitments.push(noteAlgos.valueNoteCommitment(note));
     }
 
     const keyBuf = Buffer.concat(encryptedNotes.map(vk => vk.toBuffer()));
-    const decryptedNotes = await batchDecryptNotes(keyBuf, receiver.privKey, noteAlgos, grumpkin);
+    const decryptedNotes = await batchDecryptNotes(keyBuf, inputNullifiers, receiver.privKey, noteAlgos, grumpkin);
     const recovered = recoverTreeNotes(decryptedNotes, noteCommitments, receiver.privKey, grumpkin, noteAlgos);
     for (let i = 0; i < numNotes; ++i) {
       expect(recovered[i]).toEqual(notes[i]);
@@ -50,19 +62,22 @@ describe('tree_note', () => {
 
     const numNotes = 8;
     const encryptedNotes: ViewingKey[] = [];
+    const inputNullifiers: Buffer[] = [];
     const notes: TreeNote[] = [];
     const noteCommitments: Buffer[] = [];
     for (let i = 0; i < numNotes; ++i) {
       const owner = i % 2 ? stranger : receiver;
       const ephPrivKey = grumpkin.getRandomFr();
-      const note = TreeNote.createFromEphPriv(owner.pubKey, BigInt(200), 0, 1, ephPrivKey, grumpkin);
+      const inputNullifier = numToUInt32BE(i, 32);
+      inputNullifiers.push(inputNullifier);
+      const note = TreeNote.createFromEphPriv(owner.pubKey, BigInt(200), 0, 1, inputNullifier, ephPrivKey, grumpkin);
       notes.push(note);
-      encryptedNotes.push(note.getViewingKey(ephPrivKey, grumpkin));
+      encryptedNotes.push(note.createViewingKey(ephPrivKey, grumpkin));
       noteCommitments.push(noteAlgos.valueNoteCommitment(note));
     }
 
     const keyBuf = Buffer.concat(encryptedNotes.map(vk => vk.toBuffer()));
-    const decryptedNotes = await batchDecryptNotes(keyBuf, receiver.privKey, noteAlgos, grumpkin);
+    const decryptedNotes = await batchDecryptNotes(keyBuf, inputNullifiers, receiver.privKey, noteAlgos, grumpkin);
     const recovered = recoverTreeNotes(decryptedNotes, noteCommitments, receiver.privKey, grumpkin, noteAlgos);
     for (let i = 0; i < numNotes; ++i) {
       const note = recovered[i];
@@ -79,19 +94,31 @@ describe('tree_note', () => {
 
     const numNotes = 8;
     const encryptedNotes: ViewingKey[] = [];
+    const inputNullifiers: Buffer[] = [];
     const notes: TreeNote[] = [];
     const noteCommitments: Buffer[] = [];
     for (let i = 0; i < numNotes; ++i) {
       const noteVersion = i % 4 ? 0 : 1;
       const ephPrivKey = grumpkin.getRandomFr();
-      const note = TreeNote.createFromEphPriv(receiver.pubKey, BigInt(200), 0, 1, ephPrivKey, grumpkin, noteVersion);
+      const inputNullifier = numToUInt32BE(i, 32);
+      inputNullifiers.push(inputNullifier);
+      const note = TreeNote.createFromEphPriv(
+        receiver.pubKey,
+        BigInt(200),
+        0,
+        1,
+        inputNullifier,
+        ephPrivKey,
+        grumpkin,
+        noteVersion,
+      );
       notes.push(note);
-      encryptedNotes.push(note.getViewingKey(ephPrivKey, grumpkin));
+      encryptedNotes.push(note.createViewingKey(ephPrivKey, grumpkin));
       noteCommitments.push(noteAlgos.valueNoteCommitment(note));
     }
 
     const keyBuf = Buffer.concat(encryptedNotes.map(vk => vk.toBuffer()));
-    const decryptedNotes = await batchDecryptNotes(keyBuf, receiver.privKey, noteAlgos, grumpkin);
+    const decryptedNotes = await batchDecryptNotes(keyBuf, inputNullifiers, receiver.privKey, noteAlgos, grumpkin);
     const recovered = recoverTreeNotes(decryptedNotes, noteCommitments, receiver.privKey, grumpkin, noteAlgos);
     for (let i = 0; i < numNotes; ++i) {
       expect(recovered[i]).toEqual(notes[i]);
@@ -103,18 +130,29 @@ describe('tree_note', () => {
 
     const numNotes = 4;
     const encryptedNotes: ViewingKey[] = [];
+    const inputNullifiers: Buffer[] = [];
     const notes: TreeNote[] = [];
     const noteCommitments: Buffer[] = [];
     for (let i = 0; i < numNotes; ++i) {
       const ephPrivKey = grumpkin.getRandomFr();
-      const note = TreeNote.createFromEphPriv(receiver.pubKey, BigInt(100 + i), 0, 1, ephPrivKey, grumpkin);
+      const inputNullifier = numToUInt32BE(i, 32);
+      inputNullifiers.push(inputNullifier);
+      const note = TreeNote.createFromEphPriv(
+        receiver.pubKey,
+        BigInt(100 + i),
+        0,
+        1,
+        inputNullifier,
+        ephPrivKey,
+        grumpkin,
+      );
       notes.push(note);
-      encryptedNotes.push(note.getViewingKey(ephPrivKey, grumpkin));
+      encryptedNotes.push(note.createViewingKey(ephPrivKey, grumpkin));
       noteCommitments.push(noteAlgos.valueNoteCommitment(note));
     }
 
     const keyBuf = Buffer.concat(encryptedNotes.map(vk => vk.toBuffer()));
-    const decryptedNotes = await batchDecryptNotes(keyBuf, receiver.privKey, noteAlgos, grumpkin);
+    const decryptedNotes = await batchDecryptNotes(keyBuf, inputNullifiers, receiver.privKey, noteAlgos, grumpkin);
     const fakePrivKey = randomBytes(32);
     const recovered = recoverTreeNotes(decryptedNotes, noteCommitments, fakePrivKey, grumpkin, noteAlgos);
     for (let i = 0; i < numNotes; ++i) {
