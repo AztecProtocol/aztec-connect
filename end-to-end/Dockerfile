@@ -14,5 +14,5 @@ COPY --from=2 /usr/src/blockchain/dest /usr/src/blockchain/dest
 COPY --from=3 /usr/src/sriracha/dest /usr/src/sriracha/dest
 WORKDIR /usr/src/end-to-end
 COPY . .
-RUN yarn install
+RUN yarn install --frozen-lockfile
 CMD ["yarn", "test"]
