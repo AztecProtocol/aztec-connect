@@ -679,6 +679,14 @@ export class UserSession extends EventEmitter {
     this.toStep(LoginStep.MIGRATE_ACCOUNT);
 
     try {
+      await this.confirmAccountKey();
+    } catch (e) {
+      this.emitSystemMessage(e.message, MessageType.ERROR);
+      await this.destroy();
+      return;
+    }
+
+    try {
       // Add the old account to the sdk.
       const nonce = 1;
       const prevUserId = new AccountId(this.keyVaultV0.accountPublicKey, nonce);
@@ -1217,6 +1225,7 @@ export class UserSession extends EventEmitter {
   };
 
   private async createAccountProof() {
+    await this.confirmAccountKey();
     const { accountPublicKey, accountPrivateKey } = this.keyVault;
     const nonce = 0;
     const userId = new AccountId(accountPublicKey, nonce);
@@ -1233,6 +1242,42 @@ export class UserSession extends EventEmitter {
       throw new Error('Failed to create account proof.');
     } finally {
       await this.accountUtils.removeUser(userId);
+    }
+  }
+
+  private async confirmAccountKey() {
+    let isSameKey = false;
+    try {
+      const { signerAddress, accountPublicKey } = this.keyVault;
+      while (!this.provider!.account?.equals(signerAddress)) {
+        this.emitSystemMessage(
+          `Please switch your wallet's account to ${signerAddress
+            .toString()
+            .slice(0, 6)}...${signerAddress.toString().slice(-4)}.`,
+          MessageType.WARNING,
+        );
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        if (this.destroyed) {
+          throw new Error('Session destroyed.');
+        }
+      }
+
+      this.emitSystemMessage(
+        'Please sign the message in your wallet to create your Aztec Privacy Key...',
+        MessageType.WARNING,
+      );
+      const newKeyVault = await KeyVault.create(this.provider!, this.sdk);
+      isSameKey = accountPublicKey.equals(newKeyVault.accountPublicKey);
+    } catch (e) {
+      debug(e);
+      throw new Error('Failed to create Aztec Privacy Key.');
+    } finally {
+      this.clearSystemMessage();
+    }
+    if (!isSameKey) {
+      throw new Error(
+        `Your wallet doesn't generate deterministic ECDSA signatures. Please retry creating an account with a wallet that does.`,
+      );
     }
   }
 
