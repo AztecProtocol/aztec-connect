@@ -52,7 +52,7 @@ export class TxResolver {
   @FieldResolver()
   async assetId(@Root() { proofData }: TxDao) {
     const joinSplit = new ProofData(proofData);
-    return joinSplit.assetId;
+    return joinSplit.publicAssetId;
   }
 
   @FieldResolver()

@@ -112,7 +112,9 @@ export class TxReceiver {
   }
 
   private async validateJoinSplitTx(proofData: ProofData, txType: TxType, depositSignature?: Buffer) {
-    const { assetId, txId, txFeeAssetId, txFee, publicOwner, publicValue } = new JoinSplitProofData(proofData);
+    const { publicAssetId: assetId, txId, txFeeAssetId, txFee, publicOwner, publicValue } = new JoinSplitProofData(
+      proofData,
+    );
 
     const minFee = this.txFeeResolver.getMinTxFee(txFeeAssetId, txType);
     if (txFee < minFee) {
@@ -144,7 +146,7 @@ export class TxReceiver {
       const total =
         (await this.rollupDb.getUnsettledJoinSplitTxs())
           .map(tx => JoinSplitProofData.fromBuffer(tx.proofData))
-          .filter(proofData => proofData.publicOwner.equals(publicOwner) && proofData.assetId === assetId)
+          .filter(proofData => proofData.publicOwner.equals(publicOwner) && proofData.publicAssetId === assetId)
           .reduce((acc, proofData) => acc + proofData.publicValue, 0n) + publicValue;
 
       const pendingDeposit = await this.blockchain.getUserPendingDeposit(assetId, publicOwner);
@@ -164,11 +166,7 @@ export class TxReceiver {
   private async validateDefiBridgeTx(proofData: ProofData, txType: TxType) {
     const { bridgeId, txFeeAssetId, txFee } = new DefiDepositProofData(proofData);
 
-    // TODO - Use a whitelist.
-    const remoteBridgeId = await this.blockchain.getBridgeId(bridgeId.address);
-    if (!bridgeId.equals(remoteBridgeId)) {
-      throw new Error('Invalid bridge id.');
-    }
+    // TODO - Use a whitelist for bridges.
 
     const minFee = this.txFeeResolver.getMinTxFee(txFeeAssetId, txType);
     if (txFee < minFee) {

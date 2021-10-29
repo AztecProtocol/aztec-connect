@@ -334,20 +334,23 @@ contract Decoder {
         pure
         returns (
             uint256 bridgeId,
-            address bridgeAddress,
-            uint256[3] memory assetIds,
-            uint32 numOutputAssets,
-            uint256 totalInputValue
+            uint256[4] memory assetIds,
+            uint32 bitConfig,
+            uint256 totalInputValue,
+            uint32 openingNonce,
+            uint64 auxData
         )
     {
         assembly {
             let dataStart := add(add(proofData, bridgeIdsOffset), mul(0x20, idx))
             bridgeId := mload(dataStart)
-            bridgeAddress := and(bridgeId, 0xffffffffffffffffffffffffffffffffffffffff)
-            numOutputAssets := and(shr(160, bridgeId), 3)
-            mstore(assetIds, and(shr(162, bridgeId), 0x3fffffff))
-            mstore(add(assetIds, 0x20), and(shr(192, bridgeId), 0x3fffffff))
-            mstore(add(assetIds, 0x40), and(shr(222, bridgeId), 0x3fffffff))
+            mstore(assetIds, and(bridgeId, 0xffffffff))
+            mstore(add(assetIds, 0x20), and(shr(32, bridgeId), 0x3fffffff))
+            mstore(add(assetIds, 0x40), and(shr(62, bridgeId), 0x3fffffff))
+            mstore(add(assetIds, 0x60), and(shr(92, bridgeId), 0x3fffffff))
+            openingNonce := and(shr(122, bridgeId), 0xffffffff)
+            bitConfig := and(shr(154, bridgeId), 0xffffffff)
+            auxData := and(shr(186, bridgeId), 0xffffffffffffffff)
             totalInputValue := mload(add(dataStart, mul(0x20, numberOfBridgeCalls)))
         }
     }

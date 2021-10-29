@@ -6,15 +6,13 @@ import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 import {IDefiBridge} from '../interfaces/IDefiBridge.sol';
 
+import 'hardhat/console.sol';
+
 /**
  * @dev Warning: do not deploy in real environments, for testing only
  */
 contract MockDefiBridge is IDefiBridge {
     address public immutable rollupProcessor;
-    uint32 public immutable numOutputAssets;
-    address public immutable inputAsset;
-    address public immutable outputAssetA;
-    address public immutable outputAssetB;
 
     bool immutable canConvert;
     bool immutable isAsync;
@@ -24,16 +22,16 @@ contract MockDefiBridge is IDefiBridge {
     uint256 immutable returnValueB;
     uint256 immutable returnInputValue;
 
+    mapping(uint256 => uint256) interestRates;
+
     mapping(uint256 => uint256) interactions;
+
+    enum AUX_DATA {NADA, OPEN_LOAN, CLOSE_LOAN, OPEN_LIQUIDITY_PROVIDER, CLOSE_LIQUIDITY_PROVIDER}
 
     receive() external payable {}
 
     constructor(
         address _rollupProcessor,
-        uint32 _numOutputAssets,
-        address _inputAsset,
-        address _outputAssetA,
-        address _outputAssetB,
         bool _canConvert,
         uint256 _outputValueA,
         uint256 _outputValueB,
@@ -43,10 +41,6 @@ contract MockDefiBridge is IDefiBridge {
         bool _isAsync
     ) public {
         rollupProcessor = _rollupProcessor;
-        numOutputAssets = _numOutputAssets;
-        inputAsset = _inputAsset;
-        outputAssetA = _outputAssetA;
-        outputAssetB = _outputAssetB;
         canConvert = _canConvert;
         outputValueA = _outputValueA;
         outputValueB = _outputValueB;
@@ -56,21 +50,16 @@ contract MockDefiBridge is IDefiBridge {
         isAsync = _isAsync;
     }
 
-    function getInfo()
-        external
-        view
-        override
-        returns (
-            uint32,
-            address,
-            address,
-            address
-        )
-    {
-        return (numOutputAssets, inputAsset, outputAssetA, outputAssetB);
-    }
-
-    function convert(uint256 inputValue, uint256 interactionNonce)
+    function convert(
+        address inputAsset,
+        address outputAssetA,
+        address outputAssetB,
+        uint256 inputValue,
+        uint256 interactionNonce,
+        uint32 openingNonce,
+        uint32 bitConfig,
+        uint64 auxData
+    )
         external
         payable
         override
@@ -82,10 +71,16 @@ contract MockDefiBridge is IDefiBridge {
     {
         require(canConvert);
 
+        uint256 modifiedReturnValueA = returnValueA;
+        if (auxData == uint32(AUX_DATA.CLOSE_LOAN) && openingNonce > 0) {
+            // get interest rate from the mapping interestRates
+            modifiedReturnValueA -= (returnValueA * interestRates[openingNonce]) / 100;
+        }
+
         if (!isAsync) {
             transferTokens(inputAsset, returnInputValue);
-            transferTokens(outputAssetA, returnValueA);
-            if (numOutputAssets == 2) {
+            transferTokens(outputAssetA, modifiedReturnValueA);
+            if ((bitConfig & 1) == 1) {
                 transferTokens(outputAssetB, returnValueB);
             }
         }
@@ -94,18 +89,28 @@ contract MockDefiBridge is IDefiBridge {
         return (0, 0, isAsync);
     }
 
+    function recordInterestRate(uint256 interactionNonce, uint256 rate) external {
+        interestRates[interactionNonce] = rate;
+    }
+
     function canFinalise(
         uint256 /*interactionNonce*/
     ) external view override returns (bool) {
         return true;
     }
 
-    function finalise(uint256 interactionNonce) external payable override {
+    function finalise(
+        address inputAsset,
+        address outputAssetA,
+        address outputAssetB,
+        uint256 interactionNonce,
+        uint32 bitConfig
+    ) external payable override {
         uint256 msgCallValue = 0;
 
         msgCallValue += approveTransfer(inputAsset, returnInputValue);
         msgCallValue += approveTransfer(outputAssetA, returnValueA);
-        if (numOutputAssets == 2) {
+        if ((bitConfig & 1) == 1) {
             msgCallValue += approveTransfer(outputAssetB, returnValueB);
         }
 

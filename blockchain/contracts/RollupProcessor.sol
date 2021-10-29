@@ -23,8 +23,7 @@ import {Error} from './Error.sol';
 contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     using SafeMath for uint256;
 
-    bytes4 private constant GET_INFO_SELECTOR = 0x5a9b0b89; // bytes4(keccak256('getInfo()'));
-    bytes4 private constant DEFI_BRIDGE_PROXY_CONVERT_SELECTOR = 0xc2a8a5be; // bytes4(keccak256('convert(address,address,address,address,uint256,uint256,uint256)'));
+    bytes4 private constant DEFI_BRIDGE_PROXY_CONVERT_SELECTOR = 0xb5f08153; // bytes4(keccak256('convert(address,address,address,address,uint32,uint256,uint256,uint256)'));
     bytes4 private constant TRANSFER_FROM_SELECTOR = 0x23b872dd; // bytes4(keccak256('transferFrom(address,address,uint256)'));
     bytes32 private constant INIT_DATA_ROOT = 0x11977941a807ca96cf02d1b15830a53296170bf8ac7d96e5cded7615d18ec607;
     bytes32 private constant INIT_NULL_ROOT = 0x1b831fad9b940f7d02feae1e9824c963ae45b3223e721138c6f73261e690c96a;
@@ -60,6 +59,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     event Withdraw(uint256 assetId, address withdrawAddress, uint256 withdrawValue);
     event WithdrawError(bytes errorReason);
     event AssetAdded(uint256 indexed assetId, address indexed assetAddress);
+    event BridgeAdded(uint256 indexed bridgeAddressId, address indexed bridgeAddress);
     event RollupProviderUpdated(address indexed providerAddress, bool valid);
     event VerifierUpdated(address indexed verifierAddress);
 
@@ -69,6 +69,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     // Mapping which maps an asset address to a bool, determining whether it supports
     // permit as according to ERC-2612
     mapping(address => bool) assetPermitSupport;
+
+    // Array of supported bridge contract addresses (similar to assetIds)
+    address[] public supportedBridges;
 
     // Mapping from assetId to mapping of userAddress to public userBalance stored on this contract
     mapping(uint256 => mapping(address => uint256)) public userPendingDeposits;
@@ -257,6 +260,21 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     }
 
     /**
+     * @dev Get the bridge contract address for a given bridgeAddressId
+     * @param bridgeAddressId - identifier used to denote a particular bridge
+     */
+    function getSupportedBridge(uint256 bridgeAddressId) public view override returns (address) {
+        return supportedBridges[bridgeAddressId - 1];
+    }
+
+    /**
+     * @dev Get the addresses of all supported bridge contracts
+     */
+    function getSupportedBridges() external view override returns (address[] memory) {
+        return supportedBridges;
+    }
+
+    /**
      * @dev Get the addresses of all supported ERC20 tokens
      */
     function getSupportedAssets() external view override returns (address[] memory) {
@@ -383,6 +401,21 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
 
         uint256 assetId = supportedAssets.length;
         emit AssetAdded(assetId, linkedToken);
+    }
+
+    /**
+     * @dev Set the mapping between an bridge contract id and the address of the linked bridge contract.
+     * Protected by onlyOwner
+     * @param linkedBridge - address of the bridge contract
+     */
+    function setSupportedBridge(address linkedBridge) external override onlyOwner {
+        require(linkedBridge != address(0x0), 'Rollup Processor: ZERO_ADDRESS');
+
+        supportedBridges.push(linkedBridge);
+
+        uint256 bridgeAddressId = supportedBridges.length;
+
+        emit BridgeAdded(bridgeAddressId, linkedBridge);
     }
 
     /**
@@ -807,8 +840,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
      */
     function processDefiBridges(bytes memory proofData) internal {
         // pop off 4 defi interactions from defiInteractionHashes && SHA2 them
-        bytes32 expectedDefiInteractionHash;
         {
+            bytes32 expectedDefiInteractionHash;
             assembly {
                 // Compute the offset we use to index `defiInteractionHashes[]`
                 // If defiInteractionHashes.length > 4, offset = defiInteractionhashes.length - 4
@@ -859,16 +892,17 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                 let newState := or(oldState, shl(DEFIINTERACTIONHASHES_BIT_OFFSET, offset))
                 sstore(rollupState_slot, newState)
             }
+        
+
+            bytes32 prevDefiInteractionHash = extractPrevDefiInteractionHash(proofData, rollupHeaderInputLength);
+
+            // Validate the compupted interactionHash matches the value in the rollup proof!
+            require(
+                prevDefiInteractionHash == expectedDefiInteractionHash,
+                'Rollup Processor: INCORRECT_PREV_DEFI_INTERACTION_HASH'
+            );
+
         }
-
-        bytes32 prevDefiInteractionHash = extractPrevDefiInteractionHash(proofData, rollupHeaderInputLength);
-
-        // Validate the computed interactionHash matches the value in the rollup proof!
-        require(
-            prevDefiInteractionHash == expectedDefiInteractionHash,
-            'Rollup Processor: INCORRECT_PREV_DEFI_INTERACTION_HASH'
-        );
-
         uint256 interactionNonce = getRollupId(proofData) * numberOfBridgeCalls;
 
         /**
@@ -911,20 +945,17 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                     revert(x, 0x84)
                 }
 
-                // extract numOutputAssets, inputAssetId and two outputAssetIds from bridgeId
-                let numOutputAssets := and(shr(160, bridgeId), 3)
-                let assetIdA := and(shr(162, bridgeId), 0x3fffffff)
-                let assetIdB := and(shr(192, bridgeId), 0x3fffffff)
-                let assetIdC := mul(eq(numOutputAssets, 2), and(shr(222, bridgeId), 0x3fffffff))
+                // extract bitConfig, inputAssetId and two outputAssetIds from bridgeId
+                let bridgeAddressId := and(bridgeId, 0xffffffff)
+                let bitConfig := and(shr(154, bridgeId), 0xff)
+                let assetIdA := and(shr(32, bridgeId), 0x3fffffff)
+                let assetIdB := and(shr(62, bridgeId), 0x3fffffff)
+                let assetIdC := mul(and(bitConfig, 1), and(shr(92, bridgeId), 0x3fffffff))
 
                 // Validate bridgeId is correctly formatted
-                // 1. numOutputAssets must be > 0
-                // 2. if numOutputAssets == 2, both output asset ids cannot match one another
+                // i.e. if secondAssetValid is 1, both output asset ids cannot match one another
                 {
-                    let validBridgeId := and(
-                        gt(numOutputAssets, 0),
-                        iszero(and(eq(assetIdB, assetIdC), eq(numOutputAssets, 2)))
-                    )
+                    let validBridgeId := iszero(and(eq(assetIdB, assetIdC), and(bitConfig, 1)))
                     if iszero(validBridgeId)
                     {
                         mstore(0x00, 0x08c379a000000000000000000000000000000000000000000000000000000000)
@@ -943,7 +974,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                 if sub(assetIdA, ethAssetId)
                 {
                     assetIdA := sload(add(assetSlot, sub(assetIdA, 0x01)))
-                          if iszero(assetIdA)
+                    if iszero(assetIdA)
                     {
                         revert(0x00, 0x00)
                     }
@@ -951,7 +982,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                 if sub(assetIdB, ethAssetId)
                 {
                     assetIdB := sload(add(assetSlot, sub(assetIdB, 0x01)))
-                  if iszero(assetIdB)
+                    if iszero(assetIdB)
                     {
                         revert(0x00, 0x00)
                     }
@@ -965,27 +996,39 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                     }
                 }
 
-                // call to getInfo(), check response matches interaction data.
-                let bridgeAddress := and(bridgeId, 0xffffffffffffffffffffffffffffffffffffffff)
+                // convert the bridgeAddressId into contract address
+                mstore(0x00, supportedBridges_slot)
+                let bridgeSlot := keccak256(0x00, 0x20)
+
+                if sub(bridgeAddressId, ethAssetId)
+                {
+                    bridgeAddressId := sload(add(bridgeSlot, sub(bridgeAddressId, 0x01)))
+                    if iszero(bridgeAddressId)
+                    {
+                        revert(0x00, 0x00)
+                    }
+                }
+
+                // call Bridge.convert(assetIdA, assetIdB, assetIdC, secondAssetValid, totalInputValue, interactionNonce)
                 let mPtr := mload(0x40)
 
                 let outputValueA := 0
                 let outputValueB := 0
                 let isAsync
-
-                // call Bridge.convert(assetIdA, assetIdB, assetIdC, numOutputAssets, totalInputValue, interactionNonce)
+        
                 mstore(mPtr, DEFI_BRIDGE_PROXY_CONVERT_SELECTOR)
-                mstore(add(mPtr, 0x4), bridgeAddress)
+                mstore(add(mPtr, 0x4), bridgeAddressId)
                 mstore(add(mPtr, 0x24), assetIdA)
                 mstore(add(mPtr, 0x44), assetIdB)
                 mstore(add(mPtr, 0x64), assetIdC)
-                mstore(add(mPtr, 0x84), numOutputAssets)
+                mstore(add(mPtr, 0x84), and(shr(122, bridgeId), 0xffffffff)) // openingNonce
                 mstore(add(mPtr, 0xa4), totalInputValue)
                 mstore(add(mPtr, 0xc4), interactionNonce)
-                let success := delegatecall(sload(gasSentToBridgeProxy_slot), sload(defiBridgeProxy_slot), mPtr, 0xe4, mPtr, 0x60)
+                mstore(add(mPtr, 0xe4), and(shr(154, bridgeId), 0xffffffffffffffffffffffff)) // (auxData || bitConfig)
+                let success := delegatecall(sload(gasSentToBridgeProxy_slot), sload(defiBridgeProxy_slot), mPtr, 0x114, mPtr, 0x60)
                 if success {
                     outputValueA := mload(mPtr)
-                    outputValueB := mul(mload(add(mPtr, 0x20)), gt(numOutputAssets, 1))
+                    outputValueB := mul(mload(add(mPtr, 0x20)), and(bitConfig, 1))
                     isAsync := mload(add(mPtr, 0x40))
                 }
 
@@ -1137,8 +1180,22 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             // setting bridgeId to 0 is enough to cause future calls with this interaction nonce to fail
             sstore(interactionPtr, 0x00)
 
-            let bridgeAddress := and(bridgeId, 0xffffffffffffffffffffffffffffffffffffffff)
-            if iszero(eq(bridgeAddress, caller())) {
+            let bridgeAddressId := and(bridgeId, 0xffffffff)
+
+            // convert the bridgeAddressId into contract address
+            mstore(0x00, supportedBridges_slot)
+            let bridgeSlot := keccak256(0x00, 0x20)
+
+            if sub(bridgeAddressId, ethAssetId)
+            {
+                bridgeAddressId := sload(add(bridgeSlot, sub(bridgeAddressId, 0x01)))
+                if iszero(bridgeAddressId)
+                {
+                    revert(0x00, 0x00)
+                }
+            }
+
+            if iszero(eq(bridgeAddressId, caller())) {
                 let mPtr := mload(0x40)
                 mstore(mPtr, 0x08c379a000000000000000000000000000000000000000000000000000000000)
                 mstore(add(mPtr, 0x04), 0x20)
@@ -1159,7 +1216,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                 let supportedAssetsSlotBase := keccak256(0x00, 0x20)
                 let tokenAddress := sload(add(supportedAssetsSlotBase, sub(assetId, 0x01)))
 
-                // call token.transferFrom(bridgeAddress, this, outputValue)
+                // call token.transferFrom(bridgeAddressId, this, outputValue)
                 let mPtr := mload(0x40)
                 mstore(mPtr, TRANSFER_FROM_SELECTOR)
                 mstore(add(mPtr, 0x04), caller())
@@ -1168,22 +1225,22 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                 success := call(gas(), tokenAddress, 0, mPtr, 0x64, 0x00, 0x20)
             }
 
-            let numOutputAssets := and(shr(160, bridgeId), 3)
-            let success := or(eq(numOutputAssets, 2), eq(outputValueB, 0))
+            let secondAssetValid := and(shr(154, bridgeId), 1)
+            let success := or(eq(secondAssetValid, 1), eq(outputValueB, 0))
 
             let hasOutputValueA := gt(outputValueA, 0)
             let hasOutputValueB := gt(outputValueB, 0)
             result := or(hasOutputValueA, hasOutputValueB)
             if iszero(result) {
-                let inputAssetId := and(shr(162, bridgeId), 0x3fffffff)
+                let inputAssetId := and(shr(32, bridgeId), 0x3fffffff)
                 success := transferTokens(inputAssetId, totalInputValue)
             }
             if and(success, hasOutputValueA) {
-                let assetIdA := and(shr(192, bridgeId), 0x3fffffff)
+                let assetIdA := and(shr(62, bridgeId), 0x3fffffff)
                 success := transferTokens(assetIdA, outputValueA)
             }
             if and(success, hasOutputValueB) {
-                let assetIdB := and(shr(222, bridgeId), 0x3fffffff)
+                let assetIdB := and(shr(92, bridgeId), 0x3fffffff)
                 success := transferTokens(assetIdB, outputValueB)
             }
             if iszero(success) {

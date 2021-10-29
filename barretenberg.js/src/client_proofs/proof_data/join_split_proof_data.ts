@@ -14,8 +14,8 @@ export class JoinSplitProofData {
     return this.proofData.txId;
   }
 
-  get assetId(): AssetId {
-    return this.proofData.assetId.readUInt32BE(28);
+  get publicAssetId(): AssetId {
+    return this.proofData.publicAssetId.readUInt32BE(28);
   }
 
   get publicValue() {

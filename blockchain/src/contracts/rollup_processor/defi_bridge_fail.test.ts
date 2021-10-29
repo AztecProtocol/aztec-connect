@@ -45,7 +45,7 @@ describe('rollup_processor: defi bridge failures', () => {
   const dummyProof = () => createSendProof(AssetId.ETH);
 
   const mockBridge = async (params: MockBridgeParams = {}) =>
-    deployMockBridge(rollupProvider, rollupProcessor.address, assetAddresses, params);
+    deployMockBridge(rollupProvider, rollupProcessor, assetAddresses, params);
 
   const expectResult = async (expectedResult: DefiInteractionNote[], txHash: TxHash) => {
     const receipt = await ethers.provider.getTransactionReceipt(txHash.toString());
@@ -78,7 +78,7 @@ describe('rollup_processor: defi bridge failures', () => {
   const expectRefund = async (bridgeId: BridgeId, inputValue: bigint, txHash: TxHash) => {
     await expectBalance(bridgeId.inputAssetId, inputValue);
     await expectBalance(bridgeId.outputAssetIdA, 0n);
-    if (bridgeId.numOutputAssets > 1) {
+    if (bridgeId.secondAssetValid) {
       await expectBalance(bridgeId.outputAssetIdB, 0n);
     }
     await expectResult([new DefiInteractionNote(bridgeId, 0, inputValue, 0n, 0n, false)], txHash);

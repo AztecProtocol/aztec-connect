@@ -18,39 +18,24 @@ contract UniswapBridge is IDefiBridge {
     address public immutable rollupProcessor;
     address public weth;
 
-    address public immutable inputAsset;
-    address public immutable outputAsset;
-
     IUniswapV2Router02 router;
 
-    constructor(
-        address _rollupProcessor,
-        address _router,
-        address _inputAsset,
-        address _outputAsset
-    ) public {
+    constructor(address _rollupProcessor, address _router) public {
         rollupProcessor = _rollupProcessor;
         router = IUniswapV2Router02(_router);
-        inputAsset = _inputAsset;
-        outputAsset = _outputAsset;
         weth = router.WETH();
     }
 
-    function getInfo()
-        external
-        view
-        override
-        returns (
-            uint32,
-            address,
-            address,
-            address
-        )
-    {
-        return (1, inputAsset, outputAsset, address(0));
-    }
-
-    function convert(uint256 inputValue, uint256)
+    function convert(
+        address inputAsset,
+        address outputAsset,
+        address, /* outputAssetB */
+        uint256 inputValue,
+        uint256, /* interactionNonce */
+        uint32, /* openingNonce */
+        uint32, /* bitConfig */
+        uint64 /* auxData */
+    )
         external
         payable
         override
@@ -95,7 +80,11 @@ contract UniswapBridge is IDefiBridge {
     }
 
     function finalise(
-        uint256 /*interactionNonce*/
+        address, /* inputAsset */
+        address, /* outputAssetA */
+        address, /* outputAssetB */
+        uint256, /* interactionNonce */
+        uint32 /* bitConfig */
     ) external payable override {
         require(false);
     }

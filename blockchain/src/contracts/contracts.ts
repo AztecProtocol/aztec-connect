@@ -220,29 +220,6 @@ export class Contracts {
     return this.gasPriceFeed;
   }
 
-  public async getBridgeId(address: EthAddress) {
-    let info: { numOutputAssets: number; inputAsset: string; outputAssetA: string; outputAssetB: string };
-    try {
-      const contract = new Contract(address.toString(), DefiBridgeABI, this.provider);
-      info = await contract.getInfo();
-
-      const assetAddresses = this.getAssets().map(a => a.getStaticInfo().address);
-      const getAssetIdOrThrow = (assetAddress: string) => {
-        const id = assetAddresses.findIndex(a => a.equals(EthAddress.fromString(assetAddress)));
-        if (id < 0) {
-          throw new Error(`Unknown asset address: ${assetAddress}.`);
-        }
-        return id;
-      };
-      const inputAssetId = getAssetIdOrThrow(info.inputAsset);
-      const outputAssetIdA = getAssetIdOrThrow(info.outputAssetA);
-      const outputAssetIdB = info.numOutputAssets > 1 ? getAssetIdOrThrow(info.outputAssetB) : 0;
-      return new BridgeId(address, info.numOutputAssets, inputAssetId, outputAssetIdA, outputAssetIdB);
-    } catch (e) {
-      return BridgeId.ZERO;
-    }
-  }
-
   public async getUserProofApprovalStatus(address: EthAddress, txId: Buffer) {
     return this.rollupProcessor.getProofApprovalStatus(address, txId);
   }

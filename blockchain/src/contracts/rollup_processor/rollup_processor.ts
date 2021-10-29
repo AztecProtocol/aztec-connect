@@ -84,6 +84,20 @@ export class RollupProcessor {
     return Buffer.from((await this.rollupProcessor.getStateHash()).slice(2), 'hex');
   }
 
+  async getSupportedBridge(bridgeAddressId: number) {
+    return EthAddress.fromString(await this.rollupProcessor.getSupportedBridge(bridgeAddressId));
+  }
+
+  async getSupportedBridges() {
+    const bridgeAddresses: string[] = await this.rollupProcessor.getSupportedBridges();
+    return bridgeAddresses.map(a => EthAddress.fromString(a));
+  }
+
+  async getBridgeAddressId(address: EthAddress) {
+    const bridgeAddresses = await this.getSupportedBridges();
+    return bridgeAddresses.findIndex(a => a.equals(address)) + 1;
+  }
+
   async getSupportedAsset(assetId: AssetId) {
     return EthAddress.fromString(await this.rollupProcessor.getSupportedAsset(assetId));
   }
@@ -97,6 +111,15 @@ export class RollupProcessor {
     const { gasLimit, gasPrice } = { ...options, ...this.defaults };
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.setVerifier(address.toString(), { gasLimit, gasPrice }).catch(fixEthersStackTrace);
+    return TxHash.fromString(tx.hash);
+  }
+
+  async setSupportedBridge(bridgeAddress: EthAddress, options: SendTxOptions = {}) {
+    const { gasLimit, gasPrice } = { ...options, ...this.defaults };
+    const rollupProcessor = this.getContractWithSigner(options);
+    const tx = await rollupProcessor
+      .setSupportedBridge(bridgeAddress.toString(), { gasLimit, gasPrice })
+      .catch(fixEthersStackTrace);
     return TxHash.fromString(tx.hash);
   }
 

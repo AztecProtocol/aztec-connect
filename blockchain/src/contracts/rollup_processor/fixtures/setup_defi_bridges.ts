@@ -3,15 +3,17 @@ import { AssetId } from '@aztec/barretenberg/asset';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
+import { RollupProcessor } from '../rollup_processor';
 
 export interface MockBridgeParams {
-  numOutputAssets?: number;
   inputAssetId?: AssetId;
   outputAssetIdA?: AssetId;
   outputAssetIdB?: AssetId;
   inputAsset?: EthAddress;
   outputAssetA?: EthAddress;
   outputAssetB?: EthAddress;
+  secondAssetValid?: boolean;
+  secondAssetVirtual?: boolean;
   canConvert?: boolean;
   outputValueA?: bigint;
   outputValueB?: bigint;
@@ -20,20 +22,23 @@ export interface MockBridgeParams {
   returnInputValue?: bigint;
   isAsync?: boolean;
   maxTxs?: number;
+  openingNonce?: number;
+  auxData?: number;
 }
 
 export const deployMockBridge = async (
   publisher: Signer,
-  rollupProcessor: EthAddress,
+  rollupProcessor: RollupProcessor,
   assetAddresses: EthAddress[],
   {
-    numOutputAssets = 1,
     inputAssetId = AssetId.DAI,
     outputAssetIdA = AssetId.renBTC,
     outputAssetIdB = AssetId.ETH,
     inputAsset = assetAddresses[inputAssetId],
     outputAssetA = assetAddresses[outputAssetIdA],
     outputAssetB = assetAddresses[outputAssetIdB],
+    secondAssetValid = false,
+    secondAssetVirtual = false,
     canConvert = true,
     outputValueA = 10n,
     outputValueB = 0n,
@@ -42,15 +47,13 @@ export const deployMockBridge = async (
     returnInputValue = 0n,
     isAsync = false,
     maxTxs = 100,
+    openingNonce = 0,
+    auxData = 0,
   }: MockBridgeParams = {},
 ) => {
   const DefiBridge = await ethers.getContractFactory('MockDefiBridge', publisher);
   const bridge = await DefiBridge.deploy(
-    rollupProcessor.toString(),
-    numOutputAssets,
-    inputAsset.toString(),
-    outputAssetA.toString(),
-    outputAssetB.toString(),
+    rollupProcessor.address.toString(),
     canConvert,
     outputValueA,
     outputValueB,
@@ -76,11 +79,18 @@ export const deployMockBridge = async (
 
   await bridge.deployed();
 
+  const address = EthAddress.fromString(bridge.address);
+  await rollupProcessor.setSupportedBridge(address);
+  const bridgeAddressId = await rollupProcessor.getBridgeAddressId(address);
+
   return new BridgeId(
-    EthAddress.fromString(bridge.address),
-    numOutputAssets,
+    bridgeAddressId,
     inputAssetId,
     outputAssetIdA,
     outputAssetIdB,
+    openingNonce,
+    secondAssetValid,
+    secondAssetVirtual,
+    auxData,
   );
 };

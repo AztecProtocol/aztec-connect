@@ -17,7 +17,7 @@ describe('rollup_processor: defi bridge', () => {
   const dummyProof = () => createSendProof(AssetId.ETH);
 
   const mockBridge = async (params: MockBridgeParams = {}) =>
-    deployMockBridge(rollupProvider, rollupProcessor.address, assetAddresses, params);
+    deployMockBridge(rollupProvider, rollupProcessor, assetAddresses, params);
 
   beforeEach(async () => {
     signers = await ethers.getSigners();
@@ -27,29 +27,30 @@ describe('rollup_processor: defi bridge', () => {
 
   const cloneId = (
     bridgeId: BridgeId,
-    { address, numOutputAssets, inputAssetId, outputAssetIdA, outputAssetIdB }: Partial<BridgeId> = {},
+    {
+      address,
+      secondAssetValid,
+      secondAssetVirtual,
+      inputAssetId,
+      outputAssetIdA,
+      outputAssetIdB,
+    }: Partial<BridgeId> = {},
   ) => {
     return new BridgeId(
       address || bridgeId.address,
-      numOutputAssets !== undefined ? numOutputAssets : bridgeId.numOutputAssets,
       inputAssetId !== undefined ? inputAssetId : bridgeId.inputAssetId,
       outputAssetIdA !== undefined ? outputAssetIdA : bridgeId.outputAssetIdA,
       outputAssetIdB !== undefined ? outputAssetIdB : bridgeId.outputAssetIdB,
+      bridgeId.openingNonce,
+      secondAssetValid !== undefined ? secondAssetValid : bridgeId.secondAssetValid,
+      secondAssetVirtual !== undefined ? secondAssetVirtual : bridgeId.secondAssetVirtual,
+      bridgeId.auxData,
     );
   };
 
-  it('revert if number of output assets is zero', async () => {
-    const bridgeId = await mockBridge({ numOutputAssets: 0 });
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
-    });
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: INVALID_BRIDGE');
-  });
-
   it('revert if output assets are the same', async () => {
     const bridgeId = await mockBridge({
-      numOutputAssets: 2,
+      secondAssetValid: true,
       outputAssetIdA: AssetId.renBTC,
       outputAssetIdB: AssetId.renBTC,
     });

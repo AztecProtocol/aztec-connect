@@ -59,9 +59,15 @@ interface IRollupProcessor {
 
     function setAssetPermitSupport(uint256 assetId, bool supportsPermit) external;
 
+    function setSupportedBridge(address linkedBridge) external;
+
     function getSupportedAsset(uint256 assetId) external view returns (address);
 
     function getSupportedAssets() external view returns (address[] memory);
+
+    function getSupportedBridge(uint256 bridgeAddressId) external view returns (address);
+
+    function getSupportedBridges() external view returns (address[] memory);
 
     function getAssetPermitSupport(uint256 assetId) external view returns (bool);
 

@@ -38,7 +38,7 @@ describe('rollup_processor', () => {
   const escapeBlockUpperBound = 100;
 
   const mockBridge = async (params: MockBridgeParams = {}) =>
-    deployMockBridge(signers[0], rollupProcessor.address, assetAddresses, params);
+    deployMockBridge(signers[0], rollupProcessor, assetAddresses, params);
 
   beforeEach(async () => {
     signers = await ethers.getSigners();

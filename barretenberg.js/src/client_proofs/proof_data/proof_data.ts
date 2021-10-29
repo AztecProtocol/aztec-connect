@@ -20,7 +20,7 @@ export class ProofData {
   public readonly nullifier2: Buffer;
   public readonly publicValue: Buffer;
   public readonly publicOwner: Buffer;
-  public readonly assetId: Buffer;
+  public readonly publicAssetId: Buffer;
 
   public readonly noteTreeRoot: Buffer;
   public readonly txFee: Buffer;
@@ -49,7 +49,7 @@ export class ProofData {
     dataStart += 32;
     this.publicOwner = rawProofData.slice(dataStart, dataStart + 32);
     dataStart += 32;
-    this.assetId = rawProofData.slice(dataStart, dataStart + 32);
+    this.publicAssetId = rawProofData.slice(dataStart, dataStart + 32);
     dataStart += 32;
 
     // Not published as part of inner proofs.

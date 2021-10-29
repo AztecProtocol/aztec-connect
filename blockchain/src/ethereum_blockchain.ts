@@ -320,10 +320,6 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return this.contracts.getGasPriceFeed();
   }
 
-  public async getBridgeId(address: EthAddress) {
-    return await this.contracts.getBridgeId(address);
-  }
-
   public async isContract(address: EthAddress) {
     return this.contracts.isContract(address);
   }
@@ -344,7 +340,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return this.contracts.getRollupBalance(assetId);
   }
 
-  public getFeeDistributorBalance(assetId: number){
+  public getFeeDistributorBalance(assetId: number) {
     return this.contracts.getFeeDistributorBalance(assetId);
   }
 }

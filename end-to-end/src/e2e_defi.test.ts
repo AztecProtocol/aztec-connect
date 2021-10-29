@@ -78,11 +78,11 @@ describe('end-to-end defi tests', () => {
 
     // Defi deposit - swap ETH to DAI
     {
-      const defiBridge = EthAddress.fromString('0xc5a5C42992dECbae36851359345FE25997F5C42d');
+      const bridgeAddressId = 1;
       const inputAssetId = AssetId.ETH;
       const outputAssetIdA = AssetId.DAI;
       const outputAssetIdB = 0;
-      const bridgeId = new BridgeId(defiBridge, 1, inputAssetId, outputAssetIdA, outputAssetIdB);
+      const bridgeId = new BridgeId(bridgeAddressId, inputAssetId, outputAssetIdA, outputAssetIdB, 0, false, false, 0);
       const txFee = await sdk.getFee(inputAssetId, TxType.DEFI_DEPOSIT);
       const depositValue = sdk.toBaseUnits(inputAssetId, '0.5');
       const initialBalance = sdk.getBalance(inputAssetId, userId);
@@ -105,9 +105,9 @@ describe('end-to-end defi tests', () => {
 
     // Defi deposit - swap DAI to ETH
     {
-      const defiBridge = EthAddress.fromString('0xE6E340D132b5f46d1e472DebcD681B2aBc16e57E');
+      const bridgeAddressId = 3;
       const inputAssetId = AssetId.DAI;
-      const bridgeId = new BridgeId(defiBridge, 1, inputAssetId, AssetId.ETH, 0);
+      const bridgeId = new BridgeId(bridgeAddressId, inputAssetId, AssetId.ETH, 0, 0, false, false, 0);
       const txFee = await sdk.getFee(inputAssetId, TxType.DEFI_DEPOSIT);
       const depositValue = sdk.toBaseUnits(inputAssetId, '100');
 

@@ -139,7 +139,7 @@ describe('account proof', () => {
     expect(accountProof.nullifier2).toEqual(Buffer.alloc(32));
     expect(accountProof.publicValue).toEqual(Buffer.alloc(32));
     expect(accountProof.publicOwner).toEqual(Buffer.alloc(32));
-    expect(accountProof.assetId).toEqual(Buffer.alloc(32));
+    expect(accountProof.publicAssetId).toEqual(Buffer.alloc(32));
     expect(accountProof.noteTreeRoot).toEqual(merkleRoot);
     expect(accountProof.txFee).toEqual(Buffer.alloc(32));
     expect(accountProof.txFeeAssetId).toEqual(Buffer.alloc(32));

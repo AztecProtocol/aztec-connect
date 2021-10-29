@@ -18,8 +18,22 @@ export class DefiBridge {
     this.contract = new Contract(address.toString(), abi, this.provider);
   }
 
-  async finalise(interactionNonce: number, options: SendTxOptions = {}) {
+  async finalise(
+    inputAsset: EthAddress,
+    outputAssetA: EthAddress,
+    outputAssetB: EthAddress,
+    bitConfig: number,
+    interactionNonce: number,
+    options: SendTxOptions = {},
+  ) {
     const contract = new ContractWithSigner(this.contract, { ...this.defaultOptions, ...options });
-    return contract.sendTx('finalise', interactionNonce);
+    return contract.sendTx(
+      'finalise',
+      inputAsset.toString(),
+      outputAssetA.toString(),
+      outputAssetB.toString(),
+      interactionNonce,
+      bitConfig,
+    );
   }
 }

@@ -13,12 +13,8 @@ export async function deployDefiBridge(
   // TODO - Create a bridge contract with two output assets.
   console.error('Deploying DefiBridge...');
   const defiBridgeLibrary = new ContractFactory(UniswapBridge.abi, UniswapBridge.bytecode, signer);
-  const defiBridge = await defiBridgeLibrary.deploy(
-    rollupProcessor.address,
-    uniswapRouter.address,
-    inputAsset,
-    outputAssetA,
-  );
+  const defiBridge = await defiBridgeLibrary.deploy(rollupProcessor.address, uniswapRouter.address);
+  await rollupProcessor.setSupportedBridge(defiBridge.address);
   console.error(
     `DefiBridge contract address: ${
       defiBridge.address

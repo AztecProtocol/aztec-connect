@@ -1,7 +1,7 @@
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { JoinSplitTx } from '@aztec/barretenberg/client_proofs';
+import { JoinSplitTx, ProofId } from '@aztec/barretenberg/client_proofs';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { ClaimNoteTxData, TreeNote, NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { WorldState } from '@aztec/barretenberg/world_state';
@@ -118,10 +118,23 @@ export class JoinSplitTxFactory {
 
     const dataRoot = this.worldState.getRoot();
 
+    const getProofId = () => {
+      if (defiDepositValue > 0) {
+        return ProofId.DEFI_DEPOSIT;
+      }
+      if (publicInput > 0) {
+        return ProofId.DEPOSIT;
+      }
+      if (publicOutput > 0) {
+        return ProofId.WITHDRAW;
+      }
+      return ProofId.SEND;
+    };
+
     // For now, we will use the account key as the signing key (no account note required).
     const tx = new JoinSplitTx(
-      publicInput,
-      publicOutput,
+      getProofId(),
+      publicInput + publicOutput,
       publicOwner || EthAddress.ZERO,
       assetId,
       numInputNotes,

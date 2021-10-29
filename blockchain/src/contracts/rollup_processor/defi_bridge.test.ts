@@ -44,7 +44,7 @@ describe('rollup_processor: defi bridge', () => {
   const dummyProof = () => createSendProof(AssetId.ETH);
 
   const mockBridge = async (params: MockBridgeParams = {}) =>
-    deployMockBridge(rollupProvider, rollupProcessor.address, assetAddresses, params);
+    deployMockBridge(rollupProvider, rollupProcessor, assetAddresses, params);
 
   const expectResult = async (expectedResult: DefiInteractionNote[], txHash: TxHash) => {
     const receipt = await ethers.provider.getTransactionReceipt(txHash.toString());
@@ -233,7 +233,7 @@ describe('rollup_processor: defi bridge', () => {
     const outputValueA = 12n;
     const outputValueB = 7n;
     const bridgeId = await mockBridge({
-      numOutputAssets: 2,
+      secondAssetValid: true,
       inputAssetId: AssetId.DAI,
       outputAssetIdA: AssetId.ETH,
       outputAssetIdB: AssetId.renBTC,

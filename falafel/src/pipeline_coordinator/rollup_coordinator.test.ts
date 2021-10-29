@@ -21,6 +21,8 @@ type Mockify<T> = {
   [P in keyof T]: jest.Mock;
 };
 
+const randomInt = (to = 2 ** 32 - 1) => Math.floor(Math.random() * (to + 1));
+
 describe('rollup_coordinator', () => {
   const numInnerRollupTxs = 2;
   const numOuterRollupProofs = 4;
@@ -39,7 +41,7 @@ describe('rollup_coordinator', () => {
     id: number,
     txType = TxType.DEPOSIT,
     txFeeAssetId = AssetId.ETH,
-    bridgeId = new BridgeId(EthAddress.randomAddress(), 1, 0, 1, 0),
+    bridgeId = new BridgeId(randomInt(), 1, 0, 1, 0, false, false, 0),
   ) =>
     (({
       id,
@@ -206,7 +208,7 @@ describe('rollup_coordinator', () => {
 
       const bridgeIds = Array(6)
         .fill(0)
-        .map(() => new BridgeId(EthAddress.randomAddress(), 2, 1, 1, 0));
+        .map(() => new BridgeId(randomInt(), 1, 1, 0, 0, true, false, 0));
       const pendingTxs = [
         mockDefiBridgeTx(0, bridgeIds[0]),
         mockDefiBridgeTx(1, bridgeIds[1]),

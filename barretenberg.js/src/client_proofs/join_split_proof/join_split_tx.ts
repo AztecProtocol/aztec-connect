@@ -8,10 +8,10 @@ import { TreeNote, ClaimNoteTxData } from '../../note_algorithms';
 
 export class JoinSplitTx {
   constructor(
-    public publicInput: bigint,
-    public publicOutput: bigint,
+    public proofId: number,
+    public publicValue: bigint,
     public publicOwner: EthAddress,
-    public assetId: AssetId,
+    public publicAssetId: AssetId,
     public numInputNotes: number,
     public inputNoteIndices: number[],
     public merkleRoot: Buffer,
@@ -31,10 +31,10 @@ export class JoinSplitTx {
 
   toBuffer() {
     return Buffer.concat([
-      toBufferBE(this.publicInput, 32),
-      toBufferBE(this.publicOutput, 32),
+      numToUInt32BE(this.proofId),
+      toBufferBE(this.publicValue, 32),
       this.publicOwner.toBuffer32(),
-      numToUInt32BE(this.assetId),
+      numToUInt32BE(this.publicAssetId),
       numToUInt32BE(this.numInputNotes),
       numToUInt32BE(this.inputNoteIndices[0]),
       numToUInt32BE(this.inputNoteIndices[1]),

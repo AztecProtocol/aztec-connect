@@ -3,17 +3,16 @@
 pragma solidity >=0.6.10 <0.8.0;
 
 interface IDefiBridge {
-    function getInfo()
-        external
-        view
-        returns (
-            uint32 numOutputAssets,
-            address inputAsset,
-            address outputAssetA,
-            address outputAssetB
-        );
-
-    function convert(uint256 inputValue, uint256 interactionNonce)
+    function convert(
+        address inputAsset,
+        address outputAssetA,
+        address outputAssetB,
+        uint256 inputValue,
+        uint256 interactionNonce,
+        uint32 openingNonce,
+        uint32 bitConfig,
+        uint64 auxData
+    )
         external
         payable
         returns (
@@ -24,5 +23,11 @@ interface IDefiBridge {
 
     function canFinalise(uint256 interactionNonce) external view returns (bool);
 
-    function finalise(uint256 interactionNonce) external payable;
+    function finalise(
+        address inputAsset,
+        address outputAssetA,
+        address outputAssetB,
+        uint256 interactionNonce,
+        uint32 bitConfig
+    ) external payable;
 }

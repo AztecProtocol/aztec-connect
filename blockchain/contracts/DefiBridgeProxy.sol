@@ -4,7 +4,7 @@ pragma solidity >=0.6.10 <0.8.0;
 
 import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
 
-// import 'hardhat/console.sol';
+import 'hardhat/console.sol';
 
 contract DefiBridgeProxy {
     using SafeMath for uint256;
@@ -13,7 +13,7 @@ contract DefiBridgeProxy {
     bytes4 private constant DEPOSIT_SELECTOR = 0xb6b55f25; // bytes4(keccak256('deposit(uint256)'));
     bytes4 private constant TRANSFER_SELECTOR = 0xa9059cbb; // bytes4(keccak256('transfer(address,uint256)'));
     bytes4 private constant WITHDRAW_SELECTOR = 0x2e1a7d4d; // bytes4(keccak256('withdraw(uint256)'));
-    bytes4 private constant CONVERT_SELECTOR = 0x96e4ee3d; // bytes4(keccak256('convert(uint256,uint256)'));
+    bytes4 private constant CONVERT_SELECTOR = 0x7ea1ab1a; // bytes4(keccak256('convert(address,address,address,uint256,uint256,uint32,uint32,uint64)'));
 
     function getBalance(address assetAddress) internal view returns (uint256 result) {
         assembly {
@@ -40,9 +40,10 @@ contract DefiBridgeProxy {
         address inputAssetAddress,
         address outputAssetAddressA,
         address outputAssetAddressB,
-        uint256 numOutputAssets,
+        uint32 openingNonce,
         uint256 totalInputValue,
-        uint256 interactionNonce
+        uint256 interactionNonce,
+        uint256 auxInputData // (auxData || bitConfig)
     )
         external
         returns (
@@ -66,21 +67,27 @@ contract DefiBridgeProxy {
         }
 
         outputValueA = getBalance(outputAssetAddressA);
-        outputValueB = numOutputAssets == 2 ? getBalance(outputAssetAddressB) : 0;
+        outputValueB = (auxInputData & 1) == 1 ? getBalance(outputAssetAddressB) : 0;
 
         // Call bridge.convert(), which will return output values for the two output assets.
         // If input is ETH, send it along with call to convert.
         assembly {
             mstore(mload(0x40), CONVERT_SELECTOR)
-            mstore(add(mload(0x40), 0x4), totalInputValue)
-            mstore(add(mload(0x40), 0x24), interactionNonce)
+            mstore(add(mload(0x40), 0x4), inputAssetAddress)
+            mstore(add(mload(0x40), 0x24), outputAssetAddressA)
+            mstore(add(mload(0x40), 0x44), outputAssetAddressB)
+            mstore(add(mload(0x40), 0x64), totalInputValue)
+            mstore(add(mload(0x40), 0x84), interactionNonce)
+            mstore(add(mload(0x40), 0xa4), openingNonce)
+            mstore(add(mload(0x40), 0xc4), and(auxInputData, 0xffffffff)) // bitConfig
+            mstore(add(mload(0x40), 0xe4), and(shr(32, auxInputData), 0xffffffffffffffff)) // auxData
             if iszero(
                 call(
                     gas(),
                     bridgeAddress,
                     mul(totalInputValue, eq(inputAssetAddress, 0)),
                     mload(0x40),
-                    0x44,
+                    0x114,
                     mload(0x40),
                     0x60
                 )
@@ -91,7 +98,7 @@ contract DefiBridgeProxy {
         }
 
         outputValueA = getBalance(outputAssetAddressA) - outputValueA;
-        outputValueB = numOutputAssets == 2 ? getBalance(outputAssetAddressB) - outputValueB : 0;
+        outputValueB = (auxInputData & 1) == 1 ? getBalance(outputAssetAddressB) - outputValueB : 0;
 
         if (isAsync) {
             require(outputValueA == 0 && outputValueB == 0, 'DefiBridgeProxy: ASYNC_NONZERO_OUTPUT_VALUES');
