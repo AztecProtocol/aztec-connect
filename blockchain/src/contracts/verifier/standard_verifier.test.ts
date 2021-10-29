@@ -1,7 +1,6 @@
 import { ethers } from 'hardhat';
 import { StandardVerifier } from './standard_verifier';
-import { getStandardDataMock } from './fixtures/get_standard_plonk_data';
-import { getRollupDataStandard } from './fixtures/get_rollup_data';
+import { getRollupData } from './fixtures/get_rollup_data';
 import { EthersAdapter } from '../../provider';
 
 describe('StandardVerifier', function () {
@@ -13,20 +12,13 @@ describe('StandardVerifier', function () {
   });
 
   async function validate(inner: number, outer: number) {
-    const { proofData, broadcastData, inputHash } = await getRollupDataStandard(inner, outer);
+    const { proofData, broadcastData, inputHash } = await getRollupData(inner, outer);
     const gasUsed = await verifier.verify(proofData, broadcastData.rollupSize, inputHash, { gasLimit });
    console.log(`gasUsed: ${gasUsed}`);
   }
-
-  it('should validate a 1 rollup proof (1 tx)', async () => {
-    await validate(1, 1);
-  });
 
   it('should validate a 2 rollup proof (1 tx)', async () => {
     await validate(1, 2);
   });
 
-  it('should validate a 4 rollup proof (1 tx)', async () => {
-    await validate(1, 4);
-  });
 });

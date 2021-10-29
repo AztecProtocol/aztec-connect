@@ -1,6 +1,6 @@
 import { ContractFactory, Signer } from 'ethers';
-import TurboVerifier from '../artifacts/contracts/verifier/TurboVerifier.sol/TurboVerifier.json';
-import VerificationKeys from '../artifacts/contracts/verifier/keys/VerificationKeys.sol/VerificationKeys.json';
+import StandardVerifier from '../artifacts/contracts/verifier/StandardVerifier.sol/StandardVerifier.json';
+import RootVerifierVk from '../artifacts/contracts/verifier/keys/RootVerifierVk.sol/RootVerifierVk.json';
 
 function linkBytecode(artifact: any, libraries: any) {
   let bytecode = artifact.bytecode;
@@ -26,15 +26,15 @@ function linkBytecode(artifact: any, libraries: any) {
 }
 
 export async function deployVerifier(signer: Signer) {
-  console.error('Deploying VerificationKeys...');
-  const verificationKeysLibrary = new ContractFactory(VerificationKeys.abi, VerificationKeys.bytecode, signer);
-  const verificationKeysLib = await verificationKeysLibrary.deploy();
+  console.error('Deploying RootVerifierVk...');
+  const StandardVerificationKeyLibrary = new ContractFactory(RootVerifierVk.abi, RootVerifierVk.bytecode, signer);
+  const StandardVerificationKeyLib = await StandardVerificationKeyLibrary.deploy();
 
-  console.error('Deploying TurboVerifier...');
-  const linkedVBytecode = linkBytecode(TurboVerifier, {
-    VerificationKeys: verificationKeysLib.address,
+  console.error('Deploying StandardVerifier...');
+  const linkedVBytecode = linkBytecode(StandardVerifier, {
+    RootVerifierVk: StandardVerificationKeyLib.address,
   });
-  const verifierFactory = new ContractFactory(TurboVerifier.abi, linkedVBytecode, signer);
+  const verifierFactory = new ContractFactory(StandardVerifier.abi, linkedVBytecode, signer);
   const verifier = await verifierFactory.deploy();
   return verifier;
 }

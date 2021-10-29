@@ -6,7 +6,7 @@ pragma solidity >=0.6.0 <0.8.0;
 pragma experimental ABIEncoderV2;
 
 import {IVerifier} from '../interfaces/IVerifier.sol';
-import {StandardVerificationKeys} from './keys/StandardVerificationKeys.sol';
+import {RootVerifierVk} from './keys/RootVerifierVk.sol';
 import {StandardTypes} from './cryptography/StandardTypes.sol';
 
 /**
@@ -171,7 +171,7 @@ contract StandardVerifier is IVerifier {
             require(hash_matches_input, "computed public input hash does not match value in proof!");
         }
         
-        StandardTypes.VerificationKey memory vk = StandardVerificationKeys.getKeyById(rollup_size);
+        StandardTypes.VerificationKey memory vk = RootVerifierVk.get_verification_key();
 
 
         assembly {
@@ -211,370 +211,6 @@ contract StandardVerifier is IVerifier {
                 mstore(G2X_Y1_LOC, 0x22febda3c0c0632a56475b4214e5615e11e6dd3f96e6cea2854a87d4dacc5e55)
             }
 
-            /**
-             * Compute modular inverse of a prime field element whose characteristic matches the bn254 group order
-             * computes `I^{p-2}`
-             */
-            function invert(I) -> acc {
-                let p := 21888242871839275222246405745257275088548364400416034343698204186575808495617
-
-                /**
-                 * Step 1: Compute a lookup table of the following binary values
-                 *  1
-                 *  11
-                 *  101
-                 *  111
-                 *  1001
-                 *  1101
-                 *  1111
-                 *  10001
-                 *  10011
-                 *  11001
-                 *  11101
-                 *  11111
-                 */
-                {
-                    let IO := mulmod(I, I, p)
-                    let IOO := mulmod(IO, IO, p)
-                    let IOI := mulmod(IOO, I, p)
-                    mstore(II_POS, mulmod(IO, I, p))
-                    mstore(IOI_POS, IOI)
-                    mstore(III_POS, mulmod(IOI, IO, p))
-                    mstore(IOOI_POS, mulmod(IOO, IOI, p))
-                    mstore(IIOI_POS, mulmod(mload(IOOI_POS), IOO, p))
-                    mstore(IIII_POS, mulmod(mload(IIOI_POS), IO, p))
-                    mstore(IOOOI_POS, mulmod(mload(IIOI_POS), IOO, p))
-                    mstore(IOOII_POS, mulmod(mload(IOOOI_POS), IO, p))
-                    acc := mulmod(mload(IOOII_POS), IOI, p)
-                    mstore(IIOOI_POS, mulmod(acc, I, p))
-                    mstore(IIOII_POS, mulmod(mload(IIOOI_POS), IO, p))
-                    mstore(IIIOI_POS, mulmod(mload(IIOII_POS), IO, p))
-                    mstore(IIIII_POS, mulmod(mload(IIIOI_POS), IO, p))
-                }
-
-
-                /**
-                 * Step 2: Perform square and multiply on accumulator
-                 */
-                // append 0011001 to accumulator
-                {
-                    let t0 := mulmod(acc, acc, p)
-                    let t1 := mulmod(t0, t0, p)
-                    let t2 := mulmod(t1, t1, p)
-                    let t3 := mulmod(t2, t2, p)
-                    let t4 := mulmod(t3, t3, p)
-                    let t5 := mulmod(t4, t4, p)
-                    acc := mulmod(mulmod(t5, t5, p), mload(IIOOI_POS), p)
-                }
-                // append 000 10011 10011 to accumulator
-                {
-                    let t0 := mulmod(acc, acc, p)
-                    let t1 := mulmod(t0, t0, p)
-                    let t2 := mulmod(t1, t1, p)
-                    let t3 := mulmod(t2, t2, p)
-                    let t4 := mulmod(t3, t3, p)
-                    let t5 := mulmod(t4, t4, p)
-                    let t6 := mulmod(t5, t5, p)
-                    let t7 := mulmod(mulmod(t6, t6, p), mload(IOOII_POS), p)
-                    let t8 := mulmod(t7, t7, p)
-                    let t9 := mulmod(t8, t8, p)
-                    let t10 := mulmod(t9, t9, p)
-                    let t11 := mulmod(t10, t10, p)
-                    acc := mulmod(mulmod(t11, t11, p), mload(IOOII_POS), p)
-                }
-                // append 1001 0 111 0000 to accumulator
-                {
-                    let t0 := mulmod(acc, acc, p)
-                    let t1 := mulmod(t0, t0, p)
-                    let t2 := mulmod(t1, t1, p)
-                    let t3 := mulmod(mulmod(t2, t2, p), mload(IOOI_POS), p)
-                    let t4 := mulmod(t3, t3, p)
-                    let t5 := mulmod(t4, t4, p)
-                    let t6 := mulmod(t5, t5, p)
-                    let t7 := mulmod(mulmod(t6, t6, p), mload(III_POS), p)
-                    let t8 := mulmod(t7, t7, p)
-                    let t9 := mulmod(t8, t8, p)
-                    let t10 := mulmod(t9, t9, p)
-                    acc := mulmod(t10, t10, p)
-                }
-                // append 10011 000 1101 to accumulator
-                {
-                    let t0 := mulmod(acc, acc, p)
-                    let t1 := mulmod(t0, t0, p)
-                    let t2 := mulmod(t1, t1, p)
-                    let t3 := mulmod(t2, t2, p)
-                    let t4 := mulmod(mulmod(t3, t3, p), mload(IOOII_POS), p)
-                    let t5 := mulmod(t4, t4, p)
-                    let t6 := mulmod(t5, t5, p)
-                    let t7 := mulmod(t6, t6, p)
-                    let t8 := mulmod(t7, t7, p)
-                    let t9 := mulmod(t8, t8, p)
-                    let t10 := mulmod(t9, t9, p)
-                    acc := mulmod(mulmod(t10, t10, p), mload(IIOI_POS), p)
-                }
-                // append 0000000 1 0 10011 to accumulator
-                {
-                    let t0 := mulmod(acc, acc, p)
-                    let t1 := mulmod(t0, t0, p)
-                    let t2 := mulmod(t1, t1, p)
-                    let t3 := mulmod(t2, t2, p)
-                    let t4 := mulmod(t3, t3, p)
-                    let t5 := mulmod(t4, t4, p)
-                    let t6 := mulmod(t5, t5, p)
-                    let t7 := mulmod(mulmod(t6, t6, p), I, p)
-                    let t8 := mulmod(t7, t7, p)
-                    let t9 := mulmod(t8, t8, p)
-                    let t10 := mulmod(t9, t9, p)
-                    let t11 := mulmod(t10, t10, p)
-                    let t12 := mulmod(t11, t11, p)
-                    acc := mulmod(mulmod(t12, t12, p), mload(IOOII_POS), p)
-                }
-                // append 0 111 0000 101 to accumulator
-                {
-                    let t0 := mulmod(acc, acc, p)
-                    let t1 := mulmod(t0, t0, p)
-                    let t2 := mulmod(t1, t1, p)
-                    let t3 := mulmod(mulmod(t2, t2, p), mload(III_POS), p)
-                    let t4 := mulmod(t3, t3, p)
-                    let t5 := mulmod(t4, t4, p)
-                    let t6 := mulmod(t5, t5, p)
-                    let t7 := mulmod(t6, t6, p)
-                    let t8 := mulmod(t7, t7, p)
-                    let t9 := mulmod(t8, t8, p)
-                    acc := mulmod(mulmod(t9, t9, p), mload(IOI_POS), p)
-                }
-                // append 00000 10001 0 to accumulator
-                {
-                    let t0 := mulmod(acc, acc, p)
-                    let t1 := mulmod(t0, t0, p)
-                    let t2 := mulmod(t1, t1, p)
-                    let t3 := mulmod(t2, t2, p)
-                    let t4 := mulmod(t3, t3, p)
-                    let t5 := mulmod(t4, t4, p)
-                    let t6 := mulmod(t5, t5, p)
-                    let t7 := mulmod(t6, t6, p)
-                    let t8 := mulmod(t7, t7, p)
-                    let t9 := mulmod(mulmod(t8, t8, p), mload(IOOOI_POS), p)
-                    acc := mulmod(t9, t9, p)
-                }
-                // append 11011 0 1101 to accumulator
-                {
-                    let t0 := mulmod(acc, acc, p)
-                    let t1 := mulmod(t0, t0, p)
-                    let t2 := mulmod(t1, t1, p)
-                    let t3 := mulmod(t2, t2, p)
-                    let t4 := mulmod(mulmod(t3, t3, p), mload(IIOII_POS), p)
-                    let t5 := mulmod(t4, t4, p)
-                    let t6 := mulmod(t5, t5, p)
-                    let t7 := mulmod(t6, t6, p)
-                    let t8 := mulmod(t7, t7, p)
-                    acc := mulmod(mulmod(t8, t8, p), mload(IIOI_POS), p)
-                }
-                // append 000000 11 000000 to accumulator
-                {
-                    let t0 := mulmod(acc, acc, p)
-                    let t1 := mulmod(t0, t0, p)
-                    let t2 := mulmod(t1, t1, p)
-                    let t3 := mulmod(t2, t2, p)
-                    let t4 := mulmod(t3, t3, p)
-                    let t5 := mulmod(t4, t4, p)
-                    let terr := mulmod(t5, t5, p)
-                    let t6 := mulmod(mulmod(terr, terr, p), mload(II_POS), p)
-                    let t7 := mulmod(t6, t6, p)
-                    let t8 := mulmod(t7, t7, p)
-                    let t9 := mulmod(t8, t8, p)
-                    let t10 := mulmod(t9, t9, p)
-                    let t11 := mulmod(t10, t10, p)
-                    acc := mulmod(t11, t11, p)
-                }
-                // append 101 0 11 0000 1 to accumulator
-                {
-                    let t0 := mulmod(acc, acc, p)
-                    let t1 := mulmod(t0, t0, p)
-                    let t2 := mulmod(mulmod(t1, t1, p), mload(IOI_POS), p)
-                    let t3 := mulmod(t2, t2, p)
-                    let t4 := mulmod(t3, t3, p)
-                    let t5 := mulmod(mulmod(t4, t4, p), mload(II_POS), p)
-                    let t6 := mulmod(t5, t5, p)
-                    let t7 := mulmod(t6, t6, p)
-                    let t8 := mulmod(t7, t7, p)
-                    let t9 := mulmod(t8, t8, p)
-                    acc := mulmod(mulmod(t9, t9, p), I, p)
-                }
-                // append 0 11101 00 101 to accumulator
-                {
-                    let t0 := mulmod(acc, acc, p)
-                    let t1 := mulmod(t0, t0, p)
-                    let t2 := mulmod(t1, t1, p)
-                    let t3 := mulmod(t2, t2, p)
-                    let t4 := mulmod(t3, t3, p)
-                    let t5 := mulmod(mulmod(t4, t4, p), mload(IIIOI_POS), p)
-                    let t6 := mulmod(t5, t5, p)
-                    let t7 := mulmod(t6, t6, p)
-                    let t8 := mulmod(t7, t7, p)
-                    let t9 := mulmod(t8, t8, p)
-                    acc := mulmod(mulmod(t9, t9, p), mload(IOI_POS), p)
-                }
-                // append 00000 to accumulator
-                {
-                    let t0 := mulmod(acc, acc, p)
-                    let t1 := mulmod(t0, t0, p)
-                    let t2 := mulmod(t1, t1, p)
-                    let t3 := mulmod(t2, t2, p)
-                    acc := mulmod(t3, t3, p)
-                }
-                // append 11001 1 11101 to accumulator
-                {
-                    let t0 := mulmod(acc, acc, p)
-                    let t1 := mulmod(t0, t0, p)
-                    let t2 := mulmod(t1, t1, p)
-                    let t3 := mulmod(t2, t2, p)
-                    let t4 := mulmod(mulmod(t3, t3, p), mload(IIOOI_POS), p)
-                    let t5 := mulmod(mulmod(t4, t4, p), I, p)
-                    let t6 := mulmod(t5, t5, p)
-                    let t7 := mulmod(t6, t6, p)
-                    let t8 := mulmod(t7, t7, p)
-                    let t9 := mulmod(t8, t8, p)
-                    acc := mulmod(mulmod(t9, t9, p), mload(IIIOI_POS), p)
-                }
-                // append 0000 1001 0000 to accumulator
-                {
-                    let t0 := mulmod(acc, acc, p)
-                    let t1 := mulmod(t0, t0, p)
-                    let t2 := mulmod(t1, t1, p)
-                    let t3 := mulmod(t2, t2, p)
-                    let t4 := mulmod(t3, t3, p)
-                    let t5 := mulmod(t4, t4, p)
-                    let t6 := mulmod(t5, t5, p)
-                    let t7 := mulmod(mulmod(t6, t6, p), mload(IOOI_POS), p)
-                    let t8 := mulmod(t7, t7, p)
-                    let t9 := mulmod(t8, t8, p)
-                    let t10 := mulmod(t9, t9, p)
-                    acc := mulmod(t10, t10, p)
-                }
-                // append 1111 00 11011 to accumulator
-                {
-                    let t0 := mulmod(acc, acc, p)
-                    let t1 := mulmod(t0, t0, p)
-                    let t2 := mulmod(t1, t1, p)
-                    let t3 := mulmod(mulmod(t2, t2, p), mload(IIII_POS), p)
-                    let t4 := mulmod(t3, t3, p)
-                    let t5 := mulmod(t4, t4, p)
-                    let t6 := mulmod(t5, t5, p)
-                    let t7 := mulmod(t6, t6, p)
-                    let t8 := mulmod(t7, t7, p)
-                    let t9 := mulmod(t8, t8, p)
-                    acc := mulmod(mulmod(t9, t9, p), mload(IIOII_POS), p)
-                }
-                // append 1001 0 111 0000 to accumulator
-                {
-                    let t0 := mulmod(acc, acc, p)
-                    let t1 := mulmod(t0, t0, p)
-                    let t2 := mulmod(t1, t1, p)
-                    let t3 := mulmod(mulmod(t2, t2, p), mload(IOOI_POS), p)
-                    let t4 := mulmod(t3, t3, p)
-                    let t5 := mulmod(t4, t4, p)
-                    let t6 := mulmod(t5, t5, p)
-                    let t7 := mulmod(mulmod(t6, t6, p), mload(III_POS), p)
-                    let t8 := mulmod(t7, t7, p)
-                    let t9 := mulmod(t8, t8, p)
-                    let t10 := mulmod(t9, t9, p)
-                    acc := mulmod(t10, t10, p)    
-                }
-                // append 1001 000 101 to accumulator
-                {
-                    let t0 := mulmod(acc, acc, p)
-                    let t1 := mulmod(t0, t0, p)
-                    let t2 := mulmod(t1, t1, p)
-                    let t3 := mulmod(mulmod(t2, t2, p), mload(IOOI_POS), p)
-                    let t4 := mulmod(t3, t3, p)
-                    let t5 := mulmod(t4, t4, p)
-                    let t6 := mulmod(t5, t5, p)
-                    let t7 := mulmod(t6, t6, p)
-                    let t8 := mulmod(t7, t7, p)
-                    acc := mulmod(mulmod(t8, t8, p), mload(IOI_POS), p)
-                }
-                // append 0000 11111 0000 to accumulator
-                {
-                    let t0 := mulmod(acc, acc, p)
-                    let t1 := mulmod(t0, t0, p)
-                    let t2 := mulmod(t1, t1, p)
-                    let t3 := mulmod(t2, t2, p)
-                    let t4 := mulmod(t3, t3, p)
-                    let t5 := mulmod(t4, t4, p)
-                    let t6 := mulmod(t5, t5, p)
-                    let t7 := mulmod(t6, t6, p)
-                    let t8 := mulmod(mulmod(t7, t7, p), mload(IIIII_POS), p)
-                    let t9 := mulmod(t8, t8, p)
-                    let t10 := mulmod(t9, t9, p)
-                    let t11 := mulmod(t10, t10, p)
-                    acc := mulmod(t11, t11, p)
-                }
-                // append 11111 0 1 0 to accumulator
-                {
-                    let t0 := mulmod(acc, acc, p)
-                    let t1 := mulmod(t0, t0, p)
-                    let t2 := mulmod(t1, t1, p)
-                    let t3 := mulmod(t2, t2, p)
-                    let t4 := mulmod(mulmod(t3, t3, p), mload(IIIII_POS), p)
-                    let t5 := mulmod(t4, t4, p)
-                    let t6 := mulmod(mulmod(t5, t5, p), I, p)
-                    acc := mulmod(t6, t6, p)
-                }
-                // append 11001 00 11111 to accumulator
-                {
-                    let t0 := mulmod(acc, acc, p)
-                    let t1 := mulmod(t0, t0, p)
-                    let t2 := mulmod(t1, t1, p)
-                    let t3 := mulmod(t2, t2, p)
-                    let t4 := mulmod(mulmod(t3, t3, p), mload(IIOOI_POS), p)
-                    let t5 := mulmod(t4, t4, p)
-                    let t6 := mulmod(t5, t5, p)
-                    let t7 := mulmod(t6, t6, p)
-                    let t8 := mulmod(t7, t7, p)
-                    let t9 := mulmod(t8, t8, p)
-                    let t10 := mulmod(t9, t9, p)
-                    acc := mulmod(mulmod(t10, t10, p), mload(IIIII_POS), p)
-                }
-                // append 0 111 11111 to accumulator
-                {
-                    let t0 := mulmod(acc, acc, p)
-                    let t1 := mulmod(t0, t0, p)
-                    let t2 := mulmod(t1, t1, p)
-                    let t3 := mulmod(mulmod(t2, t2, p), mload(III_POS), p)
-                    let t4 := mulmod(t3, t3, p)
-                    let t5 := mulmod(t4, t4, p)
-                    let t6 := mulmod(t5, t5, p)
-                    let t7 := mulmod(t6, t6, p)
-                    acc := mulmod(mulmod(t7, t7, p), mload(IIIII_POS), p)
-                }
-                // append 11111 11111 to accumulator
-                {
-                    let t0 := mulmod(acc, acc, p)
-                    let t1 := mulmod(t0, t0, p)
-                    let t2 := mulmod(t1, t1, p)
-                    let t3 := mulmod(t2, t2, p)
-                    let t4 := mulmod(mulmod(t3, t3, p), mload(IIIII_POS), p)
-                    let t5 := mulmod(t4, t4, p)
-                    let t6 := mulmod(t5, t5, p)
-                    let t7 := mulmod(t6, t6, p)
-                    let t8 := mulmod(t7, t7, p)
-                    acc := mulmod(mulmod(t8, t8, p), mload(IIIII_POS), p)
-                }
-                // append 11111 11111 to accumulator
-                {
-                    let t0 := mulmod(acc, acc, p)
-                    let t1 := mulmod(t0, t0, p)
-                    let t2 := mulmod(t1, t1, p)
-                    let t3 := mulmod(t2, t2, p)
-                    let t4 := mulmod(mulmod(t3, t3, p), mload(IIIII_POS), p)
-                    let t5 := mulmod(t4, t4, p)
-                    let t6 := mulmod(t5, t5, p)
-                    let t7 := mulmod(t6, t6, p)
-                    let t8 := mulmod(t7, t7, p)
-                    acc := mulmod(mulmod(t8, t8, p), mload(IIIII_POS), p)
-                }
-            }  // End of the invert function
             let q := 21888242871839275222246405745257275088696311157297823662689037894645226208583 // EC group order
             let p := 21888242871839275222246405745257275088548364400416034343698204186575808495617 // Prime field order
 
@@ -821,8 +457,19 @@ contract StandardVerifier is IVerifier {
                 let t1 := accumulator
                 accumulator := mulmod(accumulator, l_start_denominator, p)
                 let t2 := accumulator
-                accumulator := invert(mulmod(accumulator, l_end_denominator, p))
-
+                {
+                    mstore(0, 0x20)
+                    mstore(0x20, 0x20)
+                    mstore(0x40, 0x20)
+                    mstore(0x60, mulmod(accumulator, l_end_denominator, p))
+                    mstore(0x80, sub(p, 2))
+                    mstore(0xa0, p)
+                    if iszero(staticcall(gas(), 0x05, 0x00, 0xc0, 0x00, 0x20))
+                    {
+                        revert(0x00, 0x00)
+                    }
+                    accumulator := mload(0x00)
+                }
  
                 t2 := mulmod(accumulator, t2, p)
                 accumulator := mulmod(accumulator, l_end_denominator, p)

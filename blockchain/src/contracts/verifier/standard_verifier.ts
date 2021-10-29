@@ -3,7 +3,7 @@ import { EthereumProvider, SendTxOptions } from '@aztec/barretenberg/blockchain'
 import { Web3Provider } from '@ethersproject/providers';
 import { ContractFactory, Contract } from 'ethers';
 import StandardVerifierContract from '../../artifacts/contracts/verifier/StandardVerifier.sol/StandardVerifier.json';
-import StandardVerificationKeys from '../../artifacts/contracts/verifier/keys/StandardVerificationKeys.sol/StandardVerificationKeys.json';
+import RootVerifierVk from '../../artifacts/contracts/verifier/keys/RootVerifierVk.sol/RootVerifierVk.json';
 
 const fixEthersStackTrace = (err: Error) => {
   err.stack! += new Error().stack;
@@ -52,13 +52,15 @@ export class StandardVerifier {
     const { signingAddress } = defaults;
     const signer = new Web3Provider(provider).getSigner(signingAddress ? signingAddress.toString() : 0);
     
-    const StandardverificationKeysLibrary = new ContractFactory(StandardVerificationKeys.abi, StandardVerificationKeys.bytecode, signer);
-    const StandardverificationKeysLib = await StandardverificationKeysLibrary.deploy();
+    const StandardVerificationKeyLibrary = new ContractFactory(RootVerifierVk.abi, RootVerifierVk.bytecode, signer);
+    const StandardVerificationKeyLib = await StandardVerificationKeyLibrary.deploy();
   
 
-    const linkedVBytecode = linkBytecode(StandardVerifierContract, {
-        StandardVerificationKeys: StandardverificationKeysLib.address,
-    });
+    const linkedVBytecode = linkBytecode(StandardVerifierContract, 
+      {
+        RootVerifierVk: StandardVerificationKeyLib.address,
+      }
+    );
     const verifierFactory = new ContractFactory(StandardVerifierContract.abi, linkedVBytecode, signer);
     const verifier = await verifierFactory.deploy().catch(fixEthersStackTrace);
     return new StandardVerifier(EthAddress.fromString(verifier.address), provider, defaults);

@@ -2,6 +2,7 @@ import { CliProofGenerator } from './proof_generator';
 
 export interface ServerConfig {
   readonly maxCircuitSize: number;
+  readonly rollupShapes: string;
 }
 
 export class Server {
@@ -9,8 +10,8 @@ export class Server {
   private ready = false;
 
   constructor(config: ServerConfig) {
-    const { maxCircuitSize } = config;
-    this.proofGenerator = new CliProofGenerator(maxCircuitSize);
+    const {maxCircuitSize, rollupShapes} = config;
+    this.proofGenerator = new CliProofGenerator(maxCircuitSize, rollupShapes);
   }
 
   public async start() {

@@ -495,6 +495,7 @@ export class CoreSdk extends EventEmitter {
     const aliases = rollups
       .map(r => r.innerProofData)
       .flat()
+      .filter(ip => ip.proofId !== ProofId.PADDING)
       .map((ip, i) => (ip.proofId === ProofId.ACCOUNT ? OffchainAccountData.fromBuffer(offchainTxData[i]) : undefined))
       .filter((p): p is OffchainAccountData => !!p)
       .map(({ accountPublicKey, accountAliasId }) => ({

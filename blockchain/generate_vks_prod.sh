@@ -5,4 +5,4 @@ rm -rf build-vks
 mkdir build-vks
 cd build-vks
 cmake .. && make -j$(nproc) keygen
-./src/aztec/rollup/keygen/keygen 28 4 ../../blockchain/contracts/verifier/keys
+./src/aztec/rollup/keygen/keygen 28 1,2,4 ../../blockchain/contracts/verifier/keys
