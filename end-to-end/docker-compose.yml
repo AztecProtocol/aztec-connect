@@ -17,15 +17,14 @@ services:
       - '8545:8545'
 
   halloumi:
-    build: ../halloumi
     image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/halloumi:latest
     environment:
       NODE_ENV: production
+      PERSIST: 'false'
     ports:
       - '8083:8083'
 
   falafel:
-    build: ../falafel
     image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/falafel:latest
     environment:
       ETHEREUM_HOST: http://ganache:8545
@@ -46,7 +45,6 @@ services:
       - '8081:8081'
 
   end-to-end:
-    build: .
     image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/end-to-end:latest
     environment:
       ETHEREUM_HOST: http://ganache:8545
@@ -57,5 +55,5 @@ services:
       sh -c "
       apk add curl jq bash;
       ./scripts/wait_till_ready.sh;
-      yarn test ./src/e2e.test.ts ./src/e2e_account.test.ts ./src/e2e_defi.test.ts
+      yarn test ${TEST:-./src/e2e.test.ts}
       "

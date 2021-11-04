@@ -127,8 +127,7 @@ Run a local ganache instance.
 ganache-cli -d
 ```
 
-Run `falafel` as above. Run `yarn test ./src/e2e.test.ts` to run the tests. Running the full e2e test suite is usually
-overkill, but if desired will also require running `sriracha`.
+Run `falafel` as above. Run `yarn test ./src/e2e.test.ts` to run the tests.
 
 ### Hummus
 

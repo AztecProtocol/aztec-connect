@@ -105,18 +105,6 @@ jobs:
           working_directory: falafel
           command: build falafel
 
-  sriracha:
-    machine:
-      image: ubuntu-1604:201903-01
-    resource_class: large
-    steps:
-      - checkout
-      - *setup_env
-      - run:
-          name: 'Build and test'
-          working_directory: sriracha
-          command: build sriracha
-
   wasabi:
     machine:
       image: ubuntu-1604:201903-01
@@ -182,20 +170,67 @@ jobs:
           command: build documentation
 
   end-to-end:
-    machine:
-      image: ubuntu-1604:201903-01
-    resource_class: 2xlarge
+    docker:
+      - image: aztecprotocol/build-image
     steps:
       - checkout
       - *setup_env
+      - setup_remote_docker:
+          version: 19.03.13
       - run:
-          name: 'Build and test'
+          name: 'Build'
+          working_directory: end-to-end
+          command: build end-to-end
+
+  e2e-payment:
+    docker:
+      - image: aztecprotocol/build-image
+    resource_class: small
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker:
+          version: 19.03.13
+      - run:
+          name: 'Test'
           working_directory: end-to-end
           command: |
             if check_rebuild; then
-              build end-to-end
-              docker tag $ECR_URL/end-to-end:cache-$CIRCLE_SHA1 $ECR_DEPLOY_URL/end-to-end:latest
-              docker-compose up --exit-code-from end-to-end
+              cd scripts && ./spot_run_tests.sh $CIRCLE_SHA1 ./src/e2e.test.ts
+            fi
+
+  e2e-account:
+    docker:
+      - image: aztecprotocol/build-image
+    resource_class: small
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker:
+          version: 19.03.13
+      - run:
+          name: 'Test'
+          working_directory: end-to-end
+          command: |
+            if check_rebuild; then
+              cd scripts && ./spot_run_tests.sh $CIRCLE_SHA1 ./src/e2e_account.test.ts
+            fi
+
+  e2e-defi:
+    docker:
+      - image: aztecprotocol/build-image
+    resource_class: small
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker:
+          version: 19.03.13
+      - run:
+          name: 'Test'
+          working_directory: end-to-end
+          command: |
+            if check_rebuild; then
+              cd scripts && ./spot_run_tests.sh $CIRCLE_SHA1 ./src/e2e_defi.test.ts
             fi
 
   zk-money:
@@ -297,10 +332,6 @@ jobs:
           working_directory: falafel
           command: deploy falafel
       - run:
-          name: 'sriracha'
-          working_directory: sriracha
-          command: deploy sriracha
-      - run:
           name: 'wasabi'
           working_directory: wasabi
           command: deploy wasabi
@@ -365,13 +396,6 @@ jobs:
             deploy_ecr blockchain
             deploy_npm blockchain
       - run:
-          name: 'sriracha'
-          working_directory: sriracha
-          command: |
-            deploy_ecr sriracha
-            deploy_npm sriracha
-            deploy_dockerhub sriracha
-      - run:
           name: 'sdk'
           working_directory: sdk
           command: |
@@ -413,7 +437,6 @@ workflows:
           requires:
             - wasm-linux-clang
             - x86_64-linux-clang
-            - x86_64-linux-clang-assert
           filters: *tag_filter
       - blockchain:
           requires:
@@ -428,13 +451,9 @@ workflows:
             - blockchain
             - halloumi
           filters: *tag_filter
-      - sriracha:
-          requires:
-            - blockchain
-          filters: *tag_filter
       - sdk:
           requires:
-            - falafel
+            - blockchain
           filters: *tag_filter
       - hummus:
           requires:
@@ -456,12 +475,26 @@ workflows:
           requires:
             - sdk
           filters: *tag_filter
+      - e2e-payment:
+          requires:
+            - end-to-end
+          filters: *tag_filter
+      - e2e-account:
+          requires:
+            - end-to-end
+          filters: *tag_filter
+      - e2e-defi:
+          requires:
+            - end-to-end
+          filters: *tag_filter
       - website
       - metrics
       - deploy:
           requires:
             - x86_64-linux-gcc
-            - end-to-end
+            - e2e-payment
+            - e2e-account
+            - e2e-defi
             - hummus
             - wasabi
             - block-explorer
@@ -473,7 +506,9 @@ workflows:
               only: master
       - deploy-prod:
           requires:
-            - end-to-end
+            - e2e-payment
+            - e2e-account
+            - e2e-defi
             - zk-money
           filters:
             branches:

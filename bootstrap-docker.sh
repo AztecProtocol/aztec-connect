@@ -10,7 +10,7 @@ docker build --file ./dockerfiles/Dockerfile.x86_64-linux-clang . -t $ECR_URL/ba
 echo "Building barretenberg wasm"
 docker build --file ./dockerfiles/Dockerfile.wasm-linux-clang . -t $ECR_URL/barretenberg-wasm-linux-clang
 
-for PROJECT in barretenberg.js blockchain sriracha halloumi falafel sriracha sdk end-to-end; do
+for PROJECT in barretenberg.js blockchain halloumi falafel sdk end-to-end; do
   cd ../$PROJECT
   echo "Building $PROJECT"
   docker build -t $ECR_URL/$PROJECT:latest .

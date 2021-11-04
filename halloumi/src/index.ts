@@ -4,12 +4,21 @@ import { appFactory } from './app';
 import { Server, ServerConfig } from './server';
 import 'log-timestamp';
 
-const { PORT = '8083', MAX_CIRCUIT_SIZE = '8388608', ROLLUP_SHAPES = '1x2', API_PREFIX = '' } = process.env;
+const {
+  PORT = '8083',
+  MAX_CIRCUIT_SIZE = '8388608',
+  ROLLUP_OUTERS = '2',
+  API_PREFIX = '',
+  DATA_DIR = './data',
+  PERSIST = 'true',
+} = process.env;
 
 async function main() {
   const serverConfig: ServerConfig = {
     maxCircuitSize: +MAX_CIRCUIT_SIZE,
-    rollupShapes: ROLLUP_SHAPES,
+    rollupOuters: ROLLUP_OUTERS,
+    dataDir: DATA_DIR,
+    persist: PERSIST == 'true',
   };
   const server = new Server(serverConfig);
   const shutdown = async () => {

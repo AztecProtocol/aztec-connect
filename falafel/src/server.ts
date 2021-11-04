@@ -75,7 +75,9 @@ export class Server {
       numInnerRollupTxs * numOuterRollupProofs,
       publishInterval.asSeconds(),
     );
-    this.proofGenerator = halloumiHost ? new ServerProofGenerator(halloumiHost) : new CliProofGenerator(2 ** 21, "1x2");
+    this.proofGenerator = halloumiHost
+      ? new ServerProofGenerator(halloumiHost)
+      : new CliProofGenerator(2 ** 21, '2', './data', true);
     this.pipelineFactory = new RollupPipelineFactory(
       this.proofGenerator,
       blockchain,

@@ -13,7 +13,12 @@ export class CliProofGenerator implements ProofGenerator {
   private runningPromise?: Promise<void>;
   private execQueue = new MemoryFifo<() => Promise<void>>();
 
-  constructor(private maxCircuitSize: number, private rollupShapes: string) {
+  constructor(
+    private maxCircuitSize: number,
+    private rollupShapes: string,
+    private dataDir: string,
+    private persist: boolean,
+  ) {
     if (!maxCircuitSize) {
       throw new Error('Rollup sizes must be greater than 0.');
     }
@@ -140,7 +145,7 @@ export class CliProofGenerator implements ProofGenerator {
 
   private launch() {
     const binPath = '../barretenberg/build/src/aztec/rollup/rollup_cli/rollup_cli';
-    const proc = (this.proc = spawn(binPath, ['./data/crs', './data'].concat(this.rollupShapes)));
+    const proc = (this.proc = spawn(binPath, ['./data/crs', this.dataDir, this.rollupShapes, this.persist.toString()]));
     this.stdout = new PromiseReadable(proc!.stdout!);
 
     const rl = createInterface({
