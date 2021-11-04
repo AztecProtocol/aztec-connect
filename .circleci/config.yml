@@ -453,7 +453,7 @@ workflows:
           filters: *tag_filter
       - sdk:
           requires:
-            - blockchain
+            - falafel
           filters: *tag_filter
       - hummus:
           requires:
