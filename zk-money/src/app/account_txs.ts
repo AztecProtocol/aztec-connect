@@ -4,7 +4,8 @@ export enum AccountAction {
   SHIELD = 'SHIELD',
   SEND = 'SEND',
   MERGE = 'MERGE',
-  MIGRATE = 'MIGRATE',
+  MIGRATE_OLD_BALANCE = 'MIGRATE_OLD_BALANCE',
+  MIGRATE_FORGOTTON_BALANCE = 'MIGRATE_FORGOTTON_BALANCE',
 }
 
 type JoinSplitTxAction = AccountAction | 'RECEIVE';

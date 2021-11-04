@@ -279,8 +279,12 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
     this.setState({ systemMessage: { message: '', type: MessageType.TEXT } }, () => this.app.logout());
   };
 
-  private handleMigrateBalance = () => {
-    this.app.selectAction(AccountAction.MIGRATE);
+  private handleMigrateOldBalance = () => {
+    this.app.selectAction(AccountAction.MIGRATE_OLD_BALANCE);
+  };
+
+  private onMigrateForgottonBalance = () => {
+    this.app.selectAction(AccountAction.MIGRATE_FORGOTTON_BALANCE);
   };
 
   private handleChangeAsset = (assetId: AppAssetId) => {
@@ -339,7 +343,8 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
         worldState={worldState}
         account={step === LoginStep.DONE ? accountState : undefined}
         systemMessage={systemMessage}
-        onMigrateBalance={this.handleMigrateBalance}
+        onMigrateOldBalance={this.handleMigrateOldBalance}
+        onMigrateForgottonBalance={this.onMigrateForgottonBalance}
         onLogout={this.handleLogout}
         isLoading={isLoading}
       >

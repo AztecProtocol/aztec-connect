@@ -587,19 +587,25 @@ export class CoreSdk extends EventEmitter {
   }
 
   public async getAccountId(user: string | GrumpkinAddress, nonce?: number) {
-    if (typeof user === 'string') {
-      const publicKey = GrumpkinAddress.isAddress(user)
-        ? GrumpkinAddress.fromString(user)
-        : await this.getAddressFromAlias(user);
-      if (!publicKey) {
-        throw new Error('Alias not registered.');
-      }
-      const accountNonce = nonce !== undefined ? nonce : await this.getLatestUserNonce(publicKey);
-      return new AccountId(publicKey, accountNonce);
+    if (typeof user !== 'string') {
+      const accountNonce = nonce !== undefined ? nonce : await this.getLatestUserNonce(user);
+      return new AccountId(user, accountNonce);
     }
 
-    const accountNonce = nonce !== undefined ? nonce : await this.getLatestUserNonce(user);
-    return new AccountId(user, accountNonce);
+    const aliasHash = this.computeAliasHash(user);
+    if (nonce === undefined) {
+      const latest = await this.db.getLatestAlias(aliasHash);
+      if (!latest) {
+        throw new Error('Alias not registered.');
+      }
+      return new AccountId(latest.address, latest.latestNonce);
+    }
+
+    const pubKey = await this.db.getAddressByAliasHash(aliasHash);
+    if (!pubKey) {
+      throw new Error('Alias not registered.');
+    }
+    return new AccountId(pubKey, nonce);
   }
 
   public async isAliasAvailable(alias: string) {

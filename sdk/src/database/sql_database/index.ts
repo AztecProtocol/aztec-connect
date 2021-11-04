@@ -204,9 +204,9 @@ export class SQLDatabase implements Database {
     return alias?.latestNonce;
   }
 
-  async getLatestNonceByAliasHash(aliasHash: AliasHash) {
+  async getLatestAlias(aliasHash: AliasHash) {
     const alias = await this.aliasRep.findOne({ where: { aliasHash }, order: { latestNonce: 'DESC' } });
-    return alias?.latestNonce;
+    return alias;
   }
 
   async getAliasHashByAddress(address: GrumpkinAddress, nonce?: number) {
