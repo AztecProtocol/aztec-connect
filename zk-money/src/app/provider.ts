@@ -132,6 +132,12 @@ export class Provider extends EventEmitter {
     this.updateState({ status: ProviderStatus.INITIALIZED });
   }
 
+  async disconnect() {
+    if (this.ethereumProvider) {
+      this.handleDisconnect();
+    }
+  }
+
   async destroy() {
     this.removeAllListeners();
     this.ethereumProvider?.removeListener('disconnect', this.handleDisconnect);

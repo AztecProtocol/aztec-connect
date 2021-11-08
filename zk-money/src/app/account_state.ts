@@ -14,6 +14,7 @@ export interface AccountState {
   alias: string;
   accountTxs: AccountTx[];
   settled: boolean;
+  latestUserNonce: number;
 }
 
 export interface AssetState {

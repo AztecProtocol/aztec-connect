@@ -32,7 +32,7 @@ interface SigningKeyFormProps {
   messageType?: MessageType;
   onChangeWallet(walletId: WalletId): void;
   onDisconnectWallet(): void;
-  onGoBack(): void;
+  onGoBack?: () => void;
 }
 
 export const SigningKeyForm: React.FunctionComponent<SigningKeyFormProps> = ({
@@ -56,11 +56,8 @@ export const SigningKeyForm: React.FunctionComponent<SigningKeyFormProps> = ({
       </Description>
       <WalletPicker wallets={availableWallets} walletId={providerState?.walletId} onSubmit={onChangeWallet} />
       <FooterLink>
-        {!providerState ? (
-          <TextLink text="(Go Back)" onClick={onGoBack} size="xs" color="white" />
-        ) : (
-          <TextLink text="(Disconnect)" onClick={onDisconnectWallet} size="xs" color="white" />
-        )}
+        {!!onGoBack && !providerState && <TextLink text="(Go Back)" onClick={onGoBack} size="xs" color="white" />}
+        {!!providerState && <TextLink text="(Disconnect)" onClick={onDisconnectWallet} size="xs" color="white" />}
       </FooterLink>
       {!!message && <SystemMessagePopup message={message} type={messageType!} />}
     </Root>

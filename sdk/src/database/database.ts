@@ -59,7 +59,7 @@ export interface Database {
   getAlias(aliasHash: AliasHash, address: GrumpkinAddress): Promise<Alias | undefined>;
   getAliases(aliasHash: AliasHash): Promise<Alias[]>;
   getLatestNonceByAddress(address: GrumpkinAddress): Promise<number | undefined>;
-  getLatestNonceByAliasHash(aliasHash: AliasHash): Promise<number | undefined>;
+  getLatestAlias(aliasHash: AliasHash): Promise<Alias | undefined>;
   getAliasHashByAddress(address: GrumpkinAddress, nonce?: number): Promise<AliasHash | undefined>;
   getAddressByAliasHash(aliasHash: AliasHash, nonce?: number): Promise<GrumpkinAddress | undefined>;
 

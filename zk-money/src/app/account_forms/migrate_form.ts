@@ -15,7 +15,7 @@ import {
   withError,
   withWarning,
 } from '../form';
-import { KeyVault } from '../key_vault';
+import { createSigningKeys, KeyVault } from '../key_vault';
 import { Provider, ProviderEvent } from '../provider';
 import { AccountForm, AccountFormEvent } from './account_form';
 
@@ -85,18 +85,24 @@ const initialMigrateFormValues = {
 export class MigrateForm extends EventEmitter implements AccountForm {
   private readonly userId: AccountId;
 
+  private sourceAccount?: {
+    userId: AccountId;
+    accountPrivateKey: Buffer;
+    signingPrivateKey: Buffer;
+  };
+
   private values: MigrateFormValues = initialMigrateFormValues;
   private formStatus = FormStatus.ACTIVE;
   private destroyed = false;
 
-  private keyVault?: KeyVault;
-
   constructor(
     accountState: AccountState,
+    private readonly keyVault: KeyVault,
     private provider: Provider | undefined,
     private readonly sdk: WalletSdk,
     private readonly db: Database,
     private readonly accountUtils: AccountUtils,
+    private readonly fromAccountV0: boolean,
   ) {
     super();
     this.userId = accountState.userId;
@@ -214,14 +220,13 @@ export class MigrateForm extends EventEmitter implements AccountForm {
     this.updateFormStatus(FormStatus.PROCESSING);
     this.updateFormValues({ status: { value: MigrateStatus.SYNC } });
 
-    const { accountPublicKey, accountPrivateKey } = this.keyVault!;
-    const prevUserId = new AccountId(accountPublicKey, 1);
-    await this.accountUtils.addUser(accountPrivateKey, prevUserId.nonce);
-    await this.sdk.awaitUserSynchronised(prevUserId);
+    const { userId, accountPrivateKey } = this.sourceAccount!;
+    await this.accountUtils.addUser(accountPrivateKey, userId.nonce);
+    await this.sdk.awaitUserSynchronised(userId);
 
     const migratingAssets = await Promise.all(
       this.values.migratingAssets.value.map(async asset => {
-        const notes = (await this.sdk.getSpendableNotes(asset.assetId, prevUserId)).sort((a, b) =>
+        const notes = (await this.sdk.getSpendableNotes(asset.assetId, userId)).sort((a, b) =>
           a.value < b.value ? 1 : -1,
         );
         const fee = await this.sdk.getFee(asset.assetId, TxType.TRANSFER);
@@ -240,7 +245,7 @@ export class MigrateForm extends EventEmitter implements AccountForm {
 
     if (!migratingAssets.some(a => a.migratableValues.length)) {
       // Nothing to migrate.
-      await this.accountUtils.removeUser(prevUserId);
+      await this.accountUtils.removeUser(userId);
     }
 
     this.updateFormStatus(FormStatus.LOCKED);
@@ -266,9 +271,8 @@ export class MigrateForm extends EventEmitter implements AccountForm {
     };
 
     const migratingAssets = this.values.migratingAssets.value;
-    const { accountPublicKey, accountPrivateKey } = this.keyVault!;
-    const prevUserId = new AccountId(accountPublicKey, 1);
-    const signer = this.sdk.createSchnorrSigner(accountPrivateKey);
+    const { userId, signingPrivateKey } = this.sourceAccount!;
+    const signer = this.sdk.createSchnorrSigner(signingPrivateKey);
     for (const asset of migratingAssets) {
       const { assetId, fee, migratableValues } = asset;
       for (let i = 0; i < migratableValues.length; i += 2) {
@@ -278,7 +282,7 @@ export class MigrateForm extends EventEmitter implements AccountForm {
 
         const amount = migratableValues.slice(i, i + 2).reduce((sum, value) => sum + value, 0n) - fee;
         // Create private send proof.
-        const proof = await this.sdk.createTransferProof(assetId, prevUserId, amount, fee, signer, this.userId);
+        const proof = await this.sdk.createTransferProof(assetId, userId, amount, fee, signer, this.userId);
         await this.sdk.sendProof(proof);
         await this.db.addMigratingTx({
           ...proof.tx,
@@ -289,7 +293,7 @@ export class MigrateForm extends EventEmitter implements AccountForm {
       }
     }
 
-    await this.accountUtils.removeUser(prevUserId);
+    await this.accountUtils.removeUser(userId);
 
     this.updateFormValues({ status: { value: MigrateStatus.DONE } });
   }
@@ -303,11 +307,20 @@ export class MigrateForm extends EventEmitter implements AccountForm {
       submit: clearMessage({ value: false }),
     });
 
+    if (this.fromAccountV0) {
+      await this.requestKeyVaultV0();
+    } else {
+      await this.requestSigningKey();
+    }
+  };
+
+  private async requestKeyVaultV0() {
     if (!this.provider) {
       return;
     }
 
-    const signingMessage = KeyVault.signingMessageV0(this.provider.account!, this.sdk).toString('hex');
+    const provider = this.provider;
+    const signingMessage = KeyVault.signingMessageV0(provider.account!, this.sdk).toString('hex');
     this.prompt(
       `To check the balances in your old account, please sign the following hash in your wallet: 0x${signingMessage.slice(
         0,
@@ -316,17 +329,60 @@ export class MigrateForm extends EventEmitter implements AccountForm {
     );
 
     try {
-      this.keyVault = await KeyVault.createV0(this.provider, this.sdk);
-      if (!this.destroyed && this.status === MigrateStatus.CONNECT) {
+      const { accountPublicKey, accountPrivateKey } = await KeyVault.createV0(provider, this.sdk);
+      if (!this.destroyed && this.status === MigrateStatus.CONNECT && provider === this.provider) {
         this.provider.off(ProviderEvent.UPDATED_PROVIDER_STATE, this.onProviderStateChange);
+        this.sourceAccount = {
+          userId: new AccountId(accountPublicKey, 1),
+          accountPrivateKey,
+          signingPrivateKey: accountPrivateKey,
+        };
         await this.syncBalance();
       }
     } catch (e) {
-      if (this.status === MigrateStatus.CONNECT) {
+      if (this.status === MigrateStatus.CONNECT && provider === this.provider) {
+        await provider?.disconnect();
         this.updateFormValues({ submit: withError({ value: false }, 'Message signature denied.') });
       }
     }
-  };
+  }
+
+  private async requestSigningKey() {
+    if (!this.provider) {
+      return;
+    }
+
+    const provider = this.provider;
+    const { account } = provider;
+    const { signerAddress } = this.keyVault;
+    if (!account?.equals(signerAddress)) {
+      this.prompt(
+        `Please switch your wallet's account to ${signerAddress
+          .toString()
+          .slice(0, 6)}...${signerAddress.toString().slice(-4)}`,
+      );
+      return;
+    }
+
+    this.prompt('Please sign the message in your wallet to generate your Aztec Spending Key...');
+
+    try {
+      const signingKey = await createSigningKeys(provider, this.sdk);
+      if (!this.destroyed && this.status === MigrateStatus.CONNECT && provider === this.provider) {
+        this.sourceAccount = {
+          userId: new AccountId(this.userId.publicKey, this.userId.nonce + 1),
+          accountPrivateKey: this.keyVault.accountPrivateKey,
+          signingPrivateKey: signingKey.privateKey,
+        };
+        await this.syncBalance();
+      }
+    } catch (e) {
+      if (this.status === MigrateStatus.CONNECT && provider === this.provider) {
+        await provider?.disconnect();
+        this.updateFormValues({ submit: withError({ value: false }, 'Message signature denied.') });
+      }
+    }
+  }
 
   private updateFormStatus(status: FormStatus) {
     this.formStatus = status;
