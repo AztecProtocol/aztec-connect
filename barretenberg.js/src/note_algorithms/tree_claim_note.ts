@@ -21,7 +21,7 @@ export class TreeClaimNote {
     return new TreeClaimNote(
       toBigIntBE(randomBytes(32)),
       BridgeId.random(),
-      randomBytes(4).readUInt32BE(),
+      randomBytes(4).readUInt32BE(0),
       toBigIntBE(randomBytes(32)),
       randomBytes(32),
       randomBytes(32),

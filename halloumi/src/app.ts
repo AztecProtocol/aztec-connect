@@ -19,7 +19,7 @@ export function appFactory(server: Server, prefix: string) {
   const exceptionHandler = async (ctx: Koa.Context, next: () => Promise<void>) => {
     try {
       await next();
-    } catch (err) {
+    } catch (err: any) {
       console.log(err);
       ctx.status = 400;
       ctx.body = { error: err.message };

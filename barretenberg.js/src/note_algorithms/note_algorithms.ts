@@ -80,12 +80,12 @@ export class NoteAlgorithms {
   public accountNoteCommitment(
     accountAliasId: AccountAliasId,
     publicKey: GrumpkinAddress,
-    signingKey: GrumpkinAddress,
+    signingKey: Buffer,
   ) {
     this.wasm.transferToHeap(accountAliasId.toBuffer(), 0);
     this.wasm.transferToHeap(publicKey.toBuffer(), 32);
-    this.wasm.transferToHeap(signingKey.toBuffer(), 96);
-    this.wasm.call('notes__account_note_commitment', 0, 32, 96, 0);
+    this.wasm.transferToHeap(signingKey, 64);
+    this.wasm.call('notes__account_note_commitment', 0, 32, 64, 0);
     return Buffer.from(this.wasm.sliceMemory(0, 32));
   }
 

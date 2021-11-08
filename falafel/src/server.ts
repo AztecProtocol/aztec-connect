@@ -3,7 +3,7 @@ import { Blockchain } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
-import { RollupProviderStatus } from '@aztec/barretenberg/rollup_provider';
+import { RollupProviderStatus, InitialWorldState } from '@aztec/barretenberg/rollup_provider';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
@@ -18,6 +18,7 @@ import { RollupPipelineFactory } from './rollup_pipeline';
 import { TxFeeResolver } from './tx_fee_resolver';
 import { Tx, TxReceiver } from './tx_receiver';
 import { WorldState } from './world_state';
+import { InitHelpers } from '@aztec/barretenberg/environment';
 
 export interface ServerConfig {
   readonly halloumiHost?: string;
@@ -155,6 +156,13 @@ export class Server {
       nextPublishTime: this.worldState.getNextPublishTime(),
       pendingTxCount: await this.rollupDb.getUnsettledTxCount(),
     };
+  }
+
+  public async getInitialWorldState(): Promise<InitialWorldState> {
+    const chainId = await this.blockchain.getChainId();
+    const accountFileName = InitHelpers.getAccountDataFile(chainId);
+    const initialAccounts = accountFileName ? await InitHelpers.readData(accountFileName) : Buffer.alloc(0);
+    return { initialAccounts };
   }
 
   public async getUnsettledTxs() {

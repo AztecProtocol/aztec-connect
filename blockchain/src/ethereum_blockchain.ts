@@ -15,6 +15,7 @@ import { Contracts } from './contracts/contracts';
 import { validateSignature } from './validate_signature';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state/world_state_constants';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { InitHelpers } from '@aztec/barretenberg/environment';
 
 export interface EthereumBlockchainConfig {
   console?: boolean;
@@ -44,13 +45,6 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
 
   constructor(private config: EthereumBlockchainConfig, private contracts: Contracts) {
     super();
-    this.status = {
-      ...this.status,
-      dataRoot: WorldStateConstants.EMPTY_DATA_ROOT,
-      nullRoot: WorldStateConstants.EMPTY_NULL_ROOT,
-      rootRoot: WorldStateConstants.EMPTY_ROOT_ROOT,
-      defiRoot: WorldStateConstants.EMPTY_DEFI_ROOT,
-    };
     if (config.console === false) {
       this.log = () => {};
     }
@@ -112,7 +106,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       while (true) {
         try {
           return await this.getBlocks(fromRollup);
-        } catch (err) {
+        } catch (err: any) {
           this.log(`getBlocks failed, will retry: ${err.message}`);
           await new Promise(resolve => setTimeout(resolve, 5000));
         }
@@ -187,6 +181,18 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
         nullRoot: rollupProofData.newNullRoot,
         rootRoot: rollupProofData.newDataRootsRoot,
         defiRoot: rollupProofData.newDefiRoot,
+      };
+    } else {
+      // No rollups yet.
+      const chainId = await this.contracts.getChainId();
+      const { initDataRoot, initNullRoot, initRootsRoot } = InitHelpers.getInitRoots(chainId);
+      this.status = {
+        ...this.status,
+        nextRollupId: 0,
+        dataRoot: initDataRoot,
+        nullRoot: initNullRoot,
+        rootRoot: initRootsRoot,
+        defiRoot: WorldStateConstants.EMPTY_DEFI_ROOT,
       };
     }
   }

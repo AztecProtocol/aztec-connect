@@ -58,7 +58,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   const exceptionHandler = async (ctx: Koa.Context, next: () => Promise<void>) => {
     try {
       await next();
-    } catch (err) {
+    } catch (err: any) {
       console.log(err);
       ctx.status = 400;
       ctx.body = { error: err.message };
@@ -144,6 +144,12 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
 
     ctx.set('content-type', 'application/json');
     ctx.body = response;
+    ctx.status = 200;
+  });
+
+  router.get('/get-initial-world-state', recordMetric, checkReady, async (ctx: Koa.Context) => {
+    const response = await server.getInitialWorldState();
+    ctx.body = response.initialAccounts;
     ctx.status = 200;
   });
 

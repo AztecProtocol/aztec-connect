@@ -81,7 +81,7 @@ export class TerminalHandler {
         } else {
           await this.handleCommand(cmd, args, this.postInitCmds);
         }
-      } catch (err) {
+      } catch (err: any) {
         debug(err);
         this.printQueue.put(err.message + '\n');
       }

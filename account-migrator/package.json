@@ -1,0 +1,27 @@
+{
+  "name": "account-migrator",
+  "version": "1.0.0",
+  "description": "A utility for migrating accounts across system versions",
+  "main": "index.js",
+  "author": "Aztec",
+  "license": "GPL-2.0",
+  "scripts": {
+    "build": "yarn clean && tsc -p tsconfig.json",
+    "start": "node ./dest/index.js",
+    "clean": "rm -rf ./dest"
+  },
+  "dependencies": {
+    "@aztec/barretenberg": "file:../barretenberg.js/dest",
+    "@aztec/blockchain": "file:../blockchain/dest",
+    "@types/node": "^16.10.2",
+    "commander": "^8.2.0",
+    "ethers": "^5.4.7",
+    "typescript": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/mocha": "^9.0.0",
+    "@typescript-eslint/eslint-plugin": "^4.1.1",
+    "@typescript-eslint/parser": "^4.1.1",
+    "ts-node": "^10.2.1"
+  }
+}

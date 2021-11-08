@@ -60,7 +60,7 @@ describe('rollup_processor: deposit', () => {
 
     const { gasPrice } = await ethers.provider.getTransaction(txHash.toString());
     const { gasUsed } = await ethers.provider.getTransactionReceipt(txHash.toString());
-    const gasCost = BigInt(gasUsed.mul(gasPrice).toString());
+    const gasCost = BigInt(gasUsed.mul(gasPrice!).toString());
     const feeDistributorBalance = await feeDistributor.txFeeBalance(EthAddress.ZERO);
     const feeRefund = prepaidFee + txFee - feeDistributorBalance;
 

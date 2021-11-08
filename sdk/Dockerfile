@@ -6,7 +6,7 @@ COPY --from=0 /usr/src/barretenberg.js/dest /usr/src/barretenberg.js/dest
 COPY --from=1 /usr/src/blockchain/dest /usr/src/blockchain/dest
 WORKDIR /usr/src/sdk
 COPY . .
-RUN yarn install && yarn test --runInBand && yarn build && rm -rf node_modules && yarn cache clean
+RUN yarn install --frozen-lockfile && yarn test --runInBand && yarn build && rm -rf node_modules && yarn cache clean
 
 FROM node:14-alpine
 COPY --from=0 /usr/src/barretenberg.js/dest /usr/src/barretenberg.js/dest

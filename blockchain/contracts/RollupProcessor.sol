@@ -25,10 +25,10 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
 
     bytes4 private constant DEFI_BRIDGE_PROXY_CONVERT_SELECTOR = 0xb5f08153; // bytes4(keccak256('convert(address,address,address,address,uint32,uint256,uint256,uint256)'));
     bytes4 private constant TRANSFER_FROM_SELECTOR = 0x23b872dd; // bytes4(keccak256('transferFrom(address,address,uint256)'));
-    bytes32 private constant INIT_DATA_ROOT = 0x11977941a807ca96cf02d1b15830a53296170bf8ac7d96e5cded7615d18ec607;
-    bytes32 private constant INIT_NULL_ROOT = 0x1b831fad9b940f7d02feae1e9824c963ae45b3223e721138c6f73261e690c96a;
-    bytes32 private constant INIT_ROOT_ROOT = 0x1b435f036fc17f4cc3862f961a8644839900a8e4f1d0b318a7046dd88b10be75;
+
     bytes32 private constant INIT_DEFI_ROOT = 0x0170467ae338aaf3fd093965165b8636446f09eeb15ab3d36df2e31dd718883d;
+
+    bytes32 public stateHash;
 
     IVerifier public verifier;
 
@@ -107,20 +107,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
      * | 245            | 10            | defiInteractionHashes.length : number of entries in defiInteractionHashes array |
      * | 255            | 1             | reentrancyMutex used to guard against reentrancy attacks
      */
-    bytes32 public rollupState =
-        bytes32(
-            uint256(
-                keccak256(
-                    abi.encodePacked(
-                        uint256(0), // nextRollupId
-                        INIT_DATA_ROOT,
-                        INIT_NULL_ROOT,
-                        INIT_ROOT_ROOT,
-                        INIT_DEFI_ROOT
-                    )
-                )
-            ) & STATE_HASH_MASK
-        );
+    bytes32 public rollupState;
 
     function getStateHash() public view returns (bytes32 stateHash) {
         assembly {
@@ -204,8 +191,27 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         uint256 _escapeBlockLowerBound,
         uint256 _escapeBlockUpperBound,
         address _defiBridgeProxy,
-        address _contractOwner
+        address _contractOwner,
+        bytes32 _initDataRoot,
+        bytes32 _initNullRoot,
+        bytes32 _initRootRoot,
+        uint256 _initDataSize
     ) public {
+        rollupState =
+            bytes32(
+                uint256(
+                    keccak256(
+                        abi.encodePacked(
+                            uint256(0), // nextRollupId
+                            _initDataRoot,
+                            _initNullRoot,
+                            _initRootRoot,
+                            INIT_DEFI_ROOT
+                        )
+                    )
+                ) & STATE_HASH_MASK
+            );
+        setDataSize(_initDataSize);
         verifier = IVerifier(_verifierAddress);
         defiBridgeProxy = _defiBridgeProxy;
         escapeBlockLowerBound = _escapeBlockLowerBound;
@@ -455,9 +461,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             address assetAddress = getSupportedAsset(assetId);
             internalDeposit(assetId, assetAddress, depositorAddress, amount);
         }
-        
-        if(proofHash != 0)  {
-          approveProof(proofHash);
+
+        if (proofHash != 0) {
+            approveProof(proofHash);
         }
     }
 
@@ -490,8 +496,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         IERC20Permit(assetAddress).permit(depositorAddress, spender, permitApprovalAmount, deadline, v, r, s);
         internalDeposit(assetId, assetAddress, depositorAddress, amount);
 
-        if(proofHash != '')  {
-          approveProof(proofHash);
+        if (proofHash != '') {
+            approveProof(proofHash);
         }
     }
 
@@ -799,13 +805,13 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                         bytes32 hashedMessage;
                         assembly {
                             let mPtr := mload(0x40)
-                            mstore(add(mPtr, 32), "\x19Ethereum Signed Message:\n174")
-                            mstore(add(mPtr, 61), "Signing this message will allow ")
-                            mstore(add(mPtr, 93), "your pending funds to be spent i")
-                            mstore(add(mPtr, 125), "n Aztec transaction:\n")
+                            mstore(add(mPtr, 32), '\x19Ethereum Signed Message:\n174')
+                            mstore(add(mPtr, 61), 'Signing this message will allow ')
+                            mstore(add(mPtr, 93), 'your pending funds to be spent i')
+                            mstore(add(mPtr, 125), 'n Aztec transaction:\n')
                             mstore(add(mPtr, 146), digest)
-                            mstore(add(mPtr, 178), "\nIMPORTANT: Only sign the messag")
-                            mstore(add(mPtr, 210), "e if you trust the client")
+                            mstore(add(mPtr, 178), '\nIMPORTANT: Only sign the messag')
+                            mstore(add(mPtr, 210), 'e if you trust the client')
                             hashedMessage := keccak256(add(mPtr, 32), 203)
                         }
 
@@ -1257,7 +1263,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             mstore(add(mPtr, 0xa0), result)
             pop(staticcall(gas(), 0x2, mPtr, 0xc0, 0x00, 0x20))
             defiInteractionHash := mod(mload(0x00), CIRCUIT_MODULUS)
-            
+
             // push async defi interaction hash
             mstore(0x00, asyncDefiInteractionHashes_slot)
             let slotBase := keccak256(0x00, 0x20)
@@ -1265,7 +1271,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             let state := sload(rollupState_slot)
             let asyncArrayLen := and(ARRAY_LENGTH_MASK, shr(ASYNCDEFIINTERACTIONHASHES_BIT_OFFSET, state))
             let defiArrayLen := and(ARRAY_LENGTH_MASK, shr(DEFIINTERACTIONHASHES_BIT_OFFSET, state))
-            
+
             // check that size of asyncDefiInteractionHashes isn't such that
             // adding 1 to it will make the next block's defiInteractionHashes length hit 512
             if gt(add(add(1, asyncArrayLen), defiArrayLen), 512)

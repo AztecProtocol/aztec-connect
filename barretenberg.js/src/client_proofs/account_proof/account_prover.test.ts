@@ -129,8 +129,8 @@ describe('account proof', () => {
     // Check public inputs
     const accountProof = new ProofData(proof);
     const newAccountAliasId = new AccountAliasId(aliasHash, nonce + 1);
-    const noteCommitment1 = noteAlgos.accountNoteCommitment(newAccountAliasId, user.publicKey, signingKey0.publicKey);
-    const noteCommitment2 = noteAlgos.accountNoteCommitment(newAccountAliasId, user.publicKey, signingKey1.publicKey);
+    const noteCommitment1 = noteAlgos.accountNoteCommitment(newAccountAliasId, user.publicKey, signingKey0.publicKey.x());
+    const noteCommitment2 = noteAlgos.accountNoteCommitment(newAccountAliasId, user.publicKey, signingKey1.publicKey.x());
     const accountAliasIdNullifier = noteAlgos.accountAliasIdNullifier(accountAliasId);
     expect(accountProof.proofId).toBe(ProofId.ACCOUNT);
     expect(accountProof.noteCommitment1).toEqual(noteCommitment1);

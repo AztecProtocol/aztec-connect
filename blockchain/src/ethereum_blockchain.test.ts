@@ -4,6 +4,9 @@ import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { Contracts } from './contracts';
 import { EthereumBlockchain, EthereumBlockchainConfig } from './ethereum_blockchain';
+import { InitHelpers } from '@aztec/barretenberg/environment';
+
+jest.mock('@aztec/barretenberg/environment');
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;
@@ -29,7 +32,7 @@ describe('ethereum_blockchain', () => {
 
   const getRollupStateFromBlock = (block: Block) => {
     const nextRollupId = block.rollupId + 1;
-    const dataSize = 16
+    const dataSize = 16;
     const dataRoot = Buffer.alloc(32);
     const nullRoot = Buffer.alloc(32);
     const rootRoot = Buffer.alloc(32);
@@ -44,6 +47,18 @@ describe('ethereum_blockchain', () => {
       defiRoot,
     };
   };
+
+  beforeAll(() => {
+    const getInitRootsMock = jest.fn(() => {
+      return {
+        initDataRoot: Buffer.alloc(32),
+        initNullRoot: Buffer.alloc(32),
+        initRootsRoot: Buffer.alloc(32),
+      };
+    });
+    const MockInitHelpers = InitHelpers as jest.Mocked<typeof InitHelpers>;
+    MockInitHelpers.getInitRoots.mockImplementation(getInitRootsMock);
+  });
 
   beforeEach(async () => {
     contracts = {

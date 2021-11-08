@@ -4,5 +4,10 @@ FROM node:14-alpine
 COPY --from=0 /usr/src /usr/src
 WORKDIR /usr/src/hummus
 COPY . .
-RUN yarn install && yarn test && yarn build && rm -rf node_modules && yarn install --production && yarn cache clean
+RUN yarn install --frozen-lockfile && \
+  yarn test && \
+  yarn build && \
+  rm -rf node_modules && \
+  yarn install --frozen-lockfile --production && \
+  yarn cache clean
 CMD ["yarn", "start"]

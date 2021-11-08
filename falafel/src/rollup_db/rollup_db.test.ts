@@ -37,7 +37,7 @@ describe('rollup_db', () => {
     await rollupDb.addTx(txDao);
 
     const result = await rollupDb.getTx(txDao.id);
-    expect(result!).toStrictEqual(txDao);
+    expect(result!).toEqual(txDao);
   });
 
   it('should add account tx', async () => {

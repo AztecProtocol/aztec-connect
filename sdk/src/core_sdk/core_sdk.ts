@@ -16,13 +16,14 @@ import { RollupProvider, SettlementTime } from '@aztec/barretenberg/rollup_provi
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { BarretenbergWasm, WorkerPool } from '@aztec/barretenberg/wasm';
 import { WorldState } from '@aztec/barretenberg/world_state';
+import { AccountData, InitHelpers } from '@aztec/barretenberg/environment';
 import createDebug from 'debug';
 import isNode from 'detect-node';
 import { EventEmitter } from 'events';
 import Mutex from 'idb-mutex';
 import { LevelUp } from 'levelup';
 import os from 'os';
-import { Database } from '../database';
+import { Alias, Database, SigningKey } from '../database';
 import { AccountProofCreator } from '../proofs/account_proof_creator';
 import { DefiDepositProofCreator } from '../proofs/defi_deposit_proof_creator';
 import { JoinSplitProofCreator } from '../proofs/join_split_proof_creator';
@@ -140,7 +141,7 @@ export class CoreSdk extends EventEmitter {
       rollupContractAddress: rollupContractAddress,
       dataSize: this.worldState.getSize(),
       dataRoot: this.worldState.getRoot(),
-      syncedToRollup: +(await this.leveldb.get('syncedToRollup').catch(() => -1)),
+      syncedToRollup: await this.getSyncedToRollup(),
       latestRollupId: +(await this.leveldb.get('latestRollupId').catch(() => -1)),
       assets,
     };
@@ -345,10 +346,77 @@ export class CoreSdk extends EventEmitter {
     });
   }
 
+  private async syncAliasesAndKeys(accounts: AccountData[]) {
+    const aliases = new Array<Alias>();
+    const uniqueSigningKeys = new Map<string, SigningKey>();
+    let index = 0;
+
+    // There can be duplicate account/nonce/signing key combinations.
+    // We need to just keep the most recent one.
+    // This loop simulates upserts by keeping the most recent version before inserting into the DB.
+    for (let i = 0; i < accounts.length; i++) {
+      const {
+        alias: { address, nonce },
+        signingKeys: { signingKey1, signingKey2 },
+      } = accounts[i];
+      const accountId = new AccountId(new GrumpkinAddress(address), nonce);
+
+      [signingKey1, signingKey2].forEach(key => {
+        const keyVal = key.toString('hex') + ' - ' + accountId.toString();
+        const sk: SigningKey = { treeIndex: index++, key, accountId };
+        uniqueSigningKeys.set(keyVal, sk);
+      });
+
+      aliases.push({
+        aliasHash: new AliasHash(accounts[i].alias.aliasHash),
+        address: new GrumpkinAddress(accounts[i].alias.address),
+        latestNonce: accounts[i].alias.nonce,
+      });
+    }
+    const keys = [...uniqueSigningKeys.values()];
+
+    debug(`synching with ${aliases.length} aliases`);
+    let start = new Date().getTime();
+    await this.db.setAliases(aliases);
+    debug(`aliases saved in ${new Date().getTime() - start}ms`);
+
+    debug(`synching with ${keys.length} signing keys`);
+    start = new Date().getTime();
+    await this.db.addUserSigningKeys(keys);
+    debug(`signing keys saved in ${new Date().getTime() - start}ms`);
+  }
+
+  private async syncCommitments(accounts: AccountData[]) {
+    const start = new Date().getTime();
+    const commitments = accounts.flatMap(x => [x.notes.note1, x.notes.note2]);
+    debug(`synching with ${commitments.length} commitments`);
+    await this.worldState.processNoteCommitments(0, commitments);
+    debug(`note commitments saved in ${new Date().getTime() - start}ms`);
+  }
+
+  private async genesisSync() {
+    debug('initialising genesis state from server...');
+    const initialState = await this.rollupProvider.getInitialWorldState();
+    const accounts = InitHelpers.parseAccountTreeData(initialState.initialAccounts);
+    await this.syncAliasesAndKeys(accounts);
+    await this.syncCommitments(accounts);
+  }
+
+  private async getSyncedToRollup() {
+    return +(await this.leveldb.get('syncedToRollup').catch(() => -1));
+  }
+
   public async startReceivingBlocks() {
     await this.serialExecute(async () => {
       if (this.processBlocksPromise) {
         return;
+      }
+
+      {
+        const syncedToRollup = await this.getSyncedToRollup();
+        if (syncedToRollup === -1) {
+          await this.genesisSync();
+        }
       }
 
       this.blockQueue = new MemoryFifo<Block>();
@@ -358,19 +426,21 @@ export class CoreSdk extends EventEmitter {
 
       await this.sync();
 
-      const syncedToRollup = await this.leveldb.get('syncedToRollup').catch(() => -1);
+      const syncedToRollup = await this.getSyncedToRollup();
       await this.rollupProvider.start(+syncedToRollup + 1);
 
       debug('started processing blocks.');
+    }).catch(err => {
+      debug('START RECEIVING BLOCKS FAILED:', err);
     });
   }
 
   /**
    * Called when data root is not as expected. We need to save parts of leveldb we don't want to lose, erase the db,
-   * and call sync() to rebuild the merkle tree.
+   * and rebuild the merkle tree.
    */
   private async eraseAndRebuildDataTree() {
-    debug('Erasing and rebuilding data tree...');
+    debug('erasing and rebuilding data tree...');
 
     const rca = await this.getRollupContractAddress();
     const rva = await this.getVerifierContractAddress();
@@ -380,12 +450,18 @@ export class CoreSdk extends EventEmitter {
 
     await this.worldState.init();
 
+    const initialState = await this.rollupProvider.getInitialWorldState();
+    const accounts = InitHelpers.parseAccountTreeData(initialState.initialAccounts);
+    await this.syncCommitments(accounts);
+
     await this.sync();
   }
 
   private async sync() {
-    const syncedToRollup = +(await this.leveldb.get('syncedToRollup').catch(() => -1));
+    const syncedToRollup = await this.getSyncedToRollup();
     const blocks = await this.rollupProvider.getBlocks(syncedToRollup + 1);
+
+    debug(`blocks received from rollup provider: ${blocks.length}`);
 
     // For debugging.
     const oldRoot = this.worldState.getRoot();
@@ -397,6 +473,7 @@ export class CoreSdk extends EventEmitter {
       const { dataRoot: expectedDataRoot, dataSize: expectedDataSize } = (await this.getRemoteStatus())
         .blockchainStatus;
       if (!oldRoot.equals(expectedDataRoot)) {
+        debug(`old root ${oldRoot.toString('hex')}, Expected root ${expectedDataRoot.toString('hex')}`);
         await this.eraseAndRebuildDataTree();
         await this.rollupProvider.clientLog({
           message: 'Invalid dataRoot.',
@@ -514,7 +591,7 @@ export class CoreSdk extends EventEmitter {
       await this.worldState.syncFromDb();
       this.sdkStatus.dataRoot = this.worldState.getRoot();
       this.sdkStatus.dataSize = this.worldState.getSize();
-      this.sdkStatus.syncedToRollup = +(await this.leveldb.get('syncedToRollup').catch(() => -1));
+      this.sdkStatus.syncedToRollup = await this.getSyncedToRollup();
       this.sdkStatus.latestRollupId = +(await this.leveldb.get('latestRollupId').catch(() => -1));
       this.emit(SdkEvent.UPDATED_WORLD_STATE, this.sdkStatus.syncedToRollup, this.sdkStatus.latestRollupId);
     });

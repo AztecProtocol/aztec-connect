@@ -29,7 +29,11 @@ contract TestRollupProcessor is RollupProcessor {
             _escapeBlockLowerBound,
             _escapeBlockUpperBound,
             _defiBridgeProxy,
-            _contractOwner
+            _contractOwner,
+            bytes32(0x11977941a807ca96cf02d1b15830a53296170bf8ac7d96e5cded7615d18ec607),
+            bytes32(0x1b831fad9b940f7d02feae1e9824c963ae45b3223e721138c6f73261e690c96a),
+            bytes32(0x1b435f036fc17f4cc3862f961a8644839900a8e4f1d0b318a7046dd88b10be75),
+            uint256(0)
         )
     {}
 

@@ -3,7 +3,7 @@ import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
-import Dexie from 'dexie';
+import Dexie, { PromiseExtended } from 'dexie';
 import { Note } from '../note';
 import { AccountId, UserData } from '../user';
 import { UserAccountTx, UserDefiTx, UserJoinSplitTx } from '../user_tx';
@@ -621,6 +621,14 @@ export class DexieDatabase implements Database {
 
   async addUserSigningKey({ accountId, key, treeIndex }: SigningKey) {
     await this.userKeys.put(new DexieUserKey(new Uint8Array(accountId.toBuffer()), new Uint8Array(key), treeIndex));
+  }
+
+  async addUserSigningKeys(signingKeys: SigningKey[]) {
+    const dbKeys = signingKeys.map(
+      (key, index) =>
+        new DexieUserKey(new Uint8Array(key.accountId.toBuffer()), new Uint8Array(key.key), key.treeIndex),
+    );
+    await this.userKeys.bulkPut(dbKeys);
   }
 
   async getUserSigningKeys(accountId: AccountId) {

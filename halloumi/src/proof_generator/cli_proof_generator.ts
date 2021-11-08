@@ -1,7 +1,6 @@
-import { readFile, pathExists, mkdirp, rename } from 'fs-extra';
+import { readFile, writeFile, pathExists, mkdirp, rename } from 'fs-extra';
 import { fetch } from '@aztec/barretenberg/iso_fetch';
 import { ChildProcess, spawn } from 'child_process';
-import { createWriteStream } from 'fs';
 import { PromiseReadable } from 'promise-readable';
 import { createInterface } from 'readline';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
@@ -117,10 +116,16 @@ export class CliProofGenerator implements ProofGenerator {
   }
 
   private async ensureCrs() {
-    let required = this.maxCircuitSize;
     const pointPerTranscript = 5040000;
-    for (let i = 0; required > 0; i++, required -= pointPerTranscript) {
-      await this.downloadTranscript(i);
+    for (let i = 0, fetched = 0; fetched < this.maxCircuitSize; ) {
+      try {
+        await this.downloadTranscript(i);
+        ++i;
+        fetched += pointPerTranscript;
+      } catch (err: any) {
+        console.log('Failed to download transcript, will retry: ', err);
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
     }
   }
 
@@ -132,14 +137,11 @@ export class CliProofGenerator implements ProofGenerator {
     console.log(`Downloading crs: transcript${id}.dat...`);
     await mkdirp('./data/crs');
     const response = await fetch(`http://aztec-ignition.s3.amazonaws.com/MAIN%20IGNITION/sealed/transcript${id}.dat`);
-    if (response.status !== 200) {
-      throw new Error('Failed to download crs.');
+    if (!response.ok) {
+      throw new Error(response.statusText);
     }
-    const out = createWriteStream(`./data/crs/transcript${id}.dat.progress`);
-    await new Promise(resolve => {
-      out.once('close', resolve);
-      (response.body as any).pipe(out);
-    });
+    const data = await (response as any).buffer();
+    await writeFile(`./data/crs/transcript${id}.dat.progress`, data);
     await rename(`./data/crs/transcript${id}.dat.progress`, `./data/crs/transcript${id}.dat`);
   }
 

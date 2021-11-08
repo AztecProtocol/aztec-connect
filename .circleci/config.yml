@@ -468,9 +468,6 @@ workflows:
           requires:
             - sdk
           filters: *tag_filter
-      - documentation:
-          requires:
-            - sdk
       - end-to-end:
           requires:
             - sdk
@@ -498,7 +495,6 @@ workflows:
             - hummus
             - wasabi
             - block-explorer
-            - documentation
             - website
             - zk-money
           filters:

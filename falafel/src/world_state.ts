@@ -7,6 +7,7 @@ import { DefiInteractionNote, NoteAlgorithms, TreeClaimNote } from '@aztec/barre
 import { OffchainDefiDepositData } from '@aztec/barretenberg/offchain_tx_data';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
+import { InitHelpers } from '@aztec/barretenberg/environment';
 import { AssetMetricsDao } from './entity/asset_metrics';
 import { RollupDao } from './entity/rollup';
 import { RollupProofDao } from './entity/rollup_proof';
@@ -15,6 +16,7 @@ import { getTxTypeFromInnerProofData } from './get_tx_type';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
 import { RollupPipeline, RollupPipelineFactory } from './rollup_pipeline';
+import { AccountDao } from './entity/account';
 
 const innerProofDataToTxDao = (tx: InnerProofData, offchainTxData: Buffer, created: Date, txType: TxType) => {
   const txDao = new TxDao();
@@ -70,6 +72,66 @@ export class WorldState {
     this.pipeline.flushTxs();
   }
 
+  private async syncStateFromInitFiles() {
+    console.log('Synching state from initilisation files...');
+    const chainId = await this.blockchain.getChainId();
+    console.log(`Chain ID: ${chainId}`);
+    const accountDataFile = InitHelpers.getAccountDataFile(chainId);
+    if (!accountDataFile) {
+      console.log(`No account initialisation file for target chain ${chainId}. Skipping account initialisation`);
+      return;
+    }
+    const accounts = await InitHelpers.readAccountTreeData(accountDataFile);
+    const { initDataRoot, initNullRoot, initRootsRoot } = InitHelpers.getInitRoots(chainId);
+    if (accounts.length === 0) {
+      console.log('No accounts read from file, continuing without syncing from file');
+      return;
+    }
+    if (!initDataRoot.length || !initNullRoot.length || !initRootsRoot.length) {
+      console.log('No roots read from file, continuing without syncing from file');
+      return;
+    }
+    console.log(`Read ${accounts.length} accounts from file`);
+    const { dataRoot, rootsRoot } = await InitHelpers.populateDataAndRootsTrees(
+      accounts,
+      this.worldStateDb,
+      RollupTreeId.DATA,
+      RollupTreeId.ROOT,
+    );
+    const newNullRoot = await InitHelpers.populateNullifierTree(accounts, this.worldStateDb, RollupTreeId.NULL);
+
+    this.printState();
+
+    if (!initDataRoot.equals(dataRoot)) {
+      throw new Error(`New data root different to init file: ${initDataRoot.toString('hex')}`);
+    }
+    if (!initRootsRoot.equals(rootsRoot)) {
+      throw new Error(`New roots root different to init file: ${initRootsRoot.toString('hex')}`);
+    }
+    if (!initNullRoot.equals(newNullRoot)) {
+      throw new Error(`New null root different to init file: ${initNullRoot.toString('hex')}`);
+    }
+
+    const accountDaos = accounts.map(
+      a =>
+        new AccountDao({
+          aliasHash: a.alias.aliasHash,
+          accountPubKey: a.alias.address,
+          nonce: a.alias.nonce,
+        }),
+    );
+    await this.rollupDb.addAccounts(accountDaos);
+  }
+
+  private async syncStateFromBlockchain(nextRollupId: number) {
+    console.log(`Syncing state from rollup ${nextRollupId}...`);
+    const blocks = await this.blockchain.getBlocks(nextRollupId);
+
+    for (const block of blocks) {
+      await this.updateDbs(block);
+    }
+  }
+
   /**
    * Called at startup to bring us back in sync.
    * Erases any orphaned rollup proofs and unsettled rollups from rollup db.
@@ -78,12 +140,11 @@ export class WorldState {
   private async syncState() {
     this.printState();
     const nextRollupId = await this.rollupDb.getNextRollupId();
-    console.log(`Syncing state from rollup ${nextRollupId}...`);
-    const blocks = await this.blockchain.getBlocks(nextRollupId);
-
-    for (const block of blocks) {
-      await this.updateDbs(block);
+    console.log(`Syncing state, next rollup id: ${nextRollupId}`);
+    if (nextRollupId === 0) {
+      await this.syncStateFromInitFiles();
     }
+    await this.syncStateFromBlockchain(nextRollupId);
 
     // This deletes all proofs created until now. Not ideal, figure out a way to resume.
     await this.rollupDb.deleteUnsettledRollups();

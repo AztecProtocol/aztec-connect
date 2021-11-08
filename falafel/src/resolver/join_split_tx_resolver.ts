@@ -23,26 +23,26 @@ export class JoinSplitTxResolver {
 
   @FieldResolver()
   async inputOwner(@Root() { joinSplitProofData }: any) {
-    return joinSplitProofData.inputOwner.toString();
+    return joinSplitProofData.publicOwner.toString();
   }
 
   @FieldResolver()
   async publicInput(@Root() { joinSplitProofData }: any) {
-    return joinSplitProofData.publicInput;
+    return joinSplitProofData.publicValue;
   }
 
   @FieldResolver()
   async publicOutput(@Root() { joinSplitProofData }: any) {
-    return joinSplitProofData.publicOutput;
+    return joinSplitProofData.publicValue;
   }
 
   @FieldResolver()
   async assetId(@Root() { joinSplitProofData }: any) {
-    return joinSplitProofData.assetId;
+    return joinSplitProofData.publicAssetId;
   }
 
   @FieldResolver()
   async outputOwner(@Root() { joinSplitProofData }: any) {
-    return joinSplitProofData.outputOwner.toString();
+    return joinSplitProofData.publicOwner.toString();
   }
 }

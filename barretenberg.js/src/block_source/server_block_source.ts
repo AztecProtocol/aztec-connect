@@ -93,7 +93,7 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
           throw new Error(`Bad status code: ${response.status}`);
         }
         return response;
-      } catch (err) {
+      } catch (err: any) {
         console.log(err.message);
         await new Promise(resolve => setTimeout(resolve, 1000));
       }

@@ -7,6 +7,10 @@ import { aliasHashTransformer, grumpkinAddressTransformer } from './transformer'
 @Entity({ name: 'alias' })
 @Index(['aliasHash', 'address'], { unique: true })
 export class AliasDao implements Alias {
+  constructor(init?: Alias) {
+    Object.assign(this, init);
+  }
+
   @PrimaryColumn('blob', { transformer: [aliasHashTransformer] })
   public aliasHash!: AliasHash;
 

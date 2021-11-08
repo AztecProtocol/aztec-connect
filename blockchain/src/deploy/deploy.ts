@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { InitHelpers } from '@aztec/barretenberg/environment';
 import { parseEther } from '@ethersproject/units';
 import { ContractFactory, Signer } from 'ethers';
 import { EthAddress } from '@aztec/barretenberg/address';
@@ -21,6 +22,16 @@ export async function deploy(escapeHatchBlockLower: number, escapeHatchBlockUppe
 
   const defiProxy = await deployDefiBridgeProxy(signer);
 
+  const chainId = await signer.getChainId();
+  console.error(`Chain ID: ${chainId}`);
+
+  const { initDataRoot, initNullRoot, initRootsRoot } = InitHelpers.getInitRoots(chainId);
+  const initDataSize: number = InitHelpers.getInitDataSize(chainId);
+  console.error(`Initial data size: ${initDataSize}`);
+  console.error(`Initial data root: ${initDataRoot.toString('hex')}`);
+  console.error(`Initial null root: ${initNullRoot.toString('hex')}`);
+  console.error(`Initial root root: ${initRootsRoot.toString('hex')}`);
+
   // note we need to change this address for production to the multisig
   const ownerAddress = await signer.getAddress();
   const rollup = await rollupFactory.deploy(
@@ -29,6 +40,10 @@ export async function deploy(escapeHatchBlockLower: number, escapeHatchBlockUppe
     escapeHatchBlockUpper,
     defiProxy.address,
     ownerAddress,
+    initDataRoot,
+    initNullRoot,
+    initRootsRoot,
+    initDataSize,
   );
 
   console.error(`Awaiting deployment...`);

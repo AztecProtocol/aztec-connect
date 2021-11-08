@@ -14,6 +14,7 @@ import { Metrics } from './metrics';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { Container } from 'typedi';
 import { CachedRollupDb, TypeOrmRollupDb } from './rollup_db';
+import { InitHelpers } from '@aztec/barretenberg/environment';
 
 async function main() {
   const {
@@ -66,7 +67,9 @@ async function main() {
     maxUnsettledTxs,
     signingAddress,
   };
-  const rollupDb = new CachedRollupDb(new TypeOrmRollupDb(connection));
+  const chainId = await blockchain.getChainId();
+  const { initDataRoot } = InitHelpers.getInitRoots(chainId);
+  const rollupDb = new CachedRollupDb(new TypeOrmRollupDb(connection, initDataRoot));
   await rollupDb.init();
   const worldStateDb = new WorldStateDb();
   const metrics = new Metrics(worldStateDb, rollupDb, blockchain);

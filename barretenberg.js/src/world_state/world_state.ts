@@ -59,6 +59,14 @@ export class WorldState {
     debug(`data root: ${this.tree.getRoot().toString('hex')}`);
   }
 
+  public async processNoteCommitments(dataStartIndex: number, notes: Buffer[]): Promise<void> {
+    debug(`Processing ${notes.length} note commitments with start index ${dataStartIndex}`);
+    await this.tree.updateElements(dataStartIndex, notes);
+
+    debug(`data size: ${this.tree.getSize()}`);
+    debug(`data root: ${this.tree.getRoot().toString('hex')}`);
+  }
+
   public async syncFromDb() {
     await this.tree.syncFromDb();
   }

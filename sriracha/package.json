@@ -40,7 +40,7 @@
     "log-timestamp": "^0.3.0",
     "promise-readable": "^6.0.0",
     "reflect-metadata": "^0.1.13",
-    "typescript": "^3.5.3"
+    "typescript": "^4.4.4"
   },
   "devDependencies": {
     "@types/fs-extra": "9.0.1",

@@ -20,7 +20,7 @@ export class DefiInteractionNote {
   static random() {
     return new DefiInteractionNote(
       BridgeId.random(),
-      randomBytes(4).readUInt32BE(),
+      randomBytes(4).readUInt32BE(0),
       toBigIntBE(randomBytes(32)),
       toBigIntBE(randomBytes(32)),
       toBigIntBE(randomBytes(32)),

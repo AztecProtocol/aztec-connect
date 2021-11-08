@@ -10,7 +10,7 @@ cd ../build-wasm
 cmake ..
 make -j$(nproc) barretenberg.wasm
 popd
-yarn install
+yarn install --frozen-lockfile
 yarn build
 yarn symlink-wasm
 cd dest && yarn link $LINK_FOLDER

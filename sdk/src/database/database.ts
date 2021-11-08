@@ -60,6 +60,7 @@ export interface Database {
   removeUserTx(txHash: TxHash, userId: AccountId): Promise<void>;
 
   addUserSigningKey(signingKey: SigningKey): Promise<void>;
+  addUserSigningKeys(signingKeys: SigningKey[]): Promise<void>;
   getUserSigningKeys(accountId: AccountId): Promise<SigningKey[]>;
   getUserSigningKeyIndex(accountId: AccountId, signingKey: GrumpkinAddress): Promise<number | undefined>;
   removeUserSigningKeys(accountId: AccountId): Promise<void>;

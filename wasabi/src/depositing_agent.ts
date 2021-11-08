@@ -42,7 +42,7 @@ export class DepositingAgent extends Agent {
           await this.depositToContract();
         }
         await this.deposit();
-      } catch (err) {
+      } catch (err: any) {
         console.log(err.message);
         await new Promise(resolve => setTimeout(resolve, 1000));
       }

@@ -54,7 +54,7 @@ export class Pedersen {
     await this.worker.transferToHeap(data, inputPtr);
 
     const resultPtr = await this.worker.call('pedersen__hash_to_tree', inputPtr);
-    const resultNumFields = Buffer.from(await this.worker.sliceMemory(resultPtr, resultPtr + 4)).readUInt32BE();
+    const resultNumFields = Buffer.from(await this.worker.sliceMemory(resultPtr, resultPtr + 4)).readUInt32BE(0);
     const resultData = Buffer.from(await this.worker.sliceMemory(resultPtr, resultPtr + 4 + resultNumFields * 32));
     await this.worker.call('bbfree', inputPtr);
     await this.worker.call('bbfree', resultPtr);

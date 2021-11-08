@@ -5,7 +5,7 @@ import { randomBytes } from 'crypto';
 import { Note } from '../../note';
 import { AccountId, UserData } from '../../user';
 import { UserAccountTx, UserDefiTx, UserJoinSplitTx } from '../../user_tx';
-import { Database, SigningKey } from '../database';
+import { Database, SigningKey, Alias } from '../database';
 import {
   randomAlias,
   randomClaim,
@@ -621,6 +621,30 @@ export const databaseTestSuite = (
         expect(emptyAliases).toEqual([]);
       });
 
+      it('bulk saves aliases', async () => {
+        const aliases = Array<Alias>();
+        const numAliases = 1000;
+        for (let i = 0; i < numAliases; i++) {
+          aliases.push(randomAlias());
+        }
+        await db.setAliases(aliases);
+
+        let dbAlias = await db.getAlias(aliases[0].aliasHash, aliases[0].address);
+        expect(dbAlias).toEqual(aliases[0]);
+
+        dbAlias = await db.getAlias(aliases[1].aliasHash, aliases[1].address);
+        expect(dbAlias).toEqual(aliases[1]);
+
+        dbAlias = await db.getAlias(aliases[100].aliasHash, aliases[100].address);
+        expect(dbAlias).toEqual(aliases[100]);
+
+        dbAlias = await db.getAlias(aliases[101].aliasHash, aliases[101].address);
+        expect(dbAlias).toEqual(aliases[101]);
+
+        dbAlias = await db.getAlias(aliases[999].aliasHash, aliases[999].address);
+        expect(dbAlias).toEqual(aliases[999]);
+      });
+
       it('update alias with the same aliasHash and address pair', async () => {
         const alias1 = randomAlias();
         await db.setAlias(alias1);
@@ -724,6 +748,30 @@ export const databaseTestSuite = (
 
         expect(await db.getKey(name)).toBeUndefined();
       });
+    });
+
+    it('bulk saves signingKeys', async () => {
+      const keys = Array<SigningKey>();
+      const numKeys = 1000;
+      for (let i = 0; i < numKeys; i++) {
+        keys.push(randomSigningKey());
+      }
+      await db.addUserSigningKeys(keys);
+
+      let [dbKey] = await db.getUserSigningKeys(keys[0].accountId);
+      expect(dbKey).toEqual(keys[0]);
+
+      [dbKey] = await db.getUserSigningKeys(keys[1].accountId);
+      expect(dbKey).toEqual(keys[1]);
+
+      [dbKey] = await db.getUserSigningKeys(keys[100].accountId);
+      expect(dbKey).toEqual(keys[100]);
+
+      [dbKey] = await db.getUserSigningKeys(keys[101].accountId);
+      expect(dbKey).toEqual(keys[101]);
+
+      [dbKey] = await db.getUserSigningKeys(keys[999].accountId);
+      expect(dbKey).toEqual(keys[999]);
     });
 
     describe('Reset and Cleanup', () => {

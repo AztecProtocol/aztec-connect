@@ -1234,9 +1234,9 @@ export class UserSession extends EventEmitter {
     const { signerAddress } = this.keyVault;
     while (!this.provider!.account?.equals(signerAddress)) {
       this.emitSystemMessage(
-        `Please switch your wallet's account to ${signerAddress
+        `Please switch your wallet's account to ${signerAddress.toString().slice(0, 6)}...${signerAddress
           .toString()
-          .slice(0, 6)}...${signerAddress.toString().slice(-4)}.`,
+          .slice(-4)}.`,
         MessageType.WARNING,
       );
       await new Promise(resolve => setTimeout(resolve, 1000));

@@ -33,7 +33,7 @@ export class AccountProofOutput implements ProofOutput {
     let dataStart = 0;
     const migratedBuf = buf.slice(dataStart, dataStart + 1);
     dataStart += 1;
-    const rawProofDataLen = buf.slice(dataStart, dataStart + 4).readUInt32BE();
+    const rawProofDataLen = buf.slice(dataStart, dataStart + 4).readUInt32BE(0);
     dataStart += 4;
     const rawProofData = buf.slice(dataStart, dataStart + rawProofDataLen);
     dataStart += rawProofDataLen;

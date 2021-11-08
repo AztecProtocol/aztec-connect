@@ -22,12 +22,13 @@ function getSigner() {
     const provider = new ethers.providers.JsonRpcProvider(ETHEREUM_HOST);
     return new NonceManager(provider.getSigner(0));
   }
+  return undefined;
 }
 
 async function main() {
   const signer = getSigner();
   if (!signer) {
-    throw new Error('Failed to create signer. Set ETHEREUM_HOST or INFURA_API_KEY, NETWORK, PRIVATE_KEY.');
+    throw new Error('Failed to create connection. Set ETHEREUM_HOST or INFURA_API_KEY, NETWORK, PRIVATE_KEY.');
   }
 
   const { rollup, priceFeeds } = await deploy(+ESCAPE_BLOCK_LOWER, +ESCAPE_BLOCK_UPPER, signer);

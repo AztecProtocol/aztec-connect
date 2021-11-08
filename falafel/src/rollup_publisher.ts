@@ -141,7 +141,7 @@ export class RollupPublisher {
         const reportedPrice = ((await this.blockchain.getGasPrice()) * multiplier) / 100n;
         const gasPrice = reportedPrice < this.maxProviderGasPrice ? reportedPrice : this.maxProviderGasPrice;
         return await this.blockchain.sendTx(txData, { gasPrice });
-      } catch (err) {
+      } catch (err: any) {
         console.log(err.message.slice(0, 200));
         await this.sleepOrInterrupted(60000);
       }

@@ -1,0 +1,24 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "type": "node",
+        "request": "launch",
+        "name": "Launch Program",
+        "skipFiles": ["<node_internals>/**"],
+        "program": "${workspaceFolder}/src/index.ts",
+        "outFiles": ["${workspaceFolder}/dest/**/*.js"],
+        "args": [
+          "-d", "../data", 
+          "-a", "0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba", 
+          "-u", "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35",
+          "-r", "0",
+          "-c", "0"
+        ]
+      }
+    ]
+  }
+  

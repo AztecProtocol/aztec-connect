@@ -261,6 +261,35 @@ export class SQLDatabase implements Database {
     await this.userKeyRep.save(signingKey);
   }
 
+  async addBulkItems<Entity, InputType>(
+    repo: Repository<Entity>,
+    items: InputType[],
+    newEntity: { new (input: InputType): Entity },
+    initialBatchSize = 20,
+  ) {
+    const itemsCopy = [...items];
+    await repo.manager.transaction(async transactionalEntityManager => {
+      let batchSize = initialBatchSize;
+      while (itemsCopy.length) {
+        const keysSlice = itemsCopy.slice(0, batchSize).map(k => new newEntity(k));
+        try {
+          await transactionalEntityManager.save(keysSlice);
+          itemsCopy.splice(0, batchSize);
+        } catch (err) {
+          batchSize /= 2;
+          if (batchSize < 1) {
+            throw new Error(`Unable to insert entity, error: ${err}`);
+          }
+          batchSize = Math.round(batchSize);
+        }
+      }
+    });
+  }
+
+  async addUserSigningKeys(signingKeys: SigningKey[]) {
+    await this.addBulkItems(this.userKeyRep, signingKeys, UserKeyDao, 20);
+  }
+
   async getUserSigningKeys(accountId: AccountId) {
     return await this.userKeyRep.find({ accountId });
   }
@@ -280,10 +309,7 @@ export class SQLDatabase implements Database {
   }
 
   async setAliases(aliases: Alias[]) {
-    // TODO: Dedupe for bulk insert.
-    for (const alias of aliases) {
-      await this.aliasRep.save(alias);
-    }
+    await this.addBulkItems(this.aliasRep, aliases, AliasDao, 20);
   }
 
   async getAlias(aliasHash: AliasHash, address: GrumpkinAddress) {

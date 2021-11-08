@@ -1,6 +1,7 @@
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { Mutex } from 'async-mutex';
+import { AccountDao } from '../entity/account';
 import { AssetMetricsDao } from '../entity/asset_metrics';
 import { ClaimDao } from '../entity/claim';
 import { RollupDao } from '../entity/rollup';
@@ -15,6 +16,10 @@ export class SyncRollupDb {
 
   public async addTx(txDao: TxDao) {
     return this.synchronise(() => this.rollupDb.addTx(txDao));
+  }
+
+  public async addAccounts(accounts: AccountDao[]) {
+    return this.synchronise(() => this.rollupDb.addAccounts(accounts));
   }
 
   public async getTx(txId: Buffer) {

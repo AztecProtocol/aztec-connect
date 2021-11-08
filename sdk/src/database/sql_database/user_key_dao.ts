@@ -6,6 +6,10 @@ import { accountIdTransformer } from './transformer';
 @Entity({ name: 'userKey' })
 @Index(['key', 'accountId'], { unique: true })
 export class UserKeyDao implements SigningKey {
+  constructor(init?: SigningKey) {
+    Object.assign(this, init);
+  }
+
   @PrimaryColumn()
   public key!: Buffer;
 

@@ -8,7 +8,8 @@ make -j$(nproc) db_cli
 cd ../build-wasm
 make -j$(nproc) barretenberg.wasm
 popd
-yarn install
+
+yarn install --frozen-lockfile
 yarn link $LINK_FOLDER @aztec/barretenberg
 yarn link $LINK_FOLDER @aztec/blockchain
 yarn link $LINK_FOLDER halloumi

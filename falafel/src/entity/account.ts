@@ -12,9 +12,9 @@ export class AccountDao {
   @PrimaryColumn()
   public aliasHash!: Buffer;
 
-  @OneToOne(() => TxDao, tx => tx.id, { onDelete: 'CASCADE' })
+  @OneToOne(() => TxDao, tx => tx.id, { onDelete: 'CASCADE', nullable: true })
   @JoinColumn()
-  public tx!: TxDao;
+  public tx?: TxDao;
 
   @Column()
   public accountPubKey!: Buffer;

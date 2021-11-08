@@ -87,4 +87,19 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
     const url = new URL(`${this.baseUrl}/client-log`);
     await fetch(url.toString(), { method: 'POST', body: JSON.stringify(log) }).catch(() => undefined);
   }
+
+  async getInitialWorldState() {
+    const url = new URL(`${this.baseUrl}/get-initial-world-state`);
+    const response = await fetch(url.toString()).catch(() => undefined);
+    if (!response) {
+      throw new Error('Failed to contact rollup provider.');
+    }
+    if (response.status !== 200) {
+      throw new Error(`Bad response code ${response.status}.`);
+    }
+    const arrBuffer = await response.arrayBuffer();
+    return {
+      initialAccounts: Buffer.from(arrBuffer),
+    };
+  }
 }

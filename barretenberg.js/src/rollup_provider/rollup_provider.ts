@@ -32,10 +32,15 @@ export interface RollupProviderStatus {
   pendingTxCount: number;
 }
 
+export interface InitialWorldState {
+  initialAccounts: Buffer;
+}
+
 export interface RollupProvider extends BlockSource {
   sendProof(proof: Proof): Promise<TxHash>;
   getStatus(): Promise<RollupProviderStatus>;
   getPendingTxs: () => Promise<TxHash[]>;
   getPendingNoteNullifiers: () => Promise<Buffer[]>;
   clientLog: (msg: any) => Promise<void>;
+  getInitialWorldState(): Promise<InitialWorldState>;
 }

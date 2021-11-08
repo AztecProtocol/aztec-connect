@@ -24,7 +24,7 @@ export class TypeOrmRollupDb implements RollupDb {
   private claimRep: Repository<ClaimDao>;
   private assetMetricsRep: Repository<AssetMetricsDao>;
 
-  constructor(private connection: Connection) {
+  constructor(private connection: Connection, private initialDataRoot: Buffer = WorldStateConstants.EMPTY_DATA_ROOT) {
     this.txRep = this.connection.getRepository(TxDao);
     this.rollupProofRep = this.connection.getRepository(RollupProofDao);
     this.rollupRep = this.connection.getRepository(RollupDao);
@@ -39,6 +39,14 @@ export class TypeOrmRollupDb implements RollupDb {
         await transactionalEntityManager.save(txDaoToAccountDao(txDao));
       }
       await transactionalEntityManager.save(txDao);
+    });
+  }
+
+  public async addAccounts(accounts: AccountDao[]) {
+    await this.connection.transaction(async transactionalEntityManager => {
+      for (const account of accounts) {
+        await transactionalEntityManager.save(account);
+      }
     });
   }
 
@@ -313,7 +321,7 @@ export class TypeOrmRollupDb implements RollupDb {
 
   public async getDataRootsIndex(root: Buffer) {
     // Lookup and save the proofs data root index (for old root support).
-    if (root.equals(WorldStateConstants.EMPTY_DATA_ROOT)) {
+    if (root.equals(this.initialDataRoot)) {
       return 0;
     }
 

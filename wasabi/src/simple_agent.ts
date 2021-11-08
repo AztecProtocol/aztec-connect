@@ -52,7 +52,7 @@ export class SimpleAgent extends Agent {
           await this.serialize(this.transfer);
         }
         await this.serialize(this.withdraw);
-      } catch (err) {
+      } catch (err: any) {
         console.log(err.message);
         await new Promise(resolve => setTimeout(resolve, 1000));
       }

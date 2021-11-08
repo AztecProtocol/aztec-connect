@@ -25,7 +25,7 @@
   },
   "dependencies": {
     "@aztec/sdk": "file:../sdk/dest",
-    "typescript": "^3.5.3"
+    "typescript": "^4.4.4"
   },
   "devDependencies": {
     "@types/jest": "^25.2.3",
@@ -34,9 +34,9 @@
     "@typescript-eslint/parser": "^4.1.1",
     "eslint": "^7.9.0",
     "eslint-config-prettier": "^6.11.0",
-    "jest": "^24.8.0",
+    "jest": "^27.3.1",
     "prettier": "^2.0.5",
-    "ts-jest": "^24.0.2",
+    "ts-jest": "^27.0.7",
     "tsc-watch": "^2.2.1"
   }
 }

@@ -33,7 +33,7 @@ export class ServerProofGenerator implements ProofGenerator {
           throw new Error(`Bad status code: ${response.status}`);
         }
         return Buffer.from(await response.arrayBuffer());
-      } catch (err) {
+      } catch (err: any) {
         console.log(err.message);
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
