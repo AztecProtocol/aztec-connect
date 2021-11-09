@@ -2,8 +2,5 @@
   "ImageId": "ami-0e5df77ac318c7a18",
   "KeyName": "build-instance",
   "SecurityGroupIds": ["sg-0ccd4e5df0dcca0c9"],
-  "InstanceType": "m5.16xlarge",
-  "Placement": {
-    "AvailabilityZone": "us-east-2a"
-  }
+  "InstanceType": "m5.16xlarge"
 }
