@@ -24,6 +24,7 @@ while [ -z "$IID" -o "$IID" == "None" ]; do
 done
 
 aws ec2 create-tags --region us-east-2 --resources $IID --tags "Key=Name,Value=$NAME"
+aws ec2 create-tags --region us-east-2 --resources $IID --tags "Key=Group,Value=build-instance"
 
 aws ec2 describe-instances \
   --region us-east-2 \
