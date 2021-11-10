@@ -112,10 +112,6 @@ interface ContentRootProps {
 }
 
 const ContentRoot = styled.div<ContentRootProps>`
-  display: flex;
-  align-items: center;
-  flex-wrap: nowrap;
-
   ${({ isLoading }) =>
     isLoading &&
     `
