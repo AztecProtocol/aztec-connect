@@ -1,7 +1,7 @@
 import { AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
-import { Connection, ConnectionOptions, IsNull, MoreThan, MoreThanOrEqual, Repository } from 'typeorm';
+import { Connection, ConnectionOptions, IsNull, MoreThan, MoreThanOrEqual, Repository, getConnection } from 'typeorm';
 import { Note } from '../../note';
 import { AccountId, UserData } from '../../user';
 import { UserAccountTx, UserDefiTx, UserJoinSplitTx } from '../../user_tx';
@@ -261,33 +261,51 @@ export class SQLDatabase implements Database {
     await this.userKeyRep.save(signingKey);
   }
 
+  // attempt to efficiently bulk upsert a large number of entities in one transaction
+  // performed using smaller batch sizes as a single save on anything more than a few hundred entities throws SQL exceptions
+  // the batch size that's possible with the given entity isn't known in advance, so we use an initial size and attempt the set of upserts
+  // if the operation fails we reduce the batch size and try again
+  // here we are using QueryRunner instead of EntityManager as it gives us finer control over the transaction execution
   async addBulkItems<Entity, InputType>(
-    repo: Repository<Entity>,
+    entityName: string,
     items: InputType[],
     newEntity: { new (input: InputType): Entity },
-    initialBatchSize = 20,
+    initialBatchSize,
   ) {
-    const itemsCopy = [...items];
-    await repo.manager.transaction(async transactionalEntityManager => {
-      let batchSize = initialBatchSize;
-      while (itemsCopy.length) {
-        const keysSlice = itemsCopy.slice(0, batchSize).map(k => new newEntity(k));
-        try {
-          await transactionalEntityManager.save(keysSlice);
+    let batchSize = initialBatchSize;
+    let commited = false;
+    while (!commited) {
+      const itemsCopy = [...items];
+      const connection = getConnection(getOrmConfig().name);
+      const queryRunner = connection.createQueryRunner();
+
+      // establish real database connection using our new query runner
+      await queryRunner.connect();
+      const entities = queryRunner.manager.getRepository<Entity>(entityName);
+      await queryRunner.startTransaction();
+      try {
+        while (itemsCopy.length) {
+          const keysSlice = itemsCopy.slice(0, batchSize).map(k => new newEntity(k));
+          await entities.save(keysSlice);
           itemsCopy.splice(0, batchSize);
-        } catch (err) {
-          batchSize /= 2;
-          if (batchSize < 1) {
-            throw new Error(`Unable to insert entity, error: ${err}`);
-          }
-          batchSize = Math.round(batchSize);
         }
+        await queryRunner.commitTransaction();
+        await queryRunner.release();
+        commited = true;
+      } catch (err) {
+        await queryRunner.rollbackTransaction();
+        await queryRunner.release();
+        batchSize /= 2;
+        if (batchSize < 1) {
+          throw new Error(`Unable to insert entity, error: ${err}`);
+        }
+        batchSize = Math.round(batchSize);
       }
-    });
+    }
   }
 
   async addUserSigningKeys(signingKeys: SigningKey[]) {
-    await this.addBulkItems(this.userKeyRep, signingKeys, UserKeyDao, 20);
+    await this.addBulkItems('UserKeyDao', signingKeys, UserKeyDao, 100);
   }
 
   async getUserSigningKeys(accountId: AccountId) {
@@ -309,7 +327,7 @@ export class SQLDatabase implements Database {
   }
 
   async setAliases(aliases: Alias[]) {
-    await this.addBulkItems(this.aliasRep, aliases, AliasDao, 20);
+    await this.addBulkItems('AliasDao', aliases, AliasDao, 100);
   }
 
   async getAlias(aliasHash: AliasHash, address: GrumpkinAddress) {
