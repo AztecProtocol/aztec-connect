@@ -1,4 +1,4 @@
-// Verification Key Hash: 5e20d24a32e6466e3f9c1775b0f92956b932b6e884788bca718161f84b7be29b
+// Verification Key Hash: 5ef0de1d7e627f71cbb9d991110c3c7942015705a14151e56aee8593be26adf3
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2021 Spilsbury Holdings Ltd
 
@@ -23,8 +23,8 @@ library RootVerifierVk {
             mstore(add(vk, 0x80),0x2165a1a5bda6792b1dd75c9f4e2b8e61126a786ba1a6eadf811b03e7d69ca83b) // vk.work_root_inverse
             mstore(mload(add(vk, 0xa0)), 0x0cdf188de7b607fc71f27acf2cf3b09f04f6513e68e7c15aecdcaf3a59d494f8)//vk.Q1
             mstore(add(mload(add(vk, 0xa0)), 0x20), 0x1160a977c7fcd64b7a1d843604c1ad1bafa9fabac35704bad44a452a31d8eeae)
-            mstore(mload(add(vk, 0xc0)), 0x0aa45508ba95d349d425478603224bcbe41c9c3c4b96cd43c865f3fc345ce1d0)//vk.Q2
-            mstore(add(mload(add(vk, 0xc0)), 0x20), 0x2b1563f06787d9fc7e6a3a9fe65d06e6025df001d8cf76f6d4a74cb98ffe572c)
+            mstore(mload(add(vk, 0xc0)), 0x1a99dee56401b89822a6e613b18943adc51b6f4c626d63d68bf77fb6a415424b)//vk.Q2
+            mstore(add(mload(add(vk, 0xc0)), 0x20), 0x0f46ee0308c6fef9c9fbdeb77b5ae4b53ae177e995439c67dbb1ad1242dab35f)
             mstore(mload(add(vk, 0xe0)), 0x21a15a83f1ece891b6e0478cd28b5225ea4051b9a1668cbeed2ea1701874e70c)//vk.Q3
             mstore(add(mload(add(vk, 0xe0)), 0x20), 0x22ab06fffbf360ef54139a3c666c85387c36c49b207ca3f4d72ec06fb3efa110)
             mstore(mload(add(vk, 0x100)), 0x0ad4ff8e0acd928bb6bf3a9f4756f4fa7d142c37f1a0f4f87f7219638a2a1da4)//vk.QM
