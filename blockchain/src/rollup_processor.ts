@@ -201,7 +201,7 @@ export class RollupProcessor {
       viewingKeysData,
       rollupId: RollupProofData.getRollupIdFromBuffer(rollupProofData),
       rollupSize: RollupProofData.getRollupSizeFromBuffer(rollupProofData),
-      gasPrice: BigInt(tx.gasPrice.toString()),
+      gasPrice: BigInt(tx.gasPrice!.toString()),
       gasUsed: receipt.gasUsed.toNumber(),
     };
   }

@@ -160,12 +160,10 @@ export class Contracts {
     const { signingAddress, gasLimit } = options;
     const signer = signingAddress ? this.provider.getSigner(signingAddress.toString()) : this.provider.getSigner(0);
     const from = await signer.getAddress();
-    const gasPrice = options.gasPrice || (await this.getGasPrice());
     const txRequest = {
       to: this.rollupContractAddress.toString(),
       from,
       gasLimit,
-      gasPrice: `0x${gasPrice.toString(16)}`,
       data,
     };
     const txResponse = await signer.sendTransaction(txRequest);
@@ -242,9 +240,5 @@ export class Contracts {
 
   public async isContract(address: EthAddress) {
     return (await this.provider.getCode(address.toString())) !== '0x';
-  }
-
-  public async getGasPrice() {
-    return BigInt((await this.provider.getGasPrice()).toString());
   }
 }

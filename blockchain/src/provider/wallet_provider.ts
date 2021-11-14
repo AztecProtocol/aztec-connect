@@ -55,6 +55,8 @@ export class WalletProvider implements EthereumProvider {
         return this.accounts.length ? this.accounts.map(a => a.address) : await this.provider.request(args);
       case 'eth_sign':
         return await this.sign(args);
+      case 'personal_sign':
+        return await this.personalSign(args);
       case 'eth_signTypedData_v4':
         return this.signTypedData(args);
       case 'eth_signTransaction':
@@ -65,6 +67,15 @@ export class WalletProvider implements EthereumProvider {
         return await this.provider.request(args);
       }
     }
+  }
+
+  private async personalSign(args: RequestArguments) {
+    const [message, from] = args.params!;
+    const account = this.accounts.find(a => a.address.toLowerCase() === from);
+    if (account) {
+      return await account.signMessage(Buffer.from(message.slice(2), 'hex'));
+    }
+    return await this.provider.request(args);
   }
 
   private async sign(args: RequestArguments) {
