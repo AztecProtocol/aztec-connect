@@ -8,7 +8,7 @@ import {
 import { Wallet } from 'ethers';
 import { EthAddress } from 'barretenberg/address';
 import { EthersAdapter } from './ethers_adapter';
-import { JsonRpcProvider, TransactionRequest } from '@ethersproject/providers';
+import { JsonRpcProvider, Web3Provider, TransactionRequest } from '@ethersproject/providers';
 
 /**
  * Given an EIP1193 provider, wraps it, and provides the ability to add local accounts.
@@ -24,7 +24,7 @@ export class WalletProvider implements EthereumProvider {
   }
 
   public addAccount(privateKey: Buffer) {
-    return this.addEthersWallet(new Wallet(privateKey));
+    return this.addEthersWallet(new Wallet(privateKey, new Web3Provider(this.provider)));
   }
 
   public addEthersWallet(wallet: Wallet) {
@@ -103,23 +103,18 @@ export class WalletProvider implements EthereumProvider {
    * Populate any missing fields.
    */
   private async signTxLocally(tx: any, account: Wallet) {
-    const gasLimit = tx.gas || 7000000;
-    const gasPrice = tx.gasPrice || (await this.provider.request({ method: 'eth_gasPrice' }));
-    const value = tx.value || 0;
-    const chainId = +(await this.provider.request({ method: 'eth_chainId' }));
-    const nonce =
-      tx.nonce || (await this.provider.request({ method: 'eth_getTransactionCount', params: [tx.from, 'latest'] }));
+    const { gasLimit = null, value = 0, from, to, data, nonce = null } = tx;
 
-    const toSign: TransactionRequest = {
-      chainId,
-      from: tx.from,
-      to: tx.to,
-      data: tx.data,
+    const txReq: TransactionRequest = {
+      from,
+      to,
+      data,
       gasLimit,
-      gasPrice,
       value,
       nonce,
     };
+    const toSign = await account.populateTransaction(txReq);
+
     return await account.signTransaction(toSign);
   }
 

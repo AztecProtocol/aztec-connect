@@ -158,7 +158,7 @@ export class RollupPublisher {
       try {
         return await this.blockchain.sendTx(txData);
       } catch (err) {
-        console.log(err.message.slice(0, 200));
+        console.log(err.message);
         await this.sleepOrInterrupted(60000);
       }
     }
