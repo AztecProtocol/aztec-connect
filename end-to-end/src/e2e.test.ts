@@ -4,10 +4,14 @@ import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
 import { getFeeDistributorContract } from './fee_distributor_contract';
 
-jest.setTimeout(10 * 60 * 1000);
+jest.setTimeout(10 * 120 * 1000);
 EventEmitter.defaultMaxListeners = 30;
 
-const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost:8081' } = process.env;
+const {
+  ETHEREUM_HOST = 'http://localhost:8545',
+  ROLLUP_HOST = 'http://localhost:8081',
+  PRIVATE_KEY = '',
+} = process.env;
 
 /**
  * Run the following:
@@ -27,7 +31,7 @@ describe('end-to-end tests', () => {
   const awaitSettlementTimeout = 600;
 
   beforeAll(async () => {
-    provider = await createFundedWalletProvider(ETHEREUM_HOST, 2, '1');
+    provider = await createFundedWalletProvider(ETHEREUM_HOST, 2, 1, PRIVATE_KEY, '0.1');
     accounts = provider.getAccounts();
 
     sdk = await createWalletSdk(provider, ROLLUP_HOST, {
@@ -68,7 +72,7 @@ describe('end-to-end tests', () => {
     {
       const userId = userIds[0];
       const depositor = accounts[0];
-      const value = sdk.toBaseUnits(assetId, '0.2');
+      const value = sdk.toBaseUnits(assetId, '0.02');
       const txFee = await sdk.getFee(assetId, TxType.DEPOSIT);
 
       const initialTxFeeBalance = BigInt(await feeDistributor.txFeeBalance(assetId));
@@ -77,9 +81,8 @@ describe('end-to-end tests', () => {
       const proofOutput = await sdk.createDepositProof(assetId, depositor, userId, value, txFee, signer);
       const signature = await sdk.signProof(proofOutput, depositor);
 
-      await expect(sdk.sendProof(proofOutput, signature)).rejects.toThrow();
-
-      await sdk.depositFundsToContract(assetId, depositor, value + txFee);
+      const depositHash = await sdk.depositFundsToContract(assetId, depositor, value + txFee);
+      await sdk.getTransactionReceipt(depositHash);
 
       const publicBalance = await sdk.getPublicBalance(assetId, depositor);
       const expectedPublicBalance = initialPublicBalance - value - txFee;
@@ -103,7 +106,7 @@ describe('end-to-end tests', () => {
       const sender = userIds[0];
       const senderAddress = accounts[0];
       const recipient = userIds[1];
-      const value = sdk.toBaseUnits(assetId, '0.15');
+      const value = sdk.toBaseUnits(assetId, '0.015');
       const txFee = await sdk.getFee(assetId, TxType.TRANSFER);
 
       const initialSenderPublicBalance = await sdk.getPublicBalance(assetId, senderAddress);
@@ -130,7 +133,7 @@ describe('end-to-end tests', () => {
     {
       const userId = userIds[1];
       const userAddress = accounts[1];
-      const value = sdk.toBaseUnits(assetId, '0.08');
+      const value = sdk.toBaseUnits(assetId, '0.008');
       const txFee = await sdk.getFee(assetId, TxType.WITHDRAW_TO_WALLET);
 
       const initialPublicBalance = await sdk.getPublicBalance(assetId, userAddress);
