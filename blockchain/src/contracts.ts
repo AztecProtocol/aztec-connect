@@ -157,21 +157,16 @@ export class Contracts {
   }
 
   public async sendTx(data: Buffer, options: SendTxOptions = {}) {
-    console.log(`Contracts sendTx() with ${data.length} bytes of calldata.`);
     const { signingAddress, gasLimit } = options;
     const signer = signingAddress ? this.provider.getSigner(signingAddress.toString()) : this.provider.getSigner(0);
     const from = await signer.getAddress();
-    const gasPrice = options.gasPrice || (await this.getGasPrice());
     const txRequest = {
       to: this.rollupContractAddress.toString(),
       from,
       gasLimit,
-      gasPrice: `0x${gasPrice.toString(16)}`,
       data,
     };
-    console.log({ txRequest });
     const txResponse = await signer.sendTransaction(txRequest);
-    console.log({ txResponse });
     return TxHash.fromString(txResponse.hash);
   }
 
@@ -245,9 +240,5 @@ export class Contracts {
 
   public async isContract(address: EthAddress) {
     return (await this.provider.getCode(address.toString())) !== '0x';
-  }
-
-  public async getGasPrice() {
-    return BigInt((await this.provider.getGasPrice()).toString());
   }
 }
