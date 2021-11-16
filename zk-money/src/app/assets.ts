@@ -15,6 +15,7 @@ export interface Asset {
   icon: string;
   iconWhite: string;
   decimals: number;
+  preferredFractionalDigits?: number;
 }
 
 export const assets: Asset[] = [
@@ -25,6 +26,7 @@ export const assets: Asset[] = [
     icon: ethIcon,
     iconWhite: ethWhiteIcon,
     decimals: 18,
+    preferredFractionalDigits: 6,
   },
   {
     id: AssetId.DAI,
@@ -33,6 +35,7 @@ export const assets: Asset[] = [
     icon: daiIcon,
     iconWhite: daiWhiteIcon,
     decimals: 18,
+    preferredFractionalDigits: 2,
   },
   {
     id: AssetId.renBTC,
@@ -41,5 +44,6 @@ export const assets: Asset[] = [
     icon: rbtcIcon,
     iconWhite: rbtcWhiteIcon,
     decimals: 8,
+    preferredFractionalDigits: 8,
   },
 ];

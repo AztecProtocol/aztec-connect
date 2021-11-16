@@ -40,7 +40,7 @@ import { createSigningKeys, KeyVault } from '../key_vault';
 import { Network } from '../networks';
 import { Provider, ProviderEvent, ProviderStatus } from '../provider';
 import { RollupService, RollupServiceEvent, RollupStatus, TxFee } from '../rollup_service';
-import { fromBaseUnits, max, min, toBaseUnits } from '../units';
+import { fromBaseUnits, max, min, toBaseUnits, formatBaseUnits } from '../units';
 import { AccountForm, AccountFormEvent } from './account_form';
 
 const debug = createDebug('zm:shield_form');
@@ -423,6 +423,16 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       toUpdate.amount = clearMessage(amountInput);
     }
 
+    const { preferredFractionalDigits } = this.asset;
+    if (amountInput && preferredFractionalDigits !== undefined) {
+      if ((amountInput.value.split('.')[1]?.length ?? 0) > preferredFractionalDigits) {
+        toUpdate.amount = withError(
+          amountInput,
+          `Please enter no more than ${preferredFractionalDigits} decimal places.`,
+        );
+      }
+    }
+
     const amountValue = toBaseUnits(amountInput.value, this.asset.decimals);
     if (amountValue > this.txAmountLimit && !toUpdate.amount?.message) {
       toUpdate.amount = withError(
@@ -798,7 +808,11 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       amount = this.values.maxAmount.value;
     }
     if (amount && !this.values.amount.value) {
-      this.updateFormValues({ amount: { value: fromBaseUnits(amount, this.asset.decimals) } });
+      this.updateFormValues({
+        amount: {
+          value: formatBaseUnits(amount, this.asset.decimals, { precision: this.asset.preferredFractionalDigits }),
+        },
+      });
     }
   }
 
