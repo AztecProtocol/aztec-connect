@@ -16,7 +16,8 @@
       "^.+\\.ts$": "ts-jest"
     },
     "testRegex": ".*\\.test\\.ts$",
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "testTimeout": 30000
   },
   "browserslist": [
     "since 2017-06"

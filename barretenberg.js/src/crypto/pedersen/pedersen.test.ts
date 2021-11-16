@@ -2,8 +2,6 @@ import { BarretenbergWasm, WorkerPool } from '../../wasm';
 import { PooledPedersen } from './pooled_pedersen';
 import { Pedersen } from './pedersen';
 
-jest.setTimeout(20000);
-
 describe('pedersen', () => {
   let barretenberg!: BarretenbergWasm;
   const values: Buffer[] = [];
