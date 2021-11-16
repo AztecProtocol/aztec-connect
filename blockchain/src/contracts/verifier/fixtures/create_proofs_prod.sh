@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
-rm -rf ../../../../../barretenberg/build/data
+
+cd ../../../../../barretenberg
+rm -rf build-vks && mkdir build-vks && cd build-vks && cmake ..
+cd ../../blockchain/src/contracts/verifier/fixtures
 
 # input format:
 # num_txs | split proofs ? | data_dir | inner size | outer size | valid outer sizes |

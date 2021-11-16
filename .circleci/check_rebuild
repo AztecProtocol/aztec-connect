@@ -1,4 +1,5 @@
 #!/bin/bash
+# Succeeds if any files matching the rebuild patterns, have changed since the base commit.
 set -e
 
 # If rebuild is forced.
@@ -13,14 +14,18 @@ if [ -n "$CIRCLE_TAG" ]; then
   exit 0
 fi
 
-PATTERNS=${1:-.rebuild_patterns}
+BASE_COMMIT=$1
+PATTERNS=${2:-.rebuild_patterns}
+
+# If given nothing, then return true to rebuild.
+[ -n "$BASE_COMMIT" ] || exit 0
 
 # If there are is no rebuild patterns file, create one from project directory.
 if [ ! -f "$PATTERNS" ]; then
   echo "^$(git rev-parse --show-prefix)" > $PATTERNS
 fi
 
-if git diff --name-only ${LAST_SUCCESSFUL_COMMIT} ${CIRCLE_SHA1} | grep -q -f $PATTERNS; then
+if git diff --name-only ${BASE_COMMIT} ${CIRCLE_SHA1} | grep -q -f $PATTERNS; then
   exit 0
 else
   exit 1

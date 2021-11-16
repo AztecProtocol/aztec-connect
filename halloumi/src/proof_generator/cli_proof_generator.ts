@@ -146,7 +146,7 @@ export class CliProofGenerator implements ProofGenerator {
   }
 
   private launch() {
-    const binPath = '../barretenberg/build/src/aztec/rollup/rollup_cli/rollup_cli';
+    const binPath = '../barretenberg/build/bin/rollup_cli';
     const proc = (this.proc = spawn(binPath, ['./data/crs', this.dataDir, this.rollupShapes, this.persist.toString()]));
     this.stdout = new PromiseReadable(proc!.stdout!);
 

@@ -4,8 +4,8 @@ FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/barretenberg-x86_64-linux-clan
 FROM node:14-alpine AS builder
 WORKDIR /usr/src/barretenberg.js
 COPY . .
-COPY --from=0 /usr/src/barretenberg/build/src/aztec/barretenberg.wasm ./src/wasm/barretenberg.wasm
-COPY --from=1 /usr/src/barretenberg/build/src/aztec/rollup/db_cli/db_cli ../barretenberg/build/src/aztec/rollup/db_cli/db_cli
+COPY --from=0 /usr/src/barretenberg/build/bin/barretenberg.wasm ./src/wasm/barretenberg.wasm
+COPY --from=1 /usr/src/barretenberg/build/bin/db_cli ../barretenberg/build/bin/db_cli
 RUN yarn cache clean && yarn install --frozen-lockfile && yarn test && yarn build && rm -rf node_modules && yarn cache clean
 
 FROM alpine:latest

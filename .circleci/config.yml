@@ -45,6 +45,90 @@ jobs:
           working_directory: barretenberg
           command: build barretenberg-x86_64-linux-clang-assert ./dockerfiles/Dockerfile.x86_64-linux-clang-assert
 
+  barretenberg-tests:
+    docker:
+      - image: aztecprotocol/build-image
+    resource_class: small
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker:
+          version: 19.03.13
+      - run:
+          name: 'Test'
+          working_directory: barretenberg/scripts
+          command: ./cond_spot_run_tests bb-tests $CIRCLE_SHA1
+
+  stdlib-primitives-tests:
+    docker:
+      - image: aztecprotocol/build-image
+    resource_class: small
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker:
+          version: 19.03.13
+      - run:
+          name: 'Test'
+          working_directory: barretenberg/scripts
+          command: ./cond_spot_run_tests stdlib_primitives_tests $CIRCLE_SHA1 1
+
+  stdlib-recursion-tests:
+    docker:
+      - image: aztecprotocol/build-image
+    resource_class: small
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker:
+          version: 19.03.13
+      - run:
+          name: 'Test'
+          working_directory: barretenberg/scripts
+          command: ./cond_spot_run_tests stdlib_recursion_tests $CIRCLE_SHA1 1
+
+  tx-rollup-tests:
+    docker:
+      - image: aztecprotocol/build-image
+    resource_class: small
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker:
+          version: 19.03.13
+      - run:
+          name: 'Test'
+          working_directory: barretenberg/scripts
+          command: ./cond_spot_run_tests rollup_proofs_tx_rollup_tests $CIRCLE_SHA1
+
+  root-rollup-tests:
+    docker:
+      - image: aztecprotocol/build-image
+    resource_class: small
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker:
+          version: 19.03.13
+      - run:
+          name: 'Test'
+          working_directory: barretenberg/scripts
+          command: ./cond_spot_run_tests rollup_proofs_root_rollup_tests $CIRCLE_SHA1
+
+  root-verifier-tests:
+    docker:
+      - image: aztecprotocol/build-image
+    resource_class: small
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker:
+          version: 19.03.13
+      - run:
+          name: 'Test'
+          working_directory: barretenberg/scripts
+          command: ./cond_spot_run_tests rollup_proofs_root_verifier_tests $CIRCLE_SHA1 1
+
   wasm-linux-clang:
     machine:
       image: ubuntu-1604:201903-01
@@ -193,11 +277,8 @@ jobs:
           version: 19.03.13
       - run:
           name: 'Test'
-          working_directory: end-to-end
-          command: |
-            if check_rebuild; then
-              cd scripts && ./spot_run_tests.sh $CIRCLE_SHA1 ./src/e2e.test.ts
-            fi
+          working_directory: end-to-end/scripts
+          command: ./cond_spot_run_tests payment-test ./src/e2e.test.ts
 
   e2e-account:
     docker:
@@ -210,11 +291,8 @@ jobs:
           version: 19.03.13
       - run:
           name: 'Test'
-          working_directory: end-to-end
-          command: |
-            if check_rebuild; then
-              cd scripts && ./spot_run_tests.sh $CIRCLE_SHA1 ./src/e2e_account.test.ts
-            fi
+          working_directory: end-to-end/scripts
+          command: ./cond_spot_run_tests account-test ./src/e2e_account.test.ts
 
   e2e-defi:
     docker:
@@ -227,11 +305,8 @@ jobs:
           version: 19.03.13
       - run:
           name: 'Test'
-          working_directory: end-to-end
-          command: |
-            if check_rebuild; then
-              cd scripts && ./spot_run_tests.sh $CIRCLE_SHA1 ./src/e2e_defi.test.ts
-            fi
+          working_directory: end-to-end/scripts
+          command: ./cond_spot_run_tests defi-test ./src/e2e_defi.test.ts
 
   zk-money:
     docker:
@@ -313,7 +388,8 @@ jobs:
           working_directory: blockchain
           command: |
             deploy_ecr blockchain
-            if changed '.*\.sol$' || changed .redeploy; then
+            COMMIT=$(last_successful_deploy_commit)
+            if [ -z "$COMMIT" -o changed $COMMIT '.*\.sol$' ]; then
               `docker run --env ESCAPE_BLOCK_LOWER=60 --env ESCAPE_BLOCK_UPPER=120 --env INFURA_API_KEY=$TF_VAR_INFURA_API_KEY --env PRIVATE_KEY=$TF_VAR_PRIVATE_KEY --env NETWORK=goerli 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:latest`
               export TF_VAR_ROLLUP_CONTRACT_ADDRESS=$ROLLUP_CONTRACT_ADDRESS
               export TF_VAR_PRICE_FEED_CONTRACT_ADDRESSES=$PRICE_FEED_CONTRACT_ADDRESSES
@@ -432,6 +508,30 @@ workflows:
       - x86_64-linux-clang-assert:
           filters: *tag_filter
       - wasm-linux-clang:
+          filters: *tag_filter
+      - barretenberg-tests:
+          requires:
+            - x86_64-linux-clang-assert
+          filters: *tag_filter
+      - stdlib-primitives-tests:
+          requires:
+            - x86_64-linux-clang-assert
+          filters: *tag_filter
+      - stdlib-recursion-tests:
+          requires:
+            - x86_64-linux-clang-assert
+          filters: *tag_filter
+      - tx-rollup-tests:
+          requires:
+            - x86_64-linux-clang-assert
+          filters: *tag_filter
+      - root-rollup-tests:
+          requires:
+            - x86_64-linux-clang-assert
+          filters: *tag_filter
+      - root-verifier-tests:
+          requires:
+            - x86_64-linux-clang-assert
           filters: *tag_filter
       - barretenberg-js:
           requires:

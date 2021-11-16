@@ -34,7 +34,7 @@ export class WorldStateDb {
   private stdioQueue = new MemoryFifo<() => Promise<void>>();
   private roots: Buffer[] = [];
   private sizes: bigint[] = [];
-  private binPath = '../barretenberg/build/src/aztec/rollup/db_cli/db_cli';
+  private binPath = '../barretenberg/build/bin/db_cli';
 
   constructor(private dbPath: string = './data/world_state.db') {}
 

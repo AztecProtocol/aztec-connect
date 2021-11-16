@@ -54,6 +54,6 @@ services:
     command: >
       sh -c "
       apk add curl jq bash;
-      ./scripts/wait_till_ready.sh;
+      ./scripts/wait_till_ready;
       yarn test ${TEST:-./src/e2e.test.ts}
       "

@@ -20,5 +20,4 @@ describe('StandardVerifier', function () {
   it('should validate a 2 rollup proof (1 tx)', async () => {
     await validate(1, 2);
   });
-
 });

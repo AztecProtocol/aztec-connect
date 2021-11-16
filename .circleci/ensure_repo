@@ -5,12 +5,12 @@ LIFECYCLE_POLICY='{
   "rules": [
     {
       "rulePriority": 1,
-      "description": "No more than 20 cache images.",
+      "description": "No more than 200 cache images.",
       "selection": {
         "tagStatus": "tagged",
         "tagPrefixList": ["cache-"],
         "countType": "imageCountMoreThan",
-        "countNumber": 20
+        "countNumber": 200
       },
       "action": {
         "type": "expire"
@@ -22,6 +22,7 @@ LIFECYCLE_POLICY='{
 
 REPOSITORY=$1
 REGION=$2
+REFRESH_LIFECYCLE=$3
 
 $(aws ecr get-login --region $REGION --no-include-email) 2> /dev/null
 
@@ -30,8 +31,8 @@ if ! aws ecr describe-repositories --region $REGION --repository-names $REPOSITO
   echo "Creating repo: $REPOSITORY"
   aws ecr create-repository --region $REGION --repository-name $REPOSITORY
   aws ecr put-lifecycle-policy --region $REGION --repository-name $REPOSITORY --lifecycle-policy-text "$LIFECYCLE_POLICY"
-elif changed .circleci/ensure_repo; then
-  echo "Updating lifecycle rules for repo: $REPOSITORY"
+elif [ -n "$REFRESH_LIFECYCLE" ]; then
+  echo "Refreshing lifecycle rules for repo: $REPOSITORY"
   aws ecr put-lifecycle-policy --region $REGION --repository-name $REPOSITORY --lifecycle-policy-text "$LIFECYCLE_POLICY"
 fi
 echo
