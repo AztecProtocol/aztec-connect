@@ -8,6 +8,7 @@ import { AccountProver, JoinSplitProver, PooledProverFactory, ProofId } from '@a
 import { Crs } from '@aztec/barretenberg/crs';
 import { Blake2s, Pedersen, PooledPedersen, Schnorr } from '@aztec/barretenberg/crypto';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
+import { AccountData, InitHelpers } from '@aztec/barretenberg/environment';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
@@ -16,7 +17,6 @@ import { RollupProvider, SettlementTime } from '@aztec/barretenberg/rollup_provi
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { BarretenbergWasm, WorkerPool } from '@aztec/barretenberg/wasm';
 import { WorldState } from '@aztec/barretenberg/world_state';
-import { AccountData, InitHelpers } from '@aztec/barretenberg/environment';
 import createDebug from 'debug';
 import isNode from 'detect-node';
 import { EventEmitter } from 'events';
@@ -77,6 +77,7 @@ export class CoreSdk extends EventEmitter {
     assets: [],
   };
   private processBlocksPromise?: Promise<void>;
+  private noteAlgos!: NoteAlgorithms;
   private blake2s!: Blake2s;
   private pedersen!: Pedersen;
   private schnorr!: Schnorr;
@@ -109,13 +110,13 @@ export class CoreSdk extends EventEmitter {
     const numWorkers = this.nextLowestPowerOf2(Math.min(this.numCPU, 8));
     this.workerPool = await WorkerPool.new(barretenberg, numWorkers);
 
-    const noteAlgos = new NoteAlgorithms(barretenberg, this.workerPool.workers[0]);
+    this.noteAlgos = new NoteAlgorithms(barretenberg, this.workerPool.workers[0]);
     this.blake2s = new Blake2s(barretenberg);
     this.pedersen = new PooledPedersen(barretenberg, this.workerPool);
     this.grumpkin = new Grumpkin(barretenberg);
     this.schnorr = new Schnorr(barretenberg);
     this.userFactory = new UserDataFactory(this.grumpkin);
-    this.userStateFactory = new UserStateFactory(this.grumpkin, noteAlgos, this.db, this.rollupProvider);
+    this.userStateFactory = new UserStateFactory(this.grumpkin, this.noteAlgos, this.db, this.rollupProvider);
     this.worldState = new WorldState(this.leveldb, this.pedersen);
 
     await this.initUserStates();
@@ -155,14 +156,14 @@ export class CoreSdk extends EventEmitter {
     );
     this.joinSplitProofCreator = new JoinSplitProofCreator(
       joinSplitProver,
-      noteAlgos,
+      this.noteAlgos,
       this.worldState,
       this.grumpkin,
       this.db,
     );
     this.defiDepositProofCreator = new DefiDepositProofCreator(
       joinSplitProver,
-      noteAlgos,
+      this.noteAlgos,
       this.worldState,
       this.grumpkin,
       this.db,
@@ -489,7 +490,7 @@ export class CoreSdk extends EventEmitter {
     }
 
     const rollups = blocks.map(b => RollupProofData.fromBuffer(b.rollupProofData));
-    const offchainTxData = blocks.map(b => b.offchainTxData).flat();
+    const offchainTxData = blocks.map(b => b.offchainTxData);
 
     // For debugging.
     const expectedDataRoot = rollups[rollups.length - 1].newDataRoot;
@@ -559,7 +560,7 @@ export class CoreSdk extends EventEmitter {
         await this.worldState.syncFromDb().catch(() => {});
         const rollup = RollupProofData.fromBuffer(block.rollupProofData);
         await this.worldState.processRollup(rollup);
-        await this.processAliases([rollup], block.offchainTxData);
+        await this.processAliases([rollup], [block.offchainTxData]);
         await this.updateStatusRollupInfo(rollup);
 
         // Forward the block on to each UserState for processing.
@@ -568,18 +569,32 @@ export class CoreSdk extends EventEmitter {
     }
   }
 
-  private async processAliases(rollups: RollupProofData[], offchainTxData: Buffer[]) {
-    const aliases = rollups
-      .map(r => r.innerProofData)
-      .flat()
-      .filter(ip => ip.proofId !== ProofId.PADDING)
-      .map((ip, i) => (ip.proofId === ProofId.ACCOUNT ? OffchainAccountData.fromBuffer(offchainTxData[i]) : undefined))
-      .filter((p): p is OffchainAccountData => !!p)
-      .map(({ accountPublicKey, accountAliasId }) => ({
-        address: accountPublicKey,
-        aliasHash: accountAliasId.aliasHash,
-        latestNonce: accountAliasId.nonce,
-      }));
+  private async processAliases(rollups: RollupProofData[], offchainTxData: Buffer[][]) {
+    const processRollup = (rollup: RollupProofData, offchainData: Buffer[]) => {
+      const aliases: Alias[] = [];
+      for (let i = 0; i < rollup.innerProofData.length; ++i) {
+        const proof = rollup.innerProofData[i];
+        if (proof.proofId !== ProofId.ACCOUNT) {
+          continue;
+        }
+
+        const { accountPublicKey, accountAliasId, spendingPublicKey1 } = OffchainAccountData.fromBuffer(
+          offchainData[i],
+        );
+        const commitment = this.noteAlgos.accountNoteCommitment(accountAliasId, accountPublicKey, spendingPublicKey1);
+        // Only need to check one commitment to make sure the accountAliasId and accountPublicKey pair is valid.
+        if (commitment.equals(proof.noteCommitment1)) {
+          aliases.push({
+            address: accountPublicKey,
+            aliasHash: accountAliasId.aliasHash,
+            latestNonce: accountAliasId.nonce,
+          });
+        }
+      }
+      return aliases;
+    };
+
+    const aliases = rollups.map((rollup, i) => processRollup(rollup, offchainTxData[i])).flat();
     await this.db.setAliases(aliases);
   }
 

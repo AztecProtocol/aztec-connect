@@ -9,6 +9,8 @@ import {
   ProofId,
 } from '@aztec/barretenberg/client_proofs';
 import { Crs } from '@aztec/barretenberg/crs';
+import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
+import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
 import { BarretenbergWasm, BarretenbergWorker, createWorker, destroyWorker } from '@aztec/barretenberg/wasm';
 import { Mutex } from 'async-mutex';
 import { ProofGenerator } from 'halloumi/proof_generator';
@@ -32,6 +34,7 @@ export class TxReceiver {
 
   constructor(
     private barretenberg: BarretenbergWasm,
+    private noteAlgo: NoteAlgorithms,
     private rollupDb: RollupDb,
     private blockchain: Blockchain,
     private proofGenerator: ProofGenerator,
@@ -79,9 +82,11 @@ export class TxReceiver {
         case ProofId.SEND:
           await this.validateJoinSplitTx(proof, txType, depositSignature);
           break;
-        case ProofId.ACCOUNT:
-          await this.validateAccountTx(proof);
+        case ProofId.ACCOUNT: {
+          const offchainData = OffchainAccountData.fromBuffer(offchainTxData);
+          await this.validateAccountTx(proof, offchainData);
           break;
+        }
         case ProofId.DEFI_DEPOSIT:
           await this.validateDefiBridgeTx(proof, txType);
           break;
@@ -157,14 +162,23 @@ export class TxReceiver {
     }
   }
 
-  private async validateAccountTx(proof: ProofData) {
+  private async validateAccountTx(proof: ProofData, offchainData: OffchainAccountData) {
+    const { accountPublicKey, accountAliasId, spendingPublicKey1, spendingPublicKey2 } = offchainData;
+    const expectedCommitments = [proof.noteCommitment1, proof.noteCommitment2];
+    [spendingPublicKey1, spendingPublicKey2].forEach((spendingKey, i) => {
+      const commitment = this.noteAlgo.accountNoteCommitment(accountAliasId, accountPublicKey, spendingKey);
+      if (!commitment.equals(expectedCommitments[i])) {
+        throw new Error('Invalid offchain account data.');
+      }
+    });
+
     if (!(await this.accountVerifier.verifyProof(proof.rawProofData))) {
       throw new Error('Account proof verification failed.');
     }
   }
 
   private async validateDefiBridgeTx(proofData: ProofData, txType: TxType) {
-    const { bridgeId, txFeeAssetId, txFee } = new DefiDepositProofData(proofData);
+    const { txFeeAssetId, txFee } = new DefiDepositProofData(proofData);
 
     // TODO - Use a whitelist for bridges.
 

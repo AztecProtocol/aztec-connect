@@ -99,6 +99,7 @@ export class Server {
     this.worldState = new WorldState(rollupDb, worldStateDb, blockchain, this.pipelineFactory, noteAlgo, metrics);
     this.txReceiver = new TxReceiver(
       barretenberg,
+      noteAlgo,
       rollupDb,
       blockchain,
       this.proofGenerator,

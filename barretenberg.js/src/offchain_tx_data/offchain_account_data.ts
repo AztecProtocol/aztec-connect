@@ -7,13 +7,13 @@ export class OffchainAccountData {
   constructor(
     public readonly accountPublicKey: GrumpkinAddress,
     public readonly accountAliasId: AccountAliasId,
-    public readonly spendingPublicKey1?: Buffer,
-    public readonly spendingPublicKey2?: Buffer,
+    public readonly spendingPublicKey1 = Buffer.alloc(32),
+    public readonly spendingPublicKey2 = Buffer.alloc(32),
   ) {
-    if (spendingPublicKey1 && spendingPublicKey1.length !== 32) {
+    if (spendingPublicKey1.length !== 32) {
       throw new Error('Expect spendingPublicKey1 to be 32 bytes.');
     }
-    if (spendingPublicKey2 && spendingPublicKey2.length !== 32) {
+    if (spendingPublicKey2.length !== 32) {
       throw new Error('Expect spendingPublicKey2 to be 32 bytes.');
     }
   }
@@ -24,24 +24,18 @@ export class OffchainAccountData {
     dataStart += 64;
     const accountAliasId = AccountAliasId.fromBuffer(buf.slice(dataStart, dataStart + 32));
     dataStart += 32;
-    const emptyPubKey = Buffer.alloc(32);
     const spendingPublicKey1 = buf.slice(dataStart, dataStart + 32);
     dataStart += 32;
     const spendingPublicKey2 = buf.slice(dataStart, dataStart + 32);
-    return new OffchainAccountData(
-      accountPublicKey,
-      accountAliasId,
-      !spendingPublicKey1.equals(emptyPubKey) ? spendingPublicKey1 : undefined,
-      !spendingPublicKey2.equals(emptyPubKey) ? spendingPublicKey2 : undefined,
-    );
+    return new OffchainAccountData(accountPublicKey, accountAliasId, spendingPublicKey1, spendingPublicKey2);
   }
 
   toBuffer() {
     return Buffer.concat([
       this.accountPublicKey.toBuffer(),
       this.accountAliasId.toBuffer(),
-      this.spendingPublicKey1 || Buffer.alloc(32),
-      this.spendingPublicKey2 || Buffer.alloc(32),
+      this.spendingPublicKey1,
+      this.spendingPublicKey2,
     ]);
   }
 }
