@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import { Button, ContentWrapper, PaddedBlock, RainDrops, Text } from '../components';
+import { SupportStatus } from '../device_support';
 import { borderRadiuses, breakpoints, fontSizes, lineHeights, spacings } from '../styles';
 
 const HomeRoot = styled.div`
@@ -76,16 +77,37 @@ const UnsupportedMessage = styled(Text)`
   padding-bottom: ${spacings.m};
 `;
 
+const getUnsupportedHeading = (status: SupportStatus) => {
+  switch (status) {
+    case 'firefox-private-unsupported':
+      return 'Firefox private windows unsupported.';
+    default:
+      return 'Browser not supported.';
+  }
+};
+
+const getUnsupportedText = (status: SupportStatus) => {
+  switch (status) {
+    case 'firefox-private-unsupported':
+      return (
+        "We recommend either exiting Firefox's private mode, or using a different browser.\n\n" +
+        'Unfortunately in private mode Firefox disables IndexedDB interactions, which are necessary for zk.money to function.'
+      );
+    default:
+      return 'We recommend using the latest browser on desktop or Android devices.';
+  }
+};
+
 interface HomeProps {
   onConnect: () => void;
-  unsupported: boolean;
+  supportStatus: SupportStatus;
 }
 
-export const Home: React.FunctionComponent<HomeProps> = ({ onConnect, unsupported }) => {
+export const Home: React.FunctionComponent<HomeProps> = ({ onConnect, supportStatus }) => {
   const [showUnsupported, setShowUnsupported] = useState(false);
 
   const handleConnect = () => {
-    if (unsupported) {
+    if (supportStatus !== 'supported') {
       setShowUnsupported(true);
     } else {
       onConnect();
@@ -125,11 +147,8 @@ export const Home: React.FunctionComponent<HomeProps> = ({ onConnect, unsupporte
         <UnsupportedRoot>
           <UnsupportedContentWrapper>
             <UnsupportedPopup>
-              <Text text="Browser not supported." size="m" weight="semibold" />
-              <UnsupportedMessage
-                text="We recommend using the latest browser on desktop or Android devices."
-                size="s"
-              />
+              <Text text={getUnsupportedHeading(supportStatus)} size="m" weight="semibold" />
+              <UnsupportedMessage text={getUnsupportedText(supportStatus)} size="s" />
               <Button theme="white" size="m" text="Close" outlined onClick={() => setShowUnsupported(false)} />
             </UnsupportedPopup>
           </UnsupportedContentWrapper>

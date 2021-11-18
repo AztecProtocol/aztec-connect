@@ -26,7 +26,7 @@ import {
 import { ProviderState } from '../app/provider';
 import { Template } from '../components';
 import { Config } from '../config';
-import { isUnsupportedDevice } from '../device_support';
+import { getSupportStatus, SupportStatus } from '../device_support';
 import { Theme } from '../styles';
 import { Account } from '../views/account';
 import { Home } from '../views/home';
@@ -58,6 +58,7 @@ interface AppState {
   depositForm?: DepositFormValues;
   systemMessage: SystemMessage;
   isLoading: boolean;
+  supportStatus: SupportStatus;
 }
 
 enum CrossTabEvent {
@@ -106,6 +107,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
         type: MessageType.TEXT,
       },
       isLoading: true,
+      supportStatus: 'supported',
     };
   }
 
@@ -128,6 +130,9 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
           break;
       }
     };
+    getSupportStatus().then(supportStatus => {
+      this.setState({ supportStatus });
+    });
     await this.handleActionChange(this.state.action);
     this.setState({ isLoading: false });
   }
@@ -326,6 +331,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
       depositForm,
       systemMessage,
       isLoading,
+      supportStatus,
     } = this.state;
     const { config } = this.props;
     const { step } = loginState;
@@ -406,7 +412,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
               );
             }
             default:
-              return <Home onConnect={this.handleConnect} unsupported={isUnsupportedDevice()} />;
+              return <Home onConnect={this.handleConnect} supportStatus={supportStatus} />;
           }
         })()}
       </Template>
