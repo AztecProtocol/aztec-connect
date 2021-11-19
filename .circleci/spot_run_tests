@@ -7,14 +7,13 @@
 set -e
 
 NAME=$1
-COMMIT_HASH=$2
 
 # Get spot instance.
 IP=$(request_spot $COMMIT_HASH:$NAME)
 
 # Run tests remotely on spot instance, capturing success or failure.
 set +e
-./remote_run_tests $IP $@
+remote_run_tests $IP $@
 CODE=$?
 
 # Shutdown spot.

@@ -2,13 +2,13 @@
 set -e
 
 REPOSITORY=$1
-IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:cache-$CIRCLE_SHA1
-IMAGE_MASTER_URI=$ECR_URL/$REPOSITORY:master-$CIRCLE_SHA1
+IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:cache-$COMMIT_HASH
+IMAGE_MASTER_URI=$ECR_URL/$REPOSITORY:master-$COMMIT_HASH
 
 # Login.
 ensure_repo $REPOSITORY $ECR_REGION
 
-if [ -z "$CIRCLE_TAG" ]; then
+if [ -z "$COMMIT_TAG" ]; then
   # This is a not a tagged release, but an update to master.
 
   # If nothing changed, tag the existing image with this commit hash and bail out.
@@ -33,7 +33,7 @@ if [ -z "$CIRCLE_TAG" ]; then
   # - falafel:latest
   # - falafel:deadbeefcafebabe1337c0de
   IMAGE_DEPLOY_URI=$ECR_DEPLOY_URL/$REPOSITORY:latest
-  IMAGE_DEPLOY_COMMIT_URI=$ECR_DEPLOY_URL/$REPOSITORY:$CIRCLE_SHA1
+  IMAGE_DEPLOY_COMMIT_URI=$ECR_DEPLOY_URL/$REPOSITORY:$COMMIT_HASH
   docker tag $IMAGE_COMMIT_URI $IMAGE_DEPLOY_URI
   docker tag $IMAGE_COMMIT_URI $IMAGE_DEPLOY_COMMIT_URI
   docker push $IMAGE_DEPLOY_URI
@@ -48,8 +48,8 @@ else
   # Push image to deployment repo with version tag and commit hash tag e.g.:
   # - falafel:2.0.0
   # - falafel:deadbeefcafebabe1337c0de
-  IMAGE_DEPLOY_TAG_URI=$ECR_DEPLOY_URL/$REPOSITORY:$CIRCLE_TAG
-  IMAGE_DEPLOY_COMMIT_URI=$ECR_DEPLOY_URL/$REPOSITORY:$CIRCLE_SHA1
+  IMAGE_DEPLOY_TAG_URI=$ECR_DEPLOY_URL/$REPOSITORY:$COMMIT_TAG
+  IMAGE_DEPLOY_COMMIT_URI=$ECR_DEPLOY_URL/$REPOSITORY:$COMMIT_HASH
   docker tag $IMAGE_COMMIT_URI $IMAGE_DEPLOY_TAG_URI
   docker tag $IMAGE_COMMIT_URI $IMAGE_DEPLOY_COMMIT_URI
   docker push $IMAGE_DEPLOY_TAG_URI

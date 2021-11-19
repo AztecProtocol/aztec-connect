@@ -1,9 +1,19 @@
 #!/bin/bash
+# This script sets up the global build environment. This should be called before any other build scripts,
+# as the other build scripts assume these global variables are set. The global variables are written to
+# the file in $BASH_ENV, which means that any new bash shells launched within the lifetime of the machine
+# context will have these variables set. This happens for example when CircleCI runs a new "step".
+# The script should be sourced, e.g:
+#   source setup_env
+# This ensures the resultant variables are set in the calling shell.
 set -e
 
-[ -n "$CIRCLE_TOKEN" ] || (echo "No CIRCLE_TOKEN available." && exit 1)
+BRANCH=$1
+COMMIT_HASH=$2
+COMMIT_TAG=$3
+FORCE_REBUILD_ALL=$4
 
-BUILD_SYSTEM_PATH=$(pwd)/.circleci
+BUILD_SYSTEM_PATH=$(pwd)
 
 echo export BUILD_SYSTEM_PATH=$BUILD_SYSTEM_PATH >> $BASH_ENV
 echo export SSH_CONFIG_PATH=$BUILD_SYSTEM_PATH/remote/ssh_config >> $BASH_ENV
@@ -13,11 +23,16 @@ echo export ECR_REGION=us-east-2 >> $BASH_ENV
 echo export ECR_URL=278380418400.dkr.ecr.us-east-2.amazonaws.com >> $BASH_ENV
 echo export ECR_DEPLOY_REGION=eu-west-2 >> $BASH_ENV
 echo export ECR_DEPLOY_URL=278380418400.dkr.ecr.eu-west-2.amazonaws.com >> $BASH_ENV
-echo export REBUILD=$1 >> $BASH_ENV
+echo export FORCE_REBUILD_ALL=$FORCE_REBUILD_ALL >> $BASH_ENV
 echo export TF_VAR_IMAGE_TAG=$CIRCLE_TAG >> $BASH_ENV
-echo export CIRCLE_BRANCH=$CIRCLE_BRANCH >> $BASH_ENV
+echo export BRANCH=$CIRCLE_BRANCH >> $BASH_ENV
+echo export COMMIT_HASH=$CIRCLE_SHA1 >> $BASH_ENV
+echo export COMMIT_TAG=$CIRCLE_TAG >> $BASH_ENV
 cat $BASH_ENV
 
+# Having written the variables to $BASH_ENV, we now want to set them in this shell context.
+source $BASH_ENV
+
 # Ensure correct permissions on build instance key.
-cp .circleci/remote/build_instance_key ~/.ssh/build_instance_key
+cp ./remote/build_instance_key ~/.ssh/build_instance_key
 chmod 600 ~/.ssh/build_instance_key

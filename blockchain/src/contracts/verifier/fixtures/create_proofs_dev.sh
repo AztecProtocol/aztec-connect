@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
 cd ../../../../../barretenberg
-rm -rf build-vks && mkdir build-vks && cd build-vks && cmake ..
+rm -rf ./data && mkdir -p build && cd build && cmake .. && make -j$(nproc) tx_factory rollup_cli
+cd ../srs_db && ./download_ignition.sh 1
 cd ../../blockchain/src/contracts/verifier/fixtures
 
-# input format:
-# num_txs | split proofs ? | data_dir | inner size | outer size | valid outer sizes |
-./create_rollup_proof.sh 1 0 ./data 1 2 2
+# input format: num_txs | data_dir | inner size | outer size | valid outer sizes
+./create_rollup_proof.sh 1 ./data 1 2 2

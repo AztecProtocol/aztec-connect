@@ -1,17 +1,20 @@
-#!/bin/bash
+#!/bin/sh
+# Assumes we have valid binaries at expected location.
+# Builds a fixture (rollup proof) to input specification.
 set -e
-cd ../../../../../barretenberg/build-vks
-make -j$(nproc) tx_factory rollup_cli
-rm -f pipe && mkfifo pipe
 
 TXS=${1:-1}
-SPLIT_PROOFS_ACROSS_ROLLUPS=${2:0}
-DATA_DIR=${3:-./data}
-INNER_SIZE=${4:-1}
-OUTER_SIZE=${5:-1}
-VALID_OUTERS=${6:-1}
+DATA_DIR=${2:-./data}
+INNER_SIZE=${3:-1}
+OUTER_SIZE=${4:-1}
+VALID_OUTERS=${5:-1}
+
+cd ../../../../../barretenberg/build
+
+# Ensure bidirectional pipe exists to feed request/response between tx_factory and rollup_cli.
+rm -rf pipe && mkfifo pipe
 
 ./bin/tx_factory \
-    $TXS $INNER_SIZE $OUTER_SIZE $SPLIT_PROOFS_ACROSS_ROLLUPS \
+    $TXS $INNER_SIZE $OUTER_SIZE 0 \
     ../../blockchain/src/contracts/verifier/fixtures/rollup_proof_data_${INNER_SIZE}x${OUTER_SIZE}.dat < pipe |
-    ./bin/rollup_cli ../srs_db/ignition $DATA_DIR $VALID_OUTERS  > pipe
+    ./bin/rollup_cli ../srs_db/ignition $DATA_DIR $VALID_OUTERS false > pipe

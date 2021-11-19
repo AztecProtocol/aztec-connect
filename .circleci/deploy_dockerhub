@@ -1,14 +1,14 @@
 #!/bin/bash
 set -e
 
-if [ -z "$CIRCLE_TAG" ]; then
+if [ -z "$COMMIT_TAG" ]; then
   echo "Can only push tagged builds to dockerhub."
   exit 1
 fi
 
 REPOSITORY=$1
-IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:$CIRCLE_SHA1
-IMAGE_DEPLOY_URI=aztecprotocol/$REPOSITORY:$CIRCLE_TAG
+IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:$COMMIT_HASH
+IMAGE_DEPLOY_URI=aztecprotocol/$REPOSITORY:$COMMIT_TAG
 
 # Login.
 ensure_repo $REPOSITORY $ECR_DEPLOY_REGION

@@ -1,7 +1,7 @@
 setup_env: &setup_env
   run:
     name: 'Setup environment'
-    command: .circleci/setup_env << pipeline.parameters.rebuild >>
+    command: cd .circleci && ./setup_env $CIRCLE_BRANCH $CIRCLE_SHA1 $CIRCLE_TAG << pipeline.parameters.rebuild >>
 
 version: 2.1
 parameters:
@@ -56,8 +56,8 @@ jobs:
           version: 19.03.13
       - run:
           name: 'Test'
-          working_directory: barretenberg/scripts
-          command: ./cond_spot_run_tests bb-tests $CIRCLE_SHA1
+          working_directory: barretenberg
+          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert bb-tests
 
   stdlib-primitives-tests:
     docker:
@@ -70,8 +70,8 @@ jobs:
           version: 19.03.13
       - run:
           name: 'Test'
-          working_directory: barretenberg/scripts
-          command: ./cond_spot_run_tests stdlib_primitives_tests $CIRCLE_SHA1 1
+          working_directory: barretenberg
+          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert stdlib_primitives_tests 1
 
   stdlib-recursion-tests:
     docker:
@@ -84,8 +84,8 @@ jobs:
           version: 19.03.13
       - run:
           name: 'Test'
-          working_directory: barretenberg/scripts
-          command: ./cond_spot_run_tests stdlib_recursion_tests $CIRCLE_SHA1 1
+          working_directory: barretenberg
+          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert stdlib_recursion_tests 1
 
   tx-rollup-tests:
     docker:
@@ -98,9 +98,8 @@ jobs:
           version: 19.03.13
       - run:
           name: 'Test'
-          working_directory: barretenberg/scripts
-          command: ./cond_spot_run_tests rollup_proofs_tx_rollup_tests $CIRCLE_SHA1
-
+          working_directory: barretenberg
+          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_tx_rollup_tests
   root-rollup-tests:
     docker:
       - image: aztecprotocol/build-image
@@ -112,9 +111,8 @@ jobs:
           version: 19.03.13
       - run:
           name: 'Test'
-          working_directory: barretenberg/scripts
-          command: ./cond_spot_run_tests rollup_proofs_root_rollup_tests $CIRCLE_SHA1
-
+          working_directory: barretenberg
+          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_root_rollup_tests
   root-verifier-tests:
     docker:
       - image: aztecprotocol/build-image
@@ -126,8 +124,8 @@ jobs:
           version: 19.03.13
       - run:
           name: 'Test'
-          working_directory: barretenberg/scripts
-          command: ./cond_spot_run_tests rollup_proofs_root_verifier_tests $CIRCLE_SHA1 1
+          working_directory: barretenberg
+          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_root_verifier_tests 1
 
   wasm-linux-clang:
     machine:
@@ -164,6 +162,20 @@ jobs:
           name: 'Build and test'
           working_directory: blockchain
           command: build blockchain
+
+  blockchain-tests:
+    docker:
+      - image: aztecprotocol/build-image
+    resource_class: small
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker:
+          version: 19.03.13
+      - run:
+          name: 'Test'
+          working_directory: blockchain
+          command: cond_spot_run_tests blockchain tests
 
   halloumi:
     machine:
@@ -277,8 +289,8 @@ jobs:
           version: 19.03.13
       - run:
           name: 'Test'
-          working_directory: end-to-end/scripts
-          command: ./cond_spot_run_tests payment-test ./src/e2e.test.ts
+          working_directory: end-to-end
+          command: cond_spot_run_tests end-to-end payment-test ./src/e2e.test.ts
 
   e2e-account:
     docker:
@@ -291,8 +303,8 @@ jobs:
           version: 19.03.13
       - run:
           name: 'Test'
-          working_directory: end-to-end/scripts
-          command: ./cond_spot_run_tests account-test ./src/e2e_account.test.ts
+          working_directory: end-to-end
+          command: cond_spot_run_tests end-to-end account-test ./src/e2e_account.test.ts
 
   e2e-defi:
     docker:
@@ -305,8 +317,8 @@ jobs:
           version: 19.03.13
       - run:
           name: 'Test'
-          working_directory: end-to-end/scripts
-          command: ./cond_spot_run_tests defi-test ./src/e2e_defi.test.ts
+          working_directory: end-to-end
+          command: cond_spot_run_tests end-to-end defi-test ./src/e2e_defi.test.ts
 
   zk-money:
     docker:
@@ -541,6 +553,10 @@ workflows:
       - blockchain:
           requires:
             - barretenberg-js
+          filters: *tag_filter
+      - blockchain-tests:
+          requires:
+            - blockchain
           filters: *tag_filter
       - halloumi:
           requires:

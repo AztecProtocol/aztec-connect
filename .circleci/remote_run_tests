@@ -1,0 +1,13 @@
+#!/bin/bash
+set -e
+
+IP=$1
+shift
+SSH_CONFIG_PATH=${SSH_CONFIG_PATH:-$BUILD_SYSTEM_PATH/remote/ssh_config}
+
+# Copy all files in current working directory to spot instance.
+# It's expected there be a file called run_tests to execute on the remote machine.
+scp -F $SSH_CONFIG_PATH ./* $IP:.
+
+# Run tests on remote instance.
+ssh -F $SSH_CONFIG_PATH $IP "COMMIT_HASH=$COMMIT_HASH ./run_tests $@"

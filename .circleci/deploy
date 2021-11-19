@@ -9,7 +9,7 @@ TF_DIR=$3
 deploy_ecr $REPOSITORY
 
 # Bail out if nothing changed.
-IMAGE_COMMIT_TAG=cache-$CIRCLE_SHA1
+IMAGE_COMMIT_TAG=cache-$COMMIT_HASH
 image_exists $REPOSITORY $IMAGE_COMMIT_TAG || { echo "No new image found." && exit 0; }
 
 deploy_terraform $TF_DIR

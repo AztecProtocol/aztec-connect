@@ -3,13 +3,13 @@
 set -e
 
 # If rebuild is forced.
-if [ "$REBUILD" == "true" ]; then
+if [ "$FORCE_REBUILD_ALL" == "true" ]; then
   echo "Forced rebuild requested."
   exit 0
 fi
 
 # If this is a tagged commit, rebuild.
-if [ -n "$CIRCLE_TAG" ]; then
+if [ -n "$COMMIT_TAG" ]; then
   echo "Rebuilding tagged commit."
   exit 0
 fi
@@ -25,7 +25,7 @@ if [ ! -f "$PATTERNS" ]; then
   echo "^$(git rev-parse --show-prefix)" > $PATTERNS
 fi
 
-if git diff --name-only ${BASE_COMMIT} ${CIRCLE_SHA1} | grep -q -f $PATTERNS; then
+if git diff --name-only ${BASE_COMMIT} ${COMMIT_HASH} | grep -q -f $PATTERNS; then
   exit 0
 else
   exit 1
