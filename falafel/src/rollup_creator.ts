@@ -91,8 +91,12 @@ export class RollupCreator {
     const bridgeIds: Buffer[] = [];
     const assetIds: Set<AssetId> = new Set();
 
-    for (const tx of txs) {
-      const proof = new ProofData(tx.proofData);
+    const proofs = txs.map(tx => new ProofData(tx.proofData));
+    const { linkedCommitmentPaths, linkedCommitmentIndices } = await this.getLinkedCommitments(proofs);
+
+    for (let i = 0; i < proofs.length; ++i) {
+      const proof = proofs[i];
+      const tx = txs[i];
 
       if (proof.proofId !== ProofId.ACCOUNT) {
         assetIds.add(proof.txFeeAssetId.readUInt32BE(28));
@@ -136,7 +140,7 @@ export class RollupCreator {
       await worldStateDb.put(
         RollupTreeId.DATA,
         dataStartIndex + BigInt(this.innerRollupSize) * 2n - 1n,
-        Buffer.alloc(64, 0),
+        Buffer.alloc(32, 0),
       );
 
       // Add padding data. The vectors that are shorter than their expected size, will be grown to their full circuit
@@ -160,8 +164,8 @@ export class RollupCreator {
       oldDataRoot,
       newDataRoot,
       oldDataPath,
-      [],
-      [],
+      linkedCommitmentPaths,
+      linkedCommitmentIndices,
 
       oldNullRoot,
       newNullRoots,
@@ -176,5 +180,31 @@ export class RollupCreator {
 
       [...assetIds].map(id => numToUInt32BE(id, 32)),
     );
+  }
+
+  private async getLinkedCommitments(proofs: ProofData[]) {
+    const linkedCommitmentPaths: HashPath[] = [];
+    const linkedCommitmentIndices: number[] = [];
+    const dataSize = this.worldStateDb.getSize(RollupTreeId.DATA);
+    const emptyPath = await this.worldStateDb.getHashPath(RollupTreeId.DATA, dataSize);
+    const dataTreeValues: Buffer[] = [];
+    for (const { backwardLink } of proofs) {
+      if (backwardLink.equals(Buffer.alloc(32))) {
+        linkedCommitmentPaths.push(emptyPath);
+        linkedCommitmentIndices.push(0);
+      } else {
+        const offset = 1 + dataTreeValues.findIndex(c => c.equals(backwardLink));
+        let index = dataSize - BigInt(offset);
+        let value = dataTreeValues[offset - 1];
+        while (!value?.equals(backwardLink)) {
+          index--;
+          value = await this.worldStateDb.get(RollupTreeId.DATA, index);
+          dataTreeValues.push(value);
+        }
+        linkedCommitmentPaths.push(await this.worldStateDb.getHashPath(RollupTreeId.DATA, index));
+        linkedCommitmentIndices.push(Number(index));
+      }
+    }
+    return { linkedCommitmentPaths, linkedCommitmentIndices };
   }
 }

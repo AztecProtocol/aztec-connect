@@ -37,14 +37,28 @@ export const databaseTestSuite = (
     });
 
     describe('Note', () => {
-      it('add note to db and get note by index', async () => {
+      it('add note to db and get note by its commitment', async () => {
         const note = randomNote();
         note.value = 2899999999999990600n;
 
         await db.addNote(note);
 
-        const savedNote = await db.getNote(note.index);
+        const savedNote = await db.getNote(note.commitment);
         expect(savedNote).toEqual(note);
+      });
+
+      it('override existing note that has the same commitment', async () => {
+        const note = randomNote();
+        note.allowChain = true;
+        note.pending = true;
+        await db.addNote(note);
+
+        expect(await db.getNote(note.commitment)).toEqual(note);
+
+        const note2 = { ...note, allowChain: false, pending: false };
+        await db.addNote(note2);
+
+        expect(await db.getNote(note.commitment)).toEqual(note2);
       });
 
       it('get note by nullifier', async () => {
@@ -61,24 +75,28 @@ export const databaseTestSuite = (
         const note = randomNote();
         await db.addNote(note);
 
-        const savedNote = await db.getNote(note.index);
+        const savedNote = await db.getNote(note.commitment);
         expect(savedNote!.nullified).toBe(false);
 
-        await db.nullifyNote(note.index);
+        await db.nullifyNote(note.nullifier);
 
-        const updatedNote = await db.getNote(note.index);
+        const updatedNote = await db.getNote(note.commitment);
         expect(updatedNote!.nullified).toBe(true);
       });
 
       it('get all notes belonging to a user that are not nullified', async () => {
         const userId = AccountId.random();
         const userNotes: Note[] = [];
-        for (let i = 0; i < 5; ++i) {
+        for (let i = 0; i < 10; ++i) {
           const note = randomNote();
           note.owner = userId;
-          await db.addNote(note);
           if (i % 2) {
-            await db.nullifyNote(note.index);
+            note.allowChain = true;
+            note.pending = true;
+          }
+          await db.addNote(note);
+          if (i % 3) {
+            await db.nullifyNote(note.nullifier);
           } else {
             userNotes.push(note);
           }
@@ -90,7 +108,58 @@ export const databaseTestSuite = (
         }
 
         const savedNotes = await db.getUserNotes(userId);
-        expect(savedNotes).toEqual(sort(userNotes, 'index'));
+        expect(savedNotes.length).toEqual(userNotes.length);
+        expect(savedNotes).toEqual(expect.arrayContaining(userNotes));
+      });
+
+      it('get all pending notes belonging to a user', async () => {
+        const userId = AccountId.random();
+        const userPendingNotes: Note[] = [];
+        for (let i = 0; i < 10; ++i) {
+          const note = randomNote();
+          note.owner = userId;
+          if (i % 2) {
+            note.pending = true;
+            userPendingNotes.push(note);
+          }
+          await db.addNote(note);
+        }
+        for (let i = 0; i < 5; ++i) {
+          const note = randomNote();
+          note.owner = AccountId.random();
+          note.pending = true;
+          await db.addNote(note);
+        }
+
+        const savedNotes = await db.getUserPendingNotes(userId);
+        expect(savedNotes.length).toEqual(userPendingNotes.length);
+        expect(savedNotes).toEqual(expect.arrayContaining(userPendingNotes));
+      });
+
+      it('delete note by nullifier', async () => {
+        const userId = AccountId.random();
+        const notes: Note[] = [];
+        for (let i = 0; i < 5; ++i) {
+          const note = randomNote();
+          note.owner = userId;
+          await db.addNote(note);
+          notes.push(note);
+        }
+
+        {
+          const savedNotes = await db.getUserNotes(userId);
+          expect(savedNotes.length).toEqual(5);
+          expect(savedNotes).toEqual(expect.arrayContaining(notes));
+        }
+
+        await db.removeNote(notes[1].nullifier);
+        await db.removeNote(notes[3].nullifier);
+
+        {
+          const savedNotes = await db.getUserNotes(userId);
+          expect(savedNotes.length).toEqual(3);
+          expect(savedNotes).toEqual(expect.arrayContaining([notes[0], notes[2], notes[4]]));
+        }
       });
     });
 
@@ -805,14 +874,14 @@ export const databaseTestSuite = (
 
         expect(await db.getUser(user0.id)).toBeUndefined();
         expect(await db.getUserNotes(user0.id)).toEqual([]);
-        expect(await db.getNote(profile0.note.index)).toBeUndefined();
+        expect(await db.getNote(profile0.note.commitment)).toBeUndefined();
         expect(await db.getUserSigningKeys(user0.id)).toEqual([]);
         expect(await db.getJoinSplitTxs(user0.id)).toEqual([]);
         expect(await db.getAccountTxs(user0.id)).toEqual([]);
 
         expect(await db.getUser(user1.id)).toEqual(profile1.user);
         expect(await db.getUserNotes(user1.id)).toEqual([profile1.note]);
-        expect(await db.getNote(profile1.note.index)).toEqual(profile1.note);
+        expect(await db.getNote(profile1.note.commitment)).toEqual(profile1.note);
         expect(await db.getUserSigningKeys(user1.id)).toEqual([profile1.signingKey]);
         expect(await db.getJoinSplitTxs(user1.id)).toEqual([profile1.joinSplitTx]);
         expect(await db.getAccountTxs(user1.id)).toEqual([profile1.accountTx]);
@@ -828,14 +897,14 @@ export const databaseTestSuite = (
 
         expect(await db.getUser(user0.id)).toBeUndefined();
         expect(await db.getUserNotes(user0.id)).toEqual([]);
-        expect(await db.getNote(profile0.note.index)).toBeUndefined();
+        expect(await db.getNote(profile0.note.commitment)).toBeUndefined();
         expect(await db.getUserSigningKeys(user0.id)).toEqual([]);
         expect(await db.getJoinSplitTxs(user0.id)).toEqual([]);
         expect(await db.getAccountTxs(user0.id)).toEqual([]);
 
         expect(await db.getUser(user1.id)).toEqual(profile1.user);
         expect(await db.getUserNotes(user1.id)).toEqual([profile1.note]);
-        expect(await db.getNote(profile1.note.index)).toEqual(profile1.note);
+        expect(await db.getNote(profile1.note.commitment)).toEqual(profile1.note);
         expect(await db.getUserSigningKeys(user1.id)).toEqual([profile1.signingKey]);
         expect(await db.getJoinSplitTxs(user1.id)).toEqual([profile1.joinSplitTx]);
         expect(await db.getAccountTxs(user1.id)).toEqual([profile1.accountTx]);
@@ -865,7 +934,7 @@ export const databaseTestSuite = (
         await db.resetUsers();
 
         expect(await db.getAliases(alias.aliasHash)).toEqual([]);
-        expect(await db.getNote(note.index)).toBeUndefined();
+        expect(await db.getNote(note.commitment)).toBeUndefined();
         expect(await db.getUserSigningKeyIndex(signingKey.accountId, fullKey)).toBeUndefined();
         expect(await db.getJoinSplitTx(tx.txHash, tx.userId)).toBeUndefined();
 
@@ -901,7 +970,7 @@ export const databaseTestSuite = (
         await db.clear();
 
         expect(await db.getAliases(alias.aliasHash)).toEqual([]);
-        expect(await db.getNote(note.index)).toBeUndefined();
+        expect(await db.getNote(note.commitment)).toBeUndefined();
         expect(await db.getUser(user.id)).toBeUndefined();
         expect(await db.getKey(keyName)).toBeUndefined();
         expect(await db.getUserSigningKeyIndex(signingKey.accountId, fullKey)).toBeUndefined();

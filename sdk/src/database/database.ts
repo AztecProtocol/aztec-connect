@@ -24,10 +24,12 @@ export interface Database {
   clear(): Promise<void>;
 
   addNote(note: Note): Promise<void>;
-  getNote(treeIndex: number): Promise<Note | undefined>;
+  getNote(commitment: Buffer): Promise<Note | undefined>;
   getNoteByNullifier(nullifier: Buffer): Promise<Note | undefined>;
-  nullifyNote(index: number): Promise<void>;
+  nullifyNote(nullifier: Buffer): Promise<void>;
   getUserNotes(userId: AccountId): Promise<Note[]>;
+  getUserPendingNotes(userId: AccountId): Promise<Note[]>;
+  removeNote(nullifier: Buffer): Promise<void>;
 
   addClaim(note: Claim): Promise<void>;
   getClaim(nullifier: Buffer): Promise<Claim | undefined>;

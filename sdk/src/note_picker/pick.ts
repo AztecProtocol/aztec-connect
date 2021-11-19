@@ -1,6 +1,6 @@
 import { SortedNotes } from './sorted_notes';
 
-export const pick = (sortedNotes: SortedNotes, value: bigint) => {
+const findPair = (sortedNotes: SortedNotes, value: bigint) => {
   let i = 0;
   const left = sortedNotes.nth(i);
   if (!left) {
@@ -29,13 +29,42 @@ export const pick = (sortedNotes: SortedNotes, value: bigint) => {
       break;
     }
 
-    const thisPair = [sortedNotes.nth(i), sortedNotes.nth(j)];
-    tmpSum = thisPair[0].value + thisPair[1].value;
+    const tmpPair = [sortedNotes.nth(i), sortedNotes.nth(j)];
+    tmpSum = tmpPair[0].value + tmpPair[1].value;
     if (tmpSum === value || (sum !== value && tmpSum > value)) {
       sum = tmpSum;
-      pair = thisPair;
+      pair = tmpPair;
     }
   }
 
   return sum >= value ? pair : null;
+};
+
+export const pick = (sortedNotes: SortedNotes, value: bigint) => {
+  const settledNotes = sortedNotes.filter(n => !n.allowChain);
+  const pendingNotes = sortedNotes.filter(n => n.allowChain);
+  const pairs = [findPair(settledNotes, value)];
+  pendingNotes.forEach(note => {
+    const notes = settledNotes.clone().add(note);
+    pairs.push(findPair(notes, value));
+  });
+
+  return (
+    pairs.reduce((pair, tmpPair) => {
+      if (!pair || !tmpPair) {
+        return pair || tmpPair;
+      }
+
+      if (pair.length !== tmpPair.length) {
+        return pair.length > tmpPair.length ? pair : tmpPair;
+      }
+
+      const sum = pair.reduce((s, n) => s + n.value, BigInt(0));
+      const tmpSum = tmpPair.reduce((s, n) => s + n.value, BigInt(0));
+      if (tmpSum < sum || (tmpSum === sum && tmpPair[0].value > pair[0].value)) {
+        return tmpPair;
+      }
+      return pair;
+    }, pairs[0]) || null
+  );
 };

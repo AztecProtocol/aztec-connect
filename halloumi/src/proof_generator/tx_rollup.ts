@@ -54,7 +54,7 @@ export class TxRollup {
       this.newDataRoot,
       this.oldDataPath.toBuffer(),
       serializeBufferArrayToVector(this.linkedCommitmentPaths.map(path => path.toBuffer())),
-      serializeBufferArrayToVector(this.linkedCommitmentIndices.map(numToUInt32BE)),
+      serializeBufferArrayToVector(this.linkedCommitmentIndices.map(index => numToUInt32BE(index, 4))),
 
       this.oldNullRoot,
       serializeBufferArrayToVector(this.newNullRoots),
@@ -62,13 +62,7 @@ export class TxRollup {
 
       this.dataRootsRoot,
       serializeBufferArrayToVector(this.dataRootsPaths.map(path => path.toBuffer())),
-      serializeBufferArrayToVector(
-        this.dataRootsIndicies.map(v => {
-          const buf = Buffer.alloc(4);
-          buf.writeUInt32BE(v, 0);
-          return buf;
-        }),
-      ),
+      serializeBufferArrayToVector(this.dataRootsIndicies.map(index => numToUInt32BE(index, 4))),
 
       this.newDefiRoot,
       serializeBufferArrayToVector(this.bridgeIds),

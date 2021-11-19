@@ -106,20 +106,28 @@ export class SQLDatabase implements Database {
     await this.noteRep.save(note);
   }
 
-  async getNote(index: number) {
-    return this.noteRep.findOne({ index });
+  async getNote(commitment: Buffer) {
+    return this.noteRep.findOne({ commitment });
   }
 
   async getNoteByNullifier(nullifier: Buffer) {
     return this.noteRep.findOne({ nullifier });
   }
 
-  async nullifyNote(index: number) {
-    await this.noteRep.update(index, { nullified: true });
+  async nullifyNote(nullifier: Buffer) {
+    await this.noteRep.update({ nullifier }, { nullified: true });
   }
 
   async getUserNotes(userId: AccountId) {
     return this.noteRep.find({ where: { owner: userId, nullified: false } });
+  }
+
+  async getUserPendingNotes(userId: AccountId) {
+    return this.noteRep.find({ where: { owner: userId, pending: true } });
+  }
+
+  async removeNote(nullifier: Buffer) {
+    await this.noteRep.delete({ nullifier });
   }
 
   async addClaim(claim: Claim) {

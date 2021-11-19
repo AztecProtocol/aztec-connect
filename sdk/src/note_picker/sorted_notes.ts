@@ -23,6 +23,7 @@ export class SortedNotes {
       }
     }
     this.sortedNotes.splice(i, 0, note);
+    return this;
   }
 
   bulkAdd(notes: Note[]) {
@@ -31,27 +32,35 @@ export class SortedNotes {
     } else {
       notes.forEach(n => this.add(n));
     }
-  }
-
-  remove(note: Note) {
-    const idx = this.sortedNotes.findIndex(n => n.index === note.index);
-    this.sortedNotes.splice(idx, 1);
+    return this;
   }
 
   forEach(callback: (note: Note, i: number) => void) {
     this.sortedNotes.forEach((note, i) => callback(note, i));
   }
 
+  find(callback: (note: Note) => boolean) {
+    return this.sortedNotes.find(note => callback(note));
+  }
+
   nth(idx: number) {
     return this.sortedNotes[idx];
   }
 
-  slice(start: number, end?: number) {
-    return this.sortedNotes.slice(start, end);
+  first(num: number) {
+    return this.sortedNotes.slice(0, num);
+  }
+
+  last(num: number) {
+    return this.sortedNotes.slice(-num);
   }
 
   filter(cb: (note: Note) => boolean) {
     const chosenNotes = this.sortedNotes.filter(cb);
     return new SortedNotes(chosenNotes);
+  }
+
+  clone() {
+    return new SortedNotes(this.notes);
   }
 }

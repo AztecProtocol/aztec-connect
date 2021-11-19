@@ -1,6 +1,7 @@
 import { blockchainStatusToJson } from '@aztec/barretenberg/blockchain';
 import { Block, BlockServerResponse, GetBlocksServerResponse } from '@aztec/barretenberg/block_source';
-import { Proof } from '@aztec/barretenberg/rollup_provider';
+import { ProofData } from '@aztec/barretenberg/client_proofs';
+import { PendingTxServerResponse, Proof } from '@aztec/barretenberg/rollup_provider';
 import cors from '@koa/cors';
 import { ApolloServer } from 'apollo-server-koa';
 import graphqlPlayground from 'graphql-playground-middleware-koa';
@@ -154,8 +155,16 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   });
 
   router.get('/get-pending-txs', recordMetric, async (ctx: Koa.Context) => {
-    const txIds = await server.getUnsettledTxs();
-    ctx.body = txIds.map(txId => txId.toString('hex'));
+    const txs = await server.getUnsettledTxs();
+    ctx.body = txs
+      .map(tx => new ProofData(tx.proofData))
+      .map(
+        (proof): PendingTxServerResponse => ({
+          txId: proof.txId.toString('hex'),
+          noteCommitment1: proof.noteCommitment1.toString('hex'),
+          noteCommitment2: proof.noteCommitment2.toString('hex'),
+        }),
+      );
     ctx.status = 200;
   });
 

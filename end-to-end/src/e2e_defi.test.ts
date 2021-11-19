@@ -84,10 +84,11 @@ describe('end-to-end defi tests', () => {
       const outputAssetIdB = 0;
       const bridgeId = new BridgeId(bridgeAddressId, inputAssetId, outputAssetIdA, outputAssetIdB, 0, false, false, 0);
       const txFee = await sdk.getFee(inputAssetId, TxType.DEFI_DEPOSIT);
+      const jsTxFee = await sdk.getFee(inputAssetId, TxType.TRANSFER);
       const depositValue = sdk.toBaseUnits(inputAssetId, '0.5');
       const initialBalance = sdk.getBalance(inputAssetId, userId);
       const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
-      const proofOutput = await sdk.createDefiProof(bridgeId, userId, depositValue, txFee, signer);
+      const proofOutput = await sdk.createDefiProof(bridgeId, userId, depositValue, txFee, jsTxFee, signer);
       const txHash = await sdk.sendProof(proofOutput);
       await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
       const defiTxs = await sdk.getDefiTxs(userId);
@@ -109,12 +110,13 @@ describe('end-to-end defi tests', () => {
       const inputAssetId = AssetId.DAI;
       const bridgeId = new BridgeId(bridgeAddressId, inputAssetId, AssetId.ETH, 0, 0, false, false, 0);
       const txFee = await sdk.getFee(inputAssetId, TxType.DEFI_DEPOSIT);
+      const jsTxFee = await sdk.getFee(inputAssetId, TxType.TRANSFER);
       const depositValue = sdk.toBaseUnits(inputAssetId, '100');
 
       const initialEthBalance = sdk.getBalance(AssetId.ETH, userId);
       const initialDaiBalance = sdk.getBalance(AssetId.DAI, userId);
       const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
-      const proofOutput = await sdk.createDefiProof(bridgeId, userId, depositValue, txFee, signer);
+      const proofOutput = await sdk.createDefiProof(bridgeId, userId, depositValue, txFee, jsTxFee, signer);
 
       const txHash = await sdk.sendProof(proofOutput);
       await sdk.awaitSettlement(txHash, awaitSettlementTimeout);

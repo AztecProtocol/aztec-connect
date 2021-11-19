@@ -13,9 +13,7 @@ export class PublishTimeManager {
   ) {}
 
   update(txs: TxDao[]) {
-    const publicTime = this.refreshPublishTime(txs);
-    this.publishTime = publicTime;
-    return publicTime;
+    this.publishTime = this.refreshPublishTime(txs);
   }
 
   getPublishTime() {

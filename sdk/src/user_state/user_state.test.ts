@@ -26,7 +26,9 @@ import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { randomBytes } from 'crypto';
 import { Database } from '../database';
+import { JoinSplitProofOutput } from '../proofs/proof_output';
 import { AccountId, UserData } from '../user';
+import { UserJoinSplitTx } from '../user_tx';
 import { UserState } from './index';
 
 type Mockify<T> = {
@@ -89,7 +91,9 @@ describe('user state', () => {
       getNote: jest.fn(),
       addNote: jest.fn(),
       nullifyNote: jest.fn(),
-      getNoteByNullifier: jest.fn(),
+      getNoteByNullifier: jest.fn().mockResolvedValue({ owner: user.id }),
+      getUserPendingNotes: jest.fn().mockResolvedValue([]),
+      removeNote: jest.fn(),
       addClaim: jest.fn(),
       getClaim: jest.fn(),
       getUserNotes: jest.fn().mockResolvedValue([]),
@@ -177,7 +181,7 @@ describe('user state', () => {
       numToUInt32BE(assetId, 32),
     );
     const offchainTxData = new OffchainJoinSplitData(viewingKeys);
-    return { proofData, offchainTxData };
+    return { proofData, offchainTxData, outputNotes: notes.map(n => n.note) };
   };
 
   const generateAccountProof = ({
@@ -329,28 +333,27 @@ describe('user state', () => {
   it('settle existing join split tx, add new note to db and nullify old note', async () => {
     const outputNoteValue1 = 36n;
     const outputNoteValue2 = 64n;
-    const inputNoteIndex = 123;
 
     const jsProof = generateJoinSplitProof({ outputNoteValue1, outputNoteValue2 });
     const block = createRollupBlock([jsProof]);
 
-    db.getJoinSplitTx.mockResolvedValue({ txHash: '', settled: undefined });
-    db.getNoteByNullifier.mockResolvedValueOnce({ index: inputNoteIndex, owner: user.id });
+    db.getJoinSplitTx.mockResolvedValue({ settled: undefined });
 
     userState.processBlock(block);
     await userState.stopSync(true);
 
     expect(db.addNote).toHaveBeenCalledTimes(2);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
-      dataEntry: jsProof.proofData.noteCommitment1,
+      commitment: jsProof.proofData.noteCommitment1,
       value: outputNoteValue1,
     });
     expect(db.addNote.mock.calls[1][0]).toMatchObject({
-      dataEntry: jsProof.proofData.noteCommitment2,
+      commitment: jsProof.proofData.noteCommitment2,
       value: outputNoteValue2,
     });
-    expect(db.nullifyNote).toHaveBeenCalledTimes(1);
-    expect(db.nullifyNote).toHaveBeenCalledWith(inputNoteIndex);
+    expect(db.nullifyNote).toHaveBeenCalledTimes(2);
+    expect(db.nullifyNote).toHaveBeenCalledWith(jsProof.proofData.nullifier1);
+    expect(db.nullifyNote).toHaveBeenCalledWith(jsProof.proofData.nullifier2);
     expect(db.settleJoinSplitTx).toHaveBeenCalledTimes(1);
     expect(db.settleJoinSplitTx).toHaveBeenCalledWith(new TxHash(jsProof.proofData.txId), user.id, block.created);
     expect(db.addJoinSplitTx).toHaveBeenCalledTimes(0);
@@ -358,6 +361,62 @@ describe('user state', () => {
       ...user,
       syncedToRollup: block.rollupId,
     });
+  });
+
+  it('add proof with pending notes, update the note status after settling the tx', async () => {
+    const outputNoteValue1 = 36n;
+    const outputNoteValue2 = 64n;
+
+    const jsProof = generateJoinSplitProof({ outputNoteValue1, outputNoteValue2 });
+    const block = createRollupBlock([jsProof]);
+
+    db.getJoinSplitTx.mockResolvedValue({ settled: undefined });
+
+    const tx = { proofId: ProofId.SEND } as UserJoinSplitTx;
+    const clientProofData = Buffer.concat([
+      jsProof.proofData.toBuffer(),
+      Buffer.alloc(32 * 8), // noteTreeRoot ... backwardLink
+      Buffer.concat([Buffer.alloc(31), Buffer.from([2])]), // allowChain = 2
+    ]);
+    const proofOutput = new JoinSplitProofOutput(tx, jsProof.outputNotes, clientProofData, jsProof.offchainTxData);
+    await userState.addProof(proofOutput);
+    expect(db.addNote).toHaveBeenCalledTimes(2);
+    expect(db.addNote.mock.calls[0][0]).toMatchObject({
+      commitment: jsProof.proofData.noteCommitment1,
+      value: outputNoteValue1,
+      allowChain: false,
+      pending: true,
+    });
+    expect(db.addNote.mock.calls[1][0]).toMatchObject({
+      commitment: jsProof.proofData.noteCommitment2,
+      value: outputNoteValue2,
+      allowChain: true,
+      pending: true,
+    });
+    expect(db.addJoinSplitTx).toHaveBeenCalledTimes(1);
+    expect(db.addJoinSplitTx).toHaveBeenCalledWith(tx);
+    db.addNote.mockClear();
+    db.addJoinSplitTx.mockClear();
+
+    userState.processBlock(block);
+    await userState.stopSync(true);
+
+    expect(db.addNote).toHaveBeenCalledTimes(2);
+    expect(db.addNote.mock.calls[0][0]).toMatchObject({
+      commitment: jsProof.proofData.noteCommitment1,
+      value: outputNoteValue1,
+      allowChain: false,
+      pending: false,
+    });
+    expect(db.addNote.mock.calls[1][0]).toMatchObject({
+      commitment: jsProof.proofData.noteCommitment2,
+      value: outputNoteValue2,
+      allowChain: false,
+      pending: false,
+    });
+    expect(db.addJoinSplitTx).toHaveBeenCalledTimes(0);
+    expect(db.settleJoinSplitTx).toHaveBeenCalledTimes(1);
+    expect(db.settleJoinSplitTx).toHaveBeenCalledWith(new TxHash(jsProof.proofData.txId), user.id, block.created);
   });
 
   it('should correctly process multiple blocks', async () => {
@@ -373,24 +432,20 @@ describe('user state', () => {
     });
     const block2 = createRollupBlock([accountProof, jsProof2], { rollupId: 1, rollupSize: 2 });
 
-    db.getJoinSplitTx.mockResolvedValue({ txHash: '', settled: undefined });
-    db.getNoteByNullifier.mockResolvedValueOnce({ index: 0, owner: user.id });
-    db.getNoteByNullifier.mockResolvedValueOnce({ index: 1, owner: user.id });
-    db.getNoteByNullifier.mockResolvedValueOnce({ index: 2, owner: user.id });
-    db.getNoteByNullifier.mockResolvedValueOnce({ index: 3, owner: user.id });
+    db.getJoinSplitTx.mockResolvedValue({ settled: undefined });
 
     await userState.handleBlocks([block1, block2]);
 
     expect(db.addNote).toHaveBeenCalledTimes(4);
-    expect(db.addNote.mock.calls[0][0]).toMatchObject({ dataEntry: jsProof1.proofData.noteCommitment1, value: 1n });
-    expect(db.addNote.mock.calls[1][0]).toMatchObject({ dataEntry: jsProof1.proofData.noteCommitment2, value: 2n });
-    expect(db.addNote.mock.calls[2][0]).toMatchObject({ dataEntry: jsProof2.proofData.noteCommitment1, value: 3n });
-    expect(db.addNote.mock.calls[3][0]).toMatchObject({ dataEntry: jsProof2.proofData.noteCommitment2, value: 4n });
+    expect(db.addNote.mock.calls[0][0]).toMatchObject({ commitment: jsProof1.proofData.noteCommitment1, value: 1n });
+    expect(db.addNote.mock.calls[1][0]).toMatchObject({ commitment: jsProof1.proofData.noteCommitment2, value: 2n });
+    expect(db.addNote.mock.calls[2][0]).toMatchObject({ commitment: jsProof2.proofData.noteCommitment1, value: 3n });
+    expect(db.addNote.mock.calls[3][0]).toMatchObject({ commitment: jsProof2.proofData.noteCommitment2, value: 4n });
     expect(db.nullifyNote).toHaveBeenCalledTimes(4);
-    expect(db.nullifyNote).toHaveBeenCalledWith(0);
-    expect(db.nullifyNote).toHaveBeenCalledWith(1);
-    expect(db.nullifyNote).toHaveBeenCalledWith(2);
-    expect(db.nullifyNote).toHaveBeenCalledWith(3);
+    expect(db.nullifyNote).toHaveBeenCalledWith(jsProof1.proofData.nullifier1);
+    expect(db.nullifyNote).toHaveBeenCalledWith(jsProof1.proofData.nullifier2);
+    expect(db.nullifyNote).toHaveBeenCalledWith(jsProof2.proofData.nullifier1);
+    expect(db.nullifyNote).toHaveBeenCalledWith(jsProof2.proofData.nullifier1);
     expect(db.settleJoinSplitTx).toHaveBeenCalledTimes(2);
     expect(db.settleJoinSplitTx).toHaveBeenCalledWith(new TxHash(jsProof1.proofData.txId), user.id, block1.created);
     expect(db.settleJoinSplitTx).toHaveBeenCalledWith(new TxHash(jsProof2.proofData.txId), user.id, block2.created);
@@ -437,12 +492,12 @@ describe('user state', () => {
   });
 
   it('do nothing if new notes owner has a different nonce', async () => {
-    const newUserId = new AccountId(user.publicKey, 1);
+    const newUserId = new AccountId(user.publicKey, user.nonce + 1);
     const block = createRollupBlock([
       generateJoinSplitProof({
         outputNoteValue1: 10n,
         outputNoteValue2: 20n,
-        noteCommitmentNonce: user.nonce + 1,
+        noteCommitmentNonce: newUserId.nonce,
         proofSender: { ...user, id: newUserId, nonce: newUserId.nonce },
         newNoteOwner: { ...user, id: newUserId, nonce: newUserId.nonce },
       }),
@@ -476,7 +531,14 @@ describe('user state', () => {
     });
     const block = createRollupBlock([jsProof]);
 
-    db.getNoteByNullifier.mockResolvedValueOnce({ index: 123, owner: user.id, value: inputNoteValue });
+    db.getNoteByNullifier.mockResolvedValueOnce({
+      owner: user.id,
+      value: inputNoteValue,
+    });
+    db.getNoteByNullifier.mockResolvedValueOnce({
+      owner: user.id,
+      value: 0n,
+    });
 
     userState.processBlock(block);
     await userState.stopSync(true);
@@ -484,15 +546,16 @@ describe('user state', () => {
     const txHash = new TxHash(jsProof.proofData.txId);
     expect(db.addNote).toHaveBeenCalledTimes(2);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
-      dataEntry: jsProof.proofData.noteCommitment1,
+      commitment: jsProof.proofData.noteCommitment1,
       value: outputNoteValue1,
     });
     expect(db.addNote.mock.calls[1][0]).toMatchObject({
-      dataEntry: jsProof.proofData.noteCommitment2,
+      commitment: jsProof.proofData.noteCommitment2,
       value: outputNoteValue2,
     });
-    expect(db.nullifyNote).toHaveBeenCalledTimes(1);
-    expect(db.nullifyNote).toHaveBeenCalledWith(123);
+    expect(db.nullifyNote).toHaveBeenCalledTimes(2);
+    expect(db.nullifyNote).toHaveBeenCalledWith(jsProof.proofData.nullifier1);
+    expect(db.nullifyNote).toHaveBeenCalledWith(jsProof.proofData.nullifier2);
     expect(db.settleJoinSplitTx).toHaveBeenCalledTimes(0);
     expect(db.addJoinSplitTx).toHaveBeenCalledTimes(1);
     expect(db.addJoinSplitTx.mock.calls[0][0]).toMatchObject({
@@ -515,19 +578,17 @@ describe('user state', () => {
     const proofSender = createUser();
     const outputNoteValue1 = 56n;
     const outputNoteValue2 = 78n;
-    const jsProof = generateJoinSplitProof({
-      proofSender,
-      outputNoteValue1,
-      outputNoteValue2,
-    });
+    const jsProof = generateJoinSplitProof({ proofSender, outputNoteValue1, outputNoteValue2 });
     const block = createRollupBlock([jsProof]);
+
+    db.getNoteByNullifier.mockResolvedValue(undefined);
 
     userState.processBlock(block);
     await userState.stopSync(true);
 
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
-      dataEntry: jsProof.proofData.noteCommitment1,
+      commitment: jsProof.proofData.noteCommitment1,
       value: outputNoteValue1,
     });
     expect(db.nullifyNote).toHaveBeenCalledTimes(0);
@@ -549,15 +610,14 @@ describe('user state', () => {
     const jsProof = generateJoinSplitProof({ proofSender, outputNoteValue1, outputNoteValue2 });
     const block = createRollupBlock([jsProof]);
 
-    db.getNoteByNullifier.mockResolvedValueOnce({ index: 1, owner: proofSender.id, value: 12n });
-    db.getNoteByNullifier.mockResolvedValueOnce({ index: 2, owner: proofSender.id, value: 34n });
+    db.getNoteByNullifier.mockResolvedValue({ owner: proofSender.id });
 
     userState.processBlock(block);
     await userState.stopSync(true);
 
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
-      dataEntry: jsProof.proofData.noteCommitment1,
+      commitment: jsProof.proofData.noteCommitment1,
       value: outputNoteValue1,
     });
     expect(db.nullifyNote).toHaveBeenCalledTimes(0);
@@ -587,7 +647,7 @@ describe('user state', () => {
 
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
-      dataEntry: jsProof.proofData.noteCommitment2,
+      commitment: jsProof.proofData.noteCommitment2,
       value: outputNoteValue2,
     });
     expect(db.addJoinSplitTx).toHaveBeenCalledTimes(1);
@@ -714,7 +774,6 @@ describe('user state', () => {
   });
 
   it('update a defi tx, add claim to db and nullify old notes', async () => {
-    const inputNoteIndex = 123;
     const outputNoteValue = 36n;
     const bridgeId = BridgeId.random();
     const depositValue = 64n;
@@ -730,17 +789,9 @@ describe('user state', () => {
       new DefiInteractionNote(BridgeId.random(), 1, 12n, 34n, 56n, true),
     ];
     const block = createRollupBlock([defiProof], { interactionResult });
-
     const txHash = new TxHash(defiProof.proofData.txId);
-    const claimNoteNullifer = noteAlgos.claimNoteNullifier(defiProof.proofData.noteCommitment1);
 
-    db.getDefiTx.mockResolvedValue({ txHash, settled: undefined });
-    db.getNoteByNullifier.mockResolvedValueOnce({
-      index: inputNoteIndex,
-      owner: user.id,
-      nullifier: claimNoteNullifer,
-      value: 100n,
-    });
+    db.getDefiTx.mockResolvedValue({ settled: undefined });
 
     userState.processBlock(block);
     await userState.stopSync(true);
@@ -756,11 +807,12 @@ describe('user state', () => {
     });
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
-      dataEntry: defiProof.proofData.noteCommitment2,
+      commitment: defiProof.proofData.noteCommitment2,
       value: outputNoteValue,
     });
-    expect(db.nullifyNote).toHaveBeenCalledTimes(1);
-    expect(db.nullifyNote).toHaveBeenCalledWith(inputNoteIndex);
+    expect(db.nullifyNote).toHaveBeenCalledTimes(2);
+    expect(db.nullifyNote).toHaveBeenCalledWith(defiProof.proofData.nullifier1);
+    expect(db.nullifyNote).toHaveBeenCalledWith(defiProof.proofData.nullifier2);
     expect(db.updateDefiTx).toHaveBeenCalledTimes(1);
     expect(db.updateDefiTx).toHaveBeenCalledWith(txHash, outputValueA, outputValueB);
     expect(db.addDefiTx).toHaveBeenCalledTimes(0);
@@ -768,7 +820,6 @@ describe('user state', () => {
   });
 
   it('restore a defi tx and save to db, nullify input notes', async () => {
-    const inputNoteIndexes = [123, 124];
     const inputNoteValues = [70n, 30n];
     const outputNoteValue = 20n;
     const bridgeId = BridgeId.random();
@@ -787,12 +838,10 @@ describe('user state', () => {
     const block = createRollupBlock([defiProof], { interactionResult });
 
     db.getNoteByNullifier.mockResolvedValueOnce({
-      index: inputNoteIndexes[0],
       owner: user.id,
       value: inputNoteValues[0],
     });
     db.getNoteByNullifier.mockResolvedValueOnce({
-      index: inputNoteIndexes[1],
       owner: user.id,
       value: inputNoteValues[1],
     });
@@ -807,12 +856,12 @@ describe('user state', () => {
     });
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
-      dataEntry: defiProof.proofData.noteCommitment2,
+      commitment: defiProof.proofData.noteCommitment2,
       value: outputNoteValue,
     });
     expect(db.nullifyNote).toHaveBeenCalledTimes(2);
-    expect(db.nullifyNote).toHaveBeenCalledWith(inputNoteIndexes[0]);
-    expect(db.nullifyNote).toHaveBeenCalledWith(inputNoteIndexes[1]);
+    expect(db.nullifyNote).toHaveBeenCalledWith(defiProof.proofData.nullifier1);
+    expect(db.nullifyNote).toHaveBeenCalledWith(defiProof.proofData.nullifier2);
     expect(db.updateDefiTx).toHaveBeenCalledTimes(0);
     expect(db.addDefiTx).toHaveBeenCalledTimes(1);
     expect(db.addDefiTx).toHaveBeenCalledWith(
@@ -851,12 +900,12 @@ describe('user state', () => {
 
     expect(db.addNote).toHaveBeenCalledTimes(2);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
-      dataEntry: claimProof.proofData.noteCommitment1,
+      commitment: claimProof.proofData.noteCommitment1,
       value: outputValueA,
       secret,
     });
     expect(db.addNote.mock.calls[1][0]).toMatchObject({
-      dataEntry: claimProof.proofData.noteCommitment2,
+      commitment: claimProof.proofData.noteCommitment2,
       value: outputValueB,
       secret,
     });
@@ -885,7 +934,7 @@ describe('user state', () => {
 
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
-      dataEntry: claimProof.proofData.noteCommitment1,
+      commitment: claimProof.proofData.noteCommitment1,
       value: depositValue,
       secret,
     });
@@ -923,7 +972,6 @@ describe('user state', () => {
   it('should not add notes with incorrect commitments', async () => {
     const outputNoteValue1 = 36n;
     const outputNoteValue2 = 64n;
-    const inputNoteIndex = 123;
 
     const jsProof = generateJoinSplitProof({
       outputNoteValue1,
@@ -932,8 +980,7 @@ describe('user state', () => {
     });
     const block = createRollupBlock([jsProof]);
 
-    db.getJoinSplitTx.mockResolvedValue({ txHash: '', settled: undefined });
-    db.getNoteByNullifier.mockResolvedValueOnce({ index: inputNoteIndex, owner: user.id });
+    db.getJoinSplitTx.mockResolvedValue({ settled: undefined });
 
     userState.processBlock(block);
     await userState.stopSync(true);
@@ -941,11 +988,23 @@ describe('user state', () => {
     expect(db.addNote).toHaveBeenCalledTimes(0);
   });
 
-  it('remove orphaned txs', async () => {
-    const unsettledUserTxs = [TxHash.random(), TxHash.random(), TxHash.random()];
+  it('remove orphaned txs and notes', async () => {
+    const unsettledUserTxs = [...Array(4)].map(() => TxHash.random());
     db.getUnsettledUserTxs.mockResolvedValue(unsettledUserTxs);
 
-    const pendingTxs = [TxHash.random(), TxHash.random(), unsettledUserTxs[1]];
+    const pendingNotes = [...Array(6)].map(() => ({ commitment: randomBytes(32), nullifier: randomBytes(32) }));
+    db.getUserPendingNotes.mockResolvedValue(pendingNotes);
+
+    const pendingTxs = [
+      { txId: TxHash.random(), noteCommitment1: pendingNotes[1].commitment, noteCommitment2: randomBytes(32) },
+      { txId: unsettledUserTxs[1], noteCommitment1: randomBytes(32), noteCommitment2: pendingNotes[2].commitment },
+      { txId: TxHash.random(), noteCommitment1: randomBytes(32), noteCommitment2: randomBytes(32) },
+      {
+        txId: unsettledUserTxs[3],
+        noteCommitment1: pendingNotes[4].commitment,
+        noteCommitment2: pendingNotes[5].commitment,
+      },
+    ];
     rollupProvider.getPendingTxs.mockResolvedValue(pendingTxs);
 
     userState = new UserState(user, grumpkin, noteAlgos, db as any, rollupProvider as any);
@@ -954,5 +1013,8 @@ describe('user state', () => {
     expect(db.removeUserTx).toHaveBeenCalledTimes(2);
     expect(db.removeUserTx).toHaveBeenCalledWith(unsettledUserTxs[0], user.id);
     expect(db.removeUserTx).toHaveBeenCalledWith(unsettledUserTxs[2], user.id);
+    expect(db.removeNote).toHaveBeenCalledTimes(2);
+    expect(db.removeNote).toHaveBeenCalledWith(pendingNotes[0].nullifier);
+    expect(db.removeNote).toHaveBeenCalledWith(pendingNotes[3].nullifier);
   });
 });

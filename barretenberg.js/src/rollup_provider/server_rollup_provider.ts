@@ -5,6 +5,12 @@ import { Proof } from '../rollup_provider';
 import { TxHash } from '../tx_hash';
 import { blockchainStatusFromJson } from '../blockchain';
 
+export interface PendingTxServerResponse {
+  txId: string;
+  noteCommitment1: string;
+  noteCommitment2: string;
+}
+
 export class ServerRollupProvider extends ServerBlockSource implements RollupProvider {
   constructor(baseUrl: URL, pollInterval = 10000) {
     super(baseUrl, pollInterval);
@@ -67,8 +73,12 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
       throw new Error(`Bad response code ${response.status}.`);
     }
 
-    const txIds = (await response.json()) as string[];
-    return txIds.map(txId => TxHash.fromString(txId));
+    const txs = (await response.json()) as PendingTxServerResponse[];
+    return txs.map(tx => ({
+      txId: TxHash.fromString(tx.txId),
+      noteCommitment1: Buffer.from(tx.noteCommitment1, 'hex'),
+      noteCommitment2: Buffer.from(tx.noteCommitment2, 'hex'),
+    }));
   }
 
   async getPendingNoteNullifiers() {

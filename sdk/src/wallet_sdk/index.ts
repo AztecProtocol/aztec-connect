@@ -176,6 +176,7 @@ export class WalletSdk extends EventEmitter {
     value: bigint,
     fee: bigint,
     signer: Signer,
+    allowChain = true,
   ) {
     return this.createJoinSplitProof(
       assetId,
@@ -188,6 +189,7 @@ export class WalletSdk extends EventEmitter {
       signer,
       to, // noteRecipient
       from, // publicOwner
+      allowChain,
     );
   }
 
@@ -198,6 +200,7 @@ export class WalletSdk extends EventEmitter {
     fee: bigint,
     signer: Signer,
     to: EthAddress,
+    allowChain = true,
   ) {
     return this.createJoinSplitProof(
       assetId,
@@ -210,6 +213,7 @@ export class WalletSdk extends EventEmitter {
       signer,
       undefined,
       to,
+      allowChain,
     );
   }
 
@@ -220,8 +224,21 @@ export class WalletSdk extends EventEmitter {
     fee: bigint,
     signer: Signer,
     to: AccountId,
+    allowChain = true,
   ) {
-    return this.createJoinSplitProof(assetId, userId, BigInt(0), BigInt(0), value + fee, value, BigInt(0), signer, to);
+    return this.createJoinSplitProof(
+      assetId,
+      userId,
+      BigInt(0),
+      BigInt(0),
+      value + fee,
+      value,
+      BigInt(0),
+      signer,
+      to,
+      undefined,
+      allowChain,
+    );
   }
 
   public async createJoinSplitProof(
@@ -235,6 +252,7 @@ export class WalletSdk extends EventEmitter {
     signer: Signer,
     noteRecipient?: AccountId,
     publicOwner?: EthAddress,
+    allowChain = true,
   ) {
     if (privateInput) {
       await this.checkNoteBalance(assetId, userId, privateInput);
@@ -251,6 +269,7 @@ export class WalletSdk extends EventEmitter {
       signer,
       noteRecipient,
       publicOwner,
+      allowChain,
     );
   }
 
@@ -282,7 +301,9 @@ export class WalletSdk extends EventEmitter {
     userId: AccountId,
     depositValue: bigint,
     txFee: bigint,
+    jsTxFee: bigint,
     signer: Signer,
+    allowChain = false,
   ) {
     if (!depositValue) {
       throw new Error('Deposit value must be greater than 0.');
@@ -290,7 +311,7 @@ export class WalletSdk extends EventEmitter {
 
     await this.checkNoteBalance(bridgeId.inputAssetId, userId, depositValue + txFee);
 
-    return this.core.createDefiProof(bridgeId, userId, depositValue, txFee, signer);
+    return this.core.createDefiProof(bridgeId, userId, depositValue, txFee, jsTxFee, signer, allowChain);
   }
 
   public async signProof(proofOutput: ProofOutput, inputOwner: EthAddress, provider?: EthereumProvider) {

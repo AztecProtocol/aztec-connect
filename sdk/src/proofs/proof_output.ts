@@ -1,4 +1,5 @@
 import { ProofData } from '@aztec/barretenberg/client_proofs';
+import { TreeNote } from '@aztec/barretenberg/note_algorithms';
 import {
   OffchainAccountData,
   OffchainDefiDepositData,
@@ -12,20 +13,32 @@ import { UserAccountTx, UserDefiTx, UserJoinSplitTx } from '../user_tx';
 
 export interface ProofOutput extends Proof {
   tx: UserJoinSplitTx | UserAccountTx | UserDefiTx;
+  outputNotes: TreeNote[];
+  parentProof?: ProofOutput;
 }
 
 export class JoinSplitProofOutput implements ProofOutput {
-  public offchainTxData: Buffer;
+  public readonly offchainTxData: Buffer;
 
-  constructor(public tx: UserJoinSplitTx, public proofData: Buffer, offchainTxData: OffchainJoinSplitData) {
+  constructor(
+    public readonly tx: UserJoinSplitTx,
+    public readonly outputNotes: TreeNote[],
+    public readonly proofData: Buffer,
+    offchainTxData: OffchainJoinSplitData,
+  ) {
     this.offchainTxData = offchainTxData.toBuffer();
   }
 }
 
 export class AccountProofOutput implements ProofOutput {
-  public offchainTxData: Buffer;
+  public readonly offchainTxData: Buffer;
+  public readonly outputNotes = [];
 
-  constructor(public tx: UserAccountTx, public proofData: Buffer, offchainTxData: OffchainAccountData) {
+  constructor(
+    public readonly tx: UserAccountTx,
+    public readonly proofData: Buffer,
+    offchainTxData: OffchainAccountData,
+  ) {
     this.offchainTxData = offchainTxData.toBuffer();
   }
 
@@ -66,9 +79,15 @@ export class AccountProofOutput implements ProofOutput {
 }
 
 export class DefiProofOutput implements ProofOutput {
-  public offchainTxData: Buffer;
+  public readonly offchainTxData: Buffer;
 
-  constructor(public tx: UserDefiTx, public proofData: Buffer, offchainTxData: OffchainDefiDepositData) {
+  constructor(
+    public readonly tx: UserDefiTx,
+    public readonly outputNotes: TreeNote[],
+    public readonly proofData: Buffer,
+    offchainTxData: OffchainDefiDepositData,
+    public readonly parentProof?: JoinSplitProofOutput,
+  ) {
     this.offchainTxData = offchainTxData.toBuffer();
   }
 }

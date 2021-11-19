@@ -3,7 +3,7 @@ import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
-import Dexie, { PromiseExtended } from 'dexie';
+import Dexie from 'dexie';
 import { Note } from '../note';
 import { AccountId, UserData } from '../user';
 import { UserAccountTx, UserDefiTx, UserJoinSplitTx } from '../user_tx';
@@ -16,55 +16,59 @@ const toSubKeyName = (name: string, index: number) => `${name}__${index}`;
 
 class DexieNote {
   constructor(
-    public id: number,
     public assetId: number,
     public value: string,
-    public dataEntry: Uint8Array,
+    public commitment: Uint8Array,
     public secret: Uint8Array,
     public nullifier: Uint8Array,
     public nullified: 0 | 1,
     public owner: Uint8Array,
     public creatorPubKey: Uint8Array,
     public inputNullifier: Uint8Array,
+    public index: number,
+    public allowChain: boolean,
+    public pending: 0 | 1,
   ) {}
 }
 
 const noteToDexieNote = (note: Note) =>
   new DexieNote(
-    note.index,
     note.assetId,
     note.value.toString(),
-    note.dataEntry,
+    note.commitment,
     note.secret,
     note.nullifier,
     note.nullified ? 1 : 0,
     new Uint8Array(note.owner.toBuffer()),
     new Uint8Array(note.creatorPubKey),
     new Uint8Array(note.inputNullifier),
+    note.index,
+    note.allowChain,
+    note.pending ? 1 : 0,
   );
 
 const dexieNoteToNote = ({
-  id,
   value,
-  dataEntry,
+  commitment,
   secret,
   nullifier,
   nullified,
   owner,
   creatorPubKey,
   inputNullifier,
+  pending,
   ...rest
 }: DexieNote): Note => ({
   ...rest,
-  index: id,
   value: BigInt(value),
-  dataEntry: Buffer.from(dataEntry),
+  commitment: Buffer.from(commitment),
   secret: Buffer.from(secret),
   nullifier: Buffer.from(nullifier),
   nullified: !!nullified,
   owner: AccountId.fromBuffer(Buffer.from(owner)),
   creatorPubKey: Buffer.from(creatorPubKey),
   inputNullifier: Buffer.from(inputNullifier),
+  pending: !!pending,
 });
 
 class DexieClaim {
@@ -351,7 +355,7 @@ export class DexieDatabase implements Database {
       alias: '&[aliasHash+address], aliasHash, address, latestNonce',
       claim: '&nullifier',
       key: '&name',
-      note: '++id, [owner+nullified], nullifier, owner',
+      note: '++commitment, [owner+nullified], [owner+pending], nullifier, owner',
       user: '&id',
       userKeys: '&[accountId+key], accountId',
       userTx: '&[txHash+userId], txHash, [txHash+proofId], [userId+proofId], proofId, settled',
@@ -380,8 +384,8 @@ export class DexieDatabase implements Database {
     await this.note.put(noteToDexieNote(note));
   }
 
-  async getNote(treeIndex: number) {
-    const note = await this.note.get(treeIndex);
+  async getNote(commitment: Buffer) {
+    const note = await this.note.get({ commitment: new Uint8Array(commitment) });
     return note ? dexieNoteToNote(note) : undefined;
   }
 
@@ -390,8 +394,8 @@ export class DexieDatabase implements Database {
     return note ? dexieNoteToNote(note) : undefined;
   }
 
-  async nullifyNote(index: number) {
-    await this.note.update(index, { nullified: 1 });
+  async nullifyNote(nullifier: Buffer) {
+    await this.note.where({ nullifier: new Uint8Array(nullifier) }).modify({ nullified: 1 });
   }
 
   async addClaim(claim: Claim) {
@@ -407,6 +411,16 @@ export class DexieDatabase implements Database {
     return (await this.note.where({ owner: new Uint8Array(userId.toBuffer()), nullified: 0 }).toArray()).map(
       dexieNoteToNote,
     );
+  }
+
+  async getUserPendingNotes(userId: AccountId) {
+    return (await this.note.where({ owner: new Uint8Array(userId.toBuffer()), pending: 1 }).toArray()).map(
+      dexieNoteToNote,
+    );
+  }
+
+  async removeNote(nullifier: Buffer) {
+    await this.note.where({ nullifier: new Uint8Array(nullifier) }).delete();
   }
 
   async getUser(userId: AccountId) {
@@ -625,8 +639,7 @@ export class DexieDatabase implements Database {
 
   async addUserSigningKeys(signingKeys: SigningKey[]) {
     const dbKeys = signingKeys.map(
-      (key, index) =>
-        new DexieUserKey(new Uint8Array(key.accountId.toBuffer()), new Uint8Array(key.key), key.treeIndex),
+      key => new DexieUserKey(new Uint8Array(key.accountId.toBuffer()), new Uint8Array(key.key), key.treeIndex),
     );
     await this.userKeys.bulkPut(dbKeys);
   }

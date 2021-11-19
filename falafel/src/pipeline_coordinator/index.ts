@@ -1,4 +1,4 @@
-import { DefiInteractionNote, NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
+import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import moment, { Duration } from 'moment';
@@ -13,6 +13,7 @@ import { PublishTimeManager } from './publish_time_manager';
 import { RollupCoordinator } from './rollup_coordinator';
 
 export class PipelineCoordinator {
+  private flush = false;
   private running = false;
   private runningPromise!: Promise<void>;
   private publishTimeManager!: PublishTimeManager;
@@ -58,8 +59,8 @@ export class PipelineCoordinator {
 
       while (this.running) {
         const pendingTxs = await this.rollupDb.getPendingTxs();
-        const published = await this.rollupCoordinator.processPendingTxs(pendingTxs);
-        if (published) {
+        const published = await this.rollupCoordinator.processPendingTxs(pendingTxs, this.flush);
+        if (published || this.flush) {
           this.running = false;
           break;
         }
@@ -85,30 +86,37 @@ export class PipelineCoordinator {
   }
 
   public flushTxs() {
-    this.rollupCoordinator.flushTxs();
+    this.flush = true;
   }
 
   private async reset() {
+    this.flush = false;
+
     // Erase any outstanding rollups and proofs to release unsettled txs.
     await this.rollupDb.deleteUnsettledRollups();
     await this.rollupDb.deleteOrphanedRollupProofs();
     await this.rollupDb.deleteUnsettledClaimTxs();
     const lastRollup = await this.rollupDb.getLastSettledRollup();
     const rollupId = lastRollup ? lastRollup.id + 1 : 0;
-
-    this.publishTimeManager = new PublishTimeManager(
-      this.numInnerRollupTxs * this.numOuterRollupProofs,
-      this.publishInterval,
-      this.feeResolver,
-    );
+    const rollupSize = this.numInnerRollupTxs * this.numOuterRollupProofs;
 
     const oldDefiRoot = this.worldStateDb.getRoot(RollupTreeId.DEFI);
     const oldDefiPath = await this.worldStateDb.getHashPath(
       RollupTreeId.DEFI,
       BigInt(Math.max(0, rollupId - 1) * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK),
     );
+
     const defiInteractionNotes = lastRollup ? parseInteractionResult(lastRollup.interactionResult!) : [];
-    await this.updateDefiTree(defiInteractionNotes);
+    for (const note of defiInteractionNotes) {
+      await this.worldStateDb.put(
+        RollupTreeId.DEFI,
+        BigInt(note.nonce),
+        this.noteAlgo.defiInteractionNoteCommitment(note),
+      );
+    }
+
+    this.publishTimeManager = new PublishTimeManager(rollupSize, this.publishInterval, this.feeResolver);
+
     this.rollupCoordinator = new RollupCoordinator(
       this.publishTimeManager,
       this.rollupCreator,
@@ -120,15 +128,5 @@ export class PipelineCoordinator {
       oldDefiPath,
       defiInteractionNotes,
     );
-  }
-
-  private async updateDefiTree(notes: DefiInteractionNote[]) {
-    for (const note of notes) {
-      await this.worldStateDb.put(
-        RollupTreeId.DEFI,
-        BigInt(note.nonce),
-        this.noteAlgo.defiInteractionNoteCommitment(note),
-      );
-    }
   }
 }

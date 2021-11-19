@@ -41,26 +41,60 @@ export class JoinSplitProofCreator {
     signer: Signer,
     newNoteOwner?: AccountId,
     publicOwner?: EthAddress,
-    propagatedInputIndex?: number,
-    backwardLink?: Buffer,
-    allowChain?: number,
+    allowChain = false,
   ) {
-    const { tx, viewingKeys } = await this.txFactory.createJoinSplitTx(
-      userState,
-      publicInput,
-      publicOutput,
-      privateInput,
-      recipientPrivateOutput,
-      senderPrivateOutput,
-      BigInt(0), // defiDepositValue
+    if (publicInput && publicOutput) {
+      throw new Error('Public values cannot be both greater than zero.');
+    }
+
+    if (publicOutput + recipientPrivateOutput + senderPrivateOutput > publicInput + privateInput) {
+      throw new Error('Total output cannot be larger than total input.');
+    }
+
+    if (publicInput + publicOutput && !publicOwner) {
+      throw new Error('Public owner undefined.');
+    }
+
+    if (recipientPrivateOutput && !newNoteOwner) {
+      throw new Error('Note recipient undefined.');
+    }
+
+    const proofId = (() => {
+      if (publicInput > 0) {
+        return ProofId.DEPOSIT;
+      }
+      if (publicOutput > 0) {
+        return ProofId.WITHDRAW;
+      }
+      return ProofId.SEND;
+    })();
+
+    const user = userState.getUser();
+
+    const notes = privateInput ? await userState.pickNotes(assetId, privateInput) : [];
+    if (!notes) {
+      throw new Error(`Failed to find no more than 2 notes that sum to ${privateInput}.`);
+    }
+
+    const totalInputNoteValue = notes.reduce((sum, note) => sum + note.value, BigInt(0));
+    const changeValue = totalInputNoteValue > privateInput ? totalInputNoteValue - privateInput : BigInt(0);
+
+    const { tx, outputNotes, viewingKeys } = await this.txFactory.createTx(
+      user,
+      proofId,
       assetId,
+      notes,
       signer.getPublicKey(),
-      newNoteOwner,
-      publicOwner,
-      propagatedInputIndex,
-      backwardLink,
-      allowChain,
+      {
+        publicValue: publicInput + publicOutput,
+        publicOwner,
+        outputNoteValue1: recipientPrivateOutput,
+        outputNoteValue2: changeValue + senderPrivateOutput,
+        newNoteOwner,
+        allowChain: allowChain ? 2 : 0,
+      },
     );
+
     const signingData = await this.joinSplitProver.computeSigningData(tx);
     const signature = await signer.signMessage(signingData);
 
@@ -70,12 +104,11 @@ export class JoinSplitProofCreator {
     debug(`created proof: ${new Date().getTime() - start}ms`);
     debug(`proof size: ${proofData.length}`);
 
-    const { txId, proofId } = new ProofData(proofData);
+    const { txId } = new ProofData(proofData);
     const txHash = new TxHash(txId);
-    const userId = userState.getUser().id;
     const userTx = new UserJoinSplitTx(
       txHash,
-      userId,
+      user.id,
       assetId,
       publicInput,
       publicOutput,
@@ -89,6 +122,6 @@ export class JoinSplitProofCreator {
     );
     const offchainTxData = new OffchainJoinSplitData(viewingKeys);
 
-    return new JoinSplitProofOutput(userTx, proofData, offchainTxData);
+    return new JoinSplitProofOutput(userTx, outputNotes, proofData, offchainTxData);
   }
 }

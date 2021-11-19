@@ -1,8 +1,6 @@
-import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { ProofData } from '@aztec/barretenberg/client_proofs';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
@@ -39,19 +37,29 @@ describe('rollup_coordinator', () => {
 
   const mockTx = (
     id: number,
-    txType = TxType.DEPOSIT,
-    txFeeAssetId = AssetId.ETH,
-    bridgeId = new BridgeId(randomInt(), 1, 0, 1, 0, false, false, 0),
+    {
+      txType = TxType.TRANSFER,
+      txFeeAssetId = AssetId.ETH,
+      bridgeId = new BridgeId(randomInt(), 1, 0, 1, 0, false, false, 0),
+      noteCommitment1 = randomBytes(32),
+      noteCommitment2 = randomBytes(32),
+      backwardLink = Buffer.alloc(32),
+      allowChain = numToUInt32BE(2, 32),
+    } = {},
   ) =>
     (({
       id,
       txType,
       proofData: Buffer.concat([
         numToUInt32BE(txTypeToProofId(txType), 32),
-        randomBytes(9 * 32),
+        noteCommitment1,
+        noteCommitment2,
+        randomBytes(7 * 32),
         numToUInt32BE(txFeeAssetId, 32),
         bridgeId.toBuffer(),
-        randomBytes((ProofData.NUM_PUBLIC_INPUTS - 12) * 32),
+        randomBytes(3 * 32),
+        backwardLink,
+        allowChain,
       ]),
     } as any) as TxDao);
 
@@ -204,7 +212,11 @@ describe('rollup_coordinator', () => {
   describe('picking txs to rollup', () => {
     it('will not rollup defi deposit proofs with more than the allowed distinct bridge ids', async () => {
       const mockDefiBridgeTx = (id: number, bridgeId: BridgeId) =>
-        mockTx(id, TxType.DEFI_DEPOSIT, bridgeId.inputAssetId, bridgeId);
+        mockTx(id, {
+          txType: TxType.DEFI_DEPOSIT,
+          txFeeAssetId: bridgeId.inputAssetId,
+          bridgeId,
+        });
 
       const bridgeIds = Array(6)
         .fill(0)
@@ -242,17 +254,17 @@ describe('rollup_coordinator', () => {
 
     it('will rollup defi claim proofs first', async () => {
       const pendingTxs = [
-        mockTx(0, TxType.DEPOSIT),
-        mockTx(1, TxType.ACCOUNT),
-        mockTx(2, TxType.DEFI_DEPOSIT),
-        mockTx(3, TxType.DEFI_CLAIM),
-        mockTx(4, TxType.WITHDRAW_TO_CONTRACT),
-        mockTx(5, TxType.DEFI_CLAIM),
-        mockTx(6, TxType.TRANSFER),
-        mockTx(7, TxType.WITHDRAW_TO_WALLET),
-        mockTx(8, TxType.DEPOSIT),
-        mockTx(9, TxType.DEFI_DEPOSIT),
-        mockTx(10, TxType.DEFI_CLAIM),
+        mockTx(0, { txType: TxType.DEPOSIT }),
+        mockTx(1, { txType: TxType.ACCOUNT }),
+        mockTx(2, { txType: TxType.DEFI_DEPOSIT }),
+        mockTx(3, { txType: TxType.DEFI_CLAIM }),
+        mockTx(4, { txType: TxType.WITHDRAW_TO_CONTRACT }),
+        mockTx(5, { txType: TxType.DEFI_CLAIM }),
+        mockTx(6, { txType: TxType.TRANSFER }),
+        mockTx(7, { txType: TxType.WITHDRAW_TO_WALLET }),
+        mockTx(8, { txType: TxType.DEPOSIT }),
+        mockTx(9, { txType: TxType.DEFI_DEPOSIT }),
+        mockTx(10, { txType: TxType.DEFI_CLAIM }),
       ];
       const published = await coordinator.processPendingTxs(pendingTxs);
       expect(published).toBe(true);
@@ -272,10 +284,143 @@ describe('rollup_coordinator', () => {
     });
   });
 
+  describe('aggregating linked txs', () => {
+    const numInnerRollupTxs = 8;
+    const numOuterRollupProofs = 2;
+
+    beforeEach(() => {
+      coordinator = new RollupCoordinator(
+        publishTimeManager as any,
+        rollupCreator as any,
+        rollupAggregator as any,
+        rollupPublisher as any,
+        numInnerRollupTxs,
+        numOuterRollupProofs,
+        oldDefiRoot,
+        oldDefiPath,
+        defiInteractionNotes,
+      );
+    });
+
+    it('should put chained txs in an inner rollup together', async () => {
+      const chainedTxsA = [...Array(3)]
+        .map(() => randomBytes(32))
+        .map((noteCommitment2, i, commitments) =>
+          mockTx(i, {
+            noteCommitment2,
+            backwardLink: i ? commitments[i - 1] : randomBytes(32),
+          }),
+        );
+      const chainedTxsB = [...Array(4)]
+        .map(() => randomBytes(32))
+        .map((noteCommitment2, i, commitments) =>
+          mockTx(i, {
+            noteCommitment2,
+            backwardLink: i ? commitments[i - 1] : randomBytes(32),
+          }),
+        );
+      const normalTxs = [...Array(3)].map((_, i) => mockTx(i + chainedTxsA.length + chainedTxsB.length));
+      const pendingTxs = [
+        chainedTxsA[0],
+        normalTxs[0],
+        chainedTxsB[0],
+        normalTxs[1],
+        chainedTxsB[1],
+        chainedTxsA[1],
+        normalTxs[2],
+        chainedTxsB[2],
+        chainedTxsA[2],
+        chainedTxsB[3],
+      ];
+      const published = await coordinator.processPendingTxs(pendingTxs);
+      expect(published).toBe(false);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupCreator.create).toHaveBeenCalledWith([
+        chainedTxsA[0],
+        chainedTxsA[1],
+        normalTxs[0],
+        chainedTxsB[0],
+        chainedTxsB[1],
+        chainedTxsB[2],
+        normalTxs[1],
+        normalTxs[2],
+      ]);
+    });
+
+    it('should break a chain if they cannot be in the same inner rollup', async () => {
+      const bridgeIds = [...Array(5)].map(() => new BridgeId(randomInt(), 1, 0, 1, 0, false, false, 0));
+
+      // Create 4 defi deposit txs with different bridge ids.
+      const defiTxs = bridgeIds.slice(0, 4).map((bridgeId, i) =>
+        mockTx(i, {
+          txType: TxType.DEFI_DEPOSIT,
+          bridgeId,
+        }),
+      );
+
+      // Create a chain with 5 txs. The 3rd one is a defi deposit tx.
+      const commitments = [...Array(5)].map(() => randomBytes(32));
+      const chainedTxs = commitments.slice(0, 2).map((noteCommitment2, i) =>
+        mockTx(i + 4, {
+          noteCommitment2,
+          backwardLink: i ? commitments[i - 1] : Buffer.alloc(32),
+        }),
+      );
+      chainedTxs.push(
+        mockTx(6, {
+          txType: TxType.DEFI_DEPOSIT,
+          bridgeId: bridgeIds[4],
+          noteCommitment2: commitments[2],
+          backwardLink: commitments[1],
+        }),
+      );
+      commitments.slice(3).forEach((noteCommitment2, i) => {
+        chainedTxs.push(
+          mockTx(i + 7, {
+            noteCommitment2,
+            backwardLink: commitments[2 + i],
+          }),
+        );
+      });
+
+      // Create 3 deposit txs.
+      const normalTxs = [...Array(3)].map((_, i) => mockTx(i + 9));
+
+      const pendingTxs = [
+        defiTxs[0],
+        defiTxs[1],
+        chainedTxs[0],
+        defiTxs[2],
+        chainedTxs[1],
+        defiTxs[3],
+        chainedTxs[2],
+        chainedTxs[3],
+        normalTxs[0],
+        chainedTxs[4],
+        normalTxs[1],
+        normalTxs[2],
+      ];
+      const published = await coordinator.processPendingTxs(pendingTxs);
+      expect(published).toBe(false);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupCreator.create).toHaveBeenCalledWith([
+        defiTxs[0],
+        defiTxs[1],
+        chainedTxs[0],
+        chainedTxs[1],
+        defiTxs[2],
+        defiTxs[3],
+        normalTxs[0],
+        normalTxs[1],
+      ]);
+    });
+  });
+
   describe('flushTxs', () => {
+    const flush = true;
+
     it('should do nothing if txs is empty', async () => {
-      coordinator.flushTxs();
-      const published = await coordinator.processPendingTxs([]);
+      const published = await coordinator.processPendingTxs([], flush);
       expect(published).toBe(false);
       expect(coordinator.processedTxs).toEqual([]);
       expect(rollupCreator.create).toHaveBeenCalledTimes(0);
@@ -284,9 +429,8 @@ describe('rollup_coordinator', () => {
     });
 
     it('should aggregate and publish all txs', async () => {
-      coordinator.flushTxs();
       const pendingTxs = [mockTx(0)];
-      const published = await coordinator.processPendingTxs(pendingTxs);
+      const published = await coordinator.processPendingTxs(pendingTxs, flush);
       expect(published).toBe(true);
       expect(coordinator.processedTxs).toEqual(pendingTxs);
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
@@ -303,52 +447,22 @@ describe('rollup_coordinator', () => {
       expect(rollupPublisher.interrupt).toHaveBeenCalledTimes(1);
     });
 
-    it('should not aggregate any txs', async () => {
-      coordinator.interrupt();
-      const pendingTxs = [...Array(numInnerRollupTxs * numOuterRollupProofs)].map((_, i) => mockTx(i));
-      const published = await coordinator.processPendingTxs(pendingTxs);
-      expect(published).toBe(false);
-      expect(coordinator.processedTxs).toEqual([]);
-      expect(rollupCreator.create).toHaveBeenCalledTimes(0);
-      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
-      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
-    });
-
-    it('should not continue to create inner proof', async () => {
-      rollupCreator.create.mockImplementationOnce(() => {
-        coordinator.interrupt();
-        return Buffer.alloc(0);
+    it('should not aggregate and publish if rollupCreator is interrupted', async () => {
+      rollupCreator.create.mockImplementation(() => {
+        throw new Error();
       });
       const pendingTxs = [...Array(numInnerRollupTxs * numOuterRollupProofs)].map((_, i) => mockTx(i));
       const published = await coordinator.processPendingTxs(pendingTxs);
       expect(published).toBe(false);
-      expect(coordinator.processedTxs).toEqual(pendingTxs.slice(0, numInnerRollupTxs));
+      expect(coordinator.processedTxs).toEqual([]);
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
     });
 
-    it('should not aggregate if interrupted after creating all inner proofs', async () => {
-      rollupCreator.create.mockImplementationOnce(() => Buffer.alloc(0));
-      rollupCreator.create.mockImplementationOnce(() => Buffer.alloc(0));
-      rollupCreator.create.mockImplementationOnce(() => Buffer.alloc(0));
-      rollupCreator.create.mockImplementationOnce(() => {
-        coordinator.interrupt();
-        return Buffer.alloc(0);
-      });
-      const pendingTxs = [...Array(numInnerRollupTxs * numOuterRollupProofs)].map((_, i) => mockTx(i));
-      const published = await coordinator.processPendingTxs(pendingTxs);
-      expect(published).toBe(false);
-      expect(coordinator.processedTxs).toEqual(pendingTxs);
-      expect(rollupCreator.create).toHaveBeenCalledTimes(numOuterRollupProofs);
-      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
-      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
-    });
-
-    it('should not publish if interrupted during aggregation', async () => {
-      rollupAggregator.aggregateRollupProofs.mockImplementationOnce(() => {
-        coordinator.interrupt();
-        return Buffer.alloc(0);
+    it('should not publish if rollupAggregator is interrupted', async () => {
+      rollupAggregator.aggregateRollupProofs.mockImplementation(() => {
+        throw new Error();
       });
       const pendingTxs = [...Array(numInnerRollupTxs * numOuterRollupProofs)].map((_, i) => mockTx(i));
       const published = await coordinator.processPendingTxs(pendingTxs);
@@ -357,6 +471,19 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(numOuterRollupProofs);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
+    });
+
+    it('should not throw if rollupPublisher is interrupted', async () => {
+      rollupPublisher.publishRollup.mockImplementation(() => {
+        throw new Error();
+      });
+      const pendingTxs = [...Array(numInnerRollupTxs * numOuterRollupProofs)].map((_, i) => mockTx(i));
+      const published = await coordinator.processPendingTxs(pendingTxs);
+      expect(published).toBe(false);
+      expect(coordinator.processedTxs).toEqual(pendingTxs);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(numOuterRollupProofs);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
   });
 });

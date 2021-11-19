@@ -17,16 +17,18 @@ const inputOrDefault = <T>(inputValue: T | undefined, defaultValue: T) =>
   inputValue !== undefined ? inputValue : defaultValue;
 
 export const randomNote = (): Note => ({
-  index: randomInt(),
   assetId: randomInt(),
   value: BigInt(randomInt()),
-  dataEntry: randomBytes(32),
+  commitment: randomBytes(32),
   secret: randomBytes(32),
   nullifier: randomBytes(32),
   nullified: false,
   owner: AccountId.random(),
   creatorPubKey: randomBytes(32),
   inputNullifier: randomBytes(32),
+  index: randomInt(),
+  allowChain: false,
+  pending: false,
 });
 
 export const randomClaim = (): Claim => ({

@@ -1,13 +1,4 @@
-import {
-  AccountId,
-  AssetId,
-  createWalletSdk,
-  EthAddress,
-  TxType,
-  WalletProvider,
-  WalletSdk,
-  FeeDistributor,
-} from '@aztec/sdk';
+import { AccountId, AssetId, createWalletSdk, EthAddress, TxHash, TxType, WalletProvider, WalletSdk } from '@aztec/sdk';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
 
@@ -28,10 +19,8 @@ const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost
 
 describe('end-to-end tests', () => {
   let provider: WalletProvider;
-  let feeDistributor: FeeDistributor;
   let sdk: WalletSdk;
   let accounts: EthAddress[] = [];
-  let assetAddr: EthAddress;
   const userIds: AccountId[] = [];
   const assetId = AssetId.ETH;
   const awaitSettlementTimeout = 600;
@@ -55,12 +44,6 @@ describe('end-to-end tests', () => {
       const user = await sdk.addUser(provider.getPrivateKeyForAddress(accounts[i])!);
       userIds.push(user.id);
     }
-
-    const {
-      blockchainStatus: { feeDistributorContractAddress, assets },
-    } = await sdk.getRemoteStatus();
-    assetAddr = assets[0].address;
-    feeDistributor = new FeeDistributor(feeDistributorContractAddress, provider);
   });
 
   afterAll(async () => {
@@ -68,90 +51,65 @@ describe('end-to-end tests', () => {
   });
 
   it('should deposit, transfer and withdraw funds', async () => {
+    const depositValue = sdk.toBaseUnits(assetId, '0.2');
+    const transferValue = sdk.toBaseUnits(assetId, '0.07');
+    const withdrawValue = sdk.toBaseUnits(assetId, '0.08');
+
+    const sender = userIds[0];
+    const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[0])!);
+
+    let depositTxHash: TxHash;
+    let transferTxHash: TxHash;
+    let withdrawTxHash: TxHash;
+    let accumPrivateFee = 0n;
+
+    let initialPublicBalance0: bigint;
+    const initialPublicBalance1 = await sdk.getPublicBalance(assetId, accounts[1]);
+    expect(sdk.getBalance(assetId, userIds[0])).toBe(0n);
+    expect(sdk.getBalance(assetId, userIds[1])).toBe(0n);
+
     // Deposit to user 0.
     {
-      const userId = userIds[0];
       const depositor = accounts[0];
-      const value = sdk.toBaseUnits(assetId, '0.2');
       const txFee = await sdk.getFee(assetId, TxType.DEPOSIT);
+      const depositProof = await sdk.createDepositProof(assetId, depositor, userIds[0], depositValue, txFee, signer);
+      const depositSignature = await sdk.signProof(depositProof, accounts[0]);
 
-      const initialTxFeeBalance = await feeDistributor.txFeeBalance(assetAddr);
-      const initialPublicBalance = await sdk.getPublicBalance(assetId, depositor);
-      const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
-      const proofOutput = await sdk.createDepositProof(assetId, depositor, userId, value, txFee, signer);
-      const signature = await sdk.signProof(proofOutput, depositor);
+      await expect(sdk.sendProof(depositProof, depositSignature)).rejects.toThrow();
 
-      await expect(sdk.sendProof(proofOutput, signature)).rejects.toThrow();
+      await sdk.depositFundsToContract(assetId, accounts[0], depositValue + txFee);
 
-      await sdk.depositFundsToContract(assetId, depositor, value + txFee);
-
-      const publicBalance = await sdk.getPublicBalance(assetId, depositor);
-      const expectedPublicBalance = initialPublicBalance - value - txFee;
-      // Minus gas cost for depositing funds to rollup contract.
-      expect(publicBalance < expectedPublicBalance).toBe(true);
-      expect(sdk.getBalance(assetId, userId)).toBe(BigInt(0));
-
-      const txHash = await sdk.sendProof(proofOutput, signature);
-      await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
-
-      expect(await sdk.getPublicBalance(assetId, depositor)).toBe(publicBalance);
-      expect(sdk.getBalance(assetId, userId)).toBe(value);
-
-      const reimbursement = await feeDistributor.getLastReimbursement();
-      const txFeeBalance = await feeDistributor.txFeeBalance(assetAddr);
-      expect(txFeeBalance).toEqual(initialTxFeeBalance + txFee - reimbursement);
+      initialPublicBalance0 = await sdk.getPublicBalance(assetId, accounts[0]);
+      depositTxHash = await sdk.sendProof(depositProof, depositSignature);
     }
 
     // Transfer to user 1.
     {
-      const sender = userIds[0];
-      const senderAddress = accounts[0];
       const recipient = userIds[1];
-      const value = sdk.toBaseUnits(assetId, '0.15');
       const txFee = await sdk.getFee(assetId, TxType.TRANSFER);
-
-      const initialSenderPublicBalance = await sdk.getPublicBalance(assetId, senderAddress);
-      const initialSenderBalance = sdk.getBalance(assetId, sender);
-      const initialTxFeeBalance = await feeDistributor.txFeeBalance(assetAddr);
-
-      expect(sdk.getBalance(assetId, recipient)).toBe(0n);
-
-      const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(senderAddress)!);
-      const proofOutput = await sdk.createTransferProof(assetId, sender, value, txFee, signer, recipient);
-      const txHash = await sdk.sendProof(proofOutput);
-      await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
-
-      expect(await sdk.getPublicBalance(assetId, senderAddress)).toBe(initialSenderPublicBalance);
-      expect(sdk.getBalance(assetId, sender)).toBe(initialSenderBalance - value - txFee);
-      expect(sdk.getBalance(assetId, recipient)).toBe(value);
-
-      const reimbursement = await feeDistributor.getLastReimbursement();
-      const txFeeBalance = await feeDistributor.txFeeBalance(assetAddr);
-      expect(txFeeBalance).toEqual(initialTxFeeBalance + txFee - reimbursement);
+      accumPrivateFee += txFee;
+      const transferProof = await sdk.createTransferProof(assetId, sender, transferValue, txFee, signer, recipient);
+      transferTxHash = await sdk.sendProof(transferProof);
     }
 
-    // Withdraw to user 1.
+    // Withdraw to user 0.
     {
-      const userId = userIds[1];
-      const userAddress = accounts[1];
-      const value = sdk.toBaseUnits(assetId, '0.08');
+      const recipient = accounts[0];
       const txFee = await sdk.getFee(assetId, TxType.WITHDRAW_TO_WALLET);
-
-      const initialPublicBalance = await sdk.getPublicBalance(assetId, userAddress);
-      const initialBalance = sdk.getBalance(assetId, userId);
-      const initialTxFeeBalance = await feeDistributor.txFeeBalance(assetAddr);
-
-      const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(userAddress)!);
-      const proofOutput = await sdk.createWithdrawProof(assetId, userId, value, txFee, signer, userAddress);
-      const txHash = await sdk.sendProof(proofOutput);
-      await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
-
-      expect(await sdk.getPublicBalance(assetId, userAddress)).toBe(initialPublicBalance + value);
-      expect(sdk.getBalance(assetId, userId)).toBe(initialBalance - value - txFee);
-
-      const reimbursement = await feeDistributor.getLastReimbursement();
-      const txFeeBalance = await feeDistributor.txFeeBalance(assetAddr);
-      expect(txFeeBalance).toEqual(initialTxFeeBalance + txFee - reimbursement);
+      accumPrivateFee += txFee;
+      const withdrawProof = await sdk.createWithdrawProof(assetId, sender, withdrawValue, txFee, signer, recipient);
+      withdrawTxHash = await sdk.sendProof(withdrawProof);
     }
+
+    await Promise.all([
+      sdk.awaitSettlement(depositTxHash, awaitSettlementTimeout),
+      sdk.awaitSettlement(transferTxHash, awaitSettlementTimeout),
+      sdk.awaitSettlement(withdrawTxHash, awaitSettlementTimeout),
+    ]);
+
+    expect(await sdk.getPublicBalance(assetId, accounts[0])).toBe(initialPublicBalance0 + withdrawValue);
+    expect(await sdk.getPublicBalance(assetId, accounts[1])).toBe(initialPublicBalance1);
+    expect(sdk.getBalance(assetId, userIds[0])).toBe(depositValue - transferValue - withdrawValue - accumPrivateFee);
+    expect(sdk.getBalance(assetId, userIds[1])).toBe(transferValue);
   });
 });

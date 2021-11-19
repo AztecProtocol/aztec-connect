@@ -677,6 +677,7 @@ export class CoreSdk extends EventEmitter {
     signer: Signer,
     noteRecipient?: AccountId,
     publicOwner?: EthAddress,
+    allowChain?: boolean,
   ) {
     return this.serialExecute(async () => {
       const userState = this.getUserState(userId);
@@ -691,6 +692,7 @@ export class CoreSdk extends EventEmitter {
         signer,
         noteRecipient,
         publicOwner,
+        allowChain,
       );
     });
   }
@@ -751,23 +753,39 @@ export class CoreSdk extends EventEmitter {
     userId: AccountId,
     depositValue: bigint,
     txFee: bigint,
+    jsTxFee: bigint,
     signer: Signer,
+    allowChain?: boolean,
   ) {
     return this.serialExecute(async () => {
       const userState = this.getUserState(userId);
-      return this.defiDepositProofCreator.createProof(userState, bridgeId, depositValue, txFee, signer);
+      return this.defiDepositProofCreator.createProof(
+        userState,
+        bridgeId,
+        depositValue,
+        txFee,
+        jsTxFee,
+        signer,
+        allowChain,
+      );
     });
   }
 
   public async sendProof(proofOutput: ProofOutput, depositSignature?: Buffer) {
     const { tx } = proofOutput;
-    const { userId } = tx;
-    const userState = this.getUserState(userId);
+    const userState = this.getUserState(tx.userId);
 
-    const { proofData, offchainTxData } = proofOutput;
-    await this.rollupProvider.sendProof({ proofData, offchainTxData, depositSignature });
+    const { parentProof } = proofOutput;
+    if (parentProof) {
+      const { proofData, offchainTxData } = parentProof;
+      await this.rollupProvider.sendProof({ proofData, offchainTxData });
+    }
 
-    await userState.addTx(tx);
+    {
+      const { proofData, offchainTxData } = proofOutput;
+      await this.rollupProvider.sendProof({ proofData, offchainTxData, depositSignature });
+      await userState.addProof(proofOutput);
+    }
 
     return tx.txHash;
   }

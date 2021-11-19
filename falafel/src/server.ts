@@ -167,8 +167,7 @@ export class Server {
   }
 
   public async getUnsettledTxs() {
-    const txs = await this.rollupDb.getUnsettledTxs();
-    return txs.map(tx => tx.id);
+    return this.rollupDb.getUnsettledTxs();
   }
 
   public async getUnsettledNullifiers() {

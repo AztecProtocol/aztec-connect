@@ -3,7 +3,7 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId, AssetIds } from '@aztec/barretenberg/asset';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { Block } from '@aztec/barretenberg/block_source';
-import { ProofId } from '@aztec/barretenberg/client_proofs';
+import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
 import {
@@ -28,6 +28,7 @@ import { EventEmitter } from 'events';
 import { Database } from '../database';
 import { Note } from '../note';
 import { NotePicker } from '../note_picker';
+import { ProofOutput } from '../proofs/proof_output';
 import { UserData } from '../user';
 import { UserAccountTx, UserDefiTx, UserJoinSplitTx } from '../user_tx';
 
@@ -241,11 +242,21 @@ export class UserState extends EventEmitter {
   }
 
   private async resetData() {
+    const pendingTxs = await this.rollupProvider.getPendingTxs();
+
     const pendingUserTxIds = await this.db.getUnsettledUserTxs(this.user.id);
-    const pendingTxIds = await this.rollupProvider.getPendingTxs();
     for (const userTxId of pendingUserTxIds) {
-      if (!pendingTxIds.some(txId => txId.equals(userTxId))) {
+      if (!pendingTxs.some(tx => tx.txId.equals(userTxId))) {
         await this.db.removeUserTx(userTxId, this.user.id);
+      }
+    }
+
+    const pendingNotes = await this.db.getUserPendingNotes(this.user.id);
+    for (const note of pendingNotes) {
+      if (
+        !pendingTxs.some(tx => tx.noteCommitment1.equals(note.commitment) || tx.noteCommitment2.equals(note.commitment))
+      ) {
+        await this.db.removeNote(note.nullifier);
       }
     }
   }
@@ -320,7 +331,7 @@ export class UserState extends EventEmitter {
     const txHash = new TxHash(proof.txId);
     const savedTx = await this.db.getJoinSplitTx(txHash, this.user.id);
     if (savedTx) {
-      debug(`settling tx: ${savedTx.txHash.toString()}`);
+      debug(`settling tx: ${txHash}`);
       await this.db.settleJoinSplitTx(txHash, this.user.id, blockCreated);
     } else {
       const tx = this.recoverJoinSplitTx(
@@ -331,7 +342,7 @@ export class UserState extends EventEmitter {
         destroyedNote1,
         destroyedNote2,
       );
-      debug(`recovered tx: ${tx.txHash.toString()}`);
+      debug(`recovered tx: ${txHash}`);
       await this.db.addJoinSplitTx(tx);
     }
   }
@@ -372,7 +383,7 @@ export class UserState extends EventEmitter {
 
     const savedTx = await this.db.getDefiTx(txHash);
     if (savedTx) {
-      debug(`settling defi tx: ${txHash.toString()}`);
+      debug(`settling defi tx: ${txHash}`);
       await this.db.updateDefiTx(txHash, outputValueA, outputValueB);
     } else {
       const tx = this.recoverDefiTx(
@@ -384,7 +395,7 @@ export class UserState extends EventEmitter {
         destroyedNote1,
         destroyedNote2,
       );
-      debug(`recovered defi tx: ${txHash.toString()}`);
+      debug(`recovered defi tx: ${txHash}`);
       await this.db.addDefiTx(tx);
     }
   }
@@ -442,33 +453,42 @@ export class UserState extends EventEmitter {
     await this.db.settleDefiTx(txHash, blockCreated);
   }
 
-  private async processNewNote(index: number, dataEntry: Buffer, treeNote?: TreeNote) {
+  private async processNewNote(
+    index: number,
+    commitment: Buffer,
+    treeNote?: TreeNote,
+    allowChain = false,
+    pending = false,
+  ) {
     if (!treeNote) {
       return;
     }
 
-    const savedNote = await this.db.getNote(index);
-    if (savedNote) {
-      return savedNote.owner.equals(this.user.id) ? savedNote : undefined;
-    }
-
-    const { noteSecret, value, assetId, nonce, creatorPubKey, inputNullifier } = treeNote;
-    if (nonce !== this.user.id.nonce) {
+    const savedNote = await this.db.getNote(commitment);
+    if (savedNote && !savedNote.owner.equals(this.user.id)) {
       return;
     }
 
-    const nullifier = this.noteAlgos.valueNoteNullifier(dataEntry, this.user.privateKey);
+    const { ownerPubKey, noteSecret, value, assetId, nonce, creatorPubKey, inputNullifier } = treeNote;
+    const noteOwner = new AccountId(ownerPubKey, nonce);
+    if (!noteOwner.equals(this.user.id)) {
+      return;
+    }
+
+    const nullifier = this.noteAlgos.valueNoteNullifier(commitment, this.user.privateKey);
     const note: Note = {
-      index,
       assetId,
       value,
-      dataEntry,
+      commitment,
       secret: noteSecret,
       nullifier,
       nullified: false,
       owner: this.user.id,
       creatorPubKey,
       inputNullifier,
+      index,
+      allowChain,
+      pending,
     };
 
     if (value) {
@@ -484,14 +504,13 @@ export class UserState extends EventEmitter {
     if (!note || !note.owner.equals(this.user.id)) {
       return;
     }
-    await this.db.nullifyNote(note.index);
+    await this.db.nullifyNote(nullifier);
     debug(`user ${this.user.id} nullified note at index ${note.index} with value ${note.value}.`);
     return note;
   }
 
-  // dataEntry is the partial claim note's commitment
-  private async addClaim(index: number, txHash: TxHash, dataEntry: Buffer, noteSecret: Buffer) {
-    const nullifier = this.noteAlgos.claimNoteNullifier(dataEntry);
+  private async addClaim(index: number, txHash: TxHash, commitment: Buffer, noteSecret: Buffer) {
+    const nullifier = this.noteAlgos.claimNoteNullifier(commitment);
     await this.db.addClaim({
       txHash,
       secret: noteSecret,
@@ -600,6 +619,11 @@ export class UserState extends EventEmitter {
     this.notePickers = AssetIds.map(assetId => new NotePicker(notesMap[assetId]));
   }
 
+  public async pickNote(assetId: AssetId, value: bigint) {
+    const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
+    return this.notePickers[assetId].pickOne(value, pendingNullifiers);
+  }
+
   public async pickNotes(assetId: AssetId, value: bigint) {
     const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
     return this.notePickers[assetId].pick(value, pendingNullifiers);
@@ -624,7 +648,8 @@ export class UserState extends EventEmitter {
     return this.notePickers[assetId].getSum();
   }
 
-  public async addTx(tx: UserJoinSplitTx | UserAccountTx | UserDefiTx) {
+  public async addProof(proofOutput: ProofOutput) {
+    const { tx } = proofOutput;
     switch (tx.proofId) {
       case ProofId.DEPOSIT:
       case ProofId.WITHDRAW:
@@ -641,6 +666,27 @@ export class UserState extends EventEmitter {
         await this.db.addDefiTx(tx);
         break;
     }
+
+    const addNotes = async ({ outputNotes, proofData }: ProofOutput) => {
+      const proof = new ProofData(proofData);
+      const allowChain = proof.allowChain.readUInt32BE(28);
+      const noteCommitments = [proof.noteCommitment1, proof.noteCommitment2];
+      let added = false;
+      for (let i = 0; i < outputNotes.length; ++i) {
+        const note = await this.processNewNote(0, noteCommitments[i], outputNotes[i], allowChain === i + 1, true);
+        added = added || !!note?.value;
+      }
+      return added;
+    };
+
+    const { parentProof } = proofOutput;
+    if ((parentProof && (await addNotes(parentProof))) || (await addNotes(proofOutput))) {
+      await this.refreshNotePicker();
+    }
+
+    // No need to do anything with proof.backwardLink (i.e., mark a note as chained).
+    // Rollup provider will return the nullifiers of pending notes, which will be excluded when the sdk is picking notes.
+
     this.emit(UserStateEvent.UPDATED_USER_STATE, this.user.id);
   }
 

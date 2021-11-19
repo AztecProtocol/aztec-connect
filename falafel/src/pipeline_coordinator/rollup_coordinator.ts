@@ -14,13 +14,11 @@ import { RollupPublisher } from '../rollup_publisher';
 import { PublishTimeManager } from './publish_time_manager';
 
 export class RollupCoordinator {
-  private interrupted = false;
-  private flush = false;
-  private published = false;
   private innerProofs: RollupProofDao[] = [];
   private txs: TxDao[] = [];
   private bridgeIds: BridgeId[] = [];
   private assetIds: Set<AssetId> = new Set();
+  private published = false;
 
   constructor(
     private publishTimeManager: PublishTimeManager,
@@ -38,34 +36,37 @@ export class RollupCoordinator {
     return this.txs;
   }
 
-  flushTxs() {
-    this.flush = true;
-  }
-
   interrupt() {
-    this.interrupted = true;
     this.rollupCreator.interrupt();
     this.rollupAggregator.interrupt();
     this.rollupPublisher.interrupt();
   }
 
-  async processPendingTxs(pendingTxs: TxDao[]) {
-    if (this.interrupted || this.published) {
+  async processPendingTxs(pendingTxs: TxDao[], flush = false) {
+    if (this.published) {
       return false;
     }
 
-    const txs = await this.getNextTxsToRollup(pendingTxs);
+    const txs = this.getNextTxsToRollup(pendingTxs);
     this.publishTimeManager.update([...this.txs, ...txs]);
     const publishTime = this.publishTimeManager.getPublishTime();
-    return this.aggregateAndPublish(txs, publishTime);
+    const isTimeToPublish = flush || moment(publishTime).isSameOrBefore();
+    try {
+      this.published = await this.aggregateAndPublish(txs, isTimeToPublish);
+      return this.published;
+    } catch (e) {
+      // Probably being interrupted.
+      return false;
+    }
   }
 
-  private async getNextTxsToRollup(pendingTxs: TxDao[]) {
+  private getNextTxsToRollup(pendingTxs: TxDao[]) {
     const remainingTxSlots = this.numInnerRollupTxs * (this.numOuterRollupProofs - this.innerProofs.length);
     const sortedTxs = [...pendingTxs].sort((a, b) =>
       a.txType === TxType.DEFI_CLAIM && a.txType !== b.txType ? -1 : 1,
     );
     const txs: TxDao[] = [];
+    const discardedCommitments: Buffer[] = [];
     for (let i = 0; i < sortedTxs.length && txs.length < remainingTxSlots; ++i) {
       const tx = sortedTxs[i];
       if (tx.txType === TxType.ACCOUNT) {
@@ -75,51 +76,64 @@ export class RollupCoordinator {
 
       const proofData = new ProofData(tx.proofData);
       const assetId = proofData.txFeeAssetId.readUInt32BE(28);
-      if (!this.assetIds.has(assetId) && this.assetIds.size === RollupProofData.NUMBER_OF_ASSETS) {
-        continue;
-      }
 
-      const addTx = (tx: TxDao) => {
+      const addTx = () => {
         this.assetIds.add(assetId);
         txs.push(tx);
       };
-      if (tx.txType !== TxType.DEFI_DEPOSIT) {
-        addTx(tx);
-      } else {
-        const bridgeId = BridgeId.fromBuffer(proofData.bridgeId);
-        if (this.bridgeIds.some(id => id.equals(bridgeId))) {
-          addTx(tx);
-        } else if (this.bridgeIds.length < RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK) {
-          this.bridgeIds.push(bridgeId);
-          addTx(tx);
+
+      const discardTx = () => {
+        switch (proofData.allowChain.readUInt32BE(28)) {
+          case 1:
+            discardedCommitments.push(proofData.noteCommitment1);
+            break;
+          case 2:
+            discardedCommitments.push(proofData.noteCommitment2);
+            break;
         }
+      };
+
+      if (!this.assetIds.has(assetId) && this.assetIds.size === RollupProofData.NUMBER_OF_ASSETS) {
+        discardTx();
+        continue;
+      }
+
+      if (
+        !proofData.backwardLink.equals(Buffer.alloc(32)) &&
+        discardedCommitments.some(c => c.equals(proofData.backwardLink))
+      ) {
+        discardTx();
+        continue;
+      }
+
+      const bridgeId = BridgeId.fromBuffer(proofData.bridgeId);
+      if (tx.txType !== TxType.DEFI_DEPOSIT) {
+        addTx();
+      } else if (this.bridgeIds.some(id => id.equals(bridgeId))) {
+        addTx();
+      } else if (this.bridgeIds.length < RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK) {
+        this.bridgeIds.push(bridgeId);
+        addTx();
+      } else {
+        discardTx();
       }
     }
     return txs;
   }
 
-  private async aggregateAndPublish(txs: TxDao[], publishTime: Date) {
-    if (moment(publishTime).isSameOrBefore()) {
-      this.flush = true;
-    }
-
+  private async aggregateAndPublish(txs: TxDao[], isTimeToPublish: boolean) {
     const pendingTxs = [...txs];
     while (
-      !this.interrupted &&
-      ((this.flush && pendingTxs.length) || pendingTxs.length >= this.numInnerRollupTxs) &&
+      ((isTimeToPublish && pendingTxs.length) || pendingTxs.length >= this.numInnerRollupTxs) &&
       this.innerProofs.length < this.numOuterRollupProofs
     ) {
-      const txs = pendingTxs.splice(0, this.numInnerRollupTxs);
+      const txs = this.reorderTxs(pendingTxs.splice(0, this.numInnerRollupTxs));
       const rollupProofDao = await this.rollupCreator.create(txs);
       this.txs = [...this.txs, ...txs];
       this.innerProofs.push(rollupProofDao);
     }
 
-    if (
-      !this.interrupted &&
-      this.innerProofs.length &&
-      (this.flush || this.innerProofs.length === this.numOuterRollupProofs)
-    ) {
+    if ((isTimeToPublish && this.innerProofs.length) || this.innerProofs.length === this.numOuterRollupProofs) {
       const rollupDao = await this.rollupAggregator.aggregateRollupProofs(
         this.innerProofs,
         this.oldDefiRoot,
@@ -130,12 +144,27 @@ export class RollupCoordinator {
         ),
         [...this.assetIds],
       );
-      if (!this.interrupted) {
-        this.published = await this.rollupPublisher.publishRollup(rollupDao);
-        return this.published;
-      }
+      return this.rollupPublisher.publishRollup(rollupDao);
     }
 
     return false;
+  }
+
+  private reorderTxs(txs: TxDao[]) {
+    const sorted = [...txs];
+    const proofs = txs.map(tx => new ProofData(tx.proofData));
+    for (let i = 0; i < txs.length; ++i) {
+      const { backwardLink } = proofs[i];
+      const insertAfter = proofs.findIndex(
+        p => p.noteCommitment1.equals(backwardLink) || p.noteCommitment2.equals(backwardLink),
+      );
+      if (insertAfter >= 0) {
+        const [proof] = proofs.splice(i, 1);
+        const [tx] = sorted.splice(i, 1);
+        proofs.splice(insertAfter + 1, 0, proof);
+        sorted.splice(insertAfter + 1, 0, tx);
+      }
+    }
+    return sorted;
   }
 }

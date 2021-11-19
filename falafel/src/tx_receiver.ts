@@ -75,6 +75,17 @@ export class TxReceiver {
         throw new Error('Nullifier already exists.');
       }
 
+      if (!proof.backwardLink.equals(Buffer.alloc(32))) {
+        const txs = await this.rollupDb.getUnsettledTxs();
+        const linkedTx = txs.find(({ proofData }) => {
+          const { noteCommitment1, noteCommitment2 } = new ProofData(proofData);
+          return [noteCommitment1, noteCommitment2].some(c => c.equals(proof.backwardLink));
+        });
+        if (!linkedTx) {
+          throw new Error('Linked tx not found.');
+        }
+      }
+
       // Check the proof is valid.
       switch (proof.proofId) {
         case ProofId.DEPOSIT:

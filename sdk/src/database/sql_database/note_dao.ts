@@ -6,16 +6,7 @@ import { bigintTransformer, accountIdTransformer } from './transformer';
 @Entity({ name: 'note' })
 export class NoteDao implements Note {
   @PrimaryColumn()
-  public index!: number;
-
-  @Column()
-  public assetId!: number;
-
-  @Column('text', { transformer: [bigintTransformer] })
-  public value!: bigint;
-
-  @Column()
-  public dataEntry!: Buffer;
+  public commitment!: Buffer;
 
   @Column()
   public secret!: Buffer;
@@ -36,4 +27,20 @@ export class NoteDao implements Note {
 
   @Column()
   public inputNullifier!: Buffer;
+
+  @Column()
+  public index!: number;
+
+  @Column()
+  public assetId!: number;
+
+  @Column('text', { transformer: [bigintTransformer] })
+  public value!: bigint;
+
+  @Column()
+  public allowChain!: boolean;
+
+  @Index({ unique: false })
+  @Column()
+  public pending!: boolean;
 }
