@@ -34,7 +34,6 @@ import { formatAliasInput, getAliasError } from './alias';
 import { AppAssetId, assets } from './assets';
 import { Database } from './database';
 import { MessageType, SystemMessage, ValueAvailability } from './form';
-import { GraphQLService } from './graphql_service';
 import { createSigningKeys, KeyVault } from './key_vault';
 import { Network } from './networks';
 import { PriceFeedService } from './price_feed_service';
@@ -170,7 +169,6 @@ export class UserSession extends EventEmitter {
     initialActiveAsset: AppAssetId,
     initialLoginMode: LoginMode,
     private readonly db: Database,
-    private readonly graphql: GraphQLService,
     private readonly sessionCookieName: string,
     private readonly accountProofCacheName: string,
     private readonly walletCacheName: string,
@@ -1058,7 +1056,7 @@ export class UserSession extends EventEmitter {
     this.rollupService?.destroy();
     this.rollupService = new RollupService(this.sdk);
     await this.rollupService.init();
-    this.accountUtils = new AccountUtils(this.sdk, this.graphql, this.requiredNetwork);
+    this.accountUtils = new AccountUtils(this.sdk, this.requiredNetwork);
 
     const confirmUserStates = this.ensureUserStates();
     // Leave it to run in the background so that it won't block the ui.
@@ -1202,11 +1200,11 @@ export class UserSession extends EventEmitter {
 
   private updateAliasAvailability = async () => {
     const aliasInput = this.loginState.alias;
-    const nonce = await this.accountUtils.getAliasNonce(aliasInput);
+    const available = await this.accountUtils.isAliasAvailable(aliasInput);
     if (aliasInput !== this.loginState.alias) return;
 
     this.updateLoginState({
-      aliasAvailability: nonce === 0 ? ValueAvailability.VALID : ValueAvailability.INVALID,
+      aliasAvailability: available ? ValueAvailability.VALID : ValueAvailability.INVALID,
     });
   };
 
@@ -1435,7 +1433,7 @@ export class UserSession extends EventEmitter {
       return true;
     }
     const { pendingTxCount } = await this.sdk.getRemoteStatus();
-    const unsettledAccountTxs = await this.graphql.getUnsettledAccountTxs();
+    const unsettledAccountTxs = await this.sdk.getRemoteUnsettledAccountTxs();
     const numRollups = Math.max(1, Math.ceil(pendingTxCount / this.TXS_PER_ROLLUP));
     return unsettledAccountTxs.length < numRollups * this.MAX_ACCOUNT_TXS_PER_ROLLUP;
   }

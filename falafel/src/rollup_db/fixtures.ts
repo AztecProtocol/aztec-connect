@@ -1,9 +1,11 @@
-import { EthAddress } from '@aztec/barretenberg/address';
-import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
+import { AccountAliasId, AliasHash } from '@aztec/barretenberg/account_id';
+import { GrumpkinAddress } from '@aztec/barretenberg/address';
+import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
-import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
+import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { randomBytes } from 'crypto';
 import moment from 'moment';
@@ -14,43 +16,39 @@ import { TxDao } from '../entity/tx';
 
 const now = moment();
 
-interface RandomTxOpts {
-  signature?: Buffer;
-  inputOwner?: EthAddress;
-  publicInput?: bigint;
-  txType?: TxType;
-}
-
 const txTypeToProofId = (txType: TxType) => (txType < TxType.WITHDRAW_TO_CONTRACT ? txType + 1 : txType);
 
-export const randomTx = ({ signature, inputOwner, publicInput, txType = TxType.DEPOSIT }: RandomTxOpts = {}) => {
+export const randomTx = ({
+  txType = TxType.TRANSFER,
+  offchainTxData = randomBytes(160),
+  signature = Buffer.alloc(0),
+} = {}) => {
   const proofId = txTypeToProofId(txType);
   const proofData = new ProofData(
-    Buffer.concat([
-      numToUInt32BE(proofId, 32),
-      randomBytes(32), // note1
-      randomBytes(32), // note2
-      randomBytes(32), // nullifier1
-      randomBytes(32), // nullifier2
-      publicInput ? toBufferBE(publicInput, 32) : randomBytes(32), // publicInput
-      randomBytes(32), // publicOutput
-      randomBytes(32), // assetId / accountAliasId / bridgeId
-      inputOwner ? inputOwner.toBuffer32() : Buffer.concat([Buffer.alloc(12), randomBytes(20)]),
-      Buffer.concat([Buffer.alloc(12), randomBytes(20)]),
-    ]),
+    Buffer.concat([numToUInt32BE(proofId, 32), randomBytes(32 * (ProofData.NUM_PUBLIC_INPUTS - 1))]),
   );
   return new TxDao({
     id: proofData.txId,
     proofData: proofData.rawProofData,
-    offchainTxData: randomBytes(160),
+    offchainTxData,
     nullifier1: toBigIntBE(proofData.nullifier1) ? proofData.nullifier1 : undefined,
     nullifier2: toBigIntBE(proofData.nullifier2) ? proofData.nullifier2 : undefined,
     dataRootsIndex: 0,
     created: now.add(1, 's').toDate(),
-    signature,
+    signature: signature.length ? signature : undefined,
     txType,
   });
 };
+
+export const randomAccountTx = ({
+  accountPublicKey = GrumpkinAddress.randomAddress(),
+  aliasHash = AliasHash.random(),
+  nonce = 1,
+} = {}) =>
+  randomTx({
+    txType: TxType.ACCOUNT,
+    offchainTxData: new OffchainAccountData(accountPublicKey, new AccountAliasId(aliasHash, nonce)).toBuffer(),
+  });
 
 export const randomRollupProof = (txs: TxDao[], dataStartIndex = 0, rollupSize = txs.length) =>
   new RollupProofDao({

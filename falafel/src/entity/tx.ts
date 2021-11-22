@@ -70,10 +70,10 @@ export class TxDao {
   @AfterInsert()
   @AfterUpdate()
   afterLoad() {
-    if (this.rollupProof === null) {
+    if (!this.rollupProof) {
       delete this.rollupProof;
     }
-    if (this.signature === null) {
+    if (!this.signature) {
       delete this.signature;
     }
     if (this.dataRootsIndex === null) {

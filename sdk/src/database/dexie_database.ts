@@ -719,7 +719,7 @@ export class DexieDatabase implements Database {
     return aliases.length ? new AliasHash(Buffer.from(aliases[0].aliasHash)) : undefined;
   }
 
-  async getAddressByAliasHash(aliasHash: AliasHash, nonce?: number) {
+  async getAccountId(aliasHash: AliasHash, nonce?: number) {
     const collection = this.alias
       .where({
         aliasHash: new Uint8Array(aliasHash.toBuffer()),
@@ -728,7 +728,9 @@ export class DexieDatabase implements Database {
     if (nonce === undefined) {
       collection.reverse();
     }
-    const aliases = await collection.sortBy('latestNonce');
-    return aliases.length ? new GrumpkinAddress(Buffer.from(aliases[0].address)) : undefined;
+    const [alias] = await collection.sortBy('latestNonce');
+    return alias
+      ? new AccountId(new GrumpkinAddress(Buffer.from(alias.address)), nonce ?? alias.latestNonce)
+      : undefined;
   }
 }

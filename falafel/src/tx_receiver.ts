@@ -128,9 +128,14 @@ export class TxReceiver {
   }
 
   private async validateJoinSplitTx(proofData: ProofData, txType: TxType, depositSignature?: Buffer) {
-    const { publicAssetId: assetId, txId, txFeeAssetId, txFee, publicOwner, publicValue } = new JoinSplitProofData(
-      proofData,
-    );
+    const {
+      publicAssetId: assetId,
+      txId,
+      txFeeAssetId,
+      txFee,
+      publicOwner,
+      publicValue,
+    } = new JoinSplitProofData(proofData);
 
     const minFee = this.txFeeResolver.getMinTxFee(txFeeAssetId, txType);
     if (txFee < minFee) {

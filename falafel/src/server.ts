@@ -1,13 +1,15 @@
-import { EthAddress } from '@aztec/barretenberg/address';
-import { Blockchain } from '@aztec/barretenberg/blockchain';
+import { AliasHash } from '@aztec/barretenberg/account_id';
+import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
+import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
+import { Blockchain, EthereumProvider } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
+import { Blake2s } from '@aztec/barretenberg/crypto';
+import { InitHelpers } from '@aztec/barretenberg/environment';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
-import { RollupProviderStatus, InitialWorldState } from '@aztec/barretenberg/rollup_provider';
+import { InitialWorldState, RollupProviderStatus } from '@aztec/barretenberg/rollup_provider';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
-import { EthereumProvider } from '@aztec/barretenberg/blockchain';
-import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { emptyDir } from 'fs-extra';
 import { CliProofGenerator, ProofGenerator, ServerProofGenerator } from 'halloumi/proof_generator';
 import { Duration } from 'moment';
@@ -18,7 +20,6 @@ import { RollupPipelineFactory } from './rollup_pipeline';
 import { TxFeeResolver } from './tx_fee_resolver';
 import { Tx, TxReceiver } from './tx_receiver';
 import { WorldState } from './world_state';
-import { InitHelpers } from '@aztec/barretenberg/environment';
 
 export interface ServerConfig {
   readonly halloumiHost?: string;
@@ -37,6 +38,7 @@ export interface ServerConfig {
 }
 
 export class Server {
+  private blake: Blake2s;
   private worldState: WorldState;
   private txReceiver: TxReceiver;
   private txFeeResolver: TxFeeResolver;
@@ -67,6 +69,7 @@ export class Server {
       signingAddress,
     } = config;
     const noteAlgo = new NoteAlgorithms(barretenberg);
+    this.blake = new Blake2s(barretenberg);
 
     this.txFeeResolver = new TxFeeResolver(
       blockchain,
@@ -172,6 +175,28 @@ export class Server {
 
   public async getUnsettledNullifiers() {
     return this.rollupDb.getUnsettledNullifiers();
+  }
+
+  public async getLatestAccountNonce(accountPublicKey: GrumpkinAddress) {
+    return this.rollupDb.getLatestAccountNonce(accountPublicKey);
+  }
+
+  public async getLatestAliasNonce(alias: string) {
+    const aliasHash = AliasHash.fromAlias(alias, this.blake);
+    return this.rollupDb.getLatestAliasNonce(aliasHash);
+  }
+
+  public async getAccountId(alias: string, nonce?: number) {
+    const aliasHash = AliasHash.fromAlias(alias, this.blake);
+    return this.rollupDb.getAccountId(aliasHash, nonce);
+  }
+
+  public async getUnsettledAccountTxs() {
+    return this.rollupDb.getUnsettledAccountTxs();
+  }
+
+  public async getUnsettledJoinSplitTxs() {
+    return this.rollupDb.getUnsettledJoinSplitTxs();
   }
 
   public async getBlocks(from: number): Promise<Block[]> {

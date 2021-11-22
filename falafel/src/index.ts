@@ -83,7 +83,6 @@ async function main() {
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
 
-  Container.set({ id: 'barretenberg', factory: () => barretenberg });
   Container.set({ id: 'connection', factory: () => connection });
   Container.set({ id: 'rollupDb', factory: () => rollupDb });
   Container.set({ id: 'server', factory: () => server });

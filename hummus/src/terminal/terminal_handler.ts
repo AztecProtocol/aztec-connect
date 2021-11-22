@@ -345,11 +345,11 @@ export class TerminalHandler {
     this.printQueue.put(`withdrawl proof sent.\n`);
   }
 
-  private async transfer(addressOrAlias: string, value: string) {
+  private async transfer(alias: string, value: string) {
     this.assertRegistered();
-    const to = await this.app.getSdk().getAccountId(addressOrAlias);
+    const to = await this.app.getSdk().getAccountId(alias);
     if (!to) {
-      throw new Error(`unknown user: ${addressOrAlias}`);
+      throw new Error(`unknown user: ${alias}`);
     }
     const userAsset = this.app.getUser().getAsset(this.assetId);
     const fee = await this.app.getSdk().getFee(this.assetId, TxType.TRANSFER);

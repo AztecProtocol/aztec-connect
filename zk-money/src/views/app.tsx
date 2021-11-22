@@ -2,7 +2,6 @@ import { AssetId } from '@aztec/sdk';
 import { BroadcastChannel } from 'broadcast-channel';
 import { isEqual } from 'lodash';
 import { PureComponent } from 'react';
-import { withApollo, WithApolloClient } from 'react-apollo';
 import { RouteComponentProps } from 'react-router';
 import {
   AccountAction,
@@ -41,8 +40,6 @@ interface AppProps extends RouteComponentProps<RouteParams> {
   config: Config;
 }
 
-type AppPropsWithApollo = WithApolloClient<AppProps>;
-
 interface AppState {
   action: AppAction;
   activeAsset: AppAssetId;
@@ -65,16 +62,16 @@ enum CrossTabEvent {
   LOGGED_OUT = 'CROSS_TAB_LOGGED_OUT',
 }
 
-class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
+export class AppView extends PureComponent<AppProps, AppState> {
   private app: App;
   private channel = new BroadcastChannel('zk-money');
 
   private readonly defaultAsset = AssetId.ETH;
 
-  constructor(props: AppPropsWithApollo) {
+  constructor(props: AppProps) {
     super(props);
 
-    const { match, client, config } = props;
+    const { match, config } = props;
     const { path, params } = match;
     const initialAction = getActionFromUrl(path);
 
@@ -89,7 +86,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
 
     const loginMode = getLoginModeFromUrl(path);
 
-    this.app = new App(config, client, activeAsset, loginMode);
+    this.app = new App(config, activeAsset, loginMode);
 
     this.state = {
       action: initialAction,
@@ -132,7 +129,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
     this.setState({ isLoading: false });
   }
 
-  componentDidUpdate(prevProps: AppPropsWithApollo, prevState: AppState) {
+  componentDidUpdate(prevProps: AppProps, prevState: AppState) {
     const { match: prevMatch } = prevProps;
     const { match } = this.props;
     const { action: prevAction } = prevState;
@@ -403,5 +400,3 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
     );
   }
 }
-
-export const AppView = withApollo<AppPropsWithApollo>(AppComponent);

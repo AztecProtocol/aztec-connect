@@ -625,36 +625,38 @@ export class CoreSdk extends EventEmitter {
   /**
    * Return the latest nonce for a given public key, derived from chain data.
    */
-  public async getLatestUserNonce(publicKey: GrumpkinAddress) {
+  public async getLatestAccountNonce(publicKey: GrumpkinAddress) {
     return (await this.db.getLatestNonceByAddress(publicKey)) || 0;
   }
 
-  public async getAddressFromAlias(alias: string, nonce?: number) {
-    const aliasHash = this.computeAliasHash(alias);
-    return this.db.getAddressByAliasHash(aliasHash, nonce);
+  public async getRemoteLatestAccountNonce(publicKey: GrumpkinAddress) {
+    return (await this.rollupProvider.getLatestAccountNonce(publicKey)) || 0;
   }
 
-  public async getAccountId(user: string | GrumpkinAddress, nonce?: number) {
-    if (typeof user === 'string') {
-      const publicKey = GrumpkinAddress.isAddress(user)
-        ? GrumpkinAddress.fromString(user)
-        : await this.getAddressFromAlias(user);
-      if (!publicKey) {
-        throw new Error('Alias not registered.');
-      }
-      const accountNonce = nonce !== undefined ? nonce : await this.getLatestUserNonce(publicKey);
-      return new AccountId(publicKey, accountNonce);
-    }
+  public async getLatestAliasNonce(alias: string) {
+    const aliasHash = this.computeAliasHash(alias);
+    return this.db.getLatestNonceByAliasHash(aliasHash);
+  }
 
-    const accountNonce = nonce !== undefined ? nonce : await this.getLatestUserNonce(user);
-    return new AccountId(user, accountNonce);
+  public async getRemoteLatestAliasNonce(alias: string) {
+    return this.rollupProvider.getLatestAliasNonce(alias);
+  }
+
+  public async getAccountId(alias: string, nonce?: number) {
+    const aliasHash = this.computeAliasHash(alias);
+    return this.db.getAccountId(aliasHash, nonce);
+  }
+
+  public async getRemoteAccountId(alias: string, nonce?: number) {
+    return this.rollupProvider.getAccountId(alias, nonce);
   }
 
   public async isAliasAvailable(alias: string) {
-    // TODO - request it from server so that we can also check those aliases in unsettled txs.
-    const aliasHash = this.computeAliasHash(alias);
-    const address = await this.db.getAddressByAliasHash(aliasHash);
-    return !address;
+    return !(await this.getLatestAliasNonce(alias));
+  }
+
+  public async isRemoteAliasAvailable(alias: string) {
+    return !(await this.rollupProvider.getLatestAliasNonce(alias));
   }
 
   public computeAliasHash(alias: string) {
@@ -858,7 +860,7 @@ export class CoreSdk extends EventEmitter {
 
   public async addUser(privateKey: Buffer, nonce?: number, noSync = false) {
     const publicKey = this.derivePublicKey(privateKey);
-    const accountNonce = nonce ?? (await this.getLatestUserNonce(publicKey));
+    const accountNonce = nonce ?? (await this.getLatestAccountNonce(publicKey));
 
     let syncedToRollup = -1;
     if (noSync) {
@@ -928,6 +930,10 @@ export class CoreSdk extends EventEmitter {
     return userState.getSpendableSum(assetId);
   }
 
+  public async getNotes(userId: AccountId) {
+    return this.db.getUserNotes(userId);
+  }
+
   public async getJoinSplitTxs(userId: AccountId) {
     return this.db.getJoinSplitTxs(userId);
   }
@@ -940,7 +946,11 @@ export class CoreSdk extends EventEmitter {
     return this.db.getDefiTxs(userId);
   }
 
-  public async getNotes(userId: AccountId) {
-    return this.db.getUserNotes(userId);
+  public async getRemoteUnsettledAccountTxs() {
+    return this.rollupProvider.getUnsettledAccountTxs();
+  }
+
+  public async getRemoteUnsettledJoinSplitTxs() {
+    return this.rollupProvider.getUnsettledJoinSplitTxs();
   }
 }

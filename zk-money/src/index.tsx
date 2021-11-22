@@ -1,6 +1,4 @@
-import ApolloClient from 'apollo-boost';
 import React from 'react';
-import { ApolloProvider } from 'react-apollo';
 import ReactDOM from 'react-dom';
 import { BrowserRouter } from 'react-router-dom';
 import { getConfig } from './config';
@@ -15,16 +13,12 @@ declare global {
 
 const config = getConfig();
 
-const client = new ApolloClient({ uri: config.graphqlEndpoint });
-
 ReactDOM.render(
   <>
     <GlobalStyle />
-    <ApolloProvider client={client}>
-      <BrowserRouter>
-        <Views config={config} />
-      </BrowserRouter>
-    </ApolloProvider>
+    <BrowserRouter>
+      <Views config={config} />
+    </BrowserRouter>
   </>,
   document.getElementById('root'),
 );

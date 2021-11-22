@@ -1,6 +1,10 @@
-import { BlockSource } from '../block_source';
-import { TxHash } from '../tx_hash';
+import { AccountId } from '../account_id';
+import { GrumpkinAddress } from '../address';
 import { BlockchainStatus } from '../blockchain';
+import { BlockSource } from '../block_source';
+import { AccountProofData, JoinSplitProofData } from '../client_proofs';
+import { OffchainAccountData, OffchainJoinSplitData } from '../offchain_tx_data';
+import { TxHash } from '../tx_hash';
 
 export enum SettlementTime {
   SLOW,
@@ -42,6 +46,16 @@ export interface InitialWorldState {
   initialAccounts: Buffer;
 }
 
+export interface AccountTx {
+  proofData: AccountProofData;
+  offchainData: OffchainAccountData;
+}
+
+export interface JoinSplitTx {
+  proofData: JoinSplitProofData;
+  offchainData: OffchainJoinSplitData;
+}
+
 export interface RollupProvider extends BlockSource {
   sendProof(proof: Proof): Promise<TxHash>;
   getStatus(): Promise<RollupProviderStatus>;
@@ -49,4 +63,9 @@ export interface RollupProvider extends BlockSource {
   getPendingNoteNullifiers: () => Promise<Buffer[]>;
   clientLog: (msg: any) => Promise<void>;
   getInitialWorldState(): Promise<InitialWorldState>;
+  getLatestAccountNonce(accountPubKey: GrumpkinAddress): Promise<number>;
+  getLatestAliasNonce(alias: string): Promise<number>;
+  getAccountId(alias: string, nonce?: number): Promise<AccountId | undefined>;
+  getUnsettledAccountTxs: () => Promise<AccountTx[]>;
+  getUnsettledJoinSplitTxs: () => Promise<JoinSplitTx[]>;
 }

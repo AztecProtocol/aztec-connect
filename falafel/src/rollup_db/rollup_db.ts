@@ -1,16 +1,18 @@
+import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
+import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
-import { Connection, In, IsNull, LessThan, MoreThanOrEqual, Not, Repository } from 'typeorm';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
+import { Connection, In, IsNull, LessThan, MoreThanOrEqual, Not, Repository } from 'typeorm';
 import { AccountDao } from '../entity/account';
+import { AssetMetricsDao } from '../entity/asset_metrics';
 import { ClaimDao } from '../entity/claim';
 import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
 import { txDaoToAccountDao } from './tx_dao_to_account_dao';
-import { AssetMetricsDao } from '../entity/asset_metrics';
 
 export type RollupDb = {
   [P in keyof TypeOrmRollupDb]: TypeOrmRollupDb[P];
@@ -76,7 +78,11 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async deletePendingTxs() {
-    await this.txRep.delete({ rollupProof: null });
+    await this.connection.transaction(async transactionalEntityManager => {
+      const pendingTxIds = (await this.txRep.find({ where: { rollupProof: null } })).map(tx => tx.id);
+      await transactionalEntityManager.delete(this.accountRep.target, { txId: In(pendingTxIds) });
+      await transactionalEntityManager.delete(this.txRep.target, { id: In(pendingTxIds) });
+    });
   }
 
   public async getTotalTxCount() {
@@ -96,7 +102,31 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async getAccountCount() {
-    return this.accountRep.count();
+    return this.accountRep.count({ where: { nonce: 1 } });
+  }
+
+  public async getLatestAccountNonce(accountPubKey: GrumpkinAddress) {
+    const account = await this.accountRep.findOne(
+      { accountPubKey: accountPubKey.toBuffer() },
+      { order: { nonce: 'DESC' } },
+    );
+    return account?.nonce || 0;
+  }
+
+  public async getLatestAliasNonce(aliasHash: AliasHash) {
+    const account = await this.accountRep.findOne({ aliasHash: aliasHash.toBuffer() }, { order: { nonce: 'DESC' } });
+    return account?.nonce || 0;
+  }
+
+  public async getAccountId(aliasHash: AliasHash, nonce?: number) {
+    const account = await this.accountRep.findOne({
+      where: { aliasHash: aliasHash.toBuffer(), nonce: MoreThanOrEqual(nonce || 0) },
+      order: { nonce: nonce !== undefined ? 'ASC' : 'DESC' },
+    });
+    if (!account) {
+      return;
+    }
+    return new AccountId(new GrumpkinAddress(account.accountPubKey), nonce === undefined ? account.nonce : nonce);
   }
 
   public async getTotalRollupsOfSize(rollupSize: number) {

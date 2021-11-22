@@ -786,22 +786,43 @@ export const databaseTestSuite = (
         expect(await db.getAliasHashByAddress(alias.address, 8)).toEqual(aliasHashes[1]);
       });
 
-      it('get public key by alias hash and an optional nonce', async () => {
+      it('get account id by alias hash and an optional nonce', async () => {
         const alias = randomAlias();
-        const publicKeys: GrumpkinAddress[] = [];
-        for (let i = 0; i < 3; ++i) {
-          alias.latestNonce = 10 - i * 2;
-          alias.address = GrumpkinAddress.randomAddress();
-          publicKeys.push(alias.address);
-          await db.setAlias(alias);
-        }
+        const publicKeys = [...Array(3)].map(() => GrumpkinAddress.randomAddress());
+        await db.setAlias({
+          ...alias,
+          address: publicKeys[0],
+          latestNonce: 1,
+        });
+        await db.setAlias({
+          ...alias,
+          address: publicKeys[1],
+          latestNonce: 2,
+        });
+        await db.setAlias({
+          ...alias,
+          address: publicKeys[2],
+          latestNonce: 4,
+        });
 
-        expect(await db.getAddressByAliasHash(alias.aliasHash)).toEqual(publicKeys[0]);
-        expect(await db.getAddressByAliasHash(alias.aliasHash, 0)).toEqual(publicKeys[2]);
-        expect(await db.getAddressByAliasHash(alias.aliasHash, 5)).toEqual(publicKeys[2]);
-        expect(await db.getAddressByAliasHash(alias.aliasHash, 6)).toEqual(publicKeys[2]);
-        expect(await db.getAddressByAliasHash(alias.aliasHash, 7)).toEqual(publicKeys[1]);
-        expect(await db.getAddressByAliasHash(alias.aliasHash, 8)).toEqual(publicKeys[1]);
+        const alias2 = randomAlias();
+        await db.setAlias({
+          ...alias2,
+          address: publicKeys[1],
+          latestNonce: 7,
+        });
+
+        expect(await db.getAccountId(alias.aliasHash)).toEqual(new AccountId(publicKeys[2], 4));
+        expect(await db.getAccountId(alias.aliasHash, 0)).toEqual(new AccountId(publicKeys[0], 0));
+        expect(await db.getAccountId(alias.aliasHash, 1)).toEqual(new AccountId(publicKeys[0], 1));
+        expect(await db.getAccountId(alias.aliasHash, 2)).toEqual(new AccountId(publicKeys[1], 2));
+        expect(await db.getAccountId(alias.aliasHash, 3)).toEqual(new AccountId(publicKeys[2], 3));
+        expect(await db.getAccountId(alias.aliasHash, 4)).toEqual(new AccountId(publicKeys[2], 4));
+        expect(await db.getAccountId(alias.aliasHash, 5)).toBe(undefined);
+
+        expect(await db.getAccountId(alias2.aliasHash)).toEqual(new AccountId(publicKeys[1], 7));
+
+        expect(await db.getAccountId(AliasHash.random())).toBe(undefined);
       });
     });
 

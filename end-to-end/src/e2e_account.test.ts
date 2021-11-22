@@ -57,7 +57,7 @@ describe('end-to-end account tests', () => {
     const user = await sdk.addUser(account1PrivKey);
     const { publicKey: account1PubKey } = user.getUserData();
 
-    expect(await sdk.getLatestUserNonce(account1PubKey)).toBe(0);
+    expect(await sdk.getLatestAccountNonce(account1PubKey)).toBe(0);
 
     // Create a new account.
     // The recoveryPublicKey is a single use key allowing the addition of the trustedThirdPartyPublicKey.
@@ -71,13 +71,12 @@ describe('end-to-end account tests', () => {
     const txHash = await user.createAccount(alias, signer1.getPublicKey(), recoveryPublicKey);
     await sdk.awaitSettlement(txHash, 300);
 
-    expect(await sdk.getAddressFromAlias(alias)).toEqual(user.getUserData().publicKey);
-    expect(await sdk.getLatestUserNonce(account1PubKey)).toBe(1);
-
     // Check new account was created with the expected singing keys.
     const accountId1 = new AccountId(account1PubKey, 1);
     const account1 = await sdk.getUser(accountId1);
     expectEqualSigningKeys(await account1.getSigningKeys(), [signer1.getPublicKey(), recoveryPublicKey]);
+    expect(await sdk.getAccountId(alias)).toEqual(accountId1);
+    expect(await sdk.getLatestAccountNonce(account1PubKey)).toBe(1);
 
     // Recover account. Adds the trustedThirdPartyPublicKey to list of signing keys.
     const recoverTxHash = await account1.recoverAccount(recoveryPayloads[0]);
@@ -106,7 +105,7 @@ describe('end-to-end account tests', () => {
     const migrateTxHash = await account1.migrateAccount(signer2, signer3.getPublicKey());
     await sdk.awaitSettlement(migrateTxHash, 300);
 
-    expect(await sdk.getLatestUserNonce(account1PubKey)).toBe(2);
+    expect(await sdk.getLatestAccountNonce(account1PubKey)).toBe(2);
 
     const accountId2 = new AccountId(account1PubKey, 2);
     const account2 = await sdk.getUser(accountId2);
@@ -123,12 +122,12 @@ describe('end-to-end account tests', () => {
     );
     await sdk.awaitSettlement(migrateNewTxHash, 300);
 
-    expect(await sdk.getLatestUserNonce(account1PubKey)).toBe(2);
-    expect(await sdk.getLatestUserNonce(account3PubKey)).toBe(3);
+    expect(await sdk.getLatestAccountNonce(account1PubKey)).toBe(2);
+    expect(await sdk.getLatestAccountNonce(account3PubKey)).toBe(3);
 
     const accountId3 = new AccountId(account3PubKey, 3);
     const account3 = await sdk.getUser(accountId3);
     expectEqualSigningKeys(await account3.getSigningKeys(), [signer3.getPublicKey(), signer2.getPublicKey()]);
-    expect(await sdk.getAddressFromAlias(alias)).toEqual(account3.getUserData().publicKey);
+    expect(await sdk.getAccountId(alias)).toEqual(accountId3);
   });
 });

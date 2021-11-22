@@ -74,7 +74,7 @@ export interface Database {
   getLatestNonceByAddress(address: GrumpkinAddress): Promise<number | undefined>;
   getLatestNonceByAliasHash(aliasHash: AliasHash): Promise<number | undefined>;
   getAliasHashByAddress(address: GrumpkinAddress, nonce?: number): Promise<AliasHash | undefined>;
-  getAddressByAliasHash(aliasHash: AliasHash, nonce?: number): Promise<GrumpkinAddress | undefined>;
+  getAccountId(aliasHash: AliasHash, nonce?: number): Promise<AccountId | undefined>;
 
   deleteKey(name: string): Promise<void>;
   addKey(name: string, value: Buffer): Promise<void>;

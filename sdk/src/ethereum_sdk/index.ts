@@ -185,8 +185,8 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.getUserData(accountId)!;
   }
 
-  public async getAccountId(aliasOrAddress: string | GrumpkinAddress) {
-    return this.walletSdk.getAccountId(aliasOrAddress);
+  public async getAccountId(alias: string) {
+    return this.walletSdk.getAccountId(alias);
   }
 
   private async deriveGrumpkinPrivateKey(address: EthAddress) {
@@ -210,7 +210,8 @@ export class EthereumSdk extends EventEmitter {
     if (!pubKey) {
       return;
     }
-    const accountId = await this.walletSdk.getAccountId(pubKey);
+    const nonce = await this.walletSdk.getLatestAccountNonce(pubKey);
+    const accountId = new AccountId(pubKey, nonce);
     return new EthereumSdkUser(address, accountId, this);
   }
 

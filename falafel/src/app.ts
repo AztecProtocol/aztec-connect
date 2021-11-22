@@ -1,7 +1,8 @@
+import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { blockchainStatusToJson } from '@aztec/barretenberg/blockchain';
 import { Block, BlockServerResponse, GetBlocksServerResponse } from '@aztec/barretenberg/block_source';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
-import { PendingTxServerResponse, Proof } from '@aztec/barretenberg/rollup_provider';
+import { PendingTxServerResponse, Proof, TxServerResponse } from '@aztec/barretenberg/rollup_provider';
 import cors from '@koa/cors';
 import { ApolloServer } from 'apollo-server-koa';
 import graphqlPlayground from 'graphql-playground-middleware-koa';
@@ -12,8 +13,9 @@ import { PromiseReadable } from 'promise-readable';
 import requestIp from 'request-ip';
 import { buildSchemaSync } from 'type-graphql';
 import { Container } from 'typedi';
+import { TxDao } from './entity/tx';
 import { Metrics } from './metrics';
-import { AccountTxResolver, JoinSplitTxResolver, RollupResolver, ServerStatusResolver, TxResolver } from './resolver';
+import { JoinSplitTxResolver, RollupResolver, ServerStatusResolver, TxResolver } from './resolver';
 import { Server } from './server';
 
 const toBlockResponse = (block: Block): BlockServerResponse => ({
@@ -24,6 +26,11 @@ const toBlockResponse = (block: Block): BlockServerResponse => ({
   interactionResult: block.interactionResult.map(r => r.toBuffer().toString('hex')),
   created: block.created.toISOString(),
   gasPrice: block.gasPrice.toString(),
+});
+
+const toTxResponse = ({ proofData, offchainTxData }: TxDao): TxServerResponse => ({
+  proofData: proofData.toString('hex'),
+  offchainData: offchainTxData.toString('hex'),
 });
 
 const bufferFromHex = (hexStr: string) => Buffer.from(hexStr.replace(/^0x/i, ''), 'hex');
@@ -174,6 +181,41 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     ctx.status = 200;
   });
 
+  router.post('/get-latest-account-nonce', recordMetric, async (ctx: Koa.Context) => {
+    const stream = new PromiseReadable(ctx.req);
+    const data = JSON.parse((await stream.readAll()) as string);
+    const accountPubKey = GrumpkinAddress.fromString(data.accountPubKey);
+    ctx.body = await server.getLatestAccountNonce(accountPubKey);
+    ctx.status = 200;
+  });
+
+  router.post('/get-latest-alias-nonce', recordMetric, async (ctx: Koa.Context) => {
+    const stream = new PromiseReadable(ctx.req);
+    const { alias } = JSON.parse((await stream.readAll()) as string);
+    ctx.body = await server.getLatestAliasNonce(alias);
+    ctx.status = 200;
+  });
+
+  router.post('/get-account-id', recordMetric, async (ctx: Koa.Context) => {
+    const stream = new PromiseReadable(ctx.req);
+    const { alias, nonce } = JSON.parse((await stream.readAll()) as string);
+    const accountId = await server.getAccountId(alias, nonce ? +nonce : undefined);
+    ctx.body = accountId?.toString() || '';
+    ctx.status = 200;
+  });
+
+  router.get('/get-unsettled-account-txs', recordMetric, async (ctx: Koa.Context) => {
+    const txs = await server.getUnsettledAccountTxs();
+    ctx.body = txs.map(toTxResponse);
+    ctx.status = 200;
+  });
+
+  router.get('/get-unsettled-join-split-txs', recordMetric, async (ctx: Koa.Context) => {
+    const txs = await server.getUnsettledJoinSplitTxs();
+    ctx.body = txs.map(toTxResponse);
+    ctx.status = 200;
+  });
+
   router.get('/set-topology', recordMetric, validateAuth, async (ctx: Koa.Context) => {
     const numOuterRollupProofs = +(ctx.query['num-outer-proofs'] as string);
     if (!numOuterRollupProofs || numOuterRollupProofs > 32 || numOuterRollupProofs & (numOuterRollupProofs - 1)) {
@@ -199,7 +241,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   app.use(router.allowedMethods());
 
   const schema = buildSchemaSync({
-    resolvers: [JoinSplitTxResolver, AccountTxResolver, RollupResolver, TxResolver, ServerStatusResolver],
+    resolvers: [JoinSplitTxResolver, RollupResolver, TxResolver, ServerStatusResolver],
     container: Container,
   });
   const appServer = new ApolloServer({ schema, introspection: true });

@@ -1,5 +1,4 @@
 import { GrumpkinAddress } from '@aztec/sdk';
-import { ApolloClient } from 'apollo-boost';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import Cookie from 'js-cookie';
@@ -9,7 +8,6 @@ import { AccountAction } from './account_txs';
 import { AppAssetId } from './assets';
 import { Database } from './database';
 import { Form, SystemMessage } from './form';
-import { GraphQLService } from './graphql_service';
 import { getNetwork, Network } from './networks';
 import {
   initialLoginState,
@@ -47,7 +45,6 @@ export interface App {
 
 export class App extends EventEmitter {
   private db: Database;
-  private graphql: GraphQLService;
   private session?: UserSession;
   private activeAsset: AppAssetId;
   private loginMode = LoginMode.SIGNUP;
@@ -56,12 +53,7 @@ export class App extends EventEmitter {
   private readonly accountProofCacheName = 'zm_account_proof_v1';
   private readonly walletCacheName = 'zm_wallet';
 
-  constructor(
-    private readonly config: Config,
-    apollo: ApolloClient<any>,
-    initialAsset: AppAssetId,
-    initialLoginMode: LoginMode,
-  ) {
+  constructor(private readonly config: Config, initialAsset: AppAssetId, initialLoginMode: LoginMode) {
     super();
     if (config.debug) {
       createDebug.enable('zm:*');
@@ -71,7 +63,6 @@ export class App extends EventEmitter {
       throw new Error(`Unknown network ${config.network}.`);
     }
     this.db = new Database();
-    this.graphql = new GraphQLService(apollo);
     this.activeAsset = initialAsset;
     this.loginMode = initialLoginMode;
   }
@@ -195,7 +186,6 @@ export class App extends EventEmitter {
       this.activeAsset,
       this.loginMode,
       this.db,
-      this.graphql,
       this.sessionCookieName,
       this.accountProofCacheName,
       this.walletCacheName,

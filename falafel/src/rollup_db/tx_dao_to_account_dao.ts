@@ -6,8 +6,8 @@ export const txDaoToAccountDao = (txDao: TxDao) => {
   const { accountPublicKey, accountAliasId } = OffchainAccountData.fromBuffer(txDao.offchainTxData);
   return new AccountDao({
     aliasHash: accountAliasId.aliasHash.toBuffer(),
-    tx: txDao,
     accountPubKey: accountPublicKey.toBuffer(),
     nonce: accountAliasId.nonce,
+    txId: txDao.id,
   });
 };

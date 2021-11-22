@@ -1,18 +1,13 @@
+import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { AccountId, AssetId, EthAddress, GrumpkinAddress, WalletSdk } from '@aztec/sdk';
 import createDebug from 'debug';
 import { formatAliasInput, isValidAliasInput } from './alias';
-import { GraphQLService } from './graphql_service';
 import { Network } from './networks';
 
 const debug = createDebug('zm:account_utils');
 
 export class AccountUtils {
-  constructor(private sdk: WalletSdk, private graphql: GraphQLService, private requiredNetwork: Network) {}
-
-  async isAccountSettled(userId: AccountId) {
-    const accountTxs = await this.sdk.getAccountTxs(userId);
-    return accountTxs.length > 1 || !!accountTxs[0]?.settled;
-  }
+  constructor(private sdk: WalletSdk, private requiredNetwork: Network) {}
 
   async addUser(privateKey: Buffer, nonce: number, noSync = !nonce) {
     const publicKey = this.sdk.derivePublicKey(privateKey);
@@ -36,19 +31,23 @@ export class AccountUtils {
     return true;
   }
 
-  async isAliasAvailable(aliasInput: string) {
-    const alias = formatAliasInput(aliasInput);
-    return !!alias && !(await this.graphql.getAliasPublicKey(alias));
-  }
-
   async getAliasPublicKey(aliasInput: string) {
     const alias = formatAliasInput(aliasInput);
-    return this.graphql.getAliasPublicKey(alias);
+    return (await this.sdk.getRemoteAccountId(alias))?.publicKey;
   }
 
   async getAliasNonce(aliasInput: string) {
     const alias = formatAliasInput(aliasInput);
-    return this.graphql.getAliasNonce(alias);
+    return this.sdk.getRemoteLatestAliasNonce(alias);
+  }
+
+  async getAccountNonce(publicKey: GrumpkinAddress) {
+    return this.sdk.getRemoteLatestAccountNonce(publicKey);
+  }
+
+  async isAliasAvailable(aliasInput: string) {
+    const alias = formatAliasInput(aliasInput);
+    return this.sdk.isRemoteAliasAvailable(alias);
   }
 
   async isValidRecipient(aliasInput: string) {
@@ -57,18 +56,7 @@ export class AccountUtils {
     }
 
     const alias = formatAliasInput(aliasInput);
-    try {
-      const accountId = await this.sdk.getAccountId(alias);
-      if (accountId.nonce > 0) {
-        return true;
-      }
-    } catch (e) {
-      // getAccountId will throw if alias is not registered.
-    }
-
-    const aliasHash = (this.sdk as any).core.computeAliasHash(alias).toString().replace(/^0x/i, '');
-    const unsettled = await this.graphql.getUnsettledAccountTxs();
-    return unsettled.some(tx => tx.aliasHash === aliasHash);
+    return !(await this.sdk.isAliasAvailable(alias)) || !(await this.sdk.isRemoteAliasAvailable(alias));
   }
 
   async getAccountId(aliasInput: string) {
@@ -77,50 +65,22 @@ export class AccountUtils {
     }
 
     const alias = formatAliasInput(aliasInput);
-
-    // Get the latest nonce from unsettled account txs.
-    // TODO - Find a way to get pending account's public key without having to compute its alias hash or send the alias to server.
-    const aliasHash = (this.sdk as any).core.computeAliasHash(alias).toString().replace(/^0x/i, '');
-    const unsettled = await this.graphql.getUnsettledAccountTxs();
-    const account = unsettled.find(tx => tx.aliasHash === aliasHash);
-    if (account) {
-      const { accountPubKey, nonce } = account;
-      const publicKey = GrumpkinAddress.fromString(accountPubKey);
-      return new AccountId(publicKey, nonce);
-    }
-
-    await this.sdk.awaitSynchronised();
-
-    try {
-      const accountId = await this.sdk.getAccountId(alias);
-      if (accountId.nonce > 0) {
-        return accountId;
-      }
-    } catch (e) {
-      // getAccountId will throw if alias is not registered.
-    }
-  }
-
-  async getAccountNonce(publicKey: GrumpkinAddress) {
-    // Falafel will override [alias+oldPubKey] with [alias+newPubKey] so the nonce for oldPubKey will always be 0.
-    return this.graphql.getAccountNonce(publicKey);
-  }
-
-  async getPendingDeposit(assetId: AssetId, inputOwner: EthAddress) {
-    const txs = await this.graphql.getUnsettledJoinSplitTxs();
-    return (
-      txs
-        .filter(tx => tx.assetId === assetId && EthAddress.fromString(tx.inputOwner).equals(inputOwner))
-        .reduce((sum, tx) => {
-          return sum + BigInt(tx.publicInput);
-        }, 0n) || 0n
-    );
+    return this.sdk.getRemoteAccountId(alias);
   }
 
   async getPendingBalance(assetId: AssetId, ethAddress: EthAddress) {
     const deposited = await this.sdk.getUserPendingDeposit(assetId, ethAddress);
-    const pendingDeposit = await this.getPendingDeposit(assetId, ethAddress);
-    return deposited - pendingDeposit;
+    const txs = await this.sdk.getRemoteUnsettledJoinSplitTxs();
+    const unsettledDeposit =
+      txs
+        .filter(
+          tx =>
+            tx.proofData.proofData.proofId === ProofId.DEPOSIT &&
+            tx.proofData.publicAssetId === assetId &&
+            tx.proofData.publicOwner.equals(ethAddress),
+        )
+        .reduce((sum, tx) => sum + BigInt(tx.proofData.publicValue), 0n) || 0n;
+    return deposited - unsettledDeposit;
   }
 
   async confirmPendingBalance(

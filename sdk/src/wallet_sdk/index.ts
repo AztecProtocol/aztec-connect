@@ -118,20 +118,85 @@ export class WalletSdk extends EventEmitter {
     return this.core.getFee(assetId, txType, speed);
   }
 
-  public getUserPendingDeposit(assetId: AssetId, account: EthAddress) {
-    return this.blockchain.getUserPendingDeposit(assetId, account);
+  public async getLatestAccountNonce(publicKey: GrumpkinAddress) {
+    return this.core.getLatestAccountNonce(publicKey);
   }
 
-  public async getAddressFromAlias(alias: string, nonce?: number) {
-    return this.core.getAddressFromAlias(alias, nonce);
+  public async getRemoteLatestAccountNonce(publicKey: GrumpkinAddress) {
+    return this.core.getRemoteLatestAccountNonce(publicKey);
   }
 
-  public async getLatestUserNonce(publicKey: GrumpkinAddress) {
-    return this.core.getLatestUserNonce(publicKey);
+  public async getLatestAliasNonce(alias: string) {
+    return this.core.getLatestAliasNonce(alias);
+  }
+
+  public async getRemoteLatestAliasNonce(alias: string) {
+    return this.core.getRemoteLatestAliasNonce(alias);
+  }
+
+  public async getAccountId(alias: string, nonce?: number) {
+    return this.core.getAccountId(alias, nonce);
+  }
+
+  public async getRemoteAccountId(alias: string, nonce?: number) {
+    return this.core.getRemoteAccountId(alias, nonce);
   }
 
   public async isAliasAvailable(alias: string) {
     return this.core.isAliasAvailable(alias);
+  }
+
+  public async isRemoteAliasAvailable(alias: string) {
+    return this.core.isRemoteAliasAvailable(alias);
+  }
+
+  public async userExists(userId: AccountId) {
+    return this.core.userExists(userId);
+  }
+
+  public async addUser(privateKey: Buffer, nonce?: number, noSync = false) {
+    const userData = await this.core.addUser(privateKey, nonce, noSync);
+    return new WalletSdkUser(userData.id, this);
+  }
+
+  public async removeUser(userId: AccountId) {
+    return this.core.removeUser(userId);
+  }
+
+  /**
+   * Returns a WalletSdkUser for a locally resolved user.
+   */
+  public getUser(userId: AccountId) {
+    const userData = this.getUserData(userId);
+    return new WalletSdkUser(userData.id, this);
+  }
+
+  public getUserData(userId: AccountId) {
+    return this.core.getUserData(userId);
+  }
+
+  public getUsersData() {
+    return this.core.getUsersData();
+  }
+
+  public createSchnorrSigner(privateKey: Buffer) {
+    return this.core.createSchnorrSigner(privateKey);
+  }
+
+  public derivePublicKey(privateKey: Buffer) {
+    return this.core.derivePublicKey(privateKey);
+  }
+
+  public fromBaseUnits(assetId: AssetId, value: bigint, precision?: number) {
+    return this.blockchain.getAsset(assetId).fromBaseUnits(value, precision);
+  }
+
+  public toBaseUnits(assetId: AssetId, value: string) {
+    return this.blockchain.getAsset(assetId).toBaseUnits(value);
+  }
+
+  public getAssetInfo(assetId: AssetId) {
+    return this.blockchain.getAsset(assetId).getStaticInfo();
   }
 
   public async mint(assetId: AssetId, value: bigint, account: EthAddress, provider?: EthereumProvider) {
@@ -169,7 +234,7 @@ export class WalletSdk extends EventEmitter {
     return permitArgs;
   }
 
-  async createDepositProof(
+  public async createDepositProof(
     assetId: AssetId,
     from: EthAddress,
     to: AccountId,
@@ -193,7 +258,7 @@ export class WalletSdk extends EventEmitter {
     );
   }
 
-  async createWithdrawProof(
+  public async createWithdrawProof(
     assetId: AssetId,
     userId: AccountId,
     value: bigint,
@@ -217,7 +282,7 @@ export class WalletSdk extends EventEmitter {
     );
   }
 
-  async createTransferProof(
+  public async createTransferProof(
     assetId: AssetId,
     userId: AccountId,
     value: bigint,
@@ -273,29 +338,6 @@ export class WalletSdk extends EventEmitter {
     );
   }
 
-  public async createAccountProof(
-    userId: AccountId,
-    signer: Signer,
-    alias: string,
-    nonce: number,
-    migrate: boolean,
-    newSigningPublicKey1?: GrumpkinAddress,
-    newSigningPublicKey2?: GrumpkinAddress,
-    newAccountPrivateKey?: Buffer,
-  ) {
-    const aliasHash = this.core.computeAliasHash(alias);
-    return this.core.createAccountProof(
-      userId,
-      signer,
-      aliasHash,
-      nonce,
-      migrate,
-      newSigningPublicKey1,
-      newSigningPublicKey2,
-      newAccountPrivateKey,
-    );
-  }
-
   public async createDefiProof(
     bridgeId: BridgeId,
     userId: AccountId,
@@ -314,80 +356,13 @@ export class WalletSdk extends EventEmitter {
     return this.core.createDefiProof(bridgeId, userId, depositValue, txFee, jsTxFee, signer, allowChain);
   }
 
-  public async signProof(proofOutput: ProofOutput, inputOwner: EthAddress, provider?: EthereumProvider) {
-    const { txHash } = proofOutput.tx;
-    const ethSigner = provider ? new Web3Signer(provider) : this.ethSigner;
-    return await ethSigner.signMessage(
-      Buffer.concat([
-        Buffer.from('Signing this message will allow your pending funds to be spent in Aztec transaction:\n'),
-        txHash.toBuffer(),
-        Buffer.from('\nIMPORTANT: Only sign the message if you trust the client'),
-      ]),
-      inputOwner,
-    );
-  }
-
-  public async sendProof(proofOutput: ProofOutput, signature?: Buffer) {
-    return this.core.sendProof(proofOutput, signature);
-  }
-
-  public async approveProof(address: EthAddress, signingData: Buffer, provider?: EthereumProvider) {
-    return this.blockchain.approveProof(address, signingData, provider);
-  }
-
-  public async depositFundsToContract(
-    assetId: AssetId,
-    from: EthAddress,
-    value: bigint,
-    proofHash?: Buffer,
-    permitArgs?: PermitArgs,
-    provider?: EthereumProvider,
-  ) {
-    return this.blockchain.depositPendingFunds(assetId, value, from, proofHash, permitArgs, provider);
-  }
-
-  public async getTransactionReceipt(txHash: TxHash, interval = 1, timeout = 300): Promise<Receipt> {
-    const { minConfirmation, minConfirmationEHW } = this.sdkOptions;
-    const confs =
-      minConfirmationEHW !== undefined && (await this.core.getRemoteStatus()).blockchainStatus.escapeOpen
-        ? minConfirmationEHW
-        : minConfirmation || 0;
-    return this.blockchain.getTransactionReceipt(txHash, interval, timeout, confs);
-  }
-
-  public async isContract(address: EthAddress) {
-    return this.blockchain.isContract(address);
-  }
-
-  public async isProofApproved(account: EthAddress, txId: Buffer) {
-    return !!(await this.blockchain.getUserProofApprovalStatus(account, txId));
-  }
-
-  private async checkNoteBalance(assetId: AssetId, userId: AccountId, value: bigint) {
-    const balance = this.core.getBalance(assetId, userId);
-    if (value > balance) {
-      throw new Error('Not enough balance.');
-    }
-
-    const maxTxValue = await this.core.getMaxSpendableValue(assetId, userId);
-    if (value > maxTxValue) {
-      const messages = [`Failed to find 2 notes that sum to ${this.fromBaseUnits(assetId, value)}.`];
-      if (maxTxValue) {
-        messages.push(`Please make a transaction no more than ${this.fromBaseUnits(assetId, maxTxValue)}.`);
-      } else {
-        messages.push('Please wait for pending transactions to settle.');
-      }
-      throw new Error(messages.join(' '));
-    }
-  }
-
   public async generateAccountRecoveryData(
     alias: string,
     publicKey: GrumpkinAddress,
     trustedThirdPartyPublicKeys: GrumpkinAddress[],
     nonce?: number,
   ) {
-    const accountNonce = nonce !== undefined ? nonce : (await this.core.getLatestUserNonce(publicKey)) + 1;
+    const accountNonce = nonce !== undefined ? nonce : (await this.core.getLatestAccountNonce(publicKey)) + 1;
     const accountId = new AccountId(publicKey, accountNonce);
     const socialRecoverySigner = this.core.createSchnorrSigner(randomBytes(32));
     const recoveryPublicKey = socialRecoverySigner.getPublicKey();
@@ -484,41 +459,97 @@ export class WalletSdk extends EventEmitter {
     );
   }
 
+  public async createAccountProof(
+    userId: AccountId,
+    signer: Signer,
+    alias: string,
+    nonce: number,
+    migrate: boolean,
+    newSigningPublicKey1?: GrumpkinAddress,
+    newSigningPublicKey2?: GrumpkinAddress,
+    newAccountPrivateKey?: Buffer,
+  ) {
+    const aliasHash = this.core.computeAliasHash(alias);
+    return this.core.createAccountProof(
+      userId,
+      signer,
+      aliasHash,
+      nonce,
+      migrate,
+      newSigningPublicKey1,
+      newSigningPublicKey2,
+      newAccountPrivateKey,
+    );
+  }
+
+  public async approveProof(address: EthAddress, signingData: Buffer, provider?: EthereumProvider) {
+    return this.blockchain.approveProof(address, signingData, provider);
+  }
+
+  public async depositFundsToContract(
+    assetId: AssetId,
+    from: EthAddress,
+    value: bigint,
+    proofHash?: Buffer,
+    permitArgs?: PermitArgs,
+    provider?: EthereumProvider,
+  ) {
+    return this.blockchain.depositPendingFunds(assetId, value, from, proofHash, permitArgs, provider);
+  }
+
+  public async getUserPendingDeposit(assetId: AssetId, account: EthAddress) {
+    return this.blockchain.getUserPendingDeposit(assetId, account);
+  }
+
+  public async isContract(address: EthAddress) {
+    return this.blockchain.isContract(address);
+  }
+
+  public async isProofApproved(account: EthAddress, txId: Buffer) {
+    return !!(await this.blockchain.getUserProofApprovalStatus(account, txId));
+  }
+
+  public validateSignature(publicOwner: EthAddress, signature: Buffer, signingData: Buffer) {
+    return validateSignature(publicOwner, signature, signingData);
+  }
+
+  public async signProof(proofOutput: ProofOutput, inputOwner: EthAddress, provider?: EthereumProvider) {
+    const { txHash } = proofOutput.tx;
+    const ethSigner = provider ? new Web3Signer(provider) : this.ethSigner;
+    return await ethSigner.signMessage(
+      Buffer.concat([
+        Buffer.from('Signing this message will allow your pending funds to be spent in Aztec transaction:\n'),
+        txHash.toBuffer(),
+        Buffer.from('\nIMPORTANT: Only sign the message if you trust the client'),
+      ]),
+      inputOwner,
+    );
+  }
+
+  public async sendProof(proofOutput: ProofOutput, signature?: Buffer) {
+    return this.core.sendProof(proofOutput, signature);
+  }
+
+  public async getTransactionReceipt(txHash: TxHash, interval = 1, timeout = 300): Promise<Receipt> {
+    const { minConfirmation, minConfirmationEHW } = this.sdkOptions;
+    const confs =
+      minConfirmationEHW !== undefined && (await this.core.getRemoteStatus()).blockchainStatus.escapeOpen
+        ? minConfirmationEHW
+        : minConfirmation || 0;
+    return this.blockchain.getTransactionReceipt(txHash, interval, timeout, confs);
+  }
+
   public async getSigningKeys(userId: AccountId) {
     return this.core.getSigningKeys(userId);
   }
 
-  public async userExists(userId: AccountId) {
-    return this.core.userExists(userId);
+  public async getPublicBalance(assetId: AssetId, ethAddress: EthAddress) {
+    return this.blockchain.getAsset(assetId).balanceOf(ethAddress);
   }
 
-  public getUserData(userId: AccountId) {
-    return this.core.getUserData(userId);
-  }
-
-  public getUsersData() {
-    return this.core.getUsersData();
-  }
-
-  public createSchnorrSigner(privateKey: Buffer) {
-    return this.core.createSchnorrSigner(privateKey);
-  }
-
-  public async addUser(privateKey: Buffer, nonce?: number, noSync = false) {
-    const userData = await this.core.addUser(privateKey, nonce, noSync);
-    return new WalletSdkUser(userData.id, this);
-  }
-
-  public async removeUser(userId: AccountId) {
-    return this.core.removeUser(userId);
-  }
-
-  /**
-   * Returns a WalletSdkUser for a locally resolved user.
-   */
-  public getUser(userId: AccountId) {
-    const userData = this.getUserData(userId);
-    return new WalletSdkUser(userData.id, this);
+  public async getPublicAllowance(assetId: AssetId, ethAddress: EthAddress) {
+    const { rollupContractAddress } = this.getLocalStatus();
+    return this.blockchain.getAsset(assetId).allowance(ethAddress, rollupContractAddress);
   }
 
   public getBalance(assetId: AssetId, userId: AccountId) {
@@ -537,25 +568,8 @@ export class WalletSdk extends EventEmitter {
     return this.core.getSpendableSum(assetId, userId);
   }
 
-  public async getPublicBalance(assetId: AssetId, ethAddress: EthAddress) {
-    return this.blockchain.getAsset(assetId).balanceOf(ethAddress);
-  }
-
-  public async getPublicAllowance(assetId: AssetId, ethAddress: EthAddress) {
-    const { rollupContractAddress } = this.getLocalStatus();
-    return this.blockchain.getAsset(assetId).allowance(ethAddress, rollupContractAddress);
-  }
-
-  public fromBaseUnits(assetId: AssetId, value: bigint, precision?: number) {
-    return this.blockchain.getAsset(assetId).fromBaseUnits(value, precision);
-  }
-
-  public toBaseUnits(assetId: AssetId, value: string) {
-    return this.blockchain.getAsset(assetId).toBaseUnits(value);
-  }
-
-  public getAssetInfo(assetId: AssetId) {
-    return this.blockchain.getAsset(assetId).getStaticInfo();
+  public async getNotes(userId: AccountId) {
+    return this.core.getNotes(userId);
   }
 
   public async getJoinSplitTxs(userId: AccountId) {
@@ -570,23 +584,30 @@ export class WalletSdk extends EventEmitter {
     return this.core.getDefiTxs(userId);
   }
 
-  public async getNotes(userId: AccountId) {
-    return this.core.getNotes(userId);
+  public async getRemoteUnsettledAccountTxs() {
+    return this.core.getRemoteUnsettledAccountTxs();
   }
 
-  public derivePublicKey(privateKey: Buffer) {
-    return this.core.derivePublicKey(privateKey);
+  public async getRemoteUnsettledJoinSplitTxs() {
+    return this.core.getRemoteUnsettledJoinSplitTxs();
   }
 
-  public validateSignature(publicOwner: EthAddress, signature: Buffer, signingData: Buffer) {
-    return validateSignature(publicOwner, signature, signingData);
-  }
+  private async checkNoteBalance(assetId: AssetId, userId: AccountId, value: bigint) {
+    const balance = this.core.getBalance(assetId, userId);
+    if (value > balance) {
+      throw new Error('Not enough balance.');
+    }
 
-  /**
-   * Returns a globally resolved AccountId.
-   */
-  public async getAccountId(aliasOrAddress: string | GrumpkinAddress, nonce?: number) {
-    return this.core.getAccountId(aliasOrAddress, nonce);
+    const maxTxValue = await this.core.getMaxSpendableValue(assetId, userId);
+    if (value > maxTxValue) {
+      const messages = [`Failed to find 2 notes that sum to ${this.fromBaseUnits(assetId, value)}.`];
+      if (maxTxValue) {
+        messages.push(`Please make a transaction no more than ${this.fromBaseUnits(assetId, maxTxValue)}.`);
+      } else {
+        messages.push('Please wait for pending transactions to settle.');
+      }
+      throw new Error(messages.join(' '));
+    }
   }
 
   private async sendAccountProof(

@@ -1,3 +1,5 @@
+import { AliasHash } from '@aztec/barretenberg/account_id';
+import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { Mutex } from 'async-mutex';
@@ -60,6 +62,18 @@ export class SyncRollupDb {
 
   public async getAccountCount() {
     return this.synchronise(() => this.rollupDb.getAccountCount());
+  }
+
+  public async getLatestAccountNonce(accountPubKey: GrumpkinAddress) {
+    return this.synchronise(() => this.rollupDb.getLatestAccountNonce(accountPubKey));
+  }
+
+  public async getLatestAliasNonce(aliasHash: AliasHash) {
+    return this.synchronise(() => this.rollupDb.getLatestAliasNonce(aliasHash));
+  }
+
+  public async getAccountId(aliasHash: AliasHash, nonce?: number) {
+    return this.synchronise(() => this.rollupDb.getAccountId(aliasHash, nonce));
   }
 
   public async getTotalRollupsOfSize(rollupSize: number) {

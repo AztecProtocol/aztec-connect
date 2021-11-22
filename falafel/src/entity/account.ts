@@ -1,9 +1,7 @@
-import { Column, Entity, Index, JoinColumn, OneToOne, PrimaryColumn } from 'typeorm';
-import { TxDao } from './tx';
+import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 
 @Entity({ name: 'account' })
-@Index(['aliasHash', 'nonce'], { unique: true })
-@Index(['accountPubKey', 'nonce'], { unique: false })
+@Index(['nonce'], { unique: false })
 export class AccountDao {
   public constructor(init?: AccountDao) {
     Object.assign(this, init);
@@ -12,13 +10,13 @@ export class AccountDao {
   @PrimaryColumn()
   public aliasHash!: Buffer;
 
-  @OneToOne(() => TxDao, tx => tx.id, { onDelete: 'CASCADE', nullable: true })
-  @JoinColumn()
-  public tx?: TxDao;
-
-  @Column()
+  @PrimaryColumn()
   public accountPubKey!: Buffer;
 
-  @Column()
+  @PrimaryColumn()
   public nonce!: number;
+
+  @Column({ nullable: true })
+  @Index({ unique: true })
+  public txId?: Buffer;
 }
