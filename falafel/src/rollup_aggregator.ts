@@ -3,13 +3,20 @@ import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
-import { ProofGenerator, RootRollup, RootRollupProofRequest, RootVerifier, RootVerifierProofRequest } from 'halloumi/proof_generator';
+import {
+  ProofGenerator,
+  RootRollup,
+  RootRollupProofRequest,
+  RootVerifier,
+  RootVerifierProofRequest,
+} from 'halloumi/proof_generator';
 import { AssetId } from '@aztec/barretenberg/asset';
 import { RollupDao } from './entity/rollup';
 import { RollupProofDao } from './entity/rollup_proof';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
+import { EthAddress } from '@aztec/barretenberg/address';
 
 export class RollupAggregator {
   constructor(
@@ -29,6 +36,7 @@ export class RollupAggregator {
     defiInteractionNotes: DefiInteractionNote[],
     bridgeIds: BridgeId[],
     assetIds: AssetId[],
+    rollupBeneficiary: EthAddress,
   ) {
     console.log(`Creating root rollup proof ${innerProofs.length} inner proofs...`);
 
@@ -39,19 +47,24 @@ export class RollupAggregator {
       defiInteractionNotes,
       bridgeIds,
       assetIds,
+      rollupBeneficiary,
     );
     const end = this.metrics.rootRollupTimer();
     const rootRollupRequest = new RootRollupProofRequest(this.numInnerRollupTxs, this.numOuterRollupProofs, rootRollup);
     const rootRollupProofBuf = await this.proofGenerator.createProof(rootRollupRequest.toBuffer());
 
     const rootVerifier = await this.createRootVerifier(rootRollupProofBuf);
-    const rootVerifierRequest = new RootVerifierProofRequest(this.numInnerRollupTxs, this.numOuterRollupProofs, rootVerifier);
+    const rootVerifierRequest = new RootVerifierProofRequest(
+      this.numInnerRollupTxs,
+      this.numOuterRollupProofs,
+      rootVerifier,
+    );
     const finalProofData = await this.proofGenerator.createProof(rootVerifierRequest.toBuffer());
     end();
 
     if (!finalProofData) {
       throw new Error('Failed to create valid aggregate rollup.');
-    };
+    }
 
     const rollupProofData = RollupProofData.fromBuffer(finalProofData);
     const rollupProofDao = new RollupProofDao();
@@ -90,6 +103,7 @@ export class RollupAggregator {
     defiInteractionNotes: DefiInteractionNote[],
     bridgeIds: BridgeId[],
     assetIds: AssetId[],
+    rollupBeneficiary: EthAddress,
   ) {
     const worldStateDb = this.worldStateDb;
 
@@ -124,6 +138,7 @@ export class RollupAggregator {
       bridgeIds.map(id => id.toBigInt()),
       assetIds.map(id => numToUInt32BE(id, 32)),
       defiInteractionNotes.map(n => n.toBuffer()),
+      rollupBeneficiary,
     );
 
     return rootRollup;

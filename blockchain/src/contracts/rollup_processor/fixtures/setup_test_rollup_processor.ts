@@ -42,7 +42,6 @@ export async function setupTestRollupProcessor(
     rollupProcessor.address,
     EthAddress.fromString(uniswapRouter.address),
   );
-  await rollupProcessor.setFeeDistributor(feeDistributor.address);
 
   const initialTotalSupply = 10n * 10n ** 18n;
   const tokenAssets = assets.slice(1);

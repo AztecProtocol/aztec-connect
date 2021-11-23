@@ -25,6 +25,7 @@ async function main() {
     confVars: {
       halloumiHost,
       rollupContractAddress,
+      feeDistributorAddress,
       priceFeedContractAddresses,
       numInnerRollupTxs,
       numOuterRollupProofs,
@@ -47,6 +48,7 @@ async function main() {
   const blockchain = await EthereumBlockchain.new(
     ethConfig,
     EthAddress.fromString(rollupContractAddress!),
+    EthAddress.fromString(feeDistributorAddress!),
     priceFeedContractAddresses.map(a => EthAddress.fromString(a)),
     provider,
   );

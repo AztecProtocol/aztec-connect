@@ -39,6 +39,7 @@ The first pubic input is a SHA256 hash (reduced modulo the BN254 group order) of
 1. `defi_deposit_sums` (size is `NUM_BRIDGE_CALLS_PER_BLOCK`)
 1. `encrypted_defi_interaction_notes` (size is `NUM_BRIDGE_CALLS_PER_BLOCK`)
 1. `previous_defi_interaction_hash`
+1. `rollup_benficiary`
 1. For $i=1,..,M$
     1. The `public_inputs_hash` of the rollup
 
@@ -56,6 +57,8 @@ The purpose of the SHA256 compression is not to hide information, it is solely t
 
 This is because, for a verifier smart contract on the Ethereum blockchain network, the computational cost of processing a public input is ~160 gas. The computational cost of including a 32-byte value in a SHA256 hash is 6 gas. Therefore reducing the public inputs via SHA256 hashing represents a significant gas saving, lowering the cost of processing a rollup block.
 
+The `rollup_benficiary` is just added to the circuit to ensure the proof constructor can pay who they intend.
+
 ### ◈ Private Inputs
 
 1. The recursive proof output of each inner rollup proof (4 $\mathbb{F}_q$ elements represented as 16 $\mathbb{F}_p$ elements, see above)
@@ -69,5 +72,6 @@ This is because, for a verifier smart contract on the Ethereum blockchain networ
 5. Validate that the `bridge_ids` in each real inner rollup proof match the input `bridge_ids` to the root rollup
 6. Accumulate defi deposits across inner rollup proofs
 7. Add the input `defi_interaction_notes` in the `defi_tree` and compute `previous_defi_interaction_hash := Hash(defi_interaction_notes)`
+8. Range constrain that `rollup_beneficiary` is an ethereum address,
 
 where $vk$ is the verification key of the rollup circuit. 

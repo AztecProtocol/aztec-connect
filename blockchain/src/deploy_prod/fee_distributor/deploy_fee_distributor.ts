@@ -8,7 +8,8 @@ export async function deployFeeDistributor(
 ) {
   console.error('Deploying FeeDistributor...');
   const feeDistributorLibrary = new ContractFactory(AztecFeeDistributor.abi, AztecFeeDistributor.bytecode, signer);
-  const feeDistributor = await feeDistributorLibrary.deploy(rollupProcessorAddress, uniswapRouterAddress);
+  const feeClaimer = await signer.getAddress();
+  const feeDistributor = await feeDistributorLibrary.deploy(feeClaimer, rollupProcessorAddress, uniswapRouterAddress);
   console.error(`FeeDistributor contract address: ${feeDistributor.address}`);
 
   return feeDistributor;

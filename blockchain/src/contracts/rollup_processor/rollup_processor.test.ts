@@ -6,8 +6,6 @@ import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proo
 import { randomBytes } from 'crypto';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
-import { EthersAdapter } from '../../provider';
-import { Web3Signer } from '../../signer';
 import { FeeDistributor } from '../fee_distributor';
 import { advanceBlocks, blocksToAdvance } from './fixtures/advance_block';
 import {
@@ -24,9 +22,10 @@ import {
 import { deployMockBridge, MockBridgeParams } from './fixtures/setup_defi_bridges';
 import { setupTestRollupProcessor } from './fixtures/setup_test_rollup_processor';
 import { RollupProcessor } from './rollup_processor';
+import { EthersAdapter } from '../../provider';
+import { TestRollupProcessor } from './fixtures/test_rollup_processor';
 
 describe('rollup_processor', () => {
-  const ethereumProvider = new EthersAdapter(ethers.provider);
   let feeDistributor: FeeDistributor;
   let rollupProcessor: RollupProcessor;
   let signers: Signer[];
@@ -55,7 +54,6 @@ describe('rollup_processor', () => {
 
   it('should get contract status', async () => {
     expect(rollupProcessor.address).toEqual(rollupProcessor.address);
-    expect(await rollupProcessor.feeDistributor()).toEqual(feeDistributor.address);
     expect(await rollupProcessor.numberOfAssets()).toBe(16);
     expect(await rollupProcessor.numberOfBridgeCalls()).toBe(4);
     expect(await rollupProcessor.dataSize()).toBe(0);
@@ -101,40 +99,24 @@ describe('rollup_processor', () => {
   it('should allow any address to use escape hatch', async () => {
     const { proofData } = await createRollupProof(signers[0], createSendProof());
     const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
-    await rollupProcessor.sendTx(tx);
+    await rollupProcessor.sendTx(tx, { signingAddress: EthAddress.fromString(await signers[1].getAddress()) });
   });
 
-  it('should reject a rollup from an unknown provider', async () => {
-    const { proofData, signatures, providerSignature } = await createRollupProof(signers[0], createSendProof(), {
+  it('should reject a rollup from an unknown provider outside escape hatch window', async () => {
+    const { proofData, signatures } = await createRollupProof(signers[0], createSendProof(), {
       feeDistributorAddress: feeDistributor.address,
     });
-    const tx = await rollupProcessor.createRollupProofTx(
-      proofData,
-      signatures,
-      [],
-      providerSignature,
-      addresses[1],
-      addresses[0],
+    await advanceBlocks(50, ethers.provider);
+
+    const { escapeOpen } = await rollupProcessor.getEscapeHatchStatus();
+    expect(escapeOpen).toBe(false);
+    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
+
+    await expect(
+      rollupProcessor.sendTx(tx, { signingAddress: EthAddress.fromString(await signers[1].getAddress()) }),
+    ).rejects.toThrow(
+      "VM Exception while processing transaction: reverted with reason string 'Rollup Processor: INVALID_PROVIDER'",
     );
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('UNKNOWN_PROVIDER');
-  });
-
-  it('should reject a rollup with a bad provider signature', async () => {
-    const { proofData, signatures, sigData } = await createRollupProof(signers[0], createSendProof(), {
-      feeDistributorAddress: feeDistributor.address,
-    });
-
-    const providerSignature = await new Web3Signer(ethereumProvider).signMessage(sigData, addresses[1]);
-
-    const tx = await rollupProcessor.createRollupProofTx(
-      proofData,
-      signatures,
-      [],
-      providerSignature,
-      addresses[0],
-      addresses[0],
-    );
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('validateSignature: INVALID_SIGNATURE');
   });
 
   it('should allow the owner to change the verifier address', async () => {
@@ -163,16 +145,6 @@ describe('rollup_processor', () => {
     const { escapeOpen, blocksRemaining } = await rollupProcessor.getEscapeHatchStatus();
     expect(escapeOpen).toBe(false);
     expect(blocksRemaining).toBe(1);
-  });
-
-  it('should reject escape hatch outside valid block window', async () => {
-    const { proofData } = await createRollupProof(signers[1], createSendProof());
-    const escapeBlock = await blocksToAdvance(0, 100, ethers.provider);
-    await advanceBlocks(escapeBlock, ethers.provider);
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
-    await expect(rollupProcessor.sendTx(tx, { signingAddress: addresses[1] })).rejects.toThrow(
-      'Rollup Processor: ESCAPE_BLOCK_RANGE_INCORRECT',
-    );
   });
 
   it('should process all proof types and get specified blocks', async () => {

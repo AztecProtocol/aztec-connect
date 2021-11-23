@@ -16,28 +16,49 @@ import {IFeeDistributor} from './interfaces/IFeeDistributor.sol';
 contract AztecFeeDistributor is IFeeDistributor, Ownable {
     using SafeMath for uint256;
 
-    uint256 public override reimburseConstant = 16 * 51781;
+    uint256 public override feeLimit = 4e17;
+    address public override aztecFeeClaimer;
+    address public rollupProcessor;
+
     uint256 public override convertConstant = 157768 * 20; // gas for calling convert() / 5%
-    address public immutable override feeClaimer;
+
     address public immutable override router;
     address public immutable override factory;
     address public immutable override WETH;
 
-    constructor(address _feeClaimer, address _router) public {
-        feeClaimer = _feeClaimer;
+    constructor(
+        address _feeClaimer,
+        address _rollupProcessor,
+        address _router
+    ) public {
+        aztecFeeClaimer = _feeClaimer;
+        rollupProcessor = _rollupProcessor;
         router = _router;
         factory = IUniswapV2Router02(_router).factory();
         WETH = IUniswapV2Router02(_router).WETH();
     }
 
-    receive() external payable {}
+    // @dev top up the designated address by feeLimit
+    receive() external payable {
+        if (msg.sender == rollupProcessor) {
+            if (aztecFeeClaimer.balance < feeLimit) {
+                uint256 toSend = address(this).balance > feeLimit ? feeLimit : address(this).balance;
+                (bool success, ) = aztecFeeClaimer.call{gas: 3000, value: toSend}('');
+                emit FeeReimbursed(aztecFeeClaimer, toSend);
+            }
+        }
+    }
 
-    function setReimburseConstant(uint256 _reimburseConstant) external override onlyOwner {
-        reimburseConstant = _reimburseConstant;
+    function setFeeLimit(uint256 _feeLimit) external override onlyOwner {
+        feeLimit = _feeLimit;
     }
 
     function setConvertConstant(uint256 _convertConstant) external override onlyOwner {
         convertConstant = _convertConstant;
+    }
+
+    function setFeeClaimer(address _feeClaimer) external override onlyOwner {
+        aztecFeeClaimer = _feeClaimer;
     }
 
     function txFeeBalance(address assetAddress) public view override returns (uint256) {
@@ -68,28 +89,7 @@ contract AztecFeeDistributor is IFeeDistributor, Ownable {
         depositedAmount = amount;
     }
 
-    function reimburseGas(
-        uint256 gasUsed,
-        uint256 feeLimit,
-        address payable feeReceiver
-    ) external override returns (uint256 reimbursement) {
-        require(msg.sender == feeClaimer, 'Fee Distributor: INVALID_CALLER');
-
-        reimbursement = gasUsed.add(reimburseConstant).mul(tx.gasprice);
-        require(reimbursement <= feeLimit, 'Fee Distributor: FEE_LIMIT_EXCEEDED');
-
-        (bool success, ) = feeReceiver.call{value: reimbursement}('');
-        require(success, 'Fee Distributor: REIMBURSE_GAS_FAILED');
-
-        emit FeeReimbursed(feeReceiver, reimbursement);
-    }
-
-    function convert(address assetAddress, uint256 minOutputValue)
-        public
-        override
-        onlyOwner
-        returns (uint256 outputValue)
-    {
+    function convert(address assetAddress, uint256 minOutputValue) public override returns (uint256 outputValue) {
         require(assetAddress != address(0), 'Fee Distributor: NOT_A_TOKEN_ASSET');
 
         uint256 inputValue = IERC20(assetAddress).balanceOf(address(this));
@@ -117,8 +117,9 @@ contract AztecFeeDistributor is IFeeDistributor, Ownable {
         (bool success, ) = assetAddress.call(abi.encodeWithSelector(0xa9059cbb, pair, inputValue));
         require(success, 'Fee Distributor: TRANSFER_FAILED');
 
-        (uint256 amountOut0, uint256 amountOut1) =
-            assetAddress < WETH ? (uint256(0), outputValue) : (outputValue, uint256(0));
+        (uint256 amountOut0, uint256 amountOut1) = assetAddress < WETH
+            ? (uint256(0), outputValue)
+            : (outputValue, uint256(0));
         IUniswapV2Pair(pair).swap(amountOut0, amountOut1, address(this), new bytes(0));
 
         IWETH(WETH).withdraw(outputValue);

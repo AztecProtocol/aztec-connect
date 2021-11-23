@@ -13,6 +13,7 @@ import { AssetMetricsDao } from './entity/asset_metrics';
 interface ConfVars {
   port: number;
   rollupContractAddress?: string;
+  feeDistributorAddress?: string;
   priceFeedContractAddresses: string[];
   ethereumHost?: string;
   ethereumPollInterval?: number;
@@ -41,6 +42,7 @@ interface ConfVars {
 function getConfVars(): ConfVars {
   const {
     ROLLUP_CONTRACT_ADDRESS,
+    FEE_DISTRIBUTOR_ADDRESS,
     PRICE_FEED_CONTRACT_ADDRESSES,
     ETHEREUM_HOST,
     ETHEREUM_POLL_INTERVAL,
@@ -70,6 +72,7 @@ function getConfVars(): ConfVars {
   return {
     port: +(PORT || 8081),
     rollupContractAddress: ROLLUP_CONTRACT_ADDRESS,
+    feeDistributorAddress: FEE_DISTRIBUTOR_ADDRESS,
     priceFeedContractAddresses: (PRICE_FEED_CONTRACT_ADDRESSES || '').split(','),
     ethereumHost: ETHEREUM_HOST,
     ethereumPollInterval: +(ETHEREUM_POLL_INTERVAL || 10000),

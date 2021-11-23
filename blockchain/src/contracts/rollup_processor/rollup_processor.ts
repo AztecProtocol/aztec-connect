@@ -45,17 +45,8 @@ export class RollupProcessor {
     return this.rollupProcessor;
   }
 
-  async feeDistributor() {
-    return EthAddress.fromString(await this.rollupProcessor.feeDistributor());
-  }
-
   async verifier() {
     return EthAddress.fromString(await this.rollupProcessor.verifier());
-  }
-
-  async setFeeDistributor(addr: EthAddress, options: SendTxOptions = {}) {
-    const contract = this.getContractWithSigner(options);
-    await contract.setFeeDistributor(addr.toString());
   }
 
   async numberOfAssets() {
@@ -147,7 +138,7 @@ export class RollupProcessor {
     const encodedProof = Buffer.concat([rollupProofData.encode(), trailingData]);
     const formattedSignatures = solidityFormatSignatures(signatures);
     const tx = await this.rollupProcessor.populateTransaction
-      .escapeHatch(
+      .processRollup(
         `0x${encodedProof.toString('hex')}`,
         formattedSignatures,
         `0x${Buffer.concat(offchainTxData).toString('hex')}`,
@@ -156,15 +147,7 @@ export class RollupProcessor {
     return Buffer.from(tx.data!.slice(2), 'hex');
   }
 
-  async createRollupProofTx(
-    proofData: Buffer,
-    signatures: Buffer[],
-    offchainTxData: Buffer[],
-    providerSignature: Buffer,
-    providerAddress: EthAddress,
-    feeReceiver: EthAddress,
-    feeLimit = BigInt(10) ** BigInt(18),
-  ) {
+  async createRollupProofTx(proofData: Buffer, signatures: Buffer[], offchainTxData: Buffer[]) {
     const rollupProofData = RollupProofData.fromBuffer(proofData);
     const trailingData = proofData.slice(rollupProofData.toBuffer().length);
     const encodedProof = Buffer.concat([rollupProofData.encode(), trailingData]);
@@ -174,10 +157,6 @@ export class RollupProcessor {
         `0x${encodedProof.toString('hex')}`,
         formattedSignatures,
         `0x${Buffer.concat(offchainTxData).toString('hex')}`,
-        providerSignature,
-        providerAddress.toString(),
-        feeReceiver.toString(),
-        feeLimit,
       )
       .catch(fixEthersStackTrace);
     return Buffer.from(tx.data!.slice(2), 'hex');

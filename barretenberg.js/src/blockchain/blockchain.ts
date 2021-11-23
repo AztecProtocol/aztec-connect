@@ -32,22 +32,9 @@ export interface Blockchain extends BlockSource, BlockchainStatusSource, Ethereu
 
   getUserPendingDeposit(assetId: AssetId, account: EthAddress): Promise<bigint>;
 
-  createRollupProofTx(
-    proof: Buffer,
-    signatures: Buffer[],
-    offchainTxData: Buffer[],
-    providerSignature: Buffer,
-    providerAddress: EthAddress,
-    feeReceiver: EthAddress,
-    feeLimit: bigint,
-  ): Promise<Buffer>;
+  createRollupProofTx(proof: Buffer, signatures: Buffer[], offchainTxData: Buffer[]): Promise<Buffer>;
 
-  createEscapeHatchProofTx(
-    proofData: Buffer,
-    depositSignature?: Buffer,
-    offchainTxData?: Buffer,
-    signingAddress?: EthAddress,
-  ): Promise<Buffer>;
+  createEscapeHatchProofTx(proofData: Buffer, depositSignature?: Buffer, offchainTxData?: Buffer): Promise<Buffer>;
 
   sendTx(tx: Buffer, options?: SendTxOptions): Promise<TxHash>;
 

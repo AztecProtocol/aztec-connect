@@ -31,20 +31,22 @@ describe('pipeline_coordinator', () => {
 
   const mockRollup = () => ({ id: 0, interactionResult: Buffer.alloc(0), mined: moment() });
 
-  const mockTx = (created = moment()) => ({
-    proofData: Buffer.concat([
-      randomBytes(32),
-      randomBytes(32),
-      randomBytes(32),
-      Buffer.alloc(32),
-      randomBytes(64),
-      randomBytes(64),
-      randomBytes(32),
-      randomBytes(32),
-      randomBytes(32),
-      randomBytes(32),
-    ]), created: created.toDate()
-  } as TxDao);
+  const mockTx = (created = moment()) =>
+    ({
+      proofData: Buffer.concat([
+        randomBytes(32),
+        randomBytes(32),
+        randomBytes(32),
+        Buffer.alloc(32),
+        randomBytes(64),
+        randomBytes(64),
+        randomBytes(32),
+        randomBytes(32),
+        randomBytes(32),
+        randomBytes(32),
+      ]),
+      created: created.toDate(),
+    } as TxDao);
 
   beforeEach(() => {
     jest.spyOn(Date, 'now').mockImplementation(() => 1618226000000);
@@ -62,6 +64,7 @@ describe('pipeline_coordinator', () => {
     rollupPublisher = {
       publishRollup: jest.fn().mockResolvedValue(true),
       interrupt: jest.fn(),
+      getRollupBenificiary: jest.fn(),
     };
 
     claimProofCreator = {

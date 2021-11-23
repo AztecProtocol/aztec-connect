@@ -51,7 +51,6 @@ export async function deploy(escapeHatchBlockLower: number, escapeHatchBlockUppe
   console.error(`Rollup contract address: ${rollup.address}`);
 
   const feeDistributor = await deployFeeDistributor(signer, rollup, uniswapRouter);
-  rollup.setFeeDistributor(feeDistributor.address);
 
   const initialFee = '1';
   console.error(`Depositing ${initialFee} ETH to FeeDistributor.`);

@@ -13,6 +13,7 @@ import {Bn254Crypto} from './verifier/cryptography/Bn254Crypto.sol';
  *
  * length
  * rollupId
+ * rollupSize
  * dataStartIndex
  * oldDataRoot
  * newDataRoot
@@ -28,6 +29,7 @@ import {Bn254Crypto} from './verifier/cryptography/Bn254Crypto.sol';
  * txFees[numberOfAssets]
  * interactionNotes[numberOfBridgeCalls]
  * prevDefiInteractionHash
+ * rollupBenficiary
  * numRollupTxs
  * encodedInnerProofData.length (4 bytes)
  * encodedInnerProofData
@@ -38,11 +40,12 @@ contract Decoder {
     uint256 public constant numberOfAssets = 16;
     uint256 public constant numberOfBridgeCalls = 4;
     uint256 public constant txNumPubInputs = 8;
-    uint256 public constant rollupNumHeaderInputs = 13 + (numberOfBridgeCalls * 3) + (numberOfAssets * 2);
+    uint256 public constant rollupNumHeaderInputs = 14 + (numberOfBridgeCalls * 3) + (numberOfAssets * 2);
     uint256 public constant txPubInputLength = txNumPubInputs * 32;
     uint256 public constant rollupHeaderInputLength = rollupNumHeaderInputs * 32;
     uint256 public constant ethAssetId = 0;
     uint256 public constant numRollupTxsOffset = rollupNumHeaderInputs - 1;
+
     uint256 public constant CIRCUIT_MODULUS =
         21888242871839275222246405745257275088548364400416034343698204186575808495617;
     // offset we add to `proofData` to point to the bridgeIds
@@ -321,7 +324,18 @@ contract Decoder {
         returns (bytes32 prevDefiInteractionHash)
     {
         assembly {
-            prevDefiInteractionHash := mload(add(proofData, sub(rollupHeaderInputLength, 0x20)))
+            prevDefiInteractionHash := mload(add(proofData, sub(rollupHeaderInputLength, 0x40)))
+        }
+    }
+
+    function extractRollupBeneficiaryAddress(bytes memory proofData)
+        internal
+        pure
+        returns (address rollupBeneficiaryAddress)
+    {
+        uint256 local = rollupHeaderInputLength;
+        assembly {
+            rollupBeneficiaryAddress := mload(add(proofData, sub(local, 0x20)))
         }
     }
 

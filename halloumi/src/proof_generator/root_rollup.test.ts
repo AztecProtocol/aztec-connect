@@ -1,8 +1,10 @@
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
+import { EthAddress } from '@aztec/barretenberg/address';
 import { randomBytes } from 'crypto';
 import { RootRollup } from './root_rollup';
 
 const randomRoot = () => randomBytes(32);
+const randomAddress = () => randomBytes(20);
 const randomDataPath = () => new HashPath([...Array(32)].map(() => [randomBytes(32), randomBytes(32)]));
 
 describe('Rollup', () => {
@@ -21,6 +23,7 @@ describe('Rollup', () => {
       [],
       [],
       [],
+      new EthAddress(randomAddress()),
     );
 
     const buf = rollup.toBuffer();

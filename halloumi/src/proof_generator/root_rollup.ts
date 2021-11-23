@@ -1,3 +1,4 @@
+import { EthAddress } from '@aztec/barretenberg/address';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import {
@@ -23,6 +24,7 @@ export class RootRollup {
     public bridgeIds: bigint[],
     public assetIds: Buffer[],
     public defiInteractionNotes: Buffer[],
+    public rollupBeneficiary: EthAddress,
   ) { }
 
   public toBuffer() {
@@ -39,6 +41,7 @@ export class RootRollup {
       serializeBufferArrayToVector(this.bridgeIds.map(b => toBufferBE(b, 32))),
       serializeBufferArrayToVector(this.assetIds),
       serializeBufferArrayToVector(this.defiInteractionNotes),
+      this.rollupBeneficiary.toBuffer32(),
     ]);
   }
 
@@ -69,6 +72,9 @@ export class RootRollup {
     offset += assetIds.adv;
 
     const defiInteractionNotes = deserializeArrayFromVector(deserializeField, buf, offset);
+    offset += defiInteractionNotes.adv;
+
+    const rollupBeneficiary = deserializeField(buf, offset);
 
     return new RootRollup(
       rollupId,
@@ -82,6 +88,7 @@ export class RootRollup {
       bridgeIds.elem,
       assetIds.elem,
       defiInteractionNotes.elem,
+      new EthAddress(rollupBeneficiary.elem),
     );
   }
 }

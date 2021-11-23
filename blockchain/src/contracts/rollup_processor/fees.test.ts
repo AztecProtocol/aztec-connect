@@ -4,7 +4,7 @@ import { Asset } from '@aztec/barretenberg/blockchain';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
 import { FeeDistributor } from '../fee_distributor';
-import { createDepositProof, createRollupProof, createSendProof } from './fixtures/create_mock_proof';
+import { createDepositProof, createRollupProof } from './fixtures/create_mock_proof';
 import { setupTestRollupProcessor } from './fixtures/setup_test_rollup_processor';
 import { RollupProcessor } from './rollup_processor';
 
@@ -30,17 +30,13 @@ describe('rollup_processor: deposit', () => {
   it('should process a tx with fee', async () => {
     const txFee = 10n;
     const publicInput = depositAmount + txFee;
-    const prepaidFee = 10n ** 18n;
 
     // User deposits funds.
     await rollupProcessor.depositPendingFunds(AssetId.ETH, publicInput, undefined, undefined, {
       signingAddress: userAddresses[0],
     });
 
-    // Rollup provider tops up fee distributor.
-    await feeDistributor.deposit(EthAddress.ZERO, prepaidFee);
-
-    const { proofData, signatures, providerSignature } = await createRollupProof(
+    const { proofData, signatures } = await createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAddresses[0], userSigners[0], AssetId.ETH, txFee),
       { feeDistributorAddress },
@@ -48,86 +44,18 @@ describe('rollup_processor: deposit', () => {
 
     const providerInitialBalance = await assets[0].balanceOf(rollupProviderAddress);
 
-    const tx = await rollupProcessor.createRollupProofTx(
-      proofData,
-      signatures,
-      [],
-      providerSignature,
-      rollupProviderAddress,
-      rollupProviderAddress,
-    );
+    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
     const txHash = await rollupProcessor.sendTx(tx);
 
     const { gasPrice } = await ethers.provider.getTransaction(txHash.toString());
     const { gasUsed } = await ethers.provider.getTransactionReceipt(txHash.toString());
     const gasCost = BigInt(gasUsed.mul(gasPrice!).toString());
-    const feeDistributorBalance = await feeDistributor.txFeeBalance(EthAddress.ZERO);
-    const feeRefund = prepaidFee + txFee - feeDistributorBalance;
+    const feeDistributorETHBalance = await feeDistributor.txFeeBalance(EthAddress.ZERO);
 
+    expect(feeDistributorETHBalance).toBe(txFee);
     expect(await rollupProcessor.getUserPendingDeposit(AssetId.ETH, userAddresses[0])).toBe(0n);
     expect(await assets[0].balanceOf(rollupProcessor.address)).toBe(depositAmount);
-    expect(await assets[0].balanceOf(rollupProviderAddress)).toBe(providerInitialBalance + feeRefund - gasCost);
-  });
-
-  it('should reject a tx if the distributor contract is different than expected', async () => {
-    const { proofData, signatures, providerSignature } = await createRollupProof(
-      rollupProvider,
-      await createDepositProof(depositAmount, userAddresses[0], userSigners[0], AssetId.ETH),
-      {
-        feeDistributorAddress: EthAddress.randomAddress(),
-      },
-    );
-
-    const tx = await rollupProcessor.createRollupProofTx(
-      proofData,
-      signatures,
-      [],
-      providerSignature,
-      rollupProviderAddress,
-      rollupProviderAddress,
-    );
-
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('validateSignature: INVALID_SIGNATURE');
-  });
-
-  it('should reject a tx if it causes more than the fee limit', async () => {
-    const feeLimit = 10n;
-
-    await feeDistributor.deposit(EthAddress.ZERO, 10n ** 18n);
-
-    const { proofData, signatures, providerSignature } = await createRollupProof(rollupProvider, createSendProof(), {
-      feeLimit,
-      feeDistributorAddress,
-    });
-
-    const tx = await rollupProcessor.createRollupProofTx(
-      proofData,
-      signatures,
-      [],
-      providerSignature,
-      rollupProviderAddress,
-      rollupProviderAddress,
-      feeLimit,
-    );
-
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: REIMBURSE_GAS_FAILED');
-  });
-
-  it('should reject a tx that spends more than the remaining fee distributor balance', async () => {
-    const { proofData, signatures, providerSignature } = await createRollupProof(rollupProvider, createSendProof(), {
-      feeDistributorAddress,
-    });
-
-    const tx = await rollupProcessor.createRollupProofTx(
-      proofData,
-      signatures,
-      [],
-      providerSignature,
-      rollupProviderAddress,
-      rollupProviderAddress,
-    );
-
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: REIMBURSE_GAS_FAILED');
+    expect(await assets[0].balanceOf(rollupProviderAddress)).toBe(providerInitialBalance - gasCost);
   });
 
   it('should be able to pay fee with erc20 tokens', async () => {
@@ -142,25 +70,62 @@ describe('rollup_processor: deposit', () => {
     });
     await feeDistributor.deposit(EthAddress.ZERO, prepaidFee);
 
-    const { proofData, signatures, providerSignature } = await createRollupProof(
+    const { proofData, signatures } = await createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAddresses[0], userSigners[0], AssetId.DAI, txFee),
       { feeDistributorAddress },
     );
 
-    const tx = await rollupProcessor.createRollupProofTx(
-      proofData,
-      signatures,
-      [],
-      providerSignature,
-      rollupProviderAddress,
-      rollupProviderAddress,
-    );
+    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
     await rollupProcessor.sendTx(tx);
 
-    expect((await feeDistributor.txFeeBalance(EthAddress.ZERO)) < prepaidFee).toBe(true);
+    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).toBe(prepaidFee);
     expect(await feeDistributor.txFeeBalance(asset.getStaticInfo().address)).toBe(txFee);
     expect(await asset.balanceOf(feeDistributor.address)).toBe(txFee);
     expect(await asset.balanceOf(rollupProcessor.address)).toBe(depositAmount);
+  });
+
+  it('feeDistributor should topup the rollupProvider if the balance is below the FEE_LIMIT when a rollup is sent', async () => {
+    const txFee = 10n;
+    const publicInput = depositAmount + txFee;
+    const feeLimt = BigInt(4e17);
+    const transferEthCost = BigInt(21000) * 10n;
+
+    // User deposits funds.
+    await rollupProcessor.depositPendingFunds(AssetId.ETH, publicInput, undefined, undefined, {
+      signingAddress: userAddresses[0],
+    });
+
+    const providerInitialBalance = await assets[0].balanceOf(rollupProviderAddress);
+
+    await assets[0].transfer(
+      providerInitialBalance - feeLimt - transferEthCost,
+      rollupProviderAddress,
+      EthAddress.ZERO,
+    );
+
+    const providerBalanceAfter = await assets[0].balanceOf(rollupProviderAddress);
+
+    expect(providerBalanceAfter).toBe(feeLimt);
+
+    // create rollup
+    const { proofData, signatures } = await createRollupProof(
+      rollupProvider,
+      await createDepositProof(depositAmount, userAddresses[0], userSigners[0], AssetId.ETH, txFee),
+      { feeDistributorAddress },
+    );
+
+    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
+    const txHash = await rollupProcessor.sendTx(tx);
+
+    const { gasPrice } = await ethers.provider.getTransaction(txHash.toString());
+    const { gasUsed } = await ethers.provider.getTransactionReceipt(txHash.toString());
+    const gasCost = BigInt(gasUsed.mul(gasPrice!).toString());
+    const feeDistributorETHBalance = await feeDistributor.txFeeBalance(EthAddress.ZERO);
+
+    expect(feeDistributorETHBalance).toBe(0n);
+    expect(await rollupProcessor.getUserPendingDeposit(AssetId.ETH, userAddresses[0])).toBe(0n);
+    expect(await assets[0].balanceOf(rollupProcessor.address)).toBe(depositAmount);
+    expect(await assets[0].balanceOf(rollupProviderAddress)).toBe(providerBalanceAfter - gasCost + txFee);
   });
 });

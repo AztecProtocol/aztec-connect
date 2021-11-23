@@ -5,22 +5,10 @@ pragma solidity >=0.6.10 <0.8.0;
 interface IRollupProcessor {
     function defiBridgeProxy() external view returns (address);
 
-    function feeDistributor() external view returns (address);
-
-    function escapeHatch(
-        bytes calldata proofData,
-        bytes calldata signatures,
-        bytes calldata offchainTxData
-    ) external;
-
     function processRollup(
         bytes calldata proofData,
         bytes calldata signatures,
-        bytes calldata offchainTxData,
-        bytes calldata providerSignature,
-        address provider,
-        address payable feeReceiver,
-        uint256 feeLimit
+        bytes calldata offchainTxData
     ) external;
 
     function depositPendingFunds(
@@ -48,8 +36,6 @@ interface IRollupProcessor {
     function approveProof(bytes32 _proofHash) external;
 
     function setDefiBridgeProxy(address feeDistributorAddress) external;
-
-    function setFeeDistributor(address feeDistributorAddress) external;
 
     function setGasSentToDefiBridgeProxy(uint256 _gasSentToBridgeProxy) external;
 

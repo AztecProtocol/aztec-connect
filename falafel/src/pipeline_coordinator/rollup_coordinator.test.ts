@@ -84,6 +84,7 @@ describe('rollup_coordinator', () => {
     rollupPublisher = {
       publishRollup: jest.fn().mockResolvedValue(true),
       interrupt: jest.fn(),
+      getRollupBenificiary: jest.fn(),
     };
 
     coordinator = new RollupCoordinator(
@@ -137,6 +138,7 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(numOuterRollupProofs);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.getRollupBenificiary).toHaveBeenCalledTimes(1);
     });
 
     it('should update publish time with pending txs', async () => {
@@ -154,6 +156,7 @@ describe('rollup_coordinator', () => {
         const published = await coordinator.processPendingTxs(pendingTxs);
         expect(published).toBe(true);
         expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+        expect(rollupPublisher.getRollupBenificiary).toHaveBeenCalledTimes(1);
       }
       {
         const pendingTxs = [...Array(numTxs)].map((_, i) => mockTx(i + numTxs));

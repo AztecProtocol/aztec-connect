@@ -9,8 +9,11 @@ export async function setupFeeDistributor(
   rollupProcessorAddress: EthAddress,
   uniswapRouterAddress: EthAddress,
 ) {
+  const feeOwner = await publisher.getAddress();
   const AztecFeeDistributor = await ethers.getContractFactory('AztecFeeDistributor', publisher);
+
   const feeDistributorContract = await AztecFeeDistributor.deploy(
+    feeOwner.toString(),
     rollupProcessorAddress.toString(),
     uniswapRouterAddress.toString(),
   );

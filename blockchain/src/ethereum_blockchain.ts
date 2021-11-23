@@ -53,12 +53,14 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   static async new(
     config: EthereumBlockchainConfig,
     rollupContractAddress: EthAddress,
+    feeDistributorAddress: EthAddress,
     priceFeedContractAddresses: EthAddress[],
     provider: EthereumProvider,
   ) {
     const confirmations = config.minConfirmation || EthereumBlockchain.DEFAULT_MIN_CONFIRMATIONS;
     const contracts = await Contracts.fromAddresses(
       rollupContractAddress,
+      feeDistributorAddress,
       priceFeedContractAddresses,
       provider,
       confirmations,
@@ -216,24 +218,8 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return this.contracts.getUserProofApprovalStatus(account, txId);
   }
 
-  public async createRollupProofTx(
-    proofData: Buffer,
-    signatures: Buffer[],
-    offchainTxData: Buffer[],
-    providerSignature: Buffer,
-    providerAddress: EthAddress,
-    feeReceiver: EthAddress,
-    feeLimit: bigint,
-  ) {
-    return await this.contracts.createRollupProofTx(
-      proofData,
-      signatures,
-      offchainTxData,
-      providerSignature,
-      providerAddress,
-      feeReceiver,
-      feeLimit,
-    );
+  public async createRollupProofTx(proofData: Buffer, signatures: Buffer[], offchainTxData: Buffer[]) {
+    return await this.contracts.createRollupProofTx(proofData, signatures, offchainTxData);
   }
 
   public async createEscapeHatchProofTx(proofData: Buffer, depositSignature?: Buffer, offchainTxData?: Buffer) {

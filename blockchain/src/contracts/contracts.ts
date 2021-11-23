@@ -35,13 +35,14 @@ export class Contracts {
 
   static async fromAddresses(
     rollupContractAddress: EthAddress,
+    feeDistributorAddress: EthAddress,
     priceFeedContractAddresses: EthAddress[],
     ethereumProvider: EthereumProvider,
     confirmations: number,
   ) {
     const rollupProcessor = new RollupProcessor(rollupContractAddress, ethereumProvider);
 
-    const feeDistributor = new FeeDistributor(await rollupProcessor.feeDistributor(), ethereumProvider);
+    const feeDistributor = new FeeDistributor(feeDistributorAddress, ethereumProvider);
 
     const assetAddresses = await rollupProcessor.getSupportedAssets();
     const tokenAssets = await Promise.all(
@@ -124,24 +125,8 @@ export class Contracts {
     return this.rollupProcessor.createEscapeHatchProofTx(proofData, signatures, offchainTxData);
   }
 
-  public async createRollupProofTx(
-    proofData: Buffer,
-    signatures: Buffer[],
-    offchainTxData: Buffer[],
-    providerSignature: Buffer,
-    providerAddress: EthAddress,
-    feeReceiver: EthAddress,
-    feeLimit: bigint,
-  ) {
-    return this.rollupProcessor.createRollupProofTx(
-      proofData,
-      signatures,
-      offchainTxData,
-      providerSignature,
-      providerAddress,
-      feeReceiver,
-      feeLimit,
-    );
+  public async createRollupProofTx(proofData: Buffer, signatures: Buffer[], offchainTxData: Buffer[]) {
+    return this.rollupProcessor.createRollupProofTx(proofData, signatures, offchainTxData);
   }
 
   public async sendTx(data: Buffer, options: SendTxOptions = {}) {

@@ -303,26 +303,18 @@ export const createRollupProof = async (
     ...totalTxFeePublicInputs,
     ...interactionNoteCommitments,
     previousDefiInteractionHash || WorldStateConstants.INITIAL_INTERACTION_HASH,
+    feeDistributorAddress.toBuffer32(),
     numToBuffer(rollupSize), // ??
     ...innerProofs.map(p => p.toBuffer()),
     padding,
   ]);
 
-  const providerAddress = EthAddress.fromString(await rollupProvider.getAddress());
-  const sigData = createSigData(proofData, providerAddress, feeLimit, feeDistributorAddress);
-
-  const providerSignature = await new Web3Signer(new EthersAdapter(rollupProvider)).signMessage(
-    sigData,
-    providerAddress,
-  );
 
   const rollupProofData = RollupProofData.fromBuffer(proofData);
 
   return {
     ...innerProofOutput,
     proofData,
-    providerSignature,
-    sigData,
     rollupProofData,
     offchainTxData,
   };

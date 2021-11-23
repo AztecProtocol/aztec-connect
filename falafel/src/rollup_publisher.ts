@@ -84,6 +84,10 @@ export class RollupPublisher {
     this.interruptResolve();
   }
 
+  public getRollupBenificiary() {
+    return this.providerAddress;
+  }
+
   private async createTxData(rollup: RollupDao) {
     const proof = rollup.rollupProof.proofData;
     const txs = rollup.rollupProof.txs;
@@ -97,24 +101,7 @@ export class RollupPublisher {
         signatures.push(tx.signature!);
       }
     }
-
-    const { feeDistributorContractAddress } = await this.blockchain.getBlockchainStatus();
-    const providerSignature = await this.generateSignature(
-      proof,
-      this.providerAddress,
-      this.feeLimit,
-      feeDistributorContractAddress,
-    );
-
-    return await this.blockchain.createRollupProofTx(
-      proof,
-      signatures,
-      offchainTxData,
-      providerSignature,
-      this.providerAddress,
-      this.providerAddress,
-      this.feeLimit,
-    );
+    return await this.blockchain.createRollupProofTx(proof, signatures, offchainTxData);
   }
 
   private async generateSignature(

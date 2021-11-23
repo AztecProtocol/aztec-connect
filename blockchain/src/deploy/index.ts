@@ -31,9 +31,10 @@ async function main() {
     throw new Error('Failed to create connection. Set ETHEREUM_HOST or INFURA_API_KEY, NETWORK, PRIVATE_KEY.');
   }
 
-  const { rollup, priceFeeds } = await deploy(+ESCAPE_BLOCK_LOWER, +ESCAPE_BLOCK_UPPER, signer);
+  const { rollup, priceFeeds, feeDistributor } = await deploy(+ESCAPE_BLOCK_LOWER, +ESCAPE_BLOCK_UPPER, signer);
 
   console.log(`export ROLLUP_CONTRACT_ADDRESS=${rollup.address}`);
+  console.log(`export FEE_DISTRIBUTOR_ADDRESS=${feeDistributor.address}`);
   console.log(`export PRICE_FEED_CONTRACT_ADDRESSES=${priceFeeds.map(p => p.address).join(',')}`);
 }
 

@@ -143,6 +143,7 @@ export class RollupCoordinator {
           Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK - this.bridgeIds.length).fill(BridgeId.ZERO),
         ),
         [...this.assetIds],
+        this.rollupPublisher.getRollupBenificiary(),
       );
       return this.rollupPublisher.publishRollup(rollupDao);
     }

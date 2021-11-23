@@ -13,6 +13,7 @@ const {
   ROLLUP_CONTRACT_ADDRESS,
   ETHEREUM_HOST = 'http://localhost:8545',
   API_PREFIX = '',
+  FEE_DISTRIBUTOR_ADDRESS = EthAddress.ZERO.toString(),
   MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW,
 } = process.env;
 
@@ -60,6 +61,7 @@ async function main() {
   const ethereumBlockchain = await EthereumBlockchain.new(
     ethConfig,
     EthAddress.fromString(ROLLUP_CONTRACT_ADDRESS!),
+    EthAddress.fromString(FEE_DISTRIBUTOR_ADDRESS),
     [],
     provider,
   );

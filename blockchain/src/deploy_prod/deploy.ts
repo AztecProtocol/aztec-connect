@@ -32,8 +32,6 @@ export async function deploy(
   console.error(`Rollup contract address: ${rollup.address}`);
 
   const feeDistributor = await deployFeeDistributor(signer, rollup.address, uniswapRouterAddress);
-  rollup.setFeeDistributor(feeDistributor.address);
-
   const response: TransactionResponse = await rollup.transferOwnership(multiSigAddr);
   const receipt = await response.wait();
 

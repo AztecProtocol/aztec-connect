@@ -8,7 +8,14 @@ import { deployPriceFeed } from '../deploy_price_feed';
 import { createPair } from '../deploy_uniswap';
 import { addAsset } from './add_asset';
 
-const { ETHEREUM_HOST, INFURA_API_KEY, NETWORK, PRIVATE_KEY, ROLLUP_CONTRACT_ADDRESS } = process.env;
+const {
+  ETHEREUM_HOST,
+  INFURA_API_KEY,
+  NETWORK,
+  PRIVATE_KEY,
+  ROLLUP_CONTRACT_ADDRESS,
+  FEE_DISTRIBUTOR_ADDRESS,
+} = process.env;
 
 function getSigner() {
   if (INFURA_API_KEY && NETWORK && PRIVATE_KEY) {
@@ -42,13 +49,16 @@ async function main() {
     throw new Error('Pass a ROLLUP_CONTRACT_ADDRESS.');
   }
 
+  if (!FEE_DISTRIBUTOR_ADDRESS) {
+    throw new Error('Pass a FEE_DISTRIBUTOR_ADDRESS.');
+  }
+
   const rollup = new Contract(ROLLUP_CONTRACT_ADDRESS, RollupProcessor.abi, signer);
   const asset = erc20Address
     ? new Contract(erc20Address, ERC20Mintable.abi, signer)
     : await addAsset(rollup, signer, supportsPermit);
 
-  const feeDistributorAddress = await rollup.feeDistributor();
-  const feeDistributor = new Contract(feeDistributorAddress, IFeeDistributor.abi, signer);
+  const feeDistributor = new Contract(FEE_DISTRIBUTOR_ADDRESS, IFeeDistributor.abi, signer);
   const uniswapRouter = new Contract(await feeDistributor.router(), IUniswapV2Router02.abi, signer);
   const initialTokenSupply = initialTokenSupplyStr ? BigInt(initialTokenSupplyStr) : undefined;
   const initialEthSupply = initialEthSupplyStr ? BigInt(initialEthSupplyStr) : undefined;

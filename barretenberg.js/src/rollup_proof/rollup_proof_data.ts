@@ -88,6 +88,9 @@ const parseHeaderInputs = (proofData: Buffer) => {
   const prevDefiInteractionHash = proofData.slice(startIndex, startIndex + 32);
   startIndex += 32;
 
+  const rollupBeneficiary = proofData.slice(startIndex, startIndex + 32);
+  startIndex +=32;
+
   const numRollupTxs = proofData.readUInt32BE(startIndex + 28);
   startIndex += 32;
 
@@ -109,6 +112,7 @@ const parseHeaderInputs = (proofData: Buffer) => {
     totalTxFees,
     defiInteractionNotes,
     prevDefiInteractionHash,
+    rollupBeneficiary,
     numRollupTxs,
   };
 };
@@ -117,7 +121,7 @@ export class RollupProofData {
   static NUMBER_OF_ASSETS = 16;
   static NUM_BRIDGE_CALLS_PER_BLOCK = 4;
   static NUM_ROLLUP_HEADER_INPUTS =
-    13 + RollupProofData.NUMBER_OF_ASSETS * 2 + RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK * 3;
+    14 + RollupProofData.NUMBER_OF_ASSETS * 2 + RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK * 3;
   static LENGTH_ROLLUP_HEADER_INPUTS = RollupProofData.NUM_ROLLUP_HEADER_INPUTS * 32;
   public rollupHash: Buffer;
 
@@ -139,6 +143,7 @@ export class RollupProofData {
     public totalTxFees: bigint[],
     public defiInteractionNotes: Buffer[],
     public prevDefiInteractionHash: Buffer,
+    public rollupBeneficiary: Buffer,
     public numRollupTxs: number,
     public innerProofData: InnerProofData[],
   ) {
@@ -180,6 +185,7 @@ export class RollupProofData {
       ...this.totalTxFees.map(a => toBufferBE(a, 32)),
       ...this.defiInteractionNotes,
       this.prevDefiInteractionHash,
+      this.rollupBeneficiary,
       numToUInt32BE(this.numRollupTxs, 32),
       ...this.innerProofData.map(p => p.toBuffer()),
     ]);
@@ -232,6 +238,7 @@ export class RollupProofData {
       ...this.totalTxFees.map(a => toBufferBE(a, 32)),
       ...this.defiInteractionNotes,
       this.prevDefiInteractionHash,
+      this.rollupBeneficiary,
       numToUInt32BE(this.numRollupTxs, 32),
       numToUInt32BE(Buffer.concat(encodedInnerProof).length),
       ...encodedInnerProof,
@@ -265,9 +272,11 @@ export class RollupProofData {
       totalTxFees,
       defiInteractionNotes,
       prevDefiInteractionHash,
+      rollupBeneficiary,
       numRollupTxs,
     } = parseHeaderInputs(proofData);
 
+  
     if (!rollupSize) {
       throw new Error('Empty rollup.');
     }
@@ -299,6 +308,7 @@ export class RollupProofData {
       totalTxFees,
       defiInteractionNotes,
       prevDefiInteractionHash,
+      rollupBeneficiary,
       numRollupTxs,
       innerProofData,
     );
@@ -309,6 +319,7 @@ export class RollupProofData {
       innerProofData === undefined
         ? new Array(numTxs).fill(0).map(() => InnerProofData.fromBuffer(Buffer.alloc(InnerProofData.LENGTH)))
         : innerProofData;
+    
     return new RollupProofData(
       rollupId,
       numTxs,
@@ -326,6 +337,7 @@ export class RollupProofData {
       new Array(RollupProofData.NUMBER_OF_ASSETS).fill(0),
       new Array(RollupProofData.NUMBER_OF_ASSETS).fill(BigInt(0)),
       new Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK).fill(0).map(() => Buffer.alloc(32)),
+      Buffer.alloc(32),
       Buffer.alloc(32),
       ipd.length,
       ipd,
@@ -351,6 +363,7 @@ export class RollupProofData {
       totalTxFees,
       defiInteractionNotes,
       prevDefiInteractionHash,
+      rollupBeneficiary,
       numRollupTxs,
     } = parseHeaderInputs(encoded);
 
@@ -390,6 +403,7 @@ export class RollupProofData {
       totalTxFees,
       defiInteractionNotes,
       prevDefiInteractionHash,
+      rollupBeneficiary,
       numRollupTxs,
       innerProofData,
     );
