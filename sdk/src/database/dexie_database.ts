@@ -696,14 +696,14 @@ export class DexieDatabase implements Database {
     return aliases[0]?.latestNonce;
   }
 
-  async getLatestAlias(aliasHash: AliasHash) {
+  async getLatestNonceByAliasHash(aliasHash: AliasHash) {
     const aliases = await this.alias
       .where({
         aliasHash: new Uint8Array(aliasHash.toBuffer()),
       })
       .reverse()
       .sortBy('latestNonce');
-    return aliases[0] ? dexieAliasToAlias(aliases[0]) : undefined;
+    return aliases[0]?.latestNonce;
   }
 
   async getAliasHashByAddress(address: GrumpkinAddress, nonce?: number) {

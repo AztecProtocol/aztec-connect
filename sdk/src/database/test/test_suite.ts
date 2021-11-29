@@ -750,7 +750,7 @@ export const databaseTestSuite = (
         expect(await db.getLatestNonceByAddress(address2)).toBe(10);
       });
 
-      it('get the largest alias by alias hash', async () => {
+      it('get the largest nonce by alias hash', async () => {
         const aliasHash1 = AliasHash.random();
         const aliasHash2 = AliasHash.random();
         for (let i = 0; i < 3; ++i) {
@@ -764,8 +764,8 @@ export const databaseTestSuite = (
           await db.setAlias(alias);
         }
 
-        expect((await db.getLatestAlias(aliasHash1))!.latestNonce).toBe(2);
-        expect((await db.getLatestAlias(aliasHash2))!.latestNonce).toBe(10);
+        expect(await db.getLatestNonceByAliasHash(aliasHash1)).toBe(2);
+        expect(await db.getLatestNonceByAliasHash(aliasHash2)).toBe(10);
       });
 
       it('get alias hash by public key and an optional nonce', async () => {
