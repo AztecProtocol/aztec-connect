@@ -1,9 +1,8 @@
-import { HardhatUserConfig } from 'hardhat/config';
 import '@nomiclabs/hardhat-waffle';
 import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-etherscan';
 
-const config: HardhatUserConfig = {
+const config = {
   solidity: {
     version: '0.6.10',
     settings: {
@@ -15,9 +14,6 @@ const config: HardhatUserConfig = {
     ganache: {
       url: `http://${process.env.GANACHE_HOST || 'localhost'}:8545`,
     },
-    // mainnet: {
-    //   url: process.env.ETHEREUM_HOST,
-    // },
     hardhat: {
       blockGasLimit: 15000000,
       gasPrice: 10,

@@ -55,7 +55,7 @@
     fs-extra "10.0.0"
     levelup "^5.0.0"
     memdown "^6.0.0"
-    node-fetch "2.6.1"
+    node-fetch "3.0.0"
     promise-readable "^5.0.4"
     sha3 "^2.1.3"
     threads "1.7.0"
@@ -64,7 +64,7 @@
 "@aztec/blockchain@file:../blockchain/dest":
   version "2.0.0"
   dependencies:
-    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-172828a2-b8d8-4e7f-93ed-f1e0bffba745-1636298967171/node_modules/barretenberg.js/dest"
+    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-f96916c1-b28a-4ca7-b7c7-617f6ddfe55a-1638218595816/node_modules/barretenberg.js/dest"
     "@ethersproject/experimental" "5.5.0"
     "@uniswap/v2-core" "^1.0.1"
     "@uniswap/v2-periphery" "^1.1.0-beta.0"
@@ -2596,6 +2596,11 @@ dashdash@^1.12.0:
   dependencies:
     assert-plus "^1.0.0"
 
+data-uri-to-buffer@^3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/data-uri-to-buffer/-/data-uri-to-buffer-3.0.1.tgz#594b8973938c5bc2c33046535785341abc4f3636"
+  integrity sha512-WboRycPNsVw3B3TL559F7kuBUM4d8CgMEvk6xEJlOp7OBPjt6G7z8WMWlD2rOFZLk6OYfFIUGsCOWzcQH9K2og==
+
 data-urls@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/data-urls/-/data-urls-2.0.0.tgz#156485a72963a970f5d5821aaf642bef2bf2db9b"
@@ -3276,6 +3281,13 @@ fb-watchman@^2.0.0:
   dependencies:
     bser "2.1.1"
 
+fetch-blob@^3.1.2:
+  version "3.1.3"
+  resolved "https://registry.yarnpkg.com/fetch-blob/-/fetch-blob-3.1.3.tgz#a7dca4855e39d3e3c5a1da62d4ee335c37d26012"
+  integrity sha512-ax1Y5I9w+9+JiM+wdHkhBoxew+zG4AJ2SvAD1v1szpddUIiPERVGBxrMcB2ZqW0Y3PP8bOWYv2zqQq1Jp2kqUQ==
+  dependencies:
+    web-streams-polyfill "^3.0.3"
+
 figlet@^1.1.1:
   version "1.5.2"
   resolved "https://registry.yarnpkg.com/figlet/-/figlet-1.5.2.tgz#dda34ff233c9a48e36fcff6741aeb5bafe49b634"
@@ -3651,8 +3663,8 @@ growly@^1.3.0:
 "halloumi@file:../halloumi/dest":
   version "1.0.0"
   dependencies:
-    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-halloumi-1.0.0-39d8c393-668d-4524-8428-8e2681f31c49-1636298967263/barretenberg.js/dest"
-    "@aztec/blockchain" "file:../../.cache/yarn/v6/npm-halloumi-1.0.0-39d8c393-668d-4524-8428-8e2681f31c49-1636298967263/blockchain/dest"
+    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-halloumi-1.0.0-7272bfff-c15c-45a9-99c1-82e83231f7a7-1638218595924/barretenberg.js/dest"
+    "@aztec/blockchain" "file:../../.cache/yarn/v6/npm-halloumi-1.0.0-7272bfff-c15c-45a9-99c1-82e83231f7a7-1638218595924/blockchain/dest"
     fs-extra "9.0.1"
     koa "^2.7.0"
     koa-router "^7.4.0"
@@ -5336,10 +5348,13 @@ node-cleanup@^2.1.2:
   resolved "https://registry.yarnpkg.com/node-cleanup/-/node-cleanup-2.1.2.tgz#7ac19abd297e09a7f72a71545d951b517e4dde2c"
   integrity sha1-esGavSl+Caf3KnFUXZUbUX5N3iw=
 
-node-fetch@2.6.1:
-  version "2.6.1"
-  resolved "https://registry.yarnpkg.com/node-fetch/-/node-fetch-2.6.1.tgz#045bd323631f76ed2e2b55573394416b639a0052"
-  integrity sha512-V4aYg89jEoVRxRb2fJdAg8FHvI7cEyYdVAh94HH0UIK8oJxUfkjlDQN9RbMx+bEjP7+ggMiFRprSti032Oipxw==
+node-fetch@3.0.0:
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/node-fetch/-/node-fetch-3.0.0.tgz#79da7146a520036f2c5f644e4a26095f17e411ea"
+  integrity sha512-bKMI+C7/T/SPU1lKnbQbwxptpCrG9ashG+VkytmXCPZyuM9jB6VU+hY0oi4lC8LxTtAeWdckNCTa3nrGsAdA3Q==
+  dependencies:
+    data-uri-to-buffer "^3.0.1"
+    fetch-blob "^3.1.2"
 
 node-fetch@^2.6.1:
   version "2.6.6"
@@ -7184,6 +7199,11 @@ walker@^1.0.7, walker@~1.0.5:
   integrity sha512-ts/8E8l5b7kY0vlWLewOkDXMmPdLcVV4GmOQLyxuSswIJsweeFZtAsMF7k1Nszz+TYBQrlYRmzOnr398y1JemQ==
   dependencies:
     makeerror "1.0.12"
+
+web-streams-polyfill@^3.0.3:
+  version "3.2.0"
+  resolved "https://registry.yarnpkg.com/web-streams-polyfill/-/web-streams-polyfill-3.2.0.tgz#a6b74026b38e4885869fb5c589e90b95ccfc7965"
+  integrity sha512-EqPmREeOzttaLRm5HS7io98goBgZ7IVz79aDvqjD0kYXLtFZTc0T/U6wHTPKyIjb+MdN7DFIIX6hgdBEpWmfPA==
 
 webidl-conversions@^3.0.0:
   version "3.0.1"
