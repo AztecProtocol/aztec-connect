@@ -99,7 +99,6 @@ export class App extends EventEmitter {
       this.session?.getLoginState() || {
         ...initialLoginState,
         mode: this.loginMode,
-        isNewAlias: this.loginMode === LoginMode.SIGNUP,
       }
     );
   }
@@ -149,8 +148,14 @@ export class App extends EventEmitter {
       await this.db.open();
     }
 
-    const [accountV0] = (await this.db.getAccountV0s()).sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1));
-    return accountV0;
+    const accountV0s = (await this.db.getAccountV0s()).sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1));
+    const pubKeys = await Promise.all(accountV0s.map(({ alias }) => this.graphql.getAliasPublicKey(alias)));
+    const validAccounts = accountV0s.filter(a => pubKeys.some(pubKey => pubKey?.equals(a.accountPublicKey)));
+    const invalidAccounts = accountV0s.filter(a => !pubKeys.some(pubKey => pubKey?.equals(a.accountPublicKey)));
+    for (const account of invalidAccounts) {
+      await this.db.deleteAccountV0(account.accountPublicKey);
+    }
+    return validAccounts[0];
   }
 
   async migrateFromLocalAccountV0(accountV0: { alias: string; accountPublicKey: GrumpkinAddress }) {
@@ -203,9 +208,12 @@ export class App extends EventEmitter {
           case UserSessionEvent.SESSION_OPEN:
             this.emit(AppEvent.SESSION_OPEN);
             break;
-          case UserSessionEvent.UPDATED_LOGIN_STATE:
+          case UserSessionEvent.UPDATED_LOGIN_STATE: {
+            const { mode } = this.session!.getLoginState();
+            this.loginMode = mode;
             this.emit(AppEvent.UPDATED_LOGIN_STATE, ...args);
             break;
+          }
           case UserSessionEvent.UPDATED_SYSTEM_MESSAGE:
             this.emit(AppEvent.UPDATED_SYSTEM_MESSAGE, ...args);
             break;

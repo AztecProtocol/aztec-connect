@@ -2,7 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import {
   AssetState,
-  fromBaseUnits,
+  formatBaseUnits,
   isValidForm,
   ProviderState,
   ShieldFormValues,
@@ -203,16 +203,24 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
               value={amount.value}
               onChangeValue={value => onChangeInputs({ amount: { value } })}
             />
-            <MaxButton onClick={() => onChangeInputs({ amount: { value: fromBaseUnits(maxAmount.value, decimals) } })}>
+            <MaxButton
+              onClick={() =>
+                onChangeInputs({
+                  amount: {
+                    value: formatBaseUnits(maxAmount.value, decimals, { precision: asset.preferredFractionalDigits }),
+                  },
+                })
+              }
+            >
               <Text text="MAX" size="xs" />
             </MaxButton>
           </AmountInputWrapper>
           {pendingBalance > txFee.fee && (
             <InputFoot size="xxs">
-              {`You have ${fromBaseUnits(
-                pendingBalance - txFee.fee,
-                decimals,
-              )} ${symbol} pending on the contract, this will be used first. `}
+              {`You have ${formatBaseUnits(pendingBalance - txFee.fee, decimals, {
+                precision: asset.preferredFractionalDigits,
+                commaSeparated: true,
+              })} ${symbol} pending on the contract, this will be used first. `}
             </InputFoot>
           )}
           {amount.message && (

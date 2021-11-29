@@ -50,45 +50,42 @@ export class FeeDistributor {
   }
 
   async deposit(asset: EthAddress, amount: bigint, options: SendTxOptions = this.defaults) {
-    const { gasLimit, gasPrice } = options;
+    const { gasLimit } = options;
     const contract = this.getContractWithSigner(options);
     const tx = await contract
       .deposit(asset.toString(), amount, {
         value: asset.equals(EthAddress.ZERO) ? amount : undefined,
         gasLimit,
-        gasPrice,
       })
       .catch(fixEthersStackTrace);
     return TxHash.fromString(tx.hash);
   }
 
   async convert(asset: EthAddress, minOutputValue: bigint, options: SendTxOptions = this.defaults) {
-    const { gasLimit, gasPrice } = options;
+    const { gasLimit } = options;
     const contract = this.getContractWithSigner(options);
-    const tx = await contract
-      .convert(asset.toString(), minOutputValue, { gasLimit, gasPrice })
-      .catch(fixEthersStackTrace);
+    const tx = await contract.convert(asset.toString(), minOutputValue, { gasLimit }).catch(fixEthersStackTrace);
     return TxHash.fromString(tx.hash);
   }
 
   async setConvertConstant(constant: bigint, options: SendTxOptions = this.defaults) {
-    const { gasLimit, gasPrice } = options;
+    const { gasLimit } = options;
     const contract = this.getContractWithSigner(options);
-    const tx = await contract.setConvertConstant(constant, { gasLimit, gasPrice }).catch(fixEthersStackTrace);
+    const tx = await contract.setConvertConstant(constant, { gasLimit }).catch(fixEthersStackTrace);
     return TxHash.fromString(tx.hash);
   }
 
   async setFeeLimit(constant: bigint, options: SendTxOptions = this.defaults) {
-    const { gasLimit, gasPrice } = options;
+    const { gasLimit } = options;
     const contract = this.getContractWithSigner(options);
-    const tx = await contract.setFeeLimit(constant, { gasLimit, gasPrice }).catch(fixEthersStackTrace);
+    const tx = await contract.setFeeLimit(constant, { gasLimit }).catch(fixEthersStackTrace);
     return TxHash.fromString(tx.hash);
   }
 
   async setFeeClaimer(address: EthAddress, options: SendTxOptions = this.defaults) {
-    const { gasLimit, gasPrice } = options;
+    const { gasLimit } = options;
     const contract = this.getContractWithSigner(options);
-    const tx = await contract.setFeeClaimer(address.toString(), { gasLimit, gasPrice }).catch(fixEthersStackTrace);
+    const tx = await contract.setFeeClaimer(address.toString(), { gasLimit }).catch(fixEthersStackTrace);
     return TxHash.fromString(tx.hash);
   }
 

@@ -23,8 +23,8 @@ export class ContractWithSigner {
       throw new Error(`Unknown contract function '${functionName}'.`);
     }
 
-    const { gasLimit, gasPrice } = this.options;
-    const tx = await this.contract[functionName](...args, { gasLimit, gasPrice }).catch(fixEthersStackTrace);
+    const { gasLimit } = this.options;
+    const tx = await this.contract[functionName](...args, { gasLimit }).catch(fixEthersStackTrace);
     return TxHash.fromString(tx.hash);
   }
 }

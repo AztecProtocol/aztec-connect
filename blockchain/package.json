@@ -31,6 +31,7 @@
   "dependencies": {
     "@aztec/barretenberg": "../barretenberg.js/dest",
     "@ethersproject/experimental": "5.5.0",
+    "@nomiclabs/hardhat-etherscan": "^2.1.8",
     "@uniswap/v2-core": "^1.0.1",
     "@uniswap/v2-periphery": "^1.1.0-beta.0",
     "debug": "^4.1.1",

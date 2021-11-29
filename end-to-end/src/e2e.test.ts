@@ -2,10 +2,14 @@ import { AccountId, AssetId, createWalletSdk, EthAddress, TxHash, TxType, Wallet
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
 
-jest.setTimeout(15 * 60 * 1000);
+jest.setTimeout(20 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
 
-const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost:8081' } = process.env;
+const {
+  ETHEREUM_HOST = 'http://localhost:8545',
+  ROLLUP_HOST = 'http://localhost:8081',
+  PRIVATE_KEY = '',
+} = process.env;
 
 /**
  * If necessary, install ganache-cli: yarn global add ganache-cli
@@ -26,7 +30,7 @@ describe('end-to-end tests', () => {
   const awaitSettlementTimeout = 600;
 
   beforeAll(async () => {
-    provider = await createFundedWalletProvider(ETHEREUM_HOST, 2);
+    provider = await createFundedWalletProvider(ETHEREUM_HOST, 2, 1, Buffer.from(PRIVATE_KEY, 'hex'), 10n ** 17n);
     accounts = provider.getAccounts();
 
     sdk = await createWalletSdk(provider, ROLLUP_HOST, {
@@ -51,9 +55,9 @@ describe('end-to-end tests', () => {
   });
 
   it('should deposit, transfer and withdraw funds', async () => {
-    const depositValue = sdk.toBaseUnits(assetId, '0.2');
-    const transferValue = sdk.toBaseUnits(assetId, '0.07');
-    const withdrawValue = sdk.toBaseUnits(assetId, '0.08');
+    const depositValue = 200n;
+    const transferValue = 70n;
+    const withdrawValue = 80n;
 
     const sender = userIds[0];
     const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[0])!);

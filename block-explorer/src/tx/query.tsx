@@ -9,7 +9,6 @@ export interface Block {
 
 export interface Tx {
   id: string;
-  txNo: number;
   proofId: number;
   proofData: string;
   newNote1: string;
@@ -37,7 +36,6 @@ export const GET_TX = gql`
   query Tx($id: HexString!) {
     tx(id: $id) {
       id
-      txNo
       proofId
       proofData
       newNote1

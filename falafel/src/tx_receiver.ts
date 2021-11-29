@@ -85,6 +85,7 @@ export class TxReceiver {
           throw new Error('Linked tx not found.');
         }
       }
+      const dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
 
       // Check the proof is valid.
       switch (proof.proofId) {
@@ -104,8 +105,6 @@ export class TxReceiver {
         default:
           throw new Error('Unknown proof id.');
       }
-
-      const dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
 
       const txDao = new TxDao({
         id: proof.txId,

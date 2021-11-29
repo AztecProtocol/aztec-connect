@@ -1,6 +1,6 @@
 import React from 'react';
 import styled, { css } from 'styled-components';
-import { Asset, convertToPriceString, fromBaseUnits } from '../../app';
+import { Asset, convertToPriceString, formatBaseUnits } from '../../app';
 import { Button, Dot, GradientBlock, Text, Tooltip } from '../../components';
 import { breakpoints, fontSizes, lineHeights, spacings } from '../../styles';
 
@@ -179,7 +179,10 @@ export const ValueSummary: React.FunctionComponent<ValueSummaryProps> = ({
   isLoading,
 }) => {
   const totalBalance = value + pendingValue;
-  const valueStr = fromBaseUnits(totalBalance, asset.decimals);
+  const valueStr = formatBaseUnits(totalBalance, asset.decimals, {
+    precision: asset.preferredFractionalDigits,
+    commaSeparated: true,
+  });
 
   return (
     <GradientBlock className={className}>
@@ -196,7 +199,11 @@ export const ValueSummary: React.FunctionComponent<ValueSummaryProps> = ({
           {pendingTxs > 0 && (
             <PendingTxsTooltip trigger={<Dot size="xs" color="yellow" />}>
               <Text
-                text={`${pendingValue >= 0 ? '+' : ''}${fromBaseUnits(pendingValue, asset.decimals)} zk${asset.symbol}`}
+                text={`${formatBaseUnits(pendingValue, asset.decimals, {
+                  precision: asset.preferredFractionalDigits,
+                  commaSeparated: true,
+                  showPlus: true,
+                })} zk${asset.symbol}`}
                 size="xs"
                 nowrap
               />

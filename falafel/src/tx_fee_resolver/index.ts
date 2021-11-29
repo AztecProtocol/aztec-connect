@@ -19,7 +19,7 @@ export class TxFeeResolver {
     private readonly publishInterval: number,
     private readonly surplusRatios = [1, 0.9, 0.5, 0],
     private readonly feeFreeAssets: AssetId[] = [],
-    private readonly freeTxTypes = [TxType.ACCOUNT, TxType.TRANSFER],
+    private readonly freeTxTypes = [TxType.ACCOUNT],
     private readonly numSignificantFigures = 2,
     private readonly refreshInterval = 5 * 60 * 1000, // 5 mins
     private readonly minFeeDuration = refreshInterval * 2, // 10 mins

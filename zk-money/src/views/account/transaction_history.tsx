@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import styled, { css } from 'styled-components';
-import { AccountTx, Asset, fromBaseUnits, JoinSplitTx } from '../../app';
+import { AccountTx, Asset, formatBaseUnits, JoinSplitTx } from '../../app';
 import { AccountTxSummary, JoinSplitTxSummary, Pagination } from '../../components';
 import { spacings, Theme, themeColours } from '../../styles';
 
@@ -53,7 +53,11 @@ export const TransactionHistory: React.FunctionComponent<TransactionHistoryProps
             key={tx.txHash.toString()}
             txHash={tx.txHash.toString()}
             action={tx.action}
-            value={`${tx.balanceDiff > 0n ? '+' : ''}${fromBaseUnits(tx.balanceDiff, asset.decimals)}`}
+            value={formatBaseUnits(tx.balanceDiff, asset.decimals, {
+              precision: asset.preferredFractionalDigits,
+              commaSeparated: true,
+              showPlus: true,
+            })}
             symbol={asset.symbol}
             link={tx.link}
             publishTime={txsPublishTime}

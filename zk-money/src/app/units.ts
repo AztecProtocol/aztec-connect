@@ -4,20 +4,15 @@ export const sum = (values: bigint[]) => values.reduce((sum, v) => sum + v, 0n);
 
 const tenTo = (power: number) => BigInt('1'.padEnd(power + 1, '0'));
 
-export const fromBaseUnits = (value: bigint, decimals: number, precision?: number) => {
+export const fromBaseUnits = (value: bigint, decimals: number) => {
   const neg = value < 0n;
   const valStr = value
     .toString()
     .slice(neg ? 1 : 0)
     .padStart(decimals + 1, '0');
   const integer = valStr.slice(0, valStr.length - decimals);
-  let fractional = valStr.slice(-decimals);
-  if (precision === undefined) {
-    fractional = fractional.replace(/0{1,}$/, '');
-  } else if (!precision) {
-    fractional = '';
-  }
-  return (neg ? '-' : '') + (fractional ? `${integer}.${fractional.slice(0, precision)}` : integer);
+  const fractional = valStr.slice(-decimals).replace(/0{1,}$/, '');
+  return (neg ? '-' : '') + (fractional ? `${integer}.${fractional}` : integer);
 };
 
 export const toBaseUnits = (valueString: string, decimals: number) => {
@@ -28,6 +23,28 @@ export const toBaseUnits = (valueString: string, decimals: number) => {
   return BigInt(fractional || 0) * fractionalScale + BigInt(integer || 0) * scalingFactor;
 };
 
+const baseUnitsToFloat = (value: bigint, divisorExponent: number) => {
+  const divisor = Math.pow(10, divisorExponent);
+  const bigIntDivsor = BigInt(divisor);
+  const whole = Number(value / bigIntDivsor);
+  const fractional = Number(value % bigIntDivsor) / divisor;
+  return whole + fractional;
+};
+
+export const formatBaseUnits = (
+  value: bigint,
+  decimals: number,
+  opts?: { precision?: number; commaSeparated?: boolean; showPlus?: boolean },
+) =>
+  // Precision is lost in converting a BigInt to a number, but if the precision lost makes it into the digits displayed
+  // then we've got bigger problems anyway, such as fitting such a long string in the UI.
+  new Intl.NumberFormat('en-GB', {
+    useGrouping: opts?.commaSeparated ?? false,
+    maximumFractionDigits: opts?.precision,
+    minimumFractionDigits: opts?.precision,
+    signDisplay: opts?.showPlus ? 'exceptZero' : undefined,
+  }).format(baseUnitsToFloat(value, decimals));
+
 export const convertToPrice = (value: bigint, decimals: number, priceBaseUnits: bigint) =>
   (value * priceBaseUnits) / tenTo(decimals);
 
@@ -37,4 +54,5 @@ export const convertToPriceString = (
   priceBaseUnits: bigint,
   priceDecimals = 8,
   precision = 2,
-) => fromBaseUnits(convertToPrice(value, decimals, priceBaseUnits), priceDecimals, precision);
+) =>
+  formatBaseUnits(convertToPrice(value, decimals, priceBaseUnits), priceDecimals, { precision, commaSeparated: true });

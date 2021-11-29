@@ -1,4 +1,7 @@
 import {
+  AfterInsert,
+  AfterLoad,
+  AfterUpdate,
   BeforeInsert,
   BeforeUpdate,
   Column,
@@ -43,9 +46,18 @@ export class RollupProofDao {
   @Column()
   public created!: Date;
 
-  @OneToOne(() => RollupDao, rollup => rollup.rollupProof, { onDelete: 'SET NULL' })
+  @OneToOne(() => RollupDao, rollup => rollup.rollupProof, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn()
-  rollup!: RollupDao;
+  rollup?: RollupDao;
+
+  @AfterLoad()
+  @AfterInsert()
+  @AfterUpdate()
+  afterLoad() {
+    if (this.rollup === null) {
+      delete this.rollup;
+    }
+  }
 
   @BeforeInsert()
   @BeforeUpdate()

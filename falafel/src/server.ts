@@ -7,7 +7,7 @@ import { Blake2s } from '@aztec/barretenberg/crypto';
 import { InitHelpers } from '@aztec/barretenberg/environment';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
-import { InitialWorldState, RollupProviderStatus } from '@aztec/barretenberg/rollup_provider';
+import { InitialWorldState, RollupProviderStatus, RuntimeConfig } from '@aztec/barretenberg/rollup_provider';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { emptyDir } from 'fs-extra';
@@ -44,7 +44,7 @@ export class Server {
   private txFeeResolver: TxFeeResolver;
   private pipelineFactory: RollupPipelineFactory;
   private proofGenerator: ProofGenerator;
-  private ready = false;
+  private runtimeConfig: RuntimeConfig;
 
   constructor(
     private config: ServerConfig,
@@ -70,6 +70,12 @@ export class Server {
     } = config;
     const noteAlgo = new NoteAlgorithms(barretenberg);
     this.blake = new Blake2s(barretenberg);
+
+    this.runtimeConfig = {
+      ready: false,
+      useKeyCache: true,
+      numOuterRollupProofs,
+    };
 
     this.txFeeResolver = new TxFeeResolver(
       blockchain,
@@ -121,13 +127,13 @@ export class Server {
     await this.worldState.start();
     await this.txReceiver.init();
 
-    this.ready = true;
+    this.runtimeConfig.ready = true;
     console.log('Server ready to receive txs.');
   }
 
   public async stop() {
     console.log('Server stop...');
-    this.ready = false;
+    this.runtimeConfig.ready = false;
     await this.txReceiver.destroy();
     await this.worldState.stop();
     await this.txFeeResolver.stop();
@@ -137,8 +143,19 @@ export class Server {
     return this.rollupDb.getUnsettledTxCount();
   }
 
-  public isReady() {
-    return this.ready;
+  public getRuntimeConfig() {
+    return this.runtimeConfig;
+  }
+
+  public setRuntimeConfig(config: Partial<RuntimeConfig>) {
+    this.runtimeConfig = {
+      ...this.runtimeConfig,
+      ...config,
+    };
+
+    if (config.numOuterRollupProofs !== undefined) {
+      this.pipelineFactory.setTopology(this.config.numInnerRollupTxs, config.numOuterRollupProofs);
+    }
   }
 
   public async removeData() {
@@ -159,6 +176,7 @@ export class Server {
       txFees: status.assets.map((_, i) => this.txFeeResolver.getFeeQuotes(i)),
       nextPublishTime: this.worldState.getNextPublishTime(),
       pendingTxCount: await this.rollupDb.getUnsettledTxCount(),
+      runtimeConfig: this.runtimeConfig,
     };
   }
 
@@ -223,18 +241,6 @@ export class Server {
     return (await this.rollupDb.getNextRollupId()) - 1;
   }
 
-  public async getRollup(id: number) {
-    return this.rollupDb.getRollup(id);
-  }
-
-  public async getTxs(txIds: Buffer[]) {
-    return this.rollupDb.getTxsByTxIds(txIds);
-  }
-
-  public async getTx(txId: Buffer) {
-    return this.rollupDb.getTx(txId);
-  }
-
   public async receiveTx(tx: Tx) {
     const { maxUnsettledTxs } = this.config;
     const unsettled = await this.getUnsettledTxCount();
@@ -253,9 +259,5 @@ export class Server {
   public flushTxs() {
     console.log('Flushing queued transactions...');
     this.worldState.flushTxs();
-  }
-
-  public setTopology(numOuterRollupProofs: number) {
-    this.pipelineFactory.setTopology(this.config.numInnerRollupTxs, numOuterRollupProofs);
   }
 }

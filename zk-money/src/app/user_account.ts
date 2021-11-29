@@ -64,6 +64,7 @@ export class UserAccount extends EventEmitter {
   constructor(
     readonly userId: AccountId,
     readonly alias: string,
+    readonly latestUserNonce: number,
     private activeAsset: AppAssetId,
     private readonly keyVault: KeyVault,
     private readonly sdk: WalletSdk,
@@ -85,6 +86,7 @@ export class UserAccount extends EventEmitter {
       alias,
       accountTxs: [],
       settled: false,
+      latestUserNonce,
     };
     this.assetState = {
       ...initialAssetState,
@@ -269,8 +271,17 @@ export class UserAccount extends EventEmitter {
         );
       case AccountAction.MERGE:
         return new MergeForm(this.accountState, this.assetState, this.provider, this.keyVault, this.sdk, this.rollup);
-      case AccountAction.MIGRATE:
-        return new MigrateForm(this.accountState, this.provider, this.sdk, this.db, this.accountUtils);
+      case AccountAction.MIGRATE_OLD_BALANCE:
+      case AccountAction.MIGRATE_FORGOTTON_BALANCE:
+        return new MigrateForm(
+          this.accountState,
+          this.keyVault,
+          this.provider,
+          this.sdk,
+          this.db,
+          this.accountUtils,
+          action === AccountAction.MIGRATE_OLD_BALANCE,
+        );
       default:
         return new ShieldForm(
           this.accountState,

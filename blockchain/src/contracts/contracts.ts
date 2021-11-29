@@ -1,17 +1,13 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
 import { Asset, EthereumProvider, PriceFeed, SendTxOptions, TypedData } from '@aztec/barretenberg/blockchain';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { Web3Provider } from '@ethersproject/providers';
-import { Contract } from 'ethers';
-import { abi as DefiBridgeABI } from '../artifacts/contracts/interfaces/IDefiBridge.sol/IDefiBridge.json';
 import { Web3Signer } from '../signer';
 import { EthAsset, TokenAsset } from './asset';
 import { FeeDistributor } from './fee_distributor';
 import { EthPriceFeed, GasPriceFeed, TokenPriceFeed } from './price_feed';
 import { RollupProcessor } from './rollup_processor';
-import { Block } from '@aztec/barretenberg/block_source';
 
 /**
  * Facade around all Aztec smart contract classes.
@@ -211,9 +207,5 @@ export class Contracts {
 
   public async isContract(address: EthAddress) {
     return (await this.provider.getCode(address.toString())) !== '0x';
-  }
-
-  public async getGasPrice() {
-    return BigInt((await this.provider.getGasPrice()).toString());
   }
 }

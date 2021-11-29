@@ -99,26 +99,26 @@ export class RollupProcessor {
   }
 
   async setVerifier(address: EthAddress, options: SendTxOptions = {}) {
-    const { gasLimit, gasPrice } = { ...options, ...this.defaults };
+    const { gasLimit } = { ...options, ...this.defaults };
     const rollupProcessor = this.getContractWithSigner(options);
-    const tx = await rollupProcessor.setVerifier(address.toString(), { gasLimit, gasPrice }).catch(fixEthersStackTrace);
+    const tx = await rollupProcessor.setVerifier(address.toString(), { gasLimit }).catch(fixEthersStackTrace);
     return TxHash.fromString(tx.hash);
   }
 
   async setSupportedBridge(bridgeAddress: EthAddress, options: SendTxOptions = {}) {
-    const { gasLimit, gasPrice } = { ...options, ...this.defaults };
+    const { gasLimit } = { ...options, ...this.defaults };
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor
-      .setSupportedBridge(bridgeAddress.toString(), { gasLimit, gasPrice })
+      .setSupportedBridge(bridgeAddress.toString(), { gasLimit })
       .catch(fixEthersStackTrace);
     return TxHash.fromString(tx.hash);
   }
 
   async setSupportedAsset(assetAddress: EthAddress, supportsPermit: boolean, options: SendTxOptions = {}) {
-    const { gasLimit, gasPrice } = { ...options, ...this.defaults };
+    const { gasLimit } = { ...options, ...this.defaults };
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor
-      .setSupportedAsset(assetAddress.toString(), supportsPermit, { gasLimit, gasPrice })
+      .setSupportedAsset(assetAddress.toString(), supportsPermit, { gasLimit })
       .catch(fixEthersStackTrace);
     return TxHash.fromString(tx.hash);
   }
@@ -166,13 +166,10 @@ export class RollupProcessor {
     const { signingAddress, gasLimit } = { ...options, ...this.defaults };
     const signer = signingAddress ? this.provider.getSigner(signingAddress.toString()) : this.provider.getSigner(0);
     const from = await signer.getAddress();
-    const providerGasPrice = BigInt((await this.provider.getGasPrice()).toString());
-    const gasPrice = options.gasPrice || providerGasPrice;
     const txRequest = {
       to: this.rollupContractAddress.toString(),
       from,
       gasLimit,
-      gasPrice: `0x${gasPrice.toString(16)}`,
       data,
     };
     const txResponse = await signer.sendTransaction(txRequest).catch(fixEthersStackTrace);
@@ -186,7 +183,7 @@ export class RollupProcessor {
     permitArgs?: PermitArgs,
     options: SendTxOptions = {},
   ) {
-    const { gasPrice, gasLimit } = { ...options, ...this.defaults };
+    const { gasLimit } = { ...options, ...this.defaults };
     const rollupProcessor = this.getContractWithSigner(options);
     const depositorAddress = await rollupProcessor.signer.getAddress();
     if (permitArgs) {
@@ -202,7 +199,7 @@ export class RollupProcessor {
           permitArgs.signature.v,
           permitArgs.signature.r,
           permitArgs.signature.s,
-          { value: assetId === 0 ? amount : undefined, gasPrice, gasLimit },
+          { value: assetId === 0 ? amount : undefined, gasLimit },
         )
         .catch(fixEthersStackTrace);
       return TxHash.fromString(tx.hash);
@@ -210,7 +207,6 @@ export class RollupProcessor {
       const tx = await rollupProcessor
         .depositPendingFunds(assetId, amount, depositorAddress, proofHash, {
           value: assetId === 0 ? amount : undefined,
-          gasPrice,
           gasLimit,
         })
         .catch(fixEthersStackTrace);
@@ -219,9 +215,9 @@ export class RollupProcessor {
   }
 
   async approveProof(proofHash: Buffer, options: SendTxOptions = {}) {
-    const { gasPrice, gasLimit } = { ...options, ...this.defaults };
+    const { gasLimit } = { ...options, ...this.defaults };
     const rollupProcessor = this.getContractWithSigner(options);
-    const tx = await rollupProcessor.approveProof(proofHash, { gasPrice, gasLimit }).catch(fixEthersStackTrace);
+    const tx = await rollupProcessor.approveProof(proofHash, { gasLimit }).catch(fixEthersStackTrace);
     return TxHash.fromString(tx.hash);
   }
 

@@ -289,6 +289,15 @@ export class DepositForm extends EventEmitter implements AccountForm {
     } else {
       toUpdate.amount = clearMessage(amountInput);
     }
+    const { preferredFractionalDigits } = this.asset;
+    if (preferredFractionalDigits !== undefined) {
+      if ((amountInput.value.split('.')[1]?.length ?? 0) > preferredFractionalDigits) {
+        toUpdate.amount = withError(
+          amountInput,
+          `Please enter no more than ${preferredFractionalDigits} decimal places.`,
+        );
+      }
+    }
 
     const { pendingBalance } = this.ethAccount.state;
     const amountValue = toBaseUnits(amountInput.value, this.asset.decimals);
