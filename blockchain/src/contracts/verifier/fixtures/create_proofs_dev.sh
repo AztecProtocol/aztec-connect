@@ -2,7 +2,7 @@
 set -e
 
 cd ../../../../../barretenberg
-rm -rf ./data && mkdir -p build && cd build && cmake .. && make -j$(nproc) tx_factory rollup_cli
+mkdir -p build && cd build && rm -rf ./data && cmake .. && make -j$(nproc) tx_factory rollup_cli
 cd ../srs_db && ./download_ignition.sh 1
 cd ../../blockchain/src/contracts/verifier/fixtures
 
