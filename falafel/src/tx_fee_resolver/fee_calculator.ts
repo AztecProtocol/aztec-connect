@@ -77,11 +77,33 @@ export class FeeCalculator {
     return this.toAssetPrice(assetId, BigInt(this.baseTxGas), minPrice);
   }
 
-  private getFeeConstant(assetId: AssetId, txType: TxType, minPrice = false) {
+  public getFeeConstant(assetId: AssetId, txType: TxType, minPrice = false) {
     if (this.feeFreeAssets.includes(assetId)) {
       return 0n;
     }
     return this.toAssetPrice(assetId, BigInt(this.assets[assetId].gasConstants[txType]), minPrice);
+  }
+
+  public getGasPaidForByFee(assetId: AssetId, fee: bigint) {
+    const assetCostInWei = this.priceTracker.getAssetPrice(assetId);
+    const gasPriceInWei = (this.priceTracker.getMinGasPrice() * BigInt(this.feeGasPriceMultiplier * 100)) / 100n;
+    const { decimals } = this.assets[assetId];
+    const scaleFactor = 10n ** BigInt(decimals);
+    // the units here are inconsistent, fee is in base units, asset cost in wei is not
+    // the result is a number that is 10n ** BigInt(decimals) too large.
+    // but we want to keep numbers as large as possible until the end where we will scale back down
+    const amountOfWeiProvided = assetCostInWei * fee;
+    const gasPaidForUnscaled = amountOfWeiProvided / gasPriceInWei;
+    const gasPaidforScaled = gasPaidForUnscaled / scaleFactor;
+    return gasPaidforScaled;
+  }
+
+  public getBaseTxGas() {
+    return this.baseTxGas;
+  }
+
+  public getTxGas(assetId: AssetId, txType: TxType) {
+    return this.baseTxGas + this.assets[assetId].gasConstants[txType];
   }
 
   private toAssetPrice(assetId: AssetId, gas: bigint, minPrice: boolean) {

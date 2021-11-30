@@ -70,4 +70,19 @@ export class TxFeeResolver {
     }
     return this.feeCalculator.computeSurplusRatio(txs);
   }
+
+  getGasPaidForByFee(assetId: AssetId, fee: bigint) {
+    if (!this.feeCalculator) {
+      return 0n;
+    }
+    return this.feeCalculator.getGasPaidForByFee(assetId, fee);
+  }
+
+  getBaseTxGas() {
+    return this.baseTxGas;
+  }
+
+  getTxGas(assetId: AssetId, txType: TxType) {
+    return BigInt(this.baseTxGas) + BigInt(this.assets[assetId].gasConstants[txType]);
+  }
 }

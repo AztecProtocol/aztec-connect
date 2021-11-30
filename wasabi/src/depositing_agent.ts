@@ -25,7 +25,7 @@ export class DepositingAgent extends Agent {
     id: number,
     queue: MemoryFifo<() => Promise<void>>,
   ) {
-    super(sdk, id, queue);
+    super('Depositing', sdk, id, queue);
     this.address = provider.addEthersWallet(this.wallet);
   }
 
@@ -58,7 +58,7 @@ export class DepositingAgent extends Agent {
     }
 
     const value = toFund - balance;
-    console.log(`Agent ${this.id} funding with ${value} wei...`);
+    console.log(`${this.agentId()} funding with ${value} wei...`);
 
     const tx = {
       to: this.address.toString(),
@@ -69,14 +69,14 @@ export class DepositingAgent extends Agent {
   }
 
   private async depositToContract() {
-    console.log(`Agent ${this.id} depositing to contract...`);
+    console.log(`${this.agentId()} depositing to contract...`);
     const value = 1000n;
     const txHash = await this.sdk.depositFundsToContract(AssetId.ETH, this.address, value);
     await this.masterWallet.provider!.waitForTransaction(txHash.toString());
   }
 
   private deposit = async () => {
-    console.log(`Agent ${this.id} depositing...`);
+    console.log(`${this.agentId()} depositing...`);
     const value = 1n;
     const proof = await this.sdk.createDepositProof(AssetId.ETH, this.address, this.user.id, value, 0n, this.signer);
     const signature = await this.sdk.signProof(proof, this.address);

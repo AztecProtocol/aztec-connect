@@ -59,6 +59,10 @@ contract Decoder {
     uint256 public constant ARRAY_LENGTH_MASK = 0x3ff;
     uint256 public constant DATASIZE_MASK = 0xffffffff;
 
+    function paddingTx(uint256 inPtr, uint256 outPtr) internal pure returns (uint256) {
+        return (inPtr + 0x101);
+    }
+
     function depositTx(uint256 inPtr, uint256 outPtr) internal pure returns (uint256) {
         assembly {
             calldatacopy(add(outPtr, 0x20), add(inPtr, 0x1), 0xa0) // noteCommitment1 ... publicValue
@@ -138,6 +142,7 @@ contract Decoder {
             }
             {
                 // Step 2: copy function pointers into local variables so that inline asm code can access them
+                function(uint256, uint256) pure returns (uint256) t0 = paddingTx;
                 function(uint256, uint256) pure returns (uint256) t1 = depositTx;
                 function(uint256, uint256) pure returns (uint256) t2 = withdrawTx;
                 function(uint256, uint256) pure returns (uint256) t3 = sendTx;
@@ -148,7 +153,7 @@ contract Decoder {
 
                 // Step 3: write function pointers into the table!
                 assembly {
-                    mstore(functionTable, t7)
+                    mstore(functionTable, t0)
                     mstore(add(functionTable, 0x20), t1)
                     mstore(add(functionTable, 0x40), t2)
                     mstore(add(functionTable, 0x60), t3)

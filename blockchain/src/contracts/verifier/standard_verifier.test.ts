@@ -14,10 +14,22 @@ describe('StandardVerifier', function () {
   async function validate(inner: number, outer: number) {
     const { proofData, broadcastData, inputHash } = await getRollupData(inner, outer);
     const gasUsed = await verifier.verify(proofData, broadcastData.rollupSize, inputHash, { gasLimit });
-   console.log(`gasUsed: ${gasUsed}`);
+    console.log(`gasUsed: ${gasUsed}`);
   }
 
   it('should validate a 2 rollup proof (1 tx)', async () => {
     await validate(1, 2);
   });
+
+/*   it('should validate a 28 rollup proof (1 tx)', async () => {
+    await validate(28, 1);
+  });
+
+  it('should validate a 56 rollup proof (1 tx)', async () => {
+    await validate(28, 2);
+  });
+
+  it('should validate a 112 rollup proof (1 tx)', async () => {
+    await validate(28, 4);
+  }); */
 });

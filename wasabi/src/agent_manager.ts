@@ -3,6 +3,7 @@ import { Web3Provider } from '@ethersproject/providers';
 import { Wallet } from 'ethers';
 import { Agent } from './agent';
 import { SimpleAgent } from './simple_agent';
+import { DefiAgent } from './defi_agent';
 import { NonceManager } from '@ethersproject/experimental';
 // import { DepositingAgent } from './depositing_agent';
 
@@ -12,7 +13,8 @@ export class AgentManager {
   private queue = new MemoryFifo<() => Promise<void>>();
 
   public constructor(
-    private numAgents: number,
+    private numDefiAgents: number,
+    private numPaymentAgents: number,
     private rollupHost: string,
     private mnemonic: string,
     private provider: WalletProvider,
@@ -42,7 +44,7 @@ export class AgentManager {
     await this.sdk.init();
 
     // console.log('Synching data tree...');
-    // await this.sdk.awaitSynchronised();
+    await this.sdk.awaitSynchronised();
 
     // Task queue to serialize sdk access.
     this.queue.process(fn => fn());
@@ -61,9 +63,13 @@ export class AgentManager {
     //       ),
     //   );
 
-    this.agents = Array(this.numAgents)
+    this.agents = Array(this.numDefiAgents + this.numPaymentAgents)
       .fill(0)
-      .map((_, i) => new SimpleAgent(this.sdk, this.provider, masterWallet, i, this.queue, loop));
+      .map((_, i) =>
+        i >= this.numDefiAgents
+          ? new SimpleAgent(this.sdk, this.provider, masterWallet, i, this.queue, loop)
+          : new DefiAgent(this.sdk, this.provider, masterWallet, i, this.queue, loop, 5),
+      );
 
     await Promise.all(this.agents.map(a => a.run()));
   }

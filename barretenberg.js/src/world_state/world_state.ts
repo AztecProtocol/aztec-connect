@@ -24,7 +24,7 @@ export class WorldState {
   public async processRollup(rollup: RollupProofData) {
     const { rollupId, dataStartIndex, innerProofData } = rollup;
 
-    debug(`processing rollup ${rollupId}...`);
+    debug(`processing rollup ${rollupId}, inner proof data length ${innerProofData.length}`);
 
     const leaves = innerProofData.map(p => [p.noteCommitment1, p.noteCommitment2]).flat();
     await this.tree.updateElements(dataStartIndex, leaves);
@@ -39,6 +39,7 @@ export class WorldState {
     let dataStartIndex = rollups[0].dataStartIndex;
     let leaves: Buffer[] = [];
     for (const rollup of rollups) {
+      debug(`processing rollup ${rollup.rollupId}, inner proof data length ${rollup.innerProofData.length}`);
       if (rollup.dataStartIndex > dataStartIndex + leaves.length) {
         const padding = rollup.dataStartIndex - leaves.length;
         leaves.push(...new Array(padding).fill(Buffer.alloc(64, 0)));

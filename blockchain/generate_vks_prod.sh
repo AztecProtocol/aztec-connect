@@ -6,3 +6,5 @@ mkdir build-vks
 cd build-vks
 cmake .. && make -j$(nproc) keygen
 ./bin/keygen 28 1,2,4 ../../blockchain/contracts/verifier/keys
+cd ../../blockchain
+yarn compile

@@ -1,4 +1,5 @@
 import { EthereumBlockchainConfig, EthersAdapter, WalletProvider } from '@aztec/blockchain';
+import { BridgeId, BridgeConfig } from '@aztec/barretenberg/bridge_id';
 import { emptyDir, mkdirp, pathExists, readJson, writeJson } from 'fs-extra';
 import { dirname } from 'path';
 import { JsonRpcProvider, InfuraProvider } from '@ethersproject/providers';
@@ -180,6 +181,10 @@ function getOrmConfig(logging: boolean): ConnectionOptions {
   };
 }
 
+export function getBridgeConfigs(chainId: number): BridgeConfig[] {
+  return getPerChainBridgeConfig(chainId);
+}
+
 export async function getConfig() {
   const confVars = await loadConfVars('./data/config');
   const { gasLimit, rollupContractAddress, typeOrmLogging } = confVars;
@@ -190,4 +195,38 @@ export async function getConfig() {
   console.log(`Rollup contract address: ${rollupContractAddress || 'none'}`);
 
   return { confVars, ormConfig, ...getProvider(confVars), ethConfig: getEthereumBlockchainConfig(confVars) };
+}
+
+const perChainBridgeConfig: { [key: string]: any[] } = {
+  '1': [],
+  '1337': [
+    {
+      bridgeId: '0x0000000000000000000000000000000000000000000000004000000000000001',
+      numTxs: 3,
+      fee: 30000,
+      rollupFrequency: 2,
+    },
+    {
+      bridgeId: '0x0000000000000000000000000000000000000000000000000000000100000003',
+      numTxs: 3,
+      fee: 30000,
+      rollupFrequency: 3,
+    },
+  ],
+};
+
+export function getPerChainBridgeConfig(chainId: number) {
+  const config = perChainBridgeConfig[chainId];
+  if (!config?.length) {
+    return [];
+  }
+  return config.map(c => {
+    const bc: BridgeConfig = {
+      bridgeId: BridgeId.fromString(c.bridgeId),
+      numTxs: c.numTxs,
+      fee: BigInt(c.fee),
+      rollupFrequency: c.rollupFrequency,
+    };
+    return bc;
+  });
 }

@@ -10,6 +10,7 @@ import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { InitialWorldState, RollupProviderStatus } from '@aztec/barretenberg/rollup_provider';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
+import { BridgeConfig, convertToBridgeStatus } from '@aztec/barretenberg/bridge_id';
 import { emptyDir } from 'fs-extra';
 import { CliProofGenerator, ProofGenerator, ServerProofGenerator } from 'halloumi/proof_generator';
 import { Duration } from 'moment';
@@ -35,6 +36,7 @@ export interface ServerConfig {
   readonly reimbursementFeeLimit: bigint;
   readonly maxUnsettledTxs: number;
   readonly signingAddress: EthAddress;
+  readonly bridgeConfigs: BridgeConfig[];
 }
 
 export class Server {
@@ -67,6 +69,7 @@ export class Server {
       providerGasPriceMultiplier,
       halloumiHost,
       signingAddress,
+      bridgeConfigs,
     } = config;
     const noteAlgo = new NoteAlgorithms(barretenberg);
     this.blake = new Blake2s(barretenberg);
@@ -98,6 +101,7 @@ export class Server {
       providerGasPriceMultiplier,
       numInnerRollupTxs,
       numOuterRollupProofs,
+      bridgeConfigs,
     );
     this.worldState = new WorldState(rollupDb, worldStateDb, blockchain, this.pipelineFactory, noteAlgo, metrics);
     this.txReceiver = new TxReceiver(
@@ -108,6 +112,7 @@ export class Server {
       this.proofGenerator,
       this.txFeeResolver,
       metrics,
+      bridgeConfigs,
     );
   }
 
@@ -154,11 +159,17 @@ export class Server {
 
   public async getStatus(): Promise<RollupProviderStatus> {
     const status = await this.blockchain.getBlockchainStatus();
+    const nextPublish = this.worldState.getNextPublishTime();
     return {
       blockchainStatus: status,
       txFees: status.assets.map((_, i) => this.txFeeResolver.getFeeQuotes(i)),
-      nextPublishTime: this.worldState.getNextPublishTime(),
       pendingTxCount: await this.rollupDb.getUnsettledTxCount(),
+      nextPublishTime: nextPublish.baseTimeout ? nextPublish.baseTimeout.timeout : new Date(0),
+      nextPublishNumber: nextPublish.baseTimeout ? nextPublish.baseTimeout.rollupNumber : 0,
+      bridgeStatus: this.config.bridgeConfigs.map(bc => {
+        const rt = nextPublish.bridgeTimeouts.get(bc.bridgeId.toString());
+        return convertToBridgeStatus(bc, rt?.rollupNumber, rt?.timeout);
+      }),
     };
   }
 

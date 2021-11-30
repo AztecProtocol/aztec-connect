@@ -9,7 +9,7 @@
     "start": "node ./dest",
     "start:dev": "tsc-watch -p tsconfig.cjs.json --onSuccess 'yarn start'",
     "test": "jest --passWithNoTests",
-    "start:local": "yarn build && DEBUG=bb:user_state ETHEREUM_HOST=http://localhost:8545 NUM_AGENTS=40 ROLLUP_HOST=http://localhost:8081 MNEMONIC='test test test test test test test test test test test junk' node ./dest",
+    "start:local": "yarn build && DEBUG=bb:user_state ETHEREUM_HOST=http://localhost:8545 NUM_DEFI_AGENTS=50 NUM_PAYMENT_AGENTS=50 ROLLUP_HOST=http://localhost:8081 MNEMONIC='test test test test test test test test test test test junk' node ./dest",
     "clean": "rm -rf ./dest"
   },
   "jest": {

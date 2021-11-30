@@ -22,7 +22,11 @@ export class RollupCreator {
     private innerRollupSize: number,
     private outerRollupSize: number,
     private metrics: Metrics,
-  ) {}
+  ) {
+    console.log(
+      `Rollup Creator: num inner rollup txs: ${this.numInnerRollupTxs}, inner rollup size: ${this.innerRollupSize}, outer rollup size: ${this.outerRollupSize}`,
+    );
+  }
 
   /**
    * Creates a rollup from the given txs and publishes it.
@@ -182,14 +186,19 @@ export class RollupCreator {
     );
   }
 
+  // This function determines the data tree indices and hash paths of commitments that precede commitments within this rollup
+  // i.e. if a commitment in this rollup is chained from a commitment that is already in the data tree, we need it's index and hash path
+  // if a commitment is chained from another commitment in this rollup then we return empty indices/paths
   private async getLinkedCommitments(proofs: ProofData[]) {
+    const commitmentsInCurrentRollup: Set<string> = new Set<string>();
     const linkedCommitmentPaths: HashPath[] = [];
     const linkedCommitmentIndices: number[] = [];
+    const emptyBuffer = Buffer.alloc(32);
     const dataSize = this.worldStateDb.getSize(RollupTreeId.DATA);
     const emptyPath = await this.worldStateDb.getHashPath(RollupTreeId.DATA, dataSize);
     const dataTreeValues: Buffer[] = [];
-    for (const { backwardLink } of proofs) {
-      if (backwardLink.equals(Buffer.alloc(32))) {
+    for (const { backwardLink, noteCommitment1, noteCommitment2 } of proofs) {
+      if (backwardLink.equals(emptyBuffer) || commitmentsInCurrentRollup.has(backwardLink.toString('hex'))) {
         linkedCommitmentPaths.push(emptyPath);
         linkedCommitmentIndices.push(0);
       } else {
@@ -203,6 +212,12 @@ export class RollupCreator {
         }
         linkedCommitmentPaths.push(await this.worldStateDb.getHashPath(RollupTreeId.DATA, index));
         linkedCommitmentIndices.push(Number(index));
+      }
+      const commitmentStrings = [noteCommitment1, noteCommitment2]
+        .filter(c => !c.equals(emptyBuffer))
+        .map(c => c.toString('hex'));
+      for (const str of commitmentStrings) {
+        commitmentsInCurrentRollup.add(str);
       }
     }
     return { linkedCommitmentPaths, linkedCommitmentIndices };

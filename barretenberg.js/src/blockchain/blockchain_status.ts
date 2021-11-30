@@ -10,6 +10,14 @@ export enum TxType {
   DEFI_CLAIM,
 }
 
+export function isDefiDeposit(txType: TxType) {
+  return txType === TxType.DEFI_DEPOSIT;
+}
+
+export function isAccountCreation(txType: TxType) {
+  return txType === TxType.ACCOUNT;
+}
+
 export interface BlockchainAsset {
   address: EthAddress;
   permitSupport: boolean;

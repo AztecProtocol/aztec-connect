@@ -1,6 +1,8 @@
 import { toBigIntBE, toBufferBE } from '../bigint_buffer';
 
 export * from './aux_data_selector';
+export * from './bridge_config';
+export * from './bridge_status';
 
 const randomInt = (to = 2 ** 26 - 1) => Math.floor(Math.random() * (to + 1));
 

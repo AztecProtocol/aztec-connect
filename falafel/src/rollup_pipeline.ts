@@ -3,6 +3,7 @@ import { Blockchain } from '@aztec/barretenberg/blockchain';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
+import { BridgeConfig } from '@aztec/barretenberg/bridge_id';
 import { ProofGenerator } from 'halloumi/proof_generator';
 import { Duration } from 'moment';
 import { ClaimProofCreator } from './claim_proof_creator';
@@ -33,6 +34,7 @@ export class RollupPipeline {
     providerGasPriceMultiplier: number,
     numInnerRollupTxs: number,
     numOuterRollupProofs: number,
+    bridgeConfigs: BridgeConfig[]
   ) {
     const innerRollupSize = 1 << Math.ceil(Math.log2(numInnerRollupTxs));
     const outerRollupSize = 1 << Math.ceil(Math.log2(innerRollupSize * numOuterRollupProofs));
@@ -83,6 +85,7 @@ export class RollupPipeline {
       numInnerRollupTxs,
       numOuterRollupProofs,
       publishInterval,
+      bridgeConfigs
     );
   }
 
@@ -120,6 +123,7 @@ export class RollupPipelineFactory {
     private providerGasPriceMultiplier: number,
     private numInnerRollupTxs: number,
     private numOuterRollupProofs: number,
+    private bridgeConfigs: BridgeConfig[]
   ) {}
 
   public setTopology(numInnerRollupTxs: number, numOuterRollupProofs: number) {
@@ -144,6 +148,7 @@ export class RollupPipelineFactory {
       this.providerGasPriceMultiplier,
       this.numInnerRollupTxs,
       this.numOuterRollupProofs,
+      this.bridgeConfigs
     );
   }
 }

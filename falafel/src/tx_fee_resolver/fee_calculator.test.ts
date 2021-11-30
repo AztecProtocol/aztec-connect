@@ -348,6 +348,33 @@ describe('fee calculator', () => {
       }
     });
 
+    it('return correct gas for fee paid', async () => {
+      const feeGasPriceMultiplier = 0.5;
+      feeCalculator = new FeeCalculator(
+        priceTracker as any,
+        assets,
+        baseTxGas,
+        maxFeeGasPrice,
+        feeGasPriceMultiplier,
+        txsPerRollup,
+        publishInterval,
+        surplusRatios,
+        feeFreeAssets,
+        freeTxTypes,
+        numSignificantFigures,
+      );
+
+      {
+        // with the multipler, the 100 gas price becomes a 50
+        // The 2n means the 500 DAI becomes 1000 ETH
+        mockPrices(100n, 2n);
+        const assetId = AssetId.DAI;
+        const gas = feeCalculator.getGasPaidForByFee(assetId, 500n);
+        // 1000 / 50 
+        expect(gas).toEqual(20n);
+      }
+    });
+
     it('time in fee quotes should never be less than 5 mins', async () => {
       const publishInterval = 5 * 60 + 1;
       feeCalculator = new FeeCalculator(
