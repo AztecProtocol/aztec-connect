@@ -127,11 +127,11 @@ describe('rollup_db', () => {
     const rollupProof = randomRollupProof([tx0, tx1]);
     await rollupDb.addRollupProof(rollupProof);
 
-    const rollupDao = (await rollupDb.getRollupProof(rollupProof.id))!;
+    const rollupProofDao = (await rollupDb.getRollupProof(rollupProof.id))!;
     const newTxDao0 = await rollupDb.getTx(tx0.id);
-    expect(newTxDao0!.rollupProof).toStrictEqual(rollupDao);
+    expect(newTxDao0!.rollupProof).toStrictEqual(rollupProofDao);
     const newTxDao1 = await rollupDb.getTx(tx1.id);
-    expect(newTxDao1!.rollupProof).toStrictEqual(rollupDao);
+    expect(newTxDao1!.rollupProof).toStrictEqual(rollupProofDao);
   });
 
   it('should add rollup proof and update the rollup id for its txs', async () => {
@@ -547,14 +547,14 @@ describe('rollup_db', () => {
       await rollupDb.addTx(tx);
     }
 
-    const txs = await rollupDb.getLatestTxs(10);
+    const txs = await rollupDb.getPendingTxs();
     expect(txs).toEqual(
-      [...claimedTxs, ...unclaimedTxs].sort((a, b) => (a.created.getTime() > b.created.getTime() ? -1 : 1)),
+      [...claimedTxs, ...unclaimedTxs].sort((a, b) => (a.created.getTime() > b.created.getTime() ? 1 : -1)),
     );
 
     await rollupDb.deleteUnsettledClaimTxs();
 
-    const saved = await rollupDb.getLatestTxs(10);
-    expect(saved).toEqual(claimedTxs.sort((a, b) => (a.created.getTime() > b.created.getTime() ? -1 : 1)));
+    const saved = await rollupDb.getPendingTxs();
+    expect(saved).toEqual(claimedTxs.sort((a, b) => (a.created.getTime() > b.created.getTime() ? 1 : -1)));
   });
 });

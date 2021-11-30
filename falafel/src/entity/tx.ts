@@ -33,7 +33,7 @@ export class TxDao {
   @ManyToOne(() => RollupProofDao, r => r.txs, { onDelete: 'SET NULL' })
   @JoinColumn()
   @Index()
-  public rollupProof?: RollupProofDao | null;
+  public rollupProof?: RollupProofDao;
 
   @Column()
   public proofData!: Buffer;

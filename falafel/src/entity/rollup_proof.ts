@@ -54,7 +54,7 @@ export class RollupProofDao {
   @AfterInsert()
   @AfterUpdate()
   afterLoad() {
-    if (this.rollup === null) {
+    if (!this.rollup) {
       delete this.rollup;
     }
   }
