@@ -5,6 +5,7 @@ import { BlockSource } from '../block_source';
 import { AccountProofData, JoinSplitProofData } from '../client_proofs';
 import { OffchainAccountData, OffchainJoinSplitData } from '../offchain_tx_data';
 import { TxHash } from '../tx_hash';
+import { BridgeStatus } from '../bridge_id';
 
 export enum SettlementTime {
   SLOW,
@@ -39,8 +40,10 @@ export interface RollupProviderStatus {
   blockchainStatus: BlockchainStatus;
   txFees: AssetFeeQuote[];
   nextPublishTime: Date;
+  nextPublishNumber: number;
   pendingTxCount: number;
   runtimeConfig: RuntimeConfig;
+  bridgeStatus: BridgeStatus[];
 }
 
 export interface PendingTx {

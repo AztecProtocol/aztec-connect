@@ -1,3 +1,6 @@
+import { AssetId } from '@aztec/barretenberg/asset';
+import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
+import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { randomBytes } from 'crypto';
@@ -10,6 +13,7 @@ import { RollupCreator } from '../rollup_creator';
 import { RollupDb } from '../rollup_db';
 import { RollupPublisher } from '../rollup_publisher';
 import { TxFeeResolver } from '../tx_fee_resolver';
+import { TxType } from '@aztec/barretenberg/blockchain';
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;
@@ -41,15 +45,19 @@ describe('pipeline_coordinator', () => {
         randomBytes(64),
         randomBytes(64),
         randomBytes(32),
-        randomBytes(32),
+        toBufferBE(100000n, 32),
+        numToUInt32BE(AssetId.ETH, 32),
         randomBytes(32),
         randomBytes(32),
       ]),
       created: created.toDate(),
+      txType: TxType.TRANSFER,
     } as TxDao);
 
   beforeEach(() => {
     jest.spyOn(Date, 'now').mockImplementation(() => 1618226000000);
+
+    jest.spyOn(console, 'log').mockImplementation(() => {});
 
     rollupCreator = {
       create: jest.fn().mockResolvedValue(Buffer.alloc(0)),
@@ -86,8 +94,24 @@ describe('pipeline_coordinator', () => {
     } as any;
 
     feeResolver = {
-      computeSurplusRatio: jest.fn().mockReturnValue(1),
-    } as any;
+      getBaseTxGas: jest.fn().mockReturnValue(1),
+      getGasPaidForByFee: jest.fn().mockImplementation((assetId: AssetId, fee: bigint) => fee),
+      getMinTxFee: jest.fn().mockImplementation(() => {
+        throw new Error('This should not be called');
+      }),
+      start: jest.fn(),
+      stop: jest.fn(),
+      getFeeQuotes: jest.fn(),
+      computeSurplusRatio: jest.fn().mockImplementation(() => {
+        throw new Error('This should not be called');
+      }),
+      getTxGas: jest.fn().mockImplementation((assetId: AssetId, txType: TxType) => {
+        if (txType === TxType.DEFI_DEPOSIT) {
+          throw new Error('This should not be called');
+        }
+        return 1n;
+      }),
+    };
 
     noteAlgo = {
       commitDefiInteractionNote: jest.fn(),
@@ -105,6 +129,7 @@ describe('pipeline_coordinator', () => {
       numInnerRollupTxs,
       numOuterRollupProofs,
       publishInterval,
+      [],
     );
   });
 
@@ -122,13 +147,11 @@ describe('pipeline_coordinator', () => {
   });
 
   it('should return publishInterval seconds from now if not running', async () => {
-    rollupDb.getLastSettledRollup.mockImplementation(() => mockRollup());
-    rollupDb.getPendingTxs.mockImplementation(() => [mockTx(moment().subtract(2, 's'))]);
+    expect(coordinator.getNextPublishTime().baseTimeout?.timeout).toEqual(moment().add(10, 's').toDate());
     coordinator.start();
     await new Promise(resolve => setTimeout(resolve, 100));
-    expect(coordinator.getNextPublishTime()).toEqual(moment().add(8, 's').toDate());
     coordinator.stop();
-    expect(coordinator.getNextPublishTime()).toEqual(moment().add(10, 's').toDate());
+    expect(coordinator.getNextPublishTime().baseTimeout?.timeout).toEqual(moment().add(10, 's').toDate());
   });
 
   it('cannot start when it has already started', async () => {

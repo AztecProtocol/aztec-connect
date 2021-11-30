@@ -6,6 +6,7 @@ import { RollupDefiDepositProofData } from './rollup_defi_deposit_proof_data';
 import { RollupDepositProofData } from './rollup_deposit_proof_data';
 import { RollupSendProofData } from './rollup_send_proof_data';
 import { RollupWithdrawProofData } from './rollup_withdraw_proof_data';
+import { RollupPaddingProofData } from './rollup_padding_proof_data';
 
 const recoverInnerProof = (proof: InnerProofData) => {
   switch (proof.proofId) {
@@ -21,6 +22,8 @@ const recoverInnerProof = (proof: InnerProofData) => {
       return new RollupDefiDepositProofData(proof);
     case ProofId.DEFI_CLAIM:
       return new RollupDefiClaimProofData(proof);
+    case ProofId.PADDING:
+      return new RollupPaddingProofData(proof);
   }
 };
 

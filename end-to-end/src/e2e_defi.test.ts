@@ -83,7 +83,9 @@ describe('end-to-end defi tests', () => {
       const outputAssetIdA = AssetId.DAI;
       const outputAssetIdB = 0;
       const bridgeId = new BridgeId(bridgeAddressId, inputAssetId, outputAssetIdA, outputAssetIdB, 0, false, false, 0);
-      const txFee = await sdk.getFee(inputAssetId, TxType.DEFI_DEPOSIT);
+      let txFee = await sdk.getFee(inputAssetId, TxType.DEFI_DEPOSIT);
+      // need to double the fee in order for the DEFI claim to be rolled up
+      txFee *= 2n;
       const jsTxFee = await sdk.getFee(inputAssetId, TxType.TRANSFER);
       const depositValue = sdk.toBaseUnits(inputAssetId, '0.5');
       const initialBalance = sdk.getBalance(inputAssetId, userId);
@@ -109,7 +111,9 @@ describe('end-to-end defi tests', () => {
       const bridgeAddressId = 3;
       const inputAssetId = AssetId.DAI;
       const bridgeId = new BridgeId(bridgeAddressId, inputAssetId, AssetId.ETH, 0, 0, false, false, 0);
-      const txFee = await sdk.getFee(inputAssetId, TxType.DEFI_DEPOSIT);
+      let txFee = await sdk.getFee(inputAssetId, TxType.DEFI_DEPOSIT);
+      // need to double the fee in order for the DEFI claim to be rolled up
+      txFee *= 2n;
       const jsTxFee = await sdk.getFee(inputAssetId, TxType.TRANSFER);
       const depositValue = sdk.toBaseUnits(inputAssetId, '100');
 

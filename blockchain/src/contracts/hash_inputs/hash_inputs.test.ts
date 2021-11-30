@@ -36,4 +36,15 @@ describe('hashInputs', function () {
     await validate(1, 2);
   });
 
+/*   it('should verify a 28 encoded proof (1 tx)', async () => {
+    await validate(28, 1);
+  });
+
+  it('should verify a 56 encoded proof (1 tx)', async () => {
+    await validate(28, 2);
+  });
+
+  it('should verify a 112 encoded proof (1 tx)', async () => {
+    await validate(28, 4);
+  }); */
 });

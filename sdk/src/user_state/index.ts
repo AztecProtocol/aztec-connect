@@ -211,11 +211,11 @@ export class UserState extends EventEmitter {
           case ProofId.DEFI_DEPOSIT: {
             const note2 = treeNotes[treeNoteStartIndex];
             treeNoteStartIndex++;
+            const [offchainTxData] = offchainDefiDepositData.splice(0, 1);
             if (!note2) {
               // Both notes should be owned by the same user.
               continue;
             }
-            const [offchainTxData] = offchainDefiDepositData.splice(0, 1);
             await this.handleDefiDepositTx(proof, offchainTxData, noteStartIndex, block.interactionResult, note2);
             break;
           }

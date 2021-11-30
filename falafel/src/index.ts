@@ -8,7 +8,7 @@ import { createConnection } from 'typeorm';
 import { appFactory } from './app';
 import { Server, ServerConfig } from './server';
 import 'log-timestamp';
-import { getConfig } from './config';
+import { getConfig, getBridgeConfigs } from './config';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Metrics } from './metrics';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
@@ -52,6 +52,9 @@ async function main() {
     priceFeedContractAddresses.map(a => EthAddress.fromString(a)),
     provider,
   );
+
+  // TODO: Not sure we want to read this config here 
+  const bridgeConfigs = getBridgeConfigs(await blockchain.getChainId());
   const barretenberg = await BarretenbergWasm.new();
 
   const serverConfig: ServerConfig = {
@@ -68,6 +71,7 @@ async function main() {
     reimbursementFeeLimit,
     maxUnsettledTxs,
     signingAddress,
+    bridgeConfigs,
   };
   const chainId = await blockchain.getChainId();
   const { initDataRoot } = InitHelpers.getInitRoots(chainId);

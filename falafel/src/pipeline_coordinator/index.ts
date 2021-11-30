@@ -1,7 +1,8 @@
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { BridgeConfig } from '@aztec/barretenberg/bridge_id';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
-import moment, { Duration } from 'moment';
+import moment from 'moment';
 import { ClaimProofCreator } from '../claim_proof_creator';
 import { RollupAggregator } from '../rollup_aggregator';
 import { RollupCreator } from '../rollup_creator';
@@ -9,6 +10,7 @@ import { RollupDb } from '../rollup_db';
 import { parseInteractionResult } from '../rollup_db/parse_interaction_result';
 import { RollupPublisher } from '../rollup_publisher';
 import { TxFeeResolver } from '../tx_fee_resolver';
+import { BridgeCostResolver } from '../tx_fee_resolver/bridge_cost_resolver';
 import { PublishTimeManager } from './publish_time_manager';
 import { RollupCoordinator } from './rollup_coordinator';
 
@@ -30,15 +32,14 @@ export class PipelineCoordinator {
     private noteAlgo: NoteAlgorithms,
     private numInnerRollupTxs: number,
     private numOuterRollupProofs: number,
-    private publishInterval: Duration,
-  ) {}
+    private publishInterval: moment.Duration,
+    private bridgeConfigs: BridgeConfig[],
+  ) {
+    this.publishTimeManager = new PublishTimeManager(this.publishInterval.asSeconds(), this.bridgeConfigs);
+  }
 
   public getNextPublishTime() {
-    if (!this.running || !this.publishTimeManager) {
-      return moment().add(this.publishInterval).toDate();
-    }
-
-    return this.publishTimeManager.getPublishTime();
+    return this.publishTimeManager.calculateNextTimeouts();
   }
 
   /**
@@ -59,8 +60,8 @@ export class PipelineCoordinator {
 
       while (this.running) {
         const pendingTxs = await this.rollupDb.getPendingTxs();
-        const published = await this.rollupCoordinator.processPendingTxs(pendingTxs, this.flush);
-        if (published || this.flush) {
+        const rollupProfile = await this.rollupCoordinator.processPendingTxs(pendingTxs, this.flush);
+        if (rollupProfile.published || this.flush) {
           this.running = false;
           break;
         }
@@ -115,8 +116,6 @@ export class PipelineCoordinator {
       );
     }
 
-    this.publishTimeManager = new PublishTimeManager(rollupSize, this.publishInterval, this.feeResolver);
-
     this.rollupCoordinator = new RollupCoordinator(
       this.publishTimeManager,
       this.rollupCreator,
@@ -126,6 +125,9 @@ export class PipelineCoordinator {
       this.numOuterRollupProofs,
       oldDefiRoot,
       oldDefiPath,
+      this.bridgeConfigs,
+      this.feeResolver,
+      new BridgeCostResolver(this.bridgeConfigs),
       defiInteractionNotes,
     );
   }

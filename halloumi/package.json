@@ -8,6 +8,7 @@
     "build:dev": "node package.js && tsc -p tsconfig.dest.json --watch",
     "start": "node ./dest",
     "start:dev": "tsc-watch -p tsconfig.dest.json --onSuccess 'yarn start'",
+    "start:prod": "yarn build && ROLLUP_OUTERS=1,2,4 MAX_CIRCUIT_SIZE=33554432 node ./dest",
     "start:e2e": "yarn clean_data && ./bootstrap.sh && yarn start",
     "test": "jest",
     "clean": "rm -rf ./dest",

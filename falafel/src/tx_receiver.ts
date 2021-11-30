@@ -1,5 +1,6 @@
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
+import { BridgeId, BridgeConfig } from '@aztec/barretenberg/bridge_id';
 import {
   AccountVerifier,
   DefiDepositProofData,
@@ -40,6 +41,7 @@ export class TxReceiver {
     private proofGenerator: ProofGenerator,
     private txFeeResolver: TxFeeResolver,
     private metrics: Metrics,
+    private bridgeConfigs: BridgeConfig[],
   ) {}
 
   public async init() {
@@ -69,7 +71,7 @@ export class TxReceiver {
       const txType = await getTxTypeFromProofData(proof, this.blockchain);
       this.metrics.txReceived(txType);
 
-      console.log(`Received tx: ${proof.txId.toString('hex')}`);
+      console.log(`Received tx: ${proof.txId.toString('hex')}, type: ${txType}`);
 
       if (await this.rollupDb.nullifiersExist(proof.nullifier1, proof.nullifier2)) {
         throw new Error('Nullifier already exists.');
@@ -100,7 +102,7 @@ export class TxReceiver {
           break;
         }
         case ProofId.DEFI_DEPOSIT:
-          await this.validateDefiBridgeTx(proof, txType);
+          await this.validateDefiBridgeTx(proof);
           break;
         default:
           throw new Error('Unknown proof id.');
@@ -192,14 +194,25 @@ export class TxReceiver {
     }
   }
 
-  private async validateDefiBridgeTx(proofData: ProofData, txType: TxType) {
-    const { txFeeAssetId, txFee } = new DefiDepositProofData(proofData);
+  private async validateDefiBridgeTx(proofData: ProofData) {
+    const { bridgeId, txFeeAssetId, txFee } = new DefiDepositProofData(proofData);
 
-    // TODO - Use a whitelist for bridges.
+    const bridgeConfig = this.bridgeConfigs.find(bc => bc.bridgeId.equals(bridgeId));
 
-    const minFee = this.txFeeResolver.getMinTxFee(txFeeAssetId, txType);
-    if (txFee < minFee) {
-      throw new Error('Insufficient fee.');
+    if (!bridgeConfig) {
+      console.log(`Unrecognised Defi bridge: ${bridgeId.toString()}`);
+      throw new Error('Unrecognised Defi-bridge');
+    }
+
+    const numBridgeTxs = BigInt(bridgeConfig.numTxs);
+    let requiredGas = BigInt(this.txFeeResolver.getBaseTxGas()) + bridgeConfig.fee / numBridgeTxs;
+    if (bridgeConfig.fee % numBridgeTxs > 0n) {
+      requiredGas++;
+    }
+    const providedGas = this.txFeeResolver.getGasPaidForByFee(txFeeAssetId, txFee);
+    if (providedGas < requiredGas) {
+      console.log(`Defi tx only contained enough fee to pay for ${providedGas} gas, but it needed ${requiredGas}`);
+      throw new Error('Insufficient fee');
     }
 
     if (!(await this.joinSplitVerifier.verifyProof(proofData.rawProofData))) {
