@@ -70,7 +70,8 @@ interface TemplateProps {
   account?: AccountState;
   rootUrl?: string;
   systemMessage?: SystemMessage;
-  onMigrateBalance?: () => void;
+  onMigrateOldBalance?: () => void;
+  onMigrateForgottonBalance?: () => void;
   onLogout?: () => void;
   isLoading?: boolean;
 }
@@ -83,7 +84,8 @@ export const Template: React.FunctionComponent<TemplateProps> = ({
   account,
   rootUrl = '/',
   systemMessage,
-  onMigrateBalance,
+  onMigrateOldBalance,
+  onMigrateForgottonBalance,
   onLogout,
   isLoading = false,
 }) => {
@@ -99,7 +101,8 @@ export const Template: React.FunctionComponent<TemplateProps> = ({
           network={network}
           worldState={worldState}
           account={account}
-          onMigrateBalance={onMigrateBalance}
+          onMigrateOldBalance={onMigrateOldBalance}
+          onMigrateForgottonBalance={onMigrateForgottonBalance}
           onLogout={onLogout}
         />
         {!isLoading && children}

@@ -24,19 +24,19 @@ export class TestRollupProcessor extends RollupProcessor {
 
   async stubAsyncTransactionHashes(size: number) {
     const contract = this.getContractWithSigner({});
-    const { gasLimit, gasPrice } = { ...this.defaults };
-    await contract.stubAsyncTransactionHashesLength(size, { gasLimit, gasPrice });
+    const { gasLimit } = { ...this.defaults };
+    await contract.stubAsyncTransactionHashesLength(size, { gasLimit });
   }
 
   async stubTransactionHashes(size: number) {
     const contract = this.getContractWithSigner({});
-    const { gasLimit, gasPrice } = { ...this.defaults };
-    await contract.stubTransactionHashesLength(size, { gasLimit, gasPrice });
+    const { gasLimit } = { ...this.defaults };
+    await contract.stubTransactionHashesLength(size, { gasLimit });
   }
 
   async stubReentrancyGuard(size: boolean) {
     const contract = this.getContractWithSigner({});
-    const { gasLimit, gasPrice } = { ...this.defaults };
-    await contract.stubReentrancyGuard(size, { gasLimit, gasPrice });
+    const { gasLimit } = { ...this.defaults };
+    await contract.stubReentrancyGuard(size, { gasLimit });
   }
 }

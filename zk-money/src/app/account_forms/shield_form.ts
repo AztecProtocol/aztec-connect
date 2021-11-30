@@ -40,7 +40,7 @@ import { createSigningKeys, KeyVault } from '../key_vault';
 import { Network } from '../networks';
 import { Provider, ProviderEvent, ProviderStatus } from '../provider';
 import { RollupService, RollupServiceEvent, RollupStatus, TxFee } from '../rollup_service';
-import { fromBaseUnits, max, min, toBaseUnits } from '../units';
+import { fromBaseUnits, max, min, toBaseUnits, formatBaseUnits } from '../units';
 import { AccountForm, AccountFormEvent } from './account_form';
 
 const debug = createDebug('zm:shield_form');
@@ -423,6 +423,16 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       toUpdate.amount = clearMessage(amountInput);
     }
 
+    const { preferredFractionalDigits } = this.asset;
+    if (amountInput && preferredFractionalDigits !== undefined) {
+      if ((amountInput.value.split('.')[1]?.length ?? 0) > preferredFractionalDigits) {
+        toUpdate.amount = withError(
+          amountInput,
+          `Please enter no more than ${preferredFractionalDigits} decimal places.`,
+        );
+      }
+    }
+
     const amountValue = toBaseUnits(amountInput.value, this.asset.decimals);
     if (amountValue > this.txAmountLimit && !toUpdate.amount?.message) {
       toUpdate.amount = withError(
@@ -462,7 +472,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     if (this.status === ShieldStatus.VALIDATE) {
       // This error won't be displayed in the form but should trigger a "Session Expired" error in the confirm step.
       const currentFee = this.rollup.getFee(this.asset.id, TxType.DEPOSIT, form.speed.value);
-      if (fee !== currentFee) {
+      if (fee < currentFee) {
         form.fees = withError(
           form.fees,
           `Fee has changed from ${fromBaseUnits(fee, this.asset.decimals)} to ${fromBaseUnits(
@@ -607,7 +617,9 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       const signingData = proofOutput.tx.txHash.toBuffer();
       if (!isContract && !this.depositProof.signature) {
         const msgHash = Buffer.from(utils.arrayify(utils.keccak256(signingData))).toString('hex');
-        this.prompt(`Please sign the proof data in your wallet: 0x${msgHash.slice(0, 8)}...${msgHash.slice(-4)}`);
+        this.prompt(
+          `Please sign the following proof data in your wallet: 0x${msgHash.slice(0, 8)}...${msgHash.slice(-4)}`,
+        );
         try {
           this.depositProof.signature = await this.sdk.signProof(
             proofOutput,
@@ -649,7 +661,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
         await this.sdk.sendProof(proofOutput, this.depositProof.signature);
       } catch (e) {
         debug(e);
-        return this.abort('Failed to send the proof.');
+        return this.abort(`Failed to send the proof: ${e.message}`);
       }
 
       if (!senderId.equals(this.userId)) {
@@ -797,7 +809,11 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       amount = this.values.maxAmount.value;
     }
     if (amount && !this.values.amount.value) {
-      this.updateFormValues({ amount: { value: fromBaseUnits(amount, this.asset.decimals) } });
+      this.updateFormValues({
+        amount: {
+          value: formatBaseUnits(amount, this.asset.decimals, { precision: this.asset.preferredFractionalDigits }),
+        },
+      });
     }
   }
 

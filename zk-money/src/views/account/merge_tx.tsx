@@ -1,11 +1,12 @@
 import React from 'react';
 import styled from 'styled-components';
-import { Asset, fromBaseUnits } from '../../app';
+import { Asset, formatBaseUnits } from '../../app';
 import { Button, Text } from '../../components';
 import mergeIcon from '../../images/merge.svg';
 import { breakpoints, FontSize, gradients, spacings } from '../../styles';
 
-const getPricision = (value: bigint, decimals: number) => (value >= 100n * BigInt('1'.padEnd(decimals + 1, '0')) ? 0 : 2);
+const getPrecision = (value: bigint, decimals: number) =>
+  value >= 100n * BigInt('1'.padEnd(decimals + 1, '0')) ? 0 : 2;
 
 const getValueFontSize = (valueStr: string): FontSize => {
   const len = valueStr.replace('.', '').length;
@@ -88,8 +89,14 @@ export const MergeTx: React.FunctionComponent<MergeTxProps> = ({
   fee,
   onSubmit,
 }) => {
-  const oldValueStr = fromBaseUnits(prevAmount, asset.decimals, getPricision(prevAmount, asset.decimals));
-  const newValueStr = fromBaseUnits(amount, asset.decimals, getPricision(amount, asset.decimals));
+  const oldValueStr = formatBaseUnits(prevAmount, asset.decimals, {
+    precision: getPrecision(prevAmount, asset.decimals),
+    commaSeparated: true,
+  });
+  const newValueStr = formatBaseUnits(amount, asset.decimals, {
+    precision: getPrecision(amount, asset.decimals),
+    commaSeparated: true,
+  });
   const valueFontSize = getValueFontSize(newValueStr.length > oldValueStr.length ? newValueStr : oldValueStr);
   return (
     <div className={className}>

@@ -25,7 +25,7 @@ import {
 import { ProviderState } from '../app/provider';
 import { Template } from '../components';
 import { Config } from '../config';
-import { isUnsupportedDevice } from '../device_support';
+import { getSupportStatus, SupportStatus } from '../device_support';
 import { Theme } from '../styles';
 import { Account } from '../views/account';
 import { Home } from '../views/home';
@@ -55,6 +55,7 @@ interface AppState {
   depositForm?: DepositFormValues;
   systemMessage: SystemMessage;
   isLoading: boolean;
+  supportStatus: SupportStatus;
 }
 
 enum CrossTabEvent {
@@ -103,6 +104,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
         type: MessageType.TEXT,
       },
       isLoading: true,
+      supportStatus: 'supported',
     };
   }
 
@@ -125,6 +127,9 @@ export class AppView extends PureComponent<AppProps, AppState> {
           break;
       }
     };
+    getSupportStatus().then(supportStatus => {
+      this.setState({ supportStatus });
+    });
     await this.handleActionChange(this.state.action);
     this.setState({ isLoading: false });
   }
@@ -198,13 +203,6 @@ export class AppView extends PureComponent<AppProps, AppState> {
         this.app.resumeSignup();
         return;
       }
-
-      const accountV0 = await this.app.getLocalAccountV0();
-      if (accountV0) {
-        const url = getUrlFromLoginMode(LoginMode.MIGRATE);
-        this.props.history.push(url);
-        this.app.migrateFromLocalAccountV0(accountV0);
-      }
     }
   }
 
@@ -257,9 +255,14 @@ export class AppView extends PureComponent<AppProps, AppState> {
   };
 
   private handleRestart = () => {
-    if (this.state.loginState.accountV0) {
-      const url = getUrlFromLoginMode(LoginMode.SIGNUP);
-      this.props.history.push(url);
+    const prevMode = this.state.loginState.mode;
+    switch (prevMode) {
+      case LoginMode.MIGRATE:
+      case LoginMode.NEW_ALIAS: {
+        const url = getUrlFromLoginMode(LoginMode.SIGNUP);
+        this.props.history.push(url);
+        break;
+      }
     }
     this.setState({ systemMessage: { message: '', type: MessageType.TEXT } }, () => this.app.logout());
   };
@@ -271,8 +274,12 @@ export class AppView extends PureComponent<AppProps, AppState> {
     this.setState({ systemMessage: { message: '', type: MessageType.TEXT } }, () => this.app.logout());
   };
 
-  private handleMigrateBalance = () => {
-    this.app.selectAction(AccountAction.MIGRATE);
+  private handleMigrateOldBalance = () => {
+    this.app.selectAction(AccountAction.MIGRATE_OLD_BALANCE);
+  };
+
+  private onMigrateForgottonBalance = () => {
+    this.app.selectAction(AccountAction.MIGRATE_FORGOTTON_BALANCE);
   };
 
   private handleChangeAsset = (assetId: AppAssetId) => {
@@ -314,6 +321,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
       depositForm,
       systemMessage,
       isLoading,
+      supportStatus,
     } = this.state;
     const { config } = this.props;
     const { step } = loginState;
@@ -331,7 +339,8 @@ export class AppView extends PureComponent<AppProps, AppState> {
         worldState={worldState}
         account={step === LoginStep.DONE ? accountState : undefined}
         systemMessage={systemMessage}
-        onMigrateBalance={this.handleMigrateBalance}
+        onMigrateOldBalance={this.handleMigrateOldBalance}
+        onMigrateForgottonBalance={this.onMigrateForgottonBalance}
         onLogout={this.handleLogout}
         isLoading={isLoading}
       >
@@ -393,7 +402,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
               );
             }
             default:
-              return <Home onConnect={this.handleConnect} unsupported={isUnsupportedDevice()} />;
+              return <Home onConnect={this.handleConnect} supportStatus={supportStatus} />;
           }
         })()}
       </Template>

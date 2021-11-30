@@ -14,7 +14,6 @@ export interface Receipt {
 }
 
 export interface SendTxOptions {
-  gasPrice?: bigint;
   gasLimit?: number;
   signingAddress?: EthAddress;
   provider?: EthereumProvider;
@@ -49,8 +48,6 @@ export interface Blockchain extends BlockSource, BlockchainStatusSource, Ethereu
   isContract(address: EthAddress): Promise<boolean>;
 
   getUserProofApprovalStatus(address: EthAddress, txId: Buffer): Promise<boolean>;
-
-  getGasPrice(): Promise<bigint>;
 
   estimateGas(data: Buffer): Promise<number>;
 

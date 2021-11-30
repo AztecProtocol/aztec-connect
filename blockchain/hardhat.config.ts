@@ -1,8 +1,8 @@
-import { HardhatUserConfig } from 'hardhat/config';
 import '@nomiclabs/hardhat-waffle';
 import '@nomiclabs/hardhat-ethers';
+import '@nomiclabs/hardhat-etherscan';
 
-const config: HardhatUserConfig = {
+const config = {
   solidity: {
     version: '0.6.10',
     settings: {
@@ -22,6 +22,9 @@ const config: HardhatUserConfig = {
   },
   paths: {
     artifacts: './src/artifacts',
+  },
+  etherscan: {
+    apiKey: process.env.ETHERSCAN_API_KEY,
   },
 };
 

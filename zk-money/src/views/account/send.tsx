@@ -3,7 +3,7 @@ import React from 'react';
 import styled from 'styled-components';
 import {
   AssetState,
-  fromBaseUnits,
+  formatBaseUnits,
   isAddress,
   isValidForm,
   MessageType,
@@ -215,7 +215,10 @@ export const Send: React.FunctionComponent<SendProps> = ({
                   <Text text="Sendable balance" size="xxs" nowrap />
                 </Tooltip>
                 <SpendableBalance
-                  text={`${fromBaseUnits(spendableBalance, asset.decimals)} zk${asset.symbol}`}
+                  text={`${formatBaseUnits(spendableBalance, asset.decimals, {
+                    precision: asset.preferredFractionalDigits,
+                    commaSeparated: true,
+                  })} zk${asset.symbol}`}
                   size="xs"
                 />
               </SpendableBalanceRoot>
@@ -232,7 +235,15 @@ export const Send: React.FunctionComponent<SendProps> = ({
               onChangeValue={value => onChangeInputs({ amount: { value } })}
             />
             <MaxButton
-              onClick={() => onChangeInputs({ amount: { value: fromBaseUnits(maxAmount.value, asset.decimals) } })}
+              onClick={() =>
+                onChangeInputs({
+                  amount: {
+                    value: formatBaseUnits(maxAmount.value, asset.decimals, {
+                      precision: asset.preferredFractionalDigits,
+                    }),
+                  },
+                })
+              }
             >
               <Text text="MAX" size="xs" />
             </MaxButton>

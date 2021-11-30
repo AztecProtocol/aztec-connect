@@ -334,6 +334,15 @@ export class SendForm extends EventEmitter implements AccountForm {
 
     if (changes.amount) {
       const amountInput = changes.amount;
+      const { preferredFractionalDigits } = this.asset;
+      if (preferredFractionalDigits !== undefined) {
+        if ((amountInput.value.split('.')[1]?.length ?? 0) > preferredFractionalDigits) {
+          toUpdate.amount = withError(
+            amountInput,
+            `Please enter no more than ${preferredFractionalDigits} decimal places.`,
+          );
+        }
+      }
       const amountValue = toBaseUnits(amountInput.value, this.asset.decimals);
       if (amountValue > this.txAmountLimit) {
         toUpdate.amount = withError(
@@ -395,7 +404,7 @@ export class SendForm extends EventEmitter implements AccountForm {
     if (this.status === SendStatus.VALIDATE) {
       // This error won't be displayed in the form but should trigger a "Session Expired" error in the confirm step.
       const currentFee = this.rollup.getFee(this.asset.id, txType, form.speed.value);
-      if (fee !== currentFee) {
+      if (fee < currentFee) {
         form.fees = withError(
           form.fees,
           `Fee has changed from ${fromBaseUnits(fee, this.asset.decimals)} to ${fromBaseUnits(
@@ -480,7 +489,7 @@ export class SendForm extends EventEmitter implements AccountForm {
       await this.sdk.sendProof(this.proofOutput!);
     } catch (e) {
       debug(e);
-      return this.abort('Failed to send the proof.');
+      return this.abort(`Failed to send the proof: ${e.message}`);
     }
 
     this.proceed(SendStatus.DONE);
@@ -513,7 +522,7 @@ export class SendForm extends EventEmitter implements AccountForm {
       await this.sdk.sendProof(this.proofOutput!);
     } catch (e) {
       debug(e);
-      return this.abort('Failed to send the proof.');
+      return this.abort(`Failed to send the proof: ${e.message}`);
     }
 
     this.proceed(SendStatus.DONE);
@@ -567,7 +576,7 @@ export class SendForm extends EventEmitter implements AccountForm {
       return;
     }
 
-    this.prompt('Please sign the message in your wallet.');
+    this.prompt('Please sign the message in your wallet to generate your Aztec Spending Key.');
 
     try {
       const { privateKey } = await createSigningKeys(provider, this.sdk);

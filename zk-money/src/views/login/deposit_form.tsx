@@ -1,6 +1,14 @@
 import React from 'react';
 import styled from 'styled-components';
-import { DepositFormValues, DepositStatus, fromBaseUnits, isValidForm, ProviderState, WalletId } from '../../app';
+import {
+  DepositFormValues,
+  DepositStatus,
+  formatBaseUnits,
+  fromBaseUnits,
+  isValidForm,
+  ProviderState,
+  WalletId,
+} from '../../app';
 import {
   Button,
   Input,
@@ -149,7 +157,15 @@ export const DepositForm: React.FunctionComponent<DepositFormProps> = ({
               onChangeValue={value => onChangeInputs({ amount: { value } })}
             />
             <MaxButton
-              onClick={() => onChangeInputs({ amount: { value: fromBaseUnits(maxAmount.value, asset.decimals) } })}
+              onClick={() =>
+                onChangeInputs({
+                  amount: {
+                    value: formatBaseUnits(maxAmount.value, asset.decimals, {
+                      precision: asset.preferredFractionalDigits,
+                    }),
+                  },
+                })
+              }
             >
               <Text text="MAX" size="xs" />
             </MaxButton>

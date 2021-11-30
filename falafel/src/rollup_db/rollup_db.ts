@@ -53,22 +53,7 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async getTx(txId: Buffer) {
-    return this.txRep.findOne({ id: txId }, { relations: ['rollupProof'] });
-  }
-
-  public async getTxsByTxIds(txIds: Buffer[]) {
-    return this.txRep.find({
-      where: { txId: In(txIds) },
-      relations: ['rollupProof', 'rollupProof.rollup'],
-    });
-  }
-
-  public async getLatestTxs(take: number) {
-    return this.txRep.find({
-      order: { created: 'DESC' },
-      relations: ['rollupProof', 'rollupProof.rollup'],
-      take,
-    });
+    return this.txRep.findOne({ id: txId }, { relations: ['rollupProof', 'rollupProof.rollup'] });
   }
 
   public async getPendingTxCount() {
@@ -95,6 +80,19 @@ export class TypeOrmRollupDb implements RollupDb {
 
   public async getDefiTxCount() {
     return this.txRep.count({ where: { txType: TxType.DEFI_DEPOSIT } });
+  }
+
+  public async getAccountTx(aliasHash: Buffer) {
+    return this.accountRep.findOne({ aliasHash });
+  }
+
+  public async getLatestAccountTx(accountPubKey: Buffer) {
+    return this.accountRep.findOne(
+      { accountPubKey },
+      {
+        order: { nonce: 'DESC' },
+      },
+    );
   }
 
   public async getAccountTxCount() {

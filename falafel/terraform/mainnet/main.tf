@@ -92,7 +92,7 @@ resource "aws_ecs_task_definition" "falafel" {
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   cpu                      = "2048"
-  memory                   = "4096"
+  memory                   = "8192"
   execution_role_arn       = data.terraform_remote_state.setup_iac.outputs.ecs_task_execution_role_arn
 
   volume {
@@ -169,11 +169,11 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "MAX_FEE_GAS_PRICE",
-        "value": "87500000000"
+        "value": "250000000000"
       },
       {
         "name": "FEE_GAS_PRICE_MULTIPLIER",
-        "value": "0.7"
+        "value": "1.2"
       },
       {
         "name": "MAX_PROVIDER_GAS_PRICE",
@@ -290,9 +290,9 @@ resource "aws_alb_target_group" "falafel" {
   health_check {
     path                = "/falafel-mainnet"
     matcher             = "200"
-    interval            = 10
+    interval            = 30
     healthy_threshold   = 2
-    unhealthy_threshold = 5
+    unhealthy_threshold = 10
     timeout             = 5
   }
 

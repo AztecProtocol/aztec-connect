@@ -30,12 +30,19 @@ export interface AssetFeeQuote {
   baseFeeQuotes: FeeQuote[];
 }
 
+export interface RuntimeConfig {
+  ready: boolean;
+  useKeyCache: boolean;
+  numOuterRollupProofs: number;
+}
+
 export interface RollupProviderStatus {
   blockchainStatus: BlockchainStatus;
   txFees: AssetFeeQuote[];
   nextPublishTime: Date;
   nextPublishNumber: number;
   pendingTxCount: number;
+  runtimeConfig: RuntimeConfig;
   bridgeStatus: BridgeStatus[];
 }
 

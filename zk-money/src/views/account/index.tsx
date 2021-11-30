@@ -52,11 +52,17 @@ const getPopupInfo = (action: AccountAction, formValues: Form) => {
         title: formValues.status.value === MergeStatus.NADA ? 'About your balance' : 'Merge',
       };
     }
-    case AccountAction.MIGRATE:
+    case AccountAction.MIGRATE_OLD_BALANCE:
       return {
         theme: Theme.GRADIENT,
         generatingKey: false,
         title: 'Migrate balance',
+      };
+    case AccountAction.MIGRATE_FORGOTTON_BALANCE:
+      return {
+        theme: Theme.GRADIENT,
+        generatingKey: false,
+        title: 'Migrate forgotton balance',
       };
   }
 };
@@ -244,14 +250,15 @@ export const Account: React.FunctionComponent<AccountProps> = ({
                         onClose={onClearAction}
                       />
                     );
-                  case AccountAction.MIGRATE:
+                  case AccountAction.MIGRATE_OLD_BALANCE:
+                  case AccountAction.MIGRATE_FORGOTTON_BALANCE:
                     return (
                       <Migrate
                         providerState={providerState}
                         form={activeAction.formValues as any}
                         onChangeWallet={onChangeWallet}
                         onDisconnectWallet={onDisconnectWallet}
-                        onSubmit={() => onSubmit(AccountAction.MIGRATE)}
+                        onSubmit={() => onSubmit(activeAction.action)}
                         onClose={onClearAction}
                       />
                     );

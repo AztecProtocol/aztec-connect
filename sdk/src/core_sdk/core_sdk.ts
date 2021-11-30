@@ -125,12 +125,13 @@ export class CoreSdk extends EventEmitter {
 
     const {
       blockchainStatus: { chainId, rollupContractAddress, verifierContractAddress, assets },
+      runtimeConfig: { useKeyCache },
     } = await this.getRemoteStatus();
 
     const currentVerifierContractAddress = await this.getVerifierContractAddress();
-    const verifierContractChanged = currentVerifierContractAddress
-      ? !currentVerifierContractAddress.equals(verifierContractAddress)
-      : true;
+    const recreateKeys =
+      !useKeyCache ||
+      (currentVerifierContractAddress ? !currentVerifierContractAddress.equals(verifierContractAddress) : true);
 
     // TODO: Refactor all leveldb saved config into a little PersistentConfig class with getters/setters.
     await this.leveldb.put('rollupContractAddress', rollupContractAddress.toBuffer());
@@ -147,31 +148,36 @@ export class CoreSdk extends EventEmitter {
       assets,
     };
 
-    // Create provers
-    const crsData = await this.getCrsData(JoinSplitProver.circuitSize);
-    const pooledProverFactory = new PooledProverFactory(this.workerPool, crsData);
+    this.serialExecute(async () => {
+      // Create provers
+      const crsData = await this.getCrsData(JoinSplitProver.circuitSize);
+      const pooledProverFactory = new PooledProverFactory(this.workerPool, crsData);
 
-    const joinSplitProver = new JoinSplitProver(
-      await pooledProverFactory.createUnrolledProver(JoinSplitProver.circuitSize),
-    );
-    this.joinSplitProofCreator = new JoinSplitProofCreator(
-      joinSplitProver,
-      this.noteAlgos,
-      this.worldState,
-      this.grumpkin,
-      this.db,
-    );
-    this.defiDepositProofCreator = new DefiDepositProofCreator(
-      joinSplitProver,
-      this.noteAlgos,
-      this.worldState,
-      this.grumpkin,
-      this.db,
-    );
-    const accountProver = new AccountProver(await pooledProverFactory.createUnrolledProver(AccountProver.circuitSize));
-    this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState, this.db);
-    await this.createJoinSplitProvingKey(joinSplitProver, verifierContractChanged);
-    await this.createAccountProvingKey(accountProver, verifierContractChanged);
+      const joinSplitProver = new JoinSplitProver(
+        await pooledProverFactory.createUnrolledProver(JoinSplitProver.circuitSize),
+      );
+      this.joinSplitProofCreator = new JoinSplitProofCreator(
+        joinSplitProver,
+        this.noteAlgos,
+        this.worldState,
+        this.grumpkin,
+        this.db,
+      );
+      this.defiDepositProofCreator = new DefiDepositProofCreator(
+        joinSplitProver,
+        this.noteAlgos,
+        this.worldState,
+        this.grumpkin,
+        this.db,
+      );
+      const accountProver = new AccountProver(
+        await pooledProverFactory.createUnrolledProver(AccountProver.circuitSize),
+      );
+      this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState, this.db);
+
+      await this.createJoinSplitProvingKey(joinSplitProver, recreateKeys);
+      await this.createAccountProvingKey(accountProver, recreateKeys);
+    });
 
     this.updateInitState(SdkInitState.INITIALIZED);
   }
@@ -282,6 +288,7 @@ export class CoreSdk extends EventEmitter {
       if (provingKey) {
         this.logInitMsgAndDebug('Loading account proving key...');
         await accountProver.loadKey(provingKey);
+        return;
       }
     }
 

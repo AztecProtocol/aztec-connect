@@ -13,6 +13,7 @@ const footerLinks = {
   [LoginMode.SIGNUP]: [loginLink, migrateLink],
   [LoginMode.LOGIN]: [signupLink, migrateLink],
   [LoginMode.MIGRATE]: [signupLink, loginLink],
+  [LoginMode.NEW_ALIAS]: [signupLink, loginLink],
 };
 
 const Root = styled.div`

@@ -191,24 +191,27 @@ const DropdownItem = styled.div`
 interface UserAccountProps {
   account: AccountState;
   worldState: WorldState;
-  onMigrateBalance(): void;
+  onMigrateOldBalance(): void;
+  onMigrateForgottonBalance(): void;
   onLogout(): void;
 }
 
 export const UserAccount: React.FunctionComponent<UserAccountProps> = ({
   account,
   worldState,
-  onMigrateBalance,
+  onMigrateOldBalance,
+  onMigrateForgottonBalance,
   onLogout,
 }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const isSynced = worldState.accountSyncedToRollup === worldState.latestRollup;
+  const { userId, alias, version, latestUserNonce } = account;
 
   return (
     <Root>
       <UsernameRoot onClick={() => setShowDropdown(true)}>
         <StatusRoot>{isSynced ? <Dot size="xs" color="green" /> : <Loader />}</StatusRoot>
-        <UserName text={`@${account.alias}`} size="s" nowrap />
+        <UserName text={`@${alias}`} size="s" nowrap />
         <AvatarRoot>
           <Avatar src={personIcon} />
         </AvatarRoot>
@@ -222,8 +225,8 @@ export const UserAccount: React.FunctionComponent<UserAccountProps> = ({
                 <Text text={isSynced ? 'Synced' : 'Syncing'} size="xs" />
                 <StatusRoot>{isSynced ? <Dot size="xs" color="green" /> : <Loader />}</StatusRoot>
               </SyncStatusRoot>
-              <UserNameTitleRoot compact={account.alias.length > 16}>
-                <UserNameTitle text={`@${account.alias}`} nowrap />
+              <UserNameTitleRoot compact={alias.length > 16}>
+                <UserNameTitle text={`@${alias}`} nowrap />
                 <CloseButton onClick={() => setShowDropdown(false)}>
                   <img src={closeIcon} alt="close" width={40} />
                 </CloseButton>
@@ -231,13 +234,30 @@ export const UserAccount: React.FunctionComponent<UserAccountProps> = ({
               <Divider />
             </DropdownTitle>
             <DropdownItemRoot>
-              {account.version === AccountVersion.V1 && (
+              <DropdownItem>
+                <Text text={`Account Nonce: ${userId.nonce}`} nowrap />
+              </DropdownItem>
+              {version === AccountVersion.V1 && (
                 <DropdownItem>
                   <TextLink
-                    text="Migrate balance"
+                    text="Migrate Old Balance"
                     onClick={() => {
                       setShowDropdown(false);
-                      onMigrateBalance();
+                      onMigrateOldBalance();
+                    }}
+                    color="indigo"
+                    weight="semibold"
+                    nowrap
+                  />
+                </DropdownItem>
+              )}
+              {userId.nonce < latestUserNonce && (
+                <DropdownItem>
+                  <TextLink
+                    text="Migrate Forgotten Balance"
+                    onClick={() => {
+                      setShowDropdown(false);
+                      onMigrateForgottonBalance();
                     }}
                     color="indigo"
                     weight="semibold"

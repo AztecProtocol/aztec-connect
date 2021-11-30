@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import { Asset, fromBaseUnits } from '../../app';
+import { Asset, formatBaseUnits } from '../../app';
 import { Button, Text } from '../../components';
 import { breakpoints, spacings } from '../../styles';
 
@@ -40,7 +40,14 @@ export const ShieldPrompt: React.FunctionComponent<ShieldPromptProps> = ({ asset
       {pendingBalance > 0n ? (
         <>
           {'You have '}
-          <Text text={`${fromBaseUnits(pendingBalance, asset.decimals)} ${asset.symbol}`} weight="bold" inline />
+          <Text
+            text={`${formatBaseUnits(pendingBalance, asset.decimals, {
+              precision: asset.preferredFractionalDigits,
+              commaSeparated: true,
+            })} ${asset.symbol}`}
+            weight="bold"
+            inline
+          />
           {` pending, shield to get started!`}
         </>
       ) : (

@@ -51,7 +51,7 @@ interface TxDetailsProps {
 
 export const TxDetails: React.FunctionComponent<TxDetailsProps> = ({ tx }) => {
   const {
-    txNo,
+    id,
     proofId,
     proofData,
     newNote1,
@@ -104,7 +104,9 @@ export const TxDetails: React.FunctionComponent<TxDetailsProps> = ({ tx }) => {
 
   const summaryNode = (
     <BlockSummary title="Transaction" titleContent={statusTag}>
-      <InfoRow title="TRANSACTION NUMBER">{`${txNo}`}</InfoRow>
+      <InfoRow title="TRANSACTION ID">
+        <HashValue value={`0x${id}`} />
+      </InfoRow>
       <InfoRow title="TIMESTAMP">{created ? <Timestamp time={created} /> : 'Pending...'}</InfoRow>
       <InfoRow title="NULLIFIERS">
         <HashValue value={`0x${nullifier1}`} />
