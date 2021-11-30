@@ -16,7 +16,8 @@ export async function createFundedWalletProvider(
     walletProvider.addAccount(randomBytes(32));
   }
 
-  const funder = privateKey ? walletProvider.addAccount(privateKey) : (await ethereumProvider.getAccounts())[0];
+  const funder =
+    privateKey && privateKey.length ? walletProvider.addAccount(privateKey) : (await ethereumProvider.getAccounts())[0];
   for (let i = 0; i < numAccountToFund; ++i) {
     const to = walletProvider.getAccount(i);
     await ethAsset.transfer(initialBalance, funder, to);

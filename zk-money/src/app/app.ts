@@ -143,21 +143,6 @@ export class App extends EventEmitter {
     return this.session?.isProcessingAction() || this.session?.getAccount()?.isProcessingAction() || false;
   }
 
-  async getLocalAccountV0() {
-    if (!this.db.isOpen) {
-      await this.db.open();
-    }
-
-    const accountV0s = (await this.db.getAccountV0s()).sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1));
-    const pubKeys = await Promise.all(accountV0s.map(({ alias }) => this.graphql.getAliasPublicKey(alias)));
-    const validAccounts = accountV0s.filter(a => pubKeys.some(pubKey => pubKey?.equals(a.accountPublicKey)));
-    const invalidAccounts = accountV0s.filter(a => !pubKeys.some(pubKey => pubKey?.equals(a.accountPublicKey)));
-    for (const account of invalidAccounts) {
-      await this.db.deleteAccountV0(account.accountPublicKey);
-    }
-    return validAccounts[0];
-  }
-
   async migrateFromLocalAccountV0(accountV0: { alias: string; accountPublicKey: GrumpkinAddress }) {
     if (!this.session) {
       this.createSession();

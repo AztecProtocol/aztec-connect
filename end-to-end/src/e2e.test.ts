@@ -55,9 +55,9 @@ describe('end-to-end tests', () => {
   });
 
   it('should deposit, transfer and withdraw funds', async () => {
-    const depositValue = 200n;
-    const transferValue = 70n;
-    const withdrawValue = 80n;
+    const depositValue = sdk.toBaseUnits(assetId, '0.02');
+    const transferValue = sdk.toBaseUnits(assetId, '0.007');
+    const withdrawValue = sdk.toBaseUnits(assetId, '0.008');
 
     const sender = userIds[0];
     const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[0])!);

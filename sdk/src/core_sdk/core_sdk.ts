@@ -148,31 +148,36 @@ export class CoreSdk extends EventEmitter {
       assets,
     };
 
-    // Create provers
-    const crsData = await this.getCrsData(JoinSplitProver.circuitSize);
-    const pooledProverFactory = new PooledProverFactory(this.workerPool, crsData);
+    this.serialExecute(async () => {
+      // Create provers
+      const crsData = await this.getCrsData(JoinSplitProver.circuitSize);
+      const pooledProverFactory = new PooledProverFactory(this.workerPool, crsData);
 
-    const joinSplitProver = new JoinSplitProver(
-      await pooledProverFactory.createUnrolledProver(JoinSplitProver.circuitSize),
-    );
-    this.joinSplitProofCreator = new JoinSplitProofCreator(
-      joinSplitProver,
-      this.noteAlgos,
-      this.worldState,
-      this.grumpkin,
-      this.db,
-    );
-    this.defiDepositProofCreator = new DefiDepositProofCreator(
-      joinSplitProver,
-      this.noteAlgos,
-      this.worldState,
-      this.grumpkin,
-      this.db,
-    );
-    const accountProver = new AccountProver(await pooledProverFactory.createUnrolledProver(AccountProver.circuitSize));
-    this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState, this.db);
-    await this.createJoinSplitProvingKey(joinSplitProver, recreateKeys);
-    await this.createAccountProvingKey(accountProver, recreateKeys);
+      const joinSplitProver = new JoinSplitProver(
+        await pooledProverFactory.createUnrolledProver(JoinSplitProver.circuitSize),
+      );
+      this.joinSplitProofCreator = new JoinSplitProofCreator(
+        joinSplitProver,
+        this.noteAlgos,
+        this.worldState,
+        this.grumpkin,
+        this.db,
+      );
+      this.defiDepositProofCreator = new DefiDepositProofCreator(
+        joinSplitProver,
+        this.noteAlgos,
+        this.worldState,
+        this.grumpkin,
+        this.db,
+      );
+      const accountProver = new AccountProver(
+        await pooledProverFactory.createUnrolledProver(AccountProver.circuitSize),
+      );
+      this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState, this.db);
+
+      await this.createJoinSplitProvingKey(joinSplitProver, recreateKeys);
+      await this.createAccountProvingKey(accountProver, recreateKeys);
+    });
 
     this.updateInitState(SdkInitState.INITIALIZED);
   }

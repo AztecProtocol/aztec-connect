@@ -203,13 +203,6 @@ export class AppView extends PureComponent<AppProps, AppState> {
         this.app.resumeSignup();
         return;
       }
-
-      const accountV0 = await this.app.getLocalAccountV0();
-      if (accountV0) {
-        const url = getUrlFromLoginMode(LoginMode.MIGRATE);
-        this.props.history.push(url);
-        this.app.migrateFromLocalAccountV0(accountV0);
-      }
     }
   }
 
