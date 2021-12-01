@@ -14,6 +14,10 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.addTx(txDao));
   }
 
+  public async addTxs(txs: TxDao[]) {
+    return this.synchronise(() => this.rollupDb.addTxs(txs));
+  }
+
   public async getTx(txId: Buffer) {
     return this.synchronise(() => this.rollupDb.getTx(txId));
   }

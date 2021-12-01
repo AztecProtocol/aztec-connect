@@ -1,7 +1,7 @@
 import { ApolloServer } from 'apollo-server-koa';
 import { blockchainStatusToJson } from 'barretenberg/blockchain';
 import { Block, BlockServerResponse, GetBlocksServerResponse } from 'barretenberg/block_source';
-import { Proof, RuntimeConfig } from 'barretenberg/rollup_provider';
+import { RuntimeConfig, TxPostData } from 'barretenberg/rollup_provider';
 import { ViewingKey } from 'barretenberg/viewing_key';
 import graphqlPlayground from 'graphql-playground-middleware-koa';
 import Koa, { Context, DefaultState } from 'koa';
@@ -15,6 +15,8 @@ import { JoinSplitTxResolver, AccountTxResolver, RollupResolver, ServerStatusRes
 import { Server } from './server';
 import cors from '@koa/cors';
 import requestIp from 'request-ip';
+import { Tx } from './tx_receiver';
+import { ProofData } from 'barretenberg/client_proofs/proof_data';
 
 const toBlockResponse = (block: Block): BlockServerResponse => ({
   ...block,
@@ -26,6 +28,13 @@ const toBlockResponse = (block: Block): BlockServerResponse => ({
 });
 
 const bufferFromHex = (hexStr: string) => Buffer.from(hexStr.replace(/^0x/i, ''), 'hex');
+
+const fromTxPostData = ({ proofData, viewingKeys, depositSignature, parentProof }: TxPostData): Tx => ({
+  proof: new ProofData(bufferFromHex(proofData)),
+  viewingKeys: viewingKeys.map((v: string) => ViewingKey.fromString(v)),
+  depositSignature: depositSignature ? bufferFromHex(depositSignature) : undefined,
+  parentTx: parentProof ? fromTxPostData(parentProof) : undefined,
+});
 
 export function appFactory(server: Server, prefix: string, metrics: Metrics, serverAuthToken: string) {
   const router = new Router<DefaultState, Context>({ prefix });
@@ -75,12 +84,8 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
 
   router.post('/tx', recordMetric, checkReady, async (ctx: Koa.Context) => {
     const stream = new PromiseReadable(ctx.req);
-    const { proofData, viewingKeys, depositSignature } = JSON.parse((await stream.readAll()) as string);
-    const tx: Proof = {
-      proofData: bufferFromHex(proofData),
-      viewingKeys: viewingKeys.map((v: string) => ViewingKey.fromString(v)),
-      depositSignature: depositSignature ? bufferFromHex(depositSignature) : undefined,
-    };
+    const proof = JSON.parse((await stream.readAll()) as string);
+    const tx = fromTxPostData(proof);
     const txId = await server.receiveTx(tx);
     const response = {
       txHash: txId.toString('hex'),

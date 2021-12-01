@@ -771,9 +771,12 @@ export class CoreSdk extends EventEmitter {
     const { userId } = tx;
     const userState = this.getUserState(userId);
 
-    const { proofData, viewingKeys } = proofOutput;
-    await this.rollupProvider.sendProof({ proofData, viewingKeys, depositSignature });
+    const { proofData, viewingKeys, parentProof } = proofOutput;
+    await this.rollupProvider.sendProof({ proofData, viewingKeys, depositSignature, parentProof });
 
+    if (parentProof) {
+      await userState.addTx(parentProof.tx);
+    }
     await userState.addTx(tx);
 
     return tx.txHash;

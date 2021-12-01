@@ -25,7 +25,7 @@ export const randomTx = ({ signature, inputOwner, publicInput, txType }: RandomT
       Buffer.alloc(32), // proofId
       publicInput ? toBufferBE(publicInput, 32) : randomBytes(32), // publicInput
       randomBytes(32), // publicOutput
-      Buffer.alloc(32), // assetId
+      txType === TxType.ACCOUNT ? randomBytes(32) : Buffer.alloc(32), // assetId
       randomBytes(64), // note1
       randomBytes(64), // note2
       randomBytes(32), // nullifier1

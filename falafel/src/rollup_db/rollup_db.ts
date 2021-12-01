@@ -1,5 +1,4 @@
 import { TxType } from 'barretenberg/blockchain';
-import { AccountProofData, ProofData } from 'barretenberg/client_proofs/proof_data';
 import { TxHash } from 'barretenberg/tx_hash';
 import { toBufferBE } from 'bigint-buffer';
 import { Connection, In, IsNull, MoreThanOrEqual, Not, Repository } from 'typeorm';
@@ -7,6 +6,7 @@ import { AccountDao } from '../entity/account';
 import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
+import { txDaoToAccountDao } from './tx_dao_to_account_dao';
 
 export type RollupDb = {
   [P in keyof TypeOrmRollupDb]: TypeOrmRollupDb[P];
@@ -28,15 +28,17 @@ export class TypeOrmRollupDb implements RollupDb {
   public async addTx(txDao: TxDao) {
     await this.connection.transaction(async transactionalEntityManager => {
       if (txDao.txType === TxType.ACCOUNT) {
-        const proofData = new AccountProofData(new ProofData(txDao.proofData));
-        const account = new AccountDao();
-        account.aliasHash = proofData.accountAliasId.aliasHash.toBuffer();
-        account.nonce = proofData.accountAliasId.nonce;
-        account.accountPubKey = proofData.publicKey;
-        account.tx = txDao;
-        await transactionalEntityManager.save(account);
+        await transactionalEntityManager.save(txDaoToAccountDao(txDao));
       }
       await transactionalEntityManager.save(txDao);
+    });
+  }
+
+  public async addTxs(txs: TxDao[]) {
+    await this.connection.transaction(async transactionalEntityManager => {
+      const accountDaos = txs.filter(tx => tx.txType === TxType.ACCOUNT).map(txDaoToAccountDao);
+      await transactionalEntityManager.save(accountDaos);
+      await transactionalEntityManager.save(txs);
     });
   }
 

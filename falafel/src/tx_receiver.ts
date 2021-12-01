@@ -1,7 +1,7 @@
 import { Blockchain, TxType } from 'barretenberg/blockchain';
 import { AccountVerifier } from 'barretenberg/client_proofs/account_proof';
 import { JoinSplitVerifier } from 'barretenberg/client_proofs/join_split_proof';
-import { ProofId, ProofData, JoinSplitProofData } from 'barretenberg/client_proofs/proof_data';
+import { ProofId, ProofData, JoinSplitProofData, AccountProofData } from 'barretenberg/client_proofs/proof_data';
 import { Crs } from 'barretenberg/crs';
 import { BarretenbergWasm } from 'barretenberg/wasm';
 import { BarretenbergWorker } from 'barretenberg/wasm/worker';
@@ -16,9 +16,10 @@ import { Metrics } from './metrics';
 import { getTxTypeFromProofData } from './get_tx_type';
 
 export interface Tx {
-  proofData: Buffer;
+  proof: ProofData;
   viewingKeys: ViewingKey[];
   depositSignature?: Buffer;
+  parentTx?: Tx;
 }
 
 export class TxReceiver {
@@ -55,52 +56,71 @@ export class TxReceiver {
     await destroyWorker(this.worker);
   }
 
-  public async receiveTx({ proofData, depositSignature, viewingKeys }: Tx) {
+  public async receiveTx(tx: Tx) {
     // We mutex this entire receive call until we move to "deposit to proof hash". Read more below.
     await this.mutex.acquire();
     try {
-      const proof = new ProofData(proofData);
-      const txType = await getTxTypeFromProofData(proof, this.blockchain);
+      const txType = await getTxTypeFromProofData(tx.proof, this.blockchain);
       this.metrics.txReceived(txType);
+      console.log(`Received tx: ${tx.proof.txId.toString('hex')}`);
 
-      console.log(`Received tx: ${proof.txId.toString('hex')}`);
-
-      if (await this.rollupDb.nullifiersExist(proof.nullifier1, proof.nullifier2)) {
-        throw new Error('Nullifier already exists.');
-      }
-
-      const dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
-
-      // Check the proof is valid.
-      switch (proof.proofId) {
-        case ProofId.JOIN_SPLIT: {
-          await this.validateJoinSplitTx(proof, txType, depositSignature);
-          break;
+      const txs: TxDao[] = [];
+      if (tx.parentTx) {
+        if (tx.parentTx.proof.proofId !== ProofId.ACCOUNT) {
+          throw new Error('Invalid parent tx type.');
         }
-        case ProofId.ACCOUNT:
-          await this.validateAccountTx(proof);
-          break;
+        if (!tx.proof.publicInput) {
+          throw new Error('Account tx must be submitted along with a shield tx.');
+        }
+        txs.push(await this.validateTx(tx.parentTx));
+      } else if (tx.proof.proofId === ProofId.ACCOUNT) {
+        const { accountAliasId } = new AccountProofData(tx.proof);
+        if (!(await this.rollupDb.getAccountTx(accountAliasId.aliasHash.toBuffer()))) {
+          throw new Error('Tx for creating a new account must be submitted along with a shield tx.');
+        }
       }
+      txs.push(await this.validateTx(tx));
 
-      const txDao = new TxDao({
-        id: proof.txId,
-        proofData,
-        viewingKey1: proof.proofId == ProofId.JOIN_SPLIT ? viewingKeys[0] : ViewingKey.EMPTY,
-        viewingKey2: proof.proofId == ProofId.JOIN_SPLIT ? viewingKeys[1] : ViewingKey.EMPTY,
-        signature: depositSignature,
-        nullifier1: proof.nullifier1,
-        nullifier2: proof.nullifier2,
-        dataRootsIndex,
-        created: new Date(),
-        txType,
-      });
+      await this.rollupDb.addTxs(txs);
 
-      await this.rollupDb.addTx(txDao);
-
-      return proof.txId;
+      return txs[txs.length - 1].id;
     } finally {
       this.mutex.release();
     }
+  }
+
+  private async validateTx({ proof, depositSignature, viewingKeys }: Tx) {
+    const txType = await getTxTypeFromProofData(proof, this.blockchain);
+
+    if (await this.rollupDb.nullifiersExist(proof.nullifier1, proof.nullifier2)) {
+      throw new Error('Nullifier already exists.');
+    }
+
+    const dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
+
+    // Check the proof is valid.
+    switch (proof.proofId) {
+      case ProofId.JOIN_SPLIT: {
+        await this.validateJoinSplitTx(proof, txType, depositSignature);
+        break;
+      }
+      case ProofId.ACCOUNT:
+        await this.validateAccountTx(proof);
+        break;
+    }
+
+    return new TxDao({
+      id: proof.txId,
+      proofData: proof.rawProofData,
+      viewingKey1: proof.proofId == ProofId.JOIN_SPLIT ? viewingKeys[0] : ViewingKey.EMPTY,
+      viewingKey2: proof.proofId == ProofId.JOIN_SPLIT ? viewingKeys[1] : ViewingKey.EMPTY,
+      signature: depositSignature,
+      nullifier1: proof.nullifier1,
+      nullifier2: proof.nullifier2,
+      dataRootsIndex,
+      created: new Date(),
+      txType,
+    });
   }
 
   private async validateJoinSplitTx(proofData: ProofData, txType: TxType, depositSignature?: Buffer) {

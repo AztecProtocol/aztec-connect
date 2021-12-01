@@ -9,6 +9,7 @@ import { UserAccountTx, UserJoinSplitTx } from '../user_tx';
 export interface ProofOutput extends Proof {
   tx: UserJoinSplitTx | UserAccountTx;
   signingData?: Buffer;
+  parentProof?: ProofOutput;
 }
 
 export class JoinSplitProofOutput implements ProofOutput {
@@ -17,13 +18,14 @@ export class JoinSplitProofOutput implements ProofOutput {
     public proofData: Buffer,
     public viewingKeys: ViewingKey[],
     public signingData?: Buffer,
+    public parentProof?: ProofOutput,
   ) {}
 }
 
 export class AccountProofOutput implements ProofOutput {
   public readonly viewingKeys = [];
 
-  constructor(public tx: UserAccountTx, public proofData: Buffer) {}
+  constructor(public tx: UserAccountTx, public proofData: Buffer, public parentProof?: ProofOutput) {}
 
   static fromBuffer(buf: Buffer) {
     const [migratedBuf, rawProofData] = [buf.slice(0, 1), buf.slice(1)];
