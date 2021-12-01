@@ -1,16 +1,18 @@
-import { GrumpkinAddress } from '@aztec/sdk';
+import { EthersAdapter, GrumpkinAddress } from '@aztec/sdk';
+import { InfuraProvider, Web3Provider } from '@ethersproject/providers';
 import { ApolloClient } from 'apollo-boost';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import Cookie from 'js-cookie';
 import { Config } from '../config';
-import { DepositFormValues } from './account_forms';
+import { ShieldFormValues } from './account_forms';
 import { AccountAction } from './account_txs';
 import { AppAssetId } from './assets';
 import { Database } from './database';
 import { Form, SystemMessage } from './form';
 import { GraphQLService } from './graphql_service';
 import { getNetwork, Network } from './networks';
+import { PriceFeedService } from './price_feed_service';
 import {
   initialLoginState,
   initialWorldState,
@@ -48,9 +50,11 @@ export interface App {
 export class App extends EventEmitter {
   private db: Database;
   private graphql: GraphQLService;
+  readonly priceFeedService: PriceFeedService;
   private session?: UserSession;
   private activeAsset: AppAssetId;
   private loginMode = LoginMode.SIGNUP;
+  private shieldForAliasAmountPreselection?: bigint;
   public readonly requiredNetwork: Network;
   private readonly sessionCookieName = '_zkmoney_session_v1';
   private readonly accountProofCacheName = 'zm_account_proof_v1';
@@ -74,6 +78,10 @@ export class App extends EventEmitter {
     this.graphql = new GraphQLService(apollo);
     this.activeAsset = initialAsset;
     this.loginMode = initialLoginMode;
+    const provider = new EthersAdapter(new InfuraProvider('mainnet', config.infuraId));
+    const web3Provider = new Web3Provider(provider);
+    this.priceFeedService = new PriceFeedService(config.priceFeedContractAddresses, web3Provider);
+    this.priceFeedService.init();
   }
 
   async destroy() {
@@ -82,6 +90,7 @@ export class App extends EventEmitter {
     if (this.db.isOpen) {
       await this.db.close();
     }
+    this.priceFeedService.destroy();
   }
 
   hasSession() {
@@ -140,8 +149,8 @@ export class App extends EventEmitter {
     return this.session?.getAccount()?.getMergeForm();
   }
 
-  get depositForm() {
-    return this.session?.getDepositForm()?.getValues();
+  get shieldForAliasForm() {
+    return this.session?.getShieldForAliasForm()?.getValues();
   }
 
   isDaiTxFree() {
@@ -178,6 +187,10 @@ export class App extends EventEmitter {
     this.session!.clearLocalAccountV0s();
   }
 
+  updateShieldForAliasAmountPreselection(amount: bigint) {
+    this.shieldForAliasAmountPreselection = amount;
+  }
+
   changeLoginMode(mode: LoginMode) {
     if (mode === this.loginMode) return;
 
@@ -201,9 +214,11 @@ export class App extends EventEmitter {
       this.loginMode,
       this.db,
       this.graphql,
+      this.priceFeedService,
       this.sessionCookieName,
       this.accountProofCacheName,
       this.walletCacheName,
+      this.shieldForAliasAmountPreselection,
     );
 
     for (const e in UserSessionEvent) {
@@ -313,8 +328,8 @@ export class App extends EventEmitter {
     this.session?.changeAsset(assetId);
   };
 
-  changeDepositForm = (inputs: DepositFormValues) => {
-    this.session!.changeDepositForm(inputs);
+  changeShieldForAliasForm = (inputs: ShieldFormValues) => {
+    this.session!.changeShieldForAliasForm(inputs);
   };
 
   claimUserName = async () => {

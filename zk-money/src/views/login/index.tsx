@@ -1,12 +1,12 @@
 import React from 'react';
 import styled from 'styled-components';
 import {
-  DepositFormValues,
   LoginMode,
   LoginState,
   LoginStep,
   MessageType,
   ProviderState,
+  ShieldFormValues,
   SystemMessage,
   Wallet,
   WalletId,
@@ -17,7 +17,7 @@ import { Text, TextLink, WalletPicker } from '../../components';
 import { breakpoints, spacings } from '../../styles';
 import { AliasForm } from './alias_form';
 import { ConnectForm } from './connect_form';
-import { DepositForm } from './deposit_form';
+import { ShieldForAliasForm } from './shield_for_alias_form';
 import { InitDataForm } from './init_data_form';
 import { LoginTemplate } from './login_template';
 import { MigrateAccountForm } from './migrate_account_form';
@@ -81,7 +81,7 @@ interface LoginProps {
   worldState: WorldState;
   loginState: LoginState;
   providerState?: ProviderState;
-  depositForm?: DepositFormValues;
+  shieldForAliasForm?: ShieldFormValues;
   availableWallets: Wallet[];
   explorerUrl: string;
   systemMessage: SystemMessage;
@@ -97,8 +97,8 @@ interface LoginProps {
   onMigrateNotes(): void;
   onClearAccountV0s(): void;
   onSelectAlias: (alias: string) => void;
-  onDepositFormInputsChange(inputs: Partial<DepositFormValues>): void;
-  onSubmitDepositForm(): void;
+  onShieldForAliasFormInputsChange(inputs: Partial<ShieldFormValues>): void;
+  onSubmitShieldForAliasForm(): void;
   onChangeWallet(walletId: WalletId): void;
 }
 
@@ -293,8 +293,8 @@ const getStepInfo = ({
     case LoginStep.CLAIM_USERNAME:
       return {
         stepNo: 4,
-        title: 'Deposit ETH', // TODO - Could be other assets.
-        description: `In order to prevent spam, you must deposit at the same time as claiming a username. Please deposit at least 0.01 ETH.`,
+        title: 'Shield ETH', // TODO - Could be other assets.
+        description: `In order to prevent spam, you must shield at the same time as claiming a username. Please shield at least 0.01 ETH.`,
       };
     default:
       return {
@@ -332,7 +332,7 @@ export const Login: React.FunctionComponent<LoginProps> = props => {
     worldState,
     loginState,
     providerState,
-    depositForm,
+    shieldForAliasForm,
     availableWallets,
     systemMessage,
     setSeedPhrase,
@@ -346,8 +346,8 @@ export const Login: React.FunctionComponent<LoginProps> = props => {
     onRestart,
     onForgotAlias,
     onSelectAlias,
-    onDepositFormInputsChange,
-    onSubmitDepositForm,
+    onShieldForAliasFormInputsChange,
+    onSubmitShieldForAliasForm,
     onChangeWallet,
   } = props;
   const {
@@ -413,11 +413,11 @@ export const Login: React.FunctionComponent<LoginProps> = props => {
               );
             case LoginStep.CLAIM_USERNAME:
               return (
-                <DepositForm
+                <ShieldForAliasForm
                   providerState={providerState}
-                  form={depositForm!}
-                  onChangeInputs={onDepositFormInputsChange}
-                  onSubmit={onSubmitDepositForm}
+                  form={shieldForAliasForm!}
+                  onChangeInputs={onShieldForAliasFormInputsChange}
+                  onSubmit={onSubmitShieldForAliasForm}
                   onChangeWallet={onChangeWallet}
                 />
               );

@@ -4,7 +4,6 @@ import {
   AssetId,
   createWalletSdk,
   EthAddress,
-  EthersAdapter,
   GrumpkinAddress,
   SdkEvent,
   SdkInitState,
@@ -12,7 +11,6 @@ import {
   TxType,
   WalletSdk,
 } from '@aztec/sdk';
-import { InfuraProvider, Web3Provider } from '@ethersproject/providers';
 import { createHash } from 'crypto';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
@@ -20,11 +18,12 @@ import Mutex from 'idb-mutex';
 import Cookie from 'js-cookie';
 import { debounce, DebouncedFunc } from 'lodash';
 import { Config } from '../config';
+import { EthAccount } from './eth_account';
 import {
   AccountFormEvent,
-  DepositForm,
-  DepositFormValues,
-  DepositStatus,
+  ShieldForm,
+  ShieldFormValues,
+  ShieldStatus,
   getMigratableValues,
   MigratingAsset,
 } from './account_forms';
@@ -122,7 +121,7 @@ export enum UserSessionEvent {
   UPDATED_PROVIDER_STATE = 'UPDATED_PROVIDER_STATE',
   UPDATED_WORLD_STATE = 'UPDATED_WORLD_STATE',
   UPDATED_USER_ACCOUNT_DATA = 'UPDATED_USER_ACCOUNT_DATA',
-  UPDATED_DEPOSIT_FORM = 'UPDATED_DEPOSIT_FORM',
+  UPDATED_SHIELD_FOR_ALIAS_FORM = 'UPDATED_SHIELD_FOR_ALIAS_FORM',
   UPDATED_SYSTEM_MESSAGE = 'UPDATED_SYSTEM_MESSAGE',
   SESSION_CLOSED = 'SESSION_CLOSED',
   SESSION_OPEN = 'SESSION_OPEN',
@@ -142,13 +141,12 @@ export class UserSession extends EventEmitter {
   private provider?: Provider;
   private sdk!: WalletSdk;
   private rollupService!: RollupService;
-  private priceFeedService!: PriceFeedService;
   private loginState: LoginState;
   private worldState = initialWorldState;
   private keyVault!: KeyVault;
   private keyVaultV0!: KeyVault;
   private spendingPrivateKey?: Buffer;
-  private depositForm?: DepositForm;
+  private shieldForAliasForm?: ShieldForm;
   private accountUtils!: AccountUtils;
   private account!: UserAccount;
   private activeAsset: AppAssetId;
@@ -171,9 +169,11 @@ export class UserSession extends EventEmitter {
     initialLoginMode: LoginMode,
     private readonly db: Database,
     private readonly graphql: GraphQLService,
+    private readonly priceFeedService: PriceFeedService,
     private readonly sessionCookieName: string,
     private readonly accountProofCacheName: string,
     private readonly walletCacheName: string,
+    private readonly shieldForAliasAmountPreselection?: bigint,
   ) {
     super();
     this.debounceCheckAlias = debounce(this.updateAliasAvailability, this.debounceCheckAliasWait);
@@ -200,12 +200,14 @@ export class UserSession extends EventEmitter {
     return this.account;
   }
 
-  getDepositForm() {
-    return this.depositForm;
+  getShieldForAliasForm() {
+    return this.shieldForAliasForm;
   }
 
   isProcessingAction() {
-    return !this.destroyed && (undisruptiveSteps.indexOf(this.loginState.step) >= 0 || !!this.depositForm?.locked);
+    return (
+      !this.destroyed && (undisruptiveSteps.indexOf(this.loginState.step) >= 0 || !!this.shieldForAliasForm?.locked)
+    );
   }
 
   isDaiTxFree() {
@@ -229,8 +231,7 @@ export class UserSession extends EventEmitter {
     this.coreProvider?.destroy();
     this.provider?.destroy();
     this.rollupService?.destroy();
-    this.depositForm?.destroy();
-    this.priceFeedService?.destroy();
+    this.shieldForAliasForm?.destroy();
     this.clearLocalAccountProof();
     if (this.sdk && this.sdk.getLocalStatus().initState !== SdkInitState.DESTROYED) {
       this.sdk.removeAllListeners();
@@ -476,7 +477,7 @@ export class UserSession extends EventEmitter {
       await prevProvider?.destroy();
       this.updateLoginState({ walletId });
     }
-    this.depositForm?.changeProvider(this.provider);
+    this.shieldForAliasForm?.changeProvider(this.provider);
     this.account?.changeProvider(this.provider);
     this.handleProviderStateChange(this.provider?.getState());
   }
@@ -786,27 +787,27 @@ export class UserSession extends EventEmitter {
     this.toStep(LoginStep.DONE);
   }
 
-  changeDepositForm(newInputs: Partial<DepositFormValues>) {
-    this.depositForm!.changeValues(newInputs);
+  changeShieldForAliasForm(newInputs: Partial<ShieldFormValues>) {
+    this.shieldForAliasForm!.changeValues(newInputs);
   }
 
   async claimUserName() {
-    if (!this.depositForm) {
+    if (!this.shieldForAliasForm) {
       throw new Error('Deposit form uninitialized.');
     }
 
-    if (this.depositForm.locked) {
+    if (this.shieldForAliasForm.locked) {
       debug('Duplicated call to claimUserName().');
       return;
     }
 
-    await this.depositForm.lock();
-    if (!this.depositForm.locked) return;
+    await this.shieldForAliasForm.lock();
+    if (!this.shieldForAliasForm.locked) return;
 
-    await this.depositForm.submit();
-    if (this.depositForm.status !== DepositStatus.DONE) return;
+    await this.shieldForAliasForm.submit();
+    if (this.shieldForAliasForm.status !== ShieldStatus.DONE) return;
 
-    this.depositForm.destroy();
+    this.shieldForAliasForm.destroy();
 
     this.emitSystemMessage(`Sending registration proof...`);
 
@@ -818,15 +819,6 @@ export class UserSession extends EventEmitter {
 
     if (!this.provider?.account) {
       this.emitSystemMessage('Wallet disconnected.', MessageType.ERROR);
-      return;
-    }
-
-    const pendingBalance = await this.accountUtils.getPendingBalance(
-      this.accountProofDepositAsset,
-      this.provider.account,
-    );
-    if (pendingBalance < this.accountProofMinDeposit) {
-      this.emitSystemMessage('Insufficient deposit.', MessageType.ERROR);
       return;
     }
 
@@ -856,7 +848,7 @@ export class UserSession extends EventEmitter {
       this.toStep(LoginStep.DONE);
     }
 
-    this.depositForm = undefined;
+    this.shieldForAliasForm = undefined;
   }
 
   async initSdk() {
@@ -879,8 +871,8 @@ export class UserSession extends EventEmitter {
       if (isNewAlias) {
         proceed(LoginStep.CREATE_ACCOUNT);
 
-        await this.createAccountProof();
-        await this.createDepositForm();
+        const proofOutput = await this.createAccountProof();
+        await this.createShieldForAliasForm(proofOutput.tx.userId);
 
         proceed(LoginStep.CLAIM_USERNAME);
       } else {
@@ -1012,7 +1004,7 @@ export class UserSession extends EventEmitter {
         );
       }
 
-      await this.createDepositForm();
+      await this.createShieldForAliasForm(userId);
 
       this.toStep(LoginStep.CLAIM_USERNAME);
     } catch (e) {
@@ -1042,31 +1034,41 @@ export class UserSession extends EventEmitter {
     }
   }
 
-  private async createDepositForm() {
-    this.depositForm = new DepositForm(
-      assets[this.accountProofDepositAsset],
-      this.sdk,
-      this.coreProvider,
+  private async createShieldForAliasForm(userId: AccountId) {
+    const ethAccount = new EthAccount(
       this.provider,
+      this.accountUtils,
+      this.accountProofDepositAsset,
+      this.rollupService.supportedAssets[this.accountProofDepositAsset].address,
+      this.requiredNetwork,
+    );
+    this.shieldForAliasForm = new ShieldForm(
+      { userId, alias: this.loginState.alias },
+      { asset: assets[this.accountProofDepositAsset], spendableBalance: 0n },
+      this.provider,
+      ethAccount,
+      this.keyVault,
+      this.sdk,
+      this.db,
+      this.coreProvider,
       this.rollupService,
       this.accountUtils,
       this.requiredNetwork,
       this.config.txAmountLimits[AssetId.ETH],
       this.accountProofMinDeposit,
+      this.shieldForAliasAmountPreselection,
     );
-
     for (const e in AccountFormEvent) {
       const event = (AccountFormEvent as any)[e];
-      this.depositForm.on(event, () => this.emit(UserSessionEvent.UPDATED_DEPOSIT_FORM));
-      this.depositForm.on(AccountFormEvent.UPDATED_FORM_VALUES, (values: DepositFormValues) => {
+      this.shieldForAliasForm.on(event, () => this.emit(UserSessionEvent.UPDATED_SHIELD_FOR_ALIAS_FORM));
+      this.shieldForAliasForm.on(AccountFormEvent.UPDATED_FORM_VALUES, (values: ShieldFormValues) => {
         const { message, messageType } = values.submit;
         if (message !== undefined) {
           this.emit(UserSessionEvent.UPDATED_SYSTEM_MESSAGE, { message, type: messageType });
         }
       });
     }
-
-    await this.depositForm.init();
+    await this.shieldForAliasForm.init();
   }
 
   private async createSdk(autoReset = false) {
@@ -1128,19 +1130,7 @@ export class UserSession extends EventEmitter {
 
     await this.accountUtils.addUser(this.keyVault.accountPrivateKey, userId.nonce);
 
-    const {
-      priceFeedContractAddresses,
-      infuraId,
-      txAmountLimits,
-      withdrawSafeAmounts,
-      explorerUrl,
-      maxAvailableAssetId,
-    } = this.config;
-    const provider = new EthersAdapter(new InfuraProvider('mainnet', infuraId));
-    const web3Provider = new Web3Provider(provider);
-    this.priceFeedService = new PriceFeedService(priceFeedContractAddresses, web3Provider);
-    // Leave it to run in the background.
-    this.priceFeedService.init();
+    const { txAmountLimits, withdrawSafeAmounts, explorerUrl, maxAvailableAssetId } = this.config;
 
     await this.reviveUserProvider();
 
@@ -1259,6 +1249,7 @@ export class UserSession extends EventEmitter {
       await this.accountUtils.addUser(accountPrivateKey, userId.nonce);
       const accountProof = await this.sdk.createAccountProof(userId, signer, alias, 0, true, spendingPublicKey);
       this.saveLocalAccountProof(accountProof, alias);
+      return accountProof;
     } catch (e) {
       debug(e);
       throw new Error('Failed to create account proof.');
@@ -1433,7 +1424,7 @@ export class UserSession extends EventEmitter {
   private handleProviderStateChange = (state?: ProviderState) => {
     if (!state || state.status === ProviderStatus.DESTROYED) {
       this.provider = undefined;
-      this.depositForm?.changeProvider();
+      this.shieldForAliasForm?.changeProvider();
       this.account?.changeProvider();
       this.clearWalletSession();
       this.updateLoginState({ walletId: undefined });

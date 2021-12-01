@@ -31,3 +31,4 @@ export * from './tooltip';
 export * from './transaction_summary';
 export * from './tx_progress';
 export * from './wallet_picker';
+export * from './shielded_asset_icon';
