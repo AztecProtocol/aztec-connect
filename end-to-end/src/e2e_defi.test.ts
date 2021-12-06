@@ -64,7 +64,7 @@ describe('end-to-end defi tests', () => {
 
     // Shield
     let depositTxHash: TxHash;
-    const shieldValue = sdk.toBaseUnits(AssetId.ETH, '0.08');
+    const shieldValue = sdk.toBaseUnits(AssetId.ETH, '0.5');
     {
       const assetId = AssetId.ETH;
       const txFee = await sdk.getFee(assetId, TxType.DEPOSIT);

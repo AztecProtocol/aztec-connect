@@ -61,9 +61,9 @@ export async function deploy(escapeHatchBlockLower: number, escapeHatchBlockUppe
   const asset = await addAsset(rollup, signer, permitSupport);
 
   const gasPrice = 20n * 10n ** 9n; // 20 gwei
-  const assetPrice = 1n * 10n ** 16n; // 100 DAI/ETH
+  const assetPrice = 1n * 10n ** 15n; // 1000 DAI/ETH
   const initialEthSupply = 1n * 10n ** 17n; // 0.1 ETH
-  const initialTokenSupply = (initialEthSupply / assetPrice) * 10n ** 18n;
+  const initialTokenSupply = (initialEthSupply * 10n ** 18n) / assetPrice;
   await createPair(signer, uniswapRouter, asset, initialTokenSupply, initialEthSupply);
 
   const priceFeeds = [await deployPriceFeed(signer, gasPrice), await deployPriceFeed(signer, assetPrice)];
