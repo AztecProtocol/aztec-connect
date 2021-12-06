@@ -165,7 +165,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "API_PREFIX",
-        "value": "/${DEPLOY_TAG}/falafel"
+        "value": "/${var.DEPLOY_TAG}/falafel"
       },
       {
         "name": "NUM_INNER_ROLLUP_TXS",
