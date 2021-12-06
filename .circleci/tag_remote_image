@@ -6,15 +6,24 @@ EXISTING_TAG=$2
 NEW_TAG=$3
 REGION=${4:-$ECR_REGION}
 
-MY_MANIFEST=$(aws ecr batch-get-image \
+EXISTING_TAG_MANIFEST=$(aws ecr batch-get-image \
   --region $REGION \
   --repository-name $REPOSITORY \
   --image-ids imageTag=$EXISTING_TAG \
   --query images[].imageManifest \
   --output text)
 
-aws ecr put-image \
+NEW_TAG_MANIFEST=$(aws ecr batch-get-image \
   --region $REGION \
   --repository-name $REPOSITORY \
-  --image-tag $NEW_TAG \
-  --image-manifest "$MY_MANIFEST"
+  --image-ids imageTag=$NEW_TAG \
+  --query images[].imageManifest \
+  --output text)
+
+if [ "$EXISTING_TAG_MANIFEST" != "$NEW_TAG_MANIFEST" ]; then
+  aws ecr put-image \
+    --region $REGION \
+    --repository-name $REPOSITORY \
+    --image-tag $NEW_TAG \
+    --image-manifest "$EXISTING_TAG_MANIFEST"
+fi
