@@ -20,13 +20,19 @@ const txTypeToProofId = (txType: TxType) => (txType < TxType.WITHDRAW_TO_CONTRAC
 
 export const randomTx = ({
   txType = TxType.TRANSFER,
-  offchainTxData = randomBytes(160),
   signature = Buffer.alloc(0),
+  accountPublicKey = GrumpkinAddress.randomAddress(),
+  aliasHash = AliasHash.random(),
+  nonce = 1,
 } = {}) => {
   const proofId = txTypeToProofId(txType);
   const proofData = new ProofData(
     Buffer.concat([numToUInt32BE(proofId, 32), randomBytes(32 * (ProofData.NUM_PUBLIC_INPUTS - 1))]),
   );
+  const offchainTxData =
+    txType === TxType.ACCOUNT
+      ? new OffchainAccountData(accountPublicKey, new AccountAliasId(aliasHash, nonce)).toBuffer()
+      : randomBytes(160);
   return new TxDao({
     id: proofData.txId,
     proofData: proofData.rawProofData,
@@ -47,7 +53,9 @@ export const randomAccountTx = ({
 } = {}) =>
   randomTx({
     txType: TxType.ACCOUNT,
-    offchainTxData: new OffchainAccountData(accountPublicKey, new AccountAliasId(aliasHash, nonce)).toBuffer(),
+    accountPublicKey,
+    aliasHash,
+    nonce,
   });
 
 export const randomRollupProof = (txs: TxDao[], dataStartIndex = 0, rollupSize = txs.length) =>

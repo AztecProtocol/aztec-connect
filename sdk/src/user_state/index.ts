@@ -30,7 +30,7 @@ import { Note } from '../note';
 import { NotePicker } from '../note_picker';
 import { ProofOutput } from '../proofs/proof_output';
 import { UserData } from '../user';
-import { UserAccountTx, UserDefiTx, UserJoinSplitTx } from '../user_tx';
+import { UserAccountTx, UserDefiTx, UserJoinSplitTx, UserUtilTx } from '../user_tx';
 
 const debug = createDebug('bb:user_state');
 
@@ -316,9 +316,9 @@ export class UserState extends EventEmitter {
     note2?: TreeNote,
   ) {
     const { noteCommitment1, noteCommitment2, nullifier1, nullifier2 } = proof;
-    const noteCommitment = await this.processNewNote(noteStartIndex, noteCommitment1, note1);
+    const newNote = await this.processNewNote(noteStartIndex, noteCommitment1, note1);
     const changeNote = await this.processNewNote(noteStartIndex + 1, noteCommitment2, note2);
-    if (!noteCommitment && !changeNote) {
+    if (!newNote && !changeNote) {
       // Neither note was decrypted (change note should always belong to us for txs we created).
       return;
     }
@@ -329,21 +329,21 @@ export class UserState extends EventEmitter {
     await this.refreshNotePicker();
 
     const txHash = new TxHash(proof.txId);
-    const savedTx = await this.db.getJoinSplitTx(txHash, this.user.id);
-    if (savedTx) {
-      debug(`settling tx: ${txHash}`);
-      await this.db.settleJoinSplitTx(txHash, this.user.id, blockCreated);
+    if (proof.proofId === ProofId.SEND && newNote && changeNote) {
+      // Tranfering both notes to the user -> should've been created for another tx.
+      const tx = this.recoverUtilTx(proof, newNote, changeNote, destroyedNote1, destroyedNote2);
+      debug(`recovered util tx: ${txHash}`);
+      await this.db.addUtilTx(tx);
     } else {
-      const tx = this.recoverJoinSplitTx(
-        proof,
-        blockCreated,
-        noteCommitment,
-        changeNote,
-        destroyedNote1,
-        destroyedNote2,
-      );
-      debug(`recovered tx: ${txHash}`);
-      await this.db.addJoinSplitTx(tx);
+      const savedTx = await this.db.getJoinSplitTx(txHash, this.user.id);
+      if (savedTx) {
+        debug(`settling tx: ${txHash}`);
+        await this.db.settleJoinSplitTx(txHash, this.user.id, blockCreated);
+      } else {
+        const tx = this.recoverJoinSplitTx(proof, blockCreated, newNote, changeNote, destroyedNote1, destroyedNote2);
+        debug(`recovered tx: ${txHash}`);
+        await this.db.addJoinSplitTx(tx);
+      }
     }
   }
 
@@ -386,6 +386,7 @@ export class UserState extends EventEmitter {
       debug(`settling defi tx: ${txHash}`);
       await this.db.updateDefiTx(txHash, outputValueA, outputValueB);
     } else {
+      const utilTx = await this.db.getUtilTxByLink(proof.nullifier1);
       const tx = this.recoverDefiTx(
         proof,
         offchainTxData,
@@ -394,6 +395,7 @@ export class UserState extends EventEmitter {
         note2,
         destroyedNote1,
         destroyedNote2,
+        utilTx,
       );
       debug(`recovered defi tx: ${txHash}`);
       await this.db.addDefiTx(tx);
@@ -461,11 +463,6 @@ export class UserState extends EventEmitter {
     pending = false,
   ) {
     if (!treeNote) {
-      return;
-    }
-
-    const savedNote = await this.db.getNote(commitment);
-    if (savedNote && !savedNote.owner.equals(this.user.id)) {
       return;
     }
 
@@ -586,16 +583,17 @@ export class UserState extends EventEmitter {
     changeNote?: Note,
     destroyedNote1?: Note,
     destroyedNote2?: Note,
+    utilTx?: UserUtilTx,
   ) {
     const { txId } = proof;
     const { bridgeId, depositValue, partialStateSecretEphPubKey } = offchainTxData;
     const txHash = new TxHash(txId);
     const partialStateSecret = deriveNoteSecret(partialStateSecretEphPubKey, this.user.privateKey, this.grumpkin);
 
-    const noteValue = (note?: Note) => (note ? note.value : BigInt(0));
+    const noteValue = (note?: Note) => note?.value || BigInt(0);
     const privateInput = noteValue(destroyedNote1) + noteValue(destroyedNote2);
     const privateOutput = noteValue(changeNote);
-    const txFee = privateInput - privateOutput - depositValue;
+    const txFee = privateInput - privateOutput - depositValue + (utilTx?.txFee || BigInt(0));
 
     return new UserDefiTx(
       txHash,
@@ -608,6 +606,26 @@ export class UserState extends EventEmitter {
       outputValueA,
       outputValueB,
     );
+  }
+
+  private recoverUtilTx(
+    proof: InnerProofData,
+    utilNote: Note,
+    changeNote: Note,
+    destroyedNote1?: Note,
+    destroyedNote2?: Note,
+  ) {
+    const assetId = utilNote.assetId;
+
+    const noteValue = (note?: Note) => note?.value || BigInt(0);
+    const privateInput = noteValue(destroyedNote1) + noteValue(destroyedNote2);
+    const txFee = privateInput - utilNote.value - changeNote.value;
+
+    // Currently the only util tx is the j/s created for a defi deposit tx,
+    // which always uses the j/s tx's first output note as its input note.
+    const forwardLink = utilNote.nullifier;
+
+    return new UserUtilTx(new TxHash(proof.txId), this.user.id, assetId, txFee, forwardLink);
   }
 
   private async refreshNotePicker() {
@@ -649,7 +667,48 @@ export class UserState extends EventEmitter {
   }
 
   public async addProof(proofOutput: ProofOutput) {
-    const { tx } = proofOutput;
+    const processProof = async (proof: ProofOutput) => {
+      let numAddedNotes = 0;
+      if (proof.parentProof) {
+        numAddedNotes += await processProof(proof.parentProof);
+      }
+      await this.addPendingTx(proof);
+      return numAddedNotes + (await this.addPendingNotes(proof));
+    };
+
+    const numAddedNotes = await processProof(proofOutput);
+    if (numAddedNotes) {
+      await this.refreshNotePicker();
+    }
+
+    // No need to do anything with proof.backwardLink (i.e., mark a note as chained).
+    // Rollup provider will return the nullifiers of pending notes, which will be excluded when the sdk is picking notes.
+
+    this.emit(UserStateEvent.UPDATED_USER_STATE, this.user.id);
+  }
+
+  public async awaitSynchronised() {
+    while (this.syncState === SyncState.SYNCHING) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+
+  private async addPendingTx({ tx, proofData, outputNotes }: ProofOutput) {
+    // Tranfering both notes to the user -> should've been created for another tx.
+    if (
+      tx.proofId === ProofId.SEND &&
+      outputNotes[0].ownerPubKey.equals(this.user.publicKey) &&
+      outputNotes[0].nonce === this.user.nonce
+    ) {
+      const proof = new ProofData(proofData);
+      const txFee = tx.privateInput - tx.recipientPrivateOutput - tx.senderPrivateOutput;
+      // Defi deposit always uses the first output note from its linked j/s tx as the input note.
+      const forwardLink = this.noteAlgos.valueNoteNullifier(proof.noteCommitment1, this.user.privateKey);
+      const utilTx = new UserUtilTx(tx.txHash, this.user.id, tx.assetId, txFee, forwardLink);
+      await this.db.addUtilTx(utilTx);
+      return;
+    }
+
     switch (tx.proofId) {
       case ProofId.DEPOSIT:
       case ProofId.WITHDRAW:
@@ -666,34 +725,13 @@ export class UserState extends EventEmitter {
         await this.db.addDefiTx(tx);
         break;
     }
-
-    const addNotes = async ({ outputNotes, proofData }: ProofOutput) => {
-      const proof = new ProofData(proofData);
-      const allowChain = proof.allowChain.readUInt32BE(28);
-      const noteCommitments = [proof.noteCommitment1, proof.noteCommitment2];
-      let added = false;
-      for (let i = 0; i < outputNotes.length; ++i) {
-        const note = await this.processNewNote(0, noteCommitments[i], outputNotes[i], allowChain === i + 1, true);
-        added = added || !!note?.value;
-      }
-      return added;
-    };
-
-    const { parentProof } = proofOutput;
-    if ((parentProof && (await addNotes(parentProof))) || (await addNotes(proofOutput))) {
-      await this.refreshNotePicker();
-    }
-
-    // No need to do anything with proof.backwardLink (i.e., mark a note as chained).
-    // Rollup provider will return the nullifiers of pending notes, which will be excluded when the sdk is picking notes.
-
-    this.emit(UserStateEvent.UPDATED_USER_STATE, this.user.id);
   }
 
-  public async awaitSynchronised() {
-    while (this.syncState === SyncState.SYNCHING) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
+  private async addPendingNotes({ outputNotes, proofData }: ProofOutput) {
+    const proof = new ProofData(proofData);
+    const note1 = await this.processNewNote(0, proof.noteCommitment1, outputNotes[0], proof.allowChainFromNote1, true);
+    const note2 = await this.processNewNote(0, proof.noteCommitment2, outputNotes[1], proof.allowChainFromNote2, true);
+    return +!!note1?.value + +!!note2?.value;
   }
 }
 

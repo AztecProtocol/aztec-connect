@@ -2,7 +2,12 @@ import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { blockchainStatusToJson } from '@aztec/barretenberg/blockchain';
 import { Block, BlockServerResponse, GetBlocksServerResponse } from '@aztec/barretenberg/block_source';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
-import { PendingTxServerResponse, Proof, TxServerResponse, RuntimeConfig } from '@aztec/barretenberg/rollup_provider';
+import {
+  PendingTxServerResponse,
+  RuntimeConfig,
+  TxPostData,
+  TxServerResponse,
+} from '@aztec/barretenberg/rollup_provider';
 import cors from '@koa/cors';
 import { ApolloServer } from 'apollo-server-koa';
 import graphqlPlayground from 'graphql-playground-middleware-koa';
@@ -17,6 +22,7 @@ import { TxDao } from './entity/tx';
 import { Metrics } from './metrics';
 import { JoinSplitTxResolver, RollupResolver, ServerStatusResolver, TxResolver } from './resolver';
 import { Server } from './server';
+import { Tx } from './tx_receiver';
 
 const toBlockResponse = (block: Block): BlockServerResponse => ({
   ...block,
@@ -34,6 +40,13 @@ const toTxResponse = ({ proofData, offchainTxData }: TxDao): TxServerResponse =>
 });
 
 const bufferFromHex = (hexStr: string) => Buffer.from(hexStr.replace(/^0x/i, ''), 'hex');
+
+const fromTxPostData = (data: TxPostData): Tx => ({
+  proof: new ProofData(bufferFromHex(data.proofData)),
+  offchainTxData: bufferFromHex(data.offchainTxData),
+  depositSignature: data.depositSignature ? bufferFromHex(data.depositSignature) : undefined,
+  parentTx: data.parentProof ? fromTxPostData(data.parentProof) : undefined,
+});
 
 export function appFactory(server: Server, prefix: string, metrics: Metrics, serverAuthToken: string) {
   const router = new Router<DefaultState, Context>({ prefix });
@@ -83,12 +96,8 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
 
   router.post('/tx', recordMetric, checkReady, async (ctx: Koa.Context) => {
     const stream = new PromiseReadable(ctx.req);
-    const { proofData, offchainTxData, depositSignature } = JSON.parse((await stream.readAll()) as string);
-    const tx: Proof = {
-      proofData: bufferFromHex(proofData),
-      offchainTxData: bufferFromHex(offchainTxData),
-      depositSignature: depositSignature ? bufferFromHex(depositSignature) : undefined,
-    };
+    const postData = JSON.parse((await stream.readAll()) as string);
+    const tx = fromTxPostData(postData);
     const txId = await server.receiveTx(tx);
     const response = {
       txHash: txId.toString('hex'),

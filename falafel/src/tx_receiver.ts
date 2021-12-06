@@ -1,6 +1,6 @@
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
-import { BridgeId, BridgeConfig } from '@aztec/barretenberg/bridge_id';
+import { BridgeConfig } from '@aztec/barretenberg/bridge_id';
 import {
   AccountVerifier,
   DefiDepositProofData,
@@ -22,9 +22,10 @@ import { RollupDb } from './rollup_db';
 import { TxFeeResolver } from './tx_fee_resolver';
 
 export interface Tx {
-  proofData: Buffer;
+  proof: ProofData;
   offchainTxData: Buffer;
   depositSignature?: Buffer;
+  parentTx?: Tx;
 }
 
 export class TxReceiver {
@@ -63,69 +64,110 @@ export class TxReceiver {
     await destroyWorker(this.worker);
   }
 
-  public async receiveTx({ proofData, depositSignature, offchainTxData }: Tx) {
+  public async receiveTx(tx: Tx) {
     // We mutex this entire receive call until we move to "deposit to proof hash". Read more below.
     await this.mutex.acquire();
     try {
-      const proof = new ProofData(proofData);
-      const txType = await getTxTypeFromProofData(proof, this.blockchain);
+      const txType = await getTxTypeFromProofData(tx.proof, this.blockchain);
       this.metrics.txReceived(txType);
+      console.log(`Received tx: ${tx.proof.txId.toString('hex')}, type: ${txType}`);
 
-      console.log(`Received tx: ${proof.txId.toString('hex')}, type: ${txType}`);
-
-      if (await this.rollupDb.nullifiersExist(proof.nullifier1, proof.nullifier2)) {
-        throw new Error('Nullifier already exists.');
-      }
-
-      if (!proof.backwardLink.equals(Buffer.alloc(32))) {
-        const txs = await this.rollupDb.getUnsettledTxs();
-        const linkedTx = txs.find(({ proofData }) => {
-          const { noteCommitment1, noteCommitment2 } = new ProofData(proofData);
-          return [noteCommitment1, noteCommitment2].some(c => c.equals(proof.backwardLink));
-        });
-        if (!linkedTx) {
-          throw new Error('Linked tx not found.');
+      const txs: TxDao[] = [];
+      const processTx = async (tx: Tx) => {
+        if (tx.parentTx) {
+          if (tx.parentTx.proof.proofId === ProofId.DEPOSIT) {
+            // Do not allow a deposit tx to be in the chain
+            // so that we don't have to accumulate all deposits and check the total value against the pending deposit.
+            throw new Error('Invalid parent tx type.');
+          }
+          await processTx(tx.parentTx);
         }
-      }
-      const dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
+        txs.push(await this.validateTx(tx));
+      };
+      await processTx(tx);
 
-      // Check the proof is valid.
-      switch (proof.proofId) {
-        case ProofId.DEPOSIT:
-        case ProofId.WITHDRAW:
-        case ProofId.SEND:
-          await this.validateJoinSplitTx(proof, txType, depositSignature);
-          break;
-        case ProofId.ACCOUNT: {
-          const offchainData = OffchainAccountData.fromBuffer(offchainTxData);
-          await this.validateAccountTx(proof, offchainData);
-          break;
-        }
-        case ProofId.DEFI_DEPOSIT:
-          await this.validateDefiBridgeTx(proof);
-          break;
-        default:
-          throw new Error('Unknown proof id.');
-      }
+      await this.rollupDb.addTxs(txs);
 
-      const txDao = new TxDao({
-        id: proof.txId,
-        proofData,
-        offchainTxData,
-        signature: proof.proofId === ProofId.DEPOSIT ? depositSignature : undefined,
-        nullifier1: toBigIntBE(proof.nullifier1) ? proof.nullifier1 : undefined,
-        nullifier2: toBigIntBE(proof.nullifier2) ? proof.nullifier2 : undefined,
-        dataRootsIndex,
-        created: new Date(),
-        txType,
-      });
-
-      await this.rollupDb.addTx(txDao);
-
-      return proof.txId;
+      return txs[txs.length - 1].id;
     } finally {
       this.mutex.release();
     }
+  }
+
+  private async validateTx({ proof, offchainTxData, depositSignature, parentTx }: Tx) {
+    const findParent = (cb: (p: Tx) => boolean, p = parentTx) => {
+      if (p?.parentTx && findParent(cb, p.parentTx)) {
+        return true;
+      }
+      return p ? cb(p) : false;
+    };
+
+    if (
+      (await this.rollupDb.nullifiersExist(proof.nullifier1, proof.nullifier2)) ||
+      findParent(p =>
+        [p.proof.nullifier1, p.proof.nullifier2]
+          .filter(n => !!toBigIntBE(n))
+          .some(n => n.equals(proof.nullifier1) || n.equals(proof.nullifier2)),
+      )
+    ) {
+      throw new Error('Nullifier already exists.');
+    }
+
+    const { backwardLink } = proof;
+    if (!backwardLink.equals(Buffer.alloc(32))) {
+      const unsettledTxs = (await this.rollupDb.getUnsettledTxs()).map(({ proofData }) => new ProofData(proofData));
+      if (
+        unsettledTxs.some(tx => tx.backwardLink.equals(backwardLink)) ||
+        findParent(p => p.proof.backwardLink.equals(backwardLink))
+      ) {
+        throw new Error('Duplicated backward link.');
+      }
+
+      const linkedTx =
+        findParent(p => [p.proof.noteCommitment1, p.proof.noteCommitment2].some(nc => nc.equals(backwardLink))) ||
+        unsettledTxs.some(
+          tx =>
+            (tx.allowChainFromNote1 && tx.noteCommitment1.equals(backwardLink)) ||
+            (tx.allowChainFromNote2 && tx.noteCommitment2.equals(backwardLink)),
+        );
+      if (!linkedTx) {
+        throw new Error('Linked tx not found.');
+      }
+    }
+
+    const txType = await getTxTypeFromProofData(proof, this.blockchain);
+
+    // Check the proof is valid.
+    switch (proof.proofId) {
+      case ProofId.DEPOSIT:
+      case ProofId.WITHDRAW:
+      case ProofId.SEND:
+        await this.validateJoinSplitTx(proof, txType, depositSignature);
+        break;
+      case ProofId.ACCOUNT: {
+        const offchainData = OffchainAccountData.fromBuffer(offchainTxData);
+        await this.validateAccountTx(proof, offchainData);
+        break;
+      }
+      case ProofId.DEFI_DEPOSIT:
+        await this.validateDefiBridgeTx(proof);
+        break;
+      default:
+        throw new Error('Unknown proof id.');
+    }
+
+    const dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
+    return new TxDao({
+      id: proof.txId,
+      proofData: proof.rawProofData,
+      offchainTxData,
+      signature: proof.proofId === ProofId.DEPOSIT ? depositSignature : undefined,
+      nullifier1: toBigIntBE(proof.nullifier1) ? proof.nullifier1 : undefined,
+      nullifier2: toBigIntBE(proof.nullifier2) ? proof.nullifier2 : undefined,
+      dataRootsIndex,
+      created: new Date(),
+      txType,
+    });
   }
 
   private async validateJoinSplitTx(proofData: ProofData, txType: TxType, depositSignature?: Buffer) {

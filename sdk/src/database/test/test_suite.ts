@@ -15,6 +15,7 @@ import {
   randomUserAccountTx,
   randomUserDefiTx,
   randomUserJoinSplitTx,
+  randomUserUtilTx,
 } from './fixtures';
 
 const sort = (arr: any[], sortBy: string) => arr.sort((a, b) => (a[sortBy] < b[sortBy] ? -1 : 1));
@@ -464,6 +465,19 @@ export const databaseTestSuite = (
 
         expect(await db.getDefiTxs(userId0)).toEqual(unsettledTxs0.concat([...settledTxs0].reverse()));
         expect(await db.getDefiTxs(userId1)).toEqual([...unsettledTxs1].reverse().concat(settledTxs1));
+      });
+    });
+
+    describe('UtilTx', () => {
+      it('add util tx and get it by forward link', async () => {
+        const tx1 = randomUserUtilTx();
+        await db.addUtilTx(tx1);
+        const tx2 = randomUserUtilTx();
+        await db.addUtilTx(tx2);
+
+        expect(await db.getUtilTxByLink(tx1.forwardLink)).toEqual(tx1);
+        expect(await db.getUtilTxByLink(tx2.forwardLink)).toEqual(tx2);
+        expect(await db.getUtilTxByLink(randomBytes(32))).toBe(undefined);
       });
     });
 

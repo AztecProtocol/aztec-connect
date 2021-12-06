@@ -4,7 +4,7 @@ import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { Connection, ConnectionOptions, IsNull, MoreThan, MoreThanOrEqual, Repository, getConnection } from 'typeorm';
 import { Note } from '../../note';
 import { AccountId, UserData } from '../../user';
-import { UserAccountTx, UserDefiTx, UserJoinSplitTx } from '../../user_tx';
+import { UserAccountTx, UserDefiTx, UserJoinSplitTx, UserUtilTx } from '../../user_tx';
 import { Claim } from '../claim';
 import { Alias, Database, SigningKey } from '../database';
 import { AccountTxDao } from './account_tx_dao';
@@ -16,12 +16,24 @@ import { KeyDao } from './key_dao';
 import { NoteDao } from './note_dao';
 import { UserDataDao } from './user_data_dao';
 import { UserKeyDao } from './user_key_dao';
+import { UtilTxDao } from './util_tx_dao';
 
 export const getOrmConfig = (dbPath?: string): ConnectionOptions => ({
   name: 'aztec2-sdk',
   type: 'sqlite',
   database: dbPath === ':memory:' ? dbPath : `${dbPath || '.'}/aztec2-sdk.sqlite`,
-  entities: [AccountTxDao, AliasDao, ClaimDao, DefiTxDao, JoinSplitTxDao, KeyDao, NoteDao, UserDataDao, UserKeyDao],
+  entities: [
+    AccountTxDao,
+    AliasDao,
+    ClaimDao,
+    DefiTxDao,
+    JoinSplitTxDao,
+    KeyDao,
+    NoteDao,
+    UserDataDao,
+    UserKeyDao,
+    UtilTxDao,
+  ],
   synchronize: true,
   logging: false,
 });
@@ -79,6 +91,7 @@ export class SQLDatabase implements Database {
   private noteRep: Repository<NoteDao>;
   private userDataRep: Repository<UserDataDao>;
   private userKeyRep: Repository<UserKeyDao>;
+  private utilTxRep: Repository<UtilTxDao>;
 
   constructor(private connection: Connection) {
     this.accountTxRep = this.connection.getRepository(AccountTxDao);
@@ -90,6 +103,7 @@ export class SQLDatabase implements Database {
     this.noteRep = this.connection.getRepository(NoteDao);
     this.userDataRep = this.connection.getRepository(UserDataDao);
     this.userKeyRep = this.connection.getRepository(UserKeyDao);
+    this.utilTxRep = this.connection.getRepository(UtilTxDao);
   }
 
   async init() {}
@@ -236,6 +250,14 @@ export class SQLDatabase implements Database {
 
   async settleDefiTx(txHash: TxHash, settled: Date) {
     await this.defiTxRep.update({ txHash }, { settled });
+  }
+
+  async addUtilTx(tx: UserUtilTx) {
+    await this.utilTxRep.save(tx);
+  }
+
+  async getUtilTxByLink(forwardLink: Buffer) {
+    return this.utilTxRep.findOne({ forwardLink });
   }
 
   async isUserTxSettled(txHash: TxHash) {

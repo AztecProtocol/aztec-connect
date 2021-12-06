@@ -44,6 +44,14 @@ export class TypeOrmRollupDb implements RollupDb {
     });
   }
 
+  public async addTxs(txs: TxDao[]) {
+    await this.connection.transaction(async transactionalEntityManager => {
+      const accountDaos = txs.filter(tx => tx.txType === TxType.ACCOUNT).map(txDaoToAccountDao);
+      await transactionalEntityManager.save(accountDaos);
+      await transactionalEntityManager.save(txs);
+    });
+  }
+
   public async addAccounts(accounts: AccountDao[]) {
     await this.connection.transaction(async transactionalEntityManager => {
       for (const account of accounts) {

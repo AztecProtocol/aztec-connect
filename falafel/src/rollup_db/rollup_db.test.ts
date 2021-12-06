@@ -95,6 +95,27 @@ describe('rollup_db', () => {
     expect(await rollupDb.getLatestAccountNonce(accountPublicKey1)).toBe(0);
   });
 
+  it('should bulk add txs', async () => {
+    const txs = [
+      TxType.DEPOSIT,
+      TxType.WITHDRAW_TO_WALLET,
+      TxType.ACCOUNT,
+      TxType.DEFI_DEPOSIT,
+      TxType.TRANSFER,
+      TxType.WITHDRAW_TO_CONTRACT,
+      TxType.ACCOUNT,
+      TxType.DEFI_CLAIM,
+    ].map(txType => randomTx({ txType }));
+
+    await rollupDb.addTxs(txs);
+
+    expect(await rollupDb.getTotalTxCount()).toBe(8);
+    expect(await rollupDb.getJoinSplitTxCount()).toBe(4);
+    expect(await rollupDb.getDefiTxCount()).toBe(1);
+    expect(await rollupDb.getAccountTxCount()).toBe(2);
+    expect(await rollupDb.getAccountCount()).toBe(2);
+  });
+
   it('should get rollup proof by id', async () => {
     const rollup = randomRollupProof([]);
     await rollupDb.addRollupProof(rollup);
@@ -297,7 +318,7 @@ describe('rollup_db', () => {
       TxType.WITHDRAW_TO_CONTRACT,
       TxType.ACCOUNT,
       TxType.DEFI_CLAIM,
-    ].map(txType => (txType === TxType.ACCOUNT ? randomAccountTx() : randomTx({ txType })));
+    ].map(txType => randomTx({ txType }));
     const rollupProof = randomRollupProof(txs, 0);
     const rollup = randomRollup(0, rollupProof);
 

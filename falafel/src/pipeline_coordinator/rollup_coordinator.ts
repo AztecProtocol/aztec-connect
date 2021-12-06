@@ -167,20 +167,14 @@ export class RollupCoordinator {
         continue;
       }
 
+      const discardTx = () => {
+        discardedCommitments.push(proofData.noteCommitment1);
+        discardedCommitments.push(proofData.noteCommitment2);
+      };
+
       const addTx = () => {
         assetIds.add(assetId);
         txs.push(createRollupTx(tx, proofData));
-      };
-
-      const discardTx = () => {
-        switch (proofData.allowChain.readUInt32BE(28)) {
-          case 1:
-            discardedCommitments.push(proofData.noteCommitment1);
-            break;
-          case 2:
-            discardedCommitments.push(proofData.noteCommitment2);
-            break;
-        }
       };
 
       if (!assetIds.has(assetId) && assetIds.size === RollupProofData.NUMBER_OF_ASSETS) {
@@ -200,6 +194,9 @@ export class RollupCoordinator {
         addTx();
       } else {
         txs = this.handleNewDefiTx(tx, remainingTxSlots - txs.length, txs, flush, assetIds, bridgeIds);
+        if (!txs.some(newTx => newTx.tx.id.equals(tx.id))) {
+          discardTx();
+        }
       }
     }
     return txs;
@@ -252,7 +249,7 @@ export class RollupCoordinator {
       ((shouldPublish && pendingTxs.length) || pendingTxs.length >= this.numInnerRollupTxs) &&
       this.innerProofs.length < this.numOuterRollupProofs
     ) {
-      const txs = this.reorderTxs(pendingTxs.splice(0, this.numInnerRollupTxs));
+      const txs = pendingTxs.splice(0, this.numInnerRollupTxs);
       const rollupProofDao = await this.rollupCreator.create(txs.map(rollupTx => rollupTx.tx));
       this.updateRollupBridgesAndAssets(txs);
       this.txs = [...this.txs, ...txs];
@@ -282,23 +279,5 @@ export class RollupCoordinator {
     rollupProfile.published = await this.rollupPublisher.publishRollup(rollupDao);
     this.printRollupState(rollupProfile, timedout);
     return rollupProfile;
-  }
-
-  private reorderTxs(txs: RollupTx[]) {
-    const sorted = [...txs];
-    const proofs = txs.map(tx => new ProofData(tx.tx.proofData));
-    for (let i = 0; i < txs.length; ++i) {
-      const { backwardLink } = proofs[i];
-      const insertAfter = proofs.findIndex(
-        p => p.noteCommitment1.equals(backwardLink) || p.noteCommitment2.equals(backwardLink),
-      );
-      if (insertAfter >= 0) {
-        const [proof] = proofs.splice(i, 1);
-        const [tx] = sorted.splice(i, 1);
-        proofs.splice(insertAfter + 1, 0, proof);
-        sorted.splice(insertAfter + 1, 0, tx);
-      }
-    }
-    return sorted;
   }
 }

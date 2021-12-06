@@ -334,7 +334,13 @@ export class CoreSdk extends EventEmitter {
 
   public async getFee(assetId: AssetId, transactionType: TxType, speed: SettlementTime) {
     const { txFees } = await this.getRemoteStatus();
-    return txFees[assetId].feeConstants[transactionType] + txFees[assetId].baseFeeQuotes[speed].fee;
+    let fee = txFees[assetId].feeConstants[transactionType] + txFees[assetId].baseFeeQuotes[speed].fee;
+    if (transactionType === TxType.DEFI_DEPOSIT) {
+      // need to double the fee in order for the DEFI claim to be rolled up
+      fee *= BigInt(2);
+      fee += txFees[assetId].feeConstants[TxType.TRANSFER] + txFees[assetId].baseFeeQuotes[speed].fee;
+    }
+    return fee;
   }
 
   private serialExecute<T>(fn: () => Promise<T>): Promise<T> {
@@ -762,17 +768,22 @@ export class CoreSdk extends EventEmitter {
     userId: AccountId,
     depositValue: bigint,
     txFee: bigint,
-    jsTxFee: bigint,
     signer: Signer,
     allowChain?: boolean,
   ) {
     return this.serialExecute(async () => {
+      const jsTxFee = allowChain
+        ? BigInt(0)
+        : await this.getFee(bridgeId.inputAssetId, TxType.TRANSFER, SettlementTime.SLOW);
+      if (jsTxFee > txFee) {
+        throw new Error('Insufficient fee.');
+      }
       const userState = this.getUserState(userId);
       return this.defiDepositProofCreator.createProof(
         userState,
         bridgeId,
         depositValue,
-        txFee,
+        txFee - jsTxFee,
         jsTxFee,
         signer,
         allowChain,
@@ -781,20 +792,11 @@ export class CoreSdk extends EventEmitter {
   }
 
   public async sendProof(proofOutput: ProofOutput, depositSignature?: Buffer) {
-    const { tx } = proofOutput;
+    const { tx, proofData, offchainTxData, parentProof } = proofOutput;
     const userState = this.getUserState(tx.userId);
 
-    const { parentProof } = proofOutput;
-    if (parentProof) {
-      const { proofData, offchainTxData } = parentProof;
-      await this.rollupProvider.sendProof({ proofData, offchainTxData });
-    }
-
-    {
-      const { proofData, offchainTxData } = proofOutput;
-      await this.rollupProvider.sendProof({ proofData, offchainTxData, depositSignature });
-      await userState.addProof(proofOutput);
-    }
+    await this.rollupProvider.sendProof({ proofData, offchainTxData, depositSignature, parentProof });
+    await userState.addProof(proofOutput);
 
     return tx.txHash;
   }

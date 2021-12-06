@@ -116,6 +116,21 @@ export class CachedRollupDb extends SyncRollupDb {
     this.totalTxCount++;
   }
 
+  public async addTxs(txs: TxDao[]) {
+    await super.addTxs(txs);
+
+    txs
+      .map(tx => new ProofData(tx.proofData))
+      .map(p => [p.nullifier1, p.nullifier2])
+      .flat()
+      .filter(n => !!toBigIntBE(n))
+      .forEach(n => this.unsettledNullifiers.push(n));
+
+    this.unsettledTxs.push(...txs);
+    this.pendingTxCount += txs.length;
+    this.totalTxCount += txs.length;
+  }
+
   public async addRollupProof(rollupDao: RollupProofDao) {
     await super.addRollupProof(rollupDao);
     await this.refresh();

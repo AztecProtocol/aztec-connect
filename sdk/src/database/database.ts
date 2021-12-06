@@ -3,7 +3,7 @@ import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { Note } from '../note';
 import { AccountId, UserData } from '../user';
-import { UserAccountTx, UserDefiTx, UserJoinSplitTx } from '../user_tx';
+import { UserAccountTx, UserDefiTx, UserJoinSplitTx, UserUtilTx } from '../user_tx';
 import { Claim } from './claim';
 
 export interface SigningKey {
@@ -56,6 +56,9 @@ export interface Database {
   getDefiTxs(userId): Promise<UserDefiTx[]>;
   updateDefiTx(txHash: TxHash, outputValueA: bigint, outputValueB: bigint): Promise<void>;
   settleDefiTx(txHash: TxHash, settled: Date): Promise<void>;
+
+  addUtilTx(tx: UserUtilTx): Promise<void>;
+  getUtilTxByLink(forwardLink: Buffer): Promise<UserUtilTx | undefined>;
 
   isUserTxSettled(txHash: TxHash): Promise<boolean>;
   getUnsettledUserTxs(userId: AccountId): Promise<TxHash[]>;

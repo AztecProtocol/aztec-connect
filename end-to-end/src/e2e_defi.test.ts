@@ -4,6 +4,7 @@ import {
   BridgeId,
   createWalletSdk,
   EthAddress,
+  TxHash,
   TxType,
   WalletProvider,
   WalletSdk,
@@ -32,7 +33,7 @@ describe('end-to-end defi tests', () => {
   const awaitSettlementTimeout = 600;
 
   beforeAll(async () => {
-    provider = await createFundedWalletProvider(ETHEREUM_HOST, 2);
+    provider = await createFundedWalletProvider(ETHEREUM_HOST, 1);
     accounts = provider.getAccounts();
 
     sdk = await createWalletSdk(provider, ROLLUP_HOST, {
@@ -59,40 +60,38 @@ describe('end-to-end defi tests', () => {
   it('should make a defi deposit', async () => {
     const userId = userIds[0];
     const depositor = accounts[0];
+    const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
 
     // Shield
+    let depositTxHash: TxHash;
+    const shieldValue = sdk.toBaseUnits(AssetId.ETH, '0.8');
     {
       const assetId = AssetId.ETH;
-      const value = sdk.toBaseUnits(assetId, '0.8');
       const txFee = await sdk.getFee(assetId, TxType.DEPOSIT);
-      const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
-      const proofOutput = await sdk.createDepositProof(assetId, depositor, userId, value, txFee, signer);
+      const proofOutput = await sdk.createDepositProof(assetId, depositor, userId, shieldValue, txFee, signer);
       const signature = await sdk.signProof(proofOutput, depositor);
-      await sdk.depositFundsToContract(assetId, depositor, value + txFee);
-
-      const txHash = await sdk.sendProof(proofOutput, signature);
-      await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
-
-      expect(sdk.getBalance(assetId, userId)).toBe(value);
+      await sdk.depositFundsToContract(assetId, depositor, shieldValue + txFee);
+      depositTxHash = await sdk.sendProof(proofOutput, signature);
     }
 
-    // Defi deposit - swap ETH to DAI
+    // Defi deposit - swap partial ETH to DAI
     {
       const bridgeAddressId = 1;
       const inputAssetId = AssetId.ETH;
       const outputAssetIdA = AssetId.DAI;
       const outputAssetIdB = 0;
       const bridgeId = new BridgeId(bridgeAddressId, inputAssetId, outputAssetIdA, outputAssetIdB, 0, false, false, 0);
-      let txFee = await sdk.getFee(inputAssetId, TxType.DEFI_DEPOSIT);
-      // need to double the fee in order for the DEFI claim to be rolled up
-      txFee *= 2n;
-      const jsTxFee = await sdk.getFee(inputAssetId, TxType.TRANSFER);
+      const txFee = await sdk.getFee(inputAssetId, TxType.DEFI_DEPOSIT);
       const depositValue = sdk.toBaseUnits(inputAssetId, '0.5');
-      const initialBalance = sdk.getBalance(inputAssetId, userId);
-      const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
-      const proofOutput = await sdk.createDefiProof(bridgeId, userId, depositValue, txFee, jsTxFee, signer);
-      const txHash = await sdk.sendProof(proofOutput);
-      await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
+      const proofOutput = await sdk.createDefiProof(bridgeId, userId, depositValue, txFee, signer);
+      const defiTxHash = await sdk.sendProof(proofOutput);
+
+      // Await shield tx and defi deposit tx to settle.
+      await Promise.all([
+        sdk.awaitSettlement(depositTxHash, awaitSettlementTimeout),
+        sdk.awaitSettlement(defiTxHash, awaitSettlementTimeout),
+      ]);
+
       const defiTxs = await sdk.getDefiTxs(userId);
       expect(defiTxs.length).toBe(1);
       const defiTx = defiTxs[0];
@@ -102,25 +101,29 @@ describe('end-to-end defi tests', () => {
         txFee,
         outputValueB: 0n,
       });
+      expect(sdk.getBalance(inputAssetId, userId)).toBe(shieldValue - depositValue - txFee);
       expect(sdk.getBalance(outputAssetIdA, userId)).toBe(defiTx.outputValueA);
-      expect(sdk.getBalance(inputAssetId, userId)).toBe(initialBalance - depositValue - txFee);
     }
 
-    // Defi deposit - swap DAI to ETH
+    // Defi deposit - swap all DAI to ETH
     {
       const bridgeAddressId = 3;
       const inputAssetId = AssetId.DAI;
-      const bridgeId = new BridgeId(bridgeAddressId, inputAssetId, AssetId.ETH, 0, 0, false, false, 0);
-      let txFee = await sdk.getFee(inputAssetId, TxType.DEFI_DEPOSIT);
-      // need to double the fee in order for the DEFI claim to be rolled up
-      txFee *= 2n;
-      const jsTxFee = await sdk.getFee(inputAssetId, TxType.TRANSFER);
-      const depositValue = sdk.toBaseUnits(inputAssetId, '100');
+      const outputAssetIdA = AssetId.ETH;
+      const outputAssetIdB = 0;
+      const bridgeId = new BridgeId(bridgeAddressId, inputAssetId, outputAssetIdA, outputAssetIdB, 0, false, false, 0);
 
       const initialEthBalance = sdk.getBalance(AssetId.ETH, userId);
       const initialDaiBalance = sdk.getBalance(AssetId.DAI, userId);
-      const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
-      const proofOutput = await sdk.createDefiProof(bridgeId, userId, depositValue, txFee, jsTxFee, signer);
+
+      const defiFee = await sdk.getFee(inputAssetId, TxType.DEFI_DEPOSIT);
+      const jsTxFee = await sdk.getFee(inputAssetId, TxType.TRANSFER);
+      // TODO - return the fee `defiFee - jsTxFee` from the sdk if specify the output note from the defi deposit tx can be chained from.
+      const txFee = defiFee - jsTxFee;
+      const depositValue = initialDaiBalance - txFee;
+
+      const allowChain = true;
+      const proofOutput = await sdk.createDefiProof(bridgeId, userId, depositValue, txFee, signer, allowChain);
 
       const txHash = await sdk.sendProof(proofOutput);
       await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
@@ -134,8 +137,8 @@ describe('end-to-end defi tests', () => {
         txFee,
         outputValueB: 0n,
       });
-      expect(sdk.getBalance(AssetId.ETH, userId)).toBe(initialEthBalance + defiTx.outputValueA);
-      expect(sdk.getBalance(AssetId.DAI, userId)).toBe(initialDaiBalance - txFee - depositValue);
+      expect(sdk.getBalance(inputAssetId, userId)).toBe(0n);
+      expect(sdk.getBalance(outputAssetIdA, userId)).toBe(initialEthBalance + defiTx.outputValueA);
     }
   });
 });

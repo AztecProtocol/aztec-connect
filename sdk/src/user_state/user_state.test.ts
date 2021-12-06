@@ -26,9 +26,9 @@ import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { randomBytes } from 'crypto';
 import { Database } from '../database';
-import { JoinSplitProofOutput } from '../proofs/proof_output';
+import { DefiProofOutput, JoinSplitProofOutput } from '../proofs/proof_output';
 import { AccountId, UserData } from '../user';
-import { UserJoinSplitTx } from '../user_tx';
+import { UserDefiTx, UserJoinSplitTx, UserUtilTx } from '../user_tx';
 import { UserState } from './index';
 
 type Mockify<T> = {
@@ -86,9 +86,10 @@ describe('user state', () => {
       updateDefiTx: jest.fn(),
       settleDefiTx: jest.fn(),
       addDefiTx: jest.fn(),
+      addUtilTx: jest.fn(),
+      getUtilTxByLink: jest.fn(),
       getUnsettledUserTxs: jest.fn().mockResolvedValue([]),
       removeUserTx: jest.fn(),
-      getNote: jest.fn(),
       addNote: jest.fn(),
       nullifyNote: jest.fn(),
       getNoteByNullifier: jest.fn().mockResolvedValue({ owner: user.id }),
@@ -143,17 +144,18 @@ describe('user state', () => {
       partialState,
       inputNullifier,
     );
-    return { partialClaimNote, partialStateSecretEphPubKey: ephPubKey };
+    return { partialClaimNote, partialStateSecretEphPubKey: ephPubKey, partialStateSecret };
   };
 
   const generateJoinSplitProof = ({
     proofSender = user,
-    newNoteOwner = user,
+    newNoteOwner = createUser(),
     assetId = 1,
     publicInput = 0n,
     publicOutput = 0n,
     outputNoteValue1 = 0n,
     outputNoteValue2 = 0n,
+    txFee = 0n,
     publicOwner = EthAddress.ZERO,
     noteCommitmentNonce = user.nonce,
     isPadding = false,
@@ -181,7 +183,21 @@ describe('user state', () => {
       numToUInt32BE(assetId, 32),
     );
     const offchainTxData = new OffchainJoinSplitData(viewingKeys);
-    return { proofData, offchainTxData, outputNotes: notes.map(n => n.note) };
+    const tx = new UserJoinSplitTx(
+      new TxHash(proofData.txId),
+      proofSender.id,
+      assetId,
+      publicInput,
+      publicOutput,
+      outputNoteValue1 + outputNoteValue2 + txFee,
+      outputNoteValue1,
+      outputNoteValue2,
+      publicInput ? publicOwner : undefined,
+      publicOutput ? publicOwner : undefined,
+      proofSender.id.equals(user.id),
+      new Date(),
+    );
+    return { proofData, offchainTxData, tx, outputNotes: notes.map(n => n.note) };
   };
 
   const generateAccountProof = ({
@@ -224,14 +240,16 @@ describe('user state', () => {
     bridgeId = BridgeId.random(),
     outputNoteValue = 0n,
     depositValue = 0n,
+    txFee = 0n,
     proofSender = user,
     claimNoteRecipient = user.id,
   } = {}) => {
     const assetId = bridgeId.inputAssetId;
     const nullifier1 = noteAlgos.valueNoteNullifier(randomBytes(32), proofSender.privateKey);
     const nullifier2 = noteAlgos.valueNoteNullifier(randomBytes(32), proofSender.privateKey);
+    const dummyNote = createNote(assetId, 0n, proofSender.id, randomBytes(32));
     const changeNote = createNote(assetId, outputNoteValue, proofSender.id, nullifier2);
-    const { partialClaimNote, partialStateSecretEphPubKey } = createClaimNote(
+    const { partialClaimNote, partialStateSecretEphPubKey, partialStateSecret } = createClaimNote(
       bridgeId,
       depositValue,
       claimNoteRecipient,
@@ -250,7 +268,6 @@ describe('user state', () => {
       Buffer.alloc(32),
       Buffer.alloc(32),
     );
-
     const offchainTxData = new OffchainDefiDepositData(
       bridgeId,
       partialClaimNote.partialState,
@@ -259,7 +276,16 @@ describe('user state', () => {
       0n,
       viewingKeys[0],
     );
-    return { proofData, offchainTxData };
+    const tx = new UserDefiTx(
+      new TxHash(proofData.txId),
+      proofSender.id,
+      bridgeId,
+      depositValue,
+      partialStateSecret,
+      txFee,
+      new Date(),
+    );
+    return { proofData, offchainTxData, tx, outputNotes: [dummyNote.note, changeNote.note] };
   };
 
   const generateDefiClaimProof = ({
@@ -342,12 +368,8 @@ describe('user state', () => {
     userState.processBlock(block);
     await userState.stopSync(true);
 
-    expect(db.addNote).toHaveBeenCalledTimes(2);
+    expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
-      commitment: jsProof.proofData.noteCommitment1,
-      value: outputNoteValue1,
-    });
-    expect(db.addNote.mock.calls[1][0]).toMatchObject({
       commitment: jsProof.proofData.noteCommitment2,
       value: outputNoteValue2,
     });
@@ -380,14 +402,8 @@ describe('user state', () => {
     ]);
     const proofOutput = new JoinSplitProofOutput(tx, jsProof.outputNotes, clientProofData, jsProof.offchainTxData);
     await userState.addProof(proofOutput);
-    expect(db.addNote).toHaveBeenCalledTimes(2);
+    expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
-      commitment: jsProof.proofData.noteCommitment1,
-      value: outputNoteValue1,
-      allowChain: false,
-      pending: true,
-    });
-    expect(db.addNote.mock.calls[1][0]).toMatchObject({
       commitment: jsProof.proofData.noteCommitment2,
       value: outputNoteValue2,
       allowChain: true,
@@ -401,14 +417,8 @@ describe('user state', () => {
     userState.processBlock(block);
     await userState.stopSync(true);
 
-    expect(db.addNote).toHaveBeenCalledTimes(2);
+    expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
-      commitment: jsProof.proofData.noteCommitment1,
-      value: outputNoteValue1,
-      allowChain: false,
-      pending: false,
-    });
-    expect(db.addNote.mock.calls[1][0]).toMatchObject({
       commitment: jsProof.proofData.noteCommitment2,
       value: outputNoteValue2,
       allowChain: false,
@@ -436,11 +446,9 @@ describe('user state', () => {
 
     await userState.handleBlocks([block1, block2]);
 
-    expect(db.addNote).toHaveBeenCalledTimes(4);
-    expect(db.addNote.mock.calls[0][0]).toMatchObject({ commitment: jsProof1.proofData.noteCommitment1, value: 1n });
-    expect(db.addNote.mock.calls[1][0]).toMatchObject({ commitment: jsProof1.proofData.noteCommitment2, value: 2n });
-    expect(db.addNote.mock.calls[2][0]).toMatchObject({ commitment: jsProof2.proofData.noteCommitment1, value: 3n });
-    expect(db.addNote.mock.calls[3][0]).toMatchObject({ commitment: jsProof2.proofData.noteCommitment2, value: 4n });
+    expect(db.addNote).toHaveBeenCalledTimes(2);
+    expect(db.addNote.mock.calls[0][0]).toMatchObject({ commitment: jsProof1.proofData.noteCommitment2, value: 2n });
+    expect(db.addNote.mock.calls[1][0]).toMatchObject({ commitment: jsProof2.proofData.noteCommitment2, value: 4n });
     expect(db.nullifyNote).toHaveBeenCalledTimes(4);
     expect(db.nullifyNote).toHaveBeenCalledWith(jsProof1.proofData.nullifier1);
     expect(db.nullifyNote).toHaveBeenCalledWith(jsProof1.proofData.nullifier2);
@@ -512,7 +520,7 @@ describe('user state', () => {
     expect(db.addJoinSplitTx).toHaveBeenCalledTimes(0);
   });
 
-  it('restore a join split tx and save to db', async () => {
+  it('restore a deposit tx and save to db', async () => {
     const assetId = 1;
     const outputNoteValue1 = 36n;
     const outputNoteValue2 = 64n;
@@ -544,12 +552,8 @@ describe('user state', () => {
     await userState.stopSync(true);
 
     const txHash = new TxHash(jsProof.proofData.txId);
-    expect(db.addNote).toHaveBeenCalledTimes(2);
+    expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
-      commitment: jsProof.proofData.noteCommitment1,
-      value: outputNoteValue1,
-    });
-    expect(db.addNote.mock.calls[1][0]).toMatchObject({
       commitment: jsProof.proofData.noteCommitment2,
       value: outputNoteValue2,
     });
@@ -565,7 +569,7 @@ describe('user state', () => {
       publicInput,
       publicOutput,
       privateInput: inputNoteValue,
-      recipientPrivateOutput: outputNoteValue1,
+      recipientPrivateOutput: 0n,
       senderPrivateOutput: outputNoteValue2,
       inputOwner: publicOwner,
       outputOwner: undefined,
@@ -574,11 +578,70 @@ describe('user state', () => {
     });
   });
 
-  it('restore a join split tx sent from another user to us', async () => {
+  it('restore a withdraw tx and save to db', async () => {
+    const assetId = 1;
+    const outputNoteValue1 = 0n;
+    const outputNoteValue2 = 10n;
+    const inputNoteValue = 70n;
+    const publicInput = 0n;
+    const publicOutput = 60n;
+    const publicOwner = EthAddress.randomAddress();
+
+    const jsProof = generateJoinSplitProof({
+      assetId,
+      outputNoteValue1,
+      outputNoteValue2,
+      publicInput,
+      publicOutput,
+      publicOwner,
+      newNoteOwner: user,
+    });
+    const block = createRollupBlock([jsProof]);
+
+    db.getNoteByNullifier.mockResolvedValueOnce({
+      owner: user.id,
+      value: inputNoteValue,
+    });
+    db.getNoteByNullifier.mockResolvedValueOnce({
+      owner: user.id,
+      value: 0n,
+    });
+
+    userState.processBlock(block);
+    await userState.stopSync(true);
+
+    const txHash = new TxHash(jsProof.proofData.txId);
+    expect(db.addNote).toHaveBeenCalledTimes(1);
+    expect(db.addNote.mock.calls[0][0]).toMatchObject({
+      commitment: jsProof.proofData.noteCommitment2,
+      value: outputNoteValue2,
+    });
+    expect(db.nullifyNote).toHaveBeenCalledTimes(2);
+    expect(db.nullifyNote).toHaveBeenCalledWith(jsProof.proofData.nullifier1);
+    expect(db.nullifyNote).toHaveBeenCalledWith(jsProof.proofData.nullifier2);
+    expect(db.settleJoinSplitTx).toHaveBeenCalledTimes(0);
+    expect(db.addJoinSplitTx).toHaveBeenCalledTimes(1);
+    expect(db.addJoinSplitTx.mock.calls[0][0]).toMatchObject({
+      txHash,
+      userId: user.id,
+      assetId,
+      publicInput,
+      publicOutput,
+      privateInput: inputNoteValue,
+      recipientPrivateOutput: 0n,
+      senderPrivateOutput: outputNoteValue2,
+      inputOwner: undefined,
+      outputOwner: publicOwner,
+      ownedByUser: true,
+      settled: block.created,
+    });
+  });
+
+  it('restore a transfer tx sent from another user to us', async () => {
     const proofSender = createUser();
     const outputNoteValue1 = 56n;
     const outputNoteValue2 = 78n;
-    const jsProof = generateJoinSplitProof({ proofSender, outputNoteValue1, outputNoteValue2 });
+    const jsProof = generateJoinSplitProof({ proofSender, newNoteOwner: user, outputNoteValue1, outputNoteValue2 });
     const block = createRollupBlock([jsProof]);
 
     db.getNoteByNullifier.mockResolvedValue(undefined);
@@ -603,11 +666,11 @@ describe('user state', () => {
     });
   });
 
-  it('restore a join split tx sent from another local user to us', async () => {
+  it('restore a transfer tx sent from another local user to us', async () => {
     const proofSender = createUser();
     const outputNoteValue1 = 56n;
     const outputNoteValue2 = 78n;
-    const jsProof = generateJoinSplitProof({ proofSender, outputNoteValue1, outputNoteValue2 });
+    const jsProof = generateJoinSplitProof({ proofSender, newNoteOwner: user, outputNoteValue1, outputNoteValue2 });
     const block = createRollupBlock([jsProof]);
 
     db.getNoteByNullifier.mockResolvedValue({ owner: proofSender.id });
@@ -632,7 +695,7 @@ describe('user state', () => {
     });
   });
 
-  it('restore a join split tx sent to another user', async () => {
+  it('restore a transfer tx sent to another user', async () => {
     const outputNoteValue1 = 56n;
     const outputNoteValue2 = 78n;
     const jsProof = generateJoinSplitProof({
@@ -940,6 +1003,183 @@ describe('user state', () => {
     });
     expect(db.settleDefiTx).toHaveBeenCalledTimes(1);
     expect(db.settleDefiTx).toHaveBeenCalledWith(txHash, block.created);
+  });
+
+  it('add defi proof and its linked j/s proof, update the note status after the tx is settled', async () => {
+    const jsTxFee = 2n;
+    const outputNoteValue1 = 36n;
+    const outputNoteValue2 = 64n;
+    const inputNoteValue = outputNoteValue1 + outputNoteValue2 + jsTxFee;
+    const defiTxFee = 6n;
+    const depositValue = outputNoteValue1 - defiTxFee;
+    const outputValueA = 10n;
+    const outputValueB = 20n;
+    const bridgeId = BridgeId.random();
+
+    const jsProof = generateJoinSplitProof({ newNoteOwner: user, outputNoteValue1, outputNoteValue2, txFee: jsTxFee });
+    const jsProofData = Buffer.concat([
+      jsProof.proofData.toBuffer(),
+      Buffer.alloc(32 * 8), // noteTreeRoot ... backwardLink
+      Buffer.concat([Buffer.alloc(31), Buffer.from([3])]), // allowChain = 3
+    ]);
+    const jsProofOutput = new JoinSplitProofOutput(
+      jsProof.tx,
+      jsProof.outputNotes,
+      jsProofData,
+      jsProof.offchainTxData,
+    );
+    const forwardLink = noteAlgos.valueNoteNullifier(jsProof.proofData.noteCommitment1, user.privateKey);
+    const utilTx = new UserUtilTx(jsProof.tx.txHash, user.id, jsProof.tx.assetId, jsTxFee, forwardLink);
+
+    const defiProof = generateDefiDepositProof({ bridgeId, depositValue });
+    const defiProofData = Buffer.concat([
+      defiProof.proofData.toBuffer(),
+      Buffer.alloc(32 * 8), // noteTreeRoot ... backwardLink
+      Buffer.alloc(32), // allowChain = 0
+    ]);
+    const defiProofOutput = new DefiProofOutput(
+      defiProof.tx,
+      defiProof.outputNotes,
+      defiProofData,
+      defiProof.offchainTxData,
+      jsProofOutput,
+    );
+
+    await userState.addProof(defiProofOutput);
+    expect(db.addNote).toHaveBeenCalledTimes(2);
+    expect(db.addNote.mock.calls[0][0]).toMatchObject({
+      commitment: jsProof.proofData.noteCommitment1,
+      value: outputNoteValue1,
+      allowChain: true,
+      pending: true,
+    });
+    expect(db.addNote.mock.calls[1][0]).toMatchObject({
+      commitment: jsProof.proofData.noteCommitment2,
+      value: outputNoteValue2,
+      allowChain: true,
+      pending: true,
+    });
+    expect(db.addJoinSplitTx).toHaveBeenCalledTimes(0);
+    expect(db.addUtilTx).toHaveBeenCalledTimes(1);
+    expect(db.addUtilTx).toHaveBeenCalledWith(utilTx);
+    expect(db.addDefiTx).toHaveBeenCalledTimes(1);
+    expect(db.addDefiTx).toHaveBeenCalledWith(defiProof.tx);
+
+    db.addNote.mockClear();
+    db.addUtilTx.mockClear();
+    db.addDefiTx.mockClear();
+
+    db.getDefiTx.mockResolvedValue({ settled: undefined });
+
+    db.getNoteByNullifier.mockResolvedValueOnce({
+      owner: user.id,
+      value: inputNoteValue,
+    });
+    db.getNoteByNullifier.mockResolvedValueOnce({
+      owner: user.id,
+      value: 0n,
+    });
+    db.getNoteByNullifier.mockResolvedValueOnce({
+      owner: user.id,
+      value: outputNoteValue1,
+    });
+
+    const interactionResult = [new DefiInteractionNote(bridgeId, 0, depositValue, outputValueA, outputValueB, true)];
+    const block = createRollupBlock([jsProof, defiProof], { interactionResult });
+
+    userState.processBlock(block);
+    await userState.stopSync(true);
+
+    expect(db.addNote).toHaveBeenCalledTimes(2);
+    expect(db.addNote.mock.calls[0][0]).toMatchObject({
+      commitment: jsProof.proofData.noteCommitment1,
+      value: outputNoteValue1,
+      allowChain: false,
+      pending: false,
+    });
+    expect(db.addNote.mock.calls[1][0]).toMatchObject({
+      commitment: jsProof.proofData.noteCommitment2,
+      value: outputNoteValue2,
+      allowChain: false,
+      pending: false,
+    });
+    expect(db.addJoinSplitTx).toHaveBeenCalledTimes(0);
+    expect(db.settleJoinSplitTx).toHaveBeenCalledTimes(0);
+    expect(db.addUtilTx).toHaveBeenCalledTimes(1);
+    expect(db.addUtilTx).toHaveBeenCalledWith(utilTx);
+    expect(db.addDefiTx).toHaveBeenCalledTimes(0);
+    expect(db.updateDefiTx).toHaveBeenCalledTimes(1);
+    expect(db.updateDefiTx).toHaveBeenCalledWith(new TxHash(defiProof.proofData.txId), outputValueA, outputValueB);
+  });
+
+  it('recover a defi proof and accumulate the fee from its linked j/s proof', async () => {
+    const jsTxFee = 2n;
+    const outputNoteValue1 = 36n;
+    const outputNoteValue2 = 64n;
+    const inputNoteValue = outputNoteValue1 + outputNoteValue2 + jsTxFee;
+    const defiTxFee = 6n;
+    const depositValue = outputNoteValue1 - defiTxFee;
+    const outputValueA = 10n;
+    const outputValueB = 20n;
+    const bridgeId = BridgeId.random();
+
+    const jsProof = generateJoinSplitProof({ newNoteOwner: user, outputNoteValue1, outputNoteValue2, txFee: jsTxFee });
+    const forwardLink = noteAlgos.valueNoteNullifier(jsProof.proofData.noteCommitment1, user.privateKey);
+    const utilTx = new UserUtilTx(jsProof.tx.txHash, user.id, jsProof.tx.assetId, jsTxFee, forwardLink);
+    const defiProof = generateDefiDepositProof({ bridgeId, depositValue });
+
+    db.getNoteByNullifier.mockResolvedValueOnce({
+      owner: user.id,
+      value: inputNoteValue,
+    });
+    db.getNoteByNullifier.mockResolvedValueOnce({
+      owner: user.id,
+      value: 0n,
+    });
+    db.getNoteByNullifier.mockResolvedValueOnce({
+      owner: user.id,
+      value: outputNoteValue1,
+    });
+
+    db.getUtilTxByLink.mockResolvedValueOnce(utilTx);
+
+    const interactionResult = [new DefiInteractionNote(bridgeId, 0, depositValue, outputValueA, outputValueB, true)];
+    const block = createRollupBlock([jsProof, defiProof], { interactionResult });
+
+    userState.processBlock(block);
+    await userState.stopSync(true);
+
+    expect(db.addNote).toHaveBeenCalledTimes(2);
+    expect(db.addNote.mock.calls[0][0]).toMatchObject({
+      commitment: jsProof.proofData.noteCommitment1,
+      value: outputNoteValue1,
+      allowChain: false,
+      pending: false,
+    });
+    expect(db.addNote.mock.calls[1][0]).toMatchObject({
+      commitment: jsProof.proofData.noteCommitment2,
+      value: outputNoteValue2,
+      allowChain: false,
+      pending: false,
+    });
+    expect(db.addJoinSplitTx).toHaveBeenCalledTimes(0);
+    expect(db.settleJoinSplitTx).toHaveBeenCalledTimes(0);
+    expect(db.addUtilTx).toHaveBeenCalledTimes(1);
+    expect(db.addUtilTx).toHaveBeenCalledWith(utilTx);
+    expect(db.addDefiTx).toHaveBeenCalledTimes(1);
+    expect(db.addDefiTx).toHaveBeenCalledWith(
+      expect.objectContaining({
+        txHash: defiProof.tx.txHash,
+        userId: user.id,
+        bridgeId,
+        depositValue,
+        txFee: defiTxFee + jsTxFee,
+        outputValueA,
+        outputValueB,
+        settled: undefined,
+      }),
+    );
+    expect(db.updateDefiTx).toHaveBeenCalledTimes(0);
   });
 
   it('ignore a defi claim proof for account with a different nonce', async () => {

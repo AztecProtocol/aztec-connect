@@ -5,15 +5,17 @@ import {
   OffchainDefiDepositData,
   OffchainJoinSplitData,
 } from '@aztec/barretenberg/offchain_tx_data';
-import { Proof } from '@aztec/barretenberg/rollup_provider';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { AccountId } from '../user';
 import { UserAccountTx, UserDefiTx, UserJoinSplitTx } from '../user_tx';
 
-export interface ProofOutput extends Proof {
+export interface ProofOutput {
   tx: UserJoinSplitTx | UserAccountTx | UserDefiTx;
   outputNotes: TreeNote[];
+  proofData: Buffer;
+  offchainTxData: Buffer;
+  depositSignature?: Buffer;
   parentProof?: ProofOutput;
 }
 
@@ -25,6 +27,7 @@ export class JoinSplitProofOutput implements ProofOutput {
     public readonly outputNotes: TreeNote[],
     public readonly proofData: Buffer,
     offchainTxData: OffchainJoinSplitData,
+    public parentProof?: ProofOutput,
   ) {
     this.offchainTxData = offchainTxData.toBuffer();
   }
@@ -38,6 +41,7 @@ export class AccountProofOutput implements ProofOutput {
     public readonly tx: UserAccountTx,
     public readonly proofData: Buffer,
     offchainTxData: OffchainAccountData,
+    public parentProof?: ProofOutput,
   ) {
     this.offchainTxData = offchainTxData.toBuffer();
   }
@@ -86,7 +90,7 @@ export class DefiProofOutput implements ProofOutput {
     public readonly outputNotes: TreeNote[],
     public readonly proofData: Buffer,
     offchainTxData: OffchainDefiDepositData,
-    public readonly parentProof?: JoinSplitProofOutput,
+    public parentProof?: ProofOutput,
   ) {
     this.offchainTxData = offchainTxData.toBuffer();
   }

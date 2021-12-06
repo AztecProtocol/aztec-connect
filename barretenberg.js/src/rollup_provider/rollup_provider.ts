@@ -18,6 +18,7 @@ export interface Proof {
   proofData: Buffer;
   offchainTxData: Buffer;
   depositSignature?: Buffer;
+  parentProof?: Proof;
 }
 
 export interface FeeQuote {

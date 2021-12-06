@@ -207,8 +207,7 @@ export class DefiAgent extends Agent {
       bridgeId,
       this.user.id,
       depositValue,
-      txFee,
-      jsTxFee,
+      txFee + jsTxFee,
       this.signer,
     );
     console.log(`${this.agentId()} sending Defi proof, defi hash: ${proofOutput.tx.txHash}`);

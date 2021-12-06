@@ -58,7 +58,6 @@ export class DefiDepositProofCreator {
       const txHash = new TxHash(txId);
       const assetId = bridgeId.inputAssetId;
       const privateInput = tx.inputNotes.reduce((sum, n) => sum + n.value, BigInt(0));
-      const senderPrivateOutput = outputNotes.reduce((sum, n) => sum + n.value, BigInt(0));
       const userTx = new UserJoinSplitTx(
         txHash,
         user.id,
@@ -66,8 +65,8 @@ export class DefiDepositProofCreator {
         BigInt(0),
         BigInt(0),
         privateInput,
-        BigInt(0),
-        senderPrivateOutput,
+        outputNotes[0].value,
+        outputNotes[1].value,
         undefined,
         undefined,
         true, // ownedByUser
@@ -84,7 +83,15 @@ export class DefiDepositProofCreator {
     const {
       claimNote: { partialStateSecret },
     } = tx;
-    const userTx = new UserDefiTx(txHash, user.id, bridgeId, depositValue, partialStateSecret, txFee, new Date());
+    const userTx = new UserDefiTx(
+      txHash,
+      user.id,
+      bridgeId,
+      depositValue,
+      partialStateSecret,
+      txFee + (joinSplitProofOutput ? jsTxFee : BigInt(0)),
+      new Date(),
+    );
     const partialState = this.noteAlgos.valueNotePartialCommitment(partialStateSecret, user.id);
     const offchainTxData = new OffchainDefiDepositData(
       bridgeId,
@@ -147,7 +154,7 @@ export class DefiDepositProofCreator {
           {
             bridgeId,
             defiDepositValue,
-            allowChain: allowChain ? 2 : 0,
+            allowChain: changeValue ? 2 : 0,
           },
         );
         return [defiDepositTx];
@@ -166,13 +173,13 @@ export class DefiDepositProofCreator {
       const changeValue = totalInputNoteValue - privateInput;
 
       const joinSplitTx = await this.txFactory.createTx(user, ProofId.SEND, assetId, notes, signingPubKey, {
-        outputNoteValue1: changeValue,
-        outputNoteValue2: defiDepositValue + txFee,
-        allowChain: 2,
+        outputNoteValue1: defiDepositValue + txFee,
+        outputNoteValue2: changeValue,
+        allowChain: 3,
       });
 
-      // Use the second output note from the above j/s tx as the input note.
-      const inputNote = this.txFactory.treeNoteToNote(joinSplitTx.outputNotes[1], user.privateKey, {
+      // Use the first output note from the above j/s tx as the input note.
+      const inputNote = this.txFactory.treeNoteToNote(joinSplitTx.outputNotes[0], user.privateKey, {
         allowChain: true,
       });
 

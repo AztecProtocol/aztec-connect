@@ -237,20 +237,22 @@ export class WalletSdk extends EventEmitter {
   public async createDepositProof(
     assetId: AssetId,
     from: EthAddress,
-    to: AccountId,
+    userId: AccountId,
     value: bigint,
     fee: bigint,
     signer: Signer,
+    to = userId,
     allowChain = true,
   ) {
+    const [recipientPrivateOutput, senderPrivateOutput] = to.equals(userId) ? [BigInt(0), value] : [value, BigInt(0)];
     return this.createJoinSplitProof(
       assetId,
-      to, // userId
+      userId,
       value + fee, // publicInput
       BigInt(0), // publicOutput
       BigInt(0), // privateInput
-      BigInt(0), // recipientPrivateOutput
-      value, // senderPrivateOutput
+      recipientPrivateOutput,
+      senderPrivateOutput,
       signer,
       to, // noteRecipient
       from, // publicOwner
@@ -343,7 +345,6 @@ export class WalletSdk extends EventEmitter {
     userId: AccountId,
     depositValue: bigint,
     txFee: bigint,
-    jsTxFee: bigint,
     signer: Signer,
     allowChain = false,
   ) {
@@ -352,8 +353,7 @@ export class WalletSdk extends EventEmitter {
     }
 
     await this.checkNoteBalance(bridgeId.inputAssetId, userId, depositValue + txFee);
-
-    return this.core.createDefiProof(bridgeId, userId, depositValue, txFee, jsTxFee, signer, allowChain);
+    return this.core.createDefiProof(bridgeId, userId, depositValue, txFee, signer, allowChain);
   }
 
   public async generateAccountRecoveryData(
@@ -593,18 +593,11 @@ export class WalletSdk extends EventEmitter {
   }
 
   private async checkNoteBalance(assetId: AssetId, userId: AccountId, value: bigint) {
-    const balance = this.core.getBalance(assetId, userId);
-    if (value > balance) {
-      throw new Error('Not enough balance.');
-    }
-
     const maxTxValue = await this.core.getMaxSpendableValue(assetId, userId);
     if (value > maxTxValue) {
       const messages = [`Failed to find 2 notes that sum to ${this.fromBaseUnits(assetId, value)}.`];
       if (maxTxValue) {
         messages.push(`Please make a transaction no more than ${this.fromBaseUnits(assetId, maxTxValue)}.`);
-      } else {
-        messages.push('Please wait for pending transactions to settle.');
       }
       throw new Error(messages.join(' '));
     }

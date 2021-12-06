@@ -69,14 +69,14 @@ describe('NotePicker', () => {
     }
   });
 
-  it('calculate the sum of all notes', () => {
+  it('calculate the sum of settled notes', () => {
     {
       const notePicker = new NotePicker(notes);
       expect(notePicker.getSum()).toBe(23n);
     }
     {
       const notePicker = new NotePicker([...notes, randomNote(5n, false, true), randomNote(4n, true, true)]);
-      expect(notePicker.getSum()).toBe(32n);
+      expect(notePicker.getSum()).toBe(23n);
     }
   });
 

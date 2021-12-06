@@ -6,10 +6,12 @@ const noteSum = (notes: Note[]) => notes.reduce((sum, { value }) => sum + value,
 
 export class NotePicker {
   private readonly spendableNotes: SortedNotes;
+  private readonly settledNotes: Note[];
   private readonly numNotesPerTx = 2;
 
-  constructor(private readonly notes: Note[] = []) {
+  constructor(readonly notes: Note[] = []) {
     this.spendableNotes = new SortedNotes(notes.filter(n => !n.pending || n.allowChain));
+    this.settledNotes = notes.filter(n => !n.pending);
   }
 
   getSpendableNotes(excludeNullifiers?: Buffer[]) {
@@ -28,7 +30,7 @@ export class NotePicker {
   }
 
   getSum() {
-    return noteSum(this.notes);
+    return noteSum(this.settledNotes);
   }
 
   getSpendableSum(excludeNullifiers?: Buffer[]) {

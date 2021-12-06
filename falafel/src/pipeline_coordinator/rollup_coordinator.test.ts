@@ -118,7 +118,7 @@ describe('rollup_coordinator', () => {
     } = {},
   ) =>
     ({
-      id,
+      id: Buffer.from([id]),
       txType,
       created: creationTime,
       proofData: Buffer.concat([
@@ -142,6 +142,10 @@ describe('rollup_coordinator', () => {
       txFeeAssetId: assetId,
       bridgeId: bridgeId,
     });
+
+  const expectProcessedTxIds = (txIds: number[]) => {
+    expect(coordinator.processedTxs.map(tx => tx.id)).toEqual(txIds.map(id => Buffer.from([id])));
+  };
 
   beforeEach(() => {
     jest.spyOn(Date, 'now').mockImplementation(() => getCurrentTime().getTime());
@@ -442,7 +446,7 @@ describe('rollup_coordinator', () => {
       ];
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([0, 1, 4, 5]);
+      expectProcessedTxIds([0, 1, 4, 5]);
       expect(rollupCreator.create).toHaveBeenCalledTimes(2);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
@@ -461,7 +465,7 @@ describe('rollup_coordinator', () => {
       ];
       let rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([0, 1, 4, 5]);
+      expectProcessedTxIds([0, 1, 4, 5]);
 
       // then we get some more txs. Of course we still have the defis from before
       pendingTxs = [
@@ -475,7 +479,7 @@ describe('rollup_coordinator', () => {
       ];
       rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([0, 1, 4, 5, 6, 2, 3, 7]);
+      expectProcessedTxIds([0, 1, 4, 5, 6, 2, 3, 7]);
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
@@ -499,7 +503,7 @@ describe('rollup_coordinator', () => {
       ];
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([2, 0, 1, 3, 4, 5, 6]);
+      expectProcessedTxIds([2, 0, 1, 3, 4, 5, 6]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
@@ -521,7 +525,7 @@ describe('rollup_coordinator', () => {
       ];
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([0, 2, 5, 6]);
+      expectProcessedTxIds([0, 2, 5, 6]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(2);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
@@ -543,7 +547,7 @@ describe('rollup_coordinator', () => {
       ];
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([0, 1, 2, 3, 5, 6, 7, 8]);
+      expectProcessedTxIds([0, 1, 2, 3, 5, 6, 7, 8]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
@@ -572,7 +576,7 @@ describe('rollup_coordinator', () => {
       ];
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([0, 1, 3, 4, 6, 7, 8, 10]);
+      expectProcessedTxIds([0, 1, 3, 4, 6, 7, 8, 10]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
@@ -589,7 +593,7 @@ describe('rollup_coordinator', () => {
       let pendingTxs = [mockDefiBridgeTxLocal(0, BASE_GAS + 90000n), mockDefiBridgeTxLocal(1, BASE_GAS + 30000n)];
       let rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([0, 1]);
+      expectProcessedTxIds([0, 1]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
@@ -602,7 +606,7 @@ describe('rollup_coordinator', () => {
       ];
       rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([0, 1, 3, 4]);
+      expectProcessedTxIds([0, 1, 3, 4]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(2);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
@@ -619,7 +623,7 @@ describe('rollup_coordinator', () => {
       ];
       rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([0, 1, 3, 4, 6, 7, 8, 10]);
+      expectProcessedTxIds([0, 1, 3, 4, 6, 7, 8, 10]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
@@ -650,7 +654,7 @@ describe('rollup_coordinator', () => {
       ];
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([0, 1, 3, 4, 6, 7, 8, 10]);
+      expectProcessedTxIds([0, 1, 3, 4, 6, 7, 8, 10]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
@@ -679,7 +683,7 @@ describe('rollup_coordinator', () => {
       ];
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([0, 1, 2, 5, 6, 7, 9, 10]);
+      expectProcessedTxIds([0, 1, 2, 5, 6, 7, 9, 10]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
@@ -703,7 +707,7 @@ describe('rollup_coordinator', () => {
       ];
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([3, 0, 4, 1, 2, 5, 6, 7]);
+      expectProcessedTxIds([3, 0, 4, 1, 2, 5, 6, 7]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
@@ -729,7 +733,7 @@ describe('rollup_coordinator', () => {
       ];
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([3, 0, 4, 1, 2, 5, 6, 7]);
+      expectProcessedTxIds([3, 0, 4, 1, 2, 5, 6, 7]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
@@ -748,7 +752,7 @@ describe('rollup_coordinator', () => {
       const pendingTxs = [mockDefiBridgeTx(0, fullCost, bridgeConfigs[1].bridgeId)];
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([0]);
+      expectProcessedTxIds([0]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
@@ -768,7 +772,7 @@ describe('rollup_coordinator', () => {
       ];
       let rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([0, 1]);
+      expectProcessedTxIds([0, 1]);
 
       // 1 inner rollup has been created
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
@@ -778,7 +782,7 @@ describe('rollup_coordinator', () => {
       pendingTxs = [mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH })];
       rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([0, 1, 2]);
+      expectProcessedTxIds([0, 1, 2]);
 
       // rollup is now profitable
       expect(rollupCreator.create).toHaveBeenCalledTimes(2);
@@ -796,7 +800,7 @@ describe('rollup_coordinator', () => {
       const pendingTxs = [mockTx(0, { txType: TxType.TRANSFER, txFee: fullCost, txFeeAssetId: AssetId.ETH })];
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([0]);
+      expectProcessedTxIds([0]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
@@ -818,7 +822,7 @@ describe('rollup_coordinator', () => {
       ];
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([0]);
+      expectProcessedTxIds([0]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
@@ -847,7 +851,7 @@ describe('rollup_coordinator', () => {
       // we can only rollup the first 2 txs for bridge [2] here
       let rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([0, 1]);
+      expectProcessedTxIds([0, 1]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
@@ -868,7 +872,7 @@ describe('rollup_coordinator', () => {
       // still can't do anything with bridge [3]
       rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([0, 1, 7, 9]);
+      expectProcessedTxIds([0, 1, 7, 9]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(2);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
@@ -935,7 +939,7 @@ describe('rollup_coordinator', () => {
       const pendingTxs = [mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH })];
       let rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([]);
+      expectProcessedTxIds([]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(0);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
@@ -952,7 +956,7 @@ describe('rollup_coordinator', () => {
       // run again and we should have published it
       rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([0]);
+      expectProcessedTxIds([0]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
@@ -972,7 +976,7 @@ describe('rollup_coordinator', () => {
       const pendingTxs = [mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH })];
       let rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([]);
+      expectProcessedTxIds([]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(0);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
@@ -989,7 +993,7 @@ describe('rollup_coordinator', () => {
       // run again and we still should not have published it
       rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([]);
+      expectProcessedTxIds([]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(0);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
@@ -1006,7 +1010,7 @@ describe('rollup_coordinator', () => {
       ];
       let rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([]);
+      expectProcessedTxIds([]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(0);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
@@ -1023,7 +1027,7 @@ describe('rollup_coordinator', () => {
       // run again and we should have published it
       rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([0]);
+      expectProcessedTxIds([0]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
@@ -1046,7 +1050,7 @@ describe('rollup_coordinator', () => {
       ];
       let rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([]);
+      expectProcessedTxIds([]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(0);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
@@ -1066,7 +1070,7 @@ describe('rollup_coordinator', () => {
       // run again and we should have published it
       rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([0, 1]);
+      expectProcessedTxIds([0, 1]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
@@ -1084,7 +1088,7 @@ describe('rollup_coordinator', () => {
       const pendingTxs = [mockDefiBridgeTx(1, BASE_GAS + bridgeConfigs[2].fee / 3n, bridgeConfigs[2].bridgeId)];
       let rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([]);
+      expectProcessedTxIds([]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(0);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
@@ -1104,7 +1108,7 @@ describe('rollup_coordinator', () => {
       // run again and we should have published it
       rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([1]);
+      expectProcessedTxIds([1]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
@@ -1126,7 +1130,7 @@ describe('rollup_coordinator', () => {
       ];
       let rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([]);
+      expectProcessedTxIds([]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(0);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
@@ -1147,7 +1151,7 @@ describe('rollup_coordinator', () => {
       // run again and we should have published it
       rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([0, 1, 2]);
+      expectProcessedTxIds([0, 1, 2]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
@@ -1226,7 +1230,7 @@ describe('rollup_coordinator', () => {
       ];
       let rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([]);
+      expectProcessedTxIds([]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(0);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
@@ -1244,7 +1248,7 @@ describe('rollup_coordinator', () => {
       // run again and we should have published it
       rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([0]);
+      expectProcessedTxIds([0]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
@@ -1279,57 +1283,12 @@ describe('rollup_coordinator', () => {
       );
     });
 
-    it('should put chained txs in an inner rollup together', async () => {
-      const chainedTxsA = [...Array(3)]
-        .map(() => randomBytes(32))
-        .map((noteCommitment2, i, commitments) =>
-          mockTx(i, {
-            noteCommitment2,
-            backwardLink: i ? commitments[i - 1] : randomBytes(32),
-          }),
-        );
-      const chainedTxsB = [...Array(4)]
-        .map(() => randomBytes(32))
-        .map((noteCommitment2, i, commitments) =>
-          mockTx(i, {
-            noteCommitment2,
-            backwardLink: i ? commitments[i - 1] : randomBytes(32),
-          }),
-        );
-      const normalTxs = [...Array(3)].map((_, i) => mockTx(i + chainedTxsA.length + chainedTxsB.length));
-      const pendingTxs = [
-        chainedTxsA[0],
-        normalTxs[0],
-        chainedTxsB[0],
-        normalTxs[1],
-        chainedTxsB[1],
-        chainedTxsA[1],
-        normalTxs[2],
-        chainedTxsB[2],
-        chainedTxsA[2],
-        chainedTxsB[3],
-      ];
-      const rp = await coordinator.processPendingTxs(pendingTxs);
-      expect(rp.published).toBe(false);
-      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
-      expect(rollupCreator.create).toHaveBeenCalledWith([
-        chainedTxsA[0],
-        chainedTxsA[1],
-        normalTxs[0],
-        chainedTxsB[0],
-        chainedTxsB[1],
-        chainedTxsB[2],
-        normalTxs[1],
-        normalTxs[2],
-      ]);
-    });
-
     it('should break a chain if they cannot be in the same inner rollup', async () => {
-      // Create 3 defi deposit txs with different bridge ids.
-      const defiTxs = bridgeConfigs.slice(0, 3).map((bc, i) => mockDefiBridgeTx(i, bc.fee + BASE_GAS, bc.bridgeId));
+      // Create 4 defi deposit txs with different bridge ids.
+      const defiTxs = bridgeConfigs.slice(0, 4).map((bc, i) => mockDefiBridgeTx(i, bc.fee + BASE_GAS, bc.bridgeId));
 
-      // Create a chain of txs. The 3rd one is a defi deposit tx.
-      const commitments = [...Array(3)].map(() => randomBytes(32));
+      // Create a chain of 4 txs. The 3rd one is a defi deposit tx.
+      const commitments = [...Array(4)].map(() => randomBytes(32));
       const chainedTxs = commitments.slice(0, 2).map((noteCommitment2, i) =>
         mockTx(i + 4, {
           noteCommitment2,
@@ -1345,6 +1304,12 @@ describe('rollup_coordinator', () => {
           backwardLink: commitments[1],
         }),
       );
+      chainedTxs.push(
+        mockTx(7, {
+          noteCommitment2: commitments[3],
+          backwardLink: commitments[2],
+        }),
+      );
 
       // Create 3 deposit txs.
       const normalTxs = [...Array(3)].map((_, i) => mockTx(i + 9));
@@ -1354,8 +1319,10 @@ describe('rollup_coordinator', () => {
         defiTxs[1],
         chainedTxs[0],
         defiTxs[2],
+        defiTxs[3],
         chainedTxs[1],
         chainedTxs[2],
+        chainedTxs[3],
         normalTxs[0],
         normalTxs[1],
         normalTxs[2],
@@ -1367,63 +1334,11 @@ describe('rollup_coordinator', () => {
         defiTxs[0],
         defiTxs[1],
         chainedTxs[0],
-        chainedTxs[1],
-        chainedTxs[2],
         defiTxs[2],
+        defiTxs[3],
+        chainedTxs[1],
         normalTxs[0],
         normalTxs[1],
-      ]);
-    });
-
-    it('should maintain chain ordering with defi', async () => {
-      const creatChain = (startIndex: number, length: number, defiFee: bigint, bridgeId: BridgeId) => {
-        // Create a chain of txs. The 3rd one is a defi deposit tx.
-        const commitments = [...Array(length - 1)].map(() => randomBytes(32));
-        const chainedTxs = commitments.slice(0, 2).map((noteCommitment2, i) =>
-          mockTx(i + startIndex, {
-            noteCommitment2,
-            backwardLink: i ? commitments[i - 1] : Buffer.alloc(32),
-          }),
-        );
-        chainedTxs.push(
-          mockTx(length - 1 + startIndex, {
-            txType: TxType.DEFI_DEPOSIT,
-            bridgeId: bridgeId,
-            txFee: BASE_GAS + defiFee,
-            noteCommitment2: commitments[2],
-            backwardLink: commitments[1],
-          }),
-        );
-        return chainedTxs;
-      };
-
-      const defiChain1 = creatChain(0, 3, bridgeConfigs[2].fee / 3n, bridgeConfigs[2].bridgeId);
-      const defiChain2 = creatChain(3, 3, bridgeConfigs[2].fee / 3n, bridgeConfigs[2].bridgeId);
-      const defiChain3 = creatChain(6, 3, bridgeConfigs[2].fee / 3n, bridgeConfigs[2].bridgeId);
-
-      const pendingTxs = [
-        defiChain1[0],
-        defiChain2[0],
-        defiChain3[0],
-        defiChain1[1],
-        defiChain2[1],
-        defiChain3[1],
-        defiChain1[2],
-        defiChain2[2],
-        defiChain3[2],
-      ];
-      const rp = await coordinator.processPendingTxs(pendingTxs);
-      expect(rp.published).toBe(false);
-      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
-      expect(rollupCreator.create).toHaveBeenCalledWith([
-        defiChain1[0],
-        defiChain1[1],
-        defiChain1[2],
-        defiChain2[0],
-        defiChain2[1],
-        defiChain2[2],
-        defiChain3[0],
-        defiChain3[1],
       ]);
     });
   });
@@ -1454,7 +1369,7 @@ describe('rollup_coordinator', () => {
       const pendingTxs = [mockDefiBridgeTx(1, BASE_GAS + bridgeConfigs[2].fee / 3n, bridgeConfigs[2].bridgeId)];
       let rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([]);
+      expectProcessedTxIds([]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(0);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
@@ -1463,7 +1378,7 @@ describe('rollup_coordinator', () => {
       // run again but this time flush
       rp = await coordinator.processPendingTxs(pendingTxs, flush);
       expect(rp.published).toBe(true);
-      expect(coordinator.processedTxs.map(tx => tx.id)).toEqual([1]);
+      expectProcessedTxIds([1]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);

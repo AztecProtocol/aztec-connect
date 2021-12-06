@@ -107,7 +107,7 @@ export class JoinSplitTxFactory {
       signingPubKey,
       propagatedInputIndex,
       backwardLink,
-      allowChain && outputNotes[allowChain - 1].value ? allowChain : 0,
+      allowChain,
     );
 
     const viewingKeys =

@@ -30,18 +30,28 @@ export interface PendingTxServerResponse {
   noteCommitment2: string;
 }
 
+export interface TxPostData {
+  proofData: string;
+  offchainTxData: string;
+  depositSignature?: string;
+  parentProof?: TxPostData;
+}
+
+const toTxPostData = ({ proofData, offchainTxData, depositSignature, parentProof }: Proof): TxPostData => ({
+  proofData: proofData.toString('hex'),
+  offchainTxData: offchainTxData.toString('hex'),
+  depositSignature: depositSignature ? depositSignature.toString('hex') : undefined,
+  parentProof: parentProof ? toTxPostData(parentProof) : undefined,
+});
+
 export class ServerRollupProvider extends ServerBlockSource implements RollupProvider {
   constructor(baseUrl: URL, pollInterval = 10000) {
     super(baseUrl, pollInterval);
   }
 
-  async sendProof({ proofData, offchainTxData, depositSignature, ...rest }: Proof) {
-    const response = await this.fetch('/tx', {
-      proofData: proofData.toString('hex'),
-      offchainTxData: offchainTxData.toString('hex'),
-      depositSignature: depositSignature ? depositSignature.toString('hex') : undefined,
-      ...rest,
-    });
+  async sendProof(proof: Proof) {
+    const data = toTxPostData(proof);
+    const response = await this.fetch('/tx', data);
     const body = await response.json();
     return TxHash.fromString(body.txHash);
   }

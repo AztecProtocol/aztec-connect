@@ -6,7 +6,7 @@ import { TxHash } from '@aztec/barretenberg/tx_hash';
 import Dexie from 'dexie';
 import { Note } from '../note';
 import { AccountId, UserData } from '../user';
-import { UserAccountTx, UserDefiTx, UserJoinSplitTx } from '../user_tx';
+import { UserAccountTx, UserDefiTx, UserJoinSplitTx, UserUtilTx } from '../user_tx';
 import { Claim } from './claim';
 import { Alias, Database, SigningKey } from './database';
 
@@ -304,6 +304,34 @@ const fromDexieDefiTx = ({
     settled ? new Date(settled) : undefined,
   );
 
+class DexieUtilTx {
+  constructor(
+    public txHash: Uint8Array,
+    public userId: Uint8Array,
+    public assetId: number,
+    public txFee: string,
+    public forwardLink: Uint8Array,
+  ) {}
+}
+
+const toDexieUtilTx = ({ txHash, userId, assetId, txFee, forwardLink }: UserUtilTx) =>
+  new DexieUtilTx(
+    new Uint8Array(txHash.toBuffer()),
+    new Uint8Array(userId.toBuffer()),
+    assetId,
+    txFee.toString(),
+    new Uint8Array(forwardLink),
+  );
+
+const fromDexieUtilTx = ({ txHash, userId, assetId, txFee, forwardLink }: DexieUtilTx) =>
+  new UserUtilTx(
+    new TxHash(Buffer.from(txHash)),
+    AccountId.fromBuffer(Buffer.from(userId)),
+    assetId,
+    BigInt(txFee),
+    Buffer.from(forwardLink),
+  );
+
 class DexieUserKey {
   constructor(public accountId: Uint8Array, public key: Uint8Array, public treeIndex: number) {}
 }
@@ -329,6 +357,7 @@ export class DexieDatabase implements Database {
   private user!: Dexie.Table<DexieUser, number>;
   private userKeys!: Dexie.Table<DexieUserKey, string>;
   private userTx!: Dexie.Table<DexieUserTx, string>;
+  private utilTx!: Dexie.Table<DexieUtilTx, string>;
   private note!: Dexie.Table<DexieNote, number>;
   private claim!: Dexie.Table<DexieClaim, number>;
   private key!: Dexie.Table<DexieKey, string>;
@@ -359,6 +388,7 @@ export class DexieDatabase implements Database {
       user: '&id',
       userKeys: '&[accountId+key], accountId',
       userTx: '&[txHash+userId], txHash, [txHash+proofId], [userId+proofId], proofId, settled',
+      utilTx: '&[txHash], forwardLink',
     });
 
     this.alias = this.dexie.table('alias');
@@ -368,6 +398,7 @@ export class DexieDatabase implements Database {
     this.user = this.dexie.table('user');
     this.userKeys = this.dexie.table('userKeys');
     this.userTx = this.dexie.table('userTx');
+    this.utilTx = this.dexie.table('utilTx');
   }
 
   async close() {
@@ -535,6 +566,15 @@ export class DexieDatabase implements Database {
     await this.userTx
       .where({ txHash: new Uint8Array(txHash.toBuffer()), proofId: ProofId.DEFI_DEPOSIT })
       .modify({ settled });
+  }
+
+  async addUtilTx(tx: UserUtilTx) {
+    await this.utilTx.put(toDexieUtilTx(tx));
+  }
+
+  async getUtilTxByLink(forwardLink: Buffer) {
+    const tx = await this.utilTx.get({ forwardLink: new Uint8Array(forwardLink) });
+    return tx ? fromDexieUtilTx(tx) : undefined;
   }
 
   async isUserTxSettled(txHash: TxHash) {

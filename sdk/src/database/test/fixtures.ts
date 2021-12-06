@@ -5,7 +5,7 @@ import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { randomBytes } from 'crypto';
 import { Note } from '../../note';
 import { AccountAliasId, AccountId, UserData } from '../../user';
-import { UserAccountTx, UserDefiTx, UserJoinSplitTx } from '../../user_tx';
+import { UserAccountTx, UserDefiTx, UserJoinSplitTx, UserUtilTx } from '../../user_tx';
 import { Claim } from '../claim';
 import { Alias, SigningKey } from '../database';
 
@@ -91,6 +91,15 @@ export const randomUserDefiTx = (tx: Partial<UserDefiTx> = {}) =>
     tx.outputValueA || BigInt(0),
     tx.outputValueB || BigInt(0),
     tx.settled,
+  );
+
+export const randomUserUtilTx = (tx: Partial<UserUtilTx> = {}) =>
+  new UserUtilTx(
+    tx.txHash || TxHash.random(),
+    tx.userId || AccountId.random(),
+    inputOrDefault(tx.assetId, randomInt()),
+    inputOrDefault(tx.txFee, BigInt(randomInt())),
+    tx.forwardLink || randomBytes(32),
   );
 
 export const randomAccountAliasId = () => new AccountAliasId(AliasHash.random(), randomInt());

@@ -74,4 +74,14 @@ export class ProofData {
 
     this.txId = createTxId(rawProofData.slice(0, ProofData.NUM_PUBLISHED_PUBLIC_INPUTS * 32));
   }
+
+  get allowChainFromNote1() {
+    const allowChain = this.allowChain.readUInt32BE(28);
+    return [1, 3].includes(allowChain);
+  }
+
+  get allowChainFromNote2() {
+    const allowChain = this.allowChain.readUInt32BE(28);
+    return [2, 3].includes(allowChain);
+  }
 }
