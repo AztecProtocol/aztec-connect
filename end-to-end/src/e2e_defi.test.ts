@@ -64,7 +64,7 @@ describe('end-to-end defi tests', () => {
 
     // Shield
     let depositTxHash: TxHash;
-    const shieldValue = sdk.toBaseUnits(AssetId.ETH, '0.8');
+    const shieldValue = sdk.toBaseUnits(AssetId.ETH, '0.08');
     {
       const assetId = AssetId.ETH;
       const txFee = await sdk.getFee(assetId, TxType.DEPOSIT);
@@ -82,7 +82,7 @@ describe('end-to-end defi tests', () => {
       const outputAssetIdB = 0;
       const bridgeId = new BridgeId(bridgeAddressId, inputAssetId, outputAssetIdA, outputAssetIdB, 0, false, false, 0);
       const txFee = await sdk.getFee(inputAssetId, TxType.DEFI_DEPOSIT);
-      const depositValue = sdk.toBaseUnits(inputAssetId, '0.5');
+      const depositValue = sdk.toBaseUnits(inputAssetId, '0.05');
       const proofOutput = await sdk.createDefiProof(bridgeId, userId, depositValue, txFee, signer);
       const defiTxHash = await sdk.sendProof(proofOutput);
 

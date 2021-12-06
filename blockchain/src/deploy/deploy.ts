@@ -58,42 +58,20 @@ export async function deploy(escapeHatchBlockLower: number, escapeHatchBlockUppe
   await feeDistributor.deposit(EthAddress.ZERO.toString(), amount, { value: amount });
 
   const permitSupport = false;
-  const asset1 = await addAsset(rollup, signer, permitSupport);
-  const decimals2 = 8;
-  const asset2 = await addAsset(rollup, signer, permitSupport, decimals2);
+  const asset = await addAsset(rollup, signer, permitSupport);
 
-  const gasPrice = 200000000000n; // 50 gwei
-  const assetPrice1 = 500000000000000n; // 2000 DAI/ETH
-  const assetPrice2 = 15n * 10n ** 18n; // 15 ETH/BTC
-  {
-    const initialEthSupply = 10n * 10n ** 18n;
-    // 20000 DAI - 10 ETH
-    await createPair(signer, uniswapRouter, asset1, (initialEthSupply * 10n ** 18n) / assetPrice1, initialEthSupply);
-  }
-  {
-    const initialEthSupply = 150n * 10n ** 18n;
-    // 10 BTC - 150 ETH
-    await createPair(
-      signer,
-      uniswapRouter,
-      asset2,
-      (initialEthSupply * 10n ** BigInt(decimals2)) / assetPrice2,
-      initialEthSupply,
-    );
-  }
+  const gasPrice = 20n * 10n ** 9n; // 20 gwei
+  const assetPrice = 1n * 10n ** 16n; // 100 DAI/ETH
+  const initialEthSupply = 1n * 10n ** 17n; // 0.1 ETH
+  const initialTokenSupply = (initialEthSupply / assetPrice) * 10n ** 18n;
+  await createPair(signer, uniswapRouter, asset, initialTokenSupply, initialEthSupply);
 
-  const priceFeeds = [
-    await deployPriceFeed(signer, gasPrice),
-    await deployPriceFeed(signer, assetPrice1),
-    await deployPriceFeed(signer, assetPrice2),
-  ];
+  const priceFeeds = [await deployPriceFeed(signer, gasPrice), await deployPriceFeed(signer, assetPrice)];
 
   // Defi bridge
   const defiBridges = [
-    await deployDefiBridge(signer, rollup, uniswapRouter, EthAddress.ZERO.toString(), asset1.address),
-    await deployDefiBridge(signer, rollup, uniswapRouter, EthAddress.ZERO.toString(), asset2.address),
-    await deployDefiBridge(signer, rollup, uniswapRouter, asset1.address, EthAddress.ZERO.toString()),
-    await deployDefiBridge(signer, rollup, uniswapRouter, asset2.address, EthAddress.ZERO.toString()),
+    await deployDefiBridge(signer, rollup, uniswapRouter, EthAddress.ZERO.toString(), asset.address),
+    await deployDefiBridge(signer, rollup, uniswapRouter, asset.address, EthAddress.ZERO.toString()),
   ];
 
   return { rollup, feeDistributor, uniswapRouter, priceFeeds, defiBridges };
