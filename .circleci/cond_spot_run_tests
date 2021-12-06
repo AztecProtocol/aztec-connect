@@ -6,10 +6,9 @@
 # with at minimum a script called `run_tests` to execute on the remote machine.
 #
 # Arguments are:
-# 1. NAME: A unique short name given to this test run. The remote image is tagged using this name to indicate success.
-# 2. RUN_SCRIPT: The name of the script to copy and run on the remote instance.
-# 3. COMMIT_HASH: The commit hash that triggered this build. Used in image location and tagging.
-# 4... ARGS: Additional arguments specific to RUN_SCRIPT.
+# 1. REPOSITORY: The project repository name in ECR.
+# 2. NAME: A unique short name given to this test run. The remote image is tagged using this name to indicate success.
+# 3... ARGS: Additional arguments to pass through.
 set -e
 
 REPOSITORY=$1

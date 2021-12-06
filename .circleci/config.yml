@@ -1,7 +1,7 @@
 setup_env: &setup_env
   run:
     name: 'Setup environment'
-    command: cd .circleci && ./setup_env $CIRCLE_BRANCH $CIRCLE_SHA1 $CIRCLE_TAG << pipeline.parameters.rebuild >>
+    command: cd .circleci && ./setup_env "$CIRCLE_SHA1" "$CIRCLE_TAG" << pipeline.parameters.rebuild >>
 
 version: 2.1
 parameters:
@@ -11,7 +11,7 @@ parameters:
 jobs:
   x86_64-linux-gcc:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-2004:202010-01
     resource_class: large
     steps:
       - checkout
@@ -23,7 +23,7 @@ jobs:
 
   x86_64-linux-clang:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-2004:202010-01
     resource_class: large
     steps:
       - checkout
@@ -35,7 +35,7 @@ jobs:
 
   x86_64-linux-clang-assert:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-2004:202010-01
     resource_class: large
     steps:
       - checkout
@@ -100,6 +100,7 @@ jobs:
           name: 'Test'
           working_directory: barretenberg
           command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_tx_rollup_tests
+
   root-rollup-tests:
     docker:
       - image: aztecprotocol/build-image
@@ -113,6 +114,7 @@ jobs:
           name: 'Test'
           working_directory: barretenberg
           command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_root_rollup_tests
+
   root-verifier-tests:
     docker:
       - image: aztecprotocol/build-image
@@ -129,7 +131,7 @@ jobs:
 
   wasm-linux-clang:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-2004:202010-01
     resource_class: large
     steps:
       - checkout
@@ -141,7 +143,7 @@ jobs:
 
   barretenberg-js:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-2004:202010-01
     resource_class: large
     steps:
       - checkout
@@ -153,7 +155,7 @@ jobs:
 
   blockchain:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-2004:202010-01
     resource_class: large
     steps:
       - checkout
@@ -179,7 +181,7 @@ jobs:
 
   halloumi:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-2004:202010-01
     resource_class: large
     steps:
       - checkout
@@ -191,7 +193,7 @@ jobs:
 
   falafel:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-2004:202010-01
     resource_class: large
     steps:
       - checkout
@@ -203,7 +205,7 @@ jobs:
 
   wasabi:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-2004:202010-01
     resource_class: large
     steps:
       - checkout
@@ -371,7 +373,7 @@ jobs:
           working_directory: metrics/grafana
           command: build grafana
 
-  deploy:
+  deploy-master:
     docker:
       - image: aztecprotocol/build-image
     steps:
@@ -379,50 +381,6 @@ jobs:
       - *setup_env
       - setup_remote_docker:
           version: 19.03.13
-      - run:
-          name: 'barretenberg-x86_64-linux-gcc'
-          working_directory: barretenberg
-          command: deploy_ecr barretenberg-x86_64-linux-gcc
-      - run:
-          name: 'barretenberg-x86_64-linux-clang'
-          working_directory: barretenberg
-          command: deploy_ecr barretenberg-x86_64-linux-clang
-      - run:
-          name: 'barretenberg-wasm-linux-clang'
-          working_directory: barretenberg
-          command: deploy_ecr barretenberg-wasm-linux-clang
-      - run:
-          name: 'barretenberg.js'
-          working_directory: barretenberg.js
-          command: deploy_ecr barretenberg.js
-      - run:
-          name: 'blockchain'
-          working_directory: blockchain
-          command: |
-            deploy_ecr blockchain
-            COMMIT=$(last_successful_deploy_commit)
-            if [ -z "$COMMIT" -o changed $COMMIT '.*\.sol$' ]; then
-              `docker run --env ESCAPE_BLOCK_LOWER=60 --env ESCAPE_BLOCK_UPPER=120 --env INFURA_API_KEY=$TF_VAR_INFURA_API_KEY --env PRIVATE_KEY=$TF_VAR_PRIVATE_KEY --env NETWORK=goerli 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:latest`
-              export TF_VAR_ROLLUP_CONTRACT_ADDRESS=$ROLLUP_CONTRACT_ADDRESS
-              export TF_VAR_PRICE_FEED_CONTRACT_ADDRESSES=$PRICE_FEED_CONTRACT_ADDRESSES
-              deploy_terraform
-            fi
-      - run:
-          name: 'sdk'
-          working_directory: sdk
-          command: deploy_ecr sdk
-      - run:
-          name: 'halloumi'
-          working_directory: halloumi
-          command: deploy halloumi
-      - run:
-          name: 'falafel'
-          working_directory: falafel
-          command: deploy falafel
-      - run:
-          name: 'wasabi'
-          working_directory: wasabi
-          command: deploy wasabi
       - run:
           name: 'hummus'
           working_directory: hummus
@@ -463,6 +421,60 @@ jobs:
             cd prometheus && deploy prometheus && cd ..
             cd grafana && deploy grafana && cd ..
 
+  deploy-dev:
+    docker:
+      - image: aztecprotocol/build-image
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker:
+          version: 19.03.13
+      - run:
+          name: 'barretenberg-x86_64-linux-gcc'
+          working_directory: barretenberg
+          command: deploy_ecr barretenberg-x86_64-linux-gcc
+      - run:
+          name: 'barretenberg-x86_64-linux-clang'
+          working_directory: barretenberg
+          command: deploy_ecr barretenberg-x86_64-linux-clang
+      - run:
+          name: 'barretenberg-wasm-linux-clang'
+          working_directory: barretenberg
+          command: deploy_ecr barretenberg-wasm-linux-clang
+      - run:
+          name: 'barretenberg.js'
+          working_directory: barretenberg.js
+          command: deploy_ecr barretenberg.js
+      - run:
+          name: 'blockchain'
+          working_directory: blockchain
+          command: |
+            deploy_ecr blockchain
+            COMMIT=$(last_successful_commit blockchain deployed)
+            if [ -z "$COMMIT" -o changed $COMMIT '.*\.sol$' ]; then
+              `docker run --env ESCAPE_BLOCK_LOWER=60 --env ESCAPE_BLOCK_UPPER=120 --env INFURA_API_KEY=$TF_VAR_INFURA_API_KEY --env PRIVATE_KEY=$TF_VAR_PRIVATE_KEY --env NETWORK=goerli 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:latest`
+              export TF_VAR_ROLLUP_CONTRACT_ADDRESS=$ROLLUP_CONTRACT_ADDRESS
+              export TF_VAR_PRICE_FEED_CONTRACT_ADDRESSES=$PRICE_FEED_CONTRACT_ADDRESSES
+              deploy_terraform blockchain
+              tag_remote_image blockchain cache-$COMMIT_HASH cache-$COMMIT_HASH-deployed
+            fi
+      - run:
+          name: 'halloumi'
+          working_directory: halloumi
+          command: deploy halloumi
+      - run:
+          name: 'falafel'
+          working_directory: falafel
+          command: deploy falafel
+      - run:
+          name: 'sdk'
+          working_directory: sdk
+          command: deploy_ecr sdk
+      - run:
+          name: 'wasabi'
+          working_directory: wasabi
+          command: deploy wasabi
+
   deploy-prod:
     docker:
       - image: aztecprotocol/build-image
@@ -492,19 +504,19 @@ jobs:
       - run:
           name: 'halloumi'
           working_directory: halloumi
-          command: deploy halloumi halloumi-mainnet ./terraform/mainnet
+          command: deploy halloumi
       - run:
           name: 'falafel'
           working_directory: falafel
           command: |
-            deploy falafel falafel-mainnet ./terraform/mainnet
+            deploy falafel
             deploy_dockerhub falafel
       - run:
           name: 'zk-money'
           working_directory: zk-money
           command: |
             deploy_ecr zk-money
-            deploy_s3 zk-money ./terraform/mainnet
+            deploy_s3 zk-money
 
 tag_filter: &tag_filter
   tags:
@@ -602,20 +614,36 @@ workflows:
           filters: *tag_filter
       - website
       - metrics
-      - deploy:
+      - deploy-master:
+          requires:
+            - website
+            - block-explorer
+            - hummus
+            - metrics
+          filters:
+            branches:
+              only:
+                - master
+      - deploy-dev:
           requires:
             - x86_64-linux-gcc
+            - barretenberg-tests
+            - stdlib-primitives-tests
+            - stdlib-recursion-tests
+            - tx-rollup-tests
+            - root-rollup-tests
+            - root-verifier-tests
+            - blockchain-tests
             - e2e-payment
             - e2e-account
             - e2e-defi
-            - hummus
             - wasabi
-            - block-explorer
-            - website
             - zk-money
           filters:
             branches:
-              only: master
+              only:
+                - master
+                - defi-bridge-project
       - deploy-prod:
           requires:
             - e2e-payment

@@ -3,14 +3,23 @@ set -e
 
 REPOSITORY=$1
 SERVICE=${2:-$REPOSITORY}
-TF_DIR=$3
 
-# Regardless of whether the repo changed or not, we want to tag image with this commit hash.
+# Regardless of whether the repo changed or not, we want to update tags in the deployment repo.
 deploy_ecr $REPOSITORY
 
 # Bail out if nothing changed.
-IMAGE_COMMIT_TAG=cache-$COMMIT_HASH
-image_exists $REPOSITORY $IMAGE_COMMIT_TAG || { echo "No new image found." && exit 0; }
+LAST_SUCCESSFUL_COMMIT=$(last_successful_commit $REPOSITORY deployed)
+echo "Last successfully deployed commit: $LAST_SUCCESSFUL_COMMIT"
+if ! check_rebuild $LAST_SUCCESSFUL_COMMIT; then
+  echo "No changes detected, skipping deployment."
+  exit 0
+fi
 
-deploy_terraform $TF_DIR
+# If tagged, deploy the versioned image, otherwise use the project image.
+export TF_VAR_IMAGE_TAG=${COMMIT_TAG:-$PROJECT}
+
+deploy_terraform $REPOSITORY
 deploy_service $SERVICE
+
+# Tag the image as deployed.
+tag_remote_image $REPOSITORY cache-$LAST_SUCCESSFUL_COMMIT cache-$COMMIT_HASH-deployed

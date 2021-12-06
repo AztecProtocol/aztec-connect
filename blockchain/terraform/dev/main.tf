@@ -1,7 +1,6 @@
 terraform {
   backend "s3" {
     bucket = "aztec-terraform"
-    key    = "aztec2/blockchain"
     region = "eu-west-2"
   }
 }
@@ -21,7 +20,6 @@ variable "FEE_DISTIBUTOR_ADDRESS" {
 output "fee_distributor_address" {
   value = "${var.FEE_DISTIBUTOR_ADDRESS}"
 }
-
 
 variable "PRICE_FEED_CONTRACT_ADDRESSES" {
   type = string

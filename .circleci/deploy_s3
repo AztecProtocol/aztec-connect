@@ -2,16 +2,10 @@
 set -e
 
 REPOSITORY=$1
-TF_DIR=${2:-./terraform}
-
-if [ ! -d $TF_DIR ]; then
-   echo "No terraform dir at $TF_DIR. Required for bucket and cloudfront outputs."
-   exit 1
-fi
 
 extract_repo $REPOSITORY /usr/src/$REPOSITORY/dist ./dist
 
-deploy_terraform $TF_DIR
+deploy_terraform $REPOSITORY
 
 pushd $TF_DIR > /dev/null
 AWS_BUCKET_NAME=$(terraform output s3)

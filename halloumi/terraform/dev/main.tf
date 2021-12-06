@@ -1,9 +1,11 @@
 terraform {
   backend "s3" {
     bucket = "aztec-terraform"
-    key    = "aztec2/halloumi"
     region = "eu-west-2"
   }
+}
+variable "IMAGE_TAG" {
+  type = string
 }
 
 data "terraform_remote_state" "setup_iac" {
@@ -72,7 +74,7 @@ resource "aws_ecs_task_definition" "halloumi" {
 [
   {
     "name": "halloumi",
-    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/halloumi:latest",
+    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/halloumi:${var.IMAGE_TAG}",
     "essential": true,
     "memoryReservation": 30464,
     "portMappings": [

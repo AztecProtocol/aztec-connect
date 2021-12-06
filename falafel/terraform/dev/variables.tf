@@ -5,3 +5,7 @@ variable "PRIVATE_KEY" {
 variable "SERVER_AUTH_TOKEN" {
   type = string
 }
+
+variable "IMAGE_TAG" {
+  type = string
+}

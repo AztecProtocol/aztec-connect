@@ -1,22 +1,18 @@
 #!/bin/bash
 #
 # Builds a docker image and pushes it to it's repository. Leverages caches where possible.
-# Cached images include previous images built on this branch, otherwise use images from master at fork point.
+# Cached images include previous successfully built images built on this branch.
 # The images output are cache images, meaning they will eventually get purged.
 # The deploy phase will tag the images such that they become permanent.
 #
 # usage: ./build <repository> [dockerfile]
 # example (branch cl/feature): ./build barretenberg-x86_64-linux-clang
 # output image tags:
-#   278380418400.dkr.ecr.us-east-2.amazonaws.com/barretenberg-x86_64-linux-clang:cache-cl_feature
 #   278380418400.dkr.ecr.us-east-2.amazonaws.com/barretenberg-x86_64-linux-clang:cache-deadbeefcafebabe1337c0d3
 
 set -e
 
 REPOSITORY=$1
-BRANCH=${BRANCH//\//_}
-IMAGE_BRANCH_URI=$ECR_URL/$REPOSITORY:cache-$BRANCH
-IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:cache-$COMMIT_HASH
 DOCKERFILE=${2:-./Dockerfile}
 
 function fetch_image() {
@@ -106,10 +102,9 @@ if [ -n "$LAST_SUCCESSFUL_COMMIT" ]; then
 fi
 
 # Build the actual image and give it a branch and commit tag.
-echo "Building image: $IMAGE_BRANCH_URI, $IMAGE_COMMIT_URI"
-docker build -t $IMAGE_BRANCH_URI -t $IMAGE_COMMIT_URI -f $DOCKERFILE $CACHE_FROM .
-echo "Pushing image: $IMAGE_BRANCH_URI"
-docker push $IMAGE_BRANCH_URI > /dev/null 2>&1
+IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:cache-$COMMIT_HASH
+echo "Building image: $IMAGE_COMMIT_URI"
+docker build -t $IMAGE_COMMIT_URI -f $DOCKERFILE $CACHE_FROM .
 echo "Pushing image: $IMAGE_COMMIT_URI"
 docker push $IMAGE_COMMIT_URI > /dev/null 2>&1
 echo
@@ -122,7 +117,7 @@ if [ -d ./terraform ]; then
   for DIR in . $(find . -maxdepth 1 -type d); do
     pushd $DIR
     if [ -f ./main.tf ]; then
-      terraform init -input=false
+      terraform init -input=false -backend-config="key=dummy"
       terraform validate
     fi
     popd

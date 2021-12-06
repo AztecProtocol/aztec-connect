@@ -4,16 +4,17 @@ set -e
 REPOSITORY=$1
 EXISTING_TAG=$2
 NEW_TAG=$3
+REGION=${4:-$ECR_REGION}
 
 MY_MANIFEST=$(aws ecr batch-get-image \
-  --region $ECR_REGION \
+  --region $REGION \
   --repository-name $REPOSITORY \
   --image-ids imageTag=$EXISTING_TAG \
   --query images[].imageManifest \
   --output text)
 
 aws ecr put-image \
-  --region $ECR_REGION \
+  --region $REGION \
   --repository-name $REPOSITORY \
   --image-tag $NEW_TAG \
   --image-manifest "$MY_MANIFEST"

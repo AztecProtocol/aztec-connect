@@ -3,55 +3,22 @@ set -e
 
 REPOSITORY=$1
 IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:cache-$COMMIT_HASH
-IMAGE_MASTER_URI=$ECR_URL/$REPOSITORY:master-$COMMIT_HASH
 
-# Login.
+# Login to build region and pull the build.
 ensure_repo $REPOSITORY $ECR_REGION
+docker pull $IMAGE_COMMIT_URI > /dev/null 2>&1
 
-if [ -z "$COMMIT_TAG" ]; then
-  # This is a not a tagged release, but an update to master.
+# Ensure ECR repository exists in deployment region.
+ensure_repo $REPOSITORY $ECR_DEPLOY_REGION
 
-  # If nothing changed, tag the existing image with this commit hash and bail out.
-  if ! docker pull $IMAGE_COMMIT_URI > /dev/null 2>&1; then
-    OLD_IMAGE_MASTER_URI=$ECR_URL/$REPOSITORY:master-$LAST_SUCCESSFUL_COMMIT
-    echo "Nothing changed. Tagging existing image $OLD_IMAGE_MASTER_URI as $IMAGE_MASTER_URI."
-    docker pull $OLD_IMAGE_MASTER_URI
-    docker tag $OLD_IMAGE_MASTER_URI $IMAGE_MASTER_URI
-    docker push $IMAGE_MASTER_URI
-    exit 0
-  fi
+# Push image to deployment repo with commit hash tag e.g:
+# falafel:deadbeefcafebabe1337c0de
+IMAGE_DEPLOY_COMMIT_URI=$ECR_DEPLOY_URL/$REPOSITORY:$COMMIT_HASH
+docker tag $IMAGE_COMMIT_URI $IMAGE_DEPLOY_COMMIT_URI
+docker push $IMAGE_DEPLOY_COMMIT_URI
 
-  # Tag new image as master in cache region. Used by branches that haven't modified the repository.
-  echo "Tagging $IMAGE_COMMIT_URI as $IMAGE_MASTER_URI."
-  docker tag $IMAGE_COMMIT_URI $IMAGE_MASTER_URI
-  docker push $IMAGE_MASTER_URI
+# Image tag is project name, or commit tag if there is one.
+IMAGE_TAG=${COMMIT_TAG:-$PROJECT}
 
-  # Ensure ECR repository exists in deployment region.
-  ensure_repo $REPOSITORY $ECR_DEPLOY_REGION
-
-  # Push image to deployment repo with latest tag and commit hash tag e.g.:
-  # - falafel:latest
-  # - falafel:deadbeefcafebabe1337c0de
-  IMAGE_DEPLOY_URI=$ECR_DEPLOY_URL/$REPOSITORY:latest
-  IMAGE_DEPLOY_COMMIT_URI=$ECR_DEPLOY_URL/$REPOSITORY:$COMMIT_HASH
-  docker tag $IMAGE_COMMIT_URI $IMAGE_DEPLOY_URI
-  docker tag $IMAGE_COMMIT_URI $IMAGE_DEPLOY_COMMIT_URI
-  docker push $IMAGE_DEPLOY_URI
-  docker push $IMAGE_DEPLOY_COMMIT_URI
-else
-  # This is tagged release.
-  docker pull $IMAGE_COMMIT_URI > /dev/null 2>&1
-
-  # Ensure ECR repository exists in deployment region.
-  ensure_repo $REPOSITORY $ECR_DEPLOY_REGION
-
-  # Push image to deployment repo with version tag and commit hash tag e.g.:
-  # - falafel:2.0.0
-  # - falafel:deadbeefcafebabe1337c0de
-  IMAGE_DEPLOY_TAG_URI=$ECR_DEPLOY_URL/$REPOSITORY:$COMMIT_TAG
-  IMAGE_DEPLOY_COMMIT_URI=$ECR_DEPLOY_URL/$REPOSITORY:$COMMIT_HASH
-  docker tag $IMAGE_COMMIT_URI $IMAGE_DEPLOY_TAG_URI
-  docker tag $IMAGE_COMMIT_URI $IMAGE_DEPLOY_COMMIT_URI
-  docker push $IMAGE_DEPLOY_TAG_URI
-  docker push $IMAGE_DEPLOY_COMMIT_URI
-fi
+IMAGE_DEPLOY_URI=$ECR_DEPLOY_URL/$REPOSITORY:$IMAGE_TAG
+tag_remote_image $REPOSITORY $IMAGE_DEPLOY_COMMIT_URI $IMAGE_DEPLOY_URI $ECR_DEPLOY_REGION

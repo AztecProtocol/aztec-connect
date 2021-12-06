@@ -1,9 +1,7 @@
 #!/bin/bash
 # Runs a test script on a remote spot instance. Arguments are:
-# 1. NAME: A unique short name given to this test run. The remote is tagged using this name to indicate success.
-# 2. RUN_SCRIPT: The name of the script to copy and run on the remote instance.
-# 3. COMMIT_HASH: The commit hash that triggered this build. Used in image location and tagging.
-# 4... ARGS: Additional arguments specific to RUN_SCRIPT.
+# 1. NAME: A unique short name given to this test run. The spot instance is tagged with this name.
+# 2... ARGS: Additional arguments to pass through.
 set -e
 
 NAME=$1

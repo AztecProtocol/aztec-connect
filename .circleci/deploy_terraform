@@ -1,13 +1,28 @@
 #!/bin/bash
 set -e
 
-TF_DIR=${1:-./terraform}
+REPOSITORY=$1
+
+# If tagged e.g. v2.0.123, use the terraform dir v2.0, otherwise dev.
+if [ -n "$COMMIT_TAG" ]; then
+  VERSION=$(echo "$COMMIT_TAG" | grep -oP "v\d+.\d+")
+else
+  VERSION=dev
+fi
+TF_DIR=./terraform/$VERSION
 
 # Apply terraform.
 if [ -d $TF_DIR ]; then
   ensure_terraform
   export TF_IN_AUTOMATION=1
   cd $TF_DIR
-  terraform init -input=false
-  terraform apply -input=false -auto-approve
+
+  # If given a repository name, use it to construct and set/override the backend key.
+  # Otherwise use the key as specified in the terraform.
+  if [ -n "$REPOSITORY" ]; then
+    BACKEND_CONFIG=-backend-config="key=$PROJECT/$VERSION/$REPOSITORY"
+  fi
+
+  terraform init -input=false $BACKEND_CONFIG
+  terraform apply -input=false -auto-approve $BACKEND_CONFIG
 fi
