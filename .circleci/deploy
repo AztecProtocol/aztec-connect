@@ -2,7 +2,6 @@
 set -e
 
 REPOSITORY=$1
-SERVICE=${2:-$REPOSITORY}
 
 # Regardless of whether the repo changed or not, we want to update tags in the deployment repo.
 deploy_ecr $REPOSITORY
@@ -15,11 +14,10 @@ if ! check_rebuild $LAST_SUCCESSFUL_COMMIT; then
   exit 0
 fi
 
-# If tagged, deploy the versioned image, otherwise use the project image.
-export TF_VAR_IMAGE_TAG=${COMMIT_TAG:-$PROJECT}
-
 deploy_terraform $REPOSITORY
-deploy_service $SERVICE
+
+# If the project terraform maintains a service with the given name, restart it to run latest image.
+deploy_service $DEPLOY_TAG-$REPOSITORY
 
 # Tag the image as deployed.
-tag_remote_image $REPOSITORY cache-$LAST_SUCCESSFUL_COMMIT cache-$COMMIT_HASH-deployed
+tag_remote_image $REPOSITORY cache-$COMMIT_HASH cache-$COMMIT_HASH-deployed

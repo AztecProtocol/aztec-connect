@@ -1,3 +1,3 @@
-variable "IMAGE_TAG" {
+variable "DEPLOY_TAG" {
   type = string
 }

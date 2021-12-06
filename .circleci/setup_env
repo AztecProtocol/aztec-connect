@@ -14,6 +14,12 @@ FORCE_REBUILD_ALL=$3
 
 BUILD_SYSTEM_PATH=$(pwd)
 
+if [ -n "$CIRCLE_SHA1" ]; then
+  DEPLOY_TAG=$PROJECT-$(echo "$CIRCLE_SHA1" | grep -oP "v\d+.\d+")
+else
+  DEPLOY_TAG=$PROJECT-dev
+fi
+
 echo export BUILD_SYSTEM_PATH=$BUILD_SYSTEM_PATH >> $BASH_ENV
 echo export SSH_CONFIG_PATH=$BUILD_SYSTEM_PATH/remote/ssh_config >> $BASH_ENV
 echo export PATH=$PATH:$BUILD_SYSTEM_PATH >> $BASH_ENV
@@ -26,6 +32,7 @@ echo export FORCE_REBUILD_ALL=$FORCE_REBUILD_ALL >> $BASH_ENV
 echo export PROJECT=$(cat ../PROJECT) >> $BASH_ENV
 echo export COMMIT_HASH=$CIRCLE_SHA1 >> $BASH_ENV
 echo export COMMIT_TAG=$CIRCLE_TAG >> $BASH_ENV
+echo export DEPLOY_TAG=$DEPLOY_TAG >> $BASH_ENV
 cat $BASH_ENV
 
 # Having written the variables to $BASH_ENV, we now want to set them in this shell context.

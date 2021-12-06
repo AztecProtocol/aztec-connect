@@ -4,9 +4,6 @@ terraform {
     region = "eu-west-2"
   }
 }
-variable "IMAGE_TAG" {
-  type = string
-}
 
 data "terraform_remote_state" "setup_iac" {
   backend = "s3"
@@ -32,7 +29,7 @@ provider "aws" {
 }
 
 resource "aws_service_discovery_service" "halloumi" {
-  name = "halloumi"
+  name = "${var.DEPLOY_TAG}-halloumi"
 
   health_check_custom_config {
     failure_threshold = 1
@@ -57,13 +54,13 @@ resource "aws_service_discovery_service" "halloumi" {
   # Terraform just fails if this resource changes and you have registered instances.
   provisioner "local-exec" {
     when    = destroy
-    command = "${path.module}/servicediscovery-drain.sh ${self.id}"
+    command = "${path.module}/../servicediscovery-drain.sh ${self.id}"
   }
 }
 
 # Define task definition and service.
 resource "aws_ecs_task_definition" "halloumi" {
-  family                   = "halloumi"
+  family                   = "${var.DEPLOY_TAG}-halloumi"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   cpu                      = "4096"
@@ -73,8 +70,8 @@ resource "aws_ecs_task_definition" "halloumi" {
   container_definitions = <<DEFINITIONS
 [
   {
-    "name": "halloumi",
-    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/halloumi:${var.IMAGE_TAG}",
+    "name": "${var.DEPLOY_TAG}-halloumi",
+    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/halloumi:${var.DEPLOY_TAG}",
     "essential": true,
     "memoryReservation": 30464,
     "portMappings": [
@@ -99,7 +96,7 @@ resource "aws_ecs_task_definition" "halloumi" {
     "logConfiguration": {
       "logDriver": "awslogs",
       "options": {
-        "awslogs-group": "/fargate/service/halloumi",
+        "awslogs-group": "/fargate/service/${var.DEPLOY_TAG}/halloumi",
         "awslogs-region": "eu-west-2",
         "awslogs-stream-prefix": "ecs"
       }
@@ -118,13 +115,13 @@ resource "aws_ecs_task_definition" "halloumi" {
     "environment": [
       {
         "name": "SERVICE",
-        "value": "halloumi"
+        "value": "${var.DEPLOY_TAG}-halloumi"
       }
     ],
     "logConfiguration": {
       "logDriver": "awslogs",
       "options": {
-        "awslogs-group": "/fargate/service/halloumi",
+        "awslogs-group": "/fargate/service/${var.DEPLOY_TAG}/halloumi",
         "awslogs-region": "eu-west-2",
         "awslogs-stream-prefix": "ecs"
       }
@@ -139,7 +136,7 @@ data "aws_ecs_task_definition" "halloumi" {
 }
 
 resource "aws_ecs_service" "halloumi" {
-  name                               = "halloumi"
+  name                               = "${var.DEPLOY_TAG}-halloumi"
   cluster                            = data.terraform_remote_state.setup_iac.outputs.ecs_cluster_id
   launch_type                        = "FARGATE"
   desired_count                      = "1"
@@ -157,7 +154,7 @@ resource "aws_ecs_service" "halloumi" {
 
   service_registries {
     registry_arn   = aws_service_discovery_service.halloumi.arn
-    container_name = "halloumi"
+    container_name = "${var.DEPLOY_TAG}-halloumi"
     container_port = 80
   }
 
@@ -166,6 +163,6 @@ resource "aws_ecs_service" "halloumi" {
 
 # Logs
 resource "aws_cloudwatch_log_group" "halloumi_logs" {
-  name              = "/fargate/service/halloumi"
+  name              = "/fargate/service/${var.DEPLOY_TAG}/halloumi"
   retention_in_days = "14"
 }

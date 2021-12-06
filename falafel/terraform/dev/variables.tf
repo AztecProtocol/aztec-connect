@@ -6,6 +6,6 @@ variable "SERVER_AUTH_TOKEN" {
   type = string
 }
 
-variable "IMAGE_TAG" {
+variable "DEPLOY_TAG" {
   type = string
 }

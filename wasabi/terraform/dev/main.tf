@@ -27,7 +27,7 @@ data "terraform_remote_state" "blockchain" {
   backend = "s3"
   config = {
     bucket = "aztec-terraform"
-    key    = "aztec2/blockchain"
+    key    = "${var.DEPLOY_TAG}/blockchain"
     region = "eu-west-2"
   }
 }
@@ -39,7 +39,7 @@ provider "aws" {
 
 # Define task definition and service.
 resource "aws_ecs_task_definition" "wasabi" {
-  family                   = "wasabi"
+  family                   = "${var.DEPLOY_TAG}-wasabi"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   cpu                      = "4096"
@@ -50,8 +50,8 @@ resource "aws_ecs_task_definition" "wasabi" {
   container_definitions = <<DEFINITIONS
 [
   {
-    "name": "wasabi",
-    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/wasabi:${var.IMAGE_TAG}",
+    "name": "${var.DEPLOY_TAG}-wasabi",
+    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/wasabi:${var.DEPLOY_TAG}",
     "essential": true,
     "memoryReservation": 8192,
     "portMappings": [
@@ -80,7 +80,7 @@ resource "aws_ecs_task_definition" "wasabi" {
     "logConfiguration": {
       "logDriver": "awslogs",
       "options": {
-        "awslogs-group": "/fargate/service/wasabi",
+        "awslogs-group": "/fargate/service/${var.DEPLOY_TAG}/wasabi",
         "awslogs-region": "eu-west-2",
         "awslogs-stream-prefix": "ecs"
       }
@@ -96,7 +96,7 @@ data "aws_ecs_task_definition" "wasabi" {
 }
 
 resource "aws_ecs_service" "wasabi" {
-  name                               = "wasabi"
+  name                               = "${var.DEPLOY_TAG}-wasabi"
   cluster                            = data.terraform_remote_state.setup_iac.outputs.ecs_cluster_id
   launch_type                        = "FARGATE"
   desired_count                      = 0
@@ -117,6 +117,6 @@ resource "aws_ecs_service" "wasabi" {
 
 # Logs
 resource "aws_cloudwatch_log_group" "wasabi_logs" {
-  name              = "/fargate/service/wasabi"
+  name              = "/fargate/service/${var.DEPLOY_TAG}/wasabi"
   retention_in_days = "14"
 }

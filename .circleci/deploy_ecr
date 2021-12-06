@@ -17,7 +17,9 @@ IMAGE_DEPLOY_COMMIT_URI=$ECR_DEPLOY_URL/$REPOSITORY:$COMMIT_HASH
 docker tag $IMAGE_COMMIT_URI $IMAGE_DEPLOY_COMMIT_URI
 docker push $IMAGE_DEPLOY_COMMIT_URI
 
-# Image tag is project name, or commit tag if there is one.
-IMAGE_TAG=${COMMIT_TAG:-$PROJECT}
+# Tag image with full version if we have one. Allows deployment of precise image version if rollback needed.
+if [ -n "$COMMIT_TAG" ]; then
+  tag_remote_image $REPOSITORY $COMMIT_HASH $PROJECT-$COMMIT_TAG $ECR_DEPLOY_REGION
+fi
 
-tag_remote_image $REPOSITORY $COMMIT_HASH $IMAGE_TAG $ECR_DEPLOY_REGION
+tag_remote_image $REPOSITORY $COMMIT_HASH $DEPLOY_TAG $ECR_DEPLOY_REGION

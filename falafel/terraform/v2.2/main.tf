@@ -106,7 +106,7 @@ resource "aws_ecs_task_definition" "falafel" {
 [
   {
     "name": "falafel-mainnet",
-    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/falafel:${var.IMAGE_TAG}",
+    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/falafel:${var.DEPLOY_TAG}",
     "essential": true,
     "memoryReservation": 3840,
     "portMappings": [

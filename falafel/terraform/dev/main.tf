@@ -27,7 +27,7 @@ data "terraform_remote_state" "blockchain" {
   backend = "s3"
   config = {
     bucket = "aztec-terraform"
-    key    = "aztec2/blockchain"
+    key    = "${var.DEPLOY_TAG}/blockchain"
     region = "eu-west-2"
   }
 }
@@ -38,7 +38,7 @@ provider "aws" {
 }
 
 resource "aws_service_discovery_service" "falafel" {
-  name = "falafel-dev"
+  name = "${var.DEPLOY_TAG}-falafel"
 
   health_check_custom_config {
     failure_threshold = 1
@@ -69,12 +69,12 @@ resource "aws_service_discovery_service" "falafel" {
 
 # Configure an EFS filesystem.
 resource "aws_efs_file_system" "falafel_data_store" {
-  creation_token                  = "falafel-data-dev"
+  creation_token                  = "${var.DEPLOY_TAG}-falafel-data"
   throughput_mode                 = "provisioned"
   provisioned_throughput_in_mibps = 20
 
   tags = {
-    Name = "falafel-data-dev"
+    Name = "${var.DEPLOY_TAG}-falafel-data"
   }
 
   lifecycle_policy {
@@ -96,7 +96,7 @@ resource "aws_efs_mount_target" "private_az2" {
 
 # Define task definition and service.
 resource "aws_ecs_task_definition" "falafel" {
-  family                   = "falafel-dev"
+  family                   = "${var.DEPLOY_TAG}-falafel"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   cpu                      = "2048"
@@ -113,8 +113,8 @@ resource "aws_ecs_task_definition" "falafel" {
   container_definitions = <<DEFINITIONS
 [
   {
-    "name": "falafel-dev",
-    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/falafel:${var.IMAGE_TAG}",
+    "name": "${var.DEPLOY_TAG}-falafel",
+    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/falafel:${var.DEPLOY_TAG}",
     "essential": true,
     "memoryReservation": 3840,
     "portMappings": [
@@ -137,7 +137,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "HALLOUMI_HOST",
-        "value": "http://halloumi-dev.local"
+        "value": "http://${var.DEPLOY_TAG}-halloumi.local"
       },
       {
         "name": "ROLLUP_CONTRACT_ADDRESS",
@@ -165,7 +165,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "API_PREFIX",
-        "value": "/falafel-dev"
+        "value": "/${DEPLOY_TAG}/falafel"
       },
       {
         "name": "NUM_INNER_ROLLUP_TXS",
@@ -213,7 +213,7 @@ resource "aws_ecs_task_definition" "falafel" {
     "logConfiguration": {
       "logDriver": "awslogs",
       "options": {
-        "awslogs-group": "/fargate/service/falafel-dev",
+        "awslogs-group": "/fargate/service/${var.DEPLOY_TAG}/falafel",
         "awslogs-region": "eu-west-2",
         "awslogs-stream-prefix": "ecs"
       }
@@ -232,13 +232,13 @@ resource "aws_ecs_task_definition" "falafel" {
     "environment": [
       {
         "name": "SERVICE",
-        "value": "falafel-dev"
+        "value": "${var.DEPLOY_TAG}/falafel"
       }
     ],
     "logConfiguration": {
       "logDriver": "awslogs",
       "options": {
-        "awslogs-group": "/fargate/service/falafel-dev",
+        "awslogs-group": "/fargate/service/${var.DEPLOY_TAG}/falafel",
         "awslogs-region": "eu-west-2",
         "awslogs-stream-prefix": "ecs"
       }
@@ -253,7 +253,7 @@ data "aws_ecs_task_definition" "falafel" {
 }
 
 resource "aws_ecs_service" "falafel" {
-  name                               = "falafel-dev"
+  name                               = "${var.DEPLOY_TAG}-falafel"
   cluster                            = data.terraform_remote_state.setup_iac.outputs.ecs_cluster_id
   launch_type                        = "FARGATE"
   desired_count                      = 1
@@ -271,13 +271,13 @@ resource "aws_ecs_service" "falafel" {
 
   load_balancer {
     target_group_arn = aws_alb_target_group.falafel.arn
-    container_name   = "falafel-dev"
+    container_name   = "${var.DEPLOY_TAG}-falafel"
     container_port   = 80
   }
 
   service_registries {
     registry_arn   = aws_service_discovery_service.falafel.arn
-    container_name = "falafel-dev"
+    container_name = "${var.DEPLOY_TAG}-falafel"
     container_port = 80
   }
 
@@ -286,13 +286,13 @@ resource "aws_ecs_service" "falafel" {
 
 # Logs
 resource "aws_cloudwatch_log_group" "falafel_logs" {
-  name              = "/fargate/service/falafel-dev"
+  name              = "/fargate/service/${var.DEPLOY_TAG}/falafel"
   retention_in_days = "14"
 }
 
 # Configure ALB to route /falafel to server.
 resource "aws_alb_target_group" "falafel" {
-  name                 = "falafel-dev"
+  name                 = "${var.DEPLOY_TAG}-falafel"
   port                 = "80"
   protocol             = "HTTP"
   target_type          = "ip"
@@ -300,7 +300,7 @@ resource "aws_alb_target_group" "falafel" {
   deregistration_delay = 5
 
   health_check {
-    path                = "/falafel-dev"
+    path                = "/${var.DEPLOY_TAG}/falafel"
     matcher             = "200"
     interval            = 10
     healthy_threshold   = 2
@@ -309,13 +309,12 @@ resource "aws_alb_target_group" "falafel" {
   }
 
   tags = {
-    name = "falafel-dev"
+    name = "${var.DEPLOY_TAG}-falafel"
   }
 }
 
 resource "aws_lb_listener_rule" "api" {
   listener_arn = data.terraform_remote_state.aztec2_iac.outputs.alb_listener_arn
-  priority     = 100
 
   action {
     type             = "forward"
@@ -324,7 +323,7 @@ resource "aws_lb_listener_rule" "api" {
 
   condition {
     path_pattern {
-      values = ["/falafel-dev*"]
+      values = ["/${var.DEPLOY_TAG}/falafel*"]
     }
   }
 }

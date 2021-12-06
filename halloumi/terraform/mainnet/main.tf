@@ -99,7 +99,7 @@ resource "aws_ecs_task_definition" "halloumi" {
 [
   {
     "name": "halloumi-mainnet",
-    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/halloumi:${var.IMAGE_TAG}",
+    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/halloumi:${var.DEPLOY_TAG}",
     "essential": true,
     "memory": 253952,
     "memoryReservation": 126976,
