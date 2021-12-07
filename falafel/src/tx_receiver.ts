@@ -68,11 +68,8 @@ export class TxReceiver {
     // We mutex this entire receive call until we move to "deposit to proof hash". Read more below.
     await this.mutex.acquire();
     try {
-      const txType = await getTxTypeFromProofData(tx.proof, this.blockchain);
-      this.metrics.txReceived(txType);
-      console.log(`Received tx: ${tx.proof.txId.toString('hex')}, type: ${txType}`);
-
       const txs: TxDao[] = [];
+
       const processTx = async (tx: Tx) => {
         if (tx.parentTx) {
           if (tx.parentTx.proof.proofId === ProofId.DEPOSIT) {
@@ -82,8 +79,14 @@ export class TxReceiver {
           }
           await processTx(tx.parentTx);
         }
+
+        const txType = await getTxTypeFromProofData(tx.proof, this.blockchain);
+        this.metrics.txReceived(txType);
+        console.log(`Received tx: ${tx.proof.txId.toString('hex')}, type: ${TxType[txType]}`);
+
         txs.push(await this.validateTx(tx));
       };
+
       await processTx(tx);
 
       await this.rollupDb.addTxs(txs);

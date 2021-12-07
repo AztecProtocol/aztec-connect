@@ -383,7 +383,7 @@ export class UserState extends EventEmitter {
 
     const savedTx = await this.db.getDefiTx(txHash);
     if (savedTx) {
-      debug(`settling defi tx: ${txHash}`);
+      debug(`found defi tx, awaiting claim for settlement: ${txHash}`);
       await this.db.updateDefiTx(txHash, outputValueA, outputValueB);
     } else {
       const utilTx = await this.db.getUtilTxByLink(proof.nullifier1);
@@ -453,6 +453,7 @@ export class UserState extends EventEmitter {
     await this.refreshNotePicker();
 
     await this.db.settleDefiTx(txHash, blockCreated);
+    debug(`settled defi tx: ${txHash}`);
   }
 
   private async processNewNote(

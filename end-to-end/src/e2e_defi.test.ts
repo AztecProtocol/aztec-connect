@@ -64,7 +64,7 @@ describe('end-to-end defi tests', () => {
 
     // Shield
     let depositTxHash: TxHash;
-    const shieldValue = sdk.toBaseUnits(AssetId.ETH, '0.8');
+    const shieldValue = sdk.toBaseUnits(AssetId.ETH, '0.08');
     {
       const assetId = AssetId.ETH;
       const txFee = await sdk.getFee(assetId, TxType.DEPOSIT);
@@ -107,7 +107,7 @@ describe('end-to-end defi tests', () => {
 
     // Defi deposit - swap all DAI to ETH
     {
-      const bridgeAddressId = 3;
+      const bridgeAddressId = 2;
       const inputAssetId = AssetId.DAI;
       const outputAssetIdA = AssetId.ETH;
       const outputAssetIdB = 0;
