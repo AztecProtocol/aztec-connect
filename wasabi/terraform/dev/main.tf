@@ -90,11 +90,6 @@ resource "aws_ecs_task_definition" "wasabi" {
 DEFINITIONS
 }
 
-data "aws_ecs_task_definition" "wasabi" {
-  depends_on      = [aws_ecs_task_definition.wasabi]
-  task_definition = aws_ecs_task_definition.wasabi.family
-}
-
 resource "aws_ecs_service" "wasabi" {
   name                               = "${var.DEPLOY_TAG}-wasabi"
   cluster                            = data.terraform_remote_state.setup_iac.outputs.ecs_cluster_id
@@ -112,7 +107,7 @@ resource "aws_ecs_service" "wasabi" {
     security_groups = [data.terraform_remote_state.setup_iac.outputs.security_group_private_id]
   }
 
-  task_definition = "${aws_ecs_task_definition.wasabi.family}:${max(aws_ecs_task_definition.wasabi.revision, data.aws_ecs_task_definition.wasabi.revision)}"
+  task_definition = aws_ecs_task_definition.wasabi.family
 }
 
 # Logs

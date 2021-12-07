@@ -244,10 +244,6 @@ resource "aws_ecs_task_definition" "falafel" {
 DEFINITIONS
 }
 
-data "aws_ecs_task_definition" "falafel" {
-  task_definition = aws_ecs_task_definition.falafel.family
-}
-
 resource "aws_ecs_service" "falafel" {
   name                               = "${var.DEPLOY_TAG}-falafel"
   cluster                            = data.terraform_remote_state.setup_iac.outputs.ecs_cluster_id
@@ -277,7 +273,7 @@ resource "aws_ecs_service" "falafel" {
     container_port = 80
   }
 
-  task_definition = "${aws_ecs_task_definition.falafel.family}:${max(aws_ecs_task_definition.falafel.revision, data.aws_ecs_task_definition.falafel.revision)}"
+  task_definition = aws_ecs_task_definition.falafel.family
 }
 
 # Logs

@@ -131,10 +131,6 @@ resource "aws_ecs_task_definition" "halloumi" {
 DEFINITIONS
 }
 
-data "aws_ecs_task_definition" "halloumi" {
-  task_definition = aws_ecs_task_definition.halloumi.family
-}
-
 resource "aws_ecs_service" "halloumi" {
   name                               = "${var.DEPLOY_TAG}-halloumi"
   cluster                            = data.terraform_remote_state.setup_iac.outputs.ecs_cluster_id
@@ -158,7 +154,7 @@ resource "aws_ecs_service" "halloumi" {
     container_port = 80
   }
 
-  task_definition = "${aws_ecs_task_definition.halloumi.family}:${max(aws_ecs_task_definition.halloumi.revision, data.aws_ecs_task_definition.halloumi.revision)}"
+  task_definition = aws_ecs_task_definition.halloumi.family
 }
 
 # Logs
