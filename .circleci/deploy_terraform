@@ -27,5 +27,5 @@ if [ -d $TF_DIR ]; then
   fi
 
   terraform init -input=false $BACKEND_CONFIG
-  terraform apply -input=false -auto-approve $BACKEND_CONFIG
+  terraform apply -input=false -auto-approve
 fi
