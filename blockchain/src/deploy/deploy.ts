@@ -52,7 +52,7 @@ export async function deploy(escapeHatchBlockLower: number, escapeHatchBlockUppe
 
   const feeDistributor = await deployFeeDistributor(signer, rollup, uniswapRouter);
 
-  const initialFee = '1';
+  const initialFee = '0.1';
   console.error(`Depositing ${initialFee} ETH to FeeDistributor.`);
   const amount = parseEther(initialFee);
   await feeDistributor.deposit(EthAddress.ZERO.toString(), amount, { value: amount });
