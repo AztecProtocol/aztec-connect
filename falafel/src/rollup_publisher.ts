@@ -1,5 +1,4 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { AssetId } from '@aztec/barretenberg/asset';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { Blockchain, EthereumProvider } from '@aztec/barretenberg/blockchain';
 import { JoinSplitProofData } from '@aztec/barretenberg/client_proofs';
@@ -19,9 +18,7 @@ export class RollupPublisher {
   constructor(
     private rollupDb: RollupDb,
     private blockchain: Blockchain,
-    private feeLimit: bigint,
     private maxProviderGasPrice: bigint,
-    private providerGasPriceMultiplier: number,
     private provider: EthereumProvider,
     private providerAddress: EthAddress,
     private metrics: Metrics,
@@ -34,12 +31,15 @@ export class RollupPublisher {
     await this.rollupDb.setCallData(rollup.id, txData);
 
     while (!this.interrupted) {
-      // Check fee distributor has at least 0.5 ETH.
-      const feeDistributorBalance = await this.blockchain.getFeeDistributorBalance(AssetId.ETH);
-      if (feeDistributorBalance < 5n * 10n ** 17n) {
-        console.log(`Fee distributor ETH balance too low, awaiting top up...`);
-        await this.sleepOrInterrupted(60000);
-        continue;
+      // Wait until fee is below threshold.
+      if (this.maxProviderGasPrice) {
+        const { maxFeePerGas, maxPriorityFeePerGas, gasPrice } = await this.blockchain.getFeeData();
+        const fee = gasPrice ? gasPrice : maxFeePerGas + maxPriorityFeePerGas;
+        if (fee > this.maxProviderGasPrice) {
+          console.log(`Gas price too high at ${fee} wei. Waiting till below ${this.maxProviderGasPrice}...`);
+          await this.sleepOrInterrupted(60000);
+          continue;
+        }
       }
 
       const end = this.metrics.publishTimer();

@@ -331,4 +331,8 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   public getFeeDistributorBalance(assetId: number) {
     return this.contracts.getFeeDistributorBalance(assetId);
   }
+
+  public async getFeeData() {
+    return this.contracts.getFeeData();
+  }
 }

@@ -29,12 +29,10 @@ export class RollupPipeline {
     provider: EthereumProvider,
     signingAddress: EthAddress,
     publishInterval: Duration,
-    feeLimit: bigint,
     maxProviderGasPrice: bigint,
-    providerGasPriceMultiplier: number,
     numInnerRollupTxs: number,
     numOuterRollupProofs: number,
-    bridgeConfigs: BridgeConfig[]
+    bridgeConfigs: BridgeConfig[],
   ) {
     const innerRollupSize = 1 << Math.ceil(Math.log2(numInnerRollupTxs));
     const outerRollupSize = 1 << Math.ceil(Math.log2(innerRollupSize * numOuterRollupProofs));
@@ -46,9 +44,7 @@ export class RollupPipeline {
     const rollupPublisher = new RollupPublisher(
       rollupDb,
       blockchain,
-      feeLimit,
       maxProviderGasPrice,
-      providerGasPriceMultiplier,
       provider,
       signingAddress,
       metrics,
@@ -85,7 +81,7 @@ export class RollupPipeline {
       numInnerRollupTxs,
       numOuterRollupProofs,
       publishInterval,
-      bridgeConfigs
+      bridgeConfigs,
     );
   }
 
@@ -118,12 +114,10 @@ export class RollupPipelineFactory {
     private provider: EthereumProvider,
     private signingAddress: EthAddress,
     private publishInterval: Duration,
-    private feeLimit: bigint,
     private maxProviderGasPrice: bigint,
-    private providerGasPriceMultiplier: number,
     private numInnerRollupTxs: number,
     private numOuterRollupProofs: number,
-    private bridgeConfigs: BridgeConfig[]
+    private bridgeConfigs: BridgeConfig[],
   ) {}
 
   public setTopology(numInnerRollupTxs: number, numOuterRollupProofs: number) {
@@ -143,12 +137,10 @@ export class RollupPipelineFactory {
       this.provider,
       this.signingAddress,
       this.publishInterval,
-      this.feeLimit,
       this.maxProviderGasPrice,
-      this.providerGasPriceMultiplier,
       this.numInnerRollupTxs,
       this.numOuterRollupProofs,
-      this.bridgeConfigs
+      this.bridgeConfigs,
     );
   }
 }

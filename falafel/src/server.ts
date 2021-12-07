@@ -32,8 +32,6 @@ export interface ServerConfig {
   readonly maxFeeGasPrice: bigint;
   readonly feeGasPriceMultiplier: number;
   readonly maxProviderGasPrice: bigint;
-  readonly providerGasPriceMultiplier: number;
-  readonly reimbursementFeeLimit: bigint;
   readonly maxUnsettledTxs: number;
   readonly signingAddress: EthAddress;
   readonly bridgeConfigs: BridgeConfig[];
@@ -61,12 +59,10 @@ export class Server {
       numInnerRollupTxs,
       numOuterRollupProofs,
       publishInterval,
-      reimbursementFeeLimit,
       baseTxGas,
       maxFeeGasPrice,
       feeGasPriceMultiplier,
       maxProviderGasPrice,
-      providerGasPriceMultiplier,
       halloumiHost,
       signingAddress,
       bridgeConfigs,
@@ -102,9 +98,7 @@ export class Server {
       provider,
       signingAddress,
       publishInterval,
-      reimbursementFeeLimit,
       maxProviderGasPrice,
-      providerGasPriceMultiplier,
       numInnerRollupTxs,
       numOuterRollupProofs,
       bridgeConfigs,

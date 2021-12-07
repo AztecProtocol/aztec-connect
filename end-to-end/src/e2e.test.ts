@@ -62,9 +62,7 @@ describe('end-to-end tests', () => {
     const sender = userIds[0];
     const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[0])!);
 
-    let depositTxHash: TxHash;
-    let transferTxHash: TxHash;
-    let withdrawTxHash: TxHash;
+    const txHashes: TxHash[] = [];
     let accumPrivateFee = 0n;
 
     let initialPublicBalance0: bigint;
@@ -79,12 +77,10 @@ describe('end-to-end tests', () => {
       const depositProof = await sdk.createDepositProof(assetId, depositor, userIds[0], depositValue, txFee, signer);
       const depositSignature = await sdk.signProof(depositProof, accounts[0]);
 
-      await expect(sdk.sendProof(depositProof, depositSignature)).rejects.toThrow();
-
       await sdk.depositFundsToContract(assetId, accounts[0], depositValue + txFee);
 
       initialPublicBalance0 = await sdk.getPublicBalance(assetId, accounts[0]);
-      depositTxHash = await sdk.sendProof(depositProof, depositSignature);
+      txHashes.push(await sdk.sendProof(depositProof, depositSignature));
     }
 
     // Transfer to user 1.
@@ -93,7 +89,7 @@ describe('end-to-end tests', () => {
       const txFee = await sdk.getFee(assetId, TxType.TRANSFER);
       accumPrivateFee += txFee;
       const transferProof = await sdk.createTransferProof(assetId, sender, transferValue, txFee, signer, recipient);
-      transferTxHash = await sdk.sendProof(transferProof);
+      txHashes.push(await sdk.sendProof(transferProof));
     }
 
     // Withdraw to user 0.
@@ -102,14 +98,10 @@ describe('end-to-end tests', () => {
       const txFee = await sdk.getFee(assetId, TxType.WITHDRAW_TO_WALLET);
       accumPrivateFee += txFee;
       const withdrawProof = await sdk.createWithdrawProof(assetId, sender, withdrawValue, txFee, signer, recipient);
-      withdrawTxHash = await sdk.sendProof(withdrawProof);
+      txHashes.push(await sdk.sendProof(withdrawProof));
     }
 
-    await Promise.all([
-      sdk.awaitSettlement(depositTxHash, awaitSettlementTimeout),
-      sdk.awaitSettlement(transferTxHash, awaitSettlementTimeout),
-      sdk.awaitSettlement(withdrawTxHash, awaitSettlementTimeout),
-    ]);
+    await Promise.all(txHashes.map(txHash => sdk.awaitSettlement(txHash, awaitSettlementTimeout)));
 
     expect(await sdk.getPublicBalance(assetId, accounts[0])).toBe(initialPublicBalance0 + withdrawValue);
     expect(await sdk.getPublicBalance(assetId, accounts[1])).toBe(initialPublicBalance1);

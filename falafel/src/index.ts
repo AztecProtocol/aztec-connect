@@ -38,8 +38,6 @@ async function main() {
       maxFeeGasPrice,
       feeGasPriceMultiplier,
       maxProviderGasPrice,
-      providerGasPriceMultiplier,
-      reimbursementFeeLimit,
       maxUnsettledTxs,
     },
   } = await getConfig();
@@ -53,7 +51,7 @@ async function main() {
     provider,
   );
 
-  // TODO: Not sure we want to read this config here 
+  // TODO: Not sure we want to read this config here
   const bridgeConfigs = getBridgeConfigs(await blockchain.getChainId());
   const barretenberg = await BarretenbergWasm.new();
 
@@ -67,8 +65,6 @@ async function main() {
     maxFeeGasPrice,
     feeGasPriceMultiplier,
     maxProviderGasPrice,
-    providerGasPriceMultiplier,
-    reimbursementFeeLimit,
     maxUnsettledTxs,
     signingAddress,
     bridgeConfigs,

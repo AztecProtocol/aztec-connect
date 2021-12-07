@@ -1,6 +1,6 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
-import { Asset, EthereumProvider, PriceFeed, SendTxOptions, TypedData } from '@aztec/barretenberg/blockchain';
+import { Asset, EthereumProvider, FeeData, PriceFeed, SendTxOptions, TypedData } from '@aztec/barretenberg/blockchain';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { Web3Provider } from '@ethersproject/providers';
 import { Web3Signer } from '../signer';
@@ -207,5 +207,14 @@ export class Contracts {
 
   public async isContract(address: EthAddress) {
     return (await this.provider.getCode(address.toString())) !== '0x';
+  }
+
+  public async getFeeData(): Promise<FeeData> {
+    const { maxFeePerGas, maxPriorityFeePerGas, gasPrice } = await this.provider.getFeeData();
+    return {
+      maxFeePerGas: maxFeePerGas !== null ? BigInt(maxFeePerGas.toString()) : BigInt(0),
+      maxPriorityFeePerGas: maxPriorityFeePerGas !== null ? BigInt(maxPriorityFeePerGas.toString()) : BigInt(0),
+      gasPrice: gasPrice !== null ? BigInt(gasPrice.toString()) : BigInt(0),
+    };
   }
 }

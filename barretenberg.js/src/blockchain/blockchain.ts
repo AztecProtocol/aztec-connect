@@ -19,6 +19,12 @@ export interface SendTxOptions {
   provider?: EthereumProvider;
 }
 
+export interface FeeData {
+  maxFeePerGas: bigint;
+  maxPriorityFeePerGas: bigint;
+  gasPrice: bigint;
+}
+
 export type PermitArgs = { deadline: bigint; approvalAmount: bigint; signature: EthereumSignature };
 
 export interface Blockchain extends BlockSource, BlockchainStatusSource, EthereumSigner {
@@ -56,4 +62,6 @@ export interface Blockchain extends BlockSource, BlockchainStatusSource, Ethereu
   getRollupBalance(assetId: number): Promise<bigint>;
 
   getFeeDistributorBalance(assetId: number): Promise<bigint>;
+
+  getFeeData(): Promise<FeeData>;
 }
