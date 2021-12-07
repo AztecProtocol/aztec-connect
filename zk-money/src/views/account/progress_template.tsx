@@ -204,7 +204,7 @@ export const ProgressTemplate: React.FunctionComponent<ProgressTemplateProps> = 
     if (message) {
       return <FooterMessage theme={inputTheme} message={message} type={messageType} />;
     }
-    return <FooterMessage theme={inputTheme} message="Do not close this window before the transaction has sent." />;
+    return <FooterMessage theme={inputTheme} message="Do not close this window before the transaction has been sent." />;
   };
 
   return (

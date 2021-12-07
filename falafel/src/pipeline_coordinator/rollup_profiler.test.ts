@@ -1,6 +1,6 @@
 import { AssetId } from '@aztec/barretenberg/asset';
 import { TxType } from '@aztec/barretenberg/blockchain';
-import { BridgeId, BridgeConfig } from '@aztec/barretenberg/bridge_id';
+import { BridgeId, BitConfig, BridgeConfig } from '@aztec/barretenberg/bridge_id';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxDao } from '../entity/tx';
 import { BridgeProfile, profileRollup } from './rollup_profiler';
@@ -51,7 +51,7 @@ describe('Profile Rollup', () => {
       txFeeAssetId = AssetId.ETH,
       txFee = BASE_GAS + NON_DEFI_TX_GAS,
       creationTime = new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id), // ensures txs are ordered by id
-      bridgeId = new BridgeId(randomInt(), 1, 0, 1, 0, false, false, 0),
+      bridgeId = new BridgeId(randomInt(), 1, 0, 1, 0, new BitConfig(false, false, false, false, false, false), 0),
       noteCommitment1 = randomBytes(32),
       noteCommitment2 = randomBytes(32),
       backwardLink = Buffer.alloc(32),

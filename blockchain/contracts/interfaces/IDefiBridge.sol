@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2020 Spilsbury Holdings Ltd
 pragma solidity >=0.6.10 <0.8.0;
+pragma experimental ABIEncoderV2;
 
+import {AztecTypes} from '../AztecTypes.sol';
 interface IDefiBridge {
     function convert(
-        address inputAsset,
-        address outputAssetA,
-        address outputAssetB,
-        uint256 inputValue,
+        AztecTypes.AztecAsset memory inputAssetA,
+        AztecTypes.AztecAsset memory inputAssetB,
+        AztecTypes.AztecAsset memory outputAssetA,
+        AztecTypes.AztecAsset memory outputAssetB,
+        uint256 totalInputValue,
         uint256 interactionNonce,
-        uint32 openingNonce,
-        uint32 bitConfig,
         uint64 auxData
     )
         external
@@ -18,7 +19,7 @@ interface IDefiBridge {
         returns (
             uint256 outputValueA,
             uint256 outputValueB,
-            bool
+            bool isAsync
         );
 
     function canFinalise(uint256 interactionNonce) external view returns (bool);

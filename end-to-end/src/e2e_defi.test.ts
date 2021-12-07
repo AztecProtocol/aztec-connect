@@ -2,6 +2,7 @@ import {
   AccountId,
   AssetId,
   BridgeId,
+  BitConfig,
   createWalletSdk,
   EthAddress,
   TxHash,
@@ -80,7 +81,7 @@ describe('end-to-end defi tests', () => {
       const inputAssetId = AssetId.ETH;
       const outputAssetIdA = AssetId.DAI;
       const outputAssetIdB = 0;
-      const bridgeId = new BridgeId(bridgeAddressId, inputAssetId, outputAssetIdA, outputAssetIdB, 0, false, false, 0);
+      const bridgeId = new BridgeId(bridgeAddressId, inputAssetId, outputAssetIdA, outputAssetIdB, 0, new BitConfig(false, false, false, false, false, false), 0);
       const txFee = await sdk.getFee(inputAssetId, TxType.DEFI_DEPOSIT);
       const depositValue = sdk.toBaseUnits(inputAssetId, '0.05');
       const proofOutput = await sdk.createDefiProof(bridgeId, userId, depositValue, txFee, signer);
@@ -111,7 +112,7 @@ describe('end-to-end defi tests', () => {
       const inputAssetId = AssetId.DAI;
       const outputAssetIdA = AssetId.ETH;
       const outputAssetIdB = 0;
-      const bridgeId = new BridgeId(bridgeAddressId, inputAssetId, outputAssetIdA, outputAssetIdB, 0, false, false, 0);
+      const bridgeId = new BridgeId(bridgeAddressId, inputAssetId, AssetId.ETH, 0, 0, new BitConfig(false, false, false, false, false, false), 0);
 
       const initialEthBalance = sdk.getBalance(AssetId.ETH, userId);
       const initialDaiBalance = sdk.getBalance(AssetId.DAI, userId);

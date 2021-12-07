@@ -1,7 +1,7 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
 import { Asset } from '@aztec/barretenberg/blockchain';
-import { AUX_DATA, BridgeId } from '@aztec/barretenberg/bridge_id';
+import { AUX_DATA_SELECTOR, BridgeId } from '@aztec/barretenberg/bridge_id';
 import {
   computeInteractionHashes,
   DefiInteractionNote,
@@ -53,7 +53,7 @@ describe('rollup_processor: defi bridge with loans', () => {
     const bridgeId = await deployMockBridge(rollupProvider, rollupProcessor, assetAddresses, {
       ...params,
     });
-    const bridgeAddress = await rollupProcessor.getSupportedBridge(bridgeId.address);
+    const bridgeAddress = await rollupProcessor.getSupportedBridge(bridgeId.addressId);
     const bridge = new DefiBridge(bridgeAddress, new EthersAdapter(ethers.provider));
     const contract = await ethers.getContractAt('MockDefiBridge', bridgeAddress.toString());
     return { bridgeId, bridge, contract };
@@ -94,13 +94,13 @@ describe('rollup_processor: defi bridge with loans', () => {
     ({ rollupProcessor, assets, assetAddresses } = await setupTestRollupProcessor(signers));
   });
 
+    // TODO ADD A TEST THAT ENSURES BRIDGE THROWS IF NON-VIRTUAL ASSETS ARE PROVIDED
   it('process defi interaction data that draws and repays a loan', async () => {
     const inputValue = 20n;
     const outputValueA = 10n;
     const outputValueB = 7n;
     const { bridgeId } = await mockBridge({
-      secondAssetValid: true,
-      secondAssetVirtual: true,
+      secondOutputAssetVirtual: true,
       inputAssetId: AssetId.DAI,
       outputAssetIdA: AssetId.ETH,
       outputAssetIdB: AssetId.renBTC,
@@ -134,7 +134,7 @@ describe('rollup_processor: defi bridge with loans', () => {
 
       await expectBalance(AssetId.ETH, outputValueA);
       await expectBalance(AssetId.DAI, initialTokenBalance - inputValue);
-      await expectBalance(AssetId.renBTC, outputValueB);
+      await expectBalance(AssetId.renBTC, BigInt(0));
 
       const interactionResult = [new DefiInteractionNote(bridgeId, 4, inputValue, outputValueA, outputValueB, true)];
       await expectResult(interactionResult, txHash);
@@ -145,15 +145,14 @@ describe('rollup_processor: defi bridge with loans', () => {
     // Note that we need a new bridge id as the input and output assets have changed
     {
       const { bridgeId: bridgeId2, contract: bridge2 } = await mockBridge({
-        secondAssetValid: true,
-        secondAssetVirtual: true,
+        secondInputAssetVirtual: true,
         inputAssetId: AssetId.ETH,
         outputAssetIdA: AssetId.DAI,
         outputAssetIdB: AssetId.renBTC,
         outputValueA: inputValue,
         outputValueB: BigInt(0),
         openingNonce: 4,
-        auxData: AUX_DATA.CLOSE_LOAN,
+        auxData: AUX_DATA_SELECTOR.CLOSE_LOAN,
       });
       await bridge2.recordInterestRate(4, 10); // interest rate = 10 %
 
@@ -173,7 +172,7 @@ describe('rollup_processor: defi bridge with loans', () => {
 
       await expectBalance(AssetId.ETH, BigInt(0));
       await expectBalance(AssetId.DAI, initialTokenBalance - (inputValue * BigInt(1)) / BigInt(10));
-      await expectBalance(AssetId.renBTC, outputValueB);
+      await expectBalance(AssetId.renBTC, BigInt(0));
     }
   });
 
@@ -181,7 +180,7 @@ describe('rollup_processor: defi bridge with loans', () => {
     const collateralValue1 = 100n;
     const loanValue1 = 10n;
     const { bridgeId: bridgeId1 } = await mockBridge({
-      secondAssetVirtual: true,
+      secondOutputAssetVirtual: true,
       inputAssetId: AssetId.DAI,
       outputAssetIdA: AssetId.ETH,
       outputValueA: loanValue1,
@@ -190,7 +189,7 @@ describe('rollup_processor: defi bridge with loans', () => {
     const collateralValue2 = 20n;
     const loanValue2 = 4n;
     const { bridgeId: bridgeId2 } = await mockBridge({
-      secondAssetVirtual: true,
+      secondOutputAssetVirtual: true,
       inputAssetId: AssetId.ETH,
       outputAssetIdA: AssetId.renBTC,
       outputValueA: loanValue2,
@@ -225,38 +224,37 @@ describe('rollup_processor: defi bridge with loans', () => {
       const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
 
-      await expectBalance(AssetId.ETH, initialEthBalance - collateralValue2 + loanValue1);
-      await expectBalance(AssetId.DAI, initialTokenBalance - collateralValue1);
-      await expectBalance(AssetId.renBTC, loanValue2);
-
       const interactionResult = [
         new DefiInteractionNote(bridgeId1, 4, collateralValue1, loanValue1, 0n, true),
         new DefiInteractionNote(bridgeId2, 5, collateralValue2, loanValue2, 0n, true),
       ];
       await expectResult(interactionResult, txHash);
+
+      await expectBalance(AssetId.ETH, initialEthBalance - collateralValue2 + loanValue1);
+      await expectBalance(AssetId.DAI, initialTokenBalance - collateralValue1);
+      await expectBalance(AssetId.renBTC, loanValue2);
       previousDefiInteractionHash = packInteractionNotes(interactionResult, 4);
     }
-
     // Repay the two loans after subtracting 10% and 20% interests respectively
     // Note that we need new bridge ids as the input and output assets have changed
     {
       const { bridgeId: repayBridgeId1, contract: repayBridge1 } = await mockBridge({
-        secondAssetVirtual: true,
+        secondInputAssetVirtual: true,
         inputAssetId: AssetId.ETH,
         outputAssetIdA: AssetId.DAI,
         outputValueA: collateralValue1,
         openingNonce: 4,
-        auxData: AUX_DATA.CLOSE_LOAN,
+        auxData: AUX_DATA_SELECTOR.CLOSE_LOAN,
       });
       await repayBridge1.recordInterestRate(4, 10); // interest rate = 10 %
 
       const { bridgeId: repayBridgeId2, contract: repayBridge2 } = await mockBridge({
-        secondAssetVirtual: true,
+        secondInputAssetVirtual: true,
         inputAssetId: AssetId.renBTC,
         outputAssetIdA: AssetId.ETH,
         outputValueA: collateralValue2,
         openingNonce: 5,
-        auxData: AUX_DATA.CLOSE_LOAN,
+        auxData: AUX_DATA_SELECTOR.CLOSE_LOAN,
       });
       await repayBridge2.recordInterestRate(5, 20); // interest rate = 20 %
 

@@ -28,29 +28,27 @@ describe('rollup_processor: defi bridge', () => {
   const cloneId = (
     bridgeId: BridgeId,
     {
-      address,
-      secondAssetValid,
-      secondAssetVirtual,
+      addressId,
       inputAssetId,
       outputAssetIdA,
       outputAssetIdB,
+      bitConfig,
     }: Partial<BridgeId> = {},
   ) => {
     return new BridgeId(
-      address || bridgeId.address,
+      addressId || bridgeId.addressId,
       inputAssetId !== undefined ? inputAssetId : bridgeId.inputAssetId,
       outputAssetIdA !== undefined ? outputAssetIdA : bridgeId.outputAssetIdA,
       outputAssetIdB !== undefined ? outputAssetIdB : bridgeId.outputAssetIdB,
       bridgeId.openingNonce,
-      secondAssetValid !== undefined ? secondAssetValid : bridgeId.secondAssetValid,
-      secondAssetVirtual !== undefined ? secondAssetVirtual : bridgeId.secondAssetVirtual,
+      bitConfig !== undefined ? bitConfig : bridgeId.bitConfig,
       bridgeId.auxData,
     );
   };
 
   it('revert if output assets are the same', async () => {
     const bridgeId = await mockBridge({
-      secondAssetValid: true,
+      secondOutputAssetValid: true,
       outputAssetIdA: AssetId.renBTC,
       outputAssetIdB: AssetId.renBTC,
     });

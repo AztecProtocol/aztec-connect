@@ -1,4 +1,4 @@
-export enum AUX_DATA {
+export enum AUX_DATA_SELECTOR {
   NADA,
   OPEN_LOAN,
   CLOSE_LOAN,

@@ -1,6 +1,6 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeId, BitConfig } from '@aztec/barretenberg/bridge_id';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
 import { RollupProcessor } from '../rollup_processor';
@@ -12,8 +12,9 @@ export interface MockBridgeParams {
   inputAsset?: EthAddress;
   outputAssetA?: EthAddress;
   outputAssetB?: EthAddress;
-  secondAssetValid?: boolean;
-  secondAssetVirtual?: boolean;
+  secondOutputAssetValid?: boolean;
+  secondOutputAssetVirtual?: boolean;
+  secondInputAssetVirtual?: boolean;
   canConvert?: boolean;
   outputValueA?: bigint;
   outputValueB?: bigint;
@@ -37,8 +38,9 @@ export const deployMockBridge = async (
     inputAsset = assetAddresses[inputAssetId],
     outputAssetA = assetAddresses[outputAssetIdA],
     outputAssetB = assetAddresses[outputAssetIdB],
-    secondAssetValid = false,
-    secondAssetVirtual = false,
+    secondOutputAssetValid = false,
+    secondOutputAssetVirtual = false,
+    secondInputAssetVirtual = false,
     canConvert = true,
     outputValueA = 10n,
     outputValueB = 0n,
@@ -89,8 +91,14 @@ export const deployMockBridge = async (
     outputAssetIdA,
     outputAssetIdB,
     openingNonce,
-    secondAssetValid,
-    secondAssetVirtual,
+    new BitConfig(
+        false,
+        secondInputAssetVirtual,
+        false,
+        secondOutputAssetVirtual,
+        false,
+        secondOutputAssetValid,
+    ),
     auxData,
   );
 };

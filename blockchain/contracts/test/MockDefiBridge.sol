@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2020 Spilsbury Holdings Ltd
 pragma solidity >=0.6.10 <0.8.0;
+pragma experimental ABIEncoderV2;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 import {IDefiBridge} from '../interfaces/IDefiBridge.sol';
+import {AztecTypes} from '../AztecTypes.sol';
+
+import 'hardhat/console.sol';
 
 import 'hardhat/console.sol';
 
@@ -26,7 +30,13 @@ contract MockDefiBridge is IDefiBridge {
 
     mapping(uint256 => uint256) interactions;
 
-    enum AUX_DATA {NADA, OPEN_LOAN, CLOSE_LOAN, OPEN_LIQUIDITY_PROVIDER, CLOSE_LIQUIDITY_PROVIDER}
+    enum AUX_DATA_SELECTOR {
+        NADA,
+        OPEN_LOAN,
+        CLOSE_LOAN,
+        OPEN_LP,
+        CLOSE_LP
+    }
 
     receive() external payable {}
 
@@ -50,43 +60,70 @@ contract MockDefiBridge is IDefiBridge {
         isAsync = _isAsync;
     }
 
+    // Input cases:
+    // Case1: 1 real input.
+    // Case2: 1 virtual asset input.
+    // Case3: 1 real 1 virtual input.
+
+    // Output cases:
+    // 1 real
+    // 2 real
+    // 1 real 1 virtual
+    // 1 virtual
+
+    // E2E example use cases.
+    // 1 1: Swapping.
+    // 1 2: Swapping with incentives (2nd output reward token).
+    // 1 3: Borrowing. Lock up collateral, get back loan asset and virtual position asset.
+    // 1 4: Opening lending position OR Purchasing NFT. Input real asset, get back virtual asset representing NFT or position.
+    // 2 1: Selling NFT. Input the virtual asset, get back a real asset.
+    // 2 2: Closing a lending position. Get back original asset and reward asset.
+    // 2 3: Claiming fees from an open position.
+    // 2 4: Voting on a 1 4 case.
+    // 3 1: Repaying a borrow. Return loan plus interest. Get collateral back.
+    // 3 2: Repaying a borrow. Return loan plus interest. Get collateral plus reward token. (AAVE)
+    // 3 3: Partial loan repayment.
+    // 3 4: DAO voting stuff.
     function convert(
-        address inputAsset,
-        address outputAssetA,
-        address outputAssetB,
-        uint256 inputValue,
+        AztecTypes.AztecAsset memory inputAssetA,
+        AztecTypes.AztecAsset memory inputAssetB,
+        AztecTypes.AztecAsset memory outputAssetA,
+        AztecTypes.AztecAsset memory outputAssetB,
+        uint256 totalInputValue,
         uint256 interactionNonce,
-        uint32 openingNonce,
-        uint32 bitConfig,
         uint64 auxData
     )
         external
         payable
         override
         returns (
-            uint256,
-            uint256,
-            bool
+            uint256 outputValueA,
+            uint256 outputValueB,
+            bool _isAsync
         )
     {
         require(canConvert);
 
         uint256 modifiedReturnValueA = returnValueA;
-        if (auxData == uint32(AUX_DATA.CLOSE_LOAN) && openingNonce > 0) {
+        if (auxData == uint32(AUX_DATA_SELECTOR.CLOSE_LOAN) && inputAssetB.id > 0) {
+            require(
+                inputAssetB.assetType == AztecTypes.AztecAssetType.VIRTUAL,
+                'MockDefiBridge: INPUT_ASSET_A_NOT_VIRTUAL'
+            );
             // get interest rate from the mapping interestRates
-            modifiedReturnValueA -= (returnValueA * interestRates[openingNonce]) / 100;
+            modifiedReturnValueA -= (returnValueA * interestRates[inputAssetB.id]) / 100;
         }
 
         if (!isAsync) {
-            transferTokens(inputAsset, returnInputValue);
+            transferTokens(inputAssetA, returnInputValue);
             transferTokens(outputAssetA, modifiedReturnValueA);
-            if ((bitConfig & 1) == 1) {
-                transferTokens(outputAssetB, returnValueB);
-            }
+            transferTokens(outputAssetB, returnValueB);
         }
-
-        interactions[interactionNonce] = inputValue;
-        return (0, 0, isAsync);
+        interactions[interactionNonce] = totalInputValue;
+        if (isAsync) {
+            return (0, 0, isAsync);
+        }
+        return (modifiedReturnValueA, returnValueB, isAsync);
     }
 
     function recordInterestRate(uint256 interactionNonce, uint256 rate) external {
@@ -114,13 +151,12 @@ contract MockDefiBridge is IDefiBridge {
             msgCallValue += approveTransfer(outputAssetB, returnValueB);
         }
 
-        bytes memory payload =
-            abi.encodeWithSignature(
-                'processAsyncDefiInteraction(uint256,uint256,uint256)',
-                interactionNonce,
-                outputValueA,
-                outputValueB
-            );
+        bytes memory payload = abi.encodeWithSignature(
+            'processAsyncDefiInteraction(uint256,uint256,uint256)',
+            interactionNonce,
+            outputValueA,
+            outputValueB
+        );
         (bool success, ) = address(rollupProcessor).call{value: msgCallValue}(payload);
         assembly {
             if iszero(success) {
@@ -130,11 +166,16 @@ contract MockDefiBridge is IDefiBridge {
         }
     }
 
-    function transferTokens(address assetAddress, uint256 value) internal {
-        if (assetAddress == address(0)) {
+    function transferTokens(AztecTypes.AztecAsset memory asset, uint256 value) internal {
+        if (
+            asset.assetType == AztecTypes.AztecAssetType.NOT_USED ||
+            asset.assetType == AztecTypes.AztecAssetType.VIRTUAL
+        ) {
+            return;
+        } else if (asset.assetType == AztecTypes.AztecAssetType.ETH) {
             rollupProcessor.call{value: value}('');
         } else {
-            IERC20(assetAddress).transfer(rollupProcessor, value);
+            IERC20(asset.erc20Address).transfer(rollupProcessor, value);
         }
     }
 

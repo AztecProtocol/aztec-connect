@@ -3,32 +3,36 @@ tags: Specs
 ---
 # Defi Bridge Contract Interface
 
-## External Methods
+## Types
 
-### getInfo
+```
+library AztecTypes {
+    enum AztecAssetType {
+        NOT_USED,
+        ETH,
+        ERC20,
+        VIRTUAL
+    }
 
-A defi bridge's info must be immutable. Clients will use the return values to derive a bridge id.[^1]
-
-```solidity
-function getInfo()
-    external
-    view
-    returns (
-        uint32 numOutputAssets,
-        address inputAsset,
-        address outputAssetA,
-        address outputAssetB
-    );
+    struct AztecAsset {
+        uint256 id;
+        address erc20Address;
+        AztecAssetType assetType;
+    }
+}
 ```
 
-###### Return Values:
+The `AztecAsset` struct is an attempt at a more developer-friendly description of an Aztec asset that does not rely on bit flags.
 
-| Name              | Type      | Description |
-| ----------------- | --------- | ----------- |
-| `numOutputAssets` | *uint32*  | Number of output assets. Must be either 1 or 2. |
-| `inputAsset`      | *address* | Contract address of the input asset. |
-| `outputAssetA`    | *address* | Contract address of the first output asset. |
-| `outputAssetB`    | *address* | Contract address of the second output asset. Must be *address(0)* if `numOutputAssets` is 1. |
+The *type* of the asset is described by an enum. For virtual or not used assets, the `erc20Address` will be 0.
+
+For input virtual assets, the `id` field will contain the interaction nonce of the interaction that created the asset.
+
+For output virtual assets, the `id` field will be the current interaction nonce.
+
+## External Methods
+
+
 
 
 ### convert
@@ -36,19 +40,36 @@ function getInfo()
 Initiate a DeFi interaction and inform the rollup contract of the proceeds. If the DeFi interaction cannot proceed for any reason, it is expected that the convert method will throw.
 
 ```solidity
-function convert(uint256 inputValue)
-    external
-    returns (
-        uint256 outputValueA,
-        uint256 outputValueB
-    );
+    function convert(
+        AztecTypes.AztecAsset memory inputAssetA,
+        AztecTypes.AztecAsset memory inputAssetB,
+        AztecTypes.AztecAsset memory outputAssetA,
+        AztecTypes.AztecAsset memory outputAssetB,
+        uint256 totalInputValue,
+        uint256 interactionNonce,
+        uint64 auxData
+    )
+        external
+        payable
+        override
+        returns (
+            uint256 outputValueA,
+            uint256 outputValueB,
+            bool _isAsync
+        )
 ```
 
 ###### Input Values:
 
 | Name         | Type      | Description |
 | ------------ | --------- | ----------- |
-| `inputValue` | *uint256* | The amount of `inputAsset` this bridge contract is allowed to transfer from the rollup contract. |
+| `inputAssetA` | *AztecAsset* | first input asset |
+| `inputAssetB` | *AztecAsset* | second input asset. Either VIRTUAL or NOT_USED |
+| `outputAssetA` | *AztecAsset* | first output asset. Cannot be virtual |
+| `outputAssetB` | *AztecAsset* | second output asset. Can be real or virtual (or NOT_USED) |
+| `totalInputValue` | *uint256* | The amount of `inputAsset` this bridge contract is allowed to transfer from the rollup contract. |
+| `interactionNonce` | *uint256* | The current defi interaction nonce |
+| `auxData` | *uint64* | Custom auxiliary metadata |
 
 ###### Return Values:
 
@@ -60,9 +81,25 @@ function convert(uint256 inputValue)
 In the unfortunate event when both output values are zeros, this function should throw so that the rollup contract could refund `inputValue` back to the users.
 
 
-[^1]: Bridge id is a 252-bit concatenation of:
-`address(this)` (160 bits)
-`numOutputAssets` (2 bits)
-`inputAsset` (32 bits)
-`outputAssetA` (32 bits)
-`outputAssetB` (26 bits)
+[^1]: Bridge id is a 250-bit concatenation of the following data (starting at the most significant bit position):
+
+| bit position | bit length | definition | description |
+| --- | --- | --- | --- |
+| 0 | 64 | `auxData` | custom auxiliary data for bridge-specific logic |
+| 64 | 32 | `bitConfig` | flags that describe asset types |
+| 96 | 32 | `openingNonce` | (optional) reference to a previous defi interaction nonce (used for virtual assets) |
+| 128 | 30 |  `outputAssetB` | asset id of 2nd output asset |
+| 158 | 30 | `outputAssetA` | asset id of 1st output asset |
+| 188 | 30 | `inputAsset` | asset id of 1st input asset |
+| 218 | 32 | `bridgeAddressId` | id of bridge smart contract address |
+
+
+Bit Config Definition
+| bit | meaning |
+| --- | --- |
+| 0   | firstInputAssetVirtual |
+| 1   | secondInputAssetVirtual |
+| 2   | firstOutputAssetVirtual |
+| 3   | secondOutputAssetVirtual |
+| 4   | secondInputValid |
+| 5   | secondOutputValid |

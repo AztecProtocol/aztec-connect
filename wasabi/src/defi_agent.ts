@@ -11,6 +11,7 @@ import {
   MemoryFifo,
   TxType,
   BridgeId,
+  BitConfig,
 } from '@aztec/sdk';
 import { randomBytes } from 'crypto';
 import { Agent } from './agent';
@@ -180,8 +181,7 @@ export class DefiAgent extends Agent {
       spec.outputAsset,
       outputAssetIdB,
       0,
-      false,
-      false,
+      new BitConfig(false, false, false, false, false, false),  
       0,
     );
     const currentBalanceInputAsset = this.sdk.getBalance(spec.inputAsset, this.user.id);

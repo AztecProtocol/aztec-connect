@@ -56,7 +56,7 @@ describe('rollup_processor: async defi bridge', () => {
       ...params,
       isAsync: true,
     });
-    const bridgeAddress = await rollupProcessor.getSupportedBridge(bridgeId.address);
+    const bridgeAddress = await rollupProcessor.getSupportedBridge(bridgeId.addressId);
     const bridge = new DefiBridge(bridgeAddress, new EthersAdapter(ethers.provider));
     return { bridgeId, bridge };
   };
@@ -103,7 +103,7 @@ describe('rollup_processor: async defi bridge', () => {
     const outputValueA = 12n;
     const outputValueB = 7n;
     const { bridgeId, bridge } = await mockAsyncBridge({
-      secondAssetValid: true,
+      secondOutputAssetValid: true,
       inputAssetId: AssetId.DAI,
       outputAssetIdA: AssetId.ETH,
       outputAssetIdB: AssetId.renBTC,
@@ -173,7 +173,7 @@ describe('rollup_processor: async defi bridge', () => {
     const outputValueA = 12n;
     const outputValueB = 7n;
     const { bridgeId, bridge } = await mockAsyncBridge({
-      secondAssetValid: true,
+      secondOutputAssetValid: true,
       inputAssetId: AssetId.DAI,
       outputAssetIdA: AssetId.ETH,
       outputAssetIdB: AssetId.renBTC,
@@ -384,7 +384,7 @@ describe('rollup_processor: async defi bridge', () => {
     const outputValueA = 7n;
     const outputValueB = 1n;
     const { bridgeId, bridge } = await mockAsyncBridge({
-      secondAssetValid: false,
+      secondOutputAssetValid: false,
       outputValueA,
       outputValueB,
     });
