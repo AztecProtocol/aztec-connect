@@ -90,7 +90,7 @@ resource "aws_ecs_task_definition" "halloumi" {
       },
       {
         "name": "MAX_CIRCUIT_SIZE",
-        "value": "4194304"
+        "value": "8388608"
       }
     ],
     "logConfiguration": {
