@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import { Button, ContentWrapper, PaddedBlock, RainDrops, Text } from '../components';
+import { Button, ContentWrapper, TextLink, PaddedBlock, RainDrops, Text } from '../components';
 import { SupportStatus } from '../device_support';
 import { borderRadiuses, breakpoints, fontSizes, lineHeights, spacings } from '../styles';
+import { ShieldSelect } from './shield_select';
 
 const HomeRoot = styled.div`
   position: relative;
   padding: ${spacings.xxl} 0 ${spacings.xl};
 
-  @media (max-width: ${breakpoints.s}) {
+  @media (max-width: ${breakpoints.l}) {
     padding-top: ${spacings.l};
     text-align: center;
   }
@@ -17,6 +18,43 @@ const HomeRoot = styled.div`
 const ContentRoot = styled.div`
   position: relative;
   z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-areas: 'shield text';
+  gap: 100px;
+
+  @media (max-width: ${breakpoints.l}) {
+    grid-template-columns: unset;
+    grid-template-rows: auto auto;
+    grid-template-areas:
+      'text'
+      'shield';
+    gap: ${spacings.m};
+  }
+`;
+
+const ShieldCol = styled.div`
+  grid-area: shield;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+`;
+
+const ShieldSelectWrapper = styled.div`
+  width: 100%;
+  max-width: 480px;
+`;
+
+const LoginBlock = styled(PaddedBlock)`
+  text-align: center;
+`;
+
+const TextCol = styled.div`
+  grid-area: text;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 `;
 
 const SectionHead = styled(PaddedBlock)`
@@ -31,15 +69,6 @@ const SectionHead = styled(PaddedBlock)`
 
 const SectionCaption = styled(PaddedBlock)`
   max-width: 480px;
-`;
-
-const ButtonRoot = styled(PaddedBlock)`
-  display: flex;
-
-  @media (max-width: ${breakpoints.s}) {
-    width: 100%;
-    justify-content: center;
-  }
 `;
 
 const AnimationRoot = styled.div`
@@ -98,19 +127,37 @@ const getUnsupportedText = (status: SupportStatus) => {
   }
 };
 
-interface HomeProps {
-  onConnect: () => void;
+export interface HomeState {
   supportStatus: SupportStatus;
+  ethPrice?: bigint;
 }
 
-export const Home: React.FunctionComponent<HomeProps> = ({ onConnect, supportStatus }) => {
+interface HomeProps {
+  onLogin: () => void;
+  onSignupAndShield: (amount: bigint) => void;
+  homeState: HomeState;
+}
+
+export const Home: React.FunctionComponent<HomeProps> = ({
+  onLogin,
+  onSignupAndShield,
+  homeState: { supportStatus, ethPrice },
+}) => {
   const [showUnsupported, setShowUnsupported] = useState(false);
 
-  const handleConnect = () => {
+  const handleLogin = () => {
     if (supportStatus !== 'supported') {
       setShowUnsupported(true);
     } else {
-      onConnect();
+      onLogin();
+    }
+  };
+
+  const handleSignupAndShield = (amount: bigint) => {
+    if (supportStatus !== 'supported') {
+      setShowUnsupported(true);
+    } else {
+      onSignupAndShield(amount);
     }
   };
 
@@ -120,28 +167,37 @@ export const Home: React.FunctionComponent<HomeProps> = ({ onConnect, supportSta
         <RainDrops />
       </AnimationRoot>
       <ContentRoot>
-        <SectionHead>
-          <Text>
-            {`Affordable, `}
-            <Text weight="bold" text="private " inline></Text>
-            {'crypto'}
-          </Text>
-          <Text text="payments have arrived." />
-        </SectionHead>
-        <SectionCaption>
-          <Text size="m">
-            Connect{' '}
-            <Text weight="bold" inline>
-              your wallet
-            </Text>{' '}
-            to get started
-          </Text>
-        </SectionCaption>
-        {!showUnsupported && (
-          <ButtonRoot>
-            <Button theme="white" text="Connect" onClick={handleConnect} />
-          </ButtonRoot>
-        )}
+        <ShieldCol>
+          <ShieldSelectWrapper>
+            <ShieldSelect onSubmit={handleSignupAndShield} ethPrice={ethPrice} />
+            <LoginBlock>
+              <Text size="s">
+                Already have an account?{' '}
+                <TextLink color="white" underline inline onClick={handleLogin}>
+                  Login
+                </TextLink>
+              </Text>
+            </LoginBlock>
+          </ShieldSelectWrapper>
+        </ShieldCol>
+        <TextCol>
+          <SectionHead>
+            <Text>
+              {`Affordable, `}
+              <Text weight="bold" text="private " inline />
+              payments for Ethereum
+            </Text>
+          </SectionHead>
+          <SectionCaption>
+            <Text size="m">
+              Connect{' '}
+              <Text weight="bold" inline>
+                your wallet
+              </Text>{' '}
+              and shield your first ETH to get started
+            </Text>
+          </SectionCaption>
+        </TextCol>
       </ContentRoot>
       {showUnsupported && (
         <UnsupportedRoot>

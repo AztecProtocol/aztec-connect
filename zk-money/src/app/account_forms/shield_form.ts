@@ -13,10 +13,10 @@ import createDebug from 'debug';
 import { utils } from 'ethers';
 import { EventEmitter } from 'events';
 import { debounce, DebouncedFunc, isEqual } from 'lodash';
-import { AccountState, AssetState } from '../account_state';
+import { AssetState } from '../account_state';
 import { AccountUtils } from '../account_utils';
 import { isSameAlias, isValidAliasInput } from '../alias';
-import { Asset } from '../assets';
+import { Asset, assets } from '../assets';
 import { Database } from '../database';
 import { EthAccount, EthAccountEvent, EthAccountState } from '../eth_account';
 import {
@@ -76,7 +76,12 @@ interface TxSpeedInput extends IntValue {
   value: SettlementTime;
 }
 
+interface AssetStateValue extends FormValue {
+  value: { asset: Asset; txAmountLimit: bigint };
+}
+
 export interface ShieldFormValues {
+  assetState: AssetStateValue;
   amount: StrInput;
   maxAmount: BigIntValue;
   gasCost: BigIntValue;
@@ -94,6 +99,9 @@ export interface ShieldFormValues {
 }
 
 const initialShieldFormValues = {
+  assetState: {
+    value: { asset: assets[0], txAmountLimit: 0n },
+  },
   amount: {
     value: '',
     required: true,
@@ -171,8 +179,8 @@ export class ShieldForm extends EventEmitter implements AccountForm {
   private readonly aliasDebounceWait = 1000;
 
   constructor(
-    accountState: AccountState,
-    private assetState: AssetState,
+    accountState: { userId: AccountId; alias: string },
+    private assetState: { asset: Asset; spendableBalance: bigint },
     private provider: Provider | undefined,
     private ethAccount: EthAccount,
     private readonly keyVault: KeyVault,
@@ -183,6 +191,8 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     private readonly accountUtils: AccountUtils,
     private readonly requiredNetwork: Network,
     private readonly txAmountLimit: bigint,
+    private readonly minAmount?: bigint,
+    amountPreselection?: bigint,
   ) {
     super();
     this.userId = accountState.userId;
@@ -191,7 +201,15 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     this.debounceUpdateRecipient = debounce(this.updateRecipientStatus, this.aliasDebounceWait);
     this.values.recipient = { value: { input: this.alias, valid: ValueAvailability.VALID } };
     this.values.fees = { value: this.rollup.getTxFees(this.asset.id, TxType.DEPOSIT) };
-    this.refreshValues();
+    const values: Partial<ShieldFormValues> = {};
+    if (amountPreselection !== undefined) {
+      values.amount = {
+        value: formatBaseUnits(amountPreselection, this.asset.decimals, {
+          precision: this.asset.preferredFractionalDigits,
+        }),
+      };
+    }
+    this.refreshValues(values);
   }
 
   get locked() {
@@ -202,7 +220,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     return this.formStatus === FormStatus.PROCESSING;
   }
 
-  private get status() {
+  get status() {
     return this.values.status.value;
   }
 
@@ -393,6 +411,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     const recipient = this.values.recipient.value.input;
 
     const toUpdate = this.validateChanges({
+      assetState: { value: { ...this.assetState, txAmountLimit: this.txAmountLimit } },
       maxAmount: { value: maxAmount },
       gasCost: { value: gasCost },
       ethAccount: { value: ethAccountState },
@@ -441,6 +460,14 @@ export class ShieldForm extends EventEmitter implements AccountForm {
           this.asset.symbol
         }.`,
       );
+    }
+    if (this.minAmount !== undefined) {
+      if (amountValue < this.minAmount && !toUpdate.amount?.message) {
+        toUpdate.amount = withError(
+          amountInput,
+          `Please shield at least ${fromBaseUnits(this.minAmount, this.asset.decimals)} ${this.asset.symbol}.`,
+        );
+      }
     }
 
     if (changes.maxAmount && !toUpdate.amount?.message) {
@@ -574,7 +601,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
 
     const asset = this.asset;
     const recipient = form.recipient.value.input;
-    const outputNoteOwner = (await this.accountUtils.getAccountId(recipient))!;
+    const outputNoteOwner = recipient === this.alias ? this.userId : (await this.accountUtils.getAccountId(recipient))!;
     const amount = toBaseUnits(form.amount.value, asset.decimals);
     const fee = form.fees.value[form.speed.value].fee;
     const publicInput = amount + fee;

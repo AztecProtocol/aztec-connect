@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import warningIcon from '../images/warning.svg';
 import { Text } from './text';
 import { borderRadiuses, breakpoints, spacings, Theme, themeColours } from '../styles';
-import { AssetState, fromBaseUnits } from '../app';
+import { Asset, fromBaseUnits } from '../app';
 
 const Root = styled.div`
   display: flex;
@@ -59,7 +59,7 @@ const WarningFootnote = styled(Text)`
 `;
 
 interface DisclaimerBlockProps {
-  assetState: AssetState;
+  assetState: { asset: Asset; txAmountLimit: bigint };
 }
 
 export const DisclaimerBlock: React.FunctionComponent<DisclaimerBlockProps> = ({ assetState }) => {

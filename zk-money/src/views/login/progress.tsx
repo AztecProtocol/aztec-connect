@@ -1,12 +1,11 @@
 import React from 'react';
 import styled from 'styled-components';
-import { LoginStep } from '../../app';
 import { Dot, Loader, LoaderTheme, PaddedBlock, Text } from '../../components';
 import errorIcon from '../../images/exclamation_mark.svg';
 import { borderRadiuses, spacings } from '../../styles';
 
 export interface Step {
-  step: LoginStep;
+  step: string | number;
   title: React.ReactNode;
 }
 
@@ -48,7 +47,7 @@ const StepName = styled(Text)<StepNameProps>`
 `;
 
 interface ProgressProps {
-  currentStep: LoginStep;
+  currentStep: string | number;
   steps: Step[];
   active: boolean;
   failed: boolean;
