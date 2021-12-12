@@ -22,7 +22,7 @@ import { breakpoints, spacings, Theme } from '../../styles';
 import { AccountAsset } from './asset';
 import { Merge } from './merge';
 import { Migrate } from './migrate';
-import { Send } from './send';
+import { SendLayout } from './send_layout';
 import { Shield } from './shield';
 import { UnsupportedAsset } from './unsupported_asset';
 
@@ -41,7 +41,7 @@ const getPopupInfo = (action: AccountAction, formValues: Form) => {
       return {
         theme: generatingKey ? Theme.GRADIENT : Theme.WHITE,
         generatingKey,
-        title: 'Send',
+        overridesModalLayout: !generatingKey,
       };
     }
     case AccountAction.MERGE: {
@@ -191,12 +191,16 @@ export const Account: React.FunctionComponent<AccountProps> = ({
       )}
       {activeAction &&
         (() => {
-          const { theme, generatingKey, title } = getPopupInfo(activeAction.action, activeAction.formValues);
+          const { theme, generatingKey, title, overridesModalLayout } = getPopupInfo(
+            activeAction.action,
+            activeAction.formValues,
+          );
           return (
             <Modal
               theme={theme}
               title={generatingKey ? 'Create Aztec Spending Key' : title}
-              onClose={!processingAction && !generatingKey ? onClearAction : undefined}
+              noPadding={overridesModalLayout}
+              onClose={!overridesModalLayout && !processingAction && !generatingKey ? onClearAction : undefined}
             >
               {(() => {
                 switch (activeAction.action) {
@@ -219,7 +223,7 @@ export const Account: React.FunctionComponent<AccountProps> = ({
                     );
                   case AccountAction.SEND: {
                     return (
-                      <Send
+                      <SendLayout
                         theme={theme}
                         assetState={assetState}
                         providerState={providerState}

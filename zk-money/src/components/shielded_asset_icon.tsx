@@ -4,8 +4,8 @@ import zkShieldWhiteIcon from '../images/zk_shield_white.svg';
 import { Size } from '../styles';
 
 const iconSizes = {
-  xxl: '72px',
-  xl: '62px',
+  xxl: '92px',
+  xl: '72px',
   l: '50px',
   m: '36px',
   s: '28px',
@@ -21,7 +21,7 @@ const Root = styled.div<{ size: Size }>`
   `}
 `;
 
-interface IconVarients {
+export interface IconVarients {
   iconWhite: string;
   iconGradient: string;
 }
@@ -42,7 +42,7 @@ const AssetIcon = styled.div<{ white?: boolean; icons: IconVarients }>`
   background-repeat: no-repeat;
 `;
 
-const ShieldIcon = styled.div<{ white?: boolean }>`
+const ShieldIcon = styled.div<{ white?: boolean; hide?: boolean }>`
   position: absolute;
   top: 0;
   left: 0;
@@ -52,15 +52,18 @@ const ShieldIcon = styled.div<{ white?: boolean }>`
   background-size: contain;
   background-position: center;
   background-repeat: no-repeat;
+  transition: opacity 0.2s;
+  opacity: ${({ hide }) => (hide ? 0 : 1)};
 `;
 
 export const ShieldedAssetIcon: React.FunctionComponent<{
   asset: IconVarients;
   white?: boolean;
   size?: Size;
-}> = ({ white, asset, size = 'm' }) => (
+  hideShield?: boolean;
+}> = ({ white, asset, size = 'm', hideShield }) => (
   <Root size={size}>
     <AssetIcon white={white} icons={asset} />
-    <ShieldIcon white={white} />
+    <ShieldIcon white={white} hide={hideShield} />
   </Root>
 );
