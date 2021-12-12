@@ -32,3 +32,5 @@ export * from './transaction_summary';
 export * from './tx_progress';
 export * from './wallet_picker';
 export * from './shielded_asset_icon';
+export * from './transition_group';
+export * from './cross_fade';

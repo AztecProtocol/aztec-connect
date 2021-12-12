@@ -804,13 +804,6 @@ export class UserSession extends EventEmitter {
     await this.shieldForAliasForm.lock();
     if (!this.shieldForAliasForm.locked) return;
 
-    await this.shieldForAliasForm.submit();
-    if (this.shieldForAliasForm.status !== ShieldStatus.DONE) return;
-
-    this.shieldForAliasForm.destroy();
-
-    this.emitSystemMessage(`Sending registration proof...`);
-
     const { proofOutput } = this.getLocalAccountProof() || {};
     if (!proofOutput) {
       this.emitSystemMessage('Session expired.', MessageType.ERROR);
@@ -829,12 +822,15 @@ export class UserSession extends EventEmitter {
     await this.accountUtils.addUser(this.keyVault.accountPrivateKey, userId.nonce, noSync);
 
     try {
-      await this.sdk.sendProof(proofOutput);
+      await this.shieldForAliasForm.submit({ parentProof: proofOutput });
+      if (this.shieldForAliasForm.status !== ShieldStatus.DONE) return;
       this.clearLocalAccountProof();
+
+      this.shieldForAliasForm.destroy();
     } catch (e) {
       debug(e);
       await this.accountUtils.removeUser(userId);
-      this.emitSystemMessage('Failed to send the proof. Please try again later.', MessageType.ERROR);
+      this.emitSystemMessage('Failed to send the proofs. Please try again later.', MessageType.ERROR);
       return;
     }
 
@@ -1429,8 +1425,23 @@ export class UserSession extends EventEmitter {
       this.clearWalletSession();
       this.updateLoginState({ walletId: undefined });
     }
+    if (this.shieldForAliasForm?.ethAccountIsStale()) {
+      this.renewShieldForAliasEthAccount();
+    }
+
     this.emit(UserSessionEvent.UPDATED_PROVIDER_STATE, state);
   };
+
+  private renewShieldForAliasEthAccount() {
+    const ethAccount = new EthAccount(
+      this.provider,
+      this.accountUtils,
+      this.accountProofDepositAsset,
+      this.rollupService.supportedAssets[this.accountProofDepositAsset].address,
+      this.requiredNetwork,
+    );
+    this.shieldForAliasForm?.changeEthAccount(ethAccount);
+  }
 
   private toStep(step: LoginStep, message = '', messageType = MessageType.TEXT) {
     this.updateLoginState({ step });

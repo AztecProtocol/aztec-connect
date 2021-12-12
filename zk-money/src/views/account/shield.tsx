@@ -26,6 +26,7 @@ import {
   InputWrapper,
   MaskedInput,
   PaddedBlock,
+  ShieldedAssetIcon,
   Text,
   TextLink,
 } from '../../components';
@@ -34,11 +35,6 @@ import { FeeSelect } from './fee_select';
 import { SettledTime } from './settled_time';
 import { ShieldProgress } from './shield_progress';
 import { WalletSelect } from './wallet_select';
-
-const AssetIcon = styled.img`
-  padding: 0 ${spacings.s};
-  height: 24px;
-`;
 
 const AmountCol = styled(InputCol)`
   width: 60%;
@@ -63,6 +59,7 @@ const AmountInputWrapper = styled(InputWrapper)`
 const AmountAssetIconRoot = styled.div`
   display: flex;
   align-items: center;
+  padding-left: ${spacings.s};
 `;
 
 const MaxButton = styled.div`
@@ -172,7 +169,7 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
     confirmed,
     submit,
   } = form;
-  const { icon, decimals, symbol } = asset;
+  const { decimals, symbol } = asset;
   const { pendingBalance } = ethAccount.value;
   const txFee = fees.value[speed.value];
 
@@ -195,7 +192,7 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
           />
           <AmountInputWrapper theme={inputTheme}>
             <AmountAssetIconRoot>
-              <AssetIcon src={icon} />
+              <ShieldedAssetIcon asset={asset} />
             </AmountAssetIconRoot>
             <Input
               theme={inputTheme}

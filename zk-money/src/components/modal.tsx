@@ -8,7 +8,13 @@ import { PaddedBlock } from './padded_block';
 import { ContentWrapper } from './template/content_wrapper';
 import { Text } from './text';
 
-const ModalContentWrapper = styled(ContentWrapper)`
+interface ModalContentWrapperProps {
+  noPadding?: boolean;
+}
+
+const ModalContentWrapper = styled(ContentWrapper)<ModalContentWrapperProps>`
+  ${({ noPadding }) => noPadding && `padding: 0;`}
+
   @media (max-width: ${breakpoints.s}) {
     padding: 0;
   }
@@ -26,18 +32,20 @@ const whiteContent = css`
 
 interface PopupContentProps {
   theme: Theme;
+  noPadding?: boolean;
 }
 
 const PopupContent = styled(PaddedBlock)<PopupContentProps>`
   ${({ theme }) => (theme === Theme.WHITE ? whiteContent : gradientContent)};
-  padding: ${spacings.m} ${spacings.xl};
+  padding: ${({ noPadding }) => (noPadding ? '0' : `${spacings.m} ${spacings.xl}`)};
+
   box-shadow: 0px 4px 50px rgba(0, 0, 0, 0.2);
   border-radius: ${borderRadiuses.m};
   max-height: calc(100vh - ${parseInt(spacings.m) * 2}px);
   overflow: auto;
 
   @media (max-width: ${breakpoints.s}) {
-    padding: ${spacings.m} ${spacings.l};
+    ${({ noPadding }) => !noPadding && `padding: ${spacings.m} ${spacings.l};`}
     border-radius: 0;
     max-height: 100vh;
     height: 100vh;
@@ -65,14 +73,41 @@ const CloseButton = styled.div`
   cursor: pointer;
 `;
 
-interface ModalProps {
+interface ModalHeaderProps {
   theme?: Theme;
   title: string | React.ReactNode;
-  children: React.ReactNode;
   onClose?: () => void;
 }
 
-export const Modal: React.FunctionComponent<ModalProps> = ({ theme = Theme.WHITE, title, children, onClose }) => {
+export const ModalHeader: React.FunctionComponent<ModalHeaderProps> = ({ theme, title, onClose }) => (
+  <Header>
+    {!!title && (
+      <TitleRoot>
+        <Title color={theme === Theme.WHITE ? 'gradient' : 'white'} size="xl">
+          {title}
+        </Title>
+      </TitleRoot>
+    )}
+    {!!onClose && (
+      <CloseButton onClick={onClose}>
+        <img src={theme === Theme.GRADIENT ? closeIconWhite : closeIcon} alt="close" width={40} />
+      </CloseButton>
+    )}
+  </Header>
+);
+
+interface ModalProps extends ModalHeaderProps {
+  children: React.ReactNode;
+  noPadding?: boolean;
+}
+
+export const Modal: React.FunctionComponent<ModalProps> = ({
+  theme = Theme.WHITE,
+  title,
+  children,
+  onClose,
+  noPadding,
+}) => {
   useEffect(() => {
     const prevPosition = document.body.style.position;
     const scrollY = window.scrollY;
@@ -88,24 +123,9 @@ export const Modal: React.FunctionComponent<ModalProps> = ({ theme = Theme.WHITE
 
   return (
     <Overlay>
-      <ModalContentWrapper>
-        <PopupContent theme={theme}>
-          {!!(title || onClose) && (
-            <Header>
-              {!!title && (
-                <TitleRoot>
-                  <Title color={theme === Theme.WHITE ? 'gradient' : 'white'} size="xl">
-                    {title}
-                  </Title>
-                </TitleRoot>
-              )}
-              {!!onClose && (
-                <CloseButton onClick={onClose}>
-                  <img src={theme === Theme.GRADIENT ? closeIconWhite : closeIcon} alt="close" width={40} />
-                </CloseButton>
-              )}
-            </Header>
-          )}
+      <ModalContentWrapper noPadding={noPadding}>
+        <PopupContent theme={theme} noPadding={noPadding}>
+          {!!(title || onClose) && <ModalHeader theme={theme} title={title} onClose={onClose} />}
           {children}
         </PopupContent>
       </ModalContentWrapper>

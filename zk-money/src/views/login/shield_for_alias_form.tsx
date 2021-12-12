@@ -172,11 +172,11 @@ export const ShieldForAliasForm: React.FunctionComponent<DepositFormProps> = ({
     },
     {
       step: ShieldStatus.SEND_PROOF,
-      title: 'Send Shield Transaction',
+      title: 'Send Shield and Registration Transaction',
     },
     {
       step: ShieldStatus.DONE,
-      title: 'Send Registration Transaction',
+      title: 'Initialise Account',
     },
   ];
   if (submissionSteps.find(x => x.step === status)) {
