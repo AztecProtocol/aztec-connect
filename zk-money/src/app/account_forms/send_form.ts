@@ -334,6 +334,15 @@ export class SendForm extends EventEmitter implements AccountForm {
 
     if (changes.amount) {
       const amountInput = changes.amount;
+      const { preferredFractionalDigits } = this.asset;
+      if (preferredFractionalDigits !== undefined) {
+        if ((amountInput.value.split('.')[1]?.length ?? 0) > preferredFractionalDigits) {
+          toUpdate.amount = withError(
+            amountInput,
+            `Please enter no more than ${preferredFractionalDigits} decimal places.`,
+          );
+        }
+      }
       const amountValue = toBaseUnits(amountInput.value, this.asset.decimals);
       if (amountValue > this.txAmountLimit) {
         toUpdate.amount = withError(

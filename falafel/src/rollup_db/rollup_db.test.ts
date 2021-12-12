@@ -46,6 +46,24 @@ describe('rollup_db', () => {
     expect(result!).toBe(1);
   });
 
+  it('should bulk add txs', async () => {
+    const txs = [
+      TxType.DEPOSIT,
+      TxType.WITHDRAW_TO_WALLET,
+      TxType.ACCOUNT,
+      TxType.TRANSFER,
+      TxType.WITHDRAW_TO_CONTRACT,
+      TxType.ACCOUNT,
+    ].map(txType => randomTx({ txType }));
+
+    await rollupDb.addTxs(txs);
+
+    expect(await rollupDb.getTotalTxCount()).toBe(6);
+    expect(await rollupDb.getJoinSplitTxCount()).toBe(4);
+    expect(await rollupDb.getAccountTxCount()).toBe(2);
+    expect(await rollupDb.getAccountCount()).toBe(2);
+  });
+
   it('should get rollup proof by id', async () => {
     const rollup = randomRollupProof([]);
     await rollupDb.addRollupProof(rollup);

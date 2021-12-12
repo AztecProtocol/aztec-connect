@@ -13,7 +13,7 @@ import {
   AppEvent,
   assets,
   AssetState,
-  DepositFormValues,
+  ShieldFormValues,
   Form,
   LoginMode,
   LoginState,
@@ -26,10 +26,10 @@ import {
 import { ProviderState } from '../app/provider';
 import { Template } from '../components';
 import { Config } from '../config';
-import { isUnsupportedDevice } from '../device_support';
+import { getSupportStatus } from '../device_support';
 import { Theme } from '../styles';
 import { Account } from '../views/account';
-import { Home } from '../views/home';
+import { Home, HomeState } from '../views/home';
 import { Login } from '../views/login';
 import { getAccountUrl, getActionFromUrl, getLoginModeFromUrl, getUrlFromAction, getUrlFromLoginMode } from './views';
 
@@ -55,9 +55,10 @@ interface AppState {
     action: AccountAction;
     formValues: Form;
   };
-  depositForm?: DepositFormValues;
+  shieldForAliasForm?: ShieldFormValues;
   systemMessage: SystemMessage;
   isLoading: boolean;
+  homeState: HomeState;
 }
 
 enum CrossTabEvent {
@@ -100,12 +101,13 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
       accountState: this.app.accountState,
       assetState: this.app.assetState,
       activeAction: this.app.activeAction,
-      depositForm: this.app.depositForm,
+      shieldForAliasForm: this.app.shieldForAliasForm,
       systemMessage: {
         message: '',
         type: MessageType.TEXT,
       },
       isLoading: true,
+      homeState: { supportStatus: 'supported' },
     };
   }
 
@@ -128,6 +130,12 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
           break;
       }
     };
+    const ethPrice = this.app.priceFeedService.getPrice(AssetId.ETH);
+    if (ethPrice !== 0n) this.setState({ homeState: { ...this.state.homeState, ethPrice } });
+    this.app.priceFeedService.subscribe(AssetId.ETH, this.handleEthPriceChange);
+    getSupportStatus().then(supportStatus => {
+      this.setState({ homeState: { ...this.state.homeState, supportStatus } });
+    });
     await this.handleActionChange(this.state.action);
     this.setState({ isLoading: false });
   }
@@ -146,6 +154,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
   }
 
   componentWillUnmount() {
+    this.app.priceFeedService.unsubscribe(AssetId.ETH, this.handleEthPriceChange);
     this.app.destroy();
     this.channel.close();
   }
@@ -231,7 +240,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
       accountState: this.app.accountState,
       assetState: this.app.assetState,
       activeAction: this.app.activeAction,
-      depositForm: this.app.depositForm,
+      shieldForAliasForm: this.app.shieldForAliasForm,
     });
   };
 
@@ -247,7 +256,17 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
     this.onUserSessionDataChange();
   };
 
-  private handleConnect = () => {
+  private handleEthPriceChange = (_: AppAssetId, ethPrice: bigint) => {
+    this.setState({ homeState: { ...this.state.homeState, ethPrice } });
+  };
+
+  private handleLogin = () => {
+    const url = getUrlFromLoginMode(LoginMode.LOGIN);
+    this.props.history.push(url);
+  };
+
+  private handleSignupAndShield = (amount: bigint) => {
+    this.app.updateShieldForAliasAmountPreselection(amount);
     const url = getUrlFromLoginMode(LoginMode.SIGNUP);
     this.props.history.push(url);
   };
@@ -323,9 +342,10 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
       loginState,
       providerState,
       worldState,
-      depositForm,
+      shieldForAliasForm,
       systemMessage,
       isLoading,
+      homeState,
     } = this.state;
     const { config } = this.props;
     const { step } = loginState;
@@ -357,7 +377,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
                   loginState={loginState}
                   providerState={providerState}
                   availableWallets={this.app.availableWallets}
-                  depositForm={depositForm}
+                  shieldForAliasForm={shieldForAliasForm}
                   explorerUrl={config.explorerUrl}
                   systemMessage={systemMessage}
                   setSeedPhrase={this.app.setSeedPhrase}
@@ -372,8 +392,8 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
                   onForgotAlias={this.app.forgotAlias}
                   onMigrateAccount={this.app.migrateAccount}
                   onClearAccountV0s={this.handleClearAccountV0s}
-                  onDepositFormInputsChange={this.app.changeDepositForm}
-                  onSubmitDepositForm={this.app.claimUserName}
+                  onShieldForAliasFormInputsChange={this.app.changeShieldForAliasForm}
+                  onSubmitShieldForAliasForm={this.app.claimUserName}
                   onChangeWallet={this.app.changeWallet}
                 />
               );
@@ -406,7 +426,9 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
               );
             }
             default:
-              return <Home onConnect={this.handleConnect} unsupported={isUnsupportedDevice()} />;
+              return (
+                <Home onLogin={this.handleLogin} onSignupAndShield={this.handleSignupAndShield} homeState={homeState} />
+              );
           }
         })()}
       </Template>

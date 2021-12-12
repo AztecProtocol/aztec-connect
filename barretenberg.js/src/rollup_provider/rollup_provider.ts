@@ -14,6 +14,7 @@ export interface Proof {
   proofData: Buffer;
   viewingKeys: ViewingKey[];
   depositSignature?: Buffer;
+  parentProof?: Proof;
 }
 
 export interface FeeQuote {

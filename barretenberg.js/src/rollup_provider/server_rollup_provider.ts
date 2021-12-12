@@ -5,19 +5,28 @@ import { Proof } from '../rollup_provider';
 import { TxHash } from '../tx_hash';
 import { blockchainStatusFromJson } from '../blockchain';
 
+export interface TxPostData {
+  proofData: string;
+  viewingKeys: string[];
+  depositSignature?: string;
+  parentProof?: TxPostData;
+}
+
+const toTxPostData = ({ proofData, viewingKeys, depositSignature, parentProof }: Proof): TxPostData => ({
+  proofData: proofData.toString('hex'),
+  viewingKeys: viewingKeys.map(v => v.toString()),
+  depositSignature: depositSignature ? depositSignature.toString('hex') : undefined,
+  parentProof: parentProof ? toTxPostData(parentProof) : undefined,
+});
+
 export class ServerRollupProvider extends ServerBlockSource implements RollupProvider {
   constructor(baseUrl: URL, pollInterval = 10000) {
     super(baseUrl, pollInterval);
   }
 
-  async sendProof({ proofData, viewingKeys, depositSignature, ...rest }: Proof) {
+  async sendProof(proof: Proof) {
     const url = new URL(`${this.baseUrl}/tx`);
-    const data = {
-      proofData: proofData.toString('hex'),
-      viewingKeys: viewingKeys.map(v => v.toString()),
-      depositSignature: depositSignature ? depositSignature.toString('hex') : undefined,
-      ...rest,
-    };
+    const data = toTxPostData(proof);
     const response = await fetch(url.toString(), { method: 'POST', body: JSON.stringify(data) }).catch(() => undefined);
     if (!response) {
       throw new Error('Failed to contact rollup provider.');
