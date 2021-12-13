@@ -86,7 +86,7 @@ export class Server {
     );
     this.proofGenerator = halloumiHost
       ? new ServerProofGenerator(halloumiHost)
-      : new CliProofGenerator(2 ** 21, '2', './data', true);
+      : new CliProofGenerator(2 ** 23, '2', './data', true);
     this.pipelineFactory = new RollupPipelineFactory(
       this.proofGenerator,
       blockchain,

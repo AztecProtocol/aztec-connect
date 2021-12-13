@@ -104,29 +104,12 @@ export class RollupPublisher {
     return await this.blockchain.createRollupProofTx(proof, signatures, offchainTxData);
   }
 
-  private async generateSignature(
-    rollupProof: Buffer,
-    feeReceiver: EthAddress,
-    feeLimit: bigint,
-    feeDistributorAddress: EthAddress,
-  ) {
-    const publicInputs = rollupProof.slice(0, RollupProofData.LENGTH_ROLLUP_HEADER_INPUTS);
-    const message = Buffer.concat([
-      publicInputs,
-      feeReceiver.toBuffer(),
-      toBufferBE(feeLimit, 32),
-      feeDistributorAddress.toBuffer(),
-    ]);
-    const digest = new Keccak(256).update(message).digest();
-    return await new Web3Signer(this.provider).signMessage(digest, this.providerAddress);
-  }
-
   private async sendRollupProof(txData: Buffer) {
     while (!this.interrupted) {
       try {
         return await this.blockchain.sendTx(txData);
       } catch (err: any) {
-        console.log(err.message.slice(0, 300));
+        console.log(err.message.slice(0, 500));
         await this.sleepOrInterrupted(60000);
       }
     }

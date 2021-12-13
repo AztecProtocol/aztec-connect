@@ -6,12 +6,8 @@ import { abi } from '../../../artifacts/contracts/test/TestRollupProcessor.sol/T
 import { Web3Provider } from '@ethersproject/providers';
 
 export class TestRollupProcessor extends RollupProcessor {
-  constructor(
-    protected rollupContractAddress: EthAddress,
-    provider: EthereumProvider,
-    protected defaults: SendTxOptions = { gasLimit: 1000000 },
-  ) {
-    super(rollupContractAddress, provider, defaults);
+  constructor(protected rollupContractAddress: EthAddress, provider: EthereumProvider) {
+    super(rollupContractAddress, provider);
     this.rollupProcessor = new Contract(rollupContractAddress.toString(), abi, this.provider);
   }
 
@@ -24,19 +20,16 @@ export class TestRollupProcessor extends RollupProcessor {
 
   async stubAsyncTransactionHashes(size: number) {
     const contract = this.getContractWithSigner({});
-    const { gasLimit } = { ...this.defaults };
-    await contract.stubAsyncTransactionHashesLength(size, { gasLimit });
+    await contract.stubAsyncTransactionHashesLength(size);
   }
 
   async stubTransactionHashes(size: number) {
     const contract = this.getContractWithSigner({});
-    const { gasLimit } = { ...this.defaults };
-    await contract.stubTransactionHashesLength(size, { gasLimit });
+    await contract.stubTransactionHashesLength(size);
   }
 
   async stubReentrancyGuard(size: boolean) {
     const contract = this.getContractWithSigner({});
-    const { gasLimit } = { ...this.defaults };
-    await contract.stubReentrancyGuard(size, { gasLimit });
+    await contract.stubReentrancyGuard(size);
   }
 }

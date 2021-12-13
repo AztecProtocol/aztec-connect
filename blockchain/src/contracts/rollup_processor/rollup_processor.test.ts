@@ -22,8 +22,6 @@ import {
 import { deployMockBridge, MockBridgeParams } from './fixtures/setup_defi_bridges';
 import { setupTestRollupProcessor } from './fixtures/setup_test_rollup_processor';
 import { RollupProcessor } from './rollup_processor';
-import { EthersAdapter } from '../../provider';
-import { TestRollupProcessor } from './fixtures/test_rollup_processor';
 
 describe('rollup_processor', () => {
   let feeDistributor: FeeDistributor;

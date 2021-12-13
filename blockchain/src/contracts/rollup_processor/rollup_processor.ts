@@ -28,11 +28,7 @@ export class RollupProcessor {
   private lastQueriedRollupBlockNum?: number;
   protected provider: Web3Provider;
 
-  constructor(
-    protected rollupContractAddress: EthAddress,
-    provider: EthereumProvider,
-    protected defaults: SendTxOptions = { gasLimit: 1000000 },
-  ) {
+  constructor(protected rollupContractAddress: EthAddress, provider: EthereumProvider) {
     this.provider = new Web3Provider(provider);
     this.rollupProcessor = new Contract(rollupContractAddress.toString(), abi, this.provider);
   }
@@ -99,14 +95,14 @@ export class RollupProcessor {
   }
 
   async setVerifier(address: EthAddress, options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options, ...this.defaults };
+    const { gasLimit } = { ...options };
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.setVerifier(address.toString(), { gasLimit }).catch(fixEthersStackTrace);
     return TxHash.fromString(tx.hash);
   }
 
   async setSupportedBridge(bridgeAddress: EthAddress, options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options, ...this.defaults };
+    const { gasLimit } = { ...options };
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor
       .setSupportedBridge(bridgeAddress.toString(), { gasLimit })
@@ -115,7 +111,7 @@ export class RollupProcessor {
   }
 
   async setSupportedAsset(assetAddress: EthAddress, supportsPermit: boolean, options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options, ...this.defaults };
+    const { gasLimit } = { ...options };
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor
       .setSupportedAsset(assetAddress.toString(), supportsPermit, { gasLimit })
@@ -163,7 +159,7 @@ export class RollupProcessor {
   }
 
   public async sendTx(data: Buffer, options: SendTxOptions = {}) {
-    const { signingAddress, gasLimit } = { ...options, ...this.defaults };
+    const { signingAddress, gasLimit } = { ...options };
     const signer = signingAddress ? this.provider.getSigner(signingAddress.toString()) : this.provider.getSigner(0);
     const from = await signer.getAddress();
     const txRequest = {
@@ -183,7 +179,7 @@ export class RollupProcessor {
     permitArgs?: PermitArgs,
     options: SendTxOptions = {},
   ) {
-    const { gasLimit } = { ...options, ...this.defaults };
+    const { gasLimit } = { ...options };
     const rollupProcessor = this.getContractWithSigner(options);
     const depositorAddress = await rollupProcessor.signer.getAddress();
     if (permitArgs) {
@@ -215,7 +211,7 @@ export class RollupProcessor {
   }
 
   async approveProof(proofHash: Buffer, options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options, ...this.defaults };
+    const { gasLimit } = { ...options };
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.approveProof(proofHash, { gasLimit }).catch(fixEthersStackTrace);
     return TxHash.fromString(tx.hash);

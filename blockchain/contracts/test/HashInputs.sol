@@ -102,6 +102,12 @@ contract HashInputs is Decoder {
             // i.e. verified == false if proof is not valid
             proof_verified := staticcall(gas(), sload(verifier_slot), dataPtr, add(zkProofDataSize, 0x84), 0x00, 0x00)
         }
-        require(proof_verified, 'proof verification failed');
+
+        if (!proof_verified) {
+            assembly {
+                returndatacopy(0, 0, returndatasize())
+                revert(0, returndatasize())
+            }
+        }
     }
 }

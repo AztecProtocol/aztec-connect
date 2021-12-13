@@ -87,7 +87,7 @@ contract StandardVerifier is IVerifier {
     uint256 constant C_BETA_LOC =                               0x200 + 0x340 + 0x300 + 0x00;
     uint256 constant C_GAMMA_LOC =                              0x200 + 0x340 + 0x300 + 0x20;
     uint256 constant C_ALPHA_LOC =                              0x200 + 0x340 + 0x300 + 0x40;
-    uint256 constant C_ARITHMETIC_ALPHA_LOC =                   0x200 + 0x340 + 0x300 + 0x60; 
+    uint256 constant C_ARITHMETIC_ALPHA_LOC =                   0x200 + 0x340 + 0x300 + 0x60;
     uint256 constant C_ZETA_LOC =                               0x200 + 0x340 + 0x300 + 0x80;
     uint256 constant C_CURRENT_LOC =                            0x200 + 0x340 + 0x300 + 0xa0;
     uint256 constant C_V0_LOC =                                 0x200 + 0x340 + 0x300 + 0xc0;
@@ -107,7 +107,7 @@ contract StandardVerifier is IVerifier {
     uint256 constant ZERO_POLY_LOC =                            0x200 + 0x340 + 0x300 + 0x1a0 + 0x80;
     uint256 constant L_START_LOC =                              0x200 + 0x340 + 0x300 + 0x1a0 + 0xa0;
     uint256 constant L_END_LOC =                                0x200 + 0x340 + 0x300 + 0x1a0 + 0xc0;
-    uint256 constant R_ZERO_EVAL_LOC =                          0x200 + 0x340 + 0x300 + 0x1a0 + 0xe0; 
+    uint256 constant R_ZERO_EVAL_LOC =                          0x200 + 0x340 + 0x300 + 0x1a0 + 0xe0;
     uint256 constant ACCUMULATOR_X_LOC =                        0x200 + 0x340 + 0x300 + 0x1a0 + 0x100;
     uint256 constant ACCUMULATOR_Y_LOC =                        0x200 + 0x340 + 0x300 + 0x1a0 + 0x120;
     uint256 constant ACCUMULATOR2_X_LOC =                       0x200 + 0x340 + 0x300 + 0x1a0 + 0x140;
@@ -168,15 +168,12 @@ contract StandardVerifier is IVerifier {
             assembly {
                 hash_matches_input := eq(calldataload(add(calldataload(0x04), 0x24)), public_inputs_hash)
             }
-            require(hash_matches_input, "computed public input hash does not match value in proof!");
+            require(hash_matches_input, 'Rollup Processor: PUBLIC_INPUTS_HASH_VERIFICATION_FAILED');
         }
-        
+
         StandardTypes.VerificationKey memory vk = RootVerifierVk.get_verification_key();
 
-
         assembly {
-
-            
             /**
              * LOAD VKEY
              * TODO REPLACE THIS WITH A CONTRACT CALL
@@ -204,7 +201,7 @@ contract StandardVerifier is IVerifier {
                 mstore(SIGMA3_X_LOC,        mload(mload(add(vk, 0x180))))
                 mstore(SIGMA3_Y_LOC,        mload(add(mload(add(vk, 0x180)), 0x20)))
                 mstore(CONTAINS_RECURSIVE_PROOF_LOC, mload(add(vk, 0x1a0)))
-                mstore(RECURSIVE_PROOF_PUBLIC_INPUT_INDICES_LOC, mload(add(vk, 0x1c0))) 
+                mstore(RECURSIVE_PROOF_PUBLIC_INPUT_INDICES_LOC, mload(add(vk, 0x1c0)))
                 mstore(G2X_X0_LOC, 0x260e01b251f6f1c7e7ff4e580791dee8ea51d87a358e038b4efe30fac09383c1)
                 mstore(G2X_X1_LOC, 0x0118c4d5b837bcc2bc89b5b398b5974e9f5944073b32078b7e231fec938883b0)
                 mstore(G2X_Y0_LOC, 0x04fc6369f7110fe3d25156c1bb9a72859cf2a04641f99ba4ee413c80da6a5fe4)
@@ -248,7 +245,7 @@ contract StandardVerifier is IVerifier {
 
             let public_input_byte_length := mul(mload(NUM_INPUTS_LOC), 32)
             data_ptr := add(data_ptr, public_input_byte_length)
-  
+
 
             mstore(W1_X_LOC, mod(calldataload(add(data_ptr, 0x20)), q))
             mstore(W1_Y_LOC, mod(calldataload(data_ptr), q))
@@ -470,7 +467,7 @@ contract StandardVerifier is IVerifier {
                     }
                     accumulator := mload(0x00)
                 }
- 
+
                 t2 := mulmod(accumulator, t2, p)
                 accumulator := mulmod(accumulator, l_end_denominator, p)
 
@@ -515,7 +512,7 @@ contract StandardVerifier is IVerifier {
                 mstore(C_ALPHA_SQR_LOC, alpha_sqr)
                 mstore(C_ARITHMETIC_ALPHA_LOC, mulmod(alpha_sqr, alpha_sqr, p))
 
-                mstore(R_ZERO_EVAL_LOC,    
+                mstore(R_ZERO_EVAL_LOC,
                             mulmod(
                                 addmod(
                                     addmod(r_0, sub(p, mulmod(mload(L_START_LOC), alpha_sqr, p)), p),
@@ -601,17 +598,17 @@ contract StandardVerifier is IVerifier {
                 partial_grand_product := mulmod(
                     mulmod(
                         partial_grand_product,
-                        addmod(k1_beta_zeta, witness_term, p), // w2 + k1.beta.zeta + gamma 
+                        addmod(k1_beta_zeta, witness_term, p), // w2 + k1.beta.zeta + gamma
                         p
                     ),
                     addmod(addmod(add(k1_beta_zeta, beta_zeta), gamma, p), mload(W3_EVAL_LOC), p), // k2.beta.zeta + gamma + w3 where k2 = k1+1
                     p
                 )
 
-            
+
                 let linear_challenge := alpha // Owing to the simplified Plonk, nu =1, linear_challenge = nu * alpha = alpha
 
-            
+
                 mstore(0x00, mload(SIGMA3_X_LOC))
                 mstore(0x20, mload(SIGMA3_Y_LOC))
                 mstore(0x40, mulmod(
@@ -642,25 +639,25 @@ contract StandardVerifier is IVerifier {
                     mload(C_U_LOC),
                     p
                 ))
-            // 0x00 = SIGMA3_X_LOC, 
-            // 0x20 = SIGMA3_Y_LOC, 
+            // 0x00 = SIGMA3_X_LOC,
+            // 0x20 = SIGMA3_Y_LOC,
             // 0x40 = −(ā + βs̄_σ1 + γ)( b̄ + βs̄_σ2 + γ)αβz̄_ω,
-            // 0x60 = Z_X_LOC, 
-            // 0x80 = Z_Y_LOC, 
-            // 0xa0 = (ā + βz + γ)( b̄ + βk_1 z + γ)(c̄ + βk_2 z + γ)α + L_1(z)α^3 + u 
+            // 0x60 = Z_X_LOC,
+            // 0x80 = Z_Y_LOC,
+            // 0xa0 = (ā + βz + γ)( b̄ + βk_1 z + γ)(c̄ + βk_2 z + γ)α + L_1(z)α^3 + u
                 success := and(success, and(
                     staticcall(gas(), 6, ACCUMULATOR_X_LOC, 0x80, ACCUMULATOR_X_LOC, 0x40),
                     // Why ACCUMULATOR_X_LOC := ACCUMULATOR_X_LOC + ACCUMULATOR2_X_LOC? Inner parenthesis is executed before?
                     and(
                         staticcall(gas(), 7, 0x60, 0x60, ACCUMULATOR_X_LOC, 0x40),
-                        // [ACCUMULATOR_X_LOC, ACCUMULATOR_X_LOC + 0x40) = ((ā + βz + γ)( b̄ + βk_1 z + γ)(c̄ + βk_2 z + γ)α + L_1(z)α^3 + u)*[z]_1 
+                        // [ACCUMULATOR_X_LOC, ACCUMULATOR_X_LOC + 0x40) = ((ā + βz + γ)( b̄ + βk_1 z + γ)(c̄ + βk_2 z + γ)α + L_1(z)α^3 + u)*[z]_1
                         staticcall(gas(), 7, 0x00, 0x60, ACCUMULATOR2_X_LOC, 0x40)
                         // [ACCUMULATOR2_X_LOC, ACCUMULATOR2_X_LOC + 0x40) = −(ā + βs̄_σ1 + γ)( b̄ + βs̄_σ2 + γ)αβz̄_ω * [s_σ3]_1
                     )
                 ))
-                
+
                 mstore(GRAND_PRODUCT_SUCCESS_FLAG, success)
-            
+
             }
 
             /**
@@ -680,7 +677,7 @@ contract StandardVerifier is IVerifier {
                 // captures new terms Q1, Q2, and so on and they get accumulated to ACCUMULATOR_X_LOC
                 let success := and(
                     staticcall(gas(), 6, ACCUMULATOR_X_LOC, 0x80, ACCUMULATOR_X_LOC, 0x40),
-                    // [ACCUMULATOR_X_LOC, ACCUMULATOR_X_LOC + 0x40) = ((ā + βz + γ)( b̄ + βk_1 z + γ)(c̄ + βk_2 z + γ)α + L_1(z)α^3 + u)*[z]_1 −(ā + βs̄_σ1 + γ)( b̄ + βs̄_σ2 + γ)αβz̄_ω * [s_σ3]_1 
+                    // [ACCUMULATOR_X_LOC, ACCUMULATOR_X_LOC + 0x40) = ((ā + βz + γ)( b̄ + βk_1 z + γ)(c̄ + βk_2 z + γ)α + L_1(z)α^3 + u)*[z]_1 −(ā + βs̄_σ1 + γ)( b̄ + βs̄_σ2 + γ)αβz̄_ω * [s_σ3]_1
                     staticcall(gas(), 7, 0x00, 0x60, ACCUMULATOR2_X_LOC, 0x40)
                     // [ACCUMULATOR2_X_LOC, ACCUMULATOR2_X_LOC + 0x40) = ā * [q_L]_1
                 )
@@ -742,7 +739,7 @@ contract StandardVerifier is IVerifier {
             {
                 // previous scalar_multiplier = 1, z^n, z^2n
                 // scalar_multiplier owing to the simplified Plonk = 1 * -Z_H(z), z^n * -Z_H(z), z^2n * -Z_H(z)
-                // VALIDATE T1 
+                // VALIDATE T1
                 let success
                 {
                     let x := mload(T1_X_LOC)
@@ -755,7 +752,7 @@ contract StandardVerifier is IVerifier {
                     // mstore(ACCUMULATOR2_X_LOC, x)
                     // mstore(ACCUMULATOR2_Y_LOC, y)
                 }
-                success := and(success, 
+                success := and(success,
                 and(
                     staticcall(gas(), 6, ACCUMULATOR_X_LOC, 0x80, ACCUMULATOR_X_LOC, 0x40),
                     staticcall(gas(), 7, 0x00, 0x60, ACCUMULATOR2_X_LOC, 0x40)
@@ -880,7 +877,7 @@ contract StandardVerifier is IVerifier {
             }
 
             /**
-             * COMPUTE BATCH EVALUATION SCALAR MULTIPLIER 
+             * COMPUTE BATCH EVALUATION SCALAR MULTIPLIER
              */
             {
                 mstore(0x00, 0x01) // [1].x
@@ -914,7 +911,7 @@ contract StandardVerifier is IVerifier {
                         )
                     )
                 )
-                
+
                 let success := and(
                     staticcall(gas(), 6, ACCUMULATOR_X_LOC, 0x80, ACCUMULATOR_X_LOC, 0x40),
                     staticcall(gas(), 7, 0x00, 0x60, ACCUMULATOR2_X_LOC, 0x40)
@@ -1011,13 +1008,13 @@ contract StandardVerifier is IVerifier {
                     mstore(0xa0, mload(PAIRING_RHS_X_LOC))
                     mstore(0xc0, mload(PAIRING_RHS_Y_LOC))
                     success := and(success, staticcall(gas(), 6, 0x60, 0x80, PAIRING_RHS_X_LOC, 0x40))
-    
+
                     // compute u.u.[recursiveP2] + lhs and write into lhs
                     mstore(0x40, mload(PAIRING_LHS_X_LOC))
                     mstore(0x60, mload(PAIRING_LHS_Y_LOC))
                     success := and(success, staticcall(gas(), 6, 0x00, 0x80, PAIRING_LHS_X_LOC, 0x40))
                 }
-        
+
                 if iszero(success)
                 {
                     revert(0x00, 0x00)
@@ -1031,7 +1028,7 @@ contract StandardVerifier is IVerifier {
             {
                 // rhs paired with [1]_2
                 // lhs paired with [x]_2
-   
+
                 mstore(0x00, mload(PAIRING_RHS_X_LOC))
                 mstore(0x20, mload(PAIRING_RHS_Y_LOC))
                 mstore(0x40, 0x198e9393920d483a7260bfb731fb5d25f1aa493335a9e71297e485b7aef312c2) // this is [1]_2
@@ -1057,7 +1054,7 @@ contract StandardVerifier is IVerifier {
                 mstore(PAIRING_SUCCESS_FLAG, success)
                 mstore(RESULT_FLAG, mload(0x00))
             }
-            if iszero(and(
+            if and(
                 and(
                     and(
                         and(
@@ -1075,16 +1072,12 @@ contract StandardVerifier is IVerifier {
                     mload(ARITHMETIC_TERM_SUCCESS_FLAG)
                 ),
                 mload(GRAND_PRODUCT_SUCCESS_FLAG)
-            ))
-            {
-               revert(0x00, 0x00) // Proof failed :(
-            }
+            )
             {
                 mstore(0x00, 0x01)
                 return(0x00, 0x20) // Proof succeeded!
             }
-
-
         }
+        require(false, 'Rollup Processor: PROOF_VERIFICATION_FAILED');
     }
 }

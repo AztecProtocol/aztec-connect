@@ -34,7 +34,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     //       uint256 interactionNonce,
     //       uint256 auxData)
     // N.B. this is the selector of the 'convert' function of the DefiBridgeProxy contract.
-    //      This has a different interface to the IDefiBridge.convert function 
+    //      This has a different interface to the IDefiBridge.convert function
     bytes4 private constant DEFI_BRIDGE_PROXY_CONVERT_SELECTOR = 0xd9b5fb79;
     bytes4 private constant TRANSFER_FROM_SELECTOR = 0x23b872dd; // bytes4(keccak256('transferFrom(address,address,uint256)'));
 
@@ -487,7 +487,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             internalDeposit(assetId, assetAddress, depositorAddress, amount);
         }
 
-        if (proofHash != 0)  {
+        if (proofHash != 0) {
             approveProof(proofHash);
         }
     }
@@ -689,7 +689,12 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         }
 
         // Check the proof is valid!
-        require(proof_verified, 'Rollup Processor: PROOF_VERIFICATION_FAILED');
+        if (!proof_verified) {
+            assembly {
+                returndatacopy(0, 0, returndatasize())
+                revert(0, returndatasize())
+            }
+        }
 
         // Validate and update state hash
         uint256 rollupId = validateAndUpdateMerkleRoots(proofData);
@@ -825,8 +830,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         }
     }
 
-    struct BridgeData
-    {
+    struct BridgeData {
         uint256 bridgeAddressId;
         uint256 bridgeAddress; // TODO: ADD METHOD TO GET THIS VALUE
         uint256 inputAssetId;
@@ -849,8 +853,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     uint256 private constant MASK_THIRTY_TWO_BITS = 0xffffffff;
     uint256 private constant MASK_THIRTY_BITS = 0x3fffffff;
     uint256 private constant MASK_SIXTY_FOUR_BITS = 0xffffffffffffffff;
-    function getBridgeData(uint256 bridgeId) internal view returns (BridgeData memory bridgeData)
-    {
+
+    function getBridgeData(uint256 bridgeId) internal view returns (BridgeData memory bridgeData) {
         bridgeData.bridgeAddressId = bridgeId & MASK_THIRTY_TWO_BITS;
         bridgeData.inputAssetId = (bridgeId >> INPUT_ASSET_ID_SHIFT) & MASK_THIRTY_BITS;
         bridgeData.outputAssetIdA = (bridgeId >> OUTPUT_ASSET_ID_A_SHIFT) & MASK_THIRTY_BITS;
@@ -872,63 +876,67 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         bridgeData.secondOutputValid = ((bitConfig >> 5) & 1) == 1;
 
         bridgeData.bridgeAddress = uint256(supportedBridges[bridgeData.bridgeAddressId - 1]);
-        if (bridgeData.secondOutputValid)
-        {
+        if (bridgeData.secondOutputValid) {
             require(bridgeData.outputAssetIdA != bridgeData.outputAssetIdB, 'Rollup Processor: INVALID_BRIDGE');
         }
     }
 
-    function getAztecAssetTypes(BridgeData memory bridgeData, uint256 defiInteractionNonce) internal view returns (AztecTypes.AztecAsset memory inputAssetA, AztecTypes.AztecAsset memory inputAssetB, AztecTypes.AztecAsset memory outputAssetA, AztecTypes.AztecAsset memory outputAssetB)
+    function getAztecAssetTypes(BridgeData memory bridgeData, uint256 defiInteractionNonce)
+        internal
+        view
+        returns (
+            AztecTypes.AztecAsset memory inputAssetA,
+            AztecTypes.AztecAsset memory inputAssetB,
+            AztecTypes.AztecAsset memory outputAssetA,
+            AztecTypes.AztecAsset memory outputAssetB
+        )
     {
         inputAssetA.id = bridgeData.inputAssetId;
         inputAssetA.erc20Address = getSupportedAsset(bridgeData.inputAssetId);
-        inputAssetA.assetType = inputAssetA.erc20Address == address(0x0) ? AztecTypes.AztecAssetType.ETH : AztecTypes.AztecAssetType.ERC20;
+        inputAssetA.assetType = inputAssetA.erc20Address == address(0x0)
+            ? AztecTypes.AztecAssetType.ETH
+            : AztecTypes.AztecAssetType.ERC20;
         outputAssetA.id = bridgeData.outputAssetIdA;
         outputAssetA.erc20Address = getSupportedAsset(bridgeData.outputAssetIdA);
-        outputAssetA.assetType = outputAssetA.erc20Address == address(0x0) ? AztecTypes.AztecAssetType.ETH : AztecTypes.AztecAssetType.ERC20;
+        outputAssetA.assetType = outputAssetA.erc20Address == address(0x0)
+            ? AztecTypes.AztecAssetType.ETH
+            : AztecTypes.AztecAssetType.ERC20;
 
         // potential conflicting states that are explicitly ruled out by circuit constraints:
         // secondOutputVirtual && secondOutputValid
         // secondOutputVirtual && bridgeData.outputassetIdB != 0
         // if secondAssetValid is 1, both output asset ids cannot match one another
         // TODO: add all of them here!
-        if (bridgeData.secondInputVirtual)
-        {
+        if (bridgeData.secondInputVirtual) {
             // use nonce as asset id.
             inputAssetB.id = bridgeData.linkedInteractionNonce;
             inputAssetB.erc20Address = address(0x0);
             inputAssetB.assetType = AztecTypes.AztecAssetType.VIRTUAL;
-        }
-        else
-        {
+        } else {
             inputAssetB.id = 0;
             inputAssetB.erc20Address = address(0x0);
             inputAssetB.assetType = AztecTypes.AztecAssetType.NOT_USED;
         }
 
-        if (bridgeData.secondOutputVirtual)
-        {
+        if (bridgeData.secondOutputVirtual) {
             // use nonce as asset id.
             outputAssetB.id = defiInteractionNonce;
             outputAssetB.erc20Address = address(0x0);
-            outputAssetB.assetType = AztecTypes.AztecAssetType.VIRTUAL; 
-        }
-        else if (bridgeData.secondOutputValid)
-        {
+            outputAssetB.assetType = AztecTypes.AztecAssetType.VIRTUAL;
+        } else if (bridgeData.secondOutputValid) {
             outputAssetB.id = bridgeData.outputAssetIdB;
             outputAssetB.erc20Address = getSupportedAsset(bridgeData.outputAssetIdB);
-            outputAssetB.assetType = outputAssetB.erc20Address == address(0x0) ? AztecTypes.AztecAssetType.ETH : AztecTypes.AztecAssetType.ERC20;
-        }
-        else
-        {
+            outputAssetB.assetType = outputAssetB.erc20Address == address(0x0)
+                ? AztecTypes.AztecAssetType.ETH
+                : AztecTypes.AztecAssetType.ERC20;
+        } else {
             outputAssetB.id = 0;
             outputAssetB.erc20Address = address(0x0);
             outputAssetB.assetType = AztecTypes.AztecAssetType.NOT_USED;
         }
     }
 
-    struct BridgeResult
-    {
+    struct BridgeResult {
         uint256 outputValueA;
         uint256 outputValueB;
         bool isAsync;
@@ -1020,21 +1028,22 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         uint256 defiInteractionHashesLength;
         assembly {
             proofDataPtr := add(proofData, bridgeIdsOffset)
-            defiInteractionHashesLength := and(ARRAY_LENGTH_MASK, shr(DEFIINTERACTIONHASHES_BIT_OFFSET, sload(rollupState_slot)))
+            defiInteractionHashesLength := and(
+                ARRAY_LENGTH_MASK,
+                shr(DEFIINTERACTIONHASHES_BIT_OFFSET, sload(rollupState_slot))
+            )
         }
         BridgeResult memory bridgeResult;
         assembly {
             bridgeResult := mload(0x40)
             mstore(0x40, add(bridgeResult, 0x80))
         }
-        for (uint256 i = 0; i < numberOfBridgeCalls; ++i)
-        {
+        for (uint256 i = 0; i < numberOfBridgeCalls; ++i) {
             uint256 bridgeId;
             assembly {
                 bridgeId := mload(proofDataPtr)
             }
-            if (bridgeId == 0)
-            {
+            if (bridgeId == 0) {
                 // no more bridges to call
                 break;
             }
@@ -1046,7 +1055,12 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
 
             BridgeData memory bridgeData = getBridgeData(bridgeId);
 
-            (AztecTypes.AztecAsset memory inputAssetA, AztecTypes.AztecAsset memory inputAssetB, AztecTypes.AztecAsset memory outputAssetA, AztecTypes.AztecAsset memory outputAssetB) = getAztecAssetTypes(bridgeData, interactionNonce);
+            (
+                AztecTypes.AztecAsset memory inputAssetA,
+                AztecTypes.AztecAsset memory inputAssetB,
+                AztecTypes.AztecAsset memory outputAssetA,
+                AztecTypes.AztecAsset memory outputAssetB
+            ) = getAztecAssetTypes(bridgeData, interactionNonce);
 
             assembly {
                 // call the following function of DefiBridgeProxy via delegatecall...
@@ -1090,7 +1104,14 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                     let auxData := mload(add(bridgeData, 0xc0))
                     mstore(add(mPtr, 0x1e0), auxData)
                 }
-                let success := delegatecall(sload(gasSentToBridgeProxy_slot), sload(defiBridgeProxy_slot), sub(mPtr, 0x04), 0x204, mPtr, 0x60)
+                let success := delegatecall(
+                    sload(gasSentToBridgeProxy_slot),
+                    sload(defiBridgeProxy_slot),
+                    sub(mPtr, 0x04),
+                    0x204,
+                    mPtr,
+                    0x60
+                )
 
                 switch success
                 case 1 {
@@ -1106,8 +1127,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                     mstore(add(bridgeResult, 0x60), 0) // success
                 }
             }
-            if (!(bridgeData.secondOutputValid || bridgeData.secondOutputVirtual))
-            {
+            if (!(bridgeData.secondOutputValid || bridgeData.secondOutputVirtual)) {
                 bridgeResult.outputValueB = 0;
             }
 
@@ -1263,7 +1283,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             // N.B. only need to delete 1st slot value `bridgeId`. Deleting vars costs gas post-London
             // setting bridgeId to 0 is enough to cause future calls with this interaction nonce to fail
             sstore(interactionPtr, 0x00)
-
         }
         BridgeData memory bridgeData = getBridgeData(bridgeId);
         bool secondOutputVirtual = bridgeData.secondOutputVirtual;
@@ -1296,8 +1315,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                 // test if we are using eth?
                 if iszero(assetId) {
                     let success := eq(outputValue, callvalue())
-                    if iszero(success)
-                    {
+                    if iszero(success) {
                         revert(0x00, 0x00) // TODO ERROR MESSAGE
                     }
                     leave
@@ -1314,8 +1332,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                 mstore(add(mPtr, 0x24), address())
                 mstore(add(mPtr, 0x44), outputValue)
                 let success := call(gas(), tokenAddress, 0, mPtr, 0x64, 0x00, 0x20)
-                if iszero(success)
-                {
+                if iszero(success) {
                     returndatacopy(0, 0, returndatasize())
                     revert(0x00, returndatasize())
                 }

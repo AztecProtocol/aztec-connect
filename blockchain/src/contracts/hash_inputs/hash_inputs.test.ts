@@ -24,27 +24,22 @@ describe('hashInputs', function () {
     hashInputs = await setupHashInputs();
   });
 
-  async function validate(inner: number, outer: number) {
-    const { proofData, broadcastData } = await getRollupData(inner, outer);
+  it('should verify hash inputs valid', async () => {
+    const { proofData, broadcastData } = await getRollupData(1, 2);
     const proofBytes = Buffer.concat([broadcastData.encode(), proofData]);
 
-    const gasUsed = await hashInputs.validate(proofBytes, { gasLimit });
-    console.log(`gasUsed: ${gasUsed}`);
-  }
-
-  it('should verify a 2 encoded proof (1 tx)', async () => {
-    await validate(1, 2);
+    await hashInputs.validate(proofBytes, { gasLimit });
   });
 
-/*   it('should verify a 28 encoded proof (1 tx)', async () => {
-    await validate(28, 1);
-  });
+  it('should handle invalid input hash', async () => {
+    const { proofData, broadcastData } = await getRollupData(1, 2);
+    const proofBytes = Buffer.concat([broadcastData.encode(), proofData]);
 
-  it('should verify a 56 encoded proof (1 tx)', async () => {
-    await validate(28, 2);
-  });
+    // Bork.
+    proofBytes.writeUInt8(10, 0);
 
-  it('should verify a 112 encoded proof (1 tx)', async () => {
-    await validate(28, 4);
-  }); */
+    await expect(hashInputs.validate(proofBytes, { gasLimit })).rejects.toThrow(
+      'Rollup Processor: PUBLIC_INPUTS_HASH_VERIFICATION_FAILED',
+    );
+  });
 });
