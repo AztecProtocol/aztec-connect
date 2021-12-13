@@ -77,7 +77,8 @@ describe('end-to-end tests', () => {
       const depositProof = await sdk.createDepositProof(assetId, depositor, userIds[0], depositValue, txFee, signer);
       const depositSignature = await sdk.signProof(depositProof, accounts[0]);
 
-      await sdk.depositFundsToContract(assetId, accounts[0], depositValue + txFee);
+      const txHash = await sdk.depositFundsToContract(assetId, accounts[0], depositValue + txFee);
+      await sdk.getTransactionReceipt(txHash);
 
       initialPublicBalance0 = await sdk.getPublicBalance(assetId, accounts[0]);
       txHashes.push(await sdk.sendProof(depositProof, depositSignature));

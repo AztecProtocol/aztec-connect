@@ -10,7 +10,7 @@ export async function createFundedWalletProvider(
 ) {
   const ethereumProvider = new JsonRpcProvider(host);
   const walletProvider = new WalletProvider(ethereumProvider);
-  const ethAsset = new EthAsset(ethereumProvider);
+  const ethAsset = new EthAsset(walletProvider);
 
   for (let i = 0; i < accounts; ++i) {
     walletProvider.addAccount(randomBytes(32));
@@ -18,6 +18,7 @@ export async function createFundedWalletProvider(
 
   const funder =
     privateKey && privateKey.length ? walletProvider.addAccount(privateKey) : (await ethereumProvider.getAccounts())[0];
+
   for (let i = 0; i < numAccountToFund; ++i) {
     const to = walletProvider.getAccount(i);
     await ethAsset.transfer(initialBalance, funder, to);

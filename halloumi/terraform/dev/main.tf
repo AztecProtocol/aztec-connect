@@ -58,13 +58,40 @@ resource "aws_service_discovery_service" "halloumi" {
   }
 }
 
+# Create EC2 instance.
+resource "aws_instance" "container_instance_az1" {
+  ami                    = "ami-0cd4858f2b923aa6b"
+  instance_type          = "r5.4xlarge"
+  subnet_id              = data.terraform_remote_state.setup_iac.outputs.subnet_az1_private_id
+  vpc_security_group_ids = [data.terraform_remote_state.setup_iac.outputs.security_group_private_id]
+  iam_instance_profile   = data.terraform_remote_state.setup_iac.outputs.ecs_instance_profile_name
+  key_name               = data.terraform_remote_state.setup_iac.outputs.ecs_instance_key_pair_name
+  availability_zone      = "eu-west-2a"
+
+  root_block_device {
+    volume_type = "gp3"
+    volume_size = 300
+    throughput  = 1000
+    iops        = 4000
+  }
+
+  user_data = <<USER_DATA
+#!/bin/bash
+echo ECS_CLUSTER=${data.terraform_remote_state.setup_iac.outputs.ecs_cluster_name} >> /etc/ecs/ecs.config
+echo 'ECS_INSTANCE_ATTRIBUTES={"group": "${var.DEPLOY_TAG}-halloumi"}' >> /etc/ecs/ecs.config
+USER_DATA
+
+  tags = {
+    Name       = "${var.DEPLOY_TAG}-halloumi-az1"
+    prometheus = ""
+  }
+}
+
 # Define task definition and service.
 resource "aws_ecs_task_definition" "halloumi" {
   family                   = "${var.DEPLOY_TAG}-halloumi"
-  requires_compatibilities = ["FARGATE"]
+  requires_compatibilities = ["EC2"]
   network_mode             = "awsvpc"
-  cpu                      = "4096"
-  memory                   = "30720"
   execution_role_arn       = data.terraform_remote_state.setup_iac.outputs.ecs_task_execution_role_arn
 
   container_definitions = <<DEFINITIONS
@@ -73,7 +100,8 @@ resource "aws_ecs_task_definition" "halloumi" {
     "name": "${var.DEPLOY_TAG}-halloumi",
     "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/halloumi:${var.DEPLOY_TAG}",
     "essential": true,
-    "memoryReservation": 30464,
+    "memory": 126000,
+    "memoryReservation": 63000,
     "portMappings": [
       {
         "containerPort": 80
@@ -90,7 +118,7 @@ resource "aws_ecs_task_definition" "halloumi" {
       },
       {
         "name": "MAX_CIRCUIT_SIZE",
-        "value": "8388608"
+        "value": "33554432"
       }
     ],
     "logConfiguration": {
@@ -134,11 +162,10 @@ DEFINITIONS
 resource "aws_ecs_service" "halloumi" {
   name                               = "${var.DEPLOY_TAG}-halloumi"
   cluster                            = data.terraform_remote_state.setup_iac.outputs.ecs_cluster_id
-  launch_type                        = "FARGATE"
+  launch_type                        = "EC2"
   desired_count                      = "1"
   deployment_maximum_percent         = 100
   deployment_minimum_healthy_percent = 0
-  platform_version                   = "1.4.0"
 
   network_configuration {
     subnets = [
@@ -152,6 +179,11 @@ resource "aws_ecs_service" "halloumi" {
     registry_arn   = aws_service_discovery_service.halloumi.arn
     container_name = "${var.DEPLOY_TAG}-halloumi"
     container_port = 80
+  }
+
+  placement_constraints {
+    type       = "memberOf"
+    expression = "attribute:group == ${var.DEPLOY_TAG}-halloumi"
   }
 
   task_definition = aws_ecs_task_definition.halloumi.family
