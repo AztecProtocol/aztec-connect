@@ -39,7 +39,7 @@ describe('hashInputs', function () {
     proofBytes.writeUInt8(10, 0);
 
     await expect(hashInputs.validate(proofBytes, { gasLimit })).rejects.toThrow(
-      'Rollup Processor: PUBLIC_INPUTS_HASH_VERIFICATION_FAILED',
+      'PUBLIC_INPUTS_HASH_VERIFICATION_FAILED',
     );
   });
 });

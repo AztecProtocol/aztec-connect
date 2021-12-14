@@ -12,8 +12,8 @@ describe('StandardVerifier', function () {
   });
 
   async function validate(inner: number, outer: number) {
-    const { proofData, broadcastData, inputHash } = await getRollupData(inner, outer);
-    const gasUsed = await verifier.verify(proofData, broadcastData.rollupSize, inputHash, { gasLimit });
+    const { proofData, inputHash } = await getRollupData(inner, outer);
+    const gasUsed = await verifier.verify(proofData, inputHash, { gasLimit });
     console.log(`gasUsed: ${gasUsed}`);
   }
 
@@ -21,15 +21,12 @@ describe('StandardVerifier', function () {
     await validate(1, 2);
   });
 
-/*   it('should validate a 28 rollup proof (1 tx)', async () => {
-    await validate(28, 1);
-  });
+  it('should fail to validate bad proof', async () => {
+    const { proofData, inputHash } = await getRollupData(1, 2);
 
-  it('should validate a 56 rollup proof (1 tx)', async () => {
-    await validate(28, 2);
-  });
+    // Bork.
+    proofData.writeUInt8(10, 300);
 
-  it('should validate a 112 rollup proof (1 tx)', async () => {
-    await validate(28, 4);
-  }); */
+    await expect(verifier.verify(proofData, inputHash, { gasLimit })).rejects.toThrow('PROOF_VERIFICATION_FAILED');
+  });
 });

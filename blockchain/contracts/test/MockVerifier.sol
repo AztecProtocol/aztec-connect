@@ -15,7 +15,7 @@ contract MockVerifier is IVerifier {
     /**
      * @dev Mock verify a Plonk proof
      */
-    function verify(bytes memory , uint256, uint256) external override returns (bool) {
+    function verify(bytes memory, uint256) external override returns (bool) {
         return true;
     }
 }

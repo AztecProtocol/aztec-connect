@@ -159,16 +159,16 @@ contract StandardVerifier is IVerifier {
     /**
      * @dev Verify a Plonk proof
      * @param - array of serialized proof data
-     * @param - number of transactions in the rollup
+     * @param - public input hash as computed from the broadcast data
      */
-    function verify(bytes calldata, uint256 rollup_size, uint256 public_inputs_hash) external override returns (bool) {
+    function verify(bytes calldata, uint256 public_inputs_hash) external override returns (bool) {
         // validate the correctness of the public inputs hash
         {
             bool hash_matches_input;
             assembly {
                 hash_matches_input := eq(calldataload(add(calldataload(0x04), 0x24)), public_inputs_hash)
             }
-            require(hash_matches_input, 'Rollup Processor: PUBLIC_INPUTS_HASH_VERIFICATION_FAILED');
+            require(hash_matches_input, 'PUBLIC_INPUTS_HASH_VERIFICATION_FAILED');
         }
 
         StandardTypes.VerificationKey memory vk = RootVerifierVk.get_verification_key();
@@ -463,7 +463,11 @@ contract StandardVerifier is IVerifier {
                     mstore(0xa0, p)
                     if iszero(staticcall(gas(), 0x05, 0x00, 0xc0, 0x00, 0x20))
                     {
-                        revert(0x00, 0x00)
+                        mstore(0, 0x08c379a000000000000000000000000000000000000000000000000000000000)
+                        mstore(0x04, 0x20)
+                        mstore(0x24, 25)
+                        mstore(0x44, "PROOF_VERIFICATION_FAILED")
+                        revert(0x00, 0x64)
                     }
                     accumulator := mload(0x00)
                 }
@@ -1017,7 +1021,11 @@ contract StandardVerifier is IVerifier {
 
                 if iszero(success)
                 {
-                    revert(0x00, 0x00)
+                    mstore(0, 0x08c379a000000000000000000000000000000000000000000000000000000000)
+                    mstore(0x04, 0x20)
+                    mstore(0x24, 25)
+                    mstore(0x44, "PROOF_VERIFICATION_FAILED")
+                    revert(0x00, 0x64)
                 }
                 mstore(PAIRING_PREAMBLE_SUCCESS_FLAG, success)
             }
@@ -1054,7 +1062,7 @@ contract StandardVerifier is IVerifier {
                 mstore(PAIRING_SUCCESS_FLAG, success)
                 mstore(RESULT_FLAG, mload(0x00))
             }
-            if and(
+            if iszero(and(
                 and(
                     and(
                         and(
@@ -1072,12 +1080,18 @@ contract StandardVerifier is IVerifier {
                     mload(ARITHMETIC_TERM_SUCCESS_FLAG)
                 ),
                 mload(GRAND_PRODUCT_SUCCESS_FLAG)
-            )
+            ))
+            {
+                mstore(0, 0x08c379a000000000000000000000000000000000000000000000000000000000)
+                mstore(0x04, 0x20)
+                mstore(0x24, 25)
+                mstore(0x44, "PROOF_VERIFICATION_FAILED")
+                revert(0x00, 0x64)
+            }
             {
                 mstore(0x00, 0x01)
                 return(0x00, 0x20) // Proof succeeded!
             }
         }
-        require(false, 'Rollup Processor: PROOF_VERIFICATION_FAILED');
     }
 }

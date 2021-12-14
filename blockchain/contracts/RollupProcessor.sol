@@ -666,26 +666,25 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             // Get free memory pointer - we copy calldata into memory starting here
             let dataPtr := mload(0x40)
 
-            // We call the function `verify(bytes,uint256,uint256)`
-            // The function signature is 0x198e744a
+            // We call the function `verify(bytes,uint256)`
+            // The function signature is 0xac318c5d
             // Calldata map is:
-            // 0x00 - 0x04 : 0x198e744a
+            // 0x00 - 0x04 : 0xac318c5d
             // 0x04 - 0x24 : 0x40 (number of bytes between 0x04 and the start of the `proofData` array at 0x44)
-            // 0x24 - 0x44 : numTxs
+            // 0x24 - 0x44 : publicInputsHash
             // 0x44 - .... : proofData
-            mstore8(dataPtr, 0x19)
-            mstore8(add(dataPtr, 0x01), 0x8e)
-            mstore8(add(dataPtr, 0x02), 0x74)
-            mstore8(add(dataPtr, 0x03), 0x4a)
-            mstore(add(dataPtr, 0x04), 0x60)
-            mstore(add(dataPtr, 0x24), calldataload(add(calldataload(0x04), 0x44))) // numTxs
-            mstore(add(dataPtr, 0x44), publicInputsHash) // computed SHA256 hash of broadcasted data
-            mstore(add(dataPtr, 0x64), zkProofDataSize) // length of zkProofData bytes array
-            calldatacopy(add(dataPtr, 0x84), zkProofDataPtr, zkProofDataSize) // copy the zk proof data into memory
+            mstore8(dataPtr, 0xac)
+            mstore8(add(dataPtr, 0x01), 0x31)
+            mstore8(add(dataPtr, 0x02), 0x8c)
+            mstore8(add(dataPtr, 0x03), 0x5d)
+            mstore(add(dataPtr, 0x04), 0x40)
+            mstore(add(dataPtr, 0x24), publicInputsHash)
+            mstore(add(dataPtr, 0x44), zkProofDataSize) // length of zkProofData bytes array
+            calldatacopy(add(dataPtr, 0x64), zkProofDataPtr, zkProofDataSize) // copy the zk proof data into memory
 
             // Step 3: Call our verifier contract. If does not return any values, but will throw an error if the proof is not valid
             // i.e. verified == false if proof is not valid
-            proof_verified := staticcall(gas(), sload(verifier_slot), dataPtr, add(zkProofDataSize, 0x84), 0x00, 0x00)
+            proof_verified := staticcall(gas(), sload(verifier_slot), dataPtr, add(zkProofDataSize, 0x64), 0x00, 0x00)
         }
 
         // Check the proof is valid!

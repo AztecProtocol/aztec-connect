@@ -51,16 +51,13 @@ export class StandardVerifier {
   static async deploy(provider: EthereumProvider, defaults: SendTxOptions = {}) {
     const { signingAddress } = defaults;
     const signer = new Web3Provider(provider).getSigner(signingAddress ? signingAddress.toString() : 0);
-    
+
     const StandardVerificationKeyLibrary = new ContractFactory(RootVerifierVk.abi, RootVerifierVk.bytecode, signer);
     const StandardVerificationKeyLib = await StandardVerificationKeyLibrary.deploy();
-  
 
-    const linkedVBytecode = linkBytecode(StandardVerifierContract, 
-      {
-        RootVerifierVk: StandardVerificationKeyLib.address,
-      }
-    );
+    const linkedVBytecode = linkBytecode(StandardVerifierContract, {
+      RootVerifierVk: StandardVerificationKeyLib.address,
+    });
     const verifierFactory = new ContractFactory(StandardVerifierContract.abi, linkedVBytecode, signer);
     const verifier = await verifierFactory.deploy().catch(fixEthersStackTrace);
     return new StandardVerifier(EthAddress.fromString(verifier.address), provider, defaults);
@@ -74,11 +71,11 @@ export class StandardVerifier {
     return this.verifier;
   }
 
-  async verify(proofData: Buffer, rollupSize: number, pubInputsHash: Buffer, options: SendTxOptions = {}) {
+  async verify(proofData: Buffer, pubInputsHash: Buffer, options: SendTxOptions = {}) {
     const { signingAddress, gasLimit } = { ...options, ...this.defaults };
     const signer = new Web3Provider(this.provider).getSigner(signingAddress ? signingAddress.toString() : 0);
     const verifier = new Contract(this.verifierContractAddress.toString(), StandardVerifierContract.abi, signer);
-    const txResponse = await verifier.verify(proofData, rollupSize, pubInputsHash, { gasLimit }).catch(fixEthersStackTrace);
+    const txResponse = await verifier.verify(proofData, pubInputsHash, { gasLimit }).catch(fixEthersStackTrace);
     const receipt = await txResponse.wait();
     return receipt.gasUsed.toNumber();
   }
