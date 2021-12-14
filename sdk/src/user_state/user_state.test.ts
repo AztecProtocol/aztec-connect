@@ -397,7 +397,7 @@ describe('user state', () => {
     const tx = { proofId: ProofId.SEND } as UserJoinSplitTx;
     const clientProofData = Buffer.concat([
       jsProof.proofData.toBuffer(),
-      Buffer.alloc(32 * 8), // noteTreeRoot ... backwardLink
+      Buffer.alloc(32 * 7), // noteTreeRoot ... backwardLink
       Buffer.concat([Buffer.alloc(31), Buffer.from([2])]), // allowChain = 2
     ]);
     const proofOutput = new JoinSplitProofOutput(tx, jsProof.outputNotes, clientProofData, jsProof.offchainTxData);
@@ -1019,7 +1019,7 @@ describe('user state', () => {
     const jsProof = generateJoinSplitProof({ newNoteOwner: user, outputNoteValue1, outputNoteValue2, txFee: jsTxFee });
     const jsProofData = Buffer.concat([
       jsProof.proofData.toBuffer(),
-      Buffer.alloc(32 * 8), // noteTreeRoot ... backwardLink
+      Buffer.alloc(32 * 7), // noteTreeRoot ... backwardLink
       Buffer.concat([Buffer.alloc(31), Buffer.from([3])]), // allowChain = 3
     ]);
     const jsProofOutput = new JoinSplitProofOutput(
@@ -1034,7 +1034,7 @@ describe('user state', () => {
     const defiProof = generateDefiDepositProof({ bridgeId, depositValue });
     const defiProofData = Buffer.concat([
       defiProof.proofData.toBuffer(),
-      Buffer.alloc(32 * 8), // noteTreeRoot ... backwardLink
+      Buffer.alloc(32 * 7), // noteTreeRoot ... backwardLink
       Buffer.alloc(32), // allowChain = 0
     ]);
     const defiProofOutput = new DefiProofOutput(

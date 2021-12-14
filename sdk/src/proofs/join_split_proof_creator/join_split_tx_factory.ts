@@ -105,7 +105,6 @@ export class JoinSplitTxFactory {
       accountIndex,
       accountPath,
       signingPubKey,
-      propagatedInputIndex,
       backwardLink,
       allowChain,
     );

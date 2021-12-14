@@ -29,7 +29,6 @@ export class ProofData {
   public readonly defiDepositValue: Buffer;
   public readonly defiRoot: Buffer;
 
-  public readonly propagatedInputIndex: Buffer;
   public readonly backwardLink: Buffer;
   public readonly allowChain: Buffer;
 
@@ -64,8 +63,6 @@ export class ProofData {
     this.defiDepositValue = rawProofData.slice(dataStart, dataStart + 32);
     dataStart += 32;
     this.defiRoot = rawProofData.slice(dataStart, dataStart + 32);
-    dataStart += 32;
-    this.propagatedInputIndex = rawProofData.slice(dataStart, dataStart + 32);
     dataStart += 32;
     this.backwardLink = rawProofData.slice(dataStart, dataStart + 32);
     dataStart += 32;

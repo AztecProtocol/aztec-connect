@@ -1315,17 +1315,17 @@ describe('rollup_coordinator', () => {
       const normalTxs = [...Array(3)].map((_, i) => mockTx(i + 9));
 
       const pendingTxs = [
-        defiTxs[0],
-        defiTxs[1],
-        chainedTxs[0],
-        defiTxs[2],
-        defiTxs[3],
-        chainedTxs[1],
-        chainedTxs[2],
-        chainedTxs[3],
-        normalTxs[0],
-        normalTxs[1],
-        normalTxs[2],
+        defiTxs[0], // 0
+        defiTxs[1], // 1
+        chainedTxs[0], // 4
+        defiTxs[2], // 2
+        defiTxs[3], // 3
+        chainedTxs[1], // 5
+        chainedTxs[2], // 6
+        chainedTxs[3], // 7
+        normalTxs[0], // 9
+        normalTxs[1], // 10
+        normalTxs[2], // 11
       ];
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
@@ -1337,8 +1337,8 @@ describe('rollup_coordinator', () => {
         defiTxs[2],
         defiTxs[3],
         chainedTxs[1],
+        chainedTxs[3],
         normalTxs[0],
-        normalTxs[1],
       ]);
     });
   });
