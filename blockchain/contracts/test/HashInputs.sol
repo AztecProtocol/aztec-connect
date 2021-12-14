@@ -10,6 +10,9 @@ import 'hardhat/console.sol';
 
 import {IVerifier} from '../interfaces/IVerifier.sol';
 
+/**
+ * TODO: Pretty sure this should all be removed and we should be testing decodeProof response directly.
+ */
 contract HashInputs is Decoder {
     IVerifier public verifier;
 
