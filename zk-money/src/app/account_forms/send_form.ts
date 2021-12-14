@@ -52,6 +52,11 @@ interface TxSpeedInput extends IntValue {
   value: SettlementTime;
 }
 
+export type PrivacyIssue = 'already-withdrawn-to' | 'already-deposited-from' | 'none';
+interface PrivacyIssueValue extends FormValue {
+  value: PrivacyIssue;
+}
+
 export interface RecipientInput extends FormValue {
   value: {
     input: string;
@@ -61,6 +66,7 @@ export interface RecipientInput extends FormValue {
 }
 
 export interface SendFormValues {
+  privacyIssue: PrivacyIssueValue;
   selectedAmount: BigIntValue;
   amount: StrInput;
   maxAmount: BigIntValue;
@@ -75,6 +81,7 @@ export interface SendFormValues {
 }
 
 const initialSendFormValues = {
+  privacyIssue: { value: 'none' as PrivacyIssue },
   selectedAmount: {
     value: 0n,
   },
@@ -367,20 +374,17 @@ export class SendForm extends EventEmitter implements AccountForm {
     if (changes.recipient && isAddress(changes.recipient.value.input)) {
       const recipient = EthAddress.fromString(changes.recipient.value.input);
       if (this.transactionGraph.isDepositor(recipient)) {
-        toUpdate.recipient = withWarning(
-          changes.recipient,
-          'You have deposited from this address before. Sending funds to this address may compromise privacy.',
-        );
+        toUpdate.privacyIssue = { value: 'already-deposited-from' };
+        toUpdate.recipient = withWarning(changes.recipient, 'You have deposited from this address before.');
       } else if (this.transactionGraph.isRecipient(recipient)) {
-        toUpdate.recipient = withWarning(
-          changes.recipient,
-          'This address has received funds before. Sending funds to this address again may compromise privacy.',
-        );
+        toUpdate.privacyIssue = { value: 'already-withdrawn-to' };
+        toUpdate.recipient = withWarning(changes.recipient, 'This address has received funds before.');
       } else {
         toUpdate.recipient = withMessage(
           changes.recipient,
           `To achieve maximum privacy, make sure this address has never deposited or received funds before.`,
         );
+        toUpdate.privacyIssue = { value: 'none' };
       }
     }
 

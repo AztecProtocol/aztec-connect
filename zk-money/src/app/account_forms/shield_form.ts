@@ -1,5 +1,6 @@
 import {
   AccountId,
+  AccountProofOutput,
   AssetId,
   EthAddress,
   JoinSplitProofOutput,
@@ -285,6 +286,10 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     this.onProviderStateChange();
   }
 
+  ethAccountIsStale() {
+    return !this.ethAccount?.isSameAccount(this.provider);
+  }
+
   async changeEthAccount(ethAccount: EthAccount) {
     if (this.processing) {
       debug('Cannot change ethAccount while a form is being processed.');
@@ -365,7 +370,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     }
   }
 
-  async submit() {
+  async submit(opts: { parentProof?: AccountProofOutput } = {}) {
     if (!this.locked) {
       debug('Cannot submit a form before it has been validated and locked.');
       return;
@@ -383,7 +388,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     this.updateFormStatus(FormStatus.PROCESSING);
 
     try {
-      await this.shield();
+      await this.shield(opts);
       this.updateFormValues({ submit: { value: false } });
     } catch (e) {
       debug(e);
@@ -563,7 +568,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     this.updateFormStatus(FormStatus.PROCESSING);
 
     try {
-      await this.shield(privateKey);
+      await this.shield({ privateKey });
       this.updateFormValues({ submit: { value: false } });
     } catch (e) {
       debug(e);
@@ -575,7 +580,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     this.updateFormStatus(FormStatus.LOCKED);
   }
 
-  private async shield(privateKey?: Buffer) {
+  private async shield({ privateKey, parentProof }: { privateKey?: Buffer; parentProof?: AccountProofOutput } = {}) {
     if (!this.depositProof.depositor) {
       this.proceed(ShieldStatus.DEPOSIT);
       try {
@@ -685,6 +690,9 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       this.proceed(ShieldStatus.SEND_PROOF);
 
       try {
+        if (parentProof) {
+          proofOutput.parentProof = parentProof;
+        }
         await this.sdk.sendProof(proofOutput, this.depositProof.signature);
       } catch (e) {
         debug(e);

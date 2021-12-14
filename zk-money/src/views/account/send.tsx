@@ -7,12 +7,10 @@ import {
   isAddress,
   isValidForm,
   MessageType,
-  ProviderState,
   RecipientInput,
   SendFormValues,
   SendStatus,
   ValueAvailability,
-  WalletId,
 } from '../../app';
 import {
   BlockTitle,
@@ -30,13 +28,14 @@ import {
   InputTheme,
   InputWrapper,
   MaskedInput,
+  ModalHeader,
   PaddedBlock,
+  ShieldedAssetIcon,
   Text,
   Tooltip,
 } from '../../components';
 import { borderRadiuses, breakpoints, colours, spacings, Theme } from '../../styles';
 import { FeeSelect } from './fee_select';
-import { PrivacySetSelect } from './privacy_set_select';
 import { SendProgress } from './send_progress';
 import { SettledTime } from './settled_time';
 
@@ -52,14 +51,13 @@ const getRecipientInputStatus = (recipient: RecipientInput) => {
     : InputStatus.SUCCESS;
 };
 
+const RecipientMessageWrapper = styled.div`
+  height: 40px;
+`;
+
 const RecipientMessage = styled(Text)`
   padding-top: ${spacings.xs};
   text-align: right;
-`;
-
-const AssetIcon = styled.img`
-  padding: 0 ${spacings.s};
-  height: 24px;
 `;
 
 const AmountCol = styled(InputCol)`
@@ -94,6 +92,7 @@ const AmountInputWrapper = styled(InputWrapper)`
 const AmountAssetIconRoot = styled.div`
   display: flex;
   align-items: center;
+  padding-left: ${spacings.s};
 `;
 
 const MaxButton = styled.div`
@@ -117,15 +116,12 @@ const ButtonRoot = styled(InputCol)`
   width: auto;
 `;
 
-interface SendProps {
+export interface SendProps {
   theme: Theme;
   assetState: AssetState;
-  providerState?: ProviderState;
   form: SendFormValues;
   explorerUrl: string;
   onChangeInputs(inputs: Partial<SendFormValues>): void;
-  onChangeWallet(walletId: WalletId): void;
-  onDisconnectWallet(): void;
   onValidate(): void;
   onGoBack(): void;
   onSubmit(): void;
@@ -135,12 +131,9 @@ interface SendProps {
 export const Send: React.FunctionComponent<SendProps> = ({
   theme,
   assetState,
-  providerState,
   form,
   explorerUrl,
   onChangeInputs,
-  onChangeWallet,
-  onDisconnectWallet,
   onValidate,
   onGoBack,
   onSubmit,
@@ -151,10 +144,7 @@ export const Send: React.FunctionComponent<SendProps> = ({
       <SendProgress
         theme={theme}
         assetState={assetState}
-        providerState={providerState}
         form={form}
-        onChangeWallet={onChangeWallet}
-        onDisconnectWallet={onDisconnectWallet}
         onGoBack={onGoBack}
         onSubmit={onSubmit}
         onClose={onClose}
@@ -164,11 +154,13 @@ export const Send: React.FunctionComponent<SendProps> = ({
 
   const inputTheme = theme === Theme.WHITE ? InputTheme.WHITE : InputTheme.LIGHT;
   const { asset, spendableBalance } = assetState;
-  const { selectedAmount, amount, fees, speed, maxAmount, recipient, confirmed, submit } = form;
+  const { amount, fees, speed, maxAmount, recipient, confirmed, submit } = form;
   const txFee = fees.value[speed.value];
+  const title = isAddress(recipient.value.input) ? 'Withdraw' : 'Send';
 
   return (
     <>
+      <ModalHeader title={title} onClose={onClose} theme={Theme.WHITE} />
       <InputRow>
         <InputCol>
           <BlockTitle title="Recipient" />
@@ -187,24 +179,16 @@ export const Send: React.FunctionComponent<SendProps> = ({
               placeholder="username or ethereum address"
             />
           </InputWrapper>
-          {recipient.message &&
-            (recipient.messageType === MessageType.ERROR ? (
-              <FixedInputMessage theme={inputTheme} message={recipient.message} type={recipient.messageType} />
-            ) : (
-              <RecipientMessage text={recipient.message} size="xs" />
-            ))}
+          <RecipientMessageWrapper>
+            {recipient.message &&
+              (recipient.messageType === MessageType.ERROR ? (
+                <FixedInputMessage theme={inputTheme} message={recipient.message} type={recipient.messageType} />
+              ) : (
+                <RecipientMessage text={recipient.message} size="xs" />
+              ))}
+          </RecipientMessageWrapper>
         </InputCol>
       </InputRow>
-      {isAddress(recipient.value.input) && assetState.withdrawSafeAmounts.length > 0 && (
-        <PaddedBlock size="m">
-          <PrivacySetSelect
-            asset={assetState.asset}
-            values={assetState.withdrawSafeAmounts}
-            value={selectedAmount.value}
-            onSelect={value => onChangeInputs({ selectedAmount: { value } })}
-          />
-        </PaddedBlock>
-      )}
       <InputRow>
         <AmountCol>
           <BlockTitle
@@ -226,7 +210,7 @@ export const Send: React.FunctionComponent<SendProps> = ({
           />
           <AmountInputWrapper theme={inputTheme}>
             <AmountAssetIconRoot>
-              <AssetIcon src={asset.icon} />
+              <ShieldedAssetIcon asset={asset} />
             </AmountAssetIconRoot>
             <Input
               theme={inputTheme}

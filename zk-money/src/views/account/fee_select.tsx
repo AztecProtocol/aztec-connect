@@ -2,13 +2,9 @@ import { SettlementTime } from '@aztec/sdk';
 import React from 'react';
 import styled from 'styled-components';
 import { Asset, fromBaseUnits, TxFee } from '../../app';
-import { Input, InputTheme, InputWrapper, Select, Text } from '../../components';
+import { Input, InputTheme, InputWrapper, Select, ShieldedAssetIcon, Text } from '../../components';
 import { fontSizes, spacings } from '../../styles';
 import { formatTime } from './settled_time';
-
-const AssetIcon = styled.img`
-  height: 24px;
-`;
 
 const InputButton = styled(Input)`
   cursor: pointer;
@@ -60,7 +56,7 @@ export const FeeSelect: React.FunctionComponent<FeeSelectProps> = ({
     trigger={
       <InputWrapper theme={inputTheme}>
         <InputIconRoot>
-          <AssetIcon src={asset.icon} />
+          <ShieldedAssetIcon asset={asset} />
         </InputIconRoot>
         <InputButton value={fromBaseUnits(fees[selectedSpeed].fee, asset.decimals)} readOnly />
       </InputWrapper>
@@ -72,7 +68,7 @@ export const FeeSelect: React.FunctionComponent<FeeSelectProps> = ({
         content: (
           <ItemRoot>
             <InfoRoot>
-              <AssetIcon src={asset.icon} />
+              <ShieldedAssetIcon asset={asset} />
               <Value text={fromBaseUnits(fee, asset.decimals)} />
             </InfoRoot>
             <Text text={formatTime(time)} color="grey" size="s" italic nowrap />
