@@ -180,7 +180,8 @@ export const ShieldForAliasForm: React.FunctionComponent<DepositFormProps> = ({
     },
   ];
   if (submissionSteps.find(x => x.step === status)) {
-    return <Progress steps={submissionSteps} currentStep={status} active={true} failed={false} />;
+    const failed = submit.messageType === MessageType.ERROR;
+    return <Progress steps={submissionSteps} currentStep={status} active={!failed} failed={failed} />;
   }
 
   const amountInputMessageProps = getAmountInputMessageProps(form);
