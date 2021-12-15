@@ -35,7 +35,7 @@ const AssetIcon = styled.div<{ white?: boolean; icons: IconVarients }>`
   width: 100%;
   height: 100%;
   transform-origin: top left;
-  transform: translate(${61 * unitSize}%, ${70 * unitSize}%) scale(${116 * unitSize}%);
+  transform: translate(${61 * unitSize}%, ${70 * unitSize}%) scale(${(116 * unitSize) / 100});
   background-image: url(${({ white, icons }) => (white ? icons.iconWhite : icons.iconGradient)});
   background-size: contain;
   background-position: center;
