@@ -131,7 +131,7 @@ resource "aws_cloudfront_distribution" "zkmoney_distribution" {
 
     lambda_function_association {
       event_type = "origin-response"
-      lambda_arn = aws_lambda_function.twitter_meta_lambda.qualified_arn
+      lambda_arn = aws_lambda_function.twitter_lambda.qualified_arn
     }
 
     forwarded_values {
