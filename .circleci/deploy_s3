@@ -21,6 +21,7 @@ aws s3 cp \
        --include '*.js' \
        --no-guess-mime-type \
        --content-type="application/javascript; charset=utf-8" \
+       --cache-control "no-cache" \
        --metadata-directive="REPLACE" \
        --recursive
 aws cloudfront create-invalidation --distribution-id $AWS_CLOUDFRONT_DISTRIBUTION --paths "/*"

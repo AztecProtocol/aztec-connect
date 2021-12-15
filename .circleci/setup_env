@@ -15,10 +15,11 @@ FORCE_REBUILD_ALL=$3
 BUILD_SYSTEM_PATH=$(pwd)
 PROJECT=$(cat ../PROJECT)
 
+# If tagged e.g. v2.0.123, version is v2.0, otherwise dev.
 if [ -n "$COMMIT_TAG" ]; then
-  DEPLOY_TAG=$PROJECT-$(echo "$COMMIT_TAG" | grep -oP "v\d+.\d+")
+  VERSION=$(echo "$COMMIT_TAG" | grep -oP "v\d+.\d+")
 else
-  DEPLOY_TAG=$PROJECT-dev
+  VERSION=dev
 fi
 
 echo export BUILD_SYSTEM_PATH=$BUILD_SYSTEM_PATH >> $BASH_ENV
@@ -33,7 +34,8 @@ echo export FORCE_REBUILD_ALL=$FORCE_REBUILD_ALL >> $BASH_ENV
 echo export PROJECT=$PROJECT >> $BASH_ENV
 echo export COMMIT_HASH=$COMMIT_HASH >> $BASH_ENV
 echo export COMMIT_TAG=$COMMIT_TAG >> $BASH_ENV
-echo export DEPLOY_TAG=$DEPLOY_TAG >> $BASH_ENV
+echo export DEPLOY_TAG=$PROJECT-$VERSION >> $BASH_ENV
+echo export TF_DIR=./terraform/$VERSION >> $BASH_ENV
 cat $BASH_ENV
 
 # Having written the variables to $BASH_ENV, we now want to set them in this shell context.

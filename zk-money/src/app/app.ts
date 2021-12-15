@@ -1,5 +1,5 @@
-import { EthersAdapter, GrumpkinAddress } from '@aztec/sdk';
-import { InfuraProvider, Web3Provider } from '@ethersproject/providers';
+import { GrumpkinAddress, JsonRpcProvider } from '@aztec/sdk';
+import { Web3Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import Cookie from 'js-cookie';
@@ -9,7 +9,7 @@ import { AccountAction } from './account_txs';
 import { AppAssetId } from './assets';
 import { Database } from './database';
 import { Form, SystemMessage } from './form';
-import { getNetwork, Network } from './networks';
+import { chainIdToNetwork, Network } from './networks';
 import { PriceFeedService } from './price_feed_service';
 import {
   initialLoginState,
@@ -62,14 +62,14 @@ export class App extends EventEmitter {
     if (config.debug) {
       createDebug.enable('zm:*');
     }
-    this.requiredNetwork = getNetwork(config.network)!;
+    this.requiredNetwork = chainIdToNetwork(config.chainId)!;
     if (!this.requiredNetwork) {
-      throw new Error(`Unknown network ${config.network}.`);
+      throw new Error(`Unknown network for chainId ${config.chainId}.`);
     }
     this.db = new Database();
     this.activeAsset = initialAsset;
     this.loginMode = initialLoginMode;
-    const provider = new EthersAdapter(new InfuraProvider('mainnet', config.infuraId));
+    const provider = new JsonRpcProvider(config.mainnetEthereumHost);
     const web3Provider = new Web3Provider(provider);
     this.priceFeedService = new PriceFeedService(config.priceFeedContractAddresses, web3Provider);
     this.priceFeedService.init();

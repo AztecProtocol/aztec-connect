@@ -20,7 +20,7 @@
 "@aztec/blockchain@file:../blockchain/dest":
   version "2.0.0"
   dependencies:
-    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-642f7c38-05ff-4e3c-987c-32f3d5eaced4-1638266450170/node_modules/barretenberg.js/dest"
+    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-00265ba3-c38e-4a0b-919f-c8d3f6759abd-1639573144816/node_modules/barretenberg.js/dest"
     "@ethersproject/experimental" "5.5.0"
     "@nomiclabs/hardhat-etherscan" "^2.1.8"
     "@uniswap/v2-core" "^1.0.1"
@@ -33,8 +33,8 @@
 "@aztec/sdk@file:../sdk/dest":
   version "2.0.16"
   dependencies:
-    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-3965ba79-974c-47e1-b8cf-aad26163b802-1638266450007/node_modules/barretenberg.js/dest"
-    "@aztec/blockchain" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-3965ba79-974c-47e1-b8cf-aad26163b802-1638266450007/node_modules/blockchain/dest"
+    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-e67f452f-ce81-47f5-bd45-f9a19b664e85-1639573144747/node_modules/barretenberg.js/dest"
+    "@aztec/blockchain" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-e67f452f-ce81-47f5-bd45-f9a19b664e85-1639573144747/node_modules/blockchain/dest"
     "@types/levelup" "^4.3.0"
     broadcast-channel "^3.1.0"
     detect-node "^2.0.4"
@@ -4770,11 +4770,6 @@ grapheme-breaker@^0.3.2:
   dependencies:
     brfs "^1.2.0"
     unicode-trie "^0.3.1"
-
-graphql@^15.5.0:
-  version "15.6.0"
-  resolved "https://registry.yarnpkg.com/graphql/-/graphql-15.6.0.tgz#e69323c6a9780a1a4b9ddf7e35ca8904bb04df02"
-  integrity sha512-WJR872Zlc9hckiEPhXgyUftXH48jp2EjO5tgBBOyNMRJZ9fviL2mJBD6CAysk6N5S0r9BTs09Qk39nnJBkvOXQ==
 
 har-schema@^2.0.0:
   version "2.0.0"

@@ -1,7 +1,6 @@
 terraform {
   backend "s3" {
     bucket = "aztec-terraform"
-    key    = "aztec2/zk.money-testnet"
     region = "eu-west-2"
   }
 }
@@ -47,8 +46,8 @@ data "aws_acm_certificate" "zkmoney" {
 }
 
 # AWS S3 bucket for static hosting
-resource "aws_s3_bucket" "zkmoney_testnet" {
-  bucket = "zk.money-testnet"
+resource "aws_s3_bucket" "zkmoney_bucket" {
+  bucket = "zk.money-${var.DEPLOY_TAG}"
   acl    = "public-read"
 
   cors_rule {
@@ -70,7 +69,7 @@ resource "aws_s3_bucket" "zkmoney_testnet" {
         "AWS": "*"
       },
       "Action": "s3:GetObject",
-      "Resource": "arn:aws:s3:::zk.money-testnet/*"
+      "Resource": "arn:aws:s3:::zk.money-${var.DEPLOY_TAG}/*"
     }
   ]
 }
@@ -83,9 +82,9 @@ EOF
 }
 
 # AWS Cloudfront for caching
-resource "aws_cloudfront_distribution" "zkmoney_testnet_distribution" {
+resource "aws_cloudfront_distribution" "zkmoney_distribution" {
   origin {
-    domain_name = aws_s3_bucket.zkmoney_testnet.website_endpoint
+    domain_name = aws_s3_bucket.zkmoney_bucket.website_endpoint
     origin_id   = "website"
     custom_origin_config {
       http_port              = "80"
@@ -95,10 +94,10 @@ resource "aws_cloudfront_distribution" "zkmoney_testnet_distribution" {
     }
   }
 
-  enabled         = true
-  is_ipv6_enabled = true
-  comment         = "Managed by Terraform"
-  aliases         = ["testnet.zk.money"]
+  enabled             = true
+  is_ipv6_enabled     = true
+  comment             = "Managed by Terraform"
+  aliases             = ["${var.DEPLOY_TAG}.zk.money"]
   default_root_object = "/"
 
 
@@ -132,7 +131,7 @@ resource "aws_cloudfront_distribution" "zkmoney_testnet_distribution" {
 
     lambda_function_association {
       event_type = "origin-response"
-      lambda_arn = aws_lambda_function.twitter_meta_lambda_testnet.qualified_arn
+      lambda_arn = aws_lambda_function.twitter_meta_lambda.qualified_arn
     }
 
     forwarded_values {
@@ -158,13 +157,13 @@ resource "aws_cloudfront_distribution" "zkmoney_testnet_distribution" {
   }
 }
 
-resource "aws_route53_record" "testnet_a_record" {
+resource "aws_route53_record" "a_record" {
   zone_id = data.aws_route53_zone.zkmoney.zone_id
-  name    = "testnet"
+  name    = var.DEPLOY_TAG
   type    = "A"
   alias {
-    name                   = aws_cloudfront_distribution.zkmoney_testnet_distribution.domain_name
-    zone_id                = aws_cloudfront_distribution.zkmoney_testnet_distribution.hosted_zone_id
+    name                   = aws_cloudfront_distribution.zkmoney_distribution.domain_name
+    zone_id                = aws_cloudfront_distribution.zkmoney_distribution.hosted_zone_id
     evaluate_target_health = true
   }
 }
@@ -183,7 +182,7 @@ data "aws_iam_policy_document" "lambda" {
 }
 
 resource "aws_iam_role" "main" {
-  name_prefix        = var.lambda_function_name
+  name_prefix        = "twitter_lambda"
   assume_role_policy = data.aws_iam_policy_document.lambda.json
 }
 
@@ -192,14 +191,9 @@ resource "aws_iam_role_policy_attachment" "basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-
-variable "lambda_function_name" {
-  default = "twitter_meta_lambda_testnet"
-}
-
-resource "aws_lambda_function" "twitter_meta_lambda_testnet" {
+resource "aws_lambda_function" "twitter_lambda" {
   filename         = "../dist/twitter_lambda.zip"
-  function_name    = var.lambda_function_name
+  function_name    = "${var.DEPLOY_TAG}-twitter_lambda"
   role             = aws_iam_role.main.arn
   handler          = "index.main"
   provider         = aws.acm
@@ -211,18 +205,18 @@ resource "aws_lambda_function" "twitter_meta_lambda_testnet" {
 resource "aws_lambda_permission" "allow_cloudfront_invocation" {
   statement_id  = "AllowExecutionFromCloudFront"
   action        = "lambda:InvokeFunction"
-  function_name = var.lambda_function_name
+  function_name = "${var.DEPLOY_TAG}-twitter_lambda"
   principal     = "edgelambda.amazonaws.com"
-  source_arn    = aws_cloudfront_distribution.zkmoney_testnet_distribution.arn
-  provider = aws.acm
+  source_arn    = aws_cloudfront_distribution.zkmoney_distribution.arn
+  provider      = aws.acm
 
 }
 
 resource "aws_lambda_permission" "allow_cloudfront" {
-  provider = aws.acm
+  provider      = aws.acm
   statement_id  = "AllowGetFromCloudFront"
   action        = "lambda:GetFunction"
-  function_name = var.lambda_function_name
+  function_name = "${var.DEPLOY_TAG}-twitter_lambda"
   principal     = "edgelambda.amazonaws.com"
-  source_arn    = aws_cloudfront_distribution.zkmoney_testnet_distribution.arn
+  source_arn    = aws_cloudfront_distribution.zkmoney_distribution.arn
 }

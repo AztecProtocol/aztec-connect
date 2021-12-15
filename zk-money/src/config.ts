@@ -1,13 +1,13 @@
 import { toBaseUnits } from './app/units';
 import { isIOS } from './device_support';
+import { getBlockchainStatus } from '@aztec/sdk';
 
 export interface Config {
   rollupProviderUrl: string;
-  graphqlEndpoint: string;
   explorerUrl: string;
-  infuraId: string;
-  network: string;
+  chainId: number;
   ethereumHost: string;
+  mainnetEthereumHost: string;
   priceFeedContractAddresses: string[];
   txAmountLimits: bigint[];
   withdrawSafeAmounts: bigint[][];
@@ -18,12 +18,7 @@ export interface Config {
 }
 
 interface ConfigVars {
-  rollupProviderUrl: string;
-  graphqlEndpoint: string;
-  explorerUrl: string;
-  infuraId: string;
-  network: string;
-  ethereumHost: string;
+  deployTag: string;
   priceFeedContractAddress0: string;
   priceFeedContractAddress1: string;
   priceFeedContractAddress2: string;
@@ -45,12 +40,7 @@ const removeEmptyValues = (vars: ConfigVars): Partial<ConfigVars> => {
 };
 
 const fromLocalStorage = (): ConfigVars => ({
-  rollupProviderUrl: localStorage.getItem('zm_rollupProviderUrl') || '',
-  graphqlEndpoint: localStorage.getItem('zm_graphqlEndpoint') || '',
-  explorerUrl: localStorage.getItem('zm_explorerUrl') || '',
-  infuraId: localStorage.getItem('zm_infuraId') || '',
-  network: localStorage.getItem('zm_network') || '',
-  ethereumHost: localStorage.getItem('zm_ethereumHost') || '',
+  deployTag: localStorage.getItem('zm_deployTag') || '',
   priceFeedContractAddress0: localStorage.getItem('zm_priceFeedContractAddress0') || '',
   priceFeedContractAddress1: localStorage.getItem('zm_priceFeedContractAddress1') || '',
   priceFeedContractAddress2: localStorage.getItem('zm_priceFeedContractAddress2') || '',
@@ -62,12 +52,7 @@ const fromLocalStorage = (): ConfigVars => ({
 });
 
 const fromEnvVars = (): ConfigVars => ({
-  rollupProviderUrl: process.env.REACT_APP_ROLLUP_PROVIDER_URL || '',
-  graphqlEndpoint: process.env.REACT_APP_GRAPHQL_ENDPOINT || '',
-  explorerUrl: process.env.REACT_APP_EXPLORER_URL || '',
-  infuraId: process.env.REACT_APP_INFURA_ID || '',
-  network: process.env.REACT_APP_NETWORK || '',
-  ethereumHost: process.env.REACT_APP_ETHEREUM_HOST || '',
+  deployTag: process.env.DEPLOY_TAG || '',
   priceFeedContractAddress0: process.env.REACT_APP_PRICE_FEED_CONTRACT_ADDRESS_0 || '',
   priceFeedContractAddress1: process.env.REACT_APP_PRICE_FEED_CONTRACT_ADDRESS_1 || '',
   priceFeedContractAddress2: process.env.REACT_APP_PRICE_FEED_CONTRACT_ADDRESS_2 || '',
@@ -79,12 +64,7 @@ const fromEnvVars = (): ConfigVars => ({
 });
 
 const productionConfig: ConfigVars = {
-  rollupProviderUrl: 'https://api.aztec.network/falafel-mainnet',
-  graphqlEndpoint: 'https://api.aztec.network/falafel-mainnet/graphql',
-  explorerUrl: 'https://explorer.aztec.network',
-  infuraId: '6a04b7c89c5b421faefde663f787aa35',
-  network: 'mainnet',
-  ethereumHost: '',
+  deployTag: '',
   priceFeedContractAddress0: '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419', // ETH/USD
   priceFeedContractAddress1: '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9', // DAI/USD
   priceFeedContractAddress2: '0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c', // BTC/USD
@@ -120,23 +100,43 @@ const productionConfig: ConfigVars = {
 
 const developmentConfig: ConfigVars = {
   ...productionConfig,
-  rollupProviderUrl: `${window.location.protocol}//${window.location.hostname}:8081`,
-  graphqlEndpoint: `${window.location.protocol}//${window.location.hostname}:8081/graphql`,
-  explorerUrl: `${window.location.protocol}//${window.location.hostname}:3000/ganache`,
-  network: 'ganache',
-  ethereumHost: 'http://localhost:8545',
   debug: true,
 };
 
-export const getConfig = (): Config => {
+function getEthereumHost(chainId: number) {
+  switch (chainId) {
+    case 5:
+      return 'https://goerli.infura.io/v3/6a04b7c89c5b421faefde663f787aa35';
+    case 1337:
+      return 'http://localhost:8545';
+    default:
+      return 'https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35';
+  }
+}
+
+async function getDeployConfig(deployTag: string) {
+  if (deployTag) {
+    const rollupProviderUrl = `https://api.aztec.network/${deployTag}-falafel`;
+    const explorerUrl = `https://${deployTag}.explorer.aztec.network`;
+    const chainId = (await getBlockchainStatus(rollupProviderUrl)).chainId;
+    const ethereumHost = getEthereumHost(chainId);
+    const mainnetEthereumHost = getEthereumHost(1);
+    return { rollupProviderUrl, explorerUrl, chainId, ethereumHost, mainnetEthereumHost };
+  } else {
+    const rollupProviderUrl = `${window.location.protocol}//${window.location.hostname}:8081`;
+    const explorerUrl = `${window.location.protocol}//${window.location.hostname}:3000`;
+    const chainId = 1337;
+    const ethereumHost = `${window.location.protocol}//${window.location.hostname}:8545`;
+    const mainnetEthereumHost = getEthereumHost(1);
+    return { rollupProviderUrl, explorerUrl, chainId, ethereumHost, mainnetEthereumHost };
+  }
+}
+
+export async function getConfig(): Promise<Config> {
   const defaultConfig = process.env.NODE_ENV === 'development' ? developmentConfig : productionConfig;
+
   const {
-    rollupProviderUrl,
-    graphqlEndpoint,
-    explorerUrl,
-    infuraId,
-    network,
-    ethereumHost,
+    deployTag,
     priceFeedContractAddress0,
     priceFeedContractAddress1,
     priceFeedContractAddress2,
@@ -148,12 +148,7 @@ export const getConfig = (): Config => {
   } = { ...defaultConfig, ...removeEmptyValues(fromEnvVars()), ...removeEmptyValues(fromLocalStorage()) };
 
   return {
-    rollupProviderUrl,
-    graphqlEndpoint,
-    explorerUrl,
-    infuraId,
-    network,
-    ethereumHost,
+    ...(await getDeployConfig(deployTag)),
     priceFeedContractAddresses: [priceFeedContractAddress0, priceFeedContractAddress1, priceFeedContractAddress2],
     txAmountLimits: JSON.parse(txAmountLimits).map((amount: string) => BigInt(amount)),
     withdrawSafeAmounts: JSON.parse(withdrawSafeAmounts).map((amounts: string[]) =>
@@ -164,4 +159,4 @@ export const getConfig = (): Config => {
     debug,
     saveProvingKey: !isIOS(),
   };
-};
+}

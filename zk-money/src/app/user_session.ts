@@ -451,8 +451,8 @@ export class UserSession extends EventEmitter {
     const prevProvider = this.provider;
     prevProvider?.removeAllListeners();
 
-    const { infuraId, network, ethereumHost } = this.config;
-    this.provider = new Provider(walletId, { infuraId, network, ethereumHost });
+    const { chainId, ethereumHost } = this.config;
+    this.provider = new Provider(walletId, { chainId, ethereumHost });
     this.provider.on(ProviderEvent.LOG_MESSAGE, (message: string, type: MessageType) =>
       this.emitSystemMessage(message, type),
     );
@@ -1012,16 +1012,16 @@ export class UserSession extends EventEmitter {
     const walletId = this.getWalletSession();
     if (walletId === undefined || walletId === this.provider?.walletId) return;
 
-    const { infuraId, network, ethereumHost } = this.config;
-    const provider = new Provider(walletId, { infuraId, network, ethereumHost });
+    const { chainId, ethereumHost } = this.config;
+    const provider = new Provider(walletId, { chainId, ethereumHost });
     if (provider.connected) {
       await this.changeWallet(walletId, false);
     }
   }
 
   private async createCoreProvider() {
-    const { infuraId, network, ethereumHost } = this.config;
-    this.coreProvider = new Provider(WalletId.HOT, { infuraId, network, ethereumHost });
+    const { chainId, ethereumHost } = this.config;
+    this.coreProvider = new Provider(WalletId.HOT, { chainId, ethereumHost });
     await this.coreProvider.init();
     if (this.coreProvider.chainId !== this.requiredNetwork.chainId) {
       throw new Error(`Wrong network. This shouldn't happen.`);
@@ -1081,8 +1081,8 @@ export class UserSession extends EventEmitter {
     }
 
     try {
-      const { rollupProviderUrl, network, debug, saveProvingKey } = this.config;
-      const minConfirmation = network === 'ganache' ? 1 : undefined; // If not ganache, use the default value.
+      const { rollupProviderUrl, chainId, debug, saveProvingKey } = this.config;
+      const minConfirmation = chainId === 1337 ? 1 : undefined; // If not ganache, use the default value.
       this.sdk = await createWalletSdk(this.coreProvider.ethereumProvider, rollupProviderUrl, {
         minConfirmation,
         debug,

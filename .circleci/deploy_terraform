@@ -3,14 +3,6 @@ set -e
 
 REPOSITORY=$1
 
-# If tagged e.g. v2.0.123, use the terraform dir v2.0, otherwise dev.
-if [ -n "$COMMIT_TAG" ]; then
-  VERSION=$(echo "$COMMIT_TAG" | grep -oP "v\d+.\d+")
-else
-  VERSION=dev
-fi
-TF_DIR=./terraform/$VERSION
-
 # Apply terraform.
 if [ -d $TF_DIR ]; then
   ensure_terraform

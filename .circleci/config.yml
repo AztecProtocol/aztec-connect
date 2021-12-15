@@ -406,12 +406,6 @@ jobs:
             deploy_ecr website
             deploy_s3 website
       - run:
-          name: 'zk-money'
-          working_directory: zk-money
-          command: |
-            deploy_ecr zk-money
-            deploy_s3 zk-money
-      - run:
           name: 'metrics'
           working_directory: metrics
           command: |
@@ -475,6 +469,12 @@ jobs:
           name: 'wasabi'
           working_directory: wasabi
           command: deploy wasabi
+      - run:
+          name: 'zk-money'
+          working_directory: zk-money
+          command: |
+            deploy_ecr zk-money
+            deploy_s3 zk-money
 
   deploy-prod:
     docker:

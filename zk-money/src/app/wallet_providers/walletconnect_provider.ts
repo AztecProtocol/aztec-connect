@@ -218,9 +218,7 @@ class WalletconnectProvider implements WalletProvider {
   }
 }
 
-export const createWalletconnectProvider = (infuraId: string) => {
-  const provider = new WalletConnectProvider({
-    infuraId,
-  });
+export const createWalletconnectProvider = (chainId: number, ethereumHost: string) => {
+  const provider = new WalletConnectProvider({ rpc: { [chainId]: ethereumHost } });
   return new WalletconnectProvider(provider);
 };

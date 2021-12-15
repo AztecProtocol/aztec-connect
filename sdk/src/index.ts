@@ -17,6 +17,7 @@ export * from '@aztec/barretenberg/rollup_provider';
 export * from '@aztec/barretenberg/fifo';
 export * from '@aztec/barretenberg/tx_hash';
 export * from '@aztec/barretenberg/blockchain';
+export * from '@aztec/barretenberg/service';
 
 export {
   JsonRpcProvider,

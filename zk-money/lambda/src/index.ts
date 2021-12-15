@@ -36,20 +36,6 @@ exports.main = async function (event: any) {
     );
     return {
       ...response,
-      headers: {
-        'cache-control': [
-          {
-            key: 'Cache-Control',
-            value: 'max-age=3600',
-          },
-        ],
-        'content-type': [
-          {
-            key: 'Content-Type',
-            value: 'text/html',
-          },
-        ],
-      },
       body: oldBody,
     };
   } else {
@@ -63,20 +49,6 @@ exports.main = async function (event: any) {
     );
     return {
       ...response,
-      headers: {
-        'cache-control': [
-          {
-            key: 'Cache-Control',
-            value: 'max-age=3600',
-          },
-        ],
-        'content-type': [
-          {
-            key: 'Content-Type',
-            value: 'text/html',
-          },
-        ],
-      },
       body: oldBody,
     };
   }
