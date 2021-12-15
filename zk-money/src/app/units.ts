@@ -34,16 +34,20 @@ const baseUnitsToFloat = (value: bigint, divisorExponent: number) => {
 export const formatBaseUnits = (
   value: bigint,
   decimals: number,
-  opts?: { precision?: number; commaSeparated?: boolean; showPlus?: boolean },
-) =>
+  opts?: { precision?: number; commaSeparated?: boolean; showPlus?: boolean; floor?: boolean },
+) => {
+  if (opts?.floor && opts.precision !== undefined) {
+    value -= value % tenTo(decimals - opts.precision);
+  }
   // Precision is lost in converting a BigInt to a number, but if the precision lost makes it into the digits displayed
   // then we've got bigger problems anyway, such as fitting such a long string in the UI.
-  new Intl.NumberFormat('en-GB', {
+  return new Intl.NumberFormat('en-GB', {
     useGrouping: opts?.commaSeparated ?? false,
     maximumFractionDigits: opts?.precision,
     minimumFractionDigits: opts?.precision,
     signDisplay: opts?.showPlus ? 'exceptZero' : undefined,
   }).format(baseUnitsToFloat(value, decimals));
+};
 
 export const convertToPrice = (value: bigint, decimals: number, priceBaseUnits: bigint) =>
   (value * priceBaseUnits) / tenTo(decimals);

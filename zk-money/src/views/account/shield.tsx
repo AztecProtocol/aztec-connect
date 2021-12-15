@@ -204,7 +204,10 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
               onClick={() =>
                 onChangeInputs({
                   amount: {
-                    value: formatBaseUnits(maxAmount.value, decimals, { precision: asset.preferredFractionalDigits }),
+                    value: formatBaseUnits(maxAmount.value, decimals, {
+                      precision: asset.preferredFractionalDigits,
+                      floor: true,
+                    }),
                   },
                 })
               }

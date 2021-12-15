@@ -216,6 +216,7 @@ export const ShieldForAliasForm: React.FunctionComponent<DepositFormProps> = ({
                   amount: {
                     value: formatBaseUnits(maxAmount.value, asset.decimals, {
                       precision: asset.preferredFractionalDigits,
+                      floor: true,
                     }),
                   },
                 })

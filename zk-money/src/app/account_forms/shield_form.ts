@@ -846,7 +846,10 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     if (amount && !this.values.amount.value) {
       this.updateFormValues({
         amount: {
-          value: formatBaseUnits(amount, this.asset.decimals, { precision: this.asset.preferredFractionalDigits }),
+          value: formatBaseUnits(amount, this.asset.decimals, {
+            precision: this.asset.preferredFractionalDigits,
+            floor: true,
+          }),
         },
       });
     }
