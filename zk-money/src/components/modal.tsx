@@ -43,6 +43,8 @@ const PopupContent = styled(PaddedBlock)<PopupContentProps>`
   border-radius: ${borderRadiuses.m};
   max-height: calc(100vh - ${parseInt(spacings.m) * 2}px);
   overflow: auto;
+  // Hack to prevent corner overflow on safari: https://stackoverflow.com/a/58283449
+  transform: translateZ(0);
 
   @media (max-width: ${breakpoints.s}) {
     ${({ noPadding }) => !noPadding && `padding: ${spacings.m} ${spacings.l};`}
