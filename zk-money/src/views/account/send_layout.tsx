@@ -1,18 +1,21 @@
 import React from 'react';
 import styled from 'styled-components';
 import { isAddress, ProviderState, SendStatus, toBaseUnits, WalletId } from '../../app';
-import { ContentWrapper, PaddedBlock } from '../../components';
-import { breakpoints } from '../../styles';
+import { breakpoints, spacings } from '../../styles';
 import { PrivacyOverview } from './privacy/privacy_overview';
 import { Send, SendProps } from './send';
 import { SigningKeyForm } from './signing_key_form';
 
 const Root = styled.div`
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  max-width: ${parseInt(breakpoints.xl) - parseInt(spacings.xl) * 2}px;
 `;
 
 const PrivacyOverviewWrapper = styled.div`
   width: 270px;
+  min-height: 710px;
+  height: 100%;
 
   @media (max-width: ${breakpoints.m}) {
     display: none;
@@ -20,7 +23,10 @@ const PrivacyOverviewWrapper = styled.div`
 `;
 
 const SendWrapper = styled.div`
-  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  flex-direction: column;
+  padding: ${spacings.s} ${spacings.xl};
 `;
 
 interface SendLayoutProps extends SendProps {
@@ -62,11 +68,7 @@ export const SendLayout: React.FunctionComponent<SendLayoutProps> = ({
         />
       </PrivacyOverviewWrapper>
       <SendWrapper>
-        <ContentWrapper>
-          <PaddedBlock>
-            <Send {...sendProps} />
-          </PaddedBlock>
-        </ContentWrapper>
+        <Send {...sendProps} />
       </SendWrapper>
     </Root>
   );
