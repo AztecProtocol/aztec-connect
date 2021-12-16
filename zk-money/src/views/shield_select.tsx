@@ -34,7 +34,7 @@ const AnnotatedSelectWrapper = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${spacings.xs};
-  align-items: end;
+  align-items: flex-end;
 `;
 
 const SelectWrapper = styled.div`
