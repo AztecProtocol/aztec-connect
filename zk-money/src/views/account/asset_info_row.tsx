@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { Asset, convertToPriceString, fromBaseUnits } from '../../app';
-import { Text } from '../../components';
+import { ShieldedAssetIcon, Text } from '../../components';
 import { breakpoints, fontSizes, spacings } from '../../styles';
 
 const FlexRow = styled.div`
@@ -18,9 +18,8 @@ const PriceValue = styled(Text)`
   }
 `;
 
-const AssetIcon = styled.img`
+const IconWrapper = styled.div`
   margin-right: ${spacings.m};
-  height: 24px;
 
   @media (max-width: ${breakpoints.s}) {
     margin-right: ${spacings.s};
@@ -36,7 +35,9 @@ interface AssetInfoRowProps {
 export const AssetInfoRow: React.FunctionComponent<AssetInfoRowProps> = ({ asset, value, price }) => (
   <FlexRow>
     {!!price && <PriceValue text={`$${convertToPriceString(value, asset.decimals, price)}`} size="m" color="grey" />}
-    <AssetIcon src={asset.icon} />
+    <IconWrapper>
+      <ShieldedAssetIcon size="s" asset={asset} />
+    </IconWrapper>
     {fromBaseUnits(value, asset.decimals)}
   </FlexRow>
 );
