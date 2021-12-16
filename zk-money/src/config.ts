@@ -116,7 +116,7 @@ function getEthereumHost(chainId: number) {
 
 async function getDeployConfig(deployTag: string) {
   if (deployTag) {
-    const rollupProviderUrl = `https://api.aztec.network/${deployTag}-falafel`;
+    const rollupProviderUrl = `https://api.aztec.network/${deployTag}/falafel`;
     const explorerUrl = `https://${deployTag}.explorer.aztec.network`;
     const chainId = (await getBlockchainStatus(rollupProviderUrl)).chainId;
     const ethereumHost = getEthereumHost(chainId);
