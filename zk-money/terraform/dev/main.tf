@@ -192,12 +192,12 @@ resource "aws_iam_role_policy_attachment" "basic" {
 }
 
 resource "aws_lambda_function" "twitter_lambda" {
-  filename         = "../dist/twitter_lambda.zip"
+  filename         = "../../dist/twitter_lambda.zip"
   function_name    = "${var.DEPLOY_TAG}-twitter_lambda"
   role             = aws_iam_role.main.arn
   handler          = "index.main"
   provider         = aws.acm
-  source_code_hash = fileexists("../dist/twitter_lambda.zip") ? filebase64sha256("../dist/twitter_lambda.zip") : ""
+  source_code_hash = fileexists("../../dist/twitter_lambda.zip") ? filebase64sha256("../../dist/twitter_lambda.zip") : ""
   runtime          = "nodejs12.x"
   publish          = true
 }
