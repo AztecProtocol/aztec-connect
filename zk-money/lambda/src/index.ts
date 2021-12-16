@@ -14,15 +14,12 @@ interface ZkParams {
 }
 
 exports.main = async function (event: any) {
-  const { request } = event.Records[0].cf;
+  const { request, response } = event.Records[0].cf;
+
   const queryParams = new URLSearchParams(request.querystring) as URLSearchParams;
   const queryParamsObj = paramsToObject(queryParams.entries()) as ZkParams;
   const alias = queryParamsObj.alias;
 
-  const response = {
-    status: '200',
-    statusDescription: 'OK',
-  };
   let oldBody = await (await fetch('https://zk.money/index.html')).text();
 
   if (alias) {
@@ -36,20 +33,7 @@ exports.main = async function (event: any) {
     );
     return {
       ...response,
-      headers: {
-        'cache-control': [
-          {
-            key: 'Cache-Control',
-            value: 'max-age=3600',
-          },
-        ],
-        'content-type': [
-          {
-            key: 'Content-Type',
-            value: 'text/html',
-          },
-        ],
-      },
+      status: '200',
       body: oldBody,
     };
   } else {
@@ -63,20 +47,7 @@ exports.main = async function (event: any) {
     );
     return {
       ...response,
-      headers: {
-        'cache-control': [
-          {
-            key: 'Cache-Control',
-            value: 'max-age=3600',
-          },
-        ],
-        'content-type': [
-          {
-            key: 'Content-Type',
-            value: 'text/html',
-          },
-        ],
-      },
+      status: '200',
       body: oldBody,
     };
   }
