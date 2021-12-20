@@ -29,7 +29,11 @@ export class PriceTracker {
       while (this.running) {
         await new Promise<void>(resolve =>
           setTimeout(async () => {
-            await this.recordPrices();
+            try {
+              await this.recordPrices();
+            } catch (e) {
+              console.log(e.message);
+            }
             resolve();
           }, this.refreshInterval * +this.running),
         );
