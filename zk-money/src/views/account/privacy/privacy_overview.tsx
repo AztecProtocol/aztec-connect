@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { Asset, PrivacyIssue } from '../../../app';
-import { colours, gradients, lineHeights, spacings } from '../../../styles';
+import { colours, gradients, lineHeights, Spacing, spacings } from '../../../styles';
 import { CrossFade, Link, Text } from '../../../components';
 import { depositorBucketGroups } from './privacy_util';
 import { ShieldMeter } from './shield_meter';
@@ -24,6 +24,11 @@ const Root = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
+`;
+
+const Spacer = styled.div<{ size: Spacing }>`
+  width: 100%;
+  height: ${({ size }) => spacings[size]};
 `;
 
 const CrowdWrapper = styled.div<{ visible: boolean }>`
@@ -75,7 +80,7 @@ const Drawer = styled.div<{ expanded: boolean; visible: boolean }>`
   height: calc(100% - 160px);
   will-change: transform, opacity;
   transition: ${({ expanded }) =>
-    expanded ? 'transform 0.4s ease 0.4s, opacity 0.4s' : 'transform 0.4s ease 0s, opacity 0.4s'};
+    expanded ? 'transform 0.4s ease-out 0.4s, opacity 0.4s' : 'transform 0.4s ease 0s, opacity 0.4s'};
   transform: translateY(${({ expanded }) => (expanded ? '0' : `calc(100% - ${drawerPeek}px)`)});
   opacity: 1;
   ${({ visible }) =>
@@ -205,12 +210,14 @@ export const PrivacyOverview: React.FunctionComponent<PrivacyOverviewProps> = pr
   return (
     <Root>
       <ShieldMeter score={score} asset={asset} />
-      <CrowdWrapper visible={!drawExpanded && crowd !== 'hidden'}>
+      <Spacer size="l" />
+      <CrowdWrapper visible={crowd !== 'hidden'}>
         <CrowdVisualisation size={crowd === 'hidden' ? 1 : crowd} />
       </CrowdWrapper>
+      <Spacer size="m" />
       <TipWrapper>
         <CrossFade duration={500}>
-          <Text key={tip} text={tip} />
+          <Text key={tip} size="s" text={tip} />
         </CrossFade>
       </TipWrapper>
       <ButtonLabelWrapper>

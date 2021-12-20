@@ -45,7 +45,7 @@ export const SendProgress: React.FunctionComponent<SendProgressProps> = ({
     },
     {
       title: 'Recipient',
-      content: formatRecipient(recipient.value.input, window.innerWidth <= parseInt(breakpoints.m)),
+      content: formatRecipient(recipient.value.input, true),
     },
   ];
 

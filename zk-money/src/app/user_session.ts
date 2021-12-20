@@ -152,6 +152,7 @@ export class UserSession extends EventEmitter {
   private debounceCheckAlias: DebouncedFunc<() => void>;
   private createSdkMutex = new Mutex('create-sdk-mutex');
   private destroyed = false;
+  private claimUserNameProm?: Promise<void>;
 
   private readonly accountProofTimeout = 60 * 60 * 1000; // 1 hour
   private readonly accountProofDepositAsset = AssetId.ETH;
@@ -789,17 +790,23 @@ export class UserSession extends EventEmitter {
     this.shieldForAliasForm!.changeValues(newInputs);
   }
 
-  async claimUserName() {
+  async claimUserName(isRetry?: boolean) {
+    if (!this.claimUserNameProm) {
+      this.claimUserNameProm = this.unguardedClaimUserName(isRetry).finally(() => {
+        this.claimUserNameProm = undefined;
+      });
+    } else {
+      debug('Duplicated call to claimUserName().');
+    }
+    return this.claimUserNameProm;
+  }
+
+  async unguardedClaimUserName(isRetry?: boolean) {
     if (!this.shieldForAliasForm) {
       throw new Error('Deposit form uninitialized.');
     }
 
-    if (this.shieldForAliasForm.locked) {
-      debug('Duplicated call to claimUserName().');
-      return;
-    }
-
-    await this.shieldForAliasForm.lock();
+    if (!isRetry) await this.shieldForAliasForm.lock();
     if (!this.shieldForAliasForm.locked) return;
 
     const { proofOutput } = this.getLocalAccountProof() || {};

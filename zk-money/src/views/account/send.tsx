@@ -224,6 +224,7 @@ export const Send: React.FunctionComponent<SendProps> = ({
                   amount: {
                     value: formatBaseUnits(maxAmount.value, asset.decimals, {
                       precision: asset.preferredFractionalDigits,
+                      floor: true,
                     }),
                   },
                 })
