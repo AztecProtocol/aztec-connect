@@ -1,7 +1,7 @@
 import { AssetId } from 'barretenberg/asset';
 import { Blockchain, BlockchainAsset, TxType } from 'barretenberg/blockchain';
 import { AssetFeeQuote } from 'barretenberg/rollup_provider';
-import { TxDao } from '../entity/tx';
+import { TxDao } from '../entity';
 import { FeeCalculator } from './fee_calculator';
 import { PriceTracker } from './price_tracker';
 

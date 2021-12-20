@@ -1,7 +1,7 @@
 import { ProofData } from 'barretenberg/client_proofs/proof_data';
 import { Arg, FieldResolver, Int, Query, Resolver, Root } from 'type-graphql';
 import { Inject } from 'typedi';
-import { TxDao } from '../entity/tx';
+import { TxDao } from '../entity';
 import { CachedRollupDb } from '../rollup_db';
 import { HexString } from './scalar_type';
 import { TxType } from './tx_type';

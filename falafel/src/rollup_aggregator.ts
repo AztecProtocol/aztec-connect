@@ -1,8 +1,7 @@
 import { RollupProofData } from 'barretenberg/rollup_proof';
 import { WorldStateDb } from 'barretenberg/world_state_db';
 import { ProofGenerator, RootRollup, RootRollupProofRequest } from 'halloumi/proof_generator';
-import { RollupDao } from './entity/rollup';
-import { RollupProofDao } from './entity/rollup_proof';
+import { RollupDao, RollupProofDao } from './entity';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
 

@@ -4,9 +4,7 @@ import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
 import { ViewingKey } from 'barretenberg/viewing_key';
 import { toBufferBE } from 'bigint-buffer';
 import { randomBytes } from 'crypto';
-import { RollupDao } from '../entity/rollup';
-import { RollupProofDao } from '../entity/rollup_proof';
-import { TxDao } from '../entity/tx';
+import { RollupDao, RollupProofDao, TxDao } from '../entity';
 import moment from 'moment';
 import { TxType } from 'barretenberg/blockchain';
 

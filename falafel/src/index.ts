@@ -1,3 +1,7 @@
+// Must happen before anything else.
+import { initEntities } from './entity/init_entities';
+initEntities();
+
 import { WorldStateDb } from 'barretenberg/world_state_db';
 import { EthereumBlockchain } from 'blockchain';
 import http from 'http';

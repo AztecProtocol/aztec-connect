@@ -1,6 +1,6 @@
 import { AccountProofData, ProofData } from 'barretenberg/client_proofs/proof_data';
 import { AccountDao } from '../entity/account';
-import { TxDao } from '../entity/tx';
+import { TxDao } from '../entity';
 
 export const txDaoToAccountDao = (txDao: TxDao) => {
   const proofData = new AccountProofData(new ProofData(txDao.proofData));

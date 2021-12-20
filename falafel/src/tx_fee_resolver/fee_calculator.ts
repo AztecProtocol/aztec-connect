@@ -2,7 +2,7 @@ import { AssetId } from 'barretenberg/asset';
 import { BlockchainAsset, TxType } from 'barretenberg/blockchain';
 import { JoinSplitProofData, ProofData } from 'barretenberg/client_proofs/proof_data';
 import { AssetFeeQuote } from 'barretenberg/rollup_provider';
-import { TxDao } from '../entity/tx';
+import { TxDao } from '../entity';
 import { PriceTracker } from './price_tracker';
 import { roundUp } from './round_up';
 

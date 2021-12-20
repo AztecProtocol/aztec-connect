@@ -4,9 +4,7 @@ import { RollupDb } from './rollup_db';
 import { TxFeeResolver } from './tx_fee_resolver';
 import { RollupAggregator } from './rollup_aggregator';
 import { RollupPublisher } from './rollup_publisher';
-import { RollupProofDao } from './entity/rollup_proof';
-import { TxDao } from './entity/tx';
-import { RollupDao } from './entity/rollup';
+import { RollupProofDao, RollupDao, TxDao } from './entity';
 
 export class PipelineCoordinator {
   private running = false;

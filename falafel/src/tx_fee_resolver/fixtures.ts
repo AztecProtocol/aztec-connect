@@ -4,7 +4,7 @@ import { ProofData } from 'barretenberg/client_proofs/proof_data';
 import { numToUInt32BE } from 'barretenberg/serialize';
 import { toBufferBE } from 'bigint-buffer';
 import { randomBytes } from 'crypto';
-import { TxDao } from '../entity/tx';
+import { TxDao } from '../entity';
 
 export const mockTx = (assetId: AssetId, txType: TxType, txFee: bigint) =>
   (({

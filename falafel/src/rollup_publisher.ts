@@ -6,7 +6,7 @@ import { TxHash } from 'barretenberg/tx_hash';
 import { toBufferBE } from 'bigint-buffer';
 import { EthereumProvider } from 'blockchain';
 import { Signer, utils } from 'ethers';
-import { RollupDao } from './entity/rollup';
+import { RollupDao } from './entity';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
 import { ProofData, JoinSplitProofData } from 'barretenberg/client_proofs/proof_data';

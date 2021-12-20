@@ -1,8 +1,6 @@
 import { randomBytes } from 'crypto';
 import { Connection, createConnection } from 'typeorm';
-import { RollupDao } from '../entity/rollup';
-import { RollupProofDao } from '../entity/rollup_proof';
-import { TxDao } from '../entity/tx';
+import { RollupDao, RollupProofDao, TxDao } from '../entity';
 import { randomRollup, randomRollupProof, randomTx } from './fixtures';
 import { RollupDb, TypeOrmRollupDb } from './';
 import { EthAddress } from 'barretenberg/address';

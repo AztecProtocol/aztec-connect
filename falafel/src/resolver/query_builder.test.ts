@@ -1,8 +1,5 @@
 import { Connection, createConnection, Repository } from 'typeorm';
-import { AccountDao } from '../entity/account';
-import { RollupDao } from '../entity/rollup';
-import { RollupProofDao } from '../entity/rollup_proof';
-import { TxDao } from '../entity/tx';
+import { AccountDao, TxDao, RollupDao, RollupProofDao } from '../entity';
 import { RollupDb, TypeOrmRollupDb } from '../rollup_db';
 import { randomRollupProof } from '../rollup_db/fixtures';
 import { getQuery } from './query_builder';

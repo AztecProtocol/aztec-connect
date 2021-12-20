@@ -1,4 +1,5 @@
-import { Column, Entity, Index, OneToOne, PrimaryColumn } from 'typeorm';
+import { Column, Entity, OneToOne, PrimaryColumn } from 'typeorm';
+import { bufferColumn } from './init_entities';
 import { RollupProofDao } from './rollup_proof';
 
 @Entity({ name: 'rollup' })
@@ -10,29 +11,28 @@ export class RollupDao {
   @PrimaryColumn()
   public id!: number;
 
-  @Index({ unique: true })
-  @Column()
+  @Column(...bufferColumn({ unique: true, length: 32 }))
   public dataRoot!: Buffer;
 
   @OneToOne(() => RollupProofDao, rollupPoof => rollupPoof.rollup, { cascade: true })
   public rollupProof!: RollupProofDao;
 
-  @Column()
+  @Column(...bufferColumn())
   public viewingKeys!: Buffer;
 
   @Column()
   public created!: Date;
 
   // Null until calldata computed.
-  @Column({ nullable: true })
+  @Column(...bufferColumn({ nullable: true }))
   public callData!: Buffer;
 
   // Null until tx sent.
-  @Column({ nullable: true })
+  @Column(...bufferColumn({ nullable: true, length: 32 }))
   public ethTxHash!: Buffer;
 
   // Null until mined.
-  @Column({ nullable: true })
+  @Column(...bufferColumn({ nullable: true, length: 32 }))
   public gasPrice!: Buffer;
 
   // Null until mined.

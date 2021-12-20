@@ -3,8 +3,7 @@ import { HashPath } from 'barretenberg/merkle_tree';
 import { WorldStateDb } from 'barretenberg/world_state_db';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { ProofGenerator, TxRollup, TxRollupProofRequest } from 'halloumi/proof_generator';
-import { RollupProofDao } from './entity/rollup_proof';
-import { TxDao } from './entity/tx';
+import { RollupProofDao, TxDao } from './entity';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
 
@@ -99,7 +98,7 @@ export class RollupCreator {
       newNullRoots.push(worldStateDb.getRoot(1));
       newNullPaths.push(await worldStateDb.getHashPath(1, nullifier2));
 
-      dataRootsPaths.push(await worldStateDb.getHashPath(2, BigInt(tx.dataRootsIndex)));
+      dataRootsPaths.push(await worldStateDb.getHashPath(2, BigInt(tx.dataRootsIndex!)));
       dataRootsIndicies.push(tx.dataRootsIndex!);
     }
 

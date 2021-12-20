@@ -1,8 +1,6 @@
 import { Mutex } from 'async-mutex';
 import { TxHash } from 'barretenberg/tx_hash';
-import { RollupDao } from '../entity/rollup';
-import { RollupProofDao } from '../entity/rollup_proof';
-import { TxDao } from '../entity/tx';
+import { RollupDao, RollupProofDao, TxDao } from '../entity';
 import { RollupDb } from './rollup_db';
 
 export class SyncRollupDb {

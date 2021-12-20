@@ -2,9 +2,7 @@ import { EthereumBlockchainConfig, EthersAdapter, WalletProvider } from 'blockch
 import { emptyDir, mkdirp, pathExists, readJson, writeJson } from 'fs-extra';
 import { dirname } from 'path';
 import { JsonRpcProvider, InfuraProvider } from '@ethersproject/providers';
-import { RollupDao } from './entity/rollup';
-import { RollupProofDao } from './entity/rollup_proof';
-import { TxDao } from './entity/tx';
+import { RollupDao, RollupProofDao, TxDao } from './entity';
 import { ConnectionOptions } from 'typeorm';
 import { AccountDao } from './entity/account';
 
@@ -34,6 +32,7 @@ interface ConfVars {
   reimbursementFeeLimit: bigint;
   maxUnsettledTxs: number;
   typeOrmLogging: boolean;
+  dbUrl?: string;
 }
 
 function getConfVars(): ConfVars {
@@ -63,6 +62,7 @@ function getConfVars(): ConfVars {
     PROVIDER_GAS_PRICE_MULTIPLIER,
     MAX_UNSETTLED_TXS,
     TYPEORM_LOGGING,
+    DB_URL,
   } = process.env;
 
   return {
@@ -94,6 +94,7 @@ function getConfVars(): ConfVars {
     reimbursementFeeLimit: REIMBURSEMENT_FEE_LIMIT ? BigInt(REIMBURSEMENT_FEE_LIMIT) : BigInt(10) ** BigInt(30),
     maxUnsettledTxs: +(MAX_UNSETTLED_TXS || 0),
     typeOrmLogging: !!TYPEORM_LOGGING,
+    dbUrl: DB_URL,
   };
 }
 
@@ -165,21 +166,36 @@ async function loadConfVars(path: string) {
   return state;
 }
 
-function getOrmConfig(logging: boolean): ConnectionOptions {
-  return {
-    type: 'sqlite',
-    database: 'data/db.sqlite',
-    entities: [TxDao, RollupProofDao, RollupDao, AccountDao],
-    synchronize: true,
-    logging,
-  };
+function getOrmConfig(dbUrl?: string, logging = false): ConnectionOptions {
+  if (!dbUrl) {
+    return {
+      type: 'sqlite',
+      database: 'data/db.sqlite',
+      entities: [TxDao, RollupProofDao, RollupDao, AccountDao],
+      synchronize: true,
+      logging,
+    };
+  } else {
+    const url = new URL(dbUrl);
+    return {
+      type: url.protocol.slice(0, -1) as any,
+      host: url.hostname,
+      port: +url.port,
+      database: 'falafel',
+      username: url.username,
+      password: url.password,
+      entities: [TxDao, RollupProofDao, RollupDao, AccountDao],
+      synchronize: true,
+      logging,
+    };
+  }
 }
 
 export async function getConfig() {
   const confVars = await loadConfVars('./data/config');
-  const { gasLimit, rollupContractAddress, typeOrmLogging } = confVars;
+  const { gasLimit, rollupContractAddress, typeOrmLogging, dbUrl } = confVars;
 
-  const ormConfig = getOrmConfig(typeOrmLogging);
+  const ormConfig = getOrmConfig(dbUrl, typeOrmLogging);
 
   console.log(`Gas limit: ${gasLimit || 'default'}`);
   console.log(`Rollup contract address: ${rollupContractAddress || 'none'}`);

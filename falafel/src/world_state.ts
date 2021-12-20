@@ -1,11 +1,10 @@
 import { MemoryFifo } from 'barretenberg/fifo';
 import { InnerProofData, RollupProofData } from 'barretenberg/rollup_proof';
 import { WorldStateDb } from 'barretenberg/world_state_db';
+import { Timer } from 'barretenberg/timer';
 import { toBigIntBE, toBufferBE } from 'bigint-buffer';
 import { Blockchain, TxType } from 'barretenberg/blockchain';
-import { RollupDao } from './entity/rollup';
-import { RollupProofDao } from './entity/rollup_proof';
-import { TxDao } from './entity/tx';
+import { RollupDao, RollupProofDao, TxDao } from './entity';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
 import { Block } from 'barretenberg/block_source';
@@ -76,8 +75,12 @@ export class WorldState {
     this.printState();
     const nextRollupId = await this.rollupDb.getNextRollupId();
     console.log(`Syncing state from rollup ${nextRollupId}...`);
-    const blocks = await this.blockchain.getBlocks(nextRollupId);
 
+    const fetchBlocksStart = new Timer();
+    const blocks = await this.blockchain.getBlocks(nextRollupId);
+    console.log(`Fetched blocks in ${fetchBlocksStart.s()}s.`);
+
+    const updateDbsStart = new Timer();
     for (const block of blocks) {
       await this.updateDbs(block);
     }
@@ -86,7 +89,7 @@ export class WorldState {
     await this.rollupDb.deleteUnsettledRollups();
     await this.rollupDb.deleteOrphanedRollupProofs();
 
-    console.log('Sync complete.');
+    console.log(`Database synched in ${updateDbsStart.s()}s.`);
   }
 
   public printState() {
@@ -231,6 +234,14 @@ export class WorldState {
     await this.worldStateDb.batchPut(entries);
     */
     const { rollupId, dataStartIndex, innerProofData } = rollup;
+
+    const currentSize = this.worldStateDb.getSize(0);
+    if (currentSize > dataStartIndex) {
+      // The tree data is immutable, so we can assume if it's larger than the current start index, that this
+      // data has been inserted before. e.g. maybe just the sql db was erased, but we still have the tree data.
+      return;
+    }
+
     for (let i = 0; i < innerProofData.length; ++i) {
       const tx = innerProofData[i];
       await this.worldStateDb.put(0, BigInt(dataStartIndex + i * 2), tx.newNote1);

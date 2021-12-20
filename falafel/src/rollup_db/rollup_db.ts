@@ -2,10 +2,7 @@ import { TxType } from 'barretenberg/blockchain';
 import { TxHash } from 'barretenberg/tx_hash';
 import { toBufferBE } from 'bigint-buffer';
 import { Connection, In, IsNull, MoreThanOrEqual, Not, Repository } from 'typeorm';
-import { AccountDao } from '../entity/account';
-import { RollupDao } from '../entity/rollup';
-import { RollupProofDao } from '../entity/rollup_proof';
-import { TxDao } from '../entity/tx';
+import { AccountDao, RollupDao, RollupProofDao, TxDao } from '../entity';
 import { txDaoToAccountDao } from './tx_dao_to_account_dao';
 
 export type RollupDb = {
@@ -217,6 +214,8 @@ export class TypeOrmRollupDb implements RollupDb {
       }
       await transactionalEntityManager.delete(this.rollupRep.target, { id: rollup.id });
       await transactionalEntityManager.save(rollup);
+      const accountDaos = rollup.rollupProof.txs.filter(tx => tx.txType === TxType.ACCOUNT).map(txDaoToAccountDao);
+      await transactionalEntityManager.save(accountDaos);
     });
   }
 

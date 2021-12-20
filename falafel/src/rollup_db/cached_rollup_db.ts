@@ -1,6 +1,4 @@
-import { TxDao } from '../entity/tx';
-import { RollupProofDao } from '../entity/rollup_proof';
-import { RollupDao } from '../entity/rollup';
+import { RollupDao, RollupProofDao, TxDao } from '../entity';
 import { SyncRollupDb } from './sync_rollup_db';
 import { TxHash } from 'barretenberg/tx_hash';
 import { ProofData, ProofId } from 'barretenberg/client_proofs/proof_data';

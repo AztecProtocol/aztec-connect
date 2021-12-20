@@ -6,7 +6,7 @@ import { Crs } from 'barretenberg/crs';
 import { BarretenbergWasm } from 'barretenberg/wasm';
 import { BarretenbergWorker } from 'barretenberg/wasm/worker';
 import { createWorker, destroyWorker } from 'barretenberg/wasm/worker_factory';
-import { TxDao } from './entity/tx';
+import { TxDao } from './entity';
 import { RollupDb } from './rollup_db';
 import { Mutex } from 'async-mutex';
 import { ViewingKey } from 'barretenberg/viewing_key';
