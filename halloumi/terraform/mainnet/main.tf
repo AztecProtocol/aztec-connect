@@ -101,8 +101,8 @@ resource "aws_ecs_task_definition" "halloumi" {
     "name": "halloumi-mainnet",
     "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/halloumi:${var.IMAGE_TAG}",
     "essential": true,
-    "memory": 253952,
-    "memoryReservation": 126976,
+    "memory": 507904,
+    "memoryReservation": 253952,
     "portMappings": [
       {
         "containerPort": 80
