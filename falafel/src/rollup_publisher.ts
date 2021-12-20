@@ -72,6 +72,7 @@ export class RollupPublisher {
       await this.sleepOrInterrupted(60000);
     }
 
+    console.log('Publish rollup interrupted.');
     return false;
   }
 
