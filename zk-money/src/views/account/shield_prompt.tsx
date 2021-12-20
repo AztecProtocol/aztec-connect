@@ -30,11 +30,17 @@ const ButtonRoot = styled.div`
 
 interface ShieldPromptProps {
   asset: Asset;
+  balance: bigint;
   pendingBalance: bigint;
   onSubmit: () => void;
 }
 
-export const ShieldPrompt: React.FunctionComponent<ShieldPromptProps> = ({ asset, pendingBalance, onSubmit }) => (
+export const ShieldPrompt: React.FunctionComponent<ShieldPromptProps> = ({
+  asset,
+  balance,
+  pendingBalance,
+  onSubmit,
+}) => (
   <Root>
     <Message size="m">
       {pendingBalance > 0n ? (
@@ -49,6 +55,10 @@ export const ShieldPrompt: React.FunctionComponent<ShieldPromptProps> = ({ asset
             inline
           />
           {` pending, shield to get started!`}
+        </>
+      ) : balance > 0n ? (
+        <>
+          Add to your <Text text={`zk${asset.symbol}`} weight="bold" inline /> by shielding more {asset.symbol}.
         </>
       ) : (
         <>

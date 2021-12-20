@@ -1,7 +1,7 @@
 import React from 'react';
 import styled, { css } from 'styled-components';
 import { Asset, convertToPriceString, formatBaseUnits } from '../../app';
-import { Button, Dot, GradientBlock, Text, Tooltip } from '../../components';
+import { Dot, GradientBlock, Text, Tooltip } from '../../components';
 import { breakpoints, fontSizes, lineHeights, spacings } from '../../styles';
 
 const ColContent = styled.div`
@@ -161,8 +161,7 @@ interface ValueSummaryProps {
   pendingValue?: bigint;
   pendingTxs?: number;
   asset: Asset;
-  buttonText: string;
-  onClick?: () => void;
+  buttonSlot?: React.ReactNode;
   isLoading: boolean;
 }
 
@@ -174,8 +173,7 @@ export const ValueSummary: React.FunctionComponent<ValueSummaryProps> = ({
   pendingValue = 0n,
   pendingTxs = 0,
   asset,
-  buttonText,
-  onClick,
+  buttonSlot,
   isLoading,
 }) => {
   const totalBalance = value + pendingValue;
@@ -212,9 +210,7 @@ export const ValueSummary: React.FunctionComponent<ValueSummaryProps> = ({
           )}
         </ValueRoot>
       </ColContent>
-      <ColButton>
-        <Button theme="white" text={buttonText} onClick={onClick} disabled={!onClick} size="l" outlined />
-      </ColButton>
+      {buttonSlot && <ColButton>{buttonSlot}</ColButton>}
     </GradientBlock>
   );
 };
