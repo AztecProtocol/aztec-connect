@@ -25,14 +25,14 @@ describe('hashInputs', function () {
   });
 
   it('should verify hash inputs valid', async () => {
-    const { proofData, broadcastData } = await getRollupData(1, 2);
+    const { proofData, broadcastData } = await getRollupData(3, 2);
     const proofBytes = Buffer.concat([broadcastData.encode(), proofData]);
 
     await hashInputs.validate(proofBytes, { gasLimit });
   });
 
   it('should handle invalid input hash', async () => {
-    const { proofData, broadcastData } = await getRollupData(1, 2);
+    const { proofData, broadcastData } = await getRollupData(3, 2);
     const proofBytes = Buffer.concat([broadcastData.encode(), proofData]);
 
     // Bork.

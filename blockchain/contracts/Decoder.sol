@@ -60,7 +60,7 @@ contract Decoder {
     uint256 public constant DATASIZE_MASK = 0xffffffff;
 
     function paddingTx(uint256 inPtr, uint256 outPtr) internal pure returns (uint256) {
-        return (inPtr + 0x101);
+        return (inPtr + 0x1);
     }
 
     function depositTx(uint256 inPtr, uint256 outPtr) internal pure returns (uint256) {

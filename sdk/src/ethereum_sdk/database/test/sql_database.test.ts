@@ -6,7 +6,7 @@ let connection: Connection;
 let db: SQLDatabase;
 
 const createDb = async () => {
-  const config = getOrmConfig(':memory:');
+  const config = getOrmConfig(true);
   connection = await createConnection(config);
   db = new SQLDatabase(connection);
   return db;

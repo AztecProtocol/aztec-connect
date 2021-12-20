@@ -23,9 +23,9 @@ export * from './ethereum_sdk_user_asset';
 
 const debug = createDebug('bb:ethereum_sdk');
 
-async function getDb(dbPath = 'data') {
+async function getDb(memoryDb = false, identifier?: string) {
   if (isNode) {
-    const config = getOrmConfig(dbPath);
+    const config = getOrmConfig(memoryDb, identifier);
     const connection = await createConnection(config);
     return new SQLDatabase(connection);
   } else {
@@ -38,7 +38,7 @@ export async function createEthSdk(ethereumProvider: EthereumProvider, serverUrl
 
   const core = await createSdk(serverUrl, sdkOptions);
 
-  const db = await getDb(sdkOptions.dbPath);
+  const db = await getDb(sdkOptions.memoryDb, sdkOptions.identifier);
   await db.init();
 
   // Set erase flag if requested or contract changed.

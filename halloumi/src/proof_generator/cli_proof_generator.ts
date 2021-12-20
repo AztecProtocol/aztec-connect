@@ -5,6 +5,7 @@ import { PromiseReadable } from 'promise-readable';
 import { createInterface } from 'readline';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
 import { ProofGenerator } from './proof_generator';
+import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 
 export class CliProofGenerator implements ProofGenerator {
   private proc?: ChildProcess;
@@ -47,6 +48,10 @@ export class CliProofGenerator implements ProofGenerator {
   public async start() {
     await this.ensureCrs();
     this.launch();
+
+    console.log('Waiting for rollup_cli to bootstrap...');
+    this.proc!.stdin!.write(numToUInt32BE(666));
+
     const initByte = await this.stdout.read(1);
     if (initByte[0] !== 1) {
       throw new Error('Failed to initialize rollup_cli.');

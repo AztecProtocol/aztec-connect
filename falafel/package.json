@@ -9,11 +9,13 @@
     "clean_db": "rm -rf ./data/db.sqlite ./data/world_state.db ./data/config",
     "clean_keys": "rm -rf ./data/account ./data/join_split ./data/*rollup*",
     "start": "node ./dest",
+    "debug": "node --inspect-brk=0.0.0.0:9221 ./dest",
     "start:dev": "`yarn -s deploy_rollup_processor` && yarn start:dev_server",
     "start:dev_server": "tsc-watch -p tsconfig.prod.json --onSuccess 'yarn start'",
-    "start:e2e": "yarn clean_db && yarn build && `ESCAPE_BLOCK_LOWER=10 ESCAPE_BLOCK_UPPER=100 ETHEREUM_HOST=http://localhost:8545 yarn -s deploy_rollup_processor` && MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW=1 NUM_OUTER_ROLLUP_PROOFS=2 HALLOUMI_HOST=http://localhost:8083 ETHEREUM_HOST=http://localhost:8545 yarn start",
+    "start:e2e": "yarn clean_db && yarn build && `ESCAPE_BLOCK_LOWER=10 ESCAPE_BLOCK_UPPER=100 ETHEREUM_HOST=http://localhost:8545 yarn -s deploy_rollup_processor` && MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW=1 BASE_TX_GAS=10000 PUBLISH_INTERVAL=120 NUM_INNER_ROLLUP_TXS=3 NUM_OUTER_ROLLUP_PROOFS=2 HALLOUMI_HOST=http://localhost:8083 ETHEREUM_HOST=http://localhost:8545 yarn start",
     "start:escape": "yarn clean_db && yarn build && `ESCAPE_BLOCK_LOWER=10 ESCAPE_BLOCK_UPPER=100 yarn -s deploy_rollup_processor 1` && MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW=1 yarn start",
-    "start:wasabi": "yarn clean_db && yarn build && `ETHEREUM_HOST=http://localhost:8545 yarn -s deploy_rollup_processor 10000` && BASE_TX_GAS=10000 PUBLISH_INTERVAL=3600 NUM_INNER_ROLLUP_TXS=28 NUM_OUTER_ROLLUP_PROOFS=2 HALLOUMI_HOST=http://localhost:8083 ETHEREUM_HOST=http://localhost:8545 yarn start",
+    "start:wasabi": "yarn clean_db && yarn build && `ETHEREUM_HOST=http://localhost:8545 yarn -s deploy_rollup_processor 10000` && BASE_TX_GAS=10000 PUBLISH_INTERVAL=3600 NUM_INNER_ROLLUP_TXS=28 NUM_OUTER_ROLLUP_PROOFS=4 HALLOUMI_HOST=http://localhost:8083 ETHEREUM_HOST=http://localhost:8545 yarn start",
+    "test:debug": "node --inspect-brk=0.0.0.0:9221 ./node_modules/.bin/jest",
     "test": "jest"
   },
   "jest": {

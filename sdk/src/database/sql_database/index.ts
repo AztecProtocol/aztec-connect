@@ -18,25 +18,30 @@ import { UserDataDao } from './user_data_dao';
 import { UserKeyDao } from './user_key_dao';
 import { UtilTxDao } from './util_tx_dao';
 
-export const getOrmConfig = (dbPath?: string): ConnectionOptions => ({
-  name: 'aztec2-sdk',
-  type: 'sqlite',
-  database: dbPath === ':memory:' ? dbPath : `${dbPath || '.'}/aztec2-sdk.sqlite`,
-  entities: [
-    AccountTxDao,
-    AliasDao,
-    ClaimDao,
-    DefiTxDao,
-    JoinSplitTxDao,
-    KeyDao,
-    NoteDao,
-    UserDataDao,
-    UserKeyDao,
-    UtilTxDao,
-  ],
-  synchronize: true,
-  logging: false,
-});
+export const getOrmConfig = (memoryDb = false, identifier?: string): ConnectionOptions => {
+  const folder = identifier ? `/${identifier}` : '';
+  const dbPath = `./data${folder}`;
+  const suffix = identifier ? `-${identifier}` : '';
+  return {
+    name: `aztec2-sdk${suffix}`,
+    type: 'sqlite',
+    database: memoryDb ? ':memory:' : `${dbPath}/aztec2-sdk.sqlite`,
+    entities: [
+      AccountTxDao,
+      AliasDao,
+      ClaimDao,
+      DefiTxDao,
+      JoinSplitTxDao,
+      KeyDao,
+      NoteDao,
+      UserDataDao,
+      UserKeyDao,
+      UtilTxDao,
+    ],
+    synchronize: true,
+    logging: false,
+  };
+};
 
 const toUserJoinSplitTx = (tx: JoinSplitTxDao) =>
   new UserJoinSplitTx(
@@ -306,7 +311,7 @@ export class SQLDatabase implements Database {
     let commited = false;
     while (!commited) {
       const itemsCopy = [...items];
-      const connection = getConnection(getOrmConfig().name);
+      const connection = getConnection(this.connection.name);
       const queryRunner = connection.createQueryRunner();
 
       // establish real database connection using our new query runner

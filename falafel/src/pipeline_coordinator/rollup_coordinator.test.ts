@@ -14,6 +14,7 @@ import { PublishTimeManager, RollupTimeout, RollupTimeouts } from './publish_tim
 import { RollupCoordinator } from './rollup_coordinator';
 import { TxFeeResolver } from '../tx_fee_resolver';
 import { BridgeCostResolver } from '../tx_fee_resolver/bridge_cost_resolver';
+import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 
 jest.useFakeTimers();
 
@@ -158,7 +159,23 @@ describe('rollup_coordinator', () => {
     };
 
     rollupCreator = {
-      create: jest.fn().mockResolvedValue(Buffer.alloc(0)),
+      create: jest
+        .fn()
+        .mockImplementation(async (txs: TxDao[], rootRollupBridgeIds: BridgeId[], rootRollupAssetIds: Set<AssetId>) => {
+          for (const tx of txs) {
+            const proof = new ProofData(tx.proofData);
+            if (proof.proofId === ProofId.ACCOUNT) {
+              continue;
+            }
+            rootRollupAssetIds.add(proof.txFeeAssetId.readUInt32BE(28));
+            if (proof.proofId !== ProofId.DEFI_DEPOSIT) {
+              continue;
+            }
+            if (rootRollupBridgeIds.findIndex(bridge => bridge.toBuffer().equals(proof.bridgeId)) === -1) {
+              rootRollupBridgeIds.push(BridgeId.fromBuffer(proof.bridgeId));
+            }
+          }
+        }),
       interrupt: jest.fn(),
     };
 
@@ -501,7 +518,17 @@ describe('rollup_coordinator', () => {
         mockTx(5, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
         mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
       ];
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      let rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(false);
+      expectProcessedTxIds([2, 0, 1, 3, 4, 5]);
+
+      expect(rollupCreator.create).toHaveBeenCalledTimes(3);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
+
+      // 6 txs have been rollup so pending txs now just has the last one
+      pendingTxs.splice(0, 6);
+      rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
       expectProcessedTxIds([2, 0, 1, 3, 4, 5, 6]);
 
@@ -794,6 +821,37 @@ describe('rollup_coordinator', () => {
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
+    it('single defi tx can publish if it covers rollup + bridge costs 3', async () => {
+      let almostFullCost = BigInt(numInnerRollupTxs * numOuterRollupProofs - 1) * BASE_GAS; // needs 1 more tx to make profitable
+      almostFullCost += bridgeConfigs[1].fee; // bridge cost
+      let pendingTxs = [
+        mockDefiBridgeTx(0, almostFullCost, bridgeConfigs[1].bridgeId),
+        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+      ];
+      let rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(false);
+      expectProcessedTxIds([0, 1]);
+
+      // 1 inner rollup has been created
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
+
+      // calling agian with the empty array of pending txs will cause the publish
+      pendingTxs = [];
+      rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expectProcessedTxIds([0, 1]);
+
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
+        [bridgeConfigs[1].bridgeId, ...Array(3).fill(BridgeId.ZERO)].map((x: BridgeId) => x.toString()),
+      );
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
     it('single payment tx can publish if it covers complete cost', async () => {
       let fullCost = BigInt(numInnerRollupTxs * numOuterRollupProofs) * BASE_GAS; // full base cost of rollup
       fullCost += NON_DEFI_TX_GAS; // payment tx cost
@@ -801,6 +859,37 @@ describe('rollup_coordinator', () => {
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0]);
+
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
+        Array(4)
+          .fill(BridgeId.ZERO)
+          .map((x: BridgeId) => x.toString()),
+      );
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
+    it('single payment tx can publish if it covers complete cost 2', async () => {
+      let fullCost = BigInt(numInnerRollupTxs * numOuterRollupProofs) * BASE_GAS; // full base cost of rollup
+      fullCost += NON_DEFI_TX_GAS; // payment tx cost
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.TRANSFER, txFee: fullCost, txFeeAssetId: AssetId.ETH }),
+        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+      ];
+      let rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(false);
+      expectProcessedTxIds([0, 1]);
+
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
+
+      // pending txs is now empty, call again with the empty array and the rollup will be published
+      rp = await coordinator.processPendingTxs([]);
+      expect(rp.published).toBe(true);
+      expectProcessedTxIds([0, 1]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
@@ -957,6 +1046,46 @@ describe('rollup_coordinator', () => {
       rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0]);
+
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
+        Array(4)
+          .fill(BridgeId.ZERO)
+          .map((x: BridgeId) => x.toString()),
+      );
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
+    it('should publish a rollup after the rollup timeout 2', async () => {
+      // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
+      // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
+
+      const pendingTxs = [...Array(numInnerRollupTxs)].map((_, i) =>
+        mockTx(i, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+      );
+      let rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(false);
+      expectProcessedTxIds([...Array(numInnerRollupTxs)].map((_, i) => i));
+
+      // txs have been rolled up but not published
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
+
+      // set the rollup timeout to the following
+      rollupTimeouts = {
+        ...rollupTimeouts,
+        baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
+      };
+      // and set current time just after the timeout
+      currentTime = new Date('2021-06-20T12:00:01+01:00');
+
+      // run again, with no pending txs and we will publish
+      rp = await coordinator.processPendingTxs([]);
+      expect(rp.published).toBe(true);
+      expectProcessedTxIds([...Array(numInnerRollupTxs)].map((_, i) => i));
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
@@ -1167,7 +1296,7 @@ describe('rollup_coordinator', () => {
     it('will not timeout defi deposit txs if we have more than the allowed distinct bridge ids', async () => {
       // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
       // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
-      const pendingTxs = [
+      const allTxs = [
         mockDefiBridgeTx(0, 8000000n, bridgeConfigs[0].bridgeId),
         mockDefiBridgeTx(1, 8000000n, bridgeConfigs[1].bridgeId),
         mockDefiBridgeTx(2, 8000000n, bridgeConfigs[2].bridgeId),
@@ -1182,6 +1311,8 @@ describe('rollup_coordinator', () => {
         mockTx(11, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
       ];
 
+      let pendingTxs = allTxs;
+
       // set the rollup timeout and bridge timeouts to the following
       rollupTimeouts = {
         ...rollupTimeouts,
@@ -1194,18 +1325,41 @@ describe('rollup_coordinator', () => {
       // bridge[4] is in timeout but we can't fit in in as we have exceeded the max number of bridge ids
       currentTime = new Date('2021-06-20T12:00:01+01:00');
 
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      // this call won't trigger the rollup yet
+      let rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(false);
+      expect(coordinator.processedTxs).toEqual([
+        allTxs[0],
+        allTxs[1],
+        allTxs[2],
+        allTxs[3],
+        allTxs[6],
+        allTxs[8],
+        allTxs[10],
+        allTxs[11],
+      ]);
+
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
+
+      // pending txs now just contains those DEFI txs that can't be rolled up
+      pendingTxs = [allTxs[4], allTxs[5], allTxs[7], allTxs[9]];
+
+      // calling this again should trigger the rollup
+      rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
       expect(coordinator.processedTxs).toEqual([
-        pendingTxs[0],
-        pendingTxs[1],
-        pendingTxs[2],
-        pendingTxs[3],
-        pendingTxs[6],
-        pendingTxs[8],
-        pendingTxs[10],
-        pendingTxs[11],
+        allTxs[0],
+        allTxs[1],
+        allTxs[2],
+        allTxs[3],
+        allTxs[6],
+        allTxs[8],
+        allTxs[10],
+        allTxs[11],
       ]);
+
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
@@ -1330,7 +1484,7 @@ describe('rollup_coordinator', () => {
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
-      expect(rollupCreator.create).toHaveBeenCalledWith([
+      expect(rollupCreator.create.mock.calls[0][0]).toEqual([
         defiTxs[0],
         defiTxs[1],
         chainedTxs[0],
@@ -1358,6 +1512,23 @@ describe('rollup_coordinator', () => {
     it('should aggregate and publish all txs', async () => {
       const pendingTxs = [mockTx(0)];
       const rp = await coordinator.processPendingTxs(pendingTxs, flush);
+      expect(rp.published).toBe(true);
+      expect(coordinator.processedTxs).toEqual(pendingTxs);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
+    it('should aggregate and publish all txs 2', async () => {
+      const pendingTxs = [mockTx(0), mockTx(1)];
+      let rp = await coordinator.processPendingTxs(pendingTxs, flush);
+      expect(rp.published).toBe(false);
+      expect(coordinator.processedTxs).toEqual(pendingTxs);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
+      // calling again with an empty set of pending txs causes the rollup to be published
+      rp = await coordinator.processPendingTxs([], flush);
       expect(rp.published).toBe(true);
       expect(coordinator.processedTxs).toEqual(pendingTxs);
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);

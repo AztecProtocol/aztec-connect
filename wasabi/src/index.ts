@@ -1,5 +1,4 @@
 import { AgentManager } from './agent_manager';
-import { WalletProvider } from '@aztec/sdk';
 import 'log-timestamp';
 import 'source-map-support/register';
 
@@ -9,7 +8,9 @@ const {
   NUM_PAYMENT_AGENTS = '1',
   LOOP = '0',
   ROLLUP_HOST = 'https://api.aztec.network/falafel',
-  MNEMONIC = 'shrimp diagram word bacon also lend monkey allow kiss credit have neck',
+  NUM_SDKS = '8',
+  ROLLUP_SIZE = '112',
+  MEMORY_DB = '0',
 } = process.env;
 
 async function main() {
@@ -17,10 +18,23 @@ async function main() {
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
 
-  const provider = WalletProvider.fromHost(ETHEREUM_HOST);
-  const agent = new AgentManager(+NUM_DEFI_AGENTS, +NUM_PAYMENT_AGENTS, ROLLUP_HOST, MNEMONIC, provider, ':memory:');
-  await agent.start(!!+LOOP);
-  await agent.shutdown();
+  const loop = +LOOP;
+  const numSdks = +NUM_SDKS;
+  let count = 1;
+  do {
+    const agent = new AgentManager(
+      +NUM_DEFI_AGENTS,
+      +NUM_PAYMENT_AGENTS,
+      ROLLUP_HOST,
+      ETHEREUM_HOST,
+      !!+MEMORY_DB,
+      numSdks,
+      +ROLLUP_SIZE,
+    );
+    await agent.start(count);
+    await agent.shutdown();
+    count += 1;
+  } while (loop > 0);
 }
 
 main().catch(console.log);

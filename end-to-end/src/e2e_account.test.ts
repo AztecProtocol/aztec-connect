@@ -12,7 +12,7 @@ import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
 
-jest.setTimeout(20 * 60 * 1000);
+jest.setTimeout(25 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
 
 const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost:8081' } = process.env;
@@ -32,7 +32,7 @@ describe('end-to-end account tests', () => {
       syncInstances: false,
       saveProvingKey: false,
       clearDb: true,
-      dbPath: ':memory:',
+      memoryDb: true,
       minConfirmation: 1,
       minConfirmationEHW: 1,
     });
@@ -82,7 +82,9 @@ describe('end-to-end account tests', () => {
       // Create a join split proof to shield to account nonce 1.
       const assetId = AssetId.ETH;
       const value = sdk.toBaseUnits(assetId, '0.02');
-      const txFee = await sdk.getFee(assetId, TxType.DEPOSIT);
+      // in order to flush this deposit through, we will pay for all slots in the rollup
+      // for this test rollup size is 6. So we need to pay for 4 additional slots;
+      const txFee = 5n * await sdk.getFee(assetId, TxType.DEPOSIT);
       const shieldProof = await sdk.createJoinSplitProof(
         assetId,
         user0.id,

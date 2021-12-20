@@ -37,7 +37,7 @@ describe('end-to-end mixed tests', () => {
       syncInstances: false,
       saveProvingKey: false,
       clearDb: true,
-      dbPath: ':memory:',
+      memoryDb: true,
       minConfirmation: 1,
       minConfirmationEHW: 1,
     };

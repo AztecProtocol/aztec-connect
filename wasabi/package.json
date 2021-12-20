@@ -7,9 +7,10 @@
     "build": "yarn clean && tsc -p tsconfig.cjs.json",
     "build:dev": "tsc -p tsconfig.cjs.json --watch",
     "start": "node ./dest",
+    "debug": "node --inspect-brk=0.0.0.0:9221 ./dest",
     "start:dev": "tsc-watch -p tsconfig.cjs.json --onSuccess 'yarn start'",
     "test": "jest --passWithNoTests",
-    "start:local": "yarn build && DEBUG=bb:user_state ETHEREUM_HOST=http://localhost:8545 NUM_DEFI_AGENTS=50 NUM_PAYMENT_AGENTS=50 ROLLUP_HOST=http://localhost:8081 MNEMONIC='test test test test test test test test test test test junk' node ./dest",
+    "start:soak": "yarn build && DEBUG=bb:user_state ETHEREUM_HOST=http://localhost:8545 NUM_DEFI_AGENTS=0 NUM_PAYMENT_AGENTS=1 NUM_SDKS=1 MEMORY_DB=0 ROLLUP_HOST=http://localhost:8081 yarn start",
     "clean": "rm -rf ./dest"
   },
   "jest": {
@@ -29,7 +30,6 @@
   },
   "dependencies": {
     "@aztec/sdk": "file:../sdk/dest",
-    "@ethersproject/experimental": "5.5.0",
     "ethers": "5.5.1",
     "log-timestamp": "^0.3.0",
     "source-map-support": "^0.5.19",

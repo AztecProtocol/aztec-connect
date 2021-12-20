@@ -1,4 +1,14 @@
-import { AccountId, AssetId, createWalletSdk, EthAddress, TxHash, TxType, WalletProvider, WalletSdk } from '@aztec/sdk';
+import {
+  AccountId,
+  AssetId,
+  createWalletSdk,
+  EthAddress,
+  toBaseUnits,
+  TxHash,
+  TxType,
+  WalletProvider,
+  WalletSdk,
+} from '@aztec/sdk';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
 
@@ -30,14 +40,20 @@ describe('end-to-end tests', () => {
   const awaitSettlementTimeout = 600;
 
   beforeAll(async () => {
-    provider = await createFundedWalletProvider(ETHEREUM_HOST, 2, 1, Buffer.from(PRIVATE_KEY, 'hex'), 10n ** 17n);
+    provider = await createFundedWalletProvider(
+      ETHEREUM_HOST,
+      2,
+      1,
+      Buffer.from(PRIVATE_KEY, 'hex'),
+      toBaseUnits('0.035', 18),
+    );
     accounts = provider.getAccounts();
 
     sdk = await createWalletSdk(provider, ROLLUP_HOST, {
       syncInstances: false,
       saveProvingKey: false,
       clearDb: true,
-      dbPath: ':memory:',
+      memoryDb: true,
       minConfirmation: 1,
       minConfirmationEHW: 1,
     });
@@ -55,7 +71,7 @@ describe('end-to-end tests', () => {
   });
 
   it('should deposit, transfer and withdraw funds', async () => {
-    const depositValue = sdk.toBaseUnits(assetId, '0.02');
+    const depositValue = sdk.toBaseUnits(assetId, '0.03');
     const transferValue = sdk.toBaseUnits(assetId, '0.007');
     const withdrawValue = sdk.toBaseUnits(assetId, '0.008');
 
@@ -84,16 +100,7 @@ describe('end-to-end tests', () => {
       txHashes.push(await sdk.sendProof(depositProof, depositSignature));
     }
 
-    // Transfer to user 1.
-    {
-      const recipient = userIds[1];
-      const txFee = await sdk.getFee(assetId, TxType.TRANSFER);
-      accumPrivateFee += txFee;
-      const transferProof = await sdk.createTransferProof(assetId, sender, transferValue, txFee, signer, recipient);
-      txHashes.push(await sdk.sendProof(transferProof));
-    }
-
-    // Withdraw to user 0.
+    // Withdraw some to self.
     {
       const recipient = accounts[0];
       const txFee = await sdk.getFee(assetId, TxType.WITHDRAW_TO_WALLET);
@@ -102,11 +109,32 @@ describe('end-to-end tests', () => {
       txHashes.push(await sdk.sendProof(withdrawProof));
     }
 
-    await Promise.all(txHashes.map(txHash => sdk.awaitSettlement(txHash, awaitSettlementTimeout)));
+    // Withdraw some more to self.
+    {
+      const recipient = accounts[0];
+      const txFee = await sdk.getFee(assetId, TxType.WITHDRAW_TO_WALLET);
+      accumPrivateFee += txFee;
+      const withdrawProof = await sdk.createWithdrawProof(assetId, sender, withdrawValue, txFee, signer, recipient);
+      txHashes.push(await sdk.sendProof(withdrawProof));
+    }
 
-    expect(await sdk.getPublicBalance(assetId, accounts[0])).toBe(initialPublicBalance0 + withdrawValue);
+    // Transfer some to user 1.
+    {
+      const recipient = userIds[1];
+      // pay for all remaining slots in the rollup to flush it through
+      const txFee = 3n * (await sdk.getFee(assetId, TxType.WITHDRAW_TO_WALLET));
+      accumPrivateFee += txFee;
+      const transferProof = await sdk.createTransferProof(assetId, sender, transferValue, txFee, signer, recipient);
+      txHashes.push(await sdk.sendProof(transferProof));
+    }
+
+    await Promise.all(txHashes.map(hash => sdk.awaitSettlement(hash, awaitSettlementTimeout)));
+
+    expect(await sdk.getPublicBalance(assetId, accounts[0])).toBe(initialPublicBalance0 + withdrawValue * 2n);
     expect(await sdk.getPublicBalance(assetId, accounts[1])).toBe(initialPublicBalance1);
-    expect(sdk.getBalance(assetId, userIds[0])).toBe(depositValue - transferValue - withdrawValue - accumPrivateFee);
+    expect(sdk.getBalance(assetId, userIds[0])).toBe(
+      depositValue - transferValue - 2n * withdrawValue - accumPrivateFee,
+    );
     expect(sdk.getBalance(assetId, userIds[1])).toBe(transferValue);
   });
 });

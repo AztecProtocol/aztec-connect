@@ -13,9 +13,11 @@ import { CoreSdk, CoreSdkEvent, CoreSdkOptions } from './core_sdk';
 
 const debug = createDebug('bb:create_sdk');
 
-function getLevelDb(dbPath = 'data') {
+function getLevelDb(memoryDb = false, identifier?: string) {
+  const folder = identifier ? `/${identifier}` : '';
+  const dbPath = `./data${folder}`;
   if (isNode) {
-    if (dbPath === ':memory:') {
+    if (memoryDb) {
       // eslint-disable-next-line
       return levelup(require('memdown')());
     } else {
@@ -25,13 +27,13 @@ function getLevelDb(dbPath = 'data') {
     }
   } else {
     // eslint-disable-next-line
-    return levelup(require('level-js')('aztec2-sdk'));
+    return levelup(require('level-js')(`aztec2-sdk`));
   }
 }
 
-async function getDb(dbPath = 'data') {
+async function getDb(memoryDb = false, identifier?: string) {
   if (isNode) {
-    const config = getOrmConfig(dbPath);
+    const config = getOrmConfig(memoryDb, identifier);
     const connection = await createConnection(config);
     return new SQLDatabase(connection);
   } else {
@@ -43,9 +45,10 @@ export type SdkOptions = {
   syncInstances?: boolean;
   clearDb?: boolean;
   debug?: boolean;
-  dbPath?: string;
+  memoryDb?: boolean;
   minConfirmation?: number;
   minConfirmationEHW?: number;
+  identifier?: string;
 } & CoreSdkOptions;
 
 async function sdkFactory(hostStr: string, options: SdkOptions) {
@@ -54,8 +57,8 @@ async function sdkFactory(hostStr: string, options: SdkOptions) {
   }
 
   const host = new URL(hostStr);
-  const leveldb = getLevelDb(options.dbPath);
-  const db = await getDb(options.dbPath);
+  const leveldb = getLevelDb(options.memoryDb, options.identifier);
+  const db = await getDb(options.memoryDb, options.identifier);
 
   await db.init();
 

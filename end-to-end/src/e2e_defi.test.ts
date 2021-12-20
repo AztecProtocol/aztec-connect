@@ -9,6 +9,7 @@ import {
   TxType,
   WalletProvider,
   WalletSdk,
+  toBaseUnits,
 } from '@aztec/sdk';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
@@ -34,14 +35,14 @@ describe('end-to-end defi tests', () => {
   const awaitSettlementTimeout = 600;
 
   beforeAll(async () => {
-    provider = await createFundedWalletProvider(ETHEREUM_HOST, 1);
+    provider = await createFundedWalletProvider(ETHEREUM_HOST, 1, undefined, undefined, toBaseUnits('0.2', 18));
     accounts = provider.getAccounts();
 
     sdk = await createWalletSdk(provider, ROLLUP_HOST, {
       syncInstances: false,
       saveProvingKey: false,
       clearDb: true,
-      dbPath: ':memory:',
+      memoryDb: true,
       minConfirmation: 1,
       minConfirmationEHW: 1,
     });
@@ -68,7 +69,9 @@ describe('end-to-end defi tests', () => {
     const shieldValue = sdk.toBaseUnits(AssetId.ETH, '0.08');
     {
       const assetId = AssetId.ETH;
-      const txFee = await sdk.getFee(assetId, TxType.DEPOSIT);
+      // flush this transaction through by paying for all the slots in the rollup, hence 6 * Deposit fee
+      const txFee = 6n * (await sdk.getFee(assetId, TxType.DEPOSIT));
+      const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
       const proofOutput = await sdk.createDepositProof(assetId, depositor, userId, shieldValue, txFee, signer);
       const signature = await sdk.signProof(proofOutput, depositor);
       const txHash = await sdk.depositFundsToContract(assetId, depositor, shieldValue + txFee);
@@ -91,7 +94,8 @@ describe('end-to-end defi tests', () => {
         new BitConfig(false, false, false, false, false, false),
         0,
       );
-      const txFee = await sdk.getFee(inputAssetId, TxType.DEFI_DEPOSIT);
+      const txFee =
+        (await sdk.getFee(inputAssetId, TxType.DEFI_DEPOSIT)) + 5n * (await sdk.getFee(AssetId.ETH, TxType.TRANSFER)); // 5 * j/s fees to push the rollup through
       const depositValue = sdk.toBaseUnits(inputAssetId, '0.05');
       const proofOutput = await sdk.createDefiProof(bridgeId, userId, depositValue, txFee, signer);
       const defiTxHash = await sdk.sendProof(proofOutput);
@@ -119,8 +123,6 @@ describe('end-to-end defi tests', () => {
     {
       const bridgeAddressId = 2;
       const inputAssetId = AssetId.DAI;
-      const outputAssetIdA = AssetId.ETH;
-      const outputAssetIdB = 0;
       const bridgeId = new BridgeId(
         bridgeAddressId,
         inputAssetId,
@@ -137,7 +139,7 @@ describe('end-to-end defi tests', () => {
       const defiFee = await sdk.getFee(inputAssetId, TxType.DEFI_DEPOSIT);
       const jsTxFee = await sdk.getFee(inputAssetId, TxType.TRANSFER);
       // TODO - return the fee `defiFee - jsTxFee` from the sdk if specify the output note from the defi deposit tx can be chained from.
-      const txFee = defiFee - jsTxFee;
+      const txFee = defiFee - jsTxFee + 5n * jsTxFee; // 5 j/s fees are to push the rollup through
       const depositValue = initialDaiBalance - txFee;
 
       const allowChain = true;
@@ -155,8 +157,8 @@ describe('end-to-end defi tests', () => {
         txFee,
         outputValueB: 0n,
       });
-      expect(sdk.getBalance(inputAssetId, userId)).toBe(0n);
-      expect(sdk.getBalance(outputAssetIdA, userId)).toBe(initialEthBalance + defiTx.outputValueA);
+      expect(sdk.getBalance(AssetId.ETH, userId)).toBe(initialEthBalance + defiTx.outputValueA);
+      expect(sdk.getBalance(AssetId.DAI, userId)).toBe(0n);
     }
   });
 });

@@ -37,6 +37,7 @@ describe('pipeline_coordinator', () => {
 
   const mockTx = (created = moment()) =>
     ({
+      id: randomBytes(32),
       proofData: Buffer.concat([
         randomBytes(32),
         randomBytes(32),

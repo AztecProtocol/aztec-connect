@@ -195,15 +195,15 @@ const perChainBridgeConfig: { [key: string]: any[] } = {
   '1337': [
     {
       bridgeId: '0x0000000000000000000000000000000000000000000000004000000000000001',
-      numTxs: 3,
-      fee: 30000,
+      numTxs: 10,
+      fee: 100000,
       rollupFrequency: 2,
     },
     {
       bridgeId: '0x0000000000000000000000000000000000000000000000000000000100000002',
-      numTxs: 3,
-      fee: 30000,
-      rollupFrequency: 3,
+      numTxs: 10,
+      fee: 100000,
+      rollupFrequency: 2,
     },
   ],
 };

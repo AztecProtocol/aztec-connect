@@ -6,6 +6,7 @@ import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofGenerator, TxRollup, TxRollupProofRequest } from 'halloumi/proof_generator';
 import { RollupProofDao } from './entity/rollup_proof';
 import { TxDao } from './entity/tx';
@@ -32,11 +33,11 @@ export class RollupCreator {
    * Creates a rollup from the given txs and publishes it.
    * @returns true if successfully published, otherwise false.
    */
-  public async create(txs: TxDao[]) {
+  public async create(txs: TxDao[], rootRollupBridgeIds: BridgeId[], rootRollupAssetIds: Set<AssetId>) {
     if (!txs.length) {
       throw new Error('Txs empty.');
     }
-    const rollup = await this.createRollup(txs);
+    const rollup = await this.createRollup(txs, rootRollupBridgeIds, rootRollupAssetIds);
 
     console.log(`Creating proof for rollup ${rollup.rollupHash.toString('hex')} with ${txs.length} txs...`);
     const end = this.metrics.txRollupTimer();
@@ -68,7 +69,7 @@ export class RollupCreator {
     // TODO: Interrupt proof creation.
   }
 
-  private async createRollup(txs: TxDao[]) {
+  private async createRollup(txs: TxDao[], rootRollupBridgeIds: BridgeId[], rootRollupAssetIds: Set<AssetId>) {
     const rollupId = await this.rollupDb.getNextRollupId();
 
     // To find the correct data start index, we need to position ourselves on:
@@ -92,8 +93,8 @@ export class RollupCreator {
     const newNullPaths: HashPath[] = [];
     const dataRootsPaths: HashPath[] = [];
     const dataRootsIndicies: number[] = [];
-    const bridgeIds: Buffer[] = [];
-    const assetIds: Set<AssetId> = new Set();
+    const localAssetIds: Set<AssetId> = new Set();
+    const localBridgeIds: Buffer[] = [];
 
     const proofs = txs.map(tx => new ProofData(tx.proofData));
     const { linkedCommitmentPaths, linkedCommitmentIndices } = await this.getLinkedCommitments(proofs);
@@ -103,17 +104,23 @@ export class RollupCreator {
       const tx = txs[i];
 
       if (proof.proofId !== ProofId.ACCOUNT) {
-        assetIds.add(proof.txFeeAssetId.readUInt32BE(28));
+        const assetId = proof.txFeeAssetId.readUInt32BE(28);
+        localAssetIds.add(assetId);
+        rootRollupAssetIds.add(assetId);
       }
 
       if (proof.proofId !== ProofId.DEFI_DEPOSIT) {
         await worldStateDb.put(RollupTreeId.DATA, nextDataIndex++, proof.noteCommitment1);
       } else {
-        if (!bridgeIds.some(id => id.equals(proof.bridgeId))) {
-          bridgeIds.push(proof.bridgeId);
+        if (!localBridgeIds.some(id => id.equals(proof.bridgeId))) {
+          localBridgeIds.push(proof.bridgeId);
         }
-        const interactionNonce =
-          rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK + bridgeIds.findIndex(id => id.equals(proof.bridgeId));
+        let rootBridgeIndex = rootRollupBridgeIds.findIndex(id => id.toBuffer().equals(proof.bridgeId));
+        if (rootBridgeIndex === -1) {
+          rootBridgeIndex = rootRollupBridgeIds.length;
+          rootRollupBridgeIds.push(BridgeId.fromBuffer(proof.bridgeId));
+        }
+        const interactionNonce = rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK + rootBridgeIndex;
         const txFee = toBigIntBE(proof.txFee);
         const claimFee = txFee - (txFee >> BigInt(1));
         const encNote = this.noteAlgo.claimNoteCompletePartialCommitment(
@@ -180,9 +187,9 @@ export class RollupCreator {
       dataRootsIndicies,
 
       newDefiRoot,
-      bridgeIds,
+      localBridgeIds,
 
-      [...assetIds].map(id => numToUInt32BE(id, 32)),
+      [...localAssetIds].map(id => numToUInt32BE(id, 32)),
     );
   }
 
@@ -202,16 +209,36 @@ export class RollupCreator {
         linkedCommitmentPaths.push(emptyPath);
         linkedCommitmentIndices.push(0);
       } else {
-        const offset = 1 + dataTreeValues.findIndex(c => c.equals(backwardLink));
-        let index = dataSize - BigInt(offset);
-        let value = dataTreeValues[offset - 1];
-        while (!value?.equals(backwardLink)) {
-          index--;
-          value = await this.worldStateDb.get(RollupTreeId.DATA, index);
-          dataTreeValues.push(value);
+        // the cache is built up so that it contains commitments in reverse order to that of the tree
+        // e.g. commitment at dataTree[dataSize - 1] == dataTreeValues[0]
+        const indexIntoCache = dataTreeValues.findIndex(c => c.equals(backwardLink));
+        if (indexIntoCache !== -1) {
+          // our referenced commitment exists in the cache.
+          const indexIntoTree = dataSize - BigInt(indexIntoCache + 1);
+          linkedCommitmentPaths.push(await this.worldStateDb.getHashPath(RollupTreeId.DATA, indexIntoTree));
+          linkedCommitmentIndices.push(Number(indexIntoTree));
+        } else {
+          // our reference commitment is not in the cache, we need to scan further back through the tree to find it
+          // of course we will increase our cache along the way
+          let indexIntoTree = dataSize - BigInt(dataTreeValues.length + 1);
+          while (indexIntoTree >= 0) {
+            const valueFromTree = await this.worldStateDb.get(RollupTreeId.DATA, indexIntoTree);
+            dataTreeValues.push(valueFromTree);
+            if (valueFromTree.equals(backwardLink)) {
+              // we found our link
+              linkedCommitmentPaths.push(await this.worldStateDb.getHashPath(RollupTreeId.DATA, indexIntoTree));
+              linkedCommitmentIndices.push(Number(indexIntoTree));
+              break;
+            }
+            indexIntoTree--;
+          }
+          if (indexIntoTree < 0) {
+            //we couldn't find the commitment. shouldn't get here, use the empty path but this will likely be rejected
+            console.log(`Could not find commitment that we are linked from: ${backwardLink.toString('hex')}`);
+            linkedCommitmentPaths.push(emptyPath);
+            linkedCommitmentIndices.push(0);
+          }
         }
-        linkedCommitmentPaths.push(await this.worldStateDb.getHashPath(RollupTreeId.DATA, index));
-        linkedCommitmentIndices.push(Number(index));
       }
       const commitmentStrings = [noteCommitment1, noteCommitment2]
         .filter(c => !c.equals(emptyBuffer))

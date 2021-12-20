@@ -124,7 +124,7 @@ describe('Profile Rollup', () => {
   });
 
   it('gives profile for zero txs', () => {
-    const rollupProfile = profileRollup([], bridgeConfigs, feeResolver as any, 20, bridgeCostResolver as any);
+    const rollupProfile = profileRollup([], feeResolver as any, 5, 20, bridgeCostResolver as any);
     expect(rollupProfile).toBeTruthy();
     expect(rollupProfile.published).toBe(false);
     expect(rollupProfile.rollupSize).toBe(20);
@@ -149,7 +149,7 @@ describe('Profile Rollup', () => {
     ];
 
     const rollupTxs = txs.map(createRollupTx);
-    const rollupProfile = profileRollup(rollupTxs, bridgeConfigs, feeResolver as any, 20, bridgeCostResolver as any);
+    const rollupProfile = profileRollup(rollupTxs, feeResolver as any, 5, 20, bridgeCostResolver as any);
     expect(rollupProfile).toBeTruthy();
     expect(rollupProfile.published).toBe(false);
     expect(rollupProfile.rollupSize).toBe(20);
@@ -224,7 +224,7 @@ describe('Profile Rollup', () => {
     ];
 
     const rollupTxs = txs.map(createRollupTx);
-    const rollupProfile = profileRollup(rollupTxs, bridgeConfigs, feeResolver as any, 30, bridgeCostResolver as any);
+    const rollupProfile = profileRollup(rollupTxs, feeResolver as any, 5, 30, bridgeCostResolver as any);
     expect(rollupProfile).toBeTruthy();
     expect(rollupProfile.published).toBe(false);
     expect(rollupProfile.rollupSize).toBe(30);

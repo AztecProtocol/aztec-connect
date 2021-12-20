@@ -30,6 +30,9 @@ services:
       ETHEREUM_HOST: http://ganache:8545
       HALLOUMI_HOST: http://halloumi:8083
       NUM_OUTER_ROLLUP_PROOFS: 2
+      NUM_INNER_ROLLUP_TXS: 3
+      BASE_TX_GAS: 10000
+      PUBLISH_INTERVAL: 120
       NODE_ENV: production
       TX_FEE: 100000000000000000
     depends_on:

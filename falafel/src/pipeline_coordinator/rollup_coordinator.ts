@@ -202,11 +202,13 @@ export class RollupCoordinator {
     return txs;
   }
 
-  private printRollupState(rollupProfile: RollupProfile, timeout: boolean) {
+  private printRollupState(rollupProfile: RollupProfile, timeout: boolean, flush: boolean) {
     console.log(
       `New rollup - size: ${rollupProfile.rollupSize}, numTxs: ${
         rollupProfile.totalTxs
-      }, timeout: ${timeout}, gas balance: ${rollupProfile.totalGasEarnt - rollupProfile.totalGasCost}`,
+      }, timeout/flush: ${timeout}/${flush}, gas balance: ${
+        rollupProfile.totalGasEarnt - rollupProfile.totalGasCost
+      }, inner chains: ${rollupProfile.innerChains}, outer chains: ${rollupProfile.outerChains}`,
     );
     for (const bp of rollupProfile.bridgeProfiles) {
       console.log(
@@ -217,51 +219,85 @@ export class RollupCoordinator {
     }
   }
 
-  private updateRollupBridgesAndAssets(txs: RollupTx[]) {
-    for (const tx of txs) {
-      if (isDefiDeposit(tx.tx.txType) && tx.bridgeId && !this.rollupBridgeIds.some(id => id.equals(tx.bridgeId!))) {
-        this.rollupBridgeIds.push(tx.bridgeId!);
-      }
-      this.rollupAssetIds.add(tx.feeAsset);
-    }
+  private async buildInnerRollup(pendingTxs: RollupTx[]) {
+    const txs = pendingTxs.splice(0, this.numInnerRollupTxs);
+    const rollupProofDao = await this.rollupCreator.create(
+      txs.map(rollupTx => rollupTx.tx),
+      this.rollupBridgeIds,
+      this.rollupAssetIds,
+    );
+    this.txs = [...this.txs, ...txs];
+    this.innerProofs.push(rollupProofDao);
+    return pendingTxs;
   }
 
   private async aggregateAndPublish(txs: RollupTx[], rollupTimeouts: RollupTimeouts, flush: boolean) {
-    const pendingTxs = [...txs];
+    let pendingTxs = [...txs];
+
+    const numRemainingSlots = (this.numOuterRollupProofs - this.innerProofs.length) * this.numInnerRollupTxs;
+    if (pendingTxs.length > numRemainingSlots) {
+      // this shouldn't happen!
+      console.log(
+        `ERROR: Number of pending txs is larger than the number of remaining slots! Num txs: ${pendingTxs.length}, remaining slots: ${numRemainingSlots}`,
+      );
+    }
+
+    // start by rolling up all of the full inners that we can
+    const numInnersBefore = this.innerProofs.length;
+    while (pendingTxs.length >= this.numInnerRollupTxs && this.innerProofs.length < this.numOuterRollupProofs) {
+      pendingTxs = await this.buildInnerRollup(pendingTxs);
+    }
 
     const allRollupTxs = [...this.txs, ...pendingTxs];
     const rollupProfile = profileRollup(
       allRollupTxs,
-      this.bridgeConfigs,
       this.feeResolver,
+      this.numInnerRollupTxs,
       this.numInnerRollupTxs * this.numOuterRollupProofs,
       this.bridgeCostResolver,
     );
 
-    // determine whether we should publish a new rollup
-    // either because we have been told to flush, because the rollup is fully paid for, or we have one or more tx that has 'timed out'
+    if (!rollupProfile.totalTxs) {
+      // no txs at all
+      return rollupProfile;
+    }
+
     const profit = rollupProfile.totalGasEarnt >= rollupProfile.totalGasCost;
     const timedout = rollupTimeouts.baseTimeout
       ? rollupProfile.earliestTx.getTime() <= rollupTimeouts.baseTimeout.timeout.getTime()
       : false;
     const shouldPublish = flush || profit || timedout;
-    while (
-      ((shouldPublish && pendingTxs.length) || pendingTxs.length >= this.numInnerRollupTxs) &&
-      this.innerProofs.length < this.numOuterRollupProofs
-    ) {
-      const txs = pendingTxs.splice(0, this.numInnerRollupTxs);
-      const rollupProofDao = await this.rollupCreator.create(txs.map(rollupTx => rollupTx.tx));
-      this.updateRollupBridgesAndAssets(txs);
-      this.txs = [...this.txs, ...txs];
-      this.innerProofs.push(rollupProofDao);
+
+    if (this.innerProofs.length < this.numOuterRollupProofs) {
+      // we have built all of the full inner rollups that we can but the rollup isn't full
+      if (this.innerProofs.length !== numInnersBefore) {
+        // we built at least 1 inner rollup in this iteration
+        // we will exit without doing anything further
+        // building inners takes time and there may well be additional txs available to include in this rollup
+        return rollupProfile;
+      }
+      // we haven't been able to build a full inner rollup on this iteration but we may have a condition that means we need to publish immediately
+      // this could be that at least one tx has 'timed out', we have been told to 'flush' or the rollup is profitable
+      if (!shouldPublish) {
+        // no need to publish early, exit here
+        return rollupProfile;
+      }
+      // we need to publish early, rollup any stragglers before doing so
+      if (pendingTxs.length) {
+        pendingTxs = await this.buildInnerRollup(pendingTxs);
+        if (pendingTxs.length) {
+          // should now be empty
+          console.log('ERROR: Pending Txs should be empty as we just built the last inner rollup before publish!');
+        }
+      }
     }
 
+    // here we either have
+    // 1. no rollup at all
+    // 2. a partial rollup that we need to publish
+    // 3. a full rollup
     if (!this.innerProofs.length) {
       // nothing to publish
-      return rollupProfile;
-    }
-    if (this.innerProofs.length < this.numOuterRollupProofs && !shouldPublish) {
-      // rollup isn't full and we are not pre-empitvely publishing
       return rollupProfile;
     }
 
@@ -277,7 +313,7 @@ export class RollupCoordinator {
       this.rollupPublisher.getRollupBenificiary(),
     );
     rollupProfile.published = await this.rollupPublisher.publishRollup(rollupDao);
-    this.printRollupState(rollupProfile, timedout);
+    this.printRollupState(rollupProfile, timedout, flush);
     return rollupProfile;
   }
 }

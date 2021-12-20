@@ -7,7 +7,7 @@ import 'log-timestamp';
 const {
   PORT = '8083',
   MAX_CIRCUIT_SIZE = '8388608',
-  ROLLUP_OUTERS = '2',
+  ROLLUP_OUTERS = '1,2,4',
   API_PREFIX = '',
   DATA_DIR = './data',
   PERSIST = 'true',

@@ -228,17 +228,16 @@ export class WorldState {
   private async processDefiProofs(rollup: RollupProofData, offchainTxData: Buffer[], block: Block) {
     const { innerProofData, dataStartIndex } = rollup;
     const { interactionResult } = block;
+    let offChainIndex = 0;
     for (let i = 0; i < innerProofData.length; ++i) {
       const proofData = innerProofData[i];
+      if (proofData.isPadding()) {
+        continue;
+      }
       switch (proofData.proofId) {
         case ProofId.DEFI_DEPOSIT: {
-          const {
-            bridgeId,
-            depositValue,
-            partialState,
-            partialStateSecretEphPubKey,
-            txFee,
-          } = OffchainDefiDepositData.fromBuffer(offchainTxData[i]);
+          const { bridgeId, depositValue, partialState, partialStateSecretEphPubKey, txFee } =
+            OffchainDefiDepositData.fromBuffer(offchainTxData[offChainIndex]);
           const fee = txFee - (txFee >> BigInt(1));
           const index = dataStartIndex + i * 2;
           const interactionNonce = interactionResult.find(r => r.bridgeId.equals(bridgeId))!.nonce;
@@ -263,6 +262,7 @@ export class WorldState {
           await this.rollupDb.confirmClaimed(proofData.nullifier1, block.created);
           break;
       }
+      offChainIndex++;
     }
   }
 

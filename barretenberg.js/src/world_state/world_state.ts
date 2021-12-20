@@ -39,7 +39,6 @@ export class WorldState {
     let dataStartIndex = rollups[0].dataStartIndex;
     let leaves: Buffer[] = [];
     for (const rollup of rollups) {
-      debug(`processing rollup ${rollup.rollupId}, inner proof data length ${rollup.innerProofData.length}`);
       if (rollup.dataStartIndex > dataStartIndex + leaves.length) {
         const padding = rollup.dataStartIndex - leaves.length;
         leaves.push(...new Array(padding).fill(Buffer.alloc(64, 0)));

@@ -1,81 +1,118 @@
-import { WalletSdk, WalletProvider, SdkEvent, MemoryFifo } from '@aztec/sdk';
-import { Web3Provider } from '@ethersproject/providers';
-import { Wallet } from 'ethers';
+import { WalletSdk, WalletProvider, SdkEvent, MemoryFifo, JsonRpcProvider, AssetId, TxType } from '@aztec/sdk';
 import { Agent } from './agent';
 import { SimpleAgent } from './simple_agent';
 import { DefiAgent } from './defi_agent';
-import { NonceManager } from '@ethersproject/experimental';
-// import { DepositingAgent } from './depositing_agent';
+import { Stats } from './stats';
 
 export class AgentManager {
-  private sdk!: WalletSdk;
+  private sdks: WalletSdk[] = [];
   private agents: Agent[] = [];
-  private queue = new MemoryFifo<() => Promise<void>>();
+  private queues: MemoryFifo<() => Promise<void>>[] = [];
 
   public constructor(
     private numDefiAgents: number,
     private numPaymentAgents: number,
     private rollupHost: string,
-    private mnemonic: string,
-    private provider: WalletProvider,
-    private dbPath: string,
+    private host: string,
+    private memoryDB: boolean,
+    private numSdks: number,
+    private rollupSize: number,
   ) {}
 
-  public async start(loop: boolean) {
-    console.log('Starting wasabi...');
+  public async start(runNumber: number) {
+    console.log(`Starting wasabi run ${runNumber}...`);
 
-    const ethersProvider = new Web3Provider(this.provider);
-    const masterWallet = new NonceManager(
-      Wallet.fromMnemonic(this.mnemonic, `m/44'/60'/0'/0/0`).connect(ethersProvider),
-    );
+    const ethereumProvider = new JsonRpcProvider(this.host);
+    const walletProvider = new WalletProvider(ethereumProvider);
 
-    console.log(`Master account: ${await masterWallet.getAddress()}`);
+    const accounts = await ethereumProvider.getAccounts();
+    console.log(`Master account: ${accounts[0]}`);
 
-    this.sdk = await WalletSdk.create(this.provider, this.rollupHost, {
-      syncInstances: false,
-      saveProvingKey: false,
-      clearDb: true,
-      debug: false,
-      dbPath: this.dbPath,
-    });
+    for (let i = 0; i < this.numSdks; i++) {
+      const sdk = await WalletSdk.create(walletProvider, this.rollupHost, {
+        syncInstances: false,
+        saveProvingKey: false,
+        clearDb: true,
+        debug: false,
+        memoryDb: this.memoryDB,
+        identifier: `${i + 1}`,
+      });
 
-    this.sdk.on(SdkEvent.LOG, console.log);
+      sdk.on(SdkEvent.LOG, console.log);
 
-    await this.sdk.init();
+      await sdk.init();
 
-    // console.log('Synching data tree...');
-    await this.sdk.awaitSynchronised();
+      // console.log('Synching data tree...');
+      await sdk.awaitSynchronised();
+      this.sdks.push(sdk);
+      const queue = new MemoryFifo<() => Promise<void>>();
+      queue.process(fn => fn());
+      this.queues.push(queue);
+    }
 
-    // Task queue to serialize sdk access.
-    this.queue.process(fn => fn());
+    // flush fee is an amount that's guaranteed to push through a rollup
+    const flushFee = BigInt(this.rollupSize) * (await this.sdks[0].getFee(AssetId.ETH, TxType.DEPOSIT));
+    this.agents = new Array<Agent>();
+    const totalNumAgents = this.numPaymentAgents + this.numDefiAgents;
+    while (this.agents.length < totalNumAgents) {
+      try {
+        const agent =
+          this.agents.length >= this.numDefiAgents
+            ? new SimpleAgent(
+                accounts[0],
+                this.sdks[this.agents.length % this.sdks.length],
+                walletProvider,
+                this.agents.length,
+                this.queues[this.agents.length % this.queues.length],
+              )
+            : new DefiAgent(
+                accounts[0],
+                this.sdks[this.agents.length % this.sdks.length],
+                walletProvider,
+                this.agents.length,
+                this.queues[this.agents.length % this.queues.length],
+                5,
+              );
+        await agent.setup(this.agents.length === totalNumAgents - 1 ? flushFee : undefined);
+        await agent.depositToRollup();
+        this.agents.push(agent);
+      } catch (err) {
+        console.log(err);
+      }
+    }
 
-    // this.agents = Array(this.numAgents)
-    //   .fill(0)
-    //   .map(
-    //     (_, i) =>
-    //       new DepositingAgent(
-    //         this.sdk,
-    //         this.provider,
-    //         masterWallet,
-    //         Wallet.fromMnemonic(this.mnemonic, `m/44'/60'/0'/0/${i + 1}`).connect(ethersProvider),
-    //         i,
-    //         this.queue,
-    //       ),
-    //   );
+    const stats: Stats = {
+      numDefi: 0,
+      numDeposits: 0,
+      numPayments: 0,
+      numWithdrawals: 0,
+    };
 
-    this.agents = Array(this.numDefiAgents + this.numPaymentAgents)
-      .fill(0)
-      .map((_, i) =>
-        i >= this.numDefiAgents
-          ? new SimpleAgent(this.sdk, this.provider, masterWallet, i, this.queue, loop)
-          : new DefiAgent(this.sdk, this.provider, masterWallet, i, this.queue, loop, 5),
-      );
+    // start all but the last agent
+    const firstAgents = this.agents.slice(0, this.agents.length - 1);
+    const runningPromises = firstAgents.map(a => a.run(stats));
 
-    await Promise.all(this.agents.map(a => a.run()));
+    console.log('Awaiting sending of deposits...');
+    const depositPromises = firstAgents.map(agent => agent.depositPromise);
+    await Promise.all(depositPromises);
+
+    const lastAgent = this.agents[this.agents.length - 1];
+    runningPromises.push(lastAgent.run(stats));
+
+    const start = new Date();
+    await Promise.all(runningPromises);
+    const end = new Date();
+    console.log(`Time taken: ${end.getTime() - start.getTime()}ms. Stats: `, stats);
+
+    console.log('Repaying source address...');
+    for (let i = 0; i < totalNumAgents; i++) {
+      await this.agents[i].repaySourceAddress();
+    }
+    console.log(`Test run ${runNumber} completed...`);
   }
 
   public async shutdown() {
-    this.queue.cancel();
-    await this.sdk.destroy();
+    await Promise.all(this.queues.map(queue => queue.cancel()));
+    await Promise.all(this.sdks.map(sdk => sdk.destroy()));
   }
 }

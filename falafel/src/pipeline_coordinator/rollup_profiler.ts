@@ -3,6 +3,7 @@ import { TxFeeResolver } from '../tx_fee_resolver';
 import { RollupTx } from './bridge_tx_queue';
 import { isDefiDeposit } from '@aztec/barretenberg/blockchain';
 import { BridgeCostResolver } from '../tx_fee_resolver/bridge_cost_resolver';
+import { ProofData } from '@aztec/barretenberg/client_proofs';
 
 export interface BridgeProfile {
   bridgeId: BridgeId;
@@ -21,6 +22,8 @@ export interface RollupProfile {
   totalGasEarnt: bigint;
   earliestTx: Date;
   latestTx: Date;
+  innerChains: number;
+  outerChains: number;
   bridgeProfiles: BridgeProfile[];
 }
 
@@ -33,6 +36,8 @@ export function emptyProfile(rollupSize: number) {
     totalGasEarnt: 0n,
     earliestTx: new Date(0),
     latestTx: new Date(0),
+    innerChains: 0,
+    outerChains: 0,
     bridgeProfiles: [],
   };
   return rp;
@@ -40,24 +45,34 @@ export function emptyProfile(rollupSize: number) {
 
 export function profileRollup(
   allTxs: RollupTx[],
-  bridgeConfigs: BridgeConfig[],
   feeResolver: TxFeeResolver,
+  innerRollupSize: number,
   rollupSize: number,
   bridgeCostResolver: BridgeCostResolver,
 ) {
-  const rollupProfile: RollupProfile = {
-    published: false,
-    rollupSize,
-    totalTxs: allTxs.length,
-    totalGasCost: 0n,
-    totalGasEarnt: 0n,
-    earliestTx: new Date(),
-    latestTx: new Date(),
-    bridgeProfiles: [],
-  };
+  const rollupProfile: RollupProfile = emptyProfile(rollupSize);
+  rollupProfile.totalTxs = allTxs.length;
   const bridgeProfiles = new Map<string, BridgeProfile>();
+  const commitmentLocations = new Map<string, number>();
+  const emptyBuffer = Buffer.alloc(32);
   for (let txIndex = 0; txIndex < allTxs.length; txIndex++) {
     const tx = allTxs[txIndex];
+    const proof = new ProofData(tx.tx.proofData);
+    const currentInner = Math.trunc(txIndex / innerRollupSize);
+    const noteStrings = [proof.noteCommitment1, proof.noteCommitment2].filter(n => !n.equals(emptyBuffer)).map(n => n.toString('hex'));
+    for (const noteString of noteStrings) {
+      commitmentLocations.set(noteString, currentInner);
+    }
+    if (!proof.backwardLink.equals(emptyBuffer)) {
+      const link = commitmentLocations.get(proof.backwardLink.toString('hex'));
+      if (link !== undefined) {
+        if (link === currentInner) {
+          rollupProfile.innerChains++;
+        } else {
+          rollupProfile.outerChains++;
+        }
+      }
+    }
     if (!txIndex) {
       rollupProfile.earliestTx = tx.tx.created;
       rollupProfile.latestTx = tx.tx.created;

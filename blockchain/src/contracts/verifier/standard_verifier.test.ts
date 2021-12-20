@@ -17,12 +17,12 @@ describe('StandardVerifier', function () {
     console.log(`gasUsed: ${gasUsed}`);
   }
 
-  it('should validate a 2 rollup proof (1 tx)', async () => {
-    await validate(1, 2);
+  it('should verify a 3 encoded proof (4 tx)', async () => {
+    await validate(3, 2);
   });
 
   it('should fail to validate bad proof', async () => {
-    const { proofData, inputHash } = await getRollupData(1, 2);
+    const { proofData, inputHash } = await getRollupData(3, 2);
 
     // Bork.
     proofData.writeUInt8(10, 300);

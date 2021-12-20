@@ -61,7 +61,8 @@ export class PipelineCoordinator {
       while (this.running) {
         const pendingTxs = await this.rollupDb.getPendingTxs();
         const rollupProfile = await this.rollupCoordinator.processPendingTxs(pendingTxs, this.flush);
-        if (rollupProfile.published || this.flush) {
+        if (rollupProfile.published || // rollup has been published so we exit this loop
+          (!rollupProfile.totalTxs && this.flush)) { // we are in a flush state and this iteration produced no rollup-able txs, so we exit
           this.running = false;
           break;
         }
