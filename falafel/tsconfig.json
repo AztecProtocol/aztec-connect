@@ -14,7 +14,8 @@
     "experimentalDecorators": true,
     "inlineSourceMap": true,
     "declarationMap": true,
-    "types": ["node", "jest"]
+    "types": ["node", "jest"],
+    "useUnknownInCatchVariables": false
   },
   "include": ["src"]
 }
