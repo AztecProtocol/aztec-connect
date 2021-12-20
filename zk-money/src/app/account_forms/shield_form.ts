@@ -482,9 +482,10 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       } else if (amountValue > maxAmount.value) {
         toUpdate.amount = withError(
           amountInput,
-          `Insufficient ${this.asset.symbol} Balance. Please reserve at least ${fromBaseUnits(
+          `Insufficient ${this.asset.symbol} Balance. Please reserve at least ${formatBaseUnits(
             gasCost!.value,
             this.asset.decimals,
+            { precision: preferredFractionalDigits },
           )} ${this.asset.symbol} for gas cost.`,
         );
       }
@@ -846,7 +847,10 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     if (amount && !this.values.amount.value) {
       this.updateFormValues({
         amount: {
-          value: formatBaseUnits(amount, this.asset.decimals, { precision: this.asset.preferredFractionalDigits }),
+          value: formatBaseUnits(amount, this.asset.decimals, {
+            precision: this.asset.preferredFractionalDigits,
+            floor: true,
+          }),
         },
       });
     }

@@ -98,7 +98,7 @@ interface LoginProps {
   onClearAccountV0s(): void;
   onSelectAlias: (alias: string) => void;
   onShieldForAliasFormInputsChange(inputs: Partial<ShieldFormValues>): void;
-  onSubmitShieldForAliasForm(): void;
+  onSubmitShieldForAliasForm(isRetry?: boolean): void;
   onChangeWallet(walletId: WalletId): void;
 }
 

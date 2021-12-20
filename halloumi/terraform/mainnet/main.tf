@@ -62,7 +62,7 @@ resource "aws_service_discovery_service" "halloumi" {
 # Create EC2 instance.
 resource "aws_instance" "container_instance_az1" {
   ami                    = "ami-0cd4858f2b923aa6b"
-  instance_type          = "r5.8xlarge"
+  instance_type          = "r5.16xlarge"
   subnet_id              = data.terraform_remote_state.setup_iac.outputs.subnet_az1_private_id
   vpc_security_group_ids = [data.terraform_remote_state.setup_iac.outputs.security_group_private_id]
   iam_instance_profile   = data.terraform_remote_state.setup_iac.outputs.ecs_instance_profile_name

@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { ShieldedAssetIcon, IconVarients } from '../../../components';
-import zkShieldBlack from '../../../images/zk_shield_black.svg';
+import zkShieldBlack from '../../../images/zk_shield_white.svg';
 
 const Root = styled.div`
   position: relative;
@@ -9,7 +9,16 @@ const Root = styled.div`
   height: fit-content;
 `;
 
-const BlackFill = styled.div<{ t: number; hide: boolean }>`
+const Faded = styled.div`
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.3;
+`;
+
+const WhiteFill = styled.div<{ t: number; hide: boolean }>`
   position: absolute;
   left: 0;
   top: 0;
@@ -20,7 +29,7 @@ const BlackFill = styled.div<{ t: number; hide: boolean }>`
   background-repeat: no-repeat;
   background-size: contain;
   transition: clip-path 0.2s, opacity 0.2s;
-  clip-path: inset(0 0 ${({ t }) => t * 100}% 0);
+  clip-path: inset(${({ t }) => t * 100}% 0 0 0);
   opacity: ${({ hide }) => (hide ? 0 : 1)};
 `;
 
@@ -33,8 +42,11 @@ export const ShieldMeter: React.FunctionComponent<ShieldMeterProps> = ({ score, 
   const hideShield = score === 0;
   return (
     <Root>
-      <ShieldedAssetIcon asset={asset} size="xxl" white hideShield={hideShield} />
-      <BlackFill t={score} hide={hideShield} />
+      <ShieldedAssetIcon asset={asset} size="xxl" white hideShield />
+      <Faded>
+        <ShieldedAssetIcon asset={asset} size="xxl" white hideShield={hideShield} />
+      </Faded>
+      <WhiteFill t={1 - score} hide={hideShield} />
     </Root>
   );
 };

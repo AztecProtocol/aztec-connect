@@ -307,8 +307,8 @@ export class App extends EventEmitter {
     this.session!.changeShieldForAliasForm(inputs);
   };
 
-  claimUserName = async () => {
-    await this.session!.claimUserName();
+  claimUserName = async (isRetry?: boolean) => {
+    await this.session!.claimUserName(isRetry);
   };
 
   changeForm = (action: AccountAction, inputs: Form) => {

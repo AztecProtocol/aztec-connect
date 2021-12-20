@@ -1,7 +1,16 @@
 import React from 'react';
 import styled from 'styled-components';
 import { AccountAction, AccountState, Asset, AssetState, sum, WorldState } from '../../app';
-import { BlockTitle, DisclaimerBlock, ProgressHandler, Spinner, SpinnerTheme, Text, TextLink } from '../../components';
+import {
+  BlockTitle,
+  Button,
+  DisclaimerBlock,
+  ProgressHandler,
+  Spinner,
+  SpinnerTheme,
+  Text,
+  TextLink,
+} from '../../components';
 import { breakpoints, spacings } from '../../styles';
 import { MergeBlock } from './merge_block';
 import { ShieldPrompt } from './shield_prompt';
@@ -112,10 +121,11 @@ export const AccountAsset: React.FunctionComponent<AccountAssetProps> = ({
 
   return (
     <>
-      {!isLoading && (!(balance + pendingValue) || !!pendingBalance) && (
+      {!isLoading && (
         <Row>
           <ShieldPrompt
             asset={asset}
+            balance={balance}
             pendingBalance={pendingBalance}
             onSubmit={() => onSelectAction(AccountAction.SHIELD)}
           />
@@ -131,8 +141,6 @@ export const AccountAsset: React.FunctionComponent<AccountAssetProps> = ({
             pendingValue={pendingValue}
             pendingTxs={pendingTxs.length}
             asset={asset}
-            buttonText="Shield"
-            onClick={() => onSelectAction(AccountAction.SHIELD)}
             isLoading={isLoading}
           />
         </Col>
@@ -153,8 +161,9 @@ export const AccountAsset: React.FunctionComponent<AccountAssetProps> = ({
             title="Sendable Balance"
             value={spendableBalance}
             asset={asset}
-            buttonText="Send"
-            onClick={() => onSelectAction(AccountAction.SEND)}
+            buttonSlot={
+              <Button theme="white" text="Send" onClick={() => onSelectAction(AccountAction.SEND)} size="l" outlined />
+            }
             isLoading={isLoading}
           />
         </Col>
