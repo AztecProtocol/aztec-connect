@@ -23,11 +23,27 @@ import {
   PaddedBlock,
   ShieldedAssetIcon,
   Text,
+  TextButton,
 } from '../../components';
 import { borderRadiuses, breakpoints, spacings } from '../../styles';
 import { WalletSelect } from '../account/wallet_select';
 import { formatTime } from '../account/settled_time';
 import { Progress } from './progress';
+
+const ProgressRoot = styled.div`
+  position: relative;
+`;
+
+const RetryButtonWrapper = styled.div`
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  transform: translateY(100%);
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding-top: ${spacings.m};
+`;
 
 const Root = styled.div`
   display: flex;
@@ -130,7 +146,7 @@ interface DepositFormProps {
   form: ShieldFormValues;
   providerState?: ProviderState;
   onChangeInputs(inputs: Partial<ShieldFormValues>): void;
-  onSubmit(): void;
+  onSubmit(isRetry?: boolean): void;
   onChangeWallet(walletId: WalletId): void;
 }
 
@@ -180,7 +196,17 @@ export const ShieldForAliasForm: React.FunctionComponent<DepositFormProps> = ({
     },
   ];
   if (submissionSteps.find(x => x.step === status)) {
-    return <Progress steps={submissionSteps} currentStep={status} active={true} failed={false} />;
+    const failed = submit.messageType === MessageType.ERROR;
+    return (
+      <ProgressRoot>
+        <Progress steps={submissionSteps} currentStep={status} active={!failed} failed={failed} />
+        {failed && (
+          <RetryButtonWrapper>
+            <TextButton text="Retry" onClick={() => onSubmit(true)} />
+          </RetryButtonWrapper>
+        )}
+      </ProgressRoot>
+    );
   }
 
   const amountInputMessageProps = getAmountInputMessageProps(form);
