@@ -18,12 +18,14 @@ interface RandomTxOpts {
 }
 
 export const randomTx = ({ signature, inputOwner, publicInput, txType }: RandomTxOpts = {}) => {
+  const nonce = randomBytes(32);
+  nonce.writeUInt32BE(1, 0);
   const proofData = new ProofData(
     Buffer.concat([
       Buffer.alloc(32), // proofId
       publicInput ? toBufferBE(publicInput, 32) : randomBytes(32), // publicInput
       randomBytes(32), // publicOutput
-      txType === TxType.ACCOUNT ? randomBytes(32) : Buffer.alloc(32), // assetId
+      txType === TxType.ACCOUNT ? nonce : Buffer.alloc(32), // assetId
       randomBytes(64), // note1
       randomBytes(64), // note2
       randomBytes(32), // nullifier1
