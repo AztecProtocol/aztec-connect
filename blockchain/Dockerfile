@@ -10,4 +10,4 @@ RUN yarn install && yarn compile && yarn build && yarn test && rm -rf node_modul
 FROM node:14-alpine
 COPY --from=builder /usr/src/blockchain /usr/src/blockchain
 WORKDIR /usr/src/blockchain
-CMD ["yarn", "-s", "deploy", "1"]
+CMD ["yarn", "-s", "deploy", "0.1"]
