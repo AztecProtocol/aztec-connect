@@ -168,6 +168,7 @@ async function loadConfVars(path: string) {
 
 function getOrmConfig(dbUrl?: string, logging = false): ConnectionOptions {
   if (!dbUrl) {
+    console.log('Database is local sqlite.');
     return {
       type: 'sqlite',
       database: 'data/db.sqlite',
@@ -176,6 +177,7 @@ function getOrmConfig(dbUrl?: string, logging = false): ConnectionOptions {
       logging,
     };
   } else {
+    console.log(`Database Url: ${dbUrl}`);
     const url = new URL(dbUrl);
     return {
       type: url.protocol.slice(0, -1) as any,

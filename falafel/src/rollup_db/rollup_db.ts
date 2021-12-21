@@ -62,7 +62,12 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async getAccountTx(aliasHash: Buffer) {
-    return this.accountRep.findOne({ aliasHash });
+    return this.accountRep.findOne(
+      { aliasHash },
+      {
+        order: { nonce: 'DESC' },
+      },
+    );
   }
 
   public async getLatestAccountTx(accountPubKey: Buffer) {
@@ -79,7 +84,7 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async getAccountCount() {
-    return this.accountRep.count();
+    return this.accountRep.count({ where: { nonce: 1 } });
   }
 
   public async getTotalRollupsOfSize(rollupSize: number) {
