@@ -32,6 +32,7 @@ interface ShieldPromptProps {
   asset: Asset;
   balance: bigint;
   pendingBalance: bigint;
+  pendingValue: bigint;
   onSubmit: () => void;
 }
 
@@ -39,37 +40,41 @@ export const ShieldPrompt: React.FunctionComponent<ShieldPromptProps> = ({
   asset,
   balance,
   pendingBalance,
+  pendingValue = 0n,
   onSubmit,
-}) => (
-  <Root>
-    <Message size="m">
-      {pendingBalance > 0n ? (
-        <>
-          {'You have '}
-          <Text
-            text={`${formatBaseUnits(pendingBalance, asset.decimals, {
-              precision: asset.preferredFractionalDigits,
-              commaSeparated: true,
-            })} ${asset.symbol}`}
-            weight="bold"
-            inline
-          />
-          {` pending, shield to get started!`}
-        </>
-      ) : balance > 0n ? (
-        <>
-          Add to your <Text text={`zk${asset.symbol}`} weight="bold" inline /> by shielding more {asset.symbol}.
-        </>
-      ) : (
-        <>
-          {'You don’t have any '}
-          <Text text={`zk${asset.symbol}`} weight="bold" inline />
-          {`, shield ${asset.symbol} to get started!`}
-        </>
-      )}
-    </Message>
-    <ButtonRoot>
-      <Button theme="gradient" text="Shield" onClick={onSubmit} />
-    </ButtonRoot>
-  </Root>
-);
+}) => {
+  console.log(balance, pendingValue);
+  return (
+    <Root>
+      <Message size="m">
+        {pendingBalance > 0n ? (
+          <>
+            {'You have '}
+            <Text
+              text={`${formatBaseUnits(pendingBalance, asset.decimals, {
+                precision: asset.preferredFractionalDigits,
+                commaSeparated: true,
+              })} ${asset.symbol}`}
+              weight="bold"
+              inline
+            />
+            {` pending, shield to get started!`}
+          </>
+        ) : (balance > 0n || pendingValue > 0n) && balance - pendingValue !== 0n ? (
+          <>
+            Add to your <Text text={`zk${asset.symbol}`} weight="bold" inline /> by shielding more {asset.symbol}.
+          </>
+        ) : (
+          <>
+            {'You don’t have any '}
+            <Text text={`zk${asset.symbol}`} weight="bold" inline />
+            {`, shield ${asset.symbol} to get started!`}
+          </>
+        )}
+      </Message>
+      <ButtonRoot>
+        <Button theme="gradient" text="Shield" onClick={onSubmit} />
+      </ButtonRoot>
+    </Root>
+  );
+};

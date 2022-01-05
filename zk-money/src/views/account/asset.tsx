@@ -126,6 +126,7 @@ export const AccountAsset: React.FunctionComponent<AccountAssetProps> = ({
           <ShieldPrompt
             asset={asset}
             balance={balance}
+            pendingValue={pendingValue}
             pendingBalance={pendingBalance}
             onSubmit={() => onSelectAction(AccountAction.SHIELD)}
           />
