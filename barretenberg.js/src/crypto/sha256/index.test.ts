@@ -3,8 +3,6 @@ import { Sha256 } from '.';
 
 import { randomBytes, createHash } from 'crypto';
 
-import createDebug from 'debug';
-
 
 describe.only('sha256', () => {
   let barretenberg!: BarretenbergWasm;

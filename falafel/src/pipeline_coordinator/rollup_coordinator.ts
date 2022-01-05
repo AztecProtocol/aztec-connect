@@ -22,7 +22,7 @@ export class RollupCoordinator {
   private rollupBridgeIds: BridgeId[] = [];
   private rollupAssetIds: Set<AssetId> = new Set();
   private published = false;
-  private bridgeQueues = new Map<string, BridgeTxQueue>();
+  private bridgeQueues = new Map<bigint, BridgeTxQueue>();
 
   constructor(
     private publishTimeManager: PublishTimeManager,
@@ -40,10 +40,10 @@ export class RollupCoordinator {
   ) {}
 
   private initialiseBridgeQueues(rollupTimeouts: RollupTimeouts) {
-    this.bridgeQueues = new Map<string, BridgeTxQueue>();
+    this.bridgeQueues = new Map<bigint, BridgeTxQueue>();
     for (const bc of this.bridgeConfigs) {
-      const bt = rollupTimeouts.bridgeTimeouts.get(bc.bridgeId.toString());
-      this.bridgeQueues.set(bc.bridgeId.toString(), new BridgeTxQueue(bc, bt, this.bridgeCostResolver));
+      const bt = rollupTimeouts.bridgeTimeouts.get(bc.bridgeId);
+      this.bridgeQueues.set(bc.bridgeId, new BridgeTxQueue(bc, bt, this.bridgeCostResolver));
     }
   }
 
@@ -122,7 +122,7 @@ export class RollupCoordinator {
       return txsForRollup;
     }
 
-    const bridgeQueue = this.bridgeQueues.get(defiProof.bridgeId.toString());
+    const bridgeQueue = this.bridgeQueues.get(defiProof.bridgeId.toBigInt());
     if (!bridgeQueue) {
       // We don't have a bridge config for this!!
       console.log(

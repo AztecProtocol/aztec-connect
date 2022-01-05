@@ -10,6 +10,9 @@ import {
   WalletProvider,
   WalletSdk,
   toBaseUnits,
+  JoinSplitProofOutput,
+  DefiProofOutput,
+  UserDefiTx,
 } from '@aztec/sdk';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
@@ -35,7 +38,7 @@ describe('end-to-end defi tests', () => {
   const awaitSettlementTimeout = 600;
 
   beforeAll(async () => {
-    provider = await createFundedWalletProvider(ETHEREUM_HOST, 1, undefined, undefined, toBaseUnits('0.2', 18));
+    provider = await createFundedWalletProvider(ETHEREUM_HOST, 3, undefined, undefined, toBaseUnits('0.2', 18));
     accounts = provider.getAccounts();
 
     sdk = await createWalletSdk(provider, ROLLUP_HOST, {
@@ -60,27 +63,40 @@ describe('end-to-end defi tests', () => {
   });
 
   it('should make a defi deposit', async () => {
-    const userId = userIds[0];
-    const depositor = accounts[0];
-    const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
-
     // Shield
-    let depositTxHash: TxHash;
+    const depositProofs: JoinSplitProofOutput[] = [];
+    const signatures: Buffer[] = [];
     const shieldValue = sdk.toBaseUnits(AssetId.ETH, '0.08');
-    {
+    for (let i = 0; i < accounts.length; i++) {
+      const depositor = accounts[i];
       const assetId = AssetId.ETH;
-      // flush this transaction through by paying for all the slots in the rollup, hence 6 * Deposit fee
-      const txFee = 6n * (await sdk.getFee(assetId, TxType.DEPOSIT));
+      // flush the final transaction through by paying for all the remaining slots in the rollup, hence 4 * Deposit fee
+      const txFee = (i === accounts.length - 1 ? 4n : 1n) * (await sdk.getFee(assetId, TxType.DEPOSIT));
       const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
-      const proofOutput = await sdk.createDepositProof(assetId, depositor, userId, shieldValue, txFee, signer);
+      const proofOutput = await sdk.createDepositProof(assetId, depositor, userIds[i], shieldValue, txFee, signer);
       const signature = await sdk.signProof(proofOutput, depositor);
+      depositProofs.push(proofOutput);
+      signatures.push(signature);
       const txHash = await sdk.depositFundsToContract(assetId, depositor, shieldValue + txFee);
       await sdk.getTransactionReceipt(txHash);
-      depositTxHash = await sdk.sendProof(proofOutput, signature);
     }
 
-    // Defi deposit - swap partial ETH to DAI
+    // send all of the deposit proofs together
+    const depositPromises = depositProofs.map((p, i) => {
+      return sdk.sendProof(p, signatures[i]);
+    });
+    // wait for them all to settle
+    const depositHashes = await Promise.all(depositPromises);
+    await Promise.all(
+      depositHashes.map((hash) => {
+        return sdk.awaitSettlement(hash, awaitSettlementTimeout);
+      }),
+    );
+
+    // Account 1 will swap part of it's ETH for DAI. Then, once this has settled, it will swap that DAI back to ETH whilst accounts 2 and 3 swap their ETH for DAI
+    // Defi deposit - account 1 swaps partial ETH to DAI
     {
+      const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[0])!);
       const bridgeAddressId = 1;
       const inputAssetId = AssetId.ETH;
       const outputAssetIdA = AssetId.DAI;
@@ -95,18 +111,15 @@ describe('end-to-end defi tests', () => {
         0,
       );
       const txFee =
-        (await sdk.getFee(inputAssetId, TxType.DEFI_DEPOSIT)) + 5n * (await sdk.getFee(AssetId.ETH, TxType.TRANSFER)); // 5 * j/s fees to push the rollup through
+        (await sdk.getFee(inputAssetId, TxType.DEFI_DEPOSIT)) + 5n * (await sdk.getFee(inputAssetId, TxType.TRANSFER)); // 5 * j/s fees to push the rollup through
       const depositValue = sdk.toBaseUnits(inputAssetId, '0.05');
-      const proofOutput = await sdk.createDefiProof(bridgeId, userId, depositValue, txFee, signer);
+      const proofOutput = await sdk.createDefiProof(bridgeId, userIds[0], depositValue, txFee, signer);
       const defiTxHash = await sdk.sendProof(proofOutput);
 
       // Await shield tx and defi deposit tx to settle.
-      await Promise.all([
-        sdk.awaitSettlement(depositTxHash, awaitSettlementTimeout),
-        sdk.awaitSettlement(defiTxHash, awaitSettlementTimeout),
-      ]);
+      await sdk.awaitSettlement(defiTxHash, awaitSettlementTimeout);
 
-      const defiTxs = await sdk.getDefiTxs(userId);
+      const defiTxs = await sdk.getDefiTxs(userIds[0]);
       expect(defiTxs.length).toBe(1);
       const defiTx = defiTxs[0];
       expect(defiTx).toMatchObject({
@@ -115,11 +128,16 @@ describe('end-to-end defi tests', () => {
         txFee,
         outputValueB: 0n,
       });
-      expect(sdk.getBalance(inputAssetId, userId)).toBe(shieldValue - depositValue - txFee);
-      expect(sdk.getBalance(outputAssetIdA, userId)).toBe(defiTx.outputValueA);
+      expect(sdk.getBalance(inputAssetId, userIds[0])).toBe(shieldValue - depositValue - txFee);
+      expect(sdk.getBalance(outputAssetIdA, userIds[0])).toBe(defiTx.outputValueA);
     }
 
-    // Defi deposit - swap all DAI to ETH
+    // Account 1 has some DAI, accounts 2 and 3 have ETH
+    // We will have them all convert their asset for the other (ETH -> DAI/DAI -> ETH) in the same rollup
+    const defiProofs: DefiProofOutput[] = [];
+    const defiVerifications: Array<() => Promise<void>> = [];
+
+    // Defi deposit - account 1 swaps all DAI to ETH
     {
       const bridgeAddressId = 2;
       const inputAssetId = AssetId.DAI;
@@ -133,32 +151,86 @@ describe('end-to-end defi tests', () => {
         0,
       );
 
-      const initialEthBalance = sdk.getBalance(AssetId.ETH, userId);
-      const initialDaiBalance = sdk.getBalance(AssetId.DAI, userId);
+      const initialEthBalance = sdk.getBalance(AssetId.ETH, userIds[0]);
+      const initialDaiBalance = sdk.getBalance(AssetId.DAI, userIds[0]);
 
-      const defiFee = await sdk.getFee(inputAssetId, TxType.DEFI_DEPOSIT);
-      const jsTxFee = await sdk.getFee(inputAssetId, TxType.TRANSFER);
-      // TODO - return the fee `defiFee - jsTxFee` from the sdk if specify the output note from the defi deposit tx can be chained from.
-      const txFee = defiFee - jsTxFee + 5n * jsTxFee; // 5 j/s fees are to push the rollup through
+      // increase the fee to pay for the whole bridge. this will ensure that this defi deposit will get rolled up with the others
+      const txFee = (await sdk.getFee(inputAssetId, TxType.DEFI_DEPOSIT)) * 2n;
       const depositValue = initialDaiBalance - txFee;
 
       const allowChain = true;
-      const proofOutput = await sdk.createDefiProof(bridgeId, userId, depositValue, txFee, signer, allowChain);
+      const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[0])!);
+      const proofOutput = await sdk.createDefiProof(bridgeId, userIds[0], depositValue, txFee, signer, allowChain);
+      defiProofs.push(proofOutput);
 
-      const txHash = await sdk.sendProof(proofOutput);
-      await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
+      const verification = async () => {
+        const defiTxs = await sdk.getDefiTxs(userIds[0]);
+        expect(defiTxs.length).toBe(2);
+        const defiTx = defiTxs[0];
 
-      const defiTxs = await sdk.getDefiTxs(userId);
-      expect(defiTxs.length).toBe(2);
-      const defiTx = defiTxs[0];
-      expect(defiTx).toMatchObject({
-        bridgeId,
-        depositValue,
-        txFee,
-        outputValueB: 0n,
-      });
-      expect(sdk.getBalance(AssetId.ETH, userId)).toBe(initialEthBalance + defiTx.outputValueA);
-      expect(sdk.getBalance(AssetId.DAI, userId)).toBe(0n);
+        expect(defiTx).toMatchObject({
+          bridgeId,
+          depositValue,
+          txFee,
+          outputValueB: 0n,
+        });
+        expect(sdk.getBalance(AssetId.ETH, userIds[0])).toBe(initialEthBalance + defiTx.outputValueA);
+        expect(sdk.getBalance(AssetId.DAI, userIds[0])).toBe(0n);
+      };
+      defiVerifications.push(verification);
     }
+
+    // Defi deposits - accounts 2 and 3 swap partial ETH to DAI
+    for (let i = 1; i < accounts.length; i++) {
+      const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[i])!);
+      const bridgeAddressId = 1;
+      const inputAssetId = AssetId.ETH;
+      const outputAssetIdA = AssetId.DAI;
+      const outputAssetIdB = 0;
+      const bridgeId = new BridgeId(
+        bridgeAddressId,
+        inputAssetId,
+        outputAssetIdA,
+        outputAssetIdB,
+        0,
+        new BitConfig(false, false, false, false, false, false),
+        0,
+      );
+      const txFee =
+        (await sdk.getFee(inputAssetId, TxType.DEFI_DEPOSIT)) + 5n * (await sdk.getFee(inputAssetId, TxType.TRANSFER)); // 5 * j/s fees to push the rollup through
+      const depositValue = sdk.toBaseUnits(inputAssetId, '0.05');
+      const proofOutput = await sdk.createDefiProof(bridgeId, userIds[i], depositValue, txFee, signer);
+      defiProofs.push(proofOutput);
+
+      const verification = async () => {
+        const defiTxs = await sdk.getDefiTxs(userIds[i]);
+        expect(defiTxs.length).toBe(1);
+        const defiTx = defiTxs[0];
+        expect(defiTx).toMatchObject({
+          bridgeId,
+          depositValue,
+          txFee,
+          outputValueB: 0n,
+        });
+        expect(sdk.getBalance(inputAssetId, userIds[i])).toBe(shieldValue - depositValue - txFee);
+        expect(sdk.getBalance(outputAssetIdA, userIds[i])).toBe(defiTx.outputValueA);
+      };
+      defiVerifications.push(verification);
+    }
+
+    // send all of the proofs together
+    const defiHashes = await Promise.all(
+      defiProofs.map(proof => {
+        return sdk.sendProof(proof);
+      }),
+    );
+    // now wait for everything to settle
+    await Promise.all(
+      defiHashes.map(hash => {
+        return sdk.awaitSettlement(hash, awaitSettlementTimeout);
+      }),
+    );
+    // check the results of each one
+    await Promise.all(defiVerifications.map(x => x()));
   });
 });

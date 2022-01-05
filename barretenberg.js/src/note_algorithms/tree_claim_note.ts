@@ -1,4 +1,3 @@
-import { GrumpkinAddress } from '../address';
 import { toBigIntBE, toBufferBE } from '../bigint_buffer';
 import { randomBytes } from 'crypto';
 import { BridgeId } from '../bridge_id';

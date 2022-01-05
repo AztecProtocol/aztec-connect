@@ -242,7 +242,7 @@ export class TxReceiver {
   private async validateDefiBridgeTx(proofData: ProofData) {
     const { bridgeId, txFeeAssetId, txFee } = new DefiDepositProofData(proofData);
 
-    const bridgeConfig = this.bridgeConfigs.find(bc => bc.bridgeId.equals(bridgeId));
+    const bridgeConfig = this.bridgeConfigs.find(bc => bc.bridgeId == bridgeId.toBigInt());
 
     if (!bridgeConfig) {
       console.log(`Unrecognised Defi bridge: ${bridgeId.toString()}`);

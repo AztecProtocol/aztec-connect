@@ -18,13 +18,13 @@ type Mockify<T> = {
 
 const bridgeConfigs: BridgeConfig[] = [
   {
-    bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 1)),
+    bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 1)).toBigInt(),
     numTxs: 5,
     fee: 500000n,
     rollupFrequency: 2,
   },
   {
-    bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 2)),
+    bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 2)).toBigInt(),
     numTxs: 2,
     fee: 500000n,
     rollupFrequency: 3,
@@ -87,8 +87,8 @@ describe('Profile Rollup', () => {
     return rollupTx;
   };
 
-  const getBridgeCost = (bridgeId: BridgeId) => {
-    const bridgeConfig = bridgeConfigs.find(bc => bc.bridgeId.equals(bridgeId));
+  const getBridgeCost = (bridgeId: bigint) => {
+    const bridgeConfig = bridgeConfigs.find(bc => bc.bridgeId == bridgeId);
     if (!bridgeConfig) {
       throw new Error(`Requested cost for invalid bridge ID: ${bridgeId.toString()}`);
     }
@@ -101,7 +101,7 @@ describe('Profile Rollup', () => {
     jest.spyOn(Date, 'now').mockImplementation(() => getCurrentTime().getTime());
 
     bridgeCostResolver = {
-      getBridgeCost: jest.fn().mockImplementation((bridgeId: BridgeId) => getBridgeCost(bridgeId)),
+      getBridgeCost: jest.fn().mockImplementation((bridgeId: any) => getBridgeCost(bridgeId)),
     };
 
     feeResolver = {
@@ -155,7 +155,6 @@ describe('Profile Rollup', () => {
     expect(rollupProfile.rollupSize).toBe(20);
     expect(rollupProfile.totalGasEarnt).toBe(rollupTxs.map(tx => tx.fee).reduce((p, n) => p + n, 0n));
     expect(rollupProfile.totalGasCost).toBe(20n * BASE_GAS + 9n * NON_DEFI_TX_GAS); // 9 payments, 11 empty slots
-    expect(rollupProfile.bridgeProfiles).toBeTruthy();
     expect(rollupProfile.bridgeProfiles.length).toBe(0);
     expect(rollupProfile.earliestTx.getTime()).toEqual(txs[0].created.getTime());
     expect(rollupProfile.latestTx.getTime()).toEqual(txs[8].created.getTime());
@@ -177,49 +176,49 @@ describe('Profile Rollup', () => {
         txType: TxType.DEFI_DEPOSIT,
         txFee: 100000n,
         txFeeAssetId: AssetId.ETH,
-        bridgeId: bridgeConfigs[0].bridgeId,
+        bridgeId: BridgeId.fromBigInt(bridgeConfigs[0].bridgeId),
       }),
       mockTx(10, {
         txType: TxType.DEFI_DEPOSIT,
         txFee: 100000n,
         txFeeAssetId: AssetId.ETH,
-        bridgeId: bridgeConfigs[0].bridgeId,
+        bridgeId: BridgeId.fromBigInt(bridgeConfigs[0].bridgeId),
       }),
       mockTx(11, {
         txType: TxType.DEFI_DEPOSIT,
         txFee: 100000n,
         txFeeAssetId: AssetId.ETH,
-        bridgeId: bridgeConfigs[0].bridgeId,
+        bridgeId: BridgeId.fromBigInt(bridgeConfigs[0].bridgeId),
       }),
       mockTx(12, {
         txType: TxType.DEFI_DEPOSIT,
         txFee: 100000n,
         txFeeAssetId: AssetId.ETH,
-        bridgeId: bridgeConfigs[0].bridgeId,
+        bridgeId: BridgeId.fromBigInt(bridgeConfigs[0].bridgeId),
       }),
       mockTx(13, {
         txType: TxType.DEFI_DEPOSIT,
         txFee: 100000n,
         txFeeAssetId: AssetId.ETH,
-        bridgeId: bridgeConfigs[0].bridgeId,
+        bridgeId: BridgeId.fromBigInt(bridgeConfigs[0].bridgeId),
       }),
       mockTx(14, {
         txType: TxType.DEFI_DEPOSIT,
         txFee: 100000n,
         txFeeAssetId: AssetId.ETH,
-        bridgeId: bridgeConfigs[0].bridgeId,
+        bridgeId: BridgeId.fromBigInt(bridgeConfigs[0].bridgeId),
       }),
       mockTx(15, {
         txType: TxType.DEFI_DEPOSIT,
         txFee: 1000000n,
         txFeeAssetId: AssetId.ETH,
-        bridgeId: bridgeConfigs[1].bridgeId,
+        bridgeId: BridgeId.fromBigInt(bridgeConfigs[1].bridgeId),
       }),
       mockTx(16, {
         txType: TxType.DEFI_DEPOSIT,
         txFee: 1000000n,
         txFeeAssetId: AssetId.ETH,
-        bridgeId: bridgeConfigs[1].bridgeId,
+        bridgeId: BridgeId.fromBigInt(bridgeConfigs[1].bridgeId),
       }),
     ];
 
@@ -236,7 +235,6 @@ describe('Profile Rollup', () => {
     expect(rollupProfile.totalGasCost).toBe(
       30n * BASE_GAS + 9n * NON_DEFI_TX_GAS + bridgeConfigs[0].fee + bridgeConfigs[1].fee,
     );
-    expect(rollupProfile.bridgeProfiles).toBeTruthy();
     expect(rollupProfile.bridgeProfiles.length).toBe(2);
     expect(rollupProfile.totalTxs).toBe(17);
 
@@ -246,7 +244,7 @@ describe('Profile Rollup', () => {
         numTxs: 6,
         totalGasCost: 6n * BASE_GAS + bridgeConfigs[0].fee,
         totalGasEarnt: rollupTxs
-          .filter(tx => tx.bridgeId && tx.bridgeId.equals(bridgeConfigs[0].bridgeId))
+          .filter(tx => tx.bridgeId && tx.bridgeId.toBigInt() == bridgeConfigs[0].bridgeId)
           .map(tx => tx.fee)
           .reduce((p, n) => n + p, 0n),
         earliestTx: txs[9].created,
@@ -257,7 +255,7 @@ describe('Profile Rollup', () => {
         numTxs: 2,
         totalGasCost: 2n * BASE_GAS + bridgeConfigs[0].fee,
         totalGasEarnt: rollupTxs
-          .filter(tx => tx.bridgeId && tx.bridgeId.equals(bridgeConfigs[1].bridgeId))
+          .filter(tx => tx.bridgeId && tx.bridgeId.toBigInt() == bridgeConfigs[1].bridgeId)
           .map(tx => tx.fee)
           .reduce((p, n) => n + p, 0n),
         earliestTx: txs[15].created,

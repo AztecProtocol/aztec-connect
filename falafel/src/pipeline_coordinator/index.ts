@@ -100,7 +100,6 @@ export class PipelineCoordinator {
     await this.rollupDb.deleteUnsettledClaimTxs();
     const lastRollup = await this.rollupDb.getLastSettledRollup();
     const rollupId = lastRollup ? lastRollup.id + 1 : 0;
-    const rollupSize = this.numInnerRollupTxs * this.numOuterRollupProofs;
 
     const oldDefiRoot = this.worldStateDb.getRoot(RollupTreeId.DEFI);
     const oldDefiPath = await this.worldStateDb.getHashPath(

@@ -179,7 +179,7 @@ export class Server {
       nextPublishTime: nextPublish.baseTimeout ? nextPublish.baseTimeout.timeout : new Date(0),
       nextPublishNumber: nextPublish.baseTimeout ? nextPublish.baseTimeout.rollupNumber : 0,
       bridgeStatus: this.config.bridgeConfigs.map(bc => {
-        const rt = nextPublish.bridgeTimeouts.get(bc.bridgeId.toString());
+        const rt = nextPublish.bridgeTimeouts.get(bc.bridgeId);
         return convertToBridgeStatus(bc, rt?.rollupNumber, rt?.timeout);
       }),
     };

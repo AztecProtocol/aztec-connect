@@ -7,7 +7,7 @@ export interface RollupTimeout {
 
 export interface RollupTimeouts {
   baseTimeout: RollupTimeout | undefined;
-  bridgeTimeouts: Map<string, RollupTimeout>;
+  bridgeTimeouts: Map<bigint, RollupTimeout>;
 }
 
 // this class accepts a rollup publish interval and the set of bridge configurations
@@ -21,7 +21,7 @@ export class PublishTimeManager {
   constructor(private readonly rollupTimeoutDurationSecs: number, private readonly bridgeConfigs: BridgeConfig[]) {}
 
   private calculateBridgeTimeouts(baseTimeout: RollupTimeout, last: boolean) {
-    const bridgeTimeouts = new Map<string, RollupTimeout>();
+    const bridgeTimeouts = new Map<bigint, RollupTimeout>();
     for (const bc of this.bridgeConfigs) {
       if (bc.rollupFrequency < 1) {
         continue;
@@ -41,7 +41,7 @@ export class PublishTimeManager {
         timeout: bridgeTimeout,
         rollupNumber: rollupNum,
       };
-      bridgeTimeouts.set(bc.bridgeId.toString(), bt);
+      bridgeTimeouts.set(bc.bridgeId, bt);
     }
     return bridgeTimeouts;
   }
@@ -80,7 +80,7 @@ export class PublishTimeManager {
   private createEmptyTimeouts() {
     return {
       baseTimeout: undefined,
-      bridgeTimeouts: new Map<string, RollupTimeout>(),
+      bridgeTimeouts: new Map<bigint, RollupTimeout>(),
     } as RollupTimeouts;
   }
 

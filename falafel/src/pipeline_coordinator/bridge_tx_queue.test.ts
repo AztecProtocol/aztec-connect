@@ -7,9 +7,10 @@ import { TxType } from '@aztec/barretenberg/blockchain';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { randomBytes } from 'crypto';
 import { TxDao } from '../entity/tx';
+import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 
 const bridgeConfig: BridgeConfig = {
-  bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 1)),
+  bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 1)).toBigInt(),
   numTxs: 5,
   fee: 500000n,
   rollupFrequency: 2,
@@ -21,7 +22,7 @@ type Mockify<T> = {
   [P in keyof T]: jest.Mock;
 };
 
-const mockTx = (id: number, txType: TxType, txFeeAssetId: AssetId, bridgeId: BridgeId) =>
+const mockTx = (id: number, txType: TxType, txFeeAssetId: AssetId, bridgeId: bigint) =>
   ({
     id,
     txType,
@@ -31,20 +32,20 @@ const mockTx = (id: number, txType: TxType, txFeeAssetId: AssetId, bridgeId: Bri
       randomBytes(32),
       randomBytes(7 * 32),
       numToUInt32BE(txFeeAssetId, 32),
-      bridgeId.toBuffer(),
+      toBufferBE(bridgeId, 32),
       randomBytes(3 * 32),
       Buffer.alloc(32),
       numToUInt32BE(2, 32),
     ]),
   } as any as TxDao);
 
-const createRollupTx = (id: number, txType: TxType, txFeeAssetId: AssetId, bridgeId: BridgeId, feeInGas: bigint) => {
+const createRollupTx = (id: number, txType: TxType, txFeeAssetId: AssetId, bridgeId: bigint, feeInGas: bigint) => {
   const tx = mockTx(id, txType, txFeeAssetId, bridgeId);
   const rollupTx: RollupTx = {
     tx,
     fee: feeInGas,
     feeAsset: txFeeAssetId,
-    bridgeId: bridgeId,
+    bridgeId: BridgeId.fromBigInt(bridgeId),
   };
   return rollupTx;
 };
@@ -73,7 +74,7 @@ describe('Bridge Tx Queue', () => {
 
   it('returns the correct bridge id', () => {
     const bridgeQ = new BridgeTxQueue(bridgeConfig, undefined, new BridgeCostResolver([bridgeConfig]));
-    expect(bridgeQ.bridgeId.equals(bridgeConfig.bridgeId)).toBeTruthy();
+    expect(bridgeQ.bridgeId).toEqual(bridgeConfig.bridgeId);
   });
 
   it("single tx that only covers it's own gas does not get returned", () => {

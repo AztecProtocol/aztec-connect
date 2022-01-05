@@ -1,7 +1,6 @@
-import { BridgeId } from './index';
 
 export interface BridgeConfig {
-  bridgeId: BridgeId;
+  bridgeId: bigint;
   numTxs: number;
   fee: bigint;
   rollupFrequency: number;

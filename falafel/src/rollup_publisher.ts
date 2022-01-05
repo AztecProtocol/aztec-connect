@@ -1,11 +1,7 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { Blockchain, EthereumProvider } from '@aztec/barretenberg/blockchain';
 import { JoinSplitProofData } from '@aztec/barretenberg/client_proofs';
-import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
-import { Web3Signer } from '@aztec/blockchain';
-import { Keccak } from 'sha3';
 import { RollupDao } from './entity/rollup';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';

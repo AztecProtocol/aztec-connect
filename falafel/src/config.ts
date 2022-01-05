@@ -215,7 +215,7 @@ export function getPerChainBridgeConfig(chainId: number) {
   }
   return config.map(c => {
     const bc: BridgeConfig = {
-      bridgeId: BridgeId.fromString(c.bridgeId),
+      bridgeId: BridgeId.fromString(c.bridgeId).toBigInt(),
       numTxs: c.numTxs,
       fee: BigInt(c.fee),
       rollupFrequency: c.rollupFrequency,

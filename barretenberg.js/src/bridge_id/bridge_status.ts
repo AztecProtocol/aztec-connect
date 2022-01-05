@@ -1,22 +1,24 @@
 import { BridgeConfig } from './bridge_config';
-import { BridgeId } from '.';
 
 export interface BridgeStatus {
-  bridgeId: string;
+  bridgeId: bigint;
   numTxs: number;
   gas: string;
   rollupFrequency: number;
-  nextRollupNumber: number | undefined;
-  nextPublishTime: Date | undefined;
+  nextRollupNumber?: number;
+  nextPublishTime?: Date;
 }
 
-export function convertToBridgeStatus(
-  bridgeConfig: BridgeConfig,
-  rollupNumber: number | undefined,
-  publishTime: Date | undefined,
-) {
+export function bridgeStatusToJson(status: BridgeStatus) {
   return {
-    bridgeId: bridgeConfig.bridgeId.toString(),
+    ...status,
+    bridgeId: status.bridgeId.toString(),
+  };
+}
+
+export function convertToBridgeStatus(bridgeConfig: BridgeConfig, rollupNumber?: number, publishTime?: Date) {
+  return {
+    bridgeId: bridgeConfig.bridgeId,
     numTxs: bridgeConfig.numTxs,
     gas: bridgeConfig.fee.toString(),
     rollupFrequency: bridgeConfig.rollupFrequency,
@@ -27,7 +29,7 @@ export function convertToBridgeStatus(
 
 export function convertToBridgeConfig(bridgeConfiguration: BridgeStatus) {
   return {
-    bridgeId: BridgeId.fromString(bridgeConfiguration.bridgeId),
+    bridgeId: bridgeConfiguration.bridgeId,
     numTxs: bridgeConfiguration.numTxs,
     fee: BigInt(bridgeConfiguration.gas),
     rollupFrequency: bridgeConfiguration.rollupFrequency,

@@ -24,37 +24,37 @@ type Mockify<T> = {
 
 const bridgeConfigs: BridgeConfig[] = [
   {
-    bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 1)),
+    bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 1)).toBigInt(),
     numTxs: 5,
     fee: 1000000n,
     rollupFrequency: 2,
   },
   {
-    bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 2)),
+    bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 2)).toBigInt(),
     numTxs: 10,
     fee: 5000000n,
     rollupFrequency: 3,
   },
   {
-    bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 3)),
+    bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 3)).toBigInt(),
     numTxs: 3,
     fee: 90000n,
     rollupFrequency: 4,
   },
   {
-    bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 4)),
+    bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 4)).toBigInt(),
     numTxs: 6,
     fee: 3000000n,
     rollupFrequency: 1,
   },
   {
-    bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 5)),
+    bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 5)).toBigInt(),
     numTxs: 2,
     fee: 8000000n,
     rollupFrequency: 7,
   },
   {
-    bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 6)),
+    bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 6)).toBigInt(),
     numTxs: 20,
     fee: 3000000n,
     rollupFrequency: 8,
@@ -64,8 +64,8 @@ const bridgeConfigs: BridgeConfig[] = [
 const BASE_GAS = 20000n;
 const NON_DEFI_TX_GAS = 100000n;
 
-const getBridgeCost = (bridgeId: BridgeId) => {
-  const bridgeConfig = bridgeConfigs.find(bc => bc.bridgeId.equals(bridgeId));
+const getBridgeCost = (bridgeId: bigint) => {
+  const bridgeConfig = bridgeConfigs.find(bc => bc.bridgeId == bridgeId);
   if (!bridgeConfig) {
     throw new Error(`Requested cost for invalid bridge ID: ${bridgeId.toString()}`);
   }
@@ -94,11 +94,11 @@ describe('rollup_coordinator', () => {
 
   let rollupTimeouts: RollupTimeouts = {
     baseTimeout: { timeout: new Date('2021-06-20T10:00:00+00:00'), rollupNumber: 1 },
-    bridgeTimeouts: new Map<string, RollupTimeout>([
-      [bridgeConfigs[0].bridgeId.toString(), { timeout: new Date('2021-06-20T10:00:00+00:00'), rollupNumber: 1 }],
-      [bridgeConfigs[1].bridgeId.toString(), { timeout: new Date('2021-06-20T09:00:00+00:00'), rollupNumber: 1 }],
-      [bridgeConfigs[2].bridgeId.toString(), { timeout: new Date('2021-06-20T09:30:00+00:00'), rollupNumber: 1 }],
-      [bridgeConfigs[3].bridgeId.toString(), { timeout: new Date('2021-06-20T08:00:00+00:00'), rollupNumber: 1 }],
+    bridgeTimeouts: new Map<bigint, RollupTimeout>([
+      [bridgeConfigs[0].bridgeId, { timeout: new Date('2021-06-20T10:00:00+00:00'), rollupNumber: 1 }],
+      [bridgeConfigs[1].bridgeId, { timeout: new Date('2021-06-20T09:00:00+00:00'), rollupNumber: 1 }],
+      [bridgeConfigs[2].bridgeId, { timeout: new Date('2021-06-20T09:30:00+00:00'), rollupNumber: 1 }],
+      [bridgeConfigs[3].bridgeId, { timeout: new Date('2021-06-20T08:00:00+00:00'), rollupNumber: 1 }],
     ]),
   };
 
@@ -136,12 +136,12 @@ describe('rollup_coordinator', () => {
       ]),
     } as any as TxDao);
 
-  const mockDefiBridgeTx = (id: number, fee: bigint, bridgeId: BridgeId, assetId: AssetId = AssetId.ETH) =>
+  const mockDefiBridgeTx = (id: number, fee: bigint, bridgeId: bigint, assetId: AssetId = AssetId.ETH) =>
     mockTx(id, {
       txType: TxType.DEFI_DEPOSIT,
       txFee: fee,
       txFeeAssetId: assetId,
-      bridgeId: bridgeId,
+      bridgeId: BridgeId.fromBigInt(bridgeId),
     });
 
   const expectProcessedTxIds = (txIds: number[]) => {
@@ -191,7 +191,7 @@ describe('rollup_coordinator', () => {
     };
 
     bridgeCostResolver = {
-      getBridgeCost: jest.fn().mockImplementation((bridgeId: BridgeId) => getBridgeCost(bridgeId)),
+      getBridgeCost: jest.fn().mockImplementation((bridgeId: bigint) => getBridgeCost(bridgeId)),
     };
 
     feeResolver = {
@@ -322,14 +322,12 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
-        [
-          bridgeConfigs[0].bridgeId,
-          bridgeConfigs[1].bridgeId,
-          bridgeConfigs[2].bridgeId,
-          bridgeConfigs[3].bridgeId,
-        ].map((x: BridgeId) => x.toString()),
-      );
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toBigInt())).toEqual([
+        bridgeConfigs[0].bridgeId,
+        bridgeConfigs[1].bridgeId,
+        bridgeConfigs[2].bridgeId,
+        bridgeConfigs[3].bridgeId,
+      ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
@@ -394,14 +392,12 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
-        [
-          bridgeConfigs[0].bridgeId,
-          bridgeConfigs[1].bridgeId,
-          bridgeConfigs[2].bridgeId,
-          bridgeConfigs[3].bridgeId,
-        ].map((x: BridgeId) => x.toString()),
-      );
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toBigInt())).toEqual([
+        bridgeConfigs[0].bridgeId,
+        bridgeConfigs[1].bridgeId,
+        bridgeConfigs[2].bridgeId,
+        bridgeConfigs[3].bridgeId,
+      ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
@@ -413,7 +409,7 @@ describe('rollup_coordinator', () => {
           txType: TxType.DEFI_DEPOSIT,
           txFee: 10000000n,
           txFeeAssetId: AssetId.ETH,
-          bridgeId: bridgeConfigs[0].bridgeId,
+          bridgeId: BridgeId.fromBigInt(bridgeConfigs[0].bridgeId),
         }),
         mockTx(3, { txType: TxType.DEFI_CLAIM, txFeeAssetId: AssetId.ETH }),
         mockTx(4, { txType: TxType.WITHDRAW_TO_CONTRACT, txFeeAssetId: AssetId.ETH }),
@@ -425,7 +421,7 @@ describe('rollup_coordinator', () => {
           txType: TxType.DEFI_DEPOSIT,
           txFee: 10000000n,
           txFeeAssetId: AssetId.ETH,
-          bridgeId: bridgeConfigs[0].bridgeId,
+          bridgeId: BridgeId.fromBigInt(bridgeConfigs[0].bridgeId),
         }),
         mockTx(10, { txType: TxType.DEFI_CLAIM, txFeeAssetId: AssetId.ETH }),
       ];
@@ -444,8 +440,8 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
-        [bridgeConfigs[0].bridgeId, ...Array(3).fill(BridgeId.ZERO)].map((x: BridgeId) => x.toString()),
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toBigInt())).toEqual(
+        [bridgeConfigs[0].bridgeId, ...Array(3).fill(BridgeId.ZERO.toBigInt())]
       );
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -500,8 +496,8 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
-        [bridgeConfigs[2].bridgeId, ...Array(3).fill(BridgeId.ZERO)].map((x: BridgeId) => x.toString()),
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toBigInt())).toEqual(
+        [bridgeConfigs[2].bridgeId, ...Array(3).fill(BridgeId.ZERO.toBigInt())]
       );
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -535,8 +531,8 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
-        [bridgeConfigs[2].bridgeId, ...Array(3).fill(BridgeId.ZERO)].map((x: BridgeId) => x.toString()),
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toBigInt())).toEqual(
+        [bridgeConfigs[2].bridgeId, ...Array(3).fill(BridgeId.ZERO.toBigInt())]
       );
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -579,8 +575,8 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
-        [bridgeConfigs[2].bridgeId, ...Array(3).fill(BridgeId.ZERO)].map((x: BridgeId) => x.toString()),
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toBigInt())).toEqual(
+        [bridgeConfigs[2].bridgeId, ...Array(3).fill(BridgeId.ZERO.toBigInt())]
       );
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -608,8 +604,8 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
-        [bridgeConfigs[2].bridgeId, ...Array(3).fill(BridgeId.ZERO)].map((x: BridgeId) => x.toString()),
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toBigInt())).toEqual(
+        [bridgeConfigs[2].bridgeId, ...Array(3).fill(BridgeId.ZERO.toBigInt())]
       );
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -655,8 +651,8 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
-        [bridgeConfigs[2].bridgeId, ...Array(3).fill(BridgeId.ZERO)].map((x: BridgeId) => x.toString()),
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toBigInt())).toEqual(
+        [bridgeConfigs[2].bridgeId, ...Array(3).fill(BridgeId.ZERO.toBigInt())]
       );
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -686,8 +682,8 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
-        [bridgeConfigs[2].bridgeId, ...Array(3).fill(BridgeId.ZERO)].map((x: BridgeId) => x.toString()),
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toBigInt())).toEqual(
+        [bridgeConfigs[2].bridgeId, ...Array(3).fill(BridgeId.ZERO.toBigInt())]
       );
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -715,8 +711,8 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
-        [...Array(4).fill(BridgeId.ZERO)].map((x: BridgeId) => x.toString()),
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toBigInt())).toEqual(
+        [...Array(4).fill(BridgeId.ZERO.toBigInt())]
       );
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -739,11 +735,12 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
-        [bridgeConfigs[0].bridgeId, bridgeConfigs[4].bridgeId, bridgeConfigs[2].bridgeId, BridgeId.ZERO].map(
-          (x: BridgeId) => x.toString(),
-        ),
-      );
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toBigInt())).toEqual([
+        bridgeConfigs[0].bridgeId,
+        bridgeConfigs[4].bridgeId,
+        bridgeConfigs[2].bridgeId,
+        BridgeId.ZERO.toBigInt(),
+      ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
@@ -765,11 +762,12 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH, AssetId.DAI]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
-        [bridgeConfigs[0].bridgeId, bridgeConfigs[4].bridgeId, bridgeConfigs[2].bridgeId, BridgeId.ZERO].map(
-          (x: BridgeId) => x.toString(),
-        ),
-      );
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toBigInt())).toEqual([
+        bridgeConfigs[0].bridgeId,
+        bridgeConfigs[4].bridgeId,
+        bridgeConfigs[2].bridgeId,
+        BridgeId.ZERO.toBigInt(),
+      ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
@@ -784,8 +782,8 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
-        [bridgeConfigs[1].bridgeId, ...Array(3).fill(BridgeId.ZERO)].map((x: BridgeId) => x.toString()),
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toBigInt())).toEqual(
+        [bridgeConfigs[1].bridgeId, ...Array(3).fill(BridgeId.ZERO.toBigInt())]
       );
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -815,8 +813,8 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(2);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
-        [bridgeConfigs[1].bridgeId, ...Array(3).fill(BridgeId.ZERO)].map((x: BridgeId) => x.toString()),
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toBigInt())).toEqual(
+        [bridgeConfigs[1].bridgeId, ...Array(3).fill(BridgeId.ZERO.toBigInt())]
       );
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -846,8 +844,8 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
-        [bridgeConfigs[1].bridgeId, ...Array(3).fill(BridgeId.ZERO)].map((x: BridgeId) => x.toString()),
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toBigInt())).toEqual(
+        [bridgeConfigs[1].bridgeId, ...Array(3).fill(BridgeId.ZERO.toBigInt())]
       );
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -863,10 +861,9 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toBigInt())).toEqual(
         Array(4)
-          .fill(BridgeId.ZERO)
-          .map((x: BridgeId) => x.toString()),
+          .fill(BridgeId.ZERO.toBigInt())
       );
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -894,10 +891,9 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toBigInt())).toEqual(
         Array(4)
-          .fill(BridgeId.ZERO)
-          .map((x: BridgeId) => x.toString()),
+          .fill(BridgeId.ZERO.toBigInt())
       );
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -916,10 +912,9 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toBigInt())).toEqual(
         Array(4)
-          .fill(BridgeId.ZERO)
-          .map((x: BridgeId) => x.toString()),
+          .fill(BridgeId.ZERO.toBigInt())
       );
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -975,7 +970,7 @@ describe('rollup_coordinator', () => {
     let oldTime = new Date();
     let oldTimeouts: RollupTimeouts = {
       baseTimeout: { timeout: new Date(0), rollupNumber: 1 },
-      bridgeTimeouts: new Map<string, RollupTimeout>(),
+      bridgeTimeouts: new Map<bigint, RollupTimeout>(),
     };
 
     beforeEach(() => {
@@ -1000,11 +995,11 @@ describe('rollup_coordinator', () => {
       oldTimeouts = rollupTimeouts;
       rollupTimeouts = {
         baseTimeout: { timeout: new Date('2021-06-20T10:00:00+00:00'), rollupNumber: 1 },
-        bridgeTimeouts: new Map<string, RollupTimeout>([
-          [bridgeConfigs[0].bridgeId.toString(), { timeout: new Date('2021-06-20T10:00:00+00:00'), rollupNumber: 1 }],
-          [bridgeConfigs[1].bridgeId.toString(), { timeout: new Date('2021-06-20T09:00:00+00:00'), rollupNumber: 1 }],
-          [bridgeConfigs[2].bridgeId.toString(), { timeout: new Date('2021-06-20T09:30:00+00:00'), rollupNumber: 1 }],
-          [bridgeConfigs[3].bridgeId.toString(), { timeout: new Date('2021-06-20T08:00:00+00:00'), rollupNumber: 1 }],
+        bridgeTimeouts: new Map<bigint, RollupTimeout>([
+          [bridgeConfigs[0].bridgeId, { timeout: new Date('2021-06-20T10:00:00+00:00'), rollupNumber: 1 }],
+          [bridgeConfigs[1].bridgeId, { timeout: new Date('2021-06-20T09:00:00+00:00'), rollupNumber: 1 }],
+          [bridgeConfigs[2].bridgeId, { timeout: new Date('2021-06-20T09:30:00+00:00'), rollupNumber: 1 }],
+          [bridgeConfigs[3].bridgeId, { timeout: new Date('2021-06-20T08:00:00+00:00'), rollupNumber: 1 }],
         ]),
       };
 
@@ -1050,10 +1045,9 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toBigInt())).toEqual(
         Array(4)
-          .fill(BridgeId.ZERO)
-          .map((x: BridgeId) => x.toString()),
+          .fill(BridgeId.ZERO.toBigInt())
       );
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -1090,10 +1084,9 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toBigInt())).toEqual(
         Array(4)
-          .fill(BridgeId.ZERO)
-          .map((x: BridgeId) => x.toString()),
+          .fill(BridgeId.ZERO.toBigInt())
       );
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -1114,7 +1107,7 @@ describe('rollup_coordinator', () => {
       // set the rollup timeout to be no timeout
       rollupTimeouts = {
         baseTimeout: undefined,
-        bridgeTimeouts: new Map<string, RollupTimeout>(),
+        bridgeTimeouts: new Map<bigint, RollupTimeout>(),
       };
       // and set current time 100 years from now
       currentTime = new Date('2121-06-20T11:45:00+01:00');
@@ -1161,10 +1154,9 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toBigInt())).toEqual(
         Array(4)
-          .fill(BridgeId.ZERO)
-          .map((x: BridgeId) => x.toString()),
+          .fill(BridgeId.ZERO.toBigInt())
       );
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -1189,8 +1181,8 @@ describe('rollup_coordinator', () => {
       rollupTimeouts = {
         ...rollupTimeouts,
         baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
-        bridgeTimeouts: new Map<string, RollupTimeout>([
-          [bridgeConfigs[2].bridgeId.toString(), { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
+        bridgeTimeouts: new Map<bigint, RollupTimeout>([
+          [bridgeConfigs[2].bridgeId, { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
         ]),
       };
       // and set current time just after the timeout
@@ -1204,8 +1196,8 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
-        [bridgeConfigs[2].bridgeId, ...Array(3).fill(BridgeId.ZERO)].map((x: BridgeId) => x.toString()),
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toBigInt())).toEqual(
+        [bridgeConfigs[2].bridgeId, ...Array(3).fill(BridgeId.ZERO.toBigInt())]
       );
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -1227,8 +1219,8 @@ describe('rollup_coordinator', () => {
       rollupTimeouts = {
         ...rollupTimeouts,
         baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
-        bridgeTimeouts: new Map<string, RollupTimeout>([
-          [bridgeConfigs[2].bridgeId.toString(), { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
+        bridgeTimeouts: new Map<bigint, RollupTimeout>([
+          [bridgeConfigs[2].bridgeId, { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
         ]),
       };
       // and set current time just after the timeout
@@ -1242,8 +1234,8 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
-        [bridgeConfigs[2].bridgeId, ...Array(3).fill(BridgeId.ZERO)].map((x: BridgeId) => x.toString()),
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toBigInt())).toEqual(
+        [bridgeConfigs[2].bridgeId, ...Array(3).fill(BridgeId.ZERO.toBigInt())],
       );
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -1269,9 +1261,9 @@ describe('rollup_coordinator', () => {
       rollupTimeouts = {
         ...rollupTimeouts,
         baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
-        bridgeTimeouts: new Map<string, RollupTimeout>([
-          [bridgeConfigs[0].bridgeId.toString(), { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
-          [bridgeConfigs[2].bridgeId.toString(), { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
+        bridgeTimeouts: new Map<bigint, RollupTimeout>([
+          [bridgeConfigs[0].bridgeId, { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
+          [bridgeConfigs[2].bridgeId, { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
         ]),
       };
       // and set current time just after the timeout
@@ -1285,10 +1277,8 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
-        [bridgeConfigs[2].bridgeId, bridgeConfigs[0].bridgeId, ...Array(2).fill(BridgeId.ZERO)].map((x: BridgeId) =>
-          x.toString(),
-        ),
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toBigInt())).toEqual(
+        [bridgeConfigs[2].bridgeId, bridgeConfigs[0].bridgeId, ...Array(2).fill(BridgeId.ZERO.toBigInt())]
       );
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -1317,8 +1307,8 @@ describe('rollup_coordinator', () => {
       rollupTimeouts = {
         ...rollupTimeouts,
         baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
-        bridgeTimeouts: new Map<string, RollupTimeout>([
-          [bridgeConfigs[4].bridgeId.toString(), { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
+        bridgeTimeouts: new Map<bigint, RollupTimeout>([
+          [bridgeConfigs[4].bridgeId, { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
         ]),
       };
       // and set current time just after the timeout.
@@ -1363,14 +1353,12 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
-        [
-          bridgeConfigs[0].bridgeId,
-          bridgeConfigs[1].bridgeId,
-          bridgeConfigs[2].bridgeId,
-          bridgeConfigs[3].bridgeId,
-        ].map((x: BridgeId) => x.toString()),
-      );
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toBigInt())).toEqual([
+        bridgeConfigs[0].bridgeId,
+        bridgeConfigs[1].bridgeId,
+        bridgeConfigs[2].bridgeId,
+        bridgeConfigs[3].bridgeId,
+      ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
@@ -1394,7 +1382,7 @@ describe('rollup_coordinator', () => {
       rollupTimeouts = {
         ...rollupTimeouts,
         baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
-        bridgeTimeouts: new Map<string, RollupTimeout>(),
+        bridgeTimeouts: new Map<bigint, RollupTimeout>(),
       };
       // and set current time just after the timeout
       currentTime = new Date('2021-06-20T12:00:01+01:00');
@@ -1407,10 +1395,9 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toBigInt())).toEqual(
         Array(4)
-          .fill(BridgeId.ZERO)
-          .map((x: BridgeId) => x.toString()),
+          .fill(BridgeId.ZERO.toBigInt())
       );
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -1452,7 +1439,7 @@ describe('rollup_coordinator', () => {
       chainedTxs.push(
         mockTx(6, {
           txType: TxType.DEFI_DEPOSIT,
-          bridgeId: bridgeConfigs[4].bridgeId,
+          bridgeId: BridgeId.fromBigInt(bridgeConfigs[4].bridgeId),
           txFee: BASE_GAS + bridgeConfigs[4].fee,
           noteCommitment2: commitments[2],
           backwardLink: commitments[1],
@@ -1554,8 +1541,8 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
-        [bridgeConfigs[2].bridgeId, ...Array(3).fill(BridgeId.ZERO)].map((x: BridgeId) => x.toString()),
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toBigInt())).toEqual(
+        [bridgeConfigs[2].bridgeId, ...Array(3).fill(BridgeId.ZERO.toBigInt())]
       );
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -1591,14 +1578,12 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toString())).toEqual(
-        [
-          bridgeConfigs[0].bridgeId,
-          bridgeConfigs[1].bridgeId,
-          bridgeConfigs[2].bridgeId,
-          bridgeConfigs[3].bridgeId,
-        ].map((x: BridgeId) => x.toString()),
-      );
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4].map((x: BridgeId) => x.toBigInt())).toEqual([
+        bridgeConfigs[0].bridgeId,
+        bridgeConfigs[1].bridgeId,
+        bridgeConfigs[2].bridgeId,
+        bridgeConfigs[3].bridgeId,
+      ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
   });

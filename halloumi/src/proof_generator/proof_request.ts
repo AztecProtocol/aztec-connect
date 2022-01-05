@@ -19,6 +19,14 @@ export class TxRollupProofRequest {
   toBuffer() {
     return Buffer.concat([numToUInt32BE(this.proofId), numToUInt32BE(this.rollupSize), this.txRollup.toBuffer()]);
   }
+
+  static fromBuffer(buf: Buffer) {
+    let start = 4;
+    const rollupSize = buf.readUInt32BE(start);
+    start += 4;
+    const txRollup = TxRollup.fromBuffer(buf.slice(start));
+    return new TxRollupProofRequest(rollupSize, txRollup);
+  }
 }
 
 export class RootRollupProofRequest {
@@ -60,4 +68,3 @@ export class RootVerifierProofRequest {
     ]);
   }
 }
-

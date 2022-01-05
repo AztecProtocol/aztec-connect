@@ -94,7 +94,6 @@ export class RollupCreator {
     const dataRootsPaths: HashPath[] = [];
     const dataRootsIndicies: number[] = [];
     const localAssetIds: Set<AssetId> = new Set();
-    const localBridgeIds: Buffer[] = [];
 
     const proofs = txs.map(tx => new ProofData(tx.proofData));
     const { linkedCommitmentPaths, linkedCommitmentIndices } = await this.getLinkedCommitments(proofs);
@@ -112,9 +111,6 @@ export class RollupCreator {
       if (proof.proofId !== ProofId.DEFI_DEPOSIT) {
         await worldStateDb.put(RollupTreeId.DATA, nextDataIndex++, proof.noteCommitment1);
       } else {
-        if (!localBridgeIds.some(id => id.equals(proof.bridgeId))) {
-          localBridgeIds.push(proof.bridgeId);
-        }
         let rootBridgeIndex = rootRollupBridgeIds.findIndex(id => id.toBuffer().equals(proof.bridgeId));
         if (rootBridgeIndex === -1) {
           rootBridgeIndex = rootRollupBridgeIds.length;
@@ -187,7 +183,7 @@ export class RollupCreator {
       dataRootsIndicies,
 
       newDefiRoot,
-      localBridgeIds,
+      rootRollupBridgeIds.map(bridge => bridge.toBuffer()),
 
       [...localAssetIds].map(id => numToUInt32BE(id, 32)),
     );

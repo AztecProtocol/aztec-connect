@@ -10,25 +10,25 @@ const stringToDate = (dateAsString: string) => new Date(dateAsString);
 
 const bridgeConfigs: BridgeConfig[] = [
   {
-    bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 1)),
+    bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 1)).toBigInt(),
     numTxs: 1,
     fee: 500000n,
     rollupFrequency: 2,
   },
   {
-    bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 2)),
+    bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 2)).toBigInt(),
     numTxs: 1,
     fee: 500000n,
     rollupFrequency: 3,
   },
   {
-    bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 3)),
+    bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 3)).toBigInt(),
     numTxs: 1,
     fee: 500000n,
     rollupFrequency: 4,
   },
   {
-    bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 4)),
+    bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 4)).toBigInt(),
     numTxs: 1,
     fee: 500000n,
     rollupFrequency: 1,
@@ -87,19 +87,19 @@ describe('PublishTimeManager', () => {
       rollupNumber: 454617,
     });
     expect(rollupTimeouts.bridgeTimeouts.size).toEqual(4);
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[0].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[0].bridgeId)).toEqual({
       timeout: stringToDate('2021-11-11T08:00:00+00:00'),
       rollupNumber: 227308,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[1].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[1].bridgeId)).toEqual({
       timeout: stringToDate('2021-11-11T09:00:00+00:00'),
       rollupNumber: 151539,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[2].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[2].bridgeId)).toEqual({
       timeout: stringToDate('2021-11-11T08:00:00+00:00'),
       rollupNumber: 113654,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[3].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[3].bridgeId)).toEqual({
       timeout: stringToDate('2021-11-11T09:00:00+00:00'),
       rollupNumber: 454617,
     });
@@ -110,19 +110,19 @@ describe('PublishTimeManager', () => {
       rollupNumber: 454618,
     });
     expect(rollupTimeouts.bridgeTimeouts.size).toEqual(4);
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[0].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[0].bridgeId)).toEqual({
       timeout: stringToDate('2021-11-11T10:00:00+00:00'),
       rollupNumber: 227309,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[1].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[1].bridgeId)).toEqual({
       timeout: stringToDate('2021-11-11T12:00:00+00:00'),
       rollupNumber: 151540,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[2].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[2].bridgeId)).toEqual({
       timeout: stringToDate('2021-11-11T12:00:00+00:00'),
       rollupNumber: 113655,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[3].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[3].bridgeId)).toEqual({
       timeout: stringToDate('2021-11-11T10:00:00+00:00'),
       rollupNumber: 454618,
     });
@@ -131,13 +131,13 @@ describe('PublishTimeManager', () => {
   it('does not included bridges with rollup frequency < 1', () => {
     const bridgeConfigs: BridgeConfig[] = [
       {
-        bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 1)),
+        bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 1)).toBigInt(),
         numTxs: 1,
         fee: 500000n,
         rollupFrequency: 2,
       },
       {
-        bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 2)),
+        bridgeId: BridgeId.fromBuffer(Buffer.alloc(32, 2)).toBigInt(),
         numTxs: 1,
         fee: 500000n,
         rollupFrequency: 0,
@@ -150,12 +150,12 @@ describe('PublishTimeManager', () => {
       rollupNumber: 454617,
     });
     expect(rollupTimeouts.bridgeTimeouts.size).toEqual(1);
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[0].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[0].bridgeId)).toEqual({
       timeout: stringToDate('2021-11-11T08:00:00+00:00'),
       rollupNumber: 227308,
     });
 
-    expect(rollupTimeouts.bridgeTimeouts.has(bridgeConfigs[1].bridgeId.toString())).toBeFalsy();
+    expect(rollupTimeouts.bridgeTimeouts.has(bridgeConfigs[1].bridgeId)).toBeFalsy();
 
     rollupTimeouts = manager.calculateNextTimeouts();
     expect(rollupTimeouts.baseTimeout).toEqual({
@@ -163,11 +163,11 @@ describe('PublishTimeManager', () => {
       rollupNumber: 454618,
     });
     expect(rollupTimeouts.bridgeTimeouts.size).toEqual(1);
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[0].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[0].bridgeId)).toEqual({
       timeout: stringToDate('2021-11-11T10:00:00+00:00'),
       rollupNumber: 227309,
     });
-    expect(rollupTimeouts.bridgeTimeouts.has(bridgeConfigs[1].bridgeId.toString())).toBeFalsy();
+    expect(rollupTimeouts.bridgeTimeouts.has(bridgeConfigs[1].bridgeId)).toBeFalsy();
   });
 
   it('gives correct bridge timeouts 2', () => {
@@ -179,19 +179,19 @@ describe('PublishTimeManager', () => {
       rollupNumber: 454618,
     });
     expect(rollupTimeouts.bridgeTimeouts.size).toEqual(4);
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[0].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[0].bridgeId)).toEqual({
       timeout: stringToDate('2021-11-11T10:00:00+00:00'),
       rollupNumber: 227309,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[1].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[1].bridgeId)).toEqual({
       timeout: stringToDate('2021-11-11T09:00:00+00:00'),
       rollupNumber: 151539,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[2].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[2].bridgeId)).toEqual({
       timeout: stringToDate('2021-11-11T08:00:00+00:00'),
       rollupNumber: 113654,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[3].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[3].bridgeId)).toEqual({
       timeout: stringToDate('2021-11-11T10:00:00+00:00'),
       rollupNumber: 454618,
     });
@@ -202,19 +202,19 @@ describe('PublishTimeManager', () => {
       rollupNumber: 454619,
     });
     expect(rollupTimeouts.bridgeTimeouts.size).toEqual(4);
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[0].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[0].bridgeId)).toEqual({
       timeout: stringToDate('2021-11-11T12:00:00+00:00'),
       rollupNumber: 227310,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[1].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[1].bridgeId)).toEqual({
       timeout: stringToDate('2021-11-11T12:00:00+00:00'),
       rollupNumber: 151540,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[2].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[2].bridgeId)).toEqual({
       timeout: stringToDate('2021-11-11T12:00:00+00:00'),
       rollupNumber: 113655,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[3].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[3].bridgeId)).toEqual({
       timeout: stringToDate('2021-11-11T11:00:00+00:00'),
       rollupNumber: 454619,
     });
@@ -230,19 +230,19 @@ describe('PublishTimeManager', () => {
       rollupNumber: 454618,
     });
     expect(rollupTimeouts.bridgeTimeouts.size).toEqual(4);
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[0].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[0].bridgeId)).toEqual({
       timeout: stringToDate('2021-11-11T10:00:00+00:00'),
       rollupNumber: 227309,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[1].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[1].bridgeId)).toEqual({
       timeout: stringToDate('2021-11-11T09:00:00+00:00'),
       rollupNumber: 151539,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[2].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[2].bridgeId)).toEqual({
       timeout: stringToDate('2021-11-11T08:00:00+00:00'),
       rollupNumber: 113654,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[3].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[3].bridgeId)).toEqual({
       timeout: stringToDate('2021-11-11T10:00:00+00:00'),
       rollupNumber: 454618,
     });
@@ -255,19 +255,19 @@ describe('PublishTimeManager', () => {
       rollupNumber: 454619,
     });
     expect(rollupTimeouts.bridgeTimeouts.size).toEqual(4);
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[0].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[0].bridgeId)).toEqual({
       timeout: stringToDate('2021-11-11T12:00:00+00:00'),
       rollupNumber: 227310,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[1].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[1].bridgeId)).toEqual({
       timeout: stringToDate('2021-11-11T12:00:00+00:00'),
       rollupNumber: 151540,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[2].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[2].bridgeId)).toEqual({
       timeout: stringToDate('2021-11-11T12:00:00+00:00'),
       rollupNumber: 113655,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[3].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[3].bridgeId)).toEqual({
       timeout: stringToDate('2021-11-11T11:00:00+00:00'),
       rollupNumber: 454619,
     });
@@ -284,19 +284,19 @@ describe('PublishTimeManager', () => {
       rollupNumber: 451161,
     });
     expect(rollupTimeouts.bridgeTimeouts.size).toEqual(4);
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[0].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[0].bridgeId)).toEqual({
       timeout: stringToDate('2021-06-20T08:00:00+00:00'),
       rollupNumber: 225580,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[1].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[1].bridgeId)).toEqual({
       timeout: stringToDate('2021-06-20T09:00:00+00:00'),
       rollupNumber: 150387,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[2].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[2].bridgeId)).toEqual({
       timeout: stringToDate('2021-06-20T08:00:00+00:00'),
       rollupNumber: 112790,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[3].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[3].bridgeId)).toEqual({
       timeout: stringToDate('2021-06-20T09:00:00+00:00'),
       rollupNumber: 451161,
     });
@@ -309,19 +309,19 @@ describe('PublishTimeManager', () => {
       rollupNumber: 451162,
     });
     expect(rollupTimeouts.bridgeTimeouts.size).toEqual(4);
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[0].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[0].bridgeId)).toEqual({
       timeout: stringToDate('2021-06-20T10:00:00+00:00'),
       rollupNumber: 225581,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[1].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[1].bridgeId)).toEqual({
       timeout: stringToDate('2021-06-20T12:00:00+00:00'),
       rollupNumber: 150388,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[2].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[2].bridgeId)).toEqual({
       timeout: stringToDate('2021-06-20T12:00:00+00:00'),
       rollupNumber: 112791,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[3].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[3].bridgeId)).toEqual({
       timeout: stringToDate('2021-06-20T10:00:00+00:00'),
       rollupNumber: 451162,
     });
@@ -341,19 +341,19 @@ describe('PublishTimeManager', () => {
       rollupNumber: 902324,
     });
     expect(rollupTimeouts.bridgeTimeouts.size).toEqual(4);
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[0].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[0].bridgeId)).toEqual({
       timeout: stringToDate('2021-06-20T10:00:00+00:00'),
       rollupNumber: 451162,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[1].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[1].bridgeId)).toEqual({
       timeout: stringToDate('2021-06-20T09:00:00+00:00'),
       rollupNumber: 300774,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[2].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[2].bridgeId)).toEqual({
       timeout: stringToDate('2021-06-20T10:00:00+00:00'),
       rollupNumber: 225581,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[3].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[3].bridgeId)).toEqual({
       timeout: stringToDate('2021-06-20T10:00:00+00:00'),
       rollupNumber: 902324,
     });
@@ -366,19 +366,19 @@ describe('PublishTimeManager', () => {
       rollupNumber: 902325,
     });
     expect(rollupTimeouts.bridgeTimeouts.size).toEqual(4);
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[0].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[0].bridgeId)).toEqual({
       timeout: stringToDate('2021-06-20T11:00:00+00:00'),
       rollupNumber: 451163,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[1].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[1].bridgeId)).toEqual({
       timeout: stringToDate('2021-06-20T10:30:00+00:00'),
       rollupNumber: 300775,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[2].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[2].bridgeId)).toEqual({
       timeout: stringToDate('2021-06-20T12:00:00+00:00'),
       rollupNumber: 225582,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[3].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[3].bridgeId)).toEqual({
       timeout: stringToDate('2021-06-20T10:30:00+00:00'),
       rollupNumber: 902325,
     });
@@ -398,19 +398,19 @@ describe('PublishTimeManager', () => {
       rollupNumber: 902325,
     });
     expect(rollupTimeouts.bridgeTimeouts.size).toEqual(4);
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[0].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[0].bridgeId)).toEqual({
       timeout: stringToDate('2021-06-20T10:00:00+00:00'),
       rollupNumber: 451162,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[1].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[1].bridgeId)).toEqual({
       timeout: stringToDate('2021-06-20T10:30:00+00:00'),
       rollupNumber: 300775,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[2].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[2].bridgeId)).toEqual({
       timeout: stringToDate('2021-06-20T10:00:00+00:00'),
       rollupNumber: 225581,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[3].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[3].bridgeId)).toEqual({
       timeout: stringToDate('2021-06-20T10:30:00+00:00'),
       rollupNumber: 902325,
     });
@@ -424,19 +424,19 @@ describe('PublishTimeManager', () => {
       rollupNumber: 902326,
     });
     expect(rollupTimeouts.bridgeTimeouts.size).toEqual(4);
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[0].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[0].bridgeId)).toEqual({
       timeout: stringToDate('2021-06-20T11:00:00+00:00'),
       rollupNumber: 451163,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[1].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[1].bridgeId)).toEqual({
       timeout: stringToDate('2021-06-20T12:00:00+00:00'),
       rollupNumber: 300776,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[2].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[2].bridgeId)).toEqual({
       timeout: stringToDate('2021-06-20T12:00:00+00:00'),
       rollupNumber: 225582,
     });
-    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[3].bridgeId.toString())).toEqual({
+    expect(rollupTimeouts.bridgeTimeouts.get(bridgeConfigs[3].bridgeId)).toEqual({
       timeout: stringToDate('2021-06-20T11:00:00+00:00'),
       rollupNumber: 902326,
     });

@@ -1,4 +1,3 @@
-import { EthAddress } from '../address';
 import { BridgeId , BitConfig } from './';
 
 describe('bridge id', () => {

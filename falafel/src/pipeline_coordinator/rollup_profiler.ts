@@ -1,4 +1,3 @@
-import { BridgeId, BridgeConfig } from '@aztec/barretenberg/bridge_id';
 import { TxFeeResolver } from '../tx_fee_resolver';
 import { RollupTx } from './bridge_tx_queue';
 import { isDefiDeposit } from '@aztec/barretenberg/blockchain';
@@ -6,7 +5,7 @@ import { BridgeCostResolver } from '../tx_fee_resolver/bridge_cost_resolver';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
 
 export interface BridgeProfile {
-  bridgeId: BridgeId;
+  bridgeId: bigint;
   numTxs: number;
   totalGasCost: bigint;
   totalGasEarnt: bigint;
@@ -52,7 +51,7 @@ export function profileRollup(
 ) {
   const rollupProfile: RollupProfile = emptyProfile(rollupSize);
   rollupProfile.totalTxs = allTxs.length;
-  const bridgeProfiles = new Map<string, BridgeProfile>();
+  const bridgeProfiles = new Map<bigint, BridgeProfile>();
   const commitmentLocations = new Map<string, number>();
   const emptyBuffer = Buffer.alloc(32);
   for (let txIndex = 0; txIndex < allTxs.length; txIndex++) {
@@ -95,12 +94,12 @@ export function profileRollup(
       const baseGas = BigInt(feeResolver.getBaseTxGas());
       rollupProfile.totalGasCost += baseGas;
 
-      const bridgeId = tx.bridgeId.toString();
+      const bridgeId = tx.bridgeId.toBigInt();
       let profile = bridgeProfiles.get(bridgeId);
       if (!profile) {
-        const bridgeGasCost = bridgeCostResolver.getBridgeCost(tx.bridgeId);
+        const bridgeGasCost = bridgeCostResolver.getBridgeCost(bridgeId);
         profile = {
-          bridgeId: tx.bridgeId,
+          bridgeId: bridgeId,
           numTxs: 0,
           totalGasCost: bridgeGasCost,
           totalGasEarnt: 0n,

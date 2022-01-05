@@ -1,5 +1,6 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { blockchainStatusToJson } from '@aztec/barretenberg/blockchain';
+import { bridgeStatusToJson } from '@aztec/barretenberg/bridge_id';
 import { Block, BlockServerResponse, GetBlocksServerResponse } from '@aztec/barretenberg/block_source';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
 import {
@@ -170,6 +171,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
           fee: fee.toString(),
         })),
       })),
+      bridgeStatus: status.bridgeStatus.map(bridgeStatusToJson),
     };
 
     ctx.set('content-type', 'application/json');
