@@ -43,7 +43,6 @@ export const ShieldPrompt: React.FunctionComponent<ShieldPromptProps> = ({
   pendingValue = 0n,
   onSubmit,
 }) => {
-  console.log(balance, pendingValue);
   return (
     <Root>
       <Message size="m">
