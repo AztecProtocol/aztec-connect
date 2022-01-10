@@ -24,7 +24,7 @@ export class RollupPublisher {
     private feeLimit: bigint,
     private maxProviderGasPrice: bigint,
     private providerGasPriceMultiplier: number,
-    private gasLimit: number,
+    private gasLimit: number | undefined,
     provider: EthereumProvider,
     private metrics: Metrics,
   ) {

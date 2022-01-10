@@ -28,7 +28,7 @@ export class RollupPipeline {
     numInnerRollupTxs: number,
     numOuterRollupProofs: number,
     feeResolver: TxFeeResolver,
-    gasLimit: number,
+    gasLimit?: number,
   ) {
     const innerRollupSize = 1 << Math.ceil(Math.log2(numInnerRollupTxs));
     const outerRollupSize = 1 << Math.ceil(Math.log2(innerRollupSize * numOuterRollupProofs));
@@ -109,7 +109,7 @@ export class RollupPipelineFactory {
     private numInnerRollupTxs: number,
     private numOuterRollupProofs: number,
     private txFeeResolver: TxFeeResolver,
-    private gasLimit: number,
+    private gasLimit?: number,
   ) {}
 
   public setTopology(numInnerRollupTxs: number, numOuterRollupProofs: number) {
