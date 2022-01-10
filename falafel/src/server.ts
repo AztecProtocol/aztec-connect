@@ -90,6 +90,7 @@ export class Server {
       numInnerRollupTxs,
       numOuterRollupProofs,
       this.txFeeResolver,
+      gasLimit,
     );
     this.worldState = new WorldState(rollupDb, worldStateDb, blockchain, this.pipelineFactory, metrics);
     this.txReceiver = new TxReceiver(
