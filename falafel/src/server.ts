@@ -59,6 +59,7 @@ export class Server {
       feeGasPriceMultiplier,
       maxProviderGasPrice,
       providerGasPriceMultiplier,
+      gasLimit,
     } = config;
 
     this.runtimeConfig = {
