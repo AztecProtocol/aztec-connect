@@ -22,7 +22,6 @@ export interface ServerConfig {
   readonly numInnerRollupTxs: number;
   readonly numOuterRollupProofs: number;
   readonly publishInterval: Duration;
-  readonly gasLimit?: number;
   readonly baseTxGas: number;
   readonly maxFeeGasPrice: bigint;
   readonly feeGasPriceMultiplier: number;
@@ -59,7 +58,6 @@ export class Server {
       feeGasPriceMultiplier,
       maxProviderGasPrice,
       providerGasPriceMultiplier,
-      gasLimit,
     } = config;
 
     this.runtimeConfig = {
@@ -91,7 +89,6 @@ export class Server {
       numInnerRollupTxs,
       numOuterRollupProofs,
       this.txFeeResolver,
-      gasLimit,
     );
     this.worldState = new WorldState(rollupDb, worldStateDb, blockchain, this.pipelineFactory, metrics);
     this.txReceiver = new TxReceiver(

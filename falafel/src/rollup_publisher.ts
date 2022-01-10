@@ -24,7 +24,6 @@ export class RollupPublisher {
     private feeLimit: bigint,
     private maxProviderGasPrice: bigint,
     private providerGasPriceMultiplier: number,
-    private gasLimit: number | undefined,
     provider: EthereumProvider,
     private metrics: Metrics,
   ) {
@@ -157,7 +156,7 @@ export class RollupPublisher {
   private async sendRollupProof(txData: Buffer) {
     while (!this.interrupted) {
       try {
-        return await this.blockchain.sendTx(txData, { gasLimit: this.gasLimit });
+        return await this.blockchain.sendTx(txData);
       } catch (err) {
         console.log(err.message);
         await this.sleepOrInterrupted(60000);

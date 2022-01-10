@@ -103,13 +103,13 @@ export class WalletProvider implements EthereumProvider {
    * Populate any missing fields.
    */
   private async signTxLocally(tx: any, account: Wallet) {
-    const { gasLimit = null, value = 0, from, to, data, nonce = null } = tx;
+    const { gas = null, value = 0, from, to, data, nonce = null } = tx;
 
     const txReq: TransactionRequest = {
       from,
       to,
       data,
-      gasLimit,
+      gasLimit: gas,
       value,
       nonce,
     };
