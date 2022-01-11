@@ -36,6 +36,7 @@ interface InfoContentProps {
   className?: string;
   theme: StatTheme;
   title: string;
+  subtitle?: string;
   caption: string;
   titleContent?: React.ReactNode;
   titleIcon: string;
@@ -46,6 +47,7 @@ export const InfoContent: React.FunctionComponent<InfoContentProps> = ({
   className,
   theme,
   title,
+  subtitle,
   caption,
   titleContent,
   titleIcon,
@@ -60,6 +62,7 @@ export const InfoContent: React.FunctionComponent<InfoContentProps> = ({
               theme={theme}
               icon={titleIcon}
               label={caption}
+              subtitle={subtitle}
               value={title}
               size={sizeLte(breakpoint, 'xs') ? 'm' : 'l'}
             />
