@@ -6,7 +6,8 @@ import { Button, Text } from '../components';
 import { breakpoints, spacings } from '../styles';
 import { Sections, Section, SectionTitle } from '../template';
 import { GET_TX, TX_POLL_INTERVAL, TxQueryData, TxQueryVars } from './query';
-import { TxDetails, TxDetailsPlaceholder } from './tx_details';
+import { TxDetailsPlaceholder } from './tx_details_placeholder';
+import { TxDetails } from './tx_details';
 
 const TxTitle = styled.div`
   display: flex;
