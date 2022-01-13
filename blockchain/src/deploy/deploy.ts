@@ -12,7 +12,8 @@ import { deployPriceFeed } from './deploy_price_feed';
 import { createPair, deployUniswap } from './deploy_uniswap';
 import { deployVerifier } from './deploy_verifier';
 
-export async function deploy(escapeHatchBlockLower: number, escapeHatchBlockUpper: number, signer: Signer) {
+// initialEthSupply = 0.1 ETH
+export async function deploy(escapeHatchBlockLower: number, escapeHatchBlockUpper: number, signer: Signer, initialEthSupply = 1n * 10n ** 17n) {
   const uniswapRouter = await deployUniswap(signer);
   await uniswapRouter.deployed();
 
@@ -62,7 +63,6 @@ export async function deploy(escapeHatchBlockLower: number, escapeHatchBlockUppe
 
   const gasPrice = 20n * 10n ** 9n; // 20 gwei
   const assetPrice = 1n * 10n ** 15n; // 1000 DAI/ETH
-  const initialEthSupply = 1n * 10n ** 17n; // 0.1 ETH
   const initialTokenSupply = (initialEthSupply * 10n ** 18n) / assetPrice;
   await createPair(signer, uniswapRouter, asset, initialTokenSupply, initialEthSupply);
 

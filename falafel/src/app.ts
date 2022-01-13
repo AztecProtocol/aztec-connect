@@ -1,9 +1,4 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
-<<<<<<< HEAD
-import { blockchainStatusToJson } from '@aztec/barretenberg/blockchain';
-import { bridgeStatusToJson } from '@aztec/barretenberg/bridge_id';
-=======
->>>>>>> Allow setting some runtime config vars via env vars to keep testing simple.
 import { Block, BlockServerResponse, GetBlocksServerResponse } from '@aztec/barretenberg/block_source';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
 import {

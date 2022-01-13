@@ -91,6 +91,7 @@ export const randomUserDefiTx = (tx: Partial<UserDefiTx> = {}) =>
     tx.outputValueA || BigInt(0),
     tx.outputValueB || BigInt(0),
     tx.settled,
+    tx.result || false
   );
 
 export const randomUserUtilTx = (tx: Partial<UserUtilTx> = {}) =>

@@ -54,7 +54,7 @@ export interface Database {
   addDefiTx(tx: UserDefiTx): Promise<void>;
   getDefiTx(txHash: TxHash): Promise<UserDefiTx | undefined>;
   getDefiTxs(userId): Promise<UserDefiTx[]>;
-  updateDefiTx(txHash: TxHash, outputValueA: bigint, outputValueB: bigint): Promise<void>;
+  updateDefiTx(txHash: TxHash, outputValueA: bigint, outputValueB: bigint, result: boolean): Promise<void>;
   settleDefiTx(txHash: TxHash, settled: Date): Promise<void>;
 
   addUtilTx(tx: UserUtilTx): Promise<void>;

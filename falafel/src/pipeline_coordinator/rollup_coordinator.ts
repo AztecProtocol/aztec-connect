@@ -194,9 +194,6 @@ export class RollupCoordinator {
         addTx();
       } else {
         txs = this.handleNewDefiTx(tx, remainingTxSlots - txs.length, txs, flush, assetIds, bridgeIds);
-        if (!txs.some(newTx => newTx.tx.id.equals(tx.id))) {
-          discardTx();
-        }
       }
     }
     return txs;
@@ -208,7 +205,7 @@ export class RollupCoordinator {
         rollupProfile.totalTxs
       }, timeout/flush: ${timeout}/${flush}, gas balance: ${
         rollupProfile.totalGasEarnt - rollupProfile.totalGasCost
-      }, inner chains: ${rollupProfile.innerChains}, outer chains: ${rollupProfile.outerChains}`,
+      }, inner/outer chains: ${rollupProfile.innerChains}/${rollupProfile.outerChains}`,
     );
     for (const bp of rollupProfile.bridgeProfiles) {
       console.log(

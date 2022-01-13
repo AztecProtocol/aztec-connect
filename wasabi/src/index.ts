@@ -6,6 +6,8 @@ const {
   ETHEREUM_HOST = 'https://goerli.infura.io/v3/6a04b7c89c5b421faefde663f787aa35',
   NUM_DEFI_AGENTS = '1',
   NUM_PAYMENT_AGENTS = '1',
+  NUM_DEFI_SWAPS = '20',
+  NUM_PAYMENTS = '600',
   LOOP = '0',
   ROLLUP_HOST = 'https://api.aztec.network/falafel',
   NUM_SDKS = '8',
@@ -25,6 +27,8 @@ async function main() {
     const agent = new AgentManager(
       +NUM_DEFI_AGENTS,
       +NUM_PAYMENT_AGENTS,
+      +NUM_DEFI_SWAPS,
+      +NUM_PAYMENTS,
       ROLLUP_HOST,
       ETHEREUM_HOST,
       !!+MEMORY_DB,

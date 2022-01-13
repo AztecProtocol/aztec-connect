@@ -1,9 +1,8 @@
 import { WalletSdk, WalletProvider, AssetId, MemoryFifo, TxType, EthAddress, TxHash } from '@aztec/sdk';
-import { Agent, TX_SETTLEMENT_TIMEOUT } from './agent';
+import { Agent, TX_SETTLEMENT_TIMEOUT, UserData } from './agent';
 import { Stats } from './stats';
 
 export class SimpleAgent extends Agent {
-  readonly numTransfers = 400;
   readonly numConcurrentTransfers = 10;
 
   constructor(
@@ -12,8 +11,13 @@ export class SimpleAgent extends Agent {
     provider: WalletProvider,
     id: number,
     queue: MemoryFifo<() => Promise<void>>,
+    private numTransfers: number
   ) {
     super('Simple', fundsSourceAddress, sdk, id, provider, queue);
+  }
+
+  protected getNumAdditionalUsers(): number {
+    return 1;
   }
 
   public async run(stats: Stats) {
@@ -31,7 +35,7 @@ export class SimpleAgent extends Agent {
           );
           while (true) {
             try {
-              const hash: TxHash = await this.serializeAny(this.transfer);
+              const hash: TxHash = await this.serializeAny(() => this.transfer(this.users[0], this.users[1], 1n));
               console.log(
                 `${this.agentId()} sent transfer ${
                   this.numTransfers - transfersRemaining + (1 + transferPromises.length)
@@ -61,15 +65,15 @@ export class SimpleAgent extends Agent {
 
   private async calcDeposit(numTransfers: number) {
     // Nothing to do if we have a balance.
-    if (this.sdk.getBalance(AssetId.ETH, this.user.id)) {
+    if (this.sdk.getBalance(AssetId.ETH, this.primaryUser.user.id)) {
       return;
     }
-    const depositFee = await this.userAsset.getFee(TxType.DEPOSIT);
-    const transferFee = await this.userAsset.getFee(TxType.TRANSFER);
-    const withdrawFee = await this.userAsset.getFee(TxType.WITHDRAW_TO_WALLET);
+    const depositFee = await this.primaryUser.userAsset.getFee(TxType.DEPOSIT);
+    const transferFee = await this.primaryUser.userAsset.getFee(TxType.TRANSFER);
+    const withdrawFee = await this.primaryUser.userAsset.getFee(TxType.WITHDRAW_TO_WALLET);
 
     const totalDeposit =
-      BigInt(this.numTransfers * 2) + depositFee + BigInt(numTransfers) * transferFee + withdrawFee + this.payoutFee;
+      await this.primaryUser.userAsset.toBaseUnits('1') + depositFee + BigInt(numTransfers) * transferFee + withdrawFee + this.payoutFee;
     return totalDeposit;
   }
 
@@ -77,10 +81,10 @@ export class SimpleAgent extends Agent {
     return this.calcDeposit(this.numTransfers);
   }
 
-  private transfer = async () => {
+  private transfer = async (sender: UserData, recipient: UserData, ammount = 1n) => {
     console.log(`${this.agentId()} transferring...`);
-    const fee = await this.userAsset.getFee(TxType.TRANSFER);
-    const proof = await this.userAsset.createTransferProof(1n, fee, this.signer, this.user.id);
+    const fee = await sender.userAsset.getFee(TxType.TRANSFER);
+    const proof = await sender.userAsset.createTransferProof(ammount, fee, sender.signer, recipient.user.id);
     return await this.sdk.sendProof(proof);
   };
 }

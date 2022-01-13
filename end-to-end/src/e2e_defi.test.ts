@@ -5,14 +5,12 @@ import {
   BitConfig,
   createWalletSdk,
   EthAddress,
-  TxHash,
   TxType,
   WalletProvider,
   WalletSdk,
   toBaseUnits,
   JoinSplitProofOutput,
-  DefiProofOutput,
-  UserDefiTx,
+  DefiProofOutput
 } from '@aztec/sdk';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
@@ -116,7 +114,7 @@ describe('end-to-end defi tests', () => {
       const proofOutput = await sdk.createDefiProof(bridgeId, userIds[0], depositValue, txFee, signer);
       const defiTxHash = await sdk.sendProof(proofOutput);
 
-      // Await shield tx and defi deposit tx to settle.
+      // Await defi deposit tx to settle.
       await sdk.awaitSettlement(defiTxHash, awaitSettlementTimeout);
 
       const defiTxs = await sdk.getDefiTxs(userIds[0]);

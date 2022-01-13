@@ -13,8 +13,10 @@ import { Agent } from './agent';
 import { Stats } from './stats';
 
 const BASE_GAS = 10000; // configured on falafel
-const ETH_GAS_PRICE = 200000000000n;
-const DAI_GAS_PRICE = 500000000000000n;
+const ETH_GAS_PRICE = 20000000000n;
+const DAI_GAS_PRICE = 1000000000000000n;
+const DAI_TO_ETH = 1000n;
+//const DAI_GAS_PRICE = 1000000000000000n;
 
 const formatNumber = (x: bigint) => {
   return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -42,10 +44,10 @@ const bridgeConfigs: BridgeSpec[] = [
     gasCost: ETH_GAS_PRICE,
   },
   {
-    //bridgeId: '0x0000000000000000000000000000000000000000000000000000000100000003',
+    //bridgeId: '0x0000000000000000000000000000000000000000000000000000000100000002',
     inputAsset: AssetId.DAI,
     outputAsset: AssetId.ETH,
-    addressId: 3,
+    addressId: 2,
     numTxs: 10,
     gas: 100000n,
     rollupFrequency: 2,
@@ -72,22 +74,30 @@ export class DefiAgent extends Agent {
     super('Defi', fundsSourceAddress, sdk, id, provider, queue);
   }
 
+  protected getNumAdditionalUsers(): number {
+    return 0;
+  }
+
   public async run(stats: Stats) {
     try {
       await this.serializeTx(this.completePendingDeposit);
       stats.numDeposits++;
       for (let i = 0; i < this.numTransferPairs; i++) {
         console.log(`${this.agentId()} swapping ETH for DAI iteration: ${i}`);
-        await this.serializeTx(() => this.singleDefiSwap(bridgeConfigs[0], i));
+        const transferValue =
+          1000000n +
+          getBridgeTxCost(bridgeConfigs[1]) / DAI_TO_ETH +
+          (await this.sdk.getFee(AssetId.ETH, TxType.TRANSFER));
+        await this.serializeTx(() => this.singleDefiSwap(bridgeConfigs[0], (transferValue * 11n) / 10n));
         stats.numDefi++;
         console.log(`${this.agentId()} swapping DAI for ETH iteration: ${i}`);
-        await this.serializeTx(() => this.singleDefiSwap(bridgeConfigs[1], i));
+        await this.serializeTx(() => this.singleDefiSwap(bridgeConfigs[1], DAI_TO_ETH));
         stats.numDefi++;
       }
       await this.serializeTx(this.withdraw);
       stats.numWithdrawals++;
     } catch (err: any) {
-      console.log(`ERROR: `, err);
+      console.log(`${this.agentId()} ERROR: `, err);
     }
   }
 
@@ -97,23 +107,29 @@ export class DefiAgent extends Agent {
 
   private async calcDeposit() {
     // Nothing to do if we have a balance.
-    if (this.sdk.getBalance(AssetId.ETH, this.user.id)) {
+    if (this.sdk.getBalance(AssetId.ETH, this.primaryUser.user.id)) {
       return;
     }
-    const depositFee = this.depositFee ?? await this.userAsset.getFee(TxType.DEPOSIT);
-    const withdrawFee = await this.userAsset.getFee(TxType.WITHDRAW_TO_WALLET);
+    const costOfEachTransfer =
+      1000000n +
+      getBridgeTxCost(bridgeConfigs[0]) +
+      getBridgeTxCost(bridgeConfigs[1]) / DAI_TO_ETH +
+      (await this.sdk.getFee(AssetId.ETH, TxType.TRANSFER)) * 2n;
+    console.log(`DAI bridge cost: ${getBridgeTxCost(bridgeConfigs[1])}`);
+    console.log(`Transfer cost: ${costOfEachTransfer}`);
+    const depositFee = this.depositFee ?? (await this.primaryUser.userAsset.getFee(TxType.DEPOSIT));
+    const withdrawFee = await this.primaryUser.userAsset.getFee(TxType.WITHDRAW_TO_WALLET);
 
     const ethToDeposit = 1n;
     let weiToDeposit = toBaseUnits(ethToDeposit.toString(), 18) + depositFee + withdrawFee + this.payoutFee;
-    weiToDeposit +=
-      BigInt(this.numTransferPairs) * (getBridgeTxCost(bridgeConfigs[0]) + getBridgeTxCost(bridgeConfigs[1]));
+    weiToDeposit += BigInt(this.numTransferPairs) * ((costOfEachTransfer * 11n) / 10n);
 
     console.log(`${this.agentId()} depositing ${formatNumber(weiToDeposit)} wei into account`);
 
     return weiToDeposit;
   }
 
-  private singleDefiSwap = async (spec: BridgeSpec, iteration: number) => {
+  private singleDefiSwap = async (spec: BridgeSpec, amountToTransfer: bigint) => {
     const outputAssetIdB = 0;
     const bridgeId = new BridgeId(
       spec.addressId,
@@ -121,35 +137,36 @@ export class DefiAgent extends Agent {
       spec.outputAsset,
       outputAssetIdB,
       0,
-      new BitConfig(false, false, false, false, false, false),  
+      new BitConfig(false, false, false, false, false, false),
       0,
     );
-    const currentBalanceInputAsset = this.sdk.getBalance(spec.inputAsset, this.user.id);
-    const currentBalanceOutputAsset = this.sdk.getBalance(spec.outputAsset, this.user.id);
+    const currentBalanceInputAsset = this.sdk.getBalance(spec.inputAsset, this.primaryUser.user.id);
+    const currentBalanceOutputAsset = this.sdk.getBalance(spec.outputAsset, this.primaryUser.user.id);
     console.log(
-      `${this.agentId()} balances, input: ${formatNumber(currentBalanceInputAsset)}, output: ${formatNumber(
-        currentBalanceOutputAsset,
-      )}`,
+      `${this.agentId()} balances, ${AssetId[spec.inputAsset]}: ${formatNumber(currentBalanceInputAsset)}, ${
+        AssetId[spec.outputAsset]
+      }: ${formatNumber(currentBalanceOutputAsset)}`,
     );
     const txFee = getBridgeTxCost(spec);
     console.log(`${this.agentId()} defi fee: ${formatNumber(txFee)}`);
     const jsTxFee = await this.sdk.getFee(spec.inputAsset, TxType.TRANSFER);
     console.log(`${this.agentId()} JS fee: ${jsTxFee}`);
-    const depositValue = this.sdk.toBaseUnits(spec.inputAsset, '1');
     console.log(
-      `${this.agentId()} swapping ${formatNumber(depositValue)} units of asset ${spec.inputAsset} for asset ${
-        spec.outputAsset
-      }`,
+      `${this.agentId()} swapping ${formatNumber(amountToTransfer)} units of asset ${
+        AssetId[spec.inputAsset]
+      } for asset ${AssetId[spec.outputAsset]}`,
     );
     console.log(`${this.agentId()} building Defi proof`);
     const proofOutput = await this.sdk.createDefiProof(
       bridgeId,
-      this.user.id,
-      depositValue,
+      this.primaryUser.user.id,
+      amountToTransfer,
       txFee + jsTxFee,
-      this.signer,
+      this.primaryUser.signer,
     );
     console.log(`${this.agentId()} sending Defi proof, defi hash: ${proofOutput.tx.txHash}`);
-    return await this.sdk.sendProof(proofOutput);
+    const hash = await this.sdk.sendProof(proofOutput);
+    console.log(`${this.agentId()} sent Defi proof, defi hash: ${hash}`);
+    return hash;
   };
 }

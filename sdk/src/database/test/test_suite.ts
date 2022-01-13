@@ -410,12 +410,14 @@ export const databaseTestSuite = (
 
         const outputValueA = 123n;
         const outputValueB = 456n;
-        await db.updateDefiTx(tx.txHash, outputValueA, outputValueB);
+        const result = true;
+        await db.updateDefiTx(tx.txHash, outputValueA, outputValueB, result);
 
         const settledTx = (await db.getDefiTx(tx.txHash))!;
         expect(settledTx.outputValueA).toEqual(outputValueA);
         expect(settledTx.outputValueB).toEqual(outputValueB);
         expect(settledTx.settled).toBeFalsy();
+        expect(settledTx.result).toEqual(result);
       });
 
       it('settle defi tx by tx hash', async () => {

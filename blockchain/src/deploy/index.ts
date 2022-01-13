@@ -10,6 +10,7 @@ const {
   PRIVATE_KEY,
   ESCAPE_BLOCK_LOWER = '4560', // window of 1hr every 20hrs (escape in last 240 blocks of every 4800)
   ESCAPE_BLOCK_UPPER = '4800',
+  INITIAL_ETH_SUPPLY = '100000000000000000', // 0.1 ETH
 } = process.env;
 
 function getSigner() {
@@ -31,7 +32,14 @@ async function main() {
     throw new Error('Failed to create connection. Set ETHEREUM_HOST or INFURA_API_KEY, NETWORK, PRIVATE_KEY.');
   }
 
-  const { rollup, priceFeeds, feeDistributor } = await deploy(+ESCAPE_BLOCK_LOWER, +ESCAPE_BLOCK_UPPER, signer);
+  const initialEthSupply = BigInt(INITIAL_ETH_SUPPLY);
+
+  const { rollup, priceFeeds, feeDistributor } = await deploy(
+    +ESCAPE_BLOCK_LOWER,
+    +ESCAPE_BLOCK_UPPER,
+    signer,
+    initialEthSupply,
+  );
 
   console.log(`export ROLLUP_CONTRACT_ADDRESS=${rollup.address}`);
   console.log(`export FEE_DISTRIBUTOR_ADDRESS=${feeDistributor.address}`);

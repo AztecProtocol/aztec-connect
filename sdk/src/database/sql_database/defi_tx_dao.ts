@@ -37,6 +37,9 @@ export class DefiTxDao {
   @Column({ nullable: true })
   public settled?: Date;
 
+  @Column({ nullable: true })
+  public result?: boolean;
+
   @AfterLoad()
   @AfterInsert()
   @AfterUpdate()

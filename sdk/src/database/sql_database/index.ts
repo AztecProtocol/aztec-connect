@@ -84,6 +84,7 @@ const toUserDefiTx = (tx: DefiTxDao) =>
     tx.outputValueA,
     tx.outputValueB,
     tx.settled,
+    tx.result
   );
 
 export class SQLDatabase implements Database {
@@ -249,8 +250,8 @@ export class SQLDatabase implements Database {
     return [...unsettled, ...settled].map(toUserDefiTx);
   }
 
-  async updateDefiTx(txHash: TxHash, outputValueA: bigint, outputValueB: bigint) {
-    await this.defiTxRep.update({ txHash }, { outputValueA, outputValueB });
+  async updateDefiTx(txHash: TxHash, outputValueA: bigint, outputValueB: bigint, result: boolean) {
+    await this.defiTxRep.update({ txHash }, { outputValueA, outputValueB, result });
   }
 
   async settleDefiTx(txHash: TxHash, settled: Date) {

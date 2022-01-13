@@ -384,7 +384,7 @@ export class UserState extends EventEmitter {
     const savedTx = await this.db.getDefiTx(txHash);
     if (savedTx) {
       debug(`found defi tx, awaiting claim for settlement: ${txHash}`);
-      await this.db.updateDefiTx(txHash, outputValueA, outputValueB);
+      await this.db.updateDefiTx(txHash, outputValueA, outputValueB, result);
     } else {
       const utilTx = await this.db.getUtilTxByLink(proof.nullifier1);
       const tx = this.recoverDefiTx(
@@ -392,6 +392,7 @@ export class UserState extends EventEmitter {
         offchainTxData,
         outputValueA,
         outputValueB,
+        result,
         note2,
         destroyedNote1,
         destroyedNote2,
@@ -411,9 +412,9 @@ export class UserState extends EventEmitter {
 
     const { txHash, secret, owner } = claim;
     const { noteCommitment1, noteCommitment2, nullifier1: inputNullifier1, nullifier2: inputNullifier2 } = proof;
-    const { bridgeId, depositValue, outputValueA, outputValueB } = (await this.db.getDefiTx(txHash))!;
+    const { bridgeId, depositValue, outputValueA, outputValueB, result } = (await this.db.getDefiTx(txHash))!;
     // When generating output notes, set creatorPubKey to 0 (it's a DeFi txn, recipient of note is same as creator of claim note)
-    if (!outputValueA && !outputValueB) {
+    if (!result) {
       const treeNote = new TreeNote(
         owner.publicKey,
         depositValue,
@@ -581,6 +582,7 @@ export class UserState extends EventEmitter {
     offchainTxData: OffchainDefiDepositData,
     outputValueA: bigint,
     outputValueB: bigint,
+    result: boolean,
     changeNote?: Note,
     destroyedNote1?: Note,
     destroyedNote2?: Note,
@@ -606,6 +608,8 @@ export class UserState extends EventEmitter {
       new Date(),
       outputValueA,
       outputValueB,
+      undefined,
+      result
     );
   }
 

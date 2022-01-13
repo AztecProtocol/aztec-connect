@@ -12,6 +12,8 @@ export class AgentManager {
   public constructor(
     private numDefiAgents: number,
     private numPaymentAgents: number,
+    private numDefiSwaps: number,
+    private numPayments: number,
     private rollupHost: string,
     private host: string,
     private memoryDB: boolean,
@@ -64,6 +66,7 @@ export class AgentManager {
                 walletProvider,
                 this.agents.length,
                 this.queues[this.agents.length % this.queues.length],
+                this.numPayments,
               )
             : new DefiAgent(
                 accounts[0],
@@ -71,7 +74,7 @@ export class AgentManager {
                 walletProvider,
                 this.agents.length,
                 this.queues[this.agents.length % this.queues.length],
-                5,
+                this.numDefiSwaps,
               );
         await agent.setup(this.agents.length === totalNumAgents - 1 ? flushFee : undefined);
         await agent.depositToRollup();
@@ -102,13 +105,14 @@ export class AgentManager {
     const start = new Date();
     await Promise.all(runningPromises);
     const end = new Date();
-    console.log(`Time taken: ${end.getTime() - start.getTime()}ms. Stats: `, stats);
 
     console.log('Repaying source address...');
     for (let i = 0; i < totalNumAgents; i++) {
       await this.agents[i].repaySourceAddress();
     }
+    const timeTaken = end.getTime() - start.getTime();
     console.log(`Test run ${runNumber} completed...`);
+    console.log(`Time taken: ${timeTaken / 1000}s. Stats: `, stats);
   }
 
   public async shutdown() {

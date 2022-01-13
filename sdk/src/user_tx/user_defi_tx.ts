@@ -17,5 +17,6 @@ export class UserDefiTx {
     public readonly outputValueA = BigInt(0),
     public readonly outputValueB = BigInt(0),
     public readonly settled?: Date,
+    public readonly result?: boolean,
   ) {}
 }

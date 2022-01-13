@@ -845,11 +845,12 @@ describe('user state', () => {
     const totalOutputValueB = depositValue * 10n;
     const outputValueA = depositValue / 5n;
     const outputValueB = totalOutputValueB / 5n;
+    const result = true;
 
     const defiProof = generateDefiDepositProof({ bridgeId, outputNoteValue, depositValue });
     const interactionResult = [
-      new DefiInteractionNote(bridgeId, 0, totalInputValue, totalOutputValueA, totalOutputValueB, true),
-      new DefiInteractionNote(BridgeId.random(), 1, 12n, 34n, 56n, true),
+      new DefiInteractionNote(bridgeId, 0, totalInputValue, totalOutputValueA, totalOutputValueB, result),
+      new DefiInteractionNote(BridgeId.random(), 1, 12n, 34n, 56n, result),
     ];
     const block = createRollupBlock([defiProof], { interactionResult });
     const txHash = new TxHash(defiProof.proofData.txId);
@@ -877,7 +878,7 @@ describe('user state', () => {
     expect(db.nullifyNote).toHaveBeenCalledWith(defiProof.proofData.nullifier1);
     expect(db.nullifyNote).toHaveBeenCalledWith(defiProof.proofData.nullifier2);
     expect(db.updateDefiTx).toHaveBeenCalledTimes(1);
-    expect(db.updateDefiTx).toHaveBeenCalledWith(txHash, outputValueA, outputValueB);
+    expect(db.updateDefiTx).toHaveBeenCalledWith(txHash, outputValueA, outputValueB, result);
     expect(db.addDefiTx).toHaveBeenCalledTimes(0);
     expect(db.settleDefiTx).toHaveBeenCalledTimes(0);
   });
@@ -892,11 +893,12 @@ describe('user state', () => {
     const totalOutputValueB = depositValue * 10n;
     const outputValueA = depositValue / 5n;
     const outputValueB = totalOutputValueB / 5n;
+    const result = true;
 
     const defiProof = generateDefiDepositProof({ bridgeId, outputNoteValue, depositValue });
     const interactionResult = [
-      new DefiInteractionNote(BridgeId.random(), 0, 12n, 34n, 56n, true),
-      new DefiInteractionNote(bridgeId, 1, totalInputValue, totalOutputValueA, totalOutputValueB, true),
+      new DefiInteractionNote(BridgeId.random(), 0, 12n, 34n, 56n, result),
+      new DefiInteractionNote(bridgeId, 1, totalInputValue, totalOutputValueA, totalOutputValueB, result),
     ];
     const block = createRollupBlock([defiProof], { interactionResult });
 
@@ -937,6 +939,7 @@ describe('user state', () => {
         outputValueA,
         outputValueB,
         settled: undefined,
+        result,
       }),
     );
     expect(db.settleDefiTx).toHaveBeenCalledTimes(0);
@@ -951,9 +954,10 @@ describe('user state', () => {
     const secret = randomBytes(32);
     const nullifier1 = randomBytes(32);
     const nullifier2 = randomBytes(32);
+    const result = true;
 
     db.getClaim.mockImplementation(() => ({ txHash, owner: user.id, secret }));
-    db.getDefiTx.mockImplementation(() => ({ bridgeId, depositValue, outputValueA, outputValueB }));
+    db.getDefiTx.mockImplementation(() => ({ bridgeId, depositValue, outputValueA, outputValueB, result }));
 
     const claimProof = generateDefiClaimProof({ bridgeId, outputValueA, outputValueB, nullifier1, nullifier2 });
     const block = createRollupBlock([claimProof]);
@@ -985,9 +989,10 @@ describe('user state', () => {
     const secret = randomBytes(32);
     const nullifier1 = randomBytes(32);
     const nullifier2 = randomBytes(32);
+    const result = false;
 
     db.getClaim.mockImplementation(() => ({ txHash, owner: user.id, secret }));
-    db.getDefiTx.mockImplementation(() => ({ bridgeId, depositValue, outputValueA, outputValueB }));
+    db.getDefiTx.mockImplementation(() => ({ bridgeId, depositValue, outputValueA, outputValueB, result }));
 
     const claimProof = generateDefiClaimProof({ bridgeId, outputValueA, outputValueB, nullifier1, nullifier2 });
     const block = createRollupBlock([claimProof]);
@@ -1015,6 +1020,7 @@ describe('user state', () => {
     const outputValueA = 10n;
     const outputValueB = 20n;
     const bridgeId = BridgeId.random();
+    const defiResult = true;
 
     const jsProof = generateJoinSplitProof({ newNoteOwner: user, outputNoteValue1, outputNoteValue2, txFee: jsTxFee });
     const jsProofData = Buffer.concat([
@@ -1084,7 +1090,9 @@ describe('user state', () => {
       value: outputNoteValue1,
     });
 
-    const interactionResult = [new DefiInteractionNote(bridgeId, 0, depositValue, outputValueA, outputValueB, true)];
+    const interactionResult = [
+      new DefiInteractionNote(bridgeId, 0, depositValue, outputValueA, outputValueB, defiResult),
+    ];
     const block = createRollupBlock([jsProof, defiProof], { interactionResult });
 
     userState.processBlock(block);
@@ -1109,7 +1117,12 @@ describe('user state', () => {
     expect(db.addUtilTx).toHaveBeenCalledWith(utilTx);
     expect(db.addDefiTx).toHaveBeenCalledTimes(0);
     expect(db.updateDefiTx).toHaveBeenCalledTimes(1);
-    expect(db.updateDefiTx).toHaveBeenCalledWith(new TxHash(defiProof.proofData.txId), outputValueA, outputValueB);
+    expect(db.updateDefiTx).toHaveBeenCalledWith(
+      new TxHash(defiProof.proofData.txId),
+      outputValueA,
+      outputValueB,
+      defiResult,
+    );
   });
 
   it('recover a defi proof and accumulate the fee from its linked j/s proof', async () => {

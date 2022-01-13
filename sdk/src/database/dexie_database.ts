@@ -261,6 +261,7 @@ class DexieDefiTx implements DexieUserTx {
     public outputValueB: string,
     public created: Date,
     public settled: number,
+    public result?: boolean
   ) {}
 }
 
@@ -277,6 +278,7 @@ const toDexieDefiTx = (tx: UserDefiTx) =>
     tx.outputValueB.toString(),
     tx.created,
     tx.settled ? tx.settled.getTime() : 0,
+    tx.result
   );
 
 const fromDexieDefiTx = ({
@@ -290,6 +292,7 @@ const fromDexieDefiTx = ({
   outputValueB,
   created,
   settled,
+  result
 }: DexieDefiTx) =>
   new UserDefiTx(
     new TxHash(Buffer.from(txHash)),
@@ -302,6 +305,7 @@ const fromDexieDefiTx = ({
     BigInt(outputValueA),
     BigInt(outputValueB),
     settled ? new Date(settled) : undefined,
+    result
   );
 
 class DexieUtilTx {
@@ -556,10 +560,10 @@ export class DexieDatabase implements Database {
     return [...unsettled, ...settled].map(fromDexieDefiTx);
   }
 
-  async updateDefiTx(txHash: TxHash, outputValueA: bigint, outputValueB: bigint) {
+  async updateDefiTx(txHash: TxHash, outputValueA: bigint, outputValueB: bigint, result: boolean) {
     await this.userTx
       .where({ txHash: new Uint8Array(txHash.toBuffer()), proofId: ProofId.DEFI_DEPOSIT })
-      .modify({ outputValueA, outputValueB });
+      .modify({ outputValueA, outputValueB, result });
   }
 
   async settleDefiTx(txHash: TxHash, settled: Date) {
