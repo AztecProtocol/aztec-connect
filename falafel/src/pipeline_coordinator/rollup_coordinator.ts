@@ -310,7 +310,6 @@ export class RollupCoordinator {
         Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK - this.rollupBridgeIds.length).fill(BridgeId.ZERO),
       ),
       [...this.rollupAssetIds],
-      this.rollupPublisher.getRollupBenificiary(),
     );
     rollupProfile.published = await this.rollupPublisher.publishRollup(rollupDao);
     this.printRollupState(rollupProfile, timedout, flush);

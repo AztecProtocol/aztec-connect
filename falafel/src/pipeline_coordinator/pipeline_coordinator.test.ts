@@ -22,7 +22,7 @@ type Mockify<T> = {
 describe('pipeline_coordinator', () => {
   const numInnerRollupTxs = 2;
   const numOuterRollupProofs = 4;
-  const publishInterval = moment.duration(10, 's');
+  const publishInterval = 10;
   let rollupCreator: Mockify<RollupCreator>;
   let rollupAggregator: Mockify<RollupAggregator>;
   let rollupPublisher: Mockify<RollupPublisher>;
@@ -73,7 +73,6 @@ describe('pipeline_coordinator', () => {
     rollupPublisher = {
       publishRollup: jest.fn().mockResolvedValue(true),
       interrupt: jest.fn(),
-      getRollupBenificiary: jest.fn(),
     };
 
     claimProofCreator = {
@@ -95,6 +94,7 @@ describe('pipeline_coordinator', () => {
     } as any;
 
     feeResolver = {
+      setConf: jest.fn(),
       getBaseTxGas: jest.fn().mockReturnValue(1),
       getGasPaidForByFee: jest.fn().mockImplementation((assetId: AssetId, fee: bigint) => fee),
       getMinTxFee: jest.fn().mockImplementation(() => {

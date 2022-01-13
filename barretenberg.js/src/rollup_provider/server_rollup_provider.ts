@@ -1,9 +1,8 @@
-import { RollupProvider, AccountTx, JoinSplitTx } from './rollup_provider';
+import { RollupProvider, AccountTx, JoinSplitTx, rollupProviderStatusFromJson } from './rollup_provider';
 import { fetch } from '../iso_fetch';
 import { ServerBlockSource } from '../block_source';
 import { Proof } from '../rollup_provider';
 import { TxHash } from '../tx_hash';
-import { blockchainStatusFromJson } from '../blockchain';
 import { GrumpkinAddress } from '../address';
 import { AccountId } from '../account_id';
 import { AccountProofData, JoinSplitProofData } from '../client_proofs';
@@ -59,19 +58,7 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
   async getStatus() {
     const response = await this.fetch('/status');
     try {
-      const { txFees, blockchainStatus, nextPublishTime, ...rest } = await response.json();
-      return {
-        ...rest,
-        blockchainStatus: blockchainStatusFromJson(blockchainStatus),
-        txFees: txFees.map(({ feeConstants, baseFeeQuotes }) => ({
-          feeConstants: feeConstants.map(r => BigInt(r)),
-          baseFeeQuotes: baseFeeQuotes.map(({ fee, time }) => ({
-            time,
-            fee: BigInt(fee),
-          })),
-        })),
-        nextPublishTime: new Date(nextPublishTime),
-      };
+      return rollupProviderStatusFromJson(await response.json());
     } catch (err) {
       throw new Error('Bad response: getStatus()');
     }

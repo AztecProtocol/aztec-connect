@@ -43,7 +43,7 @@ describe('rollup_processor: withdraw', () => {
     await rollupProcessor.depositPendingFunds(AssetId.DAI, depositAmount, undefined, undefined, {
       signingAddress: userAddresses[1],
     });
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, []);
+    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
     await rollupProcessor.sendTx(tx);
   });
 
@@ -57,7 +57,7 @@ describe('rollup_processor: withdraw', () => {
       { rollupId: 1 },
     );
 
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, []);
+    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
     await rollupProcessor.sendTx(tx);
 
     const postWithdrawalRollupBalance = await assets[0].balanceOf(rollupProcessor.address);
@@ -77,7 +77,7 @@ describe('rollup_processor: withdraw', () => {
       { rollupId: 1 },
     );
 
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, []);
+    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
     await rollupProcessor.sendTx(tx);
 
     const postWithdrawalRollupBalance = await assets[1].balanceOf(rollupProcessor.address);
@@ -110,7 +110,7 @@ describe('rollup_processor: withdraw', () => {
       await rollupProcessor.depositPendingFunds(assetId, depositAmount, undefined, undefined, {
         signingAddress: userAddresses[0],
       });
-      const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, []);
+      const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
       await rollupProcessor.sendTx(tx);
     }
 
@@ -119,7 +119,7 @@ describe('rollup_processor: withdraw', () => {
       createWithdrawProof(depositAmount, userAddresses[0], assetId),
       { rollupId: 2 },
     );
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('ERC20FaultyTransfer: FAILED');
   });
 });

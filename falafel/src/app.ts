@@ -1,10 +1,14 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
+<<<<<<< HEAD
 import { blockchainStatusToJson } from '@aztec/barretenberg/blockchain';
 import { bridgeStatusToJson } from '@aztec/barretenberg/bridge_id';
+=======
+>>>>>>> Allow setting some runtime config vars via env vars to keep testing simple.
 import { Block, BlockServerResponse, GetBlocksServerResponse } from '@aztec/barretenberg/block_source';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
 import {
   PendingTxServerResponse,
+  rollupProviderStatusToJson,
   RuntimeConfig,
   TxPostData,
   TxServerResponse,
@@ -69,7 +73,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   };
 
   const checkReady = async (ctx: Koa.Context, next: () => Promise<void>) => {
-    if (!server.getRuntimeConfig().ready) {
+    if (!server.isReady()) {
       ctx.status = 503;
       ctx.body = { error: 'Server not ready. Try again later.' };
     } else {
@@ -90,7 +94,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   router.get('/', recordMetric, async (ctx: Koa.Context) => {
     ctx.body = {
       serviceName: 'falafel',
-      isReady: server.getRuntimeConfig().ready,
+      isReady: server.isReady(),
     };
     ctx.status = 200;
   });
@@ -144,12 +148,6 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   router.patch('/runtime-config', recordMetric, validateAuth, async (ctx: Koa.Context) => {
     const stream = new PromiseReadable(ctx.req);
     const runtimeConfig: Partial<RuntimeConfig> = JSON.parse((await stream.readAll()) as string);
-    const { numOuterRollupProofs } = runtimeConfig;
-    if (numOuterRollupProofs !== undefined) {
-      if (!numOuterRollupProofs || numOuterRollupProofs > 32 || numOuterRollupProofs & (numOuterRollupProofs - 1)) {
-        throw new Error('Bad topology, num-outer-proofs must be 1 to 32, powers of 2.');
-      }
-    }
     server.setRuntimeConfig(runtimeConfig);
     ctx.status = 200;
   });
@@ -161,19 +159,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
 
   router.get('/status', recordMetric, async (ctx: Koa.Context) => {
     const status = await server.getStatus();
-    const response = {
-      ...status,
-      blockchainStatus: blockchainStatusToJson(status.blockchainStatus),
-      txFees: status.txFees.map(({ feeConstants, baseFeeQuotes }) => ({
-        feeConstants: feeConstants.map(constant => constant.toString()),
-        baseFeeQuotes: baseFeeQuotes.map(({ fee, time }) => ({
-          time,
-          fee: fee.toString(),
-        })),
-      })),
-      bridgeStatus: status.bridgeStatus.map(bridgeStatusToJson),
-    };
-
+    const response = rollupProviderStatusToJson(status);
     ctx.set('content-type', 'application/json');
     ctx.body = response;
     ctx.status = 200;

@@ -1,14 +1,13 @@
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { EthereumBlockchain } from '@aztec/blockchain';
 import http from 'http';
-import moment from 'moment';
 import 'reflect-metadata';
 import 'source-map-support/register';
 import { createConnection } from 'typeorm';
 import { appFactory } from './app';
-import { Server, ServerConfig } from './server';
+import { Server } from './server';
 import 'log-timestamp';
-import { getConfig, getBridgeConfigs } from './config';
+import { getConfig } from './config';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Metrics } from './metrics';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
@@ -17,30 +16,9 @@ import { CachedRollupDb, TypeOrmRollupDb } from './rollup_db';
 import { InitHelpers } from '@aztec/barretenberg/environment';
 
 async function main() {
-  const {
-    ormConfig,
-    provider,
-    signingAddress,
-    ethConfig,
-    confVars: {
-      halloumiHost,
-      rollupContractAddress,
-      feeDistributorAddress,
-      priceFeedContractAddresses,
-      numInnerRollupTxs,
-      numOuterRollupProofs,
-      publishInterval,
-      apiPrefix,
-      serverAuthToken,
-      port,
-      gasLimit,
-      baseTxGas,
-      maxFeeGasPrice,
-      feeGasPriceMultiplier,
-      maxProviderGasPrice,
-      maxUnsettledTxs,
-    },
-  } = await getConfig();
+  const { ormConfig, provider, signingAddress, ethConfig, configurator, bridgeConfigs } = await getConfig();
+  const { rollupContractAddress, feeDistributorAddress, priceFeedContractAddresses, apiPrefix, serverAuthToken, port } =
+    configurator.getConfVars();
 
   const connection = await createConnection(ormConfig);
   const blockchain = await EthereumBlockchain.new(
@@ -51,31 +29,24 @@ async function main() {
     provider,
   );
 
-  // TODO: Not sure we want to read this config here
-  const bridgeConfigs = getBridgeConfigs(await blockchain.getChainId());
   const barretenberg = await BarretenbergWasm.new();
 
-  const serverConfig: ServerConfig = {
-    halloumiHost,
-    numInnerRollupTxs,
-    numOuterRollupProofs,
-    publishInterval: moment.duration(publishInterval, 's'),
-    gasLimit,
-    baseTxGas,
-    maxFeeGasPrice,
-    feeGasPriceMultiplier,
-    maxProviderGasPrice,
-    maxUnsettledTxs,
-    signingAddress,
-    bridgeConfigs,
-  };
   const chainId = await blockchain.getChainId();
   const { initDataRoot } = InitHelpers.getInitRoots(chainId);
   const rollupDb = new CachedRollupDb(new TypeOrmRollupDb(connection, initDataRoot));
   await rollupDb.init();
   const worldStateDb = new WorldStateDb();
   const metrics = new Metrics(worldStateDb, rollupDb, blockchain);
-  const server = new Server(serverConfig, blockchain, rollupDb, worldStateDb, metrics, provider, barretenberg);
+  const server = new Server(
+    configurator,
+    signingAddress,
+    bridgeConfigs,
+    blockchain,
+    rollupDb,
+    worldStateDb,
+    metrics,
+    barretenberg,
+  );
 
   const shutdown = async () => {
     await server.stop();

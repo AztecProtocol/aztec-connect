@@ -12,11 +12,11 @@ export class TxFeeResolver {
 
   constructor(
     private readonly blockchain: Blockchain,
-    private readonly baseTxGas: number,
-    private readonly maxFeeGasPrice: bigint,
-    private readonly feeGasPriceMultiplier: number,
+    private baseTxGas: number,
+    private maxFeeGasPrice: bigint,
+    private feeGasPriceMultiplier: number,
     private readonly txsPerRollup: number,
-    private readonly publishInterval: number,
+    private publishInterval: number,
     private readonly surplusRatios = [1, 0.9, 0.5, 0],
     private readonly feeFreeAssets: AssetId[] = [],
     private readonly freeTxTypes = [TxType.ACCOUNT],
@@ -24,6 +24,18 @@ export class TxFeeResolver {
     private readonly refreshInterval = 5 * 60 * 1000, // 5 mins
     private readonly minFeeDuration = refreshInterval * 2, // 10 mins
   ) {}
+
+  public setConf(
+    baseTxGas: number,
+    maxFeeGasPrice: bigint,
+    feeGasPriceMultiplier: number,
+    publishInterval: number,
+  ) {
+    this.baseTxGas = baseTxGas;
+    this.maxFeeGasPrice = maxFeeGasPrice;
+    this.feeGasPriceMultiplier = feeGasPriceMultiplier;
+    this.publishInterval = publishInterval;
+  }
 
   async start() {
     const { assets } = await this.blockchain.getBlockchainStatus();

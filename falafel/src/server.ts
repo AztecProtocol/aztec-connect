@@ -1,7 +1,7 @@
 import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
-import { Blockchain, EthereumProvider } from '@aztec/barretenberg/blockchain';
+import { Blockchain } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
 import { Blake2s } from '@aztec/barretenberg/crypto';
 import { InitHelpers } from '@aztec/barretenberg/environment';
@@ -13,7 +13,6 @@ import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { BridgeConfig, convertToBridgeStatus } from '@aztec/barretenberg/bridge_id';
 import { emptyDir } from 'fs-extra';
 import { CliProofGenerator, ProofGenerator, ServerProofGenerator } from 'halloumi/proof_generator';
-import { Duration } from 'moment';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
 import { parseInteractionResult } from './rollup_db/parse_interaction_result';
@@ -21,21 +20,7 @@ import { RollupPipelineFactory } from './rollup_pipeline';
 import { TxFeeResolver } from './tx_fee_resolver';
 import { Tx, TxReceiver } from './tx_receiver';
 import { WorldState } from './world_state';
-
-export interface ServerConfig {
-  readonly halloumiHost?: string;
-  readonly numInnerRollupTxs: number;
-  readonly numOuterRollupProofs: number;
-  readonly publishInterval: Duration;
-  readonly gasLimit?: number;
-  readonly baseTxGas: number;
-  readonly maxFeeGasPrice: bigint;
-  readonly feeGasPriceMultiplier: number;
-  readonly maxProviderGasPrice: bigint;
-  readonly maxUnsettledTxs: number;
-  readonly signingAddress: EthAddress;
-  readonly bridgeConfigs: BridgeConfig[];
-}
+import { Configurator } from './configurator';
 
 export class Server {
   private blake: Blake2s;
@@ -44,37 +29,37 @@ export class Server {
   private txFeeResolver: TxFeeResolver;
   private pipelineFactory: RollupPipelineFactory;
   private proofGenerator: ProofGenerator;
-  private runtimeConfig: RuntimeConfig;
+  private ready = false;
 
   constructor(
-    private config: ServerConfig,
+    private configurator: Configurator,
+    signingAddress: EthAddress,
+    private bridgeConfigs: BridgeConfig[],
     private blockchain: Blockchain,
     private rollupDb: RollupDb,
     worldStateDb: WorldStateDb,
     private metrics: Metrics,
-    provider: EthereumProvider,
     barretenberg: BarretenbergWasm,
   ) {
     const {
-      numInnerRollupTxs,
-      numOuterRollupProofs,
-      publishInterval,
-      baseTxGas,
-      maxFeeGasPrice,
-      feeGasPriceMultiplier,
-      maxProviderGasPrice,
       halloumiHost,
-      signingAddress,
-      bridgeConfigs,
-    } = config;
+      numInnerRollupTxs,
+      runtimeConfig: {
+        publishInterval,
+        baseTxGas,
+        maxFeeGasPrice,
+        feeGasPriceMultiplier,
+        maxProviderGasPrice,
+        gasLimit,
+      },
+    } = configurator.getConfVars();
+
+    // TODO: Deprecated. Setting to 2 as in test cases it was 2.
+    // We need to change so rollup creator just picks the size it needs.
+    const numOuterRollupProofs = 2;
+
     const noteAlgo = new NoteAlgorithms(barretenberg);
     this.blake = new Blake2s(barretenberg);
-
-    this.runtimeConfig = {
-      ready: false,
-      useKeyCache: true,
-      numOuterRollupProofs,
-    };
 
     this.txFeeResolver = new TxFeeResolver(
       blockchain,
@@ -82,7 +67,7 @@ export class Server {
       maxFeeGasPrice,
       feeGasPriceMultiplier,
       numInnerRollupTxs * numOuterRollupProofs,
-      publishInterval.asSeconds(),
+      publishInterval,
     );
     this.proofGenerator = halloumiHost
       ? new ServerProofGenerator(halloumiHost)
@@ -95,10 +80,10 @@ export class Server {
       this.txFeeResolver,
       noteAlgo,
       metrics,
-      provider,
       signingAddress,
       publishInterval,
       maxProviderGasPrice,
+      gasLimit,
       numInnerRollupTxs,
       numOuterRollupProofs,
       bridgeConfigs,
@@ -126,35 +111,40 @@ export class Server {
     await this.worldState.start();
     await this.txReceiver.init();
 
-    this.runtimeConfig.ready = true;
+    this.ready = true;
     console.log('Server ready to receive txs.');
   }
 
   public async stop() {
     console.log('Server stop...');
-    this.runtimeConfig.ready = false;
+    this.ready = false;
     await this.txReceiver.destroy();
     await this.worldState.stop();
     await this.txFeeResolver.stop();
+  }
+
+  public isReady() {
+    return this.ready && this.configurator.getConfVars().runtimeConfig.acceptingTxs;
   }
 
   public getUnsettledTxCount() {
     return this.rollupDb.getUnsettledTxCount();
   }
 
-  public getRuntimeConfig() {
-    return this.runtimeConfig;
-  }
-
-  public setRuntimeConfig(config: Partial<RuntimeConfig>) {
-    this.runtimeConfig = {
-      ...this.runtimeConfig,
-      ...config,
-    };
-
-    if (config.numOuterRollupProofs !== undefined) {
-      this.pipelineFactory.setTopology(this.config.numInnerRollupTxs, config.numOuterRollupProofs);
-    }
+  public async setRuntimeConfig(config: Partial<RuntimeConfig>) {
+    await this.configurator.saveRuntimeConfig(config);
+    const {
+      runtimeConfig: {
+        baseTxGas,
+        maxFeeGasPrice,
+        feeGasPriceMultiplier,
+        publishInterval,
+        maxProviderGasPrice,
+        gasLimit,
+      },
+    } = this.configurator.getConfVars();
+    this.pipelineFactory.setConf(publishInterval, maxProviderGasPrice, gasLimit);
+    this.txFeeResolver.setConf(baseTxGas, maxFeeGasPrice, feeGasPriceMultiplier, publishInterval);
   }
 
   public async removeData() {
@@ -175,10 +165,10 @@ export class Server {
       blockchainStatus: status,
       txFees: status.assets.map((_, i) => this.txFeeResolver.getFeeQuotes(i)),
       pendingTxCount: await this.rollupDb.getUnsettledTxCount(),
-      runtimeConfig: this.runtimeConfig,
+      runtimeConfig: this.configurator.getConfVars().runtimeConfig,
       nextPublishTime: nextPublish.baseTimeout ? nextPublish.baseTimeout.timeout : new Date(0),
       nextPublishNumber: nextPublish.baseTimeout ? nextPublish.baseTimeout.rollupNumber : 0,
-      bridgeStatus: this.config.bridgeConfigs.map(bc => {
+      bridgeStatus: this.bridgeConfigs.map(bc => {
         const rt = nextPublish.bridgeTimeouts.get(bc.bridgeId);
         return convertToBridgeStatus(bc, rt?.rollupNumber, rt?.timeout);
       }),
@@ -247,7 +237,7 @@ export class Server {
   }
 
   public async receiveTx(tx: Tx) {
-    const { maxUnsettledTxs } = this.config;
+    const { maxUnsettledTxs } = this.configurator.getConfVars().runtimeConfig;
     const unsettled = await this.getUnsettledTxCount();
     if (maxUnsettledTxs && unsettled >= maxUnsettledTxs) {
       throw new Error('Too many transactions awaiting settlement. Try again later.');

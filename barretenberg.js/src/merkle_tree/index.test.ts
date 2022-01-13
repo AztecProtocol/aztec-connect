@@ -128,16 +128,17 @@ describe('merkle_tree', () => {
     const db1 = levelup(memdown());
     const tree1 = await MerkleTree.new(db1, pedersen, 'test', 10);
 
-    for (let i = 0; i < 12; ++i) {
+    for (let i = 0; i < 29; ++i) {
       await tree1.updateElement(i, values[i]);
     }
 
-    // Create tree from 2 updates, of 6 values in each.
     const db2 = levelup(memdown());
     const tree2 = await MerkleTree.new(db2, pedersen, 'test', 10);
 
-    await tree2.updateElements(0, values.slice(0, 6));
-    await tree2.updateElements(6, values.slice(6, 12));
+    // Results in subtree insertion of 4, 2 and 1.
+    await tree2.updateElements(0, values.slice(0, 7));
+    // Results in subtree insertion of 16, 4 and 2.
+    await tree2.updateElements(7, values.slice(7, 29));
 
     await expectSameTrees(tree1, tree2);
   });

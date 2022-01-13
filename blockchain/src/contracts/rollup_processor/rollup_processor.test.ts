@@ -96,7 +96,7 @@ describe('rollup_processor', () => {
 
   it('should allow any address to use escape hatch', async () => {
     const { proofData } = await createRollupProof(signers[0], createSendProof());
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
     await rollupProcessor.sendTx(tx, { signingAddress: EthAddress.fromString(await signers[1].getAddress()) });
   });
 
@@ -199,7 +199,7 @@ describe('rollup_processor', () => {
             : [],
         previousDefiInteractionHash: i === 3 ? previousDefiInteractionHash : undefined,
       });
-      const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, offchainTxData);
+      const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, offchainTxData);
       await rollupProcessor.sendTx(tx);
     }
 

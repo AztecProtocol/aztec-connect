@@ -117,10 +117,6 @@ export class Contracts {
     return this.rollupProcessor.verifier();
   }
 
-  public async createEscapeHatchProofTx(proofData: Buffer, signatures: Buffer[], offchainTxData: Buffer[]) {
-    return this.rollupProcessor.createEscapeHatchProofTx(proofData, signatures, offchainTxData);
-  }
-
   public async createRollupProofTx(proofData: Buffer, signatures: Buffer[], offchainTxData: Buffer[]) {
     return this.rollupProcessor.createRollupProofTx(proofData, signatures, offchainTxData);
   }

@@ -187,7 +187,6 @@ describe('rollup_coordinator', () => {
     rollupPublisher = {
       publishRollup: jest.fn().mockResolvedValue(true),
       interrupt: jest.fn(),
-      getRollupBenificiary: jest.fn(),
     };
 
     bridgeCostResolver = {
@@ -198,6 +197,7 @@ describe('rollup_coordinator', () => {
       getMinTxFee: jest.fn().mockImplementation(() => {
         throw new Error('This should not be called');
       }),
+      setConf: jest.fn(),
       start: jest.fn(),
       stop: jest.fn(),
       getFeeQuotes: jest.fn(),
@@ -269,7 +269,6 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(numOuterRollupProofs);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
-      expect(rollupPublisher.getRollupBenificiary).toHaveBeenCalledTimes(1);
     });
 
     it('should do nothing with new txs if it has successfully published a rollup', async () => {
@@ -279,7 +278,6 @@ describe('rollup_coordinator', () => {
         const rp = await coordinator.processPendingTxs(pendingTxs);
         expect(rp.published).toBe(true);
         expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
-        expect(rollupPublisher.getRollupBenificiary).toHaveBeenCalledTimes(1);
       }
       {
         const pendingTxs = [...Array(numTxs)].map((_, i) => mockTx(i + numTxs));

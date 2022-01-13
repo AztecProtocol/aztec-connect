@@ -102,7 +102,7 @@ describe('rollup_processor: defi bridge', () => {
     const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
     });
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
     const txHash = await rollupProcessor.sendTx(tx);
     await expectResult([new DefiInteractionNote(bridgeId, 0, inputValue, outputValueA, 0n, true)], txHash);
 
@@ -130,7 +130,7 @@ describe('rollup_processor: defi bridge', () => {
 
     await rollupProcessor.stubTransactionHashes(1022);
 
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
     await rollupProcessor.sendTx(tx);
   });
 
@@ -151,7 +151,7 @@ describe('rollup_processor: defi bridge', () => {
     const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
     });
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
     const txHash = await rollupProcessor.sendTx(tx);
 
     await expectBalance(AssetId.ETH, 0n);
@@ -177,7 +177,7 @@ describe('rollup_processor: defi bridge', () => {
     const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
     });
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
     const txHash = await rollupProcessor.sendTx(tx);
 
     await expectBalance(AssetId.DAI, 0n);
@@ -213,7 +213,7 @@ describe('rollup_processor: defi bridge', () => {
         new DefiInteractionData(bridge3, 14n),
       ],
     });
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
     const txHash = await rollupProcessor.sendTx(tx);
 
     await expectBalance(AssetId.ETH, 100n - 11n + 22n);
@@ -254,7 +254,7 @@ describe('rollup_processor: defi bridge', () => {
     const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
     });
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
     const txHash = await rollupProcessor.sendTx(tx);
 
     await expectBalance(AssetId.ETH, outputValueA);
@@ -288,7 +288,7 @@ describe('rollup_processor: defi bridge', () => {
     const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
     });
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
     const txHash = await rollupProcessor.sendTx(tx);
 
     await expectBalance(AssetId.ETH, 0n);
@@ -327,7 +327,7 @@ describe('rollup_processor: defi bridge', () => {
     const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
     });
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
     const txHash = await rollupProcessor.sendTx(tx);
 
     await expectBalance(AssetId.DAI, 0n);
@@ -372,7 +372,7 @@ describe('rollup_processor: defi bridge', () => {
 
       previousDefiInteractionHash = packInteractionNotes(interactionResult, 4);
 
-      const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
+      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
 
       await expectBalance(AssetId.ETH, 0n);
@@ -405,7 +405,7 @@ describe('rollup_processor: defi bridge', () => {
         previousDefiInteractionHash,
         rollupId: 1,
       });
-      const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
+      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
 
       let currentEthBalance = await assets[AssetId.ETH].balanceOf(rollupProcessor.address);

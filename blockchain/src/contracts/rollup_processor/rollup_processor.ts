@@ -128,21 +128,6 @@ export class RollupProcessor {
     return { escapeOpen, blocksRemaining: +blocksRemaining };
   }
 
-  async createEscapeHatchProofTx(proofData: Buffer, signatures: Buffer[], offchainTxData: Buffer[]) {
-    const rollupProofData = RollupProofData.fromBuffer(proofData);
-    const trailingData = proofData.slice(rollupProofData.toBuffer().length);
-    const encodedProof = Buffer.concat([rollupProofData.encode(), trailingData]);
-    const formattedSignatures = solidityFormatSignatures(signatures);
-    const tx = await this.rollupProcessor.populateTransaction
-      .processRollup(
-        `0x${encodedProof.toString('hex')}`,
-        formattedSignatures,
-        `0x${Buffer.concat(offchainTxData).toString('hex')}`,
-      )
-      .catch(fixEthersStackTrace);
-    return Buffer.from(tx.data!.slice(2), 'hex');
-  }
-
   async createRollupProofTx(proofData: Buffer, signatures: Buffer[], offchainTxData: Buffer[]) {
     const rollupProofData = RollupProofData.fromBuffer(proofData);
     const trailingData = proofData.slice(rollupProofData.toBuffer().length);
@@ -261,12 +246,16 @@ export class RollupProcessor {
     let start =
       this.lastQueriedRollupId === undefined || rollupId < this.lastQueriedRollupId
         ? Math.max(end - chunk, 0)
-        : this.lastQueriedRollupBlockNum!;
+        : this.lastQueriedRollupBlockNum! + 1;
     let events: Event[] = [];
 
+    // const totalStartTime = new Date().getTime();
     while (end > earliestBlock) {
       const rollupFilter = this.rollupProcessor.filters.RollupProcessed();
+      // console.log(`Fetching rollup events between blocks ${start} and ${end}...`);
+      // const startTime = new Date().getTime();
       const rollupEvents = await this.rollupProcessor.queryFilter(rollupFilter, start, end);
+      // console.log(`${rollupEvents.length} fetched in ${(new Date().getTime() - startTime) / 1000}s`);
       events = [...rollupEvents, ...events];
       if (events.length && events[0].args!.rollupId.toNumber() <= rollupId) {
         this.lastQueriedRollupId = rollupId;
@@ -276,6 +265,7 @@ export class RollupProcessor {
       end = Math.max(start - 1, 0);
       start = Math.max(end - chunk, 0);
     }
+    // console.log(`Done: ${events.length} fetched in ${(new Date().getTime() - totalStartTime) / 1000}s`);
 
     return this.getRollupBlocksFromEvents(
       events.filter(e => e.args!.rollupId.toNumber() >= rollupId),
@@ -297,28 +287,47 @@ export class RollupProcessor {
       const rollupFilter = this.rollupProcessor.filters.RollupProcessed(rollupId == -1 ? undefined : rollupId);
       const events = await this.rollupProcessor.queryFilter(rollupFilter, start, end);
       if (events.length) {
-        return (await this.getRollupBlocksFromEvents(events, 1))[0];
+        return (await this.getRollupBlocksFromEvents(events.slice(-1), 1))[0];
       }
       end = Math.max(start - 1, 0);
       start = Math.max(end - chunk, 0);
     }
   }
 
+  /**
+   * Given an array of rollup events, fetches all the necessary data for each event in order to return a Block.
+   * This somewhat arbitrarily chunks the requests 10 at a time, as that ensures we don't overload the node by
+   * hitting it with thousands of requests at once, while also enabling some degree of parallelism.
+   * WARNING: `rollupEvents` is mutated.
+   */
   private async getRollupBlocksFromEvents(rollupEvents: Event[], minConfirmations: number) {
-    const meta = (
-      await Promise.all(
-        rollupEvents.map(event =>
-          Promise.all([
-            event.getTransaction(),
-            event.getBlock(),
-            event.getTransactionReceipt(),
-            this.getDefiBridgeEvents(event.blockNumber),
-          ]),
-        ),
-      )
-    ).filter(m => m[0].confirmations >= minConfirmations);
+    // console.log(`Fetching data for ${rollupEvents.length} rollups...`);
+    // const startTime = new Date().getTime();
 
-    return meta.map(meta => this.decodeBlock({ ...meta[0], timestamp: meta[1].timestamp }, meta[2], meta[3]));
+    const blocks: Block[] = [];
+    while (rollupEvents.length) {
+      const events = rollupEvents.splice(0, 10);
+      const meta = (
+        await Promise.all(
+          events.map(event =>
+            Promise.all([
+              event.getTransaction(),
+              event.getBlock(),
+              event.getTransactionReceipt(),
+              this.getDefiBridgeEvents(event.blockNumber),
+            ]),
+          ),
+        )
+      ).filter(m => m[0].confirmations >= minConfirmations);
+      const newBlocks = meta.map(meta =>
+        this.decodeBlock({ ...meta[0], timestamp: meta[1].timestamp }, meta[2], meta[3]),
+      );
+      blocks.push(...newBlocks);
+    }
+
+    // console.log(`Fetched in ${(new Date().getTime() - startTime) / 1000}s`);
+
+    return blocks;
   }
 
   private async getDefiBridgeEvents(blockNo: number) {

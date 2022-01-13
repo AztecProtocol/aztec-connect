@@ -106,7 +106,7 @@ describe('rollup_processor: defi bridge failures', () => {
     const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
     });
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
     const txHash = await rollupProcessor.sendTx(tx);
 
     await expectRefund(bridgeId, inputValue, txHash);
@@ -128,7 +128,7 @@ describe('rollup_processor: defi bridge failures', () => {
     const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
     });
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
     const txHash = await rollupProcessor.sendTx(tx);
 
     await expectRefund(bridgeId, inputValue, txHash);
@@ -138,7 +138,7 @@ describe('rollup_processor: defi bridge failures', () => {
     const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
       previousDefiInteractionHash: randomBytes(32),
     });
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: INCORRECT_PREV_DEFI_INTERACTION_HASH');
   });
 
@@ -148,7 +148,7 @@ describe('rollup_processor: defi bridge failures', () => {
     const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
     });
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: ZERO_TOTAL_INPUT_VALUE');
   });
 
@@ -172,7 +172,7 @@ describe('rollup_processor: defi bridge failures', () => {
 
     await rollupProcessor.stubTransactionHashes(1023);
 
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: ARRAY_OVERFLOW');
   });
 });

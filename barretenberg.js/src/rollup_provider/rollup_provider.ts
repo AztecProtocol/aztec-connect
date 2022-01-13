@@ -1,11 +1,11 @@
 import { AccountId } from '../account_id';
 import { GrumpkinAddress } from '../address';
-import { BlockchainStatus } from '../blockchain';
+import { BlockchainStatus, blockchainStatusFromJson, blockchainStatusToJson } from '../blockchain';
 import { BlockSource } from '../block_source';
 import { AccountProofData, JoinSplitProofData } from '../client_proofs';
 import { OffchainAccountData, OffchainJoinSplitData } from '../offchain_tx_data';
 import { TxHash } from '../tx_hash';
-import { BridgeStatus } from '../bridge_id';
+import { BridgeStatus, bridgeStatusToJson } from '../bridge_id';
 
 export enum SettlementTime {
   SLOW,
@@ -32,9 +32,32 @@ export interface AssetFeeQuote {
 }
 
 export interface RuntimeConfig {
-  ready: boolean;
+  acceptingTxs: boolean;
   useKeyCache: boolean;
-  numOuterRollupProofs: number;
+  publishInterval: number;
+  gasLimit: number;
+  baseTxGas: number;
+  verificationGas: number;
+  maxFeeGasPrice: bigint;
+  feeGasPriceMultiplier: number;
+  maxProviderGasPrice: bigint;
+  maxUnsettledTxs: number;
+}
+
+export function runtimeConfigToJson(runtimeConfig: RuntimeConfig) {
+  return {
+    ...runtimeConfig,
+    maxFeeGasPrice: runtimeConfig.maxFeeGasPrice.toString(),
+    maxProviderGasPrice: runtimeConfig.maxProviderGasPrice.toString(),
+  };
+}
+
+export function runtimeConfigFromJson(runtimeConfig: any) {
+  return {
+    ...runtimeConfig,
+    maxFeeGasPrice: BigInt(runtimeConfig.maxFeeGasPrice),
+    maxProviderGasPrice: BigInt(runtimeConfig.maxProviderGasPrice),
+  };
 }
 
 export interface RollupProviderStatus {
@@ -45,6 +68,39 @@ export interface RollupProviderStatus {
   pendingTxCount: number;
   runtimeConfig: RuntimeConfig;
   bridgeStatus: BridgeStatus[];
+}
+
+export function rollupProviderStatusToJson(status: RollupProviderStatus) {
+  return {
+    ...status,
+    blockchainStatus: blockchainStatusToJson(status.blockchainStatus),
+    txFees: status.txFees.map(({ feeConstants, baseFeeQuotes }) => ({
+      feeConstants: feeConstants.map(constant => constant.toString()),
+      baseFeeQuotes: baseFeeQuotes.map(({ fee, time }) => ({
+        time,
+        fee: fee.toString(),
+      })),
+    })),
+    bridgeStatus: status.bridgeStatus.map(bridgeStatusToJson),
+    runtimeConfig: runtimeConfigToJson(status.runtimeConfig),
+  };
+}
+
+export function rollupProviderStatusFromJson(status: any): RollupProviderStatus {
+  const { txFees, blockchainStatus, nextPublishTime, runtimeConfig, ...rest } = status;
+  return {
+    ...rest,
+    blockchainStatus: blockchainStatusFromJson(blockchainStatus),
+    txFees: txFees.map(({ feeConstants, baseFeeQuotes }) => ({
+      feeConstants: feeConstants.map(r => BigInt(r)),
+      baseFeeQuotes: baseFeeQuotes.map(({ fee, time }) => ({
+        time,
+        fee: BigInt(fee),
+      })),
+    })),
+    nextPublishTime: new Date(nextPublishTime),
+    runtimeConfig: runtimeConfigFromJson(runtimeConfig),
+  };
 }
 
 export interface PendingTx {

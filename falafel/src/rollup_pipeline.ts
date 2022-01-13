@@ -2,10 +2,8 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { Blockchain } from '@aztec/barretenberg/blockchain';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
-import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 import { BridgeConfig } from '@aztec/barretenberg/bridge_id';
 import { ProofGenerator } from 'halloumi/proof_generator';
-import { Duration } from 'moment';
 import { ClaimProofCreator } from './claim_proof_creator';
 import { Metrics } from './metrics';
 import { PipelineCoordinator } from './pipeline_coordinator';
@@ -26,10 +24,10 @@ export class RollupPipeline {
     feeResolver: TxFeeResolver,
     noteAlgo: NoteAlgorithms,
     metrics: Metrics,
-    provider: EthereumProvider,
-    signingAddress: EthAddress,
-    publishInterval: Duration,
+    rollupBeneficiary: EthAddress,
+    publishInterval: number,
     maxProviderGasPrice: bigint,
+    gasLimit: number,
     numInnerRollupTxs: number,
     numOuterRollupProofs: number,
     bridgeConfigs: BridgeConfig[],
@@ -41,14 +39,7 @@ export class RollupPipeline {
       `Pipeline inner_txs/outer_txs/rollup_size: ${numInnerRollupTxs}/${numOuterRollupProofs}/${outerRollupSize}`,
     );
 
-    const rollupPublisher = new RollupPublisher(
-      rollupDb,
-      blockchain,
-      maxProviderGasPrice,
-      provider,
-      signingAddress,
-      metrics,
-    );
+    const rollupPublisher = new RollupPublisher(rollupDb, blockchain, maxProviderGasPrice, gasLimit, metrics);
     const rollupAggregator = new RollupAggregator(
       proofGenerator,
       rollupDb,
@@ -56,6 +47,7 @@ export class RollupPipeline {
       outerRollupSize,
       numInnerRollupTxs,
       numOuterRollupProofs,
+      rollupBeneficiary,
       metrics,
     );
     const rollupCreator = new RollupCreator(
@@ -111,18 +103,19 @@ export class RollupPipelineFactory {
     private txFeeResolver: TxFeeResolver,
     private noteAlgo: NoteAlgorithms,
     private metrics: Metrics,
-    private provider: EthereumProvider,
-    private signingAddress: EthAddress,
-    private publishInterval: Duration,
+    private rollupBeneficiary: EthAddress,
+    private publishInterval: number,
     private maxProviderGasPrice: bigint,
+    private gasLimit: number,
     private numInnerRollupTxs: number,
     private numOuterRollupProofs: number,
     private bridgeConfigs: BridgeConfig[],
   ) {}
 
-  public setTopology(numInnerRollupTxs: number, numOuterRollupProofs: number) {
-    this.numInnerRollupTxs = numInnerRollupTxs;
-    this.numOuterRollupProofs = numOuterRollupProofs;
+  public setConf(publishInterval: number, maxProviderGasPrice: bigint, gasLimit: number) {
+    this.publishInterval = publishInterval;
+    this.maxProviderGasPrice = maxProviderGasPrice;
+    this.gasLimit = gasLimit;
   }
 
   public async create() {
@@ -134,10 +127,10 @@ export class RollupPipelineFactory {
       this.txFeeResolver,
       this.noteAlgo,
       this.metrics,
-      this.provider,
-      this.signingAddress,
+      this.rollupBeneficiary,
       this.publishInterval,
       this.maxProviderGasPrice,
+      this.gasLimit,
       this.numInnerRollupTxs,
       this.numOuterRollupProofs,
       this.bridgeConfigs,

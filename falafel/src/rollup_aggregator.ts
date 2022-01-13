@@ -26,6 +26,7 @@ export class RollupAggregator {
     private outerRollupSize: number,
     private numInnerRollupTxs: number,
     private numOuterRollupProofs: number,
+    private rollupBeneficiary: EthAddress,
     private metrics: Metrics,
   ) {}
 
@@ -36,7 +37,6 @@ export class RollupAggregator {
     defiInteractionNotes: DefiInteractionNote[],
     bridgeIds: BridgeId[],
     assetIds: AssetId[],
-    rollupBeneficiary: EthAddress,
   ) {
     console.log(`Creating root rollup proof ${innerProofs.length} inner proofs...`);
 
@@ -47,7 +47,6 @@ export class RollupAggregator {
       defiInteractionNotes,
       bridgeIds,
       assetIds,
-      rollupBeneficiary,
     );
     const end = this.metrics.rootRollupTimer();
     const rootRollupRequest = new RootRollupProofRequest(this.numInnerRollupTxs, this.numOuterRollupProofs, rootRollup);
@@ -103,7 +102,6 @@ export class RollupAggregator {
     defiInteractionNotes: DefiInteractionNote[],
     bridgeIds: BridgeId[],
     assetIds: AssetId[],
-    rollupBeneficiary: EthAddress,
   ) {
     const worldStateDb = this.worldStateDb;
 
@@ -138,7 +136,7 @@ export class RollupAggregator {
       bridgeIds.map(id => id.toBigInt()),
       assetIds.map(id => numToUInt32BE(id, 32)),
       defiInteractionNotes.map(n => n.toBuffer()),
-      rollupBeneficiary,
+      this.rollupBeneficiary,
     );
 
     return rootRollup;

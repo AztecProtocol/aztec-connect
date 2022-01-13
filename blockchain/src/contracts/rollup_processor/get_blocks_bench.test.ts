@@ -1,6 +1,5 @@
 import { RollupProcessor } from './rollup_processor';
-import { JsonRpcProvider } from '@ethersproject/providers';
-import { EthersAdapter } from '../../provider';
+import { JsonRpcProvider } from '../../provider';
 import { EthAddress } from '@aztec/barretenberg/address';
 
 const { ETHEREUM_HOST = 'http://localhost:9545' } = process.env;
@@ -12,11 +11,10 @@ describe.skip('contract tests', () => {
   let contract: RollupProcessor;
 
   beforeAll(async () => {
-    const ethersProvider = new JsonRpcProvider(ETHEREUM_HOST);
-    const ethereumProvider = new EthersAdapter(ethersProvider);
+    const ethereumProvider = new JsonRpcProvider(ETHEREUM_HOST);
     contract = new RollupProcessor(
       EthAddress.fromString('0x737901bea3eeb88459df9ef1be8ff3ae1b42a2ba'),
-      ethereumProvider
+      ethereumProvider,
     );
   });
 

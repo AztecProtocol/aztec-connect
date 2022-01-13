@@ -94,7 +94,7 @@ describe('rollup_processor: defi bridge with loans', () => {
     ({ rollupProcessor, assets, assetAddresses } = await setupTestRollupProcessor(signers));
   });
 
-    // TODO ADD A TEST THAT ENSURES BRIDGE THROWS IF NON-VIRTUAL ASSETS ARE PROVIDED
+  // TODO ADD A TEST THAT ENSURES BRIDGE THROWS IF NON-VIRTUAL ASSETS ARE PROVIDED
   it('process defi interaction data that draws and repays a loan', async () => {
     const inputValue = 20n;
     const outputValueA = 10n;
@@ -118,7 +118,7 @@ describe('rollup_processor: defi bridge with loans', () => {
     // Empty rollup to ensure defi_interaction_nonce > 0 while drawing a loan
     {
       const { proofData } = await createRollupProof(rollupProvider, dummyProof());
-      const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
+      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
       await rollupProcessor.sendTx(tx);
     }
 
@@ -129,7 +129,7 @@ describe('rollup_processor: defi bridge with loans', () => {
         rollupId: 1,
         defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
       });
-      const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
+      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
 
       await expectBalance(AssetId.ETH, outputValueA);
@@ -161,7 +161,7 @@ describe('rollup_processor: defi bridge with loans', () => {
         defiInteractionData: [new DefiInteractionData(bridgeId2, outputValueA)],
         previousDefiInteractionHash,
       });
-      const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
+      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
 
       const inputValueETH = outputValueA;
@@ -207,7 +207,7 @@ describe('rollup_processor: defi bridge with loans', () => {
     // Empty rollup to ensure defi_interaction_nonce > 0 while drawing a loan
     {
       const { proofData } = await createRollupProof(rollupProvider, dummyProof());
-      const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
+      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
       await rollupProcessor.sendTx(tx);
     }
 
@@ -221,7 +221,7 @@ describe('rollup_processor: defi bridge with loans', () => {
           new DefiInteractionData(bridgeId2, collateralValue2),
         ],
       });
-      const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
+      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
 
       const interactionResult = [
@@ -266,7 +266,7 @@ describe('rollup_processor: defi bridge with loans', () => {
         ],
         previousDefiInteractionHash,
       });
-      const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
+      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
 
       const collateralReturned1 = (collateralValue1 * BigInt(9)) / BigInt(10);

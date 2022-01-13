@@ -32,10 +32,10 @@ export class PipelineCoordinator {
     private noteAlgo: NoteAlgorithms,
     private numInnerRollupTxs: number,
     private numOuterRollupProofs: number,
-    private publishInterval: moment.Duration,
+    private publishInterval: number,
     private bridgeConfigs: BridgeConfig[],
   ) {
-    this.publishTimeManager = new PublishTimeManager(this.publishInterval.asSeconds(), this.bridgeConfigs);
+    this.publishTimeManager = new PublishTimeManager(this.publishInterval, this.bridgeConfigs);
   }
 
   public getNextPublishTime() {
@@ -61,8 +61,11 @@ export class PipelineCoordinator {
       while (this.running) {
         const pendingTxs = await this.rollupDb.getPendingTxs();
         const rollupProfile = await this.rollupCoordinator.processPendingTxs(pendingTxs, this.flush);
-        if (rollupProfile.published || // rollup has been published so we exit this loop
-          (!rollupProfile.totalTxs && this.flush)) { // we are in a flush state and this iteration produced no rollup-able txs, so we exit
+        if (
+          rollupProfile.published || // rollup has been published so we exit this loop
+          (!rollupProfile.totalTxs && this.flush)
+        ) {
+          // we are in a flush state and this iteration produced no rollup-able txs, so we exit
           this.running = false;
           break;
         }

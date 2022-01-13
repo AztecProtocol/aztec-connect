@@ -19,7 +19,7 @@ describe('rollup_processor: state', () => {
   it('should update merkle tree state', async () => {
     const { proofData, signatures, rollupProofData } = await createRollupProof(rollupProvider, createSendProof());
 
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, []);
+    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
     await rollupProcessor.sendTx(tx);
 
     const expectedStateHash = utils.keccak256(
@@ -46,7 +46,7 @@ describe('rollup_processor: state', () => {
     const { proofData, signatures } = await createRollupProof(rollupProvider, createSendProof());
     proofData.writeUInt32BE(666, RollupProofDataOffsets.ROLLUP_ID);
 
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, []);
+    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: INCORRECT_STATE_HASH');
   });
 
@@ -54,7 +54,7 @@ describe('rollup_processor: state', () => {
     const { proofData, signatures } = await createRollupProof(rollupProvider, createSendProof());
     proofData.writeUInt32BE(666, RollupProofDataOffsets.DATA_START_INDEX);
 
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, []);
+    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: INCORRECT_DATA_START_INDEX');
   });
 
@@ -62,7 +62,7 @@ describe('rollup_processor: state', () => {
     const { proofData, signatures } = await createRollupProof(rollupProvider, createSendProof());
     proofData.writeUInt32BE(666, RollupProofDataOffsets.OLD_DATA_ROOT);
 
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, []);
+    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: INCORRECT_STATE_HASH');
   });
 
@@ -70,7 +70,7 @@ describe('rollup_processor: state', () => {
     const { proofData, signatures } = await createRollupProof(rollupProvider, createSendProof());
     proofData.writeUInt32BE(666, RollupProofDataOffsets.OLD_NULL_ROOT);
 
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, []);
+    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: INCORRECT_STATE_HASH');
   });
 
@@ -78,7 +78,7 @@ describe('rollup_processor: state', () => {
     const { proofData, signatures } = await createRollupProof(rollupProvider, createSendProof());
     proofData.writeUInt32BE(666, RollupProofDataOffsets.OLD_ROOT_ROOT);
 
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, signatures, []);
+    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: INCORRECT_STATE_HASH');
   });
 });

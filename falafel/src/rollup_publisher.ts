@@ -1,5 +1,4 @@
-import { EthAddress } from '@aztec/barretenberg/address';
-import { Blockchain, EthereumProvider } from '@aztec/barretenberg/blockchain';
+import { Blockchain } from '@aztec/barretenberg/blockchain';
 import { JoinSplitProofData } from '@aztec/barretenberg/client_proofs';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { RollupDao } from './entity/rollup';
@@ -15,8 +14,7 @@ export class RollupPublisher {
     private rollupDb: RollupDb,
     private blockchain: Blockchain,
     private maxProviderGasPrice: bigint,
-    private provider: EthereumProvider,
-    private providerAddress: EthAddress,
+    private gasLimit: number,
     private metrics: Metrics,
   ) {
     this.interruptPromise = new Promise(resolve => (this.interruptResolve = resolve));
@@ -80,10 +78,6 @@ export class RollupPublisher {
     this.interruptResolve();
   }
 
-  public getRollupBenificiary() {
-    return this.providerAddress;
-  }
-
   private async createTxData(rollup: RollupDao) {
     const proof = rollup.rollupProof.proofData;
     const txs = rollup.rollupProof.txs;
@@ -103,7 +97,7 @@ export class RollupPublisher {
   private async sendRollupProof(txData: Buffer) {
     while (!this.interrupted) {
       try {
-        return await this.blockchain.sendTx(txData);
+        return await this.blockchain.sendTx(txData, { gasLimit: this.gasLimit });
       } catch (err: any) {
         console.log(err.message.slice(0, 500));
         await this.sleepOrInterrupted(60000);

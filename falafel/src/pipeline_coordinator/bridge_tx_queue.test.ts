@@ -57,6 +57,7 @@ describe('Bridge Tx Queue', () => {
     jest.spyOn(Date, 'now').mockImplementation(() => 1618226000000);
 
     feeResolver = {
+      setConf: jest.fn(),
       getMinTxFee: jest.fn().mockImplementation(() => {
         throw new Error('This should not be called');
       }),

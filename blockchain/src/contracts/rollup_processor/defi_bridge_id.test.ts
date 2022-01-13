@@ -27,13 +27,7 @@ describe('rollup_processor: defi bridge', () => {
 
   const cloneId = (
     bridgeId: BridgeId,
-    {
-      addressId,
-      inputAssetId,
-      outputAssetIdA,
-      outputAssetIdB,
-      bitConfig,
-    }: Partial<BridgeId> = {},
+    { addressId, inputAssetId, outputAssetIdA, outputAssetIdB, bitConfig }: Partial<BridgeId> = {},
   ) => {
     return new BridgeId(
       addressId || bridgeId.addressId,
@@ -55,7 +49,7 @@ describe('rollup_processor: defi bridge', () => {
     const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
     });
-    const tx = await rollupProcessor.createEscapeHatchProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: INVALID_BRIDGE');
   });
 });

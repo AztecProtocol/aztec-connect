@@ -39,8 +39,6 @@ export interface Blockchain extends BlockSource, BlockchainStatusSource, Ethereu
 
   createRollupProofTx(proof: Buffer, signatures: Buffer[], offchainTxData: Buffer[]): Promise<Buffer>;
 
-  createEscapeHatchProofTx(proofData: Buffer, depositSignature?: Buffer, offchainTxData?: Buffer): Promise<Buffer>;
-
   sendTx(tx: Buffer, options?: SendTxOptions): Promise<TxHash>;
 
   getAsset(assetId: AssetId): Asset;
