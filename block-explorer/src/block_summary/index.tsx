@@ -11,6 +11,7 @@ export * from './value';
 interface BlockSummaryProps {
   className?: string;
   title: string;
+  subtitle?: string;
   titleContent?: React.ReactNode;
   children: React.ReactNode;
 }
@@ -18,6 +19,7 @@ interface BlockSummaryProps {
 export const BlockSummary: React.FunctionComponent<BlockSummaryProps> = ({
   className,
   title,
+  subtitle,
   titleContent,
   children,
 }) => (
@@ -27,6 +29,7 @@ export const BlockSummary: React.FunctionComponent<BlockSummaryProps> = ({
     titleIcon={summaryIcon}
     caption="SUMMARY"
     title={title}
+    subtitle={subtitle}
     titleContent={titleContent}
   >
     <InfoRowOffset>{children}</InfoRowOffset>
