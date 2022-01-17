@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2021 Spilsbury Holdings Ltd
 
-pragma solidity >=0.6.0 <0.8.0;
+pragma solidity >=0.6.0 <0.8.11;
 pragma experimental ABIEncoderV2;
 
 import {StandardTypes} from '../cryptography/StandardTypes.sol';

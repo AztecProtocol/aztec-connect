@@ -2,7 +2,7 @@
 // Copyright 2020 Aztec
 
 // gas count: 299,341 (includes 21,000 tx base cost, includes cost of 3 pub inputs. Cost of circuit without pub inputs is 298,312)
-pragma solidity >=0.6.0 <0.8.0;
+pragma solidity >=0.6.0 <0.8.11;
 pragma experimental ABIEncoderV2;
 
 import {IVerifier} from '../interfaces/IVerifier.sol';
@@ -465,8 +465,8 @@ contract StandardVerifier is IVerifier {
                     {
                         mstore(0, 0x08c379a000000000000000000000000000000000000000000000000000000000)
                         mstore(0x04, 0x20)
-                        mstore(0x24, 25)
-                        mstore(0x44, "PROOF_VERIFICATION_FAILED")
+                        mstore(0x24, 32)
+                        mstore(0x44, "PROOF_VERIFICATION_FAILED_TYPE_1")
                         revert(0x00, 0x64)
                     }
                     accumulator := mload(0x00)
@@ -1023,8 +1023,8 @@ contract StandardVerifier is IVerifier {
                 {
                     mstore(0, 0x08c379a000000000000000000000000000000000000000000000000000000000)
                     mstore(0x04, 0x20)
-                    mstore(0x24, 25)
-                    mstore(0x44, "PROOF_VERIFICATION_FAILED")
+                    mstore(0x24, 32)
+                    mstore(0x44, "PROOF_VERIFICATION_FAILED_TYPE_2")
                     revert(0x00, 0x64)
                 }
                 mstore(PAIRING_PREAMBLE_SUCCESS_FLAG, success)
@@ -1084,8 +1084,8 @@ contract StandardVerifier is IVerifier {
             {
                 mstore(0, 0x08c379a000000000000000000000000000000000000000000000000000000000)
                 mstore(0x04, 0x20)
-                mstore(0x24, 25)
-                mstore(0x44, "PROOF_VERIFICATION_FAILED")
+                mstore(0x24, 32)
+                mstore(0x44, "PROOF_VERIFICATION_FAILED_TYPE_3")
                 revert(0x00, 0x64)
             }
             {

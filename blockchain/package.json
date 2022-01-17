@@ -42,7 +42,7 @@
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
-    "@openzeppelin/contracts": "^3.3.0",
+    "@openzeppelin/contracts": "4.4.0",
     "@types/debug": "^4.1.5",
     "@types/jest": "^26.0.15",
     "@types/mocha": "^9.0.0",

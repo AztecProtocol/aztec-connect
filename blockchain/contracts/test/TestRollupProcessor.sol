@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2020 Spilsbury Holdings Ltd
 
-pragma solidity >=0.6.0 <0.8.0;
+pragma solidity >=0.6.0 <0.8.11;
 pragma experimental ABIEncoderV2;
 
 import {RollupProcessor} from '../RollupProcessor.sol';
@@ -50,7 +50,7 @@ contract TestRollupProcessor is RollupProcessor {
             uint256(RollupProcessor.rollupState) | (size << DEFIINTERACTIONHASHES_BIT_OFFSET)
         );
         assembly {
-            mstore(0x00, defiInteractionHashes_slot)
+            mstore(0x00, defiInteractionHashes.slot)
             // Write the 'zero-hash' into the last 4 entries to ensure that computed
             // defiInteractionHash will be correct
             let slot := keccak256(0x00, 0x20)

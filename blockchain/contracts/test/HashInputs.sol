@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2020 Spilsbury Holdings Ltd
-pragma solidity >=0.6.10;
+pragma solidity >=0.8.4;
 
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {SafeMath} from '@openzeppelin/contracts/utils/math/SafeMath.sol';
 import {Types} from '../verifier/cryptography/Types.sol';
 import {Bn254Crypto} from '../verifier/cryptography/Bn254Crypto.sol';
 import {Decoder} from '../Decoder.sol';
@@ -102,7 +102,7 @@ contract HashInputs is Decoder {
 
             // Step 3: Call our verifier contract. If does not return any values, but will throw an error if the proof is not valid
             // i.e. verified == false if proof is not valid
-            proof_verified := staticcall(gas(), sload(verifier_slot), dataPtr, add(zkProofDataSize, 0x64), 0x00, 0x00)
+            proof_verified := staticcall(gas(), sload(verifier.slot), dataPtr, add(zkProofDataSize, 0x64), 0x00, 0x00)
         }
 
         if (!proof_verified) {

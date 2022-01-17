@@ -113,7 +113,7 @@ describe('rollup_processor', () => {
     await expect(
       rollupProcessor.sendTx(tx, { signingAddress: EthAddress.fromString(await signers[1].getAddress()) }),
     ).rejects.toThrow(
-      "VM Exception while processing transaction: reverted with reason string 'Rollup Processor: INVALID_PROVIDER'",
+      "INVALID_PROVIDER",
     );
   });
 

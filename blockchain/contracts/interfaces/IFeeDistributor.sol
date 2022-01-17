@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2020 Spilsbury Holdings Ltd
-pragma solidity >=0.6.10 <0.8.0;
+pragma solidity >=0.8.4 <0.8.11;
 
 interface IFeeDistributor {
     event FeeReimbursed(address receiver, uint256 amount);
     event Convert(address assetAddress, uint256 inputValue, uint256 outputValue);
 
-    function convertConstant() external pure returns (uint256);
+    function convertConstant() external view returns (uint256);
 
-    function feeLimit() external pure returns (uint256);
+    function feeLimit() external view returns (uint256);
 
-    function aztecFeeClaimer() external pure returns (address);
+    function aztecFeeClaimer() external view returns (address);
 
-    function router() external pure returns (address);
+    function router() external view returns (address);
 
-    function factory() external pure returns (address);
+    function factory() external view returns (address);
 
-    function WETH() external pure returns (address);
+    function WETH() external view returns (address);
 
     function setFeeClaimer(address _feeClaimer) external;
 

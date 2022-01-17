@@ -50,6 +50,6 @@ describe('rollup_processor: defi bridge', () => {
       defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
     });
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: INVALID_BRIDGE');
+    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('BRIDGE_WITH_IDENTICAL_OUTPUT_ASSETS');
   });
 });

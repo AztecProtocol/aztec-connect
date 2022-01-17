@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2020 Spilsbury Holdings Ltd
-pragma solidity >=0.6.10 <0.8.0;
+pragma solidity >=0.8.4 <0.8.11;
 
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {SafeMath} from '@openzeppelin/contracts/utils/math/SafeMath.sol';
 import {Types} from './verifier/cryptography/Types.sol';
 import {Bn254Crypto} from './verifier/cryptography/Bn254Crypto.sol';
 
@@ -59,6 +59,8 @@ contract Decoder {
     uint256 public constant ARRAY_LENGTH_MASK = 0x3ff;
     uint256 public constant DATASIZE_MASK = 0xffffffff;
 
+    error ENCODING_BYTE_INVALID();
+
     function paddingTx(uint256 inPtr, uint256 outPtr) internal pure returns (uint256) {
         return (inPtr + 0x1);
     }
@@ -110,7 +112,7 @@ contract Decoder {
     }
 
     function invalidTx(uint256, uint256) internal pure returns (uint256) {
-        require(false, 'encoding byte is invalid!');
+        revert ENCODING_BYTE_INVALID();
     }
 
     function decodeProof(uint256 rollupHeaderInputLength, uint256 txNumPubInputs)

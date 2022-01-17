@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 // Copyright 2020 Spilsbury Holdings Ltd
-pragma solidity >=0.6.10 <0.8.0;
+pragma solidity >=0.8.4 <0.8.11;
 pragma experimental ABIEncoderV2;
 
-import {SafeMath} from '@openzeppelin/contracts/math/SafeMath.sol';
+import {SafeMath} from '@openzeppelin/contracts/utils/math/SafeMath.sol';
 import {IDefiBridge} from './interfaces/IDefiBridge.sol';
 import {AztecTypes} from './AztecTypes.sol';
 
@@ -16,6 +16,10 @@ contract DefiBridgeProxy {
     bytes4 private constant TRANSFER_SELECTOR = 0xa9059cbb; // bytes4(keccak256('transfer(address,uint256)'));
     bytes4 private constant DEPOSIT_SELECTOR = 0xb6b55f25; // bytes4(keccak256('deposit(uint256)'));
     bytes4 private constant WITHDRAW_SELECTOR = 0x2e1a7d4d; // bytes4(keccak256('withdraw(uint256)'));
+
+    error DEFI_BRIDGE_PROXY_TRANSFER_FAILED();
+    error INCORRECT_ASSET_VALUE();
+    error ASYNC_NONZERO_OUTPUT_VALUES(uint256 outputValueA, uint256 outputValueB);
 
     event AztecBridgeInteraction(
         address indexed bridgeAddress,
@@ -60,7 +64,10 @@ contract DefiBridgeProxy {
             // is this correct or should we forward the correct amount
             success := call(gas(), assetAddress, 0, ptr, 0x44, ptr, 0)
         }
-        require(success, "DEFI_BRIDGE_PROXY TRANSFER_FAILED");
+        if (!success)
+        {
+            revert DEFI_BRIDGE_PROXY_TRANSFER_FAILED();
+        }
     }
 
     function convert(
@@ -115,24 +122,27 @@ contract DefiBridgeProxy {
             outputAssetA.assetType != AztecTypes.AztecAssetType.VIRTUAL &&
             outputAssetA.assetType != AztecTypes.AztecAssetType.NOT_USED
         ) {
-            require(
-                outputValueA == SafeMath.sub(getBalance(outputAssetA.erc20Address), tempValueA),
-                'DefiBridgeProxy: INCORRECT_ASSET_VALUE'
-            );
+            if (outputValueA != SafeMath.sub(getBalance(outputAssetA.erc20Address), tempValueA))
+            {
+                revert INCORRECT_ASSET_VALUE();
+            }
         }
 
         if (
             outputAssetB.assetType != AztecTypes.AztecAssetType.VIRTUAL &&
             outputAssetB.assetType != AztecTypes.AztecAssetType.NOT_USED
         ) {
-            require(
-                outputValueB == SafeMath.sub(getBalance(outputAssetB.erc20Address), tempValueB),
-                'DefiBridgeProxy: INCORRECT_ASSET_VALUE'
-            );
+            if (outputValueB != SafeMath.sub(getBalance(outputAssetB.erc20Address), tempValueB))
+            {
+                revert INCORRECT_ASSET_VALUE();
+            }
         }
 
         if (isAsync) {
-            require(outputValueA == 0 && outputValueB == 0, 'DefiBridgeProxy: ASYNC_NONZERO_OUTPUT_VALUES');
+            if (!(outputValueA == 0 && outputValueB == 0))
+            {
+                revert ASYNC_NONZERO_OUTPUT_VALUES(outputValueA, outputValueB);
+            }
         }
     }
 }

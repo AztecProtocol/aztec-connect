@@ -207,7 +207,7 @@ describe('rollup_processor: deposit', () => {
     );
 
     const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: INSUFFICIENT_DEPOSIT');
+    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('INSUFFICIENT_DEPOSIT()');
   });
 
   it('should revert for depositing eth with inconsistent value', async () => {
@@ -215,7 +215,7 @@ describe('rollup_processor: deposit', () => {
       rollupProcessor.contract
         .connect(userSigners[0])
         .depositPendingFunds(AssetId.ETH, 2, userAddresses[0].toString(), Buffer.alloc(32), { value: 1 }),
-    ).rejects.toThrow('Rollup Processor: WRONG_AMOUNT');
+    ).rejects.toThrow('WRONG_AMOUNT');
   });
 
   it('should revert for depositing erc20 asset with non-zero value', async () => {
@@ -225,7 +225,7 @@ describe('rollup_processor: deposit', () => {
       rollupProcessor.contract
         .connect(userSigners[0])
         .depositPendingFunds(AssetId.DAI, 1, userAddresses[0].toString(), Buffer.alloc(32), { value: 1 }),
-    ).rejects.toThrow('Rollup Processor: WRONG_PAYMENT_TYPE');
+    ).rejects.toThrow('WRONG_PAYMENT_TYPE');
   });
 
   it('should revert for depositing fund for an unknown asset', async () => {

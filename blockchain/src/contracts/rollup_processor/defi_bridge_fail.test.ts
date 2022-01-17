@@ -139,7 +139,7 @@ describe('rollup_processor: defi bridge failures', () => {
       previousDefiInteractionHash: randomBytes(32),
     });
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: INCORRECT_PREV_DEFI_INTERACTION_HASH');
+    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('INCORRECT_PREVIOUS_DEFI_INTERACTION_HASH');
   });
 
   it('revert if total input value is empty', async () => {
@@ -149,7 +149,7 @@ describe('rollup_processor: defi bridge failures', () => {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
     });
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: ZERO_TOTAL_INPUT_VALUE');
+    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('ZERO_TOTAL_INPUT_VALUE');
   });
 
   it('process defi interaction data fails if defiInteractionHash is max size', async () => {
@@ -173,6 +173,6 @@ describe('rollup_processor: defi bridge failures', () => {
     await rollupProcessor.stubTransactionHashes(1023);
 
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('Rollup Processor: ARRAY_OVERFLOW');
+    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('ARRAY_OVERFLOW');
   });
 });

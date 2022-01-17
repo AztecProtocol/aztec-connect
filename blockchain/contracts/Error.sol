@@ -1,4 +1,4 @@
-pragma solidity >=0.6.10;
+pragma solidity >=0.8.4;
 
 library Error {
     function toAscii(bytes32 input) internal pure returns (bytes32 hi, bytes32 lo) {
