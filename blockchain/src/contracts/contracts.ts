@@ -1,6 +1,7 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
 import { Asset, EthereumProvider, FeeData, PriceFeed, SendTxOptions, TypedData } from '@aztec/barretenberg/blockchain';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { Web3Provider } from '@ethersproject/providers';
 import { Web3Signer } from '../signer';
@@ -212,5 +213,13 @@ export class Contracts {
       maxPriorityFeePerGas: maxPriorityFeePerGas !== null ? BigInt(maxPriorityFeePerGas.toString()) : BigInt(0),
       gasPrice: gasPrice !== null ? BigInt(gasPrice.toString()) : BigInt(0),
     };
+  }
+
+  public async getBridgeGas(bridgeAddressId: number) {
+    return this.rollupProcessor.getBridgeGas(bridgeAddressId);
+  }
+
+  public async getSupportedBridges() {
+    return this.rollupProcessor.getSupportedBridges();
   }
 }

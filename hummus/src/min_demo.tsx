@@ -1,4 +1,4 @@
-import { JsonRpcProvider, AccountId, AssetId, createWalletSdk, SdkEvent, WalletSdk } from '@aztec/sdk';
+import { JsonRpcProvider, AccountId, AssetId, createWalletSdk, SdkEvent, WalletSdk, EthAddress } from '@aztec/sdk';
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 
@@ -58,17 +58,14 @@ function MinForm({ grumpkinPrivKey }: MinFormProps) {
             const accountId = new AccountId(signer.getPublicKey(), 0);
             const start = new Date().getTime();
             log(`creating js proof...`);
-            await sdk!.createJoinSplitProof(
-              AssetId.ETH,
+            const controller = sdk!.createTransferController(
               accountId,
-              BigInt(0),
-              BigInt(0),
-              BigInt(0),
-              BigInt(0),
-              BigInt(0),
               signer,
+              { assetId: AssetId.ETH, value: BigInt(0) },
+              { assetId: AssetId.ETH, value: BigInt(0) },
               accountId,
             );
+            await controller.createProof();
             log(`${new Date().getTime() - start}ms`);
             setBusy(false);
           }}
@@ -83,7 +80,22 @@ function MinForm({ grumpkinPrivKey }: MinFormProps) {
             const accountId = new AccountId(signer.getPublicKey(), 0);
             const start = new Date().getTime();
             log(`creating account proof...`);
-            await sdk!.createAccountProof(accountId, signer, 'blah', 0, true);
+            const controller = sdk!.createRegisterController(
+              accountId,
+              'blah',
+              accountId.publicKey,
+              undefined,
+              {
+                assetId: AssetId.ETH,
+                value: BigInt(0),
+              },
+              {
+                assetId: AssetId.ETH,
+                value: BigInt(0),
+              },
+              EthAddress.ZERO,
+            );
+            await controller.createProof();
             log(`${new Date().getTime() - start}ms`);
             setBusy(false);
           }}

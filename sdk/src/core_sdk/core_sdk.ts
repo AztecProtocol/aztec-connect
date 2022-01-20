@@ -1,7 +1,6 @@
-import { AliasHash } from '@aztec/barretenberg/account_id';
+import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
-import { TxType } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { AccountProver, JoinSplitProver, PooledProverFactory, ProofId } from '@aztec/barretenberg/client_proofs';
@@ -10,10 +9,10 @@ import { Blake2s, Pedersen, PooledPedersen, Schnorr } from '@aztec/barretenberg/
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { AccountData, InitHelpers } from '@aztec/barretenberg/environment';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
-import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
+import { NoteAlgorithms, TreeNote } from '@aztec/barretenberg/note_algorithms';
 import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
-import { RollupProvider, SettlementTime } from '@aztec/barretenberg/rollup_provider';
+import { RollupProvider } from '@aztec/barretenberg/rollup_provider';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { BarretenbergWasm, WorkerPool } from '@aztec/barretenberg/wasm';
 import { WorldState } from '@aztec/barretenberg/world_state';
@@ -24,13 +23,10 @@ import Mutex from 'idb-mutex';
 import { LevelUp } from 'levelup';
 import os from 'os';
 import { Alias, Database, SigningKey } from '../database';
-import { AccountProofCreator } from '../proofs/account_proof_creator';
-import { DefiDepositProofCreator } from '../proofs/defi_deposit_proof_creator';
-import { JoinSplitProofCreator } from '../proofs/join_split_proof_creator';
-import { ProofOutput } from '../proofs/proof_output';
+import { AccountProofCreator, DefiDepositProofCreator, PaymentProofCreator, ProofOutput } from '../proofs';
 import { SdkEvent, SdkInitState, SdkStatus } from '../sdk';
 import { SchnorrSigner, Signer } from '../signer';
-import { AccountId, UserData, UserDataFactory } from '../user';
+import { UserData, UserDataFactory } from '../user';
 import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
 
 const debug = createDebug('bb:core_sdk');
@@ -57,7 +53,7 @@ export class CoreSdk extends EventEmitter {
   private worldState!: WorldState;
   private userStates: UserState[] = [];
   private workerPool!: WorkerPool;
-  private joinSplitProofCreator!: JoinSplitProofCreator;
+  private paymentProofCreator!: PaymentProofCreator;
   private accountProofCreator!: AccountProofCreator;
   private defiDepositProofCreator!: DefiDepositProofCreator;
   private blockQueue!: MemoryFifo<Block>;
@@ -156,7 +152,7 @@ export class CoreSdk extends EventEmitter {
       const joinSplitProver = new JoinSplitProver(
         await pooledProverFactory.createUnrolledProver(JoinSplitProver.circuitSize),
       );
-      this.joinSplitProofCreator = new JoinSplitProofCreator(
+      this.paymentProofCreator = new PaymentProofCreator(
         joinSplitProver,
         this.noteAlgos,
         this.worldState,
@@ -332,15 +328,12 @@ export class CoreSdk extends EventEmitter {
     return await this.rollupProvider.getStatus();
   }
 
-  public async getFee(assetId: AssetId, transactionType: TxType, speed: SettlementTime) {
-    const { txFees } = await this.getRemoteStatus();
-    let fee = txFees[assetId].feeConstants[transactionType] + txFees[assetId].baseFeeQuotes[speed].fee;
-    if (transactionType === TxType.DEFI_DEPOSIT) {
-      // need to double the fee in order for the DEFI claim to be rolled up
-      fee *= BigInt(2);
-      fee += txFees[assetId].feeConstants[TxType.TRANSFER] + txFees[assetId].baseFeeQuotes[speed].fee;
-    }
-    return fee;
+  public async getTxFees(assetId: AssetId) {
+    return this.rollupProvider.getTxFees(assetId);
+  }
+
+  public async getDefiFees(bridgeId: BridgeId) {
+    return this.rollupProvider.getDefiFees(bridgeId);
   }
 
   private serialExecute<T>(fn: () => Promise<T>): Promise<T> {
@@ -681,22 +674,23 @@ export class CoreSdk extends EventEmitter {
     return new SchnorrSigner(this.schnorr, publicKey, privateKey);
   }
 
-  public async createJoinSplitProof(
-    assetId: AssetId,
+  public async createPaymentProof(
     userId: AccountId,
+    signer: Signer,
+    assetId: AssetId,
     publicInput: bigint,
     publicOutput: bigint,
     privateInput: bigint,
     recipientPrivateOutput: bigint,
     senderPrivateOutput: bigint,
-    signer: Signer,
-    noteRecipient?: AccountId,
-    publicOwner?: EthAddress,
-    allowChain?: boolean,
+    noteRecipient: AccountId | undefined,
+    publicOwner: EthAddress | undefined,
+    allowChain: number,
+    txRefNo: number,
   ) {
     return this.serialExecute(async () => {
       const userState = this.getUserState(userId);
-      return this.joinSplitProofCreator.createProof(
+      return this.paymentProofCreator.createProof(
         userState,
         publicInput,
         publicOutput,
@@ -708,6 +702,7 @@ export class CoreSdk extends EventEmitter {
         noteRecipient,
         publicOwner,
         allowChain,
+        txRefNo,
       );
     });
   }
@@ -742,63 +737,75 @@ export class CoreSdk extends EventEmitter {
     userId: AccountId,
     signer: Signer,
     aliasHash: AliasHash,
-    nonce: number,
     migrate: boolean,
-    newSigningPublicKey1?: GrumpkinAddress,
-    newSigningPublicKey2?: GrumpkinAddress,
-    newAccountPrivateKey?: Buffer,
+    newSigningPublicKey1: GrumpkinAddress | undefined,
+    newSigningPublicKey2: GrumpkinAddress | undefined,
+    newAccountPrivateKey: Buffer | undefined,
+    txRefNo: number,
   ) {
     return this.serialExecute(async () => {
       const newAccountPublicKey = newAccountPrivateKey ? this.derivePublicKey(newAccountPrivateKey) : undefined;
       return this.accountProofCreator.createProof(
         signer,
         aliasHash,
-        nonce,
+        userId.nonce,
         migrate,
         userId.publicKey,
         newAccountPublicKey,
         newSigningPublicKey1,
         newSigningPublicKey2,
+        txRefNo,
       );
     });
   }
 
   public async createDefiProof(
-    bridgeId: BridgeId,
     userId: AccountId,
+    signer: Signer,
+    bridgeId: BridgeId,
     depositValue: bigint,
     txFee: bigint,
-    signer: Signer,
-    allowChain?: boolean,
+    inputNotes: TreeNote[] | undefined,
+    txRefNo: number,
   ) {
     return this.serialExecute(async () => {
-      const jsTxFee = allowChain
-        ? BigInt(0)
-        : await this.getFee(bridgeId.inputAssetId, TxType.TRANSFER, SettlementTime.SLOW);
-      if (jsTxFee > txFee) {
-        throw new Error('Insufficient fee.');
-      }
       const userState = this.getUserState(userId);
       return this.defiDepositProofCreator.createProof(
         userState,
         bridgeId,
         depositValue,
-        txFee - jsTxFee,
-        jsTxFee,
+        txFee,
         signer,
-        allowChain,
+        inputNotes,
+        txRefNo,
       );
     });
   }
 
-  public async sendProof(proofOutput: ProofOutput, depositSignature?: Buffer) {
-    const { tx, proofData, offchainTxData, parentProof } = proofOutput;
-    const userState = this.getUserState(tx.userId);
+  public async sendProofs(proofs: ProofOutput[]) {
+    // Get userState before sending proofs to make sure that the tx owner has been added to the sdk.
+    const [
+      {
+        tx: { userId },
+      },
+    ] = proofs;
+    const userState = this.getUserState(userId);
+    if (proofs.some(({ tx }) => !tx.userId.equals(userId))) {
+      throw new Error('Inconsistent tx owners.');
+    }
 
-    await this.rollupProvider.sendProof({ proofData, offchainTxData, depositSignature, parentProof });
-    await userState.addProof(proofOutput);
+    const txs = proofs.map(({ proofData, offchainTxData, signature }) => ({
+      proofData: proofData.rawProofData,
+      offchainTxData: offchainTxData.toBuffer(),
+      depositSignature: signature,
+    }));
+    const txIds = await this.rollupProvider.sendTxs(txs);
 
-    return tx.txHash;
+    for (const proof of proofs) {
+      await userState.addProof(proof);
+    }
+
+    return txIds;
   }
 
   private async isSynchronised() {
@@ -943,23 +950,19 @@ export class CoreSdk extends EventEmitter {
     return this.db.getUserNotes(userId);
   }
 
-  public async getJoinSplitTxs(userId: AccountId) {
-    return this.db.getJoinSplitTxs(userId);
+  public async pickNotes(userId: AccountId, assetId: AssetId, value: bigint) {
+    return this.getUserState(userId).pickNotes(assetId, value);
   }
 
-  public async getAccountTxs(userId: AccountId) {
-    return this.db.getAccountTxs(userId);
-  }
-
-  public async getDefiTxs(userId: AccountId) {
-    return this.db.getDefiTxs(userId);
+  public async getUserTxs(userId: AccountId) {
+    return this.db.getUserTxs(userId);
   }
 
   public async getRemoteUnsettledAccountTxs() {
     return this.rollupProvider.getUnsettledAccountTxs();
   }
 
-  public async getRemoteUnsettledJoinSplitTxs() {
-    return this.rollupProvider.getUnsettledJoinSplitTxs();
+  public async getRemoteUnsettledPaymentTxs() {
+    return this.rollupProvider.getUnsettledPaymentTxs();
   }
 }

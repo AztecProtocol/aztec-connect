@@ -4,7 +4,7 @@ import {
   createWalletSdk,
   EthAddress,
   GrumpkinAddress,
-  TxType,
+  TxSettlementTime,
   WalletProvider,
   WalletSdk,
 } from '@aztec/sdk';
@@ -21,6 +21,7 @@ describe('end-to-end account tests', () => {
   let provider: WalletProvider;
   let sdk: WalletSdk;
   let depositor: EthAddress;
+  const assetId = AssetId.ETH;
   const awaitSettlementTimeout = 600;
 
   beforeAll(async () => {
@@ -52,7 +53,6 @@ describe('end-to-end account tests', () => {
   it('should create and recover account, add and remove signing keys.', async () => {
     const accountPrivateKey = provider.getPrivateKeyForAddress(depositor)!;
     const user0 = await sdk.addUser(accountPrivateKey);
-    const signer0 = sdk.createSchnorrSigner(accountPrivateKey);
     const { publicKey: accountPubKey } = user0.getUserData();
 
     expect(await sdk.getLatestAccountNonce(accountPubKey)).toBe(0);
@@ -68,50 +68,34 @@ describe('end-to-end account tests', () => {
     ]);
     const { recoveryPublicKey } = recoveryPayloads[0];
     {
-      // Generate an account proof.
-      const accountProof = await sdk.createAccountProof(
+      const depositValue = sdk.toBaseUnits(assetId, '0.02');
+      // in order to flush this tx through, we will pay for all slots in the rollup
+      const txFee = (await sdk.getRegisterFees(assetId, depositValue))[TxSettlementTime.INSTANT];
+
+      const controller = sdk.createRegisterController(
         user0.id,
-        signer0,
         alias,
-        0,
-        true, // migrate
         signer1.getPublicKey(),
         recoveryPublicKey,
-      );
-
-      // Create a join split proof to shield to account nonce 1.
-      const assetId = AssetId.ETH;
-      const value = sdk.toBaseUnits(assetId, '0.02');
-      // in order to flush this deposit through, we will pay for all slots in the rollup
-      // for this test rollup size is 6. So we need to pay for 4 additional slots;
-      const txFee = 5n * await sdk.getFee(assetId, TxType.DEPOSIT);
-      const shieldProof = await sdk.createJoinSplitProof(
-        assetId,
-        user0.id,
-        value + txFee,
-        BigInt(0),
-        BigInt(0),
-        value,
-        BigInt(0),
-        signer0,
-        user1.id,
+        { assetId, value: depositValue },
+        txFee,
         depositor,
       );
-      const signature = await sdk.signProof(shieldProof, depositor);
 
-      const depositHash = await sdk.depositFundsToContract(assetId, depositor, value + txFee);
+      const depositHash = await controller.depositFundsToContract();
       await sdk.getTransactionReceipt(depositHash);
 
-      expect(user0.getAsset(assetId).balance()).toBe(BigInt(0));
-      expect(user1.getAsset(assetId).balance()).toBe(BigInt(0));
+      await controller.createProof();
+      await controller.sign();
 
-      // Send the account proof with the shield proof.
-      shieldProof.parentProof = accountProof;
-      const txHash = await sdk.sendProof(shieldProof, signature);
+      expect(user0.getBalance(assetId)).toBe(BigInt(0));
+      expect(user1.getBalance(assetId)).toBe(BigInt(0));
+
+      const txHash = await controller.send();
       await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
 
-      expect(user0.getAsset(assetId).balance()).toBe(BigInt(0));
-      expect(user1.getAsset(assetId).balance()).toBe(BigInt(value));
+      expect(user0.getBalance(assetId)).toBe(BigInt(0));
+      expect(user1.getBalance(assetId)).toBe(depositValue);
     }
 
     expect(await sdk.getAccountId(alias)).toEqual(user1.id);
@@ -120,62 +104,89 @@ describe('end-to-end account tests', () => {
     // Check new account was created with the expected singing keys.
     expectEqualSigningKeys(await user1.getSigningKeys(), [signer1.getPublicKey(), recoveryPublicKey]);
 
-    // Recover account. Adds the trustedThirdPartyPublicKey to list of signing keys.
-    {
-      const txHash = await user1.recoverAccount(recoveryPayloads[0]);
-      await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
-    }
+    // // Recover account. Adds the trustedThirdPartyPublicKey to list of signing keys.
+    // {
+    //   const [fee] = await sdk.getRecoverAccountFees(assetId);
+    //   const controller = sdk.createRecoverAccountController(recoveryPayloads[0], fee);
+    //   await controller.createProof();
+    //   const txHash = await controller.send();
+    //   await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
+    // }
 
-    expectEqualSigningKeys(await user1.getSigningKeys(), [
-      signer1.getPublicKey(),
-      recoveryPublicKey,
-      recoveryPayloads[0].trustedThirdPartyPublicKey,
-    ]);
+    // expectEqualSigningKeys(await user1.getSigningKeys(), [
+    //   signer1.getPublicKey(),
+    //   recoveryPublicKey,
+    //   recoveryPayloads[0].trustedThirdPartyPublicKey,
+    // ]);
 
-    // Add new signing key.
-    const signer2 = sdk.createSchnorrSigner(randomBytes(32));
-    {
-      const txHash = await user1.addSigningKeys(thirdPartySigner, signer2.getPublicKey());
-      await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
-    }
+    // // Add new signing key.
+    // const signer2 = sdk.createSchnorrSigner(randomBytes(32));
+    // {
+    //   const [fee] = await sdk.getAddSigningKeyFees(assetId);
+    //   const controller = sdk.createAddSigningKeyController(
+    //     user1.id,
+    //     thirdPartySigner,
+    //     signer2.getPublicKey(),
+    //     undefined,
+    //     fee,
+    //   );
+    //   await controller.createProof();
+    //   const txHash = await controller.send();
+    //   await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
+    // }
 
-    expectEqualSigningKeys(await user1.getSigningKeys(), [
-      signer1.getPublicKey(),
-      recoveryPublicKey,
-      recoveryPayloads[0].trustedThirdPartyPublicKey,
-      signer2.getPublicKey(),
-    ]);
+    // expectEqualSigningKeys(await user1.getSigningKeys(), [
+    //   signer1.getPublicKey(),
+    //   recoveryPublicKey,
+    //   recoveryPayloads[0].trustedThirdPartyPublicKey,
+    //   signer2.getPublicKey(),
+    // ]);
 
-    // Migrate account, revoking previous signers in the process.
-    const signer3 = sdk.createSchnorrSigner(randomBytes(32));
-    {
-      const txHash = await user1.migrateAccount(signer2, signer3.getPublicKey());
-      await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
-    }
+    // // Migrate account, revoking previous signers in the process.
+    // const signer3 = sdk.createSchnorrSigner(randomBytes(32));
+    // {
+    //   const [fee] = await sdk.getMigrateAccountFees(assetId);
+    //   const controller = await sdk.createMigrateAccountController(
+    //     user1.id,
+    //     signer2,
+    //     signer3.getPublicKey(),
+    //     undefined,
+    //     undefined,
+    //     fee,
+    //   );
+    //   await controller.createProof();
+    //   const txHash = await controller.send();
+    //   await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
+    // }
 
-    expect(await sdk.getLatestAccountNonce(accountPubKey)).toBe(2);
+    // expect(await sdk.getLatestAccountNonce(accountPubKey)).toBe(2);
 
-    const user2 = await sdk.getUser(new AccountId(accountPubKey, 2));
-    expectEqualSigningKeys(await user2.getSigningKeys(), [signer3.getPublicKey()]);
+    // const user2 = await sdk.getUser(new AccountId(accountPubKey, 2));
+    // expectEqualSigningKeys(await user2.getSigningKeys(), [signer3.getPublicKey()]);
 
-    // Migrate account to another account public key.
-    const account3PrivKey = randomBytes(32);
-    const newAccountPubKey = sdk.derivePublicKey(account3PrivKey);
-    {
-      const txHash = await user2.migrateAccount(
-        signer3,
-        signer3.getPublicKey(),
-        signer2.getPublicKey(),
-        account3PrivKey,
-      );
-      await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
-    }
+    // // Migrate account to another account public key.
+    // const account3PrivKey = randomBytes(32);
+    // const newAccountPubKey = sdk.derivePublicKey(account3PrivKey);
+    // {
+    //   const [fee] = await sdk.getMigrateAccountFees(assetId);
+    //   const controller = await sdk.createMigrateAccountController(
+    //     user2.id,
+    //     signer3,
+    //     signer3.getPublicKey(),
+    //     signer2.getPublicKey(),
+    //     account3PrivKey,
+    //     fee,
+    //   );
+    //   await controller.createProof();
+    //   const txHash = await controller.send();
+    //   await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
+    // }
 
-    expect(await sdk.getLatestAccountNonce(accountPubKey)).toBe(2);
-    expect(await sdk.getLatestAccountNonce(newAccountPubKey)).toBe(3);
+    // expect(await sdk.getLatestAccountNonce(accountPubKey)).toBe(2);
+    // expect(await sdk.getLatestAccountNonce(newAccountPubKey)).toBe(3);
 
-    const user3 = await sdk.getUser(new AccountId(newAccountPubKey, 3));
-    expectEqualSigningKeys(await user3.getSigningKeys(), [signer3.getPublicKey(), signer2.getPublicKey()]);
-    expect(await sdk.getAccountId(alias)).toEqual(user3.id);
+    // const user3 = await sdk.getUser(new AccountId(newAccountPubKey, 3));
+    // expectEqualSigningKeys(await user3.getSigningKeys(), [signer3.getPublicKey(), signer2.getPublicKey()]);
+    // expect(await sdk.getAccountId(alias)).toEqual(user3.id);
   });
 });

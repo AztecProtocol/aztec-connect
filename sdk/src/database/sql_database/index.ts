@@ -1,22 +1,20 @@
-import { AliasHash } from '@aztec/barretenberg/account_id';
+import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
-import { Connection, ConnectionOptions, IsNull, MoreThan, MoreThanOrEqual, Repository, getConnection } from 'typeorm';
+import { Connection, ConnectionOptions, getConnection, IsNull, MoreThan, MoreThanOrEqual, Repository } from 'typeorm';
+import { CoreAccountTx, CoreClaimTx, CoreDefiTx, CorePaymentTx } from '../../core_tx';
 import { Note } from '../../note';
-import { AccountId, UserData } from '../../user';
-import { UserAccountTx, UserDefiTx, UserJoinSplitTx, UserUtilTx } from '../../user_tx';
-import { Claim } from '../claim';
+import { UserData } from '../../user';
 import { Alias, Database, SigningKey } from '../database';
 import { AccountTxDao } from './account_tx_dao';
 import { AliasDao } from './alias_dao';
-import { ClaimDao } from './claim_dao';
+import { ClaimTxDao } from './claim_tx_dao';
 import { DefiTxDao } from './defi_tx_dao';
-import { JoinSplitTxDao } from './join_split_tx_dao';
 import { KeyDao } from './key_dao';
 import { NoteDao } from './note_dao';
+import { PaymentTxDao } from './payment_tx_dao';
 import { UserDataDao } from './user_data_dao';
 import { UserKeyDao } from './user_key_dao';
-import { UtilTxDao } from './util_tx_dao';
 
 export const getOrmConfig = (memoryDb = false, identifier?: string): ConnectionOptions => {
   const folder = identifier ? `/${identifier}` : '';
@@ -26,90 +24,86 @@ export const getOrmConfig = (memoryDb = false, identifier?: string): ConnectionO
     name: `aztec2-sdk${suffix}`,
     type: 'sqlite',
     database: memoryDb ? ':memory:' : `${dbPath}/aztec2-sdk.sqlite`,
-    entities: [
-      AccountTxDao,
-      AliasDao,
-      ClaimDao,
-      DefiTxDao,
-      JoinSplitTxDao,
-      KeyDao,
-      NoteDao,
-      UserDataDao,
-      UserKeyDao,
-      UtilTxDao,
-    ],
+    entities: [AccountTxDao, AliasDao, ClaimTxDao, DefiTxDao, KeyDao, NoteDao, PaymentTxDao, UserDataDao, UserKeyDao],
     synchronize: true,
     logging: false,
   };
 };
 
-const toUserJoinSplitTx = (tx: JoinSplitTxDao) =>
-  new UserJoinSplitTx(
+const toCorePaymentTx = (tx: PaymentTxDao) =>
+  new CorePaymentTx(
     tx.txHash,
     tx.userId,
+    tx.proofId,
     tx.assetId,
-    tx.publicInput,
-    tx.publicOutput,
+    tx.publicValue,
+    tx.publicOwner,
     tx.privateInput,
     tx.recipientPrivateOutput,
     tx.senderPrivateOutput,
-    tx.inputOwner,
-    tx.outputOwner,
-    tx.ownedByUser,
+    tx.isRecipient,
+    tx.isSender,
+    tx.txRefNo,
     tx.created,
     tx.settled,
   );
 
-const toUserAccountTx = (tx: AccountTxDao) =>
-  new UserAccountTx(
+const toCoreAccountTx = (tx: AccountTxDao) =>
+  new CoreAccountTx(
     tx.txHash,
     tx.userId,
     tx.aliasHash,
     tx.newSigningPubKey1,
     tx.newSigningPubKey2,
     tx.migrated,
+    tx.txRefNo,
     tx.created,
     tx.settled,
   );
 
-const toUserDefiTx = (tx: DefiTxDao) =>
-  new UserDefiTx(
+const toCoreDefiTx = (tx: DefiTxDao) =>
+  new CoreDefiTx(
     tx.txHash,
     tx.userId,
     tx.bridgeId,
     tx.depositValue,
-    tx.partialStateSecret,
     tx.txFee,
+    tx.partialStateSecret,
+    tx.txRefNo,
     tx.created,
     tx.outputValueA,
     tx.outputValueB,
+    tx.result,
     tx.settled,
-    tx.result
   );
+
+const sortUserTxs = (txs: any[]) => {
+  const unsettled = txs.filter(tx => !tx.settled).sort((a, b) => (a.created < b.created ? 1 : -1));
+  const settled = txs.filter(tx => tx.settled);
+  return [...unsettled, ...settled];
+};
 
 export class SQLDatabase implements Database {
   private accountTxRep: Repository<AccountTxDao>;
   private aliasRep: Repository<AliasDao>;
-  private claimRep: Repository<ClaimDao>;
+  private claimTxRep: Repository<ClaimTxDao>;
   private defiTxRep: Repository<DefiTxDao>;
-  private joinSplitTxRep: Repository<JoinSplitTxDao>;
   private keyRep: Repository<KeyDao>;
   private noteRep: Repository<NoteDao>;
+  private paymentTxRep: Repository<PaymentTxDao>;
   private userDataRep: Repository<UserDataDao>;
   private userKeyRep: Repository<UserKeyDao>;
-  private utilTxRep: Repository<UtilTxDao>;
 
   constructor(private connection: Connection) {
     this.accountTxRep = this.connection.getRepository(AccountTxDao);
     this.aliasRep = this.connection.getRepository(AliasDao);
-    this.claimRep = this.connection.getRepository(ClaimDao);
+    this.claimTxRep = this.connection.getRepository(ClaimTxDao);
     this.defiTxRep = this.connection.getRepository(DefiTxDao);
-    this.joinSplitTxRep = this.connection.getRepository(JoinSplitTxDao);
     this.keyRep = this.connection.getRepository(KeyDao);
     this.noteRep = this.connection.getRepository(NoteDao);
+    this.paymentTxRep = this.connection.getRepository(PaymentTxDao);
     this.userDataRep = this.connection.getRepository(UserDataDao);
     this.userKeyRep = this.connection.getRepository(UserKeyDao);
-    this.utilTxRep = this.connection.getRepository(UtilTxDao);
   }
 
   async init() {}
@@ -150,14 +144,6 @@ export class SQLDatabase implements Database {
     await this.noteRep.delete({ nullifier });
   }
 
-  async addClaim(claim: Claim) {
-    await this.claimRep.save(claim);
-  }
-
-  async getClaim(nullifier: Buffer) {
-    return this.claimRep.findOne({ nullifier });
-  }
-
   async getUser(userId: AccountId) {
     return this.userDataRep.findOne({ id: userId });
   }
@@ -179,7 +165,8 @@ export class SQLDatabase implements Database {
     if (!user) return;
 
     await this.accountTxRep.delete({ userId });
-    await this.joinSplitTxRep.delete({ userId });
+    await this.claimTxRep.delete({ userId });
+    await this.paymentTxRep.delete({ userId });
     await this.userKeyRep.delete({ accountId: userId });
     await this.noteRep.delete({ owner: userId });
     await this.userDataRep.delete({ id: userId });
@@ -190,64 +177,59 @@ export class SQLDatabase implements Database {
     await this.noteRep.clear();
     await this.userKeyRep.clear();
     await this.accountTxRep.clear();
-    await this.joinSplitTxRep.clear();
+    await this.claimTxRep.clear();
+    await this.paymentTxRep.clear();
     await this.userDataRep.update({ syncedToRollup: MoreThan(-1) }, { syncedToRollup: -1 });
   }
 
-  async addJoinSplitTx(tx: UserJoinSplitTx) {
-    await this.joinSplitTxRep.save({ ...tx }); // save() will mutate tx, changing undefined values to null.
+  async addPaymentTx(tx: CorePaymentTx) {
+    await this.paymentTxRep.save({ ...tx }); // save() will mutate tx, changing undefined values to null.
   }
 
-  async getJoinSplitTx(txHash: TxHash, userId: AccountId) {
-    const tx = await this.joinSplitTxRep.findOne({ txHash, userId });
-    return tx ? toUserJoinSplitTx(tx) : undefined;
+  async getPaymentTx(txHash: TxHash, userId: AccountId) {
+    const tx = await this.paymentTxRep.findOne({ txHash, userId });
+    return tx ? toCorePaymentTx(tx) : undefined;
   }
 
-  async getJoinSplitTxs(userId) {
-    const txs = await this.joinSplitTxRep.find({ where: { userId }, order: { settled: 'DESC' } });
-    const unsettled = txs.filter(tx => !tx.settled).sort((a, b) => (a.created < b.created ? 1 : -1));
-    const settled = txs.filter(tx => tx.settled);
-    return [...unsettled, ...settled].map(toUserJoinSplitTx);
+  async getPaymentTxs(userId) {
+    const txs = await this.paymentTxRep.find({ where: { userId }, order: { settled: 'DESC' } });
+    return sortUserTxs(txs).map(toCorePaymentTx);
   }
 
-  async settleJoinSplitTx(txHash: TxHash, userId: AccountId, settled: Date) {
-    await this.joinSplitTxRep.update({ txHash, userId }, { settled });
+  async settlePaymentTx(txHash: TxHash, userId: AccountId, settled: Date) {
+    await this.paymentTxRep.update({ txHash, userId }, { settled });
   }
 
-  async addAccountTx(tx: UserAccountTx) {
+  async addAccountTx(tx: CoreAccountTx) {
     await this.accountTxRep.save({ ...tx }); // save() will mutate tx, changing undefined values to null.
   }
 
   async getAccountTx(txHash: TxHash) {
     const tx = await this.accountTxRep.findOne({ txHash });
-    return tx ? toUserAccountTx(tx) : undefined;
+    return tx ? toCoreAccountTx(tx) : undefined;
   }
 
   async getAccountTxs(userId) {
     const txs = await this.accountTxRep.find({ where: { userId }, order: { settled: 'DESC' } });
-    const unsettled = txs.filter(tx => !tx.settled).sort((a, b) => (a.created < b.created ? 1 : -1));
-    const settled = txs.filter(tx => tx.settled);
-    return [...unsettled, ...settled].map(toUserAccountTx);
+    return sortUserTxs(txs).map(toCoreAccountTx);
   }
 
   async settleAccountTx(txHash: TxHash, settled: Date) {
     await this.accountTxRep.update({ txHash }, { settled });
   }
 
-  async addDefiTx(tx: UserDefiTx) {
+  async addDefiTx(tx: CoreDefiTx) {
     await this.defiTxRep.save({ ...tx }); // save() will mutate tx, changing undefined values to null.
   }
 
   async getDefiTx(txHash: TxHash) {
     const tx = await this.defiTxRep.findOne({ txHash });
-    return tx ? toUserDefiTx(tx) : undefined;
+    return tx ? toCoreDefiTx(tx) : undefined;
   }
 
   async getDefiTxs(userId) {
     const txs = await this.defiTxRep.find({ where: { userId }, order: { settled: 'DESC' } });
-    const unsettled = txs.filter(tx => !tx.settled).sort((a, b) => (a.created < b.created ? 1 : -1));
-    const settled = txs.filter(tx => tx.settled);
-    return [...unsettled, ...settled].map(toUserDefiTx);
+    return sortUserTxs(txs).map(toCoreDefiTx);
   }
 
   async updateDefiTx(txHash: TxHash, outputValueA: bigint, outputValueB: bigint, result: boolean) {
@@ -258,16 +240,27 @@ export class SQLDatabase implements Database {
     await this.defiTxRep.update({ txHash }, { settled });
   }
 
-  async addUtilTx(tx: UserUtilTx) {
-    await this.utilTxRep.save(tx);
+  async addClaimTx(tx: CoreClaimTx) {
+    await this.claimTxRep.save(tx);
   }
 
-  async getUtilTxByLink(forwardLink: Buffer) {
-    return this.utilTxRep.findOne({ forwardLink });
+  async getClaimTx(nullifier: Buffer) {
+    return this.claimTxRep.findOne({ nullifier });
+  }
+
+  async getUserTxs(userId: AccountId) {
+    const txs = (
+      await Promise.all([this.getAccountTxs(userId), this.getPaymentTxs(userId), this.getDefiTxs(userId)])
+    ).flat();
+    const unsettled = txs.filter(tx => !tx.settled).sort((a, b) => (a.created < b.created ? 1 : -1));
+    const settled = txs
+      .filter(tx => tx.settled)
+      .sort((a, b) => (a.settled! < b.settled! ? 1 : a.settled! > b.settled! ? -1 : 0));
+    return [...unsettled, ...settled];
   }
 
   async isUserTxSettled(txHash: TxHash) {
-    const jsTxs = await this.joinSplitTxRep.find({ where: { txHash } });
+    const jsTxs = await this.paymentTxRep.find({ where: { txHash } });
     if (jsTxs.length > 0) {
       return jsTxs.every(tx => tx.settled);
     }
@@ -284,13 +277,13 @@ export class SQLDatabase implements Database {
   async getUnsettledUserTxs(userId: AccountId) {
     const unsettledTxs = await Promise.all([
       this.accountTxRep.find({ where: { userId, settled: IsNull() } }),
-      this.joinSplitTxRep.find({ where: { userId, settled: IsNull() } }),
+      this.paymentTxRep.find({ where: { userId, settled: IsNull() } }),
     ]);
     return unsettledTxs.flat().map(({ txHash }) => txHash);
   }
 
   async removeUserTx(txHash: TxHash, userId: AccountId) {
-    await Promise.all([this.accountTxRep.delete({ txHash }), this.joinSplitTxRep.delete({ txHash, userId })]);
+    await Promise.all([this.accountTxRep.delete({ txHash }), this.paymentTxRep.delete({ txHash, userId })]);
   }
 
   async addUserSigningKey(signingKey: SigningKey) {

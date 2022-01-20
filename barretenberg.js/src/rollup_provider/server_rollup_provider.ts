@@ -1,16 +1,23 @@
-import { RollupProvider, AccountTx, JoinSplitTx, rollupProviderStatusFromJson } from './rollup_provider';
-import { fetch } from '../iso_fetch';
-import { ServerBlockSource } from '../block_source';
-import { Proof } from '../rollup_provider';
-import { TxHash } from '../tx_hash';
-import { GrumpkinAddress } from '../address';
 import { AccountId } from '../account_id';
+import { GrumpkinAddress } from '../address';
+import { AssetId } from '../asset';
+import { ServerBlockSource } from '../block_source';
+import { BridgeId } from '../bridge_id';
 import { AccountProofData, JoinSplitProofData } from '../client_proofs';
+import { fetch } from '../iso_fetch';
 import { OffchainAccountData, OffchainJoinSplitData } from '../offchain_tx_data';
+import { Tx } from '../rollup_provider';
+import { TxHash } from '../tx_hash';
+import { AccountTx, JoinSplitTx, RollupProvider, rollupProviderStatusFromJson } from './rollup_provider';
 
 export interface TxServerResponse {
   proofData: string;
   offchainData: string;
+}
+
+export interface AssetValueServerResponse {
+  assetId: AssetId;
+  value: string;
 }
 
 const toAccountTx = ({ proofData, offchainData }: TxServerResponse): AccountTx => ({
@@ -23,6 +30,11 @@ const toJoinSplitTx = ({ proofData, offchainData }: TxServerResponse): JoinSplit
   offchainData: OffchainJoinSplitData.fromBuffer(Buffer.from(offchainData, 'hex')),
 });
 
+const toAssetValue = ({ assetId, value }: AssetValueServerResponse) => ({
+  assetId,
+  value: BigInt(value),
+});
+
 export interface PendingTxServerResponse {
   txId: string;
   noteCommitment1: string;
@@ -33,26 +45,36 @@ export interface TxPostData {
   proofData: string;
   offchainTxData: string;
   depositSignature?: string;
-  parentProof?: TxPostData;
 }
-
-const toTxPostData = ({ proofData, offchainTxData, depositSignature, parentProof }: Proof): TxPostData => ({
-  proofData: proofData.toString('hex'),
-  offchainTxData: offchainTxData.toString('hex'),
-  depositSignature: depositSignature ? depositSignature.toString('hex') : undefined,
-  parentProof: parentProof ? toTxPostData(parentProof) : undefined,
-});
 
 export class ServerRollupProvider extends ServerBlockSource implements RollupProvider {
   constructor(baseUrl: URL, pollInterval = 10000) {
     super(baseUrl, pollInterval);
   }
 
-  async sendProof(proof: Proof) {
-    const data = toTxPostData(proof);
-    const response = await this.fetch('/tx', data);
+  async sendTxs(txs: Tx[]) {
+    const data = txs.map(
+      ({ proofData, offchainTxData, depositSignature }): TxPostData => ({
+        proofData: proofData.toString('hex'),
+        offchainTxData: offchainTxData.toString('hex'),
+        depositSignature: depositSignature ? depositSignature.toString('hex') : undefined,
+      }),
+    );
+    const response = await this.fetch('/txs', data);
     const body = await response.json();
-    return TxHash.fromString(body.txHash);
+    return body.txHashes.map(txHash => TxHash.fromString(txHash));
+  }
+
+  async getTxFees(assetId: AssetId) {
+    const response = await this.fetch('/tx-fees', { assetId });
+    const txFees = (await response.json()) as AssetValueServerResponse[][];
+    return txFees.map(fees => fees.map(toAssetValue));
+  }
+
+  async getDefiFees(bridgeId: BridgeId) {
+    const response = await this.fetch('/defi-fees', { bridgeId: bridgeId.toString() });
+    const defiFees = (await response.json()) as AssetValueServerResponse[];
+    return defiFees.map(toAssetValue);
   }
 
   async getStatus() {
@@ -116,8 +138,8 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
     return txs.map(toAccountTx);
   }
 
-  async getUnsettledJoinSplitTxs() {
-    const response = await this.fetch('/get-unsettled-join-split-txs');
+  async getUnsettledPaymentTxs() {
+    const response = await this.fetch('/get-unsettled-payment-txs');
     const txs = (await response.json()) as TxServerResponse[];
     return txs.map(toJoinSplitTx);
   }

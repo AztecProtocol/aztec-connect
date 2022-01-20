@@ -1,20 +1,19 @@
-import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
+import { AccountAliasId, AccountId, AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AccountProver, AccountTx, ProofData } from '@aztec/barretenberg/client_proofs';
 import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { WorldState } from '@aztec/barretenberg/world_state';
 import createDebug from 'debug';
-import { Database } from '../../database';
-import { Signer } from '../../signer';
-import { AccountAliasId } from '../../user';
-import { UserAccountTx } from '../../user_tx';
-import { AccountProofOutput } from '../proof_output';
+import { CoreAccountTx } from '../core_tx';
+import { Database } from '../database';
+import { Signer } from '../signer';
+import { ProofOutput } from './proof_output';
 
 const debug = createDebug('bb:account_proof');
 
 export class AccountProofCreator {
-  constructor(private accountProver: AccountProver, private worldState: WorldState, private db: Database) {}
+  constructor(private prover: AccountProver, private worldState: WorldState, private db: Database) {}
 
   public async createAccountTx(
     signingPubKey: GrumpkinAddress,
@@ -46,7 +45,7 @@ export class AccountProofCreator {
   }
 
   public async computeSigningData(tx: AccountTx) {
-    return this.accountProver.computeSigningData(tx);
+    return this.prover.computeSigningData(tx);
   }
 
   public async createProof(
@@ -55,10 +54,11 @@ export class AccountProofCreator {
     nonce: number,
     migrate: boolean,
     accountPublicKey: GrumpkinAddress,
-    newAccountPublicKey?: GrumpkinAddress,
-    newSigningPubKey1?: GrumpkinAddress,
-    newSigningPubKey2?: GrumpkinAddress,
-  ) {
+    newAccountPublicKey: GrumpkinAddress | undefined,
+    newSigningPubKey1: GrumpkinAddress | undefined,
+    newSigningPubKey2: GrumpkinAddress | undefined,
+    txRefNo: number,
+  ): Promise<ProofOutput> {
     const signingPubKey = signer.getPublicKey();
     const accountIndex =
       nonce !== 0 ? await this.db.getUserSigningKeyIndex(new AccountId(accountPublicKey, nonce), signingPubKey) : 0;
@@ -78,27 +78,28 @@ export class AccountProofCreator {
       accountIndex,
     );
 
-    const signingData = await this.accountProver.computeSigningData(tx);
+    const signingData = await this.prover.computeSigningData(tx);
     const signature = await signer.signMessage(signingData);
 
     debug('creating proof...');
     const start = new Date().getTime();
-    const proofData = await this.accountProver.createAccountProof(tx, signature);
+    const proof = await this.prover.createAccountProof(tx, signature);
     debug(`created proof: ${new Date().getTime() - start}ms`);
-    debug(`proof size: ${proofData.length}`);
+    debug(`proof size: ${proof.length}`);
 
-    const { txId } = new ProofData(proofData);
-    const txHash = new TxHash(txId);
+    const proofData = new ProofData(proof);
+    const txHash = new TxHash(proofData.txId);
     const newNonce = nonce + +migrate;
     const accountOwner = new AccountId(newAccountPublicKey || accountPublicKey, newNonce);
     const accountAliasId = new AccountAliasId(aliasHash, newNonce);
-    const userTx = new UserAccountTx(
+    const coreTx = new CoreAccountTx(
       txHash,
       accountOwner,
       aliasHash,
       newSigningPubKey1?.x(),
       newSigningPubKey2?.x(),
       migrate,
+      txRefNo,
       new Date(),
     );
     const offchainTxData = new OffchainAccountData(
@@ -106,8 +107,9 @@ export class AccountProofCreator {
       accountAliasId,
       newSigningPubKey1?.x(),
       newSigningPubKey2?.x(),
+      txRefNo,
     );
 
-    return new AccountProofOutput(userTx, proofData, offchainTxData);
+    return { tx: coreTx, proofData, offchainTxData, outputNotes: [] };
   }
 }

@@ -2,7 +2,6 @@ import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 
-export * from '@aztec/barretenberg/account_id';
 export * from './recovery_payload';
 
 export interface UserData {

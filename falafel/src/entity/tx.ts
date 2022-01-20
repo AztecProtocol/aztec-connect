@@ -12,6 +12,7 @@ import {
   PrimaryColumn,
 } from 'typeorm';
 import { RollupProofDao } from './rollup_proof';
+import { bigintTransformer } from './transformer';
 
 @Entity({ name: 'tx' })
 export class TxDao {
@@ -65,6 +66,9 @@ export class TxDao {
   @Column({ nullable: true })
   @Index()
   public mined?: Date;
+
+  @Column('text', { transformer: [bigintTransformer] })
+  public excessGas!: bigint;
 
   @AfterLoad()
   @AfterInsert()

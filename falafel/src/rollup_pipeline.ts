@@ -2,7 +2,7 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { Blockchain } from '@aztec/barretenberg/blockchain';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
-import { BridgeConfig } from '@aztec/barretenberg/bridge_id';
+import { BridgeResolver } from './bridge';
 import { ProofGenerator } from 'halloumi/proof_generator';
 import { ClaimProofCreator } from './claim_proof_creator';
 import { Metrics } from './metrics';
@@ -30,7 +30,7 @@ export class RollupPipeline {
     gasLimit: number,
     numInnerRollupTxs: number,
     numOuterRollupProofs: number,
-    bridgeConfigs: BridgeConfig[],
+    bridgeResolver: BridgeResolver
   ) {
     const innerRollupSize = 1 << Math.ceil(Math.log2(numInnerRollupTxs));
     const outerRollupSize = 1 << Math.ceil(Math.log2(innerRollupSize * numOuterRollupProofs));
@@ -59,8 +59,9 @@ export class RollupPipeline {
       innerRollupSize,
       outerRollupSize,
       metrics,
+      feeResolver
     );
-    const claimProofCreator = new ClaimProofCreator(rollupDb, worldStateDb, proofGenerator);
+    const claimProofCreator = new ClaimProofCreator(rollupDb, worldStateDb, proofGenerator, feeResolver);
     this.pipelineCoordinator = new PipelineCoordinator(
       rollupCreator,
       rollupAggregator,
@@ -73,7 +74,7 @@ export class RollupPipeline {
       numInnerRollupTxs,
       numOuterRollupProofs,
       publishInterval,
-      bridgeConfigs,
+      bridgeResolver
     );
   }
 
@@ -109,7 +110,7 @@ export class RollupPipelineFactory {
     private gasLimit: number,
     private numInnerRollupTxs: number,
     private numOuterRollupProofs: number,
-    private bridgeConfigs: BridgeConfig[],
+    private bridgeResolver: BridgeResolver
   ) {}
 
   public setConf(publishInterval: number, maxProviderGasPrice: bigint, gasLimit: number) {
@@ -133,7 +134,7 @@ export class RollupPipelineFactory {
       this.gasLimit,
       this.numInnerRollupTxs,
       this.numOuterRollupProofs,
-      this.bridgeConfigs,
+      this.bridgeResolver
     );
   }
 }

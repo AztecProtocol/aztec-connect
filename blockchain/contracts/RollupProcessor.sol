@@ -323,6 +323,14 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     }
 
     /**
+     * @dev Get the gas limit for the bridge specified by bridgeAddressId
+     * @param bridgeAddressId - identifier used to denote a particular bridge
+     */
+    function getBridgeGasLimit(uint256 bridgeAddressId) public view override returns (uint256) {
+        return DEFAULT_BRIDGE_GAS_LIMIT;
+    }
+
+    /**
      * @dev Get the addresses of all supported bridge contracts
      */
     function getSupportedBridges() external view override returns (address[] memory) {

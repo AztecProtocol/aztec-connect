@@ -22,11 +22,13 @@ export class NotePicker {
 
   pick(value: bigint, excludeNullifiers?: Buffer[]) {
     const spendableNotes = this.getSpendableNotes(excludeNullifiers);
-    return pick(spendableNotes, value);
-  }
-
-  pickOne(value: bigint, excludeNullifiers?: Buffer[]) {
-    return this.getSpendableNotes(excludeNullifiers).find(n => n.value >= value);
+    const notes = pick(spendableNotes, value);
+    const sum = noteSum(notes || []);
+    if (sum === value) {
+      return notes;
+    }
+    const note = spendableNotes.find(n => n.value === value);
+    return note ? [note] : notes;
   }
 
   getSum() {

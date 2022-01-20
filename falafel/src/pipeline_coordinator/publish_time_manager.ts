@@ -1,4 +1,4 @@
-import { BridgeConfig } from '@aztec/barretenberg/bridge_id';
+import { BridgeResolver } from '../bridge';
 
 export interface RollupTimeout {
   rollupNumber: number;
@@ -18,11 +18,11 @@ export interface RollupTimeouts {
 export class PublishTimeManager {
   private epoch = new Date(0); // Unix Epoch
 
-  constructor(private readonly rollupTimeoutDurationSecs: number, private readonly bridgeConfigs: BridgeConfig[]) {}
+  constructor(private readonly rollupTimeoutDurationSecs: number, private readonly bridgeResolver: BridgeResolver) {}
 
   private calculateBridgeTimeouts(baseTimeout: RollupTimeout, last: boolean) {
     const bridgeTimeouts = new Map<bigint, RollupTimeout>();
-    for (const bc of this.bridgeConfigs) {
+    for (const bc of this.bridgeResolver.getBridgeConfigs()) {
       if (bc.rollupFrequency < 1) {
         continue;
       }

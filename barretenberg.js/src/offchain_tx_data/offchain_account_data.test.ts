@@ -10,6 +10,7 @@ describe('OffchainAccountData', () => {
       AccountAliasId.random(),
       randomBytes(32),
       randomBytes(32),
+      123,
     );
     const buf = userData.toBuffer();
     expect(buf.length).toBe(OffchainAccountData.SIZE);
@@ -22,7 +23,13 @@ describe('OffchainAccountData', () => {
       [randomBytes(32), undefined],
       [undefined, undefined],
     ].forEach(([key1, key2]) => {
-      const userData = new OffchainAccountData(GrumpkinAddress.randomAddress(), AccountAliasId.random(), key1, key2);
+      const userData = new OffchainAccountData(
+        GrumpkinAddress.randomAddress(),
+        AccountAliasId.random(),
+        key1,
+        key2,
+        123,
+      );
       const buf = userData.toBuffer();
       expect(buf.length).toBe(OffchainAccountData.SIZE);
       expect(OffchainAccountData.fromBuffer(buf)).toEqual(userData);

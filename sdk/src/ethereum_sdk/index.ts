@@ -1,7 +1,7 @@
+import { AccountId } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
-import { EthereumProvider, EthereumSigner, PermitArgs, TxType } from '@aztec/barretenberg/blockchain';
-import { SettlementTime } from '@aztec/barretenberg/rollup_provider';
+import { EthereumProvider, EthereumSigner } from '@aztec/barretenberg/blockchain';
 import { getBlockchainStatus } from '@aztec/barretenberg/service';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { ClientEthereumBlockchain, Web3Signer } from '@aztec/blockchain';
@@ -11,15 +11,12 @@ import isNode from 'detect-node';
 import { EventEmitter } from 'events';
 import { createConnection } from 'typeorm';
 import { createSdk, SdkOptions } from '../core_sdk/create_sdk';
-import { ProofOutput } from '../proofs/proof_output';
 import { SdkEvent } from '../sdk';
-import { AccountId } from '../user';
 import { WalletSdk } from '../wallet_sdk';
 import { Database, DexieDatabase, getOrmConfig, SQLDatabase } from './database';
 import { EthereumSdkUser } from './ethereum_sdk_user';
 
 export * from './ethereum_sdk_user';
-export * from './ethereum_sdk_user_asset';
 
 const debug = createDebug('bb:ethereum_sdk');
 
@@ -56,7 +53,7 @@ export async function createEthSdk(ethereumProvider: EthereumProvider, serverUrl
 
   const blockchain = new ClientEthereumBlockchain(rollupContractAddress, assets, ethereumProvider);
   const ethSigner = new Web3Signer(ethereumProvider);
-  const walletSdk = new WalletSdk(core, blockchain, ethSigner, sdkOptions);
+  const walletSdk = new WalletSdk(core, blockchain, ethereumProvider, sdkOptions);
   return new EthereumSdk(walletSdk, db, ethSigner);
 }
 
@@ -111,8 +108,8 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.getRemoteStatus();
   }
 
-  public async getFee(assetId: AssetId, txType: TxType, speed = SettlementTime.SLOW) {
-    return this.walletSdk.getFee(assetId, txType, speed);
+  public async getTxFees(assetId: AssetId) {
+    return this.walletSdk.getTxFees(assetId);
   }
 
   public getUserPendingDeposit(assetId: AssetId, account: EthAddress) {
@@ -128,57 +125,65 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.isAliasAvailable(alias);
   }
 
-  public async approve(assetId: AssetId, value: bigint, ethAddress: EthAddress) {
-    return this.walletSdk.approve(assetId, value, ethAddress);
-  }
-
   public async mint(assetId: AssetId, value: bigint, ethAddress: EthAddress) {
     return this.walletSdk.mint(assetId, value, ethAddress);
   }
 
-  public async depositFundsToContract(
-    assetId: AssetId,
-    from: EthAddress,
-    value: bigint,
-    proofHash?: Buffer,
-    permitArgs?: PermitArgs,
-  ) {
-    return this.walletSdk.depositFundsToContract(assetId, from, value, proofHash, permitArgs);
-  }
-
-  public async createDepositProof(assetId: AssetId, from: EthAddress, to: AccountId, value: bigint, fee: bigint) {
+  public createDepositController(assetId: AssetId, from: EthAddress, to: AccountId, value: bigint, fee: bigint) {
     const userData = this.walletSdk.getUserData(to);
     const aztecSigner = this.walletSdk.createSchnorrSigner(userData.privateKey);
-    return this.walletSdk.createDepositProof(assetId, from, to, value, fee, aztecSigner);
+    return this.walletSdk.createDepositController(to, aztecSigner, { assetId, value }, { assetId, value: fee }, from);
   }
 
-  public async createWithdrawProof(assetId: AssetId, from: AccountId, to: EthAddress, value: bigint, fee: bigint) {
+  public async getDepositFees(assetId: AssetId) {
+    return this.walletSdk.getDepositFees(assetId);
+  }
+
+  public createWithdrawController(assetId: AssetId, from: AccountId, to: EthAddress, value: bigint, fee: bigint) {
     const userData = this.walletSdk.getUserData(from);
     const aztecSigner = this.walletSdk.createSchnorrSigner(userData.privateKey);
-    return this.walletSdk.createWithdrawProof(assetId, from, value, fee, aztecSigner, to);
+    return this.walletSdk.createWithdrawController(from, aztecSigner, { assetId, value }, { assetId, value: fee }, to);
   }
 
-  public async createTransferProof(assetId: AssetId, from: AccountId, to: AccountId, value: bigint, fee: bigint) {
+  public async getWithdrawFees(assetId: AssetId, recipient?: EthAddress) {
+    return this.walletSdk.getWithdrawFees(assetId, recipient);
+  }
+
+  public createTransferController(assetId: AssetId, from: AccountId, to: AccountId, value: bigint, fee: bigint) {
     const userData = this.walletSdk.getUserData(from);
     const aztecSigner = this.walletSdk.createSchnorrSigner(userData.privateKey);
-    return this.walletSdk.createTransferProof(assetId, from, value, fee, aztecSigner, to);
+    return this.walletSdk.createTransferController(from, aztecSigner, { assetId, value }, { assetId, value: fee }, to);
   }
 
-  public async createAccount(
+  public async getTransferFees(assetId: AssetId) {
+    return this.walletSdk.getTransferFees(assetId);
+  }
+
+  public createRegisterController(
     accountId: AccountId,
     alias: string,
-    newSigningPublicKey: GrumpkinAddress,
-    recoveryPublicKey?: GrumpkinAddress,
+    signingPublicKey: GrumpkinAddress,
+    recoveryPublicKey: GrumpkinAddress | undefined,
+    assetId: AssetId,
+    fee: bigint,
+    depositor: EthAddress,
   ) {
-    return await this.walletSdk.createAccount(accountId, alias, newSigningPublicKey, recoveryPublicKey);
+    return this.walletSdk.createRegisterController(
+      accountId,
+      alias,
+      signingPublicKey,
+      recoveryPublicKey,
+      { assetId: 0, value: BigInt(0) },
+      {
+        assetId,
+        value: fee,
+      },
+      depositor,
+    );
   }
 
-  public async signProof(proofOutput: ProofOutput, inputOwner: EthAddress, provider?: EthereumProvider) {
-    return this.walletSdk.signProof(proofOutput, inputOwner, provider);
-  }
-
-  public async sendProof(proofOutput: ProofOutput, signature?: Buffer) {
-    return this.walletSdk.sendProof(proofOutput, signature);
+  public async getRegisterFees(assetId: AssetId, depositValue = BigInt(0)) {
+    return this.walletSdk.getRegisterFees(assetId, depositValue);
   }
 
   public getUserData(accountId: AccountId) {
@@ -227,10 +232,6 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.getPublicBalance(assetId, ethAddress);
   }
 
-  public async getPublicAllowance(assetId: AssetId, ethAddress: EthAddress) {
-    return this.walletSdk.getPublicAllowance(assetId, ethAddress);
-  }
-
   public fromBaseUnits(assetId: AssetId, value: bigint, precision?: number) {
     return this.walletSdk.fromBaseUnits(assetId, value, precision);
   }
@@ -243,8 +244,8 @@ export class EthereumSdk extends EventEmitter {
     return this.walletSdk.getAssetInfo(assetId);
   }
 
-  public async getJoinSplitTxs(accountId: AccountId) {
-    return this.walletSdk.getJoinSplitTxs(accountId);
+  public async getPaymentTxs(accountId: AccountId) {
+    return this.walletSdk.getPaymentTxs(accountId);
   }
 
   public async getAccountTxs(accountId: AccountId) {

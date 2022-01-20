@@ -1,7 +1,7 @@
+import { AccountId } from '@aztec/barretenberg/account_id';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { AfterInsert, AfterLoad, AfterUpdate, Column, Entity, Index, PrimaryColumn } from 'typeorm';
-import { AccountId } from '../../user';
 import { accountIdTransformer, bigintTransformer, bridgeIdTransformer, txHashTransformer } from './transformer';
 
 @Entity({ name: 'defiTx' })
@@ -19,17 +19,20 @@ export class DefiTxDao {
   @Column('text', { transformer: [bigintTransformer] })
   public depositValue!: bigint;
 
-  @Column()
-  public partialStateSecret!: Buffer;
-
   @Column('text', { transformer: [bigintTransformer] })
   public txFee!: bigint;
+
+  @Column()
+  public partialStateSecret!: Buffer;
 
   @Column('text', { transformer: [bigintTransformer] })
   public outputValueA!: bigint;
 
   @Column('text', { transformer: [bigintTransformer] })
   public outputValueB!: bigint;
+
+  @Column()
+  public txRefNo!: number;
 
   @Column()
   public created!: Date;

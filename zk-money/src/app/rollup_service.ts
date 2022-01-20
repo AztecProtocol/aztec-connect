@@ -1,18 +1,10 @@
-import {
-  AssetFeeQuote,
-  AssetId,
-  BlockchainAsset,
-  EthAddress,
-  RollupProviderStatus,
-  SettlementTime,
-  TxType,
-  WalletSdk,
-} from '@aztec/sdk';
+import { AssetId, AssetValue, BlockchainAsset, EthAddress, TxSettlementTime, TxType, WalletSdk } from '@aztec/sdk';
 import { Web3Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
 import { Contract } from 'ethers';
 import EventEmitter from 'events';
 import { isEqual } from 'lodash';
+import { assets } from './assets';
 import { Provider } from './provider';
 
 const debug = createDebug('zm:rollup_service');
@@ -21,23 +13,19 @@ export enum RollupServiceEvent {
   UPDATED_STATUS = 'UPDATED_STATUS',
 }
 
-const speeds = [SettlementTime.SLOW, SettlementTime.AVERAGE, SettlementTime.FAST, SettlementTime.INSTANT];
+const speeds = [TxSettlementTime.NEXT_ROLLUP, TxSettlementTime.INSTANT];
+const publishTimeRatio = [1, 0];
 
 export interface TxFee {
   fee: bigint;
   time: number;
-  speed: SettlementTime;
+  speed: TxSettlementTime;
 }
 
 export interface RollupStatus {
-  txFees: AssetFeeQuote[];
+  txFees: AssetValue[][][]; // [AssetId][TxType][TxSettlementTime]
   nextPublishTime: Date;
 }
-
-const fromRollupProviderStatus = ({ txFees, nextPublishTime }: RollupProviderStatus) => ({
-  txFees,
-  nextPublishTime,
-});
 
 const RollupABI = [
   {
@@ -75,6 +63,7 @@ export interface RollupService {
 
 export class RollupService extends EventEmitter {
   private status!: RollupStatus;
+  private publishInterval!: number;
   private rollupContractAddress!: EthAddress;
   private assets!: BlockchainAsset[];
 
@@ -84,12 +73,12 @@ export class RollupService extends EventEmitter {
     super();
   }
 
-  getStatus() {
-    return this.status;
-  }
-
   get supportedAssets() {
     return this.assets;
+  }
+
+  get nextPublishTime() {
+    return this.status.nextPublishTime;
   }
 
   destroy() {
@@ -98,38 +87,32 @@ export class RollupService extends EventEmitter {
   }
 
   async init() {
-    const status = await this.sdk.getRemoteStatus();
-    this.rollupContractAddress = status.blockchainStatus.rollupContractAddress;
-    this.assets = status.blockchainStatus.assets;
-    this.status = fromRollupProviderStatus(status);
+    const {
+      blockchainStatus,
+      nextPublishTime,
+      runtimeConfig: { publishInterval },
+    } = await this.sdk.getRemoteStatus();
+    this.rollupContractAddress = blockchainStatus.rollupContractAddress;
+    this.assets = blockchainStatus.assets;
+    this.status = {
+      nextPublishTime,
+      txFees: await this.fetchTxFees(),
+    };
+    this.publishInterval = publishInterval;
     this.subscribeToStatus();
   }
 
-  getTxFees(assetId: AssetId, txType: TxType) {
-    const { feeConstants, baseFeeQuotes } = this.status.txFees[assetId];
-    const baseFee = feeConstants[txType];
-    const txFees: TxFee[] = [];
-    for (const speed of speeds) {
-      txFees[speed] = { speed, fee: baseFee + baseFeeQuotes[speed].fee, time: baseFeeQuotes[speed].time };
-    }
-    return txFees;
+  getTxFees(assetId: AssetId, txType: TxType): TxFee[] {
+    const fees = this.status.txFees[assetId][txType];
+    return fees.map(({ value }, i) => ({
+      speed: speeds[i],
+      fee: value,
+      time: Math.ceil(this.publishInterval * publishTimeRatio[i]),
+    }));
   }
 
-  getFee(assetId: AssetId, txType: TxType, speed: SettlementTime) {
-    const { feeConstants, baseFeeQuotes } = this.status.txFees[assetId];
-    return feeConstants[txType] + baseFeeQuotes[speed].fee;
-  }
-
-  getMinFee(assetId: AssetId, txType: TxType) {
-    const { feeConstants, baseFeeQuotes } = this.status.txFees[assetId];
-    return feeConstants[txType] + baseFeeQuotes[SettlementTime.SLOW].fee;
-  }
-
-  getSettledIn(assetId: AssetId, type: TxType, fee: bigint) {
-    const { feeConstants, baseFeeQuotes } = this.status.txFees[assetId];
-    const extra = fee - feeConstants[type];
-    const speed = [...speeds].reverse().find(t => extra >= baseFeeQuotes[t].fee);
-    return baseFeeQuotes[speed !== undefined ? speed : SettlementTime.SLOW].time;
+  getFee(assetId: AssetId, txType: TxType, speed: TxSettlementTime) {
+    return this.status.txFees[assetId][txType][speed].value;
   }
 
   async getDepositGas(assetId: AssetId, amount: bigint, provider: Provider) {
@@ -171,7 +154,12 @@ export class RollupService extends EventEmitter {
     const updateStatus = async () => {
       if (!this.listenerCount(RollupServiceEvent.UPDATED_STATUS)) return;
 
-      const status = fromRollupProviderStatus(await this.sdk.getRemoteStatus());
+      // TODO - avoid polling remote status
+      const { nextPublishTime } = await this.sdk.getRemoteStatus();
+      const status = {
+        txFees: await this.fetchTxFees(),
+        nextPublishTime,
+      };
       if (!isEqual(status, this.status)) {
         const prevStatus = this.status;
         this.status = status;
@@ -180,5 +168,13 @@ export class RollupService extends EventEmitter {
     };
 
     this.statusSubscriber = window.setInterval(updateStatus, this.pollInterval);
+  }
+
+  private async fetchTxFees() {
+    const txFees: AssetValue[][][] = [];
+    for (const { id } of assets) {
+      txFees[id] = await this.sdk.getTxFees(id);
+    }
+    return txFees;
   }
 }

@@ -70,7 +70,7 @@ export class AccountUtils {
 
   async getPendingBalance(assetId: AssetId, ethAddress: EthAddress) {
     const deposited = await this.sdk.getUserPendingDeposit(assetId, ethAddress);
-    const txs = await this.sdk.getRemoteUnsettledJoinSplitTxs();
+    const txs = await this.sdk.getRemoteUnsettledPaymentTxs();
     const unsettledDeposit =
       txs
         .filter(

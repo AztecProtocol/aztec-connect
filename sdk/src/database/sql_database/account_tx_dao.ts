@@ -1,6 +1,6 @@
+import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { AfterInsert, AfterLoad, AfterUpdate, Column, Entity, Index, PrimaryColumn } from 'typeorm';
-import { AccountId, AliasHash } from '../../user';
 import { accountIdTransformer, aliasHashTransformer, txHashTransformer } from './transformer';
 
 @Entity({ name: 'accountTx' })
@@ -23,6 +23,9 @@ export class AccountTxDao {
 
   @Column()
   public migrated!: boolean;
+
+  @Column()
+  public txRefNo!: number;
 
   @Column()
   public created!: Date;

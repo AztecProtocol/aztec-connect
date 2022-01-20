@@ -1,4 +1,4 @@
-import { AssetId } from '@aztec/barretenberg/asset';
+import { AssetId, AssetIds } from '@aztec/barretenberg/asset';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeId, BitConfig } from '@aztec/barretenberg/bridge_id';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
@@ -13,6 +13,7 @@ import { ProofGenerator, TxRollupProofRequest } from 'halloumi/proof_generator';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { Metrics } from './metrics';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { TxFeeResolver } from './tx_fee_resolver';
 
 jest.useFakeTimers();
 
@@ -27,30 +28,33 @@ const buildHashPath = (value: number) => {
   return path;
 };
 
-const getFees = (numTxs: number) => [...Array(numTxs)].map(() => {
-  const num = randomInt(100) + 10;
-  const large = BigInt(num);
-  const ret = large / 2n;
-  return ret * 2n; 
-});
+const getFees = (numTxs: number) =>
+  [...Array(numTxs)].map(() => {
+    const num = randomInt(100) + 10;
+    const large = BigInt(num);
+    const ret = large / 2n;
+    return ret * 2n;
+  });
 
 const EMPTY_HASH_PATH = buildHashPath(99);
 const DATA_TREE_SIZE = 99n;
 const ROLLUP_ID = 52;
+const NON_FEE_PAYING_ASSET = 1000;
 
 const buildBridgeId = (address: number) =>
-  new BridgeId(address, 1, 0, 1, 0, new BitConfig(false, false, false, false, false, false), 0);
+  new BridgeId(address, 1, 0, 1, 0, new BitConfig(false, false, false, false, false, false), 0).toBigInt();
 const BRIDGE_1 = buildBridgeId(1);
 const BRIDGE_2 = buildBridgeId(2);
 const BRIDGE_3 = buildBridgeId(3);
 
 describe('rollup_creator', () => {
-  let rollupCreator = undefined;
+  let rollupCreator: RollupCreator;
   let rollupDb: Mockify<RollupDb>;
   let worldStateDb: Mockify<WorldStateDb>;
   let proofGenerator: Mockify<ProofGenerator>;
   let noteAlgorithms: Mockify<NoteAlgorithms>;
   let metrics: Mockify<Metrics>;
+  let feeResolver: Mockify<TxFeeResolver>;
   const numInnerRollupTxs = 28;
   const innerRollupSize = 28;
   const outerRollupSize = 2;
@@ -66,7 +70,15 @@ describe('rollup_creator', () => {
       txFeeAssetId = AssetId.ETH,
       txFee = 0n,
       creationTime = new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id), // ensures txs are ordered by id
-      bridgeId = new BridgeId(randomInt(), 1, 0, 1, 0, new BitConfig(false, false, false, false, false, false), 0),
+      bridgeId = new BridgeId(
+        randomInt(),
+        1,
+        0,
+        1,
+        0,
+        new BitConfig(false, false, false, false, false, false),
+        0,
+      ).toBigInt(),
       noteCommitment1 = randomBytes(32),
       noteCommitment2 = randomBytes(32),
       backwardLink = Buffer.alloc(32),
@@ -85,7 +97,7 @@ describe('rollup_creator', () => {
         randomBytes(6 * 32),
         toBufferBE(txFee, 32),
         numToUInt32BE(txFeeAssetId, 32),
-        bridgeId.toBuffer(),
+        toBufferBE(bridgeId, 32),
         randomBytes(2 * 32),
         backwardLink,
         allowChain,
@@ -124,21 +136,26 @@ describe('rollup_creator', () => {
     noteAlgorithms = {
       claimNoteCompletePartialCommitment: jest.fn(),
     } as any;
+
+    feeResolver = {
+      isFeePayingAsset: jest.fn().mockImplementation((assetId: AssetId) => AssetIds.some(x => x === assetId)),
+    } as any;
+
+    rollupCreator = new RollupCreator(
+      rollupDb,
+      worldStateDb as any,
+      proofGenerator,
+      noteAlgorithms as any,
+      numInnerRollupTxs,
+      innerRollupSize,
+      outerRollupSize,
+      metrics as any,
+      feeResolver as any,
+    );
   });
 
   describe('returns correct linked commitments', () => {
     it('should return the correct linked commitment for 1 tx', async () => {
-      rollupCreator = new RollupCreator(
-        rollupDb,
-        worldStateDb as any,
-        proofGenerator,
-        noteAlgorithms as any,
-        numInnerRollupTxs,
-        innerRollupSize,
-        outerRollupSize,
-        metrics as any,
-      );
-
       const backwardLink = randomBytes(32);
       notes.set(8n, backwardLink);
       const txs = [mockTx(1, { txType: TxType.TRANSFER, backwardLink: backwardLink })];
@@ -154,17 +171,6 @@ describe('rollup_creator', () => {
     });
 
     it('should return the zero linked commitment for 1 tx with no backward link', async () => {
-      rollupCreator = new RollupCreator(
-        rollupDb,
-        worldStateDb as any,
-        proofGenerator,
-        noteAlgorithms as any,
-        numInnerRollupTxs,
-        innerRollupSize,
-        outerRollupSize,
-        metrics as any,
-      );
-
       const txs = [mockTx(1, { txType: TxType.TRANSFER })];
       await rollupCreator.create(txs, [], new Set<AssetId>([AssetId.ETH]));
       expect(proofGenerator.createProof).toHaveBeenCalledTimes(1);
@@ -178,17 +184,6 @@ describe('rollup_creator', () => {
     });
 
     it('should return the correct linked commitment for 2 txs', async () => {
-      rollupCreator = new RollupCreator(
-        rollupDb,
-        worldStateDb as any,
-        proofGenerator,
-        noteAlgorithms as any,
-        numInnerRollupTxs,
-        innerRollupSize,
-        outerRollupSize,
-        metrics as any,
-      );
-
       const backwardLink1 = randomBytes(32);
       const index1 = 8n;
       notes.set(index1, backwardLink1);
@@ -211,17 +206,6 @@ describe('rollup_creator', () => {
     });
 
     it('should return the correct linked commitments for 2 sparse txs', async () => {
-      rollupCreator = new RollupCreator(
-        rollupDb,
-        worldStateDb as any,
-        proofGenerator,
-        noteAlgorithms as any,
-        numInnerRollupTxs,
-        innerRollupSize,
-        outerRollupSize,
-        metrics as any,
-      );
-
       const backwardLink1 = randomBytes(32);
       const index1 = 8n;
       notes.set(index1, backwardLink1);
@@ -251,17 +235,6 @@ describe('rollup_creator', () => {
     });
 
     it('should return the correct linked commitment for 2 sparse txs in reverse order', async () => {
-      rollupCreator = new RollupCreator(
-        rollupDb,
-        worldStateDb as any,
-        proofGenerator,
-        noteAlgorithms as any,
-        numInnerRollupTxs,
-        innerRollupSize,
-        outerRollupSize,
-        metrics as any,
-      );
-
       const backwardLink1 = randomBytes(32);
       const index1 = 8n;
       notes.set(index1, backwardLink1);
@@ -291,17 +264,6 @@ describe('rollup_creator', () => {
     });
 
     it('should return the correct linked commitment for 3 sparse txs in reverse order', async () => {
-      rollupCreator = new RollupCreator(
-        rollupDb,
-        worldStateDb as any,
-        proofGenerator,
-        noteAlgorithms as any,
-        numInnerRollupTxs,
-        innerRollupSize,
-        outerRollupSize,
-        metrics as any,
-      );
-
       const backwardLink1 = randomBytes(32);
       const index1 = 8n;
       notes.set(index1, backwardLink1);
@@ -342,17 +304,6 @@ describe('rollup_creator', () => {
     });
 
     it('should return the correct empty hash paths for linked commitments within given txs', async () => {
-      rollupCreator = new RollupCreator(
-        rollupDb,
-        worldStateDb as any,
-        proofGenerator,
-        noteAlgorithms as any,
-        numInnerRollupTxs,
-        innerRollupSize,
-        outerRollupSize,
-        metrics as any,
-      );
-
       const backwardLink1 = randomBytes(32);
       const index1 = 8n;
       notes.set(index1, backwardLink1);
@@ -401,17 +352,6 @@ describe('rollup_creator', () => {
     });
 
     it('should assign the correct nonce to 1 defi tx', async () => {
-      rollupCreator = new RollupCreator(
-        rollupDb,
-        worldStateDb as any,
-        proofGenerator,
-        noteAlgorithms as any,
-        numInnerRollupTxs,
-        innerRollupSize,
-        outerRollupSize,
-        metrics as any,
-      );
-
       const numTxs = 1;
       const commitments = [...Array(numTxs)].map(() => randomBytes(32));
       const fees = getFees(numTxs);
@@ -436,21 +376,10 @@ describe('rollup_creator', () => {
         ROLLUP_ID * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK,
         fees[0] / 2n,
       ]);
-      expect(rollup.bridgeIds).toEqual(globalBridges.map(x => x.toBuffer()));
+      expect(rollup.bridgeIds).toEqual(globalBridges.map(x => toBufferBE(x, 32)));
     });
 
     it('should assign the correct nonce to 2 txs for the same bridge', async () => {
-      rollupCreator = new RollupCreator(
-        rollupDb,
-        worldStateDb as any,
-        proofGenerator,
-        noteAlgorithms as any,
-        numInnerRollupTxs,
-        innerRollupSize,
-        outerRollupSize,
-        metrics as any,
-      );
-
       const numTxs = 2;
       const commitments = [...Array(numTxs)].map(() => randomBytes(32));
       const fees = getFees(numTxs);
@@ -474,21 +403,10 @@ describe('rollup_creator', () => {
         [commitments[0], ROLLUP_ID * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK, fees[0] / 2n],
         [commitments[1], ROLLUP_ID * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK, fees[1] / 2n],
       ]);
-      expect(rollup.bridgeIds).toEqual(globalBridges.map(x => x.toBuffer()));
+      expect(rollup.bridgeIds).toEqual(globalBridges.map(x => toBufferBE(x, 32)));
     });
 
     it('should assign the correct nonce to 2 txs for different bridges', async () => {
-      rollupCreator = new RollupCreator(
-        rollupDb,
-        worldStateDb as any,
-        proofGenerator,
-        noteAlgorithms as any,
-        numInnerRollupTxs,
-        innerRollupSize,
-        outerRollupSize,
-        metrics as any,
-      );
-
       const numTxs = 2;
       const commitments = [...Array(numTxs)].map(() => randomBytes(32));
       const fees = getFees(numTxs);
@@ -512,21 +430,10 @@ describe('rollup_creator', () => {
         [commitments[0], ROLLUP_ID * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK, fees[0] / 2n],
         [commitments[1], ROLLUP_ID * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK + 1, fees[1] / 2n],
       ]);
-      expect(rollup.bridgeIds).toEqual(globalBridges.map(x => x.toBuffer()));
+      expect(rollup.bridgeIds).toEqual(globalBridges.map(x => toBufferBE(x, 32)));
     });
 
     it('should assign the correct nonce to 2 txs for different bridges in different order', async () => {
-      rollupCreator = new RollupCreator(
-        rollupDb,
-        worldStateDb as any,
-        proofGenerator,
-        noteAlgorithms as any,
-        numInnerRollupTxs,
-        innerRollupSize,
-        outerRollupSize,
-        metrics as any,
-      );
-
       const numTxs = 2;
       const commitments = [...Array(numTxs)].map(() => randomBytes(32));
       const fees = getFees(numTxs);
@@ -550,21 +457,10 @@ describe('rollup_creator', () => {
         [commitments[0], ROLLUP_ID * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK + 1, fees[0] / 2n],
         [commitments[1], ROLLUP_ID * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK, fees[1] / 2n],
       ]);
-      expect(rollup.bridgeIds).toEqual(globalBridges.map(x => x.toBuffer()));
+      expect(rollup.bridgeIds).toEqual(globalBridges.map(x => toBufferBE(x, 32)));
     });
 
     it('should assign the correct nonce to multiple txs for different bridges in different order', async () => {
-      rollupCreator = new RollupCreator(
-        rollupDb,
-        worldStateDb as any,
-        proofGenerator,
-        noteAlgorithms as any,
-        numInnerRollupTxs,
-        innerRollupSize,
-        outerRollupSize,
-        metrics as any,
-      );
-
       const numTxs = 8;
       const commitments = [...Array(numTxs)].map(() => randomBytes(32));
       const fees = getFees(numTxs);
@@ -594,7 +490,41 @@ describe('rollup_creator', () => {
         [commitments[6], ROLLUP_ID * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK + 2, fees[6] / 2n],
         [commitments[7], ROLLUP_ID * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK + 1, fees[7] / 2n],
       ]);
-      expect(rollup.bridgeIds).toEqual(globalBridges.map(x => x.toBuffer()));
+      expect(rollup.bridgeIds).toEqual(globalBridges.map(x => toBufferBE(x, 32)));
+    });
+
+    it('should add assets to root rollup assets', async () => {
+      const txs = [
+        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.DAI }),
+        mockTx(3, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.DAI }),
+      ];
+      const rootAssets = new Set<AssetId>();
+      await rollupCreator.create(txs, [], rootAssets);
+      expect(proofGenerator.createProof).toHaveBeenCalledTimes(1);
+      const argument = proofGenerator.createProof.mock.calls[0][0];
+      const request = TxRollupProofRequest.fromBuffer(argument);
+      const rollup = request.txRollup;
+      expect(rollup.assetIds.map(buf => buf.readUInt32BE(28))).toEqual([AssetId.ETH, AssetId.DAI]);
+      expect([...rootAssets.values()]).toEqual([AssetId.ETH, AssetId.DAI]);
+    });
+
+    it('should add assets to root rollup assets', async () => {
+      const txs = [
+        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: NON_FEE_PAYING_ASSET }),
+        mockTx(3, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.DAI }),
+        mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: NON_FEE_PAYING_ASSET + 1 }),
+      ];
+      const rootAssets = new Set<AssetId>();
+      await rollupCreator.create(txs, [], rootAssets);
+      expect(proofGenerator.createProof).toHaveBeenCalledTimes(1);
+      const argument = proofGenerator.createProof.mock.calls[0][0];
+      const request = TxRollupProofRequest.fromBuffer(argument);
+      const rollup = request.txRollup;
+      expect(rollup.assetIds.map(buf => buf.readUInt32BE(28))).toEqual([AssetId.ETH, AssetId.DAI]);
+      expect([...rootAssets.values()]).toEqual([AssetId.ETH, AssetId.DAI]);
     });
   });
 });

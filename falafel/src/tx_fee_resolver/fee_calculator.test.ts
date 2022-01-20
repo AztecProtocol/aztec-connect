@@ -1,9 +1,15 @@
 import { AssetId } from '@aztec/barretenberg/asset';
 import { BlockchainAsset, TxType } from '@aztec/barretenberg/blockchain';
-import { SettlementTime } from '@aztec/barretenberg/rollup_provider';
 import { FeeCalculator } from './fee_calculator';
 import { mockTx } from './fixtures';
 import { PriceTracker } from './price_tracker';
+
+enum TestSettlementTime {
+  SLOW,
+  AVERAGE,
+  FAST,
+  INSTANT,
+}
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;
@@ -26,7 +32,7 @@ describe('fee calculator', () => {
   const txsPerRollup = 10;
   const publishInterval = 3600;
   const surplusRatios = [1, 0.9, 0.5, 0];
-  const feeFreeAssets: AssetId[] = [];
+  const freeAssets: AssetId[] = [];
   const freeTxTypes = [TxType.ACCOUNT, TxType.DEFI_DEPOSIT, TxType.DEFI_CLAIM];
   const numSignificantFigures = 0;
   let priceTracker: Mockify<PriceTracker>;
@@ -76,7 +82,7 @@ describe('fee calculator', () => {
       txsPerRollup,
       publishInterval,
       surplusRatios,
-      feeFreeAssets,
+      freeAssets,
       freeTxTypes,
       numSignificantFigures,
     );
@@ -158,7 +164,7 @@ describe('fee calculator', () => {
         txsPerRollup,
         publishInterval,
         surplusRatios,
-        feeFreeAssets,
+        freeAssets,
         freeTxTypes,
         numSignificantFigures,
       );
@@ -205,7 +211,7 @@ describe('fee calculator', () => {
         txsPerRollup,
         publishInterval,
         surplusRatios,
-        feeFreeAssets,
+        freeAssets,
         freeTxTypes,
         numSignificantFigures,
       );
@@ -263,7 +269,7 @@ describe('fee calculator', () => {
         txsPerRollup,
         publishInterval,
         surplusRatios,
-        feeFreeAssets,
+        freeAssets,
         freeTxTypes,
         numSignificantFigures,
       );
@@ -286,7 +292,7 @@ describe('fee calculator', () => {
     });
 
     it('return zero fees for free asset', async () => {
-      const feeFreeAssets = [AssetId.DAI];
+      const freeAssets = [AssetId.DAI];
       feeCalculator = new FeeCalculator(
         priceTracker as any,
         assets,
@@ -296,7 +302,7 @@ describe('fee calculator', () => {
         txsPerRollup,
         publishInterval,
         surplusRatios,
-        feeFreeAssets,
+        freeAssets,
         freeTxTypes,
         numSignificantFigures,
       );
@@ -326,7 +332,7 @@ describe('fee calculator', () => {
         txsPerRollup,
         publishInterval,
         surplusRatios,
-        feeFreeAssets,
+        freeAssets,
         freeTxTypes,
         numSignificantFigures,
       );
@@ -359,7 +365,7 @@ describe('fee calculator', () => {
         txsPerRollup,
         publishInterval,
         surplusRatios,
-        feeFreeAssets,
+        freeAssets,
         freeTxTypes,
         numSignificantFigures,
       );
@@ -370,7 +376,7 @@ describe('fee calculator', () => {
         mockPrices(100n, 2n);
         const assetId = AssetId.DAI;
         const gas = feeCalculator.getGasPaidForByFee(assetId, 500n);
-        // 1000 / 50 
+        // 1000 / 50
         expect(gas).toEqual(20n);
       }
     });
@@ -386,7 +392,7 @@ describe('fee calculator', () => {
         txsPerRollup,
         publishInterval,
         surplusRatios,
-        feeFreeAssets,
+        freeAssets,
         freeTxTypes,
         numSignificantFigures,
       );
@@ -411,7 +417,7 @@ describe('fee calculator', () => {
         txsPerRollup,
         publishInterval,
         surplusRatios,
-        feeFreeAssets,
+        freeAssets,
         freeTxTypes,
         numSignificantFigures,
       );
@@ -456,13 +462,18 @@ describe('fee calculator', () => {
   });
 
   describe('surplus ratio', () => {
-    const getTxFee = (assetId: number, txType: TxType, speed: SettlementTime) => {
+    const getTxFee = (assetId: number, txType: TxType, speed: TestSettlementTime) => {
       const { feeConstants, baseFeeQuotes } = feeCalculator.getFeeQuotes(assetId);
       return feeConstants[txType] + baseFeeQuotes[speed].fee;
     };
 
     it('should compute correct surplus ratio for different settlement time', () => {
-      [SettlementTime.SLOW, SettlementTime.AVERAGE, SettlementTime.FAST, SettlementTime.INSTANT].forEach(speed => {
+      [
+        TestSettlementTime.SLOW,
+        TestSettlementTime.AVERAGE,
+        TestSettlementTime.FAST,
+        TestSettlementTime.INSTANT,
+      ].forEach(speed => {
         const fee = getTxFee(AssetId.ETH, TxType.DEPOSIT, speed);
         const txs = [mockTx(AssetId.ETH, TxType.DEPOSIT, fee)];
         expect(feeCalculator.computeSurplusRatio(txs)).toBe(surplusRatios[speed]);
@@ -480,7 +491,7 @@ describe('fee calculator', () => {
         TxType.DEFI_CLAIM,
       ].forEach(txType => {
         const fee = feeCalculator.getTxFee(AssetId.ETH, txType);
-        const txs = [mockTx(AssetId.ETH, TxType.DEPOSIT, fee)];
+        const txs = [mockTx(AssetId.ETH, txType, fee)];
         expect(feeCalculator.computeSurplusRatio(txs)).toBe(1);
       });
     });
@@ -523,7 +534,7 @@ describe('fee calculator', () => {
     });
 
     it('should compute correct surplus ratio for "Average" txs', () => {
-      const fee = getTxFee(AssetId.ETH, TxType.DEPOSIT, SettlementTime.AVERAGE);
+      const fee = getTxFee(AssetId.ETH, TxType.DEPOSIT, TestSettlementTime.AVERAGE);
       const txs = Array(10).fill(mockTx(AssetId.ETH, TxType.DEPOSIT, fee));
       expect(feeCalculator.computeSurplusRatio(txs.slice(0, 1))).toBe(0.9);
       expect(feeCalculator.computeSurplusRatio(txs.slice(0, 2))).toBe(0.8);
@@ -534,7 +545,7 @@ describe('fee calculator', () => {
     });
 
     it('should compute correct surplus ratio for "Fast" txs', () => {
-      const fee = getTxFee(AssetId.ETH, TxType.DEPOSIT, SettlementTime.FAST);
+      const fee = getTxFee(AssetId.ETH, TxType.DEPOSIT, TestSettlementTime.FAST);
       const txs = Array(3).fill(mockTx(AssetId.ETH, TxType.DEPOSIT, fee));
       expect(feeCalculator.computeSurplusRatio(txs.slice(0, 1))).toBe(0.5);
       expect(feeCalculator.computeSurplusRatio(txs.slice(0, 2))).toBe(0);
@@ -542,7 +553,7 @@ describe('fee calculator', () => {
     });
 
     it('should compute correct surplus ratio for "INSTANT" txs', () => {
-      const fee = getTxFee(AssetId.ETH, TxType.DEPOSIT, SettlementTime.INSTANT);
+      const fee = getTxFee(AssetId.ETH, TxType.DEPOSIT, TestSettlementTime.INSTANT);
       const txs = [mockTx(AssetId.ETH, TxType.DEPOSIT, fee)];
       expect(feeCalculator.computeSurplusRatio(txs)).toBe(0);
     });
@@ -595,7 +606,7 @@ describe('fee calculator', () => {
     });
 
     it('surplus ratio should be 1 for free assets', async () => {
-      const feeFreeAssets = [AssetId.DAI];
+      const freeAssets = [AssetId.DAI];
       feeCalculator = new FeeCalculator(
         priceTracker as any,
         assets,
@@ -605,7 +616,7 @@ describe('fee calculator', () => {
         txsPerRollup,
         publishInterval,
         surplusRatios,
-        feeFreeAssets,
+        freeAssets,
         freeTxTypes,
         numSignificantFigures,
       );
@@ -626,7 +637,7 @@ describe('fee calculator', () => {
         txsPerRollup,
         publishInterval,
         surplusRatios,
-        feeFreeAssets,
+        freeAssets,
         freeTxTypes,
         numSignificantFigures,
       );
@@ -637,17 +648,17 @@ describe('fee calculator', () => {
         mockTx(
           AssetId.DAI,
           TxType.DEPOSIT,
-          daiQuotes.feeConstants[TxType.DEPOSIT] + daiQuotes.baseFeeQuotes[SettlementTime.AVERAGE].fee,
+          daiQuotes.feeConstants[TxType.DEPOSIT] + daiQuotes.baseFeeQuotes[TestSettlementTime.AVERAGE].fee,
         ),
         mockTx(
           AssetId.ETH,
           TxType.DEPOSIT,
-          ethQuotes.feeConstants[TxType.DEPOSIT] + ethQuotes.baseFeeQuotes[SettlementTime.AVERAGE].fee,
+          ethQuotes.feeConstants[TxType.DEPOSIT] + ethQuotes.baseFeeQuotes[TestSettlementTime.AVERAGE].fee,
         ),
         mockTx(
           AssetId.DAI,
           TxType.DEPOSIT,
-          daiQuotes.feeConstants[TxType.DEPOSIT] + daiQuotes.baseFeeQuotes[SettlementTime.SLOW].fee,
+          daiQuotes.feeConstants[TxType.DEPOSIT] + daiQuotes.baseFeeQuotes[TestSettlementTime.SLOW].fee,
         ),
       ];
       expect(feeCalculator.computeSurplusRatio(txs)).toBe(0.8);

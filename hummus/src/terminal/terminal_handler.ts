@@ -8,9 +8,10 @@ import {
   GrumpkinAddress,
   MemoryFifo,
   SdkEvent,
-  UserJoinSplitTx,
   WebSdk,
   TxType,
+  UserPaymentTx,
+  ProofId,
 } from '@aztec/sdk';
 import { Terminal } from './terminal';
 import createDebug from 'debug';
@@ -173,11 +174,10 @@ export class TerminalHandler {
     }
     const userData = user.getUserData();
     if (userData.id.equals(accountId) && diff && !user.isSynching()) {
-      const userAsset = user.getAsset(assetId);
       this.printQueue.put(
-        `balance updated: ${userAsset.fromBaseUnits(balance)} (${diff >= 0 ? '+' : ''}${userAsset.fromBaseUnits(
-          diff,
-        )})\n`,
+        `balance updated: ${this.app.getSdk().fromBaseUnits(assetId, balance)} (${diff >= 0 ? '+' : ''}${this.app
+          .getSdk()
+          .fromBaseUnits(assetId, diff)})\n`,
       );
     }
   };
@@ -315,47 +315,51 @@ export class TerminalHandler {
 
   private async deposit(valueStr: string) {
     this.assertRegistered();
-    const userAsset = this.app.getUser().getAsset(this.assetId);
-    const value = userAsset.toBaseUnits(valueStr);
-    const fee = await this.app.getSdk().getFee(this.assetId, TxType.DEPOSIT);
+    const value = this.app.getSdk().toBaseUnits(this.assetId, valueStr);
+    const [{ value: fee }] = await this.app.getSdk().getDepositFees(this.assetId);
     const publicInput = value + fee;
-    const assetBalance = await userAsset.balance();
-    const pendingBalance = await userAsset.pendingDeposit();
+    const depositor = this.app.getAddress();
+    const userId = this.app.getUser().getUserData().id;
+    const controller = this.app.getSdk().createDepositController(this.assetId, depositor, userId, value, fee);
+    const assetBalance = await this.app.getUser().getBalance(this.assetId);
+    const pendingBalance = await controller.getPendingFunds();
     if (assetBalance + pendingBalance < publicInput) {
       throw new Error('insufficient balance.');
     }
     if (publicInput > pendingBalance) {
       this.printQueue.put(`depositing funds to contract...\n`);
-      await userAsset.depositFundsToContract(value);
+      await controller.depositFundsToContract();
     }
     this.printQueue.put(`generating proof...\n`);
-    const proof = await userAsset.createDepositProof(value, fee);
+    await controller.createProof();
     this.printQueue.put(`signing proof...\n`);
-    const signature = await userAsset.signProof(proof);
-    await this.app.getSdk().sendProof(proof, signature);
+    await controller.sign();
+    await controller.send();
     this.printQueue.put(`deposit proof sent.\n`);
   }
 
-  private async withdraw(value: string) {
+  private async withdraw(valueStr: string) {
     this.assertRegistered();
-    const userAsset = this.app.getUser().getAsset(this.assetId);
-    const fee = await this.app.getSdk().getFee(this.assetId, TxType.WITHDRAW_TO_WALLET);
-    const proof = await userAsset.createWithdrawProof(userAsset.toBaseUnits(value) - fee, fee);
-    await this.app.getSdk().sendProof(proof);
+    const userId = this.app.getUser().getUserData().id;
+    const recipient = this.app.getAddress();
+    const value = this.app.getSdk().toBaseUnits(this.assetId, valueStr);
+    const [{ value: fee }] = await this.app.getSdk().getWithdrawFees(this.assetId);
+    const controller = this.app.getSdk().createWithdrawController(this.assetId, userId, recipient, value, fee);
+    await controller.send();
     this.printQueue.put(`withdrawl proof sent.\n`);
   }
 
-  private async transfer(alias: string, value: string) {
+  private async transfer(alias: string, valueStr: string) {
     this.assertRegistered();
     const to = await this.app.getSdk().getAccountId(alias);
     if (!to) {
       throw new Error(`unknown user: ${alias}`);
     }
-    const userAsset = this.app.getUser().getAsset(this.assetId);
-    const fee = await this.app.getSdk().getFee(this.assetId, TxType.TRANSFER);
-
-    const proof = await userAsset.createTransferProof(userAsset.toBaseUnits(value), fee, to);
-    await this.app.getSdk().sendProof(proof);
+    const userId = this.app.getUser().getUserData().id;
+    const value = this.app.getSdk().toBaseUnits(this.assetId, valueStr);
+    const [{ value: fee }] = await this.app.getSdk().getTransferFees(this.assetId);
+    const controller = await this.app.getSdk().createTransferController(this.assetId, userId, to, value, fee);
+    await controller.send();
     this.printQueue.put(`transfer proof sent.\n`);
   }
 
@@ -377,9 +381,13 @@ export class TerminalHandler {
       throw new Error('alias already registered.');
     }
     const user = this.app.getUser();
-    const { publicKey: newSigningPublicKey } = await user.getUserData();
+    const { id, publicKey: newSigningPublicKey } = await user.getUserData();
     const recoveryPublicKey = GrumpkinAddress.randomAddress();
-    const txHash = await user.createAccount(alias, newSigningPublicKey, recoveryPublicKey);
+    const address = this.app.getAddress();
+    const controller = this.app
+      .getSdk()
+      .createRegisterController(id, alias, newSigningPublicKey, recoveryPublicKey, AssetId.ETH, BigInt(0), address);
+    const txHash = await controller.send();
     this.printQueue.put(`registration proof sent.\nawaiting settlement...\n`);
     await this.app.getSdk().awaitSettlement(txHash, 300);
     await this.app.loadLatestAccount();
@@ -389,51 +397,50 @@ export class TerminalHandler {
   }
 
   private async balance() {
-    const userAsset = this.app.getUser().getAsset(this.assetId);
-    this.printQueue.put(`public: ${userAsset.fromBaseUnits(await userAsset.publicBalance())}\n`);
-    this.printQueue.put(`private: ${userAsset.fromBaseUnits(userAsset.balance())}\n`);
-    const fundsPendingDeposit = await userAsset.pendingDeposit();
+    const sdk = this.app.getSdk();
+    const address = this.app.getAddress();
+    const userId = this.app.getUser().getUserData().id;
+    this.printQueue.put(
+      `public: ${sdk.fromBaseUnits(this.assetId, await sdk.getPublicBalance(this.assetId, address))}\n`,
+    );
+    this.printQueue.put(`private: ${sdk.fromBaseUnits(this.assetId, sdk.getBalance(this.assetId, userId))}\n`);
+    const fundsPendingDeposit = await sdk.getUserPendingDeposit(this.assetId, address);
     if (fundsPendingDeposit > 0) {
-      this.printQueue.put(`pending deposit: ${userAsset.fromBaseUnits(fundsPendingDeposit)}\n`);
+      this.printQueue.put(`pending deposit: ${sdk.fromBaseUnits(this.assetId, fundsPendingDeposit)}\n`);
     }
   }
 
   private async fees() {
     const { symbol } = this.app.getSdk().getAssetInfo(this.assetId);
-    const { txFees } = await this.app.getSdk().getRemoteStatus();
-    const feeNames = ['DEPOSIT', 'TRANSFER', 'WALLET WITHDRAW', 'CONTRACT WITHDRAW'];
-    const baseFee = txFees[this.assetId].baseFeeQuotes[0].fee;
-    txFees[this.assetId].feeConstants.forEach((fee, index) => {
+    const txTypes = [TxType.DEPOSIT, TxType.TRANSFER, TxType.WITHDRAW_TO_WALLET, TxType.WITHDRAW_TO_CONTRACT];
+    const txFees = await this.app.getSdk().getTxFees(this.assetId);
+    txTypes.forEach(txType => {
       this.printQueue.put(
-        `${feeNames[index]}: ${this.app.getSdk().fromBaseUnits(this.assetId, fee + baseFee)} ${symbol}\n`,
+        `${TxType[txType]}: ${this.app.getSdk().fromBaseUnits(this.assetId, txFees[txType][0].value)} ${symbol}\n`,
       );
     });
   }
 
   private async status(num = '1', from = '0') {
     const user = this.app.getUser();
-    const txs = await user.getJoinSplitTxs();
+    const txs = await user.getPaymentTxs();
     const f = Math.max(0, +from);
     const n = Math.min(Math.max(+num, 0), 5);
-    const printTx = (tx: UserJoinSplitTx, action: string, value: bigint) => {
-      const asset = user.getAsset(tx.assetId);
+    const printTx = (tx: UserPaymentTx, action: string, value: bigint) => {
+      const asset = this.app.getSdk().getAssetInfo(tx.value.assetId);
       this.printQueue.put(
-        `${tx.txHash.toString().slice(2, 10)}: ${action} ${asset.fromBaseUnits(value)} ${asset.getInfo().symbol} ${
-          tx.settled ? 'settled' : 'pending'
-        }\n`,
+        `${tx.txHash.toString().slice(2, 10)}: ${action} ${this.app.getSdk().fromBaseUnits(this.assetId, value)} ${
+          asset.symbol
+        } ${tx.settled ? 'settled' : 'pending'}\n`,
       );
     };
     for (const tx of txs.slice(f, f + n)) {
-      if (tx.publicInput) {
-        printTx(tx, 'DEPOSIT', tx.senderPrivateOutput);
-      } else if (tx.publicOutput) {
-        printTx(tx, 'WITHDRAW', tx.publicOutput);
-      } else if (tx.privateInput) {
-        // Can't restore fee :(
-        printTx(tx, 'TRANSFER', tx.privateInput - tx.senderPrivateOutput);
-      } else {
-        printTx(tx, 'RECEIVE', tx.recipientPrivateOutput);
+      const { value } = tx.value;
+      if (!tx.isSender) {
+        printTx(tx, 'RECEIVE', value);
+        return;
       }
+      printTx(tx, ProofId[tx.proofId], value);
     }
   }
 }

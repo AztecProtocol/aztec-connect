@@ -6,12 +6,12 @@ import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofGenerator, TxRollup, TxRollupProofRequest } from 'halloumi/proof_generator';
 import { RollupProofDao } from './entity/rollup_proof';
 import { TxDao } from './entity/tx';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
+import { TxFeeResolver } from './tx_fee_resolver';
 
 export class RollupCreator {
   constructor(
@@ -23,6 +23,7 @@ export class RollupCreator {
     private innerRollupSize: number,
     private outerRollupSize: number,
     private metrics: Metrics,
+    private feeResolver: TxFeeResolver,
   ) {
     console.log(
       `Rollup Creator: num inner rollup txs: ${this.numInnerRollupTxs}, inner rollup size: ${this.innerRollupSize}, outer rollup size: ${this.outerRollupSize}`,
@@ -33,7 +34,7 @@ export class RollupCreator {
    * Creates a rollup from the given txs and publishes it.
    * @returns true if successfully published, otherwise false.
    */
-  public async create(txs: TxDao[], rootRollupBridgeIds: BridgeId[], rootRollupAssetIds: Set<AssetId>) {
+  public async create(txs: TxDao[], rootRollupBridgeIds: bigint[], rootRollupAssetIds: Set<AssetId>) {
     if (!txs.length) {
       throw new Error('Txs empty.');
     }
@@ -69,7 +70,7 @@ export class RollupCreator {
     // TODO: Interrupt proof creation.
   }
 
-  private async createRollup(txs: TxDao[], rootRollupBridgeIds: BridgeId[], rootRollupAssetIds: Set<AssetId>) {
+  private async createRollup(txs: TxDao[], rootRollupBridgeIds: bigint[], rootRollupAssetIds: Set<AssetId>) {
     const rollupId = await this.rollupDb.getNextRollupId();
 
     // To find the correct data start index, we need to position ourselves on:
@@ -104,17 +105,20 @@ export class RollupCreator {
 
       if (proof.proofId !== ProofId.ACCOUNT) {
         const assetId = proof.txFeeAssetId.readUInt32BE(28);
-        localAssetIds.add(assetId);
-        rootRollupAssetIds.add(assetId);
+        if (this.feeResolver.isFeePayingAsset(assetId)) {
+          localAssetIds.add(assetId);
+          rootRollupAssetIds.add(assetId);
+        }
       }
 
       if (proof.proofId !== ProofId.DEFI_DEPOSIT) {
         await worldStateDb.put(RollupTreeId.DATA, nextDataIndex++, proof.noteCommitment1);
       } else {
-        let rootBridgeIndex = rootRollupBridgeIds.findIndex(id => id.toBuffer().equals(proof.bridgeId));
+        const proofBridgeId = toBigIntBE(proof.bridgeId);
+        let rootBridgeIndex = rootRollupBridgeIds.findIndex(id => id === proofBridgeId);
         if (rootBridgeIndex === -1) {
           rootBridgeIndex = rootRollupBridgeIds.length;
-          rootRollupBridgeIds.push(BridgeId.fromBuffer(proof.bridgeId));
+          rootRollupBridgeIds.push(proofBridgeId);
         }
         const interactionNonce = rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK + rootBridgeIndex;
         const txFee = toBigIntBE(proof.txFee);
@@ -183,7 +187,7 @@ export class RollupCreator {
       dataRootsIndicies,
 
       newDefiRoot,
-      rootRollupBridgeIds.map(bridge => bridge.toBuffer()),
+      rootRollupBridgeIds.map(bridge => toBufferBE(bridge, 32)),
 
       [...localAssetIds].map(id => numToUInt32BE(id, 32)),
     );

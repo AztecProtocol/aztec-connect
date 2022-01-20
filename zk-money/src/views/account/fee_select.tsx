@@ -1,4 +1,4 @@
-import { SettlementTime } from '@aztec/sdk';
+import { TxSettlementTime } from '@aztec/sdk';
 import React from 'react';
 import styled from 'styled-components';
 import { Asset, fromBaseUnits, TxFee } from '../../app';
@@ -40,9 +40,9 @@ const Value = styled(Text)`
 interface FeeSelectProps {
   inputTheme: InputTheme;
   asset: Asset;
-  selectedSpeed: SettlementTime;
+  selectedSpeed: TxSettlementTime;
   fees: TxFee[];
-  onSelect(speed: SettlementTime): void;
+  onSelect(speed: TxSettlementTime): void;
 }
 
 export const FeeSelect: React.FunctionComponent<FeeSelectProps> = ({

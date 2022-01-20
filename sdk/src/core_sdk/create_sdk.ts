@@ -1,3 +1,4 @@
+import { AccountId } from '@aztec/barretenberg/account_id';
 import { AssetId } from '@aztec/barretenberg/asset';
 import { ServerRollupProvider } from '@aztec/barretenberg/rollup_provider';
 import { BroadcastChannel, createLeaderElection } from 'broadcast-channel';
@@ -8,7 +9,6 @@ import levelup from 'levelup';
 import { createConnection } from 'typeorm';
 import { DexieDatabase, getOrmConfig, SQLDatabase } from '../database';
 import { SdkEvent, SdkInitState } from '../sdk';
-import { AccountId } from '../user';
 import { CoreSdk, CoreSdkEvent, CoreSdkOptions } from './core_sdk';
 
 const debug = createDebug('bb:create_sdk');

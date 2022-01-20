@@ -10,7 +10,7 @@ export class JoinSplitTxResolver {
 
   @Query(() => [JoinSplitTxType!])
   async unsettledJoinSplitTxs() {
-    const txs = await this.rollupDb.getUnsettledJoinSplitTxs();
+    const txs = await this.rollupDb.getUnsettledPaymentTxs();
     return txs.map(({ proofData, ...rest }) => {
       const joinSplitProofData = JoinSplitProofData.fromBuffer(proofData);
       return {

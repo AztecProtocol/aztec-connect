@@ -1,5 +1,5 @@
+import { AccountId } from '@aztec/barretenberg/account_id';
 import { AssetId } from '@aztec/barretenberg/asset';
-import { AccountId } from './user';
 
 export interface Note {
   assetId: AssetId;

@@ -28,6 +28,7 @@ const innerProofDataToTxDao = (tx: InnerProofData, offchainTxData: Buffer, creat
   txDao.created = created;
   txDao.mined = created;
   txDao.txType = txType;
+  txDao.excessGas = 0n;
   return txDao;
 };
 

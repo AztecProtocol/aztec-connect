@@ -1,3 +1,4 @@
+import { AccountAliasId, AccountId } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
@@ -6,9 +7,9 @@ import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { ClaimNoteTxData, deriveNoteSecret, NoteAlgorithms, TreeNote } from '@aztec/barretenberg/note_algorithms';
 import { WorldState } from '@aztec/barretenberg/world_state';
 import { randomBytes } from 'crypto';
-import { Database } from '../../database';
-import { Note } from '../../note';
-import { AccountAliasId, AccountId, UserData } from '../../user';
+import { Database } from '../database';
+import { Note } from '../note';
+import { UserData } from '../user';
 
 export class JoinSplitTxFactory {
   constructor(

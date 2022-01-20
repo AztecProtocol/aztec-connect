@@ -1,6 +1,7 @@
+import { EthAddress } from '@aztec/barretenberg/address';
+import { AssetId } from '@aztec/barretenberg/asset';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
-import { BridgeConfig } from '@aztec/barretenberg/bridge_id';
 import {
   AccountVerifier,
   DefiDepositProofData,
@@ -15,18 +16,13 @@ import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
 import { BarretenbergWasm, BarretenbergWorker, createWorker, destroyWorker } from '@aztec/barretenberg/wasm';
 import { Mutex } from 'async-mutex';
 import { ProofGenerator } from 'halloumi/proof_generator';
-import { TxDao } from './entity/tx';
-import { getTxTypeFromProofData } from './get_tx_type';
-import { Metrics } from './metrics';
-import { RollupDb } from './rollup_db';
-import { TxFeeResolver } from './tx_fee_resolver';
-
-export interface Tx {
-  proof: ProofData;
-  offchainTxData: Buffer;
-  depositSignature?: Buffer;
-  parentTx?: Tx;
-}
+import { BridgeResolver } from '../bridge';
+import { TxDao } from '../entity/tx';
+import { getTxTypeFromProofData } from '../get_tx_type';
+import { Metrics } from '../metrics';
+import { RollupDb } from '../rollup_db';
+import { TxFeeResolver } from '../tx_fee_resolver';
+import { TxFeeAllocator, Tx } from '.';
 
 export class TxReceiver {
   private worker!: BarretenbergWorker;
@@ -42,7 +38,7 @@ export class TxReceiver {
     private proofGenerator: ProofGenerator,
     private txFeeResolver: TxFeeResolver,
     private metrics: Metrics,
-    private bridgeConfigs: BridgeConfig[],
+    private bridgeResolver: BridgeResolver,
   ) {}
 
   public async init() {
@@ -64,50 +60,48 @@ export class TxReceiver {
     await destroyWorker(this.worker);
   }
 
-  public async receiveTx(tx: Tx) {
+  public async receiveTxs(txs: Tx[]) {
     // We mutex this entire receive call until we move to "deposit to proof hash". Read more below.
     await this.mutex.acquire();
     try {
-      const txs: TxDao[] = [];
-
-      const processTx = async (tx: Tx) => {
-        if (tx.parentTx) {
-          if (tx.parentTx.proof.proofId === ProofId.DEPOSIT) {
-            // Do not allow a deposit tx to be in the chain
-            // so that we don't have to accumulate all deposits and check the total value against the pending deposit.
-            throw new Error('Invalid parent tx type.');
-          }
-          await processTx(tx.parentTx);
-        }
-
-        const txType = await getTxTypeFromProofData(tx.proof, this.blockchain);
+      const txTypes: TxType[] = [];
+      for (let i = 0; i < txs.length; ++i) {
+        const { proof } = txs[i];
+        const txType = await getTxTypeFromProofData(proof, this.blockchain);
         this.metrics.txReceived(txType);
-        console.log(`Received tx: ${tx.proof.txId.toString('hex')}, type: ${TxType[txType]}`);
+        console.log(`Received tx (${i + 1}/${txs.length}): ${proof.txId.toString('hex')}, type: ${TxType[txType]}`);
+        txTypes.push(txType);
+      }
 
-        txs.push(await this.validateTx(tx));
-      };
+      const feeAllocator = new TxFeeAllocator(this.txFeeResolver);
+      const validation = feeAllocator.validateReceivedTxs(txs, txTypes);
+      if (validation.gasProvided < validation.gasRequired) {
+        console.log(
+          `Txs only contained enough fee to pay for ${validation.gasProvided} gas, but it needed ${validation.gasRequired}.`,
+        );
+        throw new Error('Insufficient fee.');
+      }
 
-      await processTx(tx);
+      await this.validateRequiredDeposit(txs);
 
-      await this.rollupDb.addTxs(txs);
+      const txDaos: TxDao[] = [];
+      for (let i = 0; i < txs.length; ++i) {
+        const tx = txs[i];
+        txDaos.push(await this.validateTx(tx, txTypes[i], txs.slice(0, i)));
+      }
+      feeAllocator.reallocateGas(txDaos, txs, txTypes, validation);
+      await this.rollupDb.addTxs(txDaos);
 
-      return txs[txs.length - 1].id;
+      return txDaos.map(txDao => txDao.id);
     } finally {
       this.mutex.release();
     }
   }
 
-  private async validateTx({ proof, offchainTxData, depositSignature, parentTx }: Tx) {
-    const findParent = (cb: (p: Tx) => boolean, p = parentTx) => {
-      if (p?.parentTx && findParent(cb, p.parentTx)) {
-        return true;
-      }
-      return p ? cb(p) : false;
-    };
-
+  private async validateTx({ proof, offchainTxData, depositSignature }: Tx, txType: TxType, precedingTxs: Tx[]) {
     if (
       (await this.rollupDb.nullifiersExist(proof.nullifier1, proof.nullifier2)) ||
-      findParent(p =>
+      precedingTxs.some(p =>
         [p.proof.nullifier1, p.proof.nullifier2]
           .filter(n => !!toBigIntBE(n))
           .some(n => n.equals(proof.nullifier1) || n.equals(proof.nullifier2)),
@@ -118,34 +112,30 @@ export class TxReceiver {
 
     const { backwardLink } = proof;
     if (!backwardLink.equals(Buffer.alloc(32))) {
-      const unsettledTxs = (await this.rollupDb.getUnsettledTxs()).map(({ proofData }) => new ProofData(proofData));
-      if (
-        unsettledTxs.some(tx => tx.backwardLink.equals(backwardLink)) ||
-        findParent(p => p.proof.backwardLink.equals(backwardLink))
-      ) {
+      const unsettledTxs = [
+        ...(await this.rollupDb.getUnsettledTxs()).map(({ proofData }) => new ProofData(proofData)),
+        ...precedingTxs.map(p => p.proof),
+      ];
+      if (unsettledTxs.some(tx => tx.backwardLink.equals(backwardLink))) {
         throw new Error('Duplicated backward link.');
       }
 
-      const linkedTx =
-        findParent(p => [p.proof.noteCommitment1, p.proof.noteCommitment2].some(nc => nc.equals(backwardLink))) ||
-        unsettledTxs.some(
-          tx =>
-            (tx.allowChainFromNote1 && tx.noteCommitment1.equals(backwardLink)) ||
-            (tx.allowChainFromNote2 && tx.noteCommitment2.equals(backwardLink)),
-        );
+      const linkedTx = unsettledTxs.some(
+        tx =>
+          (tx.allowChainFromNote1 && tx.noteCommitment1.equals(backwardLink)) ||
+          (tx.allowChainFromNote2 && tx.noteCommitment2.equals(backwardLink)),
+      );
       if (!linkedTx) {
         throw new Error('Linked tx not found.');
       }
     }
-
-    const txType = await getTxTypeFromProofData(proof, this.blockchain);
 
     // Check the proof is valid.
     switch (proof.proofId) {
       case ProofId.DEPOSIT:
       case ProofId.WITHDRAW:
       case ProofId.SEND:
-        await this.validateJoinSplitTx(proof, txType, depositSignature);
+        await this.validateJoinSplitTx(proof, depositSignature);
         break;
       case ProofId.ACCOUNT: {
         const offchainData = OffchainAccountData.fromBuffer(offchainTxData);
@@ -170,31 +160,14 @@ export class TxReceiver {
       dataRootsIndex,
       created: new Date(),
       txType,
+      excessGas: 0n, // provided later
     });
   }
 
-  private async validateJoinSplitTx(proofData: ProofData, txType: TxType, depositSignature?: Buffer) {
-    const {
-      publicAssetId: assetId,
-      txId,
-      txFeeAssetId,
-      txFee,
-      publicOwner,
-      publicValue,
-    } = new JoinSplitProofData(proofData);
-
-    const minFee = this.txFeeResolver.getMinTxFee(txFeeAssetId, txType);
-    if (txFee < minFee) {
-      throw new Error('Insufficient fee.');
-    }
-
-    if (!(await this.joinSplitVerifier.verifyProof(proofData.rawProofData))) {
-      throw new Error('Join-split proof verification failed.');
-    }
-
-    if (proofData.proofId === ProofId.DEPOSIT) {
+  private async validateJoinSplitTx(proof: ProofData, depositSignature?: Buffer) {
+    if (proof.proofId === ProofId.DEPOSIT) {
+      const { txId, publicOwner } = new JoinSplitProofData(proof);
       let proofApproval = await this.blockchain.getUserProofApprovalStatus(publicOwner, txId);
-
       if (!proofApproval && depositSignature) {
         const message = Buffer.concat([
           Buffer.from('Signing this message will allow your pending funds to be spent in Aztec transaction:\n'),
@@ -206,21 +179,10 @@ export class TxReceiver {
       if (!proofApproval) {
         throw new Error(`Tx not approved or invalid signature: ${txId.toString('hex')}`);
       }
+    }
 
-      // WARNING! Need to check the sum of all deposits in txs remains <= the amount pending deposit on contract.
-      // As the db read of existing txs, and insertion of new tx, needs to be atomic, we have to mutex receiveTx.
-      // TODO: Move to a system where you only ever deposit against a proof hash!
-      const total =
-        (await this.rollupDb.getUnsettledJoinSplitTxs())
-          .map(tx => JoinSplitProofData.fromBuffer(tx.proofData))
-          .filter(proofData => proofData.publicOwner.equals(publicOwner) && proofData.publicAssetId === assetId)
-          .reduce((acc, proofData) => acc + proofData.publicValue, 0n) + publicValue;
-
-      const pendingDeposit = await this.blockchain.getUserPendingDeposit(assetId, publicOwner);
-
-      if (pendingDeposit < total) {
-        throw new Error('User insufficient pending deposit balance.');
-      }
+    if (!(await this.joinSplitVerifier.verifyProof(proof.rawProofData))) {
+      throw new Error('Join-split proof verification failed.');
     }
   }
 
@@ -240,28 +202,58 @@ export class TxReceiver {
   }
 
   private async validateDefiBridgeTx(proofData: ProofData) {
-    const { bridgeId, txFeeAssetId, txFee } = new DefiDepositProofData(proofData);
+    if (proofData.allowChainFromNote1 || proofData.allowChainFromNote2) {
+      throw new Error('Cannot chain from a defi deposit tx.');
+    }
 
-    const bridgeConfig = this.bridgeConfigs.find(bc => bc.bridgeId == bridgeId.toBigInt());
-
+    const { bridgeId } = new DefiDepositProofData(proofData);
+    const bridgeConfig = this.bridgeResolver.getBridgeConfig(bridgeId.toBigInt());
     if (!bridgeConfig) {
       console.log(`Unrecognised Defi bridge: ${bridgeId.toString()}`);
       throw new Error('Unrecognised Defi-bridge');
     }
 
-    const numBridgeTxs = BigInt(bridgeConfig.numTxs);
-    let requiredGas = BigInt(this.txFeeResolver.getBaseTxGas()) + bridgeConfig.fee / numBridgeTxs;
-    if (bridgeConfig.fee % numBridgeTxs > 0n) {
-      requiredGas++;
-    }
-    const providedGas = this.txFeeResolver.getGasPaidForByFee(txFeeAssetId, txFee);
-    if (providedGas < requiredGas) {
-      console.log(`Defi tx only contained enough fee to pay for ${providedGas} gas, but it needed ${requiredGas}`);
-      throw new Error('Insufficient fee');
-    }
-
     if (!(await this.joinSplitVerifier.verifyProof(proofData.rawProofData))) {
       throw new Error('Defi-bridge proof verification failed.');
+    }
+  }
+
+  private async validateRequiredDeposit(txs: Tx[]) {
+    const depositProofs = txs
+      .filter(tx => tx.proof.proofId === ProofId.DEPOSIT)
+      .map(tx => new JoinSplitProofData(tx.proof));
+    if (!depositProofs.length) {
+      return;
+    }
+
+    const requiredDeposits: { publicOwner: EthAddress; publicAssetId: AssetId; value: bigint }[] = [];
+    depositProofs.forEach(({ publicAssetId, publicOwner, publicValue }) => {
+      const index = requiredDeposits.findIndex(
+        d => d.publicOwner.equals(publicOwner) && d.publicAssetId === publicAssetId,
+      );
+      if (index < 0) {
+        requiredDeposits.push({ publicOwner, publicAssetId, value: publicValue });
+      } else {
+        requiredDeposits[index] = { publicOwner, publicAssetId, value: requiredDeposits[index].value + publicValue };
+      }
+    });
+
+    const unsettledTxs = (await this.rollupDb.getUnsettledPaymentTxs()).map(tx =>
+      JoinSplitProofData.fromBuffer(tx.proofData),
+    );
+
+    for (const { publicOwner, publicAssetId, value } of requiredDeposits) {
+      // WARNING! Need to check the sum of all deposits in txs remains <= the amount pending deposit on contract.
+      // As the db read of existing txs, and insertion of new tx, needs to be atomic, we have to mutex receiveTx.
+      const total =
+        value +
+        unsettledTxs
+          .filter(tx => tx.publicOwner.equals(publicOwner) && tx.publicAssetId === publicAssetId)
+          .reduce((acc, tx) => acc + tx.publicValue, 0n);
+      const pendingDeposit = await this.blockchain.getUserPendingDeposit(publicAssetId, publicOwner);
+      if (pendingDeposit < total) {
+        throw new Error('User insufficient pending deposit balance.');
+      }
     }
   }
 }

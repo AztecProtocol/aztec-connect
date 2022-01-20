@@ -1,16 +1,16 @@
-import { EthAddress, UserJoinSplitTx } from '@aztec/sdk';
+import { EthAddress, ProofId, UserPaymentTx } from '@aztec/sdk';
 
 export class TransactionGraph {
   private readonly inputOwners: Buffer[] = [];
   private readonly outputOwners: Buffer[] = [];
 
-  constructor(jsTxs: UserJoinSplitTx[]) {
-    jsTxs.forEach(({ inputOwner, outputOwner }) => {
-      if (inputOwner && !this.isDepositor(inputOwner)) {
-        this.inputOwners.push(inputOwner.toBuffer());
+  constructor(jsTxs: UserPaymentTx[]) {
+    jsTxs.forEach(({ proofId, publicOwner }) => {
+      if (proofId === ProofId.DEPOSIT && !this.isDepositor(publicOwner!)) {
+        this.inputOwners.push(publicOwner!.toBuffer());
       }
-      if (outputOwner && !this.isRecipient(outputOwner)) {
-        this.outputOwners.push(outputOwner.toBuffer());
+      if (proofId === ProofId.WITHDRAW && !this.isRecipient(publicOwner!)) {
+        this.outputOwners.push(publicOwner!.toBuffer());
       }
     });
   }

@@ -1,4 +1,5 @@
-import { AccountId, EthAddress, JoinSplitProofOutput, SettlementTime, TxType, WalletSdk } from '@aztec/sdk';
+import { AccountId, EthAddress, TxSettlementTime, TxType, WalletSdk } from '@aztec/sdk';
+import { TransferController, WithdrawController } from '@aztec/sdk/wallet_sdk/controllers';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { debounce, DebouncedFunc } from 'lodash';
@@ -49,7 +50,7 @@ interface TxFeesValue extends FormValue {
 }
 
 interface TxSpeedInput extends IntValue {
-  value: SettlementTime;
+  value: TxSettlementTime;
 }
 
 export type PrivacyIssue = 'already-withdrawn-to' | 'already-deposited-from' | 'none';
@@ -96,7 +97,7 @@ const initialSendFormValues = {
     value: [],
   },
   speed: {
-    value: SettlementTime.SLOW,
+    value: TxSettlementTime.NEXT_ROLLUP,
   },
   recipient: {
     value: {
@@ -124,7 +125,7 @@ export class SendForm extends EventEmitter implements AccountForm {
 
   private values: SendFormValues = initialSendFormValues;
   private formStatus = FormStatus.ACTIVE;
-  private proofOutput?: JoinSplitProofOutput;
+  private proofController?: TransferController | WithdrawController;
   private destroyed = false;
 
   private transactionGraph!: TransactionGraph;
@@ -474,23 +475,20 @@ export class SendForm extends EventEmitter implements AccountForm {
       const noteRecipient = await this.accountUtils.getAccountId(alias);
       const amount = toBaseUnits(this.values.amount.value, this.asset.decimals);
       const fee = this.values.fees.value[this.values.speed.value].fee;
-      this.proofOutput = await this.sdk.createJoinSplitProof(
-        this.asset.id,
+      this.proofController = await this.sdk.createTransferController(
         this.userId,
-        0n,
-        0n,
-        amount + fee,
-        amount,
-        0n,
         signer,
-        noteRecipient,
+        { assetId: this.asset.id, value: amount },
+        { assetId: this.asset.id, value: fee },
+        noteRecipient!,
       );
+      await this.proofController.createProof();
     }
 
     this.proceed(SendStatus.SEND_PROOF);
 
     try {
-      await this.sdk.sendProof(this.proofOutput!);
+      await this.proofController!.send();
     } catch (e) {
       debug(e);
       return this.abort(`Failed to send the proof: ${e.message}`);
@@ -506,24 +504,20 @@ export class SendForm extends EventEmitter implements AccountForm {
       const signer = this.sdk.createSchnorrSigner(privateKey);
       const amount = toBaseUnits(this.values.amount.value, this.asset.decimals);
       const fee = this.values.fees.value[this.values.speed.value].fee;
-      this.proofOutput = await this.sdk.createJoinSplitProof(
-        this.asset.id,
+      this.proofController = await this.sdk.createWithdrawController(
         this.userId,
-        0n,
-        amount,
-        amount + fee,
-        0n,
-        0n,
         signer,
-        undefined,
+        { assetId: this.asset.id, value: amount },
+        { assetId: this.asset.id, value: fee },
         ethAddress,
       );
+      await this.proofController.createProof();
     }
 
     this.proceed(SendStatus.SEND_PROOF);
 
     try {
-      await this.sdk.sendProof(this.proofOutput!);
+      await this.proofController!.send();
     } catch (e) {
       debug(e);
       return this.abort(`Failed to send the proof: ${e.message}`);
@@ -543,7 +537,7 @@ export class SendForm extends EventEmitter implements AccountForm {
 
   private async initTransactionGraph() {
     const userIds = this.sdk.getUsersData().map(u => u.id);
-    const jsTxs = (await Promise.all(userIds.map(userId => this.sdk.getJoinSplitTxs(userId)))).flat();
+    const jsTxs = (await Promise.all(userIds.map(userId => this.sdk.getPaymentTxs(userId)))).flat();
     this.transactionGraph = new TransactionGraph(jsTxs);
     this.refreshValues();
   }
@@ -573,9 +567,9 @@ export class SendForm extends EventEmitter implements AccountForm {
     const { signerAddress } = this.keyVault;
     if (!account?.equals(signerAddress)) {
       this.prompt(
-        `Please switch your wallet's account to ${signerAddress
+        `Please switch your wallet's account to ${signerAddress.toString().slice(0, 6)}...${signerAddress
           .toString()
-          .slice(0, 6)}...${signerAddress.toString().slice(-4)}.`,
+          .slice(-4)}.`,
       );
       return;
     }

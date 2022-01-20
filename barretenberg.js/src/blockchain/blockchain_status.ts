@@ -27,6 +27,12 @@ export interface BlockchainAsset {
   gasConstants: number[];
 }
 
+export interface BlockchainBridge {
+  id: number;
+  address: EthAddress;
+  gasLimit: bigint;
+}
+
 export interface BlockchainStatus {
   chainId: number;
   rollupContractAddress: EthAddress;
@@ -42,6 +48,7 @@ export interface BlockchainStatus {
   escapeOpen: boolean;
   numEscapeBlocksRemaining: number;
   assets: BlockchainAsset[];
+  bridges: BlockchainBridge[];
 }
 
 export interface BlockchainStatusJson {
@@ -66,6 +73,11 @@ export interface BlockchainStatusJson {
     name: string;
     gasConstants: number[];
   }[];
+  bridges: {
+    id: number;
+    address: string;
+    gasLimit: string;
+  }[];
 }
 
 export function blockchainStatusToJson(status: BlockchainStatus): BlockchainStatusJson {
@@ -83,6 +95,11 @@ export function blockchainStatusToJson(status: BlockchainStatus): BlockchainStat
       ...a,
       address: a.address.toString(),
     })),
+    bridges: status.bridges.map(b => ({
+      ...b,
+      address: b.address.toString(),
+      gasLimit: b.gasLimit.toString()
+    }))
   };
 }
 
@@ -101,6 +118,11 @@ export function blockchainStatusFromJson(json: BlockchainStatusJson): Blockchain
       ...a,
       address: EthAddress.fromString(a.address),
     })),
+    bridges: json.bridges.map(b => ({
+      ...b,
+      address: EthAddress.fromString(b.address),
+      gasLimit: BigInt(b.gasLimit)
+    }))
   };
 }
 

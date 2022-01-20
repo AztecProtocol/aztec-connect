@@ -92,8 +92,8 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.getUnsettledTxs());
   }
 
-  public async getUnsettledJoinSplitTxs() {
-    return this.synchronise(() => this.rollupDb.getUnsettledJoinSplitTxs());
+  public async getUnsettledPaymentTxs() {
+    return this.synchronise(() => this.rollupDb.getUnsettledPaymentTxs());
   }
 
   public async getUnsettledAccountTxs() {

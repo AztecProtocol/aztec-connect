@@ -1,0 +1,34 @@
+import { AssetValue } from '@aztec/barretenberg/asset';
+import { CoreSdk } from '../../core_sdk/core_sdk';
+import { RecoverSignatureSigner } from '../../signer';
+import { RecoveryPayload } from '../../user';
+import { AddSigningKeyController } from './add_signing_key_controller';
+
+export class RecoverAccountController {
+  private addSigningKeyController: AddSigningKeyController;
+
+  constructor(public readonly recoveryPayload: RecoveryPayload, public readonly fee: AssetValue, core: CoreSdk) {
+    const {
+      trustedThirdPartyPublicKey,
+      recoveryPublicKey,
+      recoveryData: { accountId, signature },
+    } = recoveryPayload;
+    const recoverySigner = new RecoverSignatureSigner(recoveryPublicKey, signature);
+    this.addSigningKeyController = new AddSigningKeyController(
+      accountId,
+      recoverySigner,
+      trustedThirdPartyPublicKey,
+      undefined,
+      fee,
+      core,
+    );
+  }
+
+  public async createProof() {
+    await this.addSigningKeyController.createProof();
+  }
+
+  async send() {
+    return this.addSigningKeyController.send();
+  }
+}

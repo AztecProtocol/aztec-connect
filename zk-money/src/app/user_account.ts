@@ -1,21 +1,12 @@
-import { AccountId, Note, SdkEvent, TxType, WalletSdk } from '@aztec/sdk';
+import { AccountId, Note, SdkEvent, WalletSdk } from '@aztec/sdk';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
-import { debounce, DebouncedFunc, uniqWith } from 'lodash';
-import {
-  AccountForm,
-  AccountFormEvent,
-  getMergeOptions,
-  MergeForm,
-  MigrateForm,
-  SendForm,
-  ShieldForm,
-} from './account_forms';
+import { debounce, DebouncedFunc } from 'lodash';
+import { AccountForm, AccountFormEvent, MergeForm, MigrateForm, SendForm, ShieldForm } from './account_forms';
 import { AccountState, AssetState, initialAssetState } from './account_state';
 import { AccountAction, parseAccountTx, parseJoinSplitTx } from './account_txs';
 import { AccountUtils } from './account_utils';
 import { AppAssetId, assets } from './assets';
-import { Database, DatabaseEvent } from './database';
 import { EthAccount, EthAccountEvent } from './eth_account';
 import { Form } from './form';
 import { KeyVault } from './key_vault';
@@ -69,7 +60,6 @@ export class UserAccount extends EventEmitter {
     private readonly keyVault: KeyVault,
     private readonly sdk: WalletSdk,
     private readonly coreProvider: Provider,
-    private readonly db: Database,
     private readonly rollup: RollupService,
     private readonly priceFeedService: PriceFeedService,
     private readonly accountUtils: AccountUtils,
@@ -94,7 +84,7 @@ export class UserAccount extends EventEmitter {
       txAmountLimit: txAmountLimits[activeAsset] || 0n,
       withdrawSafeAmounts: withdrawSafeAmounts[activeAsset] || [],
     };
-    this.nextPublishTime = rollup.getStatus().nextPublishTime;
+    this.nextPublishTime = rollup.nextPublishTime;
     this.debounceRefreshAccountState = debounce(this.refreshAccountState, this.refreshAccountDebounceWait);
     this.debounceRefreshAssetState = debounce(this.refreshAssetState, this.refreshAssetDebounceWait);
   }
@@ -117,20 +107,11 @@ export class UserAccount extends EventEmitter {
   }
 
   getMergeForm() {
-    if (!this.isAssetEnabled(this.activeAsset)) return;
-
-    const fee = this.rollup.getMinFee(this.activeAsset, TxType.TRANSFER);
-    const mergeOptions = getMergeOptions(this.assetState, fee);
-    return mergeOptions.length
-      ? {
-          mergeOption: mergeOptions[0],
-          fee,
-        }
-      : undefined;
+    return undefined;
   }
 
   get txsPublishTime() {
-    return this.rollup.getStatus().nextPublishTime;
+    return this.rollup.nextPublishTime;
   }
 
   isProcessingAction() {
@@ -139,7 +120,6 @@ export class UserAccount extends EventEmitter {
 
   async init(provider?: Provider) {
     this.sdk.on(SdkEvent.UPDATED_USER_STATE, this.handleUserStateChange);
-    this.db.on(DatabaseEvent.UPDATED_MIGRATING_TX, this.handleMigratingTxChange);
     this.priceFeedService.subscribe(this.activeAsset, this.onPriceChange);
     await this.changeProvider(provider);
     await this.refreshAccountState();
@@ -156,7 +136,6 @@ export class UserAccount extends EventEmitter {
     this.provider?.off(ProviderEvent.UPDATED_PROVIDER_STATE, this.onProviderStateChange);
     this.ethAccount?.destroy();
     this.sdk.off(SdkEvent.UPDATED_USER_STATE, this.handleUserStateChange);
-    this.db.off(DatabaseEvent.UPDATED_MIGRATING_TX, this.handleMigratingTxChange);
     this.priceFeedService.unsubscribe(this.activeAsset, this.onPriceChange);
     this.debounceRefreshAccountState.cancel();
     this.debounceRefreshAssetState.cancel();
@@ -278,7 +257,6 @@ export class UserAccount extends EventEmitter {
           this.keyVault,
           this.provider,
           this.sdk,
-          this.db,
           this.accountUtils,
           action === AccountAction.MIGRATE_OLD_BALANCE,
         );
@@ -286,11 +264,11 @@ export class UserAccount extends EventEmitter {
         return new ShieldForm(
           this.accountState,
           this.assetState,
+          undefined,
           this.provider,
           this.ethAccount,
           this.keyVault,
           this.sdk,
-          this.db,
           this.coreProvider,
           this.rollup,
           this.accountUtils,
@@ -308,15 +286,6 @@ export class UserAccount extends EventEmitter {
 
     this.debounceRefreshAccountState();
     this.debounceRefreshAssetState();
-  };
-
-  private handleMigratingTxChange = async (assetId?: AppAssetId) => {
-    if (assetId !== this.activeAsset) {
-      return;
-    }
-
-    const joinSplitTxs = await this.getJoinSplitTxs(this.activeAsset, this.userId);
-    this.updateAssetState({ joinSplitTxs });
   };
 
   private refreshAccountState = async () => {
@@ -421,19 +390,10 @@ export class UserAccount extends EventEmitter {
   }
 
   private async getJoinSplitTxs(assetId: AppAssetId, userId: AccountId) {
-    const userJoinSplitTxs = (await this.sdk.getJoinSplitTxs(userId)).filter(tx => tx.assetId === assetId);
-    const migratingTxs = (await this.db.getMigratingTxs(this.userId)).filter(tx => tx.assetId === assetId);
-    // TODO - deal with orphaned tx
-    for (const tx of migratingTxs) {
-      if (userJoinSplitTxs.some(uTx => uTx.txHash.equals(tx.txHash))) {
-        await this.db.removeMigratingTx(tx.txHash);
-      }
-    }
-
-    const minFee = this.rollup.getMinFee(assetId, TxType.TRANSFER);
-    return uniqWith([userJoinSplitTxs, migratingTxs].flat(), (tx0, tx1) => tx0.txHash.equals(tx1.txHash))
+    return (await this.sdk.getPaymentTxs(userId))
+      .filter(tx => tx.value.assetId === assetId)
       .sort((a, b) => (!a.settled && b.settled ? -1 : 0))
-      .map(tx => parseJoinSplitTx(tx, this.explorerUrl, minFee));
+      .map(tx => parseJoinSplitTx(tx, this.explorerUrl));
   }
 
   private isAssetEnabled(assetId: AppAssetId) {

@@ -14,6 +14,7 @@ describe('OffchainDefiDepositData', () => {
       toBigIntBE(randomBytes(32)), // depositValue
       toBigIntBE(randomBytes(32)), // txFee
       ViewingKey.random(),
+      123,
     );
     const buf = userData.toBuffer();
     expect(buf.length).toBe(OffchainDefiDepositData.SIZE);
@@ -30,6 +31,22 @@ describe('OffchainDefiDepositData', () => {
           toBigIntBE(randomBytes(32)),
           toBigIntBE(randomBytes(32)),
           ViewingKey.random(),
+          123,
+        ),
+    ).toThrow();
+  });
+
+  it('throw if viewing key is empty', () => {
+    expect(
+      () =>
+        new OffchainDefiDepositData(
+          BridgeId.random(),
+          randomBytes(32),
+          GrumpkinAddress.randomAddress(),
+          toBigIntBE(randomBytes(32)),
+          toBigIntBE(randomBytes(32)),
+          ViewingKey.EMPTY,
+          123,
         ),
     ).toThrow();
   });

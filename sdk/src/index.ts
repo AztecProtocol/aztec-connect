@@ -2,7 +2,6 @@ export * from './sdk';
 export * from './core_sdk/create_sdk';
 export * from './ethereum_sdk';
 export * from './note';
-export * from './proofs/proof_output';
 export * from './signer';
 export * from './user';
 export * from './user_tx';
@@ -18,6 +17,8 @@ export * from '@aztec/barretenberg/fifo';
 export * from '@aztec/barretenberg/tx_hash';
 export * from '@aztec/barretenberg/blockchain';
 export * from '@aztec/barretenberg/service';
+
+export { ProofId } from '@aztec/barretenberg/client_proofs';
 
 export {
   JsonRpcProvider,

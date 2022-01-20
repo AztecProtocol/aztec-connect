@@ -1,6 +1,6 @@
+import { AccountId } from '@aztec/barretenberg/account_id';
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 import { SigningKey } from '../';
-import { AccountId } from '../../user';
 import { accountIdTransformer } from './transformer';
 
 @Entity({ name: 'userKey' })

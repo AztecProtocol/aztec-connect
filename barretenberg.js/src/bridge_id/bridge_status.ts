@@ -16,22 +16,18 @@ export function bridgeStatusToJson(status: BridgeStatus) {
   };
 }
 
-export function convertToBridgeStatus(bridgeConfig: BridgeConfig, rollupNumber?: number, publishTime?: Date) {
+export function convertToBridgeStatus(
+  bridgeConfig: BridgeConfig,
+  rollupNumber: number | undefined,
+  publishTime: Date | undefined,
+  gas: bigint,
+) {
   return {
     bridgeId: bridgeConfig.bridgeId,
     numTxs: bridgeConfig.numTxs,
-    gas: bridgeConfig.fee.toString(),
+    gas: gas.toString(),
     rollupFrequency: bridgeConfig.rollupFrequency,
     nextRollupNumber: rollupNumber,
     nextPublishTime: publishTime,
   } as BridgeStatus;
-}
-
-export function convertToBridgeConfig(bridgeConfiguration: BridgeStatus) {
-  return {
-    bridgeId: bridgeConfiguration.bridgeId,
-    numTxs: bridgeConfiguration.numTxs,
-    fee: BigInt(bridgeConfiguration.gas),
-    rollupFrequency: bridgeConfiguration.rollupFrequency,
-  } as BridgeConfig;
 }

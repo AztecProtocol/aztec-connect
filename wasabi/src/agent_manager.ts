@@ -1,7 +1,15 @@
-import { WalletSdk, WalletProvider, SdkEvent, MemoryFifo, JsonRpcProvider, AssetId, TxType } from '@aztec/sdk';
+import {
+  AssetId,
+  JsonRpcProvider,
+  MemoryFifo,
+  SdkEvent,
+  TxSettlementTime,
+  WalletProvider,
+  WalletSdk,
+} from '@aztec/sdk';
 import { Agent } from './agent';
-import { SimpleAgent } from './simple_agent';
 import { DefiAgent } from './defi_agent';
+import { SimpleAgent } from './simple_agent';
 import { Stats } from './stats';
 
 export class AgentManager {
@@ -53,7 +61,7 @@ export class AgentManager {
     }
 
     // flush fee is an amount that's guaranteed to push through a rollup
-    const flushFee = BigInt(this.rollupSize) * (await this.sdks[0].getFee(AssetId.ETH, TxType.DEPOSIT));
+    const flushFee = (await this.sdks[0].getDepositFees(AssetId.ETH))[TxSettlementTime.INSTANT].value;
     this.agents = new Array<Agent>();
     const totalNumAgents = this.numPaymentAgents + this.numDefiAgents;
     while (this.agents.length < totalNumAgents) {

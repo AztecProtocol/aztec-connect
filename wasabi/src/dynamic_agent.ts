@@ -18,6 +18,7 @@ export class Agent {
     private id: number,
     private masterWallet: Wallet,
     numTransfers: number,
+    private assetId = AssetId.ETH,
   ) {
     this.sdk = sdk;
     this.wallet = Wallet.createRandom();
@@ -90,51 +91,51 @@ export class Agent {
   private async depositToContract() {
     console.log(`Agent ${this.id} depositing to contract...`);
     const value = 1n;
-    await this.sdk.depositFundsToContract(AssetId.ETH, this.address, value);
+    await this.sdk.depositFundsToContract({ assetId: this.assetId, value }, this.address);
   }
 
   private async deposit() {
     console.log(`Agent ${this.id} depositing...`);
     const value = 1n;
-    const proof = await this.sdk.createDepositProof(
-      AssetId.ETH,
-      this.address,
+    const controller = this.sdk.createDepositController(
       this.aztecUserId,
-      value,
-      0n,
       this.signer,
+      { assetId: AssetId.ETH, value },
+      { assetId: AssetId.ETH, value: 0n },
+      this.address,
     );
-    const signature = await this.sdk.signProof(proof, this.address);
-    await this.sdk.sendProof(proof, signature);
+    await controller.createProof();
+    await controller.sign();
+    await controller.send();
   }
 
   private async transfer() {
     console.log(`Agent ${this.id} transferring...`);
     const value = 1n;
-    const proof = await this.sdk.createTransferProof(
-      AssetId.ETH,
+    const controller = this.sdk.createTransferController(
       this.aztecUserId,
-      value,
-      0n,
       this.signer,
+      { assetId: AssetId.ETH, value },
+      { assetId: AssetId.ETH, value: 0n },
       this.aztecUserId,
     );
-    return await this.sdk.sendProof(proof);
+    await controller.createProof();
+    return controller.send();
   }
 
   private async withdraw() {
     console.log(`Agent ${this.id} withdrawing...`);
     const masterAddress = EthAddress.fromString(this.masterWallet.address);
     const value = 1n;
-    const proof = await this.sdk.createWithdrawProof(
-      AssetId.ETH,
+    const controller = this.sdk.createWithdrawController(
       this.aztecUserId!,
-      value,
-      0n,
       this.signer,
+      { assetId: AssetId.ETH, value },
+      { assetId: AssetId.ETH, value: 0n },
       masterAddress,
     );
-    return await this.sdk.sendProof(proof);
+    await controller.createProof();
+    return controller.send();
   }
 
   public async advanceAgent() {

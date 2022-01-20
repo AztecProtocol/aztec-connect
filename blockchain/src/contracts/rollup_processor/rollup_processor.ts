@@ -80,6 +80,10 @@ export class RollupProcessor {
     return bridgeAddresses.map(a => EthAddress.fromString(a));
   }
 
+  async getBridgeGas(bridgeAddressId: number) {
+    return BigInt(await this.rollupProcessor.getBridgeGasLimit(bridgeAddressId));
+  }
+
   async getBridgeAddressId(address: EthAddress) {
     const bridgeAddresses = await this.getSupportedBridges();
     return bridgeAddresses.findIndex(a => a.equals(address)) + 1;

@@ -11,9 +11,15 @@ import { ClaimDao } from './entity/claim';
 import { TxDao } from './entity/tx';
 import { RollupDb } from './rollup_db';
 import { parseInteractionResult } from './rollup_db/parse_interaction_result';
+import { TxFeeResolver } from './tx_fee_resolver';
 
 export class ClaimProofCreator {
-  constructor(private rollupDb: RollupDb, private worldStateDb: WorldStateDb, private proofGenerator: ProofGenerator) {}
+  constructor(
+    private rollupDb: RollupDb,
+    private worldStateDb: WorldStateDb,
+    private proofGenerator: ProofGenerator,
+    private txFeeResolver: TxFeeResolver,
+  ) {}
 
   /**
    * Creates claim proofs for the defi deposit txs with the interaction result from previous rollups.
@@ -56,6 +62,7 @@ export class ClaimProofCreator {
         nullifier2: proof.nullifier2,
         dataRootsIndex,
         created: new Date(),
+        excessGas: 0n,
       });
       await this.rollupDb.addTx(claimTx);
     }

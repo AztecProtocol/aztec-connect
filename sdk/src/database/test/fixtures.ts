@@ -1,12 +1,12 @@
-import { AliasHash } from '@aztec/barretenberg/account_id';
+import { AccountAliasId, AccountId, AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { randomBytes } from 'crypto';
+import { CoreAccountTx, CoreClaimTx, CoreDefiTx, CorePaymentTx } from '../../core_tx';
 import { Note } from '../../note';
-import { AccountAliasId, AccountId, UserData } from '../../user';
-import { UserAccountTx, UserDefiTx, UserJoinSplitTx, UserUtilTx } from '../../user_tx';
-import { Claim } from '../claim';
+import { UserData } from '../../user';
 import { Alias, SigningKey } from '../database';
 
 export const randomInt = () => {
@@ -31,11 +31,11 @@ export const randomNote = (): Note => ({
   pending: false,
 });
 
-export const randomClaim = (): Claim => ({
+export const randomClaimTx = (): CoreClaimTx => ({
   nullifier: randomBytes(32),
   txHash: TxHash.random(),
+  userId: AccountId.random(),
   secret: randomBytes(32),
-  owner: AccountId.random(),
 });
 
 export const randomUser = (): UserData => {
@@ -50,57 +50,51 @@ export const randomUser = (): UserData => {
   };
 };
 
-export const randomUserAccountTx = (tx: Partial<UserAccountTx> = {}) =>
-  new UserAccountTx(
+export const randomAccountTx = (tx: Partial<CoreAccountTx> = {}) =>
+  new CoreAccountTx(
     tx.txHash || TxHash.random(),
     tx.userId || AccountId.random(),
     tx.aliasHash || AliasHash.random(),
     tx.newSigningPubKey1 || randomBytes(32),
     tx.newSigningPubKey2 || randomBytes(32),
     tx.migrated || false,
+    inputOrDefault(tx.txRefNo, randomInt()),
     tx.created || new Date(),
     tx.settled,
   );
 
-export const randomUserJoinSplitTx = (tx: Partial<UserJoinSplitTx> = {}) =>
-  new UserJoinSplitTx(
+export const randomPaymentTx = (tx: Partial<CorePaymentTx> = {}) =>
+  new CorePaymentTx(
     tx.txHash || TxHash.random(),
     tx.userId || AccountId.random(),
+    inputOrDefault(tx.proofId, ProofId.SEND),
     inputOrDefault(tx.assetId, randomInt()),
-    inputOrDefault(tx.publicInput, BigInt(randomInt())),
-    inputOrDefault(tx.publicOutput, BigInt(randomInt())),
+    inputOrDefault(tx.publicValue, BigInt(randomInt())),
+    tx.publicOwner || EthAddress.randomAddress(),
     inputOrDefault(tx.privateInput, BigInt(randomInt())),
     inputOrDefault(tx.recipientPrivateOutput, BigInt(randomInt())),
     inputOrDefault(tx.senderPrivateOutput, BigInt(randomInt())),
-    tx.inputOwner || EthAddress.randomAddress(),
-    tx.outputOwner || EthAddress.randomAddress(),
-    inputOrDefault(tx.ownedByUser, true),
+    inputOrDefault(tx.isRecipient, true),
+    inputOrDefault(tx.isSender, true),
+    inputOrDefault(tx.txRefNo, randomInt()),
     tx.created || new Date(),
     tx.settled,
   );
 
-export const randomUserDefiTx = (tx: Partial<UserDefiTx> = {}) =>
-  new UserDefiTx(
+export const randomDefiTx = (tx: Partial<CoreDefiTx> = {}) =>
+  new CoreDefiTx(
     tx.txHash || TxHash.random(),
     tx.userId || AccountId.random(),
     tx.bridgeId || BridgeId.random(),
     inputOrDefault(tx.depositValue, BigInt(randomInt())),
-    tx.partialStateSecret || randomBytes(32),
     inputOrDefault(tx.txFee, BigInt(randomInt())),
+    tx.partialStateSecret || randomBytes(32),
+    inputOrDefault(tx.txRefNo, randomInt()),
     tx.created || new Date(),
     tx.outputValueA || BigInt(0),
     tx.outputValueB || BigInt(0),
+    tx.result || false,
     tx.settled,
-    tx.result || false
-  );
-
-export const randomUserUtilTx = (tx: Partial<UserUtilTx> = {}) =>
-  new UserUtilTx(
-    tx.txHash || TxHash.random(),
-    tx.userId || AccountId.random(),
-    inputOrDefault(tx.assetId, randomInt()),
-    inputOrDefault(tx.txFee, BigInt(randomInt())),
-    tx.forwardLink || randomBytes(32),
   );
 
 export const randomAccountAliasId = () => new AccountAliasId(AliasHash.random(), randomInt());

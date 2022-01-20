@@ -66,7 +66,7 @@ export class CachedRollupDb extends SyncRollupDb {
     return this.unsettledTxs;
   }
 
-  public async getUnsettledJoinSplitTxs() {
+  public async getUnsettledPaymentTxs() {
     return this.unsettledTxs.filter(tx => tx.txType < TxType.ACCOUNT);
   }
 

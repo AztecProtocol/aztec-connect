@@ -1,3 +1,4 @@
+import { AccountId } from '@aztec/barretenberg/account_id';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetId } from '@aztec/barretenberg/asset';
 import { JoinSplitProver, ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
@@ -7,21 +8,20 @@ import { OffchainJoinSplitData } from '@aztec/barretenberg/offchain_tx_data';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { WorldState } from '@aztec/barretenberg/world_state';
 import createDebug from 'debug';
-import { Database } from '../../database';
-import { Signer } from '../../signer';
-import { AccountId } from '../../user';
-import { UserState } from '../../user_state';
-import { UserJoinSplitTx } from '../../user_tx';
-import { JoinSplitProofOutput } from '../proof_output';
+import { CorePaymentTx as PaymentTx } from '../core_tx';
+import { Database } from '../database';
+import { Signer } from '../signer';
+import { UserState } from '../user_state';
 import { JoinSplitTxFactory } from './join_split_tx_factory';
+import { ProofOutput } from './proof_output';
 
-const debug = createDebug('bb:join_split_proof_creator');
+const debug = createDebug('bb:payment_proof_creator');
 
-export class JoinSplitProofCreator {
+export class PaymentProofCreator {
   private txFactory: JoinSplitTxFactory;
 
   constructor(
-    private joinSplitProver: JoinSplitProver,
+    private prover: JoinSplitProver,
     noteAlgos: NoteAlgorithms,
     worldState: WorldState,
     grumpkin: Grumpkin,
@@ -39,10 +39,11 @@ export class JoinSplitProofCreator {
     senderPrivateOutput: bigint,
     assetId: AssetId,
     signer: Signer,
-    newNoteOwner?: AccountId,
-    publicOwner?: EthAddress,
-    allowChain = false,
-  ) {
+    newNoteOwner: AccountId | undefined,
+    publicOwner: EthAddress | undefined,
+    allowChain: number,
+    txRefNo: number,
+  ): Promise<ProofOutput> {
     if (publicInput && publicOutput) {
       throw new Error('Public values cannot be both greater than zero.');
     }
@@ -91,37 +92,38 @@ export class JoinSplitProofCreator {
         outputNoteValue1: recipientPrivateOutput,
         outputNoteValue2: changeValue + senderPrivateOutput,
         newNoteOwner,
-        allowChain: allowChain ? 2 : 0,
+        allowChain,
       },
     );
 
-    const signingData = await this.joinSplitProver.computeSigningData(tx);
+    const signingData = await this.prover.computeSigningData(tx);
     const signature = await signer.signMessage(signingData);
 
     debug('creating proof...');
     const start = new Date().getTime();
-    const proofData = await this.joinSplitProver.createProof(tx, signature);
+    const proof = await this.prover.createProof(tx, signature);
     debug(`created proof: ${new Date().getTime() - start}ms`);
-    debug(`proof size: ${proofData.length}`);
+    debug(`proof size: ${proof.length}`);
 
-    const { txId } = new ProofData(proofData);
-    const txHash = new TxHash(txId);
-    const userTx = new UserJoinSplitTx(
+    const proofData = new ProofData(proof);
+    const txHash = new TxHash(proofData.txId);
+    const coreTx = new PaymentTx(
       txHash,
       user.id,
+      proofId,
       assetId,
-      publicInput,
-      publicOutput,
+      publicInput + publicOutput,
+      publicOwner,
       privateInput,
       recipientPrivateOutput,
       senderPrivateOutput,
-      proofId === ProofId.DEPOSIT ? publicOwner : undefined,
-      proofId === ProofId.WITHDRAW ? publicOwner : undefined,
-      true, // ownedByUser
+      !!(recipientPrivateOutput && newNoteOwner?.equals(user.id)),
+      true, // isSender
+      txRefNo,
       new Date(),
     );
-    const offchainTxData = new OffchainJoinSplitData(viewingKeys);
+    const offchainTxData = new OffchainJoinSplitData(viewingKeys, txRefNo);
 
-    return new JoinSplitProofOutput(userTx, outputNotes, proofData, offchainTxData);
+    return { tx: coreTx, proofData, offchainTxData, outputNotes };
   }
 }

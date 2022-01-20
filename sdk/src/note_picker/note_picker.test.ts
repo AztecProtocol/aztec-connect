@@ -27,12 +27,13 @@ const expectNoteValues = (notes: Note[] | null, values: bigint[] | null) => {
 describe('NotePicker', () => {
   const notes = randomNotes([10n, 1n, 0n, 7n, 3n, 2n]);
 
-  it('pick a pair of notes whose sum is equal to or larger than the required sum', () => {
+  it('pick no more than 2 notes whose sum is equal to or larger than the required sum', () => {
     const notePicker = new NotePicker(notes);
     expectNoteValues(notePicker.pick(15n), [7n, 10n]);
     expectNoteValues(notePicker.pick(10n), [3n, 7n]);
+    expectNoteValues(notePicker.pick(7n), [0n, 7n]);
     expectNoteValues(notePicker.pick(1n), [0n, 1n]);
-    expectNoteValues(notePicker.pick(0n), [0n, 1n]);
+    expectNoteValues(notePicker.pick(0n), [0n]);
     expectNoteValues(notePicker.pick(20n), null);
   });
 
@@ -48,20 +49,17 @@ describe('NotePicker', () => {
     expectNoteValues(notePicker.pick(11n), [1n, 10n]);
   });
 
-  it('pick a note whose value is equal to or larger than the given value', () => {
-    const notePicker = new NotePicker(notes);
-    expect(notePicker.pickOne(3n)!.value).toBe(3n);
-    expect(notePicker.pickOne(4n)!.value).toBe(7n);
-    expect(notePicker.pickOne(11n)).toBe(undefined);
-  });
-
   it('will not pick excluded notes', () => {
     const notePicker = new NotePicker(notes);
     expectNoteValues(notePicker.pick(10n), [3n, 7n]);
     {
       const excludeNullifiers = computeNullifiers([7n]);
       expectNoteValues(notePicker.pick(10n, excludeNullifiers), [0n, 10n]);
-      expect(notePicker.pickOne(7n, excludeNullifiers)!.value).toBe(10n);
+    }
+    {
+      const excludeNullifiers = computeNullifiers([0n]);
+      expectNoteValues(notePicker.pick(10n, excludeNullifiers), [3n, 7n]);
+      expectNoteValues(notePicker.pick(7n, excludeNullifiers), [7n]);
     }
     {
       const excludeNullifiers = computeNullifiers([7n, 10n]);

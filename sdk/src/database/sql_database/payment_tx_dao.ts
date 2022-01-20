@@ -1,12 +1,13 @@
+import { AccountId } from '@aztec/barretenberg/account_id';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { AfterInsert, AfterLoad, AfterUpdate, Column, Entity, Index, PrimaryColumn } from 'typeorm';
-import { AccountId } from '../../user';
+import { CorePaymentTx } from '../../core_tx';
 import { accountIdTransformer, bigintTransformer, ethAddressTransformer, txHashTransformer } from './transformer';
 
-@Entity({ name: 'joinSplitTx' })
+@Entity({ name: 'paymentTx' })
 @Index(['txHash', 'userId'], { unique: true })
-export class JoinSplitTxDao {
+export class PaymentTxDao implements CorePaymentTx {
   @PrimaryColumn('blob', { transformer: [txHashTransformer] })
   public txHash!: TxHash;
 
@@ -14,13 +15,16 @@ export class JoinSplitTxDao {
   public userId!: AccountId;
 
   @Column()
+  public proofId!: number;
+
+  @Column()
   public assetId!: number;
 
   @Column('text', { transformer: [bigintTransformer] })
-  public publicInput!: bigint;
+  public publicValue!: bigint;
 
-  @Column('text', { transformer: [bigintTransformer] })
-  public publicOutput!: bigint;
+  @Column('blob', { transformer: [ethAddressTransformer], nullable: true })
+  public publicOwner!: EthAddress | undefined;
 
   @Column('text', { transformer: [bigintTransformer] })
   public privateInput!: bigint;
@@ -31,14 +35,14 @@ export class JoinSplitTxDao {
   @Column('text', { transformer: [bigintTransformer] })
   public senderPrivateOutput!: bigint;
 
-  @Column('blob', { transformer: [ethAddressTransformer], nullable: true })
-  public inputOwner?: EthAddress;
-
-  @Column('blob', { transformer: [ethAddressTransformer], nullable: true })
-  public outputOwner?: EthAddress;
+  @Column()
+  public isRecipient!: boolean;
 
   @Column()
-  public ownedByUser!: boolean;
+  public isSender!: boolean;
+
+  @Column()
+  public txRefNo!: number;
 
   @Column()
   public created!: Date;

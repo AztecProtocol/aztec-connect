@@ -1,9 +1,8 @@
-import { AliasHash } from '@aztec/barretenberg/account_id';
+import { AccountAliasId, AccountId, AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { ValueTransformer } from 'typeorm';
-import { AccountAliasId, AccountId } from '../../user';
 
 export const bigintTransformer: ValueTransformer = {
   to: (entityValue?: bigint) => (entityValue !== undefined ? `${entityValue}` : ''),

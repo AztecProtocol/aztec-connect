@@ -1,7 +1,9 @@
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { AssetId } from '@aztec/barretenberg/asset';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import {
   ProofGenerator,
@@ -10,13 +12,10 @@ import {
   RootVerifier,
   RootVerifierProofRequest,
 } from 'halloumi/proof_generator';
-import { AssetId } from '@aztec/barretenberg/asset';
 import { RollupDao } from './entity/rollup';
 import { RollupProofDao } from './entity/rollup_proof';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
-import { numToUInt32BE } from '@aztec/barretenberg/serialize';
-import { EthAddress } from '@aztec/barretenberg/address';
 
 export class RollupAggregator {
   constructor(
@@ -35,7 +34,7 @@ export class RollupAggregator {
     oldDefiRoot: Buffer,
     oldDefiPath: HashPath,
     defiInteractionNotes: DefiInteractionNote[],
-    bridgeIds: BridgeId[],
+    bridgeIds: bigint[],
     assetIds: AssetId[],
   ) {
     console.log(`Creating root rollup proof ${innerProofs.length} inner proofs...`);
@@ -100,7 +99,7 @@ export class RollupAggregator {
     oldDefiRoot: Buffer,
     oldDefiPath: HashPath,
     defiInteractionNotes: DefiInteractionNote[],
-    bridgeIds: BridgeId[],
+    bridgeIds: bigint[],
     assetIds: AssetId[],
   ) {
     const worldStateDb = this.worldStateDb;
@@ -133,7 +132,7 @@ export class RollupAggregator {
       oldDefiRoot,
       newDefiRoot,
       oldDefiPath,
-      bridgeIds.map(id => id.toBigInt()),
+      bridgeIds,
       assetIds.map(id => numToUInt32BE(id, 32)),
       defiInteractionNotes.map(n => n.toBuffer()),
       this.rollupBeneficiary,

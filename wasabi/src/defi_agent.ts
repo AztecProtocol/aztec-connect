@@ -5,7 +5,6 @@ import {
   EthAddress,
   toBaseUnits,
   MemoryFifo,
-  TxType,
   BridgeId,
   BitConfig,
 } from '@aztec/sdk';
@@ -87,7 +86,7 @@ export class DefiAgent extends Agent {
         const transferValue =
           1000000n +
           getBridgeTxCost(bridgeConfigs[1]) / DAI_TO_ETH +
-          (await this.sdk.getFee(AssetId.ETH, TxType.TRANSFER));
+          (await this.sdk.getTransferFees(this.assetId))[0].value;
         await this.serializeTx(() => this.singleDefiSwap(bridgeConfigs[0], (transferValue * 11n) / 10n));
         stats.numDefi++;
         console.log(`${this.agentId()} swapping DAI for ETH iteration: ${i}`);
@@ -106,19 +105,20 @@ export class DefiAgent extends Agent {
   }
 
   private async calcDeposit() {
+    const assetId = this.assetId;
     // Nothing to do if we have a balance.
-    if (this.sdk.getBalance(AssetId.ETH, this.primaryUser.user.id)) {
+    if (this.sdk.getBalance(assetId, this.primaryUser.user.id)) {
       return;
     }
     const costOfEachTransfer =
       1000000n +
       getBridgeTxCost(bridgeConfigs[0]) +
       getBridgeTxCost(bridgeConfigs[1]) / DAI_TO_ETH +
-      (await this.sdk.getFee(AssetId.ETH, TxType.TRANSFER)) * 2n;
+      (await this.sdk.getTransferFees(assetId))[0].value * 2n;
     console.log(`DAI bridge cost: ${getBridgeTxCost(bridgeConfigs[1])}`);
     console.log(`Transfer cost: ${costOfEachTransfer}`);
-    const depositFee = this.depositFee ?? (await this.primaryUser.userAsset.getFee(TxType.DEPOSIT));
-    const withdrawFee = await this.primaryUser.userAsset.getFee(TxType.WITHDRAW_TO_WALLET);
+    const depositFee = this.depositFee ?? (await this.sdk.getDepositFees(assetId))[0].value;
+    const [{ value: withdrawFee }] = await this.sdk.getWithdrawFees(assetId);
 
     const ethToDeposit = 1n;
     let weiToDeposit = toBaseUnits(ethToDeposit.toString(), 18) + depositFee + withdrawFee + this.payoutFee;
@@ -149,7 +149,7 @@ export class DefiAgent extends Agent {
     );
     const txFee = getBridgeTxCost(spec);
     console.log(`${this.agentId()} defi fee: ${formatNumber(txFee)}`);
-    const jsTxFee = await this.sdk.getFee(spec.inputAsset, TxType.TRANSFER);
+    const jsTxFee = (await this.sdk.getTransferFees(spec.inputAsset))[0].value;
     console.log(`${this.agentId()} JS fee: ${jsTxFee}`);
     console.log(
       `${this.agentId()} swapping ${formatNumber(amountToTransfer)} units of asset ${
@@ -157,15 +157,16 @@ export class DefiAgent extends Agent {
       } for asset ${AssetId[spec.outputAsset]}`,
     );
     console.log(`${this.agentId()} building Defi proof`);
-    const proofOutput = await this.sdk.createDefiProof(
-      bridgeId,
+    const controller = this.sdk.createDefiController(
       this.primaryUser.user.id,
-      amountToTransfer,
-      txFee + jsTxFee,
       this.primaryUser.signer,
+      bridgeId,
+      { assetId: spec.inputAsset, value: amountToTransfer },
+      { assetId: spec.inputAsset, value: txFee + jsTxFee },
     );
-    console.log(`${this.agentId()} sending Defi proof, defi hash: ${proofOutput.tx.txHash}`);
-    const hash = await this.sdk.sendProof(proofOutput);
+    await controller.createProof();
+    console.log(`${this.agentId()} sending Defi proof`);
+    const hash = await controller.send();
     console.log(`${this.agentId()} sent Defi proof, defi hash: ${hash}`);
     return hash;
   };

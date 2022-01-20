@@ -1,7 +1,9 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
+import { AssetValue } from '@aztec/barretenberg/asset';
 import { Block, BlockServerResponse, GetBlocksServerResponse } from '@aztec/barretenberg/block_source';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
 import {
+  AssetValueServerResponse,
   PendingTxServerResponse,
   rollupProviderStatusToJson,
   RuntimeConfig,
@@ -39,13 +41,17 @@ const toTxResponse = ({ proofData, offchainTxData }: TxDao): TxServerResponse =>
   offchainData: offchainTxData.toString('hex'),
 });
 
+const toAssetValueResponse = ({ assetId, value }: AssetValue): AssetValueServerResponse => ({
+  assetId,
+  value: value.toString(),
+});
+
 const bufferFromHex = (hexStr: string) => Buffer.from(hexStr.replace(/^0x/i, ''), 'hex');
 
 const fromTxPostData = (data: TxPostData): Tx => ({
   proof: new ProofData(bufferFromHex(data.proofData)),
   offchainTxData: bufferFromHex(data.offchainTxData),
   depositSignature: data.depositSignature ? bufferFromHex(data.depositSignature) : undefined,
-  parentTx: data.parentProof ? fromTxPostData(data.parentProof) : undefined,
 });
 
 export function appFactory(server: Server, prefix: string, metrics: Metrics, serverAuthToken: string) {
@@ -94,13 +100,13 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     ctx.status = 200;
   });
 
-  router.post('/tx', recordMetric, checkReady, async (ctx: Koa.Context) => {
+  router.post('/txs', recordMetric, checkReady, async (ctx: Koa.Context) => {
     const stream = new PromiseReadable(ctx.req);
     const postData = JSON.parse((await stream.readAll()) as string);
-    const tx = fromTxPostData(postData);
-    const txId = await server.receiveTx(tx);
+    const txs = postData.map(fromTxPostData);
+    const txIds = await server.receiveTxs(txs);
     const response = {
-      txHash: txId.toString('hex'),
+      txHashes: txIds.map(txId => txId.toString('hex')),
     };
     ctx.body = response;
     ctx.status = 200;
@@ -160,6 +166,28 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     ctx.status = 200;
   });
 
+  router.post('/tx-fees', recordMetric, async (ctx: Koa.Context) => {
+    const stream = new PromiseReadable(ctx.req);
+    const data = JSON.parse((await stream.readAll()) as string);
+    const assetId = +data.assetId;
+    const txFees = await server.getTxFees(assetId);
+
+    ctx.set('content-type', 'application/json');
+    ctx.body = txFees.map(fees => fees.map(toAssetValueResponse));
+    ctx.status = 200;
+  });
+
+  router.post('/defi-fees', recordMetric, async (ctx: Koa.Context) => {
+    const stream = new PromiseReadable(ctx.req);
+    const data = JSON.parse((await stream.readAll()) as string);
+    const bridgeId = BigInt(data.bridgeId);
+    const defiFees = await server.getDefiFees(bridgeId);
+
+    ctx.set('content-type', 'application/json');
+    ctx.body = defiFees.map(toAssetValueResponse);
+    ctx.status = 200;
+  });
+
   router.get('/get-initial-world-state', recordMetric, checkReady, async (ctx: Koa.Context) => {
     const response = await server.getInitialWorldState();
     ctx.body = response.initialAccounts;
@@ -215,8 +243,8 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     ctx.status = 200;
   });
 
-  router.get('/get-unsettled-join-split-txs', recordMetric, async (ctx: Koa.Context) => {
-    const txs = await server.getUnsettledJoinSplitTxs();
+  router.get('/get-unsettled-payment-txs', recordMetric, async (ctx: Koa.Context) => {
+    const txs = await server.getUnsettledPaymentTxs();
     ctx.body = txs.map(toTxResponse);
     ctx.status = 200;
   });

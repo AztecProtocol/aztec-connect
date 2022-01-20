@@ -1,10 +1,9 @@
-import { AccountId, TxType, WalletSdk } from '@aztec/sdk';
+import { AccountId, WalletSdk } from '@aztec/sdk';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { AccountState } from '../account_state';
 import { AccountUtils } from '../account_utils';
 import { AppAssetId, assets } from '../assets';
-import { Database } from '../database';
 import {
   BoolInput,
   clearMessage,
@@ -100,7 +99,6 @@ export class MigrateForm extends EventEmitter implements AccountForm {
     private readonly keyVault: KeyVault,
     private provider: Provider | undefined,
     private readonly sdk: WalletSdk,
-    private readonly db: Database,
     private readonly accountUtils: AccountUtils,
     private readonly fromAccountV0: boolean,
   ) {
@@ -206,7 +204,7 @@ export class MigrateForm extends EventEmitter implements AccountForm {
 
     const migratingAssets = form.migratingAssets.value;
     for (const asset of migratingAssets) {
-      const fee = await this.sdk.getFee(asset.assetId, TxType.TRANSFER);
+      const [{ value: fee }] = await this.sdk.getTransferFees(asset.assetId);
       if (fee > asset.fee) {
         form.migratingAssets = withError(form.migratingAssets, 'Insufficient fee.');
         break;
@@ -229,7 +227,7 @@ export class MigrateForm extends EventEmitter implements AccountForm {
         const notes = (await this.sdk.getSpendableNotes(asset.assetId, userId)).sort((a, b) =>
           a.value < b.value ? 1 : -1,
         );
-        const fee = await this.sdk.getFee(asset.assetId, TxType.TRANSFER);
+        const [{ value: fee }] = await this.sdk.getTransferFees(asset.assetId);
         const values = notes.map(n => n.value);
         const migratableValues = getMigratableValues(values, fee);
         return {
@@ -282,12 +280,15 @@ export class MigrateForm extends EventEmitter implements AccountForm {
 
         const amount = migratableValues.slice(i, i + 2).reduce((sum, value) => sum + value, 0n) - fee;
         // Create private send proof.
-        const proof = await this.sdk.createTransferProof(assetId, userId, amount, fee, signer, this.userId);
-        await this.sdk.sendProof(proof);
-        await this.db.addMigratingTx({
-          ...proof.tx,
-          userId: this.userId,
-        });
+        const controller = await this.sdk.createTransferController(
+          userId,
+          signer,
+          { assetId, value: amount },
+          { assetId, value: fee },
+          this.userId,
+        );
+        await controller.createProof();
+        await controller.send();
 
         updateMigratingAssets(assetId, amount);
       }
@@ -357,9 +358,9 @@ export class MigrateForm extends EventEmitter implements AccountForm {
     const { signerAddress } = this.keyVault;
     if (!account?.equals(signerAddress)) {
       this.prompt(
-        `Please switch your wallet's account to ${signerAddress
+        `Please switch your wallet's account to ${signerAddress.toString().slice(0, 6)}...${signerAddress
           .toString()
-          .slice(0, 6)}...${signerAddress.toString().slice(-4)}`,
+          .slice(-4)}`,
       );
       return;
     }

@@ -1,36 +1,16 @@
-import { GrumpkinAddress } from '@aztec/barretenberg/address';
+import { AccountId } from '@aztec/barretenberg/account_id';
 import { AssetId } from '@aztec/barretenberg/asset';
-import { AccountId, RecoveryPayload } from '../user';
 import { WalletSdk } from '.';
-import { WalletSdkUserAsset } from './wallet_sdk_user_asset';
-import { Signer } from '../signer';
 
 export class WalletSdkUser {
   constructor(public id: AccountId, private sdk: WalletSdk) {}
 
+  isSynching() {
+    return this.sdk.isUserSynching(this.id);
+  }
+
   async awaitSynchronised() {
     return this.sdk.awaitUserSynchronised(this.id);
-  }
-
-  async createAccount(alias: string, newSigningPublicKey: GrumpkinAddress, recoveryPublicKey?: GrumpkinAddress) {
-    return this.sdk.createAccount(this.id, alias, newSigningPublicKey, recoveryPublicKey);
-  }
-
-  public async recoverAccount(recoveryPayload: RecoveryPayload) {
-    return this.sdk.recoverAccount(recoveryPayload);
-  }
-
-  public async migrateAccount(
-    signer: Signer,
-    newSigningPublicKey: GrumpkinAddress,
-    recoveryPublicKey?: GrumpkinAddress,
-    newAccountPrivateKey?: Buffer,
-  ) {
-    return this.sdk.migrateAccount(this.id, signer, newSigningPublicKey, recoveryPublicKey, newAccountPrivateKey);
-  }
-
-  public async addSigningKeys(signer: Signer, signingPublicKey1: GrumpkinAddress, signingPublicKey2?: GrumpkinAddress) {
-    return this.sdk.addSigningKeys(this.id, signer, signingPublicKey1, signingPublicKey2);
   }
 
   public async getSigningKeys() {
@@ -41,23 +21,39 @@ export class WalletSdkUser {
     return this.sdk.getUserData(this.id);
   }
 
-  public async getJoinSplitTxs() {
-    return this.sdk.getJoinSplitTxs(this.id);
+  public getBalance(assetId: AssetId) {
+    return this.sdk.getBalance(assetId, this.id);
   }
 
-  public async getAccountTxs() {
-    return this.sdk.getAccountTxs(this.id);
+  public async getMaxSpendableValue(assetId: AssetId) {
+    return this.sdk.getMaxSpendableValue(assetId, this.id);
+  }
+
+  public async getSpendableNotes(assetId: AssetId) {
+    return this.sdk.getSpendableNotes(assetId, this.id);
+  }
+
+  public async getSpendableSum(assetId: AssetId) {
+    return this.sdk.getSpendableSum(assetId, this.id);
   }
 
   public async getNotes() {
     return this.sdk.getNotes(this.id);
   }
 
-  public getAsset(assetId: AssetId) {
-    return new WalletSdkUserAsset(this.id, assetId, this.sdk);
+  public async getTxs() {
+    return this.sdk.getUserTxs(this.id);
   }
 
-  public getSigner() {
-    return this.sdk.createSchnorrSigner(this.getUserData().privateKey);
+  public async getPaymentTxs() {
+    return this.sdk.getPaymentTxs(this.id);
+  }
+
+  public async getAccountTxs() {
+    return this.sdk.getAccountTxs(this.id);
+  }
+
+  public async getDefiTxs() {
+    return this.sdk.getDefiTxs(this.id);
   }
 }

@@ -2,33 +2,27 @@ import { AccountId } from '../account_id';
 import { GrumpkinAddress } from '../address';
 import { BlockchainStatus, blockchainStatusFromJson, blockchainStatusToJson } from '../blockchain';
 import { BlockSource } from '../block_source';
+import { AssetId, AssetValue } from '../asset';
 import { AccountProofData, JoinSplitProofData } from '../client_proofs';
 import { OffchainAccountData, OffchainJoinSplitData } from '../offchain_tx_data';
 import { TxHash } from '../tx_hash';
-import { BridgeStatus, bridgeStatusToJson } from '../bridge_id';
+import { BridgeStatus, bridgeStatusToJson, BridgeId } from '../bridge_id';
 
-export enum SettlementTime {
-  SLOW,
-  AVERAGE,
-  FAST,
+export enum TxSettlementTime {
+  NEXT_ROLLUP,
   INSTANT,
 }
 
-export interface Proof {
+export enum DefiSettlementTime {
+  DEADLINE,
+  NEXT_ROLLUP,
+  INSTANT,
+}
+
+export interface Tx {
   proofData: Buffer;
   offchainTxData: Buffer;
   depositSignature?: Buffer;
-  parentProof?: Proof;
-}
-
-export interface FeeQuote {
-  fee: bigint;
-  time: SettlementTime;
-}
-
-export interface AssetFeeQuote {
-  feeConstants: bigint[];
-  baseFeeQuotes: FeeQuote[];
 }
 
 export interface RuntimeConfig {
@@ -62,7 +56,6 @@ export function runtimeConfigFromJson(runtimeConfig: any) {
 
 export interface RollupProviderStatus {
   blockchainStatus: BlockchainStatus;
-  txFees: AssetFeeQuote[];
   nextPublishTime: Date;
   nextPublishNumber: number;
   pendingTxCount: number;
@@ -74,30 +67,16 @@ export function rollupProviderStatusToJson(status: RollupProviderStatus) {
   return {
     ...status,
     blockchainStatus: blockchainStatusToJson(status.blockchainStatus),
-    txFees: status.txFees.map(({ feeConstants, baseFeeQuotes }) => ({
-      feeConstants: feeConstants.map(constant => constant.toString()),
-      baseFeeQuotes: baseFeeQuotes.map(({ fee, time }) => ({
-        time,
-        fee: fee.toString(),
-      })),
-    })),
     bridgeStatus: status.bridgeStatus.map(bridgeStatusToJson),
     runtimeConfig: runtimeConfigToJson(status.runtimeConfig),
   };
 }
 
 export function rollupProviderStatusFromJson(status: any): RollupProviderStatus {
-  const { txFees, blockchainStatus, nextPublishTime, runtimeConfig, ...rest } = status;
+  const { blockchainStatus, nextPublishTime, runtimeConfig, ...rest } = status;
   return {
     ...rest,
     blockchainStatus: blockchainStatusFromJson(blockchainStatus),
-    txFees: txFees.map(({ feeConstants, baseFeeQuotes }) => ({
-      feeConstants: feeConstants.map(r => BigInt(r)),
-      baseFeeQuotes: baseFeeQuotes.map(({ fee, time }) => ({
-        time,
-        fee: BigInt(fee),
-      })),
-    })),
     nextPublishTime: new Date(nextPublishTime),
     runtimeConfig: runtimeConfigFromJson(runtimeConfig),
   };
@@ -124,8 +103,10 @@ export interface JoinSplitTx {
 }
 
 export interface RollupProvider extends BlockSource {
-  sendProof(proof: Proof): Promise<TxHash>;
+  sendTxs(txs: Tx[]): Promise<TxHash[]>;
   getStatus(): Promise<RollupProviderStatus>;
+  getTxFees(assetId: AssetId): Promise<AssetValue[][]>;
+  getDefiFees(bridgeId: BridgeId): Promise<AssetValue[]>;
   getPendingTxs: () => Promise<PendingTx[]>;
   getPendingNoteNullifiers: () => Promise<Buffer[]>;
   clientLog: (msg: any) => Promise<void>;
@@ -134,5 +115,5 @@ export interface RollupProvider extends BlockSource {
   getLatestAliasNonce(alias: string): Promise<number>;
   getAccountId(alias: string, nonce?: number): Promise<AccountId | undefined>;
   getUnsettledAccountTxs: () => Promise<AccountTx[]>;
-  getUnsettledJoinSplitTxs: () => Promise<JoinSplitTx[]>;
+  getUnsettledPaymentTxs: () => Promise<JoinSplitTx[]>;
 }

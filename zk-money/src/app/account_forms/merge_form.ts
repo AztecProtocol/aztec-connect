@@ -1,4 +1,4 @@
-import { AccountId, JoinSplitProofOutput, Note, TxType, WalletSdk } from '@aztec/sdk';
+import { AccountId, Note, WalletSdk } from '@aztec/sdk';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { AccountState, AssetState } from '../account_state';
@@ -11,7 +11,6 @@ import {
   mergeValues,
   StrInput,
   withError,
-  withMessage,
   withWarning,
 } from '../form';
 import { createSigningKeys, KeyVault } from '../key_vault';
@@ -72,13 +71,13 @@ const initialMergeFormValues = {
   },
 };
 
+// TODO - delete it
 export class MergeForm extends EventEmitter implements AccountForm {
   private readonly userId: AccountId;
   private readonly asset: Asset;
 
   private values: MergeFormValues = initialMergeFormValues;
   private formStatus = FormStatus.ACTIVE;
-  private proofOutput?: JoinSplitProofOutput;
   private destroyed = false;
 
   private minFee = 0n;
@@ -213,8 +212,6 @@ export class MergeForm extends EventEmitter implements AccountForm {
   }
 
   private refreshValues(changes: Partial<MergeFormValues> = {}) {
-    this.minFee = this.rollup.getMinFee(this.asset.id, TxType.TRANSFER);
-
     const fee = this.minFee;
     const mergeOptions = getMergeOptions(this.assetState, fee);
 
@@ -229,7 +226,7 @@ export class MergeForm extends EventEmitter implements AccountForm {
     const form = { ...this.values };
 
     const fee = toBaseUnits(form.fee.value, this.asset.decimals);
-    const minFee = await this.sdk.getFee(this.asset.id, TxType.TRANSFER);
+    const [{ value: minFee }] = await this.sdk.getTransferFees(this.asset.id);
     if (fee < minFee) {
       form.fee = withError(form.fee, `Fee cannot be less than ${fromBaseUnits(minFee, this.asset.decimals)}.`);
     }
@@ -268,43 +265,7 @@ export class MergeForm extends EventEmitter implements AccountForm {
   }
 
   private async merge(privateKey: Buffer) {
-    const proceed = (status: MergeStatus, message = '') => {
-      this.updateFormValues({
-        status: { value: status },
-        submit: withMessage({ value: true }, message),
-      });
-    };
-
-    if (this.status <= MergeStatus.CREATE_PROOF) {
-      proceed(MergeStatus.CREATE_PROOF);
-
-      const signer = this.sdk.createSchnorrSigner(privateKey);
-      const toMerge = sum(this.values.toMerge.value.slice(0, 2));
-      const fee = toBaseUnits(this.values.fee.value, this.asset.decimals);
-      this.proofOutput = await this.sdk.createJoinSplitProof(
-        this.asset.id,
-        this.userId,
-        0n,
-        0n,
-        toMerge,
-        0n,
-        toMerge - fee,
-        signer,
-      );
-    }
-
-    proceed(MergeStatus.SEND_PROOF);
-
-    try {
-      await this.sdk.sendProof(this.proofOutput!);
-    } catch (e) {
-      debug(e);
-      this.updateFormValues({
-        submit: withError({ value: false }, `Failed to send the proof: ${e.message}`),
-      });
-    }
-
-    proceed(MergeStatus.DONE);
+    throw new Error('Deprecated.');
   }
 
   private onRollupStatusChange = () => {
@@ -332,9 +293,9 @@ export class MergeForm extends EventEmitter implements AccountForm {
     const { signerAddress } = this.keyVault;
     if (!account?.equals(signerAddress)) {
       this.prompt(
-        `Please switch your wallet's account to ${signerAddress
+        `Please switch your wallet's account to ${signerAddress.toString().slice(0, 6)}...${signerAddress
           .toString()
-          .slice(0, 6)}...${signerAddress.toString().slice(-4)}.`,
+          .slice(-4)}.`,
       );
       return;
     }

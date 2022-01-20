@@ -1,14 +1,11 @@
 import {
   AccountId,
-  AccountProofOutput,
   AssetId,
   createWalletSdk,
   EthAddress,
   GrumpkinAddress,
   SdkEvent,
   SdkInitState,
-  SettlementTime,
-  TxType,
   WalletSdk,
 } from '@aztec/sdk';
 import { createHash } from 'crypto';
@@ -18,20 +15,20 @@ import Mutex from 'idb-mutex';
 import Cookie from 'js-cookie';
 import { debounce, DebouncedFunc } from 'lodash';
 import { Config } from '../config';
-import { EthAccount } from './eth_account';
 import {
   AccountFormEvent,
+  getMigratableValues,
+  MigratingAsset,
   ShieldForm,
   ShieldFormValues,
   ShieldStatus,
-  getMigratableValues,
-  MigratingAsset,
 } from './account_forms';
 import { AccountVersion } from './account_state';
 import { AccountUtils } from './account_utils';
 import { formatAliasInput, getAliasError } from './alias';
 import { AppAssetId, assets } from './assets';
 import { Database } from './database';
+import { EthAccount } from './eth_account';
 import { MessageType, SystemMessage, ValueAvailability } from './form';
 import { createSigningKeys, KeyVault } from './key_vault';
 import { Network } from './networks';
@@ -154,7 +151,6 @@ export class UserSession extends EventEmitter {
   private destroyed = false;
   private claimUserNameProm?: Promise<void>;
 
-  private readonly accountProofTimeout = 60 * 60 * 1000; // 1 hour
   private readonly accountProofDepositAsset = AssetId.ETH;
   private readonly accountProofMinDeposit = toBaseUnits('0.01', assets[this.accountProofDepositAsset].decimals);
 
@@ -170,7 +166,6 @@ export class UserSession extends EventEmitter {
     private readonly db: Database,
     private readonly priceFeedService: PriceFeedService,
     private readonly sessionCookieName: string,
-    private readonly accountProofCacheName: string,
     private readonly walletCacheName: string,
     private readonly shieldForAliasAmountPreselection?: bigint,
   ) {
@@ -209,10 +204,6 @@ export class UserSession extends EventEmitter {
     );
   }
 
-  isDaiTxFree() {
-    return this.rollupService ? !this.rollupService.getFee(AssetId.DAI, TxType.DEPOSIT, SettlementTime.SLOW) : false;
-  }
-
   async close(message = '', messageType = MessageType.TEXT, clearSession = true) {
     this.emitSystemMessage(message, messageType);
     if (clearSession) {
@@ -231,7 +222,6 @@ export class UserSession extends EventEmitter {
     this.provider?.destroy();
     this.rollupService?.destroy();
     this.shieldForAliasForm?.destroy();
-    this.clearLocalAccountProof();
     if (this.sdk && this.sdk.getLocalStatus().initState !== SdkInitState.DESTROYED) {
       this.sdk.removeAllListeners();
       await this.removeUnregisteredUsers();
@@ -696,25 +686,25 @@ export class UserSession extends EventEmitter {
       const signingKey = await this.requestSigningKey();
 
       const signer = this.sdk.createSchnorrSigner(this.keyVaultV0.accountPrivateKey);
-      const alias = formatAliasInput(this.loginState.alias);
       await this.awaitUserSynchronised(prevUserId);
-      const proof = await this.sdk.createAccountProof(
+
+      const fee = { assetId: AssetId.ETH, value: BigInt(0) }; // TODO
+      const controller = await this.sdk.createMigrateAccountController(
         prevUserId,
         signer,
-        alias,
-        nonce,
-        true,
         signingKey,
         undefined,
         this.keyVault.accountPrivateKey,
+        fee,
       );
+      await controller.createProof();
 
       // Add the user to the sdk so that the account tx could be added to it.
       // Don't sync from the beginning. It's a new account so it doesn't have any txs from previous blocks.
       const userId = new AccountId(this.keyVault.accountPublicKey, nonce + 1);
       await this.accountUtils.addUser(this.keyVault.accountPrivateKey, userId.nonce, true);
 
-      await this.sdk.sendProof(proof);
+      await controller.send();
 
       await this.db.deleteAccountV0(prevUserId.publicKey);
 
@@ -735,7 +725,7 @@ export class UserSession extends EventEmitter {
       assets.map(async ({ id }) => {
         const notes = (await this.sdk.getSpendableNotes(id, fromUserId)).sort((a, b) => (a.value < b.value ? 1 : -1));
         const values = notes.map(n => n.value);
-        const fee = await this.sdk.getFee(id, TxType.TRANSFER);
+        const [{ value: fee }] = await this.sdk.getTransferFees(id);
         const migratableValues = getMigratableValues(values, fee);
         return {
           assetId: id,
@@ -801,7 +791,7 @@ export class UserSession extends EventEmitter {
     return this.claimUserNameProm;
   }
 
-  async unguardedClaimUserName(isRetry?: boolean) {
+  private async unguardedClaimUserName(isRetry?: boolean) {
     if (!this.shieldForAliasForm) {
       throw new Error('Deposit form uninitialized.');
     }
@@ -809,27 +799,23 @@ export class UserSession extends EventEmitter {
     if (!isRetry) await this.shieldForAliasForm.lock();
     if (!this.shieldForAliasForm.locked) return;
 
-    const { proofOutput } = this.getLocalAccountProof() || {};
-    if (!proofOutput) {
-      this.emitSystemMessage('Session expired.', MessageType.ERROR);
-      return;
-    }
-
     if (!this.provider?.account) {
       this.emitSystemMessage('Wallet disconnected.', MessageType.ERROR);
       return;
     }
 
+    const { accountPublicKey, accountPrivateKey } = this.keyVault;
+    const nonce = 0;
+    const userId = new AccountId(accountPublicKey, nonce);
+
     // Add the user to the sdk so that the accountTx could be added for it.
     // Need to sync from the beginning when "migrating" account to a new alias.
-    const { userId } = proofOutput.tx;
     const noSync = [LoginMode.SIGNUP, LoginMode.MIGRATE].includes(this.loginState.mode);
-    await this.accountUtils.addUser(this.keyVault.accountPrivateKey, userId.nonce, noSync);
+    await this.accountUtils.addUser(accountPrivateKey, userId.nonce, noSync);
 
     try {
-      await this.shieldForAliasForm.submit({ parentProof: proofOutput });
+      await this.shieldForAliasForm.submit();
       if (this.shieldForAliasForm.status !== ShieldStatus.DONE) return;
-      this.clearLocalAccountProof();
 
       this.shieldForAliasForm.destroy();
     } catch (e) {
@@ -868,18 +854,28 @@ export class UserSession extends EventEmitter {
     try {
       const { mode, alias } = this.loginState;
       const isNewAlias = [LoginMode.SIGNUP, LoginMode.NEW_ALIAS].includes(mode);
+      const { accountPublicKey } = this.keyVault;
 
       if (isNewAlias) {
         proceed(LoginStep.CREATE_ACCOUNT);
 
-        const proofOutput = await this.createAccountProof();
-        await this.createShieldForAliasForm(proofOutput.tx.userId);
+        const userId = new AccountId(accountPublicKey, 1);
+        const aliasInput = this.loginState.alias;
+        const alias = formatAliasInput(aliasInput);
+
+        await this.confirmAccountKey();
+
+        // Metamask won't show the popup if two signature requests happen one after another.
+        // Wait for half a second before asking the user to sign a message again.
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const spendingPublicKey = await this.requestSigningKey();
+
+        await this.createShieldForAliasForm(userId, alias, spendingPublicKey);
 
         proceed(LoginStep.CLAIM_USERNAME);
       } else {
         proceed(LoginStep.ADD_ACCOUNT);
 
-        const accountPublicKey = this.keyVault.accountPublicKey;
         const nonce = await this.accountUtils.getAliasNonce(alias);
         const userId = new AccountId(accountPublicKey, nonce);
         await this.initUserAccount(userId, false);
@@ -938,83 +934,6 @@ export class UserSession extends EventEmitter {
     }
   }
 
-  async resumeSignup() {
-    const { proofOutput, alias, timestamp } = this.getLocalAccountProof() || {};
-    if (!proofOutput) {
-      debug('Local account proof undefined.');
-      await this.close();
-      return;
-    }
-
-    this.toStep(LoginStep.VALIDATE_DATA);
-
-    try {
-      if (Date.now() - timestamp > this.accountProofTimeout) {
-        throw new Error('Proof expired.');
-      }
-
-      await this.createSdk();
-
-      await this.reviveUserProvider();
-      if (!this.provider?.initialized) {
-        throw new Error('Wallet disconnected.');
-      }
-    } catch (e) {
-      debug(e);
-      this.clearLocalAccountProof();
-      // Go back to signup page. Don't show error message.
-      await this.close();
-      return;
-    }
-
-    try {
-      this.toStep(LoginStep.RECOVER_ACCOUNT_PROOF);
-
-      this.emitSystemMessage(
-        `Please sign the message in your wallet to register username @${alias}...`,
-        MessageType.WARNING,
-      );
-      this.keyVault = await KeyVault.create(this.provider, this.sdk);
-
-      const userId = proofOutput.tx.userId;
-      if (!userId.publicKey.equals(this.keyVault.accountPublicKey)) {
-        throw new Error('Wallet address does not match the one you used to sign up.');
-      }
-
-      this.updateLoginState({
-        alias,
-      });
-
-      const nonce = await this.accountUtils.getAliasNonce(alias);
-      if (nonce > 0 && this.provider?.account && this.provider.chainId === this.requiredNetwork.chainId) {
-        const pendingBalance = await this.accountUtils.getPendingBalance(
-          this.accountProofDepositAsset,
-          this.provider.account,
-        );
-        if (pendingBalance >= this.accountProofMinDeposit) {
-          await this.initUserAccount(userId, false);
-          this.clearLocalAccountProof();
-          this.toStep(LoginStep.DONE);
-          return;
-        }
-      }
-
-      if (nonce > 0) {
-        throw new Error(
-          `@${alias} has been taken. Please log in with your wallet or sign up with a different username.`,
-        );
-      }
-
-      await this.createShieldForAliasForm(userId);
-
-      this.toStep(LoginStep.CLAIM_USERNAME);
-    } catch (e) {
-      debug(e);
-      this.clearLocalAccountProof();
-      await this.close(e.message, MessageType.ERROR);
-    }
-  }
-
   private async reviveUserProvider() {
     const walletId = this.getWalletSession();
     if (walletId === undefined || walletId === this.provider?.walletId) return;
@@ -1035,7 +954,7 @@ export class UserSession extends EventEmitter {
     }
   }
 
-  private async createShieldForAliasForm(userId: AccountId) {
+  private async createShieldForAliasForm(userId: AccountId, alias: string, spendingPublicKey: GrumpkinAddress) {
     const ethAccount = new EthAccount(
       this.provider,
       this.accountUtils,
@@ -1044,13 +963,13 @@ export class UserSession extends EventEmitter {
       this.requiredNetwork,
     );
     this.shieldForAliasForm = new ShieldForm(
-      { userId, alias: this.loginState.alias },
+      { userId, alias },
       { asset: assets[this.accountProofDepositAsset], spendableBalance: 0n },
+      spendingPublicKey,
       this.provider,
       ethAccount,
       this.keyVault,
       this.sdk,
-      this.db,
       this.coreProvider,
       this.rollupService,
       this.accountUtils,
@@ -1145,7 +1064,6 @@ export class UserSession extends EventEmitter {
       this.keyVault,
       this.sdk,
       this.coreProvider,
-      this.db,
       this.rollupService,
       this.priceFeedService,
       this.accountUtils,
@@ -1201,12 +1119,15 @@ export class UserSession extends EventEmitter {
 
         const amount = migratableValues.slice(i, i + 2).reduce((sum, value) => sum + value, 0n) - fee;
         // Create private send proof.
-        const proof = await this.sdk.createTransferProof(assetId, prevUserId, amount, fee, signer, userId);
-        await this.sdk.sendProof(proof);
-        await this.db.addMigratingTx({
-          ...proof.tx,
+        const controller = await this.sdk.createTransferController(
+          prevUserId,
+          signer,
+          { assetId, value: amount },
+          { assetId, value: fee },
           userId,
-        });
+        );
+        await controller.createProof();
+        await controller.send();
 
         updateMigratingAssets(assetId, amount);
       }
@@ -1233,31 +1154,6 @@ export class UserSession extends EventEmitter {
       aliasAvailability: available ? ValueAvailability.VALID : ValueAvailability.INVALID,
     });
   };
-
-  private async createAccountProof() {
-    await this.confirmAccountKey();
-    const { accountPublicKey, accountPrivateKey } = this.keyVault;
-    const nonce = 0;
-    const userId = new AccountId(accountPublicKey, nonce);
-    // Metamask won't show the popup if two signature requests happen one after another.
-    // Wait for half a second before asking the user to sign a message again.
-    await new Promise(resolve => setTimeout(resolve, 500));
-    try {
-      const spendingPublicKey = await this.requestSigningKey();
-      const signer = this.sdk.createSchnorrSigner(accountPrivateKey);
-      const aliasInput = this.loginState.alias;
-      const alias = formatAliasInput(aliasInput);
-      await this.accountUtils.addUser(accountPrivateKey, userId.nonce);
-      const accountProof = await this.sdk.createAccountProof(userId, signer, alias, 0, true, spendingPublicKey);
-      this.saveLocalAccountProof(accountProof, alias);
-      return accountProof;
-    } catch (e) {
-      debug(e);
-      throw new Error('Failed to create account proof.');
-    } finally {
-      await this.accountUtils.removeUser(userId);
-    }
-  }
 
   private async confirmAccountKey() {
     let isSameKey = false;
@@ -1318,29 +1214,6 @@ export class UserSession extends EventEmitter {
     this.spendingPrivateKey = privateKey;
     this.clearSystemMessage();
     return publicKey;
-  }
-
-  private saveLocalAccountProof(accountProof: AccountProofOutput, alias: string) {
-    const proofData = accountProof.toBuffer().toString('hex');
-    localStorage.setItem(this.accountProofCacheName, JSON.stringify({ alias, proofData, timestamp: Date.now() }));
-  }
-
-  private getLocalAccountProof() {
-    const rawData = localStorage.getItem(this.accountProofCacheName);
-    if (!rawData) {
-      return;
-    }
-
-    const { alias, proofData, timestamp } = JSON.parse(rawData);
-    return {
-      alias,
-      proofOutput: AccountProofOutput.fromBuffer(Buffer.from(proofData, 'hex')),
-      timestamp,
-    };
-  }
-
-  private clearLocalAccountProof() {
-    localStorage.removeItem(this.accountProofCacheName);
   }
 
   private saveWalletSession(walletId: WalletId) {

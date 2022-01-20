@@ -53,6 +53,8 @@ interface IRollupProcessor {
 
     function getSupportedBridge(uint256 bridgeAddressId) external view returns (address);
 
+    function getBridgeGasLimit(uint256 bridgeAddressId) external view returns (uint256);
+
     function getSupportedBridges() external view returns (address[] memory);
 
     function getAssetPermitSupport(uint256 assetId) external view returns (bool);

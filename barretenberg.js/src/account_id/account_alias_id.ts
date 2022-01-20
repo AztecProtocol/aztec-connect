@@ -2,6 +2,8 @@ import { Blake2s } from '../crypto/blake2s';
 import { AliasHash } from './alias_hash';
 
 export class AccountAliasId {
+  static ZERO = AccountAliasId.fromBuffer(Buffer.alloc(32));
+
   constructor(public aliasHash: AliasHash, public nonce: number) {}
 
   static fromAlias(alias: string, nonce: number, blake2s: Blake2s) {

@@ -8,6 +8,7 @@ import {
   Receipt,
   SendTxOptions,
   TypedData,
+  BlockchainBridge,
 } from '@aztec/barretenberg/blockchain';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { EventEmitter } from 'events';
@@ -16,6 +17,7 @@ import { validateSignature } from './validate_signature';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state/world_state_constants';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { InitHelpers } from '@aztec/barretenberg/environment';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
 
 export interface EthereumBlockchainConfig {
   console?: boolean;
@@ -86,6 +88,17 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     await this.updatePerEthBlockState();
     const chainId = await this.contracts.getChainId();
     const assets = this.contracts.getAssets().map(a => a.getStaticInfo());
+    const bridgeAddresses = await this.contracts.getSupportedBridges();
+    const bridgeStatuses = await Promise.all(
+      bridgeAddresses.map(async (address, i) => {
+        const bridgeId = i + 1;
+        return {
+          id: bridgeId,
+          address,
+          gasLimit: await this.contracts.getBridgeGas(bridgeId),
+        } as BlockchainBridge;
+      }),
+    );
     this.status = {
       ...this.status,
       chainId,
@@ -93,6 +106,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       feeDistributorContractAddress: this.contracts.getFeeDistributorContractAddress(),
       verifierContractAddress: await this.contracts.getVerifierContractAddress(),
       assets,
+      bridges: bridgeStatuses,
     };
     this.log(`Ethereum blockchain initialized with assets: ${this.status.assets.map(a => a.symbol)}`);
   }
@@ -326,5 +340,11 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
 
   public async getFeeData() {
     return this.contracts.getFeeData();
+  }
+
+  public getBridgeGas(bridgeId: bigint) {
+    const { addressId } = BridgeId.fromBigInt(bridgeId);
+    const { gasLimit } = this.status.bridges.find(bridge => bridge.id == addressId) || {};
+    return gasLimit ?? 0n;
   }
 }

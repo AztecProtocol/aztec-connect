@@ -1,4 +1,4 @@
-import { AssetId } from '@aztec/barretenberg/asset';
+import { AssetId, AssetIds } from '@aztec/barretenberg/asset';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
@@ -14,6 +14,7 @@ import { RollupDb } from '../rollup_db';
 import { RollupPublisher } from '../rollup_publisher';
 import { TxFeeResolver } from '../tx_fee_resolver';
 import { TxType } from '@aztec/barretenberg/blockchain';
+import { BridgeResolver } from '../bridge';
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;
@@ -31,6 +32,7 @@ describe('pipeline_coordinator', () => {
   let worldStateDb: Mockify<WorldStateDb>;
   let noteAlgo: Mockify<NoteAlgorithms>;
   let feeResolver: Mockify<TxFeeResolver>;
+  let bridgeResolver: Mockify<BridgeResolver>;
   let coordinator: PipelineCoordinator;
 
   const mockRollup = () => ({ id: 0, interactionResult: Buffer.alloc(0), mined: moment() });
@@ -53,6 +55,7 @@ describe('pipeline_coordinator', () => {
       ]),
       created: created.toDate(),
       txType: TxType.TRANSFER,
+      excessGas: 100000n,
     } as TxDao);
 
   beforeEach(() => {
@@ -102,17 +105,20 @@ describe('pipeline_coordinator', () => {
       }),
       start: jest.fn(),
       stop: jest.fn(),
-      getFeeQuotes: jest.fn(),
-      computeSurplusRatio: jest.fn().mockImplementation(() => {
+      getTxGas: jest.fn().mockImplementation(() => {
         throw new Error('This should not be called');
       }),
-      getTxGas: jest.fn().mockImplementation((assetId: AssetId, txType: TxType) => {
-        if (txType === TxType.DEFI_DEPOSIT) {
-          throw new Error('This should not be called');
-        }
-        return 1n;
-      }),
+      getBridgeTxGas: jest.fn(),
+      getFullBridgeGas: jest.fn().mockReturnValue(100000n),
+      getSingleBridgeTxGas: jest.fn().mockReturnValue(10000n),
+      getTxFees: jest.fn(),
+      getDefiFees: jest.fn(),
+      isFeePayingAsset: jest.fn().mockImplementation((assetId: AssetId) => AssetIds.some(x => x === assetId)),
     };
+
+    bridgeResolver = {
+      getBridgeConfigs: jest.fn().mockReturnValue([]),
+    } as any;
 
     noteAlgo = {
       commitDefiInteractionNote: jest.fn(),
@@ -130,7 +136,7 @@ describe('pipeline_coordinator', () => {
       numInnerRollupTxs,
       numOuterRollupProofs,
       publishInterval,
-      [],
+      bridgeResolver as any,
     );
   });
 

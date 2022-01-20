@@ -54,7 +54,6 @@ export class App extends EventEmitter {
   private shieldForAliasAmountPreselection?: bigint;
   public readonly requiredNetwork: Network;
   private readonly sessionCookieName = '_zkmoney_session_v1';
-  private readonly accountProofCacheName = 'zm_account_proof_v1';
   private readonly walletCacheName = 'zm_wallet';
 
   constructor(private readonly config: Config, initialAsset: AppAssetId, initialLoginMode: LoginMode) {
@@ -90,10 +89,6 @@ export class App extends EventEmitter {
 
   hasCookie() {
     return !!Cookie.get(this.sessionCookieName);
-  }
-
-  hasLocalAccountProof() {
-    return !!localStorage.getItem(this.accountProofCacheName);
   }
 
   get availableWallets() {
@@ -144,10 +139,6 @@ export class App extends EventEmitter {
     return this.session?.getShieldForAliasForm()?.getValues();
   }
 
-  isDaiTxFree() {
-    return !!this.session?.isDaiTxFree();
-  }
-
   isProcessingAction() {
     return this.session?.isProcessingAction() || this.session?.getAccount()?.isProcessingAction() || false;
   }
@@ -191,7 +182,6 @@ export class App extends EventEmitter {
       this.db,
       this.priceFeedService,
       this.sessionCookieName,
-      this.accountProofCacheName,
       this.walletCacheName,
       this.shieldForAliasAmountPreselection,
     );
@@ -275,11 +265,6 @@ export class App extends EventEmitter {
   backgroundLogin = async () => {
     this.createSession();
     await this.session!.backgroundLogin();
-  };
-
-  resumeSignup = async () => {
-    this.createSession();
-    await this.session!.resumeSignup();
   };
 
   logout = async () => {

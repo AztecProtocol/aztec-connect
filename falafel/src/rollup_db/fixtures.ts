@@ -43,6 +43,7 @@ export const randomTx = ({
     created: now.add(1, 's').toDate(),
     signature: signature.length ? signature : undefined,
     txType,
+    excessGas: 50000n
   });
 };
 

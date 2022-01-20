@@ -10,3 +10,8 @@ const enumValues = <T>(e: T): T[keyof T][] =>
     .map(k => e[k]);
 
 export const AssetIds = enumValues(AssetId);
+
+export interface AssetValue {
+  assetId: AssetId;
+  value: bigint;
+}

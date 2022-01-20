@@ -1,4 +1,5 @@
 export class OffchainDefiClaimData {
+  static EMPTY = new OffchainDefiClaimData();
   static SIZE = 0;
 
   constructor() {}

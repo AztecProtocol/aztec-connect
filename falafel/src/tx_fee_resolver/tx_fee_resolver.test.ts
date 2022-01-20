@@ -1,8 +1,8 @@
 import { AssetId } from '@aztec/barretenberg/asset';
 import { Blockchain, PriceFeed, TxType } from '@aztec/barretenberg/blockchain';
-import { SettlementTime } from '@aztec/barretenberg/rollup_provider';
+import { BitConfig, BridgeId } from '@aztec/barretenberg/bridge_id';
 import { EthPriceFeed } from '@aztec/blockchain';
-import { mockTx } from './fixtures';
+import { BridgeResolver } from '../bridge';
 import { TxFeeResolver } from './index';
 
 jest.useFakeTimers();
@@ -17,17 +17,18 @@ describe('tx fee resolver', () => {
   const feeGasPriceMultiplier = 2.5;
   const txsPerRollup = 10;
   const publishInterval = 3600;
-  const surplusRatios = [1, 0.9, 0.5, 0];
-  const feeFreeAssets: AssetId[] = [];
+  const surplusRatios = [1, 0];
+  const freeAssets: AssetId[] = [];
   const freeTxTypes: TxType[] = [];
   const numSignificantFigures = 0;
   let dateSpy: jest.SpyInstance<number>;
   let gasPriceFeed: Mockify<PriceFeed>;
   let tokenPriceFeed: Mockify<PriceFeed>;
   let blockchain: Mockify<Blockchain>;
+  let bridgeCostResolver: Mockify<BridgeResolver>;
   let txFeeResolver!: TxFeeResolver;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     dateSpy = jest.spyOn(Date, 'now').mockImplementation(() => 1618226064000);
 
     gasPriceFeed = {
@@ -72,109 +73,114 @@ describe('tx fee resolver', () => {
       }),
     } as any;
 
+    bridgeCostResolver = {
+      getMinBridgeTxGas: jest.fn().mockReturnValue(100000n),
+      getFullBridgeGas: jest.fn().mockReturnValue(100000000n),
+    } as any;
+
     txFeeResolver = new TxFeeResolver(
       blockchain,
+      bridgeCostResolver as any,
       baseTxGas,
       maxFeeGasPrice,
       feeGasPriceMultiplier,
       txsPerRollup,
       publishInterval,
       surplusRatios,
-      feeFreeAssets,
+      freeAssets,
       freeTxTypes,
       numSignificantFigures,
     );
+
+    await txFeeResolver.start();
   });
 
   afterEach(() => {
     dateSpy.mockRestore();
   });
 
-  it('return correct fee quotes', async () => {
-    expect(txFeeResolver.getFeeQuotes(AssetId.ETH)).toEqual({ feeConstants: [], baseFeeQuotes: [] });
-    expect(txFeeResolver.getFeeQuotes(AssetId.DAI)).toEqual({ feeConstants: [], baseFeeQuotes: [] });
-    await txFeeResolver.start();
-    expect(txFeeResolver.getFeeQuotes(AssetId.ETH)).toEqual({
-      feeConstants: [
-        2625000000000000n,
-        2000000000000000n,
-        2375000000000000n,
-        5750000000000000n,
-        2000000000000000n,
-        6500000000000000n,
-        4500000000000000n,
-      ],
-      baseFeeQuotes: [
-        {
-          fee: 0n,
-          time: 3600,
-        },
-        {
-          fee: 2000000000000000n,
-          time: 3600 * 0.9,
-        },
-        {
-          fee: 10000000000000000n,
-          time: 3600 * 0.5,
-        },
-        {
-          fee: 20000000000000000n,
-          time: 5 * 60,
-        },
-      ],
-    });
-    expect(txFeeResolver.getFeeQuotes(AssetId.DAI)).toEqual({
-      feeConstants: [26250n, 20000n, 24500n, 65000n, 20000n, 20000n, 20000n],
-      baseFeeQuotes: [
-        {
-          fee: 0n,
-          time: 3600,
-        },
-        {
-          fee: 20000n,
-          time: 3600 * 0.9,
-        },
-        {
-          fee: 100000n,
-          time: 3600 * 0.5,
-        },
-        {
-          fee: 200000n,
-          time: 5 * 60,
-        },
-      ],
-    });
-  });
-
   it('return correct min fees', async () => {
-    expect(txFeeResolver.getMinTxFee(AssetId.ETH, TxType.DEPOSIT)).toBe(0n);
-    expect(txFeeResolver.getMinTxFee(AssetId.DAI, TxType.DEPOSIT)).toBe(0n);
-    await txFeeResolver.start();
     expect(txFeeResolver.getMinTxFee(AssetId.ETH, TxType.DEPOSIT)).toBe(2000000000000000n + 625000000000000n);
     expect(txFeeResolver.getMinTxFee(AssetId.DAI, TxType.DEPOSIT)).toBe(20000n + 6250n);
   });
 
-  it('return correct surplus ratio', async () => {
-    await txFeeResolver.start();
-    const ethQuotes = txFeeResolver.getFeeQuotes(AssetId.ETH);
-    const daiQuotes = txFeeResolver.getFeeQuotes(AssetId.DAI);
-    const txs = [
-      mockTx(
-        AssetId.DAI,
-        TxType.DEPOSIT,
-        daiQuotes.feeConstants[TxType.DEPOSIT] + daiQuotes.baseFeeQuotes[SettlementTime.SLOW].fee,
-      ),
-      mockTx(
-        AssetId.ETH,
-        TxType.DEPOSIT,
-        ethQuotes.feeConstants[TxType.DEPOSIT] + ethQuotes.baseFeeQuotes[SettlementTime.AVERAGE].fee,
-      ),
-      mockTx(
-        AssetId.DAI,
-        TxType.DEPOSIT,
-        daiQuotes.feeConstants[TxType.DEPOSIT] + daiQuotes.baseFeeQuotes[SettlementTime.FAST].fee,
-      ),
-    ];
-    expect(txFeeResolver.computeSurplusRatio(txs)).toBe(0.4);
+  it('return correct tx fees', async () => {
+    {
+      const assetId = AssetId.ETH;
+      expect(txFeeResolver.getTxFees(assetId)).toEqual([
+        [
+          { assetId, value: 2625000000000000n },
+          { assetId, value: 22625000000000000n },
+        ],
+        [
+          { assetId, value: 2000000000000000n },
+          { assetId, value: 22000000000000000n },
+        ],
+        [
+          { assetId, value: 2375000000000000n },
+          { assetId, value: 22375000000000000n },
+        ],
+        [
+          { assetId, value: 5750000000000000n },
+          { assetId, value: 25750000000000000n },
+        ],
+        [
+          { assetId, value: 2000000000000000n },
+          { assetId, value: 22000000000000000n },
+        ],
+        [
+          { assetId, value: 6500000000000000n },
+          { assetId, value: 26500000000000000n },
+        ],
+        [
+          { assetId, value: 4500000000000000n },
+          { assetId, value: 24500000000000000n },
+        ],
+      ]);
+    }
+    {
+      const assetId = AssetId.DAI;
+      expect(txFeeResolver.getTxFees(assetId)).toEqual([
+        [
+          { assetId, value: 26250n },
+          { assetId, value: 226250n },
+        ],
+        [
+          { assetId, value: 20000n },
+          { assetId, value: 220000n },
+        ],
+        [
+          { assetId, value: 24500n },
+          { assetId, value: 224500n },
+        ],
+        [
+          { assetId, value: 65000n },
+          { assetId, value: 265000n },
+        ],
+        [
+          { assetId, value: 20000n },
+          { assetId, value: 220000n },
+        ],
+        [
+          { assetId, value: 20000n },
+          { assetId, value: 220000n },
+        ],
+        [
+          { assetId, value: 20000n },
+          { assetId, value: 220000n },
+        ],
+      ]);
+    }
+  });
+
+  it('return correct defi fees', async () => {
+    const assetId = AssetId.ETH;
+    const bridgeId = new BridgeId(0, assetId, 0, 0, 0, BitConfig.random(), 0).toBigInt();
+    const defiFees = txFeeResolver.getDefiFees(bridgeId);
+    expect(defiFees).toEqual([
+      { assetId, value: 25500000000000000n },
+      { assetId, value: 12513000000000000000n },
+      { assetId, value: 12533000000000000000n },
+    ]);
   });
 });

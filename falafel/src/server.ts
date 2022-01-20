@@ -1,8 +1,10 @@
 import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
+import { AssetId } from '@aztec/barretenberg/asset';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { Blockchain } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
+import { BridgeConfig, BridgeStatus, convertToBridgeStatus } from '@aztec/barretenberg/bridge_id';
 import { Blake2s } from '@aztec/barretenberg/crypto';
 import { InitHelpers } from '@aztec/barretenberg/environment';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
@@ -10,9 +12,9 @@ import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { InitialWorldState, RollupProviderStatus, RuntimeConfig } from '@aztec/barretenberg/rollup_provider';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
-import { BridgeConfig, convertToBridgeStatus } from '@aztec/barretenberg/bridge_id';
 import { emptyDir } from 'fs-extra';
 import { CliProofGenerator, ProofGenerator, ServerProofGenerator } from 'halloumi/proof_generator';
+import { BridgeResolver } from './bridge';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
 import { parseInteractionResult } from './rollup_db/parse_interaction_result';
@@ -61,8 +63,11 @@ export class Server {
     const noteAlgo = new NoteAlgorithms(barretenberg);
     this.blake = new Blake2s(barretenberg);
 
+    const bridgeResolver = new BridgeResolver(bridgeConfigs, blockchain);
+
     this.txFeeResolver = new TxFeeResolver(
       blockchain,
+      bridgeResolver,
       baseTxGas,
       maxFeeGasPrice,
       feeGasPriceMultiplier,
@@ -86,7 +91,7 @@ export class Server {
       gasLimit,
       numInnerRollupTxs,
       numOuterRollupProofs,
-      bridgeConfigs,
+      bridgeResolver,
     );
     this.worldState = new WorldState(rollupDb, worldStateDb, blockchain, this.pipelineFactory, noteAlgo, metrics);
     this.txReceiver = new TxReceiver(
@@ -97,7 +102,7 @@ export class Server {
       this.proofGenerator,
       this.txFeeResolver,
       metrics,
-      bridgeConfigs,
+      bridgeResolver,
     );
   }
 
@@ -161,18 +166,34 @@ export class Server {
   public async getStatus(): Promise<RollupProviderStatus> {
     const status = await this.blockchain.getBlockchainStatus();
     const nextPublish = this.worldState.getNextPublishTime();
+    const bridgeStats: BridgeStatus[] = [];
+    for (const bc of this.bridgeConfigs) {
+      const rt = nextPublish.bridgeTimeouts.get(bc.bridgeId);
+      const bs = convertToBridgeStatus(
+        bc,
+        rt?.rollupNumber,
+        rt?.timeout,
+        await this.txFeeResolver.getFullBridgeGas(bc.bridgeId),
+      );
+      bridgeStats.push(bs);
+    }
+
     return {
       blockchainStatus: status,
-      txFees: status.assets.map((_, i) => this.txFeeResolver.getFeeQuotes(i)),
       pendingTxCount: await this.rollupDb.getUnsettledTxCount(),
       runtimeConfig: this.configurator.getConfVars().runtimeConfig,
       nextPublishTime: nextPublish.baseTimeout ? nextPublish.baseTimeout.timeout : new Date(0),
       nextPublishNumber: nextPublish.baseTimeout ? nextPublish.baseTimeout.rollupNumber : 0,
-      bridgeStatus: this.bridgeConfigs.map(bc => {
-        const rt = nextPublish.bridgeTimeouts.get(bc.bridgeId);
-        return convertToBridgeStatus(bc, rt?.rollupNumber, rt?.timeout);
-      }),
+      bridgeStatus: bridgeStats,
     };
+  }
+
+  public getTxFees(assetId: AssetId) {
+    return this.txFeeResolver.getTxFees(assetId);
+  }
+
+  public getDefiFees(bridgeId: bigint) {
+    return this.txFeeResolver.getDefiFees(bridgeId);
   }
 
   public async getInitialWorldState(): Promise<InitialWorldState> {
@@ -208,8 +229,8 @@ export class Server {
     return this.rollupDb.getUnsettledAccountTxs();
   }
 
-  public async getUnsettledJoinSplitTxs() {
-    return this.rollupDb.getUnsettledJoinSplitTxs();
+  public async getUnsettledPaymentTxs() {
+    return this.rollupDb.getUnsettledPaymentTxs();
   }
 
   public async getBlocks(from: number): Promise<Block[]> {
@@ -236,7 +257,7 @@ export class Server {
     return (await this.rollupDb.getNextRollupId()) - 1;
   }
 
-  public async receiveTx(tx: Tx) {
+  public async receiveTxs(txs: Tx[]) {
     const { maxUnsettledTxs } = this.configurator.getConfVars().runtimeConfig;
     const unsettled = await this.getUnsettledTxCount();
     if (maxUnsettledTxs && unsettled >= maxUnsettledTxs) {
@@ -245,7 +266,7 @@ export class Server {
 
     const start = new Date().getTime();
     const end = this.metrics.receiveTxTimer();
-    const result = await this.txReceiver.receiveTx(tx);
+    const result = await this.txReceiver.receiveTxs(txs);
     end();
     console.log(`Received tx in ${new Date().getTime() - start}ms.`);
     return result;

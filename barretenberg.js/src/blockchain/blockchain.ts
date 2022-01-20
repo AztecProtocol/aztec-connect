@@ -62,4 +62,6 @@ export interface Blockchain extends BlockSource, BlockchainStatusSource, Ethereu
   getFeeDistributorBalance(assetId: number): Promise<bigint>;
 
   getFeeData(): Promise<FeeData>;
+
+  getBridgeGas(bridgeId: bigint): bigint;
 }

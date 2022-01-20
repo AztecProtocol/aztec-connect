@@ -5,12 +5,28 @@ import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { Contracts } from './contracts';
 import { EthereumBlockchain, EthereumBlockchainConfig } from './ethereum_blockchain';
 import { InitHelpers } from '@aztec/barretenberg/environment';
+import { BlockchainBridge } from '@aztec/barretenberg/blockchain';
+import { randomBytes } from 'crypto';
+import { BitConfig, BridgeId } from '@aztec/barretenberg/bridge_id';
 
 jest.mock('@aztec/barretenberg/environment');
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;
 };
+
+const blockchainBridges: BlockchainBridge[] = [
+  {
+    id: 1,
+    address: new EthAddress(randomBytes(20)),
+    gasLimit: 150000n,
+  },
+  {
+    id: 2,
+    address: new EthAddress(randomBytes(20)),
+    gasLimit: 250000n,
+  },
+];
 
 describe('ethereum_blockchain', () => {
   let blockchain: EthereumBlockchain;
@@ -77,6 +93,10 @@ describe('ethereum_blockchain', () => {
       getChainId: jest.fn().mockResolvedValue(999),
       getTransactionReceipt: jest.fn(),
       getRollupStateFromBlock: jest.fn().mockReturnValue(getRollupStateFromBlock(blocks[2])),
+      getBridgeGas: jest.fn().mockImplementation((id: number) => blockchainBridges[id - 1].gasLimit),
+      getSupportedBridges: jest.fn().mockImplementation(() => {
+        return [...blockchainBridges.values()].map((b: BlockchainBridge) => b.address);
+      }),
     } as any;
 
     const config: EthereumBlockchainConfig = {
@@ -101,6 +121,7 @@ describe('ethereum_blockchain', () => {
     expect(status.nullRoot).toEqual(lastRollup.newNullRoot);
     expect(status.rootRoot).toEqual(lastRollup.newDataRootsRoot);
     expect(status.defiRoot).toEqual(lastRollup.newDefiRoot);
+    expect(status.bridges).toEqual(blockchainBridges);
   });
 
   it('emit all historical blocks, then new blocks', async () => {
@@ -180,5 +201,13 @@ describe('ethereum_blockchain', () => {
     await blockchain.getTransactionReceiptSafe(TxHash.random());
 
     expect(contracts.getTransactionReceipt).toHaveBeenCalledTimes(3);
+  });
+
+  it('correctly returns bridge gas', async () => {
+    await blockchain.start();
+    let bridge = new BridgeId(1, 0, 0, 0, 0, new BitConfig(false, false, false, false, false, false), 0);
+    expect(blockchain.getBridgeGas(bridge.toBigInt())).toEqual(blockchainBridges[0].gasLimit);
+    bridge = new BridgeId(2, 0, 0, 0, 0, new BitConfig(false, false, false, false, false, false), 0);
+    expect(blockchain.getBridgeGas(bridge.toBigInt())).toEqual(blockchainBridges[1].gasLimit);
   });
 });

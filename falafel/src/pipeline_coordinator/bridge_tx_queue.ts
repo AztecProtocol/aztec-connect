@@ -1,23 +1,21 @@
 import { AssetId } from '@aztec/barretenberg/asset';
-import { BridgeId, BridgeConfig } from '@aztec/barretenberg/bridge_id';
+import { BridgeConfig } from '@aztec/barretenberg/bridge_id';
 import { DefiDepositProofData, ProofData } from '@aztec/barretenberg/client_proofs';
-import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxDao } from '../entity/tx';
 import { TxFeeResolver } from '../tx_fee_resolver';
-import { BridgeCostResolver } from '../tx_fee_resolver/bridge_cost_resolver';
 import { RollupTimeout } from './publish_time_manager';
 
 export interface RollupTx {
-  fee: bigint;
+  excessGas: bigint;
   feeAsset: AssetId;
   tx: TxDao;
-  bridgeId?: BridgeId;
+  bridgeId?: bigint;
 }
 
 export function createRollupTx(rawTx: TxDao, proof: ProofData) {
   const rollupTx = {
     tx: rawTx,
-    fee: toBigIntBE(proof.txFee),
+    excessGas: rawTx.excessGas,
     feeAsset: proof.txFeeAssetId.readUInt32BE(28),
     bridgeId: undefined,
   } as RollupTx;
@@ -27,9 +25,9 @@ export function createRollupTx(rawTx: TxDao, proof: ProofData) {
 export function createDefiRollupTx(rawTx: TxDao, proof: DefiDepositProofData) {
   const rollupTx = {
     tx: rawTx,
-    fee: proof.txFee,
+    excessGas: rawTx.excessGas,
     feeAsset: proof.txFeeAssetId,
-    bridgeId: proof.bridgeId,
+    bridgeId: proof.bridgeId.toBigInt(),
   } as RollupTx;
   return rollupTx;
 }
@@ -40,15 +38,11 @@ export class BridgeTxQueue {
   // this ensures that somebody paying the entire rollup cost (not just the bridge cost) will trigger a rollup
   private _txQueue: RollupTx[] = [];
 
-  constructor(
-    readonly _bridgeConfig: BridgeConfig,
-    readonly _bridgeTimeout: RollupTimeout | undefined,
-    readonly bridgeCostResolver: BridgeCostResolver,
-  ) {}
+  constructor(readonly _bridgeConfig: BridgeConfig, readonly _bridgeTimeout: RollupTimeout | undefined) {}
 
   // add a new tx to the queue, order by decreasing fee
   public addDefiTx(newTx: RollupTx) {
-    let index = this._txQueue.findIndex(tx => newTx.fee > tx.fee);
+    let index = this._txQueue.findIndex(tx => newTx.excessGas > tx.excessGas);
     if (index === -1) {
       index = this._txQueue.length;
     }
@@ -65,19 +59,20 @@ export class BridgeTxQueue {
   ) {
     const txsToConsider: RollupTx[] = [];
     const newAssets = new Set<AssetId>(assetIds);
-    let feeFromTxs = 0n;
+    let gasFromTxs = 0n;
     for (let i = 0; i < this._txQueue.length && txsToConsider.length < maxRemainingTransactions; i++) {
       const tx = this._txQueue[i];
-      if (!newAssets.has(tx.feeAsset) && newAssets.size === maxAssets) {
-        continue;
+      if (feeResolver.isFeePayingAsset(tx.feeAsset)) {
+        if (!newAssets.has(tx.feeAsset) && newAssets.size === maxAssets) {
+          continue;
+        }
+        newAssets.add(tx.feeAsset);
       }
-      newAssets.add(tx.feeAsset);
       txsToConsider.push(tx);
-      let contributionToBridgeCost = feeResolver.getGasPaidForByFee(tx.feeAsset, tx.fee);
-      contributionToBridgeCost -= BigInt(feeResolver.getBaseTxGas());
-      feeFromTxs += contributionToBridgeCost;
+      gasFromTxs += feeResolver.getSingleBridgeTxGas(this.bridgeId) + tx.excessGas;
     }
-    if (feeFromTxs >= this.bridgeCostResolver.getBridgeCost(this.bridgeConfig.bridgeId)) {
+    const fullBridgeGas = feeResolver.getFullBridgeGas(this.bridgeId);
+    if (gasFromTxs >= fullBridgeGas) {
       this._txQueue.splice(0, txsToConsider.length);
       for (const asset of newAssets) {
         assetIds.add(asset);

@@ -1,25 +1,24 @@
 import { AssetId } from '@aztec/barretenberg/asset';
-import { TxType, isDefiDeposit, isAccountCreation } from '@aztec/barretenberg/blockchain';
-import { BridgeId, BridgeConfig } from '@aztec/barretenberg/bridge_id';
+import { isAccountCreation, isDefiDeposit, TxType } from '@aztec/barretenberg/blockchain';
 import { DefiDepositProofData, ProofData } from '@aztec/barretenberg/client_proofs';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { BridgeResolver } from '../bridge';
 import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
 import { RollupAggregator } from '../rollup_aggregator';
 import { RollupCreator } from '../rollup_creator';
 import { RollupPublisher } from '../rollup_publisher';
-import { PublishTimeManager, RollupTimeouts } from './publish_time_manager';
 import { TxFeeResolver } from '../tx_fee_resolver';
-import { RollupTx, BridgeTxQueue, createRollupTx, createDefiRollupTx } from './bridge_tx_queue';
+import { BridgeTxQueue, createDefiRollupTx, createRollupTx, RollupTx } from './bridge_tx_queue';
+import { PublishTimeManager, RollupTimeouts } from './publish_time_manager';
 import { emptyProfile, profileRollup, RollupProfile } from './rollup_profiler';
-import { BridgeCostResolver } from '../tx_fee_resolver/bridge_cost_resolver';
 
 export class RollupCoordinator {
   private innerProofs: RollupProofDao[] = [];
   private txs: RollupTx[] = [];
-  private rollupBridgeIds: BridgeId[] = [];
+  private rollupBridgeIds: bigint[] = [];
   private rollupAssetIds: Set<AssetId> = new Set();
   private published = false;
   private bridgeQueues = new Map<bigint, BridgeTxQueue>();
@@ -33,17 +32,16 @@ export class RollupCoordinator {
     private numOuterRollupProofs: number,
     private oldDefiRoot: Buffer,
     private oldDefiPath: HashPath,
-    private bridgeConfigs: BridgeConfig[],
+    private bridgeResolver: BridgeResolver,
     private feeResolver: TxFeeResolver,
-    private bridgeCostResolver: BridgeCostResolver,
     private defiInteractionNotes: DefiInteractionNote[] = [],
   ) {}
 
   private initialiseBridgeQueues(rollupTimeouts: RollupTimeouts) {
     this.bridgeQueues = new Map<bigint, BridgeTxQueue>();
-    for (const bc of this.bridgeConfigs) {
+    for (const bc of this.bridgeResolver.getBridgeConfigs()) {
       const bt = rollupTimeouts.bridgeTimeouts.get(bc.bridgeId);
-      this.bridgeQueues.set(bc.bridgeId, new BridgeTxQueue(bc, bt, this.bridgeCostResolver));
+      this.bridgeQueues.set(bc.bridgeId, new BridgeTxQueue(bc, bt));
     }
   }
 
@@ -83,7 +81,7 @@ export class RollupCoordinator {
     txsForRollup: RollupTx[],
     flush: boolean,
     assetIds: Set<AssetId>,
-    bridgeIds: BridgeId[],
+    bridgeIds: bigint[],
   ): RollupTx[] {
     // we have a new defi interaction, we need to determine if it can be accepted and if so whether it gets queued or goes straight on chain.
     const proof = new ProofData(tx.proofData);
@@ -93,19 +91,21 @@ export class RollupCoordinator {
     const addTxs = (txs: RollupTx[]) => {
       for (const tx of txs) {
         txsForRollup.push(tx);
-        assetIds.add(tx.feeAsset);
+        if (this.feeResolver.isFeePayingAsset(tx.feeAsset)) {
+          assetIds.add(tx.feeAsset);
+        }
         if (!tx.bridgeId) {
           // this shouldn't be possible
           console.log(`Adding a tx that should be DEFI but it has no bridge id!`);
           continue;
         }
-        if (!bridgeIds.some(id => id.equals(tx.bridgeId!))) {
+        if (!bridgeIds.some(id => id === tx.bridgeId)) {
           bridgeIds.push(tx.bridgeId);
         }
       }
     };
 
-    if (bridgeIds.some(id => id.equals(rollupTx.bridgeId!))) {
+    if (bridgeIds.some(id => id === rollupTx.bridgeId)) {
       // we already have txs for this bridge in the rollup, add it straight in
       addTxs([rollupTx]);
       return txsForRollup;
@@ -149,7 +149,7 @@ export class RollupCoordinator {
     return txsForRollup;
   }
 
-  private getNextTxsToRollup(pendingTxs: TxDao[], flush: boolean, assetIds: Set<AssetId>, bridgeIds: BridgeId[]) {
+  private getNextTxsToRollup(pendingTxs: TxDao[], flush: boolean, assetIds: Set<AssetId>, bridgeIds: bigint[]) {
     const remainingTxSlots = this.numInnerRollupTxs * (this.numOuterRollupProofs - this.innerProofs.length);
     let txs: RollupTx[] = [];
 
@@ -173,11 +173,17 @@ export class RollupCoordinator {
       };
 
       const addTx = () => {
-        assetIds.add(assetId);
+        if (this.feeResolver.isFeePayingAsset(assetId)) {
+          assetIds.add(assetId);
+        }
         txs.push(createRollupTx(tx, proofData));
       };
 
-      if (!assetIds.has(assetId) && assetIds.size === RollupProofData.NUMBER_OF_ASSETS) {
+      if (
+        this.feeResolver.isFeePayingAsset(assetId) &&
+        !assetIds.has(assetId) &&
+        assetIds.size === RollupProofData.NUMBER_OF_ASSETS
+      ) {
         discardTx();
         continue;
       }
@@ -201,11 +207,7 @@ export class RollupCoordinator {
 
   private printRollupState(rollupProfile: RollupProfile, timeout: boolean, flush: boolean) {
     console.log(
-      `New rollup - size: ${rollupProfile.rollupSize}, numTxs: ${
-        rollupProfile.totalTxs
-      }, timeout/flush: ${timeout}/${flush}, gas balance: ${
-        rollupProfile.totalGasEarnt - rollupProfile.totalGasCost
-      }, inner/outer chains: ${rollupProfile.innerChains}/${rollupProfile.outerChains}`,
+      `New rollup - size: ${rollupProfile.rollupSize}, numTxs: ${rollupProfile.totalTxs}, timeout/flush: ${timeout}/${flush}, gas balance: ${rollupProfile.gasBalance}, inner/outer chains: ${rollupProfile.innerChains}/${rollupProfile.outerChains}`,
     );
     for (const bp of rollupProfile.bridgeProfiles) {
       console.log(
@@ -251,7 +253,6 @@ export class RollupCoordinator {
       this.feeResolver,
       this.numInnerRollupTxs,
       this.numInnerRollupTxs * this.numOuterRollupProofs,
-      this.bridgeCostResolver,
     );
 
     if (!rollupProfile.totalTxs) {
@@ -259,7 +260,7 @@ export class RollupCoordinator {
       return rollupProfile;
     }
 
-    const profit = rollupProfile.totalGasEarnt >= rollupProfile.totalGasCost;
+    const profit = rollupProfile.gasBalance >= 0n;
     const timedout = rollupTimeouts.baseTimeout
       ? rollupProfile.earliestTx.getTime() <= rollupTimeouts.baseTimeout.timeout.getTime()
       : false;
@@ -304,7 +305,7 @@ export class RollupCoordinator {
       this.oldDefiPath,
       this.defiInteractionNotes,
       this.rollupBridgeIds.concat(
-        Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK - this.rollupBridgeIds.length).fill(BridgeId.ZERO),
+        Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK - this.rollupBridgeIds.length).fill(0n),
       ),
       [...this.rollupAssetIds],
     );

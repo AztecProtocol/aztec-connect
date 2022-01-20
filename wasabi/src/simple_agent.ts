@@ -1,4 +1,4 @@
-import { WalletSdk, WalletProvider, AssetId, MemoryFifo, TxType, EthAddress, TxHash } from '@aztec/sdk';
+import { EthAddress, MemoryFifo, TxHash, WalletProvider, WalletSdk } from '@aztec/sdk';
 import { Agent, TX_SETTLEMENT_TIMEOUT, UserData } from './agent';
 import { Stats } from './stats';
 
@@ -11,7 +11,7 @@ export class SimpleAgent extends Agent {
     provider: WalletProvider,
     id: number,
     queue: MemoryFifo<() => Promise<void>>,
-    private numTransfers: number
+    private numTransfers: number,
   ) {
     super('Simple', fundsSourceAddress, sdk, id, provider, queue);
   }
@@ -64,16 +64,21 @@ export class SimpleAgent extends Agent {
   }
 
   private async calcDeposit(numTransfers: number) {
+    const assetId = this.assetId;
     // Nothing to do if we have a balance.
-    if (this.sdk.getBalance(AssetId.ETH, this.primaryUser.user.id)) {
+    if (this.sdk.getBalance(assetId, this.primaryUser.user.id)) {
       return;
     }
-    const depositFee = await this.primaryUser.userAsset.getFee(TxType.DEPOSIT);
-    const transferFee = await this.primaryUser.userAsset.getFee(TxType.TRANSFER);
-    const withdrawFee = await this.primaryUser.userAsset.getFee(TxType.WITHDRAW_TO_WALLET);
+    const depositFee = (await this.sdk.getDepositFees(assetId))[0].value;
+    const transferFee = (await this.sdk.getTransferFees(assetId))[0].value;
+    const withdrawFee = (await this.sdk.getWithdrawFees(assetId))[0].value;
 
     const totalDeposit =
-      await this.primaryUser.userAsset.toBaseUnits('1') + depositFee + BigInt(numTransfers) * transferFee + withdrawFee + this.payoutFee;
+      (await this.sdk.toBaseUnits(this.assetId, '1')) +
+      depositFee +
+      BigInt(numTransfers) * transferFee +
+      withdrawFee +
+      this.payoutFee;
     return totalDeposit;
   }
 
@@ -81,10 +86,17 @@ export class SimpleAgent extends Agent {
     return this.calcDeposit(this.numTransfers);
   }
 
-  private transfer = async (sender: UserData, recipient: UserData, ammount = 1n) => {
+  private transfer = async (sender: UserData, recipient: UserData, value = 1n) => {
     console.log(`${this.agentId()} transferring...`);
-    const fee = await sender.userAsset.getFee(TxType.TRANSFER);
-    const proof = await sender.userAsset.createTransferProof(ammount, fee, sender.signer, recipient.user.id);
-    return await this.sdk.sendProof(proof);
+    const [fee] = await this.sdk.getTransferFees(this.assetId);
+    const controller = this.sdk.createTransferController(
+      sender.user.id,
+      sender.signer,
+      { assetId: this.assetId, value },
+      fee,
+      recipient.user.id,
+    );
+    await controller.createProof();
+    return await controller.send();
   };
 }

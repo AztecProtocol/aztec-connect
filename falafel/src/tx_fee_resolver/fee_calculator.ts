@@ -2,7 +2,6 @@ import { AssetId } from '@aztec/barretenberg/asset';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { BlockchainAsset, TxType } from '@aztec/barretenberg/blockchain';
 import { ProofData } from '@aztec/barretenberg/client_proofs/proof_data';
-import { AssetFeeQuote } from '@aztec/barretenberg/rollup_provider';
 import { TxDao } from '../entity/tx';
 import { PriceTracker } from './price_tracker';
 import { roundUp } from './round_up';
@@ -16,8 +15,8 @@ export class FeeCalculator {
     private readonly feeGasPriceMultiplier: number,
     private readonly txsPerRollup: number,
     private readonly publishInterval: number,
-    private readonly surplusRatios = [1, 0.9, 0.5, 0],
-    private readonly feeFreeAssets: AssetId[] = [],
+    private readonly surplusRatios = [1, 0],
+    private readonly freeAssets: AssetId[] = [],
     private readonly freeTxTypes: TxType[] = [],
     private readonly numSignificantFigures = 0,
   ) {}
@@ -36,7 +35,7 @@ export class FeeCalculator {
     return this.getFeeConstant(assetId, txType) + this.getBaseFee(assetId);
   }
 
-  getFeeQuotes(assetId: number): AssetFeeQuote {
+  getFeeQuotes(assetId: number) {
     const baseFee = this.getBaseFee(assetId);
     return {
       feeConstants: [
@@ -55,6 +54,11 @@ export class FeeCalculator {
     };
   }
 
+  getTxFeeFromGas(gas: bigint, assetId: AssetId) {
+    const baseFee = this.getBaseFee(assetId);
+    return baseFee + this.toAssetPrice(assetId, gas, false);
+  }
+
   computeSurplusRatio(txs: TxDao[]) {
     const baseFees = this.assets.map((_, id) => this.getBaseFee(id));
     const surplus = txs
@@ -71,14 +75,14 @@ export class FeeCalculator {
   }
 
   getBaseFee(assetId: AssetId, minPrice = false) {
-    if (this.feeFreeAssets.includes(assetId)) {
+    if (this.freeAssets.includes(assetId)) {
       return 0n;
     }
     return this.toAssetPrice(assetId, BigInt(this.baseTxGas), minPrice);
   }
 
   public getFeeConstant(assetId: AssetId, txType: TxType, minPrice = false) {
-    if (this.feeFreeAssets.includes(assetId)) {
+    if (this.freeAssets.includes(assetId)) {
       return 0n;
     }
     return this.toAssetPrice(assetId, BigInt(this.assets[assetId].gasConstants[txType]), minPrice);

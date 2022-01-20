@@ -1,6 +1,6 @@
+import { AccountId } from '@aztec/barretenberg/account_id';
 import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 import { Note } from '../../note';
-import { AccountId } from '../../user';
 import { bigintTransformer, accountIdTransformer } from './transformer';
 
 @Entity({ name: 'note' })

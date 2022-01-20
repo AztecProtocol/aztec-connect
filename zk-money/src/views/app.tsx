@@ -202,11 +202,6 @@ export class AppView extends PureComponent<AppProps, AppState> {
       }
     } else if (this.app.hasCookie()) {
       this.goToAction(AppAction.ACCOUNT);
-    } else if (action === AppAction.LOGIN) {
-      if (this.app.hasLocalAccountProof()) {
-        this.app.resumeSignup();
-        return;
-      }
     }
   }
 
@@ -402,7 +397,6 @@ export class AppView extends PureComponent<AppProps, AppState> {
                   processingAction={processingAction}
                   explorerUrl={config.explorerUrl}
                   txsPublishTime={this.app.txsPublishTime}
-                  mergeForm={this.app.mergeForm}
                   onFormInputsChange={this.app.changeForm}
                   onValidate={this.app.validateForm}
                   onChangeWallet={this.app.changeWallet}

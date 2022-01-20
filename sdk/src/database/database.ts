@@ -1,10 +1,9 @@
-import { AliasHash } from '@aztec/barretenberg/account_id';
+import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { CoreAccountTx, CoreClaimTx, CoreDefiTx, CorePaymentTx, CoreUserTx } from '../core_tx';
 import { Note } from '../note';
-import { AccountId, UserData } from '../user';
-import { UserAccountTx, UserDefiTx, UserJoinSplitTx, UserUtilTx } from '../user_tx';
-import { Claim } from './claim';
+import { UserData } from '../user';
 
 export interface SigningKey {
   accountId: AccountId;
@@ -31,9 +30,6 @@ export interface Database {
   getUserPendingNotes(userId: AccountId): Promise<Note[]>;
   removeNote(nullifier: Buffer): Promise<void>;
 
-  addClaim(note: Claim): Promise<void>;
-  getClaim(nullifier: Buffer): Promise<Claim | undefined>;
-
   getUser(userId: AccountId): Promise<UserData | undefined>;
   getUsers(): Promise<UserData[]>;
   addUser(user: UserData): Promise<void>;
@@ -41,25 +37,26 @@ export interface Database {
   removeUser(userId: AccountId): Promise<void>;
   resetUsers(): Promise<void>;
 
-  addJoinSplitTx(tx: UserJoinSplitTx): Promise<void>;
-  getJoinSplitTx(txHash: TxHash, userId: AccountId): Promise<UserJoinSplitTx | undefined>;
-  getJoinSplitTxs(userId): Promise<UserJoinSplitTx[]>;
-  settleJoinSplitTx(txHash: TxHash, userId: AccountId, settled: Date): Promise<void>;
+  addPaymentTx(tx: CorePaymentTx): Promise<void>;
+  getPaymentTx(txHash: TxHash, userId: AccountId): Promise<CorePaymentTx | undefined>;
+  getPaymentTxs(userId): Promise<CorePaymentTx[]>;
+  settlePaymentTx(txHash: TxHash, userId: AccountId, settled: Date): Promise<void>;
 
-  addAccountTx(tx: UserAccountTx): Promise<void>;
-  getAccountTx(txHash: TxHash): Promise<UserAccountTx | undefined>;
-  getAccountTxs(userId): Promise<UserAccountTx[]>;
+  addAccountTx(tx: CoreAccountTx): Promise<void>;
+  getAccountTx(txHash: TxHash): Promise<CoreAccountTx | undefined>;
+  getAccountTxs(userId): Promise<CoreAccountTx[]>;
   settleAccountTx(txHash: TxHash, settled: Date): Promise<void>;
 
-  addDefiTx(tx: UserDefiTx): Promise<void>;
-  getDefiTx(txHash: TxHash): Promise<UserDefiTx | undefined>;
-  getDefiTxs(userId): Promise<UserDefiTx[]>;
+  addDefiTx(tx: CoreDefiTx): Promise<void>;
+  getDefiTx(txHash: TxHash): Promise<CoreDefiTx | undefined>;
+  getDefiTxs(userId): Promise<CoreDefiTx[]>;
   updateDefiTx(txHash: TxHash, outputValueA: bigint, outputValueB: bigint, result: boolean): Promise<void>;
   settleDefiTx(txHash: TxHash, settled: Date): Promise<void>;
 
-  addUtilTx(tx: UserUtilTx): Promise<void>;
-  getUtilTxByLink(forwardLink: Buffer): Promise<UserUtilTx | undefined>;
+  addClaimTx(tx: CoreClaimTx): Promise<void>;
+  getClaimTx(nullifier: Buffer): Promise<CoreClaimTx | undefined>;
 
+  getUserTxs(userId: AccountId): Promise<CoreUserTx[]>;
   isUserTxSettled(txHash: TxHash): Promise<boolean>;
   getUnsettledUserTxs(userId: AccountId): Promise<TxHash[]>;
   removeUserTx(txHash: TxHash, userId: AccountId): Promise<void>;

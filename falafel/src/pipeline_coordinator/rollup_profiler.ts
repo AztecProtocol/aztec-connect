@@ -1,7 +1,6 @@
 import { TxFeeResolver } from '../tx_fee_resolver';
 import { RollupTx } from './bridge_tx_queue';
 import { isDefiDeposit } from '@aztec/barretenberg/blockchain';
-import { BridgeCostResolver } from '../tx_fee_resolver/bridge_cost_resolver';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
 
 export interface BridgeProfile {
@@ -17,8 +16,7 @@ export interface RollupProfile {
   published: boolean;
   rollupSize: number;
   totalTxs: number;
-  totalGasCost: bigint;
-  totalGasEarnt: bigint;
+  gasBalance: bigint;
   earliestTx: Date;
   latestTx: Date;
   innerChains: number;
@@ -31,8 +29,7 @@ export function emptyProfile(rollupSize: number) {
     published: false,
     rollupSize,
     totalTxs: 0,
-    totalGasCost: 0n,
-    totalGasEarnt: 0n,
+    gasBalance: 0n,
     earliestTx: new Date(0),
     latestTx: new Date(0),
     innerChains: 0,
@@ -47,7 +44,6 @@ export function profileRollup(
   feeResolver: TxFeeResolver,
   innerRollupSize: number,
   rollupSize: number,
-  bridgeCostResolver: BridgeCostResolver,
 ) {
   const rollupProfile: RollupProfile = emptyProfile(rollupSize);
   rollupProfile.totalTxs = allTxs.length;
@@ -58,7 +54,9 @@ export function profileRollup(
     const tx = allTxs[txIndex];
     const proof = new ProofData(tx.tx.proofData);
     const currentInner = Math.trunc(txIndex / innerRollupSize);
-    const noteStrings = [proof.noteCommitment1, proof.noteCommitment2].filter(n => !n.equals(emptyBuffer)).map(n => n.toString('hex'));
+    const noteStrings = [proof.noteCommitment1, proof.noteCommitment2]
+      .filter(n => !n.equals(emptyBuffer))
+      .map(n => n.toString('hex'));
     for (const noteString of noteStrings) {
       commitmentLocations.set(noteString, currentInner);
     }
@@ -83,46 +81,53 @@ export function profileRollup(
         rollupProfile.latestTx = tx.tx.created;
       }
     }
-    rollupProfile.totalGasEarnt += feeResolver.getGasPaidForByFee(tx.feeAsset, tx.fee);
     if (!isDefiDeposit(tx.tx.txType)) {
-      // for non-defi txs, this gives base cost + tx cost
-      rollupProfile.totalGasCost += feeResolver.getTxGas(tx.feeAsset, tx.tx.txType);
+      // for non-defi txs, we add on any gas above and beyond that required for the tx (call data etc)
+      rollupProfile.gasBalance += tx.excessGas;
     } else if (!tx.bridgeId) {
       console.log(`Invalid bridge id encountered on DEFI transaction!!`);
     } else {
-      // for defi txs, this just gives base cost. tx cost is calculated further down
-      const baseGas = BigInt(feeResolver.getBaseTxGas());
-      rollupProfile.totalGasCost += baseGas;
-
-      const bridgeId = tx.bridgeId.toBigInt();
-      let profile = bridgeProfiles.get(bridgeId);
-      if (!profile) {
-        const bridgeGasCost = bridgeCostResolver.getBridgeCost(bridgeId);
-        profile = {
-          bridgeId: bridgeId,
+      const bridgeId = tx.bridgeId;
+      let bridgeProfile = bridgeProfiles.get(bridgeId);
+      if (!bridgeProfile) {
+        const bridgeGasCost = feeResolver.getFullBridgeGas(tx.bridgeId);
+        bridgeProfile = {
+          bridgeId,
           numTxs: 0,
           totalGasCost: bridgeGasCost,
           totalGasEarnt: 0n,
           earliestTx: tx.tx.created,
           latestTx: tx.tx.created,
         };
-        bridgeProfiles.set(bridgeId, profile);
-        rollupProfile.totalGasCost += bridgeGasCost;
+        bridgeProfiles.set(bridgeId, bridgeProfile);
+        // we are going to incur the cost of the bridge here so reduce our gas balance
+        rollupProfile.gasBalance -= bridgeGasCost;
       }
-      profile.numTxs++;
-      profile.totalGasEarnt += feeResolver.getGasPaidForByFee(tx.feeAsset, tx.fee);
-      profile.totalGasCost += baseGas;
-      if (profile.earliestTx > tx.tx.created) {
-        profile.earliestTx = tx.tx.created;
+      bridgeProfile.numTxs++;
+      // this is the gas provided above and beyond the gas constant for defi deposits
+      const gasTowardsBridge = feeResolver.getSingleBridgeTxGas(tx.bridgeId) + tx.excessGas;
+      bridgeProfile.totalGasEarnt += gasTowardsBridge;
+      // add this back onto the gas balance for the rollup
+      rollupProfile.gasBalance += gasTowardsBridge;
+      if (bridgeProfile.earliestTx > tx.tx.created) {
+        bridgeProfile.earliestTx = tx.tx.created;
       }
-      if (profile.latestTx < tx.tx.created) {
-        profile.latestTx = tx.tx.created;
+      if (bridgeProfile.latestTx < tx.tx.created) {
+        bridgeProfile.latestTx = tx.tx.created;
       }
     }
   }
   rollupProfile.bridgeProfiles = [...bridgeProfiles.values()];
   const numEmptySlots = rollupSize - allTxs.length;
   // now we have accounted for all transactions in this rollup, it's just the empty slots
-  rollupProfile.totalGasCost += BigInt(numEmptySlots) * BigInt(feeResolver.getBaseTxGas());
+  rollupProfile.gasBalance -= BigInt(numEmptySlots) * BigInt(feeResolver.getBaseTxGas());
+  // if we define the following values:
+  // B = bridge cost
+  // V = verification cost
+  // dB = single share of bridge cost
+  // dV = single share of verification cost
+  // gasBalance now equals:
+  // (for all bridges(sumOfTxsForBridge(dB + excess provided)) + sumOfNonBridgeTxs(excess provided)) - (cost of all bridges + numEmptySlots * dV)
+  // if gasBalance >= 0 then we are profitable
   return rollupProfile;
 }

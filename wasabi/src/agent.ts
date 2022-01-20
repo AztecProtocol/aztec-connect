@@ -5,11 +5,9 @@ import {
   EthAddress,
   WalletProvider,
   WalletSdkUser,
-  WalletSdkUserAsset,
   SchnorrSigner,
   AssetId,
   toBaseUnits,
-  TxType,
   EthAsset,
 } from '@aztec/sdk';
 import { randomBytes } from 'crypto';
@@ -18,12 +16,7 @@ import { Stats } from './stats';
 export const TX_SETTLEMENT_TIMEOUT = 12 * 3600;
 
 export class UserData {
-  constructor(
-    public address: EthAddress,
-    public signer: SchnorrSigner,
-    public user: WalletSdkUser,
-    public userAsset: WalletSdkUserAsset,
-  ) {}
+  constructor(public address: EthAddress, public signer: SchnorrSigner, public user: WalletSdkUser) {}
 }
 
 export abstract class Agent {
@@ -40,6 +33,7 @@ export abstract class Agent {
     protected id: number,
     protected provider: WalletProvider,
     private queue: MemoryFifo<() => Promise<void>>,
+    protected assetId = AssetId.ETH,
   ) {
     this.depositPromise = new Promise(resolve => {
       this.depositSent = resolve;
@@ -52,9 +46,8 @@ export abstract class Agent {
     const privateKey = randomBytes(32);
     const address = this.provider.addAccount(privateKey);
     const user = await this.sdk.addUser(privateKey, undefined, true);
-    const userAsset = user.getAsset(AssetId.ETH);
-    const signer = user.getSigner();
-    return new UserData(address, signer, user, userAsset);
+    const signer = this.sdk.createSchnorrSigner(privateKey);
+    return new UserData(address, signer, user);
   }
 
   public async setup(depositFee?: bigint) {
@@ -112,7 +105,7 @@ export abstract class Agent {
 
   private async depositToContract(deposit: bigint) {
     console.log(`${this.agentId()} depositing to contract...`);
-    await this.sdk.depositFundsToContract(AssetId.ETH, this.primaryUser.address, deposit);
+    await this.sdk.depositFundsToContract({ assetId: AssetId.ETH, value: deposit }, this.primaryUser.address);
     console.log(`${this.agentId()} deposit completed`);
   }
 
@@ -128,33 +121,43 @@ export abstract class Agent {
   }
 
   public completePendingDeposit = async () => {
-    const fee = this.depositFee ?? (await this.primaryUser.userAsset.getFee(TxType.DEPOSIT));
-    console.log(`${this.agentId()} sending pending deposit with fee ${fee}...`);
-    const pendingDeposit = await this.primaryUser.userAsset.pendingDeposit(this.primaryUser.address);
-    const proof = await this.primaryUser.userAsset.createDepositProof(
-      pendingDeposit - fee,
+    const { user, signer, address } = this.primaryUser;
+    const fee = this.depositFee
+      ? { assetId: this.assetId, value: this.depositFee }
+      : (await this.sdk.getDepositFees(this.assetId))[0];
+    console.log(`${this.agentId()} sending pending deposit with fee ${fee.value}...`);
+    const pendingDeposit = await this.sdk.getUserPendingDeposit(this.assetId, address);
+    const value = pendingDeposit - fee.value;
+    const controller = this.sdk.createDepositController(
+      user.id,
+      signer,
+      { assetId: this.assetId, value },
       fee,
-      this.primaryUser.signer,
-      this.primaryUser.address,
+      address,
     );
-    const signature = await this.sdk.signProof(proof, this.primaryUser.address);
-    const hash = await this.sdk.sendProof(proof, signature);
+    await controller.createProof();
+    await controller.sign();
+    const hash = await controller.send();
     this.depositSent();
     return hash;
   };
 
   protected withdraw = async () => {
     console.log(`${this.agentId()} withdrawing...`);
-    const fee = await this.primaryUser.userAsset.getFee(TxType.WITHDRAW_TO_WALLET);
-    const balance = this.primaryUser.userAsset.balance();
-    console.log(`${this.agentId()} withdrawing ${balance} WEI to wallet`);
-    const proof = await this.primaryUser.userAsset.createWithdrawProof(
-      balance - fee,
+    const { user, signer } = this.primaryUser;
+    const [fee] = await this.sdk.getWithdrawFees(this.assetId);
+    const balance = user.getBalance(this.assetId);
+    const value = balance - fee.value;
+    console.log(`${this.agentId()} withdrawing ${value} WEI to wallet`);
+    const controller = this.sdk.createWithdrawController(
+      user.id,
+      signer,
+      { assetId: this.assetId, value },
       fee,
-      this.primaryUser.signer,
       this.fundsSourceAddress,
     );
-    return await this.sdk.sendProof(proof);
+    await controller.createProof();
+    return controller.send();
   };
 
   /**

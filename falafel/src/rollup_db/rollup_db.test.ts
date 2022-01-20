@@ -502,7 +502,7 @@ describe('rollup_db', () => {
       await rollupDb.addTx(tx);
     }
 
-    const result = await rollupDb.getUnsettledJoinSplitTxs();
+    const result = await rollupDb.getUnsettledPaymentTxs();
     expect(result.length).toBe(4);
     expect(result.map(r => r.txType)).toEqual(
       expect.arrayContaining([TxType.DEPOSIT, TxType.TRANSFER, TxType.WITHDRAW_TO_CONTRACT, TxType.WITHDRAW_TO_WALLET]),

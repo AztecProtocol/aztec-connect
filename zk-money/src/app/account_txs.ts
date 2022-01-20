@@ -1,4 +1,4 @@
-import { TxHash, UserAccountTx, UserJoinSplitTx } from '@aztec/sdk';
+import { ProofId, TxHash, UserAccountTx, UserPaymentTx } from '@aztec/sdk';
 
 export enum AccountAction {
   SHIELD = 'SHIELD',
@@ -9,6 +9,30 @@ export enum AccountAction {
 }
 
 type JoinSplitTxAction = AccountAction | 'RECEIVE';
+
+const getTxAction = ({ proofId, isSender }: UserPaymentTx): JoinSplitTxAction => {
+  if (!isSender) {
+    return 'RECEIVE';
+  }
+  switch (proofId) {
+    case ProofId.DEPOSIT:
+      return AccountAction.SHIELD;
+    default:
+      return AccountAction.SEND;
+  }
+};
+
+const getBalanceDiff = ({ proofId, isSender, value: { value }, fee: { value: fee } }: UserPaymentTx) => {
+  if (!isSender) {
+    return value;
+  }
+  switch (proofId) {
+    case ProofId.DEPOSIT:
+      return value;
+    default:
+      return -(value + fee);
+  }
+};
 
 export interface JoinSplitTx {
   txHash: TxHash;
@@ -27,61 +51,20 @@ export interface AccountTx {
   settled?: Date;
 }
 
-const recoverJoinSplitValues = (
-  {
-    publicInput,
-    publicOutput,
-    privateInput,
-    recipientPrivateOutput,
-    senderPrivateOutput,
-    ownedByUser,
-  }: UserJoinSplitTx,
-  minFee: bigint,
-) => {
-  const fee = publicInput + privateInput - publicOutput - recipientPrivateOutput - senderPrivateOutput;
-  const balanceDiff = ownedByUser ? senderPrivateOutput - privateInput : recipientPrivateOutput;
-
-  const recoverTx = (action: JoinSplitTxAction, value: bigint, feeUnknown = false) => ({
-    action,
-    value,
-    fee: feeUnknown ? 0n : fee,
-    balanceDiff,
-  });
-
-  if (publicOutput) {
-    return recoverTx(AccountAction.SEND, privateInput);
-  }
-
-  if (publicInput) {
-    const privateOutput = recipientPrivateOutput + senderPrivateOutput;
-    return recoverTx(AccountAction.SHIELD, publicInput + privateInput, !privateOutput);
-  }
-
-  if (!ownedByUser) {
-    return recoverTx('RECEIVE', recipientPrivateOutput, true);
-  }
-
-  // TODO - find a better way to distinguish merge and send
-  // For now, if the derived fee is larger than the current minFee, it's probably a send tx after a hard sync.
-  // But...
-  // A merge tx would be mistaken as send if the user paid higher fee or the min fee has dropped.
-  // A send tx after a hard sync would be mistaken as merge if the sent amount plus the old fee is less than the current min fee.
-  if (!recipientPrivateOutput && fee <= minFee) {
-    return recoverTx(AccountAction.MERGE, privateInput);
-  }
-
-  return recoverTx(AccountAction.SEND, privateInput, !recipientPrivateOutput);
+const recoverJoinSplitValues = (tx: UserPaymentTx) => {
+  const { value, fee } = tx;
+  return { action: getTxAction(tx), value: value.value, fee: fee.value, balanceDiff: getBalanceDiff(tx) };
 };
 
-const parseTx = (tx: UserJoinSplitTx | UserAccountTx, explorerUrl: string) => ({
+const parseTx = (tx: UserPaymentTx | UserAccountTx, explorerUrl: string) => ({
   txHash: tx.txHash,
   link: `${explorerUrl}/tx/${tx.txHash.toString().replace(/^0x/i, '')}`,
   settled: tx.settled,
 });
 
-export const parseJoinSplitTx = (tx: UserJoinSplitTx, explorerUrl: string, minFee: bigint): JoinSplitTx => ({
+export const parseJoinSplitTx = (tx: UserPaymentTx, explorerUrl: string): JoinSplitTx => ({
   ...parseTx(tx, explorerUrl),
-  ...recoverJoinSplitValues(tx, minFee),
+  ...recoverJoinSplitValues(tx),
 });
 
 export const parseAccountTx = (tx: UserAccountTx, explorerUrl: string): AccountTx => ({
