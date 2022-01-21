@@ -21,6 +21,7 @@ services:
     environment:
       NODE_ENV: production
       PERSIST: 'false'
+      PROVERLESS: ${PROVERLESS}
     ports:
       - '8083:8083'
 
@@ -35,6 +36,7 @@ services:
       PUBLISH_INTERVAL: 120
       NODE_ENV: production
       TX_FEE: 100000000000000000
+      PROVERLESS: ${PROVERLESS}
     depends_on:
       - ganache
       - halloumi
@@ -52,6 +54,7 @@ services:
     environment:
       ETHEREUM_HOST: http://ganache:8545
       ROLLUP_HOST: http://falafel:8081
+      PROVERLESS: ${PROVERLESS}
     depends_on:
       - falafel
     command: >

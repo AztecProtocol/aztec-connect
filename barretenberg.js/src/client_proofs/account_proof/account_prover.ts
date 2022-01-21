@@ -4,7 +4,7 @@ import { UnrolledProver } from '../prover';
 import { AccountTx } from './account_tx';
 
 export class AccountProver {
-  constructor(private prover: UnrolledProver) {}
+  constructor(private prover: UnrolledProver, public readonly publicInputsOnly = false) {}
 
   static circuitSize = 32 * 1024;
 
@@ -45,13 +45,21 @@ export class AccountProver {
   public async createAccountProof(tx: AccountTx, signature: SchnorrSignature) {
     const worker = this.prover.getWorker();
     const buf = Buffer.concat([tx.toBuffer(), signature.toBuffer()]);
-    const txPtr = await worker.call('bbmalloc', buf.length);
-    await worker.transferToHeap(buf, txPtr);
-    const proverPtr = await worker.call('account__new_prover', txPtr);
-    await worker.call('bbfree', txPtr);
-    const proof = await this.prover.createProof(proverPtr);
-    await worker.call('account__delete_prover', proverPtr);
-    return proof;
+    const mem = await worker.call('bbmalloc', buf.length);
+    await worker.transferToHeap(buf, mem);
+    if (this.publicInputsOnly) {
+      const size = await worker.call('account__compute_public_inputs', mem);
+      const memPtr = Buffer.from(await worker.sliceMemory(0, 4)).readUInt32LE(0);
+      const proof = Buffer.from(await worker.sliceMemory(memPtr, memPtr + size));
+      await worker.call('bbfree', memPtr);
+      return proof;
+    } else {
+      const proverPtr = await worker.call('account__new_prover', mem);
+      await worker.call('bbfree', mem);
+      const proof = await this.prover.createProof(proverPtr);
+      await worker.call('account__delete_prover', proverPtr);
+      return proof;
+    }
   }
 
   public getProver() {

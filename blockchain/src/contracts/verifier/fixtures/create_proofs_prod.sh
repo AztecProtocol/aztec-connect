@@ -6,6 +6,4 @@ rm -rf ./data && mkdir -p build && cd build && cmake .. && make -j$(nproc) tx_fa
 cd ../../blockchain/src/contracts/verifier/fixtures
 
 # input format: num_txs | data_dir | inner size | outer size | valid outer sizes
-./create_rollup_proof.sh 1 ./data 28 1 1,2,4
-./create_rollup_proof.sh 29 ./data 28 2 1,2,4
-./create_rollup_proof.sh 85 ./data 28 4 1,2,4
+./create_rollup_proof.sh 85 ./data 28 32

@@ -88,6 +88,7 @@ export async function getConfig() {
     privateKey,
     rollupContractAddress,
     typeOrmLogging,
+    proverless
   } = confVars;
 
   const ormConfig = getOrmConfig(typeOrmLogging);
@@ -99,6 +100,7 @@ export async function getConfig() {
   console.log(`Gas limit: ${gasLimit || 'default'}`);
   console.log(`Rollup contract address: ${rollupContractAddress || 'none'}`);
   console.log(`Signing address: ${signingAddress}`);
+  console.log(`Proverless: ${proverless}`);
 
   return { configurator, ormConfig, provider, signingAddress, ethConfig, bridgeConfigs };
 }

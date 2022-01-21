@@ -280,6 +280,20 @@ jobs:
           working_directory: end-to-end
           command: build end-to-end
 
+  e2e-prover:
+    docker:
+      - image: aztecprotocol/build-image
+    resource_class: small
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker:
+          version: 19.03.13
+      - run:
+          name: 'Test'
+          working_directory: end-to-end
+          command: cond_spot_run_tests end-to-end prover-test ./src/e2e_deposit.test.ts
+
   e2e-payment:
     docker:
       - image: aztecprotocol/build-image
@@ -292,7 +306,7 @@ jobs:
       - run:
           name: 'Test'
           working_directory: end-to-end
-          command: cond_spot_run_tests end-to-end payment-test ./src/e2e.test.ts
+          command: cond_spot_run_tests end-to-end payment-test ./src/e2e.test.ts true
 
   e2e-account:
     docker:
@@ -306,7 +320,7 @@ jobs:
       - run:
           name: 'Test'
           working_directory: end-to-end
-          command: cond_spot_run_tests end-to-end account-test ./src/e2e_account.test.ts
+          command: cond_spot_run_tests end-to-end account-test ./src/e2e_account.test.ts true
 
   e2e-defi:
     docker:
@@ -320,7 +334,7 @@ jobs:
       - run:
           name: 'Test'
           working_directory: end-to-end
-          command: cond_spot_run_tests end-to-end defi-test ./src/e2e_defi.test.ts
+          command: cond_spot_run_tests end-to-end defi-test ./src/e2e_defi.test.ts true
 
   zk-money:
     docker:
@@ -601,6 +615,10 @@ workflows:
           requires:
             - sdk
           filters: *tag_filter
+      - e2e-prover:
+          requires:
+            - end-to-end
+          filters: *tag_filter
       - e2e-payment:
           requires:
             - end-to-end
@@ -635,6 +653,7 @@ workflows:
             - root-rollup-tests
             - root-verifier-tests
             - blockchain-tests
+            - e2e-prover
             - e2e-payment
             - e2e-account
             - e2e-defi
@@ -647,6 +666,7 @@ workflows:
                 - defi-bridge-project
       - deploy-prod:
           requires:
+            - e2e-prover
             - e2e-payment
             - e2e-account
             - e2e-defi

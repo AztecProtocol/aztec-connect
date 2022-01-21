@@ -7,10 +7,11 @@ import 'log-timestamp';
 const {
   PORT = '8083',
   MAX_CIRCUIT_SIZE = '8388608',
-  ROLLUP_OUTERS = '1,2,4',
+  ROLLUP_OUTERS = '2',
   API_PREFIX = '',
   DATA_DIR = './data',
   PERSIST = 'true',
+  PROVERLESS,
 } = process.env;
 
 async function main() {
@@ -18,7 +19,8 @@ async function main() {
     maxCircuitSize: +MAX_CIRCUIT_SIZE,
     rollupOuters: ROLLUP_OUTERS,
     dataDir: DATA_DIR,
-    persist: PERSIST == 'true',
+    persist: PERSIST === 'true',
+    proverless: PROVERLESS === 'true',
   };
   const server = new Server(serverConfig);
   const shutdown = async () => {

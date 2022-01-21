@@ -10,14 +10,20 @@ import { deployDefiBridgeProxy } from './deploy_defi_bridge_proxy';
 import { deployFeeDistributor } from './deploy_fee_distributor';
 import { deployPriceFeed } from './deploy_price_feed';
 import { createPair, deployUniswap } from './deploy_uniswap';
-import { deployVerifier } from './deploy_verifier';
+import { deployMockVerifier, deployVerifier } from './deploy_verifier';
 
 // initialEthSupply = 0.1 ETH
-export async function deploy(escapeHatchBlockLower: number, escapeHatchBlockUpper: number, signer: Signer, initialEthSupply = 1n * 10n ** 17n) {
+export async function deploy(
+  escapeHatchBlockLower: number,
+  escapeHatchBlockUpper: number,
+  signer: Signer,
+  initialEthSupply = 1n * 10n ** 17n,
+  proverless = false,
+) {
   const uniswapRouter = await deployUniswap(signer);
   await uniswapRouter.deployed();
 
-  const verifier = await deployVerifier(signer);
+  const verifier = proverless ? await deployMockVerifier(signer) : await deployVerifier(signer);
   console.error('Deploying RollupProcessor...');
   const rollupFactory = new ContractFactory(RollupProcessor.abi, RollupProcessor.bytecode, signer);
 

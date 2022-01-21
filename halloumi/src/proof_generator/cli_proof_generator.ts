@@ -1,4 +1,4 @@
-import { readFile, writeFile, pathExists, mkdirp, rename } from 'fs-extra';
+import { writeFile, pathExists, mkdirp, rename } from 'fs-extra';
 import { fetch } from '@aztec/barretenberg/iso_fetch';
 import { ChildProcess, spawn } from 'child_process';
 import { PromiseReadable } from 'promise-readable';
@@ -6,6 +6,12 @@ import { createInterface } from 'readline';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
 import { ProofGenerator } from './proof_generator';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
+
+enum CommandCodes {
+  GET_JOIN_SPLIT_VK = 100,
+  GET_ACCOUNT_VK = 101,
+  PING = 666,
+}
 
 export class CliProofGenerator implements ProofGenerator {
   private proc?: ChildProcess;
@@ -18,6 +24,7 @@ export class CliProofGenerator implements ProofGenerator {
     private rollupShapes: string,
     private dataDir: string,
     private persist: boolean,
+    private proverless: boolean,
   ) {
     if (!maxCircuitSize) {
       throw new Error('Rollup sizes must be greater than 0.');
@@ -37,12 +44,32 @@ export class CliProofGenerator implements ProofGenerator {
     await this.start();
   }
 
+  private async readVector() {
+    const length = (await this.stdout.read(4)) as Buffer | undefined;
+
+    if (!length) {
+      throw new Error('Failed to read length.');
+    }
+
+    const vectorLen = length.readUInt32BE(0);
+
+    const data = (await this.stdout.read(vectorLen)) as Buffer | undefined;
+
+    if (!data) {
+      throw new Error('Failed to read data.');
+    }
+
+    return data;
+  }
+
   public async getJoinSplitVk() {
-    return await readFile('./data/join_split/verification_key');
+    this.proc!.stdin!.write(numToUInt32BE(CommandCodes.GET_JOIN_SPLIT_VK));
+    return this.readVector();
   }
 
   public async getAccountVk() {
-    return await readFile('./data/account/verification_key');
+    this.proc!.stdin!.write(numToUInt32BE(CommandCodes.GET_ACCOUNT_VK));
+    return this.readVector();
   }
 
   public async start() {
@@ -50,7 +77,7 @@ export class CliProofGenerator implements ProofGenerator {
     this.launch();
 
     console.log('Waiting for rollup_cli to bootstrap...');
-    this.proc!.stdin!.write(numToUInt32BE(666));
+    this.proc!.stdin!.write(numToUInt32BE(CommandCodes.PING));
 
     const initByte = await this.stdout.read(1);
     if (initByte[0] !== 1) {
@@ -84,27 +111,18 @@ export class CliProofGenerator implements ProofGenerator {
 
   private async createProofInternal(buffer: Buffer) {
     this.proc!.stdin!.write(buffer);
+    const data = await this.readVector();
+    const verified = (await this.stdout.read(1)) as Buffer | undefined;
 
-    const header = (await this.stdout.read(4)) as Buffer | undefined;
-
-    if (!header) {
-      throw new Error('Failed to read length.');
-    }
-
-    const proofLength = header.readUInt32BE(0);
-
-    const data = (await this.stdout.read(proofLength + 1)) as Buffer | undefined;
-
-    if (!data) {
-      throw new Error('Failed to read data.');
-    }
-
-    const verified = data.readUInt8(proofLength);
     if (!verified) {
+      throw new Error('Failed to read verified.');
+    }
+
+    if (!verified[0]) {
       throw new Error('Proof invalid.');
     }
 
-    return data.slice(0, -1);
+    return data;
   }
 
   public async createProof(data: Buffer) {
@@ -152,7 +170,13 @@ export class CliProofGenerator implements ProofGenerator {
 
   private launch() {
     const binPath = '../barretenberg/build/bin/rollup_cli';
-    const proc = (this.proc = spawn(binPath, ['./data/crs', this.dataDir, this.rollupShapes, this.persist.toString()]));
+    const proc = (this.proc = spawn(binPath, [
+      './data/crs',
+      this.dataDir,
+      this.rollupShapes,
+      this.persist.toString(),
+      this.proverless.toString(),
+    ]));
     this.stdout = new PromiseReadable(proc!.stdout!);
 
     const rl = createInterface({

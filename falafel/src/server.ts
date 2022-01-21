@@ -46,6 +46,8 @@ export class Server {
     const {
       halloumiHost,
       numInnerRollupTxs,
+      numOuterRollupProofs,
+      proverless,
       runtimeConfig: {
         publishInterval,
         baseTxGas,
@@ -55,10 +57,6 @@ export class Server {
         gasLimit,
       },
     } = configurator.getConfVars();
-
-    // TODO: Deprecated. Setting to 2 as in test cases it was 2.
-    // We need to change so rollup creator just picks the size it needs.
-    const numOuterRollupProofs = 2;
 
     const noteAlgo = new NoteAlgorithms(barretenberg);
     this.blake = new Blake2s(barretenberg);
@@ -76,7 +74,7 @@ export class Server {
     );
     this.proofGenerator = halloumiHost
       ? new ServerProofGenerator(halloumiHost)
-      : new CliProofGenerator(2 ** 23, '2', './data', true);
+      : new CliProofGenerator(2 ** 23, '2', './data', true, proverless);
     this.pipelineFactory = new RollupPipelineFactory(
       this.proofGenerator,
       blockchain,
@@ -103,6 +101,7 @@ export class Server {
       this.txFeeResolver,
       metrics,
       bridgeResolver,
+      proverless,
     );
   }
 

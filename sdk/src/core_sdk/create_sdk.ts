@@ -49,6 +49,7 @@ export type SdkOptions = {
   minConfirmation?: number;
   minConfirmationEHW?: number;
   identifier?: string;
+  pollInterval?: number;
 } & CoreSdkOptions;
 
 async function sdkFactory(hostStr: string, options: SdkOptions) {
@@ -67,7 +68,7 @@ async function sdkFactory(hostStr: string, options: SdkOptions) {
     await db.clear();
   }
 
-  const rollupProvider = new ServerRollupProvider(host);
+  const rollupProvider = new ServerRollupProvider(host, options.pollInterval);
   return new CoreSdk(leveldb, db, rollupProvider, options);
 }
 

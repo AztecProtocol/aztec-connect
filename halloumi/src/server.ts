@@ -5,6 +5,7 @@ export interface ServerConfig {
   readonly rollupOuters: string;
   readonly dataDir: string;
   readonly persist: boolean;
+  readonly proverless: boolean;
 }
 
 export class Server {
@@ -12,8 +13,8 @@ export class Server {
   private ready = false;
 
   constructor(config: ServerConfig) {
-    const { maxCircuitSize, rollupOuters, dataDir, persist } = config;
-    this.proofGenerator = new CliProofGenerator(maxCircuitSize, rollupOuters, dataDir, persist);
+    const { maxCircuitSize, rollupOuters, dataDir, persist, proverless } = config;
+    this.proofGenerator = new CliProofGenerator(maxCircuitSize, rollupOuters, dataDir, persist, proverless);
   }
 
   public async start() {

@@ -21,7 +21,7 @@ export class TxFeeResolver {
     private feeGasPriceMultiplier: number,
     private readonly txsPerRollup: number,
     private publishInterval: number,
-    private readonly surplusRatios = [1, 0.9, 0.5, 0],
+    private readonly surplusRatios = [1, 0],
     private readonly freeAssets: AssetId[] = [],
     private readonly freeTxTypes: TxType[] = [],
     private readonly numSignificantFigures = 2,

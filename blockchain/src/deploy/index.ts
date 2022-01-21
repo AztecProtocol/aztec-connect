@@ -11,6 +11,7 @@ const {
   ESCAPE_BLOCK_LOWER = '4560', // window of 1hr every 20hrs (escape in last 240 blocks of every 4800)
   ESCAPE_BLOCK_UPPER = '4800',
   INITIAL_ETH_SUPPLY = '100000000000000000', // 0.1 ETH
+  PROVERLESS,
 } = process.env;
 
 function getSigner() {
@@ -39,6 +40,7 @@ async function main() {
     +ESCAPE_BLOCK_UPPER,
     signer,
     initialEthSupply,
+    PROVERLESS === 'true'
   );
 
   console.log(`export ROLLUP_CONTRACT_ADDRESS=${rollup.address}`);

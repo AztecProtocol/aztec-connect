@@ -7,7 +7,7 @@ TXS=${1:-1}
 DATA_DIR=${2:-./data}
 INNER_SIZE=${3:-1}
 OUTER_SIZE=${4:-1}
-VALID_OUTERS=${5:-1}
+VALID_OUTERS=${5:-$OUTER_SIZE}
 
 cd ../../../../../barretenberg/build
 

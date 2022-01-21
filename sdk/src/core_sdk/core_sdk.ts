@@ -46,6 +46,7 @@ export enum CoreSdkEvent {
 }
 
 export interface CoreSdkOptions {
+  proverless?: boolean;
   saveProvingKey?: boolean;
 }
 
@@ -151,6 +152,7 @@ export class CoreSdk extends EventEmitter {
 
       const joinSplitProver = new JoinSplitProver(
         await pooledProverFactory.createUnrolledProver(JoinSplitProver.circuitSize),
+        this.options.proverless,
       );
       this.paymentProofCreator = new PaymentProofCreator(
         joinSplitProver,
@@ -168,11 +170,14 @@ export class CoreSdk extends EventEmitter {
       );
       const accountProver = new AccountProver(
         await pooledProverFactory.createUnrolledProver(AccountProver.circuitSize),
+        this.options.proverless,
       );
       this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState, this.db);
 
-      await this.createJoinSplitProvingKey(joinSplitProver, recreateKeys);
-      await this.createAccountProvingKey(accountProver, recreateKeys);
+      if (!this.options.proverless) {
+        await this.createJoinSplitProvingKey(joinSplitProver, recreateKeys);
+        await this.createAccountProvingKey(accountProver, recreateKeys);
+      }
     });
 
     this.updateInitState(SdkInitState.INITIALIZED);

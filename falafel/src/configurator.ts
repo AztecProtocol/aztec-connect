@@ -12,11 +12,13 @@ export interface ConfVars {
   halloumiHost?: string;
   privateKey: Buffer;
   numInnerRollupTxs: number;
+  numOuterRollupProofs: number;
   apiPrefix: string;
   serverAuthToken: string;
   minConfirmation: number;
   minConfirmationEHW: number;
   typeOrmLogging: boolean;
+  proverless: boolean;
   runtimeConfig: RuntimeConfig;
 }
 
@@ -31,12 +33,14 @@ function getConfVars(): ConfVars {
     PRIVATE_KEY,
     PORT,
     NUM_INNER_ROLLUP_TXS,
+    NUM_OUTER_ROLLUP_PROOFS,
     MIN_CONFIRMATION,
     MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW,
     BASE_TX_GAS,
     PUBLISH_INTERVAL,
     API_PREFIX,
     SERVER_AUTH_TOKEN,
+    PROVERLESS,
     TYPEORM_LOGGING,
   } = process.env;
 
@@ -53,11 +57,13 @@ function getConfVars(): ConfVars {
       : // Test mnemonic account 0.
         Buffer.from('ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', 'hex'),
     numInnerRollupTxs: +(NUM_INNER_ROLLUP_TXS || 1),
+    numOuterRollupProofs: +(NUM_OUTER_ROLLUP_PROOFS || 1),
     minConfirmation: +(MIN_CONFIRMATION || 1),
     minConfirmationEHW: +(MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW || 12),
     apiPrefix: API_PREFIX || '',
     serverAuthToken: SERVER_AUTH_TOKEN || '!changeme#',
     typeOrmLogging: !!TYPEORM_LOGGING,
+    proverless: !!PROVERLESS,
     runtimeConfig: {
       acceptingTxs: true,
       useKeyCache: false,

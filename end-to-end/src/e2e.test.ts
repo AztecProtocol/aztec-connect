@@ -10,11 +10,10 @@ const {
   ETHEREUM_HOST = 'http://localhost:8545',
   ROLLUP_HOST = 'http://localhost:8081',
   PRIVATE_KEY = '',
+  PROVERLESS,
 } = process.env;
 
 /**
- * If necessary, install ganache-cli: yarn global add ganache-cli
- * Set ETHEREUM_HOST: export ETHEREUM_HOST = http://localhost:8545
  * Run the following:
  * blockchain: yarn start:ganache
  * halloumi: yarn start:e2e
@@ -43,6 +42,8 @@ describe('end-to-end tests', () => {
 
     sdk = await createWalletSdk(provider, ROLLUP_HOST, {
       syncInstances: false,
+      proverless: PROVERLESS === 'true',
+      pollInterval: 1000,
       saveProvingKey: false,
       clearDb: true,
       memoryDb: true,

@@ -8,8 +8,8 @@
     "build:dev": "node package.js && tsc -p tsconfig.dest.json --watch",
     "start": "node ./dest",
     "start:dev": "tsc-watch -p tsconfig.dest.json --onSuccess 'yarn start'",
-    "start:prod": "yarn build && ROLLUP_OUTERS=1,2,4 MAX_CIRCUIT_SIZE=33554432 node ./dest",
-    "start:e2e": "yarn clean_data && ./bootstrap.sh && yarn start",
+    "start:e2e": "./scripts/start_e2e.sh",
+    "start:e2e:proverless": "PROVERLESS=true ./scripts/start_e2e.sh",
     "test": "jest",
     "clean": "rm -rf ./dest",
     "clean_data": "rm -rf ./data"

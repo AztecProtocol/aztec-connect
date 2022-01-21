@@ -1,6 +1,7 @@
 import { ContractFactory, Signer } from 'ethers';
 import StandardVerifier from '../artifacts/contracts/verifier/StandardVerifier.sol/StandardVerifier.json';
 import RootVerifierVk from '../artifacts/contracts/verifier/keys/RootVerifierVk.sol/RootVerifierVk.json';
+import MockVerifier from '../artifacts/contracts/test/MockVerifier.sol/MockVerifier.json';
 
 function linkBytecode(artifact: any, libraries: any) {
   let bytecode = artifact.bytecode;
@@ -35,6 +36,13 @@ export async function deployVerifier(signer: Signer) {
     RootVerifierVk: StandardVerificationKeyLib.address,
   });
   const verifierFactory = new ContractFactory(StandardVerifier.abi, linkedVBytecode, signer);
+  const verifier = await verifierFactory.deploy();
+  return verifier;
+}
+
+export async function deployMockVerifier(signer: Signer) {
+  console.error('Deploying MockVerifier...');
+  const verifierFactory = new ContractFactory(MockVerifier.abi, MockVerifier.bytecode, signer);
   const verifier = await verifierFactory.deploy();
   return verifier;
 }
