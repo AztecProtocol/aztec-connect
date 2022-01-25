@@ -105,20 +105,25 @@ export class RollupProcessor {
     return TxHash.fromString(tx.hash);
   }
 
-  async setSupportedBridge(bridgeAddress: EthAddress, options: SendTxOptions = {}) {
+  async setSupportedBridge(bridgeAddress: EthAddress, bridgeGasLimit: number, options: SendTxOptions = {}) {
     const { gasLimit } = { ...options };
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor
-      .setSupportedBridge(bridgeAddress.toString(), { gasLimit })
+      .setSupportedBridge(bridgeAddress.toString(), bridgeGasLimit, { gasLimit })
       .catch(fixEthersStackTrace);
     return TxHash.fromString(tx.hash);
   }
 
-  async setSupportedAsset(assetAddress: EthAddress, supportsPermit: boolean, options: SendTxOptions = {}) {
+  async setSupportedAsset(
+    assetAddress: EthAddress,
+    supportsPermit: boolean,
+    assetGasLimit: number,
+    options: SendTxOptions = {},
+  ) {
     const { gasLimit } = { ...options };
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor
-      .setSupportedAsset(assetAddress.toString(), supportsPermit, { gasLimit })
+      .setSupportedAsset(assetAddress.toString(), supportsPermit, assetGasLimit, { gasLimit })
       .catch(fixEthersStackTrace);
     return TxHash.fromString(tx.hash);
   }

@@ -82,7 +82,7 @@ export const deployMockBridge = async (
   await bridge.deployed();
 
   const address = EthAddress.fromString(bridge.address);
-  await rollupProcessor.setSupportedBridge(address);
+  await rollupProcessor.setSupportedBridge(address, 0);
   const bridgeAddressId = await rollupProcessor.getBridgeAddressId(address);
 
   return new BridgeId(
@@ -91,14 +91,7 @@ export const deployMockBridge = async (
     outputAssetIdA,
     outputAssetIdB,
     openingNonce,
-    new BitConfig(
-        false,
-        secondInputAssetVirtual,
-        false,
-        secondOutputAssetVirtual,
-        false,
-        secondOutputAssetValid,
-    ),
+    new BitConfig(false, secondInputAssetVirtual, false, secondOutputAssetVirtual, false, secondOutputAssetValid),
     auxData,
   );
 };

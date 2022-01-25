@@ -74,8 +74,13 @@ export class Contracts {
     );
   }
 
-  public async setSupportedAsset(assetAddress: EthAddress, supportsPermit: boolean, options: SendTxOptions = {}) {
-    const tx = await this.rollupProcessor.setSupportedAsset(assetAddress, supportsPermit, options);
+  public async setSupportedAsset(
+    assetAddress: EthAddress,
+    supportsPermit: boolean,
+    assetGasLimit = 0,
+    options: SendTxOptions = {},
+  ) {
+    const tx = await this.rollupProcessor.setSupportedAsset(assetAddress, supportsPermit, assetGasLimit, options);
     const tokenAsset = await TokenAsset.fromAddress(assetAddress, this.ethereumProvider, supportsPermit);
     this.assets.push(tokenAsset);
     return tx;

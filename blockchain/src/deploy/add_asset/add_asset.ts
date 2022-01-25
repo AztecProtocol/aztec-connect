@@ -30,7 +30,7 @@ export async function addAsset(rollup: Contract, signer: Signer, supportsPermit:
 }
 
 export async function setSupportedAsset(rollup: Contract, address: string, supportsPermit: boolean) {
-  const tx = await rollup.setSupportedAsset(address, supportsPermit);
+  const tx = await rollup.setSupportedAsset(address, supportsPermit, 0);
   const receipt = await tx.wait();
   const assetId = rollup.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args.assetId;
   console.error(`AssetId: ${assetId}`);

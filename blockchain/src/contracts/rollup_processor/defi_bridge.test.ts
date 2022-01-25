@@ -297,7 +297,7 @@ describe('rollup_processor: defi bridge', () => {
     await expectResult([new DefiInteractionNote(bridgeId, 0, inputValue, outputValueA, 0n, true)], txHash);
   });
 
-  it.only('process uniswap defi interaction data that converts token to eth', async () => {
+  it('process uniswap defi interaction data that converts token to eth', async () => {
     // swap DAI for ETH
     const bridgeAddressId = 1;
     const inputAssetId = AssetId.DAI;
@@ -408,8 +408,8 @@ describe('rollup_processor: defi bridge', () => {
       const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
 
-      let currentEthBalance = await assets[AssetId.ETH].balanceOf(rollupProcessor.address);
-      let currentDaiBalance = await assets[AssetId.DAI].balanceOf(rollupProcessor.address);
+      const currentEthBalance = await assets[AssetId.ETH].balanceOf(rollupProcessor.address);
+      const currentDaiBalance = await assets[AssetId.DAI].balanceOf(rollupProcessor.address);
 
       expect(currentEthBalance === prevEthBalance).toBe(false);
       expect(currentDaiBalance === prevDaiBalance).toBe(false);

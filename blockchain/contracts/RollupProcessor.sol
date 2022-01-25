@@ -30,7 +30,10 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     error INCORRECT_STATE_HASH(bytes32 oldStateHash, bytes32 newStateHash);
     error INCORRECT_DATA_START_INDEX(uint256 providedIndex, uint256 expectedIndex);
     error BRIDGE_WITH_IDENTICAL_OUTPUT_ASSETS(uint256 outputAssetId);
-    error INCORRECT_PREVIOUS_DEFI_INTERACTION_HASH(bytes32 providedDefiInteractionHash, bytes32 expectedDefiInteractionHash);
+    error INCORRECT_PREVIOUS_DEFI_INTERACTION_HASH(
+        bytes32 providedDefiInteractionHash,
+        bytes32 expectedDefiInteractionHash
+    );
     error ZERO_TOTAL_INPUT_VALUE();
     error ARRAY_OVERFLOW();
     error ZERO_BRIDGE_ADDRESS_ID();
@@ -93,8 +96,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     event Deposit(uint256 assetId, address depositorAddress, uint256 depositValue);
     event Withdraw(uint256 assetId, address withdrawAddress, uint256 withdrawValue);
     event WithdrawError(bytes errorReason);
-    event AssetAdded(uint256 indexed assetId, address indexed assetAddress);
-    event BridgeAdded(uint256 indexed bridgeAddressId, address indexed bridgeAddress);
+    event AssetAdded(uint256 indexed assetId, address indexed assetAddress, uint256 assetGasLimit);
+    event BridgeAdded(uint256 indexed bridgeAddressId, address indexed bridgeAddress, uint256 bridgeGasLimit);
     event RollupProviderUpdated(address indexed providerAddress, bool valid);
     event VerifierUpdated(address indexed verifierAddress);
 
@@ -123,14 +126,17 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     // We need to cap the amount of gas sent to the DeFi bridge contract for two reasons.
     // 1: To provide consistency to rollup providers around costs.
     // 2: To prevent griefing attacks where a bridge consumes all our gas.
-    uint256 private gasSentToBridgeProxy = 300000;
 
     uint256 private constant DEFAULT_BRIDGE_GAS_LIMIT = 300000;
 
-    uint256 private constant DEFAULT_ERC20_GAS_LIMIT = 75000;
+    uint256 private constant DEFAULT_ERC20_GAS_LIMIT = 55000;
 
     // we need a way to register ERC20 Gas Limits for withdrawals to a specific asset id
-    mapping(uint256 => uint256) assetGasLimit;
+    mapping(uint256 => uint256) assetGasLimits;
+
+    // we need a way to register Bridge Gas Limits for dynamic limits per DeFi protocol
+
+    mapping(uint256 => uint256) bridgeGasLimits;
 
     struct PendingDefiBridgeInteraction {
         uint256 bridgeId;
@@ -143,8 +149,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     /**
      * rollupState storage slot contains the following data:
      *
-     * | bit offset   | num bits    | description |
-     * | 0             | 202           | rollup state hash |
+     * | bit offset     | num bits      | description |
+     * | 0              | 202           | rollup state hash |
      * | 202            | 32            | datasize: number of filled entries in note tree |
      * | 235            | 10            | asyncDefiInteractionHashes.length : number of entries in asyncDefiInteractionHashes array |
      * | 245            | 10            | defiInteractionHashes.length : number of entries in defiInteractionHashes array |
@@ -201,8 +207,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         assembly {
             mutexValue := shr(REENTRANCY_MUTEX_BIT_OFFSET, sload(rollupState.slot))
         }
-        if (mutexValue)
-        {
+        if (mutexValue) {
             revert REENTRANCY_MUTEX_SET();
         }
     }
@@ -266,6 +271,13 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     // Used by brige contracts to send RollupProcessor ETH during a bridge interaction
     receive() external payable {}
 
+    /**
+     * @dev Allow the multisig owner to pause the contract, in case of bugs.
+     */
+    function pause() public override onlyOwner {
+        _pause();
+    }
+
     function setRollupProvider(address providerAddress, bool valid) public override onlyOwner {
         rollupProviders[providerAddress] = valid;
         emit RollupProviderUpdated(providerAddress, valid);
@@ -278,10 +290,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
 
     function setDefiBridgeProxy(address defiBridgeProxyAddress) public override onlyOwner {
         defiBridgeProxy = defiBridgeProxyAddress;
-    }
-
-    function setGasSentToDefiBridgeProxy(uint256 _gasSentToBridgeProxy) public override onlyOwner {
-        gasSentToBridgeProxy = _gasSentToBridgeProxy;
     }
 
     /**
@@ -299,16 +307,14 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
      */
     function getSupportedAsset(uint256 assetId) public view override returns (address) {
         // If the asset ID is >= 2^30, the asset represents a 'virtual' asset that has no layer 1 equivalent
-        if (assetId > 0x3fffffff)
-        {
+        if (assetId > 0x3fffffff) {
             revert INVALID_ASSET_ID();
         }
         if (assetId == ethAssetId) {
             return address(0x0);
         }
         address result = supportedAssets[assetId - 1];
-        if (result == address(0))
-        {
+        if (result == address(0)) {
             revert INVALID_ASSET_ADDRESS();
         }
         return result;
@@ -447,8 +453,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     ) internal {
         validateAssetIdIsNotVirtual(assetId);
         uint256 userBalance = userPendingDeposits[assetId][transferFromAddress];
-        if (userBalance < amount)
-        {
+        if (userBalance < amount) {
             revert INSUFFICIENT_DEPOSIT();
         }
 
@@ -460,13 +465,15 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
      * Protected by onlyOwner
      * @param linkedToken - address of the asset
      * @param supportsPermit - bool determining whether this supports permit
+     * @param gasLimit - uint256 gas limit for ERC20 token transfers of this asset
      */
+
     function setSupportedAsset(
         address linkedToken,
-        bool supportsPermit //, /*uint256 gasLimit*/
+        bool supportsPermit,
+        uint256 gasLimit
     ) external override {
-        if (linkedToken == address(0))
-        {
+        if (linkedToken == address(0)) {
             revert INVALID_LINKED_TOKEN_ADDRESS();
         }
 
@@ -474,27 +481,27 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         assetPermitSupport[linkedToken] = supportsPermit;
 
         uint256 assetId = supportedAssets.length;
-        // assetGasLimit[assetId] = gasLimit || DEFAULT_ERC20_GAS_LIMIT;
+        assetGasLimits[assetId] = gasLimit == 0 ? DEFAULT_ERC20_GAS_LIMIT : gasLimit;
 
-        emit AssetAdded(assetId, linkedToken);
+        emit AssetAdded(assetId, linkedToken, assetGasLimits[assetId]);
     }
 
     /**
      * @dev Set the mapping between an bridge contract id and the address of the linked bridge contract.
      * Protected by onlyOwner
      * @param linkedBridge - address of the bridge contract
+     * @param gasLimit - uint256 gas limit to send to the bridge convert function
      */
-    function setSupportedBridge(address linkedBridge) external override onlyOwner {
-        if (linkedBridge == address(0))
-        {
+    function setSupportedBridge(address linkedBridge, uint256 gasLimit) external override onlyOwner {
+        if (linkedBridge == address(0)) {
             revert INVALID_LINKED_BRIDGE_ADDRESS();
         }
-
         supportedBridges.push(linkedBridge);
 
         uint256 bridgeAddressId = supportedBridges.length;
+        bridgeGasLimits[bridgeAddressId] = gasLimit == 0 ? DEFAULT_BRIDGE_GAS_LIMIT : gasLimit;
 
-        emit BridgeAdded(bridgeAddressId, linkedBridge);
+        emit BridgeAdded(bridgeAddressId, linkedBridge, bridgeGasLimits[bridgeAddressId]);
     }
 
     /**
@@ -505,8 +512,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
      */
     function setAssetPermitSupport(uint256 assetId, bool supportsPermit) external override onlyOwner {
         address assetAddress = getSupportedAsset(assetId);
-        if (assetAddress == address(0))
-        {
+        if (assetAddress == address(0)) {
             revert TOKEN_ASSET_IS_NOT_LINKED();
         }
 
@@ -529,14 +535,12 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         reentrancyMutexCheck();
 
         if (assetId == ethAssetId) {
-            if (msg.value != amount)
-            {
+            if (msg.value != amount) {
                 revert MSG_VALUE_WRONG_AMOUNT();
             }
             increasePendingDepositBalance(assetId, depositorAddress, amount);
         } else {
-            if (msg.value != 0)
-            {
+            if (msg.value != 0) {
                 revert DEPOSIT_TOKENS_WRONG_PAYMENT_TYPE();
             }
 
@@ -599,8 +603,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         validateAssetIdIsNotVirtual(assetId);
         // check user approved contract to transfer funds, so can throw helpful error to user
         uint256 rollupAllowance = IERC20(assetAddress).allowance(depositorAddress, address(this));
-        if (rollupAllowance < amount)
-        {
+        if (rollupAllowance < amount) {
             revert INSUFFICIENT_TOKEN_APPROVAL();
         }
 
@@ -638,8 +641,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         // 2. There msg.sender is an authorised rollup provider
         // 3. Always transfer fees to the passed in feeReceiver
         (bool isOpen, ) = getEscapeHatchStatus();
-        if (!(rollupProviders[msg.sender] || isOpen))
-        {
+        if (!(rollupProviders[msg.sender] || isOpen)) {
             revert INVALID_PROVIDER();
         }
 
@@ -778,22 +780,19 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         ) = computeRootHashes(proofData);
 
         bytes32 expectedStateHash = getStateHash();
-        if (oldStateHash != expectedStateHash)
-        {
+        if (oldStateHash != expectedStateHash) {
             revert INCORRECT_STATE_HASH(oldStateHash, newStateHash);
         }
 
         uint256 storedDataSize = getDataSize();
         // Ensure we are inserting at the next subtree boundary.
         if (storedDataSize % numDataLeaves == 0) {
-            if (dataStartIndex != storedDataSize)
-            {
+            if (dataStartIndex != storedDataSize) {
                 revert INCORRECT_DATA_START_INDEX(dataStartIndex, storedDataSize);
             }
         } else {
             uint256 expected = storedDataSize + numDataLeaves - (storedDataSize % numDataLeaves);
-            if (dataStartIndex != expected)
-            {
+            if (dataStartIndex != expected) {
                 revert INCORRECT_DATA_START_INDEX(dataStartIndex, expected);
             }
         }
@@ -913,6 +912,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         bool secondOutputValid;
         bool firstOutputVirtual;
         bool secondInputVirtual;
+        uint256 bridgeGasLimit;
     }
 
     uint256 private constant INPUT_ASSET_ID_SHIFT = 32;
@@ -948,11 +948,11 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
 
         bridgeData.bridgeAddress = supportedBridges[bridgeData.bridgeAddressId - 1];
         if (bridgeData.secondOutputValid) {
-            if (bridgeData.outputAssetIdA == bridgeData.outputAssetIdB)
-            {
+            if (bridgeData.outputAssetIdA == bridgeData.outputAssetIdB) {
                 revert BRIDGE_WITH_IDENTICAL_OUTPUT_ASSETS(bridgeData.outputAssetIdA);
             }
         }
+        bridgeData.bridgeGasLimit = bridgeGasLimits[bridgeData.bridgeAddressId];
     }
 
     function getAztecAssetTypes(BridgeData memory bridgeData, uint256 defiInteractionNonce)
@@ -1088,8 +1088,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             bytes32 prevDefiInteractionHash = extractPrevDefiInteractionHash(proofData, rollupHeaderInputLength);
 
             // Validate the compupted interactionHash matches the value in the rollup proof!
-            if (prevDefiInteractionHash != expectedDefiInteractionHash)
-            {
+            if (prevDefiInteractionHash != expectedDefiInteractionHash) {
                 revert INCORRECT_PREVIOUS_DEFI_INTERACTION_HASH(prevDefiInteractionHash, expectedDefiInteractionHash);
             }
         }
@@ -1123,8 +1122,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             assembly {
                 totalInputValue := mload(add(proofDataPtr, mul(0x20, numberOfBridgeCalls)))
             }
-            if (totalInputValue == 0)
-            {
+            if (totalInputValue == 0) {
                 revert ZERO_TOTAL_INPUT_VALUE();
             }
 
@@ -1179,8 +1177,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                     let auxData := mload(add(bridgeData, 0xc0))
                     mstore(add(mPtr, 0x1e0), auxData)
                 }
+
                 let success := delegatecall(
-                    sload(gasSentToBridgeProxy.slot),
+                    mload(add(bridgeData, 0x160)),
                     sload(defiBridgeProxy.slot),
                     sub(mPtr, 0x04),
                     0x204,
@@ -1337,7 +1336,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         uint256 interactionNonce,
         uint256 outputValueA,
         uint256 outputValueB
-    ) external payable {
+    ) external payable whenNotPaused {
         reentrancyMutexCheck();
         setReentrancyMutex();
         uint256 bridgeId;
@@ -1492,10 +1491,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                     (bool success, ) = payable(feeReceiver).call{gas: 50000, value: txFee}('');
                 } else {
                     address assetAddress = getSupportedAsset(assetId);
-                    // TODO get gas for ERC20 call and pass into transfer
-                    // uint256 erc20Gas = getAssetGas(assetId);
-
-                    try IERC20(assetAddress).transfer(feeReceiver, txFee) {} catch (bytes memory reason) {}
+                    try IERC20(assetAddress).transfer{gas: assetGasLimits[assetId]}(feeReceiver, txFee) {} catch (
+                        bytes memory reason
+                    ) {}
                 }
             }
         }
@@ -1513,8 +1511,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         uint256 assetId
     ) internal {
         validateAssetIdIsNotVirtual(assetId);
-        if (receiverAddress == address(0))
-        {
+        if (receiverAddress == address(0)) {
             revert WITHDRAW_TO_ZERO_ADDRESS();
         }
         if (assetId == 0) {
@@ -1522,8 +1519,13 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             // griefing attacks, as engineering a failed withdrawal will invalidate an entire rollup block
             payable(receiverAddress).call{gas: 30000, value: withdrawValue}('');
         } else {
+            // We explicitly do not throw if this call fails, as this opens up the possiblity of
+            // griefing attacks, as engineering a failed withdrawal will invalidate an entire rollup block
+            // the user should ensure their withdrawal will succeed or they will loose funds
             address assetAddress = getSupportedAsset(assetId);
-            IERC20(assetAddress).transfer(receiverAddress, withdrawValue);
+            try IERC20(assetAddress).transfer{gas: assetGasLimits[assetId]}(receiverAddress, withdrawValue) {} catch (
+                bytes memory reason
+            ) {}
         }
     }
 
@@ -1651,8 +1653,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     // }
 
     function validateAssetIdIsNotVirtual(uint256 assetId) internal pure {
-        if (assetId >= (1 << 29))
-        {
+        if (assetId >= (1 << 29)) {
             revert INVALID_ASSET_ID();
         }
     }

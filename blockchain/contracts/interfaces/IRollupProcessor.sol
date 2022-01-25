@@ -35,17 +35,21 @@ interface IRollupProcessor {
 
     function approveProof(bytes32 _proofHash) external;
 
-    function setDefiBridgeProxy(address feeDistributorAddress) external;
+    function pause() external;
 
-    function setGasSentToDefiBridgeProxy(uint256 _gasSentToBridgeProxy) external;
+    function setDefiBridgeProxy(address feeDistributorAddress) external;
 
     function setVerifier(address verifierAddress) external;
 
-    function setSupportedAsset(address linkedToken, bool supportsPermit) external;
+    function setSupportedAsset(
+        address linkedToken,
+        bool supportsPermit,
+        uint256 gasLimit
+    ) external;
 
     function setAssetPermitSupport(uint256 assetId, bool supportsPermit) external;
 
-    function setSupportedBridge(address linkedBridge) external;
+    function setSupportedBridge(address linkedBridge, uint256 gasLimit) external;
 
     function getSupportedAsset(uint256 assetId) external view returns (address);
 

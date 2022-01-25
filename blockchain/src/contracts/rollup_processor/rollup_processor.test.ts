@@ -66,18 +66,63 @@ describe('rollup_processor', () => {
 
   it('should set new supported asset', async () => {
     const assetAddr = EthAddress.randomAddress();
-    const txHash = await rollupProcessor.setSupportedAsset(assetAddr, false);
+    const txHash = await rollupProcessor.setSupportedAsset(assetAddr, false, 0);
 
     // Check event was emitted.
     const receipt = await ethers.provider.getTransactionReceipt(txHash.toString());
     const assetBId = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args.assetId;
     const assetBAddress = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
       .assetAddress;
+    const assetBGasLimit = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
+      .assetGasLimit;
+    expect(assetBGasLimit.toNumber()).toBe(55000);
+
     expect(assetBId.toNumber()).toBe(2);
     expect(assetBAddress).toBe(assetAddr.toString());
 
     const supportedAssetBAddress = await rollupProcessor.getSupportedAsset(2);
     expect(supportedAssetBAddress).toEqual(assetAddr);
+  });
+
+  it('should set new supported asset with a custom gas limit', async () => {
+    const assetAddr = EthAddress.randomAddress();
+    const gasLimit = 1500000;
+    const txHash = await rollupProcessor.setSupportedAsset(assetAddr, false, gasLimit);
+
+    // Check event was emitted.
+    const receipt = await ethers.provider.getTransactionReceipt(txHash.toString());
+    const assetBId = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args.assetId;
+    const assetBAddress = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
+      .assetAddress;
+    const assetBGasLimit = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
+      .assetGasLimit;
+    expect(assetBGasLimit.toNumber()).toBe(gasLimit);
+    expect(assetBId.toNumber()).toBe(2);
+    expect(assetBAddress).toBe(assetAddr.toString());
+
+    const supportedAssetBAddress = await rollupProcessor.getSupportedAsset(2);
+    expect(supportedAssetBAddress).toEqual(assetAddr);
+  });
+
+  it('should set new supported bridge with a custom gas limit', async () => {
+    const bridgeAddr = EthAddress.randomAddress();
+    const gasLimit = 15000000;
+    const txHash = await rollupProcessor.setSupportedBridge(bridgeAddr, gasLimit);
+
+    // Check event was emitted.
+    const receipt = await ethers.provider.getTransactionReceipt(txHash.toString());
+    const bridgeId = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
+      .bridgeAddressId;
+    const bridgeAddress = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
+      .bridgeAddress;
+    const bridgeGasLimit = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
+      .bridgeGasLimit;
+    expect(bridgeGasLimit.toNumber()).toBe(gasLimit);
+    expect(bridgeId.toNumber()).toBe(2);
+    expect(bridgeAddress).toBe(bridgeAddr.toString());
+
+    const supportedAssetBAddress = await rollupProcessor.getSupportedBridge(2);
+    expect(supportedAssetBAddress).toEqual(bridgeAddr);
   });
 
   it('should approve a proof', async () => {
@@ -112,9 +157,7 @@ describe('rollup_processor', () => {
 
     await expect(
       rollupProcessor.sendTx(tx, { signingAddress: EthAddress.fromString(await signers[1].getAddress()) }),
-    ).rejects.toThrow(
-      "INVALID_PROVIDER",
-    );
+    ).rejects.toThrow('INVALID_PROVIDER');
   });
 
   it('should allow the owner to change the verifier address', async () => {

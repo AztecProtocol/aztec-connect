@@ -87,13 +87,13 @@ describe('rollup_processor: withdraw', () => {
     expect(postWithdrawalBalance).toBe(preWithdrawlBalance + withdrawalAmount);
   });
 
-  it('should revert if withdraw fails due to faulty ERC20 transfer', async () => {
+  it('should not revert if withdraw fails due to faulty ERC20 transfer', async () => {
     const FaultyERC20 = await ethers.getContractFactory('ERC20FaultyTransfer');
     const faultyERC20 = await FaultyERC20.deploy();
     const assetAddr = EthAddress.fromString(faultyERC20.address);
     const asset = await TokenAsset.fromAddress(assetAddr, new EthersAdapter(ethers.provider), false);
 
-    await rollupProcessor.setSupportedAsset(asset.address, false);
+    await rollupProcessor.setSupportedAsset(asset.address, false, 0);
     const assetId = (await rollupProcessor.getSupportedAssets()).findIndex(a => a.equals(assetAddr));
 
     // Deposit.
@@ -120,6 +120,7 @@ describe('rollup_processor: withdraw', () => {
       { rollupId: 2 },
     );
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('ERC20FaultyTransfer: FAILED');
+    const txReceipt = await rollupProcessor.sendTx(tx);
+    await expect(txReceipt);
   });
 });

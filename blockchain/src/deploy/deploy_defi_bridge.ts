@@ -14,7 +14,7 @@ export async function deployDefiBridge(
   console.error('Deploying DefiBridge...');
   const defiBridgeLibrary = new ContractFactory(UniswapBridge.abi, UniswapBridge.bytecode, signer);
   const defiBridge = await defiBridgeLibrary.deploy(rollupProcessor.address, uniswapRouter.address);
-  await rollupProcessor.setSupportedBridge(defiBridge.address);
+  await rollupProcessor.setSupportedBridge(defiBridge.address, 0);
   console.error(
     `DefiBridge contract address: ${
       defiBridge.address
