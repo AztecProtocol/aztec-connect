@@ -1,13 +1,4 @@
-import {
-  WalletSdk,
-  WalletProvider,
-  AssetId,
-  EthAddress,
-  toBaseUnits,
-  MemoryFifo,
-  BridgeId,
-  BitConfig,
-} from '@aztec/sdk';
+import { AztecSdk, BitConfig, BridgeId, EthAddress, MemoryFifo, toBaseUnits, WalletProvider } from '@aztec/sdk';
 import { Agent } from './agent';
 import { Stats } from './stats';
 
@@ -22,8 +13,8 @@ const formatNumber = (x: bigint) => {
 };
 
 interface BridgeSpec {
-  inputAsset: AssetId;
-  outputAsset: AssetId;
+  inputAsset: number;
+  outputAsset: number;
   addressId: number;
   numTxs: number;
   gas: bigint;
@@ -34,8 +25,8 @@ interface BridgeSpec {
 const bridgeConfigs: BridgeSpec[] = [
   {
     //bridgeId: '0x0000000000000000000000000000000000000000000000004000000000000001',
-    inputAsset: AssetId.ETH,
-    outputAsset: AssetId.DAI,
+    inputAsset: 0,
+    outputAsset: 1,
     addressId: 1,
     numTxs: 10,
     gas: 100000n,
@@ -44,8 +35,8 @@ const bridgeConfigs: BridgeSpec[] = [
   },
   {
     //bridgeId: '0x0000000000000000000000000000000000000000000000000000000100000002',
-    inputAsset: AssetId.DAI,
-    outputAsset: AssetId.ETH,
+    inputAsset: 0,
+    outputAsset: 1,
     addressId: 2,
     numTxs: 10,
     gas: 100000n,
@@ -64,7 +55,7 @@ const getBridgeTxCost = (bridgeSpec: BridgeSpec) => {
 export class DefiAgent extends Agent {
   constructor(
     fundsSourceAddress: EthAddress,
-    sdk: WalletSdk,
+    sdk: AztecSdk,
     provider: WalletProvider,
     id: number,
     queue: MemoryFifo<() => Promise<void>>,
@@ -143,8 +134,8 @@ export class DefiAgent extends Agent {
     const currentBalanceInputAsset = this.sdk.getBalance(spec.inputAsset, this.primaryUser.user.id);
     const currentBalanceOutputAsset = this.sdk.getBalance(spec.outputAsset, this.primaryUser.user.id);
     console.log(
-      `${this.agentId()} balances, ${AssetId[spec.inputAsset]}: ${formatNumber(currentBalanceInputAsset)}, ${
-        AssetId[spec.outputAsset]
+      `${this.agentId()} balances, ${spec.inputAsset}: ${formatNumber(currentBalanceInputAsset)}, ${
+        spec.outputAsset
       }: ${formatNumber(currentBalanceOutputAsset)}`,
     );
     const txFee = getBridgeTxCost(spec);
@@ -152,9 +143,9 @@ export class DefiAgent extends Agent {
     const jsTxFee = (await this.sdk.getTransferFees(spec.inputAsset))[0].value;
     console.log(`${this.agentId()} JS fee: ${jsTxFee}`);
     console.log(
-      `${this.agentId()} swapping ${formatNumber(amountToTransfer)} units of asset ${
-        AssetId[spec.inputAsset]
-      } for asset ${AssetId[spec.outputAsset]}`,
+      `${this.agentId()} swapping ${formatNumber(amountToTransfer)} units of asset ${spec.inputAsset} for asset ${
+        spec.outputAsset
+      }`,
     );
     console.log(`${this.agentId()} building Defi proof`);
     const controller = this.sdk.createDefiController(

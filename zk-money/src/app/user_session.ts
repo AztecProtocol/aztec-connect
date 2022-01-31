@@ -1,13 +1,4 @@
-import {
-  AccountId,
-  AssetId,
-  createWalletSdk,
-  EthAddress,
-  GrumpkinAddress,
-  SdkEvent,
-  SdkInitState,
-  WalletSdk,
-} from '@aztec/sdk';
+import { AccountId, AztecSdk, createAztecSdk, EthAddress, GrumpkinAddress, SdkEvent, SdkInitState } from '@aztec/sdk';
 import { createHash } from 'crypto';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
@@ -135,7 +126,7 @@ export interface UserSession {
 export class UserSession extends EventEmitter {
   private coreProvider!: Provider;
   private provider?: Provider;
-  private sdk!: WalletSdk;
+  private sdk!: AztecSdk;
   private rollupService!: RollupService;
   private loginState: LoginState;
   private worldState = initialWorldState;
@@ -151,7 +142,7 @@ export class UserSession extends EventEmitter {
   private destroyed = false;
   private claimUserNameProm?: Promise<void>;
 
-  private readonly accountProofDepositAsset = AssetId.ETH;
+  private readonly accountProofDepositAsset = 0;
   private readonly accountProofMinDeposit = toBaseUnits('0.01', assets[this.accountProofDepositAsset].decimals);
 
   private readonly debounceCheckAliasWait = 600;
@@ -688,7 +679,7 @@ export class UserSession extends EventEmitter {
       const signer = this.sdk.createSchnorrSigner(this.keyVaultV0.accountPrivateKey);
       await this.awaitUserSynchronised(prevUserId);
 
-      const fee = { assetId: AssetId.ETH, value: BigInt(0) }; // TODO
+      const fee = { assetId: 0, value: BigInt(0) }; // TODO
       const controller = await this.sdk.createMigrateAccountController(
         prevUserId,
         signer,
@@ -974,7 +965,7 @@ export class UserSession extends EventEmitter {
       this.rollupService,
       this.accountUtils,
       this.requiredNetwork,
-      this.config.txAmountLimits[AssetId.ETH],
+      this.config.txAmountLimits[this.accountProofDepositAsset],
       this.accountProofMinDeposit,
       this.shieldForAliasAmountPreselection,
     );
@@ -1009,7 +1000,7 @@ export class UserSession extends EventEmitter {
     try {
       const { rollupProviderUrl, chainId, debug, saveProvingKey } = this.config;
       const minConfirmation = chainId === 1337 ? 1 : undefined; // If not ganache, use the default value.
-      this.sdk = await createWalletSdk(this.coreProvider.ethereumProvider, rollupProviderUrl, {
+      this.sdk = await createAztecSdk(this.coreProvider.ethereumProvider, rollupProviderUrl, {
         minConfirmation,
         debug,
         saveProvingKey,

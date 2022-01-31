@@ -1,4 +1,3 @@
-import { AssetId, AssetIds } from '@aztec/barretenberg/asset';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeId, BitConfig } from '@aztec/barretenberg/bridge_id';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
@@ -67,7 +66,7 @@ describe('rollup_creator', () => {
     id: number,
     {
       txType = TxType.TRANSFER,
-      txFeeAssetId = AssetId.ETH,
+      txFeeAssetId = 0,
       txFee = 0n,
       creationTime = new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id), // ensures txs are ordered by id
       bridgeId = new BridgeId(
@@ -138,7 +137,7 @@ describe('rollup_creator', () => {
     } as any;
 
     feeResolver = {
-      isFeePayingAsset: jest.fn().mockImplementation((assetId: AssetId) => AssetIds.some(x => x === assetId)),
+      isFeePayingAsset: jest.fn().mockImplementation((assetId: number) => assetId < 3),
     } as any;
 
     rollupCreator = new RollupCreator(
@@ -159,7 +158,7 @@ describe('rollup_creator', () => {
       const backwardLink = randomBytes(32);
       notes.set(8n, backwardLink);
       const txs = [mockTx(1, { txType: TxType.TRANSFER, backwardLink: backwardLink })];
-      await rollupCreator.create(txs, [], new Set<AssetId>([AssetId.ETH]));
+      await rollupCreator.create(txs, [], new Set<number>([0]));
       expect(proofGenerator.createProof).toHaveBeenCalledTimes(1);
       const argument = proofGenerator.createProof.mock.calls[0][0];
       const request = TxRollupProofRequest.fromBuffer(argument);
@@ -172,7 +171,7 @@ describe('rollup_creator', () => {
 
     it('should return the zero linked commitment for 1 tx with no backward link', async () => {
       const txs = [mockTx(1, { txType: TxType.TRANSFER })];
-      await rollupCreator.create(txs, [], new Set<AssetId>([AssetId.ETH]));
+      await rollupCreator.create(txs, [], new Set<number>([0]));
       expect(proofGenerator.createProof).toHaveBeenCalledTimes(1);
       const argument = proofGenerator.createProof.mock.calls[0][0];
       const request = TxRollupProofRequest.fromBuffer(argument);
@@ -194,7 +193,7 @@ describe('rollup_creator', () => {
         mockTx(1, { txType: TxType.TRANSFER, backwardLink: backwardLink1 }),
         mockTx(2, { txType: TxType.TRANSFER, backwardLink: backwardLink2 }),
       ];
-      await rollupCreator.create(txs, [], new Set<AssetId>([AssetId.ETH]));
+      await rollupCreator.create(txs, [], new Set<number>([0]));
       expect(proofGenerator.createProof).toHaveBeenCalledTimes(1);
       const argument = proofGenerator.createProof.mock.calls[0][0];
       const request = TxRollupProofRequest.fromBuffer(argument);
@@ -218,7 +217,7 @@ describe('rollup_creator', () => {
         mockTx(2, { txType: TxType.TRANSFER }),
         mockTx(3, { txType: TxType.TRANSFER, backwardLink: backwardLink2 }),
       ];
-      await rollupCreator.create(txs, [], new Set<AssetId>([AssetId.ETH]));
+      await rollupCreator.create(txs, [], new Set<number>([0]));
       expect(proofGenerator.createProof).toHaveBeenCalledTimes(1);
       const argument = proofGenerator.createProof.mock.calls[0][0];
       const request = TxRollupProofRequest.fromBuffer(argument);
@@ -247,7 +246,7 @@ describe('rollup_creator', () => {
         mockTx(2, { txType: TxType.TRANSFER }),
         mockTx(3, { txType: TxType.TRANSFER, backwardLink: backwardLink1 }),
       ];
-      await rollupCreator.create(txs, [], new Set<AssetId>([AssetId.ETH]));
+      await rollupCreator.create(txs, [], new Set<number>([0]));
       expect(proofGenerator.createProof).toHaveBeenCalledTimes(1);
       const argument = proofGenerator.createProof.mock.calls[0][0];
       const request = TxRollupProofRequest.fromBuffer(argument);
@@ -283,7 +282,7 @@ describe('rollup_creator', () => {
         mockTx(6, { txType: TxType.TRANSFER, backwardLink: backwardLink1 }),
         mockTx(7, { txType: TxType.TRANSFER }),
       ];
-      await rollupCreator.create(txs, [], new Set<AssetId>([AssetId.ETH]));
+      await rollupCreator.create(txs, [], new Set<number>([0]));
       expect(proofGenerator.createProof).toHaveBeenCalledTimes(1);
       const argument = proofGenerator.createProof.mock.calls[0][0];
       const request = TxRollupProofRequest.fromBuffer(argument);
@@ -330,7 +329,7 @@ describe('rollup_creator', () => {
         mockTx(6, { txType: TxType.TRANSFER, backwardLink: backwardLink1 }),
         mockTx(7, { txType: TxType.TRANSFER }),
       ];
-      await rollupCreator.create(txs, [], new Set<AssetId>([AssetId.ETH]));
+      await rollupCreator.create(txs, [], new Set<number>([0]));
       expect(proofGenerator.createProof).toHaveBeenCalledTimes(1);
       const argument = proofGenerator.createProof.mock.calls[0][0];
       const request = TxRollupProofRequest.fromBuffer(argument);
@@ -365,7 +364,7 @@ describe('rollup_creator', () => {
           txFee: BigInt(fees[i]),
         }),
       );
-      await rollupCreator.create(txs, globalBridges, new Set<AssetId>([AssetId.ETH]));
+      await rollupCreator.create(txs, globalBridges, new Set<number>([0]));
       const argument = proofGenerator.createProof.mock.calls[0][0];
       const request = TxRollupProofRequest.fromBuffer(argument);
       const rollup = request.txRollup;
@@ -393,7 +392,7 @@ describe('rollup_creator', () => {
           txFee: BigInt(fees[i]),
         }),
       );
-      await rollupCreator.create(txs, globalBridges, new Set<AssetId>([AssetId.ETH]));
+      await rollupCreator.create(txs, globalBridges, new Set<number>([0]));
       const argument = proofGenerator.createProof.mock.calls[0][0];
       const request = TxRollupProofRequest.fromBuffer(argument);
       const rollup = request.txRollup;
@@ -420,7 +419,7 @@ describe('rollup_creator', () => {
           txFee: BigInt(fees[i]),
         }),
       );
-      await rollupCreator.create(txs, globalBridges, new Set<AssetId>([AssetId.ETH]));
+      await rollupCreator.create(txs, globalBridges, new Set<number>([0]));
       const argument = proofGenerator.createProof.mock.calls[0][0];
       const request = TxRollupProofRequest.fromBuffer(argument);
       const rollup = request.txRollup;
@@ -447,7 +446,7 @@ describe('rollup_creator', () => {
           txFee: BigInt(fees[i]),
         }),
       );
-      await rollupCreator.create(txs, globalBridges, new Set<AssetId>([AssetId.ETH]));
+      await rollupCreator.create(txs, globalBridges, new Set<number>([0]));
       const argument = proofGenerator.createProof.mock.calls[0][0];
       const request = TxRollupProofRequest.fromBuffer(argument);
       const rollup = request.txRollup;
@@ -474,7 +473,7 @@ describe('rollup_creator', () => {
           txFee: BigInt(fees[i]),
         }),
       );
-      await rollupCreator.create(txs, globalBridges, new Set<AssetId>([AssetId.ETH]));
+      await rollupCreator.create(txs, globalBridges, new Set<number>([0]));
       const argument = proofGenerator.createProof.mock.calls[0][0];
       const request = TxRollupProofRequest.fromBuffer(argument);
       const rollup = request.txRollup;
@@ -495,36 +494,36 @@ describe('rollup_creator', () => {
 
     it('should add assets to root rollup assets', async () => {
       const txs = [
-        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
-        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.DAI }),
-        mockTx(3, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
-        mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.DAI }),
+        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: 1 }),
+        mockTx(3, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: 1 }),
       ];
-      const rootAssets = new Set<AssetId>();
+      const rootAssets = new Set<number>();
       await rollupCreator.create(txs, [], rootAssets);
       expect(proofGenerator.createProof).toHaveBeenCalledTimes(1);
       const argument = proofGenerator.createProof.mock.calls[0][0];
       const request = TxRollupProofRequest.fromBuffer(argument);
       const rollup = request.txRollup;
-      expect(rollup.assetIds.map(buf => buf.readUInt32BE(28))).toEqual([AssetId.ETH, AssetId.DAI]);
-      expect([...rootAssets.values()]).toEqual([AssetId.ETH, AssetId.DAI]);
+      expect(rollup.assetIds.map(buf => buf.readUInt32BE(28))).toEqual([0, 1]);
+      expect([...rootAssets.values()]).toEqual([0, 1]);
     });
 
     it('should add assets to root rollup assets', async () => {
       const txs = [
-        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: NON_FEE_PAYING_ASSET }),
-        mockTx(3, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.DAI }),
+        mockTx(3, { txType: TxType.TRANSFER, txFeeAssetId: 1 }),
         mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: NON_FEE_PAYING_ASSET + 1 }),
       ];
-      const rootAssets = new Set<AssetId>();
+      const rootAssets = new Set<number>();
       await rollupCreator.create(txs, [], rootAssets);
       expect(proofGenerator.createProof).toHaveBeenCalledTimes(1);
       const argument = proofGenerator.createProof.mock.calls[0][0];
       const request = TxRollupProofRequest.fromBuffer(argument);
       const rollup = request.txRollup;
-      expect(rollup.assetIds.map(buf => buf.readUInt32BE(28))).toEqual([AssetId.ETH, AssetId.DAI]);
-      expect([...rootAssets.values()]).toEqual([AssetId.ETH, AssetId.DAI]);
+      expect(rollup.assetIds.map(buf => buf.readUInt32BE(28))).toEqual([0, 1]);
+      expect([...rootAssets.values()]).toEqual([0, 1]);
     });
   });
 });

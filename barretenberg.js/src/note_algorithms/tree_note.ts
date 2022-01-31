@@ -1,6 +1,5 @@
-import { toBigIntBE, toBufferBE } from '../bigint_buffer';
 import { GrumpkinAddress } from '../address';
-import { AssetId } from '../asset';
+import { toBigIntBE, toBufferBE } from '../bigint_buffer';
 import { Grumpkin } from '../ecc/grumpkin';
 import { numToUInt32BE } from '../serialize';
 import { ViewingKey } from '../viewing_key';
@@ -22,7 +21,7 @@ export class TreeNote {
   constructor(
     public ownerPubKey: GrumpkinAddress,
     public value: bigint,
-    public assetId: AssetId,
+    public assetId: number,
     public nonce: number,
     public noteSecret: Buffer,
     public creatorPubKey: Buffer,
@@ -67,7 +66,7 @@ export class TreeNote {
   static createFromEphPriv(
     ownerPubKey: GrumpkinAddress,
     value: bigint,
-    assetId: AssetId,
+    assetId: number,
     nonce: number,
     inputNullifier: Buffer,
     ephPrivKey: Buffer,
@@ -82,7 +81,7 @@ export class TreeNote {
   static createFromEphPub(
     ownerPubKey: GrumpkinAddress,
     value: bigint,
-    assetId: AssetId,
+    assetId: number,
     nonce: number,
     inputNullifier: Buffer,
     ephPubKey: GrumpkinAddress,

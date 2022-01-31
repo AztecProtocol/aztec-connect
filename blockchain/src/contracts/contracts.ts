@@ -1,8 +1,13 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { AssetId } from '@aztec/barretenberg/asset';
-import { Asset, EthereumProvider, FeeData, PriceFeed, SendTxOptions, TypedData } from '@aztec/barretenberg/blockchain';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
+import {
+  Asset,
+  EthereumProvider,
+  FeeData,
+  PriceFeed,
+  SendTxOptions,
+  TxHash,
+  TypedData,
+} from '@aztec/barretenberg/blockchain';
 import { Web3Provider } from '@ethersproject/providers';
 import { Web3Signer } from '../signer';
 import { EthAsset, TokenAsset } from './asset';
@@ -151,7 +156,7 @@ export class Contracts {
     return this.rollupProcessor.getRollupBlock(rollupId);
   }
 
-  public async getUserPendingDeposit(assetId: AssetId, account: EthAddress) {
+  public async getUserPendingDeposit(assetId: number, account: EthAddress) {
     return this.rollupProcessor.getUserPendingDeposit(assetId, account);
   }
 
@@ -187,15 +192,15 @@ export class Contracts {
     return this.assets;
   }
 
-  public getAsset(assetId: AssetId) {
+  public getAsset(assetId: number) {
     return this.assets[assetId];
   }
 
-  public async getAssetPrice(assetId: AssetId) {
+  public async getAssetPrice(assetId: number) {
     return this.priceFeeds[assetId].price();
   }
 
-  public getPriceFeed(assetId: AssetId) {
+  public getPriceFeed(assetId: number) {
     return this.priceFeeds[assetId];
   }
 

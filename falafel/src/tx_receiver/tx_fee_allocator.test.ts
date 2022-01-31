@@ -1,6 +1,5 @@
 import { BridgeConfig, BridgeId } from '@aztec/barretenberg/bridge_id';
 import { TxFeeResolver } from '../tx_fee_resolver';
-import { AssetId, AssetIds } from '@aztec/barretenberg/asset';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { TxFeeAllocator } from '.';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
@@ -90,10 +89,10 @@ const mockTx = (id: number, fee: bigint, assetId: number, txType = TxType.ACCOUN
     ),
   } as any as Tx);
 
-const mockDefiBridgeTx = (id: number, fee: bigint, bridgeId: bigint, assetId: AssetId = AssetId.ETH) =>
+const mockDefiBridgeTx = (id: number, fee: bigint, bridgeId: bigint, assetId = 0) =>
   mockTx(id, fee, assetId, TxType.DEFI_DEPOSIT, bridgeId);
 
-const preciselyFundedTx = (id: number, txType: TxType, assetId: AssetId, excessGas = 0n) => {
+const preciselyFundedTx = (id: number, txType: TxType, assetId: number, excessGas = 0n) => {
   return mockTx(id, getTxGasWithBase(txType) + excessGas, assetId, txType);
 };
 
@@ -105,25 +104,25 @@ describe('Tx Fee Allocator', () => {
     jest.spyOn(console, 'log').mockImplementation(() => {});
 
     feeResolver = {
-      getGasPaidForByFee: jest.fn().mockImplementation((assetId: AssetId, fee: bigint) => fee),
-      getTxGas: jest.fn().mockImplementation((assetId: AssetId, txType: TxType) => {
+      getGasPaidForByFee: jest.fn().mockImplementation((assetId: number, fee: bigint) => fee),
+      getTxGas: jest.fn().mockImplementation((assetId: number, txType: TxType) => {
         return getTxGasWithBase(txType);
       }),
       getBridgeTxGas: jest
         .fn()
         .mockImplementation(
-          (assetId: AssetId, bridgeId: bigint) => getSingleBridgeCost(bridgeId) + getTxGasWithBase(TxType.DEFI_DEPOSIT),
+          (assetId: number, bridgeId: bigint) => getSingleBridgeCost(bridgeId) + getTxGasWithBase(TxType.DEFI_DEPOSIT),
         ),
-      isFeePayingAsset: jest.fn().mockImplementation((assetId: AssetId) => AssetIds.some(x => x === assetId))
+      isFeePayingAsset: jest.fn().mockImplementation((assetId: number) => assetId < 3),
     } as any;
 
     txFeeAllocator = new TxFeeAllocator(feeResolver as any);
   });
 
   it('correctly validates single payment', () => {
-    const tx = preciselyFundedTx(1, TxType.TRANSFER, AssetId.ETH);
+    const tx = preciselyFundedTx(1, TxType.TRANSFER, 0);
     const validation = txFeeAllocator.validateReceivedTxs([tx], [TxType.TRANSFER]);
-    expect(validation.feePayingAsset).toEqual(AssetId.ETH);
+    expect(validation.feePayingAsset).toEqual(0);
     expect(validation.gasProvided).toEqual(getTxGasWithBase(TxType.TRANSFER));
     expect(validation.gasRequired).toEqual(getTxGasWithBase(TxType.TRANSFER));
     expect(validation.hasNonFeePayingAssets).toEqual(false);
@@ -131,12 +130,9 @@ describe('Tx Fee Allocator', () => {
   });
 
   it('correctly validates multiple payments', () => {
-    const txs = [
-      preciselyFundedTx(1, TxType.TRANSFER, AssetId.ETH),
-      preciselyFundedTx(2, TxType.TRANSFER, AssetId.ETH),
-    ];
+    const txs = [preciselyFundedTx(1, TxType.TRANSFER, 0), preciselyFundedTx(2, TxType.TRANSFER, 0)];
     const validation = txFeeAllocator.validateReceivedTxs(txs, [TxType.TRANSFER, TxType.TRANSFER]);
-    expect(validation.feePayingAsset).toEqual(AssetId.ETH);
+    expect(validation.feePayingAsset).toEqual(0);
     expect(validation.gasProvided).toEqual(getTxGasWithBase(TxType.TRANSFER) * 2n);
     expect(validation.gasRequired).toEqual(getTxGasWithBase(TxType.TRANSFER) * 2n);
     expect(validation.hasNonFeePayingAssets).toEqual(false);
@@ -154,22 +150,16 @@ describe('Tx Fee Allocator', () => {
   });
 
   it('should throw if multiple fee paying assets', () => {
-    const txs = [
-      preciselyFundedTx(1, TxType.TRANSFER, AssetId.ETH),
-      preciselyFundedTx(2, TxType.TRANSFER, AssetId.DAI),
-    ];
+    const txs = [preciselyFundedTx(1, TxType.TRANSFER, 0), preciselyFundedTx(2, TxType.TRANSFER, 1)];
     expect(() => {
       txFeeAllocator.validateReceivedTxs(txs, [TxType.TRANSFER, TxType.TRANSFER]);
     }).toThrow('Transactions must have exactly 1 fee paying asset');
   });
 
   it('correctly determines fee paying asset', () => {
-    const txs = [
-      preciselyFundedTx(1, TxType.TRANSFER, AssetId.ETH),
-      preciselyFundedTx(2, TxType.TRANSFER, NON_FEE_PAYING_ASSET),
-    ];
+    const txs = [preciselyFundedTx(1, TxType.TRANSFER, 0), preciselyFundedTx(2, TxType.TRANSFER, NON_FEE_PAYING_ASSET)];
     const validation = txFeeAllocator.validateReceivedTxs(txs, [TxType.TRANSFER, TxType.TRANSFER]);
-    expect(validation.feePayingAsset).toEqual(AssetId.ETH);
+    expect(validation.feePayingAsset).toEqual(0);
     expect(validation.gasProvided).toEqual(getTxGasWithBase(TxType.TRANSFER));
     expect(validation.gasRequired).toEqual(getTxGasWithBase(TxType.TRANSFER) * 2n);
     expect(validation.hasNonFeePayingAssets).toEqual(true);
@@ -178,7 +168,7 @@ describe('Tx Fee Allocator', () => {
 
   it('correctly detects non-paying DEFI', () => {
     const txs = [
-      preciselyFundedTx(1, TxType.TRANSFER, AssetId.ETH),
+      preciselyFundedTx(1, TxType.TRANSFER, 0),
       mockDefiBridgeTx(
         2,
         getTxGasWithBase(TxType.DEFI_DEPOSIT) + getSingleBridgeCost(bridgeConfigs[0].bridgeId),
@@ -187,7 +177,7 @@ describe('Tx Fee Allocator', () => {
       ),
     ];
     const validation = txFeeAllocator.validateReceivedTxs(txs, [TxType.TRANSFER, TxType.DEFI_DEPOSIT]);
-    expect(validation.feePayingAsset).toEqual(AssetId.ETH);
+    expect(validation.feePayingAsset).toEqual(0);
     // should only count the gas provided by the TRANSFER
     expect(validation.gasProvided).toEqual(getTxGasWithBase(TxType.TRANSFER));
     // gas required includes the claim
@@ -203,16 +193,16 @@ describe('Tx Fee Allocator', () => {
 
   it('correctly calculates gas', () => {
     const txs = [
-      preciselyFundedTx(1, TxType.ACCOUNT, AssetId.DAI),
-      preciselyFundedTx(2, TxType.DEPOSIT, AssetId.DAI),
-      preciselyFundedTx(3, TxType.TRANSFER, AssetId.DAI),
-      preciselyFundedTx(4, TxType.WITHDRAW_TO_CONTRACT, AssetId.DAI),
-      preciselyFundedTx(5, TxType.WITHDRAW_TO_WALLET, AssetId.DAI),
+      preciselyFundedTx(1, TxType.ACCOUNT, 1),
+      preciselyFundedTx(2, TxType.DEPOSIT, 1),
+      preciselyFundedTx(3, TxType.TRANSFER, 1),
+      preciselyFundedTx(4, TxType.WITHDRAW_TO_CONTRACT, 1),
+      preciselyFundedTx(5, TxType.WITHDRAW_TO_WALLET, 1),
       mockDefiBridgeTx(
         6,
         getTxGasWithBase(TxType.DEFI_DEPOSIT) + getSingleBridgeCost(bridgeConfigs[0].bridgeId),
         bridgeConfigs[0].bridgeId,
-        AssetId.DAI,
+        1,
       ),
     ];
     const validation = txFeeAllocator.validateReceivedTxs(txs, [
@@ -223,7 +213,7 @@ describe('Tx Fee Allocator', () => {
       TxType.WITHDRAW_TO_WALLET,
       TxType.DEFI_DEPOSIT,
     ]);
-    expect(validation.feePayingAsset).toEqual(AssetId.DAI);
+    expect(validation.feePayingAsset).toEqual(1);
     expect(validation.gasProvided).toEqual(
       getTxGasWithBase(TxType.ACCOUNT) +
         getTxGasWithBase(TxType.DEPOSIT) +
@@ -250,11 +240,11 @@ describe('Tx Fee Allocator', () => {
 
   it('excludes gas from non-paying assets', () => {
     const txs = [
-      preciselyFundedTx(1, TxType.ACCOUNT, AssetId.DAI),
+      preciselyFundedTx(1, TxType.ACCOUNT, 1),
       preciselyFundedTx(2, TxType.DEPOSIT, NON_FEE_PAYING_ASSET),
-      preciselyFundedTx(3, TxType.TRANSFER, AssetId.DAI),
+      preciselyFundedTx(3, TxType.TRANSFER, 1),
       preciselyFundedTx(4, TxType.WITHDRAW_TO_CONTRACT, NON_FEE_PAYING_ASSET),
-      preciselyFundedTx(5, TxType.WITHDRAW_TO_WALLET, AssetId.DAI),
+      preciselyFundedTx(5, TxType.WITHDRAW_TO_WALLET, 1),
       mockDefiBridgeTx(
         6,
         getTxGasWithBase(TxType.DEFI_DEPOSIT) + getSingleBridgeCost(bridgeConfigs[0].bridgeId),
@@ -270,11 +260,11 @@ describe('Tx Fee Allocator', () => {
       TxType.WITHDRAW_TO_WALLET,
       TxType.DEFI_DEPOSIT,
     ]);
-    expect(validation.feePayingAsset).toEqual(AssetId.DAI);
+    expect(validation.feePayingAsset).toEqual(1);
     expect(validation.gasProvided).toEqual(
       getTxGasWithBase(TxType.ACCOUNT) +
         getTxGasWithBase(TxType.TRANSFER) +
-        getTxGasWithBase(TxType.WITHDRAW_TO_WALLET)
+        getTxGasWithBase(TxType.WITHDRAW_TO_WALLET),
     );
     // gas required includes the claim
     expect(validation.gasRequired).toEqual(
@@ -293,16 +283,16 @@ describe('Tx Fee Allocator', () => {
 
   it('correctly calculates gas with excess', () => {
     const txs = [
-      preciselyFundedTx(1, TxType.ACCOUNT, AssetId.DAI),
-      preciselyFundedTx(2, TxType.DEPOSIT, AssetId.DAI),
-      mockTx(3, getTxGasWithBase(TxType.TRANSFER) + 13n, AssetId.DAI, TxType.TRANSFER),
-      preciselyFundedTx(4, TxType.WITHDRAW_TO_CONTRACT, AssetId.DAI),
-      mockTx(5, getTxGasWithBase(TxType.WITHDRAW_TO_WALLET) + 5n, AssetId.DAI),
+      preciselyFundedTx(1, TxType.ACCOUNT, 1),
+      preciselyFundedTx(2, TxType.DEPOSIT, 1),
+      mockTx(3, getTxGasWithBase(TxType.TRANSFER) + 13n, 1, TxType.TRANSFER),
+      preciselyFundedTx(4, TxType.WITHDRAW_TO_CONTRACT, 1),
+      mockTx(5, getTxGasWithBase(TxType.WITHDRAW_TO_WALLET) + 5n, 1),
       mockDefiBridgeTx(
         6,
         getTxGasWithBase(TxType.DEFI_DEPOSIT) + getSingleBridgeCost(bridgeConfigs[0].bridgeId),
         bridgeConfigs[0].bridgeId,
-        AssetId.DAI,
+        1,
       ),
     ];
     const validation = txFeeAllocator.validateReceivedTxs(txs, [
@@ -313,7 +303,7 @@ describe('Tx Fee Allocator', () => {
       TxType.WITHDRAW_TO_WALLET,
       TxType.DEFI_DEPOSIT,
     ]);
-    expect(validation.feePayingAsset).toEqual(AssetId.DAI);
+    expect(validation.feePayingAsset).toEqual(1);
     expect(validation.gasProvided).toEqual(
       getTxGasWithBase(TxType.ACCOUNT) +
         getTxGasWithBase(TxType.DEPOSIT) +
@@ -341,10 +331,7 @@ describe('Tx Fee Allocator', () => {
   });
 
   it('should not modify excess gas if none provided', () => {
-    const txs = [
-      preciselyFundedTx(1, TxType.TRANSFER, AssetId.ETH),
-      preciselyFundedTx(2, TxType.TRANSFER, AssetId.ETH),
-    ];
+    const txs = [preciselyFundedTx(1, TxType.TRANSFER, 0), preciselyFundedTx(2, TxType.TRANSFER, 0)];
     const txTypes = [TxType.TRANSFER, TxType.TRANSFER];
 
     // daos start off with 0 excess gas
@@ -363,11 +350,11 @@ describe('Tx Fee Allocator', () => {
   it('should allocate gas according to provided fee if all assets are fee paying', () => {
     const excessGas = [10n, 11n, 12n, 13n, 14n];
     const txs = [
-      preciselyFundedTx(1, TxType.ACCOUNT, AssetId.DAI, excessGas[0]),
-      preciselyFundedTx(2, TxType.DEPOSIT, AssetId.DAI, excessGas[1]),
-      preciselyFundedTx(3, TxType.TRANSFER, AssetId.DAI, excessGas[2]),
-      preciselyFundedTx(4, TxType.WITHDRAW_TO_CONTRACT, AssetId.DAI, excessGas[3]),
-      preciselyFundedTx(5, TxType.WITHDRAW_TO_WALLET, AssetId.DAI, excessGas[4]),
+      preciselyFundedTx(1, TxType.ACCOUNT, 1, excessGas[0]),
+      preciselyFundedTx(2, TxType.DEPOSIT, 1, excessGas[1]),
+      preciselyFundedTx(3, TxType.TRANSFER, 1, excessGas[2]),
+      preciselyFundedTx(4, TxType.WITHDRAW_TO_CONTRACT, 1, excessGas[3]),
+      preciselyFundedTx(5, TxType.WITHDRAW_TO_WALLET, 1, excessGas[4]),
     ];
     const txTypes = [
       TxType.ACCOUNT,
@@ -386,7 +373,7 @@ describe('Tx Fee Allocator', () => {
 
     const totalExcess = excessGas.reduce((p, n) => p + n, 0n);
 
-    expect(validation.feePayingAsset).toEqual(AssetId.DAI);
+    expect(validation.feePayingAsset).toEqual(1);
     expect(validation.gasProvided).toEqual(
       getTxGasWithBase(TxType.ACCOUNT) +
         getTxGasWithBase(TxType.DEPOSIT) +
@@ -414,11 +401,11 @@ describe('Tx Fee Allocator', () => {
   it('should allocate gas according to provided fee if all assets are fee paying - include DEFI', () => {
     const excessGas = [10n, 11n, 12n, 13n, 14n, 15n];
     const txs = [
-      preciselyFundedTx(1, TxType.ACCOUNT, AssetId.DAI, excessGas[0]),
-      preciselyFundedTx(2, TxType.DEPOSIT, AssetId.DAI, excessGas[1]),
-      preciselyFundedTx(3, TxType.TRANSFER, AssetId.DAI, excessGas[2]),
-      preciselyFundedTx(4, TxType.WITHDRAW_TO_CONTRACT, AssetId.DAI, excessGas[3]),
-      preciselyFundedTx(5, TxType.WITHDRAW_TO_WALLET, AssetId.DAI, excessGas[4]),
+      preciselyFundedTx(1, TxType.ACCOUNT, 1, excessGas[0]),
+      preciselyFundedTx(2, TxType.DEPOSIT, 1, excessGas[1]),
+      preciselyFundedTx(3, TxType.TRANSFER, 1, excessGas[2]),
+      preciselyFundedTx(4, TxType.WITHDRAW_TO_CONTRACT, 1, excessGas[3]),
+      preciselyFundedTx(5, TxType.WITHDRAW_TO_WALLET, 1, excessGas[4]),
       mockDefiBridgeTx(
         6,
         getTxGasWithBase(TxType.DEFI_DEPOSIT) +
@@ -426,7 +413,7 @@ describe('Tx Fee Allocator', () => {
           getTxGasWithBase(TxType.DEFI_CLAIM) +
           excessGas[5],
         bridgeConfigs[0].bridgeId,
-        AssetId.DAI,
+        1,
       ),
     ];
     const txTypes = [
@@ -447,7 +434,7 @@ describe('Tx Fee Allocator', () => {
 
     const totalExcess = excessGas.reduce((p, n) => p + n, 0n);
 
-    expect(validation.feePayingAsset).toEqual(AssetId.DAI);
+    expect(validation.feePayingAsset).toEqual(1);
     expect(validation.gasProvided).toEqual(
       getTxGasWithBase(TxType.ACCOUNT) +
         getTxGasWithBase(TxType.DEPOSIT) +
@@ -482,7 +469,7 @@ describe('Tx Fee Allocator', () => {
   it('should allocate excess gas to first non-fee paying tx', () => {
     const excessGas = getTxGasWithBase(TxType.TRANSFER);
     const txs = [
-      preciselyFundedTx(3, TxType.TRANSFER, AssetId.DAI, excessGas),
+      preciselyFundedTx(3, TxType.TRANSFER, 1, excessGas),
       preciselyFundedTx(4, TxType.TRANSFER, NON_FEE_PAYING_ASSET),
     ];
     const txTypes = [TxType.TRANSFER, TxType.TRANSFER];
@@ -494,7 +481,7 @@ describe('Tx Fee Allocator', () => {
 
     const validation = txFeeAllocator.validateReceivedTxs(txs, txTypes);
 
-    expect(validation.feePayingAsset).toEqual(AssetId.DAI);
+    expect(validation.feePayingAsset).toEqual(1);
     expect(validation.gasProvided).toEqual(getTxGasWithBase(TxType.TRANSFER) + excessGas);
 
     expect(validation.gasRequired).toEqual(getTxGasWithBase(TxType.TRANSFER) * 2n);
@@ -511,7 +498,7 @@ describe('Tx Fee Allocator', () => {
   it('should allocate excess gas to first non-fee paying tx 2', () => {
     const excessGas = getTxGasWithBase(TxType.TRANSFER) + 50n;
     const txs = [
-      preciselyFundedTx(3, TxType.TRANSFER, AssetId.DAI, excessGas),
+      preciselyFundedTx(3, TxType.TRANSFER, 1, excessGas),
       preciselyFundedTx(4, TxType.TRANSFER, NON_FEE_PAYING_ASSET),
     ];
     const txTypes = [TxType.TRANSFER, TxType.TRANSFER];
@@ -523,7 +510,7 @@ describe('Tx Fee Allocator', () => {
 
     const validation = txFeeAllocator.validateReceivedTxs(txs, txTypes);
 
-    expect(validation.feePayingAsset).toEqual(AssetId.DAI);
+    expect(validation.feePayingAsset).toEqual(1);
     expect(validation.gasProvided).toEqual(getTxGasWithBase(TxType.TRANSFER) + excessGas);
 
     expect(validation.gasRequired).toEqual(getTxGasWithBase(TxType.TRANSFER) * 2n);
@@ -544,14 +531,14 @@ describe('Tx Fee Allocator', () => {
       getTxGasWithBase(TxType.WITHDRAW_TO_WALLET) +
       101n;
     const txs = [
-      preciselyFundedTx(1, TxType.ACCOUNT, AssetId.DAI),
-      preciselyFundedTx(2, TxType.DEPOSIT, AssetId.DAI, excessGas),
-      preciselyFundedTx(3, TxType.TRANSFER, AssetId.DAI),
+      preciselyFundedTx(1, TxType.ACCOUNT, 1),
+      preciselyFundedTx(2, TxType.DEPOSIT, 1, excessGas),
+      preciselyFundedTx(3, TxType.TRANSFER, 1),
       preciselyFundedTx(4, TxType.TRANSFER, NON_FEE_PAYING_ASSET),
-      preciselyFundedTx(5, TxType.WITHDRAW_TO_CONTRACT, AssetId.DAI),
+      preciselyFundedTx(5, TxType.WITHDRAW_TO_CONTRACT, 1),
       preciselyFundedTx(6, TxType.WITHDRAW_TO_CONTRACT, NON_FEE_PAYING_ASSET),
       preciselyFundedTx(7, TxType.WITHDRAW_TO_CONTRACT, NON_FEE_PAYING_ASSET),
-      preciselyFundedTx(8, TxType.WITHDRAW_TO_WALLET, AssetId.DAI),
+      preciselyFundedTx(8, TxType.WITHDRAW_TO_WALLET, 1),
       preciselyFundedTx(9, TxType.WITHDRAW_TO_WALLET, NON_FEE_PAYING_ASSET),
     ];
     const txTypes = [
@@ -573,7 +560,7 @@ describe('Tx Fee Allocator', () => {
 
     const validation = txFeeAllocator.validateReceivedTxs(txs, txTypes);
 
-    expect(validation.feePayingAsset).toEqual(AssetId.DAI);
+    expect(validation.feePayingAsset).toEqual(1);
     expect(validation.gasProvided).toEqual(
       getTxGasWithBase(TxType.ACCOUNT) +
         getTxGasWithBase(TxType.DEPOSIT) +
@@ -606,14 +593,14 @@ describe('Tx Fee Allocator', () => {
       getTxGasWithBase(TxType.WITHDRAW_TO_CONTRACT) * 2n +
       getTxGasWithBase(TxType.WITHDRAW_TO_WALLET);
     const txs = [
-      preciselyFundedTx(1, TxType.ACCOUNT, AssetId.DAI),
-      preciselyFundedTx(2, TxType.DEPOSIT, AssetId.DAI, excessGas),
-      preciselyFundedTx(3, TxType.TRANSFER, AssetId.DAI),
+      preciselyFundedTx(1, TxType.ACCOUNT, 1),
+      preciselyFundedTx(2, TxType.DEPOSIT, 1, excessGas),
+      preciselyFundedTx(3, TxType.TRANSFER, 1),
       preciselyFundedTx(4, TxType.TRANSFER, NON_FEE_PAYING_ASSET),
-      preciselyFundedTx(5, TxType.WITHDRAW_TO_CONTRACT, AssetId.DAI),
+      preciselyFundedTx(5, TxType.WITHDRAW_TO_CONTRACT, 1),
       preciselyFundedTx(6, TxType.WITHDRAW_TO_CONTRACT, NON_FEE_PAYING_ASSET),
       preciselyFundedTx(7, TxType.WITHDRAW_TO_CONTRACT, NON_FEE_PAYING_ASSET),
-      preciselyFundedTx(8, TxType.WITHDRAW_TO_WALLET, AssetId.DAI),
+      preciselyFundedTx(8, TxType.WITHDRAW_TO_WALLET, 1),
       preciselyFundedTx(9, TxType.WITHDRAW_TO_WALLET, NON_FEE_PAYING_ASSET),
     ];
     const txTypes = [
@@ -635,7 +622,7 @@ describe('Tx Fee Allocator', () => {
 
     const validation = txFeeAllocator.validateReceivedTxs(txs, txTypes);
 
-    expect(validation.feePayingAsset).toEqual(AssetId.DAI);
+    expect(validation.feePayingAsset).toEqual(1);
     expect(validation.gasProvided).toEqual(
       getTxGasWithBase(TxType.ACCOUNT) +
         getTxGasWithBase(TxType.DEPOSIT) +
@@ -667,8 +654,8 @@ describe('Tx Fee Allocator', () => {
       getSingleBridgeCost(bridgeConfigs[0].bridgeId) +
       getTxGasWithBase(TxType.DEFI_CLAIM);
     const txs = [
-      preciselyFundedTx(3, TxType.TRANSFER, AssetId.DAI, excessGas),
-      mockDefiBridgeTx(6, 0n, bridgeConfigs[0].bridgeId, AssetId.DAI),
+      preciselyFundedTx(3, TxType.TRANSFER, 1, excessGas),
+      mockDefiBridgeTx(6, 0n, bridgeConfigs[0].bridgeId, 1),
     ];
     const txTypes = [TxType.TRANSFER, TxType.DEFI_DEPOSIT];
 
@@ -679,14 +666,14 @@ describe('Tx Fee Allocator', () => {
 
     const validation = txFeeAllocator.validateReceivedTxs(txs, txTypes);
 
-    expect(validation.feePayingAsset).toEqual(AssetId.DAI);
+    expect(validation.feePayingAsset).toEqual(1);
     expect(validation.gasProvided).toEqual(getTxGasWithBase(TxType.TRANSFER) + excessGas);
     // gas required includes the claim
     expect(validation.gasRequired).toEqual(
       getTxGasWithBase(TxType.TRANSFER) +
         getTxGasWithBase(TxType.DEFI_DEPOSIT) +
         getSingleBridgeCost(bridgeConfigs[0].bridgeId) +
-        getTxGasWithBase(TxType.DEFI_CLAIM)
+        getTxGasWithBase(TxType.DEFI_CLAIM),
     );
     expect(validation.hasNonFeePayingAssets).toEqual(false);
     expect(validation.hasNonPayingDefi).toEqual(false);
@@ -704,7 +691,7 @@ describe('Tx Fee Allocator', () => {
       getBridgeCost(bridgeConfigs[0].bridgeId) +
       getTxGasWithBase(TxType.DEFI_CLAIM);
     const txs = [
-      preciselyFundedTx(3, TxType.TRANSFER, AssetId.DAI, excessGas),
+      preciselyFundedTx(3, TxType.TRANSFER, 1, excessGas),
       mockDefiBridgeTx(6, 0n, bridgeConfigs[0].bridgeId, NON_FEE_PAYING_ASSET),
     ];
     const txTypes = [TxType.TRANSFER, TxType.DEFI_DEPOSIT];
@@ -716,14 +703,14 @@ describe('Tx Fee Allocator', () => {
 
     const validation = txFeeAllocator.validateReceivedTxs(txs, txTypes);
 
-    expect(validation.feePayingAsset).toEqual(AssetId.DAI);
+    expect(validation.feePayingAsset).toEqual(1);
     expect(validation.gasProvided).toEqual(getTxGasWithBase(TxType.TRANSFER) + excessGas);
     // gas required includes the claim
     expect(validation.gasRequired).toEqual(
       getTxGasWithBase(TxType.TRANSFER) +
         getTxGasWithBase(TxType.DEFI_DEPOSIT) +
         getSingleBridgeCost(bridgeConfigs[0].bridgeId) +
-        getTxGasWithBase(TxType.DEFI_CLAIM)
+        getTxGasWithBase(TxType.DEFI_CLAIM),
     );
     expect(validation.hasNonFeePayingAssets).toEqual(true);
     expect(validation.hasNonPayingDefi).toEqual(true);

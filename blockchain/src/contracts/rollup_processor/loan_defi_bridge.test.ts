@@ -1,13 +1,11 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { AssetId } from '@aztec/barretenberg/asset';
-import { Asset } from '@aztec/barretenberg/blockchain';
+import { Asset, TxHash } from '@aztec/barretenberg/blockchain';
 import { AUX_DATA_SELECTOR, BridgeId } from '@aztec/barretenberg/bridge_id';
 import {
   computeInteractionHashes,
   DefiInteractionNote,
   packInteractionNotes,
 } from '@aztec/barretenberg/note_algorithms';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { Signer } from 'ethers';
 import { LogDescription } from 'ethers/lib/utils';
@@ -41,13 +39,13 @@ describe('rollup_processor: defi bridge with loans', () => {
   let rollupProvider: Signer;
   let assetAddresses: EthAddress[];
 
-  const topupToken = async (assetId: AssetId, amount: bigint) =>
+  const topupToken = async (assetId: number, amount: bigint) =>
     assets[assetId].mint(amount, rollupProcessor.address, { signingAddress: addresses[0] });
 
   const topupEth = async (amount: bigint) =>
     signers[0].sendTransaction({ to: rollupProcessor.address.toString(), value: Number(amount) });
 
-  const dummyProof = () => createSendProof(AssetId.ETH);
+  const dummyProof = () => createSendProof(0);
 
   const mockBridge = async (params: MockBridgeParams = {}) => {
     const bridgeId = await deployMockBridge(rollupProvider, rollupProcessor, assetAddresses, {
@@ -84,7 +82,7 @@ describe('rollup_processor: defi bridge with loans', () => {
     expect(expectedHashes).toEqual(resultHashes);
   };
 
-  const expectBalance = async (assetId: AssetId, balance: bigint) =>
+  const expectBalance = async (assetId: number, balance: bigint) =>
     expect(await assets[assetId].balanceOf(rollupProcessor.address)).toBe(balance);
 
   beforeEach(async () => {
@@ -101,19 +99,19 @@ describe('rollup_processor: defi bridge with loans', () => {
     const outputValueB = 7n;
     const { bridgeId } = await mockBridge({
       secondOutputAssetVirtual: true,
-      inputAssetId: AssetId.DAI,
-      outputAssetIdA: AssetId.ETH,
-      outputAssetIdB: AssetId.renBTC,
+      inputAssetId: 1,
+      outputAssetIdA: 0,
+      outputAssetIdB: 2,
       outputValueA,
       outputValueB,
     });
 
     const initialTokenBalance = 50n;
-    await topupToken(AssetId.DAI, initialTokenBalance);
+    await topupToken(1, initialTokenBalance);
 
-    await expectBalance(AssetId.ETH, 0n);
-    await expectBalance(AssetId.DAI, initialTokenBalance);
-    await expectBalance(AssetId.renBTC, 0n);
+    await expectBalance(0, 0n);
+    await expectBalance(1, initialTokenBalance);
+    await expectBalance(2, 0n);
 
     // Empty rollup to ensure defi_interaction_nonce > 0 while drawing a loan
     {
@@ -132,9 +130,9 @@ describe('rollup_processor: defi bridge with loans', () => {
       const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
 
-      await expectBalance(AssetId.ETH, outputValueA);
-      await expectBalance(AssetId.DAI, initialTokenBalance - inputValue);
-      await expectBalance(AssetId.renBTC, BigInt(0));
+      await expectBalance(0, outputValueA);
+      await expectBalance(1, initialTokenBalance - inputValue);
+      await expectBalance(2, BigInt(0));
 
       const interactionResult = [new DefiInteractionNote(bridgeId, 4, inputValue, outputValueA, outputValueB, true)];
       await expectResult(interactionResult, txHash);
@@ -146,9 +144,9 @@ describe('rollup_processor: defi bridge with loans', () => {
     {
       const { bridgeId: bridgeId2, contract: bridge2 } = await mockBridge({
         secondInputAssetVirtual: true,
-        inputAssetId: AssetId.ETH,
-        outputAssetIdA: AssetId.DAI,
-        outputAssetIdB: AssetId.renBTC,
+        inputAssetId: 0,
+        outputAssetIdA: 1,
+        outputAssetIdB: 2,
         outputValueA: inputValue,
         outputValueB: BigInt(0),
         openingNonce: 4,
@@ -170,9 +168,9 @@ describe('rollup_processor: defi bridge with loans', () => {
       const interactionResult = [new DefiInteractionNote(bridgeId2, 8, inputValueETH, outputValueDAI, BigInt(0), true)];
       await expectResult(interactionResult, txHash);
 
-      await expectBalance(AssetId.ETH, BigInt(0));
-      await expectBalance(AssetId.DAI, initialTokenBalance - (inputValue * BigInt(1)) / BigInt(10));
-      await expectBalance(AssetId.renBTC, BigInt(0));
+      await expectBalance(0, BigInt(0));
+      await expectBalance(1, initialTokenBalance - (inputValue * BigInt(1)) / BigInt(10));
+      await expectBalance(2, BigInt(0));
     }
   });
 
@@ -181,8 +179,8 @@ describe('rollup_processor: defi bridge with loans', () => {
     const loanValue1 = 10n;
     const { bridgeId: bridgeId1 } = await mockBridge({
       secondOutputAssetVirtual: true,
-      inputAssetId: AssetId.DAI,
-      outputAssetIdA: AssetId.ETH,
+      inputAssetId: 1,
+      outputAssetIdA: 0,
       outputValueA: loanValue1,
     });
 
@@ -190,19 +188,19 @@ describe('rollup_processor: defi bridge with loans', () => {
     const loanValue2 = 4n;
     const { bridgeId: bridgeId2 } = await mockBridge({
       secondOutputAssetVirtual: true,
-      inputAssetId: AssetId.ETH,
-      outputAssetIdA: AssetId.renBTC,
+      inputAssetId: 0,
+      outputAssetIdA: 2,
       outputValueA: loanValue2,
     });
 
     const initialTokenBalance = 200n;
     const initialEthBalance = 40n;
-    await topupToken(AssetId.DAI, initialTokenBalance);
+    await topupToken(1, initialTokenBalance);
     await topupEth(initialEthBalance);
 
-    await expectBalance(AssetId.ETH, initialEthBalance);
-    await expectBalance(AssetId.DAI, initialTokenBalance);
-    await expectBalance(AssetId.renBTC, 0n);
+    await expectBalance(0, initialEthBalance);
+    await expectBalance(1, initialTokenBalance);
+    await expectBalance(2, 0n);
 
     // Empty rollup to ensure defi_interaction_nonce > 0 while drawing a loan
     {
@@ -230,9 +228,9 @@ describe('rollup_processor: defi bridge with loans', () => {
       ];
       await expectResult(interactionResult, txHash);
 
-      await expectBalance(AssetId.ETH, initialEthBalance - collateralValue2 + loanValue1);
-      await expectBalance(AssetId.DAI, initialTokenBalance - collateralValue1);
-      await expectBalance(AssetId.renBTC, loanValue2);
+      await expectBalance(0, initialEthBalance - collateralValue2 + loanValue1);
+      await expectBalance(1, initialTokenBalance - collateralValue1);
+      await expectBalance(2, loanValue2);
       previousDefiInteractionHash = packInteractionNotes(interactionResult, 4);
     }
     // Repay the two loans after subtracting 10% and 20% interests respectively
@@ -240,8 +238,8 @@ describe('rollup_processor: defi bridge with loans', () => {
     {
       const { bridgeId: repayBridgeId1, contract: repayBridge1 } = await mockBridge({
         secondInputAssetVirtual: true,
-        inputAssetId: AssetId.ETH,
-        outputAssetIdA: AssetId.DAI,
+        inputAssetId: 0,
+        outputAssetIdA: 1,
         outputValueA: collateralValue1,
         openingNonce: 4,
         auxData: AUX_DATA_SELECTOR.CLOSE_LOAN,
@@ -250,8 +248,8 @@ describe('rollup_processor: defi bridge with loans', () => {
 
       const { bridgeId: repayBridgeId2, contract: repayBridge2 } = await mockBridge({
         secondInputAssetVirtual: true,
-        inputAssetId: AssetId.renBTC,
-        outputAssetIdA: AssetId.ETH,
+        inputAssetId: 2,
+        outputAssetIdA: 0,
         outputValueA: collateralValue2,
         openingNonce: 5,
         auxData: AUX_DATA_SELECTOR.CLOSE_LOAN,
@@ -277,9 +275,9 @@ describe('rollup_processor: defi bridge with loans', () => {
       ];
       await expectResult(interactionResult, txHash);
 
-      await expectBalance(AssetId.ETH, initialEthBalance - (collateralValue2 * BigInt(2)) / BigInt(10));
-      await expectBalance(AssetId.DAI, initialTokenBalance - (collateralValue1 * BigInt(1)) / BigInt(10));
-      await expectBalance(AssetId.renBTC, BigInt(0));
+      await expectBalance(0, initialEthBalance - (collateralValue2 * BigInt(2)) / BigInt(10));
+      await expectBalance(1, initialTokenBalance - (collateralValue1 * BigInt(1)) / BigInt(10));
+      await expectBalance(2, BigInt(0));
     }
   });
 });

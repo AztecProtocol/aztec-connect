@@ -1,9 +1,10 @@
 import { AccountId } from '@aztec/barretenberg/account_id';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { CoreSdk } from '../../core_sdk/core_sdk';
-import { ProofOutput } from '../../proofs';
-import { Signer } from '../../signer';
+import { TxId } from '@aztec/barretenberg/tx_id';
+import { CoreSdk } from '../core_sdk/core_sdk';
+import { ProofOutput } from '../proofs';
+import { Signer } from '../signer';
 import { createTxRefNo } from './create_tx_ref_no';
 import { filterUndefined } from './filter_undefined';
 
@@ -11,6 +12,7 @@ export class DefiController {
   private proofOutput!: ProofOutput;
   private jsProofOutput?: ProofOutput;
   private feeProofOutput?: ProofOutput;
+  private txIds!: TxId[];
 
   constructor(
     public readonly userId: AccountId,
@@ -103,9 +105,18 @@ export class DefiController {
   }
 
   async send() {
-    const txHashes = await this.core.sendProofs(
+    this.txIds = await this.core.sendProofs(
       filterUndefined([this.jsProofOutput, this.proofOutput, this.feeProofOutput]),
     );
-    return txHashes[this.jsProofOutput ? 1 : 0];
+    return this.txIds[this.jsProofOutput ? 1 : 0];
+  }
+
+  async awaitDefiInteraction(timeout?: number) {
+    const defiTxId = this.txIds[this.jsProofOutput ? 1 : 0];
+    await this.core.awaitDefiInteraction(defiTxId, timeout);
+  }
+
+  async awaitSettlement(timeout?: number) {
+    await Promise.all(this.txIds.map(txId => this.core.awaitSettlement(txId, timeout)));
   }
 }

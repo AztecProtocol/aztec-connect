@@ -2,7 +2,7 @@ import { AccountAliasId, AccountId, AliasHash } from '@aztec/barretenberg/accoun
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { TxId } from '@aztec/barretenberg/tx_id';
 import { randomBytes } from 'crypto';
 import { CoreAccountTx, CoreClaimTx, CoreDefiTx, CorePaymentTx } from '../../core_tx';
 import { Note } from '../../note';
@@ -33,7 +33,7 @@ export const randomNote = (): Note => ({
 
 export const randomClaimTx = (): CoreClaimTx => ({
   nullifier: randomBytes(32),
-  txHash: TxHash.random(),
+  txId: TxId.random(),
   userId: AccountId.random(),
   secret: randomBytes(32),
 });
@@ -52,7 +52,7 @@ export const randomUser = (): UserData => {
 
 export const randomAccountTx = (tx: Partial<CoreAccountTx> = {}) =>
   new CoreAccountTx(
-    tx.txHash || TxHash.random(),
+    tx.txId || TxId.random(),
     tx.userId || AccountId.random(),
     tx.aliasHash || AliasHash.random(),
     tx.newSigningPubKey1 || randomBytes(32),
@@ -65,7 +65,7 @@ export const randomAccountTx = (tx: Partial<CoreAccountTx> = {}) =>
 
 export const randomPaymentTx = (tx: Partial<CorePaymentTx> = {}) =>
   new CorePaymentTx(
-    tx.txHash || TxHash.random(),
+    tx.txId || TxId.random(),
     tx.userId || AccountId.random(),
     inputOrDefault(tx.proofId, ProofId.SEND),
     inputOrDefault(tx.assetId, randomInt()),
@@ -83,7 +83,7 @@ export const randomPaymentTx = (tx: Partial<CorePaymentTx> = {}) =>
 
 export const randomDefiTx = (tx: Partial<CoreDefiTx> = {}) =>
   new CoreDefiTx(
-    tx.txHash || TxHash.random(),
+    tx.txId || TxId.random(),
     tx.userId || AccountId.random(),
     tx.bridgeId || BridgeId.random(),
     inputOrDefault(tx.depositValue, BigInt(randomInt())),
@@ -93,7 +93,7 @@ export const randomDefiTx = (tx: Partial<CoreDefiTx> = {}) =>
     tx.created || new Date(),
     tx.outputValueA || BigInt(0),
     tx.outputValueB || BigInt(0),
-    tx.result || false,
+    tx.result,
     tx.settled,
   );
 

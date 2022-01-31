@@ -1,11 +1,10 @@
 import { AccountId } from '@aztec/barretenberg/account_id';
 import { EthAddress } from '@aztec/barretenberg/address';
-import { AssetId } from '@aztec/barretenberg/asset';
 import { JoinSplitProver, ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { OffchainJoinSplitData } from '@aztec/barretenberg/offchain_tx_data';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { TxId } from '@aztec/barretenberg/tx_id';
 import { WorldState } from '@aztec/barretenberg/world_state';
 import createDebug from 'debug';
 import { CorePaymentTx as PaymentTx } from '../core_tx';
@@ -37,7 +36,7 @@ export class PaymentProofCreator {
     privateInput: bigint,
     recipientPrivateOutput: bigint,
     senderPrivateOutput: bigint,
-    assetId: AssetId,
+    assetId: number,
     signer: Signer,
     newNoteOwner: AccountId | undefined,
     publicOwner: EthAddress | undefined,
@@ -106,9 +105,9 @@ export class PaymentProofCreator {
     debug(`proof size: ${proof.length}`);
 
     const proofData = new ProofData(proof);
-    const txHash = new TxHash(proofData.txId);
+    const txId = new TxId(proofData.txId);
     const coreTx = new PaymentTx(
-      txHash,
+      txId,
       user.id,
       proofId,
       assetId,

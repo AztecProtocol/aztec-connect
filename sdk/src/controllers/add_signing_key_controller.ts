@@ -1,15 +1,17 @@
 import { AccountId } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
-import { CoreSdk } from '../../core_sdk/core_sdk';
-import { ProofOutput } from '../../proofs';
-import { Signer } from '../../signer';
+import { TxId } from '@aztec/barretenberg/tx_id';
+import { CoreSdk } from '../core_sdk/core_sdk';
+import { ProofOutput } from '../proofs';
+import { Signer } from '../signer';
 import { createTxRefNo } from './create_tx_ref_no';
 import { filterUndefined } from './filter_undefined';
 
 export class AddSigningKeyController {
   private proofOutput!: ProofOutput;
   private feeProofOutput?: ProofOutput;
+  private txIds!: TxId[];
 
   constructor(
     public readonly userId: AccountId,
@@ -59,7 +61,11 @@ export class AddSigningKeyController {
   }
 
   async send() {
-    const txHashes = await this.core.sendProofs(filterUndefined([this.proofOutput, this.feeProofOutput]));
-    return txHashes[0];
+    this.txIds = await this.core.sendProofs(filterUndefined([this.proofOutput, this.feeProofOutput]));
+    return this.txIds[0];
+  }
+
+  async awaitSettlement(timeout?: number) {
+    await Promise.all(this.txIds.map(txId => this.core.awaitSettlement(txId, timeout)));
   }
 }

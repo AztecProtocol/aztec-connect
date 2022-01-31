@@ -1,7 +1,6 @@
 import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
-import { TxType } from '@aztec/barretenberg/blockchain';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { TxHash, TxType } from '@aztec/barretenberg/blockchain';
 import { randomBytes } from 'crypto';
 import { Connection, createConnection } from 'typeorm';
 import { AccountDao } from '../entity/account';

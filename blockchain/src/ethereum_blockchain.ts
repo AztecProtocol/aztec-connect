@@ -1,23 +1,22 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { AssetId } from '@aztec/barretenberg/asset';
-import { Block } from '@aztec/barretenberg/block_source';
 import {
   Blockchain,
+  BlockchainBridge,
   BlockchainStatus,
   EthereumProvider,
   Receipt,
   SendTxOptions,
+  TxHash,
   TypedData,
-  BlockchainBridge,
 } from '@aztec/barretenberg/blockchain';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { Block } from '@aztec/barretenberg/block_source';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { InitHelpers } from '@aztec/barretenberg/environment';
+import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { EventEmitter } from 'events';
 import { Contracts } from './contracts/contracts';
 import { validateSignature } from './validate_signature';
-import { WorldStateConstants } from '@aztec/barretenberg/world_state/world_state_constants';
-import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
-import { InitHelpers } from '@aztec/barretenberg/environment';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
 
 export interface EthereumBlockchainConfig {
   console?: boolean;
@@ -224,7 +223,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return this.latestRollupId;
   }
 
-  public async getUserPendingDeposit(assetId: AssetId, account: EthAddress) {
+  public async getUserPendingDeposit(assetId: number, account: EthAddress) {
     return this.contracts.getUserPendingDeposit(assetId, account);
   }
 
@@ -302,15 +301,15 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return this.contracts.signTypedData(data, address);
   }
 
-  public getAsset(assetId: AssetId) {
+  public getAsset(assetId: number) {
     return this.contracts.getAsset(assetId);
   }
 
-  public async getAssetPrice(assetId: AssetId) {
+  public async getAssetPrice(assetId: number) {
     return this.contracts.getAssetPrice(assetId);
   }
 
-  public getPriceFeed(assetId: AssetId) {
+  public getPriceFeed(assetId: number) {
     return this.contracts.getPriceFeed(assetId);
   }
 

@@ -129,7 +129,7 @@ const RelativeTime: React.FunctionComponent<{ date: Date }> = ({ date }) => <>{m
 
 interface TransactionSummaryProps {
   className?: string;
-  txHash: string;
+  txId: string;
   tag: string;
   link: string;
   publishTime?: Date;
@@ -138,7 +138,7 @@ interface TransactionSummaryProps {
 
 const TransactionSummary: React.FunctionComponent<TransactionSummaryProps> = ({
   className,
-  txHash,
+  txId,
   tag,
   link,
   children,
@@ -153,8 +153,8 @@ const TransactionSummary: React.FunctionComponent<TransactionSummaryProps> = ({
       <InfoWrapper>{children}</InfoWrapper>
       <HexRoot>
         <GroupItem>
-          <ClickToCopy text={txHash}>
-            <Text text={`${txHash.slice(0, 6)}...${txHash.slice(-4)}`} monospace />
+          <ClickToCopy text={txId}>
+            <Text text={`${txId.slice(0, 6)}...${txId.slice(-4)}`} monospace />
           </ClickToCopy>
         </GroupItem>
         <GroupItem>
@@ -192,7 +192,7 @@ const TransactionSummary: React.FunctionComponent<TransactionSummaryProps> = ({
 
 interface JoinSplitTxSummaryProps {
   className?: string;
-  txHash: string;
+  txId: string;
   action: string;
   value: string;
   symbol: string;
@@ -203,7 +203,7 @@ interface JoinSplitTxSummaryProps {
 
 export const JoinSplitTxSummary: React.FunctionComponent<JoinSplitTxSummaryProps> = ({
   className,
-  txHash,
+  txId,
   action,
   value,
   symbol,
@@ -213,7 +213,7 @@ export const JoinSplitTxSummary: React.FunctionComponent<JoinSplitTxSummaryProps
 }) => (
   <TransactionSummary
     className={className}
-    txHash={txHash}
+    txId={txId}
     tag={action.toUpperCase()}
     link={link}
     publishTime={publishTime}
@@ -228,7 +228,7 @@ export const JoinSplitTxSummary: React.FunctionComponent<JoinSplitTxSummaryProps
 
 interface AccountTxSummaryProps {
   className?: string;
-  txHash: string;
+  txId: string;
   action: string;
   link: string;
   publishTime?: Date;
@@ -237,7 +237,7 @@ interface AccountTxSummaryProps {
 
 export const AccountTxSummary: React.FunctionComponent<AccountTxSummaryProps> = ({
   className,
-  txHash,
+  txId,
   action,
   link,
   publishTime,
@@ -245,7 +245,7 @@ export const AccountTxSummary: React.FunctionComponent<AccountTxSummaryProps> = 
 }) => (
   <TransactionSummary
     className={className}
-    txHash={txHash}
+    txId={txId}
     tag="ACCOUNT"
     link={link}
     publishTime={publishTime}

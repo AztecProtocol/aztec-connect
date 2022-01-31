@@ -1,17 +1,16 @@
-import { toBufferBE } from '../../bigint_buffer';
-import { EthAddress, GrumpkinAddress } from '../../address';
-import { AssetId } from '../../asset';
-import { HashPath } from '../../merkle_tree';
-import { numToUInt32BE } from '../../serialize';
 import { AccountAliasId } from '../../account_id';
-import { TreeNote, ClaimNoteTxData } from '../../note_algorithms';
+import { EthAddress, GrumpkinAddress } from '../../address';
+import { toBufferBE } from '../../bigint_buffer';
+import { HashPath } from '../../merkle_tree';
+import { ClaimNoteTxData, TreeNote } from '../../note_algorithms';
+import { numToUInt32BE } from '../../serialize';
 
 export class JoinSplitTx {
   constructor(
     public proofId: number,
     public publicValue: bigint,
     public publicOwner: EthAddress,
-    public publicAssetId: AssetId,
+    public publicAssetId: number,
     public numInputNotes: number,
     public inputNoteIndices: number[],
     public merkleRoot: Buffer,

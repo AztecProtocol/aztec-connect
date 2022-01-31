@@ -1,13 +1,12 @@
 import { AccountId } from '../account_id';
 import { GrumpkinAddress } from '../address';
-import { AssetId } from '../asset';
 import { ServerBlockSource } from '../block_source';
 import { BridgeId } from '../bridge_id';
 import { AccountProofData, JoinSplitProofData } from '../client_proofs';
 import { fetch } from '../iso_fetch';
 import { OffchainAccountData, OffchainJoinSplitData } from '../offchain_tx_data';
 import { Tx } from '../rollup_provider';
-import { TxHash } from '../tx_hash';
+import { TxId } from '../tx_id';
 import { AccountTx, JoinSplitTx, RollupProvider, rollupProviderStatusFromJson } from './rollup_provider';
 
 export interface TxServerResponse {
@@ -16,7 +15,7 @@ export interface TxServerResponse {
 }
 
 export interface AssetValueServerResponse {
-  assetId: AssetId;
+  assetId: number;
   value: string;
 }
 
@@ -62,10 +61,10 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
     );
     const response = await this.fetch('/txs', data);
     const body = await response.json();
-    return body.txHashes.map(txHash => TxHash.fromString(txHash));
+    return body.txIds.map(txId => TxId.fromString(txId));
   }
 
-  async getTxFees(assetId: AssetId) {
+  async getTxFees(assetId: number) {
     const response = await this.fetch('/tx-fees', { assetId });
     const txFees = (await response.json()) as AssetValueServerResponse[][];
     return txFees.map(fees => fees.map(toAssetValue));
@@ -90,7 +89,7 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
     const response = await this.fetch('/get-pending-txs');
     const txs = (await response.json()) as PendingTxServerResponse[];
     return txs.map(tx => ({
-      txId: TxHash.fromString(tx.txId),
+      txId: TxId.fromString(tx.txId),
       noteCommitment1: Buffer.from(tx.noteCommitment1, 'hex'),
       noteCommitment2: Buffer.from(tx.noteCommitment2, 'hex'),
     }));

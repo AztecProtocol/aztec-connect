@@ -1,10 +1,10 @@
-import { WebSdk } from '@aztec/sdk';
 import debug from 'debug';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { createGlobalStyle } from 'styled-components';
 import { minDemo } from './min_demo';
 import { Terminal, TerminalComponent } from './terminal';
+import { WebSdk } from './web_sdk';
 
 declare global {
   interface Window {

@@ -1,8 +1,7 @@
 import { AccountId } from '@aztec/barretenberg/account_id';
-import { AssetId } from '@aztec/barretenberg/asset';
 
 export interface Note {
-  assetId: AssetId;
+  assetId: number;
   value: bigint;
   secret: Buffer;
   commitment: Buffer;

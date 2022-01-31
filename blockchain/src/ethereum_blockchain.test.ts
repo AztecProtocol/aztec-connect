@@ -1,13 +1,12 @@
 import { EthAddress } from '@aztec/barretenberg/address';
+import { BlockchainBridge, TxHash } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { BitConfig, BridgeId } from '@aztec/barretenberg/bridge_id';
+import { InitHelpers } from '@aztec/barretenberg/environment';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { randomBytes } from 'crypto';
 import { Contracts } from './contracts';
 import { EthereumBlockchain, EthereumBlockchainConfig } from './ethereum_blockchain';
-import { InitHelpers } from '@aztec/barretenberg/environment';
-import { BlockchainBridge } from '@aztec/barretenberg/blockchain';
-import { randomBytes } from 'crypto';
-import { BitConfig, BridgeId } from '@aztec/barretenberg/bridge_id';
 
 jest.mock('@aztec/barretenberg/environment');
 

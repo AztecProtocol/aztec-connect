@@ -1,9 +1,8 @@
 import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
-import { TxType } from '@aztec/barretenberg/blockchain';
+import { TxHash, TxType } from '@aztec/barretenberg/blockchain';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { Connection, In, IsNull, LessThan, MoreThanOrEqual, Not, Repository } from 'typeorm';
 import { AccountDao } from '../entity/account';

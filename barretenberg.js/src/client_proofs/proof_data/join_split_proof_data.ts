@@ -1,5 +1,4 @@
 import { EthAddress } from '../../address';
-import { AssetId } from '../../asset';
 import { toBigIntBE } from '../../bigint_buffer';
 import { ProofData } from './proof_data';
 
@@ -14,7 +13,7 @@ export class JoinSplitProofData {
     return this.proofData.txId;
   }
 
-  get publicAssetId(): AssetId {
+  get publicAssetId() {
     return this.proofData.publicAssetId.readUInt32BE(28);
   }
 
@@ -30,7 +29,7 @@ export class JoinSplitProofData {
     return toBigIntBE(this.proofData.txFee);
   }
 
-  get txFeeAssetId(): AssetId {
+  get txFeeAssetId() {
     return this.proofData.txFeeAssetId.readUInt32BE(28);
   }
 }

@@ -1,4 +1,4 @@
-import { AccountId, Note, WalletSdk } from '@aztec/sdk';
+import { AccountId, AztecSdk, Note } from '@aztec/sdk';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { AccountState, AssetState } from '../account_state';
@@ -87,7 +87,7 @@ export class MergeForm extends EventEmitter implements AccountForm {
     private assetState: AssetState,
     private provider: Provider | undefined,
     private readonly keyVault: KeyVault,
-    private readonly sdk: WalletSdk,
+    private readonly sdk: AztecSdk,
     private readonly rollup: RollupService,
   ) {
     super();

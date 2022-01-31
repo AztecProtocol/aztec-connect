@@ -1,27 +1,26 @@
 import { AccountId } from '@aztec/barretenberg/account_id';
+import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
-import { CoreSdk } from '../../core_sdk/core_sdk';
-import { ProofOutput } from '../../proofs';
-import { Signer } from '../../signer';
+import { TxId } from '@aztec/barretenberg/tx_id';
+import { CoreSdk } from '../core_sdk/core_sdk';
+import { ProofOutput } from '../proofs';
+import { Signer } from '../signer';
 import { createTxRefNo } from './create_tx_ref_no';
 import { filterUndefined } from './filter_undefined';
 
-export class TransferController {
+export class WithdrawController {
   private proofOutput!: ProofOutput;
   private feeProofOutput?: ProofOutput;
+  private txIds!: TxId[];
 
   constructor(
     public readonly userId: AccountId,
     private readonly userSigner: Signer,
     public readonly assetValue: AssetValue,
     public readonly fee: AssetValue,
-    public readonly to: AccountId,
+    public readonly to: EthAddress,
     private readonly core: CoreSdk,
-  ) {
-    if (to.equals(userId)) {
-      throw new Error('Cannot send funds to oneself.');
-    }
-  }
+  ) {}
 
   public async createProof() {
     const { assetId, value } = this.assetValue;
@@ -34,12 +33,12 @@ export class TransferController {
       this.userSigner,
       assetId,
       BigInt(0),
-      BigInt(0),
-      privateInput,
       value,
+      privateInput,
       BigInt(0),
-      this.to,
+      BigInt(0),
       undefined,
+      this.to,
       2,
       txRefNo,
     );
@@ -63,7 +62,11 @@ export class TransferController {
   }
 
   async send() {
-    const txHashes = await this.core.sendProofs(filterUndefined([this.proofOutput, this.feeProofOutput]));
-    return txHashes[0];
+    this.txIds = await this.core.sendProofs(filterUndefined([this.proofOutput, this.feeProofOutput]));
+    return this.txIds[0];
+  }
+
+  async awaitSettlement(timeout?: number) {
+    await Promise.all(this.txIds.map(txId => this.core.awaitSettlement(txId, timeout)));
   }
 }

@@ -1,8 +1,7 @@
 import { AccountId } from '@aztec/barretenberg/account_id';
 import { EthAddress } from '@aztec/barretenberg/address';
-import { AssetId } from '@aztec/barretenberg/asset';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { TxId } from '@aztec/barretenberg/tx_id';
 
 export type PaymentProofId = ProofId.DEPOSIT | ProofId.WITHDRAW | ProofId.SEND;
 
@@ -15,10 +14,10 @@ export type PaymentProofId = ProofId.DEPOSIT | ProofId.WITHDRAW | ProofId.SEND;
  */
 export class CorePaymentTx {
   constructor(
-    public readonly txHash: TxHash,
+    public readonly txId: TxId,
     public readonly userId: AccountId,
     public readonly proofId: PaymentProofId,
-    public readonly assetId: AssetId,
+    public readonly assetId: number,
     public readonly publicValue: bigint,
     public readonly publicOwner: EthAddress | undefined,
     public readonly privateInput: bigint,
@@ -34,7 +33,7 @@ export class CorePaymentTx {
 
 export const createCorePaymentTxForRecipient = (
   {
-    txHash,
+    txId,
     userId,
     proofId,
     assetId,
@@ -50,7 +49,7 @@ export const createCorePaymentTxForRecipient = (
   recipient: AccountId,
 ) =>
   new CorePaymentTx(
-    txHash,
+    txId,
     recipient,
     proofId,
     assetId,

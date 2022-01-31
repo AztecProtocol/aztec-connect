@@ -1,6 +1,6 @@
 import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { TxId } from '@aztec/barretenberg/tx_id';
 import { Connection, ConnectionOptions, getConnection, IsNull, MoreThan, MoreThanOrEqual, Repository } from 'typeorm';
 import { CoreAccountTx, CoreClaimTx, CoreDefiTx, CorePaymentTx } from '../../core_tx';
 import { Note } from '../../note';
@@ -32,7 +32,7 @@ export const getOrmConfig = (memoryDb = false, identifier?: string): ConnectionO
 
 const toCorePaymentTx = (tx: PaymentTxDao) =>
   new CorePaymentTx(
-    tx.txHash,
+    tx.txId,
     tx.userId,
     tx.proofId,
     tx.assetId,
@@ -50,7 +50,7 @@ const toCorePaymentTx = (tx: PaymentTxDao) =>
 
 const toCoreAccountTx = (tx: AccountTxDao) =>
   new CoreAccountTx(
-    tx.txHash,
+    tx.txId,
     tx.userId,
     tx.aliasHash,
     tx.newSigningPubKey1,
@@ -63,7 +63,7 @@ const toCoreAccountTx = (tx: AccountTxDao) =>
 
 const toCoreDefiTx = (tx: DefiTxDao) =>
   new CoreDefiTx(
-    tx.txHash,
+    tx.txId,
     tx.userId,
     tx.bridgeId,
     tx.depositValue,
@@ -186,8 +186,8 @@ export class SQLDatabase implements Database {
     await this.paymentTxRep.save({ ...tx }); // save() will mutate tx, changing undefined values to null.
   }
 
-  async getPaymentTx(txHash: TxHash, userId: AccountId) {
-    const tx = await this.paymentTxRep.findOne({ txHash, userId });
+  async getPaymentTx(txId: TxId, userId: AccountId) {
+    const tx = await this.paymentTxRep.findOne({ txId, userId });
     return tx ? toCorePaymentTx(tx) : undefined;
   }
 
@@ -196,16 +196,16 @@ export class SQLDatabase implements Database {
     return sortUserTxs(txs).map(toCorePaymentTx);
   }
 
-  async settlePaymentTx(txHash: TxHash, userId: AccountId, settled: Date) {
-    await this.paymentTxRep.update({ txHash, userId }, { settled });
+  async settlePaymentTx(txId: TxId, userId: AccountId, settled: Date) {
+    await this.paymentTxRep.update({ txId, userId }, { settled });
   }
 
   async addAccountTx(tx: CoreAccountTx) {
     await this.accountTxRep.save({ ...tx }); // save() will mutate tx, changing undefined values to null.
   }
 
-  async getAccountTx(txHash: TxHash) {
-    const tx = await this.accountTxRep.findOne({ txHash });
+  async getAccountTx(txId: TxId) {
+    const tx = await this.accountTxRep.findOne({ txId });
     return tx ? toCoreAccountTx(tx) : undefined;
   }
 
@@ -214,16 +214,16 @@ export class SQLDatabase implements Database {
     return sortUserTxs(txs).map(toCoreAccountTx);
   }
 
-  async settleAccountTx(txHash: TxHash, settled: Date) {
-    await this.accountTxRep.update({ txHash }, { settled });
+  async settleAccountTx(txId: TxId, settled: Date) {
+    await this.accountTxRep.update({ txId }, { settled });
   }
 
   async addDefiTx(tx: CoreDefiTx) {
     await this.defiTxRep.save({ ...tx }); // save() will mutate tx, changing undefined values to null.
   }
 
-  async getDefiTx(txHash: TxHash) {
-    const tx = await this.defiTxRep.findOne({ txHash });
+  async getDefiTx(txId: TxId) {
+    const tx = await this.defiTxRep.findOne({ txId });
     return tx ? toCoreDefiTx(tx) : undefined;
   }
 
@@ -232,12 +232,12 @@ export class SQLDatabase implements Database {
     return sortUserTxs(txs).map(toCoreDefiTx);
   }
 
-  async updateDefiTx(txHash: TxHash, outputValueA: bigint, outputValueB: bigint, result: boolean) {
-    await this.defiTxRep.update({ txHash }, { outputValueA, outputValueB, result });
+  async updateDefiTx(txId: TxId, outputValueA: bigint, outputValueB: bigint, result: boolean) {
+    await this.defiTxRep.update({ txId }, { outputValueA, outputValueB, result });
   }
 
-  async settleDefiTx(txHash: TxHash, settled: Date) {
-    await this.defiTxRep.update({ txHash }, { settled });
+  async settleDefiTx(txId: TxId, settled: Date) {
+    await this.defiTxRep.update({ txId }, { settled });
   }
 
   async addClaimTx(tx: CoreClaimTx) {
@@ -259,18 +259,18 @@ export class SQLDatabase implements Database {
     return [...unsettled, ...settled];
   }
 
-  async isUserTxSettled(txHash: TxHash) {
-    const jsTxs = await this.paymentTxRep.find({ where: { txHash } });
+  async isUserTxSettled(txId: TxId) {
+    const jsTxs = await this.paymentTxRep.find({ where: { txId } });
     if (jsTxs.length > 0) {
       return jsTxs.every(tx => tx.settled);
     }
 
-    const defiTx = await this.defiTxRep.findOne({ where: { txHash } });
+    const defiTx = await this.defiTxRep.findOne({ where: { txId } });
     if (defiTx) {
       return !!defiTx.settled;
     }
 
-    const accountTx = await this.accountTxRep.findOne({ where: { txHash } });
+    const accountTx = await this.accountTxRep.findOne({ where: { txId } });
     return !!accountTx?.settled;
   }
 
@@ -279,11 +279,11 @@ export class SQLDatabase implements Database {
       this.accountTxRep.find({ where: { userId, settled: IsNull() } }),
       this.paymentTxRep.find({ where: { userId, settled: IsNull() } }),
     ]);
-    return unsettledTxs.flat().map(({ txHash }) => txHash);
+    return unsettledTxs.flat().map(({ txId }) => txId);
   }
 
-  async removeUserTx(txHash: TxHash, userId: AccountId) {
-    await Promise.all([this.accountTxRep.delete({ txHash }), this.paymentTxRep.delete({ txHash, userId })]);
+  async removeUserTx(txId: TxId, userId: AccountId) {
+    await Promise.all([this.accountTxRep.delete({ txId }), this.paymentTxRep.delete({ txId, userId })]);
   }
 
   async addUserSigningKey(signingKey: SigningKey) {

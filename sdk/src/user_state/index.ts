@@ -1,6 +1,5 @@
 import { AccountId } from '@aztec/barretenberg/account_id';
 import { EthAddress } from '@aztec/barretenberg/address';
-import { AssetId, AssetIds } from '@aztec/barretenberg/asset';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { Block } from '@aztec/barretenberg/block_source';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
@@ -21,7 +20,7 @@ import {
 } from '@aztec/barretenberg/offchain_tx_data';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupProvider } from '@aztec/barretenberg/rollup_provider';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { TxId } from '@aztec/barretenberg/tx_id';
 import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
@@ -45,7 +44,7 @@ enum SyncState {
 }
 
 export class UserState extends EventEmitter {
-  private notePickers: NotePicker[] = [];
+  private notePickers: { assetId: number; notePicker: NotePicker }[] = [];
   private blockQueue = new MemoryFifo<Block>();
   private syncState = SyncState.OFF;
   private syncingPromise!: Promise<void>;
@@ -124,7 +123,7 @@ export class UserState extends EventEmitter {
       return;
     }
 
-    const balancesBefore = AssetIds.map(assetId => this.getBalance(assetId));
+    const balancesBefore = this.notePickers.map(({ assetId, notePicker }) => ({ assetId, value: notePicker.getSum() }));
 
     const rollupProofData = blocks.map(b => RollupProofData.fromBuffer(b.rollupProofData));
     const innerProofs = rollupProofData.map(p => p.innerProofData.filter(i => !i.isPadding())).flat();
@@ -239,9 +238,10 @@ export class UserState extends EventEmitter {
 
     await this.db.updateUser(this.user);
 
-    AssetIds.forEach((assetId, i) => {
-      const balanceAfter = this.getBalance(assetId);
-      const diff = balanceAfter - balancesBefore[i];
+    this.notePickers.forEach(({ assetId, notePicker }) => {
+      const balanceAfter = notePicker.getSum();
+      const balanceBefore = balancesBefore.find(b => b.assetId === assetId)?.value || BigInt(0);
+      const diff = balanceAfter - balanceBefore;
       if (diff) {
         this.emit(UserStateEvent.UPDATED_USER_STATE, this.user.id, balanceAfter, diff, assetId);
       }
@@ -281,7 +281,7 @@ export class UserState extends EventEmitter {
       return;
     }
 
-    const { txHash, userId, newSigningPubKey1, newSigningPubKey2, aliasHash } = tx;
+    const { txId, userId, newSigningPubKey1, newSigningPubKey2, aliasHash } = tx;
 
     if (newSigningPubKey1) {
       debug(`user ${this.user.id} adds signing key ${newSigningPubKey1.toString('hex')}.`);
@@ -307,12 +307,12 @@ export class UserState extends EventEmitter {
       await this.db.updateUser(this.user);
     }
 
-    const savedTx = await this.db.getAccountTx(txHash);
+    const savedTx = await this.db.getAccountTx(txId);
     if (savedTx) {
-      debug(`settling account tx: ${txHash.toString()}`);
-      await this.db.settleAccountTx(txHash, blockCreated);
+      debug(`settling account tx: ${txId.toString()}`);
+      await this.db.settleAccountTx(txId, blockCreated);
     } else {
-      debug(`recovered account tx: ${txHash.toString()}`);
+      debug(`recovered account tx: ${txId.toString()}`);
       await this.db.addAccountTx(tx);
     }
   }
@@ -338,11 +338,11 @@ export class UserState extends EventEmitter {
 
     await this.refreshNotePicker();
 
-    const txHash = new TxHash(proof.txId);
-    const savedTx = await this.db.getPaymentTx(txHash, this.user.id);
+    const txId = new TxId(proof.txId);
+    const savedTx = await this.db.getPaymentTx(txId, this.user.id);
     if (savedTx) {
-      debug(`settling payment tx: ${txHash}`);
-      await this.db.settlePaymentTx(txHash, this.user.id, blockCreated);
+      debug(`settling payment tx: ${txId}`);
+      await this.db.settlePaymentTx(txId, this.user.id, blockCreated);
     } else {
       const tx = this.recoverPaymentTx(
         proof,
@@ -353,7 +353,7 @@ export class UserState extends EventEmitter {
         destroyedNote1,
         destroyedNote2,
       );
-      debug(`recovered payment tx: ${txHash}`);
+      debug(`recovered payment tx: ${txId}`);
       await this.db.addPaymentTx(tx);
     }
   }
@@ -365,7 +365,7 @@ export class UserState extends EventEmitter {
     interactionResult: DefiInteractionNote[],
     treeNote2: TreeNote,
   ) {
-    const { txId, noteCommitment1, noteCommitment2 } = proof;
+    const { noteCommitment1, noteCommitment2 } = proof;
     const note2 = await this.processNewNote(noteStartIndex + 1, noteCommitment2, treeNote2);
     if (!note2) {
       // Owned by the account with a different nonce.
@@ -378,13 +378,13 @@ export class UserState extends EventEmitter {
       this.grumpkin,
       TreeNote.LATEST_VERSION,
     );
-    const txHash = new TxHash(txId);
+    const txId = new TxId(proof.txId);
     const { totalInputValue, totalOutputValueA, totalOutputValueB, result } = interactionResult.find(r =>
       r.bridgeId.equals(bridgeId),
     )!;
     const outputValueA = !result ? BigInt(0) : (totalOutputValueA * depositValue) / totalInputValue;
     const outputValueB = !result ? BigInt(0) : (totalOutputValueB * depositValue) / totalInputValue;
-    await this.addClaim(noteStartIndex, txHash, noteCommitment1, partialStateSecret);
+    await this.addClaim(noteStartIndex, txId, noteCommitment1, partialStateSecret);
 
     const { nullifier1, nullifier2 } = proof;
     await this.nullifyNote(nullifier1);
@@ -392,13 +392,13 @@ export class UserState extends EventEmitter {
 
     await this.refreshNotePicker();
 
-    const savedTx = await this.db.getDefiTx(txHash);
+    const savedTx = await this.db.getDefiTx(txId);
     if (savedTx) {
-      debug(`found defi tx, awaiting claim for settlement: ${txHash}`);
-      await this.db.updateDefiTx(txHash, outputValueA, outputValueB, result);
+      debug(`found defi tx, awaiting claim for settlement: ${txId}`);
+      await this.db.updateDefiTx(txId, outputValueA, outputValueB, result);
     } else {
       const tx = this.recoverDefiTx(proof, offchainTxData, outputValueA, outputValueB, result);
-      debug(`recovered defi tx: ${txHash}`);
+      debug(`recovered defi tx: ${txId}`);
       await this.db.addDefiTx(tx);
     }
   }
@@ -410,9 +410,9 @@ export class UserState extends EventEmitter {
       return;
     }
 
-    const { txHash, userId, secret } = claim;
+    const { txId, userId, secret } = claim;
     const { noteCommitment1, noteCommitment2, nullifier2 } = proof;
-    const { bridgeId, depositValue, outputValueA, outputValueB, result } = (await this.db.getDefiTx(txHash))!;
+    const { bridgeId, depositValue, outputValueA, outputValueB, result } = (await this.db.getDefiTx(txId))!;
     // When generating output notes, set creatorPubKey to 0 (it's a DeFi txn, recipient of note is same as creator of claim note)
     if (!result) {
       const treeNote = new TreeNote(
@@ -453,8 +453,8 @@ export class UserState extends EventEmitter {
 
     await this.refreshNotePicker();
 
-    await this.db.settleDefiTx(txHash, blockCreated);
-    debug(`settled defi tx: ${txHash}`);
+    await this.db.settleDefiTx(txId, blockCreated);
+    debug(`settled defi tx: ${txId}`);
   }
 
   private async processNewNote(
@@ -508,10 +508,10 @@ export class UserState extends EventEmitter {
     return note;
   }
 
-  private async addClaim(index: number, txHash: TxHash, commitment: Buffer, noteSecret: Buffer) {
+  private async addClaim(index: number, txId: TxId, commitment: Buffer, noteSecret: Buffer) {
     const nullifier = this.noteAlgos.claimNoteNullifier(commitment);
     await this.db.addClaimTx({
-      txHash,
+      txId,
       userId: this.user.id,
       secret: noteSecret,
       nullifier,
@@ -542,7 +542,7 @@ export class UserState extends EventEmitter {
     const { txRefNo } = offchainTxData;
 
     return new CorePaymentTx(
-      new TxHash(proof.txId),
+      new TxId(proof.txId),
       this.user.id,
       proofId,
       assetId,
@@ -560,14 +560,14 @@ export class UserState extends EventEmitter {
   }
 
   private recoverAccountTx(proof: InnerProofData, offchainTxData: OffchainAccountData, blockCreated: Date) {
-    const { txId, nullifier1 } = proof;
+    const { nullifier1 } = proof;
     const { accountPublicKey, accountAliasId, spendingPublicKey1, spendingPublicKey2, txRefNo } = offchainTxData;
-    const txHash = new TxHash(txId);
+    const txId = new TxId(proof.txId);
     const userId = new AccountId(accountPublicKey, accountAliasId.nonce);
     const migrated = !!toBigIntBE(nullifier1);
 
     return new CoreAccountTx(
-      txHash,
+      txId,
       userId,
       accountAliasId.aliasHash,
       toBigIntBE(spendingPublicKey1) ? spendingPublicKey1 : undefined,
@@ -586,13 +586,12 @@ export class UserState extends EventEmitter {
     outputValueB: bigint,
     result: boolean,
   ) {
-    const { txId } = proof;
     const { bridgeId, depositValue, txFee, partialStateSecretEphPubKey, txRefNo } = offchainTxData;
-    const txHash = new TxHash(txId);
+    const txId = new TxId(proof.txId);
     const partialStateSecret = deriveNoteSecret(partialStateSecretEphPubKey, this.user.privateKey, this.grumpkin);
 
     return new CoreDefiTx(
-      txHash,
+      txId,
       this.user.id,
       bridgeId,
       depositValue,
@@ -608,36 +607,47 @@ export class UserState extends EventEmitter {
   }
 
   private async refreshNotePicker() {
-    const notesMap: Note[][] = Array(AssetIds.length)
-      .fill(0)
-      .map(() => []);
+    const notesMap: Map<number, Note[]> = new Map();
     const notes = await this.db.getUserNotes(this.user.id);
-    notes.forEach(note => notesMap[note.assetId].push(note));
-    this.notePickers = AssetIds.map(assetId => new NotePicker(notesMap[assetId]));
+    notes.forEach(note => {
+      const assetNotes = notesMap.get(note.assetId) || [];
+      notesMap.set(note.assetId, [...assetNotes, note]);
+    });
+    const assetIds = [...notesMap.keys()].sort((a, b) => (a > b ? 1 : -1));
+    this.notePickers = assetIds.map(assetId => ({ assetId, notePicker: new NotePicker(notesMap.get(assetId)) }));
   }
 
-  public async pickNotes(assetId: AssetId, value: bigint) {
+  public async pickNotes(assetId: number, value: bigint) {
+    const { notePicker } = this.notePickers.find(np => np.assetId === assetId) || {};
     const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
-    return this.notePickers[assetId].pick(value, pendingNullifiers);
+    return notePicker ? notePicker.pick(value, pendingNullifiers) : null;
   }
 
-  public async getSpendableNotes(assetId: AssetId) {
+  public async getSpendableNotes(assetId: number) {
+    const { notePicker } = this.notePickers.find(np => np.assetId === assetId) || {};
     const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
-    return this.notePickers[assetId].getSpendableNotes(pendingNullifiers).notes;
+    return notePicker ? notePicker.getSpendableNotes(pendingNullifiers).notes : [];
   }
 
-  public async getSpendableSum(assetId: AssetId) {
+  public async getSpendableSum(assetId: number) {
+    const { notePicker } = this.notePickers.find(np => np.assetId === assetId) || {};
     const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
-    return this.notePickers[assetId].getSpendableSum(pendingNullifiers);
+    return notePicker ? notePicker.getSpendableSum(pendingNullifiers) : BigInt(0);
   }
 
-  public async getMaxSpendableValue(assetId: AssetId) {
+  public async getMaxSpendableValue(assetId: number) {
+    const { notePicker } = this.notePickers.find(np => np.assetId === assetId) || {};
     const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
-    return this.notePickers[assetId].getMaxSpendableValue(pendingNullifiers);
+    return notePicker ? notePicker.getMaxSpendableValue(pendingNullifiers) : BigInt(0);
   }
 
-  public getBalance(assetId: AssetId) {
-    return this.notePickers[assetId].getSum();
+  public getBalance(assetId: number) {
+    const { notePicker } = this.notePickers.find(np => np.assetId === assetId) || {};
+    return notePicker ? notePicker.getSum() : BigInt(0);
+  }
+
+  public getBalances() {
+    return this.notePickers.map(({ assetId, notePicker }) => ({ assetId, value: notePicker.getSum() }));
   }
 
   public async addProof({ tx, proofData, outputNotes }: ProofOutput) {
@@ -645,15 +655,15 @@ export class UserState extends EventEmitter {
       case ProofId.DEPOSIT:
       case ProofId.WITHDRAW:
       case ProofId.SEND:
-        debug(`adding pending payment tx: ${tx.txHash}`);
+        debug(`adding pending payment tx: ${tx.txId}`);
         await this.db.addPaymentTx(tx);
         break;
       case ProofId.ACCOUNT:
-        debug(`adding pending account tx: ${tx.txHash}`);
+        debug(`adding pending account tx: ${tx.txId}`);
         await this.db.addAccountTx(tx);
         break;
       case ProofId.DEFI_DEPOSIT:
-        debug(`adding pending defi tx: ${tx.txHash}`);
+        debug(`adding pending defi tx: ${tx.txId}`);
         await this.db.addDefiTx(tx);
         break;
     }

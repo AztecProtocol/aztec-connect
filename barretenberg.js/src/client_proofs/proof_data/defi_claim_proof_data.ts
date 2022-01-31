@@ -1,4 +1,3 @@
-import { AssetId } from '../../asset';
 import { toBigIntBE } from '../../bigint_buffer';
 import { BridgeId } from '../../bridge_id';
 import { ProofData } from './proof_data';
@@ -19,7 +18,7 @@ export class DefiClaimProofData {
     return toBigIntBE(this.proofData.txFee);
   }
 
-  get txFeeAssetId(): AssetId {
+  get txFeeAssetId() {
     return this.proofData.txFeeAssetId.readUInt32BE(28);
   }
 

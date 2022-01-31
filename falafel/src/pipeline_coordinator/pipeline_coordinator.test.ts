@@ -1,4 +1,3 @@
-import { AssetId, AssetIds } from '@aztec/barretenberg/asset';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
@@ -49,7 +48,7 @@ describe('pipeline_coordinator', () => {
         randomBytes(64),
         randomBytes(32),
         toBufferBE(100000n, 32),
-        numToUInt32BE(AssetId.ETH, 32),
+        Buffer.alloc(32),
         randomBytes(32),
         randomBytes(32),
       ]),
@@ -99,7 +98,7 @@ describe('pipeline_coordinator', () => {
     feeResolver = {
       setConf: jest.fn(),
       getBaseTxGas: jest.fn().mockReturnValue(1),
-      getGasPaidForByFee: jest.fn().mockImplementation((assetId: AssetId, fee: bigint) => fee),
+      getGasPaidForByFee: jest.fn().mockImplementation((assetId: number, fee: bigint) => fee),
       getMinTxFee: jest.fn().mockImplementation(() => {
         throw new Error('This should not be called');
       }),
@@ -113,7 +112,7 @@ describe('pipeline_coordinator', () => {
       getSingleBridgeTxGas: jest.fn().mockReturnValue(10000n),
       getTxFees: jest.fn(),
       getDefiFees: jest.fn(),
-      isFeePayingAsset: jest.fn().mockImplementation((assetId: AssetId) => AssetIds.some(x => x === assetId)),
+      isFeePayingAsset: jest.fn().mockImplementation((assetId: number) => assetId < 3),
     };
 
     bridgeResolver = {

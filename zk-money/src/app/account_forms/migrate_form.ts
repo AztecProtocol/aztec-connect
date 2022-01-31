@@ -1,4 +1,4 @@
-import { AccountId, WalletSdk } from '@aztec/sdk';
+import { AccountId, AztecSdk } from '@aztec/sdk';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { AccountState } from '../account_state';
@@ -98,7 +98,7 @@ export class MigrateForm extends EventEmitter implements AccountForm {
     accountState: AccountState,
     private readonly keyVault: KeyVault,
     private provider: Provider | undefined,
-    private readonly sdk: WalletSdk,
+    private readonly sdk: AztecSdk,
     private readonly accountUtils: AccountUtils,
     private readonly fromAccountV0: boolean,
   ) {

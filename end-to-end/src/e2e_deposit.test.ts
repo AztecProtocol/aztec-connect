@@ -1,4 +1,4 @@
-import { AccountId, AssetId, createWalletSdk, EthAddress, toBaseUnits, WalletProvider, WalletSdk } from '@aztec/sdk';
+import { AccountId, AztecSdk, createAztecSdk, EthAddress, toBaseUnits, WalletProvider } from '@aztec/sdk';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
 
@@ -22,10 +22,10 @@ const {
 
 describe('end-to-end tests', () => {
   let provider: WalletProvider;
-  let sdk: WalletSdk;
+  let sdk: AztecSdk;
   let accounts: EthAddress[] = [];
   let userId!: AccountId;
-  const assetId = AssetId.ETH;
+  const assetId = 0;
   const awaitSettlementTimeout = 600;
 
   beforeAll(async () => {
@@ -38,7 +38,7 @@ describe('end-to-end tests', () => {
     );
     accounts = provider.getAccounts();
 
-    sdk = await createWalletSdk(provider, ROLLUP_HOST, {
+    sdk = await createAztecSdk(provider, ROLLUP_HOST, {
       syncInstances: false,
       proverless: PROVERLESS === 'true',
       pollInterval: 1000,
@@ -75,8 +75,8 @@ describe('end-to-end tests', () => {
     await sdk.getTransactionReceipt(depositTxHash);
 
     await controller.sign();
-    const txHash = await controller.send();
-    await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
+    await controller.send();
+    await controller.awaitSettlement(awaitSettlementTimeout);
 
     expect(sdk.getBalance(assetId, userId)).toBe(depositValue);
   });

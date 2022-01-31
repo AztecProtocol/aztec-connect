@@ -1,4 +1,4 @@
-import { AssetId, EthAddress } from '@aztec/sdk';
+import { EthAddress } from '@aztec/sdk';
 import { Contract } from '@ethersproject/contracts';
 import { Web3Provider } from '@ethersproject/providers';
 import { ValueSubscriber } from './value_subscriber';
@@ -11,12 +11,12 @@ export class PublicBalance extends ValueSubscriber {
   constructor(
     private address: EthAddress | undefined,
     private web3Provider: Web3Provider | undefined,
-    private assetId: AssetId,
+    private assetId: number,
     assetAddress: EthAddress | undefined,
     interval: number,
   ) {
     super(interval);
-    if (web3Provider && assetAddress && assetId !== AssetId.ETH) {
+    if (web3Provider && assetAddress && assetId !== 0) {
       this.contract = new Contract(assetAddress.toString(), abi, web3Provider);
     }
   }
@@ -26,7 +26,7 @@ export class PublicBalance extends ValueSubscriber {
       return 0n;
     }
 
-    if (this.assetId === AssetId.ETH) {
+    if (this.assetId === 0) {
       return BigInt((await this.web3Provider!.getBalance(this.address.toString())).toString());
     }
 

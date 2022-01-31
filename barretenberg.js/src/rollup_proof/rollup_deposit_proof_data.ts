@@ -1,5 +1,4 @@
 import { EthAddress } from '../address';
-import { AssetId } from '../asset';
 import { toBigIntBE } from '../bigint_buffer';
 import { ProofId } from '../client_proofs';
 import { InnerProofData } from './inner_proof';
@@ -17,7 +16,7 @@ export class RollupDepositProofData {
     return RollupDepositProofData.ENCODED_LENGTH;
   }
 
-  get assetId(): AssetId {
+  get assetId() {
     return this.proofData.assetId.readUInt32BE(28);
   }
 

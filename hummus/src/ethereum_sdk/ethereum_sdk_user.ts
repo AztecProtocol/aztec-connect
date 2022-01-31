@@ -1,7 +1,5 @@
-import { AccountId } from '@aztec/barretenberg/account_id';
-import { EthAddress } from '@aztec/barretenberg/address';
-import { AssetId } from '@aztec/barretenberg/asset';
-import { EthereumSdk } from './';
+import { AccountId, EthAddress } from '@aztec/sdk';
+import { EthereumSdk } from '.';
 
 export class EthereumSdkUser {
   constructor(private address: EthAddress, private accountId: AccountId, private sdk: EthereumSdk) {}
@@ -18,7 +16,7 @@ export class EthereumSdkUser {
     return this.sdk.getUserData(this.accountId);
   }
 
-  getBalance(assetId: AssetId) {
+  getBalance(assetId: number) {
     return this.sdk.getBalance(assetId, this.accountId);
   }
 

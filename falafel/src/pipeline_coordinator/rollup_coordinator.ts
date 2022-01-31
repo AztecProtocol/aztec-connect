@@ -1,4 +1,3 @@
-import { AssetId } from '@aztec/barretenberg/asset';
 import { isAccountCreation, isDefiDeposit, TxType } from '@aztec/barretenberg/blockchain';
 import { DefiDepositProofData, ProofData } from '@aztec/barretenberg/client_proofs';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
@@ -19,7 +18,7 @@ export class RollupCoordinator {
   private innerProofs: RollupProofDao[] = [];
   private txs: RollupTx[] = [];
   private rollupBridgeIds: bigint[] = [];
-  private rollupAssetIds: Set<AssetId> = new Set();
+  private rollupAssetIds: Set<number> = new Set();
   private published = false;
   private bridgeQueues = new Map<bigint, BridgeTxQueue>();
 
@@ -63,7 +62,7 @@ export class RollupCoordinator {
     const rollupTimeouts = this.publishTimeManager.calculateLastTimeouts();
     this.initialiseBridgeQueues(rollupTimeouts);
     const bridgeIds = [...this.rollupBridgeIds];
-    const assetIds = new Set<AssetId>(this.rollupAssetIds);
+    const assetIds = new Set<number>(this.rollupAssetIds);
     const txs = this.getNextTxsToRollup(pendingTxs, flush, assetIds, bridgeIds);
     try {
       const rollupProfile = await this.aggregateAndPublish(txs, rollupTimeouts, flush);
@@ -80,7 +79,7 @@ export class RollupCoordinator {
     remainingTxSlots: number,
     txsForRollup: RollupTx[],
     flush: boolean,
-    assetIds: Set<AssetId>,
+    assetIds: Set<number>,
     bridgeIds: bigint[],
   ): RollupTx[] {
     // we have a new defi interaction, we need to determine if it can be accepted and if so whether it gets queued or goes straight on chain.
@@ -149,7 +148,7 @@ export class RollupCoordinator {
     return txsForRollup;
   }
 
-  private getNextTxsToRollup(pendingTxs: TxDao[], flush: boolean, assetIds: Set<AssetId>, bridgeIds: bigint[]) {
+  private getNextTxsToRollup(pendingTxs: TxDao[], flush: boolean, assetIds: Set<number>, bridgeIds: bigint[]) {
     const remainingTxSlots = this.numInnerRollupTxs * (this.numOuterRollupProofs - this.innerProofs.length);
     let txs: RollupTx[] = [];
 

@@ -1,4 +1,3 @@
-import { AssetId } from '@aztec/barretenberg/asset';
 import { Blockchain, PriceFeed } from '@aztec/barretenberg/blockchain';
 
 export class PriceTracker {
@@ -11,7 +10,7 @@ export class PriceTracker {
 
   constructor(
     blockchain: Blockchain,
-    assetIds: AssetId[],
+    assetIds: number[],
     private readonly refreshInterval = 1000,
     recordDuration = refreshInterval,
   ) {
@@ -51,7 +50,7 @@ export class PriceTracker {
     return this.prices.find(({ timestamp }) => startFrom >= timestamp)?.gasPrice || 0n;
   }
 
-  getAssetPrice(assetId: AssetId, msAgo = 0) {
+  getAssetPrice(assetId: number, msAgo = 0) {
     const startFrom = Date.now() - msAgo;
     return this.prices.find(({ timestamp }) => startFrom >= timestamp)?.assetPrices[assetId] || 0n;
   }
@@ -60,7 +59,7 @@ export class PriceTracker {
     return this.prices.reduce((min, { gasPrice }) => (gasPrice < min ? gasPrice : min), this.prices[0]?.gasPrice || 0n);
   }
 
-  getMinAssetPrice(assetId: AssetId) {
+  getMinAssetPrice(assetId: number) {
     return this.prices.reduce(
       (min, { assetPrices }) => (assetPrices[assetId] < min ? assetPrices[assetId] : min),
       this.prices[0]?.assetPrices[assetId] || 0n,

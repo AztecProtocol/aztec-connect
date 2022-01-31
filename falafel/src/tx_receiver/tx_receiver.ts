@@ -1,5 +1,4 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { AssetId } from '@aztec/barretenberg/asset';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
 import {
@@ -231,7 +230,7 @@ export class TxReceiver {
       return;
     }
 
-    const requiredDeposits: { publicOwner: EthAddress; publicAssetId: AssetId; value: bigint }[] = [];
+    const requiredDeposits: { publicOwner: EthAddress; publicAssetId: number; value: bigint }[] = [];
     depositProofs.forEach(({ publicAssetId, publicOwner, publicValue }) => {
       const index = requiredDeposits.findIndex(
         d => d.publicOwner.equals(publicOwner) && d.publicAssetId === publicAssetId,

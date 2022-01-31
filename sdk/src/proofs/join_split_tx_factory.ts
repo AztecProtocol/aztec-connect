@@ -1,6 +1,5 @@
 import { AccountAliasId, AccountId } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
-import { AssetId } from '@aztec/barretenberg/asset';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { JoinSplitTx, ProofId } from '@aztec/barretenberg/client_proofs';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
@@ -22,7 +21,7 @@ export class JoinSplitTxFactory {
   async createTx(
     user: UserData,
     proofId: ProofId,
-    assetId: AssetId,
+    assetId: number,
     inputNotes: Note[],
     signingPubKey: GrumpkinAddress,
     {
@@ -140,7 +139,7 @@ export class JoinSplitTxFactory {
     };
   }
 
-  private createNote(assetId: AssetId, value: bigint, owner: AccountId, inputNullifier: Buffer, sender?: AccountId) {
+  private createNote(assetId: number, value: bigint, owner: AccountId, inputNullifier: Buffer, sender?: AccountId) {
     const { ephPrivKey } = this.createEphemeralKeyPair();
     const creatorPubKey: Buffer = sender ? sender.publicKey.x() : Buffer.alloc(32);
     const note = TreeNote.createFromEphPriv(

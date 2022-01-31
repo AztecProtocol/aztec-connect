@@ -1,12 +1,4 @@
-import {
-  AssetId,
-  createWalletSdk,
-  EthAddress,
-  GrumpkinAddress,
-  TxSettlementTime,
-  WalletProvider,
-  WalletSdk,
-} from '@aztec/sdk';
+import { AztecSdk, createAztecSdk, EthAddress, GrumpkinAddress, TxSettlementTime, WalletProvider } from '@aztec/sdk';
 import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
@@ -18,9 +10,9 @@ const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost
 
 describe('end-to-end account tests', () => {
   let provider: WalletProvider;
-  let sdk: WalletSdk;
+  let sdk: AztecSdk;
   let depositor: EthAddress;
-  const assetId = AssetId.ETH;
+  const assetId = 0;
   const awaitSettlementTimeout = 600;
 
   beforeAll(async () => {
@@ -28,7 +20,7 @@ describe('end-to-end account tests', () => {
     provider = await createFundedWalletProvider(ETHEREUM_HOST, 1);
     [depositor] = provider.getAccounts();
 
-    sdk = await createWalletSdk(provider, ROLLUP_HOST, {
+    sdk = await createAztecSdk(provider, ROLLUP_HOST, {
       syncInstances: false,
       proverless: PROVERLESS === 'true',
       saveProvingKey: false,
@@ -91,8 +83,8 @@ describe('end-to-end account tests', () => {
       expect(user0.getBalance(assetId)).toBe(BigInt(0));
       expect(user1.getBalance(assetId)).toBe(BigInt(0));
 
-      const txHash = await controller.send();
-      await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
+      await controller.send();
+      await controller.awaitSettlement(awaitSettlementTimeout);
 
       expect(user0.getBalance(assetId)).toBe(BigInt(0));
       expect(user1.getBalance(assetId)).toBe(depositValue);
@@ -109,8 +101,8 @@ describe('end-to-end account tests', () => {
     //   const [fee] = await sdk.getRecoverAccountFees(assetId);
     //   const controller = sdk.createRecoverAccountController(recoveryPayloads[0], fee);
     //   await controller.createProof();
-    //   const txHash = await controller.send();
-    //   await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
+    //   await controller.send();
+    //   await controller.awaitSettlement(awaitSettlementTimeout);
     // }
 
     // expectEqualSigningKeys(await user1.getSigningKeys(), [
@@ -131,8 +123,8 @@ describe('end-to-end account tests', () => {
     //     fee,
     //   );
     //   await controller.createProof();
-    //   const txHash = await controller.send();
-    //   await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
+    //   await controller.send();
+    //   await controller.awaitSettlement(awaitSettlementTimeout);
     // }
 
     // expectEqualSigningKeys(await user1.getSigningKeys(), [
@@ -155,8 +147,8 @@ describe('end-to-end account tests', () => {
     //     fee,
     //   );
     //   await controller.createProof();
-    //   const txHash = await controller.send();
-    //   await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
+    //   await controller.send();
+    //   await controller.awaitSettlement(awaitSettlementTimeout);
     // }
 
     // expect(await sdk.getLatestAccountNonce(accountPubKey)).toBe(2);
@@ -178,8 +170,8 @@ describe('end-to-end account tests', () => {
     //     fee,
     //   );
     //   await controller.createProof();
-    //   const txHash = await controller.send();
-    //   await sdk.awaitSettlement(txHash, awaitSettlementTimeout);
+    //   await controller.send();
+    //   await controller.awaitSettlement(awaitSettlementTimeout);
     // }
 
     // expect(await sdk.getLatestAccountNonce(accountPubKey)).toBe(2);

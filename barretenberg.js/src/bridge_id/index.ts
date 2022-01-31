@@ -12,6 +12,8 @@ const getNumber = (val: bigint, offset: number, size: number) =>
   Number((val >> BigInt(offset)) & ((BigInt(1) << BigInt(size)) - BigInt(1)));
 
 export class BitConfig {
+  static EMPTY = new BitConfig(false, false, false, false, false, false);
+
   constructor(
     public readonly firstInputAssetVirtual: boolean,
     public readonly secondInputAssetVirtual: boolean,
@@ -49,7 +51,7 @@ export class BitConfig {
 }
 
 export class BridgeId {
-  static ZERO = new BridgeId(0, 0, 0, 0, 0, new BitConfig(false, false, false, false, false, false), 0);
+  static ZERO = new BridgeId(0, 0, 0, 0, 0, BitConfig.EMPTY, 0);
   static ENCODED_LENGTH_IN_BYTES = 32;
   static ADDRESS_BIT_LEN = 32;
   static INPUT_ASSET_ID_LEN = 30;

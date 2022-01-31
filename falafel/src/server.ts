@@ -1,6 +1,5 @@
 import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
-import { AssetId } from '@aztec/barretenberg/asset';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { Blockchain } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
@@ -187,7 +186,7 @@ export class Server {
     };
   }
 
-  public getTxFees(assetId: AssetId) {
+  public getTxFees(assetId: number) {
     return this.txFeeResolver.getTxFees(assetId);
   }
 

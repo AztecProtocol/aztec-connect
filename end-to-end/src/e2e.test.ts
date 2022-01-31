@@ -1,4 +1,4 @@
-import { AssetId, createWalletSdk, EthAddress, TxHash, TxSettlementTime, WalletProvider, WalletSdk } from '@aztec/sdk';
+import { AztecSdk, createAztecSdk, EthAddress, TxId, TxSettlementTime, WalletProvider } from '@aztec/sdk';
 import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
@@ -23,9 +23,9 @@ const {
 
 describe('end-to-end tests', () => {
   let provider: WalletProvider;
-  let sdk: WalletSdk;
+  let sdk: AztecSdk;
   let addresses: EthAddress[] = [];
-  const assetId = AssetId.ETH;
+  const assetId = 0;
   const awaitSettlementTimeout = 600;
 
   const createUser = async (accountPrivateKey = randomBytes(32), nonce = 0) => {
@@ -40,7 +40,7 @@ describe('end-to-end tests', () => {
     provider = await createFundedWalletProvider(ETHEREUM_HOST, 3, 2, Buffer.from(PRIVATE_KEY, 'hex'), initialBalance);
     addresses = provider.getAccounts();
 
-    sdk = await createWalletSdk(provider, ROLLUP_HOST, {
+    sdk = await createAztecSdk(provider, ROLLUP_HOST, {
       syncInstances: false,
       proverless: PROVERLESS === 'true',
       pollInterval: 1000,
@@ -59,9 +59,10 @@ describe('end-to-end tests', () => {
   });
 
   it('should deposit, transfer and withdraw funds', async () => {
-    const depositValue = sdk.toBaseUnits(assetId, '0.01');
+    const depositValue = sdk.toBaseUnits(assetId, '0.015');
     const transferValue = sdk.toBaseUnits(assetId, '0.007');
-    const withdrawValue = sdk.toBaseUnits(assetId, '0.008');
+    const withdrawValueA = sdk.toBaseUnits(assetId, '0.008');
+    const withdrawValueB = sdk.toBaseUnits(assetId, '0.003');
 
     const { userId: userA, signer: signerA } = await createUser();
     const { userId: userB, signer: signerB } = await createUser();
@@ -71,7 +72,7 @@ describe('end-to-end tests', () => {
     expect(sdk.getBalance(assetId, userA)).toBe(0n);
     expect(sdk.getBalance(assetId, userB)).toBe(0n);
 
-    const txHashes: TxHash[] = [];
+    const depositTxIds: TxId[] = [];
 
     // UserA deposits from Address0.
     {
@@ -85,13 +86,13 @@ describe('end-to-end tests', () => {
       initialPublicBalance0 = await sdk.getPublicBalance(assetId, depositor);
 
       await controller.sign();
-      txHashes.push(await controller.send());
+      depositTxIds.push(await controller.send());
     }
 
     // UserB deposits from Address1.
     {
       const depositor = addresses[1];
-      const [fee] = await sdk.getDepositFees(assetId);
+      const fee = (await sdk.getDepositFees(assetId))[TxSettlementTime.INSTANT];
       const controller = sdk.createDepositController(userB, signerB, { assetId, value: depositValue }, fee, depositor);
       await controller.createProof();
       await controller.sign();
@@ -100,11 +101,50 @@ describe('end-to-end tests', () => {
       await sdk.getTransactionReceipt(txHash);
       initialPublicBalance1 = await sdk.getPublicBalance(assetId, depositor);
 
-      txHashes.push(await controller.send());
+      depositTxIds.push(await controller.send());
+    }
+
+    await Promise.all(depositTxIds.map(txId => sdk.awaitSettlement(txId, awaitSettlementTimeout)));
+
+    expect(await sdk.getPublicBalance(assetId, addresses[0])).toBe(initialPublicBalance0);
+    expect(await sdk.getPublicBalance(assetId, addresses[1])).toBe(initialPublicBalance1);
+    expect(await sdk.getPublicBalance(assetId, addresses[2])).toBe(0n);
+    expect(sdk.getBalance(assetId, userA)).toBe(depositValue);
+    expect(sdk.getBalance(assetId, userB)).toBe(depositValue);
+
+    const txIds: TxId[] = [];
+
+    // UserA withdraws to Address2.
+    const [withdrawFee] = await sdk.getWithdrawFees(assetId);
+    {
+      const recipient = addresses[2];
+      const controller = sdk.createWithdrawController(
+        userA,
+        signerA,
+        { assetId, value: withdrawValueA },
+        withdrawFee,
+        recipient,
+      );
+      await controller.createProof();
+      txIds.push(await controller.send());
+    }
+
+    // UserB withdraws to Address2.
+    {
+      const recipient = addresses[2];
+      const controller = sdk.createWithdrawController(
+        userB,
+        signerB,
+        { assetId, value: withdrawValueB },
+        withdrawFee,
+        recipient,
+      );
+      await controller.createProof();
+      txIds.push(await controller.send());
     }
 
     // UserB transfers to userA.
-    const [transferFee] = await sdk.getTransferFees(assetId);
+    const transferFee = (await sdk.getTransferFees(assetId))[TxSettlementTime.INSTANT];
     {
       const controller = sdk.createTransferController(
         userB,
@@ -114,30 +154,17 @@ describe('end-to-end tests', () => {
         userA,
       );
       await controller.createProof();
-      txHashes.push(await controller.send());
+      txIds.push(await controller.send());
     }
 
-    // UserA withdraws to Address2.
-    const withdrawFee = (await sdk.getWithdrawFees(assetId))[TxSettlementTime.INSTANT];
-    {
-      const recipient = addresses[2];
-      const controller = sdk.createWithdrawController(
-        userA,
-        signerA,
-        { assetId, value: withdrawValue },
-        withdrawFee,
-        recipient,
-      );
-      await controller.createProof();
-      txHashes.push(await controller.send());
-    }
-
-    await Promise.all(txHashes.map(txHash => sdk.awaitSettlement(txHash, awaitSettlementTimeout)));
+    await Promise.all(txIds.map(txId => sdk.awaitSettlement(txId, awaitSettlementTimeout)));
 
     expect(await sdk.getPublicBalance(assetId, addresses[0])).toBe(initialPublicBalance0);
     expect(await sdk.getPublicBalance(assetId, addresses[1])).toBe(initialPublicBalance1);
-    expect(await sdk.getPublicBalance(assetId, addresses[2])).toBe(withdrawValue);
-    expect(sdk.getBalance(assetId, userA)).toBe(depositValue + transferValue - withdrawValue - withdrawFee.value);
-    expect(sdk.getBalance(assetId, userB)).toBe(depositValue - transferValue - transferFee.value);
+    expect(await sdk.getPublicBalance(assetId, addresses[2])).toBe(withdrawValueA + withdrawValueB);
+    expect(sdk.getBalance(assetId, userA)).toBe(depositValue - withdrawValueA - withdrawFee.value + transferValue);
+    expect(sdk.getBalance(assetId, userB)).toBe(
+      depositValue - withdrawValueB - withdrawFee.value - transferValue - transferFee.value,
+    );
   });
 });

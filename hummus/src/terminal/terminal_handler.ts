@@ -1,20 +1,7 @@
-import {
-  AccountId,
-  AppEvent,
-  AppInitAction,
-  AppInitState,
-  AppInitStatus,
-  AssetId,
-  GrumpkinAddress,
-  MemoryFifo,
-  SdkEvent,
-  WebSdk,
-  TxType,
-  UserPaymentTx,
-  ProofId,
-} from '@aztec/sdk';
+import { AccountId, GrumpkinAddress, MemoryFifo, SdkEvent, TxType, UserPaymentTx, ProofId } from '@aztec/sdk';
 import { Terminal } from './terminal';
 import createDebug from 'debug';
+import { AppEvent, AppInitAction, AppInitState, AppInitStatus, WebSdk } from '../web_sdk';
 
 const debug = createDebug('bb:terminal_handler');
 
@@ -46,7 +33,7 @@ export class TerminalHandler {
     fees: this.fees,
     status: this.status,
   };
-  private assetId = AssetId.ETH;
+  private assetId = 0;
 
   constructor(private app: WebSdk, private terminal: Terminal) {}
 
@@ -166,7 +153,7 @@ export class TerminalHandler {
   /**
    * If the users balance updates, print an update.
    */
-  private handleUserStateChange = (accountId: AccountId, balance: bigint, diff: bigint, assetId: AssetId) => {
+  private handleUserStateChange = (accountId: AccountId, balance: bigint, diff: bigint, assetId: number) => {
     const user = this.app.getUser();
     if (!user) {
       // Kind of a hack. But this event can emitted when adding a new user and the app doesn't have a handle on it yet.
@@ -386,10 +373,10 @@ export class TerminalHandler {
     const address = this.app.getAddress();
     const controller = this.app
       .getSdk()
-      .createRegisterController(id, alias, newSigningPublicKey, recoveryPublicKey, AssetId.ETH, BigInt(0), address);
-    const txHash = await controller.send();
+      .createRegisterController(id, alias, newSigningPublicKey, recoveryPublicKey, 0, BigInt(0), address);
+    await controller.send();
     this.printQueue.put(`registration proof sent.\nawaiting settlement...\n`);
-    await this.app.getSdk().awaitSettlement(txHash, 300);
+    await controller.awaitSettlement(300);
     await this.app.loadLatestAccount();
     // Stop monitoring pre-registration account.
     await user.remove();
@@ -429,7 +416,7 @@ export class TerminalHandler {
     const printTx = (tx: UserPaymentTx, action: string, value: bigint) => {
       const asset = this.app.getSdk().getAssetInfo(tx.value.assetId);
       this.printQueue.put(
-        `${tx.txHash.toString().slice(2, 10)}: ${action} ${this.app.getSdk().fromBaseUnits(this.assetId, value)} ${
+        `${tx.txId.toString().slice(2, 10)}: ${action} ${this.app.getSdk().fromBaseUnits(this.assetId, value)} ${
           asset.symbol
         } ${tx.settled ? 'settled' : 'pending'}\n`,
       );

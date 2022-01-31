@@ -1,7 +1,7 @@
 import { AccountAliasId, AccountId, AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { TxId } from '@aztec/barretenberg/tx_id';
 import { ValueTransformer } from 'typeorm';
 
 export const bigintTransformer: ValueTransformer = {
@@ -29,9 +29,9 @@ export const accountIdTransformer: ValueTransformer = {
   from: (dbValue?: Buffer) => (dbValue ? AccountId.fromBuffer(dbValue) : undefined),
 };
 
-export const txHashTransformer: ValueTransformer = {
-  to: (entityValue?: TxHash) => entityValue?.toBuffer(),
-  from: (dbValue?: Buffer) => (dbValue ? new TxHash(dbValue) : undefined),
+export const txIdTransformer: ValueTransformer = {
+  to: (entityValue?: TxId) => entityValue?.toBuffer(),
+  from: (dbValue?: Buffer) => (dbValue ? new TxId(dbValue) : undefined),
 };
 
 export const ethAddressTransformer: ValueTransformer = {

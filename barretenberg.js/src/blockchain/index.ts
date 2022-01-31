@@ -5,3 +5,4 @@ export * from './ethereum_provider';
 export * from './ethereum_signer';
 export * from './asset';
 export * from './price_feed';
+export * from './tx_hash';

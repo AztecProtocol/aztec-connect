@@ -1,5 +1,4 @@
 import { AccountId } from '@aztec/barretenberg/account_id';
-import { AssetId } from '@aztec/barretenberg/asset';
 import { ServerRollupProvider } from '@aztec/barretenberg/rollup_provider';
 import { BroadcastChannel, createLeaderElection } from 'broadcast-channel';
 import createDebug from 'debug';
@@ -7,8 +6,8 @@ import isNode from 'detect-node';
 import { mkdirSync } from 'fs';
 import levelup from 'levelup';
 import { createConnection } from 'typeorm';
+import { SdkEvent, SdkInitState } from '../aztec_sdk';
 import { DexieDatabase, getOrmConfig, SQLDatabase } from '../database';
-import { SdkEvent, SdkInitState } from '../sdk';
 import { CoreSdk, CoreSdkEvent, CoreSdkOptions } from './core_sdk';
 
 const debug = createDebug('bb:create_sdk');
@@ -77,7 +76,7 @@ async function sdkFactory(hostStr: string, options: SdkOptions) {
  * share events and synchronise instances. Only one instance will be the "leader" and that instance will receive
  * blocks from the block source and update the (shared) world state.
  */
-export async function createSdk(hostStr: string, options: SdkOptions = {}) {
+export async function createCoreSdk(hostStr: string, options: SdkOptions = {}) {
   options = { syncInstances: true, saveProvingKey: true, ...options };
   const sdk = await sdkFactory(hostStr, options);
 
@@ -113,7 +112,7 @@ export async function createSdk(hostStr: string, options: SdkOptions = {}) {
     sdk.on(CoreSdkEvent.UPDATED_USERS, () => channel.postMessage({ name: CoreSdkEvent.UPDATED_USERS }));
     sdk.on(
       CoreSdkEvent.UPDATED_USER_STATE,
-      (userId: AccountId, balanceAfter?: bigint, diff?: bigint, assetId?: AssetId) =>
+      (userId: AccountId, balanceAfter?: bigint, diff?: bigint, assetId?: number) =>
         channel.postMessage({
           name: CoreSdkEvent.UPDATED_USER_STATE,
           userId: userId.toString(),

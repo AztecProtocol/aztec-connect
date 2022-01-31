@@ -1,4 +1,3 @@
-import { AssetId } from '@aztec/barretenberg/asset';
 import { BridgeConfig } from '@aztec/barretenberg/bridge_id';
 import { DefiDepositProofData, ProofData } from '@aztec/barretenberg/client_proofs';
 import { TxDao } from '../entity/tx';
@@ -7,7 +6,7 @@ import { RollupTimeout } from './publish_time_manager';
 
 export interface RollupTx {
   excessGas: bigint;
-  feeAsset: AssetId;
+  feeAsset: number;
   tx: TxDao;
   bridgeId?: bigint;
 }
@@ -54,11 +53,11 @@ export class BridgeTxQueue {
   public getTxsToRollup(
     feeResolver: TxFeeResolver,
     maxRemainingTransactions: number,
-    assetIds: Set<AssetId>,
+    assetIds: Set<number>,
     maxAssets: number,
   ) {
     const txsToConsider: RollupTx[] = [];
-    const newAssets = new Set<AssetId>(assetIds);
+    const newAssets = new Set<number>(assetIds);
     let gasFromTxs = 0n;
     for (let i = 0; i < this._txQueue.length && txsToConsider.length < maxRemainingTransactions; i++) {
       const tx = this._txQueue[i];

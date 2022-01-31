@@ -1,4 +1,3 @@
-import { AssetId } from '@aztec/barretenberg/asset';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
@@ -7,7 +6,7 @@ import { TxDao } from '../entity/tx';
 
 const txTypeToProofId = (txType: TxType) => (txType < TxType.WITHDRAW_TO_CONTRACT ? txType + 1 : txType);
 
-export const mockTx = (txFeeAssetId: AssetId, txType: TxType, txFee: bigint) =>
+export const mockTx = (txFeeAssetId: number, txType: TxType, txFee: bigint) =>
   ({
     txType,
     proofData: Buffer.concat([

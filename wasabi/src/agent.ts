@@ -1,14 +1,13 @@
 import {
-  MemoryFifo,
-  TxHash,
-  WalletSdk,
+  AztecSdk,
+  AztecSdkUser,
   EthAddress,
-  WalletProvider,
-  WalletSdkUser,
-  SchnorrSigner,
-  AssetId,
-  toBaseUnits,
   EthAsset,
+  MemoryFifo,
+  SchnorrSigner,
+  toBaseUnits,
+  TxId,
+  WalletProvider,
 } from '@aztec/sdk';
 import { randomBytes } from 'crypto';
 import { Stats } from './stats';
@@ -16,7 +15,7 @@ import { Stats } from './stats';
 export const TX_SETTLEMENT_TIMEOUT = 12 * 3600;
 
 export class UserData {
-  constructor(public address: EthAddress, public signer: SchnorrSigner, public user: WalletSdkUser) {}
+  constructor(public address: EthAddress, public signer: SchnorrSigner, public user: AztecSdkUser) {}
 }
 
 export abstract class Agent {
@@ -29,11 +28,11 @@ export abstract class Agent {
   constructor(
     protected type: string,
     protected fundsSourceAddress: EthAddress,
-    protected sdk: WalletSdk,
+    protected sdk: AztecSdk,
     protected id: number,
     protected provider: WalletProvider,
     private queue: MemoryFifo<() => Promise<void>>,
-    protected assetId = AssetId.ETH,
+    protected assetId = 0,
   ) {
     this.depositPromise = new Promise(resolve => {
       this.depositSent = resolve;
@@ -65,7 +64,7 @@ export abstract class Agent {
 
   private async fundEthAddress(deposit: bigint) {
     // Fund enough to ensure we can pay tx fee to deposit to contract.
-    const balance = await this.sdk.getPublicBalance(AssetId.ETH, this.primaryUser.address);
+    const balance = await this.sdk.getPublicBalance(this.assetId, this.primaryUser.address);
     const toFund = toBaseUnits('2', 18);
     const required = toFund + deposit;
 
@@ -81,14 +80,14 @@ export abstract class Agent {
     await asset.transfer(value, this.fundsSourceAddress, this.primaryUser.address);
     console.log(
       `${this.agentId()} transaction completed, new balance: ${await this.sdk.getPublicBalance(
-        AssetId.ETH,
+        this.assetId,
         this.primaryUser.address,
       )}`,
     );
   }
 
   public async repaySourceAddress() {
-    let balance = await this.sdk.getPublicBalance(AssetId.ETH, this.primaryUser.address);
+    let balance = await this.sdk.getPublicBalance(this.assetId, this.primaryUser.address);
     balance -= this.payoutFee;
 
     console.log(`${this.agentId()} funding ${this.fundsSourceAddress} with ${balance} wei...`);
@@ -97,7 +96,7 @@ export abstract class Agent {
     await asset.transfer(balance, this.primaryUser.address, this.fundsSourceAddress);
     console.log(
       `${this.agentId()} transaction completed, new balance: ${await this.sdk.getPublicBalance(
-        AssetId.ETH,
+        this.assetId,
         this.primaryUser.address,
       )}`,
     );
@@ -105,7 +104,7 @@ export abstract class Agent {
 
   private async depositToContract(deposit: bigint) {
     console.log(`${this.agentId()} depositing to contract...`);
-    await this.sdk.depositFundsToContract({ assetId: AssetId.ETH, value: deposit }, this.primaryUser.address);
+    await this.sdk.depositFundsToContract({ assetId: this.assetId, value: deposit }, this.primaryUser.address);
     console.log(`${this.agentId()} deposit completed`);
   }
 
@@ -162,16 +161,16 @@ export abstract class Agent {
 
   /**
    * The SDK does not support parallel execution.
-   * Given a function that resolves to a TxHash, will execute that function in serial across all agents sharing the
-   * queue. Resolves when the TxHash is settled.
+   * Given a function that resolves to a TxId, will execute that function in serial across all agents sharing the
+   * queue. Resolves when the TxId is settled.
    */
-  protected async serializeTx(fn: () => Promise<TxHash | undefined>) {
-    const txHash = await this.serializeAny(fn);
-    if (!txHash) {
+  protected async serializeTx(fn: () => Promise<TxId | undefined>) {
+    const txId = await this.serializeAny(fn);
+    if (!txId) {
       return;
     }
     console.log(`Agent ${this.id} awaiting settlement...`);
-    await this.sdk.awaitSettlement(txHash, TX_SETTLEMENT_TIMEOUT);
+    await this.sdk.awaitSettlement(txId, TX_SETTLEMENT_TIMEOUT);
   }
 
   protected async serializeAny(fn: () => Promise<any>) {

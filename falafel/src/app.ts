@@ -106,7 +106,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     const txs = postData.map(fromTxPostData);
     const txIds = await server.receiveTxs(txs);
     const response = {
-      txHashes: txIds.map(txId => txId.toString('hex')),
+      txIds: txIds.map(txId => txId.toString('hex')),
     };
     ctx.body = response;
     ctx.status = 200;

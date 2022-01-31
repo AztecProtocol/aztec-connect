@@ -1,14 +1,13 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { AssetId } from '@aztec/barretenberg/asset';
 import { BridgeId, BitConfig } from '@aztec/barretenberg/bridge_id';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
 import { RollupProcessor } from '../rollup_processor';
 
 export interface MockBridgeParams {
-  inputAssetId?: AssetId;
-  outputAssetIdA?: AssetId;
-  outputAssetIdB?: AssetId;
+  inputAssetId?: number;
+  outputAssetIdA?: number;
+  outputAssetIdB?: number;
   inputAsset?: EthAddress;
   outputAssetA?: EthAddress;
   outputAssetB?: EthAddress;
@@ -32,9 +31,9 @@ export const deployMockBridge = async (
   rollupProcessor: RollupProcessor,
   assetAddresses: EthAddress[],
   {
-    inputAssetId = AssetId.DAI,
-    outputAssetIdA = AssetId.renBTC,
-    outputAssetIdB = AssetId.ETH,
+    inputAssetId = 1,
+    outputAssetIdA = 2,
+    outputAssetIdB = 0,
     inputAsset = assetAddresses[inputAssetId],
     outputAssetA = assetAddresses[outputAssetIdA],
     outputAssetB = assetAddresses[outputAssetIdB],

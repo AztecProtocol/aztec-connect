@@ -1,4 +1,4 @@
-import { ProofId, TxHash, UserAccountTx, UserPaymentTx } from '@aztec/sdk';
+import { ProofId, TxId, UserAccountTx, UserPaymentTx } from '@aztec/sdk';
 
 export enum AccountAction {
   SHIELD = 'SHIELD',
@@ -35,7 +35,7 @@ const getBalanceDiff = ({ proofId, isSender, value: { value }, fee: { value: fee
 };
 
 export interface JoinSplitTx {
-  txHash: TxHash;
+  txId: TxId;
   action: JoinSplitTxAction;
   balanceDiff: bigint;
   value: bigint;
@@ -45,7 +45,7 @@ export interface JoinSplitTx {
 }
 
 export interface AccountTx {
-  txHash: TxHash;
+  txId: TxId;
   action: string;
   link: string;
   settled?: Date;
@@ -57,8 +57,8 @@ const recoverJoinSplitValues = (tx: UserPaymentTx) => {
 };
 
 const parseTx = (tx: UserPaymentTx | UserAccountTx, explorerUrl: string) => ({
-  txHash: tx.txHash,
-  link: `${explorerUrl}/tx/${tx.txHash.toString().replace(/^0x/i, '')}`,
+  txId: tx.txId,
+  link: `${explorerUrl}/tx/${tx.txId.toString().replace(/^0x/i, '')}`,
   settled: tx.settled,
 });
 

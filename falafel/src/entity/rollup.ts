@@ -1,4 +1,4 @@
-import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { TxHash } from '@aztec/barretenberg/blockchain';
 import {
   AfterInsert,
   AfterLoad,

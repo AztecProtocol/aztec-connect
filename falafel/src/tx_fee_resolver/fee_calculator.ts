@@ -1,4 +1,3 @@
-import { AssetId } from '@aztec/barretenberg/asset';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { BlockchainAsset, TxType } from '@aztec/barretenberg/blockchain';
 import { ProofData } from '@aztec/barretenberg/client_proofs/proof_data';
@@ -16,7 +15,7 @@ export class FeeCalculator {
     private readonly txsPerRollup: number,
     private readonly publishInterval: number,
     private readonly surplusRatios = [1, 0],
-    private readonly freeAssets: AssetId[] = [],
+    private readonly freeAssets: number[] = [],
     private readonly freeTxTypes: TxType[] = [],
     private readonly numSignificantFigures = 0,
   ) {}
@@ -54,7 +53,7 @@ export class FeeCalculator {
     };
   }
 
-  getTxFeeFromGas(gas: bigint, assetId: AssetId) {
+  getTxFeeFromGas(gas: bigint, assetId: number) {
     const baseFee = this.getBaseFee(assetId);
     return baseFee + this.toAssetPrice(assetId, gas, false);
   }
@@ -74,21 +73,21 @@ export class FeeCalculator {
     return Math.min(1, Math.max(0, ratio));
   }
 
-  getBaseFee(assetId: AssetId, minPrice = false) {
+  getBaseFee(assetId: number, minPrice = false) {
     if (this.freeAssets.includes(assetId)) {
       return 0n;
     }
     return this.toAssetPrice(assetId, BigInt(this.baseTxGas), minPrice);
   }
 
-  public getFeeConstant(assetId: AssetId, txType: TxType, minPrice = false) {
+  public getFeeConstant(assetId: number, txType: TxType, minPrice = false) {
     if (this.freeAssets.includes(assetId)) {
       return 0n;
     }
     return this.toAssetPrice(assetId, BigInt(this.assets[assetId].gasConstants[txType]), minPrice);
   }
 
-  public getGasPaidForByFee(assetId: AssetId, fee: bigint) {
+  public getGasPaidForByFee(assetId: number, fee: bigint) {
     const assetCostInWei = this.priceTracker.getAssetPrice(assetId);
     const gasPriceInWei = (this.priceTracker.getMinGasPrice() * BigInt(this.feeGasPriceMultiplier * 100)) / 100n;
     const { decimals } = this.assets[assetId];
@@ -106,11 +105,11 @@ export class FeeCalculator {
     return this.baseTxGas;
   }
 
-  public getTxGas(assetId: AssetId, txType: TxType) {
+  public getTxGas(assetId: number, txType: TxType) {
     return this.baseTxGas + this.assets[assetId].gasConstants[txType];
   }
 
-  private toAssetPrice(assetId: AssetId, gas: bigint, minPrice: boolean) {
+  private toAssetPrice(assetId: number, gas: bigint, minPrice: boolean) {
     const price = minPrice ? this.priceTracker.getMinAssetPrice(assetId) : this.priceTracker.getAssetPrice(assetId);
     const { decimals } = this.assets[assetId];
     return !price

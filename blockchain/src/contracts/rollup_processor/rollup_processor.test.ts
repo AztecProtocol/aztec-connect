@@ -1,5 +1,4 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { AssetId } from '@aztec/barretenberg/asset';
 import { Asset } from '@aztec/barretenberg/blockchain';
 import { DefiInteractionNote, packInteractionNotes } from '@aztec/barretenberg/note_algorithms';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
@@ -151,8 +150,8 @@ describe('rollup_processor', () => {
   });
 
   it('should return whether an asset supports the permit ERC-2612 approval flow', async () => {
-    expect(await rollupProcessor.getAssetPermitSupport(AssetId.ETH)).toBe(false);
-    expect(await rollupProcessor.getAssetPermitSupport(AssetId.DAI)).toBe(true);
+    expect(await rollupProcessor.getAssetPermitSupport(0)).toBe(false);
+    expect(await rollupProcessor.getAssetPermitSupport(1)).toBe(true);
   });
 
   it('should allow any address to use escape hatch', async () => {
@@ -205,11 +204,11 @@ describe('rollup_processor', () => {
   });
 
   it('should process all proof types and get specified blocks', async () => {
-    const inputAssetId = AssetId.DAI;
+    const inputAssetId = 1;
     const outputValueA = 7n;
     const bridgeId = await mockBridge({
       inputAssetId,
-      outputAssetIdA: AssetId.ETH,
+      outputAssetIdA: 0,
       outputValueA,
     });
     const numberOfBridgeCalls = RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;

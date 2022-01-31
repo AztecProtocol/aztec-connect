@@ -50,8 +50,8 @@ export const TransactionHistory: React.FunctionComponent<TransactionHistoryProps
       <TxsRoot>
         {joinSplitTxs.slice((page - 1) * txsPerPage, page * txsPerPage).map(tx => (
           <JoinSplitTxSummaryRow
-            key={tx.txHash.toString()}
-            txHash={tx.txHash.toString()}
+            key={tx.txId.toString()}
+            txId={tx.txId.toString()}
             action={tx.action}
             value={formatBaseUnits(tx.balanceDiff, asset.decimals, {
               precision: asset.preferredFractionalDigits,
@@ -68,8 +68,8 @@ export const TransactionHistory: React.FunctionComponent<TransactionHistoryProps
           .slice(Math.max(0, (page - 1) * txsPerPage - numJs), Math.max(0, page * txsPerPage - numJs))
           .map(tx => (
             <AccountTxSummaryRow
-              key={tx.txHash.toString()}
-              txHash={tx.txHash.toString()}
+              key={tx.txId.toString()}
+              txId={tx.txId.toString()}
               action={tx.action}
               link={tx.link}
               publishTime={txsPublishTime}

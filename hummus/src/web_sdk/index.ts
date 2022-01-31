@@ -1,10 +1,7 @@
-import { EthAddress } from '@aztec/barretenberg/address';
-import { getBlockchainStatus } from '@aztec/barretenberg/service';
+import { EthAddress, getBlockchainStatus, SdkEvent, SdkOptions } from '@aztec/sdk';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
-import { SdkOptions } from '../core_sdk/create_sdk';
 import { createEthSdk, EthereumSdk, EthereumSdkUser } from '../ethereum_sdk';
-import { SdkEvent } from '../sdk';
 import { chainIdToNetwork, EthProvider, EthProviderEvent } from './eth_provider';
 
 const debug = createDebug('bb:websdk');
@@ -195,8 +192,12 @@ export class WebSdk extends EventEmitter {
 
   public async destroy() {
     debug('destroying app...');
-    await this.sdk?.destroy();
-    this.ethProvider?.destroy();
+    if (this.sdk) {
+      await this.sdk.destroy();
+    }
+    if (this.ethProvider) {
+      this.ethProvider.destroy();
+    }
     this.user === undefined;
     this.updateInitStatus(AppInitState.UNINITIALIZED);
   }

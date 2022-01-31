@@ -1,5 +1,4 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { AssetId } from '@aztec/barretenberg/asset';
 import { Asset } from '@aztec/barretenberg/blockchain';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
@@ -31,16 +30,16 @@ describe('rollup_processor: withdraw', () => {
     const { proofData, signatures } = await createRollupProof(
       rollupProvider,
       mergeInnerProofs([
-        await createDepositProof(depositAmount, userAddresses[0], userSigners[0], AssetId.ETH),
-        await createDepositProof(depositAmount, userAddresses[1], userSigners[1], AssetId.DAI),
+        await createDepositProof(depositAmount, userAddresses[0], userSigners[0], 0),
+        await createDepositProof(depositAmount, userAddresses[1], userSigners[1], 1),
       ]),
     );
 
     await assets[1].approve(depositAmount, userAddresses[1], rollupProcessor.address);
-    await rollupProcessor.depositPendingFunds(AssetId.ETH, depositAmount, undefined, undefined, {
+    await rollupProcessor.depositPendingFunds(0, depositAmount, undefined, undefined, {
       signingAddress: userAddresses[0],
     });
-    await rollupProcessor.depositPendingFunds(AssetId.DAI, depositAmount, undefined, undefined, {
+    await rollupProcessor.depositPendingFunds(1, depositAmount, undefined, undefined, {
       signingAddress: userAddresses[1],
     });
     const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
@@ -53,7 +52,7 @@ describe('rollup_processor: withdraw', () => {
 
     const { proofData, signatures } = await createRollupProof(
       rollupProvider,
-      createWithdrawProof(withdrawalAmount, userAddresses[0], AssetId.ETH),
+      createWithdrawProof(withdrawalAmount, userAddresses[0], 0),
       { rollupId: 1 },
     );
 
@@ -73,7 +72,7 @@ describe('rollup_processor: withdraw', () => {
 
     const { proofData, signatures } = await createRollupProof(
       rollupProvider,
-      createWithdrawProof(withdrawalAmount, userAddresses[2], AssetId.DAI),
+      createWithdrawProof(withdrawalAmount, userAddresses[2], 1),
       { rollupId: 1 },
     );
 

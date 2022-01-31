@@ -1,4 +1,4 @@
-import { AssetId, EthAddress } from '@aztec/sdk';
+import { EthAddress } from '@aztec/sdk';
 import { Web3Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
 import { AccountUtils } from '../account_utils';
@@ -57,7 +57,7 @@ export class EthAccount {
   constructor(
     public readonly provider: Provider | undefined,
     accountUtils: AccountUtils,
-    assetId: AssetId,
+    assetId: number,
     assetAddress: EthAddress | undefined,
     private requiredNetwork: Network,
   ) {

@@ -1,6 +1,5 @@
 import { AccountAliasId } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
-import { AssetId } from '@aztec/barretenberg/asset';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
@@ -49,7 +48,7 @@ export const createDepositProof = async (
   amount: bigint,
   depositorAddress: EthAddress,
   user: Signer,
-  assetId: AssetId,
+  assetId: number,
   txFee = 0n,
 ) => {
   const innerProof = new InnerProofData(
@@ -308,7 +307,6 @@ export const createRollupProof = async (
     ...innerProofs.map(p => p.toBuffer()),
     padding,
   ]);
-
 
   const rollupProofData = RollupProofData.fromBuffer(proofData);
 

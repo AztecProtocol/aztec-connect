@@ -1,8 +1,7 @@
+import { EthAddress } from '@aztec/barretenberg/address';
+import { Asset, BlockchainAsset, EthereumProvider, SendTxOptions, TxHash } from '@aztec/barretenberg/blockchain';
 import { ContractTransaction } from '@ethersproject/contracts';
 import { Web3Provider } from '@ethersproject/providers';
-import { EthAddress } from '@aztec/barretenberg/address';
-import { Asset, BlockchainAsset, SendTxOptions, EthereumProvider } from '@aztec/barretenberg/blockchain';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { Contract } from 'ethers';
 import { fromBaseUnits, toBaseUnits } from '../../units';
 

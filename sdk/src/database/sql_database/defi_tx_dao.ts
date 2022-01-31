@@ -1,13 +1,13 @@
 import { AccountId } from '@aztec/barretenberg/account_id';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { TxId } from '@aztec/barretenberg/tx_id';
 import { AfterInsert, AfterLoad, AfterUpdate, Column, Entity, Index, PrimaryColumn } from 'typeorm';
-import { accountIdTransformer, bigintTransformer, bridgeIdTransformer, txHashTransformer } from './transformer';
+import { accountIdTransformer, bigintTransformer, bridgeIdTransformer, txIdTransformer } from './transformer';
 
 @Entity({ name: 'defiTx' })
 export class DefiTxDao {
-  @PrimaryColumn('blob', { transformer: [txHashTransformer] })
-  public txHash!: TxHash;
+  @PrimaryColumn('blob', { transformer: [txIdTransformer] })
+  public txId!: TxId;
 
   @Index({ unique: false })
   @Column('blob', { transformer: [accountIdTransformer] })
@@ -47,6 +47,9 @@ export class DefiTxDao {
   @AfterInsert()
   @AfterUpdate()
   afterLoad() {
+    if (this.result === null) {
+      delete this.result;
+    }
     if (this.settled === null) {
       delete this.settled;
     }

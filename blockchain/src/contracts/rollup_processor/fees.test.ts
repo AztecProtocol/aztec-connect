@@ -1,5 +1,4 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { AssetId } from '@aztec/barretenberg/asset';
 import { Asset } from '@aztec/barretenberg/blockchain';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
@@ -32,13 +31,13 @@ describe('rollup_processor: deposit', () => {
     const publicInput = depositAmount + txFee;
 
     // User deposits funds.
-    await rollupProcessor.depositPendingFunds(AssetId.ETH, publicInput, undefined, undefined, {
+    await rollupProcessor.depositPendingFunds(0, publicInput, undefined, undefined, {
       signingAddress: userAddresses[0],
     });
 
     const { proofData, signatures } = await createRollupProof(
       rollupProvider,
-      await createDepositProof(depositAmount, userAddresses[0], userSigners[0], AssetId.ETH, txFee),
+      await createDepositProof(depositAmount, userAddresses[0], userSigners[0], 0, txFee),
       { feeDistributorAddress },
     );
 
@@ -53,26 +52,26 @@ describe('rollup_processor: deposit', () => {
     const feeDistributorETHBalance = await feeDistributor.txFeeBalance(EthAddress.ZERO);
 
     expect(feeDistributorETHBalance).toBe(txFee);
-    expect(await rollupProcessor.getUserPendingDeposit(AssetId.ETH, userAddresses[0])).toBe(0n);
+    expect(await rollupProcessor.getUserPendingDeposit(0, userAddresses[0])).toBe(0n);
     expect(await assets[0].balanceOf(rollupProcessor.address)).toBe(depositAmount);
     expect(await assets[0].balanceOf(rollupProviderAddress)).toBe(providerInitialBalance - gasCost);
   });
 
   it('should be able to pay fee with erc20 tokens', async () => {
-    const asset = assets[AssetId.DAI];
+    const asset = assets[1];
     const txFee = 10n;
     const publicInput = depositAmount + txFee;
     const prepaidFee = 10n ** 18n;
 
     await asset.approve(publicInput, userAddresses[0], rollupProcessor.address);
-    await rollupProcessor.depositPendingFunds(AssetId.DAI, publicInput, undefined, undefined, {
+    await rollupProcessor.depositPendingFunds(1, publicInput, undefined, undefined, {
       signingAddress: userAddresses[0],
     });
     await feeDistributor.deposit(EthAddress.ZERO, prepaidFee);
 
     const { proofData, signatures } = await createRollupProof(
       rollupProvider,
-      await createDepositProof(depositAmount, userAddresses[0], userSigners[0], AssetId.DAI, txFee),
+      await createDepositProof(depositAmount, userAddresses[0], userSigners[0], 1, txFee),
       { feeDistributorAddress },
     );
 
@@ -92,7 +91,7 @@ describe('rollup_processor: deposit', () => {
     const transferEthCost = BigInt(21000) * 10n;
 
     // User deposits funds.
-    await rollupProcessor.depositPendingFunds(AssetId.ETH, publicInput, undefined, undefined, {
+    await rollupProcessor.depositPendingFunds(0, publicInput, undefined, undefined, {
       signingAddress: userAddresses[0],
     });
 
@@ -111,7 +110,7 @@ describe('rollup_processor: deposit', () => {
     // create rollup
     const { proofData, signatures } = await createRollupProof(
       rollupProvider,
-      await createDepositProof(depositAmount, userAddresses[0], userSigners[0], AssetId.ETH, txFee),
+      await createDepositProof(depositAmount, userAddresses[0], userSigners[0], 0, txFee),
       { feeDistributorAddress },
     );
 
@@ -124,7 +123,7 @@ describe('rollup_processor: deposit', () => {
     const feeDistributorETHBalance = await feeDistributor.txFeeBalance(EthAddress.ZERO);
 
     expect(feeDistributorETHBalance).toBe(0n);
-    expect(await rollupProcessor.getUserPendingDeposit(AssetId.ETH, userAddresses[0])).toBe(0n);
+    expect(await rollupProcessor.getUserPendingDeposit(0, userAddresses[0])).toBe(0n);
     expect(await assets[0].balanceOf(rollupProcessor.address)).toBe(depositAmount);
     expect(await assets[0].balanceOf(rollupProviderAddress)).toBe(providerBalanceAfter - gasCost + txFee);
   });

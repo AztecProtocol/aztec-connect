@@ -3,7 +3,7 @@ import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Block } from './block_source';
 import { RollupProofData } from './rollup_proof';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { TxHash } from '@aztec/barretenberg/blockchain';
 import { Contract, ethers, Signer } from 'ethers';
 import { abi as RollupABI } from './abi/RollupProcessor.json';
 

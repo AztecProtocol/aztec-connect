@@ -1,4 +1,3 @@
-import { AssetId } from '@aztec/barretenberg/asset';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
 
 export interface Tx {
@@ -10,7 +9,7 @@ export interface Tx {
 export interface TxGroupValidation {
   hasNonPayingDefi: boolean;
   hasNonFeePayingAssets: boolean;
-  feePayingAsset: AssetId;
+  feePayingAsset: number;
   gasRequired: bigint;
   gasProvided: bigint;
 }

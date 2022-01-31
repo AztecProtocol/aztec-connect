@@ -1,5 +1,4 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { AssetId } from '@aztec/barretenberg/asset';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
@@ -35,7 +34,7 @@ export class RollupAggregator {
     oldDefiPath: HashPath,
     defiInteractionNotes: DefiInteractionNote[],
     bridgeIds: bigint[],
-    assetIds: AssetId[],
+    assetIds: number[],
   ) {
     console.log(`Creating root rollup proof ${innerProofs.length} inner proofs...`);
 
@@ -100,7 +99,7 @@ export class RollupAggregator {
     oldDefiPath: HashPath,
     defiInteractionNotes: DefiInteractionNote[],
     bridgeIds: bigint[],
-    assetIds: AssetId[],
+    assetIds: number[],
   ) {
     const worldStateDb = this.worldStateDb;
 

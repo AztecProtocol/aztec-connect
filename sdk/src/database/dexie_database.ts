@@ -2,7 +2,7 @@ import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { TxId } from '@aztec/barretenberg/tx_id';
 import Dexie from 'dexie';
 import { CoreAccountTx, CoreClaimTx, CoreDefiTx, CorePaymentTx } from '../core_tx';
 import { Note } from '../note';
@@ -105,7 +105,7 @@ const dexieUserToUser = (user: DexieUser): UserData => {
 
 class DexieUserTx {
   constructor(
-    public txHash: Uint8Array,
+    public txId: Uint8Array,
     public userId: Uint8Array,
     public proofId: number,
     public created: Date,
@@ -115,7 +115,7 @@ class DexieUserTx {
 
 class DexiePaymentTx implements DexieUserTx {
   constructor(
-    public txHash: Uint8Array,
+    public txId: Uint8Array,
     public userId: Uint8Array,
     public proofId: number,
     public assetId: number,
@@ -134,7 +134,7 @@ class DexiePaymentTx implements DexieUserTx {
 
 const toDexiePaymentTx = (tx: CorePaymentTx) =>
   new DexiePaymentTx(
-    new Uint8Array(tx.txHash.toBuffer()),
+    new Uint8Array(tx.txId.toBuffer()),
     new Uint8Array(tx.userId.toBuffer()),
     tx.proofId,
     tx.assetId,
@@ -151,7 +151,7 @@ const toDexiePaymentTx = (tx: CorePaymentTx) =>
   );
 
 const fromDexiePaymentTx = ({
-  txHash,
+  txId,
   userId,
   proofId,
   assetId,
@@ -167,7 +167,7 @@ const fromDexiePaymentTx = ({
   settled,
 }: DexiePaymentTx) =>
   new CorePaymentTx(
-    new TxHash(Buffer.from(txHash)),
+    new TxId(Buffer.from(txId)),
     AccountId.fromBuffer(Buffer.from(userId)),
     proofId,
     assetId,
@@ -185,7 +185,7 @@ const fromDexiePaymentTx = ({
 
 class DexieAccountTx implements DexieUserTx {
   constructor(
-    public txHash: Uint8Array,
+    public txId: Uint8Array,
     public userId: Uint8Array,
     public proofId: number,
     public aliasHash: Uint8Array,
@@ -200,7 +200,7 @@ class DexieAccountTx implements DexieUserTx {
 
 const toDexieAccountTx = (tx: CoreAccountTx) =>
   new DexieAccountTx(
-    new Uint8Array(tx.txHash.toBuffer()),
+    new Uint8Array(tx.txId.toBuffer()),
     new Uint8Array(tx.userId.toBuffer()),
     ProofId.ACCOUNT,
     new Uint8Array(tx.aliasHash.toBuffer()),
@@ -213,7 +213,7 @@ const toDexieAccountTx = (tx: CoreAccountTx) =>
   );
 
 const fromDexieAccountTx = ({
-  txHash,
+  txId,
   userId,
   aliasHash,
   newSigningPubKey1,
@@ -224,7 +224,7 @@ const fromDexieAccountTx = ({
   settled,
 }: DexieAccountTx) =>
   new CoreAccountTx(
-    new TxHash(Buffer.from(txHash)),
+    new TxId(Buffer.from(txId)),
     AccountId.fromBuffer(Buffer.from(userId)),
     new AliasHash(Buffer.from(aliasHash)),
     newSigningPubKey1 ? Buffer.from(newSigningPubKey1) : undefined,
@@ -237,7 +237,7 @@ const fromDexieAccountTx = ({
 
 class DexieDefiTx implements DexieUserTx {
   constructor(
-    public txHash: Uint8Array,
+    public txId: Uint8Array,
     public userId: Uint8Array,
     public proofId: number,
     public bridgeId: Uint8Array,
@@ -248,14 +248,14 @@ class DexieDefiTx implements DexieUserTx {
     public outputValueB: string,
     public txRefNo: number,
     public created: Date,
-    public result: boolean,
+    public result: boolean | undefined,
     public settled: number,
   ) {}
 }
 
 const toDexieDefiTx = (tx: CoreDefiTx) =>
   new DexieDefiTx(
-    new Uint8Array(tx.txHash.toBuffer()),
+    new Uint8Array(tx.txId.toBuffer()),
     new Uint8Array(tx.userId.toBuffer()),
     ProofId.DEFI_DEPOSIT,
     new Uint8Array(tx.bridgeId.toBuffer()),
@@ -271,7 +271,7 @@ const toDexieDefiTx = (tx: CoreDefiTx) =>
   );
 
 const fromDexieDefiTx = ({
-  txHash,
+  txId,
   userId,
   bridgeId,
   depositValue,
@@ -285,7 +285,7 @@ const fromDexieDefiTx = ({
   settled,
 }: DexieDefiTx) =>
   new CoreDefiTx(
-    new TxHash(Buffer.from(txHash)),
+    new TxId(Buffer.from(txId)),
     AccountId.fromBuffer(Buffer.from(userId)),
     BridgeId.fromBuffer(Buffer.from(bridgeId)),
     BigInt(depositValue),
@@ -302,7 +302,7 @@ const fromDexieDefiTx = ({
 class DexieClaimTx {
   constructor(
     public nullifier: Uint8Array,
-    public txHash: Uint8Array,
+    public txId: Uint8Array,
     public userId: Uint8Array,
     public secret: Uint8Array,
   ) {}
@@ -311,14 +311,14 @@ class DexieClaimTx {
 const toDexieClaimTx = (claim: CoreClaimTx) =>
   new DexieClaimTx(
     new Uint8Array(claim.nullifier),
-    new Uint8Array(claim.txHash.toBuffer()),
+    new Uint8Array(claim.txId.toBuffer()),
     new Uint8Array(claim.userId.toBuffer()),
     new Uint8Array(claim.secret),
   );
 
-const fromDexieClaimTx = ({ nullifier, txHash, userId, secret }: DexieClaimTx): CoreClaimTx => ({
+const fromDexieClaimTx = ({ nullifier, txId, userId, secret }: DexieClaimTx): CoreClaimTx => ({
   nullifier: Buffer.from(nullifier),
-  txHash: new TxHash(Buffer.from(txHash)),
+  txId: new TxId(Buffer.from(txId)),
   userId: AccountId.fromBuffer(Buffer.from(userId)),
   secret: Buffer.from(secret),
 });
@@ -383,7 +383,7 @@ export class DexieDatabase implements Database {
       note: '++commitment, [owner+nullified], [owner+pending], nullifier, owner',
       user: '&id',
       userKeys: '&[accountId+key], accountId',
-      userTx: '&[txHash+userId], txHash, [txHash+proofId], [userId+proofId], proofId, settled',
+      userTx: '&[txId+userId], txId, [txId+proofId], [userId+proofId], proofId, settled',
     });
 
     this.alias = this.dexie.table('alias');
@@ -469,9 +469,9 @@ export class DexieDatabase implements Database {
     await this.userTx.put(toDexiePaymentTx(tx));
   }
 
-  async getPaymentTx(txHash: TxHash, userId: AccountId) {
+  async getPaymentTx(txId: TxId, userId: AccountId) {
     const tx = await this.userTx.get({
-      txHash: new Uint8Array(txHash.toBuffer()),
+      txId: new Uint8Array(txId.toBuffer()),
       userId: new Uint8Array(userId.toBuffer()),
     });
     return tx && [ProofId.DEPOSIT, ProofId.WITHDRAW, ProofId.SEND].includes(tx.proofId)
@@ -489,10 +489,10 @@ export class DexieDatabase implements Database {
     return (sortUserTxs(txs) as DexiePaymentTx[]).map(fromDexiePaymentTx);
   }
 
-  async settlePaymentTx(txHash: TxHash, userId: AccountId, settled: Date) {
+  async settlePaymentTx(txId: TxId, userId: AccountId, settled: Date) {
     await this.userTx
       .where({
-        txHash: new Uint8Array(txHash.toBuffer()),
+        txId: new Uint8Array(txId.toBuffer()),
         userId: new Uint8Array(userId.toBuffer()),
       })
       .modify({ settled });
@@ -502,9 +502,9 @@ export class DexieDatabase implements Database {
     await this.userTx.put(toDexieAccountTx(tx));
   }
 
-  async getAccountTx(txHash: TxHash) {
+  async getAccountTx(txId: TxId) {
     const tx = await this.userTx.get({
-      txHash: new Uint8Array(txHash.toBuffer()),
+      txId: new Uint8Array(txId.toBuffer()),
       proofId: ProofId.ACCOUNT,
     });
     return tx ? fromDexieAccountTx(tx as DexieAccountTx) : undefined;
@@ -518,19 +518,17 @@ export class DexieDatabase implements Database {
     return (sortUserTxs(txs) as DexieAccountTx[]).map(fromDexieAccountTx);
   }
 
-  async settleAccountTx(txHash: TxHash, settled: Date) {
-    await this.userTx
-      .where({ txHash: new Uint8Array(txHash.toBuffer()), proofId: ProofId.ACCOUNT })
-      .modify({ settled });
+  async settleAccountTx(txId: TxId, settled: Date) {
+    await this.userTx.where({ txId: new Uint8Array(txId.toBuffer()), proofId: ProofId.ACCOUNT }).modify({ settled });
   }
 
   async addDefiTx(tx: CoreDefiTx) {
     await this.userTx.put(toDexieDefiTx(tx));
   }
 
-  async getDefiTx(txHash: TxHash) {
+  async getDefiTx(txId: TxId) {
     const tx = await this.userTx.get({
-      txHash: new Uint8Array(txHash.toBuffer()),
+      txId: new Uint8Array(txId.toBuffer()),
       proofId: ProofId.DEFI_DEPOSIT,
     });
     return tx ? fromDexieDefiTx(tx as DexieDefiTx) : undefined;
@@ -544,15 +542,15 @@ export class DexieDatabase implements Database {
     return (sortUserTxs(txs) as DexieDefiTx[]).map(fromDexieDefiTx);
   }
 
-  async updateDefiTx(txHash: TxHash, outputValueA: bigint, outputValueB: bigint, result: boolean) {
+  async updateDefiTx(txId: TxId, outputValueA: bigint, outputValueB: bigint, result: boolean) {
     await this.userTx
-      .where({ txHash: new Uint8Array(txHash.toBuffer()), proofId: ProofId.DEFI_DEPOSIT })
+      .where({ txId: new Uint8Array(txId.toBuffer()), proofId: ProofId.DEFI_DEPOSIT })
       .modify({ outputValueA, outputValueB, result });
   }
 
-  async settleDefiTx(txHash: TxHash, settled: Date) {
+  async settleDefiTx(txId: TxId, settled: Date) {
     await this.userTx
-      .where({ txHash: new Uint8Array(txHash.toBuffer()), proofId: ProofId.DEFI_DEPOSIT })
+      .where({ txId: new Uint8Array(txId.toBuffer()), proofId: ProofId.DEFI_DEPOSIT })
       .modify({ settled });
   }
 
@@ -573,8 +571,8 @@ export class DexieDatabase implements Database {
     });
   }
 
-  async isUserTxSettled(txHash: TxHash) {
-    const txs = await this.userTx.where({ txHash: new Uint8Array(txHash.toBuffer()) }).toArray();
+  async isUserTxSettled(txId: TxId) {
+    const txs = await this.userTx.where({ txId: new Uint8Array(txId.toBuffer()) }).toArray();
     return txs.length > 0 && txs.every(tx => tx.settled);
   }
 
@@ -583,12 +581,12 @@ export class DexieDatabase implements Database {
     return unsettledTxs
       .flat()
       .filter(tx => AccountId.fromBuffer(Buffer.from(tx.userId)).equals(userId))
-      .map(({ txHash }) => new TxHash(Buffer.from(txHash)));
+      .map(({ txId }) => new TxId(Buffer.from(txId)));
   }
 
-  async removeUserTx(txHash: TxHash, userId: AccountId) {
+  async removeUserTx(txId: TxId, userId: AccountId) {
     await this.userTx
-      .where({ txHash: new Uint8Array(txHash.toBuffer()), userId: new Uint8Array(userId.toBuffer()) })
+      .where({ txId: new Uint8Array(txId.toBuffer()), userId: new Uint8Array(userId.toBuffer()) })
       .delete();
   }
 

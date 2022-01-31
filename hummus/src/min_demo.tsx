@@ -1,4 +1,4 @@
-import { JsonRpcProvider, AccountId, AssetId, createWalletSdk, SdkEvent, WalletSdk, EthAddress } from '@aztec/sdk';
+import { AccountId, AztecSdk, createAztecSdk, EthAddress, JsonRpcProvider, SdkEvent } from '@aztec/sdk';
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 
@@ -17,7 +17,7 @@ interface MinFormProps {
 }
 
 function MinForm({ grumpkinPrivKey }: MinFormProps) {
-  const [sdk, setSdk] = useState<WalletSdk>();
+  const [sdk, setSdk] = useState<AztecSdk>();
   const [busy, setBusy] = useState(false);
 
   return (
@@ -32,7 +32,7 @@ function MinForm({ grumpkinPrivKey }: MinFormProps) {
             setBusy(true);
             log('initing');
             const provider = new JsonRpcProvider('https://goerli.infura.io/v3/6a04b7c89c5b421faefde663f787aa35');
-            const sdk = await createWalletSdk(provider, 'https://api.aztec.network/falafel', {
+            const sdk = await createAztecSdk(provider, 'https://api.aztec.network/falafel', {
               debug: true,
               saveProvingKey: false,
             });
@@ -61,8 +61,8 @@ function MinForm({ grumpkinPrivKey }: MinFormProps) {
             const controller = sdk!.createTransferController(
               accountId,
               signer,
-              { assetId: AssetId.ETH, value: BigInt(0) },
-              { assetId: AssetId.ETH, value: BigInt(0) },
+              { assetId: 0, value: BigInt(0) },
+              { assetId: 0, value: BigInt(0) },
               accountId,
             );
             await controller.createProof();
@@ -86,11 +86,11 @@ function MinForm({ grumpkinPrivKey }: MinFormProps) {
               accountId.publicKey,
               undefined,
               {
-                assetId: AssetId.ETH,
+                assetId: 0,
                 value: BigInt(0),
               },
               {
-                assetId: AssetId.ETH,
+                assetId: 0,
                 value: BigInt(0),
               },
               EthAddress.ZERO,

@@ -1,4 +1,3 @@
-import { AssetId } from '@aztec/sdk';
 import { BroadcastChannel } from 'broadcast-channel';
 import { isEqual } from 'lodash';
 import { PureComponent } from 'react';
@@ -67,7 +66,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
   private app: App;
   private channel = new BroadcastChannel('zk-money');
 
-  private readonly defaultAsset = AssetId.ETH;
+  private readonly defaultAsset = 0;
 
   constructor(props: AppProps) {
     super(props);
@@ -127,9 +126,9 @@ export class AppView extends PureComponent<AppProps, AppState> {
           break;
       }
     };
-    const ethPrice = this.app.priceFeedService.getPrice(AssetId.ETH);
+    const ethPrice = this.app.priceFeedService.getPrice(0);
     if (ethPrice !== 0n) this.setState({ homeState: { ...this.state.homeState, ethPrice } });
-    this.app.priceFeedService.subscribe(AssetId.ETH, this.handleEthPriceChange);
+    this.app.priceFeedService.subscribe(0, this.handleEthPriceChange);
     getSupportStatus().then(supportStatus => {
       this.setState({ homeState: { ...this.state.homeState, supportStatus } });
     });
@@ -151,7 +150,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
   }
 
   componentWillUnmount() {
-    this.app.priceFeedService.unsubscribe(AssetId.ETH, this.handleEthPriceChange);
+    this.app.priceFeedService.unsubscribe(0, this.handleEthPriceChange);
     this.app.destroy();
     this.channel.close();
   }

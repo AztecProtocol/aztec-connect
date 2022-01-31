@@ -1,4 +1,3 @@
-import { AssetId } from '@aztec/barretenberg/asset';
 import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
@@ -34,7 +33,7 @@ export class RollupCreator {
    * Creates a rollup from the given txs and publishes it.
    * @returns true if successfully published, otherwise false.
    */
-  public async create(txs: TxDao[], rootRollupBridgeIds: bigint[], rootRollupAssetIds: Set<AssetId>) {
+  public async create(txs: TxDao[], rootRollupBridgeIds: bigint[], rootRollupAssetIds: Set<number>) {
     if (!txs.length) {
       throw new Error('Txs empty.');
     }
@@ -70,7 +69,7 @@ export class RollupCreator {
     // TODO: Interrupt proof creation.
   }
 
-  private async createRollup(txs: TxDao[], rootRollupBridgeIds: bigint[], rootRollupAssetIds: Set<AssetId>) {
+  private async createRollup(txs: TxDao[], rootRollupBridgeIds: bigint[], rootRollupAssetIds: Set<number>) {
     const rollupId = await this.rollupDb.getNextRollupId();
 
     // To find the correct data start index, we need to position ourselves on:
@@ -94,7 +93,7 @@ export class RollupCreator {
     const newNullPaths: HashPath[] = [];
     const dataRootsPaths: HashPath[] = [];
     const dataRootsIndicies: number[] = [];
-    const localAssetIds: Set<AssetId> = new Set();
+    const localAssetIds: Set<number> = new Set();
 
     const proofs = txs.map(tx => new ProofData(tx.proofData));
     const { linkedCommitmentPaths, linkedCommitmentIndices } = await this.getLinkedCommitments(proofs);

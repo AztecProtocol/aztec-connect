@@ -1,4 +1,3 @@
-import { AssetId } from '@aztec/sdk';
 import Cookie from 'js-cookie';
 import moment from 'moment';
 import React, { useEffect, useState } from 'react';
@@ -20,7 +19,7 @@ const disableAutoPopup = () => Cookie.set(freeDaiTxsStatusCookie, 'disabled', { 
 const visibilityWait = 15 * 1000;
 
 interface FreeDaiTxsProps {
-  activeAsset: AssetId;
+  activeAsset: number;
   onSubmit(): void;
 }
 

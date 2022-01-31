@@ -1,4 +1,3 @@
-import { AssetId } from '@aztec/sdk';
 import daiIcon from '../images/dai.svg';
 import daiWhiteIcon from '../images/dai_white.svg';
 import daiGradientIcon from '../images/dai_gradient.svg';
@@ -9,7 +8,7 @@ import rbtcIcon from '../images/renBTC.svg';
 import rbtcGradientIcon from '../images/renBTC_gradient.svg';
 import rbtcWhiteIcon from '../images/renBTC_white.svg';
 
-export type AppAssetId = AssetId.ETH | AssetId.DAI | AssetId.renBTC;
+export type AppAssetId = 0 | 1 | 2;
 
 export interface Asset {
   id: AppAssetId;
@@ -24,7 +23,7 @@ export interface Asset {
 
 export const assets: Asset[] = [
   {
-    id: AssetId.ETH,
+    id: 0,
     name: 'Ethereum',
     symbol: 'ETH',
     icon: ethIcon,
@@ -34,7 +33,7 @@ export const assets: Asset[] = [
     preferredFractionalDigits: 6,
   },
   {
-    id: AssetId.DAI,
+    id: 1,
     name: 'Dai',
     symbol: 'DAI',
     icon: daiIcon,
@@ -44,7 +43,7 @@ export const assets: Asset[] = [
     preferredFractionalDigits: 2,
   },
   {
-    id: AssetId.renBTC,
+    id: 2,
     name: 'renBTC',
     symbol: 'renBTC',
     icon: rbtcIcon,

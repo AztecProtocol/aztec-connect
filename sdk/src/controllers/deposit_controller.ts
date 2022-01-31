@@ -3,10 +3,11 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { EthereumProvider, EthereumSigner } from '@aztec/barretenberg/blockchain';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
+import { TxId } from '@aztec/barretenberg/tx_id';
 import { ClientEthereumBlockchain, createPermitData, validateSignature, Web3Signer } from '@aztec/blockchain';
-import { CoreSdk } from '../../core_sdk/core_sdk';
-import { ProofOutput } from '../../proofs';
-import { Signer } from '../../signer';
+import { CoreSdk } from '../core_sdk/core_sdk';
+import { ProofOutput } from '../proofs';
+import { Signer } from '../signer';
 import { createTxRefNo } from './create_tx_ref_no';
 
 const signDepositProof = async (signingData: Buffer, depositor: EthAddress, ethSigner: EthereumSigner) =>
@@ -24,6 +25,7 @@ export class DepositController {
   private readonly requireFeePayingTx: boolean;
   private proofOutput!: ProofOutput;
   private feeProofOutput?: ProofOutput;
+  private txIds!: TxId[];
 
   constructor(
     public readonly userId: AccountId,
@@ -126,7 +128,7 @@ export class DepositController {
       senderPrivateOutput,
       this.to, // noteRecipient
       this.from, // publicOwner
-      3,
+      0, // allowChain
       txRefNo,
     );
 
@@ -149,7 +151,7 @@ export class DepositController {
   }
 
   getSigningData() {
-    return this.proofOutput.tx.txHash.toBuffer();
+    return this.proofOutput.tx.txId.toBuffer();
   }
 
   async isProofApproved() {
@@ -176,8 +178,12 @@ export class DepositController {
   }
 
   async send() {
-    const txHashes = await this.core.sendProofs(this.getProofs());
-    return txHashes[0];
+    this.txIds = await this.core.sendProofs(this.getProofs());
+    return this.txIds[0];
+  }
+
+  async awaitSettlement(timeout?: number) {
+    await Promise.all(this.txIds.map(txId => this.core.awaitSettlement(txId, timeout)));
   }
 
   private async createPermitArgs(value: bigint, deadline: bigint) {

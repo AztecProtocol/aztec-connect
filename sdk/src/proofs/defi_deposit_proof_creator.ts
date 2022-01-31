@@ -3,7 +3,7 @@ import { JoinSplitProver, ProofData, ProofId } from '@aztec/barretenberg/client_
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { NoteAlgorithms, TreeNote } from '@aztec/barretenberg/note_algorithms';
 import { OffchainDefiDepositData } from '@aztec/barretenberg/offchain_tx_data';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { TxId } from '@aztec/barretenberg/tx_id';
 import { WorldState } from '@aztec/barretenberg/world_state';
 import createDebug from 'debug';
 import { CoreDefiTx } from '../core_tx';
@@ -74,12 +74,12 @@ export class DefiDepositProofCreator {
     debug(`proof size: ${proof.length}`);
 
     const proofData = new ProofData(proof);
-    const txHash = new TxHash(proofData.txId);
+    const txId = new TxId(proofData.txId);
     const {
       claimNote: { partialStateSecret },
     } = tx;
     const coreTx = new CoreDefiTx(
-      txHash,
+      txId,
       user.id,
       bridgeId,
       depositValue,

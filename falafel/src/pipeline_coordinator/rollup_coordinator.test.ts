@@ -1,4 +1,3 @@
-import { AssetId, AssetIds } from '@aztec/barretenberg/asset';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeId, BridgeConfig, BitConfig } from '@aztec/barretenberg/bridge_id';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
@@ -124,7 +123,7 @@ describe('rollup_coordinator', () => {
     id: number,
     {
       txType = TxType.TRANSFER,
-      txFeeAssetId = AssetId.ETH,
+      txFeeAssetId = 0,
       excessGas = 0n,
       creationTime = new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id), // ensures txs are ordered by id
       bridgeId = new BridgeId(
@@ -161,7 +160,7 @@ describe('rollup_coordinator', () => {
       ]),
     } as any as TxDao);
 
-  const mockDefiBridgeTx = (id: number, fee: bigint, bridgeId: bigint, assetId: number = AssetId.ETH) =>
+  const mockDefiBridgeTx = (id: number, fee: bigint, bridgeId: bigint, assetId = 0) =>
     mockTx(id, {
       txType: TxType.DEFI_DEPOSIT,
       excessGas: fee - (DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
@@ -186,7 +185,7 @@ describe('rollup_coordinator', () => {
     rollupCreator = {
       create: jest
         .fn()
-        .mockImplementation(async (txs: TxDao[], rootRollupBridgeIds: bigint[], rootRollupAssetIds: Set<AssetId>) => {
+        .mockImplementation(async (txs: TxDao[], rootRollupBridgeIds: bigint[], rootRollupAssetIds: Set<number>) => {
           for (const tx of txs) {
             const proof = new ProofData(tx.proofData);
             if (proof.proofId === ProofId.ACCOUNT) {
@@ -225,7 +224,7 @@ describe('rollup_coordinator', () => {
       setConf: jest.fn(),
       start: jest.fn(),
       stop: jest.fn(),
-      getGasPaidForByFee: jest.fn().mockImplementation((assetId: AssetId, fee: bigint) => fee),
+      getGasPaidForByFee: jest.fn().mockImplementation((assetId: number, fee: bigint) => fee),
       getBaseTxGas: jest.fn().mockReturnValue(BASE_GAS),
       getTxGas: jest.fn().mockImplementation(() => {
         throw new Error('This should not be called');
@@ -235,7 +234,7 @@ describe('rollup_coordinator', () => {
       getSingleBridgeTxGas: jest.fn().mockImplementation((bridgeId: bigint) => getSingleBridgeCost(bridgeId)),
       getTxFees: jest.fn(),
       getDefiFees: jest.fn(),
-      isFeePayingAsset: jest.fn().mockImplementation((assetId: AssetId) => AssetIds.some(x => x === assetId)),
+      isFeePayingAsset: jest.fn().mockImplementation((assetId: number) => assetId < 3),
     };
 
     bridgeResolver = {
@@ -320,16 +319,16 @@ describe('rollup_coordinator', () => {
       const pendingTxs = [
         mockDefiBridgeTx(0, HUGE_FEE, bridgeConfigs[0].bridgeId),
         mockDefiBridgeTx(1, HUGE_FEE, bridgeConfigs[1].bridgeId),
-        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTx(3, HUGE_FEE, bridgeConfigs[2].bridgeId),
         mockDefiBridgeTx(4, HUGE_FEE, bridgeConfigs[3].bridgeId),
         mockDefiBridgeTx(5, HUGE_FEE, bridgeConfigs[4].bridgeId),
         mockDefiBridgeTx(6, HUGE_FEE, bridgeConfigs[5].bridgeId),
-        mockTx(7, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(7, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTx(8, HUGE_FEE, bridgeConfigs[4].bridgeId),
         mockDefiBridgeTx(9, HUGE_FEE, bridgeConfigs[3].bridgeId),
         mockDefiBridgeTx(10, HUGE_FEE, bridgeConfigs[5].bridgeId),
-        mockTx(11, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(11, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
@@ -345,7 +344,7 @@ describe('rollup_coordinator', () => {
       ]);
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[0].bridgeId,
         bridgeConfigs[1].bridgeId,
@@ -360,16 +359,16 @@ describe('rollup_coordinator', () => {
       const allTxs = [
         mockDefiBridgeTx(0, DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[0].fee!, bridgeConfigs[0].bridgeId),
         mockDefiBridgeTx(1, DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[1].fee!, bridgeConfigs[1].bridgeId),
-        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTx(3, DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[2].fee!, bridgeConfigs[2].bridgeId),
         mockDefiBridgeTx(4, DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[3].fee!, bridgeConfigs[3].bridgeId),
         mockDefiBridgeTx(5, DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[4].fee!, bridgeConfigs[4].bridgeId),
         mockDefiBridgeTx(6, DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[5].fee!, bridgeConfigs[5].bridgeId),
-        mockTx(7, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(7, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTx(8, DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[4].fee!, bridgeConfigs[4].bridgeId),
         mockDefiBridgeTx(9, DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[3].fee!, bridgeConfigs[3].bridgeId),
         mockDefiBridgeTx(10, DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[5].fee!, bridgeConfigs[5].bridgeId),
-        mockTx(11, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(11, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
       // include the first 3 txs
       let pendingTxs = allTxs.slice(0, 3);
@@ -415,7 +414,7 @@ describe('rollup_coordinator', () => {
       ]);
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[0].bridgeId,
         bridgeConfigs[1].bridgeId,
@@ -427,17 +426,17 @@ describe('rollup_coordinator', () => {
 
     it('will rollup defi claim proofs first', async () => {
       const pendingTxs = [
-        mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: AssetId.ETH }),
-        mockTx(1, { txType: TxType.ACCOUNT, txFeeAssetId: AssetId.ETH }),
-        mockDefiBridgeTx(2, HUGE_FEE, bridgeConfigs[0].bridgeId, AssetId.ETH),
-        mockTx(3, { txType: TxType.DEFI_CLAIM, txFeeAssetId: AssetId.ETH }),
-        mockTx(4, { txType: TxType.WITHDRAW_TO_CONTRACT, txFeeAssetId: AssetId.ETH }),
-        mockTx(5, { txType: TxType.DEFI_CLAIM, txFeeAssetId: AssetId.ETH }),
-        mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
-        mockTx(7, { txType: TxType.WITHDRAW_TO_WALLET, txFeeAssetId: AssetId.ETH }),
-        mockTx(8, { txType: TxType.DEPOSIT, txFeeAssetId: AssetId.ETH }),
-        mockDefiBridgeTx(9, HUGE_FEE, bridgeConfigs[0].bridgeId, AssetId.ETH),
-        mockTx(10, { txType: TxType.DEFI_CLAIM, txFeeAssetId: AssetId.ETH }),
+        mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
+        mockTx(1, { txType: TxType.ACCOUNT, txFeeAssetId: 0 }),
+        mockDefiBridgeTx(2, HUGE_FEE, bridgeConfigs[0].bridgeId, 0),
+        mockTx(3, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
+        mockTx(4, { txType: TxType.WITHDRAW_TO_CONTRACT, txFeeAssetId: 0 }),
+        mockTx(5, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
+        mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(7, { txType: TxType.WITHDRAW_TO_WALLET, txFeeAssetId: 0 }),
+        mockTx(8, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
+        mockDefiBridgeTx(9, HUGE_FEE, bridgeConfigs[0].bridgeId, 0),
+        mockTx(10, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
       ];
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
@@ -453,7 +452,7 @@ describe('rollup_coordinator', () => {
       ]);
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[0].bridgeId,
         ...Array(3).fill(0n),
@@ -466,12 +465,12 @@ describe('rollup_coordinator', () => {
       const mockDefiBridgeTxLocal = (id: number, fee: bigint) => mockDefiBridgeTx(id, fee, bridgeId);
 
       const pendingTxs = [
-        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
-        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTxLocal(2, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
         mockDefiBridgeTxLocal(3, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
-        mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
-        mockTx(5, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(5, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
@@ -486,12 +485,12 @@ describe('rollup_coordinator', () => {
       const mockDefiBridgeTxLocal = (id: number, fee: bigint) => mockDefiBridgeTx(id, fee, bridgeId);
 
       let pendingTxs = [
-        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
-        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTxLocal(2, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
         mockDefiBridgeTxLocal(3, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
-        mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
-        mockTx(5, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(5, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
       let rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
@@ -501,18 +500,18 @@ describe('rollup_coordinator', () => {
       pendingTxs = [
         mockDefiBridgeTxLocal(2, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
         mockDefiBridgeTxLocal(3, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
-        mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTxLocal(7, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
-        mockTx(8, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
-        mockTx(9, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
-        mockTx(10, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(8, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(9, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(10, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
       rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0, 1, 4, 5, 6, 2, 3, 7]);
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([bridgeId, ...Array(3).fill(0n)]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -524,11 +523,11 @@ describe('rollup_coordinator', () => {
       const pendingTxs = [
         mockDefiBridgeTxLocal(0, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
         mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
-        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTxLocal(3, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
         mockDefiBridgeTxLocal(4, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
-        mockTx(5, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
-        mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(5, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
       let rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
@@ -546,7 +545,7 @@ describe('rollup_coordinator', () => {
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([bridgeId, ...Array(3).fill(0n)]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -557,9 +556,9 @@ describe('rollup_coordinator', () => {
 
       const pendingTxs = [
         mockDefiBridgeTxLocal(0, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)),
-        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
-        mockTx(5, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
-        mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(5, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
@@ -577,10 +576,10 @@ describe('rollup_coordinator', () => {
       const pendingTxs = [
         mockDefiBridgeTxLocal(0, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)),
         mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
-        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTxLocal(3, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
-        mockTx(5, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
-        mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(5, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTxLocal(7, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
         mockDefiBridgeTxLocal(8, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
       ];
@@ -590,7 +589,7 @@ describe('rollup_coordinator', () => {
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([bridgeId, ...Array(3).fill(0n)]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -608,7 +607,7 @@ describe('rollup_coordinator', () => {
           bridgeConfigs[0].bridgeId,
         ),
         mockDefiBridgeTxLocal(3, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
-        mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTx(
           5,
           DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[0].bridgeId),
@@ -616,13 +615,13 @@ describe('rollup_coordinator', () => {
         ),
         mockDefiBridgeTxLocal(6, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
         mockDefiBridgeTxLocal(7, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
-        mockTx(8, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(8, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTx(
           9,
           DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[0].bridgeId),
           bridgeConfigs[0].bridgeId,
         ),
-        mockTx(10, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(10, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
@@ -630,7 +629,7 @@ describe('rollup_coordinator', () => {
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([bridgeId, ...Array(3).fill(0n)]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -658,7 +657,7 @@ describe('rollup_coordinator', () => {
           bridgeConfigs[0].bridgeId,
         ),
         mockDefiBridgeTxLocal(3, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
-        mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
       rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
@@ -681,13 +680,13 @@ describe('rollup_coordinator', () => {
         ),
         mockDefiBridgeTxLocal(6, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
         mockDefiBridgeTxLocal(7, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
-        mockTx(8, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(8, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTx(
           9,
           DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[0].bridgeId),
           bridgeConfigs[0].bridgeId,
         ),
-        mockTx(10, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(10, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
       rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
@@ -695,7 +694,7 @@ describe('rollup_coordinator', () => {
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[2].bridgeId,
         ...Array(3).fill(0n),
@@ -716,7 +715,7 @@ describe('rollup_coordinator', () => {
           bridgeConfigs[0].bridgeId,
         ),
         mockDefiBridgeTxLocal(3, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
-        mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTx(
           5,
           DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[0].bridgeId),
@@ -724,7 +723,7 @@ describe('rollup_coordinator', () => {
         ),
         mockDefiBridgeTxLocal(6, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
         mockDefiBridgeTxLocal(7, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
-        mockTx(8, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(8, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTx(
           9,
           DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[0].bridgeId),
@@ -740,7 +739,7 @@ describe('rollup_coordinator', () => {
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[2].bridgeId,
         ...Array(3).fill(0n),
@@ -753,17 +752,17 @@ describe('rollup_coordinator', () => {
       const mockDefiBridgeTxLocal = (id: number, fee: bigint) => mockDefiBridgeTx(id, fee, bridgeId);
 
       const pendingTxs = [
-        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
-        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
-        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTxLocal(3, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
         mockDefiBridgeTxLocal(4, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
-        mockTx(5, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
-        mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
-        mockTx(7, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(5, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(7, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTxLocal(8, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // for this to go in, the batch would have to be split
-        mockTx(9, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
-        mockTx(10, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(9, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(10, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
@@ -771,7 +770,7 @@ describe('rollup_coordinator', () => {
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([...Array(4).fill(0n)]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -825,7 +824,7 @@ describe('rollup_coordinator', () => {
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[0].bridgeId,
         bridgeConfigs[4].bridgeId,
@@ -841,7 +840,7 @@ describe('rollup_coordinator', () => {
           0,
           DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[4].bridgeId),
           bridgeConfigs[4].bridgeId,
-          AssetId.DAI,
+          1,
         ),
         mockDefiBridgeTx(
           1,
@@ -862,7 +861,7 @@ describe('rollup_coordinator', () => {
           4,
           DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[4].bridgeId),
           bridgeConfigs[4].bridgeId,
-          AssetId.DAI,
+          1,
         ),
         mockDefiBridgeTx(
           5,
@@ -873,13 +872,13 @@ describe('rollup_coordinator', () => {
           6,
           DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[4].bridgeId),
           bridgeConfigs[4].bridgeId,
-          AssetId.DAI,
+          1,
         ),
         mockDefiBridgeTx(
           7,
           DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[4].bridgeId),
           bridgeConfigs[4].bridgeId,
-          AssetId.DAI,
+          1,
         ),
       ];
       const rp = await coordinator.processPendingTxs(pendingTxs);
@@ -888,7 +887,7 @@ describe('rollup_coordinator', () => {
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH, AssetId.DAI]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0, 1]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[0].bridgeId,
         bridgeConfigs[4].bridgeId,
@@ -904,7 +903,7 @@ describe('rollup_coordinator', () => {
           0,
           DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[4].bridgeId),
           bridgeConfigs[4].bridgeId,
-          AssetId.DAI,
+          1,
         ),
         mockDefiBridgeTx(
           1,
@@ -926,7 +925,7 @@ describe('rollup_coordinator', () => {
           4,
           DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[4].bridgeId),
           bridgeConfigs[4].bridgeId,
-          AssetId.DAI,
+          1,
         ),
         mockDefiBridgeTx(
           5,
@@ -938,13 +937,13 @@ describe('rollup_coordinator', () => {
           6,
           DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[4].bridgeId),
           bridgeConfigs[4].bridgeId,
-          AssetId.DAI,
+          1,
         ),
         mockDefiBridgeTx(
           7,
           DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[4].bridgeId),
           bridgeConfigs[4].bridgeId,
-          AssetId.DAI,
+          1,
         ),
       ];
       const rp = await coordinator.processPendingTxs(pendingTxs);
@@ -953,7 +952,7 @@ describe('rollup_coordinator', () => {
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH, AssetId.DAI]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0, 1]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[0].bridgeId,
         bridgeConfigs[4].bridgeId,
@@ -965,7 +964,7 @@ describe('rollup_coordinator', () => {
 
     it('non-fee paying assets are not added to aggregator 2', async () => {
       const pendingTxs = [...Array(numInnerRollupTxs * numOuterRollupProofs)].map((_, i) =>
-        mockTx(i, { txFeeAssetId: i == 0 ? AssetId.ETH : i + NON_FEE_PAYING_ASSET }),
+        mockTx(i, { txFeeAssetId: i == 0 ? 0 : i + NON_FEE_PAYING_ASSET }),
       );
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
@@ -973,7 +972,7 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(numOuterRollupProofs);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([...Array(4).fill(0n)]);
     });
 
@@ -987,7 +986,7 @@ describe('rollup_coordinator', () => {
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[1].bridgeId,
         ...Array(3).fill(0n),
@@ -1000,7 +999,7 @@ describe('rollup_coordinator', () => {
       almostFullCost += DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[1].fee!; // pays for defi deposit slot + whole bridge
       let pendingTxs = [
         mockDefiBridgeTx(0, almostFullCost, bridgeConfigs[1].bridgeId),
-        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
       let rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
@@ -1011,7 +1010,7 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
 
-      pendingTxs = [mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH })];
+      pendingTxs = [mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: 0 })];
       rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0, 1, 2]);
@@ -1019,7 +1018,7 @@ describe('rollup_coordinator', () => {
       // rollup is now profitable
       expect(rollupCreator.create).toHaveBeenCalledTimes(2);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[1].bridgeId,
         ...Array(3).fill(0n),
@@ -1032,7 +1031,7 @@ describe('rollup_coordinator', () => {
       almostFullCost += DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[1].fee!; // pays for defi deposit slot + whole bridge
       let pendingTxs = [
         mockDefiBridgeTx(0, almostFullCost, bridgeConfigs[1].bridgeId),
-        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
       let rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
@@ -1051,7 +1050,7 @@ describe('rollup_coordinator', () => {
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[1].bridgeId,
         ...Array(3).fill(0n),
@@ -1064,7 +1063,7 @@ describe('rollup_coordinator', () => {
       almostFullCost += DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[1].fee!; // bridge cost
       let pendingTxs = [
         mockDefiBridgeTx(0, almostFullCost, bridgeConfigs[1].bridgeId),
-        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
       let rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
@@ -1083,7 +1082,7 @@ describe('rollup_coordinator', () => {
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[1].bridgeId,
         ...Array(3).fill(0n),
@@ -1093,14 +1092,14 @@ describe('rollup_coordinator', () => {
 
     it('single payment tx can publish if it covers complete cost', async () => {
       const fullCost = BigInt(numInnerRollupTxs * numOuterRollupProofs - 1) * BASE_GAS; // excess gas is all other slots
-      const pendingTxs = [mockTx(0, { txType: TxType.TRANSFER, excessGas: fullCost, txFeeAssetId: AssetId.ETH })];
+      const pendingTxs = [mockTx(0, { txType: TxType.TRANSFER, excessGas: fullCost, txFeeAssetId: 0 })];
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(4).fill(0n));
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -1108,8 +1107,8 @@ describe('rollup_coordinator', () => {
     it('single payment tx can publish if it covers complete cost 2', async () => {
       const fullCost = BigInt(numInnerRollupTxs * numOuterRollupProofs - 1) * BASE_GAS; // excess gas is all other slots
       const pendingTxs = [
-        mockTx(0, { txType: TxType.TRANSFER, excessGas: fullCost, txFeeAssetId: AssetId.ETH }),
-        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(0, { txType: TxType.TRANSFER, excessGas: fullCost, txFeeAssetId: 0 }),
+        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
       let rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
@@ -1126,7 +1125,7 @@ describe('rollup_coordinator', () => {
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(4).fill(0n));
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -1135,8 +1134,8 @@ describe('rollup_coordinator', () => {
       let fullCost = BigInt(numInnerRollupTxs * numOuterRollupProofs) * BASE_GAS; // full base cost of rollup
       fullCost += NON_DEFI_TX_GAS; // payment tx cost
       const pendingTxs = [
-        mockTx(0, { txType: TxType.TRANSFER, excessGas: fullCost, txFeeAssetId: AssetId.ETH }),
-        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(0, { txType: TxType.TRANSFER, excessGas: fullCost, txFeeAssetId: 0 }),
+        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
       let rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
@@ -1153,7 +1152,7 @@ describe('rollup_coordinator', () => {
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(4).fill(0n));
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -1161,7 +1160,7 @@ describe('rollup_coordinator', () => {
     it('defi txs are not published if bridge is not profitable, even if rollup is', async () => {
       const fullCost = BigInt(numInnerRollupTxs * numOuterRollupProofs - 1) * BASE_GAS; // excess gas is all other slots
       const pendingTxs = [
-        mockTx(0, { txType: TxType.TRANSFER, excessGas: fullCost, txFeeAssetId: AssetId.ETH }),
+        mockTx(0, { txType: TxType.TRANSFER, excessGas: fullCost, txFeeAssetId: 0 }),
         mockDefiBridgeTx(
           1,
           DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[0].bridgeId),
@@ -1174,7 +1173,7 @@ describe('rollup_coordinator', () => {
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(4).fill(0n));
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -1274,7 +1273,7 @@ describe('rollup_coordinator', () => {
           DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[3].bridgeId),
           bridgeConfigs[3].bridgeId,
         ),
-        mockTx(9, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(9, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
       // we can now rollup the final bridge [2] tx
       // still can't do anything with bridge [3]
@@ -1343,7 +1342,7 @@ describe('rollup_coordinator', () => {
       // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
       // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
 
-      const pendingTxs = [mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH })];
+      const pendingTxs = [mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 })];
       let rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
       expectProcessedTxIds([]);
@@ -1367,7 +1366,7 @@ describe('rollup_coordinator', () => {
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(4).fill(0n));
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -1377,7 +1376,7 @@ describe('rollup_coordinator', () => {
       // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
 
       const pendingTxs = [...Array(numInnerRollupTxs)].map((_, i) =>
-        mockTx(i, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(i, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       );
       let rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
@@ -1403,7 +1402,7 @@ describe('rollup_coordinator', () => {
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(4).fill(0n));
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -1413,7 +1412,7 @@ describe('rollup_coordinator', () => {
       // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
 
       const pendingTxs = [...Array(numInnerRollupTxs)].map((_, i) =>
-        mockTx(i, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(i, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       );
       let rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
@@ -1439,7 +1438,7 @@ describe('rollup_coordinator', () => {
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(4).fill(0n));
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -1448,7 +1447,7 @@ describe('rollup_coordinator', () => {
       // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
       // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
 
-      const pendingTxs = [mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH })];
+      const pendingTxs = [mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 })];
       let rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
       expectProcessedTxIds([]);
@@ -1480,7 +1479,7 @@ describe('rollup_coordinator', () => {
       // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
 
       const pendingTxs = [
-        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTx(
           1,
           DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[2].bridgeId),
@@ -1510,7 +1509,7 @@ describe('rollup_coordinator', () => {
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(4).fill(0n));
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -1520,7 +1519,7 @@ describe('rollup_coordinator', () => {
       // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
 
       const pendingTxs = [
-        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTx(
           1,
           DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[2].bridgeId),
@@ -1553,7 +1552,7 @@ describe('rollup_coordinator', () => {
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[2].bridgeId,
         ...Array(3).fill(0n),
@@ -1598,7 +1597,7 @@ describe('rollup_coordinator', () => {
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[2].bridgeId,
         ...Array(3).fill(0n),
@@ -1611,7 +1610,7 @@ describe('rollup_coordinator', () => {
       // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
 
       const pendingTxs = [
-        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTx(
           1,
           DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[2].bridgeId),
@@ -1650,7 +1649,7 @@ describe('rollup_coordinator', () => {
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[2].bridgeId,
         bridgeConfigs[0].bridgeId,
@@ -1673,7 +1672,7 @@ describe('rollup_coordinator', () => {
           DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[5].bridgeId),
           bridgeConfigs[5].bridgeId,
         ),
-        mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTx(7, HUGE_FEE, bridgeConfigs[4].bridgeId),
         mockDefiBridgeTx(
           8,
@@ -1685,8 +1684,8 @@ describe('rollup_coordinator', () => {
           DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[5].bridgeId),
           bridgeConfigs[5].bridgeId,
         ),
-        mockTx(10, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
-        mockTx(11, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(10, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(11, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
 
       let pendingTxs = allTxs;
@@ -1740,7 +1739,7 @@ describe('rollup_coordinator', () => {
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[0].bridgeId,
         bridgeConfigs[1].bridgeId,
@@ -1755,7 +1754,7 @@ describe('rollup_coordinator', () => {
       // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
 
       const pendingTxs = [
-        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTx(
           1,
           DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[2].bridgeId),
@@ -1786,7 +1785,7 @@ describe('rollup_coordinator', () => {
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(4).fill(0n));
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -1936,7 +1935,7 @@ describe('rollup_coordinator', () => {
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[2].bridgeId,
         ...Array(3).fill(0n),
@@ -1949,16 +1948,16 @@ describe('rollup_coordinator', () => {
       const pendingTxs = [
         mockDefiBridgeTx(0, HUGE_FEE, bridgeConfigs[0].bridgeId),
         mockDefiBridgeTx(1, HUGE_FEE, bridgeConfigs[1].bridgeId),
-        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTx(3, HUGE_FEE, bridgeConfigs[2].bridgeId),
         mockDefiBridgeTx(4, HUGE_FEE, bridgeConfigs[3].bridgeId),
         mockDefiBridgeTx(5, HUGE_FEE, bridgeConfigs[4].bridgeId),
         mockDefiBridgeTx(6, HUGE_FEE, bridgeConfigs[5].bridgeId),
-        mockTx(7, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(7, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTx(8, HUGE_FEE, bridgeConfigs[4].bridgeId),
         mockDefiBridgeTx(9, HUGE_FEE, bridgeConfigs[3].bridgeId),
         mockDefiBridgeTx(10, HUGE_FEE, bridgeConfigs[5].bridgeId),
-        mockTx(11, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
+        mockTx(11, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
       const rp = await coordinator.processPendingTxs(pendingTxs, true);
       expect(rp.published).toBe(true);
@@ -1974,7 +1973,7 @@ describe('rollup_coordinator', () => {
       ]);
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[0].bridgeId,
         bridgeConfigs[1].bridgeId,
@@ -2056,8 +2055,8 @@ describe('rollup_coordinator', () => {
       const pendingTxs = [...Array(numInnerRollupTxs * numOuterRollupProofs)].map((_, i) =>
         mockTx(i, { txFeeAssetId: i + NON_FEE_PAYING_ASSET }),
       );
-      pendingTxs[pendingTxs.length - 1] = mockTx(pendingTxs.length - 1, { txFeeAssetId: AssetId.ETH });
-      pendingTxs[pendingTxs.length - 2] = mockTx(pendingTxs.length - 2, { txFeeAssetId: AssetId.DAI });
+      pendingTxs[pendingTxs.length - 1] = mockTx(pendingTxs.length - 1, { txFeeAssetId: 0 });
+      pendingTxs[pendingTxs.length - 2] = mockTx(pendingTxs.length - 2, { txFeeAssetId: 1 });
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
       expect(coordinator.processedTxs).toEqual(pendingTxs);
@@ -2065,7 +2064,7 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
       expect(rollupPublisher.getRollupBenificiary).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH, AssetId.DAI]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0, 1]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([...Array(4).fill(0n)]);
     }); */
 
@@ -2076,8 +2075,8 @@ describe('rollup_coordinator', () => {
         }
         return mockDefiBridgeTx(i, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[0].bridgeId), bridgeConfigs[0].bridgeId, i + NON_FEE_PAYING_ASSET);
       });
-      pendingTxs[pendingTxs.length - 1] = mockTx(pendingTxs.length - 1, { txFeeAssetId: AssetId.ETH });
-      pendingTxs[pendingTxs.length - 2] = mockTx(pendingTxs.length - 2, { txFeeAssetId: AssetId.DAI });
+      pendingTxs[pendingTxs.length - 1] = mockTx(pendingTxs.length - 1, { txFeeAssetId: 0 });
+      pendingTxs[pendingTxs.length - 2] = mockTx(pendingTxs.length - 2, { txFeeAssetId: 1 });
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
       expect(coordinator.processedTxs).toEqual(pendingTxs);
@@ -2085,7 +2084,7 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
       expect(rollupPublisher.getRollupBenificiary).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([AssetId.ETH, AssetId.DAI]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0, 1]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([bridgeConfigs[0].bridgeId, ...Array(3).fill(0n)]);
     }); */
   });

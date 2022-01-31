@@ -1,4 +1,4 @@
-import { AccountId, Note, SdkEvent, WalletSdk } from '@aztec/sdk';
+import { AccountId, AztecSdk, Note, SdkEvent } from '@aztec/sdk';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { debounce, DebouncedFunc } from 'lodash';
@@ -58,7 +58,7 @@ export class UserAccount extends EventEmitter {
     readonly latestUserNonce: number,
     private activeAsset: AppAssetId,
     private readonly keyVault: KeyVault,
-    private readonly sdk: WalletSdk,
+    private readonly sdk: AztecSdk,
     private readonly coreProvider: Provider,
     private readonly rollup: RollupService,
     private readonly priceFeedService: PriceFeedService,

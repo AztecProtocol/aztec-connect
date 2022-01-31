@@ -1,12 +1,11 @@
 import { EthAddress } from '../address';
-import { AssetId } from '../asset';
 import { BlockSource } from '../block_source';
-import { TxHash } from '../tx_hash';
 import { Asset } from './asset';
 import { BlockchainStatusSource } from './blockchain_status';
 import { EthereumProvider } from './ethereum_provider';
 import { EthereumSignature, EthereumSigner } from './ethereum_signer';
 import { PriceFeed } from './price_feed';
+import { TxHash } from './tx_hash';
 
 export interface Receipt {
   status: boolean;
@@ -35,17 +34,17 @@ export interface Blockchain extends BlockSource, BlockchainStatusSource, Ethereu
    */
   getTransactionReceiptSafe(txHash: TxHash): Promise<Receipt>;
 
-  getUserPendingDeposit(assetId: AssetId, account: EthAddress): Promise<bigint>;
+  getUserPendingDeposit(assetId: number, account: EthAddress): Promise<bigint>;
 
   createRollupProofTx(proof: Buffer, signatures: Buffer[], offchainTxData: Buffer[]): Promise<Buffer>;
 
   sendTx(tx: Buffer, options?: SendTxOptions): Promise<TxHash>;
 
-  getAsset(assetId: AssetId): Asset;
+  getAsset(assetId: number): Asset;
 
-  getAssetPrice(assetId: AssetId): Promise<bigint>;
+  getAssetPrice(assetId: number): Promise<bigint>;
 
-  getPriceFeed(assetId: AssetId): PriceFeed;
+  getPriceFeed(assetId: number): PriceFeed;
 
   getGasPriceFeed(): PriceFeed;
 

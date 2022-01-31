@@ -1,5 +1,12 @@
-import { AccountId, EthAddress, TxSettlementTime, TxType, WalletSdk } from '@aztec/sdk';
-import { TransferController, WithdrawController } from '@aztec/sdk/wallet_sdk/controllers';
+import {
+  AccountId,
+  AztecSdk,
+  EthAddress,
+  TransferController,
+  TxSettlementTime,
+  TxType,
+  WithdrawController,
+} from '@aztec/sdk';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { debounce, DebouncedFunc } from 'lodash';
@@ -141,7 +148,7 @@ export class SendForm extends EventEmitter implements AccountForm {
     private assetState: AssetState,
     private provider: Provider | undefined,
     private readonly keyVault: KeyVault,
-    private readonly sdk: WalletSdk,
+    private readonly sdk: AztecSdk,
     private readonly rollup: RollupService,
     private readonly accountUtils: AccountUtils,
     private readonly txAmountLimit: bigint,

@@ -1,12 +1,12 @@
 import { AccountId } from '../account_id';
 import { GrumpkinAddress } from '../address';
+import { AssetValue } from '../asset';
 import { BlockchainStatus, blockchainStatusFromJson, blockchainStatusToJson } from '../blockchain';
 import { BlockSource } from '../block_source';
-import { AssetId, AssetValue } from '../asset';
+import { BridgeId, BridgeStatus, bridgeStatusToJson } from '../bridge_id';
 import { AccountProofData, JoinSplitProofData } from '../client_proofs';
 import { OffchainAccountData, OffchainJoinSplitData } from '../offchain_tx_data';
-import { TxHash } from '../tx_hash';
-import { BridgeStatus, bridgeStatusToJson, BridgeId } from '../bridge_id';
+import { TxId } from '../tx_id';
 
 export enum TxSettlementTime {
   NEXT_ROLLUP,
@@ -83,7 +83,7 @@ export function rollupProviderStatusFromJson(status: any): RollupProviderStatus 
 }
 
 export interface PendingTx {
-  txId: TxHash;
+  txId: TxId;
   noteCommitment1: Buffer;
   noteCommitment2: Buffer;
 }
@@ -103,9 +103,9 @@ export interface JoinSplitTx {
 }
 
 export interface RollupProvider extends BlockSource {
-  sendTxs(txs: Tx[]): Promise<TxHash[]>;
+  sendTxs(txs: Tx[]): Promise<TxId[]>;
   getStatus(): Promise<RollupProviderStatus>;
-  getTxFees(assetId: AssetId): Promise<AssetValue[][]>;
+  getTxFees(assetId: number): Promise<AssetValue[][]>;
   getDefiFees(bridgeId: BridgeId): Promise<AssetValue[]>;
   getPendingTxs: () => Promise<PendingTx[]>;
   getPendingNoteNullifiers: () => Promise<Buffer[]>;

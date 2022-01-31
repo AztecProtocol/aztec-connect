@@ -3,40 +3,27 @@ import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { CoreAccountTx, CoreDefiTx, CorePaymentTx, CoreUserTx } from '../core_tx';
 import { UserAccountTx, UserDefiTx, UserPaymentTx } from '../user_tx';
 
-const emptyValue = { assetId: 0, value: BigInt(0) };
+const emptyAssetValue = { assetId: 0, value: BigInt(0) };
 
 const toUserAccountTx = (
-  { txHash, userId, aliasHash, newSigningPubKey1, newSigningPubKey2, migrated, created, settled }: CoreAccountTx,
-  deposit: AssetValue,
+  { txId, userId, aliasHash, newSigningPubKey1, newSigningPubKey2, migrated, created, settled }: CoreAccountTx,
   fee: AssetValue,
-) =>
-  new UserAccountTx(
-    txHash,
-    userId,
-    aliasHash,
-    newSigningPubKey1,
-    newSigningPubKey2,
-    migrated,
-    deposit,
-    fee,
-    created,
-    settled,
-  );
+) => new UserAccountTx(txId, userId, aliasHash, newSigningPubKey1, newSigningPubKey2, migrated, fee, created, settled);
 
 const toUserPaymentTx = (
-  { txHash, userId, proofId, publicOwner, isSender, created, settled }: CorePaymentTx,
+  { txId, userId, proofId, publicOwner, isSender, created, settled }: CorePaymentTx,
   value: AssetValue,
   fee: AssetValue,
 ) => {
-  return new UserPaymentTx(txHash, userId, proofId, value, fee, publicOwner, isSender, created, settled);
+  return new UserPaymentTx(txId, userId, proofId, value, fee, publicOwner, isSender, created, settled);
 };
 
 const toUserDefiTx = (
-  { txHash, userId, bridgeId, depositValue, outputValueA, outputValueB, result, created, settled }: CoreDefiTx,
+  { txId, userId, bridgeId, depositValue, outputValueA, outputValueB, result, created, settled }: CoreDefiTx,
   fee: AssetValue,
 ) =>
   new UserDefiTx(
-    txHash,
+    txId,
     userId,
     bridgeId,
     { assetId: bridgeId.inputAssetId, value: depositValue },
@@ -59,8 +46,10 @@ const getPaymentValue = ({
 }: CorePaymentTx) => {
   const value = (() => {
     switch (proofId) {
-      case ProofId.DEPOSIT:
-        return recipientPrivateOutput || senderPrivateOutput || publicValue;
+      case ProofId.DEPOSIT: {
+        const outputValue = recipientPrivateOutput + senderPrivateOutput;
+        return outputValue || isRecipient ? outputValue : publicValue;
+      }
       case ProofId.WITHDRAW:
         return publicValue;
       case ProofId.SEND:
@@ -75,7 +64,7 @@ const getPaymentValue = ({
 
 const getFee = (tx: CoreUserTx) => {
   if (tx.proofId === ProofId.ACCOUNT) {
-    return emptyValue;
+    return emptyAssetValue;
   }
 
   if (tx.proofId === ProofId.DEFI_DEPOSIT) {
@@ -97,10 +86,10 @@ const getFee = (tx: CoreUserTx) => {
     switch (proofId) {
       case ProofId.DEPOSIT: {
         const outputValue = recipientPrivateOutput + senderPrivateOutput;
-        return outputValue ? publicValue - outputValue : BigInt(0);
+        return outputValue || (isSender && isRecipient) ? publicValue - outputValue : BigInt(0);
       }
       case ProofId.WITHDRAW:
-        return isSender ? privateInput - publicValue : BigInt(0);
+        return privateInput - publicValue;
       case ProofId.SEND:
         if (!isSender || (!isRecipient && !recipientPrivateOutput)) {
           return BigInt(0);
@@ -115,11 +104,17 @@ const getFee = (tx: CoreUserTx) => {
 };
 
 const getTotalFee = (txs: CoreUserTx[]) => {
-  const fees = txs.map(getFee);
-  if (!fees.length) {
-    return emptyValue;
+  if (!txs.length) {
+    return emptyAssetValue;
   }
 
+  // If there's a defi deposit tx, the fee is stored in its offchain data.
+  // We don't need to add up the fee paid by the join split tx unless its input asset is a garbage asset.
+  const defiTx = txs.find(tx => tx.proofId === ProofId.DEFI_DEPOSIT) as CoreDefiTx;
+  const feeTxs = !defiTx
+    ? txs
+    : txs.filter(tx => tx === defiTx || (tx.proofId === ProofId.SEND && tx.assetId !== defiTx.bridgeId.inputAssetId));
+  const fees = feeTxs.map(getFee);
   const { assetId } = fees.find(fee => fee.value) || fees[0];
   if (fees.some(fee => fee.value && fee.assetId !== assetId)) {
     throw new Error('Inconsistent fee paying assets.');
@@ -128,11 +123,15 @@ const getTotalFee = (txs: CoreUserTx[]) => {
   return { assetId, value: fees.reduce((sum, fee) => sum + fee.value, BigInt(0)) };
 };
 
-const isFeeTx = (tx: CoreUserTx) => tx.proofId === ProofId.SEND && tx.isRecipient && tx.isSender;
+const getPrimaryTx = (txs: CoreUserTx[], feePayingAssetIds: number[]) =>
+  txs.find(tx => !tx.txRefNo) ||
+  txs.find(tx => [ProofId.ACCOUNT, ProofId.DEFI_DEPOSIT].includes(tx.proofId)) ||
+  txs.find(tx => tx.proofId === ProofId.SEND && !tx.isSender) ||
+  txs.find(tx => [ProofId.DEPOSIT, ProofId.WITHDRAW].includes(tx.proofId)) ||
+  txs.find(tx => !feePayingAssetIds.includes((tx as CorePaymentTx).assetId));
 
-const toUserTx = (txs: CoreUserTx[]) => {
-  const primaryTx =
-    txs.find(tx => [ProofId.ACCOUNT, ProofId.DEFI_DEPOSIT].includes(tx.proofId)) || txs.find(tx => !isFeeTx(tx));
+const toUserTx = (txs: CoreUserTx[], feePayingAssetIds: number[]) => {
+  const primaryTx = getPrimaryTx(txs, feePayingAssetIds);
   if (!primaryTx) {
     return;
   }
@@ -140,16 +139,19 @@ const toUserTx = (txs: CoreUserTx[]) => {
   const fee = getTotalFee(txs);
   switch (primaryTx.proofId) {
     case ProofId.ACCOUNT: {
-      const depositTx = txs.find(tx => tx.proofId === ProofId.DEPOSIT);
-      const deposit = depositTx ? getPaymentValue(depositTx as CorePaymentTx) : emptyValue;
-      return toUserAccountTx(primaryTx, deposit, fee);
+      const depositTx = txs.find(tx => tx.proofId === ProofId.DEPOSIT) as CorePaymentTx;
+      const depositValue = depositTx ? getPaymentValue(depositTx) : emptyAssetValue;
+      if (depositValue.value) {
+        return [toUserAccountTx(primaryTx, emptyAssetValue), toUserPaymentTx(depositTx, depositValue, fee)];
+      }
+      return [toUserAccountTx(primaryTx, fee)];
     }
     case ProofId.DEFI_DEPOSIT: {
-      return toUserDefiTx(primaryTx, fee);
+      return [toUserDefiTx(primaryTx, fee)];
     }
     default: {
       const value = getPaymentValue(primaryTx);
-      return toUserPaymentTx(primaryTx, value, fee);
+      return [toUserPaymentTx(primaryTx, value, fee)];
     }
   }
 };
@@ -160,7 +162,7 @@ const groupTxsByTxRefNo = (txs: CoreUserTx[]) => {
     const { txRefNo } = tx;
     if (!txRefNo) {
       // If txRefNo is 0, this tx is not part of a tx group.
-      txGroups.set(tx.txHash.toBuffer().readUInt32BE(0), [tx]);
+      txGroups.set(tx.txId.toBuffer().readUInt32BE(0), [tx]);
     } else {
       const group = txGroups.get(txRefNo) || [];
       txGroups.set(txRefNo, [...group, tx]);
@@ -171,7 +173,7 @@ const groupTxsByTxRefNo = (txs: CoreUserTx[]) => {
 
 const filterUndefined = <T>(ts: (T | undefined)[]): T[] => ts.filter((t: T | undefined): t is T => !!t);
 
-export const groupUserTxs = (txs: CoreUserTx[]) => {
+export const groupUserTxs = (txs: CoreUserTx[], feePayingAssetIds: number[]) => {
   const txGroups = groupTxsByTxRefNo(txs);
-  return filterUndefined(txGroups.map(toUserTx));
+  return filterUndefined(txGroups.map(txs => toUserTx(txs, feePayingAssetIds))).flat();
 };

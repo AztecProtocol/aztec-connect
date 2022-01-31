@@ -1,5 +1,5 @@
 import { ProofId } from '@aztec/barretenberg/client_proofs';
-import { AccountId, AssetId, EthAddress, GrumpkinAddress, WalletSdk } from '@aztec/sdk';
+import { AccountId, AztecSdk, EthAddress, GrumpkinAddress } from '@aztec/sdk';
 import createDebug from 'debug';
 import { formatAliasInput, isValidAliasInput } from './alias';
 import { Network } from './networks';
@@ -7,7 +7,7 @@ import { Network } from './networks';
 const debug = createDebug('zm:account_utils');
 
 export class AccountUtils {
-  constructor(private sdk: WalletSdk, private requiredNetwork: Network) {}
+  constructor(private sdk: AztecSdk, private requiredNetwork: Network) {}
 
   async addUser(privateKey: Buffer, nonce: number, noSync = !nonce) {
     const publicKey = this.sdk.derivePublicKey(privateKey);
@@ -68,7 +68,7 @@ export class AccountUtils {
     return this.sdk.getRemoteAccountId(alias);
   }
 
-  async getPendingBalance(assetId: AssetId, ethAddress: EthAddress) {
+  async getPendingBalance(assetId: number, ethAddress: EthAddress) {
     const deposited = await this.sdk.getUserPendingDeposit(assetId, ethAddress);
     const txs = await this.sdk.getRemoteUnsettledPaymentTxs();
     const unsettledDeposit =
@@ -84,7 +84,7 @@ export class AccountUtils {
   }
 
   async confirmPendingBalance(
-    assetId: AssetId,
+    assetId: number,
     ethAddress: EthAddress,
     expectedPendingBalance: bigint,
     pollInterval = (this.requiredNetwork.network === 'ganache' ? 1 : 10) * 1000,

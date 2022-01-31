@@ -1,4 +1,3 @@
-import { AssetId } from '@aztec/barretenberg/asset';
 import { Blockchain, PriceFeed, TxType } from '@aztec/barretenberg/blockchain';
 import { BitConfig, BridgeId } from '@aztec/barretenberg/bridge_id';
 import { EthPriceFeed } from '@aztec/blockchain';
@@ -18,7 +17,7 @@ describe('tx fee resolver', () => {
   const txsPerRollup = 10;
   const publishInterval = 3600;
   const surplusRatios = [1, 0];
-  const freeAssets: AssetId[] = [];
+  const freeAssets: number[] = [];
   const freeTxTypes: TxType[] = [];
   const numSignificantFigures = 0;
   let dateSpy: jest.SpyInstance<number>;
@@ -65,8 +64,8 @@ describe('tx fee resolver', () => {
         ],
       }),
       getGasPriceFeed: jest.fn().mockReturnValue(gasPriceFeed),
-      getPriceFeed: jest.fn().mockImplementation((assetId: AssetId) => {
-        if (assetId === AssetId.ETH) {
+      getPriceFeed: jest.fn().mockImplementation((assetId: number) => {
+        if (assetId === 0) {
           return new EthPriceFeed();
         }
         return tokenPriceFeed;
@@ -100,13 +99,13 @@ describe('tx fee resolver', () => {
   });
 
   it('return correct min fees', async () => {
-    expect(txFeeResolver.getMinTxFee(AssetId.ETH, TxType.DEPOSIT)).toBe(2000000000000000n + 625000000000000n);
-    expect(txFeeResolver.getMinTxFee(AssetId.DAI, TxType.DEPOSIT)).toBe(20000n + 6250n);
+    expect(txFeeResolver.getMinTxFee(0, TxType.DEPOSIT)).toBe(2000000000000000n + 625000000000000n);
+    expect(txFeeResolver.getMinTxFee(1, TxType.DEPOSIT)).toBe(20000n + 6250n);
   });
 
   it('return correct tx fees', async () => {
     {
-      const assetId = AssetId.ETH;
+      const assetId = 0;
       expect(txFeeResolver.getTxFees(assetId)).toEqual([
         [
           { assetId, value: 2625000000000000n },
@@ -139,7 +138,7 @@ describe('tx fee resolver', () => {
       ]);
     }
     {
-      const assetId = AssetId.DAI;
+      const assetId = 1;
       expect(txFeeResolver.getTxFees(assetId)).toEqual([
         [
           { assetId, value: 26250n },
@@ -174,7 +173,7 @@ describe('tx fee resolver', () => {
   });
 
   it('return correct defi fees', async () => {
-    const assetId = AssetId.ETH;
+    const assetId = 0;
     const bridgeId = new BridgeId(0, assetId, 0, 0, 0, BitConfig.random(), 0).toBigInt();
     const defiFees = txFeeResolver.getDefiFees(bridgeId);
     expect(defiFees).toEqual([

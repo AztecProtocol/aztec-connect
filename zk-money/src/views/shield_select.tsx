@@ -4,7 +4,6 @@ import { Button, Select, ShieldedAssetIcon, Text } from '../components';
 import { borderRadiuses, colours, defaultTextColour, fontSizes, inputSizes, spacings, themeColours } from '../styles';
 import arrowDownGradient from '../images/arrow_down_gradient.svg';
 import { assets, convertToPriceString, formatBaseUnits, toBaseUnits } from '../app';
-import { AssetId } from '@aztec/sdk';
 
 const Root = styled.div`
   border-radius: 20px;
@@ -78,7 +77,7 @@ const SelectItemContent = styled.div`
   justify-content: space-between;
 `;
 
-const assetEth = assets[AssetId.ETH];
+const assetEth = assets[0];
 
 const AMOUNT_OPTS = ['0.01', '0.1', '1', '10'].map(x => toBaseUnits(x, assetEth.decimals));
 

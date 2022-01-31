@@ -1,4 +1,4 @@
-import { AccountId, AssetId, Note } from '@aztec/sdk';
+import { AccountId, Note } from '@aztec/sdk';
 import { AccountTx, JoinSplitTx } from './account_txs';
 import { Asset, assets } from './assets';
 
@@ -30,7 +30,7 @@ export interface AssetState {
 }
 
 export const initialAssetState = {
-  asset: assets[AssetId.ETH],
+  asset: assets[0],
   price: 0n,
   balance: 0n,
   spendableNotes: [],

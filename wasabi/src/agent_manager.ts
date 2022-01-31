@@ -1,19 +1,11 @@
-import {
-  AssetId,
-  JsonRpcProvider,
-  MemoryFifo,
-  SdkEvent,
-  TxSettlementTime,
-  WalletProvider,
-  WalletSdk,
-} from '@aztec/sdk';
+import { AztecSdk, JsonRpcProvider, MemoryFifo, SdkEvent, TxSettlementTime, WalletProvider } from '@aztec/sdk';
 import { Agent } from './agent';
 import { DefiAgent } from './defi_agent';
 import { SimpleAgent } from './simple_agent';
 import { Stats } from './stats';
 
 export class AgentManager {
-  private sdks: WalletSdk[] = [];
+  private sdks: AztecSdk[] = [];
   private agents: Agent[] = [];
   private queues: MemoryFifo<() => Promise<void>>[] = [];
 
@@ -39,7 +31,7 @@ export class AgentManager {
     console.log(`Master account: ${accounts[0]}`);
 
     for (let i = 0; i < this.numSdks; i++) {
-      const sdk = await WalletSdk.create(walletProvider, this.rollupHost, {
+      const sdk = await AztecSdk.create(walletProvider, this.rollupHost, {
         syncInstances: false,
         saveProvingKey: false,
         clearDb: true,
@@ -61,7 +53,7 @@ export class AgentManager {
     }
 
     // flush fee is an amount that's guaranteed to push through a rollup
-    const flushFee = (await this.sdks[0].getDepositFees(AssetId.ETH))[TxSettlementTime.INSTANT].value;
+    const flushFee = (await this.sdks[0].getDepositFees(0))[TxSettlementTime.INSTANT].value;
     this.agents = new Array<Agent>();
     const totalNumAgents = this.numPaymentAgents + this.numDefiAgents;
     while (this.agents.length < totalNumAgents) {

@@ -1,6 +1,5 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { EthereumProvider, SendTxOptions } from '@aztec/barretenberg/blockchain';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { EthereumProvider, SendTxOptions, TxHash } from '@aztec/barretenberg/blockchain';
 import { Web3Provider } from '@ethersproject/providers';
 import { Contract } from 'ethers';
 import { abi } from '../../artifacts/contracts/AztecFeeDistributor.sol/AztecFeeDistributor.json';

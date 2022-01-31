@@ -1,8 +1,7 @@
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
-import { TxType } from '@aztec/barretenberg/blockchain';
+import { TxHash, TxType } from '@aztec/barretenberg/blockchain';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { AssetMetricsDao } from '../entity/asset_metrics';
 import { RollupDao } from '../entity/rollup';
 import { RollupProofDao } from '../entity/rollup_proof';

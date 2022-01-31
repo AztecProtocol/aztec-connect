@@ -2,7 +2,7 @@ import { BlockSource, Block } from '.';
 import { EventEmitter } from 'events';
 import { DefiInteractionNote } from '../note_algorithms';
 import { fetch } from '../iso_fetch';
-import { TxHash } from '../tx_hash';
+import { TxHash } from '../blockchain';
 // import createDebug from 'debug';
 // const debug = createDebug('bb:server_block_source');
 

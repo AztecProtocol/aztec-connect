@@ -1,4 +1,4 @@
-import { EthAddress, MemoryFifo, TxHash, WalletProvider, WalletSdk } from '@aztec/sdk';
+import { AztecSdk, EthAddress, MemoryFifo, TxId, WalletProvider } from '@aztec/sdk';
 import { Agent, TX_SETTLEMENT_TIMEOUT, UserData } from './agent';
 import { Stats } from './stats';
 
@@ -7,7 +7,7 @@ export class SimpleAgent extends Agent {
 
   constructor(
     fundsSourceAddress: EthAddress,
-    sdk: WalletSdk,
+    sdk: AztecSdk,
     provider: WalletProvider,
     id: number,
     queue: MemoryFifo<() => Promise<void>>,
@@ -35,13 +35,13 @@ export class SimpleAgent extends Agent {
           );
           while (true) {
             try {
-              const hash: TxHash = await this.serializeAny(() => this.transfer(this.users[0], this.users[1], 1n));
+              const txId: TxId = await this.serializeAny(() => this.transfer(this.users[0], this.users[1], 1n));
               console.log(
                 `${this.agentId()} sent transfer ${
                   this.numTransfers - transfersRemaining + (1 + transferPromises.length)
-                }, hash: ${hash.toString()}...`,
+                }, hash: ${txId.toString()}...`,
               );
-              transferPromises.push(this.sdk.awaitSettlement(hash, TX_SETTLEMENT_TIMEOUT));
+              transferPromises.push(this.sdk.awaitSettlement(txId, TX_SETTLEMENT_TIMEOUT));
               break;
             } catch (err) {
               console.log(`ERROR Sending payment: `, err);

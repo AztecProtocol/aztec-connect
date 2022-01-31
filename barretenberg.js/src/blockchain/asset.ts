@@ -1,7 +1,7 @@
 import { EthAddress } from '../address';
-import { TxHash } from '../tx_hash';
 import { SendTxOptions } from './blockchain';
 import { BlockchainAsset } from './blockchain_status';
+import { TxHash } from './tx_hash';
 
 export interface Asset {
   getStaticInfo(): BlockchainAsset;

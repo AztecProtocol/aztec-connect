@@ -1,4 +1,3 @@
-import { AssetId, AssetIds } from '@aztec/barretenberg/asset';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeId, BitConfig, BridgeConfig } from '@aztec/barretenberg/bridge_id';
 import { TxDao } from '../entity/tx';
@@ -44,7 +43,7 @@ describe('Profile Rollup', () => {
     id: number,
     {
       txType = TxType.TRANSFER,
-      txFeeAssetId = AssetId.ETH,
+      txFeeAssetId = 0,
       excessGas = 0n,
       creationTime = new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id), // ensures txs are ordered by id
       bridgeId = new BridgeId(
@@ -122,7 +121,7 @@ describe('Profile Rollup', () => {
       }),
       start: jest.fn(),
       stop: jest.fn(),
-      getGasPaidForByFee: jest.fn().mockImplementation((assetId: AssetId, fee: bigint) => fee),
+      getGasPaidForByFee: jest.fn().mockImplementation((assetId: number, fee: bigint) => fee),
       getBaseTxGas: jest.fn().mockReturnValue(BASE_GAS),
       getTxGas: jest.fn().mockImplementation(() => {
         throw new Error('This should not be called');
@@ -132,7 +131,7 @@ describe('Profile Rollup', () => {
       getSingleBridgeTxGas: jest.fn().mockImplementation((bridgeId: bigint) => getSingleBridgeCost(bridgeId)),
       getTxFees: jest.fn(),
       getDefiFees: jest.fn(),
-      isFeePayingAsset: jest.fn().mockImplementation((assetId: AssetId) => AssetIds.some(x => x === assetId)),
+      isFeePayingAsset: jest.fn().mockImplementation((assetId: number) => assetId < 3),
     };
   });
 
@@ -149,15 +148,15 @@ describe('Profile Rollup', () => {
 
   it('gives profile for non defi txs', () => {
     const txs = [
-      mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: AssetId.ETH }),
-      mockTx(1, { txType: TxType.ACCOUNT, txFeeAssetId: AssetId.ETH }),
-      mockTx(3, { txType: TxType.DEFI_CLAIM, txFeeAssetId: AssetId.ETH }),
-      mockTx(4, { txType: TxType.WITHDRAW_TO_CONTRACT, txFeeAssetId: AssetId.ETH }),
-      mockTx(5, { txType: TxType.DEFI_CLAIM, txFeeAssetId: AssetId.ETH }),
-      mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
-      mockTx(7, { txType: TxType.WITHDRAW_TO_WALLET, txFeeAssetId: AssetId.ETH }),
-      mockTx(8, { txType: TxType.DEPOSIT, txFeeAssetId: AssetId.ETH }),
-      mockTx(10, { txType: TxType.DEFI_CLAIM, txFeeAssetId: AssetId.ETH }),
+      mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
+      mockTx(1, { txType: TxType.ACCOUNT, txFeeAssetId: 0 }),
+      mockTx(3, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
+      mockTx(4, { txType: TxType.WITHDRAW_TO_CONTRACT, txFeeAssetId: 0 }),
+      mockTx(5, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
+      mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+      mockTx(7, { txType: TxType.WITHDRAW_TO_WALLET, txFeeAssetId: 0 }),
+      mockTx(8, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
+      mockTx(10, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
     ];
 
     const rollupTxs = txs.map(createRollupTx);
@@ -175,15 +174,15 @@ describe('Profile Rollup', () => {
 
   it('correctly accounts for excess gas provided', () => {
     const txs = [
-      mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: AssetId.ETH }),
-      mockTx(1, { txType: TxType.ACCOUNT, txFeeAssetId: AssetId.ETH }),
-      mockTx(3, { txType: TxType.DEFI_CLAIM, txFeeAssetId: AssetId.ETH }),
-      mockTx(4, { txType: TxType.WITHDRAW_TO_CONTRACT, txFeeAssetId: AssetId.ETH }),
-      mockTx(5, { txType: TxType.DEFI_CLAIM, txFeeAssetId: AssetId.ETH }),
-      mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH, excessGas: 2n * BASE_GAS }),
-      mockTx(7, { txType: TxType.WITHDRAW_TO_WALLET, txFeeAssetId: AssetId.ETH }),
-      mockTx(8, { txType: TxType.DEPOSIT, txFeeAssetId: AssetId.ETH, excessGas: 3n * BASE_GAS }),
-      mockTx(10, { txType: TxType.DEFI_CLAIM, txFeeAssetId: AssetId.ETH }),
+      mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
+      mockTx(1, { txType: TxType.ACCOUNT, txFeeAssetId: 0 }),
+      mockTx(3, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
+      mockTx(4, { txType: TxType.WITHDRAW_TO_CONTRACT, txFeeAssetId: 0 }),
+      mockTx(5, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
+      mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: 0, excessGas: 2n * BASE_GAS }),
+      mockTx(7, { txType: TxType.WITHDRAW_TO_WALLET, txFeeAssetId: 0 }),
+      mockTx(8, { txType: TxType.DEPOSIT, txFeeAssetId: 0, excessGas: 3n * BASE_GAS }),
+      mockTx(10, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
     ];
 
     const rollupTxs = txs.map(createRollupTx);
@@ -201,15 +200,15 @@ describe('Profile Rollup', () => {
 
   it('becomes profitable with excess gas', () => {
     const txs = [
-      mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: AssetId.ETH, excessGas: 7n * BASE_GAS }),
-      mockTx(1, { txType: TxType.ACCOUNT, txFeeAssetId: AssetId.ETH }),
-      mockTx(3, { txType: TxType.DEFI_CLAIM, txFeeAssetId: AssetId.ETH }),
-      mockTx(4, { txType: TxType.WITHDRAW_TO_CONTRACT, txFeeAssetId: AssetId.ETH }),
-      mockTx(5, { txType: TxType.DEFI_CLAIM, txFeeAssetId: AssetId.ETH }),
-      mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH, excessGas: 2n * BASE_GAS }),
-      mockTx(7, { txType: TxType.WITHDRAW_TO_WALLET, txFeeAssetId: AssetId.ETH }),
-      mockTx(8, { txType: TxType.DEPOSIT, txFeeAssetId: AssetId.ETH, excessGas: 3n * BASE_GAS }),
-      mockTx(10, { txType: TxType.DEFI_CLAIM, txFeeAssetId: AssetId.ETH }),
+      mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: 0, excessGas: 7n * BASE_GAS }),
+      mockTx(1, { txType: TxType.ACCOUNT, txFeeAssetId: 0 }),
+      mockTx(3, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
+      mockTx(4, { txType: TxType.WITHDRAW_TO_CONTRACT, txFeeAssetId: 0 }),
+      mockTx(5, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
+      mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: 0, excessGas: 2n * BASE_GAS }),
+      mockTx(7, { txType: TxType.WITHDRAW_TO_WALLET, txFeeAssetId: 0 }),
+      mockTx(8, { txType: TxType.DEPOSIT, txFeeAssetId: 0, excessGas: 3n * BASE_GAS }),
+      mockTx(10, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
     ];
 
     const rollupTxs = txs.map(createRollupTx);
@@ -227,61 +226,61 @@ describe('Profile Rollup', () => {
 
   it('gives profile for payment and defi txs', () => {
     const txs = [
-      mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: AssetId.ETH }),
-      mockTx(1, { txType: TxType.ACCOUNT, txFeeAssetId: AssetId.ETH }),
-      mockTx(2, { txType: TxType.DEFI_CLAIM, txFeeAssetId: AssetId.ETH }),
-      mockTx(3, { txType: TxType.WITHDRAW_TO_CONTRACT, txFeeAssetId: AssetId.ETH }),
-      mockTx(4, { txType: TxType.DEFI_CLAIM, txFeeAssetId: AssetId.ETH }),
-      mockTx(5, { txType: TxType.TRANSFER, txFeeAssetId: AssetId.ETH }),
-      mockTx(6, { txType: TxType.WITHDRAW_TO_WALLET, txFeeAssetId: AssetId.ETH, excessGas: 2n * BASE_GAS }),
-      mockTx(7, { txType: TxType.DEPOSIT, txFeeAssetId: AssetId.ETH, excessGas: 3n * BASE_GAS }),
-      mockTx(8, { txType: TxType.DEFI_CLAIM, txFeeAssetId: AssetId.ETH }),
+      mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
+      mockTx(1, { txType: TxType.ACCOUNT, txFeeAssetId: 0 }),
+      mockTx(2, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
+      mockTx(3, { txType: TxType.WITHDRAW_TO_CONTRACT, txFeeAssetId: 0 }),
+      mockTx(4, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
+      mockTx(5, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+      mockTx(6, { txType: TxType.WITHDRAW_TO_WALLET, txFeeAssetId: 0, excessGas: 2n * BASE_GAS }),
+      mockTx(7, { txType: TxType.DEPOSIT, txFeeAssetId: 0, excessGas: 3n * BASE_GAS }),
+      mockTx(8, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
       mockTx(9, {
         txType: TxType.DEFI_DEPOSIT,
         excessGas: 0n,
-        txFeeAssetId: AssetId.ETH,
+        txFeeAssetId: 0,
         bridgeId: bridgeConfigs[0].bridgeId,
       }),
       mockTx(10, {
         txType: TxType.DEFI_DEPOSIT,
         excessGas: 0n,
-        txFeeAssetId: AssetId.ETH,
+        txFeeAssetId: 0,
         bridgeId: bridgeConfigs[0].bridgeId,
       }),
       mockTx(11, {
         txType: TxType.DEFI_DEPOSIT,
         excessGas: 0n,
-        txFeeAssetId: AssetId.ETH,
+        txFeeAssetId: 0,
         bridgeId: bridgeConfigs[0].bridgeId,
       }),
       mockTx(12, {
         txType: TxType.DEFI_DEPOSIT,
         excessGas: 0n,
-        txFeeAssetId: AssetId.ETH,
+        txFeeAssetId: 0,
         bridgeId: bridgeConfigs[0].bridgeId,
       }),
       mockTx(13, {
         txType: TxType.DEFI_DEPOSIT,
         excessGas: 0n,
-        txFeeAssetId: AssetId.ETH,
+        txFeeAssetId: 0,
         bridgeId: bridgeConfigs[0].bridgeId,
       }),
       mockTx(14, {
         txType: TxType.DEFI_DEPOSIT,
         excessGas: 33000n,
-        txFeeAssetId: AssetId.ETH,
+        txFeeAssetId: 0,
         bridgeId: bridgeConfigs[0].bridgeId,
       }),
       mockTx(15, {
         txType: TxType.DEFI_DEPOSIT,
         excessGas: 0n,
-        txFeeAssetId: AssetId.ETH,
+        txFeeAssetId: 0,
         bridgeId: bridgeConfigs[1].bridgeId,
       }),
       mockTx(16, {
         txType: TxType.DEFI_DEPOSIT,
         excessGas: 25000n,
-        txFeeAssetId: AssetId.ETH,
+        txFeeAssetId: 0,
         bridgeId: bridgeConfigs[1].bridgeId,
       }),
     ];

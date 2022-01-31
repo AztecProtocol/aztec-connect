@@ -1,6 +1,5 @@
-import { Wallet } from 'ethers';
-import { TxHash, WalletSdk, WalletProvider, SchnorrSigner, AccountId, AssetId, EthAddress } from '@aztec/sdk';
-import { utils } from 'ethers';
+import { AccountId, AztecSdk, EthAddress, SchnorrSigner, TxHash, TxId, WalletProvider } from '@aztec/sdk';
+import { utils, Wallet } from 'ethers';
 
 export class Agent {
   private wallet: Wallet;
@@ -9,16 +8,16 @@ export class Agent {
   private aztecUserId!: AccountId;
   private step: number;
   private steps: string[];
-  private aztecTxHash?: TxHash;
+  private aztecTxId?: TxId;
   private ethTxHash?: TxHash;
 
   constructor(
-    private sdk: WalletSdk,
+    private sdk: AztecSdk,
     provider: WalletProvider,
     private id: number,
     private masterWallet: Wallet,
     numTransfers: number,
-    private assetId = AssetId.ETH,
+    private assetId = 0,
   ) {
     this.sdk = sdk;
     this.wallet = Wallet.createRandom();
@@ -56,10 +55,10 @@ export class Agent {
       }
     }
 
-    if (this.aztecTxHash) {
+    if (this.aztecTxId) {
       try {
-        await this.sdk.awaitSettlement(this.aztecTxHash, 1);
-        this.aztecTxHash = undefined;
+        await this.sdk.awaitSettlement(this.aztecTxId, 1);
+        this.aztecTxId = undefined;
         return true;
       } catch (err) {
         // Swallow.
@@ -71,7 +70,7 @@ export class Agent {
 
   private async fund() {
     const toFund = 1000n;
-    const balance = await this.sdk.getPublicBalance(AssetId.ETH, this.address);
+    const balance = await this.sdk.getPublicBalance(this.assetId, this.address);
 
     if (balance >= toFund) {
       return;
@@ -100,8 +99,8 @@ export class Agent {
     const controller = this.sdk.createDepositController(
       this.aztecUserId,
       this.signer,
-      { assetId: AssetId.ETH, value },
-      { assetId: AssetId.ETH, value: 0n },
+      { assetId: this.assetId, value },
+      { assetId: this.assetId, value: 0n },
       this.address,
     );
     await controller.createProof();
@@ -115,8 +114,8 @@ export class Agent {
     const controller = this.sdk.createTransferController(
       this.aztecUserId,
       this.signer,
-      { assetId: AssetId.ETH, value },
-      { assetId: AssetId.ETH, value: 0n },
+      { assetId: this.assetId, value },
+      { assetId: this.assetId, value: 0n },
       this.aztecUserId,
     );
     await controller.createProof();
@@ -130,8 +129,8 @@ export class Agent {
     const controller = this.sdk.createWithdrawController(
       this.aztecUserId!,
       this.signer,
-      { assetId: AssetId.ETH, value },
-      { assetId: AssetId.ETH, value: 0n },
+      { assetId: this.assetId, value },
+      { assetId: this.assetId, value: 0n },
       masterAddress,
     );
     await controller.createProof();

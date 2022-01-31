@@ -1,12 +1,10 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { AssetId } from '@aztec/barretenberg/asset';
-import { EthereumProvider, PermitArgs, SendTxOptions } from '@aztec/barretenberg/blockchain';
+import { EthereumProvider, PermitArgs, SendTxOptions, TxHash } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { sliceOffchainTxData } from '@aztec/barretenberg/offchain_tx_data';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { TransactionReceipt, TransactionResponse } from '@ethersproject/abstract-provider';
 import { Web3Provider } from '@ethersproject/providers';
 import { Contract, Event, utils } from 'ethers';
@@ -89,7 +87,7 @@ export class RollupProcessor {
     return bridgeAddresses.findIndex(a => a.equals(address)) + 1;
   }
 
-  async getSupportedAsset(assetId: AssetId) {
+  async getSupportedAsset(assetId: number) {
     return EthAddress.fromString(await this.rollupProcessor.getSupportedAsset(assetId));
   }
 
@@ -137,7 +135,7 @@ export class RollupProcessor {
     return TxHash.fromString(tx.hash);
   }
 
-  async getAssetPermitSupport(assetId: AssetId): Promise<boolean> {
+  async getAssetPermitSupport(assetId: number): Promise<boolean> {
     return this.rollupProcessor.getAssetPermitSupport(assetId);
   }
 
@@ -176,7 +174,7 @@ export class RollupProcessor {
   }
 
   async depositPendingFunds(
-    assetId: AssetId,
+    assetId: number,
     amount: bigint,
     proofHash: Buffer = Buffer.alloc(32),
     permitArgs?: PermitArgs,
@@ -224,7 +222,7 @@ export class RollupProcessor {
     return await this.rollupProcessor.depositProofApprovals(address.toString(), txId);
   }
 
-  async getUserPendingDeposit(assetId: AssetId, account: EthAddress) {
+  async getUserPendingDeposit(assetId: number, account: EthAddress) {
     return BigInt(await this.rollupProcessor.getUserPendingDeposit(assetId, account.toString()));
   }
 

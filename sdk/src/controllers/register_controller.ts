@@ -2,11 +2,12 @@ import { AccountId } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
+import { TxId } from '@aztec/barretenberg/tx_id';
 import { ClientEthereumBlockchain } from '@aztec/blockchain';
-import { CoreSdk } from '../../core_sdk/core_sdk';
-import { CorePaymentTx, createCorePaymentTxForRecipient } from '../../core_tx';
-import { ProofOutput } from '../../proofs';
-import { Signer } from '../../signer';
+import { CoreSdk } from '../core_sdk/core_sdk';
+import { CorePaymentTx, createCorePaymentTxForRecipient } from '../core_tx';
+import { ProofOutput } from '../proofs';
+import { Signer } from '../signer';
 import { createTxRefNo } from './create_tx_ref_no';
 import { DepositController } from './deposit_controller';
 
@@ -15,6 +16,7 @@ export class RegisterController {
   private readonly newUserId: AccountId;
   private depositController?: DepositController;
   private proofOutput!: ProofOutput;
+  private txIds!: TxId[];
 
   constructor(
     public readonly userId: AccountId,
@@ -129,14 +131,17 @@ export class RegisterController {
 
   async send() {
     if (!this.depositController) {
-      const txHashes = await this.core.sendProofs([this.proofOutput]);
-      return txHashes[0];
+      this.txIds = await this.core.sendProofs([this.proofOutput]);
+    } else {
+      const [{ tx, ...proofOutputData }] = this.depositController.getProofs();
+      const recipientTx = createCorePaymentTxForRecipient(tx as CorePaymentTx, this.newUserId);
+      const feeProofOutput = { tx: recipientTx, ...proofOutputData };
+      this.txIds = await this.core.sendProofs([this.proofOutput, feeProofOutput]);
     }
+    return this.txIds[0];
+  }
 
-    const [{ tx, ...proofOutputData }] = this.depositController.getProofs();
-    const recipientTx = createCorePaymentTxForRecipient(tx as CorePaymentTx, this.newUserId);
-    const feeProofOutput = { tx: recipientTx, ...proofOutputData };
-    const txHashes = await this.core.sendProofs([this.proofOutput, feeProofOutput]);
-    return txHashes[0];
+  async awaitSettlement(timeout?: number) {
+    await Promise.all(this.txIds.map(txId => this.core.awaitSettlement(txId, timeout)));
   }
 }

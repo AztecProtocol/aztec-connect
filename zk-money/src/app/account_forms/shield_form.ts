@@ -1,5 +1,13 @@
-import { AccountId, AssetId, EthAddress, GrumpkinAddress, TxSettlementTime, TxType, WalletSdk } from '@aztec/sdk';
-import { DepositController, RegisterController } from '@aztec/sdk/wallet_sdk/controllers';
+import {
+  AccountId,
+  AztecSdk,
+  DepositController,
+  EthAddress,
+  GrumpkinAddress,
+  RegisterController,
+  TxSettlementTime,
+  TxType,
+} from '@aztec/sdk';
 import { Web3Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
@@ -174,7 +182,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     private provider: Provider | undefined,
     private ethAccount: EthAccount,
     private readonly keyVault: KeyVault,
-    private readonly sdk: WalletSdk,
+    private readonly sdk: AztecSdk,
     private readonly coreProvider: Provider,
     private readonly rollup: RollupService,
     private readonly accountUtils: AccountUtils,
@@ -214,7 +222,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
   }
 
   private get requireGas() {
-    return this.asset.id === AssetId.ETH;
+    return this.asset.id === 0;
   }
 
   getValues() {
@@ -675,7 +683,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     const asset = this.asset;
     const { permitSupport } = this.sdk.getAssetInfo(asset.id);
     if (!permitSupport) {
-      const allowance = asset.id !== AssetId.ETH ? await controller.getPublicAllowance() : requiredFunds;
+      const allowance = asset.id !== 0 ? await controller.getPublicAllowance() : requiredFunds;
       if (allowance < requiredFunds) {
         try {
           await this.ensureNetworkAndAccount();

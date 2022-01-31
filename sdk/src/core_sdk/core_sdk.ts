@@ -1,6 +1,5 @@
 import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
-import { AssetId } from '@aztec/barretenberg/asset';
 import { Block } from '@aztec/barretenberg/block_source';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { AccountProver, JoinSplitProver, PooledProverFactory, ProofId } from '@aztec/barretenberg/client_proofs';
@@ -13,7 +12,7 @@ import { NoteAlgorithms, TreeNote } from '@aztec/barretenberg/note_algorithms';
 import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupProvider } from '@aztec/barretenberg/rollup_provider';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { TxId } from '@aztec/barretenberg/tx_id';
 import { BarretenbergWasm, WorkerPool } from '@aztec/barretenberg/wasm';
 import { WorldState } from '@aztec/barretenberg/world_state';
 import createDebug from 'debug';
@@ -22,9 +21,9 @@ import { EventEmitter } from 'events';
 import Mutex from 'idb-mutex';
 import { LevelUp } from 'levelup';
 import os from 'os';
+import { SdkEvent, SdkInitState, SdkStatus } from '../aztec_sdk';
 import { Alias, Database, SigningKey } from '../database';
 import { AccountProofCreator, DefiDepositProofCreator, PaymentProofCreator, ProofOutput } from '../proofs';
-import { SdkEvent, SdkInitState, SdkStatus } from '../sdk';
 import { SchnorrSigner, Signer } from '../signer';
 import { UserData, UserDataFactory } from '../user';
 import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
@@ -244,7 +243,7 @@ export class CoreSdk extends EventEmitter {
 
     userState.on(
       UserStateEvent.UPDATED_USER_STATE,
-      (id: Buffer, balanceAfter: bigint, diff: bigint, assetId: AssetId) => {
+      (id: Buffer, balanceAfter: bigint, diff: bigint, assetId: number) => {
         this.emit(CoreSdkEvent.UPDATED_USER_STATE, id, balanceAfter, diff, assetId);
         this.emit(SdkEvent.UPDATED_USER_STATE, id, balanceAfter, diff, assetId);
       },
@@ -333,7 +332,7 @@ export class CoreSdk extends EventEmitter {
     return await this.rollupProvider.getStatus();
   }
 
-  public async getTxFees(assetId: AssetId) {
+  public async getTxFees(assetId: number) {
     return this.rollupProvider.getTxFees(assetId);
   }
 
@@ -628,7 +627,7 @@ export class CoreSdk extends EventEmitter {
    * Call the user state init function to refresh users internal state.
    * Emit an SdkEvent to update the UI.
    */
-  public async notifyUserStateUpdated(userId: AccountId, balanceAfter?: bigint, diff?: bigint, assetId?: AssetId) {
+  public async notifyUserStateUpdated(userId: AccountId, balanceAfter?: bigint, diff?: bigint, assetId?: number) {
     await this.getUserState(userId)?.init();
     this.emit(SdkEvent.UPDATED_USER_STATE, userId, balanceAfter, diff, assetId);
   }
@@ -682,7 +681,7 @@ export class CoreSdk extends EventEmitter {
   public async createPaymentProof(
     userId: AccountId,
     signer: Signer,
-    assetId: AssetId,
+    assetId: number,
     publicInput: bigint,
     publicOutput: bigint,
     privateInput: bigint,
@@ -841,14 +840,33 @@ export class CoreSdk extends EventEmitter {
     await this.getUserState(userId).awaitSynchronised();
   }
 
-  public async awaitSettlement(txHash: TxHash, timeout = 300) {
+  public async awaitSettlement(txId: TxId, timeout = 300) {
     const started = new Date().getTime();
     while (true) {
       if (timeout && new Date().getTime() - started > timeout * 1000) {
-        throw new Error(`Timeout awaiting tx settlement: ${txHash}`);
+        throw new Error(`Timeout awaiting tx settlement: ${txId}`);
       }
 
-      if (await this.db.isUserTxSettled(txHash)) {
+      if (await this.db.isUserTxSettled(txId)) {
+        break;
+      }
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+
+  public async awaitDefiInteraction(txId: TxId, timeout = 300) {
+    const started = new Date().getTime();
+    while (true) {
+      if (timeout && new Date().getTime() - started > timeout * 1000) {
+        throw new Error(`Timeout awaiting defi interaction: ${txId}`);
+      }
+
+      const tx = await this.db.getDefiTx(txId);
+      if (!tx) {
+        throw new Error('Unknown txId.');
+      }
+
+      if (tx.result !== undefined) {
         break;
       }
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -931,22 +949,26 @@ export class CoreSdk extends EventEmitter {
     return keys.map(k => k.key);
   }
 
-  public getBalance(assetId: AssetId, userId: AccountId) {
+  public getBalances(userId: AccountId) {
+    return this.getUserState(userId).getBalances();
+  }
+
+  public getBalance(assetId: number, userId: AccountId) {
     const userState = this.getUserState(userId);
     return userState.getBalance(assetId);
   }
 
-  public async getMaxSpendableValue(assetId: AssetId, userId: AccountId) {
+  public async getMaxSpendableValue(assetId: number, userId: AccountId) {
     const userState = this.getUserState(userId);
     return userState.getMaxSpendableValue(assetId);
   }
 
-  public async getSpendableNotes(assetId: AssetId, userId: AccountId) {
+  public async getSpendableNotes(assetId: number, userId: AccountId) {
     const userState = this.getUserState(userId);
     return userState.getSpendableNotes(assetId);
   }
 
-  public async getSpendableSum(assetId: AssetId, userId: AccountId) {
+  public async getSpendableSum(assetId: number, userId: AccountId) {
     const userState = this.getUserState(userId);
     return userState.getSpendableSum(assetId);
   }
@@ -955,7 +977,7 @@ export class CoreSdk extends EventEmitter {
     return this.db.getUserNotes(userId);
   }
 
-  public async pickNotes(userId: AccountId, assetId: AssetId, value: bigint) {
+  public async pickNotes(userId: AccountId, assetId: number, value: bigint) {
     return this.getUserState(userId).pickNotes(assetId, value);
   }
 

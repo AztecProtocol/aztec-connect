@@ -1,6 +1,7 @@
 import { AccountAliasId, AccountId, AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
+import { TxHash } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
@@ -22,7 +23,7 @@ import {
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupProvider } from '@aztec/barretenberg/rollup_provider';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { TxId } from '@aztec/barretenberg/tx_id';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { randomBytes } from 'crypto';
 import { CoreDefiTx, CorePaymentTx, PaymentProofId } from '../core_tx';
@@ -182,7 +183,7 @@ describe('user state', () => {
     );
     const offchainTxData = new OffchainJoinSplitData(viewingKeys, txRefNo);
     const tx = new CorePaymentTx(
-      new TxHash(proofData.txId),
+      new TxId(proofData.txId),
       proofSender.id,
       proofId,
       assetId,
@@ -280,7 +281,7 @@ describe('user state', () => {
       txRefNo,
     );
     const tx = new CoreDefiTx(
-      new TxHash(proofData.txId),
+      new TxId(proofData.txId),
       proofSender.id,
       bridgeId,
       depositValue,
@@ -381,7 +382,7 @@ describe('user state', () => {
     expect(db.nullifyNote).toHaveBeenCalledWith(jsProof.proofData.nullifier1);
     expect(db.nullifyNote).toHaveBeenCalledWith(jsProof.proofData.nullifier2);
     expect(db.settlePaymentTx).toHaveBeenCalledTimes(1);
-    expect(db.settlePaymentTx).toHaveBeenCalledWith(new TxHash(jsProof.proofData.txId), user.id, block.created);
+    expect(db.settlePaymentTx).toHaveBeenCalledWith(new TxId(jsProof.proofData.txId), user.id, block.created);
     expect(db.addPaymentTx).toHaveBeenCalledTimes(0);
     expect(db.updateUser).toHaveBeenLastCalledWith({
       ...user,
@@ -435,7 +436,7 @@ describe('user state', () => {
     });
     expect(db.addPaymentTx).toHaveBeenCalledTimes(0);
     expect(db.settlePaymentTx).toHaveBeenCalledTimes(1);
-    expect(db.settlePaymentTx).toHaveBeenCalledWith(new TxHash(jsProof.proofData.txId), user.id, block.created);
+    expect(db.settlePaymentTx).toHaveBeenCalledWith(new TxId(jsProof.proofData.txId), user.id, block.created);
   });
 
   it('should correctly process multiple blocks', async () => {
@@ -464,8 +465,8 @@ describe('user state', () => {
     expect(db.nullifyNote).toHaveBeenCalledWith(jsProof2.proofData.nullifier1);
     expect(db.nullifyNote).toHaveBeenCalledWith(jsProof2.proofData.nullifier1);
     expect(db.settlePaymentTx).toHaveBeenCalledTimes(2);
-    expect(db.settlePaymentTx).toHaveBeenCalledWith(new TxHash(jsProof1.proofData.txId), user.id, block1.created);
-    expect(db.settlePaymentTx).toHaveBeenCalledWith(new TxHash(jsProof2.proofData.txId), user.id, block2.created);
+    expect(db.settlePaymentTx).toHaveBeenCalledWith(new TxId(jsProof1.proofData.txId), user.id, block1.created);
+    expect(db.settlePaymentTx).toHaveBeenCalledWith(new TxId(jsProof2.proofData.txId), user.id, block2.created);
     expect(db.addPaymentTx).toHaveBeenCalledTimes(0);
     expect(db.updateUser).toHaveBeenCalledTimes(1);
     expect(db.updateUser).toHaveBeenLastCalledWith({
@@ -559,7 +560,7 @@ describe('user state', () => {
     userState.processBlock(block);
     await userState.stopSync(true);
 
-    const txHash = new TxHash(jsProof.proofData.txId);
+    const txId = new TxId(jsProof.proofData.txId);
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
       commitment: jsProof.proofData.noteCommitment2,
@@ -571,7 +572,7 @@ describe('user state', () => {
     expect(db.settlePaymentTx).toHaveBeenCalledTimes(0);
     expect(db.addPaymentTx).toHaveBeenCalledTimes(1);
     expect(db.addPaymentTx.mock.calls[0][0]).toMatchObject({
-      txHash,
+      txId,
       userId: user.id,
       assetId,
       publicValue,
@@ -616,7 +617,7 @@ describe('user state', () => {
     userState.processBlock(block);
     await userState.stopSync(true);
 
-    const txHash = new TxHash(jsProof.proofData.txId);
+    const txId = new TxId(jsProof.proofData.txId);
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
       commitment: jsProof.proofData.noteCommitment2,
@@ -628,7 +629,7 @@ describe('user state', () => {
     expect(db.settlePaymentTx).toHaveBeenCalledTimes(0);
     expect(db.addPaymentTx).toHaveBeenCalledTimes(1);
     expect(db.addPaymentTx.mock.calls[0][0]).toMatchObject({
-      txHash,
+      txId,
       userId: user.id,
       assetId,
       publicValue,
@@ -756,7 +757,7 @@ describe('user state', () => {
     userState.processBlock(block);
     await userState.stopSync(true);
 
-    const txHash = new TxHash(accountProof.proofData.txId);
+    const txId = new TxId(accountProof.proofData.txId);
     const accountId = new AccountId(user.publicKey, user.nonce);
 
     expect(db.addUserSigningKey).toHaveBeenCalledTimes(2);
@@ -771,7 +772,7 @@ describe('user state', () => {
       treeIndex: 1,
     });
     expect(db.settleAccountTx).toHaveBeenCalledTimes(1);
-    expect(db.settleAccountTx).toHaveBeenCalledWith(txHash, block.created);
+    expect(db.settleAccountTx).toHaveBeenCalledWith(txId, block.created);
     expect(db.addAccountTx).toHaveBeenCalledTimes(0);
   });
 
@@ -824,7 +825,7 @@ describe('user state', () => {
       newUserState.processBlock(block);
       await newUserState.stopSync(true);
 
-      const txHash = new TxHash(accountProof.proofData.txId);
+      const txId = new TxId(accountProof.proofData.txId);
 
       expect(newUserState.getUser().aliasHash).toEqual(aliasHash);
       expect(db.updateUser).toHaveBeenLastCalledWith({
@@ -845,7 +846,7 @@ describe('user state', () => {
       expect(db.settleAccountTx).toHaveBeenCalledTimes(0);
       expect(db.addAccountTx).toHaveBeenCalledTimes(1);
       expect(db.addAccountTx.mock.calls[0][0]).toMatchObject({
-        txHash,
+        txId,
         userId: newUser.id,
         aliasHash,
         newSigningPubKey1: newSigningPubKey1.x(),
@@ -873,7 +874,7 @@ describe('user state', () => {
       new DefiInteractionNote(BridgeId.random(), 1, 12n, 34n, 56n, result),
     ];
     const block = createRollupBlock([defiProof], { interactionResult });
-    const txHash = new TxHash(defiProof.proofData.txId);
+    const txId = new TxId(defiProof.proofData.txId);
 
     db.getDefiTx.mockResolvedValue({ settled: undefined });
 
@@ -885,7 +886,7 @@ describe('user state', () => {
 
     expect(db.addClaimTx).toHaveBeenCalledTimes(1);
     expect(db.addClaimTx.mock.calls[0][0]).toMatchObject({
-      txHash,
+      txId,
       secret: partialStateSecret,
       userId: user.id,
     });
@@ -898,7 +899,7 @@ describe('user state', () => {
     expect(db.nullifyNote).toHaveBeenCalledWith(defiProof.proofData.nullifier1);
     expect(db.nullifyNote).toHaveBeenCalledWith(defiProof.proofData.nullifier2);
     expect(db.updateDefiTx).toHaveBeenCalledTimes(1);
-    expect(db.updateDefiTx).toHaveBeenCalledWith(txHash, outputValueA, outputValueB, result);
+    expect(db.updateDefiTx).toHaveBeenCalledWith(txId, outputValueA, outputValueB, result);
     expect(db.addDefiTx).toHaveBeenCalledTimes(0);
     expect(db.settleDefiTx).toHaveBeenCalledTimes(0);
   });
@@ -934,9 +935,9 @@ describe('user state', () => {
     userState.processBlock(block);
     await userState.stopSync(true);
 
-    const txHash = new TxHash(defiProof.proofData.txId);
+    const txId = new TxId(defiProof.proofData.txId);
     expect(db.addClaimTx.mock.calls[0][0]).toMatchObject({
-      txHash,
+      txId,
       userId: user.id,
     });
     expect(db.addNote).toHaveBeenCalledTimes(1);
@@ -951,7 +952,7 @@ describe('user state', () => {
     expect(db.addDefiTx).toHaveBeenCalledTimes(1);
     expect(db.addDefiTx).toHaveBeenCalledWith(
       expect.objectContaining({
-        txHash,
+        txId,
         userId: user.id,
         bridgeId,
         depositValue,
@@ -969,13 +970,13 @@ describe('user state', () => {
     const depositValue = 12n;
     const outputValueA = 34n;
     const outputValueB = 56n;
-    const txHash = TxHash.random();
+    const txId = TxId.random();
     const secret = randomBytes(32);
     const nullifier1 = randomBytes(32);
     const nullifier2 = randomBytes(32);
     const result = true;
 
-    db.getClaimTx.mockImplementation(() => ({ txHash, userId: user.id, secret }));
+    db.getClaimTx.mockImplementation(() => ({ txId, userId: user.id, secret }));
     db.getDefiTx.mockImplementation(() => ({ bridgeId, depositValue, outputValueA, outputValueB, result }));
 
     const claimProof = generateDefiClaimProof({ bridgeId, outputValueA, outputValueB, nullifier1, nullifier2 });
@@ -996,7 +997,7 @@ describe('user state', () => {
       secret,
     });
     expect(db.settleDefiTx).toHaveBeenCalledTimes(1);
-    expect(db.settleDefiTx).toHaveBeenCalledWith(txHash, block.created);
+    expect(db.settleDefiTx).toHaveBeenCalledWith(txId, block.created);
   });
 
   it('settle a defi tx and add refund note', async () => {
@@ -1004,13 +1005,13 @@ describe('user state', () => {
     const depositValue = 12n;
     const outputValueA = 0n;
     const outputValueB = 0n;
-    const txHash = TxHash.random();
+    const txId = TxId.random();
     const secret = randomBytes(32);
     const nullifier1 = randomBytes(32);
     const nullifier2 = randomBytes(32);
     const result = false;
 
-    db.getClaimTx.mockImplementation(() => ({ txHash, userId: user.id, secret }));
+    db.getClaimTx.mockImplementation(() => ({ txId, userId: user.id, secret }));
     db.getDefiTx.mockImplementation(() => ({ bridgeId, depositValue, outputValueA, outputValueB, result }));
 
     const claimProof = generateDefiClaimProof({ bridgeId, outputValueA, outputValueB, nullifier1, nullifier2 });
@@ -1026,7 +1027,7 @@ describe('user state', () => {
       secret,
     });
     expect(db.settleDefiTx).toHaveBeenCalledTimes(1);
-    expect(db.settleDefiTx).toHaveBeenCalledWith(txHash, block.created);
+    expect(db.settleDefiTx).toHaveBeenCalledWith(txId, block.created);
   });
 
   it('ignore a defi claim proof for account with a different nonce', async () => {
@@ -1034,13 +1035,13 @@ describe('user state', () => {
     const depositValue = 12n;
     const outputValueA = 34n;
     const outputValueB = 56n;
-    const txHash = TxHash.random();
+    const txId = TxId.random();
     const secret = randomBytes(32);
     const nullifier1 = randomBytes(32);
     const nullifier2 = randomBytes(32);
 
     db.getClaimTx.mockImplementation(() => ({
-      txHash,
+      txId,
       userId: new AccountId(user.id.publicKey, user.id.nonce + 1),
       secret,
     }));
@@ -1076,16 +1077,16 @@ describe('user state', () => {
   });
 
   it('remove orphaned txs and notes', async () => {
-    const unsettledUserTxs = [...Array(4)].map(() => TxHash.random());
+    const unsettledUserTxs = [...Array(4)].map(() => TxId.random());
     db.getUnsettledUserTxs.mockResolvedValue(unsettledUserTxs);
 
     const pendingNotes = [...Array(6)].map(() => ({ commitment: randomBytes(32), nullifier: randomBytes(32) }));
     db.getUserPendingNotes.mockResolvedValue(pendingNotes);
 
     const pendingTxs = [
-      { txId: TxHash.random(), noteCommitment1: pendingNotes[1].commitment, noteCommitment2: randomBytes(32) },
+      { txId: TxId.random(), noteCommitment1: pendingNotes[1].commitment, noteCommitment2: randomBytes(32) },
       { txId: unsettledUserTxs[1], noteCommitment1: randomBytes(32), noteCommitment2: pendingNotes[2].commitment },
-      { txId: TxHash.random(), noteCommitment1: randomBytes(32), noteCommitment2: randomBytes(32) },
+      { txId: TxId.random(), noteCommitment1: randomBytes(32), noteCommitment2: randomBytes(32) },
       {
         txId: unsettledUserTxs[3],
         noteCommitment1: pendingNotes[4].commitment,

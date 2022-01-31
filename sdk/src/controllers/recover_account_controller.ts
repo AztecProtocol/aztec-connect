@@ -1,7 +1,7 @@
 import { AssetValue } from '@aztec/barretenberg/asset';
-import { CoreSdk } from '../../core_sdk/core_sdk';
-import { RecoverSignatureSigner } from '../../signer';
-import { RecoveryPayload } from '../../user';
+import { CoreSdk } from '../core_sdk/core_sdk';
+import { RecoverSignatureSigner } from '../signer';
+import { RecoveryPayload } from '../user';
 import { AddSigningKeyController } from './add_signing_key_controller';
 
 export class RecoverAccountController {
@@ -30,5 +30,9 @@ export class RecoverAccountController {
 
   async send() {
     return this.addSigningKeyController.send();
+  }
+
+  async awaitSettlement(timeout?: number) {
+    await this.addSigningKeyController.awaitSettlement(timeout);
   }
 }

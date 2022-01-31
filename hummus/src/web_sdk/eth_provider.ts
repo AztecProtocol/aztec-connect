@@ -1,8 +1,7 @@
-import { EventEmitter } from 'events';
-import createDebug from 'debug';
-import { EthAddress } from '@aztec/barretenberg/address';
-import { EthereumProvider } from '@aztec/barretenberg/blockchain';
+import { EthAddress, EthereumProvider } from '@aztec/sdk';
 import { Web3Provider } from '@ethersproject/providers';
+import createDebug from 'debug';
+import { EventEmitter } from 'events';
 
 const debug = createDebug('bb:eth_provider');
 
@@ -26,7 +25,8 @@ export const networks: Network[] = [
 ];
 
 export const chainIdToNetwork = (chainId: number) => {
-  return networks.find(network => network.chainId === chainId)?.network || 'unknown';
+  const network = networks.find(network => network.chainId === chainId);
+  return network ? network.network : 'unknown';
 };
 
 export class EthProvider extends EventEmitter {

@@ -1,9 +1,8 @@
 import { AccountId } from '@aztec/barretenberg/account_id';
-import { AssetId } from '@aztec/barretenberg/asset';
-import { WalletSdk } from '.';
+import { AztecSdk } from '.';
 
-export class WalletSdkUser {
-  constructor(public id: AccountId, private sdk: WalletSdk) {}
+export class AztecSdkUser {
+  constructor(public id: AccountId, private sdk: AztecSdk) {}
 
   isSynching() {
     return this.sdk.isUserSynching(this.id);
@@ -21,19 +20,19 @@ export class WalletSdkUser {
     return this.sdk.getUserData(this.id);
   }
 
-  public getBalance(assetId: AssetId) {
+  public getBalance(assetId: number) {
     return this.sdk.getBalance(assetId, this.id);
   }
 
-  public async getMaxSpendableValue(assetId: AssetId) {
+  public async getMaxSpendableValue(assetId: number) {
     return this.sdk.getMaxSpendableValue(assetId, this.id);
   }
 
-  public async getSpendableNotes(assetId: AssetId) {
+  public async getSpendableNotes(assetId: number) {
     return this.sdk.getSpendableNotes(assetId, this.id);
   }
 
-  public async getSpendableSum(assetId: AssetId) {
+  public async getSpendableSum(assetId: number) {
     return this.sdk.getSpendableSum(assetId, this.id);
   }
 

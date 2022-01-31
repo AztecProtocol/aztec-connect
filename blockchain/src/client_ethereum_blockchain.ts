@@ -1,8 +1,6 @@
-import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from '@aztec/barretenberg/address';
-import { AssetId } from '@aztec/barretenberg/asset';
-import { EthereumProvider, Asset, BlockchainAsset, PermitArgs } from '@aztec/barretenberg/blockchain';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { Asset, BlockchainAsset, EthereumProvider, PermitArgs, TxHash } from '@aztec/barretenberg/blockchain';
+import { Web3Provider } from '@ethersproject/providers';
 import { EthAsset, TokenAsset } from './contracts/asset';
 import { RollupProcessor } from './contracts/rollup_processor';
 
@@ -26,11 +24,11 @@ export class ClientEthereumBlockchain {
     );
   }
 
-  public getAsset(assetId: AssetId) {
+  public getAsset(assetId: number) {
     return this.assets[assetId];
   }
 
-  public async getUserPendingDeposit(assetId: AssetId, account: EthAddress) {
+  public async getUserPendingDeposit(assetId: number, account: EthAddress) {
     return this.rollupProcessor.getUserPendingDeposit(assetId, account);
   }
 
@@ -39,7 +37,7 @@ export class ClientEthereumBlockchain {
   }
 
   public async depositPendingFunds(
-    assetId: AssetId,
+    assetId: number,
     amount: bigint,
     from: EthAddress,
     proofHash?: Buffer,

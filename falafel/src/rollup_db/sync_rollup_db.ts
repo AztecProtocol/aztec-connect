@@ -1,7 +1,7 @@
 import { AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
+import { TxHash } from '@aztec/barretenberg/blockchain';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { Mutex } from 'async-mutex';
 import { AccountDao } from '../entity/account';
 import { AssetMetricsDao } from '../entity/asset_metrics';

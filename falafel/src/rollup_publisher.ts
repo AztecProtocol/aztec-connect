@@ -1,6 +1,5 @@
-import { Blockchain } from '@aztec/barretenberg/blockchain';
+import { Blockchain, TxHash } from '@aztec/barretenberg/blockchain';
 import { JoinSplitProofData } from '@aztec/barretenberg/client_proofs';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
 import { RollupDao } from './entity/rollup';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';

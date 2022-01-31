@@ -1,6 +1,6 @@
 import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { TxId } from '@aztec/barretenberg/tx_id';
 import { CoreAccountTx, CoreClaimTx, CoreDefiTx, CorePaymentTx, CoreUserTx } from '../core_tx';
 import { Note } from '../note';
 import { UserData } from '../user';
@@ -38,28 +38,28 @@ export interface Database {
   resetUsers(): Promise<void>;
 
   addPaymentTx(tx: CorePaymentTx): Promise<void>;
-  getPaymentTx(txHash: TxHash, userId: AccountId): Promise<CorePaymentTx | undefined>;
+  getPaymentTx(txId: TxId, userId: AccountId): Promise<CorePaymentTx | undefined>;
   getPaymentTxs(userId): Promise<CorePaymentTx[]>;
-  settlePaymentTx(txHash: TxHash, userId: AccountId, settled: Date): Promise<void>;
+  settlePaymentTx(txId: TxId, userId: AccountId, settled: Date): Promise<void>;
 
   addAccountTx(tx: CoreAccountTx): Promise<void>;
-  getAccountTx(txHash: TxHash): Promise<CoreAccountTx | undefined>;
+  getAccountTx(txId: TxId): Promise<CoreAccountTx | undefined>;
   getAccountTxs(userId): Promise<CoreAccountTx[]>;
-  settleAccountTx(txHash: TxHash, settled: Date): Promise<void>;
+  settleAccountTx(txId: TxId, settled: Date): Promise<void>;
 
   addDefiTx(tx: CoreDefiTx): Promise<void>;
-  getDefiTx(txHash: TxHash): Promise<CoreDefiTx | undefined>;
+  getDefiTx(txId: TxId): Promise<CoreDefiTx | undefined>;
   getDefiTxs(userId): Promise<CoreDefiTx[]>;
-  updateDefiTx(txHash: TxHash, outputValueA: bigint, outputValueB: bigint, result: boolean): Promise<void>;
-  settleDefiTx(txHash: TxHash, settled: Date): Promise<void>;
+  updateDefiTx(txId: TxId, outputValueA: bigint, outputValueB: bigint, result: boolean): Promise<void>;
+  settleDefiTx(txId: TxId, settled: Date): Promise<void>;
 
   addClaimTx(tx: CoreClaimTx): Promise<void>;
   getClaimTx(nullifier: Buffer): Promise<CoreClaimTx | undefined>;
 
   getUserTxs(userId: AccountId): Promise<CoreUserTx[]>;
-  isUserTxSettled(txHash: TxHash): Promise<boolean>;
-  getUnsettledUserTxs(userId: AccountId): Promise<TxHash[]>;
-  removeUserTx(txHash: TxHash, userId: AccountId): Promise<void>;
+  isUserTxSettled(txId: TxId): Promise<boolean>;
+  getUnsettledUserTxs(userId: AccountId): Promise<TxId[]>;
+  removeUserTx(txId: TxId, userId: AccountId): Promise<void>;
 
   addUserSigningKey(signingKey: SigningKey): Promise<void>;
   addUserSigningKeys(signingKeys: SigningKey[]): Promise<void>;

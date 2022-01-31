@@ -1,5 +1,5 @@
 import { DefiInteractionNote } from '../note_algorithms';
-import { TxHash } from '../tx_hash';
+import { TxHash } from '../blockchain';
 
 export interface Block {
   txHash: TxHash;

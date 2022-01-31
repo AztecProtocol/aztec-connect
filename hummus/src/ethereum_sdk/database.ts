@@ -1,6 +1,10 @@
-import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
+import { EthAddress, GrumpkinAddress } from '@aztec/sdk';
 import Dexie from 'dexie';
-import { Database, DbAccount } from './database';
+
+interface DbAccount {
+  ethAddress: EthAddress;
+  accountPublicKey: GrumpkinAddress;
+}
 
 class DexieAccount {
   constructor(public ethAddress: Uint8Array, public accountPublicKey: Uint8Array) {}
@@ -11,7 +15,7 @@ const dexieAccountToDbAccount = ({ ethAddress, accountPublicKey }: DexieAccount)
   accountPublicKey: new GrumpkinAddress(Buffer.from(accountPublicKey)),
 });
 
-export class DexieDatabase implements Database {
+export class Database {
   private db!: Dexie;
   private user!: Dexie.Table<DexieAccount, Uint8Array>;
 

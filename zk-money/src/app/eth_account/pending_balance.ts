@@ -1,10 +1,10 @@
-import { AssetId, EthAddress } from '@aztec/sdk';
+import { EthAddress } from '@aztec/sdk';
 import { AccountUtils } from '../account_utils';
 import { ValueSubscriber } from './value_subscriber';
 
 export class PendingBalance extends ValueSubscriber {
   constructor(
-    private assetId: AssetId,
+    private assetId: number,
     private address: EthAddress | undefined,
     private accountUtils: AccountUtils,
     interval: number,

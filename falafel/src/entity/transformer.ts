@@ -1,5 +1,5 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { TxHash } from '@aztec/barretenberg/blockchain';
 import { ValueTransformer } from 'typeorm';
 
 export const bigintTransformer: ValueTransformer = {

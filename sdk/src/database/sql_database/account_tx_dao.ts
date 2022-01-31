@@ -1,12 +1,12 @@
 import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
-import { TxHash } from '@aztec/barretenberg/tx_hash';
+import { TxId } from '@aztec/barretenberg/tx_id';
 import { AfterInsert, AfterLoad, AfterUpdate, Column, Entity, Index, PrimaryColumn } from 'typeorm';
-import { accountIdTransformer, aliasHashTransformer, txHashTransformer } from './transformer';
+import { accountIdTransformer, aliasHashTransformer, txIdTransformer } from './transformer';
 
 @Entity({ name: 'accountTx' })
 export class AccountTxDao {
-  @PrimaryColumn('blob', { transformer: [txHashTransformer] })
-  public txHash!: TxHash;
+  @PrimaryColumn('blob', { transformer: [txIdTransformer] })
+  public txId!: TxId;
 
   @Index({ unique: false })
   @Column('blob', { transformer: [accountIdTransformer] })

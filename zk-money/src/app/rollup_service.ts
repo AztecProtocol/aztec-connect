@@ -1,4 +1,4 @@
-import { AssetId, AssetValue, BlockchainAsset, EthAddress, TxSettlementTime, TxType, WalletSdk } from '@aztec/sdk';
+import { AssetValue, AztecSdk, BlockchainAsset, EthAddress, TxSettlementTime, TxType } from '@aztec/sdk';
 import { Web3Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
 import { Contract } from 'ethers';
@@ -69,7 +69,7 @@ export class RollupService extends EventEmitter {
 
   private statusSubscriber?: number;
 
-  constructor(private sdk: WalletSdk, private readonly pollInterval = 60 * 1000) {
+  constructor(private sdk: AztecSdk, private readonly pollInterval = 60 * 1000) {
     super();
   }
 
@@ -102,7 +102,7 @@ export class RollupService extends EventEmitter {
     this.subscribeToStatus();
   }
 
-  getTxFees(assetId: AssetId, txType: TxType): TxFee[] {
+  getTxFees(assetId: number, txType: TxType): TxFee[] {
     const fees = this.status.txFees[assetId][txType];
     return fees.map(({ value }, i) => ({
       speed: speeds[i],
@@ -111,17 +111,17 @@ export class RollupService extends EventEmitter {
     }));
   }
 
-  getFee(assetId: AssetId, txType: TxType, speed: TxSettlementTime) {
+  getFee(assetId: number, txType: TxType, speed: TxSettlementTime) {
     return this.status.txFees[assetId][txType][speed].value;
   }
 
-  async getDepositGas(assetId: AssetId, amount: bigint, provider: Provider) {
+  async getDepositGas(assetId: number, amount: bigint, provider: Provider) {
     const web3Provider = new Web3Provider(provider.ethereumProvider);
     const rollupProcessor = new Contract(this.rollupContractAddress.toString(), RollupABI, web3Provider.getSigner());
     const ethAddress = provider.account!;
     try {
       const gas = await rollupProcessor.estimateGas.depositPendingFunds(assetId, amount, ethAddress.toString(), {
-        value: assetId === AssetId.ETH ? amount : 0n,
+        value: assetId === 0 ? amount : 0n,
       });
       return BigInt(gas.toString());
     } catch (e) {

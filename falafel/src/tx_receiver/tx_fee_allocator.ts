@@ -1,19 +1,14 @@
-import { TxFeeResolver } from "../tx_fee_resolver";
-import { AssetId } from "@aztec/barretenberg/asset";
+import { TxFeeResolver } from '../tx_fee_resolver';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { Tx, TxGroupValidation } from '.';
-import {
-  DefiDepositProofData
-} from '@aztec/barretenberg/client_proofs';
+import { DefiDepositProofData } from '@aztec/barretenberg/client_proofs';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxDao } from '../entity/tx';
 
-
 export class TxFeeAllocator {
-  constructor(private txFeeResolver: TxFeeResolver) {
-  }
+  constructor(private txFeeResolver: TxFeeResolver) {}
 
-  private assetIsFeePaying(asset: AssetId) {
+  private assetIsFeePaying(asset: number) {
     return this.txFeeResolver.isFeePayingAsset(asset);
   }
 
@@ -25,7 +20,7 @@ export class TxFeeAllocator {
       gasRequired: 0n,
     } as TxGroupValidation;
 
-    const feePayingAssets = new Set<AssetId>();
+    const feePayingAssets = new Set<number>();
 
     // determine the fee paying asset type for this block of txs
     for (let i = 0; i < txs.length; i++) {

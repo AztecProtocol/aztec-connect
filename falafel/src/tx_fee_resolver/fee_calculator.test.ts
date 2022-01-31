@@ -1,4 +1,3 @@
-import { AssetId } from '@aztec/barretenberg/asset';
 import { BlockchainAsset, TxType } from '@aztec/barretenberg/blockchain';
 import { FeeCalculator } from './fee_calculator';
 import { mockTx } from './fixtures';
@@ -32,7 +31,7 @@ describe('fee calculator', () => {
   const txsPerRollup = 10;
   const publishInterval = 3600;
   const surplusRatios = [1, 0.9, 0.5, 0];
-  const freeAssets: AssetId[] = [];
+  const freeAssets: number[] = [];
   const freeTxTypes = [TxType.ACCOUNT, TxType.DEFI_DEPOSIT, TxType.DEFI_CLAIM];
   const numSignificantFigures = 0;
   let priceTracker: Mockify<PriceTracker>;
@@ -40,15 +39,15 @@ describe('fee calculator', () => {
 
   const mockPrices = (gasPrice: bigint, assetPrice: bigint) => {
     priceTracker.getGasPrice.mockReturnValue(gasPrice);
-    priceTracker.getAssetPrice.mockImplementation((assetId: AssetId) => {
-      if (assetId === AssetId.ETH) {
+    priceTracker.getAssetPrice.mockImplementation((assetId: number) => {
+      if (assetId === 0) {
         return 10n ** 18n;
       }
       return assetPrice;
     });
     priceTracker.getMinGasPrice.mockReturnValue(gasPrice);
-    priceTracker.getMinAssetPrice.mockImplementation((assetId: AssetId) => {
-      if (assetId === AssetId.ETH) {
+    priceTracker.getMinAssetPrice.mockImplementation((assetId: number) => {
+      if (assetId === 0) {
         return 10n ** 18n;
       }
       return assetPrice;
@@ -58,15 +57,15 @@ describe('fee calculator', () => {
   beforeEach(() => {
     priceTracker = {
       getGasPrice: jest.fn().mockReturnValue(50n),
-      getAssetPrice: jest.fn().mockImplementation((assetId: AssetId) => {
-        if (assetId === AssetId.ETH) {
+      getAssetPrice: jest.fn().mockImplementation((assetId: number) => {
+        if (assetId === 0) {
           return 10n ** 18n;
         }
         return 2n;
       }),
       getMinGasPrice: jest.fn().mockReturnValue(50n),
-      getMinAssetPrice: jest.fn().mockImplementation((assetId: AssetId) => {
-        if (assetId === AssetId.ETH) {
+      getMinAssetPrice: jest.fn().mockImplementation((assetId: number) => {
+        if (assetId === 0) {
           return 10n ** 18n;
         }
         return 2n;
@@ -91,7 +90,7 @@ describe('fee calculator', () => {
   describe('fee quotes', () => {
     it('return correct tx fee and fee quotes', async () => {
       {
-        const assetId = AssetId.ETH;
+        const assetId = 0;
         const baseFee = 50000n;
         expect(feeCalculator.getFeeQuotes(assetId)).toEqual({
           feeConstants: [650000n, 50000n, 51700n, 50000n, 0n, 0n, 0n],
@@ -122,7 +121,7 @@ describe('fee calculator', () => {
       }
 
       {
-        const assetId = AssetId.DAI;
+        const assetId = 1;
         const baseFee = 25000n;
         expect(feeCalculator.getFeeQuotes(assetId)).toEqual({
           feeConstants: [1425000n, 25000n, 26950n, 25000n, 0n, 0n, 0n],
@@ -172,7 +171,7 @@ describe('fee calculator', () => {
       const withMultiplier = (value: bigint) => (value * 120n) / 100n;
 
       {
-        const assetId = AssetId.ETH;
+        const assetId = 0;
         const baseFee = 50000n;
         expect(feeCalculator.getFeeQuotes(assetId)).toEqual({
           feeConstants: [650000n, 50000n, 51700n, 50000n, 0n, 0n, 0n].map(withMultiplier),
@@ -186,7 +185,7 @@ describe('fee calculator', () => {
       }
 
       {
-        const assetId = AssetId.DAI;
+        const assetId = 1;
         const baseFee = 25000n;
         expect(feeCalculator.getFeeQuotes(assetId)).toEqual({
           feeConstants: [1425000n, 25000n, 26950n, 25000n, 0n, 0n, 0n].map(withMultiplier),
@@ -219,7 +218,7 @@ describe('fee calculator', () => {
       const cappedValue = (value: bigint) => value * maxFeeGasPrice;
 
       {
-        const assetId = AssetId.ETH;
+        const assetId = 0;
         const baseFee = BigInt(baseTxGas);
         expect(feeCalculator.getFeeQuotes(assetId)).toEqual({
           feeConstants: [13000n, 1000n, 1034n, 1000n, 0n, 0n, 0n].map(cappedValue),
@@ -233,7 +232,7 @@ describe('fee calculator', () => {
       }
 
       {
-        const assetId = AssetId.DAI;
+        const assetId = 1;
         const baseFee = BigInt(baseTxGas) / 2n;
         expect(feeCalculator.getFeeQuotes(assetId)).toEqual({
           feeConstants: [28500n, 500n, 539n, 500n, 0n, 0n, 0n].map(cappedValue),
@@ -277,7 +276,7 @@ describe('fee calculator', () => {
       const withDecimals = (value: bigint) => value * 10n ** 8n;
 
       {
-        const assetId = AssetId.DAI;
+        const assetId = 1;
         const baseFee = 50000n;
         expect(feeCalculator.getFeeQuotes(assetId)).toEqual({
           feeConstants: [50600n, 50000n, 51700n, 50000n, 0n, 0n, 0n].map(withDecimals),
@@ -292,7 +291,7 @@ describe('fee calculator', () => {
     });
 
     it('return zero fees for free asset', async () => {
-      const freeAssets = [AssetId.DAI];
+      const freeAssets = [1];
       feeCalculator = new FeeCalculator(
         priceTracker as any,
         assets,
@@ -308,7 +307,7 @@ describe('fee calculator', () => {
       );
 
       {
-        const assetId = AssetId.DAI;
+        const assetId = 1;
         expect(feeCalculator.getFeeQuotes(assetId)).toEqual({
           feeConstants: [0n, 0n, 0n, 0n, 0n, 0n, 0n],
           baseFeeQuotes: [
@@ -338,7 +337,7 @@ describe('fee calculator', () => {
       );
 
       {
-        const assetId = AssetId.ETH;
+        const assetId = 0;
         const baseFee = 50000n;
         expect(feeCalculator.getFeeQuotes(assetId)).toEqual({
           feeConstants: [650000n, 0n, 51700n, 50000n, 50000n, 50000n, 50000n],
@@ -374,7 +373,7 @@ describe('fee calculator', () => {
         // with the multipler, the 100 gas price becomes a 50
         // The 2n means the 500 DAI becomes 1000 ETH
         mockPrices(100n, 2n);
-        const assetId = AssetId.DAI;
+        const assetId = 1;
         const gas = feeCalculator.getGasPaidForByFee(assetId, 500n);
         // 1000 / 50
         expect(gas).toEqual(20n);
@@ -397,7 +396,7 @@ describe('fee calculator', () => {
         numSignificantFigures,
       );
 
-      expect(feeCalculator.getFeeQuotes(AssetId.ETH).baseFeeQuotes).toEqual([
+      expect(feeCalculator.getFeeQuotes(0).baseFeeQuotes).toEqual([
         expect.objectContaining({ time: 5 * 60 + 1 }),
         expect.objectContaining({ time: 5 * 60 }),
         expect.objectContaining({ time: 5 * 60 }),
@@ -423,7 +422,7 @@ describe('fee calculator', () => {
       );
 
       {
-        const assetId = AssetId.ETH;
+        const assetId = 0;
         const baseFee = 13000000n;
         expect(feeCalculator.getFeeQuotes(assetId)).toEqual({
           feeConstants: [163000000n, 13000000n, 13420000n, 13000000n, 0n, 0n, 0n],
@@ -437,7 +436,7 @@ describe('fee calculator', () => {
       }
 
       {
-        const assetId = AssetId.DAI;
+        const assetId = 1;
         const baseFee = 1400000n;
         expect(feeCalculator.getFeeQuotes(assetId)).toEqual({
           feeConstants: [78400000n, 1400000n, 1510000n, 1400000n, 0n, 0n, 0n],
@@ -456,8 +455,8 @@ describe('fee calculator', () => {
       priceTracker.getAssetPrice.mockReturnValue(21n);
       priceTracker.getMinGasPrice.mockReturnValue(10n);
       priceTracker.getMinAssetPrice.mockReturnValue(20n);
-      expect(feeCalculator.getTxFee(AssetId.DAI, TxType.DEPOSIT)).toBe(29856n);
-      expect(feeCalculator.getMinTxFee(AssetId.DAI, TxType.DEPOSIT)).toBe(28500n);
+      expect(feeCalculator.getTxFee(1, TxType.DEPOSIT)).toBe(29856n);
+      expect(feeCalculator.getMinTxFee(1, TxType.DEPOSIT)).toBe(28500n);
     });
   });
 
@@ -474,8 +473,8 @@ describe('fee calculator', () => {
         TestSettlementTime.FAST,
         TestSettlementTime.INSTANT,
       ].forEach(speed => {
-        const fee = getTxFee(AssetId.ETH, TxType.DEPOSIT, speed);
-        const txs = [mockTx(AssetId.ETH, TxType.DEPOSIT, fee)];
+        const fee = getTxFee(0, TxType.DEPOSIT, speed);
+        const txs = [mockTx(0, TxType.DEPOSIT, fee)];
         expect(feeCalculator.computeSurplusRatio(txs)).toBe(surplusRatios[speed]);
       });
     });
@@ -490,52 +489,52 @@ describe('fee calculator', () => {
         TxType.DEFI_DEPOSIT,
         TxType.DEFI_CLAIM,
       ].forEach(txType => {
-        const fee = feeCalculator.getTxFee(AssetId.ETH, txType);
-        const txs = [mockTx(AssetId.ETH, txType, fee)];
+        const fee = feeCalculator.getTxFee(0, txType);
+        const txs = [mockTx(0, txType, fee)];
         expect(feeCalculator.computeSurplusRatio(txs)).toBe(1);
       });
     });
 
     it('surplus ratio should never be negative', () => {
-      const minFee = feeCalculator.getTxFee(AssetId.ETH, TxType.DEPOSIT);
-      const baseFee = feeCalculator.getBaseFee(AssetId.ETH);
-      const txs = [mockTx(AssetId.ETH, TxType.DEPOSIT, minFee + baseFee * 100n)];
+      const minFee = feeCalculator.getTxFee(0, TxType.DEPOSIT);
+      const baseFee = feeCalculator.getBaseFee(0);
+      const txs = [mockTx(0, TxType.DEPOSIT, minFee + baseFee * 100n)];
       expect(feeCalculator.computeSurplusRatio(txs)).toBe(0);
     });
 
     it('surplus ratio should never be larger than 1 ', () => {
-      const minFee = feeCalculator.getTxFee(AssetId.ETH, TxType.DEPOSIT);
-      const baseFee = feeCalculator.getBaseFee(AssetId.ETH);
-      const txs = [mockTx(AssetId.ETH, TxType.DEPOSIT, minFee - baseFee)]; // insufficient fee, feeSurplus is negative
+      const minFee = feeCalculator.getTxFee(0, TxType.DEPOSIT);
+      const baseFee = feeCalculator.getBaseFee(0);
+      const txs = [mockTx(0, TxType.DEPOSIT, minFee - baseFee)]; // insufficient fee, feeSurplus is negative
       expect(feeCalculator.computeSurplusRatio(txs)).toBe(1);
     });
 
     it('surplus ratio should be 1 if base fee is zero', async () => {
       mockPrices(0n, 10n);
 
-      const minFee = feeCalculator.getTxFee(AssetId.ETH, TxType.DEPOSIT);
+      const minFee = feeCalculator.getTxFee(0, TxType.DEPOSIT);
       expect(minFee).toBe(0n);
 
-      const ethTxs = [mockTx(AssetId.ETH, TxType.DEPOSIT, 1n)];
+      const ethTxs = [mockTx(0, TxType.DEPOSIT, 1n)];
       expect(feeCalculator.computeSurplusRatio(ethTxs)).toBe(1);
 
-      const daiTxs = [mockTx(AssetId.DAI, TxType.DEPOSIT, 1n)];
+      const daiTxs = [mockTx(1, TxType.DEPOSIT, 1n)];
       expect(feeCalculator.computeSurplusRatio(daiTxs)).toBe(1);
     });
 
     it('surplus ratio should be 1 if asset price is zero', async () => {
       mockPrices(10n, 0n);
 
-      const minFee = feeCalculator.getTxFee(AssetId.DAI, TxType.DEPOSIT);
+      const minFee = feeCalculator.getTxFee(1, TxType.DEPOSIT);
       expect(minFee).toBe(0n);
 
-      const txs = [mockTx(AssetId.DAI, TxType.DEPOSIT, 1n)];
+      const txs = [mockTx(1, TxType.DEPOSIT, 1n)];
       expect(feeCalculator.computeSurplusRatio(txs)).toBe(1);
     });
 
     it('should compute correct surplus ratio for "Average" txs', () => {
-      const fee = getTxFee(AssetId.ETH, TxType.DEPOSIT, TestSettlementTime.AVERAGE);
-      const txs = Array(10).fill(mockTx(AssetId.ETH, TxType.DEPOSIT, fee));
+      const fee = getTxFee(0, TxType.DEPOSIT, TestSettlementTime.AVERAGE);
+      const txs = Array(10).fill(mockTx(0, TxType.DEPOSIT, fee));
       expect(feeCalculator.computeSurplusRatio(txs.slice(0, 1))).toBe(0.9);
       expect(feeCalculator.computeSurplusRatio(txs.slice(0, 2))).toBe(0.8);
       expect(feeCalculator.computeSurplusRatio(txs.slice(0, 4))).toBe(0.6);
@@ -545,46 +544,46 @@ describe('fee calculator', () => {
     });
 
     it('should compute correct surplus ratio for "Fast" txs', () => {
-      const fee = getTxFee(AssetId.ETH, TxType.DEPOSIT, TestSettlementTime.FAST);
-      const txs = Array(3).fill(mockTx(AssetId.ETH, TxType.DEPOSIT, fee));
+      const fee = getTxFee(0, TxType.DEPOSIT, TestSettlementTime.FAST);
+      const txs = Array(3).fill(mockTx(0, TxType.DEPOSIT, fee));
       expect(feeCalculator.computeSurplusRatio(txs.slice(0, 1))).toBe(0.5);
       expect(feeCalculator.computeSurplusRatio(txs.slice(0, 2))).toBe(0);
       expect(feeCalculator.computeSurplusRatio(txs)).toBe(0);
     });
 
     it('should compute correct surplus ratio for "INSTANT" txs', () => {
-      const fee = getTxFee(AssetId.ETH, TxType.DEPOSIT, TestSettlementTime.INSTANT);
-      const txs = [mockTx(AssetId.ETH, TxType.DEPOSIT, fee)];
+      const fee = getTxFee(0, TxType.DEPOSIT, TestSettlementTime.INSTANT);
+      const txs = [mockTx(0, TxType.DEPOSIT, fee)];
       expect(feeCalculator.computeSurplusRatio(txs)).toBe(0);
     });
 
     it('should compute correct surplus ratio for txs with arbitrary fees', () => {
-      const minFee = feeCalculator.getTxFee(AssetId.ETH, TxType.DEPOSIT);
-      const baseFee = feeCalculator.getBaseFee(AssetId.ETH);
+      const minFee = feeCalculator.getTxFee(0, TxType.DEPOSIT);
+      const baseFee = feeCalculator.getBaseFee(0);
       const txs = [
-        mockTx(AssetId.ETH, TxType.DEPOSIT, minFee - baseFee * 2n),
-        mockTx(AssetId.ETH, TxType.DEPOSIT, minFee + baseFee * 7n),
-        mockTx(AssetId.ETH, TxType.DEPOSIT, minFee + baseFee * 3n),
+        mockTx(0, TxType.DEPOSIT, minFee - baseFee * 2n),
+        mockTx(0, TxType.DEPOSIT, minFee + baseFee * 7n),
+        mockTx(0, TxType.DEPOSIT, minFee + baseFee * 3n),
       ];
       expect(feeCalculator.computeSurplusRatio(txs)).toBe(0.2);
     });
 
     it('should compute correct surplus ratio for token asset', () => {
-      const minFee = feeCalculator.getTxFee(AssetId.DAI, TxType.DEPOSIT);
-      const baseFee = feeCalculator.getBaseFee(AssetId.DAI);
-      const txs = [mockTx(AssetId.DAI, TxType.DEPOSIT, minFee + baseFee * 2n)];
+      const minFee = feeCalculator.getTxFee(1, TxType.DEPOSIT);
+      const baseFee = feeCalculator.getBaseFee(1);
+      const txs = [mockTx(1, TxType.DEPOSIT, minFee + baseFee * 2n)];
       expect(feeCalculator.computeSurplusRatio(txs)).toBe(0.8);
     });
 
     it('should compute correct surplus ratio for mixed assets', () => {
-      const minEthFee = feeCalculator.getTxFee(AssetId.ETH, TxType.DEPOSIT);
-      const baseEthFee = feeCalculator.getBaseFee(AssetId.ETH);
-      const minFee = feeCalculator.getTxFee(AssetId.DAI, TxType.DEPOSIT);
-      const baseFee = feeCalculator.getBaseFee(AssetId.DAI);
+      const minEthFee = feeCalculator.getTxFee(0, TxType.DEPOSIT);
+      const baseEthFee = feeCalculator.getBaseFee(0);
+      const minFee = feeCalculator.getTxFee(1, TxType.DEPOSIT);
+      const baseFee = feeCalculator.getBaseFee(1);
       const txs = [
-        mockTx(AssetId.DAI, TxType.DEPOSIT, minFee + baseFee * 3n),
-        mockTx(AssetId.ETH, TxType.DEPOSIT, minEthFee + baseEthFee * 8n),
-        mockTx(AssetId.DAI, TxType.DEPOSIT, minFee - baseFee * 5n),
+        mockTx(1, TxType.DEPOSIT, minFee + baseFee * 3n),
+        mockTx(0, TxType.DEPOSIT, minEthFee + baseEthFee * 8n),
+        mockTx(1, TxType.DEPOSIT, minFee - baseFee * 5n),
       ];
       expect(feeCalculator.computeSurplusRatio(txs)).toBe(0.4);
     });
@@ -593,20 +592,20 @@ describe('fee calculator', () => {
       priceTracker.getMinGasPrice.mockReturnValue(1n);
       priceTracker.getMinAssetPrice.mockReturnValue(2n);
 
-      const minEthFee = feeCalculator.getTxFee(AssetId.ETH, TxType.DEPOSIT);
-      const baseEthFee = feeCalculator.getBaseFee(AssetId.ETH);
-      const minFee = feeCalculator.getTxFee(AssetId.DAI, TxType.DEPOSIT);
-      const baseFee = feeCalculator.getBaseFee(AssetId.DAI);
+      const minEthFee = feeCalculator.getTxFee(0, TxType.DEPOSIT);
+      const baseEthFee = feeCalculator.getBaseFee(0);
+      const minFee = feeCalculator.getTxFee(1, TxType.DEPOSIT);
+      const baseFee = feeCalculator.getBaseFee(1);
       const txs = [
-        mockTx(AssetId.DAI, TxType.DEPOSIT, minFee + baseFee * 3n),
-        mockTx(AssetId.ETH, TxType.DEPOSIT, minEthFee + baseEthFee * 8n),
-        mockTx(AssetId.DAI, TxType.DEPOSIT, minFee - baseFee * 5n),
+        mockTx(1, TxType.DEPOSIT, minFee + baseFee * 3n),
+        mockTx(0, TxType.DEPOSIT, minEthFee + baseEthFee * 8n),
+        mockTx(1, TxType.DEPOSIT, minFee - baseFee * 5n),
       ];
       expect(feeCalculator.computeSurplusRatio(txs)).toBe(0.4);
     });
 
     it('surplus ratio should be 1 for free assets', async () => {
-      const freeAssets = [AssetId.DAI];
+      const freeAssets = [1];
       feeCalculator = new FeeCalculator(
         priceTracker as any,
         assets,
@@ -621,7 +620,7 @@ describe('fee calculator', () => {
         numSignificantFigures,
       );
 
-      const txs = [mockTx(AssetId.DAI, TxType.DEPOSIT, 100n)];
+      const txs = [mockTx(1, TxType.DEPOSIT, 100n)];
       expect(feeCalculator.computeSurplusRatio(txs)).toBe(1);
     });
 
@@ -642,21 +641,21 @@ describe('fee calculator', () => {
         numSignificantFigures,
       );
 
-      const ethQuotes = feeCalculator.getFeeQuotes(AssetId.ETH);
-      const daiQuotes = feeCalculator.getFeeQuotes(AssetId.DAI);
+      const ethQuotes = feeCalculator.getFeeQuotes(0);
+      const daiQuotes = feeCalculator.getFeeQuotes(1);
       const txs = [
         mockTx(
-          AssetId.DAI,
+          1,
           TxType.DEPOSIT,
           daiQuotes.feeConstants[TxType.DEPOSIT] + daiQuotes.baseFeeQuotes[TestSettlementTime.AVERAGE].fee,
         ),
         mockTx(
-          AssetId.ETH,
+          0,
           TxType.DEPOSIT,
           ethQuotes.feeConstants[TxType.DEPOSIT] + ethQuotes.baseFeeQuotes[TestSettlementTime.AVERAGE].fee,
         ),
         mockTx(
-          AssetId.DAI,
+          1,
           TxType.DEPOSIT,
           daiQuotes.feeConstants[TxType.DEPOSIT] + daiQuotes.baseFeeQuotes[TestSettlementTime.SLOW].fee,
         ),
