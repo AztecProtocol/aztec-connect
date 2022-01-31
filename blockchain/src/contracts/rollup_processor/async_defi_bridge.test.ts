@@ -136,13 +136,7 @@ describe('rollup_processor: async defi bridge', () => {
     }
 
     {
-      const txHash = await bridge.finalise(
-        assetAddresses[AssetId.DAI],
-        assetAddresses[AssetId.ETH],
-        assetAddresses[AssetId.renBTC],
-        1,
-        0,
-      );
+      const txHash = await rollupProcessor.processAsyncDefiInteraction(0);
 
       const expectedAsyncResult = [new DefiInteractionNote(bridgeId, 0, inputValue, outputValueA, outputValueB, true)];
       await expectResult(txHash, []);
@@ -220,13 +214,7 @@ describe('rollup_processor: async defi bridge', () => {
     for (let i = 0; i < numAsyncInteractions; ++i) {
       const inputValue = BigInt(i + 1);
       const interactionNonce = i * numberOfBridgeCalls;
-      const txHash = await bridge.finalise(
-        assetAddresses[AssetId.DAI],
-        assetAddresses[AssetId.ETH],
-        assetAddresses[AssetId.renBTC],
-        1,
-        interactionNonce,
-      );
+      const txHash = await rollupProcessor.processAsyncDefiInteraction(interactionNonce);
       const asyncResult = new DefiInteractionNote(
         bridgeId,
         interactionNonce,
@@ -336,9 +324,7 @@ describe('rollup_processor: async defi bridge', () => {
       await expectBalance(AssetId.renBTC, 0n);
     }
 
-    await expect(
-      bridge.finalise(assetAddresses[AssetId.DAI], assetAddresses[AssetId.renBTC], assetAddresses[AssetId.ETH], 0, 0),
-    ).rejects.toThrow();
+    await expect(rollupProcessor.processAsyncDefiInteraction(0)).rejects.toThrow();
   });
 
   it('revert if the bridge does not transfer enough output ETH to rollup processor', async () => {
@@ -374,9 +360,7 @@ describe('rollup_processor: async defi bridge', () => {
       await expectBalance(AssetId.renBTC, 0n);
     }
 
-    await expect(
-      bridge.finalise(assetAddresses[AssetId.DAI], assetAddresses[AssetId.ETH], assetAddresses[AssetId.ETH], 0, 0),
-    ).rejects.toThrow();
+    await expect(rollupProcessor.processAsyncDefiInteraction(0)).rejects.toThrow();
   });
 
   it('revert if the bridge returns non empty output value B when number of output assets is 1', async () => {
@@ -413,9 +397,7 @@ describe('rollup_processor: async defi bridge', () => {
       await expectBalance(AssetId.renBTC, 0n);
     }
 
-    await expect(
-      bridge.finalise(assetAddresses[AssetId.DAI], assetAddresses[AssetId.renBTC], assetAddresses[AssetId.ETH], 0, 0),
-    ).rejects.toThrow();
+    await expect(rollupProcessor.processAsyncDefiInteraction(0)).rejects.toThrow();
   });
 
   it('transfer input token back to rollup processor if fail to finalise', async () => {
@@ -448,13 +430,7 @@ describe('rollup_processor: async defi bridge', () => {
     }
 
     {
-      const txHash = await bridge.finalise(
-        assetAddresses[AssetId.DAI],
-        assetAddresses[AssetId.renBTC],
-        assetAddresses[AssetId.ETH],
-        0,
-        0,
-      );
+      const txHash = await rollupProcessor.processAsyncDefiInteraction(0);
 
       await expectResult(txHash, []);
       await expectHashes([]);
@@ -499,13 +475,7 @@ describe('rollup_processor: async defi bridge', () => {
     }
 
     {
-      const txHash = await bridge.finalise(
-        assetAddresses[AssetId.ETH],
-        assetAddresses[AssetId.DAI],
-        assetAddresses[AssetId.renBTC],
-        0,
-        0,
-      );
+      const txHash = await rollupProcessor.processAsyncDefiInteraction(0);
 
       await expectResult(txHash, []);
       await expectHashes([]);
@@ -549,9 +519,7 @@ describe('rollup_processor: async defi bridge', () => {
       await expectBalance(AssetId.renBTC, 0n);
     }
 
-    await expect(
-      bridge.finalise(assetAddresses[AssetId.DAI], assetAddresses[AssetId.renBTC], assetAddresses[AssetId.ETH], 0, 0),
-    ).rejects.toThrow();
+    await expect(rollupProcessor.processAsyncDefiInteraction(0)).rejects.toThrow();
   });
 
   it('revert if the bridge does not refund enough input ETH to rollup processor', async () => {
@@ -587,9 +555,7 @@ describe('rollup_processor: async defi bridge', () => {
       await expectBalance(AssetId.renBTC, 0n);
     }
 
-    await expect(
-      bridge.finalise(assetAddresses[AssetId.ETH], assetAddresses[AssetId.DAI], assetAddresses[AssetId.ETH], 0, 0),
-    ).rejects.toThrow();
+    await expect(rollupProcessor.processAsyncDefiInteraction(0)).rejects.toThrow();
   });
 
   it('cannot process the same interaction more than once', async () => {
@@ -605,17 +571,9 @@ describe('rollup_processor: async defi bridge', () => {
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
     await rollupProcessor.sendTx(tx);
 
-    await bridge.finalise(
-      assetAddresses[AssetId.DAI],
-      assetAddresses[AssetId.renBTC],
-      assetAddresses[AssetId.ETH],
-      0,
-      0,
-    );
+    await rollupProcessor.processAsyncDefiInteraction(0);
 
-    await expect(
-      bridge.finalise(assetAddresses[AssetId.DAI], assetAddresses[AssetId.renBTC], assetAddresses[AssetId.ETH], 0, 0),
-    ).rejects.toThrow();
+    await expect(rollupProcessor.processAsyncDefiInteraction(0)).rejects.toThrow();
   });
 
   it('cannot process an unknown interaction', async () => {
@@ -631,9 +589,7 @@ describe('rollup_processor: async defi bridge', () => {
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
     await rollupProcessor.sendTx(tx);
 
-    await expect(
-      bridge.finalise(assetAddresses[AssetId.DAI], assetAddresses[AssetId.renBTC], assetAddresses[AssetId.ETH], 0, 1),
-    ).rejects.toThrow();
+    await expect(rollupProcessor.processAsyncDefiInteraction(1)).rejects.toThrow();
   });
 
   it('cannot process an interaction from another bridge', async () => {
@@ -661,33 +617,11 @@ describe('rollup_processor: async defi bridge', () => {
       await rollupProcessor.sendTx(tx);
     }
 
-    await expect(
-      bridge0.finalise(
-        assetAddresses[AssetId.DAI],
-        assetAddresses[AssetId.renBTC],
-        assetAddresses[AssetId.ETH],
-        0,
-        numberOfBridgeCalls,
-      ),
-    ).rejects.toThrow();
-    await expect(
-      bridge1.finalise(assetAddresses[AssetId.DAI], assetAddresses[AssetId.renBTC], assetAddresses[AssetId.ETH], 0, 0),
-    ).rejects.toThrow();
+    await expect(rollupProcessor.processAsyncDefiInteraction(numberOfBridgeCalls + 1)).rejects.toThrow();
+    await expect(rollupProcessor.processAsyncDefiInteraction(numberOfBridgeCalls + 2)).rejects.toThrow();
 
-    await bridge0.finalise(
-      assetAddresses[AssetId.DAI],
-      assetAddresses[AssetId.renBTC],
-      assetAddresses[AssetId.ETH],
-      0,
-      0,
-    );
-    await bridge1.finalise(
-      assetAddresses[AssetId.DAI],
-      assetAddresses[AssetId.renBTC],
-      assetAddresses[AssetId.ETH],
-      0,
-      numberOfBridgeCalls,
-    );
+    await rollupProcessor.processAsyncDefiInteraction(0);
+    await rollupProcessor.processAsyncDefiInteraction(numberOfBridgeCalls);
   });
 
   it('will finalise if async array is 1 from max size', async () => {
@@ -706,13 +640,7 @@ describe('rollup_processor: async defi bridge', () => {
 
     await rollupProcessor.stubAsyncTransactionHashes(511);
     await expect((await rollupProcessor.asyncDefiInteractionHashes()).length).toEqual(511);
-    await bridge.finalise(
-      assetAddresses[AssetId.DAI],
-      assetAddresses[AssetId.renBTC],
-      assetAddresses[AssetId.ETH],
-      0,
-      0,
-    );
+    await rollupProcessor.processAsyncDefiInteraction(0);
     await expect((await rollupProcessor.asyncDefiInteractionHashes()).length).toEqual(512);
   });
 
@@ -732,28 +660,6 @@ describe('rollup_processor: async defi bridge', () => {
 
     await rollupProcessor.stubAsyncTransactionHashes(512);
 
-    await expect(
-      bridge.finalise(assetAddresses[AssetId.DAI], assetAddresses[AssetId.renBTC], assetAddresses[AssetId.ETH], 0, 0),
-    ).rejects.toThrow();
-  });
-
-  it('will fail to finalise if reentrancy mutex is set', async () => {
-    const inputValue = 20n;
-    const { bridgeId, bridge } = await mockAsyncBridge();
-
-    const initialBalance = 50n;
-    await topupToken(AssetId.DAI, initialBalance);
-
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
-    });
-
-    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
-    await rollupProcessor.sendTx(tx);
-
-    await rollupProcessor.stubReentrancyGuard(true);
-    await expect(
-      bridge.finalise(assetAddresses[AssetId.DAI], assetAddresses[AssetId.renBTC], assetAddresses[AssetId.ETH], 0, 0),
-    ).rejects.toThrow();
+    await expect(rollupProcessor.processAsyncDefiInteraction(0)).rejects.toThrow();
   });
 });

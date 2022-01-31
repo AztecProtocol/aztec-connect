@@ -5,7 +5,7 @@ import createDebug from 'debug';
 
 const debug = createDebug('bb:grumpkin_test');
 
-describe.only('grumpkin', () => {
+describe('grumpkin', () => {
   let barretenberg!: BarretenbergWasm;
   let grumpkin!: Grumpkin;
 

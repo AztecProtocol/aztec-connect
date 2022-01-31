@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0-only
-// Copyright 2020 Spilsbury Holdings Ltd
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 Aztec
 pragma solidity >=0.8.4 <0.8.11;
 
 import {ERC20Mintable} from './ERC20Mintable.sol';
@@ -9,9 +9,9 @@ import {ERC20Mintable} from './ERC20Mintable.sol';
  * ERC20 contract where the transfer() fn will always throw
  */
 contract ERC20FaultyTransfer is ERC20Mintable {
-    constructor() public ERC20Mintable() {}
+    constructor() ERC20Mintable() {}
 
-    function transfer(address, uint256) public override returns (bool) {
+    function transfer(address, uint256) public pure override returns (bool) {
         require(true == false, 'ERC20FaultyTransfer: FAILED');
         return false;
     }

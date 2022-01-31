@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0-only
-// Copyright 2020 Spilsbury Holdings Ltd
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 Aztec
 
 pragma solidity >=0.6.0 <0.8.11;
 pragma experimental ABIEncoderV2;
@@ -23,7 +23,6 @@ contract TestRollupProcessor is RollupProcessor {
         address _defiBridgeProxy,
         address _contractOwner
     )
-        public
         RollupProcessor(
             _verifierAddress,
             _escapeBlockLowerBound,
@@ -36,6 +35,9 @@ contract TestRollupProcessor is RollupProcessor {
             uint256(0)
         )
     {}
+
+    // Used to pre-fund the rollup with some Eth (to mimic deposited Eth for defi interactions)
+    receive() external payable {}
 
     // Used to test we correctly check the length of asyncDefiTransactionHashes
     function stubAsyncTransactionHashesLength(uint256 size) public {

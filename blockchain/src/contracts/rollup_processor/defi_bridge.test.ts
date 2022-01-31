@@ -330,10 +330,11 @@ describe('rollup_processor: defi bridge', () => {
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
     const txHash = await rollupProcessor.sendTx(tx);
 
+    await expectResult([new DefiInteractionNote(bridgeId, 0, inputValue, outputValueA, 0n, true)], txHash);
+
     await expectBalance(AssetId.DAI, 0n);
     await expectBalance(AssetId.ETH, outputValueA);
 
-    await expectResult([new DefiInteractionNote(bridgeId, 0, inputValue, outputValueA, 0n, true)], txHash);
   });
 
   it('process uniswap defi interaction data that converts eth to tokens and back', async () => {

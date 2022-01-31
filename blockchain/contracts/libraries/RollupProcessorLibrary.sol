@@ -1,8 +1,11 @@
-// SPDX-License-Identifier: GPL-2.0-only
-// Copyright 2020 Spilsbury Holdings Ltd
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 Aztec
 pragma solidity >=0.8.4 <0.8.11;
 
 library RollupProcessorLibrary {
+    error SIGNATURE_ADDRESS_IS_ZERO();
+    error SIGNATURE_RECOVERY_FAILED();
+    error INVALID_SIGNATURE();
     /**
      * Extracts the address of the signer with ECDSA. Performs checks on `s` and `v` to
      * to prevent signature malleability based attacks
@@ -17,7 +20,10 @@ library RollupProcessorLibrary {
     ) internal view {
         bool result;
         address recoveredSigner = address(0x0);
-        require(signer != address(0x0), 'validateSignature: ZERO_ADDRESS');
+        if (signer == address(0x0))
+        {
+            revert SIGNATURE_ADDRESS_IS_ZERO();
+        }
 
         // prepend "\x19Ethereum Signed Message:\n32" to the digest to create the signed message
         bytes32 message;
@@ -84,9 +90,14 @@ library RollupProcessorLibrary {
             // validate that recoveredSigner is not address(0x00)
             result := and(result, not(iszero(recoveredSigner)))
         }
-
-        require(result, 'validateSignature: signature recovery failed');
-        require(recoveredSigner == signer, 'validateSignature: INVALID_SIGNATURE');
+        if (!result)
+        {
+            revert SIGNATURE_RECOVERY_FAILED();
+        }
+        if (recoveredSigner != signer)
+        {
+            revert INVALID_SIGNATURE();
+        }
     }
 
     /**
@@ -105,8 +116,10 @@ library RollupProcessorLibrary {
     ) internal view {
         bool result;
         address recoveredSigner = address(0x0);
-        require(signer != address(0x0), 'validateSignature: ZERO_ADDRESS');
-
+        if (signer == address(0x0))
+        {
+            revert SIGNATURE_ADDRESS_IS_ZERO();
+        }
         assembly {
             let mPtr := mload(0x40)
             // There's a little trick we can pull. We expect `signature` to be a byte array, of length 0x60, with
@@ -170,9 +183,14 @@ library RollupProcessorLibrary {
             // validate that recoveredSigner is not address(0x00)
             result := and(result, not(iszero(recoveredSigner)))
         }
-
-        require(result, 'validateUnpackedSignature: signature recovery failed');
-        require(recoveredSigner == signer, 'validateUnpackedSignature: INVALID_SIGNATURE');
+        if (!result)
+        {
+            revert SIGNATURE_RECOVERY_FAILED();
+        }
+        if (recoveredSigner != signer)
+        {
+            revert INVALID_SIGNATURE();
+        }
     }
 
      /**
@@ -191,7 +209,10 @@ library RollupProcessorLibrary {
     ) internal view {
         bool result;
         address recoveredSigner = address(0x0);
-        require(signer != address(0x0), 'validateSignature: ZERO_ADDRESS');
+        if (signer == address(0x0))
+        {
+            revert SIGNATURE_ADDRESS_IS_ZERO();
+        }
 
         // prepend "\x19Ethereum Signed Message:\n32" to the digest to create the signed message
         bytes32 message;
@@ -262,8 +283,13 @@ library RollupProcessorLibrary {
             // validate that recoveredSigner is not address(0x00)
             result := and(result, not(iszero(recoveredSigner)))
         }
-
-        require(result, 'validateUnpackedSignature: signature recovery failed');
-        require(recoveredSigner == signer, 'validateUnpackedSignature: INVALID_SIGNATURE');
+        if (!result)
+        {
+            revert SIGNATURE_RECOVERY_FAILED();
+        }
+        if (recoveredSigner != signer)
+        {
+            revert INVALID_SIGNATURE();
+        }
     }
 }

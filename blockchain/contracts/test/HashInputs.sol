@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0-only
-// Copyright 2020 Spilsbury Holdings Ltd
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 Aztec
 pragma solidity >=0.8.4;
 
 import {SafeMath} from '@openzeppelin/contracts/utils/math/SafeMath.sol';
@@ -15,23 +15,24 @@ import {IVerifier} from '../interfaces/IVerifier.sol';
  */
 contract HashInputs is Decoder {
     IVerifier public verifier;
+    error PUBLIC_INPUTS_HASH_VERIFICATION_FAILED(uint256, uint256);
 
-    constructor(address _verifierAddress) public {
+    constructor(address _verifierAddress) {
         verifier = IVerifier(_verifierAddress);
     }
 
     function computePublicInputHash(
         bytes calldata /* encodedProofData */
-    ) external returns (bytes32) {
-        decodeProof(rollupHeaderInputLength, txNumPubInputs);
+    ) external view returns (bytes32) {
+        decodeProof();
         return 0;
     }
 
     function verifyProofTest(
         bytes calldata /* encodedProofData */
-    ) external {
-        (, , uint256 publicInputsHash) = decodeProof(rollupHeaderInputLength, txNumPubInputs);
-        uint256 broadcastedDataSize = rollupHeaderInputLength + 4;
+    ) external view {
+        (, , uint256 publicInputsHash) = decodeProof();
+        uint256 broadcastedDataSize = rollupHeaderInputLength + 8; // add 8 bytes for two packed params at end of header
         uint256 rollupHeaderInputLengthLocal = rollupHeaderInputLength;
         bool proof_verified;
         assembly {
@@ -65,18 +66,19 @@ contract HashInputs is Decoder {
             // The calldata param *after* the header is the length of the pub inputs array. However it is a packed 4-byte param.
             // To extract it, we subtract 28 bytes from the calldata pointer and mask off all but the 4 least significant bytes.
             let encodedInnerDataSize := and(
-                calldataload(add(add(calldataload(0x04), 0x24), sub(rollupHeaderInputLengthLocal, 0x1c))),
+                calldataload(add(add(calldataload(0x04), 0x24), sub(rollupHeaderInputLengthLocal, 0x18))),
                 0xffffffff
             )
 
-            // broadcastedDataSize = inner join-split pubinput size + header size + 4 bytes (skip over zk proof length param)
+            // broadcastedDataSize = inner join-split pubinput size + header size + 8 bytes (skip over zk proof length param)
             broadcastedDataSize := add(broadcastedDataSize, encodedInnerDataSize)
 
             // Compute zk proof data size by subtracting broadcastedDataSize from overall length of bytes encodedProofsData
             let zkProofDataSize := sub(calldataload(add(calldataload(0x04), 0x04)), broadcastedDataSize)
 
             // Compute calldata pointer to start of zk proof data by adding calldata offset to broadcastedDataSize
-            // (+0x24 skips over function signature and length param of bytes encodedProofData)
+            // (+0x24 skips over function signature and numRealTxs param and length param of bytes encodedProofData)
+            // add +4 for new param or not?
             let zkProofDataPtr := add(broadcastedDataSize, add(calldataload(0x04), 0x24))
 
             // Step 2: Format calldata for verifier contract call.

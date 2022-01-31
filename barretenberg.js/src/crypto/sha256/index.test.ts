@@ -4,7 +4,7 @@ import { Sha256 } from '.';
 import { randomBytes, createHash } from 'crypto';
 
 
-describe.only('sha256', () => {
+describe('sha256', () => {
   let barretenberg!: BarretenbergWasm;
   let sha256!: Sha256;
 

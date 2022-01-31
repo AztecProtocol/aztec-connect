@@ -64,6 +64,22 @@ describe('rollup_processor', () => {
     expect(supportedAssetAAddress).toEqual(assets[1].getStaticInfo().address);
   });
 
+
+  it('should throw for a virtual asset', async () => {
+    const assetIdA = 1 << 29;
+    await expect(
+        rollupProcessor.getSupportedAsset(assetIdA)
+      ).rejects.toThrow(
+        "INVALID_ASSET_ID",
+      );
+    const assetIdB = 0x2abbccdd;
+    await expect(
+        rollupProcessor.getSupportedAsset(assetIdB)
+      ).rejects.toThrow(
+        "INVALID_ASSET_ID",
+      );
+  });
+
   it('should set new supported asset', async () => {
     const assetAddr = EthAddress.randomAddress();
     const txHash = await rollupProcessor.setSupportedAsset(assetAddr, false, 0);

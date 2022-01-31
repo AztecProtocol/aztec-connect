@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0-only
-// Copyright 2020 Spilsbury Holdings Ltd
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 Aztec
 pragma solidity >=0.8.4 <0.8.11;
 
 /**
@@ -10,7 +10,7 @@ contract MockPriceFeed {
     mapping(uint256 => int256) public getAnswer;
     mapping(uint256 => uint256) public getTimestamp;
 
-    constructor(int256 answer) public {
+    constructor(int256 answer) {
         setRoundData(answer);
     }
 

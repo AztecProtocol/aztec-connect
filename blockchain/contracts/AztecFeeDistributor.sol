@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0-only
-// Copyright 2020 Spilsbury Holdings Ltd
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 Aztec
 pragma solidity >=0.8.4 <0.8.11;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
@@ -76,7 +76,7 @@ contract AztecFeeDistributor is IFeeDistributor, Ownable {
         address _feeClaimer,
         address _rollupProcessor,
         address _router
-    ) public {
+    ) {
         aztecFeeClaimer = _feeClaimer;
         rollupProcessor = _rollupProcessor;
         router = _router;

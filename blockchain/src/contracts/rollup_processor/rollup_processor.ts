@@ -128,6 +128,15 @@ export class RollupProcessor {
     return TxHash.fromString(tx.hash);
   }
 
+  async processAsyncDefiInteraction(interactionNonce: number, options: SendTxOptions = {}) {
+    const { gasLimit } = { ...options };
+    const rollupProcessor = this.getContractWithSigner(options);
+    const tx = await rollupProcessor
+      .processAsyncDefiInteraction(interactionNonce, { gasLimit })
+      .catch(fixEthersStackTrace);
+    return TxHash.fromString(tx.hash);
+  }
+
   async getAssetPermitSupport(assetId: AssetId): Promise<boolean> {
     return this.rollupProcessor.getAssetPermitSupport(assetId);
   }

@@ -48,7 +48,7 @@ describe('rollup_processor: withdraw', () => {
   });
 
   it('should withdraw eth', async () => {
-    const preWithdrawlBalance = await assets[0].balanceOf(userAddresses[0]);
+    const preWithdrawalBalance = await assets[0].balanceOf(userAddresses[0]);
     const withdrawalAmount = 20n;
 
     const { proofData, signatures } = await createRollupProof(
@@ -64,11 +64,11 @@ describe('rollup_processor: withdraw', () => {
     expect(postWithdrawalRollupBalance).toBe(depositAmount - withdrawalAmount);
 
     const postWithdrawalBalance = await assets[0].balanceOf(userAddresses[0]);
-    expect(postWithdrawalBalance).toBe(preWithdrawlBalance + withdrawalAmount);
+    expect(postWithdrawalBalance).toBe(preWithdrawalBalance + withdrawalAmount);
   });
 
   it('should withdraw erc20', async () => {
-    const preWithdrawlBalance = await assets[1].balanceOf(userAddresses[0]);
+    const preWithdrawalBalance = await assets[1].balanceOf(userAddresses[0]);
     const withdrawalAmount = 20n;
 
     const { proofData, signatures } = await createRollupProof(
@@ -84,10 +84,10 @@ describe('rollup_processor: withdraw', () => {
     expect(postWithdrawalRollupBalance).toBe(depositAmount - withdrawalAmount);
 
     const postWithdrawalBalance = await assets[1].balanceOf(userAddresses[2]);
-    expect(postWithdrawalBalance).toBe(preWithdrawlBalance + withdrawalAmount);
+    expect(postWithdrawalBalance).toBe(preWithdrawalBalance + withdrawalAmount);
   });
 
-  it('should not revert if withdraw fails due to faulty ERC20 transfer', async () => {
+  it('should NOT revert if withdraw fails due to faulty ERC20 transfer', async () => {
     const FaultyERC20 = await ethers.getContractFactory('ERC20FaultyTransfer');
     const faultyERC20 = await FaultyERC20.deploy();
     const assetAddr = EthAddress.fromString(faultyERC20.address);
@@ -114,13 +114,16 @@ describe('rollup_processor: withdraw', () => {
       await rollupProcessor.sendTx(tx);
     }
 
+    const preWithdrawalBalance = await asset.balanceOf(userAddresses[0]);
     const { proofData } = await createRollupProof(
       rollupProvider,
       createWithdrawProof(depositAmount, userAddresses[0], assetId),
       { rollupId: 2 },
     );
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
-    const txReceipt = await rollupProcessor.sendTx(tx);
-    await expect(txReceipt);
+    await rollupProcessor.sendTx(tx);
+    const postWithdrawalBalance = await asset.balanceOf(userAddresses[0]);
+    expect(postWithdrawalBalance).toBe(preWithdrawalBalance);
+
   });
 });

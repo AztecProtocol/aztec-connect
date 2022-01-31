@@ -218,7 +218,17 @@ export class RollupProofData {
   }
 
   encode() {
-    const encodedInnerProof = this.innerProofData.map(p => encodeInnerProof(p));
+    let lastNonEmptyIndex = 0;
+    this.innerProofData.forEach((p, i) => {
+        if (p.proofId !== ProofId.PADDING)
+        {
+            lastNonEmptyIndex = i;
+        }
+    });
+
+    
+    const numRealTxns = lastNonEmptyIndex + 1;
+    const encodedInnerProof = this.innerProofData.filter((p, i) => i < numRealTxns).map(p => encodeInnerProof(p));
     return Buffer.concat([
       numToUInt32BE(this.rollupId, 32),
       numToUInt32BE(this.rollupSize, 32),
@@ -239,6 +249,7 @@ export class RollupProofData {
       this.prevDefiInteractionHash,
       this.rollupBeneficiary,
       numToUInt32BE(this.numRollupTxs, 32),
+      numToUInt32BE(numRealTxns),
       numToUInt32BE(Buffer.concat(encodedInnerProof).length),
       ...encodedInnerProof,
     ]);
@@ -371,6 +382,7 @@ export class RollupProofData {
     }
 
     let startIndex = RollupProofData.LENGTH_ROLLUP_HEADER_INPUTS;
+    startIndex += 4; // skip over numRealTxs
     let innerProofDataLength = encoded.readUInt32BE(startIndex);
     startIndex += 4;
     const innerProofData: InnerProofData[] = [];

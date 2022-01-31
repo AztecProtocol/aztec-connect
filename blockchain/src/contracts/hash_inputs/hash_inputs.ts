@@ -80,7 +80,5 @@ export class HashInputs {
     const signer = new Web3Provider(this.provider).getSigner(signingAddress ? signingAddress.toString() : 0);
     const hashInputs = new Contract(this.hashInputsContractAddress.toString(), HashInputsContract.abi, signer);
     const txResponse = await hashInputs.verifyProofTest(proofData, { gasLimit }).catch(fixEthersStackTrace);
-    const receipt = await txResponse.wait();
-    return receipt.gasUsed.toNumber();
   }
 }

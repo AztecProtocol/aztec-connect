@@ -1,6 +1,6 @@
 // Verification Key Hash: 35efb50c2685d42fc2321d175a6ad13706f2ade381e53aaf208551c6554f5228
-// SPDX-License-Identifier: GPL-2.0-only
-// Copyright 2021 Spilsbury Holdings Ltd
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 Aztec
 
 pragma solidity >=0.6.0 <0.8.11;
 pragma experimental ABIEncoderV2;

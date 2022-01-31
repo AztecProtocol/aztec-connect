@@ -31,7 +31,7 @@ describe('hashInputs', function () {
     await hashInputs.validate(proofBytes, { gasLimit });
   });
 
-  it('should handle invalid input hash', async () => {
+  it('should reject invalid input hash', async () => {
     const { proofData, broadcastData } = await getRollupData(3, 2);
     const proofBytes = Buffer.concat([broadcastData.encode(), proofData]);
 

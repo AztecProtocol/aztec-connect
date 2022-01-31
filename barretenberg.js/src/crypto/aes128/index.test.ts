@@ -3,7 +3,7 @@ import { Aes128 } from '.';
 
 import { randomBytes, createCipheriv, createDecipheriv } from 'crypto';
 
-describe.only('aes128', () => {
+describe('aes128', () => {
   let barretenberg!: BarretenbergWasm;
   let aes128!: Aes128;
 

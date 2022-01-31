@@ -1,6 +1,6 @@
-// SPDX-License-Identifier: GPL-2.0-only
-// Copyright 2020 Spilsbury Holdings Ltd
-pragma solidity >=0.8.4 <0.8.11;
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 Aztec
+pragma solidity >=0.8.4;
 pragma experimental ABIEncoderV2;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
@@ -8,9 +8,6 @@ import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IDefiBridge} from '../interfaces/IDefiBridge.sol';
 import {AztecTypes} from '../AztecTypes.sol';
 
-import 'hardhat/console.sol';
-
-import 'hardhat/console.sol';
 
 /**
  * @dev Warning: do not deploy in real environments, for testing only
@@ -49,7 +46,7 @@ contract MockDefiBridge is IDefiBridge {
         uint256 _returnValueB,
         uint256 _returnInputValue,
         bool _isAsync
-    ) public {
+    ) {
         rollupProcessor = _rollupProcessor;
         canConvert = _canConvert;
         outputValueA = _outputValueA;
@@ -97,9 +94,9 @@ contract MockDefiBridge is IDefiBridge {
         payable
         override
         returns (
-            uint256 outputValueA,
-            uint256 outputValueB,
-            bool _isAsync
+            uint256,
+            uint256,
+            bool
         )
     {
         require(canConvert);
@@ -115,9 +112,9 @@ contract MockDefiBridge is IDefiBridge {
         }
 
         if (!isAsync) {
-            transferTokens(inputAssetA, returnInputValue);
-            transferTokens(outputAssetA, modifiedReturnValueA);
-            transferTokens(outputAssetB, returnValueB);
+            approveTransfer(inputAssetA, returnInputValue, interactionNonce);
+            approveTransfer(outputAssetA, modifiedReturnValueA, interactionNonce);
+            approveTransfer(outputAssetB, returnValueB, interactionNonce);
         }
         interactions[interactionNonce] = totalInputValue;
         if (isAsync) {
@@ -137,53 +134,39 @@ contract MockDefiBridge is IDefiBridge {
     }
 
     function finalise(
-        address inputAsset,
-        address outputAssetA,
-        address outputAssetB,
+        AztecTypes.AztecAsset memory inputAssetA,
+        AztecTypes.AztecAsset memory, /*inputAssetB*/
+        AztecTypes.AztecAsset memory outputAssetA,
+        AztecTypes.AztecAsset memory outputAssetB,
+        uint256 /*totalInputValue*/,
         uint256 interactionNonce,
-        uint32 bitConfig
-    ) external payable override {
-        uint256 msgCallValue = 0;
+        uint64
+    ) external payable override returns (uint256, uint256) {
+        require(msg.sender == rollupProcessor, "invalid sender!");
+        approveTransfer(inputAssetA, returnInputValue, interactionNonce);
+        approveTransfer(outputAssetA, returnValueA, interactionNonce);
+        approveTransfer(outputAssetB, returnValueB, interactionNonce);
 
-        msgCallValue += approveTransfer(inputAsset, returnInputValue);
-        msgCallValue += approveTransfer(outputAssetA, returnValueA);
-        if ((bitConfig & 1) == 1) {
-            msgCallValue += approveTransfer(outputAssetB, returnValueB);
-        }
-
-        bytes memory payload = abi.encodeWithSignature(
-            'processAsyncDefiInteraction(uint256,uint256,uint256)',
-            interactionNonce,
-            outputValueA,
-            outputValueB
-        );
-        (bool success, ) = address(rollupProcessor).call{value: msgCallValue}(payload);
-        assembly {
-            if iszero(success) {
-                returndatacopy(0x00, 0x00, returndatasize())
-                revert(0x00, returndatasize())
-            }
-        }
+        return (outputValueA, outputValueB);
     }
 
-    function transferTokens(AztecTypes.AztecAsset memory asset, uint256 value) internal {
-        if (
-            asset.assetType == AztecTypes.AztecAssetType.NOT_USED ||
-            asset.assetType == AztecTypes.AztecAssetType.VIRTUAL
-        ) {
-            return;
-        } else if (asset.assetType == AztecTypes.AztecAssetType.ETH) {
-            rollupProcessor.call{value: value}('');
-        } else {
-            IERC20(asset.erc20Address).transfer(rollupProcessor, value);
-        }
-    }
-
-    function approveTransfer(address assetAddress, uint256 value) internal returns (uint256 msgCallValue) {
-        if (assetAddress == address(0)) {
+    function approveTransfer(
+        AztecTypes.AztecAsset memory asset,
+        uint256 value,
+        uint256 interactionNonce
+    ) internal returns (uint256 msgCallValue) {
+        if (asset.assetType == AztecTypes.AztecAssetType.ETH) {
             msgCallValue = value;
-        } else {
-            IERC20(assetAddress).approve(rollupProcessor, value);
+            bytes memory payload = abi.encodeWithSignature('receiveEthFromBridge(uint256)', interactionNonce);
+            (bool success, ) = address(rollupProcessor).call{value: msgCallValue}(payload);
+            assembly {
+                if iszero(success) {
+                    returndatacopy(0x00, 0x00, returndatasize())
+                    revert(0x00, returndatasize())
+                }
+            }
+        } else if (asset.assetType == AztecTypes.AztecAssetType.ERC20) {
+            IERC20(asset.erc20Address).approve(rollupProcessor, value);
         }
     }
 }

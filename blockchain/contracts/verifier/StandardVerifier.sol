@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0-only
-// Copyright 2020 Aztec
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 Aztec
 
 // gas count: 299,341 (includes 21,000 tx base cost, includes cost of 3 pub inputs. Cost of circuit without pub inputs is 298,312)
 pragma solidity >=0.6.0 <0.8.11;
@@ -13,7 +13,7 @@ import {StandardTypes} from './cryptography/StandardTypes.sol';
  * @title Standard Plonk proof verification contract
  * @dev Top level Plonk proof verification contract, which allows Plonk proof to be verified
  *
- * Copyright 2020 Aztec
+ * Copyright 2022 Aztec
  *
  * Licensed under the GNU General Public License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -156,19 +156,25 @@ contract StandardVerifier is IVerifier {
     uint256 constant IIIII_POS = 0x160;
 
 
+    error PUBLIC_INPUTS_HASH_VERIFICATION_FAILED(uint256, uint256);
     /**
      * @dev Verify a Plonk proof
      * @param - array of serialized proof data
      * @param - public input hash as computed from the broadcast data
      */
-    function verify(bytes calldata, uint256 public_inputs_hash) external override returns (bool) {
+    function verify(bytes calldata, uint256 public_inputs_hash) external view override returns (bool) {
         // validate the correctness of the public inputs hash
         {
             bool hash_matches_input;
+            uint256 recovered_hash;
             assembly {
-                hash_matches_input := eq(calldataload(add(calldataload(0x04), 0x24)), public_inputs_hash)
+                recovered_hash := calldataload(add(calldataload(0x04), 0x24))
+                hash_matches_input := eq(recovered_hash, public_inputs_hash)
             }
-            require(hash_matches_input, 'PUBLIC_INPUTS_HASH_VERIFICATION_FAILED');
+            if (!hash_matches_input)
+            {
+                revert PUBLIC_INPUTS_HASH_VERIFICATION_FAILED(public_inputs_hash, recovered_hash);
+            }
         }
 
         StandardTypes.VerificationKey memory vk = RootVerifierVk.get_verification_key();

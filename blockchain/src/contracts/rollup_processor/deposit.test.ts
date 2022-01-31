@@ -190,7 +190,7 @@ describe('rollup_processor: deposit', () => {
     );
 
     const tx = await rollupProcessor.createRollupProofTx(proofData, [badSignature], []);
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('validateUnpackedSignature: INVALID_SIGNATURE');
+    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('INVALID_SIGNATURE');
   });
 
   it('should reject rollup if insufficient deposit', async () => {

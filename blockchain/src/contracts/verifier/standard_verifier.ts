@@ -75,8 +75,8 @@ export class StandardVerifier {
     const { signingAddress, gasLimit } = { ...options, ...this.defaults };
     const signer = new Web3Provider(this.provider).getSigner(signingAddress ? signingAddress.toString() : 0);
     const verifier = new Contract(this.verifierContractAddress.toString(), StandardVerifierContract.abi, signer);
-    const txResponse = await verifier.verify(proofData, pubInputsHash, { gasLimit }).catch(fixEthersStackTrace);
-    const receipt = await txResponse.wait();
-    return receipt.gasUsed.toNumber();
+    await verifier.verify(proofData, pubInputsHash, { gasLimit }).catch(fixEthersStackTrace);
+    
+    return verifier.estimateGas.verify(proofData, pubInputsHash, { gasLimit });
   }
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// Copyright 2021 Spilsbury Holdings Ltd.
+// Copyright 2022 Aztec.
 pragma solidity >=0.8.4;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
@@ -11,8 +11,12 @@ import {IVerifier} from './interfaces/IVerifier.sol';
 import {IRollupProcessor} from './interfaces/IRollupProcessor.sol';
 import {IFeeDistributor} from './interfaces/IFeeDistributor.sol';
 import {IERC20Permit} from './interfaces/IERC20Permit.sol';
+import {IDefiBridge} from './interfaces/IDefiBridge.sol';
+
 import {Decoder} from './Decoder.sol';
 import {AztecTypes} from './AztecTypes.sol';
+
+import {TokenTransfers} from './libraries/TokenTransfers.sol';
 import './libraries/RollupProcessorLibrary.sol';
 
 /**
@@ -23,6 +27,9 @@ import './libraries/RollupProcessorLibrary.sol';
 contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     using SafeMath for uint256;
 
+    /*----------------------------------------
+      ERROR TAGS
+      ----------------------------------------*/
     error REENTRANCY_MUTEX_SET();
     error INVALID_ASSET_ID();
     error INVALID_ASSET_ADDRESS();
@@ -48,6 +55,14 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     error DEPOSIT_TOKENS_WRONG_PAYMENT_TYPE();
     error INSUFFICIENT_TOKEN_APPROVAL();
     error INVALID_PROVIDER();
+    error INVALID_BRIDGE_ID();
+    error INVALID_BRIDGE_ADDRESS();
+    error NONZERO_OUTPUT_VALUE_ON_NOT_USED_ASSET(uint256 outputValue);
+    error PUBLIC_INPUTS_HASH_VERIFICATION_FAILED(uint256, uint256);
+
+    /*----------------------------------------
+      FUNCTION SELECTORS (PRECOMPUTED)
+      ----------------------------------------*/
     // DEFI_BRIDGE_PROXY_CONVERT_SELECTOR = function signature of:
     //   function convert(
     //       address,
@@ -57,56 +72,82 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     //       AztecTypes.AztecAsset memory outputAssetB,
     //       uint256 totalInputValue,
     //       uint256 interactionNonce,
-    //       uint256 auxData)
+    //       uint256 auxData,
+    //       uint256 ethPaymentsSlot)
     // N.B. this is the selector of the 'convert' function of the DefiBridgeProxy contract.
     //      This has a different interface to the IDefiBridge.convert function
-    bytes4 private constant DEFI_BRIDGE_PROXY_CONVERT_SELECTOR = 0xd9b5fb79;
-    bytes4 private constant TRANSFER_FROM_SELECTOR = 0x23b872dd; // bytes4(keccak256('transferFrom(address,address,uint256)'));
+    bytes4 private constant DEFI_BRIDGE_PROXY_CONVERT_SELECTOR = 0xffd8e7b7;
 
+    /*----------------------------------------
+      CONSTANT STATE VARIABLES
+      ----------------------------------------*/
+    uint256 private constant ethAssetId = 0; // if assetId == ethAssetId, treat as native ETH and not ERC20 token
+
+    // starting root hash of the DeFi interaction result Merkle tree
     bytes32 private constant INIT_DEFI_ROOT = 0x0170467ae338aaf3fd093965165b8636446f09eeb15ab3d36df2e31dd718883d;
 
-    bytes32 public stateHash;
+    bytes32 private constant DEFI_BRIDGE_PROCESSED_SIGHASH =
+        0x1ccb5390975e3d07503983a09c3b6a5d11a0e40c4cb4094a7187655f643ef7b4;
+
+    // Bit offsets and bit masks used to convert a `uint256 bridgeId` into a BridgeData member
+    uint256 private constant INPUT_ASSET_ID_SHIFT = 32;
+    uint256 private constant OUTPUT_ASSET_ID_A_SHIFT = 62;
+    uint256 private constant OUTPUT_ASSET_ID_B_SHIFT = 92;
+    uint256 private constant LINKED_INTERACTION_NONCE_SHIFT = 122;
+    uint256 private constant BITCONFIG_SHIFT = 154;
+    uint256 private constant AUX_DATA_SHIFT = 186;
+    uint256 private constant MASK_THIRTY_TWO_BITS = 0xffffffff;
+    uint256 private constant MASK_THIRTY_BITS = 0x3fffffff;
+    uint256 private constant MASK_SIXTY_FOUR_BITS = 0xffffffffffffffff;
+
+    /*----------------------------------------
+      PRIVATE/INTERNAL STATE VARIABLES
+      TODO: why aren't all of these private or internal?
+      ----------------------------------------*/
+    // We need to cap the amount of gas sent to the DeFi bridge contract for two reasons.
+    // 1: To provide consistency to rollup providers around costs.
+    // 2: To prevent griefing attacks where a bridge consumes all our gas.
+    uint256 private gasSentToBridgeProxy = 300000;
+
+    // Mapping which maps an asset address to a bool, determining whether it supports
+    // permit as according to ERC-2612
+    mapping(address => bool) private assetPermitSupport;
+
+    // Used to guard against re-entrancy attacks when processing DeFi bridge transactions
+    bool private reentrancyMutex = false;
+
+    // asyncDefiInteractionHashes and defiInteractionHashes are custom implementations of an array type!!
+    // we store the length fields for each array inside the `rollupState` storage slot
+    // we access array elements in the traditional manner: array.slot[i] = keccak256(array.slot + i)
+    // this reduces the number of storage slots we write to when processing a rollup
+    // (each slot costs 5,000 gas to update. Repeated modifications to the same slot in a tx only cost 100 gas after the first)
+    bytes32 internal asyncDefiInteractionHashes; // defi interaction hashes to be transferred into pending defi interaction hashes
+    bytes32 internal defiInteractionHashes;
+
+    /*----------------------------------------
+      PUBLIC STATE VARIABLES
+      ----------------------------------------*/
+    /**
+     * @dev rollupState storage slot contains the following data:
+     *
+     * | bit offset   | num bits    | description |
+     * | 0             | 202           | rollup state hash |
+     * | 202            | 32            | datasize: number of filled entries in note tree |
+     * | 235            | 10            | asyncDefiInteractionHashes.length : number of entries in asyncDefiInteractionHashes array |
+     * | 245            | 10            | defiInteractionHashes.length : number of entries in defiInteractionHashes array |
+     * | 255            | 1             | reentrancyMutex used to guard against reentrancy attacks
+     */
+    bytes32 public rollupState;
+
+    // bytes32 public stateHash; todo add back in and remove from rollupState
 
     IVerifier public verifier;
 
     uint256 public immutable escapeBlockLowerBound;
     uint256 public immutable escapeBlockUpperBound;
 
-    event RollupProcessed(uint256 indexed rollupId);
-
-    bytes32 private constant DEFI_BRIDGE_PROCESSED_SIGHASH =
-        0x1ccb5390975e3d07503983a09c3b6a5d11a0e40c4cb4094a7187655f643ef7b4;
-    event DefiBridgeProcessed(
-        uint256 indexed bridgeId,
-        uint256 indexed nonce,
-        uint256 totalInputValue,
-        uint256 totalOutputValueA,
-        uint256 totalOutputValueB,
-        bool result
-    );
-
-    event AsyncDefiBridgeProcessed(
-        uint256 indexed bridgeId,
-        uint256 indexed nonce,
-        uint256 totalInputValue,
-        uint256 totalOutputValueA,
-        uint256 totalOutputValueB,
-        bool result
-    );
-    event Deposit(uint256 assetId, address depositorAddress, uint256 depositValue);
-    event Withdraw(uint256 assetId, address withdrawAddress, uint256 withdrawValue);
-    event WithdrawError(bytes errorReason);
-    event AssetAdded(uint256 indexed assetId, address indexed assetAddress, uint256 assetGasLimit);
-    event BridgeAdded(uint256 indexed bridgeAddressId, address indexed bridgeAddress, uint256 bridgeGasLimit);
-    event RollupProviderUpdated(address indexed providerAddress, bool valid);
-    event VerifierUpdated(address indexed verifierAddress);
-
     // Array of supported ERC20 token address.
     address[] public supportedAssets;
-
-    // Mapping which maps an asset address to a bool, determining whether it supports
-    // permit as according to ERC-2612
-    mapping(address => bool) assetPermitSupport;
 
     // Array of supported bridge contract addresses (similar to assetIds)
     address[] public supportedBridges;
@@ -120,8 +161,16 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
 
     address public override defiBridgeProxy;
 
-    // Used to guard against re-entrancy attacks when processing DeFi bridge transactions
-    bool private reentrancyMutex = false;
+    // we need a way to register ERC20 Gas Limits for withdrawals to a specific asset id
+    mapping(uint256 => uint256) public assetGasLimit;
+
+    // map defiInteractionNonce to PendingDefiBridgeInteraction
+    mapping(uint256 => PendingDefiBridgeInteraction) public pendingDefiInteractions;
+
+    /**
+     * @dev Used by brige contracts to send RollupProcessor ETH during a bridge interaction
+     */
+    mapping(uint256 => uint256) public ethPayments;
 
     // We need to cap the amount of gas sent to the DeFi bridge contract for two reasons.
     // 1: To provide consistency to rollup providers around costs.
@@ -138,26 +187,66 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
 
     mapping(uint256 => uint256) bridgeGasLimits;
 
+    /*----------------------------------------
+      EVENTS
+      ----------------------------------------*/
+    event RollupProcessed(uint256 indexed rollupId);
+    event DefiBridgeProcessed(
+        uint256 indexed bridgeId,
+        uint256 indexed nonce,
+        uint256 totalInputValue,
+        uint256 totalOutputValueA,
+        uint256 totalOutputValueB,
+        bool result
+    );
+    event AsyncDefiBridgeProcessed(
+        uint256 indexed bridgeId,
+        uint256 indexed nonce,
+        uint256 totalInputValue,
+        uint256 totalOutputValueA,
+        uint256 totalOutputValueB,
+        bool result
+    );
+    event Deposit(uint256 assetId, address depositorAddress, uint256 depositValue);
+    event Withdraw(uint256 assetId, address withdrawAddress, uint256 withdrawValue);
+    event WithdrawError(bytes errorReason);
+    event AssetAdded(uint256 indexed assetId, address indexed assetAddress, uint256 assetGasLimit);
+    event BridgeAdded(uint256 indexed bridgeAddressId, address indexed bridgeAddress, uint256 bridgeGasLimit);
+    event RollupProviderUpdated(address indexed providerAddress, bool valid);
+    event VerifierUpdated(address indexed verifierAddress);
+
+    /*----------------------------------------
+      STRUCTS
+      ----------------------------------------*/
+    /**
+     * @dev Represents an asynchronous defi bridge interaction that has not been resolved
+     * @param bridgeId the bridge id
+     * @param totalInputValue number of tokens/wei sent to the bridge
+     */
     struct PendingDefiBridgeInteraction {
         uint256 bridgeId;
-        uint256 totalInputValueA;
-        uint256 totalInputValueB;
+        uint256 totalInputValue;
     }
-    // map defiInteractionNonce to PendingDefiBridgeInteraction
-    mapping(uint256 => PendingDefiBridgeInteraction) pendingDefiInteractions;
 
     /**
-     * rollupState storage slot contains the following data:
+     * @dev Container for the results of a DeFi interaction
+     * @param outputValueA number of returned tokens for the interaction's first output asset
+     * @param outputValueB number of returned tokens for the interaction's second output asset (if relevant)
+     * @param isAsync is the interaction asynchronous? i.e. triggering an interaction does not immediately resolve
+     * @param success did the call to the bridge succeed or fail?
      *
-     * | bit offset     | num bits      | description |
-     * | 0              | 202           | rollup state hash |
-     * | 202            | 32            | datasize: number of filled entries in note tree |
-     * | 235            | 10            | asyncDefiInteractionHashes.length : number of entries in asyncDefiInteractionHashes array |
-     * | 245            | 10            | defiInteractionHashes.length : number of entries in defiInteractionHashes array |
-     * | 255            | 1             | reentrancyMutex used to guard against reentrancy attacks
+     * @notice async interactions must have outputValueA == 0 and outputValueB == 0 (tokens get returned later via calling `processAsyncDefiInteraction`)
      */
-    bytes32 public rollupState;
+    struct BridgeResult {
+        uint256 outputValueA;
+        uint256 outputValueB;
+        bool isAsync;
+        bool success;
+    }
 
+    /*----------------------------------------
+      FUNCTIONS
+      ----------------------------------------*/
     function getStateHash() public view returns (bytes32 stateHash) {
         assembly {
             stateHash := and(STATE_HASH_MASK, sload(rollupState.slot))
@@ -194,6 +283,12 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         }
     }
 
+    function getReentrancyMutex() internal view returns (bool mutexValue) {
+        assembly {
+            mutexValue := shr(REENTRANCY_MUTEX_BIT_OFFSET, sload(rollupState.slot))
+        }
+    }
+
     function clearReentrancyMutex() internal {
         assembly {
             let oldState := sload(rollupState.slot)
@@ -202,7 +297,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         }
     }
 
-    function reentrancyMutexCheck() internal {
+    function reentrancyMutexCheck() internal view {
         bool mutexValue;
         assembly {
             mutexValue := shr(REENTRANCY_MUTEX_BIT_OFFSET, sload(rollupState.slot))
@@ -224,17 +319,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         }
     }
 
-    // ###
-    // asyncDefiInteractionHashes and defiInteractionHashes are custom implementations of an array type!!
-    //
-    // we store the length fields for each array inside the `rollupState` storage slot
-    // we access array elements in the traditional manner: array.slot[i] = keccak256(array.slot + i)
-    // this reduces the number of storage slots we write to when processing a rollup
-    // (each slot costs 5,000 gas to update. Repeated modifications to the same slot in a tx only cost 100 gas after the first)
-    // ###
-    bytes32 internal asyncDefiInteractionHashes; // defi interaction hashes to be transferred into pending defi interaction hashes
-    bytes32 internal defiInteractionHashes;
-
     constructor(
         address _verifierAddress,
         uint256 _escapeBlockLowerBound,
@@ -245,7 +329,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         bytes32 _initNullRoot,
         bytes32 _initRootRoot,
         uint256 _initDataSize
-    ) public {
+    ) {
         rollupState = bytes32(
             uint256(
                 keccak256(
@@ -268,14 +352,19 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         transferOwnership(_contractOwner);
     }
 
-    // Used by brige contracts to send RollupProcessor ETH during a bridge interaction
-    receive() external payable {}
-
     /**
      * @dev Allow the multisig owner to pause the contract, in case of bugs.
      */
     function pause() public override onlyOwner {
         _pause();
+    }
+    
+    /**
+     * @dev Used by bridge contracts to send RollupProcessor ETH during a bridge interaction
+     * @param interactionNonce the Defi interaction nonce that this payment is logged against
+     */
+    function receiveEthFromBridge(uint256 interactionNonce) external payable {
+        ethPayments[interactionNonce] = msg.value;
     }
 
     function setRollupProvider(address providerAddress, bool valid) public override onlyOwner {
@@ -296,7 +385,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
      * @dev Approve a proofHash for spending a users deposited funds, this is one way and must be called by the owner of the funds
      * @param _proofHash - keccack256 hash of the inner proof public inputs
      */
-
     function approveProof(bytes32 _proofHash) public override whenNotPaused {
         depositProofApprovals[msg.sender][_proofHash] = true;
     }
@@ -306,10 +394,15 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
      * @param assetId - identifier used to denote a particular asset
      */
     function getSupportedAsset(uint256 assetId) public view override returns (address) {
-        // If the asset ID is >= 2^30, the asset represents a 'virtual' asset that has no layer 1 equivalent
-        if (assetId > 0x3fffffff) {
+        // If the asset ID is >= 2^29, the asset represents a 'virtual' asset that has no ERC20 analogue
+        // Virtual assets are used by defi bridges to track non-token data. E.g. to represent a loan.
+        // If an assetId is *not* a virtual asset, its ERC20 address can be recovered from `supportedAssets[assetId]`
+        if (assetId > 0x1fffffff) {
             revert INVALID_ASSET_ID();
         }
+
+        // If assetId == ethAssetId (i.e. 0), this represents native ETH.
+        // ERC20 token asset id values start at 1
         if (assetId == ethAssetId) {
             return address(0x0);
         }
@@ -318,6 +411,19 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             revert INVALID_ASSET_ADDRESS();
         }
         return result;
+    }
+
+    /**
+     * @dev throw if a given assetId represents a virtual asset
+     * @param assetId 30-bit integer that describes the asset.
+     * If assetId's 29th bit is set, it represents a virtual asset with no ERC20 equivalent
+     * Virtual assets are used by defi bridges to track non-token data. E.g. to represent a loan.
+     * If an assetId is *not* a virtual asset, its ERC20 address can be recovered from `supportedAssets[assetId]`
+     */
+    function validateAssetIdIsNotVirtual(uint256 assetId) internal pure {
+        if (assetId > 0x1fffffff) {
+            revert INVALID_ASSET_ID();
+        }
     }
 
     /**
@@ -396,7 +502,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
      * @dev Get the status of whether an asset supports the permit ERC-2612 approval flow
      * @param assetId - unique identifier of the supported asset
      */
-    function getAssetPermitSupport(uint256 assetId) external view override returns (bool) {
+    function getAssetPermitSupport(uint256 assetId) public view override returns (bool) {
         address assetAddress = getSupportedAsset(assetId);
         return assetPermitSupport[assetAddress];
     }
@@ -532,6 +638,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         address depositorAddress,
         bytes32 proofHash
     ) external payable override whenNotPaused {
+        // Guard against defi bridges calling `depositPendingFunds` when processRollup calls their `convert` function
         reentrancyMutexCheck();
 
         if (assetId == ethAssetId) {
@@ -578,6 +685,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         bytes32 r,
         bytes32 s
     ) external override whenNotPaused {
+        reentrancyMutexCheck();
         address assetAddress = getSupportedAsset(assetId);
         IERC20Permit(assetAddress).permit(depositorAddress, spender, permitApprovalAmount, deadline, v, r, s);
         internalDeposit(assetId, assetAddress, depositorAddress, amount);
@@ -607,7 +715,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             revert INSUFFICIENT_TOKEN_APPROVAL();
         }
 
-        IERC20(assetAddress).transferFrom(depositorAddress, address(this), amount);
+        TokenTransfers.safeTransferFrom(assetAddress, depositorAddress, address(this), amount);
         increasePendingDepositBalance(assetId, depositorAddress, amount);
 
         emit Deposit(assetId, depositorAddress, amount);
@@ -645,10 +753,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             revert INVALID_PROVIDER();
         }
 
-        (bytes memory proofData, uint256 numTxs, uint256 publicInputsHash) = decodeProof(
-            rollupHeaderInputLength,
-            txNumPubInputs
-        );
+        (bytes memory proofData, uint256 numTxs, uint256 publicInputsHash) = decodeProof();
 
         processRollupProof(proofData, signatures, numTxs, publicInputsHash);
 
@@ -679,7 +784,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         // redundant copy of `proofData` into memory, which costs between 100,000 to 1,000,000 gas
         // depending on the rollup size!
         bool proof_verified = false;
-        uint256 broadcastedDataSize = rollupHeaderInputLength + 4;
+        uint256 broadcastedDataSize = rollupHeaderInputLength + 8; // add 8 bytes to skip over the two packed params that follow the rollup header data
         uint256 rollupHeaderInputLengthLocal = rollupHeaderInputLength;
         assembly {
             /**
@@ -709,10 +814,10 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
              **/
             // Begin by getting length of encoded inner join-split public inputs.
             // `calldataload(0x04)` points to start of bytes array. Add 0x24 to skip over length param and function signature.
-            // The calldata param *after* the header is the length of the pub inputs array. However it is a packed 4-byte param.
-            // To extract it, we subtract 28 bytes from the calldata pointer and mask off all but the 4 least significant bytes.
+            // The calldata param 4 bytes *after* the header is the length of the pub inputs array. However it is a packed 4-byte param.
+            // To extract it, we subtract 24 bytes from the calldata pointer and mask off all but the 4 least significant bytes.
             let encodedInnerDataSize := and(
-                calldataload(add(add(calldataload(0x04), 0x24), sub(rollupHeaderInputLengthLocal, 0x1c))),
+                calldataload(add(add(calldataload(0x04), 0x24), sub(rollupHeaderInputLengthLocal, 0x18))),
                 0xffffffff
             )
 
@@ -900,6 +1005,14 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         }
     }
 
+    /**
+     * @dev Contains information that describes a specific DeFi bridge
+     * @notice A single smart contract can be used to represent multiple bridges
+     *
+     * @param bridgeAddressId the bridge contract address = supportedBridges[bridgeAddressId]
+     * @param bridgeAddress   the bridge contract address
+     * @param inputAssetId
+     */
     struct BridgeData {
         uint256 bridgeAddressId;
         address bridgeAddress;
@@ -915,16 +1028,36 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         uint256 bridgeGasLimit;
     }
 
-    uint256 private constant INPUT_ASSET_ID_SHIFT = 32;
-    uint256 private constant OUTPUT_ASSET_ID_A_SHIFT = 62;
-    uint256 private constant OUTPUT_ASSET_ID_B_SHIFT = 92;
-    uint256 private constant LINKED_INTERACTION_NONCE_SHIFT = 122;
-    uint256 private constant BITCONFIG_SHIFT = 154;
-    uint256 private constant AUX_DATA_SHIFT = 186;
-    uint256 private constant MASK_THIRTY_TWO_BITS = 0xffffffff;
-    uint256 private constant MASK_THIRTY_BITS = 0x3fffffff;
-    uint256 private constant MASK_SIXTY_FOUR_BITS = 0xffffffffffffffff;
-
+    /**
+     * @dev Unpack the bridgeId into a BridgeData struct
+     * @param bridgeId - Bit-array that encodes data that describes a DeFi bridge.
+     *
+     * Structure of the bit array is as follows (starting at least significant bit):
+     * | bit range | parameter | description
+     * | 0 - 32    | bridgeAddressId | The address ID. Bridge address = `supportedBridges[bridgeAddressId]`
+     * | 32 - 62   | inputAssetId    | Input asset ID. Asset address = `supportedAssets[inputAssetId]`
+     * | 62 - 92   | outputAssetIdA  | First output asset ID |
+     * | 92 - 122  | outputAssetIdB  | Second output asset ID (if bridge has 2nd output asset) |
+     * | 122 - 154 | linkedInteractionNonce | defi interaction nonce of interaction that produced the input notes. Only relevant for virtual input assets |
+     * | 154 - 186 | bitConfig | Bit-array that contains boolean bridge settings |
+     * | 186 - 250 | auxData | 64 bits of custom data to be passed to the bridge contract. Structure is defined/checked by the bridge contract |
+     *
+     * Structure of the `bigConfig` parameter is as follows
+     * | bit | parameter | description |
+     * | 0   | firstInputAssetVirtual  | is the first input asset virtual? Currently always false, support planned for future update |
+     * | 1   | secondInputAssetVirtual | is the second input asset virtual? Virtual assets have no ERC20 token analogue |
+     * | 2   | firstOutputAssetVirtual | is the first output asset virtual? Currently always false, support planned for future update |
+     * | 3   | secondOutputAssetVirtual| is the second output asset virtual?
+     * | 4   | secondInputValid        | does the second input note represent a non-virtual, real ERC20 token? Currently always false, support planned for future update |
+     * | 5   | secondOutputValid       | does the second output note represent a non-virtual, real ERC20 token? |
+     *
+     * Brief note on virtual assets: Virtual assets are assets that don't have an ERC20 token analogue and exist solely as notes within the Aztec network.
+     * They can be created/spent as a result of DeFi interactions. They are used to enable defi bridges to track internally-defined data without having to
+     * mint a new token on-chain.
+     * An example use of a virtual asset would a virtual loan asset that tracks an outstanding debt that must be repaid to recover collateral deposited into the bridge.
+     *
+     * @return bridgeData - struct that contains bridgeId data in a human-readable form.
+     */
     function getBridgeData(uint256 bridgeId) internal view returns (BridgeData memory bridgeData) {
         bridgeData.bridgeAddressId = bridgeId & MASK_THIRTY_TWO_BITS;
         bridgeData.inputAssetId = (bridgeId >> INPUT_ASSET_ID_SHIFT) & MASK_THIRTY_BITS;
@@ -943,7 +1076,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         // bit 5 = second output asset real?
         bridgeData.secondInputVirtual = ((bitConfig >> 1) & 1) == 1;
         bridgeData.secondOutputVirtual = ((bitConfig >> 3) & 1) == 1;
-        // bridgeData.secondInputValid = ((bitConfig >> 4) & 1) == 1;
         bridgeData.secondOutputValid = ((bitConfig >> 5) & 1) == 1;
 
         bridgeData.bridgeAddress = supportedBridges[bridgeData.bridgeAddressId - 1];
@@ -955,6 +1087,13 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         bridgeData.bridgeGasLimit = bridgeGasLimits[bridgeData.bridgeAddressId];
     }
 
+    /**
+     * @dev Get the four input/output assets associated with a DeFi bridge
+     * @param bridgeData - Information about the DeFi bridge
+     * @param defiInteractionNonce - The defi interaction nonce
+     *
+     * @return inputAssetA inputAssetB outputAssetA outputAssetB : input and output assets represented as AztecAsset structs
+     */
     function getAztecAssetTypes(BridgeData memory bridgeData, uint256 defiInteractionNonce)
         internal
         view
@@ -1008,13 +1147,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             outputAssetB.erc20Address = address(0x0);
             outputAssetB.assetType = AztecTypes.AztecAssetType.NOT_USED;
         }
-    }
-
-    struct BridgeResult {
-        uint256 outputValueA;
-        uint256 outputValueB;
-        bool isAsync;
-        bool success;
     }
 
     /**
@@ -1085,7 +1217,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                 sstore(rollupState.slot, newState)
             }
 
-            bytes32 prevDefiInteractionHash = extractPrevDefiInteractionHash(proofData, rollupHeaderInputLength);
+            bytes32 prevDefiInteractionHash = extractPrevDefiInteractionHash(proofData);
 
             // Validate the compupted interactionHash matches the value in the rollup proof!
             if (prevDefiInteractionHash != expectedDefiInteractionHash) {
@@ -1145,7 +1277,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                 //          AztecTypes.AztecAsset calldata outputAssetB,
                 //          uint256 totalInputValue,
                 //          uint256 interactionNonce,
-                //          uint256 auxInputData // (auxData)
+                //          uint256 auxInputData,
+                //          uint256 ethPaymentsSlot
                 //     )
 
                 // Construct the calldata we send to DefiBridgeProxy
@@ -1177,12 +1310,12 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                     let auxData := mload(add(bridgeData, 0xc0))
                     mstore(add(mPtr, 0x1e0), auxData)
                 }
-
+                mstore(add(mPtr, 0x200), ethPayments.slot)
                 let success := delegatecall(
                     mload(add(bridgeData, 0x160)),
                     sload(defiBridgeProxy.slot),
                     sub(mPtr, 0x04),
-                    0x204,
+                    0x224,
                     mPtr,
                     0x60
                 )
@@ -1228,7 +1361,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
 
                     sstore(pendingDefiInteractionsSlotBase, bridgeId)
                     sstore(add(pendingDefiInteractionsSlotBase, 0x01), totalInputValue)
-                    sstore(add(pendingDefiInteractionsSlotBase, 0x02), 0) // TODO REMOVE
                 }
                 default {
                     // compute defiInteractionnHash
@@ -1329,20 +1461,17 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
      *      Callback function for asynchronous bridge interactions.
      *      Can only be called by the bridge contract linked to the interactionNonce
      * @param interactionNonce - unique id of the interaection
-     * @param outputValueA - number of tokens of type A (token id recorded in bridge id)
-     * @param outputValueB - number of tokens of type B (token id recorded in bridge id)
      */
-    function processAsyncDefiInteraction(
-        uint256 interactionNonce,
-        uint256 outputValueA,
-        uint256 outputValueB
-    ) external payable whenNotPaused {
-        reentrancyMutexCheck();
-        setReentrancyMutex();
+    function processAsyncDefiInteraction(uint256 interactionNonce) external {
+        // If the re-entrancy mutex is not set, set it!
+        // The re-entrancy mutex guards against nested calls to `processRollup()` and deposit functions.
+        bool startingMutexValue = getReentrancyMutex();
+        if (!startingMutexValue) {
+            setReentrancyMutex();
+        }
+
         uint256 bridgeId;
         uint256 totalInputValue;
-        bool result;
-        bytes32 defiInteractionHash;
         assembly {
             mstore(0x00, interactionNonce)
             mstore(0x20, pendingDefiInteractions.slot)
@@ -1356,100 +1485,71 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             // setting bridgeId to 0 is enough to cause future calls with this interaction nonce to fail
             sstore(interactionPtr, 0x00)
         }
+        if (bridgeId == 0) {
+            revert INVALID_BRIDGE_ID();
+        }
         BridgeData memory bridgeData = getBridgeData(bridgeId);
-        bool secondOutputVirtual = bridgeData.secondOutputVirtual;
-        bool secondOutputValid = bridgeData.secondOutputValid;
-        assembly {
-            let bridgeAddressId := and(bridgeId, 0xffffffff)
 
-            // convert the bridgeAddressId into contract address
+        (
+            AztecTypes.AztecAsset memory inputAssetA,
+            AztecTypes.AztecAsset memory inputAssetB,
+            AztecTypes.AztecAsset memory outputAssetA,
+            AztecTypes.AztecAsset memory outputAssetB
+        ) = getAztecAssetTypes(bridgeData, interactionNonce);
+
+        // Extract the bridge address from the bridgeId
+        IDefiBridge bridgeContract;
+        assembly {
             mstore(0x00, supportedBridges.slot)
             let bridgeSlot := keccak256(0x00, 0x20)
 
-            if sub(bridgeAddressId, ethAssetId) {
-                bridgeAddressId := sload(add(bridgeSlot, sub(bridgeAddressId, 0x01)))
-                if iszero(bridgeAddressId) {
-                    // keccak256("ZERO_BRIDGE_ADDRESS_ID()").slice(4)
-                    let mPtr := mload(0x40)
-                    mstore(mPtr, 0x1cd9dc8000000000000000000000000000000000000000000000000000000000)
-                    revert(mPtr, 0x04)
-                }
-            }
+            bridgeContract := and(bridgeId, 0xffffffff)
+            bridgeContract := sload(add(bridgeSlot, sub(bridgeContract, 0x01)))
+            // mask non-address bytes (TODO is this neccessary?)
+            bridgeContract := and(bridgeContract, 0xffffffffffffffffffffffffffffffffffffffff)
+        }
+        if (address(bridgeContract) == address(0)) {
+            revert INVALID_BRIDGE_ADDRESS();
+        }
+        // Copy some variables to front of stack to get around stack too deep errors
+        uint256 totalInputValueCopy = totalInputValue;
+        uint256 interactionNonceCopy = interactionNonce;
+        uint64 auxDataCopy = uint64(bridgeData.auxData);
+        (uint256 outputValueA, uint256 outputValueB) = bridgeContract.finalise(
+            inputAssetA,
+            inputAssetB,
+            outputAssetA,
+            outputAssetB,
+            totalInputValueCopy,
+            interactionNonceCopy,
+            auxDataCopy
+        );
 
-            if iszero(eq(bridgeAddressId, caller())) {
-                let mPtr := mload(0x40)
-                // keccak256("ASYNC_CALLBACK_BAD_CALLER_ADDRESS()")
-                mstore(mPtr, 0x9c4f86a800000000000000000000000000000000000000000000000000000000)
-                revert(mPtr, 0x04)
-            }
+        if (outputValueB > 0 && outputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED) {
+            revert NONZERO_OUTPUT_VALUE_ON_NOT_USED_ASSET(outputValueB);
+        }
+        if (outputValueA == 0 && outputValueB == 0) {
+            // issue refund.
+            transferTokensAsync(address(bridgeContract), inputAssetA, totalInputValue, interactionNonceCopy);
+        } else {
+            // transfer output tokens to rollup contract
+            transferTokensAsync(address(bridgeContract), outputAssetA, outputValueA, interactionNonceCopy);
+            transferTokensAsync(address(bridgeContract), outputAssetB, outputValueB, interactionNonceCopy);
+        }
 
-            function transferTokens(assetId, outputValue) {
-                // test if we are using eth?
-                if iszero(assetId) {
-                    let success := eq(outputValue, callvalue())
-                    if iszero(success) {
-                        let mPtr := mload(0x40)
-                        // keccak256("MSG_VALUE_DOES_NOT_MATCH_STATED_VALUE()")
-                        mstore(mPtr, 0x53e2439e00000000000000000000000000000000000000000000000000000000)
-                        revert(mPtr, 0x04)
-                    }
-                    leave
-                }
-
-                mstore(0x00, supportedAssets.slot)
-                let supportedAssetsSlotBase := keccak256(0x00, 0x20)
-                let tokenAddress := sload(add(supportedAssetsSlotBase, sub(assetId, 0x01)))
-
-                // call token.transferFrom(bridgeAddressId, this, outputValue)
-                let mPtr := mload(0x40)
-                mstore(mPtr, TRANSFER_FROM_SELECTOR)
-                mstore(add(mPtr, 0x04), caller())
-                mstore(add(mPtr, 0x24), address())
-                mstore(add(mPtr, 0x44), outputValue)
-                let success := call(gas(), tokenAddress, 0, mPtr, 0x64, 0x00, 0x20)
-                if iszero(success) {
-                    returndatacopy(0, 0, returndatasize())
-                    revert(0x00, returndatasize())
-                }
-            }
-            // validate result makes sense:
-            // IF !secondOutputVirtual AND !secondOutputValid, ASSERT outputValueB == 0
-            let success := or(secondOutputVirtual, or(secondOutputValid, eq(outputValueB, 0)))
-
-            let hasOutputValueA := gt(outputValueA, 0)
-            let hasOutputValueB := gt(outputValueB, 0)
-            result := or(hasOutputValueA, hasOutputValueB)
-            if iszero(result) {
-                let inputAssetId := and(shr(32, bridgeId), 0x3fffffff)
-                transferTokens(inputAssetId, totalInputValue)
-            }
-            if and(success, hasOutputValueA) {
-                let assetIdA := and(shr(62, bridgeId), 0x3fffffff)
-                transferTokens(assetIdA, outputValueA)
-            }
-            if and(success, and(hasOutputValueB, secondOutputValid)) {
-                let assetIdB := and(shr(92, bridgeId), 0x3fffffff)
-                transferTokens(assetIdB, outputValueB)
-            }
-            if iszero(success) {
-                // TODO ADD ERROR MESSAGE
-                let mPtr := mload(0x40)
-                // keccak256("TOKEN_TRANSFER_FAILED()")
-                mstore(mPtr, 0xdaa068d900000000000000000000000000000000000000000000000000000000)
-                revert(mPtr, 0x04)
-                revert(0x00, 0x00)
-            }
-
-            // Compute defiInteractionHash.
+        // compute defiInteractionHash and push it onto the asyncDefiInteractionHashes array
+        bool result;
+        assembly {
+            result := iszero(and(eq(outputValueA, 0), eq(outputValueB, 0)))
             let mPtr := mload(0x40)
             mstore(mPtr, bridgeId)
-            mstore(add(mPtr, 0x20), interactionNonce)
-            mstore(add(mPtr, 0x40), totalInputValue)
+            mstore(add(mPtr, 0x20), interactionNonceCopy)
+            mstore(add(mPtr, 0x40), totalInputValueCopy)
             mstore(add(mPtr, 0x60), outputValueA)
             mstore(add(mPtr, 0x80), outputValueB)
             mstore(add(mPtr, 0xa0), result)
             pop(staticcall(gas(), 0x2, mPtr, 0xc0, 0x00, 0x20))
-            defiInteractionHash := mod(mload(0x00), CIRCUIT_MODULUS)
+            let defiInteractionHash := mod(mload(0x00), CIRCUIT_MODULUS)
 
             // push async defi interaction hash
             mstore(0x00, asyncDefiInteractionHashes.slot)
@@ -1462,7 +1562,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             // check that size of asyncDefiInteractionHashes isn't such that
             // adding 1 to it will make the next block's defiInteractionHashes length hit 512
             if gt(add(add(1, asyncArrayLen), defiArrayLen), 512) {
-                // keccak256("ARRAY_OVERFLOW()")
+                // store keccak256("ARRAY_OVERFLOW()")
+                // this code is equivalent to `revert ARRAY_OVERFLOW()`
                 mstore(mPtr, 0x58a4ab0e00000000000000000000000000000000000000000000000000000000)
                 revert(mPtr, 0x04)
             }
@@ -1477,23 +1578,46 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             sstore(rollupState.slot, newState)
         }
         emit AsyncDefiBridgeProcessed(bridgeId, interactionNonce, totalInputValue, outputValueA, outputValueB, result);
-        clearReentrancyMutex();
+
+        // clear the re-entrancy mutex if it was false at the start of this function
+        if (!startingMutexValue) {
+            clearReentrancyMutex();
+        }
     }
 
+    function transferTokensAsync(
+        address bridgeContract,
+        AztecTypes.AztecAsset memory asset,
+        uint256 outputValue,
+        uint256 interactionNonce
+    ) internal {
+        if (asset.assetType == AztecTypes.AztecAssetType.ETH) {
+            require(outputValue == ethPayments[interactionNonce], 'argh insufficient eth payment');
+            ethPayments[interactionNonce] = 0;
+        } else if (asset.assetType == AztecTypes.AztecAssetType.ERC20 && outputValue > 0) {
+            address tokenAddress = asset.erc20Address;
+            bool success;
+            TokenTransfers.safeTransferFrom(tokenAddress, bridgeContract, address(this), outputValue);
+        }
+    }
+
+    /**
+     * @dev Transfer a fee to the feeReceiver
+     * @param proofData proof of knowledge of a rollup block update
+     * @param feeReceiver fee beneficiary as described by the rollup provider
+     */
     function transferFee(bytes memory proofData, address feeReceiver) internal {
         for (uint256 i = 0; i < numberOfAssets; ++i) {
-            uint256 assetId = extractAssetId(proofData, i, numberOfBridgeCalls);
-            uint256 txFee = extractTotalTxFee(proofData, i, numberOfBridgeCalls);
+            uint256 assetId = extractAssetId(proofData, i);
+            uint256 txFee = extractTotalTxFee(proofData, i);
             if (txFee > 0) {
                 if (assetId == ethAssetId) {
                     // We explicitly do not throw if this call fails, as this opens up the possiblity of
                     // griefing attacks, as engineering a failed fee will invalidate an entire rollup block
-                    (bool success, ) = payable(feeReceiver).call{gas: 50000, value: txFee}('');
+                    payable(feeReceiver).call{gas: 50000, value: txFee}('');
                 } else {
                     address assetAddress = getSupportedAsset(assetId);
-                    try IERC20(assetAddress).transfer{gas: assetGasLimits[assetId]}(feeReceiver, txFee) {} catch (
-                        bytes memory reason
-                    ) {}
+                    TokenTransfers.transferToDoNotBubbleErrors(assetAddress, feeReceiver, txFee, assetGasLimits[assetId]);
                 }
             }
         }
@@ -1523,138 +1647,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             // griefing attacks, as engineering a failed withdrawal will invalidate an entire rollup block
             // the user should ensure their withdrawal will succeed or they will loose funds
             address assetAddress = getSupportedAsset(assetId);
-            try IERC20(assetAddress).transfer{gas: assetGasLimits[assetId]}(receiverAddress, withdrawValue) {} catch (
-                bytes memory reason
-            ) {}
-        }
-    }
-
-    // function receiveEthFromBridge(uint256 interactionNonce) external payable {
-    //     ethPaymentsFromBridges[msg.sender][interactionNonce] = msg.value;
-    // }
-
-    // /**
-    //  * @dev Internal utility function to withdraw funds from the contract to a receiver address
-    //  * @param withdrawValue - value being withdrawn from the contract
-    //  * @param receiverAddress - address receiving public ERC20 tokens
-    //  * @param assetId - ID of the asset for which a withdrawl is being performed
-    //  */
-    // function finalise(
-    //     uint256 interactionNonce
-    // ) external payable override returns (uint256, uint256) {
-
-    //     reentrancyMutexCheck();
-    //     setReentrancyMutex(); // can't call processRollup for the duration of this call
-    //     uint256 bridgeId;
-    //     uint256 totalInputValue;
-    //     assembly {
-    //         mstore(0x00, interactionNonce)
-    //         mstore(0x20, pendingDefiInteractions.slot)
-    //         let interactionPtr := keccak256(0x00, 0x40)
-
-    //         bridgeId := sload(interactionPtr)
-    //         totalInputValue := sload(add(interactionPtr, 0x01))
-
-    //         // delete pendingDefiInteractions[interactionNonce]
-    //         // N.B. only need to delete 1st slot value `bridgeId`. Deleting vars costs gas post-London
-    //         // setting bridgeId to 0 is enough to cause future calls with this interaction nonce to fail
-    //         sstore(interactionPtr, 0x00)
-    //     }
-    //     BridgeData memory bridgeData = getBridgeData(bridgeId);
-    //     (
-    //         AztecTypes.AztecAsset memory inputAssetA,
-    //         AztecTypes.AztecAsset memory inputAssetB,
-    //         AztecTypes.AztecAsset memory outputAssetA,
-    //         AztecTypes.AztecAsset memory outputAssetB
-    //     ) = getAztecAssetTypes(bridgeData, interactionNonce);
-
-    //     bool success;
-    //     uint256 outputValueA;
-    //     uint256 outputValueB;
-    //     assembly {
-    //             // call the following function of bridge...
-    //             //     function finalise(
-    //             //          AztecTypes.AztecAsset calldata inputAssetA,
-    //             //          AztecTypes.AztecAsset calldata inputAssetB,
-    //             //          AztecTypes.AztecAsset calldata outputAssetA,
-    //             //          AztecTypes.AztecAsset calldata outputAssetB,
-    //             //          uint256 interactionNonce,
-    //             //          uint64 auxData,
-    //             // ) external payable override returns (uint256, uint256)
-    //             // Construct the calldata we send to DefiBridgeProxy
-    //             // mPtr = memory pointer. Set to free memory location (0x40)
-    //             let mPtr := mload(0x40)
-    //             // first 4 bytes is the function signature
-    //             mstore(mPtr, DEFI_BRIDGE_FINALISE_SELECTOR)
-    //             mPtr := add(mPtr, 0x04)
-    //             {
-    //                 let bridgeAddress := mload(add(bridgeData, 0x20))
-    //                 mstore(mPtr, bridgeAddress)
-    //             }
-
-    //             mstore(add(mPtr, 0x00), mload(inputAssetA))
-    //             mstore(add(mPtr, 0x20), mload(add(inputAssetA, 0x20)))
-    //             mstore(add(mPtr, 0x40), mload(add(inputAssetA, 0x40)))
-    //             mstore(add(mPtr, 0x60), mload(inputAssetB))
-    //             mstore(add(mPtr, 0x80), mload(add(inputAssetB, 0x20)))
-    //             mstore(add(mPtr, 0xa0), mload(add(inputAssetB, 0x40)))
-    //             mstore(add(mPtr, 0xc0), mload(outputAssetA))
-    //             mstore(add(mPtr, 0xe0), mload(add(outputAssetA, 0x20)))
-    //             mstore(add(mPtr, 0x100), mload(add(outputAssetA, 0x40)))
-    //             mstore(add(mPtr, 0x120), mload(outputAssetB))
-    //             mstore(add(mPtr, 0x140), mload(add(outputAssetB, 0x20)))
-    //             mstore(add(mPtr, 0x160), mload(add(outputAssetB, 0x40)))
-    //             mstore(add(mPtr, 0x180), interactionNonce)
-    //             {
-    //                 let auxData := mload(add(bridgeData, 0xc0))
-    //                 mstore(add(mPtr, 0x1a0), auxData)
-    //             }
-    //             let success := delegatecall(
-    //                 sload(gasSentToBridgeProxy.slot),
-    //                 sload(defiBridgeProxy.slot),
-    //                 sub(mPtr, 0x04),
-    //                 0x204,
-    //                 mPtr,
-    //                 0x60
-    //             )
-    //     }
-    //     require(success, "RollupProcessor: DEFI_BRIDGE.FINALISE FAILED");
-
-    //     assembly {
-
-    //     }
-    //     // Step 1: call Finalise on bridge contract with interface:
-    //     //
-    //     //
-    //     // function finalise(
-    //     //   Types.AztecAsset calldata,
-    //     //   Types.AztecAsset calldata,
-    //     //   Types.AztecAsset calldata,
-    //     //   Types.AztecAsset calldata,
-    //     //   uint256,
-    //     //   uint64
-    //     // ) external payable override returns (uint256, uint256) {
-    //     //   require(false);
-    //     // }
-
-    //     /**
-    //      * Step 2.....
-    //      * How do we recover output tokens in a manner that enables bridges to trigger *finalise* of **other** bridges?
-    //      * We will likely need to follow the 'approve/transferFrom' pattern for ERC20 tokens
-    //      * But what do we do with ETH to prevent re-entrancy attacks?
-    //      *
-    //      * Option 1: `receiveEthFromBridge[bridgeAddress][interactionNonce]`
-    //      * Function can be called by anyone and logs Eth against address and interaction nonce
-    //      * At the end of `finalise` we check this balance to determine OutputValue
-    //      * Balance is then cleared
-    //      * Can't be abused to trigger contract to double-count...
-    //      */
-    //     require(false);
-    // }
-
-    function validateAssetIdIsNotVirtual(uint256 assetId) internal pure {
-        if (assetId >= (1 << 29)) {
-            revert INVALID_ASSET_ID();
+            TokenTransfers.transferToDoNotBubbleErrors(assetAddress, receiverAddress, withdrawValue, assetGasLimits[assetId]);
         }
     }
 }

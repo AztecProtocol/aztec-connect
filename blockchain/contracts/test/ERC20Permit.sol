@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: GPL-2.0-only
-// Copyright 2020 Spilsbury Holdings Ltd
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2022 Aztec
 pragma solidity >=0.8.4 <0.8.11;
 
 import {ERC20Mintable} from './ERC20Mintable.sol';
@@ -13,7 +13,7 @@ contract ERC20Permit is ERC20Mintable {
     bytes32 public constant PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
     mapping(address => uint256) public nonces;
 
-    constructor() public ERC20Mintable() {
+    constructor() ERC20Mintable() {
         uint256 chainId;
         assembly {
             chainId := chainid()
