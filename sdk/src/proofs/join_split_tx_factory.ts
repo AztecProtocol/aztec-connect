@@ -58,7 +58,6 @@ export class JoinSplitTxFactory {
         BigInt(0), // value
         assetId,
         nonce,
-        // TODO: Check with Ariel: is this secure? Or could we accidentally cause nullifier/commitment collisions in future if this is random? The nullifier of this gibberish note will be injected into the output note of this tx.
         randomBytes(32), // inputNullifier - this is a dummy input nullifier for the dummy note.
         this.createEphemeralPrivKey(),
         this.grumpkin,

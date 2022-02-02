@@ -12,8 +12,8 @@ export interface MockBridgeParams {
   outputAssetA?: EthAddress;
   outputAssetB?: EthAddress;
   secondOutputAssetValid?: boolean;
-  secondOutputAssetVirtual?: boolean;
-  secondInputAssetVirtual?: boolean;
+  secondOutputVirtual?: boolean;
+  secondInputVirtual?: boolean;
   canConvert?: boolean;
   outputValueA?: bigint;
   outputValueB?: bigint;
@@ -38,8 +38,8 @@ export const deployMockBridge = async (
     outputAssetA = assetAddresses[outputAssetIdA],
     outputAssetB = assetAddresses[outputAssetIdB],
     secondOutputAssetValid = false,
-    secondOutputAssetVirtual = false,
-    secondInputAssetVirtual = false,
+    secondOutputVirtual = false,
+    secondInputVirtual = false,
     canConvert = true,
     outputValueA = 10n,
     outputValueB = 0n,
@@ -90,7 +90,7 @@ export const deployMockBridge = async (
     outputAssetIdA,
     outputAssetIdB,
     openingNonce,
-    new BitConfig(false, secondInputAssetVirtual, false, secondOutputAssetVirtual, false, secondOutputAssetValid),
+    new BitConfig(false, secondInputVirtual, false, secondOutputVirtual, false, secondOutputAssetValid),
     auxData,
   );
 };

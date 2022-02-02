@@ -15,12 +15,12 @@ export class BitConfig {
   static EMPTY = new BitConfig(false, false, false, false, false, false);
 
   constructor(
-    public readonly firstInputAssetVirtual: boolean,
-    public readonly secondInputAssetVirtual: boolean,
-    public readonly firstOutputAssetVirtual: boolean,
-    public readonly secondOutputAssetVirtual: boolean,
-    public readonly secondInputValid: boolean,
-    public readonly secondOutputValid: boolean,
+    public readonly firstInputVirtual: boolean,
+    public readonly secondInputVirtual: boolean,
+    public readonly firstOutputVirtual: boolean,
+    public readonly secondOutputVirtual: boolean,
+    public readonly secondInputReal: boolean,
+    public readonly secondOutputReal: boolean,
   ) {}
 
   static random() {
@@ -40,12 +40,12 @@ export class BitConfig {
 
   toBigInt() {
     return (
-      BigInt(this.firstInputAssetVirtual) +
-      (BigInt(this.secondInputAssetVirtual) << BigInt(1)) +
-      (BigInt(this.firstOutputAssetVirtual) << BigInt(2)) +
-      (BigInt(this.secondOutputAssetVirtual) << BigInt(3)) +
-      (BigInt(this.secondInputValid) << BigInt(4)) +
-      (BigInt(this.secondOutputValid) << BigInt(5))
+      BigInt(this.firstInputVirtual) +
+      (BigInt(this.secondInputVirtual) << BigInt(1)) +
+      (BigInt(this.firstOutputVirtual) << BigInt(2)) +
+      (BigInt(this.secondOutputVirtual) << BigInt(3)) +
+      (BigInt(this.secondInputReal) << BigInt(4)) +
+      (BigInt(this.secondOutputReal) << BigInt(5))
     );
   }
 }

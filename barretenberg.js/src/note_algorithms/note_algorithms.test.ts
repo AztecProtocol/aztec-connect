@@ -36,7 +36,7 @@ describe('compute_nullifier', () => {
 
     const nullifier1 = noteAlgos.valueNoteNullifier(inputNote1Enc, privateKey);
 
-    expect(nullifier1.toString('hex')).toEqual('22e9dc570e100f8f59a70772ab88d4f325a999d2216cca0e2812c6b18adec46a');
+    expect(nullifier1.toString('hex')).toEqual('1687a9528e07b776811af3c21ae2d30f750b53c08aba6573423f0660ae12e000');
   });
 
   it('should commit to claim note and compute its nullifier', async () => {
@@ -68,6 +68,6 @@ describe('compute_nullifier', () => {
     const nonce = 1;
     const accountAliasId = AccountAliasId.fromAlias('pebble', nonce, blake2s);
     const nullifier = noteAlgos.accountAliasIdNullifier(accountAliasId);
-    expect(nullifier.toString('hex')).toEqual('0a9efa20ae80ee7fe70c9624854784176e04f76abd8780bca2607dafee953aa8');
+    expect(nullifier.toString('hex')).toEqual('224e858e256231793201058f10a1408dbc3dd1ed70cf172df0d675737993bda9');
   });
 });

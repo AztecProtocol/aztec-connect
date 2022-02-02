@@ -76,7 +76,7 @@ describe('rollup_processor: defi bridge failures', () => {
   const expectRefund = async (bridgeId: BridgeId, inputValue: bigint, txHash: TxHash) => {
     await expectBalance(bridgeId.inputAssetId, inputValue);
     await expectBalance(bridgeId.outputAssetIdA, 0n);
-    if (bridgeId.bitConfig.secondOutputValid) {
+    if (bridgeId.bitConfig.secondOutputReal) {
       await expectBalance(bridgeId.outputAssetIdB, 0n);
     }
     await expectResult([new DefiInteractionNote(bridgeId, 0, inputValue, 0n, 0n, false)], txHash);

@@ -11,6 +11,8 @@ export function deriveNoteSecret(ecdhPubKey: GrumpkinAddress, ecdhPrivKey: Buffe
     const hashA = createHash('sha256').update(secretBufferA).digest();
     const hashB = createHash('sha256').update(secretBufferB).digest();
     const hash = Buffer.concat([hashA, hashB]);
+    // Note: to get close to uniformly-distributed field elements, we need to start with 512-bits before modulo
+    // reduction (not 256) - hence why we hash _twice_ and concatenate above.
     return grumpkin.reduce512BufferToFr(hash);
   }
 

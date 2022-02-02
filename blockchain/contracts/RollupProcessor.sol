@@ -358,7 +358,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
     function pause() public override onlyOwner {
         _pause();
     }
-    
+
     /**
      * @dev Used by bridge contracts to send RollupProcessor ETH during a bridge interaction
      * @param interactionNonce the Defi interaction nonce that this payment is logged against
@@ -1022,7 +1022,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         uint256 linkedInteractionNonce;
         uint256 auxData;
         bool secondOutputVirtual;
-        bool secondOutputValid;
+        bool secondOutputReal;
         bool firstOutputVirtual;
         bool secondInputVirtual;
         uint256 bridgeGasLimit;
@@ -1048,8 +1048,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
      * | 1   | secondInputAssetVirtual | is the second input asset virtual? Virtual assets have no ERC20 token analogue |
      * | 2   | firstOutputAssetVirtual | is the first output asset virtual? Currently always false, support planned for future update |
      * | 3   | secondOutputAssetVirtual| is the second output asset virtual?
-     * | 4   | secondInputValid        | does the second input note represent a non-virtual, real ERC20 token? Currently always false, support planned for future update |
-     * | 5   | secondOutputValid       | does the second output note represent a non-virtual, real ERC20 token? |
+     * | 4   | secondInputReal         | does the second input note represent a non-virtual, real ERC20 token? Currently always false, support planned for future update |
+     * | 5   | secondOutputReal        | does the second output note represent a non-virtual, real ERC20 token? |
      *
      * Brief note on virtual assets: Virtual assets are assets that don't have an ERC20 token analogue and exist solely as notes within the Aztec network.
      * They can be created/spent as a result of DeFi interactions. They are used to enable defi bridges to track internally-defined data without having to
@@ -1076,10 +1076,10 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
         // bit 5 = second output asset real?
         bridgeData.secondInputVirtual = ((bitConfig >> 1) & 1) == 1;
         bridgeData.secondOutputVirtual = ((bitConfig >> 3) & 1) == 1;
-        bridgeData.secondOutputValid = ((bitConfig >> 5) & 1) == 1;
+        bridgeData.secondOutputReal = ((bitConfig >> 5) & 1) == 1;
 
         bridgeData.bridgeAddress = supportedBridges[bridgeData.bridgeAddressId - 1];
-        if (bridgeData.secondOutputValid) {
+        if (bridgeData.secondOutputReal) {
             if (bridgeData.outputAssetIdA == bridgeData.outputAssetIdB) {
                 revert BRIDGE_WITH_IDENTICAL_OUTPUT_ASSETS(bridgeData.outputAssetIdA);
             }
@@ -1116,7 +1116,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             : AztecTypes.AztecAssetType.ERC20;
 
         // potential conflicting states that are explicitly ruled out by circuit constraints:
-        // secondOutputVirtual && secondOutputValid
+        // secondOutputVirtual && secondOutputReal
         // secondOutputVirtual && bridgeData.outputassetIdB != 0
         // if secondAssetValid is 1, both output asset ids cannot match one another
         // TODO: add all of them here!
@@ -1136,7 +1136,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             outputAssetB.id = defiInteractionNonce;
             outputAssetB.erc20Address = address(0x0);
             outputAssetB.assetType = AztecTypes.AztecAssetType.VIRTUAL;
-        } else if (bridgeData.secondOutputValid) {
+        } else if (bridgeData.secondOutputReal) {
             outputAssetB.id = bridgeData.outputAssetIdB;
             outputAssetB.erc20Address = getSupportedAsset(bridgeData.outputAssetIdB);
             outputAssetB.assetType = outputAssetB.erc20Address == address(0x0)
@@ -1334,7 +1334,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                     mstore(add(bridgeResult, 0x60), 0) // success
                 }
             }
-            if (!(bridgeData.secondOutputValid || bridgeData.secondOutputVirtual)) {
+            if (!(bridgeData.secondOutputReal || bridgeData.secondOutputVirtual)) {
                 bridgeResult.outputValueB = 0;
             }
 
@@ -1617,7 +1617,12 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                     payable(feeReceiver).call{gas: 50000, value: txFee}('');
                 } else {
                     address assetAddress = getSupportedAsset(assetId);
-                    TokenTransfers.transferToDoNotBubbleErrors(assetAddress, feeReceiver, txFee, assetGasLimits[assetId]);
+                    TokenTransfers.transferToDoNotBubbleErrors(
+                        assetAddress,
+                        feeReceiver,
+                        txFee,
+                        assetGasLimits[assetId]
+                    );
                 }
             }
         }
@@ -1647,7 +1652,12 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             // griefing attacks, as engineering a failed withdrawal will invalidate an entire rollup block
             // the user should ensure their withdrawal will succeed or they will loose funds
             address assetAddress = getSupportedAsset(assetId);
-            TokenTransfers.transferToDoNotBubbleErrors(assetAddress, receiverAddress, withdrawValue, assetGasLimits[assetId]);
+            TokenTransfers.transferToDoNotBubbleErrors(
+                assetAddress,
+                receiverAddress,
+                withdrawValue,
+                assetGasLimits[assetId]
+            );
         }
     }
 }

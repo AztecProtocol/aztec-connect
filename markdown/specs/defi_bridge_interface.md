@@ -1,6 +1,7 @@
 ---
 tags: Specs
 ---
+
 # Defi Bridge Contract Interface
 
 ## Types
@@ -24,16 +25,13 @@ library AztecTypes {
 
 The `AztecAsset` struct is an attempt at a more developer-friendly description of an Aztec asset that does not rely on bit flags.
 
-The *type* of the asset is described by an enum. For virtual or not used assets, the `erc20Address` will be 0.
+The _type_ of the asset is described by an enum. For virtual or not used assets, the `erc20Address` will be 0.
 
 For input virtual assets, the `id` field will contain the interaction nonce of the interaction that created the asset.
 
 For output virtual assets, the `id` field will be the current interaction nonce.
 
 ## External Methods
-
-
-
 
 ### convert
 
@@ -61,45 +59,43 @@ Initiate a DeFi interaction and inform the rollup contract of the proceeds. If t
 
 ###### Input Values:
 
-| Name         | Type      | Description |
-| ------------ | --------- | ----------- |
-| `inputAssetA` | *AztecAsset* | first input asset |
-| `inputAssetB` | *AztecAsset* | second input asset. Either VIRTUAL or NOT_USED |
-| `outputAssetA` | *AztecAsset* | first output asset. Cannot be virtual |
-| `outputAssetB` | *AztecAsset* | second output asset. Can be real or virtual (or NOT_USED) |
-| `totalInputValue` | *uint256* | The amount of `inputAsset` this bridge contract is allowed to transfer from the rollup contract. |
-| `interactionNonce` | *uint256* | The current defi interaction nonce |
-| `auxData` | *uint64* | Custom auxiliary metadata |
+| Name               | Type         | Description                                                                                      |
+| ------------------ | ------------ | ------------------------------------------------------------------------------------------------ |
+| `inputAssetA`      | _AztecAsset_ | first input asset                                                                                |
+| `inputAssetB`      | _AztecAsset_ | second input asset. Either VIRTUAL or NOT_USED                                                   |
+| `outputAssetA`     | _AztecAsset_ | first output asset. Cannot be virtual                                                            |
+| `outputAssetB`     | _AztecAsset_ | second output asset. Can be real or virtual (or NOT_USED)                                        |
+| `totalInputValue`  | _uint256_    | The amount of `inputAsset` this bridge contract is allowed to transfer from the rollup contract. |
+| `interactionNonce` | _uint256_    | The current defi interaction nonce                                                               |
+| `auxData`          | _uint64_     | Custom auxiliary metadata                                                                        |
 
 ###### Return Values:
 
-| Name           | Type      | Description |
-| -------------- | --------- | ----------- |
-| `outputValueA` | *uint256* | The amount of `outputAssetA` the rollup contract will be able to transfer from this bridge contract. Must be greater than 0 if `numOutputAssets` is 1. |
-| `outputValueB` | *uint256* | The amount of `outputAssetB` the rollup contract will be able to transfer from this bridge contract. Must be 0 if `numOutputAssets` is 1. |
+| Name           | Type      | Description                                                                                                                                            |
+| -------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `outputValueA` | _uint256_ | The amount of `outputAssetA` the rollup contract will be able to transfer from this bridge contract. Must be greater than 0 if `numOutputAssets` is 1. |
+| `outputValueB` | _uint256_ | The amount of `outputAssetB` the rollup contract will be able to transfer from this bridge contract. Must be 0 if `numOutputAssets` is 1.              |
 
 In the unfortunate event when both output values are zeros, this function should throw so that the rollup contract could refund `inputValue` back to the users.
 
-
 [^1]: Bridge id is a 250-bit concatenation of the following data (starting at the most significant bit position):
 
-| bit position | bit length | definition | description |
-| --- | --- | --- | --- |
-| 0 | 64 | `auxData` | custom auxiliary data for bridge-specific logic |
-| 64 | 32 | `bitConfig` | flags that describe asset types |
-| 96 | 32 | `openingNonce` | (optional) reference to a previous defi interaction nonce (used for virtual assets) |
-| 128 | 30 |  `outputAssetB` | asset id of 2nd output asset |
-| 158 | 30 | `outputAssetA` | asset id of 1st output asset |
-| 188 | 30 | `inputAsset` | asset id of 1st input asset |
-| 218 | 32 | `bridgeAddressId` | id of bridge smart contract address |
-
+| bit position | bit length | definition        | description                                                                         |
+| ------------ | ---------- | ----------------- | ----------------------------------------------------------------------------------- |
+| 0            | 64         | `auxData`         | custom auxiliary data for bridge-specific logic                                     |
+| 64           | 32         | `bitConfig`       | flags that describe asset types                                                     |
+| 96           | 32         | `openingNonce`    | (optional) reference to a previous defi interaction nonce (used for virtual assets) |
+| 128          | 30         | `outputAssetB`    | asset id of 2nd output asset                                                        |
+| 158          | 30         | `outputAssetA`    | asset id of 1st output asset                                                        |
+| 188          | 30         | `inputAsset`      | asset id of 1st input asset                                                         |
+| 218          | 32         | `bridgeAddressId` | id of bridge smart contract address                                                 |
 
 Bit Config Definition
 | bit | meaning |
 | --- | --- |
-| 0   | firstInputAssetVirtual |
-| 1   | secondInputAssetVirtual |
-| 2   | firstOutputAssetVirtual |
-| 3   | secondOutputAssetVirtual |
-| 4   | secondInputValid |
-| 5   | secondOutputValid |
+| 0 | firstInputVirtual |
+| 1 | secondInputVirtual |
+| 2 | firstOutputVirtual |
+| 3 | secondOutputVirtual |
+| 4 | secondInputReal |
+| 5 | secondOutputReal |

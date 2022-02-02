@@ -98,7 +98,7 @@ describe('rollup_processor: defi bridge with loans', () => {
     const outputValueA = 10n;
     const outputValueB = 7n;
     const { bridgeId } = await mockBridge({
-      secondOutputAssetVirtual: true,
+      secondOutputVirtual: true,
       inputAssetId: 1,
       outputAssetIdA: 0,
       outputAssetIdB: 2,
@@ -143,7 +143,7 @@ describe('rollup_processor: defi bridge with loans', () => {
     // Note that we need a new bridge id as the input and output assets have changed
     {
       const { bridgeId: bridgeId2, contract: bridge2 } = await mockBridge({
-        secondInputAssetVirtual: true,
+        secondInputVirtual: true,
         inputAssetId: 0,
         outputAssetIdA: 1,
         outputAssetIdB: 2,
@@ -178,7 +178,7 @@ describe('rollup_processor: defi bridge with loans', () => {
     const collateralValue1 = 100n;
     const loanValue1 = 10n;
     const { bridgeId: bridgeId1 } = await mockBridge({
-      secondOutputAssetVirtual: true,
+      secondOutputVirtual: true,
       inputAssetId: 1,
       outputAssetIdA: 0,
       outputValueA: loanValue1,
@@ -187,7 +187,7 @@ describe('rollup_processor: defi bridge with loans', () => {
     const collateralValue2 = 20n;
     const loanValue2 = 4n;
     const { bridgeId: bridgeId2 } = await mockBridge({
-      secondOutputAssetVirtual: true,
+      secondOutputVirtual: true,
       inputAssetId: 0,
       outputAssetIdA: 2,
       outputValueA: loanValue2,
@@ -237,7 +237,7 @@ describe('rollup_processor: defi bridge with loans', () => {
     // Note that we need new bridge ids as the input and output assets have changed
     {
       const { bridgeId: repayBridgeId1, contract: repayBridge1 } = await mockBridge({
-        secondInputAssetVirtual: true,
+        secondInputVirtual: true,
         inputAssetId: 0,
         outputAssetIdA: 1,
         outputValueA: collateralValue1,
@@ -247,7 +247,7 @@ describe('rollup_processor: defi bridge with loans', () => {
       await repayBridge1.recordInterestRate(4, 10); // interest rate = 10 %
 
       const { bridgeId: repayBridgeId2, contract: repayBridge2 } = await mockBridge({
-        secondInputAssetVirtual: true,
+        secondInputVirtual: true,
         inputAssetId: 2,
         outputAssetIdA: 0,
         outputValueA: collateralValue2,
