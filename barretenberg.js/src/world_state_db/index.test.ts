@@ -9,7 +9,7 @@ const randomFr = () => {
   return bytes;
 };
 
-describe('world_state_db', () => {
+describe.skip('world_state_db', () => {
   let worldStateDb: WorldStateDb;
 
   beforeEach(async () => {

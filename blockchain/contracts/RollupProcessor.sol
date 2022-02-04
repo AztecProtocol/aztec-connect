@@ -974,18 +974,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                             mstore(signature, 0x60)
                         }
 
-                        bytes32 hashedMessage;
-                        assembly {
-                            let mPtr := mload(0x40)
-                            mstore(add(mPtr, 32), '\x19Ethereum Signed Message:\n174')
-                            mstore(add(mPtr, 61), 'Signing this message will allow ')
-                            mstore(add(mPtr, 93), 'your pending funds to be spent i')
-                            mstore(add(mPtr, 125), 'n Aztec transaction:\n')
-                            mstore(add(mPtr, 146), digest)
-                            mstore(add(mPtr, 178), '\nIMPORTANT: Only sign the messag')
-                            mstore(add(mPtr, 210), 'e if you trust the client')
-                            hashedMessage := keccak256(add(mPtr, 32), 203)
-                        }
+                        bytes32 hashedMessage = RollupProcessorLibrary.getSignedMessageForTxId(digest);
 
                         RollupProcessorLibrary.validateSheildSignatureUnpacked(hashedMessage, signature, publicOwner);
                         // restore the memory we overwrote

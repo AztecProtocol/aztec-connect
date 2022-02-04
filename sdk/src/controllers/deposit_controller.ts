@@ -11,14 +11,7 @@ import { Signer } from '../signer';
 import { createTxRefNo } from './create_tx_ref_no';
 
 const signDepositProof = async (signingData: Buffer, depositor: EthAddress, ethSigner: EthereumSigner) =>
-  ethSigner.signMessage(
-    Buffer.concat([
-      Buffer.from('Signing this message will allow your pending funds to be spent in Aztec transaction:\n'),
-      signingData,
-      Buffer.from('\nIMPORTANT: Only sign the message if you trust the client'),
-    ]),
-    depositor,
-  );
+  ethSigner.signMessage(signingData, depositor);
 
 export class DepositController {
   private readonly publicInput: AssetValue;
@@ -95,7 +88,7 @@ export class DepositController {
   async depositFundsToContractWithProofApproval() {
     const { assetId } = this.publicInput;
     const value = await this.getRequiredFunds();
-    const proofHash = this.getSigningData();
+    const proofHash = this.getTxId().toBuffer();
     return this.blockchain.depositPendingFunds(assetId, value, this.from, proofHash, undefined, this.provider);
   }
 
@@ -103,7 +96,7 @@ export class DepositController {
     const { assetId } = this.publicInput;
     const value = await this.getRequiredFunds();
     const permitArgs = await this.createPermitArgs(value, deadline);
-    const proofHash = this.getSigningData();
+    const proofHash = this.getTxId().toBuffer();
     return this.blockchain.depositPendingFunds(assetId, value, this.from, proofHash, permitArgs, this.provider);
   }
 
@@ -151,15 +144,19 @@ export class DepositController {
   }
 
   getSigningData() {
-    return this.proofOutput.tx.txId.toBuffer();
+    return this.getTxId().toDepositSigningData();
+  }
+
+  getTxId() {
+    return this.proofOutput.tx.txId;
   }
 
   async isProofApproved() {
-    return !!(await this.blockchain.getUserProofApprovalStatus(this.from, this.getSigningData()));
+    return !!(await this.blockchain.getUserProofApprovalStatus(this.from, this.getTxId().toBuffer()));
   }
 
   async approveProof() {
-    return this.blockchain.approveProof(this.from, this.getSigningData(), this.provider);
+    return this.blockchain.approveProof(this.from, this.getTxId().toBuffer(), this.provider);
   }
 
   async sign() {

@@ -2,6 +2,7 @@ import { AccountAliasId } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { TxId } from '@aztec/barretenberg/tx_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import {
   OffchainAccountData,
@@ -65,11 +66,7 @@ export const createDepositProof = async (
     numToBuffer(assetId),
   );
   const userAddr = EthAddress.fromString(await user.getAddress());
-  const message = Buffer.concat([
-    Buffer.from('Signing this message will allow your pending funds to be spent in Aztec transaction:\n'),
-    innerProof.txId,
-    Buffer.from('\nIMPORTANT: Only sign the message if you trust the client'),
-  ]);
+  const message = new TxId(innerProof.txId).toDepositSigningData();
   const signature = await new Web3Signer(new EthersAdapter(user)).signMessage(message, userAddr);
 
   const totalTxFees: bigint[] = [];
@@ -242,7 +239,6 @@ export const createRollupProof = async (
     previousDefiInteractionHash,
     defiInteractionData = [],
     prevInteractionResult = [],
-    feeLimit = 10n ** 18n,
     feeDistributorAddress = EthAddress.randomAddress(),
   }: RollupProofOptions = {},
 ) => {

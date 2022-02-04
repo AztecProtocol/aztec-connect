@@ -9,6 +9,7 @@ import {
   ProofData,
   ProofId,
 } from '@aztec/barretenberg/client_proofs';
+import { TxId } from '@aztec/barretenberg/tx_id';
 import { Crs } from '@aztec/barretenberg/crs';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
@@ -170,18 +171,16 @@ export class TxReceiver {
 
   private async validateJoinSplitTx(proof: ProofData, depositSignature?: Buffer) {
     if (proof.proofId === ProofId.DEPOSIT) {
-      const { txId, publicOwner } = new JoinSplitProofData(proof);
-      let proofApproval = await this.blockchain.getUserProofApprovalStatus(publicOwner, txId);
+      const { publicOwner } = new JoinSplitProofData(proof);
+      const txId = new TxId(proof.txId);
+      let proofApproval = await this.blockchain.getUserProofApprovalStatus(publicOwner, txId.toBuffer());
       if (!proofApproval && depositSignature) {
-        const message = Buffer.concat([
-          Buffer.from('Signing this message will allow your pending funds to be spent in Aztec transaction:\n'),
-          txId,
-          Buffer.from('\nIMPORTANT: Only sign the message if you trust the client'),
-        ]);
+        const message = txId.toDepositSigningData();
+
         proofApproval = this.blockchain.validateSignature(publicOwner, depositSignature, message);
       }
       if (!proofApproval) {
-        throw new Error(`Tx not approved or invalid signature: ${txId.toString('hex')}`);
+        throw new Error(`Tx not approved or invalid signature: ${txId.toString()}`);
       }
     }
 

@@ -26,4 +26,13 @@ export class TxId {
   toString() {
     return `0x${this.toBuffer().toString('hex')}`;
   }
+
+  toDepositSigningData() {
+    const digest = this.toString();
+    return Buffer.concat([
+      Buffer.from('Signing this message will allow your pending funds to be spent in Aztec transaction:\n\n'),
+      Buffer.from(digest),
+      Buffer.from('\n\nIMPORTANT: Only sign the message if you trust the client'),
+    ]);
+  }
 }
