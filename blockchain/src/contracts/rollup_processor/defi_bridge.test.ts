@@ -6,6 +6,7 @@ import {
   DefiInteractionNote,
   packInteractionNotes,
 } from '@aztec/barretenberg/note_algorithms';
+import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { Signer } from 'ethers';
 import { LogDescription } from 'ethers/lib/utils';
@@ -37,6 +38,8 @@ describe('rollup_processor: defi bridge', () => {
   let rollupProvider: Signer;
   let assetAddresses: EthAddress[];
 
+  const numberOfBridgeCalls = RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
+
   const topupToken = async (assetId: number, amount: bigint) =>
     assets[assetId].mint(amount, rollupProcessor.address, { signingAddress: addresses[0] });
 
@@ -62,12 +65,12 @@ describe('rollup_processor: defi bridge', () => {
 
     const expectedHashes = computeInteractionHashes([
       ...expectedResult,
-      ...[...Array(4 - expectedResult.length)].map(() => DefiInteractionNote.EMPTY),
+      ...[...Array(numberOfBridgeCalls - expectedResult.length)].map(() => DefiInteractionNote.EMPTY),
     ]);
     const hashes = await rollupProcessor.defiInteractionHashes();
     const resultHashes = [
       ...hashes,
-      ...[...Array(4 - hashes.length)].map(() => WorldStateConstants.EMPTY_INTERACTION_HASH),
+      ...[...Array(numberOfBridgeCalls - hashes.length)].map(() => WorldStateConstants.EMPTY_INTERACTION_HASH),
     ];
 
     expect(expectedHashes).toEqual(resultHashes);
@@ -368,7 +371,7 @@ describe('rollup_processor: defi bridge', () => {
       });
       const interactionResult = [new DefiInteractionNote(bridgeId, 0, inputValue, outputValueA, 0n, true)];
 
-      previousDefiInteractionHash = packInteractionNotes(interactionResult, 4);
+      previousDefiInteractionHash = packInteractionNotes(interactionResult, numberOfBridgeCalls);
 
       const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
@@ -413,7 +416,10 @@ describe('rollup_processor: defi bridge', () => {
       expect(currentDaiBalance === prevDaiBalance).toBe(false);
 
       await expectBalance(1, 0n);
-      await expectResult([new DefiInteractionNote(bridgeId, 4, inputValue, outputValueA, 0n, true)], txHash);
+      await expectResult(
+        [new DefiInteractionNote(bridgeId, numberOfBridgeCalls, inputValue, outputValueA, 0n, true)],
+        txHash,
+      );
     }
   });
 });

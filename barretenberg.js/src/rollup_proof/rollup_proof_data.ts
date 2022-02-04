@@ -89,7 +89,7 @@ const parseHeaderInputs = (proofData: Buffer) => {
   startIndex += 32;
 
   const rollupBeneficiary = proofData.slice(startIndex, startIndex + 32);
-  startIndex +=32;
+  startIndex += 32;
 
   const numRollupTxs = proofData.readUInt32BE(startIndex + 28);
   startIndex += 32;
@@ -119,7 +119,7 @@ const parseHeaderInputs = (proofData: Buffer) => {
 
 export class RollupProofData {
   static NUMBER_OF_ASSETS = 16;
-  static NUM_BRIDGE_CALLS_PER_BLOCK = 4;
+  static NUM_BRIDGE_CALLS_PER_BLOCK = 32;
   static NUM_ROLLUP_HEADER_INPUTS =
     14 + RollupProofData.NUMBER_OF_ASSETS * 2 + RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK * 3;
   static LENGTH_ROLLUP_HEADER_INPUTS = RollupProofData.NUM_ROLLUP_HEADER_INPUTS * 32;
@@ -286,7 +286,6 @@ export class RollupProofData {
       numRollupTxs,
     } = parseHeaderInputs(proofData);
 
-  
     if (!rollupSize) {
       throw new Error('Empty rollup.');
     }
@@ -329,7 +328,7 @@ export class RollupProofData {
       innerProofData === undefined
         ? new Array(numTxs).fill(0).map(() => InnerProofData.fromBuffer(Buffer.alloc(InnerProofData.LENGTH)))
         : innerProofData;
-    
+
     return new RollupProofData(
       rollupId,
       numTxs,

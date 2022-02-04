@@ -1161,12 +1161,12 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
      * @param proofData - the proof data
      */
     function processDefiBridges(bytes memory proofData) internal {
-        // pop off 4 defi interactions from defiInteractionHashes && SHA2 them
+        // Pop off `numberOfBridgeCalls` number of defi interactions from defiInteractionHashes && SHA2 them.
         {
             bytes32 expectedDefiInteractionHash;
             assembly {
                 // Compute the offset we use to index `defiInteractionHashes[]`
-                // If defiInteractionHashes.length > 4, offset = defiInteractionhashes.length - 4
+                // If defiInteractionHashes.length > numberOfBridgeCalls, offset = defiInteractionhashes.length - numberOfBridgeCalls.
                 // Else offset = 0
                 let numPendingInteractions
                 let offset
@@ -1188,7 +1188,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                 let mPtr := mload(0x40)
                 let i := 0
 
-                // Iterate over numPendingInteractions (will be between 0 and 4)
+                // Iterate over numPendingInteractions (will be between 0 and numberOfBridgeCalls)
                 // Load defiInteractionHashes[offset + i] and store in memory
                 // in order to compute SHA2 hash (expectedDefiInteractionHash)
                 for {
@@ -1199,7 +1199,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                     mstore(add(mPtr, mul(i, 0x20)), sload(add(sloadOffset, add(offset, i))))
                 }
 
-                // If numPendingInteractions < 4, continue iterating up to 4, this time
+                // If numPendingInteractions < numberOfBridgeCalls, continue iterating up to numberOfBridgeCalls, this time
                 // inserting the "zero hash", the result of sha256(emptyDefiInteractionResult)
                 for {
 
@@ -1208,10 +1208,10 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                 } {
                     mstore(add(mPtr, mul(i, 0x20)), 0x2d25a1e3a51eb293004c4b56abe12ed0da6bca2b4a21936752a85d102593c1b4)
                 }
-                pop(staticcall(gas(), 0x2, mPtr, 0x80, 0x00, 0x20))
+                pop(staticcall(gas(), 0x2, mPtr, mul(0x20, numberOfBridgeCalls), 0x00, 0x20))
                 expectedDefiInteractionHash := mod(mload(0x00), CIRCUIT_MODULUS)
 
-                // Update DefiInteractionHashes.length (we've reduced length by up to 4)
+                // Update DefiInteractionHashes.length (we've reduced length by up to numberOfBridgeCalls)
                 let oldState := and(not(shl(DEFIINTERACTIONHASHES_BIT_OFFSET, ARRAY_LENGTH_MASK)), state)
                 let newState := or(oldState, shl(DEFIINTERACTIONHASHES_BIT_OFFSET, offset))
                 sstore(rollupState.slot, newState)
@@ -1224,6 +1224,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
                 revert INCORRECT_PREVIOUS_DEFI_INTERACTION_HASH(prevDefiInteractionHash, expectedDefiInteractionHash);
             }
         }
+
         uint256 interactionNonce = getRollupId(proofData) * numberOfBridgeCalls;
 
         // ### Process DefiBridge Calls
@@ -1402,13 +1403,13 @@ contract RollupProcessor is IRollupProcessor, Decoder, Ownable, Pausable {
             )
 
             // Validate we are not overflowing our 1024 array size
-            // Actually check against a max array size of 1019
+            // Actually check against a max array size of 1024 - 1 - numberOfBridgeCalls
             // (this is to more easily test this failure condition!)
             // (can set the array length to max of 1023, send a rollup
             //  proof with 1 defi txn and trigger this error state)
             let valid := lt(
                 add(asyncDefiInteractionHashesLength, defiInteractionHashesLength),
-                sub(ARRAY_LENGTH_MASK, 0x03)
+                sub(ARRAY_LENGTH_MASK, sub(numberOfBridgeCalls, 1))
             )
 
             // should never hit this! If block `i` generates synchronous txns,

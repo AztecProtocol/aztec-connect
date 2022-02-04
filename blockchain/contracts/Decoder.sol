@@ -67,21 +67,21 @@ contract Decoder {
       CONSTANTS
       ----------------------------------------*/
     uint256 public constant numberOfAssets = 16; // max number of assets in a block
-    uint256 public constant numberOfBridgeCalls = 4; // max number of bridge calls in a block
+    uint256 public constant numberOfBridgeCalls = 32; // max number of bridge calls in a block
     uint256 internal constant txNumPubInputs = 8; // number of ZK-SNARK "public inputs" per join-split/account/claim transaction
     uint256 internal constant txPubInputLength = 256; // byte-length of txNumPubInputs. txNumPubInputs * 32;
-    uint256 internal constant rollupNumHeaderInputs = 58; // number of ZK-SNARK "public inputs" that make up the rollup header 14 + (numberOfBridgeCalls * 3) + (numberOfAssets * 2);
-    uint256 internal constant rollupHeaderInputLength = 1856; // rollupNumHeaderInputs * 32;
+    uint256 internal constant rollupNumHeaderInputs = 142; // number of ZK-SNARK "public inputs" that make up the rollup header. 14 + (numberOfBridgeCalls * 3) + (numberOfAssets * 2);
+    uint256 internal constant rollupHeaderInputLength = 4544; // rollupNumHeaderInputs * 32;
 
     // encodedProofDataLengthOffset = byte offset into the rollup header such that `numRealTransactions` occupies
     // the least significant 4 bytes of the 32-byte word being pointed to.
     // i.e. rollupHeaderInputLength - 28
-    uint256 internal constant numRealTransactionsOffset = 1828;
+    uint256 internal constant numRealTransactionsOffset = 4516;
 
     // encodedProofDataLengthOffset = byte offset into the rollup header such that `encodedInnerProofData.length` occupies
     // the least significant 4 bytes of the 32-byte word being pointed to.
     // i.e. rollupHeaderInputLength - 24
-    uint256 internal constant encodedProofDataLengthOffset = 1832;
+    uint256 internal constant encodedProofDataLengthOffset = 4520;
 
     // CIRCUIT_MODULUS = group order of the BN254 elliptic curve. All arithmetic gates in our ZK-SNARK circuits are evaluated modulo this prime.
     // Is used when computing the public inputs hash - our SHA256 hash outputs are reduced modulo CIRCUIT_MODULUS

@@ -8,7 +8,6 @@ import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {IDefiBridge} from '../interfaces/IDefiBridge.sol';
 import {AztecTypes} from '../AztecTypes.sol';
 
-
 /**
  * @dev Warning: do not deploy in real environments, for testing only
  */
@@ -138,11 +137,11 @@ contract MockDefiBridge is IDefiBridge {
         AztecTypes.AztecAsset memory, /*inputAssetB*/
         AztecTypes.AztecAsset memory outputAssetA,
         AztecTypes.AztecAsset memory outputAssetB,
-        uint256 /*totalInputValue*/,
+        uint256, /*totalInputValue*/
         uint256 interactionNonce,
         uint64
     ) external payable override returns (uint256, uint256) {
-        require(msg.sender == rollupProcessor, "invalid sender!");
+        require(msg.sender == rollupProcessor, 'invalid sender!');
         approveTransfer(inputAssetA, returnInputValue, interactionNonce);
         approveTransfer(outputAssetA, returnValueA, interactionNonce);
         approveTransfer(outputAssetB, returnValueB, interactionNonce);

@@ -14,6 +14,7 @@ import { RollupCoordinator } from './rollup_coordinator';
 import { TxFeeResolver } from '../tx_fee_resolver';
 import { BridgeResolver } from '../bridge';
 import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
+import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 
 jest.useFakeTimers();
 
@@ -59,6 +60,23 @@ const bridgeConfigs: BridgeConfig[] = [
     rollupFrequency: 8,
   },
 ];
+
+const numberOfBridgeCalls = RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
+
+// When we updated the numberOfBridgeCalls from 4 to 32, we needed _way_ more bridge configs.
+// Since only the first 6 (instantiated above) need bespoke values for various tests, we'll pad with the same values here.
+const padBridgeConfigs = () => {
+  // some tests need >numberOfBridgeCalls bridge calls so we'll add numberOfBridgeCalls configs on top of the existing 6.
+  for (let i = 1; i <= numberOfBridgeCalls + 1; i++) {
+    bridgeConfigs.push({
+      bridgeId: BigInt(i + 6),
+      numTxs: 1, // arbitrary
+      fee: 90000n, // arbitrary
+      rollupFrequency: 4, // arbitrary
+    });
+  }
+};
+padBridgeConfigs();
 
 const BASE_GAS = 20000n;
 const NON_DEFI_TX_GAS = 100000n;
@@ -313,117 +331,172 @@ describe('rollup_coordinator', () => {
     });
   });
 
-  describe('picking txs to rollup', () => {
+  describe('number of bridge calls per block never exceeded', () => {
+    // A separate describe block for these, as we need to increase the rollup topology to a 2x32 to push the numberOfBridgeCalls = 32 limit.
+
+    const numInnerRollupTxs = numberOfBridgeCalls;
+    const numOuterRollupProofs = 2;
+
+    beforeEach(() => {
+      Object.assign(coordinator, { numInnerRollupTxs, numOuterRollupProofs });
+    });
+
     it('will not rollup defi deposit proofs with more than the allowed distinct bridge ids', async () => {
-      // all defi txs have enough fee to be published independently
-      const pendingTxs = [
-        mockDefiBridgeTx(0, HUGE_FEE, bridgeConfigs[0].bridgeId),
-        mockDefiBridgeTx(1, HUGE_FEE, bridgeConfigs[1].bridgeId),
-        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
-        mockDefiBridgeTx(3, HUGE_FEE, bridgeConfigs[2].bridgeId),
-        mockDefiBridgeTx(4, HUGE_FEE, bridgeConfigs[3].bridgeId),
-        mockDefiBridgeTx(5, HUGE_FEE, bridgeConfigs[4].bridgeId),
-        mockDefiBridgeTx(6, HUGE_FEE, bridgeConfigs[5].bridgeId),
-        mockTx(7, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
-        mockDefiBridgeTx(8, HUGE_FEE, bridgeConfigs[4].bridgeId),
-        mockDefiBridgeTx(9, HUGE_FEE, bridgeConfigs[3].bridgeId),
-        mockDefiBridgeTx(10, HUGE_FEE, bridgeConfigs[5].bridgeId),
-        mockTx(11, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
-      ];
+      // All defi txs have enough fee to be published independently
+      const pendingTxs = [];
+      let j = 1; // for incrementing the bridgeId
+      // Create 72 mock txs to comfortably exceed the 2x32 rollup size (as some of the defi txs will be rejected by the coordinator for
+      // exceeding the maxNumberOfBridgeCalls, but we still need to fill the rollup).
+      for (let i = 0; i < 72; i++) {
+        // Occasionally insert a regular tx, for realism. `7` chosen arbitrarily.
+        if (i % 7 === 0) {
+          pendingTxs.push(mockTx(i, { txType: TxType.TRANSFER, txFeeAssetId: 0 }));
+          // Notice we don't increment j here, because we want the bridgeId for j to be included in the next iteration.
+          continue;
+        }
+        // We'll allow the number of bridgeIds to exceed the max number of bridge calls per block by 2.
+        // So 2 of our txs _should_ be rejected from the first (and only) rollup of this test.
+        const bridgeId = BigInt(((j - 1) % (numberOfBridgeCalls + 2)) + 1); // 1, 2, ..., 31, 32, 33, 34.
+        pendingTxs.push(mockDefiBridgeTx(i, HUGE_FEE, bridgeId));
+        j++;
+      }
+
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
-      expect(coordinator.processedTxs).toEqual([
-        pendingTxs[0],
-        pendingTxs[1],
-        pendingTxs[2],
-        pendingTxs[3],
-        pendingTxs[4],
-        pendingTxs[7],
-        pendingTxs[9],
-        pendingTxs[11],
-      ]);
-      expect(rollupCreator.create).toHaveBeenCalledTimes(4);
+
+      // Expect all txs but those with bridgeId = 33 or 34.
+      const expectedTxs = pendingTxs
+        .filter(tx => {
+          const proof = new ProofData(tx.proofData);
+          // We can safely coerce to a number, because we know these are small numbers in this test:
+          const bid = Number(BridgeId.fromBuffer(proof.bridgeId).toBigInt());
+          // ... except for the non-defi txs, which have huge bridgeIds (much greater than 1000, say):
+          return bid <= numberOfBridgeCalls || bid > 1000;
+        })
+        .slice(0, numInnerRollupTxs * numOuterRollupProofs); // the rollup will only include the first 64 filtered txs
+
+      expect(coordinator.processedTxs).toEqual(expectedTxs);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(2); // this is the # inner rollups that get created
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
-        bridgeConfigs[0].bridgeId,
-        bridgeConfigs[1].bridgeId,
-        bridgeConfigs[2].bridgeId,
-        bridgeConfigs[3].bridgeId,
-      ]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(
+        Array(numberOfBridgeCalls)
+          .fill(0)
+          .map((_, i) => bridgeConfigs[i].bridgeId),
+      );
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
     it('distinct bridge ids are maintained across invocations', async () => {
-      // all defi txs have enough fee to cover their bridge costs
-      const allTxs = [
-        mockDefiBridgeTx(0, DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[0].fee!, bridgeConfigs[0].bridgeId),
-        mockDefiBridgeTx(1, DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[1].fee!, bridgeConfigs[1].bridgeId),
-        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
-        mockDefiBridgeTx(3, DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[2].fee!, bridgeConfigs[2].bridgeId),
-        mockDefiBridgeTx(4, DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[3].fee!, bridgeConfigs[3].bridgeId),
-        mockDefiBridgeTx(5, DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[4].fee!, bridgeConfigs[4].bridgeId),
-        mockDefiBridgeTx(6, DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[5].fee!, bridgeConfigs[5].bridgeId),
-        mockTx(7, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
-        mockDefiBridgeTx(8, DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[4].fee!, bridgeConfigs[4].bridgeId),
-        mockDefiBridgeTx(9, DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[3].fee!, bridgeConfigs[3].bridgeId),
-        mockDefiBridgeTx(10, DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[5].fee!, bridgeConfigs[5].bridgeId),
-        mockTx(11, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
-      ];
-      // include the first 3 txs
-      let pendingTxs = allTxs.slice(0, 3);
+      // All defi txs have enough fee to be published independently
+      const allTxs = [];
+      let j = 1; // for incrementing the bridgeId
+      // Create 65 mock txs to slightly exceed the 2x32 rollup size (as one of the defi txs will be rejected by the coordinator for
+      // exceeding the maxNumberOfBridgeCalls, but we still need to fill the rollup).
+      for (let i = 0; i < numInnerRollupTxs * numOuterRollupProofs + 1; i++) {
+        // Alternately insert regular txs, for some realism.
+        if (i % 2 === 1) {
+          allTxs.push(mockTx(i, { txType: TxType.TRANSFER, txFeeAssetId: 0 }));
+          // Notice we don't increment j here, because we want the bridgeId for j to be included in the next iteration.
+          continue;
+        }
+        // We'll allow the number of bridgeIds to exceed the max number of bridge calls per block by 1.
+        // So _one_ of our txs _should_ be rejected from the first (and only) rollup of this test.
+        const index = (j - 1) % (numberOfBridgeCalls + 1); // 0, 1, 2, ..., 31, 32.
+        allTxs.push(
+          mockDefiBridgeTx(i, DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[index].fee!, bridgeConfigs[index].bridgeId),
+        );
+        j++;
+      }
+
+      // So the tx ordering is: defi, normal, defi, normal,..., defi, normal, DEFI WITH BAD BRIDGE ID.
+      // We want the test to _attempt_ to insert the defi tx with a 'bad' bridgeId (which will be rejected).
+      // Then we want the test to instead insert the normal tx as part of the batch.
+
+      // Attempt to include the first 33 txs (one more than an inner rollup size).
+      // The 33rd tx won't be included in the first inner rollup.
+      let pendingTxs = allTxs.slice(0, numInnerRollupTxs + 1);
       let rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
-      expect(coordinator.processedTxs).toEqual([allTxs[0], allTxs[1]]);
+      expect(coordinator.processedTxs).toEqual(allTxs.slice(0, numInnerRollupTxs));
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
 
-      // include the tx that didn't make it in before + the next 2
-      pendingTxs = allTxs.slice(2, 5);
+      // Include the tx that didn't get added, plus the next 31 (i.e. attempt to fill the next rollup with the next 32 txs).
+      // However, no more of these txs are added. We need at least 32 for an inner rollup and the final tx in this batch contains a 33rd bridgeId when only 32 are allowed.
+      const numTxsInRollup = numInnerRollupTxs * numOuterRollupProofs;
+      pendingTxs = [...allTxs.slice(numInnerRollupTxs, numTxsInRollup - 1), allTxs[numTxsInRollup]]; // skip over the penultimate element and try to insert the tx with a 'bad' bridgeId.
       rp = await coordinator.processPendingTxs(pendingTxs);
+
       expect(rp.published).toBe(false);
-      expect(coordinator.processedTxs).toEqual([allTxs[0], allTxs[1], allTxs[2], allTxs[3]]);
-      expect(rollupCreator.create).toHaveBeenCalledTimes(2);
+      expect(coordinator.processedTxs).toEqual(allTxs.slice(0, numInnerRollupTxs));
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
 
-      // include the tx that didn't get added, plus the next 1
-      // no more of these txs are added. We need at least 2 for an inner rollup and tx id 5 can't be added due to too many bridges
-      pendingTxs = allTxs.slice(4, 6);
-      rp = await coordinator.processPendingTxs(pendingTxs);
-      expect(rp.published).toBe(false);
-      expect(coordinator.processedTxs).toEqual([allTxs[0], allTxs[1], allTxs[2], allTxs[3]]);
-      expect(rollupCreator.create).toHaveBeenCalledTimes(2);
-      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
-      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
-
-      // include all remaining txs
-      pendingTxs = allTxs.slice(4);
+      // Insert a batch of valid txs into the inner rollup, to show they'll be accepted.
+      pendingTxs = allTxs.slice(numInnerRollupTxs);
       rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
-      expect(coordinator.processedTxs).toEqual([
-        allTxs[0],
-        allTxs[1],
-        allTxs[2],
-        allTxs[3],
-        allTxs[4],
-        allTxs[7],
-        allTxs[9],
-        allTxs[11],
-      ]);
-      expect(rollupCreator.create).toHaveBeenCalledTimes(4);
+      expect(coordinator.processedTxs).toEqual(allTxs.slice(0, numTxsInRollup));
+      expect(rollupCreator.create).toHaveBeenCalledTimes(2);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
-        bridgeConfigs[0].bridgeId,
-        bridgeConfigs[1].bridgeId,
-        bridgeConfigs[2].bridgeId,
-        bridgeConfigs[3].bridgeId,
-      ]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(
+        Array(numberOfBridgeCalls)
+          .fill(0)
+          .map((_, i) => bridgeConfigs[i].bridgeId),
+      );
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
+    it('will not flush defi deposit txs if we have more than the allowed distinct bridge ids', async () => {
+      const pendingTxs = [];
+      let j = 1; // for incrementing the bridgeId
+      // Create 72 mock txs to comfortably exceed the 2x32 rollup size (as some of the defi txs will be rejected by the coordinator for
+      // exceeding the maxNumberOfBridgeCalls, but we still need to fill the rollup).
+      for (let i = 1; i <= 72; i++) {
+        // Occasionally insert a regular tx, for realism. `7` chosen arbitrarily.
+        if (i % 7 === 0) {
+          pendingTxs.push(mockTx(i, { txType: TxType.TRANSFER, txFeeAssetId: 0 }));
+          // Notice we don't increment j here, because we want the bridgeId for j to be included in the next iteration.
+          continue;
+        }
+        // We'll allow the number of bridgeIds to exceed the max number of bridge calls per block by 2.
+        // So 2 of our txs _should_ be rejected from the first (and only) rollup of this test.
+        const bridgeId = BigInt(((j - 1) % (numberOfBridgeCalls + 2)) + 1); // 1, 2, ..., 31, 32, 33, 34.
+        pendingTxs.push(mockDefiBridgeTx(i, HUGE_FEE, bridgeId));
+        j++;
+      }
+
+      const rp = await coordinator.processPendingTxs(pendingTxs, true);
+      expect(rp.published).toBe(true);
+      // Expect all txs but those with bridgeId = 33 or 34.
+      const expectedTxs = pendingTxs
+        .filter(tx => {
+          const proof = new ProofData(tx.proofData);
+          // We can safely coerce to a number, because we know these are small numbers in this test:
+          const bid = Number(BridgeId.fromBuffer(proof.bridgeId).toBigInt());
+          // ... except for the non-defi txs, which have huge bridgeIds (much greater than 1000, say):
+          return bid <= numberOfBridgeCalls || bid > 1000;
+        })
+        .slice(0, numInnerRollupTxs * numOuterRollupProofs); // the rollup will only include the first 64 filtered txs
+
+      expect(coordinator.processedTxs).toEqual(expectedTxs);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(2);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(
+        Array(numberOfBridgeCalls)
+          .fill(0)
+          .map((_, i) => bridgeConfigs[i].bridgeId),
+      );
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('picking txs to rollup', () => {
     it('will rollup defi claim proofs first', async () => {
       const pendingTxs = [
         mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
@@ -455,7 +528,7 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[0].bridgeId,
-        ...Array(3).fill(0n),
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
       ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -512,7 +585,10 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([bridgeId, ...Array(3).fill(0n)]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeId,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
@@ -546,7 +622,10 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([bridgeId, ...Array(3).fill(0n)]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeId,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
@@ -590,7 +669,10 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([bridgeId, ...Array(3).fill(0n)]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeId,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
@@ -630,7 +712,10 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([bridgeId, ...Array(3).fill(0n)]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeId,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
@@ -697,7 +782,7 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[2].bridgeId,
-        ...Array(3).fill(0n),
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
       ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -742,7 +827,7 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[2].bridgeId,
-        ...Array(3).fill(0n),
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
       ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -771,7 +856,7 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([...Array(4).fill(0n)]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([...Array(numberOfBridgeCalls).fill(0n)]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
@@ -829,7 +914,7 @@ describe('rollup_coordinator', () => {
         bridgeConfigs[0].bridgeId,
         bridgeConfigs[4].bridgeId,
         bridgeConfigs[2].bridgeId,
-        0n,
+        ...Array(numberOfBridgeCalls - 3).fill(0n),
       ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -892,7 +977,7 @@ describe('rollup_coordinator', () => {
         bridgeConfigs[0].bridgeId,
         bridgeConfigs[4].bridgeId,
         bridgeConfigs[2].bridgeId,
-        0n,
+        ...Array(numberOfBridgeCalls - 3).fill(0n),
       ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -957,7 +1042,7 @@ describe('rollup_coordinator', () => {
         bridgeConfigs[0].bridgeId,
         bridgeConfigs[4].bridgeId,
         bridgeConfigs[2].bridgeId,
-        0n,
+        ...Array(numberOfBridgeCalls - 3).fill(0n),
       ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -973,7 +1058,7 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([...Array(4).fill(0n)]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([...Array(numberOfBridgeCalls).fill(0n)]);
     });
 
     it('single defi tx can publish if it covers rollup + bridge costs', async () => {
@@ -989,7 +1074,7 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[1].bridgeId,
-        ...Array(3).fill(0n),
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
       ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -1021,7 +1106,7 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[1].bridgeId,
-        ...Array(3).fill(0n),
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
       ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -1053,7 +1138,7 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[1].bridgeId,
-        ...Array(3).fill(0n),
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
       ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -1085,7 +1170,7 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[1].bridgeId,
-        ...Array(3).fill(0n),
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
       ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -1100,7 +1185,7 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(4).fill(0n));
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(numberOfBridgeCalls).fill(0n));
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
@@ -1126,7 +1211,7 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(4).fill(0n));
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(numberOfBridgeCalls).fill(0n));
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
@@ -1153,7 +1238,7 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(4).fill(0n));
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(numberOfBridgeCalls).fill(0n));
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
@@ -1174,7 +1259,7 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(4).fill(0n));
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(numberOfBridgeCalls).fill(0n));
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
@@ -1367,7 +1452,7 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(4).fill(0n));
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(numberOfBridgeCalls).fill(0n));
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
@@ -1403,7 +1488,7 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(4).fill(0n));
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(numberOfBridgeCalls).fill(0n));
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
@@ -1439,7 +1524,7 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(4).fill(0n));
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(numberOfBridgeCalls).fill(0n));
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
@@ -1510,7 +1595,7 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(4).fill(0n));
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(numberOfBridgeCalls).fill(0n));
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
@@ -1555,7 +1640,7 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[2].bridgeId,
-        ...Array(3).fill(0n),
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
       ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -1600,7 +1685,7 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[2].bridgeId,
-        ...Array(3).fill(0n),
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
       ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -1653,98 +1738,7 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[2].bridgeId,
         bridgeConfigs[0].bridgeId,
-        ...Array(2).fill(0n),
-      ]);
-      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
-    });
-
-    it('will not timeout defi deposit txs if we have more than the allowed distinct bridge ids', async () => {
-      // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
-      // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
-      const allTxs = [
-        mockDefiBridgeTx(0, HUGE_FEE, bridgeConfigs[0].bridgeId),
-        mockDefiBridgeTx(1, HUGE_FEE, bridgeConfigs[1].bridgeId),
-        mockDefiBridgeTx(2, HUGE_FEE, bridgeConfigs[2].bridgeId),
-        mockDefiBridgeTx(3, HUGE_FEE, bridgeConfigs[3].bridgeId),
-        mockDefiBridgeTx(4, HUGE_FEE, bridgeConfigs[4].bridgeId),
-        mockDefiBridgeTx(
-          5,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[5].bridgeId),
-          bridgeConfigs[5].bridgeId,
-        ),
-        mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
-        mockDefiBridgeTx(7, HUGE_FEE, bridgeConfigs[4].bridgeId),
-        mockDefiBridgeTx(
-          8,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[3].bridgeId),
-          bridgeConfigs[3].bridgeId,
-        ),
-        mockDefiBridgeTx(
-          9,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[5].bridgeId),
-          bridgeConfigs[5].bridgeId,
-        ),
-        mockTx(10, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
-        mockTx(11, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
-      ];
-
-      let pendingTxs = allTxs;
-
-      // set the rollup timeout and bridge timeouts to the following
-      rollupTimeouts = {
-        ...rollupTimeouts,
-        baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
-        bridgeTimeouts: new Map<bigint, RollupTimeout>([
-          [bridgeConfigs[4].bridgeId, { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
-        ]),
-      };
-      // and set current time just after the timeout.
-      // bridge[4] is in timeout but we can't fit in in as we have exceeded the max number of bridge ids
-      currentTime = new Date('2021-06-20T12:00:01+01:00');
-
-      // this call won't trigger the rollup yet
-      let rp = await coordinator.processPendingTxs(pendingTxs);
-      expect(rp.published).toBe(false);
-      expect(coordinator.processedTxs).toEqual([
-        allTxs[0],
-        allTxs[1],
-        allTxs[2],
-        allTxs[3],
-        allTxs[6],
-        allTxs[8],
-        allTxs[10],
-        allTxs[11],
-      ]);
-
-      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
-      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
-
-      // pending txs now just contains those DEFI txs that can't be rolled up
-      pendingTxs = [allTxs[4], allTxs[5], allTxs[7], allTxs[9]];
-
-      // calling this again should trigger the rollup
-      rp = await coordinator.processPendingTxs(pendingTxs);
-      expect(rp.published).toBe(true);
-      expect(coordinator.processedTxs).toEqual([
-        allTxs[0],
-        allTxs[1],
-        allTxs[2],
-        allTxs[3],
-        allTxs[6],
-        allTxs[8],
-        allTxs[10],
-        allTxs[11],
-      ]);
-
-      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
-        bridgeConfigs[0].bridgeId,
-        bridgeConfigs[1].bridgeId,
-        bridgeConfigs[2].bridgeId,
-        bridgeConfigs[3].bridgeId,
+        ...Array(numberOfBridgeCalls - 2).fill(0n),
       ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -1786,8 +1780,96 @@ describe('rollup_coordinator', () => {
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(4).fill(0n));
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(numberOfBridgeCalls).fill(0n));
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
+    describe('rollup timeouts with larger topology', () => {
+      // A separate describe block for these, as we need to increase the rollup topology to a 2x32 to push the numberOfBridgeCalls = 32 limit.
+
+      const numInnerRollupTxs = numberOfBridgeCalls;
+      const numOuterRollupProofs = 2;
+
+      beforeEach(() => {
+        Object.assign(coordinator, { numInnerRollupTxs, numOuterRollupProofs });
+      });
+
+      it('will not timeout defi deposit txs if we have more than the allowed distinct bridge ids', async () => {
+        // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
+        // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
+
+        const allTxs = [];
+        let j = 1; // for incrementing the bridgeId
+        for (let i = 0; i < numberOfBridgeCalls * 2; i++) {
+          // We'll allow the number of bridgeIds to exceed the max number of bridge calls per block by 2.
+          // So 2 of our txs _should_ be rejected from the first (and only) rollup of this test.
+          const index = (j - 1) % (numberOfBridgeCalls + 2); // 0, 1, 2, ..., 31, 32, 33.
+          allTxs.push(
+            mockDefiBridgeTx(i, DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[index].fee!, bridgeConfigs[index].bridgeId),
+          );
+          j++;
+        }
+
+        // Note:
+        //   allTxs[32] contains bridgeId 33
+        //   allTxs[33] contains bridgeId 34
+
+        let pendingTxs = allTxs;
+
+        // set the rollup timeout and bridge timeouts to the following
+        rollupTimeouts = {
+          ...rollupTimeouts,
+          baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
+          bridgeTimeouts: new Map<bigint, RollupTimeout>([
+            [bridgeConfigs[4].bridgeId, { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
+          ]),
+        };
+        // and set current time just after the timeout.
+        // bridgeIds 33 & 34 are in timeout but we can't fit them in as we have exceeded the max number of bridge ids
+        currentTime = new Date('2021-06-20T12:00:01+01:00');
+
+        // this call won't trigger the rollup yet
+        let rp = await coordinator.processPendingTxs(pendingTxs);
+        expect(rp.published).toBe(false);
+
+        // Expect all txs but those with bridgeId = 33 or 34.
+        const expectedTxs = pendingTxs
+          .filter(tx => {
+            const proof = new ProofData(tx.proofData);
+            // We can safely coerce to a number, because we know these are small numbers in this test:
+            const bid = Number(BridgeId.fromBuffer(proof.bridgeId).toBigInt());
+            // ... except for the non-defi txs, which have huge bridgeIds (much greater than 1000, say):
+            return bid <= numberOfBridgeCalls || bid > 1000;
+          })
+          .slice(0, numberOfBridgeCalls);
+
+        expect(coordinator.processedTxs).toEqual(expectedTxs);
+
+        expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+        expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
+        expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
+
+        // pending txs now just contains those DEFI txs that can't be rolled up
+        pendingTxs = pendingTxs.filter(tx => {
+          const proof = new ProofData(tx.proofData);
+          const bid = Number(BridgeId.fromBuffer(proof.bridgeId).toBigInt());
+          return bid > numberOfBridgeCalls && bid < 1000;
+        });
+
+        // calling this again should trigger the rollup - WHY?
+        rp = await coordinator.processPendingTxs(pendingTxs);
+        expect(rp.published).toBe(true);
+        expect(coordinator.processedTxs).toEqual(expectedTxs);
+        expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+        expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+        expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
+        expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(
+          Array(numberOfBridgeCalls)
+            .fill(0)
+            .map((_, i) => bridgeConfigs[i].bridgeId),
+        );
+        expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+      });
     });
   });
 
@@ -1842,7 +1924,7 @@ describe('rollup_coordinator', () => {
       );
 
       // Create 3 deposit txs.
-      const normalTxs = [...Array(3)].map((_, i) => mockTx(i + 9));
+      const normalTxs = [...Array(numberOfBridgeCalls - 1)].map((_, i) => mockTx(i + 9));
 
       const pendingTxs = [
         defiTxs[0], // 0
@@ -1938,47 +2020,7 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
         bridgeConfigs[2].bridgeId,
-        ...Array(3).fill(0n),
-      ]);
-      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
-    });
-
-    it('will not flush defi deposit txs if we have more than the allowed distinct bridge ids', async () => {
-      // all defi txs have enough fee to be published independently
-      const pendingTxs = [
-        mockDefiBridgeTx(0, HUGE_FEE, bridgeConfigs[0].bridgeId),
-        mockDefiBridgeTx(1, HUGE_FEE, bridgeConfigs[1].bridgeId),
-        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
-        mockDefiBridgeTx(3, HUGE_FEE, bridgeConfigs[2].bridgeId),
-        mockDefiBridgeTx(4, HUGE_FEE, bridgeConfigs[3].bridgeId),
-        mockDefiBridgeTx(5, HUGE_FEE, bridgeConfigs[4].bridgeId),
-        mockDefiBridgeTx(6, HUGE_FEE, bridgeConfigs[5].bridgeId),
-        mockTx(7, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
-        mockDefiBridgeTx(8, HUGE_FEE, bridgeConfigs[4].bridgeId),
-        mockDefiBridgeTx(9, HUGE_FEE, bridgeConfigs[3].bridgeId),
-        mockDefiBridgeTx(10, HUGE_FEE, bridgeConfigs[5].bridgeId),
-        mockTx(11, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
-      ];
-      const rp = await coordinator.processPendingTxs(pendingTxs, true);
-      expect(rp.published).toBe(true);
-      expect(coordinator.processedTxs).toEqual([
-        pendingTxs[0],
-        pendingTxs[1],
-        pendingTxs[2],
-        pendingTxs[3],
-        pendingTxs[4],
-        pendingTxs[7],
-        pendingTxs[9],
-        pendingTxs[11],
-      ]);
-      expect(rollupCreator.create).toHaveBeenCalledTimes(4);
-      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
-        bridgeConfigs[0].bridgeId,
-        bridgeConfigs[1].bridgeId,
-        bridgeConfigs[2].bridgeId,
-        bridgeConfigs[3].bridgeId,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
       ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });

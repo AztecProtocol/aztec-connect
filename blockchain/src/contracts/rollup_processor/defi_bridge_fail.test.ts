@@ -2,6 +2,7 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset, TxHash } from '@aztec/barretenberg/blockchain';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { computeInteractionHashes, DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
+import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { randomBytes } from 'crypto';
 import { Signer } from 'ethers';
@@ -34,6 +35,8 @@ describe('rollup_processor: defi bridge failures', () => {
   let rollupProvider: Signer;
   let assetAddresses: EthAddress[];
 
+  const numberOfBridgeCalls = RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
+
   const topupToken = async (assetId: number, amount: bigint) =>
     assets[assetId].mint(amount, rollupProcessor.address, { signingAddress: addresses[0] });
 
@@ -59,13 +62,13 @@ describe('rollup_processor: defi bridge failures', () => {
 
     const expectedHashes = computeInteractionHashes([
       ...expectedResult,
-      ...[...Array(4 - expectedResult.length)].map(() => DefiInteractionNote.EMPTY),
+      ...[...Array(numberOfBridgeCalls - expectedResult.length)].map(() => DefiInteractionNote.EMPTY),
     ]);
 
     const hashes = await rollupProcessor.defiInteractionHashes();
     const resultHashes = [
       ...hashes,
-      ...[...Array(4 - hashes.length)].map(() => WorldStateConstants.EMPTY_INTERACTION_HASH),
+      ...[...Array(numberOfBridgeCalls - hashes.length)].map(() => WorldStateConstants.EMPTY_INTERACTION_HASH),
     ];
     expect(expectedHashes).toEqual(resultHashes);
   };

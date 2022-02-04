@@ -2,8 +2,10 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset } from '@aztec/barretenberg/blockchain';
 import { DefiInteractionNote, packInteractionNotes } from '@aztec/barretenberg/note_algorithms';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { TxHash } from '@aztec/barretenberg/blockchain';
 import { randomBytes } from 'crypto';
 import { Signer } from 'ethers';
+import { Result } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import { FeeDistributor } from '../fee_distributor';
 import { advanceBlocks, blocksToAdvance } from './fixtures/advance_block';
@@ -33,6 +35,8 @@ describe('rollup_processor', () => {
   const escapeBlockLowerBound = 80;
   const escapeBlockUpperBound = 100;
 
+  const numberOfBridgeCalls = RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
+
   const mockBridge = async (params: MockBridgeParams = {}) =>
     deployMockBridge(signers[0], rollupProcessor, assetAddresses, params);
 
@@ -49,10 +53,21 @@ describe('rollup_processor', () => {
     await advanceBlocks(blocks, ethers.provider);
   });
 
+  // Extracts the 'args' of each event emitted by the tx.
+  const fetchResults = async (txHash: TxHash, eventName: string): Promise<Result> => {
+    const receipt = await ethers.provider.getTransactionReceipt(txHash.toString());
+    const eventArgs = receipt.logs
+      .filter(l => l.address === rollupProcessor.address.toString())
+      .map(l => rollupProcessor.contract.interface.parseLog(l))
+      .filter(e => e.eventFragment.name === eventName)
+      .map(e => e.args);
+    return eventArgs;
+  };
+
   it('should get contract status', async () => {
     expect(rollupProcessor.address).toEqual(rollupProcessor.address);
     expect(await rollupProcessor.numberOfAssets()).toBe(16);
-    expect(await rollupProcessor.numberOfBridgeCalls()).toBe(4);
+    expect(await rollupProcessor.numberOfBridgeCalls()).toBe(numberOfBridgeCalls);
     expect(await rollupProcessor.dataSize()).toBe(0);
     expect(await rollupProcessor.getSupportedAssets()).toEqual(assets.map(a => a.getStaticInfo().address));
     expect(await rollupProcessor.getEscapeHatchStatus()).toEqual({ escapeOpen: true, blocksRemaining: 20 });
@@ -63,20 +78,11 @@ describe('rollup_processor', () => {
     expect(supportedAssetAAddress).toEqual(assets[1].getStaticInfo().address);
   });
 
-
   it('should throw for a virtual asset', async () => {
     const assetIdA = 1 << 29;
-    await expect(
-        rollupProcessor.getSupportedAsset(assetIdA)
-      ).rejects.toThrow(
-        "INVALID_ASSET_ID",
-      );
+    await expect(rollupProcessor.getSupportedAsset(assetIdA)).rejects.toThrow('INVALID_ASSET_ID');
     const assetIdB = 0x2abbccdd;
-    await expect(
-        rollupProcessor.getSupportedAsset(assetIdB)
-      ).rejects.toThrow(
-        "INVALID_ASSET_ID",
-      );
+    await expect(rollupProcessor.getSupportedAsset(assetIdB)).rejects.toThrow('INVALID_ASSET_ID');
   });
 
   it('should set new supported asset', async () => {
@@ -176,7 +182,11 @@ describe('rollup_processor', () => {
   });
 
   it('should allow the owner to change the verifier address', async () => {
-    await rollupProcessor.setVerifier(EthAddress.randomAddress());
+    const randomAddress = EthAddress.randomAddress();
+    const txHash = await rollupProcessor.setVerifier(randomAddress);
+    const [{ verifierAddress }] = await fetchResults(txHash, 'VerifierUpdated');
+
+    expect(verifierAddress.toString()).toBe(randomAddress.toString());
   });
 
   it('should not be able to set the verifier if not the owner', async () => {
@@ -281,6 +291,8 @@ describe('rollup_processor', () => {
       });
     }
 
+    const numRealTxsInRollup = 4;
+
     {
       const block = blocks[1];
       const rollup = RollupProofData.fromBuffer(block.rollupProofData);
@@ -293,7 +305,7 @@ describe('rollup_processor', () => {
       });
       expect(rollup).toMatchObject({
         rollupId: 1,
-        dataStartIndex: 4,
+        dataStartIndex: 1 * numRealTxsInRollup,
         innerProofData: innerProofs,
       });
     }
@@ -310,7 +322,7 @@ describe('rollup_processor', () => {
       });
       expect(rollup).toMatchObject({
         rollupId: 2,
-        dataStartIndex: 8,
+        dataStartIndex: 2 * numRealTxsInRollup,
         innerProofData: innerProofs,
       });
     }
@@ -327,7 +339,7 @@ describe('rollup_processor', () => {
       });
       expect(rollup).toMatchObject({
         rollupId: 3,
-        dataStartIndex: 12,
+        dataStartIndex: 3 * numRealTxsInRollup,
         innerProofData: [innerProofs[0], InnerProofData.PADDING],
       });
     }
@@ -344,7 +356,7 @@ describe('rollup_processor', () => {
       });
       expect(rollup).toMatchObject({
         rollupId: 4,
-        dataStartIndex: 16,
+        dataStartIndex: 4 * numRealTxsInRollup,
         innerProofData: [innerProofs[0], InnerProofData.PADDING],
       });
     }

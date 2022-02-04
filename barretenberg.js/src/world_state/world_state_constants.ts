@@ -1,3 +1,8 @@
+import { packInteractionNotes } from '../note_algorithms/defi_interaction_note';
+import { RollupProofData } from '../rollup_proof';
+
+const numberOfBridgeCalls = RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
+
 export class WorldStateConstants {
   public static EMPTY_DATA_ROOT = Buffer.from(
     '11977941a807ca96cf02d1b15830a53296170bf8ac7d96e5cded7615d18ec607',
@@ -23,8 +28,5 @@ export class WorldStateConstants {
   );
 
   // value of a SHA256 of NUM_BRIDGE_CALLS of empty interaction hashes
-  public static INITIAL_INTERACTION_HASH = Buffer.from(
-    '1aea0db5ca43c22acdd5c4173782382f3abdfb601bcf12fe6eac451ad154e37d',
-    'hex',
-  );
+  public static INITIAL_INTERACTION_HASH = packInteractionNotes([], numberOfBridgeCalls);
 }

@@ -53,13 +53,19 @@ contract TestRollupProcessor is RollupProcessor {
         );
         assembly {
             mstore(0x00, defiInteractionHashes.slot)
-            // Write the 'zero-hash' into the last 4 entries to ensure that computed
+            // Write the 'zero-hash' into the last `numberOfBridgeCalls` entries to ensure that computed
             // defiInteractionHash will be correct
             let slot := keccak256(0x00, 0x20)
-            sstore(add(slot, sub(size, 1)), 0x2d25a1e3a51eb293004c4b56abe12ed0da6bca2b4a21936752a85d102593c1b4)
-            sstore(add(slot, sub(size, 2)), 0x2d25a1e3a51eb293004c4b56abe12ed0da6bca2b4a21936752a85d102593c1b4)
-            sstore(add(slot, sub(size, 3)), 0x2d25a1e3a51eb293004c4b56abe12ed0da6bca2b4a21936752a85d102593c1b4)
-            sstore(add(slot, sub(size, 4)), 0x2d25a1e3a51eb293004c4b56abe12ed0da6bca2b4a21936752a85d102593c1b4)
+            for {
+                let i := 0
+            } lt(i, numberOfBridgeCalls) {
+                i := add(i, 1)
+            } {
+                sstore(
+                    add(slot, sub(size, add(i, 1))),
+                    0x2d25a1e3a51eb293004c4b56abe12ed0da6bca2b4a21936752a85d102593c1b4
+                )
+            }
         }
     }
 

@@ -100,7 +100,7 @@ describe('rollup_processor: async defi bridge', () => {
     const inputValue = 20n;
     const outputValueA = 12n;
     const outputValueB = 7n;
-    const { bridgeId, bridge } = await mockAsyncBridge({
+    const { bridgeId } = await mockAsyncBridge({
       secondOutputAssetValid: true,
       inputAssetId: 1,
       outputAssetIdA: 0,
@@ -173,14 +173,14 @@ describe('rollup_processor: async defi bridge', () => {
       outputValueB,
     });
 
-    const initialBalance = 50n;
+    const initialBalance = 5000n;
     await topupToken(1, initialBalance);
 
     await expectBalance(0, 0n);
     await expectBalance(1, initialBalance);
     await expectBalance(2, 0n);
 
-    const numAsyncInteractions = numberOfBridgeCalls + 3;
+    const numAsyncInteractions = numberOfBridgeCalls + 3; // Plus 3, because we want to test the system can handle an async queue larger than numberOfBridgeCalls.
     let rollupId = 0;
 
     // convert
