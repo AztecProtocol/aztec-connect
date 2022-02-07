@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef } from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { MAX_X, MAX_Y, calcScene, ELLIPSE_ASPECT, MAX_SIZE } from './crowd_util';
 import personSvg from '../../../images/person.svg';
 

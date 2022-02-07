@@ -1,7 +1,7 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import {
-  AssetState,
+  Asset,
   formatBaseUnits,
   isValidForm,
   ProviderState,
@@ -112,7 +112,9 @@ const ButtonRoot = styled(InputCol)`
 
 interface ShieldProps {
   theme: Theme;
-  assetState: AssetState;
+  asset: Asset;
+  assetPrice: bigint;
+  txAmountLimit: bigint;
   providerState?: ProviderState;
   explorerUrl: string;
   form: ShieldFormValues;
@@ -127,7 +129,9 @@ interface ShieldProps {
 
 export const Shield: React.FunctionComponent<ShieldProps> = ({
   theme,
-  assetState,
+  asset,
+  assetPrice,
+  txAmountLimit,
   providerState,
   explorerUrl,
   form,
@@ -143,7 +147,9 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
     return (
       <ShieldProgress
         theme={theme}
-        assetState={assetState}
+        asset={asset}
+        assetPrice={assetPrice}
+        txAmountLimit={txAmountLimit}
         providerState={providerState}
         form={form}
         onChangeWallet={onChangeWallet}
@@ -156,19 +162,8 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
   }
 
   const inputTheme = theme === Theme.WHITE ? InputTheme.WHITE : InputTheme.LIGHT;
-  const { asset } = assetState;
-  const {
-    amount,
-    fees,
-    speed,
-    maxAmount,
-    ethAccount,
-    recipient,
-    enableAddToBalance,
-    addToBalance,
-    confirmed,
-    submit,
-  } = form;
+  const { amount, fees, speed, maxAmount, ethAccount, recipient, enableAddToBalance, addToBalance, confirmed, submit } =
+    form;
   const { decimals, symbol } = asset;
   const { pendingBalance } = ethAccount.value;
   const txFee = fees.value[speed.value];
@@ -286,7 +281,7 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
         </FlexPaddedRow>
       )}
       <PaddedBlock size="m">
-        <DisclaimerBlock assetState={assetState} />
+        <DisclaimerBlock asset={asset} txAmountLimit={txAmountLimit} />
       </PaddedBlock>
       <InputRow>
         <ConfirmRoot>

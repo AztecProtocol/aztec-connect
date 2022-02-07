@@ -1,5 +1,5 @@
 import React from 'react';
-import styled, { css } from 'styled-components';
+import styled, { css } from 'styled-components/macro';
 import { colours, defaultTextColour } from '../styles';
 import { Text, TextColour, TextProps } from './text';
 import { Link } from './link';

@@ -1,0 +1,69 @@
+@font-face {
+  font-family: Sohne;
+  font-style: normal;
+  font-weight: 400;
+  src: url(../fonts/soehne-web-leicht.woff2);
+}
+
+@font-face {
+  font-family: Sohne;
+  font-style: normal;
+  font-weight: 450;
+  src: url(../fonts/soehne-web-buch.woff2);
+}
+
+@font-face {
+  font-family: Sohne;
+  font-style: normal;
+  font-weight: 500;
+  src: url(../fonts/soehne-web-halbfett.woff2);
+}
+
+@font-face {
+  font-family: Sohne;
+  font-style: italic;
+  font-weight: 400;
+  src: url(../fonts/soehne-leicht-kursiv.ttf);
+}
+
+@font-face {
+  font-family: Sohne;
+  font-style: italic;
+  font-weight: 500;
+  src: url(../fonts/soehne-web-halbfett-kursiv.woff2);
+}
+
+@font-face {
+  font-family: 'Sohne Mono';
+  font-style: normal;
+  font-weight: 400;
+  src: url(../fonts/soehne-mono-leicht.woff);
+}
+
+@font-face {
+  font-family: 'Sohne Mono';
+  font-style: normal;
+  font-weight: 450;
+  src: url(../fonts/soehne-mono-buch.woff);
+}
+
+@font-face {
+  font-family: 'Sohne Mono';
+  font-style: normal;
+  font-weight: 500;
+  src: url(../fonts/soehne-mono-halbfett.ttf);
+}
+
+body {
+  width: 100%;
+  font-family: Sohne, serif;
+  font-size: 20px;
+}
+
+a {
+  text-decoration: none;
+}
+
+* {
+  box-sizing: border-box;
+}

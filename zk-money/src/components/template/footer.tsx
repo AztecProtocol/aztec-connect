@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { AccountState } from '../../app';
 import { colours, fontSizes, lineHeights, spacings, breakpoints } from '../../styles';
 import { PaddedBlock } from '../padded_block';

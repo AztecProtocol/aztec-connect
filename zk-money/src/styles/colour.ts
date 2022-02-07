@@ -1,6 +1,7 @@
 export const colours = {
   black: '#000000',
   greyLight: '#FAFAFA',
+  greyDark: '#F0F0F0',
   grey: '#A4A4A4',
   white: '#ffffff',
   green: '#44FF9A',
@@ -8,6 +9,7 @@ export const colours = {
   violet: '#7856FF',
   orange: '#FFB444',
   yellow: '#FFD99F',
+  pink: '#F2E1FE',
 };
 export type Colour = keyof typeof colours;
 

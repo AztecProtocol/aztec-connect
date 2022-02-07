@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { Button, InputTheme, InputWrapper, PaddedBlock, Textarea } from '../../components';
 
 const Root = styled.div`

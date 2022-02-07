@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { MessageType, ProviderState, WalletId, wallets } from '../../../app';
 import { PaddedBlock, SystemMessagePopup, TextLink, WalletPicker } from '../../../components';
 

@@ -104,11 +104,16 @@ export class RollupService extends EventEmitter {
 
   getTxFees(assetId: number, txType: TxType): TxFee[] {
     const fees = this.status.txFees[assetId][txType];
-    return fees.map(({ value }, i) => ({
+    const txFees = fees.map(({ value }, i) => ({
       speed: speeds[i],
       fee: value,
       time: Math.ceil(this.publishInterval * publishTimeRatio[i]),
     }));
+    if (txType === TxType.ACCOUNT) {
+      const depositFees = this.status.txFees[assetId][TxType.DEPOSIT];
+      txFees.forEach((txFee, i) => (txFee.fee += depositFees[i].value));
+    }
+    return txFees;
   }
 
   getFee(assetId: number, txType: TxType, speed: TxSettlementTime) {

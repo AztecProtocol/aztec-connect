@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { MigratingAsset } from '../../../app';
 import { Button, MigratingAssetInfo, PaddedBlock, Text, TextLink } from '../../../components';
 

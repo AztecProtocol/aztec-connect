@@ -1,7 +1,10 @@
+import { AztecSdk } from '@aztec/sdk';
+import { Navbar } from 'ui-components';
 import { BroadcastChannel } from 'broadcast-channel';
 import { isEqual } from 'lodash';
 import { PureComponent } from 'react';
-import { RouteComponentProps } from 'react-router';
+import styled from 'styled-components/macro';
+import { AppContext } from '../alt-model/app_context';
 import {
   AccountAction,
   AccountState,
@@ -9,7 +12,6 @@ import {
   AppAction,
   AppAssetId,
   AppEvent,
-  assets,
   AssetState,
   ShieldFormValues,
   Form,
@@ -17,6 +19,7 @@ import {
   LoginState,
   LoginStep,
   MessageType,
+  Provider,
   SystemMessage,
   WalletId,
   WorldState,
@@ -25,18 +28,19 @@ import { ProviderState } from '../app/provider';
 import { Template } from '../components';
 import { Config } from '../config';
 import { getSupportStatus } from '../device_support';
-import { Theme } from '../styles';
-import { Account } from '../views/account';
+import { spacings, Theme } from '../styles';
 import { Home, HomeState } from '../views/home';
 import { Login } from '../views/login';
 import { getAccountUrl, getActionFromUrl, getLoginModeFromUrl, getUrlFromAction, getUrlFromLoginMode } from './views';
+import { Dashboard } from './account/dashboard/dashboard';
+import { UserAccount } from '../components/template/user_account';
+import { useTotalBalance } from '../alt-model';
+import { NavigateFunction } from 'react-router-dom';
 
-interface RouteParams {
-  assetSymbol?: string;
-}
-
-interface AppProps extends RouteComponentProps<RouteParams> {
+interface AppProps {
   config: Config;
+  path: string;
+  navigate: NavigateFunction;
 }
 
 interface AppState {
@@ -55,12 +59,19 @@ interface AppState {
   systemMessage: SystemMessage;
   isLoading: boolean;
   homeState: HomeState;
+  sdk?: AztecSdk | undefined;
+  provider?: Provider | undefined;
+  path: string;
 }
 
 enum CrossTabEvent {
   LOGGED_IN = 'CROSS_TAB_LOGGED_IN',
   LOGGED_OUT = 'CROSS_TAB_LOGGED_OUT',
 }
+
+const AccountItem = styled.div`
+  padding: ${spacings.xxs} 0;
+`;
 
 export class AppView extends PureComponent<AppProps, AppState> {
   private app: App;
@@ -71,26 +82,16 @@ export class AppView extends PureComponent<AppProps, AppState> {
   constructor(props: AppProps) {
     super(props);
 
-    const { match, config } = props;
-    const { path, params } = match;
+    const { path, config } = props;
     const initialAction = getActionFromUrl(path);
-
-    let activeAsset = params?.assetSymbol
-      ? assets.find(a => a.symbol.toLowerCase() === params.assetSymbol!.toLowerCase())?.id
-      : this.defaultAsset;
-    if (activeAsset === undefined) {
-      activeAsset = this.defaultAsset;
-      const url = getAccountUrl(activeAsset);
-      this.props.history.push(url);
-    }
 
     const loginMode = getLoginModeFromUrl(path);
 
-    this.app = new App(config, activeAsset, loginMode);
+    this.app = new App(config, this.defaultAsset, loginMode);
 
     this.state = {
       action: initialAction,
-      activeAsset,
+      activeAsset: this.defaultAsset,
       loginState: this.app.loginState,
       worldState: this.app.worldState,
       providerState: this.app.providerState,
@@ -98,6 +99,8 @@ export class AppView extends PureComponent<AppProps, AppState> {
       assetState: this.app.assetState,
       activeAction: this.app.activeAction,
       shieldForAliasForm: this.app.shieldForAliasForm,
+      // path will be removed once we are able to add router to ui-components
+      path: '/',
       systemMessage: {
         message: '',
         type: MessageType.TEXT,
@@ -137,12 +140,12 @@ export class AppView extends PureComponent<AppProps, AppState> {
   }
 
   componentDidUpdate(prevProps: AppProps, prevState: AppState) {
-    const { match: prevMatch } = prevProps;
-    const { match } = this.props;
+    const { path: prevPath } = prevProps;
+    const { path } = this.props;
     const { action: prevAction } = prevState;
     const { action } = this.state;
-    if (match.path !== prevMatch.path || !isEqual(match.params, prevMatch.params)) {
-      this.handleUrlChange(match);
+    if (path !== prevPath) {
+      this.handleUrlChange(path);
     }
     if (action !== prevAction) {
       this.handleActionChange(action);
@@ -161,15 +164,15 @@ export class AppView extends PureComponent<AppProps, AppState> {
     }
 
     if (action === AppAction.ACCOUNT) {
-      const url = getAccountUrl(this.state.activeAsset);
-      this.props.history.push(url);
+      const url = getAccountUrl();
+      this.props.navigate(url);
     } else {
       const url = getUrlFromAction(action);
-      this.props.history.push(url);
+      this.props.navigate(url);
     }
   };
 
-  private handleUrlChange = async ({ path, params }: { path: string; params: RouteParams }) => {
+  private handleUrlChange = async (path: string) => {
     const action = getActionFromUrl(path);
     this.setState({ action, systemMessage: { message: '', type: MessageType.TEXT } });
 
@@ -177,13 +180,6 @@ export class AppView extends PureComponent<AppProps, AppState> {
       case AppAction.LOGIN: {
         const loginMode = getLoginModeFromUrl(path);
         this.app.changeLoginMode(loginMode);
-        break;
-      }
-      case AppAction.ACCOUNT: {
-        const activeAsset = assets.find(a => a.symbol.toLowerCase() === params.assetSymbol!.toLowerCase())?.id;
-        if (activeAsset !== this.state.activeAsset) {
-          this.handleChangeAssetThroughUrl(activeAsset);
-        }
         break;
       }
       default:
@@ -225,6 +221,8 @@ export class AppView extends PureComponent<AppProps, AppState> {
       assetState: this.app.assetState,
       activeAction: this.app.activeAction,
       shieldForAliasForm: this.app.shieldForAliasForm,
+      sdk: this.app.sdk,
+      provider: this.app.provider,
     });
   };
 
@@ -240,19 +238,19 @@ export class AppView extends PureComponent<AppProps, AppState> {
     this.onUserSessionDataChange();
   };
 
-  private handleEthPriceChange = (_: AppAssetId, ethPrice: bigint) => {
+  private handleEthPriceChange = (_: number, ethPrice: bigint) => {
     this.setState({ homeState: { ...this.state.homeState, ethPrice } });
   };
 
   private handleLogin = () => {
     const url = getUrlFromLoginMode(LoginMode.LOGIN);
-    this.props.history.push(url);
+    this.props.navigate(url);
   };
 
   private handleSignupAndShield = (amount: bigint) => {
     this.app.updateShieldForAliasAmountPreselection(amount);
     const url = getUrlFromLoginMode(LoginMode.SIGNUP);
-    this.props.history.push(url);
+    this.props.navigate(url);
   };
 
   private handleConnectWallet = (walletId: WalletId) => {
@@ -268,7 +266,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
       case LoginMode.MIGRATE:
       case LoginMode.NEW_ALIAS: {
         const url = getUrlFromLoginMode(LoginMode.SIGNUP);
-        this.props.history.push(url);
+        this.props.navigate(url);
         break;
       }
     }
@@ -293,36 +291,34 @@ export class AppView extends PureComponent<AppProps, AppState> {
   private handleChangeAsset = (assetId: AppAssetId) => {
     const action = this.state.action;
     if (action !== AppAction.ACCOUNT || assetId == this.state.activeAsset || this.app.isProcessingAction()) return;
-
-    const url = getAccountUrl(assetId);
-    this.props.history.push(url);
     this.setState({ activeAsset: assetId });
     this.app.changeAsset(assetId);
   };
 
-  private handleChangeAssetThroughUrl(assetId?: AppAssetId) {
-    if (assetId === undefined || this.app.isProcessingAction()) {
-      const url = getAccountUrl(this.state.activeAsset);
-      this.props.history.push(url);
-    } else {
-      this.setState({ activeAsset: assetId });
-      this.app.changeAsset(assetId);
-    }
-  }
-
   private handleClearAccountV0s = async () => {
     const url = getUrlFromLoginMode(LoginMode.SIGNUP);
-    this.props.history.push(url);
+    this.props.navigate(url);
     await this.app.clearLocalAccountV0s();
+  };
+
+  private handlePathChange = (path: string) => {
+    this.setState({ path });
+  };
+
+  private getTheme = () => {
+    const { path } = this.state;
+
+    if (path === '/') {
+      return Theme.GRADIENT;
+    }
+
+    return Theme.WHITE;
   };
 
   render() {
     const {
       action,
-      assetState,
-      activeAsset,
       accountState,
-      activeAction,
       loginState,
       providerState,
       worldState,
@@ -330,14 +326,28 @@ export class AppView extends PureComponent<AppProps, AppState> {
       systemMessage,
       isLoading,
       homeState,
+      path,
     } = this.state;
     const { config } = this.props;
-    const { step } = loginState;
-    const theme = action === AppAction.ACCOUNT ? Theme.WHITE : Theme.GRADIENT;
     const { requiredNetwork } = this.app;
+    const { step } = loginState;
+    const theme = this.getTheme();
     const processingAction = this.app.isProcessingAction();
     const allowReset = action !== AppAction.ACCOUNT && (!processingAction || systemMessage.type === MessageType.ERROR);
-    const rootUrl = allowReset ? '/' : this.props.match.url;
+    const rootUrl = allowReset ? '/' : this.props.path;
+    const isLoggedIn = step === LoginStep.DONE;
+
+    const accountComponent = isLoggedIn ? (
+      <AccountItem>
+        <UserAccount
+          account={accountState!}
+          worldState={worldState}
+          onMigrateOldBalance={this.handleMigrateOldBalance}
+          onMigrateForgottonBalance={this.onMigrateForgottonBalance}
+          onLogout={this.handleLogout}
+        />
+      </AccountItem>
+    ) : undefined;
 
     return (
       <Template
@@ -352,69 +362,82 @@ export class AppView extends PureComponent<AppProps, AppState> {
         onLogout={this.handleLogout}
         isLoading={isLoading}
       >
-        {(() => {
-          switch (action) {
-            case AppAction.LOGIN: {
-              return (
-                <Login
-                  worldState={worldState}
-                  loginState={loginState}
-                  providerState={providerState}
-                  availableWallets={this.app.availableWallets}
-                  shieldForAliasForm={shieldForAliasForm}
-                  explorerUrl={config.explorerUrl}
-                  systemMessage={systemMessage}
-                  setSeedPhrase={this.app.setSeedPhrase}
-                  setAlias={this.app.setAlias}
-                  setRememberMe={this.app.setRememberMe}
-                  onSelectWallet={this.handleConnectWallet}
-                  onSelectSeedPhrase={this.app.confirmSeedPhrase}
-                  onMigrateToWallet={this.app.migrateToWallet}
-                  onMigrateNotes={this.app.migrateNotes}
-                  onSelectAlias={this.app.confirmAlias}
-                  onRestart={allowReset && step !== LoginStep.CONNECT_WALLET ? this.handleRestart : undefined}
-                  onForgotAlias={this.app.forgotAlias}
-                  onMigrateAccount={this.app.migrateAccount}
-                  onClearAccountV0s={this.handleClearAccountV0s}
-                  onShieldForAliasFormInputsChange={this.app.changeShieldForAliasForm}
-                  onSubmitShieldForAliasForm={this.app.claimUserName}
-                  onChangeWallet={this.app.changeWallet}
-                />
-              );
-            }
-            case AppAction.ACCOUNT: {
-              return (
-                <Account
-                  worldState={worldState}
-                  accountState={accountState!}
-                  asset={assets[activeAsset]}
-                  assetEnabled={activeAsset <= config.maxAvailableAssetId}
-                  assetState={assetState!}
-                  loginState={loginState}
-                  providerState={providerState}
-                  activeAction={activeAction}
-                  processingAction={processingAction}
-                  explorerUrl={config.explorerUrl}
-                  txsPublishTime={this.app.txsPublishTime}
-                  onFormInputsChange={this.app.changeForm}
-                  onValidate={this.app.validateForm}
-                  onChangeWallet={this.app.changeWallet}
-                  onDisconnectWallet={this.app.disconnectWallet}
-                  onGoBack={this.app.resetFormStep}
-                  onSubmit={this.app.submitForm}
-                  onChangeAsset={this.handleChangeAsset}
-                  onSelectAction={this.app.selectAction}
-                  onClearAction={this.app.clearAction}
-                />
-              );
-            }
-            default:
-              return (
-                <Home onLogin={this.handleLogin} onSignupAndShield={this.handleSignupAndShield} homeState={homeState} />
-              );
-          }
-        })()}
+        <AppContext.Provider
+          value={{
+            config,
+            requiredNetwork: this.app.requiredNetwork,
+            sdk: this.state.sdk,
+            provider: this.state.provider,
+            accountId: this.state.accountState?.userId,
+            alias: this.state.accountState?.alias,
+            keyVault: this.app.keyVault,
+            db: this.app.db,
+            stableEthereumProvider: this.app.stableEthereumProvider,
+            rollupService: this.app.rollupService,
+            priceFeedService: this.app.priceFeedService,
+            userSession: this.app.getSession(),
+          }}
+        >
+          <NavbarWrapper
+            theme={theme}
+            isLoggedIn={isLoggedIn}
+            accountComponent={accountComponent}
+            path={path}
+            onChange={this.handlePathChange}
+            onLogin={this.handleLogin}
+          />
+          {path === '/' ? (
+            action === AppAction.LOGIN ? (
+              <Login
+                worldState={worldState}
+                loginState={loginState}
+                providerState={providerState}
+                availableWallets={this.app.availableWallets}
+                shieldForAliasForm={shieldForAliasForm}
+                explorerUrl={config.explorerUrl}
+                systemMessage={systemMessage}
+                setSeedPhrase={this.app.setSeedPhrase}
+                setAlias={this.app.setAlias}
+                setRememberMe={this.app.setRememberMe}
+                onSelectWallet={this.handleConnectWallet}
+                onSelectSeedPhrase={this.app.confirmSeedPhrase}
+                onMigrateToWallet={this.app.migrateToWallet}
+                onMigrateNotes={this.app.migrateNotes}
+                onSelectAlias={this.app.confirmAlias}
+                onRestart={allowReset && step !== LoginStep.CONNECT_WALLET ? this.handleRestart : undefined}
+                onForgotAlias={this.app.forgotAlias}
+                onMigrateAccount={this.app.migrateAccount}
+                onClearAccountV0s={this.handleClearAccountV0s}
+                onShieldForAliasFormInputsChange={this.app.changeShieldForAliasForm}
+                onSubmitShieldForAliasForm={this.app.claimUserName}
+                onChangeWallet={this.app.changeWallet}
+              />
+            ) : (
+              <Home onLogin={this.handleLogin} onSignupAndShield={this.handleSignupAndShield} homeState={homeState} />
+            )
+          ) : (
+            <Dashboard path={path} />
+          )}
+        </AppContext.Provider>
       </Template>
     );
   }
+}
+
+// NOTE: This wrapper is only here until we can make hooks work on UI Components
+//      the reason is because we have to run useTotalBalance from within Navbar
+function NavbarWrapper({ theme, isLoggedIn, accountComponent, path, onChange, onLogin }: any) {
+  const totalBalance = useTotalBalance();
+  return (
+    <Navbar
+      path={path}
+      theme={theme}
+      isLoggedIn={isLoggedIn}
+      onChange={onChange}
+      balance={totalBalance}
+      accountComponent={accountComponent}
+      onLogin={onLogin}
+      // networkComponent={networkComponent}
+    />
+  );
 }

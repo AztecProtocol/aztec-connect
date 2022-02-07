@@ -28,4 +28,6 @@ export interface AccountForm {
 
   on(event: AccountFormEvent.UPDATED_FORM_STATUS, listener: (status: FormStatus) => void): this;
   on(event: AccountFormEvent.UPDATED_FORM_VALUES, listener: (form: Form) => void): this;
+  off(event: AccountFormEvent.UPDATED_FORM_STATUS, listener: (status: FormStatus) => void): this;
+  off(event: AccountFormEvent.UPDATED_FORM_VALUES, listener: (form: Form) => void): this;
 }

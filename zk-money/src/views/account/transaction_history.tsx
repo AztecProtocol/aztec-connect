@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import styled, { css } from 'styled-components';
-import { AccountTx, Asset, formatBaseUnits, JoinSplitTx } from '../../app';
+import styled, { css } from 'styled-components/macro';
+import { AccountTx, assets, formatBaseUnits, JoinSplitTx } from '../../app';
 import { AccountTxSummary, JoinSplitTxSummary, Pagination } from '../../components';
 import { spacings, Theme, themeColours } from '../../styles';
 
@@ -27,7 +27,6 @@ const PaginationRoot = styled.div`
 `;
 
 interface TransactionHistoryProps {
-  asset: Asset;
   accountTxs: AccountTx[];
   joinSplitTxs: JoinSplitTx[];
   txsPublishTime?: Date;
@@ -35,7 +34,6 @@ interface TransactionHistoryProps {
 }
 
 export const TransactionHistory: React.FunctionComponent<TransactionHistoryProps> = ({
-  asset,
   accountTxs,
   joinSplitTxs,
   txsPublishTime,
@@ -48,22 +46,25 @@ export const TransactionHistory: React.FunctionComponent<TransactionHistoryProps
   return (
     <>
       <TxsRoot>
-        {joinSplitTxs.slice((page - 1) * txsPerPage, page * txsPerPage).map(tx => (
-          <JoinSplitTxSummaryRow
-            key={tx.txId.toString()}
-            txId={tx.txId.toString()}
-            action={tx.action}
-            value={formatBaseUnits(tx.balanceDiff, asset.decimals, {
-              precision: asset.preferredFractionalDigits,
-              commaSeparated: true,
-              showPlus: true,
-            })}
-            symbol={asset.symbol}
-            link={tx.link}
-            publishTime={txsPublishTime}
-            settled={tx.settled}
-          />
-        ))}
+        {joinSplitTxs.slice((page - 1) * txsPerPage, page * txsPerPage).map(tx => {
+          const asset = assets[tx.assetId];
+          return (
+            <JoinSplitTxSummaryRow
+              key={tx.txId.toString()}
+              txId={tx.txId.toString()}
+              action={tx.action}
+              value={formatBaseUnits(tx.balanceDiff, asset.decimals, {
+                precision: asset.preferredFractionalDigits,
+                commaSeparated: true,
+                showPlus: true,
+              })}
+              symbol={asset.symbol}
+              link={tx.link}
+              publishTime={txsPublishTime}
+              settled={tx.settled}
+            />
+          );
+        })}
         {accountTxs
           .slice(Math.max(0, (page - 1) * txsPerPage - numJs), Math.max(0, page * txsPerPage - numJs))
           .map(tx => (

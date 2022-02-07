@@ -59,7 +59,7 @@ export class Provider extends EventEmitter {
   }
 
   get chainId() {
-    return this.state.network!.chainId || 0;
+    return this.state.network?.chainId || 0;
   }
 
   get network() {

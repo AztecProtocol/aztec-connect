@@ -1,5 +1,5 @@
 import React from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled, { keyframes } from 'styled-components/macro';
 import loaderIcon from '../images/loader.svg';
 import loaderIconWhite from '../images/loader_white.svg';
 import { Spacing, spacings } from '../styles';

@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { ShieldedAssetIcon, IconVarients } from '../../../components';
 import zkShieldBlack from '../../../images/zk_shield_white.svg';
 

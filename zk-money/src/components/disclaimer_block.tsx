@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import warningIcon from '../images/warning.svg';
 import { Text } from './text';
 import { borderRadiuses, breakpoints, spacings, Theme, themeColours } from '../styles';
@@ -59,10 +59,11 @@ const WarningFootnote = styled(Text)`
 `;
 
 interface DisclaimerBlockProps {
-  assetState: { asset: Asset; txAmountLimit: bigint };
+  asset: Asset;
+  txAmountLimit: bigint;
 }
 
-export const DisclaimerBlock: React.FunctionComponent<DisclaimerBlockProps> = ({ assetState }) => {
+export const DisclaimerBlock: React.FunctionComponent<DisclaimerBlockProps> = ({ asset, txAmountLimit }) => {
   return (
     <Root>
       <ColIcon>
@@ -72,9 +73,9 @@ export const DisclaimerBlock: React.FunctionComponent<DisclaimerBlockProps> = ({
       <ColContent>
         <Text size="s">
           {`This is experimental software that hasn’t been externally audited yet. For security, amounts are capped at ${fromBaseUnits(
-            assetState.txAmountLimit,
-            assetState.asset.decimals,
-          )} ${assetState.asset.symbol}. `}
+            txAmountLimit,
+            asset.decimals,
+          )} ${asset.symbol}. `}
           <WarningFootnote text="Use at your own risk." weight="bold" inline />
         </Text>
       </ColContent>

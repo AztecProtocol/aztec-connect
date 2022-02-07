@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { LoginMode, Wallet, WalletId } from '../../app';
 import { Text, TextLink, WalletPicker } from '../../components';
 import { spacings } from '../../styles';

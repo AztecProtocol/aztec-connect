@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { MessageType, MigrateFormValues, MigrateStatus, ProviderState, WalletId } from '../../../app';
 import { PaddedBlock, Spinner, SpinnerTheme, Text } from '../../../components';
 import { spacings } from '../../../styles';

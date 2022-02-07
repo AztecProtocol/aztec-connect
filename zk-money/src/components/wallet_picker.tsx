@@ -1,6 +1,6 @@
 import { rgba } from 'polished';
 import React from 'react';
-import styled, { css } from 'styled-components';
+import styled, { css } from 'styled-components/macro';
 import { Wallet, WalletId } from '../app';
 import { borderRadiuses, breakpoints, colours, defaultTextColour, lineHeights, spacings } from '../styles';
 import { Text } from './text';

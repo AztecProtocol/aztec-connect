@@ -1,8 +1,8 @@
 import { EthAddress } from '@aztec/sdk';
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import {
-  AssetState,
+  Asset,
   formatBaseUnits,
   isAddress,
   isValidForm,
@@ -118,7 +118,10 @@ const ButtonRoot = styled(InputCol)`
 
 export interface SendProps {
   theme: Theme;
-  assetState: AssetState;
+  asset: Asset;
+  assetPrice: bigint;
+  txAmountLimit: bigint;
+  spendableBalance: bigint;
   form: SendFormValues;
   explorerUrl: string;
   onChangeInputs(inputs: Partial<SendFormValues>): void;
@@ -130,7 +133,10 @@ export interface SendProps {
 
 export const Send: React.FunctionComponent<SendProps> = ({
   theme,
-  assetState,
+  asset,
+  assetPrice,
+  txAmountLimit,
+  spendableBalance,
   form,
   explorerUrl,
   onChangeInputs,
@@ -143,7 +149,9 @@ export const Send: React.FunctionComponent<SendProps> = ({
     return (
       <SendProgress
         theme={theme}
-        assetState={assetState}
+        asset={asset}
+        assetPrice={assetPrice}
+        txAmountLimit={txAmountLimit}
         form={form}
         onGoBack={onGoBack}
         onSubmit={onSubmit}
@@ -153,7 +161,6 @@ export const Send: React.FunctionComponent<SendProps> = ({
   }
 
   const inputTheme = theme === Theme.WHITE ? InputTheme.WHITE : InputTheme.LIGHT;
-  const { asset, spendableBalance } = assetState;
   const { amount, fees, speed, maxAmount, recipient, confirmed, submit } = form;
   const txFee = fees.value[speed.value];
   const title = isAddress(recipient.value.input) ? 'Withdraw' : 'Send';
@@ -249,7 +256,7 @@ export const Send: React.FunctionComponent<SendProps> = ({
         </FeeCol>
       </InputRow>
       <PaddedBlock size="m">
-        <DisclaimerBlock assetState={assetState} />
+        <DisclaimerBlock asset={asset} txAmountLimit={txAmountLimit} />
       </PaddedBlock>
       <InputRow>
         <ConfirmRoot>

@@ -72,7 +72,8 @@ export const MergeProgress: React.FunctionComponent<MergeProgressProps> = ({
     <ProgressTemplate
       theme={theme}
       action="Merge"
-      assetState={assetState}
+      asset={assetState.asset}
+      txAmountLimit={assetState.txAmountLimit}
       items={items}
       steps={steps}
       form={form as any}

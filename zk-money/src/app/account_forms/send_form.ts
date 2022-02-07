@@ -10,7 +10,6 @@ import {
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { debounce, DebouncedFunc } from 'lodash';
-import { AccountState, AssetState } from '../account_state';
 import { AccountUtils } from '../account_utils';
 import { formatAliasInput, isSameAlias, isValidAliasInput } from '../alias';
 import { Asset } from '../assets';
@@ -144,8 +143,8 @@ export class SendForm extends EventEmitter implements AccountForm {
   private readonly txTypeDebounceWait = 1000;
 
   constructor(
-    accountState: AccountState,
-    private assetState: AssetState,
+    accountState: { userId: AccountId; alias: string },
+    private assetState: { asset: Asset; spendableBalance: bigint },
     private provider: Provider | undefined,
     private readonly keyVault: KeyVault,
     private readonly sdk: AztecSdk,
@@ -200,7 +199,7 @@ export class SendForm extends EventEmitter implements AccountForm {
     await this.initTransactionGraph();
   }
 
-  changeAssetState(assetState: AssetState) {
+  changeAssetState(assetState: { asset: Asset; spendableBalance: bigint }) {
     if (this.processing) {
       debug('Cannot change asset state while a form is being processed.');
       return;
@@ -248,13 +247,6 @@ export class SendForm extends EventEmitter implements AccountForm {
       let txType = this.values.recipient.value.txType;
       if (isAddress(recipient)) {
         valid = ValueAvailability.VALID;
-        const prevRecipient = this.values.recipient.value.input;
-        if (!isAddress(prevRecipient)) {
-          // Only reset selectedAmount when previous recipient is not an address.
-          // In case the user has changed it to other value.
-          const { withdrawSafeAmounts } = this.assetState;
-          changes.selectedAmount = { value: withdrawSafeAmounts[0] };
-        }
       } else if (isSameAlias(recipient, this.alias) || !isValidAliasInput(recipient)) {
         valid = ValueAvailability.INVALID;
       } else {

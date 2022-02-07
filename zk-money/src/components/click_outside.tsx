@@ -31,7 +31,7 @@ export const ClickOutside: React.FunctionComponent<ClickOutsideProps> = ({
     return () => {
       document.removeEventListener('click', handleClickOutside, true);
     };
-  }, [disabled]);
+  }, [disabled, onClickOutside]);
 
   return (
     <div className={className} ref={ref}>

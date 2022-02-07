@@ -1,0 +1,43 @@
+.root {
+  padding: 18px 32px;
+}
+
+.item {
+  position: relative;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.item.faded {
+  opacity: 0.5;
+}
+
+.item.hidden {
+  visibility: hidden;
+}
+
+.itemFieldContent {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+}
+
+.itemFieldContent.faded {
+  visibility: hidden;
+}
+
+.itemExpandedContent {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+}
+
+.progress {
+  font-size: 13px;
+  font-style: italic;
+  color: #aaa;
+  margin-top: 40px;
+}

@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import checkedIcon from '../images/check.svg';
 import { gradients, spacings, Theme, themeColours } from '../styles';
 import { InputTheme } from './input';

@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { fromBaseUnits } from '../../../app';
 import { Text } from '../../../components';
 import { borderRadiuses, spacings, themeColours } from '../../../styles';

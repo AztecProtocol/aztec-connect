@@ -7,12 +7,12 @@ import {
   RegisterController,
   TxSettlementTime,
   TxType,
+  EthereumProvider,
 } from '@aztec/sdk';
 import { Web3Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { debounce, DebouncedFunc, isEqual } from 'lodash';
-import { AssetState } from '../account_state';
 import { AccountUtils } from '../account_utils';
 import { isSameAlias, isValidAliasInput } from '../alias';
 import { Asset, assets } from '../assets';
@@ -157,6 +157,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
   private readonly userId: AccountId;
   private readonly alias: string;
   private readonly asset: Asset;
+  private readonly isNewAccount: boolean;
 
   private values: ShieldFormValues = initialShieldFormValues;
   private formStatus = FormStatus.ACTIVE;
@@ -183,7 +184,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     private ethAccount: EthAccount,
     private readonly keyVault: KeyVault,
     private readonly sdk: AztecSdk,
-    private readonly coreProvider: Provider,
+    private readonly stableEthereumProvider: EthereumProvider,
     private readonly rollup: RollupService,
     private readonly accountUtils: AccountUtils,
     private readonly requiredNetwork: Network,
@@ -195,9 +196,12 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     this.userId = accountState.userId;
     this.alias = accountState.alias;
     this.asset = assetState.asset;
+    this.isNewAccount = !!newSpendingPublicKey;
     this.debounceUpdateRecipient = debounce(this.updateRecipientStatus, this.aliasDebounceWait);
     this.values.recipient = { value: { input: this.alias, valid: ValueAvailability.VALID } };
-    this.values.fees = { value: this.rollup.getTxFees(this.asset.id, TxType.DEPOSIT) };
+    this.values.fees = {
+      value: this.rollup.getTxFees(this.asset.id, this.isNewAccount ? TxType.ACCOUNT : TxType.DEPOSIT),
+    };
     const values: Partial<ShieldFormValues> = {};
     if (amountPreselection !== undefined) {
       values.amount = {
@@ -245,7 +249,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
   async init() {
     this.rollup.on(RollupServiceEvent.UPDATED_STATUS, this.onRollupStatusChange);
     if (this.requireGas) {
-      await this.updateGasPrice(this.coreProvider);
+      await this.updateGasPrice(this.stableEthereumProvider);
     }
     await this.ethAccount.refreshPublicBalance(false);
     await this.ethAccount.refreshPendingBalance(false);
@@ -254,7 +258,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     this.ethAccount.on(EthAccountEvent.UPDATED_PUBLIC_BALANCE, this.onPublicBalanceChange);
   }
 
-  changeAssetState(assetState: AssetState) {
+  changeAssetState(assetState: { asset: Asset; spendableBalance: bigint }) {
     if (this.processing) {
       debug('Cannot change asset state while a form is being processed.');
       return;
@@ -396,7 +400,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     const ethAccountState = this.ethAccount.state;
 
     const { publicBalance, pendingBalance } = ethAccountState;
-    const fees = this.rollup.getTxFees(this.asset.id, TxType.DEPOSIT);
+    const fees = this.rollup.getTxFees(this.asset.id, this.isNewAccount ? TxType.ACCOUNT : TxType.DEPOSIT);
     const speed = (changes.speed || this.values.speed).value;
     const fee = fees[speed].fee;
     const gasCost = ((this.accountGasCost.deposit + this.accountGasCost.approveProof) * this.gasPrice * 110n) / 100n; // * 1.1
@@ -528,7 +532,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
           : 0n;
       const totalGas = depositGas + approveProofGas;
       if (totalGas) {
-        await this.updateGasPrice(provider!);
+        await this.updateGasPrice(provider?.ethereumProvider ?? this.stableEthereumProvider);
       }
       const requiredPublicFund = max(0n, toBeDeposited + totalGas * this.gasPrice);
       if (publicBalance < requiredPublicFund) {
@@ -612,7 +616,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
 
         this.prompt('Awaiting transaction confirmation...');
         try {
-          await this.polling(controller.isProofApproved);
+          await this.polling(async () => controller.isProofApproved());
         } catch (e) {
           return this.abort(e.message);
         }
@@ -650,12 +654,15 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     const recipient = form.recipient.value.input;
     const outputNoteOwner = recipient === this.alias ? this.userId : (await this.accountUtils.getAccountId(recipient))!;
     const signer = this.sdk.createSchnorrSigner(accountPrivateKey);
+    if (this.isNewAccount) {
+      await this.accountUtils.addUser(accountPrivateKey, this.userId.nonce);
+    }
     await this.accountUtils.addUser(accountPrivateKey, senderId.nonce);
-    return this.newSpendingPublicKey
+    return this.isNewAccount
       ? this.sdk.createRegisterController(
           senderId,
           this.alias,
-          this.newSpendingPublicKey,
+          this.newSpendingPublicKey!,
           undefined,
           depositValue,
           fee,
@@ -836,8 +843,8 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     this.accountGasCost = { ...gasCost, ethAddress };
   }
 
-  private async updateGasPrice(provider: Provider) {
-    this.gasPrice = BigInt((await new Web3Provider(provider.ethereumProvider).getGasPrice()).toString());
+  private async updateGasPrice(ethereumProvider: EthereumProvider) {
+    this.gasPrice = BigInt((await new Web3Provider(ethereumProvider).getGasPrice()).toString());
   }
 
   private updateFormStatus(status: FormStatus) {

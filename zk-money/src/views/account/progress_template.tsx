@@ -1,6 +1,6 @@
 import React from 'react';
-import styled from 'styled-components';
-import { AssetState, Form, isValidForm, MessageType } from '../../app';
+import styled from 'styled-components/macro';
+import { Asset, Form, isValidForm, MessageType } from '../../app';
 import {
   Button,
   DisclaimerBlock,
@@ -102,7 +102,8 @@ interface ProgressStep {
 interface ProgressTemplateProps {
   theme: Theme;
   action: string;
-  assetState: AssetState;
+  asset: Asset;
+  txAmountLimit: bigint;
   items: InfoItem[];
   steps: ProgressStep[];
   form: Form;
@@ -120,7 +121,8 @@ interface ProgressTemplateProps {
 export const ProgressTemplate: React.FunctionComponent<ProgressTemplateProps> = ({
   theme,
   action,
-  assetState,
+  asset,
+  txAmountLimit,
   items,
   steps,
   form,
@@ -204,7 +206,9 @@ export const ProgressTemplate: React.FunctionComponent<ProgressTemplateProps> = 
     if (message) {
       return <FooterMessage theme={inputTheme} message={message} type={messageType} />;
     }
-    return <FooterMessage theme={inputTheme} message="Do not close this window before the transaction has been sent." />;
+    return (
+      <FooterMessage theme={inputTheme} message="Do not close this window before the transaction has been sent." />
+    );
   };
 
   return (
@@ -215,7 +219,7 @@ export const ProgressTemplate: React.FunctionComponent<ProgressTemplateProps> = 
       {!success && !expired && (
         <PaddedBlock size="s">
           {pending ? (
-            <DisclaimerBlock assetState={assetState} />
+            <DisclaimerBlock asset={asset} txAmountLimit={txAmountLimit} />
           ) : (
             steps.map(({ text, status }) => createProgress(text, status))
           )}

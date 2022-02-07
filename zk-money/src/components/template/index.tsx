@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import styled, { css } from 'styled-components';
+import { Navbar } from 'ui-components';
+import styled, { css } from 'styled-components/macro';
 import { AccountState, SystemMessage, WorldState } from '../../app';
 import { breakpoints, colours, gradients, spacings, Theme } from '../../styles';
 import { CookiesForm, isCookieAccepted } from '../cookies_form';
+import { SystemMessagePopup } from './system_message_popup';
 import { ContentWrapper } from './content_wrapper';
 import { Footer } from './footer';
-import { Header } from './header';
-import { SystemMessagePopup } from './system_message_popup';
 
 export * from './content_wrapper';
 export * from './section';
@@ -94,19 +94,7 @@ export const Template: React.FunctionComponent<TemplateProps> = ({
 
   return (
     <TemplateRoot>
-      <ContentRoot extraFooterSpace={withCookie && theme === Theme.GRADIENT}>
-        <Header
-          theme={theme}
-          rootUrl={rootUrl}
-          network={network}
-          worldState={worldState}
-          account={account}
-          onMigrateOldBalance={onMigrateOldBalance}
-          onMigrateForgottonBalance={onMigrateForgottonBalance}
-          onLogout={onLogout}
-        />
-        {!isLoading && children}
-      </ContentRoot>
+      <ContentRoot extraFooterSpace={withCookie && theme === Theme.GRADIENT}>{!isLoading && children}</ContentRoot>
       {!isLoading && (
         <>
           {theme === Theme.WHITE && <Footer account={account} />}

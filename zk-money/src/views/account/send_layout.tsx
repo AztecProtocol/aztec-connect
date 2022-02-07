@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { isAddress, ProviderState, SendStatus, toBaseUnits, WalletId } from '../../app';
 import { breakpoints, spacings } from '../../styles';
 import { PrivacyOverview } from './privacy/privacy_overview';
@@ -55,7 +55,7 @@ export const SendLayout: React.FunctionComponent<SendLayoutProps> = ({
     );
   }
 
-  const { asset } = sendProps.assetState;
+  const { asset } = sendProps;
 
   return (
     <Root>

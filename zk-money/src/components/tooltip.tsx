@@ -1,6 +1,6 @@
 import { rgba } from 'polished';
 import React, { useState } from 'react';
-import styled, { css } from 'styled-components';
+import styled, { css } from 'styled-components/macro';
 import { borderRadiuses, colours, spacings } from '../styles';
 
 export type TooltipPivot = 'topcenter' | 'topright';

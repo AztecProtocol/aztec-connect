@@ -1,5 +1,5 @@
 import React from 'react';
-import styled, { css } from 'styled-components';
+import styled, { css } from 'styled-components/macro';
 import { borderRadiuses, inputSizes, inputFontSizeKeys, InputSize, spacings, gradients, colours } from '../styles';
 import { Spinner, SpinnerTheme } from './spinner';
 import { TextLink } from './text_link';

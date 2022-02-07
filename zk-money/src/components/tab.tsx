@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { spacings } from '../styles';
 import { GradientBlock } from './gradient_block';
 import { Text } from './text';

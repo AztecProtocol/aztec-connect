@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import successIcon from '../../images/check.svg';
 import errorIcon from '../../images/exclamation_mark.svg';
 import warningIcon from '../../images/warning.svg';

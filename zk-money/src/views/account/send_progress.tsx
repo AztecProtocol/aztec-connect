@@ -1,6 +1,6 @@
 import React from 'react';
-import { AssetState, isAddress, SendFormValues, SendStatus, toBaseUnits } from '../../app';
-import { breakpoints, Theme } from '../../styles';
+import { Asset, isAddress, SendFormValues, SendStatus, toBaseUnits } from '../../app';
+import { Theme } from '../../styles';
 import { AssetInfoRow } from './asset_info_row';
 import { ProgressTemplate } from './progress_template';
 
@@ -14,7 +14,9 @@ const formatRecipient = (input: string, truncate = false) => {
 
 interface SendProgressProps {
   theme: Theme;
-  assetState: AssetState;
+  asset: Asset;
+  assetPrice: bigint;
+  txAmountLimit: bigint;
   form: SendFormValues;
   onGoBack(): void;
   onSubmit(): void;
@@ -23,7 +25,9 @@ interface SendProgressProps {
 
 export const SendProgress: React.FunctionComponent<SendProgressProps> = ({
   theme,
-  assetState,
+  asset,
+  assetPrice,
+  txAmountLimit,
   form,
   onGoBack,
   onSubmit,
@@ -31,17 +35,16 @@ export const SendProgress: React.FunctionComponent<SendProgressProps> = ({
 }) => {
   const { amount, fees, speed, recipient, submit, status } = form;
 
-  const { asset, price } = assetState;
   const fee = fees.value[speed.value].fee;
 
   const items = [
     {
       title: 'Amount',
-      content: <AssetInfoRow asset={asset} value={toBaseUnits(amount.value, asset.decimals)} price={price} />,
+      content: <AssetInfoRow asset={asset} value={toBaseUnits(amount.value, asset.decimals)} price={assetPrice} />,
     },
     {
       title: 'Fee',
-      content: <AssetInfoRow asset={asset} value={fee} price={price} />,
+      content: <AssetInfoRow asset={asset} value={fee} price={assetPrice} />,
     },
     {
       title: 'Recipient',
@@ -64,7 +67,8 @@ export const SendProgress: React.FunctionComponent<SendProgressProps> = ({
     <ProgressTemplate
       theme={theme}
       action="Send"
-      assetState={assetState}
+      asset={asset}
+      txAmountLimit={txAmountLimit}
       items={items}
       steps={steps}
       form={form as any}

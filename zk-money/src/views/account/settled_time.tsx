@@ -1,6 +1,6 @@
 import moment from 'moment';
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { ValueAvailability } from '../../app';
 import { Loader, TextLink } from '../../components';
 import clockIcon from '../../images/clock.svg';

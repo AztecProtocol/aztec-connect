@@ -1,4 +1,4 @@
-import { AppAction, AppAssetId, assets, LoginMode } from '../app';
+import { AppAction, LoginMode } from '../app';
 
 const views = [
   {
@@ -18,7 +18,23 @@ const views = [
     action: AppAction.LOGIN,
   },
   {
-    path: '/asset/:assetSymbol',
+    path: '/dashboard',
+    action: AppAction.ACCOUNT,
+  },
+  {
+    path: '/dashboard/earn',
+    action: AppAction.ACCOUNT,
+  },
+  {
+    path: '/dashboard/send',
+    action: AppAction.ACCOUNT,
+  },
+  {
+    path: '/dashboard/trade',
+    action: AppAction.ACCOUNT,
+  },
+  {
+    path: '/dashboard/balance',
     action: AppAction.ACCOUNT,
   },
 ];
@@ -52,5 +68,4 @@ export const getUrlFromLoginMode = (mode: LoginMode) => {
   }
 };
 
-export const getAccountUrl = (assetId: AppAssetId) =>
-  views.find(v => v.action === AppAction.ACCOUNT)!.path.replace(':assetSymbol', `${assets[assetId].symbol}`);
+export const getAccountUrl = () => '/dashboard';

@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { Dot, Loader, LoaderTheme, PaddedBlock, Text } from '../../components';
 import errorIcon from '../../images/exclamation_mark.svg';
 import { borderRadiuses, spacings } from '../../styles';
