@@ -1,0 +1,19 @@
+@use '../../../styles/gradients';
+
+.root {
+  width: 100%;
+  height: 10px;
+  border-radius: 5px;
+  background-color: #940dff1e;
+
+  position: relative;
+  overflow: hidden;
+}
+
+.completion {
+  background: linear-gradient(101.14deg, gradients.$primary_from 11.12%, gradients.$primary_to 58.22%);
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}

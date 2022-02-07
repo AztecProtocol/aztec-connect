@@ -1,0 +1,9 @@
+.info {
+  display: flex;
+  flex-direction: row;
+  margin-bottom: 15px;
+  justify-content: space-between;
+  letter-spacing: 0.5px;
+  font-size: 12px;
+  font-style: italic;
+}

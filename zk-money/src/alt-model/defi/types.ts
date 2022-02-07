@@ -22,5 +22,7 @@ export interface DefiRecipe {
   bridgeFlow: BridgeFlow;
   logo: string;
   shortDesc: string;
+  bannerImg: string;
+  longDesc: string;
   investmentType: DefiInvestmentType;
 }

@@ -3,6 +3,7 @@ import { BridgeFlow, DefiInvestmentType, DefiRecipe } from './types';
 import lidoLogo from '../../images/lido_white.svg';
 import elementFiLogo from '../../images/element_fi_logo.svg';
 import aaveLogo from '../../images/aave_logo_white.svg';
+import ethToDaiBanner from '../../images/eth_to_dai_banner.svg';
 
 interface CreateRecipeArgs extends Omit<DefiRecipe, 'bridgeFlow'> {
   isAsync?: boolean;
@@ -48,6 +49,9 @@ export const RECIPES = {
     outAssetIdB: NOT_USED,
     investmentType: DefiInvestmentType.FIXED_YIELD,
     shortDesc: 'Deposit zkDAI into Element and receive a fixed yield back in xx Days as zkDAI',
+    longDesc:
+      'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
+    bannerImg: ethToDaiBanner,
     logo: elementFiLogo,
   }),
   'fake-lido-finance.ETH-to-wStETH': recipe({
@@ -58,6 +62,9 @@ export const RECIPES = {
     investmentType: DefiInvestmentType.STAKING,
     shortDesc:
       'Stake zkETH on the Beacon chain via Lido. Receive a variable yield via the zkwStETH tokens that can be claimed for zkETH',
+    longDesc:
+      'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
+    bannerImg: ethToDaiBanner,
     logo: lidoLogo,
   }),
   'fake-aave-borrow.ETH-to-DAI': recipe({
@@ -67,6 +74,9 @@ export const RECIPES = {
     outAssetIdB: NOT_USED,
     investmentType: DefiInvestmentType.BORROW,
     shortDesc: 'Borrow zkDAI using your zkETH as collateral',
+    longDesc:
+      'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
+    bannerImg: ethToDaiBanner,
     logo: aaveLogo,
   }),
   'fake-aave-lending.DAI-to-aDAI': recipe({
@@ -76,6 +86,9 @@ export const RECIPES = {
     outAssetIdB: NOT_USED,
     investmentType: DefiInvestmentType.YIELD,
     shortDesc: 'Deposit zkDAI into AAVE receive zkADAI in return.',
+    longDesc:
+      'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
+    bannerImg: ethToDaiBanner,
     logo: aaveLogo,
   }),
   // 'element-finance.DAI-to-DAI': recipe({

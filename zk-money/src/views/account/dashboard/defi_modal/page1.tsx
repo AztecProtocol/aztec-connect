@@ -6,12 +6,16 @@ import faqIcon from '../../../../images/faq_icon_gradient.svg';
 import { DefiFormFieldAnnotations, DefiFormFields } from './types';
 import { GasSection } from './gas_section';
 import { AmountSection } from './amount_section';
+import { DefiRecipe } from 'alt-model/defi/types';
+import { BridgeCountDown } from 'features/defi/bridge_count_down';
 
 const Root = styled.div`
   display: grid;
-  gap: 50px;
+  gap: 30px;
   grid-template-columns: 1fr 1fr;
   grid-template-areas:
+    'img progress'
+    'desc desc'
     'amount stats'
     'amount gas';
 `;
@@ -37,6 +41,7 @@ const NextWrapper = styled.div`
 `;
 
 interface Page1Props {
+  recipe: DefiRecipe;
   fields: DefiFormFields;
   onChangeFields: (fields: DefiFormFields) => void;
   inputAsset: Asset;
@@ -46,9 +51,25 @@ interface Page1Props {
   fee: bigint | undefined;
 }
 
-export function Page1({ fields, onChangeFields, fieldAnnotations, inputAsset, onNext, nextDisabled, fee }: Page1Props) {
+export function Page1({
+  recipe,
+  fields,
+  onChangeFields,
+  fieldAnnotations,
+  inputAsset,
+  onNext,
+  nextDisabled,
+  fee,
+}: Page1Props) {
   return (
     <Root>
+      <img style={{ gridArea: 'img' }} src={recipe.bannerImg} alt="" />
+      <div style={{ gridArea: 'progress', alignSelf: 'center' }}>
+        <BridgeCountDown totalSlots={24} takenSlots={12} nextBatch={new Date(Date.now() + 1000 * 60 * 22)} />
+      </div>
+      <div style={{ gridArea: 'desc' }}>
+        <Text italic size="xs" text={recipe.longDesc} />
+      </div>
       <BorderBox area="amount">
         <AmountSection
           asset={inputAsset}

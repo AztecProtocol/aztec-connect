@@ -15,7 +15,7 @@ import { Card, CardHeaderSize } from 'ui-components';
 const ModalWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  max-width: 900px;
+  max-width: 850px;
 `;
 
 const ModalBody = styled.div`
@@ -52,6 +52,7 @@ export function DefiModal({ recipe, onClose }: DefiModalProps) {
     />
   ) : (
     <Page1
+      recipe={recipe}
       inputAsset={inputAsset}
       fields={fields}
       onChangeFields={setFields}

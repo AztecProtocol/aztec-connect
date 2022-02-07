@@ -1,5 +1,4 @@
 import styled from 'styled-components/macro';
-import { DefiSettlementTime } from '@aztec/sdk';
 import { GradientBorder } from 'ui-components';
 import { Text } from '../../../../components';
 import { borderRadiuses } from '../../../../styles';
