@@ -55,8 +55,7 @@ contract DefiBridgeProxy {
                 ethPaymentsSlotBase := keccak256(0x00, 0x40)
                 ethPayment := sload(ethPaymentsSlotBase) // ethPayment = ethPayments[interactionNonce]
             }
-            if (outputValue != ethPayment)
-            {
+            if (outputValue != ethPayment) {
                 revert INSUFFICIENT_ETH_PAYMENT();
             }
             assembly {
@@ -78,6 +77,8 @@ contract DefiBridgeProxy {
      * @param interactionNonce Integer that is unique for a given defi interaction
      * @param auxInputData Optional custom data to be sent to the bridge (defined in the L2 SNARK circuits when creating claim notes)
      * @param ethPaymentsSlot The slot value of the `ethPayments` storage mapping in RollupProcessor.sol!
+     * @param rollupBeneficiary The address that should be payed any fees / subsidy for executing this bridge.
+
      * We assume this contract is called from the RollupProcessor via `delegateCall`,
      * if not... this contract behaviour is undefined! So don't do that.
      * The idea here is that, if the defi bridge has returned native ETH, they will do so via calling
@@ -108,7 +109,8 @@ contract DefiBridgeProxy {
         uint256 totalInputValue,
         uint256 interactionNonce,
         uint256 auxInputData, // (auxData)
-        uint256 ethPaymentsSlot
+        uint256 ethPaymentsSlot,
+        address rollupBeneficiary
     )
         external
         returns (
@@ -134,7 +136,8 @@ contract DefiBridgeProxy {
             outputAssetB,
             totalInputValue,
             interactionNonce,
-            uint64(auxInputData)
+            uint64(auxInputData),
+            rollupBeneficiary
         );
 
         if (isAsync) {

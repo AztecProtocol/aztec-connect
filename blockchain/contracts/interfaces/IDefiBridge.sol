@@ -4,6 +4,7 @@ pragma solidity >=0.8.4 <0.8.11;
 pragma experimental ABIEncoderV2;
 
 import {AztecTypes} from '../AztecTypes.sol';
+
 interface IDefiBridge {
     function convert(
         AztecTypes.AztecAsset memory inputAssetA,
@@ -12,7 +13,8 @@ interface IDefiBridge {
         AztecTypes.AztecAsset memory outputAssetB,
         uint256 totalInputValue,
         uint256 interactionNonce,
-        uint64 auxData
+        uint64 auxData,
+        address rollupBeneficiary
     )
         external
         payable
@@ -32,10 +34,5 @@ interface IDefiBridge {
         uint256 totalInputValue,
         uint256 interactionNonce,
         uint64 auxData
-    )
-    external payable
-    returns (
-        uint256 outputValueA,
-        uint256 outputValueB
-    );
+    ) external payable returns (uint256 outputValueA, uint256 outputValueB);
 }
