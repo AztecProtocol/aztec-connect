@@ -72,10 +72,11 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
     //       uint256 totalInputValue,
     //       uint256 interactionNonce,
     //       uint256 auxData,
-    //       uint256 ethPaymentsSlot)
+    //       uint256 ethPaymentsSlot
+    //       address rollupBeneficary)
     // N.B. this is the selector of the 'convert' function of the DefiBridgeProxy contract.
     //      This has a different interface to the IDefiBridge.convert function
-    bytes4 private constant DEFI_BRIDGE_PROXY_CONVERT_SELECTOR = 0xffd8e7b7;
+    bytes4 private constant DEFI_BRIDGE_PROXY_CONVERT_SELECTOR = 0x4bd947a8;
 
     /*----------------------------------------
       CONSTANT STATE VARIABLES
@@ -910,10 +911,11 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         }
 
         (bytes memory proofData, uint256 numTxs, uint256 publicInputsHash) = decodeProof();
+        address rollupBeneficiary = extractRollupBeneficiaryAddress(proofData);
 
-        processRollupProof(proofData, signatures, numTxs, publicInputsHash);
+        processRollupProof(proofData, signatures, numTxs, publicInputsHash, rollupBeneficiary);
 
-        transferFee(proofData, extractRollupBeneficiaryAddress(proofData));
+        transferFee(proofData, rollupBeneficiary);
 
         clearReentrancyMutex();
     }
@@ -931,11 +933,12 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         bytes memory proofData,
         bytes memory signatures,
         uint256 numTxs,
-        uint256 publicInputsHash
+        uint256 publicInputsHash,
+        address rollupBeneficiary
     ) internal {
         verifyProofAndUpdateState(proofData, publicInputsHash);
         processDepositsAndWithdrawals(proofData, numTxs, signatures);
-        processDefiBridges(proofData);
+        processDefiBridges(proofData, rollupBeneficiary);
     }
 
     /**
@@ -1299,8 +1302,10 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
      *         or, for async txns, the `pendingDefiInteractions` mapping
      *      3. copy the contents of `asyncInteractionHashes` into `defiInteractionHashes` && clear `asyncInteractionHashes`
      * @param proofData - the proof data
+     * @param rollupBeneficiary - the address that should be paid any subsidy for processing a defi bridge
+
      */
-    function processDefiBridges(bytes memory proofData) internal {
+    function processDefiBridges(bytes memory proofData, address rollupBeneficiary) internal {
         // Pop off `numberOfBridgeCalls` number of defi interactions from defiInteractionHashes && SHA2 them.
         {
             bytes32 expectedDefiInteractionHash;
@@ -1468,7 +1473,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
                 //          uint256 totalInputValue,
                 //          uint256 interactionNonce,
                 //          uint256 auxInputData,
-                //          uint256 ethPaymentsSlot
+                //          uint256 ethPaymentsSlot,
+                //          address rollupBeneficary
                 //     )
 
                 // Construct the calldata we send to DefiBridgeProxy
@@ -1496,11 +1502,13 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
                 mstore(add(mPtr, 0x180), mload(add(outputAssetB, 0x40)))
                 mstore(add(mPtr, 0x1a0), totalInputValue)
                 mstore(add(mPtr, 0x1c0), interactionNonce)
+
                 {
                     let auxData := mload(add(bridgeData, 0xc0))
                     mstore(add(mPtr, 0x1e0), auxData)
                 }
                 mstore(add(mPtr, 0x200), ethPayments.slot)
+                mstore(add(mPtr, 0x220), rollupBeneficiary)
 
                 // Call the bridge proxy via delegatecall!
                 // We want the proxy to share state with the rollup processor, as the proxy is the entity sending/recovering tokens from the bridge contracts.
@@ -1510,7 +1518,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
                     mload(add(bridgeData, 0x160)),
                     sload(defiBridgeProxy.slot),
                     sub(mPtr, 0x04),
-                    0x224,
+                    0x244,
                     mPtr,
                     0x60
                 )

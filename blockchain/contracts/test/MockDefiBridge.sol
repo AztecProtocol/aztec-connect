@@ -87,7 +87,8 @@ contract MockDefiBridge is IDefiBridge {
         AztecTypes.AztecAsset memory outputAssetB,
         uint256 totalInputValue,
         uint256 interactionNonce,
-        uint64 auxData
+        uint64 auxData,
+        address
     )
         external
         payable
