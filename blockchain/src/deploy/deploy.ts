@@ -18,12 +18,12 @@ export async function deploy(
   escapeHatchBlockUpper: number,
   signer: Signer,
   initialEthSupply = 1n * 10n ** 17n,
-  proverless = false,
+  vk?: string,
 ) {
   const uniswapRouter = await deployUniswap(signer);
   await uniswapRouter.deployed();
 
-  const verifier = proverless ? await deployMockVerifier(signer) : await deployVerifier(signer);
+  const verifier = vk ? await deployVerifier(signer, vk) : await deployMockVerifier(signer);
   console.error('Deploying RollupProcessor...');
   const rollupFactory = new ContractFactory(RollupProcessor.abi, RollupProcessor.bytecode, signer);
 

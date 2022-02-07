@@ -2,12 +2,6 @@
 # Succeeds if any files matching the rebuild patterns, have changed since the base commit.
 set -e
 
-# If rebuild is forced.
-if [ "$FORCE_REBUILD_ALL" == "true" ]; then
-  echo "Forced rebuild requested."
-  exit 0
-fi
-
 # If this is a tagged commit, rebuild.
 if [ -n "$COMMIT_TAG" ]; then
   echo "Rebuilding tagged commit."
@@ -15,7 +9,7 @@ if [ -n "$COMMIT_TAG" ]; then
 fi
 
 BASE_COMMIT=$1
-PATTERNS=${2:-.rebuild_patterns}
+PATTERNS=${REBUILD_PATTERNS:-.rebuild_patterns}
 
 # If given nothing, then return true to rebuild.
 [ -n "$BASE_COMMIT" ] || exit 0

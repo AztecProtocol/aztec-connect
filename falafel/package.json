@@ -13,7 +13,6 @@
     "start:dev": "`yarn -s deploy_rollup_processor` && yarn start:dev_server",
     "start:dev_server": "tsc-watch -p tsconfig.prod.json --onSuccess 'yarn start'",
     "start:e2e": "./scripts/start_e2e.sh",
-    "start:e2e:proverless": "PROVERLESS=true ./scripts/start_e2e.sh",
     "start:wasabi": "./scripts/start_wasabi.sh",
     "test:debug": "node --inspect-brk=0.0.0.0:9221 ./node_modules/.bin/jest",
     "test": "jest"

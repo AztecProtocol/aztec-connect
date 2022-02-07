@@ -8,7 +8,7 @@ describe('StandardVerifier', function () {
   const gasLimit = 10000000;
 
   beforeAll(async () => {
-    verifier = await StandardVerifier.deploy(new EthersAdapter(ethers.provider));
+    verifier = await StandardVerifier.deploy(new EthersAdapter(ethers.provider), 'VerificationKey3x2');
   });
 
   async function validate(inner: number, outer: number) {

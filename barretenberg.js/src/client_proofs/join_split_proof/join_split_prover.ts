@@ -4,13 +4,13 @@ import { UnrolledProver } from '../prover';
 import { JoinSplitTx } from './join_split_tx';
 
 export class JoinSplitProver {
-  constructor(private prover: UnrolledProver, public readonly publicInputsOnly = false) {}
+  constructor(private prover: UnrolledProver, public readonly mock = false) {}
 
   static circuitSize = 64 * 1024;
 
   public async computeKey() {
     const worker = this.prover.getWorker();
-    await worker.call('join_split__init_proving_key');
+    await worker.call('join_split__init_proving_key', this.mock);
   }
 
   public async loadKey(keyBuf: Buffer) {
@@ -47,19 +47,11 @@ export class JoinSplitProver {
     const worker = this.prover.getWorker();
     const mem = await worker.call('bbmalloc', buf.length);
     await worker.transferToHeap(buf, mem);
-    if (this.publicInputsOnly) {
-      const size = await worker.call('join_split__compute_public_inputs', mem);
-      const memPtr = Buffer.from(await worker.sliceMemory(0, 4)).readUInt32LE(0);
-      const proof = Buffer.from(await worker.sliceMemory(memPtr, memPtr + size));
-      await worker.call('bbfree', memPtr);
-      return proof;
-    } else {
-      const proverPtr = await worker.call('join_split__new_prover', mem);
-      await worker.call('bbfree', mem);
-      const proof = await this.prover.createProof(proverPtr);
-      await worker.call('join_split__delete_prover', proverPtr);
-      return proof;
-    }
+    const proverPtr = await worker.call('join_split__new_prover', mem, this.mock);
+    await worker.call('bbfree', mem);
+    const proof = await this.prover.createProof(proverPtr);
+    await worker.call('join_split__delete_prover', proverPtr);
+    return proof;
   }
 
   public getProver() {

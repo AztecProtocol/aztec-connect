@@ -7,7 +7,7 @@ cd ../../halloumi
 
 export ROLLUP_OUTERS=2
 export PERSIST=false
+export PROVERLESS=${1:-true}
 
-yarn clean_data
 yarn build
 yarn start

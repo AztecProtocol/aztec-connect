@@ -100,7 +100,6 @@ export class Server {
       this.txFeeResolver,
       metrics,
       bridgeResolver,
-      proverless,
     );
   }
 
@@ -171,18 +170,21 @@ export class Server {
         bc,
         rt?.rollupNumber,
         rt?.timeout,
-        await this.txFeeResolver.getFullBridgeGas(bc.bridgeId),
+        this.txFeeResolver.getFullBridgeGas(bc.bridgeId),
       );
       bridgeStats.push(bs);
     }
 
+    const { runtimeConfig, proverless } = this.configurator.getConfVars();
+
     return {
       blockchainStatus: status,
       pendingTxCount: await this.rollupDb.getUnsettledTxCount(),
-      runtimeConfig: this.configurator.getConfVars().runtimeConfig,
+      runtimeConfig,
       nextPublishTime: nextPublish.baseTimeout ? nextPublish.baseTimeout.timeout : new Date(0),
       nextPublishNumber: nextPublish.baseTimeout ? nextPublish.baseTimeout.rollupNumber : 0,
       bridgeStatus: bridgeStats,
+      proverless,
     };
   }
 

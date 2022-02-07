@@ -36,7 +36,7 @@ export class RollupAggregator {
     bridgeIds: bigint[],
     assetIds: number[],
   ) {
-    console.log(`Creating root rollup proof ${innerProofs.length} inner proofs...`);
+    console.log(`Creating root rollup proof with ${innerProofs.length} inner proofs...`);
 
     const rootRollup = await this.createRootRollup(
       innerProofs,
@@ -49,6 +49,8 @@ export class RollupAggregator {
     const end = this.metrics.rootRollupTimer();
     const rootRollupRequest = new RootRollupProofRequest(this.numInnerRollupTxs, this.numOuterRollupProofs, rootRollup);
     const rootRollupProofBuf = await this.proofGenerator.createProof(rootRollupRequest.toBuffer());
+
+    console.log(`Creating root verifier proof...`);
 
     const rootVerifier = await this.createRootVerifier(rootRollupProofBuf);
     const rootVerifierRequest = new RootVerifierProofRequest(

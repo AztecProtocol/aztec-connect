@@ -29,8 +29,9 @@ export class PooledFft implements Fft {
     debug(`initialization took: ${new Date().getTime() - start}ms`);
   }
 
-  public destroy() {
+  public async destroy() {
     this.queue.cancel();
+    await Promise.all(this.ffts.map(f => f.destroy()));
   }
 
   private async processJobs(worker: SingleFft) {

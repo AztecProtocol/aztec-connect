@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+PROJECT_DIR=$1
+shift
+
+ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
+git clone $GIT_REPOSITORY_URL project
+cd project
+git checkout $COMMIT_BRANCH
+cd .circleci
+BASH_ENV=/tmp/bash_env
+source ./setup_env "$COMMIT_HASH" "$COMMIT_BRANCH" "$COMMIT_TAG" "$JOB_NAME" "$GIT_REPOSITORY_URL"
+cd ../$PROJECT_DIR
+build $@

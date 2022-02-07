@@ -61,6 +61,7 @@ export interface RollupProviderStatus {
   pendingTxCount: number;
   runtimeConfig: RuntimeConfig;
   bridgeStatus: BridgeStatus[];
+  proverless: boolean,
 }
 
 export function rollupProviderStatusToJson(status: RollupProviderStatus) {

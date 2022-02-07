@@ -45,7 +45,6 @@ export enum CoreSdkEvent {
 }
 
 export interface CoreSdkOptions {
-  proverless?: boolean;
   saveProvingKey?: boolean;
 }
 
@@ -122,6 +121,7 @@ export class CoreSdk extends EventEmitter {
     const {
       blockchainStatus: { chainId, rollupContractAddress, verifierContractAddress, assets },
       runtimeConfig: { useKeyCache },
+      proverless,
     } = await this.getRemoteStatus();
 
     const currentVerifierContractAddress = await this.getVerifierContractAddress();
@@ -150,8 +150,8 @@ export class CoreSdk extends EventEmitter {
       const pooledProverFactory = new PooledProverFactory(this.workerPool, crsData);
 
       const joinSplitProver = new JoinSplitProver(
-        await pooledProverFactory.createUnrolledProver(JoinSplitProver.circuitSize),
-        this.options.proverless,
+        await pooledProverFactory.createUnrolledProver(proverless ? 512 : JoinSplitProver.circuitSize),
+        proverless,
       );
       this.paymentProofCreator = new PaymentProofCreator(
         joinSplitProver,
@@ -168,15 +168,13 @@ export class CoreSdk extends EventEmitter {
         this.db,
       );
       const accountProver = new AccountProver(
-        await pooledProverFactory.createUnrolledProver(AccountProver.circuitSize),
-        this.options.proverless,
+        await pooledProverFactory.createUnrolledProver(proverless ? 512 : AccountProver.circuitSize),
+        proverless,
       );
       this.accountProofCreator = new AccountProofCreator(accountProver, this.worldState, this.db);
 
-      if (!this.options.proverless) {
-        await this.createJoinSplitProvingKey(joinSplitProver, recreateKeys);
-        await this.createAccountProvingKey(accountProver, recreateKeys);
-      }
+      await this.createJoinSplitProvingKey(joinSplitProver, recreateKeys);
+      await this.createAccountProvingKey(accountProver, recreateKeys);
     });
 
     this.updateInitState(SdkInitState.INITIALIZED);

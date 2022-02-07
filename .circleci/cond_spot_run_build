@@ -1,0 +1,24 @@
+#!/bin/bash
+set -e
+
+REPOSITORY=$1
+shift
+SPEC=$1
+shift
+DOCKERFILE=${1:-./Dockerfile}
+
+LAST_SUCCESSFUL_COMMIT=$(last_successful_commit $REPOSITORY)
+echo "Last successful commit: $LAST_SUCCESSFUL_COMMIT"
+
+if check_rebuild $LAST_SUCCESSFUL_COMMIT; then
+  PROJECT=$(basename "$PWD")
+  cd ../.circleci/remote_build
+  spot_run_script $SPEC ./remote_build $PROJECT $REPOSITORY $@
+else
+  echo "No rebuild necessary. Retagging..."
+  STAGES=$(cat $DOCKERFILE | sed -n -e 's/^FROM .* AS \(.*\)/\1/p')
+  for STAGE in $STAGES; do
+    tag_remote_image $REPOSITORY cache-$LAST_SUCCESSFUL_COMMIT-$STAGE cache-$COMMIT_HASH-$STAGE
+  done
+  tag_remote_image $REPOSITORY cache-$LAST_SUCCESSFUL_COMMIT cache-$COMMIT_HASH
+fi

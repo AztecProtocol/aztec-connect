@@ -6,7 +6,7 @@ pragma solidity >=0.6.0 <0.8.11;
 pragma experimental ABIEncoderV2;
 
 import {IVerifier} from '../interfaces/IVerifier.sol';
-import {RootVerifierVk} from './keys/RootVerifierVk.sol';
+import {VerificationKey} from './keys/VerificationKey.sol';
 import {StandardTypes} from './cryptography/StandardTypes.sol';
 
 /**
@@ -177,7 +177,7 @@ contract StandardVerifier is IVerifier {
             }
         }
 
-        StandardTypes.VerificationKey memory vk = RootVerifierVk.get_verification_key();
+        StandardTypes.VerificationKey memory vk = VerificationKey.get_verification_key();
 
         assembly {
             /**

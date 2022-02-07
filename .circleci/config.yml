@@ -1,49 +1,70 @@
 setup_env: &setup_env
   run:
     name: 'Setup environment'
-    command: cd .circleci && ./setup_env "$CIRCLE_SHA1" "$CIRCLE_TAG" << pipeline.parameters.rebuild >>
+    command: cd .circleci && ./setup_env "$CIRCLE_SHA1" "$CIRCLE_BRANCH" "$CIRCLE_TAG" "$CIRCLE_JOB" "$CIRCLE_REPOSITORY_URL"
 
 version: 2.1
 parameters:
   rebuild:
     type: boolean
     default: false
+
 jobs:
-  x86_64-linux-gcc:
-    machine:
-      image: ubuntu-2004:202010-01
-    resource_class: large
+  wasm-linux-clang:
+    docker:
+      - image: aztecprotocol/build-image
+    resource_class: small
     steps:
       - checkout
       - *setup_env
+      - setup_remote_docker:
+          version: 19.03.13
       - run:
-          name: 'Build and test'
+          name: 'Build'
           working_directory: barretenberg
-          command: build barretenberg-x86_64-linux-gcc ./dockerfiles/Dockerfile.x86_64-linux-gcc
+          command: cond_spot_run_build barretenberg-wasm-linux-clang 64core ./dockerfiles/Dockerfile.wasm-linux-clang
+
+  x86_64-linux-gcc:
+    docker:
+      - image: aztecprotocol/build-image
+    resource_class: small
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker:
+          version: 19.03.13
+      - run:
+          name: 'Build'
+          working_directory: barretenberg
+          command: cond_spot_run_build barretenberg-x86_64-linux-gcc 64core ./dockerfiles/Dockerfile.x86_64-linux-gcc
 
   x86_64-linux-clang:
-    machine:
-      image: ubuntu-2004:202010-01
-    resource_class: large
+    docker:
+      - image: aztecprotocol/build-image
+    resource_class: small
     steps:
       - checkout
       - *setup_env
+      - setup_remote_docker:
+          version: 19.03.13
       - run:
-          name: 'Build and test'
+          name: 'Build'
           working_directory: barretenberg
-          command: build barretenberg-x86_64-linux-clang ./dockerfiles/Dockerfile.x86_64-linux-clang
+          command: cond_spot_run_build barretenberg-x86_64-linux-clang 64core ./dockerfiles/Dockerfile.x86_64-linux-clang
 
   x86_64-linux-clang-assert:
-    machine:
-      image: ubuntu-2004:202010-01
-    resource_class: large
+    docker:
+      - image: aztecprotocol/build-image
+    resource_class: small
     steps:
       - checkout
       - *setup_env
+      - setup_remote_docker:
+          version: 19.03.13
       - run:
-          name: 'Build and test'
+          name: 'Build'
           working_directory: barretenberg
-          command: build barretenberg-x86_64-linux-clang-assert ./dockerfiles/Dockerfile.x86_64-linux-clang-assert
+          command: cond_spot_run_build barretenberg-x86_64-linux-clang-assert 64core ./dockerfiles/Dockerfile.x86_64-linux-clang-assert
 
   barretenberg-tests:
     docker:
@@ -71,7 +92,7 @@ jobs:
       - run:
           name: 'Test'
           working_directory: barretenberg
-          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert stdlib_primitives_tests 1
+          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert stdlib_primitives_tests
 
   stdlib-recursion-tests:
     docker:
@@ -85,7 +106,7 @@ jobs:
       - run:
           name: 'Test'
           working_directory: barretenberg
-          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert stdlib_recursion_tests 1
+          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert stdlib_recursion_tests
 
   tx-rollup-tests:
     docker:
@@ -113,7 +134,21 @@ jobs:
       - run:
           name: 'Test'
           working_directory: barretenberg
-          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_root_rollup_tests
+          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_root_rollup_tests --gtest_filter=-root_rollup_full_tests.*
+
+  root-rollup-full-tests:
+    docker:
+      - image: aztecprotocol/build-image
+    resource_class: small
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker:
+          version: 19.03.13
+      - run:
+          name: 'Test'
+          working_directory: barretenberg
+          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_root_rollup_tests --gtest_filter=root_rollup_full_tests.*
 
   root-verifier-tests:
     docker:
@@ -127,19 +162,7 @@ jobs:
       - run:
           name: 'Test'
           working_directory: barretenberg
-          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_root_verifier_tests 1
-
-  wasm-linux-clang:
-    machine:
-      image: ubuntu-2004:202010-01
-    resource_class: large
-    steps:
-      - checkout
-      - *setup_env
-      - run:
-          name: 'Build and test'
-          working_directory: barretenberg
-          command: build barretenberg-wasm-linux-clang ./dockerfiles/Dockerfile.wasm-linux-clang
+          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_root_verifier_tests
 
   barretenberg-js:
     machine:
@@ -153,6 +176,20 @@ jobs:
           working_directory: barretenberg.js
           command: build barretenberg.js
 
+  blockchain-vks:
+    docker:
+      - image: aztecprotocol/build-image
+    resource_class: small
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker:
+          version: 19.03.13
+      - run:
+          name: 'Build'
+          working_directory: blockchain-vks
+          command: cond_spot_run_build blockchain-vks 64core
+
   blockchain:
     machine:
       image: ubuntu-2004:202010-01
@@ -161,7 +198,7 @@ jobs:
       - checkout
       - *setup_env
       - run:
-          name: 'Build and test'
+          name: 'Build'
           working_directory: blockchain
           command: build blockchain
 
@@ -177,7 +214,7 @@ jobs:
       - run:
           name: 'Test'
           working_directory: blockchain
-          command: cond_spot_run_tests blockchain tests
+          command: cond_spot_run_tests blockchain
 
   halloumi:
     machine:
@@ -292,7 +329,7 @@ jobs:
       - run:
           name: 'Test'
           working_directory: end-to-end
-          command: cond_spot_run_tests end-to-end prover-test ./src/e2e_deposit.test.ts
+          command: cond_spot_run_tests end-to-end ./src/e2e_deposit.test.ts VerificationKey3x2
 
   e2e-payment:
     docker:
@@ -306,7 +343,7 @@ jobs:
       - run:
           name: 'Test'
           working_directory: end-to-end
-          command: cond_spot_run_tests end-to-end payment-test ./src/e2e.test.ts true
+          command: cond_spot_run_tests end-to-end ./src/e2e.test.ts
 
   e2e-account:
     docker:
@@ -320,7 +357,7 @@ jobs:
       - run:
           name: 'Test'
           working_directory: end-to-end
-          command: cond_spot_run_tests end-to-end account-test ./src/e2e_account.test.ts true
+          command: cond_spot_run_tests end-to-end ./src/e2e_account.test.ts
 
   e2e-defi:
     docker:
@@ -334,7 +371,7 @@ jobs:
       - run:
           name: 'Test'
           working_directory: end-to-end
-          command: cond_spot_run_tests end-to-end defi-test ./src/e2e_defi.test.ts true
+          command: cond_spot_run_tests end-to-end ./src/e2e_defi.test.ts
 
   zk-money:
     docker:
@@ -460,10 +497,7 @@ jobs:
             deploy_ecr blockchain
             COMMIT=$(last_successful_commit blockchain deployed)
             if [ -z "$COMMIT" ] || changed $COMMIT '.*\.sol$'; then
-              `docker run --env ESCAPE_BLOCK_LOWER=60 --env ESCAPE_BLOCK_UPPER=120 --env INFURA_API_KEY=$TF_VAR_INFURA_API_KEY --env PRIVATE_KEY=$TF_VAR_PRIVATE_KEY --env NETWORK=goerli 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:$COMMIT_HASH`
-              export TF_VAR_ROLLUP_CONTRACT_ADDRESS=$ROLLUP_CONTRACT_ADDRESS
-              export TF_VAR_FEE_DISTRIBUTOR_ADDRESS=$FEE_DISTRIBUTOR_ADDRESS
-              export TF_VAR_PRICE_FEED_CONTRACT_ADDRESSES=$PRICE_FEED_CONTRACT_ADDRESSES
+              `docker run -e ESCAPE_BLOCK_LOWER=60 -e ESCAPE_BLOCK_UPPER=120 -e INFURA_API_KEY=$TF_VAR_INFURA_API_KEY -e PRIVATE_KEY=$TF_VAR_PRIVATE_KEY -e NETWORK=goerli -e VK=VerificationKey3x2 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:$COMMIT_HASH`
               deploy_terraform blockchain
               tag_remote_image blockchain cache-$COMMIT_HASH cache-$COMMIT_HASH-deployed
             fi
@@ -568,6 +602,10 @@ workflows:
           requires:
             - x86_64-linux-clang-assert
           filters: *tag_filter
+      - root-rollup-full-tests:
+          requires:
+            - x86_64-linux-clang-assert
+          filters: *tag_filter
       - root-verifier-tests:
           requires:
             - x86_64-linux-clang-assert
@@ -577,9 +615,14 @@ workflows:
             - wasm-linux-clang
             - x86_64-linux-clang
           filters: *tag_filter
+      - blockchain-vks:
+          requires:
+            - x86_64-linux-clang
+          filters: *tag_filter
       - blockchain:
           requires:
             - barretenberg-js
+            - blockchain-vks
           filters: *tag_filter
       - blockchain-tests:
           requires:
@@ -651,6 +694,7 @@ workflows:
             - stdlib-recursion-tests
             - tx-rollup-tests
             - root-rollup-tests
+            - root-rollup-full-tests
             - root-verifier-tests
             - blockchain-tests
             - e2e-prover

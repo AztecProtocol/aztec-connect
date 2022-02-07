@@ -7,7 +7,7 @@ import { EthAddress, GrumpkinAddress } from '../../address';
 import { Crs } from '../../crs';
 import { Blake2s, Pedersen, Schnorr, Sha256 } from '../../crypto';
 import { Grumpkin } from '../../ecc';
-import { PooledFft } from '../../fft';
+import { PooledFft, SingleFft } from '../../fft';
 import { MerkleTree } from '../../merkle_tree';
 import { ClaimNoteTxData, NoteAlgorithms, TreeNote } from '../../note_algorithms';
 import { PooledPippenger } from '../../pippenger';
@@ -27,7 +27,6 @@ jest.setTimeout(120000);
 describe('join_split_proof', () => {
   let barretenberg!: BarretenbergWasm;
   let pool!: WorkerPool;
-  let prover!: UnrolledProver;
   let joinSplitVerifier!: JoinSplitVerifier;
   let sha256!: Sha256;
   let blake2s!: Blake2s;
@@ -48,9 +47,9 @@ describe('join_split_proof', () => {
 
   beforeAll(async () => {
     EventEmitter.defaultMaxListeners = 32;
-    const circuitSize = JoinSplitProver.circuitSize;
 
-    crs = new Crs(circuitSize);
+    // Assume no larger than 64k gates.
+    crs = new Crs(64 * 1024);
     await crs.download();
 
     barretenberg = await BarretenbergWasm.new();
@@ -61,16 +60,12 @@ describe('join_split_proof', () => {
     pippenger = new PooledPippenger();
     await pippenger.init(crs.getData(), pool);
 
-    const fft = new PooledFft(pool);
-    await fft.init(circuitSize);
-
     sha256 = new Sha256(barretenberg);
     blake2s = new Blake2s(barretenberg);
     pedersen = new Pedersen(barretenberg);
     schnorr = new Schnorr(barretenberg);
     grumpkin = new Grumpkin(barretenberg);
     noteAlgos = new NoteAlgorithms(barretenberg);
-    prover = new UnrolledProver(pool.workers[0], pippenger, fft);
     joinSplitVerifier = new JoinSplitVerifier();
 
     pubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, privateKey));
@@ -180,7 +175,7 @@ describe('join_split_proof', () => {
     debug(`created proof: ${new Date().getTime() - start}ms`);
     debug(`proof size: ${proof.length}`);
 
-    if (!joinSplitProver.publicInputsOnly) {
+    if (!joinSplitProver.mock) {
       const verified = await joinSplitVerifier.verifyProof(proof);
       expect(verified).toBe(true);
     }
@@ -207,17 +202,42 @@ describe('join_split_proof', () => {
     expect(proofData.allowChain).toEqual(Buffer.alloc(32));
   };
 
-  describe('join_split_proof_generation_public_inputs_only', () => {
-    it('should construct join split proof', async () => {
-      const joinSplitProver = new JoinSplitProver(prover, true);
+  describe('join_split_mock_proof_generation', () => {
+    let fft!: SingleFft;
+    let joinSplitProver!: JoinSplitProver;
+
+    beforeAll(async () => {
+      // Mock circuits are tiny with 512 gates.
+      fft = new SingleFft(pool.workers[0]);
+      await fft.init(512);
+      const prover = new UnrolledProver(pool.workers[0], pippenger, fft);
+      joinSplitProver = new JoinSplitProver(prover, true);
+
+      debug('creating keys...');
+      const start = new Date().getTime();
+      await joinSplitProver.computeKey();
+      await joinSplitVerifier.computeKey(pippenger.pool[0], crs.getG2Data());
+      debug(`created circuit keys: ${new Date().getTime() - start}ms`);
+      debug(`vk hash: ${sha256.hash(await joinSplitVerifier.getKey()).toString('hex')}`);
+    });
+
+    afterAll(async () => {
+      await fft.destroy();
+    });
+
+    it('should construct mock join split proof', async () => {
       await createAndCheckProof(joinSplitProver);
     });
   });
 
   describe('join_split_proof_generation', () => {
+    let fft!: PooledFft;
     let joinSplitProver!: JoinSplitProver;
 
     beforeAll(async () => {
+      fft = new PooledFft(pool);
+      await fft.init(JoinSplitProver.circuitSize);
+      const prover = new UnrolledProver(pool.workers[0], pippenger, fft);
       joinSplitProver = new JoinSplitProver(prover, false);
 
       debug('creating keys...');
@@ -226,6 +246,10 @@ describe('join_split_proof', () => {
       await joinSplitVerifier.computeKey(pippenger.pool[0], crs.getG2Data());
       debug(`created circuit keys: ${new Date().getTime() - start}ms`);
       debug(`vk hash: ${sha256.hash(await joinSplitVerifier.getKey()).toString('hex')}`);
+    });
+
+    afterAll(async () => {
+      await fft.destroy();
     });
 
     it('should get key data', async () => {

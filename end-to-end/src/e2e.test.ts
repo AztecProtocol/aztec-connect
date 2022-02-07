@@ -10,7 +10,6 @@ const {
   ETHEREUM_HOST = 'http://localhost:8545',
   ROLLUP_HOST = 'http://localhost:8081',
   PRIVATE_KEY = '',
-  PROVERLESS,
 } = process.env;
 
 /**
@@ -42,7 +41,6 @@ describe('end-to-end tests', () => {
 
     sdk = await createAztecSdk(provider, ROLLUP_HOST, {
       syncInstances: false,
-      proverless: PROVERLESS === 'true',
       pollInterval: 1000,
       saveProvingKey: false,
       clearDb: true,

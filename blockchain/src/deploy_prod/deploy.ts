@@ -14,8 +14,9 @@ export async function deploy(
   uniswapRouterAddress: string,
   multiSigAddr: string,
   signer: Signer,
+  vk: string,
 ) {
-  const verifier = await deployVerifier(signer);
+  const verifier = await deployVerifier(signer, vk);
 
   const defiBridgeProxy = await deployDefiBridgeProxy(signer);
 

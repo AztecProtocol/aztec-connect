@@ -6,7 +6,7 @@ import { createFundedWalletProvider } from './create_funded_wallet_provider';
 jest.setTimeout(25 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
 
-const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost:8081', PROVERLESS } = process.env;
+const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost:8081' } = process.env;
 
 describe('end-to-end account tests', () => {
   let provider: WalletProvider;
@@ -22,7 +22,6 @@ describe('end-to-end account tests', () => {
 
     sdk = await createAztecSdk(provider, ROLLUP_HOST, {
       syncInstances: false,
-      proverless: PROVERLESS === 'true',
       saveProvingKey: false,
       clearDb: true,
       memoryDb: true,

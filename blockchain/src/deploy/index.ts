@@ -11,7 +11,7 @@ const {
   ESCAPE_BLOCK_LOWER = '4560', // window of 1hr every 20hrs (escape in last 240 blocks of every 4800)
   ESCAPE_BLOCK_UPPER = '4800',
   INITIAL_ETH_SUPPLY = '100000000000000000', // 0.1 ETH
-  PROVERLESS,
+  VK,
 } = process.env;
 
 function getSigner() {
@@ -40,12 +40,19 @@ async function main() {
     +ESCAPE_BLOCK_UPPER,
     signer,
     initialEthSupply,
-    PROVERLESS === 'true'
+    VK,
   );
 
-  console.log(`export ROLLUP_CONTRACT_ADDRESS=${rollup.address}`);
-  console.log(`export FEE_DISTRIBUTOR_ADDRESS=${feeDistributor.address}`);
-  console.log(`export PRICE_FEED_CONTRACT_ADDRESSES=${priceFeeds.map(p => p.address).join(',')}`);
+  const envVars = {
+    ROLLUP_CONTRACT_ADDRESS: rollup.address,
+    FEE_DISTRIBUTOR_ADDRESS: feeDistributor.address,
+    PRICE_FEED_CONTRACT_ADDRESSES: priceFeeds.map(p => p.address).join(','),
+  };
+
+  for (const [k, v] of Object.entries(envVars)) {
+    console.log(`export ${k}=${v}`);
+    console.log(`export TF_VAR_${k}=${v}`);
+  }
 }
 
 main().catch(error => {

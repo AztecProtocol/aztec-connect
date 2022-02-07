@@ -37,6 +37,7 @@ services:
       NODE_ENV: production
       TX_FEE: 100000000000000000
       PROVERLESS: ${PROVERLESS}
+      VK: ${VK}
     depends_on:
       - ganache
       - halloumi

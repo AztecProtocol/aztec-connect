@@ -6,8 +6,8 @@
 # The deploy phase will tag the images such that they become permanent.
 #
 # usage: ./build <repository> [dockerfile]
-# example (branch cl/feature): ./build barretenberg-x86_64-linux-clang
-# output image tags:
+# example: ./build barretenberg-x86_64-linux-clang
+# output image:
 #   278380418400.dkr.ecr.us-east-2.amazonaws.com/barretenberg-x86_64-linux-clang:cache-deadbeefcafebabe1337c0d3
 
 set -e
@@ -17,9 +17,7 @@ DOCKERFILE=${2:-./Dockerfile}
 
 function fetch_image() {
   echo "Pulling: $1"
-  # TODO: revert. debugging random pull failures from dockerhub.
-  #if ! docker pull $1 > /dev/null 2>&1; then
-  if ! docker pull $1; then
+  if ! docker pull $1 > /dev/null 2>&1; then
     echo "Image not found: $1"
     return 1
   fi

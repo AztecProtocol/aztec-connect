@@ -1,8 +1,12 @@
 #!/bin/bash
 set -e
 
-export TEST=$2
-export PROVERLESS=$3
+export TEST=$1
+export VK=$2
+
+if [ -z "$VK" ]; then
+  export PROVERLESS=true
+fi
 
 $(aws ecr get-login --region us-east-2 --no-include-email) 2> /dev/null
 

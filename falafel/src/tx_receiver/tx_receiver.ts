@@ -39,14 +39,9 @@ export class TxReceiver {
     private txFeeResolver: TxFeeResolver,
     private metrics: Metrics,
     private bridgeResolver: BridgeResolver,
-    private proverless = false,
   ) {}
 
   public async init() {
-    if (this.proverless) {
-      return;
-    }
-
     const crs = new Crs(0);
     await crs.downloadG2Data();
 
@@ -184,7 +179,7 @@ export class TxReceiver {
       }
     }
 
-    if (!this.proverless && !(await this.joinSplitVerifier.verifyProof(proof.rawProofData))) {
+    if (!(await this.joinSplitVerifier.verifyProof(proof.rawProofData))) {
       throw new Error('Join-split proof verification failed.');
     }
   }
@@ -199,7 +194,7 @@ export class TxReceiver {
       }
     });
 
-    if (!this.proverless && !(await this.accountVerifier.verifyProof(proof.rawProofData))) {
+    if (!(await this.accountVerifier.verifyProof(proof.rawProofData))) {
       throw new Error('Account proof verification failed.');
     }
   }
@@ -216,7 +211,7 @@ export class TxReceiver {
       throw new Error('Unrecognised Defi-bridge');
     }
 
-    if (!this.proverless && !(await this.joinSplitVerifier.verifyProof(proofData.rawProofData))) {
+    if (!(await this.joinSplitVerifier.verifyProof(proofData.rawProofData))) {
       throw new Error('Defi-bridge proof verification failed.');
     }
   }

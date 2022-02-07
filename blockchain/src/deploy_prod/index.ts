@@ -8,6 +8,7 @@ const {
   PRIVATE_KEY,
   ESCAPE_BLOCK_LOWER = '4560', // window of 1hr every 20hrs (escape in last 240 blocks of every 4800)
   ESCAPE_BLOCK_UPPER = '4800',
+  VK = 'VerificationKey28x32',
 } = process.env;
 
 const MULTI_SIG_ADDRESS = '0xE298a76986336686CC3566469e3520d23D1a8aaD';
@@ -31,6 +32,7 @@ async function main() {
     UNISWAP_ROUTER_ADDRESS,
     MULTI_SIG_ADDRESS,
     getSigner(),
+    VK,
   );
   console.log(`ROLLUP_CONTRACT_ADDRESS: ${rollup.address}`);
   console.log(`FEE_DISTRIBUTOR_ADDRESS: ${feeDistributor.address}`);

@@ -1,7 +1,6 @@
 {
   "name": "halloumi",
   "version": "1.0.0",
-  "main": "dest/index.js",
   "license": "GPL-2.0",
   "scripts": {
     "build": "yarn clean && tsc -p tsconfig.dest.json && node package.js",
@@ -9,7 +8,6 @@
     "start": "node ./dest",
     "start:dev": "tsc-watch -p tsconfig.dest.json --onSuccess 'yarn start'",
     "start:e2e": "./scripts/start_e2e.sh",
-    "start:e2e:proverless": "PROVERLESS=true ./scripts/start_e2e.sh",
     "test": "jest",
     "clean": "rm -rf ./dest",
     "clean_data": "rm -rf ./data"
