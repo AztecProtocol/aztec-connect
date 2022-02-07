@@ -1,7 +1,7 @@
 import Cookie from 'js-cookie';
 import moment from 'moment';
 import React, { useEffect, useState } from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { BubbleTheme, Button, Modal, MovingBubble, PaddedBlock, Text, TextLink } from '../../components';
 import dai from '../../images/dai_white.svg';
 

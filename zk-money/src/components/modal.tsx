@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import styled, { css } from 'styled-components';
+import styled, { css } from 'styled-components/macro';
 import closeIcon from '../images/close.svg';
 import closeIconWhite from '../images/close_white.svg';
 import { borderRadiuses, breakpoints, colours, defaultTextColour, gradients, spacings, Theme } from '../styles';
@@ -77,7 +77,7 @@ const CloseButton = styled.div`
 
 interface ModalHeaderProps {
   theme?: Theme;
-  title: string | React.ReactNode;
+  title?: string | React.ReactNode;
   onClose?: () => void;
 }
 

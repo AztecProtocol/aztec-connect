@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { Asset, formatBaseUnits } from '../../app';
 import { Button, Text } from '../../components';
 import mergeIcon from '../../images/merge.svg';

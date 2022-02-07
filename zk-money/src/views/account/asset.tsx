@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { AccountAction, AccountState, Asset, AssetState, sum, WorldState } from '../../app';
 import {
   BlockTitle,
@@ -179,16 +179,11 @@ export const AccountAsset: React.FunctionComponent<AccountAssetProps> = ({
         </Row>
       )}
       <Row>
-        <DisclaimerBlock assetState={assetState} />
+        <DisclaimerBlock asset={assetState.asset} txAmountLimit={assetState.txAmountLimit} />
       </Row>
       <Row>
         <BlockTitle title="Transaction History" />
-        <TransactionHistory
-          asset={asset}
-          accountTxs={accountTxs}
-          joinSplitTxs={joinSplitTxs}
-          txsPublishTime={txsPublishTime}
-        />
+        <TransactionHistory accountTxs={accountTxs} joinSplitTxs={joinSplitTxs} txsPublishTime={txsPublishTime} />
       </Row>
     </>
   );

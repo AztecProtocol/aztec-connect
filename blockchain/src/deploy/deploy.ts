@@ -41,7 +41,14 @@ export async function deploy(
 
   // note we need to change this address for production to the multisig
   const ownerAddress = await signer.getAddress();
-  const rollup = await rollupFactory.deploy(
+
+  console.error(`Awaiting deployment...`);
+
+  const rollup = await rollupFactory.deploy();
+
+  await rollup.deployed();
+
+  await rollup.initialize(
     verifier.address,
     escapeHatchBlockLower,
     escapeHatchBlockUpper,
@@ -53,8 +60,6 @@ export async function deploy(
     initDataSize,
   );
 
-  console.error(`Awaiting deployment...`);
-  await rollup.deployed();
   console.error(`Rollup contract address: ${rollup.address}`);
 
   const feeDistributor = await deployFeeDistributor(signer, rollup, uniswapRouter);
@@ -66,13 +71,19 @@ export async function deploy(
 
   const permitSupport = false;
   const asset = await addAsset(rollup, signer, permitSupport);
+  await addAsset(rollup, signer, permitSupport, 8);
 
   const gasPrice = 20n * 10n ** 9n; // 20 gwei
   const assetPrice = 1n * 10n ** 15n; // 1000 DAI/ETH
+  const btcPrice = 2n * 10n ** 2n; // 0.05 ETH/BTC
   const initialTokenSupply = (initialEthSupply * 10n ** 18n) / assetPrice;
   await createPair(signer, uniswapRouter, asset, initialTokenSupply, initialEthSupply);
 
-  const priceFeeds = [await deployPriceFeed(signer, gasPrice), await deployPriceFeed(signer, assetPrice)];
+  const priceFeeds = [
+    await deployPriceFeed(signer, gasPrice),
+    await deployPriceFeed(signer, assetPrice),
+    await deployPriceFeed(signer, btcPrice),
+  ];
 
   // Defi bridge
   const defiBridges = [

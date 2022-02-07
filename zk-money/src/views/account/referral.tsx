@@ -1,6 +1,6 @@
 import Cookie from 'js-cookie';
 import React, { useEffect, useState } from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { assets } from '../../app';
 import { Button, GradientBlock, Modal, PaddedBlock, Text } from '../../components';
 import { breakpoints, spacings } from '../../styles';

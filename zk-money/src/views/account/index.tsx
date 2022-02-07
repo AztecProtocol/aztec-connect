@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import {
   AccountAction,
   AccountState,
@@ -208,7 +208,9 @@ export const Account: React.FunctionComponent<AccountProps> = ({
                     return (
                       <Shield
                         theme={theme}
-                        assetState={assetState}
+                        asset={assetState.asset}
+                        assetPrice={assetState.price}
+                        txAmountLimit={assetState.txAmountLimit}
                         providerState={providerState}
                         form={activeAction.formValues as any}
                         explorerUrl={explorerUrl}
@@ -225,7 +227,10 @@ export const Account: React.FunctionComponent<AccountProps> = ({
                     return (
                       <SendLayout
                         theme={theme}
-                        assetState={assetState}
+                        asset={assetState.asset}
+                        assetPrice={assetState.price}
+                        txAmountLimit={assetState.txAmountLimit}
+                        spendableBalance={assetState.spendableBalance}
                         providerState={providerState}
                         form={activeAction.formValues as any}
                         explorerUrl={explorerUrl}

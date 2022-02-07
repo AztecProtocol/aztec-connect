@@ -1,0 +1,55 @@
+$primary_from: #940dff;
+$primary_to: #0094ff;
+
+@mixin gradient_font() {
+  background-color: $primary_from;
+  background-image: linear-gradient(134.14deg, $primary_from 18.37%, $primary_to 82.04%);
+  background-size: 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -moz-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  -moz-text-fill-color: transparent;
+}
+
+.dropdownWrapper {
+  position: absolute;
+  top: 60px;
+  right: 0px;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #ebeaea;
+  gap: 1px;
+  background-color: #ebeaea;
+}
+
+.dropdownOptionBackground {
+  background-color: white;
+}
+
+.dropdownOption {
+  font-size: 14px;
+  padding: 10px 25px;
+  white-space: nowrap;
+  cursor: pointer;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-align: center;
+  @include gradient_font;
+}
+
+.dropdownOption.disabled {
+  background-image: initial;
+  cursor: default;
+  background-color: #c4c4c4;
+}
+
+.dropdownOptionBackground:hover {
+  background-color: #ebeaea;
+}
+
+.dropdownOptionBackground.disabled:hover {
+  background-color: white;
+}

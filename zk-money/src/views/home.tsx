@@ -1,5 +1,6 @@
+import { Navbar, Theme } from 'ui-components';
 import React, { useState } from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { Button, ContentWrapper, TextLink, PaddedBlock, RainDrops, Text } from '../components';
 import { SupportStatus } from '../device_support';
 import { borderRadiuses, breakpoints, fontSizes, lineHeights, spacings } from '../styles';

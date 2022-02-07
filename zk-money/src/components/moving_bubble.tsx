@@ -1,6 +1,6 @@
 import { rgba } from 'polished';
 import React from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled, { keyframes } from 'styled-components/macro';
 import bubblePrimary from '../images/bubble_primary.svg';
 import bubbleSecondary from '../images/bubble_secondary.svg';
 import { colours, spacings } from '../styles';

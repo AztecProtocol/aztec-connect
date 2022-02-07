@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { AssetState, MergeFormValues, MergeStatus, ProviderState, toBaseUnits, WalletId } from '../../app';
 import { BlockTitle, PaddedBlock, Text } from '../../components';
 import { spacings, Theme, themeColours } from '../../styles';

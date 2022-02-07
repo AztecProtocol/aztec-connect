@@ -32,8 +32,7 @@ contract HashInputs is Decoder {
         bytes calldata /* encodedProofData */
     ) external view {
         (, , uint256 publicInputsHash) = decodeProof();
-        uint256 broadcastedDataSize = rollupHeaderInputLength + 8; // add 8 bytes for two packed params at end of header
-        uint256 rollupHeaderInputLengthLocal = rollupHeaderInputLength;
+        uint256 broadcastedDataSize = ROLLUP_HEADER_LENGTH + 8; // add 8 bytes for two packed params at end of header
         bool proof_verified;
         assembly {
             /**
@@ -66,7 +65,7 @@ contract HashInputs is Decoder {
             // The calldata param *after* the header is the length of the pub inputs array. However it is a packed 4-byte param.
             // To extract it, we subtract 28 bytes from the calldata pointer and mask off all but the 4 least significant bytes.
             let encodedInnerDataSize := and(
-                calldataload(add(add(calldataload(0x04), 0x24), sub(rollupHeaderInputLengthLocal, 0x18))),
+                calldataload(add(add(calldataload(0x04), 0x24), sub(ROLLUP_HEADER_LENGTH, 0x18))),
                 0xffffffff
             )
 

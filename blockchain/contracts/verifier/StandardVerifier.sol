@@ -247,6 +247,14 @@ contract StandardVerifier is IVerifier {
                     mstore(RECURSIVE_P1_Y_LOC, y0)
                     mstore(RECURSIVE_P2_X_LOC, x1)
                     mstore(RECURSIVE_P2_Y_LOC, y1)
+
+                    // validate these are valid bn128 G1 points
+                    if iszero(and(
+                        and(lt(x0, q), lt(x1, q)),
+                        and(lt(y0, q), lt(y1, q))
+                    )) {
+                        revert(0x00, 0x00)
+                    }
                 }
 
             let public_input_byte_length := mul(mload(NUM_INPUTS_LOC), 32)
@@ -375,12 +383,25 @@ contract StandardVerifier is IVerifier {
 
                     valid := and(valid, and(lt(input0, p_clone), lt(input1, p_clone)))
                     public_inputs := add(public_inputs, 0x40)
+
+                    // validate public inputs are field elements (i.e. < p)
+                    if iszero(and(lt(input0, p), lt(input1, p)))
+                    {
+                        revert(0x00, 0x00)
+                    }
                 }
 
                 endpoint := add(endpoint, 0x20)
                 for {} lt(public_inputs, endpoint) { public_inputs := add(public_inputs, 0x20) }
                 {
                     let input0 := calldataload(public_inputs)
+
+                    // validate public inputs are field elements (i.e. < p)
+                    if iszero(lt(input0, p))
+                    {
+                        revert(0x00, 0x00)
+                    }
+        
                     valid := and(valid, lt(input0, p_clone))
                     let T0 := addmod(input0, gamma, p_clone)
                     numerator_value := mulmod(

@@ -1,0 +1,23 @@
+.root {
+  padding: 18px 32px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.icon {
+  background-image: url(../../../../../images/warning.svg);
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  width: 32px;
+  height: 26px;
+}
+
+.checkboxRow {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}

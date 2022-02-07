@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { Asset } from '../../app';
 import { Text } from '../../components';
 import icon from '../../images/coming_soon.svg';

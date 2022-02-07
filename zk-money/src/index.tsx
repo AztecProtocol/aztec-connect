@@ -1,8 +1,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { BrowserRouter } from 'react-router-dom';
+import 'ui-components/styles/reset.css';
+import 'ui-components/styles/global.css';
 import { getConfig } from './config';
-import { GlobalStyle } from './global_style';
 import { Views } from './views';
 
 declare global {
@@ -16,7 +17,6 @@ async function main() {
 
   ReactDOM.render(
     <>
-      <GlobalStyle />
       <BrowserRouter>
         <Views config={config} />
       </BrowserRouter>

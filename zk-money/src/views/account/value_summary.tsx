@@ -1,5 +1,5 @@
 import React from 'react';
-import styled, { css } from 'styled-components';
+import styled, { css } from 'styled-components/macro';
 import { Asset, convertToPriceString, formatBaseUnits } from '../../app';
 import { Dot, GradientBlock, Text, Tooltip } from '../../components';
 import { breakpoints, fontSizes, lineHeights, spacings } from '../../styles';

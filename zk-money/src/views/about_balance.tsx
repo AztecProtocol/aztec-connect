@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { Button, PaddedBlock, Section, Sections, Text } from '../components';
 import { spacings } from '../styles';
 

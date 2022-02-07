@@ -1,6 +1,6 @@
 import { TxSettlementTime } from '@aztec/sdk';
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { Asset, fromBaseUnits, TxFee } from '../../app';
 import { Input, InputTheme, InputWrapper, Select, ShieldedAssetIcon, Text } from '../../components';
 import { fontSizes, spacings } from '../../styles';

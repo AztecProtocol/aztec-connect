@@ -1,0 +1,18 @@
+@use "../../../../styles/gradients.scss";
+
+.cardHeader {
+  background: linear-gradient(
+    101.14deg,
+    gradients.$primary_from 11.12%,
+    gradients.$primary_to 58.22%,
+    gradients.$primary_to 58.22%
+  );
+  width: 100%;
+  color: white;
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  justify-content: space-between;
+  padding: 0px 30px 20px 30px;
+  align-items: center;
+}

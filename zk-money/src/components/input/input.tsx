@@ -1,5 +1,5 @@
 import React from 'react';
-import styled, { css } from 'styled-components';
+import styled, { css } from 'styled-components/macro';
 import { fontSizes, fontWeights, inputFontSizeKeys, InputSize, inputSizes, spacings } from '../../styles';
 import { InputTheme, inputTextColours } from './input_theme';
 

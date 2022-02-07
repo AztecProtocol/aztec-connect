@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { AccountState, AccountVersion, WorldState } from '../../app';
 import closeIcon from '../../images/close.svg';
 import personIcon from '../../images/snowman.svg';

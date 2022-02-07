@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { Text, TextButton } from '../../../components';
 import checkIcon from '../../../images/check.svg';
 import warningIcon from '../../../images/exclamation_mark.svg';

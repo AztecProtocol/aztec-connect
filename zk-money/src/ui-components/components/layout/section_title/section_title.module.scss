@@ -1,0 +1,23 @@
+.sectionTitleWrapper {
+  display: flex;
+  flex-direction: row;
+  align-items: end;
+  margin: 40px 0 40px 0;
+  width: 100%;
+  justify-content: space-between;
+}
+
+.title {
+  font-size: 30px;
+  line-height: 35px;
+  letter-spacing: 0.03em;
+}
+
+.label {
+  font-size: 14px;
+}
+
+.icon {
+  width: 25px;
+  margin-left: 5px;
+}

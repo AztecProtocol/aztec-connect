@@ -1,4 +1,4 @@
-import { AccountId, AztecSdk, Note, SdkEvent } from '@aztec/sdk';
+import { AccountId, AztecSdk, Note, SdkEvent, EthereumProvider } from '@aztec/sdk';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { debounce, DebouncedFunc } from 'lodash';
@@ -59,7 +59,7 @@ export class UserAccount extends EventEmitter {
     private activeAsset: AppAssetId,
     private readonly keyVault: KeyVault,
     private readonly sdk: AztecSdk,
-    private readonly coreProvider: Provider,
+    private readonly stableEthereumProvider: EthereumProvider,
     private readonly rollup: RollupService,
     private readonly priceFeedService: PriceFeedService,
     private readonly accountUtils: AccountUtils,
@@ -269,7 +269,7 @@ export class UserAccount extends EventEmitter {
           this.ethAccount,
           this.keyVault,
           this.sdk,
-          this.coreProvider,
+          this.stableEthereumProvider,
           this.rollup,
           this.accountUtils,
           this.requiredNetwork,
@@ -351,7 +351,7 @@ export class UserAccount extends EventEmitter {
     }
   };
 
-  private onPriceChange = (assetId: AppAssetId, price: bigint) => {
+  private onPriceChange = (assetId: number, price: bigint) => {
     if (assetId === this.assetState.asset.id) {
       this.updateAssetState({ price });
     }

@@ -1,6 +1,6 @@
 import Cookie from 'js-cookie';
 import React, { useState } from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { borderRadiuses, breakpoints, fontSizes, lineHeights, spacings, Theme } from '../styles';
 import { Button } from './button';
 import { Text } from './text';

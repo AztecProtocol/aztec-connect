@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { AssetState, fromBaseUnits, sum } from '../../app';
 import { Text } from '../../components';
 import mergeIcon from '../../images/merge_gradient.svg';

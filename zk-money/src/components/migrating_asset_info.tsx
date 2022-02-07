@@ -1,6 +1,6 @@
 import { rgba } from 'polished';
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { assets, fromBaseUnits, MigratingAsset, sum } from '../app';
 import { colours, spacings } from '../styles';
 import { Text } from './text';

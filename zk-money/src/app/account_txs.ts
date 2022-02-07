@@ -11,7 +11,7 @@ export enum AccountAction {
 type JoinSplitTxAction = AccountAction | 'RECEIVE';
 
 const getTxAction = ({ proofId, isSender }: UserPaymentTx): JoinSplitTxAction => {
-  if (!isSender) {
+  if (!isSender && proofId === ProofId.SEND) {
     return 'RECEIVE';
   }
   switch (proofId) {
@@ -35,6 +35,7 @@ const getBalanceDiff = ({ proofId, isSender, value: { value }, fee: { value: fee
 };
 
 export interface JoinSplitTx {
+  assetId: number;
   txId: TxId;
   action: JoinSplitTxAction;
   balanceDiff: bigint;
@@ -53,7 +54,13 @@ export interface AccountTx {
 
 const recoverJoinSplitValues = (tx: UserPaymentTx) => {
   const { value, fee } = tx;
-  return { action: getTxAction(tx), value: value.value, fee: fee.value, balanceDiff: getBalanceDiff(tx) };
+  return {
+    assetId: value.assetId,
+    action: getTxAction(tx),
+    value: value.value,
+    fee: fee.value,
+    balanceDiff: getBalanceDiff(tx),
+  };
 };
 
 const parseTx = (tx: UserPaymentTx | UserAccountTx, explorerUrl: string) => ({

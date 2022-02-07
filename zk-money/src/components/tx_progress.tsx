@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import errorIcon from '../images/exclamation_mark.svg';
 import { spacings, systemStates } from '../styles';
 import { Dot } from './dot';

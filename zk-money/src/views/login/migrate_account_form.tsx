@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { Button, PaddedBlock, Text, TextLink } from '../../components';
 import { borderRadiuses, gradients, spacings } from '../../styles';
 

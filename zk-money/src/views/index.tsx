@@ -1,5 +1,5 @@
 import React from 'react';
-import { Route, Switch } from 'react-router-dom';
+import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { Template } from '../components';
 import { Config } from '../config';
 import { PageTransitionHandler } from '../page_transition_handler';
@@ -9,29 +9,36 @@ import { AppView } from './app';
 import { NotFound } from './not_found';
 import { appPaths } from './views';
 
+function AppViewConnector({ config }: { config: Config }) {
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  if (appPaths.includes(pathname)) {
+    return <AppView config={config} path={pathname} navigate={navigate} />;
+  }
+  return (
+    <Template theme={Theme.GRADIENT}>
+      <NotFound />
+    </Template>
+  );
+}
+
 interface ViewsProps {
   config: Config;
 }
 
 export const Views: React.FunctionComponent<ViewsProps> = ({ config }) => (
   <>
-    <Switch>
+    <Routes>
+      <Route path="/*" element={<AppViewConnector config={config} />} />
       <Route
-        path={appPaths}
-        exact
-        children={({ match, ...props }) => <AppView {...props} config={config} match={match as any} />}
+        path="/about_your_balance"
+        element={
+          <Template theme={Theme.WHITE}>
+            <AboutBalance />
+          </Template>
+        }
       />
-      <Route path="/about_your_balance" exact>
-        <Template theme={Theme.WHITE}>
-          <AboutBalance />
-        </Template>
-      </Route>
-      <Route>
-        <Template theme={Theme.GRADIENT}>
-          <NotFound />
-        </Template>
-      </Route>
-    </Switch>
+    </Routes>
     <PageTransitionHandler />
   </>
 );

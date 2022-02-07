@@ -1,0 +1,36 @@
+@use './gradients';
+
+@mixin shadow_border {
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+@mixin gradient_border(
+  $radius: 10px,
+  $width: 2px,
+  $color_from: gradients.$primary_from,
+  $color_to: gradients.$primary_to
+) {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: $radius;
+  padding: $width;
+  background: linear-gradient(45deg, $color_from, $color_to);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+@mixin gradient_font() {
+  background-color: gradients.$primary_from;
+  background-image: linear-gradient(134.14deg, gradients.$primary_from 18.37%, gradients.$primary_to 82.04%);
+  background-size: 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -moz-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  -moz-text-fill-color: transparent;
+}

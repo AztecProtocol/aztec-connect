@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { Asset, convertToPriceString, fromBaseUnits } from '../../app';
 import { ShieldedAssetIcon, Text } from '../../components';
 import { breakpoints, fontSizes, spacings } from '../../styles';

@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import {
   ShieldFormValues,
   ShieldStatus,
@@ -277,7 +277,7 @@ export const ShieldForAliasForm: React.FunctionComponent<DepositFormProps> = ({
         </InputPaddedBlock>
       </Cols>
       <PaddedBlock size="m">
-        <DisclaimerBlock assetState={assetState} />
+        <DisclaimerBlock asset={assetState.asset} txAmountLimit={assetState.txAmountLimit} />
       </PaddedBlock>
       <InputRow>
         <ConfirmRoot>

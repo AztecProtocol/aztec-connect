@@ -46,7 +46,7 @@ export interface App {
 }
 
 export class App extends EventEmitter {
-  private db: Database;
+  readonly db: Database;
   readonly priceFeedService: PriceFeedService;
   private session?: UserSession;
   private activeAsset: AppAssetId;
@@ -87,6 +87,10 @@ export class App extends EventEmitter {
     return !!this.session;
   }
 
+  getSession() {
+    return this.session;
+  }
+
   hasCookie() {
     return !!Cookie.get(this.sessionCookieName);
   }
@@ -105,6 +109,26 @@ export class App extends EventEmitter {
         mode: this.loginMode,
       }
     );
+  }
+
+  get sdk() {
+    return this.session?.getSdk();
+  }
+
+  get provider() {
+    return this.session?.getProvider();
+  }
+
+  get keyVault() {
+    return this.session?.getKeyVault();
+  }
+
+  get stableEthereumProvider() {
+    return this.session?.getStableEthereumProvider();
+  }
+
+  get rollupService() {
+    return this.session?.getRollupService();
   }
 
   get providerState() {

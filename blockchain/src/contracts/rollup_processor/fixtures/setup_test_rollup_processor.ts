@@ -27,20 +27,30 @@ export async function setupTestRollupProcessor(
   const MockVerifier = await ethers.getContractFactory('MockVerifier');
   const mockVerifier = await MockVerifier.deploy();
 
+  await mockVerifier.deployed();
+
   const DefiBridgeProxy = await ethers.getContractFactory('DefiBridgeProxy');
   const defiBridgeProxy = await DefiBridgeProxy.deploy();
 
-  const ownerAddress = rollupProvider.getAddress();
-
+  await defiBridgeProxy.deployed();
+  const ownerAddress = await rollupProvider.getAddress();
   const RollupProcessorContract = await ethers.getContractFactory('TestRollupProcessor', rollupProvider);
-  const rollupProcessorContract = await RollupProcessorContract.deploy(
-    mockVerifier.address,
-    escapeBlockLowerBound,
-    escapeBlockUpperBound,
-    defiBridgeProxy.address,
-    ownerAddress,
-  );
 
+    const rollupProcessorContract = await RollupProcessorContract.deploy();
+
+    await rollupProcessorContract.deployed();
+
+    await rollupProcessorContract.initialize(
+      mockVerifier.address,
+      escapeBlockLowerBound,
+      escapeBlockUpperBound,
+      defiBridgeProxy.address,
+      ownerAddress,
+      '0x11977941a807ca96cf02d1b15830a53296170bf8ac7d96e5cded7615d18ec607',
+      '0x1b831fad9b940f7d02feae1e9824c963ae45b3223e721138c6f73261e690c96a',
+      '0x1b435f036fc17f4cc3862f961a8644839900a8e4f1d0b318a7046dd88b10be75',
+      '0x0',
+    );
   const rollupProcessor = new TestRollupProcessor(
     EthAddress.fromString(rollupProcessorContract.address),
     new EthersAdapter(ethers.provider),

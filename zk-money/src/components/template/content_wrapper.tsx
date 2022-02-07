@@ -1,4 +1,4 @@
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { breakpoints, spacings } from '../../styles';
 
 export const ContentWrapper = styled.div`

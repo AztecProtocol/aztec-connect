@@ -1,0 +1,12 @@
+@use "../../../styles/gradients.scss";
+
+.root {
+  padding: 1px;
+  background: linear-gradient(134.14deg, gradients.$primary_from 18.37%, gradients.$primary_to 82.04%);
+}
+
+.content {
+  width: 100%;
+  height: 100%;
+  background: white;
+}

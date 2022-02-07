@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import {
   LoginMode,
   LoginState,
@@ -24,6 +24,7 @@ import { MigrateAccountForm } from './migrate_account_form';
 import { MigrateBalance } from './migrate_balance';
 import { Progress } from './progress';
 import { SeedPhraseForm } from './seed_phrase_form';
+import { Navbar, Theme } from 'ui-components';
 
 const PaddedTop = styled.div`
   padding-top: ${spacings.m};
@@ -350,137 +351,129 @@ export const Login: React.FunctionComponent<LoginProps> = props => {
     onSubmitShieldForAliasForm,
     onChangeWallet,
   } = props;
-  const {
-    step,
-    mode,
-    walletId,
-    seedPhrase,
-    alias,
-    aliasAvailability,
-    rememberMe,
-    allowToProceed,
-    migratingAssets,
-  } = loginState;
+  const { step, mode, walletId, seedPhrase, alias, aliasAvailability, rememberMe, allowToProceed, migratingAssets } =
+    loginState;
   const { stepNo, title, description, footnote } = getStepInfo(props);
   const { message, type: messageType } = systemMessage;
 
   return (
-    <Root>
-      <LoginTemplate
-        totalSteps={3}
-        currentStep={stepNo}
-        title={title}
-        description={description}
-        footnote={footnote}
-        onRestart={onRestart}
-      >
-        {(() => {
-          switch (step) {
-            case LoginStep.CONNECT_WALLET:
-              return (
-                <ConnectForm
-                  mode={mode}
-                  walletId={walletId}
-                  availableWallets={availableWallets}
-                  onSelectWallet={onSelectWallet}
-                  moreComingSoon={mode === LoginMode.SIGNUP && availableWallets.length < 3}
-                />
-              );
-            case LoginStep.SET_SEED_PHRASE:
-              return (
-                <SeedPhraseForm
-                  seedPhrase={seedPhrase}
-                  setSeedPhrase={setSeedPhrase}
-                  onSubmit={onSelectSeedPhrase}
-                  hasError={!!message && messageType === MessageType.ERROR}
-                />
-              );
-            case LoginStep.SET_ALIAS:
-              return (
-                <AliasForm
-                  alias={alias}
-                  aliasAvailability={aliasAvailability}
-                  rememberMe={rememberMe}
-                  allowToProceed={allowToProceed}
-                  setAlias={setAlias}
-                  setRememberMe={setRememberMe}
-                  onSubmit={onSelectAlias}
-                  onRestart={onRestart!}
-                  onForgotAlias={onForgotAlias}
-                  isNewAccount={mode === LoginMode.SIGNUP}
-                  isNewAlias={[LoginMode.SIGNUP, LoginMode.NEW_ALIAS].includes(mode)}
-                />
-              );
-            case LoginStep.CLAIM_USERNAME:
-              return (
-                <ShieldForAliasForm
-                  providerState={providerState}
-                  form={shieldForAliasForm!}
-                  onChangeInputs={onShieldForAliasFormInputsChange}
-                  onSubmit={onSubmitShieldForAliasForm}
-                  onChangeWallet={onChangeWallet}
-                />
-              );
-            case LoginStep.MIGRATE_WALLET: {
-              const availableWallets = (window.ethereum
-                ? wallets
-                : wallets.filter(w => w.id !== WalletId.METAMASK)
-              ).filter(w => w.id != WalletId.HOT);
-              return <WalletPicker wallets={availableWallets} walletId={walletId} onSubmit={onMigrateToWallet} />;
-            }
-            case LoginStep.CONFIRM_MIGRATION:
-              return (
-                <MigrateAccountForm
-                  alias={alias}
-                  onMigrateAccount={onMigrateAccount}
-                  hasError={!!message && messageType === MessageType.ERROR}
-                />
-              );
-            case LoginStep.MIGRATE_ACCOUNT:
-            case LoginStep.SYNC_ACCOUNT:
-              if (!migratingAssets.length) {
+    <>
+      <Root>
+        <LoginTemplate
+          totalSteps={3}
+          currentStep={stepNo}
+          title={title}
+          description={description}
+          footnote={footnote}
+          onRestart={onRestart}
+        >
+          {(() => {
+            switch (step) {
+              case LoginStep.CONNECT_WALLET:
                 return (
-                  <Progress
+                  <ConnectForm
+                    mode={mode}
+                    walletId={walletId}
+                    availableWallets={availableWallets}
+                    onSelectWallet={onSelectWallet}
+                    moreComingSoon={mode === LoginMode.SIGNUP && availableWallets.length < 3}
+                  />
+                );
+              case LoginStep.SET_SEED_PHRASE:
+                return (
+                  <SeedPhraseForm
+                    seedPhrase={seedPhrase}
+                    setSeedPhrase={setSeedPhrase}
+                    onSubmit={onSelectSeedPhrase}
+                    hasError={!!message && messageType === MessageType.ERROR}
+                  />
+                );
+              case LoginStep.SET_ALIAS:
+                return (
+                  <AliasForm
+                    alias={alias}
+                    aliasAvailability={aliasAvailability}
+                    rememberMe={rememberMe}
+                    allowToProceed={allowToProceed}
+                    setAlias={setAlias}
+                    setRememberMe={setRememberMe}
+                    onSubmit={onSelectAlias}
+                    onRestart={onRestart!}
+                    onForgotAlias={onForgotAlias}
+                    isNewAccount={mode === LoginMode.SIGNUP}
+                    isNewAlias={[LoginMode.SIGNUP, LoginMode.NEW_ALIAS].includes(mode)}
+                  />
+                );
+              case LoginStep.CLAIM_USERNAME:
+                return (
+                  <ShieldForAliasForm
+                    providerState={providerState}
+                    form={shieldForAliasForm!}
+                    onChangeInputs={onShieldForAliasFormInputsChange}
+                    onSubmit={onSubmitShieldForAliasForm}
+                    onChangeWallet={onChangeWallet}
+                  />
+                );
+              case LoginStep.MIGRATE_WALLET: {
+                const availableWallets = (
+                  window.ethereum ? wallets : wallets.filter(w => w.id !== WalletId.METAMASK)
+                ).filter(w => w.id != WalletId.HOT);
+                return <WalletPicker wallets={availableWallets} walletId={walletId} onSubmit={onMigrateToWallet} />;
+              }
+              case LoginStep.CONFIRM_MIGRATION:
+                return (
+                  <MigrateAccountForm
+                    alias={alias}
+                    onMigrateAccount={onMigrateAccount}
+                    hasError={!!message && messageType === MessageType.ERROR}
+                  />
+                );
+              case LoginStep.MIGRATE_ACCOUNT:
+              case LoginStep.SYNC_ACCOUNT:
+                if (!migratingAssets.length) {
+                  return (
+                    <Progress
+                      currentStep={step}
+                      steps={migratingProgresses}
+                      active={!message || messageType !== MessageType.ERROR}
+                      failed={!!message && messageType === MessageType.ERROR}
+                    />
+                  );
+                }
+                return (
+                  <MigrateBalance
+                    migratingAssets={migratingAssets}
+                    onMigrateNotes={migratingAssets.some(a => a.totalFee) ? onMigrateNotes : undefined}
+                  />
+                );
+              case LoginStep.MIGRATE_NOTES: {
+                const activeAsset =
+                  migratingAssets.find(
+                    a => a.migratableValues.length > 0 && a.migratedValues.length * 2 < a.migratableValues.length,
+                  ) || migratingAssets[migratingAssets.length - 1];
+                return <MigrateBalance migratingAssets={migratingAssets} activeAsset={activeAsset} />;
+              }
+              default: {
+                const steps =
+                  [LoginStep.VALIDATE_DATA, LoginStep.RECOVER_ACCOUNT_PROOF].indexOf(step) >= 0
+                    ? recoveringProgresses
+                    : mode === LoginMode.LOGIN
+                    ? loginProgresses
+                    : signupProgresses;
+                return (
+                  <InitDataForm
                     currentStep={step}
-                    steps={migratingProgresses}
+                    worldState={worldState}
+                    steps={steps}
                     active={!message || messageType !== MessageType.ERROR}
                     failed={!!message && messageType === MessageType.ERROR}
                   />
                 );
               }
-              return (
-                <MigrateBalance
-                  migratingAssets={migratingAssets}
-                  onMigrateNotes={migratingAssets.some(a => a.totalFee) ? onMigrateNotes : undefined}
-                />
-              );
-            case LoginStep.MIGRATE_NOTES: {
-              const activeAsset =
-                migratingAssets.find(
-                  a => a.migratableValues.length > 0 && a.migratedValues.length * 2 < a.migratableValues.length,
-                ) || migratingAssets[migratingAssets.length - 1];
-              return <MigrateBalance migratingAssets={migratingAssets} activeAsset={activeAsset} />;
             }
-            default: {
-              const steps =
-                [LoginStep.VALIDATE_DATA, LoginStep.RECOVER_ACCOUNT_PROOF].indexOf(step) >= 0
-                  ? recoveringProgresses
-                  : mode === LoginMode.LOGIN
-                  ? loginProgresses
-                  : signupProgresses;
-              return (
-                <InitDataForm
-                  currentStep={step}
-                  worldState={worldState}
-                  steps={steps}
-                  active={!message || messageType !== MessageType.ERROR}
-                  failed={!!message && messageType === MessageType.ERROR}
-                />
-              );
-            }
-          }
-        })()}
-      </LoginTemplate>
-    </Root>
+          })()}
+        </LoginTemplate>
+      </Root>
+    </>
   );
 };

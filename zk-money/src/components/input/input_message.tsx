@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { MessageType } from '../../app';
 import { breakpoints, defaultTextColour, FontSize, spacings, systemStates } from '../../styles';
 import { InputTheme } from './input_theme';

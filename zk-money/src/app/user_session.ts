@@ -1,4 +1,14 @@
-import { AccountId, AztecSdk, createAztecSdk, EthAddress, GrumpkinAddress, SdkEvent, SdkInitState } from '@aztec/sdk';
+import {
+  AccountId,
+  AztecSdk,
+  createAztecSdk,
+  EthAddress,
+  GrumpkinAddress,
+  SdkEvent,
+  SdkInitState,
+  EthereumProvider,
+  JsonRpcProvider,
+} from '@aztec/sdk';
 import { createHash } from 'crypto';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
@@ -105,6 +115,7 @@ export const initialWorldState: WorldState = { syncedToRollup: -1, latestRollup:
 
 export enum UserSessionEvent {
   UPDATED_LOGIN_STATE = 'UPDATED_LOGIN_STATE',
+  UPDATED_PROVIDER = 'UPDATED_PROVIDER',
   UPDATED_PROVIDER_STATE = 'UPDATED_PROVIDER_STATE',
   UPDATED_WORLD_STATE = 'UPDATED_WORLD_STATE',
   UPDATED_USER_ACCOUNT_DATA = 'UPDATED_USER_ACCOUNT_DATA',
@@ -116,6 +127,7 @@ export enum UserSessionEvent {
 
 export interface UserSession {
   on(event: UserSessionEvent.UPDATED_LOGIN_STATE, listener: (state: LoginState) => void): this;
+  on(event: UserSessionEvent.UPDATED_PROVIDER, listener: () => void): this;
   on(event: UserSessionEvent.UPDATED_PROVIDER_STATE, listener: (state: ProviderState) => void): this;
   on(event: UserSessionEvent.UPDATED_WORLD_STATE, listener: (state: WorldState) => void): this;
   on(event: UserSessionEvent.UPDATED_USER_ACCOUNT_DATA, listener: () => void): this;
@@ -124,7 +136,7 @@ export interface UserSession {
 }
 
 export class UserSession extends EventEmitter {
-  private coreProvider!: Provider;
+  private stableEthereumProvider!: EthereumProvider;
   private provider?: Provider;
   private sdk!: AztecSdk;
   private rollupService!: RollupService;
@@ -169,8 +181,28 @@ export class UserSession extends EventEmitter {
     this.activeAsset = initialActiveAsset;
   }
 
+  getSdk(): AztecSdk | undefined {
+    return this.sdk;
+  }
+
+  getProvider() {
+    return this.provider;
+  }
+
   getProviderState() {
     return this.provider?.getState();
+  }
+
+  getKeyVault(): KeyVault | undefined {
+    return this.keyVault;
+  }
+
+  getStableEthereumProvider(): EthereumProvider | undefined {
+    return this.stableEthereumProvider;
+  }
+
+  getRollupService(): RollupService | undefined {
+    return this.rollupService;
   }
 
   getLoginState() {
@@ -209,7 +241,6 @@ export class UserSession extends EventEmitter {
     this.removeAllListeners();
     this.debounceCheckAlias.cancel();
     this.account?.destroy();
-    this.coreProvider?.destroy();
     this.provider?.destroy();
     this.rollupService?.destroy();
     this.shieldForAliasForm?.destroy();
@@ -460,6 +491,7 @@ export class UserSession extends EventEmitter {
     this.shieldForAliasForm?.changeProvider(this.provider);
     this.account?.changeProvider(this.provider);
     this.handleProviderStateChange(this.provider?.getState());
+    this.emit(UserSessionEvent.UPDATED_PROVIDER);
   }
 
   async disconnectWallet() {
@@ -796,13 +828,14 @@ export class UserSession extends EventEmitter {
     }
 
     const { accountPublicKey, accountPrivateKey } = this.keyVault;
-    const nonce = 0;
-    const userId = new AccountId(accountPublicKey, nonce);
+    const userId = new AccountId(accountPublicKey, 0);
+    const newUserId = new AccountId(accountPublicKey, 1);
 
     // Add the user to the sdk so that the accountTx could be added for it.
     // Need to sync from the beginning when "migrating" account to a new alias.
     const noSync = [LoginMode.SIGNUP, LoginMode.MIGRATE].includes(this.loginState.mode);
-    await this.accountUtils.addUser(accountPrivateKey, userId.nonce, noSync);
+    await this.accountUtils.addUser(accountPrivateKey, userId.nonce, true);
+    await this.accountUtils.addUser(accountPrivateKey, newUserId.nonce, noSync);
 
     try {
       await this.shieldForAliasForm.submit();
@@ -816,13 +849,13 @@ export class UserSession extends EventEmitter {
       return;
     }
 
-    const latestUserNonce = await this.accountUtils.getAccountNonce(userId.publicKey);
-    if (latestUserNonce > userId.nonce) {
+    const latestUserNonce = await this.accountUtils.getAccountNonce(newUserId.publicKey);
+    if (latestUserNonce > newUserId.nonce) {
       const latestUserId = new AccountId(this.keyVault.accountPublicKey, latestUserNonce);
       await this.accountUtils.addUser(this.keyVault.accountPrivateKey, latestUserId.nonce);
       await this.migrateBalance(latestUserId, userId);
     } else {
-      await this.initUserAccount(userId, false);
+      await this.initUserAccount(newUserId, false);
       this.toStep(LoginStep.DONE);
     }
 
@@ -936,13 +969,9 @@ export class UserSession extends EventEmitter {
     }
   }
 
-  private async createCoreProvider() {
-    const { chainId, ethereumHost } = this.config;
-    this.coreProvider = new Provider(WalletId.HOT, { chainId, ethereumHost });
-    await this.coreProvider.init();
-    if (this.coreProvider.chainId !== this.requiredNetwork.chainId) {
-      throw new Error(`Wrong network. This shouldn't happen.`);
-    }
+  private async createStableEthereumProvider() {
+    const { ethereumHost } = this.config;
+    this.stableEthereumProvider = new JsonRpcProvider(ethereumHost);
   }
 
   private async createShieldForAliasForm(userId: AccountId, alias: string, spendingPublicKey: GrumpkinAddress) {
@@ -961,7 +990,7 @@ export class UserSession extends EventEmitter {
       ethAccount,
       this.keyVault,
       this.sdk,
-      this.coreProvider,
+      this.stableEthereumProvider,
       this.rollupService,
       this.accountUtils,
       this.requiredNetwork,
@@ -989,8 +1018,8 @@ export class UserSession extends EventEmitter {
       return;
     }
 
-    if (!this.coreProvider) {
-      await this.createCoreProvider();
+    if (!this.stableEthereumProvider) {
+      await this.createStableEthereumProvider();
     }
 
     if (!this.db.isOpen) {
@@ -1000,7 +1029,7 @@ export class UserSession extends EventEmitter {
     try {
       const { rollupProviderUrl, chainId, debug, saveProvingKey } = this.config;
       const minConfirmation = chainId === 1337 ? 1 : undefined; // If not ganache, use the default value.
-      this.sdk = await createAztecSdk(this.coreProvider.ethereumProvider, rollupProviderUrl, {
+      this.sdk = await createAztecSdk(this.stableEthereumProvider, rollupProviderUrl, {
         minConfirmation,
         debug,
         saveProvingKey,
@@ -1054,7 +1083,7 @@ export class UserSession extends EventEmitter {
       this.activeAsset,
       this.keyVault,
       this.sdk,
-      this.coreProvider,
+      this.stableEthereumProvider,
       this.rollupService,
       this.priceFeedService,
       this.accountUtils,

@@ -1,0 +1,136 @@
+@use '../../../styles/mixins';
+@use '../../../styles/spacings';
+@use '../../../styles/gradients';
+@use '../../../styles/breakpoints';
+
+.headerRoot {
+  display: flex;
+  align-items: center;
+  padding: spacings.$xxl 0;
+  padding: 64px 0;
+  height: 175px;
+
+  @media (max-width: breakpoints.$s) {
+    padding: spacings.$xl 0;
+  }
+}
+
+.logoRoot {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  line-height: 0;
+
+  @media (max-width: breakpoints.$s) {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+  }
+}
+
+.logoRoot.enabled {
+  cursor: pointer;
+}
+
+.logo {
+  margin-right: spacings.$xs;
+  height: 44px;
+}
+
+.accountRoot {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 5px;
+}
+
+.accountItem {
+  padding: spacings.$xxs 0;
+}
+
+.networkRoot {
+  padding: spacings.$xxs 0;
+  @media (max-width: breakpoints.$s) {
+    display: none;
+  }
+}
+
+.link {
+  opacity: 0.3;
+  font-size: 24px;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+}
+
+.link.white {
+  @include mixins.gradient_font;
+}
+
+.link.gradient {
+  color: white;
+}
+
+.navLink {
+  border-bottom: 2px solid transparent;
+  position: relative;
+  padding-bottom: 5px;
+}
+
+.navLink:hover {
+  opacity: 1;
+}
+
+.navLink.active {
+  opacity: 1;
+}
+
+.navLink.white.active::before {
+  @include mixins.gradient_border(0px, 0 0 2px 0);
+}
+
+.navLink.gradient.active::before {
+  @include mixins.gradient_border(0px, 0 0 2px 0, white, white);
+}
+
+.balanceLink {
+  opacity: 1;
+  position: relative;
+  border-radius: 10px;
+  padding: 10px 20px;
+  @include mixins.shadow_border;
+}
+
+.balanceLink.white:hover::before {
+  @include mixins.gradient_border;
+}
+
+.balanceLink.gradient::before {
+  @include mixins.gradient_border(10px, 2px, white, white);
+}
+
+.balanceLink.white.active::before {
+  @include mixins.gradient_border;
+}
+
+.balanceLink.gradient.active::before {
+  @include mixins.gradient_border(10px, 2px, white, white);
+}
+
+.shadowBorder {
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  border-radius: 20px;
+}
+
+.accountWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  position: relative;
+}
+
+.accountComponent {
+  position: absolute;
+  top: 60px;
+}

@@ -344,6 +344,9 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   public getBridgeGas(bridgeId: bigint) {
     const { addressId } = BridgeId.fromBigInt(bridgeId);
     const { gasLimit } = this.status.bridges.find(bridge => bridge.id == addressId) || {};
-    return gasLimit ?? 0n;
+    // This return obviously looked nicer before using the ?? null coalescing  operator.
+    // I've removed it for now until we can address this webpack bug:
+    // https://github.com/webpack/webpack/issues/10227
+    return gasLimit === undefined ? 0n : gasLimit;
   }
 }

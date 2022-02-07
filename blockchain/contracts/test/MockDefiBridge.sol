@@ -129,7 +129,7 @@ contract MockDefiBridge is IDefiBridge {
 
     function canFinalise(
         uint256 /*interactionNonce*/
-    ) external view override returns (bool) {
+    ) external pure override returns (bool) {
         return true;
     }
 

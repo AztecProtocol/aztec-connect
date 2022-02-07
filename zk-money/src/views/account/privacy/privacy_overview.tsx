@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { Asset, PrivacyIssue } from '../../../app';
 import { colours, gradients, lineHeights, Spacing, spacings } from '../../../styles';
 import { CrossFade, Link, Text } from '../../../components';

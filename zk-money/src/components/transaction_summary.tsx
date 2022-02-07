@@ -1,6 +1,6 @@
 import moment from 'moment';
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import linkIcon from '../images/link.svg';
 import clockIcon from '../images/clock_white.svg';
 import { breakpoints, fontSizes, spacings } from '../styles';

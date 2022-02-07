@@ -1,5 +1,5 @@
 import React from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import logo from '../images/ethereum_white.svg';
 import { borderRadiuses, colours, gradients, spacings, Theme } from '../styles';
 import { Text } from './text';

@@ -1,4 +1,4 @@
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { Text, TextProps } from './text';
 
 const TextButtonRoot = styled(Text)`

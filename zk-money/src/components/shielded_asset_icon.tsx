@@ -1,4 +1,4 @@
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import zkShieldGradientIcon from '../images/zk_shield_gradient.svg';
 import zkShieldWhiteIcon from '../images/zk_shield_white.svg';
 import { Size } from '../styles';
@@ -13,12 +13,15 @@ const iconSizes = {
   xxs: '22px',
 };
 
-const Root = styled.div<{ size: Size }>`
+const Root = styled.div<{ size: Size | number }>`
   position: relative;
-  ${({ size }) => `
-    width: ${iconSizes[size]};
-    height: ${iconSizes[size]};
-  `}
+  ${({ size }) => {
+    const pxs = typeof size === 'number' ? `${size}px` : iconSizes[size];
+    return `
+    width: ${pxs};
+    height: ${pxs};
+  `;
+  }}
 `;
 
 export interface IconVarients {
@@ -59,7 +62,7 @@ const ShieldIcon = styled.div<{ white?: boolean; hide?: boolean }>`
 export const ShieldedAssetIcon: React.FunctionComponent<{
   asset: IconVarients;
   white?: boolean;
-  size?: Size;
+  size?: Size | number;
   hideShield?: boolean;
 }> = ({ white, asset, size = 'm', hideShield }) => (
   <Root size={size}>

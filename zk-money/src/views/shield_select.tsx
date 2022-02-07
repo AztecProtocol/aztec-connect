@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 import { Button, Select, ShieldedAssetIcon, Text } from '../components';
 import { borderRadiuses, colours, defaultTextColour, fontSizes, inputSizes, spacings, themeColours } from '../styles';
 import arrowDownGradient from '../images/arrow_down_gradient.svg';

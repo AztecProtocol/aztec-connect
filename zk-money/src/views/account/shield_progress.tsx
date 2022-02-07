@@ -1,5 +1,5 @@
 import React from 'react';
-import { AssetState, ProviderState, ShieldFormValues, ShieldStatus, toBaseUnits, WalletId } from '../../app';
+import { Asset, ProviderState, ShieldFormValues, ShieldStatus, toBaseUnits, WalletId } from '../../app';
 import { Theme } from '../../styles';
 import { AssetInfoRow } from './asset_info_row';
 import { ProgressTemplate } from './progress_template';
@@ -8,7 +8,9 @@ import { SigningKeyForm } from './signing_key_form';
 interface ShieldProgressProps {
   theme: Theme;
   form: ShieldFormValues;
-  assetState: AssetState;
+  asset: Asset;
+  assetPrice: bigint;
+  txAmountLimit: bigint;
   providerState?: ProviderState;
   onChangeWallet(walletId: WalletId): void;
   onDisconnectWallet(): void;
@@ -19,7 +21,9 @@ interface ShieldProgressProps {
 
 export const ShieldProgress: React.FunctionComponent<ShieldProgressProps> = ({
   theme,
-  assetState,
+  asset,
+  assetPrice,
+  txAmountLimit,
   providerState,
   form,
   onChangeWallet,
@@ -43,17 +47,16 @@ export const ShieldProgress: React.FunctionComponent<ShieldProgressProps> = ({
     );
   }
 
-  const { asset, price } = assetState;
   const fee = fees.value[speed.value].fee;
 
   const items = [
     {
       title: 'Amount',
-      content: <AssetInfoRow asset={asset} value={toBaseUnits(amount.value, asset.decimals)} price={price} />,
+      content: <AssetInfoRow asset={asset} value={toBaseUnits(amount.value, asset.decimals)} price={assetPrice} />,
     },
     {
       title: 'Fee',
-      content: <AssetInfoRow asset={asset} value={fee} price={price} />,
+      content: <AssetInfoRow asset={asset} value={fee} price={assetPrice} />,
     },
     {
       title: 'Recipient',
@@ -87,7 +90,8 @@ export const ShieldProgress: React.FunctionComponent<ShieldProgressProps> = ({
       items={items}
       steps={steps}
       form={form as any}
-      assetState={assetState}
+      asset={asset}
+      txAmountLimit={txAmountLimit}
       currentStatus={status.value}
       confirmStatus={ShieldStatus.CONFIRM}
       validateStatus={ShieldStatus.VALIDATE}

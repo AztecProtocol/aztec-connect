@@ -1,5 +1,5 @@
 import { rgba } from 'polished';
-import styled, { keyframes } from 'styled-components';
+import styled, { keyframes } from 'styled-components/macro';
 import { colours, gradients } from '../styles';
 
 export const spinnerSizes = {
