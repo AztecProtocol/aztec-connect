@@ -10,7 +10,7 @@ import { DefiFormFields } from './types';
 import { Overlay } from '../../../../components/overlay';
 import { DefiModalHeader } from './defi_modal_header';
 import styled from 'styled-components/macro';
-import { borderRadiuses, colours } from '../../../../styles';
+import { Card, CardHeaderSize } from 'ui-components';
 
 const ModalWrapper = styled.div`
   display: flex;
@@ -19,16 +19,7 @@ const ModalWrapper = styled.div`
 `;
 
 const ModalBody = styled.div`
-  padding: 0 37px 28px 37px;
-  border-radius: 0 0 ${borderRadiuses.m} ${borderRadiuses.m};
-  background-color: ${colours.white};
-`;
-
-const CardShoulders = styled.div`
-  height: 20px;
-  border-radius: ${borderRadiuses.m} ${borderRadiuses.m} 0 0;
-  margin-top: -20px;
-  background-color: ${colours.white};
+  padding: 28px 37px 28px 37px;
 `;
 
 interface DefiModalProps {
@@ -73,9 +64,11 @@ export function DefiModal({ recipe, onClose }: DefiModalProps) {
   return (
     <Overlay>
       <ModalWrapper>
-        <DefiModalHeader recipe={recipe} closeDisabled={!canClose} onClose={onClose} />
-        <CardShoulders />
-        <ModalBody>{page}</ModalBody>
+        <Card
+          headerSize={CardHeaderSize.LARGE}
+          cardHeader={<DefiModalHeader recipe={recipe} closeDisabled={!canClose} onClose={onClose} />}
+          cardContent={<ModalBody>{page}</ModalBody>}
+        />
       </ModalWrapper>
     </Overlay>
   );

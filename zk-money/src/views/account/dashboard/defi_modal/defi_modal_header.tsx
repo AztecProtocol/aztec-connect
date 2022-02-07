@@ -1,7 +1,12 @@
-import { CardHeader } from 'ui-components';
 import styled from 'styled-components/macro';
 import { DefiRecipe } from '../../../../alt-model/defi/types';
 import { CloseButtonWhite, CardAssetTag, CardInvestmentTypeTag } from '../../../../components';
+
+const Root = styled.div`
+  display: flex;
+  width: 100%;
+  height: 100%;
+`;
 
 const LeftSeg = styled.div`
   width: 50%;
@@ -14,6 +19,7 @@ const RightSeg = styled.div`
   width: 50%;
   display: flex;
   justify-content: space-between;
+  align-items: center;
 `;
 const Tags = styled.div`
   display: flex;
@@ -31,7 +37,7 @@ export function DefiModalHeader({ recipe, onClose, closeDisabled }: DefiModalHea
   const { logo, bridgeFlow, investmentType } = recipe;
   const { inputAssetId } = bridgeFlow.enter;
   return (
-    <CardHeader>
+    <Root>
       <LeftSeg>
         <Logo src={logo} />
       </LeftSeg>
@@ -42,6 +48,6 @@ export function DefiModalHeader({ recipe, onClose, closeDisabled }: DefiModalHea
         </Tags>
         <CloseButtonWhite disabled={closeDisabled} onClick={onClose} />
       </RightSeg>
-    </CardHeader>
+    </Root>
   );
 }
