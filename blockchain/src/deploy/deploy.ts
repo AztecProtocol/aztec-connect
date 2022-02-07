@@ -41,7 +41,14 @@ export async function deploy(
 
   // note we need to change this address for production to the multisig
   const ownerAddress = await signer.getAddress();
-  const rollup = await rollupFactory.deploy(
+
+  console.error(`Awaiting deployment...`);
+
+  const rollup = await rollupFactory.deploy();
+
+  await rollup.deployed();
+
+  await rollup.initialize(
     verifier.address,
     escapeHatchBlockLower,
     escapeHatchBlockUpper,
@@ -53,8 +60,6 @@ export async function deploy(
     initDataSize,
   );
 
-  console.error(`Awaiting deployment...`);
-  await rollup.deployed();
   console.error(`Rollup contract address: ${rollup.address}`);
 
   const feeDistributor = await deployFeeDistributor(signer, rollup, uniswapRouter);

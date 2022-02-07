@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Aztec
 
-pragma solidity >=0.6.0 <0.8.11;
+pragma solidity >=0.8.4;
 pragma experimental ABIEncoderV2;
 
 library AztecTypes {

@@ -32,13 +32,6 @@ describe('rollup_processor: state', () => {
       ]),
     );
     const expected = Buffer.from(expectedStateHash.slice(2), 'hex');
-    expected[0] = 0; // mask 54 bits to align with smart contract data format
-    expected[1] = 0; // (54 bits of the relevant storage slot are used for other variables)
-    expected[2] = 0;
-    expected[3] = 0;
-    expected[4] = 0;
-    expected[5] = 0;
-    expected[6] = expected[6] & 3;
     expect(await rollupProcessor.stateHash()).toEqual(expected);
   });
 

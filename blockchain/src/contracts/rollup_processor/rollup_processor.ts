@@ -43,14 +43,6 @@ export class RollupProcessor {
     return EthAddress.fromString(await this.rollupProcessor.verifier());
   }
 
-  async numberOfAssets() {
-    return +(await this.rollupProcessor.numberOfAssets());
-  }
-
-  async numberOfBridgeCalls() {
-    return +(await this.rollupProcessor.numberOfBridgeCalls());
-  }
-
   async dataSize() {
     return +(await this.rollupProcessor.getDataSize());
   }
@@ -66,7 +58,7 @@ export class RollupProcessor {
   }
 
   async stateHash() {
-    return Buffer.from((await this.rollupProcessor.getStateHash()).slice(2), 'hex');
+    return Buffer.from((await this.rollupProcessor.rollupStateHash()).slice(2), 'hex');
   }
 
   async getSupportedBridge(bridgeAddressId: number) {

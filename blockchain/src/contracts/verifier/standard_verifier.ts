@@ -60,6 +60,7 @@ export class StandardVerifier {
     });
     const verifierFactory = new ContractFactory(StandardVerifierContract.abi, linkedVBytecode, signer);
     const verifier = await verifierFactory.deploy().catch(fixEthersStackTrace);
+    await verifier.deployed();
     return new StandardVerifier(EthAddress.fromString(verifier.address), provider, defaults);
   }
 
@@ -76,7 +77,7 @@ export class StandardVerifier {
     const signer = new Web3Provider(this.provider).getSigner(signingAddress ? signingAddress.toString() : 0);
     const verifier = new Contract(this.verifierContractAddress.toString(), StandardVerifierContract.abi, signer);
     await verifier.verify(proofData, pubInputsHash, { gasLimit }).catch(fixEthersStackTrace);
-    
+
     return verifier.estimateGas.verify(proofData, pubInputsHash, { gasLimit });
   }
 }

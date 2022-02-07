@@ -2,8 +2,8 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset, TxHash } from '@aztec/barretenberg/blockchain';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { computeInteractionHashes, DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
-import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
+import { RollupProofData } from '@aztec/barretenberg/rollup_proof/rollup_proof_data';
 import { randomBytes } from 'crypto';
 import { Signer } from 'ethers';
 import { LogDescription } from 'ethers/lib/utils';
@@ -172,7 +172,10 @@ describe('rollup_processor: defi bridge failures', () => {
     });
 
     await rollupProcessor.stubTransactionHashes(1023);
-
+    // when processDefiInteractions is called, NUM_BRIDGE_CALLS will be popped off of the defiInteractionHashes array.
+    // 1 defi interaction hash is then added due to the rollup proof containing a DefiInteractionData object.
+    // if we then copy NUM_BRIDGE_CALLS async tx hashes into defiInteractionHashes, we should trigger the array overflow
+    await rollupProcessor.stubAsyncTransactionHashes(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK);
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('ARRAY_OVERFLOW');
   });

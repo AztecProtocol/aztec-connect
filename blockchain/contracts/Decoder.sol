@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Aztec
-pragma solidity >=0.8.4 <0.8.11;
+pragma solidity >=0.8.4;
 
 import {Types} from './verifier/cryptography/Types.sol';
 import {Bn254Crypto} from './verifier/cryptography/Bn254Crypto.sol';
@@ -25,11 +25,11 @@ import {Bn254Crypto} from './verifier/cryptography/Bn254Crypto.sol';
    | 0x100 - 0x120   | 32               | newDataRootsRoot                 | Root of the tree of data tree roots after rollup block's state updates |
    | 0x120 - 0x140   | 32               | oldDefiRoot                      | Root of the defi tree prior to rollup block's state updates |
    | 0x140 - 0x160   | 32               | newDefiRoot                      | Root of the defi tree after rollup block's state updates |
-   | 0x160 - 0x560   | 1024             | bridgeIds[numberOfBridgeCalls]   | Size-32 array of bridgeIds for bridges being called in this block. If bridgeId == 0, no bridge is called |
-   | 0x560 - 0x960   | 1024             | depositSums[numberOfBridgeCalls] | Size-32 array of deposit values being sent for bridges being called in this block |
-   | 0x960 - 0xb60   | 512              | assetIds[numberOfAssets]         | Size-16 array of the assetIds for assets being deposited/withdrawn/used to pay fees in this block |
-   | 0xb60 - 0xd60   | 512              | txFees[numberOfAssets]           | Size-16 array of transaction fees paid to the rollup beneficiary, denominated in each assetId |
-   | 0xd60 - 0x1160  | 1024             | interactionNotes[numberOfBridgeCalls] | Size-32 array of defi interaction result commitments that must be inserted into the defi tree at this rollup block |
+   | 0x160 - 0x560   | 1024             | bridgeIds[NUMBER_OF_BRIDGE_CALLS]   | Size-32 array of bridgeIds for bridges being called in this block. If bridgeId == 0, no bridge is called |
+   | 0x560 - 0x960   | 1024             | depositSums[NUMBER_OF_BRIDGE_CALLS] | Size-32 array of deposit values being sent for bridges being called in this block |
+   | 0x960 - 0xb60   | 512              | assetIds[NUMBER_OF_ASSETS]         | Size-16 array of the assetIds for assets being deposited/withdrawn/used to pay fees in this block |
+   | 0xb60 - 0xd60   | 512              | txFees[NUMBER_OF_ASSETS]           | Size-16 array of transaction fees paid to the rollup beneficiary, denominated in each assetId |
+   | 0xd60 - 0x1160  | 1024             | interactionNotes[NUMBER_OF_BRIDGE_CALLS] | Size-32 array of defi interaction result commitments that must be inserted into the defi tree at this rollup block |
    | 0x1160 - 0x1180 | 32               | prevDefiInteractionHash          | A SHA256 hash of the data used to create each interaction result commitment. Used to validate correctness of interactionNotes |
    | 0x1180 - 0x11a0 | 32               | rollupBeneficiary                | The address that the fees from this rollup block should be sent to. Prevents a rollup proof being taken from the transaction pool and having its fees redirected |
    | 0x11a0 - 0x11c0 | 32               | numRollupTxs                     | Number of "inner rollup" proofs used to create the block proof. "inner rollup" circuits process 3-28 user txns, the outer rollup circuit processes 1-28 inner rollup proofs. |
@@ -53,7 +53,7 @@ import {Bn254Crypto} from './verifier/cryptography/Bn254Crypto.sol';
   * Number of real transactions = rollupSize - (decoded tx data size / 256)
   *
   * The decoded transaction data associated with padding transactions is 256 zero bytes.
-  */
+ **/
 
 /**
  * @title Decoder
@@ -66,22 +66,32 @@ contract Decoder {
     /*----------------------------------------
       CONSTANTS
       ----------------------------------------*/
-    uint256 public constant numberOfAssets = 16; // max number of assets in a block
-    uint256 public constant numberOfBridgeCalls = 32; // max number of bridge calls in a block
-    uint256 internal constant txNumPubInputs = 8; // number of ZK-SNARK "public inputs" per join-split/account/claim transaction
-    uint256 internal constant txPubInputLength = 256; // byte-length of txNumPubInputs. txNumPubInputs * 32;
-    uint256 internal constant rollupNumHeaderInputs = 142; // number of ZK-SNARK "public inputs" that make up the rollup header. 14 + (numberOfBridgeCalls * 3) + (numberOfAssets * 2);
-    uint256 internal constant rollupHeaderInputLength = 4544; // rollupNumHeaderInputs * 32;
+    uint256 internal constant NUMBER_OF_ASSETS = 16; // max number of assets in a block
+    uint256 internal constant NUMBER_OF_BRIDGE_CALLS = 32; // max number of bridge calls in a block
+    uint256 internal constant NUMBER_OF_BRIDGE_BYTES = 1024; // NUMBER_OF_BRIDGE_CALLS * 32
+    uint256 internal constant NUMBER_OF_PUBLIC_INPUTS_PER_TX = 8; // number of ZK-SNARK "public inputs" per join-split/account/claim transaction
+    uint256 internal constant TX_PUBLIC_INPUT_LENGTH = 256; // byte-length of NUMBER_OF_PUBLIC_INPUTS_PER_TX. NUMBER_OF_PUBLIC_INPUTS_PER_TX * 32;
+    uint256 internal constant ROLLUP_NUM_HEADER_INPUTS = 142; // 58; // number of ZK-SNARK "public inputs" that make up the rollup header 14 + (NUMBER_OF_BRIDGE_CALLS * 3) + (NUMBER_OF_ASSETS * 2);
+    uint256 internal constant ROLLUP_HEADER_LENGTH = 4544; // 1856; // ROLLUP_NUM_HEADER_INPUTS * 32;
 
-    // encodedProofDataLengthOffset = byte offset into the rollup header such that `numRealTransactions` occupies
+    // ENCODED_PROOF_DATA_LENGTH_OFFSET = byte offset into the rollup header such that `numRealTransactions` occupies
     // the least significant 4 bytes of the 32-byte word being pointed to.
-    // i.e. rollupHeaderInputLength - 28
-    uint256 internal constant numRealTransactionsOffset = 4516;
+    // i.e. ROLLUP_HEADER_LENGTH - 28
+    uint256 internal constant NUM_REAL_TRANSACTIONS_OFFSET = 4516;
 
-    // encodedProofDataLengthOffset = byte offset into the rollup header such that `encodedInnerProofData.length` occupies
+    // ENCODED_PROOF_DATA_LENGTH_OFFSET = byte offset into the rollup header such that `encodedInnerProofData.length` occupies
     // the least significant 4 bytes of the 32-byte word being pointed to.
-    // i.e. rollupHeaderInputLength - 24
-    uint256 internal constant encodedProofDataLengthOffset = 4520;
+    // i.e. ROLLUP_HEADER_LENGTH - 24
+    uint256 internal constant ENCODED_PROOF_DATA_LENGTH_OFFSET = 4520;
+
+    // offset we add to `proofData` to point to the bridgeIds
+    uint256 internal constant BRIDGE_IDS_OFFSET = 0x180;
+
+    // offset we add to `proofData` to point to prevDefiInteractionhash
+    uint256 internal constant PREVIOUS_DEFI_INTERACTION_HASH_OFFSET = 4480; // ROLLUP_HEADER_LENGTH - 0x40
+
+    // offset we add to `proofData` to point to rollupBeneficiary
+    uint256 internal constant ROLLUP_BENEFICIARY_OFFSET = 4512; // ROLLUP_HEADER_LENGTH - 0x20
 
     // CIRCUIT_MODULUS = group order of the BN254 elliptic curve. All arithmetic gates in our ZK-SNARK circuits are evaluated modulo this prime.
     // Is used when computing the public inputs hash - our SHA256 hash outputs are reduced modulo CIRCUIT_MODULUS
@@ -104,17 +114,7 @@ contract Decoder {
     uint256 internal constant PADDING_ROLLUP_HASH_SIZE_64 =
         0x1f83672815ac9b3ca31732d641784035834e96b269eaf6a2e759bf4fcc8e5bfd;
 
-    // offset we add to `proofData` to point to the bridgeIds
-    uint256 internal constant bridgeIdsOffset = 0x180;
-
-    // Offsets and masks used to encode/decode the stateHash storage variable of RollupProcessor
-    uint256 internal constant DATASIZE_BIT_OFFSET = 202;
-    uint256 internal constant ASYNCDEFIINTERACTIONHASHES_BIT_OFFSET = 235;
-    uint256 internal constant DEFIINTERACTIONHASHES_BIT_OFFSET = 245;
-    uint256 internal constant REENTRANCY_MUTEX_BIT_OFFSET = 255;
-    uint256 internal constant STATE_HASH_MASK = 0x3ffffffffffffffffffffffffffffffffffffffffffffffffff;
-    uint256 internal constant ARRAY_LENGTH_MASK = 0x3ff;
-    uint256 internal constant DATASIZE_MASK = 0xffffffff;
+    uint256 internal constant ADDRESS_MASK = 0x00ffffffffffffffffffffffffffffffffffffffff;
 
     /*----------------------------------------
       ERROR TAGS
@@ -353,14 +353,14 @@ contract Decoder {
                 inPtr := add(inPtr, 0x20)
 
                 numTxs := and(
-                    calldataload(add(inPtr, numRealTransactionsOffset)),
+                    calldataload(add(inPtr, NUM_REAL_TRANSACTIONS_OFFSET)),
                     0xffffffff
                 )
                 // Get encoded inner proof data size.
-                // add encodedProofDataLengthOffset to inPtr to point to the correct variable in our header block,
+                // add ENCODED_PROOF_DATA_LENGTH_OFFSET to inPtr to point to the correct variable in our header block,
                 // mask off all but 4 least significant bytes as this is a packed 32-bit variable.
                 let encodedInnerDataSize := and(
-                    calldataload(add(inPtr, encodedProofDataLengthOffset)),
+                    calldataload(add(inPtr, ENCODED_PROOF_DATA_LENGTH_OFFSET)),
                     0xffffffff
                 )
                 // Add the size of trimmed zero bytes to dataSize.
@@ -370,18 +370,18 @@ contract Decoder {
 
                 // compute the number of bytes our decoded proof data will take up.
                 // i.e. num total txns in the rollup (including padding) * number of public inputs per transaction
-                let decodedInnerDataSize := mul(rollupSize, txPubInputLength)
+                let decodedInnerDataSize := mul(rollupSize, TX_PUBLIC_INPUT_LENGTH)
 
                 // we want dataSize to equal: rollup header length + decoded tx length (excluding padding blocks)
-                let numInnerRollups := calldataload(add(inPtr, sub(rollupHeaderInputLength, 0x20)))
+                let numInnerRollups := calldataload(add(inPtr, sub(ROLLUP_HEADER_LENGTH, 0x20)))
                 let numTxsPerRollup := div(rollupSize, numInnerRollups)
 
                 let numFilledBlocks := div(numTxs, numTxsPerRollup)
                 numFilledBlocks := add(numFilledBlocks, iszero(eq(mul(numFilledBlocks, numTxsPerRollup), numTxs)))
 
-                decodedTransactionDataSize := mul(mul(numFilledBlocks, numTxsPerRollup), txPubInputLength)
+                decodedTransactionDataSize := mul(mul(numFilledBlocks, numTxsPerRollup), TX_PUBLIC_INPUT_LENGTH)
                 // i.e. current dataSize value + (difference between decoded and encoded data)
-                dataSize := add(rollupHeaderInputLength, decodedTransactionDataSize)
+                dataSize := add(ROLLUP_HEADER_LENGTH, decodedTransactionDataSize)
 
                 // Allocate memory for `proofData`.
                 proofData := mload(0x40)
@@ -400,13 +400,13 @@ contract Decoder {
                 outPtr := add(outPtr, 0x20)
 
                 // Copy rollup header data to `proofData`.
-                calldatacopy(outPtr, inPtr, rollupHeaderInputLength)
+                calldatacopy(outPtr, inPtr, ROLLUP_HEADER_LENGTH)
                 // Advance outPtr to point to the end of the header data (i.e. the start of the decoded inner transaction data)
-                outPtr := add(outPtr, rollupHeaderInputLength)
+                outPtr := add(outPtr, ROLLUP_HEADER_LENGTH)
 
                 // Advance inPtr to point to the start of our encoded inner transaction data.
-                // Add (rollupHeaderInputLength + 0x08) to skip over the packed (numRealTransactions, encodedProofData.length) parameters
-                inPtr := add(inPtr, add(rollupHeaderInputLength, 0x08))
+                // Add (ROLLUP_HEADER_LENGTH + 0x08) to skip over the packed (numRealTransactions, encodedProofData.length) parameters
+                inPtr := add(inPtr, add(ROLLUP_HEADER_LENGTH, 0x08))
 
                 // Set tailInPtr to point to the end of our encoded transaction data
                 tailInPtr := add(inPtr, encodedInnerDataSize)
@@ -444,7 +444,7 @@ contract Decoder {
                     // call the decoding function. Return value will be next required value of inPtr
                     inPtr = callfunc(inPtr, outPtr);
                     // advance outPtr by the size of a decoded transaction
-                    outPtr += txPubInputLength;
+                    outPtr += TX_PUBLIC_INPUT_LENGTH;
                 }
             }
         }
@@ -474,9 +474,9 @@ contract Decoder {
         bool invalidRollupTopology;
         assembly {
             // we need to figure out how many rollup proofs are in this tx and how many user transactions are in each rollup
-            let numRollupTxs := mload(add(proofData, rollupHeaderInputLength))
+            let numRollupTxs := mload(add(proofData, ROLLUP_HEADER_LENGTH))
             let numJoinSplitsPerRollup := div(rollupSize, numRollupTxs)
-            let rollupDataSize := mul(mul(numJoinSplitsPerRollup, txNumPubInputs), 32)
+            let rollupDataSize := mul(mul(numJoinSplitsPerRollup, NUMBER_OF_PUBLIC_INPUTS_PER_TX), 32)
 
             // Compute the number of inner rollups that don't contain padding proofs
             let numNotEmptyInnerRollups := div(numTxs, numJoinSplitsPerRollup)
@@ -492,10 +492,10 @@ contract Decoder {
             let proofdataHashPtr := mload(0x40)
             // copy the header data into the proofdataHash
             // header start is at calldataload(0x04) + 0x24 (+0x04 to skip over func signature, +0x20 to skip over byte array length param)
-            calldatacopy(proofdataHashPtr, add(calldataload(0x04), 0x24), rollupHeaderInputLength)
+            calldatacopy(proofdataHashPtr, add(calldataload(0x04), 0x24), ROLLUP_HEADER_LENGTH)
 
             // update pointer
-            proofdataHashPtr := add(proofdataHashPtr, rollupHeaderInputLength)
+            proofdataHashPtr := add(proofdataHashPtr, ROLLUP_HEADER_LENGTH)
 
             // compute the endpoint for the proofdataHashPtr (used as a loop boundary condition)
             let endPtr := add(proofdataHashPtr, mul(numNotEmptyInnerRollups, 0x20))
@@ -571,6 +571,12 @@ contract Decoder {
         }
     }
 
+    /**
+     * @dev Extract the `rollupId` param from the decoded proof data.
+     * represents the rollupId of the next valid rollup block
+     * @param proofData the decoded proof data
+     * @return nextRollupId the expected id of the next rollup block
+     */
     function getRollupId(bytes memory proofData) internal pure returns (uint256 nextRollupId) {
         assembly {
             nextRollupId := mload(add(proofData, 0x20))
@@ -603,14 +609,20 @@ contract Decoder {
             uint256 rollupId,
             bytes32 oldStateHash,
             bytes32 newStateHash,
-            uint256 numDataLeaves,
-            uint256 dataStartIndex
+            uint32 numDataLeaves,
+            uint32 dataStartIndex
         )
     {
         assembly {
             let dataStart := add(proofData, 0x20) // jump over first word, it's length of data
             numDataLeaves := shl(1, mload(add(dataStart, 0x20))) // rollupSize * 2 (2 notes per tx)
             dataStartIndex := mload(add(dataStart, 0x40))
+
+            // validate numDataLeaves && dataStartIndex are uint32s
+            if or(gt(numDataLeaves, 0xffffffff), gt(dataStartIndex, 0xffffffff))
+            {
+                revert(0,0)
+            }
             rollupId := mload(dataStart)
 
             let mPtr := mload(0x40)
@@ -620,14 +632,14 @@ contract Decoder {
             mstore(add(mPtr, 0x40), mload(add(dataStart, 0xa0))) // oldNullRoot
             mstore(add(mPtr, 0x60), mload(add(dataStart, 0xe0))) // oldRootRoot
             mstore(add(mPtr, 0x80), mload(add(dataStart, 0x120))) // oldDefiRoot
-            oldStateHash := and(STATE_HASH_MASK, keccak256(mPtr, 0xa0))
+            oldStateHash := keccak256(mPtr, 0xa0)
 
             mstore(mPtr, add(rollupId, 0x01)) // new nextRollupId
             mstore(add(mPtr, 0x20), mload(add(dataStart, 0x80))) // newDataRoot
             mstore(add(mPtr, 0x40), mload(add(dataStart, 0xc0))) // newNullRoot
             mstore(add(mPtr, 0x60), mload(add(dataStart, 0x100))) // newRootRoot
             mstore(add(mPtr, 0x80), mload(add(dataStart, 0x140))) // newDefiRoot
-            newStateHash := and(STATE_HASH_MASK, keccak256(mPtr, 0xa0))
+            newStateHash := keccak256(mPtr, 0xa0)
         }
     }
 
@@ -642,7 +654,7 @@ contract Decoder {
         returns (bytes32 prevDefiInteractionHash)
     {
         assembly {
-            prevDefiInteractionHash := mload(add(proofData, sub(rollupHeaderInputLength, 0x40))) // TODO HARDCODE THIS OFFSET
+            prevDefiInteractionHash := mload(add(proofData, PREVIOUS_DEFI_INTERACTION_HASH_OFFSET))
         }
     }
 
@@ -661,7 +673,12 @@ contract Decoder {
         returns (address rollupBeneficiaryAddress)
     {
         assembly {
-            rollupBeneficiaryAddress := mload(add(proofData, sub(rollupHeaderInputLength, 0x20)))
+            rollupBeneficiaryAddress := mload(add(proofData, ROLLUP_BENEFICIARY_OFFSET))
+            // validate rollupBeneficiaryAddress is an address!
+            if gt(rollupBeneficiaryAddress, ADDRESS_MASK) {
+                revert(0, 0)
+            }
+
         }
     }
 
@@ -677,7 +694,11 @@ contract Decoder {
         uint256 idx
     ) internal pure returns (uint256 assetId) {
         assembly {
-            assetId := mload(add(add(add(proofData, 0x180), mul(0x40, numberOfBridgeCalls)), mul(0x20, idx)))
+            assetId := mload(add(add(add(proofData, BRIDGE_IDS_OFFSET), mul(0x40, NUMBER_OF_BRIDGE_CALLS)), mul(0x20, idx)))
+            // validate assetId is a uint32!
+            if gt(assetId, 0xffffffff) {
+                revert(0, 0)
+            }
         }
     }
 
@@ -694,7 +715,7 @@ contract Decoder {
         uint256 idx
     ) internal pure returns (uint256 totalTxFee) {
         assembly {
-            totalTxFee := mload(add(add(add(proofData, 0x380), mul(0x40, numberOfBridgeCalls)), mul(0x20, idx)))
+            totalTxFee := mload(add(add(add(proofData, 0x380), mul(0x40, NUMBER_OF_BRIDGE_CALLS)), mul(0x20, idx)))
         }
     }
 }

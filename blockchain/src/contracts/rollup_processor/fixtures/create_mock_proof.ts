@@ -26,8 +26,7 @@ const randomLeafHash = () => randomBytes(32);
 
 const randomNullifier = () => Buffer.concat([Buffer.alloc(16), randomBytes(16)]);
 
-const numberOfBridgeCalls = RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
-const MAX_NUMBER_OF_ROLLUPS_PER_TEST = numberOfBridgeCalls + 10; // arbitrary choice of 10. We currently have a test that uses numberOfBridgeCalls + 3...
+const MAX_NUMBER_OF_ROLLUPS_PER_TEST = RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK + 10; // arbitrary choice of 10. We currently have a test that uses numberOfBridgeCalls + 3...
 
 const extendRoots = (roots: Buffer[], size = MAX_NUMBER_OF_ROLLUPS_PER_TEST) => [
   ...roots,
@@ -234,8 +233,8 @@ export const createRollupProof = async (
     rollupId = 0,
     rollupSize = 2,
     dataStartIndex,
-    numberOfAssets = 16,
-    numberOfDefiInteraction = numberOfBridgeCalls,
+    numberOfAssets = RollupProofData.NUMBER_OF_ASSETS,
+    numberOfDefiInteraction = RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK,
     previousDefiInteractionHash,
     defiInteractionData = [],
     prevInteractionResult = [],

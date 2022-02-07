@@ -266,7 +266,7 @@ describe('rollup_processor: defi bridge', () => {
   });
 
   it('process uniswap defi interaction data that converts eth to token', async () => {
-    // swap DAI for ETH
+    // swap ETH for DAI
     const bridgeAddressId = 1;
     const inputAssetId = 0;
     const bridgeId = new BridgeId(
@@ -421,5 +421,34 @@ describe('rollup_processor: defi bridge', () => {
         txHash,
       );
     }
+  });
+
+  it('fails gracefully when processing uniswap defi interaction data that converts eth to a >252-bit token', async () => {
+    // swap ETH for DAI
+    const outputValueA = 1n << 252n;
+    const bridgeId = await mockBridge({
+      inputAssetId: 0,
+      outputAssetIdA: 1,
+      outputAssetIdB: 0,
+      outputValueA,
+      maxTxs: 1,
+    });
+    const inputValue = 20n;
+
+    await topupEth(inputValue);
+
+    await expectBalance(0, inputValue);
+    await expectBalance(1, 0n);
+
+    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+      defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
+    });
+    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const txHash = await rollupProcessor.sendTx(tx);
+
+    await expectBalance(0, inputValue); // unchanged, because the DefiBridgeProxy should have returned success = false to the RollupProcessor.
+    await expectBalance(1, 0n); // also unchanged
+
+    await expectResult([new DefiInteractionNote(bridgeId, 0, inputValue, 0n, 0n, false)], txHash); // An interaction result which indicates failure (with zeros as output values).
   });
 });

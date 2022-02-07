@@ -9,6 +9,7 @@ import { setupFeeDistributor } from '../../fee_distributor/fixtures/setup_fee_di
 import { setupUniswap } from '../../fee_distributor/fixtures/setup_uniswap';
 import { Contract, ContractFactory } from 'ethers';
 import UniswapBridge from '../../../artifacts/contracts/bridges/UniswapBridge.sol/UniswapBridge.json';
+import { upgrades } from 'hardhat';
 
 async function deployDefiBridge(signer: Signer, rollupProcessor: TestRollupProcessor, uniswapRouter: Contract) {
   // TODO - Create a bridge contract with two output assets.
@@ -17,6 +18,22 @@ async function deployDefiBridge(signer: Signer, rollupProcessor: TestRollupProce
   await defiBridge.deployed();
   await rollupProcessor.setSupportedBridge(EthAddress.fromString(defiBridge.address), 0);
   return defiBridge;
+}
+
+export async function upgradeTestRollupProcessor(
+    rollupProvider: Signer,
+    rollupProcessorAddress: EthAddress
+) {
+    const UpgradedRollupProcessorContract = await ethers.getContractFactory('UpgradedTestRollupProcessor', rollupProvider);
+
+    const newProcessor = await upgrades.upgradeProxy(rollupProcessorAddress.toString(), UpgradedRollupProcessorContract);
+    await newProcessor.deployed();
+
+    const rollupProcessor = new TestRollupProcessor(
+        EthAddress.fromString(newProcessor.address),
+        new EthersAdapter(ethers.provider),
+    );
+    return rollupProcessor;
 }
 
 export async function setupTestRollupProcessor(
@@ -36,11 +53,9 @@ export async function setupTestRollupProcessor(
   const ownerAddress = await rollupProvider.getAddress();
   const RollupProcessorContract = await ethers.getContractFactory('TestRollupProcessor', rollupProvider);
 
-    const rollupProcessorContract = await RollupProcessorContract.deploy();
-
-    await rollupProcessorContract.deployed();
-
-    await rollupProcessorContract.initialize(
+  const rollupProcessorContract = await upgrades.deployProxy(
+    RollupProcessorContract,
+    [
       mockVerifier.address,
       escapeBlockLowerBound,
       escapeBlockUpperBound,
@@ -50,7 +65,10 @@ export async function setupTestRollupProcessor(
       '0x1b831fad9b940f7d02feae1e9824c963ae45b3223e721138c6f73261e690c96a',
       '0x1b435f036fc17f4cc3862f961a8644839900a8e4f1d0b318a7046dd88b10be75',
       '0x0',
-    );
+    ],
+    { initializer: 'initialize' },
+  );
+
   const rollupProcessor = new TestRollupProcessor(
     EthAddress.fromString(rollupProcessorContract.address),
     new EthersAdapter(ethers.provider),

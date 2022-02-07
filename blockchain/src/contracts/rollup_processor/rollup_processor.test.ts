@@ -21,12 +21,15 @@ import {
   mergeInnerProofs,
 } from './fixtures/create_mock_proof';
 import { deployMockBridge, MockBridgeParams } from './fixtures/setup_defi_bridges';
-import { setupTestRollupProcessor } from './fixtures/setup_test_rollup_processor';
-import { RollupProcessor } from './rollup_processor';
+import {
+  setupTestRollupProcessor,
+  upgradeTestRollupProcessor,
+} from './fixtures/setup_upgradeable_test_rollup_processor';
+import { TestRollupProcessor } from './fixtures/test_rollup_processor';
 
 describe('rollup_processor', () => {
   let feeDistributor: FeeDistributor;
-  let rollupProcessor: RollupProcessor;
+  let rollupProcessor: TestRollupProcessor;
   let signers: Signer[];
   let addresses: EthAddress[];
   let assets: Asset[];
@@ -39,6 +42,17 @@ describe('rollup_processor', () => {
 
   const mockBridge = async (params: MockBridgeParams = {}) =>
     deployMockBridge(signers[0], rollupProcessor, assetAddresses, params);
+
+  // Extracts the 'args' of each event emitted by the tx.
+  const fetchResults = async (txHash: TxHash, eventName: string): Promise<Result> => {
+    const receipt = await ethers.provider.getTransactionReceipt(txHash.toString());
+    const eventArgs = receipt.logs
+      .filter(l => l.address === rollupProcessor.address.toString())
+      .map(l => rollupProcessor.contract.interface.parseLog(l))
+      .filter(e => e.eventFragment.name === eventName)
+      .map(e => e.args);
+    return eventArgs;
+  };
 
   beforeEach(async () => {
     signers = await ethers.getSigners();
@@ -53,21 +67,25 @@ describe('rollup_processor', () => {
     await advanceBlocks(blocks, ethers.provider);
   });
 
-  // Extracts the 'args' of each event emitted by the tx.
-  const fetchResults = async (txHash: TxHash, eventName: string): Promise<Result> => {
-    const receipt = await ethers.provider.getTransactionReceipt(txHash.toString());
-    const eventArgs = receipt.logs
-      .filter(l => l.address === rollupProcessor.address.toString())
-      .map(l => rollupProcessor.contract.interface.parseLog(l))
-      .filter(e => e.eventFragment.name === eventName)
-      .map(e => e.args);
-    return eventArgs;
-  };
+  it('should be upgradeable', async () => {
+    const currentAddress = rollupProcessor.address;
+    expect(await rollupProcessor.foo()).toBe(1);
+
+    const newProcessor = await upgradeTestRollupProcessor(signers[0], currentAddress);
+
+    expect(newProcessor.address).toEqual(currentAddress);
+
+    expect(await newProcessor.foo()).toBe(2);
+  });
+
+  it('should not be upgradeable by address other than owner', async () => {
+    await expect(upgradeTestRollupProcessor(signers[1], rollupProcessor.address)).rejects.toThrow(
+      'Ownable: caller is not the owner',
+    );
+  });
 
   it('should get contract status', async () => {
     expect(rollupProcessor.address).toEqual(rollupProcessor.address);
-    expect(await rollupProcessor.numberOfAssets()).toBe(16);
-    expect(await rollupProcessor.numberOfBridgeCalls()).toBe(numberOfBridgeCalls);
     expect(await rollupProcessor.dataSize()).toBe(0);
     expect(await rollupProcessor.getSupportedAssets()).toEqual(assets.map(a => a.getStaticInfo().address));
     expect(await rollupProcessor.getEscapeHatchStatus()).toEqual({ escapeOpen: true, blocksRemaining: 20 });

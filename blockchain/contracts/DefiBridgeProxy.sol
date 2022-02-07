@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Aztec
-pragma solidity >=0.8.4 <0.8.11;
+pragma solidity >=0.8.4;
 pragma experimental ABIEncoderV2;
 
 import {SafeMath} from '@openzeppelin/contracts/utils/math/SafeMath.sol';
@@ -8,8 +8,6 @@ import {IDefiBridge} from './interfaces/IDefiBridge.sol';
 import {AztecTypes} from './AztecTypes.sol';
 
 import {TokenTransfers} from './libraries/TokenTransfers.sol';
-
-import 'hardhat/console.sol';
 
 contract DefiBridgeProxy {
     bytes4 private constant BALANCE_OF_SELECTOR = 0x70a08231; // bytes4(keccak256('balanceOf(address)'));
@@ -19,7 +17,10 @@ contract DefiBridgeProxy {
     bytes4 private constant TRANSFER_FROM_SELECTOR = 0x23b872dd; // bytes4(keccak256('transferFrom(address,address,uint256)'));
 
     error DEFI_BRIDGE_PROXY_TRANSFER_FAILED();
-    error INCORRECT_ASSET_VALUE();
+    error OUTPUT_A_EXCEEDS_252_BITS(uint256 outputValue);
+    error OUTPUT_B_EXCEEDS_252_BITS(uint256 outputValue);
+    error INCORRECT_ASSET_A_VALUE();
+    error INCORRECT_ASSET_B_VALUE();
     error ASYNC_NONZERO_OUTPUT_VALUES(uint256 outputValueA, uint256 outputValueB);
     error INSUFFICIENT_ETH_PAYMENT();
 
@@ -55,8 +56,7 @@ contract DefiBridgeProxy {
                 ethPaymentsSlotBase := keccak256(0x00, 0x40)
                 ethPayment := sload(ethPaymentsSlotBase) // ethPayment = ethPayments[interactionNonce]
             }
-            if (outputValue != ethPayment)
-            {
+            if (outputValue != ethPayment) {
                 revert INSUFFICIENT_ETH_PAYMENT();
             }
             assembly {
@@ -143,6 +143,12 @@ contract DefiBridgeProxy {
             }
         } else {
             address bridgeAddressCopy = bridgeAddress; // stack overflow workaround
+            if (outputValueA >= (1 << 252)) {
+                revert OUTPUT_A_EXCEEDS_252_BITS(outputValueA);
+            }
+            if (outputValueB >= (1 << 252)) {
+                revert OUTPUT_B_EXCEEDS_252_BITS(outputValueB);
+            }
             recoverTokens(outputAssetA, outputValueA, interactionNonce, bridgeAddressCopy, ethPaymentsSlot);
             recoverTokens(outputAssetB, outputValueB, interactionNonce, bridgeAddressCopy, ethPaymentsSlot);
         }
