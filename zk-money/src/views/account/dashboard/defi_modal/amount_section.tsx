@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import styled from 'styled-components/macro';
+import { InfoWrap } from 'ui-components';
 import { Asset } from '../../../../app';
-import { InfoButton, InfoWrap, Spacer, Text } from '../../../../components';
+import { InfoButton, Spacer, Text } from '../../../../components';
 import { spacings } from '../../../../styles';
 import { AmountInput } from './amount_input';
 import { InputValidationAnnotation } from './input_validation_message';
@@ -22,7 +23,6 @@ const Header = styled.div`
 function Info() {
   return (
     <>
-      <h3>Asset Amount &amp; Privacy</h3>
       <p>
         Although other information is encrypted, the numerical value of any given transaction can be located. It is
         important to protect your privacy by withdrawing/sending amounts that make it very hard to guess who proccessed
@@ -47,7 +47,13 @@ export function AmountSection(props: {
 }) {
   const [showingInfo, setShowingInfo] = useState(false);
   return (
-    <InfoWrap showingInfo={showingInfo} onHideInfo={() => setShowingInfo(false)} infoContent={<Info />}>
+    <InfoWrap
+      showingInfo={showingInfo}
+      onHideInfo={() => setShowingInfo(false)}
+      infoHeader="Asset Amount & Privacy"
+      infoContent={<Info />}
+      borderRadius={20}
+    >
       <Content>
         <Header>
           <Text>Amount</Text>

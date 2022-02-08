@@ -22,12 +22,18 @@ export function VerticalScrollRegion(props: { children?: React.ReactNode }) {
   const [contentHeight, setContentHeight] = useState(0);
   const [viewHeight, setViewHeight] = useState(0);
   useEffect(() => {
-    requestAnimationFrame(() => {
+    const applyProportions = () => {
       const contentHeight = contentRef.current?.offsetHeight ?? 0;
       setContentHeight(contentHeight);
       const viewHeight = rootRef.current?.offsetHeight ?? 0;
       setViewHeight(viewHeight);
       if (viewportRef.current) applyFade(viewportRef.current, viewHeight, contentHeight, 0);
+    };
+
+    applyProportions();
+    requestAnimationFrame(() => {
+      // We repeat because font loading could cause the content to resize
+      requestAnimationFrame(applyProportions);
     });
   }, []);
   const handleScrollTo = useCallback((scrollTop: number) => {

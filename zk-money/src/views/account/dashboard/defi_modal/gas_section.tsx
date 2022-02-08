@@ -1,9 +1,10 @@
 import { DefiSettlementTime } from '@aztec/sdk';
 import { useState } from 'react';
 import styled from 'styled-components/macro';
+import { InfoWrap } from 'ui-components';
 import { useAssetPrice } from '../../../../alt-model';
 import { Asset, convertToPriceString } from '../../../../app';
-import { InfoWrap, Text, Spacer, InfoButton } from '../../../../components';
+import { Text, Spacer, InfoButton } from '../../../../components';
 import { spacings } from '../../../../styles';
 import { SpeedSwitch } from './speed_switch';
 
@@ -26,19 +27,23 @@ const PositionedInfoButton = styled(InfoButton)`
   bottom: 15px; */
 `;
 
+const S_Info = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  line-height: 200%;
+`;
+
 function Info() {
   return (
-    <>
-      <h3>Calculating your Gas Fee</h3>
-      <p>Your zk assets are invested in one of the following ways:</p>
-      <p>
-        <b>
-          <i>Batched transaction: </i>
-        </b>
+    <S_Info>
+      <Text text="Your zk assets are invested in one of the following ways:" />
+      <Text>
+        <Text inline italic weight="bold" text="Batched transaction: " />
         your funds are grouped with other users privately in a roll-up. These are then sent approx every 2 hours. This
         is the most cost effective transaction as everyone shares the fee.
-      </p>
-    </>
+      </Text>
+    </S_Info>
   );
 }
 
@@ -73,7 +78,13 @@ export function GasSection(props: GasSectionProps) {
     assetPrice !== undefined &&
     `$${convertToPriceString(props.fee, props.asset.decimals, assetPrice)}`;
   return (
-    <InfoWrap showingInfo={showingInfo} infoContent={<Info />} onHideInfo={() => setShowingInfo(false)}>
+    <InfoWrap
+      showingInfo={showingInfo}
+      infoHeader={<Text weight="bold" text="Calculating your Gas Fee" />}
+      infoContent={<Info />}
+      onHideInfo={() => setShowingInfo(false)}
+      borderRadius={20}
+    >
       <Content>
         <Header>
           <Text>Gas Fee</Text>

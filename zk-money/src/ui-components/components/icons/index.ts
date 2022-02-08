@@ -5,3 +5,4 @@ export * from './loading_spinner_icon';
 export * from './done_gradient_icon';
 export * from './metamask_icon';
 export * from './wallet_connect_icon';
+export * from './close_mini_icon';
