@@ -7,7 +7,7 @@ import 'log-timestamp';
 const {
   PORT = '8083',
   MAX_CIRCUIT_SIZE = '8388608',
-  ROLLUP_OUTERS = '2',
+  NUM_OUTER_ROLLUP_PROOFS = '1',
   API_PREFIX = '',
   DATA_DIR = './data',
   PERSIST = 'true',
@@ -17,7 +17,7 @@ const {
 async function main() {
   const serverConfig: ServerConfig = {
     maxCircuitSize: +MAX_CIRCUIT_SIZE,
-    rollupOuters: ROLLUP_OUTERS,
+    rollupOuters: NUM_OUTER_ROLLUP_PROOFS,
     dataDir: DATA_DIR,
     persist: PERSIST === 'true',
     proverless: PROVERLESS === 'true',

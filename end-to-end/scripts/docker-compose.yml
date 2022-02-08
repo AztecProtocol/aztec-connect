@@ -20,6 +20,7 @@ services:
     image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/halloumi:latest
     environment:
       NODE_ENV: production
+      NUM_OUTER_ROLLUP_PROOFS: ${NUM_OUTER_ROLLUP_PROOFS}
       PERSIST: 'false'
       PROVERLESS: ${PROVERLESS}
     ports:
