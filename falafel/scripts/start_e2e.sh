@@ -20,10 +20,7 @@ export PUBLISH_INTERVAL=120
 export NUM_INNER_ROLLUP_TXS=3
 export NUM_OUTER_ROLLUP_PROOFS=2
 export ETHEREUM_POLL_INTERVAL=1000
-
-if [ -n "$VK" ]; then
-  export PROVERLESS=true
-fi
+export PROVERLESS=true
 
  yarn clean_db
  yarn build
