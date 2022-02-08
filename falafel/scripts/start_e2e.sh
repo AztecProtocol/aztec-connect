@@ -12,7 +12,7 @@ export HALLOUMI_HOST=http://localhost:8083
 
 export ESCAPE_BLOCK_LOWER=10
 export ESCAPE_BLOCK_UPPER=100
-export VK=MockVerificationKey3x2
+export VK=MockVerificationKey
 
 export MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW=1
 export BASE_TX_GAS=10000
