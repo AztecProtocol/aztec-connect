@@ -6,3 +6,5 @@ export * from './done_gradient_icon';
 export * from './metamask_icon';
 export * from './wallet_connect_icon';
 export * from './close_mini_icon';
+export * from './back_icon';
+export * from './forward_icon';

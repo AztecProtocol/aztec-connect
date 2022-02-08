@@ -1,4 +1,5 @@
 import styled from 'styled-components/macro';
+import { BackButton, ForwardButton } from 'ui-components';
 import { DefiRecipe } from '../../../../alt-model/defi/types';
 import { CloseButtonWhite, CardAssetTag, CardInvestmentTypeTag } from '../../../../components';
 
@@ -26,14 +27,21 @@ const Tags = styled.div`
   gap: 18px;
   align-items: center;
 `;
+const NavButtons = styled.div`
+  display: flex;
+  gap: 18px;
+  align-items: center;
+`;
 
 interface DefiModalHeaderProps {
   recipe: DefiRecipe;
   closeDisabled: boolean;
   onClose: () => void;
+  onBack?: () => void;
+  onForward?: () => void;
 }
 
-export function DefiModalHeader({ recipe, onClose, closeDisabled }: DefiModalHeaderProps) {
+export function DefiModalHeader({ recipe, onClose, closeDisabled, onBack, onForward }: DefiModalHeaderProps) {
   const { logo, bridgeFlow, investmentType } = recipe;
   const { inputAssetId } = bridgeFlow.enter;
   return (
@@ -46,6 +54,10 @@ export function DefiModalHeader({ recipe, onClose, closeDisabled }: DefiModalHea
           <CardAssetTag assetId={inputAssetId} />
           <CardInvestmentTypeTag investmentType={investmentType} />
         </Tags>
+        <NavButtons>
+          <BackButton disabled={!onBack} onClick={onBack} />
+          <ForwardButton disabled={!onForward} onClick={onForward} />
+        </NavButtons>
         <CloseButtonWhite disabled={closeDisabled} onClick={onClose} />
       </RightSeg>
     </Root>

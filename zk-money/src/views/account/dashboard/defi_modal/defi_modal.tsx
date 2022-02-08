@@ -39,8 +39,12 @@ export function DefiModal({ recipe, onClose }: DefiModalProps) {
   const [locked, setLocked] = useState(false);
   const { compose, ...composerState } = useDefiComposer(enterBridgeId);
   const { phase } = composerState;
-  const canClose = phase === DefiComposerPhase.IDLE || phase === DefiComposerPhase.DONE;
+  const isIdle = phase === DefiComposerPhase.IDLE;
+  const canClose = isIdle || phase === DefiComposerPhase.DONE;
   const handleSubmit = () => compose({ amount, speed: fields.speed });
+  const canGoBack = locked && isIdle;
+  const handleBack = canGoBack ? () => setLocked(false) : undefined;
+
   const page = locked ? (
     <Page2
       fields={fields}
@@ -67,7 +71,9 @@ export function DefiModal({ recipe, onClose }: DefiModalProps) {
       <ModalWrapper>
         <Card
           headerSize={CardHeaderSize.LARGE}
-          cardHeader={<DefiModalHeader recipe={recipe} closeDisabled={!canClose} onClose={onClose} />}
+          cardHeader={
+            <DefiModalHeader recipe={recipe} closeDisabled={!canClose} onClose={onClose} onBack={handleBack} />
+          }
           cardContent={<ModalBody>{page}</ModalBody>}
         />
       </ModalWrapper>
