@@ -15,6 +15,10 @@ export const VerticalScrollBar = forwardRef<VerticalScrollBarHandle, VerticalScr
   const { contentHeight, viewHeight, onDragTo } = props;
   const barRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef(0);
+  const barProportion = contentHeight / viewHeight;
+  const showBar = barProportion < 1;
+  const height = showBar ? undefined : `${100 / barProportion}%`;
+  const visibility = showBar ? 'hidden' : 'visible';
   useImperativeHandle(
     forwardedRef,
     () => ({
@@ -61,8 +65,8 @@ export const VerticalScrollBar = forwardRef<VerticalScrollBarHandle, VerticalScr
     }
   }, [onDragTo, viewHeight, contentHeight]);
   return (
-    <div className={style.root}>
-      <div ref={barRef} className={style.bar} style={{ height: `${100 / (contentHeight / viewHeight)}%` }} />
+    <div className={style.root} style={{ visibility }}>
+      <div ref={barRef} className={style.bar} style={{ height, visibility }} />
     </div>
   );
 });
