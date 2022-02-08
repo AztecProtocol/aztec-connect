@@ -188,7 +188,7 @@ jobs:
       - run:
           name: 'Build'
           working_directory: blockchain-vks
-          command: cond_spot_run_build blockchain-vks 64core
+          command: cond_spot_run_build blockchain-vks 32core
 
   blockchain:
     machine:
@@ -497,7 +497,7 @@ jobs:
             deploy_ecr blockchain
             COMMIT=$(last_successful_commit blockchain deployed)
             if [ -z "$COMMIT" ] || changed $COMMIT '.*\.sol$'; then
-              `docker run -e ESCAPE_BLOCK_LOWER=60 -e ESCAPE_BLOCK_UPPER=120 -e INFURA_API_KEY=$TF_VAR_INFURA_API_KEY -e PRIVATE_KEY=$TF_VAR_PRIVATE_KEY -e NETWORK=goerli -e VK=VerificationKey3x2 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:$COMMIT_HASH`
+              `docker run -e ESCAPE_BLOCK_LOWER=60 -e ESCAPE_BLOCK_UPPER=120 -e INFURA_API_KEY=$TF_VAR_INFURA_API_KEY -e PRIVATE_KEY=$TF_VAR_PRIVATE_KEY -e NETWORK=goerli -e VK=MockVerificationKey 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:$COMMIT_HASH`
               deploy_terraform blockchain
               tag_remote_image blockchain cache-$COMMIT_HASH cache-$COMMIT_HASH-deployed
             fi

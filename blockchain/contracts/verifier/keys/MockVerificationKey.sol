@@ -8,7 +8,7 @@ pragma experimental ABIEncoderV2;
 import {StandardTypes} from '../cryptography/StandardTypes.sol';
 import {Bn254Crypto} from '../cryptography/StandardBn254Crypto.sol';
 
-library MockVerificationKey3x2 {
+library MockVerificationKey {
     using Bn254Crypto for StandardTypes.G1Point;
     using Bn254Crypto for StandardTypes.G2Point;
 

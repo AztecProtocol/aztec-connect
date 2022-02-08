@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import { InitHelpers } from '@aztec/barretenberg/environment';
-import { parseEther } from '@ethersproject/units';
 import { ContractFactory, Signer } from 'ethers';
 import { EthAddress } from '@aztec/barretenberg/address';
 import RollupProcessor from '../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
@@ -63,11 +62,6 @@ export async function deploy(
   console.error(`Rollup contract address: ${rollup.address}`);
 
   const feeDistributor = await deployFeeDistributor(signer, rollup, uniswapRouter);
-
-  const initialFee = '0.1';
-  console.error(`Depositing ${initialFee} ETH to FeeDistributor.`);
-  const amount = parseEther(initialFee);
-  await feeDistributor.deposit(EthAddress.ZERO.toString(), amount, { value: amount });
 
   const permitSupport = false;
   const asset = await addAsset(rollup, signer, permitSupport);

@@ -198,6 +198,10 @@ resource "aws_ecs_task_definition" "falafel" {
       {
         "name": "MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW",
         "value": "1"
+      },
+      {
+        "name": "PROVERLESS",
+        "value": "true"
       }
     ],
     "mountPoints": [
