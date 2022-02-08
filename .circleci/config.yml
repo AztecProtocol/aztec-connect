@@ -329,7 +329,7 @@ jobs:
       - run:
           name: 'Test'
           working_directory: end-to-end
-          command: cond_spot_run_tests end-to-end ./src/e2e_deposit.test.ts VerificationKey3x2
+          command: cond_spot_run_tests end-to-end ./src/e2e_deposit.test.ts VerificationKey1x1
 
   e2e-payment:
     docker:

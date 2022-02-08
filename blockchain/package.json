@@ -9,7 +9,7 @@
     "build:dev": "tsc -p tsconfig.dest.json --watch",
     "compile": "node ./ensure_versions && yarn hardhat compile",
     "clean": "rm -rf ./cache ./dest ./src/artifacts",
-    "test": "cd ./src/contracts/verifier/fixtures && ./create_fixture.sh false true && yarn compile && NODE_NO_WARNINGS=1 yarn jest",
+    "test": "cd ./src/contracts/verifier/fixtures && ./create_fixture.sh true true && yarn compile && NODE_NO_WARNINGS=1 yarn jest",
     "start:ganache": "yarn compile && ganache-cli -d -h 0.0.0.0 --chainId=1337 -l 12000000 -e 10000 -m 'test test test test test test test test test test test junk'",
     "deploy": "node ./dest/deploy/index.js"
   },

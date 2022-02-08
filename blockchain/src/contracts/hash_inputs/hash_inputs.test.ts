@@ -8,7 +8,7 @@ import { StandardVerifier } from '../verifier/standard_verifier';
 async function setupHashInputs() {
   const signers = await ethers.getSigners();
 
-  const verifier = await StandardVerifier.deploy(new EthersAdapter(ethers.provider), 'VerificationKey3x2');
+  const verifier = await StandardVerifier.deploy(new EthersAdapter(ethers.provider), 'MockVerificationKey');
 
   const HashInputsContract = await ethers.getContractFactory('HashInputs', signers[0]);
   const hashInputsContract = await HashInputsContract.deploy(verifier.address.toString());
