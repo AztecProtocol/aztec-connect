@@ -4,16 +4,16 @@
   display: flex;
 }
 
-.content {
+.viewport {
   overflow-y: auto;
 }
 /* Hide scrollbar for Chrome, Safari and Opera */
-.content::-webkit-scrollbar {
+.viewport::-webkit-scrollbar {
   display: none;
 }
 
 /* Hide scrollbar for IE, Edge and Firefox */
-.content {
+.viewport {
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
 }
