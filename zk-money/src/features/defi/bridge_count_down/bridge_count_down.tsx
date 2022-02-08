@@ -6,6 +6,7 @@ interface BridgeCountDownProps {
   totalSlots: number;
   takenSlots: number;
   nextBatch: Date;
+  hideSlotsRemaining?: boolean;
 }
 
 export function BridgeCountDown(props: BridgeCountDownProps) {
@@ -16,7 +17,7 @@ export function BridgeCountDown(props: BridgeCountDownProps) {
     <div>
       <div className={style.info}>
         <div>Next Batch: ~{timeStr}</div>
-        <div>{remainingSlots} slots remaining!</div>
+        {!props.hideSlotsRemaining && <div>{remainingSlots} slots remaining!</div>}
       </div>
       <ProgressBar progress={progress} />
     </div>

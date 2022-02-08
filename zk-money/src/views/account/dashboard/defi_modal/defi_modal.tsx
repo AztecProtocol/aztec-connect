@@ -47,6 +47,7 @@ export function DefiModal({ recipe, onClose }: DefiModalProps) {
 
   const page = locked ? (
     <Page2
+      recipe={recipe}
       fields={fields}
       asset={inputAsset}
       fee={fee}
