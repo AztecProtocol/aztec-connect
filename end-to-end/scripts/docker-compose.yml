@@ -30,8 +30,8 @@ services:
     environment:
       ETHEREUM_HOST: http://ganache:8545
       HALLOUMI_HOST: http://halloumi:8083
-      NUM_OUTER_ROLLUP_PROOFS: 2
-      NUM_INNER_ROLLUP_TXS: 3
+      NUM_OUTER_ROLLUP_PROOFS: ${NUM_OUTER_ROLLUP_PROOFS}
+      NUM_INNER_ROLLUP_TXS: ${NUM_INNER_ROLLUP_TXS}
       BASE_TX_GAS: 10000
       PUBLISH_INTERVAL: 120
       NODE_ENV: production

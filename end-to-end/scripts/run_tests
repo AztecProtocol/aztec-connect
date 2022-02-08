@@ -2,7 +2,9 @@
 set -e
 
 export TEST=$1
-export VK=$2
+export NUM_INNER_ROLLUP_TXS=${2:-3}
+export NUM_OUTER_ROLLUP_PROOFS=${3:-2}
+export VK=$4
 
 if [ -z "$VK" ]; then
   export PROVERLESS=true
