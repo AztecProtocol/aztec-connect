@@ -36,10 +36,6 @@ const S_Separator = styled.div`
   background-color: ${themeColours[Theme.WHITE].border};
 `;
 
-const LowerBorderBox = styled(BorderBox)`
-  width: 600px;
-`;
-
 const Footer = styled.div`
   display: flex;
   justify-content: space-between;
@@ -82,7 +78,7 @@ export function Page2({ recipe, composerState, asset, maxAmount, fields, fee, on
         <S_Separator />
         <Breakdown amount={amount} fee={fee ?? 0n} asset={asset} />
       </BorderBox>
-      <LowerBorderBox>
+      <BorderBox>
         {showingDeclaration ? (
           <Disclaimer accepted={riskChecked} onChangeAccepted={setRiskChecked} asset={asset} maxAmount={maxAmount} />
         ) : showingComplete ? (
@@ -90,7 +86,7 @@ export function Page2({ recipe, composerState, asset, maxAmount, fields, fee, on
         ) : (
           <DefiSubmissionSteps composerState={composerState} />
         )}
-      </LowerBorderBox>
+      </BorderBox>
       <Footer>
         <Button
           text={hasError ? 'Retry' : 'Confirm Submit'}
