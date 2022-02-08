@@ -10,6 +10,6 @@
   cursor: not-allowed;
 }
 
-.iconButton:active {
+.iconButton:enabled:active {
   filter: brightness(50%);
 }
