@@ -43,6 +43,7 @@ export const VerticalScrollBar = forwardRef<VerticalScrollBarHandle, VerticalScr
         const pageCount = contentHeight / viewHeight;
         document.body.style.cursor = 'pointer';
         const handleMouseMove = (e: MouseEvent) => {
+          e.preventDefault();
           const y = e.pageY;
           const deltaPage = (y - startY) / height;
           const page = Math.max(0, Math.min(startPage + deltaPage, pageCount - 1));
