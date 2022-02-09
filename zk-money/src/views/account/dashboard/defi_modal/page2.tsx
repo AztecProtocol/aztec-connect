@@ -13,29 +13,31 @@ import { DefiRecipe } from 'alt-model/defi/types';
 import { BridgeCountDown } from 'features/defi/bridge_count_down';
 import { BridgeKeyStats } from 'features/defi/bridge_key_stats';
 
-const Root = styled.div`
-  display: grid;
-  gap: 50px;
-`;
+const S = {
+  Root: styled.div`
+    display: grid;
+    gap: 50px;
+  `,
 
-const S_TopStats = styled.div`
-  display: grid;
-  grid-template-columns: 3fr 2fr 5fr;
-  gap: 10%;
-  padding: 20px 25px;
-`;
+  TopStats: styled.div`
+    display: grid;
+    grid-template-columns: 3fr 2fr 5fr;
+    gap: 10%;
+    padding: 20px 25px;
+  `,
 
-const S_Separator = styled.div`
-  width: 100%;
-  height: 1px;
-  background-color: ${themeColours[Theme.WHITE].border};
-`;
+  Separator: styled.div`
+    width: 100%;
+    height: 1px;
+    background-color: ${themeColours[Theme.WHITE].border};
+  `,
 
-const Footer = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-`;
+  Footer: styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  `,
+};
 
 interface Page2Props {
   recipe: DefiRecipe;
@@ -56,9 +58,9 @@ export function Page2({ recipe, composerState, asset, maxAmount, fields, fee, on
   const showingComplete = composerState.phase === DefiComposerPhase.DONE;
   const canSubmit = riskChecked && isIdle;
   return (
-    <Root>
+    <S.Root>
       <BorderBox>
-        <S_TopStats>
+        <S.TopStats>
           <Text size="xxs" italic text={recipe.shortDesc} />
           <BridgeCountDown
             nextBatch={new Date(Date.now() + 1000 * 60 * 60)}
@@ -67,8 +69,8 @@ export function Page2({ recipe, composerState, asset, maxAmount, fields, fee, on
             compact={true}
           />
           <BridgeKeyStats compact />
-        </S_TopStats>
-        <S_Separator />
+        </S.TopStats>
+        <S.Separator />
         <Breakdown amount={amount} fee={fee ?? 0n} asset={asset} />
       </BorderBox>
       <BorderBox>
@@ -80,13 +82,13 @@ export function Page2({ recipe, composerState, asset, maxAmount, fields, fee, on
           <DefiSubmissionSteps composerState={composerState} />
         )}
       </BorderBox>
-      <Footer>
+      <S.Footer>
         <Button
           text={hasError ? 'Retry' : 'Confirm Submit'}
           onClick={riskChecked ? onSubmit : undefined}
           disabled={!canSubmit}
         />
-      </Footer>
-    </Root>
+      </S.Footer>
+    </S.Root>
   );
 }
