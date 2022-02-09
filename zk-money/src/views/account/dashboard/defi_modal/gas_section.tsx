@@ -1,44 +1,51 @@
 import { DefiSettlementTime } from '@aztec/sdk';
 import { useState } from 'react';
 import styled from 'styled-components/macro';
+import { InfoWrap } from 'ui-components';
 import { useAssetPrice } from '../../../../alt-model';
 import { Asset, convertToPriceString } from '../../../../app';
-import { InfoWrap, Text, Spacer, InfoButton } from '../../../../components';
+import { Text, Spacer, InfoButton } from '../../../../components';
 import { spacings } from '../../../../styles';
 import { SpeedSwitch } from './speed_switch';
 
-const Content = styled.div`
-  padding: ${spacings.l} ${spacings.m};
-`;
+const S = {
+  Content: styled.div`
+    padding: ${spacings.l} ${spacings.m};
+  `,
 
-const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-`;
+  Header: styled.div`
+    display: flex;
+    justify-content: space-between;
+  `,
 
-const CenteredText = styled.div`
-  text-align: center;
-`;
+  CenteredText: styled.div`
+    text-align: center;
+  `,
 
-const PositionedInfoButton = styled(InfoButton)`
-  /* position: absolute;
+  PositionedInfoButton: styled(InfoButton)`
+    /* position: absolute;
   right: 20px;
   bottom: 15px; */
-`;
+  `,
+
+  InfoRoot: styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    line-height: 200%;
+  `,
+};
 
 function Info() {
   return (
-    <>
-      <h3>Calculating your Gas Fee</h3>
-      <p>Your zk assets are invested in one of the following ways:</p>
-      <p>
-        <b>
-          <i>Batched transaction: </i>
-        </b>
+    <S.InfoRoot>
+      <Text text="Your zk assets are invested in one of the following ways:" />
+      <Text>
+        <Text inline italic weight="bold" text="Batched transaction: " />
         your funds are grouped with other users privately in a roll-up. These are then sent approx every 2 hours. This
         is the most cost effective transaction as everyone shares the fee.
-      </p>
-    </>
+      </Text>
+    </S.InfoRoot>
   );
 }
 
@@ -73,18 +80,24 @@ export function GasSection(props: GasSectionProps) {
     assetPrice !== undefined &&
     `$${convertToPriceString(props.fee, props.asset.decimals, assetPrice)}`;
   return (
-    <InfoWrap showingInfo={showingInfo} infoContent={<Info />} onHideInfo={() => setShowingInfo(false)}>
-      <Content>
-        <Header>
+    <InfoWrap
+      showingInfo={showingInfo}
+      infoHeader={<Text weight="bold" text="Calculating your Gas Fee" />}
+      infoContent={<Info />}
+      onHideInfo={() => setShowingInfo(false)}
+      borderRadius={20}
+    >
+      <S.Content>
+        <S.Header>
           <Text>Gas Fee</Text>
           <Text weight="bold" italic size="s">
             {gasPrice}
           </Text>
-        </Header>
+        </S.Header>
         <Spacer />
         <SpeedSwitch value={props.speed} onChangeValue={props.onChangeSpeed} options={OPTS} />
         <Spacer />
-        <CenteredText>
+        <S.CenteredText>
           <Text text={getTimingMessage(props.speed)} size="xxs" color="grey" />
           <Spacer />
           <Text size="xxs">
@@ -96,10 +109,10 @@ export function GasSection(props: GasSectionProps) {
           </Text>
           <Spacer />
           <Text size="xxs">[TODO:??] other people did this in the last hour</Text>
-        </CenteredText>
+        </S.CenteredText>
         <Spacer />
-        <PositionedInfoButton onClick={() => setShowingInfo(true)} />
-      </Content>
+        <S.PositionedInfoButton onClick={() => setShowingInfo(true)} />
+      </S.Content>
     </InfoWrap>
   );
 }

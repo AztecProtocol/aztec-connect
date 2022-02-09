@@ -1,0 +1,19 @@
+.iconButton {
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.iconButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.iconButton:enabled:hover {
+  filter: brightness(90%);
+}
+
+.iconButton:enabled:active {
+  filter: brightness(70%);
+}

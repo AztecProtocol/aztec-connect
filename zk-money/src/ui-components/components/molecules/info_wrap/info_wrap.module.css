@@ -1,0 +1,33 @@
+.root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.infoLayer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(15px);
+  padding: 15px 25px;
+}
+
+.header {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 50px;
+}
+
+.scroll {
+  flex-grow: 1;
+  height: calc(100% - 50px);
+}
+
+.content {
+  padding: 0 30px;
+}
