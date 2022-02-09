@@ -1,4 +1,4 @@
-import { DeFiCardProgress } from 'components/defi_card/defi_card_content/defi_card_progress';
+import { BridgeCountDown } from 'features/defi/bridge_count_down';
 import style from './defi_info_banner.module.css';
 
 interface DefiInfoBannerProps {
@@ -11,7 +11,7 @@ export function DefiInfoBanner(props: DefiInfoBannerProps) {
     <>
       <div className={style.upper}>
         <img className={style.img} src={props.imgSrc} />
-        <DeFiCardProgress />
+        <BridgeCountDown nextBatch={new Date(Date.now() + 1000 * 60 * 60)} takenSlots={10} totalSlots={12} />
       </div>
       <div className={style.description}>{props.longDesc}</div>
     </>
