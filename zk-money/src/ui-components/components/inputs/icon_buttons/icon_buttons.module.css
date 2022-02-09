@@ -10,6 +10,10 @@
   cursor: not-allowed;
 }
 
+.iconButton:enabled:hover {
+  filter: brightness(90%);
+}
+
 .iconButton:enabled:active {
-  filter: brightness(50%);
+  filter: brightness(70%);
 }

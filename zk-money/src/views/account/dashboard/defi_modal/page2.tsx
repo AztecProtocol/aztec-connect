@@ -9,9 +9,9 @@ import { DefiSubmissionSteps } from './defi_submission_steps';
 import { Disclaimer } from './disclaimer';
 import { TransactionComplete } from './transaction_complete';
 import { DefiFormFields } from './types';
-import { RecipeStats } from './recipe_stats';
 import { DefiRecipe } from 'alt-model/defi/types';
 import { BridgeCountDown } from 'features/defi/bridge_count_down';
+import { BridgeKeyStats } from 'features/defi/bridge_key_stats';
 
 const Root = styled.div`
   display: grid;
@@ -19,15 +19,10 @@ const Root = styled.div`
 `;
 
 const S_TopStats = styled.div`
-  display: flex;
-  gap: 20px;
-  justify-content: space-between;
-  align-items: center;
-`;
-
-const S_DescText = styled.div`
-  width: 25%;
-  margin-left: 25px;
+  display: grid;
+  grid-template-columns: 3fr 2fr 5fr;
+  gap: 10%;
+  padding: 20px 25px;
 `;
 
 const S_Separator = styled.div`
@@ -64,16 +59,14 @@ export function Page2({ recipe, composerState, asset, maxAmount, fields, fee, on
     <Root>
       <BorderBox>
         <S_TopStats>
-          <S_DescText>
-            <Text size="xxs" italic text={recipe.shortDesc} />
-          </S_DescText>
+          <Text size="xxs" italic text={recipe.shortDesc} />
           <BridgeCountDown
             nextBatch={new Date(Date.now() + 1000 * 60 * 60)}
             takenSlots={10}
             totalSlots={12}
-            hideSlotsRemaining={true}
+            compact={true}
           />
-          <RecipeStats />
+          <BridgeKeyStats compact />
         </S_TopStats>
         <S_Separator />
         <Breakdown amount={amount} fee={fee ?? 0n} asset={asset} />

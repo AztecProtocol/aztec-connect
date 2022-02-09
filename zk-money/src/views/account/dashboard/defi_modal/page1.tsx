@@ -1,13 +1,13 @@
 import styled from 'styled-components/macro';
 import { Asset } from '../../../../app';
 import { Text, BorderBox, Link, Button } from '../../../../components';
-import { RecipeStats } from './recipe_stats';
 import faqIcon from '../../../../images/faq_icon_gradient.svg';
 import { DefiFormFieldAnnotations, DefiFormFields } from './types';
 import { GasSection } from './gas_section';
 import { AmountSection } from './amount_section';
 import { DefiRecipe } from 'alt-model/defi/types';
 import { BridgeCountDown } from 'features/defi/bridge_count_down';
+import { BridgeKeyStats } from 'features/defi/bridge_key_stats';
 
 const Root = styled.div`
   display: grid;
@@ -18,6 +18,12 @@ const Root = styled.div`
     'desc desc'
     'amount stats'
     'amount gas';
+`;
+
+const StatsBorderBox = styled(BorderBox)`
+  padding: 0 25px;
+  display: flex;
+  align-items: center;
 `;
 
 const FaqLink = styled.div`
@@ -78,9 +84,9 @@ export function Page1({
           amountStrAnnotation={fieldAnnotations.amountStr}
         />
       </BorderBox>
-      <BorderBox area="stats">
-        <RecipeStats />
-      </BorderBox>
+      <StatsBorderBox area="stats">
+        <BridgeKeyStats compact />
+      </StatsBorderBox>
       <BorderBox area="gas">
         <GasSection
           speed={fields.speed}

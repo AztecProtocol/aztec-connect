@@ -1,0 +1,27 @@
+.root {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.label {
+  text-transform: uppercase;
+  padding-bottom: 10px;
+  font-size: 9px;
+}
+
+.value {
+  font-weight: bold;
+  font-style: italic;
+  font-size: 20px;
+}
+
+.compact .value {
+  font-size: 15px;
+}
