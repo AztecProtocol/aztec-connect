@@ -1,3 +1,3 @@
 export function Trade() {
-  return <div>Trade</div>;
+  return <div>Under Construction 🛠</div>;
 }

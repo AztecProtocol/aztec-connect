@@ -31,7 +31,7 @@ const CardStat = styled.div`
   width: 33%;
 `;
 
-export const DeFiCardStats = () => {
+export const DefiCardStats = () => {
   return (
     <CardStats>
       <CardStat>

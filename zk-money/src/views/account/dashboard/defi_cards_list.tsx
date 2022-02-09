@@ -1,10 +1,10 @@
 import styled from 'styled-components/macro';
 import { SectionTitle } from 'ui-components';
-import { DeFiCard } from '../../../components';
+import { DefiCard } from '../../../components';
 import { RECIPES } from '../../../alt-model/defi/recipes';
 import { DefiRecipe } from '../../../alt-model/defi/types';
 
-const DeFiCardWrapper = styled.div`
+const DefiCardWrapper = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
   flex-direction: row;
@@ -13,15 +13,15 @@ const DeFiCardWrapper = styled.div`
   gap: 5%;
 `;
 
-export const DeFiCardsList = ({ onSelect }: { onSelect: (recipe: DefiRecipe) => void }) => {
+export const DefiCardsList = ({ onSelect }: { onSelect: (recipe: DefiRecipe) => void }) => {
   return (
     <>
       <SectionTitle label="Popular Investments" />
-      <DeFiCardWrapper>
+      <DefiCardWrapper>
         {Object.values(RECIPES).map((recipe, idx) => (
-          <DeFiCard recipe={recipe} onSelect={onSelect} />
+          <DefiCard recipe={recipe} onSelect={onSelect} />
         ))}
-      </DeFiCardWrapper>
+      </DefiCardWrapper>
     </>
   );
 };

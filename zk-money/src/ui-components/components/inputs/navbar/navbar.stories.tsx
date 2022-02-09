@@ -15,4 +15,4 @@ const Template: ComponentStory<typeof Navbar> = args => (
 );
 
 export const Example = Template.bind({});
-Example.args = { balance: '5.400,99', accountComponent: <div>@jaosef</div> };
+Example.args = { accountComponent: <div>@jaosef</div> };

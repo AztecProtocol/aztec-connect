@@ -1,17 +1,17 @@
 import { Card, CardHeaderSize } from 'ui-components';
-import { DeFiCardHeader } from './defi_card_header';
-import { DeFiCardContent } from './defi_card_content';
+import { DefiCardHeader } from './defi_card_header';
+import { DefiCardContent } from './defi_card_content';
 import { DefiRecipe } from '../../alt-model/defi/types';
 
-interface DeFiCardProps {
+interface DefiCardProps {
   recipe: DefiRecipe;
   onSelect: (recipe: DefiRecipe) => void;
 }
-export const DeFiCard: React.FunctionComponent<DeFiCardProps> = props => {
+export const DefiCard: React.FunctionComponent<DefiCardProps> = props => {
   return (
     <Card
-      cardHeader={<DeFiCardHeader recipe={props.recipe} />}
-      cardContent={<DeFiCardContent {...props} />}
+      cardHeader={<DefiCardHeader recipe={props.recipe} />}
+      cardContent={<DefiCardContent {...props} />}
       headerSize={CardHeaderSize.LARGE}
     />
   );

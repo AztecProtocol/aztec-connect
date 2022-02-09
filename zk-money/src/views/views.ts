@@ -22,19 +22,19 @@ const views = [
     action: AppAction.ACCOUNT,
   },
   {
-    path: '/dashboard/earn',
+    path: '/earn',
     action: AppAction.ACCOUNT,
   },
   {
-    path: '/dashboard/send',
+    path: '/send',
     action: AppAction.ACCOUNT,
   },
   {
-    path: '/dashboard/trade',
+    path: '/trade',
     action: AppAction.ACCOUNT,
   },
   {
-    path: '/dashboard/balance',
+    path: '/balance',
     action: AppAction.ACCOUNT,
   },
 ];
@@ -68,4 +68,4 @@ export const getUrlFromLoginMode = (mode: LoginMode) => {
   }
 };
 
-export const getAccountUrl = () => '/dashboard';
+export const getAccountUrl = () => '/balance';

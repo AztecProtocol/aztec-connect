@@ -44,7 +44,7 @@ const ProgressBarCompletion = styled.div`
   left: 0;
 `;
 
-export const DeFiCardProgress = () => {
+export const DefiCardProgress = () => {
   return (
     <CardProgress>
       <CardProgressInfo>

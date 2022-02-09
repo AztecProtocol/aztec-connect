@@ -1,7 +1,9 @@
+import { Link, useLocation } from 'react-router-dom';
+import { bindStyle } from '../../../util/classnames';
 import logo from '../../../images/zk_money.svg';
 import logoWhite from '../../../images/zk_money_white.svg';
-import { bindStyle } from '../../../util/classnames';
 import style from './navbar.module.scss';
+import { useTotalBalance } from 'alt-model';
 
 const cx = bindStyle(style);
 
@@ -14,7 +16,6 @@ interface NavbarProps {
   isLoggedIn: boolean;
   path?: string;
   theme?: Theme;
-  balance?: string;
   onLogin?: () => void;
   onChange?: (path: string) => void;
   // NOTE: This is receiving an AccountComponent
@@ -31,69 +32,64 @@ interface Link {
 }
 
 const LINKS: Link[] = [
-  { url: '/dashboard/earn', label: 'Earn' },
-  { url: '/dashboard/trade', label: 'Trade', disabled: true },
+  { url: '/earn', label: 'Earn' },
+  { url: '/trade', label: 'Trade', disabled: true },
 ];
 
-export function Navbar({
-  balance,
-  isLoggedIn,
-  accountComponent,
-  theme,
-  onChange,
-  onLogin,
-  path = '/',
-}: NavbarProps): JSX.Element {
+export function Navbar({ isLoggedIn, accountComponent, theme, onChange, onLogin }: NavbarProps): JSX.Element {
+  const location = useLocation();
+  const totalBalance = useTotalBalance();
+
   return (
     <div className={style.headerRoot}>
       <div className={cx(style.logoRoot, { enabled: !!onChange })}>
-        <div onClick={() => onChange && onChange('/')}>
+        <Link to="/">
           <img className={style.logo} src={theme === Theme.GRADIENT ? logoWhite : logo} />
-        </div>
+        </Link>
       </div>
-      {path && onChange && (
-        <div className={style.accountRoot}>
-          <div />
-          {LINKS.map(link => (
-            <div
-              key={link.url}
-              onClick={() => onChange(link.url)}
-              className={cx(style.link, style.navLink, {
-                active: link.url === path,
+
+      <div className={style.accountRoot}>
+        <div />
+        {LINKS.map(link => (
+          <Link
+            key={link.url}
+            to={link.url}
+            className={cx(style.link, style.navLink, {
+              active: link.url === location.pathname,
+              white: theme === Theme.WHITE,
+              gradient: theme === Theme.GRADIENT,
+            })}
+          >
+            {link.label}
+          </Link>
+        ))}
+        {isLoggedIn ? (
+          <div className={style.accountWrapper}>
+            <Link
+              to={'/balance'}
+              className={cx(style.link, style.balanceLink, {
+                active: '/balance' === location.pathname,
                 white: theme === Theme.WHITE,
                 gradient: theme === Theme.GRADIENT,
               })}
             >
-              {link.label}
-            </div>
-          ))}
-          {isLoggedIn ? (
-            <div className={style.accountWrapper}>
-              <div
-                onClick={() => onChange('/dashboard/balance')}
-                className={cx(style.link, style.balanceLink, {
-                  active: '/dashboard/balance' === path,
-                  white: theme === Theme.WHITE,
-                  gradient: theme === Theme.GRADIENT,
-                })}
-              >
-                ${balance}
-              </div>
-              <div className={style.accountComponent}>{accountComponent}</div>
-            </div>
-          ) : (
-            <div
-              onClick={() => onLogin && onLogin()}
-              className={cx(style.link, style.navLink, {
-                white: theme === Theme.WHITE,
-                gradient: theme === Theme.GRADIENT,
-              })}
-            >
-              Log In
-            </div>
-          )}
-        </div>
-      )}
+              ${totalBalance}
+            </Link>
+            <div className={style.accountComponent}>{accountComponent}</div>
+          </div>
+        ) : (
+          <Link
+            to="/signin"
+            className={cx(style.link, style.navLink, {
+              active: '/signin' === location.pathname || '/signup' === location.pathname,
+              white: theme === Theme.WHITE,
+              gradient: theme === Theme.GRADIENT,
+            })}
+          >
+            Log In
+          </Link>
+        )}
+      </div>
     </div>
   );
 }

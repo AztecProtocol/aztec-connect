@@ -107,6 +107,10 @@
 }
 
 .balanceLink.gradient::before {
+  @include mixins.gradient_border(10px, 2px, transparent, transparent);
+}
+
+.balanceLink.gradient:hover::before {
   @include mixins.gradient_border(10px, 2px, white, white);
 }
 

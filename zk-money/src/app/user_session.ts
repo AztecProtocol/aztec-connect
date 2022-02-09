@@ -1418,7 +1418,7 @@ export class UserSession extends EventEmitter {
 
   // Remove the following ugly workarounds.
   private async ensureUserStates() {
-    while (!(this.sdk as any).core.userStateFactory) {
+    while ((this.sdk as any).core.sdkStatus.dataRoot.equals(Buffer.alloc(0))) {
       await new Promise(resolve => setTimeout(resolve, 200));
       if (this.destroyed) {
         throw new Error('Session destroyed.');

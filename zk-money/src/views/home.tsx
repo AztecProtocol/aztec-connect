@@ -136,12 +136,14 @@ export interface HomeState {
 interface HomeProps {
   onLogin: () => void;
   onSignupAndShield: (amount: bigint) => void;
+  isLoggedIn: boolean;
   homeState: HomeState;
 }
 
 export const Home: React.FunctionComponent<HomeProps> = ({
   onLogin,
   onSignupAndShield,
+  isLoggedIn,
   homeState: { supportStatus, ethPrice },
 }) => {
   const [showUnsupported, setShowUnsupported] = useState(false);
@@ -171,14 +173,16 @@ export const Home: React.FunctionComponent<HomeProps> = ({
         <ShieldCol>
           <ShieldSelectWrapper>
             <ShieldSelect onSubmit={handleSignupAndShield} ethPrice={ethPrice} />
-            <LoginBlock>
-              <Text size="s">
-                Already have an account?{' '}
-                <TextLink color="white" underline inline onClick={handleLogin}>
-                  Login
-                </TextLink>
-              </Text>
-            </LoginBlock>
+            {!isLoggedIn && (
+              <LoginBlock>
+                <Text size="s">
+                  Already have an account?{' '}
+                  <TextLink color="white" underline inline onClick={handleLogin}>
+                    Login
+                  </TextLink>
+                </Text>
+              </LoginBlock>
+            )}
           </ShieldSelectWrapper>
         </ShieldCol>
         <TextCol>
@@ -189,15 +193,27 @@ export const Home: React.FunctionComponent<HomeProps> = ({
               payments for Ethereum
             </Text>
           </SectionHead>
-          <SectionCaption>
-            <Text size="m">
-              Connect{' '}
-              <Text weight="bold" inline>
-                your wallet
-              </Text>{' '}
-              and shield your first ETH to get started
-            </Text>
-          </SectionCaption>
+          {isLoggedIn ? (
+            <SectionCaption>
+              <Text size="m">
+                <Text weight="bold" inline>
+                  Welcome back
+                </Text>
+                {', '}
+                shield ETH with our state-of-the-art technology
+              </Text>
+            </SectionCaption>
+          ) : (
+            <SectionCaption>
+              <Text size="m">
+                Connect{' '}
+                <Text weight="bold" inline>
+                  your wallet
+                </Text>{' '}
+                and shield your first ETH to get started
+              </Text>
+            </SectionCaption>
+          )}
         </TextCol>
       </ContentRoot>
       {showUnsupported && (

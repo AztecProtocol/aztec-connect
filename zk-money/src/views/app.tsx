@@ -1,7 +1,6 @@
 import { AztecSdk } from '@aztec/sdk';
 import { Navbar } from 'ui-components';
 import { BroadcastChannel } from 'broadcast-channel';
-import { isEqual } from 'lodash';
 import { PureComponent } from 'react';
 import styled from 'styled-components/macro';
 import { AppContext } from '../alt-model/app_context';
@@ -34,8 +33,7 @@ import { Login } from '../views/login';
 import { getAccountUrl, getActionFromUrl, getLoginModeFromUrl, getUrlFromAction, getUrlFromLoginMode } from './views';
 import { Dashboard } from './account/dashboard/dashboard';
 import { UserAccount } from '../components/template/user_account';
-import { useTotalBalance } from '../alt-model';
-import { NavigateFunction } from 'react-router-dom';
+import { NavigateFunction, Route, Routes } from 'react-router-dom';
 
 interface AppProps {
   config: Config;
@@ -165,10 +163,14 @@ export class AppView extends PureComponent<AppProps, AppState> {
 
     if (action === AppAction.ACCOUNT) {
       const url = getAccountUrl();
-      this.props.navigate(url);
+      if (window.location.pathname === '/signin' || window.location.pathname === '/signup') {
+        setTimeout(() => this.props.navigate(url), 0);
+      }
     } else {
       const url = getUrlFromAction(action);
-      this.props.navigate(url);
+      if (window.location.pathname === '/balance') {
+        setTimeout(() => this.props.navigate(url), 0);
+      }
     }
   };
 
@@ -301,14 +303,12 @@ export class AppView extends PureComponent<AppProps, AppState> {
     await this.app.clearLocalAccountV0s();
   };
 
-  private handlePathChange = (path: string) => {
-    this.setState({ path });
-  };
-
   private getTheme = () => {
-    const { path } = this.state;
-
-    if (path === '/') {
+    if (
+      window.location.pathname === '/' ||
+      window.location.pathname === '/signin' ||
+      window.location.pathname === '/signup'
+    ) {
       return Theme.GRADIENT;
     }
 
@@ -326,7 +326,6 @@ export class AppView extends PureComponent<AppProps, AppState> {
       systemMessage,
       isLoading,
       homeState,
-      path,
     } = this.state;
     const { config } = this.props;
     const { requiredNetwork } = this.app;
@@ -334,7 +333,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
     const theme = this.getTheme();
     const processingAction = this.app.isProcessingAction();
     const allowReset = action !== AppAction.ACCOUNT && (!processingAction || systemMessage.type === MessageType.ERROR);
-    const rootUrl = allowReset ? '/' : this.props.path;
+    const rootUrl = allowReset ? '/' : window.location.pathname;
     const isLoggedIn = step === LoginStep.DONE;
 
     const accountComponent = isLoggedIn ? (
@@ -378,66 +377,62 @@ export class AppView extends PureComponent<AppProps, AppState> {
             userSession: this.app.getSession(),
           }}
         >
-          <NavbarWrapper
+          <Navbar
+            path={window.location.pathname}
             theme={theme}
             isLoggedIn={isLoggedIn}
             accountComponent={accountComponent}
-            path={path}
-            onChange={this.handlePathChange}
             onLogin={this.handleLogin}
+            // balance={totalBalance}
+            // networkComponent={networkComponent}
           />
-          {path === '/' ? (
-            action === AppAction.LOGIN ? (
-              <Login
-                worldState={worldState}
-                loginState={loginState}
-                providerState={providerState}
-                availableWallets={this.app.availableWallets}
-                shieldForAliasForm={shieldForAliasForm}
-                explorerUrl={config.explorerUrl}
-                systemMessage={systemMessage}
-                setSeedPhrase={this.app.setSeedPhrase}
-                setAlias={this.app.setAlias}
-                setRememberMe={this.app.setRememberMe}
-                onSelectWallet={this.handleConnectWallet}
-                onSelectSeedPhrase={this.app.confirmSeedPhrase}
-                onMigrateToWallet={this.app.migrateToWallet}
-                onMigrateNotes={this.app.migrateNotes}
-                onSelectAlias={this.app.confirmAlias}
-                onRestart={allowReset && step !== LoginStep.CONNECT_WALLET ? this.handleRestart : undefined}
-                onForgotAlias={this.app.forgotAlias}
-                onMigrateAccount={this.app.migrateAccount}
-                onClearAccountV0s={this.handleClearAccountV0s}
-                onShieldForAliasFormInputsChange={this.app.changeShieldForAliasForm}
-                onSubmitShieldForAliasForm={this.app.claimUserName}
-                onChangeWallet={this.app.changeWallet}
+          <Routes>
+            {['/signup', '/signin'].map((path: string) => (
+              <Route
+                path={path}
+                element={
+                  <Login
+                    worldState={worldState}
+                    loginState={loginState}
+                    providerState={providerState}
+                    availableWallets={this.app.availableWallets}
+                    shieldForAliasForm={shieldForAliasForm}
+                    explorerUrl={config.explorerUrl}
+                    systemMessage={systemMessage}
+                    setSeedPhrase={this.app.setSeedPhrase}
+                    setAlias={this.app.setAlias}
+                    setRememberMe={this.app.setRememberMe}
+                    onSelectWallet={this.handleConnectWallet}
+                    onSelectSeedPhrase={this.app.confirmSeedPhrase}
+                    onMigrateToWallet={this.app.migrateToWallet}
+                    onMigrateNotes={this.app.migrateNotes}
+                    onSelectAlias={this.app.confirmAlias}
+                    onRestart={allowReset && step !== LoginStep.CONNECT_WALLET ? this.handleRestart : undefined}
+                    onForgotAlias={this.app.forgotAlias}
+                    onMigrateAccount={this.app.migrateAccount}
+                    onClearAccountV0s={this.handleClearAccountV0s}
+                    onShieldForAliasFormInputsChange={this.app.changeShieldForAliasForm}
+                    onSubmitShieldForAliasForm={this.app.claimUserName}
+                    onChangeWallet={this.app.changeWallet}
+                  />
+                }
               />
-            ) : (
-              <Home onLogin={this.handleLogin} onSignupAndShield={this.handleSignupAndShield} homeState={homeState} />
-            )
-          ) : (
-            <Dashboard path={path} />
-          )}
+            ))}
+            <Route path="/*" element={<Dashboard />} />
+            <Route
+              path="/"
+              element={
+                <Home
+                  isLoggedIn={isLoggedIn}
+                  onLogin={this.handleLogin}
+                  onSignupAndShield={this.handleSignupAndShield}
+                  homeState={homeState}
+                />
+              }
+            />
+          </Routes>
         </AppContext.Provider>
       </Template>
     );
   }
-}
-
-// NOTE: This wrapper is only here until we can make hooks work on UI Components
-//      the reason is because we have to run useTotalBalance from within Navbar
-function NavbarWrapper({ theme, isLoggedIn, accountComponent, path, onChange, onLogin }: any) {
-  const totalBalance = useTotalBalance();
-  return (
-    <Navbar
-      path={path}
-      theme={theme}
-      isLoggedIn={isLoggedIn}
-      onChange={onChange}
-      balance={totalBalance}
-      accountComponent={accountComponent}
-      onLogin={onLogin}
-      // networkComponent={networkComponent}
-    />
-  );
 }

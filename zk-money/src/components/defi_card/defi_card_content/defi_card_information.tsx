@@ -53,11 +53,11 @@ const TextBold = styled.span`
   font-weight: 600;
 `;
 
-interface DeFiCardInformationProps {
+interface DefiCardInformationProps {
   onCloseInformation: () => void;
 }
 
-export const DeFiCardInformation = ({ onCloseInformation }: DeFiCardInformationProps) => {
+export const DefiCardInformation = ({ onCloseInformation }: DefiCardInformationProps) => {
   return (
     <>
       <CardInformation />

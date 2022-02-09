@@ -76,11 +76,11 @@ const Amount = styled.div`
   align-items: center;
 `;
 
-interface DeFiLogoProps {
+interface DefiLogoProps {
   isLoading: boolean;
 }
 
-const DeFiLogo = styled.img<DeFiLogoProps>`
+const DefiLogo = styled.img<DefiLogoProps>`
   width: 30px;
   margin-right: 20px;
   opacity: ${({ isLoading }) => (isLoading ? 0.5 : 1)};
@@ -106,7 +106,7 @@ const LoadingIcon = styled.img`
   margin: 0 10px;
 `;
 
-interface DeFiInvestmentProps {
+interface DefiInvestmentProps {
   name: string;
   apy: number;
   amount: number;
@@ -114,7 +114,7 @@ interface DeFiInvestmentProps {
   isLocked?: boolean;
 }
 
-export function DeFiInvestment({ name, apy, amount, eta, isLocked }: DeFiInvestmentProps) {
+export function DefiInvestment({ name, apy, amount, eta, isLocked }: DefiInvestmentProps) {
   let actions;
   if (eta) {
     actions = (
@@ -141,7 +141,7 @@ export function DeFiInvestment({ name, apy, amount, eta, isLocked }: DeFiInvestm
   return (
     <InvestmentWrapper>
       <Name>
-        <DeFiLogo isLoading={!!eta} src={aaveIcon} />
+        <DefiLogo isLoading={!!eta} src={aaveIcon} />
         <NameLabel>{name}</NameLabel>
       </Name>
       <Values>

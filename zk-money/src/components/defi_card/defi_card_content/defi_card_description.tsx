@@ -21,12 +21,12 @@ const CardDescriptionWrapper = styled.div`
   padding: 20px 40px;
 `;
 
-interface DeFiCardDescriptionProps {
+interface DefiCardDescriptionProps {
   onOpenInformation: () => void;
   text: string;
 }
 
-export const DeFiCardDescription = ({ onOpenInformation, text }: DeFiCardDescriptionProps) => {
+export const DefiCardDescription = ({ onOpenInformation, text }: DefiCardDescriptionProps) => {
   return (
     <CardDescriptionWrapper>
       <CardDescriptionLabel>{text}</CardDescriptionLabel>

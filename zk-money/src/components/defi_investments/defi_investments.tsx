@@ -1,7 +1,7 @@
 import { SectionTitle } from 'ui-components';
 import { useState } from 'react';
 import { Pagination } from '..';
-import { DeFiInvestment } from './defi_investment';
+import { DefiInvestment } from './defi_investment';
 
 const INVESTMENTS = [
   { name: 'Aave Lending 1', apy: 2.45, amount: 1000.45, eta: 21 },
@@ -16,14 +16,14 @@ const INVESTMENTS = [
 ];
 const INVESTMENTS_PER_PAGE = 5;
 
-export function DeFiInvestments() {
+export function DefiInvestments() {
   const [page, setPage] = useState(1);
 
   return (
     <>
       <SectionTitle label="DeFi Investments" showFaq={true} />
       {INVESTMENTS.slice((page - 1) * INVESTMENTS_PER_PAGE, page * INVESTMENTS_PER_PAGE).map((investment, idx) => (
-        <DeFiInvestment
+        <DefiInvestment
           key={idx}
           name={investment.name}
           apy={investment.apy}

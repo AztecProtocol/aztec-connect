@@ -6,7 +6,7 @@ const motifs = {
     color: #1c7cff;
   `,
   frost: css`
-    background-color: #fff8;
+    background-color: #4db5ff;
     color: white;
   `,
 };

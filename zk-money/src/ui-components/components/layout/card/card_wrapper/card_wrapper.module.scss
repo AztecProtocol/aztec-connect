@@ -1,4 +1,4 @@
-@use "../../../../styles/mixins.scss";
+@use '../../../../styles/mixins.scss';
 
 .cardWrapper {
   overflow: hidden;
@@ -9,6 +9,5 @@
   justify-content: center;
   border-radius: 20px;
   align-items: center;
-  border: 1px solid #e8e6e6;
   @include mixins.shadow_border;
 }
