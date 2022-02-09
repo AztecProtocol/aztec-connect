@@ -36,11 +36,14 @@ export function VerticalScrollRegion(props: { children?: React.ReactNode }) {
       requestAnimationFrame(applyProportions);
     });
   }, []);
-  const handleScrollTo = useCallback((scrollTop: number) => {
-    const elem = viewportRef.current;
-    if (elem) elem.scrollTop = scrollTop;
-    if (viewportRef.current) applyFade(viewportRef.current, viewHeight, contentHeight, scrollTop);
-  }, []);
+  const handleScrollTo = useCallback(
+    (scrollTop: number) => {
+      const elem = viewportRef.current;
+      if (elem) elem.scrollTop = scrollTop;
+      if (viewportRef.current) applyFade(viewportRef.current, viewHeight, contentHeight, scrollTop);
+    },
+    [viewHeight, contentHeight],
+  );
   const handleScroll = () => {
     const scrollTop = viewportRef.current?.scrollTop ?? 0;
     barRef.current?.setScroll(scrollTop);
