@@ -288,8 +288,8 @@ export const Account: React.FunctionComponent<AccountProps> = ({
                 your wallet.
               </PaddedBlock>
               <PaddedBlock>
-                Each note is owned by your username, you can't spend any of your shielded balance until your username
-                has been registered successfully. On busy times, this can take several hours.
+                Each note is owned by your alias, you can't spend any of your shielded balance until your alias has been
+                registered successfully. At busy times, this can take several hours.
               </PaddedBlock>
             </Text>
           </PaddedBlock>

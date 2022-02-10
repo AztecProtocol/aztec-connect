@@ -396,11 +396,11 @@ export class SendForm extends EventEmitter implements AccountForm {
 
     const recipient = form.recipient.value.input;
     if (!recipient) {
-      form.recipient = withError(form.recipient, `Please enter recipient's username or ethereum address.`);
+      form.recipient = withError(form.recipient, `Please enter recipient's alias or ethereum address.`);
     } else if (isSameAlias(recipient, this.alias)) {
       form.recipient = withError(form.recipient, 'Cannot send fund to yourself.');
     } else if (!isAddress(recipient) && !(await this.accountUtils.isValidRecipient(recipient))) {
-      form.recipient = withError(form.recipient, `Cannot find a user with username '${recipient}'.`);
+      form.recipient = withError(form.recipient, `Cannot find a user with alias '${recipient}'.`);
     }
 
     const fee = form.fees.value[form.speed.value].fee;

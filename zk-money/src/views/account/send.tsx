@@ -176,7 +176,7 @@ export const Send: React.FunctionComponent<SendProps> = ({
               onChangeValue={value =>
                 onChangeInputs({ recipient: { value: { ...recipient.value, input: value.replace(/^@+/, '') } } })
               }
-              placeholder="username or ethereum address"
+              placeholder="alias or ethereum address"
             />
           </InputWrapper>
           <RecipientMessageWrapper>

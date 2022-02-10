@@ -395,7 +395,9 @@ export class UserSession extends EventEmitter {
       }
 
       // TODO - show a signup link in error message.
-      throw new Error('Account not registered.');
+      throw new Error(
+        'Account not found. Please first create a new account or resume your current registration by clicking "Create new account".',
+      );
     }
 
     // TODO - different aliases might have the same accountPublicKey
@@ -563,12 +565,12 @@ export class UserSession extends EventEmitter {
 
     const error = getAliasError(aliasInput);
     if (error) {
-      return this.emitSystemMessage(!isNewAlias ? 'Incorrect username.' : error, MessageType.ERROR);
+      return this.emitSystemMessage(!isNewAlias ? 'Incorrect alias.' : error, MessageType.ERROR);
     }
 
     if (isNewAlias) {
       if (!(await this.accountUtils.isAliasAvailable(aliasInput))) {
-        return this.emitSystemMessage('This username has been taken.', MessageType.ERROR);
+        return this.emitSystemMessage('This alias has been taken.', MessageType.ERROR);
       }
       const allowToProceed = await this.allowNewUser();
       if (!allowToProceed) {
@@ -578,7 +580,7 @@ export class UserSession extends EventEmitter {
     } else if (this.loginState.seedPhrase) {
       const address = await this.accountUtils.getAliasPublicKey(aliasInput);
       if (!address?.equals(this.keyVaultV0.accountPublicKey)) {
-        return this.emitSystemMessage('Incorrect username.', MessageType.ERROR);
+        return this.emitSystemMessage('Incorrect alias.', MessageType.ERROR);
       }
 
       this.toStep(LoginStep.MIGRATE_WALLET);
@@ -586,7 +588,7 @@ export class UserSession extends EventEmitter {
       const address = await this.accountUtils.getAliasPublicKey(aliasInput);
       const keyVault = mode === LoginMode.MIGRATE ? this.keyVaultV0 : this.keyVault;
       if (!address?.equals(keyVault.accountPublicKey)) {
-        return this.emitSystemMessage('Incorrect username.', MessageType.ERROR);
+        return this.emitSystemMessage('Incorrect alias.', MessageType.ERROR);
       }
     }
 
@@ -973,7 +975,7 @@ export class UserSession extends EventEmitter {
       this.toStep(LoginStep.RECOVER_ACCOUNT_PROOF);
 
       this.emitSystemMessage(
-        `Please sign the message in your wallet to register username @${alias}...`,
+        `Please sign the message in your wallet to register alias @${alias}...`,
         MessageType.WARNING,
       );
       this.keyVault = await KeyVault.create(this.provider, this.sdk);
@@ -1002,9 +1004,7 @@ export class UserSession extends EventEmitter {
       }
 
       if (nonce > 0) {
-        throw new Error(
-          `@${alias} has been taken. Please log in with your wallet or sign up with a different username.`,
-        );
+        throw new Error(`@${alias} has been taken. Please log in with your wallet or sign up with a different alias.`);
       }
 
       await this.createShieldForAliasForm(userId);

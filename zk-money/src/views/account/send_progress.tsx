@@ -1,6 +1,6 @@
 import React from 'react';
 import { AssetState, isAddress, SendFormValues, SendStatus, toBaseUnits } from '../../app';
-import { breakpoints, Theme } from '../../styles';
+import { Theme } from '../../styles';
 import { AssetInfoRow } from './asset_info_row';
 import { ProgressTemplate } from './progress_template';
 

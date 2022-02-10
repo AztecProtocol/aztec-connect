@@ -551,7 +551,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
 
     const recipient = form.recipient.value.input;
     if (!isSameAlias(recipient, this.alias) && !(await this.accountUtils.isValidRecipient(recipient))) {
-      form.recipient = withError(form.recipient, `Cannot find a user with username '${recipient}'.`);
+      form.recipient = withError(form.recipient, `Cannot find a user with alias '${recipient}'.`);
     }
 
     return form;
@@ -840,8 +840,6 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     const fee = this.values.fees.value[this.values.speed.value].fee;
     if (pendingBalance > fee) {
       amount = pendingBalance - fee;
-    } else {
-      amount = this.values.maxAmount.value;
     }
     if (amount && !this.values.amount.value) {
       this.updateFormValues({

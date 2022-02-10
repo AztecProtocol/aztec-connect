@@ -109,7 +109,7 @@ export const Referral: React.FunctionComponent<ReferralProps> = ({ alias, overri
         <Text size="s">
           {'Great news '}
           <Text text={`@${alias}`} weight="bold" inline />
-          {', you bagged a great username.'}
+          {', you bagged a great alias.'}
         </Text>
       </PaddedBlock>
       <CouponRoot size="s">

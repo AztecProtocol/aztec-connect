@@ -187,10 +187,10 @@ const getStepInfo = ({
           title: (
             <>
               {'Enter your '}
-              <Text text="username" weight="bold" inline />
+              <Text text="alias" weight="bold" inline />
             </>
           ),
-          description: `Please enter the username you used to register your zk.money account.`,
+          description: `Please enter the alias you used to register your zk.money account.`,
         };
       }
       return {
@@ -198,17 +198,17 @@ const getStepInfo = ({
         title:
           mode === LoginMode.SIGNUP ? (
             <>
-              {'Pick a '}
-              <Text text="username" weight="bold" inline />
+              {'Pick an '}
+              <Text text="alias" weight="bold" inline />
             </>
           ) : (
             <>
               {'Pick a '}
               <Text text="new" weight="bold" inline />
-              {' username'}
+              {' alias'}
             </>
           ),
-        description: `Your username makes it simple for your friends to send you crypto. It lets them look up your end-to-end encryption keys, so the rest of the world can’t snoop on your data 👀`,
+        description: `Your alias makes it simple for your friends to send you crypto. It lets them look up your end-to-end encryption keys, so the rest of the world can’t snoop on your data 👀`,
       };
     }
     case LoginStep.CONFIRM_MIGRATION:
@@ -288,13 +288,13 @@ const getStepInfo = ({
             {' account...'}
           </>
         ),
-        description: `Looks like you have tried to register before. We are restoring your account to see if you can still claim your desired username.`,
+        description: `Looks like you have tried to register before. We are restoring your account to see if you can still claim your desired alias.`,
       };
     case LoginStep.CLAIM_USERNAME:
       return {
         stepNo: 4,
         title: 'Shield ETH', // TODO - Could be other assets.
-        description: `In order to prevent spam, you must shield at the same time as claiming a username. Please shield at least 0.01 ETH.`,
+        description: `In order to prevent spam, you must shield at the same time as claiming an alias. Please shield at least 0.01 ETH.`,
       };
     default:
       return {
