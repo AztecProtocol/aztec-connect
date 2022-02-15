@@ -9,6 +9,12 @@ terraform {
     key    = "aztec2/block-explorer"
     region = "eu-west-2"
   }
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "3.74.2"
+    }
+  }
 }
 
 data "terraform_remote_state" "setup_iac" {
@@ -78,9 +84,9 @@ resource "aws_cloudfront_distribution" "block_explorer_distribution" {
     }
   }
 
-  enabled             = true
-  is_ipv6_enabled     = true
-  comment             = "Managed by Terraform"
+  enabled         = true
+  is_ipv6_enabled = true
+  comment         = "Managed by Terraform"
 
   aliases = ["explorer.aztec.network"]
 
