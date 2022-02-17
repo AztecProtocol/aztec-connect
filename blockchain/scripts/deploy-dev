@@ -30,7 +30,7 @@ cd ./terraform/dev
 ensure_terraform
 export TF_IN_AUTOMATION=1
 terraform init -input=false -backend-config="key=$DEPLOY_TAG/blockchain"
-LAST_NETWORK=$(terraform output ethereum_network)
+LAST_NETWORK=$(terraform output ethereum_network || echo "")
 cd ../..
 
 LAST_COMMIT=$(last_successful_commit blockchain deployed)
