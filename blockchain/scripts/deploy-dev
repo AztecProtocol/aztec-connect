@@ -14,7 +14,7 @@ case $NETWORK in
     export TF_VAR_PRIVATE_ETHEREUM_HOST=http://ethereum.aztec.network:10545
     ;;
   mainnet-fork)
-    export TF_VAR_PUBLIC_ETHEREUM_HOST=http://mainnet-fork.aztec.network:8545
+    export TF_VAR_PUBLIC_ETHEREUM_HOST=https://mainnet-fork.aztec.network:8545
     export TF_VAR_PRIVATE_ETHEREUM_HOST=http://mainnet-fork.aztec.network:8545
     ;;
   *)

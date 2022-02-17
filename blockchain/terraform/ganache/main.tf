@@ -96,8 +96,8 @@ resource "aws_ecs_task_definition" "ganache" {
   family                   = "${var.DEPLOY_TAG}-ganache"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
-  cpu                      = "512"
-  memory                   = "1024"
+  cpu                      = "4096"
+  memory                   = "16384"
   execution_role_arn       = data.terraform_remote_state.setup_iac.outputs.ecs_task_execution_role_arn
 
   volume {
@@ -180,7 +180,9 @@ resource "aws_cloudwatch_log_group" "ganache" {
 resource "aws_alb_listener" "http_listener" {
   load_balancer_arn = data.terraform_remote_state.aztec2_iac.outputs.alb_arn
   port              = "8545"
-  protocol          = "HTTP"
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-2016-08"
+  certificate_arn   = data.terraform_remote_state.aztec2_iac.outputs.aws_acm_certificate_aztec_network_eu_cert_arn
 
   default_action {
     type             = "forward"

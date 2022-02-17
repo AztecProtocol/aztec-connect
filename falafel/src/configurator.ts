@@ -132,9 +132,9 @@ export class Configurator {
     const conf = await readJson(path);
     return {
       ...conf,
+      privateKey: Buffer.from(conf.privateKey, 'hex'),
       runtimeConfig: {
         ...conf.runtimeConfig,
-        privateKey: Buffer.from(conf.privateKey, 'hex'),
         maxFeeGasPrice: BigInt(conf.runtimeConfig.maxFeeGasPrice),
         maxProviderGasPrice: BigInt(conf.runtimeConfig.maxProviderGasPrice),
       },
