@@ -23,13 +23,17 @@ case $NETWORK in
     ;;
 esac
 
-ensure_terraform
-export TF_IN_AUTOMATION=1
-
 deploy_ecr blockchain
 
+# Get the last network that we deployed to.
+cd ./terraform/dev
+ensure_terraform
+export TF_IN_AUTOMATION=1
+terraform init -input=false -backend-config="key=$DEPLOY_TAG/blockchain"
+LAST_NETWORK=$(terraform output ethereum_network)
+cd ../..
+
 LAST_COMMIT=$(last_successful_commit blockchain deployed)
-LAST_NETWORK=$(cd ./terraform/dev && terraform output ethereum_network)
 
 # Determine if ganache (mainnet-fork) has changed in anyway. It's run via pure terraform.
 if [ -z "$LAST_COMMIT" ] || changed $LAST_COMMIT 'blockchain/terraform/ganache/.*$'; then
@@ -50,7 +54,7 @@ if [ -z "$LAST_COMMIT" ] || changed $LAST_COMMIT '.*\.sol$'; then
   REDEPLOY=1
 fi
 
-if ["$LAST_NETWORK" != "$NETWORK" ]; then
+if [ "$LAST_NETWORK" != "$NETWORK" ]; then
   echo "Network changed."
   REDEPLOY=1
 fi
