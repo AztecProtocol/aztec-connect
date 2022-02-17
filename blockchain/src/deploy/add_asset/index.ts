@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import { Contract, ethers, Signer } from 'ethers';
 import IUniswapV2Router02 from '../../artifacts/@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol/IUniswapV2Router02.json';
 import IFeeDistributor from '../../artifacts/contracts/interfaces/IFeeDistributor.sol/IFeeDistributor.json';
@@ -8,14 +7,8 @@ import { deployPriceFeed } from '../deploy_price_feed';
 import { createPair } from '../deploy_uniswap';
 import { addAsset } from './add_asset';
 
-const {
-  ETHEREUM_HOST,
-  INFURA_API_KEY,
-  NETWORK,
-  PRIVATE_KEY,
-  ROLLUP_CONTRACT_ADDRESS,
-  FEE_DISTRIBUTOR_ADDRESS,
-} = process.env;
+const { ETHEREUM_HOST, INFURA_API_KEY, NETWORK, PRIVATE_KEY, ROLLUP_CONTRACT_ADDRESS, FEE_DISTRIBUTOR_ADDRESS } =
+  process.env;
 
 function getSigner() {
   if (INFURA_API_KEY && NETWORK && PRIVATE_KEY) {
@@ -29,15 +22,8 @@ function getSigner() {
   }
 }
 async function main() {
-  const [
-    ,
-    ,
-    erc20Address,
-    supportsPermitStr,
-    initialTokenSupplyStr,
-    initialEthSupplyStr,
-    initialPriceStr,
-  ] = process.argv;
+  const [, , erc20Address, supportsPermitStr, initialTokenSupplyStr, initialEthSupplyStr, initialPriceStr] =
+    process.argv;
   const supportsPermit = !!supportsPermitStr;
 
   const signer = getSigner();

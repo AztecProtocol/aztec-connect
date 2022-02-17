@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import { ContractFactory, Signer } from 'ethers';
 import DefiBridgeProxy from '../artifacts/contracts/DefiBridgeProxy.sol/DefiBridgeProxy.json';
 

@@ -3,6 +3,10 @@ set -e
 
 REPOSITORY=$1
 
+if [ -n "$2" ]; then
+  TF_DIR=$2
+fi
+
 # Apply terraform.
 if [ -d $TF_DIR ]; then
   ensure_terraform

@@ -74,25 +74,25 @@ export class WorldState {
   }
 
   private async syncStateFromInitFiles() {
-    console.log('Synching state from initilisation files...');
+    console.log('Synching state from initialisation files...');
     const chainId = await this.blockchain.getChainId();
-    console.log(`Chain ID: ${chainId}`);
+    console.log(`Chain id: ${chainId}`);
     const accountDataFile = InitHelpers.getAccountDataFile(chainId);
     if (!accountDataFile) {
-      console.log(`No account initialisation file for target chain ${chainId}. Skipping account initialisation`);
+      console.log(`No account initialisation file for chain ${chainId}.`);
       return;
     }
     const accounts = await InitHelpers.readAccountTreeData(accountDataFile);
     const { initDataRoot, initNullRoot, initRootsRoot } = InitHelpers.getInitRoots(chainId);
     if (accounts.length === 0) {
-      console.log('No accounts read from file, continuing without syncing from file');
+      console.log('No accounts read from file, continuing without syncing from file.');
       return;
     }
     if (!initDataRoot.length || !initNullRoot.length || !initRootsRoot.length) {
-      console.log('No roots read from file, continuing without syncing from file');
+      console.log('No roots read from file, continuing without syncing from file.');
       return;
     }
-    console.log(`Read ${accounts.length} accounts from file`);
+    console.log(`Read ${accounts.length} accounts from file.`);
     const { dataRoot, rootsRoot } = await InitHelpers.populateDataAndRootsTrees(
       accounts,
       this.worldStateDb,

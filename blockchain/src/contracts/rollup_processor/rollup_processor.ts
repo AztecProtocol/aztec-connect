@@ -220,7 +220,14 @@ export class RollupProcessor {
 
   private async getEarliestBlock() {
     const net = await this.provider.getNetwork();
-    return net.chainId === 1 ? 11967192 : 0;
+    switch (net.chainId) {
+      case 1:
+        return 11967192;
+      case 0xa57ec:
+        return 14000000;
+      default:
+        return 0;
+    }
   }
 
   /**
@@ -253,7 +260,7 @@ export class RollupProcessor {
     const chunk = 100000;
     let start =
       this.lastQueriedRollupId === undefined || rollupId < this.lastQueriedRollupId
-        ? Math.max(end - chunk, 0)
+        ? Math.max(end - chunk, earliestBlock)
         : this.lastQueriedRollupBlockNum! + 1;
     let events: Event[] = [];
 
@@ -270,8 +277,8 @@ export class RollupProcessor {
         this.lastQueriedRollupBlockNum = events[events.length - 1].blockNumber;
         break;
       }
-      end = Math.max(start - 1, 0);
-      start = Math.max(end - chunk, 0);
+      end = Math.max(start - 1, earliestBlock);
+      start = Math.max(end - chunk, earliestBlock);
     }
     // console.log(`Done: ${events.length} fetched in ${(new Date().getTime() - totalStartTime) / 1000}s`);
 
@@ -289,16 +296,17 @@ export class RollupProcessor {
     const earliestBlock = await this.getEarliestBlock();
     let end = await this.provider.getBlockNumber();
     const chunk = 100000;
-    let start = Math.max(end - chunk, 0);
+    let start = Math.max(end - chunk, earliestBlock);
 
     while (end > earliestBlock) {
+      // console.log(`Fetching rollup events between blocks ${start} and ${end}...`);
       const rollupFilter = this.rollupProcessor.filters.RollupProcessed(rollupId == -1 ? undefined : rollupId);
       const events = await this.rollupProcessor.queryFilter(rollupFilter, start, end);
       if (events.length) {
         return (await this.getRollupBlocksFromEvents(events.slice(-1), 1))[0];
       }
-      end = Math.max(start - 1, 0);
-      start = Math.max(end - chunk, 0);
+      end = Math.max(start - 1, earliestBlock);
+      start = Math.max(end - chunk, earliestBlock);
     }
   }
 

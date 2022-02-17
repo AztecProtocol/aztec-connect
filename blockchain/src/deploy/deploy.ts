@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import { InitHelpers } from '@aztec/barretenberg/environment';
 import { ContractFactory, Signer } from 'ethers';
 import { EthAddress } from '@aztec/barretenberg/address';

@@ -109,6 +109,8 @@ function getEthereumHost(chainId: number) {
       return 'https://goerli.infura.io/v3/6a04b7c89c5b421faefde663f787aa35';
     case 1337:
       return 'http://localhost:8545';
+    case 0xa57ec:
+      return 'http://mainnet-fork.aztec.network:8545';
     default:
       return 'https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35';
   }

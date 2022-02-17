@@ -2,7 +2,7 @@ import { promises as fs } from 'fs';
 import { WorldStateDb, PutEntry } from '../../world_state_db';
 import { toBigIntBE, toBufferBE } from '../../bigint_buffer';
 import * as pathTools from 'path';
-import * as initConfig from './init_config.json';
+import { getInitData } from './init_config';
 
 const NOTE_LENGTH = 32;
 const ADDRESS_LENGTH = 64;
@@ -41,7 +41,7 @@ export interface AccountData {
 
 export class InitHelpers {
   public static getInitRoots(chainId: number) {
-    const { initDataRoot, initNullRoot, initRootsRoot } = initConfig[chainId].initRoots;
+    const { initDataRoot, initNullRoot, initRootsRoot } = getInitData(chainId).initRoots;
     return {
       initDataRoot: Buffer.from(initDataRoot, 'hex'),
       initNullRoot: Buffer.from(initNullRoot, 'hex'),
@@ -50,23 +50,23 @@ export class InitHelpers {
   }
 
   public static getInitDataSize(chainId: number) {
-    return initConfig[chainId].initDataSize;
+    return getInitData(chainId).initDataSize;
   }
 
   public static getAccountDataFile(chainId: number) {
-    if (!initConfig[chainId].accounts) {
+    if (!getInitData(chainId).accounts) {
       return undefined;
     }
-    const relPathToFile = initConfig[chainId].accounts;
+    const relPathToFile = getInitData(chainId).accounts;
     const fullPath = pathTools.resolve(__dirname, relPathToFile);
     return fullPath;
   }
 
   public static getRootDataFile(chainId: number) {
-    if (!initConfig[chainId].roots) {
+    if (!getInitData(chainId).roots) {
       return undefined;
     }
-    const relPathToFile = initConfig[chainId].roots;
+    const relPathToFile = getInitData(chainId).roots;
     const fullPath = pathTools.resolve(__dirname, relPathToFile);
     return fullPath;
   }

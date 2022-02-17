@@ -133,7 +133,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "ETHEREUM_HOST",
-        "value": "http://ethereum.aztec.network:10545"
+        "value": "${data.terraform_remote_state.blockchain.outputs.private_ethereum_host}"
       },
       {
         "name": "HALLOUMI_HOST",
