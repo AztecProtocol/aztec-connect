@@ -29,10 +29,10 @@ aws ecr get-login-password --region $REGION | docker login --username AWS --pass
 # Create the repository if it doesn't exist.
 if ! aws ecr describe-repositories --region $REGION --repository-names $REPOSITORY > /dev/null 2>&1; then
   echo "Creating repo: $REPOSITORY"
-  aws ecr create-repository --region $REGION --repository-name $REPOSITORY
-  aws ecr put-lifecycle-policy --region $REGION --repository-name $REPOSITORY --lifecycle-policy-text "$LIFECYCLE_POLICY"
+  aws ecr create-repository --region $REGION --repository-name $REPOSITORY > /dev/null 2>&1
+  aws ecr put-lifecycle-policy --region $REGION --repository-name $REPOSITORY --lifecycle-policy-text "$LIFECYCLE_POLICY" > /dev/null 2>&1
 elif [ -n "$REFRESH_LIFECYCLE" ]; then
   echo "Refreshing lifecycle rules for repo: $REPOSITORY"
-  aws ecr put-lifecycle-policy --region $REGION --repository-name $REPOSITORY --lifecycle-policy-text "$LIFECYCLE_POLICY"
+  aws ecr put-lifecycle-policy --region $REGION --repository-name $REPOSITORY --lifecycle-policy-text "$LIFECYCLE_POLICY" > /dev/null 2>&1
 fi
 echo
