@@ -52,7 +52,7 @@ const fromLocalStorage = (): ConfigVars => ({
 });
 
 const fromEnvVars = (): ConfigVars => ({
-  deployTag: process.env.DEPLOY_TAG || '',
+  deployTag: process.env.REACT_APP_DEPLOY_TAG || '',
   priceFeedContractAddress0: process.env.REACT_APP_PRICE_FEED_CONTRACT_ADDRESS_0 || '',
   priceFeedContractAddress1: process.env.REACT_APP_PRICE_FEED_CONTRACT_ADDRESS_1 || '',
   priceFeedContractAddress2: process.env.REACT_APP_PRICE_FEED_CONTRACT_ADDRESS_2 || '',
