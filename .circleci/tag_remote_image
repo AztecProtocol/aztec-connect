@@ -26,4 +26,5 @@ if [ "$EXISTING_TAG_MANIFEST" != "$NEW_TAG_MANIFEST" ]; then
     --repository-name $REPOSITORY \
     --image-tag $NEW_TAG \
     --image-manifest "$EXISTING_TAG_MANIFEST"
+  echo "Tagged $1:$EXISTING_TAG as $1:$NEW_TAG."
 fi
