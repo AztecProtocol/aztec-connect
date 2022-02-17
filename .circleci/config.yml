@@ -384,7 +384,7 @@ jobs:
       - run:
           name: 'Build and test'
           working_directory: zk-money
-          command: cond_spot_run_build zk-money 32core
+          command: build zk-money
 
   website:
     docker:
