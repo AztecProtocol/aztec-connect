@@ -10,12 +10,12 @@ TF_VAR_ETHEREUM_NETWORK=$NETWORK
 # Our mainnet fork, *does* need to be exposed publically, as it's the only node in the network.
 case $NETWORK in
   goerli)
-    TF_VAR_PUBLIC_ETHEREUM_HOST=https://goerli.infura.io/v3/$TF_VAR_INFURA_API_KEY
-    TF_VAR_PRIVATE_ETHEREUM_HOST=http://ethereum.aztec.network:10545
+    export TF_VAR_PUBLIC_ETHEREUM_HOST=https://goerli.infura.io/v3/$TF_VAR_INFURA_API_KEY
+    export TF_VAR_PRIVATE_ETHEREUM_HOST=http://ethereum.aztec.network:10545
     ;;
   mainnet-fork)
-    TF_VAR_PUBLIC_ETHEREUM_HOST=http://mainnet-fork.aztec.network:8545
-    TF_VAR_PRIVATE_ETHEREUM_HOST=http://mainnet-fork.aztec.network:8545
+    export TF_VAR_PUBLIC_ETHEREUM_HOST=http://mainnet-fork.aztec.network:8545
+    export TF_VAR_PRIVATE_ETHEREUM_HOST=http://mainnet-fork.aztec.network:8545
     ;;
   *)
     echo "Unknown network: $NETWORK"
