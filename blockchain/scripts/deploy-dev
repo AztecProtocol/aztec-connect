@@ -2,7 +2,7 @@
 set -e
 
 NETWORK=$1
-TF_VAR_ETHEREUM_NETWORK=$NETWORK
+export TF_VAR_ETHEREUM_NETWORK=$NETWORK
 
 # We have to consider public and private ethereum hosts. The deployment system does not have access to the
 # nodes we run in the private subnets of the VPC. One option is to expose our OpenEthereum nodes externally but that
