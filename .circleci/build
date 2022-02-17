@@ -28,7 +28,7 @@ function fetch_image() {
 if [ -d ./terraform ]; then
   ensure_terraform
   export TF_IN_AUTOMATION=1
-  cd terraform
+  pushd terraform
   for DIR in . $(find . -maxdepth 1 -type d); do
     pushd $DIR
     if [ -f ./main.tf ]; then
@@ -37,6 +37,7 @@ if [ -d ./terraform ]; then
     fi
     popd
   done
+  popd
 fi
 
 # Ensure ECR repository exists.
