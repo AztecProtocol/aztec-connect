@@ -35,28 +35,24 @@ cd ../..
 
 LAST_COMMIT=$(last_successful_commit blockchain deployed)
 
-# Determine if ganache (mainnet-fork) has changed in anyway. It's run via pure terraform.
-if [ -z "$LAST_COMMIT" ] || changed $LAST_COMMIT 'blockchain/terraform/ganache/.*$'; then
-  echo "Ganache terraform changed. Redeploying ganache..."
-  # First kill the existing version and wait till it's gone.
-  aws ecs update-service --cluster setup --service $DEPLOY_TAG-ganache --desired-count 0
-  while [ ! $(curl -s -o /dev/null -w "%{http_code}" https://mainnet-fork.aztec.network:8545) == "503" ]; do sleep 1; done
-  # Run the ganache terraform to bring it back up, and wait till it's available.
-  deploy_terraform ganache ./terraform/ganache
-  while [ ! $(curl -s -o /dev/null -w "%{http_code}" https://mainnet-fork.aztec.network:8545) == "404" ]; do sleep 1; done
-  if [ "$NETWORK" = "mainnet-fork" ]; then
+if [ -z "$LAST_COMMIT" ]; then
+  echo "No successful last commit found. Will deploy."
+  REDEPLOY=1
+else
+  if [ changed $LAST_COMMIT '.*\.sol$' ]; then
+    echo "Solidity changed."
     REDEPLOY=1
   fi
-fi
 
-if [ -z "$LAST_COMMIT" ] || changed $LAST_COMMIT '.*\.sol$'; then
-  echo "Solidity changed."
-  REDEPLOY=1
-fi
+  if [ changed $LAST_COMMIT 'blockchain/.redeploy' ]; then
+    echo "Force deploy requested."
+    REDEPLOY=1
+  fi
 
-if [ "$LAST_NETWORK" != "$NETWORK" ]; then
-  echo "Network changed."
-  REDEPLOY=1
+  if [ "$LAST_NETWORK" != "$NETWORK" ]; then
+    echo "Network changed."
+    REDEPLOY=1
+  fi
 fi
 
 if [ -n "$REDEPLOY" ]; then

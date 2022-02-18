@@ -18,7 +18,11 @@ import { createFundedWalletProvider } from './create_funded_wallet_provider';
 jest.setTimeout(20 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
 
-const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost:8081', } = process.env;
+const {
+  ETHEREUM_HOST = 'http://localhost:8545',
+  ROLLUP_HOST = 'http://localhost:8081',
+  PRIVATE_KEY = '',
+} = process.env;
 
 /**
  * Run the following:
@@ -41,7 +45,13 @@ describe('end-to-end defi tests', () => {
   };
 
   beforeAll(async () => {
-    provider = await createFundedWalletProvider(ETHEREUM_HOST, 4, undefined, undefined, toBaseUnits('0.2', 18));
+    provider = await createFundedWalletProvider(
+      ETHEREUM_HOST,
+      4,
+      undefined,
+      Buffer.from(PRIVATE_KEY, 'hex'),
+      toBaseUnits('0.2', 18),
+    );
     accounts = provider.getAccounts();
 
     sdk = await createAztecSdk(provider, ROLLUP_HOST, {
