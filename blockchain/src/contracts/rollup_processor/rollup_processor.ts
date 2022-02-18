@@ -222,11 +222,11 @@ export class RollupProcessor {
     const net = await this.provider.getNetwork();
     switch (net.chainId) {
       case 1:
-        return 11967192;
+        return { earliestBlock: 11967192, chunk: 100000 };
       case 0xa57ec:
-        return 14000000;
+        return { earliestBlock: 14000000, chunk: 10 };
       default:
-        return 0;
+        return { earliestBlock: 0, chunk: 100000 };
     }
   }
 
@@ -255,9 +255,8 @@ export class RollupProcessor {
    * rollups block to the end of the chain. This provides best performance for polling clients.
    */
   public async getRollupBlocksFrom(rollupId: number, minConfirmations: number) {
-    const earliestBlock = await this.getEarliestBlock();
+    const { earliestBlock, chunk } = await this.getEarliestBlock();
     let end = await this.provider.getBlockNumber();
-    const chunk = 100000;
     let start =
       this.lastQueriedRollupId === undefined || rollupId < this.lastQueriedRollupId
         ? Math.max(end - chunk, earliestBlock)
@@ -293,9 +292,8 @@ export class RollupProcessor {
    * If `rollupId == -1` return the latest rollup.
    */
   public async getRollupBlock(rollupId: number) {
-    const earliestBlock = await this.getEarliestBlock();
+    const { earliestBlock, chunk } = await this.getEarliestBlock();
     let end = await this.provider.getBlockNumber();
-    const chunk = 100000;
     let start = Math.max(end - chunk, earliestBlock);
 
     while (end > earliestBlock) {
