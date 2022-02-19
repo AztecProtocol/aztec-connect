@@ -9,6 +9,7 @@ import { TransactionReceipt, TransactionResponse } from '@ethersproject/abstract
 import { Web3Provider } from '@ethersproject/providers';
 import { Contract, Event, utils } from 'ethers';
 import { abi } from '../../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
+import { decodeError } from '../decode_error';
 import { solidityFormatSignatures } from './solidity_format_signatures';
 
 const fixEthersStackTrace = (err: Error) => {
@@ -26,8 +27,8 @@ export class RollupProcessor {
   private lastQueriedRollupBlockNum?: number;
   protected provider: Web3Provider;
 
-  constructor(protected rollupContractAddress: EthAddress, provider: EthereumProvider) {
-    this.provider = new Web3Provider(provider);
+  constructor(protected rollupContractAddress: EthAddress, private ethereumProvider: EthereumProvider) {
+    this.provider = new Web3Provider(ethereumProvider);
     this.rollupProcessor = new Contract(rollupContractAddress.toString(), abi, this.provider);
   }
 
@@ -412,5 +413,9 @@ export class RollupProcessor {
     const provider = options.provider ? new Web3Provider(options.provider) : this.provider;
     const ethSigner = provider.getSigner(signingAddress ? signingAddress.toString() : 0);
     return new Contract(this.rollupContractAddress.toString(), abi, ethSigner);
+  }
+
+  public getRevertError(txHash: TxHash) {
+    return decodeError(this.contract, txHash, this.ethereumProvider);
   }
 }

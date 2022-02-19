@@ -232,4 +232,8 @@ export class Contracts {
   public async getSupportedBridges() {
     return this.rollupProcessor.getSupportedBridges();
   }
+
+  public getRevertError(txHash: TxHash) {
+    return this.rollupProcessor.getRevertError(txHash);
+  }
 }

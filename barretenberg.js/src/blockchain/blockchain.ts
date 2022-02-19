@@ -7,9 +7,15 @@ import { EthereumSignature, EthereumSigner } from './ethereum_signer';
 import { PriceFeed } from './price_feed';
 import { TxHash } from './tx_hash';
 
+export interface RevertError {
+  name: string;
+  params: string[];
+}
+
 export interface Receipt {
   status: boolean;
   blockNum: number;
+  revertError?: RevertError;
 }
 
 export interface SendTxOptions {

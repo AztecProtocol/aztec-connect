@@ -61,6 +61,9 @@ export class RollupPublisher {
       }
 
       console.log(`Transaction status failed: ${txHash}`);
+      if (receipt.revertError) {
+        console.log(`Revert Error: ${receipt.revertError.name}(${receipt.revertError.params.join(', ')})`);
+      }
       await this.sleepOrInterrupted(60000);
     }
 
