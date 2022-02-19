@@ -45,8 +45,22 @@ function getOrmConfig(logging: boolean): ConnectionOptions {
 
 function getPerChainBridgeConfig(chainId: number) {
   const perChainBridgeConfig: { [key: string]: any[] } = {
-    '1': [],
-    '1337': [
+    1: [],
+    1337: [
+      {
+        bridgeId: '0x0000000000000000000000000000000000000000000000004000000000000001',
+        numTxs: 10,
+        fee: 100000,
+        rollupFrequency: 2,
+      },
+      {
+        bridgeId: '0x0000000000000000000000000000000000000000000000000000000100000002',
+        numTxs: 10,
+        fee: 100000,
+        rollupFrequency: 2,
+      },
+    ],
+    0xa57ec: [
       {
         bridgeId: '0x0000000000000000000000000000000000000000000000004000000000000001',
         numTxs: 10,
@@ -88,7 +102,7 @@ export async function getConfig() {
     privateKey,
     rollupContractAddress,
     typeOrmLogging,
-    proverless
+    proverless,
   } = confVars;
 
   const ormConfig = getOrmConfig(typeOrmLogging);
