@@ -29,17 +29,17 @@ export async function decodeError(contract: Contract, txHash: TxHash, provider: 
   // look for the REVERT opcode if there is one
   const revert = output.structLogs.find((log: any) => log.op === 'REVERT');
   if (!revert) {
-    return undefined;
+    return;
   }
   // according to this page https://www.ethervm.io/#FD,
   // the entry at the top of the stack has the revert data offset in memory
   // and the entry 1 level beneath that has the length
   // both are in hex so extract them
-  const offset = revert?.stack[revert.stack.length - 1];
+  const offset = revert.stack[revert.stack.length - 1];
   const offsetBuf = Buffer.from(offset!, 'hex');
   const offsetInt = offsetBuf.readInt32BE(28) * 2;
 
-  const length = revert?.stack[revert.stack.length - 2];
+  const length = revert.stack[revert.stack.length - 2];
   const lengthBuf = Buffer.from(length!, 'hex');
   const lengthInt = lengthBuf.readInt32BE(28) * 2;
 
@@ -53,7 +53,7 @@ export async function decodeError(contract: Contract, txHash: TxHash, provider: 
 
   // look to see if we have the signature hash
   if (!errorMappings.has(sigHash)) {
-    return undefined;
+    return;
   }
   const errorMapping = errorMappings.get(sigHash);
 
