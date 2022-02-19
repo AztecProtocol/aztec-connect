@@ -264,7 +264,6 @@ export class RollupCoordinator {
     const shouldPublish = flush || profit || timedout;
 
     if (shouldPublish) {
-      console.log('Preparing pending rollup txs for build...');
       const innerTxDaos: Promise<RollupProofDao>[] = [];
 
       // We have to pass the firstInner flag in as nothing is in the DB yet so the previous
@@ -303,8 +302,6 @@ export class RollupCoordinator {
         this.innerProofs.push(await dao);
       }
     }
-
-    console.log('Ready to publish (or not) inner proofs:', this.innerProofs.length);
 
     // here we either have
     // 1. no rollup at all

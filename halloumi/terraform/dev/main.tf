@@ -65,6 +65,7 @@ resource "aws_service_discovery_service" "halloumi" {
 }
 
 # Create EC2 instance.
+/*
 resource "aws_instance" "container_instance_az1" {
   ami                    = "ami-0cd4858f2b923aa6b"
   instance_type          = "r5.4xlarge"
@@ -92,12 +93,15 @@ USER_DATA
     prometheus = ""
   }
 }
+*/
 
 # Define task definition and service.
 resource "aws_ecs_task_definition" "halloumi" {
   family                   = "${var.DEPLOY_TAG}-halloumi"
-  requires_compatibilities = ["EC2"]
+  requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
+  cpu                      = "2048"
+  memory                   = "4096"
   execution_role_arn       = data.terraform_remote_state.setup_iac.outputs.ecs_task_execution_role_arn
 
   container_definitions = <<DEFINITIONS
@@ -106,8 +110,7 @@ resource "aws_ecs_task_definition" "halloumi" {
     "name": "${var.DEPLOY_TAG}-halloumi",
     "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/halloumi:${var.DEPLOY_TAG}",
     "essential": true,
-    "memory": 126000,
-    "memoryReservation": 63000,
+    "memoryReservation": 3840,
     "portMappings": [
       {
         "containerPort": 80
@@ -125,6 +128,14 @@ resource "aws_ecs_task_definition" "halloumi" {
       {
         "name": "JOB_SERVER_URL",
         "value": "http://${var.DEPLOY_TAG}-falafel.local:8082"
+      },
+      {
+        "name": "NUM_INNER_ROLLUP_TXS",
+        "value": "3"
+      },
+      {
+        "name": "NUM_OUTER_ROLLUP_PROOFS",
+        "value": "2"
       },
       {
         "name": "PROVERLESS",
@@ -172,10 +183,11 @@ DEFINITIONS
 resource "aws_ecs_service" "halloumi" {
   name                               = "${var.DEPLOY_TAG}-halloumi"
   cluster                            = data.terraform_remote_state.setup_iac.outputs.ecs_cluster_id
-  launch_type                        = "EC2"
-  desired_count                      = "1"
+  launch_type                        = "FARGATE"
+  desired_count                      = 2
   deployment_maximum_percent         = 100
   deployment_minimum_healthy_percent = 0
+  platform_version                   = "1.4.0"
 
   network_configuration {
     subnets = [
@@ -189,11 +201,6 @@ resource "aws_ecs_service" "halloumi" {
     registry_arn   = aws_service_discovery_service.halloumi.arn
     container_name = "${var.DEPLOY_TAG}-halloumi"
     container_port = 80
-  }
-
-  placement_constraints {
-    type       = "memberOf"
-    expression = "attribute:group == ${var.DEPLOY_TAG}-halloumi"
   }
 
   task_definition = aws_ecs_task_definition.halloumi.family
