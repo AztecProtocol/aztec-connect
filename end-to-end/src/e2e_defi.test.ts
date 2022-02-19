@@ -84,8 +84,10 @@ describe('end-to-end defi tests', () => {
       const depositor = accounts[i];
       const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
       const assetId = 0;
-      // flush this transaction through by paying for all the slots in the rollup
-      const fee = (await sdk.getDepositFees(assetId))[TxSettlementTime.INSTANT];
+      // Last deposit pays for instant rollup to flush.
+      const fee = (await sdk.getDepositFees(assetId))[
+        i == accounts.length - 1 ? TxSettlementTime.INSTANT : TxSettlementTime.NEXT_ROLLUP
+      ];
       const controller = sdk.createDepositController(
         userIds[i],
         signer,
@@ -97,12 +99,11 @@ describe('end-to-end defi tests', () => {
       await controller.sign();
       const txHash = await controller.depositFundsToContract();
       await sdk.getTransactionReceipt(txHash);
+      await controller.send();
       depositControllers.push(controller);
     }
 
-    // send all of the deposit proofs together
     // wait for them all to settle
-    await Promise.all(depositControllers.map(controller => controller.send()));
     await Promise.all(depositControllers.map(controller => controller.awaitSettlement(awaitSettlementTimeout)));
 
     // Account 1 will swap part of it's ETH for DAI. Then, once this has settled, it will swap that DAI back to ETH whilst accounts 2 and 3 swap their ETH for DAI

@@ -9,7 +9,7 @@
     "clean_db": "rm -rf ./data/db.sqlite ./data/world_state.db ./data/config",
     "clean_keys": "rm -rf ./data/account ./data/join_split ./data/*rollup*",
     "start": "node ./dest",
-    "debug": "node --inspect-brk=0.0.0.0:9221 ./dest",
+    "start:debug": "node --inspect-brk=0.0.0.0:9221 ./dest",
     "start:dev": "`yarn -s deploy_rollup_processor` && yarn start:dev_server",
     "start:dev_server": "tsc-watch -p tsconfig.prod.json --onSuccess 'yarn start'",
     "start:e2e": "./scripts/start_e2e.sh",

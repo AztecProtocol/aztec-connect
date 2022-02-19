@@ -22,7 +22,6 @@ export class RollupAggregator {
     private rollupDb: RollupDb,
     private worldStateDb: WorldStateDb,
     private outerRollupSize: number,
-    private numInnerRollupTxs: number,
     private numOuterRollupProofs: number,
     private rollupBeneficiary: EthAddress,
     private metrics: Metrics,
@@ -47,17 +46,13 @@ export class RollupAggregator {
       assetIds,
     );
     const end = this.metrics.rootRollupTimer();
-    const rootRollupRequest = new RootRollupProofRequest(this.numInnerRollupTxs, this.numOuterRollupProofs, rootRollup);
+    const rootRollupRequest = new RootRollupProofRequest(rootRollup);
     const rootRollupProofBuf = await this.proofGenerator.createProof(rootRollupRequest.toBuffer());
 
     console.log(`Creating root verifier proof...`);
 
     const rootVerifier = await this.createRootVerifier(rootRollupProofBuf);
-    const rootVerifierRequest = new RootVerifierProofRequest(
-      this.numInnerRollupTxs,
-      this.numOuterRollupProofs,
-      rootVerifier,
-    );
+    const rootVerifierRequest = new RootVerifierProofRequest(rootVerifier);
     const finalProofData = await this.proofGenerator.createProof(rootVerifierRequest.toBuffer());
     end();
 

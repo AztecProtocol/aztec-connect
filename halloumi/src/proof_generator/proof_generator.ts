@@ -1,5 +1,6 @@
 export interface ProofGenerator {
-  awaitReady(): Promise<void>;
+  start(): Promise<void>;
+  stop(): Promise<void>;
   reset(): Promise<void>;
   getJoinSplitVk(): Promise<Buffer>;
   getAccountVk(): Promise<Buffer>;

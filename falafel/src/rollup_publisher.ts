@@ -20,6 +20,7 @@ export class RollupPublisher {
   }
 
   public async publishRollup(rollup: RollupDao) {
+    console.log(`Publishing rollup: ${rollup.id}`);
     const txData = await this.createTxData(rollup);
     await this.rollupDb.setCallData(rollup.id, txData);
 

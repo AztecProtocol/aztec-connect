@@ -55,14 +55,14 @@ export function deserializeArrayFromVector<T>(
   vector: Buffer,
   offset = 0,
 ) {
-  let startAt = offset;
-  const size = vector.readUInt32BE(startAt);
-  startAt += 4;
-  const arr: T[] = [];
+  let pos = offset;
+  const size = vector.readUInt32BE(pos);
+  pos += 4;
+  const arr = new Array<T>(size);
   for (let i = 0; i < size; ++i) {
-    const { elem, adv } = deserialize(vector, startAt);
-    startAt += adv;
-    arr.push(elem);
+    const { elem, adv } = deserialize(vector, pos);
+    pos += adv;
+    arr[i] = elem;
   }
-  return { elem: arr, adv: startAt - offset };
+  return { elem: arr, adv: pos - offset };
 }

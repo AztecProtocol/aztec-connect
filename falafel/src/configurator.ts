@@ -9,7 +9,7 @@ export interface ConfVars {
   priceFeedContractAddresses: string[];
   ethereumHost: string;
   ethereumPollInterval?: number;
-  halloumiHost?: string;
+  proofGeneratorMode: string;
   privateKey: Buffer;
   numInnerRollupTxs: number;
   numOuterRollupProofs: number;
@@ -29,7 +29,7 @@ function getConfVars(): ConfVars {
     PRICE_FEED_CONTRACT_ADDRESSES,
     ETHEREUM_HOST,
     ETHEREUM_POLL_INTERVAL,
-    HALLOUMI_HOST,
+    PROOF_GENERATOR_MODE,
     PRIVATE_KEY,
     PORT,
     NUM_INNER_ROLLUP_TXS,
@@ -51,7 +51,7 @@ function getConfVars(): ConfVars {
     priceFeedContractAddresses: (PRICE_FEED_CONTRACT_ADDRESSES || '').split(','),
     ethereumHost: ETHEREUM_HOST || '',
     ethereumPollInterval: +(ETHEREUM_POLL_INTERVAL || 10000),
-    halloumiHost: HALLOUMI_HOST,
+    proofGeneratorMode: PROOF_GENERATOR_MODE || 'normal',
     privateKey: PRIVATE_KEY
       ? Buffer.from(PRIVATE_KEY.slice(2), 'hex')
       : // Test mnemonic account 0.

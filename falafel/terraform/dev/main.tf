@@ -142,10 +142,6 @@ resource "aws_ecs_task_definition" "falafel" {
         "value": "${data.terraform_remote_state.blockchain.outputs.private_ethereum_host}"
       },
       {
-        "name": "HALLOUMI_HOST",
-        "value": "http://${var.DEPLOY_TAG}-halloumi.local"
-      },
-      {
         "name": "ROLLUP_CONTRACT_ADDRESS",
         "value": "${data.terraform_remote_state.blockchain.outputs.rollup_contract_address}"
       },

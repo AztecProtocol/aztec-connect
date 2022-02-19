@@ -123,6 +123,10 @@ resource "aws_ecs_task_definition" "halloumi" {
         "value": "80"
       },
       {
+        "name": "JOB_SERVER_URL",
+        "value": "http://${var.DEPLOY_TAG}-falafel.local:8082"
+      },
+      {
         "name": "PROVERLESS",
         "value": "true"
       }
