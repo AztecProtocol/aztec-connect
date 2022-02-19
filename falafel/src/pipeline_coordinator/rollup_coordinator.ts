@@ -291,7 +291,6 @@ export class RollupCoordinator {
 
       // This will call the proof generator (Halloumi) in parallel and populate the
       // this.innerProofs which is used below in the aggregator.
-      console.log('Awaiting parallel pending rollup build');
       await Promise.all(innerTxDaos);
 
       // Its important that the inner proofs are inserted into the DB in the same

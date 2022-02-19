@@ -466,7 +466,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         defiBridgeProxy = _defiBridgeProxy;
         escapeBlockLowerBound = _escapeBlockLowerBound;
         escapeBlockUpperBound = _escapeBlockUpperBound;
-        rollupProviders[msg.sender] = true;
+        rollupProviders[_contractOwner] = true;
     }
 
     /**
