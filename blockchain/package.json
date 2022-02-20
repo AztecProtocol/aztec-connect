@@ -11,7 +11,7 @@
     "clean": "rm -rf ./cache ./dest ./src/artifacts",
     "test": "cd ./src/contracts/verifier/fixtures && ./create_fixture.sh true true && yarn compile && NODE_NO_WARNINGS=1 yarn jest",
     "start:ganache": "yarn compile && ganache-cli -h 0.0.0.0 -l 12000000 -e 10000 -m 'test test test test test test test test test test test junk'",
-    "start:ganache:fork": "yarn compile && ganache-cli -f --chain.chainId 0xA57EC --fork.blockNumber 14000000 --database.dbPath ./data -h 0.0.0.0 -l 12000000 -e 10000 -m 'test test test test test test test test test test test junk'",
+    "start:ganache:fork": "yarn compile && ganache-cli -f $FORK_HOST --chain.chainId 0xA57EC --fork.blockNumber 14000000 --database.dbPath ./data -h 0.0.0.0 -l 12000000 -e 10000 -m 'test test test test test test test test test test test junk'",
     "deploy": "node ./dest/deploy/index.js"
   },
   "bin": {

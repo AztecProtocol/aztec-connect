@@ -11,7 +11,7 @@ const {
   LAZY_INIT,
   PERSIST,
   DATA_DIR = './data',
-  JOB_SERVER_URL = 'http://localhost:3302',
+  JOB_SERVER_URL = 'http://localhost:8082',
 } = process.env;
 
 async function main() {

@@ -89,7 +89,7 @@ export class HttpJobServer implements ProofGenerator {
     // A request for work. Serve back the newest new (timestamp 0) or expired job.
     while (this.running) {
       const now = new Date().getTime();
-      const [job] = this.jobs.filter(j => now - j.timestamp > this.ackTimeout);
+      const job = this.jobs.find(j => now - j.timestamp > this.ackTimeout);
       if (job) {
         job.timestamp = now;
         return Protocol.pack(job.id, job.cmd, job.data);

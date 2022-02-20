@@ -5,19 +5,22 @@ import debug from 'debug';
 import { randomBytes } from 'crypto';
 
 export class InterruptableSleep {
-  private interruptPromise = Promise.resolve();
   private interruptResolve = () => {};
+  private interruptPromise = new Promise<void>(resolve => (this.interruptResolve = resolve));
+  private timeouts: NodeJS.Timeout[] = [];
 
   public async sleep(ms: number) {
-    this.interruptPromise = new Promise(resolve => (this.interruptResolve = resolve));
     let timeout!: NodeJS.Timeout;
     const promise = new Promise(resolve => (timeout = setTimeout(resolve, ms)));
+    this.timeouts.push(timeout);
     await Promise.race([promise, this.interruptPromise]);
     clearTimeout(timeout);
+    this.timeouts.splice(this.timeouts.indexOf(timeout), 1);
   }
 
   public interrupt() {
     this.interruptResolve();
+    this.interruptPromise = new Promise(resolve => (this.interruptResolve = resolve));
   }
 }
 

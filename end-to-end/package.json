@@ -25,9 +25,11 @@
   },
   "dependencies": {
     "@aztec/sdk": "file:../sdk/dest",
+    "debug": "^4.3.3",
     "typescript": "^4.4.4"
   },
   "devDependencies": {
+    "@types/debug": "^4.1.7",
     "@types/jest": "^25.2.3",
     "@types/node": "^14.0.5",
     "@typescript-eslint/eslint-plugin": "^4.1.1",
