@@ -18,6 +18,8 @@ export async function deploy(
   initialEthSupply = 1n * 10n ** 17n,
   vk?: string,
 ) {
+  const signerAddress = await signer.getAddress();
+
   const uniswapRouter = await deployUniswap(signer);
   await uniswapRouter.deployed();
 
@@ -28,7 +30,7 @@ export async function deploy(
   const defiProxy = await deployDefiBridgeProxy(signer);
 
   const chainId = await signer.getChainId();
-  console.error(`Chain ID: ${chainId}`);
+  console.error(`Chain id: ${chainId}`);
 
   const { initDataRoot, initNullRoot, initRootsRoot } = InitHelpers.getInitRoots(chainId);
   const initDataSize: number = InitHelpers.getInitDataSize(chainId);
@@ -36,9 +38,6 @@ export async function deploy(
   console.error(`Initial data root: ${initDataRoot.toString('hex')}`);
   console.error(`Initial null root: ${initNullRoot.toString('hex')}`);
   console.error(`Initial root root: ${initRootsRoot.toString('hex')}`);
-
-  // note we need to change this address for production to the multisig
-  const ownerAddress = await signer.getAddress();
 
   console.error(`Awaiting deployment...`);
 
@@ -51,7 +50,7 @@ export async function deploy(
     escapeHatchBlockLower,
     escapeHatchBlockUpper,
     defiProxy.address,
-    ownerAddress,
+    signerAddress,
     initDataRoot,
     initNullRoot,
     initRootsRoot,

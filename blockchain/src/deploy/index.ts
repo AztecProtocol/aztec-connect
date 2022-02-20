@@ -5,8 +5,6 @@ import { deploy } from './deploy';
 
 const {
   ETHEREUM_HOST,
-  INFURA_API_KEY,
-  NETWORK,
   PRIVATE_KEY,
   ESCAPE_BLOCK_LOWER = '4560', // window of 1hr every 20hrs (escape in last 240 blocks of every 4800)
   ESCAPE_BLOCK_UPPER = '4800',
@@ -14,24 +12,19 @@ const {
   VK,
 } = process.env;
 
-function getSigner() {
-  if (INFURA_API_KEY && NETWORK && PRIVATE_KEY) {
-    console.error(`Infura network: ${NETWORK}`);
-    const provider = new ethers.providers.InfuraProvider(NETWORK, INFURA_API_KEY);
-    return new NonceManager(new ethers.Wallet(PRIVATE_KEY, provider) as Signer);
-  } else if (ETHEREUM_HOST) {
-    console.error(`Json rpc provider: ${ETHEREUM_HOST}`);
-    const provider = new ethers.providers.JsonRpcProvider(ETHEREUM_HOST);
-    return new NonceManager(provider.getSigner(0));
+async function getSigner() {
+  if (!ETHEREUM_HOST) {
+    throw new Error('ETHEREUM_HOST not set.');
   }
-  return undefined;
+  console.error(`Json rpc provider: ${ETHEREUM_HOST}`);
+  const provider = new ethers.providers.JsonRpcProvider(ETHEREUM_HOST);
+  const signer = PRIVATE_KEY ? (new ethers.Wallet(PRIVATE_KEY, provider) as Signer) : provider.getSigner(0);
+  console.error(`Signer: ${await signer.getAddress()}`);
+  return new NonceManager(signer);
 }
 
 async function main() {
-  const signer = getSigner();
-  if (!signer) {
-    throw new Error('Failed to create connection. Set ETHEREUM_HOST or INFURA_API_KEY, NETWORK, PRIVATE_KEY.');
-  }
+  const signer = await getSigner();
 
   const initialEthSupply = BigInt(INITIAL_ETH_SUPPLY);
 
