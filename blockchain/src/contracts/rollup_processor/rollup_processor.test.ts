@@ -235,7 +235,7 @@ describe('rollup_processor', () => {
     const inputAssetId = 1;
     const outputValueA = 7n;
     const bridgeId = await mockBridge({
-      inputAssetId,
+      inputAssetIdA: inputAssetId,
       outputAssetIdA: 0,
       outputValueA,
     });

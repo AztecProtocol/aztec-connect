@@ -102,7 +102,7 @@ describe('rollup_processor: async defi bridge', () => {
     const outputValueB = 7n;
     const { bridgeId } = await mockAsyncBridge({
       secondOutputAssetValid: true,
-      inputAssetId: 1,
+      inputAssetIdA: 1,
       outputAssetIdA: 0,
       outputAssetIdB: 2,
       outputValueA,
@@ -166,7 +166,7 @@ describe('rollup_processor: async defi bridge', () => {
     const outputValueB = 7n;
     const { bridgeId, bridge } = await mockAsyncBridge({
       secondOutputAssetValid: true,
-      inputAssetId: 1,
+      inputAssetIdA: 1,
       outputAssetIdA: 0,
       outputAssetIdB: 2,
       outputValueA,
@@ -444,7 +444,7 @@ describe('rollup_processor: async defi bridge', () => {
   it('refund input ETH to rollup processor if fail to finalise', async () => {
     const inputValue = 20n;
     const { bridgeId, bridge } = await mockAsyncBridge({
-      inputAssetId: 0,
+      inputAssetIdA: 0,
       outputAssetIdA: 1,
       outputValueA: 0n,
       returnInputValue: inputValue,
@@ -523,7 +523,7 @@ describe('rollup_processor: async defi bridge', () => {
   it('revert if the bridge does not refund enough input ETH to rollup processor', async () => {
     const inputValue = 20n;
     const { bridgeId, bridge } = await mockAsyncBridge({
-      inputAssetId: 0,
+      inputAssetIdA: 0,
       outputAssetIdA: 1,
       outputValueA: 0n,
       returnInputValue: inputValue - 1n,

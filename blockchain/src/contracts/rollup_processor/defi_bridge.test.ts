@@ -89,7 +89,7 @@ describe('rollup_processor: defi bridge', () => {
   it('process defi interaction data that converts token to eth', async () => {
     const outputValueA = 15n;
     const bridgeId = await mockBridge({
-      inputAssetId: 1,
+      inputAssetIdA: 1,
       outputAssetIdA: 0,
       outputValueA,
     });
@@ -114,7 +114,7 @@ describe('rollup_processor: defi bridge', () => {
   it('process defi interaction data if defiInteractionHash is 1 from max size', async () => {
     const outputValueA = 15n;
     const bridgeId = await mockBridge({
-      inputAssetId: 1,
+      inputAssetIdA: 1,
       outputAssetIdA: 0,
       outputValueA,
     });
@@ -138,7 +138,7 @@ describe('rollup_processor: defi bridge', () => {
   it('process defi interaction data that converts eth to token', async () => {
     const outputValueA = 15n;
     const bridgeId = await mockBridge({
-      inputAssetId: 0,
+      inputAssetIdA: 0,
       outputAssetIdA: 2,
       outputValueA,
     });
@@ -164,7 +164,7 @@ describe('rollup_processor: defi bridge', () => {
   it('process defi interaction data that converts token to token', async () => {
     const outputValueA = 15n;
     const bridgeId = await mockBridge({
-      inputAssetId: 1,
+      inputAssetIdA: 1,
       outputAssetIdA: 2,
       outputValueA,
     });
@@ -188,15 +188,15 @@ describe('rollup_processor: defi bridge', () => {
   });
 
   it('process more than one defi interaction data', async () => {
-    const bridge0 = await mockBridge({ inputAssetId: 0, outputAssetIdA: 1, outputValueA: 21n });
-    const bridge1 = await mockBridge({ inputAssetId: 1, outputAssetIdA: 0, outputValueA: 22n });
+    const bridge0 = await mockBridge({ inputAssetIdA: 0, outputAssetIdA: 1, outputValueA: 21n });
+    const bridge1 = await mockBridge({ inputAssetIdA: 1, outputAssetIdA: 0, outputValueA: 22n });
     const bridge2 = await mockBridge({
-      inputAssetId: 1,
+      inputAssetIdA: 1,
       outputAssetIdA: 2,
       outputValueA: 23n,
       canConvert: false,
     });
-    const bridge3 = await mockBridge({ inputAssetId: 2, outputAssetIdA: 1, outputValueA: 24n });
+    const bridge3 = await mockBridge({ inputAssetIdA: 2, outputAssetIdA: 1, outputValueA: 24n });
 
     await topupEth(100n);
     await topupToken(1, 100n);
@@ -238,7 +238,7 @@ describe('rollup_processor: defi bridge', () => {
     const outputValueB = 7n;
     const bridgeId = await mockBridge({
       secondOutputAssetValid: true,
-      inputAssetId: 1,
+      inputAssetIdA: 1,
       outputAssetIdA: 0,
       outputAssetIdB: 2,
       outputValueA,
@@ -261,6 +261,117 @@ describe('rollup_processor: defi bridge', () => {
     await expectBalance(0, outputValueA);
     await expectBalance(1, initialTokenBalance - inputValue);
     await expectBalance(2, outputValueB);
+
+    await expectResult([new DefiInteractionNote(bridgeId, 0, inputValue, outputValueA, outputValueB, true)], txHash);
+  });
+
+  it('process defi interaction data that has two input assets and two output assets', async () => {
+    const inputValue = 20n;
+    const outputValueA = 12n;
+    const outputValueB = 7n;
+    const bridgeId = await mockBridge({
+      secondOutputAssetValid: true,
+      secondInputAssetValid: true,
+      inputAssetIdA: 1,
+      inputAssetIdB: 2,
+      outputAssetIdA: 0,
+      outputAssetIdB: 2,
+      outputValueA,
+      outputValueB,
+    });
+
+    const initialTokenBalance = 50n;
+    await topupToken(1, initialTokenBalance);
+    await topupToken(2, initialTokenBalance);
+
+    await expectBalance(0, 0n);
+    await expectBalance(1, initialTokenBalance);
+    await expectBalance(2, initialTokenBalance);
+
+    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+      defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
+    });
+    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const txHash = await rollupProcessor.sendTx(tx);
+
+    await expectBalance(0, outputValueA);
+    await expectBalance(1, initialTokenBalance - inputValue);
+    await expectBalance(2, initialTokenBalance - inputValue + outputValueB);
+
+    await expectResult([new DefiInteractionNote(bridgeId, 0, inputValue, outputValueA, outputValueB, true)], txHash);
+  });
+
+  it('process defi interaction data that has two virtual input assets and two virtual output assets', async () => {
+    const inputValue = 20n;
+    const outputValueA = 12n;
+    const outputValueB = 7n;
+    const bridgeId = await mockBridge({
+      firstOutputVirtual: true,
+      secondOutputVirtual: true,
+      firstInputVirtual: true,
+      secondInputVirtual: true,
+      inputAssetIdA: 1,
+      inputAssetIdB: 2,
+      outputAssetIdA: 0,
+      outputAssetIdB: 2,
+      outputValueA,
+      outputValueB,
+    });
+
+    const initialTokenBalance = 50n;
+    await topupToken(1, initialTokenBalance);
+    await topupToken(2, initialTokenBalance);
+
+    await expectBalance(0, 0n);
+    await expectBalance(1, initialTokenBalance);
+    await expectBalance(2, initialTokenBalance);
+
+    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+      defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
+    });
+    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const txHash = await rollupProcessor.sendTx(tx);
+
+    await expectBalance(0, 0n); // outputs are virtual, shouldn't change token values!
+    await expectBalance(1, initialTokenBalance); // input note is virtual! Shouldn't deduct from balance of inputAssetId as this token is not related to the virtual note!
+    await expectBalance(2, initialTokenBalance); // output note is virtual! Shouldn't update token balance either
+
+    await expectResult([new DefiInteractionNote(bridgeId, 0, inputValue, outputValueA, outputValueB, true)], txHash);
+  });
+
+  it('process defi interaction data that has two virtual input assets and two real output assets', async () => {
+    const inputValue = 20n;
+    const outputValueA = 12n;
+    const outputValueB = 7n;
+    const bridgeId = await mockBridge({
+      secondOutputAssetValid: true,
+      firstInputVirtual: true,
+      secondInputVirtual: true,
+      inputAssetIdA: 1,
+      inputAssetIdB: 2,
+      outputAssetIdA: 0,
+      outputAssetIdB: 2,
+      outputValueA,
+      outputValueB,
+    });
+
+    const initialTokenBalance = 50n;
+    await topupToken(1, initialTokenBalance);
+    await topupToken(2, initialTokenBalance);
+
+    await expectBalance(0, 0n);
+    await expectBalance(1, initialTokenBalance);
+    await expectBalance(2, initialTokenBalance);
+
+    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+      defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
+    });
+    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const txHash = await rollupProcessor.sendTx(tx);
+
+    await expectBalance(0, outputValueA);
+    await expectBalance(1, initialTokenBalance); // input note is virtual! Shouldn't deduct from balance of inputAssetId as this token is not related to the virtual note!
+    await expectBalance(2, initialTokenBalance + outputValueB); // ditto for this token too
 
     await expectResult([new DefiInteractionNote(bridgeId, 0, inputValue, outputValueA, outputValueB, true)], txHash);
   });
@@ -427,7 +538,7 @@ describe('rollup_processor: defi bridge', () => {
     // swap ETH for DAI
     const outputValueA = 1n << 252n;
     const bridgeId = await mockBridge({
-      inputAssetId: 0,
+      inputAssetIdA: 0,
       outputAssetIdA: 1,
       outputAssetIdB: 0,
       outputValueA,

@@ -54,27 +54,27 @@ export class BridgeId {
   static ZERO = new BridgeId(0, 0, 0, 0, 0, BitConfig.EMPTY, 0);
   static ENCODED_LENGTH_IN_BYTES = 32;
   static ADDRESS_BIT_LEN = 32;
-  static INPUT_ASSET_ID_LEN = 30;
+  static INPUT_ASSET_ID_A_LEN = 30;
   static OUTPUT_A_ASSET_ID_LEN = 30;
   static OUTPUT_B_ASSET_ID_LEN = 30;
   static BITCONFIG_LEN = 32;
-  static OPENING_NONCE_LEN = 32;
+  static INPUT_ASSET_ID_B_LEN = 30;
   static AUX_DATA_LEN = 64;
 
   static ADDRESS_OFFSET = 0;
-  static INPUT_ASSET_ID_OFFSET = BridgeId.ADDRESS_BIT_LEN;
-  static OUTPUT_A_ASSET_ID_OFFSET = BridgeId.INPUT_ASSET_ID_OFFSET + BridgeId.INPUT_ASSET_ID_LEN;
+  static INPUT_ASSET_ID_A_OFFSET = BridgeId.ADDRESS_BIT_LEN;
+  static OUTPUT_A_ASSET_ID_OFFSET = BridgeId.INPUT_ASSET_ID_A_OFFSET + BridgeId.INPUT_ASSET_ID_A_LEN;
   static OUTPUT_B_ASSET_ID_OFFSET = BridgeId.OUTPUT_A_ASSET_ID_OFFSET + BridgeId.OUTPUT_A_ASSET_ID_LEN;
-  static OPENING_NONCE_OFFSET = BridgeId.OUTPUT_B_ASSET_ID_OFFSET + BridgeId.OUTPUT_B_ASSET_ID_LEN;
-  static BITCONFIG_OFFSET = BridgeId.OPENING_NONCE_OFFSET + BridgeId.OPENING_NONCE_LEN;
+  static INPUT_ASSET_ID_B_OFFSET = BridgeId.OUTPUT_B_ASSET_ID_OFFSET + BridgeId.OUTPUT_B_ASSET_ID_LEN;
+  static BITCONFIG_OFFSET = BridgeId.INPUT_ASSET_ID_B_OFFSET + BridgeId.INPUT_ASSET_ID_B_LEN;
   static AUX_DATA_OFFSET = BridgeId.BITCONFIG_OFFSET + BridgeId.BITCONFIG_LEN;
 
   constructor(
     public readonly addressId: number,
-    public readonly inputAssetId: number,
+    public readonly inputAssetIdA: number,
     public readonly outputAssetIdA: number,
     public readonly outputAssetIdB: number,
-    public readonly openingNonce: number,
+    public readonly inputAssetIdB: number,
     public readonly bitConfig: BitConfig,
     public readonly auxData: number,
   ) {}
@@ -94,10 +94,10 @@ export class BridgeId {
   static fromBigInt(val: bigint) {
     return new BridgeId(
       getNumber(val, this.ADDRESS_OFFSET, this.ADDRESS_BIT_LEN),
-      getNumber(val, this.INPUT_ASSET_ID_OFFSET, this.INPUT_ASSET_ID_LEN),
+      getNumber(val, this.INPUT_ASSET_ID_A_OFFSET, this.INPUT_ASSET_ID_A_LEN),
       getNumber(val, this.OUTPUT_A_ASSET_ID_OFFSET, this.OUTPUT_A_ASSET_ID_LEN),
       getNumber(val, this.OUTPUT_B_ASSET_ID_OFFSET, this.OUTPUT_B_ASSET_ID_LEN),
-      getNumber(val, this.OPENING_NONCE_OFFSET, this.OPENING_NONCE_LEN),
+      getNumber(val, this.INPUT_ASSET_ID_B_OFFSET, this.INPUT_ASSET_ID_B_LEN),
       BitConfig.fromBigInt(BigInt(getNumber(val, this.BITCONFIG_OFFSET, 32))),
       getNumber(val, this.AUX_DATA_OFFSET, this.AUX_DATA_LEN),
     );
@@ -116,12 +116,13 @@ export class BridgeId {
   }
 
   toBigInt() {
+    console.log('bit config shift = ', BridgeId.BITCONFIG_OFFSET);
     return (
       BigInt(this.addressId) +
-      (BigInt(this.inputAssetId) << BigInt(BridgeId.INPUT_ASSET_ID_OFFSET)) +
+      (BigInt(this.inputAssetIdA) << BigInt(BridgeId.INPUT_ASSET_ID_A_OFFSET)) +
       (BigInt(this.outputAssetIdA) << BigInt(BridgeId.OUTPUT_A_ASSET_ID_OFFSET)) +
       (BigInt(this.outputAssetIdB) << BigInt(BridgeId.OUTPUT_B_ASSET_ID_OFFSET)) +
-      (BigInt(this.openingNonce) << BigInt(BridgeId.OPENING_NONCE_OFFSET)) +
+      (BigInt(this.inputAssetIdB) << BigInt(BridgeId.INPUT_ASSET_ID_B_OFFSET)) +
       (this.bitConfig.toBigInt() << BigInt(BridgeId.BITCONFIG_OFFSET)) +
       (BigInt(this.auxData) << BigInt(BridgeId.AUX_DATA_OFFSET))
     );

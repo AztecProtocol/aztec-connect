@@ -77,7 +77,7 @@ describe('rollup_processor: defi bridge failures', () => {
     expect(await assets[assetId].balanceOf(rollupProcessor.address)).toBe(balance);
 
   const expectRefund = async (bridgeId: BridgeId, inputValue: bigint, txHash: TxHash) => {
-    await expectBalance(bridgeId.inputAssetId, inputValue);
+    await expectBalance(bridgeId.inputAssetIdA, inputValue);
     await expectBalance(bridgeId.outputAssetIdA, 0n);
     if (bridgeId.bitConfig.secondOutputReal) {
       await expectBalance(bridgeId.outputAssetIdB, 0n);
@@ -94,7 +94,7 @@ describe('rollup_processor: defi bridge failures', () => {
 
   it('process failed defi interaction that converts token to eth', async () => {
     const bridgeId = await mockBridge({
-      inputAssetId: 1,
+      inputAssetIdA: 1,
       outputAssetIdA: 0,
       canConvert: false,
     });
@@ -115,7 +115,7 @@ describe('rollup_processor: defi bridge failures', () => {
 
   it('process failed defi interaction that converts eth to token', async () => {
     const bridgeId = await mockBridge({
-      inputAssetId: 0,
+      inputAssetIdA: 0,
       outputAssetIdA: 1,
       canConvert: false,
     });
@@ -156,7 +156,7 @@ describe('rollup_processor: defi bridge failures', () => {
   it('process defi interaction data fails if defiInteractionHash is max size', async () => {
     const outputValueA = 15n;
     const bridgeId = await mockBridge({
-      inputAssetId: 1,
+      inputAssetIdA: 1,
       outputAssetIdA: 0,
       outputValueA,
     });

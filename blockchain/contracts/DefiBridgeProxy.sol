@@ -124,12 +124,18 @@ contract DefiBridgeProxy {
             // Transfer totalInputValue to the bridge contract if erc20. ETH is sent on call to convert.
             TokenTransfers.safeTransferTo(inputAssetA.erc20Address, bridgeAddress, totalInputValue);
         }
-
+        if (inputAssetB.assetType == AztecTypes.AztecAssetType.ERC20) {
+            // Transfer totalInputValue to the bridge contract if erc20. ETH is sent on call to convert.
+            TokenTransfers.safeTransferTo(inputAssetB.erc20Address, bridgeAddress, totalInputValue);
+        }
         // Call bridge.convert(), which will return output values for the two output assets.
         // If input is ETH, send it along with call to convert.
         IDefiBridge bridgeContract = IDefiBridge(bridgeAddress);
         (outputValueA, outputValueB, isAsync) = bridgeContract.convert{
-            value: inputAssetA.assetType == AztecTypes.AztecAssetType.ETH ? totalInputValue : 0
+            value: (inputAssetA.assetType == AztecTypes.AztecAssetType.ETH ||
+                inputAssetB.assetType == AztecTypes.AztecAssetType.ETH)
+                ? totalInputValue
+                : 0
         }(
             inputAssetA,
             inputAssetB,

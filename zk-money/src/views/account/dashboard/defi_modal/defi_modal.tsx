@@ -29,7 +29,7 @@ interface DefiModalProps {
 
 export function DefiModal({ recipe, onClose }: DefiModalProps) {
   const enterBridgeId = recipe.bridgeFlow.enter;
-  const inputAssetId = enterBridgeId.inputAssetId;
+  const inputAssetId = enterBridgeId.inputAssetIdA;
   const inputAsset = assets[inputAssetId];
   const [fields, setFields] = useState<DefiFormFields>({
     speed: DefiSettlementTime.NEXT_ROLLUP,

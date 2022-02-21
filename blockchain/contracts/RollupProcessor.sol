@@ -35,7 +35,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
     error INCORRECT_STATE_HASH(bytes32 oldStateHash, bytes32 newStateHash);
     error INCORRECT_DATA_START_INDEX(uint256 providedIndex, uint256 expectedIndex);
     error BRIDGE_WITH_IDENTICAL_OUTPUT_ASSETS(uint256 outputAssetId);
-    error BRIDGE_HAS_SECOND_OUTPUT_BOTH_VIRTUAL_AND_VALID();
+    error BRIDGE_ID_IS_INCONSISTENT();
     error INCORRECT_PREVIOUS_DEFI_INTERACTION_HASH(
         bytes32 providedDefiInteractionHash,
         bytes32 expectedDefiInteractionHash
@@ -96,12 +96,12 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
     uint256 private constant DEFAULT_ERC20_GAS_LIMIT = 55000;
 
     // Bit offsets and bit masks used to convert a `uint256 bridgeId` into a BridgeData member
-    uint256 private constant INPUT_ASSET_ID_SHIFT = 32;
+    uint256 private constant INPUT_ASSET_ID_A_SHIFT = 32;
     uint256 private constant OUTPUT_ASSET_ID_A_SHIFT = 62;
     uint256 private constant OUTPUT_ASSET_ID_B_SHIFT = 92;
-    uint256 private constant LINKED_INTERACTION_NONCE_SHIFT = 122;
-    uint256 private constant BITCONFIG_SHIFT = 154;
-    uint256 private constant AUX_DATA_SHIFT = 186;
+    uint256 private constant INPUT_ASSET_ID_B_SHIFT = 122;
+    uint256 private constant BITCONFIG_SHIFT = 152;
+    uint256 private constant AUX_DATA_SHIFT = 184;
     uint256 private constant MASK_THIRTY_TWO_BITS = 0xffffffff;
     uint256 private constant MASK_THIRTY_BITS = 0x3fffffff;
     uint256 private constant MASK_SIXTY_FOUR_BITS = 0xffffffffffffffff;
@@ -227,20 +227,22 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
      *
      * @param bridgeAddressId the bridge contract address = supportedBridges[bridgeAddressId]
      * @param bridgeAddress   the bridge contract address
-     * @param inputAssetId
+     * @param inputAssetIdA
      */
     struct BridgeData {
         uint256 bridgeAddressId;
         address bridgeAddress;
-        uint256 inputAssetId;
+        uint256 inputAssetIdA;
         uint256 outputAssetIdA;
         uint256 outputAssetIdB;
-        uint256 linkedInteractionNonce;
+        uint256 inputAssetIdB;
         uint256 auxData;
-        bool secondOutputVirtual;
-        bool secondOutputReal;
-        bool firstOutputVirtual;
+        bool firstInputVirtual;
         bool secondInputVirtual;
+        bool firstOutputVirtual;
+        bool secondOutputVirtual;
+        bool secondInputReal;
+        bool secondOutputReal;
         uint256 bridgeGasLimit;
     }
 
@@ -1173,10 +1175,10 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
      * Structure of the bit array is as follows (starting at least significant bit):
      * | bit range | parameter | description
      * | 0 - 32    | bridgeAddressId | The address ID. Bridge address = `supportedBridges[bridgeAddressId]`
-     * | 32 - 62   | inputAssetId    | Input asset ID. Asset address = `supportedAssets[inputAssetId]`
+     * | 32 - 62   | inputAssetIdA    | Input asset ID. Asset address = `supportedAssets[inputAssetIdA]`
      * | 62 - 92   | outputAssetIdA  | First output asset ID |
      * | 92 - 122  | outputAssetIdB  | Second output asset ID (if bridge has 2nd output asset) |
-     * | 122 - 154 | linkedInteractionNonce | defi interaction nonce of interaction that produced the input notes. Only relevant for virtual input assets |
+     * | 122 - 154 | inputAssetIdB | Second input asset ID. If virtual, is defi interaction nonce of interaction that produced the note |
      * | 154 - 186 | bitConfig | Bit-array that contains boolean bridge settings |
      * | 186 - 250 | auxData | 64 bits of custom data to be passed to the bridge contract. Structure is defined/checked by the bridge contract |
      *
@@ -1199,37 +1201,44 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
     function getBridgeData(uint256 bridgeId) internal view returns (BridgeData memory bridgeData) {
         assembly {
             mstore(bridgeData, and(bridgeId, MASK_THIRTY_TWO_BITS)) // bridgeAddressId
-            mstore(add(bridgeData, 0x40), and(shr(INPUT_ASSET_ID_SHIFT, bridgeId), MASK_THIRTY_BITS)) // inputAssetId
+            mstore(add(bridgeData, 0x40), and(shr(INPUT_ASSET_ID_A_SHIFT, bridgeId), MASK_THIRTY_BITS)) // inputAssetIdA
             mstore(add(bridgeData, 0x60), and(shr(OUTPUT_ASSET_ID_A_SHIFT, bridgeId), MASK_THIRTY_BITS)) // outputAssetIdA
             mstore(add(bridgeData, 0x80), and(shr(OUTPUT_ASSET_ID_B_SHIFT, bridgeId), MASK_THIRTY_BITS)) // outputAssetIdB
-            mstore(add(bridgeData, 0xa0), and(shr(LINKED_INTERACTION_NONCE_SHIFT, bridgeId), MASK_THIRTY_TWO_BITS)) // linkedInteractionNonce
+            mstore(add(bridgeData, 0xa0), and(shr(INPUT_ASSET_ID_B_SHIFT, bridgeId), MASK_THIRTY_BITS)) // inputAssetIdB
             mstore(add(bridgeData, 0xc0), and(shr(AUX_DATA_SHIFT, bridgeId), MASK_SIXTY_FOUR_BITS)) // auxData
 
             let bitConfig := and(shr(BITCONFIG_SHIFT, bridgeId), MASK_THIRTY_TWO_BITS)
             // bitConfig = bit mask that contains bridge ID settings
-            // bit 0 = first input asset virtual? (always zero atm, ruled out by circuit constraints)
+            // bit 0 = first input asset virtual?
             // bit 1 = second input asset virtual?
-            // bit 2 = first output asset virtual? (always zero atm, ruled out by circuit constraints)
+            // bit 2 = first output asset virtual?
             // bit 3 = second output asset virtual?
-            // bit 4 = second input asset real? (always zero atm, ruled out by circuit constraints)
+            // bit 4 = second input asset real?
             // bit 5 = second output asset real?
-
-            mstore(add(bridgeData, 0x140), eq(and(shr(1, bitConfig), 1), 1)) // secondInputVirtual ((bitConfig >> 1) & 1) == 1
-            mstore(add(bridgeData, 0xe0), eq(and(shr(3, bitConfig), 1), 1)) // secondOutputVirtual ((bitConfig >> 3) & 1) == 1
-            mstore(add(bridgeData, 0x100), eq(and(shr(5, bitConfig), 1), 1)) // secondOutputReal ((bitConfig >> 5) & 1) == 1
-            mstore(add(bridgeData, 0x120), 0) // firstOutputVirtual = false
+            mstore(add(bridgeData, 0xe0), and(bitConfig, 1)) // firstInputVirtual ((bitConfit) & 1) == 1
+            mstore(add(bridgeData, 0x100), eq(and(shr(1, bitConfig), 1), 1)) // secondInputVirtual ((bitConfig >> 1) & 1) == 1
+            mstore(add(bridgeData, 0x120), eq(and(shr(2, bitConfig), 1), 1)) // firstOutputVirtual ((bitConfig >> 2) & 1) == 1
+            mstore(add(bridgeData, 0x140), eq(and(shr(3, bitConfig), 1), 1)) // secondOutputVirtual ((bitConfig >> 3) & 1) == 1
+            mstore(add(bridgeData, 0x160), eq(and(shr(4, bitConfig), 1), 1)) // secondInputReal ((bitConfig >> 4) & 1) == 1
+            mstore(add(bridgeData, 0x180), eq(and(shr(5, bitConfig), 1), 1)) // secondOutputReal ((bitConfig >> 5) & 1) == 1
         }
 
         // potential conflicting states that are explicitly ruled out by circuit constraints:
-        // secondOutputVirtual && secondOutputReal
-        // if secondAssetValid is 1, both output asset ids cannot match one another
-        // also validate they aren't present here!
-        if (bridgeData.secondOutputVirtual && bridgeData.secondOutputReal) {
-            revert BRIDGE_HAS_SECOND_OUTPUT_BOTH_VIRTUAL_AND_VALID();
+        if (bridgeData.secondInputReal && bridgeData.secondInputVirtual) {
+            revert BRIDGE_ID_IS_INCONSISTENT();
         }
-
+        if (bridgeData.secondOutputReal && bridgeData.secondOutputVirtual) {
+            revert BRIDGE_ID_IS_INCONSISTENT();
+        }
         bridgeData.bridgeAddress = supportedBridges[bridgeData.bridgeAddressId - 1];
-        if (bridgeData.secondOutputReal && (bridgeData.outputAssetIdA == bridgeData.outputAssetIdB)) {
+        bool bothOutputsReal = (!bridgeData.firstOutputVirtual && bridgeData.secondOutputReal);
+        bool bothOutputsVirtual = (bridgeData.firstOutputVirtual && bridgeData.secondOutputVirtual);
+        if ((bothOutputsReal || bothOutputsVirtual) && (bridgeData.outputAssetIdA == bridgeData.outputAssetIdB)) {
+            revert BRIDGE_WITH_IDENTICAL_OUTPUT_ASSETS(bridgeData.outputAssetIdA);
+        }
+        bool bothInputsReal = (!bridgeData.firstInputVirtual && bridgeData.secondInputReal);
+        bool bothInputsVirtual = (bridgeData.firstInputVirtual && bridgeData.secondInputVirtual);
+        if ((bothInputsReal || bothInputsVirtual) && (bridgeData.outputAssetIdA == bridgeData.outputAssetIdB)) {
             revert BRIDGE_WITH_IDENTICAL_OUTPUT_ASSETS(bridgeData.outputAssetIdA);
         }
         bridgeData.bridgeGasLimit = bridgeGasLimits[bridgeData.bridgeAddressId];
@@ -1252,22 +1261,42 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
             AztecTypes.AztecAsset memory outputAssetB
         )
     {
-        inputAssetA.id = bridgeData.inputAssetId;
-        inputAssetA.erc20Address = getSupportedAsset(bridgeData.inputAssetId);
-        inputAssetA.assetType = inputAssetA.erc20Address == address(0x0)
-            ? AztecTypes.AztecAssetType.ETH
-            : AztecTypes.AztecAssetType.ERC20;
-        outputAssetA.id = bridgeData.outputAssetIdA;
-        outputAssetA.erc20Address = getSupportedAsset(bridgeData.outputAssetIdA);
-        outputAssetA.assetType = outputAssetA.erc20Address == address(0x0)
-            ? AztecTypes.AztecAssetType.ETH
-            : AztecTypes.AztecAssetType.ERC20;
+        if (bridgeData.firstInputVirtual) {
+            // asset id will be defi interaction nonce that created note
+            inputAssetA.id = bridgeData.inputAssetIdA;
+            inputAssetA.erc20Address = address(0x0);
+            inputAssetA.assetType = AztecTypes.AztecAssetType.VIRTUAL;
+        } else {
+            inputAssetA.id = bridgeData.inputAssetIdA;
+            inputAssetA.erc20Address = getSupportedAsset(bridgeData.inputAssetIdA);
+            inputAssetA.assetType = inputAssetA.erc20Address == address(0x0)
+                ? AztecTypes.AztecAssetType.ETH
+                : AztecTypes.AztecAssetType.ERC20;
+        }
+        if (bridgeData.firstOutputVirtual) {
+            // use nonce as asset id.
+            outputAssetA.id = defiInteractionNonce;
+            outputAssetA.erc20Address = address(0x0);
+            outputAssetA.assetType = AztecTypes.AztecAssetType.VIRTUAL;
+        } else {
+            outputAssetA.id = bridgeData.outputAssetIdA;
+            outputAssetA.erc20Address = getSupportedAsset(bridgeData.outputAssetIdA);
+            outputAssetA.assetType = outputAssetA.erc20Address == address(0x0)
+                ? AztecTypes.AztecAssetType.ETH
+                : AztecTypes.AztecAssetType.ERC20;
+        }
 
         if (bridgeData.secondInputVirtual) {
-            // use nonce as asset id.
-            inputAssetB.id = bridgeData.linkedInteractionNonce;
+            // asset id will be defi interaction nonce that created note
+            inputAssetB.id = bridgeData.inputAssetIdB;
             inputAssetB.erc20Address = address(0x0);
             inputAssetB.assetType = AztecTypes.AztecAssetType.VIRTUAL;
+        } else if (bridgeData.secondInputReal) {
+            inputAssetB.id = bridgeData.inputAssetIdB;
+            inputAssetB.erc20Address = getSupportedAsset(bridgeData.inputAssetIdB);
+            inputAssetB.assetType = inputAssetB.erc20Address == address(0x0)
+                ? AztecTypes.AztecAssetType.ETH
+                : AztecTypes.AztecAssetType.ERC20;
         } else {
             inputAssetB.id = 0;
             inputAssetB.erc20Address = address(0x0);
@@ -1515,7 +1544,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
                 // We wrap this logic in a delegatecall so that if the call fails (i.e. the bridge interaction fails), we can unwind bridge-interaction specific state changes,
                 // without reverting the entire transaction.
                 let success := delegatecall(
-                    mload(add(bridgeData, 0x160)),
+                    mload(add(bridgeData, 0x1a0)), // bridgeData.gasSentToBridge
                     sload(defiBridgeProxy.slot),
                     sub(mPtr, 0x04),
                     0x244,

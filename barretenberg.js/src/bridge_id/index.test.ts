@@ -1,4 +1,4 @@
-import { BridgeId , BitConfig } from './';
+import { BridgeId, BitConfig } from './';
 
 describe('bridge id', () => {
   const bridgeId = new BridgeId(67, 123, 456, 7890, 78, new BitConfig(false, true, false, true, false, false), 78);
@@ -10,10 +10,10 @@ describe('bridge id', () => {
     const recovered = BridgeId.fromBuffer(buf);
     expect(recovered.equals(bridgeId)).toBe(true);
     expect(recovered.addressId).toEqual(bridgeId.addressId);
-    expect(recovered.inputAssetId).toBe(bridgeId.inputAssetId);
+    expect(recovered.inputAssetIdA).toBe(bridgeId.inputAssetIdA);
     expect(recovered.outputAssetIdA).toBe(bridgeId.outputAssetIdA);
     expect(recovered.outputAssetIdB).toBe(bridgeId.outputAssetIdB);
-    expect(recovered.openingNonce).toBe(bridgeId.openingNonce);
+    expect(recovered.inputAssetIdB).toBe(bridgeId.inputAssetIdB);
     expect(recovered.bitConfig).toEqual(bridgeId.bitConfig);
     expect(recovered.auxData).toBe(bridgeId.auxData);
   });
@@ -25,10 +25,10 @@ describe('bridge id', () => {
     const recovered = BridgeId.fromString(str);
     expect(recovered.equals(bridgeId)).toBe(true);
     expect(recovered.addressId).toEqual(bridgeId.addressId);
-    expect(recovered.inputAssetId).toBe(bridgeId.inputAssetId);
+    expect(recovered.inputAssetIdA).toBe(bridgeId.inputAssetIdA);
     expect(recovered.outputAssetIdA).toBe(bridgeId.outputAssetIdA);
     expect(recovered.outputAssetIdB).toBe(bridgeId.outputAssetIdB);
-    expect(recovered.openingNonce).toBe(bridgeId.openingNonce);
+    expect(recovered.inputAssetIdB).toBe(bridgeId.inputAssetIdB);
     expect(recovered.bitConfig).toEqual(bridgeId.bitConfig);
     expect(recovered.auxData).toBe(bridgeId.auxData);
   });
@@ -38,10 +38,10 @@ describe('bridge id', () => {
     const recovered = BridgeId.fromBigInt(val);
     expect(recovered.equals(bridgeId)).toBe(true);
     expect(recovered.addressId).toEqual(bridgeId.addressId);
-    expect(recovered.inputAssetId).toBe(bridgeId.inputAssetId);
+    expect(recovered.inputAssetIdA).toBe(bridgeId.inputAssetIdA);
     expect(recovered.outputAssetIdA).toBe(bridgeId.outputAssetIdA);
     expect(recovered.outputAssetIdB).toBe(bridgeId.outputAssetIdB);
-    expect(recovered.openingNonce).toBe(bridgeId.openingNonce);
+    expect(recovered.inputAssetIdB).toBe(bridgeId.inputAssetIdB);
     expect(recovered.bitConfig).toEqual(bridgeId.bitConfig);
     expect(recovered.auxData).toBe(bridgeId.auxData);
   });

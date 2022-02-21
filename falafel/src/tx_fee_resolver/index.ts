@@ -107,7 +107,7 @@ export class TxFeeResolver {
   }
 
   getDefiFees(bridgeId: bigint) {
-    const { inputAssetId } = BridgeId.fromBigInt(bridgeId);
+    const { inputAssetIdA: inputAssetId } = BridgeId.fromBigInt(bridgeId);
     const assetId = this.isFeePayingAsset(inputAssetId) ? inputAssetId : this.defaultFeePayingAsset;
     const gas = this.getSingleBridgeTxGas(bridgeId);
     const fullGas = this.getFullBridgeGas(bridgeId);

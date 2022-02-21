@@ -101,18 +101,21 @@ _Note: for Pedersen commitments, different generators are used for different typ
 Computed vars:
 
 - Extract data from the `claim_note.bridge_id`:
+
   - ```
     bridge_id_data = {
         bridge_address_id, // represents a defi bridge contract address
-        input_asset_id,
+        input_asset_id_a,
+        input_asset_id_b,     // if virtual, is the defi_interaction nonce from when a loan/LP position was opened
         output_asset_id_a,
         output_asset_id_b,
-        opening_nonce,     // the defi_interaction nonce from when a loan/LP position was opened
+
                            // during some earlier defi interaction by the user
         bit_config,
         aux_data,
     }
     ```
+
 - The same data is also currently extracted from the `defi_interaction_note.bridge_id`. This is redundant, but we'll only need to remove these extra constraints if we ever approach the next power of 2.
 - Extract config data from `bit_config`:
   - ```

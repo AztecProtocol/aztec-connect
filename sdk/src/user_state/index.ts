@@ -418,7 +418,7 @@ export class UserState extends EventEmitter {
       const treeNote = new TreeNote(
         userId.publicKey,
         depositValue,
-        bridgeId.inputAssetId,
+        bridgeId.inputAssetIdA,
         userId.nonce,
         secret,
         Buffer.alloc(32),

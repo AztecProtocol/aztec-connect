@@ -143,7 +143,7 @@ export const createDefiDepositProof = (bridgeId: BridgeId, inputValue: bigint, t
     Buffer.alloc(32),
   );
   const totalTxFees: bigint[] = [];
-  totalTxFees[bridgeId.inputAssetId] = txFee;
+  totalTxFees[bridgeId.inputAssetIdA] = txFee;
 
   const offchainTxData = new OffchainDefiDepositData(
     bridgeId,
@@ -169,7 +169,7 @@ export const createDefiClaimProof = (bridgeId: BridgeId, txFee = 0n) => {
     Buffer.alloc(32),
   );
   const totalTxFees: bigint[] = [];
-  totalTxFees[bridgeId.inputAssetId] = txFee;
+  totalTxFees[bridgeId.inputAssetIdA] = txFee;
 
   const offchainTxData = new OffchainDefiClaimData();
 
@@ -268,7 +268,7 @@ export const createRollupProof = async (
       case ProofId.DEFI_DEPOSIT:
       case ProofId.DEFI_CLAIM: {
         const bridgeId = BridgeId.fromBuffer(proof.assetId);
-        assetIds.add(bridgeId.inputAssetId);
+        assetIds.add(bridgeId.inputAssetIdA);
         break;
       }
       case ProofId.ACCOUNT:
