@@ -20,9 +20,10 @@ $primary_to: #0094ff;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  border: 1px solid #ebeaea;
   gap: 1px;
+  border: 1px solid #ebeaea;
   background-color: #ebeaea;
+  z-index: 1;
 }
 
 .dropdownOptionBackground {

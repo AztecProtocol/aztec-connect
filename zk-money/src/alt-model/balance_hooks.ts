@@ -7,7 +7,7 @@ import { useApp } from './app_context';
 import { useProviderState } from './provider_hooks';
 
 // TODO: Change this to avoid using a loop in a hook
-export function useTotalBalance() {
+export function useTotalBalance(): string {
   let totalBalanceValue = 0n;
 
   const balances = useBalances();
@@ -24,7 +24,7 @@ export function useTotalBalance() {
 }
 
 // TODO: Change this to avoid using a loop in a hook
-export function useTotalSpendableBalance() {
+export function useTotalSpendableBalance(): string {
   let totalSpendableBalanceValue = 0n;
 
   const balances = useSpendableBalances();
@@ -40,7 +40,7 @@ export function useTotalSpendableBalance() {
   return convertPriceToString(totalSpendableBalanceValue);
 }
 
-export function useBalance(assetId: number) {
+export function useBalance(assetId: number): bigint | undefined {
   const { sdk, accountId } = useApp();
   const [balance, setBalance] = useState(() => accountId && sdk?.getBalance(assetId, accountId));
   useEffect(() => {
@@ -53,7 +53,7 @@ export function useBalance(assetId: number) {
   return balance;
 }
 
-export function useBalances() {
+export function useBalances(): AssetValue[] | undefined {
   const { sdk, accountId } = useApp();
   const [balances, setBalances] = useState<AssetValue[]>();
   useEffect(() => {
@@ -66,7 +66,7 @@ export function useBalances() {
   return balances;
 }
 
-export function useSpendableBalance(assetId: number) {
+export function useSpendableBalance(assetId: number): bigint | undefined {
   const { sdk, accountId } = useApp();
   const [spendableBalance, setSpendableBalance] = useState<bigint>();
   useEffect(() => {
@@ -79,7 +79,7 @@ export function useSpendableBalance(assetId: number) {
   return spendableBalance;
 }
 
-function useSpendableBalances() {
+function useSpendableBalances(): AssetValue[] | undefined {
   const { sdk, accountId } = useApp();
   const balances = useBalances();
   const [spendableBalances, setSpendableBalances] = useState<AssetValue[]>();
@@ -93,7 +93,7 @@ function useSpendableBalances() {
   return spendableBalances;
 }
 
-export function useDepositPendingShieldBalance(assetId: number) {
+export function useDepositPendingShieldBalance(assetId: number): bigint | undefined {
   const { sdk } = useApp();
   const ethAddress = useProviderState()?.account;
   const [deposit, setDeposit] = useState<bigint>();

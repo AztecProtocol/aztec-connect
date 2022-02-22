@@ -11,7 +11,7 @@ import { BridgeKeyStats } from 'features/defi/bridge_key_stats';
 
 const Root = styled.div`
   display: grid;
-  gap: 30px;
+  gap: 10px;
   grid-template-columns: 1fr 1fr;
   grid-template-areas:
     'img progress'
@@ -55,6 +55,7 @@ interface Page1Props {
   onNext: () => void;
   nextDisabled: boolean;
   fee: bigint | undefined;
+  maxAmount: bigint;
 }
 
 export function Page1({
@@ -66,6 +67,7 @@ export function Page1({
   onNext,
   nextDisabled,
   fee,
+  maxAmount,
 }: Page1Props) {
   return (
     <Root>
@@ -78,6 +80,7 @@ export function Page1({
       </div>
       <BorderBox area="amount">
         <AmountSection
+          maxAmount={maxAmount}
           asset={inputAsset}
           amountStr={fields.amountStr}
           onChangeAmountStr={amountStr => onChangeFields({ ...fields, amountStr })}

@@ -12,6 +12,7 @@ const Root = styled.div`
   width: ${DOM_WIDTH}px;
   height: ${DOM_HEIGHT}px;
   position: relative;
+  margin: auto;
 `;
 
 const Disc = styled.div`

@@ -1,10 +1,10 @@
 .info {
   display: flex;
   flex-direction: row;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
   justify-content: space-between;
   letter-spacing: 0.5px;
-  font-size: 12px;
+  font-size: 14px;
   font-style: italic;
   line-height: 130%;
 }

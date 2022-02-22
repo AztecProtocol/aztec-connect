@@ -15,11 +15,12 @@ import { Card, CardHeaderSize } from 'ui-components';
 const ModalWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  max-width: 850px;
+  width: 80vw;
+  max-width: 1000px;
 `;
 
 const ModalBody = styled.div`
-  padding: 28px 37px 28px 37px;
+  padding: 20px 40px;
 `;
 
 interface DefiModalProps {
@@ -35,7 +36,11 @@ export function DefiModal({ recipe, onClose }: DefiModalProps) {
     speed: DefiSettlementTime.NEXT_ROLLUP,
     amountStr: '',
   });
-  const { invalid, amount, fee, fieldAnnotations, maxAmount } = useDefiForm(enterBridgeId, inputAsset, fields);
+  const { invalid, amount, fee, fieldAnnotations, transactionLimit, maxAmount } = useDefiForm(
+    enterBridgeId,
+    inputAsset,
+    fields,
+  );
   const [locked, setLocked] = useState(false);
   const { compose, ...composerState } = useDefiComposer(enterBridgeId);
   const { phase } = composerState;
@@ -53,7 +58,7 @@ export function DefiModal({ recipe, onClose }: DefiModalProps) {
       fee={fee}
       composerState={composerState}
       onSubmit={handleSubmit}
-      maxAmount={maxAmount}
+      transactionLimit={transactionLimit}
     />
   ) : (
     <Page1
@@ -65,6 +70,7 @@ export function DefiModal({ recipe, onClose }: DefiModalProps) {
       onNext={() => setLocked(true)}
       nextDisabled={invalid}
       fee={fee}
+      maxAmount={maxAmount}
     />
   );
   return (

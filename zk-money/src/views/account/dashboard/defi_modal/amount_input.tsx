@@ -1,36 +1,32 @@
 import React from 'react';
-import styled from 'styled-components/macro';
 import { GradientBorder } from 'ui-components';
-import { Asset } from '../../../../app';
-import { Input, ShieldedAssetIcon } from '../../../../components';
-import { spacings } from '../../../../styles';
-
-// const Root = styled.div`
-//   height: 54px;
-//   width: 100%;
-// `;
-
-const Content = styled.div`
-  display: flex;
-  padding-left: ${spacings.s};
-  align-items: center;
-  justify-content: space-between;
-`;
+import { Asset, formatBaseUnits } from '../../../../app';
+import { Input } from '../../../../components';
+import style from './amount_input.module.scss';
 
 interface AmountInputProps extends React.ComponentProps<typeof Input> {
   asset: Asset;
+  maxAmount: bigint;
 }
 
-export function AmountInput({ asset, onChangeValue, ...inputProps }: AmountInputProps) {
+export function AmountInput({ asset, onChangeValue, maxAmount, ...inputProps }: AmountInputProps) {
   const handleChangeValue = (value: string) => onChangeValue?.(value.replace(/[^0-9.]/g, ''));
+
+  const handleMaxButton = () => {
+    const maxValue = maxAmount
+      ? formatBaseUnits(maxAmount, asset.decimals, { precision: asset.preferredFractionalDigits })
+      : '0';
+    handleChangeValue(maxValue);
+  };
+
   return (
-    // <Root>
     <GradientBorder>
-      <Content>
-        <ShieldedAssetIcon asset={asset} />
+      <div className={style.content}>
         <Input {...inputProps} onChangeValue={handleChangeValue} />
-      </Content>
+        <button className={style.maxButton} onClick={handleMaxButton}>
+          Max
+        </button>
+      </div>
     </GradientBorder>
-    // </Root>
   );
 }

@@ -3,13 +3,13 @@ import { Checkbox, Spacer, Text } from '../../../../../components';
 import style from './disclaimer.module.css';
 
 interface DisclaimerProps {
-  maxAmount: bigint;
+  transactionLimit: bigint;
   asset: Asset;
   accepted: boolean;
   onChangeAccepted: (accepted: boolean) => void;
 }
 
-export function Disclaimer({ maxAmount, asset, accepted, onChangeAccepted }: DisclaimerProps) {
+export function Disclaimer({ transactionLimit, asset, accepted, onChangeAccepted }: DisclaimerProps) {
   return (
     <div className={style.root}>
       <div className={style.header}>
@@ -22,7 +22,7 @@ export function Disclaimer({ maxAmount, asset, accepted, onChangeAccepted }: Dis
           inline
           size="s"
           text={`This is experimental software that hasn’t yet been externally audited. Your private key is stored in the browser, for security amounts are capped at ${fromBaseUnits(
-            maxAmount,
+            transactionLimit,
             asset.decimals,
           )} ${asset.symbol}. `}
         />

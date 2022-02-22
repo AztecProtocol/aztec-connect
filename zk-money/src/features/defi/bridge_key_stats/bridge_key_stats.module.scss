@@ -13,15 +13,17 @@
 .label {
   text-transform: uppercase;
   padding-bottom: 10px;
-  font-size: 9px;
+  font-size: 12px;
+  letter-spacing: 0.03em;
 }
 
 .value {
   font-weight: bold;
   font-style: italic;
-  font-size: 20px;
+  font-size: 24px;
 }
 
 .compact .value {
-  font-size: 15px;
+  font-size: 20px;
+  letter-spacing: 0.03em;
 }

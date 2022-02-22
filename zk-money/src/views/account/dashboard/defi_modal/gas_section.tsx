@@ -10,7 +10,11 @@ import { SpeedSwitch } from './speed_switch';
 
 const S = {
   Content: styled.div`
-    padding: ${spacings.l} ${spacings.m};
+    padding: ${spacings.m};
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
   `,
 
   Header: styled.div`
@@ -20,12 +24,16 @@ const S = {
 
   CenteredText: styled.div`
     text-align: center;
+    height: 33%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
   `,
 
   PositionedInfoButton: styled(InfoButton)`
-    /* position: absolute;
-  right: 20px;
-  bottom: 15px; */
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
   `,
 
   InfoRoot: styled.div`
@@ -90,16 +98,13 @@ export function GasSection(props: GasSectionProps) {
       <S.Content>
         <S.Header>
           <Text>Gas Fee</Text>
-          <Text weight="bold" italic size="s">
+          <Text weight="bold" italic>
             {gasPrice}
           </Text>
         </S.Header>
-        <Spacer />
         <SpeedSwitch value={props.speed} onChangeValue={props.onChangeSpeed} options={OPTS} />
-        <Spacer />
         <S.CenteredText>
           <Text text={getTimingMessage(props.speed)} size="xxs" color="grey" />
-          <Spacer />
           <Text size="xxs">
             You're saving{' '}
             <b>
@@ -107,10 +112,8 @@ export function GasSection(props: GasSectionProps) {
             </b>{' '}
             compared to L1!
           </Text>
-          <Spacer />
           <Text size="xxs">[TODO:??] other people did this in the last hour</Text>
         </S.CenteredText>
-        <Spacer />
         <S.PositionedInfoButton onClick={() => setShowingInfo(true)} />
       </S.Content>
     </InfoWrap>

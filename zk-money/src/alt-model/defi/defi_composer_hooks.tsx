@@ -62,9 +62,10 @@ function useDefiFees(bridgeId: BridgeId) {
 export function useDefiForm(bridgeId: BridgeId, inputAsset: Asset, fields: DefiFormFields) {
   const balance = useBalance(inputAsset.id);
   const { config } = useApp();
-  const maxAmount = config.txAmountLimits[inputAsset.id];
+  const transactionLimit = config.txAmountLimits[inputAsset.id];
   const amount = toBaseUnits(fields.amountStr, inputAsset.decimals);
   const fee = useDefiFees(bridgeId)?.[fields.speed].value;
+  const maxAmount = balance !== undefined && fee !== undefined ? balance - fee : 0n;
   const total = amount + (fee ?? 0n);
 
   const validate = () => {
@@ -74,7 +75,7 @@ export function useDefiForm(bridgeId: BridgeId, inputAsset: Asset, fields: DefiF
       allowForGas: balance - amount < fee,
       insufficentFunds: total > balance,
       tooSmall: amount <= 0n,
-      beyondMax: amount > maxAmount,
+      beyondMax: amount > transactionLimit,
     };
   };
   const issues = validate();
@@ -82,7 +83,7 @@ export function useDefiForm(bridgeId: BridgeId, inputAsset: Asset, fields: DefiF
     if (issues.beyondMax) {
       return {
         type: 'error',
-        text: `Defi deposits are currently limited to ${fromBaseUnits(maxAmount, inputAsset.decimals)} zk${
+        text: `DeFi deposits are currently limited to ${fromBaseUnits(transactionLimit, inputAsset.decimals)} zk${
           inputAsset.symbol
         }`,
       };
@@ -109,5 +110,5 @@ export function useDefiForm(bridgeId: BridgeId, inputAsset: Asset, fields: DefiF
     amountStr: annotateAmountStr(),
   };
   const invalid = Object.values(issues).some(x => x);
-  return { amount, issues, invalid, fee, fieldAnnotations, maxAmount };
+  return { maxAmount, amount, issues, invalid, fee, fieldAnnotations, transactionLimit };
 }

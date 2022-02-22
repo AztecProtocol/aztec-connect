@@ -16,7 +16,7 @@ import { BridgeKeyStats } from 'features/defi/bridge_key_stats';
 const S = {
   Root: styled.div`
     display: grid;
-    gap: 50px;
+    gap: 10px;
   `,
 
   TopStats: styled.div`
@@ -45,11 +45,11 @@ interface Page2Props {
   asset: Asset;
   fields: DefiFormFields;
   fee: bigint | undefined;
-  maxAmount: bigint;
+  transactionLimit: bigint;
   onSubmit: () => void;
 }
 
-export function Page2({ recipe, composerState, asset, maxAmount, fields, fee, onSubmit }: Page2Props) {
+export function Page2({ recipe, composerState, asset, transactionLimit, fields, fee, onSubmit }: Page2Props) {
   const amount = toBaseUnits(fields.amountStr, asset.decimals);
   const [riskChecked, setRiskChecked] = useState(false);
   const hasError = composerState.erroredPhase !== undefined;
@@ -75,7 +75,12 @@ export function Page2({ recipe, composerState, asset, maxAmount, fields, fee, on
       </BorderBox>
       <BorderBox>
         {showingDeclaration ? (
-          <Disclaimer accepted={riskChecked} onChangeAccepted={setRiskChecked} asset={asset} maxAmount={maxAmount} />
+          <Disclaimer
+            accepted={riskChecked}
+            onChangeAccepted={setRiskChecked}
+            asset={asset}
+            transactionLimit={transactionLimit}
+          />
         ) : showingComplete ? (
           <TransactionComplete />
         ) : (

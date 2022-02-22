@@ -1,23 +1,38 @@
 import { useState } from 'react';
 import styled from 'styled-components/macro';
-import { InfoWrap } from 'ui-components';
+import { GradientBorder, InfoWrap } from 'ui-components';
 import { Asset } from '../../../../app';
-import { InfoButton, Spacer, Text } from '../../../../components';
-import { spacings } from '../../../../styles';
+import { InfoButton, ShieldedAssetIcon, Text } from '../../../../components';
 import { AmountInput } from './amount_input';
 import { InputValidationAnnotation } from './input_validation_message';
 import { MiniBalanceIndicator } from './mini_balance_indicator';
 import { Privacy } from './privacy';
 import { InputAnnotation } from './types';
+import { Dropdown } from 'components/dropdown';
+import downArrow from '../../../../images/down_arrow.svg';
+import { spacings } from '../../../../styles';
+import style from './amount_section.module.scss';
 
 const Content = styled.div`
-  padding: ${spacings.l} ${spacings.m};
+  padding: ${spacings.m};
+`;
+
+const StyledAmountInput = styled(AmountInput)`
+  margin-right: 10px;
+  padding: 0;
 `;
 
 const Header = styled.div`
   display: flex;
-  justify-content: space-between;
   align-items: end;
+  margin-bottom: 14px;
+  justify-content: space-between;
+`;
+
+const StyledInfoButton = styled(InfoButton)`
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
 `;
 
 function Info() {
@@ -42,15 +57,22 @@ function Info() {
 export function AmountSection(props: {
   asset: Asset;
   amountStr: string;
+  maxAmount: bigint;
   onChangeAmountStr: (amountStr: string) => void;
   amountStrAnnotation?: InputAnnotation;
 }) {
+  const [isAssetSelectorOpen, setAssetSelectorOpen] = useState(false);
   const [showingInfo, setShowingInfo] = useState(false);
+
+  const toggleAssetSelector = () => {
+    setAssetSelectorOpen(prevValue => !prevValue);
+  };
+
   return (
     <InfoWrap
       showingInfo={showingInfo}
       onHideInfo={() => setShowingInfo(false)}
-      infoHeader="Asset Amount & Privacy"
+      infoHeader={`Asset Amount & Privacy`}
       infoContent={<Info />}
       borderRadius={20}
     >
@@ -59,18 +81,37 @@ export function AmountSection(props: {
           <Text>Amount</Text>
           <MiniBalanceIndicator asset={props.asset} />
         </Header>
-        <Spacer />
-        <AmountInput
-          asset={props.asset}
-          placeholder="Enter amount"
-          onChangeValue={props.onChangeAmountStr}
-          value={props.amountStr}
-        />
-        <Spacer size="xxs" />
+        <div className={style.inputWrapper}>
+          <GradientBorder>
+            <div className={style.assetSelectorWrapper}>
+              <div className={style.assetSelector} onClick={toggleAssetSelector}>
+                <ShieldedAssetIcon asset={props.asset} />
+                <div className={style.assetName}>{props.asset.symbol}</div>
+                <img src={downArrow} />
+              </div>
+              <Dropdown
+                isOpen={isAssetSelectorOpen}
+                options={[
+                  { label: 'zkETH', value: 'zkETH' },
+                  { label: 'zkDAI', value: 'zkDAI' },
+                  { label: 'zkrenBTC', value: 'zkrenBTC' },
+                ]}
+                onClick={() => {}}
+                onClose={toggleAssetSelector}
+              />
+            </div>
+          </GradientBorder>
+          <StyledAmountInput
+            maxAmount={props.maxAmount}
+            asset={props.asset}
+            placeholder="Enter amount"
+            onChangeValue={props.onChangeAmountStr}
+            value={props.amountStr}
+          />
+        </div>
         <InputValidationAnnotation annotation={props.amountStrAnnotation} />
-        <Spacer size="l" />
         <Privacy asset={props.asset} />
-        <InfoButton onClick={() => setShowingInfo(true)} />
+        <StyledInfoButton onClick={() => setShowingInfo(true)} />
       </Content>
     </InfoWrap>
   );

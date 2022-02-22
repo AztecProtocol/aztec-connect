@@ -5,5 +5,4 @@ export const BorderBox = styled.div<{ area?: string }>`
   border: 1px solid ${themeColours[Theme.WHITE].border};
   border-radius: ${borderRadiuses.m};
   grid-area: ${({ area }) => area};
-  overflow: hidden;
 `;

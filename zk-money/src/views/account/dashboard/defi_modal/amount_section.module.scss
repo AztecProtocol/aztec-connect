@@ -1,0 +1,28 @@
+@use '../../../../ui-components/styles/mixins.scss';
+
+.inputWrapper {
+  display: flex;
+  flex-direction: row;
+  gap: 5%;
+}
+
+.assetSelectorWrapper {
+  gap: 5%;
+  flex-direction: row;
+  align-items: center;
+  position: relative;
+  height: 100%;
+}
+
+.assetSelector {
+  display: flex;
+  padding: 0 15px;
+  height: 100%;
+  cursor: pointer;
+  align-items: center;
+}
+
+.assetName {
+  margin: 0 5px;
+  @include mixins.gradient_font;
+}

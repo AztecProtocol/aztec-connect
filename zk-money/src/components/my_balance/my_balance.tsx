@@ -5,10 +5,6 @@ import { useTotalBalance, useTotalSpendableBalance } from '../../alt-model';
 import { gradients } from '../../styles';
 import style from './my_balance.module.scss';
 
-// const MyBalanceCard = styled(Card)`
-
-// `;
-
 const BalanceWrapper = styled.div`
   margin: auto;
   display: flex;

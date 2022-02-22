@@ -17,6 +17,7 @@ interface DropdownProps<T> {
 export interface DropdownOption<T> {
   value: T;
   label: string;
+  image?: string;
   disabled?: boolean;
 }
 
@@ -35,7 +36,10 @@ export function Dropdown<T>(props: DropdownProps<T>) {
           className={cx(style.dropdownOptionBackground, option.disabled && style.disabled)}
           onClick={() => !option.disabled && props.onClick && props.onClick(option)}
         >
-          <div className={cx(style.dropdownOption, option.disabled && style.disabled)}>{option.label}</div>
+          <div className={cx(style.dropdownOption, option.disabled && style.disabled)}>
+            {option.image && <img src={option.image} />}
+            {option.label}
+          </div>
         </div>
       ))}
     </div>

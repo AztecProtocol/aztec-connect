@@ -1,5 +1,5 @@
 import { bindStyle } from 'ui-components/util/classnames';
-import style from './bridge_key_stats.module.css';
+import style from './bridge_key_stats.module.scss';
 
 const cx = bindStyle(style);
 
