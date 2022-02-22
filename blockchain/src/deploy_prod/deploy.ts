@@ -25,22 +25,25 @@ export async function deploy(
   const ownerAddress = await signer.getAddress();
 
   const chainId = await signer.getChainId();
-  console.error(`Chain ID: ${chainId}`);
+  console.error(`Chain id: ${chainId}`);
   const { initDataRoot, initNullRoot, initRootsRoot } = InitHelpers.getInitRoots(chainId);
   const initDataSize: number = InitHelpers.getInitDataSize(chainId);
 
-  const rollup = await upgrades.deployProxy(rollupFactory,
+  const rollup = await upgrades.deployProxy(
+    rollupFactory,
     [
-        verifier.address,
-        escapeHatchBlockLower,
-        escapeHatchBlockUpper,
-        defiBridgeProxy.address,
-        ownerAddress,
-        initDataRoot,
-        initNullRoot,
-        initRootsRoot,
-        initDataSize,
-    ], { initializer: 'initialize' });
+      verifier.address,
+      escapeHatchBlockLower,
+      escapeHatchBlockUpper,
+      defiBridgeProxy.address,
+      ownerAddress,
+      initDataRoot,
+      initNullRoot,
+      initRootsRoot,
+      initDataSize,
+    ],
+    { initializer: 'initialize' },
+  );
 
   console.error(`Awaiting deployment...`);
   await rollup.deployed();

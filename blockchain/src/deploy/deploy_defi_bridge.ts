@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import { Contract, ContractFactory, Signer } from 'ethers';
 import UniswapBridge from '../artifacts/contracts/bridges/UniswapBridge.sol/UniswapBridge.json';
 

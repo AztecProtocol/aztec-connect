@@ -14,31 +14,26 @@ export enum ProofId {
 export class TxRollupProofRequest {
   proofId = ProofId.TX_ROLLUP;
 
-  constructor(public rollupSize: number, public txRollup: TxRollup) {}
+  constructor(public txRollup: TxRollup) {}
 
   toBuffer() {
-    return Buffer.concat([numToUInt32BE(this.proofId), numToUInt32BE(this.rollupSize), this.txRollup.toBuffer()]);
+    return Buffer.concat([numToUInt32BE(this.proofId), this.txRollup.toBuffer()]);
   }
 
   static fromBuffer(buf: Buffer) {
-    let start = 4;
-    const rollupSize = buf.readUInt32BE(start);
-    start += 4;
-    const txRollup = TxRollup.fromBuffer(buf.slice(start));
-    return new TxRollupProofRequest(rollupSize, txRollup);
+    const txRollup = TxRollup.fromBuffer(buf.slice(4));
+    return new TxRollupProofRequest(txRollup);
   }
 }
 
 export class RootRollupProofRequest {
   proofId = ProofId.ROOT_ROLLUP;
 
-  constructor(public txRollupSize: number, public rootRollupSize: number, public rootRollup: RootRollup) {}
+  constructor(public rootRollup: RootRollup) {}
 
   toBuffer() {
     return Buffer.concat([
       numToUInt32BE(this.proofId),
-      numToUInt32BE(this.txRollupSize),
-      numToUInt32BE(this.rootRollupSize),
       this.rootRollup.toBuffer(),
     ]);
   }
@@ -57,13 +52,11 @@ export class ClaimProofRequest {
 export class RootVerifierProofRequest {
   proofId = ProofId.ROOT_VERIFIER;
 
-  constructor(public txRollupSize: number, public rootRollupSize: number, public rootVerifier: RootVerifier) {}
+  constructor(public rootVerifier: RootVerifier) {}
 
   toBuffer() {
     return Buffer.concat([
       numToUInt32BE(this.proofId),
-      numToUInt32BE(this.txRollupSize),
-      numToUInt32BE(this.rootRollupSize),
       this.rootVerifier.toBuffer(),
     ]);
   }

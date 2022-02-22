@@ -6,3 +6,4 @@ artifacts
 cache
 .env*
 docs
+.redeploy

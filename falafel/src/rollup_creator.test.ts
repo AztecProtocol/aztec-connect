@@ -158,7 +158,10 @@ describe('rollup_creator', () => {
       const backwardLink = randomBytes(32);
       notes.set(8n, backwardLink);
       const txs = [mockTx(1, { txType: TxType.TRANSFER, backwardLink: backwardLink })];
-      await rollupCreator.create(txs, [], new Set<number>([0]));
+
+      const txrollup = await rollupCreator.createRollup(txs, [], new Set<number>([0]), true);
+      await rollupCreator.create(txs, txrollup);
+
       expect(proofGenerator.createProof).toHaveBeenCalledTimes(1);
       const argument = proofGenerator.createProof.mock.calls[0][0];
       const request = TxRollupProofRequest.fromBuffer(argument);
@@ -171,7 +174,10 @@ describe('rollup_creator', () => {
 
     it('should return the zero linked commitment for 1 tx with no backward link', async () => {
       const txs = [mockTx(1, { txType: TxType.TRANSFER })];
-      await rollupCreator.create(txs, [], new Set<number>([0]));
+
+      const txrollup = await rollupCreator.createRollup(txs, [], new Set<number>([0]), true);
+      await rollupCreator.create(txs, txrollup);
+
       expect(proofGenerator.createProof).toHaveBeenCalledTimes(1);
       const argument = proofGenerator.createProof.mock.calls[0][0];
       const request = TxRollupProofRequest.fromBuffer(argument);
@@ -193,7 +199,9 @@ describe('rollup_creator', () => {
         mockTx(1, { txType: TxType.TRANSFER, backwardLink: backwardLink1 }),
         mockTx(2, { txType: TxType.TRANSFER, backwardLink: backwardLink2 }),
       ];
-      await rollupCreator.create(txs, [], new Set<number>([0]));
+
+      const txrollup = await rollupCreator.createRollup(txs, [], new Set<number>([0]), true);
+      await rollupCreator.create(txs, txrollup);
       expect(proofGenerator.createProof).toHaveBeenCalledTimes(1);
       const argument = proofGenerator.createProof.mock.calls[0][0];
       const request = TxRollupProofRequest.fromBuffer(argument);
@@ -217,7 +225,9 @@ describe('rollup_creator', () => {
         mockTx(2, { txType: TxType.TRANSFER }),
         mockTx(3, { txType: TxType.TRANSFER, backwardLink: backwardLink2 }),
       ];
-      await rollupCreator.create(txs, [], new Set<number>([0]));
+
+      const txrollup = await rollupCreator.createRollup(txs, [], new Set<number>([0]), true);
+      await rollupCreator.create(txs, txrollup);
       expect(proofGenerator.createProof).toHaveBeenCalledTimes(1);
       const argument = proofGenerator.createProof.mock.calls[0][0];
       const request = TxRollupProofRequest.fromBuffer(argument);
@@ -246,7 +256,8 @@ describe('rollup_creator', () => {
         mockTx(2, { txType: TxType.TRANSFER }),
         mockTx(3, { txType: TxType.TRANSFER, backwardLink: backwardLink1 }),
       ];
-      await rollupCreator.create(txs, [], new Set<number>([0]));
+      const txrollup = await rollupCreator.createRollup(txs, [], new Set<number>([0]), true);
+      await rollupCreator.create(txs, txrollup);
       expect(proofGenerator.createProof).toHaveBeenCalledTimes(1);
       const argument = proofGenerator.createProof.mock.calls[0][0];
       const request = TxRollupProofRequest.fromBuffer(argument);
@@ -282,7 +293,8 @@ describe('rollup_creator', () => {
         mockTx(6, { txType: TxType.TRANSFER, backwardLink: backwardLink1 }),
         mockTx(7, { txType: TxType.TRANSFER }),
       ];
-      await rollupCreator.create(txs, [], new Set<number>([0]));
+      const txrollup = await rollupCreator.createRollup(txs, [], new Set<number>([0]), true);
+      await rollupCreator.create(txs, txrollup);
       expect(proofGenerator.createProof).toHaveBeenCalledTimes(1);
       const argument = proofGenerator.createProof.mock.calls[0][0];
       const request = TxRollupProofRequest.fromBuffer(argument);
@@ -329,7 +341,8 @@ describe('rollup_creator', () => {
         mockTx(6, { txType: TxType.TRANSFER, backwardLink: backwardLink1 }),
         mockTx(7, { txType: TxType.TRANSFER }),
       ];
-      await rollupCreator.create(txs, [], new Set<number>([0]));
+      const txrollup = await rollupCreator.createRollup(txs, [], new Set<number>([0]), true);
+      await rollupCreator.create(txs, txrollup);
       expect(proofGenerator.createProof).toHaveBeenCalledTimes(1);
       const argument = proofGenerator.createProof.mock.calls[0][0];
       const request = TxRollupProofRequest.fromBuffer(argument);
@@ -364,7 +377,8 @@ describe('rollup_creator', () => {
           txFee: BigInt(fees[i]),
         }),
       );
-      await rollupCreator.create(txs, globalBridges, new Set<number>([0]));
+      const txrollup = await rollupCreator.createRollup(txs, globalBridges, new Set<number>([0]), true);
+      await rollupCreator.create(txs, txrollup);
       const argument = proofGenerator.createProof.mock.calls[0][0];
       const request = TxRollupProofRequest.fromBuffer(argument);
       const rollup = request.txRollup;
@@ -392,7 +406,9 @@ describe('rollup_creator', () => {
           txFee: BigInt(fees[i]),
         }),
       );
-      await rollupCreator.create(txs, globalBridges, new Set<number>([0]));
+
+      const txrollup = await rollupCreator.createRollup(txs, globalBridges, new Set<number>([0]), true);
+      await rollupCreator.create(txs, txrollup);
       const argument = proofGenerator.createProof.mock.calls[0][0];
       const request = TxRollupProofRequest.fromBuffer(argument);
       const rollup = request.txRollup;
@@ -419,7 +435,8 @@ describe('rollup_creator', () => {
           txFee: BigInt(fees[i]),
         }),
       );
-      await rollupCreator.create(txs, globalBridges, new Set<number>([0]));
+      const txrollup = await rollupCreator.createRollup(txs, globalBridges, new Set<number>([0]), true);
+      await rollupCreator.create(txs, txrollup);
       const argument = proofGenerator.createProof.mock.calls[0][0];
       const request = TxRollupProofRequest.fromBuffer(argument);
       const rollup = request.txRollup;
@@ -446,7 +463,9 @@ describe('rollup_creator', () => {
           txFee: BigInt(fees[i]),
         }),
       );
-      await rollupCreator.create(txs, globalBridges, new Set<number>([0]));
+
+      const txrollup = await rollupCreator.createRollup(txs, globalBridges, new Set<number>([0]), true);
+      await rollupCreator.create(txs, txrollup);
       const argument = proofGenerator.createProof.mock.calls[0][0];
       const request = TxRollupProofRequest.fromBuffer(argument);
       const rollup = request.txRollup;
@@ -473,7 +492,8 @@ describe('rollup_creator', () => {
           txFee: BigInt(fees[i]),
         }),
       );
-      await rollupCreator.create(txs, globalBridges, new Set<number>([0]));
+      const txrollup = await rollupCreator.createRollup(txs, globalBridges, new Set<number>([0]), true);
+      await rollupCreator.create(txs, txrollup);
       const argument = proofGenerator.createProof.mock.calls[0][0];
       const request = TxRollupProofRequest.fromBuffer(argument);
       const rollup = request.txRollup;
@@ -500,7 +520,8 @@ describe('rollup_creator', () => {
         mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: 1 }),
       ];
       const rootAssets = new Set<number>();
-      await rollupCreator.create(txs, [], rootAssets);
+      const txrollup = await rollupCreator.createRollup(txs, [], rootAssets, true);
+      await rollupCreator.create(txs, txrollup);
       expect(proofGenerator.createProof).toHaveBeenCalledTimes(1);
       const argument = proofGenerator.createProof.mock.calls[0][0];
       const request = TxRollupProofRequest.fromBuffer(argument);
@@ -517,7 +538,8 @@ describe('rollup_creator', () => {
         mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: NON_FEE_PAYING_ASSET + 1 }),
       ];
       const rootAssets = new Set<number>();
-      await rollupCreator.create(txs, [], rootAssets);
+      const txrollup = await rollupCreator.createRollup(txs, [], rootAssets, true);
+      await rollupCreator.create(txs, txrollup);
       expect(proofGenerator.createProof).toHaveBeenCalledTimes(1);
       const argument = proofGenerator.createProof.mock.calls[0][0];
       const request = TxRollupProofRequest.fromBuffer(argument);

@@ -1,0 +1,64 @@
+#!/bin/bash
+set -e
+
+NETWORK=$1
+export TF_VAR_ETHEREUM_NETWORK=$NETWORK
+
+# We have to consider public and private ethereum hosts. The deployment system does not have access to the
+# nodes we run in the private subnets of the VPC. One option is to expose our OpenEthereum nodes externally but that
+# probably isn't wise, so we will just use Infura to deploy, but tell upstream systems to use the private node.
+# Our mainnet fork, *does* need to be exposed publically, as it's the only node in the network.
+case $NETWORK in
+  goerli)
+    export TF_VAR_PUBLIC_ETHEREUM_HOST=https://goerli.infura.io/v3/$TF_VAR_INFURA_API_KEY
+    export TF_VAR_PRIVATE_ETHEREUM_HOST=http://ethereum.aztec.network:10545
+    ;;
+  mainnet-fork)
+    export TF_VAR_PUBLIC_ETHEREUM_HOST=https://mainnet-fork.aztec.network:8545
+    export TF_VAR_PRIVATE_ETHEREUM_HOST=https://mainnet-fork.aztec.network:8545
+    ;;
+  *)
+    echo "Unknown network: $NETWORK"
+    exit 1
+    ;;
+esac
+
+deploy_ecr blockchain
+
+# Get the last network that we deployed to.
+cd ./terraform/dev
+ensure_terraform
+export TF_IN_AUTOMATION=1
+terraform init -input=false -backend-config="key=$DEPLOY_TAG/blockchain"
+LAST_NETWORK=$(terraform output ethereum_network || echo "")
+cd ../..
+
+LAST_COMMIT=$(last_successful_commit blockchain deployed)
+
+if [ -z "$LAST_COMMIT" ]; then
+  echo "No successful last deploy found. Will deploy."
+  REDEPLOY=1
+else
+  if changed $LAST_COMMIT '.*\.sol$'; then
+    echo "Solidity changed."
+    REDEPLOY=1
+  fi
+
+  if changed $LAST_COMMIT 'blockchain/.redeploy'; then
+    echo "Force deploy requested."
+    REDEPLOY=1
+  fi
+
+  if [ "$LAST_NETWORK" != "$NETWORK" ]; then
+    echo "Network changed."
+    REDEPLOY=1
+  fi
+fi
+
+if [ -n "$REDEPLOY" ]; then
+  echo "Redeploying contracts..."
+  `docker run -e ESCAPE_BLOCK_LOWER=60 -e ESCAPE_BLOCK_UPPER=120 -e ETHEREUM_HOST=$TF_VAR_PUBLIC_ETHEREUM_HOST -e PRIVATE_KEY=$TF_VAR_PRIVATE_KEY -e VK=MockVerificationKey 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:$COMMIT_HASH`
+  deploy_terraform blockchain
+fi
+
+tag_remote_image blockchain cache-$COMMIT_HASH cache-$COMMIT_HASH-deployed

@@ -26,7 +26,7 @@ const toUserDefiTx = (
     txId,
     userId,
     bridgeId,
-    { assetId: bridgeId.inputAssetId, value: depositValue },
+    { assetId: bridgeId.inputAssetIdA, value: depositValue },
     fee,
     outputValueA,
     outputValueB,
@@ -69,7 +69,7 @@ const getFee = (tx: CoreUserTx) => {
 
   if (tx.proofId === ProofId.DEFI_DEPOSIT) {
     const { bridgeId, txFee } = tx;
-    return { assetId: bridgeId.inputAssetId, value: txFee };
+    return { assetId: bridgeId.inputAssetIdA, value: txFee };
   }
 
   const {
@@ -113,7 +113,7 @@ const getTotalFee = (txs: CoreUserTx[]) => {
   const defiTx = txs.find(tx => tx.proofId === ProofId.DEFI_DEPOSIT) as CoreDefiTx;
   const feeTxs = !defiTx
     ? txs
-    : txs.filter(tx => tx === defiTx || (tx.proofId === ProofId.SEND && tx.assetId !== defiTx.bridgeId.inputAssetId));
+    : txs.filter(tx => tx === defiTx || (tx.proofId === ProofId.SEND && tx.assetId !== defiTx.bridgeId.inputAssetIdA));
   const fees = feeTxs.map(getFee);
   const { assetId } = fees.find(fee => fee.value) || fees[0];
   if (fees.some(fee => fee.value && fee.assetId !== assetId)) {

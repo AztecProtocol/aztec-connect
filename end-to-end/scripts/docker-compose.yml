@@ -16,23 +16,32 @@ services:
     ports:
       - '8545:8545'
 
-  halloumi:
+  halloumi1:
     image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/halloumi:latest
     environment:
       NODE_ENV: production
+      NUM_INNER_ROLLUP_TXS: ${NUM_INNER_ROLLUP_TXS}
       NUM_OUTER_ROLLUP_PROOFS: ${NUM_OUTER_ROLLUP_PROOFS}
       PERSIST: 'false'
       PROVERLESS: ${PROVERLESS}
-    ports:
-      - '8083:8083'
+      JOB_SERVER_URL: http://falafel:8082
+
+  halloumi2:
+    image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/halloumi:latest
+    environment:
+      NODE_ENV: production
+      NUM_INNER_ROLLUP_TXS: ${NUM_INNER_ROLLUP_TXS}
+      NUM_OUTER_ROLLUP_PROOFS: ${NUM_OUTER_ROLLUP_PROOFS}
+      PERSIST: 'false'
+      PROVERLESS: ${PROVERLESS}
+      JOB_SERVER_URL: http://falafel:8082
 
   falafel:
     image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/falafel:latest
     environment:
       ETHEREUM_HOST: http://ganache:8545
-      HALLOUMI_HOST: http://halloumi:8083
-      NUM_OUTER_ROLLUP_PROOFS: ${NUM_OUTER_ROLLUP_PROOFS}
       NUM_INNER_ROLLUP_TXS: ${NUM_INNER_ROLLUP_TXS}
+      NUM_OUTER_ROLLUP_PROOFS: ${NUM_OUTER_ROLLUP_PROOFS}
       BASE_TX_GAS: 10000
       PUBLISH_INTERVAL: 120
       NODE_ENV: production
@@ -41,7 +50,6 @@ services:
       VK: ${VK}
     depends_on:
       - ganache
-      - halloumi
     command: >
       sh -c "
       while ! nc -z ganache 8545; do sleep 1; done;

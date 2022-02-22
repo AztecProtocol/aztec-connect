@@ -65,6 +65,8 @@ describe('pipeline_coordinator', () => {
     rollupCreator = {
       create: jest.fn().mockResolvedValue(Buffer.alloc(0)),
       interrupt: jest.fn(),
+      createRollup: jest.fn(),
+      addRollupProof: jest.fn(),
     };
 
     rollupAggregator = {

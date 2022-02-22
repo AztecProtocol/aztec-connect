@@ -12,7 +12,7 @@ import { InitialWorldState, RollupProviderStatus, RuntimeConfig } from '@aztec/b
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { emptyDir } from 'fs-extra';
-import { CliProofGenerator, ProofGenerator, ServerProofGenerator } from 'halloumi/proof_generator';
+import { CliProofGenerator, HttpJobServer, HttpJobServers, ProofGenerator } from 'halloumi/proof_generator';
 import { BridgeResolver } from './bridge';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
@@ -43,7 +43,7 @@ export class Server {
     barretenberg: BarretenbergWasm,
   ) {
     const {
-      halloumiHost,
+      proofGeneratorMode,
       numInnerRollupTxs,
       numOuterRollupProofs,
       proverless,
@@ -71,9 +71,18 @@ export class Server {
       numInnerRollupTxs * numOuterRollupProofs,
       publishInterval,
     );
-    this.proofGenerator = halloumiHost
-      ? new ServerProofGenerator(halloumiHost)
-      : new CliProofGenerator(2 ** 23, '2', './data', true, proverless);
+
+    switch (proofGeneratorMode) {
+      case 'split':
+        this.proofGenerator = new HttpJobServers();
+        break;
+      case 'local':
+        this.proofGenerator = new CliProofGenerator(2 ** 25, 28, 32, proverless, true, false, './data');
+        break;
+      default:
+        this.proofGenerator = new HttpJobServer();
+    }
+
     this.pipelineFactory = new RollupPipelineFactory(
       this.proofGenerator,
       blockchain,
@@ -107,7 +116,7 @@ export class Server {
     console.log('Server initializing...');
 
     console.log('Waiting until halloumi is ready...');
-    await this.proofGenerator.awaitReady();
+    await this.proofGenerator.start();
 
     await this.txFeeResolver.start();
     await this.worldState.start();
@@ -119,6 +128,9 @@ export class Server {
 
   public async stop() {
     console.log('Server stop...');
+
+    this.proofGenerator.stop();
+
     this.ready = false;
     await this.txReceiver.destroy();
     await this.worldState.stop();

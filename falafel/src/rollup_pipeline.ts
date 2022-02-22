@@ -30,7 +30,7 @@ export class RollupPipeline {
     gasLimit: number,
     numInnerRollupTxs: number,
     numOuterRollupProofs: number,
-    bridgeResolver: BridgeResolver
+    bridgeResolver: BridgeResolver,
   ) {
     const innerRollupSize = 1 << Math.ceil(Math.log2(numInnerRollupTxs));
     const outerRollupSize = 1 << Math.ceil(Math.log2(innerRollupSize * numOuterRollupProofs));
@@ -45,7 +45,6 @@ export class RollupPipeline {
       rollupDb,
       worldStateDb,
       outerRollupSize,
-      numInnerRollupTxs,
       numOuterRollupProofs,
       rollupBeneficiary,
       metrics,
@@ -59,7 +58,7 @@ export class RollupPipeline {
       innerRollupSize,
       outerRollupSize,
       metrics,
-      feeResolver
+      feeResolver,
     );
     const claimProofCreator = new ClaimProofCreator(rollupDb, worldStateDb, proofGenerator, feeResolver);
     this.pipelineCoordinator = new PipelineCoordinator(
@@ -74,7 +73,7 @@ export class RollupPipeline {
       numInnerRollupTxs,
       numOuterRollupProofs,
       publishInterval,
-      bridgeResolver
+      bridgeResolver,
     );
   }
 
@@ -110,7 +109,7 @@ export class RollupPipelineFactory {
     private gasLimit: number,
     private numInnerRollupTxs: number,
     private numOuterRollupProofs: number,
-    private bridgeResolver: BridgeResolver
+    private bridgeResolver: BridgeResolver,
   ) {}
 
   public setConf(publishInterval: number, maxProviderGasPrice: bigint, gasLimit: number) {
@@ -134,7 +133,7 @@ export class RollupPipelineFactory {
       this.gasLimit,
       this.numInnerRollupTxs,
       this.numOuterRollupProofs,
-      this.bridgeResolver
+      this.bridgeResolver,
     );
   }
 }

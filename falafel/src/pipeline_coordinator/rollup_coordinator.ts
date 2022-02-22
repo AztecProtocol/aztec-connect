@@ -13,6 +13,7 @@ import { TxFeeResolver } from '../tx_fee_resolver';
 import { BridgeTxQueue, createDefiRollupTx, createRollupTx, RollupTx } from './bridge_tx_queue';
 import { PublishTimeManager, RollupTimeouts } from './publish_time_manager';
 import { emptyProfile, profileRollup, RollupProfile } from './rollup_profiler';
+import { TxRollup } from 'halloumi/proof_generator';
 
 export class RollupCoordinator {
   private innerProofs: RollupProofDao[] = [];
@@ -63,12 +64,14 @@ export class RollupCoordinator {
     this.initialiseBridgeQueues(rollupTimeouts);
     const bridgeIds = [...this.rollupBridgeIds];
     const assetIds = new Set<number>(this.rollupAssetIds);
+
     const txs = this.getNextTxsToRollup(pendingTxs, flush, assetIds, bridgeIds);
     try {
       const rollupProfile = await this.aggregateAndPublish(txs, rollupTimeouts, flush);
       this.published = rollupProfile.published;
       return rollupProfile;
     } catch (e) {
+      console.log('Error:', e);
       // Probably being interrupted.
       return emptyProfile(this.numInnerRollupTxs * this.numOuterRollupProofs);
     }
@@ -217,35 +220,30 @@ export class RollupCoordinator {
     }
   }
 
-  private async buildInnerRollup(pendingTxs: RollupTx[]) {
-    const txs = pendingTxs.splice(0, this.numInnerRollupTxs);
+  private async buildInnerRollup(innerTxs: RollupTx[], rollup: TxRollup) {
+    // In this case innerTsx is expected to be <= this.numInnerRollupTxs
+    if (innerTxs.length > this.numInnerRollupTxs) {
+      throw new Error(`innerTxs.length > this.numInnerRollupTxs: ${innerTxs.length} > ${this.numInnerRollupTxs}`);
+    }
     const rollupProofDao = await this.rollupCreator.create(
-      txs.map(rollupTx => rollupTx.tx),
-      this.rollupBridgeIds,
-      this.rollupAssetIds,
+      innerTxs.map(rollupTx => rollupTx.tx),
+      rollup,
     );
-    this.txs = [...this.txs, ...txs];
-    this.innerProofs.push(rollupProofDao);
-    return pendingTxs;
+    this.txs = [...this.txs, ...innerTxs];
+    return rollupProofDao;
   }
 
   private async aggregateAndPublish(txs: RollupTx[], rollupTimeouts: RollupTimeouts, flush: boolean) {
-    let pendingTxs = [...txs];
+    const pendingTxs = [...txs];
 
     const numRemainingSlots = (this.numOuterRollupProofs - this.innerProofs.length) * this.numInnerRollupTxs;
     if (pendingTxs.length > numRemainingSlots) {
       // this shouldn't happen!
-      console.log(
-        `ERROR: Number of pending txs is larger than the number of remaining slots! Num txs: ${pendingTxs.length}, remaining slots: ${numRemainingSlots}`,
-      );
+      throw new Error(`pendingTxs.length > numRemainingSlots: ${pendingTxs.length} > ${numRemainingSlots}`);
     }
 
-    // start by rolling up all of the full inners that we can
-    const numInnersBefore = this.innerProofs.length;
-    while (pendingTxs.length >= this.numInnerRollupTxs && this.innerProofs.length < this.numOuterRollupProofs) {
-      pendingTxs = await this.buildInnerRollup(pendingTxs);
-    }
-
+    // We wait until the shouldPublish condition is met and then farm out all inner rollups to a number of
+    // distributed halloumi instances.
     const allRollupTxs = [...this.txs, ...pendingTxs];
     const rollupProfile = profileRollup(
       allRollupTxs,
@@ -265,27 +263,42 @@ export class RollupCoordinator {
       : false;
     const shouldPublish = flush || profit || timedout;
 
-    if (this.innerProofs.length < this.numOuterRollupProofs) {
-      // we have built all of the full inner rollups that we can but the rollup isn't full
-      if (this.innerProofs.length !== numInnersBefore) {
-        // we built at least 1 inner rollup in this iteration
-        // we will exit without doing anything further
-        // building inners takes time and there may well be additional txs available to include in this rollup
-        return rollupProfile;
+    if (shouldPublish) {
+      const innerTxDaos: Promise<RollupProofDao>[] = [];
+
+      // We have to pass the firstInner flag in as nothing is in the DB yet so the previous
+      // query to check DB size wont work.  Since we are doing all proofs in one hit now
+      // this is fine...  similarly though this.txs and the various append(s) to that are
+      // not required, all this will clean up asap.
+      let firstInner = true;
+      while (pendingTxs.length) {
+        const txs = pendingTxs.splice(0, this.numInnerRollupTxs);
+
+        // Moved tree updates outside of parallel loops as these were previously done
+        // inside buildInnerRollup() which was ok when that was sequential.  These updates
+        // need to be done before any calls to create() on the rollup creator or it will
+        // fail to find the linked commitments from the transaction.
+        const rollup = await this.rollupCreator.createRollup(
+          txs.map(rollupTx => rollupTx.tx),
+          this.rollupBridgeIds,
+          this.rollupAssetIds,
+          firstInner,
+        );
+
+        firstInner = false;
+        innerTxDaos.push(this.buildInnerRollup(txs, rollup));
       }
-      // we haven't been able to build a full inner rollup on this iteration but we may have a condition that means we need to publish immediately
-      // this could be that at least one tx has 'timed out', we have been told to 'flush' or the rollup is profitable
-      if (!shouldPublish) {
-        // no need to publish early, exit here
-        return rollupProfile;
-      }
-      // we need to publish early, rollup any stragglers before doing so
-      if (pendingTxs.length) {
-        pendingTxs = await this.buildInnerRollup(pendingTxs);
-        if (pendingTxs.length) {
-          // should now be empty
-          console.log('ERROR: Pending Txs should be empty as we just built the last inner rollup before publish!');
-        }
+
+      // This will call the proof generator (Halloumi) in parallel and populate the
+      // this.innerProofs which is used below in the aggregator.
+      await Promise.all(innerTxDaos);
+
+      // Its important that the inner proofs are inserted into the DB in the same
+      // order that we called createRollup() above as the first proof and following
+      // proofs have different start indexes.
+      for (const dao of innerTxDaos) {
+        await this.rollupCreator.addRollupProof(await dao);
+        this.innerProofs.push(await dao);
       }
     }
 
@@ -310,6 +323,7 @@ export class RollupCoordinator {
     );
     rollupProfile.published = await this.rollupPublisher.publishRollup(rollupDao);
     this.printRollupState(rollupProfile, timedout, flush);
+
     return rollupProfile;
   }
 }

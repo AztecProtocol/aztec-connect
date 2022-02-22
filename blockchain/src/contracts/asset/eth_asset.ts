@@ -56,6 +56,7 @@ export class EthAsset implements Asset {
       .sendTransaction({
         to: to.toString(),
         value: `0x${value.toString(16)}`,
+        gasLimit: options.gasLimit,
       })
       .catch(fixEthersStackTrace);
     const receipt = await tx.wait(this.minConfirmations);

@@ -24,6 +24,22 @@ function fetch_image() {
   return 0
 }
 
+# Validate any terraform if it exists.
+if [ -d ./terraform ]; then
+  ensure_terraform
+  export TF_IN_AUTOMATION=1
+  pushd terraform
+  for DIR in . $(find . -maxdepth 1 -type d); do
+    pushd $DIR
+    if [ -f ./main.tf ]; then
+      terraform init -input=false -backend-config="key=dummy"
+      terraform validate
+    fi
+    popd
+  done
+  popd
+fi
+
 # Ensure ECR repository exists.
 ensure_repo $REPOSITORY $ECR_REGION refresh_lifecycle
 
@@ -105,19 +121,3 @@ echo "Building image: $IMAGE_COMMIT_URI"
 docker build -t $IMAGE_COMMIT_URI -f $DOCKERFILE $CACHE_FROM --build-arg DEPLOY_TAG=$DEPLOY_TAG .
 echo "Pushing image: $IMAGE_COMMIT_URI"
 docker push $IMAGE_COMMIT_URI > /dev/null 2>&1
-echo
-
-# Validate any terraform if it exists.
-if [ -d ./terraform ]; then
-  ensure_terraform
-  export TF_IN_AUTOMATION=1
-  cd terraform
-  for DIR in . $(find . -maxdepth 1 -type d); do
-    pushd $DIR
-    if [ -f ./main.tf ]; then
-      terraform init -input=false -backend-config="key=dummy"
-      terraform validate
-    fi
-    popd
-  done
-fi

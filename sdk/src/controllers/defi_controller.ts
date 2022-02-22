@@ -26,7 +26,7 @@ export class DefiController {
       throw new Error('Deposit value must be greater than 0.');
     }
 
-    if (value.assetId !== bridgeId.inputAssetId) {
+    if (value.assetId !== bridgeId.inputAssetIdA) {
       throw new Error('Invalid asset.');
     }
   }

@@ -102,7 +102,7 @@ describe('rollup_processor: defi bridge with loans', () => {
     const outputValueB = 7n;
     const { bridgeId } = await mockBridge({
       secondOutputVirtual: true,
-      inputAssetId: 1,
+      inputAssetIdA: 1,
       outputAssetIdA: 0,
       outputAssetIdB: 2,
       outputValueA,
@@ -149,12 +149,12 @@ describe('rollup_processor: defi bridge with loans', () => {
     {
       const { bridgeId: bridgeId2, contract: bridge2 } = await mockBridge({
         secondInputVirtual: true,
-        inputAssetId: 0,
+        inputAssetIdA: 0,
         outputAssetIdA: 1,
         outputAssetIdB: 2,
         outputValueA: inputValue,
         outputValueB: BigInt(0),
-        openingNonce: numberOfBridgeCalls,
+        inputAssetIdB: numberOfBridgeCalls,
         auxData: AUX_DATA_SELECTOR.CLOSE_LOAN,
       });
       await bridge2.recordInterestRate(numberOfBridgeCalls, 10); // interest rate = 10 %
@@ -186,7 +186,7 @@ describe('rollup_processor: defi bridge with loans', () => {
     const loanValue1 = 10n;
     const { bridgeId: bridgeId1 } = await mockBridge({
       secondOutputVirtual: true,
-      inputAssetId: 1,
+      inputAssetIdA: 1,
       outputAssetIdA: 0,
       outputValueA: loanValue1,
     });
@@ -195,7 +195,7 @@ describe('rollup_processor: defi bridge with loans', () => {
     const loanValue2 = 4n;
     const { bridgeId: bridgeId2 } = await mockBridge({
       secondOutputVirtual: true,
-      inputAssetId: 0,
+      inputAssetIdA: 0,
       outputAssetIdA: 2,
       outputValueA: loanValue2,
     });
@@ -245,20 +245,20 @@ describe('rollup_processor: defi bridge with loans', () => {
     {
       const { bridgeId: repayBridgeId1, contract: repayBridge1 } = await mockBridge({
         secondInputVirtual: true,
-        inputAssetId: 0,
+        inputAssetIdA: 0,
         outputAssetIdA: 1,
         outputValueA: collateralValue1,
-        openingNonce: numberOfBridgeCalls,
+        inputAssetIdB: numberOfBridgeCalls,
         auxData: AUX_DATA_SELECTOR.CLOSE_LOAN,
       });
       await repayBridge1.recordInterestRate(numberOfBridgeCalls, 10); // interest rate = 10 %
 
       const { bridgeId: repayBridgeId2, contract: repayBridge2 } = await mockBridge({
         secondInputVirtual: true,
-        inputAssetId: 2,
+        inputAssetIdA: 2,
         outputAssetIdA: 0,
         outputValueA: collateralValue2,
-        openingNonce: 5,
+        inputAssetIdB: 5,
         auxData: AUX_DATA_SELECTOR.CLOSE_LOAN,
       });
       await repayBridge2.recordInterestRate(5, 20); // interest rate = 20 %

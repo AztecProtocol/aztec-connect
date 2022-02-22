@@ -20,6 +20,7 @@ export class RollupPublisher {
   }
 
   public async publishRollup(rollup: RollupDao) {
+    console.log(`Publishing rollup: ${rollup.id}`);
     const txData = await this.createTxData(rollup);
     await this.rollupDb.setCallData(rollup.id, txData);
 
@@ -60,6 +61,9 @@ export class RollupPublisher {
       }
 
       console.log(`Transaction status failed: ${txHash}`);
+      if (receipt.revertError) {
+        console.log(`Revert Error: ${receipt.revertError.name}(${receipt.revertError.params.join(', ')})`);
+      }
       await this.sleepOrInterrupted(60000);
     }
 

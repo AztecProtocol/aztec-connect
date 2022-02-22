@@ -1,5 +1,8 @@
 import { EthAsset, JsonRpcProvider, WalletProvider } from '@aztec/sdk';
 import { randomBytes } from 'crypto';
+import createDebug from 'debug';
+
+const debug = createDebug('bb:create_funded_wallet_provider');
 
 export async function createFundedWalletProvider(
   host: string,
@@ -19,9 +22,11 @@ export async function createFundedWalletProvider(
   const funder =
     privateKey && privateKey.length ? walletProvider.addAccount(privateKey) : (await ethereumProvider.getAccounts())[0];
 
+  debug(`funder: ${funder.toString()}`);
+
   for (let i = 0; i < numAccountToFund; ++i) {
     const to = walletProvider.getAccount(i);
-    await ethAsset.transfer(initialBalance, funder, to);
+    await ethAsset.transfer(initialBalance, funder, to, { gasLimit: 1000000 });
   }
 
   return walletProvider;

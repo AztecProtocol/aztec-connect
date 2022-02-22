@@ -85,7 +85,7 @@ export function profileRollup(
       // for non-defi txs, we add on any gas above and beyond that required for the tx (call data etc)
       rollupProfile.gasBalance += tx.excessGas;
     } else if (!tx.bridgeId) {
-      console.log(`Invalid bridge id encountered on DEFI transaction!!`);
+      console.log(`Invalid bridge id encountered on DEFI transaction!`);
     } else {
       const bridgeId = tx.bridgeId;
       let bridgeProfile = bridgeProfiles.get(bridgeId);

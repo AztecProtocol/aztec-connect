@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import { Contract, ContractFactory, Signer } from 'ethers';
 import AztecFeeDistributor from '../artifacts/contracts/AztecFeeDistributor.sol/AztecFeeDistributor.json';
 

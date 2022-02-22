@@ -376,6 +376,7 @@ jobs:
   zk-money:
     docker:
       - image: aztecprotocol/build-image
+    resource_class: small
     steps:
       - checkout
       - *setup_env
@@ -384,7 +385,7 @@ jobs:
       - run:
           name: 'Build and test'
           working_directory: zk-money
-          command: build zk-money
+          command: cond_spot_run_build zk-money 32core
 
   website:
     docker:
@@ -493,14 +494,7 @@ jobs:
       - run:
           name: 'blockchain'
           working_directory: blockchain
-          command: |
-            deploy_ecr blockchain
-            COMMIT=$(last_successful_commit blockchain deployed)
-            if [ -z "$COMMIT" ] || changed $COMMIT '.*\.sol$'; then
-              `docker run -e ESCAPE_BLOCK_LOWER=60 -e ESCAPE_BLOCK_UPPER=120 -e INFURA_API_KEY=$TF_VAR_INFURA_API_KEY -e PRIVATE_KEY=$TF_VAR_PRIVATE_KEY -e NETWORK=goerli -e VK=MockVerificationKey 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:$COMMIT_HASH`
-              deploy_terraform blockchain
-              tag_remote_image blockchain cache-$COMMIT_HASH cache-$COMMIT_HASH-deployed
-            fi
+          command: ./scripts/deploy-dev mainnet-fork
       - run:
           name: 'halloumi'
           working_directory: halloumi

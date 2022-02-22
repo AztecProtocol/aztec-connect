@@ -18,7 +18,11 @@ import { createFundedWalletProvider } from './create_funded_wallet_provider';
 jest.setTimeout(20 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
 
-const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost:8081', } = process.env;
+const {
+  ETHEREUM_HOST = 'http://localhost:8545',
+  ROLLUP_HOST = 'http://localhost:8081',
+  PRIVATE_KEY = '',
+} = process.env;
 
 /**
  * Run the following:
@@ -41,7 +45,13 @@ describe('end-to-end defi tests', () => {
   };
 
   beforeAll(async () => {
-    provider = await createFundedWalletProvider(ETHEREUM_HOST, 4, undefined, undefined, toBaseUnits('0.2', 18));
+    provider = await createFundedWalletProvider(
+      ETHEREUM_HOST,
+      4,
+      undefined,
+      Buffer.from(PRIVATE_KEY, 'hex'),
+      toBaseUnits('0.2', 18),
+    );
     accounts = provider.getAccounts();
 
     sdk = await createAztecSdk(provider, ROLLUP_HOST, {
@@ -74,8 +84,10 @@ describe('end-to-end defi tests', () => {
       const depositor = accounts[i];
       const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
       const assetId = 0;
-      // flush this transaction through by paying for all the slots in the rollup
-      const fee = (await sdk.getDepositFees(assetId))[TxSettlementTime.INSTANT];
+      // Last deposit pays for instant rollup to flush.
+      const fee = (await sdk.getDepositFees(assetId))[
+        i == accounts.length - 1 ? TxSettlementTime.INSTANT : TxSettlementTime.NEXT_ROLLUP
+      ];
       const controller = sdk.createDepositController(
         userIds[i],
         signer,
@@ -87,12 +99,11 @@ describe('end-to-end defi tests', () => {
       await controller.sign();
       const txHash = await controller.depositFundsToContract();
       await sdk.getTransactionReceipt(txHash);
+      await controller.send();
       depositControllers.push(controller);
     }
 
-    // send all of the deposit proofs together
     // wait for them all to settle
-    await Promise.all(depositControllers.map(controller => controller.send()));
     await Promise.all(depositControllers.map(controller => controller.awaitSettlement(awaitSettlementTimeout)));
 
     // Account 1 will swap part of it's ETH for DAI. Then, once this has settled, it will swap that DAI back to ETH whilst accounts 2 and 3 swap their ETH for DAI

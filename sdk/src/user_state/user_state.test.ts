@@ -247,7 +247,7 @@ describe('user state', () => {
     claimNoteRecipient = user.id,
     txRefNo = 0,
   } = {}) => {
-    const assetId = bridgeId.inputAssetId;
+    const assetId = bridgeId.inputAssetIdA;
     const nullifier1 = noteAlgos.valueNoteNullifier(randomBytes(32), proofSender.privateKey);
     const nullifier2 = noteAlgos.valueNoteNullifier(randomBytes(32), proofSender.privateKey);
     const dummyNote = createNote(assetId, 0n, proofSender.id, randomBytes(32));
@@ -301,7 +301,7 @@ describe('user state', () => {
     nullifier1 = randomBytes(32),
     nullifier2 = randomBytes(32),
   } = {}) => {
-    const assetId = bridgeId.inputAssetId;
+    const assetId = bridgeId.inputAssetIdA;
     const notes = [
       createNote(assetId, outputValueA, noteRecipient.id, nullifier1, 0),
       createNote(assetId, outputValueB, noteRecipient.id, nullifier2),

@@ -32,17 +32,17 @@ export class RollupCreator {
    * Creates a rollup from the given txs and publishes it.
    * @returns true if successfully published, otherwise false.
    */
-  public async create(txs: TxDao[], rootRollupBridgeIds: bigint[], rootRollupAssetIds: Set<number>) {
+
+  public async create(txs: TxDao[], rollup: TxRollup) {
     if (!txs.length) {
       throw new Error('Txs empty.');
     }
-    const rollup = await this.createRollup(txs, rootRollupBridgeIds, rootRollupAssetIds);
 
     console.log(`Creating proof for rollup ${rollup.rollupHash.toString('hex')} with ${txs.length} txs...`);
     const end = this.metrics.txRollupTimer();
-    const txRollupRequest = new TxRollupProofRequest(this.numInnerRollupTxs, rollup);
+    const txRollupRequest = new TxRollupProofRequest(rollup);
     const proof = await this.proofGenerator.createProof(txRollupRequest.toBuffer());
-    console.log(`Proof received: ${proof.length}`);
+    console.log(`Proof received: ${proof.length} bytes`);
     end();
 
     if (!proof) {
@@ -59,8 +59,6 @@ export class RollupCreator {
       created: new Date(),
     });
 
-    await this.rollupDb.addRollupProof(rollupProofDao);
-
     return rollupProofDao;
   }
 
@@ -68,13 +66,22 @@ export class RollupCreator {
     // TODO: Interrupt proof creation.
   }
 
-  private async createRollup(txs: TxDao[], rootRollupBridgeIds: bigint[], rootRollupAssetIds: Set<number>) {
+  public async addRollupProof(dao: RollupProofDao) {
+    await this.rollupDb.addRollupProof(dao);
+  }
+
+  public async createRollup(
+    txs: TxDao[],
+    rootRollupBridgeIds: bigint[],
+    rootRollupAssetIds: Set<number>,
+    firstInner: boolean,
+  ) {
     const rollupId = await this.rollupDb.getNextRollupId();
 
     // To find the correct data start index, we need to position ourselves on:
     // - an outer rollup size boundary for the first inner proof.
     // - an inner rollup size boundary for any other proofs.
-    const firstInner = (await this.rollupDb.getNumRollupProofsBySize(this.innerRollupSize)) === 0;
+
     const worldStateDb = this.worldStateDb;
     const dataSize = worldStateDb.getSize(RollupTreeId.DATA);
     const subtreeSize = BigInt(firstInner ? this.outerRollupSize * 2 : this.innerRollupSize * 2);

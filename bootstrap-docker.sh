@@ -13,7 +13,7 @@ fi
 
 ECR_URL=278380418400.dkr.ecr.eu-west-2.amazonaws.com
 
-for E in barretenberg:./dockerfiles/Dockerfile.x86_64-linux-clang barretenberg:./dockerfiles/Dockerfile.wasm-linux-clang barretenberg.js blockchain-vks blockchain halloumi falafel sdk end-to-end; do
+for E in barretenberg:./dockerfiles/Dockerfile.x86_64-linux-clang barretenberg:./dockerfiles/Dockerfile.wasm-linux-clang barretenberg.js blockchain-vks blockchain halloumi falafel sdk end-to-end zk-money; do
   ARR=(${E//:/ })
   PROJECT=${ARR[0]}
   DOCKERFILE=${ARR[1]:-./Dockerfile}

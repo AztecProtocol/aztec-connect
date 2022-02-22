@@ -48,7 +48,7 @@ export class DefiComposer {
         deps.accountId,
         signer,
         this.bridgeId,
-        { assetId: this.bridgeId.inputAssetId, value: payload.amount },
+        { assetId: this.bridgeId.inputAssetIdA, value: payload.amount },
         fee,
       );
       await controller.createProof();

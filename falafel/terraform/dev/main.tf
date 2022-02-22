@@ -3,6 +3,12 @@ terraform {
     bucket = "aztec-terraform"
     region = "eu-west-2"
   }
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "3.74.2"
+    }
+  }
 }
 
 data "terraform_remote_state" "setup_iac" {
@@ -133,11 +139,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "ETHEREUM_HOST",
-        "value": "http://ethereum.aztec.network:10545"
-      },
-      {
-        "name": "HALLOUMI_HOST",
-        "value": "http://${var.DEPLOY_TAG}-halloumi.local"
+        "value": "${data.terraform_remote_state.blockchain.outputs.private_ethereum_host}"
       },
       {
         "name": "ROLLUP_CONTRACT_ADDRESS",

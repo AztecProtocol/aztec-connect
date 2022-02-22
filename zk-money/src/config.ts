@@ -52,7 +52,7 @@ const fromLocalStorage = (): ConfigVars => ({
 });
 
 const fromEnvVars = (): ConfigVars => ({
-  deployTag: process.env.DEPLOY_TAG || '',
+  deployTag: process.env.REACT_APP_DEPLOY_TAG || '',
   priceFeedContractAddress0: process.env.REACT_APP_PRICE_FEED_CONTRACT_ADDRESS_0 || '',
   priceFeedContractAddress1: process.env.REACT_APP_PRICE_FEED_CONTRACT_ADDRESS_1 || '',
   priceFeedContractAddress2: process.env.REACT_APP_PRICE_FEED_CONTRACT_ADDRESS_2 || '',
@@ -109,6 +109,8 @@ function getEthereumHost(chainId: number) {
       return 'https://goerli.infura.io/v3/6a04b7c89c5b421faefde663f787aa35';
     case 1337:
       return 'http://localhost:8545';
+    case 0xa57ec:
+      return 'https://mainnet-fork.aztec.network:8545';
     default:
       return 'https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35';
   }

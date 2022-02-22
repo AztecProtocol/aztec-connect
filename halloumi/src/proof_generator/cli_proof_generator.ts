@@ -21,22 +21,20 @@ export class CliProofGenerator implements ProofGenerator {
 
   constructor(
     private maxCircuitSize: number,
-    private rollupShapes: string,
-    private dataDir: string,
-    private persist: boolean,
+    private txsPerInner: number,
+    private innersPerRoot: number,
     private proverless: boolean,
+    private lazyInit: boolean,
+    private persist: boolean,
+    private dataDir: string,
   ) {
     if (!maxCircuitSize) {
       throw new Error('Rollup sizes must be greater than 0.');
     }
 
-    if (!rollupShapes) {
-      throw new Error('No rollup shapes provided.');
+    if (!innersPerRoot) {
+      throw new Error('No inner rollup count provided.');
     }
-  }
-
-  public async awaitReady() {
-    await this.start();
   }
 
   public async reset() {
@@ -83,6 +81,7 @@ export class CliProofGenerator implements ProofGenerator {
     if (initByte[0] !== 1) {
       throw new Error('Failed to initialize rollup_cli.');
     }
+
     this.execQueue.process(fn => fn());
     console.log('Proof generator initialized.');
   }
@@ -170,13 +169,17 @@ export class CliProofGenerator implements ProofGenerator {
 
   private launch() {
     const binPath = '../barretenberg/build/bin/rollup_cli';
-    const proc = (this.proc = spawn(binPath, [
+    const binArgs = [
       './data/crs',
-      this.dataDir,
-      this.rollupShapes,
-      this.persist.toString(),
+      this.txsPerInner.toString(),
+      this.innersPerRoot.toString(),
       this.proverless.toString(),
-    ]));
+      this.lazyInit.toString(),
+      this.persist.toString(),
+      this.dataDir,
+    ];
+
+    const proc = (this.proc = spawn(binPath, binArgs));
     this.stdout = new PromiseReadable(proc!.stdout!);
 
     const rl = createInterface({

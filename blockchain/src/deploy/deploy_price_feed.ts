@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import { ContractFactory, Signer } from 'ethers';
 import MockPriceFeed from '../artifacts/contracts/test/MockPriceFeed.sol/MockPriceFeed.json';
 

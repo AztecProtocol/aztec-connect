@@ -279,7 +279,11 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       await new Promise(resolve => setTimeout(resolve, 1000));
       txReceipt = await this.contracts.getTransactionReceipt(txHash);
     }
-    return { status: !!txReceipt.status, blockNum: txReceipt.blockNumber } as Receipt;
+    const receipt: Receipt = { status: !!txReceipt.status, blockNum: txReceipt.blockNumber };
+    if (!receipt.status) {
+      receipt.revertError = await this.contracts.getRevertError(txHash);
+    }
+    return receipt;
   }
 
   /**
@@ -344,9 +348,6 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   public getBridgeGas(bridgeId: bigint) {
     const { addressId } = BridgeId.fromBigInt(bridgeId);
     const { gasLimit } = this.status.bridges.find(bridge => bridge.id == addressId) || {};
-    // This return obviously looked nicer before using the ?? null coalescing  operator.
-    // I've removed it for now until we can address this webpack bug:
-    // https://github.com/webpack/webpack/issues/10227
     return gasLimit === undefined ? 0n : gasLimit;
   }
 }

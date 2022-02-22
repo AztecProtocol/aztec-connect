@@ -38,7 +38,7 @@ export class DefiDepositProofCreator {
     txRefNo: number,
   ): Promise<ProofOutput> {
     const user = userState.getUser();
-    const assetId = bridgeId.inputAssetId;
+    const assetId = bridgeId.inputAssetIdA;
     const privateInput = depositValue + txFee;
 
     const notes = inputNotes
