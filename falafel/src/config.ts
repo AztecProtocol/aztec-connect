@@ -33,14 +33,30 @@ async function getProvider(ethereumHost: string, privateKey: Buffer) {
   return { provider, signingAddress, chainId };
 }
 
-function getOrmConfig(logging: boolean): ConnectionOptions {
-  return {
-    type: 'sqlite',
-    database: 'data/db.sqlite',
-    entities: [TxDao, RollupProofDao, RollupDao, AccountDao, ClaimDao, AssetMetricsDao],
-    synchronize: true,
-    logging,
-  };
+function getOrmConfig(dbUrl?: string, logging = false): ConnectionOptions {
+  const entities = [TxDao, RollupProofDao, RollupDao, AccountDao, ClaimDao, AssetMetricsDao];
+  if (!dbUrl) {
+    return {
+      type: 'sqlite',
+      database: 'data/db.sqlite',
+      entities,
+      synchronize: true,
+      logging,
+    };
+  } else {
+    const url = new URL(dbUrl);
+    return {
+      type: url.protocol.slice(0, -1) as any,
+      host: url.hostname,
+      port: +url.port,
+      database: 'falafel',
+      username: url.username,
+      password: url.password,
+      entities,
+      synchronize: true,
+      logging,
+    };
+  }
 }
 
 function getPerChainBridgeConfig(chainId: number) {
@@ -88,14 +104,16 @@ export async function getConfig() {
     privateKey,
     rollupContractAddress,
     typeOrmLogging,
-    proverless
+    dbUrl,
+    proverless,
   } = confVars;
 
-  const ormConfig = getOrmConfig(typeOrmLogging);
+  const ormConfig = getOrmConfig(dbUrl, typeOrmLogging);
   const { provider, signingAddress, chainId } = await getProvider(ethereumHost, privateKey);
   const ethConfig = getEthereumBlockchainConfig(confVars);
   const bridgeConfigs = getPerChainBridgeConfig(chainId);
 
+  console.log(`Database Url: ${dbUrl || 'none (local sqlite)'}`);
   console.log(`Ethereum host: ${ethereumHost}`);
   console.log(`Gas limit: ${gasLimit || 'default'}`);
   console.log(`Rollup contract address: ${rollupContractAddress || 'none'}`);

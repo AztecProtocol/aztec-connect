@@ -1,113 +1,58 @@
-import BN from 'bn.js';
 import React from 'react';
 import styled from 'styled-components';
-import {
-  BlockSummary,
-  InfoRow,
-  InfoValuePlaceholder,
-  HashValue,
-  Timestamp,
-  HashValuePlaceholder,
-  Value,
-} from '../block_summary';
-import { ProofData, ProofDataPlaceholder } from '../proof_data';
-import { proofIdToType, ProofTypeTag } from '../proof_type';
+import { BlockSummary, InfoRow, HashValue, Timestamp } from '../block_summary';
+import { ProofData } from '../proof_data';
+import { proofIdToType, ProofType, ProofTypeTag } from '../proof_type';
 import { DetailsSection } from '../template';
+import { AccountDetails } from './account_details';
+import { getTransactionType, parseRawProofData } from './helpers';
+import { JoinSplitDetails } from './join_split_details';
 import { Tx } from './query';
-
-const formatNumber = (num: string) => num.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
 const StyledProofTypeTag = styled(ProofTypeTag)`
   position: absolute;
   right: 0;
 `;
-
-export const TxDetailsPlaceholder: React.FunctionComponent = () => {
-  const summaryPlaceholder = (
-    <BlockSummary title="Transaction">
-      <InfoRow title="TRANSACTION NUMBER">
-        <InfoValuePlaceholder style={{ width: '40px' }} />
-      </InfoRow>
-      <InfoRow title="TIMESTAMP">
-        <InfoValuePlaceholder style={{ width: '50%' }} />
-      </InfoRow>
-      <InfoRow title="NULLIFIERS">
-        <HashValuePlaceholder />
-        <HashValuePlaceholder />
-      </InfoRow>
-      <InfoRow title="DATA ENTRIES">
-        <HashValuePlaceholder />
-        <HashValuePlaceholder />
-      </InfoRow>
-    </BlockSummary>
-  );
-
-  return <DetailsSection lhsContent={summaryPlaceholder} rhsContent={<ProofDataPlaceholder />} />;
-};
-
 interface TxDetailsProps {
   tx: Tx;
 }
 
 export const TxDetails: React.FunctionComponent<TxDetailsProps> = ({ tx }) => {
-  const {
-    id,
-    proofId,
-    proofData,
-    newNote1,
-    newNote2,
-    nullifier1,
-    nullifier2,
-    publicInput,
-    inputOwner,
-    publicOutput,
-    outputOwner,
-    block,
-  } = tx;
+  const { id, proofId, newNote1, newNote2, nullifier1, nullifier2, block } = tx;
+  const { asset, inputOwner, outputOwner, publicOutput, publicInput } = parseRawProofData(
+    Buffer.from(tx.proofData, 'hex'),
+  );
+
   const created = block?.created;
   const proofType = proofIdToType(proofId);
   const statusTag = <StyledProofTypeTag proofType={proofType} />;
 
-  const proofProperties = [];
   let proofDataHeight = 384;
-  switch (proofType) {
-    case 'JOIN_SPLIT': {
-      const publicInputBn = new BN(publicInput, 16);
-      proofProperties.push(
-        <InfoRow key="public_input" title="PUBLIC INPUT">
-          <Value text={`${formatNumber(publicInputBn.toString())}`} monospace />
-          <HashValue value={`0x${inputOwner}`} />
-        </InfoRow>,
-      );
-      proofDataHeight += 96;
+  let transactionType;
+  let transactionDetails;
 
-      const publicOutputBn = new BN(publicOutput, 16);
-      proofProperties.push(
-        <InfoRow key="public_output" title="PUBLIC OUTPUT">
-          <Value text={`${formatNumber(publicOutputBn.toString())}`} monospace />
-          <HashValue value={`0x${outputOwner}`} />
-        </InfoRow>,
-      );
-      proofDataHeight += 96;
-      break;
-    }
-    case 'ACCOUNT':
-      proofProperties.push(
-        <InfoRow key="account_id" title="ACCOUNT ID">
-          <HashValue value={`0x${publicInput}${publicOutput}`} />
-        </InfoRow>,
-      );
-      proofDataHeight += 72;
-      break;
-    default:
+  if (proofType === ProofType.JOIN_SPLIT) {
+    proofDataHeight += 192;
+    transactionType = getTransactionType(publicInput, publicOutput);
+    transactionDetails = (
+      <JoinSplitDetails
+        transactionType={transactionType}
+        asset={asset}
+        inputOwner={inputOwner}
+        outputOwner={outputOwner}
+        publicOutput={publicOutput}
+        publicInput={publicInput}
+      />
+    );
+  } else if (proofType === ProofType.ACCOUNT) {
+    proofDataHeight += 72;
+    transactionDetails = <AccountDetails publicOutput={publicOutput} publicInput={publicInput} />;
   }
 
   const summaryNode = (
-    <BlockSummary title="Transaction" titleContent={statusTag}>
-      <InfoRow title="TRANSACTION ID">
-        <HashValue value={`0x${id}`} />
-      </InfoRow>
+    <BlockSummary title="Transaction" subtitle={transactionType} titleContent={statusTag}>
       <InfoRow title="TIMESTAMP">{created ? <Timestamp time={created} /> : 'Pending...'}</InfoRow>
+      {transactionDetails}
       <InfoRow title="NULLIFIERS">
         <HashValue value={`0x${nullifier1}`} />
         <HashValue value={`0x${nullifier2}`} />
@@ -116,11 +61,13 @@ export const TxDetails: React.FunctionComponent<TxDetailsProps> = ({ tx }) => {
         <HashValue value={`0x${newNote1}`} />
         <HashValue value={`0x${newNote2}`} />
       </InfoRow>
-      {proofProperties}
+      <InfoRow title="TRANSACTION ID">
+        <HashValue value={`0x${id}`} />
+      </InfoRow>
     </BlockSummary>
   );
 
-  const proofNode = <ProofData proofData={`0x${proofData}`} height={proofDataHeight} />;
+  const proofNode = <ProofData proofData={`0x${tx.proofData}`} height={proofDataHeight} />;
 
   return <DetailsSection lhsContent={summaryNode} rhsContent={proofNode} />;
 };

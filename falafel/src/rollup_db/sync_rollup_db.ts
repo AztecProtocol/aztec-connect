@@ -3,12 +3,7 @@ import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { TxHash } from '@aztec/barretenberg/blockchain';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { Mutex } from 'async-mutex';
-import { AccountDao } from '../entity/account';
-import { AssetMetricsDao } from '../entity/asset_metrics';
-import { ClaimDao } from '../entity/claim';
-import { RollupDao } from '../entity/rollup';
-import { RollupProofDao } from '../entity/rollup_proof';
-import { TxDao } from '../entity/tx';
+import { AssetMetricsDao, AccountDao, ClaimDao, RollupDao, RollupProofDao, TxDao } from '../entity';
 import { RollupDb } from './rollup_db';
 
 export class SyncRollupDb {

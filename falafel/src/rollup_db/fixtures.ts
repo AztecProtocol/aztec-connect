@@ -9,10 +9,7 @@ import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { randomBytes } from 'crypto';
 import moment from 'moment';
-import { ClaimDao } from '../entity/claim';
-import { RollupDao } from '../entity/rollup';
-import { RollupProofDao } from '../entity/rollup_proof';
-import { TxDao } from '../entity/tx';
+import { ClaimDao, RollupDao, RollupProofDao, TxDao } from '../entity';
 
 const now = moment();
 
@@ -43,7 +40,7 @@ export const randomTx = ({
     created: now.add(1, 's').toDate(),
     signature: signature.length ? signature : undefined,
     txType,
-    excessGas: 50000n
+    excessGas: 50000n,
   });
 };
 

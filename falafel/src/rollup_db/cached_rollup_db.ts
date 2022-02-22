@@ -2,10 +2,7 @@ import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxHash, TxType } from '@aztec/barretenberg/blockchain';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
-import { AssetMetricsDao } from '../entity/asset_metrics';
-import { RollupDao } from '../entity/rollup';
-import { RollupProofDao } from '../entity/rollup_proof';
-import { TxDao } from '../entity/tx';
+import { AssetMetricsDao, RollupDao, RollupProofDao, TxDao } from '../entity';
 import { SyncRollupDb } from './sync_rollup_db';
 
 export class CachedRollupDb extends SyncRollupDb {

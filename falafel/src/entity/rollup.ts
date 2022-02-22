@@ -1,16 +1,7 @@
 import { TxHash } from '@aztec/barretenberg/blockchain';
-import {
-  AfterInsert,
-  AfterLoad,
-  AfterUpdate,
-  Column,
-  Entity,
-  Index,
-  OneToMany,
-  OneToOne,
-  PrimaryColumn,
-} from 'typeorm';
+import { AfterInsert, AfterLoad, AfterUpdate, Column, Entity, OneToMany, OneToOne, PrimaryColumn } from 'typeorm';
 import { AssetMetricsDao } from './asset_metrics';
+import { bufferColumn } from './init_entities';
 import { RollupProofDao } from './rollup_proof';
 import { txHashTransformer } from './transformer';
 
@@ -23,8 +14,7 @@ export class RollupDao {
   @PrimaryColumn()
   public id!: number;
 
-  @Index({ unique: true })
-  @Column()
+  @Column(...bufferColumn({ unique: true, length: 32 }))
   public dataRoot!: Buffer;
 
   @OneToOne(() => RollupProofDao, rollupPoof => rollupPoof.rollup, { cascade: true })
@@ -33,23 +23,26 @@ export class RollupDao {
   @OneToMany(() => AssetMetricsDao, am => am.rollup, { cascade: true })
   public assetMetrics!: AssetMetricsDao[];
 
+  // @Column(...bufferColumn())
+  // public viewingKeys!: Buffer;
+
   @Column()
   public created!: Date;
 
   // Null until calldata computed.
-  @Column({ nullable: true })
+  @Column(...bufferColumn({ nullable: true }))
   public callData?: Buffer;
 
   // Null until mined and events fetched.
-  @Column({ nullable: true })
+  @Column(...bufferColumn({ nullable: true }))
   public interactionResult?: Buffer;
 
   // Null until tx sent.
-  @Column('blob', { nullable: true, transformer: [txHashTransformer] })
+  @Column(...bufferColumn({ nullable: true, length: 32, transformer: [txHashTransformer] }))
   public ethTxHash?: TxHash;
 
   // Null until mined.
-  @Column({ nullable: true })
+  @Column(...bufferColumn({ nullable: true, length: 32 }))
   public gasPrice?: Buffer;
 
   // Null until mined.
@@ -66,6 +59,9 @@ export class RollupDao {
   afterLoad() {
     if (!this.callData) {
       delete this.callData;
+    }
+    if (!this.interactionResult) {
+      delete this.interactionResult;
     }
     if (!this.ethTxHash) {
       delete this.ethTxHash;

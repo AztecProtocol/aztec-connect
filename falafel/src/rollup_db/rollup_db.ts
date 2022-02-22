@@ -5,12 +5,7 @@ import { TxHash, TxType } from '@aztec/barretenberg/blockchain';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { Connection, In, IsNull, LessThan, MoreThanOrEqual, Not, Repository } from 'typeorm';
-import { AccountDao } from '../entity/account';
-import { AssetMetricsDao } from '../entity/asset_metrics';
-import { ClaimDao } from '../entity/claim';
-import { RollupDao } from '../entity/rollup';
-import { RollupProofDao } from '../entity/rollup_proof';
-import { TxDao } from '../entity/tx';
+import { AssetMetricsDao, ClaimDao, AccountDao, RollupDao, RollupProofDao, TxDao } from '../entity';
 import { txDaoToAccountDao } from './tx_dao_to_account_dao';
 
 export type RollupDb = {
@@ -90,7 +85,12 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async getAccountTx(aliasHash: Buffer) {
-    return this.accountRep.findOne({ aliasHash });
+    return this.accountRep.findOne(
+      { aliasHash },
+      {
+        order: { nonce: 'DESC' },
+      },
+    );
   }
 
   public async getLatestAccountTx(accountPubKey: Buffer) {

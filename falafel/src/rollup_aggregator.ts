@@ -11,8 +11,7 @@ import {
   RootVerifier,
   RootVerifierProofRequest,
 } from 'halloumi/proof_generator';
-import { RollupDao } from './entity/rollup';
-import { RollupProofDao } from './entity/rollup_proof';
+import { RollupDao, RollupProofDao } from './entity';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
 

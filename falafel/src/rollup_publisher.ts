@@ -1,6 +1,6 @@
 import { Blockchain, TxHash } from '@aztec/barretenberg/blockchain';
 import { JoinSplitProofData } from '@aztec/barretenberg/client_proofs';
-import { RollupDao } from './entity/rollup';
+import { RollupDao } from './entity';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
 
@@ -63,6 +63,7 @@ export class RollupPublisher {
       await this.sleepOrInterrupted(60000);
     }
 
+    console.log('Publish rollup interrupted.');
     return false;
   }
 

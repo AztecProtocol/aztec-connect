@@ -4,6 +4,7 @@ import { RuntimeConfig } from '@aztec/barretenberg/rollup_provider';
 
 export interface ConfVars {
   port: number;
+  dbUrl?: string;
   rollupContractAddress?: string;
   feeDistributorAddress?: string;
   priceFeedContractAddresses: string[];
@@ -24,6 +25,7 @@ export interface ConfVars {
 
 function getConfVars(): ConfVars {
   const {
+    DB_URL,
     ROLLUP_CONTRACT_ADDRESS,
     FEE_DISTRIBUTOR_ADDRESS,
     PRICE_FEED_CONTRACT_ADDRESSES,
@@ -46,6 +48,7 @@ function getConfVars(): ConfVars {
 
   return {
     port: +(PORT || 8081),
+    dbUrl: DB_URL,
     rollupContractAddress: ROLLUP_CONTRACT_ADDRESS,
     feeDistributorAddress: FEE_DISTRIBUTOR_ADDRESS,
     priceFeedContractAddresses: (PRICE_FEED_CONTRACT_ADDRESSES || '').split(','),

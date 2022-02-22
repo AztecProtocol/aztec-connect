@@ -1,12 +1,16 @@
-import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
-import { EthereumBlockchain } from '@aztec/blockchain';
-import http from 'http';
+// Must happen before anything else.
+import { initEntities } from './entity/init_entities';
+initEntities();
+
 import 'reflect-metadata';
 import 'source-map-support/register';
+import 'log-timestamp';
+import http from 'http';
+import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
+import { EthereumBlockchain } from '@aztec/blockchain';
 import { createConnection } from 'typeorm';
 import { appFactory } from './app';
 import { Server } from './server';
-import 'log-timestamp';
 import { getConfig } from './config';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Metrics } from './metrics';

@@ -11,6 +11,7 @@ import {
   ManyToOne,
   PrimaryColumn,
 } from 'typeorm';
+import { bufferColumn } from './init_entities';
 import { RollupProofDao } from './rollup_proof';
 import { bigintTransformer } from './transformer';
 
@@ -28,7 +29,7 @@ export class TxDao {
   public internalId!: string;
 
   // To be treated as primary key.
-  @Column({ unique: true })
+  @Column(...bufferColumn({ unique: true, length: 32 }))
   public id!: Buffer;
 
   @ManyToOne(() => RollupProofDao, r => r.txs, { onDelete: 'SET NULL' })
@@ -36,20 +37,20 @@ export class TxDao {
   @Index()
   public rollupProof?: RollupProofDao;
 
-  @Column()
+  @Column(...bufferColumn())
   public proofData!: Buffer;
 
-  @Column()
+  @Column(...bufferColumn())
   public offchainTxData!: Buffer;
 
   // Nullable, as only deposits have signatures.
-  @Column({ nullable: true })
+  @Column(...bufferColumn({ nullable: true, length: 64 }))
   public signature?: Buffer;
 
-  @Column({ unique: true, nullable: true })
+  @Column(...bufferColumn({ unique: true, nullable: true, length: 32 }))
   public nullifier1?: Buffer;
 
-  @Column({ unique: true, nullable: true })
+  @Column(...bufferColumn({ unique: true, nullable: true, length: 32 }))
   public nullifier2?: Buffer;
 
   // Nullable, as txs discovered on chain have no data root.

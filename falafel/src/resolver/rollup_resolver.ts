@@ -1,7 +1,7 @@
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { Arg, Args, FieldResolver, Int, Query, Resolver, Root } from 'type-graphql';
 import { Inject } from 'typedi';
-import { RollupDao } from '../entity/rollup';
+import { RollupDao } from '../entity';
 import { CachedRollupDb } from '../rollup_db';
 import { FieldAliases } from './query_builder';
 import { RollupsArgs, RollupType } from './rollup_type';

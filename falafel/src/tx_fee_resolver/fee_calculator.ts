@@ -1,7 +1,7 @@
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { BlockchainAsset, TxType } from '@aztec/barretenberg/blockchain';
 import { ProofData } from '@aztec/barretenberg/client_proofs/proof_data';
-import { TxDao } from '../entity/tx';
+import { TxDao } from '../entity';
 import { PriceTracker } from './price_tracker';
 import { roundUp } from './round_up';
 

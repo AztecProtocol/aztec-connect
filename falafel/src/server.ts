@@ -19,9 +19,9 @@ import { RollupDb } from './rollup_db';
 import { parseInteractionResult } from './rollup_db/parse_interaction_result';
 import { RollupPipelineFactory } from './rollup_pipeline';
 import { TxFeeResolver } from './tx_fee_resolver';
-import { Tx, TxReceiver } from './tx_receiver';
 import { WorldState } from './world_state';
 import { Configurator } from './configurator';
+import { Tx, TxReceiver } from './tx_receiver';
 
 export class Server {
   private blake: Blake2s;

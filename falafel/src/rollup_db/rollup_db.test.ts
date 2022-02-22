@@ -3,12 +3,7 @@ import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { TxHash, TxType } from '@aztec/barretenberg/blockchain';
 import { randomBytes } from 'crypto';
 import { Connection, createConnection } from 'typeorm';
-import { AccountDao } from '../entity/account';
-import { AssetMetricsDao } from '../entity/asset_metrics';
-import { ClaimDao } from '../entity/claim';
-import { RollupDao } from '../entity/rollup';
-import { RollupProofDao } from '../entity/rollup_proof';
-import { TxDao } from '../entity/tx';
+import { AssetMetricsDao, AccountDao, ClaimDao, RollupDao, RollupProofDao, TxDao } from '../entity';
 import { RollupDb, TypeOrmRollupDb } from './';
 import { randomAccountTx, randomClaim, randomRollup, randomRollupProof, randomTx } from './fixtures';
 
