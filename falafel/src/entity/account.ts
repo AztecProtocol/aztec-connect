@@ -18,7 +18,7 @@ export class AccountDao {
   @Index({ unique: false })
   public nonce!: number;
 
-  @OneToOne(() => TxDao, tx => tx.id, { nullable: true, onDelete: 'CASCADE' })
+  @OneToOne(() => TxDao, { nullable: true, onDelete: 'CASCADE' })
   @JoinColumn()
   public tx?: TxDao;
 }

@@ -31,10 +31,10 @@ export class TypeOrmRollupDb implements RollupDb {
 
   public async addTx(txDao: TxDao) {
     await this.connection.transaction(async transactionalEntityManager => {
+      await transactionalEntityManager.save(txDao);
       if (txDao.txType === TxType.ACCOUNT) {
         await transactionalEntityManager.save(txDaoToAccountDao(txDao));
       }
-      await transactionalEntityManager.save(txDao);
     });
   }
 
@@ -65,11 +65,7 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async deletePendingTxs() {
-    await this.connection.transaction(async transactionalEntityManager => {
-      const pendingTxIds = (await this.txRep.find({ where: { rollupProof: null } })).map(tx => tx.id);
-      await transactionalEntityManager.delete(this.accountRep.target, { txId: In(pendingTxIds) });
-      await transactionalEntityManager.delete(this.txRep.target, { id: In(pendingTxIds) });
-    });
+    await this.txRep.delete({ rollupProof: null });
   }
 
   public async getTotalTxCount() {

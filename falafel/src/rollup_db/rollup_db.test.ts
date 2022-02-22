@@ -80,7 +80,7 @@ describe('rollup_db', () => {
     expect(await rollupDb.getLatestAccountNonce(accountPublicKey0)).toBe(3);
     expect(await rollupDb.getLatestAccountNonce(accountPublicKey1)).toBe(4);
 
-    // txs[1] ans txs[3] will be deleted.
+    // txs[1] and txs[3] will be deleted.
     await rollupDb.deletePendingTxs();
 
     expect(await rollupDb.getLatestAliasNonce(aliasHash0)).toBe(1);

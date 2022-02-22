@@ -8,6 +8,6 @@ export const txDaoToAccountDao = (txDao: TxDao) => {
     aliasHash: accountAliasId.aliasHash.toBuffer(),
     accountPubKey: accountPublicKey.toBuffer(),
     nonce: accountAliasId.nonce,
-    txId: txDao.id,
+    tx: txDao,
   });
 };

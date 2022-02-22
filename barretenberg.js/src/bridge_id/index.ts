@@ -116,7 +116,6 @@ export class BridgeId {
   }
 
   toBigInt() {
-    console.log('bit config shift = ', BridgeId.BITCONFIG_OFFSET);
     return (
       BigInt(this.addressId) +
       (BigInt(this.inputAssetIdA) << BigInt(BridgeId.INPUT_ASSET_ID_A_OFFSET)) +
