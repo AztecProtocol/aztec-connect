@@ -12,6 +12,7 @@ import {
   OneToOne,
   PrimaryColumn,
 } from 'typeorm';
+import { bufferColumn } from './init_entities';
 import { RollupDao } from './rollup';
 import { TxDao } from './tx';
 
@@ -27,7 +28,7 @@ export class RollupProofDao {
   public internalId!: string;
 
   // To be treated as primary key.
-  @Column({ unique: true })
+  @Column(...bufferColumn({ unique: true, length: 32 }))
   public id!: Buffer;
 
   @OneToMany(() => TxDao, tx => tx.rollupProof, { cascade: true })
@@ -40,7 +41,7 @@ export class RollupProofDao {
   @Column()
   public dataStartIndex!: number;
 
-  @Column()
+  @Column(...bufferColumn())
   public proofData!: Buffer;
 
   @Column()

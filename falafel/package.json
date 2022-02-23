@@ -42,6 +42,8 @@
     "koa-router": "^7.4.0",
     "log-timestamp": "^0.3.0",
     "moment": "^2.25.3",
+    "mysql": "^2.18.1",
+    "pg": "^8.7.1",
     "prom-client": "^13.0.0",
     "promise-readable": "^5.0.4",
     "request-ip": "^2.1.3",

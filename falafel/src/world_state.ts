@@ -1,4 +1,5 @@
 import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
+import { Timer } from '@aztec/barretenberg/timer';
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
@@ -9,9 +10,7 @@ import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proo
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { InitHelpers } from '@aztec/barretenberg/environment';
 import { AssetMetricsDao } from './entity/asset_metrics';
-import { RollupDao } from './entity/rollup';
-import { RollupProofDao } from './entity/rollup_proof';
-import { TxDao } from './entity/tx';
+import { RollupDao, RollupProofDao, TxDao } from './entity';
 import { getTxTypeFromInnerProofData } from './get_tx_type';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
@@ -142,6 +141,7 @@ export class WorldState {
     this.printState();
     const nextRollupId = await this.rollupDb.getNextRollupId();
     console.log(`Syncing state, next rollup id: ${nextRollupId}`);
+    const updateDbsStart = new Timer();
     if (nextRollupId === 0) {
       await this.syncStateFromInitFiles();
     }
@@ -151,7 +151,7 @@ export class WorldState {
     await this.rollupDb.deleteUnsettledRollups();
     await this.rollupDb.deleteOrphanedRollupProofs();
 
-    console.log('Sync complete.');
+    console.log(`Database synched in ${updateDbsStart.s()}s.`);
   }
 
   public printState() {
@@ -374,6 +374,14 @@ export class WorldState {
     await this.worldStateDb.batchPut(entries);
     */
     const { rollupId, dataStartIndex, innerProofData } = rollup;
+
+    const currentSize = this.worldStateDb.getSize(0);
+    if (currentSize > dataStartIndex) {
+      // The tree data is immutable, so we can assume if it's larger than the current start index, that this
+      // data has been inserted before. e.g. maybe just the sql db was erased, but we still have the tree data.
+      return;
+    }
+
     for (let i = 0; i < innerProofData.length; ++i) {
       const tx = innerProofData[i];
       await this.worldStateDb.put(RollupTreeId.DATA, BigInt(dataStartIndex + i * 2), tx.noteCommitment1);

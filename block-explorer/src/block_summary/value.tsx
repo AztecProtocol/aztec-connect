@@ -1,6 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { contentPlaceholderStyle, Text, TextProps } from '../components';
+import { Icon } from '../components/icon';
 import { fontSizes, lineHeights } from '../styles';
 
 export const ValuePlaceholder = styled.div`
@@ -23,10 +24,20 @@ const ValueText = styled(Text)`
   line-height: 1;
 `;
 
+const ValueWrapper = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+`;
+
 interface ValueProps extends TextProps {
   className?: string;
+  icon?: string;
 }
 
-export const Value: React.FunctionComponent<ValueProps> = ({ className, ...textProps }) => (
-  <ValueText className={className} size="xs" weight="light" {...textProps} />
+export const Value: React.FunctionComponent<ValueProps> = ({ className, icon, ...textProps }) => (
+  <ValueWrapper>
+    {icon && <Icon icon={icon} theme={'tertiary'} size={'s'} />}
+    <ValueText className={className} size="xs" weight="light" {...textProps} />
+  </ValueWrapper>
 );

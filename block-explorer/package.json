@@ -22,6 +22,8 @@
     "parcel-bundler": "^1.12.5",
     "parcel-plugin-static-files-copy": "^2.6.0",
     "polished": "^3.6.6",
+    "prettier": "^2.0.5",
+    "eslint-config-prettier": "^7.2.0",
     "react": "^16.13.1",
     "react-apollo": "^3.1.5",
     "react-dom": "^16.13.1",

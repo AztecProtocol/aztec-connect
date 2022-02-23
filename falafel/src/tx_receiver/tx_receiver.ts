@@ -17,7 +17,7 @@ import { BarretenbergWasm, BarretenbergWorker, createWorker, destroyWorker } fro
 import { Mutex } from 'async-mutex';
 import { ProofGenerator } from 'halloumi/proof_generator';
 import { BridgeResolver } from '../bridge';
-import { TxDao } from '../entity/tx';
+import { TxDao } from '../entity';
 import { getTxTypeFromProofData } from '../get_tx_type';
 import { Metrics } from '../metrics';
 import { RollupDb } from '../rollup_db';
