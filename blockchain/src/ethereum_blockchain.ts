@@ -56,6 +56,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     rollupContractAddress: EthAddress,
     feeDistributorAddress: EthAddress,
     priceFeedContractAddresses: EthAddress[],
+    feePayingAssetAddresses: EthAddress[],
     provider: EthereumProvider,
   ) {
     const confirmations = config.minConfirmation || EthereumBlockchain.DEFAULT_MIN_CONFIRMATIONS;
@@ -63,6 +64,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       rollupContractAddress,
       feeDistributorAddress,
       priceFeedContractAddresses,
+      feePayingAssetAddresses,
       provider,
       confirmations,
     );

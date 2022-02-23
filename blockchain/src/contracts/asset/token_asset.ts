@@ -41,6 +41,7 @@ export class TokenAsset implements Asset {
     address: EthAddress,
     ethereumProvider: EthereumProvider,
     permitSupport: boolean,
+    isFeePaying: boolean,
     minConfirmations = 1,
   ) {
     const contract = new Contract(address.toString(), abi, new Web3Provider(ethereumProvider));
@@ -50,7 +51,8 @@ export class TokenAsset implements Asset {
       symbol: await contract.symbol(),
       decimals: +(await contract.decimals()),
       permitSupport,
-      gasConstants: [5000, 0, 36000, 36000, 0, 36000, 36000],
+      isFeePaying,
+      gasConstants: isFeePaying ? [5000, 0, 36000, 36000, 0, 36000, 36000] : [],
     };
     return new TokenAsset(ethereumProvider, info, minConfirmations);
   }

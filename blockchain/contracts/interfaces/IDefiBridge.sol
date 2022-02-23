@@ -34,5 +34,11 @@ interface IDefiBridge {
         uint256 totalInputValue,
         uint256 interactionNonce,
         uint64 auxData
-    ) external payable returns (uint256 outputValueA, uint256 outputValueB);
+    )
+    external payable
+    returns (
+        uint256 outputValueA,
+        uint256 outputValueB,
+        bool interactionCompleted
+    );
 }

@@ -527,21 +527,44 @@ describe('rollup_db', () => {
 
   it('should add and get pending claims', async () => {
     const pendingClaims: ClaimDao[] = [];
-    for (let i = 0; i < 8; ++i) {
+    for (let i = 0; i < 16; ++i) {
       const claim = randomClaim();
-      if (i % 2) {
+      claim.interactionNonce = i % 2; // nonce is based on even or odd-ness
+      if (i % 4 === 0) {
+        // every 4th is fully claimed
         claim.claimed = new Date();
+        claim.interactionResultRollupId = (claim.interactionNonce + 1)  * 32;
       } else {
+        // every odd is not ready for claim
+        if (i % 2 === 0) {
+          claim.interactionResultRollupId = (claim.interactionNonce + 1)  * 32;
+        }
         pendingClaims.push(claim);
       }
       await rollupDb.addClaim(claim);
     }
 
-    expect(await rollupDb.getPendingClaims()).toEqual(pendingClaims);
+    // only those pending claims with a valid result are ready to rollup
+    expect(await rollupDb.getClaimsToRollup()).toEqual(pendingClaims.filter(claim => claim.interactionResultRollupId));
 
+    pendingClaims.forEach(claim => {
+      if (claim.interactionResultRollupId) {
+        return;
+      }
+      claim.interactionResultRollupId = (claim.interactionNonce + 1)  * 32;
+    });
+
+    // now set the odds to be ready to rollup
+    await rollupDb.updateClaimsWithResultRollupId(1, 64);
+
+    // now, all claims in pending claims should be ready to rollup
+    expect(await rollupDb.getClaimsToRollup()).toEqual(pendingClaims);
+
+    // now confirm the first claim
     await rollupDb.confirmClaimed(pendingClaims[0].nullifier, new Date());
 
-    expect(await rollupDb.getPendingClaims()).toEqual(pendingClaims.slice(1));
+    // should no longer be ready to rollup
+    expect(await rollupDb.getClaimsToRollup()).toEqual(pendingClaims.slice(1));
   });
 
   it('should delete unsettled claim txs', async () => {

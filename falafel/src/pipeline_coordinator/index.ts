@@ -4,8 +4,7 @@ import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { ClaimProofCreator } from '../claim_proof_creator';
 import { RollupAggregator } from '../rollup_aggregator';
 import { RollupCreator } from '../rollup_creator';
-import { RollupDb } from '../rollup_db';
-import { parseInteractionResult } from '../rollup_db/parse_interaction_result';
+import { RollupDb, parseInteractionResult } from '../rollup_db';
 import { RollupPublisher } from '../rollup_publisher';
 import { TxFeeResolver } from '../tx_fee_resolver';
 import { BridgeResolver } from '../bridge';
@@ -115,12 +114,14 @@ export class PipelineCoordinator {
     );
 
     const defiInteractionNotes = lastRollup ? parseInteractionResult(lastRollup.interactionResult!) : [];
+    let interactionNoteIndex = BigInt(Math.max(0, rollupId - 1)) * BigInt(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK);
     for (const note of defiInteractionNotes) {
       await this.worldStateDb.put(
         RollupTreeId.DEFI,
-        BigInt(note.nonce),
+        interactionNoteIndex,
         this.noteAlgo.defiInteractionNoteCommitment(note),
       );
+      interactionNoteIndex++;
     }
 
     this.rollupCoordinator = new RollupCoordinator(

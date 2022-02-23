@@ -2,13 +2,14 @@ import { InitHelpers } from '@aztec/barretenberg/environment';
 import { ContractFactory, Signer } from 'ethers';
 import { EthAddress } from '@aztec/barretenberg/address';
 import RollupProcessor from '../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
-import { addAsset } from './add_asset/add_asset';
+import { addAsset, setSupportedAsset } from './add_asset/add_asset';
 import { deployDefiBridge } from './deploy_defi_bridge';
 import { deployDefiBridgeProxy } from './deploy_defi_bridge_proxy';
 import { deployFeeDistributor } from './deploy_fee_distributor';
 import { deployPriceFeed } from './deploy_price_feed';
-import { createPair, deployUniswap } from './deploy_uniswap';
+import { createPair, deployUniswap, deployUniswapBridge } from './deploy_uniswap';
 import { deployMockVerifier, deployVerifier } from './deploy_verifier';
+import { deployElementBridge, elementAssets, elementConfig, setupElementPools } from './deploy_element';
 
 // initialEthSupply = 0.1 ETH
 export async function deploy(
@@ -79,9 +80,46 @@ export async function deploy(
 
   // Defi bridge
   const defiBridges = [
-    await deployDefiBridge(signer, rollup, uniswapRouter, EthAddress.ZERO.toString(), asset.address),
-    await deployDefiBridge(signer, rollup, uniswapRouter, asset.address, EthAddress.ZERO.toString()),
+    await deployDefiBridge(rollup, () => deployUniswapBridge(signer, rollup, uniswapRouter), 0n, [
+      { inputAsset: EthAddress.ZERO.toString(), outputAssetA: asset.address },
+    ]),
+    await deployDefiBridge(rollup, () => deployUniswapBridge(signer, rollup, uniswapRouter), 0n, [
+      { inputAsset: asset.address, outputAssetA: EthAddress.ZERO.toString() },
+    ]),
   ];
 
-  return { rollup, feeDistributor, uniswapRouter, priceFeeds, defiBridges };
+  if (await signer.provider!.getCode(elementConfig.balancerAddress) != '0x') {
+    console.error(`Balancer contract exists, deploying element bridge contract...`);
+    const elementAssetConfigs = elementAssets.map(token => {
+      return {
+        inputAsset: token,
+        outputAssetA: token,
+      };
+    });
+    for (const elementAsset of elementAssetConfigs) {
+      await setSupportedAsset(rollup, elementAsset.inputAsset, false);
+    }
+    defiBridges.push(
+      await deployDefiBridge(
+        rollup,
+        () =>
+          deployElementBridge(
+            signer,
+            rollup.address,
+            elementConfig.trancheFactoryAddress,
+            elementConfig.trancheByteCodeHash,
+            elementConfig.balancerAddress,
+          ),
+        1000000n,
+        elementAssetConfigs,
+      ),
+    );
+    await setupElementPools(elementConfig, defiBridges[2]);
+  } else {
+    console.error(`Balancer contract not found, element bridge and it's assets won't be deployed.`);
+  }
+
+  const feePayingAssets = [EthAddress.ZERO.toString(), asset.address];
+
+  return { rollup, feeDistributor, uniswapRouter, priceFeeds, defiBridges, feePayingAssets };
 }

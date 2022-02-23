@@ -1,0 +1,472 @@
+{
+	"tokens": {
+		"usdc": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+		"weth": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+		"dai": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+		"lusd3crv-f": "0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA",
+		"crvtricrypto": "0xcA3d75aC011BF5aD07a98d02f18225F9bD9A6BDF",
+		"stecrv": "0x06325440D014e39736583c165C2963BA99fAf14E",
+		"crv3crypto": "0xc4AD29ba4B3c580e6D59105FFf484999997675Ff",
+		"wbtc": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+		"alusd3crv-f": "0x43b4FdFD4Ff969587185cDB6f0BD875c5Fc83f8c",
+		"mim-3lp3crv-f": "0x5a6A4D54456819380173272A5E8E9B9904BdF41B",
+		"eurscrv": "0x194eBd173F6cDacE046C53eACcE9B953F28411d1"
+	},
+	"wrappedPositions": {
+		"yearn": {
+			"lusd3crv-f": "0x53b1aEAa018da00b4F458Cc13d40eB3e8d1B85d6",
+			"crvtricrypto": "0x97278Ce17D4860f8f49afC6E4c1C5AcBf2584cE5",
+			"stecrv": "0xB3295e739380BD68de96802F7c4Dba4e54477206",
+			"dai": "0x21BbC083362022aB8D7e42C18c47D484cc95C193",
+			"usdc": "0xdEa04Ffc66ECD7bf35782C70255852B34102C3b0",
+			"crv3crypto": "0x4F424B26c7c659F198797Bd87282BF602F543521",
+			"wbtc": "0x8D9487b81e0fEdcd2D8Cab91885756742375CDC5",
+			"alusd3crv-f": "0x3b5Dbd685C7ad66f8D3A82E2134320eD74DA4Af2",
+			"mim-3lp3crv-f": "0x270f63b67FF1Ca770D60684366B009A566170AdD",
+			"eurscrv": "0xb601610553071209443Fbae6E71b8dE4Ba78643b"
+		},
+		"yearnv4": {
+			"usdc": "0x62d9855c399fDE8226840eA12D9F1Dd693a49B6A"
+		}
+	},
+	"vaults": {
+		"yearn": {
+			"lusd3crv-f": "0x5fA5B62c8AF877CB37031e0a3B2f34A78e3C56A6",
+			"crvtricrypto": "0x3D980E50508CFd41a13837A60149927a11c03731",
+			"stecrv": "0xdCD90C7f6324cfa40d7169ef80b12031770B4325",
+			"dai": "0xdA816459F1AB5631232FE5e97a05BBBb94970c95",
+			"usdc": "0x5f18C75AbDAe578b483E5F43f12a39cF75b973a9",
+			"crv3crypto": "0xE537B5cc158EB71037D4125BDD7538421981E6AA",
+			"wbtc": "0xA696a63cc78DfFa1a63E9E50587C197387FF6C7E",
+			"alusd3crv-f": "0xA74d4B67b3368E83797a35382AFB776bAAE4F5C8",
+			"mim-3lp3crv-f": "0x2DfB14E32e2F8156ec15a2c21c3A6c053af52Be8",
+			"eurscrv": "0x25212Df29073FfFA7A67399AcEfC2dd75a831A1A"
+		},
+		"yearnv4": {
+			"usdc": "0xa354F35829Ae975e850e23e9615b11Da1B3dC4DE"
+		}
+	},
+	"trancheFactory": "0x62F161BF3692E4015BefB05A03a94A40f520d1c0",
+	"userProxy": "0xEe4e158c03A10CBc8242350d74510779A364581C",
+	"balancerVault": "0xBA12222222228d8Ba445958a75a0704d566BF2C8",
+	"weightedPoolFactory": "0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9",
+	"convergentCurvePoolFactory": "0xb7561f547F3207eDb42A6AfA42170Cd47ADD17BD",
+	"tranches": {
+		"stecrv": [
+			{
+				"expiration": 1634325622,
+				"address": "0x26941C63F4587796aBE199348ecd3d7C44F9aE0C",
+				"trancheFactory": "0x62F161BF3692E4015BefB05A03a94A40f520d1c0",
+				"ptPool": {
+					"address": "0xce16E7ed7654a3453E8FaF748f2c82E57069278f",
+					"poolId": "0xce16e7ed7654a3453e8faf748f2c82e57069278f00020000000000000000006d",
+					"fee": "0.1",
+					"timeStretch": 26.1
+				},
+				"ytPool": {
+					"address": "0xD5D7bc115B32ad1449C6D0083E43C87be95F2809",
+					"poolId": "0xd5d7bc115b32ad1449c6d0083e43c87be95f280900020000000000000000006c",
+					"fee": "0.003"
+				},
+				"weightedPoolFactory": "0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9",
+				"convergentCurvePoolFactory": "0xb7561f547F3207eDb42A6AfA42170Cd47ADD17BD"
+			},
+			{
+				"expiration": 1643382514,
+				"address": "0x720465A4AE6547348056885060EEB51F9CAdb571",
+				"trancheFactory": "0x62F161BF3692E4015BefB05A03a94A40f520d1c0",
+				"ptPool": {
+					"address": "0x544c823194218f0640daE8291c1f59752d25faE3",
+					"poolId": "0x544c823194218f0640dae8291c1f59752d25fae3000200000000000000000093",
+					"fee": "0.1",
+					"timeStretch": 18.49
+				},
+				"ytPool": {
+					"address": "0x4212bE3C7b255bA4B29705573ABD023cdcE21542",
+					"poolId": "0x4212be3c7b255ba4b29705573abd023cdce21542000200000000000000000092",
+					"fee": "0.003"
+				},
+				"weightedPoolFactory": "0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9",
+				"convergentCurvePoolFactory": "0xb7561f547F3207eDb42A6AfA42170Cd47ADD17BD"
+			},
+			{
+				"expiration": 1650025565,
+				"address": "0x2361102893CCabFb543bc55AC4cC8d6d0824A67E",
+				"trancheFactory": "0x62F161BF3692E4015BefB05A03a94A40f520d1c0",
+				"ptPool": {
+					"address": "0xb03C6B351A283bc1Cd26b9cf6d7B0c4556013bDb",
+					"poolId": "0xb03c6b351a283bc1cd26b9cf6d7b0c4556013bdb0002000000000000000000ab",
+					"fee": "0.1",
+					"timeStretch": 36.98
+				},
+				"ytPool": {
+					"address": "0x062F38735AAC32320DB5e2DBBEb07968351D7C72",
+					"poolId": "0x062f38735aac32320db5e2dbbeb07968351d7c720002000000000000000000ac",
+					"fee": "0.003"
+				},
+				"weightedPoolFactory": "0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9",
+				"convergentCurvePoolFactory": "0xb7561f547F3207eDb42A6AfA42170Cd47ADD17BD"
+			}
+		],
+		"lusd3crv-f": [
+			{
+				"address": "0x9b44Ed798a10Df31dee52C5256Dcb4754BCf097E",
+				"expiration": 1632834462,
+				"trancheFactory": "0x62F161BF3692E4015BefB05A03a94A40f520d1c0",
+				"ptPool": {
+					"address": "0xA8D4433BAdAa1A35506804B43657B0694deA928d",
+					"poolId": "0xa8d4433badaa1a35506804b43657b0694dea928d00020000000000000000005e",
+					"fee": "0.1",
+					"timeStretch": 16
+				},
+				"ytPool": {
+					"address": "0xDe620bb8BE43ee54d7aa73f8E99A7409Fe511084",
+					"poolId": "0xde620bb8be43ee54d7aa73f8e99a7409fe51108400020000000000000000005d",
+					"fee": "0.003"
+				},
+				"weightedPoolFactory": "0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9",
+				"convergentCurvePoolFactory": "0xb7561f547F3207eDb42A6AfA42170Cd47ADD17BD"
+			},
+			{
+				"expiration": 1640620258,
+				"address": "0xa2b3d083AA1eaa8453BfB477f062A208Ed85cBBF",
+				"trancheFactory": "0x62F161BF3692E4015BefB05A03a94A40f520d1c0",
+				"ptPool": {
+					"address": "0x893B30574BF183d69413717f30b17062eC9DFD8b",
+					"poolId": "0x893b30574bf183d69413717f30b17062ec9dfd8b000200000000000000000061",
+					"fee": "0.1",
+					"timeStretch": 24
+				},
+				"ytPool": {
+					"address": "0x67F8FCb9D3c463da05DE1392EfDbB2A87F8599Ea",
+					"poolId": "0x67f8fcb9d3c463da05de1392efdbb2a87f8599ea000200000000000000000060",
+					"fee": "0.003"
+				},
+				"weightedPoolFactory": "0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9",
+				"convergentCurvePoolFactory": "0xb7561f547F3207eDb42A6AfA42170Cd47ADD17BD"
+			},
+			{
+				"address": "0x0740A6CfB9468B8b53070C0B327099293DCCB82d",
+				"expiration": 1651264326,
+				"trancheFactory": "0x62F161BF3692E4015BefB05A03a94A40f520d1c0",
+				"ptPool": {
+					"address": "0x56F30398d13F111401d6e7ffE758254a0946687d",
+					"poolId": "0x56f30398d13f111401d6e7ffe758254a0946687d000200000000000000000105",
+					"fee": "0.1",
+					"timeStretch": 27.74
+				},
+				"ytPool": {
+					"address": "0x8E9d636BbE6939BD0F52849afc02C0c66F6A3603",
+					"poolId": "0x8e9d636bbe6939bd0f52849afc02c0c66f6a3603000200000000000000000104",
+					"fee": "0.003"
+				},
+				"weightedPoolFactory": "0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9",
+				"convergentCurvePoolFactory": "0xb7561f547F3207eDb42A6AfA42170Cd47ADD17BD"
+			}
+		],
+		"crvtricrypto": [
+			{
+				"expiration": 1628997564,
+				"address": "0x237535Da7e2f0aBa1b68262ABCf7C4e60B42600C",
+				"trancheFactory": "0x62F161BF3692E4015BefB05A03a94A40f520d1c0",
+				"ptPool": {
+					"address": "0x3A693EB97b500008d4Bb6258906f7Bbca1D09Cc5",
+					"poolId": "0x3a693eb97b500008d4bb6258906f7bbca1d09cc5000200000000000000000065",
+					"fee": "0.1",
+					"timeStretch": 6.16
+				},
+				"ytPool": {
+					"address": "0xF94A7Df264A2ec8bCEef2cFE54d7cA3f6C6DFC7a",
+					"poolId": "0xf94a7df264a2ec8bceef2cfe54d7ca3f6c6dfc7a000200000000000000000064",
+					"fee": "0.003"
+				},
+				"weightedPoolFactory": "0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9",
+				"convergentCurvePoolFactory": "0xb7561f547F3207eDb42A6AfA42170Cd47ADD17BD"
+			}
+		],
+		"dai": [
+			{
+				"expiration": 1634346845,
+				"address": "0xb1cc77e701de60FE246607565CF7eDC9D9b6b963",
+				"trancheFactory": "0x62F161BF3692E4015BefB05A03a94A40f520d1c0",
+				"ptPool": {
+					"address": "0x71628c66C502F988Fbb9e17081F2bD14e361FAF4",
+					"poolId": "0x71628c66c502f988fbb9e17081f2bd14e361faf4000200000000000000000078",
+					"fee": "0.1",
+					"timeStretch": 22.19
+				},
+				"ytPool": {
+					"address": "0xE54B3F5c444a801e61BECDCa93e74CdC1C4C1F90",
+					"poolId": "0xe54b3f5c444a801e61becdca93e74cdc1c4c1f90000200000000000000000077",
+					"fee": "0.003"
+				},
+				"weightedPoolFactory": "0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9",
+				"convergentCurvePoolFactory": "0xb7561f547F3207eDb42A6AfA42170Cd47ADD17BD"
+			},
+			{
+				"expiration": 1643382446,
+				"address": "0x449D7C2e096E9f867339078535b15440d42F78E8",
+				"trancheFactory": "0x62F161BF3692E4015BefB05A03a94A40f520d1c0",
+				"ptPool": {
+					"address": "0xA47D1251CF21AD42685Cc6B8B3a186a73Dbd06cf",
+					"poolId": "0xa47d1251cf21ad42685cc6b8b3a186a73dbd06cf000200000000000000000097",
+					"fee": "0.1",
+					"timeStretch": 24.66
+				},
+				"ytPool": {
+					"address": "0xB70c25D96EF260eA07F650037Bf68F5d6583885e",
+					"poolId": "0xb70c25d96ef260ea07f650037bf68f5d6583885e000200000000000000000096",
+					"fee": "0.003"
+				},
+				"weightedPoolFactory": "0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9",
+				"convergentCurvePoolFactory": "0xb7561f547F3207eDb42A6AfA42170Cd47ADD17BD"
+			},
+			{
+				"expiration": 1651275535,
+				"address": "0x2c72692E94E757679289aC85d3556b2c0f717E0E",
+				"trancheFactory": "0x62F161BF3692E4015BefB05A03a94A40f520d1c0",
+				"ptPool": {
+					"address": "0xEdf085f65b4F6c155e13155502Ef925c9a756003",
+					"poolId": "0xedf085f65b4f6c155e13155502ef925c9a756003000200000000000000000123",
+					"fee": "0.1",
+					"timeStretch": 31.7
+				},
+				"ytPool": {
+					"address": "0x415747EE98D482e6dD9B431fa76Ad5553744F247",
+					"poolId": "0x415747ee98d482e6dd9b431fa76ad5553744f247000200000000000000000122",
+					"fee": "0.003"
+				},
+				"weightedPoolFactory": "0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9",
+				"convergentCurvePoolFactory": "0xb7561f547F3207eDb42A6AfA42170Cd47ADD17BD"
+			}
+		],
+		"usdc": [
+			{
+				"expiration": 1635528110,
+				"address": "0xf38c3E836Be9cD35072055Ff6a9Ba570e0B70797",
+				"trancheFactory": "0x62F161BF3692E4015BefB05A03a94A40f520d1c0",
+				"ptPool": {
+					"address": "0x787546Bf2c05e3e19e2b6BDE57A203da7f682efF",
+					"poolId": "0x787546bf2c05e3e19e2b6bde57a203da7f682eff00020000000000000000007c",
+					"fee": "0.1",
+					"timeStretch": 18.5
+				},
+				"ytPool": {
+					"address": "0x2D6e3515C8b47192Ca3913770fa741d3C4Dac354",
+					"poolId": "0x2d6e3515c8b47192ca3913770fa741d3c4dac35400020000000000000000007b",
+					"fee": "0.003"
+				},
+				"weightedPoolFactory": "0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9",
+				"convergentCurvePoolFactory": "0xb7561f547F3207eDb42A6AfA42170Cd47ADD17BD"
+			},
+			{
+				"expiration": 1643382476,
+				"address": "0x8a2228705ec979961F0e16df311dEbcf097A2766",
+				"trancheFactory": "0x62F161BF3692E4015BefB05A03a94A40f520d1c0",
+				"ptPool": {
+					"address": "0x10a2F8bd81Ee2898D7eD18fb8f114034a549FA59",
+					"poolId": "0x10a2f8bd81ee2898d7ed18fb8f114034a549fa59000200000000000000000090",
+					"fee": "0.1",
+					"timeStretch": 24.7
+				},
+				"ytPool": {
+					"address": "0x9e030b67a8384cbba09D5927533Aa98010C87d91",
+					"poolId": "0x9e030b67a8384cbba09d5927533aa98010c87d9100020000000000000000008f",
+					"fee": "0.003"
+				},
+				"weightedPoolFactory": "0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9",
+				"convergentCurvePoolFactory": "0xb7561f547F3207eDb42A6AfA42170Cd47ADD17BD"
+			},
+			{
+				"expiration": 1639727861,
+				"address": "0x76a34D72b9CF97d972fB0e390eB053A37F211c74",
+				"trancheFactory": "0x62F161BF3692E4015BefB05A03a94A40f520d1c0",
+				"ytPool": {
+					"address": "0x7C9cF12d783821d5C63d8E9427aF5C44bAd92445",
+					"poolId": "0x7c9cf12d783821d5c63d8e9427af5c44bad924450002000000000000000000b4",
+					"fee": "0.003"
+				},
+				"ptPool": {
+					"address": "0x90ca5cef5b29342b229fb8ae2db5d8f4f894d652",
+					"poolId": "0x90ca5cef5b29342b229fb8ae2db5d8f4f894d6520002000000000000000000b5",
+					"fee": "0.1",
+					"timeStretch": 24.66
+				},
+				"weightedPoolFactory": "0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9",
+				"convergentCurvePoolFactory": "0xb7561f547F3207eDb42A6AfA42170Cd47ADD17BD"
+			}
+		],
+		"crv3crypto": [
+			{
+				"expiration": 1636746083,
+				"address": "0x9CF2AB51aC93711Ec2fa32Ec861349568A16c729",
+				"trancheFactory": "0x62F161BF3692E4015BefB05A03a94A40f520d1c0",
+				"ptPool": {
+					"address": "0xF6dc4640D2783654BeF88E0dF3fb0F051f0DfC1A",
+					"poolId": "0xf6dc4640d2783654bef88e0df3fb0f051f0dfc1a00020000000000000000007e",
+					"fee": "0.1",
+					"timeStretch": 4.44
+				},
+				"ytPool": {
+					"address": "0xd16847480D6bc218048CD31Ad98b63CC34e5c2bF",
+					"poolId": "0xd16847480d6bc218048cd31ad98b63cc34e5c2bf00020000000000000000007d",
+					"fee": "0.003"
+				},
+				"weightedPoolFactory": "0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9",
+				"convergentCurvePoolFactory": "0xb7561f547F3207eDb42A6AfA42170Cd47ADD17BD"
+			},
+			{
+				"expiration": 1651240496,
+				"address": "0x285328906D0D33cb757c1E471F5e2176683247c2",
+				"trancheFactory": "0x62F161BF3692E4015BefB05A03a94A40f520d1c0",
+				"ptPool": {
+					"address": "0x6Dd0F7c8F4793ed2531c0df4fEA8633a21fDcFf4",
+					"poolId": "0x6dd0f7c8f4793ed2531c0df4fea8633a21fdcff40002000000000000000000b7",
+					"fee": "0.1",
+					"timeStretch": 13.06
+				},
+				"ytPool": {
+					"address": "0x4aBB6FD289fA70056CFcB58ceBab8689921eB922",
+					"poolId": "0x4abb6fd289fa70056cfcb58cebab8689921eb9220002000000000000000000b6",
+					"fee": "0.003"
+				},
+				"weightedPoolFactory": "0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9",
+				"convergentCurvePoolFactory": "0xb7561f547F3207eDb42A6AfA42170Cd47ADD17BD"
+			}
+		],
+		"wbtc": [
+			{
+				"expiration": 1637941844,
+				"address": "0x6BF924137E769C0A5c443dcE6eC885552d31D579",
+				"trancheFactory": "0x62F161BF3692E4015BefB05A03a94A40f520d1c0",
+				"ptPool": {
+					"address": "0x4Db9024fc9F477134e00Da0DA3c77DE98d9836aC",
+					"poolId": "0x4db9024fc9f477134e00da0da3c77de98d9836ac000200000000000000000086",
+					"fee": "0.1",
+					"timeStretch": 31.7
+				},
+				"ytPool": {
+					"address": "0x7320d680Ca9BCE8048a286f00A79A2c9f8DCD7b3",
+					"poolId": "0x7320d680ca9bce8048a286f00a79a2c9f8dcd7b3000200000000000000000085",
+					"fee": "0.003"
+				},
+				"weightedPoolFactory": "0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9",
+				"convergentCurvePoolFactory": "0xb7561f547F3207eDb42A6AfA42170Cd47ADD17BD"
+			},
+			{
+				"expiration": 1651265241,
+				"address": "0x49e9e169f0B661Ea0A883f490564F4CC275123Ed",
+				"trancheFactory": "0x62F161BF3692E4015BefB05A03a94A40f520d1c0",
+				"ptPool": {
+					"address": "0x4bd6D86dEBdB9F5413e631Ad386c4427DC9D01B2",
+					"poolId": "0x4bd6d86debdb9f5413e631ad386c4427dc9d01b20002000000000000000000ec",
+					"fee": "0.1",
+					"timeStretch": 73.96
+				},
+				"ytPool": {
+					"address": "0xCF354603A9AEbD2Ff9f33E1B04246d8Ea204ae95",
+					"poolId": "0xcf354603a9aebd2ff9f33e1b04246d8ea204ae950002000000000000000000eb",
+					"fee": "0.003"
+				},
+				"weightedPoolFactory": "0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9",
+				"convergentCurvePoolFactory": "0xb7561f547F3207eDb42A6AfA42170Cd47ADD17BD"
+			}
+		],
+		"alusd3crv-f": [
+			{
+				"expiration": 1643382460,
+				"address": "0x55096A35Bf827919B3Bb0A5e6b5E2af8095F3D4d",
+				"trancheFactory": "0x62F161BF3692E4015BefB05A03a94A40f520d1c0",
+				"ptPool": {
+					"address": "0xC9AD279994980F8DF348b526901006972509677F",
+					"poolId": "0xc9ad279994980f8df348b526901006972509677f00020000000000000000009e",
+					"fee": "0.1",
+					"timeStretch": 11.1
+				},
+				"ytPool": {
+					"address": "0x802d0f2f4b5f1fb5BfC9b2040a703c1464e1D4CB",
+					"poolId": "0x802d0f2f4b5f1fb5bfc9b2040a703c1464e1d4cb00020000000000000000009d",
+					"fee": "0.003"
+				},
+				"weightedPoolFactory": "0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9",
+				"convergentCurvePoolFactory": "0xb7561f547F3207eDb42A6AfA42170Cd47ADD17BD"
+			},
+			{
+				"expiration": 1651267340,
+				"address": "0xEaa1cBA8CC3CF01a92E9E853E90277B5B8A23e07",
+				"trancheFactory": "0x62F161BF3692E4015BefB05A03a94A40f520d1c0",
+				"ptPool": {
+					"address": "0x63E9B50DD3eB63BfBF93B26F57b9EFB574e59576",
+					"poolId": "0x63e9b50dd3eb63bfbf93b26f57b9efb574e595760002000000000000000000cf",
+					"fee": "0.1",
+					"timeStretch": 13.87
+				},
+				"ytPool": {
+					"address": "0x10f21C9bD8128a29Aa785Ab2dE0d044DCdd79436",
+					"poolId": "0x10f21c9bd8128a29aa785ab2de0d044dcdd794360002000000000000000000ce",
+					"fee": "0.003"
+				},
+				"weightedPoolFactory": "0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9",
+				"convergentCurvePoolFactory": "0xb7561f547F3207eDb42A6AfA42170Cd47ADD17BD"
+			}
+		],
+		"mim-3lp3crv-f": [
+			{
+				"expiration": 1644601070,
+				"address": "0x418De6227499181B045CAdf554030722E460881a",
+				"trancheFactory": "0x62F161BF3692E4015BefB05A03a94A40f520d1c0",
+				"ptPool": {
+					"address": "0x09b1b33BaD0e87454ff05696b1151BFbD208a43F",
+					"poolId": "0x09b1b33bad0e87454ff05696b1151bfbd208a43f0002000000000000000000a6",
+					"fee": "0.1",
+					"timeStretch": 11.1
+				},
+				"ytPool": {
+					"address": "0x1D310a6238e11c8BE91D83193C88A99eB66279bE",
+					"poolId": "0x1d310a6238e11c8be91d83193c88a99eb66279be0002000000000000000000a2",
+					"fee": "0.003"
+				},
+				"weightedPoolFactory": "0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9",
+				"convergentCurvePoolFactory": "0xb7561f547F3207eDb42A6AfA42170Cd47ADD17BD"
+			},
+			{
+				"expiration": 1651247155,
+				"address": "0xC63958D9D01eFA6B8266b1df3862c6323CbDb52B",
+				"trancheFactory": "0x62F161BF3692E4015BefB05A03a94A40f520d1c0",
+				"ptPool": {
+					"address": "0x14792d3F6FcF2661795d1E08ef818bf612708BbF",
+					"poolId": "0x14792d3f6fcf2661795d1e08ef818bf612708bbf0002000000000000000000be",
+					"fee": "0.1",
+					"timeStretch": 11.68
+				},
+				"ytPool": {
+					"address": "0x6FE95FafE2F86158c77Bf18350672D360BfC78a2",
+					"poolId": "0x6fe95fafe2f86158c77bf18350672d360bfc78a20002000000000000000000bd",
+					"fee": "0.003"
+				},
+				"weightedPoolFactory": "0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9",
+				"convergentCurvePoolFactory": "0xb7561f547F3207eDb42A6AfA42170Cd47ADD17BD"
+			}
+		],
+		"eurscrv": [
+			{
+				"expiration": 1644604852,
+				"address": "0x2A8f5649DE50462fF9699Ccc75A2Fb0b53447503",
+				"trancheFactory": "0x62F161BF3692E4015BefB05A03a94A40f520d1c0",
+				"ptPool": {
+					"address": "0x6AC02eCD0c2A23B11f9AFb3b3Aaf237169475cac",
+					"poolId": "0x6ac02ecd0c2a23b11f9afb3b3aaf237169475cac0002000000000000000000a8",
+					"fee": "0.1",
+					"timeStretch": 11.09
+				},
+				"ytPool": {
+					"address": "0x5fA3ce1fB47bC8A29B5C02e2e7167799BBAf5F41",
+					"poolId": "0x5fa3ce1fb47bc8a29b5c02e2e7167799bbaf5f410002000000000000000000a7",
+					"fee": "0.003"
+				},
+				"weightedPoolFactory": "0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9",
+				"convergentCurvePoolFactory": "0xb7561f547F3207eDb42A6AfA42170Cd47ADD17BD"
+			}
+		]
+	}
+}

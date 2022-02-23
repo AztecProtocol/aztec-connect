@@ -202,14 +202,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         uint256 totalOutputValueB,
         bool result
     );
-    event AsyncDefiBridgeProcessed(
-        uint256 indexed bridgeId,
-        uint256 indexed nonce,
-        uint256 totalInputValue,
-        uint256 totalOutputValueA,
-        uint256 totalOutputValueB,
-        bool result
-    );
     event Deposit(uint256 assetId, address depositorAddress, uint256 depositValue);
     event Withdraw(uint256 assetId, address withdrawAddress, uint256 withdrawValue);
     event WithdrawError(bytes errorReason);
@@ -270,6 +262,18 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         uint256 outputValueB;
         bool isAsync;
         bool success;
+    }
+
+    /**
+     * @dev Container for the inputs of a Defi interaction
+     * @param totalInputValue number of tokens/wei sent to the bridge
+     * @param interactionNonce the unique id of the interaction
+     * @param auxData additional input specific to the type of interaction
+     */
+    struct InteractionInputs {
+        uint256 totalInputValue;
+        uint256 interactionNonce;
+        uint64 auxData;
     }
 
     /*----------------------------------------
@@ -1574,16 +1578,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
 
             // emit events and update state
             assembly {
-                let mPtr := mload(0x40)
-                // emit DefiBridgeProcessed(indexed bridgeId, indexed interactionNonce, totalInputValue, outputValueA, outputValueB, success)
-                {
-                    mstore(mPtr, totalInputValue)
-                    mstore(add(mPtr, 0x20), mload(bridgeResult)) // outputValueA
-                    mstore(add(mPtr, 0x40), mload(add(bridgeResult, 0x20))) // outputValueB
-                    mstore(add(mPtr, 0x60), mload(add(bridgeResult, 0x60))) // success
-                    log3(mPtr, 0x80, DEFI_BRIDGE_PROCESSED_SIGHASH, bridgeId, interactionNonce)
-                }
-
+                
                 // if interaction is Async, update pendingDefiInteractions
                 // if interaction is synchronous, compute the interaction hash and add to defiInteractionHashes
                 switch mload(add(bridgeResult, 0x40)) // switch isAsync
@@ -1597,6 +1592,17 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
                     sstore(add(pendingDefiInteractionsSlotBase, 0x01), totalInputValue)
                 }
                 default {
+                    let mPtr := mload(0x40)
+                    // prepare the data required to publish the DefiBridgeProcessed event, we will only publish it if isAsync == false
+                    // async interactions that have failed, have there isAsync property modified to false above
+                    // emit DefiBridgeProcessed(indexed bridgeId, indexed interactionNonce, totalInputValue, outputValueA, outputValueB, success)
+                    {
+                        mstore(mPtr, totalInputValue)
+                        mstore(add(mPtr, 0x20), mload(bridgeResult)) // outputValueA
+                        mstore(add(mPtr, 0x40), mload(add(bridgeResult, 0x20))) // outputValueB
+                        mstore(add(mPtr, 0x60), mload(add(bridgeResult, 0x60))) // success
+                        log3(mPtr, 0x80, DEFI_BRIDGE_PROCESSED_SIGHASH, bridgeId, interactionNonce)
+                    }
                     // compute defiInteractionnHash
                     mstore(mPtr, bridgeId)
                     mstore(add(mPtr, 0x20), interactionNonce)
@@ -1693,7 +1699,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
      *      Can only be called by the bridge contract linked to the interactionNonce
      * @param interactionNonce - unique id of the interaection
      */
-    function processAsyncDefiInteraction(uint256 interactionNonce) external {
+    function processAsyncDefiInteraction(uint256 interactionNonce) external override returns (bool) {
         // If the re-entrancy mutex is not set, set it!
         // The re-entrancy mutex guards against nested calls to `processRollup()` and deposit functions.
         bool startingMutexValue = getReentrancyMutex();
@@ -1742,39 +1748,52 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
             revert INVALID_BRIDGE_ADDRESS();
         }
         // Copy some variables to front of stack to get around stack too deep errors
-        uint256 totalInputValueCopy = totalInputValue;
-        uint256 interactionNonceCopy = interactionNonce;
-        uint64 auxDataCopy = uint64(bridgeData.auxData);
-        (uint256 outputValueA, uint256 outputValueB) = bridgeContract.finalise(
+        InteractionInputs memory inputs = InteractionInputs(
+            totalInputValue,
+            interactionNonce,
+            uint64(bridgeData.auxData)
+        );
+        (uint256 outputValueA, uint256 outputValueB, bool interactionCompleted) = bridgeContract.finalise(
             inputAssetA,
             inputAssetB,
             outputAssetA,
             outputAssetB,
-            totalInputValueCopy,
-            interactionNonceCopy,
-            auxDataCopy
+            inputs.totalInputValue,
+            inputs.interactionNonce,
+            inputs.auxData
         );
+
+        if (!interactionCompleted) {
+            // clear the re-entrancy mutex if it was false at the start of this function
+            if (!startingMutexValue) {
+                clearReentrancyMutex();
+            }
+            return false;
+        }
 
         if (outputValueB > 0 && outputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED) {
             revert NONZERO_OUTPUT_VALUE_ON_NOT_USED_ASSET(outputValueB);
         }
+
         if (outputValueA == 0 && outputValueB == 0) {
             // issue refund.
-            transferTokensAsync(address(bridgeContract), inputAssetA, totalInputValue, interactionNonceCopy);
+            transferTokensAsync(address(bridgeContract), inputAssetA, inputs.totalInputValue, inputs.interactionNonce);
         } else {
             // transfer output tokens to rollup contract
-            transferTokensAsync(address(bridgeContract), outputAssetA, outputValueA, interactionNonceCopy);
-            transferTokensAsync(address(bridgeContract), outputAssetB, outputValueB, interactionNonceCopy);
+            transferTokensAsync(address(bridgeContract), outputAssetA, outputValueA, inputs.interactionNonce);
+            transferTokensAsync(address(bridgeContract), outputAssetB, outputValueB, inputs.interactionNonce);
         }
 
         // compute defiInteractionHash and push it onto the asyncDefiInteractionHashes array
         bool result;
         assembly {
+            let inputValue := mload(inputs)
+            let nonce := mload(add(inputs, 0x20))
             result := iszero(and(eq(outputValueA, 0), eq(outputValueB, 0)))
             let mPtr := mload(0x40)
             mstore(mPtr, bridgeId)
-            mstore(add(mPtr, 0x20), interactionNonceCopy)
-            mstore(add(mPtr, 0x40), totalInputValueCopy)
+            mstore(add(mPtr, 0x20), nonce)
+            mstore(add(mPtr, 0x40), inputValue)
             mstore(add(mPtr, 0x60), outputValueA)
             mstore(add(mPtr, 0x80), outputValueB)
             mstore(add(mPtr, 0xa0), result)
@@ -1807,12 +1826,20 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
 
             sstore(rollupState.slot, newState)
         }
-        emit AsyncDefiBridgeProcessed(bridgeId, interactionNonce, totalInputValue, outputValueA, outputValueB, result);
+        emit DefiBridgeProcessed(
+            bridgeId,
+            inputs.interactionNonce,
+            inputs.totalInputValue,
+            outputValueA,
+            outputValueB,
+            result
+        );
 
         // clear the re-entrancy mutex if it was false at the start of this function
         if (!startingMutexValue) {
             clearReentrancyMutex();
         }
+        return true;
     }
 
     /**

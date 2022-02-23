@@ -16,6 +16,7 @@ import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
 import { RollupPipeline, RollupPipelineFactory } from './rollup_pipeline';
 import { AccountDao } from './entity/account';
+import { ClaimDao } from './entity/claim';
 
 const innerProofDataToTxDao = (tx: InnerProofData, offchainTxData: Buffer, created: Date, txType: TxType) => {
   const txDao = new TxDao();
@@ -201,14 +202,15 @@ export class WorldState {
     const end = this.metrics.processBlockTimer();
     const { rollupProofData: rawRollupData, offchainTxData } = block;
     const rollupProofData = RollupProofData.fromBuffer(rawRollupData);
-    const { rollupId, rollupHash, newDataRoot, newNullRoot, newDataRootsRoot } = rollupProofData;
+    const { rollupId, rollupHash, newDataRoot, newNullRoot, newDataRootsRoot, newDefiRoot } = rollupProofData;
 
     console.log(`Processing rollup ${rollupId}: ${rollupHash.toString('hex')}...`);
 
     if (
-      newDataRoot.equals(this.worldStateDb.getRoot(0)) &&
-      newNullRoot.equals(this.worldStateDb.getRoot(1)) &&
-      newDataRootsRoot.equals(this.worldStateDb.getRoot(2))
+      newDataRoot.equals(this.worldStateDb.getRoot(RollupTreeId.DATA)) &&
+      newNullRoot.equals(this.worldStateDb.getRoot(RollupTreeId.NULL)) &&
+      newDataRootsRoot.equals(this.worldStateDb.getRoot(RollupTreeId.ROOT)) &&
+      newDefiRoot.equals(this.worldStateDb.getRoot(RollupTreeId.DEFI))
     ) {
       // This must be the rollup we just published. Commit the world state.
       await this.worldStateDb.commit();
@@ -227,7 +229,7 @@ export class WorldState {
   }
 
   private async processDefiProofs(rollup: RollupProofData, offchainTxData: Buffer[], block: Block) {
-    const { innerProofData, dataStartIndex } = rollup;
+    const { innerProofData, dataStartIndex, bridgeIds, rollupId } = rollup;
     const { interactionResult } = block;
     let offChainIndex = 0;
     for (let i = 0; i < innerProofData.length; ++i) {
@@ -241,11 +243,13 @@ export class WorldState {
             OffchainDefiDepositData.fromBuffer(offchainTxData[offChainIndex]);
           const fee = txFee - (txFee >> BigInt(1));
           const index = dataStartIndex + i * 2;
-          const interactionNonce = interactionResult.find(r => r.bridgeId.equals(bridgeId))!.nonce;
+          const interactionNonce =
+            bridgeIds.findIndex(bridge => bridge.equals(bridgeId.toBuffer())) +
+            rollup.rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
           const inputNullifier = proofData.nullifier1;
           const note = new TreeClaimNote(depositValue, bridgeId, interactionNonce, fee, partialState, inputNullifier);
           const nullifier = this.noteAlgo.claimNoteNullifier(this.noteAlgo.claimNoteCommitment(note));
-          await this.rollupDb.addClaim({
+          const claim = new ClaimDao({
             id: index,
             nullifier,
             bridgeId: bridgeId.toBigInt(),
@@ -257,6 +261,7 @@ export class WorldState {
             fee,
             created: new Date(),
           });
+          await this.rollupDb.addClaim(claim);
           break;
         }
         case ProofId.DEFI_CLAIM:
@@ -264,6 +269,15 @@ export class WorldState {
           break;
       }
       offChainIndex++;
+    }
+
+    for (const defiNote of interactionResult) {
+      console.log(
+        `Received defi interaction result ${defiNote.result} for nonce ${
+          defiNote.nonce
+        } and bridge ${defiNote.bridgeId.toBigInt()}`,
+      );
+      await this.rollupDb.updateClaimsWithResultRollupId(defiNote.nonce, rollupId);
     }
   }
 

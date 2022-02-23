@@ -26,6 +26,7 @@ export async function createFundedWalletProvider(
 
   for (let i = 0; i < numAccountToFund; ++i) {
     const to = walletProvider.getAccount(i);
+    debug(`funding: ${to.toString()}`);
     await ethAsset.transfer(initialBalance, funder, to, { gasLimit: 1000000 });
   }
 

@@ -5,7 +5,7 @@ import '@openzeppelin/hardhat-upgrades';
 
 const config = {
   solidity: {
-    version: '0.8.4',
+    version: '0.8.10',
     settings: {
       evmVersion: 'berlin',
       optimizer: { enabled: true, runs: 200 },
@@ -19,7 +19,7 @@ const config = {
       blockGasLimit: 15000000,
       gasPrice: 10,
       hardfork: 'berlin',
-    },
+      },
   },
   paths: {
     artifacts: './src/artifacts',

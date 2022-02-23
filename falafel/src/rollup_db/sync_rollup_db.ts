@@ -210,8 +210,12 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.addClaim(claim));
   }
 
-  public async getPendingClaims(take?: number) {
-    return this.synchronise(() => this.rollupDb.getPendingClaims(take));
+  public async getClaimsToRollup(take?: number) {
+    return this.synchronise(() => this.rollupDb.getClaimsToRollup(take));
+  }
+
+  public async updateClaimsWithResultRollupId(interactionNonce: number, interactionResultRollupId: number) {
+    return this.synchronise(() => this.rollupDb.updateClaimsWithResultRollupId(interactionNonce, interactionResultRollupId));
   }
 
   public async confirmClaimed(nullifier: Buffer, claimed: Date) {

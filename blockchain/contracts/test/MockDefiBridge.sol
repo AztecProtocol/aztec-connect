@@ -141,13 +141,13 @@ contract MockDefiBridge is IDefiBridge {
         uint256, /*totalInputValue*/
         uint256 interactionNonce,
         uint64
-    ) external payable override returns (uint256, uint256) {
+    ) external payable override returns (uint256, uint256, bool) {
         require(msg.sender == rollupProcessor, 'invalid sender!');
         approveTransfer(inputAssetA, returnInputValue, interactionNonce);
         approveTransfer(outputAssetA, returnValueA, interactionNonce);
         approveTransfer(outputAssetB, returnValueB, interactionNonce);
 
-        return (outputValueA, outputValueB);
+        return (outputValueA, outputValueB, true);
     }
 
     function approveTransfer(

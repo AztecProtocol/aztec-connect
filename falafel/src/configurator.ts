@@ -8,6 +8,7 @@ export interface ConfVars {
   rollupContractAddress?: string;
   feeDistributorAddress?: string;
   priceFeedContractAddresses: string[];
+  feePayingAssetAddresses: string[];
   ethereumHost: string;
   ethereumPollInterval?: number;
   proofGeneratorMode: string;
@@ -29,6 +30,7 @@ function getConfVars(): ConfVars {
     ROLLUP_CONTRACT_ADDRESS,
     FEE_DISTRIBUTOR_ADDRESS,
     PRICE_FEED_CONTRACT_ADDRESSES,
+    FEE_PAYING_ASSET_ADDRESSES,
     ETHEREUM_HOST,
     ETHEREUM_POLL_INTERVAL,
     PROOF_GENERATOR_MODE,
@@ -52,6 +54,7 @@ function getConfVars(): ConfVars {
     rollupContractAddress: ROLLUP_CONTRACT_ADDRESS,
     feeDistributorAddress: FEE_DISTRIBUTOR_ADDRESS,
     priceFeedContractAddresses: (PRICE_FEED_CONTRACT_ADDRESSES || '').split(','),
+    feePayingAssetAddresses: (FEE_PAYING_ASSET_ADDRESSES || '').split(','),
     ethereumHost: ETHEREUM_HOST || '',
     ethereumPollInterval: +(ETHEREUM_POLL_INTERVAL || 10000),
     proofGeneratorMode: PROOF_GENERATOR_MODE || 'normal',

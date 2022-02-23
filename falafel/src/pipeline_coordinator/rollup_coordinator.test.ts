@@ -418,12 +418,12 @@ describe('rollup_coordinator', () => {
       // We want the test to _attempt_ to insert the defi tx with a 'bad' bridgeId (which will be rejected).
       // Then we want the test to instead insert the normal tx as part of the batch.
 
-      let pendingTxs = [...allTxs.slice(0, numTxsInRollup - 1), allTxs[64], allTxs[63]];
+      const pendingTxs = [...allTxs.slice(0, numTxsInRollup - 1), allTxs[64], allTxs[63]];
 
-      let rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
 
-      let expectedTxs = [...allTxs.slice(0, numTxsInRollup)];
+      const expectedTxs = [...allTxs.slice(0, numTxsInRollup)];
       expect(coordinator.processedTxs).toEqual(expectedTxs);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(2);
@@ -605,7 +605,7 @@ describe('rollup_coordinator', () => {
         mockTx(5, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
-      let rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
 
       expectProcessedTxIds([2, 0, 1, 3, 4, 5, 6]);
@@ -1049,7 +1049,7 @@ describe('rollup_coordinator', () => {
     it('single defi tx can publish if it covers rollup + bridge costs 2', async () => {
       let almostFullCost = BigInt(numInnerRollupTxs * numOuterRollupProofs - 3) * BASE_GAS; // pays for all but 3 slots
       almostFullCost += DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[1].fee!; // pays for defi deposit slot + whole bridge
-      let pendingTxs = [
+      const pendingTxs = [
         mockDefiBridgeTx(0, almostFullCost, bridgeConfigs[1].bridgeId),
         mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
@@ -1087,11 +1087,11 @@ describe('rollup_coordinator', () => {
       // we have removed the base cost of 2 txs above from the excess which we have compensated for
       // as per the calculation that happens inside mockDefiBridgeTx() but then we add the defi tx
       // and a transfer tx back in to cover these missing costs.
-      let pendingTxs = [
+      const pendingTxs = [
         mockDefiBridgeTx(0, almostFullCost, bridgeConfigs[1].bridgeId),
         mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
-      let rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0, 1]);
 
@@ -1114,9 +1114,9 @@ describe('rollup_coordinator', () => {
       // so what we should end up with here as the excess is just the bridge fee, which is
       // exactly what we want.
       {
-        let pendingTxs = [mockDefiBridgeTx(0, almostFullCost, bridgeConfigs[1].bridgeId)];
+        const pendingTxs = [mockDefiBridgeTx(0, almostFullCost, bridgeConfigs[1].bridgeId)];
 
-        let rp = await coordinator.processPendingTxs(pendingTxs);
+        const rp = await coordinator.processPendingTxs(pendingTxs);
         expect(rp.published).toBe(true);
         expectProcessedTxIds([0]);
 
@@ -1130,9 +1130,9 @@ describe('rollup_coordinator', () => {
       // subtracting a single gas from the tx and check that it fails
       {
         almostFullCost -= 1n;
-        let pendingTxs = [mockDefiBridgeTx(0, almostFullCost, bridgeConfigs[1].bridgeId)];
+        const pendingTxs = [mockDefiBridgeTx(0, almostFullCost, bridgeConfigs[1].bridgeId)];
 
-        let rp = await coordinator.processPendingTxs(pendingTxs);
+        const rp = await coordinator.processPendingTxs(pendingTxs);
         expect(rp.published).toBe(false);
       }
     });
@@ -1163,7 +1163,7 @@ describe('rollup_coordinator', () => {
       // excess should be enough to cover this transaction.
       //mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
 
-      let rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0]);
 
@@ -1194,7 +1194,7 @@ describe('rollup_coordinator', () => {
         mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
 
-      let rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0, 1]);
 
@@ -1225,7 +1225,7 @@ describe('rollup_coordinator', () => {
     });
 
     it('not all complete bridges can be put into a rollup', async () => {
-      let pendingTxs = [
+      const pendingTxs = [
         mockDefiBridgeTx(
           0,
           DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[2].bridgeId),
@@ -1293,7 +1293,7 @@ describe('rollup_coordinator', () => {
 
       // bridge [2] got in meaning bridge [3] couldn't as there isn't enough room
       // we can only rollup the first 2 txs for bridge [2] here
-      let rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0, 1, 7, 9, 10, 11, 12, 13]);
 
@@ -1746,7 +1746,7 @@ describe('rollup_coordinator', () => {
         //   allTxs[32] contains bridgeId 33
         //   allTxs[33] contains bridgeId 34
 
-        let pendingTxs = allTxs;
+        const pendingTxs = allTxs;
 
         // set the rollup timeout and bridge timeouts to the following
         rollupTimeouts = {
@@ -1761,7 +1761,7 @@ describe('rollup_coordinator', () => {
         currentTime = new Date('2021-06-20T12:00:01+01:00');
 
         // this call will trigger the rollup
-        let rp = await coordinator.processPendingTxs(pendingTxs);
+        const rp = await coordinator.processPendingTxs(pendingTxs);
         expect(rp.published).toBe(true);
 
         // Expect all txs but those with bridgeId = 33 or 34.
@@ -1881,7 +1881,7 @@ describe('rollup_coordinator', () => {
 
     it('should aggregate and publish all txs 2', async () => {
       const pendingTxs = [mockTx(0), mockTx(1)];
-      let rp = await coordinator.processPendingTxs(pendingTxs, flush);
+      const rp = await coordinator.processPendingTxs(pendingTxs, flush);
       // There is no longer any delay on processing pending transactions as we do them
       // all in one parallel batch.  So this should publish immediately due to flush=true
       // triggering the shouldPublish condition

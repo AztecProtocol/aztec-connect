@@ -126,8 +126,8 @@ contract UniswapBridge is IDefiBridge {
         uint256, /*totalInputValue*/
         uint256, /*interactionNonce*/
         uint64 /*auxData*/
-    ) external payable override returns (uint256, uint256) {
+    ) external payable override returns (uint256, uint256, bool) {
         require(false);
-        return (0, 0);
+        return (0, 0, false);
     }
 }

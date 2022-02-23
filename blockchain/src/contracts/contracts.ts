@@ -39,6 +39,7 @@ export class Contracts {
     rollupContractAddress: EthAddress,
     feeDistributorAddress: EthAddress,
     priceFeedContractAddresses: EthAddress[],
+    feePayingAssetAddresses: EthAddress[],
     ethereumProvider: EthereumProvider,
     confirmations: number,
   ) {
@@ -55,6 +56,7 @@ export class Contracts {
             addr,
             ethereumProvider,
             await rollupProcessor.getAssetPermitSupport(i + 1),
+            feePayingAssetAddresses.some(feePayingAsset => addr.equals(feePayingAsset)),
             confirmations,
           ),
         ),
@@ -82,11 +84,12 @@ export class Contracts {
   public async setSupportedAsset(
     assetAddress: EthAddress,
     supportsPermit: boolean,
+    isFeePaying: boolean,
     assetGasLimit = 0,
     options: SendTxOptions = {},
   ) {
     const tx = await this.rollupProcessor.setSupportedAsset(assetAddress, supportsPermit, assetGasLimit, options);
-    const tokenAsset = await TokenAsset.fromAddress(assetAddress, this.ethereumProvider, supportsPermit);
+    const tokenAsset = await TokenAsset.fromAddress(assetAddress, this.ethereumProvider, supportsPermit, isFeePaying);
     this.assets.push(tokenAsset);
     return tx;
   }
@@ -233,7 +236,7 @@ export class Contracts {
     return this.rollupProcessor.getSupportedBridges();
   }
 
-  public getRevertError(txHash: TxHash) {
-    return this.rollupProcessor.getRevertError(txHash);
+  public async getRevertError(txHash: TxHash) {
+    return await this.rollupProcessor.getRevertError(txHash);
   }
 }

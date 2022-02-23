@@ -28,7 +28,7 @@ async function main() {
 
   const initialEthSupply = BigInt(INITIAL_ETH_SUPPLY);
 
-  const { rollup, priceFeeds, feeDistributor } = await deploy(
+  const { rollup, priceFeeds, feeDistributor, feePayingAssets } = await deploy(
     +ESCAPE_BLOCK_LOWER,
     +ESCAPE_BLOCK_UPPER,
     signer,
@@ -40,6 +40,7 @@ async function main() {
     ROLLUP_CONTRACT_ADDRESS: rollup.address,
     FEE_DISTRIBUTOR_ADDRESS: feeDistributor.address,
     PRICE_FEED_CONTRACT_ADDRESSES: priceFeeds.map(p => p.address).join(','),
+    FEE_PAYING_ASSET_ADDRESSES: feePayingAssets.join(','),
   };
 
   for (const [k, v] of Object.entries(envVars)) {

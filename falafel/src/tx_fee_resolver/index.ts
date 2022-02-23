@@ -1,12 +1,13 @@
+import { EthAddress } from '@aztec/barretenberg/address';
 import { Blockchain, BlockchainAsset, TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { TxSettlementTime } from '@aztec/barretenberg/rollup_provider';
 import { BridgeResolver } from '../bridge';
 import { FeeCalculator } from './fee_calculator';
 import { PriceTracker } from './price_tracker';
 
 export class TxFeeResolver {
-  private assets!: BlockchainAsset[];
+  private allAssets!: BlockchainAsset[];
+  private feePayingAssetIds!: number[];
   private priceTracker!: PriceTracker;
   private feeCalculator!: FeeCalculator;
 
@@ -20,6 +21,7 @@ export class TxFeeResolver {
     private feeGasPriceMultiplier: number,
     private readonly txsPerRollup: number,
     private publishInterval: number,
+    private feePayingAssetAddresses: string[],
     private readonly surplusRatios = [1, 0],
     private readonly freeAssets: number[] = [],
     private readonly freeTxTypes: TxType[] = [],
@@ -37,12 +39,17 @@ export class TxFeeResolver {
 
   async start() {
     const { assets } = await this.blockchain.getBlockchainStatus();
-    this.assets = assets;
-    const assetIds = assets.map((_, id) => id);
+    this.allAssets = assets;
+    this.feePayingAssetIds = this.allAssets.flatMap((asset, id) =>
+      this.feePayingAssetAddresses.some(feePayingAsset => asset.address.equals(EthAddress.fromString(feePayingAsset)))
+        ? [id]
+        : [],
+    );
+    const assetIds = this.feePayingAssetIds;
     this.priceTracker = new PriceTracker(this.blockchain, assetIds, this.refreshInterval, this.minFeeDuration);
     this.feeCalculator = new FeeCalculator(
       this.priceTracker,
-      this.assets,
+      this.allAssets,
       this.baseTxGas,
       this.maxFeeGasPrice,
       this.feeGasPriceMultiplier,
@@ -61,7 +68,7 @@ export class TxFeeResolver {
   }
 
   isFeePayingAsset(assetId: number) {
-    return assetId <= this.assets.length;
+    return this.feePayingAssetIds.some(id => id === assetId);
   }
 
   getMinTxFee(assetId: number, txType: TxType) {
@@ -83,7 +90,7 @@ export class TxFeeResolver {
   }
 
   getTxGas(feeAssetId: number, txType: TxType) {
-    return this.getBaseTxGas() + BigInt(this.assets[feeAssetId].gasConstants[txType]);
+    return this.getBaseTxGas() + BigInt(this.allAssets[feeAssetId].gasConstants[txType]);
   }
 
   getBridgeTxGas(feeAssetId: number, bridgeId: bigint) {
@@ -109,19 +116,22 @@ export class TxFeeResolver {
   getDefiFees(bridgeId: bigint) {
     const { inputAssetIdA: inputAssetId } = BridgeId.fromBigInt(bridgeId);
     const assetId = this.isFeePayingAsset(inputAssetId) ? inputAssetId : this.defaultFeePayingAsset;
-    const gas = this.getSingleBridgeTxGas(bridgeId);
-    const fullGas = this.getFullBridgeGas(bridgeId);
-    const bridgeFee = this.feeCalculator.getTxFeeFromGas(gas, assetId);
-    const fullBridgeFee = this.feeCalculator.getTxFeeFromGas(fullGas, assetId);
-    const { feeConstants, baseFeeQuotes } = this.feeCalculator.getFeeQuotes(assetId);
-    const defiDepositFee = feeConstants[TxType.DEFI_DEPOSIT];
-    const claimFee = feeConstants[TxType.DEFI_CLAIM];
-    const txRollupFee = baseFeeQuotes[TxSettlementTime.NEXT_ROLLUP].fee;
-    const fullRollupFee = baseFeeQuotes[TxSettlementTime.INSTANT].fee;
-    return [
-      { assetId, value: bridgeFee + defiDepositFee + claimFee + txRollupFee * 3n },
-      { assetId, value: fullBridgeFee + defiDepositFee + claimFee + txRollupFee * 3n },
-      { assetId, value: fullBridgeFee + defiDepositFee + claimFee + fullRollupFee },
+    const singleBridgeTxGas = this.getSingleBridgeTxGas(bridgeId);
+    const fullBridgeTxGas = this.getFullBridgeGas(bridgeId);
+    const baseTxGas = BigInt(this.feeCalculator.getBaseTxGas());
+
+    // both of these include the base tx gas
+    const defiDepositGas = BigInt(this.feeCalculator.getTxGas(assetId, TxType.DEFI_DEPOSIT));
+    const defiClaimGas = BigInt(this.feeCalculator.getTxGas(assetId, TxType.DEFI_CLAIM));
+    const slowTxGas = defiDepositGas + defiClaimGas + singleBridgeTxGas;
+    const fastTxGas = defiDepositGas + defiClaimGas + fullBridgeTxGas;
+    const immediateTxGas = defiDepositGas + defiClaimGas + fullBridgeTxGas + baseTxGas * BigInt(this.txsPerRollup - 1);
+
+    const values = [
+      { assetId, value: this.feeCalculator.getTxFeeFromGas(slowTxGas, assetId) },
+      { assetId, value: this.feeCalculator.getTxFeeFromGas(fastTxGas, assetId) },
+      { assetId, value: this.feeCalculator.getTxFeeFromGas(immediateTxGas, assetId) },
     ];
+    return values;
   }
 }

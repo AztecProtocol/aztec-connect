@@ -1,5 +1,4 @@
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
-import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { randomBytes } from 'crypto';

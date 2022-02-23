@@ -60,7 +60,7 @@ export class RollupPipeline {
       metrics,
       feeResolver,
     );
-    const claimProofCreator = new ClaimProofCreator(rollupDb, worldStateDb, proofGenerator, feeResolver);
+    const claimProofCreator = new ClaimProofCreator(rollupDb, worldStateDb, proofGenerator);
     this.pipelineCoordinator = new PipelineCoordinator(
       rollupCreator,
       rollupAggregator,

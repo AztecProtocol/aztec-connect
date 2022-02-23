@@ -90,7 +90,7 @@ describe('rollup_processor: withdraw', () => {
     const FaultyERC20 = await ethers.getContractFactory('ERC20FaultyTransfer');
     const faultyERC20 = await FaultyERC20.deploy();
     const assetAddr = EthAddress.fromString(faultyERC20.address);
-    const asset = await TokenAsset.fromAddress(assetAddr, new EthersAdapter(ethers.provider), false);
+    const asset = await TokenAsset.fromAddress(assetAddr, new EthersAdapter(ethers.provider), false, true);
 
     await rollupProcessor.setSupportedAsset(asset.address, false, 0);
     const assetId = (await rollupProcessor.getSupportedAssets()).findIndex(a => a.equals(assetAddr));

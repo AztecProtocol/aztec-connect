@@ -3,6 +3,8 @@ import { BridgeId, BitConfig } from '@aztec/barretenberg/bridge_id';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
 import { RollupProcessor } from '../rollup_processor';
+import { DefiBridge } from '../../defi_bridge';
+import { EthersAdapter } from '../../..';
 
 export interface MockBridgeParams {
   inputAssetIdA?: number;
@@ -133,4 +135,14 @@ export const deployMockBridge = async (
     ),
     auxData,
   );
+};
+
+export const mockAsyncBridge = async (rollupProvider: Signer, rollupProcessor: RollupProcessor, assetAddresses: EthAddress[], params: MockBridgeParams = {}) => {
+  const bridgeId = await deployMockBridge(rollupProvider, rollupProcessor, assetAddresses, {
+    ...params,
+    isAsync: true,
+  });
+  const bridgeAddress = await rollupProcessor.getSupportedBridge(bridgeId.addressId);
+  const bridge = new DefiBridge(bridgeAddress, new EthersAdapter(ethers.provider));
+  return { bridgeId, bridge };
 };

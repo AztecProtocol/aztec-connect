@@ -9,29 +9,6 @@ const fixEthersStackTrace = (err: Error) => {
   throw err;
 };
 
-function linkBytecode(artifact: any, libraries: any) {
-  let bytecode = artifact.bytecode;
-  for (const entry of Object.entries(artifact.linkReferences)) {
-    const [, fileReferences]: any = entry;
-    for (const fileEntry of Object.entries(fileReferences)) {
-      const [libName, fixups]: any = fileEntry;
-      const addr = libraries[libName];
-      if (addr === undefined) {
-        continue;
-      }
-
-      for (const fixup of fixups) {
-        bytecode =
-          bytecode.substr(0, 2 + fixup.start * 2) +
-          addr.substr(2) +
-          bytecode.substr(2 + (fixup.start + fixup.length) * 2);
-      }
-    }
-  }
-
-  return bytecode;
-}
-
 export class HashInputs {
   public hashInputs: Contract;
 
@@ -79,6 +56,6 @@ export class HashInputs {
     const { signingAddress, gasLimit } = { ...options, ...this.defaults };
     const signer = new Web3Provider(this.provider).getSigner(signingAddress ? signingAddress.toString() : 0);
     const hashInputs = new Contract(this.hashInputsContractAddress.toString(), HashInputsContract.abi, signer);
-    const txResponse = await hashInputs.verifyProofTest(proofData, { gasLimit }).catch(fixEthersStackTrace);
+    await hashInputs.verifyProofTest(proofData, { gasLimit }).catch(fixEthersStackTrace);
   }
 }

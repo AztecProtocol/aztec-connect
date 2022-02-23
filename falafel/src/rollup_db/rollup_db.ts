@@ -367,12 +367,16 @@ export class TypeOrmRollupDb implements RollupDb {
     await this.claimRep.save(claim);
   }
 
-  public async getPendingClaims(take?: number) {
+  public async getClaimsToRollup(take?: number) {
     return this.claimRep.find({
-      where: { claimed: IsNull() },
+      where: { claimed: IsNull(), interactionResultRollupId: Not(IsNull()) },
       order: { created: 'ASC' },
       take,
     });
+  }
+
+  public async updateClaimsWithResultRollupId(interactionNonce: number, interactionResultRollupId: number) {
+    await this.claimRep.update({ interactionNonce}, { interactionResultRollupId })
   }
 
   public async confirmClaimed(nullifier: Buffer, claimed: Date) {

@@ -47,6 +47,7 @@ export class Server {
       numInnerRollupTxs,
       numOuterRollupProofs,
       proverless,
+      feePayingAssetAddresses,
       runtimeConfig: {
         publishInterval,
         baseTxGas,
@@ -70,6 +71,7 @@ export class Server {
       feeGasPriceMultiplier,
       numInnerRollupTxs * numOuterRollupProofs,
       publishInterval,
+      feePayingAssetAddresses
     );
 
     switch (proofGeneratorMode) {

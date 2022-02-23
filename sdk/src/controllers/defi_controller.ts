@@ -52,7 +52,7 @@ export class DefiController {
         this.userSigner,
         this.bridgeId,
         value,
-        this.fee.value,
+        !requireFeePayingTx ? this.fee.value : BigInt(0),
         undefined,
         txRefNo,
       );
@@ -104,19 +104,32 @@ export class DefiController {
     }
   }
 
+  private getDefiDepositTxId() {
+    return this.txIds[this.jsProofOutput ? 1 : 0];
+  }
+
   async send() {
     this.txIds = await this.core.sendProofs(
       filterUndefined([this.jsProofOutput, this.proofOutput, this.feeProofOutput]),
     );
-    return this.txIds[this.jsProofOutput ? 1 : 0];
+    return this.getDefiDepositTxId();;
   }
 
   async awaitDefiInteraction(timeout?: number) {
-    const defiTxId = this.txIds[this.jsProofOutput ? 1 : 0];
+    const defiTxId = this.getDefiDepositTxId()
     await this.core.awaitDefiInteraction(defiTxId, timeout);
+  }
+
+  async awaitDefiDepositCompletion(timeout?: number) {
+    const defiTxId = this.getDefiDepositTxId();
+    await this.core.awaitDefiDepositCompletion(defiTxId, timeout);
   }
 
   async awaitSettlement(timeout?: number) {
     await Promise.all(this.txIds.map(txId => this.core.awaitSettlement(txId, timeout)));
+  }
+
+  async getInteractionNonce() {
+    return await this.core.getDefiInteractionNonce(this.getDefiDepositTxId());
   }
 }

@@ -224,7 +224,7 @@ export class UserState extends EventEmitter {
               // Both notes should be owned by the same user.
               continue;
             }
-            await this.handleDefiDepositTx(proof, offchainTxData, noteStartIndex, block.interactionResult, note2);
+            await this.handleDefiDepositTx(proofData, proof, offchainTxData, noteStartIndex, note2);
             break;
           }
           case ProofId.DEFI_CLAIM:
@@ -234,6 +234,8 @@ export class UserState extends EventEmitter {
       }
 
       this.user = { ...this.user, syncedToRollup: proofData.rollupId };
+
+      this.processDefiInteractionResults(block.interactionResult);
     }
 
     await this.db.updateUser(this.user);
@@ -359,10 +361,10 @@ export class UserState extends EventEmitter {
   }
 
   private async handleDefiDepositTx(
+    rollupProofData: RollupProofData,
     proof: InnerProofData,
     offchainTxData: OffchainDefiDepositData,
     noteStartIndex: number,
-    interactionResult: DefiInteractionNote[],
     treeNote2: TreeNote,
   ) {
     const { noteCommitment1, noteCommitment2 } = proof;
@@ -371,7 +373,7 @@ export class UserState extends EventEmitter {
       // Owned by the account with a different nonce.
       return;
     }
-    const { bridgeId, depositValue, partialStateSecretEphPubKey } = offchainTxData;
+    const { bridgeId, partialStateSecretEphPubKey } = offchainTxData;
     const partialStateSecret = deriveNoteSecret(
       partialStateSecretEphPubKey,
       this.user.privateKey,
@@ -379,11 +381,6 @@ export class UserState extends EventEmitter {
       TreeNote.LATEST_VERSION,
     );
     const txId = new TxId(proof.txId);
-    const { totalInputValue, totalOutputValueA, totalOutputValueB, result } = interactionResult.find(r =>
-      r.bridgeId.equals(bridgeId),
-    )!;
-    const outputValueA = !result ? BigInt(0) : (totalOutputValueA * depositValue) / totalInputValue;
-    const outputValueB = !result ? BigInt(0) : (totalOutputValueB * depositValue) / totalInputValue;
     await this.addClaim(noteStartIndex, txId, noteCommitment1, partialStateSecret);
 
     const { nullifier1, nullifier2 } = proof;
@@ -392,14 +389,28 @@ export class UserState extends EventEmitter {
 
     await this.refreshNotePicker();
 
+    const { rollupId, bridgeIds } = rollupProofData;
+    const interactionNonce = (RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK * rollupId) + bridgeIds.findIndex(bridge => bridge.equals(bridgeId.toBuffer()));
+
     const savedTx = await this.db.getDefiTx(txId);
     if (savedTx) {
       debug(`found defi tx, awaiting claim for settlement: ${txId}`);
-      await this.db.updateDefiTx(txId, outputValueA, outputValueB, result);
+      await this.db.updateDefiTxWithNonce(txId, interactionNonce);
     } else {
-      const tx = this.recoverDefiTx(proof, offchainTxData, outputValueA, outputValueB, result);
+      const tx = this.recoverDefiTx(proof, offchainTxData, interactionNonce);
       debug(`recovered defi tx: ${txId}`);
       await this.db.addDefiTx(tx);
+    }
+  }
+
+  private async processDefiInteractionResults(defiInteractionNotes: DefiInteractionNote[]) {
+    for (const note of defiInteractionNotes) {
+      const defiTxs = await this.db.getDefiTxsByNonce(this.user.id, note.nonce);
+      for (const tx of defiTxs) {
+        const outputValueA = !note.result ? BigInt(0) : (note.totalOutputValueA * tx.depositValue) / note.totalInputValue;
+        const outputValueB = !note.result ? BigInt(0) : (note.totalOutputValueB * tx.depositValue) / note.totalInputValue;
+        await this.db.updateDefiTx(tx.txId, outputValueA, outputValueB, note.result);
+      }
     }
   }
 
@@ -582,9 +593,7 @@ export class UserState extends EventEmitter {
   private recoverDefiTx(
     proof: InnerProofData,
     offchainTxData: OffchainDefiDepositData,
-    outputValueA: bigint,
-    outputValueB: bigint,
-    result: boolean,
+    interactionNonce: number
   ) {
     const { bridgeId, depositValue, txFee, partialStateSecretEphPubKey, txRefNo } = offchainTxData;
     const txId = new TxId(proof.txId);
@@ -599,10 +608,11 @@ export class UserState extends EventEmitter {
       partialStateSecret,
       txRefNo,
       new Date(),
-      outputValueA,
-      outputValueB,
-      result,
       undefined,
+      undefined,
+      undefined,
+      undefined,
+      interactionNonce
     );
   }
 

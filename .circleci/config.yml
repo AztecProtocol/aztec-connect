@@ -329,7 +329,7 @@ jobs:
       - run:
           name: 'Test'
           working_directory: end-to-end
-          command: cond_spot_run_tests end-to-end ./src/e2e_deposit.test.ts 1 1 VerificationKey1x1
+          command: cond_spot_run_tests end-to-end ./src/e2e_deposit.test.ts false 1 1 VerificationKey1x1
 
   e2e-payment:
     docker:
@@ -372,6 +372,34 @@ jobs:
           name: 'Test'
           working_directory: end-to-end
           command: cond_spot_run_tests end-to-end ./src/e2e_defi.test.ts
+
+  e2e-non-fee-assets:
+    docker:
+      - image: aztecprotocol/build-image
+    resource_class: small
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker:
+          version: 19.03.13
+      - run:
+          name: 'Test'
+          working_directory: end-to-end
+          command: cond_spot_run_tests end-to-end ./src/e2e_non_fee_assets.test.ts true
+
+  e2e-element:
+    docker:
+      - image: aztecprotocol/build-image
+    resource_class: small
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker:
+          version: 19.03.13
+      - run:
+          name: 'Test'
+          working_directory: end-to-end
+          command: cond_spot_run_tests end-to-end ./src/e2e_element_defi.test.ts true
 
   zk-money:
     docker:
@@ -665,6 +693,14 @@ workflows:
             - end-to-end
           filters: *tag_filter
       - e2e-defi:
+          requires:
+            - end-to-end
+          filters: *tag_filter
+      - e2e-non-fee-assets:
+          requires:
+            - end-to-end
+          filters: *tag_filter
+      - e2e-element:
           requires:
             - end-to-end
           filters: *tag_filter

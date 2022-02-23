@@ -6,3 +6,5 @@ export * from './contracts';
 export * from './signer';
 export * from './validate_signature';
 export * from './units';
+export * from './tokens';
+export * from './manipulate_blocks';

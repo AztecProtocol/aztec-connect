@@ -2,6 +2,7 @@ import UniswapV2FactoryJson from '@uniswap/v2-core/build/UniswapV2Factory.json';
 import UniswapV2PairJson from '@uniswap/v2-core/build/UniswapV2Pair.json';
 import IWETH from '@uniswap/v2-periphery/build/IWETH.json';
 import UniswapV2Router02Json from '@uniswap/v2-periphery/build/UniswapV2Router02.json';
+import UniswapBridge from '../artifacts/contracts/bridges/UniswapBridge.sol/UniswapBridge.json';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Contract, ContractFactory, Signer } from 'ethers';
 import WETH9 from '../abis/WETH9.json';
@@ -55,3 +56,9 @@ export const deployUniswap = async (owner: Signer) => {
 
   return router;
 };
+
+export const deployUniswapBridge = async (signer: Signer, rollupProcessor: Contract, uniswapRouter: Contract) => {
+  const defiBridgeLibrary = new ContractFactory(UniswapBridge.abi, UniswapBridge.bytecode, signer);
+  const defiBridge = await defiBridgeLibrary.deploy(rollupProcessor.address, uniswapRouter.address);
+  return defiBridge;
+}

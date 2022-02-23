@@ -66,4 +66,6 @@ interface IRollupProcessor {
     function getEscapeHatchStatus() external view returns (bool, uint256);
 
     function getUserPendingDeposit(uint256 assetId, address userAddress) external view returns (uint256);
+
+    function processAsyncDefiInteraction(uint256 interactionNonce) external returns (bool);
 }

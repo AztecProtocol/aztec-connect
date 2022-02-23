@@ -18,5 +18,6 @@ export class UserDefiTx {
     public readonly result: boolean | undefined,
     public readonly created: Date,
     public readonly settled?: Date,
+    public readonly interactionNonce?: number
   ) {}
 }

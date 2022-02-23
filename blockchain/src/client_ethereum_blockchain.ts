@@ -54,6 +54,10 @@ export class ClientEthereumBlockchain {
     return this.rollupProcessor.approveProof(txId, { signingAddress: account, provider });
   }
 
+  public async processAsyncDefiInteraction(interactionNonce: number) {
+    return this.rollupProcessor.processAsyncDefiInteraction(interactionNonce);
+  }
+
   /**
    * Wait for given transaction to be mined, and return receipt.
    */

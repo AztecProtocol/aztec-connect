@@ -261,12 +261,30 @@ export class AztecSdk extends EventEmitter {
     return this.blockchain.getAsset(assetId).getStaticInfo();
   }
 
+  public isFeePayingAsset(assetId: number) {
+    return this.getAssetInfo(assetId).isFeePaying;
+  }
+
   public async mint(assetId: number, value: bigint, account: EthAddress, provider?: EthereumProvider) {
     return this.blockchain.getAsset(assetId).mint(value, account, { provider });
   }
 
+  public async processAsyncDefiInteraction(interactionNonce: number) {
+    return this.blockchain.processAsyncDefiInteraction(interactionNonce);
+  }
+
+  private async getTransactionFees(assetId: number, txType: TxType) {
+    const fees = await this.core.getTxFees(assetId);
+    const transactionFee = fees[txType];
+    if (this.isFeePayingAsset(assetId)) {
+      return transactionFee;
+    }
+    const [minTransferFee] = fees[TxType.TRANSFER];
+    return transactionFee.map(({ value, ...rest }) => ({ value: value + minTransferFee.value, ...rest }));
+  }
+
   public async getDepositFees(assetId: number) {
-    return (await this.core.getTxFees(assetId))[TxType.DEPOSIT];
+    return await this.getTransactionFees(assetId, TxType.DEPOSIT);
   }
 
   public createDepositController(
@@ -284,7 +302,7 @@ export class AztecSdk extends EventEmitter {
   public async getWithdrawFees(assetId: number, recipient?: EthAddress) {
     const txType =
       recipient && (await this.isContract(recipient)) ? TxType.WITHDRAW_TO_CONTRACT : TxType.WITHDRAW_TO_WALLET;
-    return (await this.core.getTxFees(assetId))[txType];
+    return await this.getTransactionFees(assetId, txType);
   }
 
   public createWithdrawController(
@@ -298,7 +316,7 @@ export class AztecSdk extends EventEmitter {
   }
 
   public async getTransferFees(assetId: number) {
-    return (await this.core.getTxFees(assetId))[TxType.TRANSFER];
+    return await this.getTransactionFees(assetId, TxType.TRANSFER);
   }
 
   public createTransferController(
@@ -326,13 +344,23 @@ export class AztecSdk extends EventEmitter {
       return notes?.reduce((sum, n) => sum + n.value, BigInt(0)) !== privateInput;
     })();
 
-    if (!requireSplit) {
-      return defiFees;
+    const [minTransferFee] = (await this.core.getTxFees(assetId))[TxType.TRANSFER];
+    let additionalFee = BigInt(0);
+    if (requireSplit) {      
+      additionalFee += minTransferFee.value;
+    }
+    if (assetId !== bridgeId.inputAssetIdA) {
+      additionalFee += minTransferFee.value;
     }
 
-    const [minFee, ...fees] = defiFees;
-    const [minTransferFee] = (await this.core.getTxFees(assetId))[TxType.TRANSFER];
-    return [{ ...minFee, value: minFee.value + minTransferFee.value }, ...fees];
+    const values = defiFees.map(defiFee => {
+      return {
+        ...defiFee,
+        value: defiFee.value + additionalFee
+      };
+    });
+    
+    return values;
   }
 
   public createDefiController(
@@ -531,7 +559,7 @@ export class AztecSdk extends EventEmitter {
 
   public async getUserTxs(userId: AccountId) {
     const txs = await this.core.getUserTxs(userId);
-    const feePayingAssetIds = Array(this.core.getLocalStatus().assets.length).map((_, i) => i);
+    const feePayingAssetIds = this.core.getLocalStatus().assets.flatMap((asset, id) => (asset.isFeePaying ? [id] : []));
     return groupUserTxs(txs, feePayingAssetIds);
   }
 

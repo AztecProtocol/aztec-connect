@@ -1,5 +1,5 @@
 import { EthereumBlockchainConfig, EthersAdapter, WalletProvider } from '@aztec/blockchain';
-import { BridgeId, BridgeConfig } from '@aztec/barretenberg/bridge_id';
+import { BridgeId, BridgeConfig, BitConfig } from '@aztec/barretenberg/bridge_id';
 import { JsonRpcProvider } from '@ethersproject/providers';
 import { RollupDao } from './entity/rollup';
 import { RollupProofDao } from './entity/rollup_proof';
@@ -59,37 +59,53 @@ function getOrmConfig(dbUrl?: string, logging = false): ConnectionOptions {
   }
 }
 
+function generateBridgeId(id: number, inputAsset: number, outputAsset: number, aux: number) {
+  return new BridgeId(id, inputAsset, outputAsset, 0, 0, BitConfig.EMPTY, aux);
+}
+
+function generateBridgeConfig(numTxs: number, fee: number, rollupFrequency: number, bridgeId: BridgeId) {
+  const bridgeConfig = {
+    bridgeId: bridgeId.toBigInt(),
+    numTxs,
+    fee,
+    rollupFrequency
+  };
+  return bridgeConfig;
+}
+
+function generateBridgeIds(numTxs: number, fee: number, rollupFrequency: number) {
+  const uniswapBridge1 = 1;
+  const uniswapBridge2 = 2;
+  const elementBridge = 3;
+  const elementAssetIds = [3, 4, 5, 6, 8, 9];
+  const elementAuxDatas = new Map<number, Array<number>>(
+    [
+      [3, [1643382476]],
+      [4, [1643382446]],
+      [5, [1651264326]],
+      [6, [1643382514, 1650025565]],
+      [8, [1643382460, 1651267340]],
+      [9, [1644601070, 1651247155]]
+    ]
+  );
+  return [
+    generateBridgeConfig(numTxs, fee, rollupFrequency, generateBridgeId(uniswapBridge1, 0, 1, 0)),
+    generateBridgeConfig(numTxs, fee, rollupFrequency, generateBridgeId(uniswapBridge2, 1, 0, 0)),
+    ...elementAssetIds.flatMap(assetId => {
+      const auxValues = elementAuxDatas.get(assetId);
+      return auxValues === undefined ? [] : auxValues.map(aux => {
+        const generatedBridgeId = generateBridgeId(elementBridge, assetId, assetId, aux);
+        return generateBridgeConfig(numTxs, fee, rollupFrequency, generatedBridgeId);
+      });
+    })
+  ]
+}
+
 function getPerChainBridgeConfig(chainId: number) {
   const perChainBridgeConfig: { [key: string]: any[] } = {
     1: [],
-    1337: [
-      {
-        bridgeId: '0x0000000000000000000000000000000000000000000000004000000000000001',
-        numTxs: 10,
-        fee: 100000,
-        rollupFrequency: 2,
-      },
-      {
-        bridgeId: '0x0000000000000000000000000000000000000000000000000000000100000002',
-        numTxs: 10,
-        fee: 100000,
-        rollupFrequency: 2,
-      },
-    ],
-    0xa57ec: [
-      {
-        bridgeId: '0x0000000000000000000000000000000000000000000000004000000000000001',
-        numTxs: 10,
-        fee: 100000,
-        rollupFrequency: 2,
-      },
-      {
-        bridgeId: '0x0000000000000000000000000000000000000000000000000000000100000002',
-        numTxs: 10,
-        fee: 100000,
-        rollupFrequency: 2,
-      },
-    ],
+    1337: generateBridgeIds(10, 100000, 2),
+    0xa57ec: generateBridgeIds(10, 1000000, 2),
   };
 
   const config = perChainBridgeConfig[chainId];
@@ -98,9 +114,9 @@ function getPerChainBridgeConfig(chainId: number) {
   }
   return config.map(c => {
     const bc: BridgeConfig = {
-      bridgeId: BridgeId.fromString(c.bridgeId).toBigInt(),
+      bridgeId: c.bridgeId,
       numTxs: c.numTxs,
-      fee: BigInt(c.fee),
+      fee: c.fee === undefined ? undefined : BigInt(c.fee),
       rollupFrequency: c.rollupFrequency,
     };
     return bc;

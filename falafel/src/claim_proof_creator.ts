@@ -11,21 +11,19 @@ import { ClaimDao } from './entity/claim';
 import { TxDao } from './entity/tx';
 import { RollupDb } from './rollup_db';
 import { parseInteractionResult } from './rollup_db/parse_interaction_result';
-import { TxFeeResolver } from './tx_fee_resolver';
 
 export class ClaimProofCreator {
   constructor(
     private rollupDb: RollupDb,
     private worldStateDb: WorldStateDb,
     private proofGenerator: ProofGenerator,
-    private txFeeResolver: TxFeeResolver,
   ) {}
 
   /**
    * Creates claim proofs for the defi deposit txs with the interaction result from previous rollups.
    */
   async create(numTxs: number) {
-    const claims = await this.rollupDb.getPendingClaims(numTxs);
+    const claims = await this.rollupDb.getClaimsToRollup(numTxs);
     if (!claims.length) {
       return;
     }
@@ -35,16 +33,21 @@ export class ClaimProofCreator {
 
     const rollupIds: Set<number> = new Set();
     for (const claim of claims) {
-      const { interactionNonce } = claim;
-      const rollupId = Math.floor(interactionNonce / RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK);
-      rollupIds.add(rollupId);
+      const { interactionResultRollupId } = claim;
+      if (interactionResultRollupId === undefined) {
+        continue;
+      }
+      rollupIds.add(interactionResultRollupId);
     }
     const rollups = await this.rollupDb.getRollupsByRollupIds([...rollupIds]);
-    const interactionNotes = rollups.map(({ interactionResult }) => parseInteractionResult(interactionResult!)).flat();
 
     for (const claim of claims) {
-      const interactionNote = interactionNotes.find(n => n.nonce === claim.interactionNonce)!;
-      const proofData = await this.createClaimProof(dataRoot, defiRoot, claim, interactionNote);
+      const rollupForThisClaim = rollups.find(rollup => rollup.id === claim.interactionResultRollupId)!;
+      const interactionNotesForThisRollup = parseInteractionResult(rollupForThisClaim.interactionResult!);
+      const noteIndex = interactionNotesForThisRollup.findIndex(itx => itx.nonce === claim.interactionNonce);
+      const interactionNote = interactionNotesForThisRollup[noteIndex];
+      const interactionIndex = rollupForThisClaim.id * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK + noteIndex;
+      const proofData = await this.createClaimProof(dataRoot, defiRoot, claim, interactionNote, interactionIndex);
       if (!proofData) {
         // TODO: Once we correctly handle interrupts, this is not a panic scenario.
         throw new Error('Failed to create claim proof. This should not happen.');
@@ -77,6 +80,7 @@ export class ClaimProofCreator {
     defiRoot: Buffer,
     claim: ClaimDao,
     interactionNote: DefiInteractionNote,
+    interactionNoteIndex: number,
   ) {
     const { id, depositValue, bridgeId, partialState, inputNullifier, interactionNonce, fee } = claim;
     console.log(`Creating claim proof for note ${id}...`);
@@ -90,7 +94,7 @@ export class ClaimProofCreator {
       partialState,
       inputNullifier,
     );
-    const interactionNotePath = await this.worldStateDb.getHashPath(RollupTreeId.DEFI, BigInt(interactionNonce));
+    const interactionNotePath = await this.worldStateDb.getHashPath(RollupTreeId.DEFI, BigInt(interactionNoteIndex));
     const { outputValueA, outputValueB } = this.getOutputValues(claimNote, interactionNote);
     const defiInteractionNoteDummyNullifierNonce = randomBytes(32); // WARNING: we might want to inject this randomness from a different part of the repo, and using a different random number generator?
 
@@ -100,6 +104,7 @@ export class ClaimProofCreator {
       claimNoteIndex,
       claimNotePath,
       claimNote,
+      interactionNoteIndex,
       interactionNotePath,
       interactionNote,
       defiInteractionNoteDummyNullifierNonce,

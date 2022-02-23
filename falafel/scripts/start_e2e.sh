@@ -22,7 +22,7 @@ export NUM_OUTER_ROLLUP_PROOFS=2
 export ETHEREUM_POLL_INTERVAL=1000
 export PROVERLESS=true
 
- yarn clean_db
- yarn build
+yarn clean_db
+yarn build
 `yarn -s deploy_rollup_processor`
 yarn start

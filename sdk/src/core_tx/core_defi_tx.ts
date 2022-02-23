@@ -19,5 +19,6 @@ export class CoreDefiTx {
     public readonly outputValueB = BigInt(0),
     public readonly result?: boolean,
     public readonly settled?: Date,
+    public readonly interactionNonce?: number
   ) {}
 }

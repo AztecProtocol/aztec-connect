@@ -12,6 +12,7 @@ export class ClaimProof {
     public claimNotePath: HashPath,
     public claimNote: TreeClaimNote,
 
+    public defiInteractionNoteIndex: number,
     public defiInteractionNotePath: HashPath,
     public defiInteractionNote: DefiInteractionNote,
 
@@ -30,6 +31,7 @@ export class ClaimProof {
       this.claimNotePath.toBuffer(),
       this.claimNote.toBuffer(),
 
+      numToUInt32BE(this.defiInteractionNoteIndex),
       this.defiInteractionNotePath.toBuffer(),
       this.defiInteractionNote.toBuffer(),
 
@@ -51,6 +53,8 @@ export class ClaimProof {
     offset += claimNotePath.adv;
     const claimNote = TreeClaimNote.fromBuffer(buf.slice(offset));
     offset += TreeClaimNote.LENGTH;
+    const defiInteractionNoteIndex = buf.readUInt32BE(offset);
+    offset += 4;
     const defiInteractionNotePath = HashPath.deserialize(buf, offset);
     offset += defiInteractionNotePath.adv;
     const defiInteractionNote = DefiInteractionNote.fromBuffer(buf.slice(offset));
@@ -67,6 +71,7 @@ export class ClaimProof {
       claimNoteIndex,
       claimNotePath.elem,
       claimNote,
+      defiInteractionNoteIndex,
       defiInteractionNotePath.elem,
       defiInteractionNote,
       defiInteractionNoteDummyNullifierNonce,

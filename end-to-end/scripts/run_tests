@@ -2,9 +2,16 @@
 set -e
 
 export TEST=$1
-export NUM_INNER_ROLLUP_TXS=${2:-3}
-export NUM_OUTER_ROLLUP_PROOFS=${3:-2}
-export VK=$4
+export MAINNET_FORK=$2
+export NUM_INNER_ROLLUP_TXS=${3:-3}
+export NUM_OUTER_ROLLUP_PROOFS=${4:-2}
+export VK=$5
+
+if [ "$MAINNET_FORK" = "true" ]; then
+  export CHAIN_ID='--chain.chainId=0xA57EC'
+  export FORK_HOST='-f=https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35'
+  export FORK_BLOCK='--fork.blockNumber=14000000'
+fi
 
 if [ -z "$VK" ]; then
   export PROVERLESS=true

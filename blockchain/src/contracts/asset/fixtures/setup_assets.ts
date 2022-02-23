@@ -16,6 +16,7 @@ export const setupAssets = async (publisher: Signer, mintUsers: Signer[], mintAm
       EthAddress.fromString(asset.address),
       new EthersAdapter(ethers.provider),
       false,
+      true,
     );
 
     for (const user of mintUsers) {

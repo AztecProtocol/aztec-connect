@@ -43,6 +43,10 @@ export class DefiTxDao {
   @Column({ nullable: true })
   public result?: boolean;
 
+  @Index({ unique: false })
+  @Column({ nullable: true })  
+  public interactionNonce?: number;
+
   @AfterLoad()
   @AfterInsert()
   @AfterUpdate()
@@ -52,6 +56,9 @@ export class DefiTxDao {
     }
     if (this.settled === null) {
       delete this.settled;
+    }
+    if (this.interactionNonce === null) {
+      delete this.interactionNonce;
     }
   }
 }

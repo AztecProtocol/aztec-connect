@@ -26,6 +26,7 @@
   "dependencies": {
     "@aztec/sdk": "file:../sdk/dest",
     "debug": "^4.3.3",
+    "@aztec/blockchain": "file:../blockchain/dest",
     "typescript": "^4.4.4"
   },
   "devDependencies": {

@@ -54,8 +54,7 @@ export class FeeCalculator {
   }
 
   getTxFeeFromGas(gas: bigint, assetId: number) {
-    const baseFee = this.getBaseFee(assetId);
-    return baseFee + this.toAssetPrice(assetId, gas, false);
+    return this.toAssetPrice(assetId, gas, false);
   }
 
   computeSurplusRatio(txs: TxDao[]) {

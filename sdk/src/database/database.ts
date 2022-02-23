@@ -47,10 +47,12 @@ export interface Database {
   getAccountTxs(userId): Promise<CoreAccountTx[]>;
   settleAccountTx(txId: TxId, settled: Date): Promise<void>;
 
+  getDefiTxsByNonce(userId, interactionNonce: number): Promise<CoreDefiTx[]>;
+  updateDefiTxWithNonce(txId: TxId, interactionNonce: number): Promise<void>;
+  updateDefiTx(txId: TxId, outputValueA: bigint, outputValueB: bigint, result?: boolean): Promise<void>;
   addDefiTx(tx: CoreDefiTx): Promise<void>;
   getDefiTx(txId: TxId): Promise<CoreDefiTx | undefined>;
   getDefiTxs(userId): Promise<CoreDefiTx[]>;
-  updateDefiTx(txId: TxId, outputValueA: bigint, outputValueB: bigint, result: boolean): Promise<void>;
   settleDefiTx(txId: TxId, settled: Date): Promise<void>;
 
   addClaimTx(tx: CoreClaimTx): Promise<void>;

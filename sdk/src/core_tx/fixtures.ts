@@ -56,4 +56,5 @@ export const randomCoreDefiTx = (tx: Partial<CoreDefiTx> = {}) =>
     tx.outputValueB,
     tx.result,
     tx.settled,
+    tx.interactionNonce || 1
   );

@@ -1,4 +1,4 @@
-import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
+import { Column, Entity, Index, PrimaryColumn, AfterLoad } from 'typeorm';
 import { bigintTransformer } from './transformer';
 
 @Entity({ name: 'claim' })
@@ -41,4 +41,15 @@ export class ClaimDao {
   @Column({ nullable: true })
   @Index()
   public claimed?: Date;
+
+  @Column({ nullable: true })
+  @Index()
+  public interactionResultRollupId?: number;
+
+  @AfterLoad()
+  afterLoad() {
+    if (this.interactionResultRollupId === null) {
+      delete this.interactionResultRollupId;
+    }
+  }
 }

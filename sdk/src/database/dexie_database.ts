@@ -250,6 +250,7 @@ class DexieDefiTx implements DexieUserTx {
     public created: Date,
     public result: boolean | undefined,
     public settled: number,
+    public interactionNonce?: number
   ) {}
 }
 
@@ -268,6 +269,7 @@ const toDexieDefiTx = (tx: CoreDefiTx) =>
     tx.created,
     tx.result,
     tx.settled ? tx.settled.getTime() : 0,
+    tx.interactionNonce
   );
 
 const fromDexieDefiTx = ({
@@ -283,6 +285,7 @@ const fromDexieDefiTx = ({
   created,
   result,
   settled,
+  interactionNonce,
 }: DexieDefiTx) =>
   new CoreDefiTx(
     new TxId(Buffer.from(txId)),
@@ -297,6 +300,7 @@ const fromDexieDefiTx = ({
     BigInt(outputValueB),
     result,
     settled ? new Date(settled) : undefined,
+    interactionNonce
   );
 
 class DexieClaimTx {
@@ -383,7 +387,8 @@ export class DexieDatabase implements Database {
       note: '++commitment, [owner+nullified], [owner+pending], nullifier, owner',
       user: '&id',
       userKeys: '&[accountId+key], accountId',
-      userTx: '&[txId+userId], txId, [txId+proofId], [userId+proofId], proofId, settled',
+      userTx:
+        '&[txId+userId], txId, [txId+proofId], [userId+proofId], proofId, settled, [userId+proofId+interactionNonce]',
     });
 
     this.alias = this.dexie.table('alias');
@@ -540,6 +545,20 @@ export class DexieDatabase implements Database {
       .reverse()
       .sortBy('settled');
     return (sortUserTxs(txs) as DexieDefiTx[]).map(fromDexieDefiTx);
+  }
+
+  async getDefiTxsByNonce(userId: AccountId, interactionNonce: number) {
+    const txs = (await this.userTx
+      .where({ userId: new Uint8Array(userId.toBuffer()), proofId: ProofId.DEFI_DEPOSIT, interactionNonce })
+      .reverse()
+      .sortBy('settled')) as DexieDefiTx[];
+      return (sortUserTxs(txs) as DexieDefiTx[]).map(fromDexieDefiTx);
+  }
+
+  async updateDefiTxWithNonce(txId: TxId, interactionNonce: number): Promise<void> {
+    await this.userTx
+      .where({ txId: new Uint8Array(txId.toBuffer()), proofId: ProofId.DEFI_DEPOSIT })
+      .modify({ interactionNonce });
   }
 
   async updateDefiTx(txId: TxId, outputValueA: bigint, outputValueB: bigint, result: boolean) {

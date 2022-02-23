@@ -9,6 +9,7 @@
     "build": "yarn clean && tsc -p tsconfig.dest.json && node ./package.js",
     "build:dev": "tsc -p tsconfig.dest.json --watch",
     "clean": "rm -rf ./dest",
+    "test:debug": "node --inspect-brk=0.0.0.0:9221 ./node_modules/.bin/jest",
     "test": "jest"
   },
   "jest": {

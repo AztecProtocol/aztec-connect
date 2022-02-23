@@ -1,4 +1,4 @@
-import { Contract, providers, Signer } from 'ethers';
+import { Contract, Signer } from 'ethers';
 import { ethers } from 'hardhat';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset } from '@aztec/barretenberg/blockchain';

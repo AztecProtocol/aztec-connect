@@ -871,6 +871,33 @@ export class CoreSdk extends EventEmitter {
     }
   }
 
+  public async awaitDefiDepositCompletion(txId: TxId, timeout = 300) {
+    const started = new Date().getTime();
+    while (true) {
+      if (timeout && new Date().getTime() - started > timeout * 1000) {
+        throw new Error(`Timeout awaiting defi interaction: ${txId}`);
+      }
+
+      const tx = await this.db.getDefiTx(txId);
+      if (!tx) {
+        throw new Error('Unknown txId.');
+      }
+
+      if (tx.interactionNonce !== undefined) {
+        break;
+      }
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+
+  public async getDefiInteractionNonce(txId: TxId) {
+    const tx = await this.db.getDefiTx(txId);
+    if (!tx) {
+      throw new Error('Unknown txId');
+    }
+    return tx.interactionNonce;
+  }
+
   private getUserState(userId: AccountId) {
     const userState = this.userStates.find(us => us.getUser().id.equals(userId));
     if (!userState) {

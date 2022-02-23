@@ -100,6 +100,8 @@ describe('user state', () => {
       updateUser: jest.fn(),
       addUserSigningKey: jest.fn(),
       getUserSigningKeys: jest.fn().mockResolvedValue([]),
+      getDefiTxsByNonce: jest.fn(),
+      updateDefiTxWithNonce: jest.fn(),
     } as any;
 
     rollupProvider = {
@@ -289,6 +291,11 @@ describe('user state', () => {
       partialStateSecret,
       txRefNo,
       new Date(),
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined
     );
     return { proofData, offchainTxData, tx, outputNotes: [dummyNote.note, changeNote.note] };
   };
@@ -324,12 +331,17 @@ describe('user state', () => {
     return { proofData, offchainTxData };
   };
 
-  const generateRollup = (rollupId = 0, innerProofs: InnerProofData[] = [], rollupSize = innerProofs.length) => {
+  const generateRollup = (
+    rollupId = 0,
+    innerProofs: InnerProofData[] = [],
+    rollupSize = innerProofs.length,
+    bridgeIds: BridgeId[] = [],
+  ) => {
     const innerProofData = [...innerProofs];
     for (let i = innerProofs.length; i < rollupSize; ++i) {
       innerProofData.push(InnerProofData.PADDING);
     }
-    return RollupProofData.randomData(rollupId, rollupSize, 0, innerProofData);
+    return RollupProofData.randomData(rollupId, rollupSize, 0, innerProofData, bridgeIds);
   };
 
   const createBlock = (
@@ -350,12 +362,18 @@ describe('user state', () => {
 
   const createRollupBlock = (
     innerProofs: { proofData: InnerProofData; offchainTxData: { toBuffer(): Buffer } }[] = [],
-    { rollupId = 0, rollupSize = innerProofs.length, interactionResult = [] as DefiInteractionNote[] } = {},
+    {
+      rollupId = 0,
+      rollupSize = innerProofs.length,
+      interactionResult = [] as DefiInteractionNote[],
+      bridgeIds = [] as BridgeId[],
+    } = {},
   ) => {
     const rollup = generateRollup(
       rollupId,
       innerProofs.map(p => p.proofData),
       rollupSize,
+      bridgeIds,
     );
     const offchainTxData = innerProofs.map(p => p.offchainTxData.toBuffer());
     return createBlock(rollup, offchainTxData, interactionResult);
@@ -867,28 +885,34 @@ describe('user state', () => {
     const outputValueA = depositValue / 5n;
     const outputValueB = totalOutputValueB / 5n;
     const result = true;
+    const rollupId = 4;
 
     const defiProof = generateDefiDepositProof({ bridgeId, outputNoteValue, depositValue });
     const interactionResult = [
-      new DefiInteractionNote(bridgeId, 0, totalInputValue, totalOutputValueA, totalOutputValueB, result),
-      new DefiInteractionNote(BridgeId.random(), 1, 12n, 34n, 56n, result),
+      new DefiInteractionNote(bridgeId, 16, totalInputValue, totalOutputValueA, totalOutputValueB, result),
+      new DefiInteractionNote(BridgeId.random(), 17, 12n, 34n, 56n, result),
     ];
-    const block = createRollupBlock([defiProof], { interactionResult });
+    const block = createRollupBlock([defiProof], {
+      rollupId,
+      interactionResult,
+      bridgeIds: interactionResult.map(ir => ir.bridgeId),
+    });
     const txId = new TxId(defiProof.proofData.txId);
 
     db.getDefiTx.mockResolvedValue({ settled: undefined });
+    db.getDefiTxsByNonce.mockResolvedValue([]).mockResolvedValueOnce([{ txId, depositValue: depositValue }]);
 
     userState.processBlock(block);
     await userState.stopSync(true);
 
     const { partialStateSecretEphPubKey } = defiProof.offchainTxData;
-    const partialStateSecret = deriveNoteSecret(partialStateSecretEphPubKey, user.privateKey, grumpkin);
+    const partialStateSecret = deriveNoteSecret(partialStateSecretEphPubKey, user.privateKey, grumpkin, TreeNote.LATEST_VERSION);
 
     expect(db.addClaimTx).toHaveBeenCalledTimes(1);
     expect(db.addClaimTx.mock.calls[0][0]).toMatchObject({
-      txId,
-      secret: partialStateSecret,
+      txId: txId,
       userId: user.id,
+      secret: partialStateSecret,      
     });
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
@@ -898,8 +922,91 @@ describe('user state', () => {
     expect(db.nullifyNote).toHaveBeenCalledTimes(2);
     expect(db.nullifyNote).toHaveBeenCalledWith(defiProof.proofData.nullifier1);
     expect(db.nullifyNote).toHaveBeenCalledWith(defiProof.proofData.nullifier2);
+    expect(db.updateDefiTxWithNonce).toHaveBeenCalledTimes(1);
+    expect(db.updateDefiTxWithNonce).toHaveBeenCalledWith(txId, (rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK) + interactionResult.findIndex(d => d.bridgeId.equals(bridgeId)));
+    // defi tx should have been updated
     expect(db.updateDefiTx).toHaveBeenCalledTimes(1);
     expect(db.updateDefiTx).toHaveBeenCalledWith(txId, outputValueA, outputValueB, result);
+    expect(db.addDefiTx).toHaveBeenCalledTimes(0);
+    expect(db.settleDefiTx).toHaveBeenCalledTimes(0);
+  });
+
+  it('update a defi tx, add claim to db and nullify old notes - async defi', async () => {
+    const outputNoteValue = 36n;
+    const bridgeId = BridgeId.random();
+    const depositValue = 64n;
+    const totalInputValue = depositValue * 5n;
+    const totalOutputValueA = depositValue;
+    const totalOutputValueB = depositValue * 10n;
+    const outputValueA = depositValue / 5n;
+    const outputValueB = totalOutputValueB / 5n;
+    const result = true;
+    const rollupId = 4;
+
+    const defiProof = generateDefiDepositProof({ bridgeId, outputNoteValue, depositValue });
+    const interactionResult = [
+      new DefiInteractionNote(bridgeId, 16, totalInputValue, totalOutputValueA, totalOutputValueB, result),
+      new DefiInteractionNote(BridgeId.random(), 17, 12n, 34n, 56n, result),
+    ];
+
+    // first rollup doesn't have defi result
+    const block1 = createRollupBlock([defiProof], { rollupId, bridgeIds: interactionResult.map(ir => ir.bridgeId) });
+    const txId = new TxId(defiProof.proofData.txId);
+
+    db.getDefiTx.mockResolvedValue({ settled: undefined });
+
+    // create some other transaction to put into a rollup
+    // the defi interaction result will go in this block
+    const jsProof = generatePaymentProof({
+      newNoteOwner: createUser(),
+      outputNoteValue1: 56n,
+      outputNoteValue2: 78n,
+    });
+    const block2 = createRollupBlock([jsProof], {
+      rollupId: rollupId + 1,
+      interactionResult,
+    });
+
+    db.getDefiTxsByNonce.mockResolvedValue([]).mockResolvedValueOnce([{ txId, depositValue: depositValue }]);
+
+    userState.processBlock(block1);
+    userState.processBlock(block2);
+    await userState.stopSync(true);
+
+    const { partialStateSecretEphPubKey } = defiProof.offchainTxData;
+    const partialStateSecret = deriveNoteSecret(partialStateSecretEphPubKey, user.privateKey, grumpkin);
+
+    //claim should dhave been created
+    expect(db.addClaimTx).toHaveBeenCalledTimes(1);
+    expect(db.addClaimTx.mock.calls[0][0]).toMatchObject({
+      txId,
+      secret: partialStateSecret,
+      userId: user.id,
+    });
+
+    // defi inputs should have been nullified
+    expect(db.nullifyNote).toHaveBeenCalledTimes(4);
+    expect(db.nullifyNote).toHaveBeenCalledWith(defiProof.proofData.nullifier1);
+    expect(db.nullifyNote).toHaveBeenCalledWith(defiProof.proofData.nullifier2);
+    expect(db.nullifyNote).toHaveBeenCalledWith(jsProof.proofData.nullifier1);
+    expect(db.nullifyNote).toHaveBeenCalledWith(jsProof.proofData.nullifier2);
+
+    // defi tx should have been given nonce
+    expect(db.updateDefiTxWithNonce).toHaveBeenCalledTimes(1);
+    const expectedNonce = (rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK) + interactionResult.findIndex(defi => defi.bridgeId.equals(bridgeId));
+    expect(db.updateDefiTxWithNonce).toHaveBeenCalledWith(defiProof.tx.txId, expectedNonce);
+
+    // defi tx should have been updated
+    expect(db.updateDefiTx).toHaveBeenCalledTimes(1);
+    expect(db.updateDefiTx).toHaveBeenCalledWith(txId, outputValueA, outputValueB, result);
+
+    // claim output should have been created
+    expect(db.addNote).toHaveBeenCalledTimes(2);
+    expect(db.addNote.mock.calls[0][0]).toMatchObject({
+      commitment: defiProof.proofData.noteCommitment2,
+      value: outputNoteValue,
+    });
+
     expect(db.addDefiTx).toHaveBeenCalledTimes(0);
     expect(db.settleDefiTx).toHaveBeenCalledTimes(0);
   });
@@ -912,16 +1019,22 @@ describe('user state', () => {
     const totalInputValue = depositValue * 5n;
     const totalOutputValueA = depositValue;
     const totalOutputValueB = depositValue * 10n;
-    const outputValueA = depositValue / 5n;
+    const outputValueA = totalOutputValueA / 5n;
     const outputValueB = totalOutputValueB / 5n;
     const result = true;
+    const rollupId = 5;
+    const txFee = inputNoteValues[0] + inputNoteValues[1] - outputNoteValue - depositValue;
 
-    const defiProof = generateDefiDepositProof({ bridgeId, outputNoteValue, depositValue });
+    const defiProof = generateDefiDepositProof({ bridgeId, outputNoteValue, depositValue, txFee });
     const interactionResult = [
-      new DefiInteractionNote(BridgeId.random(), 0, 12n, 34n, 56n, result),
-      new DefiInteractionNote(bridgeId, 1, totalInputValue, totalOutputValueA, totalOutputValueB, result),
+      new DefiInteractionNote(BridgeId.random(), 20, 12n, 34n, 56n, result),
+      new DefiInteractionNote(bridgeId, 21, totalInputValue, totalOutputValueA, totalOutputValueB, result),
     ];
-    const block = createRollupBlock([defiProof], { interactionResult });
+    const block = createRollupBlock([defiProof], {
+      rollupId,
+      interactionResult,
+      bridgeIds: interactionResult.map(ir => ir.bridgeId),
+    });
 
     db.getNoteByNullifier.mockResolvedValueOnce({
       owner: user.id,
@@ -930,6 +1043,10 @@ describe('user state', () => {
     db.getNoteByNullifier.mockResolvedValueOnce({
       owner: user.id,
       value: inputNoteValues[1],
+    });
+
+    db.getDefiTxsByNonce.mockImplementation((user, nonce) => {
+      return nonce === 20 ? [] : [{ txId: defiProof.tx.txId, depositValue: depositValue }];
     });
 
     userState.processBlock(block);
@@ -948,20 +1065,25 @@ describe('user state', () => {
     expect(db.nullifyNote).toHaveBeenCalledTimes(2);
     expect(db.nullifyNote).toHaveBeenCalledWith(defiProof.proofData.nullifier1);
     expect(db.nullifyNote).toHaveBeenCalledWith(defiProof.proofData.nullifier2);
-    expect(db.updateDefiTx).toHaveBeenCalledTimes(0);
     expect(db.addDefiTx).toHaveBeenCalledTimes(1);
+    const expectedNonce = (rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK) + interactionResult.findIndex(defi => defi.bridgeId.equals(bridgeId));
     expect(db.addDefiTx).toHaveBeenCalledWith(
       expect.objectContaining({
         txId,
         userId: user.id,
         bridgeId,
         depositValue,
-        outputValueA,
-        outputValueB,
+        txFee,
+        outputValueA: 0n,
+        outputValueB: 0n,
         settled: undefined,
-        result,
+        result: undefined,
+        interactionNonce: expectedNonce,
       }),
     );
+    // defi tx should have been updated
+    expect(db.updateDefiTx).toHaveBeenCalledTimes(1);
+    expect(db.updateDefiTx).toHaveBeenCalledWith(defiProof.tx.txId, outputValueA, outputValueB, result);
     expect(db.settleDefiTx).toHaveBeenCalledTimes(0);
   });
 
@@ -1028,6 +1150,384 @@ describe('user state', () => {
     });
     expect(db.settleDefiTx).toHaveBeenCalledTimes(1);
     expect(db.settleDefiTx).toHaveBeenCalledWith(txId, block.created);
+  });
+
+  it('add defi proof and its linked j/s proof, update the note status after the tx is settled', async () => {
+    const jsTxFee = 2n;
+    const outputNoteValue1 = 36n;
+    const outputNoteValue2 = 64n;
+    const inputNoteValue = outputNoteValue1 + outputNoteValue2 + jsTxFee;
+    const defiTxFee = 6n;
+    const depositValue = outputNoteValue1 - defiTxFee;
+    const outputValueA = 10n;
+    const outputValueB = 20n;
+    const bridgeId = BridgeId.random();
+    const defiResult = true;
+
+    const jsProof = generatePaymentProof({ newNoteOwner: user, outputNoteValue1, outputNoteValue2, txFee: jsTxFee });
+    const jsProofData = Buffer.concat([
+      jsProof.proofData.toBuffer(),
+      Buffer.alloc(32 * 7), // noteTreeRoot ... backwardLink
+      Buffer.concat([Buffer.alloc(31), Buffer.from([3])]), // allowChain = 3
+    ]);
+    const jsProofOutput = {
+      tx: jsProof.tx,
+      outputNotes: jsProof.outputNotes,
+      proofData: new ProofData(jsProofData),
+      offchainTxData: jsProof.offchainTxData,
+    }
+
+    const defiProof = generateDefiDepositProof({ bridgeId, depositValue });
+    const defiProofData = Buffer.concat([
+      defiProof.proofData.toBuffer(),
+      Buffer.alloc(32 * 7), // noteTreeRoot ... backwardLink
+      Buffer.alloc(32), // allowChain = 0
+    ]);
+  
+    const defiProofOutput = {
+      tx: defiProof.tx,
+      outputNotes: defiProof.outputNotes,
+      proofData: new ProofData(defiProofData),
+      offchainTxData: defiProof.offchainTxData,
+      jsProofOutput
+    };
+
+    await userState.addProof(defiProofOutput);
+    expect(db.addNote).toHaveBeenCalledTimes(0);
+    expect(db.addPaymentTx).toHaveBeenCalledTimes(0);
+    expect(db.addDefiTx).toHaveBeenCalledTimes(1);
+    expect(db.addDefiTx).toHaveBeenCalledWith(defiProof.tx);
+
+    db.addNote.mockClear();
+    db.addDefiTx.mockClear();
+
+    db.getDefiTx.mockResolvedValue({ settled: undefined });
+
+    db.getNoteByNullifier.mockResolvedValueOnce({
+      owner: user.id,
+      value: inputNoteValue,
+    });
+    db.getNoteByNullifier.mockResolvedValueOnce({
+      owner: user.id,
+      value: 0n,
+    });
+    db.getNoteByNullifier.mockResolvedValueOnce({
+      owner: user.id,
+      value: outputNoteValue1,
+    });
+
+    const rollupId = 4;
+    const interactionResult = [
+      new DefiInteractionNote(bridgeId, 16, depositValue, outputValueA, outputValueB, defiResult),
+    ];
+    const block = createRollupBlock([jsProof, defiProof], {
+      rollupId,
+      interactionResult,
+      bridgeIds: interactionResult.map(ir => ir.bridgeId),
+    });
+    db.getDefiTxsByNonce.mockResolvedValue([]).mockResolvedValueOnce([{ txId: defiProof.tx.txId, depositValue: depositValue }]);
+
+    userState.processBlock(block);
+    await userState.stopSync(true);
+
+    expect(db.addNote).toHaveBeenCalledTimes(2);
+    expect(db.addNote.mock.calls[0][0]).toMatchObject({
+      commitment: jsProof.proofData.noteCommitment1,
+      value: outputNoteValue1,
+      allowChain: false,
+      pending: false,
+    });
+    expect(db.addNote.mock.calls[1][0]).toMatchObject({
+      commitment: jsProof.proofData.noteCommitment2,
+      value: outputNoteValue2,
+      allowChain: false,
+      pending: false,
+    });
+    expect(db.addPaymentTx).toHaveBeenCalledTimes(1);
+    expect(db.settlePaymentTx).toHaveBeenCalledTimes(0);
+
+    expect(db.updateDefiTxWithNonce).toHaveBeenCalledTimes(1);
+    const expectedNonce = (rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK) + interactionResult.findIndex(defi => defi.bridgeId.equals(bridgeId));
+    expect(db.updateDefiTxWithNonce).toHaveBeenCalledWith(defiProof.tx.txId, expectedNonce);
+
+    expect(db.addDefiTx).toHaveBeenCalledTimes(0);
+    expect(db.updateDefiTx).toHaveBeenCalledTimes(1);
+    expect(db.updateDefiTx).toHaveBeenCalledWith(
+      new TxHash(defiProof.proofData.txId),
+      outputValueA,
+      outputValueB,
+      defiResult,
+    );
+  });
+
+  it('recover a defi proof and accumulate the fee from its linked j/s proof', async () => {
+    const jsTxFee = 2n;
+    const outputNoteValue1 = 36n;
+    const outputNoteValue2 = 64n;
+    const inputNoteValue = outputNoteValue1 + outputNoteValue2 + jsTxFee;
+    const defiTxFee = 6n;
+    const depositValue = outputNoteValue1 - defiTxFee;
+    const outputValueA = 10n;
+    const outputValueB = 20n;
+    const bridgeId = BridgeId.random();
+    const rollupId = 4;
+
+    const jsProof = generatePaymentProof({ newNoteOwner: user, outputNoteValue1, outputNoteValue2, txFee: jsTxFee });
+    const defiProof = generateDefiDepositProof({ bridgeId, depositValue, txFee: defiTxFee });
+
+    db.getNoteByNullifier.mockResolvedValueOnce({
+      owner: user.id,
+      value: inputNoteValue,
+    });
+    db.getNoteByNullifier.mockResolvedValueOnce({
+      owner: user.id,
+      value: 0n,
+    });
+    db.getNoteByNullifier.mockResolvedValueOnce({
+      owner: user.id,
+      value: outputNoteValue1,
+    });
+
+    db.getDefiTxsByNonce.mockResolvedValue([]).mockResolvedValueOnce([{ txId: defiProof.tx.txId, depositValue: depositValue }]);
+
+    const interactionResult = [new DefiInteractionNote(bridgeId, 16, depositValue, outputValueA, outputValueB, true)];
+    const block = createRollupBlock([jsProof, defiProof], {
+      rollupId,
+      interactionResult,
+      bridgeIds: interactionResult.map(ir => ir.bridgeId),
+    });
+
+    userState.processBlock(block);
+    await userState.stopSync(true);
+
+    expect(db.addNote).toHaveBeenCalledTimes(2);
+    expect(db.addNote.mock.calls[0][0]).toMatchObject({
+      commitment: jsProof.proofData.noteCommitment1,
+      value: outputNoteValue1,
+      allowChain: false,
+      pending: false,
+    });
+    expect(db.addNote.mock.calls[1][0]).toMatchObject({
+      commitment: jsProof.proofData.noteCommitment2,
+      value: outputNoteValue2,
+      allowChain: false,
+      pending: false,
+    });
+    expect(db.addPaymentTx).toHaveBeenCalledTimes(1);
+    expect(db.settlePaymentTx).toHaveBeenCalledTimes(0);
+    expect(db.addDefiTx).toHaveBeenCalledTimes(1);
+    const expectedNonce = (rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK) + interactionResult.findIndex(defi => defi.bridgeId.equals(bridgeId));
+    expect(db.addDefiTx).toHaveBeenCalledWith(
+      expect.objectContaining({
+        txId: defiProof.tx.txId,
+        userId: user.id,
+        bridgeId,
+        depositValue,
+        txFee: defiTxFee,
+        outputValueA: 0n,
+        outputValueB: 0n,
+        settled: undefined,
+        result: undefined,
+        interactionNonce: expectedNonce,
+      }),
+    );
+    // defi tx should have been updated
+    expect(db.updateDefiTx).toHaveBeenCalledTimes(1);
+    expect(db.updateDefiTx).toHaveBeenCalledWith(defiProof.tx.txId, outputValueA, outputValueB, true);
+  });
+
+  it('add defi proof and its linked j/s proof, update the note status after the tx is settled', async () => {
+    const jsTxFee = 2n;
+    const outputNoteValue1 = 36n;
+    const outputNoteValue2 = 64n;
+    const inputNoteValue = outputNoteValue1 + outputNoteValue2 + jsTxFee;
+    const defiTxFee = 6n;
+    const depositValue = outputNoteValue1 - defiTxFee;
+    const outputValueA = 10n;
+    const outputValueB = 20n;
+    const bridgeId = BridgeId.random();
+    const defiResult = true;
+
+    const jsProof = generatePaymentProof({ newNoteOwner: user, outputNoteValue1, outputNoteValue2, txFee: jsTxFee });
+    const jsProofData = Buffer.concat([
+      jsProof.proofData.toBuffer(),
+      Buffer.alloc(32 * 7), // noteTreeRoot ... backwardLink
+      Buffer.concat([Buffer.alloc(31), Buffer.from([3])]), // allowChain = 3
+    ]);
+    const jsProofOutput = {
+      tx: jsProof.tx,
+      outputNotes: jsProof.outputNotes,
+      proofData: new ProofData(jsProofData),
+      offchainTxData: jsProof.offchainTxData,
+    }
+
+    const defiProof = generateDefiDepositProof({ bridgeId, depositValue });
+    const defiProofData = Buffer.concat([
+      defiProof.proofData.toBuffer(),
+      Buffer.alloc(32 * 7), // noteTreeRoot ... backwardLink
+      Buffer.alloc(32), // allowChain = 0
+    ]);
+    const defiProofOutput = {
+      tx: defiProof.tx,
+      outputNotes: defiProof.outputNotes,
+      proofData: new ProofData(defiProofData),
+      offchainTxData: defiProof.offchainTxData,
+    };
+    await userState.addProof(jsProofOutput);
+    await userState.addProof(defiProofOutput);
+    expect(db.addNote).toHaveBeenCalledTimes(2);
+    expect(db.addNote.mock.calls[0][0]).toMatchObject({
+      commitment: jsProof.proofData.noteCommitment1,
+      value: outputNoteValue1,
+      allowChain: true,
+      pending: true,
+    });
+    expect(db.addNote.mock.calls[1][0]).toMatchObject({
+      commitment: jsProof.proofData.noteCommitment2,
+      value: outputNoteValue2,
+      allowChain: true,
+      pending: true,
+    });
+    expect(db.addPaymentTx).toHaveBeenCalledTimes(1);
+    expect(db.addDefiTx).toHaveBeenCalledTimes(1);
+    expect(db.addDefiTx).toHaveBeenCalledWith(defiProof.tx);
+
+    db.addNote.mockClear();
+    db.addDefiTx.mockClear();
+
+    db.getDefiTx.mockResolvedValue({ settled: undefined });
+
+    db.getNoteByNullifier.mockResolvedValueOnce({
+      owner: user.id,
+      value: inputNoteValue,
+    });
+    db.getNoteByNullifier.mockResolvedValueOnce({
+      owner: user.id,
+      value: 0n,
+    });
+    db.getNoteByNullifier.mockResolvedValueOnce({
+      owner: user.id,
+      value: outputNoteValue1,
+    });
+
+    const rollupId = 4;
+    const interactionResult = [
+      new DefiInteractionNote(bridgeId, 16, depositValue, outputValueA, outputValueB, defiResult),
+    ];
+    const block = createRollupBlock([jsProof, defiProof], {
+      rollupId,
+      interactionResult,
+      bridgeIds: interactionResult.map(ir => ir.bridgeId),
+    });
+    db.getDefiTxsByNonce.mockResolvedValue([]).mockResolvedValueOnce([{ txId: defiProof.tx.txId, depositValue: depositValue }]);
+
+    userState.processBlock(block);
+    await userState.stopSync(true);
+
+    expect(db.addNote).toHaveBeenCalledTimes(2);
+    expect(db.addNote.mock.calls[0][0]).toMatchObject({
+      commitment: jsProof.proofData.noteCommitment1,
+      value: outputNoteValue1,
+      allowChain: false,
+      pending: false,
+    });
+    expect(db.addNote.mock.calls[1][0]).toMatchObject({
+      commitment: jsProof.proofData.noteCommitment2,
+      value: outputNoteValue2,
+      allowChain: false,
+      pending: false,
+    });
+    expect(db.addPaymentTx).toHaveBeenCalledTimes(2);
+    expect(db.settlePaymentTx).toHaveBeenCalledTimes(0);
+
+    expect(db.updateDefiTxWithNonce).toHaveBeenCalledTimes(1);
+    const expectedNonce = (rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK) + interactionResult.findIndex(defi => defi.bridgeId.equals(bridgeId));
+    expect(db.updateDefiTxWithNonce).toHaveBeenCalledWith(defiProof.tx.txId, expectedNonce);
+
+    expect(db.addDefiTx).toHaveBeenCalledTimes(0);
+    expect(db.updateDefiTx).toHaveBeenCalledTimes(1);
+    expect(db.updateDefiTx).toHaveBeenCalledWith(
+      new TxHash(defiProof.proofData.txId),
+      outputValueA,
+      outputValueB,
+      defiResult,
+    );
+  });
+
+  it('recover a defi proof and accumulate the fee from its linked j/s proof', async () => {
+    const jsTxFee = 2n;
+    const outputNoteValue1 = 36n;
+    const outputNoteValue2 = 64n;
+    const inputNoteValue = outputNoteValue1 + outputNoteValue2 + jsTxFee;
+    const defiTxFee = 6n;
+    const depositValue = outputNoteValue1 - defiTxFee;
+    const outputValueA = 10n;
+    const outputValueB = 20n;
+    const bridgeId = BridgeId.random();
+    const rollupId = 4;
+
+    const jsProof = generatePaymentProof({ newNoteOwner: user, outputNoteValue1, outputNoteValue2, txFee: jsTxFee });
+    const defiProof = generateDefiDepositProof({ bridgeId, depositValue, txFee: defiTxFee });
+
+    db.getNoteByNullifier.mockResolvedValueOnce({
+      owner: user.id,
+      value: inputNoteValue,
+    });
+    db.getNoteByNullifier.mockResolvedValueOnce({
+      owner: user.id,
+      value: 0n,
+    });
+    db.getNoteByNullifier.mockResolvedValueOnce({
+      owner: user.id,
+      value: outputNoteValue1,
+    });
+
+    db.getDefiTxsByNonce.mockResolvedValue([]).mockResolvedValueOnce([{ txId: defiProof.tx.txId, depositValue: depositValue }]);
+
+    const interactionResult = [new DefiInteractionNote(bridgeId, 16, depositValue, outputValueA, outputValueB, true)];
+    const block = createRollupBlock([jsProof, defiProof], {
+      rollupId,
+      interactionResult,
+      bridgeIds: interactionResult.map(ir => ir.bridgeId),
+    });
+
+    userState.processBlock(block);
+    await userState.stopSync(true);
+
+    expect(db.addNote).toHaveBeenCalledTimes(2);
+    expect(db.addNote.mock.calls[0][0]).toMatchObject({
+      commitment: jsProof.proofData.noteCommitment1,
+      value: outputNoteValue1,
+      allowChain: false,
+      pending: false,
+    });
+    expect(db.addNote.mock.calls[1][0]).toMatchObject({
+      commitment: jsProof.proofData.noteCommitment2,
+      value: outputNoteValue2,
+      allowChain: false,
+      pending: false,
+    });
+    expect(db.addPaymentTx).toHaveBeenCalledTimes(1);
+    expect(db.settlePaymentTx).toHaveBeenCalledTimes(0);
+    expect(db.addDefiTx).toHaveBeenCalledTimes(1);
+    const expectedNonce = (rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK) + interactionResult.findIndex(defi => defi.bridgeId.equals(bridgeId));
+    expect(db.addDefiTx).toHaveBeenCalledWith(
+      expect.objectContaining({
+        txId: defiProof.tx.txId,
+        userId: user.id,
+        bridgeId,
+        depositValue,
+        txFee: defiTxFee,
+        outputValueA: 0n,
+        outputValueB: 0n,
+        settled: undefined,
+        result: undefined,
+        interactionNonce: expectedNonce,
+      }),
+    );
+    // defi tx should have been updated
+    expect(db.updateDefiTx).toHaveBeenCalledTimes(1);
+    expect(db.updateDefiTx).toHaveBeenCalledWith(defiProof.tx.txId, outputValueA, outputValueB, true);
   });
 
   it('ignore a defi claim proof for account with a different nonce', async () => {

@@ -2,9 +2,12 @@ import { Contract, utils } from 'ethers';
 import { EthereumProvider, RevertError, TxHash } from '@aztec/barretenberg/blockchain';
 
 async function extractTransaction(txHash: TxHash, provider: EthereumProvider) {
-  return await provider.request({ method: 'debug_traceTransaction', params: [txHash.toString()] });
+  try {
+    return await provider.request({ method: 'debug_traceTransaction', params: [txHash.toString()] });
+  } catch (err) {
+    return;
+  }
 }
-
 interface Fragment {
   name: string;
   inputs: string[];
@@ -23,8 +26,16 @@ function extractErrorFragmentsBySelector(contract: Contract) {
   return errorMappings;
 }
 
-export async function decodeError(contract: Contract, txHash: TxHash, provider: EthereumProvider) {
+export function decodeSelector(contract: Contract, selector: string) {
+  const mappings = extractErrorFragmentsBySelector(contract);
+  return mappings.get(selector);
+}
+
+export async function decodeErrorFromContract(contract: Contract, txHash: TxHash, provider: EthereumProvider) {
   const output = await extractTransaction(txHash, provider);
+  if (!output) {
+    return;
+  }
   const errorMappings = extractErrorFragmentsBySelector(contract);
   // look for the REVERT opcode if there is one
   const revert = output.structLogs.find((log: any) => log.op === 'REVERT');

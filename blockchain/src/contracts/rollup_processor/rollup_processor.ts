@@ -9,7 +9,7 @@ import { TransactionReceipt, TransactionResponse } from '@ethersproject/abstract
 import { Web3Provider } from '@ethersproject/providers';
 import { Contract, Event, utils } from 'ethers';
 import { abi } from '../../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
-import { decodeError } from '../decode_error';
+import { decodeErrorFromContract } from '../decode_error';
 import { solidityFormatSignatures } from './solidity_format_signatures';
 
 const fixEthersStackTrace = (err: Error) => {
@@ -258,10 +258,11 @@ export class RollupProcessor {
   public async getRollupBlocksFrom(rollupId: number, minConfirmations: number) {
     const { earliestBlock, chunk } = await this.getEarliestBlock();
     let end = await this.provider.getBlockNumber();
+    const preceedingRollupId = rollupId === 0 ? rollupId : rollupId - 1;
     let start =
       this.lastQueriedRollupId === undefined || rollupId < this.lastQueriedRollupId
         ? Math.max(end - chunk, earliestBlock)
-        : this.lastQueriedRollupBlockNum! + 1;
+        : this.lastQueriedRollupBlockNum!;
     let events: Event[] = [];
 
     // const totalStartTime = new Date().getTime();
@@ -271,8 +272,10 @@ export class RollupProcessor {
       // const startTime = new Date().getTime();
       const rollupEvents = await this.rollupProcessor.queryFilter(rollupFilter, start, end);
       // console.log(`${rollupEvents.length} fetched in ${(new Date().getTime() - startTime) / 1000}s`);
+
       events = [...rollupEvents, ...events];
-      if (events.length && events[0].args!.rollupId.toNumber() <= rollupId) {
+
+      if (events.length && events[0].args!.rollupId.toNumber() <= preceedingRollupId) {
         this.lastQueriedRollupId = rollupId;
         this.lastQueriedRollupBlockNum = events[events.length - 1].blockNumber;
         break;
@@ -282,10 +285,16 @@ export class RollupProcessor {
     }
     // console.log(`Done: ${events.length} fetched in ${(new Date().getTime() - totalStartTime) / 1000}s`);
 
-    return this.getRollupBlocksFromEvents(
-      events.filter(e => e.args!.rollupId.toNumber() >= rollupId),
-      minConfirmations,
-    );
+    const eventsToExtractRollups = events
+      .map((ev, index) => {
+        return {
+          rollupEvent: ev,
+          blockAfterPreviousRollup: index === 0 ? undefined : events[index - 1].blockNumber + 1,
+        };
+      })
+      .filter(e => e.rollupEvent.args!.rollupId.toNumber() >= rollupId)
+
+    return this.getRollupBlocksFromEvents(eventsToExtractRollups, minConfirmations);
   }
 
   /**
@@ -296,13 +305,39 @@ export class RollupProcessor {
     const { earliestBlock, chunk } = await this.getEarliestBlock();
     let end = await this.provider.getBlockNumber();
     let start = Math.max(end - chunk, earliestBlock);
+    const filter = rollupId === -1 ? undefined : rollupId === 0 ? [rollupId] : [rollupId - 1, rollupId];
+    let rollupEvents: Event[] = [];
+    let lastRollupId = undefined;
 
     while (end > earliestBlock) {
-      // console.log(`Fetching rollup events between blocks ${start} and ${end}...`);
-      const rollupFilter = this.rollupProcessor.filters.RollupProcessed(rollupId == -1 ? undefined : rollupId);
+      const rollupFilter = this.rollupProcessor.filters.RollupProcessed(filter);
       const events = await this.rollupProcessor.queryFilter(rollupFilter, start, end);
       if (events.length) {
-        return (await this.getRollupBlocksFromEvents(events.slice(-1), 1))[0];
+        if (lastRollupId === undefined) {
+          // this is the first batch of events going back that match our filter
+          lastRollupId = events[events.length - 1].args!.rollupId.toNumber();
+          // if the last rollupId == 0, then we have enough to return as there were no other events of interest before this
+          if (lastRollupId === 0) {
+            return (
+              await this.getRollupBlocksFromEvents(
+                [{ rollupEvent: events[events.length - 1], blockAfterPreviousRollup: undefined }],
+                1,
+              )
+            )[0];
+          }
+        }
+        rollupEvents = [...events, ...rollupEvents];
+      }
+      if (rollupEvents.length > 1) {
+        // we need more than 1 event in order to capture the intermediate events between rollups
+        // just get the last 2 events
+        rollupEvents = rollupEvents.slice(-2);
+        return (
+          await this.getRollupBlocksFromEvents(
+            [{ rollupEvent: rollupEvents[1], blockAfterPreviousRollup: rollupEvents[0].blockNumber + 1 }],
+            1,
+          )
+        )[0];
       }
       end = Math.max(start - 1, earliestBlock);
       start = Math.max(end - chunk, earliestBlock);
@@ -315,7 +350,10 @@ export class RollupProcessor {
    * hitting it with thousands of requests at once, while also enabling some degree of parallelism.
    * WARNING: `rollupEvents` is mutated.
    */
-  private async getRollupBlocksFromEvents(rollupEvents: Event[], minConfirmations: number) {
+  private async getRollupBlocksFromEvents(
+    rollupEvents: { rollupEvent: Event; blockAfterPreviousRollup?: number }[],
+    minConfirmations: number,
+  ) {
     // console.log(`Fetching data for ${rollupEvents.length} rollups...`);
     // const startTime = new Date().getTime();
 
@@ -326,10 +364,15 @@ export class RollupProcessor {
         await Promise.all(
           events.map(event =>
             Promise.all([
-              event.getTransaction(),
-              event.getBlock(),
-              event.getTransactionReceipt(),
-              this.getDefiBridgeEvents(event.blockNumber),
+              event.rollupEvent.getTransaction(),
+              event.rollupEvent.getBlock(),
+              event.rollupEvent.getTransactionReceipt(),
+              this.getDefiBridgeEvents(
+                event.blockAfterPreviousRollup === undefined
+                  ? event.rollupEvent.blockNumber
+                  : event.blockAfterPreviousRollup,
+                event.rollupEvent.blockNumber,
+              )
             ]),
           ),
         )
@@ -345,9 +388,9 @@ export class RollupProcessor {
     return blocks;
   }
 
-  private async getDefiBridgeEvents(blockNo: number) {
+  private async getDefiBridgeEvents(from: number, to: number) {
     const filter = this.rollupProcessor.filters.DefiBridgeProcessed();
-    const defiBridgeEvents = await this.rollupProcessor.queryFilter(filter, blockNo, blockNo);
+    const defiBridgeEvents = await this.rollupProcessor.queryFilter(filter, from, to);
     return defiBridgeEvents.map((log: { blockNumber: number; topics: string[]; data: string }) => {
       const {
         args: { bridgeId, nonce, totalInputValue, totalOutputValueA, totalOutputValueB, result },
@@ -415,7 +458,7 @@ export class RollupProcessor {
     return new Contract(this.rollupContractAddress.toString(), abi, ethSigner);
   }
 
-  public getRevertError(txHash: TxHash) {
-    return decodeError(this.contract, txHash, this.ethereumProvider);
+  public async getRevertError(txHash: TxHash) {
+    return await decodeErrorFromContract(this.contract, txHash, this.ethereumProvider);
   }
 }

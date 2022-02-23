@@ -6,6 +6,7 @@ import { encodeInnerProof } from './encode_inner_proof';
 import { InnerProofData } from './inner_proof';
 import { RollupDepositProofData, RollupWithdrawProofData } from '.';
 import { toBigIntBE, toBufferBE } from '../bigint_buffer';
+import { BridgeId } from '../bridge_id';
 
 export enum RollupProofDataFields {
   ROLLUP_ID,
@@ -323,7 +324,7 @@ export class RollupProofData {
     );
   }
 
-  static randomData(rollupId: number, numTxs: number, dataStartIndex = 0, innerProofData?: InnerProofData[]) {
+  static randomData(rollupId: number, numTxs: number, dataStartIndex = 0, innerProofData?: InnerProofData[], bridgeIds: BridgeId[] = []) {
     const ipd =
       innerProofData === undefined
         ? new Array(numTxs).fill(0).map(() => InnerProofData.fromBuffer(Buffer.alloc(InnerProofData.LENGTH)))
@@ -341,7 +342,7 @@ export class RollupProofData {
       Buffer.alloc(32),
       Buffer.alloc(32),
       Buffer.alloc(32),
-      new Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK).fill(0).map(() => Buffer.alloc(32)),
+      bridgeIds.map(b => b.toBuffer()).concat(new Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK - bridgeIds.length).fill(0).map(() => Buffer.alloc(32))),
       new Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK).fill(BigInt(0)),
       new Array(RollupProofData.NUMBER_OF_ASSETS).fill(0),
       new Array(RollupProofData.NUMBER_OF_ASSETS).fill(BigInt(0)),
