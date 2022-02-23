@@ -154,6 +154,10 @@ resource "aws_ecs_task_definition" "falafel" {
         "value": "${data.terraform_remote_state.blockchain.outputs.price_feed_contract_addresses}"
       },
       {
+        "name": "FEE_PAYING_ASSET_ADDRESSES",
+        "value": "${data.terraform_remote_state.blockchain.outputs.fee_paying_asset_addresses}"
+      },
+      {
         "name": "GAS_LIMIT",
         "value": "8000000"
       },
