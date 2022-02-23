@@ -1,4 +1,3 @@
-import { Navbar, Theme } from 'ui-components';
 import React, { useState } from 'react';
 import styled from 'styled-components/macro';
 import { Button, ContentWrapper, TextLink, PaddedBlock, RainDrops, Text } from '../components';

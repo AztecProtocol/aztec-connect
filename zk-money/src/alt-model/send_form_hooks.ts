@@ -1,6 +1,6 @@
 import { AccountId, AztecSdk } from '@aztec/sdk';
 import { useEffect, useMemo, useRef } from 'react';
-import { assets, Provider, RollupService, SendForm, SendFormValues } from '../app';
+import { assets, Provider, RollupService, SendForm, SendFormValues, SendMode } from '../app';
 import { useSpendableBalance } from './balance_hooks';
 import { useApp } from './app_context';
 import { AccountUtils } from '../app/account_utils';
@@ -18,11 +18,20 @@ interface AttemptCreateSendFormDeps {
   spendableBalance: bigint;
   keyVault?: KeyVault;
   rollupService?: RollupService;
+  sendMode?: SendMode;
   config: Config;
 }
 
 function attemptCreateSendForm(deps: AttemptCreateSendFormDeps) {
-  if (deps.sdk && deps.keyVault && deps.alias && deps.accountId && deps.rollupService && deps.accountUtils) {
+  if (
+    deps.sdk &&
+    deps.keyVault &&
+    deps.alias &&
+    deps.accountId &&
+    deps.rollupService &&
+    deps.accountUtils &&
+    deps.sendMode !== undefined
+  ) {
     const accountState = { alias: deps.alias, userId: deps.accountId };
     const assetState = { asset: assets[deps.assetId], spendableBalance: deps.spendableBalance };
     const sendForm = new SendForm(
@@ -34,13 +43,14 @@ function attemptCreateSendForm(deps: AttemptCreateSendFormDeps) {
       deps.rollupService,
       deps.accountUtils,
       deps.config.txAmountLimits[deps.assetId],
+      deps.sendMode,
     );
     sendForm.init();
     return sendForm;
   }
 }
 
-export function useSendForm(assetId: number) {
+export function useSendForm(assetId: number, sendMode: SendMode) {
   const app = useApp();
   const { sdk, requiredNetwork } = app;
   const spendableBalance = useSpendableBalance(assetId) ?? 0n;
@@ -54,6 +64,7 @@ export function useSendForm(assetId: number) {
       accountUtils,
       assetId,
       spendableBalance,
+      sendMode,
     });
   }
   const sendForm = sendFormRef.current;

@@ -8,9 +8,9 @@ interface EarnProps {
 
 export function Earn({ onOpenDefiModal }: EarnProps) {
   return (
-    <>
+    <div>
       <DefiCardsList onSelect={onOpenDefiModal} />
       <DefiInvestments />
-    </>
+    </div>
   );
 }

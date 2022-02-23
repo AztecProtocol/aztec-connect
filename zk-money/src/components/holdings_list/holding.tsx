@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { AssetValue } from '@aztec/sdk';
 import { Dropdown, DropdownOption } from '../dropdown';
 import styled from 'styled-components/macro';
-import sendIcon from '../../images/send.svg';
+import sendToL1Icon from '../../images/l1_send.svg';
+import sendToL2Icon from '../../images/l2_send.svg';
 import ellipsisIcon from '../../images/ellipsis.svg';
 import { Asset, assets, convertToPriceString, formatBaseUnits } from '../../app';
 import { ShieldedAssetIcon } from '..';
@@ -73,9 +74,10 @@ const DROPDOWN_OPTIONS = [
 interface HoldingProps {
   assetValue: AssetValue;
   onSend?: () => void;
+  onWidthdraw?: () => void;
 }
 
-export function Holding({ assetValue, onSend }: HoldingProps) {
+export function Holding({ assetValue, onSend, onWidthdraw }: HoldingProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const asset = assets[assetValue.assetId] as Asset | undefined;
@@ -96,7 +98,12 @@ export function Holding({ assetValue, onSend }: HoldingProps) {
   };
 
   const handleDropdownClick = (option: DropdownOption<string>) => {
-    console.log('Clicked on dropdown option: ', option);
+    if (option.value === 'widthdraw') {
+      onWidthdraw && onWidthdraw();
+    }
+    if (option.value === 'send') {
+      onSend && onSend();
+    }
   };
 
   if (!asset) {
@@ -112,12 +119,12 @@ export function Holding({ assetValue, onSend }: HoldingProps) {
       <HoldingAmount>${priceStr}</HoldingAmount>
       <div>{amountStr}</div>
       <ButtonsWrapper>
-        {/* <Button>
-          <ButtonIcon src={toL1Icon} />
-        </Button> */}
+        <Button onClick={onWidthdraw}>
+          <ButtonIcon src={sendToL1Icon} />
+        </Button>
         {onSend && (
           <Button onClick={onSend}>
-            <ButtonIcon src={sendIcon} />
+            <ButtonIcon src={sendToL2Icon} />
           </Button>
         )}
         <Button onClick={handleDropdownToggle}>

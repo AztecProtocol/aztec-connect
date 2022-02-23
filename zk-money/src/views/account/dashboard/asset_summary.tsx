@@ -27,7 +27,6 @@ export function AssetSummary({ assetId }: { assetId: number }) {
   return (
     <>
       <Text>{asset.symbol} Summary</Text>
-
       <ShieldPrompt
         asset={asset}
         balance={balance ?? 0n}

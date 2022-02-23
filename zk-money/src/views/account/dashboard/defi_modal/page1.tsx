@@ -82,6 +82,7 @@ export function Page1({
         <AmountSection
           maxAmount={maxAmount}
           asset={inputAsset}
+          allowAssetSelection={true}
           amountStr={fields.amountStr}
           onChangeAmountStr={amountStr => onChangeFields({ ...fields, amountStr })}
           amountStrAnnotation={fieldAnnotations.amountStr}

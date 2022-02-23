@@ -89,7 +89,6 @@ export interface ShieldFormValues {
   recipient: RecipientInput;
   enableAddToBalance: BoolInput; // TODO - remove
   addToBalance: BoolInput;
-  confirmed: BoolInput;
   status: {
     value: ShieldStatus;
   };
@@ -134,10 +133,6 @@ const initialShieldFormValues = {
   },
   addToBalance: {
     value: false,
-  },
-  confirmed: {
-    value: false,
-    required: true,
   },
   status: {
     value: ShieldStatus.NADA,
@@ -487,10 +482,6 @@ export class ShieldForm extends EventEmitter implements AccountForm {
 
   private async validateValues() {
     const form = { ...this.values };
-
-    if (!form.confirmed.value) {
-      form.confirmed = withError(form.confirmed, 'Please confirm that you understand the risk.');
-    }
 
     const fee = form.fees.value[form.speed.value].fee;
     if (this.status === ShieldStatus.VALIDATE) {

@@ -12,14 +12,12 @@ import {
 } from '../../app';
 import {
   BlockTitle,
+  BorderBox,
   Button,
   Checkbox,
-  DisclaimerBlock,
   FixedInputMessage,
   Input,
-  InputCol,
   InputMessage,
-  InputRow,
   InputStatus,
   InputStatusIcon,
   InputTheme,
@@ -36,20 +34,13 @@ import { SettledTime } from './settled_time';
 import { ShieldProgress } from './shield_progress';
 import { WalletSelect } from './wallet_select';
 
-const AmountCol = styled(InputCol)`
-  width: 60%;
-
-  @media (max-width: ${breakpoints.s}) {
-    width: 100%;
-  }
-`;
-
-const FeeCol = styled(InputCol)`
-  width: 40%;
-
-  @media (max-width: ${breakpoints.s}) {
-    width: 100%;
-  }
+const Root = styled.div`
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr 1fr;
+  grid-template-areas:
+    'amount recipient'
+    'amount fee';
 `;
 
 const AmountInputWrapper = styled(InputWrapper)`
@@ -94,20 +85,12 @@ const FlexFixed = styled.div`
   flex-shrink: 0;
 `;
 
-const ConfirmRoot = styled(InputCol)`
-  display: flex;
-  align-items: center;
-  flex: 1;
-  flex-wrap: wrap;
+const StyledBorderBox = styled(BorderBox)`
+  padding: 24px;
 `;
 
-const ConfirmMessage = styled(Text)`
-  padding-right: ${spacings.xs};
-`;
-
-const ButtonRoot = styled(InputCol)`
-  flex-shrink: 0;
-  width: auto;
+const NextWrapper = styled.div`
+  justify-self: end;
 `;
 
 interface ShieldProps {
@@ -162,146 +145,128 @@ export const Shield: React.FunctionComponent<ShieldProps> = ({
   }
 
   const inputTheme = theme === Theme.WHITE ? InputTheme.WHITE : InputTheme.LIGHT;
-  const { amount, fees, speed, maxAmount, ethAccount, recipient, enableAddToBalance, addToBalance, confirmed, submit } =
-    form;
+  const { amount, fees, speed, maxAmount, ethAccount, recipient, enableAddToBalance, addToBalance, submit } = form;
   const { decimals, symbol } = asset;
   const { pendingBalance } = ethAccount.value;
   const txFee = fees.value[speed.value];
 
   return (
-    <>
-      <InputRow>
-        <AmountCol>
-          <BlockTitle
-            title="Amount"
-            info={
-              <WalletSelect
-                asset={asset}
-                providerState={providerState}
-                ethAccount={ethAccount.value}
-                message={ethAccount.message}
-                messageType={ethAccount.messageType}
-                onChangeWallet={onChangeWallet}
-              />
+    <Root>
+      <StyledBorderBox area="amount">
+        <BlockTitle
+          title="Amount"
+          info={
+            <WalletSelect
+              asset={asset}
+              providerState={providerState}
+              ethAccount={ethAccount.value}
+              message={ethAccount.message}
+              messageType={ethAccount.messageType}
+              onChangeWallet={onChangeWallet}
+            />
+          }
+        />
+        <AmountInputWrapper theme={inputTheme}>
+          <AmountAssetIconRoot>
+            <ShieldedAssetIcon asset={asset} />
+          </AmountAssetIconRoot>
+          <Input
+            theme={inputTheme}
+            type="number"
+            value={amount.value}
+            onChangeValue={value => onChangeInputs({ amount: { value } })}
+          />
+          <MaxButton
+            onClick={() =>
+              onChangeInputs({
+                amount: {
+                  value: formatBaseUnits(maxAmount.value, decimals, {
+                    precision: asset.preferredFractionalDigits,
+                    floor: true,
+                  }),
+                },
+              })
             }
+          >
+            <Text text="MAX" size="xs" />
+          </MaxButton>
+        </AmountInputWrapper>
+      </StyledBorderBox>
+      <StyledBorderBox area="fee">
+        {pendingBalance > txFee.fee && (
+          <InputFoot size="xxs">
+            {`You have ${formatBaseUnits(pendingBalance - txFee.fee, decimals, {
+              precision: asset.preferredFractionalDigits,
+              commaSeparated: true,
+            })} ${symbol} pending on the contract, this will be used first. `}
+          </InputFoot>
+        )}
+        {amount.message && <FixedInputMessage theme={inputTheme} message={amount.message} type={amount.messageType} />}
+        <BlockTitle title="Fee" info={<SettledTime settledIn={txFee.time} explorerUrl={explorerUrl} />} />
+        <FeeSelect
+          inputTheme={inputTheme}
+          asset={asset}
+          selectedSpeed={speed.value}
+          fees={fees.value}
+          onSelect={speed => onChangeInputs({ speed: { value: speed } })}
+        />
+      </StyledBorderBox>
+      <StyledBorderBox area="recipient">
+        <BlockTitle title="Recipient" />
+        <InputWrapper theme={inputTheme}>
+          <InputStatusIcon
+            status={
+              recipient.value.valid === ValueAvailability.PENDING
+                ? InputStatus.LOADING
+                : recipient.value && recipient.value.valid === ValueAvailability.INVALID
+                ? InputStatus.ERROR
+                : InputStatus.SUCCESS
+            }
+            inactive={!recipient.value}
           />
-          <AmountInputWrapper theme={inputTheme}>
-            <AmountAssetIconRoot>
-              <ShieldedAssetIcon asset={asset} />
-            </AmountAssetIconRoot>
-            <Input
-              theme={inputTheme}
-              type="number"
-              value={amount.value}
-              onChangeValue={value => onChangeInputs({ amount: { value } })}
-            />
-            <MaxButton
-              onClick={() =>
-                onChangeInputs({
-                  amount: {
-                    value: formatBaseUnits(maxAmount.value, decimals, {
-                      precision: asset.preferredFractionalDigits,
-                      floor: true,
-                    }),
-                  },
-                })
-              }
-            >
-              <Text text="MAX" size="xs" />
-            </MaxButton>
-          </AmountInputWrapper>
-          {pendingBalance > txFee.fee && (
-            <InputFoot size="xxs">
-              {`You have ${formatBaseUnits(pendingBalance - txFee.fee, decimals, {
-                precision: asset.preferredFractionalDigits,
-                commaSeparated: true,
-              })} ${symbol} pending on the contract, this will be used first. `}
-            </InputFoot>
-          )}
-          {amount.message && (
-            <FixedInputMessage theme={inputTheme} message={amount.message} type={amount.messageType} />
-          )}
-        </AmountCol>
-        <FeeCol>
-          <BlockTitle title="Fee" info={<SettledTime settledIn={txFee.time} explorerUrl={explorerUrl} />} />
-          <FeeSelect
-            inputTheme={inputTheme}
-            asset={asset}
-            selectedSpeed={speed.value}
-            fees={fees.value}
-            onSelect={speed => onChangeInputs({ speed: { value: speed } })}
+          <MaskedInput
+            theme={inputTheme}
+            value={recipient.value.input}
+            prefix="@"
+            onChangeValue={input => onChangeInputs({ recipient: { value: { ...recipient.value, input } } })}
+            placeholder="@montzema50"
           />
-        </FeeCol>
-      </InputRow>
-      <InputRow>
-        <InputCol>
-          <BlockTitle title="Recipient" />
-          <InputWrapper theme={inputTheme}>
-            <InputStatusIcon
-              status={
-                recipient.value.valid === ValueAvailability.PENDING
-                  ? InputStatus.LOADING
-                  : recipient.value && recipient.value.valid === ValueAvailability.INVALID
-                  ? InputStatus.ERROR
-                  : InputStatus.SUCCESS
-              }
-              inactive={!recipient.value}
-            />
-            <MaskedInput
-              theme={inputTheme}
-              value={recipient.value.input}
-              prefix="@"
-              onChangeValue={input => onChangeInputs({ recipient: { value: { ...recipient.value, input } } })}
-              placeholder="@montzema50"
-            />
-          </InputWrapper>
-          {recipient.message && (
-            <FixedInputMessage theme={inputTheme} message={recipient.message} type={recipient.messageType} />
-          )}
-        </InputCol>
-      </InputRow>
-      {enableAddToBalance.value && (
-        <FlexPaddedRow size="m">
-          <FlexExpand>
-            <Text size="s" weight="semibold">
-              {'Add to available balance '}
-              <TextLink text="(?)" weight="normal" href="/about_your_balance" target="_blank" inline italic />
-            </Text>
-            <Text
-              text="(This will make a portion of your balance unavailable until the transaction settles)"
-              size="xs"
-            />
-          </FlexExpand>
-          <FlexFixed>
-            <Checkbox
-              checked={addToBalance.value}
-              onChangeValue={value => onChangeInputs({ addToBalance: { value } })}
-            />
-          </FlexFixed>
-        </FlexPaddedRow>
-      )}
-      <PaddedBlock size="m">
-        <DisclaimerBlock asset={asset} txAmountLimit={txAmountLimit} />
-      </PaddedBlock>
-      <InputRow>
-        <ConfirmRoot>
-          <ConfirmMessage text="I understand the risks" size="s" />
-          <Checkbox checked={confirmed.value} onChangeValue={value => onChangeInputs({ confirmed: { value } })} />
-          {confirmed.message && (
-            <FixedInputMessage theme={inputTheme} message={confirmed.message} type={confirmed.messageType} />
-          )}
-        </ConfirmRoot>
-        <ButtonRoot>
-          <Button
-            theme="gradient"
-            text="Next"
-            onClick={onValidate}
-            disabled={!isValidForm(form as any) || recipient.value.valid !== ValueAvailability.VALID}
-            isLoading={submit.value}
-          />
-        </ButtonRoot>
-      </InputRow>
+        </InputWrapper>
+        {recipient.message && (
+          <FixedInputMessage theme={inputTheme} message={recipient.message} type={recipient.messageType} />
+        )}
+        {enableAddToBalance.value && (
+          <FlexPaddedRow size="m">
+            <FlexExpand>
+              <Text size="s" weight="semibold">
+                {'Add to available balance '}
+                <TextLink text="(?)" weight="normal" href="/about_your_balance" target="_blank" inline italic />
+              </Text>
+              <Text
+                text="(This will make a portion of your balance unavailable until the transaction settles)"
+                size="xs"
+              />
+            </FlexExpand>
+            <FlexFixed>
+              <Checkbox
+                checked={addToBalance.value}
+                onChangeValue={value => onChangeInputs({ addToBalance: { value } })}
+              />
+            </FlexFixed>
+          </FlexPaddedRow>
+        )}
+      </StyledBorderBox>
+      <div />
+      <NextWrapper>
+        <Button
+          theme="gradient"
+          text="Next"
+          onClick={onValidate}
+          disabled={!isValidForm(form as any) || recipient.value.valid !== ValueAvailability.VALID}
+          isLoading={submit.value}
+        />
+      </NextWrapper>
       {submit.message && <InputMessage theme={inputTheme} message={submit.message} type={submit.messageType} />}
-    </>
+    </Root>
   );
 };

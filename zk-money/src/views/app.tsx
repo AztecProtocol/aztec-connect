@@ -31,9 +31,15 @@ import { spacings, Theme } from '../styles';
 import { Home, HomeState } from '../views/home';
 import { Login } from '../views/login';
 import { getAccountUrl, getActionFromUrl, getLoginModeFromUrl, getUrlFromAction, getUrlFromLoginMode } from './views';
-import { Dashboard } from './account/dashboard/dashboard';
 import { UserAccount } from '../components/template/user_account';
 import { NavigateFunction, Route, Routes } from 'react-router-dom';
+import { TransitionGroup, CSSTransition } from 'react-transition-group';
+import { Balance } from './account/dashboard/balance';
+import { Earn } from './account/dashboard/earn';
+import { Trade } from './account/dashboard/trade';
+import { DefiRecipe } from 'alt-model/defi/types';
+import './app.css';
+import { DefiModal } from './account/dashboard/defi_modal/defi_modal';
 
 interface AppProps {
   config: Config;
@@ -43,6 +49,7 @@ interface AppProps {
 
 interface AppState {
   action: AppAction;
+  activeDefiModalRecipe?: DefiRecipe;
   activeAsset: AppAssetId;
   loginState: LoginState;
   worldState: WorldState;
@@ -97,6 +104,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
       assetState: this.app.assetState,
       activeAction: this.app.activeAction,
       shieldForAliasForm: this.app.shieldForAliasForm,
+      activeDefiModalRecipe: undefined,
       // path will be removed once we are able to add router to ui-components
       path: '/',
       systemMessage: {
@@ -275,6 +283,10 @@ export class AppView extends PureComponent<AppProps, AppState> {
     this.setState({ systemMessage: { message: '', type: MessageType.TEXT } }, () => this.app.logout());
   };
 
+  private handleOpenDefiModal = (activeDefiModalRecipe: DefiRecipe) => {
+    this.setState({ activeDefiModalRecipe });
+  };
+
   private handleLogout = () => {
     if (!this.app.hasSession()) {
       return;
@@ -288,13 +300,6 @@ export class AppView extends PureComponent<AppProps, AppState> {
 
   private onMigrateForgottonBalance = () => {
     this.app.selectAction(AccountAction.MIGRATE_FORGOTTON_BALANCE);
-  };
-
-  private handleChangeAsset = (assetId: AppAssetId) => {
-    const action = this.state.action;
-    if (action !== AppAction.ACCOUNT || assetId == this.state.activeAsset || this.app.isProcessingAction()) return;
-    this.setState({ activeAsset: assetId });
-    this.app.changeAsset(assetId);
   };
 
   private handleClearAccountV0s = async () => {
@@ -326,14 +331,13 @@ export class AppView extends PureComponent<AppProps, AppState> {
       systemMessage,
       isLoading,
       homeState,
+      activeDefiModalRecipe,
     } = this.state;
     const { config } = this.props;
-    const { requiredNetwork } = this.app;
     const { step } = loginState;
     const theme = this.getTheme();
     const processingAction = this.app.isProcessingAction();
     const allowReset = action !== AppAction.ACCOUNT && (!processingAction || systemMessage.type === MessageType.ERROR);
-    const rootUrl = allowReset ? '/' : window.location.pathname;
     const isLoggedIn = step === LoginStep.DONE;
 
     const accountComponent = isLoggedIn ? (
@@ -351,14 +355,8 @@ export class AppView extends PureComponent<AppProps, AppState> {
     return (
       <Template
         theme={theme}
-        rootUrl={rootUrl}
-        network={requiredNetwork.network}
-        worldState={worldState}
         account={step === LoginStep.DONE ? accountState : undefined}
         systemMessage={systemMessage}
-        onMigrateOldBalance={this.handleMigrateOldBalance}
-        onMigrateForgottonBalance={this.onMigrateForgottonBalance}
-        onLogout={this.handleLogout}
         isLoading={isLoading}
       >
         <AppContext.Provider
@@ -383,54 +381,64 @@ export class AppView extends PureComponent<AppProps, AppState> {
             isLoggedIn={isLoggedIn}
             accountComponent={accountComponent}
             onLogin={this.handleLogin}
-            // balance={totalBalance}
-            // networkComponent={networkComponent}
           />
-          <Routes>
-            {['/signup', '/signin'].map((path: string) => (
-              <Route
-                path={path}
-                element={
-                  <Login
-                    worldState={worldState}
-                    loginState={loginState}
-                    providerState={providerState}
-                    availableWallets={this.app.availableWallets}
-                    shieldForAliasForm={shieldForAliasForm}
-                    explorerUrl={config.explorerUrl}
-                    systemMessage={systemMessage}
-                    setSeedPhrase={this.app.setSeedPhrase}
-                    setAlias={this.app.setAlias}
-                    setRememberMe={this.app.setRememberMe}
-                    onSelectWallet={this.handleConnectWallet}
-                    onSelectSeedPhrase={this.app.confirmSeedPhrase}
-                    onMigrateToWallet={this.app.migrateToWallet}
-                    onMigrateNotes={this.app.migrateNotes}
-                    onSelectAlias={this.app.confirmAlias}
-                    onRestart={allowReset && step !== LoginStep.CONNECT_WALLET ? this.handleRestart : undefined}
-                    onForgotAlias={this.app.forgotAlias}
-                    onMigrateAccount={this.app.migrateAccount}
-                    onClearAccountV0s={this.handleClearAccountV0s}
-                    onShieldForAliasFormInputsChange={this.app.changeShieldForAliasForm}
-                    onSubmitShieldForAliasForm={this.app.claimUserName}
-                    onChangeWallet={this.app.changeWallet}
+          <TransitionGroup>
+            <CSSTransition key={window.location.pathname} classNames="fade" timeout={250}>
+              <Routes location={window.location.pathname}>
+                {['/signup', '/signin'].map((path: string) => (
+                  <Route
+                    path={path}
+                    element={
+                      <Login
+                        worldState={worldState}
+                        loginState={loginState}
+                        providerState={providerState}
+                        availableWallets={this.app.availableWallets}
+                        shieldForAliasForm={shieldForAliasForm}
+                        explorerUrl={config.explorerUrl}
+                        systemMessage={systemMessage}
+                        setSeedPhrase={this.app.setSeedPhrase}
+                        setAlias={this.app.setAlias}
+                        setRememberMe={this.app.setRememberMe}
+                        onSelectWallet={this.handleConnectWallet}
+                        onSelectSeedPhrase={this.app.confirmSeedPhrase}
+                        onMigrateToWallet={this.app.migrateToWallet}
+                        onMigrateNotes={this.app.migrateNotes}
+                        onSelectAlias={this.app.confirmAlias}
+                        onRestart={allowReset && step !== LoginStep.CONNECT_WALLET ? this.handleRestart : undefined}
+                        onForgotAlias={this.app.forgotAlias}
+                        onMigrateAccount={this.app.migrateAccount}
+                        onClearAccountV0s={this.handleClearAccountV0s}
+                        onShieldForAliasFormInputsChange={this.app.changeShieldForAliasForm}
+                        onSubmitShieldForAliasForm={this.app.claimUserName}
+                        onChangeWallet={this.app.changeWallet}
+                      />
+                    }
                   />
-                }
-              />
-            ))}
-            <Route path="/*" element={<Dashboard />} />
-            <Route
-              path="/"
-              element={
-                <Home
-                  isLoggedIn={isLoggedIn}
-                  onLogin={this.handleLogin}
-                  onSignupAndShield={this.handleSignupAndShield}
-                  homeState={homeState}
+                ))}
+                <Route path="/earn" element={<Earn onOpenDefiModal={this.handleOpenDefiModal} />} />
+                <Route path="/trade" element={<Trade />} />
+                <Route path="/balance" element={<Balance />} />
+                <Route
+                  path="/"
+                  element={
+                    <Home
+                      isLoggedIn={isLoggedIn}
+                      onLogin={this.handleLogin}
+                      onSignupAndShield={this.handleSignupAndShield}
+                      homeState={homeState}
+                    />
+                  }
                 />
-              }
+              </Routes>
+            </CSSTransition>
+          </TransitionGroup>
+          {activeDefiModalRecipe && (
+            <DefiModal
+              onClose={() => this.setState({ activeDefiModalRecipe: undefined })}
+              recipe={activeDefiModalRecipe}
             />
-          </Routes>
+          )}
         </AppContext.Provider>
       </Template>
     );

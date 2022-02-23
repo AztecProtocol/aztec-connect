@@ -59,7 +59,9 @@ export function AmountSection(props: {
   amountStr: string;
   maxAmount: bigint;
   onChangeAmountStr: (amountStr: string) => void;
+  allowAssetSelection?: boolean;
   amountStrAnnotation?: InputAnnotation;
+  hidePrivacy?: boolean;
 }) {
   const [isAssetSelectorOpen, setAssetSelectorOpen] = useState(false);
   const [showingInfo, setShowingInfo] = useState(false);
@@ -82,25 +84,27 @@ export function AmountSection(props: {
           <MiniBalanceIndicator asset={props.asset} />
         </Header>
         <div className={style.inputWrapper}>
-          <GradientBorder>
-            <div className={style.assetSelectorWrapper}>
-              <div className={style.assetSelector} onClick={toggleAssetSelector}>
-                <ShieldedAssetIcon asset={props.asset} />
-                <div className={style.assetName}>{props.asset.symbol}</div>
-                <img src={downArrow} />
+          {props.allowAssetSelection && (
+            <GradientBorder>
+              <div className={style.assetSelectorWrapper}>
+                <div className={style.assetSelector} onClick={toggleAssetSelector}>
+                  <ShieldedAssetIcon asset={props.asset} />
+                  <div className={style.assetName}>{props.asset.symbol}</div>
+                  <img src={downArrow} />
+                </div>
+                <Dropdown
+                  isOpen={isAssetSelectorOpen}
+                  options={[
+                    { label: 'zkETH', value: 'zkETH' },
+                    { label: 'zkDAI', value: 'zkDAI' },
+                    { label: 'zkrenBTC', value: 'zkrenBTC' },
+                  ]}
+                  onClick={() => {}}
+                  onClose={toggleAssetSelector}
+                />
               </div>
-              <Dropdown
-                isOpen={isAssetSelectorOpen}
-                options={[
-                  { label: 'zkETH', value: 'zkETH' },
-                  { label: 'zkDAI', value: 'zkDAI' },
-                  { label: 'zkrenBTC', value: 'zkrenBTC' },
-                ]}
-                onClick={() => {}}
-                onClose={toggleAssetSelector}
-              />
-            </div>
-          </GradientBorder>
+            </GradientBorder>
+          )}
           <StyledAmountInput
             maxAmount={props.maxAmount}
             asset={props.asset}
@@ -110,7 +114,7 @@ export function AmountSection(props: {
           />
         </div>
         <InputValidationAnnotation annotation={props.amountStrAnnotation} />
-        <Privacy asset={props.asset} />
+        {!props.hidePrivacy && <Privacy asset={props.asset} />}
         <StyledInfoButton onClick={() => setShowingInfo(true)} />
       </Content>
     </InfoWrap>

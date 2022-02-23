@@ -108,17 +108,6 @@ const MaxButton = styled.div`
   cursor: pointer;
 `;
 
-const ConfirmRoot = styled(InputCol)`
-  display: flex;
-  align-items: center;
-  flex: 1;
-  flex-wrap: wrap;
-`;
-
-const ConfirmMessage = styled(Text)`
-  padding-right: ${spacings.xs};
-`;
-
 const ButtonRoot = styled(InputCol)`
   flex-shrink: 0;
   width: auto;
@@ -168,7 +157,6 @@ export const ShieldForAliasForm: React.FunctionComponent<DepositFormProps> = ({
     fees,
     speed,
     ethAccount,
-    confirmed,
     status: { value: status },
   } = formInputs;
   const { asset } = assetState;
@@ -280,17 +268,6 @@ export const ShieldForAliasForm: React.FunctionComponent<DepositFormProps> = ({
         <DisclaimerBlock asset={assetState.asset} txAmountLimit={assetState.txAmountLimit} />
       </PaddedBlock>
       <InputRow>
-        <ConfirmRoot>
-          <ConfirmMessage text="I understand the risks" size="s" />
-          <Checkbox
-            theme={InputTheme.LIGHT}
-            checked={confirmed.value}
-            onChangeValue={value => onChangeInputs({ confirmed: { value } })}
-          />
-          {confirmed.message && (
-            <FixedInputMessage theme={InputTheme.LIGHT} message={confirmed.message} type={confirmed.messageType} />
-          )}
-        </ConfirmRoot>
         <ButtonRoot>
           <Button
             theme="white"

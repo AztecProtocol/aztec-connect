@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components/macro';
 import { Asset, Form, isValidForm, MessageType } from '../../app';
 import {
   Button,
+  Checkbox,
   DisclaimerBlock,
   InfoItem,
   InfoTable,
@@ -20,7 +21,7 @@ import { colours, gradients, spacings, Theme } from '../../styles';
 const Footer = styled.div`
   display: flex;
   justify-content: center;
-  padding: ${spacings.s} 0;
+  padding-bottom: ${spacings.s};
 `;
 
 const ConfirmRoot = styled.div`
@@ -28,6 +29,7 @@ const ConfirmRoot = styled.div`
   justify-content: space-between;
   align-items: center;
   width: 100%;
+  padding-top: 25px;
 `;
 
 const EditButton = styled(TextButton)`
@@ -136,6 +138,7 @@ export const ProgressTemplate: React.FunctionComponent<ProgressTemplateProps> = 
   onSubmit,
   onClose,
 }) => {
+  const [risksAccepted, setRisksAccepted] = useState(false);
   const inputTheme = theme === Theme.WHITE ? InputTheme.WHITE : InputTheme.LIGHT;
 
   const validating = currentStatus === validateStatus;
@@ -177,7 +180,13 @@ export const ProgressTemplate: React.FunctionComponent<ProgressTemplateProps> = 
       return (
         <ConfirmRoot>
           <EditButton text="(Edit Transaction)" size="xs" onClick={onGoBack} />
-          <Button theme="gradient" text={`Confirm ${action}`} onClick={onSubmit} isLoading={validating} />
+          <Button
+            theme="gradient"
+            disabled={!risksAccepted}
+            text={`Confirm ${action}`}
+            onClick={() => risksAccepted && onSubmit()}
+            isLoading={validating}
+          />
         </ConfirmRoot>
       );
     }
@@ -217,13 +226,20 @@ export const ProgressTemplate: React.FunctionComponent<ProgressTemplateProps> = 
         <InfoTable theme={inputTheme} items={items} />
       </PaddedBlock>
       {!success && !expired && (
-        <PaddedBlock size="s">
-          {pending ? (
-            <DisclaimerBlock asset={asset} txAmountLimit={txAmountLimit} />
-          ) : (
-            steps.map(({ text, status }) => createProgress(text, status))
-          )}
-        </PaddedBlock>
+        <>
+          <PaddedBlock size="s">
+            {pending ? (
+              <>
+                <DisclaimerBlock asset={asset} txAmountLimit={txAmountLimit} />
+                <ConfirmRoot>
+                  <Checkbox text="I understand the risks" checked={risksAccepted} onChangeValue={setRisksAccepted} />
+                </ConfirmRoot>
+              </>
+            ) : (
+              steps.map(({ text, status }) => createProgress(text, status))
+            )}
+          </PaddedBlock>
+        </>
       )}
       <Footer>{renderFooterContent()}</Footer>
     </>

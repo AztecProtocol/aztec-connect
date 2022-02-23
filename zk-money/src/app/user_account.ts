@@ -2,7 +2,7 @@ import { AccountId, AztecSdk, Note, SdkEvent, EthereumProvider } from '@aztec/sd
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { debounce, DebouncedFunc } from 'lodash';
-import { AccountForm, AccountFormEvent, MergeForm, MigrateForm, SendForm, ShieldForm } from './account_forms';
+import { AccountForm, AccountFormEvent, MergeForm, MigrateForm, SendForm, SendMode, ShieldForm } from './account_forms';
 import { AccountState, AssetState, initialAssetState } from './account_state';
 import { AccountAction, parseAccountTx, parseJoinSplitTx } from './account_txs';
 import { AccountUtils } from './account_utils';
@@ -247,6 +247,7 @@ export class UserAccount extends EventEmitter {
           this.rollup,
           this.accountUtils,
           this.txAmountLimits[this.assetState.asset.id],
+          SendMode.SEND,
         );
       case AccountAction.MERGE:
         return new MergeForm(this.accountState, this.assetState, this.provider, this.keyVault, this.sdk, this.rollup);

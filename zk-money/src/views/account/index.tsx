@@ -20,10 +20,6 @@ import {
 import { Modal, PaddedBlock, Tab, Text } from '../../components';
 import { breakpoints, spacings, Theme } from '../../styles';
 import { AccountAsset } from './asset';
-import { Merge } from './merge';
-import { Migrate } from './migrate';
-import { SendLayout } from './send_layout';
-import { Shield } from './shield';
 import { UnsupportedAsset } from './unsupported_asset';
 
 const getPopupInfo = (action: AccountAction, formValues: Form) => {
@@ -189,95 +185,6 @@ export const Account: React.FunctionComponent<AccountProps> = ({
           <UnsupportedAsset asset={asset} />
         </PaddedBlock>
       )}
-      {activeAction &&
-        (() => {
-          const { theme, generatingKey, title, overridesModalLayout } = getPopupInfo(
-            activeAction.action,
-            activeAction.formValues,
-          );
-          return (
-            <Modal
-              theme={theme}
-              title={generatingKey ? 'Create Aztec Spending Key' : title}
-              noPadding={overridesModalLayout}
-              onClose={!overridesModalLayout && !processingAction && !generatingKey ? onClearAction : undefined}
-            >
-              {(() => {
-                switch (activeAction.action) {
-                  case AccountAction.SHIELD:
-                    return (
-                      <Shield
-                        theme={theme}
-                        asset={assetState.asset}
-                        assetPrice={assetState.price}
-                        txAmountLimit={assetState.txAmountLimit}
-                        providerState={providerState}
-                        form={activeAction.formValues as any}
-                        explorerUrl={explorerUrl}
-                        onChangeInputs={(inputs: Form) => onFormInputsChange(AccountAction.SHIELD, inputs)}
-                        onValidate={() => onValidate(AccountAction.SHIELD)}
-                        onChangeWallet={onChangeWallet}
-                        onDisconnectWallet={onDisconnectWallet}
-                        onGoBack={() => onGoBack(AccountAction.SHIELD)}
-                        onSubmit={() => onSubmit(AccountAction.SHIELD)}
-                        onClose={onClearAction}
-                      />
-                    );
-                  case AccountAction.SEND: {
-                    return (
-                      <SendLayout
-                        theme={theme}
-                        asset={assetState.asset}
-                        assetPrice={assetState.price}
-                        txAmountLimit={assetState.txAmountLimit}
-                        spendableBalance={assetState.spendableBalance}
-                        providerState={providerState}
-                        form={activeAction.formValues as any}
-                        explorerUrl={explorerUrl}
-                        onChangeInputs={(inputs: Form) => onFormInputsChange(AccountAction.SEND, inputs)}
-                        onChangeWallet={onChangeWallet}
-                        onDisconnectWallet={onDisconnectWallet}
-                        onValidate={() => onValidate(AccountAction.SEND)}
-                        onGoBack={() => onGoBack(AccountAction.SEND)}
-                        onSubmit={() => onSubmit(AccountAction.SEND)}
-                        onClose={onClearAction}
-                      />
-                    );
-                  }
-                  case AccountAction.MERGE:
-                    return (
-                      <Merge
-                        theme={theme}
-                        assetState={assetState}
-                        providerState={providerState}
-                        form={activeAction.formValues as any}
-                        onChangeWallet={onChangeWallet}
-                        onDisconnectWallet={onDisconnectWallet}
-                        onValidate={handleValidateMergeForm}
-                        onGoBack={() => onGoBack(AccountAction.MERGE)}
-                        onSubmit={() => onSubmit(AccountAction.MERGE)}
-                        onClose={onClearAction}
-                      />
-                    );
-                  case AccountAction.MIGRATE_OLD_BALANCE:
-                  case AccountAction.MIGRATE_FORGOTTON_BALANCE:
-                    return (
-                      <Migrate
-                        providerState={providerState}
-                        form={activeAction.formValues as any}
-                        onChangeWallet={onChangeWallet}
-                        onDisconnectWallet={onDisconnectWallet}
-                        onSubmit={() => onSubmit(activeAction.action)}
-                        onClose={onClearAction}
-                      />
-                    );
-                  default:
-                    return null;
-                }
-              })()}
-            </Modal>
-          );
-        })()}
       {explainUnsettled && (
         <Modal title="About your balance" onClose={() => setExplainUnsettled(false)}>
           <PaddedBlock>

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Navbar } from 'ui-components';
 import styled, { css } from 'styled-components/macro';
-import { AccountState, SystemMessage, WorldState } from '../../app';
+import { AccountState, SystemMessage } from '../../app';
 import { breakpoints, colours, gradients, spacings, Theme } from '../../styles';
 import { CookiesForm, isCookieAccepted } from '../cookies_form';
 import { SystemMessagePopup } from './system_message_popup';
@@ -12,6 +11,10 @@ export * from './content_wrapper';
 export * from './section';
 export * from './system_message_popup';
 
+interface RootProps {
+  theme: Theme;
+}
+
 const rootStyle = css`
   position: relative;
   display: flex;
@@ -21,15 +24,21 @@ const rootStyle = css`
   overflow: hidden;
 `;
 
-const GradientRoot = styled.div`
+const WhiteRoot = styled.div<RootProps>`
   ${rootStyle};
-  background: linear-gradient(101.14deg, ${gradients.primary.from} 11.12%, ${gradients.primary.to} 58.22%);
-  color: ${colours.white};
-`;
-
-const WhiteRoot = styled.div`
-  ${rootStyle};
-  background: ${colours.white};
+  background: linear-gradient(
+    101.14deg,
+    white 0%,
+    white 33.333%,
+    ${gradients.primary.from} 66.666%,
+    ${gradients.primary.from} 69%,
+    ${gradients.primary.to} 82%
+  );
+  background-size: 300% 300%;
+  background-position: ${({ theme }) =>
+    theme === Theme.WHITE ? '0% 0%;' : theme === Theme.GRADIENT ? '100% 100%;' : '0% 0%;'};
+  transition: background-position 1.25s ease;
+  color: ${({ theme }) => (theme === Theme.GRADIENT ? `${colours.white}` : `${colours.black}`)};
 `;
 
 interface ContentRootProps {
@@ -65,35 +74,22 @@ const CookiesFormRoot = styled.div`
 interface TemplateProps {
   theme: Theme;
   children: React.ReactNode;
-  network?: string;
-  worldState?: WorldState;
   account?: AccountState;
-  rootUrl?: string;
   systemMessage?: SystemMessage;
-  onMigrateOldBalance?: () => void;
-  onMigrateForgottonBalance?: () => void;
-  onLogout?: () => void;
   isLoading?: boolean;
 }
 
 export const Template: React.FunctionComponent<TemplateProps> = ({
   theme,
   children,
-  network,
-  worldState,
   account,
-  rootUrl = '/',
   systemMessage,
-  onMigrateOldBalance,
-  onMigrateForgottonBalance,
-  onLogout,
   isLoading = false,
 }) => {
   const [withCookie, setWithCookie] = useState(!isCookieAccepted());
-  const TemplateRoot = theme === Theme.GRADIENT ? GradientRoot : WhiteRoot;
 
   return (
-    <TemplateRoot>
+    <WhiteRoot theme={theme}>
       <ContentRoot extraFooterSpace={withCookie && theme === Theme.GRADIENT}>{!isLoading && children}</ContentRoot>
       {!isLoading && (
         <>
@@ -106,6 +102,6 @@ export const Template: React.FunctionComponent<TemplateProps> = ({
           </CookiesFormRoot>
         </>
       )}
-    </TemplateRoot>
+    </WhiteRoot>
   );
 };

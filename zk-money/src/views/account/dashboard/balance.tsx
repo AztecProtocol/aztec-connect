@@ -17,13 +17,13 @@ export function Balance() {
   const accountTxs = useParsedAccountTxs();
   const joinSplitTxs = useParsedJoinSplitTxs();
   return (
-    <>
+    <div>
       <Balances>
         <MyBalance />
         <ShieldMore />
       </Balances>
       <HoldingsList />
       <TransactionHistory accountTxs={accountTxs} joinSplitTxs={joinSplitTxs} />
-    </>
+    </div>
   );
 }

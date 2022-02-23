@@ -35,6 +35,27 @@
 .logo {
   margin-right: spacings.$xs;
   height: 44px;
+  clip-path: url(#svgPath);
+  background: linear-gradient(
+    101.14deg,
+    white 0%,
+    white 33.333%,
+    gradients.$primary_from 66.666%,
+    gradients.$primary_from 69%,
+    gradients.$primary_to 82%
+  );
+  background-size: 300% 300%;
+  overflow: initial;
+  height: 48px;
+  transition: background-position 1.25s ease;
+}
+
+.logo.gradient {
+  background-position: 0% 0%;
+}
+
+.logo.white {
+  background-position: 100% 100%;
 }
 
 .accountRoot {

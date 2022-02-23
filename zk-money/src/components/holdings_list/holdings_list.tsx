@@ -6,6 +6,7 @@ import { SpeedSwitch } from '../../views/account/dashboard/defi_modal/speed_swit
 import { Holding } from './holding';
 import { useDefiTxs } from '../../alt-model/defi_txs_hooks';
 import { SendModal } from 'views/account/dashboard/send_modal';
+import { SendMode } from 'app';
 
 const SpeedSwitchWrapper = styled.div`
   width: 300px;
@@ -30,13 +31,27 @@ const VIEWS = [
 type View = typeof VIEWS[number]['value'];
 
 function TokenList() {
+  const [sendMode, setSendMode] = useState<SendMode>(SendMode.SEND);
+  const [modalAssetId, setModalAssetId] = useState<number | undefined>(undefined);
   const [page, setPage] = useState(1);
   const balances = useBalances();
-  const [sendModalAssetId, setSendModalAssetId] = useState<number>();
   return (
     <>
       {slicePage(balances ?? [], page).map((balance, idx) => {
-        return <Holding key={idx} assetValue={balance} onSend={() => setSendModalAssetId(balance.assetId)} />;
+        return (
+          <Holding
+            key={idx}
+            assetValue={balance}
+            onSend={() => {
+              setModalAssetId(balance.assetId);
+              setSendMode(SendMode.SEND);
+            }}
+            onWidthdraw={() => {
+              setModalAssetId(balance.assetId);
+              setSendMode(SendMode.WIDTHDRAW);
+            }}
+          />
+        );
       })}
       <Pagination
         totalItems={balances?.length ?? 0}
@@ -44,8 +59,8 @@ function TokenList() {
         page={page}
         onChangePage={setPage}
       />
-      {sendModalAssetId !== undefined && (
-        <SendModal assetId={sendModalAssetId} onClose={() => setSendModalAssetId(undefined)} />
+      {modalAssetId !== undefined && (
+        <SendModal sendMode={sendMode} assetId={modalAssetId} onClose={() => setModalAssetId(undefined)} />
       )}
     </>
   );

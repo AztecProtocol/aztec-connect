@@ -1,7 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { bindStyle } from '../../../util/classnames';
-import logo from '../../../images/zk_money.svg';
-import logoWhite from '../../../images/zk_money_white.svg';
+import { ReactComponent as Logo } from '../../../images/zk_money.svg';
 import style from './navbar.module.scss';
 import { useTotalBalance } from 'alt-model';
 
@@ -44,7 +43,7 @@ export function Navbar({ isLoggedIn, accountComponent, theme, onChange, onLogin 
     <div className={style.headerRoot}>
       <div className={cx(style.logoRoot, { enabled: !!onChange })}>
         <Link to="/">
-          <img className={style.logo} src={theme === Theme.GRADIENT ? logoWhite : logo} />
+          <Logo className={cx(style.logo, theme === Theme.GRADIENT ? style.gradient : style.white)} />
         </Link>
       </div>
 

@@ -72,6 +72,11 @@ export interface RecipientInput extends FormValue {
   };
 }
 
+export enum SendMode {
+  SEND,
+  WIDTHDRAW,
+}
+
 export interface SendFormValues {
   privacyIssue: PrivacyIssueValue;
   selectedAmount: BigIntValue;
@@ -80,7 +85,6 @@ export interface SendFormValues {
   fees: TxFeesValue;
   speed: TxSpeedInput;
   recipient: RecipientInput;
-  confirmed: BoolInput;
   status: {
     value: SendStatus;
   };
@@ -112,10 +116,6 @@ const initialSendFormValues = {
       valid: ValueAvailability.INVALID,
     },
   },
-  confirmed: {
-    value: false,
-    required: true,
-  },
   status: {
     value: SendStatus.NADA,
   },
@@ -128,6 +128,7 @@ export class SendForm extends EventEmitter implements AccountForm {
   private readonly userId: AccountId;
   private readonly alias: string;
   private readonly asset: Asset;
+  private readonly sendMode: SendMode;
 
   private values: SendFormValues = initialSendFormValues;
   private formStatus = FormStatus.ACTIVE;
@@ -151,11 +152,13 @@ export class SendForm extends EventEmitter implements AccountForm {
     private readonly rollup: RollupService,
     private readonly accountUtils: AccountUtils,
     private readonly txAmountLimit: bigint,
+    private readonly sMode: SendMode,
   ) {
     super();
     this.userId = accountState.userId;
     this.alias = accountState.alias;
     this.asset = assetState.asset;
+    this.sendMode = sMode;
     this.debounceUpdateRecipientStatus = debounce(this.updateRecipientStatus, this.aliasDebounceWait);
     this.debounceUpdateRecipientTxType = debounce(this.updateRecipientTxType, this.txTypeDebounceWait);
     this.refreshValues({
@@ -227,7 +230,28 @@ export class SendForm extends EventEmitter implements AccountForm {
 
   changeEthAccount() {}
 
-  changeValues(newValues: Partial<SendFormValues>) {
+  async getFormValidity(recipient: string) {
+    // to L1 address
+    if (this.sendMode === SendMode.WIDTHDRAW && !isAddress(recipient)) {
+      return ValueAvailability.INVALID;
+    }
+
+    // to L2 alias
+    if (this.sendMode === SendMode.SEND) {
+      if (
+        isAddress(recipient) ||
+        isSameAlias(recipient, this.alias) ||
+        !isValidAliasInput(recipient) ||
+        !(await this.accountUtils.isValidRecipient(recipient))
+      ) {
+        return ValueAvailability.INVALID;
+      }
+    }
+
+    return ValueAvailability.VALID;
+  }
+
+  async changeValues(newValues: Partial<SendFormValues>) {
     if (this.locked) {
       debug('Cannot change form values while it is locked.');
       return;
@@ -245,13 +269,9 @@ export class SendForm extends EventEmitter implements AccountForm {
       const recipient = changes.recipient.value.input;
       let valid = ValueAvailability.PENDING;
       let txType = this.values.recipient.value.txType;
-      if (isAddress(recipient)) {
-        valid = ValueAvailability.VALID;
-      } else if (isSameAlias(recipient, this.alias) || !isValidAliasInput(recipient)) {
-        valid = ValueAvailability.INVALID;
-      } else {
-        txType = TxType.TRANSFER;
-      }
+
+      valid = await this.getFormValidity(recipient);
+
       changes.recipient = { value: { input: recipient, txType, valid } };
     }
 
@@ -395,12 +415,28 @@ export class SendForm extends EventEmitter implements AccountForm {
     const form = { ...this.values };
 
     const recipient = form.recipient.value.input;
-    if (!recipient) {
-      form.recipient = withError(form.recipient, `Please enter recipient's username or ethereum address.`);
-    } else if (isSameAlias(recipient, this.alias)) {
-      form.recipient = withError(form.recipient, 'Cannot send fund to yourself.');
-    } else if (!isAddress(recipient) && !(await this.accountUtils.isValidRecipient(recipient))) {
-      form.recipient = withError(form.recipient, `Cannot find a user with username '${recipient}'.`);
+
+    // Generic message (for any bordercase)
+    if (form.recipient.value.valid === ValueAvailability.INVALID) {
+      form.recipient = withError(form.recipient, 'Invalid recipient.');
+    }
+
+    if (this.sendMode === SendMode.SEND) {
+      if (!recipient) {
+        form.recipient = withError(form.recipient, `Please enter recipient's username.`);
+      } else if (isAddress(recipient)) {
+        form.recipient = withError(form.recipient, `Recipient cannot be an Ethereum address.`);
+      } else if (!(await this.accountUtils.isValidRecipient(recipient))) {
+        form.recipient = withError(form.recipient, `Cannot find a user with username '${recipient}'.`);
+      } else if (isSameAlias(recipient, this.alias)) {
+        form.recipient = withError(form.recipient, 'Cannot send fund to yourself.');
+      }
+    } else if (this.sendMode === SendMode.WIDTHDRAW) {
+      if (!recipient) {
+        form.recipient = withError(form.recipient, `Please enter recipient's Ethereum address.`);
+      } else if (!isAddress(recipient)) {
+        form.recipient = withError(form.recipient, `Recipient is not an Ethereum address.`);
+      }
     }
 
     const fee = form.fees.value[form.speed.value].fee;
@@ -428,10 +464,6 @@ export class SendForm extends EventEmitter implements AccountForm {
       if (amount > maxAmount) {
         form.amount = withError(form.amount, `Insufficient zk${this.asset.symbol} Balance.`);
       }
-    }
-
-    if (!form.confirmed.value) {
-      form.confirmed = withError(form.confirmed, 'Please confirm that you understand the risk.');
     }
 
     return form;
