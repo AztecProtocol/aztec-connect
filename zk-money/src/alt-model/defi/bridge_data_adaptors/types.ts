@@ -18,4 +18,8 @@ export type BridgeDataAdaptor =
       adaptor: YieldBridgeData;
     };
 
-export type BridgeDataAdaptorCreator = (provider: Web3Provider) => BridgeDataAdaptor;
+export type BridgeDataAdaptorCreator = (
+  provider: Web3Provider,
+  rollupContractAddress: string,
+  bridgeContractAddress: string,
+) => BridgeDataAdaptor;

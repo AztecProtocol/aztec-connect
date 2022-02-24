@@ -15,6 +15,7 @@ function createTopLevelContextValue(config: Config): TopLevelContextValue {
   const bridgeDataAdaptorsMethodCaches = createBridgeDataAdaptorsMethodCaches(
     stableEthereumProvider,
     blockchainAssetsObs,
+    config,
   );
   return {
     stableEthereumProvider,

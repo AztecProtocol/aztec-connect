@@ -1,5 +1,13 @@
 import { createMockAsyncYieldAdaptor } from './adaptor_mock';
-export const createElementAdaptor = createMockAsyncYieldAdaptor;
+import { BridgeDataAdaptorCreator } from './types';
+
+export const createElementAdaptor: BridgeDataAdaptorCreator = (
+  web3Provider,
+  rollupContractAddress,
+  bridgeContractAddress,
+) => {
+  return createMockAsyncYieldAdaptor(web3Provider, rollupContractAddress, bridgeContractAddress);
+};
 
 // The impl below can be swapped in once @aztec/bridge-clients is available on npm
 

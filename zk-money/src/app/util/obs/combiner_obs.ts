@@ -1,13 +1,11 @@
 import { BaseObs } from './base_obs';
 import { IObs, ObsUnlisten } from './types';
 
-export type SomeObsList = IObs<unknown>[];
-type ObsValue<TObs> = TObs extends IObs<infer TValue> ? TValue : never;
-type ObsListValues<TObsList extends SomeObsList> = { [K in keyof TObsList]: ObsValue<TObsList[K]> };
+export type ObsTuple<TValues> = { [K in keyof TValues]: IObs<TValues[K]> };
 
-export class CombinerObs<TObsList extends SomeObsList, TValues = ObsListValues<TObsList>> extends BaseObs<TValues> {
+export class CombinerObs<TValues extends unknown[]> extends BaseObs<TValues> {
   private unlistenDeps?: ObsUnlisten;
-  constructor(private readonly deps: TObsList) {
+  constructor(private readonly deps: [...ObsTuple<TValues>]) {
     super(deps.map(obs => obs.value) as unknown as TValues);
   }
   private refresh = () => {

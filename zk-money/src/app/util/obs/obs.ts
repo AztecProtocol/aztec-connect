@@ -1,9 +1,10 @@
 import { IObs, ObsListener, ObsUnlisten } from './types';
-import { CombinerObs, SomeObsList } from './combiner_obs';
+import { CombinerObs, ObsTuple } from './combiner_obs';
 import { EmitMapper, EmitMapperObs } from './emit_mapper_obs';
 import { InputObs } from './input_obs';
 import { MapperObs } from './mapper_obs';
 import { PromiseObs } from './promise_obs';
+import { Emitter, EmitterObs } from './emitter_obs';
 
 export class Obs<T> implements IObs<T> {
   constructor(protected readonly internalObs: IObs<T>) {}
@@ -24,8 +25,12 @@ export class Obs<T> implements IObs<T> {
     return new Obs(new PromiseObs(promise, initialValue));
   }
 
-  static combine<TObsList extends SomeObsList>(deps: TObsList) {
+  static combine<TValues extends unknown[]>(deps: [...ObsTuple<TValues>]) {
     return new Obs(new CombinerObs(deps));
+  }
+
+  static emitter<T>(emitter: Emitter<T>, initialValue: T) {
+    return new Obs(new EmitterObs(emitter, initialValue));
   }
 
   map<TOut>(mapper: (value: T) => TOut) {

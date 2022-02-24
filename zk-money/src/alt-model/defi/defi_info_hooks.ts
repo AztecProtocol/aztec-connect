@@ -3,19 +3,17 @@ import { AssetValue, BridgeId } from '@aztec/sdk';
 import { useAggregatedAssetsPrice, useAssetPrice, useRollupProviderStatus } from 'alt-model';
 import { useEffect, useMemo, useState } from 'react';
 import { toAdaptorArgs } from './bridge_data_adaptors/bridge_adaptor_util';
-import { BridgeDataAdaptor, BridgeDataAdaptorCreator } from './bridge_data_adaptors/types';
+import { BridgeDataAdaptor } from './bridge_data_adaptors/types';
 import { DefiRecipe } from './types';
 import { baseUnitsToFloat, convertToPrice, PRICE_DECIMALS, tenTo } from 'app';
-import { useStableEthereumProvider } from 'alt-model/top_level_context/top_level_context';
-import { Web3Provider } from '@ethersproject/providers';
 import { useBridgeDataAdaptorsMethodCaches } from 'alt-model/top_level_context';
 import { useMaybeObs, useObs } from 'app/util';
 
 const debug = createDebug('zm:defi_info_hooks');
 
-export function useBridgeDataAdaptor(creator: BridgeDataAdaptorCreator) {
-  const provider = useStableEthereumProvider();
-  return useMemo(() => creator(new Web3Provider(provider)), [provider, creator]);
+export function useBridgeDataAdaptor(recipe: DefiRecipe) {
+  const { adaptorsObsCache } = useBridgeDataAdaptorsMethodCaches();
+  return useObs(adaptorsObsCache.get(recipe));
 }
 
 function useAdaptorArgs(bridgeId: BridgeId) {

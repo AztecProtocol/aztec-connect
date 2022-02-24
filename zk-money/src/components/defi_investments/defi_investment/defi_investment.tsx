@@ -141,8 +141,8 @@ function AmountInfo({
 
 export function DefiInvestment({ position }: DefiInvestmentProps) {
   const { recipe, assetValue } = position;
-  const { bridgeFlow, createAdaptor } = recipe;
-  const dataAdaptor = useBridgeDataAdaptor(createAdaptor);
+  const { bridgeFlow } = recipe;
+  const dataAdaptor = useBridgeDataAdaptor(recipe);
 
   const eta = undefined;
   const isLocked = true;
@@ -177,8 +177,8 @@ export function DefiInvestment({ position }: DefiInvestmentProps) {
         <S.NameLabel>{recipe.name}</S.NameLabel>
       </S.Name>
       <S.Values>
-        {dataAdaptor.isYield && <ApyInfo recipe={recipe} />}
-        {!dataAdaptor.isAsync && bridgeFlow.type === 'closable' && (
+        {dataAdaptor?.isYield && <ApyInfo recipe={recipe} />}
+        {dataAdaptor?.isAsync === false && bridgeFlow.type === 'closable' && (
           <AmountInfo bridgeId={bridgeFlow.exit} dataAdaptor={dataAdaptor} inputValue={assetValue.value} />
         )}
       </S.Values>
