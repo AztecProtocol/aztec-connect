@@ -33,6 +33,7 @@ import { Login } from '../views/login';
 import { getAccountUrl, getActionFromUrl, getLoginModeFromUrl, getUrlFromAction, getUrlFromLoginMode } from './views';
 import { UserAccount } from '../components/template/user_account';
 import { NavigateFunction, Route, Routes } from 'react-router-dom';
+import { SdkObs } from 'alt-model/top_level_context/sdk_obs';
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
 import { Balance } from './account/dashboard/balance';
 import { Earn } from './account/dashboard/earn';
@@ -43,6 +44,7 @@ import { DefiModal } from './account/dashboard/defi_modal/defi_modal';
 
 interface AppProps {
   config: Config;
+  sdkObs: SdkObs;
   path: string;
   navigate: NavigateFunction;
 }
@@ -92,7 +94,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
 
     const loginMode = getLoginModeFromUrl(path);
 
-    this.app = new App(config, this.defaultAsset, loginMode);
+    this.app = new App(config, props.sdkObs, this.defaultAsset, loginMode);
 
     this.state = {
       action: initialAction,
@@ -363,7 +365,6 @@ export class AppView extends PureComponent<AppProps, AppState> {
           value={{
             config,
             requiredNetwork: this.app.requiredNetwork,
-            sdk: this.state.sdk,
             provider: this.state.provider,
             accountId: this.state.accountState?.userId,
             alias: this.state.accountState?.alias,

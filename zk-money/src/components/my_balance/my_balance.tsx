@@ -1,3 +1,4 @@
+import { convertPriceToString } from 'app';
 import styled from 'styled-components/macro';
 import { Card, CardHeaderSize } from 'ui-components';
 import { CardTag, InfoButton } from '..';
@@ -52,7 +53,10 @@ const Available = styled.h2`
 
 export function MyBalance() {
   const totalBalance = useTotalBalance();
+  const totalBalanceStr = totalBalance !== undefined ? convertPriceToString(totalBalance) : '??';
   const totalSpendableBalance = useTotalSpendableBalance();
+  const totalSpendableBalanceStr =
+    totalSpendableBalance !== undefined ? convertPriceToString(totalSpendableBalance) : '??';
 
   return (
     <Card
@@ -61,11 +65,11 @@ export function MyBalance() {
       cardContent={
         <BalanceWrapper>
           <AmountWrapper>
-            <Amount>${totalBalance}</Amount>
+            <Amount>${totalBalanceStr}</Amount>
             {/* <Variation amount={-10} /> */}
           </AmountWrapper>
           <InformationWrapper>
-            <Available>Available ${totalSpendableBalance}</Available>
+            <Available>Available ${totalSpendableBalanceStr}</Available>
             <InfoButton />
           </InformationWrapper>
         </BalanceWrapper>

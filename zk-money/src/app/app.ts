@@ -1,5 +1,6 @@
 import { GrumpkinAddress, JsonRpcProvider } from '@aztec/sdk';
 import { Web3Provider } from '@ethersproject/providers';
+import { SdkObs } from 'alt-model/top_level_context/sdk_obs';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import Cookie from 'js-cookie';
@@ -56,7 +57,12 @@ export class App extends EventEmitter {
   private readonly sessionCookieName = '_zkmoney_session_v1';
   private readonly walletCacheName = 'zm_wallet';
 
-  constructor(private readonly config: Config, initialAsset: AppAssetId, initialLoginMode: LoginMode) {
+  constructor(
+    private readonly config: Config,
+    private readonly sdkObs: SdkObs,
+    initialAsset: AppAssetId,
+    initialLoginMode: LoginMode,
+  ) {
     super();
     if (config.debug) {
       createDebug.enable('zm:*');
@@ -200,6 +206,7 @@ export class App extends EventEmitter {
 
     this.session = new UserSession(
       this.config,
+      this.sdkObs,
       this.requiredNetwork,
       this.activeAsset,
       this.loginMode,

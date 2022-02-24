@@ -7,6 +7,7 @@ import { AccountUtils } from '../app/account_utils';
 import { KeyVault } from '../app/key_vault';
 import { Config } from '../config';
 import { useFormIsProcessing, useFormValues, useSyncProviderIntoForm } from './account_form_hooks';
+import { useInitialisedSdk } from './top_level_context';
 
 interface AttemptCreateSendFormDeps {
   accountUtils?: AccountUtils;
@@ -52,7 +53,8 @@ function attemptCreateSendForm(deps: AttemptCreateSendFormDeps) {
 
 export function useSendForm(assetId: number, sendMode: SendMode) {
   const app = useApp();
-  const { sdk, requiredNetwork } = app;
+  const { requiredNetwork } = app;
+  const sdk = useInitialisedSdk();
   const spendableBalance = useSpendableBalance(assetId) ?? 0n;
 
   const accountUtils = useMemo(() => sdk && new AccountUtils(sdk, requiredNetwork), [sdk, requiredNetwork]);
@@ -61,6 +63,7 @@ export function useSendForm(assetId: number, sendMode: SendMode) {
   if (!sendFormRef.current) {
     sendFormRef.current = attemptCreateSendForm({
       ...app,
+      sdk,
       accountUtils,
       assetId,
       spendableBalance,

@@ -68,7 +68,7 @@ export function Page2({ recipe, composerState, asset, transactionLimit, fields, 
             totalSlots={12}
             compact={true}
           />
-          <BridgeKeyStats compact />
+          <BridgeKeyStats recipe={recipe} compact />
         </S.TopStats>
         <S.Separator />
         <Breakdown amount={amount} fee={fee ?? 0n} asset={asset} />

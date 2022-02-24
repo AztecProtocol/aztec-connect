@@ -1,47 +1,25 @@
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { AssetValue, JoinSplitTx } from '@aztec/sdk';
 import { useEffect, useMemo, useState } from 'react';
-import { listenAccountUpdated, useAssetPrices } from '.';
-import { convertToPrice, assets, convertPriceToString } from '../app';
+import { listenAccountUpdated } from './event_utils';
+import { useAggregatedAssetsPrice } from './price_hooks';
 import { useApp } from './app_context';
 import { useProviderState } from './provider_hooks';
+import { useInitialisedSdk } from './top_level_context';
 
-// TODO: Change this to avoid using a loop in a hook
-export function useTotalBalance(): string {
-  let totalBalanceValue = 0n;
-
+export function useTotalBalance() {
   const balances = useBalances();
-  const assetIds = useMemo(() => balances?.map(x => x.assetId), [balances]);
-  const prices = useAssetPrices(assetIds ?? []);
-  balances?.forEach(({ assetId, value }) => {
-    const price = prices[assetId];
-    if (price !== undefined) {
-      totalBalanceValue += convertToPrice(value, assets[assetId].decimals, price);
-    }
-  });
-
-  return convertPriceToString(totalBalanceValue);
+  return useAggregatedAssetsPrice(balances);
 }
 
-// TODO: Change this to avoid using a loop in a hook
-export function useTotalSpendableBalance(): string {
-  let totalSpendableBalanceValue = 0n;
-
+export function useTotalSpendableBalance() {
   const balances = useSpendableBalances();
-  const assetIds = useMemo(() => balances?.map(x => x.assetId), [balances]);
-  const prices = useAssetPrices(assetIds ?? []);
-  balances?.forEach(({ assetId, value }) => {
-    const price = prices[assetId];
-    if (price !== undefined) {
-      totalSpendableBalanceValue += convertToPrice(value, assets[assetId].decimals, price);
-    }
-  });
-
-  return convertPriceToString(totalSpendableBalanceValue);
+  return useAggregatedAssetsPrice(balances);
 }
 
-export function useBalance(assetId: number): bigint | undefined {
-  const { sdk, accountId } = useApp();
+export function useBalance(assetId: number) {
+  const { accountId } = useApp();
+  const sdk = useInitialisedSdk();
   const [balance, setBalance] = useState(() => accountId && sdk?.getBalance(assetId, accountId));
   useEffect(() => {
     if (sdk && accountId) {
@@ -53,8 +31,9 @@ export function useBalance(assetId: number): bigint | undefined {
   return balance;
 }
 
-export function useBalances(): AssetValue[] | undefined {
-  const { sdk, accountId } = useApp();
+export function useBalances() {
+  const { accountId } = useApp();
+  const sdk = useInitialisedSdk();
   const [balances, setBalances] = useState<AssetValue[]>();
   useEffect(() => {
     if (accountId && sdk) {
@@ -66,8 +45,9 @@ export function useBalances(): AssetValue[] | undefined {
   return balances;
 }
 
-export function useSpendableBalance(assetId: number): bigint | undefined {
-  const { sdk, accountId } = useApp();
+export function useSpendableBalance(assetId: number) {
+  const { accountId } = useApp();
+  const sdk = useInitialisedSdk();
   const [spendableBalance, setSpendableBalance] = useState<bigint>();
   useEffect(() => {
     if (sdk && accountId) {
@@ -79,8 +59,9 @@ export function useSpendableBalance(assetId: number): bigint | undefined {
   return spendableBalance;
 }
 
-function useSpendableBalances(): AssetValue[] | undefined {
-  const { sdk, accountId } = useApp();
+function useSpendableBalances() {
+  const { accountId } = useApp();
+  const sdk = useInitialisedSdk();
   const balances = useBalances();
   const [spendableBalances, setSpendableBalances] = useState<AssetValue[]>();
   useEffect(() => {
@@ -93,8 +74,8 @@ function useSpendableBalances(): AssetValue[] | undefined {
   return spendableBalances;
 }
 
-export function useDepositPendingShieldBalance(assetId: number): bigint | undefined {
-  const { sdk } = useApp();
+export function useDepositPendingShieldBalance(assetId: number) {
+  const sdk = useInitialisedSdk();
   const ethAddress = useProviderState()?.account;
   const [deposit, setDeposit] = useState<bigint>();
   useEffect(() => {

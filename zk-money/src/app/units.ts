@@ -2,7 +2,7 @@ export const min = (...values: bigint[]) => values.reduce((minValue, v) => (minV
 export const max = (...values: bigint[]) => values.reduce((maxValue, v) => (maxValue >= v ? maxValue : v), values[0]);
 export const sum = (values: bigint[]) => values.reduce((sum, v) => sum + v, 0n);
 
-const tenTo = (power: number) => BigInt('1'.padEnd(power + 1, '0'));
+export const tenTo = (power: number) => BigInt('1'.padEnd(power + 1, '0'));
 
 export const fromBaseUnits = (value: bigint, decimals: number) => {
   const neg = value < 0n;
@@ -23,7 +23,7 @@ export const toBaseUnits = (valueString: string, decimals: number) => {
   return BigInt(fractional || 0) * fractionalScale + BigInt(integer || 0) * scalingFactor;
 };
 
-const baseUnitsToFloat = (value: bigint, divisorExponent: number) => {
+export const baseUnitsToFloat = (value: bigint, divisorExponent: number) => {
   const divisor = Math.pow(10, divisorExponent);
   const bigIntDivsor = BigInt(divisor);
   const whole = Number(value / bigIntDivsor);
@@ -52,14 +52,16 @@ export const formatBaseUnits = (
 export const convertToPrice = (value: bigint, decimals: number, priceBaseUnits: bigint) =>
   (value * priceBaseUnits) / tenTo(decimals);
 
+export const PRICE_DECIMALS = 8;
+
 export const convertToPriceString = (
   value: bigint,
   decimals: number,
   priceBaseUnits: bigint,
-  priceDecimals = 8,
+  priceDecimals = PRICE_DECIMALS,
   precision = 2,
 ) =>
   formatBaseUnits(convertToPrice(value, decimals, priceBaseUnits), priceDecimals, { precision, commaSeparated: true });
 
-export const convertPriceToString = (price: bigint, priceDecimals = 8, precision = 2) =>
+export const convertPriceToString = (price: bigint, priceDecimals = PRICE_DECIMALS, precision = 2) =>
   formatBaseUnits(price, priceDecimals, { precision, commaSeparated: true });

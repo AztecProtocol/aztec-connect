@@ -2,7 +2,7 @@ import createDebug from 'debug';
 import { AccountId, DefiSettlementTime, AztecSdk, BridgeId } from '@aztec/sdk';
 import { Provider } from '../../app';
 import { createSigningKeys } from '../../app/key_vault';
-import { Obs } from '../../app/util/obs';
+import { Obs } from '../../app/util';
 
 const debug = createDebug('zm:defi_composer');
 
@@ -30,7 +30,7 @@ export interface DefiComposerState {
 }
 
 export class DefiComposer {
-  stateObs = new Obs<DefiComposerState>({ phase: DefiComposerPhase.IDLE });
+  stateObs = Obs.input<DefiComposerState>({ phase: DefiComposerPhase.IDLE });
   constructor(readonly bridgeId: BridgeId) {}
 
   async compose(payload: DefiComposerPayload, deps: DefiComposerDeps) {

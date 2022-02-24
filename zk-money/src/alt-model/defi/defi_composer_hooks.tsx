@@ -9,6 +9,7 @@ import { useBalance } from '../balance_hooks';
 import { DefiFormFieldAnnotations, InputAnnotation } from '../../views/account/dashboard/defi_modal/types';
 import { useProviderState } from '../provider_hooks';
 import { Semaphore } from '../../app/util';
+import { useInitialisedSdk } from 'alt-model/top_level_context';
 
 const debug = createDebug('zm:defi_composer_hooks');
 
@@ -31,11 +32,12 @@ function useAwaitCorrectProvider() {
 export function useDefiComposer(bridgeId: BridgeId) {
   const composer = useMemo(() => new DefiComposer(bridgeId), [bridgeId]);
   const state = useObs(composer.stateObs);
-  const { sdk, accountId, provider } = useApp();
+  const { accountId } = useApp();
+  const sdk = useInitialisedSdk();
 
   const awaitCorrectProvider = useAwaitCorrectProvider();
   const compose = (payload: DefiComposerPayload) => {
-    if (!provider || !sdk || !accountId) {
+    if (!sdk || !accountId) {
       debug('Tried to submit to DefiComposer before deps were ready.');
       return;
     }
@@ -51,7 +53,7 @@ interface DefiFormFields {
 }
 
 function useDefiFees(bridgeId: BridgeId) {
-  const { sdk } = useApp();
+  const sdk = useInitialisedSdk();
   const [fees, setFees] = useState<AssetValue[]>();
   useEffect(() => {
     sdk?.getDefiFees(bridgeId).then(setFees);

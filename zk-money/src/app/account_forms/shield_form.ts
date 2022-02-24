@@ -152,7 +152,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
   private readonly userId: AccountId;
   private readonly alias: string;
   private readonly asset: Asset;
-  private readonly isNewAccount: boolean;
+  readonly isNewAccount: boolean;
 
   private values: ShieldFormValues = initialShieldFormValues;
   private formStatus = FormStatus.ACTIVE;
@@ -395,9 +395,8 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     const ethAccountState = this.ethAccount.state;
 
     const { publicBalance, pendingBalance } = ethAccountState;
-    const fees = this.rollup.getTxFees(this.asset.id, this.isNewAccount ? TxType.ACCOUNT : TxType.DEPOSIT);
     const speed = (changes.speed || this.values.speed).value;
-    const fee = fees[speed].fee;
+    const fee = (changes.fees ?? this.values.fees).value[speed].fee;
     const gasCost = ((this.accountGasCost.deposit + this.accountGasCost.approveProof) * this.gasPrice * 110n) / 100n; // * 1.1
     const maxAmount = min(
       max(0n, publicBalance + pendingBalance - fee - gasCost, pendingBalance - fee),
@@ -409,7 +408,6 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       maxAmount: { value: maxAmount },
       gasCost: { value: gasCost },
       ethAccount: { value: ethAccountState },
-      fees: { value: fees },
       ...changes,
     });
 
@@ -483,10 +481,14 @@ export class ShieldForm extends EventEmitter implements AccountForm {
   private async validateValues() {
     const form = { ...this.values };
 
+    const amount = toBaseUnits(form.amount.value, this.asset.decimals);
     const fee = form.fees.value[form.speed.value].fee;
     if (this.status === ShieldStatus.VALIDATE) {
       // This error won't be displayed in the form but should trigger a "Session Expired" error in the confirm step.
-      const currentFee = this.rollup.getFee(this.asset.id, TxType.DEPOSIT, form.speed.value);
+      const currentFees = this.isNewAccount
+        ? await this.sdk.getRegisterFees(this.asset.id, amount)
+        : await this.sdk.getDepositFees(this.asset.id);
+      const currentFee = currentFees[form.speed.value].value;
       if (fee < currentFee) {
         form.fees = withError(
           form.fees,
@@ -499,7 +501,6 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     }
 
     const { provider } = this.ethAccount;
-    const amount = toBaseUnits(form.amount.value, this.asset.decimals);
     if (!this.ethAccount.active) {
       if (!provider) {
         form.amount = withError(form.amount, 'Please connect a wallet.');

@@ -89,7 +89,7 @@ export function Page1({
         />
       </BorderBox>
       <StatsBorderBox area="stats">
-        <BridgeKeyStats compact />
+        <BridgeKeyStats recipe={recipe} compact />
       </StatsBorderBox>
       <BorderBox area="gas">
         <GasSection

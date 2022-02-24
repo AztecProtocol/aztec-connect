@@ -3,6 +3,7 @@ import { bindStyle } from '../../../util/classnames';
 import { ReactComponent as Logo } from '../../../images/zk_money.svg';
 import style from './navbar.module.scss';
 import { useTotalBalance } from 'alt-model';
+import { convertPriceToString } from 'app';
 
 const cx = bindStyle(style);
 
@@ -38,6 +39,7 @@ const LINKS: Link[] = [
 export function Navbar({ isLoggedIn, accountComponent, theme, onChange, onLogin }: NavbarProps): JSX.Element {
   const location = useLocation();
   const totalBalance = useTotalBalance();
+  const totalBalanceStr = totalBalance !== undefined ? convertPriceToString(totalBalance) : '??';
 
   return (
     <div className={style.headerRoot}>
@@ -72,7 +74,7 @@ export function Navbar({ isLoggedIn, accountComponent, theme, onChange, onLogin 
                 gradient: theme === Theme.GRADIENT,
               })}
             >
-              ${totalBalance}
+              ${totalBalanceStr}
             </Link>
             <div className={style.accountComponent}>{accountComponent}</div>
           </div>

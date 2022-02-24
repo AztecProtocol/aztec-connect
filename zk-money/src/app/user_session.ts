@@ -1,7 +1,6 @@
 import {
   AccountId,
   AztecSdk,
-  createAztecSdk,
   EthAddress,
   GrumpkinAddress,
   SdkEvent,
@@ -9,6 +8,7 @@ import {
   EthereumProvider,
   JsonRpcProvider,
 } from '@aztec/sdk';
+import { SdkObs } from 'alt-model/top_level_context/sdk_obs';
 import { createHash } from 'crypto';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
@@ -163,6 +163,7 @@ export class UserSession extends EventEmitter {
 
   constructor(
     private readonly config: Config,
+    private readonly sdkObs: SdkObs,
     private readonly requiredNetwork: Network,
     initialActiveAsset: AppAssetId,
     initialLoginMode: LoginMode,
@@ -1011,6 +1012,21 @@ export class UserSession extends EventEmitter {
     await this.shieldForAliasForm.init();
   }
 
+  private awaitSdkCreated() {
+    return new Promise<void>(resolve => {
+      if (this.sdkObs.value) {
+        resolve();
+      } else {
+        const unlisten = this.sdkObs.listen(sdk => {
+          if (sdk) {
+            resolve();
+            unlisten?.();
+          }
+        });
+      }
+    });
+  }
+
   private async createSdk(autoReset = false) {
     await this.createSdkMutex.lock();
 
@@ -1026,20 +1042,8 @@ export class UserSession extends EventEmitter {
       await this.db.open();
     }
 
-    try {
-      const { rollupProviderUrl, chainId, debug, saveProvingKey } = this.config;
-      const minConfirmation = chainId === 1337 ? 1 : undefined; // If not ganache, use the default value.
-      this.sdk = await createAztecSdk(this.stableEthereumProvider, rollupProviderUrl, {
-        minConfirmation,
-        debug,
-        saveProvingKey,
-      });
-      // For testing.
-      (window as any).aztec = this.sdk;
-    } catch (e) {
-      debug(e);
-      throw new Error(`Failed to create sdk.`);
-    }
+    await this.awaitSdkCreated();
+    this.sdk = this.sdkObs.value!;
 
     // If local rollupContractAddress is empty, it is a new device or the data just got wiped out.
     if (!(await this.getLocalRollupContractAddress())) {

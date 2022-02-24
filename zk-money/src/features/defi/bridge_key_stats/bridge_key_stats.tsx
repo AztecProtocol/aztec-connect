@@ -1,28 +1,31 @@
+import { DefiRecipe, KeyBridgeStat } from 'alt-model/defi/types';
 import { bindStyle } from 'ui-components/util/classnames';
 import style from './bridge_key_stats.module.scss';
+import { getKeyStatItemProps } from './bridge_key_stat_items';
 
 const cx = bindStyle(style);
 
-function Item(props: { label: string; value: string }) {
+function renderItem(stat: KeyBridgeStat, recipe: DefiRecipe) {
+  const { label, value } = getKeyStatItemProps(stat, recipe);
   return (
     <div className={style.item}>
-      <div className={style.label}>{props.label}</div>
-      <div className={style.value}>{props.value}</div>
+      <div className={style.label}>{label}</div>
+      <div className={style.value}>{value}</div>
     </div>
   );
 }
 
 interface BridgeKeyStatsProps {
+  recipe: DefiRecipe;
   compact?: boolean;
 }
 
-export function BridgeKeyStats({ compact }: BridgeKeyStatsProps) {
-  // TODO: fetch stats from bridge adaptor
+export function BridgeKeyStats({ recipe, compact }: BridgeKeyStatsProps) {
   return (
     <div className={cx(style.root, { compact })}>
-      <Item label="Current yield" value="4.56%" />
-      <Item label="L1 liquidity" value="$10Bn" />
-      <Item label="Batch size" value="$150k" />
+      {renderItem(recipe.keyStat1, recipe)}
+      {renderItem(recipe.keyStat2, recipe)}
+      {renderItem(recipe.keyStat3, recipe)}
     </div>
   );
 }

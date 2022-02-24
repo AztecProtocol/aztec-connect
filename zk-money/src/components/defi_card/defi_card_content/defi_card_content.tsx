@@ -35,7 +35,7 @@ export const DefiCardContent = (props: DefiCardContentProps) => {
   return (
     <>
       <DefiCardDescription onOpenInformation={handleOpenInformation} text={props.recipe.shortDesc} />
-      <DefiCardStats />
+      <DefiCardStats recipe={props.recipe} />
       <DefiCardProgress />
       <DefiCardButton theme="gradient" text="Deposit zkETH" onClick={handleClickDeposit} />
       {isInformationOpen && <DefiCardInformation onCloseInformation={handleCloseInformation} />}

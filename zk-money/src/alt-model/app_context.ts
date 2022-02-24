@@ -1,4 +1,4 @@
-import { AccountId, EthereumProvider, AztecSdk } from '@aztec/sdk';
+import { AccountId, EthereumProvider } from '@aztec/sdk';
 import { createContext, useContext } from 'react';
 import { Provider, RollupService, UserSession } from '../app';
 import { Database } from '../app/database';
@@ -10,7 +10,6 @@ import { Config } from '../config';
 interface AppContextValue {
   config: Config;
   requiredNetwork: Network;
-  sdk?: AztecSdk;
   provider?: Provider;
   accountId?: AccountId;
   alias?: string;

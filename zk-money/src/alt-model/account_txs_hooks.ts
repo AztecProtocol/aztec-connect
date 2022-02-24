@@ -3,9 +3,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { listenAccountUpdated } from '.';
 import { parseAccountTx } from '../app';
 import { useApp } from './app_context';
+import { useInitialisedSdk } from './top_level_context';
 
 function useUserAccountTxs() {
-  const { sdk, accountId } = useApp();
+  const { accountId } = useApp();
+  const sdk = useInitialisedSdk();
   const [txs, setTxs] = useState<UserAccountTx[]>([]);
   useEffect(() => {
     setTxs([]);

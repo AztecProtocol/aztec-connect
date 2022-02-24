@@ -1,6 +1,6 @@
-import { AccountId, EthereumProvider, AztecSdk } from '@aztec/sdk';
+import { AccountId, EthereumProvider, AztecSdk, TxSettlementTime } from '@aztec/sdk';
 import { useEffect, useMemo, useRef } from 'react';
-import { assets, EthAccount, Provider, RollupService, ShieldForm, ShieldFormValues } from '../app';
+import { assets, EthAccount, Provider, RollupService, ShieldForm, ShieldFormValues, toBaseUnits } from '../app';
 import { useSpendableBalance } from './balance_hooks';
 import { useApp } from './app_context';
 import { AccountUtils } from '../app/account_utils';
@@ -10,6 +10,7 @@ import { KeyVault } from '../app/key_vault';
 import { Database } from '../app/database';
 import { Config } from '../config';
 import { useFormIsProcessing, useFormValues, useSyncProviderIntoForm } from './account_form_hooks';
+import { useInitialisedSdk } from './top_level_context';
 
 interface AttemptCreateShieldFormDeps {
   ethAccount?: EthAccount;
@@ -62,15 +63,17 @@ function attemptCreateShieldForm(deps: AttemptCreateShieldFormDeps) {
 
 export function useShieldForm(assetId: number) {
   const app = useApp();
-  const { sdk, requiredNetwork, provider } = app;
+  const { requiredNetwork, provider } = app;
+  const sdk = useInitialisedSdk();
   const spendableBalance = useSpendableBalance(assetId) ?? 0n;
   const rollupProviderStatus = useRollupProviderStatus();
 
   const accountUtils = useMemo(() => sdk && new AccountUtils(sdk, requiredNetwork), [sdk, requiredNetwork]);
 
-  const assetAddress = rollupProviderStatus?.blockchainStatus.assets[assetId].address;
+  const assetAddress = rollupProviderStatus?.blockchainStatus.assets[assetId]?.address;
   const ethAccount = useMemo(
-    () => accountUtils && new EthAccount(provider, accountUtils, assetId, assetAddress, requiredNetwork),
+    () =>
+      accountUtils && assetAddress && new EthAccount(provider, accountUtils, assetId, assetAddress, requiredNetwork),
     [provider, accountUtils, assetId, assetAddress, requiredNetwork],
   );
 
@@ -78,6 +81,7 @@ export function useShieldForm(assetId: number) {
   if (!shieldFormRef.current) {
     shieldFormRef.current = attemptCreateShieldForm({
       ...app,
+      sdk,
       ethAccount,
       accountUtils,
       assetId,
@@ -100,6 +104,39 @@ export function useShieldForm(assetId: number) {
   useSyncProviderIntoForm(shieldForm);
   const formValues = useFormValues<ShieldFormValues>(shieldForm);
   const processing = useFormIsProcessing(shieldForm);
+
+  // Refresh fees
+  const rpStatus = useRollupProviderStatus();
+  const rollupTime = rpStatus?.runtimeConfig.publishInterval;
+  const depositAmount = toBaseUnits(formValues?.amount.value ?? '', assets[assetId].decimals);
+  useEffect(() => {
+    if (sdk && shieldForm && shieldForm.isNewAccount && rollupTime !== undefined) {
+      sdk.getRegisterFees(assetId, depositAmount).then(fees => {
+        shieldForm.changeValues({
+          fees: {
+            value: [
+              { fee: fees[TxSettlementTime.NEXT_ROLLUP].value, time: rollupTime, speed: TxSettlementTime.NEXT_ROLLUP },
+              { fee: fees[TxSettlementTime.INSTANT].value, time: 0, speed: TxSettlementTime.INSTANT },
+            ],
+          },
+        });
+      });
+    }
+  }, [sdk, shieldForm, assetId, depositAmount, rollupTime]);
+  useEffect(() => {
+    if (sdk && shieldForm && !shieldForm.isNewAccount && rollupTime !== undefined) {
+      sdk.getDepositFees(assetId).then(fees => {
+        shieldForm.changeValues({
+          fees: {
+            value: [
+              { fee: fees[TxSettlementTime.NEXT_ROLLUP].value, time: rollupTime, speed: TxSettlementTime.NEXT_ROLLUP },
+              { fee: fees[TxSettlementTime.INSTANT].value, time: 0, speed: TxSettlementTime.INSTANT },
+            ],
+          },
+        });
+      });
+    }
+  }, [sdk, shieldForm, assetId, rollupTime]);
 
   return { formValues, shieldForm, processing };
 }
