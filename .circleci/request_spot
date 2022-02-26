@@ -8,7 +8,7 @@ export AWS_DEFAULT_REGION=us-east-2
 
 >&2 echo "Requesting instance ($SPEC)..."
 SIR=$(aws ec2 request-spot-instances \
-  --spot-price "0.90" \
+  --spot-price "2.00" \
   --instance-count 1 \
   --type "one-time" \
   --launch-specification file://$BUILD_SYSTEM_PATH/remote/$SPEC.json \
