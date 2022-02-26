@@ -18,7 +18,6 @@ describe('Claim Proof', () => {
       randomInt(),
       randomDataPath(),
       DefiInteractionNote.random(),
-      randomBytes(32),
       randomBigInt(),
       randomBigInt(),
     );

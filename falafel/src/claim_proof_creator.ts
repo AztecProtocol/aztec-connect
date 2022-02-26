@@ -96,7 +96,6 @@ export class ClaimProofCreator {
     );
     const interactionNotePath = await this.worldStateDb.getHashPath(RollupTreeId.DEFI, BigInt(interactionNoteIndex));
     const { outputValueA, outputValueB } = this.getOutputValues(claimNote, interactionNote);
-    const defiInteractionNoteDummyNullifierNonce = randomBytes(32); // WARNING: we might want to inject this randomness from a different part of the repo, and using a different random number generator?
 
     const claimProof = new ClaimProof(
       dataRoot,
@@ -107,7 +106,6 @@ export class ClaimProofCreator {
       interactionNoteIndex,
       interactionNotePath,
       interactionNote,
-      defiInteractionNoteDummyNullifierNonce,
       outputValueA,
       outputValueB,
     );

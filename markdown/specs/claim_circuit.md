@@ -90,7 +90,6 @@ Recall that all inner circuits must have the **same number of public inputs** as
       commitment,
   }
   ```
-- `defi_interaction_note_dummy_nullifier_nonce`
 - `output_value_a`
 - `output_value_b`
 
@@ -179,6 +178,6 @@ Ratio Checks (very complex code):
 Computed public inputs:
 
 - `nullifier_1 = pedersen(claim_note.commitment)`
-- `nullifier_2 = pedersen(defi_interaction_note.commitment, defi_interaction_dummy_nullifier_nonce)`
+- `nullifier_2 = pedersen(defi_interaction_note.commitment, claim_note.commitment)`
 - `output_note_commitment1 = pedersen(value_note_partial_commitment, output_value_1, output_asset_id_1, nullifier_1)`
 - `output_note_commitment2 = (second_output_virtual ^ second_output_real) ? pedersen(value_note_partial_commitment, output_value_2, output_asset_id_2, nullifier_2) : 0`

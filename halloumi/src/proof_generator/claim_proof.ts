@@ -16,8 +16,6 @@ export class ClaimProof {
     public defiInteractionNotePath: HashPath,
     public defiInteractionNote: DefiInteractionNote,
 
-    public defiInteractionNoteDummyNullifierNonce: Buffer,
-
     public outputValueA: bigint,
     public outputValueB: bigint,
   ) {}
@@ -34,8 +32,6 @@ export class ClaimProof {
       numToUInt32BE(this.defiInteractionNoteIndex),
       this.defiInteractionNotePath.toBuffer(),
       this.defiInteractionNote.toBuffer(),
-
-      this.defiInteractionNoteDummyNullifierNonce,
 
       toBufferBE(this.outputValueA, 32),
       toBufferBE(this.outputValueB, 32),
@@ -59,8 +55,6 @@ export class ClaimProof {
     offset += defiInteractionNotePath.adv;
     const defiInteractionNote = DefiInteractionNote.fromBuffer(buf.slice(offset));
     offset += DefiInteractionNote.LENGTH;
-    const defiInteractionNoteDummyNullifierNonce = buf.slice(offset, offset + 32);
-    offset += 32;
     const outputValueA = toBigIntBE(buf.slice(offset, offset + 32));
     offset += 32;
     const outputValueB = toBigIntBE(buf.slice(offset, offset + 32));
@@ -74,7 +68,6 @@ export class ClaimProof {
       defiInteractionNoteIndex,
       defiInteractionNotePath.elem,
       defiInteractionNote,
-      defiInteractionNoteDummyNullifierNonce,
       outputValueA,
       outputValueB,
     );
