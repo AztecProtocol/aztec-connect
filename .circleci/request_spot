@@ -2,16 +2,19 @@
 set -e
 
 NAME=$1
-SPEC=${2:-32core}
+CPUS=${2:-32}
 
 export AWS_DEFAULT_REGION=us-east-2
 
->&2 echo "Requesting instance ($SPEC)..."
+BID_PER_CPU_HOUR=0.03125
+PRICE=$(node -pe "($BID_PER_CPU_HOUR*$CPUS).toFixed(5)")
+
+>&2 echo "Requesting $CPUS cpu instance (bid: $PRICE)..."
 SIR=$(aws ec2 request-spot-instances \
-  --spot-price "2.00" \
+  --spot-price "$PRICE" \
   --instance-count 1 \
   --type "one-time" \
-  --launch-specification file://$BUILD_SYSTEM_PATH/remote/$SPEC.json \
+  --launch-specification file://$BUILD_SYSTEM_PATH/remote/${CPUS}core.json \
   --query "SpotInstanceRequests[*].[SpotInstanceRequestId]" \
   --output text)
 

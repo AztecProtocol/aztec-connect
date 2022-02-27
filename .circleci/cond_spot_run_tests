@@ -8,4 +8,4 @@ shift
 export REBUILD_PATTERNS=$PWD/.rebuild_patterns
 
 cd ./scripts
-cond_spot_run_script $REPOSITORY $JOB_NAME 32core ./run_tests $@
+cond_spot_run_script $REPOSITORY $JOB_NAME 32 ./run_tests $@

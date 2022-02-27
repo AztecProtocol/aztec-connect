@@ -22,7 +22,7 @@ jobs:
       - run:
           name: 'Build'
           working_directory: barretenberg
-          command: cond_spot_run_build barretenberg-wasm-linux-clang 64core ./dockerfiles/Dockerfile.wasm-linux-clang
+          command: cond_spot_run_build barretenberg-wasm-linux-clang 64 ./dockerfiles/Dockerfile.wasm-linux-clang
 
   x86_64-linux-gcc:
     docker:
@@ -36,7 +36,7 @@ jobs:
       - run:
           name: 'Build'
           working_directory: barretenberg
-          command: cond_spot_run_build barretenberg-x86_64-linux-gcc 64core ./dockerfiles/Dockerfile.x86_64-linux-gcc
+          command: cond_spot_run_build barretenberg-x86_64-linux-gcc 64 ./dockerfiles/Dockerfile.x86_64-linux-gcc
 
   x86_64-linux-clang:
     docker:
@@ -50,7 +50,7 @@ jobs:
       - run:
           name: 'Build'
           working_directory: barretenberg
-          command: cond_spot_run_build barretenberg-x86_64-linux-clang 64core ./dockerfiles/Dockerfile.x86_64-linux-clang
+          command: cond_spot_run_build barretenberg-x86_64-linux-clang 64 ./dockerfiles/Dockerfile.x86_64-linux-clang
 
   x86_64-linux-clang-assert:
     docker:
@@ -64,7 +64,7 @@ jobs:
       - run:
           name: 'Build'
           working_directory: barretenberg
-          command: cond_spot_run_build barretenberg-x86_64-linux-clang-assert 64core ./dockerfiles/Dockerfile.x86_64-linux-clang-assert
+          command: cond_spot_run_build barretenberg-x86_64-linux-clang-assert 64 ./dockerfiles/Dockerfile.x86_64-linux-clang-assert
 
   barretenberg-tests:
     docker:
@@ -188,7 +188,7 @@ jobs:
       - run:
           name: 'Build'
           working_directory: blockchain-vks
-          command: cond_spot_run_build blockchain-vks 32core
+          command: cond_spot_run_build blockchain-vks 32
 
   blockchain:
     machine:
@@ -413,7 +413,7 @@ jobs:
       - run:
           name: 'Build and test'
           working_directory: zk-money
-          command: cond_spot_run_build zk-money 32core
+          command: cond_spot_run_build zk-money 32
 
   website:
     docker:
