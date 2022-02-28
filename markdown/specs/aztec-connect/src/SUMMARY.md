@@ -4,6 +4,8 @@
 # Other
 
 - [Primitives](./primitives.md)
+    - [Schnorr Signatures](./schnorr.md)
+    - [Unsigned integers](./uint.md)
 - [Notes & Nullifiers](./notes_and_nullifiers.md)
 - [Defi Bridge Interface](./defi_bridge_interface.md)
 
