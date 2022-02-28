@@ -111,7 +111,7 @@ export function useShieldForm(assetId: number) {
   const depositAmount = toBaseUnits(formValues?.amount.value ?? '', assets[assetId].decimals);
   useEffect(() => {
     if (sdk && shieldForm && shieldForm.isNewAccount && rollupTime !== undefined) {
-      sdk.getRegisterFees(assetId, depositAmount).then(fees => {
+      sdk.getRegisterFees({ assetId, value: depositAmount }).then(fees => {
         shieldForm.changeValues({
           fees: {
             value: [

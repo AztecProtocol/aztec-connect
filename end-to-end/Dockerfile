@@ -9,4 +9,5 @@ COPY --from=0 /usr/src /usr/src
 WORKDIR /usr/src/end-to-end
 COPY . .
 RUN yarn install --frozen-lockfile
+ENV DEBUG=bb:*
 CMD ["yarn", "test"]

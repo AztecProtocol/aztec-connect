@@ -31,7 +31,7 @@ export class HttpJobWorker {
   private log = debug(`http_job_worker:${this.id.slice(0, 4).toString('hex')}`);
   private interruptableSleep = new InterruptableSleep();
   private abortController!: AbortController;
-  private pingTimeout!: NodeJS.Timeout;
+  private pingTimeout?: NodeJS.Timeout;
 
   constructor(public readonly server: Server, private url = 'http://localhost:8082') {}
 
@@ -45,7 +45,7 @@ export class HttpJobWorker {
     this.running = false;
     this.abortController.abort();
     this.interruptableSleep.interrupt();
-    clearTimeout(this.pingTimeout);
+    clearTimeout(this.pingTimeout!);
     await this.runningPromise;
     this.log('stop complete');
   }
@@ -83,23 +83,24 @@ export class HttpJobWorker {
         const repBuf = Protocol.pack(id, cmd, res);
 
         await fetch(`${this.url}/job-complete`, { body: repBuf, method: 'POST' }).catch(() => undefined);
-        clearTimeout(this.pingTimeout);
       } catch (err) {
         console.log(err);
-        clearTimeout(this.pingTimeout);
         await this.interruptableSleep.sleep(1000);
+      } finally {
+        clearTimeout(this.pingTimeout!);
+        this.pingTimeout = undefined;
       }
     }
     this.log('exiting function loop');
   }
 
   private async ping(jobId: Buffer) {
-    this.log('ping...');
-    try {
-      await fetch(`${this.url}/ping?job-id=${jobId.toString('hex')}`);
-    } finally {
-      this.pingTimeout = setTimeout(() => this.ping(jobId), 1000);
+    if (!this.pingTimeout) {
+      return;
     }
+    this.log(`ping job: ${jobId.toString('hex')}`);
+    await fetch(`${this.url}/ping?job-id=${jobId.toString('hex')}`).catch(() => undefined);
+    this.pingTimeout = setTimeout(() => this.ping(jobId), 1000);
   }
 
   private async process(cmd: number, data: Buffer) {

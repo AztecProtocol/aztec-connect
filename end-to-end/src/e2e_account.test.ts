@@ -2,11 +2,16 @@ import { AztecSdk, createAztecSdk, EthAddress, GrumpkinAddress, TxSettlementTime
 import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
+import createDebug from 'debug';
 
 jest.setTimeout(25 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
 
-const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost:8081' } = process.env;
+const {
+  ETHEREUM_HOST = 'http://localhost:8545',
+  ROLLUP_HOST = 'http://localhost:8081',
+  PRIVATE_KEY = '',
+} = process.env;
 
 describe('end-to-end account tests', () => {
   let provider: WalletProvider;
@@ -14,10 +19,12 @@ describe('end-to-end account tests', () => {
   let depositor: EthAddress;
   const assetId = 0;
   const awaitSettlementTimeout = 600;
+  const debug = createDebug('bb:e2e_account');
 
   beforeAll(async () => {
-    // Init sdk.
-    provider = await createFundedWalletProvider(ETHEREUM_HOST, 1);
+    debug(`funding initial ETH accounts...`);
+    const initialBalance = 2n * 10n ** 16n; // 0.02
+    provider = await createFundedWalletProvider(ETHEREUM_HOST, 1, 1, Buffer.from(PRIVATE_KEY, 'hex'), initialBalance);
     [depositor] = provider.getAccounts();
 
     sdk = await createAztecSdk(provider, ROLLUP_HOST, {
@@ -48,7 +55,7 @@ describe('end-to-end account tests', () => {
 
     expect(await sdk.getLatestAccountNonce(accountPubKey)).toBe(0);
 
-    // Create a new account and shield.
+    debug('creating new account and shielding...');
     // The recoveryPublicKey is a single use key allowing the addition of the trustedThirdPartyPublicKey.
     const user1 = await sdk.addUser(accountPrivateKey, 1);
     const signer1 = sdk.createSchnorrSigner(randomBytes(32));
@@ -59,16 +66,16 @@ describe('end-to-end account tests', () => {
     ]);
     const { recoveryPublicKey } = recoveryPayloads[0];
     {
-      const depositValue = sdk.toBaseUnits(assetId, '0.02');
+      const depositValue = sdk.toBaseUnits(assetId, '0.01');
       // in order to flush this tx through, we will pay for all slots in the rollup
-      const txFee = (await sdk.getRegisterFees(assetId, depositValue))[TxSettlementTime.INSTANT];
+      const txFee = (await sdk.getRegisterFees(depositValue))[TxSettlementTime.INSTANT];
 
       const controller = sdk.createRegisterController(
         user0.id,
         alias,
         signer1.getPublicKey(),
         recoveryPublicKey,
-        { assetId, value: depositValue },
+        depositValue,
         txFee,
         depositor,
       );
@@ -83,10 +90,11 @@ describe('end-to-end account tests', () => {
       expect(user1.getBalance(assetId)).toBe(BigInt(0));
 
       await controller.send();
+      debug(`waiting to settle...`);
       await controller.awaitSettlement(awaitSettlementTimeout);
 
       expect(user0.getBalance(assetId)).toBe(BigInt(0));
-      expect(user1.getBalance(assetId)).toBe(depositValue);
+      expect(user1.getBalance(assetId)).toBe(depositValue.value);
     }
 
     expect(await sdk.getAccountId(alias)).toEqual(user1.id);

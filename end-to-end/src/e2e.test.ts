@@ -2,6 +2,7 @@ import { AztecSdk, createAztecSdk, EthAddress, TxId, TxSettlementTime, WalletPro
 import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
+import createDebug from 'debug';
 
 jest.setTimeout(20 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
@@ -25,7 +26,7 @@ describe('end-to-end tests', () => {
   let sdk: AztecSdk;
   let addresses: EthAddress[] = [];
   const assetId = 0;
-  const awaitSettlementTimeout = 600;
+  const debug = createDebug('bb:e2e');
 
   const createUser = async (accountPrivateKey = randomBytes(32), nonce = 0) => {
     const userId = (await sdk.addUser(accountPrivateKey, nonce)).id;
@@ -35,6 +36,7 @@ describe('end-to-end tests', () => {
   };
 
   beforeAll(async () => {
+    debug(`funding initial ETH accounts...`);
     const initialBalance = 2n * 10n ** 16n; // 0.02
     provider = await createFundedWalletProvider(ETHEREUM_HOST, 3, 2, Buffer.from(PRIVATE_KEY, 'hex'), initialBalance);
     addresses = provider.getAccounts();
@@ -59,110 +61,117 @@ describe('end-to-end tests', () => {
   it('should deposit, transfer and withdraw funds', async () => {
     const depositValue = sdk.toBaseUnits(assetId, '0.015');
     const transferValue = sdk.toBaseUnits(assetId, '0.007');
-    const withdrawValueA = sdk.toBaseUnits(assetId, '0.008');
-    const withdrawValueB = sdk.toBaseUnits(assetId, '0.003');
+    const withdrawalValues = [sdk.toBaseUnits(assetId, '0.008'), sdk.toBaseUnits(assetId, '0.003')];
+    const depositFees = await sdk.getDepositFees(assetId);
+    const withdrawalFees = await sdk.getWithdrawFees(assetId);
+    const transferFees = await sdk.getTransferFees(assetId);
+    const initialPublicBalances: bigint[] = [];
 
     const { userId: userA, signer: signerA } = await createUser();
     const { userId: userB, signer: signerB } = await createUser();
+    const { userId: userC, signer: signerC } = await createUser();
+    const accounts = [userA, userB, userC];
+    const signers = [signerA, signerB, signerC];
 
-    let initialPublicBalance0: bigint;
-    let initialPublicBalance1: bigint;
+    const debugBalance = async (assetId: number, account: number) =>
+      debug(
+        `account ${account} public / private balance: ${sdk.fromBaseUnits(
+          await sdk.getPublicBalanceAv(assetId, addresses[account]),
+          true,
+        )} / ${sdk.fromBaseUnits(sdk.getBalanceAv(assetId, accounts[account]), true)}`,
+      );
+
     expect(sdk.getBalance(assetId, userA)).toBe(0n);
     expect(sdk.getBalance(assetId, userB)).toBe(0n);
 
-    const depositTxIds: TxId[] = [];
-
-    // UserA deposits from Address0.
+    // Rollup 0: Deposits.
     {
-      const depositor = addresses[0];
-      const [fee] = await sdk.getDepositFees(assetId);
-      const controller = sdk.createDepositController(userA, signerA, { assetId, value: depositValue }, fee, depositor);
-      await controller.createProof();
+      const depositTxIds: TxId[] = [];
 
-      const txHash = await controller.depositFundsToContract();
-      await sdk.getTransactionReceipt(txHash);
-      initialPublicBalance0 = await sdk.getPublicBalance(assetId, depositor);
+      for (let i = 0; i < 2; ++i) {
+        const depositor = addresses[i];
+        const signer = signers[i];
+        const user = accounts[i];
+        const fee = depositFees[i == 0 ? TxSettlementTime.NEXT_ROLLUP : TxSettlementTime.INSTANT];
+        debug(
+          `shielding ${sdk.fromBaseUnits(depositValue, true)} (fee: ${sdk.fromBaseUnits(
+            fee,
+          )}) from ${depositor.toString()} to account ${i}...`,
+        );
+        const controller = sdk.createDepositController(user, signer, depositValue, fee, depositor);
+        await controller.createProof();
 
-      await controller.sign();
-      depositTxIds.push(await controller.send());
+        const txHash = await controller.depositFundsToContract();
+        await sdk.getTransactionReceipt(txHash);
+        initialPublicBalances[i] = await sdk.getPublicBalance(assetId, depositor);
+
+        await controller.sign();
+        depositTxIds.push(await controller.send());
+      }
+
+      debug(`waiting to settle...`);
+      await Promise.all(depositTxIds.map(txId => sdk.awaitSettlement(txId)));
+      await debugBalance(assetId, 0);
+      await debugBalance(assetId, 1);
+      await debugBalance(assetId, 2);
+
+      expect(await sdk.getPublicBalance(assetId, addresses[0])).toBe(initialPublicBalances[0]);
+      expect(await sdk.getPublicBalance(assetId, addresses[1])).toBe(initialPublicBalances[1]);
+      expect(await sdk.getPublicBalance(assetId, addresses[2])).toBe(0n);
+      expect(sdk.getBalanceAv(assetId, userA)).toEqual(depositValue);
+      expect(sdk.getBalanceAv(assetId, userB)).toEqual(depositValue);
     }
 
-    // UserB deposits from Address1.
+    // Rollup 1: Withdrawals and transfers.
     {
-      const depositor = addresses[1];
-      const fee = (await sdk.getDepositFees(assetId))[TxSettlementTime.INSTANT];
-      const controller = sdk.createDepositController(userB, signerB, { assetId, value: depositValue }, fee, depositor);
-      await controller.createProof();
-      await controller.sign();
+      const txIds: TxId[] = [];
+      const withdrawalFee = withdrawalFees[TxSettlementTime.NEXT_ROLLUP];
+      const transferFee = transferFees[TxSettlementTime.INSTANT];
 
-      const txHash = await controller.depositFundsToContract();
-      await sdk.getTransactionReceipt(txHash);
-      initialPublicBalance1 = await sdk.getPublicBalance(assetId, depositor);
+      // UserA and UserB withdraws.
+      for (let i = 0; i < 2; ++i) {
+        const signer = signers[i];
+        const user = accounts[i];
+        const recipient = addresses[2];
+        debug(
+          `withdrawing ${sdk.fromBaseUnits(withdrawalValues[i], true)} (fee: ${sdk.fromBaseUnits(
+            withdrawalFee,
+          )}) from account ${i} to ${recipient.toString()}...`,
+        );
+        const controller = sdk.createWithdrawController(user, signer, withdrawalValues[i], withdrawalFee, recipient);
+        await controller.createProof();
+        txIds.push(await controller.send());
+      }
 
-      depositTxIds.push(await controller.send());
-    }
+      // UserB transfers to userA.
+      {
+        debug(
+          `transferring ${sdk.fromBaseUnits(transferValue, true)} (fee: ${sdk.fromBaseUnits(
+            transferFee,
+          )}) from account 1 to account 0...`,
+        );
+        const controller = sdk.createTransferController(userB, signerB, transferValue, transferFee, userA);
+        await controller.createProof();
+        txIds.push(await controller.send());
+      }
 
-    await Promise.all(depositTxIds.map(txId => sdk.awaitSettlement(txId, awaitSettlementTimeout)));
+      debug(`waiting to settle...`);
+      await Promise.all(txIds.map(txId => sdk.awaitSettlement(txId)));
+      await debugBalance(assetId, 0);
+      await debugBalance(assetId, 1);
+      await debugBalance(assetId, 2);
 
-    expect(await sdk.getPublicBalance(assetId, addresses[0])).toBe(initialPublicBalance0);
-    expect(await sdk.getPublicBalance(assetId, addresses[1])).toBe(initialPublicBalance1);
-    expect(await sdk.getPublicBalance(assetId, addresses[2])).toBe(0n);
-    expect(sdk.getBalance(assetId, userA)).toBe(depositValue);
-    expect(sdk.getBalance(assetId, userB)).toBe(depositValue);
-
-    const txIds: TxId[] = [];
-
-    // UserA withdraws to Address2.
-    const [withdrawFee] = await sdk.getWithdrawFees(assetId);
-    {
-      const recipient = addresses[2];
-      const controller = sdk.createWithdrawController(
-        userA,
-        signerA,
-        { assetId, value: withdrawValueA },
-        withdrawFee,
-        recipient,
+      expect(await sdk.getPublicBalance(assetId, addresses[0])).toBe(initialPublicBalances[0]);
+      expect(await sdk.getPublicBalance(assetId, addresses[1])).toBe(initialPublicBalances[1]);
+      expect(await sdk.getPublicBalance(assetId, addresses[2])).toBe(
+        withdrawalValues[0].value + withdrawalValues[1].value,
       );
-      await controller.createProof();
-      txIds.push(await controller.send());
-    }
-
-    // UserB withdraws to Address2.
-    {
-      const recipient = addresses[2];
-      const controller = sdk.createWithdrawController(
-        userB,
-        signerB,
-        { assetId, value: withdrawValueB },
-        withdrawFee,
-        recipient,
+      expect(sdk.getBalance(assetId, userA)).toBe(
+        depositValue.value - withdrawalValues[0].value - withdrawalFee.value + transferValue.value,
       );
-      await controller.createProof();
-      txIds.push(await controller.send());
-    }
-
-    // UserB transfers to userA.
-    const transferFee = (await sdk.getTransferFees(assetId))[TxSettlementTime.INSTANT];
-    {
-      const controller = sdk.createTransferController(
-        userB,
-        signerB,
-        { assetId, value: transferValue },
-        transferFee,
-        userA,
+      expect(sdk.getBalance(assetId, userB)).toBe(
+        depositValue.value - withdrawalValues[1].value - withdrawalFee.value - transferValue.value - transferFee.value,
       );
-      await controller.createProof();
-      txIds.push(await controller.send());
     }
-
-    await Promise.all(txIds.map(txId => sdk.awaitSettlement(txId, awaitSettlementTimeout)));
-
-    expect(await sdk.getPublicBalance(assetId, addresses[0])).toBe(initialPublicBalance0);
-    expect(await sdk.getPublicBalance(assetId, addresses[1])).toBe(initialPublicBalance1);
-    expect(await sdk.getPublicBalance(assetId, addresses[2])).toBe(withdrawValueA + withdrawValueB);
-    expect(sdk.getBalance(assetId, userA)).toBe(depositValue - withdrawValueA - withdrawFee.value + transferValue);
-    expect(sdk.getBalance(assetId, userB)).toBe(
-      depositValue - withdrawValueB - withdrawFee.value - transferValue - transferFee.value,
-    );
   });
 });

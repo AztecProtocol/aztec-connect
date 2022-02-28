@@ -10,15 +10,9 @@ import {
   EthAddress,
   toBaseUnits,
   TxSettlementTime,
-  WalletProvider
+  WalletProvider,
 } from '@aztec/sdk';
-import {
-  setBlockchainTime,
-  getCurrentBlockTime,
-  advanceBlocks,
-  TokenStore,
-  MainnetAddresses,
-} from '@aztec/blockchain';
+import { setBlockchainTime, getCurrentBlockTime, advanceBlocks, TokenStore, MainnetAddresses } from '@aztec/blockchain';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
 import { depositTokensToAztec, defiDepositTokens } from './sdk_utils';
@@ -177,13 +171,7 @@ describe('end-to-end async defi tests', () => {
       const fee = (await sdk.getDepositFees(ethAssetId))[
         i == accounts.length - 1 ? TxSettlementTime.INSTANT : TxSettlementTime.NEXT_ROLLUP
       ];
-      const controller = sdk.createDepositController(
-        userIds[i],
-        signer,
-        { assetId: ethAssetId, value: shieldValue },
-        fee,
-        depositor,
-      );
+      const controller = sdk.createDepositController(userIds[i], signer, shieldValue, fee, depositor);
       await controller.createProof();
       await controller.sign();
       const txHash = await controller.depositFundsToContract();
@@ -196,7 +184,7 @@ describe('end-to-end async defi tests', () => {
     await Promise.all(depositControllers.map(controller => controller.awaitSettlement(awaitSettlementTimeout)));
 
     for (const user of userIds) {
-      expect(sdk.getBalance(ethAssetId, user)).toEqual(shieldValue);
+      expect(sdk.getBalance(ethAssetId, user)).toEqual(shieldValue.value);
     }
 
     // now setup all of the interactions and purchase the required tokens
@@ -349,9 +337,7 @@ describe('end-to-end async defi tests', () => {
         continue;
       }
       // should have received more from the settlement of the first batch than we deposited, so we test for greater than
-      expect(sdk.getBalance(assetId, user1)).toBeGreaterThan(
-        spec.quantityReceived - amountDeposited + amountSettled,
-      );
+      expect(sdk.getBalance(assetId, user1)).toBeGreaterThan(spec.quantityReceived - amountDeposited + amountSettled);
     }
 
     // we now need to ensure that all of the second batch are finalised

@@ -66,7 +66,7 @@ describe('end-to-end tests', () => {
 
     const depositor = accounts[0];
     const [fee] = await sdk.getDepositFees(assetId);
-    const controller = sdk.createDepositController(userId, signer, { assetId, value: depositValue }, fee, depositor);
+    const controller = sdk.createDepositController(userId, signer, depositValue, fee, depositor);
     await controller.createProof();
 
     const depositTxHash = await controller.depositFundsToContract();
@@ -76,6 +76,6 @@ describe('end-to-end tests', () => {
     await controller.send();
     await controller.awaitSettlement(awaitSettlementTimeout);
 
-    expect(sdk.getBalance(assetId, userId)).toBe(depositValue);
+    expect(sdk.getBalanceAv(assetId, userId)).toEqual(depositValue);
   });
 });

@@ -1,5 +1,6 @@
 import {
   AccountId,
+  AssetValue,
   AztecSdk,
   createAztecSdk,
   EthAddress,
@@ -109,30 +110,30 @@ export class EthereumSdk extends EventEmitter {
     return this.aztecSdk.mint(assetId, value, ethAddress);
   }
 
-  public createDepositController(assetId: number, from: EthAddress, to: AccountId, value: bigint, fee: bigint) {
+  public createDepositController(from: EthAddress, to: AccountId, value: AssetValue, fee: AssetValue) {
     const userData = this.aztecSdk.getUserData(to);
     const aztecSigner = this.aztecSdk.createSchnorrSigner(userData.privateKey);
-    return this.aztecSdk.createDepositController(to, aztecSigner, { assetId, value }, { assetId, value: fee }, from);
+    return this.aztecSdk.createDepositController(to, aztecSigner, value, fee, from);
   }
 
   public async getDepositFees(assetId: number) {
     return this.aztecSdk.getDepositFees(assetId);
   }
 
-  public createWithdrawController(assetId: number, from: AccountId, to: EthAddress, value: bigint, fee: bigint) {
+  public createWithdrawController(from: AccountId, to: EthAddress, value: AssetValue, fee: AssetValue) {
     const userData = this.aztecSdk.getUserData(from);
     const aztecSigner = this.aztecSdk.createSchnorrSigner(userData.privateKey);
-    return this.aztecSdk.createWithdrawController(from, aztecSigner, { assetId, value }, { assetId, value: fee }, to);
+    return this.aztecSdk.createWithdrawController(from, aztecSigner, value, fee, to);
   }
 
   public async getWithdrawFees(assetId: number, recipient?: EthAddress) {
     return this.aztecSdk.getWithdrawFees(assetId, recipient);
   }
 
-  public createTransferController(assetId: number, from: AccountId, to: AccountId, value: bigint, fee: bigint) {
+  public createTransferController(from: AccountId, to: AccountId, value: AssetValue, fee: AssetValue) {
     const userData = this.aztecSdk.getUserData(from);
     const aztecSigner = this.aztecSdk.createSchnorrSigner(userData.privateKey);
-    return this.aztecSdk.createTransferController(from, aztecSigner, { assetId, value }, { assetId, value: fee }, to);
+    return this.aztecSdk.createTransferController(from, aztecSigner, value, fee, to);
   }
 
   public async getTransferFees(assetId: number) {
@@ -162,8 +163,8 @@ export class EthereumSdk extends EventEmitter {
     );
   }
 
-  public async getRegisterFees(assetId: number, depositValue = BigInt(0)) {
-    return this.aztecSdk.getRegisterFees(assetId, depositValue);
+  public async getRegisterFees(value: AssetValue) {
+    return this.aztecSdk.getRegisterFees(value);
   }
 
   public getUserData(accountId: AccountId) {
@@ -213,7 +214,7 @@ export class EthereumSdk extends EventEmitter {
   }
 
   public fromBaseUnits(assetId: number, value: bigint, precision?: number) {
-    return this.aztecSdk.fromBaseUnits(assetId, value, precision);
+    return this.aztecSdk.fromBaseUnits({ assetId, value }, false, precision);
   }
 
   public toBaseUnits(assetId: number, value: string) {

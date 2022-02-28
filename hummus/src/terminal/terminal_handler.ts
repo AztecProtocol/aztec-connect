@@ -303,11 +303,11 @@ export class TerminalHandler {
   private async deposit(valueStr: string) {
     this.assertRegistered();
     const value = this.app.getSdk().toBaseUnits(this.assetId, valueStr);
-    const [{ value: fee }] = await this.app.getSdk().getDepositFees(this.assetId);
-    const publicInput = value + fee;
+    const [fee] = await this.app.getSdk().getDepositFees(this.assetId);
+    const publicInput = value.value + fee.value;
     const depositor = this.app.getAddress();
     const userId = this.app.getUser().getUserData().id;
-    const controller = this.app.getSdk().createDepositController(this.assetId, depositor, userId, value, fee);
+    const controller = this.app.getSdk().createDepositController(depositor, userId, value, fee);
     const assetBalance = await this.app.getUser().getBalance(this.assetId);
     const pendingBalance = await controller.getPendingFunds();
     if (assetBalance + pendingBalance < publicInput) {
@@ -330,8 +330,8 @@ export class TerminalHandler {
     const userId = this.app.getUser().getUserData().id;
     const recipient = this.app.getAddress();
     const value = this.app.getSdk().toBaseUnits(this.assetId, valueStr);
-    const [{ value: fee }] = await this.app.getSdk().getWithdrawFees(this.assetId);
-    const controller = this.app.getSdk().createWithdrawController(this.assetId, userId, recipient, value, fee);
+    const [fee] = await this.app.getSdk().getWithdrawFees(this.assetId);
+    const controller = this.app.getSdk().createWithdrawController(userId, recipient, value, fee);
     await controller.send();
     this.printQueue.put(`withdrawl proof sent.\n`);
   }
@@ -344,8 +344,8 @@ export class TerminalHandler {
     }
     const userId = this.app.getUser().getUserData().id;
     const value = this.app.getSdk().toBaseUnits(this.assetId, valueStr);
-    const [{ value: fee }] = await this.app.getSdk().getTransferFees(this.assetId);
-    const controller = await this.app.getSdk().createTransferController(this.assetId, userId, to, value, fee);
+    const [fee] = await this.app.getSdk().getTransferFees(this.assetId);
+    const controller = this.app.getSdk().createTransferController(userId, to, value, fee);
     await controller.send();
     this.printQueue.put(`transfer proof sent.\n`);
   }

@@ -249,12 +249,13 @@ export class AztecSdk extends EventEmitter {
     return assetId;
   }
 
-  public fromBaseUnits(assetId: number, value: bigint, precision?: number) {
-    return this.blockchain.getAsset(assetId).fromBaseUnits(value, precision);
+  public fromBaseUnits({ assetId, value }: AssetValue, symbol = false, precision?: number) {
+    const v = this.blockchain.getAsset(assetId).fromBaseUnits(value, precision);
+    return symbol ? `${v} ${this.getAssetInfo(assetId).symbol}` : v;
   }
 
   public toBaseUnits(assetId: number, value: string) {
-    return this.blockchain.getAsset(assetId).toBaseUnits(value);
+    return { assetId, value: this.blockchain.getAsset(assetId).toBaseUnits(value) };
   }
 
   public getAssetInfo(assetId: number) {
@@ -346,7 +347,7 @@ export class AztecSdk extends EventEmitter {
 
     const [minTransferFee] = (await this.core.getTxFees(assetId))[TxType.TRANSFER];
     let additionalFee = BigInt(0);
-    if (requireSplit) {      
+    if (requireSplit) {
       additionalFee += minTransferFee.value;
     }
     if (assetId !== bridgeId.inputAssetIdA) {
@@ -356,10 +357,10 @@ export class AztecSdk extends EventEmitter {
     const values = defiFees.map(defiFee => {
       return {
         ...defiFee,
-        value: defiFee.value + additionalFee
+        value: defiFee.value + additionalFee,
       };
     });
-    
+
     return values;
   }
 
@@ -402,7 +403,7 @@ export class AztecSdk extends EventEmitter {
     );
   }
 
-  public async getRegisterFees(assetId: number, depositValue = BigInt(0)): Promise<AssetValue[]> {
+  public async getRegisterFees({ assetId, value: depositValue }: AssetValue): Promise<AssetValue[]> {
     const txFees = await this.core.getTxFees(assetId);
     const [depositFee] = txFees[TxType.DEPOSIT];
     return txFees[TxType.ACCOUNT].map(({ value, ...rest }) => ({
@@ -529,16 +530,28 @@ export class AztecSdk extends EventEmitter {
     return this.core.getSigningKeys(userId);
   }
 
+  // Deprecated.
   public async getPublicBalance(assetId: number, ethAddress: EthAddress) {
     return this.blockchain.getAsset(assetId).balanceOf(ethAddress);
+  }
+
+  // Rename to getPublicBalance().
+  public async getPublicBalanceAv(assetId: number, ethAddress: EthAddress) {
+    return { assetId, value: await this.blockchain.getAsset(assetId).balanceOf(ethAddress) };
   }
 
   public getBalances(userId: AccountId) {
     return this.core.getBalances(userId);
   }
 
+  // Deprecated.
   public getBalance(assetId: number, userId: AccountId) {
     return this.core.getBalance(assetId, userId);
+  }
+
+  // Rename to getBalance().
+  public getBalanceAv(assetId: number, userId: AccountId) {
+    return { assetId, value: this.core.getBalance(assetId, userId) };
   }
 
   public async getMaxSpendableValue(assetId: number, userId: AccountId) {

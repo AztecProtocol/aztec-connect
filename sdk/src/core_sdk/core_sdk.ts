@@ -838,7 +838,7 @@ export class CoreSdk extends EventEmitter {
     await this.getUserState(userId).awaitSynchronised();
   }
 
-  public async awaitSettlement(txId: TxId, timeout = 300) {
+  public async awaitSettlement(txId: TxId, timeout?: number) {
     const started = new Date().getTime();
     while (true) {
       if (timeout && new Date().getTime() - started > timeout * 1000) {
@@ -852,7 +852,7 @@ export class CoreSdk extends EventEmitter {
     }
   }
 
-  public async awaitDefiInteraction(txId: TxId, timeout = 300) {
+  public async awaitDefiInteraction(txId: TxId, timeout?: number) {
     const started = new Date().getTime();
     while (true) {
       if (timeout && new Date().getTime() - started > timeout * 1000) {

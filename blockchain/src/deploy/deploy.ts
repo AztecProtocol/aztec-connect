@@ -67,14 +67,14 @@ export async function deploy(
   await addAsset(rollup, signer, permitSupport, 8);
 
   const gasPrice = 20n * 10n ** 9n; // 20 gwei
-  const assetPrice = 1n * 10n ** 15n; // 1000 DAI/ETH
+  const daiPrice = 1n * 10n ** 15n; // 1000 DAI/ETH
   const btcPrice = 2n * 10n ** 2n; // 0.05 ETH/BTC
-  const initialTokenSupply = (initialEthSupply * 10n ** 18n) / assetPrice;
+  const initialTokenSupply = (initialEthSupply * 10n ** 18n) / daiPrice;
   await createPair(signer, uniswapRouter, asset, initialTokenSupply, initialEthSupply);
 
   const priceFeeds = [
     await deployPriceFeed(signer, gasPrice),
-    await deployPriceFeed(signer, assetPrice),
+    await deployPriceFeed(signer, daiPrice),
     await deployPriceFeed(signer, btcPrice),
   ];
 

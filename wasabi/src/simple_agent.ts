@@ -74,7 +74,7 @@ export class SimpleAgent extends Agent {
     const withdrawFee = (await this.sdk.getWithdrawFees(assetId))[0].value;
 
     const totalDeposit =
-      (await this.sdk.toBaseUnits(this.assetId, '1')) +
+      (await this.sdk.toBaseUnits(this.assetId, '1')).value +
       depositFee +
       BigInt(numTransfers) * transferFee +
       withdrawFee +
