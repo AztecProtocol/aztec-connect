@@ -1,7 +1,3 @@
----
-tags: Specs
----
-
 # Defi Bridge Contract Interface
 
 ## Types

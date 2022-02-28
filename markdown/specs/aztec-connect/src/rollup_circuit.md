@@ -1,18 +1,12 @@
----
-tags: Specs
----
-
-[edit link](https://hackmd.io/ou6xa5oAQIWmEepHZQEm-Q)
-
 # Rollup circuit
 
-### ◈ Circuit Description
+### Circuit Description
 
 The rollup circuit aggregates proofs from a defined set of ‘inner’ circuits.
 
 Each inner circuit has 17 public inputs. The rollup circuit will execute several defined subroutines on the public inputs.
 
-### ◈ Public Inputs: Detail
+### Public Inputs: Detail
 
 There are $28 + 12 \times \text{rollup_size}$ public inputs, in three sections:
 
@@ -50,7 +44,7 @@ The `public_inputs_hash` value is a SHA256 hash of the set of all join-split pub
 1. `public_owner`
 1. `public_asset_id`
 
-### ◈ Private Inputs: Detail
+### Private Inputs: Detail
 
 The following inputs are private to reduce proof size:
 
@@ -63,7 +57,7 @@ The following inputs are private to reduce proof size:
 1. `data_roots_paths`
 1. `data_roots_indices`
 
-### ◈ Index of Functions
+### Index of Functions
 
 - `Extract` **Extraction Function** extracts the public inputs from an inner proof, and validates the result matches the rollup’s inner public inputs
 - `Aggregate` **Proof Aggregation Function** for ultimate batch verification outside the circuit, given a verification key and (optional, defined by 4th input parameter) a previous output of Aggregate. Returns a BN254 point pair
@@ -73,7 +67,7 @@ The following inputs are private to reduce proof size:
 - `ProcessDefiDeposit` **Processes Defi Deposit** ensures that if a given inner proof is a defi deposit proof, it has a valid bridge id that matches one of the input bridge ids to the rollup. Further, it also adds the `defi_interaction_nonce` in the encrypted claim note of a defi deposit proof.
 - `ProcessClaim` **Process Claims** checks if the claim proof is using the correct defi root.
 
-### ◈ Circuit Logic (Pseudocode)
+### Circuit Logic (Pseudocode)
 
 1. Let `Q_0 = [0, 0]`
 1. Validate `num_inputs == N`

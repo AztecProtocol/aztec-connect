@@ -1,18 +1,14 @@
----
-tags: Specs
----
-
-# Aztec 2.0 - JoinSplit Circuit
+# JoinSplit Circuit
 
 [![hackmd-github-sync-badge](https://hackmd.io/zwjbbtxkTKm00nAOvAJY-w/badge)](https://hackmd.io/zwjbbtxkTKm00nAOvAJY-w)
 
-### ◈ Circuit Description
+### Circuit Description
 
 This circuit allows notes to be spent.
 
 The circuit takes in two input notes, and two new output notes, and updates the Note Tree and Nullifier Tree accordingly.
 
-### ◈ Circuit Inputs: Summary
+### Circuit Inputs: Summary
 
 The inputs for the join-split circuit are:
 
@@ -20,7 +16,7 @@ $$ \text{JoinSplit Inputs} = (\text{Public Inputs}, \text{Private Inputs}) \in \
 
 Where the field $\mathbb{F}_p$ is from the BN254 specification.
 
-### ◈ Public Inputs: Detail
+### Public Inputs: Detail
 
 1. `proof_id`
 1. `output_note_commitment_1`
@@ -42,7 +38,7 @@ Where the field $\mathbb{F}_p$ is from the BN254 specification.
 
 1. `defi_root` // note: this will not be used by the circuit, but is included so that the number of public inputs is uniform across base-level circuits.
 
-### ◈ Private Inputs: Detail
+### Private Inputs: Detail
 
 1. `asset_id` // TODO: possibly redundant field, given this info is already contained within input_note_i
 1. `nonce` // TODO: possibly redundant field, given this info is already contained within input_note_i
@@ -102,7 +98,7 @@ Where the field $\mathbb{F}_p$ is from the BN254 specification.
 1. `signing_pk` (a.k.a. spending public key)
 1. `signature`
 
-### ◈ Index of Functions
+### Index of Functions
 
 In the Pseudocode to follow, we use the following function names:
 
@@ -117,7 +113,7 @@ In the Pseudocode to follow, we use the following function names:
 - `public_key()` derives a public key from a given secret key.
 - `update()` **Merkle Update Function** inserts a set of compressed note commitments into the note tree and validates the correctness of the associated merkle root update.
 
-### ◈ Circuit Logic (Pseudocode)
+### Circuit Logic (Pseudocode)
 
 #### Establish booleans
 

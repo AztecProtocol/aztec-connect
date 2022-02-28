@@ -1,16 +1,12 @@
----
-tags: Specs
----
-[edit](https://hackmd.io/hyOqv7pqQeqJ6tQL578Lzg)
 # Root Rollup circuit
 
-### ◈ Circuit Description
+### Circuit Description
 
 This circuit rolls up other rollup proofs.
 
 It is defined by a parameter `rollup_num`, of inner rollups. Let's also denote $M:=$`rollup_num` for convenience.
 
-### ◈ Circuit Inputs: Summary
+### Circuit Inputs: Summary
 
 The inputs for the root rollup circuit are:
 
@@ -18,7 +14,7 @@ $$ \text{Root Rollup Inputs} = (\text{Public Inputs}, \text{Private Inputs}) \in
 
 As previously, the field $\mathbb{F}_p$ is from the BN254 specification.
 
-### ◈ Public Inputs 
+### Public Inputs 
 
 The root rollup circuit contains `17` public inputs.
 
@@ -49,7 +45,7 @@ The two $\mathbb{G}_1$ elements, $[P_1], [P_2]$, represent the `recursive_proof_
 
 $e([P_1], [x]) == e([P_2], [1])$, where $[x]$ is the $\mathbb{G}_2$ element produced by the Ignition trusted setup ceremony.
 
-### ◈ Broadcasted Inputs
+### Broadcasted Inputs
 
 In addition to the public inputs, the preimage to the above SHA256 hash is also broadcasted with the proof.
 
@@ -59,12 +55,12 @@ This is because, for a verifier smart contract on the Ethereum blockchain networ
 
 The `rollup_benficiary` is just added to the circuit to ensure the proof constructor can pay who they intend.
 
-### ◈ Private Inputs
+### Private Inputs
 
 1. The recursive proof output of each inner rollup proof (4 $\mathbb{F}_q$ elements represented as 16 $\mathbb{F}_p$ elements, see above)
 2. The remaining public inputs of each rollup proof
 
-### ◈ Circuit Logic (Pseudocode)
+### Circuit Logic (Pseudocode)
 1. For $i=2,..,M+1$, check that $Q_i = aggregate(PI_{i-1}, \pi_{i-1}, vk, Q_{i-1}, (i > 1))$
 2. For $i=2,..,M$, check that `new_data_root`$_{i-1}$=`old_data_root`$_i$.
 3. Validate `Update(old_data_roots_root, new_data_roots_root, rollup_id, new_data_root_M)`

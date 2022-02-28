@@ -1,9 +1,3 @@
----
-tags: Specs
----
-
-[edit](https://hackmd.io/q1fcVLaLRZmtXNfkXvgwWA)
-
 ## Rollup Contract
 
 Rollup contract is responsible for processing Aztec zkRollups, including relaying them to a verifier contract for validation and performing all relevant token transfers and defi bridge interactions.

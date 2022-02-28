@@ -1,12 +1,6 @@
----
-tags: Specs
----
-
-[edit](https://hackmd.io/1jn-lUazQcWjIaY7x6WZzg)
-
 # Account Circuit
 
-### ◈ Circuit Description
+### Circuit Description
 
 The Account Circuit allows the transfer of keys that control notes.
 Unlike the Rollup Circuit, which _always_ adds nullifiers to the tree, the Account Circuit _conditionally_ adds nullifiers to the tree.
@@ -21,7 +15,7 @@ Unlike the Rollup Circuit, which _always_ adds nullifiers to the tree, the Accou
 1. If a spending key becomes compromised, Alice nullifies `account_id = (alice, 1)`, associating new spending keys with `(alice, 2)`
 1. Alice transfers funds at `(account_public_key, 1)`, to `(account_public_key, 2)`
 
-### ◈ Circuit Inputs: Summary
+### Circuit Inputs: Summary
 
 The inputs for the account circuit are:
 
@@ -29,7 +23,7 @@ $$ \text{Account Inputs} = (\text{Public Inputs}, \text{Private Inputs}) \in \ma
 
 As previously, the field $\mathbb{F}_p$ is from the BN254 specification.
 
-### ◈ Public Inputs: Detail
+### Public Inputs: Detail
 
 Recall that all inner circuits must have the **same number of public inputs** as they will be used homogenously by the rollup circuit.
 
@@ -48,7 +42,7 @@ Recall that all inner circuits must have the **same number of public inputs** as
 1. `defi_deposit_value`
 1. `defi_root`
 
-### ◈ Private Inputs: Detail
+### Private Inputs: Detail
 
 1. `input_note_1.val`
 2. `input_note_1.secret`
@@ -76,11 +70,11 @@ Recall that all inner circuits must have the **same number of public inputs** as
 24. `nk` (nullifier private key)
 25. `signature`
 
-### ◈ Index of Functions
+### Index of Functions
 
 None
 
-### ◈ Circuit Logic (Pseudocode)
+### Circuit Logic (Pseudocode)
 
 Computed vars:
 
