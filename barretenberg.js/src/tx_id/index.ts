@@ -7,6 +7,10 @@ export class TxId {
     }
   }
 
+  static deserialize(buffer: Buffer, offset: number) {
+    return { elem: new TxId(buffer.slice(offset, offset + 32)), adv: 32 };
+  }
+
   public static fromString(hash: string) {
     return new TxId(Buffer.from(hash.replace(/^0x/i, ''), 'hex'));
   }

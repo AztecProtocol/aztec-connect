@@ -1,4 +1,5 @@
 import { Column, Entity, Index, PrimaryColumn, AfterLoad } from 'typeorm';
+import { bufferColumn } from './init_entities';
 import { bigintTransformer } from './transformer';
 
 @Entity({ name: 'claim' })
@@ -10,9 +11,10 @@ export class ClaimDao {
   @PrimaryColumn()
   public id!: number;
 
-  @Column({ unique: true })
+  // The nullifier of this claim's claim note.
+  @Column(...bufferColumn({ length: 32, unique: true }))
   @Index()
-  public nullifier!: Buffer; // the nullifier of this claim's claim note
+  public nullifier!: Buffer;
 
   @Column('text', { transformer: [bigintTransformer] })
   public bridgeId!: bigint;
@@ -20,14 +22,16 @@ export class ClaimDao {
   @Column('text', { transformer: [bigintTransformer] })
   public depositValue!: bigint;
 
-  @Column()
+  @Column(...bufferColumn())
   public partialState!: Buffer;
 
-  @Column()
+  @Column(...bufferColumn())
   public partialStateSecretEphPubKey!: Buffer;
 
-  @Column()
-  public inputNullifier!: Buffer; // the nullifier included in the preimage of this claim's partial claim note. (This is the nullifier of input note 1 of the defi deposit tx).
+  // The nullifier included in the preimage of this claim's partial claim note.
+  // This is the nullifier of input note 1 of the defi deposit tx.
+  @Column(...bufferColumn({ length: 32 }))
+  public inputNullifier!: Buffer;
 
   @Column()
   public interactionNonce!: number;

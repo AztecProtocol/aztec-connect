@@ -1,13 +1,10 @@
 import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
-import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { Blockchain } from '@aztec/barretenberg/blockchain';
-import { Block } from '@aztec/barretenberg/block_source';
 import { BridgeConfig, BridgeStatus, convertToBridgeStatus } from '@aztec/barretenberg/bridge_id';
 import { Blake2s } from '@aztec/barretenberg/crypto';
 import { InitHelpers } from '@aztec/barretenberg/environment';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
-import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { InitialWorldState, RollupProviderStatus, RuntimeConfig } from '@aztec/barretenberg/rollup_provider';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
@@ -16,7 +13,6 @@ import { CliProofGenerator, HttpJobServer, HttpJobServers, ProofGenerator } from
 import { BridgeResolver } from './bridge';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
-import { parseInteractionResult } from './rollup_db/parse_interaction_result';
 import { RollupPipelineFactory } from './rollup_pipeline';
 import { TxFeeResolver } from './tx_fee_resolver';
 import { WorldState } from './world_state';
@@ -247,24 +243,8 @@ export class Server {
     return this.rollupDb.getUnsettledPaymentTxs();
   }
 
-  public async getBlocks(from: number): Promise<Block[]> {
-    const { nextRollupId } = await this.blockchain.getBlockchainStatus();
-    if (from >= nextRollupId) {
-      return [];
-    }
-
-    const rollups = await this.rollupDb.getSettledRollups(from);
-    return rollups.map(dao => ({
-      txHash: dao.ethTxHash!,
-      created: dao.created,
-      rollupId: dao.id,
-      rollupSize: RollupProofData.getRollupSizeFromBuffer(dao.rollupProof.proofData!),
-      rollupProofData: dao.rollupProof.proofData!,
-      offchainTxData: dao.rollupProof.txs.map(tx => tx.offchainTxData),
-      interactionResult: parseInteractionResult(dao.interactionResult!),
-      gasPrice: toBigIntBE(dao.gasPrice!),
-      gasUsed: dao.gasUsed!,
-    }));
+  public getBlockBuffers(from: number) {
+    return this.worldState.getBlockBuffers(from);
   }
 
   public async getLatestRollupId() {

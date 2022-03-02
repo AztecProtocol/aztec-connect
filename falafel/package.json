@@ -38,7 +38,7 @@
     "graphql-playground-middleware-koa": "^1.6.19",
     "halloumi": "file:../halloumi/dest",
     "koa": "^2.7.0",
-    "koa-compress": "^3.0.0",
+    "koa-compress": "^5.1.0",
     "koa-router": "^7.4.0",
     "log-timestamp": "^0.3.0",
     "moment": "^2.25.3",

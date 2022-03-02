@@ -17,6 +17,13 @@ export class DefiInteractionNote {
     public readonly result: boolean,
   ) {}
 
+  static deserialize(buffer: Buffer, offset: number) {
+    return {
+      elem: DefiInteractionNote.fromBuffer(buffer.slice(offset, offset + DefiInteractionNote.LENGTH)),
+      adv: DefiInteractionNote.LENGTH,
+    };
+  }
+
   static random() {
     return new DefiInteractionNote(
       BridgeId.random(),

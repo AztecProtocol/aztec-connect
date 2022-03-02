@@ -1,6 +1,5 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
-import { Block, BlockServerResponse, GetBlocksServerResponse } from '@aztec/barretenberg/block_source';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
 import {
   AssetValueServerResponse,
@@ -10,6 +9,7 @@ import {
   TxPostData,
   TxServerResponse,
 } from '@aztec/barretenberg/rollup_provider';
+import { numToInt32BE, serializeBufferArrayToVector } from '@aztec/barretenberg/serialize';
 import cors from '@koa/cors';
 import { ApolloServer } from 'apollo-server-koa';
 import graphqlPlayground from 'graphql-playground-middleware-koa';
@@ -25,16 +25,6 @@ import { Metrics } from './metrics';
 import { JoinSplitTxResolver, RollupResolver, ServerStatusResolver, TxResolver } from './resolver';
 import { Server } from './server';
 import { Tx } from './tx_receiver';
-
-const toBlockResponse = (block: Block): BlockServerResponse => ({
-  ...block,
-  txHash: block.txHash.toString(),
-  rollupProofData: block.rollupProofData.toString('hex'),
-  offchainTxData: block.offchainTxData.map(d => d.toString('hex')),
-  interactionResult: block.interactionResult.map(r => r.toBuffer().toString('hex')),
-  created: block.created.toISOString(),
-  gasPrice: block.gasPrice.toString(),
-});
 
 const toTxResponse = ({ proofData, offchainTxData }: TxDao): TxServerResponse => ({
   proofData: proofData.toString('hex'),
@@ -127,11 +117,12 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   });
 
   router.get('/get-blocks', recordMetric, async (ctx: Koa.Context) => {
-    const blocks = await server.getBlocks(+ctx.query.from);
-    const response: GetBlocksServerResponse = {
-      latestRollupId: await server.getLatestRollupId(),
-      blocks: blocks.map(toBlockResponse),
-    };
+    const blocks = server.getBlockBuffers(+ctx.query.from);
+    const response = Buffer.concat([
+      numToInt32BE(await server.getLatestRollupId()),
+      serializeBufferArrayToVector(blocks),
+    ]);
+    ctx.compress = true;
     ctx.body = response;
     ctx.status = 200;
   });
@@ -258,7 +249,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
 
   const app = new Koa();
   app.proxy = true;
-  app.use(compress());
+  app.use(compress({ br: false } as any));
   app.use(cors());
   app.use(exceptionHandler);
   app.use(router.routes());

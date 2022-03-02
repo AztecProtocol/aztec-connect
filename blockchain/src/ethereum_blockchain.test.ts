@@ -31,17 +31,18 @@ describe('ethereum_blockchain', () => {
   let blockchain: EthereumBlockchain;
   let contracts: Mockify<Contracts>;
 
-  const generateBlock = (rollupId: number) => ({
-    txHash: TxHash.random(),
-    created: new Date(),
-    rollupId,
-    rollupSize: 2,
-    rollupProofData: RollupProofData.randomData(1, 2).toBuffer(),
-    offchainTxData: [],
-    interactionResult: [],
-    gasPrice: BigInt(0),
-    gasUsed: 0,
-  });
+  const generateBlock = (rollupId: number) =>
+    new Block(
+      TxHash.random(),
+      new Date(),
+      rollupId,
+      2,
+      RollupProofData.randomData(1, 2).toBuffer(),
+      [],
+      [],
+      0,
+      BigInt(0),
+    );
 
   const blocks: Block[] = [generateBlock(0), generateBlock(1), generateBlock(2)];
 

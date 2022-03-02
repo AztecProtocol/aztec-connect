@@ -438,17 +438,17 @@ export class RollupProcessor {
     const proofIds = rollupProofData.innerProofData.filter(p => !p.isPadding()).map(p => p.proofId);
     const offchainTxData = sliceOffchainTxData(proofIds, Buffer.from(offchainTxDataBuf.slice(2), 'hex'));
 
-    return {
-      created: new Date(tx.timestamp! * 1000),
-      txHash: TxHash.fromString(tx.hash),
-      rollupProofData: rollupProofData.toBuffer(),
+    return new Block(
+      TxHash.fromString(tx.hash),
+      new Date(tx.timestamp! * 1000),
+      rollupProofData.rollupId,
+      rollupProofData.rollupSize,
+      rollupProofData.toBuffer(),
       offchainTxData,
       interactionResult,
-      rollupId: rollupProofData.rollupId,
-      rollupSize: rollupProofData.rollupSize,
-      gasPrice: BigInt(tx.gasPrice!.toString()),
-      gasUsed: receipt.gasUsed.toNumber(),
-    };
+      receipt.gasUsed.toNumber(),
+      BigInt(tx.gasPrice!.toString()),
+    );
   }
 
   protected getContractWithSigner(options: SendTxOptions) {

@@ -11,12 +11,12 @@ import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { InitHelpers } from '@aztec/barretenberg/environment';
 import { AssetMetricsDao } from './entity/asset_metrics';
 import { RollupDao, RollupProofDao, TxDao } from './entity';
-import { getTxTypeFromInnerProofData } from './get_tx_type';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
 import { RollupPipeline, RollupPipelineFactory } from './rollup_pipeline';
-import { AccountDao } from './entity/account';
-import { ClaimDao } from './entity/claim';
+import { AccountDao, ClaimDao } from './entity';
+import { parseInteractionResult } from './rollup_db/parse_interaction_result';
+import { getTxTypeFromInnerProofData } from './get_tx_type';
 
 const innerProofDataToTxDao = (tx: InnerProofData, offchainTxData: Buffer, created: Date, txType: TxType) => {
   const txDao = new TxDao();
@@ -32,9 +32,24 @@ const innerProofDataToTxDao = (tx: InnerProofData, offchainTxData: Buffer, creat
   return txDao;
 };
 
+const rollupDaoToBlockBuffer = (dao: RollupDao) => {
+  return new Block(
+    dao.ethTxHash!,
+    dao.created,
+    dao.id,
+    dao.rollupProof.rollupSize,
+    dao.rollupProof.proofData!,
+    dao.rollupProof.txs.map(tx => tx.offchainTxData),
+    parseInteractionResult(dao.interactionResult!),
+    dao.gasUsed!,
+    toBigIntBE(dao.gasPrice!),
+  ).toBuffer();
+};
+
 export class WorldState {
   private blockQueue = new MemoryFifo<Block>();
   private pipeline!: RollupPipeline;
+  private blockBufferCache: Buffer[] = [];
 
   constructor(
     public rollupDb: RollupDb,
@@ -50,12 +65,20 @@ export class WorldState {
 
     await this.syncState();
 
+    // Get all settled rollups, and convert them to block buffers for shipping to clients.
+    // New blocks will be appended as they are received.
+    this.blockBufferCache = (await this.rollupDb.getSettledRollups(0)).map(rollupDaoToBlockBuffer);
+
     await this.startNewPipeline();
 
     this.blockchain.on('block', block => this.blockQueue.put(block));
     await this.blockchain.start(await this.rollupDb.getNextRollupId());
 
     this.blockQueue.process(block => this.handleBlock(block));
+  }
+
+  public getBlockBuffers(from: number) {
+    return this.blockBufferCache.slice(from);
   }
 
   public getNextPublishTime() {
@@ -345,6 +368,9 @@ export class WorldState {
       await this.rollupDb.addRollup(rollupDao);
       this.metrics.rollupReceived(rollupDao!);
     }
+
+    const rollupDao = await this.rollupDb.getRollup(rollup.rollupId);
+    this.blockBufferCache.push(rollupDaoToBlockBuffer(rollupDao!));
   }
 
   private async getAssetMetrics(rollup: RollupProofData, interactionResults: DefiInteractionNote[]) {

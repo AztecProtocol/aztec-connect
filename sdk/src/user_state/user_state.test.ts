@@ -348,17 +348,18 @@ describe('user state', () => {
     rollupProofData: RollupProofData,
     offchainTxData: Buffer[],
     interactionResult: DefiInteractionNote[] = [],
-  ): Block => ({
-    txHash: TxHash.random(),
-    rollupId: rollupProofData.rollupId,
-    rollupSize: 1,
-    rollupProofData: rollupProofData.toBuffer(),
-    offchainTxData,
-    interactionResult,
-    created: new Date(),
-    gasUsed: 0,
-    gasPrice: 0n,
-  });
+  ): Block =>
+    new Block(
+      TxHash.random(),
+      new Date(),
+      rollupProofData.rollupId,
+      1,
+      rollupProofData.toBuffer(),
+      offchainTxData,
+      interactionResult,
+      0,
+      0n,
+    );
 
   const createRollupBlock = (
     innerProofs: { proofData: InnerProofData; offchainTxData: { toBuffer(): Buffer } }[] = [],

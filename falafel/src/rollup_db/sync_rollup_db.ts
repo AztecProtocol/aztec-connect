@@ -215,7 +215,9 @@ export class SyncRollupDb {
   }
 
   public async updateClaimsWithResultRollupId(interactionNonce: number, interactionResultRollupId: number) {
-    return this.synchronise(() => this.rollupDb.updateClaimsWithResultRollupId(interactionNonce, interactionResultRollupId));
+    return this.synchronise(() =>
+      this.rollupDb.updateClaimsWithResultRollupId(interactionNonce, interactionResultRollupId),
+    );
   }
 
   public async confirmClaimed(nullifier: Buffer, claimed: Date) {

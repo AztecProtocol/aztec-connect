@@ -7,6 +7,14 @@ export class TxHash {
     }
   }
 
+  static fromBuffer(buffer: Buffer) {
+    return new TxHash(buffer);
+  }
+
+  static deserialize(buffer: Buffer, offset: number) {
+    return { elem: new TxHash(buffer.slice(offset, offset + 32)), adv: 32 };
+  }
+
   public static fromString(hash: string) {
     return new TxHash(Buffer.from(hash.replace(/^0x/i, ''), 'hex'));
   }

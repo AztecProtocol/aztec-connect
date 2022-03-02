@@ -21,8 +21,15 @@ import { InitHelpers } from '@aztec/barretenberg/environment';
 
 async function main() {
   const { ormConfig, provider, signingAddress, ethConfig, configurator, bridgeConfigs } = await getConfig();
-  const { rollupContractAddress, feeDistributorAddress, priceFeedContractAddresses, apiPrefix, serverAuthToken, port, feePayingAssetAddresses } =
-    configurator.getConfVars();
+  const {
+    rollupContractAddress,
+    feeDistributorAddress,
+    priceFeedContractAddresses,
+    apiPrefix,
+    serverAuthToken,
+    port,
+    feePayingAssetAddresses,
+  } = configurator.getConfVars();
 
   const connection = await createConnection(ormConfig);
   const blockchain = await EthereumBlockchain.new(

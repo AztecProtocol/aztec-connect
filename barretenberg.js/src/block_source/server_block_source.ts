@@ -1,39 +1,9 @@
 import { BlockSource, Block } from '.';
 import { EventEmitter } from 'events';
-import { DefiInteractionNote } from '../note_algorithms';
 import { fetch } from '../iso_fetch';
-import { TxHash } from '../blockchain';
+import { Deserializer } from '../serialize';
 // import createDebug from 'debug';
 // const debug = createDebug('bb:server_block_source');
-
-export interface BlockServerResponse {
-  txHash: string;
-  created: string;
-  rollupId: number;
-  rollupSize: number;
-  rollupProofData: string;
-  offchainTxData: string[];
-  interactionResult: string[];
-  gasPrice: string;
-  gasUsed: number;
-}
-
-export interface GetBlocksServerResponse {
-  latestRollupId: number;
-  blocks: BlockServerResponse[];
-}
-
-// const debug = createDebug('bb:server_block_source');
-
-const toBlock = (block: BlockServerResponse): Block => ({
-  ...block,
-  txHash: TxHash.fromString(block.txHash),
-  rollupProofData: Buffer.from(block.rollupProofData, 'hex'),
-  offchainTxData: block.offchainTxData.map(p => Buffer.from(p, 'hex')),
-  interactionResult: block.interactionResult.map(r => DefiInteractionNote.fromBuffer(Buffer.from(r, 'hex'))),
-  created: new Date(block.created),
-  gasPrice: BigInt(block.gasPrice),
-});
 
 export class ServerBlockSource extends EventEmitter implements BlockSource {
   private running = false;
@@ -103,10 +73,11 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
   public async getBlocks(from: number) {
     const url = new URL(`${this.baseUrl}/get-blocks`);
     url.searchParams.append('from', from.toString());
-    const response = await this.awaitSucceed(() => fetch(url.toString()));
-    const result = (await response.json()) as GetBlocksServerResponse;
-    this.latestRollupId = result.latestRollupId;
-    return result.blocks.map(toBlock);
+    const response = await this.awaitSucceed(() => fetch(url.toString(), { headers: { 'Accept-encoding': 'gzip' } }));
+    const result = Buffer.from(await response.arrayBuffer());
+    const des = new Deserializer(result);
+    this.latestRollupId = des.int32();
+    return des.deserializeArray(Block.deserialize);
   }
 
   private async sleepOrInterrupted(ms: number) {
