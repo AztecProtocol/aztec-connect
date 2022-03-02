@@ -48,7 +48,15 @@ export class JoinSplitTxFactory {
     const notes = [...inputNotes];
     const inputTreeNotes = notes.map(
       n =>
-        new TreeNote(n.owner.publicKey, n.value, n.assetId, n.owner.nonce, n.secret, n.creatorPubKey, n.inputNullifier),
+        new TreeNote(
+          n.owner.publicKey,
+          n.value,
+          n.assetId,
+          n.owner.accountNonce,
+          n.secret,
+          n.creatorPubKey,
+          n.inputNullifier,
+        ),
     );
 
     // Add gibberish notes to ensure we have two notes.
@@ -145,7 +153,7 @@ export class JoinSplitTxFactory {
       owner.publicKey,
       value,
       assetId,
-      owner.nonce,
+      owner.accountNonce,
       inputNullifier,
       ephPrivKey,
       this.grumpkin,

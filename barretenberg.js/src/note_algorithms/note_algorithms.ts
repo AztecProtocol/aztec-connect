@@ -37,7 +37,7 @@ export class NoteAlgorithms {
     // Currently this is only used for creating the value notes from a claim note.
     // Given these notes are owned by the creator of the claim note, we can leave creator pubkey as 0.
     this.wasm.transferToHeap(Buffer.alloc(32), 96);
-    this.wasm.call('notes__value_note_partial_commitment', 0, 32, 96, owner.nonce, 0);
+    this.wasm.call('notes__value_note_partial_commitment', 0, 32, 96, owner.accountNonce, 0);
     return Buffer.from(this.wasm.sliceMemory(0, 32));
   }
 
@@ -77,11 +77,7 @@ export class NoteAlgorithms {
     return Buffer.from(this.wasm.sliceMemory(0, 32));
   }
 
-  public accountNoteCommitment(
-    accountAliasId: AccountAliasId,
-    publicKey: GrumpkinAddress,
-    signingKey: Buffer,
-  ) {
+  public accountNoteCommitment(accountAliasId: AccountAliasId, publicKey: GrumpkinAddress, signingKey: Buffer) {
     this.wasm.transferToHeap(accountAliasId.toBuffer(), 0);
     this.wasm.transferToHeap(publicKey.toBuffer(), 32);
     this.wasm.transferToHeap(signingKey, 64);

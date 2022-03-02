@@ -93,7 +93,7 @@ Where the field $\mathbb{F}_p$ is from the BN254 specification.
 1. `account_private_key` (a.k.a. nullifier private key)
 1. `alias_hash`
 1. `account_note_index`
-1. `account_path`
+1. `account_note_path`
 
 1. `signing_pk` (a.k.a. spending public key)
 1. `signature`
@@ -264,7 +264,7 @@ for i = 1,2
 #### Verify Account Ownership
 
 ```
-check membership(account_note_commitment, account_note_index, account_path, data_tree_root)
+check membership(account_note_commitment, account_note_index, account_note_path, data_tree_root)
 
 let message =
   (

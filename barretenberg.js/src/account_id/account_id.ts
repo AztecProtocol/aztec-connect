@@ -1,7 +1,7 @@
 import { GrumpkinAddress } from '../address';
 
 export class AccountId {
-  constructor(public publicKey: GrumpkinAddress, public nonce: number) {}
+  constructor(public publicKey: GrumpkinAddress, public accountNonce: number) {}
 
   public static fromBuffer(id: Buffer) {
     if (id.length !== 68) {
@@ -9,18 +9,18 @@ export class AccountId {
     }
 
     const publicKey = new GrumpkinAddress(id.slice(0, 64));
-    const nonce = id.readUInt32BE(64);
-    return new AccountId(publicKey, nonce);
+    const accountNonce = id.readUInt32BE(64);
+    return new AccountId(publicKey, accountNonce);
   }
 
   public static fromString(idStr: string) {
-    const [match, publicKeyStr, nonceStr] = idStr.match(/^0x([0-9a-f]{128}) \(([0-9]+)\)$/i) || [];
+    const [match, publicKeyStr, accountNonceStr] = idStr.match(/^0x([0-9a-f]{128}) \(([0-9]+)\)$/i) || [];
     if (!match) {
       throw new Error('Invalid id string.');
     }
 
     const publicKey = GrumpkinAddress.fromString(publicKeyStr);
-    return new AccountId(publicKey, +nonceStr);
+    return new AccountId(publicKey, +accountNonceStr);
   }
 
   public static random() {
@@ -33,12 +33,12 @@ export class AccountId {
   }
 
   toBuffer() {
-    const nonceBuf = Buffer.alloc(4);
-    nonceBuf.writeUInt32BE(this.nonce);
-    return Buffer.concat([this.publicKey.toBuffer(), nonceBuf]);
+    const accountNonceBuf = Buffer.alloc(4);
+    accountNonceBuf.writeUInt32BE(this.accountNonce);
+    return Buffer.concat([this.publicKey.toBuffer(), accountNonceBuf]);
   }
 
   toString() {
-    return `${this.publicKey.toString()} (${this.nonce})`;
+    return `${this.publicKey.toString()} (${this.accountNonce})`;
   }
 }

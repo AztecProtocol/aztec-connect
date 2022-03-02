@@ -235,7 +235,7 @@ export const UserAccount: React.FunctionComponent<UserAccountProps> = ({
             </DropdownTitle>
             <DropdownItemRoot>
               <DropdownItem>
-                <Text text={`Account Nonce: ${userId.nonce}`} nowrap />
+                <Text text={`Account Nonce: ${userId.accountNonce}`} nowrap />
               </DropdownItem>
               {version === AccountVersion.V1 && (
                 <DropdownItem>
@@ -251,7 +251,7 @@ export const UserAccount: React.FunctionComponent<UserAccountProps> = ({
                   />
                 </DropdownItem>
               )}
-              {userId.nonce < latestUserNonce && (
+              {userId.accountNonce < latestUserNonce && (
                 <DropdownItem>
                   <TextLink
                     text="Migrate Forgotten Balance"

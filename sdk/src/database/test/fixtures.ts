@@ -44,7 +44,7 @@ export const randomUser = (): UserData => {
     id,
     privateKey: randomBytes(32),
     publicKey: id.publicKey,
-    nonce: id.nonce,
+    nonce: id.accountNonce,
     aliasHash: AliasHash.random(),
     syncedToRollup: randomInt(),
   };

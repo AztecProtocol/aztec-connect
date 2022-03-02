@@ -65,9 +65,9 @@ describe('compute_nullifier', () => {
   });
 
   it('should compute correct alias id nullifier', async () => {
-    const nonce = 1;
-    const accountAliasId = AccountAliasId.fromAlias('pebble', nonce, blake2s);
+    const accountNonce = 1;
+    const accountAliasId = AccountAliasId.fromAlias('pebble', accountNonce, blake2s);
     const nullifier = noteAlgos.accountAliasIdNullifier(accountAliasId);
-    expect(nullifier.toString('hex')).toEqual('224e858e256231793201058f10a1408dbc3dd1ed70cf172df0d675737993bda9');
+    expect(nullifier.toString('hex')).toEqual('296ffc495fd4a753552f43a3018b3725ffdbf38a882d4475fadc12ea93b5178f');
   });
 });

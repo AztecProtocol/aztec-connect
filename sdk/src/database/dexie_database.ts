@@ -96,7 +96,7 @@ const dexieUserToUser = (user: DexieUser): UserData => {
   return {
     id,
     publicKey: id.publicKey,
-    nonce: id.nonce,
+    nonce: id.accountNonce,
     privateKey: Buffer.from(user.privateKey),
     syncedToRollup: user.syncedToRollup,
     aliasHash: user.aliasHash ? new AliasHash(Buffer.from(user.aliasHash)) : undefined,
