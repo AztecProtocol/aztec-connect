@@ -215,11 +215,19 @@ describe('end-to-end defi tests', () => {
       }
 
       debug(`waiting for defi interactions to complete...`);
+      const statusBefore = await sdk.getRemoteStatus();
+      const bridgeStatusBefore = statusBefore.bridgeStatus.find(value => value.bridgeId == ethToDaiBridge.toBigInt());
+      expect(bridgeStatusBefore);
+      expect(BigInt(bridgeStatusBefore!.gasAccrued)).toBeGreaterThan(0n);
       await Promise.all(defiControllers.map(controller => controller.awaitDefiInteraction()));
 
       debug(`waiting for claims to settle...`);
       await flushClaim();
       await Promise.all(defiControllers.map(controller => controller.awaitSettlement()));
+      const statusAfter = await sdk.getRemoteStatus();
+      const bridgeStatusAfter = statusAfter.bridgeStatus.find(value => value.bridgeId == ethToDaiBridge.toBigInt());
+      expect(bridgeStatusAfter);
+      expect(BigInt(bridgeStatusAfter!.gasAccrued)).toBe(0n);
 
       // Check results.
       await Promise.all(defiVerifications.map(x => x()));

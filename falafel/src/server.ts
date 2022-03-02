@@ -18,6 +18,7 @@ import { TxFeeResolver } from './tx_fee_resolver';
 import { WorldState } from './world_state';
 import { Configurator } from './configurator';
 import { Tx, TxReceiver } from './tx_receiver';
+import { BridgeProfile } from './pipeline_coordinator/rollup_profiler';
 
 export class Server {
   private blake: Blake2s;
@@ -67,7 +68,7 @@ export class Server {
       feeGasPriceMultiplier,
       numInnerRollupTxs * numOuterRollupProofs,
       publishInterval,
-      feePayingAssetAddresses
+      feePayingAssetAddresses,
     );
 
     switch (proofGeneratorMode) {
@@ -173,13 +174,24 @@ export class Server {
   public async getStatus(): Promise<RollupProviderStatus> {
     const status = await this.blockchain.getBlockchainStatus();
     const nextPublish = this.worldState.getNextPublishTime();
+    const txPoolProfile = this.worldState.getTxPoolProfile();
     const bridgeStats: BridgeStatus[] = [];
     for (const bc of this.bridgeConfigs) {
       const rt = nextPublish.bridgeTimeouts.get(bc.bridgeId);
+      let gasAccrued = 0n;
+      const nextRollupBridgeProfile = txPoolProfile.nextRollupProfile.bridgeProfiles.get(bc.bridgeId);
+      const pendingBridgeProfile = txPoolProfile.pendingBridgeStats.get(bc.bridgeId);
+      if (nextRollupBridgeProfile) {
+        gasAccrued = nextRollupBridgeProfile!.gasAccrued;
+      } else if (pendingBridgeProfile && pendingBridgeProfile.gasAccrued) {
+        gasAccrued = pendingBridgeProfile.gasAccrued;
+      }
+
       const bs = convertToBridgeStatus(
         bc,
         rt?.rollupNumber,
         rt?.timeout,
+        gasAccrued,
         this.txFeeResolver.getFullBridgeGas(bc.bridgeId),
       );
       bridgeStats.push(bs);

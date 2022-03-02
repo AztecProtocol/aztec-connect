@@ -142,7 +142,7 @@ describe('Profile Rollup', () => {
     expect(rollupProfile.rollupSize).toBe(20);
     expect(rollupProfile.gasBalance).toBe(BASE_GAS * -20n);
     expect(rollupProfile.bridgeProfiles).toBeTruthy();
-    expect(rollupProfile.bridgeProfiles.length).toBe(0);
+    expect([...rollupProfile.bridgeProfiles.values()].length).toBe(0);
     expect(rollupProfile.totalTxs).toBe(0);
   });
 
@@ -166,7 +166,7 @@ describe('Profile Rollup', () => {
     expect(rollupProfile.rollupSize).toBe(20);
     expect(rollupProfile.gasBalance).toBe(-11n * BASE_GAS); // 11 empty slots
     expect(rollupProfile.bridgeProfiles).toBeTruthy();
-    expect(rollupProfile.bridgeProfiles.length).toBe(0);
+    expect([...rollupProfile.bridgeProfiles.values()].length).toBe(0);
     expect(rollupProfile.earliestTx.getTime()).toEqual(txs[0].created.getTime());
     expect(rollupProfile.latestTx.getTime()).toEqual(txs[8].created.getTime());
     expect(rollupProfile.totalTxs).toBe(9);
@@ -192,7 +192,7 @@ describe('Profile Rollup', () => {
     expect(rollupProfile.rollupSize).toBe(20);
     expect(rollupProfile.gasBalance).toBe(-6n * BASE_GAS); // 11 empty slots but 5 are paid for with excess gas
     expect(rollupProfile.bridgeProfiles).toBeTruthy();
-    expect(rollupProfile.bridgeProfiles.length).toBe(0);
+    expect([...rollupProfile.bridgeProfiles.values()].length).toBe(0);
     expect(rollupProfile.earliestTx.getTime()).toEqual(txs[0].created.getTime());
     expect(rollupProfile.latestTx.getTime()).toEqual(txs[8].created.getTime());
     expect(rollupProfile.totalTxs).toBe(9);
@@ -218,13 +218,13 @@ describe('Profile Rollup', () => {
     expect(rollupProfile.rollupSize).toBe(20);
     expect(rollupProfile.gasBalance).toBe(BASE_GAS); // 11 empty slots but we have 12 slots worth of excess gas
     expect(rollupProfile.bridgeProfiles).toBeTruthy();
-    expect(rollupProfile.bridgeProfiles.length).toBe(0);
+    expect([...rollupProfile.bridgeProfiles.values()].length).toBe(0);
     expect(rollupProfile.earliestTx.getTime()).toEqual(txs[0].created.getTime());
     expect(rollupProfile.latestTx.getTime()).toEqual(txs[8].created.getTime());
     expect(rollupProfile.totalTxs).toBe(9);
   });
 
-  it('gives profile for payment and defi txs', () => {
+  it.only('gives profile for payment and defi txs', () => {
     const txs = [
       mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
       mockTx(1, { txType: TxType.ACCOUNT, txFeeAssetId: 0 }),
@@ -312,15 +312,16 @@ describe('Profile Rollup', () => {
     expectedGasBalance -= 13n * BASE_GAS;
     expect(rollupProfile.gasBalance).toEqual(expectedGasBalance);
     expect(rollupProfile.bridgeProfiles).toBeTruthy();
-    expect(rollupProfile.bridgeProfiles.length).toBe(2);
+
+    expect([...rollupProfile.bridgeProfiles.values()].length).toBe(2);
     expect(rollupProfile.totalTxs).toBe(17);
 
     const bridgeProfiles: BridgeProfile[] = [
       {
         bridgeId: bridgeConfigs[0].bridgeId,
         numTxs: 6,
-        totalGasCost: getBridgeCost(bridgeConfigs[0].bridgeId),
-        totalGasEarnt: rollupTxs
+        gasThreshold: getBridgeCost(bridgeConfigs[0].bridgeId),
+        gasAccrued: rollupTxs
           .filter(tx => tx.bridgeId && tx.bridgeId === bridgeConfigs[0].bridgeId)
           .map(tx => getSingleBridgeCost(bridgeConfigs[0].bridgeId) + tx.excessGas)
           .reduce((p, n) => n + p, 0n),
@@ -330,8 +331,8 @@ describe('Profile Rollup', () => {
       {
         bridgeId: bridgeConfigs[1].bridgeId,
         numTxs: 2,
-        totalGasCost: getBridgeCost(bridgeConfigs[1].bridgeId),
-        totalGasEarnt: rollupTxs
+        gasThreshold: getBridgeCost(bridgeConfigs[1].bridgeId),
+        gasAccrued: rollupTxs
           .filter(tx => tx.bridgeId && tx.bridgeId === bridgeConfigs[1].bridgeId)
           .map(tx => getSingleBridgeCost(bridgeConfigs[1].bridgeId) + tx.excessGas)
           .reduce((p, n) => n + p, 0n),
@@ -339,6 +340,6 @@ describe('Profile Rollup', () => {
         latestTx: txs[16].created,
       },
     ];
-    expect(rollupProfile.bridgeProfiles).toEqual(bridgeProfiles);
+    expect([...rollupProfile.bridgeProfiles.values()]).toEqual(bridgeProfiles);
   });
 });

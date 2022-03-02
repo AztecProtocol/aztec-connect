@@ -3,7 +3,8 @@ import { BridgeConfig } from './bridge_config';
 export interface BridgeStatus {
   bridgeId: bigint;
   numTxs: number;
-  gas: string;
+  gasThreshold: string;
+  gasAccrued: string;
   rollupFrequency: number;
   nextRollupNumber?: number;
   nextPublishTime?: Date;
@@ -20,12 +21,14 @@ export function convertToBridgeStatus(
   bridgeConfig: BridgeConfig,
   rollupNumber: number | undefined,
   publishTime: Date | undefined,
-  gas: bigint,
+  gasAccrued: bigint,
+  gasThreshold: bigint,
 ) {
   return {
     bridgeId: bridgeConfig.bridgeId,
     numTxs: bridgeConfig.numTxs,
-    gas: gas.toString(),
+    gasThreshold: gasThreshold.toString(),
+    gasAccrued: gasAccrued.toString(),
     rollupFrequency: bridgeConfig.rollupFrequency,
     nextRollupNumber: rollupNumber,
     nextPublishTime: publishTime,
