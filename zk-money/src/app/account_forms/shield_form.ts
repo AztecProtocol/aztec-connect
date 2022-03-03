@@ -100,7 +100,7 @@ const initialShieldFormValues = {
     value: { asset: assets[0], txAmountLimit: 0n },
   },
   amount: {
-    value: '',
+    value: '0',
     required: true,
   },
   maxAmount: {
