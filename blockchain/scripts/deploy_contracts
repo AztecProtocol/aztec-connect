@@ -23,7 +23,7 @@ case $VERSION_TAG in
 esac
 
 # Get the last network that we deployed to.
-cd ./terraform/dev
+cd $TF_DIR
 ensure_terraform
 export TF_IN_AUTOMATION=1
 terraform init -input=false -backend-config="key=$DEPLOY_TAG/blockchain"
