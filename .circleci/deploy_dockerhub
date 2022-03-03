@@ -2,8 +2,8 @@
 set -e
 
 if [ -z "$COMMIT_TAG" ]; then
-  echo "Can only push tagged builds to dockerhub."
-  exit 1
+  echo "Will only push tagged builds to dockerhub. Skipping."
+  exit 0
 fi
 
 REPOSITORY=$1

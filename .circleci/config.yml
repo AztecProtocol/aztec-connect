@@ -495,7 +495,7 @@ jobs:
             cd prometheus && deploy prometheus && cd ..
             cd grafana && deploy grafana && cd ..
 
-  deploy-dev:
+  deploy:
     docker:
       - image: aztecprotocol/build-image
     steps:
@@ -518,45 +518,6 @@ jobs:
       - run:
           name: 'barretenberg.js'
           working_directory: barretenberg.js
-          command: deploy_ecr barretenberg.js
-      - run:
-          name: 'blockchain'
-          working_directory: blockchain
-          command: ./scripts/deploy-dev mainnet-fork
-      - run:
-          name: 'halloumi'
-          working_directory: halloumi
-          command: deploy halloumi
-      - run:
-          name: 'falafel'
-          working_directory: falafel
-          command: deploy falafel
-      - run:
-          name: 'sdk'
-          working_directory: sdk
-          command: deploy_ecr sdk
-      - run:
-          name: 'wasabi'
-          working_directory: wasabi
-          command: deploy wasabi
-      - run:
-          name: 'zk-money'
-          working_directory: zk-money
-          command: |
-            deploy_ecr zk-money
-            deploy_s3 zk-money
-
-  deploy-prod:
-    docker:
-      - image: aztecprotocol/build-image
-    steps:
-      - checkout
-      - *setup_env
-      - setup_remote_docker:
-          version: 19.03.13
-      - run:
-          name: 'barretenberg.js'
-          working_directory: barretenberg.js
           command: |
             deploy_ecr barretenberg.js
             deploy_npm barretenberg.js
@@ -565,13 +526,8 @@ jobs:
           working_directory: blockchain
           command: |
             deploy_ecr blockchain
+            ./scripts/deploy_contracts
             deploy_npm blockchain
-      - run:
-          name: 'sdk'
-          working_directory: sdk
-          command: |
-            deploy_ecr sdk
-            deploy_npm sdk
       - run:
           name: 'halloumi'
           working_directory: halloumi
@@ -583,6 +539,16 @@ jobs:
             deploy falafel
             deploy_dockerhub falafel
       - run:
+          name: 'sdk'
+          working_directory: sdk
+          command: |
+            deploy_ecr sdk
+            deploy_npm sdk
+      - run:
+          name: 'wasabi'
+          working_directory: wasabi
+          command: deploy wasabi
+      - run:
           name: 'zk-money'
           working_directory: zk-money
           command: |
@@ -591,7 +557,7 @@ jobs:
 
 tag_filter: &tag_filter
   tags:
-    only: /v[0-9]+(\.[0-9]+)*/
+    only: /v[0-9]+(\.[0-9]+)*(-[a-zA-Z-]+\.[0-9]+)?/
 
 workflows:
   build:
@@ -716,7 +682,7 @@ workflows:
             branches:
               only:
                 - master
-      - deploy-dev:
+      - deploy:
           requires:
             - x86_64-linux-gcc
             - barretenberg-tests
@@ -731,6 +697,8 @@ workflows:
             - e2e-payment
             - e2e-account
             - e2e-defi
+            - e2e-element
+            - e2e-non-fee-assets
             - wasabi
             - zk-money
           filters:
@@ -738,15 +706,4 @@ workflows:
               only:
                 - master
                 - defi-bridge-project
-      - deploy-prod:
-          requires:
-            - e2e-prover
-            - e2e-payment
-            - e2e-account
-            - e2e-defi
-            - zk-money
-          filters:
-            branches:
-              ignore: /.*/
-            tags:
-              only: /v[0-9]+(\.[0-9]+)*/
+            *tag_filter

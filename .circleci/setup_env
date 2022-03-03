@@ -15,14 +15,33 @@ JOB_NAME=$4
 GIT_REPOSITORY_URL=$5
 
 BUILD_SYSTEM_PATH=$(pwd)
-PROJECT=$(cat ../PROJECT)
+VERSION=$(cat ../VERSION)
 
-# If tagged e.g. v2.0.123, version is v2.0, otherwise dev.
 if [ -n "$COMMIT_TAG" ]; then
-  VERSION=$(echo "$COMMIT_TAG" | grep -oP "v\d+.\d+")
+  # We're tagged e.g. v2.1.123 or v2.1.123-testnet.0.
+  # First we check that the tag matches the VERSION file.
+  COMMIT_TAG_VERSION=$(echo "$COMMIT_TAG" | grep -oP "v\d+.\d+")
+  if [ "$COMMIT_TAG_VERSION" != "$VERSION" ]; then
+    echo "Commit tag $COMMIT_TAG does not match repo version $VERSION."
+    exit 1
+  fi
+
+  # Extract the version tag from the commit tag, if it has one, e.g. testnet.
+  # If we have one, we look something like v2.1.123-testnet.0. This is a "non production" release.
+  VERSION_TAG=$(echo "$COMMIT_TAG" | grep -oP ".*-\K(.*)(?=\.\d+)")
+  if [ -z "$VERSION_TAG" ]; then
+    # If we don't have one, we look something like v2.1.123. This is a production release.
+    VERSION_TAG=prod
+  fi
 else
-  VERSION=dev
+  # We have no commit tag. This is one of our development project branches.
+  VERSION_TAG=dev
 fi
+
+# The deploy tag (used in api paths, subdomains), is concatenation of the version and version tag, e.g. v2.1-dev.
+# The terraform that will be executed (if it exists) is named after the version tag, e.g. ./terraform/dev.
+DEPLOY_TAG=$VERSION-$VERSION_TAG
+TF_DIR=./terraform/$VERSION_TAG
 
 echo export BUILD_SYSTEM_PATH=$BUILD_SYSTEM_PATH >> $BASH_ENV
 echo export SSH_CONFIG_PATH=$BUILD_SYSTEM_PATH/remote/ssh_config >> $BASH_ENV
@@ -38,8 +57,9 @@ echo export COMMIT_BRANCH=$COMMIT_BRANCH >> $BASH_ENV
 echo export COMMIT_TAG=$COMMIT_TAG >> $BASH_ENV
 echo export JOB_NAME=$JOB_NAME >> $BASH_ENV
 echo export GIT_REPOSITORY_URL=$GIT_REPOSITORY_URL >> $BASH_ENV
-echo export DEPLOY_TAG=$PROJECT-$VERSION >> $BASH_ENV
-echo export TF_DIR=./terraform/$VERSION >> $BASH_ENV
+echo export VERSION_TAG=$VERSION_TAG >> $BASH_ENV
+echo export DEPLOY_TAG=$DEPLOY_TAG >> $BASH_ENV
+echo export TF_DIR=$TF_DIR >> $BASH_ENV
 cat $BASH_ENV
 
 # Having written the variables to $BASH_ENV, we now want to set them in this shell context.
