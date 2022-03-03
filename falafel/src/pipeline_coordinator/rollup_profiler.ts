@@ -6,8 +6,8 @@ import { ProofData } from '@aztec/barretenberg/client_proofs';
 export interface BridgeProfile {
   bridgeId: bigint;
   numTxs: number;
-  totalGasCost: bigint;
-  totalGasEarnt: bigint;
+  gasThreshold: bigint;
+  gasAccrued: bigint;
   earliestTx: Date;
   latestTx: Date;
 }
@@ -21,7 +21,7 @@ export interface RollupProfile {
   latestTx: Date;
   innerChains: number;
   outerChains: number;
-  bridgeProfiles: BridgeProfile[];
+  bridgeProfiles: Map<bigint, BridgeProfile>;
 }
 
 export function emptyProfile(rollupSize: number) {
@@ -34,7 +34,7 @@ export function emptyProfile(rollupSize: number) {
     latestTx: new Date(0),
     innerChains: 0,
     outerChains: 0,
-    bridgeProfiles: [],
+    bridgeProfiles: new Map(),
   };
   return rp;
 }
@@ -94,8 +94,8 @@ export function profileRollup(
         bridgeProfile = {
           bridgeId,
           numTxs: 0,
-          totalGasCost: bridgeGasCost,
-          totalGasEarnt: 0n,
+          gasThreshold: bridgeGasCost,
+          gasAccrued: 0n,
           earliestTx: tx.tx.created,
           latestTx: tx.tx.created,
         };
@@ -106,7 +106,7 @@ export function profileRollup(
       bridgeProfile.numTxs++;
       // this is the gas provided above and beyond the gas constant for defi deposits
       const gasTowardsBridge = feeResolver.getSingleBridgeTxGas(tx.bridgeId) + tx.excessGas;
-      bridgeProfile.totalGasEarnt += gasTowardsBridge;
+      bridgeProfile.gasAccrued += gasTowardsBridge;
       // add this back onto the gas balance for the rollup
       rollupProfile.gasBalance += gasTowardsBridge;
       if (bridgeProfile.earliestTx > tx.tx.created) {
@@ -117,7 +117,7 @@ export function profileRollup(
       }
     }
   }
-  rollupProfile.bridgeProfiles = [...bridgeProfiles.values()];
+  rollupProfile.bridgeProfiles = bridgeProfiles;
   const numEmptySlots = rollupSize - allTxs.length;
   // now we have accounted for all transactions in this rollup, it's just the empty slots
   rollupProfile.gasBalance -= BigInt(numEmptySlots) * BigInt(feeResolver.getBaseTxGas());

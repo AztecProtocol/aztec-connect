@@ -702,7 +702,7 @@ export class UserSession extends EventEmitter {
       // Add the old account to the sdk.
       const nonce = 1;
       const prevUserId = new AccountId(this.keyVaultV0.accountPublicKey, nonce);
-      await this.accountUtils.addUser(this.keyVaultV0.accountPrivateKey, prevUserId.nonce);
+      await this.accountUtils.addUser(this.keyVaultV0.accountPrivateKey, prevUserId.accountNonce);
 
       // Metamask won't show the popup if two signature requests happen one after another.
       // Wait for half a second before asking the user to sign a message again.
@@ -726,7 +726,7 @@ export class UserSession extends EventEmitter {
       // Add the user to the sdk so that the account tx could be added to it.
       // Don't sync from the beginning. It's a new account so it doesn't have any txs from previous blocks.
       const userId = new AccountId(this.keyVault.accountPublicKey, nonce + 1);
-      await this.accountUtils.addUser(this.keyVault.accountPrivateKey, userId.nonce, true);
+      await this.accountUtils.addUser(this.keyVault.accountPrivateKey, userId.accountNonce, true);
 
       await controller.send();
 
@@ -835,8 +835,8 @@ export class UserSession extends EventEmitter {
     // Add the user to the sdk so that the accountTx could be added for it.
     // Need to sync from the beginning when "migrating" account to a new alias.
     const noSync = [LoginMode.SIGNUP, LoginMode.MIGRATE].includes(this.loginState.mode);
-    await this.accountUtils.addUser(accountPrivateKey, userId.nonce, true);
-    await this.accountUtils.addUser(accountPrivateKey, newUserId.nonce, noSync);
+    await this.accountUtils.addUser(accountPrivateKey, userId.accountNonce, true);
+    await this.accountUtils.addUser(accountPrivateKey, newUserId.accountNonce, noSync);
 
     try {
       await this.shieldForAliasForm.submit();
@@ -851,9 +851,9 @@ export class UserSession extends EventEmitter {
     }
 
     const latestUserNonce = await this.accountUtils.getAccountNonce(newUserId.publicKey);
-    if (latestUserNonce > newUserId.nonce) {
+    if (latestUserNonce > newUserId.accountNonce) {
       const latestUserId = new AccountId(this.keyVault.accountPublicKey, latestUserNonce);
-      await this.accountUtils.addUser(this.keyVault.accountPrivateKey, latestUserId.nonce);
+      await this.accountUtils.addUser(this.keyVault.accountPrivateKey, latestUserId.accountNonce);
       await this.migrateBalance(latestUserId, userId);
     } else {
       await this.initUserAccount(newUserId, false);
@@ -1068,11 +1068,11 @@ export class UserSession extends EventEmitter {
   }
 
   private async initUserAccount(userId: AccountId, awaitSynchronised = true) {
-    if (!userId.nonce) {
+    if (!userId.accountNonce) {
       throw new Error('User not registered.');
     }
 
-    await this.accountUtils.addUser(this.keyVault.accountPrivateKey, userId.nonce);
+    await this.accountUtils.addUser(this.keyVault.accountPrivateKey, userId.accountNonce);
 
     const { txAmountLimits, withdrawSafeAmounts, explorerUrl, maxAvailableAssetId } = this.config;
 
@@ -1392,7 +1392,7 @@ export class UserSession extends EventEmitter {
   }
 
   private async awaitUserSynchronised(userId: AccountId) {
-    if (!userId.nonce) {
+    if (!userId.accountNonce) {
       return;
     }
 

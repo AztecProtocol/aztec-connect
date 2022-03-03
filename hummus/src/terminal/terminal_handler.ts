@@ -357,7 +357,7 @@ export class TerminalHandler {
   }
 
   private isRegistered() {
-    return this.app.getUser().getUserData().id.nonce != 0;
+    return this.app.getUser().getUserData().id.accountNonce != 0;
   }
 
   private async registerAlias(alias: string) {

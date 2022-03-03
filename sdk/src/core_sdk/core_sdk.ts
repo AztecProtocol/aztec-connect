@@ -595,7 +595,7 @@ export class CoreSdk extends EventEmitter {
           aliases.push({
             address: accountPublicKey,
             aliasHash: accountAliasId.aliasHash,
-            latestNonce: accountAliasId.nonce,
+            latestNonce: accountAliasId.accountNonce,
           });
         }
       }
@@ -750,7 +750,7 @@ export class CoreSdk extends EventEmitter {
       return this.accountProofCreator.createProof(
         signer,
         aliasHash,
-        userId.nonce,
+        userId.accountNonce,
         migrate,
         userId.publicKey,
         newAccountPublicKey,

@@ -85,6 +85,10 @@ export class WorldState {
     return this.pipeline.getNextPublishTime();
   }
 
+  public getTxPoolProfile() {
+    return this.pipeline.getTxPoolProfile();
+  }
+
   public async stop() {
     this.blockQueue.cancel();
     this.blockchain.stop();

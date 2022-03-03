@@ -81,6 +81,10 @@ export class RollupPipeline {
     return this.pipelineCoordinator.getNextPublishTime();
   }
 
+  public getTxPoolProfile() {
+    return this.pipelineCoordinator.getTxPoolProfile();
+  }
+
   public async start() {
     return this.pipelineCoordinator.start();
   }

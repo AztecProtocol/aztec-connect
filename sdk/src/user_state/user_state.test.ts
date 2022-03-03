@@ -120,7 +120,7 @@ describe('user state', () => {
       user.publicKey,
       value,
       assetId,
-      user.nonce,
+      user.accountNonce,
       inputNullifier,
       ephPrivKey,
       grumpkin,
@@ -210,12 +210,12 @@ describe('user state', () => {
     migrate = false,
     txRefNo = 0,
   } = {}) => {
-    const { publicKey, nonce } = accountCreator;
+    const { publicKey, accountNonce } = accountCreator;
     const aliasHash = AliasHash.fromAlias(alias, blake2s);
     const note1 = randomBytes(32);
     const note2 = randomBytes(32);
-    const accountAliasId = new AccountAliasId(aliasHash!, nonce);
-    const newAccountAliasId = new AccountAliasId(aliasHash!, nonce + +migrate);
+    const accountAliasId = new AccountAliasId(aliasHash!, accountNonce);
+    const newAccountAliasId = new AccountAliasId(aliasHash!, accountNonce + +migrate);
     const nullifier1 = migrate ? noteAlgos.accountAliasIdNullifier(accountAliasId) : Buffer.alloc(32);
     const proofData = new InnerProofData(
       ProofId.ACCOUNT,
@@ -534,9 +534,9 @@ describe('user state', () => {
       generatePaymentProof({
         outputNoteValue1: 10n,
         outputNoteValue2: 20n,
-        noteCommitmentNonce: newUserId.nonce,
-        proofSender: { ...user, id: newUserId, nonce: newUserId.nonce },
-        newNoteOwner: { ...user, id: newUserId, nonce: newUserId.nonce },
+        noteCommitmentNonce: newUserId.accountNonce,
+        proofSender: { ...user, id: newUserId, nonce: newUserId.accountNonce },
+        newNoteOwner: { ...user, id: newUserId, nonce: newUserId.accountNonce },
       }),
     ]);
 
@@ -1543,7 +1543,7 @@ describe('user state', () => {
 
     db.getClaimTx.mockImplementation(() => ({
       txId,
-      userId: new AccountId(user.id.publicKey, user.id.nonce + 1),
+      userId: new AccountId(user.id.publicKey, user.id.accountNonce + 1),
       secret,
     }));
     db.getDefiTx.mockImplementation(() => ({ bridgeId, depositValue, outputValueA, outputValueB }));

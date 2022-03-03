@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components/macro';
 import {
   ShieldFormValues,
@@ -13,7 +13,6 @@ import {
   Button,
   Checkbox,
   DisclaimerBlock,
-  FixedInputMessage,
   Input,
   InputCol,
   InputMessage,
@@ -62,6 +61,14 @@ const Cols = styled.div`
     grid-template-columns: 1fr;
     justify-items: center;
   }
+`;
+
+const ConfirmRoot = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding-top: 25px;
 `;
 
 const InputPaddedBlock = styled.div`
@@ -146,6 +153,7 @@ export const ShieldForAliasForm: React.FunctionComponent<DepositFormProps> = ({
   onSubmit,
   onChangeWallet,
 }) => {
+  const [risksAccepted, setRisksAccepted] = useState(false);
   const {
     submit, // eslint-disable-line @typescript-eslint/no-unused-vars
     ...formInputs
@@ -266,6 +274,14 @@ export const ShieldForAliasForm: React.FunctionComponent<DepositFormProps> = ({
       </Cols>
       <PaddedBlock size="m">
         <DisclaimerBlock asset={assetState.asset} txAmountLimit={assetState.txAmountLimit} />
+        <ConfirmRoot>
+          <Checkbox
+            text="I understand the risks"
+            theme={InputTheme.LIGHT}
+            checked={risksAccepted}
+            onChangeValue={setRisksAccepted}
+          />
+        </ConfirmRoot>
       </PaddedBlock>
       <InputRow>
         <ButtonRoot>
@@ -273,7 +289,7 @@ export const ShieldForAliasForm: React.FunctionComponent<DepositFormProps> = ({
             theme="white"
             text="Shield"
             onClick={onSubmit}
-            disabled={!isValidForm(formInputs as any) || status > ShieldStatus.VALIDATE}
+            disabled={!isValidForm(formInputs as any) || status > ShieldStatus.VALIDATE || !risksAccepted}
             isLoading={status === ShieldStatus.VALIDATE}
           />
         </ButtonRoot>

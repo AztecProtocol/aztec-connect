@@ -81,6 +81,15 @@ export class BridgeTxQueue {
     return [];
   }
 
+  public getAccruedGasFromPendingBridgeTxs(feeResolver: TxFeeResolver): bigint {
+    let gasFromTxs = 0n;
+    for (let i = 0; i < this._txQueue.length; i++) {
+      const tx = this._txQueue[i];
+      gasFromTxs += feeResolver.getSingleBridgeTxGas(this.bridgeId) + tx.excessGas;
+    }
+    return gasFromTxs;
+  }
+
   get bridgeId() {
     return this.bridgeConfig.bridgeId;
   }

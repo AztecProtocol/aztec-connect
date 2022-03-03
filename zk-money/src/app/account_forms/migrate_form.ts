@@ -219,7 +219,7 @@ export class MigrateForm extends EventEmitter implements AccountForm {
     this.updateFormValues({ status: { value: MigrateStatus.SYNC } });
 
     const { userId, accountPrivateKey } = this.sourceAccount!;
-    await this.accountUtils.addUser(accountPrivateKey, userId.nonce);
+    await this.accountUtils.addUser(accountPrivateKey, userId.accountNonce);
     await this.sdk.awaitUserSynchronised(userId);
 
     const migratingAssets = await Promise.all(
@@ -371,7 +371,7 @@ export class MigrateForm extends EventEmitter implements AccountForm {
       const signingKey = await createSigningKeys(provider, this.sdk);
       if (!this.destroyed && this.status === MigrateStatus.CONNECT && provider === this.provider) {
         this.sourceAccount = {
-          userId: new AccountId(this.userId.publicKey, this.userId.nonce + 1),
+          userId: new AccountId(this.userId.publicKey, this.userId.accountNonce + 1),
           accountPrivateKey: this.keyVault.accountPrivateKey,
           signingPrivateKey: signingKey.privateKey,
         };

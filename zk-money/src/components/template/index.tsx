@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import styled, { css } from 'styled-components/macro';
 import { AccountState, SystemMessage } from '../../app';
 import { breakpoints, colours, gradients, spacings, Theme } from '../../styles';
@@ -6,6 +6,7 @@ import { CookiesForm, isCookieAccepted } from '../cookies_form';
 import { SystemMessagePopup } from './system_message_popup';
 import { ContentWrapper } from './content_wrapper';
 import { Footer } from './footer';
+import { debounce } from 'lodash';
 
 export * from './content_wrapper';
 export * from './section';
@@ -15,17 +16,22 @@ interface RootProps {
   theme: Theme;
 }
 
-const rootStyle = css`
+interface BackgroundProps {
+  theme: Theme;
+  isResizing: boolean;
+}
+
+const Root = styled.div<RootProps>`
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   min-height: 100vh;
   overflow: hidden;
+  color: ${({ theme }) => (theme === Theme.GRADIENT ? `${colours.white}` : `${colours.black}`)};
 `;
 
-const WhiteRoot = styled.div<RootProps>`
-  ${rootStyle};
+const Background = styled.div<BackgroundProps>`
   background: linear-gradient(
     101.14deg,
     white 0%,
@@ -34,11 +40,15 @@ const WhiteRoot = styled.div<RootProps>`
     ${gradients.primary.from} 69%,
     ${gradients.primary.to} 82%
   );
-  background-size: 300% 300%;
-  background-position: ${({ theme }) =>
-    theme === Theme.WHITE ? '0% 0%;' : theme === Theme.GRADIENT ? '100% 100%;' : '0% 0%;'};
-  transition: background-position 1.25s ease;
-  color: ${({ theme }) => (theme === Theme.GRADIENT ? `${colours.white}` : `${colours.black}`)};
+  transform: ${({ theme }) =>
+    theme === Theme.GRADIENT ? `translate(calc(-100% + 100vw), calc(-100% + 100vh))` : `translate(0%, 0%)`};
+  transition: transform ${({ isResizing }) => (isResizing ? '0s' : '1.25s')} ease;
+  position: fixed;
+  width: 300vw;
+  height: 300vh;
+  top: 0;
+  left: 0;
+  z-index: -999999;
 `;
 
 interface ContentRootProps {
@@ -87,21 +97,39 @@ export const Template: React.FunctionComponent<TemplateProps> = ({
   isLoading = false,
 }) => {
   const [withCookie, setWithCookie] = useState(!isCookieAccepted());
+  const [isResizing, setResizing] = useState(false);
+
+  useLayoutEffect(() => {
+    const stopResizing = debounce(() => {
+      setResizing(false);
+    }, 200);
+    const resize = debounce(() => {
+      setResizing(true);
+      stopResizing();
+    }, 100);
+    window.addEventListener('resize', resize);
+    return () => window.removeEventListener('resize', resize);
+  }, []);
 
   return (
-    <WhiteRoot theme={theme}>
-      <ContentRoot extraFooterSpace={withCookie && theme === Theme.GRADIENT}>{!isLoading && children}</ContentRoot>
-      {!isLoading && (
-        <>
-          {theme === Theme.WHITE && <Footer account={account} />}
-          {!!systemMessage?.message && <SystemMessagePopup message={systemMessage.message} type={systemMessage.type} />}
-          <CookiesFormRoot>
-            <ContentWrapper>
-              <CookiesForm theme={theme} onClose={() => setWithCookie(false)} />
-            </ContentWrapper>
-          </CookiesFormRoot>
-        </>
-      )}
-    </WhiteRoot>
+    <>
+      <Root theme={theme}>
+        <ContentRoot extraFooterSpace={withCookie && theme === Theme.GRADIENT}>{!isLoading && children}</ContentRoot>
+        {!isLoading && (
+          <>
+            {theme === Theme.WHITE && <Footer account={account} />}
+            {!!systemMessage?.message && (
+              <SystemMessagePopup message={systemMessage.message} type={systemMessage.type} />
+            )}
+            <CookiesFormRoot>
+              <ContentWrapper>
+                <CookiesForm theme={theme} onClose={() => setWithCookie(false)} />
+              </ContentWrapper>
+            </CookiesFormRoot>
+          </>
+        )}
+      </Root>
+      <Background isResizing={isResizing} theme={theme} />
+    </>
   );
 };

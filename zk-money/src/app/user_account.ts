@@ -281,7 +281,10 @@ export class UserAccount extends EventEmitter {
 
   private handleUserStateChange = async (userId: AccountId) => {
     // We might need to show the join-split txs from previous nonce.
-    if (!userId.equals(this.userId) && !userId.equals(new AccountId(this.userId.publicKey, this.userId.nonce - 1))) {
+    if (
+      !userId.equals(this.userId) &&
+      !userId.equals(new AccountId(this.userId.publicKey, this.userId.accountNonce - 1))
+    ) {
       return;
     }
 

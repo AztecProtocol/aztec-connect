@@ -30,7 +30,7 @@ export class RegisterController {
     blockchain: ClientEthereumBlockchain,
     provider: EthereumProvider,
   ) {
-    if (userId.nonce !== 0) {
+    if (userId.accountNonce !== 0) {
       throw new Error('Registration proof can only be created by account with nonce 0.');
     }
 

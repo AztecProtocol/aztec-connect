@@ -9,7 +9,7 @@ import { RollupPublisher } from '../rollup_publisher';
 import { TxFeeResolver } from '../tx_fee_resolver';
 import { BridgeResolver } from '../bridge';
 import { PublishTimeManager } from './publish_time_manager';
-import { RollupCoordinator } from './rollup_coordinator';
+import { RollupCoordinator, TxPoolProfile } from './rollup_coordinator';
 import debug from 'debug';
 
 export class PipelineCoordinator {
@@ -19,6 +19,7 @@ export class PipelineCoordinator {
   private publishTimeManager!: PublishTimeManager;
   private rollupCoordinator!: RollupCoordinator;
   private log = debug('pipeline_coordinator');
+  private txPoolProfile!: TxPoolProfile;
 
   constructor(
     private rollupCreator: RollupCreator,
@@ -39,6 +40,10 @@ export class PipelineCoordinator {
 
   public getNextPublishTime() {
     return this.publishTimeManager.calculateNextTimeouts();
+  }
+
+  public getTxPoolProfile() {
+    return this.txPoolProfile;
   }
 
   /**
@@ -62,10 +67,11 @@ export class PipelineCoordinator {
         const pendingTxs = await this.rollupDb.getPendingTxs();
 
         this.log('Processing pending txs...');
-        const rollupProfile = await this.rollupCoordinator.processPendingTxs(pendingTxs, this.flush);
+        this.txPoolProfile = await this.rollupCoordinator.processPendingTxs(pendingTxs, this.flush);
+
         if (
-          rollupProfile.published || // rollup has been published so we exit this loop
-          (!rollupProfile.totalTxs && this.flush)
+          this.txPoolProfile.nextRollupProfile.published || // rollup has been published so we exit this loop
+          (!this.txPoolProfile.nextRollupProfile.totalTxs && this.flush)
         ) {
           console.log('Rollup published or we are in a flush state, exiting.');
           // we are in a flush state and this iteration produced no rollup-able txs, so we exit

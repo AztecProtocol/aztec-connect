@@ -100,7 +100,7 @@ const initialShieldFormValues = {
     value: { asset: assets[0], txAmountLimit: 0n },
   },
   amount: {
-    value: '',
+    value: '0',
     required: true,
   },
   maxAmount: {
@@ -647,9 +647,9 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     const outputNoteOwner = recipient === this.alias ? this.userId : (await this.accountUtils.getAccountId(recipient))!;
     const signer = this.sdk.createSchnorrSigner(accountPrivateKey);
     if (this.isNewAccount) {
-      await this.accountUtils.addUser(accountPrivateKey, this.userId.nonce);
+      await this.accountUtils.addUser(accountPrivateKey, this.userId.accountNonce);
     }
-    await this.accountUtils.addUser(accountPrivateKey, senderId.nonce);
+    await this.accountUtils.addUser(accountPrivateKey, senderId.accountNonce);
     return this.isNewAccount
       ? this.sdk.createRegisterController(
           senderId,

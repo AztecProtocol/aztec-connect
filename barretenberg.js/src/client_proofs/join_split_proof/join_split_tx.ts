@@ -48,7 +48,7 @@ export class JoinSplitTx {
 
       this.accountPrivateKey,
       this.accountAliasId.aliasHash.toBuffer32(),
-      numToUInt32BE(this.accountAliasId.nonce),
+      numToUInt32BE(this.accountAliasId.accountNonce),
       numToUInt32BE(this.accountIndex),
       this.accountPath.toBuffer(),
       this.signingPubKey.toBuffer(),

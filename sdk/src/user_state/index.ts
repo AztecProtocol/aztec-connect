@@ -390,7 +390,9 @@ export class UserState extends EventEmitter {
     await this.refreshNotePicker();
 
     const { rollupId, bridgeIds } = rollupProofData;
-    const interactionNonce = (RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK * rollupId) + bridgeIds.findIndex(bridge => bridge.equals(bridgeId.toBuffer()));
+    const interactionNonce =
+      RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK * rollupId +
+      bridgeIds.findIndex(bridge => bridge.equals(bridgeId.toBuffer()));
 
     const savedTx = await this.db.getDefiTx(txId);
     if (savedTx) {
@@ -407,8 +409,12 @@ export class UserState extends EventEmitter {
     for (const note of defiInteractionNotes) {
       const defiTxs = await this.db.getDefiTxsByNonce(this.user.id, note.nonce);
       for (const tx of defiTxs) {
-        const outputValueA = !note.result ? BigInt(0) : (note.totalOutputValueA * tx.depositValue) / note.totalInputValue;
-        const outputValueB = !note.result ? BigInt(0) : (note.totalOutputValueB * tx.depositValue) / note.totalInputValue;
+        const outputValueA = !note.result
+          ? BigInt(0)
+          : (note.totalOutputValueA * tx.depositValue) / note.totalInputValue;
+        const outputValueB = !note.result
+          ? BigInt(0)
+          : (note.totalOutputValueB * tx.depositValue) / note.totalInputValue;
         await this.db.updateDefiTx(tx.txId, outputValueA, outputValueB, note.result);
       }
     }
@@ -430,7 +436,7 @@ export class UserState extends EventEmitter {
         userId.publicKey,
         depositValue,
         bridgeId.inputAssetIdA,
-        userId.nonce,
+        userId.accountNonce,
         secret,
         Buffer.alloc(32),
         nullifier1,
@@ -442,7 +448,7 @@ export class UserState extends EventEmitter {
         userId.publicKey,
         outputValueA,
         bridgeId.outputAssetIdA,
-        userId.nonce,
+        userId.accountNonce,
         secret,
         Buffer.alloc(32),
         nullifier1,
@@ -454,7 +460,7 @@ export class UserState extends EventEmitter {
         userId.publicKey,
         outputValueB,
         bridgeId.outputAssetIdB,
-        userId.nonce,
+        userId.accountNonce,
         secret,
         Buffer.alloc(32),
         nullifier2,
@@ -574,7 +580,7 @@ export class UserState extends EventEmitter {
     const { nullifier1 } = proof;
     const { accountPublicKey, accountAliasId, spendingPublicKey1, spendingPublicKey2, txRefNo } = offchainTxData;
     const txId = new TxId(proof.txId);
-    const userId = new AccountId(accountPublicKey, accountAliasId.nonce);
+    const userId = new AccountId(accountPublicKey, accountAliasId.accountNonce);
     const migrated = !!toBigIntBE(nullifier1);
 
     return new CoreAccountTx(
@@ -590,11 +596,7 @@ export class UserState extends EventEmitter {
     );
   }
 
-  private recoverDefiTx(
-    proof: InnerProofData,
-    offchainTxData: OffchainDefiDepositData,
-    interactionNonce: number
-  ) {
+  private recoverDefiTx(proof: InnerProofData, offchainTxData: OffchainDefiDepositData, interactionNonce: number) {
     const { bridgeId, depositValue, txFee, partialStateSecretEphPubKey, txRefNo } = offchainTxData;
     const txId = new TxId(proof.txId);
     const partialStateSecret = deriveNoteSecret(partialStateSecretEphPubKey, this.user.privateKey, this.grumpkin);
@@ -612,7 +614,7 @@ export class UserState extends EventEmitter {
       undefined,
       undefined,
       undefined,
-      interactionNonce
+      interactionNonce,
     );
   }
 

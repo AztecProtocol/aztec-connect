@@ -280,7 +280,7 @@ describe('rollup_coordinator', () => {
 
   describe('publish time is in the future', () => {
     it('should do nothing if txs is empty', async () => {
-      const rp = await coordinator.processPendingTxs([]);
+      const rp = (await coordinator.processPendingTxs([])).nextRollupProfile;
       expect(rp.published).toBe(false);
       expect(coordinator.processedTxs).toEqual([]);
       expect(rollupCreator.create).toHaveBeenCalledTimes(0);
@@ -290,7 +290,7 @@ describe('rollup_coordinator', () => {
 
     it('should do nothing if txs are not enough to create an inner proof', async () => {
       const pendingTxs = [...Array(numInnerRollupTxs - 1)].map((_, i) => mockTx(i));
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(false);
       expect(coordinator.processedTxs).toEqual([]);
       expect(rollupCreator.create).toHaveBeenCalledTimes(0);
@@ -300,7 +300,7 @@ describe('rollup_coordinator', () => {
 
     it('should aggregate and publish if txs is full', async () => {
       const pendingTxs = [...Array(numInnerRollupTxs * numOuterRollupProofs)].map((_, i) => mockTx(i));
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expect(coordinator.processedTxs).toEqual(pendingTxs);
       expect(rollupCreator.create).toHaveBeenCalledTimes(numOuterRollupProofs);
@@ -312,13 +312,13 @@ describe('rollup_coordinator', () => {
       const numTxs = numInnerRollupTxs * numOuterRollupProofs;
       {
         const pendingTxs = [...Array(numTxs)].map((_, i) => mockTx(i));
-        const rp = await coordinator.processPendingTxs(pendingTxs);
+        const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
         expect(rp.published).toBe(true);
         expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
       }
       {
         const pendingTxs = [...Array(numTxs)].map((_, i) => mockTx(i + numTxs));
-        const rp = await coordinator.processPendingTxs(pendingTxs);
+        const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
         expect(rp.published).toBe(false);
         expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
       }
@@ -355,7 +355,7 @@ describe('rollup_coordinator', () => {
         j++;
       }
 
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
 
       // Expect all txs but those with bridgeId = 33 or 34.
@@ -420,7 +420,7 @@ describe('rollup_coordinator', () => {
 
       const pendingTxs = [...allTxs.slice(0, numTxsInRollup - 1), allTxs[64], allTxs[63]];
 
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
 
       const expectedTxs = [...allTxs.slice(0, numTxsInRollup)];
@@ -463,7 +463,7 @@ describe('rollup_coordinator', () => {
         j++;
       }
 
-      const rp = await coordinator.processPendingTxs(pendingTxs, true);
+      const rp = (await coordinator.processPendingTxs(pendingTxs, true)).nextRollupProfile;
       expect(rp.published).toBe(true);
       // Expect all txs but those with bridgeId = 33 or 34.
       const expectedTxs = pendingTxs
@@ -504,7 +504,7 @@ describe('rollup_coordinator', () => {
         mockDefiBridgeTx(9, HUGE_FEE, bridgeConfigs[0].bridgeId, 0),
         mockTx(10, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
       ];
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expect(coordinator.processedTxs).toEqual([
         pendingTxs[3],
@@ -538,7 +538,7 @@ describe('rollup_coordinator', () => {
         mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockTx(5, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(false);
       expectProcessedTxIds([]);
       expect(rollupCreator.create).toHaveBeenCalledTimes(0);
@@ -561,7 +561,7 @@ describe('rollup_coordinator', () => {
 
       // the bridge txs wouldnt be covered as we are missing 1 bridge tx and the normal txs we
       // still only have 2x2 when when we needed 4x2 so nothing will be published
-      let rp = await coordinator.processPendingTxs(pendingTxs);
+      let { nextRollupProfile: rp } = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
       expectProcessedTxIds([]);
 
@@ -579,7 +579,7 @@ describe('rollup_coordinator', () => {
         mockTx(9, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockTx(10, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
-      rp = await coordinator.processPendingTxs(pendingTxs);
+      rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0, 1, 4, 5, 6, 2, 3, 7]);
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
@@ -605,7 +605,7 @@ describe('rollup_coordinator', () => {
         mockTx(5, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
 
       expectProcessedTxIds([2, 0, 1, 3, 4, 5, 6]);
@@ -633,7 +633,7 @@ describe('rollup_coordinator', () => {
         mockDefiBridgeTxLocal(7, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
         mockDefiBridgeTxLocal(8, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
       ];
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0, 1, 2, 3, 5, 6, 7, 8]);
 
@@ -676,7 +676,7 @@ describe('rollup_coordinator', () => {
         ),
         mockTx(10, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0, 1, 3, 4, 6, 7, 8, 10]);
 
@@ -698,7 +698,7 @@ describe('rollup_coordinator', () => {
         mockDefiBridgeTxLocal(0, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)),
         mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
       ];
-      let rp = await coordinator.processPendingTxs(pendingTxs);
+      let { nextRollupProfile: rp } = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
       expectProcessedTxIds([]);
 
@@ -738,7 +738,7 @@ describe('rollup_coordinator', () => {
         ),
         mockTx(10, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
-      rp = await coordinator.processPendingTxs(pendingTxs);
+      rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       //expectProcessedTxIds([0, 1, 3, 4, 6, 7, 8, 10]);
       expectProcessedTxIds([0, 1, 3, 4, 8, 10]);
@@ -785,7 +785,7 @@ describe('rollup_coordinator', () => {
         mockDefiBridgeTxLocal(11, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
         mockDefiBridgeTxLocal(12, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
       ];
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0, 1, 3, 4, 6, 7, 8, 10]);
 
@@ -816,7 +816,7 @@ describe('rollup_coordinator', () => {
         mockTx(9, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockTx(10, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0, 1, 2, 5, 6, 7, 9, 10]);
 
@@ -870,7 +870,7 @@ describe('rollup_coordinator', () => {
           bridgeConfigs[4].bridgeId,
         ),
       ];
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expectProcessedTxIds([3, 0, 4, 1, 2, 5, 6, 7]);
 
@@ -933,7 +933,7 @@ describe('rollup_coordinator', () => {
           1,
         ),
       ];
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expectProcessedTxIds([3, 0, 4, 1, 2, 5, 6, 7]);
 
@@ -998,7 +998,7 @@ describe('rollup_coordinator', () => {
           1,
         ),
       ];
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expectProcessedTxIds([3, 0, 4, 1, 2, 5, 6, 7]);
 
@@ -1018,7 +1018,7 @@ describe('rollup_coordinator', () => {
       const pendingTxs = [...Array(numInnerRollupTxs * numOuterRollupProofs)].map((_, i) =>
         mockTx(i, { txFeeAssetId: i == 0 ? 0 : i + NON_FEE_PAYING_ASSET }),
       );
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expect(coordinator.processedTxs).toEqual(pendingTxs);
       expect(rollupCreator.create).toHaveBeenCalledTimes(numOuterRollupProofs);
@@ -1032,7 +1032,7 @@ describe('rollup_coordinator', () => {
       let fullCost = BigInt(numInnerRollupTxs * numOuterRollupProofs - 1) * BASE_GAS; // all other slots
       fullCost += DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[1].fee!; // our slot
       const pendingTxs = [mockDefiBridgeTx(0, fullCost, bridgeConfigs[1].bridgeId)];
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0]);
 
@@ -1053,7 +1053,7 @@ describe('rollup_coordinator', () => {
         mockDefiBridgeTx(0, almostFullCost, bridgeConfigs[1].bridgeId),
         mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
-      let rp = await coordinator.processPendingTxs(pendingTxs);
+      let { nextRollupProfile: rp } = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
       expectProcessedTxIds([]);
 
@@ -1065,7 +1065,7 @@ describe('rollup_coordinator', () => {
       // now add the required 3rd tx back in to cover the base fee we took out from almostFullCost -3
       pendingTxs.push(mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: 0 }));
 
-      rp = await coordinator.processPendingTxs(pendingTxs);
+      rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0, 1, 2]);
 
@@ -1091,7 +1091,7 @@ describe('rollup_coordinator', () => {
         mockDefiBridgeTx(0, almostFullCost, bridgeConfigs[1].bridgeId),
         mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0, 1]);
 
@@ -1116,7 +1116,7 @@ describe('rollup_coordinator', () => {
       {
         const pendingTxs = [mockDefiBridgeTx(0, almostFullCost, bridgeConfigs[1].bridgeId)];
 
-        const rp = await coordinator.processPendingTxs(pendingTxs);
+        const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
         expect(rp.published).toBe(true);
         expectProcessedTxIds([0]);
 
@@ -1132,7 +1132,7 @@ describe('rollup_coordinator', () => {
         almostFullCost -= 1n;
         const pendingTxs = [mockDefiBridgeTx(0, almostFullCost, bridgeConfigs[1].bridgeId)];
 
-        const rp = await coordinator.processPendingTxs(pendingTxs);
+        const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
         expect(rp.published).toBe(false);
       }
     });
@@ -1140,7 +1140,7 @@ describe('rollup_coordinator', () => {
     it('single payment tx can publish if it covers complete cost', async () => {
       const fullCost = BigInt(numInnerRollupTxs * numOuterRollupProofs - 1) * BASE_GAS; // excess gas is all other slots
       const pendingTxs = [mockTx(0, { txType: TxType.TRANSFER, excessGas: fullCost, txFeeAssetId: 0 })];
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0]);
 
@@ -1163,7 +1163,7 @@ describe('rollup_coordinator', () => {
       // excess should be enough to cover this transaction.
       //mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
 
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0]);
 
@@ -1194,7 +1194,7 @@ describe('rollup_coordinator', () => {
         mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
 
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0, 1]);
 
@@ -1213,7 +1213,7 @@ describe('rollup_coordinator', () => {
           bridgeConfigs[0].bridgeId,
         ),
       ];
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0]);
 
@@ -1293,7 +1293,7 @@ describe('rollup_coordinator', () => {
 
       // bridge [2] got in meaning bridge [3] couldn't as there isn't enough room
       // we can only rollup the first 2 txs for bridge [2] here
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0, 1, 7, 9, 10, 11, 12, 13]);
 
@@ -1359,7 +1359,7 @@ describe('rollup_coordinator', () => {
       // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
 
       const pendingTxs = [mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 })];
-      let rp = await coordinator.processPendingTxs(pendingTxs);
+      let rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(false);
       expectProcessedTxIds([]);
 
@@ -1376,7 +1376,7 @@ describe('rollup_coordinator', () => {
       currentTime = new Date('2021-06-20T12:00:01+01:00');
 
       // run again and we should have published it
-      rp = await coordinator.processPendingTxs(pendingTxs);
+      rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0]);
 
@@ -1394,7 +1394,7 @@ describe('rollup_coordinator', () => {
       const pendingTxs = [...Array(numInnerRollupTxs)].map((_, i) =>
         mockTx(i, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       );
-      let rp = await coordinator.processPendingTxs(pendingTxs);
+      let { nextRollupProfile: rp } = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
       expectProcessedTxIds([]);
 
@@ -1413,7 +1413,7 @@ describe('rollup_coordinator', () => {
       currentTime = new Date('2021-06-20T12:00:01+01:00');
 
       // run again, with no pending txs and we will publish
-      rp = await coordinator.processPendingTxs(pendingTxs);
+      rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expectProcessedTxIds([...Array(numInnerRollupTxs)].map((_, i) => i));
 
@@ -1431,7 +1431,7 @@ describe('rollup_coordinator', () => {
       const pendingTxs = [...Array(numInnerRollupTxs)].map((_, i) =>
         mockTx(i, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       );
-      let rp = await coordinator.processPendingTxs([]);
+      let { nextRollupProfile: rp } = await coordinator.processPendingTxs([]);
       expect(rp.published).toBe(false);
       expectProcessedTxIds([]);
 
@@ -1449,7 +1449,7 @@ describe('rollup_coordinator', () => {
       currentTime = new Date('2021-06-20T12:00:01+01:00');
 
       // run again, with no pending txs and we will publish
-      rp = await coordinator.processPendingTxs(pendingTxs);
+      rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expectProcessedTxIds([...Array(numInnerRollupTxs)].map((_, i) => i));
 
@@ -1465,7 +1465,7 @@ describe('rollup_coordinator', () => {
       // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
 
       const pendingTxs = [mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 })];
-      let rp = await coordinator.processPendingTxs(pendingTxs);
+      let { nextRollupProfile: rp } = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
       expectProcessedTxIds([]);
 
@@ -1482,7 +1482,7 @@ describe('rollup_coordinator', () => {
       currentTime = new Date('2121-06-20T11:45:00+01:00');
 
       // run again and we still should not have published it
-      rp = await coordinator.processPendingTxs(pendingTxs);
+      rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(false);
       expectProcessedTxIds([]);
 
@@ -1503,7 +1503,7 @@ describe('rollup_coordinator', () => {
           bridgeConfigs[2].bridgeId,
         ),
       ];
-      let rp = await coordinator.processPendingTxs(pendingTxs);
+      let rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(false);
       expectProcessedTxIds([]);
 
@@ -1520,7 +1520,7 @@ describe('rollup_coordinator', () => {
       currentTime = new Date('2021-06-20T12:00:01+01:00');
 
       // run again and we should have published it
-      rp = await coordinator.processPendingTxs(pendingTxs);
+      rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0]);
 
@@ -1543,7 +1543,7 @@ describe('rollup_coordinator', () => {
           bridgeConfigs[2].bridgeId,
         ),
       ];
-      let rp = await coordinator.processPendingTxs(pendingTxs);
+      let { nextRollupProfile: rp } = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
       expectProcessedTxIds([]);
 
@@ -1563,7 +1563,7 @@ describe('rollup_coordinator', () => {
       currentTime = new Date('2021-06-20T12:00:01+01:00');
 
       // run again and we should have published it
-      rp = await coordinator.processPendingTxs(pendingTxs);
+      rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0, 1]);
 
@@ -1588,7 +1588,7 @@ describe('rollup_coordinator', () => {
           bridgeConfigs[2].bridgeId,
         ),
       ];
-      let rp = await coordinator.processPendingTxs(pendingTxs);
+      let { nextRollupProfile: rp } = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
       expectProcessedTxIds([]);
 
@@ -1608,7 +1608,7 @@ describe('rollup_coordinator', () => {
       currentTime = new Date('2021-06-20T12:00:01+01:00');
 
       // run again and we should have published it
-      rp = await coordinator.processPendingTxs(pendingTxs);
+      rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expectProcessedTxIds([1]);
 
@@ -1639,7 +1639,7 @@ describe('rollup_coordinator', () => {
           bridgeConfigs[0].bridgeId,
         ),
       ];
-      let rp = await coordinator.processPendingTxs(pendingTxs);
+      let { nextRollupProfile: rp } = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
       expectProcessedTxIds([]);
 
@@ -1660,7 +1660,7 @@ describe('rollup_coordinator', () => {
       currentTime = new Date('2021-06-20T12:00:01+01:00');
 
       // run again and we should have published it
-      rp = await coordinator.processPendingTxs(pendingTxs);
+      rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0, 1, 2]);
 
@@ -1687,7 +1687,7 @@ describe('rollup_coordinator', () => {
           bridgeConfigs[2].bridgeId,
         ),
       ];
-      let rp = await coordinator.processPendingTxs(pendingTxs);
+      let { nextRollupProfile: rp } = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
       expectProcessedTxIds([]);
 
@@ -1705,7 +1705,7 @@ describe('rollup_coordinator', () => {
       currentTime = new Date('2021-06-20T12:00:01+01:00');
 
       // run again and we should have published it
-      rp = await coordinator.processPendingTxs(pendingTxs);
+      rp = await (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0]);
 
@@ -1761,7 +1761,7 @@ describe('rollup_coordinator', () => {
         currentTime = new Date('2021-06-20T12:00:01+01:00');
 
         // this call will trigger the rollup
-        const rp = await coordinator.processPendingTxs(pendingTxs);
+        const { nextRollupProfile: rp } = await coordinator.processPendingTxs(pendingTxs);
         expect(rp.published).toBe(true);
 
         // Expect all txs but those with bridgeId = 33 or 34.
@@ -1841,7 +1841,7 @@ describe('rollup_coordinator', () => {
         normalTxs[1], // 10
         normalTxs[2], // 11
       ];
-      const rp = await coordinator.processPendingTxs(pendingTxs, true);
+      const { nextRollupProfile: rp } = await coordinator.processPendingTxs(pendingTxs, true);
       expect(rp.published).toBe(true);
       expect(rollupCreator.create).toHaveBeenCalledTimes(2);
       expect(rollupCreator.create.mock.calls[0][0]).toEqual([
@@ -1861,7 +1861,7 @@ describe('rollup_coordinator', () => {
     const flush = true;
 
     it('should do nothing if txs is empty', async () => {
-      const rp = await coordinator.processPendingTxs([], flush);
+      const { nextRollupProfile: rp } = await coordinator.processPendingTxs([], flush);
       expect(rp.published).toBe(false);
       expect(coordinator.processedTxs).toEqual([]);
       expect(rollupCreator.create).toHaveBeenCalledTimes(0);
@@ -1871,7 +1871,7 @@ describe('rollup_coordinator', () => {
 
     it('should aggregate and publish all txs', async () => {
       const pendingTxs = [mockTx(0)];
-      const rp = await coordinator.processPendingTxs(pendingTxs, flush);
+      const { nextRollupProfile: rp } = await coordinator.processPendingTxs(pendingTxs, flush);
       expect(rp.published).toBe(true);
       expect(coordinator.processedTxs).toEqual(pendingTxs);
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
@@ -1881,7 +1881,7 @@ describe('rollup_coordinator', () => {
 
     it('should aggregate and publish all txs 2', async () => {
       const pendingTxs = [mockTx(0), mockTx(1)];
-      const rp = await coordinator.processPendingTxs(pendingTxs, flush);
+      const { nextRollupProfile: rp } = await coordinator.processPendingTxs(pendingTxs, flush);
       // There is no longer any delay on processing pending transactions as we do them
       // all in one parallel batch.  So this should publish immediately due to flush=true
       // triggering the shouldPublish condition
@@ -1900,7 +1900,7 @@ describe('rollup_coordinator', () => {
           bridgeConfigs[2].bridgeId,
         ),
       ];
-      let rp = await coordinator.processPendingTxs(pendingTxs);
+      let rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(false);
       expectProcessedTxIds([]);
 
@@ -1909,7 +1909,7 @@ describe('rollup_coordinator', () => {
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
 
       // run again but this time flush
-      rp = await coordinator.processPendingTxs(pendingTxs, flush);
+      rp = (await coordinator.processPendingTxs(pendingTxs, flush)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expectProcessedTxIds([1]);
 
@@ -1937,7 +1937,7 @@ describe('rollup_coordinator', () => {
         throw new Error();
       });
       const pendingTxs = [...Array(numInnerRollupTxs * numOuterRollupProofs)].map((_, i) => mockTx(i));
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      const { nextRollupProfile: rp } = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
       expect(coordinator.processedTxs).toEqual([]);
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
@@ -1950,7 +1950,7 @@ describe('rollup_coordinator', () => {
         throw new Error();
       });
       const pendingTxs = [...Array(numInnerRollupTxs * numOuterRollupProofs)].map((_, i) => mockTx(i));
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      const { nextRollupProfile: rp } = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
       expect(coordinator.processedTxs).toEqual(pendingTxs);
       expect(rollupCreator.create).toHaveBeenCalledTimes(numOuterRollupProofs);
@@ -1963,7 +1963,7 @@ describe('rollup_coordinator', () => {
         throw new Error();
       });
       const pendingTxs = [...Array(numInnerRollupTxs * numOuterRollupProofs)].map((_, i) => mockTx(i));
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      const { nextRollupProfile: rp } = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
       expect(coordinator.processedTxs).toEqual(pendingTxs);
       expect(rollupCreator.create).toHaveBeenCalledTimes(numOuterRollupProofs);
@@ -1997,7 +1997,7 @@ describe('rollup_coordinator', () => {
       );
       pendingTxs[pendingTxs.length - 1] = mockTx(pendingTxs.length - 1, { txFeeAssetId: 0 });
       pendingTxs[pendingTxs.length - 2] = mockTx(pendingTxs.length - 2, { txFeeAssetId: 1 });
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expect(coordinator.processedTxs).toEqual(pendingTxs);
       expect(rollupCreator.create).toHaveBeenCalledTimes(numOuterRollupProofs);
@@ -2017,7 +2017,7 @@ describe('rollup_coordinator', () => {
       });
       pendingTxs[pendingTxs.length - 1] = mockTx(pendingTxs.length - 1, { txFeeAssetId: 0 });
       pendingTxs[pendingTxs.length - 2] = mockTx(pendingTxs.length - 2, { txFeeAssetId: 1 });
-      const rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expect(coordinator.processedTxs).toEqual(pendingTxs);
       expect(rollupCreator.create).toHaveBeenCalledTimes(numOuterRollupProofs);

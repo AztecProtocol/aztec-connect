@@ -12,8 +12,13 @@ import { RollupPublisher } from '../rollup_publisher';
 import { TxFeeResolver } from '../tx_fee_resolver';
 import { BridgeTxQueue, createDefiRollupTx, createRollupTx, RollupTx } from './bridge_tx_queue';
 import { PublishTimeManager, RollupTimeouts } from './publish_time_manager';
-import { emptyProfile, profileRollup, RollupProfile } from './rollup_profiler';
+import { BridgeProfile, emptyProfile, profileRollup, RollupProfile } from './rollup_profiler';
 import { TxRollup } from 'halloumi/proof_generator';
+
+export interface TxPoolProfile {
+  nextRollupProfile: RollupProfile;
+  pendingBridgeStats: Map<bigint, Partial<BridgeProfile>>;
+}
 
 export class RollupCoordinator {
   private innerProofs: RollupProofDao[] = [];
@@ -55,9 +60,14 @@ export class RollupCoordinator {
     this.rollupPublisher.interrupt();
   }
 
-  async processPendingTxs(pendingTxs: TxDao[], flush = false) {
+  async processPendingTxs(pendingTxs: TxDao[], flush = false): Promise<TxPoolProfile> {
+    const profile: TxPoolProfile = {
+      pendingBridgeStats: new Map(),
+      nextRollupProfile: emptyProfile(this.numInnerRollupTxs * this.numOuterRollupProofs),
+    };
+
     if (this.published) {
-      return emptyProfile(this.numInnerRollupTxs * this.numOuterRollupProofs);
+      return profile;
     }
 
     const rollupTimeouts = this.publishTimeManager.calculateLastTimeouts();
@@ -66,14 +76,22 @@ export class RollupCoordinator {
     const assetIds = new Set<number>(this.rollupAssetIds);
 
     const txs = this.getNextTxsToRollup(pendingTxs, flush, assetIds, bridgeIds);
+    // get the pending bridge stats
+    for (const bi of this.bridgeQueues.keys()) {
+      profile.pendingBridgeStats.set(bi, {
+        gasAccrued: this.bridgeQueues.get(bi)!.getAccruedGasFromPendingBridgeTxs(this.feeResolver),
+        gasThreshold: this.feeResolver.getFullBridgeGas(bi),
+      });
+    }
     try {
       const rollupProfile = await this.aggregateAndPublish(txs, rollupTimeouts, flush);
       this.published = rollupProfile.published;
-      return rollupProfile;
+      profile.nextRollupProfile = rollupProfile;
+      return profile;
     } catch (e) {
       console.log('Error:', e);
       // Probably being interrupted.
-      return emptyProfile(this.numInnerRollupTxs * this.numOuterRollupProofs);
+      return profile;
     }
   }
 
@@ -211,10 +229,10 @@ export class RollupCoordinator {
     console.log(
       `New rollup - size: ${rollupProfile.rollupSize}, numTxs: ${rollupProfile.totalTxs}, timeout/flush: ${timeout}/${flush}, gas balance: ${rollupProfile.gasBalance}, inner/outer chains: ${rollupProfile.innerChains}/${rollupProfile.outerChains}`,
     );
-    for (const bp of rollupProfile.bridgeProfiles) {
+    for (const bp of rollupProfile.bridgeProfiles.values()) {
       console.log(
         `Defi bridge published. Id: ${bp.bridgeId.toString()}, numTxs: ${bp.numTxs}, gas balance: ${
-          bp.totalGasEarnt - bp.totalGasCost
+          bp.gasAccrued - bp.gasThreshold
         }`,
       );
     }
