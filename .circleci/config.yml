@@ -555,9 +555,10 @@ jobs:
             deploy_ecr zk-money
             deploy_s3 zk-money
 
+tag_regex: &tag_regex /v[0-9]+(\.[0-9]+)*(-[a-zA-Z-]+\.[0-9]+)?/
 tag_filter: &tag_filter
   tags:
-    only: /v[0-9]+(\.[0-9]+)*(-[a-zA-Z-]+\.[0-9]+)?/
+    only: *tag_regex
 
 workflows:
   build:
@@ -706,4 +707,5 @@ workflows:
               only:
                 - master
                 - defi-bridge-project
-            *tag_filter
+            tags:
+              only: *tag_regex
