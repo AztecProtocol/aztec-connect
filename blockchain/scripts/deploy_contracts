@@ -1,32 +1,29 @@
 #!/bin/bash
 set -e
 
-NETWORK=$1
-export TF_VAR_ETHEREUM_NETWORK=$NETWORK
-
 # We have to consider public and private ethereum hosts. The deployment system does not have access to the
 # nodes we run in the private subnets of the VPC. One option is to expose our OpenEthereum nodes externally but that
 # probably isn't wise, so we will just use Infura to deploy, but tell upstream systems to use the private node.
 # Our mainnet fork, *does* need to be exposed publically, as it's the only node in the network.
-case $NETWORK in
-  goerli)
+case $VERSION_TAG in
+  testnet)
     export TF_VAR_PUBLIC_ETHEREUM_HOST=https://goerli.infura.io/v3/$TF_VAR_INFURA_API_KEY
     export TF_VAR_PRIVATE_ETHEREUM_HOST=http://ethereum.aztec.network:10545
+    export TF_VAR_ETHEREUM_NETWORK=goerli
     ;;
-  mainnet-fork)
+  dev)
     export TF_VAR_PUBLIC_ETHEREUM_HOST=https://mainnet-fork.aztec.network:8545
     export TF_VAR_PRIVATE_ETHEREUM_HOST=https://mainnet-fork.aztec.network:8545
+    export TF_VAR_ETHEREUM_NETWORK=mainnet-fork
     ;;
   *)
-    echo "Unknown network: $NETWORK"
-    exit 1
+    echo "No configuration for VERSION_TAG=$VERSION_TAG, skipping contract deployment."
+    exit 0
     ;;
 esac
 
-deploy_ecr blockchain
-
 # Get the last network that we deployed to.
-cd ./terraform/dev
+cd $TF_DIR
 ensure_terraform
 export TF_IN_AUTOMATION=1
 terraform init -input=false -backend-config="key=$DEPLOY_TAG/blockchain"

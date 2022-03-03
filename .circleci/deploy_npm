@@ -5,7 +5,7 @@ readonly REPOSITORY=$1
 readonly IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:cache-$COMMIT_HASH
 
 # Only publish tagged commits to npm.
-[ -n "$COMMIT_TAG" ] || { echo "Only publish tagged commits to npm." && exit 0; }
+[ -n "$COMMIT_TAG" ] || { echo "Will only publish tagged commits to npm. Skipping." && exit 0; }
 
 # Pull the built image, do nothing if this wasn't rebuilt.
 docker pull $IMAGE_COMMIT_URI > /dev/null 2>&1 || { echo "No new image found." && exit 0; }
@@ -16,27 +16,38 @@ docker cp $TEMP_CONTAINER:/usr/src/$REPOSITORY/dest $REPOSITORY
 docker rm -v $TEMP_CONTAINER
 
 cd $REPOSITORY
-mv package.npm.json package.json
 
-# Publish npm package using given version number if higher than published, otherwise bump published.
 echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > .npmrc
 
-VERSION=$(echo "$COMMIT_TAG" | grep -oP "\d+(.\d+)*")
-
-if [ "$(npx semver $VERSION)" == "" ]; then
-  echo "$VERSION is not a semantic version."
+# We are publishing a tagged commit. Check it's a valid semver.
+VERSION=$(npx semver $COMMIT_TAG)
+if [ -z "$VERSION" ]; then
+  echo "$COMMIT_TAG is not a semantic version."
   exit 1
 fi
 
-readonly PUBLISHED_VERSION=$(npm show ./ version 2> /dev/null)
-readonly HIGHER_VERSION=$(npx semver ${VERSION} ${PUBLISHED_VERSION} | tail -1)
+# If the commit tag itself has a dist-tag (e.g. v2.1.0-testnet.123), extract the dist-tag.
+TAG=$(echo "$VERSION" | grep -oP ".*-\K(.*)(?=\.\d+)")
+if [ -n "$TAG" ]; then
+  TAG_ARG="--tag $TAG"
+fi
 
+# Bail if published npm package version is not < given version.
+readonly PUBLISHED_VERSION=$(npm show . version $TAG_ARG 2> /dev/null)
+readonly HIGHER_VERSION=$(npx semver ${VERSION} ${PUBLISHED_VERSION} | tail -1)
 if [ "$VERSION" == "$PUBLISHED_VERSION" ] || [ "$VERSION" != "$HIGHER_VERSION" ]; then
   echo "Tagged version $VERSION is not greater than published version $PUBLISHED_VERSION."
   exit 1
 fi
 
+# Update the package version in package.json.
 TMP=$(mktemp)
 jq --arg v $VERSION '.version = $v' package.json > $TMP && mv $TMP package.json
 
-npm publish
+# Update each dependent @aztec package version in package.json.
+for PKG in $(jq --raw-output ".dependencies | keys[] | select(contains(\"@aztec/\"))" package.json); do
+  jq --arg v $VERSION ".dependencies[\"$PKG\"] = \$v" package.json > $TMP && mv $TMP package.json
+done
+
+# Publish
+npm publish $TAG_ARG
