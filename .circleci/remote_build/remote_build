@@ -5,9 +5,15 @@ PROJECT_DIR=$1
 shift
 
 ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
-git clone $GIT_REPOSITORY_URL project
+
+# Shallow checkout this commit.
+mkdir project
 cd project
-git checkout $COMMIT_BRANCH
+git init
+git remote add origin $GIT_REPOSITORY_URL
+git fetch --depth 1 origin $COMMIT_HASH
+git checkout FETCH_HEAD
+
 cd .circleci
 BASH_ENV=/tmp/bash_env
 source ./setup_env "$COMMIT_HASH" "$COMMIT_BRANCH" "$COMMIT_TAG" "$JOB_NAME" "$GIT_REPOSITORY_URL"
