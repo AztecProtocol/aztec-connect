@@ -15,11 +15,12 @@ JOB_NAME=$4
 GIT_REPOSITORY_URL=$5
 
 BUILD_SYSTEM_PATH=$(pwd)
+PROJECT=$(cat ../PROJECT)
 VERSION=$(cat ../VERSION)
 
 if [ -n "$COMMIT_TAG" ]; then
   # We're tagged e.g. v2.1.123 or v2.1.123-testnet.0.
-  # First we check that the tag matches the VERSION file.
+  # First we sanity check that the tag matches the VERSION file.
   COMMIT_TAG_VERSION=$(echo "$COMMIT_TAG" | grep -oP "v\d+.\d+")
   if [ "$COMMIT_TAG_VERSION" != "$VERSION" ]; then
     echo "Commit tag $COMMIT_TAG does not match repo version $VERSION."
@@ -38,9 +39,9 @@ else
   VERSION_TAG=dev
 fi
 
-# The deploy tag (used in api paths, subdomains), is concatenation of the version and version tag, e.g. v2.1-dev.
+# The deploy tag (used in api paths, subdomains), is concatenation of the project name and version tag, e.g. aztec-connect-dev.
 # The terraform that will be executed (if it exists) is named after the version tag, e.g. ./terraform/dev.
-DEPLOY_TAG=$VERSION-$VERSION_TAG
+DEPLOY_TAG=$PROJECT-$VERSION_TAG
 TF_DIR=./terraform/$VERSION_TAG
 
 echo export BUILD_SYSTEM_PATH=$BUILD_SYSTEM_PATH >> $BASH_ENV
