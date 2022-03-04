@@ -7,21 +7,23 @@ if [ -n "$2" ]; then
   TF_DIR=$2
 fi
 
-# Apply terraform.
-if [ -d $TF_DIR ]; then
-  ensure_terraform
-  export TF_IN_AUTOMATION=1
-  cd $TF_DIR
-
-  # Always want to export the DEPLOY_TAG variable to terraform. It's used to easily scope releases.
-  export TF_VAR_DEPLOY_TAG=$DEPLOY_TAG
-
-  # If given a repository name, use it to construct and set/override the backend key.
-  # Otherwise use the key as specified in the terraform.
-  if [ -n "$REPOSITORY" ]; then
-    BACKEND_CONFIG=-backend-config="key=$DEPLOY_TAG/$REPOSITORY"
-  fi
-
-  terraform init -input=false $BACKEND_CONFIG
-  terraform apply -input=false -auto-approve
+if [ ! -d $TF_DIR ]; then
+  echo "No terraform directory found at $TF_DIR. Skipping."
+  exit 0
 fi
+
+ensure_terraform
+export TF_IN_AUTOMATION=1
+cd $TF_DIR
+
+# Always want to export the DEPLOY_TAG variable to terraform. It's used to easily scope releases.
+export TF_VAR_DEPLOY_TAG=$DEPLOY_TAG
+
+# If given a repository name, use it to construct and set/override the backend key.
+# Otherwise use the key as specified in the terraform.
+if [ -n "$REPOSITORY" ]; then
+  BACKEND_CONFIG=-backend-config="key=$DEPLOY_TAG/$REPOSITORY"
+fi
+
+terraform init -input=false $BACKEND_CONFIG
+terraform apply -input=false -auto-approve

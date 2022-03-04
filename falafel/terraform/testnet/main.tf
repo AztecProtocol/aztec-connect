@@ -1,8 +1,13 @@
 terraform {
   backend "s3" {
     bucket = "aztec-terraform"
-    key    = "aztec/v2.1/falafel"
     region = "eu-west-2"
+  }
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "3.74.2"
+    }
   }
 }
 
@@ -24,13 +29,22 @@ data "terraform_remote_state" "aztec2_iac" {
   }
 }
 
+data "terraform_remote_state" "blockchain" {
+  backend = "s3"
+  config = {
+    bucket = "aztec-terraform"
+    key    = "${var.DEPLOY_TAG}/blockchain"
+    region = "eu-west-2"
+  }
+}
+
 provider "aws" {
   profile = "default"
   region  = "eu-west-2"
 }
 
 resource "aws_service_discovery_service" "falafel" {
-  name = "falafel-defi-bridge"
+  name = "${var.DEPLOY_TAG}-falafel"
 
   health_check_custom_config {
     failure_threshold = 1
@@ -61,12 +75,12 @@ resource "aws_service_discovery_service" "falafel" {
 
 # Configure an EFS filesystem.
 resource "aws_efs_file_system" "falafel_data_store" {
-  creation_token                  = "falafel-defi-bridge-data-store"
+  creation_token                  = "${var.DEPLOY_TAG}-falafel-data"
   throughput_mode                 = "provisioned"
   provisioned_throughput_in_mibps = 20
 
   tags = {
-    Name = "falafel-defi-bridge-data-store"
+    Name = "${var.DEPLOY_TAG}-falafel-data"
   }
 
   lifecycle_policy {
@@ -88,11 +102,11 @@ resource "aws_efs_mount_target" "private_az2" {
 
 # Define task definition and service.
 resource "aws_ecs_task_definition" "falafel" {
-  family                   = "falafel-defi-bridge"
+  family                   = "${var.DEPLOY_TAG}-falafel"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
-  cpu                      = "4096"
-  memory                   = "30720"
+  cpu                      = "2048"
+  memory                   = "4096"
   execution_role_arn       = data.terraform_remote_state.setup_iac.outputs.ecs_task_execution_role_arn
 
   volume {
@@ -105,10 +119,10 @@ resource "aws_ecs_task_definition" "falafel" {
   container_definitions = <<DEFINITIONS
 [
   {
-    "name": "falafel-defi-bridge",
-    "image": "278380418400.dkr.ecr.us-east-2.amazonaws.com/falafel:cache-defi-bridge-project",
+    "name": "${var.DEPLOY_TAG}-falafel",
+    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/falafel:${var.DEPLOY_TAG}",
     "essential": true,
-    "memoryReservation": 30464,
+    "memoryReservation": 3840,
     "portMappings": [
       {
         "containerPort": 80
@@ -125,15 +139,23 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "ETHEREUM_HOST",
-        "value": "http://ethereum.aztec.network:10545"
+        "value": "${data.terraform_remote_state.blockchain.outputs.private_ethereum_host}"
       },
       {
         "name": "ROLLUP_CONTRACT_ADDRESS",
-        "value": "0xA7b3Fe0ac95310b65Ec17CAc64cF6a07cD173A19"
+        "value": "${data.terraform_remote_state.blockchain.outputs.rollup_contract_address}"
+      },
+      {
+        "name": "FEE_DISTRIBUTOR_ADDRESS",
+        "value": "${data.terraform_remote_state.blockchain.outputs.fee_distributor_address}"
       },
       {
         "name": "PRICE_FEED_CONTRACT_ADDRESSES",
-        "value": "0xDeFBe0fC6704F41419B7c1EF33CB7f9B2a8De21d,0x84CF7b5C00dAe33CaB79F40AeE13E7a2C2f43d83"
+        "value": "${data.terraform_remote_state.blockchain.outputs.price_feed_contract_addresses}"
+      },
+      {
+        "name": "FEE_PAYING_ASSET_ADDRESSES",
+        "value": "${data.terraform_remote_state.blockchain.outputs.fee_paying_asset_addresses}"
       },
       {
         "name": "GAS_LIMIT",
@@ -141,19 +163,23 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "PRIVATE_KEY",
-        "value": "0x1e76840afc5763c3fe78574ab4b1e2fa0f7b9e5b866a5bfae60cfa17e80d5bdf"
+        "value": "${var.PRIVATE_KEY}"
+      },
+      {
+        "name": "SERVER_AUTH_TOKEN",
+        "value": "${var.SERVER_AUTH_TOKEN}"
       },
       {
         "name": "API_PREFIX",
-        "value": "/falafel-defi-bridge"
+        "value": "/${var.DEPLOY_TAG}/falafel"
       },
       {
         "name": "NUM_INNER_ROLLUP_TXS",
-        "value": "1"
+        "value": "28"
       },
       {
         "name": "NUM_OUTER_ROLLUP_PROOFS",
-        "value": "2"
+        "value": "32"
       },
       {
         "name": "MAX_FEE_GAS_PRICE",
@@ -162,6 +188,10 @@ resource "aws_ecs_task_definition" "falafel" {
       {
         "name": "FEE_GAS_PRICE_MULTIPLIER",
         "value": "1.2"
+      },
+      {
+        "name": "MAX_PROVIDER_GAS_PRICE",
+        "value": "250000000000"
       },
       {
         "name": "BASE_TX_GAS",
@@ -174,6 +204,10 @@ resource "aws_ecs_task_definition" "falafel" {
       {
         "name": "MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW",
         "value": "1"
+      },
+      {
+        "name": "PROVERLESS",
+        "value": "true"
       }
     ],
     "mountPoints": [
@@ -185,7 +219,32 @@ resource "aws_ecs_task_definition" "falafel" {
     "logConfiguration": {
       "logDriver": "awslogs",
       "options": {
-        "awslogs-group": "/fargate/service/falafel-defi-bridge",
+        "awslogs-group": "/fargate/service/${var.DEPLOY_TAG}/falafel",
+        "awslogs-region": "eu-west-2",
+        "awslogs-stream-prefix": "ecs"
+      }
+    }
+  },
+  {
+    "name": "metrics",
+    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/metrics-sidecar:latest",
+    "essential": false,
+    "memoryReservation": 256,
+    "portMappings": [
+      {
+        "containerPort": 9545
+      }
+    ],
+    "environment": [
+      {
+        "name": "SERVICE",
+        "value": "${var.DEPLOY_TAG}/falafel"
+      }
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/fargate/service/${var.DEPLOY_TAG}/falafel",
         "awslogs-region": "eu-west-2",
         "awslogs-stream-prefix": "ecs"
       }
@@ -195,12 +254,8 @@ resource "aws_ecs_task_definition" "falafel" {
 DEFINITIONS
 }
 
-data "aws_ecs_task_definition" "falafel" {
-  task_definition = aws_ecs_task_definition.falafel.family
-}
-
 resource "aws_ecs_service" "falafel" {
-  name                               = "falafel-defi-bridge"
+  name                               = "${var.DEPLOY_TAG}-falafel"
   cluster                            = data.terraform_remote_state.setup_iac.outputs.ecs_cluster_id
   launch_type                        = "FARGATE"
   desired_count                      = 1
@@ -218,28 +273,28 @@ resource "aws_ecs_service" "falafel" {
 
   load_balancer {
     target_group_arn = aws_alb_target_group.falafel.arn
-    container_name   = "falafel-defi-bridge"
+    container_name   = "${var.DEPLOY_TAG}-falafel"
     container_port   = 80
   }
 
   service_registries {
     registry_arn   = aws_service_discovery_service.falafel.arn
-    container_name = "falafel-defi-bridge"
+    container_name = "${var.DEPLOY_TAG}-falafel"
     container_port = 80
   }
 
-  task_definition = "${aws_ecs_task_definition.falafel.family}:${max(aws_ecs_task_definition.falafel.revision, data.aws_ecs_task_definition.falafel.revision)}"
+  task_definition = aws_ecs_task_definition.falafel.family
 }
 
 # Logs
 resource "aws_cloudwatch_log_group" "falafel_logs" {
-  name              = "/fargate/service/falafel-defi-bridge"
+  name              = "/fargate/service/${var.DEPLOY_TAG}/falafel"
   retention_in_days = "14"
 }
 
 # Configure ALB to route /falafel to server.
 resource "aws_alb_target_group" "falafel" {
-  name                 = "falafel-defi-bridge"
+  name                 = "${var.DEPLOY_TAG}-falafel"
   port                 = "80"
   protocol             = "HTTP"
   target_type          = "ip"
@@ -247,7 +302,7 @@ resource "aws_alb_target_group" "falafel" {
   deregistration_delay = 5
 
   health_check {
-    path                = "/falafel-defi-bridge"
+    path                = "/${var.DEPLOY_TAG}/falafel"
     matcher             = "200"
     interval            = 10
     healthy_threshold   = 2
@@ -256,13 +311,12 @@ resource "aws_alb_target_group" "falafel" {
   }
 
   tags = {
-    name = "falafel-defi-bridge"
+    name = "${var.DEPLOY_TAG}-falafel"
   }
 }
 
 resource "aws_lb_listener_rule" "api" {
   listener_arn = data.terraform_remote_state.aztec2_iac.outputs.alb_listener_arn
-  priority     = 99
 
   action {
     type             = "forward"
@@ -271,7 +325,7 @@ resource "aws_lb_listener_rule" "api" {
 
   condition {
     path_pattern {
-      values = ["/falafel-defi-bridge*"]
+      values = ["/${var.DEPLOY_TAG}/falafel*"]
     }
   }
 }
