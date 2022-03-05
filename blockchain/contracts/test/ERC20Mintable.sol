@@ -11,7 +11,7 @@ import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 contract ERC20Mintable is ERC20 {
     uint8 public asset_decimals = 18;
 
-    constructor() ERC20('Test', 'TEST') {}
+    constructor(string memory symbol_) ERC20(symbol_, symbol_) {}
 
     function mint(address _to, uint256 _value) public returns (bool) {
         _mint(_to, _value);

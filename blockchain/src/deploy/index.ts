@@ -19,7 +19,6 @@ async function getSigner() {
   console.error(`Json rpc provider: ${ETHEREUM_HOST}`);
   const provider = new ethers.providers.JsonRpcProvider(ETHEREUM_HOST);
   const signer = PRIVATE_KEY ? (new ethers.Wallet(PRIVATE_KEY, provider) as Signer) : provider.getSigner(0);
-  console.error(`Signer: ${await signer.getAddress()}`);
   return new NonceManager(signer);
 }
 

@@ -77,7 +77,7 @@ describe('end-to-end defi tests', () => {
 
     const shieldValue = sdk.toBaseUnits(0, '0.08');
     const ethToDaiBridge = new BridgeId(1, 0, 1, 0, 0, new BitConfig(false, false, false, false, false, false), 0);
-    const daiToEthBridge = new BridgeId(2, 1, 0, 0, 0, new BitConfig(false, false, false, false, false, false), 0);
+    const daiToEthBridge = new BridgeId(1, 1, 0, 0, 0, new BitConfig(false, false, false, false, false, false), 0);
     const ethToDaiFees = await sdk.getDefiFees(ethToDaiBridge);
     const daiToEthFees = await sdk.getDefiFees(daiToEthBridge);
 

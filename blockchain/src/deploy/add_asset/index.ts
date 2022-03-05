@@ -4,7 +4,7 @@ import IFeeDistributor from '../../artifacts/contracts/interfaces/IFeeDistributo
 import RollupProcessor from '../../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
 import ERC20Mintable from '../../artifacts/contracts/test/ERC20Mintable.sol/ERC20Mintable.json';
 import { deployPriceFeed } from '../deploy_price_feed';
-import { createPair } from '../deploy_uniswap';
+import { createUniswapPair } from '../deploy_uniswap';
 import { addAsset } from './add_asset';
 
 const { ETHEREUM_HOST, INFURA_API_KEY, NETWORK, PRIVATE_KEY, ROLLUP_CONTRACT_ADDRESS, FEE_DISTRIBUTOR_ADDRESS } =
@@ -48,7 +48,7 @@ async function main() {
   const uniswapRouter = new Contract(await feeDistributor.router(), IUniswapV2Router02.abi, signer);
   const initialTokenSupply = initialTokenSupplyStr ? BigInt(initialTokenSupplyStr) : undefined;
   const initialEthSupply = initialEthSupplyStr ? BigInt(initialEthSupplyStr) : undefined;
-  await createPair(signer, uniswapRouter, asset, initialTokenSupply, initialEthSupply);
+  await createUniswapPair(signer, uniswapRouter, asset, initialTokenSupply, initialEthSupply);
   const initialPrice = initialPriceStr ? BigInt(initialPriceStr) : undefined;
   await deployPriceFeed(signer, initialPrice);
 }

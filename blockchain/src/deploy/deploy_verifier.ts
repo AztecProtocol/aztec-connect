@@ -31,6 +31,7 @@ export async function deployVerifier(signer: Signer, vk: string) {
   const VerificationKey = Keys[vk];
   const StandardVerificationKeyLibrary = new ContractFactory(VerificationKey.abi, VerificationKey.bytecode, signer);
   const StandardVerificationKeyLib = await StandardVerificationKeyLibrary.deploy();
+  console.error(`${vk} address: ${StandardVerificationKeyLib.address}`);
 
   console.error('Deploying StandardVerifier...');
   const linkedVBytecode = linkBytecode(StandardVerifier, {
@@ -38,6 +39,7 @@ export async function deployVerifier(signer: Signer, vk: string) {
   });
   const verifierFactory = new ContractFactory(StandardVerifier.abi, linkedVBytecode, signer);
   const verifier = await verifierFactory.deploy();
+  console.error(`StandardVerifier address: ${verifier.address}`);
   return verifier;
 }
 
@@ -45,5 +47,6 @@ export async function deployMockVerifier(signer: Signer) {
   console.error('Deploying MockVerifier...');
   const verifierFactory = new ContractFactory(MockVerifier.abi, MockVerifier.bytecode, signer);
   const verifier = await verifierFactory.deploy();
+  console.error(`MockVerifier address: ${verifier.address}`);
   return verifier;
 }

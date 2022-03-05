@@ -9,7 +9,7 @@ import {ERC20Mintable} from './ERC20Mintable.sol';
  * ERC20 contract where the transfer() fn will always throw
  */
 contract ERC20FaultyTransfer is ERC20Mintable {
-    constructor() ERC20Mintable() {}
+    constructor() ERC20Mintable('TEST') {}
 
     function transfer(address, uint256) public pure override returns (bool) {
         require(true == false, 'ERC20FaultyTransfer: FAILED');

@@ -68,37 +68,36 @@ function generateBridgeConfig(numTxs: number, fee: number, rollupFrequency: numb
     bridgeId: bridgeId.toBigInt(),
     numTxs,
     fee,
-    rollupFrequency
+    rollupFrequency,
   };
   return bridgeConfig;
 }
 
 function generateBridgeIds(numTxs: number, fee: number, rollupFrequency: number) {
-  const uniswapBridge1 = 1;
-  const uniswapBridge2 = 2;
-  const elementBridge = 3;
+  const uniswapBridge = 1;
+  const elementBridge = 2;
   const elementAssetIds = [3, 4, 5, 6, 8, 9];
-  const elementAuxDatas = new Map<number, Array<number>>(
-    [
-      [3, [1643382476]],
-      [4, [1643382446]],
-      [5, [1651264326]],
-      [6, [1643382514, 1650025565]],
-      [8, [1643382460, 1651267340]],
-      [9, [1644601070, 1651247155]]
-    ]
-  );
+  const elementAuxDatas = new Map<number, Array<number>>([
+    [3, [1643382476]],
+    [4, [1643382446]],
+    [5, [1651264326]],
+    [6, [1643382514, 1650025565]],
+    [8, [1643382460, 1651267340]],
+    [9, [1644601070, 1651247155]],
+  ]);
   return [
-    generateBridgeConfig(numTxs, fee, rollupFrequency, generateBridgeId(uniswapBridge1, 0, 1, 0)),
-    generateBridgeConfig(numTxs, fee, rollupFrequency, generateBridgeId(uniswapBridge2, 1, 0, 0)),
+    generateBridgeConfig(numTxs, fee, rollupFrequency, generateBridgeId(uniswapBridge, 0, 1, 0)),
+    generateBridgeConfig(numTxs, fee, rollupFrequency, generateBridgeId(uniswapBridge, 1, 0, 0)),
     ...elementAssetIds.flatMap(assetId => {
       const auxValues = elementAuxDatas.get(assetId);
-      return auxValues === undefined ? [] : auxValues.map(aux => {
-        const generatedBridgeId = generateBridgeId(elementBridge, assetId, assetId, aux);
-        return generateBridgeConfig(numTxs, fee, rollupFrequency, generatedBridgeId);
-      });
-    })
-  ]
+      return auxValues === undefined
+        ? []
+        : auxValues.map(aux => {
+            const generatedBridgeId = generateBridgeId(elementBridge, assetId, assetId, aux);
+            return generateBridgeConfig(numTxs, fee, rollupFrequency, generatedBridgeId);
+          });
+    }),
+  ];
 }
 
 function getPerChainBridgeConfig(chainId: number) {
