@@ -18,7 +18,6 @@ import { TxFeeResolver } from './tx_fee_resolver';
 import { WorldState } from './world_state';
 import { Configurator } from './configurator';
 import { Tx, TxReceiver } from './tx_receiver';
-import { BridgeProfile } from './pipeline_coordinator/rollup_profiler';
 
 export class Server {
   private blake: Blake2s;

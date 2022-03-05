@@ -2,12 +2,6 @@
 # Succeeds if any files matching the rebuild patterns, have changed since the base commit.
 set -e
 
-# If this is a tagged commit, rebuild.
-if [ -n "$COMMIT_TAG" ]; then
-  echo "Rebuilding tagged commit."
-  exit 0
-fi
-
 BASE_COMMIT=$1
 PATTERNS=${REBUILD_PATTERNS:-.rebuild_patterns}
 
