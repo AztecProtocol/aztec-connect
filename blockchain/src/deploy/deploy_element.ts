@@ -51,21 +51,17 @@ export const deployElementBridge = async (
   trancheByteCode: Buffer,
   balancerAddress: string,
 ) => {
-  console.error('Deploying Element Bridge...');
+  console.error('Deploying ElementBridge...');
   const ElementFactory = new ContractFactory(ElementBridge.abi, ElementBridge.bytecode, owner);
   const bridge = await ElementFactory.deploy(rollupAddress, trancheFactoryAddress, trancheByteCode, balancerAddress);
-  console.error(`Element Bridge contract address: ${bridge.address}`);
+  console.error(`ElementBridge contract address: ${bridge.address}`);
   return bridge;
 };
 
 export const setupElementPools = async (elementPoolConfig: ElementPoolConfiguration, bridgeContract: Contract) => {
   for (const spec of elementPoolConfig.poolSpecs) {
-    // try {
     const dateString = new Date(spec.expiry * 1000).toDateString();
+    console.error(`Registering convergent pool ${spec.poolAddress} for ${spec.asset} and expiry ${dateString}...`);
     await bridgeContract.registerConvergentPoolAddress(spec.poolAddress, spec.wrappedPosition, spec.expiry);
-    console.error(`Registered convergent pool ${spec.poolAddress} for ${spec.asset} and expiry ${dateString}`);
-    // } catch (e) {
-    //   console.error(`Registration failed `, e);
-    // }
   }
 };

@@ -39,7 +39,7 @@ export async function deployVerifier(signer: Signer, vk: string) {
   });
   const verifierFactory = new ContractFactory(StandardVerifier.abi, linkedVBytecode, signer);
   const verifier = await verifierFactory.deploy();
-  console.error(`StandardVerifier address: ${verifier.address}`);
+  console.error(`StandardVerifier contract address: ${verifier.address}`);
   return verifier;
 }
 
@@ -47,6 +47,6 @@ export async function deployMockVerifier(signer: Signer) {
   console.error('Deploying MockVerifier...');
   const verifierFactory = new ContractFactory(MockVerifier.abi, MockVerifier.bytecode, signer);
   const verifier = await verifierFactory.deploy();
-  console.error(`MockVerifier address: ${verifier.address}`);
+  console.error(`MockVerifier contract address: ${verifier.address}`);
   return verifier;
 }

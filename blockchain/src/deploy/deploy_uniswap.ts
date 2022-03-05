@@ -23,14 +23,14 @@ export const createUniswapPair = async (
     return;
   }
 
-  console.error(`Create UniswapPair [${await asset.name()} - WETH]...`);
+  console.error(`Creating UniswapPair: ${await asset.name()} / WETH...`);
   {
     const tx = await factory.createPair(asset.address, weth.address);
     await tx.wait();
   }
   const pairAddress = await factory.getPair(asset.address, weth.address);
   const pair = new Contract(pairAddress, UniswapV2PairJson.abi, owner);
-  console.error(`Pair contract address: ${pairAddress}`);
+  console.error(`UniswapPair contract address: ${pairAddress}`);
 
   await asset.mint(pair.address, initialTokenSupply, { gasLimit });
   await weth.deposit({ value: initialEthSupply, gasLimit });

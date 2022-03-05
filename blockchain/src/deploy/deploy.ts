@@ -52,13 +52,14 @@ async function deployBridgeContracts(signer: Signer, rollup: Contract, uniswapRo
   const uniswapBridge = await deployUniswapBridge(signer, rollup, uniswapRouter);
   await rollup.setSupportedBridge(uniswapBridge.address, 0n);
 
-  if ((await signer.provider!.getCode(elementConfig.balancerAddress)) != '0x') {
-    console.error(`Balancer contract not found, element bridge and it's assets won't be deployed.`);
+  const chainId = await signer.getChainId();
+  if (!(chainId === 1 || chainId === 0xa57ec)) {
+    console.error(`We are neither mainnet nor mainnet-fork. Skipping ElementBridge deployment.`);
     return;
   }
 
   for (const elementAsset of elementAssets) {
-    await rollup.setSupportedAsset(elementAsset.inputAsset, false, 0);
+    await rollup.setSupportedAsset(elementAsset, false, 0);
   }
 
   const elementBridge = await deployElementBridge(
@@ -114,7 +115,6 @@ export async function deploy(
   const feeDistributor = await deployFeeDistributor(signer, rollup, uniswapRouter);
 
   const [erc20Asset] = await deployErc20Contracts(signer, rollup);
-  await uniswapRouter.deployed();
   await erc20Asset.deployed();
 
   const gasPrice = 20n * 10n ** 9n; // 20 gwei
