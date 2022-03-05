@@ -3,7 +3,6 @@
   "version": "2.0.0",
   "main": "index.js",
   "license": "GPLv2",
-  "private": true,
   "scripts": {
     "build": "yarn clean && yarn compile && tsc -p tsconfig.dest.json && node ./package.js && chmod +x ./dest/deploy/index.js",
     "build:dev": "tsc -p tsconfig.dest.json --watch",
