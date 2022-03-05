@@ -7,7 +7,7 @@ REPOSITORY=$1
 deploy_ecr $REPOSITORY
 
 # Bail out if nothing changed.
-LAST_SUCCESSFUL_COMMIT=$(last_successful_commit $REPOSITORY deployed)
+LAST_SUCCESSFUL_COMMIT=$(last_successful_commit $REPOSITORY $DEPLOY_TAG-deployed)
 echo "Last successfully deployed commit: $LAST_SUCCESSFUL_COMMIT"
 if ! check_rebuild $LAST_SUCCESSFUL_COMMIT; then
   echo "No changes detected, skipping deployment."
@@ -20,4 +20,4 @@ deploy_terraform $REPOSITORY
 deploy_service $DEPLOY_TAG-$REPOSITORY
 
 # Tag the image as deployed.
-tag_remote_image $REPOSITORY cache-$COMMIT_HASH cache-$COMMIT_HASH-deployed
+tag_remote_image $REPOSITORY cache-$COMMIT_HASH cache-$COMMIT_HASH-$DEPLOY_TAG-deployed

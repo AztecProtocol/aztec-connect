@@ -30,7 +30,7 @@ terraform init -input=false -backend-config="key=$DEPLOY_TAG/blockchain"
 LAST_NETWORK=$(terraform output ethereum_network || echo "")
 cd ../..
 
-LAST_COMMIT=$(last_successful_commit blockchain deployed)
+LAST_COMMIT=$(last_successful_commit blockchain $DEPLOY_TAG-deployed)
 
 if [ -z "$LAST_COMMIT" ]; then
   echo "No successful last deploy found. Will deploy."
@@ -58,4 +58,4 @@ if [ -n "$REDEPLOY" ]; then
   deploy_terraform blockchain
 fi
 
-tag_remote_image blockchain cache-$COMMIT_HASH cache-$COMMIT_HASH-deployed
+tag_remote_image blockchain cache-$COMMIT_HASH cache-$COMMIT_HASH-$DEPLOY_TAG-deployed
