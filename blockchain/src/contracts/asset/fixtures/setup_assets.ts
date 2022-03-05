@@ -11,7 +11,7 @@ export const setupAssets = async (publisher: Signer, mintUsers: Signer[], mintAm
   const provider = new EthersAdapter(ethers.provider);
   const assets: Asset[] = [new EthAsset(provider)];
   for (let i = 0; i < numAssets; ++i) {
-    const asset = await ERC20.deploy();
+    const asset = await ERC20.deploy('TEST');
     const tokenAsset = await TokenAsset.fromAddress(
       EthAddress.fromString(asset.address),
       new EthersAdapter(ethers.provider),

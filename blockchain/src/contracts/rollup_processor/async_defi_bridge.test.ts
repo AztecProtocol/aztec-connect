@@ -402,7 +402,7 @@ describe('rollup_processor: async defi bridge', () => {
       const txHash = await rollupProcessor.processAsyncDefiInteraction(0);
       const expectedAsyncResult = [new DefiInteractionNote(bridgeId, 0, inputValue, 0n, 0n, false)];
       await expectResult(txHash, expectedAsyncResult);
-      await expectHashes([]);      
+      await expectHashes([]);
       await expectAsyncHashes(expectedAsyncResult);
 
       await expectBalance(0, 0n);
@@ -445,7 +445,7 @@ describe('rollup_processor: async defi bridge', () => {
       const expectedAsyncResult = [new DefiInteractionNote(bridgeId, 0, inputValue, 0n, 0n, false)];
       await expectResult(txHash, expectedAsyncResult);
       await expectHashes([]);
-      
+
       await expectAsyncHashes(expectedAsyncResult);
 
       await expectBalance(0, initialBalance);
