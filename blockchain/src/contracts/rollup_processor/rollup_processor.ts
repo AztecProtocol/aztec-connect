@@ -292,7 +292,7 @@ export class RollupProcessor {
           blockAfterPreviousRollup: index === 0 ? undefined : events[index - 1].blockNumber + 1,
         };
       })
-      .filter(e => e.rollupEvent.args!.rollupId.toNumber() >= rollupId)
+      .filter(e => e.rollupEvent.args!.rollupId.toNumber() >= rollupId);
 
     return this.getRollupBlocksFromEvents(eventsToExtractRollups, minConfirmations);
   }
@@ -372,7 +372,7 @@ export class RollupProcessor {
                   ? event.rollupEvent.blockNumber
                   : event.blockAfterPreviousRollup,
                 event.rollupEvent.blockNumber,
-              )
+              ),
             ]),
           ),
         )

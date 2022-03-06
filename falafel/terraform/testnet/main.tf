@@ -199,7 +199,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "PUBLISH_INTERVAL",
-        "value": "60"
+        "value": "3600"
       },
       {
         "name": "MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW",
@@ -208,6 +208,10 @@ resource "aws_ecs_task_definition" "falafel" {
       {
         "name": "PROVERLESS",
         "value": "true"
+      },
+      {
+        "name": "PROOF_GENERATOR_MODE",
+        "value": "split"
       }
     ],
     "mountPoints": [

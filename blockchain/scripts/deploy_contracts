@@ -8,7 +8,9 @@ set -e
 case $VERSION_TAG in
   testnet)
     export TF_VAR_PUBLIC_ETHEREUM_HOST=https://goerli.infura.io/v3/$TF_VAR_INFURA_API_KEY
-    export TF_VAR_PRIVATE_ETHEREUM_HOST=http://ethereum.aztec.network:10545
+    export TF_VAR_PRIVATE_ETHEREUM_HOST=https://goerli.infura.io/v3/$TF_VAR_INFURA_API_KEY
+    # Our goerli node is not working right.
+    #export TF_VAR_PRIVATE_ETHEREUM_HOST=http://ethereum.aztec.network:10545
     export TF_VAR_ETHEREUM_NETWORK=goerli
     ;;
   dev)
