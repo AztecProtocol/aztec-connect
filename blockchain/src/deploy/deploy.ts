@@ -119,19 +119,18 @@ export async function deploy(
 
   const gasPrice = 20n * 10n ** 9n; // 20 gwei
   const daiPrice = 1n * 10n ** 15n; // 1000 DAI/ETH
-  const btcPrice = 2n * 10n ** 2n; // 0.05 ETH/BTC
   const initialTokenSupply = (initialEthSupply * 10n ** 18n) / daiPrice;
   await createUniswapPair(signer, uniswapRouter, erc20Asset, initialTokenSupply, initialEthSupply);
 
-  const priceFeeds = [
-    await deployPriceFeed(signer, gasPrice),
-    await deployPriceFeed(signer, daiPrice),
-    await deployPriceFeed(signer, btcPrice),
-  ];
+  const priceFeeds = [await deployPriceFeed(signer, gasPrice), await deployPriceFeed(signer, daiPrice)];
 
   await deployBridgeContracts(signer, rollup, uniswapRouter);
 
   const feePayingAssets = [EthAddress.ZERO.toString(), erc20Asset.address];
+
+  if (feePayingAssets.length !== priceFeeds.length) {
+    throw new Error('There should be one price feed per fee paying asset.');
+  }
 
   return { rollup, priceFeeds, feeDistributor, feePayingAssets };
 }
