@@ -21,7 +21,7 @@ export class Agent {
   ) {
     this.sdk = sdk;
     this.wallet = Wallet.createRandom();
-    this.address = provider.addEthersWallet(this.wallet);
+    this.address = provider.addAccount(Buffer.from(this.wallet.privateKey.slice(2), 'hex'));
 
     this.steps = ['fund', 'depositToContract', 'deposit', ...Array(numTransfers).fill('transfer'), 'withdraw'];
     this.step = 0;

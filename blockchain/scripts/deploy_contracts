@@ -57,6 +57,13 @@ fi
 if [ -n "$REDEPLOY" ]; then
   echo "Redeploying contracts..."
   `docker run -e ESCAPE_BLOCK_LOWER=60 -e ESCAPE_BLOCK_UPPER=120 -e ETHEREUM_HOST=$TF_VAR_PUBLIC_ETHEREUM_HOST -e PRIVATE_KEY=$TF_VAR_PRIVATE_KEY -e VK=MockVerificationKey 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:$COMMIT_HASH`
+else
+  echo "No reason to redeploy contracts."
+  # We will reapply terraform to pickup changes to ethereum hosts above. Load existing unknown outputs first.
+  export TF_VAR_FEE_DISTRIBUTOR_ADDRESS=$(terraform output fee_distributor_address)
+  export TF_VAR_FEE_PAYING_ASSET_ADDRESSES=$(terraform output fee_paying_asset_addresses)
+  export TF_VAR_PRICE_FEED_CONTRACT_ADDRESSES=$(terraform output price_feed_contract_addresses)
+  export TF_VAR_ROLLUP_CONTRACT_ADDRESS=$(terraform output rollup_contract_address)
 fi
 
 deploy_terraform blockchain

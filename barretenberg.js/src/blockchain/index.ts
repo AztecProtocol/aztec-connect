@@ -1,5 +1,6 @@
 export * from './blockchain';
 export * from './blockchain_status';
+export * from './ethereum_rpc';
 export * from './typed_data';
 export * from './ethereum_provider';
 export * from './ethereum_signer';

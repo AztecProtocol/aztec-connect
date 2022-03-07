@@ -1,4 +1,4 @@
-import { AztecSdk, createAztecSdk, EthAddress, TxId, TxSettlementTime, WalletProvider } from '@aztec/sdk';
+import { AztecSdk, createAztecSdk, EthAddress, EthereumRpc, TxId, TxSettlementTime, WalletProvider } from '@aztec/sdk';
 import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
@@ -22,7 +22,6 @@ const {
  */
 
 describe('end-to-end tests', () => {
-  let provider: WalletProvider;
   let sdk: AztecSdk;
   let addresses: EthAddress[] = [];
   const assetId = 0;
@@ -38,9 +37,17 @@ describe('end-to-end tests', () => {
   beforeAll(async () => {
     debug(`funding initial ETH accounts...`);
     const initialBalance = 2n * 10n ** 16n; // 0.02
-    provider = await createFundedWalletProvider(ETHEREUM_HOST, 3, 2, Buffer.from(PRIVATE_KEY, 'hex'), initialBalance);
-    addresses = provider.getAccounts();
-    const confs = (await provider.getChainId()) === 1337 ? 1 : 2;
+    const provider = await createFundedWalletProvider(
+      ETHEREUM_HOST,
+      3,
+      2,
+      Buffer.from(PRIVATE_KEY, 'hex'),
+      initialBalance,
+    );
+    const ethRpc = new EthereumRpc(provider);
+    const chainId = await ethRpc.getChainId();
+    const confs = chainId === 1337 ? 1 : 2;
+    addresses = await ethRpc.getAccounts();
 
     sdk = await createAztecSdk(provider, ROLLUP_HOST, {
       syncInstances: false,
