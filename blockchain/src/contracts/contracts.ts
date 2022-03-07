@@ -49,17 +49,15 @@ export class Contracts {
 
     const assetAddresses = await rollupProcessor.getSupportedAssets();
     const tokenAssets = await Promise.all(
-      assetAddresses
-        .slice(1)
-        .map(async (addr, i) =>
-          TokenAsset.fromAddress(
-            addr,
-            ethereumProvider,
-            await rollupProcessor.getAssetPermitSupport(i + 1),
-            feePayingAssetAddresses.some(feePayingAsset => addr.equals(feePayingAsset)),
-            confirmations,
-          ),
+      assetAddresses.slice(1).map(async (addr, i) =>
+        TokenAsset.fromAddress(
+          addr,
+          ethereumProvider,
+          await rollupProcessor.getAssetPermitSupport(i + 1),
+          feePayingAssetAddresses.some(feePayingAsset => addr.equals(feePayingAsset)),
+          confirmations,
         ),
+      ),
     );
     const assets = [new EthAsset(ethereumProvider), ...tokenAssets];
 

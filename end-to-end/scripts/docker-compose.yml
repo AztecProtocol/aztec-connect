@@ -37,7 +37,6 @@ services:
       BASE_TX_GAS: 10000
       PUBLISH_INTERVAL: 120
       NODE_ENV: production
-      TX_FEE: 100000000000000000
       PROVERLESS: ${PROVERLESS}
       VK: ${VK}
     depends_on:

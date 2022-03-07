@@ -47,6 +47,8 @@ export class TxReceiver {
 
     this.worker = await createWorker('0', this.barretenberg.module);
 
+    console.log('TxReceiver requesting verification keys from ProofGenerator...');
+
     const jsKey = await this.proofGenerator.getJoinSplitVk();
     this.joinSplitVerifier = new JoinSplitVerifier();
     await this.joinSplitVerifier.loadKey(this.worker, jsKey, crs.getG2Data());

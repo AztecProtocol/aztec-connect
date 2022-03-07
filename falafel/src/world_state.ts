@@ -69,12 +69,12 @@ export class WorldState {
     // New blocks will be appended as they are received.
     this.blockBufferCache = (await this.rollupDb.getSettledRollups(0)).map(rollupDaoToBlockBuffer);
 
-    await this.startNewPipeline();
-
     this.blockchain.on('block', block => this.blockQueue.put(block));
     await this.blockchain.start(await this.rollupDb.getNextRollupId());
 
     this.blockQueue.process(block => this.handleBlock(block));
+
+    await this.startNewPipeline();
   }
 
   public getBlockBuffers(from: number) {

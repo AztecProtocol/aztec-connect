@@ -57,7 +57,8 @@ fi
 if [ -n "$REDEPLOY" ]; then
   echo "Redeploying contracts..."
   `docker run -e ESCAPE_BLOCK_LOWER=60 -e ESCAPE_BLOCK_UPPER=120 -e ETHEREUM_HOST=$TF_VAR_PUBLIC_ETHEREUM_HOST -e PRIVATE_KEY=$TF_VAR_PRIVATE_KEY -e VK=MockVerificationKey 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:$COMMIT_HASH`
-  deploy_terraform blockchain
 fi
+
+deploy_terraform blockchain
 
 tag_remote_image blockchain cache-$COMMIT_HASH cache-$COMMIT_HASH-$DEPLOY_TAG-deployed

@@ -1,14 +1,15 @@
 import { emptyDir, mkdirp, pathExists, readJson, writeJson } from 'fs-extra';
 import { dirname } from 'path';
 import { RuntimeConfig } from '@aztec/barretenberg/rollup_provider';
+import { EthAddress } from '@aztec/barretenberg/address';
 
 export interface ConfVars {
   port: number;
   dbUrl?: string;
-  rollupContractAddress?: string;
-  feeDistributorAddress?: string;
-  priceFeedContractAddresses: string[];
-  feePayingAssetAddresses: string[];
+  rollupContractAddress: EthAddress;
+  feeDistributorAddress: EthAddress;
+  priceFeedContractAddresses: EthAddress[];
+  feePayingAssetAddresses: EthAddress[];
   ethereumHost: string;
   ethereumPollInterval?: number;
   proofGeneratorMode: string;
@@ -51,10 +52,14 @@ function getConfVars(): ConfVars {
   return {
     port: +(PORT || 8081),
     dbUrl: DB_URL,
-    rollupContractAddress: ROLLUP_CONTRACT_ADDRESS,
-    feeDistributorAddress: FEE_DISTRIBUTOR_ADDRESS,
-    priceFeedContractAddresses: (PRICE_FEED_CONTRACT_ADDRESSES || '').split(','),
-    feePayingAssetAddresses: (FEE_PAYING_ASSET_ADDRESSES || '').split(','),
+    rollupContractAddress: EthAddress.fromString(ROLLUP_CONTRACT_ADDRESS || ''),
+    feeDistributorAddress: EthAddress.fromString(FEE_DISTRIBUTOR_ADDRESS || ''),
+    priceFeedContractAddresses: PRICE_FEED_CONTRACT_ADDRESSES
+      ? PRICE_FEED_CONTRACT_ADDRESSES.split(',').map(EthAddress.fromString)
+      : [],
+    feePayingAssetAddresses: FEE_PAYING_ASSET_ADDRESSES
+      ? FEE_PAYING_ASSET_ADDRESSES.split(',').map(EthAddress.fromString)
+      : [EthAddress.ZERO],
     ethereumHost: ETHEREUM_HOST || '',
     ethereumPollInterval: +(ETHEREUM_POLL_INTERVAL || 10000),
     proofGeneratorMode: PROOF_GENERATOR_MODE || 'normal',
@@ -73,7 +78,7 @@ function getConfVars(): ConfVars {
     runtimeConfig: {
       acceptingTxs: true,
       useKeyCache: false,
-      publishInterval: +(PUBLISH_INTERVAL || 0),
+      publishInterval: +(PUBLISH_INTERVAL || 60),
       gasLimit: 4000000,
       baseTxGas: +(BASE_TX_GAS || 16000),
       verificationGas: 500000,
@@ -106,9 +111,9 @@ export class Configurator {
     if (await pathExists(this.confPath)) {
       // Erase all data if rollup contract changes.
       const saved: ConfVars = await this.readConfigFile(this.confPath);
-      if (this.confVars.rollupContractAddress && this.confVars.rollupContractAddress !== saved.rollupContractAddress) {
+      if (!this.confVars.rollupContractAddress.equals(saved.rollupContractAddress)) {
         console.log(
-          `Rollup contract changed, erasing data: ${saved.rollupContractAddress} -> ${this.confVars.rollupContractAddress}`,
+          `Rollup contract changed, erasing data: ${saved.rollupContractAddress.toString()} -> ${this.confVars.rollupContractAddress.toString()}`,
         );
         await emptyDir(dir);
       }
@@ -138,6 +143,10 @@ export class Configurator {
     const conf = await readJson(path);
     return {
       ...conf,
+      rollupContractAddress: EthAddress.fromString(conf.rollupContractAddress),
+      feeDistributorAddress: EthAddress.fromString(conf.feeDistributorAddress),
+      priceFeedContractAddresses: conf.priceFeedContractAddresses.map(EthAddress.fromString),
+      feePayingAssetAddresses: conf.feePayingAssetAddresses.map(EthAddress.fromString),
       privateKey: Buffer.from(conf.privateKey, 'hex'),
       runtimeConfig: {
         ...conf.runtimeConfig,
@@ -154,6 +163,10 @@ export class Configurator {
   private async writeConfigFile(path: string, conf: ConfVars) {
     await writeJson(path, {
       ...conf,
+      rollupContractAddress: conf.rollupContractAddress.toString(),
+      feeDistributorAddress: conf.feeDistributorAddress.toString(),
+      priceFeedContractAddresses: conf.priceFeedContractAddresses.map(a => a.toString()),
+      feePayingAssetAddresses: conf.feePayingAssetAddresses.map(a => a.toString()),
       privateKey: conf.privateKey.toString('hex'),
       runtimeConfig: {
         ...conf.runtimeConfig,

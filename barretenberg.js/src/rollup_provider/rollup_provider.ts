@@ -47,10 +47,11 @@ export function runtimeConfigToJson(runtimeConfig: RuntimeConfig) {
 }
 
 export function runtimeConfigFromJson(runtimeConfig: any) {
+  const { maxFeeGasPrice, maxProviderGasPrice } = runtimeConfig;
   return {
     ...runtimeConfig,
-    maxFeeGasPrice: BigInt(runtimeConfig.maxFeeGasPrice),
-    maxProviderGasPrice: BigInt(runtimeConfig.maxProviderGasPrice),
+    ...(maxFeeGasPrice !== undefined ? { maxFeeGasPrice: BigInt(maxFeeGasPrice) } : {}),
+    ...(maxProviderGasPrice !== undefined ? { maxProviderGasPrice: BigInt(maxProviderGasPrice) } : {}),
   };
 }
 
@@ -61,7 +62,7 @@ export interface RollupProviderStatus {
   pendingTxCount: number;
   runtimeConfig: RuntimeConfig;
   bridgeStatus: BridgeStatus[];
-  proverless: boolean,
+  proverless: boolean;
 }
 
 export function rollupProviderStatusToJson(status: RollupProviderStatus) {

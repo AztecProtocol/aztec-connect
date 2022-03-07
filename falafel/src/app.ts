@@ -6,6 +6,7 @@ import {
   PendingTxServerResponse,
   rollupProviderStatusToJson,
   RuntimeConfig,
+  runtimeConfigFromJson,
   TxPostData,
   TxServerResponse,
 } from '@aztec/barretenberg/rollup_provider';
@@ -139,7 +140,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
 
   router.patch('/runtime-config', recordMetric, validateAuth, async (ctx: Koa.Context) => {
     const stream = new PromiseReadable(ctx.req);
-    const runtimeConfig: Partial<RuntimeConfig> = JSON.parse((await stream.readAll()) as string);
+    const runtimeConfig: Partial<RuntimeConfig> = runtimeConfigFromJson(JSON.parse((await stream.readAll()) as string));
     server.setRuntimeConfig(runtimeConfig);
     ctx.status = 200;
   });

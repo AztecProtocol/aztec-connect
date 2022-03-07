@@ -9,16 +9,23 @@ export class FeeCalculator {
   constructor(
     private readonly priceTracker: PriceTracker,
     private readonly assets: BlockchainAsset[],
-    private readonly baseTxGas: number,
-    private readonly maxFeeGasPrice: bigint,
-    private readonly feeGasPriceMultiplier: number,
+    private baseTxGas: number,
+    private maxFeeGasPrice: bigint,
+    private feeGasPriceMultiplier: number,
     private readonly txsPerRollup: number,
-    private readonly publishInterval: number,
+    private publishInterval: number,
     private readonly surplusRatios = [1, 0],
     private readonly freeAssets: number[] = [],
     private readonly freeTxTypes: TxType[] = [],
     private readonly numSignificantFigures = 0,
   ) {}
+
+  public setConf(baseTxGas: number, maxFeeGasPrice: bigint, feeGasPriceMultiplier: number, publishInterval: number) {
+    this.baseTxGas = baseTxGas;
+    this.maxFeeGasPrice = maxFeeGasPrice;
+    this.feeGasPriceMultiplier = feeGasPriceMultiplier;
+    this.publishInterval = publishInterval;
+  }
 
   getMinTxFee(assetId: number, txType: TxType) {
     if (this.freeTxTypes.includes(txType)) {

@@ -11,6 +11,7 @@ import { Contract, Event, utils } from 'ethers';
 import { abi } from '../../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
 import { decodeErrorFromContract } from '../decode_error';
 import { solidityFormatSignatures } from './solidity_format_signatures';
+import createDebug from 'debug';
 
 const fixEthersStackTrace = (err: Error) => {
   err.stack! += new Error().stack;
@@ -26,6 +27,7 @@ export class RollupProcessor {
   private lastQueriedRollupId?: number;
   private lastQueriedRollupBlockNum?: number;
   protected provider: Web3Provider;
+  private log = createDebug('bb:rollup_processor');
 
   constructor(protected rollupContractAddress: EthAddress, private ethereumProvider: EthereumProvider) {
     this.provider = new Web3Provider(ethereumProvider);
@@ -265,13 +267,13 @@ export class RollupProcessor {
         : this.lastQueriedRollupBlockNum!;
     let events: Event[] = [];
 
-    // const totalStartTime = new Date().getTime();
+    const totalStartTime = new Date().getTime();
     while (end > earliestBlock) {
       const rollupFilter = this.rollupProcessor.filters.RollupProcessed();
-      // console.log(`Fetching rollup events between blocks ${start} and ${end}...`);
-      // const startTime = new Date().getTime();
+      this.log(`Fetching rollup events between blocks ${start} and ${end}...`);
+      const startTime = new Date().getTime();
       const rollupEvents = await this.rollupProcessor.queryFilter(rollupFilter, start, end);
-      // console.log(`${rollupEvents.length} fetched in ${(new Date().getTime() - startTime) / 1000}s`);
+      this.log(`${rollupEvents.length} fetched in ${(new Date().getTime() - startTime) / 1000}s`);
 
       events = [...rollupEvents, ...events];
 
@@ -283,7 +285,7 @@ export class RollupProcessor {
       end = Math.max(start - 1, earliestBlock);
       start = Math.max(end - chunk, earliestBlock);
     }
-    // console.log(`Done: ${events.length} fetched in ${(new Date().getTime() - totalStartTime) / 1000}s`);
+    this.log(`Done: ${events.length} fetched in ${(new Date().getTime() - totalStartTime) / 1000}s`);
 
     const eventsToExtractRollups = events
       .map((ev, index) => {
@@ -354,8 +356,8 @@ export class RollupProcessor {
     rollupEvents: { rollupEvent: Event; blockAfterPreviousRollup?: number }[],
     minConfirmations: number,
   ) {
-    // console.log(`Fetching data for ${rollupEvents.length} rollups...`);
-    // const startTime = new Date().getTime();
+    this.log(`Fetching data for ${rollupEvents.length} rollups...`);
+    const startTime = new Date().getTime();
 
     const blocks: Block[] = [];
     while (rollupEvents.length) {
@@ -383,7 +385,7 @@ export class RollupProcessor {
       blocks.push(...newBlocks);
     }
 
-    // console.log(`Fetched in ${(new Date().getTime() - startTime) / 1000}s`);
+    this.log(`Fetched in ${(new Date().getTime() - startTime) / 1000}s`);
 
     return blocks;
   }

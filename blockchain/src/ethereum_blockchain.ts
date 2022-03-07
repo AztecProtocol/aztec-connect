@@ -165,6 +165,8 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
         await emitBlocks().catch(this.log);
       }
     })();
+
+    console.log('Ethereum blockchain started.');
   }
 
   /**

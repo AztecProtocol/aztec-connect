@@ -144,10 +144,6 @@ resource "aws_ecs_task_definition" "falafel" {
         "value": "0x169E633A2D1E6c10dD91238Ba11c4A708dfEF37C,0x773616E4d11A78F511299002da57A0a94577F1f4,0xdeb288F737066589598e9214E782fa5A8eD689e8"
       },
       {
-        "name": "GAS_LIMIT",
-        "value": "4000000"
-      },
-      {
         "name": "PRIVATE_KEY",
         "value": "${var.PRIVATE_KEY_MAINNET}"
       },
@@ -166,26 +162,6 @@ resource "aws_ecs_task_definition" "falafel" {
       {
         "name": "NUM_OUTER_ROLLUP_PROOFS",
         "value": "4"
-      },
-      {
-        "name": "MAX_FEE_GAS_PRICE",
-        "value": "250000000000"
-      },
-      {
-        "name": "FEE_GAS_PRICE_MULTIPLIER",
-        "value": "1.2"
-      },
-      {
-        "name": "MAX_PROVIDER_GAS_PRICE",
-        "value": "250000000000"
-      },
-      {
-        "name": "BASE_TX_GAS",
-        "value": "16000"
-      },
-      {
-        "name": "PUBLISH_INTERVAL",
-        "value": "21600"
       }
     ],
     "mountPoints": [

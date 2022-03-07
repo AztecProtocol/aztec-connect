@@ -40,6 +40,7 @@ describe('end-to-end tests', () => {
     const initialBalance = 2n * 10n ** 16n; // 0.02
     provider = await createFundedWalletProvider(ETHEREUM_HOST, 3, 2, Buffer.from(PRIVATE_KEY, 'hex'), initialBalance);
     addresses = provider.getAccounts();
+    const confs = (await provider.getChainId()) === 1337 ? 1 : 2;
 
     sdk = await createAztecSdk(provider, ROLLUP_HOST, {
       syncInstances: false,
@@ -47,11 +48,20 @@ describe('end-to-end tests', () => {
       saveProvingKey: false,
       clearDb: true,
       memoryDb: true,
-      minConfirmation: 1,
-      minConfirmationEHW: 1,
+      minConfirmation: confs,
+      minConfirmationEHW: confs,
     });
     await sdk.init();
     await sdk.awaitSynchronised();
+
+    for (const addr of addresses) {
+      debug(
+        `address ${addr.toString()} public balance: ${sdk.fromBaseUnits(
+          await sdk.getPublicBalanceAv(assetId, addr),
+          true,
+        )}`,
+      );
+    }
   });
 
   afterAll(async () => {

@@ -77,7 +77,7 @@ resource "aws_ecs_task_definition" "halloumi_inner" {
 [
   {
     "name": "${var.DEPLOY_TAG}-halloumi-inner",
-    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/halloumi:aztec-connect-dev",
+    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/halloumi:${var.DEPLOY_TAG}",
     "essential": true,
     "portMappings": [
       {
@@ -201,7 +201,7 @@ resource "aws_ecs_task_definition" "halloumi_outer" {
 [
   {
     "name": "${var.DEPLOY_TAG}-halloumi-outer",
-    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/halloumi:aztec-connect-dev",
+    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/halloumi:${var.DEPLOY_TAG}",
     "essential": true,
     "portMappings": [
       {

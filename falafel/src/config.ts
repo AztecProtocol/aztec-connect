@@ -132,6 +132,9 @@ export async function getConfig() {
     ethereumHost,
     privateKey,
     rollupContractAddress,
+    feeDistributorAddress,
+    feePayingAssetAddresses,
+    priceFeedContractAddresses,
     typeOrmLogging,
     dbUrl,
     proverless,
@@ -146,8 +149,13 @@ export async function getConfig() {
   console.log(`Ethereum host: ${ethereumHost}`);
   console.log(`Gas limit: ${gasLimit || 'default'}`);
   console.log(`Rollup contract address: ${rollupContractAddress || 'none'}`);
+  console.log(`Fee distributor contract address: ${feeDistributorAddress || 'none'}`);
   console.log(`Signing address: ${signingAddress}`);
   console.log(`Proverless: ${proverless}`);
+
+  if (feePayingAssetAddresses.length !== priceFeedContractAddresses.length) {
+    throw new Error('There should be one price feed contract address per fee paying asset.');
+  }
 
   return { configurator, ormConfig, provider, signingAddress, ethConfig, bridgeConfigs };
 }

@@ -12,7 +12,6 @@ import { createConnection } from 'typeorm';
 import { appFactory } from './app';
 import { Server } from './server';
 import { getConfig } from './config';
-import { EthAddress } from '@aztec/barretenberg/address';
 import { Metrics } from './metrics';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { Container } from 'typedi';
@@ -34,10 +33,10 @@ async function main() {
   const connection = await createConnection(ormConfig);
   const blockchain = await EthereumBlockchain.new(
     ethConfig,
-    EthAddress.fromString(rollupContractAddress!),
-    EthAddress.fromString(feeDistributorAddress!),
-    priceFeedContractAddresses.map(a => EthAddress.fromString(a)),
-    feePayingAssetAddresses.map(a => EthAddress.fromString(a)),
+    rollupContractAddress,
+    feeDistributorAddress,
+    priceFeedContractAddresses,
+    feePayingAssetAddresses,
     provider,
   );
 

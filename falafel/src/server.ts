@@ -113,9 +113,7 @@ export class Server {
   public async start() {
     console.log('Server initializing...');
 
-    console.log('Waiting until halloumi is ready...');
     await this.proofGenerator.start();
-
     await this.txFeeResolver.start();
     await this.worldState.start();
     await this.txReceiver.init();

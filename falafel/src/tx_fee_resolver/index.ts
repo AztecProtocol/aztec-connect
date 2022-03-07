@@ -21,7 +21,7 @@ export class TxFeeResolver {
     private feeGasPriceMultiplier: number,
     private readonly txsPerRollup: number,
     private publishInterval: number,
-    private feePayingAssetAddresses: string[],
+    private feePayingAssetAddresses: EthAddress[],
     private readonly surplusRatios = [1, 0],
     private readonly freeAssets: number[] = [],
     private readonly freeTxTypes: TxType[] = [],
@@ -35,15 +35,14 @@ export class TxFeeResolver {
     this.maxFeeGasPrice = maxFeeGasPrice;
     this.feeGasPriceMultiplier = feeGasPriceMultiplier;
     this.publishInterval = publishInterval;
+    this.feeCalculator.setConf(baseTxGas, maxFeeGasPrice, feeGasPriceMultiplier, publishInterval);
   }
 
   async start() {
     const { assets } = await this.blockchain.getBlockchainStatus();
     this.allAssets = assets;
     this.feePayingAssetIds = this.allAssets.flatMap((asset, id) =>
-      this.feePayingAssetAddresses.some(feePayingAsset => asset.address.equals(EthAddress.fromString(feePayingAsset)))
-        ? [id]
-        : [],
+      this.feePayingAssetAddresses.some(feePayingAsset => asset.address.equals(feePayingAsset)) ? [id] : [],
     );
     const assetIds = this.feePayingAssetIds;
     this.priceTracker = new PriceTracker(this.blockchain, assetIds, this.refreshInterval, this.minFeeDuration);

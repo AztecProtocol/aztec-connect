@@ -158,10 +158,6 @@ resource "aws_ecs_task_definition" "falafel" {
         "value": "${data.terraform_remote_state.blockchain.outputs.fee_paying_asset_addresses}"
       },
       {
-        "name": "GAS_LIMIT",
-        "value": "8000000"
-      },
-      {
         "name": "PRIVATE_KEY",
         "value": "${var.PRIVATE_KEY}"
       },
@@ -180,26 +176,6 @@ resource "aws_ecs_task_definition" "falafel" {
       {
         "name": "NUM_OUTER_ROLLUP_PROOFS",
         "value": "32"
-      },
-      {
-        "name": "MAX_FEE_GAS_PRICE",
-        "value": "250000000000"
-      },
-      {
-        "name": "FEE_GAS_PRICE_MULTIPLIER",
-        "value": "1.2"
-      },
-      {
-        "name": "MAX_PROVIDER_GAS_PRICE",
-        "value": "250000000000"
-      },
-      {
-        "name": "BASE_TX_GAS",
-        "value": "16000"
-      },
-      {
-        "name": "PUBLISH_INTERVAL",
-        "value": "3600"
       },
       {
         "name": "MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW",

@@ -44,7 +44,7 @@ describe('tx fee resolver', () => {
       address: EthAddress.randomAddress(),
       decimals: 18,
       gasConstants: [5000, 0, 3600, 36000, 0, 0, 0],
-    }
+    },
   ];
 
   beforeEach(async () => {
@@ -96,7 +96,7 @@ describe('tx fee resolver', () => {
       feeGasPriceMultiplier,
       txsPerRollup,
       publishInterval,
-      assets.slice(0, 2).map(x => x.address.toString()),
+      assets.slice(0, 2).map(x => x.address),
       surplusRatios,
       freeAssets,
       freeTxTypes,
@@ -188,7 +188,7 @@ describe('tx fee resolver', () => {
     const assetId = 0;
     const bridgeId = new BridgeId(0, assetId, 0, 0, 0, BitConfig.random(), 0).toBigInt();
     const defiFees = txFeeResolver.getDefiFees(bridgeId);
-    const ethGasPriceMultiplier = (ETHGasPrice / 2n) + (2n * ETHGasPrice);
+    const ethGasPriceMultiplier = ETHGasPrice / 2n + 2n * ETHGasPrice;
     expect(defiFees).toEqual([
       { assetId, value: ethGasPriceMultiplier * 188000n },
       { assetId, value: ethGasPriceMultiplier * 100088000n },
