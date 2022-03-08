@@ -7,16 +7,16 @@ set -e
 # Our mainnet fork, *does* need to be exposed publically, as it's the only node in the network.
 case $VERSION_TAG in
   testnet)
+    NETWORK=goerli
     export TF_VAR_PUBLIC_ETHEREUM_HOST=https://goerli.infura.io/v3/$TF_VAR_INFURA_API_KEY
     export TF_VAR_PRIVATE_ETHEREUM_HOST=https://goerli.infura.io/v3/$TF_VAR_INFURA_API_KEY
     # Our goerli node is not working right.
     #export TF_VAR_PRIVATE_ETHEREUM_HOST=http://ethereum.aztec.network:10545
-    export TF_VAR_ETHEREUM_NETWORK=goerli
     ;;
   dev)
+    NETWORK=mainnet-fork
     export TF_VAR_PUBLIC_ETHEREUM_HOST=https://mainnet-fork.aztec.network:8545
     export TF_VAR_PRIVATE_ETHEREUM_HOST=https://mainnet-fork.aztec.network:8545
-    export TF_VAR_ETHEREUM_NETWORK=mainnet-fork
     ;;
   *)
     echo "No configuration for VERSION_TAG=$VERSION_TAG, skipping contract deployment."
@@ -24,12 +24,16 @@ case $VERSION_TAG in
     ;;
 esac
 
-# Get the last network that we deployed to.
+# Get remaining prexisting terraform state variables.
 cd $TF_DIR
 ensure_terraform
 export TF_IN_AUTOMATION=1
 terraform init -input=false -backend-config="key=$DEPLOY_TAG/blockchain"
-LAST_NETWORK=$(terraform output ethereum_network || echo "")
+export TF_VAR_ETHEREUM_NETWORK=$(terraform output ethereum_network || echo "")
+export TF_VAR_FEE_DISTRIBUTOR_ADDRESS=$(terraform output fee_distributor_address || echo "")
+export TF_VAR_FEE_PAYING_ASSET_ADDRESSES=$(terraform output fee_paying_asset_addresses || echo "")
+export TF_VAR_PRICE_FEED_CONTRACT_ADDRESSES=$(terraform output price_feed_contract_addresses || echo "")
+export TF_VAR_ROLLUP_CONTRACT_ADDRESS=$(terraform output rollup_contract_address || echo "")
 cd ../..
 
 LAST_COMMIT=$(last_successful_commit blockchain $DEPLOY_TAG-deployed)
@@ -48,8 +52,9 @@ else
     REDEPLOY=1
   fi
 
-  if [ "$LAST_NETWORK" != "$TF_VAR_ETHEREUM_NETWORK" ]; then
+  if [ "$NETWORK" != "$TF_VAR_ETHEREUM_NETWORK" ]; then
     echo "Network changed."
+    export TF_VAR_ETHEREUM_NETWORK=$NETWORK
     REDEPLOY=1
   fi
 fi
@@ -57,13 +62,6 @@ fi
 if [ -n "$REDEPLOY" ]; then
   echo "Redeploying contracts..."
   `docker run -e ESCAPE_BLOCK_LOWER=60 -e ESCAPE_BLOCK_UPPER=120 -e ETHEREUM_HOST=$TF_VAR_PUBLIC_ETHEREUM_HOST -e PRIVATE_KEY=$TF_VAR_PRIVATE_KEY -e VK=MockVerificationKey 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:$COMMIT_HASH`
-else
-  echo "No reason to redeploy contracts."
-  # We will reapply terraform to pickup changes to ethereum hosts above. Load existing unknown outputs first.
-  export TF_VAR_FEE_DISTRIBUTOR_ADDRESS=$(terraform output fee_distributor_address)
-  export TF_VAR_FEE_PAYING_ASSET_ADDRESSES=$(terraform output fee_paying_asset_addresses)
-  export TF_VAR_PRICE_FEED_CONTRACT_ADDRESSES=$(terraform output price_feed_contract_addresses)
-  export TF_VAR_ROLLUP_CONTRACT_ADDRESS=$(terraform output rollup_contract_address)
 fi
 
 deploy_terraform blockchain
