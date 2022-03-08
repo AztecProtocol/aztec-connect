@@ -40,6 +40,6 @@ export const InputWrapper = styled.div<InputWrapperProps>`
   display: flex;
   position: relative;
   align-items: center;
-  border-radius: ${borderRadiuses.s};
+  border-radius: 15px;
   ${({ theme }: InputWrapperProps) => wrapperStyles[theme]}
 `;

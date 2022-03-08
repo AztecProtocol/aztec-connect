@@ -5,13 +5,13 @@ import {
   useParsedJoinSplitTxs,
   useDepositPendingShieldBalance,
   useSpendableBalance,
-} from '../../../alt-model';
-import { assets, sum } from '../../../app';
-import { Button, Text } from '../../../components';
+} from 'alt-model';
+import { assets, sum } from 'app';
+import { Button, Text } from 'components';
 import { ShieldPrompt } from '../shield_prompt';
 import { ValueSummary } from '../value_summary';
-import { SendModal } from './send_modal';
-import { ShieldModal } from './shield_modal';
+import { SendModal } from './modals/send_modal';
+import { ShieldModal } from './modals/shield_modal';
 
 export function AssetSummary({ assetId }: { assetId: number }) {
   const asset = assets[assetId];

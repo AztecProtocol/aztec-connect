@@ -10,6 +10,7 @@ import { DefiCardStats } from './defi_card_stats';
 const DefiCardButton = styled(Button)`
   margin: 20px 0 25px 0;
   width: 185px;
+  align-self: center;
 `;
 
 interface DefiCardContentProps {

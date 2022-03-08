@@ -1,0 +1,18 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 20px 40px;
+  max-height: calc(100vh - 100px);
+  overflow: scroll;
+}
+
+.fixedInputMessage {
+  position: absolute;
+  bottom: 30px;
+  left: 65px;
+}
+
+.nextWrapper {
+  align-self: end;
+}

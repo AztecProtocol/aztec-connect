@@ -7,6 +7,10 @@ const CardDescriptionLabel = styled.div`
   font-size: 14px;
   margin-right: 30px;
   line-height: 24px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  display: -webkit-box;
+  overflow: hidden;
 `;
 
 const CardDescriptionWrapper = styled.div`

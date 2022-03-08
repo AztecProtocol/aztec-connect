@@ -53,11 +53,3 @@ export const InputMessage: React.FunctionComponent<InputMessageProps> = ({
     </Message>
   </Root>
 );
-
-export const FixedInputMessage = styled(InputMessage)`
-  @media (min-width: ${parseInt(breakpoints.s) + 1}px) {
-    position: absolute;
-    bottom: ${spacings.m};
-    transform: translateY(100%);
-  }
-`;

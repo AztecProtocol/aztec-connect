@@ -1,15 +1,22 @@
 import React, { useState } from 'react';
 import styled, { css } from 'styled-components/macro';
+import { SectionTitle } from 'ui-components';
 import { AccountTx, assets, formatBaseUnits, JoinSplitTx } from '../../app';
 import { AccountTxSummary, JoinSplitTxSummary, Pagination } from '../../components';
-import { spacings, Theme, themeColours } from '../../styles';
-
-const TxsRoot = styled.div`
-  border-bottom: 1px solid ${themeColours[Theme.WHITE].border};
-`;
+import { spacings } from '../../styles';
 
 const summaryRowStyle = css`
-  border-top: 1px solid ${themeColours[Theme.WHITE].border};
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0px 4px 14px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  padding: 15px 40px;
+  letter-spacing: 0.1em;
+  margin: 20px 0;
+  height: 66px;
 `;
 
 const JoinSplitTxSummaryRow = styled(JoinSplitTxSummary)`
@@ -45,39 +52,38 @@ export const TransactionHistory: React.FunctionComponent<TransactionHistoryProps
 
   return (
     <>
-      <TxsRoot>
-        {joinSplitTxs.slice((page - 1) * txsPerPage, page * txsPerPage).map(tx => {
-          const asset = assets[tx.assetId];
-          return (
-            <JoinSplitTxSummaryRow
-              key={tx.txId.toString()}
-              txId={tx.txId.toString()}
-              action={tx.action}
-              value={formatBaseUnits(tx.balanceDiff, asset.decimals, {
-                precision: asset.preferredFractionalDigits,
-                commaSeparated: true,
-                showPlus: true,
-              })}
-              symbol={asset.symbol}
-              link={tx.link}
-              publishTime={txsPublishTime}
-              settled={tx.settled}
-            />
-          );
-        })}
-        {accountTxs
-          .slice(Math.max(0, (page - 1) * txsPerPage - numJs), Math.max(0, page * txsPerPage - numJs))
-          .map(tx => (
-            <AccountTxSummaryRow
-              key={tx.txId.toString()}
-              txId={tx.txId.toString()}
-              action={tx.action}
-              link={tx.link}
-              publishTime={txsPublishTime}
-              settled={tx.settled}
-            />
-          ))}
-      </TxsRoot>
+      <SectionTitle label="Transaction History" />
+      {joinSplitTxs.slice((page - 1) * txsPerPage, page * txsPerPage).map(tx => {
+        const asset = assets[tx.assetId];
+        return (
+          <JoinSplitTxSummaryRow
+            key={tx.txId.toString()}
+            txId={tx.txId.toString()}
+            action={tx.action}
+            value={formatBaseUnits(tx.balanceDiff, asset.decimals, {
+              precision: asset.preferredFractionalDigits,
+              commaSeparated: true,
+              showPlus: true,
+            })}
+            symbol={asset.symbol}
+            link={tx.link}
+            publishTime={txsPublishTime}
+            settled={tx.settled}
+          />
+        );
+      })}
+      {accountTxs
+        .slice(Math.max(0, (page - 1) * txsPerPage - numJs), Math.max(0, page * txsPerPage - numJs))
+        .map(tx => (
+          <AccountTxSummaryRow
+            key={tx.txId.toString()}
+            txId={tx.txId.toString()}
+            action={tx.action}
+            link={tx.link}
+            publishTime={txsPublishTime}
+            settled={tx.settled}
+          />
+        ))}
       {numJs >= txsPerPage && (
         <PaginationRoot>
           <Pagination totalItems={numJs + numAc} page={page} itemsPerPage={txsPerPage} onChangePage={setPage} />

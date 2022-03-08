@@ -38,8 +38,9 @@ const CloseButton = styled.div`
 const ModalWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  width: 80vw;
-  max-width: 1000px;
+  width: 66vw;
+  max-width: 900px;
+  overflow-y: scroll;
 `;
 
 interface ModalHeaderProps {

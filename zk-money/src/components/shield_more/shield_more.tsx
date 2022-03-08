@@ -1,7 +1,7 @@
 import { CardWrapper } from 'ui-components';
 import { useState } from 'react';
 import styled from 'styled-components/macro';
-import { ShieldModal } from '../../views/account/dashboard/shield_modal';
+import { ShieldModal } from 'views/account/dashboard/modals/shield_modal';
 import { Button } from '../button';
 import { Dropdown } from '../dropdown';
 

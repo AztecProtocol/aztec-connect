@@ -301,6 +301,14 @@ export class SendForm extends EventEmitter implements AccountForm {
     this.updateFormStatus(FormStatus.ACTIVE);
   }
 
+  async softValidation() {
+    const validated = await this.validateValues();
+
+    if (!isValidForm(validated)) {
+      this.updateFormValues(mergeValues(validated, { submit: { value: false } }));
+    }
+  }
+
   async lock() {
     this.updateFormValues({ submit: { value: true } });
 
@@ -429,7 +437,7 @@ export class SendForm extends EventEmitter implements AccountForm {
       } else if (!(await this.accountUtils.isValidRecipient(recipient))) {
         form.recipient = withError(form.recipient, `Cannot find a user with username '${recipient}'.`);
       } else if (isSameAlias(recipient, this.alias)) {
-        form.recipient = withError(form.recipient, 'Cannot send fund to yourself.');
+        form.recipient = withError(form.recipient, 'Cannot send funds to yourself.');
       }
     } else if (this.sendMode === SendMode.WIDTHDRAW) {
       if (!recipient) {

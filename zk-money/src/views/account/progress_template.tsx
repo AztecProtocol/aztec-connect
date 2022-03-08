@@ -77,6 +77,10 @@ const FeedbackMessage = styled(Text)`
   text-align: center;
 `;
 
+const ProgressTemplateWrapper = styled.div`
+  padding: 20px 40px;
+`;
+
 const FeedbackTitle = styled(FeedbackMessage)`
   padding: ${spacings.s} 0;
 `;
@@ -221,7 +225,7 @@ export const ProgressTemplate: React.FunctionComponent<ProgressTemplateProps> = 
   };
 
   return (
-    <>
+    <ProgressTemplateWrapper>
       <PaddedBlock size="m">
         <InfoTable theme={inputTheme} items={items} />
       </PaddedBlock>
@@ -242,6 +246,6 @@ export const ProgressTemplate: React.FunctionComponent<ProgressTemplateProps> = 
         </>
       )}
       <Footer>{renderFooterContent()}</Footer>
-    </>
+    </ProgressTemplateWrapper>
   );
 };

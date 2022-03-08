@@ -1,0 +1,40 @@
+@use '../../../styles/mixins';
+@use '../../../styles/spacings';
+
+.inputWrapper {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  border-radius: 15px;
+  @include mixins.shadow_border;
+}
+
+.assetSelectorWrapper {
+  flex-direction: row;
+  align-items: center;
+  position: relative;
+  height: 100%;
+  width: 155px;
+}
+
+.assetSelector {
+  display: flex;
+  padding-left: 15px;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.assetDisplay {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.assetName {
+  margin-left: 10px;
+  @include mixins.gradient_font;
+}

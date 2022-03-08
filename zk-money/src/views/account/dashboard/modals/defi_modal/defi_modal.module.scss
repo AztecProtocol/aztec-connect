@@ -1,0 +1,15 @@
+.modalWrapper {
+  display: flex;
+  flex-direction: column;
+  width: 75vw;
+  max-width: 1000px;
+}
+
+.modalBody {
+  padding: 20px 40px;
+  max-height: calc(100vh - 100px);
+  overflow: scroll;
+  display: flex;
+  align-items: initial;
+  justify-content: center;
+}

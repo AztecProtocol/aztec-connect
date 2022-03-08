@@ -37,10 +37,9 @@ import { SdkObs } from 'alt-model/top_level_context/sdk_obs';
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
 import { Balance } from './account/dashboard/balance';
 import { Earn } from './account/dashboard/earn';
-import { Trade } from './account/dashboard/trade';
 import { DefiRecipe } from 'alt-model/defi/types';
+import { DefiModal } from 'views/account/dashboard/modals/defi_modal';
 import './app.css';
-import { DefiModal } from './account/dashboard/defi_modal/defi_modal';
 
 interface AppProps {
   config: Config;
@@ -418,7 +417,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
                   />
                 ))}
                 <Route path="/earn" element={<Earn onOpenDefiModal={this.handleOpenDefiModal} />} />
-                <Route path="/trade" element={<Trade />} />
+                <Route path="/trade" element={<div />} />
                 <Route path="/balance" element={<Balance />} />
                 <Route
                   path="/"

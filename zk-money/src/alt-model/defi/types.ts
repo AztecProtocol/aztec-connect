@@ -36,7 +36,7 @@ export interface DefiRecipe {
   miniLogo: string;
   shortDesc: string;
   bannerImg: string;
-  longDesc: string;
+  longDescription: string;
   investmentType: DefiInvestmentType;
   keyStat1: KeyBridgeStat;
   keyStat2: KeyBridgeStat;

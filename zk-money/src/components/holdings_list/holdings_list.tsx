@@ -1,12 +1,12 @@
+import { SendMode } from 'app';
 import { useState } from 'react';
 import styled from 'styled-components/macro';
+import { SpeedSwitch } from 'ui-components';
 import { Pagination } from '..';
 import { useBalances } from '../../alt-model';
-import { SpeedSwitch } from '../../views/account/dashboard/defi_modal/speed_switch';
-import { Holding } from './holding';
 import { useDefiTxs } from '../../alt-model/defi_txs_hooks';
-import { SendModal } from 'views/account/dashboard/send_modal';
-import { SendMode } from 'app';
+import { Holding } from './holding';
+import { SendModal } from 'views/account/dashboard/modals/send_modal';
 
 const SpeedSwitchWrapper = styled.div`
   width: 300px;

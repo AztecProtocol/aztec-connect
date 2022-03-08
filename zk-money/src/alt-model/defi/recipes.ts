@@ -67,7 +67,7 @@ export const RECIPES = {
     name: 'Element Fixed Yield',
     investmentType: DefiInvestmentType.FIXED_YIELD,
     shortDesc: 'Deposit zkDAI into Element and receive a fixed yield back in xx Days as zkDAI',
-    longDesc:
+    longDescription:
       'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
     bannerImg: ethToDaiBanner,
     logo: elementFiLogo,
@@ -87,7 +87,7 @@ export const RECIPES = {
     investmentType: DefiInvestmentType.STAKING,
     shortDesc:
       'Stake zkETH on the Beacon chain via Lido. Receive a variable yield via the zkwStETH tokens that can be claimed for zkETH',
-    longDesc:
+    longDescription:
       'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
     bannerImg: ethToDaiBanner,
     logo: lidoLogo,
@@ -104,7 +104,7 @@ export const RECIPES = {
   //   dataAdaptor: MOCK_ADAPTOR,
   //   investmentType: DefiInvestmentType.BORROW,
   //   shortDesc: 'Borrow zkDAI using your zkETH as collateral',
-  //   longDesc:
+  //   longDescription:
   //     'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
   //   bannerImg: ethToDaiBanner,
   //   logo: aaveLogo,
@@ -122,7 +122,7 @@ export const RECIPES = {
     name: 'AAVE Lending',
     investmentType: DefiInvestmentType.YIELD,
     shortDesc: 'Deposit zkDAI into AAVE receive zkADAI in return.',
-    longDesc:
+    longDescription:
       'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
     bannerImg: ethToDaiBanner,
     logo: aaveLogo,

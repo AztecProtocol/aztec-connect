@@ -1,6 +1,6 @@
 import { GradientDisclosureIcon } from '../../icons/gradient_disclosure_icon';
 import { GradientBorder } from '../../layout';
-import style from './gradient_select_box.module.css';
+import style from './gradient_select_box.module.scss';
 
 interface GradientSelectBoxProps {
   children: React.ReactNode;
