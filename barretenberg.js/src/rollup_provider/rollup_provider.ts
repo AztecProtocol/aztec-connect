@@ -36,6 +36,7 @@ export interface RuntimeConfig {
   feeGasPriceMultiplier: number;
   maxProviderGasPrice: bigint;
   maxUnsettledTxs: number;
+  defaultDeFiBatchSize: number;
 }
 
 export function runtimeConfigToJson(runtimeConfig: RuntimeConfig) {

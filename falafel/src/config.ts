@@ -103,8 +103,7 @@ function generateBridgeIds(numTxs: number, fee: number, rollupFrequency: number)
 function getPerChainBridgeConfig(chainId: number) {
   const perChainBridgeConfig: { [key: string]: any[] } = {
     1: [],
-    1337: generateBridgeIds(10, 100000, 2),
-    0xa57ec: generateBridgeIds(10, 1000000, 2),
+    // 0xa57ec: generateBridgeIds(10, 1000000, 2),
   };
 
   const config = perChainBridgeConfig[chainId];

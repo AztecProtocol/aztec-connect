@@ -20,20 +20,20 @@ async function deployDefiBridge(signer: Signer, rollupProcessor: TestRollupProce
   return defiBridge;
 }
 
-export async function upgradeTestRollupProcessor(
-    rollupProvider: Signer,
-    rollupProcessorAddress: EthAddress
-) {
-    const UpgradedRollupProcessorContract = await ethers.getContractFactory('UpgradedTestRollupProcessor', rollupProvider);
+export async function upgradeTestRollupProcessor(rollupProvider: Signer, rollupProcessorAddress: EthAddress) {
+  const UpgradedRollupProcessorContract = await ethers.getContractFactory(
+    'UpgradedTestRollupProcessor',
+    rollupProvider,
+  );
 
-    const newProcessor = await upgrades.upgradeProxy(rollupProcessorAddress.toString(), UpgradedRollupProcessorContract);
-    await newProcessor.deployed();
+  const newProcessor = await upgrades.upgradeProxy(rollupProcessorAddress.toString(), UpgradedRollupProcessorContract);
+  await newProcessor.deployed();
 
-    const rollupProcessor = new TestRollupProcessor(
-        EthAddress.fromString(newProcessor.address),
-        new EthersAdapter(ethers.provider),
-    );
-    return rollupProcessor;
+  const rollupProcessor = new TestRollupProcessor(
+    EthAddress.fromString(newProcessor.address),
+    new EthersAdapter(ethers.provider),
+  );
+  return rollupProcessor;
 }
 
 export async function setupTestRollupProcessor(
@@ -65,6 +65,7 @@ export async function setupTestRollupProcessor(
       '0x1b831fad9b940f7d02feae1e9824c963ae45b3223e721138c6f73261e690c96a',
       '0x1b435f036fc17f4cc3862f961a8644839900a8e4f1d0b318a7046dd88b10be75',
       '0x0',
+      false,
     ],
     { initializer: 'initialize' },
   );
@@ -85,7 +86,9 @@ export async function setupTestRollupProcessor(
 
   const initialTotalSupply = 10n * 10n ** 18n;
   const tokenAssets: Array<Asset> = assets.slice(1);
+
   await Promise.all(tokenAssets.map(a => rollupProcessor.setSupportedAsset(a.getStaticInfo().address, true, 0)));
+
   await Promise.all(tokenAssets.map(a => createPair(a, initialTotalSupply)));
 
   const assetAddresses = assets.map(a => a.getStaticInfo().address);

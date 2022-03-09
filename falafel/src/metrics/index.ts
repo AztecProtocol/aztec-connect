@@ -244,7 +244,7 @@ export class Metrics {
   }
 
   async rollupReceived(rollup: RollupDao) {
-    const status = await this.blockchain.getBlockchainStatus();
+    const status = this.blockchain.getBlockchainStatus();
     for (const assetMetric of rollup.assetMetrics) {
       const assetId = assetMetric.assetId;
       const assetName = status.assets[assetId].symbol;

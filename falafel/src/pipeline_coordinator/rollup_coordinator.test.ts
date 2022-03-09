@@ -181,7 +181,7 @@ describe('rollup_coordinator', () => {
   const mockDefiBridgeTx = (id: number, fee: bigint, bridgeId: bigint, assetId = 0) =>
     mockTx(id, {
       txType: TxType.DEFI_DEPOSIT,
-      excessGas: fee - (DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
+      excessGas: fee - (DEFI_TX_PLUS_BASE_GAS + feeResolver.getSingleBridgeTxGas(bridgeId)),
       txFeeAssetId: assetId,
       bridgeId,
     });
@@ -261,6 +261,7 @@ describe('rollup_coordinator', () => {
 
     bridgeResolver = {
       getBridgeConfigs: jest.fn().mockReturnValue(bridgeConfigs),
+      defaultDefiBatchSize: 5,
     } as any;
 
     coordinator = new RollupCoordinator(
@@ -538,7 +539,8 @@ describe('rollup_coordinator', () => {
         mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockTx(5, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
-      const rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
+      const profile = await coordinator.processPendingTxs(pendingTxs);
+      const rp = profile.nextRollupProfile;
       expect(rp.published).toBe(false);
       expectProcessedTxIds([]);
       expect(rollupCreator.create).toHaveBeenCalledTimes(0);
@@ -582,6 +584,40 @@ describe('rollup_coordinator', () => {
       rp = (await coordinator.processPendingTxs(pendingTxs)).nextRollupProfile;
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0, 1, 4, 5, 6, 2, 3, 7]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(4);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeId,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
+    it('will add defi txs to a bridge queue if the bridge is not in the config', async () => {
+      const bridgeId = 12345678n;
+      const mockBridgeGas = 10000000n;
+      const defaultDeFiBatchSize = 8n;
+      const mockDefiBridgeTxLocal = (id: number, fee: bigint) => mockDefiBridgeTx(id, fee, bridgeId);
+      feeResolver.getSingleBridgeTxGas.mockReturnValue(mockBridgeGas / defaultDeFiBatchSize);
+      feeResolver.getFullBridgeGas.mockReturnValue(mockBridgeGas);
+      const pendingTxs = [
+        mockDefiBridgeTxLocal(0, DEFI_TX_PLUS_BASE_GAS + feeResolver.getSingleBridgeTxGas(bridgeId)),
+        mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + feeResolver.getSingleBridgeTxGas(bridgeId)),
+        mockDefiBridgeTxLocal(2, DEFI_TX_PLUS_BASE_GAS + feeResolver.getSingleBridgeTxGas(bridgeId)),
+        mockDefiBridgeTxLocal(3, DEFI_TX_PLUS_BASE_GAS + feeResolver.getSingleBridgeTxGas(bridgeId)),
+        mockDefiBridgeTxLocal(4, DEFI_TX_PLUS_BASE_GAS + feeResolver.getSingleBridgeTxGas(bridgeId)),
+        mockDefiBridgeTxLocal(5, DEFI_TX_PLUS_BASE_GAS + feeResolver.getSingleBridgeTxGas(bridgeId)),
+        mockDefiBridgeTxLocal(6, DEFI_TX_PLUS_BASE_GAS + feeResolver.getSingleBridgeTxGas(bridgeId)),
+        mockDefiBridgeTxLocal(7, DEFI_TX_PLUS_BASE_GAS + feeResolver.getSingleBridgeTxGas(bridgeId)),
+      ];
+      const { nextRollupProfile } = await coordinator.processPendingTxs(pendingTxs);
+      const bp = nextRollupProfile.bridgeProfiles.get(bridgeId)!;
+
+      expect(nextRollupProfile.published).toBe(true);
+      expect(bp).toBeDefined();
+      expect(BigInt(bp.gasAccrued) >= BigInt(bp.gasThreshold)).toBe(true);
+      expectProcessedTxIds([0, 1, 2, 3, 4, 5, 6, 7]);
       expect(rollupCreator.create).toHaveBeenCalledTimes(4);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);

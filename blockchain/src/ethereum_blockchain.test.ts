@@ -30,6 +30,7 @@ const blockchainBridges: BlockchainBridge[] = [
 describe('ethereum_blockchain', () => {
   let blockchain: EthereumBlockchain;
   let contracts: Mockify<Contracts>;
+  let blocks: Block[];
 
   const generateBlock = (rollupId: number) =>
     new Block(
@@ -43,8 +44,6 @@ describe('ethereum_blockchain', () => {
       0,
       BigInt(0),
     );
-
-  const blocks: Block[] = [generateBlock(0), generateBlock(1), generateBlock(2)];
 
   const getRollupStateFromBlock = (block: Block) => {
     const nextRollupId = block.rollupId + 1;
@@ -77,6 +76,8 @@ describe('ethereum_blockchain', () => {
   });
 
   beforeEach(async () => {
+    blocks = [generateBlock(0), generateBlock(1), generateBlock(2)];
+
     contracts = {
       getAssets: jest.fn().mockReturnValue([]),
       getPerRollupState: jest.fn().mockResolvedValue({ nextRollupId: 0 }),
@@ -89,7 +90,7 @@ describe('ethereum_blockchain', () => {
       getRollupContractAddress: jest.fn().mockReturnValue(EthAddress.randomAddress()),
       getFeeDistributorContractAddress: jest.fn().mockReturnValue(EthAddress.randomAddress()),
       getVerifierContractAddress: jest.fn().mockReturnValue(EthAddress.randomAddress()),
-      getBlockNumber: jest.fn().mockResolvedValue(blocks.length),
+      getBlockNumber: jest.fn().mockImplementation(async () => blocks.length),
       getChainId: jest.fn().mockResolvedValue(999),
       getTransactionReceipt: jest.fn(),
       getRollupStateFromBlock: jest.fn().mockReturnValue(getRollupStateFromBlock(blocks[2])),
@@ -209,5 +210,40 @@ describe('ethereum_blockchain', () => {
     expect(blockchain.getBridgeGas(bridge.toBigInt())).toEqual(blockchainBridges[0].gasLimit);
     bridge = new BridgeId(2, 0, 0, 0, 0, new BitConfig(false, false, false, false, false, false), 0);
     expect(blockchain.getBridgeGas(bridge.toBigInt())).toEqual(blockchainBridges[1].gasLimit);
+  });
+
+  it('correctly refreshes bridges and assets', async () => {
+    const gasLimt = 1000n;
+    const getStaticInfoMock = jest.fn();
+    contracts.getAssets = jest.fn().mockImplementation(() => {
+      return [];
+    });
+    const bridgeAddress = EthAddress.randomAddress().toString();
+    await blockchain.start();
+    const statusBefore = blockchain.getBlockchainStatus();
+    expect(statusBefore.assets.length).toBe(0);
+    expect(statusBefore.bridges.length).toBe(blockchainBridges.length);
+
+    contracts.getSupportedBridges.mockResolvedValueOnce([bridgeAddress]);
+    contracts.getBridgeGas.mockResolvedValueOnce(gasLimt);
+
+    // advance one block
+    blocks.push(generateBlock(3));
+
+    contracts.getAssets = jest.fn().mockImplementation(() => {
+      return [{ getStaticInfo: getStaticInfoMock }];
+    });
+
+    // we need to wait 1 full second for the blocks to be polled.
+    await new Promise(r => setTimeout(r, 1000));
+    const statusAfter = blockchain.getBlockchainStatus();
+
+    expect(contracts.getAssets).toBeCalled();
+    expect(statusAfter.assets.length).toBe(1);
+    expect(statusAfter.bridges.length).toBe(1);
+    expect(statusAfter.bridges[0].gasLimit).toBe(gasLimt);
+    expect(statusAfter.bridges[0].address.toString()).toBe(bridgeAddress);
+    expect(statusAfter.bridges[0].id).toBe(1);
+    expect(getStaticInfoMock).toBeCalled();
   });
 });

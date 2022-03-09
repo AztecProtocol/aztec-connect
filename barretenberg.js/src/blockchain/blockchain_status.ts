@@ -47,6 +47,7 @@ export interface BlockchainStatus {
   defiRoot: Buffer;
   defiInteractionHashes: Buffer[];
   escapeOpen: boolean;
+  allowThirdPartyContracts: boolean;
   numEscapeBlocksRemaining: number;
   assets: BlockchainAsset[];
   bridges: BlockchainBridge[];
@@ -65,6 +66,7 @@ export interface BlockchainStatusJson {
   defiRoot: string;
   defiInteractionHashes: string[];
   escapeOpen: boolean;
+  allowThirdPartyContracts: boolean;
   numEscapeBlocksRemaining: number;
   assets: {
     address: string;
@@ -100,8 +102,8 @@ export function blockchainStatusToJson(status: BlockchainStatus): BlockchainStat
     bridges: status.bridges.map(b => ({
       ...b,
       address: b.address.toString(),
-      gasLimit: b.gasLimit.toString()
-    }))
+      gasLimit: b.gasLimit.toString(),
+    })),
   };
 }
 
@@ -123,11 +125,11 @@ export function blockchainStatusFromJson(json: BlockchainStatusJson): Blockchain
     bridges: json.bridges.map(b => ({
       ...b,
       address: EthAddress.fromString(b.address),
-      gasLimit: BigInt(b.gasLimit)
-    }))
+      gasLimit: BigInt(b.gasLimit),
+    })),
   };
 }
 
 export interface BlockchainStatusSource {
-  getBlockchainStatus(): Promise<BlockchainStatus>;
+  getBlockchainStatus(): BlockchainStatus;
 }

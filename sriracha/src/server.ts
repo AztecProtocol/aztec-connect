@@ -74,7 +74,7 @@ export default class Server implements HashPathSource {
 
   public async getStatus() {
     return {
-      blockchainStatus: await this.blockchain.getBlockchainStatus(),
+      blockchainStatus: this.blockchain.getBlockchainStatus(),
     };
   }
 

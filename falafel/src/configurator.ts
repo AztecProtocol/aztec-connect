@@ -47,6 +47,7 @@ function getConfVars(): ConfVars {
     SERVER_AUTH_TOKEN,
     PROVERLESS,
     TYPEORM_LOGGING,
+    DEFAULT_DEFI_BATCH_SIZE,
   } = process.env;
 
   return {
@@ -86,6 +87,7 @@ function getConfVars(): ConfVars {
       feeGasPriceMultiplier: 1,
       maxProviderGasPrice: 250000000000n,
       maxUnsettledTxs: 0,
+      defaultDeFiBatchSize: +(DEFAULT_DEFI_BATCH_SIZE || 5),
     },
   };
 }

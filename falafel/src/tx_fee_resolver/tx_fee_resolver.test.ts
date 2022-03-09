@@ -71,7 +71,7 @@ describe('tx fee resolver', () => {
     } as any;
 
     blockchain = {
-      getBlockchainStatus: jest.fn().mockResolvedValue({
+      getBlockchainStatus: jest.fn().mockReturnValue({
         assets,
       }),
       getGasPriceFeed: jest.fn().mockReturnValue(gasPriceFeed),

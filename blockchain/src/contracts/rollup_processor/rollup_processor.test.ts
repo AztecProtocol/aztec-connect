@@ -89,6 +89,24 @@ describe('rollup_processor', () => {
     expect(await rollupProcessor.getEscapeHatchStatus()).toEqual({ escapeOpen: true, blocksRemaining: 20 });
   });
 
+  it('owner should be able to set the allowThirdParty contract flag', async () => {
+    const statusBefore = await rollupProcessor.getThirdPartyContractStatus();
+    expect(statusBefore).toBe(false);
+
+    await expect(
+      rollupProcessor.setThirdPartyContractStatus(true, {
+        signingAddress: EthAddress.fromString(await signers[1].getAddress()),
+      }),
+    ).rejects.toThrow('Ownable: caller is not the owner');
+
+    await rollupProcessor.setThirdPartyContractStatus(true, {
+      signingAddress: EthAddress.fromString(await signers[0].getAddress()),
+    });
+
+    const statusAfter = await rollupProcessor.getThirdPartyContractStatus();
+    expect(statusAfter).toBe(true);
+  });
+
   it('should get supported asset', async () => {
     const supportedAssetAAddress = await rollupProcessor.getSupportedAsset(1);
     expect(supportedAssetAAddress).toEqual(assets[1].getStaticInfo().address);
@@ -119,6 +137,22 @@ describe('rollup_processor', () => {
 
     const supportedAssetBAddress = await rollupProcessor.getSupportedAsset(2);
     expect(supportedAssetBAddress).toEqual(assetAddr);
+  });
+
+  it('should set new supported asset if not owner when the THIRD_PARTY_CONTRACTS flag is set', async () => {
+    const assetAddr = EthAddress.randomAddress();
+    const nonOwner = EthAddress.fromString(await signers[1].getAddress());
+    await expect(rollupProcessor.setSupportedAsset(assetAddr, false, 0, { signingAddress: nonOwner })).rejects.toThrow(
+      'THIRD_PARTY_CONTRACTS_FLAG_NOT_SET',
+    );
+
+    await rollupProcessor.setThirdPartyContractStatus(true, {
+      signingAddress: EthAddress.fromString(await signers[0].getAddress()),
+    });
+
+    await expect(
+      rollupProcessor.setSupportedAsset(assetAddr, false, 0, { signingAddress: nonOwner }),
+    ).resolves.toBeTruthy();
   });
 
   it('should set new supported asset with a custom gas limit', async () => {
@@ -160,6 +194,23 @@ describe('rollup_processor', () => {
 
     const supportedAssetBAddress = await rollupProcessor.getSupportedBridge(2);
     expect(supportedAssetBAddress).toEqual(bridgeAddr);
+  });
+
+  it('should set new supported bridge if not owner when the THIRD_PARTY_CONTRACTS flag is set', async () => {
+    const bridgeAddr = EthAddress.randomAddress();
+    const gasLimit = 15000000;
+    const nonOwner = EthAddress.fromString(await signers[1].getAddress());
+    await expect(
+      rollupProcessor.setSupportedBridge(bridgeAddr, gasLimit, { signingAddress: nonOwner }),
+    ).rejects.toThrow('THIRD_PARTY_CONTRACTS_FLAG_NOT_SET');
+
+    await rollupProcessor.setThirdPartyContractStatus(true, {
+      signingAddress: EthAddress.fromString(await signers[0].getAddress()),
+    });
+
+    await expect(
+      rollupProcessor.setSupportedBridge(bridgeAddr, gasLimit, { signingAddress: nonOwner }),
+    ).resolves.toBeTruthy();
   });
 
   it('should approve a proof', async () => {
@@ -438,7 +489,11 @@ describe('rollup_processor', () => {
 
     // send the first 3 txs, this will take us beyond the defi deposits
     for (let i = 0; i < 3; i++) {
-      const tx = await rollupProcessor.createRollupProofTx(txProofs[i].proofData, txProofs[i].signatures, txProofs[i].offchainTxData);
+      const tx = await rollupProcessor.createRollupProofTx(
+        txProofs[i].proofData,
+        txProofs[i].signatures,
+        txProofs[i].offchainTxData,
+      );
       await rollupProcessor.sendTx(tx);
     }
 
@@ -448,7 +503,11 @@ describe('rollup_processor', () => {
 
     // now send the last 2 tx rollups
     for (let i = 3; i < txProofs.length; i++) {
-      const tx = await rollupProcessor.createRollupProofTx(txProofs[i].proofData, txProofs[i].signatures, txProofs[i].offchainTxData);
+      const tx = await rollupProcessor.createRollupProofTx(
+        txProofs[i].proofData,
+        txProofs[i].signatures,
+        txProofs[i].offchainTxData,
+      );
       await rollupProcessor.sendTx(tx);
     }
 
@@ -498,7 +557,7 @@ describe('rollup_processor', () => {
       expect(block).toMatchObject({
         rollupId: 2,
         rollupSize: 2,
-        offchainTxData
+        offchainTxData,
       });
       expect(rollup).toMatchObject({
         rollupId: 2,

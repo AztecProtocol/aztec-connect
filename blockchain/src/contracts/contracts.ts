@@ -102,10 +102,12 @@ export class Contracts {
 
   public async getPerBlockState() {
     const { escapeOpen, blocksRemaining } = await this.rollupProcessor.getEscapeHatchStatus();
+    const allowThirdPartyContracts = await this.rollupProcessor.getThirdPartyContractStatus();
 
     return {
       escapeOpen,
       numEscapeBlocksRemaining: blocksRemaining,
+      allowThirdPartyContracts,
     };
   }
 

@@ -10,7 +10,9 @@ import { TxFeeResolver } from '../tx_fee_resolver';
 import { BridgeResolver } from '../bridge';
 import { PublishTimeManager } from './publish_time_manager';
 import { RollupCoordinator, TxPoolProfile } from './rollup_coordinator';
+
 import debug from 'debug';
+import { emptyProfile } from './rollup_profiler';
 
 export class PipelineCoordinator {
   private flush = false;
@@ -35,6 +37,10 @@ export class PipelineCoordinator {
     private publishInterval: number,
     private bridgeResolver: BridgeResolver,
   ) {
+    this.txPoolProfile = {
+      nextRollupProfile: emptyProfile(numInnerRollupTxs * numOuterRollupProofs),
+      pendingBridgeStats: new Map(),
+    };
     this.publishTimeManager = new PublishTimeManager(this.publishInterval, this.bridgeResolver);
   }
 

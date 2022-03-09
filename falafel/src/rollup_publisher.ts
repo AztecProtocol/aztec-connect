@@ -54,7 +54,7 @@ export class RollupPublisher {
         return true;
       }
 
-      const { nextRollupId } = await this.blockchain.getBlockchainStatus();
+      const { nextRollupId } = this.blockchain.getBlockchainStatus();
       if (nextRollupId > rollup.id) {
         console.log('Publish failed. Contract changed underfoot.');
         break;

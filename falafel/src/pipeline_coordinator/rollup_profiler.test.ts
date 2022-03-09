@@ -224,7 +224,7 @@ describe('Profile Rollup', () => {
     expect(rollupProfile.totalTxs).toBe(9);
   });
 
-  it.only('gives profile for payment and defi txs', () => {
+  it('gives profile for payment and defi txs', () => {
     const txs = [
       mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
       mockTx(1, { txType: TxType.ACCOUNT, txFeeAssetId: 0 }),

@@ -20,6 +20,7 @@ async function deployRollupProcessor(
   initNullRoot: Buffer,
   initRootsRoot: Buffer,
   initDataSize: number,
+  allowThirdPartyContracts: boolean,
 ) {
   console.error('Deploying RollupProcessor...');
   const rollupFactory = new ContractFactory(RollupProcessor.abi, RollupProcessor.bytecode, signer);
@@ -35,6 +36,7 @@ async function deployRollupProcessor(
     initNullRoot,
     initRootsRoot,
     initDataSize,
+    allowThirdPartyContracts,
   );
 
   console.error(`RollupProcessor contract address: ${rollup.address}`);
@@ -99,7 +101,7 @@ export async function deploy(
   const verifier = vk ? await deployVerifier(signer, vk) : await deployMockVerifier(signer);
 
   const defiProxy = await deployDefiBridgeProxy(signer);
-
+  const allowThirdPartyContracts = true;
   const rollup = await deployRollupProcessor(
     signer,
     verifier,
@@ -110,6 +112,7 @@ export async function deploy(
     initNullRoot,
     initRootsRoot,
     initDataSize,
+    allowThirdPartyContracts,
   );
 
   const feeDistributor = await deployFeeDistributor(signer, rollup, uniswapRouter);

@@ -39,7 +39,7 @@ export class TxFeeResolver {
   }
 
   async start() {
-    const { assets } = await this.blockchain.getBlockchainStatus();
+    const { assets } = this.blockchain.getBlockchainStatus();
     this.allAssets = assets;
     this.feePayingAssetIds = this.allAssets.flatMap((asset, id) =>
       this.feePayingAssetAddresses.some(feePayingAsset => asset.address.equals(feePayingAsset)) ? [id] : [],

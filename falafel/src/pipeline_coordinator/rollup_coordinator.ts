@@ -17,7 +17,7 @@ import { TxRollup } from 'halloumi/proof_generator';
 
 export interface TxPoolProfile {
   nextRollupProfile: RollupProfile;
-  pendingBridgeStats: Map<bigint, Partial<BridgeProfile>>;
+  pendingBridgeStats: Map<bigint, BridgeProfile>;
 }
 
 export class RollupCoordinator {
@@ -78,11 +78,17 @@ export class RollupCoordinator {
     const txs = this.getNextTxsToRollup(pendingTxs, flush, assetIds, bridgeIds);
     // get the pending bridge stats
     for (const bi of this.bridgeQueues.keys()) {
+      const { gasAccrued, earliestTx, latestTx } = this.bridgeQueues.get(bi)!.profileBridgeQueue(this.feeResolver);
       profile.pendingBridgeStats.set(bi, {
-        gasAccrued: this.bridgeQueues.get(bi)!.getAccruedGasFromPendingBridgeTxs(this.feeResolver),
         gasThreshold: this.feeResolver.getFullBridgeGas(bi),
+        gasAccrued,
+        earliestTx,
+        latestTx,
+        bridgeId: bi,
+        numTxs: this.bridgeResolver.defaultDeFiBatchSize,
       });
     }
+
     try {
       const rollupProfile = await this.aggregateAndPublish(txs, rollupTimeouts, flush);
       this.published = rollupProfile.published;
@@ -141,14 +147,24 @@ export class RollupCoordinator {
       addTxs([rollupTx]);
       return txsForRollup;
     }
+    const bridgeId = defiProof.bridgeId.toBigInt();
 
-    const bridgeQueue = this.bridgeQueues.get(defiProof.bridgeId.toBigInt());
+    let bridgeQueue = this.bridgeQueues.get(bridgeId);
+
     if (!bridgeQueue) {
       // We don't have a bridge config for this!!
-      console.log(
-        `Received transaction for bridge: ${defiProof.bridgeId.toString()} but we have no config for this bridge!!`,
+      this.bridgeQueues.set(
+        bridgeId,
+        new BridgeTxQueue(
+          {
+            bridgeId,
+            numTxs: this.bridgeResolver.defaultDeFiBatchSize,
+            rollupFrequency: 0,
+          },
+          undefined,
+        ),
       );
-      return txsForRollup;
+      bridgeQueue = this.bridgeQueues.get(bridgeId)!;
     }
 
     //if we are beyond the timeout interval for this bridge then add it straight in

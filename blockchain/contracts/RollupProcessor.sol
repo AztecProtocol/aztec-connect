@@ -46,6 +46,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
     error ASYNC_CALLBACK_BAD_CALLER_ADDRESS();
     error MSG_VALUE_WRONG_AMOUNT();
     error TOKEN_TRANSFER_FAILED();
+    error INSUFFICIENT_ETH_TRANSFER();
     error WITHDRAW_TO_ZERO_ADDRESS();
     error INSUFFICIENT_DEPOSIT();
     error INVALID_LINKED_TOKEN_ADDRESS();
@@ -58,6 +59,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
     error INVALID_BRIDGE_ADDRESS();
     error NONZERO_OUTPUT_VALUE_ON_NOT_USED_ASSET(uint256 outputValue);
     error PUBLIC_INPUTS_HASH_VERIFICATION_FAILED(uint256, uint256);
+    error THIRD_PARTY_CONTRACTS_FLAG_NOT_SET();
 
     /*----------------------------------------
       FUNCTION SELECTORS (PRECOMPUTED)
@@ -81,7 +83,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
     /*----------------------------------------
       CONSTANT STATE VARIABLES
       ----------------------------------------*/
+
     uint256 private constant ethAssetId = 0; // if assetId == ethAssetId, treat as native ETH and not ERC20 token
+    bool public allowThirdPartyContracts;
 
     // starting root hash of the DeFi interaction result Merkle tree
     bytes32 private constant INIT_DEFI_ROOT = 0x0170467ae338aaf3fd093965165b8636446f09eeb15ab3d36df2e31dd718883d;
@@ -452,7 +456,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         bytes32 _initDataRoot,
         bytes32 _initNullRoot,
         bytes32 _initRootRoot,
-        uint32 _initDatasize
+        uint32 _initDatasize,
+        bool _allowThirdPartyContracts
     ) external initializer {
         __Ownable_init();
         transferOwnership(_contractOwner);
@@ -473,6 +478,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         escapeBlockLowerBound = _escapeBlockLowerBound;
         escapeBlockUpperBound = _escapeBlockUpperBound;
         rollupProviders[_contractOwner] = true;
+        allowThirdPartyContracts = _allowThirdPartyContracts;
     }
 
     /**
@@ -525,6 +531,27 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         assembly {
             verifier := and(sload(rollupState.slot), ADDRESS_MASK)
         }
+    }
+
+    /**
+     * @dev Modifier to protect functions from being called while the contract is still in BETA.
+     */
+
+    modifier checkThirdPartyContractStatus() {
+        if (owner() != _msgSender() && !allowThirdPartyContracts) {
+            revert THIRD_PARTY_CONTRACTS_FLAG_NOT_SET();
+        }
+        _;
+    }
+
+    /**
+     * @dev Set a flag that allows a third party dev to register Assets and bridges.
+     * Protected by onlyOwner
+     * @param _flag - bool if the flag should be set or not
+     */
+
+    function setAllowThirdPartyContracts(bool _flag) external override onlyOwner {
+        allowThirdPartyContracts = _flag;
     }
 
     /**
@@ -741,7 +768,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         address linkedToken,
         bool supportsPermit,
         uint256 gasLimit
-    ) external override {
+    ) external override checkThirdPartyContractStatus {
         if (linkedToken == address(0)) {
             revert INVALID_LINKED_TOKEN_ADDRESS();
         }
@@ -761,7 +788,12 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
      * @param linkedBridge - address of the bridge contract
      * @param gasLimit - uint256 gas limit to send to the bridge convert function
      */
-    function setSupportedBridge(address linkedBridge, uint256 gasLimit) external override onlyOwner {
+
+    function setSupportedBridge(address linkedBridge, uint256 gasLimit)
+        external
+        override
+        checkThirdPartyContractStatus
+    {
         if (linkedBridge == address(0)) {
             revert INVALID_LINKED_BRIDGE_ADDRESS();
         }
@@ -771,21 +803,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         bridgeGasLimits[bridgeAddressId] = gasLimit == 0 ? DEFAULT_BRIDGE_GAS_LIMIT : gasLimit;
 
         emit BridgeAdded(bridgeAddressId, linkedBridge, bridgeGasLimits[bridgeAddressId]);
-    }
-
-    /**
-     * @dev Update the value indicating whether a linked asset supports permit.
-     * Protected by onlyOwner
-     * @param assetId - unique ID of the asset
-     * @param supportsPermit - bool determining whether this supports permit
-     */
-    function setAssetPermitSupport(uint256 assetId, bool supportsPermit) external override onlyOwner {
-        address assetAddress = getSupportedAsset(assetId);
-        if (assetAddress == address(0)) {
-            revert TOKEN_ASSET_IS_NOT_LINKED();
-        }
-
-        assetPermitSupport[assetAddress] = supportsPermit;
     }
 
     /**
@@ -1578,7 +1595,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
 
             // emit events and update state
             assembly {
-                
                 // if interaction is Async, update pendingDefiInteractions
                 // if interaction is synchronous, compute the interaction hash and add to defiInteractionHashes
                 switch mload(add(bridgeResult, 0x40)) // switch isAsync
@@ -1858,7 +1874,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         uint256 interactionNonce
     ) internal {
         if (asset.assetType == AztecTypes.AztecAssetType.ETH) {
-            require(outputValue == ethPayments[interactionNonce], 'argh insufficient eth payment');
+            if (outputValue > ethPayments[interactionNonce]) {
+                revert INSUFFICIENT_ETH_TRANSFER();
+            }
             ethPayments[interactionNonce] = 0;
         } else if (asset.assetType == AztecTypes.AztecAssetType.ERC20 && outputValue > 0) {
             address tokenAddress = asset.erc20Address;
@@ -1869,7 +1887,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
     /**
      * @dev Transfer a fee to the feeReceiver
      * @param proofData proof of knowledge of a rollup block update
-     * @param feeReceiver fee beneficiary as described by the rollup provider
+     * @param feeReceiver fee beneficiary as described kby the rollup provider
      */
     function transferFee(bytes memory proofData, address feeReceiver) internal {
         for (uint256 i = 0; i < NUMBER_OF_ASSETS; ++i) {

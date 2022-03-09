@@ -2,7 +2,11 @@ import { Blockchain } from '@aztec/barretenberg/blockchain';
 import { BridgeConfig } from '@aztec/barretenberg/bridge_id';
 
 export class BridgeResolver {
-  constructor(private bridgeConfigs: BridgeConfig[], private blockchain: Blockchain) {}
+  constructor(
+    private bridgeConfigs: BridgeConfig[],
+    private blockchain: Blockchain,
+    public defaultDeFiBatchSize: number,
+  ) {}
 
   public getBridgeConfig(bridgeId: bigint) {
     return this.bridgeConfigs.find(bc => bc.bridgeId == bridgeId);
@@ -20,28 +24,29 @@ export class BridgeResolver {
     return this.determineFullBridgeGas(bridgeId);
   }
 
+  public setConf(defaultDeFiBatchSize: number) {
+    this.defaultDeFiBatchSize = defaultDeFiBatchSize;
+  }
+
   private determineFullBridgeGas(bridgeId: bigint) {
     const config = this.getBridgeConfig(bridgeId);
     if (config?.fee) {
       return config.fee;
     }
     const gasFromContract = this.blockchain.getBridgeGas(bridgeId);
-    if (gasFromContract === undefined) {
-      throw new Error(`Failed to retrieve bridge cost for bridge ${bridgeId.toString()}`);
-    }
     return gasFromContract;
   }
 
   public getMinBridgeTxGas(bridgeId: bigint) {
-    const bridgeConfig = this.getBridgeConfig(bridgeId);
-    if (!bridgeConfig) {
-      console.log(`Cannot get gas. Unrecognised Defi bridge: ${bridgeId}`);
-      throw new Error('Cannot get gas. Unrecognised Defi-bridge');
-    }
-
+    const bridgeConfig = this.getBridgeConfig(bridgeId)!;
     const bridgeGas = this.getFullBridgeGas(bridgeId);
-    const numBridgeTxs = BigInt(bridgeConfig.numTxs);
-    const requiredGas = bridgeGas / numBridgeTxs;
-    return bridgeGas % numBridgeTxs > 0n ? requiredGas + 1n : requiredGas;
+    const blockchainStatus = this.blockchain.getBlockchainStatus();
+    if (blockchainStatus.allowThirdPartyContracts || bridgeConfig) {
+      const numBridgeTxs = bridgeConfig ? BigInt(bridgeConfig.numTxs) : BigInt(this.defaultDeFiBatchSize);
+      const requiredGas = bridgeGas / numBridgeTxs;
+      return bridgeGas % numBridgeTxs > 0n ? requiredGas + 1n : requiredGas;
+    } else {
+      throw new Error('Cannot get gas. Unrecognised DeFi-bridge');
+    }
   }
 }

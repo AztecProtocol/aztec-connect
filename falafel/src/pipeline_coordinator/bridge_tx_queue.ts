@@ -1,8 +1,9 @@
-import { BridgeConfig } from '@aztec/barretenberg/bridge_id';
+import { BridgeConfig, BridgeStatus } from '@aztec/barretenberg/bridge_id';
 import { DefiDepositProofData, ProofData } from '@aztec/barretenberg/client_proofs';
 import { TxDao } from '../entity/tx';
 import { TxFeeResolver } from '../tx_fee_resolver';
 import { RollupTimeout } from './publish_time_manager';
+import { BridgeProfile } from './rollup_profiler';
 
 export interface RollupTx {
   excessGas: bigint;
@@ -10,6 +11,8 @@ export interface RollupTx {
   tx: TxDao;
   bridgeId?: bigint;
 }
+
+type PartialBridgeProfile = Pick<BridgeProfile, 'earliestTx' | 'latestTx' | 'gasAccrued'>;
 
 export function createRollupTx(rawTx: TxDao, proof: ProofData) {
   const rollupTx = {
@@ -81,13 +84,28 @@ export class BridgeTxQueue {
     return [];
   }
 
-  public getAccruedGasFromPendingBridgeTxs(feeResolver: TxFeeResolver): bigint {
-    let gasFromTxs = 0n;
+  public profileBridgeQueue(feeResolver: TxFeeResolver): PartialBridgeProfile {
+    const bridgeProfile: Partial<PartialBridgeProfile> = {
+      gasAccrued: 0n,
+    };
+
     for (let i = 0; i < this._txQueue.length; i++) {
       const tx = this._txQueue[i];
-      gasFromTxs += feeResolver.getSingleBridgeTxGas(this.bridgeId) + tx.excessGas;
+      bridgeProfile.gasAccrued! += feeResolver.getSingleBridgeTxGas(this.bridgeId) + tx.excessGas;
+      if (!bridgeProfile.earliestTx) {
+        bridgeProfile.earliestTx = tx.tx.created;
+      }
+      if (!bridgeProfile.latestTx) {
+        bridgeProfile.latestTx = tx.tx.created;
+      }
+      if (bridgeProfile.earliestTx > tx.tx.created) {
+        bridgeProfile.earliestTx = tx.tx.created;
+      }
+      if (bridgeProfile.latestTx < tx.tx.created) {
+        bridgeProfile.latestTx = tx.tx.created;
+      }
     }
-    return gasFromTxs;
+    return bridgeProfile as PartialBridgeProfile;
   }
 
   get bridgeId() {

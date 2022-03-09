@@ -47,7 +47,7 @@ interface IRollupProcessor {
         uint256 gasLimit
     ) external;
 
-    function setAssetPermitSupport(uint256 assetId, bool supportsPermit) external;
+    function setAllowThirdPartyContracts(bool _flag) external;
 
     function setSupportedBridge(address linkedBridge, uint256 gasLimit) external;
 

@@ -188,7 +188,7 @@ describe('end-to-end defi tests', () => {
         debugBalance(inputAssetIdA, i);
         debugBalance(outputAssetIdA, i);
         const depositValue = sdk.toBaseUnits(inputAssetIdA, '0.05');
-        const fee = ethToDaiFees[i == 2 ? DefiSettlementTime.INSTANT : DefiSettlementTime.NEXT_ROLLUP];
+        const fee = ethToDaiFees[i == 2 ? DefiSettlementTime.INSTANT : DefiSettlementTime.DEADLINE];
 
         debug(
           `account ${i} swapping ${sdk.fromBaseUnits(depositValue, true)} (fee: ${sdk.fromBaseUnits(fee)}) for ${
@@ -198,8 +198,18 @@ describe('end-to-end defi tests', () => {
 
         const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[i])!);
         const controller = sdk.createDefiController(userIds[i], signer, ethToDaiBridge, depositValue, fee);
+
         await controller.createProof();
         await controller.send();
+        // we need to wait 1 full seconds for the profile to be updated.
+        await new Promise(r => setTimeout(r, 1000));
+        const statusBefore = await sdk.getRemoteStatus();
+        const bridgeStatusBefore = statusBefore.bridgeStatus.find(
+          value => BigInt(value.bridgeId) == ethToDaiBridge.toBigInt(),
+        );
+
+        expect(bridgeStatusBefore);
+        expect(BigInt(bridgeStatusBefore!.gasAccrued)).toBeGreaterThan(0n);
         defiControllers.push(controller);
 
         const verification = async () => {
@@ -215,10 +225,7 @@ describe('end-to-end defi tests', () => {
       }
 
       debug(`waiting for defi interactions to complete...`);
-      const statusBefore = await sdk.getRemoteStatus();
-      const bridgeStatusBefore = statusBefore.bridgeStatus.find(value => value.bridgeId == ethToDaiBridge.toBigInt());
-      expect(bridgeStatusBefore);
-      expect(BigInt(bridgeStatusBefore!.gasAccrued)).toBeGreaterThan(0n);
+
       await Promise.all(defiControllers.map(controller => controller.awaitDefiInteraction()));
 
       debug(`waiting for claims to settle...`);
@@ -226,9 +233,7 @@ describe('end-to-end defi tests', () => {
       await Promise.all(defiControllers.map(controller => controller.awaitSettlement()));
       const statusAfter = await sdk.getRemoteStatus();
       const bridgeStatusAfter = statusAfter.bridgeStatus.find(value => value.bridgeId == ethToDaiBridge.toBigInt());
-      expect(bridgeStatusAfter);
-      expect(BigInt(bridgeStatusAfter!.gasAccrued)).toBe(0n);
-
+      expect(bridgeStatusAfter).toBeUndefined();
       // Check results.
       await Promise.all(defiVerifications.map(x => x()));
     }

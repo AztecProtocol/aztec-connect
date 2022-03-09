@@ -29,6 +29,7 @@ const getFullBridgeGas = (id: number) =>
 describe('Bridge Resolver', () => {
   let blockchain: Mockify<Blockchain>;
   let bridgeResolver: BridgeResolver;
+  const defaultDeFiBatchSize = 10;
 
   beforeEach(() => {
     jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -38,9 +39,14 @@ describe('Bridge Resolver', () => {
         const id = Number(bridgeId);
         return getFullBridgeGas(id);
       }),
+      getBlockchainStatus: jest.fn().mockImplementation(() => {
+        return {
+          allowThirdPartyContracts: false,
+        };
+      }),
     } as any;
 
-    bridgeResolver = new BridgeResolver(bridgeConfigs, blockchain);
+    bridgeResolver = new BridgeResolver(bridgeConfigs, blockchain, defaultDeFiBatchSize);
   });
 
   it('returns correct bridge config', () => {
@@ -59,22 +65,28 @@ describe('Bridge Resolver', () => {
   it('returns correct full bridge gas', () => {
     expect(bridgeResolver.getFullBridgeGas(bridgeConfigs[0].bridgeId)).toEqual(bridgeConfigs[0].fee);
     expect(bridgeResolver.getFullBridgeGas(bridgeConfigs[1].bridgeId)).toEqual(BLOCKCHAIN_BRIDGE_GAS);
-
-    expect(() => {
-      bridgeResolver.getFullBridgeGas(3n);
-    }).toThrow(`Failed to retrieve bridge cost for bridge ${3n.toString()}`);
   });
 
-  it('returns correct single tx gas', () => {
+  it('returns correct single tx gas in the bridge config', () => {
     expect(bridgeResolver.getMinBridgeTxGas(bridgeConfigs[0].bridgeId)).toEqual(
       bridgeConfigs[0].fee! / BigInt(bridgeConfigs[0].numTxs),
     );
     expect(bridgeResolver.getMinBridgeTxGas(bridgeConfigs[1].bridgeId)).toEqual(
       BLOCKCHAIN_BRIDGE_GAS / BigInt(bridgeConfigs[1].numTxs),
     );
+  });
 
-    expect(() => {
-      bridgeResolver.getMinBridgeTxGas(3n);
-    }).toThrow('Cannot get gas. Unrecognised Defi-bridge');
+  it('returns correct single tx gas NOT in the bridge config and when the acceptAllBridges flag is set', () => {
+    const unregisteredBridgeFee = 100000n;
+    blockchain.getBridgeGas.mockReturnValueOnce(unregisteredBridgeFee);
+    blockchain.getBlockchainStatus.mockReturnValueOnce({ allowThirdPartyContracts: true });
+
+    expect(bridgeResolver.getMinBridgeTxGas(3n)).toEqual(unregisteredBridgeFee / BigInt(defaultDeFiBatchSize));
+  });
+
+  it('throws for a tx  NOT in the bridge config and when the acceptAllBridges flag is FALSE', () => {
+    bridgeResolver = new BridgeResolver(bridgeConfigs, blockchain, defaultDeFiBatchSize);
+    blockchain.getBlockchainStatus.mockReturnValue({ allowThirdPartyContracts: false });
+    expect(() => bridgeResolver.getMinBridgeTxGas(3n)).toThrow('Cannot get gas. Unrecognised DeFi-bridge');
   });
 });

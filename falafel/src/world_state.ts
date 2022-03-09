@@ -17,6 +17,7 @@ import { RollupPipeline, RollupPipelineFactory } from './rollup_pipeline';
 import { AccountDao, ClaimDao } from './entity';
 import { parseInteractionResult } from './rollup_db/parse_interaction_result';
 import { getTxTypeFromInnerProofData } from './get_tx_type';
+import { RollupTimeout, RollupTimeouts } from './pipeline_coordinator/publish_time_manager';
 
 const innerProofDataToTxDao = (tx: InnerProofData, offchainTxData: Buffer, created: Date, txType: TxType) => {
   const txDao = new TxDao();
@@ -82,7 +83,13 @@ export class WorldState {
   }
 
   public getNextPublishTime() {
-    return this.pipeline.getNextPublishTime();
+    if (this.pipeline) {
+      return this.pipeline.getNextPublishTime();
+    }
+    return {
+      baseTimeout: undefined,
+      bridgeTimeouts: new Map<bigint, RollupTimeout>(),
+    } as RollupTimeouts;
   }
 
   public getTxPoolProfile() {

@@ -98,12 +98,17 @@ export class RollupProcessor {
     return TxHash.fromString(tx.hash);
   }
 
+  async setThirdPartyContractStatus(flag: boolean, options: SendTxOptions = {}) {
+    const { gasLimit } = { ...options };
+    const rollupProcessor = this.getContractWithSigner(options);
+    const tx = await rollupProcessor.setAllowThirdPartyContracts(flag, { gasLimit });
+    return TxHash.fromString(tx.hash);
+  }
+
   async setSupportedBridge(bridgeAddress: EthAddress, bridgeGasLimit: number, options: SendTxOptions = {}) {
     const { gasLimit } = { ...options };
     const rollupProcessor = this.getContractWithSigner(options);
-    const tx = await rollupProcessor
-      .setSupportedBridge(bridgeAddress.toString(), bridgeGasLimit, { gasLimit })
-      .catch(fixEthersStackTrace);
+    const tx = await rollupProcessor.setSupportedBridge(bridgeAddress.toString(), bridgeGasLimit, { gasLimit });
     return TxHash.fromString(tx.hash);
   }
 
@@ -115,9 +120,9 @@ export class RollupProcessor {
   ) {
     const { gasLimit } = { ...options };
     const rollupProcessor = this.getContractWithSigner(options);
-    const tx = await rollupProcessor
-      .setSupportedAsset(assetAddress.toString(), supportsPermit, assetGasLimit, { gasLimit })
-      .catch(fixEthersStackTrace);
+    const tx = await rollupProcessor.setSupportedAsset(assetAddress.toString(), supportsPermit, assetGasLimit, {
+      gasLimit,
+    });
     return TxHash.fromString(tx.hash);
   }
 
@@ -219,6 +224,11 @@ export class RollupProcessor {
 
   async getUserPendingDeposit(assetId: number, account: EthAddress) {
     return BigInt(await this.rollupProcessor.getUserPendingDeposit(assetId, account.toString()));
+  }
+
+  async getThirdPartyContractStatus(options: SendTxOptions = {}) {
+    const { gasLimit } = { ...options };
+    return await this.rollupProcessor.allowThirdPartyContracts({ gasLimit });
   }
 
   private async getEarliestBlock() {

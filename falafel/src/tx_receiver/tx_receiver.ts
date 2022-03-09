@@ -208,7 +208,8 @@ export class TxReceiver {
 
     const { bridgeId } = new DefiDepositProofData(proofData);
     const bridgeConfig = this.bridgeResolver.getBridgeConfig(bridgeId.toBigInt());
-    if (!bridgeConfig) {
+    const blockchainStatus = this.blockchain.getBlockchainStatus();
+    if (!blockchainStatus.allowThirdPartyContracts && !bridgeConfig) {
       console.log(`Unrecognised Defi bridge: ${bridgeId.toString()}`);
       throw new Error('Unrecognised Defi-bridge');
     }

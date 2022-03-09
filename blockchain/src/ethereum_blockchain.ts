@@ -88,28 +88,40 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     await this.updatePerRollupState(latestBlock);
     await this.updatePerEthBlockState();
     const chainId = await this.contracts.getChainId();
-    const assets = this.contracts.getAssets().map(a => a.getStaticInfo());
-    const bridgeAddresses = await this.contracts.getSupportedBridges();
-    const bridgeStatuses = await Promise.all(
-      bridgeAddresses.map(async (address, i) => {
-        const bridgeId = i + 1;
-        return {
-          id: bridgeId,
-          address,
-          gasLimit: await this.contracts.getBridgeGas(bridgeId),
-        } as BlockchainBridge;
-      }),
-    );
+
     this.status = {
       ...this.status,
       chainId,
       rollupContractAddress: this.contracts.getRollupContractAddress(),
       feeDistributorContractAddress: this.contracts.getFeeDistributorContractAddress(),
       verifierContractAddress: await this.contracts.getVerifierContractAddress(),
+    };
+    this.log(`Ethereum blockchain initialized with assets: ${this.status.assets.map(a => a.symbol)}`);
+  }
+
+  /**
+   * Fetch the latest bridges and assets from the rollup in case they have changed
+   * Set these on the status so the upstream code can be synchronous
+   */
+
+  private async refreshBridgesAndAssets() {
+    const assets = this.contracts.getAssets().map(a => a.getStaticInfo());
+    const bridgeAddresses = await this.contracts.getSupportedBridges();
+    const bridgeStatuses = await Promise.all(
+      bridgeAddresses.map(async (address, i) => {
+        const bridgeAddressId = i + 1;
+        return {
+          id: bridgeAddressId,
+          address,
+          gasLimit: await this.contracts.getBridgeGas(bridgeAddressId),
+        } as BlockchainBridge;
+      }),
+    );
+    this.status = {
+      ...this.status,
       assets,
       bridges: bridgeStatuses,
     };
-    this.log(`Ethereum blockchain initialized with assets: ${this.status.assets.map(a => a.symbol)}`);
   }
 
   /**
@@ -181,7 +193,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   /**
    * Get the status of the rollup contract
    */
-  public async getBlockchainStatus() {
+  public getBlockchainStatus() {
     return this.status;
   }
 
@@ -217,6 +229,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   }
 
   private async updatePerEthBlockState() {
+    await this.refreshBridgesAndAssets();
     this.status = {
       ...this.status,
       ...(await this.contracts.getPerBlockState()),
@@ -352,6 +365,9 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   public getBridgeGas(bridgeId: bigint) {
     const { addressId } = BridgeId.fromBigInt(bridgeId);
     const { gasLimit } = this.status.bridges.find(bridge => bridge.id == addressId) || {};
-    return gasLimit === undefined ? 0n : gasLimit;
+    if (!gasLimit) {
+      throw new Error(`Failed to retrieve bridge cost for bridge ${bridgeId.toString()}`);
+    }
+    return gasLimit;
   }
 }

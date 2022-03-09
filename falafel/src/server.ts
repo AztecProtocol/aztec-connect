@@ -26,6 +26,7 @@ export class Server {
   private txFeeResolver: TxFeeResolver;
   private pipelineFactory: RollupPipelineFactory;
   private proofGenerator: ProofGenerator;
+  private bridgeResolver: BridgeResolver;
   private ready = false;
 
   constructor(
@@ -51,17 +52,17 @@ export class Server {
         feeGasPriceMultiplier,
         maxProviderGasPrice,
         gasLimit,
+        defaultDeFiBatchSize,
       },
     } = configurator.getConfVars();
 
     const noteAlgo = new NoteAlgorithms(barretenberg);
     this.blake = new Blake2s(barretenberg);
-
-    const bridgeResolver = new BridgeResolver(bridgeConfigs, blockchain);
+    this.bridgeResolver = new BridgeResolver(bridgeConfigs, blockchain, defaultDeFiBatchSize);
 
     this.txFeeResolver = new TxFeeResolver(
       blockchain,
-      bridgeResolver,
+      this.bridgeResolver,
       baseTxGas,
       maxFeeGasPrice,
       feeGasPriceMultiplier,
@@ -95,7 +96,7 @@ export class Server {
       gasLimit,
       numInnerRollupTxs,
       numOuterRollupProofs,
-      bridgeResolver,
+      this.bridgeResolver,
     );
     this.worldState = new WorldState(rollupDb, worldStateDb, blockchain, this.pipelineFactory, noteAlgo, metrics);
     this.txReceiver = new TxReceiver(
@@ -106,7 +107,7 @@ export class Server {
       this.proofGenerator,
       this.txFeeResolver,
       metrics,
-      bridgeResolver,
+      this.bridgeResolver,
     );
   }
 
@@ -151,8 +152,10 @@ export class Server {
         publishInterval,
         maxProviderGasPrice,
         gasLimit,
+        defaultDeFiBatchSize,
       },
     } = this.configurator.getConfVars();
+    this.bridgeResolver.setConf(defaultDeFiBatchSize);
     this.pipelineFactory.setConf(publishInterval, maxProviderGasPrice, gasLimit);
     this.txFeeResolver.setConf(baseTxGas, maxFeeGasPrice, feeGasPriceMultiplier, publishInterval);
   }
@@ -169,32 +172,38 @@ export class Server {
   }
 
   public async getStatus(): Promise<RollupProviderStatus> {
-    const status = await this.blockchain.getBlockchainStatus();
+    const status = this.blockchain.getBlockchainStatus();
     const nextPublish = this.worldState.getNextPublishTime();
     const txPoolProfile = this.worldState.getTxPoolProfile();
+    const { runtimeConfig, proverless } = this.configurator.getConfVars();
+
     const bridgeStats: BridgeStatus[] = [];
-    for (const bc of this.bridgeConfigs) {
-      const rt = nextPublish.bridgeTimeouts.get(bc.bridgeId);
+    const fullSetOfBridges = [...txPoolProfile.pendingBridgeStats.values()];
+    fullSetOfBridges.forEach(pendingBridgeProfile => {
+      const bridgeId = pendingBridgeProfile.bridgeId;
+      const rt = nextPublish.bridgeTimeouts.get(bridgeId);
       let gasAccrued = 0n;
-      const nextRollupBridgeProfile = txPoolProfile.nextRollupProfile.bridgeProfiles.get(bc.bridgeId);
-      const pendingBridgeProfile = txPoolProfile.pendingBridgeStats.get(bc.bridgeId);
+      const bc: BridgeConfig = this.bridgeConfigs.find(config => config.bridgeId === bridgeId) || {
+        bridgeId,
+        numTxs: runtimeConfig.defaultDeFiBatchSize,
+        rollupFrequency: 0,
+      };
+      const nextRollupBridgeProfile = txPoolProfile.nextRollupProfile.bridgeProfiles.get(bridgeId);
       if (nextRollupBridgeProfile) {
-        gasAccrued = nextRollupBridgeProfile!.gasAccrued;
-      } else if (pendingBridgeProfile && pendingBridgeProfile.gasAccrued) {
-        gasAccrued = pendingBridgeProfile.gasAccrued;
+        gasAccrued = nextRollupBridgeProfile.gasAccrued;
+      } else {
+        gasAccrued = pendingBridgeProfile.gasAccrued!;
       }
 
       const bs = convertToBridgeStatus(
         bc,
         rt?.rollupNumber,
         rt?.timeout,
-        gasAccrued,
-        this.txFeeResolver.getFullBridgeGas(bc.bridgeId),
+        gasAccrued!,
+        pendingBridgeProfile.gasThreshold!,
       );
       bridgeStats.push(bs);
-    }
-
-    const { runtimeConfig, proverless } = this.configurator.getConfVars();
+    });
 
     return {
       blockchainStatus: status,
