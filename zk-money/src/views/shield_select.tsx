@@ -108,7 +108,7 @@ export const ShieldSelect: React.FunctionComponent<ShieldSelectProps> = ({ onSub
     [ethPrice, assetEth],
   );
   const [selectedAmount, setSelectedAmount] = useState(AMOUNT_OPTS[1]);
-  const selectedItem = items?.find(x => x.id === selectedAmount)!;
+  const selectedItem = items?.find(x => x.id === selectedAmount);
   return (
     <Root>
       <Header>
@@ -128,7 +128,7 @@ export const ShieldSelect: React.FunctionComponent<ShieldSelectProps> = ({ onSub
                 <Selection>
                   <ShieldedAssetIcon address={KMAA.ETH} size="m" />
                   <Spacer />
-                  {selectedItem.label}
+                  {selectedItem?.label}
                   <DownArrow />
                 </Selection>
               }
