@@ -1,24 +1,34 @@
-import { JsonRpcProvider as EthersProvider, Web3Provider } from '@ethersproject/providers';
+import { Web3Provider } from '@ethersproject/providers';
 import { Contract } from 'ethers';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { TxHash } from '@aztec/barretenberg/blockchain';
 import { Command } from 'commander';
-import { purchaseTokens, MainnetAddresses, EthersAdapter, RollupProcessor, JsonRpcProvider } from '..';
+import { purchaseTokens, MainnetAddresses, RollupProcessor, JsonRpcProvider } from '..';
 import { setBlockchainTime, getCurrentBlockTime} from '../manipulate_blocks';
 import { decodeErrorFromContract, decodeSelector } from '../contracts/decode_error';
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 import * as RollupAbi from '../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
 import * as ElementAbi from '../artifacts/contracts/bridges/ElementBridge.sol/ElementBridge.json';
+import { WalletProvider } from '../provider';
+
+const {
+  PRIVATE_KEY
+} = process.env;
 
 export const abis: { [key: string]: any } = {
   Rollup: RollupAbi,
   Element: ElementAbi,
 };
 
-const getEthersAdapter = (host: string) => {
-  const provider = new EthersProvider(host);
-  return new EthersAdapter(provider);
-};
+const getProvider = (url: string) => {
+  if (PRIVATE_KEY) {
+    const provider = WalletProvider.fromHost(url);
+    const address = provider.addAccount(Buffer.from(PRIVATE_KEY, 'hex'));
+    console.log(`Added account ${address.toString()} from provided private key`);
+    return provider;
+  }
+  return new JsonRpcProvider(url);
+}
 
 export async function retrieveEvents(
   contractAddress: string,
@@ -54,7 +64,7 @@ async function main() {
     .argument('<time>', 'the time you wish to set for the next block, unix timestamp format')
     .argument('[url]', 'your ganache url', 'http://localhost:8545')
     .action(async (time: any, url: any) => {
-      const provider = getEthersAdapter(url)
+      const provider = getProvider(url)
       const date = new Date(parseInt(time));
       await setBlockchainTime(date.getTime(), provider);
       console.log(`New block time ${await getCurrentBlockTime(provider)}`);
@@ -68,7 +78,7 @@ async function main() {
     .argument('<txHash>', 'the tx hash that you wish to decode, as a hex string')
     .argument('[url]', 'your ganache url', 'http://localhost:8545')
     .action(async (contractAddress, contractName, txHash, url) => {
-      const provider = getEthersAdapter(url)
+      const provider = getProvider(url)
       const error = await decodeError(contractAddress, contractName, txHash, provider);
       if (!error) {
         console.log(`Failed to retrieve error for tx ${txHash}`);
@@ -84,7 +94,7 @@ async function main() {
     .argument('<nonce>', 'the nonce you wish to finalise, as a number')
     .argument('[url]', 'your ganache url', 'http://localhost:8545')
     .action(async (rollupAddress, nonce, url) => {
-      const provider = getEthersAdapter(url);
+      const provider = getProvider(url);
       const rollupProcessor = new RollupProcessor(rollupAddress, provider);
       try {
         await rollupProcessor.processAsyncDefiInteraction(parseInt(nonce));
@@ -104,7 +114,7 @@ async function main() {
     .argument('[to]', 'the block number to search to, defaults to the latest block')
     .argument('[url]', 'your ganache url', 'http://localhost:8545')
     .action(async (contractAddress, contractName, eventName, from, to, url) => {
-      const provider = getEthersAdapter(url);
+      const provider = getProvider(url);
       const logs = await retrieveEvents(contractAddress, contractName, provider, eventName, parseInt(from), to ? parseInt(to) : undefined);
       console.log("Received event args ", logs.map(l => l.args));
     });
@@ -116,14 +126,14 @@ async function main() {
     .argument('<tokenQuantity>', 'the quantity of token you want to attempt to purchase')
     .argument('[spender]', 'the address of the account to purchase the token defaults to 1st default account 0xf39...', undefined)
     .argument('[recipient]', 'the address of the account to receive the tokens defaults to the spender', undefined)
-    .argument('[maxAmountToSpend]', 'optional limit of the amount to spend', 10n ** 21n)
+    .argument('[maxAmountToSpend]', 'optional limit of the amount to spend', BigInt(10n ** 21n).toString())
     .argument('[url]', 'your ganache url', 'http://localhost:8545')
     .action(async (tokenAddress, tokenQuantity, recipient, spender, maxAmountToSpend, url) => {
-      const jsonProvider = new JsonRpcProvider(url);
-      const accounts = await jsonProvider.getAccounts();
+      const ourProvider = getProvider(url);
+      const accounts = await ourProvider.getAccounts();
       spender = spender ? EthAddress.fromString(spender) : accounts[0];
       recipient = recipient ? EthAddress.fromString(recipient) : spender;
-      const amountPurchased = await purchaseTokens(EthAddress.fromString(tokenAddress), BigInt(tokenQuantity), BigInt(maxAmountToSpend), getEthersAdapter(url), spender, recipient);
+      const amountPurchased = await purchaseTokens(EthAddress.fromString(tokenAddress), BigInt(tokenQuantity), BigInt(maxAmountToSpend), ourProvider, spender, recipient);
       console.log(`Successfully purchased ${amountPurchased} of ${tokenAddress}`);
     });
 
