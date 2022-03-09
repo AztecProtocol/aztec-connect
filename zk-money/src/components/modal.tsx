@@ -6,15 +6,6 @@ import { spacings, Theme } from '../styles';
 import { Overlay } from './overlay';
 import { Text } from './text';
 
-interface ModalContentWrapperProps {
-  noPadding?: boolean;
-}
-
-interface PopupContentProps {
-  theme: Theme;
-  noPadding?: boolean;
-}
-
 const Header = styled.div`
   display: flex;
   align-items: flex-start;

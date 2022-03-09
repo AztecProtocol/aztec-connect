@@ -1,4 +1,5 @@
-import { BitConfig, BridgeId } from '@aztec/sdk';
+import createDebug from 'debug';
+import { BitConfig, BridgeId, EthAddress } from '@aztec/sdk';
 import { BridgeFlow, DefiInvestmentType, DefiRecipe, KeyBridgeStat } from './types';
 import lidoLogo from '../../images/lido_white.svg';
 import lidoMiniLogo from '../../images/lido_mini_logo.png';
@@ -9,27 +10,31 @@ import aaveMiniLogo from '../../images/aave_mini_logo.png';
 import ethToDaiBanner from '../../images/eth_to_dai_banner.svg';
 import { createMockYieldAdaptor } from './bridge_data_adaptors/adaptor_mock';
 import { createElementAdaptor } from './bridge_data_adaptors/element_adaptor';
+import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from 'alt-model/known_assets/known_asset_addresses';
+import { RemoteAsset } from 'alt-model/types';
+import { RemoteAssetsObs } from 'alt-model/top_level_context/remote_assets_obs';
 
-interface CreateRecipeArgs extends Omit<DefiRecipe, 'bridgeFlow'> {
+const debug = createDebug('zm:recipes');
+
+interface CreateRecipeArgs extends Omit<DefiRecipe, 'bridgeFlow' | 'inputAssetA' | 'outputAssetA'> {
   isAsync?: boolean;
   auxData?: number;
   addressId: number;
-  inputAssetId: number;
-  outAssetIdA: number;
-  outAssetIdB: number;
-  logo: string;
+  inputAssetAddressA: EthAddress;
+  outputAssetAddressA: EthAddress;
 }
 
-function recipe({
-  isAsync,
-  auxData,
-  addressId,
-  inputAssetId,
-  outAssetIdA,
-  outAssetIdB,
-  ...args
-}: CreateRecipeArgs): DefiRecipe {
-  const enter = new BridgeId(addressId, inputAssetId, outAssetIdA, outAssetIdB, 0, BitConfig.EMPTY, auxData ?? 0);
+function createRecipe(
+  { isAsync, auxData, addressId, inputAssetAddressA, outputAssetAddressA, ...args }: CreateRecipeArgs,
+  assets: RemoteAsset[],
+): DefiRecipe | undefined {
+  const inputAssetA = assets.find(x => x.address.equals(inputAssetAddressA));
+  const outputAssetA = assets.find(x => x.address.equals(outputAssetAddressA));
+  if (!inputAssetA || !outputAssetA) {
+    debug(`Could not find remote assets for recipe '${args.id}'`);
+    return;
+  }
+  const enter = new BridgeId(addressId, inputAssetA.id, outputAssetA.id, 0, 0, BitConfig.EMPTY, auxData ?? 0);
   const bridgeFlow: BridgeFlow = isAsync
     ? { type: 'async', enter }
     : {
@@ -37,32 +42,32 @@ function recipe({
         enter,
         exit: new BridgeId(
           addressId,
-          outAssetIdA, // swapped
-          inputAssetId, // swapped
-          outAssetIdB,
+          inputAssetA.id, // swapped
+          outputAssetA.id, // swapped
+          0,
           0,
           BitConfig.EMPTY,
           0,
         ),
       };
-  return { ...args, bridgeFlow };
+  return { ...args, bridgeFlow, inputAssetA, outputAssetA };
 }
 
-const ETH = 0;
+// const ETH = 0;
 const DAI = 1;
 // const zkwStETH = 3;
 // const TO_BE_CONFIRMED = 0;
-const NOT_USED = 0;
+// const NOT_USED = 0;
 
-export const RECIPES = {
-  'element-finance.DAI-to-DAI': recipe({
+const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
+  {
+    id: 'element-finance.DAI-to-DAI',
     openHandleAssetId: DAI,
     isAsync: true,
     auxData: 1643382446,
     addressId: 2,
-    inputAssetId: DAI,
-    outAssetIdA: DAI,
-    outAssetIdB: NOT_USED,
+    inputAssetAddressA: KMAA.DAI,
+    outputAssetAddressA: KMAA.DAI,
     createAdaptor: createElementAdaptor,
     name: 'Element Fixed Yield',
     investmentType: DefiInvestmentType.FIXED_YIELD,
@@ -75,13 +80,13 @@ export const RECIPES = {
     keyStat1: KeyBridgeStat.FIXED_YIELD,
     keyStat2: KeyBridgeStat.BATCH_SIZE,
     keyStat3: KeyBridgeStat.MATURITY,
-  }),
-  'fake-lido-finance.ETH-to-wStETH': recipe({
+  },
+  {
+    id: 'fake-lido-finance.ETH-to-wStETH',
     openHandleAssetId: DAI,
     addressId: 1,
-    inputAssetId: ETH,
-    outAssetIdA: ETH,
-    outAssetIdB: NOT_USED,
+    inputAssetAddressA: KMAA.ETH,
+    outputAssetAddressA: KMAA.ETH,
     createAdaptor: createMockYieldAdaptor,
     name: 'Lido Staking',
     investmentType: DefiInvestmentType.STAKING,
@@ -95,29 +100,13 @@ export const RECIPES = {
     keyStat1: KeyBridgeStat.YIELD,
     keyStat2: KeyBridgeStat.LIQUIDITY,
     keyStat3: KeyBridgeStat.BATCH_SIZE,
-  }),
-  // 'fake-aave-borrow.ETH-to-DAI': recipe({
-  //   addressId: 1,
-  //   inputAssetId: ETH,
-  //   outAssetIdA: DAI,
-  //   outAssetIdB: NOT_USED,
-  //   dataAdaptor: MOCK_ADAPTOR,
-  //   investmentType: DefiInvestmentType.BORROW,
-  //   shortDesc: 'Borrow zkDAI using your zkETH as collateral',
-  //   longDescription:
-  //     'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
-  //   bannerImg: ethToDaiBanner,
-  //   logo: aaveLogo,
-  //   keyStat1: KeyBridgeStat.YIELD,
-  //   keyStat2: KeyBridgeStat.LIQUIDITY,
-  //   keyStat3: KeyBridgeStat.BATCH_SIZE,
-  // }),
-  'fake-aave-lending.DAI-to-aDAI': recipe({
+  },
+  {
+    id: 'fake-aave-lending.DAI-to-aDAI',
     openHandleAssetId: DAI,
     addressId: 1,
-    inputAssetId: ETH,
-    outAssetIdA: DAI,
-    outAssetIdB: NOT_USED,
+    inputAssetAddressA: KMAA.ETH,
+    outputAssetAddressA: KMAA.DAI,
     createAdaptor: createMockYieldAdaptor,
     name: 'AAVE Lending',
     investmentType: DefiInvestmentType.YIELD,
@@ -130,42 +119,19 @@ export const RECIPES = {
     keyStat1: KeyBridgeStat.YIELD,
     keyStat2: KeyBridgeStat.LIQUIDITY,
     keyStat3: KeyBridgeStat.BATCH_SIZE,
-  }),
-  // 'element-finance.DAI-to-DAI': recipe({
-  //   addressId: TO_BE_CONFIRMED,
-  //   inputAssetId: DAI,
-  //   outAssetIdA: DAI,
-  //   outAssetIdB: TO_BE_CONFIRMED,
-  //   investmentType: DefiInvestmentType.FIXED_YIELD,
-  //   shortDesc: 'Deposit zkDAI into Element and receive a fixed yield back in xx Days as zkDAI',
-  //   logo: elementFiLogo,
-  // }),
-  // 'lido-finance.ETH-to-wStETH': recipe({
-  //   addressId: TO_BE_CONFIRMED,
-  //   inputAssetId: ETH,
-  //   outAssetIdA: TO_BE_CONFIRMED,
-  //   outAssetIdB: TO_BE_CONFIRMED,
-  //   investmentType: DefiInvestmentType.STAKING,
-  //   shortDesc:
-  //     'Stake zkETH on the Beacon chain via Lido. Receive a variable yield via the zkwStETH tokens that can be claimed for zkETH',
-  //   logo: lidoLogo,
-  // }),
-  // 'aave-borrow.ETH-to-DAI': recipe({
-  //   addressId: TO_BE_CONFIRMED,
-  //   inputAssetId: ETH,
-  //   outAssetIdA: DAI,
-  //   outAssetIdB: TO_BE_CONFIRMED,
-  //   investmentType: DefiInvestmentType.BORROW,
-  //   shortDesc: 'Borrow zkDAI using your zkETH as collateral',
-  //   logo: aaveLogo,
-  // }),
-  // 'aave-lending.DAI-to-aDAI': recipe({
-  //   addressId: TO_BE_CONFIRMED,
-  //   inputAssetId: DAI,
-  //   outAssetIdA: TO_BE_CONFIRMED,
-  //   outAssetIdB: TO_BE_CONFIRMED,
-  //   investmentType: DefiInvestmentType.YIELD,
-  //   shortDesc: 'Deposit zkDAI into AAVE receive zkADAI in return.',
-  //   logo: aaveLogo,
-  // }),
-};
+  },
+];
+
+export function createDefiRecipeObs(knownAssetsObs: RemoteAssetsObs) {
+  return knownAssetsObs.map(assets => {
+    if (!assets) return undefined;
+    const recipes: DefiRecipe[] = [];
+    for (const args of CREATE_RECIPES_ARGS) {
+      const recipe = createRecipe(args, assets);
+      if (recipe) recipes.push(recipe);
+    }
+    return recipes;
+  });
+}
+
+export type DefiRecipesObs = ReturnType<typeof createDefiRecipeObs>;

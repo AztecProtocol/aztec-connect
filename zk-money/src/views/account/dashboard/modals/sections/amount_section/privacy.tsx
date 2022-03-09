@@ -1,5 +1,5 @@
+import type { RemoteAsset } from 'alt-model/types';
 import styled from 'styled-components';
-import { Asset } from 'app';
 import { Text } from 'components';
 import { CrowdVisualisation } from 'views/account/privacy/crowd_visualisation';
 
@@ -7,7 +7,7 @@ const StyledText = styled(Text)`
   text-align: center;
 `;
 
-export function Privacy({ asset, className }: { asset: Asset; className?: string }) {
+export function Privacy({ asset, className }: { asset: RemoteAsset; className?: string }) {
   return (
     <div className={className}>
       <StyledText size="xs">

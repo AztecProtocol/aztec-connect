@@ -1,13 +1,13 @@
+import type { RemoteAsset } from 'alt-model/types';
 import { useState } from 'react';
 import { Dropdown } from 'components/dropdown';
 import { ShieldedAssetIcon } from 'components';
 import { AmountInput } from 'ui-components';
-import { Asset } from '../../../../app';
 import downArrow from '../../../images/down_arrow.svg';
 import style from './amount_selection.module.scss';
 
 interface AmountSelectionProps {
-  asset: Asset;
+  asset: RemoteAsset;
   maxAmount: bigint;
   amountString: string;
   allowAssetSelection?: boolean;
@@ -27,7 +27,7 @@ export function AmountSelection(props: AmountSelectionProps) {
         <div className={style.assetSelectorWrapper}>
           <div className={style.assetSelector} onClick={toggleAssetSelector}>
             <div className={style.assetDisplay}>
-              <ShieldedAssetIcon asset={props.asset} />
+              <ShieldedAssetIcon address={props.asset.address} />
               <div className={style.assetName}>{props.asset.symbol}</div>
             </div>
             <img src={downArrow} />

@@ -1,13 +1,16 @@
+import type { AssetValue } from '@aztec/sdk';
 import { useState } from 'react';
-import { AssetValue } from '@aztec/sdk';
 import { Dropdown, DropdownOption } from '../dropdown';
 import styled from 'styled-components/macro';
 import sendToL1Icon from '../../images/l1_send.svg';
 import sendToL2Icon from '../../images/l2_send.svg';
 import ellipsisIcon from '../../images/ellipsis.svg';
-import { Asset, assets, convertToPriceString, formatBaseUnits } from '../../app';
+import { convertToPriceString, formatBaseUnits } from '../../app';
 import { ShieldedAssetIcon } from '..';
 import { useAssetPrice } from '../../alt-model';
+import { useRemoteAssetForId } from 'alt-model/top_level_context';
+import { getAssetPreferredFractionalDigits } from 'alt-model/known_assets/known_asset_display_data';
+import { RemoteAsset } from 'alt-model/types';
 
 const HoldingWrapper = styled.div`
   display: flex;
@@ -73,21 +76,23 @@ const DROPDOWN_OPTIONS = [
 
 interface HoldingProps {
   assetValue: AssetValue;
-  onSend?: () => void;
-  onWidthdraw?: () => void;
+  onSend?: (asset: RemoteAsset) => void;
+  onWidthdraw?: (asset: RemoteAsset) => void;
 }
 
 export function Holding({ assetValue, onSend, onWidthdraw }: HoldingProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  const asset = assets[assetValue.assetId] as Asset | undefined;
+  const asset = useRemoteAssetForId(assetValue.assetId);
   const price = useAssetPrice(assetValue.assetId);
   const priceStr =
     price === undefined || asset === undefined ? '?' : convertToPriceString(assetValue.value, asset.decimals, price);
   const amountStr =
     asset === undefined
       ? '?'
-      : formatBaseUnits(assetValue.value, asset?.decimals, { precision: asset.preferredFractionalDigits });
+      : formatBaseUnits(assetValue.value, asset?.decimals, {
+          precision: getAssetPreferredFractionalDigits(asset.address),
+        });
 
   const handleDropdownToggle = () => {
     setIsDropdownOpen(prevValue => !prevValue);
@@ -98,11 +103,11 @@ export function Holding({ assetValue, onSend, onWidthdraw }: HoldingProps) {
   };
 
   const handleDropdownClick = (option: DropdownOption<string>) => {
-    if (option.value === 'widthdraw') {
-      onWidthdraw && onWidthdraw();
+    if (option.value === 'widthdraw' && asset) {
+      onWidthdraw && onWidthdraw(asset);
     }
-    if (option.value === 'send') {
-      onSend && onSend();
+    if (option.value === 'send' && asset) {
+      onSend && onSend(asset);
     }
   };
 
@@ -113,17 +118,17 @@ export function Holding({ assetValue, onSend, onWidthdraw }: HoldingProps) {
   return (
     <HoldingWrapper>
       <AssetWrapper>
-        <ShieldedAssetIcon asset={asset} />
+        <ShieldedAssetIcon address={asset.address} />
         <HoldingUnits>zk{asset.symbol ?? '?'}</HoldingUnits>
       </AssetWrapper>
       <HoldingAmount>${priceStr}</HoldingAmount>
       <div>{amountStr}</div>
       <ButtonsWrapper>
-        <Button onClick={onWidthdraw}>
+        <Button onClick={() => onWidthdraw?.(asset)}>
           <ButtonIcon src={sendToL1Icon} />
         </Button>
         {onSend && (
-          <Button onClick={onSend}>
+          <Button onClick={() => onSend(asset)}>
             <ButtonIcon src={sendToL2Icon} />
           </Button>
         )}

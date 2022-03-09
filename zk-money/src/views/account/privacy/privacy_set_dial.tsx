@@ -1,12 +1,13 @@
+import type { RemoteAsset } from 'alt-model/types';
 import React from 'react';
 import styled from 'styled-components/macro';
 import { fromBaseUnits } from '../../../app';
 import { Text } from '../../../components';
 import { borderRadiuses, spacings, themeColours } from '../../../styles';
-import { Asset } from '../../../app/assets';
-import { depositorBucketGroups } from './privacy_util';
+import { useDepositorBuckets } from './privacy_util';
 import usersIcon from '../../../images/users_icon.svg';
 import triangleRight from '../../../images/triangle_right.svg';
+import { getAssetIconWhite } from 'alt-model/known_assets/known_asset_display_data';
 
 const rowHeight = 35;
 
@@ -104,27 +105,27 @@ const numberFormatter = new Intl.NumberFormat('en-GB');
 
 interface PrivacySetDialProps {
   amount: bigint;
-  asset: Asset;
+  asset: RemoteAsset;
 }
 
 export const PrivacySetDial: React.FunctionComponent<PrivacySetDialProps> = ({ amount, asset }) => {
-  const buckets = depositorBucketGroups[asset.id];
-  const activeBucketIdx = buckets.findIndex(b => b.lowerBound >= amount);
-  const activeRowIdx = activeBucketIdx === -1 ? buckets.length : activeBucketIdx;
+  const buckets = useDepositorBuckets(asset.address);
+  const activeBucketIdx = buckets?.findIndex(b => b.lowerBound >= amount);
+  const activeRowIdx = activeBucketIdx === -1 ? buckets?.length : activeBucketIdx;
   return (
     <Root>
       <Header>
-        <HeaderIcon url={asset.iconWhite} />
+        <HeaderIcon url={getAssetIconWhite(asset.address)} />
         <HeaderIcon url={usersIcon} />
         <Text size="s" text={asset.symbol} />
         <Text size="s" text="Users" />
       </Header>
       <HighlightCursor />
       <Body>
-        <Rows style={{ transform: `translateY(${displaceForIdx(activeRowIdx)}px)` }}>
+        <Rows style={{ transform: `translateY(${displaceForIdx(activeRowIdx ?? 0)}px)` }}>
           {emptyRow}
           {emptyRow}
-          {buckets.map((b, idx) => (
+          {buckets?.map((b, idx) => (
             <Row key={idx}>
               <Text size="s" text={fromBaseUnits(b.lowerBound, asset.decimals)} />
               <Text size="s" text={numberFormatter.format(b.count)} />

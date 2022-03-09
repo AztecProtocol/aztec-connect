@@ -1,9 +1,10 @@
+import type { RemoteAsset } from 'alt-model/types';
 import React from 'react';
 import styled from 'styled-components/macro';
 import warningIcon from '../images/warning.svg';
 import { Text } from './text';
 import { borderRadiuses, breakpoints, spacings, Theme, themeColours } from '../styles';
-import { Asset, fromBaseUnits } from '../app';
+import { fromBaseUnits } from '../app';
 
 const Root = styled.div`
   display: flex;
@@ -59,7 +60,7 @@ const WarningFootnote = styled(Text)`
 `;
 
 interface DisclaimerBlockProps {
-  asset: Asset;
+  asset: RemoteAsset;
   txAmountLimit: bigint;
 }
 

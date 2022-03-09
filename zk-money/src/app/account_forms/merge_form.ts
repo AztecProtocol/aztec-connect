@@ -1,8 +1,8 @@
+import type { CutdownAsset } from 'app/types';
 import { AccountId, AztecSdk, Note } from '@aztec/sdk';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { AccountState, AssetState } from '../account_state';
-import { Asset } from '../assets';
 import {
   BoolInput,
   clearMessage,
@@ -74,7 +74,7 @@ const initialMergeFormValues = {
 // TODO - delete it
 export class MergeForm extends EventEmitter implements AccountForm {
   private readonly userId: AccountId;
-  private readonly asset: Asset;
+  private readonly asset: CutdownAsset;
 
   private values: MergeFormValues = initialMergeFormValues;
   private formStatus = FormStatus.ACTIVE;

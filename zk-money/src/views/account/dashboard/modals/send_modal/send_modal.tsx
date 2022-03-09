@@ -1,6 +1,8 @@
+import { isKnownAssetAddressString } from 'alt-model/known_assets/known_asset_addresses';
+import type { RemoteAsset } from 'alt-model/types';
 import { Card, CardHeaderSize } from 'ui-components';
 import { useApp, useAssetPrice, useProviderState, useSendForm } from 'alt-model';
-import { assets, SendMode, SendStatus } from 'app';
+import { SendMode, SendStatus } from 'app';
 import { CloseButtonWhite, Modal } from 'components';
 import { Theme } from 'styles';
 import { SendLayout } from './send_layout';
@@ -8,7 +10,7 @@ import style from './send_modal.module.scss';
 
 interface SendModalProps {
   onClose: () => void;
-  assetId: number;
+  asset: RemoteAsset;
   sendMode?: SendMode;
 }
 
@@ -23,17 +25,23 @@ function getTitle(sendMode: SendMode) {
   }
 }
 
-export function SendModal({ assetId, onClose, sendMode = SendMode.SEND }: SendModalProps) {
+export function SendModal({ asset, onClose, sendMode = SendMode.SEND }: SendModalProps) {
   const { config, userSession } = useApp();
-  const { formValues, sendForm, processing, spendableBalance } = useSendForm(assetId, sendMode);
+  const { formValues, sendForm, processing, spendableBalance } = useSendForm(asset, sendMode);
   const generatingKey = formValues?.status.value === SendStatus.GENERATE_KEY;
   const theme = generatingKey ? Theme.GRADIENT : Theme.WHITE;
-  const assetPrice = useAssetPrice(assetId);
+  const assetPrice = useAssetPrice(asset.id);
   const providerState = useProviderState();
   const canClose = !processing && !generatingKey;
   const overrideModalLayout = !generatingKey;
 
-  if (!formValues) return <></>;
+  if (!formValues || !asset) return <></>;
+
+  const assetAddressStr = asset.address.toString();
+  if (!isKnownAssetAddressString(assetAddressStr)) {
+    throw new Error(`Attempting SendModal with unknown asset address '${assetAddressStr}'`);
+  }
+  const txAmountLimit = config.txAmountLimits[assetAddressStr];
 
   return (
     <Modal
@@ -55,9 +63,9 @@ export function SendModal({ assetId, onClose, sendMode = SendMode.SEND }: SendMo
         cardContent={
           <SendLayout
             theme={theme}
-            asset={assets[assetId]}
+            asset={asset}
             assetPrice={assetPrice ?? 0n}
-            txAmountLimit={config.txAmountLimits[assetId]}
+            txAmountLimit={txAmountLimit}
             spendableBalance={spendableBalance}
             providerState={providerState}
             sendMode={sendMode}

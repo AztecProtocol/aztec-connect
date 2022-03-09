@@ -9,7 +9,7 @@ function formatPriceShort(value: bigint) {
 }
 
 function LiquidityValue(props: { recipe: DefiRecipe }) {
-  const liquidity = useLiquidity(props.recipe);
+  const liquidity = useLiquidity(props.recipe.id);
   const valueStr = liquidity !== undefined ? `$${formatPriceShort(liquidity)}` : '??';
   return <>{valueStr}</>;
 }

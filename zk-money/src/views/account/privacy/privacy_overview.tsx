@@ -1,9 +1,10 @@
+import type { RemoteAsset } from 'alt-model/types';
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components/macro';
-import { Asset, PrivacyIssue } from '../../../app';
+import { PrivacyIssue } from '../../../app';
 import { colours, gradients, lineHeights, Spacing, spacings } from '../../../styles';
 import { CrossFade, Link, Text } from '../../../components';
-import { depositorBucketGroups } from './privacy_util';
+import { Bucket, useDepositorBuckets } from './privacy_util';
 import { ShieldMeter } from './shield_meter';
 import { CrowdVisualisation } from './crowd_visualisation';
 import { PrivacySetDial } from './privacy_set_dial';
@@ -130,12 +131,10 @@ const ExpandButton = styled.button<{ expanded: boolean }>`
 
 const approxCrowdFormatter = new Intl.NumberFormat('en-GB', { maximumSignificantDigits: 1, notation: 'compact' });
 
-const calcState = ({
-  isWithdrawal,
-  privacyIssue,
-  amount,
-  asset,
-}: PrivacyOverviewProps): {
+const calcState = (
+  buckets: Bucket[] | undefined,
+  { isWithdrawal, privacyIssue, amount, asset }: PrivacyOverviewProps,
+): {
   score: number;
   crowd: number | 'hidden';
   tip: string;
@@ -149,8 +148,7 @@ const calcState = ({
       extra: 'none',
     };
   }
-  const buckets = depositorBucketGroups[asset.id];
-  const countFromPrivacySet = buckets.find(b => b.lowerBound >= amount)?.count ?? 1;
+  const countFromPrivacySet = buckets?.find(b => b.lowerBound >= amount)?.count ?? 1;
   const crowd = privacyIssue === 'none' ? countFromPrivacySet : 1;
   const approxCrowd = approxCrowdFormatter.format(crowd);
   if (crowd < 2) {
@@ -193,7 +191,7 @@ const calcState = ({
 
 interface PrivacyOverviewProps {
   amount: bigint;
-  asset: Asset;
+  asset: RemoteAsset;
   isWithdrawal: boolean;
   privacyIssue: PrivacyIssue;
 }
@@ -206,7 +204,8 @@ export const PrivacyOverview: React.FunctionComponent<PrivacyOverviewProps> = pr
     return () => clearTimeout(task);
   }, [props]);
   const { asset, amount } = debouncedProps;
-  const { score, crowd, tip, extra } = calcState(debouncedProps);
+  const buckets = useDepositorBuckets(asset.address);
+  const { score, crowd, tip, extra } = calcState(buckets, debouncedProps);
   return (
     <Root>
       <ShieldMeter score={score} asset={asset} />

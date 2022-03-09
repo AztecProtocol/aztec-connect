@@ -24,7 +24,6 @@ import { MigrateAccountForm } from './migrate_account_form';
 import { MigrateBalance } from './migrate_balance';
 import { Progress } from './progress';
 import { SeedPhraseForm } from './seed_phrase_form';
-import { Navbar, Theme } from 'ui-components';
 
 const PaddedTop = styled.div`
   padding-top: ${spacings.m};
@@ -417,7 +416,7 @@ export const Login: React.FunctionComponent<LoginProps> = props => {
               case LoginStep.MIGRATE_WALLET: {
                 const availableWallets = (
                   window.ethereum ? wallets : wallets.filter(w => w.id !== WalletId.METAMASK)
-                ).filter(w => w.id != WalletId.HOT);
+                ).filter(w => w.id !== WalletId.HOT);
                 return <WalletPicker wallets={availableWallets} walletId={walletId} onSubmit={onMigrateToWallet} />;
               }
               case LoginStep.CONFIRM_MIGRATION:

@@ -1,6 +1,7 @@
+import type { RemoteAsset } from 'alt-model/types';
 import React, { useState } from 'react';
 import styled from 'styled-components/macro';
-import { Asset, Form, isValidForm, MessageType } from '../../app';
+import { Form, isValidForm, MessageType } from '../../app';
 import {
   Button,
   Checkbox,
@@ -108,7 +109,7 @@ interface ProgressStep {
 interface ProgressTemplateProps {
   theme: Theme;
   action: string;
-  asset: Asset;
+  asset: RemoteAsset;
   txAmountLimit: bigint;
   items: InfoItem[];
   steps: ProgressStep[];

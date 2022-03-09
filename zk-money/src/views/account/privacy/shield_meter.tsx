@@ -1,6 +1,7 @@
+import type { RemoteAsset } from 'alt-model/types';
 import React from 'react';
 import styled from 'styled-components/macro';
-import { ShieldedAssetIcon, IconVarients } from '../../../components';
+import { ShieldedAssetIcon } from '../../../components';
 import zkShieldBlack from '../../../images/zk_shield_white.svg';
 
 const Root = styled.div`
@@ -35,16 +36,16 @@ const WhiteFill = styled.div<{ t: number; hide: boolean }>`
 
 interface ShieldMeterProps {
   score: number;
-  asset: IconVarients;
+  asset: RemoteAsset;
 }
 
 export const ShieldMeter: React.FunctionComponent<ShieldMeterProps> = ({ score, asset }) => {
   const hideShield = score === 0;
   return (
     <Root>
-      <ShieldedAssetIcon asset={asset} size="xxl" white hideShield />
+      <ShieldedAssetIcon address={asset.address} size="xxl" white hideShield />
       <Faded>
-        <ShieldedAssetIcon asset={asset} size="xxl" white hideShield={hideShield} />
+        <ShieldedAssetIcon address={asset.address} size="xxl" white hideShield={hideShield} />
       </Faded>
       <WhiteFill t={1 - score} hide={hideShield} />
     </Root>

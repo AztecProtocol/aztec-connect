@@ -1,7 +1,8 @@
+import type { RemoteAsset } from 'alt-model/types';
 import { TxSettlementTime } from '@aztec/sdk';
 import React from 'react';
 import styled from 'styled-components/macro';
-import { Asset, fromBaseUnits, TxFee } from '../../app';
+import { fromBaseUnits, TxFee } from '../../app';
 import { Input, InputTheme, InputWrapper, Select, ShieldedAssetIcon, Text } from '../../components';
 import { fontSizes, spacings } from '../../styles';
 import { formatTime } from './settled_time';
@@ -39,7 +40,7 @@ const Value = styled(Text)`
 
 interface FeeSelectProps {
   inputTheme: InputTheme;
-  asset: Asset;
+  asset: RemoteAsset;
   selectedSpeed: TxSettlementTime;
   fees: TxFee[];
   onSelect(speed: TxSettlementTime): void;
@@ -56,7 +57,7 @@ export const FeeSelect: React.FunctionComponent<FeeSelectProps> = ({
     trigger={
       <InputWrapper theme={inputTheme}>
         <InputIconRoot>
-          <ShieldedAssetIcon asset={asset} />
+          <ShieldedAssetIcon address={asset.address} />
         </InputIconRoot>
         <InputButton value={fromBaseUnits(fees[selectedSpeed].fee, asset.decimals)} readOnly />
       </InputWrapper>
@@ -68,7 +69,7 @@ export const FeeSelect: React.FunctionComponent<FeeSelectProps> = ({
         content: (
           <ItemRoot>
             <InfoRoot>
-              <ShieldedAssetIcon asset={asset} />
+              <ShieldedAssetIcon address={asset.address} />
               <Value text={fromBaseUnits(fee, asset.decimals)} />
             </InfoRoot>
             <Text text={formatTime(time)} color="grey" size="s" italic nowrap />

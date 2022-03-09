@@ -1,6 +1,6 @@
-import { AccountId, EthereumProvider, AztecSdk, TxSettlementTime } from '@aztec/sdk';
+import { AccountId, EthereumProvider, AztecSdk, TxSettlementTime, AssetValue } from '@aztec/sdk';
 import { useEffect, useMemo, useRef } from 'react';
-import { assets, EthAccount, Provider, RollupService, ShieldForm, ShieldFormValues, toBaseUnits } from '../app';
+import { EthAccount, Provider, RollupService, ShieldForm, ShieldFormValues, toBaseUnits } from '../app';
 import { useSpendableBalance } from './balance_hooks';
 import { useApp } from './app_context';
 import { AccountUtils } from '../app/account_utils';
@@ -11,6 +11,8 @@ import { Database } from '../app/database';
 import { Config } from '../config';
 import { useFormIsProcessing, useFormValues, useSyncProviderIntoForm } from './account_form_hooks';
 import { useInitialisedSdk } from './top_level_context';
+import { RemoteAsset } from './types';
+import { isKnownAssetAddressString } from './known_assets/known_asset_addresses';
 
 interface AttemptCreateShieldFormDeps {
   ethAccount?: EthAccount;
@@ -18,7 +20,7 @@ interface AttemptCreateShieldFormDeps {
   sdk?: AztecSdk;
   requiredNetwork: Network;
   provider?: Provider;
-  assetId: number;
+  asset: RemoteAsset;
   alias?: string;
   accountId?: AccountId;
   spendableBalance: bigint;
@@ -41,7 +43,11 @@ function attemptCreateShieldForm(deps: AttemptCreateShieldFormDeps) {
     deps.accountUtils
   ) {
     const accountState = { alias: deps.alias, userId: deps.accountId };
-    const assetState = { asset: assets[deps.assetId], spendableBalance: deps.spendableBalance };
+    const assetState = { asset: deps.asset, spendableBalance: deps.spendableBalance };
+    const assetAddressStr = deps.asset.address.toString();
+    if (!isKnownAssetAddressString(assetAddressStr)) {
+      throw new Error(`Attempting useSendForm with unknown asset address '${assetAddressStr}'`);
+    }
     const shieldForm = new ShieldForm(
       accountState,
       assetState,
@@ -54,27 +60,35 @@ function attemptCreateShieldForm(deps: AttemptCreateShieldFormDeps) {
       deps.rollupService,
       deps.accountUtils,
       deps.requiredNetwork,
-      deps.config.txAmountLimits[deps.assetId],
+      deps.config.txAmountLimits[assetAddressStr],
     );
     shieldForm.init();
     return shieldForm;
   }
 }
 
-export function useShieldForm(assetId: number) {
+function transformFeesField(fees: AssetValue[], rollupTime: number) {
+  return {
+    fees: {
+      value: [
+        { fee: fees[TxSettlementTime.NEXT_ROLLUP].value, time: rollupTime, speed: TxSettlementTime.NEXT_ROLLUP },
+        { fee: fees[TxSettlementTime.INSTANT].value, time: 0, speed: TxSettlementTime.INSTANT },
+      ],
+    },
+  };
+}
+
+export function useShieldForm(asset: RemoteAsset) {
   const app = useApp();
   const { requiredNetwork, provider } = app;
   const sdk = useInitialisedSdk();
-  const spendableBalance = useSpendableBalance(assetId) ?? 0n;
-  const rollupProviderStatus = useRollupProviderStatus();
+  const spendableBalance = useSpendableBalance(asset.id) ?? 0n;
 
   const accountUtils = useMemo(() => sdk && new AccountUtils(sdk, requiredNetwork), [sdk, requiredNetwork]);
 
-  const assetAddress = rollupProviderStatus?.blockchainStatus.assets[assetId]?.address;
   const ethAccount = useMemo(
-    () =>
-      accountUtils && assetAddress && new EthAccount(provider, accountUtils, assetId, assetAddress, requiredNetwork),
-    [provider, accountUtils, assetId, assetAddress, requiredNetwork],
+    () => accountUtils && new EthAccount(provider, accountUtils, asset.id, asset.address, requiredNetwork),
+    [provider, accountUtils, asset, requiredNetwork],
   );
 
   const shieldFormRef = useRef<ShieldForm>();
@@ -84,7 +98,7 @@ export function useShieldForm(assetId: number) {
       sdk,
       ethAccount,
       accountUtils,
-      assetId,
+      asset,
       spendableBalance,
     });
   }
@@ -98,8 +112,8 @@ export function useShieldForm(assetId: number) {
   }, [shieldForm, ethAccount]);
 
   useEffect(() => {
-    shieldForm?.changeAssetState({ asset: assets[assetId], spendableBalance });
-  }, [shieldForm, spendableBalance, assetId]);
+    shieldForm?.changeAssetState({ asset, spendableBalance });
+  }, [shieldForm, spendableBalance, asset]);
 
   useSyncProviderIntoForm(shieldForm);
   const formValues = useFormValues<ShieldFormValues>(shieldForm);
@@ -108,35 +122,22 @@ export function useShieldForm(assetId: number) {
   // Refresh fees
   const rpStatus = useRollupProviderStatus();
   const rollupTime = rpStatus?.runtimeConfig.publishInterval;
-  const depositAmount = toBaseUnits(formValues?.amount.value ?? '', assets[assetId].decimals);
+  const depositAmount = toBaseUnits(formValues?.amount.value ?? '', asset.decimals);
+  const assetId = asset.id;
   useEffect(() => {
     if (sdk && shieldForm && shieldForm.isNewAccount && rollupTime !== undefined) {
       sdk.getRegisterFees({ assetId, value: depositAmount }).then(fees => {
-        shieldForm.changeValues({
-          fees: {
-            value: [
-              { fee: fees[TxSettlementTime.NEXT_ROLLUP].value, time: rollupTime, speed: TxSettlementTime.NEXT_ROLLUP },
-              { fee: fees[TxSettlementTime.INSTANT].value, time: 0, speed: TxSettlementTime.INSTANT },
-            ],
-          },
-        });
+        shieldForm.changeValues(transformFeesField(fees, rollupTime));
       });
     }
   }, [sdk, shieldForm, assetId, depositAmount, rollupTime]);
   useEffect(() => {
     if (sdk && shieldForm && !shieldForm.isNewAccount && rollupTime !== undefined) {
-      sdk.getDepositFees(assetId).then(fees => {
-        shieldForm.changeValues({
-          fees: {
-            value: [
-              { fee: fees[TxSettlementTime.NEXT_ROLLUP].value, time: rollupTime, speed: TxSettlementTime.NEXT_ROLLUP },
-              { fee: fees[TxSettlementTime.INSTANT].value, time: 0, speed: TxSettlementTime.INSTANT },
-            ],
-          },
-        });
+      sdk.getDepositFees(asset.id).then(fees => {
+        shieldForm.changeValues(transformFeesField(fees, rollupTime));
       });
     }
-  }, [sdk, shieldForm, assetId, rollupTime]);
+  }, [sdk, shieldForm, asset, rollupTime]);
 
   return { formValues, shieldForm, processing };
 }

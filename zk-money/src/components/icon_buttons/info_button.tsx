@@ -10,12 +10,12 @@ const StyledInfoButton = styled(IconButtonBase)`
   border-radius: 5px;
 `;
 
-interface InfoButton {
+interface InfoButtonProps {
   onClick?: () => void;
   className?: string;
 }
 
-export function InfoButton({ onClick, className }: InfoButton) {
+export function InfoButton({ onClick, className }: InfoButtonProps) {
   return (
     <div onClick={onClick} className={`${style.infoButtonWrapper} ${className}`}>
       <StyledInfoButton />

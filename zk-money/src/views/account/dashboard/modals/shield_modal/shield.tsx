@@ -1,15 +1,7 @@
+import type { RemoteAsset } from 'alt-model/types';
 import React from 'react';
 import { TxSettlementTime, TxType } from '@aztec/sdk';
-import {
-  Asset,
-  isValidForm,
-  ProviderState,
-  SendMode,
-  ShieldFormValues,
-  ShieldStatus,
-  ValueAvailability,
-  WalletId,
-} from 'app';
+import { isValidForm, ProviderState, SendMode, ShieldFormValues, ShieldStatus, ValueAvailability, WalletId } from 'app';
 import { Button, InputMessage, InputTheme } from 'components';
 import { Theme } from 'styles';
 import { ShieldProgress } from './shield_progress';
@@ -18,7 +10,7 @@ import style from './shield.module.scss';
 
 interface ShieldProps {
   theme: Theme;
-  asset: Asset;
+  asset: RemoteAsset;
   assetPrice: bigint;
   txAmountLimit: bigint;
   providerState?: ProviderState;

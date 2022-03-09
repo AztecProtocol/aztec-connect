@@ -3,7 +3,6 @@ export * from './account_txs';
 export * from './account_state';
 export * from './alias';
 export * from './app';
-export * from './assets';
 export * from './eth_account';
 export * from './form';
 export * from './provider';

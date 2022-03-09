@@ -1,6 +1,7 @@
+import { RemoteAsset } from 'alt-model/types';
 import styled from 'styled-components/macro';
 import { useAssetPrice } from 'alt-model';
-import { Asset, convertToPriceString, fromBaseUnits } from 'app';
+import { convertToPriceString, fromBaseUnits } from 'app';
 import { ShieldedAssetIcon, Text } from 'components';
 import { spacings } from 'styles';
 
@@ -15,7 +16,7 @@ const Table = styled.div`
 interface RowProps {
   label: string;
   value: bigint;
-  asset: Asset;
+  asset: RemoteAsset;
   assetPrice: bigint;
 }
 
@@ -24,14 +25,14 @@ function Row({ asset, value, label, assetPrice }: RowProps) {
     <>
       <Text text={label} />
       <Text color="grey" size="s" text={`$${convertToPriceString(value, asset.decimals, assetPrice)}`} />
-      <ShieldedAssetIcon size="s" asset={asset} />
+      <ShieldedAssetIcon size="s" address={asset.address} />
       <Text size="s" weight="bold" italic text={`${fromBaseUnits(value, asset.decimals)} ${asset.symbol}`} />
     </>
   );
 }
 
 interface BreakdownProps {
-  asset: Asset;
+  asset: RemoteAsset;
   amount: bigint;
   fee: bigint;
 }

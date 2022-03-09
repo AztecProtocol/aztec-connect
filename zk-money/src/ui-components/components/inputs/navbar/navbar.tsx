@@ -25,13 +25,13 @@ interface NavbarProps {
   accountComponent?: JSX.Element;
 }
 
-interface Link {
+interface LinkItem {
   url: string;
   label: string;
   disabled?: boolean;
 }
 
-const LINKS: Link[] = [
+const LINKS: LinkItem[] = [
   { url: '/earn', label: 'Earn' },
   { url: '/trade', label: 'Trade', disabled: true },
 ];

@@ -1,6 +1,7 @@
+import type { RemoteAsset } from './types';
 import { AccountId, AztecSdk } from '@aztec/sdk';
 import { useEffect, useMemo, useRef } from 'react';
-import { assets, Provider, RollupService, SendForm, SendFormValues, SendMode } from '../app';
+import { Provider, RollupService, SendForm, SendFormValues, SendMode } from '../app';
 import { useSpendableBalance } from './balance_hooks';
 import { useApp } from './app_context';
 import { AccountUtils } from '../app/account_utils';
@@ -8,12 +9,13 @@ import { KeyVault } from '../app/key_vault';
 import { Config } from '../config';
 import { useFormIsProcessing, useFormValues, useSyncProviderIntoForm } from './account_form_hooks';
 import { useInitialisedSdk } from './top_level_context';
+import { isKnownAssetAddressString } from './known_assets/known_asset_addresses';
 
 interface AttemptCreateSendFormDeps {
   accountUtils?: AccountUtils;
   sdk?: AztecSdk;
   provider?: Provider;
-  assetId: number;
+  asset: RemoteAsset;
   alias?: string;
   accountId?: AccountId;
   spendableBalance: bigint;
@@ -34,7 +36,12 @@ function attemptCreateSendForm(deps: AttemptCreateSendFormDeps) {
     deps.sendMode !== undefined
   ) {
     const accountState = { alias: deps.alias, userId: deps.accountId };
-    const assetState = { asset: assets[deps.assetId], spendableBalance: deps.spendableBalance };
+    const assetState = { asset: deps.asset, spendableBalance: deps.spendableBalance };
+
+    const assetAddressStr = deps.asset.address.toString();
+    if (!isKnownAssetAddressString(assetAddressStr)) {
+      throw new Error(`Attempting useSendForm with unknown asset address '${assetAddressStr}'`);
+    }
     const sendForm = new SendForm(
       accountState,
       assetState,
@@ -43,7 +50,7 @@ function attemptCreateSendForm(deps: AttemptCreateSendFormDeps) {
       deps.sdk,
       deps.rollupService,
       deps.accountUtils,
-      deps.config.txAmountLimits[deps.assetId],
+      deps.config.txAmountLimits[assetAddressStr],
       deps.sendMode,
     );
     sendForm.init();
@@ -51,11 +58,11 @@ function attemptCreateSendForm(deps: AttemptCreateSendFormDeps) {
   }
 }
 
-export function useSendForm(assetId: number, sendMode: SendMode) {
+export function useSendForm(asset: RemoteAsset, sendMode: SendMode) {
   const app = useApp();
   const { requiredNetwork } = app;
   const sdk = useInitialisedSdk();
-  const spendableBalance = useSpendableBalance(assetId) ?? 0n;
+  const spendableBalance = useSpendableBalance(asset?.id) ?? 0n;
 
   const accountUtils = useMemo(() => sdk && new AccountUtils(sdk, requiredNetwork), [sdk, requiredNetwork]);
 
@@ -65,7 +72,7 @@ export function useSendForm(assetId: number, sendMode: SendMode) {
       ...app,
       sdk,
       accountUtils,
-      assetId,
+      asset,
       spendableBalance,
       sendMode,
     });
@@ -74,8 +81,8 @@ export function useSendForm(assetId: number, sendMode: SendMode) {
   useEffect(() => () => sendForm?.destroy(), [sendForm]);
 
   useEffect(() => {
-    sendForm?.changeAssetState({ asset: assets[assetId], spendableBalance });
-  }, [sendForm, spendableBalance, assetId]);
+    sendForm?.changeAssetState({ asset, spendableBalance });
+  }, [sendForm, spendableBalance, asset]);
 
   useSyncProviderIntoForm(sendForm);
   const formValues = useFormValues<SendFormValues>(sendForm);

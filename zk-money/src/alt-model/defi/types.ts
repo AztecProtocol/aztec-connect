@@ -1,4 +1,5 @@
 import type { BridgeId } from '@aztec/sdk';
+import type { RemoteAsset } from 'alt-model/types';
 import type { BridgeDataAdaptorCreator } from './bridge_data_adaptors/types';
 
 export enum DefiInvestmentType {
@@ -28,7 +29,10 @@ export enum KeyBridgeStat {
 }
 
 export interface DefiRecipe {
+  id: string;
   openHandleAssetId: number;
+  inputAssetA: RemoteAsset;
+  outputAssetA: RemoteAsset;
   bridgeFlow: BridgeFlow;
   createAdaptor: BridgeDataAdaptorCreator;
   name: string;

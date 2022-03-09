@@ -1,5 +1,6 @@
+import type { RemoteAsset } from 'alt-model/types';
 import React from 'react';
-import { Asset, isAddress, SendFormValues, SendStatus, toBaseUnits } from 'app';
+import { isAddress, SendFormValues, SendStatus, toBaseUnits } from 'app';
 import { Theme } from 'styles';
 import { AssetInfoRow } from 'views/account/asset_info_row';
 import { ProgressTemplate } from 'views/account/progress_template';
@@ -14,7 +15,7 @@ const formatRecipient = (input: string, truncate = false) => {
 
 interface SendProgressProps {
   theme: Theme;
-  asset: Asset;
+  asset: RemoteAsset;
   assetPrice: bigint;
   txAmountLimit: bigint;
   form: SendFormValues;

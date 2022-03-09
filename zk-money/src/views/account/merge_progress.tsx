@@ -1,3 +1,4 @@
+import { useRemoteAssetForId } from 'alt-model/top_level_context';
 import React from 'react';
 import { AssetState, MergeFormValues, MergeStatus, ProviderState, sum, toBaseUnits, WalletId } from '../../app';
 import { Theme } from '../../styles';
@@ -28,6 +29,7 @@ export const MergeProgress: React.FunctionComponent<MergeProgressProps> = ({
   onSubmit,
   onClose,
 }) => {
+  const remoteAsset = useRemoteAssetForId(assetState.asset.id);
   const { toMerge, fee, submit, status } = form;
 
   if (status.value === MergeStatus.GENERATE_KEY) {
@@ -43,17 +45,19 @@ export const MergeProgress: React.FunctionComponent<MergeProgressProps> = ({
     );
   }
 
+  if (!remoteAsset) return <></>;
+
   const { asset, price } = assetState;
   const newSpendableBalance = sum(toMerge.value) - toBaseUnits(fee.value, asset.decimals);
 
   const items = [
     {
       title: 'New Sendable Balance',
-      content: <AssetInfoRow asset={asset} value={newSpendableBalance} price={price} />,
+      content: <AssetInfoRow asset={remoteAsset} value={newSpendableBalance} price={price} />,
     },
     {
       title: 'Fee',
-      content: <AssetInfoRow asset={asset} value={toBaseUnits(fee.value, asset.decimals)} price={price} />,
+      content: <AssetInfoRow asset={remoteAsset} value={toBaseUnits(fee.value, asset.decimals)} price={price} />,
     },
   ];
 
@@ -72,7 +76,7 @@ export const MergeProgress: React.FunctionComponent<MergeProgressProps> = ({
     <ProgressTemplate
       theme={theme}
       action="Merge"
-      asset={assetState.asset}
+      asset={remoteAsset}
       txAmountLimit={assetState.txAmountLimit}
       items={items}
       steps={steps}

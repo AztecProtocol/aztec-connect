@@ -1,7 +1,9 @@
+import { getAssetIconWhite } from 'alt-model/known_assets/known_asset_display_data';
+import { useRemoteAssetForId } from 'alt-model/top_level_context';
 import { rgba } from 'polished';
 import React from 'react';
 import styled from 'styled-components/macro';
-import { assets, fromBaseUnits, MigratingAsset, sum } from '../app';
+import { fromBaseUnits, MigratingAsset, sum } from '../app';
 import { colours, spacings } from '../styles';
 import { Text } from './text';
 
@@ -68,16 +70,18 @@ export const MigratingAssetInfo: React.FunctionComponent<MigratingAssetInfoProps
   asset,
   showMigrated = false,
 }) => {
-  const { assetId, migratableValues, migratedValues, totalFee } = asset;
+  const remoteAsset = useRemoteAssetForId(asset.assetId);
+  if (!remoteAsset) return <></>;
+  const { migratableValues, migratedValues, totalFee } = asset;
   const oldBalance = sum(migratableValues);
   const remainingBalance = sum(migratableValues.slice(migratedValues.length * 2));
   const migratedBalance = sum(migratedValues);
-  const { iconWhite, symbol, decimals } = assets[assetId];
+  const { symbol, decimals } = remoteAsset;
   return (
     <Root>
       <InfoRoot>
         <AssetIconRoot>
-          <AssetIcon src={iconWhite} />
+          <AssetIcon src={getAssetIconWhite(remoteAsset.address)} />
         </AssetIconRoot>
         <BalanceRoot dim={showMigrated && !remainingBalance}>
           <Text text={fromBaseUnits(oldBalance, decimals)} monospace />

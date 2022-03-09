@@ -1,3 +1,5 @@
+import type { EthAddress } from '@aztec/sdk';
+import { getAssetIconGradient, getAssetIconWhite } from 'alt-model/known_assets/known_asset_display_data';
 import styled from 'styled-components/macro';
 import zkShieldGradientIcon from '../images/zk_shield_gradient.svg';
 import zkShieldWhiteIcon from '../images/zk_shield_white.svg';
@@ -24,14 +26,9 @@ const Root = styled.div<{ size: Size | number }>`
   }}
 `;
 
-export interface IconVarients {
-  iconWhite: string;
-  iconGradient: string;
-}
-
 const unitSize = 100 / 248;
 
-const AssetIcon = styled.div<{ white?: boolean; icons: IconVarients }>`
+const AssetIcon = styled.div<{ icon: string }>`
   position: absolute;
   top: 0;
   left: 0;
@@ -39,7 +36,7 @@ const AssetIcon = styled.div<{ white?: boolean; icons: IconVarients }>`
   height: 100%;
   transform-origin: top left;
   transform: translate(${61 * unitSize}%, ${70 * unitSize}%) scale(${(116 * unitSize) / 100});
-  background-image: url(${({ white, icons }) => (white ? icons.iconWhite : icons.iconGradient)});
+  background-image: url(${({ icon }) => icon});
   background-size: contain;
   background-position: center;
   background-repeat: no-repeat;
@@ -60,13 +57,16 @@ const ShieldIcon = styled.div<{ white?: boolean; hide?: boolean }>`
 `;
 
 export const ShieldedAssetIcon: React.FunctionComponent<{
-  asset: IconVarients;
+  address: EthAddress;
   white?: boolean;
   size?: Size | number;
   hideShield?: boolean;
-}> = ({ white, asset, size = 'm', hideShield }) => (
-  <Root size={size}>
-    <AssetIcon white={white} icons={asset} />
-    <ShieldIcon white={white} hide={hideShield} />
-  </Root>
-);
+}> = ({ white, address, size = 'm', hideShield }) => {
+  const icon = white ? getAssetIconWhite(address) : getAssetIconGradient(address);
+  return (
+    <Root size={size}>
+      <AssetIcon icon={icon} />
+      <ShieldIcon white={white} hide={hideShield} />
+    </Root>
+  );
+};

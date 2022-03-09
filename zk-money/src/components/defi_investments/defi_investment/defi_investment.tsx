@@ -142,7 +142,7 @@ function AmountInfo({
 export function DefiInvestment({ position }: DefiInvestmentProps) {
   const { recipe, assetValue } = position;
   const { bridgeFlow } = recipe;
-  const dataAdaptor = useBridgeDataAdaptor(recipe);
+  const dataAdaptor = useBridgeDataAdaptor(recipe.id);
 
   const eta = undefined;
   const isLocked = true;

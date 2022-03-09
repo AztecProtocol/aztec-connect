@@ -1,7 +1,8 @@
+import type { RemoteAsset } from 'alt-model/types';
 import React, { useState } from 'react';
 import { TxSettlementTime } from '@aztec/sdk';
 import styled from 'styled-components/macro';
-import { Asset, isValidForm, SendFormValues, SendMode, SendStatus, ValueAvailability } from 'app';
+import { isValidForm, SendFormValues, SendMode, SendStatus, ValueAvailability } from 'app';
 import { Button, InputTheme } from 'components';
 import { Theme } from 'styles';
 import { AmountSection } from 'views/account/dashboard/modals/sections/amount_section';
@@ -50,7 +51,7 @@ const NextWrapper = styled.div`
 
 export interface SendProps {
   theme: Theme;
-  asset: Asset;
+  asset: RemoteAsset;
   assetPrice: bigint;
   txAmountLimit: bigint;
   spendableBalance: bigint;

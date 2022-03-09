@@ -1,6 +1,6 @@
+import type { CutdownAsset } from './types';
 import { AccountId, Note } from '@aztec/sdk';
 import { AccountTx, JoinSplitTx } from './account_txs';
-import { Asset, assets } from './assets';
 
 export enum AccountVersion {
   V0 = 0,
@@ -18,9 +18,8 @@ export interface AccountState {
 }
 
 export interface AssetState {
-  asset: Asset;
+  asset: CutdownAsset;
   txAmountLimit: bigint;
-  withdrawSafeAmounts: bigint[];
   price: bigint;
   balance: bigint;
   spendableNotes: Note[];
@@ -30,7 +29,6 @@ export interface AssetState {
 }
 
 export const initialAssetState = {
-  asset: assets[0],
   price: 0n,
   balance: 0n,
   spendableNotes: [],
@@ -38,5 +36,4 @@ export const initialAssetState = {
   joinSplitTxs: [],
   pendingBalance: 0n,
   txAmountLimit: 0n,
-  withdrawSafeAmounts: [],
 };

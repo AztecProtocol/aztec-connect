@@ -11,9 +11,9 @@ import { useMaybeObs, useObs } from 'app/util';
 
 const debug = createDebug('zm:defi_info_hooks');
 
-export function useBridgeDataAdaptor(recipe: DefiRecipe) {
+export function useBridgeDataAdaptor(recipeId: string) {
   const { adaptorsObsCache } = useBridgeDataAdaptorsMethodCaches();
-  return useObs(adaptorsObsCache.get(recipe));
+  return useObs(adaptorsObsCache.get(recipeId));
 }
 
 function useAdaptorArgs(bridgeId: BridgeId) {
@@ -31,19 +31,19 @@ function useAdaptorArgs(bridgeId: BridgeId) {
   }, [bridgeId, assets]);
 }
 
-function useBridgeMarket(recipe: DefiRecipe) {
+function useBridgeMarket(recipeId: string) {
   const { marketSizeObsCache } = useBridgeDataAdaptorsMethodCaches();
-  return useObs(marketSizeObsCache.get(recipe));
+  return useObs(marketSizeObsCache.get(recipeId));
 }
 
-export function useLiquidity(recipe: DefiRecipe) {
-  const market = useBridgeMarket(recipe);
+export function useLiquidity(recipeId: string) {
+  const market = useBridgeMarket(recipeId);
   return useAggregatedAssetsPrice(market);
 }
 
-function useExpectedYearlyOuput(recipe: DefiRecipe, inputValue?: bigint) {
+function useExpectedYearlyOuput(recipeId: string, inputValue?: bigint) {
   const { expectedYearlyOutputObsCache } = useBridgeDataAdaptorsMethodCaches();
-  const obs = inputValue === undefined ? undefined : expectedYearlyOutputObsCache.get([recipe, inputValue]);
+  const obs = inputValue === undefined ? undefined : expectedYearlyOutputObsCache.get([recipeId, inputValue]);
   return useMaybeObs(obs);
 }
 
@@ -54,7 +54,7 @@ export function useExpectedYield(recipe: DefiRecipe) {
   const inputAsset = assets?.[inputAssetId];
   const inputValue = useMemo(() => (inputAsset ? tenTo(inputAsset?.decimals) : undefined), [inputAsset]);
 
-  const output = useExpectedYearlyOuput(recipe, inputValue);
+  const output = useExpectedYearlyOuput(recipe.id, inputValue);
   const outputAsset = output ? assets?.[output.assetId] : undefined;
   const outputAssetPrice = useAssetPrice(output?.assetId);
   const inputAssetPrice = useAssetPrice(inputAssetId);

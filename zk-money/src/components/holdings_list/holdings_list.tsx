@@ -5,8 +5,9 @@ import { SpeedSwitch } from 'ui-components';
 import { Pagination } from '..';
 import { useBalances } from '../../alt-model';
 import { useDefiTxs } from '../../alt-model/defi_txs_hooks';
-import { Holding } from './holding';
 import { SendModal } from 'views/account/dashboard/modals/send_modal';
+import { Holding } from './holding';
+import { RemoteAsset } from 'alt-model/types';
 
 const SpeedSwitchWrapper = styled.div`
   width: 300px;
@@ -31,26 +32,15 @@ const VIEWS = [
 type View = typeof VIEWS[number]['value'];
 
 function TokenList() {
-  const [sendMode, setSendMode] = useState<SendMode>(SendMode.SEND);
-  const [modalAssetId, setModalAssetId] = useState<number | undefined>(undefined);
+  const [sendModalAsset, setSendModalAsset] = useState<RemoteAsset | undefined>(undefined);
+  const [withdrawModalAsset, setWithdrawModalAsset] = useState<RemoteAsset | undefined>(undefined);
   const [page, setPage] = useState(1);
   const balances = useBalances();
   return (
     <>
       {slicePage(balances ?? [], page).map((balance, idx) => {
         return (
-          <Holding
-            key={idx}
-            assetValue={balance}
-            onSend={() => {
-              setModalAssetId(balance.assetId);
-              setSendMode(SendMode.SEND);
-            }}
-            onWidthdraw={() => {
-              setModalAssetId(balance.assetId);
-              setSendMode(SendMode.WIDTHDRAW);
-            }}
-          />
+          <Holding key={idx} assetValue={balance} onSend={setSendModalAsset} onWidthdraw={setWithdrawModalAsset} />
         );
       })}
       <Pagination
@@ -59,8 +49,15 @@ function TokenList() {
         page={page}
         onChangePage={setPage}
       />
-      {modalAssetId !== undefined && (
-        <SendModal sendMode={sendMode} assetId={modalAssetId} onClose={() => setModalAssetId(undefined)} />
+      {sendModalAsset && (
+        <SendModal sendMode={SendMode.SEND} asset={sendModalAsset} onClose={() => setSendModalAsset(undefined)} />
+      )}
+      {withdrawModalAsset && (
+        <SendModal
+          sendMode={SendMode.WIDTHDRAW}
+          asset={withdrawModalAsset}
+          onClose={() => setWithdrawModalAsset(undefined)}
+        />
       )}
     </>
   );

@@ -1,3 +1,4 @@
+import type { CutdownAsset } from 'app/types';
 import { AztecSdk } from '@aztec/sdk';
 import { Navbar } from 'ui-components';
 import { BroadcastChannel } from 'broadcast-channel';
@@ -9,7 +10,6 @@ import {
   AccountState,
   App,
   AppAction,
-  AppAssetId,
   AppEvent,
   AssetState,
   ShieldFormValues,
@@ -40,6 +40,7 @@ import { Earn } from './account/dashboard/earn';
 import { DefiRecipe } from 'alt-model/defi/types';
 import { DefiModal } from 'views/account/dashboard/modals/defi_modal';
 import './app.css';
+import { KNOWN_MAINNET_ASSET_ADDRESSES } from 'alt-model/known_assets/known_asset_addresses';
 
 interface AppProps {
   config: Config;
@@ -51,7 +52,7 @@ interface AppProps {
 interface AppState {
   action: AppAction;
   activeDefiModalRecipe?: DefiRecipe;
-  activeAsset: AppAssetId;
+  activeAsset: number;
   loginState: LoginState;
   worldState: WorldState;
   providerState?: ProviderState;
@@ -79,6 +80,15 @@ const AccountItem = styled.div`
   padding: ${spacings.xxs} 0;
 `;
 
+const LEGACY_APP_ASSETS: CutdownAsset[] = [
+  {
+    id: 0,
+    symbol: 'ETH',
+    address: KNOWN_MAINNET_ASSET_ADDRESSES.ETH,
+    decimals: 18,
+  },
+];
+
 export class AppView extends PureComponent<AppProps, AppState> {
   private app: App;
   private channel = new BroadcastChannel('zk-money');
@@ -93,7 +103,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
 
     const loginMode = getLoginModeFromUrl(path);
 
-    this.app = new App(config, props.sdkObs, this.defaultAsset, loginMode);
+    this.app = new App(config, LEGACY_APP_ASSETS, props.sdkObs, this.defaultAsset, loginMode);
 
     this.state = {
       action: initialAction,
@@ -371,7 +381,6 @@ export class AppView extends PureComponent<AppProps, AppState> {
             db: this.app.db,
             stableEthereumProvider: this.app.stableEthereumProvider,
             rollupService: this.app.rollupService,
-            priceFeedService: this.app.priceFeedService,
             userSession: this.app.getSession(),
           }}
         >

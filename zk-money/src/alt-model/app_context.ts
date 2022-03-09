@@ -4,7 +4,6 @@ import { Provider, RollupService, UserSession } from '../app';
 import { Database } from '../app/database';
 import { KeyVault } from '../app/key_vault';
 import { Network } from '../app/networks';
-import { PriceFeedService } from '../app/price_feed_service';
 import { Config } from '../config';
 
 interface AppContextValue {
@@ -17,7 +16,6 @@ interface AppContextValue {
   db: Database;
   stableEthereumProvider?: EthereumProvider;
   rollupService?: RollupService;
-  priceFeedService: PriceFeedService;
   userSession?: UserSession;
 }
 

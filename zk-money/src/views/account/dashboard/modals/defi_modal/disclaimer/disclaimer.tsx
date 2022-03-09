@@ -1,10 +1,11 @@
-import { Asset, fromBaseUnits } from 'app';
+import type { RemoteAsset } from 'alt-model/types';
+import { fromBaseUnits } from 'app';
 import { Checkbox, Spacer, Text } from 'components';
 import style from './disclaimer.module.css';
 
 interface DisclaimerProps {
   transactionLimit: bigint;
-  asset: Asset;
+  asset: RemoteAsset;
   accepted: boolean;
   onChangeAccepted: (accepted: boolean) => void;
 }

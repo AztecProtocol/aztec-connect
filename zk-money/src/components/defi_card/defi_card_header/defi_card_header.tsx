@@ -27,14 +27,13 @@ const CardHeader = styled.div`
 `;
 
 export const DefiCardHeader = ({ recipe }: { recipe: DefiRecipe }) => {
-  const { bridgeFlow, investmentType, logo } = recipe;
-  const { inputAssetIdA } = bridgeFlow.enter;
+  const { investmentType, logo, inputAssetA } = recipe;
   return (
     <CardHeader>
       <CardHeaderLogo src={logo} />
       <CardHeaderButtonsWrapper>
         <CardInvestmentTypeTag investmentType={investmentType} />
-        <CardAssetTag assetId={inputAssetIdA} />
+        <CardAssetTag asset={inputAssetA} />
       </CardHeaderButtonsWrapper>
     </CardHeader>
   );

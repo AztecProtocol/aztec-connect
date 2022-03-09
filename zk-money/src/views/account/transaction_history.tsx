@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import { getAssetPreferredFractionalDigits } from 'alt-model/known_assets/known_asset_display_data';
+import { useRemoteAssets } from 'alt-model/top_level_context';
+import React, { Fragment, useState } from 'react';
 import styled, { css } from 'styled-components/macro';
 import { SectionTitle } from 'ui-components';
-import { AccountTx, assets, formatBaseUnits, JoinSplitTx } from '../../app';
+import { AccountTx, formatBaseUnits, JoinSplitTx } from '../../app';
 import { AccountTxSummary, JoinSplitTxSummary, Pagination } from '../../components';
 import { spacings } from '../../styles';
 
@@ -46,6 +48,7 @@ export const TransactionHistory: React.FunctionComponent<TransactionHistoryProps
   txsPublishTime,
   txsPerPage = 5,
 }) => {
+  const remoteAssets = useRemoteAssets();
   const [page, setPage] = useState(1);
   const numJs = joinSplitTxs.length;
   const numAc = accountTxs.length;
@@ -53,15 +56,16 @@ export const TransactionHistory: React.FunctionComponent<TransactionHistoryProps
   return (
     <>
       <SectionTitle label="Transaction History" />
-      {joinSplitTxs.slice((page - 1) * txsPerPage, page * txsPerPage).map(tx => {
-        const asset = assets[tx.assetId];
+      {joinSplitTxs.slice((page - 1) * txsPerPage, page * txsPerPage).map((tx, idx) => {
+        const asset = remoteAssets?.find(x => x.id === tx.assetId);
+        if (!asset) return <Fragment key={idx} />;
         return (
           <JoinSplitTxSummaryRow
             key={tx.txId.toString()}
             txId={tx.txId.toString()}
             action={tx.action}
             value={formatBaseUnits(tx.balanceDiff, asset.decimals, {
-              precision: asset.preferredFractionalDigits,
+              precision: getAssetPreferredFractionalDigits(asset.address),
               commaSeparated: true,
               showPlus: true,
             })}

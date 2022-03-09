@@ -1,5 +1,4 @@
 import styled from 'styled-components/macro';
-import { Asset } from 'app';
 import { Button } from 'components';
 import { DefiFormFieldAnnotations, DefiFormFields } from './types';
 import {
@@ -36,7 +35,6 @@ interface Page1Props {
   recipe: DefiRecipe;
   fields: DefiFormFields;
   onChangeFields: (fields: DefiFormFields) => void;
-  inputAsset: Asset;
   fieldAnnotations: DefiFormFieldAnnotations;
   onNext: () => void;
   nextDisabled: boolean;
@@ -49,7 +47,6 @@ export function Page1({
   fields,
   onChangeFields,
   fieldAnnotations,
-  inputAsset,
   onNext,
   nextDisabled,
   fee,
@@ -63,7 +60,7 @@ Page1Props) {
       <DescriptionSection text={recipe.longDescription} />
       <AmountSection
         maxAmount={maxAmount}
-        asset={inputAsset}
+        asset={recipe.inputAssetA}
         allowAssetSelection={true}
         amountStr={fields.amountStr}
         onChangeAmountStr={amountStr => onChangeFields({ ...fields, amountStr })}
@@ -75,7 +72,7 @@ Page1Props) {
         type={GasSectionType.DEFI}
         speed={fields.speed as DefiSettlementTime}
         onChangeSpeed={speed => onChangeFields({ ...fields, speed: speed as DefiSettlementTime })}
-        asset={inputAsset}
+        asset={recipe.inputAssetA}
         fee={fee}
       />
       <FaqHint className={style.faqHint} />

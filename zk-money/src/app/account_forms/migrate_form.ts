@@ -1,9 +1,9 @@
+import type { CutdownAsset } from 'app/types';
 import { AccountId, AztecSdk } from '@aztec/sdk';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { AccountState } from '../account_state';
 import { AccountUtils } from '../account_utils';
-import { AppAssetId, assets } from '../assets';
 import {
   BoolInput,
   clearMessage,
@@ -21,7 +21,7 @@ import { AccountForm, AccountFormEvent } from './account_form';
 const debug = createDebug('zm:migrate_form');
 
 export interface MigratingAsset {
-  assetId: AppAssetId;
+  assetId: number;
   fee: bigint;
   totalFee: bigint;
   values: bigint[];
@@ -63,16 +63,6 @@ export interface MigrateFormValues {
 }
 
 const initialMigrateFormValues = {
-  migratingAssets: {
-    value: assets.map(({ id }) => ({
-      assetId: id,
-      fee: 0n,
-      totalFee: 0n,
-      values: [],
-      migratableValues: [],
-      migratedValues: [],
-    })),
-  },
   status: {
     value: MigrateStatus.CONNECT,
   },
@@ -90,7 +80,7 @@ export class MigrateForm extends EventEmitter implements AccountForm {
     signingPrivateKey: Buffer;
   };
 
-  private values: MigrateFormValues = initialMigrateFormValues;
+  private values: MigrateFormValues;
   private formStatus = FormStatus.ACTIVE;
   private destroyed = false;
 
@@ -101,9 +91,23 @@ export class MigrateForm extends EventEmitter implements AccountForm {
     private readonly sdk: AztecSdk,
     private readonly accountUtils: AccountUtils,
     private readonly fromAccountV0: boolean,
+    assets: CutdownAsset[],
   ) {
     super();
     this.userId = accountState.userId;
+    this.values = {
+      ...initialMigrateFormValues,
+      migratingAssets: {
+        value: assets.map(({ id }) => ({
+          assetId: id,
+          fee: 0n,
+          totalFee: 0n,
+          values: [],
+          migratableValues: [],
+          migratedValues: [],
+        })),
+      },
+    };
   }
 
   get locked() {
@@ -253,7 +257,7 @@ export class MigrateForm extends EventEmitter implements AccountForm {
   private async migrateNotes() {
     this.updateFormValues({ status: { value: MigrateStatus.MIGRATE } });
 
-    const updateMigratingAssets = (assetId: AppAssetId, value: bigint) => {
+    const updateMigratingAssets = (assetId: number, value: bigint) => {
       const migratingAssets = this.values.migratingAssets.value.map(asset => {
         if (asset.assetId !== assetId) {
           return asset;

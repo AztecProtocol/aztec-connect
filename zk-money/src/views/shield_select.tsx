@@ -3,7 +3,9 @@ import styled from 'styled-components/macro';
 import { Button, Select, ShieldedAssetIcon, Text } from '../components';
 import { borderRadiuses, colours, defaultTextColour, fontSizes, inputSizes, spacings, themeColours } from '../styles';
 import arrowDownGradient from '../images/arrow_down_gradient.svg';
-import { assets, convertToPriceString, formatBaseUnits, toBaseUnits } from '../app';
+import { convertToPriceString, formatBaseUnits, toBaseUnits } from '../app';
+import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from 'alt-model/known_assets/known_asset_addresses';
+import { useRemoteAssetForId } from 'alt-model/top_level_context';
 
 const Root = styled.div`
   border-radius: 20px;
@@ -77,9 +79,7 @@ const SelectItemContent = styled.div`
   justify-content: space-between;
 `;
 
-const assetEth = assets[0];
-
-const AMOUNT_OPTS = ['0.01', '0.1', '1', '10'].map(x => toBaseUnits(x, assetEth.decimals));
+const AMOUNT_OPTS = ['0.01', '0.1', '1', '10'].map(x => toBaseUnits(x, 18));
 
 interface ShieldSelectProps {
   onSubmit: (value: bigint) => void;
@@ -87,8 +87,10 @@ interface ShieldSelectProps {
 }
 
 export const ShieldSelect: React.FunctionComponent<ShieldSelectProps> = ({ onSubmit, ethPrice }) => {
+  const assetEth = useRemoteAssetForId(0);
   const items = useMemo(
     () =>
+      assetEth &&
       AMOUNT_OPTS.map(amount => {
         const label = (
           <SelectItemContent>
@@ -103,15 +105,15 @@ export const ShieldSelect: React.FunctionComponent<ShieldSelectProps> = ({ onSub
         const content = <SelectItem>{label}</SelectItem>;
         return { id: amount, label, content };
       }),
-    [ethPrice],
+    [ethPrice, assetEth],
   );
   const [selectedAmount, setSelectedAmount] = useState(AMOUNT_OPTS[1]);
-  const selectedItem = items.find(x => x.id === selectedAmount)!;
+  const selectedItem = items?.find(x => x.id === selectedAmount)!;
   return (
     <Root>
       <Header>
         <Text>Shield ETH</Text>
-        <ShieldedAssetIcon asset={assetEth} white size="xl" />
+        <ShieldedAssetIcon address={KMAA.ETH} white size="xl" />
       </Header>
       <Body>
         <AnnotatedSelectWrapper>
@@ -121,10 +123,10 @@ export const ShieldSelect: React.FunctionComponent<ShieldSelectProps> = ({ onSub
           </Text>
           <SelectWrapper>
             <Select
-              items={items}
+              items={items ?? []}
               trigger={
                 <Selection>
-                  <ShieldedAssetIcon asset={assetEth} size="m" />
+                  <ShieldedAssetIcon address={KMAA.ETH} size="m" />
                   <Spacer />
                   {selectedItem.label}
                   <DownArrow />

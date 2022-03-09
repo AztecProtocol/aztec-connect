@@ -1,6 +1,6 @@
 import type { Config } from 'config';
 import type { EthereumProvider } from '@aztec/sdk';
-import type { DefiRecipe } from 'alt-model/defi/types';
+import type { DefiRecipesObs } from 'alt-model/defi/recipes';
 import createDebug from 'debug';
 import { Web3Provider } from '@ethersproject/providers';
 import { LazyInitCacheMap } from 'app/util/lazy_init_cache_map';
@@ -30,22 +30,26 @@ function createRollupProviderStatusObs(config: Config) {
   }, undefined);
 }
 
-export function createBridgeDataAdaptorObsCache(ethereumProvider: EthereumProvider, config: Config) {
+export function createBridgeDataAdaptorObsCache(
+  defiRecipesObs: DefiRecipesObs,
+  ethereumProvider: EthereumProvider,
+  config: Config,
+) {
   const web3Provider = new Web3Provider(ethereumProvider);
   const rollupProviderStatusObs = createRollupProviderStatusObs(config);
-  return new LazyInitCacheMap((recipe: DefiRecipe) =>
-    rollupProviderStatusObs.map(status => {
-      if (status) {
-        const { rollupContractAddress } = status.blockchainStatus;
-        const blockchainBridge = status.blockchainStatus.bridges.find(
-          bridge => bridge.id === recipe.bridgeFlow.enter.addressId,
-        );
-        if (!blockchainBridge) {
-          debug("No bridge found for recipe's enter address.");
-          return;
-        }
-        return recipe.createAdaptor(web3Provider, rollupContractAddress, blockchainBridge.address);
+  return new LazyInitCacheMap((recipeId: string) =>
+    Obs.combine([defiRecipesObs, rollupProviderStatusObs]).map(([recipes, status]) => {
+      if (!status || !recipes) return undefined;
+      const recipe = recipes.find(x => x.id === recipeId)!;
+      const { rollupContractAddress } = status.blockchainStatus;
+      const blockchainBridge = status.blockchainStatus.bridges.find(
+        bridge => bridge.id === recipe.bridgeFlow.enter.addressId,
+      );
+      if (!blockchainBridge) {
+        debug("No bridge found for recipe's enter address.");
+        return undefined;
       }
+      return recipe.createAdaptor(web3Provider, rollupContractAddress, blockchainBridge.address);
     }),
   );
 }

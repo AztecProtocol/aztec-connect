@@ -28,6 +28,8 @@ import { borderRadiuses, breakpoints, spacings } from '../../styles';
 import { WalletSelect } from '../account/wallet_select';
 import { formatTime } from '../account/settled_time';
 import { Progress } from './progress';
+import { useRemoteAssetForId } from 'alt-model/top_level_context';
+import { getAssetPreferredFractionalDigits } from 'alt-model/known_assets/known_asset_display_data';
 
 const ProgressRoot = styled.div`
   position: relative;
@@ -130,7 +132,7 @@ const getAmountInputMessageProps = (form: ShieldFormValues) => {
     const { asset } = assetState.value;
     return {
       message: `You have ${formatBaseUnits(pendingBalance - txFee.fee, asset.decimals, {
-        precision: asset.preferredFractionalDigits,
+        precision: getAssetPreferredFractionalDigits(asset.address),
         commaSeparated: true,
       })} ${asset.symbol} pending on the contract, this will be used first. `,
       type: MessageType.TEXT,
@@ -167,7 +169,8 @@ export const ShieldForAliasForm: React.FunctionComponent<DepositFormProps> = ({
     ethAccount,
     status: { value: status },
   } = formInputs;
-  const { asset } = assetState;
+  const asset = useRemoteAssetForId(assetState.asset.id);
+  if (!asset) return <></>;
 
   const submissionSteps = [
     {
@@ -225,7 +228,7 @@ export const ShieldForAliasForm: React.FunctionComponent<DepositFormProps> = ({
           </FieldTitleRoot>
           <FieldInputWrapper theme={InputTheme.LIGHT}>
             <AmountAssetIconRoot>
-              <ShieldedAssetIcon asset={asset} size="m" white />
+              <ShieldedAssetIcon address={asset.address} size="m" white />
             </AmountAssetIconRoot>
             <Input
               theme={InputTheme.LIGHT}
@@ -237,7 +240,7 @@ export const ShieldForAliasForm: React.FunctionComponent<DepositFormProps> = ({
                 onChangeInputs({
                   amount: {
                     value: formatBaseUnits(maxAmount.value, asset.decimals, {
-                      precision: asset.preferredFractionalDigits,
+                      precision: getAssetPreferredFractionalDigits(asset.address),
                       floor: true,
                     }),
                   },
@@ -260,12 +263,12 @@ export const ShieldForAliasForm: React.FunctionComponent<DepositFormProps> = ({
           </FieldTitleRoot>
           <FieldInputWrapper theme={InputTheme.LIGHT}>
             <AmountAssetIconRoot>
-              <ShieldedAssetIcon asset={asset} size="m" white />
+              <ShieldedAssetIcon address={asset.address} size="m" white />
             </AmountAssetIconRoot>
             <Input
               theme={InputTheme.LIGHT}
               value={formatBaseUnits(txFee.fee, asset.decimals, {
-                precision: asset.preferredFractionalDigits,
+                precision: getAssetPreferredFractionalDigits(asset.address),
               })}
               disabled
             />
@@ -273,7 +276,7 @@ export const ShieldForAliasForm: React.FunctionComponent<DepositFormProps> = ({
         </InputPaddedBlock>
       </Cols>
       <PaddedBlock size="m">
-        <DisclaimerBlock asset={assetState.asset} txAmountLimit={assetState.txAmountLimit} />
+        <DisclaimerBlock asset={asset} txAmountLimit={assetState.txAmountLimit} />
         <ConfirmRoot>
           <Checkbox
             text="I understand the risks"

@@ -1,16 +1,18 @@
+import type { RemoteAsset } from 'alt-model/types';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import createDebug from 'debug';
 import { DefiComposer, DefiComposerPayload } from './defi_composer';
 import { useApp } from '../app_context';
 import { useObs } from '../../app/util/obs';
 import { AssetValue, BridgeId, DefiSettlementTime, toBaseUnits } from '@aztec/sdk';
-import { Asset, fromBaseUnits, Provider } from '../../app';
+import { fromBaseUnits, Provider } from '../../app';
 import { useBalance } from '../balance_hooks';
 import { DefiFormFieldAnnotations } from 'views/account/dashboard/modals/defi_modal/types';
 import { InputAnnotation } from 'views/account/dashboard/modals/sections/amount_section/types';
 import { useProviderState } from '../provider_hooks';
 import { Semaphore } from '../../app/util';
 import { useInitialisedSdk } from 'alt-model/top_level_context';
+import { isKnownAssetAddressString } from 'alt-model/known_assets/known_asset_addresses';
 
 const debug = createDebug('zm:defi_composer_hooks');
 
@@ -62,10 +64,14 @@ function useDefiFees(bridgeId: BridgeId) {
   return fees;
 }
 
-export function useDefiForm(bridgeId: BridgeId, inputAsset: Asset, fields: DefiFormFields) {
+export function useDefiForm(bridgeId: BridgeId, inputAsset: RemoteAsset, fields: DefiFormFields) {
   const balance = useBalance(inputAsset.id);
   const { config } = useApp();
-  const transactionLimit = config.txAmountLimits[inputAsset.id];
+  const assetAddressStr = inputAsset.address.toString();
+  if (!isKnownAssetAddressString(assetAddressStr)) {
+    throw new Error(`Attempting useDefiForm with unknown asset address '${assetAddressStr}'`);
+  }
+  const transactionLimit = config.txAmountLimits[assetAddressStr];
   const amount = toBaseUnits(fields.amountStr, inputAsset.decimals);
   const fee = useDefiFees(bridgeId)?.[fields.speed].value;
   const maxAmount = balance !== undefined && fee !== undefined ? balance - fee : 0n;

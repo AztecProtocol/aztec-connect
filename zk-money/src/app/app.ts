@@ -1,3 +1,4 @@
+import type { CutdownAsset } from './types';
 import { GrumpkinAddress, JsonRpcProvider } from '@aztec/sdk';
 import { Web3Provider } from '@ethersproject/providers';
 import { SdkObs } from 'alt-model/top_level_context/sdk_obs';
@@ -7,7 +8,6 @@ import Cookie from 'js-cookie';
 import { Config } from '../config';
 import { ShieldFormValues } from './account_forms';
 import { AccountAction } from './account_txs';
-import { AppAssetId } from './assets';
 import { Database } from './database';
 import { Form, SystemMessage } from './form';
 import { chainIdToNetwork, Network } from './networks';
@@ -50,7 +50,7 @@ export class App extends EventEmitter {
   readonly db: Database;
   readonly priceFeedService: PriceFeedService;
   private session?: UserSession;
-  private activeAsset: AppAssetId;
+  private activeAsset: number;
   private loginMode = LoginMode.SIGNUP;
   private shieldForAliasAmountPreselection?: bigint;
   public readonly requiredNetwork: Network;
@@ -59,8 +59,9 @@ export class App extends EventEmitter {
 
   constructor(
     private readonly config: Config,
+    private readonly assets: CutdownAsset[],
     private readonly sdkObs: SdkObs,
-    initialAsset: AppAssetId,
+    initialAsset: number,
     initialLoginMode: LoginMode,
   ) {
     super();
@@ -76,7 +77,7 @@ export class App extends EventEmitter {
     this.loginMode = initialLoginMode;
     const provider = new JsonRpcProvider(config.mainnetEthereumHost);
     const web3Provider = new Web3Provider(provider);
-    this.priceFeedService = new PriceFeedService(config.priceFeedContractAddresses, web3Provider);
+    this.priceFeedService = new PriceFeedService(config.priceFeedContractAddresses, web3Provider, assets);
     this.priceFeedService.init();
   }
 
@@ -205,6 +206,7 @@ export class App extends EventEmitter {
     }
 
     this.session = new UserSession(
+      this.assets,
       this.config,
       this.sdkObs,
       this.requiredNetwork,
@@ -314,7 +316,7 @@ export class App extends EventEmitter {
     await this.session!.changeWallet(walletId);
   };
 
-  changeAsset = (assetId: AppAssetId) => {
+  changeAsset = (assetId: number) => {
     this.activeAsset = assetId;
     this.session?.changeAsset(assetId);
   };

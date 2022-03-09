@@ -1,9 +1,10 @@
+import type { RemoteAsset } from 'alt-model/types';
 import { useState } from 'react';
 import { DefiSettlementTime, TxSettlementTime } from '@aztec/sdk';
 import { SpeedSwitch, InfoWrap } from 'ui-components';
 import { BlockTitle, BorderBox, InfoButton, Text } from 'components';
 import { useAssetPrice } from 'alt-model';
-import { Asset, convertToPriceString } from 'app';
+import { convertToPriceString } from 'app';
 import style from './gas_section.module.scss';
 
 function Info() {
@@ -37,7 +38,7 @@ interface GasSectionProps {
   type: GasSectionType;
   speed: DefiSettlementTime | TxSettlementTime;
   onChangeSpeed: (speed: DefiSettlementTime | TxSettlementTime) => void;
-  asset: Asset;
+  asset: RemoteAsset;
   fee: bigint | undefined;
 }
 

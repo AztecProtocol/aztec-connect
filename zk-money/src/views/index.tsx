@@ -14,6 +14,7 @@ function AppViewConnector({ config }: { config: Config }) {
   const { sdkObs } = useContext(TopLevelContext);
   const { pathname } = useLocation();
   const navigate = useNavigate();
+
   if (appPaths.includes(pathname)) {
     return <AppView config={config} sdkObs={sdkObs} path={pathname} navigate={navigate} />;
   }

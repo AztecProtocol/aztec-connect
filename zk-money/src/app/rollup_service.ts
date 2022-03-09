@@ -4,7 +4,6 @@ import createDebug from 'debug';
 import { Contract } from 'ethers';
 import EventEmitter from 'events';
 import { isEqual } from 'lodash';
-import { assets } from './assets';
 import { Provider } from './provider';
 
 const debug = createDebug('zm:rollup_service');
@@ -177,7 +176,7 @@ export class RollupService extends EventEmitter {
 
   private async fetchTxFees() {
     const txFees: AssetValue[][][] = [];
-    for (const { id } of assets) {
+    for (let id = 0; id < this.assets.length; id++) {
       txFees[id] = await this.sdk.getTxFees(id);
     }
     return txFees;

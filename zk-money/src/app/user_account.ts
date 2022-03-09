@@ -1,3 +1,4 @@
+import type { CutdownAsset } from './types';
 import { AccountId, AztecSdk, Note, SdkEvent, EthereumProvider } from '@aztec/sdk';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
@@ -6,7 +7,6 @@ import { AccountForm, AccountFormEvent, MergeForm, MigrateForm, SendForm, SendMo
 import { AccountState, AssetState, initialAssetState } from './account_state';
 import { AccountAction, parseAccountTx, parseJoinSplitTx } from './account_txs';
 import { AccountUtils } from './account_utils';
-import { AppAssetId, assets } from './assets';
 import { EthAccount, EthAccountEvent } from './eth_account';
 import { Form } from './form';
 import { KeyVault } from './key_vault';
@@ -14,6 +14,11 @@ import { Network } from './networks';
 import { PriceFeedService } from './price_feed_service';
 import { Provider, ProviderEvent } from './provider';
 import { RollupService, RollupServiceEvent, RollupStatus } from './rollup_service';
+import {
+  isKnownAssetAddressString,
+  KNOWN_MAINNET_ASSET_ADDRESS_STRS,
+  PerKnownAddress,
+} from 'alt-model/known_assets/known_asset_addresses';
 
 const debug = createDebug('zm:account');
 
@@ -53,10 +58,11 @@ export class UserAccount extends EventEmitter {
   private readonly refreshAssetDebounceWait = 100;
 
   constructor(
+    readonly assets: CutdownAsset[],
     readonly userId: AccountId,
     readonly alias: string,
     readonly latestUserNonce: number,
-    private activeAsset: AppAssetId,
+    private activeAsset: number,
     private readonly keyVault: KeyVault,
     private readonly sdk: AztecSdk,
     private readonly stableEthereumProvider: EthereumProvider,
@@ -65,8 +71,7 @@ export class UserAccount extends EventEmitter {
     private readonly accountUtils: AccountUtils,
     private readonly requiredNetwork: Network,
     private readonly explorerUrl: string,
-    private readonly txAmountLimits: bigint[],
-    private readonly withdrawSafeAmounts: bigint[][],
+    private readonly txAmountLimits: PerKnownAddress<bigint>,
     private readonly maxAvailableAssetId: number,
   ) {
     super();
@@ -81,8 +86,7 @@ export class UserAccount extends EventEmitter {
     this.assetState = {
       ...initialAssetState,
       asset: assets[activeAsset],
-      txAmountLimit: txAmountLimits[activeAsset] || 0n,
-      withdrawSafeAmounts: withdrawSafeAmounts[activeAsset] || [],
+      txAmountLimit: txAmountLimits[KNOWN_MAINNET_ASSET_ADDRESS_STRS.ETH] || 0n,
     };
     this.nextPublishTime = rollup.nextPublishTime;
     this.debounceRefreshAccountState = debounce(this.refreshAccountState, this.refreshAccountDebounceWait);
@@ -141,7 +145,7 @@ export class UserAccount extends EventEmitter {
     this.debounceRefreshAssetState.cancel();
   }
 
-  async changeAsset(assetId: AppAssetId) {
+  async changeAsset(assetId: number) {
     if (assetId === this.activeAsset) return;
 
     if (this.activeAction?.form.processing) {
@@ -236,6 +240,11 @@ export class UserAccount extends EventEmitter {
   }
 
   private createForm(action: AccountAction) {
+    const assetAddressStr = this.assetState.asset.address.toString();
+    if (!isKnownAssetAddressString(assetAddressStr)) {
+      throw new Error(`Attempting createForm with unknown asset address '${assetAddressStr}'`);
+    }
+    const txAmountLimit = this.txAmountLimits[assetAddressStr];
     switch (action) {
       case AccountAction.SEND:
         return new SendForm(
@@ -246,7 +255,7 @@ export class UserAccount extends EventEmitter {
           this.sdk,
           this.rollup,
           this.accountUtils,
-          this.txAmountLimits[this.assetState.asset.id],
+          txAmountLimit,
           SendMode.SEND,
         );
       case AccountAction.MERGE:
@@ -260,6 +269,7 @@ export class UserAccount extends EventEmitter {
           this.sdk,
           this.accountUtils,
           action === AccountAction.MIGRATE_OLD_BALANCE,
+          this.assets,
         );
       default:
         return new ShieldForm(
@@ -274,7 +284,7 @@ export class UserAccount extends EventEmitter {
           this.rollup,
           this.accountUtils,
           this.requiredNetwork,
-          this.txAmountLimits[this.assetState.asset.id],
+          txAmountLimit,
         );
     }
   }
@@ -303,7 +313,7 @@ export class UserAccount extends EventEmitter {
   };
 
   private refreshAssetState = async () => {
-    const asset = assets[this.activeAsset];
+    const asset = this.assets[this.activeAsset];
     if (!this.isAssetEnabled(asset.id)) {
       await this.updateAssetState({
         ...initialAssetState,
@@ -317,6 +327,12 @@ export class UserAccount extends EventEmitter {
     const spendableBalance = sumNotes(spendableNotes.slice(-2));
     const joinSplitTxs = await this.getJoinSplitTxs(asset.id, this.userId);
 
+    const assetAddressStr = asset.address.toString();
+    if (!isKnownAssetAddressString(assetAddressStr)) {
+      throw new Error(`Attempting refreshAssetState with unknown asset address '${assetAddressStr}'`);
+    }
+    const txAmountLimit = this.txAmountLimits[assetAddressStr];
+
     this.updateAssetState({
       asset,
       balance,
@@ -324,14 +340,13 @@ export class UserAccount extends EventEmitter {
       spendableBalance,
       joinSplitTxs,
       price: this.priceFeedService.getPrice(asset.id),
-      txAmountLimit: this.txAmountLimits[asset.id],
-      withdrawSafeAmounts: this.withdrawSafeAmounts[asset.id],
+      txAmountLimit,
     });
   };
 
   private async renewEthAccount() {
     this.ethAccount?.off(EthAccountEvent.UPDATED_PENDING_BALANCE, this.onPendingBalanceChange);
-    const asset = assets[this.activeAsset];
+    const asset = this.assets[this.activeAsset];
     this.ethAccount = new EthAccount(
       this.provider,
       this.accountUtils,
@@ -393,14 +408,14 @@ export class UserAccount extends EventEmitter {
     this.emit(UserAccountEvent.UPDATED_ACCOUNT_ACTION);
   }
 
-  private async getJoinSplitTxs(assetId: AppAssetId, userId: AccountId) {
+  private async getJoinSplitTxs(assetId: number, userId: AccountId) {
     return (await this.sdk.getPaymentTxs(userId))
       .filter(tx => tx.value.assetId === assetId)
       .sort((a, b) => (!a.settled && b.settled ? -1 : 0))
       .map(tx => parseJoinSplitTx(tx, this.explorerUrl));
   }
 
-  private isAssetEnabled(assetId: AppAssetId) {
+  private isAssetEnabled(assetId: number) {
     return assetId <= this.maxAvailableAssetId;
   }
 }

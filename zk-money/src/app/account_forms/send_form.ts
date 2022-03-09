@@ -1,3 +1,4 @@
+import type { CutdownAsset } from 'app/types';
 import {
   AccountId,
   AztecSdk,
@@ -12,7 +13,6 @@ import { EventEmitter } from 'events';
 import { debounce, DebouncedFunc } from 'lodash';
 import { AccountUtils } from '../account_utils';
 import { formatAliasInput, isSameAlias, isValidAliasInput } from '../alias';
-import { Asset } from '../assets';
 import {
   BigIntValue,
   BoolInput,
@@ -36,6 +36,7 @@ import { RollupService, RollupServiceEvent, TxFee } from '../rollup_service';
 import { fromBaseUnits, max, min, toBaseUnits } from '../units';
 import { AccountForm, AccountFormEvent } from './account_form';
 import { TransactionGraph } from './transaction_graph';
+import { getAssetPreferredFractionalDigits } from 'alt-model/known_assets/known_asset_display_data';
 
 const debug = createDebug('zm:send_form');
 
@@ -127,7 +128,7 @@ const initialSendFormValues = {
 export class SendForm extends EventEmitter implements AccountForm {
   private readonly userId: AccountId;
   private readonly alias: string;
-  private readonly asset: Asset;
+  private readonly asset: CutdownAsset;
   private readonly sendMode: SendMode;
 
   private values: SendFormValues = initialSendFormValues;
@@ -145,7 +146,7 @@ export class SendForm extends EventEmitter implements AccountForm {
 
   constructor(
     accountState: { userId: AccountId; alias: string },
-    private assetState: { asset: Asset; spendableBalance: bigint },
+    private assetState: { asset: CutdownAsset; spendableBalance: bigint },
     private provider: Provider | undefined,
     private readonly keyVault: KeyVault,
     private readonly sdk: AztecSdk,
@@ -202,7 +203,7 @@ export class SendForm extends EventEmitter implements AccountForm {
     await this.initTransactionGraph();
   }
 
-  changeAssetState(assetState: { asset: Asset; spendableBalance: bigint }) {
+  changeAssetState(assetState: { asset: CutdownAsset; spendableBalance: bigint }) {
     if (this.processing) {
       debug('Cannot change asset state while a form is being processed.');
       return;
@@ -369,7 +370,7 @@ export class SendForm extends EventEmitter implements AccountForm {
 
     if (changes.amount) {
       const amountInput = changes.amount;
-      const { preferredFractionalDigits } = this.asset;
+      const preferredFractionalDigits = getAssetPreferredFractionalDigits(this.asset.address);
       if (preferredFractionalDigits !== undefined) {
         if ((amountInput.value.split('.')[1]?.length ?? 0) > preferredFractionalDigits) {
           toUpdate.amount = withError(

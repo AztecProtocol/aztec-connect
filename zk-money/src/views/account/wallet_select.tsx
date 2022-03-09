@@ -1,7 +1,7 @@
+import type { RemoteAsset } from 'alt-model/types';
 import React from 'react';
 import styled from 'styled-components/macro';
 import {
-  Asset,
   EthAccountState,
   fromBaseUnits,
   MessageType,
@@ -72,7 +72,7 @@ const WalletItem: React.FunctionComponent<WalletItemProps> = ({ name, icon, conn
 );
 
 interface WalletSelectInputProps {
-  asset: Asset;
+  asset: RemoteAsset;
   providerState?: ProviderState;
   ethAccount: EthAccountState;
   message?: string;

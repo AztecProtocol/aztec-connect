@@ -1,10 +1,12 @@
+import type { RemoteAsset } from 'alt-model/types';
+import { getAssetPreferredFractionalDigits } from 'alt-model/known_assets/known_asset_display_data';
 import React from 'react';
-import { Asset, formatBaseUnits } from '../../../../app';
+import { formatBaseUnits } from '../../../../app';
 import { Input } from '../../../../components';
 import style from './amount_input.module.scss';
 
 interface AmountInputProps extends React.ComponentProps<typeof Input> {
-  asset: Asset;
+  asset: RemoteAsset;
   maxAmount: bigint;
 }
 
@@ -13,7 +15,7 @@ export function AmountInput({ asset, onChangeValue, maxAmount, ...inputProps }: 
 
   const handleMaxButton = () => {
     const maxValue = maxAmount
-      ? formatBaseUnits(maxAmount, asset.decimals, { precision: asset.preferredFractionalDigits })
+      ? formatBaseUnits(maxAmount, asset.decimals, { precision: getAssetPreferredFractionalDigits(asset.address) })
       : '0';
     handleChangeValue(maxValue);
   };

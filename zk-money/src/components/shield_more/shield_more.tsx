@@ -1,9 +1,12 @@
+import type { RemoteAsset } from 'alt-model/types';
 import { CardWrapper } from 'ui-components';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import styled from 'styled-components/macro';
 import { ShieldModal } from 'views/account/dashboard/modals/shield_modal';
 import { Button } from '../button';
 import { Dropdown } from '../dropdown';
+import { useRemoteAssets } from 'alt-model/top_level_context';
+import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from 'alt-model/known_assets/known_asset_addresses';
 
 const ShieldMoreWrapper = styled(CardWrapper)`
   display: flex;
@@ -22,15 +25,19 @@ const ModalAnchor = styled.div`
   position: relative;
 `;
 
-const DROPDOWN_OPTIONS = [
-  { value: 0, label: 'ETH' },
-  { value: 1, label: 'DAI' },
-  { value: 2, label: 'renBTC' },
-];
+const SUPPORTED_FOR_SHIELDING = [KMAA.ETH, KMAA.DAI, KMAA.renBTC];
 
 export function ShieldMore() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [assetIdForShielding, setAssetIdForShielding] = useState<number>();
+  const [assetForShielding, setAssetForShielding] = useState<RemoteAsset>();
+  const assets = useRemoteAssets();
+  const options = useMemo(
+    () =>
+      assets
+        ?.filter(x => SUPPORTED_FOR_SHIELDING.some(addr => x.address.equals(addr)))
+        .map(x => ({ value: x.id, label: x.symbol })),
+    [assets],
+  );
   return (
     <>
       <ShieldMoreWrapper>
@@ -39,17 +46,17 @@ export function ShieldMore() {
           <ShieldMoreButton text="Shield more" onClick={() => setIsDropdownOpen(true)} />
           <Dropdown
             isOpen={isDropdownOpen}
-            options={DROPDOWN_OPTIONS}
+            options={options ?? []}
             onClick={({ value }) => {
-              setAssetIdForShielding(value);
+              setAssetForShielding(assets?.find(x => x.id === value));
               setIsDropdownOpen(false);
             }}
             onClose={() => setIsDropdownOpen(false)}
           />
         </ModalAnchor>
       </ShieldMoreWrapper>
-      {assetIdForShielding !== undefined && (
-        <ShieldModal assetId={assetIdForShielding} onClose={() => setAssetIdForShielding(undefined)} />
+      {assetForShielding !== undefined && (
+        <ShieldModal asset={assetForShielding} onClose={() => setAssetForShielding(undefined)} />
       )}
     </>
   );

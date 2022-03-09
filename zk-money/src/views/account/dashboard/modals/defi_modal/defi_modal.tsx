@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { DefiSettlementTime } from '@aztec/sdk';
-import { assets } from 'app';
 import { Page1 } from './page1';
 import { Page2 } from './page2';
 import { useDefiComposer, useDefiForm } from 'alt-model/defi/defi_composer_hooks';
@@ -19,8 +18,7 @@ interface DefiModalProps {
 
 export function DefiModal({ recipe, onClose }: DefiModalProps) {
   const enterBridgeId = recipe.bridgeFlow.enter;
-  const inputAssetId = enterBridgeId.inputAssetIdA;
-  const inputAsset = assets[inputAssetId];
+  const inputAsset = recipe.inputAssetA;
   const [fields, setFields] = useState<DefiFormFields>({
     speed: DefiSettlementTime.NEXT_ROLLUP,
     amountStr: '',
@@ -41,7 +39,6 @@ export function DefiModal({ recipe, onClose }: DefiModalProps) {
     <Page2
       recipe={recipe}
       fields={fields}
-      asset={inputAsset}
       fee={fee}
       composerState={composerState}
       onSubmit={handleSubmit}
@@ -50,7 +47,6 @@ export function DefiModal({ recipe, onClose }: DefiModalProps) {
   ) : (
     <Page1
       recipe={recipe}
-      inputAsset={inputAsset}
       fields={fields}
       onChangeFields={setFields}
       fieldAnnotations={fieldAnnotations}

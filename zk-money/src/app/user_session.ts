@@ -1,3 +1,4 @@
+import type { CutdownAsset } from './types';
 import {
   AccountId,
   AztecSdk,
@@ -27,7 +28,6 @@ import {
 import { AccountVersion } from './account_state';
 import { AccountUtils } from './account_utils';
 import { formatAliasInput, getAliasError } from './alias';
-import { AppAssetId, assets } from './assets';
 import { Database } from './database';
 import { EthAccount } from './eth_account';
 import { MessageType, SystemMessage, ValueAvailability } from './form';
@@ -36,9 +36,10 @@ import { Network } from './networks';
 import { PriceFeedService } from './price_feed_service';
 import { Provider, ProviderEvent, ProviderState, ProviderStatus } from './provider';
 import { RollupService } from './rollup_service';
-import { toBaseUnits } from './units';
 import { UserAccount, UserAccountEvent } from './user_account';
 import { WalletId, wallets } from './wallet_providers';
+import { toBaseUnits } from './units';
+import { KNOWN_MAINNET_ASSET_ADDRESS_STRS } from 'alt-model/known_assets/known_asset_addresses';
 
 const debug = createDebug('zm:user_session');
 
@@ -148,24 +149,25 @@ export class UserSession extends EventEmitter {
   private shieldForAliasForm?: ShieldForm;
   private accountUtils!: AccountUtils;
   private account!: UserAccount;
-  private activeAsset: AppAssetId;
+  private activeAsset: number;
   private debounceCheckAlias: DebouncedFunc<() => void>;
   private createSdkMutex = new Mutex('create-sdk-mutex');
   private destroyed = false;
   private claimUserNameProm?: Promise<void>;
 
-  private readonly accountProofDepositAsset = 0;
-  private readonly accountProofMinDeposit = toBaseUnits('0.01', assets[this.accountProofDepositAsset].decimals);
+  private readonly accountProofDepositAssetId = 0;
+  private readonly accountProofMinDeposit: bigint;
 
   private readonly debounceCheckAliasWait = 600;
   private readonly MAX_ACCOUNT_TXS_PER_ROLLUP = 112; // TODO - fetch from server
   private readonly TXS_PER_ROLLUP = 112;
 
   constructor(
+    private readonly assets: CutdownAsset[],
     private readonly config: Config,
     private readonly sdkObs: SdkObs,
     private readonly requiredNetwork: Network,
-    initialActiveAsset: AppAssetId,
+    initialActiveAsset: number,
     initialLoginMode: LoginMode,
     private readonly db: Database,
     private readonly priceFeedService: PriceFeedService,
@@ -180,6 +182,7 @@ export class UserSession extends EventEmitter {
       mode: initialLoginMode,
     };
     this.activeAsset = initialActiveAsset;
+    this.accountProofMinDeposit = toBaseUnits('0.01', assets[this.accountProofDepositAssetId].decimals);
   }
 
   getSdk(): AztecSdk | undefined {
@@ -500,7 +503,7 @@ export class UserSession extends EventEmitter {
     this.handleProviderStateChange();
   }
 
-  changeAsset(assetId: AppAssetId) {
+  changeAsset(assetId: number) {
     this.activeAsset = assetId;
     this.account?.changeAsset(assetId);
   }
@@ -746,7 +749,7 @@ export class UserSession extends EventEmitter {
     await this.awaitUserSynchronised(fromUserId);
 
     const migratingAssets = await Promise.all(
-      assets.map(async ({ id }) => {
+      this.assets.map(async ({ id }) => {
         const notes = (await this.sdk.getSpendableNotes(id, fromUserId)).sort((a, b) => (a.value < b.value ? 1 : -1));
         const values = notes.map(n => n.value);
         const [{ value: fee }] = await this.sdk.getTransferFees(id);
@@ -979,13 +982,13 @@ export class UserSession extends EventEmitter {
     const ethAccount = new EthAccount(
       this.provider,
       this.accountUtils,
-      this.accountProofDepositAsset,
-      this.rollupService.supportedAssets[this.accountProofDepositAsset].address,
+      this.accountProofDepositAssetId,
+      this.rollupService.supportedAssets[this.accountProofDepositAssetId].address,
       this.requiredNetwork,
     );
     this.shieldForAliasForm = new ShieldForm(
       { userId, alias },
-      { asset: assets[this.accountProofDepositAsset], spendableBalance: 0n },
+      { asset: this.assets[this.accountProofDepositAssetId], spendableBalance: 0n },
       spendingPublicKey,
       this.provider,
       ethAccount,
@@ -995,7 +998,7 @@ export class UserSession extends EventEmitter {
       this.rollupService,
       this.accountUtils,
       this.requiredNetwork,
-      this.config.txAmountLimits[this.accountProofDepositAsset],
+      this.config.txAmountLimits[KNOWN_MAINNET_ASSET_ADDRESS_STRS.ETH],
       this.accountProofMinDeposit,
       this.shieldForAliasAmountPreselection,
     );
@@ -1074,13 +1077,14 @@ export class UserSession extends EventEmitter {
 
     await this.accountUtils.addUser(this.keyVault.accountPrivateKey, userId.accountNonce);
 
-    const { txAmountLimits, withdrawSafeAmounts, explorerUrl, maxAvailableAssetId } = this.config;
+    const { txAmountLimits, explorerUrl, maxAvailableAssetId } = this.config;
 
     await this.reviveUserProvider();
 
     const { alias } = this.loginState;
     const latestUserNonce = await this.accountUtils.getAccountNonce(userId.publicKey);
     this.account = new UserAccount(
+      this.assets,
       userId,
       alias,
       latestUserNonce,
@@ -1094,7 +1098,6 @@ export class UserSession extends EventEmitter {
       this.requiredNetwork,
       explorerUrl,
       txAmountLimits,
-      withdrawSafeAmounts,
       maxAvailableAssetId,
     );
 
@@ -1117,7 +1120,7 @@ export class UserSession extends EventEmitter {
   }
 
   private async migrateNotes(prevUserId: AccountId, userId: AccountId, signingPrivateKey: Buffer) {
-    const updateMigratingAssets = (assetId: AppAssetId, migratedValue: bigint) => {
+    const updateMigratingAssets = (assetId: number, migratedValue: bigint) => {
       const migratingAssets = this.loginState.migratingAssets.map(asset => {
         if (asset.assetId !== assetId) {
           return asset;
@@ -1338,8 +1341,8 @@ export class UserSession extends EventEmitter {
     const ethAccount = new EthAccount(
       this.provider,
       this.accountUtils,
-      this.accountProofDepositAsset,
-      this.rollupService.supportedAssets[this.accountProofDepositAsset].address,
+      this.accountProofDepositAssetId,
+      this.rollupService.supportedAssets[this.accountProofDepositAssetId].address,
       this.requiredNetwork,
     );
     this.shieldForAliasForm?.changeEthAccount(ethAccount);

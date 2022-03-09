@@ -1,68 +1,92 @@
+import type { CutdownAsset } from 'app/types';
 import { Web3Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
-import { assets } from '../assets';
 import { PriceFeed, PriceFeedEvent } from './price_feed';
+import { mapObj } from 'app/util/objects';
+import { isKnownAssetAddressString, PerKnownAddress } from 'alt-model/known_assets/known_asset_addresses';
 
 const debug = createDebug('zm:price_feed_service');
 
 type PriceFeedSubscriber = (assetId: number, price: bigint) => void;
 
 export class PriceFeedService {
-  private priceFeeds: PriceFeed[];
-  private subscribers: PriceFeedSubscriber[][] = [];
-  private priceListeners: ((price: bigint) => void)[] = [];
+  private groups: PerKnownAddress<{
+    priceFeed: PriceFeed;
+    subscribers: PriceFeedSubscriber[];
+    priceListener: (price: bigint) => void;
+  }>;
 
   private readonly pollInterval = 5 * 60 * 1000; // 5 mins
 
-  constructor(priceFeedContractAddresses: string[], provider: Web3Provider) {
-    this.priceFeeds = priceFeedContractAddresses.map(a => new PriceFeed(a, provider, this.pollInterval));
-    assets.forEach(({ id }) => {
-      this.subscribers[id] = [];
-      this.priceListeners[id] = (price: bigint) => {
-        this.emit(id, price);
+  constructor(
+    priceFeedContractAddresses: PerKnownAddress<string>,
+    provider: Web3Provider,
+    private readonly assets: CutdownAsset[],
+  ) {
+    this.groups = mapObj(priceFeedContractAddresses, (feedAddressStr, assetAddressStr) => {
+      const assetId = assets.find(x => x.address.toString() === assetAddressStr)?.id;
+      return {
+        priceFeed: new PriceFeed(feedAddressStr, provider, this.pollInterval),
+        subscribers: [],
+        priceListener: price => {
+          if (assetId) this.emit(assetId, price);
+        },
       };
     });
   }
 
+  private getGroup(assetId: number) {
+    const asset = this.assets[assetId];
+    const assetAddressStr = asset.address.toString();
+    if (!isKnownAssetAddressString(assetAddressStr)) {
+      throw new Error(`Attempting PriceFeedService with unknown asset address '${assetAddressStr}'`);
+    }
+    return this.groups[assetAddressStr];
+  }
+
   getPrice(assetId: number) {
-    return this.priceFeeds[assetId]?.price || 0n;
+    return this.getGroup(assetId)?.priceFeed?.price || 0n;
   }
 
   destroy() {
-    this.priceFeeds.forEach(pf => pf.destroy());
+    Object.values(this.groups).forEach(group => group.priceFeed.destroy());
   }
 
   async init() {
-    await Promise.all(this.priceFeeds.map(pf => pf.init()));
+    await Promise.all(Object.values(this.groups).map(g => g.priceFeed.init()));
   }
 
   subscribe(assetId: number, subscriber: PriceFeedSubscriber) {
-    if (!this.priceFeeds[assetId]) return;
+    const group = this.getGroup(assetId);
+    if (!group) return;
 
-    if (this.subscribers[assetId].some(s => s === subscriber)) {
+    if (group.subscribers.some(s => s === subscriber)) {
       debug('Duplicated subscription.');
       return;
     }
 
-    this.subscribers[assetId].push(subscriber);
-    if (this.subscribers[assetId].length === 1) {
-      this.priceFeeds[assetId].on(PriceFeedEvent.UPDATED_PRICE, this.priceListeners[assetId]);
-      if (Date.now() - this.priceFeeds[assetId].lastSynced > this.pollInterval) {
-        this.priceFeeds[assetId].refresh();
+    group.subscribers.push(subscriber);
+    if (group.subscribers.length === 1) {
+      group.priceFeed.on(PriceFeedEvent.UPDATED_PRICE, group.priceListener);
+      if (Date.now() - group.priceFeed.lastSynced > this.pollInterval) {
+        group.priceFeed.refresh();
       }
     }
   }
 
   unsubscribe(assetId: number, subscriber: PriceFeedSubscriber) {
-    if (!this.priceFeeds[assetId]) return;
+    const group = this.getGroup(assetId);
+    if (!group) return;
 
-    this.subscribers[assetId] = this.subscribers[assetId].filter(s => s !== subscriber);
-    if (!this.subscribers[assetId].length) {
-      this.priceFeeds[assetId].off(PriceFeedEvent.UPDATED_PRICE, this.priceListeners[assetId]);
+    group.subscribers = group.subscribers.filter(s => s !== subscriber);
+    if (!group.subscribers.length) {
+      group.priceFeed.off(PriceFeedEvent.UPDATED_PRICE, group.priceListener);
     }
   }
 
   private emit(assetId: number, price: bigint) {
-    this.subscribers[assetId].forEach(s => s(assetId, price));
+    const group = this.getGroup(assetId);
+    if (!group) return;
+    group.subscribers.forEach(s => s(assetId, price));
   }
 }

@@ -1,5 +1,6 @@
+import type { RemoteAsset } from 'alt-model/types';
 import React from 'react';
-import { Asset, ProviderState, ShieldFormValues, ShieldStatus, toBaseUnits, WalletId } from 'app';
+import { ProviderState, ShieldFormValues, ShieldStatus, toBaseUnits, WalletId } from 'app';
 import { Theme } from 'styles';
 import { AssetInfoRow } from 'views/account/asset_info_row';
 import { ProgressTemplate } from 'views/account/progress_template';
@@ -8,7 +9,7 @@ import { SigningKeyForm } from 'views/account/signing_key_form';
 interface ShieldProgressProps {
   theme: Theme;
   form: ShieldFormValues;
-  asset: Asset;
+  asset: RemoteAsset;
   assetPrice: bigint;
   txAmountLimit: bigint;
   providerState?: ProviderState;

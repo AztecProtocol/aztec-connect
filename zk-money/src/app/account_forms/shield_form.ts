@@ -1,3 +1,4 @@
+import { CutdownAsset } from 'app/types';
 import {
   AccountId,
   AztecSdk,
@@ -15,7 +16,6 @@ import { EventEmitter } from 'events';
 import { debounce, DebouncedFunc, isEqual } from 'lodash';
 import { AccountUtils } from '../account_utils';
 import { isSameAlias, isValidAliasInput } from '../alias';
-import { Asset, assets } from '../assets';
 import { EthAccount, EthAccountEvent, EthAccountState } from '../eth_account';
 import {
   BigIntValue,
@@ -40,6 +40,7 @@ import { Provider, ProviderStatus } from '../provider';
 import { RollupService, RollupServiceEvent, RollupStatus, TxFee } from '../rollup_service';
 import { formatBaseUnits, fromBaseUnits, max, min, toBaseUnits } from '../units';
 import { AccountForm, AccountFormEvent } from './account_form';
+import { getAssetPreferredFractionalDigits } from 'alt-model/known_assets/known_asset_display_data';
 
 const debug = createDebug('zm:shield_form');
 
@@ -75,7 +76,7 @@ interface TxSpeedInput extends IntValue {
 }
 
 interface AssetStateValue extends FormValue {
-  value: { asset: Asset; txAmountLimit: bigint };
+  value: { asset: CutdownAsset; txAmountLimit: bigint };
 }
 
 export interface ShieldFormValues {
@@ -96,9 +97,6 @@ export interface ShieldFormValues {
 }
 
 const initialShieldFormValues = {
-  assetState: {
-    value: { asset: assets[0], txAmountLimit: 0n },
-  },
   amount: {
     value: '0',
     required: true,
@@ -151,10 +149,10 @@ interface AccountGasCost {
 export class ShieldForm extends EventEmitter implements AccountForm {
   private readonly userId: AccountId;
   private readonly alias: string;
-  private readonly asset: Asset;
+  private readonly asset: CutdownAsset;
   readonly isNewAccount: boolean;
 
-  private values: ShieldFormValues = initialShieldFormValues;
+  private values: ShieldFormValues;
   private formStatus = FormStatus.ACTIVE;
   private proof?: {
     depositor: EthAddress;
@@ -173,7 +171,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
 
   constructor(
     accountState: { userId: AccountId; alias: string },
-    private assetState: { asset: Asset; spendableBalance: bigint },
+    private assetState: { asset: CutdownAsset; spendableBalance: bigint },
     private readonly newSpendingPublicKey: GrumpkinAddress | undefined,
     private provider: Provider | undefined,
     private ethAccount: EthAccount,
@@ -193,6 +191,14 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     this.asset = assetState.asset;
     this.isNewAccount = !!newSpendingPublicKey;
     this.debounceUpdateRecipient = debounce(this.updateRecipientStatus, this.aliasDebounceWait);
+    this.values = {
+      ...initialShieldFormValues,
+      assetState: { value: { asset: assetState.asset, txAmountLimit: 0n } },
+      recipient: { value: { input: this.alias, valid: ValueAvailability.VALID } },
+      fees: {
+        value: this.rollup.getTxFees(this.asset.id, this.isNewAccount ? TxType.ACCOUNT : TxType.DEPOSIT),
+      },
+    };
     this.values.recipient = { value: { input: this.alias, valid: ValueAvailability.VALID } };
     this.values.fees = {
       value: this.rollup.getTxFees(this.asset.id, this.isNewAccount ? TxType.ACCOUNT : TxType.DEPOSIT),
@@ -201,7 +207,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     if (amountPreselection !== undefined) {
       values.amount = {
         value: formatBaseUnits(amountPreselection, this.asset.decimals, {
-          precision: this.asset.preferredFractionalDigits,
+          precision: getAssetPreferredFractionalDigits(this.asset.address),
         }),
       };
     }
@@ -253,7 +259,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     this.ethAccount.on(EthAccountEvent.UPDATED_PUBLIC_BALANCE, this.onPublicBalanceChange);
   }
 
-  changeAssetState(assetState: { asset: Asset; spendableBalance: bigint }) {
+  changeAssetState(assetState: { asset: CutdownAsset; spendableBalance: bigint }) {
     if (this.processing) {
       debug('Cannot change asset state while a form is being processed.');
       return;
@@ -431,7 +437,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       toUpdate.amount = clearMessage(amountInput);
     }
 
-    const { preferredFractionalDigits } = this.asset;
+    const preferredFractionalDigits = getAssetPreferredFractionalDigits(this.asset.address);
     if (amountInput && preferredFractionalDigits !== undefined) {
       if ((amountInput.value.split('.')[1]?.length ?? 0) > preferredFractionalDigits) {
         toUpdate.amount = withError(
@@ -791,7 +797,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       this.updateFormValues({
         amount: {
           value: formatBaseUnits(amount, this.asset.decimals, {
-            precision: this.asset.preferredFractionalDigits,
+            precision: getAssetPreferredFractionalDigits(this.asset.address),
             floor: true,
           }),
         },

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import styled from 'styled-components/macro';
 import { DefiComposerPhase, DefiComposerState } from 'alt-model/defi/defi_composer';
-import { Asset, toBaseUnits } from 'app';
+import { toBaseUnits } from 'app';
 import { Theme, themeColours } from 'styles';
 import { BorderBox, Button, Text } from 'components';
 import { Breakdown } from './breakdown';
@@ -48,14 +48,14 @@ const S = {
 interface Page2Props {
   recipe: DefiRecipe;
   composerState: DefiComposerState;
-  asset: Asset;
   fields: DefiFormFields;
   fee: bigint | undefined;
   transactionLimit: bigint;
   onSubmit: () => void;
 }
 
-export function Page2({ recipe, composerState, asset, transactionLimit, fields, fee, onSubmit }: Page2Props) {
+export function Page2({ recipe, composerState, transactionLimit, fields, fee, onSubmit }: Page2Props) {
+  const asset = recipe.inputAssetA;
   const amount = toBaseUnits(fields.amountStr, asset.decimals);
   const [riskChecked, setRiskChecked] = useState(false);
   const hasError = composerState.erroredPhase !== undefined;

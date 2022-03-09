@@ -1,6 +1,7 @@
 import { toBaseUnits } from './app/units';
 import { isIOS } from './device_support';
 import { getBlockchainStatus } from '@aztec/sdk';
+import { KNOWN_MAINNET_ASSET_ADDRESS_STRS as S, PerKnownAddress } from 'alt-model/known_assets/known_asset_addresses';
 
 export interface Config {
   rollupProviderUrl: string;
@@ -8,9 +9,8 @@ export interface Config {
   chainId: number;
   ethereumHost: string;
   mainnetEthereumHost: string;
-  priceFeedContractAddresses: string[];
-  txAmountLimits: bigint[];
-  withdrawSafeAmounts: bigint[][];
+  priceFeedContractAddresses: PerKnownAddress<string>;
+  txAmountLimits: PerKnownAddress<bigint>;
   sessionTimeout: number;
   debug: boolean;
   saveProvingKey: boolean;
@@ -23,7 +23,6 @@ interface ConfigVars {
   priceFeedContractAddress1: string;
   priceFeedContractAddress2: string;
   txAmountLimits: string;
-  withdrawSafeAmounts: string;
   sessionTimeout: string;
   maxAvailableAssetId: string;
   debug: boolean;
@@ -45,7 +44,6 @@ const fromLocalStorage = (): ConfigVars => ({
   priceFeedContractAddress1: localStorage.getItem('zm_priceFeedContractAddress1') || '',
   priceFeedContractAddress2: localStorage.getItem('zm_priceFeedContractAddress2') || '',
   txAmountLimits: localStorage.getItem('zm_txAmountLimit') || '',
-  withdrawSafeAmounts: localStorage.getItem('zm_withdrawSafeAmounts') || '',
   sessionTimeout: localStorage.getItem('zm_sessionTimeout') || '',
   maxAvailableAssetId: localStorage.getItem('zm_maxAvailableAssetId') || '',
   debug: !!localStorage.getItem('zm_debug'),
@@ -57,7 +55,6 @@ const fromEnvVars = (): ConfigVars => ({
   priceFeedContractAddress1: process.env.REACT_APP_PRICE_FEED_CONTRACT_ADDRESS_1 || '',
   priceFeedContractAddress2: process.env.REACT_APP_PRICE_FEED_CONTRACT_ADDRESS_2 || '',
   txAmountLimits: process.env.REACT_APP_TX_AMOUNT_LIMIT || '',
-  withdrawSafeAmounts: process.env.REACT_APP_WITHDRAW_SAFE_AMOUNT || '',
   sessionTimeout: process.env.REACT_APP_SESSION_TIMEOUT || '',
   maxAvailableAssetId: process.env.REACT_APP_MAX_AVAILABLE_ASSET_ID || '',
   debug: !!process.env.REACT_APP_DEBUG,
@@ -72,26 +69,6 @@ const productionConfig: ConfigVars = {
     `${toBaseUnits('30', 18)}`, // 30 ETH
     `${toBaseUnits('100000', 18)}`, // 100000 DAI
     `${toBaseUnits('2', 8)}`, // 2 renBTC
-  ]),
-  withdrawSafeAmounts: JSON.stringify([
-    [
-      `${toBaseUnits('0.1', 18)}`, // 0.1 zkETH
-      `${toBaseUnits('1', 18)}`, // 1 zkETH
-      `${toBaseUnits('10', 18)}`, // 10 zkETH
-      `${toBaseUnits('30', 18)}`, // 30 zkETH
-    ],
-    [
-      `${toBaseUnits('200', 18)}`, // 200 zkDAI
-      `${toBaseUnits('2000', 18)}`, // 2000 zkDAI
-      `${toBaseUnits('20000', 18)}`, // 20000 zkDAI
-      `${toBaseUnits('100000', 18)}`, // 100000 zkDAI
-    ],
-    [
-      `${toBaseUnits('0.01', 8)}`, // 0.01 zkrenBTC
-      `${toBaseUnits('0.1', 8)}`, // 0.1 zkrenBTC
-      `${toBaseUnits('1', 8)}`, // 1 zkrenBTC
-      `${toBaseUnits('2', 8)}`, // 2 zkrenBTC
-    ],
   ]),
   sessionTimeout: '30', // days
   maxAvailableAssetId: '2',
@@ -142,20 +119,26 @@ export async function getConfig(): Promise<Config> {
     priceFeedContractAddress0,
     priceFeedContractAddress1,
     priceFeedContractAddress2,
-    txAmountLimits,
-    withdrawSafeAmounts,
+    txAmountLimits: txAmountLimitsStr,
     sessionTimeout,
     maxAvailableAssetId,
     debug,
   } = { ...defaultConfig, ...removeEmptyValues(fromEnvVars()), ...removeEmptyValues(fromLocalStorage()) };
 
+  const txAmountLimits = JSON.parse(txAmountLimitsStr);
+
   return {
     ...(await getDeployConfig(deployTag)),
-    priceFeedContractAddresses: [priceFeedContractAddress0, priceFeedContractAddress1, priceFeedContractAddress2],
-    txAmountLimits: JSON.parse(txAmountLimits).map((amount: string) => BigInt(amount)),
-    withdrawSafeAmounts: JSON.parse(withdrawSafeAmounts).map((amounts: string[]) =>
-      amounts.map((a: string) => BigInt(a)),
-    ),
+    priceFeedContractAddresses: {
+      [S.ETH]: priceFeedContractAddress0,
+      [S.DAI]: priceFeedContractAddress1,
+      [S.renBTC]: priceFeedContractAddress2,
+    },
+    txAmountLimits: {
+      [S.ETH]: BigInt(txAmountLimits[0]),
+      [S.DAI]: BigInt(txAmountLimits[1]),
+      [S.renBTC]: BigInt(txAmountLimits[2]),
+    },
     sessionTimeout: +(sessionTimeout || 1),
     maxAvailableAssetId: +maxAvailableAssetId,
     debug,

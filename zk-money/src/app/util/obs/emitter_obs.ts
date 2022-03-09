@@ -1,5 +1,4 @@
 import { BaseObs } from './base_obs';
-import { IObs, ObsUnlisten } from './types';
 
 type EmitterCleanup = (() => void) | undefined | void;
 export type Emitter<TEmitted> = (emit: (value: TEmitted) => void) => EmitterCleanup;

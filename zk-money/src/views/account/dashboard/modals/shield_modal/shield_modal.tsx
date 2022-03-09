@@ -1,21 +1,29 @@
+import { isKnownAssetAddressString } from 'alt-model/known_assets/known_asset_addresses';
+import { RemoteAsset } from 'alt-model/types';
 import { Card, CardHeaderSize } from 'ui-components';
 import { useApp, useAssetPrice, useProviderState, useShieldForm } from 'alt-model';
-import { assets, ShieldStatus } from 'app';
+import { ShieldStatus } from 'app';
 import { CloseButtonWhite, Modal } from 'components';
 import { Theme } from 'styles';
 import { Shield } from './shield';
 import style from './shield_modal.module.scss';
 
-export function ShieldModal({ assetId, onClose }: { assetId: number; onClose: () => void }) {
+export function ShieldModal({ asset, onClose }: { asset: RemoteAsset; onClose: () => void }) {
   const { config, userSession } = useApp();
-  const { formValues, shieldForm, processing } = useShieldForm(assetId);
+  const { formValues, shieldForm, processing } = useShieldForm(asset);
   const generatingKey = formValues?.status.value === ShieldStatus.GENERATE_KEY;
   const theme = generatingKey ? Theme.GRADIENT : Theme.WHITE;
-  const assetPrice = useAssetPrice(assetId);
+  const assetPrice = useAssetPrice(asset.id);
   const providerState = useProviderState();
   const canClose = !processing && !generatingKey;
 
-  if (!formValues) return <></>;
+  if (!formValues || !asset) return <></>;
+
+  const assetAddressStr = asset.address.toString();
+  if (!isKnownAssetAddressString(assetAddressStr)) {
+    throw new Error(`Attempting SendModal with unknown asset address '${assetAddressStr}'`);
+  }
+  const txAmountLimit = config.txAmountLimits[assetAddressStr];
 
   return (
     <Modal>
@@ -29,9 +37,9 @@ export function ShieldModal({ assetId, onClose }: { assetId: number; onClose: ()
         cardContent={
           <Shield
             theme={theme}
-            asset={assets[assetId]}
+            asset={asset}
             assetPrice={assetPrice ?? 0n}
-            txAmountLimit={config.txAmountLimits[assetId]}
+            txAmountLimit={txAmountLimit}
             providerState={providerState}
             form={formValues}
             explorerUrl={config.explorerUrl}

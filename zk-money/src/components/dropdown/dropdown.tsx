@@ -37,7 +37,7 @@ export function Dropdown<T>(props: DropdownProps<T>) {
           onClick={() => !option.disabled && props.onClick && props.onClick(option)}
         >
           <div className={cx(style.dropdownOption, option.disabled && style.disabled)}>
-            {option.image && <img src={option.image} />}
+            {option.image && <img src={option.image} alt="" />}
             {option.label}
           </div>
         </div>

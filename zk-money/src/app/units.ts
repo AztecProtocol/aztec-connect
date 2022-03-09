@@ -1,5 +1,5 @@
-export const min = (...values: bigint[]) => values.reduce((minValue, v) => (minValue <= v ? minValue : v), values[0]);
-export const max = (...values: bigint[]) => values.reduce((maxValue, v) => (maxValue >= v ? maxValue : v), values[0]);
+export const min = (...values: bigint[]) => values.reduce((minValue, v) => (minValue <= v ? minValue : v), values[0]!);
+export const max = (...values: bigint[]) => values.reduce((maxValue, v) => (maxValue >= v ? maxValue : v), values[0]!);
 export const sum = (values: bigint[]) => values.reduce((sum, v) => sum + v, 0n);
 
 export const tenTo = (power: number) => BigInt('1'.padEnd(power + 1, '0'));

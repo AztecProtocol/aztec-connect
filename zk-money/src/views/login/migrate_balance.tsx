@@ -1,6 +1,8 @@
+import { getAssetIconWhite } from 'alt-model/known_assets/known_asset_display_data';
+import { useRemoteAssetForId } from 'alt-model/top_level_context';
 import React from 'react';
 import styled from 'styled-components/macro';
-import { assets, MigratingAsset } from '../../app';
+import { MigratingAsset } from '../../app';
 import { Button, MigratingAssetInfo, MovingBubble, PaddedBlock } from '../../components';
 
 const Root = styled.div`
@@ -14,6 +16,16 @@ const ContentRoot = styled(PaddedBlock)`
   justify-content: center;
   width: 100%;
 `;
+
+function ActiveAssetItem({ activeAsset }: { activeAsset: MigratingAsset }) {
+  const remoteAsset = useRemoteAssetForId(activeAsset.assetId);
+  if (!remoteAsset) return <></>;
+  return (
+    <ContentRoot>
+      <MovingBubble icon={getAssetIconWhite(remoteAsset.address)} />
+    </ContentRoot>
+  );
+}
 
 interface MigrateBalanceProps {
   migratingAssets: MigratingAsset[];
@@ -40,11 +52,7 @@ export const MigrateBalance: React.FunctionComponent<MigrateBalanceProps> = ({
           <Button theme="white" text="Migrate" onClick={onMigrateNotes} />
         </ContentRoot>
       )}
-      {!!activeAsset && (
-        <ContentRoot>
-          <MovingBubble icon={assets[activeAsset.assetId].iconWhite} />
-        </ContentRoot>
-      )}
+      {!!activeAsset && <ActiveAssetItem activeAsset={activeAsset} />}
     </Root>
   );
 };

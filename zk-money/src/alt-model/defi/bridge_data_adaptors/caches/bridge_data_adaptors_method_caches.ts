@@ -1,18 +1,24 @@
 import type { EthereumProvider } from '@aztec/sdk';
-import type { BlockchainAssetsObs } from 'alt-model/top_level_context/blockchain_assets_obs';
+import type { DefiRecipesObs } from 'alt-model/defi/recipes';
+import type { RemoteAssetsObs } from 'alt-model/top_level_context/remote_assets_obs';
 import type { Config } from 'config';
 import { createBridgeDataAdaptorObsCache } from './bridge_data_adaptor_cache';
 import { createExpectedYearlyOutputObsCache } from './expected_yearly_output_obs_cache';
 import { createMarketSizeObsCache } from './market_size_obs_cache';
 
 export function createBridgeDataAdaptorsMethodCaches(
+  defiRecipesObs: DefiRecipesObs,
   ethereumProvider: EthereumProvider,
-  blockchainAssetsObs: BlockchainAssetsObs,
+  remoteAssetsObs: RemoteAssetsObs,
   config: Config,
 ) {
-  const adaptorsObsCache = createBridgeDataAdaptorObsCache(ethereumProvider, config);
-  const expectedYearlyOutputObsCache = createExpectedYearlyOutputObsCache(adaptorsObsCache, blockchainAssetsObs);
-  const marketSizeObsCache = createMarketSizeObsCache(adaptorsObsCache, blockchainAssetsObs);
+  const adaptorsObsCache = createBridgeDataAdaptorObsCache(defiRecipesObs, ethereumProvider, config);
+  const expectedYearlyOutputObsCache = createExpectedYearlyOutputObsCache(
+    defiRecipesObs,
+    adaptorsObsCache,
+    remoteAssetsObs,
+  );
+  const marketSizeObsCache = createMarketSizeObsCache(defiRecipesObs, adaptorsObsCache, remoteAssetsObs);
   return { adaptorsObsCache, expectedYearlyOutputObsCache, marketSizeObsCache };
 }
 

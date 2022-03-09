@@ -1,6 +1,6 @@
+import type { RemoteAsset } from 'alt-model/types';
 import { useState } from 'react';
 import { InfoWrap, AmountSelection } from 'ui-components';
-import { Asset } from 'app';
 import { BlockTitle, BorderBox, InfoButton } from 'components';
 import { MiniBalanceIndicator } from './mini_balance_indicator';
 import { Privacy } from './privacy';
@@ -27,7 +27,7 @@ function Info() {
 }
 
 interface AmountSectionProps {
-  asset: Asset;
+  asset: RemoteAsset;
   amountStr: string;
   maxAmount: bigint;
   onChangeAmountStr: (amountStr: string) => void;
