@@ -51,17 +51,16 @@ const getBridgeTxCost = (bridgeSpec: BridgeSpec) => {
   const txFee = txGas * bridgeSpec.gasCost;
   return txFee;
 };
-
+/*
 export class DefiAgent extends Agent {
   constructor(
     fundsSourceAddress: EthAddress,
     sdk: AztecSdk,
     provider: WalletProvider,
     id: number,
-    queue: MemoryFifo<() => Promise<void>>,
     private numTransferPairs: number,
   ) {
-    super('Defi', fundsSourceAddress, sdk, id, provider, queue);
+    super('Defi', fundsSourceAddress, sdk, id, provider);
   }
 
   protected getNumAdditionalUsers(): number {
@@ -70,7 +69,7 @@ export class DefiAgent extends Agent {
 
   public async run(stats: Stats) {
     try {
-      await this.serializeTx(this.completePendingDeposit);
+      this.sdk.awaitSettlement(await this.completePendingDeposit());
       stats.numDeposits++;
       for (let i = 0; i < this.numTransferPairs; i++) {
         console.log(`${this.agentId()} swapping ETH for DAI iteration: ${i}`);
@@ -78,13 +77,13 @@ export class DefiAgent extends Agent {
           1000000n +
           getBridgeTxCost(bridgeConfigs[1]) / DAI_TO_ETH +
           (await this.sdk.getTransferFees(this.assetId))[0].value;
-        await this.serializeTx(() => this.singleDefiSwap(bridgeConfigs[0], (transferValue * 11n) / 10n));
+        await this.sdk.awaitSettlement(await this.singleDefiSwap(bridgeConfigs[0], (transferValue * 11n) / 10n));
         stats.numDefi++;
         console.log(`${this.agentId()} swapping DAI for ETH iteration: ${i}`);
-        await this.serializeTx(() => this.singleDefiSwap(bridgeConfigs[1], DAI_TO_ETH));
+        await this.sdk.awaitSettlement(await this.singleDefiSwap(bridgeConfigs[1], DAI_TO_ETH));
         stats.numDefi++;
       }
-      await this.serializeTx(this.withdraw);
+      await this.sdk.awaitSettlement(await this.withdraw());
       stats.numWithdrawals++;
     } catch (err: any) {
       console.log(`${this.agentId()} ERROR: `, err);
@@ -98,7 +97,7 @@ export class DefiAgent extends Agent {
   private async calcDeposit() {
     const assetId = this.assetId;
     // Nothing to do if we have a balance.
-    if (this.sdk.getBalance(assetId, this.primaryUser.user.id)) {
+    if (this.sdk.getBalance(assetId, this.user.user.id)) {
       return;
     }
     const costOfEachTransfer =
@@ -131,8 +130,8 @@ export class DefiAgent extends Agent {
       new BitConfig(false, false, false, false, false, false),
       0,
     );
-    const currentBalanceInputAsset = this.sdk.getBalance(spec.inputAsset, this.primaryUser.user.id);
-    const currentBalanceOutputAsset = this.sdk.getBalance(spec.outputAsset, this.primaryUser.user.id);
+    const currentBalanceInputAsset = this.sdk.getBalance(spec.inputAsset, this.user.user.id);
+    const currentBalanceOutputAsset = this.sdk.getBalance(spec.outputAsset, this.user.user.id);
     console.log(
       `${this.agentId()} balances, ${spec.inputAsset}: ${formatNumber(currentBalanceInputAsset)}, ${
         spec.outputAsset
@@ -149,8 +148,8 @@ export class DefiAgent extends Agent {
     );
     console.log(`${this.agentId()} building Defi proof`);
     const controller = this.sdk.createDefiController(
-      this.primaryUser.user.id,
-      this.primaryUser.signer,
+      this.user.user.id,
+      this.user.signer,
       bridgeId,
       { assetId: spec.inputAsset, value: amountToTransfer },
       { assetId: spec.inputAsset, value: txFee + jsTxFee },
@@ -162,3 +161,4 @@ export class DefiAgent extends Agent {
     return hash;
   };
 }
+*/

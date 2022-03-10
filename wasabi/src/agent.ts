@@ -3,45 +3,35 @@ import {
   AztecSdkUser,
   EthAddress,
   EthAsset,
-  MemoryFifo,
   SchnorrSigner,
   toBaseUnits,
-  TxId,
+  TxSettlementTime,
   WalletProvider,
 } from '@aztec/sdk';
 import { randomBytes } from 'crypto';
-import { Stats } from './stats';
-
-export const TX_SETTLEMENT_TIMEOUT = 12 * 3600;
 
 export class UserData {
   constructor(public address: EthAddress, public signer: SchnorrSigner, public user: AztecSdkUser) {}
 }
 
-export abstract class Agent {
-  protected users: UserData[] = [];
-  public depositPromise?: Promise<void>;
-  private depositSent!: () => void;
-  protected payoutFee: bigint = toBaseUnits('420', 12);
-  protected depositFee?: bigint;
+export enum AgentState {
+  RUNNING,
+  AWAITING,
+  COMPLETE,
+}
+
+export class Agent {
+  private assetId = 0;
+  private state = AgentState.RUNNING;
 
   constructor(
-    protected type: string,
-    protected fundsSourceAddress: EthAddress,
-    protected sdk: AztecSdk,
-    protected id: number,
-    protected provider: WalletProvider,
-    private queue: MemoryFifo<() => Promise<void>>,
-    protected assetId = 0,
-  ) {
-    this.depositPromise = new Promise(resolve => {
-      this.depositSent = resolve;
-    });
-  }
+    private fundingAddress: EthAddress,
+    private sdk: AztecSdk,
+    private provider: WalletProvider,
+    private id: number,
+  ) {}
 
-  protected abstract getNumAdditionalUsers(): number;
-
-  private async createUser() {
+  public async createUser() {
     const privateKey = randomBytes(32);
     const address = this.provider.addAccount(privateKey);
     const user = await this.sdk.addUser(privateKey, undefined, true);
@@ -49,137 +39,78 @@ export abstract class Agent {
     return new UserData(address, signer, user);
   }
 
-  public async setup(depositFee?: bigint) {
-    this.depositFee = depositFee;
-    this.users.push(await this.createUser());
-
-    for (let i = 0; i < this.getNumAdditionalUsers(); i++) {
-      this.users.push(await this.createUser());
-    }
-  }
-
-  get primaryUser() {
-    return this.users[0];
-  }
-
-  private async fundEthAddress(deposit: bigint) {
-    // Fund enough to ensure we can pay tx fee to deposit to contract.
-    const balance = await this.sdk.getPublicBalance(this.assetId, this.primaryUser.address);
-    const toFund = toBaseUnits('2', 18);
-    const required = toFund + deposit;
-
-    if (balance >= required) {
-      return;
-    }
-
-    const value = required - balance;
-    console.log(`${this.agentId()} funding ${this.primaryUser.address} with ${value} wei...`);
-
+  public async fundEthAddress(userData: UserData, deposit: bigint) {
+    console.log(`agent ${this.id} funding ${userData.address} with ${deposit} wei...`);
     const asset: EthAsset = new EthAsset(this.provider);
-    console.log(`${this.agentId()} transaction sent`);
-    await asset.transfer(value, this.fundsSourceAddress, this.primaryUser.address);
-    console.log(
-      `${this.agentId()} transaction completed, new balance: ${await this.sdk.getPublicBalance(
-        this.assetId,
-        this.primaryUser.address,
-      )}`,
-    );
+    const txHash = await asset.transfer(deposit, this.fundingAddress, userData.address);
+    return this.sdk.getTransactionReceipt(txHash);
   }
 
-  public async repaySourceAddress() {
-    let balance = await this.sdk.getPublicBalance(this.assetId, this.primaryUser.address);
-    balance -= this.payoutFee;
+  public async deposit(userData: UserData, deposit: bigint, instant = false) {
+    const { user, signer, address } = userData;
+    const fee = (await this.sdk.getDepositFees(this.assetId))[
+      instant ? TxSettlementTime.INSTANT : TxSettlementTime.NEXT_ROLLUP
+    ];
+    console.log(`agent ${this.id} sending deposit with fee ${fee.value}...`);
 
-    console.log(`${this.agentId()} funding ${this.fundsSourceAddress} with ${balance} wei...`);
-    const asset: EthAsset = new EthAsset(this.provider);
-    console.log(`${this.agentId()} transaction sent`);
-    await asset.transfer(balance, this.primaryUser.address, this.fundsSourceAddress);
-    console.log(
-      `${this.agentId()} transaction completed, new balance: ${await this.sdk.getPublicBalance(
-        this.assetId,
-        this.primaryUser.address,
-      )}`,
-    );
-  }
-
-  private async depositToContract(deposit: bigint) {
-    console.log(`${this.agentId()} depositing to contract...`);
-    await this.sdk.depositFundsToContract({ assetId: this.assetId, value: deposit }, this.primaryUser.address);
-    console.log(`${this.agentId()} deposit completed`);
-  }
-
-  protected abstract getInitialDeposit(): Promise<bigint | undefined>;
-
-  public async depositToRollup() {
-    const deposit = await this.getInitialDeposit();
-    if (!deposit) {
-      return;
-    }
-    await this.fundEthAddress(deposit);
-    await this.depositToContract(deposit);
-  }
-
-  public completePendingDeposit = async () => {
-    const { user, signer, address } = this.primaryUser;
-    const fee = this.depositFee
-      ? { assetId: this.assetId, value: this.depositFee }
-      : (await this.sdk.getDepositFees(this.assetId))[0];
-    console.log(`${this.agentId()} sending pending deposit with fee ${fee.value}...`);
-    const pendingDeposit = await this.sdk.getUserPendingDeposit(this.assetId, address);
-    const value = pendingDeposit - fee.value;
     const controller = this.sdk.createDepositController(
       user.id,
       signer,
-      { assetId: this.assetId, value },
+      { assetId: 0, value: deposit - fee.value },
       fee,
       address,
     );
+    await controller.depositFundsToContract();
     await controller.createProof();
     await controller.sign();
-    const hash = await controller.send();
-    this.depositSent();
-    return hash;
-  };
+    await controller.send();
+    return this.signalAwaiting(controller.awaitSettlement());
+  }
 
-  protected withdraw = async () => {
-    console.log(`${this.agentId()} withdrawing...`);
-    const { user, signer } = this.primaryUser;
-    const [fee] = await this.sdk.getWithdrawFees(this.assetId);
+  public async withdraw(userData: UserData) {
+    const { user, signer } = userData;
+    const fee = (await this.sdk.getWithdrawFees(this.assetId))[TxSettlementTime.NEXT_ROLLUP];
     const balance = user.getBalance(this.assetId);
     const value = balance - fee.value;
-    console.log(`${this.agentId()} withdrawing ${value} WEI to wallet`);
+    console.log(`agent ${this.id} withdrawing ${value} wei to ${userData.address.toString()}`);
     const controller = this.sdk.createWithdrawController(
       user.id,
       signer,
       { assetId: this.assetId, value },
       fee,
-      this.fundsSourceAddress,
+      userData.address,
     );
     await controller.createProof();
-    return controller.send();
-  };
+    await controller.send();
+    return this.signalAwaiting(controller.awaitSettlement());
+  }
+
+  public async repayFundingAddress(userData: UserData) {
+    const fee = toBaseUnits('420', 12);
+    const value = (await this.sdk.getPublicBalance(this.assetId, userData.address)) - fee;
+
+    console.log(`agent ${this.id} refunding ${this.fundingAddress} with ${value} wei...`);
+    const asset: EthAsset = new EthAsset(this.provider);
+    const txHash = await asset.transfer(value, userData.address, this.fundingAddress);
+    return this.sdk.getTransactionReceipt(txHash);
+  }
+
+  public getState() {
+    return this.state;
+  }
 
   /**
-   * The SDK does not support parallel execution.
-   * Given a function that resolves to a TxId, will execute that function in serial across all agents sharing the
-   * queue. Resolves when the TxId is settled.
+   * Given a promise (one that is awaiting one of more tx settlements), wraps it such the the Agent is flagged
+   * as AWAITING. This can be polled externally so that a higher level system can send a flushing transaction.
    */
-  protected async serializeTx(fn: () => Promise<TxId | undefined>) {
-    const txId = await this.serializeAny(fn);
-    if (!txId) {
-      return;
-    }
-    console.log(`Agent ${this.id} awaiting settlement...`);
-    await this.sdk.awaitSettlement(txId, TX_SETTLEMENT_TIMEOUT);
+  public async signalAwaiting(awaitSettlementPromise: Promise<void>) {
+    this.state = AgentState.AWAITING;
+    return awaitSettlementPromise.then(() => {
+      this.state = AgentState.RUNNING;
+    });
   }
 
-  protected async serializeAny(fn: () => Promise<any>) {
-    return await new Promise<any>((resolve, reject) => this.queue.put(() => fn().then(resolve).catch(reject)));
+  public complete() {
+    this.state = AgentState.COMPLETE;
   }
-
-  protected agentId() {
-    return `${this.type} agent ${this.id}`;
-  }
-
-  abstract run(stats: Stats): Promise<void>;
 }

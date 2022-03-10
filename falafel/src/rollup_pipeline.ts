@@ -26,6 +26,7 @@ export class RollupPipeline {
     metrics: Metrics,
     rollupBeneficiary: EthAddress,
     publishInterval: number,
+    flushAfterIdle: number,
     maxProviderGasPrice: bigint,
     gasLimit: number,
     numInnerRollupTxs: number,
@@ -73,6 +74,7 @@ export class RollupPipeline {
       numInnerRollupTxs,
       numOuterRollupProofs,
       publishInterval,
+      flushAfterIdle,
       bridgeResolver,
     );
   }
@@ -109,6 +111,7 @@ export class RollupPipelineFactory {
     private metrics: Metrics,
     private rollupBeneficiary: EthAddress,
     private publishInterval: number,
+    private flushAfterIdle: number,
     private maxProviderGasPrice: bigint,
     private gasLimit: number,
     private numInnerRollupTxs: number,
@@ -116,8 +119,9 @@ export class RollupPipelineFactory {
     private bridgeResolver: BridgeResolver,
   ) {}
 
-  public setConf(publishInterval: number, maxProviderGasPrice: bigint, gasLimit: number) {
+  public setConf(publishInterval: number, flushAfterIdle: number, maxProviderGasPrice: bigint, gasLimit: number) {
     this.publishInterval = publishInterval;
+    this.flushAfterIdle = flushAfterIdle;
     this.maxProviderGasPrice = maxProviderGasPrice;
     this.gasLimit = gasLimit;
   }
@@ -133,6 +137,7 @@ export class RollupPipelineFactory {
       this.metrics,
       this.rollupBeneficiary,
       this.publishInterval,
+      this.flushAfterIdle,
       this.maxProviderGasPrice,
       this.gasLimit,
       this.numInnerRollupTxs,

@@ -29,6 +29,7 @@ export interface RuntimeConfig {
   acceptingTxs: boolean;
   useKeyCache: boolean;
   publishInterval: number;
+  flushAfterIdle: number;
   gasLimit: number;
   baseTxGas: number;
   verificationGas: number;

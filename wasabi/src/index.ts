@@ -3,15 +3,14 @@ import 'log-timestamp';
 import 'source-map-support/register';
 
 const {
-  ETHEREUM_HOST = 'https://goerli.infura.io/v3/6a04b7c89c5b421faefde663f787aa35',
-  NUM_DEFI_AGENTS = '1',
-  NUM_PAYMENT_AGENTS = '1',
+  ETHEREUM_HOST = 'http://localhost:8545',
+  PRIVATE_KEY = '',
+  AGENT_TYPE = 'payment',
+  NUM_AGENTS = '1',
   NUM_DEFI_SWAPS = '20',
-  NUM_PAYMENTS = '600',
-  LOOP = '0',
-  ROLLUP_HOST = 'https://api.aztec.network/falafel',
-  NUM_SDKS = '8',
-  ROLLUP_SIZE = '112',
+  NUM_PAYMENTS = '20',
+  LOOPS = '1',
+  ROLLUP_HOST = 'http://localhost:8081',
   MEMORY_DB = '0',
 } = process.env;
 
@@ -20,25 +19,20 @@ async function main() {
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
 
-  const loop = +LOOP;
-  const numSdks = +NUM_SDKS;
-  let count = 1;
-  do {
-    const agent = new AgentManager(
-      +NUM_DEFI_AGENTS,
-      +NUM_PAYMENT_AGENTS,
+  const loops = +LOOPS;
+  for (let runNumber = 0; runNumber != loops; ++runNumber) {
+    const agentManager = new AgentManager(
+      Buffer.from(PRIVATE_KEY, 'hex'),
+      AGENT_TYPE,
+      +NUM_AGENTS,
       +NUM_DEFI_SWAPS,
       +NUM_PAYMENTS,
       ROLLUP_HOST,
       ETHEREUM_HOST,
       !!+MEMORY_DB,
-      numSdks,
-      +ROLLUP_SIZE,
     );
-    await agent.start(count);
-    await agent.shutdown();
-    count += 1;
-  } while (loop > 0);
+    await agentManager.run(runNumber);
+  }
 }
 
 main().catch(console.log);

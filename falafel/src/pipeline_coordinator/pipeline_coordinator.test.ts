@@ -136,6 +136,7 @@ describe('pipeline_coordinator', () => {
       numInnerRollupTxs,
       numOuterRollupProofs,
       publishInterval,
+      0,
       bridgeResolver as any,
     );
   });

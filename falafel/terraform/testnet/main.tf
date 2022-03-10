@@ -188,6 +188,10 @@ resource "aws_ecs_task_definition" "falafel" {
       {
         "name": "PROOF_GENERATOR_MODE",
         "value": "split"
+      },
+      {
+        "name": "FLUSH_AFTER_IDLE",
+        "value": "10"
       }
     ],
     "mountPoints": [

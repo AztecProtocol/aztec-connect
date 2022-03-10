@@ -10,9 +10,9 @@ import { TxFeeResolver } from '../tx_fee_resolver';
 import { BridgeResolver } from '../bridge';
 import { PublishTimeManager } from './publish_time_manager';
 import { RollupCoordinator, TxPoolProfile } from './rollup_coordinator';
-
-import debug from 'debug';
 import { emptyProfile } from './rollup_profiler';
+import { TxDao } from '../entity';
+import debug from 'debug';
 
 export class PipelineCoordinator {
   private flush = false;
@@ -35,6 +35,7 @@ export class PipelineCoordinator {
     private numInnerRollupTxs: number,
     private numOuterRollupProofs: number,
     private publishInterval: number,
+    private flushAfterIdle: number,
     private bridgeResolver: BridgeResolver,
   ) {
     this.txPoolProfile = {
@@ -54,7 +55,7 @@ export class PipelineCoordinator {
 
   /**
    * Starts monitoring for txs, and once conditions are met, creates a rollup.
-   * Stops monitoring once a rollup has been successfully published or `stop` called.
+   * Stops monitoring once a rollup has been successfully published or `stop` or 'flushTxs' called.
    */
   public start() {
     if (this.running) {
@@ -64,13 +65,15 @@ export class PipelineCoordinator {
     this.running = true;
 
     const fn = async () => {
-      await this.reset();
+      await this.init();
 
       await this.claimProofCreator.create(this.numInnerRollupTxs * this.numOuterRollupProofs);
 
       while (this.running) {
         this.log('Getting pending txs...');
         const pendingTxs = await this.rollupDb.getPendingTxs();
+
+        this.flush = this.flush || this.minTxWaitTimeExceeded(pendingTxs);
 
         this.log('Processing pending txs...');
         this.txPoolProfile = await this.rollupCoordinator.processPendingTxs(pendingTxs, this.flush);
@@ -105,11 +108,20 @@ export class PipelineCoordinator {
     await this.runningPromise;
   }
 
+  /**
+   * Triggers the pipeline to flush any pending txs and exit. A graceful stop().
+   */
   public flushTxs() {
     this.flush = true;
   }
 
-  private async reset() {
+  /**
+   * Initialize the pipeline.
+   * Resets db state such that any lingering state from a prior pipeline that didn't complete for any reason, is erased.
+   * Inserts the defi interaction notes emitted from the contract into the defi tree.
+   * Constructs the RollupCoordinator.
+   */
+  private async init() {
     this.flush = false;
 
     // Erase any outstanding rollups and proofs to release unsettled txs.
@@ -149,5 +161,15 @@ export class PipelineCoordinator {
       this.feeResolver,
       defiInteractionNotes,
     );
+  }
+
+  /**
+   * Returns true if there are pending txs, and the latest is older than flushAfterIdle.
+   */
+  private minTxWaitTimeExceeded(txs: TxDao[]) {
+    if (!this.flushAfterIdle || !txs.length) {
+      return false;
+    }
+    return new Date().getTime() - txs[txs.length - 1].created.getTime() > this.flushAfterIdle * 1000;
   }
 }

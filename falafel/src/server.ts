@@ -47,6 +47,7 @@ export class Server {
       feePayingAssetAddresses,
       runtimeConfig: {
         publishInterval,
+        flushAfterIdle,
         baseTxGas,
         maxFeeGasPrice,
         feeGasPriceMultiplier,
@@ -92,6 +93,7 @@ export class Server {
       metrics,
       signingAddress,
       publishInterval,
+      flushAfterIdle,
       maxProviderGasPrice,
       gasLimit,
       numInnerRollupTxs,
@@ -150,13 +152,14 @@ export class Server {
         maxFeeGasPrice,
         feeGasPriceMultiplier,
         publishInterval,
+        flushAfterIdle: minTxWaitInterval,
         maxProviderGasPrice,
         gasLimit,
         defaultDeFiBatchSize,
       },
     } = this.configurator.getConfVars();
     this.bridgeResolver.setConf(defaultDeFiBatchSize);
-    this.pipelineFactory.setConf(publishInterval, maxProviderGasPrice, gasLimit);
+    this.pipelineFactory.setConf(publishInterval, minTxWaitInterval, maxProviderGasPrice, gasLimit);
     this.txFeeResolver.setConf(baseTxGas, maxFeeGasPrice, feeGasPriceMultiplier, publishInterval);
   }
 

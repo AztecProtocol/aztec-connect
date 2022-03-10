@@ -16,12 +16,16 @@ export INITIAL_ETH_SUPPLY=1000000000000000000000
 export VK=MockVerificationKey
 
 # Falafel
-export BASE_TX_GAS=10000
-export PUBLISH_INTERVAL=3600
-export NUM_INNER_ROLLUP_TXS=28
-export NUM_OUTER_ROLLUP_PROOFS=4
+export MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW=1
+export BASE_TX_GAS=1
+export FEE_GAS_PRICE_MULTIPLIER=0.01
+export NUM_INNER_ROLLUP_TXS=3
+export NUM_OUTER_ROLLUP_PROOFS=2
+export ETHEREUM_POLL_INTERVAL=1000
+export PROVERLESS=true
+export FLUSH_AFTER_IDLE=10
 
 yarn clean_db
 yarn build
-`yarn -s deploy_rollup_processor 10000`
+`yarn -s deploy_rollup_processor`
 yarn start

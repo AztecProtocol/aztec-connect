@@ -84,7 +84,7 @@ resource "aws_ecs_task_definition" "wasabi" {
       },
       {
         "name": "NUM_AGENTS",
-        "value": "1"
+        "value": "3"
       },
       {
         "name": "LOOPS",
@@ -108,7 +108,7 @@ resource "aws_ecs_service" "wasabi" {
   name                               = "${var.DEPLOY_TAG}-wasabi"
   cluster                            = data.terraform_remote_state.setup_iac.outputs.ecs_cluster_id
   launch_type                        = "FARGATE"
-  desired_count                      = 0
+  desired_count                      = 1
   deployment_maximum_percent         = 100
   deployment_minimum_healthy_percent = 0
   platform_version                   = "1.4.0"
