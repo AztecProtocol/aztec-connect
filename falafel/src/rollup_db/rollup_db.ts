@@ -376,7 +376,7 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async updateClaimsWithResultRollupId(interactionNonce: number, interactionResultRollupId: number) {
-    await this.claimRep.update({ interactionNonce}, { interactionResultRollupId })
+    await this.claimRep.update({ interactionNonce }, { interactionResultRollupId });
   }
 
   public async confirmClaimed(nullifier: Buffer, claimed: Date) {

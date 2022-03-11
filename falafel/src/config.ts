@@ -1,6 +1,5 @@
-import { EthereumBlockchainConfig, EthersAdapter, WalletProvider } from '@aztec/blockchain';
+import { EthereumBlockchainConfig, EthersAdapter, JsonRpcProvider, WalletProvider } from '@aztec/blockchain';
 import { BridgeId, BridgeConfig, BitConfig } from '@aztec/barretenberg/bridge_id';
-import { JsonRpcProvider } from '@ethersproject/providers';
 import { RollupDao } from './entity/rollup';
 import { RollupProofDao } from './entity/rollup_proof';
 import { TxDao } from './entity/tx';
@@ -9,6 +8,7 @@ import { AccountDao } from './entity/account';
 import { ClaimDao } from './entity/claim';
 import { AssetMetricsDao } from './entity/asset_metrics';
 import { Configurator, ConfVars } from './configurator';
+import { EthereumRpc } from '@aztec/barretenberg/blockchain';
 
 function getEthereumBlockchainConfig({
   runtimeConfig: { gasLimit },
@@ -25,9 +25,9 @@ function getEthereumBlockchainConfig({
 }
 
 async function getProvider(ethereumHost: string, privateKey: Buffer) {
-  const ethersProvider = new JsonRpcProvider(ethereumHost);
-  const chainId = (await ethersProvider.getNetwork()).chainId;
-  const baseProvider = new EthersAdapter(ethersProvider);
+  const baseProvider = new JsonRpcProvider(ethereumHost);
+  const ethereumRpc = new EthereumRpc(baseProvider);
+  const chainId = await ethereumRpc.getChainId();
   const provider = new WalletProvider(baseProvider);
   const signingAddress = provider.addAccount(privateKey);
   return { provider, signingAddress, chainId };

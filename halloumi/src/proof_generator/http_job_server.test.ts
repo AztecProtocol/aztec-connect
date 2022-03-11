@@ -219,7 +219,9 @@ describe('HttpJobServer', () => {
     const { server, worker } = createWorker();
     // Save the successful value.
     const expectedValue = await server.createProof(createProofInput);
-    server.createProof.mockRejectedValue(new Error('Fail.'));
+    // The string 'Fail.' is not an Error object. This will cause a throw in the handler that otherwise would
+    // have NACK'ed the job, resulting in job state being unknown, and thus able to expire its timeout.
+    server.createProof.mockRejectedValue('Fail.');
     worker.start();
 
     // Give time for worker to fail the job, and enter its 1 second wait before retrying.

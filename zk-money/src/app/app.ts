@@ -1,6 +1,6 @@
 import type { CutdownAsset } from './types';
-import { GrumpkinAddress, JsonRpcProvider } from '@aztec/sdk';
-import { Web3Provider } from '@ethersproject/providers';
+import { GrumpkinAddress } from '@aztec/sdk';
+import { JsonRpcProvider } from '@ethersproject/providers';
 import { SdkObs } from 'alt-model/top_level_context/sdk_obs';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
@@ -76,8 +76,7 @@ export class App extends EventEmitter {
     this.activeAsset = initialAsset;
     this.loginMode = initialLoginMode;
     const provider = new JsonRpcProvider(config.mainnetEthereumHost);
-    const web3Provider = new Web3Provider(provider);
-    this.priceFeedService = new PriceFeedService(config.priceFeedContractAddresses, web3Provider, assets);
+    this.priceFeedService = new PriceFeedService(config.priceFeedContractAddresses, provider, assets);
     this.priceFeedService.init();
   }
 

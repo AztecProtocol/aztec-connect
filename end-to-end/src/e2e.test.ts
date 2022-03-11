@@ -1,4 +1,4 @@
-import { AztecSdk, createAztecSdk, EthAddress, EthereumRpc, TxId, TxSettlementTime, WalletProvider } from '@aztec/sdk';
+import { AztecSdk, createAztecSdk, EthAddress, EthereumRpc, TxId, TxSettlementTime } from '@aztec/sdk';
 import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';

@@ -1,4 +1,4 @@
-import { AztecSdk, EthAddress, JsonRpcProvider, WalletProvider } from '@aztec/sdk';
+import { AztecSdk, EthAddress, EthereumRpc, JsonRpcProvider, WalletProvider } from '@aztec/sdk';
 // import { DefiAgent } from './defi_agent';
 import { PaymentAgent } from './payment_agent';
 
@@ -50,13 +50,14 @@ export class AgentManager {
     const start = new Date();
 
     const ethereumProvider = new JsonRpcProvider(this.host);
+    const ethereumRpc = new EthereumRpc(ethereumProvider);
     this.provider = new WalletProvider(ethereumProvider);
     this.sdk = await this.initSdk();
 
     if (this.privateKey.length) {
       this.fundingAddress = this.provider.addAccount(this.privateKey);
     } else {
-      [this.fundingAddress] = await ethereumProvider.getAccounts();
+      [this.fundingAddress] = await ethereumRpc.getAccounts();
     }
 
     const fundingAddressBalance = await this.sdk.getPublicBalanceAv(0, this.fundingAddress);

@@ -38,11 +38,11 @@ export class RollupCreator {
       throw new Error('Txs empty.');
     }
 
-    console.log(`Creating proof for rollup ${rollup.rollupHash.toString('hex')} with ${txs.length} txs...`);
+    console.log(`Creating proof for tx rollup ${rollup.rollupHash.toString('hex')} with ${txs.length} txs...`);
     const end = this.metrics.txRollupTimer();
     const txRollupRequest = new TxRollupProofRequest(rollup);
     const proof = await this.proofGenerator.createProof(txRollupRequest.toBuffer());
-    console.log(`Proof received: ${proof.length} bytes`);
+    console.log(`Tx rollup proof received: ${proof.length} bytes`);
     end();
 
     if (!proof) {

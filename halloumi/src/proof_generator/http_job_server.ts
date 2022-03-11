@@ -105,7 +105,7 @@ export class HttpJobServer implements ProofGenerator {
 
   private async completeJob(buf: Buffer) {
     this.log('received result for job: ', Protocol.logUnpack(buf).id);
-    const { id, data } = Protocol.unpack(buf);
+    const { id, cmd, data } = Protocol.unpack(buf);
 
     const index = this.jobs.findIndex(j => id.equals(j.id));
     if (index === -1) {
@@ -115,8 +115,12 @@ export class HttpJobServer implements ProofGenerator {
     // Remove the completed job from the job set.
     const [job] = this.jobs.splice(index, 1);
 
-    job.resolve(data);
-    this.log('resolved');
+    if (cmd === Command.ACK) {
+      job.resolve(data);
+      this.log('resolved');
+    } else {
+      job.reject(new Error(data.toString('utf8')));
+    }
   }
 
   private async ping(jobId: Buffer) {

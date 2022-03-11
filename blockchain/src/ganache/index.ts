@@ -1,19 +1,17 @@
 import { Web3Provider } from '@ethersproject/providers';
 import { Contract } from 'ethers';
 import { EthAddress } from '@aztec/barretenberg/address';
-import { TxHash } from '@aztec/barretenberg/blockchain';
+import { EthereumRpc, TxHash } from '@aztec/barretenberg/blockchain';
 import { Command } from 'commander';
 import { purchaseTokens, MainnetAddresses, RollupProcessor, JsonRpcProvider } from '..';
-import { setBlockchainTime, getCurrentBlockTime} from '../manipulate_blocks';
-import { decodeErrorFromContract, decodeSelector } from '../contracts/decode_error';
+import { setBlockchainTime, getCurrentBlockTime } from '../manipulate_blocks';
+import { decodeErrorFromContractByTxHash, decodeSelector } from '../contracts/decode_error';
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 import * as RollupAbi from '../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
 import * as ElementAbi from '../artifacts/contracts/bridges/ElementBridge.sol/ElementBridge.json';
 import { WalletProvider } from '../provider';
 
-const {
-  PRIVATE_KEY
-} = process.env;
+const { PRIVATE_KEY } = process.env;
 
 export const abis: { [key: string]: any } = {
   Rollup: RollupAbi,
@@ -28,7 +26,7 @@ const getProvider = (url: string) => {
     return provider;
   }
   return new JsonRpcProvider(url);
-}
+};
 
 export async function retrieveEvents(
   contractAddress: string,
@@ -52,7 +50,7 @@ export async function decodeError(
 ) {
   const web3 = new Web3Provider(provider);
   const contract = new Contract(contractAddress, abis[contractName].abi, web3.getSigner());
-  return await decodeErrorFromContract(contract, txHash, provider);
+  return await decodeErrorFromContractByTxHash(contract, txHash, provider);
 }
 
 const program = new Command();
@@ -64,7 +62,7 @@ async function main() {
     .argument('<time>', 'the time you wish to set for the next block, unix timestamp format')
     .argument('[url]', 'your ganache url', 'http://localhost:8545')
     .action(async (time: any, url: any) => {
-      const provider = getProvider(url)
+      const provider = getProvider(url);
       const date = new Date(parseInt(time));
       await setBlockchainTime(date.getTime(), provider);
       console.log(`New block time ${await getCurrentBlockTime(provider)}`);
@@ -78,7 +76,7 @@ async function main() {
     .argument('<txHash>', 'the tx hash that you wish to decode, as a hex string')
     .argument('[url]', 'your ganache url', 'http://localhost:8545')
     .action(async (contractAddress, contractName, txHash, url) => {
-      const provider = getProvider(url)
+      const provider = getProvider(url);
       const error = await decodeError(contractAddress, contractName, txHash, provider);
       if (!error) {
         console.log(`Failed to retrieve error for tx ${txHash}`);
@@ -100,11 +98,11 @@ async function main() {
         await rollupProcessor.processAsyncDefiInteraction(parseInt(nonce));
       } catch (err: any) {
         const result = decodeSelector(rollupProcessor.contract, err.error.data.result.slice(2));
-        console.log("Failed to process async defi interaction, error: ", result);
-      }      
+        console.log('Failed to process async defi interaction, error: ', result);
+      }
     });
 
-    program
+  program
     .command('extractEvents')
     .description('extract events emitted from a contract')
     .argument('<contractAddress>', 'the address of the deployed contract, as a hex string')
@@ -115,29 +113,51 @@ async function main() {
     .argument('[url]', 'your ganache url', 'http://localhost:8545')
     .action(async (contractAddress, contractName, eventName, from, to, url) => {
       const provider = getProvider(url);
-      const logs = await retrieveEvents(contractAddress, contractName, provider, eventName, parseInt(from), to ? parseInt(to) : undefined);
-      console.log("Received event args ", logs.map(l => l.args));
+      const logs = await retrieveEvents(
+        contractAddress,
+        contractName,
+        provider,
+        eventName,
+        parseInt(from),
+        to ? parseInt(to) : undefined,
+      );
+      console.log(
+        'Received event args ',
+        logs.map(l => l.args),
+      );
     });
 
-    program
+  program
     .command('purchaseTokens')
     .description('purchase tokens for an account')
     .argument('<tokenAddress>', 'the address of the token contract, as a hex string')
     .argument('<tokenQuantity>', 'the quantity of token you want to attempt to purchase')
-    .argument('[spender]', 'the address of the account to purchase the token defaults to 1st default account 0xf39...', undefined)
+    .argument(
+      '[spender]',
+      'the address of the account to purchase the token defaults to 1st default account 0xf39...',
+      undefined,
+    )
     .argument('[recipient]', 'the address of the account to receive the tokens defaults to the spender', undefined)
     .argument('[maxAmountToSpend]', 'optional limit of the amount to spend', BigInt(10n ** 21n).toString())
     .argument('[url]', 'your ganache url', 'http://localhost:8545')
     .action(async (tokenAddress, tokenQuantity, recipient, spender, maxAmountToSpend, url) => {
       const ourProvider = getProvider(url);
-      const accounts = await ourProvider.getAccounts();
+      const ethereumRpc = new EthereumRpc(ourProvider);
+      const accounts = await ethereumRpc.getAccounts();
       spender = spender ? EthAddress.fromString(spender) : accounts[0];
       recipient = recipient ? EthAddress.fromString(recipient) : spender;
-      const amountPurchased = await purchaseTokens(EthAddress.fromString(tokenAddress), BigInt(tokenQuantity), BigInt(maxAmountToSpend), ourProvider, spender, recipient);
+      const amountPurchased = await purchaseTokens(
+        EthAddress.fromString(tokenAddress),
+        BigInt(tokenQuantity),
+        BigInt(maxAmountToSpend),
+        ourProvider,
+        spender,
+        recipient,
+      );
       console.log(`Successfully purchased ${amountPurchased} of ${tokenAddress}`);
     });
 
-    program
+  program
     .command('mainnet')
     .description('display useful addresses for mainnet')
     .action(() => {

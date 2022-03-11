@@ -48,16 +48,20 @@ export class RollupAggregator {
     const rootRollupRequest = new RootRollupProofRequest(rootRollup);
     const rootRollupProofBuf = await this.proofGenerator.createProof(rootRollupRequest.toBuffer());
 
+    if (!rootRollupProofBuf) {
+      throw new Error('Failed to create root rollup proof. This should not happen.');
+    }
+
     console.log(`Creating root verifier proof...`);
 
     const rootVerifier = await this.createRootVerifier(rootRollupProofBuf);
     const rootVerifierRequest = new RootVerifierProofRequest(rootVerifier);
     const finalProofData = await this.proofGenerator.createProof(rootVerifierRequest.toBuffer());
-    end();
 
     if (!finalProofData) {
       throw new Error('Failed to create valid aggregate rollup.');
     }
+    end();
 
     const rollupProofData = RollupProofData.fromBuffer(finalProofData);
     const rollupProofDao = new RollupProofDao();

@@ -9,7 +9,7 @@ import { TransactionReceipt, TransactionResponse } from '@ethersproject/abstract
 import { Web3Provider } from '@ethersproject/providers';
 import { Contract, Event, utils } from 'ethers';
 import { abi } from '../../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
-import { decodeErrorFromContract } from '../decode_error';
+import { decodeErrorFromContractByTxHash } from '../decode_error';
 import { solidityFormatSignatures } from './solidity_format_signatures';
 import createDebug from 'debug';
 
@@ -471,6 +471,6 @@ export class RollupProcessor {
   }
 
   public async getRevertError(txHash: TxHash) {
-    return await decodeErrorFromContract(this.contract, txHash, this.ethereumProvider);
+    return await decodeErrorFromContractByTxHash(this.contract, txHash, this.ethereumProvider);
   }
 }

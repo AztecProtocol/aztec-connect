@@ -51,6 +51,10 @@ export class CliProofGenerator implements ProofGenerator {
 
     const vectorLen = length.readUInt32BE(0);
 
+    if (vectorLen === 0) {
+      return Buffer.alloc(0);
+    }
+
     const data = (await this.stdout.read(vectorLen)) as Buffer | undefined;
 
     if (!data) {
@@ -61,13 +65,17 @@ export class CliProofGenerator implements ProofGenerator {
   }
 
   public async getJoinSplitVk() {
-    this.proc!.stdin!.write(numToUInt32BE(CommandCodes.GET_JOIN_SPLIT_VK));
-    return this.readVector();
+    return this.serialExecute(() => {
+      this.proc!.stdin!.write(numToUInt32BE(CommandCodes.GET_JOIN_SPLIT_VK));
+      return this.readVector();
+    });
   }
 
   public async getAccountVk() {
-    this.proc!.stdin!.write(numToUInt32BE(CommandCodes.GET_ACCOUNT_VK));
-    return this.readVector();
+    return this.serialExecute(() => {
+      this.proc!.stdin!.write(numToUInt32BE(CommandCodes.GET_ACCOUNT_VK));
+      return this.readVector();
+    });
   }
 
   public async start() {
@@ -124,17 +132,21 @@ export class CliProofGenerator implements ProofGenerator {
     return data;
   }
 
-  public async createProof(data: Buffer) {
-    return new Promise<Buffer>((resolve, reject) => {
-      const fn = async () => {
+  private serialExecute<T>(fn: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      this.execQueue.put(async () => {
         try {
-          resolve(await this.createProofInternal(data));
-        } catch (err) {
-          reject(err);
+          const res = await fn();
+          resolve(res);
+        } catch (e) {
+          reject(e);
         }
-      };
-      this.execQueue.put(fn);
+      });
     });
+  }
+
+  public async createProof(data: Buffer) {
+    return this.serialExecute(() => this.createProofInternal(data));
   }
 
   private async ensureCrs() {

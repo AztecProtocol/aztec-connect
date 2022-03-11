@@ -1,13 +1,6 @@
-import { Contract, utils } from 'ethers';
 import { EthereumProvider, RevertError, TxHash } from '@aztec/barretenberg/blockchain';
+import { Contract, utils } from 'ethers';
 
-async function extractTransaction(txHash: TxHash, provider: EthereumProvider) {
-  try {
-    return await provider.request({ method: 'debug_traceTransaction', params: [txHash.toString()] });
-  } catch (err) {
-    return;
-  }
-}
 interface Fragment {
   name: string;
   inputs: string[];
@@ -31,36 +24,12 @@ export function decodeSelector(contract: Contract, selector: string) {
   return mappings.get(selector);
 }
 
-export async function decodeErrorFromContract(contract: Contract, txHash: TxHash, provider: EthereumProvider) {
-  const output = await extractTransaction(txHash, provider);
-  if (!output) {
-    return;
-  }
+export async function decodeErrorFromContract(contract: Contract, data: string) {
   const errorMappings = extractErrorFragmentsBySelector(contract);
-  // look for the REVERT opcode if there is one
-  const revert = output.structLogs.find((log: any) => log.op === 'REVERT');
-  if (!revert) {
-    return;
-  }
-  // according to this page https://www.ethervm.io/#FD,
-  // the entry at the top of the stack has the revert data offset in memory
-  // and the entry 1 level beneath that has the length
-  // both are in hex so extract them
-  const offset = revert.stack[revert.stack.length - 1];
-  const offsetBuf = Buffer.from(offset!, 'hex');
-  const offsetInt = offsetBuf.readInt32BE(28) * 2;
-
-  const length = revert.stack[revert.stack.length - 2];
-  const lengthBuf = Buffer.from(length!, 'hex');
-  const lengthInt = lengthBuf.readInt32BE(28) * 2;
-
-  // now we can reference the mmemory area
-  // the first 4 bytes (8 hex nibbles) are the first 4 bytes of the revert error hash,
-  // which we can lookup in the mapping we created above
-  const fullData = revert.memory.join('').slice(offsetInt, offsetInt + lengthInt);
+  const fullData = data.slice(2);
   const sigHash = fullData.slice(0, 8);
   // the rest of the data is any arguments given to the revert
-  const args = fullData.slice(8, lengthInt);
+  const args = fullData.slice(8);
 
   // look to see if we have the signature hash
   if (!errorMappings.has(sigHash)) {
@@ -81,4 +50,28 @@ export async function decodeErrorFromContract(contract: Contract, txHash: TxHash
   };
 
   return errorValue;
+}
+
+export async function decodeErrorFromContractByTxHash(contract: Contract, txHash: TxHash, provider: EthereumProvider) {
+  const { to, from, gas, maxFeePerGas, maxPriorityFeePerGas, input, value, chainId, nonce } = await provider.request({
+    method: 'eth_getTransactionByHash',
+    params: [txHash.toString()],
+  });
+  const req = {
+    to,
+    from,
+    gas,
+    maxFeePerGas,
+    maxPriorityFeePerGas,
+    data: input,
+    value,
+    chainId,
+    nonce,
+  };
+  const rep = await provider.request({ method: 'eth_call', params: [req] }).catch(err => err);
+  if (rep.name !== 'CallError') {
+    return;
+  }
+
+  return decodeErrorFromContract(contract, rep.data);
 }

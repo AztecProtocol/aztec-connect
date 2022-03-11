@@ -59,7 +59,6 @@ resource "aws_ecs_task_definition" "wasabi" {
     "name": "${var.DEPLOY_TAG}-wasabi",
     "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/wasabi:${var.DEPLOY_TAG}",
     "essential": true,
-    "memoryReservation": 8192,
     "portMappings": [
       {
         "containerPort": 80

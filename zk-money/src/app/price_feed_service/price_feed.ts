@@ -1,4 +1,4 @@
-import { Web3Provider } from '@ethersproject/providers';
+import { Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
 import { Contract } from 'ethers';
 import EventEmitter from 'events';
@@ -19,7 +19,7 @@ export class PriceFeed extends EventEmitter {
   private contract: Contract;
   private priceSubscriber?: number;
 
-  constructor(priceFeedContractAddress: string, provider: Web3Provider, private readonly pollInterval: number) {
+  constructor(priceFeedContractAddress: string, provider: Provider, private readonly pollInterval: number) {
     super();
     this.contract = new Contract(priceFeedContractAddress, AggregatorABI, provider);
   }

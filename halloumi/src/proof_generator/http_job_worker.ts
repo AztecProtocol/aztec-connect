@@ -79,11 +79,12 @@ export class HttpJobWorker {
 
         this.pingTimeout = setTimeout(() => this.ping(id), 1000);
 
-        const res = await this.process(cmd, data);
-        const repBuf = Protocol.pack(id, cmd, res);
+        const repBuf = await this.process(cmd, data)
+          .then(res => Protocol.pack(id, Command.ACK, res))
+          .catch((err: Error) => Protocol.pack(id, Command.NACK, Buffer.from(err.message)));
 
         await fetch(`${this.url}/job-complete`, { body: repBuf, method: 'POST' }).catch(() => undefined);
-      } catch (err) {
+      } catch (err: any) {
         console.log(err);
         await this.interruptableSleep.sleep(1000);
       } finally {

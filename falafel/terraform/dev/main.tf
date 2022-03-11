@@ -182,6 +182,10 @@ resource "aws_ecs_task_definition" "falafel" {
         "value": "1"
       },
       {
+        "name": "PUBLISH_INTERVAL",
+        "value": "60"
+      },
+      {
         "name": "PROVERLESS",
         "value": "true"
       }

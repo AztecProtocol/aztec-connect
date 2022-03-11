@@ -1,5 +1,5 @@
 import type { CutdownAsset } from 'app/types';
-import { Web3Provider } from '@ethersproject/providers';
+import { Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
 import { PriceFeed, PriceFeedEvent } from './price_feed';
 import { mapObj } from 'app/util/objects';
@@ -20,7 +20,7 @@ export class PriceFeedService {
 
   constructor(
     priceFeedContractAddresses: PerKnownAddress<string>,
-    provider: Web3Provider,
+    provider: Provider,
     private readonly assets: CutdownAsset[],
   ) {
     this.groups = mapObj(priceFeedContractAddresses, (feedAddressStr, assetAddressStr) => {

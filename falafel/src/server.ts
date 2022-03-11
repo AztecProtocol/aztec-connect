@@ -77,7 +77,15 @@ export class Server {
         this.proofGenerator = new HttpJobServers();
         break;
       case 'local':
-        this.proofGenerator = new CliProofGenerator(2 ** 25, 28, 32, proverless, true, false, './data');
+        this.proofGenerator = new CliProofGenerator(
+          2 ** 25,
+          numInnerRollupTxs,
+          numOuterRollupProofs,
+          proverless,
+          true,
+          false,
+          './data',
+        );
         break;
       default:
         this.proofGenerator = new HttpJobServer();

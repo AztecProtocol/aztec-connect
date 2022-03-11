@@ -424,7 +424,7 @@ export class WorldState {
     }
     await this.worldStateDb.batchPut(entries);
     */
-    const { rollupId, dataStartIndex, innerProofData } = rollup;
+    const { rollupId, dataStartIndex, innerProofData, defiInteractionNotes } = rollup;
 
     const currentSize = this.worldStateDb.getSize(0);
     if (currentSize > dataStartIndex) {
@@ -450,6 +450,15 @@ export class WorldState {
     }
 
     await this.worldStateDb.put(RollupTreeId.ROOT, BigInt(rollupId + 1), this.worldStateDb.getRoot(0));
+
+    const interactionNoteStartIndex = Math.max(0, rollupId - 1) * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
+    for (let i = 0; i < defiInteractionNotes.length; ++i) {
+      const index = BigInt(interactionNoteStartIndex + i);
+      if (defiInteractionNotes[i].equals(Buffer.alloc(0, 32))) {
+        continue;
+      }
+      await this.worldStateDb.put(RollupTreeId.DEFI, index, defiInteractionNotes[i]);
+    }
 
     await this.worldStateDb.commit();
   }

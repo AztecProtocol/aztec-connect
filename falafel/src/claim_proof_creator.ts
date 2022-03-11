@@ -111,7 +111,7 @@ export class ClaimProofCreator {
     );
     const request = new ClaimProofRequest(claimProof);
     const proof = await this.proofGenerator.createProof(request.toBuffer());
-    console.log(`Proof received: ${proof.length} bytes`);
+    console.log(`Claim proof received: ${proof.length} bytes`);
     return proof;
   }
 
