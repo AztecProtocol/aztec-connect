@@ -4,6 +4,8 @@ import { FeeDistributor } from '../fee_distributor';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { EthersAdapter } from '../../../provider';
 
+const gasLimit = 5000000;
+
 export async function setupFeeDistributor(
   publisher: Signer,
   rollupProcessorAddress: EthAddress,
@@ -21,7 +23,7 @@ export async function setupFeeDistributor(
   const feeDistributor = new FeeDistributor(
     EthAddress.fromString(feeDistributorContract.address),
     new EthersAdapter(ethers.provider),
-    { gasLimit: 5000000 },
+    { gasLimit },
   );
 
   return {

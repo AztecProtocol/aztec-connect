@@ -4,6 +4,7 @@ import { Contract, ContractFactory, Signer } from 'ethers';
 
 const TRANCHE_BYTECODE_HASH = Buffer.from('f481a073666136ab1f5e93b296e84df58092065256d0db23b2d22b62c68e978d', 'hex');
 export const ASSETS = ['usdc', 'dai', 'lusd3crv-f', 'stecrv', 'wbtc', 'alusd3crv-f', 'mim-3lp3crv-f'];
+const gasLimit = 5000000;
 
 export interface ElementPoolSpec {
   asset: string;
@@ -53,7 +54,9 @@ export const deployElementBridge = async (
 ) => {
   console.error('Deploying ElementBridge...');
   const ElementFactory = new ContractFactory(ElementBridge.abi, ElementBridge.bytecode, owner);
-  const bridge = await ElementFactory.deploy(rollupAddress, trancheFactoryAddress, trancheByteCode, balancerAddress);
+  const bridge = await ElementFactory.deploy(rollupAddress, trancheFactoryAddress, trancheByteCode, balancerAddress, {
+    gasLimit,
+  });
   console.error(`ElementBridge contract address: ${bridge.address}`);
   return bridge;
 };
@@ -62,6 +65,8 @@ export const setupElementPools = async (elementPoolConfig: ElementPoolConfigurat
   for (const spec of elementPoolConfig.poolSpecs) {
     const dateString = new Date(spec.expiry * 1000).toDateString();
     console.error(`Registering convergent pool ${spec.poolAddress} for ${spec.asset} and expiry ${dateString}...`);
-    await bridgeContract.registerConvergentPoolAddress(spec.poolAddress, spec.wrappedPosition, spec.expiry);
+    await bridgeContract.registerConvergentPoolAddress(spec.poolAddress, spec.wrappedPosition, spec.expiry, {
+      gasLimit,
+    });
   }
 };

@@ -10,6 +10,8 @@ import { createUniswapPair, deployUniswap, deployUniswapBridge } from './deploy_
 import { deployMockVerifier, deployVerifier } from './deploy_verifier';
 import { deployElementBridge, elementAssets, elementConfig, setupElementPools } from './deploy_element';
 
+const gasLimit = 5000000;
+
 async function deployRollupProcessor(
   signer: Signer,
   verifier: Contract,
@@ -37,6 +39,7 @@ async function deployRollupProcessor(
     initRootsRoot,
     initDataSize,
     allowThirdPartyContracts,
+    { gasLimit },
   );
 
   console.error(`RollupProcessor contract address: ${rollup.address}`);
@@ -52,7 +55,7 @@ async function deployErc20Contracts(signer: Signer, rollup: Contract) {
 
 async function deployBridgeContracts(signer: Signer, rollup: Contract, uniswapRouter: Contract) {
   const uniswapBridge = await deployUniswapBridge(signer, rollup, uniswapRouter);
-  await rollup.setSupportedBridge(uniswapBridge.address, 0n);
+  await rollup.setSupportedBridge(uniswapBridge.address, 0n, { gasLimit });
 
   const chainId = await signer.getChainId();
   if (!(chainId === 1 || chainId === 0xa57ec)) {
@@ -61,7 +64,7 @@ async function deployBridgeContracts(signer: Signer, rollup: Contract, uniswapRo
   }
 
   for (const elementAsset of elementAssets) {
-    await rollup.setSupportedAsset(elementAsset, false, 0);
+    await rollup.setSupportedAsset(elementAsset, false, 0, { gasLimit });
   }
 
   const elementBridge = await deployElementBridge(
@@ -71,11 +74,19 @@ async function deployBridgeContracts(signer: Signer, rollup: Contract, uniswapRo
     elementConfig.trancheByteCodeHash,
     elementConfig.balancerAddress,
   );
-  await rollup.setSupportedBridge(elementBridge.address, 1000000n);
+  await rollup.setSupportedBridge(elementBridge.address, 1000000n, { gasLimit });
 
   await setupElementPools(elementConfig, elementBridge);
 }
 
+/**
+ * We add gasLimit to all txs, to prevent calls to estimateGas that may fail. If a gasLimit is provided the calldata
+ * is simply produced, there is nothing to fail. As long as all the txs are executed by the evm in order, things
+ * should succeed. The NonceManager ensures all the txs have sequentially increasing nonces.
+ * In some cases there maybe a "deployment sync point" which is required if we are making a "call" to the blockchain
+ * straight after, that assumes the state is up-to-date at that point.
+ * This drastically improves deployment times.
+ */
 export async function deploy(
   escapeHatchBlockLower: number,
   escapeHatchBlockUpper: number,
@@ -118,7 +129,6 @@ export async function deploy(
   const feeDistributor = await deployFeeDistributor(signer, rollup, uniswapRouter);
 
   const [erc20Asset] = await deployErc20Contracts(signer, rollup);
-  await erc20Asset.deployed();
 
   const gasPrice = 20n * 10n ** 9n; // 20 gwei
   const daiPrice = 1n * 10n ** 15n; // 1000 DAI/ETH

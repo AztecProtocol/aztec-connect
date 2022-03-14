@@ -7,6 +7,8 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { Contract, ContractFactory, Signer } from 'ethers';
 import WETH9 from '../abis/WETH9.json';
 
+const gasLimit = 5000000;
+
 export const createUniswapPair = async (
   owner: Signer,
   router: Contract,
@@ -14,7 +16,6 @@ export const createUniswapPair = async (
   initialTokenSupply = 1000n * 10n ** 18n,
   initialEthSupply = 10n ** 18n,
 ) => {
-  const gasLimit = 5000000;
   const factory = new Contract(await router.factory(), UniswapV2FactoryJson.abi, owner);
   const weth = new Contract(await router.WETH(), IWETH.abi, owner);
 
@@ -25,7 +26,8 @@ export const createUniswapPair = async (
 
   console.error(`Creating UniswapPair: ${await asset.name()} / WETH...`);
   {
-    const tx = await factory.createPair(asset.address, weth.address);
+    const tx = await factory.createPair(asset.address, weth.address, { gasLimit });
+    // Deployment sync point. We need the pair to exist to call getPair().
     await tx.wait();
   }
   const pairAddress = await factory.getPair(asset.address, weth.address);

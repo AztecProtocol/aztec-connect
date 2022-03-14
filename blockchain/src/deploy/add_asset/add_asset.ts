@@ -2,6 +2,8 @@ import { Contract, ContractFactory, Signer } from 'ethers';
 import ERC20Permit from '../../artifacts/contracts/test/ERC20Permit.sol/ERC20Permit.json';
 import ERC20Mintable from '../../artifacts/contracts/test/ERC20Mintable.sol/ERC20Mintable.json';
 
+const gasLimit = 5000000;
+
 export async function addAsset(
   rollup: Contract,
   signer: Signer,
@@ -18,7 +20,7 @@ export async function addAsset(
       console.error(`Changing decimals to: ${decimals}...`);
       await erc20.setDecimals(decimals);
     }
-    await rollup.setSupportedAsset(erc20.address, supportsPermit, 0);
+    await rollup.setSupportedAsset(erc20.address, supportsPermit, 0, { gasLimit });
     return erc20;
   } else {
     console.error('Deploying ERC20...');
@@ -27,9 +29,9 @@ export async function addAsset(
     console.error(`ERC20 contract address: ${erc20.address}`);
     if (decimals !== 18) {
       console.error(`Changing decimals to: ${decimals}...`);
-      await erc20.setDecimals(decimals);
+      await erc20.setDecimals(decimals, { gasLimit });
     }
-    await rollup.setSupportedAsset(erc20.address, supportsPermit, 0);
+    await rollup.setSupportedAsset(erc20.address, supportsPermit, 0, { gasLimit });
     return erc20;
   }
 }
