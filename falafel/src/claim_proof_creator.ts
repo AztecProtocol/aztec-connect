@@ -42,12 +42,14 @@ export class ClaimProofCreator {
     const rollups = await this.rollupDb.getRollupsByRollupIds([...rollupIds]);
 
     for (const claim of claims) {
-      const rollupForThisClaim = rollups.find(rollup => rollup.id === claim.interactionResultRollupId)!;
-      const interactionNotesForThisRollup = parseInteractionResult(rollupForThisClaim.interactionResult!);
-      const noteIndex = interactionNotesForThisRollup.findIndex(itx => itx.nonce === claim.interactionNonce);
-      const interactionNote = interactionNotesForThisRollup[noteIndex];
-      const interactionIndex = rollupForThisClaim.id * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK + noteIndex;
-      const proofData = await this.createClaimProof(dataRoot, defiRoot, claim, interactionNote, interactionIndex);
+      const rollupForThisClaimsDefiInteraction = rollups.find(rollup => rollup.id === claim.interactionResultRollupId)!;
+      const interactionNotesForRollup = parseInteractionResult(rollupForThisClaimsDefiInteraction.interactionResult!);
+      const noteIndex = interactionNotesForRollup.findIndex(itx => itx.nonce === claim.interactionNonce);
+      const interactionNoteForThisClaim = interactionNotesForRollup[noteIndex];
+      // rollupForThisClaim is the rollup that produced the defi interaction notes
+      // the rollup id we need is the one following, which is when the notes were entered into the defi tree
+      const interactionIndex = (rollupForThisClaimsDefiInteraction.id + 1) * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK + noteIndex;
+      const proofData = await this.createClaimProof(dataRoot, defiRoot, claim, interactionNoteForThisClaim, interactionIndex);
       if (!proofData) {
         // TODO: Once we correctly handle interrupts, this is not a panic scenario.
         throw new Error('Failed to create claim proof. This should not happen.');

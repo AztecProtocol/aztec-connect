@@ -121,7 +121,7 @@ export class RollupAggregator {
       // Grows the data tree by inserting 0 at last subtree position.
       await worldStateDb.put(RollupTreeId.DATA, BigInt(endIndex), Buffer.alloc(32, 0));
     }
-
+    
     const rootRollup = new RootRollup(
       rollupId,
       rollupProofs.map(tx => tx.proofData),

@@ -451,7 +451,7 @@ export class WorldState {
 
     await this.worldStateDb.put(RollupTreeId.ROOT, BigInt(rollupId + 1), this.worldStateDb.getRoot(0));
 
-    const interactionNoteStartIndex = Math.max(0, rollupId - 1) * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
+    const interactionNoteStartIndex = rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
     for (let i = 0; i < defiInteractionNotes.length; ++i) {
       const index = BigInt(interactionNoteStartIndex + i);
       if (defiInteractionNotes[i].equals(Buffer.alloc(0, 32))) {

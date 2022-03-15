@@ -134,18 +134,18 @@ export class PipelineCoordinator {
     const oldDefiRoot = this.worldStateDb.getRoot(RollupTreeId.DEFI);
     const oldDefiPath = await this.worldStateDb.getHashPath(
       RollupTreeId.DEFI,
-      BigInt(Math.max(0, rollupId - 1) * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK),
+      BigInt(rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK),
     );
 
+
     const defiInteractionNotes = lastRollup ? parseInteractionResult(lastRollup.interactionResult!) : [];
-    let interactionNoteIndex = BigInt(Math.max(0, rollupId - 1)) * BigInt(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK);
-    for (const note of defiInteractionNotes) {
+    const interactionNoteStartIndex = BigInt(rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK);
+    for (let i = 0; i < defiInteractionNotes.length; ++i) {
       await this.worldStateDb.put(
         RollupTreeId.DEFI,
-        interactionNoteIndex,
-        this.noteAlgo.defiInteractionNoteCommitment(note),
+        interactionNoteStartIndex + BigInt(i),
+        this.noteAlgo.defiInteractionNoteCommitment(defiInteractionNotes[i]),
       );
-      interactionNoteIndex++;
     }
 
     this.rollupCoordinator = new RollupCoordinator(

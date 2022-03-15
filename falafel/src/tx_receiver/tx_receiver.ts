@@ -77,6 +77,10 @@ export class TxReceiver {
 
       const feeAllocator = new TxFeeAllocator(this.txFeeResolver);
       const validation = feeAllocator.validateReceivedTxs(txs, txTypes);
+      console.log(
+        `Gas Required/Provided: ${validation.gasRequired}/${validation.gasProvided}. Fee asset index: ${validation.feePayingAsset}. Non-fee assets/defi: ${validation.hasNonFeePayingAssets}/${validation.hasNonPayingDefi}`,
+      );
+
       if (validation.gasProvided < validation.gasRequired) {
         console.log(
           `Txs only contained enough fee to pay for ${validation.gasProvided} gas, but it needed ${validation.gasRequired}.`,
