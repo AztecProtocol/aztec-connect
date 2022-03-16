@@ -61,6 +61,7 @@ export class Agent {
       address,
     );
     await controller.depositFundsToContract();
+    await controller.awaitDepositFundsToContract();
     await controller.createProof();
     await controller.sign();
     await controller.send();

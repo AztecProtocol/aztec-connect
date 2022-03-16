@@ -16,6 +16,7 @@ export class AgentManager {
     private rollupHost: string,
     private host: string,
     private memoryDB: boolean,
+    private confs: number,
   ) {}
 
   private createAgent(id: number) {
@@ -36,6 +37,8 @@ export class AgentManager {
       clearDb: true,
       debug: false,
       memoryDb: this.memoryDB,
+      minConfirmation: this.confs,
+      minConfirmationEHW: this.confs,
     });
 
     // sdk.on(SdkEvent.LOG, console.log);

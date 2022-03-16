@@ -12,6 +12,7 @@ const {
   LOOPS = '1',
   ROLLUP_HOST = 'http://localhost:8081',
   MEMORY_DB = '0',
+  CONFS = '1',
 } = process.env;
 
 async function main() {
@@ -30,6 +31,7 @@ async function main() {
       ROLLUP_HOST,
       ETHEREUM_HOST,
       !!+MEMORY_DB,
+      +CONFS,
     );
     await agentManager.run(runNumber);
   }

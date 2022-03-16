@@ -1,7 +1,7 @@
 import { AccountId } from '@aztec/barretenberg/account_id';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
-import { EthereumProvider, EthereumSigner } from '@aztec/barretenberg/blockchain';
+import { EthereumProvider, EthereumSigner, TxHash } from '@aztec/barretenberg/blockchain';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { ClientEthereumBlockchain, createPermitData, validateSignature, Web3Signer } from '@aztec/blockchain';
@@ -16,9 +16,10 @@ const signDepositProof = async (signingData: Buffer, depositor: EthAddress, ethS
 export class DepositController {
   private readonly publicInput: AssetValue;
   private readonly requireFeePayingTx: boolean;
-  private proofOutput!: ProofOutput;
+  private proofOutput?: ProofOutput;
   private feeProofOutput?: ProofOutput;
-  private txIds!: TxId[];
+  private txIds?: TxId[];
+  private txHash?: TxHash;
 
   constructor(
     public readonly userId: AccountId,
@@ -75,21 +76,45 @@ export class DepositController {
   async depositFundsToContract() {
     const { assetId } = this.publicInput;
     const value = await this.getRequiredFunds();
-    return this.blockchain.depositPendingFunds(assetId, value, this.from, undefined, undefined, this.provider);
+    this.txHash = await this.blockchain.depositPendingFunds(
+      assetId,
+      value,
+      this.from,
+      undefined,
+      undefined,
+      this.provider,
+    );
+    return this.txHash;
   }
 
   async depositFundsToContractWithPermit(deadline: bigint) {
     const { assetId } = this.publicInput;
     const value = await this.getRequiredFunds();
     const permitArgs = await this.createPermitArgs(value, deadline);
-    return this.blockchain.depositPendingFunds(assetId, value, this.from, undefined, permitArgs, this.provider);
+    this.txHash = await this.blockchain.depositPendingFunds(
+      assetId,
+      value,
+      this.from,
+      undefined,
+      permitArgs,
+      this.provider,
+    );
+    return this.txHash;
   }
 
   async depositFundsToContractWithProofApproval() {
     const { assetId } = this.publicInput;
     const value = await this.getRequiredFunds();
     const proofHash = this.getTxId().toBuffer();
-    return this.blockchain.depositPendingFunds(assetId, value, this.from, proofHash, undefined, this.provider);
+    this.txHash = await this.blockchain.depositPendingFunds(
+      assetId,
+      value,
+      this.from,
+      proofHash,
+      undefined,
+      this.provider,
+    );
+    return this.txHash;
   }
 
   async depositFundsToContractWithPermitAndProofApproval(deadline: bigint) {
@@ -97,7 +122,22 @@ export class DepositController {
     const value = await this.getRequiredFunds();
     const permitArgs = await this.createPermitArgs(value, deadline);
     const proofHash = this.getTxId().toBuffer();
-    return this.blockchain.depositPendingFunds(assetId, value, this.from, proofHash, permitArgs, this.provider);
+    this.txHash = await this.blockchain.depositPendingFunds(
+      assetId,
+      value,
+      this.from,
+      proofHash,
+      permitArgs,
+      this.provider,
+    );
+    return this.txHash;
+  }
+
+  async awaitDepositFundsToContract() {
+    if (!this.txHash) {
+      throw new Error('Call depositFundsToContract() first.');
+    }
+    await this.blockchain.getTransactionReceipt(this.txHash);
   }
 
   async createProof(txRefNo = 0) {
@@ -148,6 +188,9 @@ export class DepositController {
   }
 
   getTxId() {
+    if (!this.proofOutput) {
+      throw new Error('Call createProof() first.');
+    }
     return this.proofOutput.tx.txId;
   }
 
@@ -160,17 +203,26 @@ export class DepositController {
   }
 
   async sign() {
+    if (!this.proofOutput) {
+      throw new Error('Call createProof() first.');
+    }
     const ethSigner = new Web3Signer(this.provider);
     const signingData = this.getSigningData();
     this.proofOutput.signature = await signDepositProof(signingData, this.from, ethSigner);
   }
 
   isSignatureValid() {
+    if (!this.proofOutput) {
+      throw new Error('Call createProof() and sign() first.');
+    }
     const signingData = this.getSigningData();
     return validateSignature(this.from, this.proofOutput.signature!, signingData);
   }
 
   getProofs() {
+    if (!this.proofOutput) {
+      throw new Error('Call createProof() first.');
+    }
     return this.requireFeePayingTx ? [this.proofOutput, this.feeProofOutput!] : [this.proofOutput];
   }
 
@@ -180,6 +232,9 @@ export class DepositController {
   }
 
   async awaitSettlement(timeout?: number) {
+    if (!this.txIds) {
+      throw new Error('Call send() first.');
+    }
     await Promise.all(this.txIds.map(txId => this.core.awaitSettlement(txId, timeout)));
   }
 

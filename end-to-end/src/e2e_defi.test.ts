@@ -84,27 +84,31 @@ describe('end-to-end defi tests', () => {
     // Rollup 0.
     // Shield.
     {
-      const promises: Promise<void>[] = [];
       const depositFees = await sdk.getDepositFees(shieldValue.assetId);
 
-      for (let i = 0; i < accounts.length; i++) {
-        const depositor = accounts[i];
-        debug(`shielding ${sdk.fromBaseUnits(shieldValue, true)} from ${depositor.toString()}...`);
+      // Each account deposits funds to the contract in parallel. Await till they all complete.
+      const controllers = await Promise.all(
+        accounts.map(async (depositor, i) => {
+          debug(`shielding ${sdk.fromBaseUnits(shieldValue, true)} from ${depositor.toString()}...`);
 
-        const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
-        // Last deposit pays for instant rollup to flush.
-        const fee = depositFees[i == accounts.length - 1 ? TxSettlementTime.INSTANT : TxSettlementTime.NEXT_ROLLUP];
-        const controller = sdk.createDepositController(userIds[i], signer, shieldValue, fee, depositor);
-        await controller.createProof();
-        await controller.sign();
-        const txHash = await controller.depositFundsToContract();
-        await sdk.getTransactionReceipt(txHash);
+          const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
+          // Last deposit pays for instant rollup to flush.
+          const fee = depositFees[i == accounts.length - 1 ? TxSettlementTime.INSTANT : TxSettlementTime.NEXT_ROLLUP];
+          const controller = sdk.createDepositController(userIds[i], signer, shieldValue, fee, depositor);
+          await controller.createProof();
+          await controller.depositFundsToContractWithProofApproval();
+          await controller.awaitDepositFundsToContract();
+          return controller;
+        }),
+      );
+
+      // Send to rollup provider, and be sure to send the "instant" one last.
+      for (const controller of controllers) {
         await controller.send();
-        promises.push(controller.awaitSettlement());
       }
 
       debug(`waiting for shields to settle...`);
-      await Promise.all(promises);
+      await Promise.all(controllers.map(controller => controller.awaitSettlement()));
     }
 
     // Rollup 1.
@@ -201,15 +205,6 @@ describe('end-to-end defi tests', () => {
 
         await controller.createProof();
         await controller.send();
-        // we need to wait 1 full seconds for the profile to be updated.
-        await new Promise(r => setTimeout(r, 1000));
-        const statusBefore = await sdk.getRemoteStatus();
-        const bridgeStatusBefore = statusBefore.bridgeStatus.find(
-          value => BigInt(value.bridgeId) == ethToDaiBridge.toBigInt(),
-        );
-
-        expect(bridgeStatusBefore);
-        expect(BigInt(bridgeStatusBefore!.gasAccrued)).toBeGreaterThan(0n);
         defiControllers.push(controller);
 
         const verification = async () => {
@@ -231,9 +226,7 @@ describe('end-to-end defi tests', () => {
       debug(`waiting for claims to settle...`);
       await flushClaim();
       await Promise.all(defiControllers.map(controller => controller.awaitSettlement()));
-      const statusAfter = await sdk.getRemoteStatus();
-      const bridgeStatusAfter = statusAfter.bridgeStatus.find(value => value.bridgeId == ethToDaiBridge.toBigInt());
-      expect(bridgeStatusAfter).toBeUndefined();
+
       // Check results.
       await Promise.all(defiVerifications.map(x => x()));
     }
