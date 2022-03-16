@@ -5,8 +5,6 @@ COPY --from=0 /usr/src /usr/src
 WORKDIR /usr/src/zk-money
 COPY . .
 RUN apk add git zip
-ARG DEPLOY_TAG
-ENV REACT_APP_DEPLOY_TAG=$DEPLOY_TAG
 RUN yarn install && yarn build
 RUN cd lambda && yarn install && yarn build && cp twitter_lambda.zip ../dist
 

@@ -50,7 +50,7 @@ const fromLocalStorage = (): ConfigVars => ({
 });
 
 const fromEnvVars = (): ConfigVars => ({
-  deployTag: process.env.REACT_APP_DEPLOY_TAG || '',
+  deployTag: '',
   priceFeedContractAddress0: process.env.REACT_APP_PRICE_FEED_CONTRACT_ADDRESS_0 || '',
   priceFeedContractAddress1: process.env.REACT_APP_PRICE_FEED_CONTRACT_ADDRESS_1 || '',
   priceFeedContractAddress2: process.env.REACT_APP_PRICE_FEED_CONTRACT_ADDRESS_2 || '',
@@ -94,9 +94,20 @@ function getEthereumHost(chainId: number) {
 }
 
 async function getDeployConfig(deployTag: string) {
+  if (!deployTag) {
+    // If we haven't overridden our deploy tag, we discover it at runtime. All s3 deployments have a file
+    // called DEPLOY_TAG in their root containing the deploy tag.
+    deployTag = await fetch('/DEPLOY_TAG')
+      .then(resp => resp.text())
+      .catch(() => '');
+  }
+
   if (deployTag) {
     const rollupProviderUrl = `https://api.aztec.network/${deployTag}/falafel`;
-    const explorerUrl = `https://${deployTag}.explorer.aztec.network`;
+    // If this is prod release, we will use the prod domain name.
+    const explorerUrl = deployTag.match(/-prod$/)
+      ? 'https://explorer.aztec.network'
+      : `https://${deployTag}.explorer.aztec.network`;
     const chainId = (await getBlockchainStatus(rollupProviderUrl)).chainId;
     const ethereumHost = getEthereumHost(chainId);
     const mainnetEthereumHost = getEthereumHost(1);

@@ -5,6 +5,9 @@ REPOSITORY=$1
 
 extract_repo $REPOSITORY /usr/src/$REPOSITORY/dist ./dist
 
+# So a front-end app can discover it's deploy tag at runtime, we include a file called DEPLOY_TAG in the dist root.
+echo $DEPLOY_TAG > ./dist/DEPLOY_TAG
+
 deploy_terraform $REPOSITORY
 
 pushd $TF_DIR > /dev/null

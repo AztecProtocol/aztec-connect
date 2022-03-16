@@ -39,8 +39,9 @@ else
   VERSION_TAG=dev
 fi
 
-# The deploy tag (used in api paths, subdomains), is concatenation of the project name and version tag, e.g. aztec-connect-dev.
-# The terraform that will be executed (if it exists) is named after the version tag, e.g. ./terraform/dev.
+# - The deploy tag (used in api paths, subdomains), is a concatenation of the project name and version tag,
+#   e.g. aztec-connect-dev, aztec-connect-testnet, or aztec-connect-prod
+# - The terraform that will be executed (if it exists) is named after the version tag, e.g. ./terraform/dev.
 DEPLOY_TAG=$PROJECT-$VERSION_TAG
 TF_DIR=./terraform/$VERSION_TAG
 
