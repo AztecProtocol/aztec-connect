@@ -1,0 +1,5 @@
+cache
+artifacts
+**/fixtures/*.dat
+.openzeppelin
+data

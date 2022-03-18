@@ -1,0 +1,1 @@
+barretenberg_module(stdlib_recursion ecc plonk stdlib_primitives stdlib_pedersen stdlib_blake2s)

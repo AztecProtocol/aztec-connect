@@ -1,0 +1,1 @@
+barretenberg_module(stdlib_pedersen stdlib_primitives crypto_pedersen)

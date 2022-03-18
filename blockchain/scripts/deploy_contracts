@@ -1,0 +1,69 @@
+#!/bin/bash
+set -e
+
+# We have to consider public and private ethereum hosts. The deployment system does not have access to the
+# nodes we run in the private subnets of the VPC. One option is to expose our OpenEthereum nodes externally but that
+# probably isn't wise, so we will just use Infura to deploy, but tell upstream systems to use the private node.
+# Our mainnet fork, *does* need to be exposed publically, as it's the only node in the network.
+case $VERSION_TAG in
+  testnet)
+    NETWORK=goerli
+    export TF_VAR_PUBLIC_ETHEREUM_HOST=https://goerli.infura.io/v3/$TF_VAR_INFURA_API_KEY
+    export TF_VAR_PRIVATE_ETHEREUM_HOST=https://goerli.infura.io/v3/$TF_VAR_INFURA_API_KEY
+    # Our goerli node is not working right.
+    #export TF_VAR_PRIVATE_ETHEREUM_HOST=http://ethereum.aztec.network:10545
+    ;;
+  dev)
+    NETWORK=mainnet-fork
+    export TF_VAR_PUBLIC_ETHEREUM_HOST=https://mainnet-fork.aztec.network:8545
+    export TF_VAR_PRIVATE_ETHEREUM_HOST=https://mainnet-fork.aztec.network:8545
+    ;;
+  *)
+    echo "No configuration for VERSION_TAG=$VERSION_TAG, skipping contract deployment."
+    exit 0
+    ;;
+esac
+
+# Get remaining prexisting terraform state variables.
+cd $TF_DIR
+ensure_terraform
+export TF_IN_AUTOMATION=1
+terraform init -input=false -backend-config="key=$DEPLOY_TAG/blockchain"
+export TF_VAR_ETHEREUM_NETWORK=$(terraform output ethereum_network || echo "")
+export TF_VAR_FEE_DISTRIBUTOR_ADDRESS=$(terraform output fee_distributor_address || echo "")
+export TF_VAR_FEE_PAYING_ASSET_ADDRESSES=$(terraform output fee_paying_asset_addresses || echo "")
+export TF_VAR_PRICE_FEED_CONTRACT_ADDRESSES=$(terraform output price_feed_contract_addresses || echo "")
+export TF_VAR_ROLLUP_CONTRACT_ADDRESS=$(terraform output rollup_contract_address || echo "")
+cd ../..
+
+LAST_COMMIT=$(last_successful_commit blockchain $DEPLOY_TAG-deployed)
+
+if [ -z "$LAST_COMMIT" ]; then
+  echo "No successful last deploy found. Will deploy."
+  REDEPLOY=1
+else
+  if changed $LAST_COMMIT '.*\.sol$'; then
+    echo "Solidity changed."
+    REDEPLOY=1
+  fi
+
+  if changed $LAST_COMMIT 'blockchain/.redeploy'; then
+    echo "Force deploy requested."
+    REDEPLOY=1
+  fi
+
+  if [ "$NETWORK" != "$TF_VAR_ETHEREUM_NETWORK" ]; then
+    echo "Network changed."
+    export TF_VAR_ETHEREUM_NETWORK=$NETWORK
+    REDEPLOY=1
+  fi
+fi
+
+if [ -n "$REDEPLOY" ]; then
+  echo "Redeploying contracts..."
+  `docker run -e ESCAPE_BLOCK_LOWER=60 -e ESCAPE_BLOCK_UPPER=120 -e ETHEREUM_HOST=$TF_VAR_PUBLIC_ETHEREUM_HOST -e PRIVATE_KEY=$TF_VAR_PRIVATE_KEY -e VK=MockVerificationKey 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:$COMMIT_HASH`
+fi
+
+deploy_terraform blockchain
+
+tag_remote_image blockchain cache-$COMMIT_HASH cache-$COMMIT_HASH-$DEPLOY_TAG-deployed

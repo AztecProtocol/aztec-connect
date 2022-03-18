@@ -1,0 +1,59 @@
+{
+  "name": "halloumi",
+  "version": "1.0.0",
+  "license": "GPL-2.0",
+  "scripts": {
+    "build": "yarn clean && tsc -p tsconfig.dest.json && node package.js",
+    "build:dev": "node package.js && tsc -p tsconfig.dest.json --watch",
+    "start": "node ./dest",
+    "debug": "node --inspect-brk=0.0.0.0:9221 ./dest",
+    "start:dev": "tsc-watch -p tsconfig.dest.json --onSuccess 'yarn start'",
+    "start:e2e": "./scripts/start_e2e.sh",
+    "test:debug": "node --inspect-brk=0.0.0.0:9221 ./node_modules/.bin/jest",
+    "test": "jest",
+    "clean": "rm -rf ./dest",
+    "clean_data": "rm -rf ./data"
+  },
+  "jest": {
+    "transform": {
+      "^.+\\.ts$": "ts-jest"
+    },
+    "testRegex": ".*\\.test\\.(tsx?|js)$",
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "jsx",
+      "json",
+      "node"
+    ],
+    "rootDir": "./src"
+  },
+  "dependencies": {
+    "@aztec/barretenberg": "file:../barretenberg.js/dest",
+    "debug": "^4.3.3",
+    "fs-extra": "9.0.1",
+    "koa": "^2.7.0",
+    "koa-router": "^7.4.0",
+    "log-timestamp": "^0.3.0",
+    "promise-readable": "^5.0.4",
+    "source-map-support": "^0.5.19",
+    "typescript": "^4.4.4"
+  },
+  "devDependencies": {
+    "@types/debug": "^4.1.7",
+    "@types/fs-extra": "9.0.1",
+    "@types/jest": "^24.0.15",
+    "@types/koa": "^2.0.49",
+    "@types/koa-router": "^7.0.42",
+    "@types/node": "^12.6.8",
+    "@typescript-eslint/eslint-plugin": "^4.1.1",
+    "@typescript-eslint/parser": "^4.1.1",
+    "eslint": "^7.9.0",
+    "eslint-config-prettier": "^6.11.0",
+    "jest": "^27.4.7",
+    "prettier": "^2.0.5",
+    "ts-jest": "^27.1.3",
+    "tsc-watch": "^2.2.1"
+  }
+}

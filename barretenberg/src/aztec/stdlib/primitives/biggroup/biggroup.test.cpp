@@ -1,0 +1,714 @@
+#include <common/test.hpp>
+
+#include "../bigfield/bigfield.hpp"
+#include "../biggroup/biggroup.hpp"
+#include "../bool/bool.hpp"
+#include "../field/field.hpp"
+
+#include <plonk/proof_system/prover/prover.hpp>
+#include <plonk/proof_system/verifier/verifier.hpp>
+
+#include <polynomials/polynomial_arithmetic.hpp>
+
+#include <stdlib/primitives/curves/bn254.hpp>
+#include <stdlib/primitives/curves/secp256r1.hpp>
+#include <ecc/curves/secp256r1/secp256r1.hpp>
+
+#include <memory>
+#include <numeric/random/engine.hpp>
+
+using namespace barretenberg;
+using namespace plonk;
+
+template <typename Composer> class stdlib_biggroup : public testing::Test {
+    typedef stdlib::bn254<Composer> bn254;
+    typedef stdlib::secp256r1_ct<Composer> secp256r1_ct;
+    typedef typename bn254::fr_ct fr_ct;
+    typedef typename bn254::bigfr_ct bigfr_ct;
+    typedef typename bn254::g1_ct g1_ct;
+    typedef typename bn254::g1_bigfr_ct g1_bigfr_ct;
+    typedef typename bn254::fq_ct fq_ct;
+    typedef typename bn254::public_witness_ct public_witness_ct;
+    typedef typename bn254::witness_ct witness_ct;
+
+    static g1_bigfr_ct convert_inputs_bigfr(Composer* ctx, const g1::affine_element& input)
+    {
+        uint256_t x_u256(input.x);
+        uint256_t y_u256(input.y);
+
+        fq_ct x(witness_ct(ctx, fr(x_u256.slice(0, fq_ct::NUM_LIMB_BITS * 2))),
+                witness_ct(ctx, fr(x_u256.slice(fq_ct::NUM_LIMB_BITS * 2, fq_ct::NUM_LIMB_BITS * 4))));
+        fq_ct y(witness_ct(ctx, fr(y_u256.slice(0, fq_ct::NUM_LIMB_BITS * 2))),
+                witness_ct(ctx, fr(y_u256.slice(fq_ct::NUM_LIMB_BITS * 2, fq_ct::NUM_LIMB_BITS * 4))));
+
+        return g1_bigfr_ct(x, y);
+    }
+
+    static bigfr_ct convert_inputs_bigfr(Composer* ctx, const fr& scalar)
+    {
+        uint256_t scalar_u256(scalar);
+
+        bigfr_ct x(witness_ct(ctx, fr(scalar_u256.slice(0, fq_ct::NUM_LIMB_BITS * 2))),
+                   witness_ct(ctx, fr(scalar_u256.slice(fq_ct::NUM_LIMB_BITS * 2, fq_ct::NUM_LIMB_BITS * 4))));
+
+        return x;
+    }
+
+    static g1_ct convert_inputs(Composer* ctx, const g1::affine_element& input)
+    {
+        uint256_t x_u256(input.x);
+        uint256_t y_u256(input.y);
+
+        fq_ct x(witness_ct(ctx, fr(x_u256.slice(0, fq_ct::NUM_LIMB_BITS * 2))),
+                witness_ct(ctx, fr(x_u256.slice(fq_ct::NUM_LIMB_BITS * 2, fq_ct::NUM_LIMB_BITS * 4))));
+        fq_ct y(witness_ct(ctx, fr(y_u256.slice(0, fq_ct::NUM_LIMB_BITS * 2))),
+                witness_ct(ctx, fr(y_u256.slice(fq_ct::NUM_LIMB_BITS * 2, fq_ct::NUM_LIMB_BITS * 4))));
+
+        return g1_ct(x, y);
+    }
+
+    static typename secp256r1_ct::bigfr_ct convert_inputs_bigfr_secp256r1(Composer* ctx, const secp256r1::fr& scalar)
+    {
+        uint256_t scalar_u256(scalar);
+
+        typename secp256r1_ct::bigfr_ct x(
+            witness_ct(ctx, fr(scalar_u256.slice(0, secp256r1_ct::fq_ct::NUM_LIMB_BITS * 2))),
+            witness_ct(
+                ctx,
+                fr(scalar_u256.slice(secp256r1_ct::fq_ct::NUM_LIMB_BITS * 2, secp256r1_ct::fq_ct::NUM_LIMB_BITS * 4))));
+
+        return x;
+    }
+
+  public:
+    static void test_add()
+    {
+        auto composer = Composer("../srs_db/ignition/");
+        size_t num_repetitions = 10;
+        for (size_t i = 0; i < num_repetitions; ++i) {
+            g1::affine_element input_a(g1::element::random_element());
+            g1::affine_element input_b(g1::element::random_element());
+
+            g1_bigfr_ct a = convert_inputs_bigfr(&composer, input_a);
+            g1_bigfr_ct b = convert_inputs_bigfr(&composer, input_b);
+
+            g1_bigfr_ct c = a + b;
+
+            g1::affine_element c_expected(g1::element(input_a) + g1::element(input_b));
+
+            uint256_t c_x_u256 = c.x.get_value().lo;
+            uint256_t c_y_u256 = c.y.get_value().lo;
+
+            fq c_x_result(c_x_u256);
+            fq c_y_result(c_y_u256);
+
+            EXPECT_EQ(c_x_result, c_expected.x);
+            EXPECT_EQ(c_y_result, c_expected.y);
+        }
+        auto prover = composer.create_prover();
+        auto verifier = composer.create_verifier();
+        waffle::plonk_proof proof = prover.construct_proof();
+        bool proof_result = verifier.verify_proof(proof);
+        EXPECT_EQ(proof_result, true);
+    }
+
+    static void test_sub()
+    {
+        auto composer = Composer("../srs_db/ignition/");
+        size_t num_repetitions = 10;
+        for (size_t i = 0; i < num_repetitions; ++i) {
+            g1::affine_element input_a(g1::element::random_element());
+            g1::affine_element input_b(g1::element::random_element());
+
+            g1_bigfr_ct a = convert_inputs_bigfr(&composer, input_a);
+            g1_bigfr_ct b = convert_inputs_bigfr(&composer, input_b);
+
+            g1_bigfr_ct c = a - b;
+
+            g1::affine_element c_expected(g1::element(input_a) - g1::element(input_b));
+
+            uint256_t c_x_u256 = c.x.get_value().lo;
+            uint256_t c_y_u256 = c.y.get_value().lo;
+
+            fq c_x_result(c_x_u256);
+            fq c_y_result(c_y_u256);
+
+            EXPECT_EQ(c_x_result, c_expected.x);
+            EXPECT_EQ(c_y_result, c_expected.y);
+        }
+        auto prover = composer.create_prover();
+        auto verifier = composer.create_verifier();
+        waffle::plonk_proof proof = prover.construct_proof();
+        bool proof_result = verifier.verify_proof(proof);
+        EXPECT_EQ(proof_result, true);
+    }
+
+    static void test_dbl()
+    {
+        auto composer = Composer("../srs_db/ignition/");
+        size_t num_repetitions = 10;
+        for (size_t i = 0; i < num_repetitions; ++i) {
+            g1::affine_element input_a(g1::element::random_element());
+
+            g1_bigfr_ct a = convert_inputs_bigfr(&composer, input_a);
+
+            g1_bigfr_ct c = a.dbl();
+
+            g1::affine_element c_expected(g1::element(input_a).dbl());
+
+            uint256_t c_x_u256 = c.x.get_value().lo;
+            uint256_t c_y_u256 = c.y.get_value().lo;
+
+            fq c_x_result(c_x_u256);
+            fq c_y_result(c_y_u256);
+
+            EXPECT_EQ(c_x_result, c_expected.x);
+            EXPECT_EQ(c_y_result, c_expected.y);
+        }
+        auto prover = composer.create_prover();
+        auto verifier = composer.create_verifier();
+        waffle::plonk_proof proof = prover.construct_proof();
+        bool proof_result = verifier.verify_proof(proof);
+        EXPECT_EQ(proof_result, true);
+    }
+
+    static void test_montgomery_ladder()
+    {
+        auto composer = Composer("../srs_db/ignition/");
+        size_t num_repetitions = 1;
+        for (size_t i = 0; i < num_repetitions; ++i) {
+            g1::affine_element input_a(g1::element::random_element());
+            g1::affine_element input_b(g1::element::random_element());
+
+            g1_bigfr_ct a = convert_inputs_bigfr(&composer, input_a);
+            g1_bigfr_ct b = convert_inputs_bigfr(&composer, input_b);
+
+            g1_bigfr_ct c = a.montgomery_ladder(b);
+
+            g1::affine_element c_expected(g1::element(input_a).dbl() + g1::element(input_b));
+
+            uint256_t c_x_u256 = c.x.get_value().lo;
+            uint256_t c_y_u256 = c.y.get_value().lo;
+
+            fq c_x_result(c_x_u256);
+            fq c_y_result(c_y_u256);
+
+            EXPECT_EQ(c_x_result, c_expected.x);
+            EXPECT_EQ(c_y_result, c_expected.y);
+        }
+        auto prover = composer.create_prover();
+        auto verifier = composer.create_verifier();
+        waffle::plonk_proof proof = prover.construct_proof();
+        bool proof_result = verifier.verify_proof(proof);
+        EXPECT_EQ(proof_result, true);
+    }
+
+    static void test_mul()
+    {
+        auto composer = Composer("../srs_db/ignition/");
+        size_t num_repetitions = 1;
+        for (size_t i = 0; i < num_repetitions; ++i) {
+            g1::affine_element input(g1::element::random_element());
+            fr scalar(fr::random_element());
+            if (uint256_t(scalar).get_bit(0)) {
+                scalar -= fr(1); // make sure to add skew
+            }
+            g1_ct P = convert_inputs(&composer, input);
+            fr_ct x = witness_ct(&composer, scalar);
+
+            std::cout << "gates before mul " << composer.get_num_gates() << std::endl;
+            g1_ct c = P * x;
+            std::cout << "composer aftr mul " << composer.get_num_gates() << std::endl;
+            g1::affine_element c_expected(g1::element(input) * scalar);
+
+            fq c_x_result(c.x.get_value().lo);
+            fq c_y_result(c.y.get_value().lo);
+
+            EXPECT_EQ(c_x_result, c_expected.x);
+            EXPECT_EQ(c_y_result, c_expected.y);
+        }
+        std::cout << "composer gates = " << composer.get_num_gates() << std::endl;
+        auto prover = composer.create_prover();
+        std::cout << "creating verifier " << std::endl;
+        auto verifier = composer.create_verifier();
+        std::cout << "creating proof " << std::endl;
+        waffle::plonk_proof proof = prover.construct_proof();
+        bool proof_result = verifier.verify_proof(proof);
+        EXPECT_EQ(proof_result, true);
+    }
+
+    static void test_twin_mul()
+    {
+        auto composer = Composer("../srs_db/ignition/");
+        size_t num_repetitions = 1;
+        for (size_t i = 0; i < num_repetitions; ++i) {
+            g1::affine_element input_a(g1::element::random_element());
+            g1::affine_element input_b(g1::element::random_element());
+            fr scalar_a(fr::random_element());
+            fr scalar_b(fr::random_element());
+            if ((uint256_t(scalar_a).get_bit(0) & 1) == 1) {
+                scalar_a -= fr(1); // make a have skew
+            }
+            if ((uint256_t(scalar_b).get_bit(0) & 1) == 0) {
+                scalar_b += fr(1); // make b not have skew
+            }
+            g1_bigfr_ct P_a = convert_inputs_bigfr(&composer, input_a);
+            bigfr_ct x_a = convert_inputs_bigfr(&composer, scalar_a);
+            g1_bigfr_ct P_b = convert_inputs_bigfr(&composer, input_b);
+            bigfr_ct x_b = convert_inputs_bigfr(&composer, scalar_b);
+
+            g1_bigfr_ct c = g1_bigfr_ct::batch_mul({ P_a, P_b }, { x_a, x_b });
+            g1::element input_c = (g1::element(input_a) * scalar_a);
+            g1::element input_d = (g1::element(input_b) * scalar_b);
+            g1::affine_element expected(input_c + input_d);
+            fq c_x_result(c.x.get_value().lo);
+            fq c_y_result(c.y.get_value().lo);
+
+            EXPECT_EQ(c_x_result, expected.x);
+            EXPECT_EQ(c_y_result, expected.y);
+        }
+        std::cout << "composer gates = " << composer.get_num_gates() << std::endl;
+        auto prover = composer.create_prover();
+        std::cout << "creating verifier " << std::endl;
+        auto verifier = composer.create_verifier();
+        std::cout << "creating proof " << std::endl;
+        waffle::plonk_proof proof = prover.construct_proof();
+        bool proof_result = verifier.verify_proof(proof);
+        EXPECT_EQ(proof_result, true);
+    }
+
+    static void test_triple_mul()
+    {
+        auto composer = Composer("../srs_db/ignition/");
+        size_t num_repetitions = 1;
+        for (size_t i = 0; i < num_repetitions; ++i) {
+            g1::affine_element input_a(g1::element::random_element());
+            g1::affine_element input_b(g1::element::random_element());
+            g1::affine_element input_c(g1::element::random_element());
+            fr scalar_a(fr::random_element());
+            fr scalar_b(fr::random_element());
+            fr scalar_c(fr::random_element());
+            if ((uint256_t(scalar_a).get_bit(0) & 1) == 1) {
+                scalar_a -= fr(1); // make a have skew
+            }
+            if ((uint256_t(scalar_b).get_bit(0) & 1) == 0) {
+                scalar_b += fr(1); // make b not have skew
+            }
+            g1_bigfr_ct P_a = convert_inputs_bigfr(&composer, input_a);
+            bigfr_ct x_a = convert_inputs_bigfr(&composer, scalar_a);
+            g1_bigfr_ct P_b = convert_inputs_bigfr(&composer, input_b);
+            bigfr_ct x_b = convert_inputs_bigfr(&composer, scalar_b);
+            g1_bigfr_ct P_c = convert_inputs_bigfr(&composer, input_c);
+            bigfr_ct x_c = convert_inputs_bigfr(&composer, scalar_c);
+
+            g1_bigfr_ct c = g1_bigfr_ct::batch_mul({ P_a, P_b, P_c }, { x_a, x_b, x_c });
+            g1::element input_e = (g1::element(input_a) * scalar_a);
+            g1::element input_f = (g1::element(input_b) * scalar_b);
+            g1::element input_g = (g1::element(input_c) * scalar_c);
+
+            g1::affine_element expected(input_e + input_f + input_g);
+            fq c_x_result(c.x.get_value().lo);
+            fq c_y_result(c.y.get_value().lo);
+
+            EXPECT_EQ(c_x_result, expected.x);
+            EXPECT_EQ(c_y_result, expected.y);
+        }
+        std::cout << "composer gates = " << composer.get_num_gates() << std::endl;
+        auto prover = composer.create_prover();
+        std::cout << "creating verifier " << std::endl;
+        auto verifier = composer.create_verifier();
+        std::cout << "creating proof " << std::endl;
+        waffle::plonk_proof proof = prover.construct_proof();
+        bool proof_result = verifier.verify_proof(proof);
+        EXPECT_EQ(proof_result, true);
+    }
+
+    static void test_quad_mul_bigfr()
+    {
+        auto composer = Composer("../srs_db/ignition/");
+        size_t num_repetitions = 1;
+        for (size_t i = 0; i < num_repetitions; ++i) {
+            g1::affine_element input_a(g1::element::random_element());
+            g1::affine_element input_b(g1::element::random_element());
+            g1::affine_element input_c(g1::element::random_element());
+            g1::affine_element input_d(g1::element::random_element());
+            fr scalar_a(fr::random_element());
+            fr scalar_b(fr::random_element());
+            fr scalar_c(fr::random_element());
+            fr scalar_d(fr::random_element());
+            if ((uint256_t(scalar_a).get_bit(0) & 1) == 1) {
+                scalar_a -= fr(1); // make a have skew
+            }
+            if ((uint256_t(scalar_b).get_bit(0) & 1) == 0) {
+                scalar_b += fr(1); // make b not have skew
+            }
+            g1_bigfr_ct P_a = convert_inputs_bigfr(&composer, input_a);
+            bigfr_ct x_a = convert_inputs_bigfr(&composer, scalar_a);
+            g1_bigfr_ct P_b = convert_inputs_bigfr(&composer, input_b);
+            bigfr_ct x_b = convert_inputs_bigfr(&composer, scalar_b);
+            g1_bigfr_ct P_c = convert_inputs_bigfr(&composer, input_c);
+            bigfr_ct x_c = convert_inputs_bigfr(&composer, scalar_c);
+            g1_bigfr_ct P_d = convert_inputs_bigfr(&composer, input_d);
+            bigfr_ct x_d = convert_inputs_bigfr(&composer, scalar_d);
+
+            g1_bigfr_ct c = g1_bigfr_ct::batch_mul({ P_a, P_b, P_c, P_d }, { x_a, x_b, x_c, x_d });
+            g1::element input_e = (g1::element(input_a) * scalar_a);
+            g1::element input_f = (g1::element(input_b) * scalar_b);
+            g1::element input_g = (g1::element(input_c) * scalar_c);
+            g1::element input_h = (g1::element(input_d) * scalar_d);
+
+            g1::affine_element expected(input_e + input_f + input_g + input_h);
+            fq c_x_result(c.x.get_value().lo);
+            fq c_y_result(c.y.get_value().lo);
+
+            EXPECT_EQ(c_x_result, expected.x);
+            EXPECT_EQ(c_y_result, expected.y);
+        }
+        std::cout << "composer gates = " << composer.get_num_gates() << std::endl;
+        auto prover = composer.create_prover();
+        std::cout << "creating verifier " << std::endl;
+        auto verifier = composer.create_verifier();
+        std::cout << "creating proof " << std::endl;
+        waffle::plonk_proof proof = prover.construct_proof();
+        bool proof_result = verifier.verify_proof(proof);
+        EXPECT_EQ(proof_result, true);
+    }
+
+    static void test_quad_mul()
+    {
+        auto composer = Composer("../srs_db/ignition/");
+        size_t num_repetitions = 1;
+        for (size_t i = 0; i < num_repetitions; ++i) {
+            g1::affine_element input_a(g1::element::random_element());
+            g1::affine_element input_b(g1::element::random_element());
+            g1::affine_element input_c(g1::element::random_element());
+            g1::affine_element input_d(g1::element::random_element());
+            fr scalar_a(fr::random_element());
+            fr scalar_b(fr::random_element());
+            fr scalar_c(fr::random_element());
+            fr scalar_d(fr::random_element());
+            if ((uint256_t(scalar_a).get_bit(0) & 1) == 1) {
+                scalar_a -= fr(1); // make a have skew
+            }
+            if ((uint256_t(scalar_b).get_bit(0) & 1) == 0) {
+                scalar_b += fr(1); // make b not have skew
+            }
+            g1_ct P_a = convert_inputs(&composer, input_a);
+            fr_ct x_a = witness_ct(&composer, scalar_a);
+            g1_ct P_b = convert_inputs(&composer, input_b);
+            fr_ct x_b = witness_ct(&composer, scalar_b);
+            g1_ct P_c = convert_inputs(&composer, input_c);
+            fr_ct x_c = witness_ct(&composer, scalar_c);
+            g1_ct P_d = convert_inputs(&composer, input_d);
+            fr_ct x_d = witness_ct(&composer, scalar_d);
+
+            g1_ct c = g1_ct::batch_mul({ P_a, P_b, P_c, P_d }, { x_a, x_b, x_c, x_d });
+            g1::element input_e = (g1::element(input_a) * scalar_a);
+            g1::element input_f = (g1::element(input_b) * scalar_b);
+            g1::element input_g = (g1::element(input_c) * scalar_c);
+            g1::element input_h = (g1::element(input_d) * scalar_d);
+
+            g1::affine_element expected(input_e + input_f + input_g + input_h);
+            fq c_x_result(c.x.get_value().lo);
+            fq c_y_result(c.y.get_value().lo);
+
+            EXPECT_EQ(c_x_result, expected.x);
+            EXPECT_EQ(c_y_result, expected.y);
+        }
+        std::cout << "composer gates = " << composer.get_num_gates() << std::endl;
+        auto prover = composer.create_prover();
+        std::cout << "creating verifier " << std::endl;
+        auto verifier = composer.create_verifier();
+        std::cout << "creating proof " << std::endl;
+        waffle::plonk_proof proof = prover.construct_proof();
+        bool proof_result = verifier.verify_proof(proof);
+        EXPECT_EQ(proof_result, true);
+    }
+
+    static void test_one()
+    {
+        auto composer = Composer("../srs_db/ignition/");
+        size_t num_repetitions = 1;
+        for (size_t i = 0; i < num_repetitions; ++i) {
+            fr scalar_a(fr::random_element());
+            if ((uint256_t(scalar_a).get_bit(0) & 1) == 1) {
+                scalar_a -= fr(1); // make a have skew
+            }
+            g1_bigfr_ct P_a = g1_bigfr_ct::one(&composer);
+            bigfr_ct x_a = convert_inputs_bigfr(&composer, scalar_a);
+            g1_bigfr_ct c = P_a * x_a;
+            g1::affine_element expected(g1::one * scalar_a);
+            fq c_x_result(c.x.get_value().lo);
+            fq c_y_result(c.y.get_value().lo);
+
+            EXPECT_EQ(c_x_result, expected.x);
+            EXPECT_EQ(c_y_result, expected.y);
+        }
+        std::cout << "composer gates = " << composer.get_num_gates() << std::endl;
+        auto prover = composer.create_prover();
+        std::cout << "creating verifier " << std::endl;
+        auto verifier = composer.create_verifier();
+        std::cout << "creating proof " << std::endl;
+        waffle::plonk_proof proof = prover.construct_proof();
+        bool proof_result = verifier.verify_proof(proof);
+        EXPECT_EQ(proof_result, true);
+    }
+
+    /** TODO (#LARGE_MODULUS_AFFINE_POINT_COMPRESSION): Rewrite this test after designing point compression for p>2^255
+            static void test_one_secp256r1()
+            {
+                auto composer = Composer("../srs_db/ignition/");
+                size_t num_repetitions = 1;
+                for (size_t i = 0; i < num_repetitions; ++i) {
+                    typename secp256r1::fr scalar_a(secp256r1::fr::random_element());
+                    if ((uint256_t(scalar_a).get_bit(0) & 1) == 1) {
+                        scalar_a -= secp256r1::fr(1); // make a have skew
+                    }
+                    typename secp256r1_ct::g1_bigfr_ct P_a = secp256r1_ct::g1_bigfr_ct::one(&composer);
+                    typename secp256r1_ct::bigfr_ct x_a = convert_inputs_bigfr_secp256r1(&composer, scalar_a);
+                    typename secp256r1_ct::g1_bigfr_ct c = P_a * x_a;
+                    secp256r1::g1::affine_element expected(secp256r1::g1::one * scalar_a);
+                    secp256r1::fq c_x_result(c.x.get_value().lo);
+                    secp256r1::fq c_y_result(c.y.get_value().lo);
+
+                    EXPECT_EQ(c_x_result, expected.x);
+                    EXPECT_EQ(c_y_result, expected.y);
+                }
+                std::cout << "composer gates = " << composer.get_num_gates() << std::endl;
+                auto prover = composer.create_prover();
+                std::cout << "creating verifier " << std::endl;
+                auto verifier = composer.create_verifier();
+                std::cout << "creating proof " << std::endl;
+                waffle::plonk_proof proof = prover.construct_proof();
+                bool proof_result = verifier.verify_proof(proof);
+                EXPECT_EQ(proof_result, true);
+            }**/
+
+    static void test_batch_mul()
+    {
+        const size_t num_points = 5;
+        auto composer = Composer("../srs_db/ignition/");
+        std::vector<g1::affine_element> points;
+        std::vector<fr> scalars;
+        for (size_t i = 0; i < num_points; ++i) {
+            points.push_back(g1::affine_element(g1::element::random_element()));
+            scalars.push_back(fr::random_element());
+        }
+
+        std::vector<g1_ct> circuit_points;
+        std::vector<fr_ct> circuit_scalars;
+        for (size_t i = 0; i < num_points; ++i) {
+            circuit_points.push_back(convert_inputs(&composer, points[i]));
+            circuit_scalars.push_back(witness_ct(&composer, scalars[i]));
+        }
+
+        g1_ct result_point = g1_ct::batch_mul(circuit_points, circuit_scalars);
+
+        g1::element expected_point = g1::one;
+        expected_point.self_set_infinity();
+        for (size_t i = 0; i < num_points; ++i) {
+            expected_point += (g1::element(points[i]) * scalars[i]);
+        }
+        expected_point = expected_point.normalize();
+        fq result_x(result_point.x.get_value().lo);
+        fq result_y(result_point.y.get_value().lo);
+
+        EXPECT_EQ(result_x, expected_point.x);
+        EXPECT_EQ(result_y, expected_point.y);
+
+        std::cout << "composer gates = " << composer.get_num_gates() << std::endl;
+        auto prover = composer.create_prover();
+        std::cout << "creating verifier " << std::endl;
+        auto verifier = composer.create_verifier();
+        std::cout << "creating proof " << std::endl;
+        waffle::plonk_proof proof = prover.construct_proof();
+        bool proof_result = verifier.verify_proof(proof);
+        EXPECT_EQ(proof_result, true);
+    }
+
+    static void test_batch_mul_short_scalars()
+    {
+        const size_t num_points = 11;
+        auto composer = Composer("../srs_db/ignition/");
+        std::vector<g1::affine_element> points;
+        std::vector<fr> scalars;
+        for (size_t i = 0; i < num_points; ++i) {
+            points.push_back(g1::affine_element(g1::element::random_element()));
+            uint256_t scalar_raw = fr::random_element();
+            scalar_raw.data[2] = 0ULL;
+            scalar_raw.data[3] = 0ULL;
+            scalars.push_back(fr(scalar_raw));
+        }
+        std::vector<g1_ct> circuit_points;
+        std::vector<fr_ct> circuit_scalars;
+        for (size_t i = 0; i < num_points; ++i) {
+            circuit_points.push_back(convert_inputs(&composer, points[i]));
+            circuit_scalars.push_back(witness_ct(&composer, scalars[i]));
+        }
+
+        g1_ct result_point = g1_ct::batch_mul(circuit_points, circuit_scalars, 128);
+
+        g1::element expected_point = g1::one;
+        expected_point.self_set_infinity();
+        for (size_t i = 0; i < num_points; ++i) {
+            expected_point += (g1::element(points[i]) * scalars[i]);
+        }
+        expected_point = expected_point.normalize();
+        fq result_x(result_point.x.get_value().lo);
+        fq result_y(result_point.y.get_value().lo);
+
+        EXPECT_EQ(result_x, expected_point.x);
+        EXPECT_EQ(result_y, expected_point.y);
+
+        std::cout << "composer gates = " << composer.get_num_gates() << std::endl;
+        auto prover = composer.create_prover();
+        std::cout << "creating verifier " << std::endl;
+        auto verifier = composer.create_verifier();
+        std::cout << "creating proof " << std::endl;
+        waffle::plonk_proof proof = prover.construct_proof();
+        bool proof_result = verifier.verify_proof(proof);
+        EXPECT_EQ(proof_result, true);
+    }
+
+    static void test_mixed_batch_mul()
+    {
+        const size_t num_big_points = 10;
+        const size_t num_small_points = 11;
+        auto composer = Composer("../srs_db/ignition/");
+        std::vector<g1::affine_element> big_points;
+        std::vector<fr> big_scalars;
+        std::vector<g1::affine_element> small_points;
+        std::vector<fr> small_scalars;
+
+        for (size_t i = 0; i < num_big_points; ++i) {
+            big_points.push_back(g1::affine_element(g1::element::random_element()));
+            big_scalars.push_back(fr::random_element());
+        }
+        for (size_t i = 0; i < num_small_points; ++i) {
+            small_points.push_back(g1::affine_element(g1::element::random_element()));
+            uint256_t scalar_raw = fr::random_element();
+            scalar_raw.data[2] = 0ULL;
+            scalar_raw.data[3] = 0ULL;
+            small_scalars.push_back(fr(scalar_raw));
+        }
+
+        std::vector<g1_ct> big_circuit_points;
+        std::vector<fr_ct> big_circuit_scalars;
+        std::vector<g1_ct> small_circuit_points;
+        std::vector<fr_ct> small_circuit_scalars;
+        for (size_t i = 0; i < num_big_points; ++i) {
+            big_circuit_points.push_back(convert_inputs(&composer, big_points[i]));
+            big_circuit_scalars.push_back(witness_ct(&composer, big_scalars[i]));
+        }
+        for (size_t i = 0; i < num_small_points; ++i) {
+            small_circuit_points.push_back(convert_inputs(&composer, small_points[i]));
+            small_circuit_scalars.push_back(witness_ct(&composer, small_scalars[i]));
+        }
+        g1_ct result_point = g1_ct::mixed_batch_mul(
+            big_circuit_points, big_circuit_scalars, small_circuit_points, small_circuit_scalars, 128);
+
+        g1::element expected_point = g1::one;
+        expected_point.self_set_infinity();
+        for (size_t i = 0; i < num_big_points; ++i) {
+            expected_point += (g1::element(big_points[i]) * big_scalars[i]);
+        }
+        for (size_t i = 0; i < num_small_points; ++i) {
+            expected_point += (g1::element(small_points[i]) * small_scalars[i]);
+        }
+        expected_point = expected_point.normalize();
+        fq result_x(result_point.x.get_value().lo);
+        fq result_y(result_point.y.get_value().lo);
+
+        EXPECT_EQ(result_x, expected_point.x);
+        EXPECT_EQ(result_y, expected_point.y);
+
+        std::cout << "composer gates = " << composer.get_num_gates() << std::endl;
+        auto prover = composer.create_prover();
+        std::cout << "creating verifier " << std::endl;
+        auto verifier = composer.create_verifier();
+        std::cout << "creating proof " << std::endl;
+        waffle::plonk_proof proof = prover.construct_proof();
+        bool proof_result = verifier.verify_proof(proof);
+        EXPECT_EQ(proof_result, true);
+    }
+};
+
+// Set types for which our typed tests will be built.
+typedef testing::Types<waffle::StandardComposer,
+                       waffle::TurboComposer //,
+                       >
+    ComposerTypes;
+// Define test suite
+TYPED_TEST_SUITE(stdlib_biggroup, ComposerTypes);
+
+TYPED_TEST(stdlib_biggroup, add)
+{
+    TestFixture::test_add();
+}
+
+TYPED_TEST(stdlib_biggroup, sub)
+{
+    TestFixture::test_sub();
+}
+
+TYPED_TEST(stdlib_biggroup, dbl)
+{
+    TestFixture::test_dbl();
+}
+
+TYPED_TEST(stdlib_biggroup, montgomery_ladder)
+{
+    TestFixture::test_montgomery_ladder();
+}
+
+HEAVY_TYPED_TEST(stdlib_biggroup, mul)
+{
+    TestFixture::test_mul();
+}
+
+HEAVY_TYPED_TEST(stdlib_biggroup, twin_mul)
+{
+    TestFixture::test_twin_mul();
+}
+
+HEAVY_TYPED_TEST(stdlib_biggroup, triple_mul)
+{
+    TestFixture::test_triple_mul();
+}
+
+HEAVY_TYPED_TEST(stdlib_biggroup, quad_mul_bigfr)
+{
+    TestFixture::test_quad_mul_bigfr();
+}
+
+HEAVY_TYPED_TEST(stdlib_biggroup, quad_mul)
+{
+    TestFixture::test_quad_mul();
+}
+
+HEAVY_TYPED_TEST(stdlib_biggroup, one)
+{
+    TestFixture::test_one();
+}
+
+/** TODO (#LARGE_MODULUS_AFFINE_POINT_COMPRESSION): Rewrite this test after designing point compression for p>2^255
+HEAVY_TYPED_TEST(stdlib_biggroup, one_secp256r1)
+{
+    TestFixture::test_one_secp256r1();
+}
+**/
+
+HEAVY_TYPED_TEST(stdlib_biggroup, batch_mul)
+{
+    TestFixture::test_batch_mul();
+}
+
+HEAVY_TYPED_TEST(stdlib_biggroup, batch_mul_short_scalars)
+{
+    TestFixture::test_batch_mul_short_scalars();
+}
+
+HEAVY_TYPED_TEST(stdlib_biggroup, mixed_batch_mul)
+{
+    TestFixture::test_mixed_batch_mul();
+}
