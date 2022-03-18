@@ -1,11 +1,13 @@
 import type { RemoteAsset } from 'alt-model/types';
 import React from 'react';
 import { TxSettlementTime, TxType } from '@aztec/sdk';
+
 import { isValidForm, ProviderState, SendMode, ShieldFormValues, ShieldStatus, ValueAvailability, WalletId } from 'app';
 import { Button, InputTheme } from 'components';
 import { Theme } from 'styles';
 import { ShieldProgress } from './shield_progress';
 import { AmountSection, GasSection, GasSectionType, RecipientSection } from 'views/account/dashboard/modals/sections';
+import { WalletSelect } from 'views/account/wallet_select';
 import style from './shield.module.scss';
 
 interface ShieldProps {
@@ -61,11 +63,20 @@ export const Shield: React.FunctionComponent<ShieldProps> = (props: ShieldProps)
   }
 
   const inputTheme = theme === Theme.WHITE ? InputTheme.WHITE : InputTheme.LIGHT;
-  const { amount, fees, speed, maxAmount, recipient, submit } = form;
+  const { amount, fees, speed, maxAmount, recipient, submit, ethAccount } = form;
   const txFee = fees.value[speed.value];
 
   return (
     <div className={style.root}>
+      <WalletSelect
+        className={style.walletSelect}
+        asset={asset}
+        providerState={providerState}
+        ethAccount={ethAccount.value}
+        message={ethAccount.message}
+        messageType={ethAccount.messageType}
+        onChangeWallet={onChangeWallet}
+      />
       <AmountSection
         maxAmount={maxAmount.value}
         asset={asset}
@@ -89,16 +100,7 @@ export const Shield: React.FunctionComponent<ShieldProps> = (props: ShieldProps)
         asset={asset}
         fee={txFee.fee}
       />
-      {/* <div>
-        {recipient.message && (
-          <InputMessage
-            className={style.fixedInputMessage}
-            theme={inputTheme}
-            message={recipient.message}
-            type={recipient.messageType}
-          />
-        )}
-      </div> */}
+      {submit.message && <div className={style.errorMessage}>{submit.message}</div>}
       <div className={style.nextWrapper}>
         <Button
           theme="gradient"
@@ -108,7 +110,6 @@ export const Shield: React.FunctionComponent<ShieldProps> = (props: ShieldProps)
           isLoading={submit.value}
         />
       </div>
-      {/* {submit.message && <InputMessage theme={inputTheme} message={submit.message} type={submit.messageType} />} */}
     </div>
   );
 };

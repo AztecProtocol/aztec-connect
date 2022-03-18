@@ -1,4 +1,3 @@
-import { GradientSelectBox } from 'ui-components';
 import styled from 'styled-components/macro';
 import { useApp } from 'alt-model';
 import { WalletId, wallets } from 'app';
@@ -22,11 +21,7 @@ export function WalletDropdownSelect() {
     <Select
       items={ITEMS}
       onSelect={id => userSession?.changeWallet(id)}
-      trigger={
-        <GradientSelectBox>
-          <PlaceHolder>Connect a wallet</PlaceHolder>
-        </GradientSelectBox>
-      }
+      trigger={<PlaceHolder>Connect a wallet</PlaceHolder>}
     />
   );
 }

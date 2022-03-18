@@ -1,70 +1,16 @@
 import type { AssetValue } from '@aztec/sdk';
 import { useState } from 'react';
 import { Dropdown, DropdownOption } from '../dropdown';
-import styled from 'styled-components/macro';
 import sendToL1Icon from '../../images/l1_send.svg';
 import sendToL2Icon from '../../images/l2_send.svg';
 import ellipsisIcon from '../../images/ellipsis.svg';
 import { convertToPriceString, formatBaseUnits } from '../../app';
-import { ShieldedAssetIcon } from '..';
 import { useAssetPrice } from '../../alt-model';
 import { useRemoteAssetForId } from 'alt-model/top_level_context';
 import { getAssetPreferredFractionalDigits } from 'alt-model/known_assets/known_asset_display_data';
 import { RemoteAsset } from 'alt-model/types';
-
-const HoldingWrapper = styled.div`
-  display: flex;
-  flex-direction: row;
-  width: 100%;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: 0px 4px 14px rgba(0, 0, 0, 0.1);
-  border-radius: 10px;
-  padding: 15px 40px;
-  letter-spacing: 0.1em;
-  margin: 20px 0;
-`;
-
-const AssetWrapper = styled.div`
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-`;
-
-const HoldingUnits = styled.div`
-  margin-left: 20px;
-`;
-
-const ButtonIcon = styled.img`
-  width: 20px;
-`;
-
-const Button = styled.div`
-  width: 35px;
-  height: 35px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  box-shadow: 0px 4px 14px rgba(0, 0, 0, 0.05);
-  border-radius: 5px;
-  margin-left: 10px;
-  cursor: pointer;
-  transition: transform 0.2s ease-in-out;
-  &:hover {
-    transform: scale(1.1);
-  }
-`;
-
-const ButtonsWrapper = styled.div`
-  display: flex;
-  flex-direction: row;
-  position: relative;
-`;
-
-const HoldingAmount = styled.div`
-  color: #dedede;
-  font-style: italic;
-`;
+import style from './holding.module.scss';
+import { ShieldedAssetIcon } from '..';
 
 const DROPDOWN_OPTIONS = [
   { value: 'widthdraw', label: 'Widthdraw to L1' },
@@ -116,32 +62,32 @@ export function Holding({ assetValue, onSend, onWidthdraw }: HoldingProps) {
   }
 
   return (
-    <HoldingWrapper>
-      <AssetWrapper>
+    <div className={style.holdingWrapper}>
+      <div className={style.assetWrapper}>
         <ShieldedAssetIcon address={asset.address} />
-        <HoldingUnits>zk{asset.symbol ?? '?'}</HoldingUnits>
-      </AssetWrapper>
-      <HoldingAmount>${priceStr}</HoldingAmount>
+        <div className={style.holdingUnits}>zk{asset.symbol ?? '?'}</div>
+      </div>
+      <div className={style.holdingAmount}>${priceStr}</div>
       <div>{amountStr}</div>
-      <ButtonsWrapper>
-        <Button onClick={() => onWidthdraw?.(asset)}>
-          <ButtonIcon src={sendToL1Icon} />
-        </Button>
+      <div className={style.buttonsWrapper}>
+        <div className={style.button} onClick={() => onWidthdraw?.(asset)}>
+          <img className={style.buttonIcon} src={sendToL1Icon} />
+        </div>
         {onSend && (
-          <Button onClick={() => onSend(asset)}>
-            <ButtonIcon src={sendToL2Icon} />
-          </Button>
+          <div className={style.button} onClick={() => onSend(asset)}>
+            <img className={style.buttonIcon} src={sendToL2Icon} />
+          </div>
         )}
-        <Button onClick={handleDropdownToggle}>
-          <ButtonIcon src={ellipsisIcon} />
-        </Button>
+        <div className={style.button} onClick={handleDropdownToggle}>
+          <img className={style.buttonIcon} src={ellipsisIcon} />
+        </div>
         <Dropdown
           isOpen={isDropdownOpen}
           options={DROPDOWN_OPTIONS}
           onClick={handleDropdownClick}
           onClose={handleDropdownClose}
         />
-      </ButtonsWrapper>
-    </HoldingWrapper>
+      </div>
+    </div>
   );
 }

@@ -1,5 +1,5 @@
-export * from './gradient_select_box';
-export * from './input';
+export * from './select';
+export * from './search_input';
 export * from './navbar';
 export * from './speed_switch';
 export * from './faq_hint';

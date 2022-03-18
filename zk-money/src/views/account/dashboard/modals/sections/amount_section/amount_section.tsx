@@ -58,7 +58,7 @@ export function AmountSection(props: AmountSectionProps) {
             onChangeAmountString={props.onChangeAmountStr}
             amountString={props.amountStr}
           />
-          <span className={style.errorMessage}>{props.message}</span>
+          <div className={style.errorMessage}>{props.message}</div>
           {!props.hidePrivacy && <Privacy className={style.privacy} asset={props.asset} />}
           <InfoButton className={style.styledInfoButton} onClick={() => setShowingInfo(true)} />
         </div>

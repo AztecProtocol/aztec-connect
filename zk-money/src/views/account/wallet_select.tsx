@@ -72,6 +72,7 @@ const WalletItem: React.FunctionComponent<WalletItemProps> = ({ name, icon, conn
 );
 
 interface WalletSelectInputProps {
+  className?: string;
   asset: RemoteAsset;
   providerState?: ProviderState;
   ethAccount: EthAccountState;
@@ -81,6 +82,7 @@ interface WalletSelectInputProps {
 }
 
 export const WalletSelect: React.FunctionComponent<WalletSelectInputProps> = ({
+  className,
   asset,
   providerState,
   ethAccount,
@@ -93,6 +95,7 @@ export const WalletSelect: React.FunctionComponent<WalletSelectInputProps> = ({
   const walletId = providerState?.walletId;
   const walletSelect = (
     <Select
+      className={className}
       trigger={<TextButton text={`(${ethAddress ? 'Change' : 'Connect'})`} size="xs" nowrap />}
       items={wallets
         .filter(({ id }) => id !== WalletId.HOT)
@@ -107,7 +110,7 @@ export const WalletSelect: React.FunctionComponent<WalletSelectInputProps> = ({
 
   if (ethAddress && ethAddress.toString() === providerState?.account?.toString()) {
     return (
-      <FlexRow>
+      <FlexRow className={className}>
         <Tooltip
           trigger={
             message && messageType === MessageType.ERROR ? (
@@ -133,7 +136,7 @@ export const WalletSelect: React.FunctionComponent<WalletSelectInputProps> = ({
 
   if (providerState && [ProviderStatus.INITIALIZING, ProviderStatus.INITIALIZED].indexOf(providerState.status) >= 0) {
     return (
-      <FlexRow>
+      <FlexRow className={className}>
         <EthAddressStatus size="xs" color="orange" />
         <EthAddressText text={`Connecting to ${wallets[providerState!.walletId].name}...`} size="xs" nowrap />
       </FlexRow>
@@ -141,7 +144,7 @@ export const WalletSelect: React.FunctionComponent<WalletSelectInputProps> = ({
   }
 
   return (
-    <FlexRow>
+    <FlexRow className={className}>
       <ErrorEthAddressRoot>
         <ErrorEthAddressIcon src={errorIcon} />
       </ErrorEthAddressRoot>

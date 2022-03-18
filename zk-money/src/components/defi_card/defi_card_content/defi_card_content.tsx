@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import styled from 'styled-components/macro';
+import { bindStyle } from 'ui-components/util/classnames';
 import { InfoWrap } from 'ui-components';
 import { Button } from '../..';
 import { DefiRecipe } from '../../../alt-model/defi/types';
@@ -7,21 +7,25 @@ import { DefiCardDescription } from './defi_card_description';
 import { DefiCardInfoContent } from './defi_card_info_content';
 import { DefiCardProgress } from './defi_card_progress';
 import { DefiCardStats } from './defi_card_stats';
+import style from './defi_card_content.module.scss';
 
-const DefiCardContentWrapper = styled.div`
-  display: flex;
-  flex-direction: column;
-`;
-
-const DefiCardButton = styled(Button)`
-  margin: 20px 0 25px 0;
-  width: 185px;
-  align-self: center;
-`;
+const cx = bindStyle(style);
 
 interface DefiCardContentProps {
   onSelect: (recipe: DefiRecipe) => void;
   recipe: DefiRecipe;
+  isLoggedIn: boolean;
+}
+
+function getAssetName(assetName: number) {
+  switch (assetName) {
+    case 0:
+      return 'ETH';
+    case 1:
+      return 'DAI';
+    default:
+      return '';
+  }
 }
 
 export const DefiCardContent = (props: DefiCardContentProps) => {
@@ -36,23 +40,30 @@ export const DefiCardContent = (props: DefiCardContentProps) => {
   };
 
   const handleClickDeposit = () => {
-    props.onSelect(props.recipe);
+    if (props.isLoggedIn) {
+      props.onSelect(props.recipe);
+    }
   };
 
   return (
     <InfoWrap
       showingInfo={isInformationOpen}
       onHideInfo={handleCloseInformation}
-      infoHeader="Defi Investing"
+      infoHeader="DeFi Investing"
       infoContent={<DefiCardInfoContent />}
       borderRadius={20}
     >
-      <DefiCardContentWrapper>
+      <div className={style.defiCardContentWrapper}>
         <DefiCardDescription onOpenInformation={handleOpenInformation} text={props.recipe.shortDesc} />
         <DefiCardStats recipe={props.recipe} />
         <DefiCardProgress />
-        <DefiCardButton theme="gradient" text="Deposit zkETH" onClick={handleClickDeposit} />
-      </DefiCardContentWrapper>
+        <Button
+          className={cx(style.defiCardButton, !props.isLoggedIn && style.disabledButton)}
+          theme="gradient"
+          text={`Deposit zk${props.recipe.inputAssetA.symbol}`}
+          onClick={handleClickDeposit}
+        />
+      </div>
     </InfoWrap>
   );
 };

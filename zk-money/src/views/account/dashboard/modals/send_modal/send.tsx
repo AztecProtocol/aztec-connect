@@ -143,6 +143,7 @@ export const Send: React.FunctionComponent<SendProps> = ({
       />
       <FaqHint className={style.faqHint} />
       <NextWrapper>
+        {submit.message && <div className={style.errorMessage}>{submit.message}</div>}
         <Button
           text="Next"
           theme="gradient"

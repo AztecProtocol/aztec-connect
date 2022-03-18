@@ -4,13 +4,15 @@ import { DefiCardsList } from './defi_cards_list';
 
 interface EarnProps {
   onOpenDefiModal: (recipe: DefiRecipe) => void;
+  isLoggedIn: boolean;
 }
 
-export function Earn({ onOpenDefiModal }: EarnProps) {
+export function Earn(props: EarnProps) {
+  const { onOpenDefiModal, isLoggedIn } = props;
   return (
     <div>
-      <DefiCardsList onSelect={onOpenDefiModal} />
-      <DefiInvestments />
+      <DefiCardsList onSelect={onOpenDefiModal} isLoggedIn={isLoggedIn} />
+      {isLoggedIn && <DefiInvestments />}
     </div>
   );
 }

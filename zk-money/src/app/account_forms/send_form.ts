@@ -303,11 +303,15 @@ export class SendForm extends EventEmitter implements AccountForm {
   }
 
   async softValidation() {
+    this.updateFormStatus(FormStatus.LOCKED);
+
     const validated = await this.validateValues();
 
     if (!isValidForm(validated)) {
       this.updateFormValues(mergeValues(validated, { submit: { value: false } }));
     }
+
+    this.updateFormStatus(FormStatus.ACTIVE);
   }
 
   async lock() {

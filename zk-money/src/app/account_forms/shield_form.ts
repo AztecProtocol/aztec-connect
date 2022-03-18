@@ -351,6 +351,18 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     this.ethAccount.on(EthAccountEvent.UPDATED_PUBLIC_BALANCE, this.onPublicBalanceChange);
   }
 
+  async softValidation() {
+    this.updateFormStatus(FormStatus.LOCKED);
+
+    const validated = await this.validateValues();
+
+    if (!isValidForm(validated)) {
+      this.updateFormValues(mergeValues(validated, { submit: { value: false } }));
+    }
+
+    this.updateFormStatus(FormStatus.ACTIVE);
+  }
+
   async lock() {
     this.updateFormValues({ submit: { value: true } });
 
@@ -539,7 +551,9 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     }
 
     const recipient = form.recipient.value.input;
-    if (!isSameAlias(recipient, this.alias) && !(await this.accountUtils.isValidRecipient(recipient))) {
+    if (recipient.length === 0) {
+      form.recipient = withError(form.recipient, `Please write a recipient.`);
+    } else if (!isSameAlias(recipient, this.alias) && !(await this.accountUtils.isValidRecipient(recipient))) {
       form.recipient = withError(form.recipient, `Cannot find a user with username '${recipient}'.`);
     }
 

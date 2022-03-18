@@ -1,0 +1,20 @@
+.defiCardButton {
+  margin: 20px 0 25px 0;
+  width: 185px;
+  align-self: center;
+}
+
+.disabledButton {
+  opacity: 0.5;
+  cursor: initial !important;
+  transform: translateY(0px) !important;
+}
+
+.disabledButton:active {
+  transform: translateY(0px) !important;
+}
+
+.defiCardContentWrapper {
+  display: flex;
+  flex-direction: column;
+}

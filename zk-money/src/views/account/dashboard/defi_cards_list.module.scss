@@ -11,3 +11,30 @@
 .defiCard {
   margin-bottom: 50px;
 }
+
+.investmentFilterInputs {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: space-evenly;
+}
+
+.searchInput {
+  box-shadow: 0px 4px 14px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+
+.searchInput:focus {
+  box-shadow: 0px 4px 14px rgba(0, 0, 0, 0.1);
+}
+
+.searchInput:hover {
+  box-shadow: 0px 4px 14px rgba(0, 0, 0, 0.1);
+}
+
+.select {
+  margin-right: 15px;
+}
+
+.noResults {
+}

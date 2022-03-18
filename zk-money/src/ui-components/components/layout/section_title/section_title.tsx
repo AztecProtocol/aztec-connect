@@ -1,16 +1,15 @@
-import { FaqHint } from '../../inputs/faq_hint';
 import style from './section_title.module.scss';
 
 interface SectionTitleProps {
   label: string;
-  showFaq?: boolean;
+  sideComponent?: JSX.Element;
 }
 
-export function SectionTitle({ label, showFaq }: SectionTitleProps) {
+export function SectionTitle({ label, sideComponent }: SectionTitleProps) {
   return (
     <div className={style.sectionTitleWrapper}>
       <h1 className={style.title}>{label}</h1>
-      {showFaq && <FaqHint />}
+      {sideComponent}
     </div>
   );
 }

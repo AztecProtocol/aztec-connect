@@ -34,3 +34,40 @@
   -webkit-text-fill-color: transparent;
   -moz-text-fill-color: transparent;
 }
+
+@mixin reset_input() {
+  margin: 0;
+  font-family: inherit !important;
+  border: none;
+  outline-width: 0;
+  outline-color: transparent;
+  background-image: none;
+  background-color: transparent;
+  box-shadow: none;
+
+  &:focus,
+  &:hover {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    outline: none;
+  }
+
+  &::placeholder {
+    font-size: inherit;
+    font-weight: inherit;
+    line-height: inherit;
+  }
+
+  // Hide arrows from number input
+  /* Chrome, Safari, Edge, Opera */
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  /* Firefox */
+  &[type='number'] {
+    -moz-appearance: textfield;
+  }
+}

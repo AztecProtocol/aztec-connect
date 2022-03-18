@@ -70,14 +70,21 @@ interface SelectProps {
   trigger: React.ReactNode;
   items: SelectItem[];
   onSelect(id: any): void;
+  className?: string;
   position?: DropdownPosition;
 }
 
-export const Select: React.FunctionComponent<SelectProps> = ({ trigger, items, onSelect, position = 'bottom' }) => {
+export const Select: React.FunctionComponent<SelectProps> = ({
+  trigger,
+  className,
+  items,
+  onSelect,
+  position = 'bottom',
+}) => {
   const [showDropdown, setShowDropdown] = useState(false);
 
   return (
-    <Root onClickOutside={() => setShowDropdown(false)} disabled={!showDropdown}>
+    <Root className={className} onClickOutside={() => setShowDropdown(false)} disabled={!showDropdown}>
       <TriggerRoot
         onClick={e => {
           e.preventDefault();

@@ -7,7 +7,9 @@ interface DefiCardProps {
   className?: string;
   recipe: DefiRecipe;
   onSelect: (recipe: DefiRecipe) => void;
+  isLoggedIn: boolean;
 }
+
 export const DefiCard: React.FunctionComponent<DefiCardProps> = props => {
   return (
     <Card

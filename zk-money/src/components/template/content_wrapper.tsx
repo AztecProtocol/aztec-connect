@@ -3,9 +3,9 @@ import { breakpoints, spacings } from '../../styles';
 
 export const ContentWrapper = styled.div`
   position: relative;
-  padding: 0 ${spacings.xl};
+  padding: 0 20px;
   width: 100%;
-  max-width: ${parseInt(breakpoints.xl) - parseInt(spacings.xl) * 2}px;
+  max-width: 1000px;
 
   @media (max-width: ${breakpoints.m}) {
     padding: 0 ${spacings.l};

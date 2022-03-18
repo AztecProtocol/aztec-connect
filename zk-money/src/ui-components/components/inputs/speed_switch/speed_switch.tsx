@@ -56,12 +56,13 @@ interface SpeedSwitchProps<T> {
   value: T;
   options: Option<T>[];
   onChangeValue: (value: T) => void;
+  className?: string;
 }
 
-export function SpeedSwitch<T>({ value, onChangeValue, options }: SpeedSwitchProps<T>) {
+export function SpeedSwitch<T>({ value, onChangeValue, options, className }: SpeedSwitchProps<T>) {
   const selectedIdx = options.findIndex(opt => opt.value === value);
   return (
-    <Root>
+    <Root className={className}>
       {options.map((opt, idx) => (
         <Cell key={idx} idx={idx} onClick={() => onChangeValue(opt.value)} optionCount={options.length}>
           <Text size="xs" color="gradient" text={opt.label} />

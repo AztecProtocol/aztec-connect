@@ -1,9 +1,11 @@
+import { useCallback } from 'react';
 import { isKnownAssetAddressString } from 'alt-model/known_assets/known_asset_addresses';
 import { RemoteAsset } from 'alt-model/types';
 import { Card, CardHeaderSize } from 'ui-components';
 import { useApp, useAssetPrice, useProviderState, useShieldForm } from 'alt-model';
 import { ShieldStatus } from 'app';
 import { CloseButtonWhite, Modal } from 'components';
+import { debounce } from 'lodash';
 import { Theme } from 'styles';
 import { Shield } from './shield';
 import style from './shield_modal.module.scss';
@@ -16,6 +18,10 @@ export function ShieldModal({ asset, onClose }: { asset: RemoteAsset; onClose: (
   const assetPrice = useAssetPrice(asset.id);
   const providerState = useProviderState();
   const canClose = !processing && !generatingKey;
+  const debouncedSoftValidation = useCallback(
+    debounce(() => shieldForm?.softValidation(), 1e3),
+    [shieldForm],
+  );
 
   if (!formValues || !asset) return <></>;
 
@@ -43,7 +49,10 @@ export function ShieldModal({ asset, onClose }: { asset: RemoteAsset; onClose: (
             providerState={providerState}
             form={formValues}
             explorerUrl={config.explorerUrl}
-            onChangeInputs={values => shieldForm?.changeValues(values)}
+            onChangeInputs={async values => {
+              shieldForm?.changeValues(values);
+              debouncedSoftValidation();
+            }}
             onValidate={() => shieldForm?.lock()}
             onChangeWallet={walletId => userSession?.changeWallet(walletId)}
             onDisconnectWallet={() => userSession?.disconnectWallet()}

@@ -1,6 +1,8 @@
+import { useCallback } from 'react';
 import { isKnownAssetAddressString } from 'alt-model/known_assets/known_asset_addresses';
 import type { RemoteAsset } from 'alt-model/types';
 import { Card, CardHeaderSize } from 'ui-components';
+import { debounce } from 'lodash';
 import { useApp, useAssetPrice, useProviderState, useSendForm } from 'alt-model';
 import { SendMode, SendStatus } from 'app';
 import { CloseButtonWhite, Modal } from 'components';
@@ -34,6 +36,10 @@ export function SendModal({ asset, onClose, sendMode = SendMode.SEND }: SendModa
   const providerState = useProviderState();
   const canClose = !processing && !generatingKey;
   const overrideModalLayout = !generatingKey;
+  const debouncedSoftValidation = useCallback(
+    debounce(() => sendForm?.softValidation(), 300),
+    [sendForm],
+  );
 
   if (!formValues || !asset) return <></>;
 
@@ -71,9 +77,9 @@ export function SendModal({ asset, onClose, sendMode = SendMode.SEND }: SendModa
             sendMode={sendMode}
             form={formValues}
             explorerUrl={config.explorerUrl}
-            onChangeInputs={values => {
+            onChangeInputs={async values => {
               sendForm?.changeValues(values);
-              // sendForm?.softValidation();
+              debouncedSoftValidation();
             }}
             onValidate={() => sendForm?.lock()}
             onChangeWallet={walletId => userSession?.changeWallet(walletId)}

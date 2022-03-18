@@ -53,7 +53,7 @@ export function RecipientSection(props: RecipientSectionProps) {
             placeholder={getRecipientPlaceholder(sendMode)}
           />
         </InputWrapper>
-        <span className={style.errorMessage}>{props.message}</span>
+        <div className={style.errorMessage}>{props.message}</div>
       </div>
     </BorderBox>
   );

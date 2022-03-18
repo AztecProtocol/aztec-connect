@@ -426,7 +426,10 @@ export class AppView extends PureComponent<AppProps, AppState> {
                     }
                   />
                 ))}
-                <Route path="/earn" element={<Earn onOpenDefiModal={this.handleOpenDefiModal} />} />
+                <Route
+                  path="/earn"
+                  element={<Earn isLoggedIn={isLoggedIn} onOpenDefiModal={this.handleOpenDefiModal} />}
+                />
                 <Route path="/trade" element={<div />} />
                 <Route path="/balance" element={<Balance />} />
                 <Route

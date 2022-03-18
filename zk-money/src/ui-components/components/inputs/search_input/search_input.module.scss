@@ -1,0 +1,25 @@
+@use '../../../styles/mixins';
+
+.searchInputWrapper {
+  box-shadow: 0px 4px 14px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  position: relative;
+  width: 100%;
+  height: 45px;
+  display: flex;
+  flex-direction: row;
+}
+
+.searchInput {
+  @include mixins.reset_input;
+  font-size: 18px;
+  margin-left: 10px;
+}
+
+.innerFrame {
+  height: 45px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}

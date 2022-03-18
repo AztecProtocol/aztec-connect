@@ -102,11 +102,11 @@ export const Template: React.FunctionComponent<TemplateProps> = ({
   useLayoutEffect(() => {
     const stopResizing = debounce(() => {
       setResizing(false);
-    }, 200);
-    const resize = debounce(() => {
+    }, 100);
+    const resize = () => {
       setResizing(true);
       stopResizing();
-    }, 100);
+    };
     window.addEventListener('resize', resize);
     return () => window.removeEventListener('resize', resize);
   }, []);
