@@ -42,6 +42,7 @@ export function DefiModal({ recipe, onClose }: DefiModalProps) {
       fee={fee}
       composerState={composerState}
       onSubmit={handleSubmit}
+      onClose={onClose}
       transactionLimit={transactionLimit}
     />
   ) : (

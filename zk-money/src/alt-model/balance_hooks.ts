@@ -17,15 +17,19 @@ export function useTotalSpendableBalance() {
   return useAggregatedAssetsPrice(balances);
 }
 
-export function useBalance(assetId: number) {
+export function useBalance(assetId?: number) {
   const { accountId } = useApp();
   const sdk = useInitialisedSdk();
-  const [balance, setBalance] = useState(() => accountId && sdk?.getBalance(assetId, accountId));
+  const [balance, setBalance] = useState(() => {
+    if (accountId && assetId !== undefined) return sdk?.getBalance(assetId, accountId);
+  });
   useEffect(() => {
-    if (sdk && accountId) {
+    if (sdk && accountId && assetId !== undefined) {
       const updateBalance = () => setBalance(sdk.getBalance(assetId, accountId));
       updateBalance();
       return listenAccountUpdated(sdk, accountId, updateBalance);
+    } else {
+      setBalance(undefined);
     }
   }, [sdk, accountId, assetId]);
   return balance;

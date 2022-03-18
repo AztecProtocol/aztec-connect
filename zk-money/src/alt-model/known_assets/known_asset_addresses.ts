@@ -12,7 +12,8 @@ export type KnownAssetAddressString = typeof KNOWN_MAINNET_ASSET_ADDRESS_STRS[Kn
 export type PerKnownAddress<TValue> = Record<KnownAssetAddressString, TValue>;
 
 const addressStrs: string[] = Object.values(KNOWN_MAINNET_ASSET_ADDRESS_STRS);
-export function isKnownAssetAddressString(addressStr: string): addressStr is KnownAssetAddressString {
+export function isKnownAssetAddressString(addressStr?: string): addressStr is KnownAssetAddressString {
+  if (!addressStr) return false;
   return addressStrs.includes(addressStr);
 }
 

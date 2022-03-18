@@ -2,7 +2,7 @@ import type { RemoteAsset } from 'alt-model/types';
 import { useState } from 'react';
 import { InfoWrap, AmountSelection } from 'ui-components';
 import { BlockTitle, BorderBox, InfoButton } from 'components';
-import { MiniBalanceIndicator } from './mini_balance_indicator';
+import { MiniL1BalanceIndicator, MiniL2BalanceIndicator } from './mini_balance_indicators';
 import { Privacy } from './privacy';
 import { InputAnnotation } from './types';
 import style from './amount_section.module.scss';
@@ -26,6 +26,17 @@ function Info() {
   );
 }
 
+type BalanceType = 'L1' | 'L2';
+
+function renderBalanceIndicator(balanceType: BalanceType, asset: RemoteAsset) {
+  switch (balanceType) {
+    case 'L1':
+      return <MiniL1BalanceIndicator asset={asset} />;
+    case 'L2':
+      return <MiniL2BalanceIndicator asset={asset} />;
+  }
+}
+
 interface AmountSectionProps {
   asset: RemoteAsset;
   amountStr: string;
@@ -35,6 +46,8 @@ interface AmountSectionProps {
   amountStrAnnotation?: InputAnnotation;
   hidePrivacy?: boolean;
   message?: string;
+  balance?: boolean;
+  balanceType: BalanceType;
 }
 
 export function AmountSection(props: AmountSectionProps) {
@@ -50,7 +63,7 @@ export function AmountSection(props: AmountSectionProps) {
         borderRadius={20}
       >
         <div className={style.content}>
-          <BlockTitle title="Amount" info={<MiniBalanceIndicator asset={props.asset} />} />
+          <BlockTitle title="Amount" info={renderBalanceIndicator(props.balanceType, props.asset)} />
           <AmountSelection
             asset={props.asset}
             allowAssetSelection={props.allowAssetSelection}

@@ -1,4 +1,4 @@
-import { AccountId, EthereumProvider } from '@aztec/sdk';
+import { AccountId } from '@aztec/sdk';
 import { createContext, useContext } from 'react';
 import { Provider, RollupService, UserSession } from '../app';
 import { Database } from '../app/database';
@@ -14,7 +14,6 @@ interface AppContextValue {
   alias?: string;
   keyVault?: KeyVault;
   db: Database;
-  stableEthereumProvider?: EthereumProvider;
   rollupService?: RollupService;
   userSession?: UserSession;
 }

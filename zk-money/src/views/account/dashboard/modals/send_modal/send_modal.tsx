@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useMemo } from 'react';
 import { isKnownAssetAddressString } from 'alt-model/known_assets/known_asset_addresses';
 import type { RemoteAsset } from 'alt-model/types';
 import { Card, CardHeaderSize } from 'ui-components';
@@ -36,10 +36,7 @@ export function SendModal({ asset, onClose, sendMode = SendMode.SEND }: SendModa
   const providerState = useProviderState();
   const canClose = !processing && !generatingKey;
   const overrideModalLayout = !generatingKey;
-  const debouncedSoftValidation = useCallback(
-    debounce(() => sendForm?.softValidation(), 300),
-    [sendForm],
-  );
+  const debouncedSoftValidation = useMemo(() => debounce(() => sendForm?.softValidation(), 300), [sendForm]);
 
   if (!formValues || !asset) return <></>;
 

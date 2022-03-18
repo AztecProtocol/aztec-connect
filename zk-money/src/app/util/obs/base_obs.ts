@@ -30,6 +30,7 @@ export class BaseObs<T> {
   }
 
   protected setAndEmit(value: T) {
+    if (value === this._value) return;
     this._value = value;
     const listeners = [...this.listeners];
     for (const l of listeners) l(value);

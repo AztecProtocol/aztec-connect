@@ -1,9 +1,10 @@
 type SomeKey = string | number | symbol;
+type MappedObj<TObj, TValue> = { [K in keyof TObj]: TValue };
 
-export function mapObj<TKey extends SomeKey, TValueIn, TValueOut>(
-  object: Record<TKey, TValueIn>,
-  mapper: (value: TValueIn, key: TKey) => TValueOut,
-): Record<TKey, TValueOut> {
+export function mapObj<TObj extends {}, TValueOut>(
+  object: TObj,
+  mapper: (value: TObj[keyof TObj], key: keyof TObj) => TValueOut,
+): MappedObj<TObj, TValueOut> {
   const out: any = {};
   for (const k in object) out[k] = mapper(object[k], k);
   return out;

@@ -71,15 +71,15 @@ export function Holding({ assetValue, onSend, onWidthdraw }: HoldingProps) {
       <div>{amountStr}</div>
       <div className={style.buttonsWrapper}>
         <div className={style.button} onClick={() => onWidthdraw?.(asset)}>
-          <img className={style.buttonIcon} src={sendToL1Icon} />
+          <img className={style.buttonIcon} src={sendToL1Icon} alt="Send to L1 button" />
         </div>
         {onSend && (
           <div className={style.button} onClick={() => onSend(asset)}>
-            <img className={style.buttonIcon} src={sendToL2Icon} />
+            <img className={style.buttonIcon} src={sendToL2Icon} alt="Send on L2 button" />
           </div>
         )}
         <div className={style.button} onClick={handleDropdownToggle}>
-          <img className={style.buttonIcon} src={ellipsisIcon} />
+          <img className={style.buttonIcon} src={ellipsisIcon} alt="More actions button" />
         </div>
         <Dropdown
           isOpen={isDropdownOpen}

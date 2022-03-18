@@ -65,6 +65,7 @@ Page1Props) {
         onChangeAmountStr={amountStr => onChangeFields({ ...fields, amountStr })}
         amountStrAnnotation={fieldAnnotations.amountStr}
         message={fieldAnnotations.amountStr?.text}
+        balanceType="L2"
       />
       <StatsSection recipe={recipe} />
       <GasSection

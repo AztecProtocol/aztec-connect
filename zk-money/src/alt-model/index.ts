@@ -7,4 +7,3 @@ export * from './price_hooks';
 export * from './provider_hooks';
 export * from './rollup_provider_hooks';
 export * from './send_form_hooks';
-export * from './shield_form_hooks';

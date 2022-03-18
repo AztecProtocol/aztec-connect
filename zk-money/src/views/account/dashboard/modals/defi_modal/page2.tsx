@@ -6,8 +6,8 @@ import { Theme, themeColours } from 'styles';
 import { BorderBox, Button, Text } from 'components';
 import { Breakdown } from './breakdown';
 import { DefiSubmissionSteps } from './defi_submission_steps';
-import { Disclaimer } from './disclaimer';
-import { TransactionComplete } from './transaction_complete';
+import { Disclaimer } from '../modal_molecules/disclaimer';
+import { TransactionComplete } from '../modal_molecules/transaction_complete';
 import { DefiFormFields } from './types';
 import { DefiRecipe } from 'alt-model/defi/types';
 import { BridgeCountDown } from 'features/defi/bridge_count_down';
@@ -52,9 +52,10 @@ interface Page2Props {
   fee: bigint | undefined;
   transactionLimit: bigint;
   onSubmit: () => void;
+  onClose: () => void;
 }
 
-export function Page2({ recipe, composerState, transactionLimit, fields, fee, onSubmit }: Page2Props) {
+export function Page2({ recipe, composerState, transactionLimit, fields, fee, onSubmit, onClose }: Page2Props) {
   const asset = recipe.inputAssetA;
   const amount = toBaseUnits(fields.amountStr, asset.decimals);
   const [riskChecked, setRiskChecked] = useState(false);
@@ -88,7 +89,7 @@ export function Page2({ recipe, composerState, transactionLimit, fields, fee, on
             transactionLimit={transactionLimit}
           />
         ) : showingComplete ? (
-          <TransactionComplete />
+          <TransactionComplete onClose={onClose} />
         ) : (
           <DefiSubmissionSteps composerState={composerState} />
         )}

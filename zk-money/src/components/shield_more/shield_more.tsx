@@ -56,7 +56,7 @@ export function ShieldMore() {
         </ModalAnchor>
       </ShieldMoreWrapper>
       {assetForShielding !== undefined && (
-        <ShieldModal asset={assetForShielding} onClose={() => setAssetForShielding(undefined)} />
+        <ShieldModal preselectedAssetId={assetForShielding.id} onClose={() => setAssetForShielding(undefined)} />
       )}
     </>
   );

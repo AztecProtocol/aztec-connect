@@ -5,12 +5,13 @@ import style from './disclaimer.module.css';
 
 interface DisclaimerProps {
   transactionLimit: bigint;
-  asset: RemoteAsset;
+  asset?: RemoteAsset;
   accepted: boolean;
   onChangeAccepted: (accepted: boolean) => void;
 }
 
 export function Disclaimer({ transactionLimit, asset, accepted, onChangeAccepted }: DisclaimerProps) {
+  const assetStr = asset ? `${fromBaseUnits(transactionLimit, asset.decimals)} ${asset.symbol}` : '';
   return (
     <div className={style.root}>
       <div className={style.header}>
@@ -22,10 +23,7 @@ export function Disclaimer({ transactionLimit, asset, accepted, onChangeAccepted
         <Text
           inline
           size="s"
-          text={`This is experimental software that hasn’t yet been externally audited. Your private key is stored in the browser, for security amounts are capped at ${fromBaseUnits(
-            transactionLimit,
-            asset.decimals,
-          )} ${asset.symbol}. `}
+          text={`This is experimental software that hasn’t yet been externally audited. Your private key is stored in the browser, for security amounts are capped at ${assetStr}. `}
         />
         <Text size="s" inline italic text="Use at your own risk" />
       </div>

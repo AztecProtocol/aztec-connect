@@ -11,13 +11,18 @@ interface AmountInputProps extends React.ComponentProps<typeof Input> {
 }
 
 export function AmountInput({ asset, onChangeValue, maxAmount, ...inputProps }: AmountInputProps) {
-  const handleChangeValue = (value: string) => onChangeValue?.(value.replace(/[^0-9.]/g, ''));
-
+  const handleChangeValue = (value: string) => onChangeValue?.(value.match(/^\d*\.?\d*/)?.[0] ?? '');
   const handleMaxButton = () => {
-    const maxValue = maxAmount
-      ? formatBaseUnits(maxAmount, asset.decimals, { precision: getAssetPreferredFractionalDigits(asset.address) })
-      : '0';
-    handleChangeValue(maxValue);
+    if (maxAmount === 0n) {
+      // Skip decimal places for 0
+      handleChangeValue('0');
+      return;
+    }
+    const maxStr = formatBaseUnits(maxAmount, asset.decimals, {
+      precision: getAssetPreferredFractionalDigits(asset.address),
+      floor: true,
+    });
+    handleChangeValue(maxStr);
   };
 
   return (

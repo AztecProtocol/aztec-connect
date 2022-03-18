@@ -17,17 +17,6 @@ interface DefiCardContentProps {
   isLoggedIn: boolean;
 }
 
-function getAssetName(assetName: number) {
-  switch (assetName) {
-    case 0:
-      return 'ETH';
-    case 1:
-      return 'DAI';
-    default:
-      return '';
-  }
-}
-
 export const DefiCardContent = (props: DefiCardContentProps) => {
   const [isInformationOpen, setIsInformationOpen] = useState(false);
 

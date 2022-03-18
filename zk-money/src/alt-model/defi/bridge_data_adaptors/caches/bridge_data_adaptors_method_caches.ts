@@ -1,4 +1,4 @@
-import type { EthereumProvider } from '@aztec/sdk';
+import type { Web3Provider } from '@ethersproject/providers';
 import type { DefiRecipesObs } from 'alt-model/defi/recipes';
 import type { RemoteAssetsObs } from 'alt-model/top_level_context/remote_assets_obs';
 import type { Config } from 'config';
@@ -8,11 +8,11 @@ import { createMarketSizeObsCache } from './market_size_obs_cache';
 
 export function createBridgeDataAdaptorsMethodCaches(
   defiRecipesObs: DefiRecipesObs,
-  ethereumProvider: EthereumProvider,
+  web3Provider: Web3Provider,
   remoteAssetsObs: RemoteAssetsObs,
   config: Config,
 ) {
-  const adaptorsObsCache = createBridgeDataAdaptorObsCache(defiRecipesObs, ethereumProvider, config);
+  const adaptorsObsCache = createBridgeDataAdaptorObsCache(defiRecipesObs, web3Provider, config);
   const expectedYearlyOutputObsCache = createExpectedYearlyOutputObsCache(
     defiRecipesObs,
     adaptorsObsCache,

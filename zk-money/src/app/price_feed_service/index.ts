@@ -9,12 +9,14 @@ const debug = createDebug('zm:price_feed_service');
 
 type PriceFeedSubscriber = (assetId: number, price: bigint) => void;
 
+interface PriceFeedGroup {
+  priceFeed: PriceFeed;
+  subscribers: PriceFeedSubscriber[];
+  priceListener: (price: bigint) => void;
+}
+
 export class PriceFeedService {
-  private groups: PerKnownAddress<{
-    priceFeed: PriceFeed;
-    subscribers: PriceFeedSubscriber[];
-    priceListener: (price: bigint) => void;
-  }>;
+  private groups: PerKnownAddress<PriceFeedGroup>;
 
   private readonly pollInterval = 5 * 60 * 1000; // 5 mins
 
@@ -23,7 +25,7 @@ export class PriceFeedService {
     provider: Provider,
     private readonly assets: CutdownAsset[],
   ) {
-    this.groups = mapObj(priceFeedContractAddresses, (feedAddressStr, assetAddressStr) => {
+    this.groups = mapObj(priceFeedContractAddresses, (feedAddressStr, assetAddressStr): PriceFeedGroup => {
       const assetId = assets.find(x => x.address.toString() === assetAddressStr)?.id;
       return {
         priceFeed: new PriceFeed(feedAddressStr, provider, this.pollInterval),

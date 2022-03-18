@@ -1,8 +1,7 @@
-import type { EthereumProvider } from '@aztec/sdk';
+import type { Web3Provider } from '@ethersproject/providers';
 import type { RemoteAssetsObs } from 'alt-model/top_level_context/remote_assets_obs';
 import createDebug from 'debug';
 import { LazyInitCacheMap } from 'app/util/lazy_init_cache_map';
-import { Web3Provider } from '@ethersproject/providers';
 import { Contract } from '@ethersproject/contracts';
 import { isKnownAssetAddressString, PerKnownAddress } from 'alt-model/known_assets/known_asset_addresses';
 import { listenPoll } from 'app/util';
@@ -14,11 +13,10 @@ const ABI = ['function latestAnswer() public view returns(int256)'];
 const POLL_INTERVAL = 5 * 60 * 1000;
 
 export function createPriceFeedObsCache(
-  ethereumProvider: EthereumProvider,
+  web3Provider: Web3Provider,
   contractAddresses: PerKnownAddress<string>,
   remoteAssetsObs: RemoteAssetsObs,
 ) {
-  const web3Provider = new Web3Provider(ethereumProvider);
   return new LazyInitCacheMap((assetId: number) => {
     return remoteAssetsObs.mapEmitter<bigint | undefined>((assets, emit) => {
       if (assets) {

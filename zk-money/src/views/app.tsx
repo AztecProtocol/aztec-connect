@@ -379,7 +379,6 @@ export class AppView extends PureComponent<AppProps, AppState> {
             alias: this.state.accountState?.alias,
             keyVault: this.app.keyVault,
             db: this.app.db,
-            stableEthereumProvider: this.app.stableEthereumProvider,
             rollupService: this.app.rollupService,
             userSession: this.app.getSession(),
           }}

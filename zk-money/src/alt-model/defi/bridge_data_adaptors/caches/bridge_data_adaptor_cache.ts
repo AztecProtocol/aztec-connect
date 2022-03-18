@@ -1,8 +1,7 @@
+import type { Web3Provider } from '@ethersproject/providers';
 import type { Config } from 'config';
-import type { EthereumProvider } from '@aztec/sdk';
 import type { DefiRecipesObs } from 'alt-model/defi/recipes';
 import createDebug from 'debug';
-import { Web3Provider } from '@ethersproject/providers';
 import { LazyInitCacheMap } from 'app/util/lazy_init_cache_map';
 import { Obs } from 'app/util';
 
@@ -32,10 +31,9 @@ function createRollupProviderStatusObs(config: Config) {
 
 export function createBridgeDataAdaptorObsCache(
   defiRecipesObs: DefiRecipesObs,
-  ethereumProvider: EthereumProvider,
+  web3Provider: Web3Provider,
   config: Config,
 ) {
-  const web3Provider = new Web3Provider(ethereumProvider);
   const rollupProviderStatusObs = createRollupProviderStatusObs(config);
   return new LazyInitCacheMap((recipeId: string) =>
     Obs.combine([defiRecipesObs, rollupProviderStatusObs]).map(([recipes, status]) => {

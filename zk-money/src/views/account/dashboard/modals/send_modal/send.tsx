@@ -133,6 +133,7 @@ export const Send: React.FunctionComponent<SendProps> = ({
         amountStrAnnotation={undefined}
         hidePrivacy={sendMode === SendMode.WIDTHDRAW}
         message={form.amount?.message}
+        balanceType="L2"
       />
       <GasSection
         type={GasSectionType.TX}

@@ -1,0 +1,7 @@
+.root {
+  padding: 32px 24px;
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 10px 20px;
+  align-items: center;
+}

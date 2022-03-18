@@ -15,6 +15,15 @@ export function useRemoteAssetForId(assetId: number) {
   return useRemoteAssets()?.find(x => x.id === assetId);
 }
 
+export function useAmountFactory() {
+  const { amountFactoryObs } = useTopLevelContext();
+  return useObs(amountFactoryObs);
+}
+
+export function useStableEthereumProvider() {
+  return useTopLevelContext().stableEthereumProvider;
+}
+
 export function usePriceFeedObsCache() {
   return useTopLevelContext().priceFeedObsCache;
 }

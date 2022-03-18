@@ -1,0 +1,15 @@
+.root {
+  display: grid;
+  gap: 10px;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.error {
+  color: red;
+  font-size: 16px;
+}
