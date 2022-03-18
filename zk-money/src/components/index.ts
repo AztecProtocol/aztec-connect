@@ -9,7 +9,6 @@ export * from './disclaimer_block';
 export * from './dot';
 export * from './gradient_block';
 export * from './icon_buttons';
-export * from './info_wrap';
 export * from './info_table';
 export * from './input';
 export * from './link';

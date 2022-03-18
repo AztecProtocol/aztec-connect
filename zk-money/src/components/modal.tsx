@@ -31,7 +31,7 @@ const ModalWrapper = styled.div`
   flex-direction: column;
   width: 66vw;
   max-width: 900px;
-  overflow-y: scroll;
+  overflow-y: auto;
 `;
 
 interface ModalHeaderProps {

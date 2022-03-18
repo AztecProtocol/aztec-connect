@@ -2,7 +2,7 @@ import type { RemoteAsset } from 'alt-model/types';
 import React from 'react';
 import { TxSettlementTime, TxType } from '@aztec/sdk';
 import { isValidForm, ProviderState, SendMode, ShieldFormValues, ShieldStatus, ValueAvailability, WalletId } from 'app';
-import { Button, InputMessage, InputTheme } from 'components';
+import { Button, InputTheme } from 'components';
 import { Theme } from 'styles';
 import { ShieldProgress } from './shield_progress';
 import { AmountSection, GasSection, GasSectionType, RecipientSection } from 'views/account/dashboard/modals/sections';

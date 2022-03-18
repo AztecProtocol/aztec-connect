@@ -30,7 +30,7 @@ export function AmountSelection(props: AmountSelectionProps) {
               <ShieldedAssetIcon address={props.asset.address} />
               <div className={style.assetName}>{props.asset.symbol}</div>
             </div>
-            <img src={downArrow} />
+            <img src={downArrow} alt="" />
           </div>
           <Dropdown
             isOpen={isAssetSelectorOpen}

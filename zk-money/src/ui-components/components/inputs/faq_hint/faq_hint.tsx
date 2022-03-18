@@ -10,7 +10,7 @@ export function FaqHint({ className }: { className?: string }) {
       target="_blank"
     >
       <span className={style.label}>Need help?, check out the </span>
-      <img className={style.icon} src={faqIcon} />
+      <img className={style.icon} src={faqIcon} alt="FAQ" />
     </Link>
   );
 }

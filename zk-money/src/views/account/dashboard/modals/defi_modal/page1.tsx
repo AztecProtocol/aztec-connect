@@ -61,7 +61,6 @@ Page1Props) {
       <AmountSection
         maxAmount={maxAmount}
         asset={recipe.inputAssetA}
-        allowAssetSelection={true}
         amountStr={fields.amountStr}
         onChangeAmountStr={amountStr => onChangeFields({ ...fields, amountStr })}
         amountStrAnnotation={fieldAnnotations.amountStr}

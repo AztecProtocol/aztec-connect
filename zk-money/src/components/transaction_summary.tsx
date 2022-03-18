@@ -1,10 +1,7 @@
-import moment from 'moment';
 import React from 'react';
 import styled from 'styled-components/macro';
-import { breakpoints, fontSizes, spacings } from '../styles';
-import { Link } from './link';
+import { breakpoints } from '../styles';
 import { Tag } from './tag';
-import { Text } from './text';
 
 const Item = styled.div`
   display: flex;

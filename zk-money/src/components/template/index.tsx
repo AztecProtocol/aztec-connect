@@ -1,5 +1,5 @@
-import React, { useEffect, useLayoutEffect, useState } from 'react';
-import styled, { css } from 'styled-components/macro';
+import React, { useLayoutEffect, useState } from 'react';
+import styled from 'styled-components/macro';
 import { AccountState, SystemMessage } from '../../app';
 import { breakpoints, colours, gradients, spacings, Theme } from '../../styles';
 import { CookiesForm, isCookieAccepted } from '../cookies_form';

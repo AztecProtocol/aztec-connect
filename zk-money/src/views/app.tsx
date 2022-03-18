@@ -396,6 +396,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
               <Routes location={window.location.pathname}>
                 {['/signup', '/signin'].map((path: string) => (
                   <Route
+                    key={path}
                     path={path}
                     element={
                       <Login

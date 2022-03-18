@@ -26,8 +26,7 @@ export function InfoWrap({ children, showingInfo, infoHeader, infoContent, onHid
             </div>
             <div className={style.scroll}>
               <VerticalScrollRegion>
-                <div className={style.content}></div>
-                {infoContent}
+                <div className={style.content}>{infoContent}</div>
               </VerticalScrollRegion>
             </div>
           </div>

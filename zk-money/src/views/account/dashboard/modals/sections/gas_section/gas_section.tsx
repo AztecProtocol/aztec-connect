@@ -9,14 +9,16 @@ import style from './gas_section.module.scss';
 
 function Info() {
   return (
-    <div className={style.infoRoot}>
-      <Text text="Your zk assets are invested in one of the following ways:" />
-      <Text>
-        <Text inline italic weight="bold" text="Batched transaction: " />
+    <>
+      <p>Your zk assets are invested in one of the following ways:</p>
+      <p>
+        <b>
+          <i>Batched transaction: </i>
+        </b>
         your funds are grouped with other users privately in a roll-up. These are then sent approx every 2 hours. This
         is the most cost effective transaction as everyone shares the fee.
-      </Text>
-    </div>
+      </p>
+    </>
   );
 }
 

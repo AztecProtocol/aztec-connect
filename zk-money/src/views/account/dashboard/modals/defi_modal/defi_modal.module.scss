@@ -8,7 +8,7 @@
 .modalBody {
   padding: 20px 40px;
   max-height: calc(100vh - 100px);
-  overflow: scroll;
+  overflow: auto;
   display: flex;
   align-items: initial;
   justify-content: center;

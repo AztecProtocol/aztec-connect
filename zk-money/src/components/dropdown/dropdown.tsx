@@ -31,8 +31,9 @@ export function Dropdown<T>(props: DropdownProps<T>) {
 
   return (
     <div ref={wrapperRef} className={style.dropdownWrapper}>
-      {props.options.map((option: DropdownOption<T>) => (
+      {props.options.map((option, idx) => (
         <div
+          key={idx}
           className={cx(style.dropdownOptionBackground, option.disabled && style.disabled)}
           onClick={() => !option.disabled && props.onClick && props.onClick(option)}
         >

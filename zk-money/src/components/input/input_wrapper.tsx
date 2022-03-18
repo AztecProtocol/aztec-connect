@@ -1,5 +1,5 @@
 import styled, { css } from 'styled-components/macro';
-import { borderRadiuses, breakpoints, colours, spacings } from '../../styles';
+import { breakpoints, colours, spacings } from '../../styles';
 import { InputTheme } from './input_theme';
 
 const wrapperStyles: { [key in InputTheme]: any } = {

@@ -27,7 +27,7 @@ const Root = styled.div<RootProps>`
   grid-template-columns: 1fr 1fr;
   padding: 20px 40px;
   max-height: calc(100vh - 100px);
-  overflow: scroll;
+  overflow: auto;
 
   ${({ sendMode }) =>
     sendMode === SendMode.SEND
