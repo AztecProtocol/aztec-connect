@@ -1774,7 +1774,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
             inputAssetB,
             outputAssetA,
             outputAssetB,
-            inputs.totalInputValue,
             inputs.interactionNonce,
             inputs.auxData
         );

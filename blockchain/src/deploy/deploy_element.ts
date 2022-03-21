@@ -1,4 +1,6 @@
-import ElementBridge from '../artifacts/contracts/bridges/ElementBridge.sol/ElementBridge.json';
+import ElementBridge, {
+  ElementBridge__factory,
+} from '@aztec/bridge-clients/client-dest/typechain-types/factories/ElementBridge__factory';
 import * as ElementVaultConfig from './ElementVaultConfig.json';
 import { Contract, ContractFactory, Signer } from 'ethers';
 
@@ -53,10 +55,15 @@ export const deployElementBridge = async (
   balancerAddress: string,
 ) => {
   console.error('Deploying ElementBridge...');
-  const ElementFactory = new ContractFactory(ElementBridge.abi, ElementBridge.bytecode, owner);
-  const bridge = await ElementFactory.deploy(rollupAddress, trancheFactoryAddress, trancheByteCode, balancerAddress, {
-    gasLimit,
-  });
+  const bridge = await new ElementBridge__factory(owner).deploy(
+    rollupAddress,
+    trancheFactoryAddress,
+    trancheByteCode,
+    balancerAddress,
+    {
+      gasLimit,
+    },
+  );
   console.error(`ElementBridge contract address: ${bridge.address}`);
   return bridge;
 };

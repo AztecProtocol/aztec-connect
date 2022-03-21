@@ -8,14 +8,14 @@ import { setBlockchainTime, getCurrentBlockTime } from '../manipulate_blocks';
 import { decodeErrorFromContractByTxHash, decodeSelector } from '../contracts/decode_error';
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 import * as RollupAbi from '../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
-import * as ElementAbi from '../artifacts/contracts/bridges/ElementBridge.sol/ElementBridge.json';
+import * as ElementFactory from '@aztec/bridge-clients/client-dest/typechain-types/factories/ElementBridge__factory';
 import { WalletProvider } from '../provider';
 
 const { PRIVATE_KEY } = process.env;
 
 export const abis: { [key: string]: any } = {
   Rollup: RollupAbi,
-  Element: ElementAbi,
+  Element: ElementFactory.ElementBridge__factory.abi,
 };
 
 const getProvider = (url: string) => {

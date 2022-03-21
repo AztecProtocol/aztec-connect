@@ -398,6 +398,7 @@ jobs:
           version: 19.03.13
       - run:
           name: 'Test'
+          no_output_timeout: 15m
           working_directory: end-to-end
           command: cond_spot_run_tests end-to-end ./src/e2e_element_defi.test.ts true
 

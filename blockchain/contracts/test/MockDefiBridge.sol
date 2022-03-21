@@ -138,10 +138,18 @@ contract MockDefiBridge is IDefiBridge {
         AztecTypes.AztecAsset memory, /*inputAssetB*/
         AztecTypes.AztecAsset memory outputAssetA,
         AztecTypes.AztecAsset memory outputAssetB,
-        uint256, /*totalInputValue*/
         uint256 interactionNonce,
         uint64
-    ) external payable override returns (uint256, uint256, bool) {
+    )
+        external
+        payable
+        override
+        returns (
+            uint256,
+            uint256,
+            bool
+        )
+    {
         require(msg.sender == rollupProcessor, 'invalid sender!');
         approveTransfer(inputAssetA, returnInputValue, interactionNonce);
         approveTransfer(outputAssetA, returnValueA, interactionNonce);
