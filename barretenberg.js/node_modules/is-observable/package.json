@@ -1,0 +1,39 @@
+{
+	"name": "is-observable",
+	"version": "2.1.0",
+	"description": "Check if a value is an Observable",
+	"license": "MIT",
+	"repository": "sindresorhus/is-observable",
+	"funding": "https://github.com/sponsors/sindresorhus",
+	"author": {
+		"name": "Sindre Sorhus",
+		"email": "sindresorhus@gmail.com",
+		"url": "https://sindresorhus.com"
+	},
+	"engines": {
+		"node": ">=8"
+	},
+	"scripts": {
+		"test": "xo && ava"
+	},
+	"files": [
+		"index.js"
+	],
+	"keywords": [
+		"observable",
+		"observables",
+		"is",
+		"check",
+		"detect",
+		"type"
+	],
+	"devDependencies": {
+		"ava": "^1.4.1",
+		"indefinite-observable": "^1.0.1",
+		"most": "^1.7.2",
+		"rxjs": "^6.5.2",
+		"xo": "^0.24.0",
+		"xstream": "^11.0.0",
+		"zen-observable": "^0.8.14"
+	}
+}

@@ -1,0 +1,1 @@
+{"version":3,"file":"rollup_padding_proof_data.d.ts","sourceRoot":"","sources":["../../src/rollup_proof/rollup_padding_proof_data.ts"],"names":[],"mappings":";AACA,OAAO,EAAE,cAAc,EAAE,MAAM,eAAe,CAAC;AAE/C,qBAAa,sBAAsB;aAGL,SAAS,EAAE,cAAc;IAFrD,MAAM,CAAC,cAAc,SAAK;gBAEE,SAAS,EAAE,cAAc;IAMrD,IAAI,cAAc,WAEjB;IAED,MAAM,CAAC,MAAM,CAAC,OAAO,EAAE,MAAM;IAmB7B,MAAM;CAGP"}

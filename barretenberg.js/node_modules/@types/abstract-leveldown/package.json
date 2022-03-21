@@ -1,0 +1,30 @@
+{
+    "name": "@types/abstract-leveldown",
+    "version": "5.0.2",
+    "description": "TypeScript definitions for abstract-leveldown",
+    "homepage": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/abstract-leveldown",
+    "license": "MIT",
+    "contributors": [
+        {
+            "name": "Meirion Hughes",
+            "url": "https://github.com/MeirionHughes",
+            "githubUsername": "MeirionHughes"
+        },
+        {
+            "name": "Daniel Byrne",
+            "url": "https://github.com/danwbyrne",
+            "githubUsername": "danwbyrne"
+        }
+    ],
+    "main": "",
+    "types": "index.d.ts",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
+        "directory": "types/abstract-leveldown"
+    },
+    "scripts": {},
+    "dependencies": {},
+    "typesPublisherContentHash": "69e7c709eacf3bad42271a32daf65ba40bc05fc937c01a334910e8d9a5accf23",
+    "typeScriptVersion": "3.6"
+}

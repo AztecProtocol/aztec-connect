@@ -1,0 +1,52 @@
+{
+  "name": "level-iterator-stream",
+  "version": "5.0.0",
+  "description": "Turn an abstract-leveldown iterator into a readable stream",
+  "license": "MIT",
+  "scripts": {
+    "test": "standard && hallmark && (nyc -s node test.js | faucet) && nyc report",
+    "test-browsers-local": "airtap --coverage test.js",
+    "coverage": "nyc report --reporter=text-lcov | coveralls",
+    "hallmark": "hallmark --fix",
+    "dependency-check": "dependency-check . test.js",
+    "prepublishOnly": "npm run dependency-check"
+  },
+  "files": [
+    "index.js",
+    "package.json",
+    "CHANGELOG.md",
+    "CONTRIBUTORS.md",
+    "LICENSE.md",
+    "UPGRADING.md"
+  ],
+  "dependencies": {
+    "inherits": "^2.0.4",
+    "readable-stream": "^3.4.0"
+  },
+  "devDependencies": {
+    "airtap": "^4.0.3",
+    "airtap-playwright": "^1.0.1",
+    "coveralls": "^3.0.2",
+    "dependency-check": "^3.3.0",
+    "faucet": "^0.0.1",
+    "hallmark": "^3.1.0",
+    "level-community": "^3.0.0",
+    "memdown": "^5.1.0",
+    "nyc": "^15.1.0",
+    "secret-event-listener": "^1.0.0",
+    "standard": "^16.0.3",
+    "tape": "^5.0.1",
+    "through2": "^4.0.2"
+  },
+  "hallmark": {
+    "community": "level-community"
+  },
+  "repository": "Level/iterator-stream",
+  "homepage": "https://github.com/Level/iterator-stream",
+  "keywords": [
+    "level"
+  ],
+  "engines": {
+    "node": ">=10"
+  }
+}

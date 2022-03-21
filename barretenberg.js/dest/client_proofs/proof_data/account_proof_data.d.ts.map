@@ -1,0 +1,1 @@
+{"version":3,"file":"account_proof_data.d.ts","sourceRoot":"","sources":["../../../src/client_proofs/proof_data/account_proof_data.ts"],"names":[],"mappings":";AAAA,OAAO,EAAE,SAAS,EAAE,MAAM,cAAc,CAAC;AAGzC,qBAAa,gBAAgB;aACC,SAAS,EAAE,SAAS;gBAApB,SAAS,EAAE,SAAS;IAMhD,MAAM,CAAC,UAAU,CAAC,YAAY,EAAE,MAAM;CAGvC"}

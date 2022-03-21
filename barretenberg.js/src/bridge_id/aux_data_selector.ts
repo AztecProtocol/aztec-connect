@@ -1,0 +1,7 @@
+export enum AUX_DATA_SELECTOR {
+  NADA,
+  OPEN_LOAN,
+  CLOSE_LOAN,
+  OPEN_LP,
+  CLOSE_LP,
+}

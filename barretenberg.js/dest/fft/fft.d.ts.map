@@ -1,0 +1,1 @@
+{"version":3,"file":"fft.d.ts","sourceRoot":"","sources":["../../src/fft/fft.ts"],"names":[],"mappings":"AAAA,MAAM,WAAW,GAAG;IAClB,GAAG,CAAC,YAAY,EAAE,UAAU,EAAE,QAAQ,EAAE,UAAU,GAAG,OAAO,CAAC,UAAU,CAAC,CAAC;IACzE,IAAI,CAAC,YAAY,EAAE,UAAU,GAAG,OAAO,CAAC,UAAU,CAAC,CAAC;CACrD"}

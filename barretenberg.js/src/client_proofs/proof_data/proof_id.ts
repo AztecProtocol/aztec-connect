@@ -1,0 +1,9 @@
+export enum ProofId {
+  PADDING,
+  DEPOSIT,
+  WITHDRAW,
+  SEND,
+  ACCOUNT,
+  DEFI_DEPOSIT,
+  DEFI_CLAIM,
+}

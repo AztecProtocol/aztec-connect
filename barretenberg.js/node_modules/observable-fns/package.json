@@ -1,0 +1,49 @@
+{
+  "name": "observable-fns",
+  "version": "0.6.1",
+  "description": "Light-weight observable implementation and utils written in TypeScript. Based on zen-observable.",
+  "author": "Andy Wermke (https://github.com/andywer)",
+  "license": "MIT",
+  "repository": "github:andywer/observable-fns",
+  "module": "./dist.esm/index.js",
+  "sideEffects": [
+    "**/_symbols.js"
+  ],
+  "scripts": {
+    "prebuild": "rimraf dist/ dist.esm/",
+    "build": "run-s build:cjs build:esm",
+    "build:cjs": "tsc",
+    "build:esm": "tsc -p ./tsconfig.esm.json",
+    "create-entrypoints": "rimraf *.js *.d.ts && node ./scripts/create-entrypoints.js",
+    "test": "ava",
+    "posttest": "tslint --project .",
+    "prepare": "run-s build create-entrypoints"
+  },
+  "devDependencies": {
+    "ava": "^3.15.0",
+    "npm-run-all": "^4.1.5",
+    "rimraf": "^2.6.3",
+    "ts-node": "^10.0.0",
+    "tslint": "^5.18.0",
+    "tslint-config-prettier": "^1.18.0",
+    "typescript": "^4.3.2"
+  },
+  "ava": {
+    "extensions": [
+      "ts"
+    ],
+    "files": [
+      "test/**/*.test.ts"
+    ],
+    "require": [
+      "ts-node/register"
+    ]
+  },
+  "files": [
+    "dist/**",
+    "dist.*/**",
+    "types/**",
+    "*.d.ts",
+    "*.js"
+  ]
+}

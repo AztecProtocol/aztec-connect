@@ -1,0 +1,75 @@
+{
+  "name": "levelup",
+  "version": "5.1.1",
+  "description": "Fast & simple storage - a Node.js-style LevelDB wrapper",
+  "license": "MIT",
+  "main": "lib/levelup.js",
+  "browser": {
+    "./lib/next-tick.js": "./lib/next-tick-browser.js"
+  },
+  "scripts": {
+    "test": "standard && hallmark && (nyc -s node test/self.js | faucet) && nyc report",
+    "coverage": "nyc report -r lcovonly",
+    "test-browsers": "airtap --coverage --verbose test/self.js",
+    "test-browsers-local": "airtap -p local test/self.js",
+    "hallmark": "hallmark --fix",
+    "dependency-check": "dependency-check --no-dev -i queue-microtask .",
+    "prepublishOnly": "npm run dependency-check"
+  },
+  "files": [
+    "lib",
+    "CHANGELOG.md",
+    "UPGRADING.md",
+    "sauce-labs.svg"
+  ],
+  "dependencies": {
+    "catering": "^2.0.0",
+    "deferred-leveldown": "^7.0.0",
+    "level-errors": "^3.0.1",
+    "level-iterator-stream": "^5.0.0",
+    "level-supports": "^2.0.1",
+    "queue-microtask": "^1.2.3"
+  },
+  "devDependencies": {
+    "after": "^0.8.2",
+    "airtap": "^4.0.1",
+    "airtap-playwright": "^1.0.1",
+    "airtap-sauce": "^1.1.0",
+    "async-each": "^1.0.3",
+    "browserify": "^17.0.0",
+    "concat-stream": "^2.0.0",
+    "delayed": "^2.0.0",
+    "dependency-check": "^4.1.0",
+    "encoding-down": "^7.1.0",
+    "faucet": "^0.0.1",
+    "hallmark": "^3.1.0",
+    "level-concat-iterator": "^3.0.0",
+    "memdown": "^6.1.0",
+    "nyc": "^15.1.0",
+    "run-parallel": "^1.2.0",
+    "run-series": "^1.1.8",
+    "simple-concat": "^1.0.0",
+    "sinon": "^11.1.2",
+    "standard": "^16.0.3",
+    "tape": "^5.2.2",
+    "trickle": "0.0.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Level/levelup.git"
+  },
+  "homepage": "https://github.com/Level/levelup",
+  "keywords": [
+    "level",
+    "leveldb",
+    "stream",
+    "database",
+    "db",
+    "store",
+    "storage",
+    "json"
+  ],
+  "engines": {
+    "node": ">=10"
+  }
+}
