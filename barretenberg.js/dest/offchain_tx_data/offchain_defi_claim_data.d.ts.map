@@ -1,1 +1,0 @@
-{"version":3,"file":"offchain_defi_claim_data.d.ts","sourceRoot":"","sources":["../../src/offchain_tx_data/offchain_defi_claim_data.ts"],"names":[],"mappings":";AAAA,qBAAa,qBAAqB;IAChC,MAAM,CAAC,KAAK,wBAA+B;IAC3C,MAAM,CAAC,IAAI,SAAK;;IAKhB,MAAM,CAAC,UAAU,CAAC,GAAG,EAAE,MAAM;IAI7B,QAAQ;CAGT"}

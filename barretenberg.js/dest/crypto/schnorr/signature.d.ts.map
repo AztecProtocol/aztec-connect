@@ -1,1 +1,0 @@
-{"version":3,"file":"signature.d.ts","sourceRoot":"","sources":["../../../src/crypto/schnorr/signature.ts"],"names":[],"mappings":";AAEA,qBAAa,gBAAgB;IACf,OAAO,CAAC,MAAM;gBAAN,MAAM,EAAE,MAAM;WAMpB,WAAW,CAAC,SAAS,EAAE,MAAM;WAI7B,UAAU,CAAC,SAAS,EAAE,MAAM;WAO5B,eAAe;IAI7B,CAAC;IAID,CAAC;IAID,QAAQ;IAIR,QAAQ;CAGT"}

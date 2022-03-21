@@ -1,1 +1,0 @@
-{"version":3,"file":"worker_factory.d.ts","sourceRoot":"","sources":["../../src/wasm/worker_factory.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,kBAAkB,EAAE,MAAM,UAAU,CAAC;AAI9C,wBAAsB,YAAY,CAAC,EAAE,CAAC,EAAE,MAAM,EAAE,MAAM,CAAC,EAAE,WAAW,CAAC,MAAM,EAAE,OAAO,CAAC,EAAE,MAAM;;;;;;;;;IAM5F;AAED,wBAAsB,aAAa,CAAC,MAAM,EAAE,kBAAkB,iBAE7D"}
