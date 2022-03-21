@@ -1,6 +1,6 @@
-# AZTEC 2.0 Monorepo
+# AZTEC Connect Monorepo
 
-The Aztec 2.0 system consists of the following sub projects.
+The Aztec Connect system consists of the following sub projects.
 
 - `barretenberg` - C++ cryptographic library.
 - `barretenberg.js` - TypeScript wrapper around WASM build of barretenberg.
