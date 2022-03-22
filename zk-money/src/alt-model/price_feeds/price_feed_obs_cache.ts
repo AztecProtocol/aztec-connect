@@ -1,4 +1,4 @@
-import type { Web3Provider } from '@ethersproject/providers';
+import type { Provider } from '@ethersproject/providers';
 import type { RemoteAssetsObs } from 'alt-model/top_level_context/remote_assets_obs';
 import createDebug from 'debug';
 import { LazyInitCacheMap } from 'app/util/lazy_init_cache_map';
@@ -13,7 +13,7 @@ const ABI = ['function latestAnswer() public view returns(int256)'];
 const POLL_INTERVAL = 5 * 60 * 1000;
 
 export function createPriceFeedObsCache(
-  web3Provider: Web3Provider,
+  web3Provider: Provider,
   contractAddresses: PerKnownAddress<string>,
   remoteAssetsObs: RemoteAssetsObs,
 ) {

@@ -1,4 +1,4 @@
-import type { Web3Provider } from '@ethersproject/providers';
+import type { Provider } from '@ethersproject/providers';
 import type { AsyncBridgeData, AsyncYieldBridgeData, YieldBridgeData } from './bridge_data_interface';
 
 export type BridgeDataAdaptor =
@@ -19,7 +19,7 @@ export type BridgeDataAdaptor =
     };
 
 export type BridgeDataAdaptorCreator = (
-  provider: Web3Provider,
+  provider: Provider,
   rollupContractAddress: string,
   bridgeContractAddress: string,
 ) => BridgeDataAdaptor;

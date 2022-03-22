@@ -1,4 +1,4 @@
-import type { Web3Provider } from '@ethersproject/providers';
+import type { Provider } from '@ethersproject/providers';
 import type { Config } from 'config';
 import type { DefiRecipesObs } from 'alt-model/defi/recipes';
 import createDebug from 'debug';
@@ -29,11 +29,7 @@ function createRollupProviderStatusObs(config: Config) {
   }, undefined);
 }
 
-export function createBridgeDataAdaptorObsCache(
-  defiRecipesObs: DefiRecipesObs,
-  web3Provider: Web3Provider,
-  config: Config,
-) {
+export function createBridgeDataAdaptorObsCache(defiRecipesObs: DefiRecipesObs, provider: Provider, config: Config) {
   const rollupProviderStatusObs = createRollupProviderStatusObs(config);
   return new LazyInitCacheMap((recipeId: string) =>
     Obs.combine([defiRecipesObs, rollupProviderStatusObs]).map(([recipes, status]) => {
@@ -47,7 +43,7 @@ export function createBridgeDataAdaptorObsCache(
         debug("No bridge found for recipe's enter address.");
         return undefined;
       }
-      return recipe.createAdaptor(web3Provider, rollupContractAddress, blockchainBridge.address);
+      return recipe.createAdaptor(provider, rollupContractAddress, blockchainBridge.address);
     }),
   );
 }

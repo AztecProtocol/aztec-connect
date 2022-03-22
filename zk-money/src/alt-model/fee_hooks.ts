@@ -1,7 +1,6 @@
 import createDebug from 'debug';
 import { useEffect, useMemo, useState } from 'react';
 import { AssetValue, EthAddress, TxSettlementTime } from '@aztec/sdk';
-import { Web3Provider } from '@ethersproject/providers';
 import { Contract } from '@ethersproject/contracts';
 import { useInitialisedSdk, useStableEthereumProvider } from 'alt-model/top_level_context';
 import { listenPoll } from 'app/util';
@@ -67,9 +66,8 @@ function useGasPrice() {
   const stableEthereumProvider = useStableEthereumProvider();
   const [price, setPrice] = useState<bigint>();
   useEffect(() => {
-    const web3Provider = new Web3Provider(stableEthereumProvider);
     return listenPoll(async () => {
-      const bigNumber = await web3Provider.getGasPrice();
+      const bigNumber = await stableEthereumProvider.getGasPrice();
       setPrice(BigInt(bigNumber.toString()));
     }, GAS_PRICE_POLL_INTERVAL);
   }, [stableEthereumProvider]);
@@ -90,8 +88,7 @@ export function useEstimatedShieldingGasCosts(depositor?: EthAddress, assetId?: 
   const [approveProofGas, setApproveProofGas] = useState<bigint>();
   const contract = useMemo(() => {
     if (contractAddress) {
-      const web3Provider = new Web3Provider(stableEthereumProvider);
-      return new Contract(contractAddress, ROLLUP_ABI, web3Provider.getSigner());
+      return new Contract(contractAddress, ROLLUP_ABI, stableEthereumProvider);
     }
   }, [stableEthereumProvider, contractAddress]);
   useEffect(() => {

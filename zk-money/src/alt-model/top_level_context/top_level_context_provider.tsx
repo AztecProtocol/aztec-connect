@@ -1,10 +1,9 @@
-import { JsonRpcProvider } from '@aztec/sdk';
 import { createAmountFactoryObs } from 'alt-model/assets/amount_factory_obs';
 import { createBridgeDataAdaptorsMethodCaches } from 'alt-model/defi/bridge_data_adaptors/caches/bridge_data_adaptors_method_caches';
 import { createDefiRecipeObs } from 'alt-model/defi/recipes';
 import { createPriceFeedObsCache } from 'alt-model/price_feeds';
 import { useMemo } from 'react';
-import { Web3Provider } from '@ethersproject/providers';
+import { JsonRpcProvider } from '@ethersproject/providers';
 import { Config } from '../../config';
 import { createRemoteAssetsObs } from './remote_assets_obs';
 import { createSdkRemoteStatusObs } from './remote_status_obs';
@@ -13,20 +12,19 @@ import { TopLevelContext, TopLevelContextValue } from './top_level_context';
 
 function createTopLevelContextValue(config: Config): TopLevelContextValue {
   const stableEthereumProvider = new JsonRpcProvider(config.ethereumHost);
-  const stableWeb3Provider = new Web3Provider(stableEthereumProvider);
-  const sdkObs = createSdkObs(stableEthereumProvider, config);
+  const sdkObs = createSdkObs(config);
   const remoteStatusObs = createSdkRemoteStatusObs(sdkObs);
   const remoteAssetsObs = createRemoteAssetsObs(remoteStatusObs);
   const amountFactoryObs = createAmountFactoryObs(remoteAssetsObs);
   const priceFeedObsCache = createPriceFeedObsCache(
-    stableWeb3Provider,
+    stableEthereumProvider,
     config.priceFeedContractAddresses,
     remoteAssetsObs,
   );
   const defiRecipesObs = createDefiRecipeObs(remoteAssetsObs);
   const bridgeDataAdaptorsMethodCaches = createBridgeDataAdaptorsMethodCaches(
     defiRecipesObs,
-    stableWeb3Provider,
+    stableEthereumProvider,
     remoteAssetsObs,
     config,
   );
@@ -35,7 +33,7 @@ function createTopLevelContextValue(config: Config): TopLevelContextValue {
     sdkObs,
     remoteStatusObs,
     remoteAssetsObs,
-    amountFactoryObs: amountFactoryObs,
+    amountFactoryObs,
     priceFeedObsCache,
     bridgeDataAdaptorsMethodCaches,
     defiRecipesObs,
