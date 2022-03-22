@@ -97,9 +97,11 @@ async function getDeployConfig(deployTag: string) {
   if (!deployTag) {
     // If we haven't overridden our deploy tag, we discover it at runtime. All s3 deployments have a file
     // called DEPLOY_TAG in their root containing the deploy tag.
-    // deployTag = await fetch('/DEPLOY_TAG')
-    //   .then(resp => resp.text())
-    //   .catch(() => '');
+    if (process.env.NODE_ENV !== 'development') {
+      deployTag = await fetch('/DEPLOY_TAG')
+        .then(resp => resp.text())
+        .catch(() => '');
+    }
   }
 
   if (deployTag) {
