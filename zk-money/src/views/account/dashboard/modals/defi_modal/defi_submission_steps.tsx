@@ -1,9 +1,9 @@
 import { EthAddress } from '@aztec/sdk';
 import { StepStatus, SubmissionFlow, ActiveSubmissionFlowItem, WalletAccountIndicator } from 'ui-components';
 import { useApp, useProviderState } from 'alt-model';
-import { DefiComposerPhase, DefiComposerState } from 'alt-model/defi/defi_composer';
+import { DefiComposerPhase, DefiComposerState } from 'alt-model/defi/defi_form';
 import { WalletId } from 'app';
-import { SubmissionItemPrompt } from './submission_item_prompt';
+import { SubmissionItemPrompt } from '../modal_molecules/submission_item_prompt';
 import { WalletDropdownSelect } from './wallet_dropdown_select';
 
 interface DefiSubmissionStepsProps {
@@ -37,14 +37,15 @@ function SwitchWalletPrompt() {
 }
 
 function getActiveItem(
-  { phase, erroredPhase }: DefiComposerState,
+  { phase, error }: DefiComposerState,
   isCorrectAccount: boolean,
   address?: EthAddress,
   walletId?: WalletId,
 ): ActiveSubmissionFlowItem {
-  if (erroredPhase !== undefined) {
-    const idx = steps.findIndex(x => x.phase === erroredPhase);
-    return { idx, status: StepStatus.ERROR };
+  if (error) {
+    const idx = steps.findIndex(x => x.phase === error.phase);
+    const expandedContent = <SubmissionItemPrompt errored>{error.message}</SubmissionItemPrompt>;
+    return { idx, status: StepStatus.ERROR, expandedContent };
   }
   const idx = steps.findIndex(x => x.phase === phase);
   if (phase === DefiComposerPhase.GENERATING_KEY) {

@@ -1,6 +1,4 @@
-import styled from 'styled-components/macro';
-
-export const SubmissionItemPrompt = styled.div`
+.root {
   margin-top: 20px;
   width: 100%;
   border: solid #ffa937 4px;
@@ -9,4 +7,9 @@ export const SubmissionItemPrompt = styled.div`
   font-size: 12px;
   line-height: 200%;
   padding: 10px 30px;
-`;
+  background-color: white;
+}
+
+.errored {
+  border-color: red;
+}

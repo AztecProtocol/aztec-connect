@@ -40,7 +40,7 @@ interface GasSectionProps {
   type: GasSectionType;
   speed: DefiSettlementTime | TxSettlementTime;
   onChangeSpeed: (speed: DefiSettlementTime | TxSettlementTime) => void;
-  asset: RemoteAsset;
+  asset?: RemoteAsset;
   fee: bigint | undefined;
 }
 
@@ -66,10 +66,11 @@ const TX_OPTIONS: TxOption[] = [
 ];
 
 export function GasSection(props: GasSectionProps) {
-  const assetPrice = useAssetPrice(props.asset.id);
+  const assetPrice = useAssetPrice(props.asset?.id);
   const [showingInfo, setShowingInfo] = useState(false);
   const gasPrice =
     props.fee !== undefined &&
+    props.asset !== undefined &&
     assetPrice !== undefined &&
     `$${convertToPriceString(props.fee, props.asset.decimals, assetPrice)}`;
 

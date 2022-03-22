@@ -6,15 +6,17 @@ function getAmountInputFeedback(result: ShieldFormValidationResult, touched: boo
   if (result.mustAllowForFee && result.mustAllowForGas) {
     const fee = result.input.feeAmount;
     const cost = fee?.add(result.reservedForL1GasIfTargetAssetIsEth ?? 0n);
-    return `Please allow ${cost?.format()} from your L1 balance for paying the transaction fee and covering gas costs.`;
+    return `Please allow ${cost?.format({
+      layer: 'L1',
+    })} from your L1 balance for paying the transaction fee and covering gas costs.`;
   }
   if (result.mustAllowForGas) {
     const gas = result.input.targetL2OutputAmount?.withBaseUnits(result.reservedForL1GasIfTargetAssetIsEth ?? 0n);
-    return `Please allow ${gas?.format()} from your L1 balance for covering gas costs.`;
+    return `Please allow ${gas?.format({ layer: 'L1' })} from your L1 balance for covering gas costs.`;
   }
   if (result.mustAllowForFee) {
     const fee = result.input.feeAmount;
-    return `Please allow ${fee?.format()} from your L1 balance for paying the transaction fee.`;
+    return `Please allow ${fee?.format({ layer: 'L1' })} from your L1 balance for paying the transaction fee.`;
   }
   if (result.beyondTransactionLimit) {
     const { targetL2OutputAmount, transactionLimit } = result.input;
@@ -30,6 +32,13 @@ function getAmountInputFeedback(result: ShieldFormValidationResult, touched: boo
 }
 
 function getWalletAccountFeedback(result: ShieldFormValidationResult) {
+  if (result.mustDepositFromWalletAccountUsedToGenerateAztecKeys) {
+    const targetSymbol = result.input.targetL2OutputAmount?.info.symbol;
+    const feeSymbol = result.input.feeAmount?.info.symbol;
+    const addressStr = result.input.keyVault?.signerAddress.toString();
+    const abbreviatedStr = `${addressStr?.slice(0, 8)}...${addressStr?.slice(-4)}`;
+    return `Because fees for shielding ${targetSymbol} can only be paid from your existing zk${feeSymbol} balance, you must shield from the same L1 wallet account (${abbreviatedStr}) that was used to register your Aztec account.`;
+  }
   if (result.noWalletConnected) {
     return 'Please connect a wallet';
   } else if (result.wrongNetwork) {

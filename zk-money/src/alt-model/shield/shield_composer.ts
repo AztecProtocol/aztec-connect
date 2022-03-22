@@ -6,7 +6,7 @@ import { retryUntil, CachedStep } from 'app/util';
 import { WalletAccountEnforcer } from './ensured_provider';
 import { Network } from 'app/networks';
 import { ShieldComposerPhase, ShieldComposerStateObs } from './shield_composer_state_obs';
-import { KeyVault } from '../../app/key_vault';
+import { createSigningKeys, KeyVault } from '../../app/key_vault';
 
 const debug = createDebug('zm:shield_composer');
 
@@ -20,6 +20,7 @@ export interface ShieldComposerPayload {
 export interface ShieldComposerDeps {
   sdk: AztecSdk;
   keyVault: KeyVault;
+  accountId: AccountId;
   provider: Provider;
   requiredNetwork: Network;
 }
@@ -63,26 +64,40 @@ export class ShieldComposer {
 
   private async createController() {
     const { targetOutput, fee, depositor, recipientAlias } = this.payload;
-    const { provider, sdk, keyVault } = this.deps;
+    const { provider, sdk, keyVault, accountId } = this.deps;
 
-    try {
-      // Funds are shielded from account nonce 0
-      sdk.addUser(keyVault.accountPrivateKey, 0, true);
-    } catch {
-      // Already added
+    // If fees are taken in second asset we need access to the user's spending key.
+    // Otherwise we can shield from nonce 0 and skip spending key generation.
+    const isShieldingFromNonce0 = targetOutput.id === fee.id;
+
+    if (isShieldingFromNonce0) {
+      try {
+        // We add the nonce 0 user to the sdk's store so the proof creator can check its state.
+        // This feels like an unnecessary implemention quirk to me.
+        await sdk.addUser(keyVault.accountPrivateKey, 0, true);
+      } catch {
+        // Already added
+      }
     }
 
-    const depositorNonce0Account = await new AccountId(keyVault.accountPublicKey, 0);
-    const recipientNonce0Account = await sdk.getAccountId(recipientAlias, 0);
+    const depositorAccount = isShieldingFromNonce0 ? await new AccountId(keyVault.accountPublicKey, 0) : accountId;
+    const recipientAccount = await sdk.getAccountId(recipientAlias);
 
-    const signer = await sdk.createSchnorrSigner(keyVault.accountPrivateKey);
+    if (!isShieldingFromNonce0) {
+      this.stateObs.setPhase(ShieldComposerPhase.GENERATE_SPENDING_KEY);
+    }
+    const signerPrivateKey = isShieldingFromNonce0
+      ? keyVault.accountPrivateKey
+      : (await createSigningKeys(provider, sdk)).privateKey;
+    const signer = await sdk.createSchnorrSigner(signerPrivateKey);
+
     return sdk.createDepositController(
-      depositorNonce0Account,
+      depositorAccount,
       signer,
       targetOutput.toAssetValue(),
       fee.toAssetValue(),
       depositor,
-      recipientNonce0Account,
+      recipientAccount,
       provider.ethereumProvider,
     );
   }
@@ -111,7 +126,7 @@ export class ShieldComposer {
         controller.getPublicAllowance().then(allowance => allowance >= requiredFunds);
       if (!(await sufficientAllowanceHasBeenApproved())) {
         await this.walletAccountEnforcer.ensure();
-        this.stateObs.setPrompt(`Please approve a deposit of ${requiredAmount.format()}.`);
+        this.stateObs.setPrompt(`Please approve a deposit of ${requiredAmount.format({ layer: 'L1' })}.`);
         await controller.approve();
         this.stateObs.setPrompt('Awaiting transaction confirmation...');
         const timeout = 1000 * 60 * 30; // 30 mins
@@ -126,7 +141,7 @@ export class ShieldComposer {
 
   private async depositAndAwaitConfirmation(controller: DepositController, requiredAmount: Amount) {
     await this.walletAccountEnforcer.ensure();
-    this.stateObs.setPrompt(`Please make a deposit of ${requiredAmount.format()} from your wallet.`);
+    this.stateObs.setPrompt(`Please make a deposit of ${requiredAmount.format({ layer: 'L1' })} from your wallet.`);
     if (this.payload.targetOutput.info.permitSupport) {
       const expireIn = 60n * 5n; // 5 minutes
       const deadline = BigInt(Math.floor(Date.now() / 1000)) + expireIn;
@@ -188,12 +203,14 @@ export class ShieldComposer {
   }
 
   private async cleanup(controller: DepositController) {
-    const { sdk } = this.deps;
-    try {
+    const { userId } = controller;
+    if (userId.accountNonce === 0) {
       // No longer need account nonce 0 of depositor address
-      await sdk.removeUser(controller.userId);
-    } catch {
-      // Already removed
+      try {
+        await this.deps.sdk.removeUser(controller.userId);
+      } catch {
+        // Already removed
+      }
     }
   }
 }

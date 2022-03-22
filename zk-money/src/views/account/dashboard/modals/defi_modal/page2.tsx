@@ -1,17 +1,15 @@
 import { useState } from 'react';
 import styled from 'styled-components/macro';
-import { DefiComposerPhase, DefiComposerState } from 'alt-model/defi/defi_composer';
-import { toBaseUnits } from 'app';
+import { DefiComposerPhase, DefiComposerState, DefiFormValidationResult } from 'alt-model/defi/defi_form';
 import { Theme, themeColours } from 'styles';
 import { BorderBox, Button, Text } from 'components';
-import { Breakdown } from './breakdown';
 import { DefiSubmissionSteps } from './defi_submission_steps';
 import { Disclaimer } from '../modal_molecules/disclaimer';
 import { TransactionComplete } from '../modal_molecules/transaction_complete';
-import { DefiFormFields } from './types';
 import { DefiRecipe } from 'alt-model/defi/types';
 import { BridgeCountDown } from 'features/defi/bridge_count_down';
 import { BridgeKeyStats } from 'features/defi/bridge_key_stats';
+import { CostBreakdown } from '../modal_molecules/cost_breakdown';
 
 const S = {
   Root: styled.div`
@@ -48,21 +46,18 @@ const S = {
 interface Page2Props {
   recipe: DefiRecipe;
   composerState: DefiComposerState;
-  fields: DefiFormFields;
-  fee: bigint | undefined;
-  transactionLimit: bigint;
+  validationResult: DefiFormValidationResult;
   onSubmit: () => void;
   onClose: () => void;
 }
 
-export function Page2({ recipe, composerState, transactionLimit, fields, fee, onSubmit, onClose }: Page2Props) {
+export function Page2({ recipe, composerState, validationResult, onSubmit, onClose }: Page2Props) {
   const asset = recipe.inputAssetA;
-  const amount = toBaseUnits(fields.amountStr, asset.decimals);
   const [riskChecked, setRiskChecked] = useState(false);
-  const hasError = composerState.erroredPhase !== undefined;
-  const isIdle = composerState.phase === DefiComposerPhase.IDLE;
+  const hasError = !!composerState?.error;
+  const isIdle = composerState?.phase === DefiComposerPhase.IDLE;
   const showingDeclaration = isIdle && !hasError;
-  const showingComplete = composerState.phase === DefiComposerPhase.DONE;
+  const showingComplete = composerState?.phase === DefiComposerPhase.DONE;
   const canSubmit = riskChecked && isIdle;
   return (
     <S.Root>
@@ -78,7 +73,7 @@ export function Page2({ recipe, composerState, transactionLimit, fields, fee, on
           <BridgeKeyStats recipe={recipe} compact />
         </S.TopStats>
         <S.Separator />
-        <Breakdown amount={amount} fee={fee ?? 0n} asset={asset} />
+        <CostBreakdown amount={validationResult.input.targetOutputAmount} fee={validationResult.input.feeAmount} />
       </BorderBox>
       <S.BorderBox>
         {showingDeclaration ? (
@@ -86,7 +81,7 @@ export function Page2({ recipe, composerState, transactionLimit, fields, fee, on
             accepted={riskChecked}
             onChangeAccepted={setRiskChecked}
             asset={asset}
-            transactionLimit={transactionLimit}
+            transactionLimit={validationResult.input.transactionLimit ?? 0n}
           />
         ) : showingComplete ? (
           <TransactionComplete onClose={onClose} />

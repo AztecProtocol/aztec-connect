@@ -1,0 +1,23 @@
+.root {
+  display: flex;
+}
+
+.anchor {
+  position: relative;
+  width: 100%;
+}
+
+.feedback {
+  position: absolute;
+  top: 0;
+  left: 10px;
+  width: calc(100% - 10px);
+  border: solid #ffa937 2px;
+  border-radius: 20px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 200%;
+  padding: 10px 30px;
+  background-color: white;
+  z-index: 1;
+}

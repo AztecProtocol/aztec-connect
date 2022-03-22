@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { useL1Balances } from 'alt-model/assets/l1_balance_hooks';
 import { useDepositFee, useEstimatedShieldingGasCosts } from 'alt-model/fee_hooks';
 import { useTrackedFieldChangeHandlers } from 'alt-model/form_fields_hooks';
-import { ShieldFormFields, validateForm } from './shield_form_validation';
+import { ShieldFormFields, validateShieldForm } from './shield_form_validation';
 import { getShieldFormFeedback } from './shield_form_feedback';
 import { ShieldComposerPhase } from './shield_composer_state_obs';
 import { ShieldComposer } from './shield_composer';
@@ -19,7 +19,7 @@ import { isKnownAssetAddressString } from 'alt-model/known_assets/known_asset_ad
 const debug = createDebug('zm:shield_form_hooks');
 
 export function useShieldForm(preselectedAssetId?: number) {
-  const { alias, provider, requiredNetwork, config, keyVault } = useApp();
+  const { alias, provider, requiredNetwork, config, keyVault, accountId } = useApp();
   const [fields, setFields] = useState<ShieldFormFields>({
     assetId: preselectedAssetId ?? 0,
     amountStr: '',
@@ -49,12 +49,13 @@ export function useShieldForm(preselectedAssetId?: number) {
     ? config.txAmountLimits[targetAssetAddressStr]
     : undefined;
   const aliasIsValid = useAliasIsValidRecipient(fields.recipientAlias);
-  const validationResult = validateForm({
+  const validationResult = validateShieldForm({
     fields,
     amountFactory,
     targetL2OutputAmount,
     l1Balance,
     l1PendingBalance,
+    keyVault,
     approveProofGasCost,
     depositFundsGasCost,
     feeAmount,
@@ -79,7 +80,7 @@ export function useShieldForm(preselectedAssetId?: number) {
       debug('Attempted to recreate ShieldComposer');
       return;
     }
-    if (!validationResult.validPayload || !sdk || !keyVault || !provider) {
+    if (!validationResult.validPayload || !sdk || !keyVault || !accountId || !provider) {
       debug('Attempted to create ShieldComposer with incomplete dependencies', {
         validationResult,
         sdk,
@@ -91,6 +92,7 @@ export function useShieldForm(preselectedAssetId?: number) {
     const composer = new ShieldComposer(validationResult.validPayload, {
       sdk,
       keyVault,
+      accountId,
       provider,
       requiredNetwork,
     });

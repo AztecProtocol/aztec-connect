@@ -1,11 +1,7 @@
-import { useState } from 'react';
-import { DefiSettlementTime } from '@aztec/sdk';
 import { Page1 } from './page1';
 import { Page2 } from './page2';
-import { useDefiComposer, useDefiForm } from 'alt-model/defi/defi_composer_hooks';
+import { useDefiForm, DefiComposerPhase } from 'alt-model/defi/defi_form';
 import { DefiRecipe } from 'alt-model/defi/types';
-import { DefiComposerPhase } from 'alt-model/defi/defi_composer';
-import { DefiFormFields } from './types';
 import { Overlay } from 'components/overlay';
 import { DefiModalHeader } from './defi_modal_header';
 import { Card, CardHeaderSize } from 'ui-components';
@@ -18,45 +14,35 @@ interface DefiModalProps {
 
 export function DefiModal({ recipe, onClose }: DefiModalProps) {
   const enterBridgeId = recipe.bridgeFlow.enter;
-  const inputAsset = recipe.inputAssetA;
-  const [fields, setFields] = useState<DefiFormFields>({
-    speed: DefiSettlementTime.NEXT_ROLLUP,
-    amountStr: '',
-  });
-  const defiForm = useDefiForm(enterBridgeId, inputAsset, fields);
-  const { invalid, amount, fee, fieldAnnotations, transactionLimit, maxAmount } = defiForm;
+  const defiForm = useDefiForm(enterBridgeId);
+  const { fields, setters, validationResult, feedback, composerState, submit, attemptLock, locked, unlock } = defiForm;
 
-  const [locked, setLocked] = useState(false);
-  const { compose, ...composerState } = useDefiComposer(enterBridgeId);
-  const { phase } = composerState;
+  const phase = composerState?.phase;
   const isIdle = phase === DefiComposerPhase.IDLE;
-  const canClose = isIdle || phase === DefiComposerPhase.DONE;
-  const handleSubmit = () => compose({ amount, speed: fields.speed });
+  const canClose = phase === undefined || isIdle || phase === DefiComposerPhase.DONE;
   const canGoBack = locked && isIdle;
-  const handleBack = canGoBack ? () => setLocked(false) : undefined;
+  const handleBack = canGoBack ? unlock : undefined;
 
-  const page = locked ? (
-    <Page2
-      recipe={recipe}
-      fields={fields}
-      fee={fee}
-      composerState={composerState}
-      onSubmit={handleSubmit}
-      onClose={onClose}
-      transactionLimit={transactionLimit}
-    />
-  ) : (
-    <Page1
-      recipe={recipe}
-      fields={fields}
-      onChangeFields={setFields}
-      fieldAnnotations={fieldAnnotations}
-      onNext={() => setLocked(true)}
-      nextDisabled={invalid}
-      fee={fee}
-      maxAmount={maxAmount}
-    />
-  );
+  const page =
+    locked && composerState ? (
+      <Page2
+        recipe={recipe}
+        composerState={composerState}
+        onSubmit={submit}
+        onClose={onClose}
+        validationResult={validationResult}
+      />
+    ) : (
+      <Page1
+        recipe={recipe}
+        fields={fields}
+        onChangeAmountStr={setters.amountStr}
+        onChangeSpeed={setters.speed}
+        feedback={feedback}
+        onNext={attemptLock}
+        validationResult={validationResult}
+      />
+    );
   return (
     <Overlay>
       <div className={style.modalWrapper}>

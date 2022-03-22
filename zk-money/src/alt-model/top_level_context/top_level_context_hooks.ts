@@ -1,6 +1,7 @@
-import { useContext } from 'react';
+import { useContext, useMemo } from 'react';
 import { TopLevelContext } from './top_level_context';
 import { useObs } from 'app/util';
+import { AssetValue } from '@aztec/sdk';
 
 function useTopLevelContext() {
   return useContext(TopLevelContext);
@@ -18,6 +19,11 @@ export function useRemoteAssetForId(assetId: number) {
 export function useAmountFactory() {
   const { amountFactoryObs } = useTopLevelContext();
   return useObs(amountFactoryObs);
+}
+
+export function useAmount(assetValue?: AssetValue) {
+  const factory = useAmountFactory();
+  return useMemo(() => assetValue && factory?.fromAssetValue(assetValue), [factory, assetValue]);
 }
 
 export function useStableEthereumProvider() {

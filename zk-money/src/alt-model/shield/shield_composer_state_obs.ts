@@ -4,6 +4,7 @@ import { IObs } from 'app/util/obs/types';
 export enum ShieldComposerPhase {
   IDLE = 'IDLE',
   DEPOSIT = 'DEPOSIT',
+  GENERATE_SPENDING_KEY = 'GENERATE_SPENDING_KEY',
   CREATE_PROOF = 'CREATE_PROOF',
   APPROVE_PROOF = 'APPROVE_PROOF',
   SEND_PROOF = 'SEND_PROOF',

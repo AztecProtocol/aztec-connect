@@ -1,6 +1,6 @@
 import styled from 'styled-components/macro';
 import { Button } from 'components';
-import { DefiFormFieldAnnotations, DefiFormFields } from './types';
+import { DefiFormFeedback, DefiFormFields, DefiFormValidationResult } from 'alt-model/defi/defi_form';
 import {
   AmountSection,
   DescriptionSection,
@@ -34,23 +34,21 @@ const NextWrapper = styled.div`
 interface Page1Props {
   recipe: DefiRecipe;
   fields: DefiFormFields;
-  onChangeFields: (fields: DefiFormFields) => void;
-  fieldAnnotations: DefiFormFieldAnnotations;
+  validationResult: DefiFormValidationResult;
+  feedback: DefiFormFeedback;
+  onChangeAmountStr: (value: string) => void;
+  onChangeSpeed: (value: DefiSettlementTime) => void;
   onNext: () => void;
-  nextDisabled: boolean;
-  fee: bigint | undefined;
-  maxAmount: bigint;
 }
 
 export function Page1({
   recipe,
   fields,
-  onChangeFields,
-  fieldAnnotations,
+  validationResult,
+  feedback,
+  onChangeAmountStr,
+  onChangeSpeed,
   onNext,
-  nextDisabled,
-  fee,
-  maxAmount,
 }: // amount
 Page1Props) {
   return (
@@ -59,25 +57,24 @@ Page1Props) {
       <ProgressSection />
       <DescriptionSection text={recipe.longDescription} />
       <AmountSection
-        maxAmount={maxAmount}
+        maxAmount={validationResult.maxOutput ?? 0n}
         asset={recipe.inputAssetA}
         amountStr={fields.amountStr}
-        onChangeAmountStr={amountStr => onChangeFields({ ...fields, amountStr })}
-        amountStrAnnotation={fieldAnnotations.amountStr}
-        message={fieldAnnotations.amountStr?.text}
+        onChangeAmountStr={onChangeAmountStr}
+        message={feedback.amount}
         balanceType="L2"
       />
       <StatsSection recipe={recipe} />
       <GasSection
         type={GasSectionType.DEFI}
         speed={fields.speed as DefiSettlementTime}
-        onChangeSpeed={speed => onChangeFields({ ...fields, speed: speed as DefiSettlementTime })}
-        asset={recipe.inputAssetA}
-        fee={fee}
+        onChangeSpeed={speed => onChangeSpeed(speed as DefiSettlementTime)}
+        asset={validationResult.input.feeAmount?.info}
+        fee={validationResult.input.feeAmount?.baseUnits}
       />
       <FaqHint className={style.faqHint} />
       <NextWrapper>
-        <Button text="Next" onClick={nextDisabled ? undefined : onNext} disabled={nextDisabled} />
+        <Button text="Next" onClick={onNext} disabled={!validationResult.isValid} />
       </NextWrapper>
     </Root>
   );

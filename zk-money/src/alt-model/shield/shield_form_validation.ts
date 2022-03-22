@@ -4,6 +4,7 @@ import type { ShieldComposerPayload } from './shield_composer';
 import type { EthAddress, TxSettlementTime } from '@aztec/sdk';
 import type { Amount } from 'alt-model/assets/amount';
 import { min } from 'app';
+import { KeyVault } from 'app/key_vault';
 
 export interface ShieldFormFields {
   assetId: number;
@@ -18,6 +19,7 @@ interface ShieldFormValidationInputs {
   targetL2OutputAmount?: Amount;
   l1Balance?: bigint;
   l1PendingBalance?: bigint;
+  keyVault?: KeyVault;
   approveProofGasCost?: bigint;
   depositFundsGasCost?: bigint;
   feeAmount?: Amount;
@@ -35,9 +37,11 @@ export interface ShieldFormValidationResult {
   loading?: boolean;
   unrecognisedTargetAmount?: boolean;
   insufficientTargetAssetBalance?: boolean;
+  mustDepositFromWalletAccountUsedToGenerateAztecKeys?: boolean;
   insufficientFeePayingAssetBalance?: boolean;
   mustAllowForFee?: boolean;
   mustAllowForGas?: boolean;
+  requiresSpendingKey?: boolean;
   beyondTransactionLimit?: boolean;
   noAmount?: boolean;
   isValid?: boolean;
@@ -47,13 +51,14 @@ export interface ShieldFormValidationResult {
   input: ShieldFormValidationInputs;
 }
 
-export function validateForm(input: ShieldFormValidationInputs): ShieldFormValidationResult {
+export function validateShieldForm(input: ShieldFormValidationInputs): ShieldFormValidationResult {
   const {
     fields,
     amountFactory,
     targetL2OutputAmount,
     l1Balance,
     l1PendingBalance,
+    keyVault,
     approveProofGasCost,
     depositFundsGasCost,
     feeAmount,
@@ -75,6 +80,7 @@ export function validateForm(input: ShieldFormValidationInputs): ShieldFormValid
     !feeAmount ||
     l1Balance === undefined ||
     l1PendingBalance === undefined ||
+    !keyVault ||
     approveProofGasCost === undefined ||
     depositFundsGasCost === undefined ||
     balanceInFeePayingAsset === undefined
@@ -82,12 +88,17 @@ export function validateForm(input: ShieldFormValidationInputs): ShieldFormValid
     return { loading: true, input };
   }
   if (!targetL2OutputAmount || transactionLimit === undefined) {
-    return { loading: false, unrecognisedTargetAmount: true, input };
+    return { unrecognisedTargetAmount: true, input };
   }
 
   // If the target asset isn't used for paying the fee, we don't need to reserve funds for it
   const targetAssetIsPayingFee = fields.assetId === feeAmount.id;
   const feeInTargetAsset = targetAssetIsPayingFee ? feeAmount.baseUnits : 0n;
+
+  const requiresSpendingKey = !targetAssetIsPayingFee;
+  if (requiresSpendingKey && !keyVault.signerAddress.equals(depositor)) {
+    return { mustDepositFromWalletAccountUsedToGenerateAztecKeys: true, input };
+  }
 
   // If it's ETH being shielded, we need to reserve funds for gas costs
   const isEth = targetL2OutputAmount.id === 0;
@@ -132,6 +143,7 @@ export function validateForm(input: ShieldFormValidationInputs): ShieldFormValid
     insufficientFeePayingAssetBalance,
     mustAllowForFee,
     mustAllowForGas,
+    requiresSpendingKey,
     beyondTransactionLimit,
     noAmount,
     isValid,

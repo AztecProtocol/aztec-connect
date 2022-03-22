@@ -24,7 +24,7 @@ export function SubmissionFlow({ labels, activeItem }: SubmissionFlowProps) {
         {labels.map((label, idx) => {
           const isCurrent = idx === activeItem.idx;
           const prevIsCurrent = idx === activeItem.idx + 1;
-          const prevIsExpanded = !!(prevIsCurrent && activeItem.fieldContent);
+          const prevIsExpanded = !!(prevIsCurrent && activeItem.expandedContent);
           const faded = prevIsCurrent && !prevIsExpanded && activeItem.status !== StepStatus.ERROR;
           const hidden = !faded && idx > activeItem.idx;
           const status = idx < activeItem.idx ? StepStatus.DONE : activeItem.status;

@@ -4,7 +4,7 @@ import { Disclaimer } from '../../modal_molecules/disclaimer';
 import { TransactionComplete } from '../../modal_molecules/transaction_complete';
 import { ShieldFormValidationResult } from 'alt-model/shield/shield_form_validation';
 import { ShieldComposerPhase, ShieldComposerState } from 'alt-model/shield/shield_composer_state_obs';
-import { CostBreakdown } from '../../modal_molecules/cost_breakdown/cost_breakdown';
+import { CostBreakdown } from '../../modal_molecules/cost_breakdown';
 import { ShieldSubmissionSteps } from './shield_submission_steps';
 import style from './shield_page2.module.css';
 
@@ -39,11 +39,13 @@ export function ShieldPage2({ composerState, validationResult, onSubmit, onClose
         ) : showingComplete ? (
           <TransactionComplete onClose={onClose} />
         ) : (
-          <ShieldSubmissionSteps composerState={composerState} />
+          <ShieldSubmissionSteps
+            composerState={composerState}
+            requiresSpendingKey={validationResult.requiresSpendingKey}
+          />
         )}
       </BorderBox>
       <div className={style.footer}>
-        <div className={style.error}>{hasError && composerState.error?.message}</div>
         {isIdle && (
           <Button
             text={hasError ? 'Retry' : 'Confirm Submit'}

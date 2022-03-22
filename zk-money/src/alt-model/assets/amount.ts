@@ -33,8 +33,10 @@ export class Amount {
     return this.withBaseUnits(this.baseUnits + baseUnits);
   }
 
-  format() {
-    return `${this.toFloat()} ${this.info.symbol}`;
+  format(opts?: { layer?: 'L1' | 'L2' }) {
+    const layer = opts?.layer ?? 'L2';
+    const symbolPrefix = layer === 'L2' ? 'zk' : '';
+    return `${this.toFloat()} ${symbolPrefix}${this.info.symbol}`;
   }
 
   toUsd(assetPrice: bigint) {
