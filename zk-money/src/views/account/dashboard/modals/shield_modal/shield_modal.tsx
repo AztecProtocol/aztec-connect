@@ -1,9 +1,9 @@
 import { Card, CardHeaderSize } from 'ui-components';
 import { useShieldForm } from 'alt-model/shield/shield_form_hooks';
 import { CloseButtonWhite, Modal } from 'components';
-import style from './shield_modal.module.scss';
 import { ShieldPage2 } from './shield_page2/shield_page2';
 import { ShieldPage1 } from './shield_page1';
+import style from './shield_modal.module.scss';
 
 export function ShieldModal({ preselectedAssetId, onClose }: { preselectedAssetId?: number; onClose: () => void }) {
   const { fields, setters, validationResult, composerState, locked, attemptLock, feedback, submit, unlock } =

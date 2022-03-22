@@ -1,9 +1,9 @@
-import type { CutdownAsset } from 'app/types';
 import { AztecSdk } from '@aztec/sdk';
 import { Navbar } from 'ui-components';
 import { BroadcastChannel } from 'broadcast-channel';
 import { PureComponent } from 'react';
 import styled from 'styled-components/macro';
+import type { CutdownAsset } from 'app/types';
 import { AppContext } from '../alt-model/app_context';
 import {
   AccountAction,
@@ -37,10 +37,11 @@ import { SdkObs } from 'alt-model/top_level_context/sdk_obs';
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
 import { Balance } from './account/dashboard/balance';
 import { Earn } from './account/dashboard/earn';
+import { Trade } from './account/dashboard/trade';
 import { DefiRecipe } from 'alt-model/defi/types';
 import { DefiModal } from 'views/account/dashboard/modals/defi_modal';
-import './app.css';
 import { KNOWN_MAINNET_ASSET_ADDRESSES } from 'alt-model/known_assets/known_asset_addresses';
+import './app.css';
 
 interface AppProps {
   config: Config;
@@ -429,7 +430,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
                   path="/earn"
                   element={<Earn isLoggedIn={isLoggedIn} onOpenDefiModal={this.handleOpenDefiModal} />}
                 />
-                <Route path="/trade" element={<div />} />
+                <Route path="/trade" element={<Trade />} />
                 <Route path="/balance" element={<Balance />} />
                 <Route
                   path="/"

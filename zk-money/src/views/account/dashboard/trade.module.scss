@@ -1,0 +1,37 @@
+@use '../../../ui-components/styles/mixins';
+
+.underConstructionWrapper {
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  margin: 40px auto auto auto;
+  align-items: flex-start;
+  width: 50%;
+
+  .image {
+    width: 300px;
+    align-self: center;
+  }
+
+  .title {
+    font-size: 46px;
+    margin-top: 50px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    width: 100%;
+    text-align: left;
+    @include mixins.gradient_font;
+  }
+
+  .body {
+    margin-top: 30px;
+    width: 90%;
+    font-size: 16px;
+    line-height: 150%;
+  }
+
+  .button {
+    margin-top: 30px;
+  }
+}

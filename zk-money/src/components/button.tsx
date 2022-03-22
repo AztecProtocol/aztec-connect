@@ -65,7 +65,7 @@ const StyledButton = styled(TextLink)<StyledButtonProps>`
   ${({ theme }: StyledButtonProps) => {
     switch (theme) {
       case 'white':
-        return `background: ${colours.white};`;
+        return `background: ${colours.white}; box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);`;
       case 'gradient':
         return `background: linear-gradient(134.14deg, ${gradients.primary.from} 18.37%, ${gradients.primary.to} 82.04%);`;
       default:
