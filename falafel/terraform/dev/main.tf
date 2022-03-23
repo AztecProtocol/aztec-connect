@@ -171,18 +171,18 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "NUM_INNER_ROLLUP_TXS",
-        "value": "3"
+        "value": "28"
       },
       {
         "name": "NUM_OUTER_ROLLUP_PROOFS",
-        "value": "2"
+        "value": "32"
       },
       {
         "name": "MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW",
         "value": "1"
       },
       {
-        "name": "PUBLISH_INTERVAL",
+        "name": "FLUSH_AFTER_IDLE",
         "value": "60"
       },
       {

@@ -20,9 +20,9 @@ export class RollupPublisher {
   }
 
   public async publishRollup(rollup: RollupDao) {
-    console.log(`Publishing rollup: ${rollup.id}`);
     const txData = await this.createTxData(rollup);
     await this.rollupDb.setCallData(rollup.id, txData);
+    console.log(`Publishing rollup: ${rollup.id} (${txData.length} bytes)`);
 
     while (!this.interrupted) {
       // Wait until fee is below threshold.

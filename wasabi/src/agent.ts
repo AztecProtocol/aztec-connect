@@ -40,10 +40,21 @@ export class Agent {
   }
 
   public async fundEthAddress(userData: UserData, deposit: bigint) {
-    console.log(`agent ${this.id} funding ${userData.address} with ${deposit} wei...`);
-    const asset: EthAsset = new EthAsset(this.provider);
-    const txHash = await asset.transfer(deposit, this.fundingAddress, userData.address);
-    return this.sdk.getTransactionReceipt(txHash);
+    while (true) {
+      try {
+        console.log(`agent ${this.id} funding ${userData.address} with ${deposit} wei...`);
+        const asset: EthAsset = new EthAsset(this.provider);
+        const txHash = await asset.transfer(deposit, this.fundingAddress, userData.address);
+        const receipt = await this.sdk.getTransactionReceipt(txHash);
+        if (!receipt.status) {
+          throw new Error('receipt status is false.');
+        }
+        break;
+      } catch (err: any) {
+        console.log(`agent ${this.id} failed to fund, will retry: ${err.message}`);
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
+    }
   }
 
   public async deposit(userData: UserData, deposit: bigint, instant = false) {
