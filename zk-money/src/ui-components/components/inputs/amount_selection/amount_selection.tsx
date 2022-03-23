@@ -1,17 +1,22 @@
 import type { RemoteAsset } from 'alt-model/types';
-import { useState } from 'react';
-import { Dropdown } from 'components/dropdown';
+import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from 'alt-model/known_assets/known_asset_addresses';
+import { useState, useMemo } from 'react';
+import { Dropdown, DropdownOption } from 'components/dropdown';
 import { ShieldedAssetIcon } from 'components';
 import { AmountInput } from 'ui-components';
 import downArrow from '../../../images/down_arrow.svg';
 import style from './amount_selection.module.scss';
 
+const SUPPORTED_FOR_SHIELDING = [KMAA.ETH, KMAA.DAI, KMAA.renBTC];
+
 interface AmountSelectionProps {
   asset: RemoteAsset;
+  assets?: RemoteAsset[];
   maxAmount: bigint;
   amountString: string;
-  allowAssetSelection?: boolean;
   onChangeAmountString: (amountString: string) => void;
+  onChangeAsset?: (option: DropdownOption<string>) => void;
+  allowAssetSelection?: boolean;
 }
 
 export function AmountSelection(props: AmountSelectionProps) {
@@ -21,9 +26,17 @@ export function AmountSelection(props: AmountSelectionProps) {
     setAssetSelectorOpen(prevValue => !prevValue);
   };
 
+  const options = useMemo(
+    () =>
+      props.assets
+        ?.filter(x => SUPPORTED_FOR_SHIELDING.some(addr => x.address.equals(addr)))
+        .map(x => ({ value: x.symbol, label: x.symbol })),
+    [props.assets],
+  ) as DropdownOption<string>[] | undefined;
+
   return (
     <div className={style.inputWrapper}>
-      {props.allowAssetSelection && (
+      {props.allowAssetSelection && props.assets && options && (
         <div className={style.assetSelectorWrapper}>
           <div className={style.assetSelector} onClick={toggleAssetSelector}>
             <div className={style.assetDisplay}>
@@ -34,12 +47,8 @@ export function AmountSelection(props: AmountSelectionProps) {
           </div>
           <Dropdown
             isOpen={isAssetSelectorOpen}
-            options={[
-              { label: 'zkETH', value: 'zkETH' },
-              { label: 'zkDAI', value: 'zkDAI' },
-              { label: 'zkrenBTC', value: 'zkrenBTC' },
-            ]}
-            onClick={() => {}}
+            options={options}
+            onClick={props.onChangeAsset}
             onClose={toggleAssetSelector}
           />
         </div>

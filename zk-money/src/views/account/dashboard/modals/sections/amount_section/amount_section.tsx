@@ -6,6 +6,7 @@ import { MiniL1BalanceIndicator, MiniL2BalanceIndicator } from './mini_balance_i
 import { Privacy } from './privacy';
 import { InputAnnotation } from './types';
 import style from './amount_section.module.scss';
+import { DropdownOption } from 'components/dropdown';
 
 function Info() {
   return (
@@ -39,9 +40,11 @@ function renderBalanceIndicator(balanceType: BalanceType, asset: RemoteAsset) {
 
 interface AmountSectionProps {
   asset: RemoteAsset;
+  assets?: RemoteAsset[];
   amountStr: string;
   maxAmount: bigint;
   onChangeAmountStr: (amountStr: string) => void;
+  onChangeAsset?: (option: DropdownOption<string>) => void;
   allowAssetSelection?: boolean;
   amountStrAnnotation?: InputAnnotation;
   hidePrivacy?: boolean;
@@ -66,9 +69,11 @@ export function AmountSection(props: AmountSectionProps) {
           <BlockTitle title="Amount" info={renderBalanceIndicator(props.balanceType, props.asset)} />
           <AmountSelection
             asset={props.asset}
+            assets={props.assets}
             allowAssetSelection={props.allowAssetSelection}
             maxAmount={props.maxAmount}
             onChangeAmountString={props.onChangeAmountStr}
+            onChangeAsset={props.onChangeAsset}
             amountString={props.amountStr}
           />
           <div className={style.errorMessage}>{props.message}</div>

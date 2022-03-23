@@ -4,8 +4,10 @@ import { TxSettlementTime, TxType } from '@aztec/sdk';
 import { SendMode, ValueAvailability } from 'app';
 import { Button, InputTheme } from 'components';
 import { AmountSection, GasSection, GasSectionType, RecipientSection } from 'views/account/dashboard/modals/sections';
-import style from './shield.module.scss';
 import { ConnectedLegacyWalletSelect } from './connected_legacy_wallet_select';
+import { DropdownOption } from 'components/dropdown';
+import { RemoteAsset } from 'alt-model/types';
+import style from './shield.module.scss';
 
 function toLegacyRecipientInput({ recipientAlias }: ShieldFormFields, { input }: ShieldFormValidationResult) {
   const { aliasIsValid } = input;
@@ -24,23 +26,31 @@ interface ShieldPage1Props {
   fields: ShieldFormFields;
   feedback: ShieldFormFeedback;
   validationResult: ShieldFormValidationResult;
+  asset?: RemoteAsset;
+  assets: RemoteAsset[];
   onNext(): void;
   onChangeAmountStr(value: string): void;
   onChangeRecipientAlias(value: string): void;
   onChangeSpeed(speed: TxSettlementTime): void;
+  onChangeAsset(option: DropdownOption<string>): void;
 }
 
 export function ShieldPage1({
   fields,
   feedback,
   validationResult,
+  asset,
+  assets,
   onNext,
   onChangeAmountStr,
   onChangeRecipientAlias,
   onChangeSpeed,
+  onChangeAsset,
 }: ShieldPage1Props) {
-  const asset = validationResult.input.targetL2OutputAmount?.info;
-  if (!asset) return <>Loading...</>;
+  if (!asset) {
+    return <>Loading...</>;
+  }
+
   return (
     <>
       <ConnectedLegacyWalletSelect
@@ -51,7 +61,10 @@ export function ShieldPage1({
       <AmountSection
         maxAmount={validationResult.maxL2Output ?? 0n}
         asset={asset}
+        assets={assets}
         amountStr={fields.amountStr}
+        allowAssetSelection={true}
+        onChangeAsset={onChangeAsset}
         onChangeAmountStr={onChangeAmountStr}
         hidePrivacy
         message={feedback.amount}

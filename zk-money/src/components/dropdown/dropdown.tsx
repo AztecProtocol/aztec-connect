@@ -30,12 +30,24 @@ export function Dropdown<T>(props: DropdownProps<T>) {
     return null;
   }
 
+  const handleClick = (option: DropdownOption<T>) => {
+    if (option.disabled) {
+      return;
+    }
+    if (props.onClick) {
+      props.onClick(option);
+    }
+    if (props.onClose) {
+      props.onClose();
+    }
+  };
+
   return (
     <div ref={wrapperRef} className={cx(style.dropdownWrapper, props.className)}>
       {props.options.map((option: DropdownOption<T>) => (
         <div
           className={cx(style.dropdownOptionBackground, option.disabled && style.disabled)}
-          onClick={() => !option.disabled && props.onClick && props.onClick(option)}
+          onClick={() => handleClick(option)}
           key={option.label}
         >
           <div className={cx(style.dropdownOption, option.disabled && style.disabled)}>
