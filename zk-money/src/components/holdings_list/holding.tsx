@@ -65,10 +65,11 @@ export function Holding({ assetValue, onSend, onWidthdraw }: HoldingProps) {
     <div className={style.holdingWrapper}>
       <div className={style.assetWrapper}>
         <ShieldedAssetIcon address={asset.address} />
-        <div className={style.holdingUnits}>zk{asset.symbol ?? '?'}</div>
+        <div className={style.holdingUnits}>
+          {amountStr} zk{asset.symbol ?? '?'}
+        </div>
       </div>
       <div className={style.holdingAmount}>${priceStr}</div>
-      <div>{amountStr}</div>
       <div className={style.buttonsWrapper}>
         <div className={style.button} onClick={() => onWidthdraw?.(asset)}>
           <img className={style.buttonIcon} src={sendToL1Icon} alt="Send to L1 button" />
