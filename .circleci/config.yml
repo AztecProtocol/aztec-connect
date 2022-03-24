@@ -490,7 +490,7 @@ jobs:
       - run:
           name: 'halloumi'
           working_directory: halloumi
-          command: deploy halloumi
+          command: deploy halloumi "halloumi halloumi-inner halloumi-outer"
       - run:
           name: 'falafel'
           working_directory: falafel
@@ -531,16 +531,16 @@ jobs:
           working_directory: website
           command: |
             deploy_ecr website
-            deploy_s3 website
+            deploy_s3 website is_global
       - run:
           name: 'metrics'
           working_directory: metrics
           command: |
-            cd coinbase-exporter && deploy coinbase-exporter && cd ..
-            cd ecs-exporter && deploy_terraform && cd ..
-            cd sidecar && deploy metrics-sidecar && cd ..
-            cd prometheus && deploy prometheus && cd ..
-            cd grafana && deploy grafana && cd ..
+            cd coinbase-exporter && deploy coinbase-exporter "" is_global && cd ..
+            cd ecs-exporter && deploy_terraform cd ..
+            cd sidecar && deploy_ecr metrics-sidecar && cd ..
+            cd prometheus && deploy prometheus "" is_global && cd ..
+            cd grafana && deploy grafana "" is_global && cd ..
 
 tag_regex: &tag_regex /v[0-9]+(\.[0-9]+)*(-[a-zA-Z-]+\.[0-9]+)?/
 tag_filter: &tag_filter

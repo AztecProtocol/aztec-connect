@@ -2,6 +2,9 @@
 set -e
 
 REPOSITORY=$1
+SERVICES=${2:-$REPOSITORY}
+# A global deploy, doesn't namespace under a deploy tag (e.g. company website, metrics)
+IS_GLOBAL=$3
 
 # Regardless of whether the repo changed or not, we want to update tags in the deployment repo.
 deploy_ecr $REPOSITORY
@@ -14,10 +17,21 @@ if ! check_rebuild $LAST_SUCCESSFUL_COMMIT; then
   exit 0
 fi
 
-deploy_terraform $REPOSITORY
+if [ -n "$IS_GLOBAL" ]; then
+  deploy_terraform
 
-# If the project terraform maintains a service with the given name, restart it to run latest image.
-deploy_service $DEPLOY_TAG-$REPOSITORY
+  # Restart services.
+  for SERVICE in $SERVICES; do
+    deploy_service $SERVICE
+  done
+else
+  deploy_terraform $REPOSITORY
+
+  # Restart services.
+  for SERVICE in $SERVICES; do
+    deploy_service $DEPLOY_TAG-$SERVICE
+  done
+fi
 
 # Tag the image as deployed.
 tag_remote_image $REPOSITORY cache-$COMMIT_HASH cache-$COMMIT_HASH-$DEPLOY_TAG-deployed
