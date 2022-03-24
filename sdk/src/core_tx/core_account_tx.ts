@@ -17,3 +17,38 @@ export class CoreAccountTx {
     public readonly settled?: Date,
   ) {}
 }
+
+export interface CoreAccountTxJson {
+  proofId: number;
+  txId: string;
+  userId: string;
+  aliasHash: string;
+  newSigningPubKey1: string | undefined;
+  newSigningPubKey2: string | undefined;
+  migrated: boolean;
+  txRefNo: number;
+  created: Date;
+  settled?: Date;
+}
+
+export const coreAccountTxToJson = (tx: CoreAccountTx): CoreAccountTxJson => ({
+  ...tx,
+  txId: tx.txId.toString(),
+  userId: tx.userId.toString(),
+  aliasHash: tx.aliasHash.toString(),
+  newSigningPubKey1: tx.newSigningPubKey1 ? tx.newSigningPubKey1.toString('hex') : undefined,
+  newSigningPubKey2: tx.newSigningPubKey2 ? tx.newSigningPubKey2.toString('hex') : undefined,
+});
+
+export const coreAccountTxFromJson = (json: CoreAccountTxJson) =>
+  new CoreAccountTx(
+    TxId.fromString(json.txId),
+    AccountId.fromString(json.userId),
+    AliasHash.fromString(json.aliasHash),
+    json.newSigningPubKey1 ? Buffer.from(json.newSigningPubKey1, 'hex') : undefined,
+    json.newSigningPubKey2 ? Buffer.from(json.newSigningPubKey2, 'hex') : undefined,
+    json.migrated,
+    json.txRefNo,
+    json.created,
+    json.settled,
+  );

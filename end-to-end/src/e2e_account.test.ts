@@ -1,8 +1,15 @@
-import { AztecSdk, createAztecSdk, EthAddress, GrumpkinAddress, TxSettlementTime, WalletProvider } from '@aztec/sdk';
+import {
+  AztecSdk,
+  createNodeAztecSdk,
+  EthAddress,
+  GrumpkinAddress,
+  TxSettlementTime,
+  WalletProvider,
+} from '@aztec/sdk';
 import { randomBytes } from 'crypto';
+import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
-import createDebug from 'debug';
 
 jest.setTimeout(25 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
@@ -27,15 +34,13 @@ describe('end-to-end account tests', () => {
     provider = await createFundedWalletProvider(ETHEREUM_HOST, 1, 1, Buffer.from(PRIVATE_KEY, 'hex'), initialBalance);
     [depositor] = provider.getAccounts();
 
-    sdk = await createAztecSdk(provider, ROLLUP_HOST, {
-      syncInstances: false,
-      saveProvingKey: false,
-      clearDb: true,
+    sdk = await createNodeAztecSdk(provider, {
+      serverUrl: ROLLUP_HOST,
       memoryDb: true,
       minConfirmation: 1,
       minConfirmationEHW: 1,
     });
-    await sdk.init();
+    await sdk.run();
     await sdk.awaitSynchronised();
   });
 
@@ -51,16 +56,17 @@ describe('end-to-end account tests', () => {
   it('should create and recover account, add and remove signing keys.', async () => {
     const accountPrivateKey = provider.getPrivateKeyForAddress(depositor)!;
     const user0 = await sdk.addUser(accountPrivateKey);
-    const { publicKey: accountPubKey } = user0.getUserData();
+    const signer0 = await sdk.createSchnorrSigner(accountPrivateKey);
+    const { publicKey: accountPubKey } = await user0.getUserData();
 
     expect(await sdk.getLatestAccountNonce(accountPubKey)).toBe(0);
 
     debug('creating new account and shielding...');
     // The recoveryPublicKey is a single use key allowing the addition of the trustedThirdPartyPublicKey.
     const user1 = await sdk.addUser(accountPrivateKey, 1);
-    const signer1 = sdk.createSchnorrSigner(randomBytes(32));
+    const signer1 = await sdk.createSchnorrSigner(randomBytes(32));
     const alias = randomBytes(8).toString('hex');
-    const thirdPartySigner = sdk.createSchnorrSigner(randomBytes(32));
+    const thirdPartySigner = await sdk.createSchnorrSigner(randomBytes(32));
     const recoveryPayloads = await sdk.generateAccountRecoveryData(alias, accountPubKey, [
       thirdPartySigner.getPublicKey(),
     ]);
@@ -72,6 +78,7 @@ describe('end-to-end account tests', () => {
 
       const controller = sdk.createRegisterController(
         user0.id,
+        signer0,
         alias,
         signer1.getPublicKey(),
         recoveryPublicKey,
@@ -86,15 +93,15 @@ describe('end-to-end account tests', () => {
       await controller.createProof();
       await controller.sign();
 
-      expect(user0.getBalance(assetId)).toBe(BigInt(0));
-      expect(user1.getBalance(assetId)).toBe(BigInt(0));
+      expect(await user0.getBalance(assetId)).toBe(BigInt(0));
+      expect(await user1.getBalance(assetId)).toBe(BigInt(0));
 
       await controller.send();
       debug(`waiting to settle...`);
       await controller.awaitSettlement(awaitSettlementTimeout);
 
-      expect(user0.getBalance(assetId)).toBe(BigInt(0));
-      expect(user1.getBalance(assetId)).toBe(depositValue.value);
+      expect(await user0.getBalance(assetId)).toBe(BigInt(0));
+      expect(await user1.getBalance(assetId)).toBe(depositValue.value);
     }
 
     expect(await sdk.getAccountId(alias)).toEqual(user1.id);

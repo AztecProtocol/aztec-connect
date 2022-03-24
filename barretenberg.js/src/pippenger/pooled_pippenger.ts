@@ -8,11 +8,13 @@ const debug = createDebug('bb:pippenger');
 export class PooledPippenger implements Pippenger {
   public pool: SinglePippenger[] = [];
 
-  public async init(crsData: Uint8Array, pool: WorkerPool) {
+  constructor(private workerPool: WorkerPool) {}
+
+  public async init(crsData: Uint8Array) {
     const start = new Date().getTime();
     debug(`initializing: ${new Date().getTime() - start}ms`);
     this.pool = await Promise.all(
-      pool.workers.map(async w => {
+      this.workerPool.workers.map(async w => {
         const p = new SinglePippenger(w);
         await p.init(crsData);
         return p;

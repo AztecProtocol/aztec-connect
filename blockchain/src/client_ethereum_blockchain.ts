@@ -11,7 +11,7 @@ export class ClientEthereumBlockchain {
 
   constructor(
     rollupContractAddress: EthAddress,
-    assetInfos: BlockchainAsset[],
+    public readonly assetInfos: BlockchainAsset[],
     private ethereumProvider: EthereumProvider,
     private minConfirmation = 1,
   ) {

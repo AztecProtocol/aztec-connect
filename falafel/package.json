@@ -5,9 +5,8 @@
   "license": "GPL-2.0",
   "scripts": {
     "build": "rm -rf ./dest && tsc -p tsconfig.prod.json",
-    "clean": "rm -rf ./data",
-    "clean_db": "rm -rf ./data/db.sqlite ./data/world_state.db ./data/config",
-    "clean_keys": "rm -rf ./data/account ./data/join_split ./data/*rollup*",
+    "clean": "rm -rf ./data ./dest",
+    "clean_db": "rm -rf ./data",
     "start": "node ./dest",
     "start:debug": "node --inspect-brk=0.0.0.0:9221 ./dest",
     "start:dev": "`yarn -s deploy_rollup_processor` && yarn start:dev_server",

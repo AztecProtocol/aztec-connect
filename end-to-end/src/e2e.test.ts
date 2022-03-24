@@ -1,8 +1,8 @@
-import { AztecSdk, createAztecSdk, EthAddress, EthereumRpc, TxId, TxSettlementTime } from '@aztec/sdk';
+import { AztecSdk, createNodeAztecSdk, EthAddress, EthereumRpc, TxId, TxSettlementTime } from '@aztec/sdk';
 import { randomBytes } from 'crypto';
+import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
-import createDebug from 'debug';
 
 jest.setTimeout(20 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
@@ -30,7 +30,7 @@ describe('end-to-end tests', () => {
   const createUser = async (accountPrivateKey = randomBytes(32), nonce = 0) => {
     const userId = (await sdk.addUser(accountPrivateKey, nonce)).id;
     const signingPrivateKey = !nonce ? accountPrivateKey : randomBytes(32);
-    const signer = sdk.createSchnorrSigner(signingPrivateKey);
+    const signer = await sdk.createSchnorrSigner(signingPrivateKey);
     return { userId, signer, accountPrivateKey };
   };
 
@@ -49,16 +49,14 @@ describe('end-to-end tests', () => {
     const confs = chainId === 1337 ? 1 : 2;
     addresses = await ethRpc.getAccounts();
 
-    sdk = await createAztecSdk(provider, ROLLUP_HOST, {
-      syncInstances: false,
+    sdk = await createNodeAztecSdk(provider, {
+      serverUrl: ROLLUP_HOST,
       pollInterval: 1000,
-      saveProvingKey: false,
-      clearDb: true,
       memoryDb: true,
       minConfirmation: confs,
       minConfirmationEHW: confs,
     });
-    await sdk.init();
+    await sdk.run();
     await sdk.awaitSynchronised();
 
     for (const addr of addresses) {
@@ -95,11 +93,11 @@ describe('end-to-end tests', () => {
         `account ${account} public / private balance: ${sdk.fromBaseUnits(
           await sdk.getPublicBalanceAv(assetId, addresses[account]),
           true,
-        )} / ${sdk.fromBaseUnits(sdk.getBalanceAv(assetId, accounts[account]), true)}`,
+        )} / ${sdk.fromBaseUnits(await sdk.getBalanceAv(assetId, accounts[account]), true)}`,
       );
 
-    expect(sdk.getBalance(assetId, userA)).toBe(0n);
-    expect(sdk.getBalance(assetId, userB)).toBe(0n);
+    expect(await sdk.getBalance(assetId, userA)).toBe(0n);
+    expect(await sdk.getBalance(assetId, userB)).toBe(0n);
 
     // Rollup 0: Deposits.
     {
@@ -135,8 +133,8 @@ describe('end-to-end tests', () => {
       expect(await sdk.getPublicBalance(assetId, addresses[0])).toBe(initialPublicBalances[0]);
       expect(await sdk.getPublicBalance(assetId, addresses[1])).toBe(initialPublicBalances[1]);
       expect(await sdk.getPublicBalance(assetId, addresses[2])).toBe(0n);
-      expect(sdk.getBalanceAv(assetId, userA)).toEqual(depositValue);
-      expect(sdk.getBalanceAv(assetId, userB)).toEqual(depositValue);
+      expect(await sdk.getBalanceAv(assetId, userA)).toEqual(depositValue);
+      expect(await sdk.getBalanceAv(assetId, userB)).toEqual(depositValue);
     }
 
     // Rollup 1: Withdrawals and transfers.
@@ -183,10 +181,10 @@ describe('end-to-end tests', () => {
       expect(await sdk.getPublicBalance(assetId, addresses[2])).toBe(
         withdrawalValues[0].value + withdrawalValues[1].value,
       );
-      expect(sdk.getBalance(assetId, userA)).toBe(
+      expect(await sdk.getBalance(assetId, userA)).toBe(
         depositValue.value - withdrawalValues[0].value - withdrawalFee.value + transferValue.value,
       );
-      expect(sdk.getBalance(assetId, userB)).toBe(
+      expect(await sdk.getBalance(assetId, userB)).toBe(
         depositValue.value - withdrawalValues[1].value - withdrawalFee.value - transferValue.value - transferFee.value,
       );
     }

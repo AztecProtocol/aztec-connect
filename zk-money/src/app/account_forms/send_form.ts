@@ -472,7 +472,7 @@ export class SendForm extends EventEmitter implements AccountForm {
     if (!amount) {
       form.amount = withError(form.amount, 'Amount must be greater than 0.');
     } else {
-      const balance = this.sdk.getBalance(this.asset.id, this.userId);
+      const balance = await this.sdk.getBalance(this.asset.id, this.userId);
       const maxAmount = min(max(0n, balance - fee), this.txAmountLimit);
       if (amount > maxAmount) {
         form.amount = withError(form.amount, `Insufficient zk${this.asset.symbol} Balance.`);
@@ -515,7 +515,7 @@ export class SendForm extends EventEmitter implements AccountForm {
     if (this.status <= SendStatus.CREATE_PROOF) {
       this.proceed(SendStatus.CREATE_PROOF);
 
-      const signer = this.sdk.createSchnorrSigner(privateKey);
+      const signer = await this.sdk.createSchnorrSigner(privateKey);
       const noteRecipient = await this.accountUtils.getAccountId(alias);
       const amount = toBaseUnits(this.values.amount.value, this.asset.decimals);
       const fee = this.values.fees.value[this.values.speed.value].fee;
@@ -545,7 +545,7 @@ export class SendForm extends EventEmitter implements AccountForm {
     if (this.status <= SendStatus.CREATE_PROOF) {
       this.proceed(SendStatus.CREATE_PROOF);
 
-      const signer = this.sdk.createSchnorrSigner(privateKey);
+      const signer = await this.sdk.createSchnorrSigner(privateKey);
       const amount = toBaseUnits(this.values.amount.value, this.asset.decimals);
       const fee = this.values.fees.value[this.values.speed.value].fee;
       this.proofController = await this.sdk.createWithdrawController(
@@ -580,7 +580,7 @@ export class SendForm extends EventEmitter implements AccountForm {
   }
 
   private async initTransactionGraph() {
-    const userIds = this.sdk.getUsersData().map(u => u.id);
+    const userIds = (await this.sdk.getUsersData()).map(u => u.id);
     const jsTxs = (await Promise.all(userIds.map(userId => this.sdk.getPaymentTxs(userId)))).flat();
     this.transactionGraph = new TransactionGraph(jsTxs);
     this.refreshValues();

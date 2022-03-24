@@ -1,8 +1,9 @@
 /.vscode
 .viscode
 .cache
+.parcel-cache
 .yarn
-dest*
+dest
 dist
 node_modules
 .terraform

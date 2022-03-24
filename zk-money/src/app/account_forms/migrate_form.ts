@@ -274,7 +274,7 @@ export class MigrateForm extends EventEmitter implements AccountForm {
 
     const migratingAssets = this.values.migratingAssets.value;
     const { userId, signingPrivateKey } = this.sourceAccount!;
-    const signer = this.sdk.createSchnorrSigner(signingPrivateKey);
+    const signer = await this.sdk.createSchnorrSigner(signingPrivateKey);
     for (const asset of migratingAssets) {
       const { assetId, fee, migratableValues } = asset;
       for (let i = 0; i < migratableValues.length; i += 2) {

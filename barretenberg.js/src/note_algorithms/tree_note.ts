@@ -16,6 +16,7 @@ export class TreeNote {
     Buffer.alloc(32),
     Buffer.alloc(32),
   );
+  static SIZE = TreeNote.EMPTY.toBuffer().length;
   static LATEST_VERSION = 1;
 
   constructor(
@@ -48,6 +49,24 @@ export class TreeNote {
       this.creatorPubKey,
     ]);
     return ViewingKey.createFromEphPriv(noteBuf, this.ownerPubKey, ephPrivKey, grumpkin);
+  }
+
+  static fromBuffer(buf: Buffer) {
+    let dataStart = 0;
+    const value = toBigIntBE(buf.slice(dataStart, dataStart + 32));
+    dataStart += 32;
+    const assetId = buf.readUInt32BE(dataStart);
+    dataStart += 4;
+    const nonce = buf.readUInt32BE(dataStart);
+    dataStart += 4;
+    const ownerPubKey = new GrumpkinAddress(buf.slice(dataStart, dataStart + 64));
+    dataStart += 64;
+    const noteSecret = buf.slice(dataStart, dataStart + 32);
+    dataStart += 32;
+    const creatorPubKey = buf.slice(dataStart, dataStart + 32);
+    dataStart += 32;
+    const inputNullifier = buf.slice(dataStart, dataStart + 32);
+    return new TreeNote(ownerPubKey, value, assetId, nonce, noteSecret, creatorPubKey, inputNullifier);
   }
 
   /**

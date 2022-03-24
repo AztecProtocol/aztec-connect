@@ -4,14 +4,14 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "build": "yarn clean && tsc -p tsconfig.cjs.json",
+    "build": "rm -rf ./dest && tsc -p tsconfig.cjs.json",
     "build:dev": "tsc -p tsconfig.cjs.json --watch",
     "start": "node ./dest",
     "debug": "node --inspect-brk=0.0.0.0:9221 ./dest",
     "start:dev": "tsc-watch -p tsconfig.cjs.json --onSuccess 'yarn start'",
     "test": "jest --passWithNoTests",
     "start:soak": "yarn build && DEBUG=bb:user_state ETHEREUM_HOST=http://localhost:8545 NUM_DEFI_AGENTS=50 NUM_PAYMENT_AGENTS=20 NUM_SDKS=8 MEMORY_DB=1 ROLLUP_HOST=http://localhost:8081 yarn start",
-    "clean": "rm -rf ./dest"
+    "clean": "rm -rf ./data ./dest"
   },
   "jest": {
     "transform": {

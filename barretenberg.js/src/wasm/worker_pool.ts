@@ -1,13 +1,12 @@
-import { BarretenbergWorker } from './worker';
-import { ModuleThread } from 'threads';
 import createDebug from 'debug';
+import { BarretenbergWasm } from './barretenberg_wasm';
+import { BarretenbergWorker } from './worker';
 import { createWorker, destroyWorker } from './worker_factory';
-import { BarretenbergWasm } from '.';
 
 const debug = createDebug('bb:worker_pool');
 
 export class WorkerPool {
-  public workers: ModuleThread<BarretenbergWorker>[] = [];
+  public workers: BarretenbergWorker[] = [];
 
   static async new(barretenberg: BarretenbergWasm, poolSize: number) {
     const pool = new WorkerPool();

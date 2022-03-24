@@ -131,11 +131,11 @@ resource "aws_ecs_task_definition" "halloumi" {
       },
       {
         "name": "NUM_INNER_ROLLUP_TXS",
-        "value": "3"
+        "value": "28"
       },
       {
         "name": "NUM_OUTER_ROLLUP_PROOFS",
-        "value": "2"
+        "value": "32"
       },
       {
         "name": "PROVERLESS",

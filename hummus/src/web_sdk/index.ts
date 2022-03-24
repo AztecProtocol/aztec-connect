@@ -1,4 +1,4 @@
-import { EthAddress, getBlockchainStatus, SdkEvent, SdkOptions } from '@aztec/sdk';
+import { CreateHostedAztecSdkOptions, EthAddress, getBlockchainStatus, SdkEvent } from '@aztec/sdk';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { createEthSdk, EthereumSdk, EthereumSdkUser } from '../ethereum_sdk';
@@ -58,7 +58,7 @@ export class WebSdk extends EventEmitter {
     super();
   }
 
-  public async init(serverUrl: string, sdkOptions: SdkOptions = {}) {
+  public async init(rollupProviderUrl: string, sdkOptions: CreateHostedAztecSdkOptions) {
     if (sdkOptions.debug) {
       createDebug.enable('bb:*');
     }
@@ -68,7 +68,7 @@ export class WebSdk extends EventEmitter {
     debug('initializing app...');
 
     try {
-      const { chainId: rollupProviderChainId } = await getBlockchainStatus(serverUrl);
+      const { chainId: rollupProviderChainId } = await getBlockchainStatus(rollupProviderUrl);
 
       this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.LINK_PROVIDER_ACCOUNT);
       this.ethProvider = new EthProvider(this.ethereumProvider);
@@ -83,7 +83,7 @@ export class WebSdk extends EventEmitter {
         }
       }
 
-      this.sdk = await createEthSdk(this.ethereumProvider, serverUrl, sdkOptions);
+      this.sdk = await createEthSdk(this.ethereumProvider, sdkOptions);
 
       // Forward all sdk events. This allows subscribing to the events on the App, before we have called init().
       for (const e in SdkEvent) {
@@ -101,7 +101,7 @@ export class WebSdk extends EventEmitter {
 
       // Ensure we're still on correct network, and attach handler.
       // Any network changes at this point result in destruction.
-      this.networkChanged();
+      await this.networkChanged();
       this.ethProvider.on(EthProviderEvent.UPDATED_NETWORK, this.networkChanged);
 
       debug('initialization complete.');
@@ -138,8 +138,8 @@ export class WebSdk extends EventEmitter {
     }
   };
 
-  private networkChanged = () => {
-    if (!this.isCorrectNetwork()) {
+  private networkChanged = async () => {
+    if (!(await this.isCorrectNetwork())) {
       this.destroy();
     }
   };
@@ -210,8 +210,8 @@ export class WebSdk extends EventEmitter {
     return this.getInitStatus().initState === AppInitState.INITIALIZED;
   }
 
-  public isCorrectNetwork() {
-    const { chainId } = this.sdk.getLocalStatus();
+  public async isCorrectNetwork() {
+    const { chainId } = await this.sdk.getLocalStatus();
     return this.ethProvider.getChainId() === chainId;
   }
 

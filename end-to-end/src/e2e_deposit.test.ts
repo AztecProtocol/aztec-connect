@@ -1,4 +1,4 @@
-import { AccountId, AztecSdk, createAztecSdk, EthAddress, toBaseUnits, WalletProvider } from '@aztec/sdk';
+import { AccountId, AztecSdk, createNodeAztecSdk, EthAddress, toBaseUnits, WalletProvider } from '@aztec/sdk';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
 
@@ -37,16 +37,14 @@ describe('end-to-end tests', () => {
     );
     accounts = provider.getAccounts();
 
-    sdk = await createAztecSdk(provider, ROLLUP_HOST, {
-      syncInstances: false,
+    sdk = await createNodeAztecSdk(provider, {
+      serverUrl: ROLLUP_HOST,
       pollInterval: 1000,
-      saveProvingKey: false,
-      clearDb: true,
       memoryDb: true,
       minConfirmation: 1,
       minConfirmationEHW: 1,
     });
-    await sdk.init();
+    await sdk.run();
     await sdk.awaitSynchronised();
 
     const user = await sdk.addUser(provider.getPrivateKeyForAddress(accounts[0])!);
@@ -60,9 +58,9 @@ describe('end-to-end tests', () => {
   it('should deposit', async () => {
     const depositValue = sdk.toBaseUnits(assetId, '0.03');
 
-    const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[0])!);
+    const signer = await sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[0])!);
 
-    expect(sdk.getBalance(assetId, userId)).toBe(0n);
+    expect(await sdk.getBalance(assetId, userId)).toBe(0n);
 
     const depositor = accounts[0];
     const [fee] = await sdk.getDepositFees(assetId);
@@ -76,6 +74,6 @@ describe('end-to-end tests', () => {
     await controller.send();
     await controller.awaitSettlement(awaitSettlementTimeout);
 
-    expect(sdk.getBalanceAv(assetId, userId)).toEqual(depositValue);
+    expect(await sdk.getBalanceAv(assetId, userId)).toEqual(depositValue);
   });
 });

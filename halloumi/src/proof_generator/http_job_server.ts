@@ -1,5 +1,5 @@
 import { ProofGenerator } from './proof_generator';
-import { randomBytes } from 'crypto';
+import { randomBytes } from '@aztec/barretenberg/crypto';
 import debug from 'debug';
 import { Command, Protocol } from './http_job_protocol';
 import http from 'http';

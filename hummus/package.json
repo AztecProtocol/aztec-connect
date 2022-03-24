@@ -27,7 +27,6 @@
     "eslint": "^7.9.0",
     "eslint-config-prettier": "^7.2.0",
     "parcel-bundler": "^1.12.5",
-    "parcel-plugin-static-files-copy": "^2.5.0",
     "prettier": "^2.0.5",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
@@ -36,11 +35,5 @@
   },
   "resolutions": {
     "terser": "4.8.0"
-  },
-  "staticFiles": {
-    "staticPath": [
-      "./node_modules/@aztec/barretenberg/wasm/barretenberg.wasm",
-      "./node_modules/@aztec/barretenberg/worker.js"
-    ]
   }
 }

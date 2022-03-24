@@ -28,11 +28,31 @@ export interface BlockchainAsset {
   gasConstants: number[];
 }
 
+export interface BlockchainAssetJson {
+  address: string;
+  permitSupport: boolean;
+  decimals: number;
+  symbol: string;
+  name: string;
+  isFeePaying: boolean;
+  gasConstants: number[];
+}
+
 export interface BlockchainBridge {
   id: number;
   address: EthAddress;
   gasLimit: bigint;
 }
+
+export const blockchainAssetToJson = (asset: BlockchainAsset) => ({
+  ...asset,
+  address: asset.address.toString(),
+});
+
+export const blockchainAssetFromJson = (json: BlockchainAssetJson) => ({
+  ...json,
+  address: EthAddress.fromString(json.address),
+});
 
 export interface BlockchainStatus {
   chainId: number;
@@ -95,10 +115,7 @@ export function blockchainStatusToJson(status: BlockchainStatus): BlockchainStat
     rootRoot: status.rootRoot.toString('hex'),
     defiRoot: status.defiRoot.toString('hex'),
     defiInteractionHashes: status.defiInteractionHashes.map(v => v.toString('hex')),
-    assets: status.assets.map(a => ({
-      ...a,
-      address: a.address.toString(),
-    })),
+    assets: status.assets.map(blockchainAssetToJson),
     bridges: status.bridges.map(b => ({
       ...b,
       address: b.address.toString(),
@@ -118,10 +135,7 @@ export function blockchainStatusFromJson(json: BlockchainStatusJson): Blockchain
     rootRoot: Buffer.from(json.rootRoot, 'hex'),
     defiRoot: Buffer.from(json.defiRoot, 'hex'),
     defiInteractionHashes: json.defiInteractionHashes.map(f => Buffer.from(f, 'hex')),
-    assets: json.assets.map(a => ({
-      ...a,
-      address: EthAddress.fromString(a.address),
-    })),
+    assets: json.assets.map(blockchainAssetFromJson),
     bridges: json.bridges.map(b => ({
       ...b,
       address: EthAddress.fromString(b.address),

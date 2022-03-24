@@ -1,9 +1,9 @@
-import { toBaseUnits } from './app/units';
-import { isIOS } from './device_support';
 import { getBlockchainStatus } from '@aztec/sdk';
 import { KNOWN_MAINNET_ASSET_ADDRESS_STRS as S, PerKnownAddress } from 'alt-model/known_assets/known_asset_addresses';
+import { toBaseUnits } from './app/units';
 
 export interface Config {
+  hostedSdkUrl: string;
   rollupProviderUrl: string;
   explorerUrl: string;
   chainId: number;
@@ -13,7 +13,6 @@ export interface Config {
   txAmountLimits: PerKnownAddress<bigint>;
   sessionTimeout: number;
   debug: boolean;
-  saveProvingKey: boolean;
   maxAvailableAssetId: number;
 }
 
@@ -105,6 +104,7 @@ async function getDeployConfig(deployTag: string) {
   }
 
   if (deployTag) {
+    const hostedSdkUrl = `https://${deployTag}.sdk.aztec.network`;
     const rollupProviderUrl = `https://api.aztec.network/${deployTag}/falafel`;
     // If this is prod release, we will use the prod domain name.
     const explorerUrl = deployTag.match(/-prod$/)
@@ -113,14 +113,15 @@ async function getDeployConfig(deployTag: string) {
     const chainId = (await getBlockchainStatus(rollupProviderUrl)).chainId;
     const ethereumHost = getEthereumHost(chainId);
     const mainnetEthereumHost = getEthereumHost(1);
-    return { rollupProviderUrl, explorerUrl, chainId, ethereumHost, mainnetEthereumHost };
+    return { hostedSdkUrl, rollupProviderUrl, explorerUrl, chainId, ethereumHost, mainnetEthereumHost };
   } else {
+    const hostedSdkUrl = `${window.location.protocol}//${window.location.hostname}:5000`;
     const rollupProviderUrl = `${window.location.protocol}//${window.location.hostname}:8081`;
     const explorerUrl = `${window.location.protocol}//${window.location.hostname}:3000`;
     const chainId = 1337;
     const ethereumHost = `${window.location.protocol}//${window.location.hostname}:8545`;
     const mainnetEthereumHost = getEthereumHost(1);
-    return { rollupProviderUrl, explorerUrl, chainId, ethereumHost, mainnetEthereumHost };
+    return { hostedSdkUrl, rollupProviderUrl, explorerUrl, chainId, ethereumHost, mainnetEthereumHost };
   }
 }
 
@@ -155,6 +156,5 @@ export async function getConfig(): Promise<Config> {
     sessionTimeout: +(sessionTimeout || 1),
     maxAvailableAssetId: +maxAvailableAssetId,
     debug,
-    saveProvingKey: !isIOS(),
   };
 }

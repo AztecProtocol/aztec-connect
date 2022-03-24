@@ -1,9 +1,10 @@
+import { advanceBlocks, getCurrentBlockTime, MainnetAddresses, setBlockchainTime, TokenStore } from '@aztec/blockchain';
 import {
   AccountId,
   AztecSdk,
   BitConfig,
   BridgeId,
-  createAztecSdk,
+  createNodeAztecSdk,
   DefiController,
   DefiSettlementTime,
   DepositController,
@@ -12,10 +13,9 @@ import {
   TxSettlementTime,
   WalletProvider,
 } from '@aztec/sdk';
-import { setBlockchainTime, getCurrentBlockTime, advanceBlocks, TokenStore, MainnetAddresses } from '@aztec/blockchain';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
-import { depositTokensToAztec, defiDepositTokens } from './sdk_utils';
+import { defiDepositTokens, depositTokensToAztec } from './sdk_utils';
 
 jest.setTimeout(20 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
@@ -57,7 +57,7 @@ describe('end-to-end async defi tests', () => {
   let timeAtTestStart = 0;
 
   const sendFlushTx = async () => {
-    const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[1])!);
+    const signer = await sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[1])!);
     await sdk.flushRollup(userIds[1], signer);
   };
 
@@ -66,16 +66,14 @@ describe('end-to-end async defi tests', () => {
     timeAtTestStart = await getCurrentBlockTime(provider);
     accounts = provider.getAccounts();
 
-    sdk = await createAztecSdk(provider, ROLLUP_HOST, {
-      syncInstances: false,
+    sdk = await createNodeAztecSdk(provider, {
+      serverUrl: ROLLUP_HOST,
       pollInterval: 1000,
-      saveProvingKey: false,
-      clearDb: true,
       memoryDb: true,
       minConfirmation: 1,
       minConfirmationEHW: 1,
     });
-    await sdk.init();
+    await sdk.run();
     await sdk.awaitSynchronised();
 
     for (let i = 0; i < accounts.length; i++) {
@@ -167,7 +165,7 @@ describe('end-to-end async defi tests', () => {
     const depositControllers: DepositController[] = [];
     for (let i = 0; i < accounts.length; i++) {
       const depositor = accounts[i];
-      const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
+      const signer = await sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
       const fee = (await sdk.getDepositFees(ethAssetId))[
         i == accounts.length - 1 ? TxSettlementTime.INSTANT : TxSettlementTime.NEXT_ROLLUP
       ];
@@ -184,7 +182,7 @@ describe('end-to-end async defi tests', () => {
     await Promise.all(depositControllers.map(controller => controller.awaitSettlement(awaitSettlementTimeout)));
 
     for (const user of userIds) {
-      expect(sdk.getBalance(ethAssetId, user)).toEqual(shieldValue.value);
+      expect(await sdk.getBalance(ethAssetId, user)).toEqual(shieldValue.value);
     }
 
     // now setup all of the interactions and purchase the required tokens
@@ -250,7 +248,7 @@ describe('end-to-end async defi tests', () => {
 
     for (const spec of assetSpecs.values()) {
       const assetId = sdk.getAssetIdByAddress(spec.tokenAddress);
-      expect(sdk.getBalance(assetId, user1)).toEqual(spec.quantityReceived);
+      expect(await sdk.getBalance(assetId, user1)).toEqual(spec.quantityReceived);
     }
 
     // execute the defi deposits in 2 batches
@@ -287,7 +285,7 @@ describe('end-to-end async defi tests', () => {
         .map(x => x.quantity);
       const amountDeposited = depositsForThisAsset.reduce((prev, current) => current + prev, 0n);
       // should have a balance that is equal to the starting quantity less what we have deposited so far for this asset
-      expect(sdk.getBalance(assetId, user1)).toEqual(spec.quantityReceived - amountDeposited);
+      expect(await sdk.getBalance(assetId, user1)).toEqual(spec.quantityReceived - amountDeposited);
     }
 
     // set the chain time to after the first batch of interactions
@@ -333,11 +331,13 @@ describe('end-to-end async defi tests', () => {
       const amountDeposited = depositsForThisAsset.reduce((prev, current) => current + prev, 0n);
       if (amountSettled === 0n) {
         // just test that the balance is reduced by the amount of the deposit
-        expect(sdk.getBalance(assetId, user1)).toEqual(spec.quantityReceived - amountDeposited);
+        expect(await sdk.getBalance(assetId, user1)).toEqual(spec.quantityReceived - amountDeposited);
         continue;
       }
       // should have received more from the settlement of the first batch than we deposited, so we test for greater than
-      expect(sdk.getBalance(assetId, user1)).toBeGreaterThan(spec.quantityReceived - amountDeposited + amountSettled);
+      expect(await sdk.getBalance(assetId, user1)).toBeGreaterThan(
+        spec.quantityReceived - amountDeposited + amountSettled,
+      );
     }
 
     // we now need to ensure that all of the second batch are finalised
@@ -368,7 +368,7 @@ describe('end-to-end async defi tests', () => {
     // all assets should now have more than we initially received
     for (const spec of assetSpecs.values()) {
       const assetId = sdk.getAssetIdByAddress(spec.tokenAddress);
-      expect(sdk.getBalance(assetId, user1)).toBeGreaterThan(spec.quantityReceived);
+      expect(await sdk.getBalance(assetId, user1)).toBeGreaterThan(spec.quantityReceived);
     }
   });
 });

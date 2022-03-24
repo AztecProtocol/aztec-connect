@@ -5,7 +5,7 @@ import { EthereumProvider, EthereumSigner, TxHash } from '@aztec/barretenberg/bl
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { ClientEthereumBlockchain, createPermitData, validateSignature, Web3Signer } from '@aztec/blockchain';
-import { CoreSdk } from '../core_sdk/core_sdk';
+import { CoreSdkInterface } from '../core_sdk';
 import { ProofOutput } from '../proofs';
 import { Signer } from '../signer';
 import { createTxRefNo } from './create_tx_ref_no';
@@ -28,7 +28,7 @@ export class DepositController {
     public readonly fee: AssetValue,
     public readonly from: EthAddress,
     public readonly to: AccountId,
-    private readonly core: CoreSdk,
+    private readonly core: CoreSdkInterface,
     private readonly blockchain: ClientEthereumBlockchain,
     private readonly provider: EthereumProvider,
   ) {
@@ -60,14 +60,14 @@ export class DepositController {
 
   async getPublicAllowance() {
     const { assetId } = this.publicInput;
-    const { rollupContractAddress } = this.core.getLocalStatus();
+    const { rollupContractAddress } = await this.core.getLocalStatus();
     return this.blockchain.getAsset(assetId).allowance(this.from, rollupContractAddress);
   }
 
   async approve() {
     const { assetId } = this.publicInput;
     const value = await this.getRequiredFunds();
-    const { rollupContractAddress } = this.core.getLocalStatus();
+    const { rollupContractAddress } = await this.core.getLocalStatus();
     return this.blockchain
       .getAsset(assetId)
       .approve(value, this.from, rollupContractAddress, { provider: this.provider });
@@ -149,10 +149,10 @@ export class DepositController {
     if (this.requireFeePayingTx && !txRefNo) {
       txRefNo = createTxRefNo();
     }
+    const spendingPublicKey = this.userSigner.getPublicKey();
 
-    this.proofOutput = await this.core.createPaymentProof(
+    const proofInput = await this.core.createPaymentProofInput(
       this.userId,
-      this.userSigner,
       assetId,
       value, // publicInput,
       BigInt(0), // publicOutput
@@ -161,14 +161,15 @@ export class DepositController {
       senderPrivateOutput,
       this.to, // noteRecipient
       this.from, // publicOwner
+      spendingPublicKey,
       0, // allowChain
-      txRefNo,
     );
+    proofInput.signature = await this.userSigner.signMessage(proofInput.signingData);
+    this.proofOutput = await this.core.createPaymentProof(proofInput, txRefNo);
 
     if (this.requireFeePayingTx) {
-      this.feeProofOutput = await this.core.createPaymentProof(
+      const feeProofInput = await this.core.createPaymentProofInput(
         this.userId,
-        this.userSigner,
         this.fee.assetId,
         BigInt(0),
         BigInt(0),
@@ -177,9 +178,11 @@ export class DepositController {
         BigInt(0),
         undefined,
         undefined,
+        spendingPublicKey,
         2,
-        txRefNo,
       );
+      feeProofInput.signature = await this.userSigner.signMessage(feeProofInput.signingData);
+      this.feeProofOutput = await this.core.createPaymentProof(feeProofInput, txRefNo);
     }
   }
 
@@ -241,7 +244,7 @@ export class DepositController {
   private async createPermitArgs(value: bigint, deadline: bigint) {
     const { assetId } = this.publicInput;
     const nonce = await this.blockchain.getAsset(assetId).getUserNonce(this.from);
-    const { rollupContractAddress, chainId, assets } = this.core.getLocalStatus();
+    const { rollupContractAddress, chainId, assets } = await this.core.getLocalStatus();
     const asset = assets[assetId];
     const permitData = createPermitData(
       asset.name,

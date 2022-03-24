@@ -63,7 +63,6 @@ export class UserState extends EventEmitter {
    * Load/refresh user state.
    */
   public async init() {
-    this.user = (await this.db.getUser(this.user.id))!;
     await this.resetData();
     await this.refreshNotePicker();
   }
@@ -122,8 +121,6 @@ export class UserState extends EventEmitter {
     if (blocks.length == 0) {
       return;
     }
-
-    const balancesBefore = this.notePickers.map(({ assetId, notePicker }) => ({ assetId, value: notePicker.getSum() }));
 
     const rollupProofData = blocks.map(b => RollupProofData.fromBuffer(b.rollupProofData));
     const innerProofs = rollupProofData.map(p => p.innerProofData.filter(i => !i.isPadding())).flat();
@@ -224,7 +221,14 @@ export class UserState extends EventEmitter {
               // Both notes should be owned by the same user.
               continue;
             }
-            await this.handleDefiDepositTx(proofData, proof, offchainTxData, noteStartIndex, note2);
+            await this.handleDefiDepositTx(
+              proofData,
+              proof,
+              offchainTxData,
+              noteStartIndex,
+              note2,
+              block.interactionResult,
+            );
             break;
           }
           case ProofId.DEFI_CLAIM:
@@ -235,19 +239,10 @@ export class UserState extends EventEmitter {
 
       this.user = { ...this.user, syncedToRollup: proofData.rollupId };
 
-      this.processDefiInteractionResults(block.interactionResult);
+      await this.processDefiInteractionResults(block.interactionResult);
     }
 
     await this.db.updateUser(this.user);
-
-    this.notePickers.forEach(({ assetId, notePicker }) => {
-      const balanceAfter = notePicker.getSum();
-      const balanceBefore = balancesBefore.find(b => b.assetId === assetId)?.value || BigInt(0);
-      const diff = balanceAfter - balanceBefore;
-      if (diff) {
-        this.emit(UserStateEvent.UPDATED_USER_STATE, this.user.id, balanceAfter, diff, assetId);
-      }
-    });
 
     this.emit(UserStateEvent.UPDATED_USER_STATE, this.user.id);
   }
@@ -366,6 +361,7 @@ export class UserState extends EventEmitter {
     offchainTxData: OffchainDefiDepositData,
     noteStartIndex: number,
     treeNote2: TreeNote,
+    defiInteractionNotes: DefiInteractionNote[],
   ) {
     const { noteCommitment1, noteCommitment2 } = proof;
     const note2 = await this.processNewNote(noteStartIndex + 1, noteCommitment2, treeNote2);
@@ -393,13 +389,14 @@ export class UserState extends EventEmitter {
     const interactionNonce =
       RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK * rollupId +
       bridgeIds.findIndex(bridge => bridge.equals(bridgeId.toBuffer()));
+    const isAsync = defiInteractionNotes.every(n => n.nonce !== interactionNonce);
 
     const savedTx = await this.db.getDefiTx(txId);
     if (savedTx) {
       debug(`found defi tx, awaiting claim for settlement: ${txId}`);
-      await this.db.updateDefiTxWithNonce(txId, interactionNonce);
+      await this.db.updateDefiTxWithNonce(txId, interactionNonce, isAsync);
     } else {
-      const tx = this.recoverDefiTx(proof, offchainTxData, interactionNonce);
+      const tx = this.recoverDefiTx(proof, offchainTxData, interactionNonce, isAsync);
       debug(`recovered defi tx: ${txId}`);
       await this.db.addDefiTx(tx);
     }
@@ -596,7 +593,12 @@ export class UserState extends EventEmitter {
     );
   }
 
-  private recoverDefiTx(proof: InnerProofData, offchainTxData: OffchainDefiDepositData, interactionNonce: number) {
+  private recoverDefiTx(
+    proof: InnerProofData,
+    offchainTxData: OffchainDefiDepositData,
+    interactionNonce: number,
+    isAsync: boolean,
+  ) {
     const { bridgeId, depositValue, txFee, partialStateSecretEphPubKey, txRefNo } = offchainTxData;
     const txId = new TxId(proof.txId);
     const partialStateSecret = deriveNoteSecret(partialStateSecretEphPubKey, this.user.privateKey, this.grumpkin);
@@ -615,6 +617,7 @@ export class UserState extends EventEmitter {
       undefined,
       undefined,
       interactionNonce,
+      isAsync,
     );
   }
 

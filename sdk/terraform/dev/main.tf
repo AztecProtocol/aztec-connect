@@ -1,12 +1,6 @@
-provider "aws" {
-  profile = "default"
-  region  = "eu-west-2"
-}
-
 terraform {
   backend "s3" {
     bucket = "aztec-terraform"
-    key    = "aztec2/block-explorer"
     region = "eu-west-2"
   }
   required_providers {
@@ -35,9 +29,14 @@ data "terraform_remote_state" "aztec2_iac" {
   }
 }
 
-# AWS S3 bucket for static hosting
-resource "aws_s3_bucket" "block_explorer" {
-  bucket = "explorer.aztec.network"
+provider "aws" {
+  profile = "default"
+  region  = "eu-west-2"
+}
+
+# AWS S3 bucket for static hosting.
+resource "aws_s3_bucket" "sdk" {
+  bucket = "${var.DEPLOY_TAG}.sdk.aztec.network"
   acl    = "public-read"
 
   cors_rule {
@@ -59,7 +58,7 @@ resource "aws_s3_bucket" "block_explorer" {
         "AWS": "*"
       },
       "Action": "s3:GetObject",
-      "Resource": "arn:aws:s3:::explorer.aztec.network/*"
+      "Resource": "arn:aws:s3:::${var.DEPLOY_TAG}.sdk.aztec.network/*"
     }
   ]
 }
@@ -71,10 +70,10 @@ EOF
   }
 }
 
-# AWS Cloudfront for caching
-resource "aws_cloudfront_distribution" "block_explorer_distribution" {
+# AWS Cloudfront for caching.
+resource "aws_cloudfront_distribution" "sdk_distribution" {
   origin {
-    domain_name = aws_s3_bucket.block_explorer.website_endpoint
+    domain_name = aws_s3_bucket.sdk.website_endpoint
     origin_id   = "website"
     custom_origin_config {
       http_port              = "80"
@@ -88,7 +87,7 @@ resource "aws_cloudfront_distribution" "block_explorer_distribution" {
   is_ipv6_enabled = true
   comment         = "Managed by Terraform"
 
-  aliases = ["explorer.aztec.network"]
+  aliases = ["${var.DEPLOY_TAG}.sdk.aztec.network"]
 
   default_cache_behavior {
     allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
@@ -123,13 +122,13 @@ resource "aws_cloudfront_distribution" "block_explorer_distribution" {
   }
 }
 
-resource "aws_route53_record" "dashboard_record" {
+resource "aws_route53_record" "a_record" {
   zone_id = data.terraform_remote_state.aztec2_iac.outputs.aws_route53_zone_id
-  name    = "explorer"
+  name    = "${var.DEPLOY_TAG}.sdk"
   type    = "A"
   alias {
-    name                   = aws_cloudfront_distribution.block_explorer_distribution.domain_name
-    zone_id                = aws_cloudfront_distribution.block_explorer_distribution.hosted_zone_id
+    name                   = aws_cloudfront_distribution.sdk_distribution.domain_name
+    zone_id                = aws_cloudfront_distribution.sdk_distribution.hosted_zone_id
     evaluate_target_health = true
   }
 }

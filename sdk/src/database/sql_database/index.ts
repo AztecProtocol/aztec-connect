@@ -75,7 +75,8 @@ const toCoreDefiTx = (tx: DefiTxDao) =>
     tx.outputValueB,
     tx.result,
     tx.settled,
-    tx.interactionNonce
+    tx.interactionNonce,
+    tx.isAsync,
   );
 
 const sortUserTxs = (txs: any[]) => {
@@ -238,8 +239,8 @@ export class SQLDatabase implements Database {
     return sortUserTxs(txs).map(toCoreDefiTx);
   }
 
-  async updateDefiTxWithNonce(txId: TxId, interactionNonce: number): Promise<void> {
-    await this.defiTxRep.update({ txId }, { interactionNonce });
+  async updateDefiTxWithNonce(txId: TxId, interactionNonce: number, isAsync: boolean): Promise<void> {
+    await this.defiTxRep.update({ txId }, { interactionNonce, isAsync });
   }
 
   async updateDefiTx(txId: TxId, outputValueA: bigint, outputValueB: bigint, result?: boolean) {

@@ -665,7 +665,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     const fee = { assetId: asset.id, value: form.fees.value[form.speed.value].fee };
     const recipient = form.recipient.value.input;
     const outputNoteOwner = recipient === this.alias ? this.userId : (await this.accountUtils.getAccountId(recipient))!;
-    const signer = this.sdk.createSchnorrSigner(accountPrivateKey);
+    const signer = await this.sdk.createSchnorrSigner(accountPrivateKey);
     if (this.isNewAccount) {
       await this.accountUtils.addUser(accountPrivateKey, this.userId.accountNonce);
     }
@@ -673,6 +673,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     return this.isNewAccount
       ? this.sdk.createRegisterController(
           senderId,
+          signer,
           this.alias,
           this.newSpendingPublicKey!,
           undefined,

@@ -7,7 +7,7 @@ import { WorldState } from '@aztec/barretenberg/world_state';
 import createDebug from 'debug';
 import { CoreAccountTx } from '../core_tx';
 import { Database } from '../database';
-import { Signer } from '../signer';
+import { AccountProofInput } from './proof_input';
 import { ProofOutput } from './proof_output';
 
 const debug = createDebug('bb:account_proof');
@@ -48,18 +48,16 @@ export class AccountProofCreator {
     return this.prover.computeSigningData(tx);
   }
 
-  public async createProof(
-    signer: Signer,
+  public async createProofInput(
     aliasHash: AliasHash,
     nonce: number,
     migrate: boolean,
     accountPublicKey: GrumpkinAddress,
+    signingPubKey: GrumpkinAddress,
     newAccountPublicKey: GrumpkinAddress | undefined,
     newSigningPubKey1: GrumpkinAddress | undefined,
     newSigningPubKey2: GrumpkinAddress | undefined,
-    txRefNo: number,
-  ): Promise<ProofOutput> {
-    const signingPubKey = signer.getPublicKey();
+  ): Promise<AccountProofInput> {
     const accountIndex =
       nonce !== 0 ? await this.db.getUserSigningKeyIndex(new AccountId(accountPublicKey, nonce), signingPubKey) : 0;
     if (accountIndex === undefined) {
@@ -79,19 +77,29 @@ export class AccountProofCreator {
     );
 
     const signingData = await this.prover.computeSigningData(tx);
-    const signature = await signer.signMessage(signingData);
 
+    return { tx, signingData };
+  }
+
+  public async createProof({ tx, signature }: AccountProofInput, txRefNo: number): Promise<ProofOutput> {
     debug('creating proof...');
     const start = new Date().getTime();
-    const proof = await this.prover.createAccountProof(tx, signature);
+    const proof = await this.prover.createAccountProof(tx, signature!);
     debug(`created proof: ${new Date().getTime() - start}ms`);
     debug(`proof size: ${proof.length}`);
 
     const proofData = new ProofData(proof);
     const txId = new TxId(proofData.txId);
-    const newNonce = nonce + +migrate;
-    const accountOwner = new AccountId(newAccountPublicKey || accountPublicKey, newNonce);
-    const accountAliasId = new AccountAliasId(aliasHash, newNonce);
+    const {
+      accountAliasId: { aliasHash, accountNonce },
+      newAccountPublicKey,
+      newSigningPubKey1,
+      newSigningPubKey2,
+      migrate,
+    } = tx;
+    const newNonce = accountNonce + +migrate;
+    const accountOwner = new AccountId(newAccountPublicKey, newNonce);
+    const newAccountAliasId = new AccountAliasId(aliasHash, newNonce);
     const coreTx = new CoreAccountTx(
       txId,
       accountOwner,
@@ -103,8 +111,8 @@ export class AccountProofCreator {
       new Date(),
     );
     const offchainTxData = new OffchainAccountData(
-      accountOwner.publicKey,
-      accountAliasId,
+      newAccountPublicKey,
+      newAccountAliasId,
       newSigningPubKey1?.x(),
       newSigningPubKey2?.x(),
       txRefNo,

@@ -109,7 +109,7 @@ export class Terminal extends EventEmitter {
           this.putCursorChar(char);
       }
       this.updated();
-      await new Promise(resolve => setTimeout(resolve, 30));
+      await new Promise(resolve => setTimeout(resolve, 10));
     }
     this.setCursor(savedCursor);
     this.inputLocked = savedInputLocked;

@@ -1,4 +1,4 @@
-import { SdkEvent, SdkInitState } from '@aztec/sdk';
+import { SdkEvent } from '@aztec/sdk';
 import { useObs } from 'app/util';
 import { useContext, useEffect, useState } from 'react';
 import { TopLevelContext } from './top_level_context';
@@ -8,29 +8,26 @@ function useSdk() {
   return useObs(sdkObs);
 }
 
-function useSdkLocalStatus() {
+function useSdkState() {
   const sdk = useSdk();
-  const [localStatus, setLocalStatus] = useState(sdk?.getLocalStatus());
+  const [destroyed, setDestroyed] = useState(false);
   useEffect(() => {
     if (sdk) {
-      const updateStatus = () => {
-        setLocalStatus(sdk.getLocalStatus());
+      const updateStatus = async () => {
+        setDestroyed(true);
       };
       updateStatus();
-      sdk.addListener(SdkEvent.UPDATED_INIT_STATE, updateStatus);
-      sdk.addListener(SdkEvent.UPDATED_WORLD_STATE, updateStatus);
+      sdk.addListener(SdkEvent.DESTROYED, updateStatus);
       return () => {
-        sdk.removeListener(SdkEvent.UPDATED_INIT_STATE, updateStatus);
-        sdk.removeListener(SdkEvent.UPDATED_WORLD_STATE, updateStatus);
+        sdk.removeListener(SdkEvent.DESTROYED, updateStatus);
       };
     }
   }, [sdk]);
-  return localStatus;
+  return destroyed;
 }
 
 export function useInitialisedSdk() {
   const sdk = useSdk();
-  const localStatus = useSdkLocalStatus();
-  if (localStatus?.initState !== SdkInitState.INITIALIZED) return;
-  return sdk;
+  const destroyed = useSdkState();
+  return !destroyed ? sdk : undefined;
 }

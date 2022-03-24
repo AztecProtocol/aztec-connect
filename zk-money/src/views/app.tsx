@@ -227,8 +227,8 @@ export class AppView extends PureComponent<AppProps, AppState> {
       this.setState({ loginState }, () => this.goToAction(AppAction.ACCOUNT));
     } else {
       const callback =
-        loginState.step === LoginStep.INIT_SDK && this.state.loginState.step !== LoginStep.INIT_SDK
-          ? this.app.initSdk
+        loginState.step === LoginStep.INIT_ACCOUNT && this.state.loginState.step !== LoginStep.INIT_ACCOUNT
+          ? this.app.initAccount
           : undefined;
       this.setState({ loginState }, callback);
     }

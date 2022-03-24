@@ -290,8 +290,8 @@ export class App extends EventEmitter {
     await this.session!.migrateAccount();
   };
 
-  initSdk = async () => {
-    await this.session!.initSdk();
+  initAccount = async () => {
+    await this.session!.initAccount();
   };
 
   backgroundLogin = async () => {

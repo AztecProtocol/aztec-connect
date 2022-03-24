@@ -220,6 +220,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       this.status = {
         ...this.status,
         nextRollupId: 0,
+        dataSize: 0,
         dataRoot: initDataRoot,
         nullRoot: initNullRoot,
         rootRoot: initRootsRoot,

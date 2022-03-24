@@ -1,7 +1,7 @@
 import { AccountId } from '@aztec/barretenberg/account_id';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { TxId } from '@aztec/barretenberg/tx_id';
-import { CoreSdk } from '../core_sdk/core_sdk';
+import { CoreSdkInterface } from '../core_sdk';
 import { ProofOutput } from '../proofs';
 import { Signer } from '../signer';
 import { createTxRefNo } from './create_tx_ref_no';
@@ -18,7 +18,7 @@ export class TransferController {
     public readonly assetValue: AssetValue,
     public readonly fee: AssetValue,
     public readonly to: AccountId,
-    private readonly core: CoreSdk,
+    private readonly core: CoreSdkInterface,
   ) {}
 
   public async createProof() {
@@ -26,10 +26,10 @@ export class TransferController {
     const requireFeePayingTx = this.fee.value && this.fee.assetId !== assetId;
     const privateInput = value + (!requireFeePayingTx ? this.fee.value : BigInt(0));
     const txRefNo = requireFeePayingTx ? createTxRefNo() : 0;
+    const spendingPublicKey = this.userSigner.getPublicKey();
 
-    this.proofOutput = await this.core.createPaymentProof(
+    const proofInput = await this.core.createPaymentProofInput(
       this.userId,
-      this.userSigner,
       assetId,
       BigInt(0),
       BigInt(0),
@@ -38,14 +38,15 @@ export class TransferController {
       BigInt(0),
       this.to,
       undefined,
+      spendingPublicKey,
       2,
-      txRefNo,
     );
+    proofInput.signature = await this.userSigner.signMessage(proofInput.signingData);
+    this.proofOutput = await this.core.createPaymentProof(proofInput, txRefNo);
 
     if (requireFeePayingTx) {
-      this.feeProofOutput = await this.core.createPaymentProof(
+      const feeProofInput = await this.core.createPaymentProofInput(
         this.userId,
-        this.userSigner,
         this.fee.assetId,
         BigInt(0),
         BigInt(0),
@@ -54,9 +55,11 @@ export class TransferController {
         BigInt(0),
         undefined,
         undefined,
+        spendingPublicKey,
         2,
-        txRefNo,
       );
+      feeProofInput.signature = await this.userSigner.signMessage(feeProofInput.signingData);
+      this.feeProofOutput = await this.core.createPaymentProof(feeProofInput, txRefNo);
     }
   }
 

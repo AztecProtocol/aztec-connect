@@ -95,7 +95,8 @@ export const randomDefiTx = (tx: Partial<CoreDefiTx> = {}) =>
     tx.outputValueB || BigInt(0),
     tx.result,
     tx.settled,
-    tx.interactionNonce || 1,
+    tx.interactionNonce,
+    tx.isAsync,
   );
 
 export const randomAccountAliasId = () => new AccountAliasId(AliasHash.random(), randomInt());

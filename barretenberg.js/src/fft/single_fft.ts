@@ -1,6 +1,6 @@
-import { BarretenbergWorker } from '../wasm/worker';
 import { Transfer } from 'threads';
-import { Fft } from './fft';
+import { BarretenbergWorker } from '../wasm/worker';
+import { Fft, FftFactory } from './fft';
 
 export class SingleFft implements Fft {
   private domainPtr!: number;
@@ -34,5 +34,20 @@ export class SingleFft implements Fft {
     const result = await this.wasm.sliceMemory(newPtr, newPtr + circuitSize * 32);
     await this.wasm.call('bbfree', newPtr);
     return result;
+  }
+}
+
+export class SingleFftFactory implements FftFactory {
+  private ffts: { [circuitSize: number]: Fft } = {};
+
+  constructor(private wasm: BarretenbergWorker) {}
+
+  public async createFft(circuitSize: number) {
+    if (!this.ffts[circuitSize]) {
+      const fft = new SingleFft(this.wasm);
+      await fft.init(circuitSize);
+      this.ffts[circuitSize] = fft;
+    }
+    return this.ffts[circuitSize];
   }
 }

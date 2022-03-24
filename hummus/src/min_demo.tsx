@@ -32,13 +32,13 @@ function MinForm({ grumpkinPrivKey }: MinFormProps) {
             setBusy(true);
             log('initing');
             const provider = new JsonRpcProvider('https://goerli.infura.io/v3/6a04b7c89c5b421faefde663f787aa35');
-            const sdk = await createAztecSdk(provider, 'https://api.aztec.network/falafel', {
+            const sdk = await createAztecSdk(provider, {
+              serverUrl: 'https://api.aztec.network/falafel',
               debug: true,
-              saveProvingKey: false,
             });
             sdk.on(SdkEvent.LOG, log);
-            await sdk.init();
-            const grumpkinPubKey = sdk.derivePublicKey(grumpkinPrivKey);
+            await sdk.run();
+            const grumpkinPubKey = await sdk.derivePublicKey(grumpkinPrivKey);
             const accountId = new AccountId(grumpkinPubKey, 0);
             if (!(await sdk.userExists(accountId))) {
               await sdk.addUser(grumpkinPrivKey);
@@ -54,7 +54,7 @@ function MinForm({ grumpkinPrivKey }: MinFormProps) {
           disabled={!sdk || busy}
           onClick={async () => {
             setBusy(true);
-            const signer = sdk!.createSchnorrSigner(grumpkinPrivKey);
+            const signer = await sdk!.createSchnorrSigner(grumpkinPrivKey);
             const accountId = new AccountId(signer.getPublicKey(), 0);
             const start = new Date().getTime();
             log(`creating js proof...`);
@@ -76,12 +76,13 @@ function MinForm({ grumpkinPrivKey }: MinFormProps) {
           disabled={!sdk || busy}
           onClick={async () => {
             setBusy(true);
-            const signer = sdk!.createSchnorrSigner(grumpkinPrivKey);
+            const signer = await sdk!.createSchnorrSigner(grumpkinPrivKey);
             const accountId = new AccountId(signer.getPublicKey(), 0);
             const start = new Date().getTime();
             log(`creating account proof...`);
             const controller = sdk!.createRegisterController(
               accountId,
+              signer,
               'blah',
               accountId.publicKey,
               undefined,

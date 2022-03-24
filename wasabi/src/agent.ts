@@ -35,7 +35,7 @@ export class Agent {
     const privateKey = randomBytes(32);
     const address = this.provider.addAccount(privateKey);
     const user = await this.sdk.addUser(privateKey, undefined, true);
-    const signer = this.sdk.createSchnorrSigner(privateKey);
+    const signer = await this.sdk.createSchnorrSigner(privateKey);
     return new UserData(address, signer, user);
   }
 
@@ -82,7 +82,7 @@ export class Agent {
   public async withdraw(userData: UserData) {
     const { user, signer } = userData;
     const fee = (await this.sdk.getWithdrawFees(this.assetId))[TxSettlementTime.NEXT_ROLLUP];
-    const balance = user.getBalance(this.assetId);
+    const balance = await user.getBalance(this.assetId);
     const value = balance - fee.value;
     console.log(`agent ${this.id} withdrawing ${value} wei to ${userData.address.toString()}`);
     const controller = this.sdk.createWithdrawController(

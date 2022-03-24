@@ -4,7 +4,7 @@
     "module": "commonjs",
     "outDir": "dest",
     "moduleResolution": "node",
-    "lib": ["dom", "esnext", "es2017.object"],
+    "lib": ["dom", "esnext", "es2017.object", "webworker"],
     "strict": true,
     "declaration": true,
     "noImplicitAny": false,
@@ -16,7 +16,8 @@
     "declarationMap": true,
     "importHelpers": true,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    "skipLibCheck": true
   },
   "include": ["src"]
 }

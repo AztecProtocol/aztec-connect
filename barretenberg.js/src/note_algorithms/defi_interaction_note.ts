@@ -1,7 +1,8 @@
+import { createHash } from 'crypto';
 import { toBigIntBE, toBufferBE } from '../bigint_buffer';
-import { createHash, randomBytes } from 'crypto';
-import { numToUInt32BE } from '../serialize';
 import { BridgeId } from '../bridge_id';
+import { randomBytes } from '../crypto';
+import { numToUInt32BE } from '../serialize';
 
 export class DefiInteractionNote {
   static EMPTY = new DefiInteractionNote(BridgeId.ZERO, 0, BigInt(0), BigInt(0), BigInt(0), false);

@@ -2,7 +2,7 @@ import { AccountId } from '@aztec/barretenberg/account_id';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { TxId } from '@aztec/barretenberg/tx_id';
-import { CoreSdk } from '../core_sdk/core_sdk';
+import { CoreSdkInterface } from '../core_sdk';
 import { ProofOutput } from '../proofs';
 import { Signer } from '../signer';
 import { createTxRefNo } from './create_tx_ref_no';
@@ -20,7 +20,7 @@ export class DefiController {
     public readonly bridgeId: BridgeId,
     public readonly value: AssetValue,
     public readonly fee: AssetValue,
-    private readonly core: CoreSdk,
+    private readonly core: CoreSdkInterface,
   ) {
     if (!value) {
       throw new Error('Deposit value must be greater than 0.');
@@ -40,6 +40,8 @@ export class DefiController {
       throw new Error(`Failed to find no more than 2 notes that sum to ${privateInput}.`);
     }
 
+    const spendingPublicKey = this.userSigner.getPublicKey();
+
     const totalInputNoteValue = notes.reduce((sum, note) => sum + note.value, BigInt(0));
     const changeValue = totalInputNoteValue - privateInput;
 
@@ -47,49 +49,55 @@ export class DefiController {
 
     // Create a defi deposit tx with 0 change value.
     if (!changeValue) {
-      this.proofOutput = await this.core.createDefiProof(
+      const proofInput = await this.core.createDefiProofInput(
         this.userId,
-        this.userSigner,
         this.bridgeId,
         value,
         !requireFeePayingTx ? this.fee.value : BigInt(0),
         undefined,
-        txRefNo,
+        spendingPublicKey,
       );
+      proofInput.signature = await this.userSigner.signMessage(proofInput.signingData);
+      this.proofOutput = await this.core.createDefiProof(proofInput, txRefNo);
     } else {
       // Create a join split tx to generate an output note with the exact value for the defi deposit plus fee.
-      this.jsProofOutput = await this.core.createPaymentProof(
-        this.userId,
-        this.userSigner,
-        assetId,
-        BigInt(0),
-        BigInt(0),
-        privateInput,
-        privateInput,
-        BigInt(0),
-        this.userId,
-        undefined,
-        3, // allowChain
-        txRefNo,
-      );
+      {
+        const proofInput = await this.core.createPaymentProofInput(
+          this.userId,
+          assetId,
+          BigInt(0),
+          BigInt(0),
+          privateInput,
+          privateInput,
+          BigInt(0),
+          this.userId,
+          undefined,
+          spendingPublicKey,
+          3, // allowChain
+        );
+        proofInput.signature = await this.userSigner.signMessage(proofInput.signingData);
+        this.jsProofOutput = await this.core.createPaymentProof(proofInput, txRefNo);
+      }
 
       // Use the first output note from the above j/s tx as the input note.
-      const inputNotes = [this.jsProofOutput.outputNotes[0]];
-      this.proofOutput = await this.core.createDefiProof(
-        this.userId,
-        this.userSigner,
-        this.bridgeId,
-        value,
-        !requireFeePayingTx ? this.fee.value : BigInt(0),
-        inputNotes,
-        txRefNo,
-      );
+      {
+        const inputNotes = [this.jsProofOutput.outputNotes[0]];
+        const proofInput = await this.core.createDefiProofInput(
+          this.userId,
+          this.bridgeId,
+          value,
+          !requireFeePayingTx ? this.fee.value : BigInt(0),
+          inputNotes,
+          spendingPublicKey,
+        );
+        proofInput.signature = await this.userSigner.signMessage(proofInput.signingData);
+        this.proofOutput = await this.core.createDefiProof(proofInput, txRefNo);
+      }
     }
 
     if (requireFeePayingTx) {
-      this.feeProofOutput = await this.core.createPaymentProof(
+      const proofInput = await this.core.createPaymentProofInput(
         this.userId,
-        this.userSigner,
         this.fee.assetId,
         BigInt(0),
         BigInt(0),
@@ -98,9 +106,11 @@ export class DefiController {
         BigInt(0),
         undefined,
         undefined,
+        spendingPublicKey,
         2,
-        txRefNo,
       );
+      proofInput.signature = await this.userSigner.signMessage(proofInput.signingData);
+      this.feeProofOutput = await this.core.createPaymentProof(proofInput, txRefNo);
     }
   }
 
@@ -112,11 +122,11 @@ export class DefiController {
     this.txIds = await this.core.sendProofs(
       filterUndefined([this.jsProofOutput, this.proofOutput, this.feeProofOutput]),
     );
-    return this.getDefiDepositTxId();;
+    return this.getDefiDepositTxId();
   }
 
   async awaitDefiInteraction(timeout?: number) {
-    const defiTxId = this.getDefiDepositTxId()
+    const defiTxId = this.getDefiDepositTxId();
     await this.core.awaitDefiInteraction(defiTxId, timeout);
   }
 

@@ -1,7 +1,7 @@
-import { AccountId, GrumpkinAddress, MemoryFifo, SdkEvent, TxType, UserPaymentTx, ProofId } from '@aztec/sdk';
-import { Terminal } from './terminal';
+import { GrumpkinAddress, MemoryFifo, ProofId, SdkEvent, TxType, UserPaymentTx } from '@aztec/sdk';
 import createDebug from 'debug';
 import { AppEvent, AppInitAction, AppInitState, AppInitStatus, WebSdk } from '../web_sdk';
+import { Terminal } from './terminal';
 
 const debug = createDebug('bb:terminal_handler');
 
@@ -97,13 +97,13 @@ export class TerminalHandler {
    */
   private registerHandlers() {
     this.app.on(AppEvent.UPDATED_INIT_STATE, this.handleInitStateChange);
-    this.app.on(SdkEvent.UPDATED_USER_STATE, this.handleUserStateChange);
+    this.app.on(SdkEvent.DESTROYED, this.handleSdkDestroyed);
     this.app.on(SdkEvent.LOG, this.logHandler);
   }
 
   private unregisterHandlers() {
     this.app.off(AppEvent.UPDATED_INIT_STATE, this.handleInitStateChange);
-    this.app.off(SdkEvent.UPDATED_USER_STATE, this.handleUserStateChange);
+    this.app.off(SdkEvent.DESTROYED, this.handleSdkDestroyed);
     this.app.off(SdkEvent.LOG, this.logHandler);
   }
 
@@ -140,33 +140,15 @@ export class TerminalHandler {
         this.printQueue.put(TermControl.PROMPT);
       });
     }
-    if (initStatus.initState === AppInitState.UNINITIALIZED) {
-      this.controlQueue.put(async () => {
-        this.printQueue.put(TermControl.LOCK);
-        this.printQueue.put('\rlogged out. reinitialize.\n');
-        this.printQueue.put(TermControl.PROMPT);
-        this.unregisterHandlers();
-      });
-    }
   };
 
-  /**
-   * If the users balance updates, print an update.
-   */
-  private handleUserStateChange = (accountId: AccountId, balance: bigint, diff: bigint, assetId: number) => {
-    const user = this.app.getUser();
-    if (!user) {
-      // Kind of a hack. But this event can emitted when adding a new user and the app doesn't have a handle on it yet.
-      return;
-    }
-    const userData = user.getUserData();
-    if (userData.id.equals(accountId) && diff && !user.isSynching()) {
-      this.printQueue.put(
-        `balance updated: ${this.app.getSdk().fromBaseUnits(assetId, balance)} (${diff >= 0 ? '+' : ''}${this.app
-          .getSdk()
-          .fromBaseUnits(assetId, diff)})\n`,
-      );
-    }
+  private handleSdkDestroyed = () => {
+    this.controlQueue.put(async () => {
+      this.printQueue.put(TermControl.LOCK);
+      this.printQueue.put('\rlogged out. reinitialize.\n');
+      this.printQueue.put(TermControl.PROMPT);
+      this.unregisterHandlers();
+    });
   };
 
   private getInitString({ initAction, network }: AppInitStatus) {
@@ -253,6 +235,18 @@ export class TerminalHandler {
     }
   }
 
+  private async getDeployTag() {
+    // If we haven't overridden our deploy tag, we discover it at runtime. All s3 deployments have a file
+    // called DEPLOY_TAG in their root containing the deploy tag.
+    if (process.env.NODE_ENV !== 'development') {
+      return await fetch('/DEPLOY_TAG')
+        .then(resp => resp.text())
+        .catch(() => '');
+    } else {
+      return '';
+    }
+  }
+
   private async init(server: string) {
     this.app.off(AppEvent.UPDATED_INIT_STATE, this.initProgressHandler);
     this.app.off(SdkEvent.LOG, this.logHandler);
@@ -260,9 +254,16 @@ export class TerminalHandler {
 
     this.app.on(AppEvent.UPDATED_INIT_STATE, this.initProgressHandler);
     this.app.on(SdkEvent.LOG, this.logHandler);
+
+    const deployTag = await this.getDeployTag();
+    const rollupProviderUrl =
+      server ||
+      (process.env.NODE_ENV === 'production'
+        ? `https://api.aztec.network/${deployTag}/falafel`
+        : 'http://localhost:8081');
     const serverUrl =
-      server || (process.env.NODE_ENV === 'production' ? 'https://api.aztec.network/falafel' : 'http://localhost:8081');
-    await this.app.init(serverUrl);
+      process.env.NODE_ENV === 'production' ? `https://${deployTag}/sdk.aztec.network/` : 'http://localhost:5000';
+    await this.app.init(rollupProviderUrl, { serverUrl, debug: true });
     this.app.off(AppEvent.UPDATED_INIT_STATE, this.initProgressHandler);
     this.app.off(SdkEvent.LOG, this.logHandler);
 
@@ -301,14 +302,14 @@ export class TerminalHandler {
   // }
 
   private async deposit(valueStr: string) {
-    this.assertRegistered();
+    await this.assertRegistered();
     const value = this.app.getSdk().toBaseUnits(this.assetId, valueStr);
     const [fee] = await this.app.getSdk().getDepositFees(this.assetId);
     const publicInput = value.value + fee.value;
     const depositor = this.app.getAddress();
-    const userId = this.app.getUser().getUserData().id;
-    const controller = this.app.getSdk().createDepositController(depositor, userId, value, fee);
-    const assetBalance = await this.app.getUser().getBalance(this.assetId);
+    const userId = (await this.app.getUser().getUserData()).id;
+    const controller = await this.app.getSdk().createDepositController(depositor, userId, value, fee);
+    const assetBalance = await this.app.getSdk().getPublicBalance(this.assetId, depositor);
     const pendingBalance = await controller.getPendingFunds();
     if (assetBalance + pendingBalance < publicInput) {
       throw new Error('insufficient balance.');
@@ -326,54 +327,64 @@ export class TerminalHandler {
   }
 
   private async withdraw(valueStr: string) {
-    this.assertRegistered();
-    const userId = this.app.getUser().getUserData().id;
+    await this.assertRegistered();
+    const userId = (await this.app.getUser().getUserData()).id;
     const recipient = this.app.getAddress();
     const value = this.app.getSdk().toBaseUnits(this.assetId, valueStr);
     const [fee] = await this.app.getSdk().getWithdrawFees(this.assetId);
-    const controller = this.app.getSdk().createWithdrawController(userId, recipient, value, fee);
+    const controller = await this.app.getSdk().createWithdrawController(userId, recipient, value, fee);
+    await controller.createProof();
     await controller.send();
     this.printQueue.put(`withdrawl proof sent.\n`);
   }
 
   private async transfer(alias: string, valueStr: string) {
-    this.assertRegistered();
+    await this.assertRegistered();
     const to = await this.app.getSdk().getAccountId(alias);
     if (!to) {
       throw new Error(`unknown user: ${alias}`);
     }
-    const userId = this.app.getUser().getUserData().id;
+    const userId = (await this.app.getUser().getUserData()).id;
     const value = this.app.getSdk().toBaseUnits(this.assetId, valueStr);
     const [fee] = await this.app.getSdk().getTransferFees(this.assetId);
-    const controller = this.app.getSdk().createTransferController(userId, to, value, fee);
+    const controller = await this.app.getSdk().createTransferController(userId, to, value, fee);
+    await controller.createProof();
     await controller.send();
     this.printQueue.put(`transfer proof sent.\n`);
   }
 
-  private assertRegistered() {
-    if (!this.isRegistered()) {
+  private async assertRegistered() {
+    if (!(await this.isRegistered())) {
       throw new Error('register an alias first.');
     }
   }
 
-  private isRegistered() {
-    return this.app.getUser().getUserData().id.accountNonce != 0;
+  private async isRegistered() {
+    return (await this.app.getUser().getUserData()).id.accountNonce != 0;
   }
 
   private async registerAlias(alias: string) {
-    if (this.isRegistered()) {
+    if (await this.isRegistered()) {
       throw new Error('account already has an alias.');
     }
     if (!(await this.app.getSdk().isAliasAvailable(alias))) {
       throw new Error('alias already registered.');
     }
+    const fee = (await this.app.getSdk().getRegisterFees({ assetId: this.assetId, value: 0n }))[0];
     const user = this.app.getUser();
     const { id, publicKey: newSigningPublicKey } = await user.getUserData();
     const recoveryPublicKey = GrumpkinAddress.randomAddress();
     const address = this.app.getAddress();
-    const controller = this.app
+    await this.app.getSdk().addUser(this.app.getAddress(), 1);
+    const controller = await this.app
       .getSdk()
-      .createRegisterController(id, alias, newSigningPublicKey, recoveryPublicKey, 0, BigInt(0), address);
+      .createRegisterController(id, alias, newSigningPublicKey, recoveryPublicKey, fee.assetId, fee.value, address);
+    const pendingDeposit = await controller.getPendingFunds();
+    if (pendingDeposit < fee.value) {
+      await controller.depositFundsToContract();
+    }
+    await controller.createProof();
+    await controller.sign();
     await controller.send();
     this.printQueue.put(`registration proof sent.\nawaiting settlement...\n`);
     await controller.awaitSettlement(300);
@@ -386,11 +397,11 @@ export class TerminalHandler {
   private async balance() {
     const sdk = this.app.getSdk();
     const address = this.app.getAddress();
-    const userId = this.app.getUser().getUserData().id;
+    const userId = (await this.app.getUser().getUserData()).id;
     this.printQueue.put(
       `public: ${sdk.fromBaseUnits(this.assetId, await sdk.getPublicBalance(this.assetId, address))}\n`,
     );
-    this.printQueue.put(`private: ${sdk.fromBaseUnits(this.assetId, sdk.getBalance(this.assetId, userId))}\n`);
+    this.printQueue.put(`private: ${sdk.fromBaseUnits(this.assetId, await sdk.getBalance(this.assetId, userId))}\n`);
     const fundsPendingDeposit = await sdk.getUserPendingDeposit(this.assetId, address);
     if (fundsPendingDeposit > 0) {
       this.printQueue.put(`pending deposit: ${sdk.fromBaseUnits(this.assetId, fundsPendingDeposit)}\n`);
@@ -399,7 +410,13 @@ export class TerminalHandler {
 
   private async fees() {
     const { symbol } = this.app.getSdk().getAssetInfo(this.assetId);
-    const txTypes = [TxType.DEPOSIT, TxType.TRANSFER, TxType.WITHDRAW_TO_WALLET, TxType.WITHDRAW_TO_CONTRACT];
+    const txTypes = [
+      TxType.ACCOUNT,
+      TxType.DEPOSIT,
+      TxType.TRANSFER,
+      TxType.WITHDRAW_TO_WALLET,
+      TxType.WITHDRAW_TO_CONTRACT,
+    ];
     const txFees = await this.app.getSdk().getTxFees(this.assetId);
     txTypes.forEach(txType => {
       this.printQueue.put(

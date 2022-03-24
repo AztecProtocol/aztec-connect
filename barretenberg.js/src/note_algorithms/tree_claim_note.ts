@@ -1,6 +1,6 @@
 import { toBigIntBE, toBufferBE } from '../bigint_buffer';
-import { randomBytes } from 'crypto';
 import { BridgeId } from '../bridge_id';
+import { randomBytes } from '../crypto';
 import { numToUInt32BE } from '../serialize';
 
 export class TreeClaimNote {

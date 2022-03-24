@@ -10,7 +10,7 @@ export class AccountUtils {
   constructor(private sdk: AztecSdk, private requiredNetwork: Network) {}
 
   async addUser(privateKey: Buffer, nonce: number, noSync = !nonce) {
-    const publicKey = this.sdk.derivePublicKey(privateKey);
+    const publicKey = await this.sdk.derivePublicKey(privateKey);
     const userId = new AccountId(publicKey, nonce);
     try {
       await this.sdk.addUser(privateKey, nonce, noSync);

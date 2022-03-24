@@ -5,7 +5,6 @@ import {
   EthAddress,
   GrumpkinAddress,
   SdkEvent,
-  SdkInitState,
   EthereumProvider,
   JsonRpcProvider,
 } from '@aztec/sdk';
@@ -59,7 +58,7 @@ export enum LoginStep {
   MIGRATE_ACCOUNT,
   SYNC_ACCOUNT,
   MIGRATE_NOTES,
-  INIT_SDK,
+  INIT_ACCOUNT,
   CREATE_ACCOUNT,
   VALIDATE_DATA,
   RECOVER_ACCOUNT_PROOF,
@@ -73,7 +72,7 @@ const undisruptiveSteps = [
   LoginStep.MIGRATE_ACCOUNT,
   LoginStep.SYNC_ACCOUNT,
   LoginStep.MIGRATE_NOTES,
-  LoginStep.INIT_SDK,
+  LoginStep.INIT_ACCOUNT,
   LoginStep.CREATE_ACCOUNT,
   LoginStep.VALIDATE_DATA,
   LoginStep.RECOVER_ACCOUNT_PROOF,
@@ -248,13 +247,9 @@ export class UserSession extends EventEmitter {
     this.provider?.destroy();
     this.rollupService?.destroy();
     this.shieldForAliasForm?.destroy();
-    if (this.sdk && this.sdk.getLocalStatus().initState !== SdkInitState.DESTROYED) {
+    if (this.sdk) {
       this.sdk.removeAllListeners();
       await this.removeUnregisteredUsers();
-      // Can only safely destroy the sdk after it's fully initialized.
-      if (this.sdk.getLocalStatus().initState === SdkInitState.INITIALIZING) {
-        await this.awaitSdkInitialized(this.sdk);
-      }
       await this.sdk.destroy();
     }
     debug('Session destroyed.');
@@ -363,7 +358,7 @@ export class UserSession extends EventEmitter {
       } else {
         // Log in to previously logged in account.
         this.updateLoginState({ alias });
-        this.toStep(LoginStep.INIT_SDK);
+        this.toStep(LoginStep.INIT_ACCOUNT);
       }
     }
   }
@@ -419,7 +414,7 @@ export class UserSession extends EventEmitter {
     } else {
       // Log in to previously logged in account.
       this.updateLoginState({ alias });
-      this.toStep(LoginStep.INIT_SDK);
+      this.toStep(LoginStep.INIT_ACCOUNT);
     }
   }
 
@@ -514,7 +509,7 @@ export class UserSession extends EventEmitter {
   }
 
   async confirmSeedPhrase(seedPhraseInput: string) {
-    this.keyVaultV0 = KeyVault.fromSeedPhrase(seedPhraseInput, this.sdk);
+    this.keyVaultV0 = await KeyVault.fromSeedPhrase(seedPhraseInput, this.sdk);
     const nonce = await this.accountUtils.getAccountNonce(this.keyVaultV0.accountPublicKey);
     if (!nonce) {
       this.emitSystemMessage('Account not found.', MessageType.ERROR);
@@ -605,7 +600,7 @@ export class UserSession extends EventEmitter {
       }
     }
 
-    this.toStep(mode === LoginMode.MIGRATE ? LoginStep.CONFIRM_MIGRATION : LoginStep.INIT_SDK);
+    this.toStep(mode === LoginMode.MIGRATE ? LoginStep.CONFIRM_MIGRATION : LoginStep.INIT_ACCOUNT);
   }
 
   async migrateToWallet(walletId: WalletId, reconnect = false) {
@@ -677,7 +672,7 @@ export class UserSession extends EventEmitter {
       const nonce = 1;
       const prevUserId = new AccountId(this.loginState.accountV0, nonce);
       const prevUser = await this.sdk.getUserData(prevUserId);
-      this.keyVaultV0 = new KeyVault(prevUser.privateKey, EthAddress.ZERO, this.sdk, AccountVersion.V0);
+      this.keyVaultV0 = new KeyVault(prevUser.privateKey, prevUser.publicKey, EthAddress.ZERO, AccountVersion.V0);
     }
 
     if (!this.keyVault) {
@@ -712,7 +707,7 @@ export class UserSession extends EventEmitter {
       await new Promise(resolve => setTimeout(resolve, 500));
       const signingKey = await this.requestSigningKey();
 
-      const signer = this.sdk.createSchnorrSigner(this.keyVaultV0.accountPrivateKey);
+      const signer = await this.sdk.createSchnorrSigner(this.keyVaultV0.accountPrivateKey);
       await this.awaitUserSynchronised(prevUserId);
 
       const fee = { assetId: 0, value: BigInt(0) }; // TODO
@@ -866,13 +861,9 @@ export class UserSession extends EventEmitter {
     this.shieldForAliasForm = undefined;
   }
 
-  async initSdk() {
-    if (!(await this.awaitSdkInitialized())) {
-      return;
-    }
-
-    const proceed = (step: LoginStep) => {
-      if (this.sdk.getLocalStatus().initState === SdkInitState.DESTROYED) {
+  async initAccount() {
+    const proceed = async (step: LoginStep) => {
+      if (this.destroyed) {
         throw new Error('Sdk destroyed.');
       }
 
@@ -885,7 +876,7 @@ export class UserSession extends EventEmitter {
       const { accountPublicKey } = this.keyVault;
 
       if (isNewAlias) {
-        proceed(LoginStep.CREATE_ACCOUNT);
+        await proceed(LoginStep.CREATE_ACCOUNT);
 
         const userId = new AccountId(accountPublicKey, 1);
         const aliasInput = this.loginState.alias;
@@ -900,19 +891,19 @@ export class UserSession extends EventEmitter {
 
         await this.createShieldForAliasForm(userId, alias, spendingPublicKey);
 
-        proceed(LoginStep.CLAIM_USERNAME);
+        await proceed(LoginStep.CLAIM_USERNAME);
       } else {
-        proceed(LoginStep.ADD_ACCOUNT);
+        await proceed(LoginStep.ADD_ACCOUNT);
 
         const nonce = await this.accountUtils.getAliasNonce(alias);
         const userId = new AccountId(accountPublicKey, nonce);
         await this.initUserAccount(userId, false);
 
-        proceed(LoginStep.SYNC_DATA);
+        await proceed(LoginStep.SYNC_DATA);
 
         await this.awaitUserSynchronised(userId);
 
-        proceed(LoginStep.DONE);
+        await proceed(LoginStep.DONE);
       }
     } catch (e) {
       debug(e);
@@ -946,8 +937,8 @@ export class UserSession extends EventEmitter {
       }
 
       const userId = new AccountId(accountPublicKey, nonce);
-      const { privateKey } = await this.sdk.getUserData(userId);
-      this.keyVault = new KeyVault(privateKey, signerAddress, this.sdk, version);
+      const { privateKey, publicKey } = await this.sdk.getUserData(userId);
+      this.keyVault = new KeyVault(privateKey, publicKey, signerAddress, version);
 
       this.updateLoginState({
         alias,
@@ -1049,7 +1040,7 @@ export class UserSession extends EventEmitter {
     this.sdk = this.sdkObs.value!;
 
     // If local rollupContractAddress is empty, it is a new device or the data just got wiped out.
-    if (!(await this.getLocalRollupContractAddress())) {
+    if (await this.rollupContractAddressChanged()) {
       if (autoReset) {
         await this.db.clear();
       } else {
@@ -1062,10 +1053,7 @@ export class UserSession extends EventEmitter {
     await this.rollupService.init();
     this.accountUtils = new AccountUtils(this.sdk, this.requiredNetwork);
 
-    const confirmUserStates = this.ensureUserStates();
-    // Leave it to run in the background so that it won't block the ui.
-    this.sdk.init();
-    await confirmUserStates;
+    await this.sdk.run();
 
     await this.createSdkMutex.unlock();
   }
@@ -1136,7 +1124,7 @@ export class UserSession extends EventEmitter {
     };
 
     const { migratingAssets } = this.loginState;
-    const signer = this.sdk.createSchnorrSigner(signingPrivateKey);
+    const signer = await this.sdk.createSchnorrSigner(signingPrivateKey);
     for (const asset of migratingAssets) {
       const { assetId, fee, migratableValues } = asset;
       for (let i = 0; i < migratableValues.length; i += 2) {
@@ -1165,9 +1153,9 @@ export class UserSession extends EventEmitter {
     const {
       blockchainStatus: { nextRollupId },
     } = await this.sdk.getRemoteStatus();
-    const { syncedToRollup } = this.sdk.getLocalStatus();
+    const { syncedToRollup } = await this.sdk.getLocalStatus();
     this.handleWorldStateChange(syncedToRollup, nextRollupId - 1);
-    this.handleUserStateChange(userId);
+    await this.handleUserStateChange(userId);
     this.sdk.on(SdkEvent.UPDATED_WORLD_STATE, this.handleWorldStateChange);
     this.sdk.on(SdkEvent.UPDATED_USER_STATE, this.handleUserStateChange);
   }
@@ -1301,7 +1289,7 @@ export class UserSession extends EventEmitter {
   }
 
   private async removeUnregisteredUsers() {
-    const users = this.sdk.getUsersData();
+    const users = await this.sdk.getUsersData();
     const userZeros = users.filter(u => !u.nonce);
     for (const userZero of userZeros) {
       if (!users.some(u => u.publicKey.equals(userZero.publicKey) && u.nonce > 0)) {
@@ -1314,10 +1302,10 @@ export class UserSession extends EventEmitter {
     this.updateWorldState({ ...this.worldState, syncedToRollup, latestRollup });
   };
 
-  private handleUserStateChange = (userId: AccountId) => {
+  private handleUserStateChange = async (userId: AccountId) => {
     if (!this.account?.userId.equals(userId)) return;
 
-    const user = this.sdk.getUserData(userId);
+    const user = await this.sdk.getUserData(userId);
     this.worldState = { ...this.worldState, accountSyncedToRollup: user.syncedToRollup };
     this.emit(UserSessionEvent.UPDATED_WORLD_STATE, this.worldState);
   };
@@ -1383,17 +1371,6 @@ export class UserSession extends EventEmitter {
     this.emit(UserSessionEvent.UPDATED_SYSTEM_MESSAGE, { message, type });
   }
 
-  private async awaitSdkInitialized(sdk = this.sdk) {
-    const sdkInitState = () => sdk.getLocalStatus().initState;
-    while (sdkInitState() !== SdkInitState.INITIALIZED) {
-      if (sdkInitState() === SdkInitState.DESTROYED) {
-        return false;
-      }
-      await new Promise(resolve => setTimeout(resolve, 500));
-    }
-    return true;
-  }
-
   private async awaitUserSynchronised(userId: AccountId) {
     if (!userId.accountNonce) {
       return;
@@ -1404,7 +1381,7 @@ export class UserSession extends EventEmitter {
       await this.sdk.awaitUserSynchronised(userId);
     } else {
       // If sync from rollup 0, sdk.awaitUserSynchronised will resolve immediately.
-      while (this.sdk.getUserData(userId).syncedToRollup < latestRollup) {
+      while ((await this.sdk.getUserData(userId)).syncedToRollup < latestRollup) {
         await new Promise(resolve => setTimeout(resolve, 1000));
         if (this.destroyed) {
           throw new Error('Session destroyed.');
@@ -1423,17 +1400,13 @@ export class UserSession extends EventEmitter {
     return unsettledAccountTxs.length < numRollups * this.MAX_ACCOUNT_TXS_PER_ROLLUP;
   }
 
-  // Remove the following ugly workarounds.
-  private async ensureUserStates() {
-    while ((this.sdk as any).core.sdkStatus.dataRoot.equals(Buffer.alloc(0))) {
-      await new Promise(resolve => setTimeout(resolve, 200));
-      if (this.destroyed) {
-        throw new Error('Session destroyed.');
-      }
-    }
-  }
-
-  private async getLocalRollupContractAddress() {
-    return (this.sdk as any).core.getRollupContractAddress();
+  private async rollupContractAddressChanged() {
+    const {
+      blockchainStatus: { rollupContractAddress },
+    } = await this.sdk.getRemoteStatus();
+    const remoteRollupContractAddress = rollupContractAddress.toString();
+    const localRollupContractAddress = localStorage.getItem('rollupContractAddress');
+    localStorage.setItem('rollupContractAddress', remoteRollupContractAddress);
+    return localRollupContractAddress && localRollupContractAddress !== remoteRollupContractAddress;
   }
 }

@@ -97,7 +97,7 @@ export class DefiAgent extends Agent {
   private async calcDeposit() {
     const assetId = this.assetId;
     // Nothing to do if we have a balance.
-    if (this.sdk.getBalance(assetId, this.user.user.id)) {
+    if (await this.sdk.getBalance(assetId, this.user.user.id)) {
       return;
     }
     const costOfEachTransfer =
@@ -130,8 +130,8 @@ export class DefiAgent extends Agent {
       new BitConfig(false, false, false, false, false, false),
       0,
     );
-    const currentBalanceInputAsset = this.sdk.getBalance(spec.inputAsset, this.user.user.id);
-    const currentBalanceOutputAsset = this.sdk.getBalance(spec.outputAsset, this.user.user.id);
+    const currentBalanceInputAsset = await this.sdk.getBalance(spec.inputAsset, this.user.user.id);
+    const currentBalanceOutputAsset = await this.sdk.getBalance(spec.outputAsset, this.user.user.id);
     console.log(
       `${this.agentId()} balances, ${spec.inputAsset}: ${formatNumber(currentBalanceInputAsset)}, ${
         spec.outputAsset

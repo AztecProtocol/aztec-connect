@@ -278,7 +278,7 @@ jobs:
           working_directory: hummus
           command: build hummus
 
-  block-explorer:
+  explorer:
     docker:
       - image: aztecprotocol/build-image
     steps:
@@ -288,8 +288,8 @@ jobs:
           version: 19.03.13
       - run:
           name: 'Build and test'
-          working_directory: block-explorer
-          command: build block-explorer
+          working_directory: explorer
+          command: build explorer
 
   documentation:
     docker:
@@ -454,33 +454,6 @@ jobs:
           working_directory: metrics/grafana
           command: build grafana
 
-  deploy-master:
-    docker:
-      - image: aztecprotocol/build-image
-    steps:
-      - checkout
-      - *setup_env
-      - setup_remote_docker:
-          version: 19.03.13
-      - run:
-          name: 'hummus'
-          working_directory: hummus
-          command: |
-            deploy_ecr hummus
-            deploy_s3 hummus
-      - run:
-          name: 'block-explorer'
-          working_directory: block-explorer
-          command: |
-            deploy_ecr block-explorer
-            deploy_s3 block-explorer
-      - run:
-          name: 'documentation'
-          working_directory: documentation
-          command: |
-            deploy_ecr documentation
-            deploy_s3 documentation
-
   deploy:
     docker:
       - image: aztecprotocol/build-image
@@ -529,6 +502,7 @@ jobs:
           working_directory: sdk
           command: |
             deploy_ecr sdk
+            deploy_s3 sdk
             deploy_npm sdk
       - run:
           name: 'wasabi'
@@ -540,6 +514,18 @@ jobs:
           command: |
             deploy_ecr zk-money
             deploy_s3 zk-money
+      - run:
+          name: 'hummus'
+          working_directory: hummus
+          command: |
+            deploy_ecr hummus
+            deploy_s3 hummus
+      - run:
+          name: 'explorer'
+          working_directory: explorer
+          command: |
+            deploy_ecr explorer
+            deploy_s3 explorer
       - run:
           name: 'website'
           working_directory: website
@@ -634,12 +620,11 @@ workflows:
       - hummus:
           requires:
             - sdk
+          filters: *tag_filter
       - wasabi:
           requires:
             - sdk
-      - block-explorer:
-          requires:
-            - sdk
+          filters: *tag_filter
       - zk-money:
           requires:
             - sdk
@@ -672,18 +657,10 @@ workflows:
           requires:
             - end-to-end
           filters: *tag_filter
+      - explorer:
+          filters: *tag_filter
       - website
       - metrics
-      - deploy-master:
-          requires:
-            - website
-            - block-explorer
-            - hummus
-            - metrics
-          filters:
-            branches:
-              only:
-                - master
       - deploy:
           requires:
             - x86_64-linux-gcc
@@ -703,10 +680,13 @@ workflows:
             - e2e-non-fee-assets
             - wasabi
             - zk-money
+            - hummus
+            - explorer
+            - website
+            - metrics
           filters:
             branches:
               only:
-                - master
                 - defi-bridge-project
             tags:
               only: *tag_regex

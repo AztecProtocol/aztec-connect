@@ -2,33 +2,25 @@ import {
   AccountId,
   AssetValue,
   AztecSdk,
-  createAztecSdk,
+  AztecSdkUser,
+  createHostedAztecSdk,
+  CreateHostedAztecSdkOptions,
   EthAddress,
   EthereumProvider,
   EthereumSigner,
-  getBlockchainStatus,
   GrumpkinAddress,
   SdkEvent,
-  SdkOptions,
   TxId,
   Web3Signer,
 } from '@aztec/sdk';
-import { Web3Provider } from '@ethersproject/providers';
 import { EventEmitter } from 'events';
 import { Database } from './database';
 import { EthereumSdkUser } from './ethereum_sdk_user';
 
 export * from './ethereum_sdk_user';
 
-export async function createEthSdk(ethereumProvider: EthereumProvider, serverUrl: string, sdkOptions: SdkOptions = {}) {
-  const { chainId } = await getBlockchainStatus(serverUrl);
-  const provider = new Web3Provider(ethereumProvider);
-  const { chainId: providerChainId } = await provider.getNetwork();
-  if (chainId !== providerChainId) {
-    throw new Error(`Provider chainId ${providerChainId} does not match rollup provider chainId ${chainId}.`);
-  }
-
-  const aztecSdk = await createAztecSdk(ethereumProvider, serverUrl, sdkOptions);
+export async function createEthSdk(ethereumProvider: EthereumProvider, sdkOptions: CreateHostedAztecSdkOptions) {
+  const aztecSdk = await createHostedAztecSdk(ethereumProvider, sdkOptions);
 
   const db = new Database();
   await db.init();
@@ -50,7 +42,7 @@ export class EthereumSdk extends EventEmitter {
       this.aztecSdk.on(event, (...args: any[]) => this.emit(event, ...args));
     }
 
-    await this.aztecSdk.init();
+    await this.aztecSdk.run();
 
     this.emit(SdkEvent.LOG, 'Synching data tree state...');
     const start = new Date().getTime();
@@ -65,7 +57,7 @@ export class EthereumSdk extends EventEmitter {
     this.removeAllListeners();
   }
 
-  public isUserSynching(userId: AccountId) {
+  public async isUserSynching(userId: AccountId) {
     return this.aztecSdk.isUserSynching(userId);
   }
 
@@ -110,9 +102,9 @@ export class EthereumSdk extends EventEmitter {
     return this.aztecSdk.mint(assetId, value, ethAddress);
   }
 
-  public createDepositController(from: EthAddress, to: AccountId, value: AssetValue, fee: AssetValue) {
-    const userData = this.aztecSdk.getUserData(to);
-    const aztecSigner = this.aztecSdk.createSchnorrSigner(userData.privateKey);
+  public async createDepositController(from: EthAddress, to: AccountId, value: AssetValue, fee: AssetValue) {
+    const userData = await this.aztecSdk.getUserData(to);
+    const aztecSigner = await this.aztecSdk.createSchnorrSigner(userData.privateKey);
     return this.aztecSdk.createDepositController(to, aztecSigner, value, fee, from);
   }
 
@@ -120,9 +112,9 @@ export class EthereumSdk extends EventEmitter {
     return this.aztecSdk.getDepositFees(assetId);
   }
 
-  public createWithdrawController(from: AccountId, to: EthAddress, value: AssetValue, fee: AssetValue) {
-    const userData = this.aztecSdk.getUserData(from);
-    const aztecSigner = this.aztecSdk.createSchnorrSigner(userData.privateKey);
+  public async createWithdrawController(from: AccountId, to: EthAddress, value: AssetValue, fee: AssetValue) {
+    const userData = await this.aztecSdk.getUserData(from);
+    const aztecSigner = await this.aztecSdk.createSchnorrSigner(userData.privateKey);
     return this.aztecSdk.createWithdrawController(from, aztecSigner, value, fee, to);
   }
 
@@ -130,9 +122,9 @@ export class EthereumSdk extends EventEmitter {
     return this.aztecSdk.getWithdrawFees(assetId, recipient);
   }
 
-  public createTransferController(from: AccountId, to: AccountId, value: AssetValue, fee: AssetValue) {
-    const userData = this.aztecSdk.getUserData(from);
-    const aztecSigner = this.aztecSdk.createSchnorrSigner(userData.privateKey);
+  public async createTransferController(from: AccountId, to: AccountId, value: AssetValue, fee: AssetValue) {
+    const userData = await this.aztecSdk.getUserData(from);
+    const aztecSigner = await this.aztecSdk.createSchnorrSigner(userData.privateKey);
     return this.aztecSdk.createTransferController(from, aztecSigner, value, fee, to);
   }
 
@@ -140,7 +132,7 @@ export class EthereumSdk extends EventEmitter {
     return this.aztecSdk.getTransferFees(assetId);
   }
 
-  public createRegisterController(
+  public async createRegisterController(
     accountId: AccountId,
     alias: string,
     signingPublicKey: GrumpkinAddress,
@@ -149,8 +141,12 @@ export class EthereumSdk extends EventEmitter {
     fee: bigint,
     depositor: EthAddress,
   ) {
+    const userData = await this.aztecSdk.getUserData(accountId);
+    const aztecSigner = await this.aztecSdk.createSchnorrSigner(userData.privateKey);
+
     return this.aztecSdk.createRegisterController(
       accountId,
+      aztecSigner,
       alias,
       signingPublicKey,
       recoveryPublicKey,
@@ -179,10 +175,17 @@ export class EthereumSdk extends EventEmitter {
     return (await this.ethSigner.signMessage(Buffer.from('Link Aztec account.'), address)).slice(0, 32);
   }
 
-  public async addUser(ethAddress: EthAddress) {
+  public async addUser(ethAddress: EthAddress, nonce?: number) {
     const privateKey = await this.deriveGrumpkinPrivateKey(ethAddress);
-    const user = await this.aztecSdk.addUser(privateKey);
-    await this.db.setAccount({ ethAddress, accountPublicKey: user.getUserData().publicKey });
+    let user: AztecSdkUser;
+    try {
+      user = await this.aztecSdk.addUser(privateKey, nonce);
+    } catch (e) {
+      const pubKey = await this.aztecSdk.derivePublicKey(privateKey);
+      const accountNonce = nonce ?? (await this.aztecSdk.getLatestAccountNonce(pubKey));
+      user = await this.aztecSdk.getUser(new AccountId(pubKey, accountNonce));
+    }
+    await this.db.setAccount({ ethAddress, accountPublicKey: (await user.getUserData()).publicKey });
     return new EthereumSdkUser(ethAddress, user.id, this);
   }
 

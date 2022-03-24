@@ -5,7 +5,7 @@ import memdown from 'memdown';
 import { AccountAliasId } from '../../account_id';
 import { EthAddress, GrumpkinAddress } from '../../address';
 import { Crs } from '../../crs';
-import { Blake2s, Pedersen, Schnorr, Sha256 } from '../../crypto';
+import { Blake2s, Pedersen, Schnorr, Sha256, SinglePedersen } from '../../crypto';
 import { Grumpkin } from '../../ecc';
 import { PooledFft, SingleFft } from '../../fft';
 import { MerkleTree } from '../../merkle_tree';
@@ -57,12 +57,12 @@ describe('join_split_proof', () => {
     pool = new WorkerPool();
     await pool.init(barretenberg.module, Math.min(navigator.hardwareConcurrency, 8));
 
-    pippenger = new PooledPippenger();
-    await pippenger.init(crs.getData(), pool);
+    pippenger = new PooledPippenger(pool);
+    await pippenger.init(crs.getData());
 
     sha256 = new Sha256(barretenberg);
     blake2s = new Blake2s(barretenberg);
-    pedersen = new Pedersen(barretenberg);
+    pedersen = new SinglePedersen(barretenberg);
     schnorr = new Schnorr(barretenberg);
     grumpkin = new Grumpkin(barretenberg);
     noteAlgos = new NoteAlgorithms(barretenberg);
@@ -236,7 +236,7 @@ describe('join_split_proof', () => {
 
     beforeAll(async () => {
       fft = new PooledFft(pool);
-      await fft.init(JoinSplitProver.circuitSize);
+      await fft.init(JoinSplitProver.getCircuitSize());
       const prover = new UnrolledProver(pool.workers[0], pippenger, fft);
       joinSplitProver = new JoinSplitProver(prover, false);
 

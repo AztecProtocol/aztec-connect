@@ -1,4 +1,4 @@
-import { randomBytes } from 'crypto';
+import { randomBytes } from '../random';
 
 export class SchnorrSignature {
   constructor(private buffer: Buffer) {

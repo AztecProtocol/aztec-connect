@@ -77,7 +77,7 @@ function getConfVars(): ConfVars {
     apiPrefix: API_PREFIX || '',
     serverAuthToken: SERVER_AUTH_TOKEN || '!changeme#',
     typeOrmLogging: !!TYPEORM_LOGGING,
-    proverless: !!PROVERLESS,
+    proverless: PROVERLESS === 'true',
     runtimeConfig: {
       acceptingTxs: true,
       useKeyCache: false,

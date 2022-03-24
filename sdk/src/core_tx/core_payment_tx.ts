@@ -31,6 +31,52 @@ export class CorePaymentTx {
   ) {}
 }
 
+export interface CorePaymentTxJson {
+  txId: string;
+  userId: string;
+  proofId: PaymentProofId;
+  assetId: number;
+  publicValue: string;
+  publicOwner: string | undefined;
+  privateInput: string;
+  recipientPrivateOutput: string;
+  senderPrivateOutput: string;
+  isRecipient: boolean;
+  isSender: boolean;
+  txRefNo: number;
+  created: Date;
+  settled?: Date;
+}
+
+export const corePaymentTxToJson = (tx: CorePaymentTx): CorePaymentTxJson => ({
+  ...tx,
+  txId: tx.txId.toString(),
+  userId: tx.userId.toString(),
+  publicValue: tx.publicValue.toString(),
+  publicOwner: tx.publicOwner ? tx.publicOwner.toString() : undefined,
+  privateInput: tx.privateInput.toString(),
+  recipientPrivateOutput: tx.recipientPrivateOutput.toString(),
+  senderPrivateOutput: tx.senderPrivateOutput.toString(),
+});
+
+export const corePaymentTxFromJson = (json: CorePaymentTxJson) =>
+  new CorePaymentTx(
+    TxId.fromString(json.txId),
+    AccountId.fromString(json.userId),
+    json.proofId,
+    json.assetId,
+    BigInt(json.publicValue),
+    json.publicOwner ? EthAddress.fromString(json.publicOwner) : undefined,
+    BigInt(json.privateInput),
+    BigInt(json.recipientPrivateOutput),
+    BigInt(json.senderPrivateOutput),
+    json.isRecipient,
+    json.isSender,
+    json.txRefNo,
+    json.created,
+    json.settled,
+  );
+
 export const createCorePaymentTxForRecipient = (
   {
     txId,

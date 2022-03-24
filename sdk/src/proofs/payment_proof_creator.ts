@@ -1,5 +1,5 @@
 import { AccountId } from '@aztec/barretenberg/account_id';
-import { EthAddress } from '@aztec/barretenberg/address';
+import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { JoinSplitProver, ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
@@ -9,10 +9,9 @@ import { WorldState } from '@aztec/barretenberg/world_state';
 import createDebug from 'debug';
 import { CorePaymentTx as PaymentTx } from '../core_tx';
 import { Database } from '../database';
-import { Signer } from '../signer';
 import { UserState } from '../user_state';
 import { JoinSplitTxFactory } from './join_split_tx_factory';
-import { ProofOutput } from './proof_output';
+import { JoinSplitProofInput } from './proof_input';
 
 const debug = createDebug('bb:payment_proof_creator');
 
@@ -29,7 +28,7 @@ export class PaymentProofCreator {
     this.txFactory = new JoinSplitTxFactory(noteAlgos, worldState, grumpkin, db);
   }
 
-  public async createProof(
+  public async createProofInput(
     userState: UserState,
     publicInput: bigint,
     publicOutput: bigint,
@@ -37,12 +36,11 @@ export class PaymentProofCreator {
     recipientPrivateOutput: bigint,
     senderPrivateOutput: bigint,
     assetId: number,
-    signer: Signer,
     newNoteOwner: AccountId | undefined,
     publicOwner: EthAddress | undefined,
+    spendingPublicKey: GrumpkinAddress,
     allowChain: number,
-    txRefNo: number,
-  ): Promise<ProofOutput> {
+  ) {
     if (publicInput && publicOutput) {
       throw new Error('Public values cannot be both greater than zero.');
     }
@@ -79,44 +77,47 @@ export class PaymentProofCreator {
     const totalInputNoteValue = notes.reduce((sum, note) => sum + note.value, BigInt(0));
     const changeValue = totalInputNoteValue > privateInput ? totalInputNoteValue - privateInput : BigInt(0);
 
-    const { tx, outputNotes, viewingKeys } = await this.txFactory.createTx(
-      user,
-      proofId,
-      assetId,
-      notes,
-      signer.getPublicKey(),
-      {
-        publicValue: publicInput + publicOutput,
-        publicOwner,
-        outputNoteValue1: recipientPrivateOutput,
-        outputNoteValue2: changeValue + senderPrivateOutput,
-        newNoteOwner,
-        allowChain,
-      },
-    );
+    const proofInput = await this.txFactory.createTx(user, proofId, assetId, notes, spendingPublicKey, {
+      publicValue: publicInput + publicOutput,
+      publicOwner,
+      outputNoteValue1: recipientPrivateOutput,
+      outputNoteValue2: changeValue + senderPrivateOutput,
+      newNoteOwner,
+      allowChain,
+    });
 
-    const signingData = await this.prover.computeSigningData(tx);
-    const signature = await signer.signMessage(signingData);
+    const signingData = await this.prover.computeSigningData(proofInput.tx);
 
+    return { ...proofInput, signingData };
+  }
+
+  public async createProof({ tx, signature, viewingKeys }: JoinSplitProofInput, txRefNo: number) {
     debug('creating proof...');
     const start = new Date().getTime();
-    const proof = await this.prover.createProof(tx, signature);
+    const proof = await this.prover.createProof(tx, signature!);
     debug(`created proof: ${new Date().getTime() - start}ms`);
     debug(`proof size: ${proof.length}`);
 
     const proofData = new ProofData(proof);
     const txId = new TxId(proofData.txId);
+
+    const { inputNotes, outputNotes, proofId, publicValue, publicOwner } = tx;
+    const privateInput = inputNotes.reduce((sum, n) => sum + n.value, BigInt(0));
+    const { value: recipientPrivateOutput } = outputNotes[0];
+    const { assetId, value: senderPrivateOutput } = outputNotes[1];
+    const newNoteOwner = new AccountId(outputNotes[0].ownerPubKey, outputNotes[0].nonce);
+    const userId = new AccountId(outputNotes[1].ownerPubKey, outputNotes[1].nonce);
     const coreTx = new PaymentTx(
       txId,
-      user.id,
+      userId,
       proofId,
       assetId,
-      publicInput + publicOutput,
+      publicValue,
       publicOwner,
       privateInput,
       recipientPrivateOutput,
       senderPrivateOutput,
-      !!(recipientPrivateOutput && newNoteOwner?.equals(user.id)),
+      !!(recipientPrivateOutput && newNoteOwner?.equals(userId)),
       true, // isSender
       txRefNo,
       new Date(),

@@ -21,11 +21,11 @@ export function useBalance(assetId?: number) {
   const { accountId } = useApp();
   const sdk = useInitialisedSdk();
   const [balance, setBalance] = useState(() => {
-    if (accountId && assetId !== undefined) return sdk?.getBalance(assetId, accountId);
+    if (sdk && accountId && assetId !== undefined) return BigInt(0);
   });
   useEffect(() => {
     if (sdk && accountId && assetId !== undefined) {
-      const updateBalance = () => setBalance(sdk.getBalance(assetId, accountId));
+      const updateBalance = async () => setBalance(await sdk.getBalance(assetId, accountId));
       updateBalance();
       return listenAccountUpdated(sdk, accountId, updateBalance);
     } else {
@@ -41,7 +41,7 @@ export function useBalances() {
   const [balances, setBalances] = useState<AssetValue[]>();
   useEffect(() => {
     if (accountId && sdk) {
-      const updateBalances = () => setBalances(sdk.getBalances(accountId));
+      const updateBalances = async () => setBalances(await sdk.getBalances(accountId));
       updateBalances();
       return listenAccountUpdated(sdk, accountId, updateBalances);
     }

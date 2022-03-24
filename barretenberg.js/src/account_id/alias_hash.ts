@@ -1,5 +1,4 @@
-import { randomBytes } from 'crypto';
-import { Blake2s } from '../crypto/blake2s';
+import { Blake2s, randomBytes } from '../crypto';
 
 export class AliasHash {
   constructor(private buffer: Buffer) {
@@ -14,6 +13,10 @@ export class AliasHash {
 
   static fromAlias(alias: string, blake2s: Blake2s) {
     return new AliasHash(blake2s.hashToField(Buffer.from(alias)).slice(0, 28));
+  }
+
+  static fromString(hash: string) {
+    return new AliasHash(Buffer.from(hash.replace(/^0x/i, ''), 'hex'));
   }
 
   toBuffer() {

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "license": "GPL-2.0",
   "scripts": {
-    "build": "yarn clean && tsc -p tsconfig.dest.json && node package.js",
+    "build": "rm -rf ./dest && tsc -p tsconfig.dest.json && node package.js",
     "build:dev": "node package.js && tsc -p tsconfig.dest.json --watch",
     "start": "node ./dest",
     "debug": "node --inspect-brk=0.0.0.0:9221 ./dest",
@@ -11,8 +11,7 @@
     "start:e2e": "./scripts/start_e2e.sh",
     "test:debug": "node --inspect-brk=0.0.0.0:9221 ./node_modules/.bin/jest",
     "test": "jest",
-    "clean": "rm -rf ./dest",
-    "clean_data": "rm -rf ./data"
+    "clean": "rm -rf ./dest ./data"
   },
   "jest": {
     "transform": {

@@ -31,7 +31,7 @@ const PaddedTop = styled.div`
 
 const loginProgresses = [
   {
-    step: LoginStep.INIT_SDK,
+    step: LoginStep.INIT_ACCOUNT,
     title: 'Creating Encryption Keys',
   },
   {
@@ -46,7 +46,7 @@ const loginProgresses = [
 
 const signupProgresses = [
   {
-    step: LoginStep.INIT_SDK,
+    step: LoginStep.INIT_ACCOUNT,
     title: 'Encrypting Data',
   },
   {

@@ -1,6 +1,6 @@
-import { AccountAliasId } from '../../account_id';
+import { AccountAliasId, AliasHash } from '../../account_id';
 import { EthAddress, GrumpkinAddress } from '../../address';
-import { toBufferBE } from '../../bigint_buffer';
+import { toBigIntBE, toBufferBE } from '../../bigint_buffer';
 import { HashPath } from '../../merkle_tree';
 import { ClaimNoteTxData, TreeNote } from '../../note_algorithms';
 import { numToUInt32BE } from '../../serialize';
@@ -56,5 +56,73 @@ export class JoinSplitTx {
       this.backwardLink,
       numToUInt32BE(this.allowChain),
     ]);
+  }
+
+  static fromBuffer(buf: Buffer) {
+    let dataStart = 0;
+    const proofId = buf.readUInt32BE(dataStart);
+    dataStart += 4;
+    const publicValue = toBigIntBE(buf.slice(dataStart, dataStart + 32));
+    dataStart += 32;
+    const publicOwner = new EthAddress(buf.slice(dataStart, dataStart + 32));
+    dataStart += 32;
+    const publicAssetId = buf.readUInt32BE(dataStart);
+    dataStart += 4;
+    const numInputNotes = buf.readUInt32BE(dataStart);
+    dataStart += 4;
+    const inputNoteIndices = [buf.readUInt32BE(dataStart), buf.readUInt32BE(dataStart + 4)];
+    dataStart += 8;
+    const merkleRoot = buf.slice(dataStart, dataStart + 32);
+    dataStart += 32;
+    const inputNotePath0 = HashPath.deserialize(buf, dataStart);
+    dataStart += inputNotePath0.adv;
+    const inputNotePath1 = HashPath.deserialize(buf, dataStart);
+    dataStart += inputNotePath1.adv;
+    const inputNote0 = TreeNote.fromBuffer(buf.slice(dataStart));
+    dataStart += TreeNote.SIZE;
+    const inputNote1 = TreeNote.fromBuffer(buf.slice(dataStart));
+    dataStart += TreeNote.SIZE;
+    const outputNote0 = TreeNote.fromBuffer(buf.slice(dataStart));
+    dataStart += TreeNote.SIZE;
+    const outputNote1 = TreeNote.fromBuffer(buf.slice(dataStart));
+    dataStart += TreeNote.SIZE;
+    const claimNote = ClaimNoteTxData.fromBuffer(buf.slice(dataStart));
+    dataStart += ClaimNoteTxData.SIZE;
+    const accountPrivateKey = buf.slice(dataStart, dataStart + 32);
+    dataStart += 32;
+    const aliasHash = new AliasHash(buf.slice(dataStart + 4, dataStart + 32));
+    dataStart += 32;
+    const nonce = buf.readUInt32BE(dataStart);
+    dataStart += 4;
+    const accountAliasId = new AccountAliasId(aliasHash, nonce);
+    const accountIndex = buf.readUInt32BE(dataStart);
+    dataStart += 4;
+    const accountPath = HashPath.deserialize(buf, dataStart);
+    dataStart += accountPath.adv;
+    const signingPubKey = new GrumpkinAddress(buf.slice(dataStart, dataStart + 64));
+    dataStart += 64;
+    const backwardLink = buf.slice(dataStart, dataStart + 32);
+    dataStart += 32;
+    const allowChain = buf.readUInt32BE(dataStart);
+    return new JoinSplitTx(
+      proofId,
+      publicValue,
+      publicOwner,
+      publicAssetId,
+      numInputNotes,
+      inputNoteIndices,
+      merkleRoot,
+      [inputNotePath0.elem, inputNotePath1.elem],
+      [inputNote0, inputNote1],
+      [outputNote0, outputNote1],
+      claimNote,
+      accountPrivateKey,
+      accountAliasId,
+      accountIndex,
+      accountPath.elem,
+      signingPubKey,
+      backwardLink,
+      allowChain,
+    );
   }
 }

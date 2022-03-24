@@ -1,8 +1,8 @@
-import { BarretenbergWasm } from '../wasm';
-import { Pedersen } from '../crypto/pedersen';
-import { MerkleTree, HashPath } from '.';
 import levelup from 'levelup';
 import memdown from 'memdown';
+import { HashPath, MerkleTree } from '.';
+import { SinglePedersen } from '../crypto/pedersen';
+import { BarretenbergWasm } from '../wasm';
 
 const expectSameTrees = async (tree1: MerkleTree, tree2: MerkleTree) => {
   const size = tree1.getSize();
@@ -18,13 +18,13 @@ const expectSameTrees = async (tree1: MerkleTree, tree2: MerkleTree) => {
 
 describe('merkle_tree', () => {
   let barretenberg!: BarretenbergWasm;
-  let pedersen!: Pedersen;
+  let pedersen!: SinglePedersen;
   const values: Buffer[] = [];
 
   beforeAll(async () => {
     barretenberg = new BarretenbergWasm();
     await barretenberg.init();
-    pedersen = new Pedersen(barretenberg);
+    pedersen = new SinglePedersen(barretenberg);
 
     for (let i = 0; i < 32; ++i) {
       const v = Buffer.alloc(32, 0);

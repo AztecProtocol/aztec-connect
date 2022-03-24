@@ -322,7 +322,7 @@ export class UserAccount extends EventEmitter {
       return;
     }
 
-    const balance = this.sdk.getBalance(asset.id, this.userId);
+    const balance = await this.sdk.getBalance(asset.id, this.userId);
     const spendableNotes = await this.sdk.getSpendableNotes(asset.id, this.userId);
     const spendableBalance = sumNotes(spendableNotes.slice(-2));
     const joinSplitTxs = await this.getJoinSplitTxs(asset.id, this.userId);

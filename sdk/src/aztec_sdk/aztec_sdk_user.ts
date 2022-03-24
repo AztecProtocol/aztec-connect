@@ -1,14 +1,14 @@
 import { AccountId } from '@aztec/barretenberg/account_id';
-import { AztecSdk } from '.';
+import { AztecSdk } from './aztec_sdk';
 
 export class AztecSdkUser {
   constructor(public id: AccountId, private sdk: AztecSdk) {}
 
-  isSynching() {
+  public async isSynching() {
     return this.sdk.isUserSynching(this.id);
   }
 
-  async awaitSynchronised() {
+  public async awaitSynchronised() {
     return this.sdk.awaitUserSynchronised(this.id);
   }
 
@@ -16,11 +16,11 @@ export class AztecSdkUser {
     return this.sdk.getSigningKeys(this.id);
   }
 
-  public getUserData() {
+  public async getUserData() {
     return this.sdk.getUserData(this.id);
   }
 
-  public getBalance(assetId: number) {
+  public async getBalance(assetId: number) {
     return this.sdk.getBalance(assetId, this.id);
   }
 

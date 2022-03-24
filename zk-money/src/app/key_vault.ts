@@ -14,7 +14,7 @@ export const createSigningKeys = async (provider: Provider, sdk: AztecSdk) => {
   const ethAddress = provider.account!;
   const signer = new Web3Signer(provider.ethereumProvider);
   const privateKey = (await signer.signPersonalMessage(message, ethAddress)).slice(0, 32);
-  const publicKey = sdk.derivePublicKey(privateKey);
+  const publicKey = await sdk.derivePublicKey(privateKey);
   return { privateKey, publicKey };
 };
 
@@ -32,8 +32,7 @@ export class KeyVault {
 
   private account: { privateKey: Buffer; publicKey: GrumpkinAddress; ethAddress: EthAddress; version: AccountVersion };
 
-  constructor(privateKey: Buffer, ethAddress: EthAddress, sdk: AztecSdk, version: AccountVersion) {
-    const publicKey = sdk.derivePublicKey(privateKey);
+  constructor(privateKey: Buffer, publicKey: GrumpkinAddress, ethAddress: EthAddress, version: AccountVersion) {
     this.account = { privateKey, publicKey, ethAddress, version };
   }
 
@@ -57,7 +56,8 @@ export class KeyVault {
     const ethAddress = provider.account!;
     const signer = new Web3Signer(provider.ethereumProvider);
     const privateKey = (await signer.signPersonalMessage(KeyVault.signingMessage, ethAddress)).slice(0, 32);
-    return new KeyVault(privateKey, ethAddress, sdk, AccountVersion.V1);
+    const publicKey = await sdk.derivePublicKey(privateKey);
+    return new KeyVault(privateKey, publicKey, ethAddress, AccountVersion.V1);
   }
 
   // To be deprecated.
@@ -66,12 +66,14 @@ export class KeyVault {
     const digest = KeyVault.signingMessageV0(ethAddress, sdk);
     const signer = new Web3Signer(provider.ethereumProvider);
     const privateKey = (await signer.signMessage(digest, ethAddress)).slice(0, 32);
-    return new KeyVault(privateKey, ethAddress, sdk, AccountVersion.V0);
+    const publicKey = await sdk.derivePublicKey(privateKey);
+    return new KeyVault(privateKey, publicKey, ethAddress, AccountVersion.V0);
   }
 
   // To be deprecated.
-  static fromSeedPhrase(seedPhrase: string, sdk: AztecSdk) {
+  static async fromSeedPhrase(seedPhrase: string, sdk: AztecSdk) {
     const privateKey = hashToField(Buffer.from(formatSeedPhraseInput(seedPhrase)), sdk);
-    return new KeyVault(privateKey, EthAddress.ZERO, sdk, AccountVersion.V0);
+    const publicKey = await sdk.derivePublicKey(privateKey);
+    return new KeyVault(privateKey, publicKey, EthAddress.ZERO, AccountVersion.V0);
   }
 }

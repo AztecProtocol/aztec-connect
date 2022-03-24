@@ -1,7 +1,6 @@
 terraform {
   backend "s3" {
     bucket = "aztec-terraform"
-    key    = "aztec2/hummus"
     region = "eu-west-2"
   }
   required_providers {
@@ -37,7 +36,7 @@ provider "aws" {
 
 # AWS S3 bucket for static hosting.
 resource "aws_s3_bucket" "hummus" {
-  bucket = "terminal.aztec.network"
+  bucket = "${var.DEPLOY_TAG}.terminal.aztec.network"
   acl    = "public-read"
 
   cors_rule {
@@ -59,7 +58,7 @@ resource "aws_s3_bucket" "hummus" {
         "AWS": "*"
       },
       "Action": "s3:GetObject",
-      "Resource": "arn:aws:s3:::terminal.aztec.network/*"
+      "Resource": "arn:aws:s3:::${var.DEPLOY_TAG}.terminal.aztec.network/*"
     }
   ]
 }
@@ -88,7 +87,7 @@ resource "aws_cloudfront_distribution" "hummus_distribution" {
   is_ipv6_enabled = true
   comment         = "Managed by Terraform"
 
-  aliases = ["terminal.aztec.network"]
+  aliases = ["${var.DEPLOY_TAG}.terminal.aztec.network"]
 
   default_cache_behavior {
     allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
@@ -125,7 +124,7 @@ resource "aws_cloudfront_distribution" "hummus_distribution" {
 
 resource "aws_route53_record" "a_record" {
   zone_id = data.terraform_remote_state.aztec2_iac.outputs.aws_route53_zone_id
-  name    = "terminal"
+  name    = "${var.DEPLOY_TAG}.terminal"
   type    = "A"
   alias {
     name                   = aws_cloudfront_distribution.hummus_distribution.domain_name

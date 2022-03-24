@@ -44,8 +44,11 @@ export class DefiTxDao {
   public result?: boolean;
 
   @Index({ unique: false })
-  @Column({ nullable: true })  
+  @Column({ nullable: true })
   public interactionNonce?: number;
+
+  @Column({ nullable: true })
+  public isAsync?: boolean;
 
   @AfterLoad()
   @AfterInsert()
@@ -59,6 +62,9 @@ export class DefiTxDao {
     }
     if (this.interactionNonce === null) {
       delete this.interactionNonce;
+    }
+    if (this.isAsync === null) {
+      delete this.isAsync;
     }
   }
 }

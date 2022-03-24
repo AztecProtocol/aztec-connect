@@ -22,6 +22,19 @@ describe('tree_note', () => {
     noteAlgos = new NoteAlgorithms(wasm);
   });
 
+  it('should convert to and from buffer', () => {
+    const note = new TreeNote(
+      GrumpkinAddress.randomAddress(),
+      BigInt(123),
+      456,
+      789,
+      randomBytes(32),
+      randomBytes(32),
+      randomBytes(32),
+    );
+    expect(TreeNote.fromBuffer(note.toBuffer())).toEqual(note);
+  });
+
   it('should correctly batch decrypt notes', async () => {
     const receiver = createKeyPair();
 

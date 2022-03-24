@@ -1,14 +1,14 @@
-import { EthereumBlockchainConfig, EthersAdapter, JsonRpcProvider, WalletProvider } from '@aztec/blockchain';
-import { BridgeId, BridgeConfig, BitConfig } from '@aztec/barretenberg/bridge_id';
+import { EthereumRpc } from '@aztec/barretenberg/blockchain';
+import { BridgeConfig } from '@aztec/barretenberg/bridge_id';
+import { EthereumBlockchainConfig, JsonRpcProvider, WalletProvider } from '@aztec/blockchain';
+import { ConnectionOptions } from 'typeorm';
+import { Configurator, ConfVars } from './configurator';
+import { AccountDao } from './entity/account';
+import { AssetMetricsDao } from './entity/asset_metrics';
+import { ClaimDao } from './entity/claim';
 import { RollupDao } from './entity/rollup';
 import { RollupProofDao } from './entity/rollup_proof';
 import { TxDao } from './entity/tx';
-import { ConnectionOptions } from 'typeorm';
-import { AccountDao } from './entity/account';
-import { ClaimDao } from './entity/claim';
-import { AssetMetricsDao } from './entity/asset_metrics';
-import { Configurator, ConfVars } from './configurator';
-import { EthereumRpc } from '@aztec/barretenberg/blockchain';
 
 function getEthereumBlockchainConfig({
   runtimeConfig: { gasLimit },
@@ -59,6 +59,7 @@ function getOrmConfig(dbUrl?: string, logging = false): ConnectionOptions {
   }
 }
 
+/* We might want these back for mainnet launch.
 function generateBridgeId(id: number, inputAsset: number, outputAsset: number, aux: number) {
   return new BridgeId(id, inputAsset, outputAsset, 0, 0, BitConfig.EMPTY, aux);
 }
@@ -99,6 +100,7 @@ function generateBridgeIds(numTxs: number, fee: number, rollupFrequency: number)
     }),
   ];
 }
+*/
 
 function getPerChainBridgeConfig(chainId: number) {
   const perChainBridgeConfig: { [key: string]: any[] } = {

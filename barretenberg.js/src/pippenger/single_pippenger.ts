@@ -11,7 +11,7 @@ export class SinglePippenger implements Pippenger {
   public async init(crsData: Uint8Array) {
     const crsPtr = await this.wasm.call('bbmalloc', crsData.length);
     this.numPoints = crsData.length / 64;
-    this.wasm.transferToHeap(crsData, crsPtr);
+    await this.wasm.transferToHeap(crsData, crsPtr);
     this.pippengerPtr = await this.wasm.call('new_pippenger', crsPtr, this.numPoints);
     await this.wasm.call('bbfree', crsPtr);
   }

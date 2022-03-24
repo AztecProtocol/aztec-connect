@@ -4,7 +4,7 @@ import { AssetValue } from '@aztec/barretenberg/asset';
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { ClientEthereumBlockchain } from '@aztec/blockchain';
-import { CoreSdk } from '../core_sdk/core_sdk';
+import { CoreSdkInterface } from '../core_sdk';
 import { CorePaymentTx, createCorePaymentTxForRecipient } from '../core_tx';
 import { ProofOutput } from '../proofs';
 import { Signer } from '../signer';
@@ -12,7 +12,6 @@ import { createTxRefNo } from './create_tx_ref_no';
 import { DepositController } from './deposit_controller';
 
 export class RegisterController {
-  private readonly userSigner: Signer;
   private readonly newUserId: AccountId;
   private depositController?: DepositController;
   private proofOutput!: ProofOutput;
@@ -20,13 +19,14 @@ export class RegisterController {
 
   constructor(
     public readonly userId: AccountId,
+    private readonly userSigner: Signer,
     public readonly alias: string,
     public readonly signingPublicKey: GrumpkinAddress,
     public readonly recoveryPublicKey: GrumpkinAddress | undefined,
     public readonly deposit: AssetValue,
     public readonly fee: AssetValue,
     public readonly depositor: EthAddress,
-    private readonly core: CoreSdk,
+    private readonly core: CoreSdkInterface,
     blockchain: ClientEthereumBlockchain,
     provider: EthereumProvider,
   ) {
@@ -38,9 +38,7 @@ export class RegisterController {
       throw new Error('Inconsistent asset ids.');
     }
 
-    const { publicKey, privateKey } = this.core.getUserData(this.userId);
-    this.userSigner = this.core.createSchnorrSigner(privateKey);
-    this.newUserId = new AccountId(publicKey, 1);
+    this.newUserId = new AccountId(userId.publicKey, 1);
 
     if (deposit.value || fee.value) {
       this.depositController = new DepositController(
@@ -90,19 +88,21 @@ export class RegisterController {
   }
 
   async createProof() {
-    const aliasHash = this.core.computeAliasHash(this.alias);
+    const aliasHash = await this.core.computeAliasHash(this.alias);
     const txRefNo = this.depositController ? createTxRefNo() : 0;
+    const signingPublicKey = this.userSigner.getPublicKey();
 
-    this.proofOutput = await this.core.createAccountProof(
+    const proofInput = await this.core.createAccountProofInput(
       this.userId,
-      this.userSigner,
       aliasHash,
       true,
+      signingPublicKey,
       this.signingPublicKey,
       this.recoveryPublicKey,
       undefined,
-      txRefNo,
     );
+    proofInput.signature = await this.userSigner.signMessage(proofInput.signingData);
+    this.proofOutput = await this.core.createAccountProof(proofInput, txRefNo);
 
     if (this.depositController) {
       await this.depositController.createProof(txRefNo);

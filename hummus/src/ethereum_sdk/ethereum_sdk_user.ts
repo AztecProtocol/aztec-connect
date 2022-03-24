@@ -4,7 +4,7 @@ import { EthereumSdk } from '.';
 export class EthereumSdkUser {
   constructor(private address: EthAddress, private accountId: AccountId, private sdk: EthereumSdk) {}
 
-  isSynching() {
+  async isSynching() {
     return this.sdk.isUserSynching(this.accountId);
   }
 
@@ -12,15 +12,15 @@ export class EthereumSdkUser {
     return this.sdk.awaitUserSynchronised(this.accountId);
   }
 
-  getUserData() {
+  async getUserData() {
     return this.sdk.getUserData(this.accountId);
   }
 
-  getBalance(assetId: number) {
+  async getBalance(assetId: number) {
     return this.sdk.getBalance(assetId, this.accountId);
   }
 
-  remove() {
+  async remove() {
     return this.sdk.removeUser(this.address, this.accountId);
   }
 

@@ -1,11 +1,11 @@
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
+import { randomBytes } from '@aztec/barretenberg/crypto';
 import { DefiInteractionNote, TreeClaimNote } from '@aztec/barretenberg/note_algorithms';
 import { OffchainDefiClaimData } from '@aztec/barretenberg/offchain_tx_data';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
-import { randomBytes } from 'crypto';
 import { ClaimProof, ClaimProofRequest, ProofGenerator } from 'halloumi/proof_generator';
 import { ClaimDao } from './entity/claim';
 import { TxDao } from './entity/tx';

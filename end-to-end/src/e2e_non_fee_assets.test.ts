@@ -1,7 +1,8 @@
+import { getTokenBalance, MainnetAddresses, TokenStore } from '@aztec/blockchain';
 import {
   AccountId,
   AztecSdk,
-  createAztecSdk,
+  createNodeAztecSdk,
   DepositController,
   EthAddress,
   toBaseUnits,
@@ -12,7 +13,6 @@ import {
 } from '@aztec/sdk';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
-import { TokenStore, getTokenBalance, MainnetAddresses } from '@aztec/blockchain';
 import { depositTokensToAztec, sendTokens, withdrawTokens } from './sdk_utils';
 
 jest.setTimeout(5 * 60 * 1000);
@@ -42,16 +42,14 @@ describe('end-to-end async defi tests', () => {
     provider = await createFundedWalletProvider(ETHEREUM_HOST, 2, undefined, undefined, ethDepositedToUsersAccount);
     accounts = provider.getAccounts();
 
-    sdk = await createAztecSdk(provider, ROLLUP_HOST, {
-      syncInstances: false,
+    sdk = await createNodeAztecSdk(provider, {
+      serverUrl: ROLLUP_HOST,
       pollInterval: 1000,
-      saveProvingKey: false,
-      clearDb: true,
       memoryDb: true,
       minConfirmation: 1,
       minConfirmationEHW: 1,
     });
-    await sdk.init();
+    await sdk.run();
     await sdk.awaitSynchronised();
 
     for (let i = 0; i < accounts.length; i++) {
@@ -79,7 +77,7 @@ describe('end-to-end async defi tests', () => {
     const depositControllers: DepositController[] = [];
     for (let i = 0; i < accounts.length; i++) {
       const depositor = accounts[i];
-      const signer = sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
+      const signer = await sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
       // flush this transaction through by paying for all the slots in the rollup
       const fee = (await sdk.getDepositFees(ethAssetId))[
         i == accounts.length - 1 ? TxSettlementTime.INSTANT : TxSettlementTime.NEXT_ROLLUP
@@ -95,8 +93,8 @@ describe('end-to-end async defi tests', () => {
     await Promise.all(depositControllers.map(controller => controller.send()));
     await Promise.all(depositControllers.map(controller => controller.awaitSettlement(awaitSettlementTimeout)));
 
-    expect(sdk.getBalance(ethAssetId, user1)).toEqual(expectedUser0EthBalance);
-    expect(sdk.getBalance(ethAssetId, user2)).toEqual(expectedUser1EthBalance);
+    expect(await sdk.getBalance(ethAssetId, user1)).toEqual(expectedUser0EthBalance);
+    expect(await sdk.getBalance(ethAssetId, user2)).toEqual(expectedUser1EthBalance);
 
     // user 0 purchases some DAI and USDC and deposits it into the system
     const usersEthereumAddress = accounts[0];
@@ -141,9 +139,9 @@ describe('end-to-end async defi tests', () => {
 
     expectedUser0EthBalance -= (await sdk.getDepositFees(daiAssetId))[TxSettlementTime.NEXT_ROLLUP].value;
     expectedUser0EthBalance -= (await sdk.getDepositFees(usdcAssetId))[TxSettlementTime.INSTANT].value;
-    expect(sdk.getBalance(ethAssetId, user1)).toEqual(expectedUser0EthBalance);
-    expect(sdk.getBalance(daiAssetId, user1)).toEqual(daiQuantityPurchased);
-    expect(sdk.getBalance(usdcAssetId, user1)).toEqual(usdcQuantityPurchased);
+    expect(await sdk.getBalance(ethAssetId, user1)).toEqual(expectedUser0EthBalance);
+    expect(await sdk.getBalance(daiAssetId, user1)).toEqual(daiQuantityPurchased);
+    expect(await sdk.getBalance(usdcAssetId, user1)).toEqual(usdcQuantityPurchased);
 
     // now user 0 transfers all their DAI and USDC to user 1
     const daiTransferController = await sendTokens(
@@ -168,11 +166,11 @@ describe('end-to-end async defi tests', () => {
     // check the new balances
     expectedUser0EthBalance -= (await sdk.getTransferFees(daiAssetId))[TxSettlementTime.NEXT_ROLLUP].value;
     expectedUser0EthBalance -= (await sdk.getTransferFees(usdcAssetId))[TxSettlementTime.INSTANT].value;
-    expect(sdk.getBalance(ethAssetId, user1)).toEqual(expectedUser0EthBalance);
-    expect(sdk.getBalance(daiAssetId, user2)).toEqual(daiQuantityPurchased);
-    expect(sdk.getBalance(usdcAssetId, user2)).toEqual(usdcQuantityPurchased);
-    expect(sdk.getBalance(daiAssetId, user1)).toEqual(0n);
-    expect(sdk.getBalance(usdcAssetId, user1)).toEqual(0n);
+    expect(await sdk.getBalance(ethAssetId, user1)).toEqual(expectedUser0EthBalance);
+    expect(await sdk.getBalance(daiAssetId, user2)).toEqual(daiQuantityPurchased);
+    expect(await sdk.getBalance(usdcAssetId, user2)).toEqual(usdcQuantityPurchased);
+    expect(await sdk.getBalance(daiAssetId, user1)).toEqual(0n);
+    expect(await sdk.getBalance(usdcAssetId, user1)).toEqual(0n);
 
     // now user 1 withdraws both assets to a wallet
     const daiWithdrawController = await withdrawTokens(
@@ -197,11 +195,11 @@ describe('end-to-end async defi tests', () => {
     //check the new balances
     expectedUser1EthBalance -= (await sdk.getWithdrawFees(daiAssetId))[TxSettlementTime.NEXT_ROLLUP].value;
     expectedUser1EthBalance -= (await sdk.getWithdrawFees(usdcAssetId))[TxSettlementTime.INSTANT].value;
-    expect(sdk.getBalance(ethAssetId, user2)).toEqual(expectedUser1EthBalance);
-    expect(sdk.getBalance(daiAssetId, user2)).toEqual(0n);
-    expect(sdk.getBalance(usdcAssetId, user2)).toEqual(0n);
-    expect(sdk.getBalance(daiAssetId, user1)).toEqual(0n);
-    expect(sdk.getBalance(usdcAssetId, user1)).toEqual(0n);
+    expect(await sdk.getBalance(ethAssetId, user2)).toEqual(expectedUser1EthBalance);
+    expect(await sdk.getBalance(daiAssetId, user2)).toEqual(0n);
+    expect(await sdk.getBalance(usdcAssetId, user2)).toEqual(0n);
+    expect(await sdk.getBalance(daiAssetId, user1)).toEqual(0n);
+    expect(await sdk.getBalance(usdcAssetId, user1)).toEqual(0n);
     expect(await getTokenBalance(daiEthAddress, accounts[1], provider)).toEqual(daiQuantityPurchased);
     expect(await getTokenBalance(usdcEthAddress, accounts[1], provider)).toEqual(usdcQuantityPurchased);
   });

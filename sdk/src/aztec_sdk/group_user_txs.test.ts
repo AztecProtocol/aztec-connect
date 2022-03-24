@@ -424,7 +424,14 @@ describe('groupUserTxs', () => {
     });
 
     it('recover settled defi tx', () => {
-      const defiTx = randomCoreDefiTx({ bridgeId, result: true, outputValueA: 123n, settled: new Date() });
+      const defiTx = randomCoreDefiTx({
+        bridgeId,
+        result: true,
+        outputValueA: 123n,
+        settled: new Date(),
+        interactionNonce: 45,
+        isAsync: false,
+      });
       expect(groupUserTxs([defiTx], feePayingAssetIds)).toEqual([
         new UserDefiTx(
           defiTx.txId,
@@ -437,6 +444,8 @@ describe('groupUserTxs', () => {
           true,
           defiTx.created,
           defiTx.settled,
+          45,
+          false,
         ),
       ]);
     });

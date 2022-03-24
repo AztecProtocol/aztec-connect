@@ -250,7 +250,8 @@ class DexieDefiTx implements DexieUserTx {
     public created: Date,
     public result: boolean | undefined,
     public settled: number,
-    public interactionNonce?: number
+    public interactionNonce?: number,
+    public isAsync?: boolean,
   ) {}
 }
 
@@ -269,7 +270,8 @@ const toDexieDefiTx = (tx: CoreDefiTx) =>
     tx.created,
     tx.result,
     tx.settled ? tx.settled.getTime() : 0,
-    tx.interactionNonce
+    tx.interactionNonce,
+    tx.isAsync,
   );
 
 const fromDexieDefiTx = ({
@@ -286,6 +288,7 @@ const fromDexieDefiTx = ({
   result,
   settled,
   interactionNonce,
+  isAsync,
 }: DexieDefiTx) =>
   new CoreDefiTx(
     new TxId(Buffer.from(txId)),
@@ -300,7 +303,8 @@ const fromDexieDefiTx = ({
     BigInt(outputValueB),
     result,
     settled ? new Date(settled) : undefined,
-    interactionNonce
+    interactionNonce,
+    isAsync,
   );
 
 class DexieClaimTx {
@@ -552,13 +556,13 @@ export class DexieDatabase implements Database {
       .where({ userId: new Uint8Array(userId.toBuffer()), proofId: ProofId.DEFI_DEPOSIT, interactionNonce })
       .reverse()
       .sortBy('settled')) as DexieDefiTx[];
-      return (sortUserTxs(txs) as DexieDefiTx[]).map(fromDexieDefiTx);
+    return (sortUserTxs(txs) as DexieDefiTx[]).map(fromDexieDefiTx);
   }
 
-  async updateDefiTxWithNonce(txId: TxId, interactionNonce: number): Promise<void> {
+  async updateDefiTxWithNonce(txId: TxId, interactionNonce: number, isAsync: boolean) {
     await this.userTx
       .where({ txId: new Uint8Array(txId.toBuffer()), proofId: ProofId.DEFI_DEPOSIT })
-      .modify({ interactionNonce });
+      .modify({ interactionNonce, isAsync });
   }
 
   async updateDefiTx(txId: TxId, outputValueA: bigint, outputValueB: bigint, result: boolean) {

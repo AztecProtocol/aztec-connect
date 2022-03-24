@@ -19,6 +19,55 @@ export class CoreDefiTx {
     public readonly outputValueB = BigInt(0),
     public readonly result?: boolean,
     public readonly settled?: Date,
-    public readonly interactionNonce?: number
+    public readonly interactionNonce?: number,
+    public readonly isAsync?: boolean,
   ) {}
 }
+
+export interface CoreDefiTxJson {
+  proofId: number;
+  txId: string;
+  userId: string;
+  bridgeId: string;
+  depositValue: string;
+  txFee: string;
+  partialStateSecret: string;
+  txRefNo: number;
+  created: Date;
+  outputValueA: string;
+  outputValueB: string;
+  result?: boolean;
+  settled?: Date;
+  interactionNonce?: number;
+  isAsync?: boolean;
+}
+
+export const coreDefiTxToJson = (tx: CoreDefiTx): CoreDefiTxJson => ({
+  ...tx,
+  txId: tx.txId.toString(),
+  userId: tx.userId.toString(),
+  bridgeId: tx.bridgeId.toString(),
+  depositValue: tx.depositValue.toString(),
+  txFee: tx.txFee.toString(),
+  partialStateSecret: tx.partialStateSecret.toString('hex'),
+  outputValueA: tx.outputValueA.toString(),
+  outputValueB: tx.outputValueB.toString(),
+});
+
+export const coreDefiTxFromJson = (json: CoreDefiTxJson) =>
+  new CoreDefiTx(
+    TxId.fromString(json.txId),
+    AccountId.fromString(json.userId),
+    BridgeId.fromString(json.bridgeId),
+    BigInt(json.depositValue),
+    BigInt(json.txFee),
+    Buffer.from(json.partialStateSecret, 'hex'),
+    json.txRefNo,
+    json.created,
+    BigInt(json.outputValueA),
+    BigInt(json.outputValueB),
+    json.result,
+    json.settled,
+    json.interactionNonce,
+    json.isAsync,
+  );

@@ -5,16 +5,29 @@ import { CoreAccountTx, CoreClaimTx, CoreDefiTx, CorePaymentTx, CoreUserTx } fro
 import { Note } from '../note';
 import { UserData } from '../user';
 
-export interface SigningKey {
-  accountId: AccountId;
-  key: Buffer; // only contains x coordinate of a grumpkin address.
-  treeIndex: number;
+// export interface SigningKey {
+//   accountId: AccountId;
+//   key: Buffer; // only contains x coordinate of a grumpkin address.
+//   treeIndex: number;
+// }
+
+// export interface Alias {
+//   aliasHash: AliasHash;
+//   address: GrumpkinAddress;
+//   latestNonce: number;
+// }
+
+// Temporary workaround. Parcel can't find Alias and SigningKey if they are declared as interfaces :/
+export class SigningKey {
+  constructor(
+    public accountId: AccountId,
+    public key: Buffer, // only contains x coordinate of a grumpkin address.
+    public treeIndex: number,
+  ) {}
 }
 
-export interface Alias {
-  aliasHash: AliasHash;
-  address: GrumpkinAddress;
-  latestNonce: number;
+export class Alias {
+  constructor(public aliasHash: AliasHash, public address: GrumpkinAddress, public latestNonce: number) {}
 }
 
 export interface Database {
@@ -48,7 +61,7 @@ export interface Database {
   settleAccountTx(txId: TxId, settled: Date): Promise<void>;
 
   getDefiTxsByNonce(userId, interactionNonce: number): Promise<CoreDefiTx[]>;
-  updateDefiTxWithNonce(txId: TxId, interactionNonce: number): Promise<void>;
+  updateDefiTxWithNonce(txId: TxId, interactionNonce: number, isAsync: boolean): Promise<void>;
   updateDefiTx(txId: TxId, outputValueA: bigint, outputValueB: bigint, result?: boolean): Promise<void>;
   addDefiTx(tx: CoreDefiTx): Promise<void>;
   getDefiTx(txId: TxId): Promise<CoreDefiTx | undefined>;

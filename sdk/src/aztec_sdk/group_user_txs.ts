@@ -19,7 +19,19 @@ const toUserPaymentTx = (
 };
 
 const toUserDefiTx = (
-  { txId, userId, bridgeId, depositValue, outputValueA, outputValueB, result, created, settled }: CoreDefiTx,
+  {
+    txId,
+    userId,
+    bridgeId,
+    depositValue,
+    outputValueA,
+    outputValueB,
+    result,
+    created,
+    settled,
+    interactionNonce,
+    isAsync,
+  }: CoreDefiTx,
   fee: AssetValue,
 ) =>
   new UserDefiTx(
@@ -33,6 +45,8 @@ const toUserDefiTx = (
     result,
     created,
     settled,
+    interactionNonce,
+    isAsync,
   );
 
 const getPaymentValue = ({
