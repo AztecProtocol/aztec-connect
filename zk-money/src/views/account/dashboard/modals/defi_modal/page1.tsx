@@ -54,7 +54,7 @@ Page1Props) {
   return (
     <Root>
       <div />
-      <ProgressSection />
+      <ProgressSection recipe={recipe} />
       <DescriptionSection text={recipe.longDescription} />
       <AmountSection
         maxAmount={validationResult.maxOutput ?? 0n}
@@ -69,8 +69,8 @@ Page1Props) {
         type={GasSectionType.DEFI}
         speed={fields.speed as DefiSettlementTime}
         onChangeSpeed={speed => onChangeSpeed(speed as DefiSettlementTime)}
-        asset={validationResult.input.feeAmount?.info}
-        fee={validationResult.input.feeAmount?.baseUnits}
+        feeAmount={validationResult.input.feeAmount}
+        recipe={recipe}
       />
       <FaqHint className={style.faqHint} />
       <NextWrapper>

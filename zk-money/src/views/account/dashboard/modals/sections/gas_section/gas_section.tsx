@@ -1,11 +1,14 @@
-import type { RemoteAsset } from 'alt-model/types';
 import { useState } from 'react';
 import { DefiSettlementTime, TxSettlementTime } from '@aztec/sdk';
 import { SpeedSwitch, InfoWrap } from 'ui-components';
 import { BlockTitle, BorderBox, InfoButton, Text } from 'components';
-import { useAssetPrice } from 'alt-model';
-import { convertToPriceString } from 'app';
+import { useAmountCost } from 'alt-model';
+import { formatCost } from 'app';
 import style from './gas_section.module.scss';
+import { DefiGasSavings } from './def_gas_savings';
+import { Amount } from 'alt-model/assets';
+import { DefiRecipe } from 'alt-model/defi/types';
+import { DefiRollupTiming } from './defi_rollup_timing';
 
 function Info() {
   return (
@@ -22,15 +25,6 @@ function Info() {
   );
 }
 
-function getTimingMessage(speed: DefiSettlementTime | TxSettlementTime) {
-  switch (speed) {
-    case DefiSettlementTime.NEXT_ROLLUP:
-      return 'This transaction will be sent in a batch in [TODO] hours time.';
-    default:
-      return '[TODO: Some info about time]';
-  }
-}
-
 export enum GasSectionType {
   DEFI = 'DEFI',
   TX = 'TX',
@@ -40,8 +34,8 @@ interface GasSectionProps {
   type: GasSectionType;
   speed: DefiSettlementTime | TxSettlementTime;
   onChangeSpeed: (speed: DefiSettlementTime | TxSettlementTime) => void;
-  asset?: RemoteAsset;
-  fee: bigint | undefined;
+  feeAmount?: Amount;
+  recipe?: DefiRecipe;
 }
 
 interface DefiOption {
@@ -65,21 +59,20 @@ const TX_OPTIONS: TxOption[] = [
   { value: TxSettlementTime.NEXT_ROLLUP, label: 'Next Rollup' },
 ];
 
-export function GasSection(props: GasSectionProps) {
-  const assetPrice = useAssetPrice(props.asset?.id);
+export function GasSection({ type, speed, onChangeSpeed, feeAmount, recipe }: GasSectionProps) {
   const [showingInfo, setShowingInfo] = useState(false);
-  const gasPrice =
-    props.fee !== undefined &&
-    props.asset !== undefined &&
-    assetPrice !== undefined &&
-    `$${convertToPriceString(props.fee, props.asset.decimals, assetPrice)}`;
+  const feeCost = useAmountCost(feeAmount);
+  const feeCostStr = feeCost !== undefined ? `$${formatCost(feeCost)}` : undefined;
 
   let options: DefiOption[] | TxOption[] = DEFI_OPTIONS;
-  if (props.type === GasSectionType.DEFI) {
+  if (type === GasSectionType.DEFI) {
     options = DEFI_OPTIONS;
-  } else if (props.type === GasSectionType.TX) {
+  } else if (type === GasSectionType.TX) {
     options = TX_OPTIONS;
   }
+
+  const shouldShowDefiBatchingInfo =
+    type === GasSectionType.DEFI && speed === DefiSettlementTime.DEADLINE && recipe !== undefined;
 
   return (
     <BorderBox className={style.gasSection} area="fee">
@@ -95,22 +88,23 @@ export function GasSection(props: GasSectionProps) {
             title="Gas Fee"
             info={
               <Text weight="bold" italic>
-                {gasPrice}
+                {feeCostStr}
               </Text>
             }
           />
           <div className={style.header} />
-          <SpeedSwitch value={props.speed} onChangeValue={props.onChangeSpeed} options={options} />
+          <SpeedSwitch value={speed} onChangeValue={onChangeSpeed} options={options} />
           <div className={style.centeredText}>
-            <Text text={getTimingMessage(props.speed)} size="xxs" color="grey" />
-            <Text size="xxs">
-              You're saving{' '}
-              <b>
-                <i>[TODO:??]</i>
-              </b>{' '}
-              compared to L1!
-            </Text>
-            <Text size="xxs">[TODO:??] other people did this in the last hour</Text>
+            {shouldShowDefiBatchingInfo && (
+              <Text size="xxs" color="grey">
+                <DefiRollupTiming recipe={recipe} />
+              </Text>
+            )}
+            {shouldShowDefiBatchingInfo && (
+              <Text size="xxs">
+                <DefiGasSavings feeAmount={feeAmount} bridgeAddressId={recipe.addressId} />
+              </Text>
+            )}
           </div>
           <InfoButton className={style.positionedInfoButton} onClick={() => setShowingInfo(true)} />
         </div>

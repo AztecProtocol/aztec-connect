@@ -13,8 +13,7 @@ interface DefiModalProps {
 }
 
 export function DefiModal({ recipe, onClose }: DefiModalProps) {
-  const enterBridgeId = recipe.bridgeFlow.enter;
-  const defiForm = useDefiForm(enterBridgeId);
+  const defiForm = useDefiForm(recipe);
   const { fields, setters, validationResult, feedback, composerState, submit, attemptLock, locked, unlock } = defiForm;
 
   const phase = composerState?.phase;

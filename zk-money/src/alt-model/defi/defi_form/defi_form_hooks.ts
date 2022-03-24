@@ -1,5 +1,5 @@
 import createDebug from 'debug';
-import { BridgeId, DefiSettlementTime } from '@aztec/sdk';
+import { DefiSettlementTime } from '@aztec/sdk';
 import { useBalance } from 'alt-model';
 import { useAmountFactory, useInitialisedSdk } from 'alt-model/top_level_context';
 import { useState } from 'react';
@@ -13,10 +13,13 @@ import { useMaybeObs } from 'app/util';
 import { isKnownAssetAddressString } from 'alt-model/known_assets/known_asset_addresses';
 import { useDefiFeeAmount } from './defi-fee-hooks';
 import { useAwaitCorrectProvider } from './correct_provider_hooks';
+import { DefiRecipe } from '../types';
+import { Amount } from 'alt-model/assets';
+import { useDefaultBridgeId } from '../defi_info_hooks';
 
 const debug = createDebug('zm:defi_form_hooks');
 
-export function useDefiForm(bridgeId: BridgeId) {
+export function useDefiForm(recipe: DefiRecipe) {
   const { accountId, config } = useApp();
   const [fields, setFields] = useState<DefiFormFields>({
     amountStr: '',
@@ -29,7 +32,8 @@ export function useDefiForm(bridgeId: BridgeId) {
   const sdk = useInitialisedSdk();
   const awaitCorrectProvider = useAwaitCorrectProvider();
   const amountFactory = useAmountFactory();
-  const targetOutputAmount = amountFactory?.from(bridgeId.inputAssetIdA, fields.amountStr);
+  const targetOutputAmount = Amount.from(fields.amountStr, recipe.inputAssetA);
+  const bridgeId = useDefaultBridgeId(recipe);
   const feeAmount = useDefiFeeAmount(bridgeId, fields.speed);
   const balanceInTargetAsset = useBalance(targetOutputAmount?.id);
   const balanceInFeePayingAsset = useBalance(feeAmount?.id);
@@ -60,12 +64,13 @@ export function useDefiForm(bridgeId: BridgeId) {
       debug('Attempted to recreate DefiComposer');
       return;
     }
-    if (!validationResult.validPayload || !sdk || !awaitCorrectProvider || !accountId) {
+    if (!validationResult.validPayload || !sdk || !awaitCorrectProvider || !accountId || !bridgeId) {
       debug('Attempted to create DefiComposer with incomplete dependencies', {
         validationResult,
         sdk,
         awaitCorrectProvider,
         accountId,
+        bridgeId,
       });
       return;
     }

@@ -80,8 +80,7 @@ export function ShieldPage1({
         type={GasSectionType.TX}
         speed={fields.speed}
         onChangeSpeed={speed => onChangeSpeed(speed as TxSettlementTime)}
-        asset={asset}
-        fee={validationResult.input.feeAmount?.baseUnits}
+        feeAmount={validationResult.input.feeAmount}
       />
       {feedback.footer && <div className={style.errorMessage}>{feedback.footer}</div>}
       <div className={style.nextWrapper}>

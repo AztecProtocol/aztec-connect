@@ -65,3 +65,7 @@ export const convertToPriceString = (
 
 export const convertPriceToString = (price: bigint, priceDecimals = PRICE_DECIMALS, precision = 2) =>
   formatBaseUnits(price, priceDecimals, { precision, commaSeparated: true });
+
+export function formatCost(baseUnits: bigint) {
+  return formatBaseUnits(baseUnits, PRICE_DECIMALS, { precision: 2 });
+}

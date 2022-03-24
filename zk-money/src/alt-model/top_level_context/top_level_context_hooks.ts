@@ -34,6 +34,11 @@ export function usePriceFeedObsCache() {
   return useTopLevelContext().priceFeedObsCache;
 }
 
+export function useGasPrice() {
+  const { gasPriceObs } = useTopLevelContext();
+  return useObs(gasPriceObs);
+}
+
 export function useBridgeDataAdaptorsMethodCaches() {
   return useTopLevelContext().bridgeDataAdaptorsMethodCaches;
 }

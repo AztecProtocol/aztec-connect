@@ -45,7 +45,7 @@ export const DefiCardContent = (props: DefiCardContentProps) => {
       <div className={style.defiCardContentWrapper}>
         <DefiCardDescription onOpenInformation={handleOpenInformation} text={props.recipe.shortDesc} />
         <DefiCardStats recipe={props.recipe} />
-        <DefiCardProgress />
+        <DefiCardProgress recipe={props.recipe} />
         <Button
           className={cx(style.defiCardButton, !props.isLoggedIn && style.disabledButton)}
           theme="gradient"

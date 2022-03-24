@@ -11,6 +11,7 @@ import { SendProgress } from './send_progress';
 import { FaqHint } from 'ui-components';
 import { DescriptionSection, RecipientSection } from '../sections';
 import style from './send.module.scss';
+import { Amount } from 'alt-model/assets';
 
 interface SendFormFields {
   amountStr: string;
@@ -139,8 +140,7 @@ export const Send: React.FunctionComponent<SendProps> = ({
         type={GasSectionType.TX}
         speed={fields.speed as TxSettlementTime}
         onChangeSpeed={speed => setFields({ ...fields, speed: speed as TxSettlementTime })}
-        asset={asset}
-        fee={txFee.fee}
+        feeAmount={new Amount(txFee.fee, asset)}
       />
       <FaqHint className={style.faqHint} />
       <NextWrapper>

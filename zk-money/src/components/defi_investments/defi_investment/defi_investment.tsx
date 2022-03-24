@@ -6,10 +6,12 @@ import { Button } from '../..';
 import { DefiPosition } from 'alt-model/defi/open_position_hooks';
 import { useAssetInfo } from 'alt-model/asset_hooks';
 import { formatBaseUnits } from 'app';
-import { BridgeDataAdaptor } from 'alt-model/defi/bridge_data_adaptors/types';
 import { DefiInvestmentType, DefiRecipe } from 'alt-model/defi/types';
-import { useBridgeDataAdaptor, useExpectedOutput, useExpectedYield } from 'alt-model/defi/defi_info_hooks';
-import { BridgeId } from '@aztec/sdk';
+import {
+  useBridgeDataAdaptor,
+  useDefaultExpectedOutput,
+  useDefaultExpectedYield,
+} from 'alt-model/defi/defi_info_hooks';
 
 const S = {
   InvestmentWrapper: styled.div`
@@ -107,7 +109,7 @@ const S = {
 const percentageFormatter = new Intl.NumberFormat('en-GB', { style: 'percent', maximumFractionDigits: 1 });
 
 function ApyInfo({ recipe }: { recipe: DefiRecipe }) {
-  const expectedYield = useExpectedYield(recipe);
+  const expectedYield = useDefaultExpectedYield(recipe);
   const yieldStr = expectedYield !== undefined ? percentageFormatter.format(expectedYield) : '??';
   if (recipe.investmentType === DefiInvestmentType.FIXED_YIELD) {
     return <S.APYRate>Fixed: {yieldStr} APY</S.APYRate>;
@@ -119,17 +121,9 @@ interface DefiInvestmentProps {
   position: DefiPosition;
 }
 
-function AmountInfo({
-  bridgeId,
-  dataAdaptor,
-  inputValue,
-}: {
-  bridgeId: BridgeId;
-  dataAdaptor: BridgeDataAdaptor;
-  inputValue: bigint;
-}) {
-  const output = useExpectedOutput(dataAdaptor, bridgeId, inputValue);
-  const asset = useAssetInfo(bridgeId.outputAssetIdA);
+function AmountInfo({ recipe, inputValue }: { recipe: DefiRecipe; inputValue: bigint }) {
+  const output = useDefaultExpectedOutput(recipe, inputValue);
+  const asset = useAssetInfo(recipe.outputAssetA.id);
   const valueStr =
     asset === 'loading' || output === undefined
       ? '⌛'
@@ -141,7 +135,6 @@ function AmountInfo({
 
 export function DefiInvestment({ position }: DefiInvestmentProps) {
   const { recipe, assetValue } = position;
-  const { bridgeFlow } = recipe;
   const dataAdaptor = useBridgeDataAdaptor(recipe.id);
 
   const eta = undefined;
@@ -178,8 +171,8 @@ export function DefiInvestment({ position }: DefiInvestmentProps) {
       </S.Name>
       <S.Values>
         {dataAdaptor?.isYield && <ApyInfo recipe={recipe} />}
-        {dataAdaptor?.isAsync === false && bridgeFlow.type === 'closable' && (
-          <AmountInfo bridgeId={bridgeFlow.exit} dataAdaptor={dataAdaptor} inputValue={assetValue.value} />
+        {dataAdaptor?.isAsync === false && recipe.closable && (
+          <AmountInfo recipe={recipe} inputValue={assetValue.value} />
         )}
       </S.Values>
       <S.Actions>{actions}</S.Actions>

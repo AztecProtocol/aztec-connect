@@ -1,6 +1,14 @@
 import { BaseObs } from './base_obs';
 import { IObs, ObsUnlisten } from './types';
 
+function arrEqual<T>(arr1: T[], arr2: T[]) {
+  if (arr1.length !== arr2.length) return false;
+  for (let i = 0; i < arr1.length; i++) {
+    if (arr1[i] !== arr2[i]) return false;
+  }
+  return true;
+}
+
 export type ObsTuple<TValues> = { [K in keyof TValues]: IObs<TValues[K]> };
 
 export class CombinerObs<TValues extends unknown[]> extends BaseObs<TValues> {
@@ -9,7 +17,10 @@ export class CombinerObs<TValues extends unknown[]> extends BaseObs<TValues> {
     super(deps.map(obs => obs.value) as unknown as TValues);
   }
   private refresh = () => {
-    this.setAndEmit(this.deps.map(obs => obs.value) as unknown as TValues);
+    const nextValue = this.deps.map(obs => obs.value) as unknown as TValues;
+    if (!arrEqual(nextValue, this.value)) {
+      this.setAndEmit(nextValue);
+    }
   };
   protected didReceiveFirstListener() {
     this.refresh();

@@ -5,6 +5,7 @@ import type { SdkObs } from './sdk_obs';
 import type { DefiRecipesObs } from 'alt-model/defi/recipes';
 import type { RemoteAssetsObs } from './remote_assets_obs';
 import type { PriceFeedObsCache } from 'alt-model/price_feeds';
+import type { GasPriceObs } from 'alt-model/gas/gas_price_obs';
 import type { AmountFactoryObs } from 'alt-model/assets/amount_factory_obs';
 import { createContext, useContext } from 'react';
 
@@ -15,6 +16,7 @@ export interface TopLevelContextValue {
   remoteAssetsObs: RemoteAssetsObs;
   amountFactoryObs: AmountFactoryObs;
   priceFeedObsCache: PriceFeedObsCache;
+  gasPriceObs: GasPriceObs;
   bridgeDataAdaptorsMethodCaches: BridgeDataAdaptorsMethodCaches;
   defiRecipesObs: DefiRecipesObs;
 }

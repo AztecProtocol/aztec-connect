@@ -1,4 +1,5 @@
-import { BlockchainAsset, BridgeId, EthAddress } from '@aztec/sdk';
+import { BlockchainAsset, EthAddress } from '@aztec/sdk';
+import { DefiRecipe } from '../types';
 import { AztecAsset, AztecAssetType } from './bridge_data_interface';
 
 const ZERO_ADDRESS_STR = EthAddress.ZERO.toString();
@@ -43,28 +44,12 @@ function toAdaptorAsset(assets: BlockchainAsset[], assetId: number, isVirtual: b
   else return UNUSED_ASSET;
 }
 
-export function toAdaptorArgs(assets: BlockchainAsset[], bridgeId: BridgeId) {
-  const {
-    inputAssetIdA: inA,
-    inputAssetIdB: inB,
-    outputAssetIdA: outA,
-    outputAssetIdB: outB,
-    bitConfig,
-    auxData,
-  } = bridgeId;
-  const {
-    firstInputVirtual: inAVirt,
-    secondInputVirtual: inBVirt,
-    firstOutputVirtual: outAVirt,
-    secondOutputVirtual: outBVirt,
-    secondInputReal: inBReal,
-    secondOutputReal: outBReal,
-  } = bitConfig;
+export function toAdaptorArgs(assets: BlockchainAsset[], recipe: DefiRecipe) {
+  // TODO: handle more complex asset combos
   return {
-    inA: toAdaptorAsset(assets, inA, inAVirt, true),
-    inB: toAdaptorAsset(assets, inB, inBVirt, inBReal),
-    outA: toAdaptorAsset(assets, outA, outAVirt, true),
-    outB: toAdaptorAsset(assets, outB, outBVirt, outBReal),
-    aux: BigInt(auxData),
+    inA: toAdaptorAsset(assets, recipe.inputAssetA.id, false, true),
+    inB: toAdaptorAsset(assets, 0, false, false),
+    outA: toAdaptorAsset(assets, recipe.outputAssetA.id, false, true),
+    outB: toAdaptorAsset(assets, 0, false, false),
   };
 }

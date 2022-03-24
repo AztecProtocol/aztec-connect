@@ -3,6 +3,7 @@ import { convertToPrice } from 'app';
 import { Obs, useMaybeObs } from 'app/util';
 import { mapToObj } from 'app/util/objects';
 import { useMemo } from 'react';
+import { Amount } from './assets';
 import { useRollupProviderStatus } from './rollup_provider_hooks';
 import { usePriceFeedObsCache } from './top_level_context';
 
@@ -41,4 +42,10 @@ export function useAggregatedAssetsPrice(assetValues?: AssetValue[]) {
   });
 
   return aggregatedPrice;
+}
+
+export function useAmountCost(amount?: Amount) {
+  const price = useAssetPrice(amount?.id);
+  if (price === undefined || amount === undefined) return;
+  return convertToPrice(amount.baseUnits, amount.info.decimals, price);
 }

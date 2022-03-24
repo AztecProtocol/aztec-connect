@@ -2,7 +2,7 @@ import createDebug from 'debug';
 import { useEffect, useMemo, useState } from 'react';
 import { AssetValue, EthAddress, TxSettlementTime } from '@aztec/sdk';
 import { Contract } from '@ethersproject/contracts';
-import { useInitialisedSdk, useStableEthereumProvider } from 'alt-model/top_level_context';
+import { useInitialisedSdk, useStableEthereumProvider, useGasPrice } from 'alt-model/top_level_context';
 import { listenPoll } from 'app/util';
 import { useRollupProviderStatus } from './rollup_provider_hooks';
 
@@ -58,20 +58,6 @@ async function getApproveProofGasEstimate(contract: Contract) {
     // Probably not enough balance.
     return 50000n;
   }
-}
-
-const GAS_PRICE_POLL_INTERVAL = 1000 * 60;
-
-function useGasPrice() {
-  const stableEthereumProvider = useStableEthereumProvider();
-  const [price, setPrice] = useState<bigint>();
-  useEffect(() => {
-    return listenPoll(async () => {
-      const bigNumber = await stableEthereumProvider.getGasPrice();
-      setPrice(BigInt(bigNumber.toString()));
-    }, GAS_PRICE_POLL_INTERVAL);
-  }, [stableEthereumProvider]);
-  return price;
 }
 
 function costPlus10Percent(gas?: bigint, gasPrice?: bigint) {

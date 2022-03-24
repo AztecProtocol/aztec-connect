@@ -64,12 +64,7 @@ export function Page2({ recipe, composerState, validationResult, onSubmit, onClo
       <BorderBox>
         <S.TopStats>
           <Text size="xxs" italic text={recipe.shortDesc} />
-          <BridgeCountDown
-            nextBatch={new Date(Date.now() + 1000 * 60 * 60)}
-            takenSlots={10}
-            totalSlots={12}
-            compact={true}
-          />
+          <BridgeCountDown recipe={recipe} compact />
           <BridgeKeyStats recipe={recipe} compact />
         </S.TopStats>
         <S.Separator />

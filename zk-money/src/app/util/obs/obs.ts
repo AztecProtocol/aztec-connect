@@ -5,6 +5,7 @@ import { InputObs } from './input_obs';
 import { MapperObs } from './mapper_obs';
 import { PromiseObs } from './promise_obs';
 import { Emitter, EmitterObs } from './emitter_obs';
+import { FilterObs } from './filter_obs';
 
 export class Obs<T> implements IObs<T> {
   constructor(protected readonly internalObs: IObs<T>) {}
@@ -39,6 +40,10 @@ export class Obs<T> implements IObs<T> {
 
   mapEmitter<TOut>(emitter: EmitMapper<T, TOut>, initialValue: TOut) {
     return new Obs(new EmitMapperObs(this, emitter, initialValue));
+  }
+
+  filter(filter: (value: T, prevValue: T) => boolean) {
+    return new Obs(new FilterObs(this, filter));
   }
 }
 

@@ -1,4 +1,3 @@
-import type { BridgeId } from '@aztec/sdk';
 import type { RemoteAsset } from 'alt-model/types';
 import type { BridgeDataAdaptorCreator } from './bridge_data_adaptors/types';
 
@@ -8,17 +7,6 @@ export enum DefiInvestmentType {
   STAKING,
   BORROW,
 }
-
-export type BridgeFlow =
-  | {
-      type: 'closable';
-      enter: BridgeId;
-      exit: BridgeId;
-    }
-  | {
-      type: 'async';
-      enter: BridgeId;
-    };
 
 export enum KeyBridgeStat {
   YIELD,
@@ -30,10 +18,11 @@ export enum KeyBridgeStat {
 
 export interface DefiRecipe {
   id: string;
+  addressId: number;
+  closable: boolean;
   openHandleAssetId: number;
   inputAssetA: RemoteAsset;
   outputAssetA: RemoteAsset;
-  bridgeFlow: BridgeFlow;
   createAdaptor: BridgeDataAdaptorCreator;
   name: string;
   logo: string;

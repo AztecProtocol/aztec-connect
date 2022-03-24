@@ -9,24 +9,32 @@ import { createRemoteAssetsObs } from './remote_assets_obs';
 import { createSdkRemoteStatusObs } from './remote_status_obs';
 import { createSdkObs } from './sdk_obs';
 import { TopLevelContext, TopLevelContextValue } from './top_level_context';
+import { createGasPriceObs } from 'alt-model/gas/gas_price_obs';
 
 function createTopLevelContextValue(config: Config): TopLevelContextValue {
   const stableEthereumProvider = new JsonRpcProvider(config.ethereumHost);
   const sdkObs = createSdkObs(config);
   const remoteStatusObs = createSdkRemoteStatusObs(sdkObs);
   const remoteAssetsObs = createRemoteAssetsObs(remoteStatusObs);
+
+  // Many remote status fields will never change, so we use firstRemoteStatusObs and firstRemoteAssetsObs as a
+  // dependency for entities that only need the unchanging fields, to reducing unnecessary reconstructions/rerenders.
+  const firstRemoteStatusObs = remoteStatusObs.filter((_, preValue) => !preValue);
+  const firstRemoteAssetsObs = createRemoteAssetsObs(firstRemoteStatusObs);
+
   const amountFactoryObs = createAmountFactoryObs(remoteAssetsObs);
+  const gasPriceObs = createGasPriceObs(stableEthereumProvider);
   const priceFeedObsCache = createPriceFeedObsCache(
     stableEthereumProvider,
     config.priceFeedContractAddresses,
-    remoteAssetsObs,
+    firstRemoteAssetsObs,
   );
   const defiRecipesObs = createDefiRecipeObs(remoteAssetsObs);
   const bridgeDataAdaptorsMethodCaches = createBridgeDataAdaptorsMethodCaches(
     defiRecipesObs,
     stableEthereumProvider,
-    remoteAssetsObs,
-    config,
+    firstRemoteStatusObs,
+    firstRemoteAssetsObs,
   );
   return {
     stableEthereumProvider,
@@ -35,6 +43,7 @@ function createTopLevelContextValue(config: Config): TopLevelContextValue {
     remoteAssetsObs,
     amountFactoryObs,
     priceFeedObsCache,
+    gasPriceObs,
     bridgeDataAdaptorsMethodCaches,
     defiRecipesObs,
   };

@@ -3,7 +3,7 @@ import { GrumpkinAddress } from '../address';
 import { AssetValue } from '../asset';
 import { BlockchainStatus, blockchainStatusFromJson, blockchainStatusToJson } from '../blockchain';
 import { BlockSource } from '../block_source';
-import { BridgeId, BridgeStatus, bridgeStatusToJson } from '../bridge_id';
+import { BridgeId, BridgeStatus, bridgeStatusFromJson, bridgeStatusToJson } from '../bridge_id';
 import { AccountProofData, JoinSplitProofData } from '../client_proofs';
 import { OffchainAccountData, OffchainJoinSplitData } from '../offchain_tx_data';
 import { TxId } from '../tx_id';
@@ -77,12 +77,13 @@ export function rollupProviderStatusToJson(status: RollupProviderStatus) {
 }
 
 export function rollupProviderStatusFromJson(status: any): RollupProviderStatus {
-  const { blockchainStatus, nextPublishTime, runtimeConfig, ...rest } = status;
+  const { blockchainStatus, nextPublishTime, runtimeConfig, bridgeStatus, ...rest } = status;
   return {
     ...rest,
     blockchainStatus: blockchainStatusFromJson(blockchainStatus),
     nextPublishTime: new Date(nextPublishTime),
     runtimeConfig: runtimeConfigFromJson(runtimeConfig),
+    bridgeStatus: bridgeStatus.map(bridgeStatusFromJson),
   };
 }
 

@@ -17,6 +17,14 @@ export function bridgeStatusToJson(status: BridgeStatus) {
   };
 }
 
+export function bridgeStatusFromJson(status: any): BridgeStatus {
+  return {
+    ...status,
+    bridgeId: BigInt(status.bridgeId),
+    nextPublishTime: status.nextPublishTime ? new Date(status.nextPublishTime) : undefined,
+  };
+}
+
 export function convertToBridgeStatus(
   bridgeConfig: BridgeConfig,
   rollupNumber: number | undefined,

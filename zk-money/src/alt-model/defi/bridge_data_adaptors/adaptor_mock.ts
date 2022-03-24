@@ -11,7 +11,7 @@ export class YieldBridgeDataMock implements YieldBridgeData {
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
   ): Promise<bigint[]> {
-    return [];
+    return [0n];
   }
 
   auxDataConfig: AuxDataConfig[] = [];
