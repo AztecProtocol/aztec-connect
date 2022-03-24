@@ -26,20 +26,18 @@ interface ShieldPage1Props {
   fields: ShieldFormFields;
   feedback: ShieldFormFeedback;
   validationResult: ShieldFormValidationResult;
-  asset?: RemoteAsset;
   assets: RemoteAsset[];
   onNext(): void;
   onChangeAmountStr(value: string): void;
   onChangeRecipientAlias(value: string): void;
   onChangeSpeed(speed: TxSettlementTime): void;
-  onChangeAsset(option: DropdownOption<string>): void;
+  onChangeAsset(asset: number): void;
 }
 
 export function ShieldPage1({
   fields,
   feedback,
   validationResult,
-  asset,
   assets,
   onNext,
   onChangeAmountStr,
@@ -47,6 +45,7 @@ export function ShieldPage1({
   onChangeSpeed,
   onChangeAsset,
 }: ShieldPage1Props) {
+  const asset = validationResult.input.targetL2OutputAmount?.info;
   if (!asset) {
     return <>Loading...</>;
   }

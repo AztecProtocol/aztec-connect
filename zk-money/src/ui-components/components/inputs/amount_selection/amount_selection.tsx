@@ -15,7 +15,7 @@ interface AmountSelectionProps {
   maxAmount: bigint;
   amountString: string;
   onChangeAmountString: (amountString: string) => void;
-  onChangeAsset?: (option: DropdownOption<string>) => void;
+  onChangeAsset?: (option: number) => void;
   allowAssetSelection?: boolean;
 }
 
@@ -30,9 +30,9 @@ export function AmountSelection(props: AmountSelectionProps) {
     () =>
       props.assets
         ?.filter(x => SUPPORTED_FOR_SHIELDING.some(addr => x.address.equals(addr)))
-        .map(x => ({ value: x.symbol, label: x.symbol })),
+        .map(x => ({ value: x.id, label: x.symbol })),
     [props.assets],
-  ) as DropdownOption<string>[] | undefined;
+  ) as DropdownOption<number>[] | undefined;
 
   return (
     <div className={style.inputWrapper}>
@@ -48,7 +48,7 @@ export function AmountSelection(props: AmountSelectionProps) {
           <Dropdown
             isOpen={isAssetSelectorOpen}
             options={options}
-            onClick={props.onChangeAsset}
+            onClick={e => props.onChangeAsset && props.onChangeAsset(e.value)}
             onClose={toggleAssetSelector}
           />
         </div>

@@ -6,7 +6,6 @@ import { MiniL1BalanceIndicator, MiniL2BalanceIndicator } from './mini_balance_i
 import { Privacy } from './privacy';
 import { InputAnnotation } from './types';
 import style from './amount_section.module.scss';
-import { DropdownOption } from 'components/dropdown';
 
 function Info() {
   return (
@@ -44,7 +43,7 @@ interface AmountSectionProps {
   amountStr: string;
   maxAmount: bigint;
   onChangeAmountStr: (amountStr: string) => void;
-  onChangeAsset?: (option: DropdownOption<string>) => void;
+  onChangeAsset?: (option: number) => void;
   allowAssetSelection?: boolean;
   amountStrAnnotation?: InputAnnotation;
   hidePrivacy?: boolean;
