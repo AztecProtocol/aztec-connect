@@ -1,8 +1,8 @@
-import { CreateHostedAztecSdkOptions, EthAddress, getBlockchainStatus, SdkEvent } from '@aztec/sdk';
+import { CreateHostedAztecSdkOptions, EthAddress, SdkEvent } from '@aztec/sdk';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { createEthSdk, EthereumSdk, EthereumSdkUser } from '../ethereum_sdk';
-import { chainIdToNetwork, EthProvider, EthProviderEvent } from './eth_provider';
+import { EthProvider, EthProviderEvent } from './eth_provider';
 
 const debug = createDebug('bb:websdk');
 
@@ -58,7 +58,7 @@ export class WebSdk extends EventEmitter {
     super();
   }
 
-  public async init(rollupProviderUrl: string, sdkOptions: CreateHostedAztecSdkOptions) {
+  public async init(sdkOptions: CreateHostedAztecSdkOptions) {
     if (sdkOptions.debug) {
       createDebug.enable('bb:*');
     }
@@ -68,20 +68,9 @@ export class WebSdk extends EventEmitter {
     debug('initializing app...');
 
     try {
-      const { chainId: rollupProviderChainId } = await getBlockchainStatus(rollupProviderUrl);
-
       this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.LINK_PROVIDER_ACCOUNT);
       this.ethProvider = new EthProvider(this.ethereumProvider);
       await this.ethProvider.init();
-
-      // If our network doesn't match that of the rollup provider, request it be changed until it does.
-      this.initStatus.network = chainIdToNetwork(rollupProviderChainId);
-      if (rollupProviderChainId !== this.ethProvider.getChainId()) {
-        this.updateInitStatus(AppInitState.INITIALIZING, AppInitAction.CHANGE_NETWORK);
-        while (rollupProviderChainId !== this.ethProvider.getChainId()) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-      }
 
       this.sdk = await createEthSdk(this.ethereumProvider, sdkOptions);
 

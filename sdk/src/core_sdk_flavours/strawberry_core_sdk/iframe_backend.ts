@@ -4,7 +4,26 @@ import { CoreSdkServerStub, SdkEvent } from '../../core_sdk';
 import { BananaCoreSdkOptions, createBananaCoreSdk } from '../banana_core_sdk';
 import { DispatchMsg } from '../transport';
 
-const serverUrl = 'http://localhost:8081';
+async function getServerUrl() {
+  if (process.env.NODE_ENV === 'production') {
+    const deployTag = await fetch('/DEPLOY_TAG', {})
+      .then(resp => (!resp.ok ? '' : resp.text()))
+      .catch(() => '');
+
+    if (deployTag) {
+      return `https://api.aztec.network/${deployTag}/falafel`;
+    } else {
+      return await fetch('/ROLLUP_PROVIDER_URL').then(resp => {
+        if (!resp.ok) {
+          throw new Error('Failed to fetch /ROLLUP_PROVIDER_URL.');
+        }
+        return resp.text();
+      });
+    }
+  } else {
+    return 'http://localhost:8081';
+  }
+}
 
 export interface IframeBackend extends EventEmitter {
   on(name: 'dispatch_msg', handler: (msg: DispatchMsg) => void): this;
@@ -27,6 +46,7 @@ export class IframeBackend extends EventEmitter {
       createDebug.enable('bb:*');
     }
 
+    const serverUrl = await getServerUrl();
     this.coreSdk = new CoreSdkServerStub(await createBananaCoreSdk({ ...options, serverUrl }));
     for (const e in SdkEvent) {
       const event = (SdkEvent as any)[e];

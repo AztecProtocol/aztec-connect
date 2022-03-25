@@ -18,20 +18,23 @@ fi
 
 pushd $TF_DIR > /dev/null
 AWS_BUCKET_NAME=$(terraform output s3)
-AWS_CLOUDFRONT_DISTRIBUTION=$(terraform output cloudfront)
+AWS_CLOUDFRONT_DISTRIBUTION=$(terraform output cloudfront || echo "")
 popd > /dev/null
 
 aws s3 rm s3://$AWS_BUCKET_NAME --recursive
 aws s3 cp ./dist s3://$AWS_BUCKET_NAME --recursive --metadata-directive REPLACE --cache-control "no-cache" --acl public-read
 aws s3 cp \
-       s3://$AWS_BUCKET_NAME \
-       s3://$AWS_BUCKET_NAME \
-       --exclude '*' \
-       --include '*.js' \
-       --no-guess-mime-type \
-       --content-type="application/javascript; charset=utf-8" \
-       --cache-control "no-cache" \
-       --metadata-directive="REPLACE" \
-       --cache-control "no-cache" \
-       --recursive
-aws cloudfront create-invalidation --distribution-id $AWS_CLOUDFRONT_DISTRIBUTION --paths "/*"
+      s3://$AWS_BUCKET_NAME \
+      s3://$AWS_BUCKET_NAME \
+      --exclude '*' \
+      --include '*.js' \
+      --no-guess-mime-type \
+      --content-type="application/javascript; charset=utf-8" \
+      --cache-control "no-cache" \
+      --metadata-directive="REPLACE" \
+      --cache-control "no-cache" \
+      --recursive
+
+if [ -n "$AWS_CLOUDFRONT_DISTRIBUTION" ]; then
+  aws cloudfront create-invalidation --distribution-id $AWS_CLOUDFRONT_DISTRIBUTION --paths "/*"
+fi

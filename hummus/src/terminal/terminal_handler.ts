@@ -238,10 +238,8 @@ export class TerminalHandler {
   private async getDeployTag() {
     // If we haven't overridden our deploy tag, we discover it at runtime. All s3 deployments have a file
     // called DEPLOY_TAG in their root containing the deploy tag.
-    if (process.env.NODE_ENV !== 'development') {
-      return await fetch('/DEPLOY_TAG')
-        .then(resp => resp.text())
-        .catch(() => '');
+    if (process.env.NODE_ENV === 'production') {
+      return await fetch('/DEPLOY_TAG').then(resp => resp.text());
     } else {
       return '';
     }
@@ -256,14 +254,8 @@ export class TerminalHandler {
     this.app.on(SdkEvent.LOG, this.logHandler);
 
     const deployTag = await this.getDeployTag();
-    const rollupProviderUrl =
-      server ||
-      (process.env.NODE_ENV === 'production'
-        ? `https://api.aztec.network/${deployTag}/falafel`
-        : 'http://localhost:8081');
-    const serverUrl =
-      process.env.NODE_ENV === 'production' ? `https://${deployTag}-sdk.aztec.network/` : 'http://localhost:5000';
-    await this.app.init(rollupProviderUrl, { serverUrl, debug: true });
+    const serverUrl = server || (deployTag ? `https://${deployTag}-sdk.aztec.network/` : 'http://localhost:5000');
+    await this.app.init({ serverUrl, debug: true });
     this.app.off(AppEvent.UPDATED_INIT_STATE, this.initProgressHandler);
     this.app.off(SdkEvent.LOG, this.logHandler);
 

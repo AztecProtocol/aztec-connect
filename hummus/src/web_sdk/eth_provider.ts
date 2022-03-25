@@ -22,6 +22,7 @@ export const networks: Network[] = [
   { chainId: 5, network: 'goerli' },
   { chainId: 42, network: 'kovan' },
   { chainId: 1337, network: 'ganache' },
+  { chainId: 0xa57ec, network: 'mainnet-fork' },
 ];
 
 export const chainIdToNetwork = (chainId: number) => {

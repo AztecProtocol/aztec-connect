@@ -87,90 +87,14 @@ EOF
   }
 }
 
-# AWS Cloudfront for caching
-resource "aws_cloudfront_distribution" "zkmoney_distribution" {
-  origin {
-    domain_name = aws_s3_bucket.zkmoney_bucket.website_endpoint
-    origin_id   = "website"
-    custom_origin_config {
-      http_port              = "80"
-      https_port             = "443"
-      origin_protocol_policy = "http-only"
-      origin_ssl_protocols   = ["TLSv1", "TLSv1.1", "TLSv1.2"]
-    }
-  }
-
-  enabled             = true
-  is_ipv6_enabled     = true
-  comment             = "Managed by Terraform"
-  aliases             = ["${var.DEPLOY_TAG}.zk.money"]
-  default_root_object = "/"
-
-
-  default_cache_behavior {
-    target_origin_id = "website"
-    allowed_methods  = ["GET", "HEAD"]
-    cached_methods   = ["GET", "HEAD"]
-
-    forwarded_values {
-      query_string = true
-
-      cookies {
-        forward = "none"
-      }
-    }
-    viewer_protocol_policy = "redirect-to-https"
-    min_ttl                = 0
-    default_ttl            = 3600
-    max_ttl                = 86400
-  }
-
-  ordered_cache_behavior {
-    path_pattern           = "/"
-    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
-    cached_methods         = ["GET", "HEAD"]
-    target_origin_id       = "website"
-    viewer_protocol_policy = "redirect-to-https"
-    min_ttl                = 0
-    default_ttl            = 3600
-    max_ttl                = 86400
-
-    lambda_function_association {
-      event_type = "origin-response"
-      lambda_arn = aws_lambda_function.twitter_lambda.qualified_arn
-    }
-
-    forwarded_values {
-      query_string = true
-
-      cookies {
-        forward = "none"
-      }
-    }
-  }
-
-  price_class = "PriceClass_100"
-
-  restrictions {
-    geo_restriction {
-      restriction_type = "none"
-    }
-  }
-
-  viewer_certificate {
-    acm_certificate_arn = data.aws_acm_certificate.zkmoney.arn
-    ssl_support_method  = "sni-only"
-  }
-}
-
 resource "aws_route53_record" "a_record" {
   zone_id = data.aws_route53_zone.zkmoney.zone_id
   name    = var.DEPLOY_TAG
   type    = "A"
   alias {
-    name                   = aws_cloudfront_distribution.zkmoney_distribution.domain_name
-    zone_id                = aws_cloudfront_distribution.zkmoney_distribution.hosted_zone_id
-    evaluate_target_health = true
+    name                   = aws_s3_bucket.zkmoney_bucket.website_endpoint
+    zone_id                = aws_s3_bucket.zkmoney_bucket.hosted_zone_id
+    evaluate_target_health = false
   }
 }
 

@@ -79,9 +79,9 @@ resource "aws_cloudfront_distribution" "documentation_distribution" {
     }
   }
 
-  enabled             = true
-  is_ipv6_enabled     = true
-  comment             = "Managed by Terraform"
+  enabled         = true
+  is_ipv6_enabled = true
+  comment         = "Managed by Terraform"
 
   aliases = ["developers.aztec.network"]
 
