@@ -36,7 +36,7 @@ provider "aws" {
 
 # AWS S3 bucket for static hosting.
 resource "aws_s3_bucket" "sdk" {
-  bucket = "${var.DEPLOY_TAG}.sdk.aztec.network"
+  bucket = "${var.DEPLOY_TAG}-sdk.aztec.network"
   acl    = "public-read"
 
   cors_rule {
@@ -58,7 +58,7 @@ resource "aws_s3_bucket" "sdk" {
         "AWS": "*"
       },
       "Action": "s3:GetObject",
-      "Resource": "arn:aws:s3:::${var.DEPLOY_TAG}.sdk.aztec.network/*"
+      "Resource": "arn:aws:s3:::${var.DEPLOY_TAG}-sdk.aztec.network/*"
     }
   ]
 }
@@ -87,7 +87,7 @@ resource "aws_cloudfront_distribution" "sdk_distribution" {
   is_ipv6_enabled = true
   comment         = "Managed by Terraform"
 
-  aliases = ["${var.DEPLOY_TAG}.sdk.aztec.network"]
+  aliases = ["${var.DEPLOY_TAG}-sdk.aztec.network"]
 
   default_cache_behavior {
     allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
@@ -124,7 +124,7 @@ resource "aws_cloudfront_distribution" "sdk_distribution" {
 
 resource "aws_route53_record" "a_record" {
   zone_id = data.terraform_remote_state.aztec2_iac.outputs.aws_route53_zone_id
-  name    = "${var.DEPLOY_TAG}.sdk"
+  name    = "${var.DEPLOY_TAG}-sdk"
   type    = "A"
   alias {
     name                   = aws_cloudfront_distribution.sdk_distribution.domain_name

@@ -104,12 +104,12 @@ async function getDeployConfig(deployTag: string) {
   }
 
   if (deployTag) {
-    const hostedSdkUrl = `https://${deployTag}.sdk.aztec.network`;
+    const hostedSdkUrl = `https://${deployTag}-sdk.aztec.network`;
     const rollupProviderUrl = `https://api.aztec.network/${deployTag}/falafel`;
     // If this is prod release, we will use the prod domain name.
     const explorerUrl = deployTag.match(/-prod$/)
       ? 'https://explorer.aztec.network'
-      : `https://${deployTag}.explorer.aztec.network`;
+      : `https://${deployTag}-explorer.aztec.network`;
     const chainId = (await getBlockchainStatus(rollupProviderUrl)).chainId;
     const ethereumHost = getEthereumHost(chainId);
     const mainnetEthereumHost = getEthereumHost(1);

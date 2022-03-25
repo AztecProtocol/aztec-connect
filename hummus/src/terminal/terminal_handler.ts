@@ -262,7 +262,7 @@ export class TerminalHandler {
         ? `https://api.aztec.network/${deployTag}/falafel`
         : 'http://localhost:8081');
     const serverUrl =
-      process.env.NODE_ENV === 'production' ? `https://${deployTag}/sdk.aztec.network/` : 'http://localhost:5000';
+      process.env.NODE_ENV === 'production' ? `https://${deployTag}-sdk.aztec.network/` : 'http://localhost:5000';
     await this.app.init(rollupProviderUrl, { serverUrl, debug: true });
     this.app.off(AppEvent.UPDATED_INIT_STATE, this.initProgressHandler);
     this.app.off(SdkEvent.LOG, this.logHandler);
