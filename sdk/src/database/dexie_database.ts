@@ -244,14 +244,16 @@ class DexieDefiTx implements DexieUserTx {
     public depositValue: string,
     public txFee: string,
     public partialStateSecret: Uint8Array,
-    public outputValueA: string,
-    public outputValueB: string,
     public txRefNo: number,
     public created: Date,
-    public result: boolean | undefined,
     public settled: number,
-    public interactionNonce?: number,
-    public isAsync?: boolean,
+    public interactionNonce: number,
+    public isAsync: boolean,
+    public success: boolean,
+    public outputValueA: string,
+    public outputValueB: string,
+    public finalised?: Date,
+    public claimSettled?: Date,
   ) {}
 }
 
@@ -264,14 +266,16 @@ const toDexieDefiTx = (tx: CoreDefiTx) =>
     tx.depositValue.toString(),
     tx.txFee.toString(),
     new Uint8Array(tx.partialStateSecret),
-    tx.outputValueA.toString(),
-    tx.outputValueB.toString(),
     tx.txRefNo,
     tx.created,
-    tx.result,
     tx.settled ? tx.settled.getTime() : 0,
     tx.interactionNonce,
     tx.isAsync,
+    tx.success,
+    tx.outputValueA.toString(),
+    tx.outputValueB.toString(),
+    tx.finalised,
+    tx.claimSettled,
   );
 
 const fromDexieDefiTx = ({
@@ -281,14 +285,16 @@ const fromDexieDefiTx = ({
   depositValue,
   txFee,
   partialStateSecret,
-  outputValueA,
-  outputValueB,
   txRefNo,
   created,
-  result,
   settled,
   interactionNonce,
   isAsync,
+  success,
+  outputValueA,
+  outputValueB,
+  finalised,
+  claimSettled,
 }: DexieDefiTx) =>
   new CoreDefiTx(
     new TxId(Buffer.from(txId)),
@@ -299,12 +305,14 @@ const fromDexieDefiTx = ({
     Buffer.from(partialStateSecret),
     txRefNo,
     created,
-    BigInt(outputValueA),
-    BigInt(outputValueB),
-    result,
     settled ? new Date(settled) : undefined,
     interactionNonce,
     isAsync,
+    success,
+    BigInt(outputValueA),
+    BigInt(outputValueB),
+    finalised,
+    claimSettled,
   );
 
 class DexieClaimTx {
@@ -559,22 +567,28 @@ export class DexieDatabase implements Database {
     return (sortUserTxs(txs) as DexieDefiTx[]).map(fromDexieDefiTx);
   }
 
-  async updateDefiTxWithNonce(txId: TxId, interactionNonce: number, isAsync: boolean) {
+  async settleDefiDeposit(txId: TxId, interactionNonce: number, isAsync: boolean, settled: Date) {
     await this.userTx
       .where({ txId: new Uint8Array(txId.toBuffer()), proofId: ProofId.DEFI_DEPOSIT })
-      .modify({ interactionNonce, isAsync });
+      .modify({ interactionNonce, isAsync, settled });
   }
 
-  async updateDefiTx(txId: TxId, outputValueA: bigint, outputValueB: bigint, result: boolean) {
+  async updateDefiTxFinalisationResult(
+    txId: TxId,
+    success: boolean,
+    outputValueA: bigint,
+    outputValueB: bigint,
+    finalised: Date,
+  ) {
     await this.userTx
       .where({ txId: new Uint8Array(txId.toBuffer()), proofId: ProofId.DEFI_DEPOSIT })
-      .modify({ outputValueA, outputValueB, result });
+      .modify({ success, outputValueA, outputValueB, finalised });
   }
 
-  async settleDefiTx(txId: TxId, settled: Date) {
+  async settleDefiTx(txId: TxId, claimSettled: Date) {
     await this.userTx
       .where({ txId: new Uint8Array(txId.toBuffer()), proofId: ProofId.DEFI_DEPOSIT })
-      .modify({ settled });
+      .modify({ claimSettled });
   }
 
   async getUserTxs(userId: AccountId) {
@@ -599,7 +613,7 @@ export class DexieDatabase implements Database {
     return txs.length > 0 && txs.every(tx => tx.settled);
   }
 
-  async getUnsettledUserTxs(userId: AccountId) {
+  async getPendingUserTxs(userId: AccountId) {
     const unsettledTxs = await this.userTx.where({ settled: 0 }).toArray();
     return unsettledTxs
       .flat()

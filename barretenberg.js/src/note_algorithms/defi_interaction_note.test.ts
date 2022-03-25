@@ -11,13 +11,7 @@ describe('defi interaction note', () => {
     expect(buf.length).toBe(DefiInteractionNote.LENGTH);
 
     const recovered = DefiInteractionNote.fromBuffer(buf);
-    expect(recovered.equals(note)).toBe(true);
-    expect(recovered.bridgeId).toEqual(note.bridgeId);
-    expect(recovered.nonce).toBe(note.nonce);
-    expect(recovered.totalInputValue).toBe(note.totalInputValue);
-    expect(recovered.totalOutputValueA).toBe(note.totalOutputValueA);
-    expect(recovered.totalOutputValueB).toBe(note.totalOutputValueB);
-    expect(recovered.result).toBe(note.result);
+    expect(recovered).toEqual(note);
   });
 
   it('hash an array of empty interaction note', () => {

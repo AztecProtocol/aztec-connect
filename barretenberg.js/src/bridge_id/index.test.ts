@@ -1,48 +1,65 @@
-import { BridgeId, BitConfig } from './';
+import { BridgeId } from './';
 
 describe('bridge id', () => {
-  const bridgeId = new BridgeId(67, 123, 456, 7890, 78, new BitConfig(false, true, false, true, false, false), 78);
+  const virtualAssetId = 1 << 29;
+  const bridgeIds = [
+    BridgeId.ZERO,
+    new BridgeId(0, 1, 0),
+    new BridgeId(67, 123, 456, 78, 90, 1),
+    new BridgeId(67, 123, 456, undefined, virtualAssetId, 78),
+    new BridgeId(67, 123, 456, virtualAssetId, undefined, 78),
+    new BridgeId(67, virtualAssetId, 456, virtualAssetId, 123, 78),
+    new BridgeId(67, 123, virtualAssetId, undefined, 123, 78),
+  ];
 
   it('convert bridge id to and from buffer', () => {
-    const buf = bridgeId.toBuffer();
-    expect(buf.length).toBe(32);
+    bridgeIds.forEach(bridgeId => {
+      const buf = bridgeId.toBuffer();
+      expect(buf.length).toBe(32);
 
-    const recovered = BridgeId.fromBuffer(buf);
-    expect(recovered.equals(bridgeId)).toBe(true);
-    expect(recovered.addressId).toEqual(bridgeId.addressId);
-    expect(recovered.inputAssetIdA).toBe(bridgeId.inputAssetIdA);
-    expect(recovered.outputAssetIdA).toBe(bridgeId.outputAssetIdA);
-    expect(recovered.outputAssetIdB).toBe(bridgeId.outputAssetIdB);
-    expect(recovered.inputAssetIdB).toBe(bridgeId.inputAssetIdB);
-    expect(recovered.bitConfig).toEqual(bridgeId.bitConfig);
-    expect(recovered.auxData).toBe(bridgeId.auxData);
+      const recovered = BridgeId.fromBuffer(buf);
+      expect(recovered).toEqual(bridgeId);
+      expect(recovered.equals(bridgeId)).toBe(true);
+    });
   });
 
   it('convert bridge id to and from string', () => {
-    const str = bridgeId.toString();
-    expect(str).toMatch(/^0x[0-9a-f]{64}$/i);
+    bridgeIds.forEach(bridgeId => {
+      const str = bridgeId.toString();
+      expect(str).toMatch(/^0x[0-9a-f]{64}$/i);
 
-    const recovered = BridgeId.fromString(str);
-    expect(recovered.equals(bridgeId)).toBe(true);
-    expect(recovered.addressId).toEqual(bridgeId.addressId);
-    expect(recovered.inputAssetIdA).toBe(bridgeId.inputAssetIdA);
-    expect(recovered.outputAssetIdA).toBe(bridgeId.outputAssetIdA);
-    expect(recovered.outputAssetIdB).toBe(bridgeId.outputAssetIdB);
-    expect(recovered.inputAssetIdB).toBe(bridgeId.inputAssetIdB);
-    expect(recovered.bitConfig).toEqual(bridgeId.bitConfig);
-    expect(recovered.auxData).toBe(bridgeId.auxData);
+      const recovered = BridgeId.fromString(str);
+      expect(recovered).toEqual(bridgeId);
+      expect(recovered.equals(bridgeId)).toBe(true);
+    });
   });
 
   it('convert bridge id to and from bigint', () => {
-    const val = bridgeId.toBigInt();
-    const recovered = BridgeId.fromBigInt(val);
-    expect(recovered.equals(bridgeId)).toBe(true);
-    expect(recovered.addressId).toEqual(bridgeId.addressId);
-    expect(recovered.inputAssetIdA).toBe(bridgeId.inputAssetIdA);
-    expect(recovered.outputAssetIdA).toBe(bridgeId.outputAssetIdA);
-    expect(recovered.outputAssetIdB).toBe(bridgeId.outputAssetIdB);
-    expect(recovered.inputAssetIdB).toBe(bridgeId.inputAssetIdB);
-    expect(recovered.bitConfig).toEqual(bridgeId.bitConfig);
-    expect(recovered.auxData).toBe(bridgeId.auxData);
+    bridgeIds.forEach(bridgeId => {
+      const val = bridgeId.toBigInt();
+      const recovered = BridgeId.fromBigInt(val);
+      expect(recovered).toEqual(bridgeId);
+      expect(recovered.equals(bridgeId)).toBe(true);
+    });
+  });
+
+  it('correctly create the bit config', () => {
+    expect(new BridgeId(0, 1, 0).bitConfig).toEqual({
+      firstInputVirtual: false,
+      secondInputVirtual: false,
+      firstOutputVirtual: false,
+      secondOutputVirtual: false,
+      secondInputReal: false,
+      secondOutputReal: false,
+    });
+
+    expect(new BridgeId(0, 1, 0, virtualAssetId, 2).bitConfig).toEqual({
+      firstInputVirtual: false,
+      secondInputVirtual: true,
+      firstOutputVirtual: false,
+      secondOutputVirtual: false,
+      secondInputReal: false,
+      secondOutputReal: true,
+    });
   });
 });

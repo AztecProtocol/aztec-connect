@@ -261,12 +261,16 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     await this.backend.awaitSettlement(txId.toString(), timeout);
   }
 
-  public async awaitDefiInteraction(txId: TxId, timeout?: number) {
-    await this.backend.awaitDefiInteraction(txId.toString(), timeout);
-  }
-
   public async awaitDefiDepositCompletion(txId: TxId, timeout?: number) {
     await this.backend.awaitDefiDepositCompletion(txId.toString(), timeout);
+  }
+
+  public async awaitDefiFinalisation(txId: TxId, timeout?: number) {
+    await this.backend.awaitDefiFinalisation(txId.toString(), timeout);
+  }
+
+  public async awaitDefiSettlement(txId: TxId, timeout?: number) {
+    await this.backend.awaitDefiSettlement(txId.toString(), timeout);
   }
 
   public async getDefiInteractionNonce(txId: TxId) {

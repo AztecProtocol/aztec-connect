@@ -225,6 +225,7 @@ export class UserState extends EventEmitter {
               proofData,
               proof,
               offchainTxData,
+              block.created,
               noteStartIndex,
               note2,
               block.interactionResult,
@@ -239,7 +240,7 @@ export class UserState extends EventEmitter {
 
       this.user = { ...this.user, syncedToRollup: proofData.rollupId };
 
-      await this.processDefiInteractionResults(block.interactionResult);
+      await this.processDefiInteractionResults(block.interactionResult, block.created);
     }
 
     await this.db.updateUser(this.user);
@@ -250,7 +251,7 @@ export class UserState extends EventEmitter {
   private async resetData() {
     const pendingTxs = await this.rollupProvider.getPendingTxs();
 
-    const pendingUserTxIds = await this.db.getUnsettledUserTxs(this.user.id);
+    const pendingUserTxIds = await this.db.getPendingUserTxs(this.user.id);
     for (const userTxId of pendingUserTxIds) {
       if (!pendingTxs.some(tx => tx.txId.equals(userTxId))) {
         await this.db.removeUserTx(userTxId, this.user.id);
@@ -359,6 +360,7 @@ export class UserState extends EventEmitter {
     rollupProofData: RollupProofData,
     proof: InnerProofData,
     offchainTxData: OffchainDefiDepositData,
+    blockCreated: Date,
     noteStartIndex: number,
     treeNote2: TreeNote,
     defiInteractionNotes: DefiInteractionNote[],
@@ -394,15 +396,15 @@ export class UserState extends EventEmitter {
     const savedTx = await this.db.getDefiTx(txId);
     if (savedTx) {
       debug(`found defi tx, awaiting claim for settlement: ${txId}`);
-      await this.db.updateDefiTxWithNonce(txId, interactionNonce, isAsync);
+      await this.db.settleDefiDeposit(txId, interactionNonce, isAsync, blockCreated);
     } else {
-      const tx = this.recoverDefiTx(proof, offchainTxData, interactionNonce, isAsync);
+      const tx = this.recoverDefiTx(proof, offchainTxData, blockCreated, interactionNonce, isAsync);
       debug(`recovered defi tx: ${txId}`);
       await this.db.addDefiTx(tx);
     }
   }
 
-  private async processDefiInteractionResults(defiInteractionNotes: DefiInteractionNote[]) {
+  private async processDefiInteractionResults(defiInteractionNotes: DefiInteractionNote[], blockCreated: Date) {
     for (const note of defiInteractionNotes) {
       const defiTxs = await this.db.getDefiTxsByNonce(this.user.id, note.nonce);
       for (const tx of defiTxs) {
@@ -412,7 +414,7 @@ export class UserState extends EventEmitter {
         const outputValueB = !note.result
           ? BigInt(0)
           : (note.totalOutputValueB * tx.depositValue) / note.totalInputValue;
-        await this.db.updateDefiTx(tx.txId, outputValueA, outputValueB, note.result);
+        await this.db.updateDefiTxFinalisationResult(tx.txId, note.result, outputValueA, outputValueB, blockCreated);
       }
     }
   }
@@ -426,9 +428,9 @@ export class UserState extends EventEmitter {
 
     const { txId, userId, secret } = claim;
     const { noteCommitment1, noteCommitment2, nullifier2 } = proof;
-    const { bridgeId, depositValue, outputValueA, outputValueB, result } = (await this.db.getDefiTx(txId))!;
+    const { bridgeId, depositValue, outputValueA, outputValueB, success } = (await this.db.getDefiTx(txId))!;
     // When generating output notes, set creatorPubKey to 0 (it's a DeFi txn, recipient of note is same as creator of claim note)
-    if (!result) {
+    if (!success) {
       const treeNote = new TreeNote(
         userId.publicKey,
         depositValue,
@@ -456,7 +458,7 @@ export class UserState extends EventEmitter {
       const treeNote = new TreeNote(
         userId.publicKey,
         outputValueB,
-        bridgeId.outputAssetIdB,
+        bridgeId.outputAssetIdB!,
         userId.accountNonce,
         secret,
         Buffer.alloc(32),
@@ -596,6 +598,7 @@ export class UserState extends EventEmitter {
   private recoverDefiTx(
     proof: InnerProofData,
     offchainTxData: OffchainDefiDepositData,
+    blockCreated: Date,
     interactionNonce: number,
     isAsync: boolean,
   ) {
@@ -612,10 +615,7 @@ export class UserState extends EventEmitter {
       partialStateSecret,
       txRefNo,
       new Date(),
-      undefined,
-      undefined,
-      undefined,
-      undefined,
+      blockCreated,
       interactionNonce,
       isAsync,
     );

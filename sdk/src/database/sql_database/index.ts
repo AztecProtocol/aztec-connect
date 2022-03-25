@@ -71,12 +71,14 @@ const toCoreDefiTx = (tx: DefiTxDao) =>
     tx.partialStateSecret,
     tx.txRefNo,
     tx.created,
-    tx.outputValueA,
-    tx.outputValueB,
-    tx.result,
     tx.settled,
     tx.interactionNonce,
     tx.isAsync,
+    tx.success,
+    tx.outputValueA,
+    tx.outputValueB,
+    tx.finalised,
+    tx.claimSettled,
   );
 
 const sortUserTxs = (txs: any[]) => {
@@ -239,16 +241,22 @@ export class SQLDatabase implements Database {
     return sortUserTxs(txs).map(toCoreDefiTx);
   }
 
-  async updateDefiTxWithNonce(txId: TxId, interactionNonce: number, isAsync: boolean): Promise<void> {
-    await this.defiTxRep.update({ txId }, { interactionNonce, isAsync });
+  async settleDefiDeposit(txId: TxId, interactionNonce: number, isAsync: boolean, settled: Date) {
+    await this.defiTxRep.update({ txId }, { interactionNonce, isAsync, settled });
   }
 
-  async updateDefiTx(txId: TxId, outputValueA: bigint, outputValueB: bigint, result?: boolean) {
-    await this.defiTxRep.update({ txId }, { outputValueA, outputValueB, result });
+  async updateDefiTxFinalisationResult(
+    txId: TxId,
+    success: boolean,
+    outputValueA: bigint,
+    outputValueB: bigint,
+    finalised: Date,
+  ) {
+    await this.defiTxRep.update({ txId }, { success, outputValueA, outputValueB, finalised });
   }
 
-  async settleDefiTx(txId: TxId, settled: Date) {
-    await this.defiTxRep.update({ txId }, { settled });
+  async settleDefiTx(txId: TxId, claimSettled: Date) {
+    await this.defiTxRep.update({ txId }, { claimSettled });
   }
 
   async addClaimTx(tx: CoreClaimTx) {
@@ -285,16 +293,21 @@ export class SQLDatabase implements Database {
     return !!accountTx?.settled;
   }
 
-  async getUnsettledUserTxs(userId: AccountId) {
+  async getPendingUserTxs(userId: AccountId) {
     const unsettledTxs = await Promise.all([
       this.accountTxRep.find({ where: { userId, settled: IsNull() } }),
       this.paymentTxRep.find({ where: { userId, settled: IsNull() } }),
+      this.defiTxRep.find({ where: { userId, settled: IsNull() } }),
     ]);
     return unsettledTxs.flat().map(({ txId }) => txId);
   }
 
   async removeUserTx(txId: TxId, userId: AccountId) {
-    await Promise.all([this.accountTxRep.delete({ txId }), this.paymentTxRep.delete({ txId, userId })]);
+    await Promise.all([
+      this.accountTxRep.delete({ txId }),
+      this.paymentTxRep.delete({ txId, userId }),
+      this.defiTxRep.delete({ txId, userId }),
+    ]);
   }
 
   async addUserSigningKey(signingKey: SigningKey) {

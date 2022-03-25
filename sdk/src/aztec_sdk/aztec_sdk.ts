@@ -1,7 +1,7 @@
 import { AccountId } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
-import { AssetValue } from '@aztec/barretenberg/asset';
-import { BlockchainAsset, EthereumProvider, Receipt, TxHash, TxType } from '@aztec/barretenberg/blockchain';
+import { AssetValue, isVirtualAsset } from '@aztec/barretenberg/asset';
+import { EthereumProvider, Receipt, SendTxOptions, TxHash, TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { randomBytes } from '@aztec/barretenberg/crypto';
@@ -41,8 +41,6 @@ export interface AztecSdk {
 }
 
 export class AztecSdk extends EventEmitter {
-  private assets: BlockchainAsset[] = [];
-
   constructor(
     private core: CoreSdkInterface,
     private blockchain: ClientEthereumBlockchain,
@@ -56,8 +54,6 @@ export class AztecSdk extends EventEmitter {
       const event = (SdkEvent as any)[e];
       this.core.on(event, (...args: any[]) => this.emit(event, ...args));
     }
-
-    this.assets = blockchain.assetInfos;
   }
 
   public async run() {
@@ -85,8 +81,16 @@ export class AztecSdk extends EventEmitter {
     return this.core.awaitSettlement(txId, timeout);
   }
 
-  public async awaitDefiInteraction(txId: TxId, timeout?: number) {
-    return this.core.awaitDefiInteraction(txId, timeout);
+  public async awaitDefiDepositCompletion(txId: TxId, timeout?: number) {
+    return this.core.awaitDefiDepositCompletion(txId, timeout);
+  }
+
+  public async awaitDefiFinalisation(txId: TxId, timeout?: number) {
+    return this.core.awaitDefiFinalisation(txId, timeout);
+  }
+
+  public async awaitDefiSettlement(txId: TxId, timeout?: number) {
+    return this.core.awaitDefiSettlement(txId, timeout);
   }
 
   public getLocalStatus() {
@@ -171,20 +175,12 @@ export class AztecSdk extends EventEmitter {
     return this.core.derivePublicKey(privateKey);
   }
 
-  public getAssetIdByAddress(address: EthAddress) {
-    const assetId = this.assets.findIndex(a => a.address.equals(address));
-    if (assetId < 0) {
-      throw new Error(`Unknown asset address: ${address}`);
-    }
-    return assetId;
+  public getAssetIdByAddress(address: EthAddress, gasLimit?: number) {
+    return this.blockchain.getAssetIdByAddress(address, gasLimit);
   }
 
-  public getAssetIdBySymbol(symbol: string) {
-    const assetId = this.assets.findIndex(a => a.symbol.toLowerCase() === symbol.toLowerCase());
-    if (assetId < 0) {
-      throw new Error(`Unknown asset symbol: ${symbol}`);
-    }
-    return assetId;
+  public getAssetIdBySymbol(symbol: string, gasLimit?: number) {
+    return this.blockchain.getAssetIdBySymbol(symbol, gasLimit);
   }
 
   public fromBaseUnits({ assetId, value }: AssetValue, symbol = false, precision?: number) {
@@ -204,8 +200,35 @@ export class AztecSdk extends EventEmitter {
     return this.getAssetInfo(assetId).isFeePaying;
   }
 
+  public isVirtualAsset(assetId: number) {
+    return isVirtualAsset(assetId);
+  }
+
   public async mint(assetId: number, value: bigint, account: EthAddress, provider?: EthereumProvider) {
     return this.blockchain.getAsset(assetId).mint(value, account, { provider });
+  }
+
+  public async setSupportedAsset(assetAddress: EthAddress, assetGasLimit?: number, options?: SendTxOptions) {
+    return this.blockchain.setSupportedAsset(assetAddress, assetGasLimit, options);
+  }
+
+  public getBridgeAddressId(address: EthAddress, gasLimit?: number) {
+    return this.blockchain.getBridgeAddressId(address, gasLimit);
+  }
+
+  public constructBridgeId(
+    addressId: number,
+    inputAssetIdA: number,
+    outputAssetIdA: number,
+    inputAssetIdB?: number,
+    outputAssetIdB?: number,
+    auxData = 0,
+  ) {
+    return new BridgeId(addressId, inputAssetIdA, outputAssetIdA, inputAssetIdB, outputAssetIdB, auxData);
+  }
+
+  public async setSupportedBridge(bridgeAddress: EthAddress, bridgeGasLimit?: number, options?: SendTxOptions) {
+    return this.blockchain.setSupportedBridge(bridgeAddress, bridgeGasLimit, options);
   }
 
   public async processAsyncDefiInteraction(interactionNonce: number) {
@@ -418,11 +441,28 @@ export class AztecSdk extends EventEmitter {
   }
 
   public async depositFundsToContract({ assetId, value }: AssetValue, from: EthAddress, provider = this.provider) {
-    return this.blockchain.depositPendingFunds(assetId, value, from, undefined, undefined, provider);
+    return this.blockchain.depositPendingFunds(assetId, value, undefined, {
+      signingAddress: from,
+      provider,
+    });
   }
 
   public async getUserPendingDeposit(assetId: number, account: EthAddress) {
     return this.blockchain.getUserPendingDeposit(assetId, account);
+  }
+
+  public async getUserPendingFunds(assetId: number, account: EthAddress) {
+    const deposited = await this.getUserPendingDeposit(assetId, account);
+    const txs = await this.getRemoteUnsettledPaymentTxs();
+    const unsettledDeposit = txs
+      .filter(
+        tx =>
+          tx.proofData.proofData.proofId === ProofId.DEPOSIT &&
+          tx.proofData.publicAssetId === assetId &&
+          tx.proofData.publicOwner.equals(account),
+      )
+      .reduce((sum, tx) => sum + BigInt(tx.proofData.publicValue), BigInt(0));
+    return deposited - unsettledDeposit;
   }
 
   public async isContract(address: EthAddress) {
@@ -502,7 +542,7 @@ export class AztecSdk extends EventEmitter {
 
   public async getUserTxs(userId: AccountId) {
     const txs = await this.core.getUserTxs(userId);
-    const feePayingAssetIds = this.assets.flatMap((asset, id) => (asset.isFeePaying ? [id] : []));
+    const feePayingAssetIds = this.blockchain.getFeePayingAssetIds();
     return groupUserTxs(txs, feePayingAssetIds);
   }
 

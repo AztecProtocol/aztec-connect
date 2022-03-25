@@ -91,12 +91,14 @@ export const randomDefiTx = (tx: Partial<CoreDefiTx> = {}) =>
     tx.partialStateSecret || randomBytes(32),
     inputOrDefault(tx.txRefNo, randomInt()),
     tx.created || new Date(),
-    tx.outputValueA || BigInt(0),
-    tx.outputValueB || BigInt(0),
-    tx.result,
     tx.settled,
     tx.interactionNonce,
     tx.isAsync,
+    tx.success,
+    tx.outputValueA,
+    tx.outputValueB,
+    tx.finalised,
+    tx.claimSettled,
   );
 
 export const randomAccountAliasId = () => new AccountAliasId(AliasHash.random(), randomInt());

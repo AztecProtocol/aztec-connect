@@ -1,20 +1,20 @@
+import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxType } from '@aztec/barretenberg/blockchain';
-import { BridgeId, BridgeConfig, BitConfig } from '@aztec/barretenberg/bridge_id';
+import { BridgeConfig, BridgeId } from '@aztec/barretenberg/bridge_id';
+import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
+import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
-import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { randomBytes } from 'crypto';
+import { BridgeResolver } from '../bridge';
 import { TxDao } from '../entity/tx';
 import { RollupAggregator } from '../rollup_aggregator';
 import { RollupCreator } from '../rollup_creator';
 import { RollupPublisher } from '../rollup_publisher';
+import { TxFeeResolver } from '../tx_fee_resolver';
 import { PublishTimeManager, RollupTimeout, RollupTimeouts } from './publish_time_manager';
 import { RollupCoordinator } from './rollup_coordinator';
-import { TxFeeResolver } from '../tx_fee_resolver';
-import { BridgeResolver } from '../bridge';
-import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
-import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 
 jest.useFakeTimers();
 
@@ -144,15 +144,7 @@ describe('rollup_coordinator', () => {
       txFeeAssetId = 0,
       excessGas = 0n,
       creationTime = new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id), // ensures txs are ordered by id
-      bridgeId = new BridgeId(
-        randomInt(),
-        1,
-        0,
-        1,
-        0,
-        new BitConfig(false, false, false, false, false, false),
-        0,
-      ).toBigInt(),
+      bridgeId = new BridgeId(randomInt(), 1, 0).toBigInt(),
       noteCommitment1 = randomBytes(32),
       noteCommitment2 = randomBytes(32),
       backwardLink = Buffer.alloc(32),
@@ -205,27 +197,25 @@ describe('rollup_coordinator', () => {
       interrupt: jest.fn(),
       createRollup: jest
         .fn()
-        .mockImplementation(
-          async (txs: TxDao[], rootRollupBridgeIds: bigint[], rootRollupAssetIds: Set<number>, firstInner: boolean) => {
-            for (const tx of txs) {
-              const proof = new ProofData(tx.proofData);
-              if (proof.proofId === ProofId.ACCOUNT) {
-                continue;
-              }
-              const asset = proof.txFeeAssetId.readUInt32BE(28);
-              if (feeResolver.isFeePayingAsset(asset)) {
-                rootRollupAssetIds.add(asset);
-              }
-              if (proof.proofId !== ProofId.DEFI_DEPOSIT) {
-                continue;
-              }
-              const proofBridgeId = toBigIntBE(proof.bridgeId);
-              if (rootRollupBridgeIds.findIndex(bridge => bridge === proofBridgeId) === -1) {
-                rootRollupBridgeIds.push(proofBridgeId);
-              }
+        .mockImplementation(async (txs: TxDao[], rootRollupBridgeIds: bigint[], rootRollupAssetIds: Set<number>) => {
+          for (const tx of txs) {
+            const proof = new ProofData(tx.proofData);
+            if (proof.proofId === ProofId.ACCOUNT) {
+              continue;
             }
-          },
-        ),
+            const asset = proof.txFeeAssetId.readUInt32BE(28);
+            if (feeResolver.isFeePayingAsset(asset)) {
+              rootRollupAssetIds.add(asset);
+            }
+            if (proof.proofId !== ProofId.DEFI_DEPOSIT) {
+              continue;
+            }
+            const proofBridgeId = toBigIntBE(proof.bridgeId);
+            if (rootRollupBridgeIds.findIndex(bridge => bridge === proofBridgeId) === -1) {
+              rootRollupBridgeIds.push(proofBridgeId);
+            }
+          }
+        }),
       addRollupProof: jest.fn(),
     };
 

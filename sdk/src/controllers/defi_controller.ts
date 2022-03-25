@@ -125,18 +125,19 @@ export class DefiController {
     return this.getDefiDepositTxId();
   }
 
-  async awaitDefiInteraction(timeout?: number) {
-    const defiTxId = this.getDefiDepositTxId();
-    await this.core.awaitDefiInteraction(defiTxId, timeout);
-  }
-
   async awaitDefiDepositCompletion(timeout?: number) {
     const defiTxId = this.getDefiDepositTxId();
     await this.core.awaitDefiDepositCompletion(defiTxId, timeout);
   }
 
+  async awaitDefiFinalisation(timeout?: number) {
+    const defiTxId = this.getDefiDepositTxId();
+    await this.core.awaitDefiFinalisation(defiTxId, timeout);
+  }
+
   async awaitSettlement(timeout?: number) {
-    await Promise.all(this.txIds.map(txId => this.core.awaitSettlement(txId, timeout)));
+    const defiTxId = this.getDefiDepositTxId();
+    await this.core.awaitDefiSettlement(defiTxId, timeout);
   }
 
   async getInteractionNonce() {

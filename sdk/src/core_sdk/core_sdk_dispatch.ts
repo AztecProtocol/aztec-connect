@@ -206,12 +206,16 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     return this.request('awaitSettlement', [txId, timeout]);
   }
 
-  public async awaitDefiInteraction(txId: string, timeout?: number) {
-    return this.request('awaitDefiInteraction', [txId, timeout]);
-  }
-
   public async awaitDefiDepositCompletion(txId: string, timeout?: number) {
     return this.request('awaitDefiDepositCompletion', [txId, timeout]);
+  }
+
+  public async awaitDefiFinalisation(txId: string, timeout?: number) {
+    return this.request('awaitDefiFinalisation', [txId, timeout]);
+  }
+
+  public async awaitDefiSettlement(txId: string, timeout?: number) {
+    return this.request('awaitDefiSettlement', [txId, timeout]);
   }
 
   public async getDefiInteractionNonce(txId: string) {

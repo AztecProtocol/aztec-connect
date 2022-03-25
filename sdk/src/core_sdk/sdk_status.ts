@@ -1,10 +1,4 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import {
-  BlockchainAsset,
-  blockchainAssetFromJson,
-  BlockchainAssetJson,
-  blockchainAssetToJson,
-} from '@aztec/barretenberg/blockchain';
 
 export enum SdkEvent {
   // The set of users has changed.
@@ -27,7 +21,6 @@ export interface SdkStatus {
   latestRollupId: number;
   dataSize: number;
   dataRoot: Buffer;
-  assets: BlockchainAsset[];
 }
 
 export interface SdkStatusJson {
@@ -38,19 +31,16 @@ export interface SdkStatusJson {
   latestRollupId: number;
   dataSize: number;
   dataRoot: string;
-  assets: BlockchainAssetJson[];
 }
 
 export const sdkStatusToJson = (status: SdkStatus): SdkStatusJson => ({
   ...status,
   rollupContractAddress: status.rollupContractAddress.toString(),
   dataRoot: status.dataRoot.toString('hex'),
-  assets: status.assets.map(blockchainAssetToJson),
 });
 
 export const sdkStatusFromJson = (json: SdkStatusJson): SdkStatus => ({
   ...json,
   rollupContractAddress: EthAddress.fromString(json.rollupContractAddress),
   dataRoot: Buffer.from(json.dataRoot, 'hex'),
-  assets: json.assets.map(blockchainAssetFromJson),
 });

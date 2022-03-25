@@ -118,7 +118,7 @@ export class ShieldComposer {
     // If an ERC-20 doesn't support permits, an allowance must first be granted as a seperate transaction.
     const { targetOutput } = this.payload;
     const targetAssetIsEth = targetOutput.id === 0;
-    const { permitSupport } = targetOutput.info;
+    const permitSupport = targetOutput.permitSupport;
     const requiredFunds = await controller.getRequiredFunds();
     const requiredAmount = targetOutput.withBaseUnits(requiredFunds);
     if (!targetAssetIsEth && !permitSupport) {
@@ -142,7 +142,7 @@ export class ShieldComposer {
   private async depositAndAwaitConfirmation(controller: DepositController, requiredAmount: Amount) {
     await this.walletAccountEnforcer.ensure();
     this.stateObs.setPrompt(`Please make a deposit of ${requiredAmount.format({ layer: 'L1' })} from your wallet.`);
-    if (this.payload.targetOutput.info.permitSupport) {
+    if (this.payload.targetOutput.permitSupport) {
       const expireIn = 60n * 5n; // 5 minutes
       const deadline = BigInt(Math.floor(Date.now() / 1000)) + expireIn;
       await controller.depositFundsToContractWithPermit(deadline);

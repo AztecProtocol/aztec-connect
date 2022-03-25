@@ -21,27 +21,22 @@ export class BridgeResolver {
   }
 
   public getFullBridgeGas(bridgeId: bigint) {
-    return this.determineFullBridgeGas(bridgeId);
+    const config = this.getBridgeConfig(bridgeId);
+    if (config?.fee) {
+      return config.fee;
+    }
+    return BigInt(this.blockchain.getBridgeGas(bridgeId));
   }
 
   public setConf(defaultDeFiBatchSize: number) {
     this.defaultDeFiBatchSize = defaultDeFiBatchSize;
   }
 
-  private determineFullBridgeGas(bridgeId: bigint) {
-    const config = this.getBridgeConfig(bridgeId);
-    if (config?.fee) {
-      return config.fee;
-    }
-    const gasFromContract = this.blockchain.getBridgeGas(bridgeId);
-    return gasFromContract;
-  }
-
   public getMinBridgeTxGas(bridgeId: bigint) {
     const bridgeConfig = this.getBridgeConfig(bridgeId)!;
-    const bridgeGas = this.getFullBridgeGas(bridgeId);
     const blockchainStatus = this.blockchain.getBlockchainStatus();
     if (blockchainStatus.allowThirdPartyContracts || bridgeConfig) {
+      const bridgeGas = this.getFullBridgeGas(bridgeId);
       const numBridgeTxs = bridgeConfig ? BigInt(bridgeConfig.numTxs) : BigInt(this.defaultDeFiBatchSize);
       const requiredGas = bridgeGas / numBridgeTxs;
       return bridgeGas % numBridgeTxs > 0n ? requiredGas + 1n : requiredGas;

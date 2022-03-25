@@ -70,7 +70,7 @@ async function deployBridgeContracts(signer: Signer, rollup: Contract, uniswapRo
   }
 
   for (const elementAsset of elementAssets) {
-    await rollup.setSupportedAsset(elementAsset, false, 0, { gasLimit });
+    await rollup.setSupportedAsset(elementAsset, 0, { gasLimit });
   }
 
   const elementRegistry = await deployMockElementContractRegistry(signer, elementConfig);

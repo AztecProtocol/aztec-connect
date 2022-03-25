@@ -38,9 +38,14 @@ function toRealAsset(assets: BlockchainAsset[], assetId: number) {
   return assetId === 0 ? ETH_ASSET : toErc20Asset(assets, assetId);
 }
 
-function toAdaptorAsset(assets: BlockchainAsset[], assetId: number, isVirtual: boolean, isReal: boolean): AztecAsset {
-  if (isVirtual) return toVirtualAsset(assetId);
-  else if (isReal) return toRealAsset(assets, assetId);
+function toAdaptorAsset(
+  assets: BlockchainAsset[],
+  assetId: number | undefined,
+  isVirtual: boolean,
+  isReal: boolean,
+): AztecAsset {
+  if (isVirtual) return toVirtualAsset(assetId!);
+  else if (isReal) return toRealAsset(assets, assetId!);
   else return UNUSED_ASSET;
 }
 

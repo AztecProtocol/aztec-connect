@@ -25,7 +25,6 @@ describe('rollup_processor: defi bridge', () => {
 
   it('revert if output assets are the same', async () => {
     const bridgeId = await mockBridge({
-      secondOutputAssetValid: true,
       outputAssetIdA: 2,
       outputAssetIdB: 2,
     });

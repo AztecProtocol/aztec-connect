@@ -701,7 +701,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     }
 
     const asset = this.asset;
-    const { permitSupport } = this.sdk.getAssetInfo(asset.id);
+    const permitSupport = false;
     if (!permitSupport) {
       const allowance = asset.id !== 0 ? await controller.getPublicAllowance() : requiredFunds;
       if (allowance < requiredFunds) {

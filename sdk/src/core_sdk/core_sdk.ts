@@ -68,7 +68,6 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     latestRollupId: -1,
     dataRoot: Buffer.alloc(0),
     dataSize: 0,
-    assets: [],
   };
   private initState = SdkInitState.UNINITIALIZED;
   private processBlocksPromise?: Promise<void>;
@@ -112,7 +111,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     this.worldState = new WorldState(this.leveldb, this.pedersen);
 
     const {
-      blockchainStatus: { chainId, rollupContractAddress, assets },
+      blockchainStatus: { chainId, rollupContractAddress },
     } = await this.getRemoteStatus();
 
     // Clear all data if contract changed.
@@ -141,7 +140,6 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       dataRoot: this.worldState.getRoot(),
       syncedToRollup: await this.getSyncedToRollup(),
       latestRollupId: +(await this.leveldb.get('latestRollupId').catch(() => -1)),
-      assets,
     };
 
     this.updateInitState(SdkInitState.INITIALIZED);
@@ -582,26 +580,6 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     }
   }
 
-  public async awaitDefiInteraction(txId: TxId, timeout?: number) {
-    // this.assertInitState(SdkInitState.RUNNING);
-    const started = new Date().getTime();
-    while (true) {
-      if (timeout && new Date().getTime() - started > timeout * 1000) {
-        throw new Error(`Timeout awaiting defi interaction: ${txId}`);
-      }
-
-      const tx = await this.db.getDefiTx(txId);
-      if (!tx) {
-        throw new Error('Unknown txId.');
-      }
-
-      if (tx.result !== undefined) {
-        break;
-      }
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-  }
-
   public async awaitDefiDepositCompletion(txId: TxId, timeout?: number) {
     // this.assertInitState(SdkInitState.RUNNING);
     const started = new Date().getTime();
@@ -615,7 +593,45 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         throw new Error('Unknown txId.');
       }
 
-      if (tx.interactionNonce !== undefined) {
+      if (tx.settled) {
+        break;
+      }
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+
+  public async awaitDefiFinalisation(txId: TxId, timeout?: number) {
+    const started = new Date().getTime();
+    while (true) {
+      if (timeout && new Date().getTime() - started > timeout * 1000) {
+        throw new Error(`Timeout awaiting defi interaction: ${txId}`);
+      }
+
+      const tx = await this.db.getDefiTx(txId);
+      if (!tx) {
+        throw new Error('Unknown txId.');
+      }
+
+      if (tx.finalised) {
+        break;
+      }
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+
+  public async awaitDefiSettlement(txId: TxId, timeout?: number) {
+    const started = new Date().getTime();
+    while (true) {
+      if (timeout && new Date().getTime() - started > timeout * 1000) {
+        throw new Error(`Timeout awaiting defi interaction: ${txId}`);
+      }
+
+      const tx = await this.db.getDefiTx(txId);
+      if (!tx) {
+        throw new Error('Unknown txId.');
+      }
+
+      if (tx.claimSettled) {
         break;
       }
       await new Promise(resolve => setTimeout(resolve, 1000));

@@ -86,7 +86,12 @@ describe('rollup_processor', () => {
   it('should get contract status', async () => {
     expect(rollupProcessor.address).toEqual(rollupProcessor.address);
     expect(await rollupProcessor.dataSize()).toBe(0);
-    expect(await rollupProcessor.getSupportedAssets()).toEqual(assets.map(a => a.getStaticInfo().address));
+    expect(await rollupProcessor.getSupportedAssets()).toEqual(
+      assets
+        .slice(1)
+        .map(a => a.getStaticInfo())
+        .map(({ address, gasLimit }) => ({ address, gasLimit })),
+    );
     expect(await rollupProcessor.getEscapeHatchStatus()).toEqual({ escapeOpen: true, blocksRemaining: 20 });
   });
 
@@ -122,7 +127,7 @@ describe('rollup_processor', () => {
 
   it('should set new supported asset', async () => {
     const assetAddr = EthAddress.randomAddress();
-    const txHash = await rollupProcessor.setSupportedAsset(assetAddr, false, 0);
+    const txHash = await rollupProcessor.setSupportedAsset(assetAddr, 0);
 
     // Check event was emitted.
     const receipt = await ethers.provider.getTransactionReceipt(txHash.toString());
@@ -131,7 +136,7 @@ describe('rollup_processor', () => {
       .assetAddress;
     const assetBGasLimit = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
       .assetGasLimit;
-    expect(assetBGasLimit.toNumber()).toBe(55000);
+    expect(assetBGasLimit.toNumber()).toBe(TestRollupProcessor.DEFAULT_ERC20_GAS_LIMIT);
 
     expect(assetBId.toNumber()).toBe(2);
     expect(assetBAddress).toBe(assetAddr.toString());
@@ -143,7 +148,7 @@ describe('rollup_processor', () => {
   it('should set new supported asset if not owner when the THIRD_PARTY_CONTRACTS flag is set', async () => {
     const assetAddr = EthAddress.randomAddress();
     const nonOwner = EthAddress.fromString(await signers[1].getAddress());
-    await expect(rollupProcessor.setSupportedAsset(assetAddr, false, 0, { signingAddress: nonOwner })).rejects.toThrow(
+    await expect(rollupProcessor.setSupportedAsset(assetAddr, 0, { signingAddress: nonOwner })).rejects.toThrow(
       'THIRD_PARTY_CONTRACTS_FLAG_NOT_SET',
     );
 
@@ -151,15 +156,13 @@ describe('rollup_processor', () => {
       signingAddress: EthAddress.fromString(await signers[0].getAddress()),
     });
 
-    await expect(
-      rollupProcessor.setSupportedAsset(assetAddr, false, 0, { signingAddress: nonOwner }),
-    ).resolves.toBeTruthy();
+    await expect(rollupProcessor.setSupportedAsset(assetAddr, 0, { signingAddress: nonOwner })).resolves.toBeTruthy();
   });
 
   it('should set new supported asset with a custom gas limit', async () => {
     const assetAddr = EthAddress.randomAddress();
-    const gasLimit = 1500000;
-    const txHash = await rollupProcessor.setSupportedAsset(assetAddr, false, gasLimit);
+    const gasLimit = 1234567;
+    const txHash = await rollupProcessor.setSupportedAsset(assetAddr, gasLimit);
 
     // Check event was emitted.
     const receipt = await ethers.provider.getTransactionReceipt(txHash.toString());
@@ -177,8 +180,11 @@ describe('rollup_processor', () => {
   });
 
   it('should set new supported bridge with a custom gas limit', async () => {
+    const bridgeAddressId = 2;
+    expect(await rollupProcessor.getBridgeGasLimit(bridgeAddressId)).toBe(TestRollupProcessor.DEFAULT_BRIDGE_GAS_LIMIT);
+
     const bridgeAddr = EthAddress.randomAddress();
-    const gasLimit = 15000000;
+    const gasLimit = 1234567;
     const txHash = await rollupProcessor.setSupportedBridge(bridgeAddr, gasLimit);
 
     // Check event was emitted.
@@ -190,11 +196,12 @@ describe('rollup_processor', () => {
     const bridgeGasLimit = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
       .bridgeGasLimit;
     expect(bridgeGasLimit.toNumber()).toBe(gasLimit);
-    expect(bridgeId.toNumber()).toBe(2);
+    expect(bridgeId.toNumber()).toBe(bridgeAddressId);
     expect(bridgeAddress).toBe(bridgeAddr.toString());
 
-    const supportedAssetBAddress = await rollupProcessor.getSupportedBridge(2);
+    const supportedAssetBAddress = await rollupProcessor.getSupportedBridge(bridgeAddressId);
     expect(supportedAssetBAddress).toEqual(bridgeAddr);
+    expect(await rollupProcessor.getBridgeGasLimit(bridgeAddressId)).toBe(gasLimit);
   });
 
   it('should set new supported bridge if not owner when the THIRD_PARTY_CONTRACTS flag is set', async () => {
@@ -221,11 +228,6 @@ describe('rollup_processor', () => {
     await rollupProcessor.approveProof(proofHash, { signingAddress: addresses[1] });
     expect(await rollupProcessor.getProofApprovalStatus(addresses[0], proofHash)).toBe(false);
     expect(await rollupProcessor.getProofApprovalStatus(addresses[1], proofHash)).toBe(true);
-  });
-
-  it('should return whether an asset supports the permit ERC-2612 approval flow', async () => {
-    expect(await rollupProcessor.getAssetPermitSupport(0)).toBe(false);
-    expect(await rollupProcessor.getAssetPermitSupport(1)).toBe(true);
   });
 
   it('should allow any address to use escape hatch', async () => {
@@ -319,7 +321,7 @@ describe('rollup_processor', () => {
 
     // Deposit to contract.
     await assets[inputAssetId].approve(depositAmount, userAAddress, rollupProcessor.address);
-    await rollupProcessor.depositPendingFunds(inputAssetId, depositAmount, undefined, undefined, {
+    await rollupProcessor.depositPendingFunds(inputAssetId, depositAmount, undefined, {
       signingAddress: userAAddress,
     });
 
@@ -468,7 +470,7 @@ describe('rollup_processor', () => {
 
     // Deposit to contract.
     await assets[inputAssetIdA].approve(depositAmount, userAAddress, rollupProcessor.address);
-    await rollupProcessor.depositPendingFunds(inputAssetIdA, depositAmount, undefined, undefined, {
+    await rollupProcessor.depositPendingFunds(inputAssetIdA, depositAmount, undefined, {
       signingAddress: userAAddress,
     });
 

@@ -87,7 +87,9 @@ export async function setupTestRollupProcessor(
   const initialTotalSupply = 10n * 10n ** 18n;
   const tokenAssets: Array<Asset> = assets.slice(1);
 
-  await Promise.all(tokenAssets.map(a => rollupProcessor.setSupportedAsset(a.getStaticInfo().address, true, 0)));
+  await Promise.all(
+    tokenAssets.map(a => a.getStaticInfo()).map(a => rollupProcessor.setSupportedAsset(a.address, a.gasLimit)),
+  );
 
   await Promise.all(tokenAssets.map(a => createPair(a, initialTotalSupply)));
 

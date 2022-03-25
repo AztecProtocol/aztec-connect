@@ -85,7 +85,6 @@ describe('rollup_processor: async defi bridge', () => {
     const outputValueA = 12n;
     const outputValueB = 7n;
     const { bridgeId } = await mockAsyncBridge(rollupProvider, rollupProcessor, assetAddresses, {
-      secondOutputAssetValid: true,
       inputAssetIdA: 1,
       outputAssetIdA: 0,
       outputAssetIdB: 2,
@@ -146,7 +145,6 @@ describe('rollup_processor: async defi bridge', () => {
     const outputValueA = 12n;
     const outputValueB = 7n;
     const { bridgeId } = await mockAsyncBridge(rollupProvider, rollupProcessor, assetAddresses, {
-      secondOutputAssetValid: true,
       inputAssetIdA: 1,
       outputAssetIdA: 0,
       outputAssetIdB: 2,
@@ -339,7 +337,6 @@ describe('rollup_processor: async defi bridge', () => {
     const outputValueA = 7n;
     const outputValueB = 1n;
     const { bridgeId } = await mockAsyncBridge(rollupProvider, rollupProcessor, assetAddresses, {
-      secondOutputAssetValid: false,
       outputValueA,
       outputValueB,
     });

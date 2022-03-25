@@ -77,11 +77,11 @@ describe('Bridge Resolver', () => {
   });
 
   it('returns correct single tx gas NOT in the bridge config and when the acceptAllBridges flag is set', () => {
-    const unregisteredBridgeFee = 100000n;
-    blockchain.getBridgeGas.mockReturnValueOnce(unregisteredBridgeFee);
+    const unregisteredBridgeGas = 100000n;
+    blockchain.getBridgeGas.mockReturnValueOnce(unregisteredBridgeGas);
     blockchain.getBlockchainStatus.mockReturnValueOnce({ allowThirdPartyContracts: true });
 
-    expect(bridgeResolver.getMinBridgeTxGas(3n)).toEqual(unregisteredBridgeFee / BigInt(defaultDeFiBatchSize));
+    expect(bridgeResolver.getMinBridgeTxGas(3n)).toEqual(unregisteredBridgeGas / BigInt(defaultDeFiBatchSize));
   });
 
   it('throws for a tx  NOT in the bridge config and when the acceptAllBridges flag is FALSE', () => {

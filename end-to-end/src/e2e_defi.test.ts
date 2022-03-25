@@ -1,8 +1,6 @@
 import {
   AccountId,
   AztecSdk,
-  BitConfig,
-  BridgeId,
   createNodeAztecSdk,
   DefiController,
   DefiSettlementTime,
@@ -76,8 +74,11 @@ describe('end-to-end defi tests', () => {
       );
 
     const shieldValue = sdk.toBaseUnits(0, '0.08');
-    const ethToDaiBridge = new BridgeId(1, 0, 1, 0, 0, new BitConfig(false, false, false, false, false, false), 0);
-    const daiToEthBridge = new BridgeId(1, 1, 0, 0, 0, new BitConfig(false, false, false, false, false, false), 0);
+    const bridgeAddressId = 1;
+    const ethAssetId = 0;
+    const daiAssetId = 1;
+    const ethToDaiBridge = sdk.constructBridgeId(bridgeAddressId, ethAssetId, daiAssetId);
+    const daiToEthBridge = sdk.constructBridgeId(bridgeAddressId, daiAssetId, ethAssetId);
     const ethToDaiFees = await sdk.getDefiFees(ethToDaiBridge);
     const daiToEthFees = await sdk.getDefiFees(daiToEthBridge);
 
@@ -134,7 +135,7 @@ describe('end-to-end defi tests', () => {
       await controller.send();
 
       debug(`waiting for defi interaction to complete...`);
-      await controller.awaitDefiInteraction();
+      await controller.awaitDefiFinalisation();
 
       debug('waiting for claim to settle...');
       await flushClaim();
@@ -142,9 +143,10 @@ describe('end-to-end defi tests', () => {
 
       const [defiTx] = await sdk.getDefiTxs(userIds[0]);
       const expectedInputBalance = shieldValue.value - depositValue.value - fee.value;
-      expect(defiTx).toMatchObject({ bridgeId: ethToDaiBridge, depositValue, fee, outputValueB: 0n });
+      expect(defiTx).toMatchObject({ bridgeId: ethToDaiBridge, depositValue, fee });
+      expect(defiTx.interactionResult).toMatchObject({ isAsync: false, success: true, outputValueB: 0n });
       expect(await sdk.getBalance(inputAssetIdA, userIds[0])).toBe(expectedInputBalance);
-      expect(await sdk.getBalance(outputAssetIdA, userIds[0])).toBe(defiTx.outputValueA);
+      expect(await sdk.getBalance(outputAssetIdA, userIds[0])).toBe(defiTx.interactionResult.outputValueA);
     }
 
     // Rollup 2.
@@ -177,8 +179,11 @@ describe('end-to-end defi tests', () => {
 
         const verification = async () => {
           const [defiTx] = await sdk.getDefiTxs(userIds[0]);
-          expect(defiTx).toMatchObject({ bridgeId: daiToEthBridge, depositValue, fee, outputValueB: 0n });
-          expect(await sdk.getBalance(0, userIds[0])).toBe(initialEthBalance.value + defiTx.outputValueA);
+          expect(defiTx).toMatchObject({ bridgeId: daiToEthBridge, depositValue, fee });
+          expect(defiTx.interactionResult).toMatchObject({ isAsync: false, success: true, outputValueB: 0n });
+          expect(await sdk.getBalance(0, userIds[0])).toBe(
+            initialEthBalance.value + defiTx.interactionResult.outputValueA,
+          );
           expect(await sdk.getBalance(1, userIds[0])).toBe(0n);
           await debugBalance(inputAssetIdA, 0);
           await debugBalance(outputAssetIdA, 0);
@@ -210,9 +215,10 @@ describe('end-to-end defi tests', () => {
         const verification = async () => {
           const [defiTx] = await sdk.getDefiTxs(userIds[i]);
           const expectedInputBalance = shieldValue.value - depositValue.value - fee.value;
-          expect(defiTx).toMatchObject({ bridgeId: ethToDaiBridge, depositValue, fee, outputValueB: 0n });
+          expect(defiTx).toMatchObject({ bridgeId: ethToDaiBridge, depositValue, fee });
+          expect(defiTx.interactionResult).toMatchObject({ isAsync: false, success: true, outputValueB: 0n });
           expect(await sdk.getBalance(inputAssetIdA, userIds[i])).toBe(expectedInputBalance);
-          expect(await sdk.getBalance(outputAssetIdA, userIds[i])).toBe(defiTx.outputValueA);
+          expect(await sdk.getBalance(outputAssetIdA, userIds[i])).toBe(defiTx.interactionResult.outputValueA);
           await debugBalance(inputAssetIdA, i);
           await debugBalance(outputAssetIdA, i);
         };
@@ -221,7 +227,7 @@ describe('end-to-end defi tests', () => {
 
       debug(`waiting for defi interactions to complete...`);
 
-      await Promise.all(defiControllers.map(controller => controller.awaitDefiInteraction()));
+      await Promise.all(defiControllers.map(controller => controller.awaitDefiFinalisation()));
 
       debug(`waiting for claims to settle...`);
       await flushClaim();

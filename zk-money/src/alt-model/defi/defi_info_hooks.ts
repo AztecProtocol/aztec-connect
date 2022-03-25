@@ -1,5 +1,5 @@
 import createDebug from 'debug';
-import { AssetValue, BitConfig, BridgeId } from '@aztec/sdk';
+import { AssetValue, BridgeId } from '@aztec/sdk';
 import { useAggregatedAssetsPrice, useAssetPrice, useRollupProviderStatus } from 'alt-model';
 import { useEffect, useMemo, useState } from 'react';
 import { toAdaptorArgs } from './bridge_data_adaptors/bridge_adaptor_util';
@@ -28,7 +28,7 @@ export function useDefaultBridgeId(recipe: DefiRecipe) {
     const { addressId, inputAssetA, outputAssetA } = recipe;
     if (auxData === undefined) return undefined;
     // TODO: use more complete bridge id construction
-    return new BridgeId(addressId, inputAssetA.id, outputAssetA.id, 0, 0, BitConfig.EMPTY, Number(auxData));
+    return new BridgeId(addressId, inputAssetA.id, outputAssetA.id, undefined, undefined, Number(auxData));
   }, [recipe, auxData]);
 }
 

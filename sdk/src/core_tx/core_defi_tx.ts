@@ -15,12 +15,14 @@ export class CoreDefiTx {
     public readonly partialStateSecret: Buffer,
     public readonly txRefNo: number,
     public readonly created: Date,
+    public readonly settled?: Date,
+    public readonly interactionNonce = 0,
+    public readonly isAsync = false,
+    public readonly success = false,
     public readonly outputValueA = BigInt(0),
     public readonly outputValueB = BigInt(0),
-    public readonly result?: boolean,
-    public readonly settled?: Date,
-    public readonly interactionNonce?: number,
-    public readonly isAsync?: boolean,
+    public readonly finalised?: Date,
+    public readonly claimSettled?: Date,
   ) {}
 }
 
@@ -34,12 +36,14 @@ export interface CoreDefiTxJson {
   partialStateSecret: string;
   txRefNo: number;
   created: Date;
+  settled?: Date;
+  interactionNonce: number;
+  isAsync: boolean;
+  success: boolean;
   outputValueA: string;
   outputValueB: string;
-  result?: boolean;
-  settled?: Date;
-  interactionNonce?: number;
-  isAsync?: boolean;
+  finalised?: Date;
+  claimSettled?: Date;
 }
 
 export const coreDefiTxToJson = (tx: CoreDefiTx): CoreDefiTxJson => ({
@@ -64,10 +68,12 @@ export const coreDefiTxFromJson = (json: CoreDefiTxJson) =>
     Buffer.from(json.partialStateSecret, 'hex'),
     json.txRefNo,
     json.created,
-    BigInt(json.outputValueA),
-    BigInt(json.outputValueB),
-    json.result,
     json.settled,
     json.interactionNonce,
     json.isAsync,
+    json.success,
+    BigInt(json.outputValueA),
+    BigInt(json.outputValueB),
+    json.finalised,
+    json.claimSettled,
   );

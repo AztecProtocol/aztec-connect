@@ -1,7 +1,7 @@
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { CoreAccountTx, CoreDefiTx, CorePaymentTx, CoreUserTx } from '../core_tx';
-import { UserAccountTx, UserDefiTx, UserPaymentTx } from '../user_tx';
+import { UserAccountTx, UserDefiInteractionResultState, UserDefiTx, UserPaymentTx } from '../user_tx';
 
 const emptyAssetValue = { assetId: 0, value: BigInt(0) };
 
@@ -18,36 +18,56 @@ const toUserPaymentTx = (
   return new UserPaymentTx(txId, userId, proofId, value, fee, publicOwner, isSender, created, settled);
 };
 
-const toUserDefiTx = (
-  {
+const getUserDefiInteractionResultState = ({ settled, finalised, claimSettled }: CoreDefiTx) => {
+  if (claimSettled) {
+    return UserDefiInteractionResultState.SETTLED;
+  }
+  if (finalised) {
+    return UserDefiInteractionResultState.AWAITING_SETTLEMENT;
+  }
+  if (settled) {
+    return UserDefiInteractionResultState.AWAITING_FINALISATION;
+  }
+  return UserDefiInteractionResultState.PENDING;
+};
+
+const toUserDefiTx = (tx: CoreDefiTx, fee: AssetValue) => {
+  const {
     txId,
     userId,
     bridgeId,
     depositValue,
-    outputValueA,
-    outputValueB,
-    result,
     created,
     settled,
     interactionNonce,
     isAsync,
-  }: CoreDefiTx,
-  fee: AssetValue,
-) =>
-  new UserDefiTx(
+    success,
+    outputValueA,
+    outputValueB,
+    finalised,
+    claimSettled,
+  } = tx;
+  const state = getUserDefiInteractionResultState(tx);
+  return new UserDefiTx(
     txId,
     userId,
     bridgeId,
     { assetId: bridgeId.inputAssetIdA, value: depositValue },
     fee,
-    outputValueA,
-    outputValueB,
-    result,
     created,
-    settled,
-    interactionNonce,
-    isAsync,
+    claimSettled,
+    {
+      state,
+      isAsync,
+      interactionNonce,
+      success,
+      outputValueA,
+      outputValueB,
+      deposited: settled,
+      finalised,
+    },
   );
+};
 
 const getPaymentValue = ({
   proofId,

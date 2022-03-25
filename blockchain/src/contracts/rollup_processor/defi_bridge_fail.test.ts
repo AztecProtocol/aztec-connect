@@ -80,7 +80,7 @@ describe('rollup_processor: defi bridge failures', () => {
     await expectBalance(bridgeId.inputAssetIdA, inputValue);
     await expectBalance(bridgeId.outputAssetIdA, 0n);
     if (bridgeId.bitConfig.secondOutputReal) {
-      await expectBalance(bridgeId.outputAssetIdB, 0n);
+      await expectBalance(bridgeId.outputAssetIdB!, 0n);
     }
     await expectResult([new DefiInteractionNote(bridgeId, 0, inputValue, 0n, 0n, false)], txHash);
   };

@@ -1,17 +1,17 @@
-import { TxType } from '@aztec/barretenberg/blockchain';
-import { BridgeId, BitConfig } from '@aztec/barretenberg/bridge_id';
-import { HashPath } from '@aztec/barretenberg/merkle_tree';
-import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
+import { TxType } from '@aztec/barretenberg/blockchain';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { HashPath } from '@aztec/barretenberg/merkle_tree';
+import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
+import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { numToUInt32BE } from '@aztec/barretenberg/serialize';
+import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { randomBytes } from 'crypto';
+import { ProofGenerator, TxRollupProofRequest } from 'halloumi/proof_generator';
 import { TxDao } from './entity/tx';
+import { Metrics } from './metrics';
 import { RollupCreator } from './rollup_creator';
 import { RollupDb } from './rollup_db';
-import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
-import { ProofGenerator, TxRollupProofRequest } from 'halloumi/proof_generator';
-import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
-import { Metrics } from './metrics';
-import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { TxFeeResolver } from './tx_fee_resolver';
 
 jest.useFakeTimers();
@@ -40,8 +40,7 @@ const DATA_TREE_SIZE = 99n;
 const ROLLUP_ID = 52;
 const NON_FEE_PAYING_ASSET = 1000;
 
-const buildBridgeId = (address: number) =>
-  new BridgeId(address, 1, 0, 1, 0, new BitConfig(false, false, false, false, false, false), 0).toBigInt();
+const buildBridgeId = (addressId: number) => new BridgeId(addressId, 1, 0).toBigInt();
 const BRIDGE_1 = buildBridgeId(1);
 const BRIDGE_2 = buildBridgeId(2);
 const BRIDGE_3 = buildBridgeId(3);
@@ -69,15 +68,7 @@ describe('rollup_creator', () => {
       txFeeAssetId = 0,
       txFee = 0n,
       creationTime = new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id), // ensures txs are ordered by id
-      bridgeId = new BridgeId(
-        randomInt(),
-        1,
-        0,
-        1,
-        0,
-        new BitConfig(false, false, false, false, false, false),
-        0,
-      ).toBigInt(),
+      bridgeId = new BridgeId(randomInt(), 1, 0).toBigInt(),
       noteCommitment1 = randomBytes(32),
       noteCommitment2 = randomBytes(32),
       backwardLink = Buffer.alloc(32),

@@ -25,12 +25,6 @@ export class DefiTxDao {
   @Column()
   public partialStateSecret!: Buffer;
 
-  @Column('text', { transformer: [bigintTransformer] })
-  public outputValueA!: bigint;
-
-  @Column('text', { transformer: [bigintTransformer] })
-  public outputValueB!: bigint;
-
   @Column()
   public txRefNo!: number;
 
@@ -40,31 +34,40 @@ export class DefiTxDao {
   @Column({ nullable: true })
   public settled?: Date;
 
-  @Column({ nullable: true })
-  public result?: boolean;
-
   @Index({ unique: false })
-  @Column({ nullable: true })
-  public interactionNonce?: number;
+  @Column()
+  public interactionNonce!: number;
+
+  @Column()
+  public isAsync!: boolean;
+
+  @Column()
+  public success!: boolean;
+
+  @Column('text', { transformer: [bigintTransformer] })
+  public outputValueA!: bigint;
+
+  @Column('text', { transformer: [bigintTransformer] })
+  public outputValueB!: bigint;
 
   @Column({ nullable: true })
-  public isAsync?: boolean;
+  public finalised?: Date;
+
+  @Column({ nullable: true })
+  public claimSettled?: Date;
 
   @AfterLoad()
   @AfterInsert()
   @AfterUpdate()
   afterLoad() {
-    if (this.result === null) {
-      delete this.result;
-    }
     if (this.settled === null) {
       delete this.settled;
     }
-    if (this.interactionNonce === null) {
-      delete this.interactionNonce;
+    if (this.finalised === null) {
+      delete this.finalised;
     }
-    if (this.isAsync === null) {
-      delete this.isAsync;
+    if (this.claimSettled === null) {
+      delete this.claimSettled;
     }
   }
 }

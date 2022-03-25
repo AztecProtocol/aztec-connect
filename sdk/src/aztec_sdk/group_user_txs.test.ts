@@ -1,9 +1,9 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { BitConfig, BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
-import { randomCoreAccountTx, randomCoreDefiTx, randomCorePaymentTx } from '../core_tx/fixtures';
-import { UserAccountTx, UserDefiTx, UserPaymentTx } from '../user_tx';
 import { createTxRefNo } from '../controllers/create_tx_ref_no';
+import { randomCoreAccountTx, randomCoreDefiTx, randomCorePaymentTx } from '../core_tx/fixtures';
+import { UserAccountTx, UserDefiInteractionResultState, UserDefiTx, UserPaymentTx } from '../user_tx';
 import { groupUserTxs } from './group_user_txs';
 
 const createFeeTx = (fee: bigint, txRefNo: number) =>
@@ -404,7 +404,7 @@ describe('groupUserTxs', () => {
 
   describe('defi tx', () => {
     const bridgeId = BridgeId.ZERO;
-    const garbageBridgeId = new BridgeId(0, garbageAssetId, 0, 0, 0, BitConfig.EMPTY, 0);
+    const garbageBridgeId = new BridgeId(0, garbageAssetId, 0);
 
     it('recover defi tx', () => {
       const defiTx = randomCoreDefiTx({ bridgeId });
@@ -415,22 +415,30 @@ describe('groupUserTxs', () => {
           bridgeId,
           { assetId: 0, value: defiTx.depositValue },
           { assetId: 0, value: defiTx.txFee },
-          0n,
-          0n,
-          undefined,
           defiTx.created,
+          undefined,
+          {
+            state: UserDefiInteractionResultState.PENDING,
+            isAsync: false,
+            interactionNonce: 0,
+            success: false,
+            outputValueA: 0n,
+            outputValueB: 0n,
+            deposited: undefined,
+            finalised: undefined,
+          },
         ),
       ]);
     });
 
-    it('recover settled defi tx', () => {
+    it('recover deposited defi tx', () => {
       const defiTx = randomCoreDefiTx({
         bridgeId,
-        result: true,
+        success: true,
         outputValueA: 123n,
         settled: new Date(),
         interactionNonce: 45,
-        isAsync: false,
+        isAsync: true,
       });
       expect(groupUserTxs([defiTx], feePayingAssetIds)).toEqual([
         new UserDefiTx(
@@ -439,13 +447,87 @@ describe('groupUserTxs', () => {
           bridgeId,
           { assetId: 0, value: defiTx.depositValue },
           { assetId: 0, value: defiTx.txFee },
-          123n,
-          0n,
-          true,
           defiTx.created,
-          defiTx.settled,
-          45,
-          false,
+          undefined,
+          {
+            state: UserDefiInteractionResultState.AWAITING_FINALISATION,
+            isAsync: true,
+            interactionNonce: 45,
+            success: true,
+            outputValueA: 123n,
+            outputValueB: 0n,
+            deposited: defiTx.settled,
+            finalised: undefined,
+          },
+        ),
+      ]);
+    });
+
+    it('recover finalised defi tx', () => {
+      const defiTx = randomCoreDefiTx({
+        bridgeId,
+        success: true,
+        outputValueA: 23n,
+        outputValueB: 45n,
+        interactionNonce: 678,
+        isAsync: true,
+        settled: new Date(),
+        finalised: new Date(),
+      });
+      expect(groupUserTxs([defiTx], feePayingAssetIds)).toEqual([
+        new UserDefiTx(
+          defiTx.txId,
+          defiTx.userId,
+          bridgeId,
+          { assetId: 0, value: defiTx.depositValue },
+          { assetId: 0, value: defiTx.txFee },
+          defiTx.created,
+          undefined,
+          {
+            state: UserDefiInteractionResultState.AWAITING_SETTLEMENT,
+            isAsync: true,
+            interactionNonce: 678,
+            success: true,
+            outputValueA: 23n,
+            outputValueB: 45n,
+            deposited: defiTx.settled,
+            finalised: defiTx.finalised,
+          },
+        ),
+      ]);
+    });
+
+    it('recover settled defi tx', () => {
+      const defiTx = randomCoreDefiTx({
+        bridgeId,
+        success: true,
+        outputValueA: 23n,
+        outputValueB: 45n,
+        interactionNonce: 678,
+        isAsync: true,
+        settled: new Date(),
+        finalised: new Date(),
+        claimSettled: new Date(),
+      });
+      expect(groupUserTxs([defiTx], feePayingAssetIds)).toEqual([
+        new UserDefiTx(
+          defiTx.txId,
+          defiTx.userId,
+          bridgeId,
+          { assetId: 0, value: defiTx.depositValue },
+          { assetId: 0, value: defiTx.txFee },
+          defiTx.created,
+          defiTx.claimSettled,
+          {
+            state: UserDefiInteractionResultState.SETTLED,
+            isAsync: true,
+            interactionNonce: 678,
+            success: true,
+            outputValueA: 23n,
+            outputValueB: 45n,
+            deposited: defiTx.settled,
+            finalised: defiTx.finalised,
+          },
         ),
       ]);
     });
@@ -466,10 +548,18 @@ describe('groupUserTxs', () => {
           bridgeId,
           { assetId: 0, value: defiTx.depositValue },
           { assetId: 0, value: 20n },
-          0n,
-          0n,
-          undefined,
           defiTx.created,
+          undefined,
+          {
+            state: UserDefiInteractionResultState.PENDING,
+            isAsync: false,
+            interactionNonce: 0,
+            success: false,
+            outputValueA: 0n,
+            outputValueB: 0n,
+            deposited: undefined,
+            finalised: undefined,
+          },
         ),
       ]);
     });
@@ -485,10 +575,18 @@ describe('groupUserTxs', () => {
           garbageBridgeId,
           { assetId: garbageAssetId, value: defiTx.depositValue },
           { assetId: 0, value: 20n },
-          0n,
-          0n,
-          undefined,
           defiTx.created,
+          undefined,
+          {
+            state: UserDefiInteractionResultState.PENDING,
+            isAsync: false,
+            interactionNonce: 0,
+            success: false,
+            outputValueA: 0n,
+            outputValueB: 0n,
+            deposited: undefined,
+            finalised: undefined,
+          },
         ),
       ]);
     });
@@ -511,10 +609,18 @@ describe('groupUserTxs', () => {
           garbageBridgeId,
           { assetId: garbageAssetId, value: defiTx.depositValue },
           { assetId: 0, value: 20n },
-          0n,
-          0n,
-          undefined,
           defiTx.created,
+          undefined,
+          {
+            state: UserDefiInteractionResultState.PENDING,
+            isAsync: false,
+            interactionNonce: 0,
+            success: false,
+            outputValueA: 0n,
+            outputValueB: 0n,
+            deposited: undefined,
+            finalised: undefined,
+          },
         ),
       ]);
     });

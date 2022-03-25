@@ -1,6 +1,6 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset, TxHash } from '@aztec/barretenberg/blockchain';
-import { BitConfig, BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import {
   computeInteractionHashes,
   DefiInteractionNote,
@@ -37,6 +37,8 @@ describe('rollup_processor: defi bridge', () => {
   let addresses: EthAddress[];
   let rollupProvider: Signer;
   let assetAddresses: EthAddress[];
+
+  const virtualAssetIdOffset = 1 << 29;
 
   const numberOfBridgeCalls = RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
 
@@ -237,7 +239,6 @@ describe('rollup_processor: defi bridge', () => {
     const outputValueA = 12n;
     const outputValueB = 7n;
     const bridgeId = await mockBridge({
-      secondOutputAssetValid: true,
       inputAssetIdA: 1,
       outputAssetIdA: 0,
       outputAssetIdB: 2,
@@ -270,8 +271,6 @@ describe('rollup_processor: defi bridge', () => {
     const outputValueA = 12n;
     const outputValueB = 7n;
     const bridgeId = await mockBridge({
-      secondOutputAssetValid: true,
-      secondInputAssetValid: true,
       inputAssetIdA: 1,
       inputAssetIdB: 2,
       outputAssetIdA: 0,
@@ -306,14 +305,10 @@ describe('rollup_processor: defi bridge', () => {
     const outputValueA = 12n;
     const outputValueB = 7n;
     const bridgeId = await mockBridge({
-      firstOutputVirtual: true,
-      secondOutputVirtual: true,
-      firstInputVirtual: true,
-      secondInputVirtual: true,
-      inputAssetIdA: 1,
-      inputAssetIdB: 2,
-      outputAssetIdA: 0,
-      outputAssetIdB: 2,
+      inputAssetIdA: 1 + virtualAssetIdOffset,
+      inputAssetIdB: 2 + virtualAssetIdOffset,
+      outputAssetIdA: 0 + virtualAssetIdOffset,
+      outputAssetIdB: 2 + virtualAssetIdOffset,
       outputValueA,
       outputValueB,
     });
@@ -344,11 +339,8 @@ describe('rollup_processor: defi bridge', () => {
     const outputValueA = 12n;
     const outputValueB = 7n;
     const bridgeId = await mockBridge({
-      secondOutputAssetValid: true,
-      firstInputVirtual: true,
-      secondInputVirtual: true,
-      inputAssetIdA: 1,
-      inputAssetIdB: 2,
+      inputAssetIdA: 1 + virtualAssetIdOffset,
+      inputAssetIdB: 2 + virtualAssetIdOffset,
       outputAssetIdA: 0,
       outputAssetIdB: 2,
       outputValueA,
@@ -380,15 +372,7 @@ describe('rollup_processor: defi bridge', () => {
     // swap ETH for DAI
     const bridgeAddressId = 1;
     const inputAssetId = 0;
-    const bridgeId = new BridgeId(
-      bridgeAddressId,
-      inputAssetId,
-      1,
-      0,
-      0,
-      new BitConfig(false, false, false, false, false, false),
-      0,
-    );
+    const bridgeId = new BridgeId(bridgeAddressId, inputAssetId, 1);
     const outputValueA = 19n;
     const inputValue = 20n;
 
@@ -413,15 +397,7 @@ describe('rollup_processor: defi bridge', () => {
     // swap DAI for ETH
     const bridgeAddressId = 1;
     const inputAssetId = 1;
-    const bridgeId = new BridgeId(
-      bridgeAddressId,
-      inputAssetId,
-      0,
-      0,
-      0,
-      new BitConfig(false, false, false, false, false, false),
-      0,
-    );
+    const bridgeId = new BridgeId(bridgeAddressId, inputAssetId, 0);
     const outputValueA = 19n;
     // const bridgeId = await mockBridge({
     //   inputAssetId: 1,
@@ -460,15 +436,7 @@ describe('rollup_processor: defi bridge', () => {
       // 4: RenBTC to ETH
       const bridgeAddressId = 1;
       const inputAssetId = 0;
-      const bridgeId = new BridgeId(
-        bridgeAddressId,
-        inputAssetId,
-        1,
-        0,
-        0,
-        new BitConfig(false, false, false, false, false, false),
-        0,
-      );
+      const bridgeId = new BridgeId(bridgeAddressId, inputAssetId, 1);
       const outputValueA = 19n;
       const inputValue = 20n;
 
@@ -499,15 +467,7 @@ describe('rollup_processor: defi bridge', () => {
       // swap DAI for ETH
       const bridgeAddressId = 1;
       const inputAssetId = 1;
-      const bridgeId = new BridgeId(
-        bridgeAddressId,
-        inputAssetId,
-        0,
-        0,
-        0,
-        new BitConfig(false, false, false, false, false, false),
-        0,
-      );
+      const bridgeId = new BridgeId(bridgeAddressId, inputAssetId, 0);
       const outputValueA = 18n;
       const inputValue = 19n;
       await expectBalance(0, 0n);

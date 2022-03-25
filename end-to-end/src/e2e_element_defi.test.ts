@@ -1,7 +1,6 @@
 import {
   AccountId,
   AztecSdk,
-  BitConfig,
   BridgeId,
   createNodeAztecSdk,
   DefiController,
@@ -200,15 +199,8 @@ describe('end-to-end async defi tests', () => {
       debug(`purchased ${spec.quantityReceived} ${assetInfo.name} for account ${usersEthereumAddress.toString()}...`);
       for (const expiry of spec.expiries) {
         for (let i = 0; i < interactionsPerExpiry; i++) {
-          const bridgeId = new BridgeId(
-            elementBridgeId,
-            assetId,
-            assetId,
-            0,
-            0,
-            new BitConfig(false, false, false, false, false, false),
-            expiry,
-          );
+          const assetId = sdk.getAssetIdByAddress(spec.tokenAddress);
+          const bridgeId = new BridgeId(elementBridgeId, assetId, assetId, undefined, undefined, expiry);
           const interaction = {
             expiry,
             bridgeId,
@@ -405,9 +397,8 @@ describe('end-to-end async defi tests', () => {
       elementBridgeId,
       daiAssetId,
       daiAssetId,
-      0,
-      0,
-      new BitConfig(false, false, false, false, false, false),
+      undefined,
+      undefined,
       assetSpecs['DAI'].expiries[0],
     );
     const failedDefiController = await defiDepositTokens(

@@ -1,7 +1,6 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import {
   Blockchain,
-  BlockchainBridge,
   BlockchainStatus,
   EthereumProvider,
   Receipt,
@@ -60,7 +59,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     provider: EthereumProvider,
   ) {
     const confirmations = config.minConfirmation || EthereumBlockchain.DEFAULT_MIN_CONFIRMATIONS;
-    const contracts = await Contracts.fromAddresses(
+    const contracts = Contracts.fromAddresses(
       rollupContractAddress,
       feeDistributorAddress,
       priceFeedContractAddresses,
@@ -68,6 +67,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       provider,
       confirmations,
     );
+    await contracts.init();
     const eb = new EthereumBlockchain(config, contracts);
     await eb.init();
     return eb;
@@ -85,43 +85,16 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     } else {
       this.log('No rollup found, assuming pristine state.');
     }
-    await this.updatePerRollupState(latestBlock);
-    await this.updatePerEthBlockState();
     const chainId = await this.contracts.getChainId();
-
     this.status = {
-      ...this.status,
       chainId,
       rollupContractAddress: this.contracts.getRollupContractAddress(),
       feeDistributorContractAddress: this.contracts.getFeeDistributorContractAddress(),
       verifierContractAddress: await this.contracts.getVerifierContractAddress(),
+      ...(await this.getPerRollupState(latestBlock)),
+      ...(await this.getPerEthBlockState()),
     };
     this.log(`Ethereum blockchain initialized with assets: ${this.status.assets.map(a => a.symbol)}`);
-  }
-
-  /**
-   * Fetch the latest bridges and assets from the rollup in case they have changed
-   * Set these on the status so the upstream code can be synchronous
-   */
-
-  private async refreshBridgesAndAssets() {
-    const assets = this.contracts.getAssets().map(a => a.getStaticInfo());
-    const bridgeAddresses = await this.contracts.getSupportedBridges();
-    const bridgeStatuses = await Promise.all(
-      bridgeAddresses.map(async (address, i) => {
-        const bridgeAddressId = i + 1;
-        return {
-          id: bridgeAddressId,
-          address,
-          gasLimit: await this.contracts.getBridgeGas(bridgeAddressId),
-        } as BlockchainBridge;
-      }),
-    );
-    this.status = {
-      ...this.status,
-      assets,
-      bridges: bridgeStatuses,
-    };
   }
 
   /**
@@ -197,15 +170,12 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return this.status;
   }
 
-  private async updatePerRollupState(block?: Block) {
-    this.status = {
-      ...this.status,
-      ...(await this.contracts.getPerRollupState()),
-    };
+  private async getPerRollupState(block?: Block) {
+    const state = await this.contracts.getPerRollupState();
     if (block) {
       const rollupProofData = RollupProofData.fromBuffer(block.rollupProofData);
-      this.status = {
-        ...this.status,
+      return {
+        ...state,
         nextRollupId: rollupProofData.rollupId + 1,
         dataSize: rollupProofData.dataStartIndex + rollupProofData.rollupSize,
         dataRoot: rollupProofData.newDataRoot,
@@ -217,8 +187,8 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       // No rollups yet.
       const chainId = await this.contracts.getChainId();
       const { initDataRoot, initNullRoot, initRootsRoot } = InitHelpers.getInitRoots(chainId);
-      this.status = {
-        ...this.status,
+      return {
+        ...state,
         nextRollupId: 0,
         dataSize: 0,
         dataRoot: initDataRoot,
@@ -229,11 +199,26 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     }
   }
 
-  private async updatePerEthBlockState() {
-    await this.refreshBridgesAndAssets();
+  private async getPerEthBlockState() {
+    return {
+      ...(await this.contracts.getPerBlockState()),
+      assets: this.contracts.getAssets(),
+      bridges: await this.contracts.getSupportedBridges(),
+    };
+  }
+
+  private async updatePerRollupState(block?: Block) {
     this.status = {
       ...this.status,
-      ...(await this.contracts.getPerBlockState()),
+      ...(await this.getPerRollupState(block)),
+    };
+  }
+
+  private async updatePerEthBlockState() {
+    await this.contracts.updateAssets();
+    this.status = {
+      ...this.status,
+      ...(await this.getPerEthBlockState()),
     };
   }
 
@@ -321,10 +306,6 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
 
   public async signTypedData(data: TypedData, address: EthAddress) {
     return this.contracts.signTypedData(data, address);
-  }
-
-  public getAsset(assetId: number) {
-    return this.contracts.getAsset(assetId);
   }
 
   public async getAssetPrice(assetId: number) {

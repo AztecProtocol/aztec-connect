@@ -1,5 +1,5 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { BridgeId, BitConfig } from '@aztec/barretenberg/bridge_id';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
 import { RollupProcessor } from '../rollup_processor';
@@ -11,18 +11,6 @@ export interface MockBridgeParams {
   inputAssetIdB?: number;
   outputAssetIdA?: number;
   outputAssetIdB?: number;
-  inputAssetA?: EthAddress;
-  inputAssetB?: EthAddress;
-  outputAssetA?: EthAddress;
-  outputAssetB?: EthAddress;
-  firstInputVirtual?: boolean;
-  firstInputAssetValid?: boolean;
-  firstOutputVirtual?: boolean;
-  firstOutputAssetValid?: boolean;
-  secondOutputAssetValid?: boolean;
-  secondOutputVirtual?: boolean;
-  secondInputVirtual?: boolean;
-  secondInputAssetValid?: boolean;
   canConvert?: boolean;
   outputValueA?: bigint;
   outputValueB?: bigint;
@@ -40,21 +28,9 @@ export const deployMockBridge = async (
   assetAddresses: EthAddress[],
   {
     inputAssetIdA = 1,
-    inputAssetIdB = 2,
+    inputAssetIdB,
     outputAssetIdA = 2,
-    outputAssetIdB = 0,
-    inputAssetA = assetAddresses[1],
-    inputAssetB = assetAddresses[2],
-    outputAssetA = assetAddresses[2],
-    outputAssetB = assetAddresses[0],
-    firstInputVirtual = false,
-    firstInputAssetValid = true,
-    firstOutputVirtual = false,
-    firstOutputAssetValid = true,
-    secondOutputAssetValid = false,
-    secondOutputVirtual = false,
-    secondInputVirtual = false,
-    secondInputAssetValid = false,
+    outputAssetIdB,
     canConvert = true,
     outputValueA = 10n,
     outputValueB = 0n,
@@ -66,18 +42,6 @@ export const deployMockBridge = async (
     auxData = 0,
   }: MockBridgeParams = {},
 ) => {
-  if (firstInputAssetValid) {
-    inputAssetA = assetAddresses[inputAssetIdA];
-  }
-  if (secondInputAssetValid) {
-    inputAssetB = assetAddresses[inputAssetIdB];
-  }
-  if (firstOutputAssetValid) {
-    outputAssetA = assetAddresses[outputAssetIdA];
-  }
-  if (secondOutputAssetValid) {
-    outputAssetB = assetAddresses[outputAssetIdB];
-  }
   const DefiBridge = await ethers.getContractFactory('MockDefiBridge', publisher);
   const bridge = await DefiBridge.deploy(
     rollupProcessor.address.toString(),
@@ -90,6 +54,14 @@ export const deployMockBridge = async (
     isAsync,
   );
 
+  await bridge.deployed();
+
+  const address = EthAddress.fromString(bridge.address);
+  await rollupProcessor.setSupportedBridge(address, 0);
+  const bridgeAddressId = (await rollupProcessor.getSupportedBridges()).length;
+
+  const bridgeId = new BridgeId(bridgeAddressId, inputAssetIdA, outputAssetIdA, inputAssetIdB, outputAssetIdB, auxData);
+
   const mint = async (assetAddress: EthAddress, amount: bigint) => {
     if (!amount) return;
     if (assetAddress.equals(EthAddress.ZERO)) {
@@ -100,44 +72,28 @@ export const deployMockBridge = async (
       await erc20.mint(bridge.address, amount);
     }
   };
-  if (firstOutputAssetValid) {
-    await mint(outputAssetA, returnValueA * BigInt(maxTxs));
+  if (!bridgeId.firstInputVirtual) {
+    await mint(assetAddresses[inputAssetIdA], returnInputValue * BigInt(maxTxs));
   }
-  if (secondOutputAssetValid) {
-    await mint(outputAssetB, returnValueB * BigInt(maxTxs));
+  if (!bridgeId.firstOutputVirtual) {
+    await mint(assetAddresses[outputAssetIdA], returnValueA * BigInt(maxTxs));
   }
-  if (firstInputAssetValid) {
-    await mint(inputAssetA, returnInputValue * BigInt(maxTxs));
+  if (bridgeId.secondInputReal) {
+    await mint(assetAddresses[inputAssetIdB!], returnInputValue * BigInt(maxTxs));
   }
-  if (secondInputAssetValid) {
-    await mint(inputAssetB, returnInputValue * BigInt(maxTxs));
+  if (bridgeId.secondOutputReal) {
+    await mint(assetAddresses[outputAssetIdB!], returnValueB * BigInt(maxTxs));
   }
 
-  await bridge.deployed();
-
-  const address = EthAddress.fromString(bridge.address);
-  await rollupProcessor.setSupportedBridge(address, 0);
-  const bridgeAddressId = await rollupProcessor.getBridgeAddressId(address);
-
-  return new BridgeId(
-    bridgeAddressId,
-    inputAssetIdA,
-    outputAssetIdA,
-    outputAssetIdB,
-    inputAssetIdB,
-    new BitConfig(
-      firstInputVirtual,
-      secondInputVirtual,
-      firstOutputVirtual,
-      secondOutputVirtual,
-      secondInputAssetValid,
-      secondOutputAssetValid,
-    ),
-    auxData,
-  );
+  return bridgeId;
 };
 
-export const mockAsyncBridge = async (rollupProvider: Signer, rollupProcessor: RollupProcessor, assetAddresses: EthAddress[], params: MockBridgeParams = {}) => {
+export const mockAsyncBridge = async (
+  rollupProvider: Signer,
+  rollupProcessor: RollupProcessor,
+  assetAddresses: EthAddress[],
+  params: MockBridgeParams = {},
+) => {
   const bridgeId = await deployMockBridge(rollupProvider, rollupProcessor, assetAddresses, {
     ...params,
     isAsync: true,

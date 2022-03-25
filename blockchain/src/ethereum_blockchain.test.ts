@@ -1,7 +1,7 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { BlockchainBridge, TxHash } from '@aztec/barretenberg/blockchain';
+import { BlockchainAsset, BlockchainBridge, TxHash } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
-import { BitConfig, BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { InitHelpers } from '@aztec/barretenberg/environment';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { randomBytes } from 'crypto';
@@ -18,12 +18,33 @@ const blockchainBridges: BlockchainBridge[] = [
   {
     id: 1,
     address: new EthAddress(randomBytes(20)),
-    gasLimit: 150000n,
+    gasLimit: 150000,
   },
   {
     id: 2,
     address: new EthAddress(randomBytes(20)),
-    gasLimit: 250000n,
+    gasLimit: 250000,
+  },
+];
+
+const blockchainAssets: BlockchainAsset[] = [
+  {
+    address: new EthAddress(randomBytes(20)),
+    decimals: 18,
+    symbol: 'A',
+    name: 'Asset A',
+    isFeePaying: true,
+    gasConstants: [],
+    gasLimit: 123,
+  },
+  {
+    address: new EthAddress(randomBytes(20)),
+    decimals: 6,
+    symbol: 'B',
+    name: 'Asset B',
+    isFeePaying: false,
+    gasConstants: [],
+    gasLimit: 456,
   },
 ];
 
@@ -45,24 +66,6 @@ describe('ethereum_blockchain', () => {
       BigInt(0),
     );
 
-  const getRollupStateFromBlock = (block: Block) => {
-    const nextRollupId = block.rollupId + 1;
-    const dataSize = 16;
-    const dataRoot = Buffer.alloc(32);
-    const nullRoot = Buffer.alloc(32);
-    const rootRoot = Buffer.alloc(32);
-    const defiRoot = Buffer.alloc(32);
-
-    return {
-      nextRollupId,
-      dataSize,
-      dataRoot,
-      nullRoot,
-      rootRoot,
-      defiRoot,
-    };
-  };
-
   beforeAll(() => {
     const getInitRootsMock = jest.fn(() => {
       return {
@@ -79,7 +82,8 @@ describe('ethereum_blockchain', () => {
     blocks = [generateBlock(0), generateBlock(1), generateBlock(2)];
 
     contracts = {
-      getAssets: jest.fn().mockReturnValue([]),
+      init: jest.fn(),
+      updateAssets: jest.fn(),
       getPerRollupState: jest.fn().mockResolvedValue({ nextRollupId: 0 }),
       getPerBlockState: jest.fn().mockResolvedValue({
         escapeOpen: false,
@@ -93,11 +97,8 @@ describe('ethereum_blockchain', () => {
       getBlockNumber: jest.fn().mockImplementation(async () => blocks.length),
       getChainId: jest.fn().mockResolvedValue(999),
       getTransactionReceipt: jest.fn(),
-      getRollupStateFromBlock: jest.fn().mockReturnValue(getRollupStateFromBlock(blocks[2])),
-      getBridgeGas: jest.fn().mockImplementation((id: number) => blockchainBridges[id - 1].gasLimit),
-      getSupportedBridges: jest.fn().mockImplementation(() => {
-        return [...blockchainBridges.values()].map((b: BlockchainBridge) => b.address);
-      }),
+      getAssets: jest.fn().mockImplementation(() => blockchainAssets),
+      getSupportedBridges: jest.fn().mockImplementation(() => blockchainBridges),
     } as any;
 
     const config: EthereumBlockchainConfig = {
@@ -206,44 +207,39 @@ describe('ethereum_blockchain', () => {
 
   it('correctly returns bridge gas', async () => {
     await blockchain.start();
-    let bridge = new BridgeId(1, 0, 0, 0, 0, new BitConfig(false, false, false, false, false, false), 0);
-    expect(blockchain.getBridgeGas(bridge.toBigInt())).toEqual(blockchainBridges[0].gasLimit);
-    bridge = new BridgeId(2, 0, 0, 0, 0, new BitConfig(false, false, false, false, false, false), 0);
-    expect(blockchain.getBridgeGas(bridge.toBigInt())).toEqual(blockchainBridges[1].gasLimit);
+    {
+      const bridge = new BridgeId(1, 0, 0);
+      expect(blockchain.getBridgeGas(bridge.toBigInt())).toEqual(blockchainBridges[0].gasLimit);
+    }
+    {
+      const bridge = new BridgeId(2, 0, 0);
+      expect(blockchain.getBridgeGas(bridge.toBigInt())).toEqual(blockchainBridges[1].gasLimit);
+    }
   });
 
   it('correctly refreshes bridges and assets', async () => {
-    const gasLimt = 1000n;
-    const getStaticInfoMock = jest.fn();
-    contracts.getAssets = jest.fn().mockImplementation(() => {
-      return [];
-    });
-    const bridgeAddress = EthAddress.randomAddress().toString();
+    contracts.getAssets.mockImplementation(() => []);
+    contracts.getSupportedBridges.mockResolvedValueOnce([]);
+
     await blockchain.start();
+
     const statusBefore = blockchain.getBlockchainStatus();
     expect(statusBefore.assets.length).toBe(0);
-    expect(statusBefore.bridges.length).toBe(blockchainBridges.length);
+    expect(statusBefore.bridges.length).toBe(0);
+    contracts.updateAssets.mockClear();
 
-    contracts.getSupportedBridges.mockResolvedValueOnce([bridgeAddress]);
-    contracts.getBridgeGas.mockResolvedValueOnce(gasLimt);
+    contracts.getAssets.mockReturnValueOnce(blockchainAssets);
+    contracts.getSupportedBridges.mockResolvedValueOnce(blockchainBridges);
 
     // advance one block
     blocks.push(generateBlock(3));
 
-    contracts.getAssets = jest.fn().mockImplementation(() => {
-      return [{ getStaticInfo: getStaticInfoMock }];
-    });
-
     // we need to wait 1 full second for the blocks to be polled.
     await new Promise(r => setTimeout(r, 1000));
-    const statusAfter = blockchain.getBlockchainStatus();
 
-    expect(contracts.getAssets).toBeCalled();
-    expect(statusAfter.assets.length).toBe(1);
-    expect(statusAfter.bridges.length).toBe(1);
-    expect(statusAfter.bridges[0].gasLimit).toBe(gasLimt);
-    expect(statusAfter.bridges[0].address.toString()).toBe(bridgeAddress);
-    expect(statusAfter.bridges[0].id).toBe(1);
-    expect(getStaticInfoMock).toBeCalled();
+    const statusAfter = blockchain.getBlockchainStatus();
+    expect(statusAfter.assets).toEqual(blockchainAssets);
+    expect(statusAfter.bridges).toEqual(blockchainBridges);
+    expect(contracts.updateAssets).toHaveBeenCalledTimes(1);
   });
 });

@@ -257,12 +257,16 @@ export class CoreSdkServerStub {
     await this.core.awaitSettlement(TxId.fromString(txId), timeout);
   }
 
-  public async awaitDefiInteraction(txId: string, timeout?: number) {
-    await this.core.awaitDefiInteraction(TxId.fromString(txId), timeout);
-  }
-
   public async awaitDefiDepositCompletion(txId: string, timeout?: number) {
     await this.core.awaitDefiDepositCompletion(TxId.fromString(txId), timeout);
+  }
+
+  public async awaitDefiFinalisation(txId: string, timeout?: number) {
+    await this.core.awaitDefiFinalisation(TxId.fromString(txId), timeout);
+  }
+
+  public async awaitDefiSettlement(txId: string, timeout?: number) {
+    await this.core.awaitDefiSettlement(TxId.fromString(txId), timeout);
   }
 
   public async getDefiInteractionNonce(txId: string) {

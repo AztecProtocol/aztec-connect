@@ -1,5 +1,5 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { EthereumProvider, PermitArgs, SendTxOptions, TxHash } from '@aztec/barretenberg/blockchain';
+import { EthereumProvider, EthereumSignature, SendTxOptions, TxHash } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { DefiInteractionNote, computeInteractionHashes } from '@aztec/barretenberg/note_algorithms';
@@ -7,11 +7,11 @@ import { sliceOffchainTxData } from '@aztec/barretenberg/offchain_tx_data';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { TransactionReceipt, TransactionResponse } from '@ethersproject/abstract-provider';
 import { Web3Provider } from '@ethersproject/providers';
+import createDebug from 'debug';
 import { Contract, Event, utils } from 'ethers';
 import { abi } from '../../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
 import { decodeErrorFromContractByTxHash } from '../decode_error';
 import { solidityFormatSignatures } from './solidity_format_signatures';
-import createDebug from 'debug';
 
 const fixEthersStackTrace = (err: Error) => {
   err.stack! += new Error().stack;
@@ -23,6 +23,9 @@ const fixEthersStackTrace = (err: Error) => {
  * querying contract state, creating and sending transactions, and querying for rollup blocks.
  */
 export class RollupProcessor {
+  static DEFAULT_BRIDGE_GAS_LIMIT = 300000;
+  static DEFAULT_ERC20_GAS_LIMIT = 55000;
+
   public rollupProcessor: Contract;
   private lastQueriedRollupId?: number;
   private lastQueriedRollupBlockNum?: number;
@@ -31,7 +34,11 @@ export class RollupProcessor {
   // taken from the rollup contract
   static readonly DEFI_RESULT_ZERO_HASH = '0x2d25a1e3a51eb293004c4b56abe12ed0da6bca2b4a21936752a85d102593c1b4';
 
-  constructor(protected rollupContractAddress: EthAddress, private ethereumProvider: EthereumProvider) {
+  constructor(
+    protected rollupContractAddress: EthAddress,
+    private ethereumProvider: EthereumProvider,
+    private minConfirmations = 1,
+  ) {
     this.provider = new Web3Provider(ethereumProvider);
     this.rollupProcessor = new Contract(rollupContractAddress.toString(), abi, this.provider);
   }
@@ -71,17 +78,16 @@ export class RollupProcessor {
   }
 
   async getSupportedBridges() {
-    const bridgeAddresses: string[] = await this.rollupProcessor.getSupportedBridges();
-    return bridgeAddresses.map(a => EthAddress.fromString(a));
+    const [bridgeAddresses, gasLimits]: any[][] = await this.rollupProcessor.getSupportedBridges();
+    return bridgeAddresses.map((a, i) => ({
+      id: i + 1,
+      address: EthAddress.fromString(a),
+      gasLimit: +gasLimits[i],
+    }));
   }
 
-  async getBridgeGas(bridgeAddressId: number) {
-    return BigInt(await this.rollupProcessor.getBridgeGasLimit(bridgeAddressId));
-  }
-
-  async getBridgeAddressId(address: EthAddress) {
-    const bridgeAddresses = await this.getSupportedBridges();
-    return bridgeAddresses.findIndex(a => a.equals(address)) + 1;
+  async getBridgeGasLimit(bridgeAddressId: number) {
+    return +(await this.rollupProcessor.getBridgeGasLimit(bridgeAddressId));
   }
 
   async getSupportedAsset(assetId: number) {
@@ -89,43 +95,45 @@ export class RollupProcessor {
   }
 
   async getSupportedAssets() {
-    const assetAddresses: string[] = await this.rollupProcessor.getSupportedAssets();
-    return [EthAddress.ZERO, ...assetAddresses.map((a: string) => EthAddress.fromString(a))];
+    const [assetAddresses, gasLimits]: any[][] = await this.rollupProcessor.getSupportedAssets();
+    return assetAddresses.map((a, i) => ({
+      address: EthAddress.fromString(a),
+      gasLimit: +gasLimits[i],
+    }));
   }
 
   async setVerifier(address: EthAddress, options: SendTxOptions = {}) {
     const { gasLimit } = { ...options };
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.setVerifier(address.toString(), { gasLimit }).catch(fixEthersStackTrace);
-    return TxHash.fromString(tx.hash);
+    const receipt = await tx.wait(this.minConfirmations);
+    return TxHash.fromString(receipt.transactionHash);
   }
 
   async setThirdPartyContractStatus(flag: boolean, options: SendTxOptions = {}) {
     const { gasLimit } = { ...options };
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.setAllowThirdPartyContracts(flag, { gasLimit });
-    return TxHash.fromString(tx.hash);
+    const receipt = await tx.wait(this.minConfirmations);
+    return TxHash.fromString(receipt.transactionHash);
   }
 
-  async setSupportedBridge(bridgeAddress: EthAddress, bridgeGasLimit: number, options: SendTxOptions = {}) {
+  async setSupportedBridge(bridgeAddress: EthAddress, bridgeGasLimit = 0, options: SendTxOptions = {}) {
     const { gasLimit } = { ...options };
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.setSupportedBridge(bridgeAddress.toString(), bridgeGasLimit, { gasLimit });
-    return TxHash.fromString(tx.hash);
+    const receipt = await tx.wait(this.minConfirmations);
+    return TxHash.fromString(receipt.transactionHash);
   }
 
-  async setSupportedAsset(
-    assetAddress: EthAddress,
-    supportsPermit: boolean,
-    assetGasLimit: number,
-    options: SendTxOptions = {},
-  ) {
+  async setSupportedAsset(assetAddress: EthAddress, assetGasLimit = 0, options: SendTxOptions = {}) {
     const { gasLimit } = { ...options };
     const rollupProcessor = this.getContractWithSigner(options);
-    const tx = await rollupProcessor.setSupportedAsset(assetAddress.toString(), supportsPermit, assetGasLimit, {
+    const tx = await rollupProcessor.setSupportedAsset(assetAddress.toString(), assetGasLimit, {
       gasLimit,
     });
-    return TxHash.fromString(tx.hash);
+    const receipt = await tx.wait(this.minConfirmations);
+    return TxHash.fromString(receipt.transactionHash);
   }
 
   async processAsyncDefiInteraction(interactionNonce: number, options: SendTxOptions = {}) {
@@ -134,11 +142,8 @@ export class RollupProcessor {
     const tx = await rollupProcessor
       .processAsyncDefiInteraction(interactionNonce, { gasLimit })
       .catch(fixEthersStackTrace);
-    return TxHash.fromString(tx.hash);
-  }
-
-  async getAssetPermitSupport(assetId: number): Promise<boolean> {
-    return this.rollupProcessor.getAssetPermitSupport(assetId);
+    const receipt = await tx.wait(this.minConfirmations);
+    return TxHash.fromString(receipt.transactionHash);
   }
 
   async getEscapeHatchStatus() {
@@ -179,45 +184,85 @@ export class RollupProcessor {
     assetId: number,
     amount: bigint,
     proofHash: Buffer = Buffer.alloc(32),
-    permitArgs?: PermitArgs,
     options: SendTxOptions = {},
   ) {
     const { gasLimit } = { ...options };
     const rollupProcessor = this.getContractWithSigner(options);
-    const depositorAddress = await rollupProcessor.signer.getAddress();
-    if (permitArgs) {
-      const tx = await rollupProcessor
-        .depositPendingFundsPermit(
-          assetId,
-          amount,
-          depositorAddress,
-          proofHash,
-          this.rollupProcessor.address,
-          permitArgs.approvalAmount,
-          permitArgs.deadline,
-          permitArgs.signature.v,
-          permitArgs.signature.r,
-          permitArgs.signature.s,
-          { value: assetId === 0 ? amount : undefined, gasLimit },
-        )
-        .catch(fixEthersStackTrace);
-      return TxHash.fromString(tx.hash);
-    } else {
-      const tx = await rollupProcessor
-        .depositPendingFunds(assetId, amount, depositorAddress, proofHash, {
-          value: assetId === 0 ? amount : undefined,
-          gasLimit,
-        })
-        .catch(fixEthersStackTrace);
-      return TxHash.fromString(tx.hash);
-    }
+    const depositor = await rollupProcessor.signer.getAddress();
+    const tx = await rollupProcessor
+      .depositPendingFunds(assetId, amount, depositor, proofHash, {
+        value: assetId === 0 ? amount : undefined,
+        gasLimit,
+      })
+      .catch(fixEthersStackTrace);
+    const receipt = await tx.wait(this.minConfirmations);
+    return TxHash.fromString(receipt.transactionHash);
+  }
+
+  async depositPendingFundsPermit(
+    assetId: number,
+    amount: bigint,
+    deadline: bigint,
+    signature: EthereumSignature,
+    proofHash: Buffer = Buffer.alloc(32),
+    options: SendTxOptions = {},
+  ) {
+    const { gasLimit } = { ...options };
+    const rollupProcessor = this.getContractWithSigner(options);
+    const depositor = await rollupProcessor.signer.getAddress();
+    const tx = await rollupProcessor
+      .depositPendingFundsPermit(
+        assetId,
+        amount,
+        depositor,
+        proofHash,
+        deadline,
+        signature.v,
+        signature.r,
+        signature.s,
+        { gasLimit },
+      )
+      .catch(fixEthersStackTrace);
+    const receipt = await tx.wait(this.minConfirmations);
+    return TxHash.fromString(receipt.transactionHash);
+  }
+
+  async depositPendingFundsPermitNonStandard(
+    assetId: number,
+    amount: bigint,
+    nonce: bigint,
+    deadline: bigint,
+    signature: EthereumSignature,
+    proofHash = Buffer.alloc(32),
+    options: SendTxOptions = {},
+  ) {
+    const { gasLimit } = { ...options };
+    const rollupProcessor = this.getContractWithSigner(options);
+    const depositor = await rollupProcessor.signer.getAddress();
+    const tx = await rollupProcessor
+      .depositPendingFundsPermitNonStandard(
+        assetId,
+        amount,
+        depositor,
+        proofHash,
+        nonce,
+        deadline,
+        signature.v,
+        signature.r,
+        signature.s,
+        { gasLimit },
+      )
+      .catch(fixEthersStackTrace);
+    const receipt = await tx.wait(this.minConfirmations);
+    return TxHash.fromString(receipt.transactionHash);
   }
 
   async approveProof(proofHash: Buffer, options: SendTxOptions = {}) {
     const { gasLimit } = { ...options };
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.approveProof(proofHash, { gasLimit }).catch(fixEthersStackTrace);
-    return TxHash.fromString(tx.hash);
+    const receipt = await tx.wait(this.minConfirmations);
+    return TxHash.fromString(receipt.transactionHash);
   }
 
   async getProofApprovalStatus(address: EthAddress, txId: Buffer): Promise<boolean> {
@@ -453,26 +498,6 @@ export class RollupProcessor {
       startBlock = Math.max(endBlock - chunk, earliestBlock);
     }
     return hashMapping;
-  }
-
-  getRollupStateFromBlock(block: Block) {
-    const rollupProofData = RollupProofData.fromBuffer(block.rollupProofData);
-
-    const nextRollupId = rollupProofData.rollupId + 1;
-    const dataSize = rollupProofData.dataStartIndex + rollupProofData.rollupSize;
-    const dataRoot = rollupProofData.newDataRoot;
-    const nullRoot = rollupProofData.newNullRoot;
-    const rootRoot = rollupProofData.newDataRootsRoot;
-    const defiRoot = rollupProofData.newDefiRoot;
-
-    return {
-      nextRollupId,
-      dataSize,
-      dataRoot,
-      nullRoot,
-      rootRoot,
-      defiRoot,
-    };
   }
 
   private decodeBlock(

@@ -26,20 +26,30 @@ const types = {
   ],
 };
 
-const getDomain = (name: string, chainId: number, verifyingContract: string) => ({
-  name,
-  version: '1',
-  chainId,
-  verifyingContract,
-});
-
-const getMessage = (owner: EthAddress, spender: EthAddress, value: bigint, nonce: bigint, deadline: bigint) => ({
-  owner: owner.toString(),
-  spender: spender.toString(),
-  value,
-  nonce,
-  deadline,
-});
+const noneStandardTypes = {
+  Permit: [
+    {
+      name: 'holder',
+      type: 'address',
+    },
+    {
+      name: 'spender',
+      type: 'address',
+    },
+    {
+      name: 'nonce',
+      type: 'uint256',
+    },
+    {
+      name: 'expiry',
+      type: 'uint256',
+    },
+    {
+      name: 'allowed',
+      type: 'bool',
+    },
+  ],
+};
 
 export function createPermitData(
   name: string,
@@ -48,10 +58,48 @@ export function createPermitData(
   value: bigint,
   nonce: bigint,
   deadline: bigint,
-  chainId: number,
   verifyingContract: EthAddress,
+  chainId: number,
+  version = '1',
 ): TypedData {
-  const domain = getDomain(name, chainId, verifyingContract.toString());
-  const message = getMessage(owner, spender, value, nonce, deadline);
+  const domain = {
+    name,
+    version,
+    chainId,
+    verifyingContract: verifyingContract.toString(),
+  };
+  const message = {
+    owner: owner.toString(),
+    spender: spender.toString(),
+    value,
+    nonce,
+    deadline,
+  };
   return { types, domain, message };
+}
+
+export function createPermitDataNonStandard(
+  name: string,
+  owner: EthAddress,
+  spender: EthAddress,
+  nonce: bigint,
+  deadline: bigint,
+  verifyingContract: EthAddress,
+  chainId: number,
+  version = '1',
+): TypedData {
+  const domain = {
+    name,
+    version,
+    chainId,
+    verifyingContract: verifyingContract.toString(),
+  };
+  const message = {
+    holder: owner,
+    spender,
+    nonce,
+    expiry: deadline,
+    allowed: true,
+  };
+  return { types: noneStandardTypes, domain, message };
 }

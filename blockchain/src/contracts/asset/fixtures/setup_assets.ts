@@ -15,7 +15,7 @@ export const setupAssets = async (publisher: Signer, mintUsers: Signer[], mintAm
     const tokenAsset = await TokenAsset.fromAddress(
       EthAddress.fromString(asset.address),
       new EthersAdapter(ethers.provider),
-      false,
+      55000,
       true,
     );
 

@@ -14,12 +14,9 @@ import {
 import { AztecSdk, AztecSdkOptions } from './aztec_sdk';
 
 async function createBlockchain(ethereumProvider: EthereumProvider, sdkStatus: SdkStatus) {
-  const { rollupContractAddress, assets, chainId } = sdkStatus;
-  const blockchain = new ClientEthereumBlockchain(rollupContractAddress, assets, ethereumProvider);
-  const providerChainId = await blockchain.getChainId();
-  if (chainId !== providerChainId) {
-    throw new Error(`Provider chainId ${providerChainId} does not match rollup provider chainId ${chainId}.`);
-  }
+  const { serverUrl, rollupContractAddress } = sdkStatus;
+  const blockchain = ClientEthereumBlockchain.new(serverUrl, rollupContractAddress, ethereumProvider);
+  await blockchain.init();
   return blockchain;
 }
 

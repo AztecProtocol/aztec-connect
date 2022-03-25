@@ -61,7 +61,7 @@ function getOrmConfig(dbUrl?: string, logging = false): ConnectionOptions {
 
 /* We might want these back for mainnet launch.
 function generateBridgeId(id: number, inputAsset: number, outputAsset: number, aux: number) {
-  return new BridgeId(id, inputAsset, outputAsset, 0, 0, BitConfig.EMPTY, aux);
+  return new BridgeId(id, inputAsset, outputAsset, undefined, undefined, aux);
 }
 
 function generateBridgeConfig(numTxs: number, fee: number, rollupFrequency: number, bridgeId: BridgeId) {

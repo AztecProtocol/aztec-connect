@@ -48,6 +48,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
     error TOKEN_TRANSFER_FAILED();
     error INSUFFICIENT_ETH_TRANSFER();
     error WITHDRAW_TO_ZERO_ADDRESS();
+    error INVALID_DEPOSITOR();
     error INSUFFICIENT_DEPOSIT();
     error INVALID_LINKED_TOKEN_ADDRESS();
     error INVALID_LINKED_BRIDGE_ADDRESS();
@@ -121,10 +122,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
     /*----------------------------------------
       PRIVATE/INTERNAL STATE VARIABLES
       ----------------------------------------*/
-    // Mapping which maps an asset address to a bool, determining whether it supports
-    // permit as according to ERC-2612
-    mapping(address => bool) private assetPermitSupport;
-
     // asyncDefiInteractionHashes and defiInteractionHashes are custom implementations of an array type!!
     // we store the length fields for each array inside the `rollupState` storage slot
     // we access array elements in the traditional manner: array.slot[i] = keccak256(array.slot + i)
@@ -647,24 +644,23 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
     /**
      * @dev Get the addresses of all supported bridge contracts
      */
-    function getSupportedBridges() external view override returns (address[] memory) {
-        return supportedBridges;
+    function getSupportedBridges() external view override returns (address[] memory, uint256[] memory) {
+        uint256[] memory gasLimits = new uint256[](supportedBridges.length);
+        for (uint256 i = 0; i < supportedBridges.length; ++i) {
+            gasLimits[i] = bridgeGasLimits[i + 1];
+        }
+        return (supportedBridges, gasLimits);
     }
 
     /**
      * @dev Get the addresses of all supported ERC20 tokens
      */
-    function getSupportedAssets() external view override returns (address[] memory) {
-        return supportedAssets;
-    }
-
-    /**
-     * @dev Get the status of whether an asset supports the permit ERC-2612 approval flow
-     * @param assetId - unique identifier of the supported asset
-     */
-    function getAssetPermitSupport(uint256 assetId) public view override returns (bool) {
-        address assetAddress = getSupportedAsset(assetId);
-        return assetPermitSupport[assetAddress];
+    function getSupportedAssets() external view override returns (address[] memory, uint256[] memory) {
+        uint256[] memory gasLimits = new uint256[](supportedAssets.length);
+        for (uint256 i = 0; i < supportedAssets.length; ++i) {
+            gasLimits[i] = assetGasLimits[i + 1];
+        }
+        return (supportedAssets, gasLimits);
     }
 
     /**
@@ -770,20 +766,14 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
      * @dev Set the mapping between an assetId and the address of the linked asset.
      * Protected by onlyOwner
      * @param linkedToken - address of the asset
-     * @param supportsPermit - bool determining whether this supports permit
      * @param gasLimit - uint256 gas limit for ERC20 token transfers of this asset
      */
-    function setSupportedAsset(
-        address linkedToken,
-        bool supportsPermit,
-        uint256 gasLimit
-    ) external override checkThirdPartyContractStatus {
+    function setSupportedAsset(address linkedToken, uint256 gasLimit) external override checkThirdPartyContractStatus {
         if (linkedToken == address(0)) {
             revert INVALID_LINKED_TOKEN_ADDRESS();
         }
 
         supportedAssets.push(linkedToken);
-        assetPermitSupport[linkedToken] = supportsPermit;
 
         uint256 assetId = supportedAssets.length;
         assetGasLimits[assetId] = gasLimit == 0 ? DEFAULT_ERC20_GAS_LIMIT : gasLimit;
@@ -818,13 +808,13 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
      * @dev Deposit funds as part of the first stage of the two stage deposit. Non-permit flow
      * @param assetId - unique ID of the asset
      * @param amount - number of tokens being deposited
-     * @param depositorAddress - address from which funds are being transferred to the contract
+     * @param owner - address that can spend the deposited funds
      * @param proofHash - the 32 byte transaction id that can spend the deposited funds
      */
     function depositPendingFunds(
         uint256 assetId,
         uint256 amount,
-        address depositorAddress,
+        address owner,
         bytes32 proofHash
     ) external payable override whenNotPaused {
         // Guard against defi bridges calling `depositPendingFunds` when processRollup calls their `convert` function
@@ -834,14 +824,17 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
             if (msg.value != amount) {
                 revert MSG_VALUE_WRONG_AMOUNT();
             }
-            increasePendingDepositBalance(assetId, depositorAddress, amount);
+            increasePendingDepositBalance(assetId, owner, amount);
         } else {
             if (msg.value != 0) {
                 revert DEPOSIT_TOKENS_WRONG_PAYMENT_TYPE();
             }
+            if (owner != msg.sender) {
+                revert INVALID_DEPOSITOR();
+            }
 
             address assetAddress = getSupportedAsset(assetId);
-            internalDeposit(assetId, assetAddress, depositorAddress, amount);
+            internalDeposit(assetId, assetAddress, owner, amount);
         }
 
         if (proofHash != 0) {
@@ -855,8 +848,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
      * @param amount - number of tokens being deposited
      * @param depositorAddress - address from which funds are being transferred to the contract
      * @param proofHash - the 32 byte transaction id that can spend the deposited funds
-     * @param spender - address being granted approval to spend the funds
-     * @param permitApprovalAmount - amount permit signature is approving
      * @param deadline - when the permit signature expires
      * @param v - ECDSA sig param
      * @param r - ECDSA sig param
@@ -867,8 +858,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         uint256 amount,
         address depositorAddress,
         bytes32 proofHash,
-        address spender,
-        uint256 permitApprovalAmount,
         uint256 deadline,
         uint8 v,
         bytes32 r,
@@ -876,7 +865,40 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
     ) external override whenNotPaused {
         reentrancyMutexCheck();
         address assetAddress = getSupportedAsset(assetId);
-        IERC20Permit(assetAddress).permit(depositorAddress, spender, permitApprovalAmount, deadline, v, r, s);
+        IERC20Permit(assetAddress).permit(depositorAddress, address(this), amount, deadline, v, r, s);
+        internalDeposit(assetId, assetAddress, depositorAddress, amount);
+
+        if (proofHash != '') {
+            approveProof(proofHash);
+        }
+    }
+
+    /**
+     * @dev Deposit funds as part of the first stage of the two stage deposit. Permit flow
+     * @param assetId - unique ID of the asset
+     * @param amount - number of tokens being deposited
+     * @param depositorAddress - address from which funds are being transferred to the contract
+     * @param proofHash - the 32 byte transaction id that can spend the deposited funds
+     * @param nonce - user's nonce on the erc20 contract, for replay protection
+     * @param deadline - when the permit signature expires
+     * @param v - ECDSA sig param
+     * @param r - ECDSA sig param
+     * @param s - ECDSA sig param
+     */
+    function depositPendingFundsPermitNonStandard(
+        uint256 assetId,
+        uint256 amount,
+        address depositorAddress,
+        bytes32 proofHash,
+        uint256 nonce,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external override whenNotPaused {
+        reentrancyMutexCheck();
+        address assetAddress = getSupportedAsset(assetId);
+        IERC20Permit(assetAddress).permit(depositorAddress, address(this), nonce, deadline, true, v, r, s);
         internalDeposit(assetId, assetAddress, depositorAddress, amount);
 
         if (proofHash != '') {

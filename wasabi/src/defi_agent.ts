@@ -1,4 +1,4 @@
-import { AztecSdk, BitConfig, BridgeId, EthAddress, MemoryFifo, toBaseUnits, WalletProvider } from '@aztec/sdk';
+import { AztecSdk, BridgeId, EthAddress, MemoryFifo, toBaseUnits, WalletProvider } from '@aztec/sdk';
 import { Agent } from './agent';
 import { Stats } from './stats';
 
@@ -120,15 +120,10 @@ export class DefiAgent extends Agent {
   }
 
   private singleDefiSwap = async (spec: BridgeSpec, amountToTransfer: bigint) => {
-    const outputAssetIdB = 0;
     const bridgeId = new BridgeId(
       spec.addressId,
       spec.inputAsset,
       spec.outputAsset,
-      outputAssetIdB,
-      0,
-      new BitConfig(false, false, false, false, false, false),
-      0,
     );
     const currentBalanceInputAsset = await this.sdk.getBalance(spec.inputAsset, this.user.user.id);
     const currentBalanceOutputAsset = await this.sdk.getBalance(spec.outputAsset, this.user.user.id);

@@ -20,38 +20,54 @@ export function isAccountCreation(txType: TxType) {
 
 export interface BlockchainAsset {
   address: EthAddress;
-  permitSupport: boolean;
   decimals: number;
   symbol: string;
   name: string;
   isFeePaying: boolean;
   gasConstants: number[];
+  gasLimit: number;
 }
 
 export interface BlockchainAssetJson {
   address: string;
-  permitSupport: boolean;
   decimals: number;
   symbol: string;
   name: string;
   isFeePaying: boolean;
   gasConstants: number[];
+  gasLimit: number;
 }
+
+export const blockchainAssetToJson = ({ address, ...asset }: BlockchainAsset): BlockchainAssetJson => ({
+  ...asset,
+  address: address.toString(),
+});
+
+export const blockchainAssetFromJson = ({ address, ...asset }: BlockchainAssetJson): BlockchainAsset => ({
+  ...asset,
+  address: EthAddress.fromString(address),
+});
 
 export interface BlockchainBridge {
   id: number;
   address: EthAddress;
-  gasLimit: bigint;
+  gasLimit: number;
 }
 
-export const blockchainAssetToJson = (asset: BlockchainAsset) => ({
-  ...asset,
-  address: asset.address.toString(),
+export interface BlockchainBridgeJson {
+  id: number;
+  address: string;
+  gasLimit: number;
+}
+
+export const blockchainBridgeToJson = ({ address, ...bridge }: BlockchainBridge): BlockchainBridgeJson => ({
+  ...bridge,
+  address: address.toString(),
 });
 
-export const blockchainAssetFromJson = (json: BlockchainAssetJson) => ({
-  ...json,
-  address: EthAddress.fromString(json.address),
+export const blockchainBridgeFromJson = ({ address, ...bridge }: BlockchainBridgeJson): BlockchainBridge => ({
+  ...bridge,
+  address: EthAddress.fromString(address),
 });
 
 export interface BlockchainStatus {
@@ -88,20 +104,8 @@ export interface BlockchainStatusJson {
   escapeOpen: boolean;
   allowThirdPartyContracts: boolean;
   numEscapeBlocksRemaining: number;
-  assets: {
-    address: string;
-    permitSupport: boolean;
-    decimals: number;
-    symbol: string;
-    name: string;
-    isFeePaying: boolean;
-    gasConstants: number[];
-  }[];
-  bridges: {
-    id: number;
-    address: string;
-    gasLimit: string;
-  }[];
+  assets: BlockchainAssetJson[];
+  bridges: BlockchainBridgeJson[];
 }
 
 export function blockchainStatusToJson(status: BlockchainStatus): BlockchainStatusJson {
@@ -116,11 +120,7 @@ export function blockchainStatusToJson(status: BlockchainStatus): BlockchainStat
     defiRoot: status.defiRoot.toString('hex'),
     defiInteractionHashes: status.defiInteractionHashes.map(v => v.toString('hex')),
     assets: status.assets.map(blockchainAssetToJson),
-    bridges: status.bridges.map(b => ({
-      ...b,
-      address: b.address.toString(),
-      gasLimit: b.gasLimit.toString(),
-    })),
+    bridges: status.bridges.map(blockchainBridgeToJson),
   };
 }
 
@@ -136,11 +136,7 @@ export function blockchainStatusFromJson(json: BlockchainStatusJson): Blockchain
     defiRoot: Buffer.from(json.defiRoot, 'hex'),
     defiInteractionHashes: json.defiInteractionHashes.map(f => Buffer.from(f, 'hex')),
     assets: json.assets.map(blockchainAssetFromJson),
-    bridges: json.bridges.map(b => ({
-      ...b,
-      address: EthAddress.fromString(b.address),
-      gasLimit: BigInt(b.gasLimit),
-    })),
+    bridges: json.bridges.map(blockchainBridgeFromJson),
   };
 }
 

@@ -114,9 +114,11 @@ export interface CoreSdkInterface {
 
   awaitSettlement(txId: TxId, timeout?: number): Promise<void>;
 
-  awaitDefiInteraction(txId: TxId, timeout?: number): Promise<void>;
-
   awaitDefiDepositCompletion(txId: TxId, timeout?: number): Promise<void>;
+
+  awaitDefiFinalisation(txId: TxId, timeout?: number): Promise<void>;
+
+  awaitDefiSettlement(txId: TxId, timeout?: number): Promise<void>;
 
   getDefiInteractionNonce(txId: TxId): Promise<number | undefined>;
 

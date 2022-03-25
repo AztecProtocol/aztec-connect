@@ -20,7 +20,7 @@ export async function addAsset(
       console.error(`Changing decimals to: ${decimals}...`);
       await erc20.setDecimals(decimals);
     }
-    await rollup.setSupportedAsset(erc20.address, supportsPermit, 0, { gasLimit });
+    await rollup.setSupportedAsset(erc20.address, 0, { gasLimit });
     return erc20;
   } else {
     console.error('Deploying ERC20...');
@@ -31,7 +31,7 @@ export async function addAsset(
       console.error(`Changing decimals to: ${decimals}...`);
       await erc20.setDecimals(decimals, { gasLimit });
     }
-    await rollup.setSupportedAsset(erc20.address, supportsPermit, 0, { gasLimit });
+    await rollup.setSupportedAsset(erc20.address, 0, { gasLimit });
     return erc20;
   }
 }

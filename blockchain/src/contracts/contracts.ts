@@ -21,21 +21,22 @@ import { RollupProcessor } from './rollup_processor';
  * Exposes a more holistic interface to clients, than having to deal with individual contract classes.
  */
 export class Contracts {
-  private provider!: Web3Provider;
+  private readonly provider!: Web3Provider;
 
   constructor(
-    private rollupProcessor: RollupProcessor,
-    private feeDistributor: FeeDistributor,
+    private readonly rollupProcessor: RollupProcessor,
+    private readonly feeDistributor: FeeDistributor,
     private assets: Asset[],
-    private gasPriceFeed: GasPriceFeed,
-    private priceFeeds: PriceFeed[],
-    private ethereumProvider: EthereumProvider,
-    private confirmations: number,
+    private readonly feePayingAssetAddresses: EthAddress[],
+    private readonly gasPriceFeed: GasPriceFeed,
+    private readonly priceFeeds: PriceFeed[],
+    private readonly ethereumProvider: EthereumProvider,
+    private readonly confirmations: number,
   ) {
     this.provider = new Web3Provider(ethereumProvider);
   }
 
-  static async fromAddresses(
+  static fromAddresses(
     rollupContractAddress: EthAddress,
     feeDistributorAddress: EthAddress,
     priceFeedContractAddresses: EthAddress[],
@@ -47,19 +48,7 @@ export class Contracts {
 
     const feeDistributor = new FeeDistributor(feeDistributorAddress, ethereumProvider);
 
-    const assetAddresses = await rollupProcessor.getSupportedAssets();
-    const tokenAssets = await Promise.all(
-      assetAddresses.slice(1).map(async (addr, i) =>
-        TokenAsset.fromAddress(
-          addr,
-          ethereumProvider,
-          await rollupProcessor.getAssetPermitSupport(i + 1),
-          feePayingAssetAddresses.some(feePayingAsset => addr.equals(feePayingAsset)),
-          confirmations,
-        ),
-      ),
-    );
-    const assets = [new EthAsset(ethereumProvider), ...tokenAssets];
+    const assets = [new EthAsset(ethereumProvider)];
 
     const [gasPriceFeedAddress, ...tokenPriceFeedAddresses] = priceFeedContractAddresses;
     const gasPriceFeed = new GasPriceFeed(gasPriceFeedAddress, ethereumProvider);
@@ -72,6 +61,7 @@ export class Contracts {
       rollupProcessor,
       feeDistributor,
       assets,
+      feePayingAssetAddresses,
       gasPriceFeed,
       priceFeeds,
       ethereumProvider,
@@ -79,17 +69,24 @@ export class Contracts {
     );
   }
 
-  public async setSupportedAsset(
-    assetAddress: EthAddress,
-    supportsPermit: boolean,
-    isFeePaying: boolean,
-    assetGasLimit = 0,
-    options: SendTxOptions = {},
-  ) {
-    const tx = await this.rollupProcessor.setSupportedAsset(assetAddress, supportsPermit, assetGasLimit, options);
-    const tokenAsset = await TokenAsset.fromAddress(assetAddress, this.ethereumProvider, supportsPermit, isFeePaying);
-    this.assets.push(tokenAsset);
-    return tx;
+  public async init() {
+    await this.updateAssets();
+  }
+
+  public async updateAssets() {
+    const supportedAssets = await this.rollupProcessor.getSupportedAssets();
+    const newAssets = await Promise.all(
+      supportedAssets.slice(this.assets.length - 1).map(async ({ address, gasLimit }) =>
+        TokenAsset.fromAddress(
+          address,
+          this.ethereumProvider,
+          gasLimit,
+          this.feePayingAssetAddresses.some(feePayingAsset => address.equals(feePayingAsset)),
+          this.confirmations,
+        ),
+      ),
+    );
+    this.assets = [...this.assets, ...newAssets];
   }
 
   public async getPerRollupState() {
@@ -191,14 +188,6 @@ export class Contracts {
     return signer.signTypedData(data, address);
   }
 
-  public getAssets() {
-    return this.assets;
-  }
-
-  public getAsset(assetId: number) {
-    return this.assets[assetId];
-  }
-
   public async getAssetPrice(assetId: number) {
     return this.priceFeeds[assetId].price();
   }
@@ -228,8 +217,8 @@ export class Contracts {
     };
   }
 
-  public async getBridgeGas(bridgeAddressId: number) {
-    return this.rollupProcessor.getBridgeGas(bridgeAddressId);
+  public getAssets() {
+    return this.assets.map(a => a.getStaticInfo());
   }
 
   public async getSupportedBridges() {
