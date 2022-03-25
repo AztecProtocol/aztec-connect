@@ -55,12 +55,12 @@ export class Uniswap {
       sqrtPriceLimitX96: 0n,
     };
     await approveWeth(spender, EthAddress.fromString(this.contract.address), params.amountInMaximum, this.provider);
-    const amountBefore = await getTokenBalance(token.erc20Address, spender, this.provider);
+    const amountBefore = await getTokenBalance(token.erc20Address, recipient, this.provider);
     const swapTx = await this.contract.connect(this.ethersProvider.getSigner(spender.toString()))
     .exactOutputSingle(params)
     .catch(fixEthersStackTrace);
     await swapTx.wait();
-    const amountAfter = await getTokenBalance(token.erc20Address, spender, this.provider);
+    const amountAfter = await getTokenBalance(token.erc20Address, recipient, this.provider);
     const amountReceived = BigInt(amountAfter) - BigInt(amountBefore);
     return amountReceived;
   }

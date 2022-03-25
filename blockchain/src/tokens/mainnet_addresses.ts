@@ -1,5 +1,10 @@
+type AddressMap = {
+  [key: string] : string;
+}
+
 export class MainnetAddresses {
-  static readonly Tokens = {
+
+  static readonly Tokens: AddressMap = {
     "USDC": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
     "WETH": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
     "DAI": "0x6b175474e89094c44da98b954eedeac495271d0f",
@@ -15,7 +20,7 @@ export class MainnetAddresses {
     "ETH": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
   };
 
-  static readonly Contracts = {
+  static readonly Contracts: AddressMap = {
     "UNISWAP": "0xe592427a0aece92de3edee1f18e0157c05861564",
     "CURVE_PROVIDER": "0x0000000022d53366457f9d5e68ec105046fc4383",
     "CURVE_ZAP": "0xa79828df1850e8a3a3064576f380d90aecdd3359",

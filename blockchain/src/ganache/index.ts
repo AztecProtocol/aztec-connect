@@ -10,6 +10,7 @@ import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 import * as RollupAbi from '../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
 import * as ElementFactory from '@aztec/bridge-clients/client-dest/typechain-types/factories/ElementBridge__factory';
 import { WalletProvider } from '../provider';
+import { getTokenBalance, getWethBalance } from '../tokens';
 
 const { PRIVATE_KEY } = process.env;
 
@@ -130,7 +131,7 @@ async function main() {
   program
     .command('purchaseTokens')
     .description('purchase tokens for an account')
-    .argument('<tokenAddress>', 'the address of the token contract, as a hex string')
+    .argument('<token>', 'any token address or any key from the tokens listed in the mainnet command')
     .argument('<tokenQuantity>', 'the quantity of token you want to attempt to purchase')
     .argument(
       '[spender]',
@@ -140,21 +141,74 @@ async function main() {
     .argument('[recipient]', 'the address of the account to receive the tokens defaults to the spender', undefined)
     .argument('[maxAmountToSpend]', 'optional limit of the amount to spend', BigInt(10n ** 21n).toString())
     .argument('[url]', 'your ganache url', 'http://localhost:8545')
-    .action(async (tokenAddress, tokenQuantity, recipient, spender, maxAmountToSpend, url) => {
+    .action(async (token, tokenQuantity, spender, recipient, maxAmountToSpend, url) => {
       const ourProvider = getProvider(url);
       const ethereumRpc = new EthereumRpc(ourProvider);
       const accounts = await ethereumRpc.getAccounts();
       spender = spender ? EthAddress.fromString(spender) : accounts[0];
       recipient = recipient ? EthAddress.fromString(recipient) : spender;
+
+      let requestedToken = token;
+      if (!EthAddress.isAddress(token)) {
+        requestedToken = MainnetAddresses.Tokens[token];
+        if (!requestedToken) {
+          console.log(`Unknown token ${token}`);
+          return;
+        }
+      }
       const amountPurchased = await purchaseTokens(
-        EthAddress.fromString(tokenAddress),
+        EthAddress.fromString(requestedToken),
         BigInt(tokenQuantity),
         BigInt(maxAmountToSpend),
         ourProvider,
         spender,
         recipient,
       );
-      console.log(`Successfully purchased ${amountPurchased} of ${tokenAddress}`);
+      if (amountPurchased === undefined) {
+        console.log(`Failed to purchase ${token}`);
+        return;
+      }
+      console.log(`Successfully purchased ${amountPurchased} of ${token}`);
+    });
+
+  program
+    .command('getBalance')
+    .description('display token/ETH balance for an account')
+    .argument('<token>', 'any token address or any key from the tokens listed in the mainnet command')
+    .argument(
+      '[account]',
+      'the address of the account to purchase the token defaults to 1st default account 0xf39...',
+      undefined,
+    )
+    .argument('[url]', 'your ganache url', 'http://localhost:8545')
+    .action(async (token, account, url) => {
+      const ourProvider = getProvider(url);
+      const accounts = await new EthereumRpc(ourProvider).getAccounts();
+      account = account ? EthAddress.fromString(account) : accounts[0];
+      if (token == 'ETH') {
+        const balance = await ourProvider.request({ method: 'eth_getBalance', params: [account.toString()] });
+        console.log(`ETH balance of account ${account.toString()}: ${BigInt(balance)}`);
+        return;
+      }
+
+      let requestedToken = token;
+      if (!EthAddress.isAddress(token)) {
+        requestedToken = MainnetAddresses.Tokens[token];
+        if (!requestedToken) {
+          console.log(`Unknown token ${token}`);
+          return;
+        }
+      }
+
+      const ethTokenAddress = EthAddress.fromString(requestedToken);
+      const wethAddress = EthAddress.fromString(MainnetAddresses.Tokens['WETH']);
+      if (ethTokenAddress.equals(wethAddress)) {
+        const balance = await getWethBalance(account, ourProvider);
+        console.log(`WETH balance of account ${account}: ${balance}`);
+        return;
+      }
+      const balance = await getTokenBalance(ethTokenAddress, account, ourProvider);
+      console.log(`Token ${ethTokenAddress.toString()} balance of account ${account}: ${balance}`);
     });
 
   program
