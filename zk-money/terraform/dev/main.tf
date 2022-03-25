@@ -131,22 +131,3 @@ resource "aws_lambda_function" "twitter_lambda" {
   runtime          = "nodejs12.x"
   publish          = true
 }
-
-resource "aws_lambda_permission" "allow_cloudfront_invocation" {
-  statement_id  = "AllowExecutionFromCloudFront"
-  action        = "lambda:InvokeFunction"
-  function_name = "${var.DEPLOY_TAG}-twitter_lambda"
-  principal     = "edgelambda.amazonaws.com"
-  source_arn    = aws_cloudfront_distribution.zkmoney_distribution.arn
-  provider      = aws.acm
-
-}
-
-resource "aws_lambda_permission" "allow_cloudfront" {
-  provider      = aws.acm
-  statement_id  = "AllowGetFromCloudFront"
-  action        = "lambda:GetFunction"
-  function_name = "${var.DEPLOY_TAG}-twitter_lambda"
-  principal     = "edgelambda.amazonaws.com"
-  source_arn    = aws_cloudfront_distribution.zkmoney_distribution.arn
-}
