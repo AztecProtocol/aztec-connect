@@ -647,7 +647,7 @@ describe('rollup_processor', () => {
 
     // Deposit to contract.
     await assets[inputAssetIdA].approve(depositAmount, userAAddress, rollupProcessor.address);
-    await rollupProcessor.depositPendingFunds(inputAssetIdA, depositAmount, undefined, undefined, {
+    await rollupProcessor.depositPendingFunds(inputAssetIdA, depositAmount, undefined, {
       signingAddress: userAAddress,
     });
 

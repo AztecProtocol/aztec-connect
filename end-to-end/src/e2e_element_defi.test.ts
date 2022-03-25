@@ -330,7 +330,7 @@ describe('end-to-end async defi tests', () => {
 
     debug('waiting for the first batch of deposits to finalise...');
     // the second batch of deposits should have finalised the first batch
-    await Promise.all(defiDepositControllersFirstBatch.map(x => x.awaitDefiInteraction()));
+    await Promise.all(defiDepositControllersFirstBatch.map(x => x.awaitDefiFinalisation()));
 
     debug('waiting for the first batch of deposits to settle...');
     // need a flush tx to ensure the claims are rolled up
@@ -410,11 +410,11 @@ describe('end-to-end async defi tests', () => {
       sdk,
     );
     debug(`sending defi deposit to expired tranche...`);
-    await failedDefiController.awaitDefiInteraction();
+    await failedDefiController.awaitDefiFinalisation();
 
     // wait for the second batch to all finalise
     debug('waiting for second batch of deposits to finalise...');
-    await Promise.all(defiDepositControllersSecondBatch.map(x => x.awaitDefiInteraction()));
+    await Promise.all(defiDepositControllersSecondBatch.map(x => x.awaitDefiFinalisation()));
 
     debug('flushing to settle claims...');
     await sendFlushTx();
