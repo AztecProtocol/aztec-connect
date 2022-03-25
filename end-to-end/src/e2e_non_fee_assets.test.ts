@@ -14,6 +14,7 @@ import {
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
 import { depositTokensToAztec, sendTokens, withdrawTokens } from './sdk_utils';
+import createDebug from 'debug';
 
 jest.setTimeout(5 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
@@ -37,8 +38,19 @@ describe('end-to-end async defi tests', () => {
   const ethDepositedToUsersAccount = toBaseUnits('0.2', 18);
   const ethAvailableForDefi = toBaseUnits('0.2', 15);
   const ethAssetId = 0;
+  const debug = createDebug('bb:e2e_non_fee_asset');
+
+  const debugBalance = async (assetId: number, account: number) => {
+    const asset = sdk.getAssetInfo(assetId);
+    debug(`account ${account} balance of ${asset.name}: ${(await sdk.getBalanceAv(assetId, userIds[account])).value}`);
+  };
+
+  const getAssetName = (assetAddress: EthAddress) => {
+    return sdk.getAssetInfo(sdk.getAssetIdByAddress(assetAddress)).name;
+  };
 
   beforeAll(async () => {
+    debug(`funding initial ETH accounts...`);
     provider = await createFundedWalletProvider(ETHEREUM_HOST, 2, undefined, undefined, ethDepositedToUsersAccount);
     accounts = provider.getAccounts();
 
@@ -71,12 +83,14 @@ describe('end-to-end async defi tests', () => {
     const user1 = userIds[0];
     const user2 = userIds[1];
 
+    debug(`shielding ETH...`);
     const shieldValue = sdk.toBaseUnits(0, '0.08');
     let expectedUser0EthBalance = shieldValue.value;
     let expectedUser1EthBalance = shieldValue.value;
     const depositControllers: DepositController[] = [];
     for (let i = 0; i < accounts.length; i++) {
       const depositor = accounts[i];
+      debug(`shielding ${sdk.fromBaseUnits(shieldValue, true)} from ${depositor.toString()}...`);
       const signer = await sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
       // flush this transaction through by paying for all the slots in the rollup
       const fee = (await sdk.getDepositFees(ethAssetId))[
@@ -91,8 +105,11 @@ describe('end-to-end async defi tests', () => {
     }
 
     await Promise.all(depositControllers.map(controller => controller.send()));
+    debug(`waiting for shields to settle...`);
     await Promise.all(depositControllers.map(controller => controller.awaitSettlement(awaitSettlementTimeout)));
 
+    await debugBalance(ethAssetId, 0);
+    await debugBalance(ethAssetId, 1);
     expect(await sdk.getBalance(ethAssetId, user1)).toEqual(expectedUser0EthBalance);
     expect(await sdk.getBalance(ethAssetId, user2)).toEqual(expectedUser1EthBalance);
 
@@ -108,12 +125,24 @@ describe('end-to-end async defi tests', () => {
       { erc20Address: daiEthAddress, amount: quantityOfDaiRequested },
       ethAvailableForDefi,
     );
+    debug(
+      `purchased ${daiQuantityPurchased} of ${getAssetName(
+        daiEthAddress,
+      )} for account ${usersEthereumAddress.toString()}...`,
+    );
     const usdcQuantityPurchased = await tokenStore.purchase(
       usersEthereumAddress,
       usersEthereumAddress,
       { erc20Address: usdcEthAddress, amount: quantityOfUsdcRequested },
       ethAvailableForDefi,
     );
+    debug(
+      `purchased ${usdcQuantityPurchased} of ${getAssetName(
+        usdcEthAddress,
+      )} for account ${usersEthereumAddress.toString()}...`,
+    );
+
+    debug(`depositing ${daiQuantityPurchased} of ${getAssetName(daiEthAddress)} to account 0...`);
 
     // make the token deposits and wait for settlement
     const daiDepositController = await depositTokensToAztec(
@@ -125,6 +154,8 @@ describe('end-to-end async defi tests', () => {
       sdk,
       provider,
     );
+
+    debug(`depositing ${usdcQuantityPurchased} of ${getAssetName(usdcEthAddress)} to account 0...`);
     const usdcDepositController = await depositTokensToAztec(
       usersEthereumAddress,
       user1,
@@ -134,6 +165,7 @@ describe('end-to-end async defi tests', () => {
       sdk,
       provider,
     );
+    debug('waiting for token deposits to settle...');
     const tokenDepositControllers: DepositController[] = [daiDepositController, usdcDepositController];
     await Promise.all(tokenDepositControllers.map(controller => controller.awaitSettlement(awaitSettlementTimeout)));
 
@@ -142,6 +174,11 @@ describe('end-to-end async defi tests', () => {
     expect(await sdk.getBalance(ethAssetId, user1)).toEqual(expectedUser0EthBalance);
     expect(await sdk.getBalance(daiAssetId, user1)).toEqual(daiQuantityPurchased);
     expect(await sdk.getBalance(usdcAssetId, user1)).toEqual(usdcQuantityPurchased);
+
+    await debugBalance(daiAssetId, 0);
+    await debugBalance(usdcAssetId, 0);
+
+    debug(`account 0 sending ${daiQuantityPurchased} of ${getAssetName(daiEthAddress)} to account 1...`);
 
     // now user 0 transfers all their DAI and USDC to user 1
     const daiTransferController = await sendTokens(
@@ -152,6 +189,8 @@ describe('end-to-end async defi tests', () => {
       TxSettlementTime.NEXT_ROLLUP,
       sdk,
     );
+
+    debug(`account 0 sending ${usdcQuantityPurchased} of ${getAssetName(usdcEthAddress)} to account 1...`);
     const usdcTransferController = await sendTokens(
       user1,
       user2,
@@ -160,6 +199,7 @@ describe('end-to-end async defi tests', () => {
       TxSettlementTime.INSTANT,
       sdk,
     );
+    debug('waiting for token transfers to settle');
     const tokenTransferControllers: TransferController[] = [daiTransferController, usdcTransferController];
     await Promise.all(tokenTransferControllers.map(controller => controller.awaitSettlement()));
 
@@ -172,6 +212,12 @@ describe('end-to-end async defi tests', () => {
     expect(await sdk.getBalance(daiAssetId, user1)).toEqual(0n);
     expect(await sdk.getBalance(usdcAssetId, user1)).toEqual(0n);
 
+    await debugBalance(daiAssetId, 0);
+    await debugBalance(daiAssetId, 1);
+    await debugBalance(usdcAssetId, 0);
+    await debugBalance(usdcAssetId, 1);
+
+    debug(`account 1 withdrawing ${daiQuantityPurchased} of ${getAssetName(daiEthAddress)}...`);
     // now user 1 withdraws both assets to a wallet
     const daiWithdrawController = await withdrawTokens(
       user2,
@@ -181,6 +227,7 @@ describe('end-to-end async defi tests', () => {
       TxSettlementTime.NEXT_ROLLUP,
       sdk,
     );
+    debug(`account 1 withdrawing ${usdcQuantityPurchased} of ${getAssetName(usdcEthAddress)}...`);
     const usdcWithdrawController = await withdrawTokens(
       user2,
       accounts[1],
@@ -189,10 +236,17 @@ describe('end-to-end async defi tests', () => {
       TxSettlementTime.INSTANT,
       sdk,
     );
+    debug('waiting for withdrawals to settle...');
     const tokenWithdrawControllers: WithdrawController[] = [daiWithdrawController, usdcWithdrawController];
     await Promise.all(tokenWithdrawControllers.map(controller => controller.awaitSettlement()));
 
     //check the new balances
+    await debugBalance(ethAssetId, 0);
+    await debugBalance(daiAssetId, 0);
+    await debugBalance(usdcAssetId, 0);
+    await debugBalance(ethAssetId, 1);
+    await debugBalance(daiAssetId, 1);
+    await debugBalance(usdcAssetId, 1);
     expectedUser1EthBalance -= (await sdk.getWithdrawFees(daiAssetId))[TxSettlementTime.NEXT_ROLLUP].value;
     expectedUser1EthBalance -= (await sdk.getWithdrawFees(usdcAssetId))[TxSettlementTime.INSTANT].value;
     expect(await sdk.getBalance(ethAssetId, user2)).toEqual(expectedUser1EthBalance);

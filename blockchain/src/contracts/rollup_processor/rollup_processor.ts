@@ -2,7 +2,7 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { EthereumProvider, PermitArgs, SendTxOptions, TxHash } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
+import { DefiInteractionNote, computeInteractionHashes } from '@aztec/barretenberg/note_algorithms';
 import { sliceOffchainTxData } from '@aztec/barretenberg/offchain_tx_data';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { TransactionReceipt, TransactionResponse } from '@ethersproject/abstract-provider';
@@ -28,6 +28,8 @@ export class RollupProcessor {
   private lastQueriedRollupBlockNum?: number;
   protected provider: Web3Provider;
   private log = createDebug('bb:rollup_processor');
+  // taken from the rollup contract
+  static readonly DEFI_RESULT_ZERO_HASH = '0x2d25a1e3a51eb293004c4b56abe12ed0da6bca2b4a21936752a85d102593c1b4';
 
   constructor(protected rollupContractAddress: EthAddress, private ethereumProvider: EthereumProvider) {
     this.provider = new Web3Provider(ethereumProvider);
@@ -270,11 +272,10 @@ export class RollupProcessor {
   public async getRollupBlocksFrom(rollupId: number, minConfirmations: number) {
     const { earliestBlock, chunk } = await this.getEarliestBlock();
     let end = await this.provider.getBlockNumber();
-    const preceedingRollupId = rollupId === 0 ? rollupId : rollupId - 1;
     let start =
       this.lastQueriedRollupId === undefined || rollupId < this.lastQueriedRollupId
         ? Math.max(end - chunk, earliestBlock)
-        : this.lastQueriedRollupBlockNum!;
+        : this.lastQueriedRollupBlockNum! + 1;
     let events: Event[] = [];
 
     const totalStartTime = new Date().getTime();
@@ -287,7 +288,7 @@ export class RollupProcessor {
 
       events = [...rollupEvents, ...events];
 
-      if (events.length && events[0].args!.rollupId.toNumber() <= preceedingRollupId) {
+      if (events.length && events[0].args!.rollupId.toNumber() <= rollupId) {
         this.lastQueriedRollupId = rollupId;
         this.lastQueriedRollupBlockNum = events[events.length - 1].blockNumber;
         break;
@@ -297,16 +298,10 @@ export class RollupProcessor {
     }
     this.log(`Done: ${events.length} fetched in ${(new Date().getTime() - totalStartTime) / 1000}s`);
 
-    const eventsToExtractRollups = events
-      .map((ev, index) => {
-        return {
-          rollupEvent: ev,
-          blockAfterPreviousRollup: index === 0 ? undefined : events[index - 1].blockNumber + 1,
-        };
-      })
-      .filter(e => e.rollupEvent.args!.rollupId.toNumber() >= rollupId);
-
-    return this.getRollupBlocksFromEvents(eventsToExtractRollups, minConfirmations);
+    return this.getRollupBlocksFromEvents(
+      events.filter(e => e.args!.rollupId.toNumber() >= rollupId),
+      minConfirmations,
+    );
   }
 
   /**
@@ -317,39 +312,13 @@ export class RollupProcessor {
     const { earliestBlock, chunk } = await this.getEarliestBlock();
     let end = await this.provider.getBlockNumber();
     let start = Math.max(end - chunk, earliestBlock);
-    const filter = rollupId === -1 ? undefined : rollupId === 0 ? [rollupId] : [rollupId - 1, rollupId];
-    let rollupEvents: Event[] = [];
-    let lastRollupId = undefined;
 
     while (end > earliestBlock) {
-      const rollupFilter = this.rollupProcessor.filters.RollupProcessed(filter);
+      this.log(`Fetching rollup events between blocks ${start} and ${end}...`);
+      const rollupFilter = this.rollupProcessor.filters.RollupProcessed(rollupId == -1 ? undefined : rollupId);
       const events = await this.rollupProcessor.queryFilter(rollupFilter, start, end);
       if (events.length) {
-        if (lastRollupId === undefined) {
-          // this is the first batch of events going back that match our filter
-          lastRollupId = events[events.length - 1].args!.rollupId.toNumber();
-          // if the last rollupId == 0, then we have enough to return as there were no other events of interest before this
-          if (lastRollupId === 0) {
-            return (
-              await this.getRollupBlocksFromEvents(
-                [{ rollupEvent: events[events.length - 1], blockAfterPreviousRollup: undefined }],
-                1,
-              )
-            )[0];
-          }
-        }
-        rollupEvents = [...events, ...rollupEvents];
-      }
-      if (rollupEvents.length > 1) {
-        // we need more than 1 event in order to capture the intermediate events between rollups
-        // just get the last 2 events
-        rollupEvents = rollupEvents.slice(-2);
-        return (
-          await this.getRollupBlocksFromEvents(
-            [{ rollupEvent: rollupEvents[1], blockAfterPreviousRollup: rollupEvents[0].blockNumber + 1 }],
-            1,
-          )
-        )[0];
+        return (await this.getRollupBlocksFromEvents(events.slice(-1), 1))[0];
       }
       end = Math.max(start - 1, earliestBlock);
       start = Math.max(end - chunk, earliestBlock);
@@ -362,36 +331,48 @@ export class RollupProcessor {
    * hitting it with thousands of requests at once, while also enabling some degree of parallelism.
    * WARNING: `rollupEvents` is mutated.
    */
-  private async getRollupBlocksFromEvents(
-    rollupEvents: { rollupEvent: Event; blockAfterPreviousRollup?: number }[],
-    minConfirmations: number,
-  ) {
+  private async getRollupBlocksFromEvents(rollupEvents: Event[], minConfirmations: number) {
     this.log(`Fetching data for ${rollupEvents.length} rollups...`);
     const startTime = new Date().getTime();
 
     const blocks: Block[] = [];
     while (rollupEvents.length) {
       const events = rollupEvents.splice(0, 10);
-      const meta = (
-        await Promise.all(
-          events.map(event =>
-            Promise.all([
-              event.rollupEvent.getTransaction(),
-              event.rollupEvent.getBlock(),
-              event.rollupEvent.getTransactionReceipt(),
-              this.getDefiBridgeEvents(
-                event.blockAfterPreviousRollup === undefined
-                  ? event.rollupEvent.blockNumber
-                  : event.blockAfterPreviousRollup,
-                event.rollupEvent.blockNumber,
-              ),
-            ]),
-          ),
-        )
-      ).filter(m => m[0].confirmations >= minConfirmations);
-      const newBlocks = meta.map(meta =>
-        this.decodeBlock({ ...meta[0], timestamp: meta[1].timestamp }, meta[2], meta[3]),
+      // retrieve all of the defi notes for these rollup events
+      const defiPromise = this.getDefiBridgeEventsForRollupEvents(events);
+      const eventTxDetailsPromise = Promise.all(
+        events.map(async event => {
+          const meta = await Promise.all([event.getTransaction(), event.getBlock(), event.getTransactionReceipt()]);
+          return {
+            event,
+            tx: meta[0],
+            block: meta[1],
+            receipt: meta[2],
+          };
+        }),
       );
+      const [meta, allDefiNotes] = await Promise.all([eventTxDetailsPromise, defiPromise]);
+      // we now have the tx details and defi notes for this batch of rollup events
+      // we need to assign the defi notes to their specified rollup
+      const newBlocks = meta
+        .filter(m => m.tx.confirmations >= minConfirmations)
+        .map(meta => {
+          // assign the set of defi notes for this rollup and decode the block
+          const hashesForThisRollup = this.extractDefiHashesFromRollupEvent(meta.event);
+          const defiNotesForThisRollup: DefiInteractionNote[] = [];
+          for (const hash of hashesForThisRollup) {
+            if (!allDefiNotes[hash]) {
+              console.log(`Unable to locate defi interaction note for hash ${hash}!`);
+              continue;
+            }
+            defiNotesForThisRollup.push(allDefiNotes[hash]!);
+          }
+          return this.decodeBlock(
+            { ...meta.tx, timestamp: meta.block.timestamp },
+            meta.receipt,
+            defiNotesForThisRollup,
+          );
+        });
       blocks.push(...newBlocks);
     }
 
@@ -400,22 +381,78 @@ export class RollupProcessor {
     return blocks;
   }
 
-  private async getDefiBridgeEvents(from: number, to: number) {
-    const filter = this.rollupProcessor.filters.DefiBridgeProcessed();
-    const defiBridgeEvents = await this.rollupProcessor.queryFilter(filter, from, to);
-    return defiBridgeEvents.map((log: { blockNumber: number; topics: string[]; data: string }) => {
-      const {
-        args: { bridgeId, nonce, totalInputValue, totalOutputValueA, totalOutputValueB, result },
-      } = this.contract.interface.parseLog(log);
-      return new DefiInteractionNote(
-        BridgeId.fromBigInt(BigInt(bridgeId)),
-        +nonce,
-        BigInt(totalInputValue),
-        BigInt(totalOutputValueA),
-        BigInt(totalOutputValueB),
-        result,
+  private extractDefiHashesFromRollupEvent(rollupEvent: Event) {
+    // the rollup contract publishes a set of hash values with each rollup event
+    const rollupLog = { blockNumber: rollupEvent.blockNumber, topics: rollupEvent.topics, data: rollupEvent.data };
+    const {
+      args: { nextExpectedDefiHashes, rollupId },
+    } = this.contract.interface.parseLog(rollupLog);
+    // this is the hash of a 'zeroed' defi interaction note as specified on the rollup contract
+    // the rollup contract shouldn't publish hashes of zero notes but we will filter them if it does
+    const zeroHash = RollupProcessor.DEFI_RESULT_ZERO_HASH;
+    // filter 'zero' hashes and remove the '0x' from the front
+    const nonZeroHashes: string[] = nextExpectedDefiHashes.filter((hash: string) => hash !== zeroHash);
+    if (nonZeroHashes.length !== nextExpectedDefiHashes.length) {
+      console.log(
+        `Received 'zero' defi interaction note hashes in next expected defi hashes for rollup ${rollupId}, ignoring them!`,
       );
-    });
+    }
+    return nonZeroHashes.map((hash: string) => hash.slice(2));
+  }
+
+  private async getDefiBridgeEventsForRollupEvents(rollupEvents: Event[]) {
+    // retrieve all defi interaction notes from the DefiBridgeProcessed stream for the set of rollup events given
+    const rollupHashes = rollupEvents.flatMap(ev => this.extractDefiHashesFromRollupEvent(ev));
+    const hashMapping: { [key: string]: DefiInteractionNote | undefined } = {};
+    for (const hash of rollupHashes) {
+      hashMapping[hash] = undefined;
+    }
+    let numHashesToFind = rollupHashes.length;
+
+    // hashMapping now contains all of the required note hashes in it's keys
+    // we need to search back through the DefiBridgeProcessed stream and find all of the notes that correspond to that stream
+
+    const { earliestBlock, chunk } = await this.getEarliestBlock();
+    // the highest block number should be the event at the end, but calculate the max to be sure
+    const highestBlockNumber = Math.max(...rollupEvents.map(ev => ev.blockNumber));
+    let endBlock = Math.max(highestBlockNumber, earliestBlock);
+    let startBlock = Math.max(endBlock - chunk, earliestBlock);
+
+    // search back through the stream until all of our notes have been found or we have exhausted the blocks
+    while (endBlock > earliestBlock && numHashesToFind > 0) {
+      this.log(`Searching for defi notes from blocks ${startBlock} - ${endBlock}`);
+      const filter = this.rollupProcessor.filters.DefiBridgeProcessed();
+      const defiBridgeEvents = await this.rollupProcessor.queryFilter(filter, startBlock, endBlock);
+      // decode the retrieved events into actual defi interaction notes
+      const decodedNotes = defiBridgeEvents.map((log: { blockNumber: number; topics: string[]; data: string }) => {
+        const {
+          args: { bridgeId, nonce, totalInputValue, totalOutputValueA, totalOutputValueB, result },
+        } = this.contract.interface.parseLog(log);
+        return new DefiInteractionNote(
+          BridgeId.fromBigInt(BigInt(bridgeId)),
+          +nonce,
+          BigInt(totalInputValue),
+          BigInt(totalOutputValueA),
+          BigInt(totalOutputValueB),
+          result,
+        );
+      });
+      this.log(
+        `Found ${decodedNotes.length} notes between blocks ${startBlock} - ${endBlock}, nonces: `,
+        decodedNotes.map(note => note.nonce),
+      );
+      // compute the hash and store the notes against that hash in our mapping
+      for (const decodedNote of decodedNotes) {
+        const noteHash = computeInteractionHashes([decodedNote])[0].toString('hex');
+        if (Object.prototype.hasOwnProperty.call(hashMapping, noteHash) && hashMapping[noteHash] === undefined) {
+          hashMapping[noteHash] = decodedNote;
+          --numHashesToFind;
+        }
+      }
+      endBlock = Math.max(startBlock - 1, earliestBlock);
+      startBlock = Math.max(endBlock - chunk, earliestBlock);
+    }
+    return hashMapping;
   }
 
   getRollupStateFromBlock(block: Block) {

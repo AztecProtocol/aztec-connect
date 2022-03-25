@@ -8,7 +8,13 @@ import { deployFeeDistributor } from './deploy_fee_distributor';
 import { deployPriceFeed } from './deploy_price_feed';
 import { createUniswapPair, deployUniswap, deployUniswapBridge } from './deploy_uniswap';
 import { deployMockVerifier, deployVerifier } from './deploy_verifier';
-import { deployElementBridge, elementAssets, elementConfig, setupElementPools } from './deploy_element';
+import {
+  deployElementBridge,
+  deployMockElementContractRegistry,
+  elementAssets,
+  elementConfig,
+  setupElementPools,
+} from './deploy_element';
 
 const gasLimit = 5000000;
 
@@ -67,14 +73,17 @@ async function deployBridgeContracts(signer: Signer, rollup: Contract, uniswapRo
     await rollup.setSupportedAsset(elementAsset, false, 0, { gasLimit });
   }
 
+  const elementRegistry = await deployMockElementContractRegistry(signer, elementConfig);
+
   const elementBridge = await deployElementBridge(
     signer,
     rollup.address,
     elementConfig.trancheFactoryAddress,
     elementConfig.trancheByteCodeHash,
     elementConfig.balancerAddress,
+    elementRegistry.address,
   );
-  await rollup.setSupportedBridge(elementBridge.address, 1000000n, { gasLimit });
+  await rollup.setSupportedBridge(elementBridge.address, 800000n, { gasLimit });
 
   await setupElementPools(elementConfig, elementBridge);
 }
@@ -113,6 +122,11 @@ export async function deploy(
 
   const defiProxy = await deployDefiBridgeProxy(signer);
   const allowThirdPartyContracts = true;
+  // this is the hash of 32 'zero' defi interaction results
+  const initialNextExpectedDefiHash = Buffer.from(
+    '14e0f351ade4ba10438e9b15f66ab2e6389eea5ae870d6e8b2df1418b2e6fd5b',
+    'hex',
+  );
   const rollup = await deployRollupProcessor(
     signer,
     verifier,

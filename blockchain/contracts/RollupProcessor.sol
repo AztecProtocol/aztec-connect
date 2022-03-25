@@ -194,10 +194,16 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
     // we need a way to register Bridge Gas Limits for dynamic limits per DeFi protocol
     mapping(uint256 => uint256) public bridgeGasLimits;
 
+    // stores the hash of the hashes of the pending defi interactions, the notes of which are expected to be added in the 'next' rollup
+    bytes32 public prevDefiInteractionsHash;
+
+    // the value of hashing a 'zeroed' defi interaction result
+    bytes32 private constant DEFI_RESULT_ZERO_HASH = 0x2d25a1e3a51eb293004c4b56abe12ed0da6bca2b4a21936752a85d102593c1b4;
+
     /*----------------------------------------
       EVENTS
       ----------------------------------------*/
-    event RollupProcessed(uint256 indexed rollupId);
+    event RollupProcessed(uint256 indexed rollupId, bytes32[] nextExpectedDefiHashes);
     event DefiBridgeProcessed(
         uint256 indexed bridgeId,
         uint256 indexed nonce,
@@ -446,6 +452,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
      * @param _initNullRoot starting state of the Aztec nullifier tree. Init tree state should be all-zeroes excluding migrated account nullifiers
      * @param _initRootRoot starting state of the Aztec data roots tree. Init tree state should be all-zeroes excluding 1 leaf containing _initDataRoot
      * @param _initDatasize starting size of the Aztec data tree.
+     * @param _allowThirdPartyContracts flag that specifies whether 3rd parties are allowed to add state to the contract
      */
     function initialize(
         address _verifierAddress,
@@ -479,6 +486,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         escapeBlockUpperBound = _escapeBlockUpperBound;
         rollupProviders[_contractOwner] = true;
         allowThirdPartyContracts = _allowThirdPartyContracts;
+        // initial value of the hash of 32 'zero' defi not hashes
+        prevDefiInteractionsHash = 0x14e0f351ade4ba10438e9b15f66ab2e6389eea5ae870d6e8b2df1418b2e6fd5b;
     }
 
     /**
@@ -959,16 +968,20 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         uint256 publicInputsHash,
         address rollupBeneficiary
     ) internal {
-        verifyProofAndUpdateState(proofData, publicInputsHash);
+        uint256 rollupId = verifyProofAndUpdateState(proofData, publicInputsHash);
         processDepositsAndWithdrawals(proofData, numTxs, signatures);
-        processDefiBridges(proofData, rollupBeneficiary);
+        bytes32[] memory nextDefiHashes = processDefiBridges(proofData, rollupBeneficiary);
+        emit RollupProcessed(rollupId, nextDefiHashes);
     }
 
     /**
      * @dev Verify the zk proof and update the contract state variables with those provided by the rollup.
      * @param proofData - cryptographic zk proof data. Passed to the verifier for verification.
      */
-    function verifyProofAndUpdateState(bytes memory proofData, uint256 publicInputsHash) internal {
+    function verifyProofAndUpdateState(bytes memory proofData, uint256 publicInputsHash)
+        internal
+        returns (uint256 rollupId)
+    {
         // Verify the rollup proof.
         //
         // We manually call the verifier contract via assembly to save on gas costs and to reduce contract bytecode size
@@ -1052,9 +1065,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         }
 
         // Validate and update state hash
-        uint256 rollupId = validateAndUpdateMerkleRoots(proofData);
-
-        emit RollupProcessed(rollupId);
+        rollupId = validateAndUpdateMerkleRoots(proofData);
     }
 
     /**
@@ -1343,130 +1354,170 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
     }
 
     /**
+     * @dev Get the length of the defi interaction hashes array and the number of pending interactions
+     *
+     * @return defiInteractionHashesLength the complete length of the defi interaction array
+     * @return numPendingInteractions the current number of pending defi interactions
+     */
+    function getDefiHashesLengths()
+        internal
+        view
+        returns (uint256 defiInteractionHashesLength, uint256 numPendingInteractions)
+    {
+        assembly {
+            // retrieve the total length of the defi interactions array and also the number of pending interactions to a maximum of NUMBER_OF_BRIDGE_CALLS
+            let state := sload(rollupState.slot)
+            {
+                defiInteractionHashesLength := and(ARRAY_LENGTH_MASK, shr(DEFIINTERACTIONHASHES_BIT_OFFSET, state))
+                numPendingInteractions := defiInteractionHashesLength
+                if gt(numPendingInteractions, NUMBER_OF_BRIDGE_CALLS) {
+                    numPendingInteractions := NUMBER_OF_BRIDGE_CALLS
+                }
+            }
+        }
+    }
+
+    /**
+     * @dev Get the set of hashes that comprise the current pending defi interactions
+     *
+     * @return hashes the set of valid (i.e. non-zero) hashes that comprise the pending defi interactions
+     * @return nextExpectedHash the hash of all hashes (including zero hashes) that comprise the pending defi interactions
+     */
+    function calculateNextExpectedDefiHash() internal view returns (bytes32[] memory hashes, bytes32 nextExpectedHash) {
+        /**----------------------------------------
+         * Compute nextExpectedHash
+         *-----------------------------------------
+         *
+         * The storage slot `defiInteractionHashes` points to an array that represents the
+         * set of defi interactions from previous blocks that have been resolved.
+         *
+         * We need to take the interaction result data from each of the above defi interactions,
+         * and add that data into the Aztec L2 merkle tree that contains defi interaction results
+         * (the "Defi Tree". Its merkle root is one of the inputs to the storage variable `rollupStateHash`)
+         *
+         * It is the rollup provider's responsibility to perform these additions.
+         * In the current block being processed, the rollup provider must take these pending interaction results,
+         * create commitments to each result and insert each commitment into the next empty leaf of the defi tree.
+         *
+         * The following code validates that this has happened! This is how:
+         *
+         * Part 1: What are we checking?
+         *
+         * The rollup circuit will receive, as a private input from the rollup provider, the pending defi interaction results
+         * (`bridgeId`, `totalInputValue`, `totalOutputValueA`, `totalOutputValueB`, `result`)
+         * The rollup circuit will compute the SHA256 hash of each interaction result (the defiInteractionHash)
+         * Finally the SHA256 hash of `NUMBER_OF_BRIDGE_CALLS` of these defiInteractionHash values is computed.
+         * (if there are fewer than `NUMBER_OF_BRIDGE_CALLS` pending defi interaction results, the SHA256 hash of an empty defi interaction result is used instead. i.e. all variable values are set to 0)
+         * The above SHA256 hash, the `pendingDefiInteractionHash` is one of the broadcasted values that forms the `publicInputsHash` public input to the rollup circuit.
+         * When verifying a rollup proof, this smart contract will compute `publicInputsHash` from the input calldata. The PLONK Verifier smart contract will then validate
+         * that our computed value for `publicInputHash` matches the value used when generating the rollup proof.
+         *
+         * TLDR of the above: our proof data contains a variable `pendingDefiInteractionHash`, which is the CLAIMED VALUE of SHA256 hashing the SHA256 hashes of the defi interactions that have resolved but whose data has not yet been added into the defi tree.
+         *
+         * Part 2: How do we check `pendingDefiInteractionHash` is correct???
+         *
+         * This contract will call `DefiBridgeProxy.convert` (via delegatecall) on every new defi interaction present in the block.
+         * The return values from the bridge proxy contract are used to construct a defi interaction result. Its hash is then computed
+         * and stored in `defiInteractionHashes[]`.
+         *
+         * N.B. It's very important that DefiBridgeProxy does not call selfdestruct, or makes a delegatecall out to a contract that can selfdestruct :o
+         *
+         * Similarly, when async defi interactions resolve, the interaction result is stored in `asyncDefiInteractionHashes[]`. At the end of the processDefiBridges function,
+         * the contents of the async array is copied into `defiInteractionHashes` (i.e. async interaction results are delayed by 1 rollup block. This is to prevent griefing attacks where
+         * the rollup state changes between the time taken for a rollup tx to be constructed and the rollup tx to be mined)
+         *
+         * We use the contents of `defiInteractionHashes` to reconstruct `pendingDefiInteractionHash`, and validate it matches the value present in calldata and
+         * therefore the value used in the rollup circuit when this block's rollup proof was constructed.
+         * This validates that all of the required defi interaction results were added into the defi tree by the rollup provider
+         * (the circuit logic enforces this, we just need to check the rollup provider used the correct inputs)
+         */
+        (uint256 defiInteractionHashesLength, uint256 numPendingInteractions) = getDefiHashesLengths();
+        uint256 offset = defiInteractionHashesLength - numPendingInteractions;
+        assembly {
+            // allocate the output array of hashes
+            hashes := mload(0x40)
+            let hashData := add(hashes, 0x20)
+            // update the free memory pointer to point past the end of our array
+            // our array will consume 32 bytes for the length field plus NUMBER_OF_BRIDGE_BYTES for all of the hashes
+            mstore(0x40, add(hashes, add(NUMBER_OF_BRIDGE_BYTES, 0x20)))
+            // set the length of hashes to only include the non-zero hash values
+            // although this function will write all of the hashes into our allocated memory, we only want to return the non-zero hashes
+            mstore(hashes, numPendingInteractions)
+
+            // Start by getting the defi interaction hashes array slot value
+            mstore(0x00, defiInteractionHashes.slot)
+            let sloadOffset := keccak256(0x00, 0x20)
+            let i := 0
+
+            // Iterate over numPendingInteractions (will be between 0 and NUMBER_OF_BRIDGE_CALLS)
+            // Load defiInteractionHashes[offset + i] and store in memory
+            // in order to compute SHA2 hash (nextExpectedHash)
+            for {
+
+            } lt(i, numPendingInteractions) {
+                i := add(i, 0x01)
+            } {
+                mstore(add(hashData, mul(i, 0x20)), sload(add(sloadOffset, add(offset, i))))
+            }
+
+            // If numPendingInteractions < NUMBER_OF_BRIDGE_CALLS, continue iterating up to NUMBER_OF_BRIDGE_CALLS, this time
+            // inserting the "zero hash", the result of sha256(emptyDefiInteractionResult)
+            for {
+
+            } lt(i, NUMBER_OF_BRIDGE_CALLS) {
+                i := add(i, 0x01)
+            } {
+                mstore(add(hashData, mul(i, 0x20)), DEFI_RESULT_ZERO_HASH)
+            }
+            pop(staticcall(gas(), 0x2, hashData, NUMBER_OF_BRIDGE_BYTES, 0x00, 0x20))
+            nextExpectedHash := mod(mload(0x00), CIRCUIT_MODULUS)
+        }
+    }
+
+    /**
      * @dev Process defi interactions.
      *      1. pop NUMBER_OF_BRIDGE_CALLS (if available) interaction hashes off of `defiInteractionHashes`,
-     *         validate their hash equals `numPendingInteractions`
+     *         validate their hash (calculated at the end of the previous rollup and stored as nextExpectedDefiInteractionsHash) equals `numPendingInteractions`
      *         (this validates that rollup block has added these interaction results into the L2 data tree)
      *      2. iterate over rollup block's new defi interactions (up to NUMBER_OF_BRIDGE_CALLS). Trigger interactions by
      *         calling DefiBridgeProxy contract. Record results in either `defiInteractionHashes` (for synchrohnous txns)
      *         or, for async txns, the `pendingDefiInteractions` mapping
      *      3. copy the contents of `asyncInteractionHashes` into `defiInteractionHashes` && clear `asyncInteractionHashes`
+     *      4. calculate the next value of nextExpectedDefiInteractionsHash from the new set of defiInteractionHashes
      * @param proofData - the proof data
      * @param rollupBeneficiary - the address that should be paid any subsidy for processing a defi bridge
-
+     * @return nextExpectedHashes - the set of non-zero hashes that comprise the current pending defi interactions
      */
-    function processDefiBridges(bytes memory proofData, address rollupBeneficiary) internal {
-        // Pop off `numberOfBridgeCalls` number of defi interactions from defiInteractionHashes && SHA2 them.
+    function processDefiBridges(bytes memory proofData, address rollupBeneficiary)
+        internal
+        returns (bytes32[] memory nextExpectedHashes)
+    {
+        // Verify that nextExpectedDefiInteractionsHash equals the value given in the rollup
+        // Then remove the set of pending hashes
         {
-            bytes32 expectedDefiInteractionHash;
+            // Extract the claimed value of previousDefiInteractionHash present in the proof data
+            bytes32 providedDefiInteractionsHash = extractPrevDefiInteractionHash(proofData);
+
+            // Validate the stored interactionHash matches the value used when making the rollup proof!
+            if (providedDefiInteractionsHash != prevDefiInteractionsHash) {
+                revert INCORRECT_PREVIOUS_DEFI_INTERACTION_HASH(providedDefiInteractionsHash, prevDefiInteractionsHash);
+            }
+            (uint256 defiInteractionHashesLength, uint256 numPendingInteractions) = getDefiHashesLengths();
+            // numPendingInteraction equals the number of interactions expected to be in the given rollup
+            // this is the length of the defiInteractionHashes array, capped at the NUM_BRIDGE_CALLS as per the following
+            // numPendingInteractions = min(defiInteractionsHashesLength, numberOfBridgeCalls)
+            // Compute the offset we use to index `defiInteractionHashes[]`
+            // If defiInteractionHashes.length > numberOfBridgeCalls, offset = defiInteractionhashes.length - numberOfBridgeCalls.
+            // Else offset = 0
+            uint256 offset = defiInteractionHashesLength - numPendingInteractions;
+
             assembly {
-                // Compute the offset we use to index `defiInteractionHashes[]`
-                // If defiInteractionHashes.length > numberOfBridgeCalls, offset = defiInteractionhashes.length - numberOfBridgeCalls.
-                // Else offset = 0
-                let numPendingInteractions
-                let offset
-                let state := sload(rollupState.slot)
-                {
-                    let defiInteractionHashesLength := and(
-                        ARRAY_LENGTH_MASK,
-                        shr(DEFIINTERACTIONHASHES_BIT_OFFSET, state)
-                    )
-                    numPendingInteractions := defiInteractionHashesLength
-                    if gt(numPendingInteractions, NUMBER_OF_BRIDGE_CALLS) {
-                        numPendingInteractions := NUMBER_OF_BRIDGE_CALLS
-                    }
-                    offset := sub(defiInteractionHashesLength, numPendingInteractions)
-                }
-
-                /**----------------------------------------
-                 * Compute pendingDefiInteractionHash
-                 *-----------------------------------------
-                 *
-                 * The storage slot `defiInteractionHashes` points to an array that represents the
-                 * set of defi interactions from previous blocks that have been resolved.
-                 *
-                 * We need to take the interaction result data from each of the above defi interactions,
-                 * and add that data into the Aztec L2 merkle tree that contains defi interaction results
-                 * (the "Defi Tree". Its merkle root is one of the inputs to the storage variable `rollupStateHash`)
-                 *
-                 * It is the rollup provider's responsibility to perform these additions.
-                 * In the current block being processed, the rollup provider must take these pending interaction results,
-                 * create commitments to each result and insert each commitment into the next empty leaf of the defi tree.
-                 *
-                 * The following code validates that this has happened! This is how:
-                 *
-                 * Part 1: What are we checking?
-                 *
-                 * The rollup circuit will receive, as a private input from the rollup provider, the pending defi interaction results
-                 * (`bridgeId`, `totalInputValue`, `totalOutputValueA`, `totalOutputValueB`, `result`)
-                 * The rollup circuit will compute the SHA256 hash of each interaction result (the defiInteractionHash)
-                 * Finally the SHA256 hash of `NUMBER_OF_BRIDGE_CALLS` of these defiInteractionHash values is computed.
-                 * (if there are fewer than `NUMBER_OF_BRIDGE_CALLS` pending defi interaction results, the SHA256 hash of an empty defi interaction result is used instead. i.e. all variable values are set to 0)
-                 * The above SHA256 hash, the `pendingDefiInteractionHash` is one of the broadcasted values that forms the `publicInputsHash` public input to the rollup circuit.
-                 * When verifying a rollup proof, this smart contract will compute `publicInputsHash` from the input calldata. The PLONK Verifier smart contract will then validate
-                 * that our computed value for `publicInputHash` matches the value used when generating the rollup proof.
-                 *
-                 * TLDR of the above: our proof data contains a variable `pendingDefiInteractionHash`, which is the CLAIMED VALUE of SHA256 hashing the SHA256 hashes of the defi interactions that have resolved but whose data has not yet been added into the defi tree.
-                 *
-                 * Part 2: How do we check `pendingDefiInteractionHash` is correct???
-                 *
-                 * This function will call `DefiBridgeProxy.convert` (via delegatecall) on every new defi interaction present in the block.
-                 * The return values from the bridge proxy contract are used to construct a defi interaction result. Its hash is then computed
-                 * and stored in `defiInteractionHashes[]`.
-                 *
-                 * N.B. It's very important that DefiBridgeProxy does not call selfdestruct, or makes a delegatecall out to a contract that can selfdestruct :o
-                 *
-                 * Similarly, when async defi interactions resolve, the interaction result is stored in `asyncDefiInteractionHashes[]`. At the end of this function,
-                 * the contents of the async array is copied into `defiInteractionHashes` (i.e. async interaction results are delayed by 1 rollup block. This is to prevent griefing attacks where
-                 * the rollup state changes between the time taken for a rollup tx to be constructed and the rollup tx to be mined)
-                 *
-                 * We use the contents of `defiInteractionHashes` to reconstruct `pendingDefiInteractionHash`, and validate it matches the value present in calldata and
-                 * therefore the value used in the rollup circuit when this block's rollup proof was constructed.
-                 * This validates that all of the required defi interaction results were added into the defi tree by the rollup provider
-                 * (the circuit logic enforces this, we just need to check the rollup provider used the correct inputs)
-                 */
-
-                // Start by getting the defi interaction hashes array slot value
-                mstore(0x00, defiInteractionHashes.slot)
-                let sloadOffset := keccak256(0x00, 0x20)
-                let mPtr := mload(0x40)
-                let i := 0
-
-                // Iterate over numPendingInteractions (will be between 0 and NUMBER_OF_BRIDGE_CALLS)
-                // Load defiInteractionHashes[offset + i] and store in memory
-                // in order to compute SHA2 hash (expectedDefiInteractionHash)
-                for {
-
-                } lt(i, numPendingInteractions) {
-                    i := add(i, 0x01)
-                } {
-                    mstore(add(mPtr, mul(i, 0x20)), sload(add(sloadOffset, add(offset, i))))
-                }
-
-                // If numPendingInteractions < NUMBER_OF_BRIDGE_CALLS, continue iterating up to NUMBER_OF_BRIDGE_CALLS, this time
-                // inserting the "zero hash", the result of sha256(emptyDefiInteractionResult)
-                for {
-
-                } lt(i, NUMBER_OF_BRIDGE_CALLS) {
-                    i := add(i, 0x01)
-                } {
-                    mstore(add(mPtr, mul(i, 0x20)), 0x2d25a1e3a51eb293004c4b56abe12ed0da6bca2b4a21936752a85d102593c1b4)
-                }
-                pop(staticcall(gas(), 0x2, mPtr, NUMBER_OF_BRIDGE_BYTES, 0x00, 0x20))
-                expectedDefiInteractionHash := mod(mload(0x00), CIRCUIT_MODULUS)
-
                 // Update DefiInteractionHashes.length (we've reduced length by up to numberOfBridgeCalls)
+                // this effectively truncates the array at offset
+                let state := sload(rollupState.slot)
                 let oldState := and(not(shl(DEFIINTERACTIONHASHES_BIT_OFFSET, ARRAY_LENGTH_MASK)), state)
                 let newState := or(oldState, shl(DEFIINTERACTIONHASHES_BIT_OFFSET, offset))
                 sstore(rollupState.slot, newState)
-            }
-
-            // Exctract the claimed value of previousDefiInteractionHash present in the proof data
-            bytes32 prevDefiInteractionHash = extractPrevDefiInteractionHash(proofData);
-
-            // Validate the compupted interactionHash matches the value used when making the rollup proof!
-            if (prevDefiInteractionHash != expectedDefiInteractionHash) {
-                revert INCORRECT_PREVIOUS_DEFI_INTERACTION_HASH(prevDefiInteractionHash, expectedDefiInteractionHash);
             }
         }
         uint256 interactionNonce = getRollupId(proofData) * NUMBER_OF_BRIDGE_CALLS;
@@ -1589,6 +1640,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
                     mstore(add(bridgeResult, 0x60), 0) // success
                 }
             }
+
             if (!(bridgeData.secondOutputReal || bridgeData.secondOutputVirtual)) {
                 bridgeResult.outputValueB = 0;
             }
@@ -1707,6 +1759,11 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
             // write new state
             sstore(rollupState.slot, state)
         }
+
+        // now we want to extract the next set of pending defi interaction hashes and calculate their hash to store for the next rollup
+        (bytes32[] memory hashes, bytes32 nextExpectedHash) = calculateNextExpectedDefiHash();
+        nextExpectedHashes = hashes;
+        prevDefiInteractionsHash = nextExpectedHash;
     }
 
     /**
@@ -1732,11 +1789,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
 
             bridgeId := sload(interactionPtr)
             totalInputValue := sload(add(interactionPtr, 0x01))
-
-            // delete pendingDefiInteractions[interactionNonce]
-            // N.B. only need to delete 1st slot value `bridgeId`. Deleting vars costs gas post-London
-            // setting bridgeId to 0 is enough to cause future calls with this interaction nonce to fail
-            sstore(interactionPtr, 0x00)
         }
         if (bridgeId == 0) {
             revert INVALID_BRIDGE_ID();
@@ -1785,6 +1837,11 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
             }
             return false;
         }
+
+        // delete pendingDefiInteractions[interactionNonce]
+        // N.B. only need to delete 1st slot value `bridgeId`. Deleting vars costs gas post-London
+        // setting bridgeId to 0 is enough to cause future calls with this interaction nonce to fail
+        pendingDefiInteractions[inputs.interactionNonce].bridgeId = 0;
 
         if (outputValueB > 0 && outputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED) {
             revert NONZERO_OUTPUT_VALUE_ON_NOT_USED_ASSET(outputValueB);

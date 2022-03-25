@@ -8,7 +8,7 @@ import { setBlockchainTime, getCurrentBlockTime } from '../manipulate_blocks';
 import { decodeErrorFromContractByTxHash, decodeSelector } from '../contracts/decode_error';
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 import * as RollupAbi from '../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
-import * as ElementFactory from '@aztec/bridge-clients/client-dest/typechain-types/factories/ElementBridge__factory';
+import * as Element from '@aztec/bridge-clients/client-dest/typechain-types/factories/ElementBridge__factory';
 import { WalletProvider } from '../provider';
 import { getTokenBalance, getWethBalance } from '../tokens';
 
@@ -16,7 +16,7 @@ const { PRIVATE_KEY } = process.env;
 
 export const abis: { [key: string]: any } = {
   Rollup: RollupAbi,
-  Element: ElementFactory.ElementBridge__factory.abi,
+  Element: Element.ElementBridge__factory,
 };
 
 const getProvider = (url: string) => {
@@ -96,9 +96,9 @@ async function main() {
       const provider = getProvider(url);
       const rollupProcessor = new RollupProcessor(rollupAddress, provider);
       try {
-        await rollupProcessor.processAsyncDefiInteraction(parseInt(nonce));
+        await rollupProcessor.processAsyncDefiInteraction(parseInt(nonce), { gasLimit: 2000000 });
       } catch (err: any) {
-        const result = decodeSelector(rollupProcessor.contract, err.error.data.result.slice(2));
+        const result = decodeSelector(rollupProcessor.contract, err.data.result.slice(2));
         console.log('Failed to process async defi interaction, error: ', result);
       }
     });

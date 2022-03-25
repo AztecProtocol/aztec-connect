@@ -1,8 +1,7 @@
-import ElementBridge, {
-  ElementBridge__factory,
-} from '@aztec/bridge-clients/client-dest/typechain-types/factories/ElementBridge__factory';
+import * as Element from '@aztec/bridge-clients/client-dest/typechain-types/factories/ElementBridge__factory';
+import * as MockElementRegistry from '@aztec/bridge-clients/client-dest/typechain-types/factories/MockDeploymentValidator__factory';
 import * as ElementVaultConfig from './ElementVaultConfig.json';
-import { Contract, ContractFactory, Signer } from 'ethers';
+import { Contract, Signer } from 'ethers';
 
 const TRANCHE_BYTECODE_HASH = Buffer.from('f481a073666136ab1f5e93b296e84df58092065256d0db23b2d22b62c68e978d', 'hex');
 export const ASSETS = ['usdc', 'dai', 'lusd3crv-f', 'stecrv', 'wbtc', 'alusd3crv-f', 'mim-3lp3crv-f'];
@@ -47,19 +46,41 @@ const parseTranches = () => {
 export const elementConfig = parseTranches();
 export const elementAssets = ASSETS.map(asset => (ElementVaultConfig as any).tokens[asset]);
 
+export const deployMockElementContractRegistry = async (owner: Signer, elementPoolConfig: ElementPoolConfiguration) => {
+  console.error('Deploying Element contract registry...');
+  const registry = await new MockElementRegistry.MockDeploymentValidator__factory(owner).deploy();
+  await configureElementRegistry(elementPoolConfig, registry);
+  console.error(`Element contract registry address: ${registry.address}`);
+  return registry;
+};
+
+export const configureElementRegistry = async (
+  elementPoolConfig: ElementPoolConfiguration,
+  registryContract: Contract,
+) => {
+  console.error('Configuring Element contract registry...');
+  for (const spec of elementPoolConfig.poolSpecs) {
+    await registryContract.validateWPAddress(spec.wrappedPosition);
+    await registryContract.validatePoolAddress(spec.poolAddress);
+    await registryContract.validateAddresses(spec.wrappedPosition, spec.poolAddress);
+  }
+};
+
 export const deployElementBridge = async (
   owner: Signer,
   rollupAddress: string,
   trancheFactoryAddress: string,
   trancheByteCode: Buffer,
   balancerAddress: string,
+  elementContractRegistryAddress: string,
 ) => {
   console.error('Deploying ElementBridge...');
-  const bridge = await new ElementBridge__factory(owner).deploy(
+  const bridge = await new Element.ElementBridge__factory(owner).deploy(
     rollupAddress,
     trancheFactoryAddress,
     trancheByteCode,
     balancerAddress,
+    elementContractRegistryAddress,
     {
       gasLimit,
     },

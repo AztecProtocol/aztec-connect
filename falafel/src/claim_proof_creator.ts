@@ -13,11 +13,7 @@ import { RollupDb } from './rollup_db';
 import { parseInteractionResult } from './rollup_db/parse_interaction_result';
 
 export class ClaimProofCreator {
-  constructor(
-    private rollupDb: RollupDb,
-    private worldStateDb: WorldStateDb,
-    private proofGenerator: ProofGenerator,
-  ) {}
+  constructor(private rollupDb: RollupDb, private worldStateDb: WorldStateDb, private proofGenerator: ProofGenerator) {}
 
   /**
    * Creates claim proofs for the defi deposit txs with the interaction result from previous rollups.
@@ -85,7 +81,7 @@ export class ClaimProofCreator {
     interactionNoteIndex: number,
   ) {
     const { id, depositValue, bridgeId, partialState, inputNullifier, interactionNonce, fee } = claim;
-    console.log(`Creating claim proof for note ${id}...`);
+    console.log(`Creating claim proof for note ${id} using interaction with nonce ${interactionNonce}...`);
     const claimNoteIndex = id;
     const claimNotePath = await this.worldStateDb.getHashPath(RollupTreeId.DATA, BigInt(claimNoteIndex));
     const claimNote = new TreeClaimNote(

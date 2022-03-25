@@ -136,15 +136,17 @@ async function main() {
     const signingKey2 = proof.outputOwner;
     const aliasString = accountAliasId.aliasHash.toString();
     const oldNonce = migrations.get(aliasString) ?? 0; // if we haven't seen this account before, it's initial nonce is 0
-    migrations.set(aliasString, accountAliasId.nonce);
-    if (oldNonce > accountAliasId.nonce) {
+    migrations.set(aliasString, accountAliasId.accountNonce);
+    if (oldNonce > accountAliasId.accountNonce) {
       console.log(
-        `New nonce is lower than previous nonce!! New nonce: ${accountAliasId.nonce}, old nonce: ${oldNonce}`,
+        `New nonce is lower than previous nonce!! New nonce: ${accountAliasId.accountNonce}, old nonce: ${oldNonce}`,
       );
     }
     const account: AccountData = {
       nullifier:
-        oldNonce === accountAliasId.nonce ? Buffer.alloc(32, 0) : noteAlgos.accountAliasIdNullifier(accountAliasId),
+        oldNonce === accountAliasId.accountNonce
+          ? Buffer.alloc(32, 0)
+          : noteAlgos.accountAliasIdNullifier(accountAliasId),
       notes: {
         note1: noteAlgos.accountNoteCommitment(accountAliasId, accountKey, signingKey1),
         note2: noteAlgos.accountNoteCommitment(accountAliasId, accountKey, signingKey2),
@@ -152,7 +154,7 @@ async function main() {
       alias: {
         aliasHash: accountAliasId.aliasHash.toBuffer(),
         address: accountKey.toBuffer(),
-        nonce: accountAliasId.nonce,
+        nonce: accountAliasId.accountNonce,
       },
       signingKeys: {
         signingKey1,
@@ -161,7 +163,7 @@ async function main() {
     };
     accounts[i] = account;
     if (options.logDuplicates) {
-      buildSigningKeyStrings(accountKey, accountAliasId.nonce, [signingKey1, signingKey2]).forEach(x => {
+      buildSigningKeyStrings(accountKey, accountAliasId.accountNonce, [signingKey1, signingKey2]).forEach(x => {
         if (duplicateKeys.has(x)) {
           console.log(`Duplicate Account/Signing key: ${x}`);
         }

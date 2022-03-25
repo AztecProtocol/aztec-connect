@@ -24,10 +24,10 @@
     threads "1.7.0"
     tslib "^2.0.0"
 
-"@aztec/bridge-clients@0.1.21":
-  version "0.1.21"
-  resolved "https://registry.yarnpkg.com/@aztec/bridge-clients/-/bridge-clients-0.1.21.tgz#50316b81498c5de1ba596838de0e4b8df8736a74"
-  integrity sha512-VgcV6CGtE3m/ohd98cfxMyugPKMdQG2jGthLgOG/PTXcBqYpSI0VKgn1K/U/o1wjUGYOi33Yx30j+2Kk8aDb9g==
+"@aztec/bridge-clients@^0.1.22":
+  version "0.1.23"
+  resolved "https://registry.yarnpkg.com/@aztec/bridge-clients/-/bridge-clients-0.1.23.tgz#d1f118e2a2dca2c527c22cf1ba8f1a45f29c5ab7"
+  integrity sha512-rP3H4t2flmVCNrSkITYd6HcBspVhumMr1Y0Np044XkHfsqQPdhAYs6RnI0ENc/rWbp9wCOWRuRR/fa86wPsnZQ==
 
 "@babel/code-frame@7.12.11":
   version "7.12.11"

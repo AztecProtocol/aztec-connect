@@ -307,9 +307,7 @@ export class WorldState {
 
     for (const defiNote of interactionResult) {
       console.log(
-        `Received defi interaction result ${defiNote.result} for nonce ${
-          defiNote.nonce
-        } and bridge ${defiNote.bridgeId.toBigInt()}`,
+        `Received defi note result ${defiNote.result}, input ${defiNote.totalInputValue}, outputs ${defiNote.totalOutputValueA}/${defiNote.totalOutputValueB}, for nonce ${defiNote.nonce}`,
       );
       await this.rollupDb.updateClaimsWithResultRollupId(defiNote.nonce, rollupId);
     }
