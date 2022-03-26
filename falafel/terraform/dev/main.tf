@@ -218,7 +218,7 @@ resource "aws_ecs_task_definition" "falafel" {
     "environment": [
       {
         "name": "SERVICE",
-        "value": "${var.DEPLOY_TAG}/falafel"
+        "value": "${var.DEPLOY_TAG}-falafel"
       }
     ],
     "logConfiguration": {
