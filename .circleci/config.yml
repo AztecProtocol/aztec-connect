@@ -718,7 +718,7 @@ workflows:
               only: *tag_regex
   metrics:
     when:
-      - equal: [metrics, << pipeline.parameters.workflow >>]
+      equal: [metrics, << pipeline.parameters.workflow >>]
     jobs:
       - metrics
       - deploy-metrics:
@@ -726,7 +726,7 @@ workflows:
             - metrics
   website:
     when:
-      - equal: [website, << pipeline.parameters.workflow >>]
+      equal: [website, << pipeline.parameters.workflow >>]
     jobs:
       - website
       - deploy-website:
