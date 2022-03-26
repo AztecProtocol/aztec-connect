@@ -12,6 +12,11 @@ if [ ! -d $TF_DIR ]; then
   exit 0
 fi
 
+if [ ! -f "$TF_DIR/main.tf" ]; then
+  echo "No main.tf found in $TF_DIR."
+  exit 1
+fi
+
 ensure_terraform
 export TF_IN_AUTOMATION=1
 cd $TF_DIR
