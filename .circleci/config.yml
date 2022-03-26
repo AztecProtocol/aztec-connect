@@ -7,7 +7,7 @@ version: 2.1
 parameters:
   workflow:
     type: string
-    default:
+    default: ''
 
 jobs:
   wasm-linux-clang:
