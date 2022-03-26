@@ -75,7 +75,7 @@ resource "aws_route53_record" "a_record" {
   name    = "${var.DEPLOY_TAG}-terminal"
   type    = "A"
   alias {
-    name                   = aws_s3_bucket.hummus.website_endpoint
+    name                   = aws_s3_bucket.hummus.website_domain
     zone_id                = aws_s3_bucket.hummus.hosted_zone_id
     evaluate_target_health = false
   }

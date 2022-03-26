@@ -75,7 +75,7 @@ resource "aws_route53_record" "dashboard_record" {
   name    = "${var.DEPLOY_TAG}-explorer"
   type    = "A"
   alias {
-    name                   = aws_s3_bucket.block_explorer.website_endpoint
+    name                   = aws_s3_bucket.block_explorer.website_domain
     zone_id                = aws_s3_bucket.block_explorer.hosted_zone_id
     evaluate_target_health = false
   }

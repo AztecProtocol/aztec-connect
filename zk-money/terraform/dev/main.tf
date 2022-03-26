@@ -92,7 +92,7 @@ resource "aws_route53_record" "a_record" {
   name    = var.DEPLOY_TAG
   type    = "A"
   alias {
-    name                   = aws_s3_bucket.zkmoney_bucket.website_endpoint
+    name                   = aws_s3_bucket.zkmoney_bucket.website_domain
     zone_id                = aws_s3_bucket.zkmoney_bucket.hosted_zone_id
     evaluate_target_health = false
   }
