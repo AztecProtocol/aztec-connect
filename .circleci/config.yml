@@ -5,9 +5,8 @@ setup_env: &setup_env
 
 version: 2.1
 parameters:
-  rebuild:
-    type: boolean
-    default: false
+  workflow:
+    type: string
 
 jobs:
   wasm-linux-clang:
