@@ -2,16 +2,17 @@ import { PooledPedersen } from '@aztec/barretenberg/crypto';
 import { PooledFftFactory } from '@aztec/barretenberg/fft';
 import { PooledPippenger } from '@aztec/barretenberg/pippenger';
 import { BarretenbergWasm, WorkerPool } from '@aztec/barretenberg/wasm';
-import { CoreSdkClientStub, CoreSdkInterface, SdkEvent } from '../../core_sdk';
-import { JobQueueFrontend, JobQueueDispatch } from '../job_queue';
-import { DispatchMsg, TransportClient } from '../transport';
+import { CoreSdkClientStub, SdkEvent } from '../../core_sdk';
+import { CoreSdkSerializedInterface } from '../../core_sdk/core_sdk_serialized_interface';
 import { getNumWorkers } from '../get_num_workers';
+import { JobQueueDispatch, JobQueueFrontend } from '../job_queue';
+import { DispatchMsg, TransportClient } from '../transport';
 import { BananaCoreSdk } from './banana_core_sdk';
 import { BananaCoreSdkOptions } from './banana_core_sdk_options';
 
 export class ServiceWorkerFrontend {
   private jobQueue!: JobQueueFrontend;
-  private coreSdk!: CoreSdkInterface;
+  private coreSdk!: CoreSdkSerializedInterface;
 
   constructor(private transportClient: TransportClient) {}
 
@@ -34,12 +35,10 @@ export class ServiceWorkerFrontend {
     this.jobQueue = new JobQueueFrontend(jobQueueDispatch, pedersen, pippenger, fftFactory);
 
     // All calls on BananaCoreSdk will be sent to coreSdkDispatch function on ServiceWorkerBackend.
-    this.coreSdk = new CoreSdkClientStub(
-      new BananaCoreSdk(
-        msg => this.transportClient.request({ fn: 'coreSdkDispatch', args: [msg] }),
-        this.jobQueue,
-        workerPool,
-      ),
+    this.coreSdk = new BananaCoreSdk(
+      msg => this.transportClient.request({ fn: 'coreSdkDispatch', args: [msg] }),
+      this.jobQueue,
+      workerPool,
     );
 
     this.coreSdk.on(SdkEvent.DESTROYED, () => this.transportClient.close());
@@ -47,7 +46,7 @@ export class ServiceWorkerFrontend {
     // Event messages from the ServiceWorkerBackend are dispatch messages (that call emit on their targets).
     this.transportClient.on('event_msg', ({ fn, args }) => this[fn](...args));
 
-    return { coreSdk: this.coreSdk };
+    return { coreSdk: new CoreSdkClientStub(this.coreSdk) };
   }
 
   public async jobQueueDispatch({ fn, args }: DispatchMsg) {

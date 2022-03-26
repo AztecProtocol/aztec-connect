@@ -11,14 +11,6 @@ import { CoreSdkSerializedInterface } from './core_sdk_serialized_interface';
 export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedInterface {
   constructor(private handler: (msg: DispatchMsg) => Promise<any>) {
     super();
-
-    // this.transportClient.on('event_msg', ({ payload: { fn, args } }: EventMessage) => {
-    //   if (fn !== 'coreSdkDispatch') {
-    //     return;
-    //   }
-    //   const [dispatch] = args;
-    //   this[dispatch.fn](...dispatch.args);
-    // });
   }
 
   private async request(fn: string, args: any[] = []) {

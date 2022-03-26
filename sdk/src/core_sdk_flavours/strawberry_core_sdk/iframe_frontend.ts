@@ -1,8 +1,11 @@
 import { CoreSdkClientStub, CoreSdkDispatch, SdkEvent } from '../../core_sdk';
-import { TransportClient } from '../transport';
+import { CoreSdkSerializedInterface } from '../../core_sdk/core_sdk_serialized_interface';
+import { DispatchMsg, TransportClient } from '../transport';
 import { StrawberryCoreSdkOptions } from './strawberry_core_sdk_options';
 
 export class IframeFrontend {
+  private coreSdk!: CoreSdkSerializedInterface;
+
   constructor(private transportClient: TransportClient) {}
 
   public async initComponents(options: StrawberryCoreSdkOptions) {
@@ -10,10 +13,16 @@ export class IframeFrontend {
     await this.transportClient.request({ fn: 'initComponents', args: [options] });
 
     // All requests on CoreSdkDispatch will be sent to IframeBackend coreSdkDispatch function.
-    const coreSdk = new CoreSdkDispatch(msg => this.transportClient.request({ fn: 'coreSdkDispatch', args: [msg] }));
+    this.coreSdk = new CoreSdkDispatch(msg => this.transportClient.request({ fn: 'coreSdkDispatch', args: [msg] }));
 
-    coreSdk.on(SdkEvent.DESTROYED, () => this.transportClient.close());
+    this.coreSdk.on(SdkEvent.DESTROYED, () => this.transportClient.close());
 
-    return { coreSdk: new CoreSdkClientStub(coreSdk) };
+    this.transportClient.on('event_msg', ({ fn, args }) => this[fn](...args));
+
+    return { coreSdk: new CoreSdkClientStub(this.coreSdk) };
+  }
+
+  public async coreSdkDispatch({ fn, args }: DispatchMsg) {
+    return await this.coreSdk[fn](...args);
   }
 }
