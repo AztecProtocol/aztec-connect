@@ -9,14 +9,14 @@ import {
   InfoValuePlaceholder,
   Value,
 } from '../block_summary';
-import { networks } from '../config';
+import { getNetwork, Network } from '../config';
 import { DetailsSection } from '../template';
 import etherscanIcon from '../images/etherscan.svg';
 import { ProofData, ProofDataPlaceholder } from '../proof_data';
 import { Block } from './query';
 
-export const getEtherscanLink = (network: string, ethTxHash: string) => {
-  const { etherscanUrl } = networks.find(n => n.name === network)!;
+export const getEtherscanLink = (network: Network, ethTxHash: string) => {
+  const { etherscanUrl } = network;
   return `${etherscanUrl}/tx/0x${ethTxHash}`;
 };
 
@@ -62,7 +62,7 @@ export const BlockDetailsPlaceholder: React.FunctionComponent = () => {
 
 interface BlockDetailsProps {
   block: Block;
-  network: string;
+  network: Network;
 }
 
 export const BlockDetails: React.FunctionComponent<BlockDetailsProps> = ({ block, network }) => {

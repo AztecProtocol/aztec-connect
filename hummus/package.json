@@ -4,7 +4,7 @@
   "main": "dist/main.js",
   "license": "GPL-2.0",
   "scripts": {
-    "build": "yarn clean && parcel build ./src/index.html --no-source-maps",
+    "build": "yarn clean && yarn tsc && parcel build ./src/index.html --no-source-maps",
     "build:dev": "parcel ./src/index.html --port 8080 --hmr-port 41337 --no-source-maps",
     "test": "tsc",
     "clean": "rm -rf ./dist ./cache"

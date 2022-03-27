@@ -26,7 +26,7 @@ export const NetworkIndicator: React.FunctionComponent = () => (
   <NetworkContext.Consumer>
     {network => (
       <Root>
-        <Name text={network.toUpperCase()} size="xs" weight="light" />
+        <Name text={network.name.toUpperCase()} size="xs" weight="light" />
         <Logo src={logo} />
       </Root>
     )}
