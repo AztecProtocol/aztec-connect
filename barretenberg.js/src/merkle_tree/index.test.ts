@@ -69,14 +69,14 @@ describe('merkle_tree', () => {
     expect(tree.getSize()).toBe(4);
 
     // Lifted from memory_tree.test.cpp to ensure consistency.
-    expect(root.toString('hex')).toEqual('27b435721cc92641c18797c3a806ee39a93230bd98005288a978f9f889c721c8');
+    expect(root.toString('hex')).toEqual('0bf2e78afd70f72b0e6eafb03c41faef167a82441b05e517cdf35d813302061f');
   });
 
   it('should have correct empty tree root for depth 32', async () => {
     const db = levelup(memdown());
     const tree = await MerkleTree.new(db, pedersen, 'test', 32);
     const root = tree.getRoot();
-    expect(root.toString('hex')).toEqual('11977941a807ca96cf02d1b15830a53296170bf8ac7d96e5cded7615d18ec607');
+    expect(root.toString('hex')).toEqual('18ceb5cd201e1cee669a5c3ad96d3c4e933a365b37046fc3178264bede32c68d');
   });
 
   it('should have same result when setting same values', async () => {

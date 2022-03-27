@@ -36,7 +36,7 @@ describe('compute_nullifier', () => {
 
     const nullifier1 = noteAlgos.valueNoteNullifier(inputNote1Enc, privateKey);
 
-    expect(nullifier1.toString('hex')).toEqual('1687a9528e07b776811af3c21ae2d30f750b53c08aba6573423f0660ae12e000');
+    expect(nullifier1.toString('hex')).toEqual('0d57355d79c04da7fae6919005d23900345b9fb0c11917fa4ada00cc56582845');
   });
 
   it('should commit to claim note and compute its nullifier', async () => {
@@ -54,20 +54,20 @@ describe('compute_nullifier', () => {
     );
     const inputNoteEnc = noteAlgos.claimNotePartialCommitment(inputNote);
     const nullifier = noteAlgos.claimNoteNullifier(inputNoteEnc);
-    expect(nullifier.toString('hex')).toEqual('11860dcc7dafe734ac85aed7d7e9bd127b2dd8c655607429bce7275ac9d3f22c');
+    expect(nullifier.toString('hex')).toEqual('039395785283f875f10902a7548d83ad959b5a06c8c32943a7735ee2c9f14e1e');
   });
 
   it('should create correct commitment for defi interaction note', async () => {
     const bridgeId = BridgeId.fromBigInt(BigInt(456));
     const note = new DefiInteractionNote(bridgeId, 1, BigInt(123), BigInt(456), BigInt(789), true);
     const commitment = noteAlgos.defiInteractionNoteCommitment(note);
-    expect(commitment.toString('hex')).toEqual('2297ea2729d9d117637db501f2463fb6db1cef558495be1f5aba72c27fe3f615');
+    expect(commitment.toString('hex')).toEqual('0196130e904cada31725bd8b7bb73de20eda978c92a2e05cd735429df1c88a47');
   });
 
   it('should compute correct alias id nullifier', async () => {
     const accountNonce = 1;
     const accountAliasId = AccountAliasId.fromAlias('pebble', accountNonce, blake2s);
     const nullifier = noteAlgos.accountAliasIdNullifier(accountAliasId);
-    expect(nullifier.toString('hex')).toEqual('296ffc495fd4a753552f43a3018b3725ffdbf38a882d4475fadc12ea93b5178f');
+    expect(nullifier.toString('hex')).toEqual('01ef0643a2bc47eeed66a6a123326171a90773e9251684e7d87f8771177d09b3');
   });
 });

@@ -37,7 +37,7 @@ export class HashPath {
 }
 
 export class MerkleTree {
-  public static ZERO_ELEMENT = Buffer.from('30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000000', 'hex');
+  public static ZERO_ELEMENT = Buffer.from('0000000000000000000000000000000000000000000000000000000000000000', 'hex');
   private root!: Buffer;
   private zeroHashes: Buffer[] = [];
 

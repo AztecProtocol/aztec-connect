@@ -46,9 +46,9 @@ export async function setupTestRollupProcessor(
     escapeBlockUpperBound,
     defiBridgeProxy.address,
     ownerAddress,
-    '0x11977941a807ca96cf02d1b15830a53296170bf8ac7d96e5cded7615d18ec607',
-    '0x1b831fad9b940f7d02feae1e9824c963ae45b3223e721138c6f73261e690c96a',
-    '0x1b435f036fc17f4cc3862f961a8644839900a8e4f1d0b318a7046dd88b10be75',
+    '0x18ceb5cd201e1cee669a5c3ad96d3c4e933a365b37046fc3178264bede32c68d',
+    '0x298329c7d0936453f354e4a5eef4897296cc0bf5a66f2a528318508d2088dafa',
+    '0x2fd2364bfe47ccb410eba3a958be9f39a8c6aca07db1abd15f5a211f51505071',
     '0x0',
     false,
   );

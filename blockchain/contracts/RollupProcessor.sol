@@ -89,7 +89,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
     bool public allowThirdPartyContracts;
 
     // starting root hash of the DeFi interaction result Merkle tree
-    bytes32 private constant INIT_DEFI_ROOT = 0x0170467ae338aaf3fd093965165b8636446f09eeb15ab3d36df2e31dd718883d;
+    bytes32 private constant INIT_DEFI_ROOT = 0x2e4ab7889ab3139204945f9e722c7a8fdb84e66439d787bd066c3d896dba04ea;
 
     bytes32 private constant DEFI_BRIDGE_PROCESSED_SIGHASH =
         0x1ccb5390975e3d07503983a09c3b6a5d11a0e40c4cb4094a7187655f643ef7b4;
