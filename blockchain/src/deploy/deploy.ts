@@ -15,6 +15,7 @@ import {
   elementConfig,
   setupElementPools,
 } from './deploy_element';
+import { deployLidoBridge } from './deploy_lido';
 
 const gasLimit = 5000000;
 
@@ -86,6 +87,11 @@ async function deployBridgeContracts(signer: Signer, rollup: Contract, uniswapRo
   await rollup.setSupportedBridge(elementBridge.address, 800000n, { gasLimit });
 
   await setupElementPools(elementConfig, elementBridge);
+
+  // deploy and set the lido bridge on the rollup
+  const lidoBridge = await deployLidoBridge(signer, rollup.address);
+
+  await rollup.setSupportedBridge(lidoBridge.address, 300000n, { gasLimit });
 }
 
 /**
