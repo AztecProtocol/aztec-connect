@@ -89,9 +89,7 @@ async function deployBridgeContracts(signer: Signer, rollup: Contract, uniswapRo
   await setupElementPools(elementConfig, elementBridge);
 
   // deploy and set the lido bridge on the rollup
-  const lidoBridge = await deployLidoBridge(signer, rollup.address);
-
-  await rollup.setSupportedBridge(lidoBridge.address, 300000n, { gasLimit });
+  await deployLidoBridge(signer, rollup);
 }
 
 /**
@@ -128,11 +126,6 @@ export async function deploy(
 
   const defiProxy = await deployDefiBridgeProxy(signer);
   const allowThirdPartyContracts = true;
-  // this is the hash of 32 'zero' defi interaction results
-  const initialNextExpectedDefiHash = Buffer.from(
-    '14e0f351ade4ba10438e9b15f66ab2e6389eea5ae870d6e8b2df1418b2e6fd5b',
-    'hex',
-  );
   const rollup = await deployRollupProcessor(
     signer,
     verifier,
