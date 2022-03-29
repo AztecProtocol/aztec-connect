@@ -1,11 +1,11 @@
 import { Fft, FftFactory } from '@aztec/barretenberg/fft';
 import { JobQueueTarget } from './job';
-import { JobQueueBackend } from './job_queue_backend';
+import { JobQueue } from './job_queue';
 
 class JobQueueFft implements Fft {
   private readonly target = JobQueueTarget.FFT;
 
-  constructor(private queue: JobQueueBackend, private circuitSize: number) {}
+  constructor(private queue: JobQueue, private circuitSize: number) {}
 
   async fft(coefficients: Uint8Array, constant: Uint8Array) {
     return this.queue.createJob(this.target, 'fft', [this.circuitSize, coefficients, constant]);
@@ -17,7 +17,7 @@ class JobQueueFft implements Fft {
 }
 
 export class JobQueueFftFactory implements FftFactory {
-  constructor(private queue: JobQueueBackend) {}
+  constructor(private queue: JobQueue) {}
 
   async createFft(circuitSize: number) {
     return new JobQueueFft(this.queue, circuitSize);

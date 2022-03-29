@@ -67,10 +67,6 @@ export class CoreSdkServerStub {
     await this.core.destroy();
   }
 
-  public async getCrsData() {
-    return new Uint8Array(await this.core.getCrsData());
-  }
-
   public async getLocalStatus() {
     const status = await this.core.getLocalStatus();
     return sdkStatusToJson(status);
@@ -361,41 +357,3 @@ export class CoreSdkServerStub {
     return txs.map(joinSplitTxToJson);
   }
 }
-
-/*
-export const getCoreSdkTransferableResponse = async (
-  coreSdk: CoreSdkSerializedInterface,
-  query: string,
-  args: any[],
-): Promise<[any, Transferable[]?]> => {
-  switch (query) {
-    case 'getCrsData': {
-      const data = await coreSdk[query]();
-      return [data, [data.buffer]];
-    }
-    case 'createPaymentProof':
-    case 'createAccountProof':
-    case 'createDefiProof': {
-      const data = await coreSdk[query](args[0], args[1]);
-      const { proofData, offchainTxData, outputNotes } = data;
-      return [data, [proofData.buffer, offchainTxData.buffer, ...outputNotes.map(n => n.buffer)]];
-    }
-  }
-
-  const data = await coreSdk[query](...args);
-  switch (query) {
-    case 'createPaymentProofInput':
-    case 'createDefiProofInput': {
-      const { tx } = data as JoinSplitProofInputJson;
-      return [data, [tx.buffer]];
-    }
-    case 'createAccountProofInput': {
-      const { tx } = data as AccountProofInputJson;
-      return [data, [tx.buffer]];
-    }
-    default: {
-      return [data];
-    }
-  }
-};
-*/

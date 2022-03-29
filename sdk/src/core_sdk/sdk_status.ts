@@ -9,8 +9,6 @@ export enum SdkEvent {
   UPDATED_WORLD_STATE = 'SDKEVENT_UPDATED_WORLD_STATE',
   // The sdk has been destroyed.
   DESTROYED = 'SDKEVENT_DESTROYED',
-  // Log messages for long running operations.
-  LOG = 'SDKEVENT_LOG',
 }
 
 export interface SdkStatus {

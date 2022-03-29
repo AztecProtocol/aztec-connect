@@ -115,7 +115,7 @@ async function getDeployConfig(deployTag: string) {
     const mainnetEthereumHost = getEthereumHost(1);
     return { hostedSdkUrl, rollupProviderUrl, explorerUrl, chainId, ethereumHost, mainnetEthereumHost };
   } else {
-    const hostedSdkUrl = `${window.location.protocol}//${window.location.hostname}:5000`;
+    const hostedSdkUrl = `${window.location.protocol}//${window.location.hostname}:1234`;
     const rollupProviderUrl = `${window.location.protocol}//${window.location.hostname}:8081`;
     const explorerUrl = `${window.location.protocol}//${window.location.hostname}:3000`;
     const chainId = 1337;

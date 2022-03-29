@@ -6,7 +6,7 @@ import http from 'http';
 import Koa, { DefaultState, Context } from 'koa';
 import Router from 'koa-router';
 import { PromiseReadable } from 'promise-readable';
-import { InterruptableSleep } from './http_job_worker';
+import { InterruptableSleep } from '@aztec/barretenberg/sleep';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
 
 interface Job {

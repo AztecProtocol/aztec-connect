@@ -87,6 +87,10 @@ export class RegisterController {
     return this.depositController!.depositFundsToContractWithPermitAndProofApproval(deadline);
   }
 
+  async awaitDepositFundsToContract() {
+    return this.depositController!.awaitDepositFundsToContract();
+  }
+
   async createProof() {
     const aliasHash = await this.core.computeAliasHash(this.alias);
     const txRefNo = this.depositController ? createTxRefNo() : 0;

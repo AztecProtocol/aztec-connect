@@ -2,7 +2,7 @@ import {
   AccountId,
   AztecSdk,
   BridgeId,
-  createNodeAztecSdk,
+  createAztecSdk,
   DefiController,
   DefiSettlementTime,
   DepositController,
@@ -119,7 +119,7 @@ describe('end-to-end async defi tests', () => {
     timeAtTestStart = await getCurrentBlockTime(provider);
     accounts = provider.getAccounts();
 
-    sdk = await createNodeAztecSdk(provider, {
+    sdk = await createAztecSdk(provider, {
       serverUrl: ROLLUP_HOST,
       pollInterval: 1000,
       memoryDb: true,

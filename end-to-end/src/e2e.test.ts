@@ -1,4 +1,4 @@
-import { AztecSdk, createNodeAztecSdk, EthAddress, EthereumRpc, TxId, TxSettlementTime } from '@aztec/sdk';
+import { AztecSdk, createAztecSdk, EthAddress, EthereumRpc, TxId, TxSettlementTime } from '@aztec/sdk';
 import { randomBytes } from 'crypto';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
@@ -49,7 +49,7 @@ describe('end-to-end tests', () => {
     const confs = chainId === 1337 ? 1 : 2;
     addresses = await ethRpc.getAccounts();
 
-    sdk = await createNodeAztecSdk(provider, {
+    sdk = await createAztecSdk(provider, {
       serverUrl: ROLLUP_HOST,
       pollInterval: 1000,
       memoryDb: true,

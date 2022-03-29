@@ -1,7 +1,7 @@
 import {
   AccountId,
   AztecSdk,
-  createNodeAztecSdk,
+  createAztecSdk,
   DefiController,
   DefiSettlementTime,
   EthAddress,
@@ -47,7 +47,7 @@ describe('end-to-end defi tests', () => {
     provider = await createFundedWalletProvider(ETHEREUM_HOST, 4, 4, privateKey, toBaseUnits('0.2', 18));
     accounts = provider.getAccounts();
 
-    sdk = await createNodeAztecSdk(provider, {
+    sdk = await createAztecSdk(provider, {
       serverUrl: ROLLUP_HOST,
       pollInterval: 1000,
       memoryDb: true,

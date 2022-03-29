@@ -1,7 +1,7 @@
 /.vscode
 .viscode
 .cache
-.parcel-cache
+.parcel-cache*
 .yarn
 dest
 dist

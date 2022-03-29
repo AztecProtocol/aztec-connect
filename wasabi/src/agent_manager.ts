@@ -1,4 +1,4 @@
-import { AztecSdk, createNodeAztecSdk, EthAddress, EthereumRpc, JsonRpcProvider, WalletProvider } from '@aztec/sdk';
+import { AztecSdk, createAztecSdk, EthAddress, EthereumRpc, JsonRpcProvider, WalletProvider } from '@aztec/sdk';
 // import { DefiAgent } from './defi_agent';
 import { PaymentAgent } from './payment_agent';
 
@@ -31,15 +31,12 @@ export class AgentManager {
   }
 
   private async initSdk() {
-    const sdk = await createNodeAztecSdk(this.provider, {
+    const sdk = await createAztecSdk(this.provider, {
       serverUrl: this.rollupHost,
-      debug: false,
       memoryDb: this.memoryDB,
       minConfirmation: this.confs,
       minConfirmationEHW: this.confs,
     });
-
-    // sdk.on(SdkEvent.LOG, console.log);
 
     await sdk.run();
     await sdk.awaitSynchronised();

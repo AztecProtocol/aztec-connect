@@ -29,10 +29,6 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     await this.request('destroy');
   }
 
-  public async getCrsData() {
-    return this.request('getCrsData');
-  }
-
   public async getLocalStatus() {
     return this.request('getLocalStatus');
   }

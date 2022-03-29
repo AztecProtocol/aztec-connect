@@ -1,39 +1,23 @@
 import { Pedersen } from '@aztec/barretenberg/crypto';
 import { FftFactory } from '@aztec/barretenberg/fft';
 import { Pippenger } from '@aztec/barretenberg/pippenger';
-import createDebug from 'debug';
+import { InterruptableSleep } from '@aztec/barretenberg/sleep';
 import { Job, JobQueueTarget } from './job';
-import { JobQueue } from './job_queue';
+import { JobQueueInterface } from './job_queue_interface';
 import { JobQueueFftFactoryClient } from './job_queue_fft_factory';
 import { JobQueuePedersenClient } from './job_queue_pedersen';
 import { JobQueuePippengerClient } from './job_queue_pippenger';
+import { createLogger } from '@aztec/barretenberg/debug';
 
-const debug = createDebug('bb:job_queue_client');
+const debug = createLogger('aztec:sdk:job_queue_worker');
 
 const fetchInterval = 1000;
 const pingInterval = 1000;
 
-export class InterruptableSleep {
-  private interruptPromise = Promise.resolve();
-  private interruptResolve = () => {};
-
-  public async sleep(ms: number) {
-    this.interruptPromise = new Promise(resolve => (this.interruptResolve = resolve));
-    let timeout!: NodeJS.Timeout;
-    const promise = new Promise(resolve => (timeout = setTimeout(resolve, ms)));
-    await Promise.race([promise, this.interruptPromise]);
-    clearTimeout(timeout);
-  }
-
-  public interrupt() {
-    this.interruptResolve();
-  }
-}
-
 /**
  * Responsible for getting jobs from a JobQueue, processing them, and returning the result.
  */
-export class JobQueueFrontend {
+export class JobQueueWorker {
   private running = false;
   private runningPromise!: Promise<void>;
   private pingTimeout!: NodeJS.Timeout;
@@ -43,13 +27,7 @@ export class JobQueueFrontend {
   private readonly pippenger: JobQueuePippengerClient;
   private readonly fftFactory: JobQueueFftFactoryClient;
 
-  constructor(
-    private jobQueue: JobQueue,
-    pedersen: Pedersen,
-    pippenger: Pippenger,
-    fftFactory: FftFactory,
-    private debugEnabled?: boolean,
-  ) {
+  constructor(private jobQueue: JobQueueInterface, pedersen: Pedersen, pippenger: Pippenger, fftFactory: FftFactory) {
     this.pedersen = new JobQueuePedersenClient(pedersen);
     this.pippenger = new JobQueuePippengerClient(pippenger);
     this.fftFactory = new JobQueueFftFactoryClient(fftFactory);
@@ -116,11 +94,7 @@ export class JobQueueFrontend {
       error = e.message;
     }
     try {
-      // const transferList = data && job.target === JobQueueTarget.FFT ? [data.buffer] : [];
       await this.jobQueue.completeJob(job.id, data, error);
-      // if (this.debugEnabled) {
-      //   logOversizedData(data, `job_queue_client ${job.target}.${job.query}`);
-      // }
     } catch (e) {
       debug(e);
     }

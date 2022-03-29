@@ -1,4 +1,4 @@
-import { AccountId, AztecSdk, createAztecSdk, EthAddress, JsonRpcProvider, SdkEvent } from '@aztec/sdk';
+import { AccountId, AztecSdk, createAztecSdk, EthAddress, JsonRpcProvider } from '@aztec/sdk';
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 
@@ -34,9 +34,8 @@ function MinForm({ grumpkinPrivKey }: MinFormProps) {
             const provider = new JsonRpcProvider('https://goerli.infura.io/v3/6a04b7c89c5b421faefde663f787aa35');
             const sdk = await createAztecSdk(provider, {
               serverUrl: 'https://api.aztec.network/falafel',
-              debug: true,
+              debug: 'bb:*',
             });
-            sdk.on(SdkEvent.LOG, log);
             await sdk.run();
             const grumpkinPubKey = await sdk.derivePublicKey(grumpkinPrivKey);
             const accountId = new AccountId(grumpkinPubKey, 0);

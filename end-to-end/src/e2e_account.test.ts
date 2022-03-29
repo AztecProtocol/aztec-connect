@@ -1,11 +1,4 @@
-import {
-  AztecSdk,
-  createNodeAztecSdk,
-  EthAddress,
-  GrumpkinAddress,
-  TxSettlementTime,
-  WalletProvider,
-} from '@aztec/sdk';
+import { AztecSdk, createAztecSdk, EthAddress, GrumpkinAddress, TxSettlementTime, WalletProvider } from '@aztec/sdk';
 import { randomBytes } from 'crypto';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
@@ -34,7 +27,7 @@ describe('end-to-end account tests', () => {
     provider = await createFundedWalletProvider(ETHEREUM_HOST, 1, 1, Buffer.from(PRIVATE_KEY, 'hex'), initialBalance);
     [depositor] = provider.getAccounts();
 
-    sdk = await createNodeAztecSdk(provider, {
+    sdk = await createAztecSdk(provider, {
       serverUrl: ROLLUP_HOST,
       memoryDb: true,
       minConfirmation: 1,

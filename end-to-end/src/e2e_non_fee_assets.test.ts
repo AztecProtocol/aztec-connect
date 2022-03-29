@@ -2,7 +2,7 @@ import { getTokenBalance, MainnetAddresses, TokenStore } from '@aztec/blockchain
 import {
   AccountId,
   AztecSdk,
-  createNodeAztecSdk,
+  createAztecSdk,
   DepositController,
   EthAddress,
   toBaseUnits,
@@ -54,7 +54,7 @@ describe('end-to-end async defi tests', () => {
     provider = await createFundedWalletProvider(ETHEREUM_HOST, 2, undefined, undefined, ethDepositedToUsersAccount);
     accounts = provider.getAccounts();
 
-    sdk = await createNodeAztecSdk(provider, {
+    sdk = await createAztecSdk(provider, {
       serverUrl: ROLLUP_HOST,
       pollInterval: 1000,
       memoryDb: true,

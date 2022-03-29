@@ -3,8 +3,8 @@ import {
   AssetValue,
   AztecSdk,
   AztecSdkUser,
-  createHostedAztecSdk,
-  CreateHostedAztecSdkOptions,
+  createAztecSdk,
+  CreateSdkOptions,
   EthAddress,
   EthereumProvider,
   EthereumSigner,
@@ -19,8 +19,8 @@ import { EthereumSdkUser } from './ethereum_sdk_user';
 
 export * from './ethereum_sdk_user';
 
-export async function createEthSdk(ethereumProvider: EthereumProvider, sdkOptions: CreateHostedAztecSdkOptions) {
-  const aztecSdk = await createHostedAztecSdk(ethereumProvider, sdkOptions);
+export async function createEthSdk(ethereumProvider: EthereumProvider, sdkOptions: CreateSdkOptions) {
+  const aztecSdk = await createAztecSdk(ethereumProvider, sdkOptions);
 
   const db = new Database();
   await db.init();
@@ -44,11 +44,7 @@ export class EthereumSdk extends EventEmitter {
 
     await this.aztecSdk.run();
 
-    this.emit(SdkEvent.LOG, 'Synching data tree state...');
-    const start = new Date().getTime();
     await this.aztecSdk.awaitSynchronised();
-    const time = (new Date().getTime() - start) / 1000;
-    this.emit(SdkEvent.LOG, `Sync took ${time.toFixed(0)} seconds.`);
   }
 
   public async destroy() {

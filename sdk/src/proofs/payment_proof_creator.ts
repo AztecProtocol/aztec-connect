@@ -6,14 +6,14 @@ import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { OffchainJoinSplitData } from '@aztec/barretenberg/offchain_tx_data';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { WorldState } from '@aztec/barretenberg/world_state';
-import createDebug from 'debug';
+import { createLogger } from '@aztec/barretenberg/debug';
 import { CorePaymentTx as PaymentTx } from '../core_tx';
 import { Database } from '../database';
 import { UserState } from '../user_state';
 import { JoinSplitTxFactory } from './join_split_tx_factory';
 import { JoinSplitProofInput } from './proof_input';
 
-const debug = createDebug('bb:payment_proof_creator');
+const debug = createLogger('bb:payment_proof_creator');
 
 export class PaymentProofCreator {
   private txFactory: JoinSplitTxFactory;

@@ -9,43 +9,33 @@ import {
   TxHash,
 } from '@aztec/barretenberg/blockchain';
 import { Web3Provider } from '@ethersproject/providers';
-import { getBlockchainStatus } from '@aztec/barretenberg/service';
-import { EthAsset, TokenAsset } from './contracts/asset';
+import { EthAsset, TokenAsset } from './contracts';
 import { RollupProcessor } from './contracts/rollup_processor';
 
 export class ClientEthereumBlockchain {
+  private readonly rollupProcessor: RollupProcessor;
   private readonly provider: Web3Provider;
-  private assets: Asset[] = [];
-  private bridges: BlockchainBridge[] = [];
+  private assets: Asset[];
 
   constructor(
-    private readonly serverUrl: string,
-    private readonly rollupProcessor: RollupProcessor,
-    private readonly ethereumProvider: EthereumProvider,
-    private readonly minConfirmations = 1,
-  ) {
-    this.provider = new Web3Provider(this.ethereumProvider);
-  }
-
-  static new(
-    serverUrl: string,
     rollupContractAddress: EthAddress,
-    ethereumProvider: EthereumProvider,
-    minConfirmations = 1,
+    assets: BlockchainAsset[],
+    private readonly bridges: BlockchainBridge[],
+    private readonly ethereumProvider: EthereumProvider,
   ) {
-    const rollupProcessor = new RollupProcessor(rollupContractAddress, ethereumProvider, minConfirmations);
-    return new ClientEthereumBlockchain(serverUrl, rollupProcessor, ethereumProvider, minConfirmations);
+    this.rollupProcessor = new RollupProcessor(rollupContractAddress, ethereumProvider);
+    this.provider = new Web3Provider(this.ethereumProvider);
+    this.assets = assets.map(asset => {
+      if (asset.address.equals(EthAddress.ZERO)) {
+        return new EthAsset(this.ethereumProvider);
+      } else {
+        return TokenAsset.new(asset, this.ethereumProvider);
+      }
+    });
   }
 
-  public async init() {
-    const { assets, bridges, chainId } = await getBlockchainStatus(this.serverUrl);
-    const providerChainId = (await this.provider.getNetwork()).chainId;
-    if (chainId !== providerChainId) {
-      throw new Error(`Provider chainId ${providerChainId} does not match rollup provider chainId ${chainId}.`);
-    }
-
-    this.updateAssets(assets);
-    this.updateBridges(bridges);
+  public async getChainId() {
+    return (await this.provider.getNetwork()).chainId;
   }
 
   public getAsset(assetId: number) {
@@ -146,28 +136,19 @@ export class ClientEthereumBlockchain {
   }
 
   public async setSupportedAsset(assetAddress: EthAddress, assetGasLimit?: number, options?: SendTxOptions) {
-    const fromIndex = this.assets.length;
     const txHash = await this.rollupProcessor.setSupportedAsset(assetAddress, assetGasLimit, options);
-    await this.ensureAssetAdded(assetAddress, assetGasLimit, fromIndex);
     return txHash;
   }
 
   public async setSupportedBridge(bridgeAddress: EthAddress, bridgeGasLimit?: number, options?: SendTxOptions) {
-    const fromIndex = this.bridges.length;
     const txHash = await this.rollupProcessor.setSupportedBridge(bridgeAddress, bridgeGasLimit, options);
-    await this.ensureBridgeAdded(bridgeAddress, bridgeGasLimit, fromIndex);
     return txHash;
   }
 
   /**
    * Wait for given transaction to be mined, and return receipt.
    */
-  public async getTransactionReceipt(
-    txHash: TxHash,
-    interval = 1,
-    timeout = 300,
-    minConfirmations = this.minConfirmations,
-  ) {
+  public async getTransactionReceipt(txHash: TxHash, interval = 1, timeout = 300, minConfirmations?: number) {
     const started = Date.now();
     while (true) {
       if (timeout && Date.now() - started > timeout * 1000) {
@@ -182,48 +163,6 @@ export class ClientEthereumBlockchain {
       }
 
       await new Promise(resolve => setTimeout(resolve, interval * 1000));
-    }
-  }
-
-  private updateAssets(assets: BlockchainAsset[]) {
-    this.assets = assets.map(info =>
-      info.address.equals(EthAddress.ZERO)
-        ? new EthAsset(this.ethereumProvider)
-        : TokenAsset.new(info, this.ethereumProvider, this.minConfirmations),
-    );
-  }
-
-  private updateBridges(bridges: BlockchainBridge[]) {
-    this.bridges = bridges;
-  }
-
-  private async ensureAssetAdded(assetAddress: EthAddress, assetGasLimit: number | undefined, fromIndex: number) {
-    while (true) {
-      const { assets } = await getBlockchainStatus(this.serverUrl);
-      const asset = assets
-        .slice(fromIndex)
-        .find(a => a.address.equals(assetAddress) && (assetGasLimit === undefined || a.gasLimit === assetGasLimit));
-      if (asset) {
-        this.updateAssets(assets);
-        break;
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-  }
-
-  private async ensureBridgeAdded(bridgeAddress: EthAddress, bridgeGasLimit: number | undefined, fromIndex: number) {
-    while (true) {
-      const { bridges } = await getBlockchainStatus(this.serverUrl);
-      const bridge = bridges
-        .slice(fromIndex)
-        .find(b => b.address.equals(bridgeAddress) && (bridgeGasLimit === undefined || b.gasLimit === bridgeGasLimit));
-      if (bridge) {
-        this.updateBridges(bridges);
-        break;
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 1000));
     }
   }
 }

@@ -1,8 +1,10 @@
-import createDebug from 'debug';
 import EventEmitter from 'events';
 import { CoreSdkServerStub, SdkEvent } from '../../core_sdk';
 import { BananaCoreSdkOptions, createBananaCoreSdk } from '../banana_core_sdk';
-import { DispatchMsg } from '../transport';
+import { createDispatchFn, DispatchMsg } from '../transport';
+import { createLogger, enableLogs } from '@aztec/barretenberg/debug';
+
+const debug = createLogger('aztec:sdk:iframe_backend');
 
 async function getServerUrl() {
   if (process.env.NODE_ENV === 'production') {
@@ -43,7 +45,7 @@ export class IframeBackend extends EventEmitter {
 
   private async initInternal(options: BananaCoreSdkOptions) {
     if (options.debug) {
-      createDebug.enable('bb:*');
+      enableLogs(options.debug);
     }
 
     const serverUrl = await getServerUrl();
@@ -60,7 +62,5 @@ export class IframeBackend extends EventEmitter {
     }
   }
 
-  public async coreSdkDispatch({ fn, args }: DispatchMsg) {
-    return await this.coreSdk[fn](...args);
-  }
+  public coreSdkDispatch = createDispatchFn(this, 'coreSdk', debug);
 }

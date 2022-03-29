@@ -14,22 +14,6 @@ To install the SDK from NPM use the following command.
 yarn add @aztec/sdk
 ```
 
-## Development
+## Docs
 
-Run in different terminals:
-
-```
-yarn build:if:dev
-```
-
-```
-yarn build:sw:dev
-```
-
-Then, if making changes to a module outside the sdk (e.g. barretenberg.js), run:
-
-```
-touch ./package.json
-```
-
-This will force a rebuild.
+Please see the documentation site [here](https://developers.aztec.network/).

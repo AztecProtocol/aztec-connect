@@ -11,6 +11,8 @@ export class Iframe {
   }
 
   public async init() {
+    document.getElementById(this.id)?.remove();
+
     if (document.getElementById(this.id)) {
       throw new Error(`iframe#${this.id} already exists.`);
     }
@@ -26,10 +28,6 @@ export class Iframe {
     await this.awaitFrameReady(() => document.body.appendChild(frame));
 
     this.frame = frame;
-  }
-
-  public destroy() {
-    document.getElementById(this.id)?.remove();
   }
 
   private async awaitFrameReady(fn: () => void) {

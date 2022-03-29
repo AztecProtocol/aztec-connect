@@ -1,12 +1,12 @@
 import { Pedersen, SinglePedersen } from '@aztec/barretenberg/crypto';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { JobQueueTarget } from './job';
-import { JobQueueBackend } from './job_queue_backend';
+import { JobQueue } from './job_queue';
 
 export class JobQueuePedersen extends SinglePedersen implements Pedersen {
   private readonly target = JobQueueTarget.PEDERSEN;
 
-  constructor(wasm: BarretenbergWasm, private queue: JobQueueBackend) {
+  constructor(wasm: BarretenbergWasm, private queue: JobQueue) {
     super(wasm);
   }
 

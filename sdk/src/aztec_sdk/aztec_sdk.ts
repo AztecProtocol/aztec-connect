@@ -27,13 +27,12 @@ import { AztecSdkUser } from './aztec_sdk_user';
 import { groupUserTxs } from './group_user_txs';
 
 export interface AztecSdkOptions {
-  debug?: boolean;
+  debug?: string;
   minConfirmation?: number;
   minConfirmationEHW?: number;
 }
 
 export interface AztecSdk {
-  on(event: SdkEvent.LOG, listener: (msg: string) => void): this;
   on(event: SdkEvent.UPDATED_USERS, listener: () => void): this;
   on(event: SdkEvent.UPDATED_USER_STATE, listener: (userId: AccountId) => void): this;
   on(event: SdkEvent.UPDATED_WORLD_STATE, listener: (rollupId: number, latestRollupId: number) => void): this;

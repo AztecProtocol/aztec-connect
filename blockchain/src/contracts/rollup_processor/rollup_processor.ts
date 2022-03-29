@@ -34,11 +34,7 @@ export class RollupProcessor {
   // taken from the rollup contract
   static readonly DEFI_RESULT_ZERO_HASH = '0x2d25a1e3a51eb293004c4b56abe12ed0da6bca2b4a21936752a85d102593c1b4';
 
-  constructor(
-    protected rollupContractAddress: EthAddress,
-    private ethereumProvider: EthereumProvider,
-    private minConfirmations = 1,
-  ) {
+  constructor(protected rollupContractAddress: EthAddress, private ethereumProvider: EthereumProvider) {
     this.provider = new Web3Provider(ethereumProvider);
     this.rollupProcessor = new Contract(rollupContractAddress.toString(), abi, this.provider);
   }
@@ -106,24 +102,21 @@ export class RollupProcessor {
     const { gasLimit } = { ...options };
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.setVerifier(address.toString(), { gasLimit }).catch(fixEthersStackTrace);
-    const receipt = await tx.wait(this.minConfirmations);
-    return TxHash.fromString(receipt.transactionHash);
+    return TxHash.fromString(tx.hash);
   }
 
   async setThirdPartyContractStatus(flag: boolean, options: SendTxOptions = {}) {
     const { gasLimit } = { ...options };
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.setAllowThirdPartyContracts(flag, { gasLimit });
-    const receipt = await tx.wait(this.minConfirmations);
-    return TxHash.fromString(receipt.transactionHash);
+    return TxHash.fromString(tx.hash);
   }
 
   async setSupportedBridge(bridgeAddress: EthAddress, bridgeGasLimit = 0, options: SendTxOptions = {}) {
     const { gasLimit } = { ...options };
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.setSupportedBridge(bridgeAddress.toString(), bridgeGasLimit, { gasLimit });
-    const receipt = await tx.wait(this.minConfirmations);
-    return TxHash.fromString(receipt.transactionHash);
+    return TxHash.fromString(tx.hash);
   }
 
   async setSupportedAsset(assetAddress: EthAddress, assetGasLimit = 0, options: SendTxOptions = {}) {
@@ -132,8 +125,7 @@ export class RollupProcessor {
     const tx = await rollupProcessor.setSupportedAsset(assetAddress.toString(), assetGasLimit, {
       gasLimit,
     });
-    const receipt = await tx.wait(this.minConfirmations);
-    return TxHash.fromString(receipt.transactionHash);
+    return TxHash.fromString(tx.hash);
   }
 
   async processAsyncDefiInteraction(interactionNonce: number, options: SendTxOptions = {}) {
@@ -142,8 +134,7 @@ export class RollupProcessor {
     const tx = await rollupProcessor
       .processAsyncDefiInteraction(interactionNonce, { gasLimit })
       .catch(fixEthersStackTrace);
-    const receipt = await tx.wait(this.minConfirmations);
-    return TxHash.fromString(receipt.transactionHash);
+    return TxHash.fromString(tx.hash);
   }
 
   async getEscapeHatchStatus() {
@@ -195,8 +186,7 @@ export class RollupProcessor {
         gasLimit,
       })
       .catch(fixEthersStackTrace);
-    const receipt = await tx.wait(this.minConfirmations);
-    return TxHash.fromString(receipt.transactionHash);
+    return TxHash.fromString(tx.hash);
   }
 
   async depositPendingFundsPermit(
@@ -223,8 +213,7 @@ export class RollupProcessor {
         { gasLimit },
       )
       .catch(fixEthersStackTrace);
-    const receipt = await tx.wait(this.minConfirmations);
-    return TxHash.fromString(receipt.transactionHash);
+    return TxHash.fromString(tx.hash);
   }
 
   async depositPendingFundsPermitNonStandard(
@@ -253,16 +242,14 @@ export class RollupProcessor {
         { gasLimit },
       )
       .catch(fixEthersStackTrace);
-    const receipt = await tx.wait(this.minConfirmations);
-    return TxHash.fromString(receipt.transactionHash);
+    return TxHash.fromString(tx.hash);
   }
 
   async approveProof(proofHash: Buffer, options: SendTxOptions = {}) {
     const { gasLimit } = { ...options };
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.approveProof(proofHash, { gasLimit }).catch(fixEthersStackTrace);
-    const receipt = await tx.wait(this.minConfirmations);
-    return TxHash.fromString(receipt.transactionHash);
+    return TxHash.fromString(tx.hash);
   }
 
   async getProofApprovalStatus(address: EthAddress, txId: Buffer): Promise<boolean> {

@@ -5,13 +5,16 @@ import { BarretenbergWasm, WorkerPool } from '@aztec/barretenberg/wasm';
 import { CoreSdkClientStub, SdkEvent } from '../../core_sdk';
 import { CoreSdkSerializedInterface } from '../../core_sdk/core_sdk_serialized_interface';
 import { getNumWorkers } from '../get_num_workers';
-import { JobQueueDispatch, JobQueueFrontend } from '../job_queue';
-import { DispatchMsg, TransportClient } from '../transport';
+import { JobQueueDispatch, JobQueueInterface, JobQueueWorker } from '../job_queue';
+import { createDispatchFn, TransportClient } from '../transport';
 import { BananaCoreSdk } from './banana_core_sdk';
 import { BananaCoreSdkOptions } from './banana_core_sdk_options';
+import { createLogger } from '@aztec/barretenberg/debug';
+
+const debug = createLogger('aztec:sdk:service_worker_frontend');
 
 export class ServiceWorkerFrontend {
-  private jobQueue!: JobQueueFrontend;
+  private jobQueue!: JobQueueInterface;
   private coreSdk!: CoreSdkSerializedInterface;
 
   constructor(private transportClient: TransportClient) {}
@@ -28,16 +31,20 @@ export class ServiceWorkerFrontend {
     const fftFactory = new PooledFftFactory(workerPool);
 
     // All calls on JobQueueDispatch will be sent to jobQueueDispatch function on ServiceWorkerBackend.
-    const jobQueueDispatch = new JobQueueDispatch(msg =>
-      this.transportClient.request({ fn: 'jobQueueDispatch', args: [msg] }),
-    );
+    this.jobQueue = new JobQueueDispatch(msg => {
+      debug(`job queue dispatch request: ${msg.fn}(${msg.args})`);
+      return this.transportClient.request({ fn: 'jobQueueDispatch', args: [msg] });
+    });
 
-    this.jobQueue = new JobQueueFrontend(jobQueueDispatch, pedersen, pippenger, fftFactory);
+    const jobQueueWorker = new JobQueueWorker(this.jobQueue, pedersen, pippenger, fftFactory);
 
     // All calls on BananaCoreSdk will be sent to coreSdkDispatch function on ServiceWorkerBackend.
     this.coreSdk = new BananaCoreSdk(
-      msg => this.transportClient.request({ fn: 'coreSdkDispatch', args: [msg] }),
-      this.jobQueue,
+      msg => {
+        debug(`core sdk dispatch request: ${msg.fn}(${msg.args})`);
+        return this.transportClient.request({ fn: 'coreSdkDispatch', args: [msg] });
+      },
+      jobQueueWorker,
       workerPool,
     );
 
@@ -49,11 +56,6 @@ export class ServiceWorkerFrontend {
     return { coreSdk: new CoreSdkClientStub(this.coreSdk) };
   }
 
-  public async jobQueueDispatch({ fn, args }: DispatchMsg) {
-    return await this.jobQueue[fn](...args);
-  }
-
-  public async coreSdkDispatch({ fn, args }: DispatchMsg) {
-    return await this.coreSdk[fn](...args);
-  }
+  public jobQueueDispatch = createDispatchFn(this, 'jobQueue', debug);
+  public coreSdkDispatch = createDispatchFn(this, 'coreSdk', debug);
 }

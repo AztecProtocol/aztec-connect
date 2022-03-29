@@ -1,4 +1,4 @@
-import { CreateHostedAztecSdkOptions, EthAddress, SdkEvent } from '@aztec/sdk';
+import { CreateSdkOptions, EthAddress, SdkEvent } from '@aztec/sdk';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { createEthSdk, EthereumSdk, EthereumSdkUser } from '../ethereum_sdk';
@@ -58,7 +58,7 @@ export class WebSdk extends EventEmitter {
     super();
   }
 
-  public async init(sdkOptions: CreateHostedAztecSdkOptions) {
+  public async init(sdkOptions: CreateSdkOptions) {
     if (sdkOptions.debug) {
       createDebug.enable('bb:*');
     }

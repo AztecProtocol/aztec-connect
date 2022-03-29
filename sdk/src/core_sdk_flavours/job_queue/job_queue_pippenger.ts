@@ -1,11 +1,11 @@
 import { Pippenger } from '@aztec/barretenberg/pippenger';
 import { JobQueueTarget } from './job';
-import { JobQueueBackend } from './job_queue_backend';
+import { JobQueue } from './job_queue';
 
 export class JobQueuePippenger implements Pippenger {
   private readonly target = JobQueueTarget.PIPPENGER;
 
-  constructor(private queue: JobQueueBackend) {}
+  constructor(private queue: JobQueue) {}
 
   async init() {
     // Don't need to do anything, as the actual work is done by a job queue worker.

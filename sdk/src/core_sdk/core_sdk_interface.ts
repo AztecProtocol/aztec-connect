@@ -14,7 +14,6 @@ import { CoreSdkOptions } from './core_sdk_options';
 import { SdkEvent, SdkStatus } from './sdk_status';
 
 export interface CoreSdkInterface {
-  on(event: SdkEvent.LOG, listener: (msg: string) => void): this;
   on(event: SdkEvent.UPDATED_USERS, listener: () => void): this;
   on(event: SdkEvent.UPDATED_USER_STATE, listener: (userId: AccountId) => void): this;
   on(event: SdkEvent.UPDATED_WORLD_STATE, listener: (rollupId: number, latestRollupId: number) => void): this;
@@ -25,8 +24,6 @@ export interface CoreSdkInterface {
   run(): Promise<void>;
 
   destroy(): Promise<void>;
-
-  getCrsData(): Promise<Buffer>;
 
   getLocalStatus(): Promise<SdkStatus>;
 

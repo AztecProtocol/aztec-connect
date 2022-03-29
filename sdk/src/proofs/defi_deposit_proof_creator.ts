@@ -7,14 +7,14 @@ import { NoteAlgorithms, TreeNote } from '@aztec/barretenberg/note_algorithms';
 import { OffchainDefiDepositData } from '@aztec/barretenberg/offchain_tx_data';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { WorldState } from '@aztec/barretenberg/world_state';
-import createDebug from 'debug';
+import { createLogger } from '@aztec/barretenberg/debug';
 import { CoreDefiTx } from '../core_tx';
 import { Database } from '../database';
 import { UserState } from '../user_state';
 import { JoinSplitTxFactory } from './join_split_tx_factory';
 import { JoinSplitProofInput } from './proof_input';
 
-const debug = createDebug('bb:defi_deposit_proof_creator');
+const debug = createLogger('bb:defi_deposit_proof_creator');
 
 export class DefiDepositProofCreator {
   private txFactory: JoinSplitTxFactory;

@@ -1,5 +1,8 @@
 import { LevelUp, LevelUpChain } from 'levelup';
 import { serializeBufferArrayToVector, deserializeArrayFromVector } from '../serialize';
+import { createLogger } from '../debug';
+
+const debug = createLogger('bb:merkle_tree');
 
 const MAX_DEPTH = 32;
 
@@ -201,6 +204,7 @@ export class MerkleTree {
   }
 
   public async updateElements(index: number, values: Buffer[]) {
+    debug(`update elements at index ${index} with ${values.length} leaves...`);
     const zeroBuf = Buffer.alloc(32, 0);
     return this.updateLeafHashes(
       index,

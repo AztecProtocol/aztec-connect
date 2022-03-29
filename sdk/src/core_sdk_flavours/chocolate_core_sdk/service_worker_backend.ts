@@ -1,9 +1,11 @@
-import createDebug from 'debug';
 import EventEmitter from 'events';
 import { CoreSdkSerializedInterface, SdkEvent } from '../../core_sdk';
-import { JobQueueBackend } from '../job_queue';
-import { DispatchMsg } from '../transport';
+import { JobQueue } from '../job_queue';
+import { createDispatchFn, DispatchMsg } from '../transport';
 import { ChocolateCoreSdkOptions, createChocolateCoreSdk } from './create_chocolate_core_sdk';
+import { createLogger, enableLogs } from '@aztec/barretenberg/debug';
+
+const debug = createLogger('aztec:sdk:service_worker_backend');
 
 export interface ServiceWorkerBackend extends EventEmitter {
   on(name: 'dispatch_msg', handler: (msg: DispatchMsg) => void): this;
@@ -11,7 +13,7 @@ export interface ServiceWorkerBackend extends EventEmitter {
 }
 
 export class ServiceWorkerBackend extends EventEmitter {
-  private jobQueue = new JobQueueBackend();
+  private jobQueue = new JobQueue();
   private coreSdk!: CoreSdkSerializedInterface;
   private initPromise!: Promise<void>;
 
@@ -28,7 +30,7 @@ export class ServiceWorkerBackend extends EventEmitter {
 
   private async initComponentsInternal(options: ChocolateCoreSdkOptions) {
     if (options.debug) {
-      createDebug.enable('bb:*');
+      enableLogs(options.debug);
     }
 
     this.coreSdk = await createChocolateCoreSdk(this.jobQueue, options);
@@ -52,11 +54,6 @@ export class ServiceWorkerBackend extends EventEmitter {
     }
   }
 
-  public async jobQueueDispatch({ fn, args }: DispatchMsg) {
-    return await this.jobQueue[fn](...args);
-  }
-
-  public async coreSdkDispatch({ fn, args }: DispatchMsg) {
-    return await this.coreSdk[fn](...args);
-  }
+  public jobQueueDispatch = createDispatchFn(this, 'jobQueue', debug);
+  public coreSdkDispatch = createDispatchFn(this, 'coreSdk', debug);
 }

@@ -4,13 +4,13 @@ import { AccountProver, AccountTx, ProofData } from '@aztec/barretenberg/client_
 import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { WorldState } from '@aztec/barretenberg/world_state';
-import createDebug from 'debug';
+import { createLogger } from '@aztec/barretenberg/debug';
 import { CoreAccountTx } from '../core_tx';
 import { Database } from '../database';
 import { AccountProofInput } from './proof_input';
 import { ProofOutput } from './proof_output';
 
-const debug = createDebug('bb:account_proof');
+const debug = createLogger('bb:account_proof');
 
 export class AccountProofCreator {
   constructor(private prover: AccountProver, private worldState: WorldState, private db: Database) {}

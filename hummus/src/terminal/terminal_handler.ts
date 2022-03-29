@@ -88,23 +88,17 @@ export class TerminalHandler {
     }
   };
 
-  private logHandler = (msg: string) => {
-    this.printQueue.put(msg + '\n');
-  };
-
   /**
    * Called after the app has been initialized.
    */
   private registerHandlers() {
     this.app.on(AppEvent.UPDATED_INIT_STATE, this.handleInitStateChange);
     this.app.on(SdkEvent.DESTROYED, this.handleSdkDestroyed);
-    this.app.on(SdkEvent.LOG, this.logHandler);
   }
 
   private unregisterHandlers() {
     this.app.off(AppEvent.UPDATED_INIT_STATE, this.handleInitStateChange);
     this.app.off(SdkEvent.DESTROYED, this.handleSdkDestroyed);
-    this.app.off(SdkEvent.LOG, this.logHandler);
   }
 
   /**
@@ -247,17 +241,14 @@ export class TerminalHandler {
 
   private async init(server: string) {
     this.app.off(AppEvent.UPDATED_INIT_STATE, this.initProgressHandler);
-    this.app.off(SdkEvent.LOG, this.logHandler);
     this.unregisterHandlers();
 
     this.app.on(AppEvent.UPDATED_INIT_STATE, this.initProgressHandler);
-    this.app.on(SdkEvent.LOG, this.logHandler);
 
     const deployTag = await this.getDeployTag();
-    const serverUrl = server || (deployTag ? `https://${deployTag}-sdk.aztec.network/` : 'http://localhost:5000');
-    await this.app.init({ serverUrl, debug: true });
+    const serverUrl = server || (deployTag ? `https://${deployTag}-sdk.aztec.network/` : 'http://localhost:1234');
+    await this.app.init({ serverUrl, debug: 'bb:*' });
     this.app.off(AppEvent.UPDATED_INIT_STATE, this.initProgressHandler);
-    this.app.off(SdkEvent.LOG, this.logHandler);
 
     const sdk = this.app.getSdk()!;
     try {
@@ -309,6 +300,7 @@ export class TerminalHandler {
     if (publicInput > pendingBalance) {
       this.printQueue.put(`depositing funds to contract...\n`);
       await controller.depositFundsToContract();
+      await controller.awaitDepositFundsToContract();
     }
     this.printQueue.put(`generating proof...\n`);
     await controller.createProof();
@@ -373,13 +365,17 @@ export class TerminalHandler {
       .createRegisterController(id, alias, newSigningPublicKey, recoveryPublicKey, fee.assetId, fee.value, address);
     const pendingDeposit = await controller.getPendingFunds();
     if (pendingDeposit < fee.value) {
+      this.printQueue.put(`depositing funds to contract...\n`);
       await controller.depositFundsToContract();
+      await controller.awaitDepositFundsToContract();
     }
+    this.printQueue.put(`generating proof...\n`);
     await controller.createProof();
+    this.printQueue.put(`signing proof...\n`);
     await controller.sign();
     await controller.send();
     this.printQueue.put(`registration proof sent.\nawaiting settlement...\n`);
-    await controller.awaitSettlement(300);
+    await controller.awaitSettlement();
     await this.app.loadLatestAccount();
     // Stop monitoring pre-registration account.
     await user.remove();

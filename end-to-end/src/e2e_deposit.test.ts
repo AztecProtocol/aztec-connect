@@ -1,4 +1,4 @@
-import { AccountId, AztecSdk, createNodeAztecSdk, EthAddress, toBaseUnits, WalletProvider } from '@aztec/sdk';
+import { AccountId, AztecSdk, createAztecSdk, EthAddress, toBaseUnits, WalletProvider } from '@aztec/sdk';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
 
@@ -37,7 +37,7 @@ describe('end-to-end tests', () => {
     );
     accounts = provider.getAccounts();
 
-    sdk = await createNodeAztecSdk(provider, {
+    sdk = await createAztecSdk(provider, {
       serverUrl: ROLLUP_HOST,
       pollInterval: 1000,
       memoryDb: true,

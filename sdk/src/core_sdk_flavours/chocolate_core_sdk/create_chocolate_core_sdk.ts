@@ -2,7 +2,7 @@ import { ServerRollupProvider } from '@aztec/barretenberg/rollup_provider';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { CoreSdkOptions, CoreSdkServerStub, CoreSdk } from '../../core_sdk';
 import { getDb, getLevelDb } from '../vanilla_core_sdk';
-import { JobQueueBackend } from '../job_queue';
+import { JobQueue } from '../job_queue';
 import { JobQueueFftFactory } from '../job_queue/job_queue_fft_factory';
 import { JobQueuePedersen } from '../job_queue/job_queue_pedersen';
 import { JobQueuePippenger } from '../job_queue/job_queue_pippenger';
@@ -17,7 +17,7 @@ export interface ChocolateCoreSdkOptions extends CoreSdkOptions {
  * It is wrapped in a network type adapter.
  * It is not interfaced with directly, but rather via a banana sdk, over some transport layer.
  */
-export async function createChocolateCoreSdk(jobQueue: JobQueueBackend, options: ChocolateCoreSdkOptions) {
+export async function createChocolateCoreSdk(jobQueue: JobQueue, options: ChocolateCoreSdkOptions) {
   const wasm = await BarretenbergWasm.new();
   const pedersen = new JobQueuePedersen(wasm, jobQueue);
   const pippenger = new JobQueuePippenger(jobQueue);

@@ -3021,10 +3021,10 @@ functional-red-black-tree@^1.0.1, functional-red-black-tree@~1.0.1:
   resolved "https://registry.yarnpkg.com/functional-red-black-tree/-/functional-red-black-tree-1.0.1.tgz#1b0ab3bd553b2a0d6399d29c0e3ea0b252078327"
   integrity sha1-GwqzvVU7Kg1jmdKcDj6gslIHgyc=
 
-ganache@^7.0.2:
-  version "7.0.2"
-  resolved "https://registry.yarnpkg.com/ganache/-/ganache-7.0.2.tgz#c6b43061dd37d722dbf02db992cc38600389b757"
-  integrity sha512-cywtnBJQY/olx87mb6IT0NiBr8aTk58WccRF8fHtVQLQXxyEUbQfozqAZmpTA25Vdme+i+kFrGr9TrEA0GGq7g==
+ganache@^7.0.3:
+  version "7.0.3"
+  resolved "https://registry.yarnpkg.com/ganache/-/ganache-7.0.3.tgz#c90a28b039378d2e1b5d9623b354969a1d877070"
+  integrity sha512-1O4V38YkAFd2B1YfBevauEepxEtoN0iTTK02SUJPUIcLOnxwrR49lSDq7liKpUWLkoZCOC2Bkrz/+XJAmEoNAQ==
   dependencies:
     "@trufflesuite/bigint-buffer" "1.1.9"
     emittery "0.10.0"

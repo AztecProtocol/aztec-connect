@@ -69,11 +69,6 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     await this.backend.destroy();
   }
 
-  public async getCrsData() {
-    const crsData = await this.backend.getCrsData();
-    return Buffer.from(crsData);
-  }
-
   public async getLocalStatus() {
     const json = await this.backend.getLocalStatus();
     return sdkStatusFromJson(json);

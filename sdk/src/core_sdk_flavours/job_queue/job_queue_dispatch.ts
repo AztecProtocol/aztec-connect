@@ -1,9 +1,9 @@
 import { EventEmitter } from 'events';
 import { DispatchMsg } from '../transport';
 import { Job } from './job';
-import { JobQueue } from './job_queue';
+import { JobQueueInterface } from './job_queue_interface';
 
-export class JobQueueDispatch extends EventEmitter implements JobQueue {
+export class JobQueueDispatch extends EventEmitter implements JobQueueInterface {
   constructor(private handler: (msg: DispatchMsg) => Promise<any>) {
     super();
   }

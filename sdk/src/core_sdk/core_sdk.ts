@@ -17,7 +17,7 @@ import { RollupProvider } from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { BarretenbergWasm, WorkerPool } from '@aztec/barretenberg/wasm';
 import { WorldState } from '@aztec/barretenberg/world_state';
-import createDebug from 'debug';
+import { createLogger } from '@aztec/barretenberg/debug';
 import { EventEmitter } from 'events';
 import { LevelUp } from 'levelup';
 import { Alias, Database, SigningKey } from '../database';
@@ -35,7 +35,7 @@ import { CoreSdkInterface } from './core_sdk_interface';
 import { CoreSdkOptions } from './core_sdk_options';
 import { SdkEvent, SdkStatus } from './sdk_status';
 
-const debug = createDebug('bb:core_sdk');
+const debug = createLogger('bb:core_sdk');
 
 enum SdkInitState {
   UNINITIALIZED = 'UNINITIALIZED',
@@ -377,13 +377,6 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   // PUBLIC METHODS FROM HERE ON REQUIRE run() TO BE CALLED.
   // -------------------------------------------------------
 
-  public async getCrsData() {
-    return this.serialQueue.push(async () => {
-      this.assertInitState(SdkInitState.RUNNING);
-      return (await this.db.getKey('crs'))!;
-    });
-  }
-
   public async createPaymentProofInput(
     userId: AccountId,
     assetId: number,
@@ -681,16 +674,11 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   private async initCrsData(circuitSize: number) {
-    let crsData = await this.db.getKey('crs');
-    if (!crsData) {
-      this.logInitMsgAndDebug('Downloading CRS data...');
-      const crs = new Crs(circuitSize);
-      await crs.download();
-      crsData = Buffer.from(crs.getData());
-      await this.db.addKey('crs', crsData);
-      debug('done.');
-    }
-    return crsData;
+    debug('downloading crs data...');
+    const crs = new Crs(circuitSize);
+    await crs.download();
+    debug('done.');
+    return Buffer.from(crs.getData());
   }
 
   private async initUserStates() {
@@ -745,17 +733,17 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     if (!forceCreate) {
       const provingKey = await this.db.getKey('join-split-proving-key');
       if (provingKey) {
-        this.logInitMsgAndDebug('Loading join-split proving key...');
+        debug('loading join-split proving key...');
         await joinSplitProver.loadKey(provingKey);
         return;
       }
     }
 
-    this.logInitMsgAndDebug('Computing join-split proving key...');
+    debug('computing join-split proving key...');
     const start = new Date().getTime();
     await joinSplitProver.computeKey();
     if (this.options.useKeyCache) {
-      this.logInitMsgAndDebug('Saving join-split proving key...');
+      debug('saving join-split proving key...');
       const newProvingKey = await joinSplitProver.getKey();
       await this.db.addKey('join-split-proving-key', newProvingKey);
     } else {
@@ -768,28 +756,23 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     if (!forceCreate) {
       const provingKey = await this.db.getKey('account-proving-key');
       if (provingKey) {
-        this.logInitMsgAndDebug('Loading account proving key...');
+        debug('loading account proving key...');
         await accountProver.loadKey(provingKey);
         return;
       }
     }
 
-    this.logInitMsgAndDebug('Computing account proving key...');
+    debug('computing account proving key...');
     const start = new Date().getTime();
     await accountProver.computeKey();
     if (this.options.useKeyCache) {
-      this.logInitMsgAndDebug('Saving account proving key...');
+      debug('saving account proving key...');
       const newProvingKey = await accountProver.getKey();
       await this.db.addKey('account-proving-key', newProvingKey);
     } else {
       await this.db.deleteKey('account-proving-key');
     }
     debug(`complete: ${new Date().getTime() - start}ms`);
-  }
-
-  private logInitMsgAndDebug(msg: string) {
-    this.emit(SdkEvent.LOG, msg);
-    debug(msg.toLowerCase());
   }
 
   private async syncAliasesAndKeys(accounts: AccountData[]) {
@@ -883,7 +866,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     const vca = await this.getLocalVerifierContractAddress();
     await this.leveldb.clear();
     await this.leveldb.put('rollupContractAddress', rca!.toBuffer());
-    await this.leveldb.put('verifierContractAddress', vca!.toBuffer());
+    await this.leveldb.put('verifierContractAddress', vca ? vca.toBuffer() : '');
 
     await this.worldState.init();
 

@@ -22,7 +22,7 @@ import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proo
 import { RollupProvider } from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { ViewingKey } from '@aztec/barretenberg/viewing_key';
-import createDebug from 'debug';
+import { createLogger } from '@aztec/barretenberg/debug';
 import { EventEmitter } from 'events';
 import { CoreAccountTx, CoreDefiTx, CorePaymentTx, PaymentProofId } from '../core_tx';
 import { Database } from '../database';
@@ -31,7 +31,7 @@ import { NotePicker } from '../note_picker';
 import { ProofOutput } from '../proofs';
 import { UserData } from '../user';
 
-const debug = createDebug('bb:user_state');
+const debug = createLogger('bb:user_state');
 
 export enum UserStateEvent {
   UPDATED_USER_STATE = 'UPDATED_USER_STATE',
