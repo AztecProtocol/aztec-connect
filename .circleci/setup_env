@@ -45,6 +45,10 @@ fi
 DEPLOY_TAG=$PROJECT-$VERSION_TAG
 TF_DIR=./terraform/$VERSION_TAG
 
+if [ -z "$BASH_ENV" ]; then
+  BASH_ENV=$(mktemp)
+fi
+
 echo export BUILD_SYSTEM_PATH=$BUILD_SYSTEM_PATH >> $BASH_ENV
 echo export SSH_CONFIG_PATH=$BUILD_SYSTEM_PATH/remote/ssh_config >> $BASH_ENV
 echo export PATH=$PATH:$BUILD_SYSTEM_PATH >> $BASH_ENV
@@ -67,6 +71,11 @@ cat $BASH_ENV
 # Having written the variables to $BASH_ENV, we now want to set them in this shell context.
 source $BASH_ENV
 
-# Ensure correct permissions on build instance key.
-cp ./remote/build_instance_key ~/.ssh/build_instance_key
-chmod 600 ~/.ssh/build_instance_key
+# Only run the following if we're the result of a commit (i.e. not being run manually).
+if [ -n "$COMMIT_HASH" ]; then
+  # Install and ensure correct permissions on build instance key.
+  cp ./remote/build_instance_key ~/.ssh/build_instance_key
+  chmod 600 ~/.ssh/build_instance_key
+fi
+
+set +e

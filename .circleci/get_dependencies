@@ -1,0 +1,52 @@
+#!/bin/bash
+set -e
+
+DOCKERFILE=./Dockerfile
+
+ALL_DEPS=()
+
+# Function that sets DEPS to a list of the current projects dependent projects.
+my_deps() {
+  # Not ideal. A project may not have a Dockerfile in its root, e.g. barretenberg. But.. barretenberg has no deps.
+  if [ ! -f $DOCKERFILE ]; then
+    DEPS=()
+    return
+  fi
+
+  # Parse Dockerfile for this projects dependencies.
+  MY_DEPS=($(cat $DOCKERFILE | sed -n -e "s/^FROM $ECR_DEPLOY_URL\/\([^ :]\+\).*/\1/p"))
+
+  DEPS=()
+  for DEP in "${MY_DEPS[@]}"; do
+    # Not ideal. barretenberg repositories are postfixed with target info. If there is no project folder, try
+    # to find a folder by stripping off everything after the first -. Works, for now...
+    if [ ! -d ../$DEP ]; then
+      if [ ! -d ../${DEP%%-*} ]; then
+        echo "Unable to find a project from $DEP."
+        exit 1
+      fi
+      DEP=${DEP%%-*}
+    fi
+    DEPS+=($DEP)
+  done
+}
+
+# Function that recursively builds up ALL_DEPS by calling my_deps for each project we depend on.
+add_deps() {
+  my_deps
+  ALL_DEPS=(${ALL_DEPS[@]} ${DEPS[@]})
+  for DEP in "${DEPS[@]}"; do
+    if [ ! -d ../$DEP ]; then
+      continue
+    fi
+    pushd ../$DEP > /dev/null
+    add_deps
+    popd > /dev/null
+  done
+}
+
+# Build ALL_DEPS.
+add_deps
+
+# Sort and uniq ALL_DEPS to produce the final list of dependencies.
+printf "%s\n" "${ALL_DEPS[@]}" | sort | uniq

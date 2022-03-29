@@ -8,9 +8,12 @@ PATTERNS=${REBUILD_PATTERNS:-.rebuild_patterns}
 # If given nothing, then return true to rebuild.
 [ -n "$BASE_COMMIT" ] || exit 0
 
-# If there are is no rebuild patterns file, create one from project directory.
+# If there are is no rebuild patterns file, compute one from current project, and Dockerfile dependencies.
 if [ ! -f "$PATTERNS" ]; then
-  echo "^$(git rev-parse --show-prefix)" > $PATTERNS
+  echo "^$(git rev-parse --show-prefix)" >> $PATTERNS
+  for DEP in $(get_dependencies); do
+    echo "^$DEP/" >> $PATTERNS
+  done
 fi
 
 if git diff --name-only ${BASE_COMMIT} ${COMMIT_HASH} | grep -q -f $PATTERNS; then

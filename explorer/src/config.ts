@@ -31,7 +31,7 @@ export async function getNetwork(): Promise<Network> {
 
   const rollupProviderUrl = `https://api.aztec.network/${deployTag}/falafel`;
   const chainId = (await getBlockchainStatus(rollupProviderUrl)).chainId;
-  const endpoint = `https://api.aztec.network/${deployTag}/graphql`;
+  const endpoint = `https://api.aztec.network/${deployTag}/falafel/graphql`;
 
   switch (chainId) {
     case 5:
