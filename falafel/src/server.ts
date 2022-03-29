@@ -51,6 +51,7 @@ export class Server {
         baseTxGas,
         maxFeeGasPrice,
         feeGasPriceMultiplier,
+        feeRoundUpSignificantFigures,
         maxProviderGasPrice,
         gasLimit,
         defaultDeFiBatchSize,
@@ -70,6 +71,10 @@ export class Server {
       numInnerRollupTxs * numOuterRollupProofs,
       publishInterval,
       feePayingAssetAddresses,
+      undefined,
+      undefined,
+      undefined,
+      feeRoundUpSignificantFigures,
     );
 
     switch (proofGeneratorMode) {
@@ -159,16 +164,23 @@ export class Server {
         baseTxGas,
         maxFeeGasPrice,
         feeGasPriceMultiplier,
+        feeRoundUpSignificantFigures,
         publishInterval,
-        flushAfterIdle: minTxWaitInterval,
+        flushAfterIdle,
         maxProviderGasPrice,
         gasLimit,
         defaultDeFiBatchSize,
       },
     } = this.configurator.getConfVars();
     this.bridgeResolver.setConf(defaultDeFiBatchSize);
-    this.pipelineFactory.setConf(publishInterval, minTxWaitInterval, maxProviderGasPrice, gasLimit);
-    this.txFeeResolver.setConf(baseTxGas, maxFeeGasPrice, feeGasPriceMultiplier, publishInterval);
+    this.pipelineFactory.setConf(publishInterval, flushAfterIdle, maxProviderGasPrice, gasLimit);
+    this.txFeeResolver.setConf(
+      baseTxGas,
+      maxFeeGasPrice,
+      feeGasPriceMultiplier,
+      publishInterval,
+      feeRoundUpSignificantFigures,
+    );
   }
 
   public async removeData() {

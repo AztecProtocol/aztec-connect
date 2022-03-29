@@ -17,14 +17,21 @@ export class FeeCalculator {
     private readonly surplusRatios = [1, 0],
     private readonly freeAssets: number[] = [],
     private readonly freeTxTypes: TxType[] = [],
-    private readonly numSignificantFigures = 0,
+    private numSignificantFigures = 0,
   ) {}
 
-  public setConf(baseTxGas: number, maxFeeGasPrice: bigint, feeGasPriceMultiplier: number, publishInterval: number) {
+  public setConf(
+    baseTxGas: number,
+    maxFeeGasPrice: bigint,
+    feeGasPriceMultiplier: number,
+    publishInterval: number,
+    numSignificantFigures: number,
+  ) {
     this.baseTxGas = baseTxGas;
     this.maxFeeGasPrice = maxFeeGasPrice;
     this.feeGasPriceMultiplier = feeGasPriceMultiplier;
     this.publishInterval = publishInterval;
+    this.numSignificantFigures = numSignificantFigures;
   }
 
   getMinTxFee(assetId: number, txType: TxType) {
@@ -95,7 +102,10 @@ export class FeeCalculator {
 
   public getGasPaidForByFee(assetId: number, fee: bigint) {
     const assetCostInWei = this.priceTracker.getAssetPrice(assetId);
-    const gasPriceInWei = (this.priceTracker.getMinGasPrice() * BigInt(this.feeGasPriceMultiplier * 100)) / 100n;
+    // Our feeGasPriceMultiplier can be accurate to 8 decimal places (e.g. 0.00000001).
+    const multiplierPrecision = 10 ** 8;
+    const feeGasPriceMultiplier = BigInt(this.feeGasPriceMultiplier * multiplierPrecision);
+    const gasPriceInWei = (this.priceTracker.getMinGasPrice() * feeGasPriceMultiplier) / BigInt(multiplierPrecision);
     const { decimals } = this.assets[assetId];
     const scaleFactor = 10n ** BigInt(decimals);
     // the units here are inconsistent, fee is in base units, asset cost in wei is not

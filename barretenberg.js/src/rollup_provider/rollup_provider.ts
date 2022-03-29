@@ -53,6 +53,7 @@ export interface RuntimeConfig {
   verificationGas: number;
   maxFeeGasPrice: bigint;
   feeGasPriceMultiplier: number;
+  feeRoundUpSignificantFigures: number;
   maxProviderGasPrice: bigint;
   maxUnsettledTxs: number;
   defaultDeFiBatchSize: number;

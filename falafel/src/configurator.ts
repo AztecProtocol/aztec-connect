@@ -88,6 +88,7 @@ function getConfVars(): ConfVars {
       verificationGas: 500000,
       maxFeeGasPrice: 250000000000n,
       feeGasPriceMultiplier: +(FEE_GAS_PRICE_MULTIPLIER || 1),
+      feeRoundUpSignificantFigures: 2,
       maxProviderGasPrice: 250000000000n,
       maxUnsettledTxs: 0,
       defaultDeFiBatchSize: +(DEFAULT_DEFI_BATCH_SIZE || 5),
@@ -123,7 +124,10 @@ export class Configurator {
         await emptyDir(dir);
       }
       // Restore runtime config.
-      this.confVars.runtimeConfig = saved.runtimeConfig;
+      this.confVars.runtimeConfig = {
+        ...this.confVars.runtimeConfig,
+        ...saved.runtimeConfig,
+      };
     }
 
     await this.writeConfigFile(this.confPath, this.confVars);
