@@ -8,7 +8,8 @@ async function checkAliasExists(sdk: AztecSdk, aliasInput: string) {
   if (!isValidAliasInput(aliasInput)) return false;
   const availableLocally = await sdk.isAliasAvailable(alias);
   if (!availableLocally) return true;
-  return !sdk.isRemoteAliasAvailable(alias);
+  const availableRemotely = await sdk.isRemoteAliasAvailable(alias);
+  return !availableRemotely;
 }
 
 export function useAliasIsValidRecipient(aliasInput: string, debounceMs = 500) {

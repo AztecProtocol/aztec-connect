@@ -1,5 +1,5 @@
 import { StepStatus, SubmissionFlow, ActiveSubmissionFlowItem } from 'ui-components';
-import { ShieldComposerPhase, ShieldComposerState } from 'alt-model/shield/shield_composer_state_obs';
+import { ShieldComposerPhase, ShieldComposerState } from 'alt-model/shield';
 import { SubmissionItemPrompt } from '../../modal_molecules/submission_item_prompt';
 
 const STEPS = [

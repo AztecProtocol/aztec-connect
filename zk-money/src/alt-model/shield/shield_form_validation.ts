@@ -117,7 +117,7 @@ export function validateShieldForm(input: ShieldFormValidationInputs): ShieldFor
   const beyondTransactionLimit = targetL2OutputAmount.baseUnits > transactionLimit;
   const noAmount = targetL2OutputAmount.baseUnits <= 0n;
   const insufficientTargetAssetBalance = l1Balance < requiredL1InputCoveringCosts;
-  const insufficientFeePayingAssetBalance = balanceInFeePayingAsset < feeAmount.baseUnits;
+  const insufficientFeePayingAssetBalance = !targetAssetIsPayingFee && balanceInFeePayingAsset < feeAmount.baseUnits;
 
   const couldShieldIfThereWereNoCosts =
     insufficientTargetAssetBalance && l1Balance >= requiredL1InputIfThereWereNoCosts;

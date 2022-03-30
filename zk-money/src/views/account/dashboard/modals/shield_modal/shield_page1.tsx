@@ -1,5 +1,4 @@
-import type { ShieldFormFeedback } from 'alt-model/shield/shield_form_feedback';
-import type { ShieldFormFields, ShieldFormValidationResult } from 'alt-model/shield/shield_form_validation';
+import type { ShieldFormFeedback, ShieldFormFields, ShieldFormValidationResult } from 'alt-model/shield';
 import { TxSettlementTime, TxType } from '@aztec/sdk';
 import { SendMode, ValueAvailability } from 'app';
 import { Button, InputTheme } from 'components';

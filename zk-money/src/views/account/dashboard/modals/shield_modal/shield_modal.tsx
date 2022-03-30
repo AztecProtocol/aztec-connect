@@ -1,5 +1,5 @@
 import { Card, CardHeaderSize } from 'ui-components';
-import { useShieldForm } from 'alt-model/shield/shield_form_hooks';
+import { useShieldForm, ShieldComposerPhase } from 'alt-model/shield';
 import { CloseButtonWhite, Modal } from 'components';
 import { ShieldPage2 } from './shield_page2/shield_page2';
 import { ShieldPage1 } from './shield_page1';
@@ -17,8 +17,15 @@ export function ShieldModal(props: ShieldModalProps) {
     useShieldForm();
 
   const handleClose = () => {
-    if (locked) unlock();
-    else onClose();
+    if (!locked) {
+      onClose();
+    } else {
+      if (composerState?.phase === ShieldComposerPhase.DONE) {
+        onClose();
+      } else {
+        unlock();
+      }
+    }
   };
 
   if (!assets) {
