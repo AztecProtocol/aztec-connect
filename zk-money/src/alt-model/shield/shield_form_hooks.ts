@@ -1,7 +1,7 @@
 import createDebug from 'debug';
 import { TxSettlementTime } from '@aztec/sdk';
 import { useBalance } from 'alt-model';
-import { useAmountFactory, useInitialisedSdk } from 'alt-model/top_level_context';
+import { useAmountFactory, useSdk } from 'alt-model/top_level_context';
 import { useState } from 'react';
 import { useL1Balances } from 'alt-model/assets/l1_balance_hooks';
 import { useDepositFee, useEstimatedShieldingGasCosts } from 'alt-model/fee_hooks';
@@ -30,7 +30,7 @@ export function useShieldForm(preselectedAssetId?: number) {
   const [attemptedLock, setAttemptedLock] = useState(false);
   const [lockedComposer, setLockedComposer] = useState<ShieldComposer>();
 
-  const sdk = useInitialisedSdk();
+  const sdk = useSdk();
   const providerState = useProviderState();
   const depositor = providerState?.account;
   const currentNetwork = providerState?.network;

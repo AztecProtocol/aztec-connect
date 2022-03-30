@@ -3,11 +3,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { listenAccountUpdated } from './event_utils';
 import { parseJoinSplitTx } from '../app';
 import { useApp } from './app_context';
-import { useInitialisedSdk } from './top_level_context';
+import { useSdk } from './top_level_context';
 
 function useUserJoinSplitTxs() {
   const { accountId } = useApp();
-  const sdk = useInitialisedSdk();
+  const sdk = useSdk();
   const [txs, setTxs] = useState<UserPaymentTx[]>([]);
   useEffect(() => {
     setTxs([]);

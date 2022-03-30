@@ -8,7 +8,7 @@ import { AccountUtils } from '../app/account_utils';
 import { KeyVault } from '../app/key_vault';
 import { Config } from '../config';
 import { useFormIsProcessing, useFormValues, useSyncProviderIntoForm } from './account_form_hooks';
-import { useInitialisedSdk } from './top_level_context';
+import { useSdk } from './top_level_context';
 import { isKnownAssetAddressString } from './known_assets/known_asset_addresses';
 
 interface AttemptCreateSendFormDeps {
@@ -61,7 +61,7 @@ function attemptCreateSendForm(deps: AttemptCreateSendFormDeps) {
 export function useSendForm(asset: RemoteAsset, sendMode: SendMode) {
   const app = useApp();
   const { requiredNetwork } = app;
-  const sdk = useInitialisedSdk();
+  const sdk = useSdk();
   const spendableBalance = useSpendableBalance(asset?.id) ?? 0n;
 
   const accountUtils = useMemo(() => sdk && new AccountUtils(sdk, requiredNetwork), [sdk, requiredNetwork]);

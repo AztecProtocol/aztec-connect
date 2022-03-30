@@ -5,7 +5,7 @@ import { listenAccountUpdated } from './event_utils';
 import { useAggregatedAssetsPrice } from './price_hooks';
 import { useApp } from './app_context';
 import { useProviderState } from './provider_hooks';
-import { useInitialisedSdk } from './top_level_context';
+import { useSdk } from './top_level_context';
 
 export function useTotalBalance() {
   const balances = useBalances();
@@ -19,7 +19,7 @@ export function useTotalSpendableBalance() {
 
 export function useBalance(assetId?: number) {
   const { accountId } = useApp();
-  const sdk = useInitialisedSdk();
+  const sdk = useSdk();
   const [balance, setBalance] = useState(() => {
     if (sdk && accountId && assetId !== undefined) return BigInt(0);
   });
@@ -37,7 +37,7 @@ export function useBalance(assetId?: number) {
 
 export function useBalances() {
   const { accountId } = useApp();
-  const sdk = useInitialisedSdk();
+  const sdk = useSdk();
   const [balances, setBalances] = useState<AssetValue[]>();
   useEffect(() => {
     if (accountId && sdk) {
@@ -51,7 +51,7 @@ export function useBalances() {
 
 export function useSpendableBalance(assetId: number) {
   const { accountId } = useApp();
-  const sdk = useInitialisedSdk();
+  const sdk = useSdk();
   const [spendableBalance, setSpendableBalance] = useState<bigint>();
   useEffect(() => {
     if (sdk && accountId) {
@@ -65,7 +65,7 @@ export function useSpendableBalance(assetId: number) {
 
 function useSpendableBalances() {
   const { accountId } = useApp();
-  const sdk = useInitialisedSdk();
+  const sdk = useSdk();
   const balances = useBalances();
   const [spendableBalances, setSpendableBalances] = useState<AssetValue[]>();
   useEffect(() => {
@@ -79,7 +79,7 @@ function useSpendableBalances() {
 }
 
 export function useDepositPendingShieldBalance(assetId: number) {
-  const sdk = useInitialisedSdk();
+  const sdk = useSdk();
   const ethAddress = useProviderState()?.account;
   const [deposit, setDeposit] = useState<bigint>();
   useEffect(() => {

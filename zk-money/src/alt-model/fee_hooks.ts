@@ -2,7 +2,7 @@ import createDebug from 'debug';
 import { useEffect, useMemo, useState } from 'react';
 import { AssetValue, EthAddress, TxSettlementTime } from '@aztec/sdk';
 import { Contract } from '@ethersproject/contracts';
-import { useInitialisedSdk, useStableEthereumProvider, useGasPrice } from 'alt-model/top_level_context';
+import { useSdk, useStableEthereumProvider, useGasPrice } from 'alt-model/top_level_context';
 import { listenPoll } from 'app/util';
 import { useRollupProviderStatus } from './rollup_provider_hooks';
 
@@ -96,7 +96,7 @@ export function useEstimatedShieldingGasCosts(depositor?: EthAddress, assetId?: 
 const DEPOSIT_FEE_POLL_INTERVAL = 1000 * 60 * 5;
 
 export function useDepositFee(assetId: number, speed: TxSettlementTime) {
-  const sdk = useInitialisedSdk();
+  const sdk = useSdk();
   const [fees, setFees] = useState<AssetValue[]>();
   useEffect(() => {
     if (sdk) {

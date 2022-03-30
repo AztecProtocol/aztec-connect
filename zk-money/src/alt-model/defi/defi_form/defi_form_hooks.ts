@@ -1,7 +1,7 @@
 import createDebug from 'debug';
 import { DefiSettlementTime } from '@aztec/sdk';
 import { useBalance } from 'alt-model';
-import { useAmountFactory, useInitialisedSdk } from 'alt-model/top_level_context';
+import { useAmountFactory, useSdk } from 'alt-model/top_level_context';
 import { useState } from 'react';
 import { useTrackedFieldChangeHandlers } from 'alt-model/form_fields_hooks';
 import { DefiFormFields, validateDefiForm } from './defi_form_validation';
@@ -29,7 +29,7 @@ export function useDefiForm(recipe: DefiRecipe) {
   const [attemptedLock, setAttemptedLock] = useState(false);
   const [lockedComposer, setLockedComposer] = useState<DefiComposer>();
 
-  const sdk = useInitialisedSdk();
+  const sdk = useSdk();
   const awaitCorrectProvider = useAwaitCorrectProvider();
   const amountFactory = useAmountFactory();
   const targetOutputAmount = Amount.from(fields.amountStr, recipe.inputAssetA);

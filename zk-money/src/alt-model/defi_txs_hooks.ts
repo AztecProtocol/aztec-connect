@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import { listenAccountUpdated } from './event_utils';
 import { useApp } from './app_context';
 import { UserDefiTx } from '@aztec/sdk';
-import { useInitialisedSdk } from './top_level_context';
+import { useSdk } from './top_level_context';
 
 export function useDefiTxs() {
   const { accountId } = useApp();
-  const sdk = useInitialisedSdk();
+  const sdk = useSdk();
   const [txs, setTxs] = useState<UserDefiTx[]>();
   useEffect(() => {
     setTxs([]);

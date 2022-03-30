@@ -1,7 +1,7 @@
 import type { AztecSdk } from '@aztec/sdk';
 import { formatAliasInput, isValidAliasInput } from 'app';
 import { useEffect, useState } from 'react';
-import { useInitialisedSdk } from './top_level_context';
+import { useSdk } from './top_level_context';
 
 async function checkAliasExists(sdk: AztecSdk, aliasInput: string) {
   const alias = formatAliasInput(aliasInput);
@@ -13,7 +13,7 @@ async function checkAliasExists(sdk: AztecSdk, aliasInput: string) {
 }
 
 export function useAliasIsValidRecipient(aliasInput: string, debounceMs = 500) {
-  const sdk = useInitialisedSdk();
+  const sdk = useSdk();
   const [availabilty, setAvailabilty] = useState<boolean>();
   useEffect(() => {
     if (sdk) {

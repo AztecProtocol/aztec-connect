@@ -7,6 +7,11 @@ function useTopLevelContext() {
   return useContext(TopLevelContext);
 }
 
+export function useSdk() {
+  const { sdkObs } = useTopLevelContext();
+  return useObs(sdkObs);
+}
+
 export function useRemoteAssets() {
   const { remoteAssetsObs } = useTopLevelContext();
   return useObs(remoteAssetsObs);

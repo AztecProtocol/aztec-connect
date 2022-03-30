@@ -1,12 +1,12 @@
 import type { RemoteAsset } from 'alt-model/types';
 import { useEffect, useMemo, useState } from 'react';
 import { useApp } from 'alt-model';
-import { useInitialisedSdk } from 'alt-model/top_level_context';
+import { useSdk } from 'alt-model/top_level_context';
 import { EthAccount, EthAccountEvent } from 'app';
 import { AccountUtils } from 'app/account_utils';
 
 export function useLegacyEthAccountState(asset?: RemoteAsset) {
-  const sdk = useInitialisedSdk();
+  const sdk = useSdk();
   const { provider, requiredNetwork } = useApp();
   const ethAccount = useMemo(() => {
     if (provider && sdk && asset)
