@@ -135,7 +135,9 @@ export class FeeCalculator {
 
   private applyGasPrice(value: bigint, minPrice: boolean) {
     const gasPrice = minPrice ? this.priceTracker.getMinGasPrice() : this.priceTracker.getGasPrice();
-    const expectedValue = (value * gasPrice * BigInt(this.feeGasPriceMultiplier * 100)) / 100n;
+    const multiplierPrecision = 10 ** 8;
+    const feeGasPriceMultiplier = BigInt(this.feeGasPriceMultiplier * multiplierPrecision);
+    const expectedValue = (value * gasPrice * feeGasPriceMultiplier) / BigInt(multiplierPrecision);
     const maxValue = this.maxFeeGasPrice ? value * this.maxFeeGasPrice : expectedValue;
     return expectedValue > maxValue ? maxValue : expectedValue;
   }
