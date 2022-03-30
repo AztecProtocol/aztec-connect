@@ -3,7 +3,7 @@ import { Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
 import { PriceFeed, PriceFeedEvent } from './price_feed';
 import { mapObj } from 'app/util/objects';
-import { isKnownAssetAddressString, PerKnownAddress } from 'alt-model/known_assets/known_asset_addresses';
+import { isKnownAssetAddressString } from 'alt-model/known_assets/known_asset_addresses';
 
 const debug = createDebug('zm:price_feed_service');
 
@@ -16,12 +16,12 @@ interface PriceFeedGroup {
 }
 
 export class PriceFeedService {
-  private groups: PerKnownAddress<PriceFeedGroup>;
+  private groups: Record<string, PriceFeedGroup>;
 
   private readonly pollInterval = 5 * 60 * 1000; // 5 mins
 
   constructor(
-    priceFeedContractAddresses: PerKnownAddress<string>,
+    priceFeedContractAddresses: Record<string, string>,
     provider: Provider,
     private readonly assets: CutdownAsset[],
   ) {

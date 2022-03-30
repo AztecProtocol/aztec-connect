@@ -9,7 +9,6 @@ export interface Config {
   chainId: number;
   ethereumHost: string;
   mainnetEthereumHost: string;
-  priceFeedContractAddresses: PerKnownAddress<string>;
   txAmountLimits: PerKnownAddress<bigint>;
   sessionTimeout: number;
   debug: boolean;
@@ -18,9 +17,6 @@ export interface Config {
 
 interface ConfigVars {
   deployTag: string;
-  priceFeedContractAddress0: string;
-  priceFeedContractAddress1: string;
-  priceFeedContractAddress2: string;
   txAmountLimits: string;
   sessionTimeout: string;
   maxAvailableAssetId: string;
@@ -39,9 +35,6 @@ const removeEmptyValues = (vars: ConfigVars): Partial<ConfigVars> => {
 
 const fromLocalStorage = (): ConfigVars => ({
   deployTag: localStorage.getItem('zm_deployTag') || '',
-  priceFeedContractAddress0: localStorage.getItem('zm_priceFeedContractAddress0') || '',
-  priceFeedContractAddress1: localStorage.getItem('zm_priceFeedContractAddress1') || '',
-  priceFeedContractAddress2: localStorage.getItem('zm_priceFeedContractAddress2') || '',
   txAmountLimits: localStorage.getItem('zm_txAmountLimit') || '',
   sessionTimeout: localStorage.getItem('zm_sessionTimeout') || '',
   maxAvailableAssetId: localStorage.getItem('zm_maxAvailableAssetId') || '',
@@ -50,9 +43,6 @@ const fromLocalStorage = (): ConfigVars => ({
 
 const fromEnvVars = (): ConfigVars => ({
   deployTag: '',
-  priceFeedContractAddress0: process.env.REACT_APP_PRICE_FEED_CONTRACT_ADDRESS_0 || '',
-  priceFeedContractAddress1: process.env.REACT_APP_PRICE_FEED_CONTRACT_ADDRESS_1 || '',
-  priceFeedContractAddress2: process.env.REACT_APP_PRICE_FEED_CONTRACT_ADDRESS_2 || '',
   txAmountLimits: process.env.REACT_APP_TX_AMOUNT_LIMIT || '',
   sessionTimeout: process.env.REACT_APP_SESSION_TIMEOUT || '',
   maxAvailableAssetId: process.env.REACT_APP_MAX_AVAILABLE_ASSET_ID || '',
@@ -61,9 +51,6 @@ const fromEnvVars = (): ConfigVars => ({
 
 const productionConfig: ConfigVars = {
   deployTag: '',
-  priceFeedContractAddress0: '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419', // ETH/USD
-  priceFeedContractAddress1: '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9', // DAI/USD
-  priceFeedContractAddress2: '0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c', // BTC/USD
   txAmountLimits: JSON.stringify([
     `${toBaseUnits('30', 18)}`, // 30 ETH
     `${toBaseUnits('100000', 18)}`, // 100000 DAI
@@ -110,6 +97,7 @@ async function getDeployConfig(deployTag: string) {
     const explorerUrl = deployTag.match(/-prod$/)
       ? 'https://explorer.aztec.network'
       : `https://${deployTag}-explorer.aztec.network`;
+
     const chainId = (await getBlockchainStatus(rollupProviderUrl)).chainId;
     const ethereumHost = getEthereumHost(chainId);
     const mainnetEthereumHost = getEthereumHost(1);
@@ -130,9 +118,6 @@ export async function getConfig(): Promise<Config> {
 
   const {
     deployTag,
-    priceFeedContractAddress0,
-    priceFeedContractAddress1,
-    priceFeedContractAddress2,
     txAmountLimits: txAmountLimitsStr,
     sessionTimeout,
     maxAvailableAssetId,
@@ -143,15 +128,11 @@ export async function getConfig(): Promise<Config> {
 
   return {
     ...(await getDeployConfig(deployTag)),
-    priceFeedContractAddresses: {
-      [S.ETH]: priceFeedContractAddress0,
-      [S.DAI]: priceFeedContractAddress1,
-      [S.renBTC]: priceFeedContractAddress2,
-    },
     txAmountLimits: {
       [S.ETH]: BigInt(txAmountLimits[0]),
       [S.DAI]: BigInt(txAmountLimits[1]),
       [S.renBTC]: BigInt(txAmountLimits[2]),
+      [S.wstETH]: BigInt(txAmountLimits[0]),
     },
     sessionTimeout: +(sessionTimeout || 1),
     maxAvailableAssetId: +maxAvailableAssetId,

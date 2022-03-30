@@ -79,23 +79,34 @@ function useExpectedYearlyOuput(recipeId: string, auxData?: bigint, inputValue?:
 function useExpectedYield(recipe: DefiRecipe, auxData?: bigint) {
   const rpStatus = useRollupProviderStatus();
   const assets = rpStatus?.blockchainStatus.assets;
-  const inputAssetId = recipe.inputAssetA.id;
+  let inputAssetId: number;
+  let outputAssetId: number;
+
+  if (recipe.expectedYearlyOutDerivedFromOutputAssets) {
+    inputAssetId = recipe.outputAssetA.id;
+    outputAssetId = recipe.inputAssetA.id;
+  } else {
+    inputAssetId = recipe.inputAssetA.id;
+    outputAssetId = recipe.outputAssetA.id;
+  }
+
   const inputAsset = assets?.[inputAssetId];
   const inputValue = useMemo(() => (inputAsset ? tenTo(inputAsset?.decimals) : undefined), [inputAsset]);
-
   const output = useExpectedYearlyOuput(recipe.id, auxData, inputValue);
-  const outputAsset = output ? assets?.[output.assetId] : undefined;
-  const outputAssetPrice = useAssetPrice(output?.assetId);
-  const inputAssetPrice = useAssetPrice(inputAssetId);
+  if (output && outputAssetId !== output?.assetId) throw new Error('AssetId missmatch in expectedYield');
+
+  const outputAsset = output ? assets?.[outputAssetId] : undefined;
+  const outputAssetPrice = useAssetPrice(outputAssetId);
+  const inputAssetPrice = useAssetPrice(recipe.outputAssetA.id);
+
   const inputPrice =
     inputAsset && inputAssetPrice !== undefined && inputValue !== undefined
       ? convertToPrice(inputValue, inputAsset.decimals, inputAssetPrice)
       : undefined;
 
-  const outputValue = output?.value;
   const outputPrice =
-    outputAsset && outputAssetPrice !== undefined && outputValue !== undefined
-      ? convertToPrice(outputValue, outputAsset.decimals, outputAssetPrice)
+    outputAsset && outputAssetPrice !== undefined && output?.value !== undefined
+      ? convertToPrice(output?.value, outputAsset.decimals, outputAssetPrice)
       : undefined;
 
   if (outputPrice === undefined || inputPrice === undefined) return undefined;

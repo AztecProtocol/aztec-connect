@@ -9,15 +9,15 @@ export type SdkObsValue = AztecSdk | undefined;
 export type SdkObs = Obs<SdkObsValue>;
 
 export function createSdkObs(config: Config) {
-  const { hostedSdkUrl, chainId, debug: isDebug } = config;
+  const { rollupProviderUrl, chainId, debug: isDebug } = config;
   const minConfirmation = chainId === 1337 ? 1 : undefined; // If not ganache, use the default value.
   const aztecJsonRpcProvider = new JsonRpcProvider(config.ethereumHost);
   return Obs.promise<SdkObsValue>(
     createAztecSdk(aztecJsonRpcProvider, {
-      serverUrl: hostedSdkUrl,
+      serverUrl: rollupProviderUrl,
       debug: isDebug ? 'bb:*' : '',
       minConfirmation,
-      // flavour: SdkFlavour.PLAIN,
+      flavour: SdkFlavour.PLAIN,
     }).catch(e => {
       debug('Failed to create sdk', e);
       return undefined;

@@ -1,4 +1,4 @@
-import type { EthAddress } from '@aztec/sdk';
+import { EthAddress } from '@aztec/sdk';
 import daiIcon from '../../images/dai.svg';
 import daiWhiteIcon from '../../images/dai_white.svg';
 import daiGradientIcon from '../../images/dai_gradient.svg';

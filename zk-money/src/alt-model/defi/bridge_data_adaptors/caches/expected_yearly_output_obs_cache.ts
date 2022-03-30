@@ -20,9 +20,13 @@ export function createExpectedYearlyOutputObsCache(
         if (!adaptor.isYield) throw new Error('Can only call getExpectedYearlyOuput for yield bridges.');
         const recipe = recipes.find(x => x.id === recipeId)!;
         const { inA, inB, outA, outB } = toAdaptorArgs(assets, recipe);
+        const assetArgs = recipe.expectedYearlyOutDerivedFromOutputAssets
+          ? ([outA, outB, inA, inB] as const)
+          : ([inA, inB, outA, outB] as const);
         return listenPoll(() => {
-          adaptor.adaptor.getExpectedYearlyOuput(inA, inB, outA, outB, auxData, inputAmount).then(values => {
-            emit({ assetId: Number(outA.id), value: values[0] });
+          // TODO should we switch here or elsewhere
+          adaptor.adaptor.getExpectedYearlyOuput(...assetArgs, auxData, inputAmount).then(values => {
+            emit({ assetId: Number(assetArgs[2].id.toString()), value: values[0] });
           });
         }, POLL_INTERVAL);
       },

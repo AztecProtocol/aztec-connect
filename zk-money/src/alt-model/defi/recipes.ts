@@ -5,18 +5,17 @@ import lidoLogo from '../../images/lido_white.svg';
 import lidoMiniLogo from '../../images/lido_mini_logo.png';
 import elementFiLogo from '../../images/element_fi_logo.svg';
 import elementMiniLogo from '../../images/element_mini_logo.png';
-import aaveLogo from '../../images/aave_logo_white.svg';
-import aaveMiniLogo from '../../images/aave_mini_logo.png';
 import ethToDaiBanner from '../../images/eth_to_dai_banner.svg';
-import { createMockYieldAdaptor } from './bridge_data_adaptors/adaptor_mock';
 import { createElementAdaptor } from './bridge_data_adaptors/element_adaptor';
 import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from 'alt-model/known_assets/known_asset_addresses';
 import { RemoteAsset } from 'alt-model/types';
 import { RemoteAssetsObs } from 'alt-model/top_level_context/remote_assets_obs';
+import { createLidoAdaptor } from './bridge_data_adaptors/lido_adaptor';
 
 const debug = createDebug('zm:recipes');
 
-interface CreateRecipeArgs extends Omit<DefiRecipe, 'closable' | 'inputAssetA' | 'outputAssetA'> {
+interface CreateRecipeArgs
+  extends Omit<DefiRecipe, 'closable' | 'inputAssetA' | 'outputAssetA' | 'expectedYearlyOutDerivedFromOutputAssets'> {
   isAsync?: boolean;
   addressId: number;
   inputAssetAddressA: EthAddress;
@@ -27,14 +26,14 @@ function createRecipe(
   { isAsync, inputAssetAddressA, outputAssetAddressA, ...args }: CreateRecipeArgs,
   assets: RemoteAsset[],
 ): DefiRecipe | undefined {
-  const closable = !!isAsync;
+  const closable = !isAsync;
   const inputAssetA = assets.find(x => x.address.equals(inputAssetAddressA));
   const outputAssetA = assets.find(x => x.address.equals(outputAssetAddressA));
   if (!inputAssetA || !outputAssetA) {
     debug(`Could not find remote assets for recipe '${args.id}'`);
     return;
   }
-  return { ...args, closable, inputAssetA, outputAssetA };
+  return { ...args, closable, inputAssetA, outputAssetA, expectedYearlyOutDerivedFromOutputAssets: closable };
 }
 
 // const ETH = 0;
@@ -65,12 +64,12 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
     keyStat3: KeyBridgeStat.MATURITY,
   },
   {
-    id: 'fake-lido-finance.ETH-to-wStETH',
+    id: 'lido-finance.ETH-to-wStETH',
     openHandleAssetId: DAI,
     addressId: 1,
     inputAssetAddressA: KMAA.ETH,
-    outputAssetAddressA: KMAA.ETH,
-    createAdaptor: createMockYieldAdaptor,
+    outputAssetAddressA: KMAA.wstETH,
+    createAdaptor: createLidoAdaptor,
     name: 'Lido Staking',
     investmentType: DefiInvestmentType.STAKING,
     shortDesc:
@@ -81,27 +80,8 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
     logo: lidoLogo,
     miniLogo: lidoMiniLogo,
     keyStat1: KeyBridgeStat.YIELD,
-    keyStat2: KeyBridgeStat.LIQUIDITY,
-    keyStat3: KeyBridgeStat.BATCH_SIZE,
-  },
-  {
-    id: 'fake-aave-lending.DAI-to-aDAI',
-    openHandleAssetId: DAI,
-    addressId: 1,
-    inputAssetAddressA: KMAA.ETH,
-    outputAssetAddressA: KMAA.DAI,
-    createAdaptor: createMockYieldAdaptor,
-    name: 'AAVE Lending',
-    investmentType: DefiInvestmentType.YIELD,
-    shortDesc: 'Deposit zkDAI into AAVE receive zkADAI in return.',
-    longDescription:
-      'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
-    bannerImg: ethToDaiBanner,
-    logo: aaveLogo,
-    miniLogo: aaveMiniLogo,
-    keyStat1: KeyBridgeStat.YIELD,
-    keyStat2: KeyBridgeStat.LIQUIDITY,
-    keyStat3: KeyBridgeStat.BATCH_SIZE,
+    keyStat2: KeyBridgeStat.BATCH_SIZE,
+    keyStat3: KeyBridgeStat.LIQUIDITY,
   },
 ];
 

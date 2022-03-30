@@ -12,6 +12,7 @@ import { Database } from './database';
 import { Form, SystemMessage } from './form';
 import { chainIdToNetwork, Network } from './networks';
 import { PriceFeedService } from './price_feed_service';
+import { KNOWN_MAINNET_ASSET_ADDRESS_STRS as S } from 'alt-model/known_assets/known_asset_addresses';
 import {
   initialLoginState,
   initialWorldState,
@@ -76,7 +77,11 @@ export class App extends EventEmitter {
     this.activeAsset = initialAsset;
     this.loginMode = initialLoginMode;
     const provider = new JsonRpcProvider(config.mainnetEthereumHost);
-    this.priceFeedService = new PriceFeedService(config.priceFeedContractAddresses, provider, assets);
+    this.priceFeedService = new PriceFeedService(
+      { [S.ETH]: '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419' },
+      provider,
+      assets,
+    );
     this.priceFeedService.init();
   }
 
