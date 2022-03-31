@@ -1,6 +1,7 @@
 import { AssetValue, toBaseUnits } from '@aztec/sdk';
+import { getAssetPreferredFractionalDigits } from 'alt-model/known_assets/known_asset_display_data';
 import { RemoteAsset } from 'alt-model/types';
-import { baseUnitsToFloat, convertToPrice } from 'app';
+import { baseUnitsToFloat, convertToPrice, formatBaseUnits } from 'app';
 
 export class Amount {
   constructor(readonly baseUnits: bigint, readonly info: RemoteAsset) {}
@@ -38,10 +39,14 @@ export class Amount {
     return this.withBaseUnits(this.baseUnits + baseUnits);
   }
 
-  format(opts?: { layer?: 'L1' | 'L2' }) {
+  format(opts?: { layer?: 'L1' | 'L2'; uniform?: boolean }) {
     const layer = opts?.layer ?? 'L2';
     const symbolPrefix = layer === 'L2' ? 'zk' : '';
-    return `${this.toFloat()} ${symbolPrefix}${this.info.symbol}`;
+    const numStr = formatBaseUnits(this.baseUnits, this.info.decimals, {
+      precision: opts?.uniform ? getAssetPreferredFractionalDigits(this.info.address) : undefined,
+      commaSeparated: opts?.uniform,
+    });
+    return `${numStr} ${symbolPrefix}${this.info.symbol}`;
   }
 
   toUsd(assetPrice: bigint) {

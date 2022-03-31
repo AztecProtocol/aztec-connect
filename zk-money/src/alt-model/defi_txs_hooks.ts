@@ -11,11 +11,7 @@ export function useDefiTxs() {
   useEffect(() => {
     setTxs([]);
     if (sdk && accountId) {
-      const updateTxs = () =>
-        sdk.getDefiTxs(accountId).then(txs => {
-          setTxs(txs);
-          console.log(txs);
-        });
+      const updateTxs = () => sdk.getDefiTxs(accountId).then(setTxs);
       updateTxs();
       return listenAccountUpdated(sdk, accountId, updateTxs);
     }

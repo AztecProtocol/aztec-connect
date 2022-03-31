@@ -76,7 +76,7 @@ function useExpectedYearlyOuput(recipeId: string, auxData?: bigint, inputValue?:
   return useMaybeObs(obs);
 }
 
-function useExpectedYield(recipe: DefiRecipe, auxData?: bigint) {
+export function useExpectedYield(recipe: DefiRecipe, auxData?: bigint) {
   const rpStatus = useRollupProviderStatus();
   const assets = rpStatus?.blockchainStatus.assets;
   let inputAssetId: number;
@@ -120,18 +120,24 @@ export function useDefaultExpectedYield(recipe: DefiRecipe) {
   return useExpectedYield(recipe, auxData);
 }
 
-function useExpectedOutput(recipe: DefiRecipe, auxData?: bigint, inputValue?: bigint) {
+export function useExpectedOutput(recipe: DefiRecipe, auxData?: bigint, inputValue?: bigint) {
   const [output, setOutput] = useState<AssetValue>();
   const dataAdaptor = useBridgeDataAdaptor(recipe.id);
   const adaptorArgs = useAdaptorArgs(recipe);
   useEffect(() => {
     if (dataAdaptor && adaptorArgs && auxData !== undefined && inputValue !== undefined) {
       const { inA, inB, outA, outB } = adaptorArgs;
-      dataAdaptor.adaptor.getExpectedOutput(inA, inB, outA, outB, auxData, inputValue).then(values => {
-        setOutput({ assetId: Number(outA.id), value: values[0] });
+      const assetArgs = recipe.expectedYearlyOutDerivedFromOutputAssets
+        ? ([outA, outB, inA, inB] as const)
+        : ([inA, inB, outA, outB] as const);
+      const outputAssetId = recipe.expectedYearlyOutDerivedFromOutputAssets
+        ? recipe.inputAssetA.id
+        : recipe.outputAssetA.id;
+      dataAdaptor.adaptor.getExpectedOutput(...assetArgs, auxData, inputValue).then(values => {
+        setOutput({ assetId: outputAssetId, value: values[0] });
       });
     }
-  }, [dataAdaptor, adaptorArgs, auxData, inputValue]);
+  }, [dataAdaptor, adaptorArgs, auxData, inputValue, recipe]);
   return output;
 }
 

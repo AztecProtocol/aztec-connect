@@ -23,10 +23,13 @@ export function createExpectedYearlyOutputObsCache(
         const assetArgs = recipe.expectedYearlyOutDerivedFromOutputAssets
           ? ([outA, outB, inA, inB] as const)
           : ([inA, inB, outA, outB] as const);
+        const outputAssetId = recipe.expectedYearlyOutDerivedFromOutputAssets
+          ? recipe.inputAssetA.id
+          : recipe.outputAssetA.id;
         return listenPoll(() => {
           // TODO should we switch here or elsewhere
           adaptor.adaptor.getExpectedYearlyOuput(...assetArgs, auxData, inputAmount).then(values => {
-            emit({ assetId: Number(assetArgs[2].id.toString()), value: values[0] });
+            emit({ assetId: outputAssetId, value: values[0] });
           });
         }, POLL_INTERVAL);
       },

@@ -20,32 +20,35 @@ interface CreateRecipeArgs
   addressId: number;
   inputAssetAddressA: EthAddress;
   outputAssetAddressA: EthAddress;
+  openHandleAssetAddress?: EthAddress;
 }
 
 function createRecipe(
-  { isAsync, inputAssetAddressA, outputAssetAddressA, ...args }: CreateRecipeArgs,
+  { isAsync, inputAssetAddressA, outputAssetAddressA, openHandleAssetAddress, ...args }: CreateRecipeArgs,
   assets: RemoteAsset[],
 ): DefiRecipe | undefined {
   const closable = !isAsync;
+  const expectedYearlyOutDerivedFromOutputAssets = closable;
   const inputAssetA = assets.find(x => x.address.equals(inputAssetAddressA));
   const outputAssetA = assets.find(x => x.address.equals(outputAssetAddressA));
   if (!inputAssetA || !outputAssetA) {
     debug(`Could not find remote assets for recipe '${args.id}'`);
     return;
   }
-  return { ...args, closable, inputAssetA, outputAssetA, expectedYearlyOutDerivedFromOutputAssets: closable };
+  let openHandleAsset: RemoteAsset | undefined = undefined;
+  if (openHandleAssetAddress) {
+    openHandleAsset = assets.find(x => x.address.equals(openHandleAssetAddress));
+    if (!openHandleAsset) {
+      debug(`Could not find open handle asset for recipe '${args.id}'`);
+      return;
+    }
+  }
+  return { ...args, closable, inputAssetA, outputAssetA, expectedYearlyOutDerivedFromOutputAssets };
 }
-
-// const ETH = 0;
-const DAI = 1;
-// const zkwStETH = 3;
-// const TO_BE_CONFIRMED = 0;
-// const NOT_USED = 0;
 
 const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
   {
     id: 'element-finance.DAI-to-DAI',
-    openHandleAssetId: DAI,
     isAsync: true,
     addressId: 2,
     inputAssetAddressA: KMAA.DAI,
@@ -65,7 +68,6 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
   },
   {
     id: 'lido-finance.ETH-to-wStETH',
-    openHandleAssetId: DAI,
     addressId: 1,
     inputAssetAddressA: KMAA.ETH,
     outputAssetAddressA: KMAA.wstETH,
@@ -80,8 +82,8 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
     logo: lidoLogo,
     miniLogo: lidoMiniLogo,
     keyStat1: KeyBridgeStat.YIELD,
-    keyStat2: KeyBridgeStat.BATCH_SIZE,
-    keyStat3: KeyBridgeStat.LIQUIDITY,
+    keyStat2: KeyBridgeStat.LIQUIDITY,
+    keyStat3: KeyBridgeStat.BATCH_SIZE,
   },
 ];
 

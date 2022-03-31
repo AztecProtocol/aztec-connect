@@ -33,6 +33,7 @@ function createTopLevelContextValue(config: Config): TopLevelContextValue {
     firstRemoteAssetsObs,
   );
   return {
+    config,
     stableEthereumProvider,
     sdkObs,
     remoteStatusObs,

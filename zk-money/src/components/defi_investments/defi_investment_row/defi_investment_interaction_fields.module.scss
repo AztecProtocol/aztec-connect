@@ -1,0 +1,25 @@
+@use '../../../ui-components/styles/mixins';
+
+.fixedTerm {
+  @include mixins.gradient_font;
+  font-size: 12px;
+  font-style: italic;
+  height: 36px;
+  position: relative;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+}
+
+.fixedTerm:before {
+  @include mixins.gradient_border(10px, 1px);
+}
+
+.claimButton {
+  height: 36px;
+}
+
+.claimButtonContent {
+  font-weight: normal;
+  font-size: 20px;
+}

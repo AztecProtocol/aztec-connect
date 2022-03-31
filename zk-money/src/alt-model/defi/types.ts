@@ -20,9 +20,9 @@ export interface DefiRecipe {
   id: string;
   addressId: number;
   closable: boolean;
-  openHandleAssetId: number;
   inputAssetA: RemoteAsset;
   outputAssetA: RemoteAsset;
+  openHandleAsset?: RemoteAsset;
   expectedYearlyOutDerivedFromOutputAssets: boolean;
   createAdaptor: BridgeDataAdaptorCreator;
   name: string;

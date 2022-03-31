@@ -7,6 +7,10 @@ function useTopLevelContext() {
   return useContext(TopLevelContext);
 }
 
+export function useConfig() {
+  return useTopLevelContext().config;
+}
+
 export function useSdk() {
   const { sdkObs } = useTopLevelContext();
   return useObs(sdkObs);

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { SpeedSwitch } from 'ui-components';
-import { DefiPositionList } from './defi_position_list';
 import { TokenList } from './token_list';
 import style from './holdings_list.module.scss';
+import { DefiInvestments } from 'components/defi_investments';
 
 const VIEWS = [
   { label: 'Tokens', value: 'tokens' },
@@ -19,7 +19,7 @@ export function HoldingsList() {
       <div className={style.speedSwitchWrapper}>
         <SpeedSwitch options={VIEWS} value={view} onChangeValue={setView} />
       </div>
-      <>{view === 'tokens' ? <TokenList /> : <DefiPositionList />}</>
+      <>{view === 'tokens' ? <TokenList /> : <DefiInvestments />}</>
     </div>
   );
 }

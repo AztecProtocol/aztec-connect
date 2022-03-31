@@ -34,7 +34,7 @@ const removeEmptyValues = (vars: ConfigVars): Partial<ConfigVars> => {
 };
 
 const fromLocalStorage = (): ConfigVars => ({
-  deployTag: localStorage.getItem('zm_deployTag') || '',
+  deployTag: localStorage.getItem('zm_deployTag') || 'aztec-connect-dev',
   txAmountLimits: localStorage.getItem('zm_txAmountLimit') || '',
   sessionTimeout: localStorage.getItem('zm_sessionTimeout') || '',
   maxAvailableAssetId: localStorage.getItem('zm_maxAvailableAssetId') || '',
