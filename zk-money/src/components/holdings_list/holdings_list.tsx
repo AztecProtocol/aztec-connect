@@ -1,3 +1,4 @@
+import type { DefiRecipe } from 'alt-model/defi/types';
 import { useState } from 'react';
 import { SpeedSwitch } from 'ui-components';
 import { TokenList } from './token_list';
@@ -11,7 +12,11 @@ const VIEWS = [
 
 type View = typeof VIEWS[number]['value'];
 
-export function HoldingsList() {
+interface HoldingsListProps {
+  onOpenDefiExitModal: (recipe: DefiRecipe, prefilledAmountStr: string) => void;
+}
+
+export function HoldingsList(props: HoldingsListProps) {
   const [view, setView] = useState<View>('tokens');
 
   return (
@@ -19,7 +24,7 @@ export function HoldingsList() {
       <div className={style.speedSwitchWrapper}>
         <SpeedSwitch options={VIEWS} value={view} onChangeValue={setView} />
       </div>
-      <>{view === 'tokens' ? <TokenList /> : <DefiInvestments />}</>
+      <>{view === 'tokens' ? <TokenList /> : <DefiInvestments onOpenDefiExitModal={props.onOpenDefiExitModal} />}</>
     </div>
   );
 }

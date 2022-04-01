@@ -49,7 +49,7 @@ export const DefiCardContent = (props: DefiCardContentProps) => {
         <Button
           className={cx(style.defiCardButton, !props.isLoggedIn && style.disabledButton)}
           theme="gradient"
-          text={`Deposit zk${props.recipe.inputAssetA.symbol}`}
+          text={`Deposit zk${props.recipe.flow.enter.inA.symbol}`}
           onClick={handleClickDeposit}
         />
       </div>

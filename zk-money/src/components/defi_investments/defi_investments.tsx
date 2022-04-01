@@ -1,3 +1,4 @@
+import type { DefiRecipe } from 'alt-model/defi/types';
 import { FaqHint, Section, SectionTitle } from 'ui-components';
 import { useState } from 'react';
 import { Pagination } from '..';
@@ -6,7 +7,11 @@ import { useOpenPositions } from 'alt-model/defi/open_position_hooks';
 
 const INVESTMENTS_PER_PAGE = 5;
 
-export function DefiInvestments() {
+interface DefiInvestmentsProps {
+  onOpenDefiExitModal: (recipe: DefiRecipe, prefilledAmountStr: string) => void;
+}
+
+export function DefiInvestments(props: DefiInvestmentsProps) {
   const [page, setPage] = useState(1);
   const positions = useOpenPositions();
 
@@ -16,7 +21,7 @@ export function DefiInvestments() {
       {positions && positions.length > 0 ? (
         <>
           {positions?.slice((page - 1) * INVESTMENTS_PER_PAGE, page * INVESTMENTS_PER_PAGE).map((position, idx) => (
-            <DefiInvestmentRow key={idx} position={position} />
+            <DefiInvestmentRow key={idx} position={position} onOpenDefiExitModal={props.onOpenDefiExitModal} />
           ))}
           <Pagination
             totalItems={positions.length}

@@ -436,11 +436,11 @@ export class SendForm extends EventEmitter implements AccountForm {
 
     if (this.sendMode === SendMode.SEND) {
       if (!recipient) {
-        form.recipient = withError(form.recipient, `Please enter recipient's username.`);
+        form.recipient = withError(form.recipient, `Please enter recipient's alias.`);
       } else if (isAddress(recipient)) {
         form.recipient = withError(form.recipient, `Recipient cannot be an Ethereum address.`);
       } else if (!(await this.accountUtils.isValidRecipient(recipient))) {
-        form.recipient = withError(form.recipient, `Cannot find a user with username '${recipient}'.`);
+        form.recipient = withError(form.recipient, `Cannot find a user with alias '${recipient}'.`);
       } else if (isSameAlias(recipient, this.alias)) {
         form.recipient = withError(form.recipient, 'Cannot send funds to yourself.');
       }

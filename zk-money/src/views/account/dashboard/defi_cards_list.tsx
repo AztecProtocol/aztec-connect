@@ -64,7 +64,7 @@ function filterRecipeBySearch(
   }
   if (assetFilter.length > 0) {
     recipes = recipes.filter(
-      recipe => recipe.inputAssetA.symbol === assetFilter || recipe.outputAssetA.symbol === assetFilter,
+      recipe => recipe.flow.enter.inA.symbol === assetFilter || recipe.flow.enter.outA.symbol === assetFilter,
     );
   }
   return recipes;
@@ -82,8 +82,8 @@ export const DefiCardsList = ({ onSelect, isLoggedIn }: DefiCardsListProps) => {
   const recipes = useDefiRecipes();
   const filteredRecipes = filterRecipeBySearch(recipes, searchFilter, assetFilter, typeFilter);
 
-  const inputAssets = recipes?.map(recipe => recipe.inputAssetA.symbol) || [];
-  const outputAssets = recipes?.map(recipe => recipe.outputAssetA.symbol) || [];
+  const inputAssets = recipes?.map(recipe => recipe.flow.enter.inA.symbol) || [];
+  const outputAssets = recipes?.map(recipe => recipe.flow.enter.outA.symbol) || [];
   const assets = new Set([...inputAssets, ...outputAssets]);
 
   return (

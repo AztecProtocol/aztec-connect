@@ -17,7 +17,7 @@ export function createAuxDataOptionsObsCache(
       ([recipes, adaptor, assets], emit) => {
         if (!adaptor || !assets || !recipes) return undefined;
         const recipe = recipes.find(x => x.id === recipeId)!;
-        const { inA, inB, outA, outB } = toAdaptorArgs(assets, recipe);
+        const { inA, inB, outA, outB } = toAdaptorArgs(recipe.flow.enter);
         return listenPoll(() => {
           adaptor.adaptor.getAuxData(inA, inB, outA, outB).then(emit);
         }, POLL_INTERVAL);

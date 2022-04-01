@@ -109,13 +109,15 @@ export const AliasForm: React.FunctionComponent<AliasFormProps> = ({
       </PaddedBlock>
       {!isNewAccount && !isNewAlias && (
         <PaddedBlock>
-          <TextLink text="(Forgot Username)" onClick={onForgotAlias} color="white" size="xxs" italic />
+          <TextLink text="(Forgot Alias)" onClick={onForgotAlias} color="white" size="xxs" italic />
         </PaddedBlock>
       )}
       {isNewAccount && !!alias && aliasAvailability === ValueAvailability.INVALID && (
         <Description>
           <Text size="xs" inline>
-            {'This username has been taken. '}
+            {
+              'This alias has been taken. If you own this alias please change to the wallet that was used to register it and '
+            }
             <TextLink
               text="Log in"
               color="white"

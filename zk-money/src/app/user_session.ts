@@ -573,12 +573,12 @@ export class UserSession extends EventEmitter {
 
     const error = getAliasError(aliasInput);
     if (error) {
-      return this.emitSystemMessage(!isNewAlias ? 'Incorrect username.' : error, MessageType.ERROR);
+      return this.emitSystemMessage(!isNewAlias ? 'Incorrect alias.' : error, MessageType.ERROR);
     }
 
     if (isNewAlias) {
       if (!(await this.accountUtils.isAliasAvailable(aliasInput))) {
-        return this.emitSystemMessage('This username has been taken.', MessageType.ERROR);
+        return this.emitSystemMessage('This alias has been taken.', MessageType.ERROR);
       }
       const allowToProceed = await this.allowNewUser();
       if (!allowToProceed) {
@@ -588,7 +588,7 @@ export class UserSession extends EventEmitter {
     } else if (this.loginState.seedPhrase) {
       const address = await this.accountUtils.getAliasPublicKey(aliasInput);
       if (!address?.equals(this.keyVaultV0.accountPublicKey)) {
-        return this.emitSystemMessage('Incorrect username.', MessageType.ERROR);
+        return this.emitSystemMessage('Incorrect alias.', MessageType.ERROR);
       }
 
       this.toStep(LoginStep.MIGRATE_WALLET);
@@ -596,7 +596,7 @@ export class UserSession extends EventEmitter {
       const address = await this.accountUtils.getAliasPublicKey(aliasInput);
       const keyVault = mode === LoginMode.MIGRATE ? this.keyVaultV0 : this.keyVault;
       if (!address?.equals(keyVault.accountPublicKey)) {
-        return this.emitSystemMessage('Incorrect username.', MessageType.ERROR);
+        return this.emitSystemMessage('Incorrect alias.', MessageType.ERROR);
       }
     }
 

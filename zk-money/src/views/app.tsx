@@ -1,3 +1,4 @@
+import type { DefiFormMode } from 'alt-model/defi/defi_form';
 import { AztecSdk } from '@aztec/sdk';
 import { Navbar } from 'ui-components';
 import { BroadcastChannel } from 'broadcast-channel';
@@ -52,7 +53,7 @@ interface AppProps {
 
 interface AppState {
   action: AppAction;
-  activeDefiModalRecipe?: DefiRecipe;
+  activeDefiModal?: { recipe: DefiRecipe; mode: DefiFormMode; prefilledAmountStr?: string };
   activeAsset: number;
   loginState: LoginState;
   worldState: WorldState;
@@ -116,7 +117,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
       assetState: this.app.assetState,
       activeAction: this.app.activeAction,
       shieldForAliasForm: this.app.shieldForAliasForm,
-      activeDefiModalRecipe: undefined,
+      activeDefiModal: undefined,
       // path will be removed once we are able to add router to ui-components
       path: '/',
       systemMessage: {
@@ -295,8 +296,13 @@ export class AppView extends PureComponent<AppProps, AppState> {
     this.setState({ systemMessage: { message: '', type: MessageType.TEXT } }, () => this.app.logout());
   };
 
-  private handleOpenDefiModal = (activeDefiModalRecipe: DefiRecipe) => {
-    this.setState({ activeDefiModalRecipe });
+  private handleOpenDefiEnterModal = (recipe: DefiRecipe) => {
+    this.setState({ activeDefiModal: { recipe, mode: 'enter' } });
+  };
+
+  private handleOpenDefiExitModal = (recipe: DefiRecipe, prefilledAmountStr: string) => {
+    console.log({ recipe, prefilledAmountStr });
+    this.setState({ activeDefiModal: { recipe, mode: 'exit', prefilledAmountStr } });
   };
 
   private handleLogout = () => {
@@ -343,7 +349,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
       systemMessage,
       isLoading,
       homeState,
-      activeDefiModalRecipe,
+      activeDefiModal,
     } = this.state;
     const { config } = this.props;
     const { step } = loginState;
@@ -369,12 +375,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
     ) : undefined;
 
     return (
-      <Template
-        theme={theme}
-        account={step === LoginStep.DONE ? accountState : undefined}
-        systemMessage={systemMessage}
-        isLoading={isLoading}
-      >
+      <Template theme={theme} systemMessage={systemMessage} isLoading={isLoading}>
         <AppContext.Provider
           value={{
             config,
@@ -437,10 +438,16 @@ export class AppView extends PureComponent<AppProps, AppState> {
                 ))}
                 <Route
                   path="/earn"
-                  element={<Earn isLoggedIn={isLoggedIn} onOpenDefiModal={this.handleOpenDefiModal} />}
+                  element={
+                    <Earn
+                      isLoggedIn={isLoggedIn}
+                      onOpenDefiEnterModal={this.handleOpenDefiEnterModal}
+                      onOpenDefiExitModal={this.handleOpenDefiExitModal}
+                    />
+                  }
                 />
                 <Route path="/trade" element={<Trade />} />
-                <Route path="/balance" element={<Balance />} />
+                <Route path="/balance" element={<Balance onOpenDefiExitModal={this.handleOpenDefiExitModal} />} />
                 <Route
                   path="/"
                   element={
@@ -455,11 +462,8 @@ export class AppView extends PureComponent<AppProps, AppState> {
               </Routes>
             </CSSTransition>
           </TransitionGroup>
-          {activeDefiModalRecipe && (
-            <DefiModal
-              onClose={() => this.setState({ activeDefiModalRecipe: undefined })}
-              recipe={activeDefiModalRecipe}
-            />
+          {activeDefiModal && (
+            <DefiModal onClose={() => this.setState({ activeDefiModal: undefined })} {...activeDefiModal} />
           )}
         </AppContext.Provider>
       </Template>

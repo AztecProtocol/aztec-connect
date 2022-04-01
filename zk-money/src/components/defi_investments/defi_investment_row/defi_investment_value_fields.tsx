@@ -5,7 +5,7 @@ import type {
   DefiPosition_Closable,
   DefiPosition_Pending,
 } from 'alt-model/defi/open_position_hooks';
-import { useDefaultExpectedOutput, useExpectedOutput } from 'alt-model/defi/defi_info_hooks';
+import { useDefaultExpectedOutput, useInteractionPresentValue } from 'alt-model/defi/defi_info_hooks';
 import { useAmount } from 'alt-model/top_level_context';
 import { ShieldedAssetIcon } from 'components/shielded_asset_icon';
 
@@ -31,7 +31,7 @@ function ClosableValueField({ position }: { position: DefiPosition_Closable }) {
 }
 
 function AsyncValueField({ position }: { position: DefiPosition_Async }) {
-  const output = useExpectedOutput(position.recipe, BigInt(position.tx.bridgeId.auxData));
+  const output = useInteractionPresentValue(position.recipe, position.tx.interactionResult.interactionNonce);
   const amount = useAmount(output);
   return <ValueField amount={amount} />;
 }

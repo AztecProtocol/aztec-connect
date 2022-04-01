@@ -1,3 +1,4 @@
+import type { DefiRecipe } from 'alt-model/defi/types';
 import type { DefiPosition } from 'alt-model/defi/open_position_hooks';
 import { renderInteractionField } from './defi_investment_interaction_fields';
 import { renderValueField } from './defi_investment_value_fields';
@@ -6,9 +7,10 @@ import { renderApyField } from './defi_investment_apy_field';
 
 interface DefiInvestmentRowProps {
   position: DefiPosition;
+  onOpenDefiExitModal: (recipe: DefiRecipe, prefilledAmountStr: string) => void;
 }
 
-export function DefiInvestmentRow({ position }: DefiInvestmentRowProps) {
+export function DefiInvestmentRow({ position, onOpenDefiExitModal }: DefiInvestmentRowProps) {
   const { recipe } = position;
   return (
     <div className={style.root}>
@@ -24,7 +26,7 @@ export function DefiInvestmentRow({ position }: DefiInvestmentRowProps) {
         <div className={style.value}>{renderValueField(position)}</div>
       </div>
       <div className={style.separator} />
-      <div className={style.lastSegment}>{renderInteractionField(position)}</div>
+      <div className={style.lastSegment}>{renderInteractionField(position, onOpenDefiExitModal)}</div>
     </div>
   );
 }

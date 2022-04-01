@@ -1,6 +1,5 @@
 import React from 'react';
 import styled from 'styled-components/macro';
-import { AccountState } from '../../app';
 import { colours, fontSizes, lineHeights, spacings, breakpoints } from '../../styles';
 import { PaddedBlock } from '../padded_block';
 import { Text } from '../text';
@@ -34,7 +33,7 @@ const helpItems = [
 
 const aboutItems = [
   {
-    name: 'Introducing Aztec 2',
+    name: 'Medium',
     href: 'https://medium.com/aztec-protocol',
   },
 ];
@@ -43,14 +42,6 @@ const socialItems = [
   {
     name: 'Twitter',
     href: 'https://twitter.com/aztecnetwork',
-  },
-];
-
-const accountSocialItems = (alias: string) => [
-  ...socialItems,
-  {
-    name: 'Win 1 zkETH',
-    to: `?alias=${alias}`,
   },
 ];
 
@@ -115,17 +106,13 @@ const Foot = styled.div`
   }
 `;
 
-interface FooterProps {
-  account?: AccountState;
-}
-
-export const Footer: React.FunctionComponent<FooterProps> = ({ account }) => (
+export const Footer: React.FunctionComponent = () => (
   <FooterRoot>
     <ContentWrapper>
       <FooterContent>
         <FooterMenu title="Need Help?" menuItems={helpItems} />
         <FooterMenu title="About" menuItems={aboutItems} />
-        <FooterMenu title="Social" menuItems={account?.alias ? accountSocialItems(account.alias) : socialItems} />
+        <FooterMenu title="Social" menuItems={socialItems} />
       </FooterContent>
       <Foot>
         <Text text="Made in London" size="xs" />

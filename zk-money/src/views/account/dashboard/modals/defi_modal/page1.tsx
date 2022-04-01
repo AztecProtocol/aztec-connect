@@ -65,7 +65,7 @@ export function Page1({
           <>
             <AmountSection
               maxAmount={validationResult.maxOutput ?? 0n}
-              asset={recipe.inputAssetA}
+              asset={validationResult.input.depositAsset}
               amountStr={fields.amountStr}
               onChangeAmountStr={onChangeAmountStr}
               message={feedback.amount}
@@ -78,7 +78,7 @@ export function Page1({
       <SplitSection
         leftPanel={
           <GasSection
-            asset={recipe.inputAssetA}
+            asset={validationResult.input.depositAsset}
             balanceType="L2"
             type={GasSectionType.DEFI}
             speed={fields.speed as DefiSettlementTime}

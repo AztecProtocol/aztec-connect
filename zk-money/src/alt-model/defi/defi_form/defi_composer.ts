@@ -8,7 +8,7 @@ import { DefiComposerPhase, DefiComposerStateObs } from './defi_composer_state_o
 const debug = createDebug('zm:defi_composer');
 
 export interface DefiComposerPayload {
-  targetOutputAmount: Amount;
+  targetDepositAmount: Amount;
   feeAmount: Amount;
 }
 
@@ -26,7 +26,7 @@ export class DefiComposer {
   async compose() {
     this.stateObs.clearError();
     try {
-      const { targetOutputAmount, feeAmount } = this.payload;
+      const { targetDepositAmount, feeAmount } = this.payload;
       const { sdk, accountId, awaitCorrectProvider, bridgeId } = this.deps;
 
       this.stateObs.setPhase(DefiComposerPhase.GENERATING_KEY);
@@ -39,7 +39,7 @@ export class DefiComposer {
         accountId,
         signer,
         bridgeId,
-        targetOutputAmount.toAssetValue(),
+        targetDepositAmount.toAssetValue(),
         feeAmount.toAssetValue(),
       );
       await controller.createProof();

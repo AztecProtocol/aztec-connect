@@ -1,6 +1,6 @@
 import { Page1 } from './page1';
 import { Page2 } from './page2';
-import { useDefiForm, DefiComposerPhase } from 'alt-model/defi/defi_form';
+import { useDefiForm, DefiComposerPhase, DefiFormMode } from 'alt-model/defi/defi_form';
 import { DefiRecipe } from 'alt-model/defi/types';
 import { Overlay } from 'components/overlay';
 import { DefiModalHeader } from './defi_modal_header';
@@ -9,11 +9,13 @@ import { Modal } from 'components';
 
 interface DefiModalProps {
   recipe: DefiRecipe;
+  mode: DefiFormMode;
+  prefilledAmountStr?: string;
   onClose: () => void;
 }
 
-export function DefiModal({ recipe, onClose }: DefiModalProps) {
-  const defiForm = useDefiForm(recipe);
+export function DefiModal({ recipe, mode, prefilledAmountStr, onClose }: DefiModalProps) {
+  const defiForm = useDefiForm(recipe, mode, prefilledAmountStr);
   const { fields, setters, validationResult, feedback, composerState, submit, attemptLock, locked, unlock } = defiForm;
 
   const phase = composerState?.phase;

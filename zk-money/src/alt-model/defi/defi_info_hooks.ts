@@ -1,14 +1,13 @@
-import createDebug from 'debug';
 import { AssetValue, BridgeId } from '@aztec/sdk';
-import { useAggregatedAssetsPrice, useAssetPrice, useRollupProviderStatus } from 'alt-model';
+import { useAggregatedAssetsPrice } from 'alt-model';
 import { useEffect, useMemo, useState } from 'react';
 import { toAdaptorArgs } from './bridge_data_adaptors/bridge_adaptor_util';
 import { DefiRecipe } from './types';
-import { baseUnitsToFloat, convertToPrice, PRICE_DECIMALS, tenTo } from 'app';
-import { useBridgeDataAdaptorsMethodCaches } from 'alt-model/top_level_context';
+import { baseUnitsToFloat, PRICE_DECIMALS } from 'app';
+import { useAmount, useBridgeDataAdaptorsMethodCaches } from 'alt-model/top_level_context';
 import { useMaybeObs, useObs } from 'app/util';
-
-const debug = createDebug('zm:defi_info_hooks');
+import { Amount } from 'alt-model/assets';
+import { useAmountCost } from 'alt-model/price_hooks';
 
 export function useBridgeDataAdaptor(recipeId: string) {
   const { adaptorsObsCache } = useBridgeDataAdaptorsMethodCaches();
@@ -25,26 +24,11 @@ export function useDefaultAuxDataOption(recipeId: string) {
 export function useDefaultBridgeId(recipe: DefiRecipe) {
   const auxData = useDefaultAuxDataOption(recipe.id);
   return useMemo(() => {
-    const { addressId, inputAssetA, outputAssetA } = recipe;
+    const { addressId, flow } = recipe;
     if (auxData === undefined) return undefined;
     // TODO: use more complete bridge id construction
-    return new BridgeId(addressId, inputAssetA.id, outputAssetA.id, undefined, undefined, Number(auxData));
+    return new BridgeId(addressId, flow.enter.inA.id, flow.enter.outA.id, undefined, undefined, Number(auxData));
   }, [recipe, auxData]);
-}
-
-function useAdaptorArgs(recipe: DefiRecipe) {
-  const rpStatus = useRollupProviderStatus();
-  const assets = rpStatus?.blockchainStatus.assets;
-  return useMemo(() => {
-    if (assets) {
-      try {
-        return toAdaptorArgs(assets, recipe);
-      } catch (e) {
-        debug('Failed to convert BridgeId to adaptor args', e);
-        return;
-      }
-    }
-  }, [recipe, assets]);
 }
 
 function useBridgeMarket(recipeId: string, auxData?: bigint) {
@@ -77,41 +61,16 @@ function useExpectedYearlyOuput(recipeId: string, auxData?: bigint, inputValue?:
 }
 
 export function useExpectedYield(recipe: DefiRecipe, auxData?: bigint) {
-  const rpStatus = useRollupProviderStatus();
-  const assets = rpStatus?.blockchainStatus.assets;
-  let inputAssetId: number;
-  let outputAssetId: number;
+  const inputAmount = Amount.from('1', recipe.valueEstimationInteractionAssets.inA);
+  const output = useExpectedYearlyOuput(recipe.id, auxData, inputAmount.baseUnits);
+  const outputAmount = useAmount(output);
 
-  if (recipe.expectedYearlyOutDerivedFromOutputAssets) {
-    inputAssetId = recipe.outputAssetA.id;
-    outputAssetId = recipe.inputAssetA.id;
-  } else {
-    inputAssetId = recipe.inputAssetA.id;
-    outputAssetId = recipe.outputAssetA.id;
-  }
+  const inputCost = useAmountCost(inputAmount);
+  const outputCost = useAmountCost(outputAmount);
 
-  const inputAsset = assets?.[inputAssetId];
-  const inputValue = useMemo(() => (inputAsset ? tenTo(inputAsset?.decimals) : undefined), [inputAsset]);
-  const output = useExpectedYearlyOuput(recipe.id, auxData, inputValue);
-  if (output && outputAssetId !== output?.assetId) throw new Error('AssetId missmatch in expectedYield');
-
-  const outputAsset = output ? assets?.[outputAssetId] : undefined;
-  const outputAssetPrice = useAssetPrice(outputAssetId);
-  const inputAssetPrice = useAssetPrice(recipe.outputAssetA.id);
-
-  const inputPrice =
-    inputAsset && inputAssetPrice !== undefined && inputValue !== undefined
-      ? convertToPrice(inputValue, inputAsset.decimals, inputAssetPrice)
-      : undefined;
-
-  const outputPrice =
-    outputAsset && outputAssetPrice !== undefined && output?.value !== undefined
-      ? convertToPrice(output?.value, outputAsset.decimals, outputAssetPrice)
-      : undefined;
-
-  if (outputPrice === undefined || inputPrice === undefined) return undefined;
-  const diff = baseUnitsToFloat(outputPrice - inputPrice, PRICE_DECIMALS);
-  const divisor = baseUnitsToFloat(inputPrice, PRICE_DECIMALS);
+  if (outputCost === undefined || inputCost === undefined) return undefined;
+  const diff = baseUnitsToFloat(outputCost - inputCost, PRICE_DECIMALS);
+  const divisor = baseUnitsToFloat(inputCost, PRICE_DECIMALS);
   return diff / divisor;
 }
 
@@ -123,22 +82,33 @@ export function useDefaultExpectedYield(recipe: DefiRecipe) {
 export function useExpectedOutput(recipe: DefiRecipe, auxData?: bigint, inputValue?: bigint) {
   const [output, setOutput] = useState<AssetValue>();
   const dataAdaptor = useBridgeDataAdaptor(recipe.id);
-  const adaptorArgs = useAdaptorArgs(recipe);
+  const { valueEstimationInteractionAssets } = recipe;
   useEffect(() => {
-    if (dataAdaptor && adaptorArgs && auxData !== undefined && inputValue !== undefined) {
-      const { inA, inB, outA, outB } = adaptorArgs;
-      const assetArgs = recipe.expectedYearlyOutDerivedFromOutputAssets
-        ? ([outA, outB, inA, inB] as const)
-        : ([inA, inB, outA, outB] as const);
-      const outputAssetId = recipe.expectedYearlyOutDerivedFromOutputAssets
-        ? recipe.inputAssetA.id
-        : recipe.outputAssetA.id;
-      dataAdaptor.adaptor.getExpectedOutput(...assetArgs, auxData, inputValue).then(values => {
+    if (dataAdaptor && auxData !== undefined && inputValue !== undefined) {
+      const { inA, inB, outA, outB } = toAdaptorArgs(valueEstimationInteractionAssets);
+      const outputAssetId = valueEstimationInteractionAssets.outA.id;
+      dataAdaptor.adaptor.getExpectedOutput(inA, inB, outA, outB, auxData, inputValue).then(values => {
         setOutput({ assetId: outputAssetId, value: values[0] });
       });
     }
-  }, [dataAdaptor, adaptorArgs, auxData, inputValue, recipe]);
+  }, [dataAdaptor, auxData, inputValue, valueEstimationInteractionAssets]);
   return output;
+}
+
+export function useInteractionPresentValue(recipe: DefiRecipe, interactionNonce?: number) {
+  return undefined as undefined | AssetValue;
+  // This can be uncommented once the element adaptor is no longer using filterQuery from block 0
+  // const [presentValue, setPresentValue] = useState<AssetValue>();
+  // const dataAdaptor = useBridgeDataAdaptor(recipe.id);
+  // useEffect(() => {
+  //   if (dataAdaptor && interactionNonce !== undefined) {
+  //     console.log('getInteractionPresentValue');
+  //     dataAdaptor.adaptor.getInteractionPresentValue(BigInt(interactionNonce)).then(values => {
+  //       setPresentValue({ assetId: Number(values[0].assetId), value: values[0].assetId });
+  //     });
+  //   }
+  // }, [recipe, dataAdaptor, interactionNonce]);
+  // return presentValue;
 }
 
 export function useDefaultExpectedOutput(recipe: DefiRecipe, inputValue?: bigint) {

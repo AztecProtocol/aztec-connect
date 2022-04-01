@@ -1,8 +1,8 @@
 import createDebug from 'debug';
-import { DefiSettlementTime } from '@aztec/sdk';
+import { BridgeId, DefiSettlementTime } from '@aztec/sdk';
 import { useBalance } from 'alt-model';
 import { useAmountFactory, useSdk } from 'alt-model/top_level_context';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTrackedFieldChangeHandlers } from 'alt-model/form_fields_hooks';
 import { DefiFormFields, validateDefiForm } from './defi_form_validation';
 import { getDefiFormFeedback } from './defi_form_feedback';
@@ -13,16 +13,38 @@ import { useMaybeObs } from 'app/util';
 import { isKnownAssetAddressString } from 'alt-model/known_assets/known_asset_addresses';
 import { useDefiFeeAmount } from './defi-fee-hooks';
 import { useAwaitCorrectProvider } from './correct_provider_hooks';
-import { DefiRecipe } from '../types';
+import { BridgeInteractionAssets, DefiRecipe } from '../types';
 import { Amount } from 'alt-model/assets';
-import { useDefaultBridgeId } from '../defi_info_hooks';
+import { useDefaultAuxDataOption } from '../defi_info_hooks';
 
 const debug = createDebug('zm:defi_form_hooks');
 
-export function useDefiForm(recipe: DefiRecipe) {
+export type DefiFormMode = 'enter' | 'exit';
+
+function getInteractionAssets(recipe: DefiRecipe, mode: DefiFormMode) {
+  switch (mode) {
+    case 'enter':
+      return recipe.flow.enter;
+    case 'exit': {
+      if (recipe.flow.type !== 'closable')
+        throw new Error(`Can't select asset to close position for recipe id '${recipe.id}'`);
+      return recipe.flow.exit;
+    }
+  }
+}
+
+function useDefiFormBridgeId(recipe: DefiRecipe, { inA, outA }: BridgeInteractionAssets) {
+  const auxData = useDefaultAuxDataOption(recipe.id);
+  return useMemo(() => {
+    if (auxData === undefined) return undefined;
+    return new BridgeId(recipe.addressId, inA.id, outA.id, undefined, undefined, Number(auxData));
+  }, [auxData, recipe, inA, outA]);
+}
+
+export function useDefiForm(recipe: DefiRecipe, mode: DefiFormMode, prefilledAmountStr?: string) {
   const { accountId, config } = useApp();
   const [fields, setFields] = useState<DefiFormFields>({
-    amountStr: '',
+    amountStr: prefilledAmountStr ?? '',
     speed: DefiSettlementTime.NEXT_ROLLUP,
   });
   const [touchedFields, setters] = useTrackedFieldChangeHandlers(fields, setFields);
@@ -32,19 +54,22 @@ export function useDefiForm(recipe: DefiRecipe) {
   const sdk = useSdk();
   const awaitCorrectProvider = useAwaitCorrectProvider();
   const amountFactory = useAmountFactory();
-  const targetOutputAmount = Amount.from(fields.amountStr, recipe.inputAssetA);
-  const bridgeId = useDefaultBridgeId(recipe);
+  const interactionAssets = getInteractionAssets(recipe, mode);
+  const depositAsset = interactionAssets.inA;
+  const targetDepositAmount = Amount.from(fields.amountStr, depositAsset);
+  const bridgeId = useDefiFormBridgeId(recipe, interactionAssets);
   const feeAmount = useDefiFeeAmount(bridgeId, fields.speed);
-  const balanceInTargetAsset = useBalance(targetOutputAmount?.id);
+  const balanceInTargetAsset = useBalance(targetDepositAmount?.id);
   const balanceInFeePayingAsset = useBalance(feeAmount?.id);
-  const targetAssetAddressStr = targetOutputAmount?.address.toString();
+  const targetAssetAddressStr = targetDepositAmount?.address.toString();
   const transactionLimit = isKnownAssetAddressString(targetAssetAddressStr)
     ? config.txAmountLimits[targetAssetAddressStr]
     : undefined;
   const validationResult = validateDefiForm({
     fields,
     amountFactory,
-    targetOutputAmount,
+    depositAsset,
+    targetDepositAmount,
     feeAmount,
     balanceInTargetAsset,
     balanceInFeePayingAsset,

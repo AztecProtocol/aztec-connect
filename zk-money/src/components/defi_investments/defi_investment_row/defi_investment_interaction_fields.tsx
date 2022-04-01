@@ -1,3 +1,4 @@
+import type { DefiRecipe } from 'alt-model/defi/types';
 import type {
   DefiPosition,
   DefiPosition_Async,
@@ -6,8 +7,9 @@ import type {
 } from 'alt-model/defi/open_position_hooks';
 import moment from 'moment';
 import { StepStatusIndicator, StepStatus } from 'ui-components';
+import { MiniLink } from 'ui-components/components/atoms/mini_link';
 import { useCountDownData } from 'features/defi/bridge_count_down/bridge_count_down_hooks';
-import { useConfig } from 'alt-model/top_level_context';
+import { useAmount, useConfig } from 'alt-model/top_level_context';
 import style from './defi_investment_interaction_fields.module.scss';
 import { Button } from 'components/button';
 
@@ -20,14 +22,22 @@ function PendingInteractionField({ position }: { position: DefiPosition_Pending 
     <>
       {timeStr}
       <StepStatusIndicator status={StepStatus.RUNNING} />
-      <a href={explorerLink}>Explorer</a>
+      <MiniLink href={explorerLink} />
     </>
   );
 }
 
-function ClosableInteractionField({ position }: { position: DefiPosition_Closable }) {
+function ClosableInteractionField({
+  position,
+  onOpenDefiExitModal,
+}: {
+  position: DefiPosition_Closable;
+  onOpenDefiExitModal: (recipe: DefiRecipe, prefilledAmountStr: string) => void;
+}) {
+  const prefilledAmount = useAmount(position.handleValue);
+  const prefilledAmountStr = prefilledAmount?.toFloat().toString() ?? '';
   return (
-    <Button className={style.claimButton}>
+    <Button className={style.claimButton} onClick={() => onOpenDefiExitModal(position.recipe, prefilledAmountStr)}>
       <div className={style.claimButtonContent}>Claim & Exit</div>
     </Button>
   );
@@ -41,12 +51,15 @@ function AsyncInteractionField({ position }: { position: DefiPosition_Async }) {
   return <div className={style.fixedTerm}>Matures {dateStr}</div>;
 }
 
-export function renderInteractionField(position: DefiPosition) {
+export function renderInteractionField(
+  position: DefiPosition,
+  onOpenDefiExitModal: (recipe: DefiRecipe, prefilledAmountStr: string) => void,
+) {
   switch (position.type) {
     case 'pending':
       return <PendingInteractionField position={position} />;
     case 'closable':
-      return <ClosableInteractionField position={position} />;
+      return <ClosableInteractionField position={position} onOpenDefiExitModal={onOpenDefiExitModal} />;
     case 'async':
       return <AsyncInteractionField position={position} />;
   }

@@ -52,7 +52,7 @@ interface Page2Props {
 }
 
 export function Page2({ recipe, composerState, validationResult, onSubmit, onClose }: Page2Props) {
-  const asset = recipe.inputAssetA;
+  const asset = validationResult.input.depositAsset;
   const [riskChecked, setRiskChecked] = useState(false);
   const hasError = !!composerState?.error;
   const isIdle = composerState?.phase === DefiComposerPhase.IDLE;
@@ -68,7 +68,7 @@ export function Page2({ recipe, composerState, validationResult, onSubmit, onClo
           <BridgeKeyStats recipe={recipe} compact />
         </S.TopStats>
         <S.Separator />
-        <CostBreakdown amount={validationResult.input.targetOutputAmount} fee={validationResult.input.feeAmount} />
+        <CostBreakdown amount={validationResult.input.targetDepositAmount} fee={validationResult.input.feeAmount} />
       </BorderBox>
       <S.BorderBox>
         {showingDeclaration ? (

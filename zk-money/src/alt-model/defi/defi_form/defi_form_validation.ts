@@ -2,6 +2,7 @@ import type { DefiSettlementTime } from '@aztec/sdk';
 import type { Amount } from 'alt-model/assets';
 import type { AmountFactory } from 'alt-model/assets/amount_factory';
 import type { DefiComposerPayload } from './defi_composer';
+import type { RemoteAsset } from 'alt-model/types';
 import { min } from 'app';
 
 export interface DefiFormFields {
@@ -12,7 +13,8 @@ export interface DefiFormFields {
 interface DefiFormValidationInput {
   fields: DefiFormFields;
   amountFactory?: AmountFactory;
-  targetOutputAmount?: Amount;
+  depositAsset: RemoteAsset;
+  targetDepositAmount?: Amount;
   balanceInTargetAsset?: bigint;
   feeAmount?: Amount;
   balanceInFeePayingAsset?: bigint;
@@ -36,7 +38,7 @@ export interface DefiFormValidationResult {
 export function validateDefiForm(input: DefiFormValidationInput): DefiFormValidationResult {
   const {
     amountFactory,
-    targetOutputAmount,
+    targetDepositAmount,
     balanceInTargetAsset,
     feeAmount,
     balanceInFeePayingAsset,
@@ -45,27 +47,27 @@ export function validateDefiForm(input: DefiFormValidationInput): DefiFormValida
   if (!amountFactory || !feeAmount || balanceInTargetAsset === undefined || balanceInFeePayingAsset === undefined) {
     return { loading: true, input };
   }
-  if (!targetOutputAmount || transactionLimit === undefined) {
+  if (!targetDepositAmount || transactionLimit === undefined) {
     return { unrecognisedTargetAmount: true, input };
   }
 
   // If the target asset isn't used for paying the fee, we don't need to reserve funds for it
-  const targetAssetIsPayingFee = targetOutputAmount.id === feeAmount.id;
+  const targetAssetIsPayingFee = targetDepositAmount.id === feeAmount.id;
   const feeInTargetAsset = targetAssetIsPayingFee ? feeAmount.baseUnits : 0n;
-  const requiredInputInTargetAssetCoveringCosts = targetOutputAmount.baseUnits + feeInTargetAsset;
+  const requiredInputInTargetAssetCoveringCosts = targetDepositAmount.baseUnits + feeInTargetAsset;
 
   const maxOutput = min(balanceInTargetAsset - feeInTargetAsset, transactionLimit);
-  const beyondTransactionLimit = targetOutputAmount.baseUnits > transactionLimit;
-  const noAmount = targetOutputAmount.baseUnits <= 0n;
+  const beyondTransactionLimit = targetDepositAmount.baseUnits > transactionLimit;
+  const noAmount = targetDepositAmount.baseUnits <= 0n;
   const insufficientTargetAssetBalance = balanceInTargetAsset < requiredInputInTargetAssetCoveringCosts;
   const insufficientFeePayingAssetBalance = balanceInFeePayingAsset < feeAmount.baseUnits;
-  const mustAllowForFee = insufficientTargetAssetBalance && balanceInTargetAsset >= targetOutputAmount.baseUnits;
+  const mustAllowForFee = insufficientTargetAssetBalance && balanceInTargetAsset >= targetDepositAmount.baseUnits;
 
   const isValid =
     !insufficientTargetAssetBalance && !insufficientFeePayingAssetBalance && !beyondTransactionLimit && !noAmount;
   const validPayload = isValid
     ? {
-        targetOutputAmount,
+        targetDepositAmount,
         feeAmount,
       }
     : undefined;

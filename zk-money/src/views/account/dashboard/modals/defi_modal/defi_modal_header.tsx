@@ -42,7 +42,7 @@ interface DefiModalHeaderProps {
 }
 
 export function DefiModalHeader({ recipe, onClose, closeDisabled, onBack, onForward }: DefiModalHeaderProps) {
-  const { logo, investmentType, inputAssetA } = recipe;
+  const { logo, investmentType, flow } = recipe;
   return (
     <Root>
       <LeftSeg>
@@ -50,7 +50,7 @@ export function DefiModalHeader({ recipe, onClose, closeDisabled, onBack, onForw
       </LeftSeg>
       <RightSeg>
         <Tags>
-          <CardAssetTag asset={inputAssetA} />
+          <CardAssetTag asset={flow.enter.inA} />
           <CardInvestmentTypeTag investmentType={investmentType} />
         </Tags>
         <NavButtons>

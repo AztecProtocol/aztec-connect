@@ -27,8 +27,8 @@ function recipeMatcher(bridgeId: BridgeId) {
     // TODO: Handle input and output assets B
     return (
       recipe.addressId === bridgeId.addressId &&
-      recipe.inputAssetA.id === bridgeId.inputAssetIdA &&
-      recipe.outputAssetA.id === bridgeId.outputAssetIdA
+      recipe.flow.enter.inA.id === bridgeId.inputAssetIdA &&
+      recipe.flow.enter.outA.id === bridgeId.outputAssetIdA
     );
   };
 }
@@ -40,13 +40,26 @@ function aggregatePositions(balances: AssetValue[], defiTxs: UserDefiTx[], recip
     if (recipe) positions.push({ type: 'closable', handleValue: assetValue, recipe });
   }
   for (const tx of defiTxs) {
-    const { state } = tx.interactionResult;
-    if (state === UserDefiInteractionResultState.AWAITING_FINALISATION) {
-      const recipe = recipes.find(recipeMatcher(tx.bridgeId));
-      if (recipe) positions.push({ type: 'async', tx, recipe });
-    } else if (state === UserDefiInteractionResultState.PENDING) {
-      const recipe = recipes.find(recipeMatcher(tx.bridgeId));
-      if (recipe) positions.push({ type: 'pending', tx, recipe });
+    const { state, isAsync } = tx.interactionResult;
+    if (isAsync) {
+      if (
+        state === UserDefiInteractionResultState.AWAITING_FINALISATION ||
+        state === UserDefiInteractionResultState.AWAITING_SETTLEMENT
+      ) {
+        const recipe = recipes.find(recipeMatcher(tx.bridgeId));
+        if (recipe) positions.push({ type: 'async', tx, recipe });
+      } else if (state === UserDefiInteractionResultState.PENDING) {
+        const recipe = recipes.find(recipeMatcher(tx.bridgeId));
+        if (recipe) positions.push({ type: 'pending', tx, recipe });
+      }
+    } else {
+      if (
+        state === UserDefiInteractionResultState.PENDING ||
+        state === UserDefiInteractionResultState.AWAITING_SETTLEMENT
+      ) {
+        const recipe = recipes.find(recipeMatcher(tx.bridgeId));
+        if (recipe) positions.push({ type: 'pending', tx, recipe });
+      }
     }
   }
   return positions;

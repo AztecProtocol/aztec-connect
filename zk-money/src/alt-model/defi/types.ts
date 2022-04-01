@@ -16,14 +16,29 @@ export enum KeyBridgeStat {
   LIQUIDITY,
 }
 
+export interface BridgeInteractionAssets {
+  inA: RemoteAsset;
+  outA: RemoteAsset;
+}
+
+export type BridgeFlowAssets =
+  | {
+      type: 'async';
+      enter: BridgeInteractionAssets;
+    }
+  | {
+      type: 'closable';
+      enter: BridgeInteractionAssets;
+      exit: BridgeInteractionAssets;
+    };
+
 export interface DefiRecipe {
   id: string;
   addressId: number;
   closable: boolean;
-  inputAssetA: RemoteAsset;
-  outputAssetA: RemoteAsset;
+  flow: BridgeFlowAssets;
   openHandleAsset?: RemoteAsset;
-  expectedYearlyOutDerivedFromOutputAssets: boolean;
+  valueEstimationInteractionAssets: BridgeInteractionAssets;
   createAdaptor: BridgeDataAdaptorCreator;
   name: string;
   logo: string;

@@ -1,6 +1,6 @@
 import React, { useLayoutEffect, useState } from 'react';
 import styled from 'styled-components/macro';
-import { AccountState, SystemMessage } from '../../app';
+import { SystemMessage } from '../../app';
 import { breakpoints, colours, gradients, spacings, Theme } from '../../styles';
 import { CookiesForm, isCookieAccepted } from '../cookies_form';
 import { SystemMessagePopup } from './system_message_popup';
@@ -86,7 +86,6 @@ const CookiesFormRoot = styled.div`
 interface TemplateProps {
   theme: Theme;
   children: React.ReactNode;
-  account?: AccountState;
   systemMessage?: SystemMessage;
   isLoading?: boolean;
 }
@@ -94,7 +93,6 @@ interface TemplateProps {
 export const Template: React.FunctionComponent<TemplateProps> = ({
   theme,
   children,
-  account,
   systemMessage,
   isLoading = false,
 }) => {
@@ -119,7 +117,7 @@ export const Template: React.FunctionComponent<TemplateProps> = ({
         <ContentRoot extraFooterSpace={withCookie && theme === Theme.GRADIENT}>{!isLoading && children}</ContentRoot>
         {!isLoading && (
           <>
-            {theme === Theme.WHITE && <Footer account={account} />}
+            {theme === Theme.WHITE && <Footer />}
             {!!systemMessage?.message && (
               <SystemMessagePopup message={systemMessage.message} type={systemMessage.type} />
             )}

@@ -554,7 +554,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     if (recipient.length === 0) {
       form.recipient = withError(form.recipient, `Please write a recipient.`);
     } else if (!isSameAlias(recipient, this.alias) && !(await this.accountUtils.isValidRecipient(recipient))) {
-      form.recipient = withError(form.recipient, `Cannot find a user with username '${recipient}'.`);
+      form.recipient = withError(form.recipient, `Cannot find a user with alias '${recipient}'.`);
     }
 
     return form;

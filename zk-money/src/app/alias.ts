@@ -8,23 +8,23 @@ interface ChecklistItem {
 const aliasChecklist: ChecklistItem[] = [
   {
     validate: (alias: string) => !!alias,
-    error: 'Username cannot be empty.',
+    error: 'Alias cannot be empty.',
   },
   {
     validate: (alias: string) => !alias.match(/^0x/i),
-    error: 'Username cannot start with 0x.',
+    error: 'Alias cannot start with 0x.',
   },
   {
     validate: (alias: string) => !EthAddress.isAddress(alias),
-    error: 'Username cannot be an ethereum address.',
+    error: 'Alias cannot be an ethereum address.',
   },
   {
     validate: (alias: string) => alias.length <= 20,
-    error: 'Username cannot be longer than 20 characters.',
+    error: 'Alias cannot be longer than 20 characters.',
   },
   {
     validate: (alias: string) => !alias.match(/\s/),
-    error: 'Username cannot contain spaces.',
+    error: 'Alias cannot contain spaces.',
   },
 ];
 

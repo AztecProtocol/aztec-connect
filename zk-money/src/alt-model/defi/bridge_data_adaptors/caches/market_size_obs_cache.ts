@@ -19,7 +19,7 @@ export function createMarketSizeObsCache(
         if (!adaptor || !assets || !recipes) return undefined;
         if (!adaptor.isYield) throw new Error('Can only call getMarketObs for yield bridges.');
         const recipe = recipes.find(x => x.id === recipeId)!;
-        const { inA, inB, outA, outB } = toAdaptorArgs(assets, recipe);
+        const { inA, inB, outA, outB } = toAdaptorArgs(recipe.flow.enter);
         return listenPoll(() => {
           adaptor.adaptor.getMarketSize(inA, inB, outA, outB, auxData).then(values => {
             const assetValues = values.map(x => ({ assetId: Number(x.assetId), value: x.amount }));

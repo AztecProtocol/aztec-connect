@@ -3,16 +3,17 @@ import { DefiInvestments } from '../../../components/defi_investments';
 import { DefiCardsList } from './defi_cards_list';
 
 interface EarnProps {
-  onOpenDefiModal: (recipe: DefiRecipe) => void;
+  onOpenDefiEnterModal: (recipe: DefiRecipe) => void;
+  onOpenDefiExitModal: (recipe: DefiRecipe, prefilledAmountStr: string) => void;
   isLoggedIn: boolean;
 }
 
 export function Earn(props: EarnProps) {
-  const { onOpenDefiModal, isLoggedIn } = props;
+  const { onOpenDefiEnterModal, onOpenDefiExitModal, isLoggedIn } = props;
   return (
     <div>
-      <DefiCardsList onSelect={onOpenDefiModal} isLoggedIn={isLoggedIn} />
-      {isLoggedIn && <DefiInvestments />}
+      <DefiCardsList onSelect={onOpenDefiEnterModal} isLoggedIn={isLoggedIn} />
+      {isLoggedIn && <DefiInvestments onOpenDefiExitModal={onOpenDefiExitModal} />}
     </div>
   );
 }
