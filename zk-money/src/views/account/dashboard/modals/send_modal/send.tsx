@@ -1,54 +1,24 @@
 import type { RemoteAsset } from 'alt-model/types';
 import React, { useState } from 'react';
 import { TxSettlementTime } from '@aztec/sdk';
-import styled from 'styled-components/macro';
 import { isValidForm, SendFormValues, SendMode, SendStatus, ValueAvailability } from 'app';
 import { Button, InputTheme } from 'components';
 import { Theme } from 'styles';
+import { SplitSection } from '../sections/split_section';
 import { AmountSection } from 'views/account/dashboard/modals/sections/amount_section';
 import { GasSection, GasSectionType } from 'views/account/dashboard/modals/sections/gas_section';
 import { SendProgress } from './send_progress';
 import { FaqHint } from 'ui-components';
 import { DescriptionSection, RecipientSection } from '../sections';
+import { useAmounts } from 'alt-model/asset_hooks';
+import { PrivacyInformationSection } from '../sections/privacy_information_section';
+import { SettlementTimeInformationSection } from '../sections/settlement_time_information_section';
 import style from './send.module.scss';
-import { Amount } from 'alt-model/assets';
 
 interface SendFormFields {
   amountStr: string;
   speed: TxSettlementTime;
 }
-
-interface RootProps {
-  sendMode: SendMode;
-}
-
-const Root = styled.div<RootProps>`
-  display: grid;
-  gap: 30px;
-  grid-template-columns: 1fr 1fr;
-  padding: 20px 40px;
-  max-height: calc(100vh - 100px);
-  overflow: auto;
-
-  ${({ sendMode }) =>
-    sendMode === SendMode.SEND
-      ? `
-    grid-template-areas:
-      'desc desc'
-      'amount recipient'
-      'amount fee';
-    `
-      : sendMode === SendMode.WIDTHDRAW
-      ? `grid-template-areas:
-          'desc desc'
-          'amount fee'
-          'recipient fee';`
-      : ``}
-`;
-
-const NextWrapper = styled.div`
-  justify-self: end;
-`;
 
 export interface SendProps {
   theme: Theme;
@@ -94,6 +64,10 @@ export const Send: React.FunctionComponent<SendProps> = ({
     speed: TxSettlementTime.INSTANT,
     amountStr: '',
   });
+  const { amount, fees, speed, maxAmount, recipient, submit } = form;
+  const txFee = fees.value[speed.value];
+  const inputTheme = theme === Theme.WHITE ? InputTheme.WHITE : InputTheme.LIGHT;
+  const feeAmounts = useAmounts(fees.value.map(feeValue => ({ assetId: asset.id, value: feeValue.fee })));
 
   if (form.status.value !== SendStatus.NADA) {
     return (
@@ -110,49 +84,61 @@ export const Send: React.FunctionComponent<SendProps> = ({
     );
   }
 
-  const { amount, fees, speed, maxAmount, recipient, submit } = form;
-  const txFee = fees.value[speed.value];
-  const inputTheme = theme === Theme.WHITE ? InputTheme.WHITE : InputTheme.LIGHT;
-
   return (
-    <Root sendMode={sendMode}>
+    <div className={style.root}>
       <DescriptionSection text={getDescription(sendMode)} />
-      <RecipientSection
-        theme={inputTheme}
-        recipient={recipient}
-        sendMode={sendMode}
-        onChangeValue={value => {
-          onChangeInputs({ recipient: { value: { ...recipient.value, input: value.replace(/^@+/, '') } } });
-        }}
-        message={form.recipient?.message}
+      <SplitSection
+        leftPanel={
+          <>
+            <RecipientSection
+              theme={inputTheme}
+              recipient={recipient}
+              sendMode={sendMode}
+              onChangeValue={value => {
+                onChangeInputs({ recipient: { value: { ...recipient.value, input: value.replace(/^@+/, '') } } });
+              }}
+              message={form.recipient?.message}
+            />
+            <AmountSection
+              maxAmount={maxAmount.value}
+              asset={asset}
+              amountStr={amount.value}
+              onChangeAmountStr={(value: string) => onChangeInputs({ amount: { value } })}
+              amountStrAnnotation={undefined}
+              message={form.amount?.message}
+              balanceType="L2"
+            />
+          </>
+        }
+        rightPanel={<PrivacyInformationSection txToAlias={sendMode === SendMode.SEND} />}
       />
-      <AmountSection
-        maxAmount={maxAmount.value}
-        asset={asset}
-        amountStr={amount.value}
-        onChangeAmountStr={(value: string) => onChangeInputs({ amount: { value } })}
-        amountStrAnnotation={undefined}
-        hidePrivacy={sendMode === SendMode.WIDTHDRAW}
-        message={form.amount?.message}
-        balanceType="L2"
+      <SplitSection
+        leftPanel={
+          <GasSection
+            asset={asset}
+            balanceType="L2"
+            type={GasSectionType.TX}
+            speed={fields.speed as TxSettlementTime}
+            onChangeSpeed={speed => setFields({ ...fields, speed: speed as TxSettlementTime })}
+            feeAmounts={feeAmounts}
+          />
+        }
+        rightPanel={<SettlementTimeInformationSection />}
       />
-      <GasSection
-        type={GasSectionType.TX}
-        speed={fields.speed as TxSettlementTime}
-        onChangeSpeed={speed => setFields({ ...fields, speed: speed as TxSettlementTime })}
-        feeAmount={new Amount(txFee.fee, asset)}
-      />
-      <FaqHint className={style.faqHint} />
-      <NextWrapper>
-        {submit.message && <div className={style.errorMessage}>{submit.message}</div>}
-        <Button
-          text="Next"
-          theme="gradient"
-          onClick={onValidate}
-          isLoading={submit.value}
-          disabled={!isValidForm(form as any) || recipient.value.valid !== ValueAvailability.VALID}
-        />
-      </NextWrapper>
-    </Root>
+      <div className={style.footer}>
+        <FaqHint className={style.faqHint} />
+        <div className={style.nextWrapper}>
+          {submit.message && <div className={style.errorMessage}>{submit.message}</div>}
+          <Button
+            className={style.nextButton}
+            text="Next"
+            theme="gradient"
+            onClick={onValidate}
+            isLoading={submit.value}
+            disabled={!isValidForm(form as any) || recipient.value.valid !== ValueAvailability.VALID}
+          />
+        </div>
+      </div>
+    </div>
   );
 };

@@ -57,9 +57,8 @@ const accountSocialItems = (alias: string) => [
 const FooterRoot = styled.div`
   display: flex;
   justify-content: center;
-  margin-top: ${spacings.l};
+  margin-top: 80px;
   width: 100%;
-  padding-top: ${spacings.l};
   background: ${colours.greyLight};
   font-size: ${fontSizes.m};
   line-height: ${lineHeights.m};

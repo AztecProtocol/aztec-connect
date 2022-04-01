@@ -1,4 +1,4 @@
-import { FaqHint, SectionTitle } from 'ui-components';
+import { FaqHint, Section, SectionTitle } from 'ui-components';
 import { useState } from 'react';
 import { Pagination } from '..';
 import { DefiInvestmentRow } from './defi_investment_row';
@@ -11,7 +11,7 @@ export function DefiInvestments() {
   const positions = useOpenPositions();
 
   return (
-    <>
+    <Section>
       <SectionTitle label="DeFi Investments" sideComponent={<FaqHint />} />
       {positions && positions.length > 0 ? (
         <>
@@ -28,6 +28,6 @@ export function DefiInvestments() {
       ) : (
         <div>You haven't made any investments yet</div>
       )}
-    </>
+    </Section>
   );
 }

@@ -24,18 +24,20 @@ export function Select<T>(props: SelectProps<T>) {
 
   const handleCloseDropdown = () => {
     setIsOpen(false);
+    // ugly hack to force the dropdown to close
+    setTimeout(() => setIsOpen(false), 0);
   };
 
   const handleOptionSelect = (option: DropdownOption<T>) => {
     setSelectedValue(option.label);
     handleChange(option.label);
+    handleCloseDropdown();
   };
 
   const handleOptionUnselect = () => {
     setSelectedValue(undefined);
     handleChange('');
-    // ugly hack to force the dropdown to close
-    setTimeout(() => setIsOpen(false), 0);
+    handleCloseDropdown();
   };
 
   const handleChange = (value: string) => {
@@ -49,7 +51,11 @@ export function Select<T>(props: SelectProps<T>) {
       <div className={style.innerFrame}>
         <GradientDisclosureIcon />
         <span className={style.value}>{selectedValue || props.placeholder}</span>
-        {selectedValue && <CloseMiniIcon className={style.closeButton} onClick={handleOptionUnselect} />}
+        {selectedValue && (
+          <div className={style.closeButton} onClick={handleOptionUnselect}>
+            <CloseMiniIcon />
+          </div>
+        )}
         <Dropdown
           className={style.dropdown}
           isOpen={isOpen}

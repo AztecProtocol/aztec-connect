@@ -52,7 +52,7 @@ export enum SendStatus {
   DONE,
 }
 
-interface TxFeesValue extends FormValue {
+export interface TxFeesValue extends FormValue {
   value: TxFee[];
 }
 

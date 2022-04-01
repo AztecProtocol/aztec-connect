@@ -5,7 +5,7 @@ import { DefiRecipe } from 'alt-model/defi/types';
 import { Overlay } from 'components/overlay';
 import { DefiModalHeader } from './defi_modal_header';
 import { Card, CardHeaderSize } from 'ui-components';
-import style from './defi_modal.module.scss';
+import { Modal } from 'components';
 
 interface DefiModalProps {
   recipe: DefiRecipe;
@@ -44,15 +44,15 @@ export function DefiModal({ recipe, onClose }: DefiModalProps) {
     );
   return (
     <Overlay>
-      <div className={style.modalWrapper}>
+      <Modal onClose={onClose}>
         <Card
           headerSize={CardHeaderSize.LARGE}
           cardHeader={
             <DefiModalHeader recipe={recipe} closeDisabled={!canClose} onClose={onClose} onBack={handleBack} />
           }
-          cardContent={<div className={style.modalBody}>{page}</div>}
+          cardContent={page}
         />
-      </div>
+      </Modal>
     </Overlay>
   );
 }

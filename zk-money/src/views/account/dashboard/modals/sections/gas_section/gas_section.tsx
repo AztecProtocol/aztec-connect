@@ -1,51 +1,44 @@
-import { useState } from 'react';
 import { DefiSettlementTime, TxSettlementTime } from '@aztec/sdk';
-import { SpeedSwitch, InfoWrap } from 'ui-components';
-import { BlockTitle, BorderBox, InfoButton, Text } from 'components';
+import { SpeedSwitch } from 'ui-components';
+import { Text } from 'components';
 import { useAmountCost } from 'alt-model';
-import { formatCost } from 'app';
-import style from './gas_section.module.scss';
 import { DefiGasSavings } from './def_gas_savings';
 import { Amount } from 'alt-model/assets';
 import { DefiRecipe } from 'alt-model/defi/types';
 import { DefiRollupTiming } from './defi_rollup_timing';
-
-function Info() {
-  return (
-    <>
-      <p>Your zk assets are invested in one of the following ways:</p>
-      <p>
-        <b>
-          <i>Batched transaction: </i>
-        </b>
-        your funds are grouped with other users privately in a roll-up. These are then sent approx every 2 hours. This
-        is the most cost effective transaction as everyone shares the fee.
-      </p>
-    </>
-  );
-}
+import { InputSection } from '../input_section';
+import { formatCost } from 'app';
+import style from './gas_section.module.scss';
+import { MiniL1BalanceIndicator, MiniL2BalanceIndicator } from '../amount_section/mini_balance_indicators';
+import { RemoteAsset } from 'alt-model/types';
 
 export enum GasSectionType {
   DEFI = 'DEFI',
   TX = 'TX',
 }
 
+type BalanceType = 'L1' | 'L2';
+
 interface GasSectionProps {
   type: GasSectionType;
   speed: DefiSettlementTime | TxSettlementTime;
   onChangeSpeed: (speed: DefiSettlementTime | TxSettlementTime) => void;
-  feeAmount?: Amount;
+  feeAmounts?: (Amount | undefined)[] | undefined[];
   recipe?: DefiRecipe;
+  asset: RemoteAsset;
+  balanceType: BalanceType;
 }
 
 interface DefiOption {
   value: DefiSettlementTime;
   label: string;
+  sublabel?: React.Component;
 }
 
 interface TxOption {
   value: TxSettlementTime;
   label: string;
+  sublabel?: React.Component;
 }
 
 const DEFI_OPTIONS: DefiOption[] = [
@@ -59,40 +52,45 @@ const TX_OPTIONS: TxOption[] = [
   { value: TxSettlementTime.NEXT_ROLLUP, label: 'Next Rollup' },
 ];
 
-export function GasSection({ type, speed, onChangeSpeed, feeAmount, recipe }: GasSectionProps) {
-  const [showingInfo, setShowingInfo] = useState(false);
+const mapFeeSubLabel = (options: DefiOption[] | TxOption[], feeAmounts?: (Amount | undefined)[]) => {
+  return options.map((option, i) =>
+    feeAmounts ? { ...option, sublabel: <AmountDisplay feeAmount={feeAmounts[i]} /> } : option,
+  );
+};
+
+function AmountDisplay({ feeAmount }: any) {
   const feeCost = useAmountCost(feeAmount);
   const feeCostStr = feeCost !== undefined ? `$${formatCost(feeCost)}` : undefined;
+  return <div className={style.amountDisplay}>{feeCostStr}</div>;
+}
 
+function renderBalanceIndicator(balanceType: BalanceType, asset: RemoteAsset) {
+  switch (balanceType) {
+    case 'L1':
+      return <MiniL1BalanceIndicator asset={asset} />;
+    case 'L2':
+      return <MiniL2BalanceIndicator asset={asset} />;
+  }
+}
+
+export function GasSection({ type, speed, onChangeSpeed, feeAmounts, recipe, asset, balanceType }: GasSectionProps) {
   let options: DefiOption[] | TxOption[] = DEFI_OPTIONS;
+
   if (type === GasSectionType.DEFI) {
-    options = DEFI_OPTIONS;
+    options = mapFeeSubLabel(DEFI_OPTIONS, feeAmounts) as DefiOption[];
   } else if (type === GasSectionType.TX) {
-    options = TX_OPTIONS;
+    options = mapFeeSubLabel(TX_OPTIONS, feeAmounts) as TxOption[];
   }
 
   const shouldShowDefiBatchingInfo =
     type === GasSectionType.DEFI && speed === DefiSettlementTime.DEADLINE && recipe !== undefined;
 
   return (
-    <BorderBox className={style.gasSection} area="fee">
-      <InfoWrap
-        showingInfo={showingInfo}
-        infoHeader={<Text weight="bold" text="Calculating your Gas Fee" />}
-        infoContent={<Info />}
-        onHideInfo={() => setShowingInfo(false)}
-        borderRadius={20}
-      >
-        <div className={style.content}>
-          <BlockTitle
-            title="Gas Fee"
-            info={
-              <Text weight="bold" italic>
-                {feeCostStr}
-              </Text>
-            }
-          />
-          <div className={style.header} />
+    <InputSection
+      title={'Gas Fee'}
+      titleComponent={renderBalanceIndicator(balanceType, asset)}
+      component={
+        <>
           <SpeedSwitch value={speed} onChangeValue={onChangeSpeed} options={options} />
           <div className={style.centeredText}>
             {shouldShowDefiBatchingInfo && (
@@ -102,13 +100,12 @@ export function GasSection({ type, speed, onChangeSpeed, feeAmount, recipe }: Ga
             )}
             {shouldShowDefiBatchingInfo && (
               <Text size="xxs">
-                <DefiGasSavings feeAmount={feeAmount} bridgeAddressId={recipe.addressId} />
+                <DefiGasSavings feeAmount={undefined} bridgeAddressId={recipe.addressId} />
               </Text>
             )}
           </div>
-          <InfoButton className={style.positionedInfoButton} onClick={() => setShowingInfo(true)} />
-        </div>
-      </InfoWrap>
-    </BorderBox>
+        </>
+      }
+    />
   );
 }

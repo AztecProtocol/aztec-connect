@@ -47,11 +47,7 @@ export function SendModal({ asset, onClose, sendMode = SendMode.SEND }: SendModa
   const txAmountLimit = config.txAmountLimits[assetAddressStr];
 
   return (
-    <Modal
-      theme={theme}
-      onClose={canClose && !overrideModalLayout ? onClose : undefined}
-      noPadding={overrideModalLayout}
-    >
+    <Modal theme={theme} onClose={() => canClose && onClose()} noPadding={overrideModalLayout}>
       <Card
         cardHeader={
           <div className={style.sendHeader}>

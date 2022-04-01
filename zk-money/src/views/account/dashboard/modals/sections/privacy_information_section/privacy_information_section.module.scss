@@ -1,0 +1,33 @@
+.privacyWrapper {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.fullPrivacyWrapper {
+  font-size: 14px;
+  line-height: 20px;
+  justify-content: center;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.title {
+  text-transform: uppercase;
+  text-align: right;
+  margin-bottom: 15px;
+  color: #939292;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+
+.bar {
+  margin-bottom: 25px;
+}
+
+.text {
+  text-align: center;
+  letter-spacing: 0.03em;
+  color: #939292;
+}

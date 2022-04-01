@@ -7,8 +7,7 @@
   display: flex;
   align-items: center;
   padding: spacings.$xxl 0;
-  padding: 64px 0;
-  height: 175px;
+  padding: 64px 0 104px 0;
 
   @media (max-width: breakpoints.$s) {
     padding: spacings.$xl 0;

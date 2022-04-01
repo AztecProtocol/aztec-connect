@@ -8,9 +8,5 @@ interface StatsSectionProps {
 }
 
 export function StatsSection(props: StatsSectionProps) {
-  return (
-    <BorderBox className={style.statsSection} area="stats">
-      <BridgeKeyStats recipe={props.recipe} compact />
-    </BorderBox>
-  );
+  return <BridgeKeyStats recipe={props.recipe} compact />;
 }

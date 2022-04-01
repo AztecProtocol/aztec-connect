@@ -26,5 +26,9 @@
 }
 
 .closeButton {
-  margin-left: 10px;
+  height: 30px;
+  padding-left: 10px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
 }

@@ -6,6 +6,8 @@ import { borderRadiuses, breakpoints, spacings } from '../../styles';
 
 const Root = styled.div`
   display: flex;
+  justify-self: center;
+  align-self: center;
   flex-direction: column;
   align-items: center;
   padding: ${spacings.xxl};

@@ -1,3 +1,33 @@
 .faqHint {
   align-self: end;
 }
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+}
+
+.descriptionWrapper {
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  gap: 30px;
+}
+
+.statsWrapper {
+  display: flex;
+  flex-direction: row;
+  gap: 160px;
+}
+
+.links {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 40px;
+}
+
+.link {
+  white-space: nowrap;
+}

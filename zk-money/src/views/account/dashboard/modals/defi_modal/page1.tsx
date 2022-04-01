@@ -6,29 +6,26 @@ import {
   DescriptionSection,
   GasSection,
   GasSectionType,
-  ProgressSection,
   StatsSection,
 } from 'views/account/dashboard/modals/sections';
 import { DefiRecipe } from 'alt-model/defi/types';
-
 import { DefiSettlementTime } from '@aztec/sdk';
-import { FaqHint } from 'ui-components';
+import { FaqHint, Hyperlink, HyperlinkIcon } from 'ui-components';
+import { SplitSection } from '../sections/split_section';
+import { SettlementTimeInformationSection } from '../sections/settlement_time_information_section';
+import defiBridgeImage from 'images/defi_bridge.svg';
 import style from './page1.module.scss';
+import { PrivacyInformationSection } from '../sections/privacy_information_section';
 
 const Root = styled.div`
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  grid-gap: 30px;
   gap: 30px;
   grid-template-columns: 1fr 1fr;
-  grid-template-areas:
-    'img progress'
-    'desc desc'
-    'amount stats'
-    'amount fee';
-`;
-
-const NextWrapper = styled.div`
-  justify-self: end;
-  align-self: end;
+  max-height: calc(100vh - 100px);
+  padding: 20px 40px;
+  overflow: auto;
 `;
 
 interface Page1Props {
@@ -49,33 +46,52 @@ export function Page1({
   onChangeAmountStr,
   onChangeSpeed,
   onNext,
-}: // amount
-Page1Props) {
+}: Page1Props) {
   return (
     <Root>
-      <div />
-      <ProgressSection recipe={recipe} />
-      <DescriptionSection text={recipe.longDescription} />
-      <AmountSection
-        maxAmount={validationResult.maxOutput ?? 0n}
-        asset={recipe.inputAssetA}
-        amountStr={fields.amountStr}
-        onChangeAmountStr={onChangeAmountStr}
-        message={feedback.amount}
-        balanceType="L2"
+      <div className={style.descriptionWrapper}>
+        <DescriptionSection text={recipe.longDescription} />
+        <img src={defiBridgeImage} />
+      </div>
+      <div className={style.statsWrapper}>
+        <StatsSection recipe={recipe} />
+        <div className={style.links}>
+          <Hyperlink label={'View Contract'} icon={HyperlinkIcon.Open} />
+          <Hyperlink label={'View Website'} icon={HyperlinkIcon.Open} />
+        </div>
+      </div>
+      <SplitSection
+        leftPanel={
+          <>
+            <AmountSection
+              maxAmount={validationResult.maxOutput ?? 0n}
+              asset={recipe.inputAssetA}
+              amountStr={fields.amountStr}
+              onChangeAmountStr={onChangeAmountStr}
+              message={feedback.amount}
+              balanceType="L2"
+            />
+          </>
+        }
+        rightPanel={<PrivacyInformationSection />}
       />
-      <StatsSection recipe={recipe} />
-      <GasSection
-        type={GasSectionType.DEFI}
-        speed={fields.speed as DefiSettlementTime}
-        onChangeSpeed={speed => onChangeSpeed(speed as DefiSettlementTime)}
-        feeAmount={validationResult.input.feeAmount}
-        recipe={recipe}
+      <SplitSection
+        leftPanel={
+          <GasSection
+            asset={recipe.inputAssetA}
+            balanceType="L2"
+            type={GasSectionType.DEFI}
+            speed={fields.speed as DefiSettlementTime}
+            onChangeSpeed={speed => onChangeSpeed(speed as DefiSettlementTime)}
+            recipe={recipe}
+          />
+        }
+        rightPanel={<SettlementTimeInformationSection />}
       />
-      <FaqHint className={style.faqHint} />
-      <NextWrapper>
+      <div className={style.footer}>
+        <FaqHint className={style.faqHint} />
         <Button text="Next" onClick={onNext} disabled={!validationResult.isValid} />
-      </NextWrapper>
+      </div>
     </Root>
   );
 }

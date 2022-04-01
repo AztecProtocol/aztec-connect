@@ -27,7 +27,7 @@
 "@aztec/blockchain@file:../blockchain/dest":
   version "2.0.0"
   dependencies:
-    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-f476131d-0514-47f6-b818-3d0b4aa16726-1648637936486/node_modules/barretenberg.js/dest"
+    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-08d3f3c3-dedc-4f6e-9698-2bab02011490-1648643041667/node_modules/barretenberg.js/dest"
     "@aztec/bridge-clients" "0.1.27"
     "@ethersproject/experimental" "5.5.0"
     "@nomiclabs/hardhat-ethers" "^2.0.2"
@@ -49,14 +49,16 @@
   resolved "https://registry.yarnpkg.com/@aztec/bridge-clients/-/bridge-clients-0.1.27.tgz#b9f3ac71b93879d04d43fc108742ad64e4c2f14f"
   integrity sha512-GZ+d0/FWfMTuEhZnrT/yyjeXEHqd6KctY93KtvWcXljNMc087ZKzWnB0YExVaYloQKC95HBfh8HzEVkr0icvnQ==
 
-"@aztec/bridge-clients@file:../../aztec-connect-bridges":
+"@aztec/bridge-clients@0.1.29":
   version "0.1.29"
+  resolved "https://registry.yarnpkg.com/@aztec/bridge-clients/-/bridge-clients-0.1.29.tgz#b0f5e997b0e1b063f92072fcc4ec133793adb07f"
+  integrity sha512-2dc4WA5fEj1f2cPCSBU6d6xxRzcFLLn91zOxfI6irEQisiKONGdaIko+5LHc55WtwDs365cdDJXQ2TTfWEu2+w==
 
 "@aztec/sdk@file:../sdk/dest":
   version "2.0.16"
   dependencies:
-    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-07493b5a-bc76-49a6-969e-5fa6ce9335b0-1648637936401/node_modules/barretenberg.js/dest"
-    "@aztec/blockchain" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-07493b5a-bc76-49a6-969e-5fa6ce9335b0-1648637936401/node_modules/blockchain/dest"
+    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-0d72f3b4-32ff-4da9-9df2-fcf4c7535aa3-1648643041585/node_modules/barretenberg.js/dest"
+    "@aztec/blockchain" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-0d72f3b4-32ff-4da9-9df2-fcf4c7535aa3-1648643041585/node_modules/blockchain/dest"
     "@types/levelup" "^4.3.0"
     broadcast-channel "^3.1.0"
     detect-node "^2.0.4"

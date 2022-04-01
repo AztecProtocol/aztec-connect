@@ -25,6 +25,8 @@ const Cell = styled.div<{ idx: number; optionCount: number }>`
   align-items: center;
   transform: translateX(${({ idx }) => idx * 100}%);
   transition: transform 0.2s;
+  display: flex;
+  flex-direction: column;
 `;
 
 const InnerCell = styled(Cell)`
@@ -51,6 +53,7 @@ const BoldLabels = styled.div<{ idx: number; optionCount: number }>`
 interface Option<T> {
   value: T;
   label: string;
+  sublabel?: React.Component;
 }
 interface SpeedSwitchProps<T> {
   value: T;
@@ -63,18 +66,20 @@ export function SpeedSwitch<T>({ value, onChangeValue, options, className }: Spe
   const selectedIdx = options.findIndex(opt => opt.value === value);
   return (
     <Root className={className}>
-      {options.map((opt, idx) => (
-        <Cell key={idx} idx={idx} onClick={() => onChangeValue(opt.value)} optionCount={options.length}>
-          <Text size="xs" color="gradient" text={opt.label} />
+      {options.map((option, idx) => (
+        <Cell key={idx} idx={idx} onClick={() => onChangeValue(option.value)} optionCount={options.length}>
+          <Text size="xs" color="gradient" text={option.label} />
+          {option.sublabel}
         </Cell>
       ))}
       <Cell idx={selectedIdx} optionCount={options.length}>
         <Switch>
           <GradientBorder>
             <BoldLabels idx={selectedIdx} optionCount={options.length}>
-              {options.map((opt, idx) => (
+              {options.map((option, idx) => (
                 <InnerCell key={idx} idx={idx} optionCount={options.length}>
-                  <Text size="xs" color="gradient" weight="bold" text={opt.label} />
+                  <Text size="xs" color="gradient" weight="bold" text={option.label} />
+                  {option.sublabel}
                 </InnerCell>
               ))}
             </BoldLabels>

@@ -55,7 +55,7 @@ export function ShieldModal(props: ShieldModalProps) {
     );
 
   return (
-    <Modal>
+    <Modal onClose={handleClose}>
       <Card
         cardHeader={
           <div className={style.sendHeader}>

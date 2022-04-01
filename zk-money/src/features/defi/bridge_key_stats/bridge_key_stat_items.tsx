@@ -16,7 +16,7 @@ function formatPriceShort(value: bigint) {
 
 function LiquidityValue(props: { recipe: DefiRecipe }) {
   const liquidity = useDefaultLiquidity(props.recipe.id);
-  const valueStr = liquidity !== undefined ? `$${formatPriceShort(liquidity)}` : '??';
+  const valueStr = liquidity !== undefined ? `$${formatPriceShort(liquidity)}` : '';
   return <>{valueStr}</>;
 }
 
@@ -31,7 +31,7 @@ const percentageFormatter = new Intl.NumberFormat('en-GB', { style: 'percent', m
 
 function YieldValue(props: { recipe: DefiRecipe }) {
   const expectedYield = useDefaultExpectedYield(props.recipe);
-  const yieldStr = expectedYield !== undefined ? percentageFormatter.format(expectedYield) : '??';
+  const yieldStr = expectedYield !== undefined ? percentageFormatter.format(expectedYield) : '';
   return <>{yieldStr}</>;
 }
 
@@ -40,7 +40,7 @@ const dateFormatter = new Intl.DateTimeFormat('default', { day: 'numeric', month
 function MaturityValue(props: { recipe: DefiRecipe }) {
   // Assume aux data is unix datetime for now
   const auxData = useDefaultAuxDataOption(props.recipe.id);
-  if (auxData === undefined) return <>??</>;
+  if (auxData === undefined) return <div />;
   const ms = Number(auxData) * 1000;
   const dateStr = dateFormatter.format(ms);
   return <>{dateStr}</>;

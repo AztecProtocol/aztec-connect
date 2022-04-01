@@ -40,6 +40,11 @@ interface ModalHeaderProps {
   onClose?: () => void;
 }
 
+interface ModalProps extends ModalHeaderProps {
+  children: React.ReactNode;
+  noPadding?: boolean;
+}
+
 export const ModalHeader: React.FunctionComponent<ModalHeaderProps> = ({ theme, title, onClose }) => (
   <Header>
     {!!title && (
@@ -57,28 +62,31 @@ export const ModalHeader: React.FunctionComponent<ModalHeaderProps> = ({ theme, 
   </Header>
 );
 
-interface ModalProps extends ModalHeaderProps {
-  children: React.ReactNode;
-  noPadding?: boolean;
-}
+export const Modal: React.FunctionComponent<ModalProps> = props => {
+  const handleKeyDown = (keyboardEvent: KeyboardEvent) => {
+    if (keyboardEvent.key === 'Escape') {
+      props.onClose && props.onClose();
+    }
+  };
 
-export const Modal: React.FunctionComponent<ModalProps> = ({ children }) => {
   useEffect(() => {
     const prevPosition = document.body.style.position;
     const scrollY = window.scrollY;
     document.body.style.position = 'fixed';
     document.body.style.top = '0px';
+    document.addEventListener('keydown', handleKeyDown);
 
     return () => {
       document.body.style.position = prevPosition;
       document.body.style.top = '';
       window.scrollTo(0, scrollY);
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 
   return (
     <Overlay>
-      <ModalWrapper>{children}</ModalWrapper>
+      <ModalWrapper>{props.children}</ModalWrapper>
     </Overlay>
   );
 };

@@ -351,6 +351,10 @@ export class AppView extends PureComponent<AppProps, AppState> {
     const processingAction = this.app.isProcessingAction();
     const allowReset = action !== AppAction.ACCOUNT && (!processingAction || systemMessage.type === MessageType.ERROR);
     const isLoggedIn = step === LoginStep.DONE;
+    const shouldCenterContent =
+      window.location.pathname === '/trade' ||
+      window.location.pathname === '/signup' ||
+      window.location.pathname === '/signin';
 
     const accountComponent = isLoggedIn ? (
       <AccountItem>
@@ -391,7 +395,12 @@ export class AppView extends PureComponent<AppProps, AppState> {
             accountComponent={accountComponent}
             onLogin={this.handleLogin}
           />
-          <TransitionGroup>
+          <TransitionGroup
+            style={{
+              margin: shouldCenterContent ? 'auto 0 auto 0' : 'initial',
+              // paddingTop: shouldCenterContent ? '64px' : 'initial',
+            }}
+          >
             <CSSTransition key={window.location.pathname} classNames="fade" timeout={250}>
               <Routes location={window.location.pathname}>
                 {['/signup', '/signin'].map((path: string) => (

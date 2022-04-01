@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Select, SectionTitle, SearchInput } from 'ui-components';
+import { Select, Section, SectionTitle, SearchInput } from 'ui-components';
 import { DefiCard } from '../../../components';
 import { DefiRecipe } from '../../../alt-model/defi/types';
 import { useDefiRecipes } from 'alt-model/top_level_context';
@@ -87,7 +87,7 @@ export const DefiCardsList = ({ onSelect, isLoggedIn }: DefiCardsListProps) => {
   const assets = new Set([...inputAssets, ...outputAssets]);
 
   return (
-    <>
+    <Section>
       <SectionTitle
         label="Popular Investments"
         sideComponent={
@@ -106,6 +106,6 @@ export const DefiCardsList = ({ onSelect, isLoggedIn }: DefiCardsListProps) => {
           <DefiCard key={idx} className={style.defiCard} recipe={recipe} onSelect={onSelect} isLoggedIn={isLoggedIn} />
         ))}
       </div>
-    </>
+    </Section>
   );
 };

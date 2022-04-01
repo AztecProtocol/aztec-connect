@@ -1,5 +1,5 @@
 .faqHint {
-  align-self: end;
+  // align-self: end;
 }
 
 .errorMessage {
@@ -10,4 +10,30 @@
   line-height: 16px;
   align-self: end;
   margin-bottom: 16px;
+}
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  grid-template-columns: 1fr 1fr;
+  padding: 20px 40px;
+  max-height: calc(100vh - 100px);
+  overflow: auto;
+}
+
+.nextWrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+}
+
+.nextButton {
+  justify-self: end;
+  align-self: end;
 }

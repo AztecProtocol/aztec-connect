@@ -2,7 +2,7 @@ import { getAssetPreferredFractionalDigits } from 'alt-model/known_assets/known_
 import { useRemoteAssets } from 'alt-model/top_level_context';
 import React, { Fragment, useState } from 'react';
 import styled, { css } from 'styled-components/macro';
-import { SectionTitle } from 'ui-components';
+import { Section, SectionTitle } from 'ui-components';
 import { AccountTx, formatBaseUnits, JoinSplitTx } from '../../app';
 import { AccountTxSummary, JoinSplitTxSummary, Pagination } from '../../components';
 import { spacings } from '../../styles';
@@ -54,7 +54,7 @@ export const TransactionHistory: React.FunctionComponent<TransactionHistoryProps
   const numAc = accountTxs.length;
 
   return (
-    <>
+    <Section>
       <SectionTitle label="Transaction History" />
       {joinSplitTxs.slice((page - 1) * txsPerPage, page * txsPerPage).map((tx, idx) => {
         const asset = remoteAssets?.find(x => x.id === tx.assetId);
@@ -93,6 +93,6 @@ export const TransactionHistory: React.FunctionComponent<TransactionHistoryProps
           <Pagination totalItems={numJs + numAc} page={page} itemsPerPage={txsPerPage} onChangePage={setPage} />
         </PaginationRoot>
       )}
-    </>
+    </Section>
   );
 };

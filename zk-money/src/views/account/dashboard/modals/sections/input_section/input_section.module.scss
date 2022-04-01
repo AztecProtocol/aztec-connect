@@ -1,15 +1,15 @@
 .content {
-  padding: 24px;
-}
-
-.recipientInput {
-  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .errorMessage {
   font-size: 14px;
   font-weight: 600;
+  margin-top: 16px;
   height: 14px;
   bottom: 10px;
   line-height: 16px;
+  margin: 10px 0 10px 0;
 }

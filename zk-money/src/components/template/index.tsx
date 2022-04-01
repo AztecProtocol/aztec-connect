@@ -9,7 +9,6 @@ import { Footer } from './footer';
 import { debounce } from 'lodash';
 
 export * from './content_wrapper';
-export * from './section';
 export * from './system_message_popup';
 
 interface RootProps {
@@ -57,6 +56,9 @@ interface ContentRootProps {
 
 const ContentRoot = styled(ContentWrapper)<ContentRootProps>`
   ${({ extraFooterSpace }) => extraFooterSpace && 'padding-bottom: 160px;'}
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 
   @media (max-width: ${breakpoints.m}) {
     ${({ extraFooterSpace }) => extraFooterSpace && 'padding-bottom: 216px;'}

@@ -1,6 +1,6 @@
 import { MessageType, RecipientInput, SendMode, ValueAvailability } from 'app';
-import { BorderBox, InputTheme, BlockTitle, InputWrapper, InputStatusIcon, MaskedInput, InputStatus } from 'components';
-import style from './recipient_section.module.scss';
+import { InputTheme, InputWrapper, InputStatusIcon, MaskedInput, InputStatus } from 'components';
+import { InputSection } from '../input_section';
 
 interface RecipientSectionProps {
   theme: InputTheme;
@@ -37,10 +37,10 @@ export function RecipientSection(props: RecipientSectionProps) {
   const { theme, recipient, sendMode, onChangeValue } = props;
 
   return (
-    <BorderBox area="recipient">
-      <div className={style.content}>
-        <BlockTitle title="Recipient" />
-        <InputWrapper className={style.recipientInput} theme={theme}>
+    <InputSection
+      title={'Recipient'}
+      component={
+        <InputWrapper theme={theme}>
           <InputStatusIcon
             status={getRecipientInputStatus(recipient)}
             inactive={!recipient.value.input && !recipient.message}
@@ -53,8 +53,8 @@ export function RecipientSection(props: RecipientSectionProps) {
             placeholder={getRecipientPlaceholder(sendMode)}
           />
         </InputWrapper>
-        <div className={style.errorMessage}>{props.message}</div>
-      </div>
-    </BorderBox>
+      }
+      errorMessage={props.message}
+    />
   );
 }

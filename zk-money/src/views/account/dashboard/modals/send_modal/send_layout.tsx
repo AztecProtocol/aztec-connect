@@ -1,14 +1,8 @@
 import React from 'react';
-import styled from 'styled-components/macro';
 import { ProviderState, SendStatus, WalletId } from 'app';
 import { Send, SendProps } from './send';
 import { SigningKeyForm } from 'views/account/signing_key_form';
-
-const SendWrapper = styled.div`
-  display: flex;
-  justify-content: space-between;
-  flex-direction: column;
-`;
+import style from './send_layout.module.scss';
 
 interface SendLayoutProps extends SendProps {
   providerState?: ProviderState;
@@ -37,8 +31,8 @@ export const SendLayout: React.FunctionComponent<SendLayoutProps> = ({
   }
 
   return (
-    <SendWrapper>
+    <div className={style.sendWrapper}>
       <Send {...sendProps} />
-    </SendWrapper>
+    </div>
   );
 };

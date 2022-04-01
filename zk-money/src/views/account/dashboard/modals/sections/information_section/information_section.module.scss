@@ -1,0 +1,33 @@
+@use '../../../../../../ui-components/styles/mixins.scss';
+
+.informationWrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 1;
+  font-size: 16px;
+}
+
+.titleWrapper {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+  letter-spacing: 0.03em;
+}
+
+.title {
+  font-weight: 500;
+}
+
+.subtitle {
+  font-weight: 500;
+}
+
+.content {
+  margin: 40px 0;
+}

@@ -4,8 +4,8 @@ import { SendMode, ValueAvailability } from 'app';
 import { Button, InputTheme } from 'components';
 import { AmountSection, GasSection, GasSectionType, RecipientSection } from 'views/account/dashboard/modals/sections';
 import { ConnectedLegacyWalletSelect } from './connected_legacy_wallet_select';
-import { DropdownOption } from 'components/dropdown';
 import { RemoteAsset } from 'alt-model/types';
+import { SplitSection } from '../sections/split_section';
 import style from './shield.module.scss';
 
 function toLegacyRecipientInput({ recipientAlias }: ShieldFormFields, { input }: ShieldFormValidationResult) {
@@ -56,30 +56,44 @@ export function ShieldPage1({
         asset={asset}
         errorFeedback={feedback.walletAccount}
       />
-      <AmountSection
-        maxAmount={validationResult.maxL2Output ?? 0n}
-        asset={asset}
-        assets={assets}
-        amountStr={fields.amountStr}
-        allowAssetSelection={true}
-        onChangeAsset={onChangeAsset}
-        onChangeAmountStr={onChangeAmountStr}
-        hidePrivacy
-        message={feedback.amount}
-        balanceType="L1"
+      <SplitSection
+        leftPanel={
+          <>
+            <AmountSection
+              maxAmount={validationResult.maxL2Output ?? 0n}
+              asset={asset}
+              assets={assets}
+              amountStr={fields.amountStr}
+              allowAssetSelection={true}
+              onChangeAsset={onChangeAsset}
+              onChangeAmountStr={onChangeAmountStr}
+              hidePrivacy
+              message={feedback.amount}
+              balanceType="L1"
+            />
+            <RecipientSection
+              theme={InputTheme.WHITE}
+              recipient={toLegacyRecipientInput(fields, validationResult)}
+              sendMode={SendMode.SEND}
+              onChangeValue={onChangeRecipientAlias}
+            />
+          </>
+        }
+        rightPanel={<div />}
       />
-      <RecipientSection
-        theme={InputTheme.WHITE}
-        recipient={toLegacyRecipientInput(fields, validationResult)}
-        sendMode={SendMode.SEND}
-        onChangeValue={onChangeRecipientAlias}
+      <SplitSection
+        leftPanel={
+          <GasSection
+            asset={asset}
+            balanceType="L1"
+            type={GasSectionType.TX}
+            speed={fields.speed}
+            onChangeSpeed={speed => onChangeSpeed(speed as TxSettlementTime)}
+          />
+        }
+        rightPanel={<div />}
       />
-      <GasSection
-        type={GasSectionType.TX}
-        speed={fields.speed}
-        onChangeSpeed={speed => onChangeSpeed(speed as TxSettlementTime)}
-        feeAmount={validationResult.input.feeAmount}
-      />
+
       {feedback.footer && <div className={style.errorMessage}>{feedback.footer}</div>}
       <div className={style.nextWrapper}>
         <Button theme="gradient" text="Next" onClick={onNext} disabled={!validationResult.isValid} />

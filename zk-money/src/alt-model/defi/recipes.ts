@@ -58,7 +58,7 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
     investmentType: DefiInvestmentType.FIXED_YIELD,
     shortDesc: 'Deposit zkDAI into Element and receive a fixed yield back in xx Days as zkDAI',
     longDescription:
-      'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
+      'This bridge, lets you invest DAI into AAVE and receive interest bearing aDAI in return. Also receive AAVE liquidity mining rewards. Gas savings are 30x and privacy is the default.',
     bannerImg: ethToDaiBanner,
     logo: elementFiLogo,
     miniLogo: elementMiniLogo,
@@ -77,7 +77,7 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
     shortDesc:
       'Stake zkETH on the Beacon chain via Lido. Receive a variable yield via the zkwStETH tokens that can be claimed for zkETH',
     longDescription:
-      'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
+      'This bridge, lets you invest DAI into AAVE and receive interest bearing aDAI in return. Also receive AAVE liquidity mining rewards. Gas savings are 30x and privacy is the default.',
     bannerImg: ethToDaiBanner,
     logo: lidoLogo,
     miniLogo: lidoMiniLogo,

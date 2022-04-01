@@ -1,0 +1,22 @@
+.splitSectionWrapper {
+  display: flex;
+  overflow: hidden;
+  flex-direction: row;
+}
+
+.leftPanel {
+  flex: 0 0 60%;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.rightPanel {
+  flex: 1 1 auto;
+  padding: 24px;
+  background-color: #fafafa;
+  border-left: 1px solid #e2e2e2;
+  border-top-right-radius: 20px;
+  border-bottom-right-radius: 20px;
+}

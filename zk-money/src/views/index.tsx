@@ -5,9 +5,7 @@ import { Template } from '../components';
 import { Config } from '../config';
 import { PageTransitionHandler } from '../page_transition_handler';
 import { Theme } from '../styles';
-import { AboutBalance } from './about_balance';
 import { AppView } from './app';
-import { NotFound } from './not_found';
 import { appPaths } from './views';
 
 function AppViewConnector({ config }: { config: Config }) {
@@ -20,7 +18,7 @@ function AppViewConnector({ config }: { config: Config }) {
   }
   return (
     <Template theme={Theme.GRADIENT}>
-      <NotFound />
+      <div>Not Found</div>
     </Template>
   );
 }
@@ -33,14 +31,6 @@ export const Views: React.FunctionComponent<ViewsProps> = ({ config }) => (
   <>
     <Routes>
       <Route path="/*" element={<AppViewConnector config={config} />} />
-      <Route
-        path="/about_your_balance"
-        element={
-          <Template theme={Theme.WHITE}>
-            <AboutBalance />
-          </Template>
-        }
-      />
     </Routes>
     <PageTransitionHandler />
   </>
