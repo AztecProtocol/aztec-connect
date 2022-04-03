@@ -1,7 +1,6 @@
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
-import { randomBytes } from '@aztec/barretenberg/crypto';
 import { DefiInteractionNote, TreeClaimNote } from '@aztec/barretenberg/note_algorithms';
 import { OffchainDefiClaimData } from '@aztec/barretenberg/offchain_tx_data';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
@@ -44,8 +43,15 @@ export class ClaimProofCreator {
       const interactionNoteForThisClaim = interactionNotesForRollup[noteIndex];
       // rollupForThisClaim is the rollup that produced the defi interaction notes
       // the rollup id we need is the one following, which is when the notes were entered into the defi tree
-      const interactionIndex = (rollupForThisClaimsDefiInteraction.id + 1) * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK + noteIndex;
-      const proofData = await this.createClaimProof(dataRoot, defiRoot, claim, interactionNoteForThisClaim, interactionIndex);
+      const interactionIndex =
+        (rollupForThisClaimsDefiInteraction.id + 1) * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK + noteIndex;
+      const proofData = await this.createClaimProof(
+        dataRoot,
+        defiRoot,
+        claim,
+        interactionNoteForThisClaim,
+        interactionIndex,
+      );
       if (!proofData) {
         // TODO: Once we correctly handle interrupts, this is not a panic scenario.
         throw new Error('Failed to create claim proof. This should not happen.');

@@ -59,6 +59,10 @@ export class UserState extends EventEmitter {
     super();
   }
 
+  private debug(...args: any[]) {
+    debug(`${this.user.id.toShortString()}:`, ...args);
+  }
+
   /**
    * Load/refresh user state.
    */
@@ -70,17 +74,19 @@ export class UserState extends EventEmitter {
   /**
    * First handles all historical blocks.
    * Then starts processing blocks added to queue via `processBlock()`.
+   * Blocks may already be being added to the queue before we start synching. This means we may try to
+   * process the same block twice, but will never miss a block. The block handler will filter duplicates.
    */
   public async startSync() {
     if (this.syncState !== SyncState.OFF) {
       return;
     }
     const start = new Date().getTime();
-    debug(`starting sync for ${this.user.id} from rollup block ${this.user.syncedToRollup + 1}...`);
+    this.debug(`starting sync from rollup block ${this.user.syncedToRollup + 1}...`);
     this.syncState = SyncState.SYNCHING;
     const blocks = await this.rollupProvider.getBlocks(this.user.syncedToRollup + 1);
     await this.handleBlocks(blocks);
-    debug(`sync complete in ${new Date().getTime() - start}ms.`);
+    this.debug(`sync complete in ${new Date().getTime() - start}ms.`);
     this.syncingPromise = this.blockQueue.process(async block => this.handleBlocks([block]));
     this.syncState = SyncState.MONITORING;
   }
@@ -92,7 +98,7 @@ export class UserState extends EventEmitter {
     if (this.syncState === SyncState.OFF) {
       return;
     }
-    debug(`stopping sync for ${this.user.id}.`);
+    this.debug(`stopping sync.`);
     flush ? this.blockQueue.end() : this.blockQueue.cancel();
     this.syncState = SyncState.OFF;
     return this.syncingPromise;
@@ -131,6 +137,7 @@ export class UserState extends EventEmitter {
     const offchainJoinSplitData: OffchainJoinSplitData[] = [];
     const offchainAccountData: OffchainAccountData[] = [];
     const offchainDefiDepositData: OffchainDefiDepositData[] = [];
+
     innerProofs.forEach((proof, i) => {
       switch (proof.proofId) {
         case ProofId.DEPOSIT:
@@ -170,13 +177,13 @@ export class UserState extends EventEmitter {
     const viewingKeysBuf = Buffer.concat(viewingKeys.flat().map(vk => vk.toBuffer()));
     const decryptedTreeNotes = await batchDecryptNotes(
       viewingKeysBuf,
-      inputNullifiers,
       this.user.privateKey,
       this.noteAlgos,
       this.grumpkin,
     );
     const treeNotes = recoverTreeNotes(
       decryptedTreeNotes,
+      inputNullifiers,
       noteCommitments,
       this.user.privateKey,
       this.grumpkin,
@@ -282,7 +289,7 @@ export class UserState extends EventEmitter {
     const { txId, userId, newSigningPubKey1, newSigningPubKey2, aliasHash } = tx;
 
     if (newSigningPubKey1) {
-      debug(`user ${this.user.id} adds signing key ${newSigningPubKey1.toString('hex')}.`);
+      this.debug(`added signing key ${newSigningPubKey1.toString('hex')}.`);
       await this.db.addUserSigningKey({
         accountId: userId,
         key: newSigningPubKey1,
@@ -291,7 +298,7 @@ export class UserState extends EventEmitter {
     }
 
     if (newSigningPubKey2) {
-      debug(`user ${this.user.id} adds signing key ${newSigningPubKey2.toString('hex')}.`);
+      this.debug(`added signing key ${newSigningPubKey2.toString('hex')}.`);
       await this.db.addUserSigningKey({
         accountId: userId,
         key: newSigningPubKey2,
@@ -300,17 +307,17 @@ export class UserState extends EventEmitter {
     }
 
     if (!this.user.aliasHash || !this.user.aliasHash.equals(aliasHash)) {
-      debug(`user ${this.user.id} updates alias hash ${aliasHash.toString()}.`);
+      this.debug(`updated alias hash ${aliasHash.toString()}.`);
       this.user = { ...this.user, aliasHash };
       await this.db.updateUser(this.user);
     }
 
     const savedTx = await this.db.getAccountTx(txId);
     if (savedTx) {
-      debug(`settling account tx: ${txId.toString()}`);
+      this.debug(`settling account tx: ${txId.toString()}`);
       await this.db.settleAccountTx(txId, blockCreated);
     } else {
-      debug(`recovered account tx: ${txId.toString()}`);
+      this.debug(`recovered account tx: ${txId.toString()}`);
       await this.db.addAccountTx(tx);
     }
   }
@@ -339,7 +346,7 @@ export class UserState extends EventEmitter {
     const txId = new TxId(proof.txId);
     const savedTx = await this.db.getPaymentTx(txId, this.user.id);
     if (savedTx) {
-      debug(`settling payment tx: ${txId}`);
+      this.debug(`settling payment tx: ${txId}`);
       await this.db.settlePaymentTx(txId, this.user.id, blockCreated);
     } else {
       const tx = this.recoverPaymentTx(
@@ -351,7 +358,7 @@ export class UserState extends EventEmitter {
         destroyedNote1,
         destroyedNote2,
       );
-      debug(`recovered payment tx: ${txId}`);
+      this.debug(`received or recovered payment tx: ${txId}`);
       await this.db.addPaymentTx(tx);
     }
   }
@@ -372,12 +379,7 @@ export class UserState extends EventEmitter {
       return;
     }
     const { bridgeId, partialStateSecretEphPubKey } = offchainTxData;
-    const partialStateSecret = deriveNoteSecret(
-      partialStateSecretEphPubKey,
-      this.user.privateKey,
-      this.grumpkin,
-      TreeNote.LATEST_VERSION,
-    );
+    const partialStateSecret = deriveNoteSecret(partialStateSecretEphPubKey, this.user.privateKey, this.grumpkin);
     const txId = new TxId(proof.txId);
     await this.addClaim(noteStartIndex, txId, noteCommitment1, partialStateSecret);
 
@@ -395,11 +397,11 @@ export class UserState extends EventEmitter {
 
     const savedTx = await this.db.getDefiTx(txId);
     if (savedTx) {
-      debug(`found defi tx, awaiting claim for settlement: ${txId}`);
+      this.debug(`found defi tx, awaiting claim for settlement: ${txId}`);
       await this.db.settleDefiDeposit(txId, interactionNonce, isAsync, blockCreated);
     } else {
       const tx = this.recoverDefiTx(proof, offchainTxData, blockCreated, interactionNonce, isAsync);
-      debug(`recovered defi tx: ${txId}`);
+      this.debug(`recovered defi tx: ${txId}`);
       await this.db.addDefiTx(tx);
     }
   }
@@ -470,7 +472,7 @@ export class UserState extends EventEmitter {
     await this.refreshNotePicker();
 
     await this.db.settleDefiTx(txId, blockCreated);
-    debug(`settled defi tx: ${txId}`);
+    this.debug(`settled defi tx: ${txId}`);
   }
 
   private async processNewNote(
@@ -508,7 +510,9 @@ export class UserState extends EventEmitter {
 
     if (value) {
       await this.db.addNote(note);
-      debug(`user ${this.user.id} successfully decrypted note at index ${index} with value ${value}.`);
+      if (!pending) {
+        this.debug(`successfully decrypted note at index ${index} with value ${value}.`);
+      }
     }
 
     return note;
@@ -520,7 +524,7 @@ export class UserState extends EventEmitter {
       return;
     }
     await this.db.nullifyNote(nullifier);
-    debug(`user ${this.user.id} nullified note at index ${note.index} with value ${note.value}.`);
+    this.debug(`nullified note at index ${note.index} with value ${note.value}.`);
     return note;
   }
 
@@ -532,7 +536,7 @@ export class UserState extends EventEmitter {
       secret: noteSecret,
       nullifier,
     });
-    debug(`user ${this.user.id} successfully decrypted claim note at index ${index}.`);
+    this.debug(`successfully decrypted claim note at index ${index}.`);
   }
 
   private recoverPaymentTx(
@@ -670,15 +674,15 @@ export class UserState extends EventEmitter {
       case ProofId.DEPOSIT:
       case ProofId.WITHDRAW:
       case ProofId.SEND:
-        debug(`adding pending payment tx: ${tx.txId}`);
+        this.debug(`adding pending payment tx: ${tx.txId}`);
         await this.db.addPaymentTx(tx);
         break;
       case ProofId.ACCOUNT:
-        debug(`adding pending account tx: ${tx.txId}`);
+        this.debug(`adding pending account tx: ${tx.txId}`);
         await this.db.addAccountTx(tx);
         break;
       case ProofId.DEFI_DEPOSIT:
-        debug(`adding pending defi tx: ${tx.txId}`);
+        this.debug(`adding pending defi tx: ${tx.txId}`);
         await this.db.addDefiTx(tx);
         break;
     }

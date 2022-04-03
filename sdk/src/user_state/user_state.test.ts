@@ -114,7 +114,7 @@ describe('user state', () => {
     await userState.startSync();
   });
 
-  const createNote = (assetId: number, value: bigint, user: AccountId, inputNullifier: Buffer, version = 1) => {
+  const createNote = (assetId: number, value: bigint, user: AccountId, inputNullifier: Buffer) => {
     const ephPrivKey = createEphemeralPrivKey();
     const note = TreeNote.createFromEphPriv(
       user.publicKey,
@@ -124,16 +124,15 @@ describe('user state', () => {
       inputNullifier,
       ephPrivKey,
       grumpkin,
-      version,
     );
     const viewingKey = note.createViewingKey(ephPrivKey, grumpkin);
     return { note, viewingKey };
   };
 
-  const createClaimNote = (bridgeId: BridgeId, value: bigint, user: AccountId, inputNullifier: Buffer, version = 1) => {
+  const createClaimNote = (bridgeId: BridgeId, value: bigint, user: AccountId, inputNullifier: Buffer) => {
     const { ephPrivKey, ephPubKey } = createEphemeralKeyPair();
 
-    const partialStateSecret = deriveNoteSecret(user.publicKey, ephPrivKey, grumpkin, version);
+    const partialStateSecret = deriveNoteSecret(user.publicKey, ephPrivKey, grumpkin);
 
     const partialState = noteAlgos.valueNotePartialCommitment(partialStateSecret, user);
     const partialClaimNote = new TreeClaimNote(
@@ -167,7 +166,7 @@ describe('user state', () => {
       : noteAlgos.valueNoteNullifier(randomBytes(32), proofSender.privateKey);
     const nullifier2 = noteAlgos.valueNoteNullifier(randomBytes(32), proofSender.privateKey);
     const notes = [
-      createNote(assetId, outputNoteValue1, new AccountId(newNoteOwner.publicKey, noteCommitmentNonce), nullifier1, 0),
+      createNote(assetId, outputNoteValue1, new AccountId(newNoteOwner.publicKey, noteCommitmentNonce), nullifier1),
       createNote(assetId, outputNoteValue2, new AccountId(proofSender.publicKey, noteCommitmentNonce), nullifier2),
     ];
     const note1Commitment = createValidNoteCommitments ? noteAlgos.valueNoteCommitment(notes[0].note) : randomBytes(32);
@@ -310,7 +309,7 @@ describe('user state', () => {
   } = {}) => {
     const assetId = bridgeId.inputAssetIdA;
     const notes = [
-      createNote(assetId, outputValueA, noteRecipient.id, nullifier1, 0),
+      createNote(assetId, outputValueA, noteRecipient.id, nullifier1),
       createNote(assetId, outputValueB, noteRecipient.id, nullifier2),
     ];
     const noteCommitments = [
@@ -915,12 +914,7 @@ describe('user state', () => {
     await userState.stopSync(true);
 
     const { partialStateSecretEphPubKey } = defiProof.offchainTxData;
-    const partialStateSecret = deriveNoteSecret(
-      partialStateSecretEphPubKey,
-      user.privateKey,
-      grumpkin,
-      TreeNote.LATEST_VERSION,
-    );
+    const partialStateSecret = deriveNoteSecret(partialStateSecretEphPubKey, user.privateKey, grumpkin);
 
     expect(db.addClaimTx).toHaveBeenCalledTimes(1);
     expect(db.addClaimTx.mock.calls[0][0]).toMatchObject({

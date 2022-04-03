@@ -1,5 +1,0 @@
-Dockerfile
-data
-dest*
-node_modules
-**/.terraform

@@ -22,6 +22,7 @@ export class ClientEthereumBlockchain {
     assets: BlockchainAsset[],
     private readonly bridges: BlockchainBridge[],
     private readonly ethereumProvider: EthereumProvider,
+    private readonly minConfirmations: number,
   ) {
     this.rollupProcessor = new RollupProcessor(rollupContractAddress, ethereumProvider);
     this.provider = new Web3Provider(this.ethereumProvider);
@@ -148,7 +149,12 @@ export class ClientEthereumBlockchain {
   /**
    * Wait for given transaction to be mined, and return receipt.
    */
-  public async getTransactionReceipt(txHash: TxHash, interval = 1, timeout = 300, minConfirmations?: number) {
+  public async getTransactionReceipt(
+    txHash: TxHash,
+    interval = 1,
+    timeout = 300,
+    minConfirmations = this.minConfirmations,
+  ) {
     const started = Date.now();
     while (true) {
       if (timeout && Date.now() - started > timeout * 1000) {

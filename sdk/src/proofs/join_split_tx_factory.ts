@@ -157,7 +157,6 @@ export class JoinSplitTxFactory {
       inputNullifier,
       ephPrivKey,
       this.grumpkin,
-      TreeNote.LATEST_VERSION,
       creatorPubKey,
     );
     const viewingKey = note.createViewingKey(ephPrivKey, this.grumpkin);

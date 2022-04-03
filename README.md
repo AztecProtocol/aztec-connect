@@ -14,7 +14,6 @@ The Aztec 2.0 system consists of the following sub projects.
 - `mainframe` - Terraform and bootstrap scripts for development mainframe.
 - `markdown` - General project documentation, coding standards, etc.
 - `sdk` - SDK for interacting with a rollup provider.
-- `sriracha` - Hash path server for escape hatch.
 - `website` - Company website.
 
 ### Contributing

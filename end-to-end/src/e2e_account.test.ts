@@ -31,7 +31,6 @@ describe('end-to-end account tests', () => {
       serverUrl: ROLLUP_HOST,
       memoryDb: true,
       minConfirmation: 1,
-      minConfirmationEHW: 1,
     });
     await sdk.run();
     await sdk.awaitSynchronised();

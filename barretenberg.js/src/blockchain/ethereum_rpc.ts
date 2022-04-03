@@ -15,6 +15,14 @@ export class EthereumRpc {
     return result.map(EthAddress.fromString);
   }
 
+  public async getTransactionCount(addr: EthAddress) {
+    const result = await this.provider.request({
+      method: 'eth_getTransactionCount',
+      params: [addr.toString(), 'latest'],
+    });
+    return result;
+  }
+
   /**
    * TODO: Return proper type with converted properties.
    */

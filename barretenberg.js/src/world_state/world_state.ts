@@ -60,7 +60,7 @@ export class WorldState {
   }
 
   public async processNoteCommitments(dataStartIndex: number, notes: Buffer[]): Promise<void> {
-    debug(`Processing ${notes.length} note commitments with start index ${dataStartIndex}`);
+    debug(`processing ${notes.length} note commitments with start index ${dataStartIndex}...`);
     await this.tree.updateElements(dataStartIndex, notes);
 
     debug(`data size: ${this.tree.getSize()}`);

@@ -17,7 +17,11 @@ export class JsonRpcProvider implements EthereumProvider {
       params,
     };
     log(`->`, body);
-    const resp = await fetch(this.host, { method: 'POST', body: JSON.stringify(body) });
+    const resp = await fetch(this.host, {
+      method: 'POST',
+      body: JSON.stringify(body),
+      headers: { 'content-type': 'application/json' },
+    });
     const res = JSON.parse(await resp.text());
     log(`<-`, res);
     if (res.error) {

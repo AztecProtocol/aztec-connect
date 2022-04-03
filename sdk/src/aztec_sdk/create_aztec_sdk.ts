@@ -13,12 +13,12 @@ import {
 } from '../core_sdk_flavours';
 import { AztecSdk, AztecSdkOptions } from './aztec_sdk';
 
-async function createBlockchain(ethereumProvider: EthereumProvider, coreSdk: CoreSdkInterface) {
+async function createBlockchain(ethereumProvider: EthereumProvider, coreSdk: CoreSdkInterface, confs = 1) {
   const { chainId, rollupContractAddress } = await coreSdk.getLocalStatus();
   const {
     blockchainStatus: { assets, bridges },
   } = await coreSdk.getRemoteStatus();
-  const blockchain = new ClientEthereumBlockchain(rollupContractAddress, assets, bridges, ethereumProvider);
+  const blockchain = new ClientEthereumBlockchain(rollupContractAddress, assets, bridges, ethereumProvider, confs);
   const providerChainId = await blockchain.getChainId();
   if (chainId !== providerChainId) {
     throw new Error(`Provider chainId ${providerChainId} does not match rollup provider chainId ${chainId}.`);
@@ -56,7 +56,7 @@ export async function createServiceWorkerSdk(
 
   const coreSdk = await createBananaCoreSdk(options);
   try {
-    const blockchain = await createBlockchain(ethereumProvider, coreSdk);
+    const blockchain = await createBlockchain(ethereumProvider, coreSdk, options.minConfirmation);
     return new AztecSdk(coreSdk, blockchain, ethereumProvider, options);
   } catch (err) {
     await coreSdk.destroy();
@@ -78,7 +78,7 @@ export async function createHostedAztecSdk(ethereumProvider: EthereumProvider, o
 
   const coreSdk = await createStrawberryCoreSdk(options);
   try {
-    const blockchain = await createBlockchain(ethereumProvider, coreSdk);
+    const blockchain = await createBlockchain(ethereumProvider, coreSdk, options.minConfirmation);
     return new AztecSdk(coreSdk, blockchain, ethereumProvider, options);
   } catch (err) {
     await coreSdk.destroy();
@@ -96,7 +96,7 @@ export async function createPlainAztecSdk(ethereumProvider: EthereumProvider, op
 
   const coreSdk = await createVanillaCoreSdk(options);
   try {
-    const blockchain = await createBlockchain(ethereumProvider, coreSdk);
+    const blockchain = await createBlockchain(ethereumProvider, coreSdk, options.minConfirmation);
     return new AztecSdk(coreSdk, blockchain, ethereumProvider, options);
   } catch (err) {
     await coreSdk.destroy();

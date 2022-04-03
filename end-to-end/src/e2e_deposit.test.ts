@@ -42,7 +42,6 @@ describe('end-to-end tests', () => {
       pollInterval: 1000,
       memoryDb: true,
       minConfirmation: 1,
-      minConfirmationEHW: 1,
     });
     await sdk.run();
     await sdk.awaitSynchronised();

@@ -1,4 +1,4 @@
-import { BridgeConfig, BridgeStatus } from '@aztec/barretenberg/bridge_id';
+import { BridgeConfig } from '@aztec/barretenberg/bridge_id';
 import { DefiDepositProofData, ProofData } from '@aztec/barretenberg/client_proofs';
 import { TxDao } from '../entity/tx';
 import { TxFeeResolver } from '../tx_fee_resolver';

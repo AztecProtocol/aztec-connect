@@ -1,12 +1,15 @@
 import { GrumpkinAddress } from '../address';
+import { createLogger } from '../debug';
 import { Grumpkin } from '../ecc/grumpkin';
 import { DecryptedNote } from './decrypted_note';
-import { deriveNoteSecret } from './derive_note_secret';
 import { NoteAlgorithms } from './note_algorithms';
 import { TreeNote } from './tree_note';
 
+const debug = createLogger('recover_tree_notes');
+
 export const recoverTreeNotes = (
   decryptedNotes: (DecryptedNote | undefined)[],
+  inputNullifiers: Buffer[],
   noteCommitments: Buffer[],
   privateKey: Buffer,
   grumpkin: Grumpkin,
@@ -15,29 +18,24 @@ export const recoverTreeNotes = (
   const ownerPubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, privateKey));
   return decryptedNotes.map((decrypted, i) => {
     if (!decrypted) {
+      debug(`index ${i}: no decrypted tree note.`);
       return;
     }
 
     const noteCommitment = noteCommitments[i];
+    const inputNullifier = inputNullifiers[i];
 
-    // Note version 1
-    {
-      const note = TreeNote.recover(decrypted, ownerPubKey);
-      const commitment = noteAlgorithms.valueNoteCommitment(note);
-      if (commitment.equals(noteCommitment)) {
-        return note;
-      }
+    const note = TreeNote.recover(decrypted, inputNullifier, ownerPubKey);
+    debug({ note });
+    const commitment = noteAlgorithms.valueNoteCommitment(note);
+    if (commitment.equals(noteCommitment)) {
+      debug(`index ${i}: tree commitment ${noteCommitment.toString('hex')} matches note version 1.`);
+      return note;
     }
-
-    // TODO: Deprecate for defi bridge?
-    // Note version 0
-    {
-      const noteSecret = deriveNoteSecret(decrypted.ephPubKey, privateKey, grumpkin, 0);
-      const note = TreeNote.recover({ ...decrypted, noteSecret }, ownerPubKey);
-      const commitment = noteAlgorithms.valueNoteCommitment(note);
-      if (commitment.equals(noteCommitment)) {
-        return note;
-      }
-    }
+    debug(
+      `index ${i}: tree commitment ${noteCommitment.toString('hex')} != encrypted note commitment${commitment.toString(
+        'hex',
+      )}.`,
+    );
   });
 };

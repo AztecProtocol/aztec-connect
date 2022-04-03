@@ -1,5 +1,5 @@
-import { AztecSdk, EthAddress, toBaseUnits, TxSettlementTime, WalletProvider } from '@aztec/sdk';
-import { Agent, AgentState, UserData } from './agent';
+import { AztecSdk, toBaseUnits, TxSettlementTime, WalletProvider } from '@aztec/sdk';
+import { Agent, EthAddressAndNonce, UserData } from './agent';
 
 /**
  * This agent will repeatedly send 1 wei from userA to userB in batches of 10, waiting for those 10 to settle,
@@ -12,38 +12,33 @@ export class PaymentAgent {
   private userB!: UserData;
 
   constructor(
-    fundingAddress: EthAddress,
+    fundingAccount: EthAddressAndNonce,
     private sdk: AztecSdk,
     provider: WalletProvider,
     private id: number,
     private numTransfers: number,
   ) {
-    this.agent = new Agent(fundingAddress, sdk, provider, id);
+    this.agent = new Agent(fundingAccount, sdk, provider, id);
   }
 
-  public isAwaitingSettlement() {
-    return this.agent.getState() === AgentState.AWAITING;
-  }
-
-  public isComplete() {
-    return this.agent.getState() === AgentState.COMPLETE;
+  public static getRequiredFunding() {
+    return toBaseUnits('0.01', 18);
   }
 
   /**
-   * Create userA and userB, and funds userA with ETH from the fundingAddress.
-   * This should be called sequentially by the AgentManager, to ensure each L1 tx has a sequential nonce.
-   * Once userA has their own funds we no longer need to worry about nonce races within the run() context.
+   * Return an address to fund with the amount in getRequiredFunding().
    */
   public async init() {
-    this.userA = await this.agent.createUser();
-    this.userB = await this.agent.createUser();
-
-    const deposit = toBaseUnits('0.01', 18);
-    return this.agent.fundEthAddress(this.userA, deposit);
+    return this.userA.address;
   }
 
   public async run() {
     try {
+      this.userA = await this.agent.createUser();
+      this.userB = await this.agent.createUser();
+
+      await this.agent.fundEthAddress(this.userA, PaymentAgent.getRequiredFunding());
+
       await this.agent.deposit(this.userA, await this.calcDeposit());
 
       for (let i = 0; i < this.numTransfers; ) {
@@ -60,7 +55,7 @@ export class PaymentAgent {
             await new Promise(resolve => setTimeout(resolve, 10000));
           }
         }
-        await this.agent.signalAwaiting(Promise.all(transferPromises).then());
+        await Promise.all(transferPromises);
       }
 
       await this.agent.withdraw(this.userA);
@@ -68,7 +63,6 @@ export class PaymentAgent {
     } catch (err: any) {
       console.log(`ERROR: `, err);
     }
-    this.agent.complete();
   }
 
   /**

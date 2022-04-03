@@ -29,7 +29,6 @@ import { groupUserTxs } from './group_user_txs';
 export interface AztecSdkOptions {
   debug?: string;
   minConfirmation?: number;
-  minConfirmationEHW?: number;
 }
 
 export interface AztecSdk {
@@ -473,12 +472,7 @@ export class AztecSdk extends EventEmitter {
   }
 
   public async getTransactionReceipt(txHash: TxHash, interval = 1, timeout?: number): Promise<Receipt> {
-    const { minConfirmation, minConfirmationEHW } = this.sdkOptions;
-    const confs =
-      minConfirmationEHW !== undefined && (await this.core.getRemoteStatus()).blockchainStatus.escapeOpen
-        ? minConfirmationEHW
-        : minConfirmation || 0;
-    return this.blockchain.getTransactionReceipt(txHash, interval, timeout, confs);
+    return this.blockchain.getTransactionReceipt(txHash, interval, timeout);
   }
 
   public async flushRollup(userId: AccountId, userSigner: Signer) {

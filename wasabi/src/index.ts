@@ -1,6 +1,6 @@
-import { AgentManager } from './agent_manager';
 import 'log-timestamp';
 import 'source-map-support/register';
+import { run } from './run';
 
 const {
   ETHEREUM_HOST = 'http://localhost:8545',
@@ -11,7 +11,6 @@ const {
   NUM_PAYMENTS = '20',
   LOOPS = '1',
   ROLLUP_HOST = 'http://localhost:8081',
-  MEMORY_DB = '0',
   CONFS = '1',
 } = process.env;
 
@@ -20,21 +19,17 @@ async function main() {
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
 
-  const loops = +LOOPS;
-  for (let runNumber = 0; runNumber != loops; ++runNumber) {
-    const agentManager = new AgentManager(
-      Buffer.from(PRIVATE_KEY, 'hex'),
-      AGENT_TYPE,
-      +NUM_AGENTS,
-      +NUM_DEFI_SWAPS,
-      +NUM_PAYMENTS,
-      ROLLUP_HOST,
-      ETHEREUM_HOST,
-      !!+MEMORY_DB,
-      +CONFS,
-    );
-    await agentManager.run(runNumber);
-  }
+  await run(
+    Buffer.from(PRIVATE_KEY, 'hex'),
+    AGENT_TYPE,
+    +NUM_AGENTS,
+    +NUM_DEFI_SWAPS,
+    +NUM_PAYMENTS,
+    ROLLUP_HOST,
+    ETHEREUM_HOST,
+    +CONFS,
+    +LOOPS,
+  );
 }
 
 main().catch(console.log);
