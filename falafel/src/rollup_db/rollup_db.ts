@@ -46,6 +46,10 @@ export class TypeOrmRollupDb implements RollupDb {
     });
   }
 
+  public async deleteTxsById(ids: Buffer[]) {
+    await this.txRep.delete({ id: In(ids) });
+  }
+
   public async addAccounts(accounts: AccountDao[]) {
     await this.connection.transaction(async transactionalEntityManager => {
       for (const account of accounts) {

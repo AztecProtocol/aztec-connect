@@ -19,6 +19,10 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.addTxs(txs));
   }
 
+  public async deleteTxsById(ids: Buffer[]) {
+    return this.synchronise(() => this.rollupDb.deleteTxsById(ids));
+  }
+
   public async addAccounts(accounts: AccountDao[]) {
     return this.synchronise(() => this.rollupDb.addAccounts(accounts));
   }

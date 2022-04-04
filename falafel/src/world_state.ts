@@ -1,8 +1,9 @@
 import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { Timer } from '@aztec/barretenberg/timer';
+import { EthAddress } from '@aztec/barretenberg/address';
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
-import { ProofId } from '@aztec/barretenberg/client_proofs';
+import { ProofId, ProofData, JoinSplitProofData } from '@aztec/barretenberg/client_proofs';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
 import { DefiInteractionNote, NoteAlgorithms, TreeClaimNote } from '@aztec/barretenberg/note_algorithms';
 import { OffchainDefiDepositData } from '@aztec/barretenberg/offchain_tx_data';
@@ -258,8 +259,103 @@ export class WorldState {
 
     await this.confirmOrAddRollupToDb(rollupProofData, offchainTxData, block);
 
+    await this.purgeInvalidTxs();
+
     this.printState();
     end();
+  }
+
+  private async purgeInvalidTxs() {
+    const pendingTxs = await this.rollupDb.getPendingTxs();
+    const txsToPurge = await this.validateTxs(pendingTxs);
+    if (!txsToPurge.length) {
+      return;
+    }
+    await this.rollupDb.deleteTxsById(txsToPurge);
+  }
+
+  private async validateTxs(txs: TxDao[]) {
+    const txsToPurge: TxDao[] = [];
+    const pendingDeposits: {
+      publicOwner: EthAddress;
+      publicAssetId: number;
+      contractValue: bigint;
+      accumulatedDeposit: bigint;
+    }[] = [];
+    const discardedCommitments: { [key: string]: number } = {};
+    const spentNoteNullifier = toBufferBE(1n, 32);
+
+    for (const tx of txs) {
+      const proof = new ProofData(tx.proofData);
+
+      const discardTx = () => {
+        discardedCommitments[proof.noteCommitment1.toString('hex')] = 1;
+        discardedCommitments[proof.noteCommitment2.toString('hex')] = 1;
+        txsToPurge.push(tx);
+      };
+
+      // first check to see if this tx chains from a tx that we have already discarded
+      // if it does then we need to discard this tx too
+      const backwardLink = proof.backwardLink.toString('hex');
+      if (discardedCommitments[backwardLink]) {
+        discardTx();
+        continue;
+      }
+
+      // now we test the txs nullifiers to see if they are already in the nullifier tree
+      // if they are then it means the txs note/s have already been spent by another tx
+      const nullifierIndices = [proof.nullifier1, proof.nullifier2].map(n => toBigIntBE(n)).filter(n => n != 0n);
+      let spentNotes = false;
+      for (const nullifierIndex of nullifierIndices) {
+        const value = await this.worldStateDb.get(RollupTreeId.NULL, nullifierIndex);
+        if (value.equals(spentNoteNullifier)) {
+          spentNotes = true;
+          break;
+        }
+      }
+
+      if (spentNotes) {
+        discardTx();
+        continue;
+      }
+
+      // now finally we need to check to check any DEPOSIT txs to ensure they aren't attempting to
+      // deposit more funds than have been sent to the smart contract
+      // this is done on an owner/asset combination basis
+      if (proof.proofId != ProofId.DEPOSIT) {
+        continue;
+      }
+
+      // extract the owner and asset
+      const joinSplitProof = new JoinSplitProofData(proof);
+      let index = pendingDeposits.findIndex(
+        d => d.publicOwner.equals(joinSplitProof.publicOwner) && d.publicAssetId === joinSplitProof.publicAssetId,
+      );
+      // if we haven't seen this owner and asset before, query the contract for the pending deposit
+      // and store the contract's deposit value
+      if (index < 0) {
+        const pendingDeposit = await this.blockchain.getUserPendingDeposit(
+          joinSplitProof.publicAssetId,
+          joinSplitProof.publicOwner,
+        );
+        pendingDeposits.push({
+          publicOwner: joinSplitProof.publicOwner,
+          publicAssetId: joinSplitProof.publicAssetId,
+          contractValue: pendingDeposit,
+          accumulatedDeposit: 0n,
+        });
+        index = pendingDeposits.length - 1;
+      }
+      // if the current accumulated value plus the new value exceed the contract value then reject the tx
+      // other we accept the tx but accumulate it's public value
+      const newTotalDeposit = pendingDeposits[index].accumulatedDeposit + joinSplitProof.publicValue;
+      if (newTotalDeposit > pendingDeposits[index].contractValue) {
+        discardTx();
+      } else {
+        pendingDeposits[index].accumulatedDeposit += joinSplitProof.publicValue;
+      }
+    }
+    return txsToPurge.map(tx => tx.id);
   }
 
   private async processDefiProofs(rollup: RollupProofData, offchainTxData: Buffer[], block: Block) {

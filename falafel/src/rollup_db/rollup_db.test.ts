@@ -533,11 +533,11 @@ describe('rollup_db', () => {
       if (i % 4 === 0) {
         // every 4th is fully claimed
         claim.claimed = new Date();
-        claim.interactionResultRollupId = (claim.interactionNonce + 1)  * 32;
+        claim.interactionResultRollupId = (claim.interactionNonce + 1) * 32;
       } else {
         // every odd is not ready for claim
         if (i % 2 === 0) {
-          claim.interactionResultRollupId = (claim.interactionNonce + 1)  * 32;
+          claim.interactionResultRollupId = (claim.interactionNonce + 1) * 32;
         }
         pendingClaims.push(claim);
       }
@@ -551,7 +551,7 @@ describe('rollup_db', () => {
       if (claim.interactionResultRollupId) {
         return;
       }
-      claim.interactionResultRollupId = (claim.interactionNonce + 1)  * 32;
+      claim.interactionResultRollupId = (claim.interactionNonce + 1) * 32;
     });
 
     // now set the odds to be ready to rollup
@@ -594,5 +594,20 @@ describe('rollup_db', () => {
 
     const saved = await rollupDb.getPendingTxs();
     expect(saved).toEqual(claimedTxs.sort((a, b) => (a.created.getTime() > b.created.getTime() ? 1 : -1)));
+  });
+
+  it('should delete txs by id', async () => {
+    const txs = Array.from({ length: 20 }).map(() => randomTx());
+    for (const tx of txs) {
+      await rollupDb.addTx(tx);
+    }
+    const pendingTxs = await rollupDb.getPendingTxs();
+    expect(pendingTxs).toEqual(txs.sort((a, b) => (a.created.getTime() > b.created.getTime() ? 1 : -1)));
+
+    const idsToDelete = [txs[4], txs[7], txs[12], txs[15], txs[16], txs[19]].map(tx => tx.id);
+    await rollupDb.deleteTxsById(idsToDelete);
+    const newPendingTxs = await rollupDb.getPendingTxs();
+    const expectedTxs = txs.filter(tx => !idsToDelete.some(id => tx.id.equals(id)));
+    expect(newPendingTxs).toEqual(expectedTxs.sort((a, b) => (a.created.getTime() > b.created.getTime() ? 1 : -1)));
   });
 });
