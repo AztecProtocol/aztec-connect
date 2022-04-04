@@ -14,8 +14,10 @@ export function useLegacyEthAccountState(asset?: RemoteAsset) {
   }, [provider, sdk, requiredNetwork, asset]);
   const [state, setState] = useState(ethAccount?.state);
   useEffect(() => {
+    setState(undefined);
     if (ethAccount) {
       const updateState = () => setState(ethAccount.state);
+      updateState();
       ethAccount.on(EthAccountEvent.UPDATED_PENDING_BALANCE, updateState);
       ethAccount.on(EthAccountEvent.UPDATED_PUBLIC_BALANCE, updateState);
       return () => {

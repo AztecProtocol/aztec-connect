@@ -36,6 +36,7 @@ export interface ShieldFormValidationResult {
   wrongNetwork?: boolean;
   loading?: boolean;
   unrecognisedTargetAmount?: boolean;
+  targetAssetIsPayingFee?: boolean;
   insufficientTargetAssetBalance?: boolean;
   mustDepositFromWalletAccountUsedToGenerateAztecKeys?: boolean;
   insufficientFeePayingAssetBalance?: boolean;
@@ -97,7 +98,7 @@ export function validateShieldForm(input: ShieldFormValidationInputs): ShieldFor
 
   const requiresSpendingKey = !targetAssetIsPayingFee;
   if (requiresSpendingKey && !keyVault.signerAddress.equals(depositor)) {
-    return { mustDepositFromWalletAccountUsedToGenerateAztecKeys: true, input };
+    return { mustDepositFromWalletAccountUsedToGenerateAztecKeys: true, targetAssetIsPayingFee, input };
   }
 
   // If it's ETH being shielded, we need to reserve funds for gas costs
@@ -139,6 +140,7 @@ export function validateShieldForm(input: ShieldFormValidationInputs): ShieldFor
       }
     : undefined;
   return {
+    targetAssetIsPayingFee,
     insufficientTargetAssetBalance,
     insufficientFeePayingAssetBalance,
     mustAllowForFee,

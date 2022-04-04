@@ -25,7 +25,7 @@ interface GasSectionProps {
   onChangeSpeed: (speed: DefiSettlementTime | TxSettlementTime) => void;
   feeAmounts?: (Amount | undefined)[] | undefined[];
   recipe?: DefiRecipe;
-  asset: RemoteAsset;
+  asset?: RemoteAsset;
   balanceType: BalanceType;
 }
 
@@ -64,7 +64,7 @@ function AmountDisplay({ feeAmount }: any) {
   return <div className={style.amountDisplay}>{feeCostStr}</div>;
 }
 
-function renderBalanceIndicator(balanceType: BalanceType, asset: RemoteAsset) {
+function renderBalanceIndicator(balanceType: BalanceType, asset?: RemoteAsset) {
   switch (balanceType) {
     case 'L1':
       return <MiniL1BalanceIndicator asset={asset} />;

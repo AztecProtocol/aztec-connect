@@ -84,8 +84,8 @@ export function ShieldPage1({
       <SplitSection
         leftPanel={
           <GasSection
-            asset={asset}
-            balanceType="L1"
+            asset={validationResult.input.feeAmount?.info}
+            balanceType={validationResult.targetAssetIsPayingFee ? 'L1' : 'L2'}
             type={GasSectionType.TX}
             speed={fields.speed}
             onChangeSpeed={speed => onChangeSpeed(speed as TxSettlementTime)}
