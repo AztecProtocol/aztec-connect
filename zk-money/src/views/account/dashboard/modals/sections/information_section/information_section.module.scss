@@ -26,6 +26,15 @@
 
 .subtitle {
   font-weight: 500;
+  @include mixins.gradient_font;
+}
+
+.actionButton {
+  text-align: center;
+  font-weight: 500;
+  height: 20px;
+  cursor: pointer;
+  @include mixins.gradient_font;
 }
 
 .content {

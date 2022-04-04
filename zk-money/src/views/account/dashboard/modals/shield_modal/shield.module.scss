@@ -29,3 +29,14 @@
   line-height: 16px;
   align-self: end;
 }
+
+.errorAlert {
+  font-size: 18px;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  flex-direction: column;
+  gap: 20px;
+}

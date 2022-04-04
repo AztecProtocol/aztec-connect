@@ -1,11 +1,13 @@
 import type { ShieldFormFeedback, ShieldFormFields, ShieldFormValidationResult } from 'alt-model/shield';
 import { TxSettlementTime, TxType } from '@aztec/sdk';
-import { SendMode, ValueAvailability } from 'app';
+import { ProviderStatus, SendMode, ValueAvailability } from 'app';
 import { Button, InputTheme } from 'components';
 import { AmountSection, GasSection, GasSectionType, RecipientSection } from 'views/account/dashboard/modals/sections';
 import { ConnectedLegacyWalletSelect } from './connected_legacy_wallet_select';
 import { RemoteAsset } from 'alt-model/types';
 import { SplitSection } from '../sections/split_section';
+import { useProviderState } from 'alt-model';
+import { useLegacyEthAccountState } from 'alt-model/assets/l1_balance_hooks';
 import style from './shield.module.scss';
 
 function toLegacyRecipientInput({ recipientAlias }: ShieldFormFields, { input }: ShieldFormValidationResult) {
@@ -44,18 +46,40 @@ export function ShieldPage1({
   onChangeSpeed,
   onChangeAsset,
 }: ShieldPage1Props) {
+  const providerState = useProviderState();
   const asset = validationResult.input.targetL2OutputAmount?.info;
+  const ethAccount = useLegacyEthAccountState(asset);
+
   if (!asset) {
     return <>Loading...</>;
+  }
+  const isWalletInitialising =
+    providerState &&
+    [ProviderStatus.DESTROYED, ProviderStatus.INITIALIZING, ProviderStatus.UNINITIALIZED].indexOf(
+      providerState.status,
+    ) >= 0;
+  const isProviderSwitching =
+    !ethAccount?.ethAddress || ethAccount.ethAddress.toString() !== providerState?.account?.toString();
+  const isWalletDisconnected = feedback.walletAccount || isWalletInitialising || isProviderSwitching;
+
+  const walletSelect = (
+    <ConnectedLegacyWalletSelect className={style.walletSelect} asset={asset} errorFeedback={feedback.walletAccount} />
+  );
+
+  if (isWalletDisconnected) {
+    return (
+      <div className={style.errorAlert}>
+        {walletSelect}
+        <div className={style.connectLabel}>
+          {isProviderSwitching ? 'Swiching provider, please wait...' : 'Please connect a wallet to shield'}
+        </div>
+      </div>
+    );
   }
 
   return (
     <>
-      <ConnectedLegacyWalletSelect
-        className={style.walletSelect}
-        asset={asset}
-        errorFeedback={feedback.walletAccount}
-      />
+      {walletSelect}
       <SplitSection
         leftPanel={
           <>

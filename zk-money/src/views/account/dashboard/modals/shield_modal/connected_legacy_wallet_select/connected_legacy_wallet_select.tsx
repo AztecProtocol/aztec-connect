@@ -2,7 +2,7 @@ import type { RemoteAsset } from 'alt-model/types';
 import { useLegacyEthAccountState } from 'alt-model/assets/l1_balance_hooks';
 import { WalletSelect } from 'views/account/wallet_select';
 import { useApp, useProviderState } from 'alt-model';
-import { MessageType } from 'app';
+import { MessageType, ProviderStatus } from 'app';
 import style from './connected_legacy_wallet_select.module.css';
 
 interface ConnectedLegacyWalletSelectProps {
@@ -15,8 +15,10 @@ export function ConnectedLegacyWalletSelect({ asset, className, errorFeedback }:
   const ethAccountState = useLegacyEthAccountState(asset);
   const providerState = useProviderState();
   const { userSession } = useApp();
+
   return (
     <div className={style.root}>
+      <div className={style.anchor}>{errorFeedback && <div className={style.feedback}>{errorFeedback}</div>}</div>
       <WalletSelect
         className={className}
         asset={asset}
@@ -26,7 +28,6 @@ export function ConnectedLegacyWalletSelect({ asset, className, errorFeedback }:
         messageType={errorFeedback ? MessageType.ERROR : undefined}
         onChangeWallet={id => userSession?.changeWallet(id)}
       />
-      <div className={style.anchor}>{errorFeedback && <div className={style.feedback}>{errorFeedback}</div>}</div>
     </div>
   );
 }
