@@ -1,4 +1,4 @@
-import { AssetState } from '../account_state';
+import type { CutdownAsset } from 'app/types';
 import { EthAccount } from '../eth_account';
 import { Form, FormStatus } from '../form';
 import { Provider } from '../provider';
@@ -17,7 +17,7 @@ export interface AccountForm {
 
   getValues(): Form;
 
-  changeAssetState(assetState: AssetState): void;
+  changeAssetState(assetState: { asset: CutdownAsset; spendableBalance: bigint }): void;
   changeProvider(provider?: Provider): void;
   changeEthAccount(ethAccount: EthAccount): void;
   changeValues(newValues: Form): void;

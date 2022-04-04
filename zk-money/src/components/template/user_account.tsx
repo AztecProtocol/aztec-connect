@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import styled from 'styled-components/macro';
-import { AccountState, AccountVersion, WorldState } from '../../app';
+import { AccountState, WorldState } from '../../app';
 import closeIcon from '../../images/close.svg';
 import personIcon from '../../images/snowman.svg';
 import { borderRadiuses, breakpoints, colours, fontSizes, spacings, Theme, themeColours } from '../../styles';
@@ -191,21 +191,13 @@ const DropdownItem = styled.div`
 interface UserAccountProps {
   account: AccountState;
   worldState: WorldState;
-  onMigrateOldBalance(): void;
-  onMigrateForgottonBalance(): void;
   onLogout(): void;
 }
 
-export const UserAccount: React.FunctionComponent<UserAccountProps> = ({
-  account,
-  worldState,
-  onMigrateOldBalance,
-  onMigrateForgottonBalance,
-  onLogout,
-}) => {
+export const UserAccount: React.FunctionComponent<UserAccountProps> = ({ account, worldState, onLogout }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const isSynced = worldState.accountSyncedToRollup === worldState.latestRollup;
-  const { userId, alias, version, latestUserNonce } = account;
+  const { userId, alias } = account;
 
   return (
     <Root>
@@ -237,34 +229,6 @@ export const UserAccount: React.FunctionComponent<UserAccountProps> = ({
               <DropdownItem>
                 <Text text={`Account Nonce: ${userId.accountNonce}`} nowrap />
               </DropdownItem>
-              {version === AccountVersion.V1 && (
-                <DropdownItem>
-                  <TextLink
-                    text="Migrate Old Balance"
-                    onClick={() => {
-                      setShowDropdown(false);
-                      onMigrateOldBalance();
-                    }}
-                    color="indigo"
-                    weight="semibold"
-                    nowrap
-                  />
-                </DropdownItem>
-              )}
-              {userId.accountNonce < latestUserNonce && (
-                <DropdownItem>
-                  <TextLink
-                    text="Migrate Forgotten Balance"
-                    onClick={() => {
-                      setShowDropdown(false);
-                      onMigrateForgottonBalance();
-                    }}
-                    color="indigo"
-                    weight="semibold"
-                    nowrap
-                  />
-                </DropdownItem>
-              )}
               <DropdownItem>
                 <TextLink text="Sign out" onClick={onLogout} color="indigo" weight="semibold" nowrap />
               </DropdownItem>

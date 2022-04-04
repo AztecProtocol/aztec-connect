@@ -1,5 +1,4 @@
 import type { CutdownAsset } from './types';
-import { GrumpkinAddress } from '@aztec/sdk';
 import { JsonRpcProvider } from '@ethersproject/providers';
 import { SdkObs } from 'alt-model/top_level_context/sdk_obs';
 import createDebug from 'debug';
@@ -7,9 +6,8 @@ import { EventEmitter } from 'events';
 import Cookie from 'js-cookie';
 import { Config } from '../config';
 import { ShieldFormValues } from './account_forms';
-import { AccountAction } from './account_txs';
 import { Database } from './database';
-import { Form, SystemMessage } from './form';
+import { SystemMessage } from './form';
 import { chainIdToNetwork, Network } from './networks';
 import { PriceFeedService } from './price_feed_service';
 import { KNOWN_MAINNET_ASSET_ADDRESS_STRS as S } from 'alt-model/known_assets/known_asset_addresses';
@@ -108,9 +106,7 @@ export class App extends EventEmitter {
 
   get availableWallets() {
     const supportedWallets = window.ethereum ? wallets : wallets.filter(w => w.id !== WalletId.METAMASK);
-    return this.loginMode !== LoginMode.MIGRATE
-      ? supportedWallets.filter(w => w.id !== WalletId.HOT)
-      : supportedWallets;
+    return supportedWallets;
   }
 
   get loginState() {
@@ -154,39 +150,12 @@ export class App extends EventEmitter {
     return this.session?.getAccount()?.getAccountState();
   }
 
-  get assetState() {
-    return this.session?.getAccount()?.getAssetState();
-  }
-
-  get activeAction() {
-    return this.session?.getAccount()?.getActiveAction();
-  }
-
-  get txsPublishTime() {
-    return this.session?.getAccount()?.txsPublishTime;
-  }
-
-  get mergeForm() {
-    return this.session?.getAccount()?.getMergeForm();
-  }
-
   get shieldForAliasForm() {
     return this.session?.getShieldForAliasForm()?.getValues();
   }
 
   isProcessingAction() {
-    return this.session?.isProcessingAction() || this.session?.getAccount()?.isProcessingAction() || false;
-  }
-
-  async migrateFromLocalAccountV0(accountV0: { alias: string; accountPublicKey: GrumpkinAddress }) {
-    if (!this.session) {
-      this.createSession();
-    }
-    await this.session!.migrateFromLocalAccountV0(accountV0.alias, accountV0.accountPublicKey);
-  }
-
-  async clearLocalAccountV0s() {
-    this.session!.clearLocalAccountV0s();
+    return this.session?.isProcessingAction() || false;
   }
 
   updateShieldForAliasAmountPreselection(amount: bigint) {
@@ -259,22 +228,6 @@ export class App extends EventEmitter {
     await this.session!.disconnectWallet();
   };
 
-  setSeedPhrase = async (seedPhrase: string) => {
-    await this.session!.setSeedPhrase(seedPhrase);
-  };
-
-  confirmSeedPhrase = async (seedPhrase: string) => {
-    await this.session!.confirmSeedPhrase(seedPhrase);
-  };
-
-  migrateToWallet = async (walletId: WalletId) => {
-    await this.session!.migrateToWallet(walletId);
-  };
-
-  migrateNotes = async () => {
-    await this.session!.confirmMigrateNotes();
-  };
-
   setAlias = (aliasInput: string) => {
     this.session!.setAlias(aliasInput);
   };
@@ -289,10 +242,6 @@ export class App extends EventEmitter {
 
   forgotAlias = () => {
     this.session!.forgotAlias();
-  };
-
-  migrateAccount = async () => {
-    await this.session!.migrateAccount();
   };
 
   initAccount = async () => {
@@ -320,40 +269,11 @@ export class App extends EventEmitter {
     await this.session!.changeWallet(walletId);
   };
 
-  changeAsset = (assetId: number) => {
-    this.activeAsset = assetId;
-    this.session?.changeAsset(assetId);
-  };
-
   changeShieldForAliasForm = (inputs: ShieldFormValues) => {
     this.session!.changeShieldForAliasForm(inputs);
   };
 
   claimUserName = async (isRetry?: boolean) => {
     await this.session!.claimUserName(isRetry);
-  };
-
-  changeForm = (action: AccountAction, inputs: Form) => {
-    this.session!.getAccount().changeForm(action, inputs);
-  };
-
-  validateForm = async (action: AccountAction) => {
-    await this.session!.getAccount().validateForm(action);
-  };
-
-  resetFormStep = async (action: AccountAction) => {
-    await this.session!.getAccount().resetFormStep(action);
-  };
-
-  submitForm = async (action: AccountAction) => {
-    await this.session!.getAccount().submitForm(action);
-  };
-
-  selectAction = async (action: AccountAction) => {
-    await this.session!.getAccount().selectAction(action);
-  };
-
-  clearAction = () => {
-    this.session!.getAccount().clearAction();
   };
 }

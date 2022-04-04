@@ -14,10 +14,6 @@ const views = [
     action: AppAction.LOGIN,
   },
   {
-    path: '/migrate',
-    action: AppAction.LOGIN,
-  },
-  {
     path: '/dashboard',
     action: AppAction.ACCOUNT,
   },
@@ -50,8 +46,6 @@ export const getLoginModeFromUrl = (url: string) => {
     case '/signup':
     case '/':
       return LoginMode.SIGNUP;
-    case '/migrate':
-      return LoginMode.MIGRATE;
     default:
       return LoginMode.LOGIN;
   }
@@ -61,8 +55,6 @@ export const getUrlFromLoginMode = (mode: LoginMode) => {
   switch (mode) {
     case LoginMode.SIGNUP:
       return '/signup';
-    case LoginMode.MIGRATE:
-      return '/migrate';
     default:
       return '/signin';
   }

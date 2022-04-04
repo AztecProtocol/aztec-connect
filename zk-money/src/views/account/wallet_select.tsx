@@ -97,13 +97,11 @@ export const WalletSelect: React.FunctionComponent<WalletSelectInputProps> = ({
     <Select
       className={className}
       trigger={<TextButton text={`(${ethAddress ? 'Change' : 'Connect'})`} size="xs" nowrap />}
-      items={wallets
-        .filter(({ id }) => id !== WalletId.HOT)
-        .map(({ id, name, icon }) => ({
-          id,
-          content: <WalletItem name={name} icon={icon} connected={id === walletId && id !== WalletId.CONNECT} />,
-          disabled: id === walletId && id !== WalletId.CONNECT,
-        }))}
+      items={wallets.map(({ id, name, icon }) => ({
+        id,
+        content: <WalletItem name={name} icon={icon} connected={id === walletId && id !== WalletId.CONNECT} />,
+        disabled: id === walletId && id !== WalletId.CONNECT,
+      }))}
       onSelect={id => onChangeWallet(id)}
     />
   );

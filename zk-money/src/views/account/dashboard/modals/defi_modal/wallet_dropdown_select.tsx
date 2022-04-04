@@ -8,12 +8,10 @@ const PlaceHolder = styled.div`
   margin-left: 20px;
 `;
 
-const ITEMS = (window.ethereum ? wallets : wallets.filter(w => w.id !== WalletId.METAMASK))
-  .filter(w => w.id !== WalletId.HOT)
-  .map(wallet => ({
-    id: wallet.id,
-    content: wallet.nameShort,
-  }));
+const ITEMS = (window.ethereum ? wallets : wallets.filter(w => w.id !== WalletId.METAMASK)).map(wallet => ({
+  id: wallet.id,
+  content: wallet.nameShort,
+}));
 
 export function WalletDropdownSelect() {
   const { userSession } = useApp();

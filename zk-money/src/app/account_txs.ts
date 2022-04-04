@@ -3,9 +3,6 @@ import { ProofId, TxId, UserAccountTx, UserPaymentTx } from '@aztec/sdk';
 export enum AccountAction {
   SHIELD = 'SHIELD',
   SEND = 'SEND',
-  MERGE = 'MERGE',
-  MIGRATE_OLD_BALANCE = 'MIGRATE_OLD_BALANCE',
-  MIGRATE_FORGOTTON_BALANCE = 'MIGRATE_FORGOTTON_BALANCE',
 }
 
 type JoinSplitTxAction = AccountAction | 'RECEIVE';

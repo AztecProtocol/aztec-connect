@@ -43,9 +43,7 @@ export const SigningKeyForm: React.FunctionComponent<SigningKeyFormProps> = ({
   onDisconnectWallet,
   onGoBack,
 }) => {
-  const availableWallets = (window.ethereum ? wallets : wallets.filter(w => w.id !== WalletId.METAMASK)).filter(
-    w => w.id !== WalletId.HOT,
-  );
+  const availableWallets = window.ethereum ? wallets : wallets.filter(w => w.id !== WalletId.METAMASK);
   return (
     <Root>
       <Description>

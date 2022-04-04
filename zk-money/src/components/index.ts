@@ -13,7 +13,6 @@ export * from './info_table';
 export * from './input';
 export * from './link';
 export * from './loader';
-export * from './migrating_asset_info';
 export * from './modal';
 export * from './moving_bubble';
 export * from './network_indicator';

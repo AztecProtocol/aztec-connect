@@ -7,14 +7,11 @@ import styled from 'styled-components/macro';
 import type { CutdownAsset } from 'app/types';
 import { AppContext } from '../alt-model/app_context';
 import {
-  AccountAction,
   AccountState,
   App,
   AppAction,
   AppEvent,
-  AssetState,
   ShieldFormValues,
-  Form,
   LoginMode,
   LoginState,
   LoginStep,
@@ -54,16 +51,10 @@ interface AppProps {
 interface AppState {
   action: AppAction;
   activeDefiModal?: { recipe: DefiRecipe; mode: DefiFormMode; prefilledAmountStr?: string };
-  activeAsset: number;
   loginState: LoginState;
   worldState: WorldState;
   providerState?: ProviderState;
   accountState?: AccountState;
-  assetState?: AssetState;
-  activeAction?: {
-    action: AccountAction;
-    formValues: Form;
-  };
   shieldForAliasForm?: ShieldFormValues;
   systemMessage: SystemMessage;
   isLoading: boolean;
@@ -109,13 +100,10 @@ export class AppView extends PureComponent<AppProps, AppState> {
 
     this.state = {
       action: initialAction,
-      activeAsset: this.defaultAsset,
       loginState: this.app.loginState,
       worldState: this.app.worldState,
       providerState: this.app.providerState,
       accountState: this.app.accountState,
-      assetState: this.app.assetState,
-      activeAction: this.app.activeAction,
       shieldForAliasForm: this.app.shieldForAliasForm,
       activeDefiModal: undefined,
       // path will be removed once we are able to add router to ui-components
@@ -241,8 +229,6 @@ export class AppView extends PureComponent<AppProps, AppState> {
       providerState: this.app.providerState,
       worldState: this.app.worldState,
       accountState: this.app.accountState,
-      assetState: this.app.assetState,
-      activeAction: this.app.activeAction,
       shieldForAliasForm: this.app.shieldForAliasForm,
       sdk: this.app.sdk,
       provider: this.app.provider,
@@ -286,7 +272,6 @@ export class AppView extends PureComponent<AppProps, AppState> {
   private handleRestart = () => {
     const prevMode = this.state.loginState.mode;
     switch (prevMode) {
-      case LoginMode.MIGRATE:
       case LoginMode.NEW_ALIAS: {
         const url = getUrlFromLoginMode(LoginMode.SIGNUP);
         this.props.navigate(url);
@@ -310,20 +295,6 @@ export class AppView extends PureComponent<AppProps, AppState> {
       return;
     }
     this.setState({ systemMessage: { message: '', type: MessageType.TEXT } }, () => this.app.logout());
-  };
-
-  private handleMigrateOldBalance = () => {
-    this.app.selectAction(AccountAction.MIGRATE_OLD_BALANCE);
-  };
-
-  private onMigrateForgottonBalance = () => {
-    this.app.selectAction(AccountAction.MIGRATE_FORGOTTON_BALANCE);
-  };
-
-  private handleClearAccountV0s = async () => {
-    const url = getUrlFromLoginMode(LoginMode.SIGNUP);
-    this.props.navigate(url);
-    await this.app.clearLocalAccountV0s();
   };
 
   private getTheme = () => {
@@ -364,13 +335,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
 
     const accountComponent = isLoggedIn ? (
       <AccountItem>
-        <UserAccount
-          account={accountState!}
-          worldState={worldState}
-          onMigrateOldBalance={this.handleMigrateOldBalance}
-          onMigrateForgottonBalance={this.onMigrateForgottonBalance}
-          onLogout={this.handleLogout}
-        />
+        <UserAccount account={accountState!} worldState={worldState} onLogout={this.handleLogout} />
       </AccountItem>
     ) : undefined;
 
@@ -417,18 +382,12 @@ export class AppView extends PureComponent<AppProps, AppState> {
                         shieldForAliasForm={shieldForAliasForm}
                         explorerUrl={config.explorerUrl}
                         systemMessage={systemMessage}
-                        setSeedPhrase={this.app.setSeedPhrase}
                         setAlias={this.app.setAlias}
                         setRememberMe={this.app.setRememberMe}
                         onSelectWallet={this.handleConnectWallet}
-                        onSelectSeedPhrase={this.app.confirmSeedPhrase}
-                        onMigrateToWallet={this.app.migrateToWallet}
-                        onMigrateNotes={this.app.migrateNotes}
                         onSelectAlias={this.app.confirmAlias}
                         onRestart={allowReset && step !== LoginStep.CONNECT_WALLET ? this.handleRestart : undefined}
                         onForgotAlias={this.app.forgotAlias}
-                        onMigrateAccount={this.app.migrateAccount}
-                        onClearAccountV0s={this.handleClearAccountV0s}
                         onShieldForAliasFormInputsChange={this.app.changeShieldForAliasForm}
                         onSubmitShieldForAliasForm={this.app.claimUserName}
                         onChangeWallet={this.app.changeWallet}

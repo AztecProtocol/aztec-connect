@@ -5,7 +5,6 @@ import hotIcon from '../../images/hot_wallet.svg';
 export enum WalletId {
   METAMASK,
   CONNECT,
-  HOT,
 }
 
 export interface Wallet {
@@ -27,11 +26,5 @@ export const wallets: Wallet[] = [
     name: 'WalletConnect',
     nameShort: 'Connect',
     icon: connectIcon,
-  },
-  {
-    id: WalletId.HOT,
-    name: 'Hot Wallet',
-    nameShort: 'Hot Wallet',
-    icon: hotIcon,
   },
 ];

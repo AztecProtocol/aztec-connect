@@ -1,13 +1,5 @@
 import type { CutdownAsset } from './types';
-import {
-  AccountId,
-  AztecSdk,
-  EthAddress,
-  GrumpkinAddress,
-  SdkEvent,
-  EthereumProvider,
-  JsonRpcProvider,
-} from '@aztec/sdk';
+import { AccountId, AztecSdk, GrumpkinAddress, SdkEvent, EthereumProvider, JsonRpcProvider } from '@aztec/sdk';
 import { SdkObs } from 'alt-model/top_level_context/sdk_obs';
 import { createHash } from 'crypto';
 import createDebug from 'debug';
@@ -16,15 +8,7 @@ import Mutex from 'idb-mutex';
 import Cookie from 'js-cookie';
 import { debounce, DebouncedFunc } from 'lodash';
 import { Config } from '../config';
-import {
-  AccountFormEvent,
-  getMigratableValues,
-  MigratingAsset,
-  ShieldForm,
-  ShieldFormValues,
-  ShieldStatus,
-} from './account_forms';
-import { AccountVersion } from './account_state';
+import { AccountFormEvent, ShieldForm, ShieldFormValues, ShieldStatus } from './account_forms';
 import { AccountUtils } from './account_utils';
 import { formatAliasInput, getAliasError } from './alias';
 import { Database } from './database';
@@ -35,7 +19,7 @@ import { Network } from './networks';
 import { PriceFeedService } from './price_feed_service';
 import { Provider, ProviderEvent, ProviderState, ProviderStatus } from './provider';
 import { RollupService } from './rollup_service';
-import { UserAccount, UserAccountEvent } from './user_account';
+import { UserAccount } from './user_account';
 import { WalletId, wallets } from './wallet_providers';
 import { toBaseUnits } from './units';
 import { KNOWN_MAINNET_ASSET_ADDRESS_STRS } from 'alt-model/known_assets/known_asset_addresses';
@@ -45,19 +29,12 @@ const debug = createDebug('zm:user_session');
 export enum LoginMode {
   SIGNUP,
   LOGIN,
-  MIGRATE,
   NEW_ALIAS,
 }
 
 export enum LoginStep {
   CONNECT_WALLET,
-  SET_SEED_PHRASE,
   SET_ALIAS,
-  CONFIRM_MIGRATION,
-  MIGRATE_WALLET,
-  MIGRATE_ACCOUNT,
-  SYNC_ACCOUNT,
-  MIGRATE_NOTES,
   INIT_ACCOUNT,
   CREATE_ACCOUNT,
   VALIDATE_DATA,
@@ -69,9 +46,6 @@ export enum LoginStep {
 }
 
 const undisruptiveSteps = [
-  LoginStep.MIGRATE_ACCOUNT,
-  LoginStep.SYNC_ACCOUNT,
-  LoginStep.MIGRATE_NOTES,
   LoginStep.INIT_ACCOUNT,
   LoginStep.CREATE_ACCOUNT,
   LoginStep.VALIDATE_DATA,
@@ -84,25 +58,20 @@ export interface LoginState {
   step: LoginStep;
   mode: LoginMode;
   walletId?: WalletId;
-  seedPhrase: string;
   alias: string;
   aliasAvailability: ValueAvailability;
   rememberMe: boolean;
   allowToProceed: boolean;
-  migratingAssets: MigratingAsset[];
-  accountV0?: GrumpkinAddress; // To be deprecated
 }
 
 export const initialLoginState: LoginState = {
   step: LoginStep.CONNECT_WALLET,
   mode: LoginMode.SIGNUP,
   walletId: undefined,
-  seedPhrase: '',
   alias: '',
   aliasAvailability: ValueAvailability.INVALID,
   rememberMe: true,
   allowToProceed: true,
-  migratingAssets: [],
 };
 
 export interface WorldState {
@@ -243,7 +212,6 @@ export class UserSession extends EventEmitter {
     this.destroyed = true;
     this.removeAllListeners();
     this.debounceCheckAlias.cancel();
-    this.account?.destroy();
     this.provider?.destroy();
     this.rollupService?.destroy();
     this.shieldForAliasForm?.destroy();
@@ -260,19 +228,6 @@ export class UserSession extends EventEmitter {
     this.clearSystemMessage();
   }
 
-  async migrateFromLocalAccountV0(alias: string, accountPublicKey: GrumpkinAddress) {
-    this.updateLoginState({ alias, mode: LoginMode.MIGRATE, accountV0: accountPublicKey });
-    this.toStep(LoginStep.CONFIRM_MIGRATION);
-  }
-
-  async clearLocalAccountV0s() {
-    const { accountV0 } = this.loginState;
-    if (accountV0) {
-      this.updateLoginState({ accountV0: undefined });
-    }
-    await this.db.deleteAccountV0s();
-  }
-
   async connectWallet(walletId: WalletId) {
     if (this.loginState.walletId !== undefined) {
       debug('Duplicated call to connectWallet()');
@@ -282,12 +237,10 @@ export class UserSession extends EventEmitter {
     this.updateLoginState({ walletId });
 
     const walletName = wallets[walletId].name;
-    if (walletId !== WalletId.HOT) {
-      this.emitSystemMessage(`Connecting to ${walletName}...`);
-      await this.changeWallet(walletId);
-      if (!this.provider) {
-        return this.abort(`Unable to connect to ${walletName}.`);
-      }
+    this.emitSystemMessage(`Connecting to ${walletName}...`);
+    await this.changeWallet(walletId);
+    if (!this.provider) {
+      return this.abort(`Unable to connect to ${walletName}.`);
     }
 
     this.emitSystemMessage('Connecting to rollup provider...');
@@ -296,10 +249,6 @@ export class UserSession extends EventEmitter {
       await this.createSdk(true);
     } catch (e) {
       return this.abort(`Something went wrong. This shouldn't happen.`);
-    }
-
-    if (walletId === WalletId.HOT) {
-      return this.toStep(LoginStep.SET_SEED_PHRASE);
     }
 
     if (this.provider!.chainId !== this.requiredNetwork.chainId) {
@@ -323,9 +272,6 @@ export class UserSession extends EventEmitter {
           break;
         case LoginMode.LOGIN:
           await this.loginWithWallet();
-          break;
-        case LoginMode.MIGRATE:
-          await this.migrateWithWallet();
           break;
       }
     } catch (e) {
@@ -378,31 +324,6 @@ export class UserSession extends EventEmitter {
 
     // Attempt to log in with unknown pubKey.
     if (!nonce) {
-      const signingMessage = KeyVault.signingMessageV0(this.provider!.account!, this.sdk).toString('hex');
-      this.emitSystemMessage(
-        `To check if you have a migratable account, please sign the following hash in your wallet: 0x${signingMessage.slice(
-          0,
-          6,
-        )}...${signingMessage.slice(-4)}`,
-        MessageType.WARNING,
-      );
-
-      try {
-        this.keyVaultV0 = await KeyVault.createV0(this.provider!, this.sdk);
-      } catch (e) {
-        debug(e);
-        throw new Error('Failed to sign the message.');
-      }
-
-      const prevNonce = await this.accountUtils.getAccountNonce(this.keyVaultV0.accountPublicKey);
-      if (prevNonce) {
-        // User has a migratable account.
-        const prevAlias = (await this.db.getAccountV0(this.keyVaultV0.accountPublicKey))?.alias || '';
-        this.updateLoginState({ alias: prevAlias, mode: LoginMode.MIGRATE });
-        this.toStep(prevAlias ? LoginStep.CONFIRM_MIGRATION : LoginStep.SET_ALIAS);
-        return;
-      }
-
       // TODO - show a signup link in error message.
       throw new Error('Account not registered.');
     }
@@ -415,37 +336,6 @@ export class UserSession extends EventEmitter {
       // Log in to previously logged in account.
       this.updateLoginState({ alias });
       this.toStep(LoginStep.INIT_ACCOUNT);
-    }
-  }
-
-  private async migrateWithWallet() {
-    const signingMessage = KeyVault.signingMessageV0(this.provider!.account!, this.sdk).toString('hex');
-    this.emitSystemMessage(
-      `To check if you have a migratable account, please sign the following hash in your wallet: 0x${signingMessage.slice(
-        0,
-        6,
-      )}...${signingMessage.slice(-4)}`,
-      MessageType.WARNING,
-    );
-
-    try {
-      this.keyVaultV0 = await KeyVault.createV0(this.provider!, this.sdk);
-    } catch (e) {
-      debug(e);
-      throw new Error('Failed to sign the message.');
-    }
-
-    const nonce = await this.accountUtils.getAccountNonce(this.keyVaultV0.accountPublicKey);
-    if (!nonce) {
-      throw new Error('Account not found.');
-    }
-
-    const { alias } = (await this.db.getAccountV0(this.keyVaultV0.accountPublicKey)) || {};
-    if (!alias) {
-      this.toStep(LoginStep.SET_ALIAS);
-    } else {
-      this.updateLoginState({ alias });
-      this.toStep(LoginStep.CONFIRM_MIGRATION);
     }
   }
 
@@ -488,7 +378,6 @@ export class UserSession extends EventEmitter {
       this.updateLoginState({ walletId });
     }
     this.shieldForAliasForm?.changeProvider(this.provider);
-    this.account?.changeProvider(this.provider);
     this.handleProviderStateChange(this.provider?.getState());
     this.emit(UserSessionEvent.UPDATED_PROVIDER);
   }
@@ -496,33 +385,6 @@ export class UserSession extends EventEmitter {
   async disconnectWallet() {
     await this.provider?.destroy();
     this.handleProviderStateChange();
-  }
-
-  changeAsset(assetId: number) {
-    this.activeAsset = assetId;
-    this.account?.changeAsset(assetId);
-  }
-
-  async setSeedPhrase(seedPhrase: string) {
-    this.clearSystemMessage();
-    return this.updateLoginState({ seedPhrase });
-  }
-
-  async confirmSeedPhrase(seedPhraseInput: string) {
-    this.keyVaultV0 = await KeyVault.fromSeedPhrase(seedPhraseInput, this.sdk);
-    const nonce = await this.accountUtils.getAccountNonce(this.keyVaultV0.accountPublicKey);
-    if (!nonce) {
-      this.emitSystemMessage('Account not found.', MessageType.ERROR);
-      return;
-    }
-
-    const { alias } = (nonce > 0 && (await this.db.getAccountV0(this.keyVaultV0.accountPublicKey))) || {};
-    if (alias) {
-      this.updateLoginState({ alias });
-      this.toStep(LoginStep.CONFIRM_MIGRATION);
-    } else {
-      this.toStep(LoginStep.SET_ALIAS);
-    }
   }
 
   forgotAlias() {
@@ -585,217 +447,14 @@ export class UserSession extends EventEmitter {
         this.updateLoginState({ allowToProceed });
         return;
       }
-    } else if (this.loginState.seedPhrase) {
-      const address = await this.accountUtils.getAliasPublicKey(aliasInput);
-      if (!address?.equals(this.keyVaultV0.accountPublicKey)) {
-        return this.emitSystemMessage('Incorrect alias.', MessageType.ERROR);
-      }
-
-      this.toStep(LoginStep.MIGRATE_WALLET);
     } else {
       const address = await this.accountUtils.getAliasPublicKey(aliasInput);
-      const keyVault = mode === LoginMode.MIGRATE ? this.keyVaultV0 : this.keyVault;
-      if (!address?.equals(keyVault.accountPublicKey)) {
+      if (!address?.equals(this.keyVault.accountPublicKey)) {
         return this.emitSystemMessage('Incorrect alias.', MessageType.ERROR);
       }
     }
 
-    this.toStep(mode === LoginMode.MIGRATE ? LoginStep.CONFIRM_MIGRATION : LoginStep.INIT_ACCOUNT);
-  }
-
-  async migrateToWallet(walletId: WalletId, reconnect = false) {
-    if (!reconnect && this.loginState.walletId !== undefined) {
-      debug('Duplicated call to migrateToWallet()');
-      return;
-    }
-
-    try {
-      this.updateLoginState({ walletId });
-
-      const walletName = wallets[walletId].name;
-      await this.changeWallet(walletId);
-      if (!this.provider) {
-        throw new Error(`Unable to connect to ${walletName}.`);
-      }
-
-      if (this.provider!.chainId !== this.requiredNetwork.chainId) {
-        this.emitSystemMessage(
-          `Please switch your wallet's network to ${this.requiredNetwork.network}...`,
-          MessageType.WARNING,
-        );
-        while (this.provider!.chainId !== this.requiredNetwork.chainId) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-          if (this.destroyed) {
-            throw new Error('Session destroyed.');
-          }
-        }
-      }
-
-      this.emitSystemMessage('Please sign the message in your wallet to create a new account...', MessageType.WARNING);
-
-      try {
-        this.keyVault = await KeyVault.create(this.provider!, this.sdk);
-      } catch (e) {
-        debug(e);
-        throw new Error('Unable to link your account.');
-      }
-
-      const nonce = await this.accountUtils.getAccountNonce(this.keyVault.accountPublicKey);
-      if (nonce > 0) {
-        const signerAddress = this.keyVault.signerAddress.toString();
-        throw new Error(
-          `An account has been linked to ${signerAddress.slice(0, 6)}...${signerAddress.slice(
-            -4,
-          )}. Please switch to another address.`,
-        );
-      }
-    } catch (e) {
-      this.emitSystemMessage(e.message, MessageType.ERROR);
-      await this.disconnectWallet();
-      return;
-    }
-
-    await this.migrateAccount();
-  }
-
-  async migrateAccount() {
-    if (!this.sdk) {
-      await this.createSdk();
-    }
-
-    if (!this.keyVaultV0) {
-      if (!this.loginState.accountV0) {
-        this.close('Account not found.');
-        return;
-      }
-
-      const nonce = 1;
-      const prevUserId = new AccountId(this.loginState.accountV0, nonce);
-      const prevUser = await this.sdk.getUserData(prevUserId);
-      this.keyVaultV0 = new KeyVault(prevUser.privateKey, prevUser.publicKey, EthAddress.ZERO, AccountVersion.V0);
-    }
-
-    if (!this.keyVault) {
-      this.toStep(LoginStep.MIGRATE_WALLET);
-      const { walletId } = this.loginState;
-      if (walletId === WalletId.HOT) {
-        await this.disconnectWallet();
-      } else if (walletId !== undefined) {
-        this.migrateToWallet(walletId, true);
-      }
-      return;
-    }
-
-    this.toStep(LoginStep.MIGRATE_ACCOUNT);
-
-    try {
-      await this.confirmAccountKey();
-    } catch (e) {
-      this.emitSystemMessage(e.message, MessageType.ERROR);
-      await this.destroy();
-      return;
-    }
-
-    try {
-      // Add the old account to the sdk.
-      const nonce = 1;
-      const prevUserId = new AccountId(this.keyVaultV0.accountPublicKey, nonce);
-      await this.accountUtils.addUser(this.keyVaultV0.accountPrivateKey, prevUserId.accountNonce);
-
-      // Metamask won't show the popup if two signature requests happen one after another.
-      // Wait for half a second before asking the user to sign a message again.
-      await new Promise(resolve => setTimeout(resolve, 500));
-      const signingKey = await this.requestSigningKey();
-
-      const signer = await this.sdk.createSchnorrSigner(this.keyVaultV0.accountPrivateKey);
-      await this.awaitUserSynchronised(prevUserId);
-
-      const fee = { assetId: 0, value: BigInt(0) }; // TODO
-      const controller = await this.sdk.createMigrateAccountController(
-        prevUserId,
-        signer,
-        signingKey,
-        undefined,
-        this.keyVault.accountPrivateKey,
-        fee,
-      );
-      await controller.createProof();
-
-      // Add the user to the sdk so that the account tx could be added to it.
-      // Don't sync from the beginning. It's a new account so it doesn't have any txs from previous blocks.
-      const userId = new AccountId(this.keyVault.accountPublicKey, nonce + 1);
-      await this.accountUtils.addUser(this.keyVault.accountPrivateKey, userId.accountNonce, true);
-
-      await controller.send();
-
-      await this.db.deleteAccountV0(prevUserId.publicKey);
-
-      await this.migrateBalance(prevUserId, userId);
-    } catch (e) {
-      debug(e);
-      this.emitSystemMessage('Failed to migrate account.', MessageType.ERROR);
-      await this.destroy();
-    }
-  }
-
-  private async migrateBalance(fromUserId: AccountId, userId: AccountId) {
-    this.toStep(LoginStep.SYNC_ACCOUNT);
-
-    await this.awaitUserSynchronised(fromUserId);
-
-    const migratingAssets = await Promise.all(
-      this.assets.map(async ({ id }) => {
-        const notes = (await this.sdk.getSpendableNotes(id, fromUserId)).sort((a, b) => (a.value < b.value ? 1 : -1));
-        const values = notes.map(n => n.value);
-        const [{ value: fee }] = await this.sdk.getTransferFees(id);
-        const migratableValues = getMigratableValues(values, fee);
-        return {
-          assetId: id,
-          fee,
-          totalFee: fee * BigInt(Math.ceil(migratableValues.length / 2)),
-          values,
-          migratableValues,
-          migratedValues: [],
-        };
-      }),
-    );
-
-    this.updateLoginState({ migratingAssets });
-
-    if (migratingAssets.every(a => !a.migratableValues.length)) {
-      await this.initUserAccount(userId, false);
-      await this.accountUtils.removeUser(fromUserId);
-      this.toStep(LoginStep.DONE);
-      return;
-    }
-
-    const totalFee = migratingAssets.reduce((sum, a) => sum + a.totalFee, 0n);
-    if (!totalFee) {
-      this.confirmMigrateNotes();
-    }
-  }
-
-  async confirmMigrateNotes() {
-    this.toStep(LoginStep.MIGRATE_NOTES);
-
-    const [userId, prevUserId, signingPrivateKey] =
-      this.loginState.mode === LoginMode.MIGRATE
-        ? [
-            new AccountId(this.keyVault.accountPublicKey, 2),
-            new AccountId(this.keyVaultV0.accountPublicKey, 1),
-            this.keyVaultV0.accountPrivateKey,
-          ]
-        : [
-            new AccountId(this.keyVault.accountPublicKey, 1),
-            new AccountId(this.keyVault.accountPublicKey, 2),
-            this.spendingPrivateKey!,
-          ];
-
-    await this.migrateNotes(prevUserId, userId, signingPrivateKey);
-    await this.accountUtils.removeUser(prevUserId);
-    await this.initUserAccount(userId, false);
-
-    this.toStep(LoginStep.DONE);
+    this.toStep(LoginStep.INIT_ACCOUNT);
   }
 
   changeShieldForAliasForm(newInputs: Partial<ShieldFormValues>) {
@@ -832,7 +491,7 @@ export class UserSession extends EventEmitter {
 
     // Add the user to the sdk so that the accountTx could be added for it.
     // Need to sync from the beginning when "migrating" account to a new alias.
-    const noSync = [LoginMode.SIGNUP, LoginMode.MIGRATE].includes(this.loginState.mode);
+    const noSync = this.loginState.mode === LoginMode.SIGNUP;
     await this.accountUtils.addUser(accountPrivateKey, userId.accountNonce, true);
     await this.accountUtils.addUser(accountPrivateKey, newUserId.accountNonce, noSync);
 
@@ -850,9 +509,7 @@ export class UserSession extends EventEmitter {
 
     const latestUserNonce = await this.accountUtils.getAccountNonce(newUserId.publicKey);
     if (latestUserNonce > newUserId.accountNonce) {
-      const latestUserId = new AccountId(this.keyVault.accountPublicKey, latestUserNonce);
-      await this.accountUtils.addUser(this.keyVault.accountPrivateKey, latestUserId.accountNonce);
-      await this.migrateBalance(latestUserId, userId);
+      throw new Error('Account migration has been depreciated');
     } else {
       await this.initUserAccount(newUserId, false);
       this.toStep(LoginStep.DONE);
@@ -912,15 +569,13 @@ export class UserSession extends EventEmitter {
     }
   }
 
-  async backgroundLogin(walletId = WalletId.HOT) {
+  async backgroundLogin() {
     if (this.loginState.walletId !== undefined) {
       debug('Attempt to login again.');
       return;
     }
 
     try {
-      this.updateLoginState({ walletId });
-
       await this.createSdk();
 
       const linkedAccount = await this.getLinkedAccountFromSession();
@@ -1065,34 +720,10 @@ export class UserSession extends EventEmitter {
 
     await this.accountUtils.addUser(this.keyVault.accountPrivateKey, userId.accountNonce);
 
-    const { txAmountLimits, explorerUrl, maxAvailableAssetId } = this.config;
-
     await this.reviveUserProvider();
 
     const { alias } = this.loginState;
-    const latestUserNonce = await this.accountUtils.getAccountNonce(userId.publicKey);
-    this.account = new UserAccount(
-      this.assets,
-      userId,
-      alias,
-      latestUserNonce,
-      this.activeAsset,
-      this.keyVault,
-      this.sdk,
-      this.stableEthereumProvider,
-      this.rollupService,
-      this.priceFeedService,
-      this.accountUtils,
-      this.requiredNetwork,
-      explorerUrl,
-      txAmountLimits,
-      maxAvailableAssetId,
-    );
-
-    for (const e in UserAccountEvent) {
-      const event = (UserAccountEvent as any)[e];
-      this.account.on(event, () => this.emit(UserSessionEvent.UPDATED_USER_ACCOUNT_DATA));
-    }
+    this.account = new UserAccount(userId, alias);
 
     await this.subscribeToSyncProgress(userId);
 
@@ -1100,53 +731,9 @@ export class UserSession extends EventEmitter {
       await this.awaitUserSynchronised(userId);
     }
 
-    await this.account.init(this.provider);
-
     await this.updateSession();
 
     this.emit(UserSessionEvent.SESSION_OPEN);
-  }
-
-  private async migrateNotes(prevUserId: AccountId, userId: AccountId, signingPrivateKey: Buffer) {
-    const updateMigratingAssets = (assetId: number, migratedValue: bigint) => {
-      const migratingAssets = this.loginState.migratingAssets.map(asset => {
-        if (asset.assetId !== assetId) {
-          return asset;
-        }
-
-        const { migratedValues } = asset;
-        return {
-          ...asset,
-          migratedValues: [...migratedValues, migratedValue],
-        };
-      });
-      this.updateLoginState({ migratingAssets });
-    };
-
-    const { migratingAssets } = this.loginState;
-    const signer = await this.sdk.createSchnorrSigner(signingPrivateKey);
-    for (const asset of migratingAssets) {
-      const { assetId, fee, migratableValues } = asset;
-      for (let i = 0; i < migratableValues.length; i += 2) {
-        if (this.destroyed) {
-          return;
-        }
-
-        const amount = migratableValues.slice(i, i + 2).reduce((sum, value) => sum + value, 0n) - fee;
-        // Create private send proof.
-        const controller = await this.sdk.createTransferController(
-          prevUserId,
-          signer,
-          { assetId, value: amount },
-          { assetId, value: fee },
-          userId,
-        );
-        await controller.createProof();
-        await controller.send();
-
-        updateMigratingAssets(assetId, amount);
-      }
-    }
   }
 
   private async subscribeToSyncProgress(userId: AccountId) {
@@ -1314,7 +901,6 @@ export class UserSession extends EventEmitter {
     if (!state || state.status === ProviderStatus.DESTROYED) {
       this.provider = undefined;
       this.shieldForAliasForm?.changeProvider();
-      this.account?.changeProvider();
       this.clearWalletSession();
       this.updateLoginState({ walletId: undefined });
     }

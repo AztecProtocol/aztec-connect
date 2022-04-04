@@ -67,8 +67,6 @@ interface HeaderProps {
   network?: string;
   worldState?: WorldState;
   account?: AccountState;
-  onMigrateOldBalance?: () => void;
-  onMigrateForgottonBalance?: () => void;
   onLogout?: () => void;
 }
 
@@ -78,8 +76,6 @@ export const Header: React.FunctionComponent<HeaderProps> = ({
   network,
   worldState,
   account,
-  onMigrateOldBalance,
-  onMigrateForgottonBalance,
   onLogout,
 }) => (
   <HeaderRoot>
@@ -96,13 +92,7 @@ export const Header: React.FunctionComponent<HeaderProps> = ({
       )}
       {!!account && (
         <AccountItem>
-          <UserAccount
-            account={account}
-            worldState={worldState!}
-            onMigrateOldBalance={onMigrateOldBalance!}
-            onMigrateForgottonBalance={onMigrateForgottonBalance!}
-            onLogout={onLogout!}
-          />
+          <UserAccount account={account} worldState={worldState!} onLogout={onLogout!} />
         </AccountItem>
       )}
     </AccountRoot>

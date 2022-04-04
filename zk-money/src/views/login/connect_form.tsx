@@ -7,12 +7,10 @@ import { getUrlFromLoginMode } from '../views';
 
 const signupLink = { text: 'Create new account', url: getUrlFromLoginMode(LoginMode.SIGNUP) };
 const loginLink = { text: 'Log in', url: getUrlFromLoginMode(LoginMode.LOGIN) };
-const migrateLink = { text: 'Migrate account', url: getUrlFromLoginMode(LoginMode.MIGRATE) };
 
 const footerLinks = {
-  [LoginMode.SIGNUP]: [loginLink, migrateLink],
-  [LoginMode.LOGIN]: [signupLink, migrateLink],
-  [LoginMode.MIGRATE]: [signupLink, loginLink],
+  [LoginMode.SIGNUP]: [loginLink],
+  [LoginMode.LOGIN]: [signupLink],
   [LoginMode.NEW_ALIAS]: [signupLink, loginLink],
 };
 
