@@ -627,6 +627,8 @@ export class UserSession extends EventEmitter {
   private async createShieldForAliasForm(userId: AccountId, alias: string, spendingPublicKey: GrumpkinAddress) {
     const ethAccount = new EthAccount(
       this.provider,
+      this.provider?.account,
+      this.provider?.network,
       this.accountUtils,
       this.accountProofDepositAssetId,
       this.rollupService.supportedAssets[this.accountProofDepositAssetId].address,
@@ -914,6 +916,8 @@ export class UserSession extends EventEmitter {
   private renewShieldForAliasEthAccount() {
     const ethAccount = new EthAccount(
       this.provider,
+      this.provider?.account,
+      this.provider?.network,
       this.accountUtils,
       this.accountProofDepositAssetId,
       this.rollupService.supportedAssets[this.accountProofDepositAssetId].address,

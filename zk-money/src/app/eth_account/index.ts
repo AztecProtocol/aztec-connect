@@ -32,9 +32,6 @@ export interface EthAccount {
 }
 
 export class EthAccount {
-  private readonly address?: EthAddress;
-  private readonly network?: Network;
-
   private readonly valueSubscribers: { [key in EthAccountEvent]: ValueSubscriber };
 
   private readonly listeners: { [key in EthAccountEvent]: ValueListener } = {
@@ -56,14 +53,13 @@ export class EthAccount {
 
   constructor(
     public readonly provider: Provider | undefined,
+    private readonly address: EthAddress | undefined,
+    private readonly network: Network | undefined,
     accountUtils: AccountUtils,
     assetId: number,
     assetAddress: EthAddress | undefined,
     private requiredNetwork: Network,
   ) {
-    this.address = provider?.account;
-    this.network = provider?.network;
-
     const enableSubscribe = this.address && this.isCorrectNetwork;
     this.valueSubscribers = {
       [EthAccountEvent.UPDATED_PUBLIC_BALANCE]: new PublicBalance(
