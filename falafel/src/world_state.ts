@@ -474,7 +474,7 @@ export class WorldState {
       this.metrics.rollupReceived(rollupDao!);
     }
 
-    const rollupDao = await this.rollupDb.getRollup(rollup.rollupId);
+    const rollupDao = (await this.rollupDb.getRollup(rollup.rollupId))!;
     this.blockBufferCache.push(rollupDaoToBlockBuffer(rollupDao!));
   }
 

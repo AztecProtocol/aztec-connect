@@ -33,7 +33,7 @@ export const recoverTreeNotes = (
       return note;
     }
     debug(
-      `index ${i}: tree commitment ${noteCommitment.toString('hex')} != encrypted note commitment${commitment.toString(
+      `index ${i}: tree commitment ${noteCommitment.toString('hex')} != encrypted note commitment ${commitment.toString(
         'hex',
       )}.`,
     );

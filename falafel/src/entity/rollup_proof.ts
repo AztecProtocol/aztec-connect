@@ -1,3 +1,4 @@
+import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import {
   AfterInsert,
   AfterLoad,
@@ -51,12 +52,21 @@ export class RollupProofDao {
   @JoinColumn()
   rollup?: RollupDao;
 
-  @AfterLoad()
   @AfterInsert()
   @AfterUpdate()
-  afterLoad() {
+  deleteFalseyProperties() {
     if (!this.rollup) {
       delete this.rollup;
+    }
+  }
+
+  @AfterLoad()
+  afterLoad() {
+    this.deleteFalseyProperties();
+    if (this.txs && this.txs.length) {
+      // TxDaos on the RollupProofDao are not guaranteed to be in the order they are within the rollup.
+      // Sort our TxDaos to be in rollup order.
+      this.txs = RollupProofData.getTxIdsFromBuffer(this.proofData).map(id => this.txs.find(tx => tx.id.equals(id))!);
     }
   }
 

@@ -3,6 +3,7 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { Block } from '@aztec/barretenberg/block_source';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
+import { createLogger } from '@aztec/barretenberg/debug';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
 import {
@@ -22,7 +23,6 @@ import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proo
 import { RollupProvider } from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { ViewingKey } from '@aztec/barretenberg/viewing_key';
-import { createLogger } from '@aztec/barretenberg/debug';
 import { EventEmitter } from 'events';
 import { CoreAccountTx, CoreDefiTx, CorePaymentTx, PaymentProofId } from '../core_tx';
 import { Database } from '../database';

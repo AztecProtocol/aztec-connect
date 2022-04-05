@@ -1,6 +1,5 @@
 import { Blockchain, TxHash } from '@aztec/barretenberg/blockchain';
 import { JoinSplitProofData } from '@aztec/barretenberg/client_proofs';
-import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupDao } from './entity';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
@@ -85,13 +84,7 @@ export class RollupPublisher {
 
   private async createTxData(rollup: RollupDao) {
     const proof = rollup.rollupProof.proofData;
-    const proofData = RollupProofData.fromBuffer(rollup.rollupProof.proofData);
-    // TxDaos on the RollupProofDao are not guaranteed to be in the order they are within the rollup.
-    // Sort our TxDaos to be in rollup order.
-    const txs = proofData.innerProofData
-      .filter(tx => !tx.isPadding())
-      .map(tx => tx.txId)
-      .map(id => rollup.rollupProof.txs.find(tx => tx.id.equals(id))!);
+    const txs = rollup.rollupProof.txs;
     const offchainTxData = txs.map(tx => tx.offchainTxData);
     const jsTxs = txs.filter(tx => tx.signature);
     const signatures: Buffer[] = [];

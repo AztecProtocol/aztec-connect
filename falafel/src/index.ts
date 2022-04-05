@@ -1,6 +1,8 @@
-// Must happen before anything else.
+// initEntities must be happen before any entities are imported.
+import { Configurator } from './configurator';
 import { initEntities } from './entity/init_entities';
-initEntities();
+const configurator = new Configurator();
+initEntities(configurator.getConfVars().dbUrl);
 
 import 'reflect-metadata';
 import 'source-map-support/register';
@@ -11,7 +13,7 @@ import { EthereumBlockchain } from '@aztec/blockchain';
 import { createConnection } from 'typeorm';
 import { appFactory } from './app';
 import { Server } from './server';
-import { getConfig } from './config';
+import { getComponents } from './config';
 import { Metrics } from './metrics';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { Container } from 'typedi';
@@ -19,7 +21,7 @@ import { CachedRollupDb, TypeOrmRollupDb } from './rollup_db';
 import { InitHelpers } from '@aztec/barretenberg/environment';
 
 async function main() {
-  const { ormConfig, provider, signingAddress, ethConfig, configurator, bridgeConfigs } = await getConfig();
+  const { ormConfig, provider, signingAddress, ethConfig, bridgeConfigs } = await getComponents(configurator);
   const {
     rollupContractAddress,
     feeDistributorAddress,

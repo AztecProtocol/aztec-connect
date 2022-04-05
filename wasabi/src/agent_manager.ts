@@ -1,6 +1,4 @@
-import {
-  AztecSdk, EthAddress, EthereumRpc, WalletProvider
-} from '@aztec/sdk';
+import { AztecSdk, EthAddress, EthereumRpc, WalletProvider } from '@aztec/sdk';
 import { EthAddressAndNonce } from './agent';
 // import { DefiAgent } from './defi_agent';
 import { PaymentAgent } from './payment_agent';
@@ -22,14 +20,13 @@ export class AgentManager {
     private fundingAddress: EthAddress,
     private agentType: string,
     private numAgents: number,
-    private numDefiSwaps: number,
-    private numPayments: number,
+    private numTxsPerAgent: number,
   ) {}
 
   private createAgent(id: number, fundingAccount: EthAddressAndNonce) {
     switch (this.agentType) {
       case 'payment':
-        return new PaymentAgent(fundingAccount, this.sdk, this.provider, id, this.numPayments);
+        return new PaymentAgent(fundingAccount, this.sdk, this.provider, id, this.numTxsPerAgent);
       // case 'defi':
       //   return new DefiAgent(this.fundingAddress, this.sdk, this.provider, this.agents.length, this.numDefiSwaps);
       default:

@@ -95,7 +95,7 @@ export class Agent {
     const fee = toBaseUnits('420', 12);
     const value = (await this.sdk.getPublicBalance(this.assetId, userData.address)) - fee;
 
-    console.log(`agent ${this.id} refunding ${this.fundingAccount} with ${value} wei...`);
+    console.log(`agent ${this.id} refunding ${this.fundingAccount.address} with ${value} wei...`);
     const asset: EthAsset = new EthAsset(this.provider);
     const txHash = await asset.transfer(value, userData.address, this.fundingAccount.address);
     return this.sdk.getTransactionReceipt(txHash);

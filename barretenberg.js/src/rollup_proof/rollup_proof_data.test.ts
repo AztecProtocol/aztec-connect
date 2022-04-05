@@ -133,4 +133,12 @@ describe('RollupProofData', () => {
     const expected = inners.map(i => new RollupDepositProofData(i)).reduce((a, i) => a + i.publicValue, BigInt(0));
     expect(rollupProofData.getTotalDeposited(0)).toEqual(expected);
   });
+
+  it('should get tx ids from buffer', () => {
+    const inners = [randomDepositProofData(), randomDepositProofData()];
+    const rollupProofData = createRollupProofData(inners);
+    const expected = rollupProofData.innerProofData.filter(i => !i.isPadding()).map(i => i.txId);
+    const txIds = RollupProofData.getTxIdsFromBuffer(rollupProofData.toBuffer());
+    expect(txIds).toEqual(expected);
+  });
 });

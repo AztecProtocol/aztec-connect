@@ -21,6 +21,10 @@ export class PaymentAgent {
     this.agent = new Agent(fundingAccount, sdk, provider, id);
   }
 
+  /**
+   * We need enough ETH to deposit funds to the contract, plus calcDeposit().
+   * Could do a better estimate of the cost of depositPendingFundsToContact().
+   */
   public static getRequiredFunding() {
     return toBaseUnits('0.01', 18);
   }
@@ -60,6 +64,9 @@ export class PaymentAgent {
 
       await this.agent.withdraw(this.userA);
       await this.agent.repayFundingAddress(this.userA);
+
+      await this.sdk.removeUser(this.userA.user.id);
+      await this.sdk.removeUser(this.userB.user.id);
     } catch (err: any) {
       console.log(`ERROR: `, err);
     }

@@ -86,10 +86,6 @@ resource "aws_ecs_task_definition" "wasabi" {
         "value": "10"
       },
       {
-        "name": "LOOPS",
-        "value": "-1"
-      },
-      {
         "name": "CONFS",
         "value": "3"
       }

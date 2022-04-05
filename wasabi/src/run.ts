@@ -26,12 +26,18 @@ async function initSdk(provider: EthereumProvider, serverUrl: string, minConfirm
 
 /**
  * Return the amount of wei this process will take from the primary funding account.
- * Currently 110% of total agents requirements, to have enough for fees.
+ * We add 10% per loop.
+ * We will refund if we drop below 110% requirement.
  */
-export function getAgentRequiredFunding(agentType: string, numAgents: number) {
+export function getAgentRequiredFunding(agentType: string, numAgents: number, loops = 10) {
+  const fundingBufferPercent = 10n * BigInt(loops);
   switch (agentType) {
-    case 'payment':
-      return (PaymentAgent.getRequiredFunding() * BigInt(numAgents) * 110n) / 100n;
+    case 'payment': {
+      const value = PaymentAgent.getRequiredFunding() * BigInt(numAgents);
+      const fundingThreshold = (value * 110n) / 100n;
+      const toFund = (value * (100n + fundingBufferPercent)) / 100n;
+      return { fundingThreshold, toFund };
+    }
     default:
       throw new Error(`Unknown agent type: ${agentType}`);
   }
@@ -41,12 +47,11 @@ export async function run(
   fundingPrivateKey: Buffer,
   agentType: string,
   numAgents: number,
-  numDefiSwaps: number,
-  numPayments: number,
+  numTxsPerAgent: number,
   rollupHost: string,
   host: string,
   confs: number,
-  loops: number,
+  loops?: number,
 ) {
   const ethereumProvider = new JsonRpcProvider(host);
   const ethereumRpc = new EthereumRpc(ethereumProvider);
@@ -64,28 +69,33 @@ export async function run(
   const fundingAddressBalance = await sdk.getPublicBalanceAv(0, fundingAddress);
   console.log(`primary funding account: ${fundingAddress} (${sdk.fromBaseUnits(fundingAddressBalance, true)})`);
 
-  // Create a unique address for this process, loop until we successfully fund it. It may fail if other
-  // processes are also trying to fund from the funding account (nonce races). Once this process address
-  // is funded, we don't need to worry about other wasabi's interferring with our txs.
+  // Create a unique address for this process.
   const processPrivateKey = randomBytes(32);
   const processAddress = provider.addAccount(processPrivateKey);
-  while (true) {
-    try {
-      const deposit = getAgentRequiredFunding(agentType, numAgents);
-      console.log(`funding process address ${processAddress} with ${deposit} wei...`);
-      const txHash = await asset.transfer(deposit, fundingAddress, processAddress);
-      const receipt = await sdk.getTransactionReceipt(txHash);
-      if (!receipt.status) {
-        throw new Error('receipt status is false.');
-      }
-      break;
-    } catch (err: any) {
-      console.log(`failed to fund process address, will retry: ${err.message}`);
-      await new Promise(resolve => setTimeout(resolve, 5000));
-    }
-  }
 
-  for (let runNumber = 0; runNumber != loops; ++runNumber) {
+  for (let runNumber = 0; runNumber !== loops; ++runNumber) {
+    console.log(`starting wasabi run ${runNumber}...`);
+    const start = new Date();
+
+    // Loop until we successfully fund process address. It may fail if other processes are also trying to fund
+    // from the funding account (nonce races). Once this process address is funded, we don't need to worry about
+    // other wasabi's interferring with our txs.
+    const { toFund, fundingThreshold } = getAgentRequiredFunding(agentType, numAgents);
+    while ((await sdk.getPublicBalance(0, processAddress)) < fundingThreshold) {
+      try {
+        console.log(`funding process address ${processAddress} with ${toFund} wei...`);
+        const txHash = await asset.transfer(toFund, fundingAddress, processAddress);
+        const receipt = await sdk.getTransactionReceipt(txHash);
+        if (!receipt.status) {
+          throw new Error('receipt status is false.');
+        }
+        break;
+      } catch (err: any) {
+        console.log(`failed to fund process address, will retry: ${err.message}`);
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
+    }
+
     const agentManager = new AgentManager(
       sdk,
       provider,
@@ -93,20 +103,18 @@ export async function run(
       processAddress,
       agentType,
       numAgents,
-      numDefiSwaps,
-      numPayments,
+      numTxsPerAgent,
     );
 
-    console.log(`Starting wasabi run ${runNumber}...`);
-    const start = new Date();
     await agentManager.run();
+
     const timeTaken = new Date().getTime() - start.getTime();
-    console.log(`Test run ${runNumber} completed: ${timeTaken / 1000}s.`);
+    console.log(`test run ${runNumber} completed: ${timeTaken / 1000}s.`);
   }
 
   // We are exiting gracefully, refund the funding account from our process account.
   const fee = toBaseUnits('420', 12);
-  const value = (await this.sdk.getPublicBalance(0, processAddress)) - fee;
+  const value = (await sdk.getPublicBalance(0, processAddress)) - fee;
   console.log(`refunding funding address ${fundingAddress} with ${value} wei...`);
   const txHash = await asset.transfer(value, processAddress, fundingAddress);
   await sdk.getTransactionReceipt(txHash);

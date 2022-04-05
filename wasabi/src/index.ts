@@ -6,12 +6,11 @@ const {
   ETHEREUM_HOST = 'http://localhost:8545',
   PRIVATE_KEY = '',
   AGENT_TYPE = 'payment',
-  NUM_AGENTS = '1',
-  NUM_DEFI_SWAPS = '20',
-  NUM_PAYMENTS = '20',
-  LOOPS = '1',
+  NUM_AGENTS = '2',
+  NUM_TXS_PER_AGENT = '10',
   ROLLUP_HOST = 'http://localhost:8081',
   CONFS = '1',
+  LOOPS,
 } = process.env;
 
 async function main() {
@@ -23,12 +22,11 @@ async function main() {
     Buffer.from(PRIVATE_KEY, 'hex'),
     AGENT_TYPE,
     +NUM_AGENTS,
-    +NUM_DEFI_SWAPS,
-    +NUM_PAYMENTS,
+    +NUM_TXS_PER_AGENT,
     ROLLUP_HOST,
     ETHEREUM_HOST,
     +CONFS,
-    +LOOPS,
+    LOOPS ? +LOOPS : undefined,
   );
 }
 

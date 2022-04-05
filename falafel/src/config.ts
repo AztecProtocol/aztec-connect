@@ -123,10 +123,7 @@ function getPerChainBridgeConfig(chainId: number) {
   });
 }
 
-export async function getConfig() {
-  const configurator = new Configurator();
-  await configurator.init();
-
+export async function getComponents(configurator: Configurator) {
   const confVars = configurator.getConfVars();
   const {
     runtimeConfig: { gasLimit },
@@ -158,5 +155,5 @@ export async function getConfig() {
     throw new Error('There should be one price feed contract address per fee paying asset.');
   }
 
-  return { configurator, ormConfig, provider, signingAddress, ethConfig, bridgeConfigs };
+  return { ormConfig, provider, signingAddress, ethConfig, bridgeConfigs };
 }

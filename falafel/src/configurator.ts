@@ -1,9 +1,9 @@
-import { emptyDir, mkdirp, pathExists, readJson, writeJson } from 'fs-extra';
+import { emptyDirSync, mkdirpSync, pathExistsSync, readJsonSync, writeJsonSync } from 'fs-extra';
 import { dirname } from 'path';
 import { RuntimeConfig } from '@aztec/barretenberg/rollup_provider';
 import { EthAddress } from '@aztec/barretenberg/address';
 
-export interface ConfVars {
+interface StartupConfig {
   port: number;
   dbUrl?: string;
   rollupContractAddress: EthAddress;
@@ -22,10 +22,50 @@ export interface ConfVars {
   minConfirmationEHW: number;
   typeOrmLogging: boolean;
   proverless: boolean;
+}
+
+export interface ConfVars extends StartupConfig {
   runtimeConfig: RuntimeConfig;
 }
 
-function getConfVars(): ConfVars {
+const defaultStartupConfig: StartupConfig = {
+  port: 8081,
+  rollupContractAddress: EthAddress.ZERO,
+  feeDistributorAddress: EthAddress.ZERO,
+  priceFeedContractAddresses: [],
+  feePayingAssetAddresses: [],
+  ethereumHost: 'http://localhost:8545',
+  ethereumPollInterval: 10000,
+  proofGeneratorMode: 'normal',
+  // Test mnemonic account 0.
+  privateKey: Buffer.from('ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', 'hex'),
+  numInnerRollupTxs: 1,
+  numOuterRollupProofs: 1,
+  minConfirmation: 1,
+  minConfirmationEHW: 12,
+  apiPrefix: '',
+  serverAuthToken: '!changeme#',
+  typeOrmLogging: false,
+  proverless: false,
+};
+
+const defaultRuntimeConfig: RuntimeConfig = {
+  acceptingTxs: true,
+  useKeyCache: false,
+  publishInterval: 0,
+  flushAfterIdle: 0,
+  gasLimit: 4000000,
+  baseTxGas: 16000,
+  verificationGas: 500000,
+  maxFeeGasPrice: 250000000000n,
+  feeGasPriceMultiplier: 1,
+  feeRoundUpSignificantFigures: 2,
+  maxProviderGasPrice: 250000000000n,
+  maxUnsettledTxs: 0,
+  defaultDeFiBatchSize: 5,
+};
+
+function getStartupConfigEnvVars(): Partial<StartupConfig> {
   const {
     DB_URL,
     ROLLUP_CONTRACT_ADDRESS,
@@ -41,65 +81,53 @@ function getConfVars(): ConfVars {
     NUM_OUTER_ROLLUP_PROOFS,
     MIN_CONFIRMATION,
     MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW,
-    BASE_TX_GAS,
-    FEE_GAS_PRICE_MULTIPLIER,
-    PUBLISH_INTERVAL,
-    FLUSH_AFTER_IDLE,
     API_PREFIX,
-    SERVER_AUTH_TOKEN,
     PROVERLESS,
     TYPEORM_LOGGING,
-    DEFAULT_DEFI_BATCH_SIZE,
   } = process.env;
 
-  return {
-    port: +(PORT || 8081),
+  const envVars: Partial<StartupConfig> = {
+    port: PORT ? +PORT : undefined,
     dbUrl: DB_URL,
-    rollupContractAddress: EthAddress.fromString(ROLLUP_CONTRACT_ADDRESS || ''),
-    feeDistributorAddress: EthAddress.fromString(FEE_DISTRIBUTOR_ADDRESS || ''),
+    rollupContractAddress: ROLLUP_CONTRACT_ADDRESS ? EthAddress.fromString(ROLLUP_CONTRACT_ADDRESS) : undefined,
+    feeDistributorAddress: FEE_DISTRIBUTOR_ADDRESS ? EthAddress.fromString(FEE_DISTRIBUTOR_ADDRESS) : undefined,
     priceFeedContractAddresses: PRICE_FEED_CONTRACT_ADDRESSES
       ? PRICE_FEED_CONTRACT_ADDRESSES.split(',').map(EthAddress.fromString)
-      : [],
+      : undefined,
     feePayingAssetAddresses: FEE_PAYING_ASSET_ADDRESSES
       ? FEE_PAYING_ASSET_ADDRESSES.split(',').map(EthAddress.fromString)
-      : [EthAddress.ZERO],
-    ethereumHost: ETHEREUM_HOST || '',
-    ethereumPollInterval: +(ETHEREUM_POLL_INTERVAL || 10000),
-    proofGeneratorMode: PROOF_GENERATOR_MODE || 'normal',
-    privateKey: PRIVATE_KEY
-      ? Buffer.from(PRIVATE_KEY.slice(2), 'hex')
-      : // Test mnemonic account 0.
-        Buffer.from('ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', 'hex'),
-    numInnerRollupTxs: +(NUM_INNER_ROLLUP_TXS || 1),
-    numOuterRollupProofs: +(NUM_OUTER_ROLLUP_PROOFS || 1),
-    minConfirmation: +(MIN_CONFIRMATION || 1),
-    minConfirmationEHW: +(MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW || 12),
-    apiPrefix: API_PREFIX || '',
-    serverAuthToken: SERVER_AUTH_TOKEN || '!changeme#',
-    typeOrmLogging: !!TYPEORM_LOGGING,
-    proverless: PROVERLESS === 'true',
-    runtimeConfig: {
-      acceptingTxs: true,
-      useKeyCache: false,
-      publishInterval: +(PUBLISH_INTERVAL || 0),
-      flushAfterIdle: +(FLUSH_AFTER_IDLE || 0),
-      gasLimit: 4000000,
-      baseTxGas: +(BASE_TX_GAS || 16000),
-      verificationGas: 500000,
-      maxFeeGasPrice: 250000000000n,
-      feeGasPriceMultiplier: +(FEE_GAS_PRICE_MULTIPLIER || 1),
-      feeRoundUpSignificantFigures: 2,
-      maxProviderGasPrice: 250000000000n,
-      maxUnsettledTxs: 0,
-      defaultDeFiBatchSize: +(DEFAULT_DEFI_BATCH_SIZE || 5),
-    },
+      : undefined,
+    ethereumHost: ETHEREUM_HOST,
+    ethereumPollInterval: ETHEREUM_POLL_INTERVAL ? +ETHEREUM_POLL_INTERVAL : undefined,
+    proofGeneratorMode: PROOF_GENERATOR_MODE,
+    privateKey: PRIVATE_KEY ? Buffer.from(PRIVATE_KEY.slice(2), 'hex') : undefined,
+    numInnerRollupTxs: NUM_INNER_ROLLUP_TXS ? +NUM_INNER_ROLLUP_TXS : undefined,
+    numOuterRollupProofs: NUM_OUTER_ROLLUP_PROOFS ? +NUM_OUTER_ROLLUP_PROOFS : undefined,
+    minConfirmation: MIN_CONFIRMATION ? +MIN_CONFIRMATION : undefined,
+    minConfirmationEHW: MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW ? +MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW : undefined,
+    apiPrefix: API_PREFIX,
+    typeOrmLogging: TYPEORM_LOGGING ? TYPEORM_LOGGING === 'true' : undefined,
+    proverless: PROVERLESS ? PROVERLESS === 'true' : undefined,
   };
+  return Object.fromEntries(Object.entries(envVars).filter(e => e[1] !== undefined));
+}
+
+function getRuntimeConfigEnvVars(): Partial<RuntimeConfig> {
+  const { BASE_TX_GAS, FEE_GAS_PRICE_MULTIPLIER, PUBLISH_INTERVAL, FLUSH_AFTER_IDLE, DEFAULT_DEFI_BATCH_SIZE } =
+    process.env;
+
+  const envVars = {
+    publishInterval: PUBLISH_INTERVAL ? +PUBLISH_INTERVAL : undefined,
+    flushAfterIdle: FLUSH_AFTER_IDLE ? +FLUSH_AFTER_IDLE : undefined,
+    baseTxGas: BASE_TX_GAS ? +BASE_TX_GAS : undefined,
+    feeGasPriceMultiplier: FEE_GAS_PRICE_MULTIPLIER ? +FEE_GAS_PRICE_MULTIPLIER : undefined,
+    defaultDeFiBatchSize: DEFAULT_DEFI_BATCH_SIZE ? +DEFAULT_DEFI_BATCH_SIZE : undefined,
+  };
+  return Object.fromEntries(Object.entries(envVars).filter(e => e[1] !== undefined));
 }
 
 export class Configurator {
   private confVars!: ConfVars;
-
-  constructor(private confPath = './data/config') {}
 
   /**
    * Builds a launch time configuration from environment variables.
@@ -108,29 +136,53 @@ export class Configurator {
    * Update the configuration with the saved runtime configuration (if it exists).
    * Save the new configuration to disk.
    */
-  async init() {
+  constructor(private confPath = './data/config') {
     const dir = dirname(this.confPath);
-    await mkdirp(dir);
+    mkdirpSync(dir);
 
-    this.confVars = getConfVars();
+    const startupConfigEnvVars = getStartupConfigEnvVars();
+    const runtimeConfigEnvVars = getRuntimeConfigEnvVars();
 
-    if (await pathExists(this.confPath)) {
+    if (pathExistsSync(this.confPath)) {
       // Erase all data if rollup contract changes.
-      const saved: ConfVars = await this.readConfigFile(this.confPath);
-      if (!this.confVars.rollupContractAddress.equals(saved.rollupContractAddress)) {
+      const saved: ConfVars = this.readConfigFile(this.confPath);
+      const { rollupContractAddress } = startupConfigEnvVars;
+      if (rollupContractAddress && !rollupContractAddress.equals(saved.rollupContractAddress)) {
         console.log(
           `Rollup contract changed, erasing data: ${saved.rollupContractAddress.toString()} -> ${this.confVars.rollupContractAddress.toString()}`,
         );
-        await emptyDir(dir);
+        emptyDirSync(dir);
       }
-      // Restore runtime config.
-      this.confVars.runtimeConfig = {
-        ...this.confVars.runtimeConfig,
-        ...saved.runtimeConfig,
+
+      // Priorities:
+      // StartupConfig: Environment, saved, defaults.
+      // RuntimeConfig: Saved, Environment, defaults.
+      const { runtimeConfig: savedRuntimeConfig, ...savedStartupConfig } = saved;
+      this.confVars = {
+        ...defaultStartupConfig,
+        ...savedStartupConfig,
+        ...startupConfigEnvVars,
+        runtimeConfig: {
+          ...defaultRuntimeConfig,
+          ...runtimeConfigEnvVars,
+          ...savedRuntimeConfig,
+        },
+      };
+    } else {
+      // Priorities:
+      // StartupConfig: Environment, defaults.
+      // RuntimeConfig: Environment, defaults.
+      this.confVars = {
+        ...defaultStartupConfig,
+        ...startupConfigEnvVars,
+        runtimeConfig: {
+          ...defaultRuntimeConfig,
+          ...runtimeConfigEnvVars,
+        },
       };
     }
 
-    await this.writeConfigFile(this.confPath, this.confVars);
+    this.writeConfigFile(this.confPath, this.confVars);
   }
 
   public getConfVars() {
@@ -142,14 +194,14 @@ export class Configurator {
       ...this.confVars.runtimeConfig,
       ...runtimeConfig,
     };
-    await this.writeConfigFile(this.confPath, this.confVars);
+    this.writeConfigFile(this.confPath, this.confVars);
   }
 
   /**
    * Loads configuration from file.
    */
-  private async readConfigFile(path: string): Promise<ConfVars> {
-    const conf = await readJson(path);
+  private readConfigFile(path: string): ConfVars {
+    const conf = readJsonSync(path);
     return {
       ...conf,
       rollupContractAddress: EthAddress.fromString(conf.rollupContractAddress),
@@ -169,8 +221,8 @@ export class Configurator {
    * Saves configuration to file. Sets acceptingTxs to true, as it's assumed if the system is restarted,
    * we want to accept txs again when ready.
    */
-  private async writeConfigFile(path: string, conf: ConfVars) {
-    await writeJson(path, {
+  private writeConfigFile(path: string, conf: ConfVars) {
+    writeJsonSync(path, {
       ...conf,
       rollupContractAddress: conf.rollupContractAddress.toString(),
       feeDistributorAddress: conf.feeDistributorAddress.toString(),

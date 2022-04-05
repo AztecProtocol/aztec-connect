@@ -78,12 +78,8 @@ export class PipelineCoordinator {
         this.log('Processing pending txs...');
         this.txPoolProfile = await this.rollupCoordinator.processPendingTxs(pendingTxs, this.flush);
 
-        if (
-          this.txPoolProfile.nextRollupProfile.published || // rollup has been published so we exit this loop
-          (!this.txPoolProfile.nextRollupProfile.totalTxs && this.flush)
-        ) {
-          console.log('Rollup published or we are in a flush state, exiting.');
-          // we are in a flush state and this iteration produced no rollup-able txs, so we exit
+        if (this.txPoolProfile.nextRollupProfile.published) {
+          console.log('Rollup published, exiting.');
           this.running = false;
           break;
         }
@@ -122,8 +118,6 @@ export class PipelineCoordinator {
    * Constructs the RollupCoordinator.
    */
   private async init() {
-    this.flush = false;
-
     // Erase any outstanding rollups and proofs to release unsettled txs.
     await this.rollupDb.deleteUnsettledRollups();
     await this.rollupDb.deleteOrphanedRollupProofs();

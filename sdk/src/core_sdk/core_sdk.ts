@@ -246,35 +246,37 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   public async addUser(privateKey: Buffer, nonce?: number, noSync = false) {
-    const publicKey = await this.derivePublicKey(privateKey);
-    if (nonce === undefined) {
-      nonce = await this.getLatestAccountNonce(publicKey);
-    }
-    const id = new AccountId(publicKey, nonce);
-    if (await this.db.getUser(id)) {
-      throw new Error(`User already exists: ${id}`);
-    }
+    return this.serialQueue.push(async () => {
+      const publicKey = await this.derivePublicKey(privateKey);
+      if (nonce === undefined) {
+        nonce = await this.getLatestAccountNonce(publicKey);
+      }
+      const id = new AccountId(publicKey, nonce);
+      if (await this.db.getUser(id)) {
+        throw new Error(`User already exists: ${id}`);
+      }
 
-    let syncedToRollup = -1;
-    if (noSync) {
-      const {
-        blockchainStatus: { nextRollupId },
-      } = await this.getRemoteStatus();
-      syncedToRollup = nextRollupId - 1;
-    }
+      let syncedToRollup = -1;
+      if (noSync) {
+        const {
+          blockchainStatus: { nextRollupId },
+        } = await this.getRemoteStatus();
+        syncedToRollup = nextRollupId - 1;
+      }
 
-    const aliasHash = nonce > 0 ? await this.db.getAliasHashByAddress(publicKey) : undefined;
-    const user = { id, privateKey, publicKey, nonce, aliasHash, syncedToRollup };
-    await this.db.addUser(user);
+      const aliasHash = nonce > 0 ? await this.db.getAliasHashByAddress(publicKey) : undefined;
+      const user = { id, privateKey, publicKey, nonce, aliasHash, syncedToRollup };
+      await this.db.addUser(user);
 
-    const userState = this.userStateFactory.createUserState(user);
-    await userState.init();
-    this.userStates.push(userState);
-    this.startSyncingUserState(userState);
+      const userState = this.userStateFactory.createUserState(user);
+      await userState.init();
+      this.userStates.push(userState);
+      this.startSyncingUserState(userState);
 
-    this.emit(SdkEvent.UPDATED_USERS);
+      this.emit(SdkEvent.UPDATED_USERS);
 
-    return userState.getUser();
+      return userState.getUser();
+    });
   }
 
   public async removeUser(userId: AccountId) {

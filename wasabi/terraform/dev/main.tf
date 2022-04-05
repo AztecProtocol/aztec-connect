@@ -84,10 +84,6 @@ resource "aws_ecs_task_definition" "wasabi" {
       {
         "name": "NUM_AGENTS",
         "value": "3"
-      },
-      {
-        "name": "LOOPS",
-        "value": "-1"
       }
     ],
     "logConfiguration": {
