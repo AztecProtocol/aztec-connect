@@ -18,7 +18,7 @@ if ! check_rebuild $LAST_SUCCESSFUL_COMMIT; then
 fi
 
 if [ -n "$IS_GLOBAL" ]; then
-  TF_DIR=./terraform
+  export TF_DIR=./terraform
   deploy_terraform
 
   # Restart services.
