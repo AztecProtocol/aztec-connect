@@ -11,8 +11,7 @@ extract_repo $REPOSITORY /usr/src/$REPOSITORY/dist ./dist
 echo $DEPLOY_TAG > ./dist/DEPLOY_TAG
 
 if [ -n "$IS_GLOBAL" ]; then
-  export TF_DIR=./terraform
-  deploy_terraform
+  deploy_terraform "" ./terraform
 else
   deploy_terraform $REPOSITORY
 fi
