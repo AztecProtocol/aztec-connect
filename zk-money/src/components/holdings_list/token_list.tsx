@@ -13,9 +13,8 @@ export function TokenList() {
   const [page, setPage] = useState(1);
   const balances = useBalances();
 
-  if (!balances || balances.length === 0) {
-    return <div>You have no tokens yet.</div>;
-  }
+  if (!balances) return <></>;
+  if (balances.length === 0) return <div>You have no tokens yet.</div>;
 
   return (
     <>

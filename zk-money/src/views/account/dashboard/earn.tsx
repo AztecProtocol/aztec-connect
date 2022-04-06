@@ -1,5 +1,5 @@
+import { DefiInvestmentsSection } from 'components/defi_investments/defi_investments_section';
 import { DefiRecipe } from '../../../alt-model/defi/types';
-import { DefiInvestments } from '../../../components/defi_investments';
 import { DefiCardsList } from './defi_cards_list';
 
 interface EarnProps {
@@ -13,7 +13,7 @@ export function Earn(props: EarnProps) {
   return (
     <div>
       <DefiCardsList onSelect={onOpenDefiEnterModal} isLoggedIn={isLoggedIn} />
-      {isLoggedIn && <DefiInvestments onOpenDefiExitModal={onOpenDefiExitModal} />}
+      {isLoggedIn && <DefiInvestmentsSection onOpenDefiExitModal={onOpenDefiExitModal} />}
     </div>
   );
 }

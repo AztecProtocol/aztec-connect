@@ -16,7 +16,6 @@ const debug = createDebug('zm:recipes');
 
 interface CreateRecipeArgs extends Omit<DefiRecipe, 'closable' | 'flow' | 'valueEstimationInteractionAssets'> {
   isAsync?: boolean;
-  addressId: number;
   entryInputAssetAddressA: EthAddress;
   entryOutputAssetAddressA: EthAddress;
   openHandleAssetAddress?: EthAddress;
@@ -46,7 +45,7 @@ function createRecipe(
       return;
     }
   }
-  return { ...args, closable, flow, valueEstimationInteractionAssets };
+  return { ...args, flow, openHandleAsset, valueEstimationInteractionAssets };
 }
 
 const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
@@ -71,7 +70,8 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
   },
   {
     id: 'lido-finance.ETH-to-wStETH',
-    addressId: 1,
+    addressId: 3,
+    openHandleAssetAddress: KMAA.wstETH,
     entryInputAssetAddressA: KMAA.ETH,
     entryOutputAssetAddressA: KMAA.wstETH,
     createAdaptor: createLidoAdaptor,

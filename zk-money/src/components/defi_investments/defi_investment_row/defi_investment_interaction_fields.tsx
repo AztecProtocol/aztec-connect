@@ -9,15 +9,15 @@ import moment from 'moment';
 import { StepStatusIndicator, StepStatus } from 'ui-components';
 import { MiniLink } from 'ui-components/components/atoms/mini_link';
 import { useCountDownData } from 'features/defi/bridge_count_down/bridge_count_down_hooks';
-import { useAmount, useConfig } from 'alt-model/top_level_context';
+import { useAmount } from 'alt-model/top_level_context';
 import style from './defi_investment_interaction_fields.module.scss';
 import { Button } from 'components/button';
+import { useExplorerTxLink } from 'alt-model/explorer_link_hooks';
 
 function PendingInteractionField({ position }: { position: DefiPosition_Pending }) {
-  const { explorerUrl } = useConfig();
+  const explorerLink = useExplorerTxLink(position.tx.txId);
   const data = useCountDownData(position.tx.bridgeId);
   const timeStr = data?.nextBatch ? moment(data.nextBatch).fromNow(true) : '';
-  const explorerLink = `${explorerUrl}/tx/${position.tx.txId.toString().replace(/^0x/i, '')}`;
   return (
     <>
       {timeStr}
