@@ -13,9 +13,9 @@ import { DefiSettlementTime } from '@aztec/sdk';
 import { FaqHint, Hyperlink, HyperlinkIcon } from 'ui-components';
 import { SplitSection } from '../sections/split_section';
 import { SettlementTimeInformationSection } from '../sections/settlement_time_information_section';
+import { PrivacyInformationSection } from '../sections/privacy_information_section';
 import defiBridgeImage from 'images/defi_bridge.svg';
 import style from './page1.module.scss';
-import { PrivacyInformationSection } from '../sections/privacy_information_section';
 
 const Root = styled.div`
   display: flex;
@@ -73,7 +73,12 @@ export function Page1({
             />
           </>
         }
-        rightPanel={<PrivacyInformationSection />}
+        rightPanel={
+          <PrivacyInformationSection
+            amount={validationResult.input.targetDepositAmount?.baseUnits || 0n}
+            asset={validationResult.input.depositAsset}
+          />
+        }
       />
       <SplitSection
         leftPanel={

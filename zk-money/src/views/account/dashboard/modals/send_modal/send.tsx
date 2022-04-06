@@ -110,7 +110,14 @@ export const Send: React.FunctionComponent<SendProps> = ({
             />
           </>
         }
-        rightPanel={<PrivacyInformationSection txToAlias={sendMode === SendMode.SEND} />}
+        rightPanel={
+          <PrivacyInformationSection
+            privacyIssue={form.privacyIssue.value}
+            amount={form.selectedAmount.value}
+            asset={asset}
+            txToAlias={sendMode === SendMode.SEND}
+          />
+        }
       />
       <SplitSection
         leftPanel={

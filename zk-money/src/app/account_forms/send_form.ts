@@ -37,6 +37,7 @@ import { fromBaseUnits, max, min, toBaseUnits } from '../units';
 import { AccountForm, AccountFormEvent } from './account_form';
 import { TransactionGraph } from './transaction_graph';
 import { getAssetPreferredFractionalDigits } from 'alt-model/known_assets/known_asset_display_data';
+import { Amount } from 'alt-model/assets';
 
 const debug = createDebug('zm:send_form');
 
@@ -261,7 +262,8 @@ export class SendForm extends EventEmitter implements AccountForm {
     const changes = { ...newValues };
     if (changes.amount) {
       changes.amount = formatBigIntInput(changes.amount);
-      changes.selectedAmount = { value: 0n };
+      const bigIntValue = toBaseUnits(changes.amount.value, this.asset.decimals);
+      changes.selectedAmount = { value: bigIntValue };
     }
     if (changes.recipient) {
       this.debounceUpdateRecipientStatus.cancel();
