@@ -8,7 +8,7 @@ import { useOpenPositions } from 'alt-model/defi/open_position_hooks';
 const INVESTMENTS_PER_PAGE = 5;
 
 interface DefiInvestmentsProps {
-  onOpenDefiExitModal: (recipe: DefiRecipe, prefilledAmountStr: string) => void;
+  onOpenDefiExitModal: (recipe: DefiRecipe) => void;
 }
 
 export function DefiInvestments(props: DefiInvestmentsProps) {

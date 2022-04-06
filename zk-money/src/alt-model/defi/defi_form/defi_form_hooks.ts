@@ -14,8 +14,8 @@ import { isKnownAssetAddressString } from 'alt-model/known_assets/known_asset_ad
 import { useDefiFeeAmount } from './defi-fee-hooks';
 import { useAwaitCorrectProvider } from './correct_provider_hooks';
 import { BridgeInteractionAssets, DefiRecipe } from '../types';
-import { Amount } from 'alt-model/assets';
 import { useDefaultAuxDataOption } from '../defi_info_hooks';
+import { MAX_MODE } from 'alt-model/forms/constants';
 
 const debug = createDebug('zm:defi_form_hooks');
 
@@ -41,10 +41,10 @@ function useDefiFormBridgeId(recipe: DefiRecipe, { inA, outA }: BridgeInteractio
   }, [auxData, recipe, inA, outA]);
 }
 
-export function useDefiForm(recipe: DefiRecipe, mode: DefiFormMode, prefilledAmountStr?: string) {
+export function useDefiForm(recipe: DefiRecipe, mode: DefiFormMode) {
   const { accountId, config } = useApp();
   const [fields, setFields] = useState<DefiFormFields>({
-    amountStr: prefilledAmountStr ?? '',
+    amountStrOrMax: mode === 'exit' ? MAX_MODE : '',
     speed: DefiSettlementTime.NEXT_ROLLUP,
   });
   const [touchedFields, setters] = useTrackedFieldChangeHandlers(fields, setFields);
@@ -56,12 +56,11 @@ export function useDefiForm(recipe: DefiRecipe, mode: DefiFormMode, prefilledAmo
   const amountFactory = useAmountFactory();
   const interactionAssets = getInteractionAssets(recipe, mode);
   const depositAsset = interactionAssets.inA;
-  const targetDepositAmount = Amount.from(fields.amountStr, depositAsset);
   const bridgeId = useDefiFormBridgeId(recipe, interactionAssets);
   const feeAmount = useDefiFeeAmount(bridgeId, fields.speed);
-  const balanceInTargetAsset = useBalance(targetDepositAmount?.id);
+  const balanceInTargetAsset = useBalance(depositAsset.id);
   const balanceInFeePayingAsset = useBalance(feeAmount?.id);
-  const targetAssetAddressStr = targetDepositAmount?.address.toString();
+  const targetAssetAddressStr = depositAsset.address.toString();
   const transactionLimit = isKnownAssetAddressString(targetAssetAddressStr)
     ? config.txAmountLimits[targetAssetAddressStr]
     : undefined;
@@ -69,12 +68,21 @@ export function useDefiForm(recipe: DefiRecipe, mode: DefiFormMode, prefilledAmo
     fields,
     amountFactory,
     depositAsset,
-    targetDepositAmount,
     feeAmount,
     balanceInTargetAsset,
     balanceInFeePayingAsset,
     transactionLimit,
   });
+
+  // Bigger issue: we're having to change many interfaces
+  // Possible race condition? transition to not max and setting
+  // const {maxOutput} =validationResult
+  // useEffect(() => {
+  //   if(fields.max && maxOutput !== undefined) {
+  //     setFields(fields => ({...fields, amountStr: }))
+  //   }
+  // },[fields.max, maxOutput])
+
   const feedback = getDefiFormFeedback(validationResult, touchedFields, attemptedLock);
   const composerState = useMaybeObs(lockedComposer?.stateObs);
   const locked = !!lockedComposer;

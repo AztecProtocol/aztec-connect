@@ -7,7 +7,7 @@ import { TransactionHistory } from '../transaction_history';
 import style from './balance.module.scss';
 
 interface BalanceProps {
-  onOpenDefiExitModal: (recipe: DefiRecipe, prefilledAmountStr: string) => void;
+  onOpenDefiExitModal: (recipe: DefiRecipe) => void;
 }
 
 export function Balance(props: BalanceProps) {

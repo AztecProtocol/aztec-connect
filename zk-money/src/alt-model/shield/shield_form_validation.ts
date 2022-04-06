@@ -2,13 +2,15 @@ import type { AmountFactory } from 'alt-model/assets/amount_factory';
 import type { Network } from 'app/networks';
 import type { ShieldComposerPayload } from './shield_composer';
 import type { EthAddress, TxSettlementTime } from '@aztec/sdk';
-import type { Amount } from 'alt-model/assets/amount';
-import { min } from 'app';
+import type { RemoteAsset } from 'alt-model/types';
+import { Amount } from 'alt-model/assets/amount';
+import { max, min } from 'app';
 import { KeyVault } from 'app/key_vault';
+import { MAX_MODE, StrOrMax } from 'alt-model/forms/constants';
 
 export interface ShieldFormFields {
   assetId: number;
-  amountStr: string;
+  amountStrOrMax: StrOrMax;
   recipientAlias: string;
   speed: TxSettlementTime;
 }
@@ -16,7 +18,7 @@ export interface ShieldFormFields {
 interface ShieldFormValidationInputs {
   fields: ShieldFormFields;
   amountFactory?: AmountFactory;
-  targetL2OutputAmount?: Amount;
+  targetAsset?: RemoteAsset;
   l1Balance?: bigint;
   l1PendingBalance?: bigint;
   keyVault?: KeyVault;
@@ -48,6 +50,7 @@ export interface ShieldFormValidationResult {
   isValid?: boolean;
   validPayload?: ShieldComposerPayload;
   maxL2Output?: bigint;
+  targetL2OutputAmount?: Amount;
   reservedForL1GasIfTargetAssetIsEth?: bigint;
   input: ShieldFormValidationInputs;
 }
@@ -56,7 +59,7 @@ export function validateShieldForm(input: ShieldFormValidationInputs): ShieldFor
   const {
     fields,
     amountFactory,
-    targetL2OutputAmount,
+    targetAsset,
     l1Balance,
     l1PendingBalance,
     keyVault,
@@ -88,7 +91,7 @@ export function validateShieldForm(input: ShieldFormValidationInputs): ShieldFor
   ) {
     return { loading: true, input };
   }
-  if (!targetL2OutputAmount || transactionLimit === undefined) {
+  if (!targetAsset || transactionLimit === undefined) {
     return { unrecognisedTargetAmount: true, input };
   }
 
@@ -102,7 +105,7 @@ export function validateShieldForm(input: ShieldFormValidationInputs): ShieldFor
   }
 
   // If it's ETH being shielded, we need to reserve funds for gas costs
-  const isEth = targetL2OutputAmount.id === 0;
+  const isEth = targetAsset.id === 0;
   const reservedForL1GasIfTargetAssetIsEth = isEth ? approveProofGasCost + depositFundsGasCost : 0n;
 
   // Some value may already be deposited, and will be used first
@@ -111,10 +114,15 @@ export function validateShieldForm(input: ShieldFormValidationInputs): ShieldFor
   // Accounting for both L1 gas and L2 fees
   const totalCost = feeInTargetAsset + reservedForL1GasIfTargetAssetIsEth;
 
+  const maxL2Output = max(min(totalL1Balance - totalCost, transactionLimit), 0n);
+  const targetL2OutputAmount =
+    fields.amountStrOrMax === MAX_MODE
+      ? new Amount(maxL2Output, targetAsset)
+      : Amount.from(fields.amountStrOrMax, targetAsset);
+
   const requiredL1InputIfThereWereNoCosts = targetL2OutputAmount.baseUnits - l1PendingBalance;
   const requiredL1InputCoveringCosts = requiredL1InputIfThereWereNoCosts + totalCost;
 
-  const maxL2Output = min(totalL1Balance - totalCost, transactionLimit);
   const beyondTransactionLimit = targetL2OutputAmount.baseUnits > transactionLimit;
   const noAmount = targetL2OutputAmount.baseUnits <= 0n;
   const insufficientTargetAssetBalance = l1Balance < requiredL1InputCoveringCosts;
@@ -152,6 +160,7 @@ export function validateShieldForm(input: ShieldFormValidationInputs): ShieldFor
     validPayload,
     input,
     maxL2Output,
+    targetL2OutputAmount,
     reservedForL1GasIfTargetAssetIsEth,
   };
 }

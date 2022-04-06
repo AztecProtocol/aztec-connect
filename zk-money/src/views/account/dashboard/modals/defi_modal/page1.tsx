@@ -1,3 +1,4 @@
+import type { StrOrMax } from 'alt-model/forms/constants';
 import styled from 'styled-components/macro';
 import { Button } from 'components';
 import { DefiFormFeedback, DefiFormFields, DefiFormValidationResult } from 'alt-model/defi/defi_form';
@@ -33,7 +34,7 @@ interface Page1Props {
   fields: DefiFormFields;
   validationResult: DefiFormValidationResult;
   feedback: DefiFormFeedback;
-  onChangeAmountStr: (value: string) => void;
+  onChangeAmountStrOrMax: (value: StrOrMax) => void;
   onChangeSpeed: (value: DefiSettlementTime) => void;
   onNext: () => void;
 }
@@ -43,7 +44,7 @@ export function Page1({
   fields,
   validationResult,
   feedback,
-  onChangeAmountStr,
+  onChangeAmountStrOrMax,
   onChangeSpeed,
   onNext,
 }: Page1Props) {
@@ -66,8 +67,8 @@ export function Page1({
             <AmountSection
               maxAmount={validationResult.maxOutput ?? 0n}
               asset={validationResult.input.depositAsset}
-              amountStr={fields.amountStr}
-              onChangeAmountStr={onChangeAmountStr}
+              amountStrOrMax={fields.amountStrOrMax}
+              onChangeAmountStrOrMax={onChangeAmountStrOrMax}
               message={feedback.amount}
               balanceType="L2"
             />

@@ -10,12 +10,11 @@ import { Modal } from 'components';
 interface DefiModalProps {
   recipe: DefiRecipe;
   mode: DefiFormMode;
-  prefilledAmountStr?: string;
   onClose: () => void;
 }
 
-export function DefiModal({ recipe, mode, prefilledAmountStr, onClose }: DefiModalProps) {
-  const defiForm = useDefiForm(recipe, mode, prefilledAmountStr);
+export function DefiModal({ recipe, mode, onClose }: DefiModalProps) {
+  const defiForm = useDefiForm(recipe, mode);
   const { fields, setters, validationResult, feedback, composerState, submit, attemptLock, locked, unlock } = defiForm;
 
   const phase = composerState?.phase;
@@ -37,7 +36,7 @@ export function DefiModal({ recipe, mode, prefilledAmountStr, onClose }: DefiMod
       <Page1
         recipe={recipe}
         fields={fields}
-        onChangeAmountStr={setters.amountStr}
+        onChangeAmountStrOrMax={setters.amountStrOrMax}
         onChangeSpeed={setters.speed}
         feedback={feedback}
         onNext={attemptLock}

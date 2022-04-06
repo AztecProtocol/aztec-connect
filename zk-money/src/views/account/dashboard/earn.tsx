@@ -4,7 +4,7 @@ import { DefiCardsList } from './defi_cards_list';
 
 interface EarnProps {
   onOpenDefiEnterModal: (recipe: DefiRecipe) => void;
-  onOpenDefiExitModal: (recipe: DefiRecipe, prefilledAmountStr: string) => void;
+  onOpenDefiExitModal: (recipe: DefiRecipe) => void;
   isLoggedIn: boolean;
 }
 

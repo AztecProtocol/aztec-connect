@@ -5,11 +5,11 @@ function getAmountInputFeedback(result: DefiFormValidationResult, touched: boole
   if (!touched) return;
   if (result.mustAllowForFee) {
     const fee = result.input.feeAmount;
-    return `Please allow ${fee?.format({ layer: 'L1' })} from your L1 balance for paying the transaction fee.`;
+    return `Please allow ${fee?.format()} for paying the transaction fee.`;
   }
   if (result.beyondTransactionLimit) {
-    const { targetDepositAmount: targetOutputAmount, transactionLimit } = result.input;
-    const txLimitAmount = targetOutputAmount?.withBaseUnits(transactionLimit ?? 0n);
+    const { transactionLimit } = result.input;
+    const txLimitAmount = result.targetDepositAmount?.withBaseUnits(transactionLimit ?? 0n);
     return `Transactions are capped at ${txLimitAmount?.format()}`;
   }
   if (result.insufficientTargetAssetBalance) {
@@ -24,7 +24,7 @@ function getFooterFeedback(result: DefiFormValidationResult, attemptedLock: bool
   if (!attemptedLock) return;
   if (result.insufficientFeePayingAssetBalance) {
     const fee = result.input.feeAmount;
-    const output = result.input.targetDepositAmount;
+    const output = result.targetDepositAmount;
     return `You do not have enough zk${
       fee?.info.symbol
     } to pay the fee for this transaction. Please first shield at least ${fee?.format({
@@ -39,7 +39,7 @@ export function getDefiFormFeedback(
   attemptedLock: boolean,
 ) {
   return {
-    amount: getAmountInputFeedback(result, touchedFields.amountStr || attemptedLock),
+    amount: getAmountInputFeedback(result, touchedFields.amountStrOrMax || attemptedLock),
     footer: getFooterFeedback(result, attemptedLock),
   };
 }

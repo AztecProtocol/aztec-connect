@@ -24,6 +24,7 @@
   @include mixins.gradient_font;
 }
 
-.maxButton:hover::before {
+.maxButton:hover::before,
+.maxButton.maxEnabled::before {
   @include mixins.gradient_border;
 }

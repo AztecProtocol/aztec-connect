@@ -8,12 +8,13 @@ import { SplitSection } from '../sections/split_section';
 import { AmountSection } from 'views/account/dashboard/modals/sections/amount_section';
 import { GasSection, GasSectionType } from 'views/account/dashboard/modals/sections/gas_section';
 import { SendProgress } from './send_progress';
-import { FaqHint } from 'ui-components';
+import { FaqHint, formatMaxAmount } from 'ui-components';
 import { DescriptionSection, RecipientSection } from '../sections';
 import { useAmounts } from 'alt-model/asset_hooks';
 import { PrivacyInformationSection } from '../sections/privacy_information_section';
 import { SettlementTimeInformationSection } from '../sections/settlement_time_information_section';
 import style from './send.module.scss';
+import { MAX_MODE, StrOrMax } from 'alt-model/forms/constants';
 
 interface SendFormFields {
   amountStr: string;
@@ -84,6 +85,12 @@ export const Send: React.FunctionComponent<SendProps> = ({
     );
   }
 
+  // TODO: Remove once concept of max mode is supported parent form logic
+  const handleChangeAmountStrOrMax = (amountStrOrMax: StrOrMax) => {
+    const value = amountStrOrMax === MAX_MODE ? formatMaxAmount(maxAmount.value, asset) : amountStrOrMax;
+    onChangeInputs({ amount: { value } });
+  };
+
   return (
     <div className={style.root}>
       <DescriptionSection text={getDescription(sendMode)} />
@@ -102,8 +109,8 @@ export const Send: React.FunctionComponent<SendProps> = ({
             <AmountSection
               maxAmount={maxAmount.value}
               asset={asset}
-              amountStr={amount.value}
-              onChangeAmountStr={(value: string) => onChangeInputs({ amount: { value } })}
+              amountStrOrMax={amount.value}
+              onChangeAmountStrOrMax={handleChangeAmountStrOrMax}
               amountStrAnnotation={undefined}
               message={form.amount?.message}
               balanceType="L2"

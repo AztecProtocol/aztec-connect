@@ -32,12 +32,10 @@ function ClosableInteractionField({
   onOpenDefiExitModal,
 }: {
   position: DefiPosition_Closable;
-  onOpenDefiExitModal: (recipe: DefiRecipe, prefilledAmountStr: string) => void;
+  onOpenDefiExitModal: (recipe: DefiRecipe) => void;
 }) {
-  const prefilledAmount = useAmount(position.handleValue);
-  const prefilledAmountStr = prefilledAmount?.toFloat().toString() ?? '';
   return (
-    <Button className={style.claimButton} onClick={() => onOpenDefiExitModal(position.recipe, prefilledAmountStr)}>
+    <Button className={style.claimButton} onClick={() => onOpenDefiExitModal(position.recipe)}>
       <div className={style.claimButtonContent}>Claim & Exit</div>
     </Button>
   );
@@ -51,10 +49,7 @@ function AsyncInteractionField({ position }: { position: DefiPosition_Async }) {
   return <div className={style.fixedTerm}>Matures {dateStr}</div>;
 }
 
-export function renderInteractionField(
-  position: DefiPosition,
-  onOpenDefiExitModal: (recipe: DefiRecipe, prefilledAmountStr: string) => void,
-) {
+export function renderInteractionField(position: DefiPosition, onOpenDefiExitModal: (recipe: DefiRecipe) => void) {
   switch (position.type) {
     case 'pending':
       return <PendingInteractionField position={position} />;
