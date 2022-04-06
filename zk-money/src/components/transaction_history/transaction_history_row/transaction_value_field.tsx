@@ -1,4 +1,4 @@
-import { AssetValue, ProofId, UserDefiInteractionResultState, UserDefiTx } from '@aztec/sdk';
+import { AssetValue, ProofId, UserDefiInteractionResultState } from '@aztec/sdk';
 import { useApp } from 'alt-model';
 import { useAmount } from 'alt-model/asset_hooks';
 import { UserTx } from 'alt-model/user_tx_hooks';

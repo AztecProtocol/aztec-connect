@@ -8,7 +8,7 @@ import { useBalance } from 'alt-model';
 export function MiniL1BalanceIndicator({ asset }: { asset?: RemoteAsset }) {
   const { l1Balance } = useL1Balances(asset);
   const content =
-    asset == undefined || l1Balance === undefined
+    asset === undefined || l1Balance === undefined
       ? 'Loading...'
       : `${formatBaseUnits(l1Balance, asset.decimals, {
           precision: getAssetPreferredFractionalDigits(asset.address),
@@ -19,7 +19,7 @@ export function MiniL1BalanceIndicator({ asset }: { asset?: RemoteAsset }) {
 export function MiniL2BalanceIndicator({ asset }: { asset?: RemoteAsset }) {
   const balance = useBalance(asset?.id);
   const content =
-    asset == undefined || balance === undefined
+    asset === undefined || balance === undefined
       ? 'Loading...'
       : `${formatBaseUnits(balance, asset.decimals, {
           precision: getAssetPreferredFractionalDigits(asset.address),

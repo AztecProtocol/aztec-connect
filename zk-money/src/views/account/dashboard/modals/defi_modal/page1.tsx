@@ -76,7 +76,7 @@ export function Page1({
         }
         rightPanel={
           <PrivacyInformationSection
-            amount={validationResult.input.targetDepositAmount?.baseUnits || 0n}
+            amount={validationResult.targetDepositAmount?.baseUnits || 0n}
             asset={validationResult.input.depositAsset}
           />
         }

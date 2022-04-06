@@ -6,7 +6,7 @@ interface MiniLinkProps {
 
 export function MiniLink(props: MiniLinkProps) {
   return (
-    <a href={props.href} target="_blank">
+    <a href={props.href} target="_blank" rel="noreferrer">
       <LinkIcon />
     </a>
   );

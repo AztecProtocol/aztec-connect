@@ -3,7 +3,7 @@ import { FaqHint, Section, SectionTitle } from 'ui-components';
 import { DefiInvestments } from './defi_investments';
 
 interface DefiInvestmentsSectionProps {
-  onOpenDefiExitModal: (recipe: DefiRecipe, prefilledAmountStr: string) => void;
+  onOpenDefiExitModal: (recipe: DefiRecipe) => void;
 }
 
 export function DefiInvestmentsSection(props: DefiInvestmentsSectionProps) {
