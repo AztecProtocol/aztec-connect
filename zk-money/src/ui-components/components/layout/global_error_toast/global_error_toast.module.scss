@@ -1,0 +1,32 @@
+@use '../../../styles/mixins.scss';
+
+.root {
+  position: fixed;
+  top: 150px;
+  left: 50%;
+  transform: translate(-50%, 0);
+  transition: opacity 0.2s, transform 0.2s;
+
+  background-color: white;
+  border: solid red 2px;
+  border-radius: 10px;
+  @include mixins.shadow_border;
+  max-width: 30vw;
+}
+
+.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+}
+
+.frame {
+  padding: 20px;
+  position: relative;
+}
+
+.closeButton {
+  position: absolute;
+  top: 0;
+  right: 7px;
+}
