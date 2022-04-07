@@ -149,7 +149,7 @@ export class Configurator {
       const { rollupContractAddress } = startupConfigEnvVars;
       if (rollupContractAddress && !rollupContractAddress.equals(saved.rollupContractAddress)) {
         console.log(
-          `Rollup contract changed, erasing data: ${saved.rollupContractAddress.toString()} -> ${this.confVars.rollupContractAddress.toString()}`,
+          `Rollup contract changed, erasing data: ${saved.rollupContractAddress.toString()} -> ${rollupContractAddress.toString()}`,
         );
         emptyDirSync(dir);
       }
