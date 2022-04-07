@@ -34,13 +34,14 @@ async function deployRollupProcessor(
   console.error('Deploying RollupProcessor...');
   const rollupFactory = new ContractFactory(RollupProcessor.abi, RollupProcessor.bytecode, signer);
   const rollup = await rollupFactory.deploy();
+  const address = await signer.getAddress();
 
   await rollup.initialize(
     verifier.address,
     escapeHatchBlockLower,
     escapeHatchBlockUpper,
     defiProxy.address,
-    await signer.getAddress(),
+    address,
     initDataRoot,
     initNullRoot,
     initRootsRoot,
@@ -48,6 +49,8 @@ async function deployRollupProcessor(
     allowThirdPartyContracts,
     { gasLimit },
   );
+
+  await rollup.setRollupProvider(address, true);
 
   console.error(`RollupProcessor contract address: ${rollup.address}`);
 
@@ -62,7 +65,7 @@ async function deployErc20Contracts(signer: Signer, rollup: Contract) {
 
 async function deployBridgeContracts(signer: Signer, rollup: Contract, uniswapRouter: Contract) {
   const uniswapBridge = await deployUniswapBridge(signer, rollup, uniswapRouter);
-  await rollup.setSupportedBridge(uniswapBridge.address, 0n, { gasLimit });
+  await rollup.setSupportedBridge(uniswapBridge.address, 300000n, { gasLimit });
 
   const chainId = await signer.getChainId();
   if (!(chainId === 1 || chainId === 0xa57ec)) {

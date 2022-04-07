@@ -1,0 +1,38 @@
+@use '../../../ui-components/styles/mixins';
+
+.root {
+  @include mixins.shadow_border;
+  border-radius: 10px;
+  width: 100%;
+  height: 60px;
+  display: grid;
+  align-items: center;
+  grid-template-columns: 1fr 1px 1fr 1fr 1px 1fr;
+  margin-bottom: 30px;
+}
+
+.segment {
+  padding: 0 20px;
+}
+
+.separator {
+  width: 1px;
+  height: 28px;
+  background-color: #eee;
+}
+
+.value {
+  display: grid;
+  grid-template-columns: 45px 1fr;
+  align-items: center;
+  font-size: 14px;;
+}
+
+.time {
+  font-size: 14px;
+  color: #c4c4c4;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+}

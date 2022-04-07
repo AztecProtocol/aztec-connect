@@ -35,7 +35,6 @@ export type BridgeFlowAssets =
 export interface DefiRecipe {
   id: string;
   addressId: number;
-  closable: boolean;
   flow: BridgeFlowAssets;
   openHandleAsset?: RemoteAsset;
   valueEstimationInteractionAssets: BridgeInteractionAssets;

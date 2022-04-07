@@ -1,4 +1,4 @@
-import { Blockchain, TxHash } from '@aztec/barretenberg/blockchain';
+import { Blockchain, EthereumRpc, TxHash } from '@aztec/barretenberg/blockchain';
 import { JoinSplitProofData } from '@aztec/barretenberg/client_proofs';
 import { RollupDao } from './entity';
 import { Metrics } from './metrics';
@@ -8,6 +8,7 @@ export class RollupPublisher {
   private interrupted = false;
   private interruptPromise = Promise.resolve();
   private interruptResolve = () => {};
+  private ethereumRpc: EthereumRpc;
 
   constructor(
     private rollupDb: RollupDb,
@@ -17,12 +18,13 @@ export class RollupPublisher {
     private metrics: Metrics,
   ) {
     this.interruptPromise = new Promise(resolve => (this.interruptResolve = resolve));
+    this.ethereumRpc = new EthereumRpc(blockchain.getProvider());
   }
 
   public async publishRollup(rollup: RollupDao) {
     const txData = await this.createTxData(rollup);
-    await this.rollupDb.setCallData(rollup.id, txData);
-    console.log(`Publishing rollup: ${rollup.id} (${txData.length} bytes)`);
+    await this.rollupDb.setCallData(rollup.id, txData.broadcastDataTx, txData.rollupProofTx);
+    console.log(`Publishing rollup: ${rollup.id}`);
 
     while (!this.interrupted) {
       // Wait until fee is below threshold.
@@ -37,7 +39,20 @@ export class RollupPublisher {
       }
 
       const end = this.metrics.publishTimer();
-      const txHash = await this.sendRollupProof(txData);
+
+      // TODO: We need to ensure a rollup provider always publishes the broadcast data, otherwise they could just
+      // publish the rollup proof, and get all the fees, but without the broadcast data no clients are actually
+      // able to find their txs. This is acceptable for now because we're the only provider.
+      // WARNING: If you restart the server at the wrong time (in-between sending broadcast data and rollup proof),
+      // you will pay twice for broadcast data.
+      //
+      // We are just using the default (0) account on the Blockchain provider to send txs.
+      const [defaultSigningAddress] = await this.ethereumRpc.getAccounts();
+      const nonce = await this.ethereumRpc.getTransactionCount(defaultSigningAddress);
+      // First send the broadcast data.
+      await this.sendTx(txData.broadcastDataTx, nonce);
+      // Then send the actual rollup proof.
+      const txHash = await this.sendTx(txData.rollupProofTx, nonce + 1);
       if (!txHash) {
         break;
       }
@@ -95,13 +110,16 @@ export class RollupPublisher {
         signatures.push(tx.signature!);
       }
     }
-    return await this.blockchain.createRollupProofTx(proof, signatures, offchainTxData);
+    const txData = await this.blockchain.createRollupTxs(proof, signatures, offchainTxData);
+    console.log(`Rollup proof size: ${txData.rollupProofTx.length} bytes`);
+    console.log(`Offchain size: ${txData.broadcastDataTx.length} bytes`);
+    return txData;
   }
 
-  private async sendRollupProof(txData: Buffer) {
+  private async sendTx(txData: Buffer, nonce: number) {
     while (!this.interrupted) {
       try {
-        return await this.blockchain.sendTx(txData, { gasLimit: this.gasLimit });
+        return await this.blockchain.sendTx(txData, { gasLimit: this.gasLimit, nonce });
       } catch (err: any) {
         console.log(err.message.slice(0, 500));
         await this.sleepOrInterrupted(60000);

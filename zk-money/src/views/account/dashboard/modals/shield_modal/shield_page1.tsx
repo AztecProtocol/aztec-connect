@@ -1,4 +1,5 @@
 import type { ShieldFormFeedback, ShieldFormFields, ShieldFormValidationResult } from 'alt-model/shield';
+import type { StrOrMax } from 'alt-model/forms/constants';
 import { TxSettlementTime, TxType } from '@aztec/sdk';
 import { ProviderStatus, SendMode, ValueAvailability } from 'app';
 import { Button, InputTheme } from 'components';
@@ -29,7 +30,7 @@ interface ShieldPage1Props {
   validationResult: ShieldFormValidationResult;
   assets: RemoteAsset[];
   onNext(): void;
-  onChangeAmountStr(value: string): void;
+  onChangeAmountStrOrMax(value: StrOrMax): void;
   onChangeRecipientAlias(value: string): void;
   onChangeSpeed(speed: TxSettlementTime): void;
   onChangeAsset(asset: number): void;
@@ -41,13 +42,13 @@ export function ShieldPage1({
   validationResult,
   assets,
   onNext,
-  onChangeAmountStr,
+  onChangeAmountStrOrMax,
   onChangeRecipientAlias,
   onChangeSpeed,
   onChangeAsset,
 }: ShieldPage1Props) {
   const providerState = useProviderState();
-  const asset = validationResult.input.targetL2OutputAmount?.info;
+  const asset = validationResult.input.targetAsset;
   const ethAccount = useLegacyEthAccountState(asset);
 
   if (!asset) {
@@ -87,10 +88,10 @@ export function ShieldPage1({
               maxAmount={validationResult.maxL2Output ?? 0n}
               asset={asset}
               assets={assets}
-              amountStr={fields.amountStr}
+              amountStrOrMax={fields.amountStrOrMax}
               allowAssetSelection={true}
               onChangeAsset={onChangeAsset}
-              onChangeAmountStr={onChangeAmountStr}
+              onChangeAmountStrOrMax={onChangeAmountStrOrMax}
               hidePrivacy
               message={feedback.amount}
               balanceType="L1"

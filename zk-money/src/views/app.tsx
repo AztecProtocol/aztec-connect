@@ -50,7 +50,7 @@ interface AppProps {
 
 interface AppState {
   action: AppAction;
-  activeDefiModal?: { recipe: DefiRecipe; mode: DefiFormMode; prefilledAmountStr?: string };
+  activeDefiModal?: { recipe: DefiRecipe; mode: DefiFormMode };
   loginState: LoginState;
   worldState: WorldState;
   providerState?: ProviderState;
@@ -285,9 +285,8 @@ export class AppView extends PureComponent<AppProps, AppState> {
     this.setState({ activeDefiModal: { recipe, mode: 'enter' } });
   };
 
-  private handleOpenDefiExitModal = (recipe: DefiRecipe, prefilledAmountStr: string) => {
-    console.log({ recipe, prefilledAmountStr });
-    this.setState({ activeDefiModal: { recipe, mode: 'exit', prefilledAmountStr } });
+  private handleOpenDefiExitModal = (recipe: DefiRecipe) => {
+    this.setState({ activeDefiModal: { recipe, mode: 'exit' } });
   };
 
   private handleLogout = () => {

@@ -1,6 +1,6 @@
 import type { RemoteAsset } from 'alt-model/types';
 import { KNOWN_MAINNET_ASSET_ADDRESS_STRS as S } from 'alt-model/known_assets/known_asset_addresses';
-import { toBaseUnits } from '../../../app';
+import { toBaseUnits } from 'app';
 import { EthAddress } from '@aztec/sdk';
 import { useRemoteAssets } from 'alt-model/top_level_context';
 import { useMemo } from 'react';

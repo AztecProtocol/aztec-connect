@@ -97,8 +97,10 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
     // We need to cap the amount of gas sent to the DeFi bridge contract for two reasons.
     // 1: To provide consistency to rollup providers around costs.
     // 2: To prevent griefing attacks where a bridge consumes all our gas.
-    uint256 private constant DEFAULT_BRIDGE_GAS_LIMIT = 300000;
-    uint256 private constant DEFAULT_ERC20_GAS_LIMIT = 55000;
+    uint256 private constant MIN_BRIDGE_GAS_LIMIT = 35000;
+    uint256 private constant MIN_ERC20_GAS_LIMIT = 55000;
+    uint256 private constant MAX_BRIDGE_GAS_LIMIT = 5000000;
+    uint256 private constant MAX_ERC20_GAS_LIMIT = 1500000;
 
     // Bit offsets and bit masks used to convert a `uint256 bridgeId` into a BridgeData member
     uint256 private constant INPUT_ASSET_ID_A_SHIFT = 32;
@@ -200,7 +202,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
     /*----------------------------------------
       EVENTS
       ----------------------------------------*/
-    event RollupProcessed(uint256 indexed rollupId, bytes32[] nextExpectedDefiHashes);
+    event BroadcastData(uint256 indexed rollupId, address sender);
+    event RollupProcessed(uint256 indexed rollupId, bytes32[] nextExpectedDefiHashes, address sender);
     event DefiBridgeProcessed(
         uint256 indexed bridgeId,
         uint256 indexed nonce,
@@ -481,7 +484,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         defiBridgeProxy = _defiBridgeProxy;
         escapeBlockLowerBound = _escapeBlockLowerBound;
         escapeBlockUpperBound = _escapeBlockUpperBound;
-        rollupProviders[_contractOwner] = true;
         allowThirdPartyContracts = _allowThirdPartyContracts;
         // initial value of the hash of 32 'zero' defi not hashes
         prevDefiInteractionsHash = 0x14e0f351ade4ba10438e9b15f66ab2e6389eea5ae870d6e8b2df1418b2e6fd5b;
@@ -514,7 +516,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
      * @param providerAddress address of rollup provider
      * @param valid are we adding or removing the provider?
      */
-    function setRollupProvider(address providerAddress, bool valid) public override onlyOwner {
+    function setRollupProvider(address providerAddress, bool valid) external override onlyOwner {
         rollupProviders[providerAddress] = valid;
         emit RollupProviderUpdated(providerAddress, valid);
     }
@@ -630,15 +632,39 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
     }
 
     /**
+     * @dev helper function to sanitise a given bridge gas limit value to be within pre-defined limits
+     * @param bridgeGasLimit - the gas limit that needs to be sanitised
+     */
+    function sanitiseBridgeGasLimit(uint256 bridgeGasLimit) internal pure returns (uint256) {
+        if (bridgeGasLimit < MIN_BRIDGE_GAS_LIMIT) {
+            return MIN_BRIDGE_GAS_LIMIT;
+        }
+        if (bridgeGasLimit > MAX_BRIDGE_GAS_LIMIT) {
+            return MAX_BRIDGE_GAS_LIMIT;
+        }
+        return bridgeGasLimit;
+    }
+
+    /**
+     * @dev helper function to sanitise a given asset gas limit value to be within pre-defined limits
+     * @param assetGasLimit - the gas limit that needs to be sanitised
+     */
+    function sanitiseAssetGasLimit(uint256 assetGasLimit) internal pure returns (uint256) {
+        if (assetGasLimit < MIN_ERC20_GAS_LIMIT) {
+            return MIN_ERC20_GAS_LIMIT;
+        }
+        if (assetGasLimit > MAX_ERC20_GAS_LIMIT) {
+            return MAX_ERC20_GAS_LIMIT;
+        }
+        return assetGasLimit;
+    }
+
+    /**
      * @dev Get the gas limit for the bridge specified by bridgeAddressId
      * @param bridgeAddressId - identifier used to denote a particular bridge
      */
     function getBridgeGasLimit(uint256 bridgeAddressId) public view override returns (uint256) {
-        uint256 bridgeGasLimit = bridgeGasLimits[bridgeAddressId];
-        if (bridgeGasLimit == 0) {
-            return DEFAULT_BRIDGE_GAS_LIMIT;
-        }
-        return bridgeGasLimit;
+        return bridgeGasLimits[bridgeAddressId];
     }
 
     /**
@@ -764,7 +790,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
 
     /**
      * @dev Set the mapping between an assetId and the address of the linked asset.
-     * Protected by onlyOwner
      * @param linkedToken - address of the asset
      * @param gasLimit - uint256 gas limit for ERC20 token transfers of this asset
      */
@@ -776,14 +801,13 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         supportedAssets.push(linkedToken);
 
         uint256 assetId = supportedAssets.length;
-        assetGasLimits[assetId] = gasLimit == 0 ? DEFAULT_ERC20_GAS_LIMIT : gasLimit;
+        assetGasLimits[assetId] = sanitiseAssetGasLimit(gasLimit);
 
         emit AssetAdded(assetId, linkedToken, assetGasLimits[assetId]);
     }
 
     /**
      * @dev Set the mapping between an bridge contract id and the address of the linked bridge contract.
-     * Protected by onlyOwner
      * @param linkedBridge - address of the bridge contract
      * @param gasLimit - uint256 gas limit to send to the bridge convert function
      */
@@ -799,7 +823,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         supportedBridges.push(linkedBridge);
 
         uint256 bridgeAddressId = supportedBridges.length;
-        bridgeGasLimits[bridgeAddressId] = gasLimit == 0 ? DEFAULT_BRIDGE_GAS_LIMIT : gasLimit;
+        bridgeGasLimits[bridgeAddressId] = sanitiseBridgeGasLimit(gasLimit);
 
         emit BridgeAdded(bridgeAddressId, linkedBridge, bridgeGasLimits[bridgeAddressId]);
     }
@@ -932,6 +956,13 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         emit Deposit(assetId, depositorAddress, amount);
     }
 
+    function broadcastData(
+        uint256 rollupId,
+        bytes calldata /* offchainTxData */
+    ) external override whenNotPaused {
+        emit BroadcastData(rollupId, msg.sender);
+    }
+
     /**
      * @dev Process a rollup - decode the rollup, update relevant state variables and
      * verify the proof
@@ -951,8 +982,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
 
     function processRollup(
         bytes calldata, /* encodedProofData */
-        bytes calldata signatures,
-        bytes calldata /* offchainTxData */
+        bytes calldata signatures
     ) external override whenNotPaused {
         reentrancyMutexCheck();
         setReentrancyMutex();
@@ -993,7 +1023,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         uint256 rollupId = verifyProofAndUpdateState(proofData, publicInputsHash);
         processDepositsAndWithdrawals(proofData, numTxs, signatures);
         bytes32[] memory nextDefiHashes = processDefiBridges(proofData, rollupBeneficiary);
-        emit RollupProcessed(rollupId, nextDefiHashes);
+        emit RollupProcessed(rollupId, nextDefiHashes, msg.sender);
     }
 
     /**
@@ -1295,7 +1325,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         if ((bothInputsReal || bothInputsVirtual) && (bridgeData.outputAssetIdA == bridgeData.outputAssetIdB)) {
             revert BRIDGE_WITH_IDENTICAL_OUTPUT_ASSETS(bridgeData.outputAssetIdA);
         }
-        bridgeData.bridgeGasLimit = bridgeGasLimits[bridgeData.bridgeAddressId];
+        bridgeData.bridgeGasLimit = getBridgeGasLimit(bridgeData.bridgeAddressId);
     }
 
     /**
@@ -1791,7 +1821,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
     /**
      * @dev Process asyncdefi interactions.
      *      Callback function for asynchronous bridge interactions.
-     *      Can only be called by the bridge contract linked to the interactionNonce
      * @param interactionNonce - unique id of the interaection
      */
     function processAsyncDefiInteraction(uint256 interactionNonce) external override returns (bool) {

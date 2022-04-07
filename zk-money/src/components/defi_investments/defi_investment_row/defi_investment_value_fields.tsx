@@ -4,6 +4,7 @@ import type {
   DefiPosition_Async,
   DefiPosition_Closable,
   DefiPosition_Pending,
+  DefiPosition_PendingExit,
 } from 'alt-model/defi/open_position_hooks';
 import { useDefaultExpectedOutput, useInteractionPresentValue } from 'alt-model/defi/defi_info_hooks';
 import { useAmount } from 'alt-model/top_level_context';
@@ -19,7 +20,7 @@ function ValueField({ amount }: { amount?: Amount }) {
   );
 }
 
-function PendingValueField({ position }: { position: DefiPosition_Pending }) {
+function PendingValueField({ position }: { position: DefiPosition_Pending | DefiPosition_PendingExit }) {
   const amount = useAmount(position.tx.depositValue);
   return <ValueField amount={amount} />;
 }
@@ -39,6 +40,7 @@ function AsyncValueField({ position }: { position: DefiPosition_Async }) {
 export function renderValueField(position: DefiPosition) {
   switch (position.type) {
     case 'pending':
+    case 'pending-exit':
       return <PendingValueField position={position} />;
     case 'closable':
       return <ClosableValueField position={position} />;

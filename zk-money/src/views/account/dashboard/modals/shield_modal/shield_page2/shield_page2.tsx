@@ -15,7 +15,7 @@ interface ShieldPage2Props {
 }
 
 export function ShieldPage2({ composerState, validationResult, onSubmit, onClose }: ShieldPage2Props) {
-  const asset = validationResult.input.targetL2OutputAmount?.info;
+  const asset = validationResult.input.targetAsset;
   const [riskChecked, setRiskChecked] = useState(false);
   const hasError = !!composerState.error;
   const isIdle = composerState.phase === ShieldComposerPhase.IDLE;
@@ -25,7 +25,7 @@ export function ShieldPage2({ composerState, validationResult, onSubmit, onClose
   return (
     <div className={style.root}>
       <BorderBox>
-        <CostBreakdown amount={validationResult.input.targetL2OutputAmount} fee={validationResult.input.feeAmount} />
+        <CostBreakdown amount={validationResult.targetL2OutputAmount} fee={validationResult.input.feeAmount} />
       </BorderBox>
       <BorderBox>
         {showingDeclaration ? (

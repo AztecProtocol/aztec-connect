@@ -15,6 +15,7 @@ import { useMaybeObs } from 'app/util';
 import { useProviderState } from 'alt-model/provider_hooks';
 import { useAliasIsValidRecipient } from 'alt-model/alias_hooks';
 import { isKnownAssetAddressString } from 'alt-model/known_assets/known_asset_addresses';
+import { useAsset } from 'alt-model/asset_hooks';
 
 const debug = createDebug('zm:shield_form_hooks');
 
@@ -22,7 +23,7 @@ export function useShieldForm(preselectedAssetId?: number) {
   const { alias, provider, requiredNetwork, config, keyVault, accountId } = useApp();
   const [fields, setFields] = useState<ShieldFormFields>({
     assetId: preselectedAssetId ?? 0,
-    amountStr: '',
+    amountStrOrMax: '',
     recipientAlias: alias ?? '',
     speed: TxSettlementTime.NEXT_ROLLUP,
   });
@@ -35,16 +36,13 @@ export function useShieldForm(preselectedAssetId?: number) {
   const depositor = providerState?.account;
   const currentNetwork = providerState?.network;
   const amountFactory = useAmountFactory();
-  const targetL2OutputAmount = amountFactory?.from(fields.assetId, fields.amountStr);
-  const { l1Balance, l1PendingBalance } = useL1Balances(targetL2OutputAmount?.info);
-  const { approveProofGasCost, depositFundsGasCost } = useEstimatedShieldingGasCosts(
-    depositor,
-    targetL2OutputAmount?.id,
-  );
+  const targetAsset = useAsset(fields.assetId);
+  const { l1Balance, l1PendingBalance } = useL1Balances(targetAsset);
+  const { approveProofGasCost, depositFundsGasCost } = useEstimatedShieldingGasCosts(depositor, targetAsset?.id);
   const fee = useDepositFee(fields.assetId, fields.speed);
   const feeAmount = fee && amountFactory?.fromAssetValue(fee);
   const balanceInFeePayingAsset = useBalance(fee?.assetId);
-  const targetAssetAddressStr = targetL2OutputAmount?.address.toString();
+  const targetAssetAddressStr = targetAsset?.address.toString();
   const transactionLimit = isKnownAssetAddressString(targetAssetAddressStr)
     ? config.txAmountLimits[targetAssetAddressStr]
     : undefined;
@@ -52,7 +50,7 @@ export function useShieldForm(preselectedAssetId?: number) {
   const validationResult = validateShieldForm({
     fields,
     amountFactory,
-    targetL2OutputAmount,
+    targetAsset,
     l1Balance,
     l1PendingBalance,
     keyVault,
@@ -102,6 +100,10 @@ export function useShieldForm(preselectedAssetId?: number) {
   const submit = () => {
     if (!lockedComposer) {
       debug('Attempted to submit before locking');
+      return;
+    }
+    if (composerState?.phase !== ShieldComposerPhase.IDLE) {
+      debug('Tried to resubmit form while in progress');
       return;
     }
     lockedComposer.compose();

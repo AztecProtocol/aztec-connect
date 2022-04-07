@@ -22,10 +22,12 @@
 
 .title {
   font-weight: 500;
+  height: 18px;
 }
 
 .subtitle {
   font-weight: 500;
+  height: 18px;
   @include mixins.gradient_font;
 }
 

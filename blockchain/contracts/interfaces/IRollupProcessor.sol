@@ -5,11 +5,9 @@ pragma solidity >=0.8.4 <0.8.11;
 interface IRollupProcessor {
     function defiBridgeProxy() external view returns (address);
 
-    function processRollup(
-        bytes calldata proofData,
-        bytes calldata signatures,
-        bytes calldata offchainTxData
-    ) external;
+    function broadcastData(uint256 rollupId, bytes calldata offchainTxData) external;
+
+    function processRollup(bytes calldata proofData, bytes calldata signatures) external;
 
     function depositPendingFunds(
         uint256 assetId,

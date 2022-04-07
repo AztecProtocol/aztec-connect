@@ -31,6 +31,8 @@ export interface FeeData {
 }
 
 export interface Blockchain extends BlockSource, BlockchainStatusSource, EthereumSigner {
+  getProvider(): EthereumProvider;
+
   getTransactionReceipt(txHash: TxHash): Promise<Receipt>;
 
   /**
@@ -40,7 +42,11 @@ export interface Blockchain extends BlockSource, BlockchainStatusSource, Ethereu
 
   getUserPendingDeposit(assetId: number, account: EthAddress): Promise<bigint>;
 
-  createRollupProofTx(proof: Buffer, signatures: Buffer[], offchainTxData: Buffer[]): Promise<Buffer>;
+  createRollupTxs(
+    dataBuf: Buffer,
+    signatures: Buffer[],
+    offchainTxData: Buffer[],
+  ): Promise<{ rollupProofTx: Buffer; broadcastDataTx: Buffer }>;
 
   sendTx(tx: Buffer, options?: SendTxOptions): Promise<TxHash>;
 

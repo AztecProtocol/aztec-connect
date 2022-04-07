@@ -1,0 +1,15 @@
+@use '../../../ui-components/styles/mixins';
+
+.root {    
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.label {
+  @include mixins.gradient_font;
+  font-size: 18px;
+  font-style: italic;
+  letter-spacing: 1.5px;
+  width: fit-content
+}

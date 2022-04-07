@@ -1,4 +1,5 @@
 import type { RemoteAsset } from 'alt-model/types';
+import type { StrOrMax } from 'alt-model/forms/constants';
 import { AmountSelection } from 'ui-components';
 import { MiniL1BalanceIndicator, MiniL2BalanceIndicator } from './mini_balance_indicators';
 import { InputAnnotation } from './types';
@@ -17,9 +18,9 @@ function renderBalanceIndicator(balanceType: BalanceType, asset: RemoteAsset) {
 
 interface AmountSectionProps {
   asset: RemoteAsset;
-  amountStr: string;
+  amountStrOrMax: StrOrMax;
   maxAmount: bigint;
-  onChangeAmountStr: (amountStr: string) => void;
+  onChangeAmountStrOrMax: (amountStrOrMax: StrOrMax) => void;
   onChangeAsset?: (option: number) => void;
   allowAssetSelection?: boolean;
   amountStrAnnotation?: InputAnnotation;
@@ -41,9 +42,9 @@ export function AmountSection(props: AmountSectionProps) {
           assets={props.assets}
           allowAssetSelection={props.allowAssetSelection}
           maxAmount={props.maxAmount}
-          onChangeAmountString={props.onChangeAmountStr}
+          onChangeAmountStringOrMax={props.onChangeAmountStrOrMax}
           onChangeAsset={props.onChangeAsset}
-          amountString={props.amountStr}
+          amountStringOrMax={props.amountStrOrMax}
         />
       }
       errorMessage={props.message}

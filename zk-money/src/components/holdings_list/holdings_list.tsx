@@ -13,7 +13,7 @@ const VIEWS = [
 type View = typeof VIEWS[number]['value'];
 
 interface HoldingsListProps {
-  onOpenDefiExitModal: (recipe: DefiRecipe, prefilledAmountStr: string) => void;
+  onOpenDefiExitModal: (recipe: DefiRecipe) => void;
 }
 
 export function HoldingsList(props: HoldingsListProps) {

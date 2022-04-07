@@ -1,4 +1,5 @@
 import type { RemoteAsset } from 'alt-model/types';
+import type { StrOrMax } from 'alt-model/forms/constants';
 import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from 'alt-model/known_assets/known_asset_addresses';
 import { useState, useMemo } from 'react';
 import { Dropdown, DropdownOption } from 'components/dropdown';
@@ -13,8 +14,8 @@ interface AmountSelectionProps {
   asset: RemoteAsset;
   assets?: RemoteAsset[];
   maxAmount: bigint;
-  amountString: string;
-  onChangeAmountString: (amountString: string) => void;
+  amountStringOrMax: StrOrMax;
+  onChangeAmountStringOrMax: (amountStringOrMax: StrOrMax) => void;
   onChangeAsset?: (option: number) => void;
   allowAssetSelection?: boolean;
 }
@@ -56,9 +57,8 @@ export function AmountSelection(props: AmountSelectionProps) {
       <AmountInput
         maxAmount={props.maxAmount}
         asset={props.asset}
-        placeholder="Enter amount"
-        onChangeValue={props.onChangeAmountString}
-        value={props.amountString}
+        onChangeValue={props.onChangeAmountStringOrMax}
+        value={props.amountStringOrMax}
       />
     </div>
   );

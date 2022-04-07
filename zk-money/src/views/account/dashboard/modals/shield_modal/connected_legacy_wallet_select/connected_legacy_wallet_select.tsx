@@ -2,7 +2,7 @@ import type { RemoteAsset } from 'alt-model/types';
 import { useLegacyEthAccountState } from 'alt-model/assets/l1_balance_hooks';
 import { WalletSelect } from 'views/account/wallet_select';
 import { useApp, useProviderState } from 'alt-model';
-import { MessageType, ProviderStatus } from 'app';
+import { MessageType } from 'app';
 import style from './connected_legacy_wallet_select.module.css';
 
 interface ConnectedLegacyWalletSelectProps {

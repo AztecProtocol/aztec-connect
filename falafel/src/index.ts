@@ -47,6 +47,9 @@ async function main() {
   const chainId = await blockchain.getChainId();
   const { initDataRoot } = InitHelpers.getInitRoots(chainId);
   const rollupDb = new CachedRollupDb(new TypeOrmRollupDb(connection, initDataRoot));
+  if (configurator.getRollupContractChanged()) {
+    await rollupDb.eraseDb();
+  }
   await rollupDb.init();
   const worldStateDb = new WorldStateDb();
   const metrics = new Metrics(worldStateDb, rollupDb, blockchain);

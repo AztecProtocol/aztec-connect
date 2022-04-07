@@ -68,7 +68,7 @@ export function Page2({ recipe, composerState, validationResult, onSubmit, onClo
           <BridgeKeyStats recipe={recipe} compact />
         </S.TopStats>
         <S.Separator />
-        <CostBreakdown amount={validationResult.input.targetDepositAmount} fee={validationResult.input.feeAmount} />
+        <CostBreakdown amount={validationResult.targetDepositAmount} fee={validationResult.input.feeAmount} />
       </BorderBox>
       <S.BorderBox>
         {showingDeclaration ? (
@@ -87,7 +87,7 @@ export function Page2({ recipe, composerState, validationResult, onSubmit, onClo
       <S.Footer>
         <Button
           text={hasError ? 'Retry' : 'Confirm Submit'}
-          onClick={riskChecked ? onSubmit : undefined}
+          onClick={canSubmit ? onSubmit : undefined}
           disabled={!canSubmit}
         />
       </S.Footer>

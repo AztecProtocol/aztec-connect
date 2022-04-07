@@ -4,20 +4,20 @@ import type {
   DefiPosition_Async,
   DefiPosition_Closable,
   DefiPosition_Pending,
+  DefiPosition_PendingExit,
 } from 'alt-model/defi/open_position_hooks';
 import moment from 'moment';
 import { StepStatusIndicator, StepStatus } from 'ui-components';
 import { MiniLink } from 'ui-components/components/atoms/mini_link';
 import { useCountDownData } from 'features/defi/bridge_count_down/bridge_count_down_hooks';
-import { useAmount, useConfig } from 'alt-model/top_level_context';
 import style from './defi_investment_interaction_fields.module.scss';
 import { Button } from 'components/button';
+import { useExplorerTxLink } from 'alt-model/explorer_link_hooks';
 
-function PendingInteractionField({ position }: { position: DefiPosition_Pending }) {
-  const { explorerUrl } = useConfig();
+function PendingInteractionField({ position }: { position: DefiPosition_Pending | DefiPosition_PendingExit }) {
+  const explorerLink = useExplorerTxLink(position.tx.txId);
   const data = useCountDownData(position.tx.bridgeId);
   const timeStr = data?.nextBatch ? moment(data.nextBatch).fromNow(true) : '';
-  const explorerLink = `${explorerUrl}/tx/${position.tx.txId.toString().replace(/^0x/i, '')}`;
   return (
     <>
       {timeStr}
@@ -32,12 +32,10 @@ function ClosableInteractionField({
   onOpenDefiExitModal,
 }: {
   position: DefiPosition_Closable;
-  onOpenDefiExitModal: (recipe: DefiRecipe, prefilledAmountStr: string) => void;
+  onOpenDefiExitModal: (recipe: DefiRecipe) => void;
 }) {
-  const prefilledAmount = useAmount(position.handleValue);
-  const prefilledAmountStr = prefilledAmount?.toFloat().toString() ?? '';
   return (
-    <Button className={style.claimButton} onClick={() => onOpenDefiExitModal(position.recipe, prefilledAmountStr)}>
+    <Button className={style.claimButton} onClick={() => onOpenDefiExitModal(position.recipe)}>
       <div className={style.claimButtonContent}>Claim & Exit</div>
     </Button>
   );
@@ -51,12 +49,10 @@ function AsyncInteractionField({ position }: { position: DefiPosition_Async }) {
   return <div className={style.fixedTerm}>Matures {dateStr}</div>;
 }
 
-export function renderInteractionField(
-  position: DefiPosition,
-  onOpenDefiExitModal: (recipe: DefiRecipe, prefilledAmountStr: string) => void,
-) {
+export function renderInteractionField(position: DefiPosition, onOpenDefiExitModal: (recipe: DefiRecipe) => void) {
   switch (position.type) {
     case 'pending':
+    case 'pending-exit':
       return <PendingInteractionField position={position} />;
     case 'closable':
       return <ClosableInteractionField position={position} onOpenDefiExitModal={onOpenDefiExitModal} />;

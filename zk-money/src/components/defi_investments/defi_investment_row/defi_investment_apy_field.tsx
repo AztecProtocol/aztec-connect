@@ -10,7 +10,8 @@ import { DefiInvestmentType } from 'alt-model/defi/types';
 const percentageFormatter = new Intl.NumberFormat('en-GB', { style: 'percent', maximumFractionDigits: 2 });
 
 function Apy({ expectedYield, investmentType }: { expectedYield?: number; investmentType: DefiInvestmentType }) {
-  const yieldStr = expectedYield !== undefined ? percentageFormatter.format(expectedYield) : '??';
+  if (expectedYield === undefined) return <></>;
+  const yieldStr = percentageFormatter.format(expectedYield);
   const typeStr = investmentType === DefiInvestmentType.FIXED_YIELD ? 'Fixed' : 'Variable';
   return (
     <>
@@ -36,5 +37,7 @@ export function renderApyField(position: DefiPosition) {
       return <ApyFromTxAux position={position} />;
     case 'closable':
       return <ApyFromDefaultAux position={position} />;
+    case 'pending-exit':
+      return <>Exiting...</>;
   }
 }

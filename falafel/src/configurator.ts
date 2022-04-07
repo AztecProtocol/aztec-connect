@@ -128,6 +128,7 @@ function getRuntimeConfigEnvVars(): Partial<RuntimeConfig> {
 
 export class Configurator {
   private confVars!: ConfVars;
+  private rollupContractChanged = false;
 
   /**
    * Builds a launch time configuration from environment variables.
@@ -152,6 +153,7 @@ export class Configurator {
           `Rollup contract changed, erasing data: ${saved.rollupContractAddress.toString()} -> ${rollupContractAddress.toString()}`,
         );
         emptyDirSync(dir);
+        this.rollupContractChanged = true;
       }
 
       // Priorities:
@@ -187,6 +189,10 @@ export class Configurator {
 
   public getConfVars() {
     return this.confVars;
+  }
+
+  public getRollupContractChanged() {
+    return this.rollupContractChanged;
   }
 
   public async saveRuntimeConfig(runtimeConfig: Partial<RuntimeConfig>) {

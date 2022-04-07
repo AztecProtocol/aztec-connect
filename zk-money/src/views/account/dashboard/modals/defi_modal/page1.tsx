@@ -1,3 +1,4 @@
+import type { StrOrMax } from 'alt-model/forms/constants';
 import styled from 'styled-components/macro';
 import { Button } from 'components';
 import { DefiFormFeedback, DefiFormFields, DefiFormValidationResult } from 'alt-model/defi/defi_form';
@@ -13,9 +14,9 @@ import { DefiSettlementTime } from '@aztec/sdk';
 import { FaqHint, Hyperlink, HyperlinkIcon } from 'ui-components';
 import { SplitSection } from '../sections/split_section';
 import { SettlementTimeInformationSection } from '../sections/settlement_time_information_section';
+import { PrivacyInformationSection } from '../sections/privacy_information_section';
 import defiBridgeImage from 'images/defi_bridge.svg';
 import style from './page1.module.scss';
-import { PrivacyInformationSection } from '../sections/privacy_information_section';
 
 const Root = styled.div`
   display: flex;
@@ -33,7 +34,7 @@ interface Page1Props {
   fields: DefiFormFields;
   validationResult: DefiFormValidationResult;
   feedback: DefiFormFeedback;
-  onChangeAmountStr: (value: string) => void;
+  onChangeAmountStrOrMax: (value: StrOrMax) => void;
   onChangeSpeed: (value: DefiSettlementTime) => void;
   onNext: () => void;
 }
@@ -43,7 +44,7 @@ export function Page1({
   fields,
   validationResult,
   feedback,
-  onChangeAmountStr,
+  onChangeAmountStrOrMax,
   onChangeSpeed,
   onNext,
 }: Page1Props) {
@@ -66,14 +67,19 @@ export function Page1({
             <AmountSection
               maxAmount={validationResult.maxOutput ?? 0n}
               asset={validationResult.input.depositAsset}
-              amountStr={fields.amountStr}
-              onChangeAmountStr={onChangeAmountStr}
+              amountStrOrMax={fields.amountStrOrMax}
+              onChangeAmountStrOrMax={onChangeAmountStrOrMax}
               message={feedback.amount}
               balanceType="L2"
             />
           </>
         }
-        rightPanel={<PrivacyInformationSection />}
+        rightPanel={
+          <PrivacyInformationSection
+            amount={validationResult.targetDepositAmount?.baseUnits || 0n}
+            asset={validationResult.input.depositAsset}
+          />
+        }
       />
       <SplitSection
         leftPanel={

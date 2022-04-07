@@ -9,7 +9,7 @@ export function useDefiTxs() {
   const sdk = useSdk();
   const [txs, setTxs] = useState<UserDefiTx[]>();
   useEffect(() => {
-    setTxs([]);
+    setTxs(undefined);
     if (sdk && accountId) {
       const updateTxs = () => sdk.getDefiTxs(accountId).then(setTxs);
       updateTxs();

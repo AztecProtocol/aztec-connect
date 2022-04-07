@@ -47,7 +47,7 @@ export function ShieldModal(props: ShieldModalProps) {
         assets={assets}
         validationResult={validationResult}
         onNext={attemptLock}
-        onChangeAmountStr={setters.amountStr}
+        onChangeAmountStrOrMax={setters.amountStrOrMax}
         onChangeAsset={setters.assetId}
         onChangeRecipientAlias={setters.recipientAlias}
         onChangeSpeed={setters.speed}

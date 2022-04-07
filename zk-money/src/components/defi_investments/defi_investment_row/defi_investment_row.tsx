@@ -7,7 +7,7 @@ import { renderApyField } from './defi_investment_apy_field';
 
 interface DefiInvestmentRowProps {
   position: DefiPosition;
-  onOpenDefiExitModal: (recipe: DefiRecipe, prefilledAmountStr: string) => void;
+  onOpenDefiExitModal: (recipe: DefiRecipe) => void;
 }
 
 export function DefiInvestmentRow({ position, onOpenDefiExitModal }: DefiInvestmentRowProps) {

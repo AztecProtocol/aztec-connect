@@ -20,6 +20,7 @@ export interface MockBridgeParams {
   isAsync?: boolean;
   maxTxs?: number;
   auxData?: number;
+  bridgeGasLimit?: number;
 }
 
 export const deployMockBridge = async (
@@ -40,6 +41,7 @@ export const deployMockBridge = async (
     isAsync = false,
     maxTxs = 100,
     auxData = 0,
+    bridgeGasLimit = 300000,
   }: MockBridgeParams = {},
 ) => {
   const DefiBridge = await ethers.getContractFactory('MockDefiBridge', publisher);
@@ -57,7 +59,7 @@ export const deployMockBridge = async (
   await bridge.deployed();
 
   const address = EthAddress.fromString(bridge.address);
-  await rollupProcessor.setSupportedBridge(address, 0);
+  await rollupProcessor.setSupportedBridge(address, bridgeGasLimit);
   const bridgeAddressId = (await rollupProcessor.getSupportedBridges()).length;
 
   const bridgeId = new BridgeId(bridgeAddressId, inputAssetIdA, outputAssetIdA, inputAssetIdB, outputAssetIdB, auxData);

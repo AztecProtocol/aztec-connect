@@ -63,7 +63,7 @@ export function useSpendableBalance(assetId: number) {
   return spendableBalance;
 }
 
-function useSpendableBalances() {
+export function useSpendableBalances() {
   const { accountId } = useApp();
   const sdk = useSdk();
   const balances = useBalances();

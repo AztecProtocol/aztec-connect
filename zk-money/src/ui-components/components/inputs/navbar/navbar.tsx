@@ -39,7 +39,7 @@ const LINKS: LinkItem[] = [
 export function Navbar({ isLoggedIn, accountComponent, theme, onChange, onLogin }: NavbarProps): JSX.Element {
   const location = useLocation();
   const totalBalance = useTotalBalance();
-  const totalBalanceStr = totalBalance !== undefined ? convertPriceToString(totalBalance) : '??';
+  const totalBalanceStr = totalBalance !== undefined ? convertPriceToString(totalBalance) : 'Balance';
 
   return (
     <div className={style.headerRoot}>

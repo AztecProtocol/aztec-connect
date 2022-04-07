@@ -34,7 +34,7 @@ const removeEmptyValues = (vars: ConfigVars): Partial<ConfigVars> => {
 };
 
 const fromLocalStorage = (): ConfigVars => ({
-  deployTag: localStorage.getItem('zm_deployTag') || 'aztec-connect-dev',
+  deployTag: localStorage.getItem('zm_deployTag') || '',
   txAmountLimits: localStorage.getItem('zm_txAmountLimit') || '',
   sessionTimeout: localStorage.getItem('zm_sessionTimeout') || '',
   maxAvailableAssetId: localStorage.getItem('zm_maxAvailableAssetId') || '',
@@ -87,6 +87,9 @@ async function getDeployConfig(deployTag: string) {
       deployTag = await fetch('/DEPLOY_TAG')
         .then(resp => resp.text())
         .catch(() => '');
+    } else {
+      // Webpack's dev-server would serve up index.html instead of the DEPLOY_TAG.
+      deployTag = 'aztec-connect-dev';
     }
   }
 

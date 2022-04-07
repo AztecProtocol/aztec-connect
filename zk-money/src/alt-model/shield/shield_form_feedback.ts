@@ -11,7 +11,7 @@ function getAmountInputFeedback(result: ShieldFormValidationResult, touched: boo
     })} from your L1 balance for paying the transaction fee and covering gas costs.`;
   }
   if (result.mustAllowForGas) {
-    const gas = result.input.targetL2OutputAmount?.withBaseUnits(result.reservedForL1GasIfTargetAssetIsEth ?? 0n);
+    const gas = result.targetL2OutputAmount?.withBaseUnits(result.reservedForL1GasIfTargetAssetIsEth ?? 0n);
     return `Please allow ${gas?.format({ layer: 'L1' })} from your L1 balance for covering gas costs.`;
   }
   if (result.mustAllowForFee) {
@@ -19,8 +19,8 @@ function getAmountInputFeedback(result: ShieldFormValidationResult, touched: boo
     return `Please allow ${fee?.format({ layer: 'L1' })} from your L1 balance for paying the transaction fee.`;
   }
   if (result.beyondTransactionLimit) {
-    const { targetL2OutputAmount, transactionLimit } = result.input;
-    const txLimitAmount = targetL2OutputAmount?.withBaseUnits(transactionLimit ?? 0n);
+    const { transactionLimit } = result.input;
+    const txLimitAmount = result.targetL2OutputAmount?.withBaseUnits(transactionLimit ?? 0n);
     return `Transactions are capped at ${txLimitAmount?.format()}`;
   }
   if (result.insufficientTargetAssetBalance) {
@@ -33,7 +33,7 @@ function getAmountInputFeedback(result: ShieldFormValidationResult, touched: boo
 
 function getWalletAccountFeedback(result: ShieldFormValidationResult) {
   if (result.mustDepositFromWalletAccountUsedToGenerateAztecKeys) {
-    const targetSymbol = result.input.targetL2OutputAmount?.info.symbol;
+    const targetSymbol = result.targetL2OutputAmount?.info.symbol;
     const feeSymbol = result.input.feeAmount?.info.symbol;
     const addressStr = result.input.keyVault?.signerAddress.toString();
     const abbreviatedStr = `${addressStr?.slice(0, 8)}...${addressStr?.slice(-4)}`;
@@ -50,7 +50,7 @@ function getFooterFeedback(result: ShieldFormValidationResult, attemptedLock: bo
   if (!attemptedLock) return;
   if (result.insufficientFeePayingAssetBalance) {
     const fee = result.input.feeAmount;
-    const output = result.input.targetL2OutputAmount;
+    const output = result.targetL2OutputAmount;
     return `You do not have enough zk${
       fee?.info.symbol
     } to pay the fee for this transaction. Please first shield at least ${fee?.toFloat()} ${
@@ -65,7 +65,7 @@ export function getShieldFormFeedback(
   attemptedLock: boolean,
 ) {
   return {
-    amount: getAmountInputFeedback(result, touchedFields.amountStr || attemptedLock),
+    amount: getAmountInputFeedback(result, touchedFields.amountStrOrMax || attemptedLock),
     walletAccount: getWalletAccountFeedback(result),
     footer: getFooterFeedback(result, attemptedLock),
   };

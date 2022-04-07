@@ -20,7 +20,7 @@ export class EthereumRpc {
       method: 'eth_getTransactionCount',
       params: [addr.toString(), 'latest'],
     });
-    return result;
+    return result as number;
   }
 
   /**

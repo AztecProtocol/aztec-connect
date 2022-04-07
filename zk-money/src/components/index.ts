@@ -31,7 +31,6 @@ export * from './text';
 export * from './text_button';
 export * from './text_link';
 export * from './tooltip';
-export * from './transaction_summary';
 export * from './tx_progress';
 export * from './wallet_picker';
 export * from './shielded_asset_icon';

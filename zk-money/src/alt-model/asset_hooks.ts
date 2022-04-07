@@ -1,15 +1,10 @@
 import { AssetValue } from '@aztec/sdk';
 import { useMemo } from 'react';
-import { useRollupProviderStatus } from './rollup_provider_hooks';
-import { useAmountFactory } from './top_level_context';
+import { useAmountFactory, useRemoteAssets } from './top_level_context';
 
-export function useAssetInfo(assetId: number) {
-  const rpStatus = useRollupProviderStatus();
-  const assets = rpStatus?.blockchainStatus.assets;
-  if (!assets) return 'loading';
-  const asset = assets[assetId];
-  if (!asset) return 'not-found';
-  return asset;
+export function useAsset(assetId: number) {
+  const assets = useRemoteAssets();
+  return assets?.[assetId];
 }
 
 export function useAmount(assetValue?: AssetValue) {

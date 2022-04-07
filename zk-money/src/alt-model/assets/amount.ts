@@ -39,12 +39,13 @@ export class Amount {
     return this.withBaseUnits(this.baseUnits + baseUnits);
   }
 
-  format(opts?: { layer?: 'L1' | 'L2'; uniform?: boolean }) {
+  format(opts?: { layer?: 'L1' | 'L2'; uniform?: boolean; showPlus?: boolean }) {
     const layer = opts?.layer ?? 'L2';
     const symbolPrefix = layer === 'L2' ? 'zk' : '';
     const numStr = formatBaseUnits(this.baseUnits, this.info.decimals, {
       precision: opts?.uniform ? getAssetPreferredFractionalDigits(this.info.address) : undefined,
       commaSeparated: opts?.uniform,
+      showPlus: opts?.showPlus,
     });
     return `${numStr} ${symbolPrefix}${this.info.symbol}`;
   }

@@ -1,34 +1,43 @@
 import type { RemoteAsset } from 'alt-model/types';
 import { getAssetPreferredFractionalDigits } from 'alt-model/known_assets/known_asset_display_data';
-import React from 'react';
 import { formatBaseUnits } from '../../../../app';
 import { Input } from '../../../../components';
+import { MAX_MODE, StrOrMax } from 'alt-model/forms/constants';
+import { bindStyle } from '../../../util/classnames';
 import style from './amount_input.module.scss';
 
-interface AmountInputProps extends React.ComponentProps<typeof Input> {
-  asset: RemoteAsset;
-  maxAmount: bigint;
+const cx = bindStyle(style);
+
+// TODO: This needn't be exported once `handleChangeAmountStrOrMax` is removed from send.tsx
+export function formatMaxAmount(maxAmount: bigint, asset: RemoteAsset) {
+  if (maxAmount === 0n) {
+    // Skip decimal places for 0
+    return '0';
+  }
+  return formatBaseUnits(maxAmount, asset.decimals, {
+    precision: getAssetPreferredFractionalDigits(asset.address),
+    floor: true,
+  });
 }
 
-export function AmountInput({ asset, onChangeValue, maxAmount, ...inputProps }: AmountInputProps) {
-  const handleChangeValue = (value: string) => onChangeValue?.(value.match(/^\d*\.?\d*/)?.[0] ?? '');
-  const handleMaxButton = () => {
-    if (maxAmount === 0n) {
-      // Skip decimal places for 0
-      handleChangeValue('0');
-      return;
-    }
-    const maxStr = formatBaseUnits(maxAmount, asset.decimals, {
-      precision: getAssetPreferredFractionalDigits(asset.address),
-      floor: true,
-    });
-    handleChangeValue(maxStr);
-  };
+interface AmountInputProps {
+  asset: RemoteAsset;
+  maxAmount: bigint;
+  value: StrOrMax;
+  onChangeValue: (value: StrOrMax) => void;
+}
+
+export function AmountInput({ asset, value, onChangeValue, maxAmount }: AmountInputProps) {
+  const handleChangeValue = (value: string) => onChangeValue(value.match(/^\d*\.?\d*/)?.[0] ?? '');
+  const handleMaxButton = () => onChangeValue(MAX_MODE);
+
+  const maxEnabled = value === MAX_MODE;
+  const amountStr = maxEnabled ? formatMaxAmount(maxAmount, asset) : value;
 
   return (
     <div className={style.content}>
-      <Input {...inputProps} onChangeValue={handleChangeValue} />
-      <button className={style.maxButton} onClick={handleMaxButton}>
+      <Input value={amountStr} onChangeValue={handleChangeValue} placeholder="Enter amount" />
+      <button className={cx(style.maxButton, { maxEnabled })} onClick={handleMaxButton}>
         Max
       </button>
     </div>
