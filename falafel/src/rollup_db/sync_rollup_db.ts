@@ -163,8 +163,8 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.addRollup(rollup));
   }
 
-  public async setCallData(id: number, callData: Buffer) {
-    return this.synchronise(() => this.rollupDb.setCallData(id, callData));
+  public async setCallData(id: number, broadcastDataCalldata: Buffer, rollupProofCalldata: Buffer) {
+    return this.synchronise(() => this.rollupDb.setCallData(id, broadcastDataCalldata, rollupProofCalldata));
   }
 
   public async confirmSent(id: number, txHash: TxHash) {
@@ -243,5 +243,9 @@ export class SyncRollupDb {
     } finally {
       release();
     }
+  }
+
+  public async eraseDb() {
+    return this.synchronise(() => this.rollupDb.eraseDb());
   }
 }

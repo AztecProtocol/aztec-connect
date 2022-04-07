@@ -73,6 +73,10 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return eb;
   }
 
+  public getProvider() {
+    return this.contracts.getProvider();
+  }
+
   /**
    * Initialises the status object. Requires querying for the latest rollup block from the blockchain.
    * This could take some time given how `getRollupBlock` searches backwards over the chain.
@@ -234,8 +238,8 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return this.contracts.getUserProofApprovalStatus(account, txId);
   }
 
-  public async createRollupProofTx(proofData: Buffer, signatures: Buffer[], offchainTxData: Buffer[]) {
-    return await this.contracts.createRollupProofTx(proofData, signatures, offchainTxData);
+  async createRollupTxs(dataBuf: Buffer, signatures: Buffer[], offchainTxData: Buffer[]) {
+    return this.contracts.createRollupTxs(dataBuf, signatures, offchainTxData);
   }
 
   public sendTx(tx: Buffer, options: SendTxOptions = {}) {

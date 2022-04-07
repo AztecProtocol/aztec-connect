@@ -2,6 +2,7 @@
 set -e
 
 TARGET_PROJECT=$1
+PUSH_LABEL=$2
 
 if [ -z "$TARGET_PROJECT" ]; then
   TARGET_PROJECT=$(git rev-parse --show-prefix)
@@ -40,6 +41,11 @@ for E in ${PROJECTS[@]}; do
   echo
   if [ "$PROJECT" = "$TARGET_PROJECT" ]; then
     time docker build --no-cache -f $DOCKERFILE -t $ECR_URL/$REPO:latest .
+    if [ -n "$PUSH_LABEL" ]; then
+      $(aws ecr get-login --region eu-west-2 --no-include-email) 2> /dev/null
+      docker tag $ECR_URL/$REPO:latest $ECR_URL/$REPO:$PUSH_LABEL
+      docker push $ECR_URL/$REPO:$PUSH_LABEL
+    fi
     break
   else
     time docker build -f $DOCKERFILE -t $ECR_URL/$REPO:latest .

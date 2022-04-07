@@ -284,8 +284,8 @@ export class TypeOrmRollupDb implements RollupDb {
     });
   }
 
-  public async setCallData(id: number, callData: Buffer) {
-    await this.rollupRep.update({ id }, { callData });
+  public async setCallData(id: number, broadcastDataCalldata: Buffer, processRollupCalldata: Buffer) {
+    await this.rollupRep.update({ id }, { broadcastDataCalldata, processRollupCalldata });
   }
 
   public async confirmSent(id: number, ethTxHash: TxHash) {
@@ -393,5 +393,13 @@ export class TypeOrmRollupDb implements RollupDb {
     });
     const nullifiers = unsettledClaim.map(c => c.nullifier);
     await this.txRep.delete({ nullifier1: In(nullifiers) });
+  }
+
+  public async eraseDb() {
+    await this.accountRep.clear();
+    await this.assetMetricsRep.clear();
+    await this.claimRep.clear();
+    await this.rollupRep.clear();
+    await this.rollupProofRep.clear();
   }
 }

@@ -421,8 +421,13 @@ describe('rollup_processor', () => {
             : [],
         previousDefiInteractionHash: i === 3 ? previousDefiInteractionHash : undefined,
       });
-      const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, offchainTxData);
-      await rollupProcessor.sendTx(tx);
+      const { rollupProofTx, broadcastDataTx } = await rollupProcessor.createRollupTxs(
+        proofData,
+        signatures,
+        offchainTxData,
+      );
+      await rollupProcessor.sendTx(broadcastDataTx);
+      await rollupProcessor.sendTx(rollupProofTx);
     }
 
     const blocks = await rollupProcessor.getRollupBlocksFrom(0, 1);
@@ -576,12 +581,13 @@ describe('rollup_processor', () => {
 
     // send the first 3 txs, this will take us beyond the defi deposits
     for (let i = 0; i < 3; i++) {
-      const tx = await rollupProcessor.createRollupProofTx(
+      const { rollupProofTx, broadcastDataTx } = await rollupProcessor.createRollupTxs(
         txProofs[i].proofData,
         txProofs[i].signatures,
         txProofs[i].offchainTxData,
       );
-      await rollupProcessor.sendTx(tx);
+      await rollupProcessor.sendTx(broadcastDataTx);
+      await rollupProcessor.sendTx(rollupProofTx);
     }
 
     // now finalise the 2 defi deposits
@@ -590,12 +596,13 @@ describe('rollup_processor', () => {
 
     // now send the last 2 tx rollups
     for (let i = 3; i < txProofs.length; i++) {
-      const tx = await rollupProcessor.createRollupProofTx(
+      const { rollupProofTx, broadcastDataTx } = await rollupProcessor.createRollupTxs(
         txProofs[i].proofData,
         txProofs[i].signatures,
         txProofs[i].offchainTxData,
       );
-      await rollupProcessor.sendTx(tx);
+      await rollupProcessor.sendTx(broadcastDataTx);
+      await rollupProcessor.sendTx(rollupProofTx);
     }
 
     const blocks = await rollupProcessor.getRollupBlocksFrom(0, 1);
@@ -792,12 +799,13 @@ describe('rollup_processor', () => {
     try {
       // send the first 5 txs
       for (let i = 0; i < 5; i++) {
-        const tx = await rollupProcessor.createRollupProofTx(
+        const { rollupProofTx, broadcastDataTx } = await rollupProcessor.createRollupTxs(
           txProofs[i].proofData,
           txProofs[i].signatures,
           txProofs[i].offchainTxData,
         );
-        await rollupProcessor.sendTx(tx);
+        await rollupProcessor.sendTx(broadcastDataTx);
+        await rollupProcessor.sendTx(rollupProofTx);
       }
     } catch (error) {
       console.log(error);
@@ -809,12 +817,15 @@ describe('rollup_processor', () => {
     }
 
     // now send the block of sync defi deposits
-    const syncDefiTx = await rollupProcessor.createRollupProofTx(
-      txProofs[5].proofData,
-      txProofs[5].signatures,
-      txProofs[5].offchainTxData,
-    );
-    await rollupProcessor.sendTx(syncDefiTx);
+    {
+      const { rollupProofTx, broadcastDataTx } = await rollupProcessor.createRollupTxs(
+        txProofs[5].proofData,
+        txProofs[5].signatures,
+        txProofs[5].offchainTxData,
+      );
+      await rollupProcessor.sendTx(broadcastDataTx);
+      await rollupProcessor.sendTx(rollupProofTx);
+    }
 
     // the async interactions hashes are 64 to 160, the sync defi interactions are 160 to 175
     // the hashes array on the contract should now equal nonces [160 ... 175, 64 ... 114]
@@ -872,12 +883,13 @@ describe('rollup_processor', () => {
     try {
       // now send the last 2 withdraw proofs rollups
       for (let i = 6; i < txProofs.length; i++) {
-        const tx = await rollupProcessor.createRollupProofTx(
+        const { broadcastDataTx, rollupProofTx } = await rollupProcessor.createRollupTxs(
           txProofs[i].proofData,
           txProofs[i].signatures,
           txProofs[i].offchainTxData,
         );
-        await rollupProcessor.sendTx(tx);
+        await rollupProcessor.sendTx(broadcastDataTx);
+        await rollupProcessor.sendTx(rollupProofTx);
       }
     } catch (error) {
       console.log(error);

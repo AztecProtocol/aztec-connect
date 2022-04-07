@@ -73,6 +73,10 @@ export class Contracts {
     await this.updateAssets();
   }
 
+  public getProvider() {
+    return this.ethereumProvider;
+  }
+
   public async updateAssets() {
     const supportedAssets = await this.rollupProcessor.getSupportedAssets();
     const newAssets = await Promise.all(
@@ -128,8 +132,8 @@ export class Contracts {
     return this.rollupProcessor.verifier();
   }
 
-  public async createRollupProofTx(proofData: Buffer, signatures: Buffer[], offchainTxData: Buffer[]) {
-    return this.rollupProcessor.createRollupProofTx(proofData, signatures, offchainTxData);
+  async createRollupTxs(dataBuf: Buffer, signatures: Buffer[], offchainTxData: Buffer[]) {
+    return this.rollupProcessor.createRollupTxs(dataBuf, signatures, offchainTxData);
   }
 
   public async sendTx(data: Buffer, options: SendTxOptions = {}) {

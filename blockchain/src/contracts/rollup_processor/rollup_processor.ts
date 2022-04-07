@@ -2,7 +2,8 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { EthereumProvider, EthereumSignature, SendTxOptions, TxHash } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { DefiInteractionNote, computeInteractionHashes } from '@aztec/barretenberg/note_algorithms';
+import { Timer } from '@aztec/barretenberg/timer';
+import { computeInteractionHashes, DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { sliceOffchainTxData } from '@aztec/barretenberg/offchain_tx_data';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { TransactionReceipt, TransactionResponse } from '@ethersproject/abstract-provider';
@@ -23,8 +24,8 @@ const fixEthersStackTrace = (err: Error) => {
  * querying contract state, creating and sending transactions, and querying for rollup blocks.
  */
 export class RollupProcessor {
-  static DEFAULT_BRIDGE_GAS_LIMIT = 300000;
-  static DEFAULT_ERC20_GAS_LIMIT = 55000;
+  static readonly DEFAULT_BRIDGE_GAS_LIMIT = 300000;
+  static readonly DEFAULT_ERC20_GAS_LIMIT = 55000;
 
   public rollupProcessor: Contract;
   private lastQueriedRollupId?: number;
@@ -32,7 +33,6 @@ export class RollupProcessor {
   protected provider: Web3Provider;
   private log = createDebug('bb:rollup_processor');
   // taken from the rollup contract
-  static readonly DEFI_RESULT_ZERO_HASH = '0x2d25a1e3a51eb293004c4b56abe12ed0da6bca2b4a21936752a85d102593c1b4';
 
   constructor(protected rollupContractAddress: EthAddress, private ethereumProvider: EthereumProvider) {
     this.provider = new Web3Provider(ethereumProvider);
@@ -142,19 +142,29 @@ export class RollupProcessor {
     return { escapeOpen, blocksRemaining: +blocksRemaining };
   }
 
-  async createRollupProofTx(proofData: Buffer, signatures: Buffer[], offchainTxData: Buffer[]) {
-    const rollupProofData = RollupProofData.fromBuffer(proofData);
-    const trailingData = proofData.slice(rollupProofData.toBuffer().length);
-    const encodedProof = Buffer.concat([rollupProofData.encode(), trailingData]);
+  // Deprecated: Used by lots of tests. We now use createRollupTxs() to produce two txs, one with broadcast data,
+  // the other with the actual rollup proof.
+  async createRollupProofTx(dataBuf: Buffer, signatures: Buffer[], offchainTxData: Buffer[]) {
+    return (await this.createRollupTxs(dataBuf, signatures, offchainTxData)).rollupProofTx;
+  }
+
+  async createRollupTxs(dataBuf: Buffer, signatures: Buffer[], offchainTxData: Buffer[]) {
+    const broadcastData = RollupProofData.fromBuffer(dataBuf);
+    const broadcastDataLength = broadcastData.toBuffer().length;
+    const encodedBroadcastData = broadcastData.encode();
+    const proofData = dataBuf.slice(broadcastDataLength);
+    const encodedData = Buffer.concat([encodedBroadcastData, proofData]);
     const formattedSignatures = solidityFormatSignatures(signatures);
-    const tx = await this.rollupProcessor.populateTransaction
-      .processRollup(
-        `0x${encodedProof.toString('hex')}`,
-        formattedSignatures,
-        `0x${Buffer.concat(offchainTxData).toString('hex')}`,
-      )
+    const rollupProofTx = await this.rollupProcessor.populateTransaction
+      .processRollup(`0x${encodedData.toString('hex')}`, formattedSignatures)
       .catch(fixEthersStackTrace);
-    return Buffer.from(tx.data!.slice(2), 'hex');
+    const broadcastDataTx = await this.rollupProcessor.populateTransaction
+      .broadcastData(broadcastData.rollupId, `0x${Buffer.concat(offchainTxData).toString('hex')}`)
+      .catch(fixEthersStackTrace);
+    return {
+      rollupProofTx: Buffer.from(rollupProofTx.data!.slice(2), 'hex'),
+      broadcastDataTx: Buffer.from(broadcastDataTx.data!.slice(2), 'hex'),
+    };
   }
 
   public async sendTx(data: Buffer, options: SendTxOptions = {}) {
@@ -269,11 +279,11 @@ export class RollupProcessor {
     const net = await this.provider.getNetwork();
     switch (net.chainId) {
       case 1:
-        return { earliestBlock: 11967192, chunk: 100000 };
+        return { earliestBlock: 11967192, chunk: 100000, broadcastSearchLead: 6 * 60 * 24 };
       case 0xa57ec:
-        return { earliestBlock: 14000000, chunk: 10 };
+        return { earliestBlock: 14000000, chunk: 10, broadcastSearchLead: 10 };
       default:
-        return { earliestBlock: 0, chunk: 100000 };
+        return { earliestBlock: 0, chunk: 100000, broadcastSearchLead: 6 * 60 * 24 };
     }
   }
 
@@ -313,7 +323,7 @@ export class RollupProcessor {
     const totalStartTime = new Date().getTime();
     while (end > earliestBlock) {
       const rollupFilter = this.rollupProcessor.filters.RollupProcessed();
-      this.log(`Fetching rollup events between blocks ${start} and ${end}...`);
+      this.log(`fetching rollup events between blocks ${start} and ${end}...`);
       const startTime = new Date().getTime();
       const rollupEvents = await this.rollupProcessor.queryFilter(rollupFilter, start, end);
       this.log(`${rollupEvents.length} fetched in ${(new Date().getTime() - startTime) / 1000}s`);
@@ -328,7 +338,7 @@ export class RollupProcessor {
       end = Math.max(start - 1, earliestBlock);
       start = Math.max(end - chunk, earliestBlock);
     }
-    this.log(`Done: ${events.length} fetched in ${(new Date().getTime() - totalStartTime) / 1000}s`);
+    this.log(`done: ${events.length} fetched in ${(new Date().getTime() - totalStartTime) / 1000}s`);
 
     return this.getRollupBlocksFromEvents(
       events.filter(e => e.args!.rollupId.toNumber() >= rollupId),
@@ -346,7 +356,7 @@ export class RollupProcessor {
     let start = Math.max(end - chunk, earliestBlock);
 
     while (end > earliestBlock) {
-      this.log(`Fetching rollup events between blocks ${start} and ${end}...`);
+      this.log(`fetching rollup events between blocks ${start} and ${end}...`);
       const rollupFilter = this.rollupProcessor.filters.RollupProcessed(rollupId == -1 ? undefined : rollupId);
       const events = await this.rollupProcessor.queryFilter(rollupFilter, start, end);
       if (events.length) {
@@ -364,26 +374,43 @@ export class RollupProcessor {
    * WARNING: `rollupEvents` is mutated.
    */
   private async getRollupBlocksFromEvents(rollupEvents: Event[], minConfirmations: number) {
-    this.log(`Fetching data for ${rollupEvents.length} rollups...`);
-    const startTime = new Date().getTime();
+    if (rollupEvents.length === 0) {
+      return [];
+    }
+
+    this.log(`fetching data for ${rollupEvents.length} rollups...`);
+    const allTimer = new Timer();
+
+    const defiBridgeEventsTimer = new Timer();
+    const allDefiNotes = await this.getDefiBridgeEventsForRollupEvents(rollupEvents);
+    this.log(`defi bridge events fetched in ${defiBridgeEventsTimer.s()}s.`);
+
+    const broadcastEventsTimer = new Timer();
+    const allBroadcastEvents = await this.getBroadcastDataEvents(rollupEvents);
+    this.log(`broadcast data events fetched in ${broadcastEventsTimer.s()}s.`);
 
     const blocks: Block[] = [];
     while (rollupEvents.length) {
       const events = rollupEvents.splice(0, 10);
-      // retrieve all of the defi notes for these rollup events
-      const defiPromise = this.getDefiBridgeEventsForRollupEvents(events);
-      const eventTxDetailsPromise = Promise.all(
-        events.map(async event => {
-          const meta = await Promise.all([event.getTransaction(), event.getBlock(), event.getTransactionReceipt()]);
+      const broadcastEvents = allBroadcastEvents.splice(0, 10);
+      const meta = await Promise.all(
+        events.map(async (event, i) => {
+          const broadcastEvent = broadcastEvents[i];
+          const meta = await Promise.all([
+            event.getTransaction(),
+            event.getBlock(),
+            event.getTransactionReceipt(),
+            broadcastEvent ? broadcastEvent.getTransaction() : undefined,
+          ]);
           return {
             event,
             tx: meta[0],
             block: meta[1],
             receipt: meta[2],
+            broadcastTx: meta[3],
           };
         }),
       );
-      const [meta, allDefiNotes] = await Promise.all([eventTxDetailsPromise, defiPromise]);
       // we now have the tx details and defi notes for this batch of rollup events
       // we need to assign the defi notes to their specified rollup
       const newBlocks = meta
@@ -403,12 +430,13 @@ export class RollupProcessor {
             { ...meta.tx, timestamp: meta.block.timestamp },
             meta.receipt,
             defiNotesForThisRollup,
+            meta.broadcastTx,
           );
         });
       blocks.push(...newBlocks);
     }
 
-    this.log(`Fetched in ${(new Date().getTime() - startTime) / 1000}s`);
+    this.log(`Fetched in ${allTimer.s()}s`);
 
     return blocks;
   }
@@ -417,19 +445,9 @@ export class RollupProcessor {
     // the rollup contract publishes a set of hash values with each rollup event
     const rollupLog = { blockNumber: rollupEvent.blockNumber, topics: rollupEvent.topics, data: rollupEvent.data };
     const {
-      args: { nextExpectedDefiHashes, rollupId },
+      args: { nextExpectedDefiHashes },
     } = this.contract.interface.parseLog(rollupLog);
-    // this is the hash of a 'zeroed' defi interaction note as specified on the rollup contract
-    // the rollup contract shouldn't publish hashes of zero notes but we will filter them if it does
-    const zeroHash = RollupProcessor.DEFI_RESULT_ZERO_HASH;
-    // filter 'zero' hashes and remove the '0x' from the front
-    const nonZeroHashes: string[] = nextExpectedDefiHashes.filter((hash: string) => hash !== zeroHash);
-    if (nonZeroHashes.length !== nextExpectedDefiHashes.length) {
-      console.log(
-        `Received 'zero' defi interaction note hashes in next expected defi hashes for rollup ${rollupId}, ignoring them!`,
-      );
-    }
-    return nonZeroHashes.map((hash: string) => hash.slice(2));
+    return nextExpectedDefiHashes.map((hash: string) => hash.slice(2));
   }
 
   private async getDefiBridgeEventsForRollupEvents(rollupEvents: Event[]) {
@@ -487,28 +505,71 @@ export class RollupProcessor {
     return hashMapping;
   }
 
+  private async getBroadcastDataEvents(rollupEvents: Event[]) {
+    const rollupLogs = rollupEvents.map(e => this.contract.interface.parseLog(e));
+    // If we only have one rollup event, use the rollup id as a filter.
+    const filter = this.rollupProcessor.filters.BroadcastData(
+      rollupLogs.length === 1 ? rollupLogs[0].args.rollupId : undefined,
+    );
+    // Search from 1 days worth of blocks before, up to the last rollup block.
+    const { broadcastSearchLead } = await this.getEarliestBlock();
+    const broadcastEvents = await this.rollupProcessor.queryFilter(
+      filter,
+      rollupEvents[0].blockNumber - broadcastSearchLead,
+      rollupEvents[rollupEvents.length - 1].blockNumber,
+    );
+    // Key the broadcast data event on the rollup id and sender.
+    const broadcastEventMap = broadcastEvents.reduce<{ [key: string]: Event }>((a, e) => {
+      const {
+        args: { rollupId, sender },
+      } = this.contract.interface.parseLog(e);
+      const key = `${rollupId}:${sender}`;
+      a[key] = e;
+      return a;
+    }, {});
+    // Finally, for each rollup log, lookup the broadcast event for the rollup id from the same sender.
+    return rollupLogs.map(rollupLog => {
+      const {
+        args: { rollupId, sender },
+      } = rollupLog;
+      const key = `${rollupId}:${sender}`;
+      const broadcastEvent = broadcastEventMap[key];
+      if (!broadcastEvent) {
+        console.log(`No broadcast data found for rollup: ${rollupId}`);
+        return;
+      }
+      return broadcastEvent;
+    });
+  }
+
   private decodeBlock(
-    tx: TransactionResponse,
+    rollupTx: TransactionResponse,
     receipt: TransactionReceipt,
     interactionResult: DefiInteractionNote[],
+    broadcastTx?: TransactionResponse,
   ): Block {
     const rollupAbi = new utils.Interface(abi);
-    const result = rollupAbi.parseTransaction({ data: tx.data });
-    const [proofData, , offchainTxDataBuf] = result.args;
+    const parsedRollupTx = rollupAbi.parseTransaction({ data: rollupTx.data });
+    let offchainTxDataBuf = Buffer.alloc(0);
+    if (broadcastTx) {
+      const parsedBroadcastTx = rollupAbi.parseTransaction({ data: broadcastTx.data });
+      offchainTxDataBuf = Buffer.from(parsedBroadcastTx.args[1].slice(2), 'hex');
+    }
+    const [proofData] = parsedRollupTx.args;
     const rollupProofData = RollupProofData.decode(Buffer.from(proofData.slice(2), 'hex'));
     const proofIds = rollupProofData.innerProofData.filter(p => !p.isPadding()).map(p => p.proofId);
-    const offchainTxData = sliceOffchainTxData(proofIds, Buffer.from(offchainTxDataBuf.slice(2), 'hex'));
+    const offchainTxData = sliceOffchainTxData(proofIds, offchainTxDataBuf);
 
     return new Block(
-      TxHash.fromString(tx.hash),
-      new Date(tx.timestamp! * 1000),
+      TxHash.fromString(rollupTx.hash),
+      new Date(rollupTx.timestamp! * 1000),
       rollupProofData.rollupId,
       rollupProofData.rollupSize,
       rollupProofData.toBuffer(),
       offchainTxData,
       interactionResult,
       receipt.gasUsed.toNumber(),
-      BigInt(tx.gasPrice!.toString()),
+      BigInt(rollupTx.gasPrice!.toString()),
     );
   }
 

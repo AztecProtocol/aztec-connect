@@ -202,7 +202,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
     /*----------------------------------------
       EVENTS
       ----------------------------------------*/
-    event RollupProcessed(uint256 indexed rollupId, bytes32[] nextExpectedDefiHashes);
+    event BroadcastData(uint256 indexed rollupId, address sender);
+    event RollupProcessed(uint256 indexed rollupId, bytes32[] nextExpectedDefiHashes, address sender);
     event DefiBridgeProcessed(
         uint256 indexed bridgeId,
         uint256 indexed nonce,
@@ -955,6 +956,13 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         emit Deposit(assetId, depositorAddress, amount);
     }
 
+    function broadcastData(
+        uint256 rollupId,
+        bytes calldata /* offchainTxData */
+    ) external override whenNotPaused {
+        emit BroadcastData(rollupId, msg.sender);
+    }
+
     /**
      * @dev Process a rollup - decode the rollup, update relevant state variables and
      * verify the proof
@@ -974,8 +982,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
 
     function processRollup(
         bytes calldata, /* encodedProofData */
-        bytes calldata signatures,
-        bytes calldata /* offchainTxData */
+        bytes calldata signatures
     ) external override whenNotPaused {
         reentrancyMutexCheck();
         setReentrancyMutex();
@@ -1016,7 +1023,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         uint256 rollupId = verifyProofAndUpdateState(proofData, publicInputsHash);
         processDepositsAndWithdrawals(proofData, numTxs, signatures);
         bytes32[] memory nextDefiHashes = processDefiBridges(proofData, rollupBeneficiary);
-        emit RollupProcessed(rollupId, nextDefiHashes);
+        emit RollupProcessed(rollupId, nextDefiHashes, msg.sender);
     }
 
     /**
