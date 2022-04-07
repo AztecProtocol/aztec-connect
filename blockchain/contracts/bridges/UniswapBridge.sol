@@ -13,8 +13,6 @@ import {IERC20Permit} from '../interfaces/IERC20Permit.sol';
 
 import {AztecTypes} from '../AztecTypes.sol';
 
-// import 'hardhat/console.sol';
-
 contract UniswapBridge is IDefiBridge {
     using SafeMath for uint256;
 

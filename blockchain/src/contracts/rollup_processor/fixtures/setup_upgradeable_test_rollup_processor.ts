@@ -69,6 +69,7 @@ export async function setupTestRollupProcessor(
     ],
     { initializer: 'initialize' },
   );
+  await rollupProcessorContract.setRollupProvider(ownerAddress, true);
 
   const rollupProcessor = new TestRollupProcessor(
     EthAddress.fromString(rollupProcessorContract.address),

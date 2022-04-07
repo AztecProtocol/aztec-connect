@@ -56,7 +56,7 @@ contract DefiBridgeProxy {
                 ethPaymentsSlotBase := keccak256(0x00, 0x40)
                 ethPayment := sload(ethPaymentsSlotBase) // ethPayment = ethPayments[interactionNonce]
             }
-            if (outputValue != ethPayment) {
+            if (outputValue > ethPayment) {
                 revert INSUFFICIENT_ETH_PAYMENT();
             }
             assembly {

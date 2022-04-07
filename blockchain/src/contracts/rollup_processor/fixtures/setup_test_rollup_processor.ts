@@ -15,7 +15,7 @@ async function deployDefiBridge(signer: Signer, rollupProcessor: TestRollupProce
   const defiBridgeLibrary = new ContractFactory(UniswapBridge.abi, UniswapBridge.bytecode, signer);
   const defiBridge = await defiBridgeLibrary.deploy(rollupProcessor.address.toString(), uniswapRouter.address);
   await defiBridge.deployed();
-  await rollupProcessor.setSupportedBridge(EthAddress.fromString(defiBridge.address), 0);
+  await rollupProcessor.setSupportedBridge(EthAddress.fromString(defiBridge.address), 300000);
   return defiBridge;
 }
 
@@ -52,6 +52,7 @@ export async function setupTestRollupProcessor(
     '0x0',
     false,
   );
+  await rollupProcessorContract.setRollupProvider(ownerAddress, true);
   const rollupProcessor = new TestRollupProcessor(
     EthAddress.fromString(rollupProcessorContract.address),
     new EthersAdapter(ethers.provider),
