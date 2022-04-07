@@ -4,6 +4,7 @@ import type {
   DefiPosition_Async,
   DefiPosition_Closable,
   DefiPosition_Pending,
+  DefiPosition_PendingExit,
 } from 'alt-model/defi/open_position_hooks';
 import moment from 'moment';
 import { StepStatusIndicator, StepStatus } from 'ui-components';
@@ -13,7 +14,7 @@ import style from './defi_investment_interaction_fields.module.scss';
 import { Button } from 'components/button';
 import { useExplorerTxLink } from 'alt-model/explorer_link_hooks';
 
-function PendingInteractionField({ position }: { position: DefiPosition_Pending }) {
+function PendingInteractionField({ position }: { position: DefiPosition_Pending | DefiPosition_PendingExit }) {
   const explorerLink = useExplorerTxLink(position.tx.txId);
   const data = useCountDownData(position.tx.bridgeId);
   const timeStr = data?.nextBatch ? moment(data.nextBatch).fromNow(true) : '';
@@ -51,6 +52,7 @@ function AsyncInteractionField({ position }: { position: DefiPosition_Async }) {
 export function renderInteractionField(position: DefiPosition, onOpenDefiExitModal: (recipe: DefiRecipe) => void) {
   switch (position.type) {
     case 'pending':
+    case 'pending-exit':
       return <PendingInteractionField position={position} />;
     case 'closable':
       return <ClosableInteractionField position={position} onOpenDefiExitModal={onOpenDefiExitModal} />;

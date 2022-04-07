@@ -74,15 +74,6 @@ export function useDefiForm(recipe: DefiRecipe, mode: DefiFormMode) {
     transactionLimit,
   });
 
-  // Bigger issue: we're having to change many interfaces
-  // Possible race condition? transition to not max and setting
-  // const {maxOutput} =validationResult
-  // useEffect(() => {
-  //   if(fields.max && maxOutput !== undefined) {
-  //     setFields(fields => ({...fields, amountStr: }))
-  //   }
-  // },[fields.max, maxOutput])
-
   const feedback = getDefiFormFeedback(validationResult, touchedFields, attemptedLock);
   const composerState = useMaybeObs(lockedComposer?.stateObs);
   const locked = !!lockedComposer;
@@ -119,6 +110,10 @@ export function useDefiForm(recipe: DefiRecipe, mode: DefiFormMode) {
   const submit = () => {
     if (!lockedComposer) {
       debug('Attempted to submit before locking');
+      return;
+    }
+    if (composerState?.phase !== DefiComposerPhase.IDLE) {
+      debug('Tried to resubmit form while in progress');
       return;
     }
     lockedComposer.compose();

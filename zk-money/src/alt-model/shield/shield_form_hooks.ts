@@ -102,6 +102,10 @@ export function useShieldForm(preselectedAssetId?: number) {
       debug('Attempted to submit before locking');
       return;
     }
+    if (composerState?.phase !== ShieldComposerPhase.IDLE) {
+      debug('Tried to resubmit form while in progress');
+      return;
+    }
     lockedComposer.compose();
   };
 

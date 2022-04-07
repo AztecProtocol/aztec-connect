@@ -11,7 +11,6 @@ export function DefiTransactionOutputField({ tx }: { tx: UserDefiTx }) {
   const amount = useAmount(assetValue);
   if (tx.interactionResult.state !== UserDefiInteractionResultState.SETTLED || !tx.interactionResult.success)
     return <></>;
-  console.log({ assetValue, amount });
   if (!amount) return <></>;
   return (
     <>

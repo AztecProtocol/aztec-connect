@@ -102,7 +102,6 @@ export function useInteractionPresentValue(recipe: DefiRecipe, interactionNonce?
   // const dataAdaptor = useBridgeDataAdaptor(recipe.id);
   // useEffect(() => {
   //   if (dataAdaptor && interactionNonce !== undefined) {
-  //     console.log('getInteractionPresentValue');
   //     dataAdaptor.adaptor.getInteractionPresentValue(BigInt(interactionNonce)).then(values => {
   //       setPresentValue({ assetId: Number(values[0].assetId), value: values[0].assetId });
   //     });

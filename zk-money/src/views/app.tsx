@@ -286,7 +286,6 @@ export class AppView extends PureComponent<AppProps, AppState> {
   };
 
   private handleOpenDefiExitModal = (recipe: DefiRecipe) => {
-    console.log({ recipe });
     this.setState({ activeDefiModal: { recipe, mode: 'exit' } });
   };
 

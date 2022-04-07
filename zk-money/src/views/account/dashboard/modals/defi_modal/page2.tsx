@@ -87,7 +87,7 @@ export function Page2({ recipe, composerState, validationResult, onSubmit, onClo
       <S.Footer>
         <Button
           text={hasError ? 'Retry' : 'Confirm Submit'}
-          onClick={riskChecked ? onSubmit : undefined}
+          onClick={canSubmit ? onSubmit : undefined}
           disabled={!canSubmit}
         />
       </S.Footer>

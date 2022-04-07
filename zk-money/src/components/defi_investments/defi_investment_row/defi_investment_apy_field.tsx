@@ -37,5 +37,7 @@ export function renderApyField(position: DefiPosition) {
       return <ApyFromTxAux position={position} />;
     case 'closable':
       return <ApyFromDefaultAux position={position} />;
+    case 'pending-exit':
+      return <>Exiting...</>;
   }
 }
