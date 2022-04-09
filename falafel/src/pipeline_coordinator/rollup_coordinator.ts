@@ -298,7 +298,7 @@ export class RollupCoordinator {
     const shouldPublish = flush || profit || timedout;
 
     if (shouldPublish) {
-      const innerTxDaos: Promise<RollupProofDao>[] = [];
+      const rollupProofPromises: Promise<RollupProofDao>[] = [];
 
       // We have to pass the firstInner flag in as nothing is in the DB yet so the previous
       // query to check DB size wont work.  Since we are doing all proofs in one hit now
@@ -320,20 +320,18 @@ export class RollupCoordinator {
         );
 
         firstInner = false;
-        innerTxDaos.push(this.buildInnerRollup(txs, rollup));
+        rollupProofPromises.push(this.buildInnerRollup(txs, rollup));
       }
 
       // This will call the proof generator (Halloumi) in parallel and populate the
       // this.innerProofs which is used below in the aggregator.
-      await Promise.all(innerTxDaos);
+      const rollupProofDaos = await Promise.all(rollupProofPromises);
 
       // Its important that the inner proofs are inserted into the DB in the same
       // order that we called createRollup() above as the first proof and following
       // proofs have different start indexes.
-      for (const dao of innerTxDaos) {
-        await this.rollupCreator.addRollupProof(await dao);
-        this.innerProofs.push(await dao);
-      }
+      await this.rollupCreator.addRollupProofs(rollupProofDaos);
+      this.innerProofs.push(...rollupProofDaos);
     }
 
     // here we either have

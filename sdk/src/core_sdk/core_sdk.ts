@@ -49,6 +49,7 @@ enum SdkInitState {
  * A serial queue is used to ensure initialisation, synching, proof construction, and block processing, are synchronised.
  * init() should be called before making any other calls to construct the basic components.
  * run() should be called once a client wants to start synching, or requesting proof construction.
+ * Takes ownership of injected components (should destroy them etc).
  */
 export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   private options!: CoreSdkOptions;
@@ -96,53 +97,58 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
    * each blocks until the first call completes.
    */
   public async init(options: CoreSdkOptions) {
-    // Take copy so we can modify internally.
-    this.options = { ...options };
+    try {
+      // Take copy so we can modify internally.
+      this.options = { ...options };
 
-    if (this.initState !== SdkInitState.UNINITIALIZED) {
-      throw new Error('Already initialized.');
+      if (this.initState !== SdkInitState.UNINITIALIZED) {
+        throw new Error('Already initialized.');
+      }
+
+      this.noteAlgos = new NoteAlgorithms(this.barretenberg);
+      this.blake2s = new Blake2s(this.barretenberg);
+      this.grumpkin = new Grumpkin(this.barretenberg);
+      this.schnorr = new Schnorr(this.barretenberg);
+      this.userStateFactory = new UserStateFactory(this.grumpkin, this.noteAlgos, this.db, this.rollupProvider);
+      this.worldState = new WorldState(this.leveldb, this.pedersen);
+
+      const {
+        blockchainStatus: { chainId, rollupContractAddress },
+      } = await this.getRemoteStatus();
+
+      // Clear all data if contract changed.
+      const rca = await this.getLocalRollupContractAddress();
+      if (rca && !rca.equals(rollupContractAddress)) {
+        debug('Erasing database...');
+        await this.leveldb.clear();
+        await this.db.clear();
+      }
+
+      // TODO: Refactor all leveldb saved config into a little PersistentConfig class with getters/setters.
+      await this.leveldb.put('rollupContractAddress', rollupContractAddress.toBuffer());
+
+      // Ensures we can get the list of users and access current known balances.
+      await this.initUserStates();
+
+      // Allows us to query the merkle tree roots etc.
+      await this.worldState.init();
+
+      this.sdkStatus = {
+        ...this.sdkStatus,
+        serverUrl: options.serverUrl,
+        chainId,
+        rollupContractAddress: rollupContractAddress,
+        dataSize: this.worldState.getSize(),
+        dataRoot: this.worldState.getRoot(),
+        syncedToRollup: await this.getSyncedToRollup(),
+        latestRollupId: +(await this.leveldb.get('latestRollupId').catch(() => -1)),
+      };
+
+      this.updateInitState(SdkInitState.INITIALIZED);
+    } catch (err) {
+      await this.destroy();
+      throw err;
     }
-
-    this.noteAlgos = new NoteAlgorithms(this.barretenberg);
-    this.blake2s = new Blake2s(this.barretenberg);
-    this.grumpkin = new Grumpkin(this.barretenberg);
-    this.schnorr = new Schnorr(this.barretenberg);
-    this.userStateFactory = new UserStateFactory(this.grumpkin, this.noteAlgos, this.db, this.rollupProvider);
-    this.worldState = new WorldState(this.leveldb, this.pedersen);
-
-    const {
-      blockchainStatus: { chainId, rollupContractAddress },
-    } = await this.getRemoteStatus();
-
-    // Clear all data if contract changed.
-    const rca = await this.getLocalRollupContractAddress();
-    if (rca && !rca.equals(rollupContractAddress)) {
-      debug('Erasing database...');
-      await this.leveldb.clear();
-      await this.db.clear();
-    }
-
-    // TODO: Refactor all leveldb saved config into a little PersistentConfig class with getters/setters.
-    await this.leveldb.put('rollupContractAddress', rollupContractAddress.toBuffer());
-
-    // Ensures we can get the list of users and access current known balances.
-    await this.initUserStates();
-
-    // Allows us to query the merkle tree roots etc.
-    await this.worldState.init();
-
-    this.sdkStatus = {
-      ...this.sdkStatus,
-      serverUrl: options.serverUrl,
-      chainId,
-      rollupContractAddress: rollupContractAddress,
-      dataSize: this.worldState.getSize(),
-      dataRoot: this.worldState.getRoot(),
-      syncedToRollup: await this.getSyncedToRollup(),
-      latestRollupId: +(await this.leveldb.get('latestRollupId').catch(() => -1)),
-    };
-
-    this.updateInitState(SdkInitState.INITIALIZED);
   }
 
   public async destroy() {

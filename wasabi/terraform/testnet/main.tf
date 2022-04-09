@@ -83,11 +83,15 @@ resource "aws_ecs_task_definition" "wasabi" {
       },
       {
         "name": "NUM_AGENTS",
-        "value": "10"
+        "value": "16"
       },
       {
         "name": "NUM_TXS_PER_AGENT",
-        "value": "100"
+        "value": "140"
+      },
+      {
+        "name": "NUM_CONCURRENT_TXS",
+        "value": "14"
       },
       {
         "name": "CONFS",
@@ -111,7 +115,7 @@ resource "aws_ecs_service" "wasabi" {
   name                               = "${var.DEPLOY_TAG}-wasabi"
   cluster                            = data.terraform_remote_state.setup_iac.outputs.ecs_cluster_id
   launch_type                        = "FARGATE"
-  desired_count                      = 3
+  desired_count                      = 4
   deployment_maximum_percent         = 100
   deployment_minimum_healthy_percent = 0
   platform_version                   = "1.4.0"

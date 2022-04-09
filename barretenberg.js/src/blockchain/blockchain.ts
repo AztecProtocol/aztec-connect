@@ -46,7 +46,7 @@ export interface Blockchain extends BlockSource, BlockchainStatusSource, Ethereu
     dataBuf: Buffer,
     signatures: Buffer[],
     offchainTxData: Buffer[],
-  ): Promise<{ rollupProofTx: Buffer; broadcastDataTx: Buffer }>;
+  ): Promise<{ rollupProofTx: Buffer; offchainDataTxs: Buffer[] }>;
 
   sendTx(tx: Buffer, options?: SendTxOptions): Promise<TxHash>;
 

@@ -64,6 +64,7 @@ export async function run(
   agentType: string,
   numAgents: number,
   numTxsPerAgent: number,
+  numConcurrentTransfers: number,
   assets: number[],
   rollupHost: string,
   host: string,
@@ -115,7 +116,17 @@ export async function run(
 
     const agentManager =
       agentType != 'element'
-        ? new AgentManager(sdk, provider, ethereumRpc, processAddress, agentType, numAgents, numTxsPerAgent, assets)
+        ? new AgentManager(
+            sdk,
+            provider,
+            ethereumRpc,
+            processAddress,
+            agentType,
+            numAgents,
+            numTxsPerAgent,
+            numConcurrentTransfers,
+            assets,
+          )
         : new ElementAgentManager(sdk, provider, ethereumRpc, processAddress, numAgents, numTxsPerAgent, assets);
 
     console.log(`starting wasabi run ${runNumber}...`);

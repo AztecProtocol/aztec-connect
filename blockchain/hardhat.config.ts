@@ -15,11 +15,14 @@ const config = {
     ganache: {
       url: `http://${process.env.GANACHE_HOST || 'localhost'}:8545`,
     },
+    goerli: {
+      url: 'https://goerli.infura.io/v3/6a04b7c89c5b421faefde663f787aa35',
+    },
     hardhat: {
       blockGasLimit: 15000000,
       gasPrice: 10,
       hardfork: 'berlin',
-      },
+    },
   },
   paths: {
     artifacts: './src/artifacts',

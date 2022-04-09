@@ -27,13 +27,22 @@ export class AgentManager {
     private agentType: string,
     private numAgents: number,
     private numTxsPerAgent: number,
+    private numConcurrentTransfers: number,
     private assets: number[],
   ) {}
 
   private createAgent(id: number, fundingAccount: EthAddressAndNonce) {
     switch (this.agentType) {
       case 'payment':
-        return new PaymentAgent(fundingAccount, this.sdk, this.provider, id, this.numTxsPerAgent, this.assets[0]);
+        return new PaymentAgent(
+          fundingAccount,
+          this.sdk,
+          this.provider,
+          id,
+          this.numTxsPerAgent,
+          this.numConcurrentTransfers,
+          this.assets[0],
+        );
       case 'uniswap':
         return new UniswapAgent(fundingAccount, this.sdk, this.provider, id, this.numTxsPerAgent);
       default:

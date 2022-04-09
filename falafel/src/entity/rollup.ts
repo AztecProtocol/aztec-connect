@@ -31,10 +31,6 @@ export class RollupDao {
 
   // Null until computed.
   @Column(...bufferColumn({ nullable: true }))
-  public broadcastDataCalldata?: Buffer;
-
-  // Null until computed.
-  @Column(...bufferColumn({ nullable: true }))
   public processRollupCalldata?: Buffer;
 
   // Null until mined and events fetched.
@@ -61,9 +57,6 @@ export class RollupDao {
   @AfterInsert()
   @AfterUpdate()
   afterLoad() {
-    if (!this.broadcastDataCalldata) {
-      delete this.broadcastDataCalldata;
-    }
     if (!this.processRollupCalldata) {
       delete this.processRollupCalldata;
     }

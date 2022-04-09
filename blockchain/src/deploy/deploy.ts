@@ -50,7 +50,7 @@ async function deployRollupProcessor(
     { gasLimit },
   );
 
-  await rollup.setRollupProvider(address, true);
+  await rollup.setRollupProvider(address, true, { gasLimit });
 
   console.error(`RollupProcessor contract address: ${rollup.address}`);
 

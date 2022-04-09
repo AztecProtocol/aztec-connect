@@ -8,7 +8,8 @@ const {
   AGENT_TYPE = 'payment',
   ASSETS = '0',
   NUM_AGENTS = '2',
-  NUM_TXS_PER_AGENT = '10',
+  NUM_TXS_PER_AGENT = '14',
+  NUM_CONCURRENT_TXS = '14',
   ROLLUP_HOST = 'http://localhost:8081',
   CONFS = '1',
   LOOPS,
@@ -19,14 +20,13 @@ async function main() {
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
 
-  const assets = ASSETS.split(',').map(x => parseInt(x));
-
   await run(
     Buffer.from(PRIVATE_KEY, 'hex'),
     AGENT_TYPE,
     +NUM_AGENTS,
     +NUM_TXS_PER_AGENT,
-    assets,
+    +NUM_CONCURRENT_TXS,
+    ASSETS.split(',').map(x => +x),
     ROLLUP_HOST,
     ETHEREUM_HOST,
     +CONFS,

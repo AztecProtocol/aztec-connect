@@ -1,6 +1,9 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Contract } from 'ethers';
-import { decodeErrorFromContract } from './decode_error';
+import { decodeErrorFromContract, decodeErrorFromContractByTxHash } from './decode_error';
+import { abi } from '../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
+import { JsonRpcProvider } from '../provider';
+import { TxHash } from '@aztec/barretenberg/blockchain';
 
 describe('decode_error', () => {
   it('should decode error', async () => {
@@ -31,4 +34,18 @@ describe('decode_error', () => {
     expect(error).not.toBeUndefined();
     expect(error!.name).toBe('INCORRECT_STATE_HASH');
   });
+
+  /* Not sure of the long term viability of this test. But might prove useful to keep around.
+  it('should correctly decode real failed goerli tx', async () => {
+    const contract = new Contract(EthAddress.ZERO.toString(), abi);
+    const provider = new JsonRpcProvider('https://goerli.infura.io/v3/6a04b7c89c5b421faefde663f787aa35');
+    const err = await decodeErrorFromContractByTxHash(
+      contract,
+      TxHash.fromString('0x8b2e077c71709f1b3eadcb66cf8822d232d0ce84ab51fcf182e169de02e8d3a7'),
+      provider,
+    );
+    expect(err).not.toBeUndefined();
+    expect(err!.name).toBe('INVALID_PROVIDER');
+  });
+  */
 });

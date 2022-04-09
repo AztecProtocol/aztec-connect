@@ -137,6 +137,11 @@ export class CachedRollupDb extends SyncRollupDb {
     await this.refresh();
   }
 
+  public async addRollupProofs(rollupDaos: RollupProofDao[]) {
+    await super.addRollupProofs(rollupDaos);
+    await this.refresh();
+  }
+
   public async addRollup(rollup: RollupDao) {
     await super.addRollup(rollup);
     this.rollups[rollup.id] = rollup;

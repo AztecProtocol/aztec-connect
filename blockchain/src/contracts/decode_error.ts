@@ -63,10 +63,11 @@ export async function decodeErrorFromContract(contract: Contract, data: string) 
 }
 
 export async function decodeErrorFromContractByTxHash(contract: Contract, txHash: TxHash, provider: EthereumProvider) {
-  const { to, from, gas, maxFeePerGas, maxPriorityFeePerGas, input, value, chainId, nonce } = await provider.request({
-    method: 'eth_getTransactionByHash',
-    params: [txHash.toString()],
-  });
+  const { to, from, gas, maxFeePerGas, maxPriorityFeePerGas, input, value, chainId, nonce, blockNumber } =
+    await provider.request({
+      method: 'eth_getTransactionByHash',
+      params: [txHash.toString()],
+    });
   const req = {
     to,
     from,
@@ -78,8 +79,8 @@ export async function decodeErrorFromContractByTxHash(contract: Contract, txHash
     chainId,
     nonce,
   };
-  const rep = await provider.request({ method: 'eth_call', params: [req] }).catch(err => err);
-  if (rep.name !== 'CallError') {
+  const rep = await provider.request({ method: 'eth_call', params: [req, blockNumber] }).catch(err => err);
+  if (!rep.data) {
     return;
   }
 

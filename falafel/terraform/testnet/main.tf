@@ -211,8 +211,12 @@ resource "aws_ecs_task_definition" "falafel" {
         "value": "32"
       },
       {
+        "name": "MIN_CONFIRMATION",
+        "value": "3"
+      },
+      {
         "name": "MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW",
-        "value": "1"
+        "value": "3"
       },
       {
         "name": "PROVERLESS",

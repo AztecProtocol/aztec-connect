@@ -40,7 +40,7 @@ for E in ${PROJECTS[@]}; do
   echo "*** Building $PROJECT:$DOCKERFILE -> $REPO ***"
   echo
   if [ "$PROJECT" = "$TARGET_PROJECT" ]; then
-    time docker build --no-cache -f $DOCKERFILE -t $ECR_URL/$REPO:latest .
+    time docker build -f $DOCKERFILE -t $ECR_URL/$REPO:latest .
     if [ -n "$PUSH_LABEL" ]; then
       $(aws ecr get-login --region eu-west-2 --no-include-email) 2> /dev/null
       docker tag $ECR_URL/$REPO:latest $ECR_URL/$REPO:$PUSH_LABEL

@@ -21,63 +21,98 @@ export class RollupPublisher {
     this.ethereumRpc = new EthereumRpc(blockchain.getProvider());
   }
 
+  private async awaitFeeBelowThreshold() {
+    // Wait until fee is below threshold.
+    while (!this.interrupted && this.maxProviderGasPrice) {
+      const { maxFeePerGas, maxPriorityFeePerGas, gasPrice } = await this.blockchain.getFeeData();
+      const fee = gasPrice ? gasPrice : maxFeePerGas + maxPriorityFeePerGas;
+      if (fee <= this.maxProviderGasPrice) {
+        break;
+      }
+      console.log(`Gas price too high at ${fee} wei. Waiting till below ${this.maxProviderGasPrice}...`);
+      await this.sleepOrInterrupted(60000);
+    }
+  }
+
   public async publishRollup(rollup: RollupDao) {
-    const txData = await this.createTxData(rollup);
-    await this.rollupDb.setCallData(rollup.id, txData.broadcastDataTx, txData.rollupProofTx);
+    const { rollupProofTx, offchainDataTxs } = await this.createTxData(rollup);
+
+    await this.rollupDb.setCallData(rollup.id, rollupProofTx);
     console.log(`Publishing rollup: ${rollup.id}`);
 
+    const endTimer = this.metrics.publishTimer();
+
+    // TODO: We need to ensure a rollup provider always publishes the broadcast data, otherwise they could just
+    // publish the rollup proof, and get all the fees, but without the broadcast data no clients are actually
+    // able to find their txs. This is acceptable for now because we're the only provider.
+    // WARNING: If you restart the server at the wrong time (in-between sending broadcast data and rollup proof),
+    // you will pay twice for broadcast data.
+
+    type OcdStatus = { success: boolean; txHash?: TxHash; tx: Buffer };
+    const ocdStatus: OcdStatus[] = offchainDataTxs.map(tx => ({ success: false, tx }));
+    const [defaultSigner] = await this.ethereumRpc.getAccounts();
+
     while (!this.interrupted) {
-      // Wait until fee is below threshold.
-      if (this.maxProviderGasPrice) {
-        const { maxFeePerGas, maxPriorityFeePerGas, gasPrice } = await this.blockchain.getFeeData();
-        const fee = gasPrice ? gasPrice : maxFeePerGas + maxPriorityFeePerGas;
-        if (fee > this.maxProviderGasPrice) {
-          console.log(`Gas price too high at ${fee} wei. Waiting till below ${this.maxProviderGasPrice}...`);
+      await this.awaitFeeBelowThreshold();
+
+      let nonce = await this.ethereumRpc.getTransactionCount(defaultSigner);
+
+      // First send the broadcast data (if we haven't already successfully).
+      for (let i = 0; i < ocdStatus.length; i++) {
+        const { tx, success } = ocdStatus[i];
+        if (success) {
+          continue;
+        }
+        console.log(`Sending broadcast data ${i}/${ocdStatus.length} of size ${tx.length} with nonce ${nonce}...`);
+        ocdStatus[i].txHash = await this.sendTx(tx, nonce++);
+      }
+      // If interrupted, one of more txHash will be undefined.
+      if (ocdStatus.some(s => s.txHash === undefined)) break;
+
+      // Then send the actual rollup proof.
+      console.log(`Sending rollup proof of size ${rollupProofTx.length} with nonce ${nonce}...`);
+      const rpTxHash = await this.sendTx(rollupProofTx, nonce++);
+      if (!rpTxHash) break;
+
+      // All txs have been sent.
+      await this.rollupDb.confirmSent(rollup.id, rpTxHash);
+
+      // Check receipts for offchain data.
+      for (let i = 0; i < ocdStatus.length; i++) {
+        const { txHash, success } = ocdStatus[i];
+        if (success) {
+          continue;
+        }
+        const receipt = await this.getTransactionReceipt(txHash!);
+        if (!receipt) return false;
+        if (receipt.status) {
+          ocdStatus[i].success = true;
+        } else {
+          console.log(`Offchain data transaction failed: ${txHash!.toString()}`);
+          if (receipt.revertError) {
+            console.log(`Revert Error: ${receipt.revertError.name}(${receipt.revertError.params.join(', ')})`);
+          }
           await this.sleepOrInterrupted(60000);
           continue;
         }
       }
 
-      const end = this.metrics.publishTimer();
-
-      // TODO: We need to ensure a rollup provider always publishes the broadcast data, otherwise they could just
-      // publish the rollup proof, and get all the fees, but without the broadcast data no clients are actually
-      // able to find their txs. This is acceptable for now because we're the only provider.
-      // WARNING: If you restart the server at the wrong time (in-between sending broadcast data and rollup proof),
-      // you will pay twice for broadcast data.
-      //
-      // We are just using the default (0) account on the Blockchain provider to send txs.
-      const [defaultSigningAddress] = await this.ethereumRpc.getAccounts();
-      const nonce = await this.ethereumRpc.getTransactionCount(defaultSigningAddress);
-      // First send the broadcast data.
-      await this.sendTx(txData.broadcastDataTx, nonce);
-      // Then send the actual rollup proof.
-      const txHash = await this.sendTx(txData.rollupProofTx, nonce + 1);
-      if (!txHash) {
-        break;
-      }
-
-      await this.rollupDb.confirmSent(rollup.id, txHash);
-
-      const receipt = await this.getTransactionReceipt(txHash);
-      if (!receipt) {
-        break;
-      }
+      // Check receipt for process rollup tx.
+      const receipt = await this.getTransactionReceipt(rpTxHash);
+      if (!receipt) break;
 
       if (receipt.status) {
-        end();
+        endTimer();
         return true;
       }
 
-      const { nextRollupId } = this.blockchain.getBlockchainStatus();
-      if (nextRollupId > rollup.id) {
-        console.log('Publish failed. Contract changed underfoot.');
-        break;
-      }
-
-      console.log(`Transaction status failed: ${txHash}`);
+      console.log(`Process rollup transaction failed: ${rpTxHash}`);
       if (receipt.revertError) {
         console.log(`Revert Error: ${receipt.revertError.name}(${receipt.revertError.params.join(', ')})`);
+        if (receipt.revertError.name === 'INCORRECT_STATE_HASH') {
+          console.log('Publish failed. Contract state changed underfoot.');
+          return false;
+        }
       }
       await this.sleepOrInterrupted(60000);
     }
@@ -110,18 +145,16 @@ export class RollupPublisher {
         signatures.push(tx.signature!);
       }
     }
-    const txData = await this.blockchain.createRollupTxs(proof, signatures, offchainTxData);
-    console.log(`Rollup proof size: ${txData.rollupProofTx.length} bytes`);
-    console.log(`Offchain size: ${txData.broadcastDataTx.length} bytes`);
-    return txData;
+    return await this.blockchain.createRollupTxs(proof, signatures, offchainTxData);
   }
 
-  private async sendTx(txData: Buffer, nonce: number) {
+  private async sendTx(txData: Buffer, nonce?: number) {
     while (!this.interrupted) {
       try {
         return await this.blockchain.sendTx(txData, { gasLimit: this.gasLimit, nonce });
       } catch (err: any) {
         console.log(err.message.slice(0, 500));
+        console.log('Will retry in 60s...');
         await this.sleepOrInterrupted(60000);
       }
     }

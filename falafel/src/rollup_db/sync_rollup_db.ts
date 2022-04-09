@@ -115,6 +115,10 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.addRollupProof(rollupDao));
   }
 
+  public async addRollupProofs(rollupDaos: RollupProofDao[]) {
+    return this.synchronise(() => this.rollupDb.addRollupProofs(rollupDaos));
+  }
+
   public async getRollupProof(id: Buffer, includeTxs = false) {
     return this.synchronise(() => this.rollupDb.getRollupProof(id, includeTxs));
   }
@@ -163,8 +167,8 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.addRollup(rollup));
   }
 
-  public async setCallData(id: number, broadcastDataCalldata: Buffer, rollupProofCalldata: Buffer) {
-    return this.synchronise(() => this.rollupDb.setCallData(id, broadcastDataCalldata, rollupProofCalldata));
+  public async setCallData(id: number, rollupProofCalldata: Buffer) {
+    return this.synchronise(() => this.rollupDb.setCallData(id, rollupProofCalldata));
   }
 
   public async confirmSent(id: number, txHash: TxHash) {

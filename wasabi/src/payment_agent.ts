@@ -6,7 +6,6 @@ import { Agent, EthAddressAndNonce, UserData } from './agent';
  * until a total of numTransfers have taken place.
  */
 export class PaymentAgent {
-  private readonly numConcurrentTransfers = 10;
   private agent: Agent;
   private userA!: UserData;
   private userB!: UserData;
@@ -17,6 +16,7 @@ export class PaymentAgent {
     provider: WalletProvider,
     private id: number,
     private numTransfers: number,
+    private numConcurrentTransfers: number,
     private assetId: number = 0,
   ) {
     this.agent = new Agent(fundingAccount, sdk, provider, id);

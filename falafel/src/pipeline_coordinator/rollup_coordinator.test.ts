@@ -216,7 +216,7 @@ describe('rollup_coordinator', () => {
             }
           }
         }),
-      addRollupProof: jest.fn(),
+      addRollupProofs: jest.fn(),
     };
 
     rollupAggregator = {

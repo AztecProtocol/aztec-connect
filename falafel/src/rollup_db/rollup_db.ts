@@ -190,6 +190,12 @@ export class TypeOrmRollupDb implements RollupDb {
     await this.rollupProofRep.save(rollupDao);
   }
 
+  public async addRollupProofs(rollupDaos: RollupProofDao[]) {
+    for (const dao of rollupDaos) {
+      await this.rollupProofRep.save(dao);
+    }
+  }
+
   public async getRollupProof(id: Buffer, includeTxs = false) {
     return this.rollupProofRep.findOne({ id }, { relations: includeTxs ? ['txs'] : undefined });
   }
@@ -284,8 +290,8 @@ export class TypeOrmRollupDb implements RollupDb {
     });
   }
 
-  public async setCallData(id: number, broadcastDataCalldata: Buffer, processRollupCalldata: Buffer) {
-    await this.rollupRep.update({ id }, { broadcastDataCalldata, processRollupCalldata });
+  public async setCallData(id: number, processRollupCalldata: Buffer) {
+    await this.rollupRep.update({ id }, { processRollupCalldata });
   }
 
   public async confirmSent(id: number, ethTxHash: TxHash) {

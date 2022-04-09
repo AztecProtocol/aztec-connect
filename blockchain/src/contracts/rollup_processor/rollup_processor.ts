@@ -148,7 +148,14 @@ export class RollupProcessor {
     return (await this.createRollupTxs(dataBuf, signatures, offchainTxData)).rollupProofTx;
   }
 
-  async createRollupTxs(dataBuf: Buffer, signatures: Buffer[], offchainTxData: Buffer[]) {
+  /**
+   * Given the raw "root verifier" data buffer returned by the proof generator, slice off the the broadcast
+   * data and the proof data, encode the broadcast data, create a new buffer ready for a processRollup tx.
+   * The given offchainTxData is chunked into multiple offchainData txs.
+   * Openethereum will accept a maximum tx size of 300kb. Pick 280kb to allow for overheads.
+   * Returns the txs to be published.
+   */
+  async createRollupTxs(dataBuf: Buffer, signatures: Buffer[], offchainTxData: Buffer[], offchainChunkSize = 280000) {
     const broadcastData = RollupProofData.fromBuffer(dataBuf);
     const broadcastDataLength = broadcastData.toBuffer().length;
     const encodedBroadcastData = broadcastData.encode();
@@ -156,19 +163,34 @@ export class RollupProcessor {
     const encodedData = Buffer.concat([encodedBroadcastData, proofData]);
     const formattedSignatures = solidityFormatSignatures(signatures);
     const rollupProofTx = await this.rollupProcessor.populateTransaction
-      .processRollup(`0x${encodedData.toString('hex')}`, formattedSignatures)
+      .processRollup(encodedData, formattedSignatures)
       .catch(fixEthersStackTrace);
-    const broadcastDataTx = await this.rollupProcessor.populateTransaction
-      .broadcastData(broadcastData.rollupId, `0x${Buffer.concat(offchainTxData).toString('hex')}`)
-      .catch(fixEthersStackTrace);
+
+    const ocData = Buffer.concat(offchainTxData);
+    const chunks = Math.ceil(ocData.length / offchainChunkSize);
+    const ocdChunks = Array.from({ length: chunks }).map((_, i) =>
+      ocData.slice(i * offchainChunkSize, (i + 1) * offchainChunkSize),
+    );
+
+    const offchainDataTxs = await Promise.all(
+      ocdChunks.map(c => this.rollupProcessor.populateTransaction.offchainData(broadcastData.rollupId, c)),
+    ).catch(fixEthersStackTrace);
+
     return {
       rollupProofTx: Buffer.from(rollupProofTx.data!.slice(2), 'hex'),
-      broadcastDataTx: Buffer.from(broadcastDataTx.data!.slice(2), 'hex'),
+      offchainDataTxs: offchainDataTxs.map(tx => Buffer.from(tx.data!.slice(2), 'hex')),
     };
   }
 
+  public async sendRollupTxs({ rollupProofTx, offchainDataTxs }: { rollupProofTx: Buffer; offchainDataTxs: Buffer[] }) {
+    for (const tx of offchainDataTxs) {
+      await this.sendTx(tx);
+    }
+    await this.sendTx(rollupProofTx);
+  }
+
   public async sendTx(data: Buffer, options: SendTxOptions = {}) {
-    const { signingAddress, gasLimit } = { ...options };
+    const { signingAddress, gasLimit, nonce } = { ...options };
     const signer = signingAddress ? this.provider.getSigner(signingAddress.toString()) : this.provider.getSigner(0);
     const from = await signer.getAddress();
     const txRequest = {
@@ -176,6 +198,7 @@ export class RollupProcessor {
       from,
       gasLimit,
       data,
+      nonce,
     };
     const txResponse = await signer.sendTransaction(txRequest).catch(fixEthersStackTrace);
     return TxHash.fromString(txResponse.hash);
@@ -279,11 +302,11 @@ export class RollupProcessor {
     const net = await this.provider.getNetwork();
     switch (net.chainId) {
       case 1:
-        return { earliestBlock: 11967192, chunk: 100000, broadcastSearchLead: 6 * 60 * 24 };
+        return { earliestBlock: 11967192, chunk: 100000, offchainSearchLead: 6 * 60 * 24 };
       case 0xa57ec:
-        return { earliestBlock: 14000000, chunk: 10, broadcastSearchLead: 10 };
+        return { earliestBlock: 14000000, chunk: 10, offchainSearchLead: 10 };
       default:
-        return { earliestBlock: 0, chunk: 100000, broadcastSearchLead: 6 * 60 * 24 };
+        return { earliestBlock: 0, chunk: 100000, offchainSearchLead: 6 * 60 * 24 };
     }
   }
 
@@ -385,29 +408,28 @@ export class RollupProcessor {
     const allDefiNotes = await this.getDefiBridgeEventsForRollupEvents(rollupEvents);
     this.log(`defi bridge events fetched in ${defiBridgeEventsTimer.s()}s.`);
 
-    const broadcastEventsTimer = new Timer();
-    const allBroadcastEvents = await this.getBroadcastDataEvents(rollupEvents);
-    this.log(`broadcast data events fetched in ${broadcastEventsTimer.s()}s.`);
+    const offchainEventsTimer = new Timer();
+    const allOffchainDataEvents = await this.getOffchainDataEvents(rollupEvents);
+    this.log(`offchain data events fetched in ${offchainEventsTimer.s()}s.`);
 
     const blocks: Block[] = [];
     while (rollupEvents.length) {
       const events = rollupEvents.splice(0, 10);
-      const broadcastEvents = allBroadcastEvents.splice(0, 10);
+      const chunkedOcdEvents = allOffchainDataEvents.splice(0, 10);
       const meta = await Promise.all(
         events.map(async (event, i) => {
-          const broadcastEvent = broadcastEvents[i];
           const meta = await Promise.all([
             event.getTransaction(),
             event.getBlock(),
             event.getTransactionReceipt(),
-            broadcastEvent ? broadcastEvent.getTransaction() : undefined,
+            ...chunkedOcdEvents[i].map(e => e.getTransaction()),
           ]);
           return {
             event,
             tx: meta[0],
             block: meta[1],
             receipt: meta[2],
-            broadcastTx: meta[3],
+            offchainDataTxs: meta.slice(3) as TransactionResponse[],
           };
         }),
       );
@@ -430,13 +452,13 @@ export class RollupProcessor {
             { ...meta.tx, timestamp: meta.block.timestamp },
             meta.receipt,
             defiNotesForThisRollup,
-            meta.broadcastTx,
+            meta.offchainDataTxs,
           );
         });
       blocks.push(...newBlocks);
     }
 
-    this.log(`Fetched in ${allTimer.s()}s`);
+    this.log(`fetched in ${allTimer.s()}s`);
 
     return blocks;
   }
@@ -470,7 +492,7 @@ export class RollupProcessor {
 
     // search back through the stream until all of our notes have been found or we have exhausted the blocks
     while (endBlock > earliestBlock && numHashesToFind > 0) {
-      this.log(`Searching for defi notes from blocks ${startBlock} - ${endBlock}`);
+      this.log(`searching for defi notes from blocks ${startBlock} - ${endBlock}`);
       const filter = this.rollupProcessor.filters.DefiBridgeProcessed();
       const defiBridgeEvents = await this.rollupProcessor.queryFilter(filter, startBlock, endBlock);
       // decode the retrieved events into actual defi interaction notes
@@ -488,7 +510,7 @@ export class RollupProcessor {
         );
       });
       this.log(
-        `Found ${decodedNotes.length} notes between blocks ${startBlock} - ${endBlock}, nonces: `,
+        `found ${decodedNotes.length} notes between blocks ${startBlock} - ${endBlock}, nonces: `,
         decodedNotes.map(note => note.nonce),
       );
       // compute the hash and store the notes against that hash in our mapping
@@ -505,40 +527,45 @@ export class RollupProcessor {
     return hashMapping;
   }
 
-  private async getBroadcastDataEvents(rollupEvents: Event[]) {
+  private async getOffchainDataEvents(rollupEvents: Event[]) {
     const rollupLogs = rollupEvents.map(e => this.contract.interface.parseLog(e));
     // If we only have one rollup event, use the rollup id as a filter.
-    const filter = this.rollupProcessor.filters.BroadcastData(
+    const filter = this.rollupProcessor.filters.OffchainData(
       rollupLogs.length === 1 ? rollupLogs[0].args.rollupId : undefined,
     );
     // Search from 1 days worth of blocks before, up to the last rollup block.
-    const { broadcastSearchLead } = await this.getEarliestBlock();
-    const broadcastEvents = await this.rollupProcessor.queryFilter(
+    const { offchainSearchLead } = await this.getEarliestBlock();
+    const offchainEvents = await this.rollupProcessor.queryFilter(
       filter,
-      rollupEvents[0].blockNumber - broadcastSearchLead,
+      rollupEvents[0].blockNumber - offchainSearchLead,
       rollupEvents[rollupEvents.length - 1].blockNumber,
     );
-    // Key the broadcast data event on the rollup id and sender.
-    const broadcastEventMap = broadcastEvents.reduce<{ [key: string]: Event }>((a, e) => {
+    // Key the offchain data event on the rollup id and sender.
+    const offchainEventMap = offchainEvents.reduce<{ [key: string]: Event[] }>((a, e) => {
       const {
         args: { rollupId, sender },
       } = this.contract.interface.parseLog(e);
       const key = `${rollupId}:${sender}`;
-      a[key] = e;
+      if (a[key]) {
+        a[key].push(e);
+      } else {
+        a[key] = [e];
+      }
       return a;
     }, {});
-    // Finally, for each rollup log, lookup the broadcast event for the rollup id from the same sender.
+    // Finally, for each rollup log, lookup the offchain events for the rollup id from the same sender.
     return rollupLogs.map(rollupLog => {
       const {
         args: { rollupId, sender },
       } = rollupLog;
       const key = `${rollupId}:${sender}`;
-      const broadcastEvent = broadcastEventMap[key];
-      if (!broadcastEvent) {
-        console.log(`No broadcast data found for rollup: ${rollupId}`);
-        return;
+      const offchainEvents = offchainEventMap[key];
+      if (!offchainEvents) {
+        console.log(`No offchain data found for rollup: ${rollupId}`);
+        return [];
       }
-      return broadcastEvent;
+      this.log(`rollup ${rollupId} has ${offchainEvents.length} offchain data event(s).`);
+      return offchainEvents;
     });
   }
 
@@ -546,15 +573,15 @@ export class RollupProcessor {
     rollupTx: TransactionResponse,
     receipt: TransactionReceipt,
     interactionResult: DefiInteractionNote[],
-    broadcastTx?: TransactionResponse,
+    offchainDataTxs: TransactionResponse[],
   ): Block {
     const rollupAbi = new utils.Interface(abi);
     const parsedRollupTx = rollupAbi.parseTransaction({ data: rollupTx.data });
-    let offchainTxDataBuf = Buffer.alloc(0);
-    if (broadcastTx) {
-      const parsedBroadcastTx = rollupAbi.parseTransaction({ data: broadcastTx.data });
-      offchainTxDataBuf = Buffer.from(parsedBroadcastTx.args[1].slice(2), 'hex');
-    }
+    const offchainTxDataBuf = Buffer.concat(
+      offchainDataTxs
+        .map(tx => rollupAbi.parseTransaction({ data: tx.data }))
+        .map(parsed => Buffer.from(parsed.args[1].slice(2), 'hex')),
+    );
     const [proofData] = parsedRollupTx.args;
     const rollupProofData = RollupProofData.decode(Buffer.from(proofData.slice(2), 'hex'));
     const proofIds = rollupProofData.innerProofData.filter(p => !p.isPadding()).map(p => p.proofId);

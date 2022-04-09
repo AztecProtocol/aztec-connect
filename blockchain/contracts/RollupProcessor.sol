@@ -205,7 +205,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
     /*----------------------------------------
       EVENTS
       ----------------------------------------*/
-    event BroadcastData(uint256 indexed rollupId, address sender);
+    event OffchainData(uint256 indexed rollupId, address sender);
     event RollupProcessed(uint256 indexed rollupId, bytes32[] nextExpectedDefiHashes, address sender);
     event DefiBridgeProcessed(
         uint256 indexed bridgeId,
@@ -960,11 +960,18 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         emit Deposit(assetId, depositorAddress, amount);
     }
 
-    function broadcastData(
+    /**
+     * @dev Used to publish data that doesn't need to be on chain. Should eventually be published elsewhere.
+     * This maybe called multiple times to work around maximum tx size limits.
+     * The data will need to be reconstructed by the client.
+     * @param rollupId - the rollup id this data is related to.
+     * @param - the data.
+     */
+    function offchainData(
         uint256 rollupId,
         bytes calldata /* offchainTxData */
     ) external override whenNotPaused {
-        emit BroadcastData(rollupId, msg.sender);
+        emit OffchainData(rollupId, msg.sender);
     }
 
     /**
@@ -983,7 +990,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
      * @param - offchainTxData Note: not used in the logic
      * of the rollupProcessor contract, but called here as a convenient to place data on chain
      */
-
     function processRollup(
         bytes calldata, /* encodedProofData */
         bytes calldata signatures
