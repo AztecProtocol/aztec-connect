@@ -5,6 +5,7 @@ import { DefiInteractionNote, TreeClaimNote } from '@aztec/barretenberg/note_alg
 import { OffchainDefiClaimData } from '@aztec/barretenberg/offchain_tx_data';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
+import { Timer } from '@aztec/barretenberg/timer';
 import { ClaimProof, ClaimProofRequest, ProofGenerator } from 'halloumi/proof_generator';
 import { ClaimDao } from './entity/claim';
 import { TxDao } from './entity/tx';
@@ -36,34 +37,45 @@ export class ClaimProofCreator {
     }
     const rollups = await this.rollupDb.getRollupsByRollupIds([...rollupIds]);
 
-    for (const claim of claims) {
-      const rollupForThisClaimsDefiInteraction = rollups.find(rollup => rollup.id === claim.interactionResultRollupId)!;
-      const interactionNotesForRollup = parseInteractionResult(rollupForThisClaimsDefiInteraction.interactionResult!);
-      const noteIndex = interactionNotesForRollup.findIndex(itx => itx.nonce === claim.interactionNonce);
-      const interactionNoteForThisClaim = interactionNotesForRollup[noteIndex];
-      // rollupForThisClaim is the rollup that produced the defi interaction notes
-      // the rollup id we need is the one following, which is when the notes were entered into the defi tree
-      const interactionIndex =
-        (rollupForThisClaimsDefiInteraction.id + 1) * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK + noteIndex;
-      const proofData = await this.createClaimProof(
-        dataRoot,
-        defiRoot,
-        claim,
-        interactionNoteForThisClaim,
-        interactionIndex,
-      );
-      if (!proofData) {
+    console.log(`Creating ${claims.length} claim proofs`);
+    const timer = new Timer();
+
+    const claimProofs = await Promise.all(
+      claims.map(async claim => {
+        const rollupForThisClaimsDefiInteraction = rollups.find(
+          rollup => rollup.id === claim.interactionResultRollupId,
+        )!;
+        const interactionNotesForRollup = parseInteractionResult(rollupForThisClaimsDefiInteraction.interactionResult!);
+        const noteIndex = interactionNotesForRollup.findIndex(itx => itx.nonce === claim.interactionNonce);
+        const interactionNoteForThisClaim = interactionNotesForRollup[noteIndex];
+        // rollupForThisClaim is the rollup that produced the defi interaction notes
+        // the rollup id we need is the one following, which is when the notes were entered into the defi tree
+        const interactionIndex =
+          (rollupForThisClaimsDefiInteraction.id + 1) * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK + noteIndex;
+        const request = await this.createClaimProofRequest(
+          dataRoot,
+          defiRoot,
+          claim,
+          interactionNoteForThisClaim,
+          interactionIndex,
+        );
+        return this.sendClaimProofRequest(request);
+      }),
+    );
+
+    for (const claimProof of claimProofs) {
+      if (!claimProof) {
         // TODO: Once we correctly handle interrupts, this is not a panic scenario.
         throw new Error('Failed to create claim proof. This should not happen.');
       }
 
-      const proof = new ProofData(proofData);
+      const proof = new ProofData(claimProof);
       const dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
       const offchainTxData = new OffchainDefiClaimData();
       const claimTx = new TxDao({
         id: proof.txId,
         txType: TxType.DEFI_CLAIM,
-        proofData,
+        proofData: claimProof,
         offchainTxData: offchainTxData.toBuffer(),
         nullifier1: proof.nullifier1,
         nullifier2: proof.nullifier2,
@@ -73,13 +85,14 @@ export class ClaimProofCreator {
       });
       await this.rollupDb.addTx(claimTx);
     }
+    console.log(`Completed ${claimProofs.length} claim proofs in ${timer.s()}s`);
   }
 
   interrupt() {
     // TODO: Interrupt proof creation.
   }
 
-  private async createClaimProof(
+  private async createClaimProofRequest(
     dataRoot: Buffer,
     defiRoot: Buffer,
     claim: ClaimDao,
@@ -113,7 +126,10 @@ export class ClaimProofCreator {
       outputValueA,
       outputValueB,
     );
-    const request = new ClaimProofRequest(claimProof);
+    return new ClaimProofRequest(claimProof);
+  }
+
+  private async sendClaimProofRequest(request: ClaimProofRequest) {
     const proof = await this.proofGenerator.createProof(request.toBuffer());
     console.log(`Claim proof received: ${proof.length} bytes`);
     return proof;

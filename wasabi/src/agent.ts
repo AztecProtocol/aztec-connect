@@ -1,14 +1,19 @@
 import {
   AztecSdk,
   AztecSdkUser,
+  DefiController,
+  DepositController,
   EthAddress,
   EthAsset,
   SchnorrSigner,
   toBaseUnits,
+  TransferController,
   TxSettlementTime,
   WalletProvider,
+  WithdrawController,
 } from '@aztec/sdk';
 import { randomBytes } from 'crypto';
+import { transferToken } from '@aztec/blockchain';
 
 export interface EthAddressAndNonce {
   address: EthAddress;
@@ -22,8 +27,6 @@ export interface UserData {
 }
 
 export class Agent {
-  private assetId = 0;
-
   constructor(
     private fundingAccount: EthAddressAndNonce,
     private sdk: AztecSdk,
@@ -40,60 +43,136 @@ export class Agent {
     return { address, signer, user };
   }
 
-  public async fundEthAddress(userData: UserData, deposit: bigint) {
-    console.log(`agent ${this.id} funding ${userData.address} with ${deposit} wei...`);
-    const asset = new EthAsset(this.provider);
+  private async fundAddressWithEth(userData: UserData, deposit: bigint) {
+    console.log(
+      `agent ${this.id} funding ${userData.address} with ${deposit} wei from address ${this.fundingAccount.address}...`,
+    );
+    const asset: EthAsset = new EthAsset(this.provider);
     // We increment the funding account nonce. This is shared amongst all agents, and ensures we correctly execute
     // L1 txs with sequential nonces, thus we can improve performance by calling this method concurrently.
     const txHash = await asset.transfer(deposit, this.fundingAccount.address, userData.address, {
       nonce: this.fundingAccount.nonce++,
     });
-    await this.sdk.getTransactionReceipt(txHash);
+    const receipt = await this.sdk.getTransactionReceipt(txHash);
+    if (!receipt.status) {
+      throw new Error('receipt status is false.');
+    }
   }
 
-  public async deposit(userData: UserData, deposit: bigint, instant = false) {
+  public async transferAsset(from: EthAddress, to: EthAddress, deposit: bigint, assetId: number) {
+    const assetInfo = this.sdk.getAssetInfo(assetId);
+    console.log(`agent ${this.id} funding ${to} with ${deposit} ${assetInfo.name} from address ${from}...`);
+    await transferToken(assetInfo.address, from, to, this.provider, deposit);
+  }
+
+  public async fundEthAddress(userData: UserData, deposit: bigint, assetId = 0) {
+    if (assetId == 0) {
+      await this.fundAddressWithEth(userData, deposit);
+      return;
+    }
+    await this.transferAsset(this.fundingAccount.address, userData.address, deposit, assetId);
+  }
+
+  public async sendDeposit(userData: UserData, deposit: bigint, assetId = 0, instant = false) {
+    const assetInfo = this.sdk.getAssetInfo(assetId);
     const { user, signer, address } = userData;
-    const fee = (await this.sdk.getDepositFees(this.assetId))[
+    const fee = (await this.sdk.getDepositFees(assetId))[
       instant ? TxSettlementTime.INSTANT : TxSettlementTime.NEXT_ROLLUP
     ];
-    console.log(`agent ${this.id} sending deposit with fee ${fee.value}...`);
+    console.log(
+      `agent ${this.id} sending deposit of ${deposit} ${assetInfo.name} with fee ${fee.value}, address ${address}...`,
+    );
+    const actualDepositValue = assetId == 0 ? deposit - fee.value : deposit;
 
     const controller = this.sdk.createDepositController(
       user.id,
       signer,
-      { assetId: 0, value: deposit - fee.value },
+      { assetId, value: actualDepositValue },
       fee,
       address,
     );
-    await controller.depositFundsToContract();
-    await controller.awaitDepositFundsToContract();
     await controller.createProof();
     await controller.sign();
+    if (assetId != 0) {
+      await controller.approve();
+    }
+    await controller.depositFundsToContract();
+    await controller.awaitDepositFundsToContract();
     await controller.send();
-    return controller.awaitSettlement();
+    return controller;
   }
 
-  public async withdraw(userData: UserData) {
+  public async awaitBulkSettlement(
+    controllers: Array<DefiController | DepositController | WithdrawController | TransferController | undefined>,
+  ) {
+    const valid = controllers.filter(c => c != undefined);
+    if (!valid.length) {
+      return;
+    }
+    await Promise.all(controllers.map(c => c!.awaitSettlement()));
+  }
+
+  public async sendWithdraw(userData: UserData, assetId = 0) {
+    const assetInfo = this.sdk.getAssetInfo(assetId);
     const { user, signer } = userData;
-    const fee = (await this.sdk.getWithdrawFees(this.assetId))[TxSettlementTime.NEXT_ROLLUP];
-    const balance = await user.getBalance(this.assetId);
-    const value = balance - fee.value;
-    console.log(`agent ${this.id} withdrawing ${value} wei to ${userData.address.toString()}`);
+    const fee = (await this.sdk.getWithdrawFees(assetId))[TxSettlementTime.NEXT_ROLLUP];
+    let assetBalance = await user.getBalance(assetId);
+    const ethBalance = await user.getBalance(0);
+    if (assetId == fee.assetId) {
+      // asset is fee paying
+      if (fee.value > assetBalance) {
+        // not enough asset to pay the fee
+        console.log(
+          `agent ${this.id} not withdrawing ${
+            assetInfo.name
+          } to address ${userData.address.toString()} as we have insufficient asset balance to pay the fee!`,
+        );
+        return;
+      }
+      // minus the fee from the withdrawal amount
+      assetBalance -= fee.value;
+    } else {
+      // asset is not fee paying
+      if (fee.value > ethBalance) {
+        // not enough ETH to pay the fee
+        console.log(
+          `agent ${this.id} not withdrawing ${
+            assetInfo.name
+          } to address ${userData.address.toString()} as we have insufficient ETH balance to pay the fee!`,
+        );
+        return;
+      }
+    }
+    if (assetBalance == 0n) {
+      console.log(
+        `agent ${this.id} not withdrawing ${
+          assetInfo.name
+        } to address ${userData.address.toString()} as our balance is 0`,
+      );
+      return;
+    }
+    console.log(
+      `agent ${this.id} withdrawing ${assetBalance} ${assetInfo.name} to ${userData.address.toString()}`,
+    );
     const controller = this.sdk.createWithdrawController(
       user.id,
       signer,
-      { assetId: this.assetId, value },
+      { assetId, value: assetBalance },
       fee,
       userData.address,
     );
     await controller.createProof();
     await controller.send();
-    return controller.awaitSettlement();
+    return controller;
   }
 
   public async repayFundingAddress(userData: UserData) {
     const fee = toBaseUnits('420', 12);
-    const value = (await this.sdk.getPublicBalance(this.assetId, userData.address)) - fee;
+    const value = (await this.sdk.getPublicBalance(0, userData.address)) - fee;
+    if (value <= 0) {
+      console.log(`agent ${this.id} not refunding ${this.fundingAccount.address} as balance after fees was <= 0`);
+      return;
+    }
 
     console.log(`agent ${this.id} refunding ${this.fundingAccount.address} with ${value} wei...`);
     const asset: EthAsset = new EthAsset(this.provider);

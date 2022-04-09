@@ -52,6 +52,12 @@ export class DefiDepositProofCreator {
       throw new Error(`Failed to find no more than 2 notes that sum to ${privateInput}.`);
     }
 
+    // verify that the selected notes sum exactly to the required private input as there will be no change note
+    const noteSum = notes.reduce((sum, n) => sum + n.value, BigInt(0));
+    if (noteSum !== privateInput) {
+      throw new Error(`Failed to find no more than 2 notes that sum to exact Defi input of ${privateInput}`);
+    }
+
     const proofInput = await this.txFactory.createTx(user, ProofId.DEFI_DEPOSIT, assetId, notes, spendingPublicKey, {
       bridgeId,
       defiDepositValue: depositValue,

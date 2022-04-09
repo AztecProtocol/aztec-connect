@@ -1,4 +1,5 @@
 import { AgentManager } from './agent_manager';
+import { ElementAgentManager } from './element_agent_manager';
 import {
   createAztecSdk,
   EthAddress,
@@ -11,6 +12,9 @@ import {
 } from '@aztec/sdk';
 import { randomBytes } from 'crypto';
 import { PaymentAgent } from './payment_agent';
+import { UniswapAgent } from './uniswap_agent';
+import { ElementAgent } from './element_agent';
+import { ManualPaymentAgent } from './manual_payment_agent';
 
 async function initSdk(provider: EthereumProvider, serverUrl: string, minConfirmation = 1) {
   const sdk = await createAztecSdk(provider, {
@@ -32,6 +36,18 @@ async function initSdk(provider: EthereumProvider, serverUrl: string, minConfirm
 export function getAgentRequiredFunding(agentType: string, numAgents: number, loops = 10) {
   const fundingBufferPercent = 10n * BigInt(loops);
   switch (agentType) {
+    case 'uniswap': {
+      const value = UniswapAgent.getRequiredFunding() * BigInt(numAgents);
+      const fundingThreshold = (value * 110n) / 100n;
+      const toFund = (value * (100n + fundingBufferPercent)) / 100n;
+      return { fundingThreshold, toFund };
+    }
+    case 'element': {
+      const value = ElementAgent.getRequiredFunding() * BigInt(numAgents) + ManualPaymentAgent.getRequiredFunding();
+      const fundingThreshold = (value * 110n) / 100n;
+      const toFund = (value * (100n + fundingBufferPercent)) / 100n;
+      return { fundingThreshold, toFund };
+    }
     case 'payment': {
       const value = PaymentAgent.getRequiredFunding() * BigInt(numAgents);
       const fundingThreshold = (value * 110n) / 100n;
@@ -48,6 +64,7 @@ export async function run(
   agentType: string,
   numAgents: number,
   numTxsPerAgent: number,
+  assets: number[],
   rollupHost: string,
   host: string,
   confs: number,
@@ -96,16 +113,12 @@ export async function run(
       }
     }
 
-    const agentManager = new AgentManager(
-      sdk,
-      provider,
-      ethereumRpc,
-      processAddress,
-      agentType,
-      numAgents,
-      numTxsPerAgent,
-    );
+    const agentManager =
+      agentType != 'element'
+        ? new AgentManager(sdk, provider, ethereumRpc, processAddress, agentType, numAgents, numTxsPerAgent, assets)
+        : new ElementAgentManager(sdk, provider, ethereumRpc, processAddress, numAgents, numTxsPerAgent, assets);
 
+    console.log(`starting wasabi run ${runNumber}...`);
     await agentManager.run();
 
     const timeTaken = new Date().getTime() - start.getTime();
@@ -115,9 +128,12 @@ export async function run(
   // We are exiting gracefully, refund the funding account from our process account.
   const fee = toBaseUnits('420', 12);
   const value = (await sdk.getPublicBalance(0, processAddress)) - fee;
-  console.log(`refunding funding address ${fundingAddress} with ${value} wei...`);
-  const txHash = await asset.transfer(value, processAddress, fundingAddress);
-  await sdk.getTransactionReceipt(txHash);
-
+  if (value <= 0) {
+    console.log(`agent manager not refunding ${fundingAddress} as balance after fees was <= 0`);
+  } else {
+    console.log(`refunding funding address ${fundingAddress} with ${value} wei...`);
+    const txHash = await asset.transfer(value, processAddress, fundingAddress);
+    await sdk.getTransactionReceipt(txHash);
+  }
   await sdk.destroy();
 }

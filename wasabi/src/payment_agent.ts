@@ -17,6 +17,7 @@ export class PaymentAgent {
     provider: WalletProvider,
     private id: number,
     private numTransfers: number,
+    private assetId: number = 0,
   ) {
     this.agent = new Agent(fundingAccount, sdk, provider, id);
   }
@@ -29,27 +30,24 @@ export class PaymentAgent {
     return toBaseUnits('0.01', 18);
   }
 
-  /**
-   * Return an address to fund with the amount in getRequiredFunding().
-   */
-  public async init() {
-    return this.userA.address;
-  }
-
   public async run() {
     try {
       this.userA = await this.agent.createUser();
       this.userB = await this.agent.createUser();
 
       await this.agent.fundEthAddress(this.userA, PaymentAgent.getRequiredFunding());
+      await (await this.agent.sendDeposit(this.userA, await this.calcDeposit()))?.awaitSettlement();
 
-      await this.agent.deposit(this.userA, await this.calcDeposit());
+      if (this.assetId != 0) {
+        await this.agent.fundEthAddress(this.userA, BigInt(this.numTransfers), this.assetId);
+        await (await this.agent.sendDeposit(this.userA, BigInt(this.numTransfers), this.assetId))?.awaitSettlement();
+      }
 
       for (let i = 0; i < this.numTransfers; ) {
         const transferPromises: Promise<void>[] = [];
         while (transferPromises.length < Math.min(this.numTransfers, this.numConcurrentTransfers)) {
           try {
-            const txId = await this.transfer(this.userA, this.userB, 1n);
+            const txId = await this.transfer(this.userA, this.userB, this.assetId, 1n);
             const j = i;
             const p = this.sdk.awaitSettlement(txId).then(() => console.log(`agent ${this.id} transfer ${j} settled.`));
             transferPromises.push(p);
@@ -62,7 +60,11 @@ export class PaymentAgent {
         await Promise.all(transferPromises);
       }
 
-      await this.agent.withdraw(this.userA);
+      if (this.assetId != 0) {
+        await (await this.agent.sendWithdraw(this.userB, this.assetId))?.awaitSettlement();
+      }
+      await (await this.agent.sendWithdraw(this.userB))?.awaitSettlement();
+      await (await this.agent.sendWithdraw(this.userA))?.awaitSettlement();
       await this.agent.repayFundingAddress(this.userA);
 
       await this.sdk.removeUser(this.userA.user.id);
@@ -76,19 +78,24 @@ export class PaymentAgent {
    * We transfer 1 wei numTransfers times. Calculate deposit large enough for all fees and transfers.
    */
   private async calcDeposit() {
-    const transferFee = (await this.sdk.getWithdrawFees(0))[TxSettlementTime.NEXT_ROLLUP];
-    const withdrawFee = (await this.sdk.getWithdrawFees(0))[TxSettlementTime.NEXT_ROLLUP];
+    const assetDepositFee = (await this.sdk.getDepositFees(this.assetId))[TxSettlementTime.NEXT_ROLLUP];
+    const assetWithdrawFee = (await this.sdk.getWithdrawFees(this.assetId))[TxSettlementTime.NEXT_ROLLUP];
+    const transferFee = (await this.sdk.getTransferFees(this.assetId))[TxSettlementTime.NEXT_ROLLUP];
+    const ethDepositFee = (await this.sdk.getWithdrawFees(0))[TxSettlementTime.NEXT_ROLLUP];
+    const ethWithdrawFee = (await this.sdk.getWithdrawFees(0))[TxSettlementTime.NEXT_ROLLUP];
     const transfers = BigInt(this.numTransfers);
-    return withdrawFee.value + transfers * transferFee.value + transfers;
+    const ethFees = ethDepositFee.value + ethWithdrawFee.value + transferFee.value * transfers;
+    return this.assetId == 0 ? ethFees : ethFees + assetDepositFee.value + assetWithdrawFee.value;
   }
 
-  private async transfer(sender: UserData, recipient: UserData, value = 1n) {
-    console.log(`agent ${this.id} transferring ${value} wei from userA to userB...`);
-    const [fee] = await this.sdk.getTransferFees(0);
+  private async transfer(sender: UserData, recipient: UserData, assetId = 0, value = 1n) {
+    const assetInfo = this.sdk.getAssetInfo(assetId);
+    console.log(`agent ${this.id} transferring ${value} ${assetInfo.name} from userA to userB...`);
+    const [fee] = await this.sdk.getTransferFees(assetId);
     const controller = this.sdk.createTransferController(
       sender.user.id,
       sender.signer,
-      { assetId: 0, value },
+      { assetId: assetId, value },
       fee,
       recipient.user.id,
     );

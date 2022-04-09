@@ -58,6 +58,17 @@ export async function decodeError(
   return await decodeErrorFromContractByTxHash(contract, txHash, provider);
 }
 
+export async function decodeContractSelector(
+  contractAddress: string,
+  contractName: string,
+  selector: string,
+  provider: EthereumProvider,
+) {
+  const web3 = new Web3Provider(provider);
+  const contract = new Contract(contractAddress, abis[contractName].abi, web3.getSigner());
+  return await decodeSelector(contract, selector);
+}
+
 export async function getContractSelectors(
   contractAddress: EthAddress,
   contractName: string,
@@ -210,6 +221,26 @@ async function main() {
         return;
       }
       console.log(`Retrieved error for tx ${txHash}`, error);
+    });
+
+  program
+    .command('decodeSelector')
+    .description('attempt to decode the selector for a reverted transaction')
+    .argument('<contractAddress>', 'the address of the deployed contract, as a hex string')
+    .argument('<contractName>', 'the name of the contract, valid values: Rollup, Element')
+    .argument('<selector>', 'the 4 byte selector that you wish to decode, as a hex string 0x...')
+    .argument('[url]', 'your ganache url', 'http://localhost:8545')
+    .action(async (contractAddress, contractName, selector, url) => {
+      const provider = getProvider(url);
+      if (selector.length == 10) {
+        selector = selector.slice(2);
+      }
+      const error = await decodeContractSelector(contractAddress, contractName, selector, provider);
+      if (!error) {
+        console.log(`Failed to retrieve error code for selector ${selector}`);
+        return;
+      }
+      console.log(`Retrieved error code for selector ${selector}`, error);
     });
 
   program

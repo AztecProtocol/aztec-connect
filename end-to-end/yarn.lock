@@ -56,6 +56,7 @@
     "@aztec/blockchain" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-99f9ef4d-d7f8-4e56-aa26-f9908c058bbe-1648643000128/node_modules/blockchain/dest"
     "@types/levelup" "^4.3.0"
     broadcast-channel "^3.1.0"
+    debug "^4.1.1"
     detect-node "^2.0.4"
     dexie "^3.0.1"
     events "^3.3.0"

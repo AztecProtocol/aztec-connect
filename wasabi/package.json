@@ -28,8 +28,10 @@
     "rootDir": "./src"
   },
   "dependencies": {
+    "@aztec/blockchain": "file:../blockchain/dest",
+    "@aztec/bridge-clients": "^0.1.23",
     "@aztec/sdk": "file:../sdk/dest",
-    "ethers": "5.5.1",
+    "@ethersproject/providers": "^5.6.1",
     "log-timestamp": "^0.3.0",
     "source-map-support": "^0.5.19",
     "typescript": "^4.4.4"

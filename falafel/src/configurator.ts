@@ -54,7 +54,7 @@ const defaultRuntimeConfig: RuntimeConfig = {
   useKeyCache: false,
   publishInterval: 0,
   flushAfterIdle: 0,
-  gasLimit: 4000000,
+  gasLimit: 12000000,
   baseTxGas: 16000,
   verificationGas: 500000,
   maxFeeGasPrice: 250000000000n,
