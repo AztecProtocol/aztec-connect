@@ -5,7 +5,7 @@ import { Contract, Signer } from 'ethers';
 
 const TRANCHE_BYTECODE_HASH = Buffer.from('f481a073666136ab1f5e93b296e84df58092065256d0db23b2d22b62c68e978d', 'hex');
 export const ASSETS = ['usdc', 'dai', 'lusd3crv-f', 'stecrv', 'wbtc', 'alusd3crv-f', 'mim-3lp3crv-f'];
-const gasLimit = 5000000;
+const gasLimit = 6000000;
 
 export interface ElementPoolSpec {
   asset: string;

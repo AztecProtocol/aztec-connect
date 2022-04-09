@@ -5,12 +5,16 @@ import { EthereumRpc, TxHash } from '@aztec/barretenberg/blockchain';
 import { Command } from 'commander';
 import { purchaseTokens, MainnetAddresses, RollupProcessor, JsonRpcProvider } from '..';
 import { setBlockchainTime, getCurrentBlockTime } from '../manipulate_blocks';
-import { decodeErrorFromContractByTxHash, decodeSelector } from '../contracts/decode_error';
+import { decodeErrorFromContractByTxHash, decodeSelector, retrieveContractSelectors } from '../contracts/decode_error';
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 import * as RollupAbi from '../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
 import * as Element from '@aztec/bridge-clients/client-dest/typechain-types/factories/ElementBridge__factory';
+import * as Rollup from '@aztec/bridge-clients/client-dest/typechain-types/factories/RollupProcessor__factory';
+import * as IVault from '@aztec/bridge-clients/client-dest/typechain-types/factories/IVault__factory';
+import { ElementBridgeData } from '@aztec/bridge-clients/client-dest/src/client/element/element-bridge-data';
 import { WalletProvider } from '../provider';
 import { getTokenBalance, getWethBalance } from '../tokens';
+import { LogDescription } from 'ethers/lib/utils';
 
 const { PRIVATE_KEY } = process.env;
 
@@ -30,28 +34,150 @@ const getProvider = (url: string) => {
 };
 
 export async function retrieveEvents(
-  contractAddress: string,
+  contractAddress: EthAddress,
   contractName: string,
   provider: EthereumProvider,
   eventName: string,
   from: number,
   to?: number,
 ) {
-  const contract = new Contract(contractAddress, abis[contractName].abi, new Web3Provider(provider));
+  const contract = new Contract(contractAddress.toString(), abis[contractName].abi, new Web3Provider(provider));
   const filter = contract.filters[eventName]();
   const events = await contract.queryFilter(filter, from, to);
   return events.map(event => contract.interface.parseLog(event));
 }
 
 export async function decodeError(
-  contractAddress: string,
+  contractAddress: EthAddress,
   contractName: string,
   txHash: TxHash,
   provider: EthereumProvider,
 ) {
   const web3 = new Web3Provider(provider);
-  const contract = new Contract(contractAddress, abis[contractName].abi, web3.getSigner());
+  const contract = new Contract(contractAddress.toString(), abis[contractName].abi, web3.getSigner());
   return await decodeErrorFromContractByTxHash(contract, txHash, provider);
+}
+
+export async function getContractSelectors(
+  contractAddress: EthAddress,
+  contractName: string,
+  provider: EthereumProvider,
+  type?: string,
+) {
+  const web3 = new Web3Provider(provider);
+  const contract = new Contract(contractAddress.toString(), abis[contractName].abi, web3.getSigner());
+  return await retrieveContractSelectors(contract, type);
+}
+
+export const createElementBridgeData = async (
+  rollupAddress: EthAddress,
+  elementBridgeAddress: EthAddress,
+  provider: EthereumProvider,
+) => {
+  const ethersProvider = new Web3Provider(provider);
+  const elementBridgeContract = Element.ElementBridge__factory.connect(elementBridgeAddress.toString(), ethersProvider);
+  const rollupContract = Rollup.RollupProcessor__factory.connect(rollupAddress.toString(), ethersProvider);
+  const vaultContract = IVault.IVault__factory.connect(MainnetAddresses.Contracts['BALANCER'], ethersProvider);
+  return new ElementBridgeData(elementBridgeContract, vaultContract, rollupContract, { chunkSize: 10 });
+};
+
+const formatTime = (unixTimeInSeconds: number) => {
+  return new Date(unixTimeInSeconds * 1000).toISOString().slice(0, 19).replace('T', ' ');
+};
+
+export async function profileElement(
+  rollupAddress: EthAddress,
+  elementAddress: EthAddress,
+  provider: EthereumProvider,
+  from: number,
+  to?: number,
+) {
+  const convertEvents = await retrieveEvents(elementAddress, 'Element', provider, 'Convert', from, to);
+  const finaliseEvents = await retrieveEvents(elementAddress, 'Element', provider, 'Finalise', from, to);
+  const poolEvents = await retrieveEvents(elementAddress, 'Element', provider, 'PoolAdded', from, to);
+  const rollupBridgeEvents = await retrieveEvents(rollupAddress, 'Rollup', provider, 'DefiBridgeProcessed', from, to);
+  const elementBridgeData = await createElementBridgeData(rollupAddress, elementAddress, provider);
+
+  const interactions: {
+    [key: string]: {
+      finalised: boolean;
+      success?: boolean;
+      inputValue?: bigint;
+      presentValue?: bigint;
+      finalValue?: bigint;
+    };
+  } = {};
+  const pools: {
+    [key: string]: { wrappedPosition: string; expiry: string };
+  } = {};
+  const convertLogs = convertEvents.map((log: LogDescription) => {
+    return {
+      nonce: log.args.nonce,
+      totalInputValue: log.args.totalInputValue.toBigInt(),
+    };
+  });
+  const finaliseLogs = finaliseEvents.map((log: LogDescription) => {
+    return {
+      nonce: log.args.nonce,
+      success: log.args.success,
+    };
+  });
+  const poolLogs = poolEvents.map((log: LogDescription) => {
+    return {
+      poolAddress: log.args.poolAddress,
+      wrappedPosition: log.args.wrappedPositionAddress,
+      expiry: log.args.expiry,
+    };
+  });
+  const rollupLogs = rollupBridgeEvents.map((log: LogDescription) => {
+    return {
+      nonce: log.args.nonce.toBigInt(),
+      outputValue: log.args.totalOutputValueA.toBigInt(),
+    };
+  });
+  for (const log of poolLogs) {
+    pools[log.poolAddress] = {
+      wrappedPosition: log.wrappedPosition,
+      expiry: formatTime(log.expiry.toNumber()),
+    };
+  }
+  for (const log of convertLogs) {
+    interactions[log.nonce.toString()] = {
+      finalised: false,
+      success: undefined,
+      inputValue: log.totalInputValue,
+    };
+  }
+
+  for (const log of finaliseLogs) {
+    if (!interactions[log.nonce.toString()]) {
+      interactions[log.nonce.toString()] = {
+        finalised: true,
+        success: log.success,
+        inputValue: undefined,
+      };
+      continue;
+    }
+    interactions[log.nonce.toString()].success = log.success;
+    interactions[log.nonce.toString()].finalised = true;
+    const rollupLog = rollupLogs.find(x => x.nonce == log.nonce);
+    if (rollupLog) {
+      interactions[log.nonce.toString()].finalValue = rollupLog.outputValue;
+    }
+  }
+  for (const log of convertLogs) {
+    if (!interactions[log.nonce.toString()]?.finalised) {
+      const presentValue = await elementBridgeData.getInteractionPresentValue(log.nonce.toBigInt());
+      interactions[log.nonce.toString()].presentValue = presentValue[0].amount;
+    }
+  }
+  const summary = {
+    Pools: pools,
+    Interactions: interactions,
+    NumInteractions: convertLogs.length,
+    NumFinalised: finaliseLogs.length,
+  };
+  console.log('Element summary ', summary);
 }
 
 const program = new Command();
@@ -78,7 +204,7 @@ async function main() {
     .argument('[url]', 'your ganache url', 'http://localhost:8545')
     .action(async (contractAddress, contractName, txHash, url) => {
       const provider = getProvider(url);
-      const error = await decodeError(contractAddress, contractName, txHash, provider);
+      const error = await decodeError(EthAddress.fromString(contractAddress), contractName, txHash, provider);
       if (!error) {
         console.log(`Failed to retrieve error for tx ${txHash}`);
         return;
@@ -115,7 +241,7 @@ async function main() {
     .action(async (contractAddress, contractName, eventName, from, to, url) => {
       const provider = getProvider(url);
       const logs = await retrieveEvents(
-        contractAddress,
+        EthAddress.fromString(contractAddress),
         contractName,
         provider,
         eventName,
@@ -209,6 +335,43 @@ async function main() {
       }
       const balance = await getTokenBalance(ethTokenAddress, account, ourProvider);
       console.log(`Token ${ethTokenAddress.toString()} balance of account ${account}: ${balance}`);
+    });
+
+  program
+    .command('selectors')
+    .description("display useful information about a contrac't selectors")
+    .argument('<contractAddress>', 'the address of the deployed contract, as a hex string')
+    .argument('<contractName>', 'the name of the contract, valid values: Rollup, Element')
+    .argument('[type]', 'optional filter for the type of selectors, e.g. error, event')
+    .argument('[url]', 'your ganache url', 'http://localhost:8545')
+    .action(async (contractAddress, contractName, type, url) => {
+      const ourProvider = getProvider(url);
+      const selectorMap = await getContractSelectors(
+        EthAddress.fromString(contractAddress),
+        contractName,
+        ourProvider,
+        type,
+      );
+      console.log(selectorMap);
+    });
+
+  program
+    .command('profileElement')
+    .description('extract events emitted from a contract')
+    .argument('<rollupAddress>', 'the address of the deployed rollup contract, as a hex string')
+    .argument('<elementAddress>', 'the address of the deployed element bridge contract, as a hex string')
+    .argument('<from>', 'the block number to search from')
+    .argument('[to]', 'the block number to search to, defaults to the latest block')
+    .argument('[url]', 'your ganache url', 'http://localhost:8545')
+    .action(async (rollupAddress, elementAddress, from, to, url) => {
+      const provider = getProvider(url);
+      await profileElement(
+        EthAddress.fromString(rollupAddress),
+        EthAddress.fromString(elementAddress),
+        provider,
+        parseInt(from),
+        to ? parseInt(to) : undefined,
+      );
     });
 
   program

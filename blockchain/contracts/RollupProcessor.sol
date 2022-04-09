@@ -94,6 +94,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
     bytes32 private constant DEFI_BRIDGE_PROCESSED_SIGHASH =
         0x1ccb5390975e3d07503983a09c3b6a5d11a0e40c4cb4094a7187655f643ef7b4;
 
+    bytes32 private constant ASYNC_BRIDGE_PROCESSED_SIGHASH =
+        0x38ce48f4c2f3454bcf130721f25a4262b2ff2c8e36af937b30edf01ba481eb1d;
+
     // We need to cap the amount of gas sent to the DeFi bridge contract for two reasons.
     // 1: To provide consistency to rollup providers around costs.
     // 2: To prevent griefing attacks where a bridge consumes all our gas.
@@ -212,6 +215,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         uint256 totalOutputValueB,
         bool result
     );
+    event AsyncDefiBridgeProcessed(uint256 indexed bridgeId, uint256 indexed nonce, uint256 totalInputValue);
     event Deposit(uint256 assetId, address depositorAddress, uint256 depositValue);
     event Withdraw(uint256 assetId, address withdrawAddress, uint256 withdrawValue);
     event WithdrawError(bytes errorReason);
@@ -485,7 +489,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         escapeBlockLowerBound = _escapeBlockLowerBound;
         escapeBlockUpperBound = _escapeBlockUpperBound;
         allowThirdPartyContracts = _allowThirdPartyContracts;
-        // initial value of the hash of 32 'zero' defi not hashes
+        // initial value of the hash of 32 'zero' defi note hashes
         prevDefiInteractionsHash = 0x14e0f351ade4ba10438e9b15f66ab2e6389eea5ae870d6e8b2df1418b2e6fd5b;
     }
 
@@ -1703,6 +1707,12 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
                 // if interaction is synchronous, compute the interaction hash and add to defiInteractionHashes
                 switch mload(add(bridgeResult, 0x40)) // switch isAsync
                 case 1 {
+                    let mPtr := mload(0x40)
+                    // emit AsyncDefiBridgeProcessed(indexed bridgeId, indexed interactionNonce, totalInputValue)
+                    {
+                        mstore(mPtr, totalInputValue)
+                        log3(mPtr, 0x20, ASYNC_BRIDGE_PROCESSED_SIGHASH, bridgeId, interactionNonce)
+                    }
                     // pendingDefiInteractions[interactionNonce] = PendingDefiBridgeInteraction(bridgeId, totalInputValue, 0)
                     mstore(0x00, interactionNonce)
                     mstore(0x20, pendingDefiInteractions.slot)
@@ -1714,7 +1724,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
                 default {
                     let mPtr := mload(0x40)
                     // prepare the data required to publish the DefiBridgeProcessed event, we will only publish it if isAsync == false
-                    // async interactions that have failed, have there isAsync property modified to false above
+                    // async interactions that have failed, have their isAsync property modified to false above
                     // emit DefiBridgeProcessed(indexed bridgeId, indexed interactionNonce, totalInputValue, outputValueA, outputValueB, success)
                     {
                         mstore(mPtr, totalInputValue)
