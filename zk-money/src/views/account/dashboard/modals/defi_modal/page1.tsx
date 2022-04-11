@@ -92,7 +92,7 @@ export function Page1({
             recipe={recipe}
           />
         }
-        rightPanel={<SettlementTimeInformationSection />}
+        rightPanel={<SettlementTimeInformationSection recipe={recipe} />}
       />
       <div className={style.footer}>
         <FaqHint className={style.faqHint} />

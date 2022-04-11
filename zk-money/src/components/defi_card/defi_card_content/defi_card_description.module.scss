@@ -1,0 +1,20 @@
+.cardDescriptionLabel {
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  display: -webkit-box;
+  flex-direction: row;
+  font-size: 14px;
+  margin-right: 30px;
+  line-height: 24px;
+  overflow: hidden;
+  color: #20293e;
+  line-height: 150%;
+  letter-spacing: 0.03em;
+}
+
+.cardDescriptionWrapper {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 25px 40px;
+}

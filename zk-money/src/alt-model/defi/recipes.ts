@@ -65,8 +65,8 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
     logo: elementFiLogo,
     miniLogo: elementMiniLogo,
     keyStat1: KeyBridgeStat.FIXED_YIELD,
-    keyStat2: KeyBridgeStat.BATCH_SIZE,
-    keyStat3: KeyBridgeStat.MATURITY,
+    keyStat2: KeyBridgeStat.MATURITY,
+    keyStat3: KeyBridgeStat.BATCH_SIZE,
   },
   {
     id: 'lido-finance.ETH-to-wStETH',

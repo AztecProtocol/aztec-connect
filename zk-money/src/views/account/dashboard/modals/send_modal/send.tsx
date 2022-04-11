@@ -137,7 +137,7 @@ export const Send: React.FunctionComponent<SendProps> = ({
             feeAmounts={feeAmounts}
           />
         }
-        rightPanel={<SettlementTimeInformationSection />}
+        rightPanel={<div />}
       />
       <div className={style.footer}>
         <FaqHint className={style.faqHint} />

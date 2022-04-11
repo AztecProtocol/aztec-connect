@@ -355,11 +355,8 @@ export class SendForm extends EventEmitter implements AccountForm {
     const fee = fees[speed].fee;
     const { spendableBalance } = this.assetState;
     const maxAmount = min(max(0n, spendableBalance - fee), this.txAmountLimit);
-    const selectedAmount = (changes.selectedAmount || this.values.selectedAmount).value;
     const amountInput = changes.amount || this.values.amount;
-    const amount = selectedAmount
-      ? fromBaseUnits(max(0n, selectedAmount - fee), this.asset.decimals)
-      : amountInput.value;
+    const amount = amountInput.value;
 
     const toUpdate = this.validateChanges({
       maxAmount: { value: maxAmount },

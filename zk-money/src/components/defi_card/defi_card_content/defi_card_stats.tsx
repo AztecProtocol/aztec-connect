@@ -6,7 +6,7 @@ import { colours } from '../../../styles';
 const CardStats = styled.div`
   width: 100%;
   border-top: 1px solid ${colours.greyDark};
-  padding: 20px 40px;
+  padding: 25px 40px;
 `;
 
 export const DefiCardStats = (props: { recipe: DefiRecipe }) => {

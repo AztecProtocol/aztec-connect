@@ -84,6 +84,12 @@ export function ShieldPage1({
       <SplitSection
         leftPanel={
           <>
+            <RecipientSection
+              theme={InputTheme.WHITE}
+              recipient={toLegacyRecipientInput(fields, validationResult)}
+              sendMode={SendMode.SEND}
+              onChangeValue={onChangeRecipientAlias}
+            />
             <AmountSection
               maxAmount={validationResult.maxL2Output ?? 0n}
               asset={asset}
@@ -95,12 +101,6 @@ export function ShieldPage1({
               hidePrivacy
               message={feedback.amount}
               balanceType="L1"
-            />
-            <RecipientSection
-              theme={InputTheme.WHITE}
-              recipient={toLegacyRecipientInput(fields, validationResult)}
-              sendMode={SendMode.SEND}
-              onChangeValue={onChangeRecipientAlias}
             />
           </>
         }

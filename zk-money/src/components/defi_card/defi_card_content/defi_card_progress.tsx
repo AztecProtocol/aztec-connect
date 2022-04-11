@@ -5,8 +5,8 @@ import { DefiRecipe } from 'alt-model/defi/types';
 
 const CardProgress = styled.div`
   width: 100%;
-  padding: 0 40px 20px 40px;
-  border-bottom: 1px solid ${colours.greyDark};
+  padding: 25px 40px;
+  border-top: 1px solid ${colours.greyDark};
 `;
 
 export const DefiCardProgress = ({ recipe }: { recipe: DefiRecipe }) => {

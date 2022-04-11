@@ -1,12 +1,12 @@
 .info {
   display: flex;
   flex-direction: row;
-  margin-bottom: 12px;
+  margin-bottom: 15px;
   justify-content: space-between;
   letter-spacing: 0.5px;
-  font-size: 14px;
-  font-style: italic;
-  line-height: 130%;
+  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .info.compact {
