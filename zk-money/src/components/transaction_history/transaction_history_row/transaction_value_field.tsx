@@ -1,7 +1,6 @@
-import { AssetValue, ProofId, UserDefiInteractionResultState } from '@aztec/sdk';
+import { AssetValue, ProofId, UserPaymentTx, UserTx } from '@aztec/sdk';
 import { useApp } from 'alt-model';
 import { useAmount } from 'alt-model/asset_hooks';
-import { UserTx } from 'alt-model/user_tx_hooks';
 import { ShieldedAssetIcon } from 'components/shielded_asset_icon';
 
 function invertAssetValue({ assetId, value }: AssetValue): AssetValue {
@@ -19,50 +18,32 @@ function ValueField(props: { assetValue?: AssetValue }) {
   );
 }
 
-function getBalanceDiff(tx: UserTx, userIsOwner: boolean): { diff?: AssetValue; fee?: AssetValue } {
-  switch (tx.proofId) {
-    case ProofId.DEPOSIT:
-      return { diff: tx.value };
-    case ProofId.SEND: {
-      const diff = userIsOwner ? invertAssetValue(tx.value) : tx.value;
-      const fee = userIsOwner ? tx.fee : undefined;
-      return { diff, fee };
-    }
-    case ProofId.WITHDRAW:
-      return { diff: invertAssetValue(tx.value), fee: tx.fee };
-    case ProofId.DEFI_DEPOSIT:
-      return { diff: invertAssetValue(tx.depositValue), fee: tx.fee };
-  }
-  return {};
-}
-
-interface TransactionValueFieldProps {
-  tx: UserTx;
-}
-
-export function TransactionValueField({ tx }: TransactionValueFieldProps) {
+function SendValueField({ tx }: { tx: UserPaymentTx }) {
   const { accountId } = useApp();
   if (!accountId) return <></>;
-  if (
-    tx.proofId === ProofId.DEFI_DEPOSIT &&
-    tx.interactionResult.state === UserDefiInteractionResultState.SETTLED &&
-    !tx.interactionResult.success
-  ) {
-    return <>Failed</>;
-  }
   const userIsOwner = tx.userId.equals(accountId);
-  const { diff, fee } = getBalanceDiff(tx, userIsOwner);
-  if (!diff) return <></>;
-  if (!fee) return <ValueField assetValue={diff} />;
-  const feeIsInDifferentAsset = diff.assetId !== fee?.assetId;
-  if (feeIsInDifferentAsset) {
-    return (
-      <>
-        <ValueField assetValue={diff} />
-        <ValueField assetValue={invertAssetValue(tx.fee)} />
-      </>
-    );
+  const value = userIsOwner ? invertAssetValue(tx.value) : tx.value;
+  return <ValueField assetValue={value} />;
+}
+
+export function renderTransactionValueField(tx: UserTx) {
+  switch (tx.proofId) {
+    case ProofId.DEPOSIT:
+      return <ValueField assetValue={tx.value} />;
+    case ProofId.SEND:
+      return <SendValueField tx={tx} />;
+    case ProofId.WITHDRAW:
+      return <ValueField assetValue={invertAssetValue(tx.value)} />;
+    case ProofId.DEFI_DEPOSIT: {
+      return <ValueField assetValue={invertAssetValue(tx.depositValue)} />;
+    }
+    case ProofId.DEFI_CLAIM:
+      if (tx.success) {
+        const outputValue = { assetId: tx.bridgeId.outputAssetIdA, value: tx.outputValueA };
+        return <ValueField assetValue={outputValue} />;
+      } else {
+        // Refund
+        return <ValueField assetValue={tx.depositValue} />;
+      }
   }
-  const balanceDiffAfterFee = { assetId: diff.assetId, value: diff.value - tx.fee.value };
-  return <ValueField assetValue={balanceDiffAfterFee} />;
 }

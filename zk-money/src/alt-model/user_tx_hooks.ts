@@ -1,10 +1,8 @@
-import type { UserAccountTx, UserDefiTx, UserPaymentTx } from '@aztec/sdk';
+import type { UserTx } from '@aztec/sdk';
 import { useEffect, useState } from 'react';
 import { useApp } from './app_context';
 import { listenAccountUpdated } from './event_utils';
 import { useSdk } from './top_level_context';
-
-export type UserTx = UserAccountTx | UserDefiTx | UserPaymentTx;
 
 export function useUserTxs() {
   const sdk = useSdk();

@@ -72,7 +72,7 @@ export interface Database {
     outputValueB: bigint,
     finalised: Date,
   ): Promise<void>;
-  settleDefiTx(txId: TxId, claimSettled: Date): Promise<void>;
+  settleDefiTx(txId: TxId, claimSettled: Date, claimTxId: TxId): Promise<void>;
 
   addClaimTx(tx: CoreClaimTx): Promise<void>;
   getClaimTx(nullifier: Buffer): Promise<CoreClaimTx | undefined>;

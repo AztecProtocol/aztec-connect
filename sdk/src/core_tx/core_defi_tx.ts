@@ -23,6 +23,7 @@ export class CoreDefiTx {
     public readonly outputValueB = BigInt(0),
     public readonly finalised?: Date,
     public readonly claimSettled?: Date,
+    public readonly claimTxId?: TxId,
   ) {}
 }
 
@@ -44,6 +45,7 @@ export interface CoreDefiTxJson {
   outputValueB: string;
   finalised?: Date;
   claimSettled?: Date;
+  claimTxId?: string;
 }
 
 export const coreDefiTxToJson = (tx: CoreDefiTx): CoreDefiTxJson => ({
@@ -56,6 +58,7 @@ export const coreDefiTxToJson = (tx: CoreDefiTx): CoreDefiTxJson => ({
   partialStateSecret: tx.partialStateSecret.toString('hex'),
   outputValueA: tx.outputValueA.toString(),
   outputValueB: tx.outputValueB.toString(),
+  claimTxId: tx.claimTxId?.toString(),
 });
 
 export const coreDefiTxFromJson = (json: CoreDefiTxJson) =>
@@ -76,4 +79,5 @@ export const coreDefiTxFromJson = (json: CoreDefiTxJson) =>
     BigInt(json.outputValueB),
     json.finalised,
     json.claimSettled,
+    json.claimTxId ? TxId.fromString(json.claimTxId) : undefined,
   );

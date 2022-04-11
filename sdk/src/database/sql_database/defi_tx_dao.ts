@@ -56,6 +56,9 @@ export class DefiTxDao {
   @Column({ nullable: true })
   public claimSettled?: Date;
 
+  @Column('blob', { nullable: true, transformer: [txIdTransformer] })
+  public claimTxId?: TxId;
+
   @AfterLoad()
   @AfterInsert()
   @AfterUpdate()
@@ -68,6 +71,9 @@ export class DefiTxDao {
     }
     if (this.claimSettled === null) {
       delete this.claimSettled;
+    }
+    if (this.claimTxId === null) {
+      delete this.claimTxId;
     }
   }
 }

@@ -1,9 +1,9 @@
-import type { UserTx } from 'alt-model/user_tx_hooks';
+import type { UserTx } from '@aztec/sdk';
 import { TransactionTypeField } from './transaction_type_field';
 import style from './transaction_history_row.module.scss';
-import { TransactionValueField } from './transaction_value_field';
-import { renderTransactionOutputField } from './transaction_output_field';
+import { renderTransactionValueField } from './transaction_value_field';
 import { renderTransactionTimeField } from './transaction_time_field';
+import { renderTransactionFeeField } from './transaction_fee_field';
 
 interface TransactionHistoryRowProps {
   tx: UserTx;
@@ -17,12 +17,10 @@ export function TransactionHistoryRow({ tx }: TransactionHistoryRowProps) {
       </div>
       <div className={style.separator} />
       <div className={style.segment}>
-        <div className={style.value}>
-          <TransactionValueField tx={tx} />
-        </div>
+        <div className={style.value}>{renderTransactionValueField(tx)}</div>
       </div>
       <div className={style.segment}>
-        <div className={style.value}>{renderTransactionOutputField(tx)}</div>
+        <div className={style.fee}>{renderTransactionFeeField(tx)}</div>
       </div>
       <div className={style.separator} />
       <div className={style.segment}>

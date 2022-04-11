@@ -471,7 +471,8 @@ export class UserState extends EventEmitter {
 
     await this.refreshNotePicker();
 
-    await this.db.settleDefiTx(txId, blockCreated);
+    const claimTxId = new TxId(proof.txId);
+    await this.db.settleDefiTx(txId, blockCreated, claimTxId);
     this.debug(`settled defi tx: ${txId}`);
   }
 

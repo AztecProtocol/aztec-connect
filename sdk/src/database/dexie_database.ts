@@ -254,6 +254,7 @@ class DexieDefiTx implements DexieUserTx {
     public outputValueB: string,
     public finalised?: Date,
     public claimSettled?: Date,
+    public claimTxId?: Uint8Array,
   ) {}
 }
 
@@ -276,6 +277,7 @@ const toDexieDefiTx = (tx: CoreDefiTx) =>
     tx.outputValueB.toString(),
     tx.finalised,
     tx.claimSettled,
+    tx.claimTxId ? new Uint8Array(tx.claimTxId.toBuffer()) : undefined,
   );
 
 const fromDexieDefiTx = ({
@@ -295,6 +297,7 @@ const fromDexieDefiTx = ({
   outputValueB,
   finalised,
   claimSettled,
+  claimTxId,
 }: DexieDefiTx) =>
   new CoreDefiTx(
     new TxId(Buffer.from(txId)),
@@ -313,6 +316,7 @@ const fromDexieDefiTx = ({
     BigInt(outputValueB),
     finalised,
     claimSettled,
+    claimTxId ? new TxId(Buffer.from(claimTxId)) : undefined,
   );
 
 class DexieClaimTx {
@@ -585,10 +589,10 @@ export class DexieDatabase implements Database {
       .modify({ success, outputValueA, outputValueB, finalised });
   }
 
-  async settleDefiTx(txId: TxId, claimSettled: Date) {
+  async settleDefiTx(txId: TxId, claimSettled: Date, claimTxId: TxId) {
     await this.userTx
       .where({ txId: new Uint8Array(txId.toBuffer()), proofId: ProofId.DEFI_DEPOSIT })
-      .modify({ claimSettled });
+      .modify({ claimSettled, claimTxId: new Uint8Array(claimTxId.toBuffer()) });
   }
 
   async getUserTxs(userId: AccountId) {

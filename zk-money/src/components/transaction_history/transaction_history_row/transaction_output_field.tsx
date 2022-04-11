@@ -1,6 +1,5 @@
-import { ProofId, UserDefiInteractionResultState, UserDefiTx } from '@aztec/sdk';
+import { ProofId, UserDefiInteractionResultState, UserDefiTx, UserTx } from '@aztec/sdk';
 import { useAmount } from 'alt-model/asset_hooks';
-import { UserTx } from 'alt-model/user_tx_hooks';
 import { ShieldedAssetIcon } from 'components/shielded_asset_icon';
 
 export function DefiTransactionOutputField({ tx }: { tx: UserDefiTx }) {

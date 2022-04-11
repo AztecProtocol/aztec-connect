@@ -25,7 +25,12 @@
   display: grid;
   grid-template-columns: 45px 1fr;
   align-items: center;
-  font-size: 14px;;
+  font-size: 14px;
+}
+
+.fee {
+  font-size: 12px;
+  opacity: 0.7;
 }
 
 .time {

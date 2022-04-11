@@ -441,12 +441,15 @@ export const databaseTestSuite = (
 
         const savedTx = (await db.getDefiTx(tx.txId))!;
         expect(savedTx.claimSettled).toBeFalsy();
+        expect(savedTx.claimTxId).toBeFalsy();
 
         const settled = new Date();
-        await db.settleDefiTx(tx.txId, settled);
+        const claimTxId = TxId.random();
+        await db.settleDefiTx(tx.txId, settled, claimTxId);
 
         const settledTx = (await db.getDefiTx(tx.txId))!;
         expect(settledTx.claimSettled).toEqual(settled);
+        expect(settledTx.claimTxId).toEqual(claimTxId);
       });
 
       it('get all txs for a user from newest to oldest with unsettled txs first', async () => {

@@ -1,6 +1,5 @@
-import { TxId } from '@aztec/sdk';
+import type { TxId, UserTx } from '@aztec/sdk';
 import { useExplorerTxLink } from 'alt-model/explorer_link_hooks';
-import { UserTx } from 'alt-model/user_tx_hooks';
 import moment from 'moment';
 import { StepStatus, StepStatusIndicator } from 'ui-components';
 import { MiniLink } from 'ui-components/components/atoms/mini_link';

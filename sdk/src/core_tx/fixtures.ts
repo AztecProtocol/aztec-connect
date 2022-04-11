@@ -60,4 +60,5 @@ export const randomCoreDefiTx = (tx: Partial<CoreDefiTx> = {}) =>
     tx.outputValueB,
     tx.finalised,
     tx.claimSettled,
+    tx.claimTxId,
   );

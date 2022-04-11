@@ -1163,7 +1163,7 @@ describe('user state', () => {
       secret,
     });
     expect(db.settleDefiTx).toHaveBeenCalledTimes(1);
-    expect(db.settleDefiTx).toHaveBeenCalledWith(txId, block.created);
+    expect(db.settleDefiTx).toHaveBeenCalledWith(txId, block.created, new TxId(claimProof.proofData.txId));
   });
 
   it('settle a defi tx and add refund note', async () => {
@@ -1193,7 +1193,7 @@ describe('user state', () => {
       secret,
     });
     expect(db.settleDefiTx).toHaveBeenCalledTimes(1);
-    expect(db.settleDefiTx).toHaveBeenCalledWith(txId, block.created);
+    expect(db.settleDefiTx).toHaveBeenCalledWith(txId, block.created, new TxId(claimProof.proofData.txId));
   });
 
   it('add defi proof and its linked j/s proof, update the note status after the tx is settled', async () => {

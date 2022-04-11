@@ -1,7 +1,14 @@
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { CoreAccountTx, CoreDefiTx, CorePaymentTx, CoreUserTx } from '../core_tx';
-import { UserAccountTx, UserDefiInteractionResultState, UserDefiTx, UserPaymentTx } from '../user_tx';
+import {
+  UserAccountTx,
+  UserDefiClaimTx,
+  UserDefiInteractionResultState,
+  UserDefiTx,
+  UserPaymentTx,
+  UserTx,
+} from '../user_tx';
 
 const emptyAssetValue = { assetId: 0, value: BigInt(0) };
 
@@ -55,7 +62,7 @@ const toUserDefiTx = (tx: CoreDefiTx, fee: AssetValue) => {
     { assetId: bridgeId.inputAssetIdA, value: depositValue },
     fee,
     created,
-    claimSettled,
+    settled,
     {
       state,
       isAsync,
@@ -63,9 +70,23 @@ const toUserDefiTx = (tx: CoreDefiTx, fee: AssetValue) => {
       success,
       outputValueA,
       outputValueB,
-      deposited: settled,
+      claimSettled,
       finalised,
     },
+  );
+};
+
+const toUserDefiClaimTx = (tx: CoreDefiTx) => {
+  const { userId, bridgeId, depositValue, claimSettled, claimTxId } = tx;
+  return new UserDefiClaimTx(
+    claimTxId!,
+    userId,
+    bridgeId,
+    { assetId: bridgeId.inputAssetIdA, value: depositValue },
+    claimSettled!,
+    tx.success,
+    tx.outputValueA,
+    tx.outputValueB,
   );
 };
 
@@ -181,7 +202,11 @@ const toUserTx = (txs: CoreUserTx[], feePayingAssetIds: number[]) => {
       return [toUserAccountTx(primaryTx, fee)];
     }
     case ProofId.DEFI_DEPOSIT: {
-      return [toUserDefiTx(primaryTx, fee)];
+      const userDefiTx = toUserDefiTx(primaryTx, fee);
+      if (primaryTx.claimTxId) {
+        return [userDefiTx, toUserDefiClaimTx(primaryTx)];
+      }
+      return [userDefiTx];
     }
     default: {
       const value = getPaymentValue(primaryTx);
@@ -207,7 +232,18 @@ const groupTxsByTxRefNo = (txs: CoreUserTx[]) => {
 
 const filterUndefined = <T>(ts: (T | undefined)[]): T[] => ts.filter((t: T | undefined): t is T => !!t);
 
+const bySettled = (tx1: UserTx, tx2: UserTx) => {
+  if (tx1.settled && tx2.settled) return tx2.settled.getTime() - tx1.settled.getTime();
+  if (!tx1.settled && !tx2.settled) return 0;
+  if (!tx1.settled) return -1;
+  if (!tx2.settled) return 1;
+
+  return 0;
+};
+
 export const groupUserTxs = (txs: CoreUserTx[], feePayingAssetIds: number[]) => {
   const txGroups = groupTxsByTxRefNo(txs);
-  return filterUndefined(txGroups.map(txs => toUserTx(txs, feePayingAssetIds))).flat();
+  return filterUndefined(txGroups.map(txs => toUserTx(txs, feePayingAssetIds)))
+    .flat()
+    .sort(bySettled);
 };

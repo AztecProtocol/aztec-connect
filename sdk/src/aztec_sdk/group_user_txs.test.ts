@@ -1,9 +1,10 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
+import { TxId } from '@aztec/barretenberg/tx_id';
 import { createTxRefNo } from '../controllers/create_tx_ref_no';
 import { randomCoreAccountTx, randomCoreDefiTx, randomCorePaymentTx } from '../core_tx/fixtures';
-import { UserAccountTx, UserDefiInteractionResultState, UserDefiTx, UserPaymentTx } from '../user_tx';
+import { UserAccountTx, UserDefiInteractionResultState, UserDefiTx, UserDefiClaimTx, UserPaymentTx } from '../user_tx';
 import { groupUserTxs } from './group_user_txs';
 
 const createFeeTx = (fee: bigint, txRefNo: number) =>
@@ -424,7 +425,7 @@ describe('groupUserTxs', () => {
             success: false,
             outputValueA: 0n,
             outputValueB: 0n,
-            deposited: undefined,
+            claimSettled: undefined,
             finalised: undefined,
           },
         ),
@@ -448,7 +449,7 @@ describe('groupUserTxs', () => {
           { assetId: 0, value: defiTx.depositValue },
           { assetId: 0, value: defiTx.txFee },
           defiTx.created,
-          undefined,
+          defiTx.settled,
           {
             state: UserDefiInteractionResultState.AWAITING_FINALISATION,
             isAsync: true,
@@ -456,7 +457,7 @@ describe('groupUserTxs', () => {
             success: true,
             outputValueA: 123n,
             outputValueB: 0n,
-            deposited: defiTx.settled,
+            claimSettled: undefined,
             finalised: undefined,
           },
         ),
@@ -482,7 +483,7 @@ describe('groupUserTxs', () => {
           { assetId: 0, value: defiTx.depositValue },
           { assetId: 0, value: defiTx.txFee },
           defiTx.created,
-          undefined,
+          defiTx.settled,
           {
             state: UserDefiInteractionResultState.AWAITING_SETTLEMENT,
             isAsync: true,
@@ -490,14 +491,15 @@ describe('groupUserTxs', () => {
             success: true,
             outputValueA: 23n,
             outputValueB: 45n,
-            deposited: defiTx.settled,
+            claimSettled: undefined,
             finalised: defiTx.finalised,
           },
         ),
       ]);
     });
 
-    it('recover settled defi tx', () => {
+    it('recover settled defi tx and claim tx', () => {
+      const claimTxId = TxId.random();
       const defiTx = randomCoreDefiTx({
         bridgeId,
         success: true,
@@ -508,6 +510,7 @@ describe('groupUserTxs', () => {
         settled: new Date(),
         finalised: new Date(),
         claimSettled: new Date(),
+        claimTxId,
       });
       expect(groupUserTxs([defiTx], feePayingAssetIds)).toEqual([
         new UserDefiTx(
@@ -517,7 +520,7 @@ describe('groupUserTxs', () => {
           { assetId: 0, value: defiTx.depositValue },
           { assetId: 0, value: defiTx.txFee },
           defiTx.created,
-          defiTx.claimSettled,
+          defiTx.settled,
           {
             state: UserDefiInteractionResultState.SETTLED,
             isAsync: true,
@@ -525,9 +528,19 @@ describe('groupUserTxs', () => {
             success: true,
             outputValueA: 23n,
             outputValueB: 45n,
-            deposited: defiTx.settled,
+            claimSettled: defiTx.claimSettled,
             finalised: defiTx.finalised,
           },
+        ),
+        new UserDefiClaimTx(
+          claimTxId,
+          defiTx.userId,
+          bridgeId,
+          { assetId: 0, value: defiTx.depositValue },
+          defiTx.claimSettled!,
+          true,
+          23n,
+          45n,
         ),
       ]);
     });
@@ -557,7 +570,7 @@ describe('groupUserTxs', () => {
             success: false,
             outputValueA: 0n,
             outputValueB: 0n,
-            deposited: undefined,
+            claimSettled: undefined,
             finalised: undefined,
           },
         ),
@@ -584,7 +597,7 @@ describe('groupUserTxs', () => {
             success: false,
             outputValueA: 0n,
             outputValueB: 0n,
-            deposited: undefined,
+            claimSettled: undefined,
             finalised: undefined,
           },
         ),
@@ -618,7 +631,7 @@ describe('groupUserTxs', () => {
             success: false,
             outputValueA: 0n,
             outputValueB: 0n,
-            deposited: undefined,
+            claimSettled: undefined,
             finalised: undefined,
           },
         ),

@@ -18,7 +18,7 @@ export interface UserDefiInteractionResult {
   success: boolean;
   outputValueA: bigint;
   outputValueB: bigint;
-  deposited?: Date;
+  claimSettled?: Date;
   finalised?: Date;
 }
 

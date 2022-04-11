@@ -79,6 +79,7 @@ const toCoreDefiTx = (tx: DefiTxDao) =>
     tx.outputValueB,
     tx.finalised,
     tx.claimSettled,
+    tx.claimTxId,
   );
 
 const sortUserTxs = (txs: any[]) => {
@@ -255,8 +256,8 @@ export class SQLDatabase implements Database {
     await this.defiTxRep.update({ txId }, { success, outputValueA, outputValueB, finalised });
   }
 
-  async settleDefiTx(txId: TxId, claimSettled: Date) {
-    await this.defiTxRep.update({ txId }, { claimSettled });
+  async settleDefiTx(txId: TxId, claimSettled: Date, claimTxId: TxId) {
+    await this.defiTxRep.update({ txId }, { claimSettled, claimTxId });
   }
 
   async addClaimTx(tx: CoreClaimTx) {

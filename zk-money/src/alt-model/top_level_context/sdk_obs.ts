@@ -1,7 +1,12 @@
-import { AztecSdk, createAztecSdk, JsonRpcProvider, SdkEvent, SdkFlavour } from '@aztec/sdk';
+import { AztecSdk, createAztecSdk, JsonRpcProvider, SdkEvent, SdkFlavour, EthAddress } from '@aztec/sdk';
 import { Obs } from 'app/util';
 import createDebug from 'debug';
 import { Config } from '../../config';
+
+const win = window as any;
+win.createAztecSdk = createAztecSdk;
+win.SdkFlavour = SdkFlavour;
+win.EthAddress = EthAddress;
 
 const debug = createDebug('zm:sdk_obs');
 

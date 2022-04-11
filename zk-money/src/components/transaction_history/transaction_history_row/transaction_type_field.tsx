@@ -1,11 +1,10 @@
-import { ProofId } from '@aztec/sdk';
-import { UserTx } from 'alt-model/user_tx_hooks';
+import { ProofId, UserTx } from '@aztec/sdk';
 import sendIcon from 'images/tx_type_send_icon.svg';
 import defiIcon from 'images/tx_type_defi_icon.svg';
 import style from './transaction_type_field.module.scss';
 
-function getTxTypeLabel(proofId: ProofId) {
-  switch (proofId) {
+function getTxTypeLabel(tx: UserTx) {
+  switch (tx.proofId) {
     case ProofId.DEPOSIT:
       return 'Shield';
     case ProofId.WITHDRAW:
@@ -15,7 +14,11 @@ function getTxTypeLabel(proofId: ProofId) {
     case ProofId.ACCOUNT:
       return 'Register';
     case ProofId.DEFI_DEPOSIT:
-      return 'Defi';
+      return 'Defi Deposit';
+    case ProofId.DEFI_CLAIM: {
+      if (tx.success) return 'Defi Claim';
+      else return 'Defi Refund';
+    }
   }
 }
 
@@ -24,6 +27,7 @@ function getIconSrc(proofId: ProofId) {
     case ProofId.SEND:
       return sendIcon;
     case ProofId.DEFI_DEPOSIT:
+    case ProofId.DEFI_CLAIM:
       return defiIcon;
   }
 }
@@ -36,7 +40,7 @@ export function TransactionTypeField({ tx }: TransactionTypeFieldProps) {
   const iconSrc = getIconSrc(tx.proofId);
   return (
     <div className={style.root}>
-      <div className={style.label}>{getTxTypeLabel(tx.proofId)}</div>
+      <div className={style.label}>{getTxTypeLabel(tx)}</div>
       {iconSrc && <img alt="" src={iconSrc} />}
     </div>
   );
