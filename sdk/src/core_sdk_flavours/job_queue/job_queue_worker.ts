@@ -1,27 +1,24 @@
 import { Pedersen } from '@aztec/barretenberg/crypto';
+import { createLogger } from '@aztec/barretenberg/debug';
 import { FftFactory } from '@aztec/barretenberg/fft';
 import { Pippenger } from '@aztec/barretenberg/pippenger';
-import { InterruptableSleep } from '@aztec/barretenberg/sleep';
 import { Job, JobQueueTarget } from './job';
-import { JobQueueInterface } from './job_queue_interface';
 import { JobQueueFftFactoryClient } from './job_queue_fft_factory';
+import { JobQueueInterface } from './job_queue_interface';
 import { JobQueuePedersenClient } from './job_queue_pedersen';
 import { JobQueuePippengerClient } from './job_queue_pippenger';
-import { createLogger } from '@aztec/barretenberg/debug';
 
 const debug = createLogger('aztec:sdk:job_queue_worker');
 
-const fetchInterval = 1000;
+const backgroundFetchDelay = 500;
 const pingInterval = 1000;
 
 /**
  * Responsible for getting jobs from a JobQueue, processing them, and returning the result.
  */
 export class JobQueueWorker {
-  private running = false;
-  private runningPromise!: Promise<void>;
+  private newJobPromise?: Promise<void>;
   private pingTimeout!: NodeJS.Timeout;
-  private interruptableSleep = new InterruptableSleep();
 
   private readonly pedersen: JobQueuePedersenClient;
   private readonly pippenger: JobQueuePippengerClient;
@@ -39,37 +36,38 @@ export class JobQueueWorker {
 
   public start() {
     this.jobQueue.on('new_job', this.notifyNewJob);
-    this.running = true;
-    this.runningPromise = this.runLoop();
   }
 
   public async stop() {
     this.jobQueue.off('new_job', this.notifyNewJob);
-    this.running = false;
-    this.interruptableSleep.interrupt();
-    await this.runningPromise;
+    await this.newJobPromise;
   }
 
-  private notifyNewJob = () => {
-    this.interruptableSleep.interrupt();
+  private notifyNewJob = async () => {
+    if (this.newJobPromise) {
+      return;
+    }
+
+    this.newJobPromise = this.fetchAndProcess();
+    await this.newJobPromise;
+    this.newJobPromise = undefined;
   };
 
-  private async runLoop() {
-    while (this.running) {
-      try {
-        const job = await this.jobQueue.getJob();
-        if (job) {
-          this.pingTimeout = setTimeout(() => this.ping(job.id), pingInterval);
-          await this.processJob(job);
-          clearTimeout(this.pingTimeout);
-        } else {
-          await this.interruptableSleep.sleep(fetchInterval);
-        }
-      } catch (e) {
-        debug(e);
-        clearTimeout(this.pingTimeout);
-        await this.interruptableSleep.sleep(fetchInterval);
+  private async fetchAndProcess() {
+    if (document.hidden) {
+      // We want foreground tabs to pick up a job first.
+      await new Promise(resolve => setTimeout(resolve, backgroundFetchDelay));
+    }
+    try {
+      const job = await this.jobQueue.getJob();
+      if (job) {
+        this.pingTimeout = setTimeout(() => this.ping(job.id), pingInterval);
+        await this.processJob(job);
       }
+    } catch (e) {
+      debug(e);
+    } finally {
+      clearTimeout(this.pingTimeout);
     }
   }
 

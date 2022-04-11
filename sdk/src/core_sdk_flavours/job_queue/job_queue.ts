@@ -1,3 +1,5 @@
+import { MemoryFifo } from '@aztec/barretenberg/fifo';
+import { InterruptableSleep } from '@aztec/barretenberg/sleep';
 import EventEmitter from 'events';
 import { Job, JobQueueTarget } from './job';
 import { JobQueueInterface } from './job_queue_interface';
@@ -9,19 +11,44 @@ interface PendingJob {
   timestamp: number;
 }
 
+const broadcastInterval = 1000;
 const pingElapsed = 2000;
 
 export class JobQueue extends EventEmitter implements JobQueueInterface {
   private jobId = 0;
-  private pendingJobs: PendingJob[] = [];
+  private pendingJobs = new MemoryFifo<PendingJob>();
+  private pending?: PendingJob;
+  private interruptableSleep = new InterruptableSleep();
 
   constructor() {
     super();
+    this.processPendingJobs();
+  }
+
+  private async processPendingJobs() {
+    while (true) {
+      const job = await this.pendingJobs.get();
+      if (!job) {
+        break;
+      }
+
+      await this.broadcastNewJob(job);
+    }
+  }
+
+  private async broadcastNewJob(job: PendingJob) {
+    this.pending = job;
+    while (this.pending) {
+      if (Date.now() - this.pending.timestamp >= pingElapsed) {
+        this.emit('new_job');
+      }
+      await this.interruptableSleep.sleep(broadcastInterval);
+    }
   }
 
   async getJob() {
-    const [pendingJob] = this.pendingJobs;
     const now = Date.now();
+    const pendingJob = this.pending;
     if (!pendingJob || now - pendingJob.timestamp < pingElapsed) {
       return;
     }
@@ -32,36 +59,34 @@ export class JobQueue extends EventEmitter implements JobQueueInterface {
   }
 
   async ping(jobId: number) {
-    const [pendingJob] = this.pendingJobs;
-    if (!pendingJob) {
+    if (!this.pending) {
       return;
     }
-    if (pendingJob.job.id === jobId) {
+    if (this.pending.job.id === jobId) {
       const now = Date.now();
-      pendingJob.timestamp = now;
+      this.pending.timestamp = now;
     }
-    return pendingJob.job.id;
+    return this.pending.job.id;
   }
 
   async completeJob(jobId: number, data?: any, error?: string) {
-    const [pendingJob] = this.pendingJobs;
-    if (!pendingJob || pendingJob.job.id !== jobId) {
+    if (!this.pending || this.pending.job.id !== jobId) {
       return;
     }
 
     if (error) {
-      pendingJob.reject(new Error(error));
+      this.pending.reject(new Error(error));
     } else {
-      pendingJob.resolve(data);
+      this.pending.resolve(data);
     }
-    this.pendingJobs = this.pendingJobs.filter(j => j !== pendingJob);
+    this.pending = undefined;
+    this.interruptableSleep.interrupt();
   }
 
   async createJob(target: JobQueueTarget, query: string, args: any[] = []) {
     return new Promise<any>((resolve, reject) => {
       const job = { id: this.jobId++, target, query, args };
-      this.pendingJobs.push({ job, resolve, reject, timestamp: 0 });
-      this.emit('new_job');
+      this.pendingJobs.put({ job, resolve, reject, timestamp: 0 });
     });
   }
 }

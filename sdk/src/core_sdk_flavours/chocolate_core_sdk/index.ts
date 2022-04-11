@@ -1,1 +1,1 @@
-export * from './create_service_worker';
+export * from './create_shared_worker';

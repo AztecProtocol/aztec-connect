@@ -1,11 +1,11 @@
 import { ServerRollupProvider } from '@aztec/barretenberg/rollup_provider';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
-import { CoreSdkOptions, CoreSdkServerStub, CoreSdk } from '../../core_sdk';
-import { getDb, getLevelDb } from '../vanilla_core_sdk';
+import { CoreSdk, CoreSdkOptions, CoreSdkServerStub } from '../../core_sdk';
 import { JobQueue } from '../job_queue';
 import { JobQueueFftFactory } from '../job_queue/job_queue_fft_factory';
 import { JobQueuePedersen } from '../job_queue/job_queue_pedersen';
 import { JobQueuePippenger } from '../job_queue/job_queue_pippenger';
+import { getDb, getLevelDb } from '../vanilla_core_sdk';
 
 export interface ChocolateCoreSdkOptions extends CoreSdkOptions {
   pollInterval?: number;
@@ -13,7 +13,7 @@ export interface ChocolateCoreSdkOptions extends CoreSdkOptions {
 
 /**
  * Construct a chocolate version of the sdk.
- * This creates a CoreSdk for running in some remote context, e.g. a service worker.
+ * This creates a CoreSdk for running in some remote context, e.g. a shared worker.
  * It is wrapped in a network type adapter.
  * It is not interfaced with directly, but rather via a banana sdk, over some transport layer.
  */

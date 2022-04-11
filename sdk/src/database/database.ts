@@ -1,5 +1,6 @@
 import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
+import { MutexDatabase } from '@aztec/barretenberg/mutex';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { CoreAccountTx, CoreClaimTx, CoreDefiTx, CorePaymentTx, CoreUserTx } from '../core_tx';
 import { Note } from '../note';
@@ -30,7 +31,7 @@ export class Alias {
   constructor(public aliasHash: AliasHash, public address: GrumpkinAddress, public latestNonce: number) {}
 }
 
-export interface Database {
+export interface Database extends MutexDatabase {
   init(): Promise<void>;
   close(): Promise<void>;
   clear(): Promise<void>;

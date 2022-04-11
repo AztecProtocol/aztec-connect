@@ -5,6 +5,7 @@ import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { AccountProver, JoinSplitProver, ProofId, UnrolledProver } from '@aztec/barretenberg/client_proofs';
 import { Crs } from '@aztec/barretenberg/crs';
 import { Blake2s, Pedersen, Schnorr } from '@aztec/barretenberg/crypto';
+import { createLogger } from '@aztec/barretenberg/debug';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { AccountData, InitHelpers } from '@aztec/barretenberg/environment';
 import { FftFactory } from '@aztec/barretenberg/fft';
@@ -17,7 +18,6 @@ import { RollupProvider } from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { BarretenbergWasm, WorkerPool } from '@aztec/barretenberg/wasm';
 import { WorldState } from '@aztec/barretenberg/world_state';
-import { createLogger } from '@aztec/barretenberg/debug';
 import { EventEmitter } from 'events';
 import { LevelUp } from 'levelup';
 import { Alias, Database, SigningKey } from '../database';
@@ -29,7 +29,7 @@ import {
   PaymentProofCreator,
   ProofOutput,
 } from '../proofs';
-import { SerialQueue } from '../serial_queue';
+import { MemorySerialQueue, MutexSerialQueue, SerialQueue } from '../serial_queue';
 import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
 import { CoreSdkInterface } from './core_sdk_interface';
 import { CoreSdkOptions } from './core_sdk_options';
@@ -59,7 +59,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   private accountProofCreator!: AccountProofCreator;
   private defiDepositProofCreator!: DefiDepositProofCreator;
   private blockQueue = new MemoryFifo<Block>();
-  private serialQueue = new SerialQueue();
+  private serialQueue!: SerialQueue;
   private userStateFactory!: UserStateFactory;
   private sdkStatus: SdkStatus = {
     serverUrl: '',
@@ -93,18 +93,21 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   /**
    * Basic initialisation of the sdk.
    * Call run() to actually start syncing etc.
-   * If multiple calls to init occur (e.g. many tabs calling into a service worker),
+   * If multiple calls to init occur (e.g. many tabs calling into a shared worker),
    * each blocks until the first call completes.
    */
   public async init(options: CoreSdkOptions) {
     try {
       // Take copy so we can modify internally.
-      this.options = { ...options };
+      this.options = { useMutex: true, ...options };
 
       if (this.initState !== SdkInitState.UNINITIALIZED) {
         throw new Error('Already initialized.');
       }
 
+      this.serialQueue = this.options.useMutex
+        ? new MutexSerialQueue(this.db, 'aztec_core_sdk')
+        : new MemorySerialQueue();
       this.noteAlgos = new NoteAlgorithms(this.barretenberg);
       this.blake2s = new Blake2s(this.barretenberg);
       this.grumpkin = new Grumpkin(this.barretenberg);
@@ -152,18 +155,19 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   public async destroy() {
-    this.serialQueue.push(async () => {
+    await this.serialQueue.push(async () => {
       debug('Destroying...');
       await this.stopReceivingBlocks();
       await Promise.all(this.userStates.map(us => this.stopSyncingUserState(us)));
       await this.leveldb.close();
       await this.db.close();
       await this.workerPool?.destroy();
-      this.serialQueue.destroy();
-      this.updateInitState(SdkInitState.DESTROYED);
-      this.removeAllListeners();
-      debug('Destroyed.');
     });
+    await this.serialQueue.destroy();
+    this.updateInitState(SdkInitState.DESTROYED);
+    this.emit(SdkEvent.DESTROYED);
+    this.removeAllListeners();
+    debug('Destroyed.');
   }
 
   public async getLocalStatus() {
@@ -349,11 +353,17 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
    * Moves the sdk into RUNNING state.
    */
   public async run() {
-    this.serialQueue.push(async () => {
-      if (this.initState === SdkInitState.RUNNING) {
-        return;
-      }
+    if (this.initState === SdkInitState.RUNNING) {
+      return;
+    }
 
+    if (this.serialQueue.length()) {
+      throw new Error('`run` must be called before other proof-generating apis.');
+    }
+
+    this.updateInitState(SdkInitState.RUNNING);
+
+    this.serialQueue.push(async () => {
       const { useKeyCache } = this.options;
 
       const {
@@ -365,7 +375,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       const forceCreate = (vca && !vca.equals(verifierContractAddress)) || !useKeyCache;
 
       const maxCircuitSize = Math.max(JoinSplitProver.getCircuitSize(), AccountProver.getCircuitSize());
-      const crsData = await this.initCrsData(maxCircuitSize);
+      const crsData = await this.getCrsData(maxCircuitSize);
 
       await this.pippenger.init(crsData);
       await this.genesisSync();
@@ -376,8 +386,6 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
       // Makes the saved proving keys considered valid. Hence set this after they're saved.
       await this.leveldb.put('verifierContractAddress', verifierContractAddress.toBuffer());
-
-      this.updateInitState(SdkInitState.RUNNING);
     });
   }
 
@@ -513,35 +521,37 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   public async sendProofs(proofs: ProofOutput[]) {
-    // this.assertInitState(SdkInitState.RUNNING);
+    return this.serialQueue.push(async () => {
+      this.assertInitState(SdkInitState.RUNNING);
 
-    // Get userState before sending proofs to make sure that the tx owner has been added to the sdk.
-    const [
-      {
-        tx: { userId },
-      },
-    ] = proofs;
-    const userState = this.getUserState(userId);
-    if (proofs.some(({ tx }) => !tx.userId.equals(userId))) {
-      throw new Error('Inconsistent tx owners.');
-    }
+      // Get userState before sending proofs to make sure that the tx owner has been added to the sdk.
+      const [
+        {
+          tx: { userId },
+        },
+      ] = proofs;
+      const userState = this.getUserState(userId);
+      if (proofs.some(({ tx }) => !tx.userId.equals(userId))) {
+        throw new Error('Inconsistent tx owners.');
+      }
 
-    const txs = proofs.map(({ proofData, offchainTxData, signature }) => ({
-      proofData: proofData.rawProofData,
-      offchainTxData: offchainTxData.toBuffer(),
-      depositSignature: signature,
-    }));
-    const txIds = await this.rollupProvider.sendTxs(txs);
+      const txs = proofs.map(({ proofData, offchainTxData, signature }) => ({
+        proofData: proofData.rawProofData,
+        offchainTxData: offchainTxData.toBuffer(),
+        depositSignature: signature,
+      }));
+      const txIds = await this.rollupProvider.sendTxs(txs);
 
-    for (const proof of proofs) {
-      await userState.addProof(proof);
-    }
+      for (const proof of proofs) {
+        await userState.addProof(proof);
+      }
 
-    return txIds;
+      return txIds;
+    });
   }
 
   public async awaitSynchronised() {
-    // this.assertInitState(SdkInitState.RUNNING);
+    this.assertInitState(SdkInitState.RUNNING);
 
     while (true) {
       try {
@@ -557,17 +567,20 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   public async isUserSynching(userId: AccountId) {
-    // this.assertInitState(SdkInitState.RUNNING);
+    this.assertInitState(SdkInitState.RUNNING);
+
     return this.getUserState(userId).isSyncing();
   }
 
   public async awaitUserSynchronised(userId: AccountId) {
-    // this.assertInitState(SdkInitState.RUNNING);
+    this.assertInitState(SdkInitState.RUNNING);
+
     await this.getUserState(userId).awaitSynchronised();
   }
 
   public async awaitSettlement(txId: TxId, timeout?: number) {
-    // this.assertInitState(SdkInitState.RUNNING);
+    this.assertInitState(SdkInitState.RUNNING);
+
     const started = new Date().getTime();
     while (true) {
       if (timeout && new Date().getTime() - started > timeout * 1000) {
@@ -582,7 +595,8 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   public async awaitDefiDepositCompletion(txId: TxId, timeout?: number) {
-    // this.assertInitState(SdkInitState.RUNNING);
+    this.assertInitState(SdkInitState.RUNNING);
+
     const started = new Date().getTime();
     while (true) {
       if (timeout && new Date().getTime() - started > timeout * 1000) {
@@ -602,6 +616,8 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   public async awaitDefiFinalisation(txId: TxId, timeout?: number) {
+    this.assertInitState(SdkInitState.RUNNING);
+
     const started = new Date().getTime();
     while (true) {
       if (timeout && new Date().getTime() - started > timeout * 1000) {
@@ -621,6 +637,8 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   public async awaitDefiSettlement(txId: TxId, timeout?: number) {
+    this.assertInitState(SdkInitState.RUNNING);
+
     const started = new Date().getTime();
     while (true) {
       if (timeout && new Date().getTime() - started > timeout * 1000) {
@@ -681,7 +699,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     return +(await this.leveldb.get('syncedToRollup').catch(() => -1));
   }
 
-  private async initCrsData(circuitSize: number) {
+  private async getCrsData(circuitSize: number) {
     debug('downloading crs data...');
     const crs = new Crs(circuitSize);
     await crs.download();
@@ -874,7 +892,9 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     const vca = await this.getLocalVerifierContractAddress();
     await this.leveldb.clear();
     await this.leveldb.put('rollupContractAddress', rca!.toBuffer());
-    await this.leveldb.put('verifierContractAddress', vca ? vca.toBuffer() : '');
+    if (vca) {
+      await this.leveldb.put('verifierContractAddress', vca.toBuffer());
+    }
 
     await this.worldState.init();
 

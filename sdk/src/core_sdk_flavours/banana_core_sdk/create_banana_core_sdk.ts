@@ -1,21 +1,16 @@
+import { createSharedWorker } from '../chocolate_core_sdk';
 import { TransportClient } from '../transport';
-import { createServiceWorker } from '../chocolate_core_sdk';
 import { BananaCoreSdkOptions } from './banana_core_sdk_options';
-import { ServiceWorkerFrontend } from './service_worker_frontend';
-import { ServiceWorkerTransportConnect } from './service_worker_transport_connect';
+import { SharedWorkerFrontend } from './shared_worker_frontend';
+import { SharedWorkerTransportConnect } from './shared_worker_transport_connect';
 
 export async function createBananaCoreSdk(options: BananaCoreSdkOptions) {
-  const sw = await createServiceWorker();
-  const connector = new ServiceWorkerTransportConnect(sw);
+  const worker = await createSharedWorker();
+  const connector = new SharedWorkerTransportConnect(worker);
   const transportClient = new TransportClient(connector);
   await transportClient.open();
 
-  const serviceWorkerFrontend = new ServiceWorkerFrontend(transportClient);
-  const { coreSdk } = await serviceWorkerFrontend.initComponents(options);
-
-  sw.addEventListener('statechange', async () => {
-    await coreSdk.destroy();
-  });
-
+  const sharedWorkerFrontend = new SharedWorkerFrontend(transportClient);
+  const { coreSdk } = await sharedWorkerFrontend.initComponents(options);
   return coreSdk;
 }

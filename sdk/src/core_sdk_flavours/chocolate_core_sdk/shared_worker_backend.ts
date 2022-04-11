@@ -5,14 +5,14 @@ import { createDispatchFn, DispatchMsg } from '../transport';
 import { ChocolateCoreSdkOptions, createChocolateCoreSdk } from './create_chocolate_core_sdk';
 import { createLogger, enableLogs } from '@aztec/barretenberg/debug';
 
-const debug = createLogger('aztec:sdk:service_worker_backend');
+const debug = createLogger('aztec:sdk:shared_worker_backend');
 
-export interface ServiceWorkerBackend extends EventEmitter {
+export interface SharedWorkerBackend extends EventEmitter {
   on(name: 'dispatch_msg', handler: (msg: DispatchMsg) => void): this;
   emit(name: 'dispatch_msg', payload: DispatchMsg): boolean;
 }
 
-export class ServiceWorkerBackend extends EventEmitter {
+export class SharedWorkerBackend extends EventEmitter {
   private jobQueue = new JobQueue();
   private coreSdk!: CoreSdkSerializedInterface;
   private initPromise!: Promise<void>;
@@ -36,7 +36,7 @@ export class ServiceWorkerBackend extends EventEmitter {
     this.coreSdk = await createChocolateCoreSdk(this.jobQueue, options);
 
     this.jobQueue.on('new_job', () => {
-      // ServiceWorkerFrontend has corresponding jobQueueDispatch method.
+      // SharedWorkerFrontend has corresponding jobQueueDispatch method.
       this.emit('dispatch_msg', {
         fn: 'jobQueueDispatch',
         args: [{ fn: 'emit', args: ['new_job'] }],

@@ -1,8 +1,9 @@
+import { createLogger, enableLogs } from '@aztec/barretenberg/debug';
 import EventEmitter from 'events';
 import { CoreSdkServerStub, SdkEvent } from '../../core_sdk';
 import { BananaCoreSdkOptions, createBananaCoreSdk } from '../banana_core_sdk';
 import { createDispatchFn, DispatchMsg } from '../transport';
-import { createLogger, enableLogs } from '@aztec/barretenberg/debug';
+import { createVanillaCoreSdk } from '../vanilla_core_sdk';
 
 const debug = createLogger('aztec:sdk:iframe_backend');
 
@@ -49,7 +50,11 @@ export class IframeBackend extends EventEmitter {
     }
 
     const serverUrl = await getServerUrl();
-    this.coreSdk = new CoreSdkServerStub(await createBananaCoreSdk({ ...options, serverUrl }));
+    const coreSdk =
+      typeof window.SharedWorker !== 'undefined'
+        ? await createBananaCoreSdk({ ...options, serverUrl })
+        : await createVanillaCoreSdk({ ...options, serverUrl });
+    this.coreSdk = new CoreSdkServerStub(coreSdk);
     for (const e in SdkEvent) {
       const event = (SdkEvent as any)[e];
       this.coreSdk.on(event, (...args: any[]) => {

@@ -994,6 +994,61 @@ export const databaseTestSuite = (
       expect(dbKey).toEqual(keys[999]);
     });
 
+    describe('Mutex', () => {
+      const name = 'mutex-test';
+      const timeout = 10000000;
+
+      const sleep = async (time: number) => new Promise(resolve => setTimeout(resolve, time));
+
+      it('acquire and release locks', async () => {
+        expect(await db.acquireLock('mutex-1', timeout)).toBe(true);
+        expect(await db.acquireLock('mutex-2', timeout)).toBe(true);
+        expect(await db.acquireLock('mutex-1', timeout)).toBe(false);
+        expect(await db.acquireLock('mutex-2', timeout)).toBe(false);
+
+        await db.releaseLock('mutex-2');
+
+        expect(await db.acquireLock('mutex-1', timeout)).toBe(false);
+        expect(await db.acquireLock('mutex-2', timeout)).toBe(true);
+        expect(await db.acquireLock('mutex-1', timeout)).toBe(false);
+        expect(await db.acquireLock('mutex-2', timeout)).toBe(false);
+      });
+
+      it('only one instance can acquire the lock', async () => {
+        const result = await Promise.all([
+          db.acquireLock(name, timeout),
+          db.acquireLock(name, timeout),
+          db.acquireLock(name, timeout),
+          db.acquireLock(name, timeout),
+        ]);
+        expect(result).toEqual([true, false, false, false]);
+      });
+
+      it('can acquire again if expired', async () => {
+        expect(await db.acquireLock(name, 100)).toBe(true);
+
+        await sleep(200);
+
+        expect(await db.acquireLock(name, 100)).toBe(true);
+      });
+
+      it('can extend expiry time', async () => {
+        expect(await db.acquireLock('mutex-1', 100)).toBe(true);
+        expect(await db.acquireLock('mutex-2', 100)).toBe(true);
+
+        await sleep(200);
+        await db.extendLock('mutex-2', 10000000);
+
+        expect(await db.acquireLock('mutex-1', 100)).toBe(true);
+        expect(await db.acquireLock('mutex-2', 100)).toBe(false);
+      });
+
+      it('can not extend if lock does not exist', async () => {
+        await db.extendLock('mutex-1', 10000000);
+        expect(await db.acquireLock('mutex-1', 100)).toBe(true);
+      });
+    });
+
     describe('Reset and Cleanup', () => {
       const generateUserProfile = async (user: UserData) => {
         await db.addUser(user);

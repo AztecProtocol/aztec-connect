@@ -1,7 +1,13 @@
-const { writeFileSync, copyFileSync } = require('fs');
+const { writeFileSync, copyFileSync, renameSync } = require('fs');
 
 copyFileSync('README_PUBLISHED.md', './dest/README.md');
-copyFileSync('dist/service_worker.js', './dest/service_worker.js');
+
+const commitTag = process.env.COMMIT_TAG;
+const sharedWorkerFilename = `shared_worker${commitTag ? `.${commitTag}` : ''}.js`;
+if (commitTag) {
+  renameSync('./dist/shared_worker.js', `./dist/${sharedWorkerFilename}`);
+}
+copyFileSync(`./dist/${sharedWorkerFilename}`, `./dest/${sharedWorkerFilename}`);
 
 const package = require('./package.json');
 const { jest, scripts, devDependencies, targets, alias, ...pkg } = package;

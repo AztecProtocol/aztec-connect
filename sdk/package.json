@@ -34,8 +34,8 @@
       "distDir": "./dist"
     },
     "sw": {
-      "context": "service-worker",
-      "source": "./src/core_sdk_flavours/chocolate_core_sdk/service_worker.ts",
+      "context": "web-worker",
+      "source": "./src/core_sdk_flavours/chocolate_core_sdk/shared_worker.ts",
       "distDir": "./dist"
     }
   },

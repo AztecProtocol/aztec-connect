@@ -1,7 +1,16 @@
 import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { TxId } from '@aztec/barretenberg/tx_id';
-import { Connection, ConnectionOptions, getConnection, IsNull, MoreThan, MoreThanOrEqual, Repository } from 'typeorm';
+import {
+  Connection,
+  ConnectionOptions,
+  getConnection,
+  IsNull,
+  LessThanOrEqual,
+  MoreThan,
+  MoreThanOrEqual,
+  Repository,
+} from 'typeorm';
 import { CoreAccountTx, CoreClaimTx, CoreDefiTx, CorePaymentTx } from '../../core_tx';
 import { Note } from '../../note';
 import { UserData } from '../../user';
@@ -11,6 +20,7 @@ import { AliasDao } from './alias_dao';
 import { ClaimTxDao } from './claim_tx_dao';
 import { DefiTxDao } from './defi_tx_dao';
 import { KeyDao } from './key_dao';
+import { MutexDao } from './mutex_dao';
 import { NoteDao } from './note_dao';
 import { PaymentTxDao } from './payment_tx_dao';
 import { UserDataDao } from './user_data_dao';
@@ -24,7 +34,18 @@ export const getOrmConfig = (memoryDb = false, identifier?: string): ConnectionO
     name: `aztec2-sdk${suffix}`,
     type: 'sqlite',
     database: memoryDb ? ':memory:' : `${dbPath}/aztec2-sdk.sqlite`,
-    entities: [AccountTxDao, AliasDao, ClaimTxDao, DefiTxDao, KeyDao, NoteDao, PaymentTxDao, UserDataDao, UserKeyDao],
+    entities: [
+      AccountTxDao,
+      AliasDao,
+      ClaimTxDao,
+      DefiTxDao,
+      KeyDao,
+      MutexDao,
+      NoteDao,
+      PaymentTxDao,
+      UserDataDao,
+      UserKeyDao,
+    ],
     synchronize: true,
     logging: false,
   };
@@ -98,6 +119,7 @@ export class SQLDatabase implements Database {
   private paymentTxRep: Repository<PaymentTxDao>;
   private userDataRep: Repository<UserDataDao>;
   private userKeyRep: Repository<UserKeyDao>;
+  private mutex: Repository<MutexDao>;
 
   constructor(private connection: Connection) {
     this.accountTxRep = this.connection.getRepository(AccountTxDao);
@@ -109,6 +131,7 @@ export class SQLDatabase implements Database {
     this.paymentTxRep = this.connection.getRepository(PaymentTxDao);
     this.userDataRep = this.connection.getRepository(UserDataDao);
     this.userKeyRep = this.connection.getRepository(UserKeyDao);
+    this.mutex = this.connection.getRepository(MutexDao);
   }
 
   async init() {}
@@ -429,5 +452,23 @@ export class SQLDatabase implements Database {
 
   async deleteKey(name: string) {
     await this.keyRep.delete({ name });
+  }
+
+  async acquireLock(name: string, timeout: number) {
+    await this.mutex.delete({ name, expiredAt: LessThanOrEqual(Date.now()) });
+    try {
+      await this.mutex.insert({ name, expiredAt: Date.now() + timeout });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async extendLock(name: string, timeout: number) {
+    await this.mutex.update(name, { expiredAt: Date.now() + timeout });
+  }
+
+  async releaseLock(name: string) {
+    await this.mutex.delete({ name });
   }
 }

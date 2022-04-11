@@ -6,6 +6,8 @@ COPY --from=0 /usr/src/barretenberg.js/dest /usr/src/barretenberg.js/dest
 COPY --from=1 /usr/src/blockchain/dest /usr/src/blockchain/dest
 WORKDIR /usr/src/sdk
 COPY . .
+ARG COMMIT_TAG
+ENV COMMIT_TAG=$COMMIT_TAG
 RUN yarn install --frozen-lockfile && yarn test --runInBand && yarn build && rm -rf node_modules && yarn cache clean
 
 FROM node:14-alpine

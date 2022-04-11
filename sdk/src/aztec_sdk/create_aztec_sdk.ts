@@ -28,24 +28,21 @@ async function createBlockchain(ethereumProvider: EthereumProvider, coreSdk: Cor
 
 export enum SdkFlavour {
   PLAIN,
-  SERVICE_WORKER,
+  SHARED_WORKER,
   HOSTED,
 }
 
-export type CreateServiceWorkerSdkOptions = AztecSdkOptions & BananaCoreSdkOptions;
+export type CreateSharedWorkerSdkOptions = AztecSdkOptions & BananaCoreSdkOptions;
 export type CreateHostedSdkOptions = AztecSdkOptions & StrawberryCoreSdkOptions;
 export type CreatePlainSdkOptions = AztecSdkOptions & VanillaCoreSdkOptions;
-export type CreateSdkOptions = CreateServiceWorkerSdkOptions &
+export type CreateSdkOptions = CreateSharedWorkerSdkOptions &
   CreateHostedSdkOptions &
   CreatePlainSdkOptions & { flavour?: SdkFlavour };
 
 /**
- * Creates an AztecSdk that is backed by a CoreSdk that runs inside a service worker.
+ * Creates an AztecSdk that is backed by a CoreSdk that runs inside a shared worker.
  */
-export async function createServiceWorkerSdk(
-  ethereumProvider: EthereumProvider,
-  options: CreateServiceWorkerSdkOptions,
-) {
+export async function createSharedWorkerSdk(ethereumProvider: EthereumProvider, options: CreateSharedWorkerSdkOptions) {
   if (isNode) {
     throw new Error('Not browser.');
   }
@@ -87,7 +84,7 @@ export async function createHostedAztecSdk(ethereumProvider: EthereumProvider, o
 }
 
 /**
- * Creates an AztecSdk that is backed directly by a CoreSdk (no iframe, no service worker).
+ * Creates an AztecSdk that is backed directly by a CoreSdk (no iframe, no shared worker).
  */
 export async function createPlainAztecSdk(ethereumProvider: EthereumProvider, options: CreatePlainSdkOptions) {
   if (options.debug) {
@@ -108,8 +105,8 @@ export async function createAztecSdk(ethereumProvider: EthereumProvider, options
   switch (options.flavour) {
     case SdkFlavour.HOSTED:
       return createHostedAztecSdk(ethereumProvider, options);
-    case SdkFlavour.SERVICE_WORKER:
-      return createServiceWorkerSdk(ethereumProvider, options);
+    case SdkFlavour.SHARED_WORKER:
+      return createSharedWorkerSdk(ethereumProvider, options);
     case SdkFlavour.PLAIN:
       return createPlainAztecSdk(ethereumProvider, options);
     default:

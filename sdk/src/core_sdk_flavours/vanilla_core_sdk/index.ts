@@ -7,8 +7,8 @@ import isNode from 'detect-node';
 import { mkdirSync } from 'fs';
 import levelup, { LevelUp } from 'levelup';
 import { createConnection } from 'typeorm';
+import { CoreSdk, CoreSdkOptions } from '../../core_sdk';
 import { DexieDatabase, getOrmConfig, SQLDatabase } from '../../database';
-import { CoreSdkOptions, CoreSdk } from '../../core_sdk';
 import { getNumWorkers } from '../get_num_workers';
 
 export function getLevelDb(memoryDb = false, identifier?: string): LevelUp {

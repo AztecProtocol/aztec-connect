@@ -369,6 +369,11 @@ const sortUserTxs = (txs: DexieUserTx[]) => {
   return [...unsettled, ...settled];
 };
 
+interface DexieMutex {
+  name: string;
+  expiredAt: number;
+}
+
 export class DexieDatabase implements Database {
   private dexie!: Dexie;
   private user!: Dexie.Table<DexieUser, number>;
@@ -378,6 +383,7 @@ export class DexieDatabase implements Database {
   private claimTx!: Dexie.Table<DexieClaimTx, number>;
   private key!: Dexie.Table<DexieKey, string>;
   private alias!: Dexie.Table<DexieAlias, number>;
+  private mutex!: Dexie.Table<DexieMutex, string>;
 
   constructor(private dbName = 'hummus', private version = 6) {}
 
@@ -400,6 +406,7 @@ export class DexieDatabase implements Database {
       alias: '&[aliasHash+address], aliasHash, address, latestNonce',
       claimTx: '&nullifier',
       key: '&name',
+      mutex: '&name',
       note: '++commitment, [owner+nullified], [owner+pending], nullifier, owner',
       user: '&id',
       userKeys: '&[accountId+key], accountId',
@@ -409,6 +416,7 @@ export class DexieDatabase implements Database {
 
     this.alias = this.dexie.table('alias');
     this.key = this.dexie.table('key');
+    this.mutex = this.dexie.table('mutex');
     this.note = this.dexie.table('note');
     this.user = this.dexie.table('user');
     this.userKeys = this.dexie.table('userKeys');
@@ -807,5 +815,24 @@ export class DexieDatabase implements Database {
     return alias
       ? new AccountId(new GrumpkinAddress(Buffer.from(alias.address)), nonce ?? alias.latestNonce)
       : undefined;
+  }
+
+  async acquireLock(name: string, timeout: number) {
+    const now = Date.now();
+    await this.mutex.filter(lock => lock.name === name && lock.expiredAt <= now).delete();
+    try {
+      await this.mutex.add({ name, expiredAt: now + timeout });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async extendLock(name: string, timeout: number) {
+    await this.mutex.update(name, { expiredAt: Date.now() + timeout });
+  }
+
+  async releaseLock(name: string) {
+    await this.mutex.delete(name);
   }
 }

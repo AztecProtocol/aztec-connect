@@ -1,13 +1,18 @@
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
+import { SerialQueue } from './serial_queue';
 
-export class SerialQueue {
+export class MemorySerialQueue implements SerialQueue {
   private readonly queue = new MemoryFifo<() => Promise<void>>();
 
   constructor() {
     this.queue.process(fn => fn());
   }
 
-  public destroy() {
+  public length() {
+    return this.queue.length();
+  }
+
+  public async destroy() {
     this.queue.cancel();
   }
 
