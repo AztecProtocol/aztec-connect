@@ -1,3 +1,4 @@
+import { formatCost } from 'app';
 import { DefiSettlementTime, TxSettlementTime } from '@aztec/sdk';
 import { SpeedSwitch } from 'ui-components';
 import { Text } from 'components';
@@ -5,12 +6,11 @@ import { useAmountCost } from 'alt-model';
 import { DefiGasSavings } from './def_gas_savings';
 import { Amount } from 'alt-model/assets';
 import { DefiRecipe } from 'alt-model/defi/types';
+import { RemoteAsset } from 'alt-model/types';
 import { DefiRollupTiming } from './defi_rollup_timing';
 import { InputSection } from '../input_section';
-import { formatCost } from 'app';
-import style from './gas_section.module.scss';
 import { MiniL1BalanceIndicator, MiniL2BalanceIndicator } from '../amount_section/mini_balance_indicators';
-import { RemoteAsset } from 'alt-model/types';
+import style from './gas_section.module.scss';
 
 export enum GasSectionType {
   DEFI = 'DEFI',
@@ -58,7 +58,7 @@ const mapFeeSubLabel = (options: DefiOption[] | TxOption[], feeAmounts?: (Amount
   );
 };
 
-function AmountDisplay({ feeAmount }: any) {
+function AmountDisplay({ feeAmount }: { feeAmount: Amount | undefined }) {
   const feeCost = useAmountCost(feeAmount);
   const feeCostStr = feeCost !== undefined ? `$${formatCost(feeCost)}` : undefined;
   return <div className={style.amountDisplay}>{feeCostStr}</div>;
@@ -75,7 +75,6 @@ function renderBalanceIndicator(balanceType: BalanceType, asset?: RemoteAsset) {
 
 export function GasSection({ type, speed, onChangeSpeed, feeAmounts, recipe, asset, balanceType }: GasSectionProps) {
   let options: DefiOption[] | TxOption[] = DEFI_OPTIONS;
-
   if (type === GasSectionType.DEFI) {
     options = mapFeeSubLabel(DEFI_OPTIONS, feeAmounts) as DefiOption[];
   } else if (type === GasSectionType.TX) {

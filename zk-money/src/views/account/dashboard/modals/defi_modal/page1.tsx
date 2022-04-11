@@ -76,7 +76,7 @@ export function Page1({
         }
         rightPanel={
           <PrivacyInformationSection
-            amount={validationResult.targetDepositAmount?.baseUnits || 0n}
+            amount={validationResult.validPayload?.targetDepositAmount?.baseUnits || 0n}
             asset={validationResult.input.depositAsset}
           />
         }
@@ -90,6 +90,7 @@ export function Page1({
             speed={fields.speed as DefiSettlementTime}
             onChangeSpeed={speed => onChangeSpeed(speed as DefiSettlementTime)}
             recipe={recipe}
+            feeAmounts={validationResult?.feeAmounts}
           />
         }
         rightPanel={<SettlementTimeInformationSection recipe={recipe} />}

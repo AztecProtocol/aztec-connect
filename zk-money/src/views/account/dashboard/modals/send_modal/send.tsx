@@ -65,8 +65,7 @@ export const Send: React.FunctionComponent<SendProps> = ({
     speed: TxSettlementTime.INSTANT,
     amountStr: '',
   });
-  const { amount, fees, speed, maxAmount, recipient, submit } = form;
-  const txFee = fees.value[speed.value];
+  const { amount, fees, maxAmount, recipient, submit } = form;
   const inputTheme = theme === Theme.WHITE ? InputTheme.WHITE : InputTheme.LIGHT;
   const feeAmounts = useAmounts(fees.value.map(feeValue => ({ assetId: asset.id, value: feeValue.fee })));
 

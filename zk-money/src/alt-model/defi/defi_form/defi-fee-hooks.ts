@@ -1,5 +1,5 @@
 import type { AssetValue, BridgeId, DefiSettlementTime } from '@aztec/sdk';
-import { useAmount, useSdk } from 'alt-model/top_level_context';
+import { useAmount, useAmounts, useSdk } from 'alt-model/top_level_context';
 import { useEffect, useState } from 'react';
 
 export function useDefiFeeAmount(bridgeId: BridgeId | undefined, speed: DefiSettlementTime) {
@@ -11,4 +11,15 @@ export function useDefiFeeAmount(bridgeId: BridgeId | undefined, speed: DefiSett
     }
   }, [sdk, bridgeId]);
   return useAmount(fees?.[speed]);
+}
+
+export function useDefiFeeAmounts(bridgeId: BridgeId | undefined) {
+  const sdk = useSdk();
+  const [fees, setFees] = useState<AssetValue[]>();
+  useEffect(() => {
+    if (bridgeId) {
+      sdk?.getDefiFees(bridgeId).then(setFees);
+    }
+  }, [sdk, bridgeId]);
+  return useAmounts(fees);
 }

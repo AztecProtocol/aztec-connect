@@ -17,6 +17,7 @@ interface DefiFormValidationInput {
   depositAsset: RemoteAsset;
   balanceInTargetAsset?: bigint;
   feeAmount?: Amount;
+  feeAmounts?: (Amount | undefined)[];
   balanceInFeePayingAsset?: bigint;
   transactionLimit?: bigint;
 }
@@ -24,6 +25,7 @@ interface DefiFormValidationInput {
 export interface DefiFormValidationResult {
   loading?: boolean;
   unrecognisedTargetAmount?: boolean;
+  feeAmounts?: (Amount | undefined)[];
   insufficientTargetAssetBalance?: boolean;
   insufficientFeePayingAssetBalance?: boolean;
   mustAllowForFee?: boolean;
@@ -42,6 +44,7 @@ export function validateDefiForm(input: DefiFormValidationInput): DefiFormValida
     amountFactory,
     balanceInTargetAsset,
     feeAmount,
+    feeAmounts,
     balanceInFeePayingAsset,
     transactionLimit,
     depositAsset,
@@ -90,5 +93,6 @@ export function validateDefiForm(input: DefiFormValidationInput): DefiFormValida
     validPayload,
     maxOutput,
     input,
+    feeAmounts,
   };
 }

@@ -35,6 +35,14 @@ export function useAmount(assetValue?: AssetValue) {
   return useMemo(() => assetValue && factory?.fromAssetValue(assetValue), [factory, assetValue]);
 }
 
+export function useAmounts(assetValues?: AssetValue[]) {
+  const factory = useAmountFactory();
+  return useMemo(
+    () => assetValues && assetValues.map(assetValue => factory?.fromAssetValue(assetValue)),
+    [factory, assetValues],
+  );
+}
+
 export function useStableEthereumProvider() {
   return useTopLevelContext().stableEthereumProvider;
 }
