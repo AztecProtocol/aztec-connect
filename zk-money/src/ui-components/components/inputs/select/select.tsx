@@ -11,11 +11,11 @@ interface SelectProps<T> {
   options: DropdownOption<T>[];
   placeholder?: string;
   className?: string;
-  onChange?: (value: string) => void;
+  value?: T;
+  onChange?: (value?: T) => void;
 }
 
 export function Select<T>(props: SelectProps<T>) {
-  const [selectedValue, setSelectedValue] = useState<string | undefined>(undefined);
   const [isOpen, setIsOpen] = useState(false);
 
   const handleTriggerDropdown = () => {
@@ -29,18 +29,16 @@ export function Select<T>(props: SelectProps<T>) {
   };
 
   const handleOptionSelect = (option: DropdownOption<T>) => {
-    setSelectedValue(option.label);
-    handleChange(option.label);
+    handleChange(option.value);
     handleCloseDropdown();
   };
 
   const handleOptionUnselect = () => {
-    setSelectedValue(undefined);
-    handleChange('');
+    handleChange(undefined);
     handleCloseDropdown();
   };
 
-  const handleChange = (value: string) => {
+  const handleChange = (value?: T) => {
     if (props.onChange) {
       props.onChange(value);
     }
@@ -50,8 +48,8 @@ export function Select<T>(props: SelectProps<T>) {
     <div className={cx(style.selectBox, props.className)} onClick={handleTriggerDropdown}>
       <div className={style.innerFrame}>
         <GradientDisclosureIcon />
-        <span className={style.value}>{selectedValue || props.placeholder}</span>
-        {selectedValue && (
+        <span className={style.value}>{props.value || props.placeholder}</span>
+        {props.value && (
           <div className={style.closeButton} onClick={handleOptionUnselect}>
             <CloseMiniIcon />
           </div>

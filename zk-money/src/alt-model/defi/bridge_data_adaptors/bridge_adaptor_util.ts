@@ -1,6 +1,6 @@
 import type { RemoteAsset } from 'alt-model/types';
 import { EthAddress } from '@aztec/sdk';
-import { AztecAsset, AztecAssetType } from './bridge_data_interface';
+import { AztecAsset, AztecAssetType } from '@aztec/bridge-clients/client-dest/src/client/bridge-data';
 import { BridgeInteractionAssets } from '../types';
 
 const ZERO_ADDRESS_STR = EthAddress.ZERO.toString();

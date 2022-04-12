@@ -1,5 +1,9 @@
 import type { Provider } from '@ethersproject/providers';
-import type { AsyncBridgeData, AsyncYieldBridgeData, YieldBridgeData } from './bridge_data_interface';
+import {
+  AsyncBridgeData,
+  YieldBridgeData,
+  AsyncYieldBridgeData,
+} from '@aztec/bridge-clients/client-dest/src/client/bridge-data';
 
 export type BridgeDataAdaptor =
   | {
@@ -22,4 +26,5 @@ export type BridgeDataAdaptorCreator = (
   provider: Provider,
   rollupContractAddress: string,
   bridgeContractAddress: string,
+  isGanache: boolean,
 ) => BridgeDataAdaptor;

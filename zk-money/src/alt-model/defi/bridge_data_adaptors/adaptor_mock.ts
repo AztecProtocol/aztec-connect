@@ -1,4 +1,10 @@
-import { YieldBridgeData, AssetValue, AztecAsset, AuxDataConfig, AsyncYieldBridgeData } from './bridge_data_interface';
+import {
+  AztecAsset,
+  YieldBridgeData,
+  AssetValue,
+  AuxDataConfig,
+  AsyncYieldBridgeData,
+} from '@aztec/bridge-clients/client-dest/src/client/bridge-data';
 import { BridgeDataAdaptorCreator } from './types';
 
 export class YieldBridgeDataMock implements YieldBridgeData {

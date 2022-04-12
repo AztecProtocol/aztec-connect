@@ -1,17 +1,27 @@
 import { useBalances } from 'alt-model';
+import { recipeFiltersToSearchStr } from 'alt-model/defi/recipe_filters';
 import { RemoteAsset } from 'alt-model/types';
 import { SendMode } from 'app';
 import { Pagination } from 'components/pagination';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { SendModal } from 'views/account/dashboard/modals/send_modal';
+import { ShieldModal } from 'views/account/dashboard/modals/shield_modal';
 import { HOLDINGS_PER_PAGE, slicePage } from './helpers';
 import { Holding } from './holding';
 
 export function TokenList() {
+  const navigate = useNavigate();
   const [sendModalAsset, setSendModalAsset] = useState<RemoteAsset | undefined>(undefined);
   const [withdrawModalAsset, setWithdrawModalAsset] = useState<RemoteAsset | undefined>(undefined);
+  const [shieldModalAsset, setShieldModalAsset] = useState<RemoteAsset | undefined>(undefined);
   const [page, setPage] = useState(1);
   const balances = useBalances();
+
+  const handleGoToEarn = (asset: RemoteAsset) => {
+    const searchStr = recipeFiltersToSearchStr({ assetSymbol: asset.symbol });
+    navigate(`/earn${searchStr}`);
+  };
 
   if (!balances) return <></>;
   if (balances.length === 0) return <div>You have no tokens yet.</div>;
@@ -20,7 +30,14 @@ export function TokenList() {
     <>
       {slicePage(balances ?? [], page).map((balance, idx) => {
         return (
-          <Holding key={idx} assetValue={balance} onSend={setSendModalAsset} onWidthdraw={setWithdrawModalAsset} />
+          <Holding
+            key={idx}
+            assetValue={balance}
+            onSend={setSendModalAsset}
+            onWidthdraw={setWithdrawModalAsset}
+            onShield={setShieldModalAsset}
+            onGoToEarn={handleGoToEarn}
+          />
         );
       })}
       {balances.length > HOLDINGS_PER_PAGE && (
@@ -40,6 +57,9 @@ export function TokenList() {
           asset={withdrawModalAsset}
           onClose={() => setWithdrawModalAsset(undefined)}
         />
+      )}
+      {shieldModalAsset && (
+        <ShieldModal preselectedAssetId={shieldModalAsset.id} onClose={() => setShieldModalAsset(undefined)} />
       )}
     </>
   );

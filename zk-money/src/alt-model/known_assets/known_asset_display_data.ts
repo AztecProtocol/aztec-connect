@@ -8,6 +8,7 @@ import ethWhiteIcon from '../../images/ethereum_white.svg';
 import rbtcIcon from '../../images/renBTC.svg';
 import rbtcGradientIcon from '../../images/renBTC_gradient.svg';
 import rbtcWhiteIcon from '../../images/renBTC_white.svg';
+import stEthGradientIcon from '../../images/steth_gradient.svg';
 import questionMarkBlackIcon from '../../images/question_mark_black.svg';
 import questionMarkWhiteIcon from '../../images/question_mark_white.svg';
 import { KNOWN_MAINNET_ASSET_ADDRESS_STRS as S } from './known_asset_addresses';
@@ -46,6 +47,8 @@ export function getAssetIconGradient(address: EthAddress) {
       return daiGradientIcon;
     case S.renBTC:
       return rbtcGradientIcon;
+    case S.wstETH:
+      return stEthGradientIcon;
     default:
       return questionMarkBlackIcon;
   }
@@ -59,5 +62,7 @@ export function getAssetPreferredFractionalDigits(address: EthAddress) {
       return 2;
     case S.renBTC:
       return 8;
+    case S.wstETH:
+      return 6;
   }
 }

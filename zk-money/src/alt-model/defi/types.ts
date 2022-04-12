@@ -2,10 +2,10 @@ import type { RemoteAsset } from 'alt-model/types';
 import type { BridgeDataAdaptorCreator } from './bridge_data_adaptors/types';
 
 export enum DefiInvestmentType {
-  FIXED_YIELD,
-  YIELD,
-  STAKING,
-  BORROW,
+  FIXED_YIELD = 'FIXED_YIELD',
+  YIELD = 'YIELD',
+  STAKING = 'STAKING',
+  BORROW = 'BORROW',
 }
 
 export enum KeyBridgeStat {
@@ -39,6 +39,7 @@ export interface DefiRecipe {
   openHandleAsset?: RemoteAsset;
   valueEstimationInteractionAssets: BridgeInteractionAssets;
   createAdaptor: BridgeDataAdaptorCreator;
+  projectName: string;
   name: string;
   logo: string;
   miniLogo: string;

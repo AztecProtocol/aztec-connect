@@ -56,6 +56,7 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
     entryInputAssetAddressA: KMAA.DAI,
     entryOutputAssetAddressA: KMAA.DAI,
     createAdaptor: createElementAdaptor,
+    projectName: 'Element',
     name: 'Element Fixed Yield',
     investmentType: DefiInvestmentType.FIXED_YIELD,
     shortDesc: 'Deposit zkDAI into Element and receive a fixed yield back in xx Days as zkDAI',
@@ -75,6 +76,7 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
     entryInputAssetAddressA: KMAA.ETH,
     entryOutputAssetAddressA: KMAA.wstETH,
     createAdaptor: createLidoAdaptor,
+    projectName: 'Lido',
     name: 'Lido Staking',
     investmentType: DefiInvestmentType.STAKING,
     shortDesc:

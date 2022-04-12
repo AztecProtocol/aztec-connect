@@ -8,13 +8,14 @@ import style from './shield_modal.module.scss';
 
 interface ShieldModalProps {
   onClose: () => void;
+  preselectedAssetId?: number;
 }
 
 export function ShieldModal(props: ShieldModalProps) {
   const assets = useRemoteAssets();
   const { onClose } = props;
   const { fields, setters, validationResult, composerState, locked, attemptLock, feedback, submit, unlock } =
-    useShieldForm();
+    useShieldForm(props.preselectedAssetId);
 
   const handleClose = () => {
     if (!locked) {

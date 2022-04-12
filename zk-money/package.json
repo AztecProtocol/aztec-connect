@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@aztec/bridge-clients": "0.1.29",
+    "@aztec/bridge-clients": "^0.1.32",
     "@aztec/sdk": "file:../sdk/dest",
     "@storybook/addon-actions": "^6.4.14",
     "@storybook/addon-essentials": "^6.4.14",

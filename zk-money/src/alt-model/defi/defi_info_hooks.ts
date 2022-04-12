@@ -96,18 +96,16 @@ export function useExpectedOutput(recipe: DefiRecipe, auxData?: bigint, inputVal
 }
 
 export function useInteractionPresentValue(recipe: DefiRecipe, interactionNonce?: number) {
-  return undefined as undefined | AssetValue;
-  // This can be uncommented once the element adaptor is no longer using filterQuery from block 0
-  // const [presentValue, setPresentValue] = useState<AssetValue>();
-  // const dataAdaptor = useBridgeDataAdaptor(recipe.id);
-  // useEffect(() => {
-  //   if (dataAdaptor && interactionNonce !== undefined) {
-  //     dataAdaptor.adaptor.getInteractionPresentValue(BigInt(interactionNonce)).then(values => {
-  //       setPresentValue({ assetId: Number(values[0].assetId), value: values[0].assetId });
-  //     });
-  //   }
-  // }, [recipe, dataAdaptor, interactionNonce]);
-  // return presentValue;
+  const [presentValue, setPresentValue] = useState<AssetValue>();
+  const dataAdaptor = useBridgeDataAdaptor(recipe.id);
+  useEffect(() => {
+    if (dataAdaptor && interactionNonce !== undefined) {
+      dataAdaptor.adaptor.getInteractionPresentValue(BigInt(interactionNonce)).then(values => {
+        setPresentValue({ assetId: Number(values[0].assetId), value: values[0].amount });
+      });
+    }
+  }, [recipe, dataAdaptor, interactionNonce]);
+  return presentValue;
 }
 
 export function useDefaultExpectedOutput(recipe: DefiRecipe, inputValue?: bigint) {

@@ -109,6 +109,9 @@ export const Pagination: React.FunctionComponent<PaginationProps> = ({
   }
 
   const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+  if (totalPages <= 1) return <></>;
+
   const pages = getVisiblePageNumbers(totalPages, page, visiblePages, visibleEndPages);
   const pageButtons: React.ReactNode[] = [];
   pages.forEach((pageNo, i) => {

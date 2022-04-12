@@ -11,6 +11,7 @@ export const createElementAdaptor: BridgeDataAdaptorCreator = (
   provider,
   rollupContractAddress,
   bridgeContractAddress,
+  isGanache,
 ) => {
   const balancerAddress = '0xBA12222222228d8Ba445958a75a0704d566BF2C8';
 
@@ -20,7 +21,8 @@ export const createElementAdaptor: BridgeDataAdaptorCreator = (
     provider,
   ) as ElementBridge;
   const rollupContract = RollupProcessor__factory.connect(rollupContractAddress.toString(), provider);
-  const adaptor = new ElementBridgeData(elementBridgeContract, balancerContract, rollupContract);
+  const chainProperties = isGanache ? { chunkSize: 10 } : undefined;
+  const adaptor = new ElementBridgeData(elementBridgeContract, balancerContract, rollupContract, chainProperties);
   return {
     isAsync: true,
     isYield: true,
