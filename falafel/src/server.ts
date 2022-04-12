@@ -113,7 +113,16 @@ export class Server {
       numOuterRollupProofs,
       this.bridgeResolver,
     );
-    this.worldState = new WorldState(rollupDb, worldStateDb, blockchain, this.pipelineFactory, noteAlgo, metrics);
+    this.worldState = new WorldState(
+      rollupDb,
+      worldStateDb,
+      blockchain,
+      this.pipelineFactory,
+      noteAlgo,
+      metrics,
+      this.txFeeResolver,
+      this.bridgeResolver,
+    );
     this.txReceiver = new TxReceiver(
       barretenberg,
       noteAlgo,
@@ -197,7 +206,7 @@ export class Server {
   public async getStatus(): Promise<RollupProviderStatus> {
     const status = this.blockchain.getBlockchainStatus();
     const nextPublish = this.worldState.getNextPublishTime();
-    const txPoolProfile = this.worldState.getTxPoolProfile();
+    const txPoolProfile = await this.worldState.getTxPoolProfile();
     const { runtimeConfig, proverless } = this.configurator.getConfVars();
 
     const bridgeStats: BridgeStatus[] = [];
@@ -205,24 +214,16 @@ export class Server {
     fullSetOfBridges.forEach(pendingBridgeProfile => {
       const bridgeId = pendingBridgeProfile.bridgeId;
       const rt = nextPublish.bridgeTimeouts.get(bridgeId);
-      let gasAccrued = 0n;
       const bc: BridgeConfig = this.bridgeConfigs.find(config => config.bridgeId === bridgeId) || {
         bridgeId,
         numTxs: runtimeConfig.defaultDeFiBatchSize,
         rollupFrequency: 0,
       };
-      const nextRollupBridgeProfile = txPoolProfile.nextRollupProfile.bridgeProfiles.get(bridgeId);
-      if (nextRollupBridgeProfile) {
-        gasAccrued = nextRollupBridgeProfile.gasAccrued;
-      } else {
-        gasAccrued = pendingBridgeProfile.gasAccrued!;
-      }
-
       const bs = convertToBridgeStatus(
         bc,
         rt?.rollupNumber,
         rt?.timeout,
-        gasAccrued!,
+        pendingBridgeProfile.gasAccrued!,
         pendingBridgeProfile.gasThreshold!,
       );
       bridgeStats.push(bs);

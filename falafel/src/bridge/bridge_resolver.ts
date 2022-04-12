@@ -12,6 +12,11 @@ export class BridgeResolver {
     return this.bridgeConfigs.find(bc => bc.bridgeId == bridgeId);
   }
 
+  public getBridgeBatchSize(bridgeId: bigint) {
+    const bc = this.bridgeConfigs.find(bc => bc.bridgeId == bridgeId);
+    return bc ? bc.numTxs : this.defaultDeFiBatchSize;
+  }
+
   public getConfiguredBridgeIds() {
     return this.bridgeConfigs.map(bc => bc.bridgeId);
   }

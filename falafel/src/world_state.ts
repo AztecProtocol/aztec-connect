@@ -3,7 +3,7 @@ import { Timer } from '@aztec/barretenberg/timer';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
-import { ProofId, ProofData, JoinSplitProofData } from '@aztec/barretenberg/client_proofs';
+import { ProofId, ProofData, JoinSplitProofData, DefiDepositProofData } from '@aztec/barretenberg/client_proofs';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
 import { DefiInteractionNote, NoteAlgorithms, TreeClaimNote } from '@aztec/barretenberg/note_algorithms';
 import { OffchainDefiDepositData } from '@aztec/barretenberg/offchain_tx_data';
@@ -19,6 +19,10 @@ import { AccountDao, ClaimDao } from './entity';
 import { parseInteractionResult } from './rollup_db/parse_interaction_result';
 import { getTxTypeFromInnerProofData } from './get_tx_type';
 import { RollupTimeout, RollupTimeouts } from './pipeline_coordinator/publish_time_manager';
+import { BridgeProfile } from './pipeline_coordinator/rollup_profiler';
+import { createDefiRollupTx, RollupTx } from './pipeline_coordinator/bridge_tx_queue';
+import { TxFeeResolver } from './tx_fee_resolver';
+import { BridgeResolver } from './bridge';
 
 const innerProofDataToTxDao = (tx: InnerProofData, offchainTxData: Buffer, created: Date, txType: TxType) => {
   const txDao = new TxDao();
@@ -47,11 +51,17 @@ const rollupDaoToBlockBuffer = (dao: RollupDao) => {
     toBigIntBE(dao.gasPrice!),
   ).toBuffer();
 };
-
+type TxPoolProfile = {
+  pendingBridgeStats: Map<bigint, BridgeProfile>;
+  pendingTxCount: number;
+};
 export class WorldState {
   private blockQueue = new MemoryFifo<Block>();
-  private pipeline!: RollupPipeline;
+  private pipeline?: RollupPipeline;
   private blockBufferCache: Buffer[] = [];
+  private txPoolProfile!: TxPoolProfile;
+  private txPoolProfileValidUntil!: Date;
+  private expireTxPoolAfter = 60; // 60 seconds
 
   constructor(
     public rollupDb: RollupDb,
@@ -60,7 +70,18 @@ export class WorldState {
     private pipelineFactory: RollupPipelineFactory,
     private noteAlgo: NoteAlgorithms,
     private metrics: Metrics,
-  ) {}
+    private feeResolver: TxFeeResolver,
+    private bridgeResolver: BridgeResolver,
+    expireTxPoolAfter?: number,
+  ) {
+    this.txPoolProfile = {
+      pendingTxCount: 0,
+      pendingBridgeStats: new Map(),
+    };
+    if (expireTxPoolAfter) {
+      this.expireTxPoolAfter = expireTxPoolAfter;
+    }
+  }
 
   public async start() {
     await this.worldStateDb.start();
@@ -93,19 +114,69 @@ export class WorldState {
     } as RollupTimeouts;
   }
 
-  public getTxPoolProfile() {
-    return this.pipeline.getTxPoolProfile();
+  public async getTxPoolProfile() {
+    // getPendingTxs from rollup db
+    // remove the tranasctions that we know are in the next rollup currently being built
+    if (!this.txPoolProfileValidUntil || new Date().getTime() > this.txPoolProfileValidUntil.getTime()) {
+      const pendingTxs = await this.rollupDb.getPendingTxs();
+      let processedTransactions: TxDao[] = [];
+      if (this.pipeline) {
+        processedTransactions = await this.pipeline.getProccessedTxs();
+      }
+
+      const pendingTransactionsNotInRollup = pendingTxs.filter(elem =>
+        processedTransactions.find(tx => tx.id.toString('hex') == elem.id.toString('hex')) ? false : true,
+      );
+
+      const txPoolProfile: Map<bigint, BridgeProfile> = new Map();
+
+      for (let i = 0; i < pendingTransactionsNotInRollup.length; i++) {
+        const tx = pendingTransactionsNotInRollup[i];
+        const proof = new ProofData(tx.proofData);
+        if (proof.proofId !== ProofId.DEFI_DEPOSIT) continue;
+        const defiProof = new DefiDepositProofData(proof);
+        const rollupTx: RollupTx = createDefiRollupTx(tx, defiProof);
+        const bridgeId = rollupTx.bridgeId!;
+        let bridgeProfile = txPoolProfile.get(rollupTx.bridgeId!);
+
+        if (!bridgeProfile) {
+          bridgeProfile = {
+            gasAccrued: this.feeResolver.getSingleBridgeTxGas(bridgeId!) + rollupTx.excessGas,
+            gasThreshold: this.feeResolver.getFullBridgeGas(bridgeId!),
+            bridgeId,
+            numTxs: this.bridgeResolver.getBridgeBatchSize(bridgeId!),
+            earliestTx: rollupTx.tx.created,
+            latestTx: rollupTx.tx.created,
+          };
+        } else {
+          bridgeProfile.gasAccrued! += this.feeResolver.getSingleBridgeTxGas(bridgeId) + rollupTx.excessGas;
+          if (bridgeProfile.earliestTx! > rollupTx.tx.created) {
+            bridgeProfile.earliestTx = rollupTx.tx.created;
+          }
+          if (bridgeProfile.latestTx! < rollupTx.tx.created) {
+            bridgeProfile.latestTx = rollupTx.tx.created;
+          }
+        }
+        txPoolProfile.set(bridgeId, bridgeProfile);
+      }
+      this.txPoolProfile = {
+        pendingBridgeStats: txPoolProfile,
+        pendingTxCount: pendingTransactionsNotInRollup.length,
+      };
+      this.txPoolProfileValidUntil = new Date(Date.now() + this.expireTxPoolAfter);
+    }
+    return this.txPoolProfile;
   }
 
   public async stop() {
     this.blockQueue.cancel();
     this.blockchain.stop();
-    await this.pipeline.stop();
+    await this.pipeline?.stop();
     this.worldStateDb.stop();
   }
 
   public flushTxs() {
-    this.pipeline.flushTxs();
+    this.pipeline?.flushTxs();
   }
 
   private async syncStateFromInitFiles() {
@@ -202,7 +273,7 @@ export class WorldState {
    * Called to purge all received, unsettled txs, and reset the rollup pipeline.
    */
   public async resetPipeline() {
-    await this.pipeline.stop();
+    await this.pipeline?.stop();
     await this.worldStateDb.rollback();
     await this.rollupDb.deleteUnsettledRollups();
     await this.rollupDb.deleteOrphanedRollupProofs();
@@ -213,6 +284,8 @@ export class WorldState {
   private async startNewPipeline() {
     this.pipeline = await this.pipelineFactory.create();
     this.pipeline.start().catch(async err => {
+      await this.pipeline?.stop();
+      this.pipeline = undefined;
       console.log('PIPELINE PANIC!');
       console.log(err);
     });
@@ -225,7 +298,7 @@ export class WorldState {
    * Starts a new pipeline.
    */
   private async handleBlock(block: Block) {
-    await this.pipeline.stop();
+    await this.pipeline?.stop();
     await this.updateDbs(block);
     await this.startNewPipeline();
   }
