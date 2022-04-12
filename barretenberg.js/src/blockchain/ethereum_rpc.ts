@@ -26,7 +26,7 @@ export class EthereumRpc {
   /**
    * TODO: Return proper type with converted properties.
    */
-  public async getTransaction(txHash: TxHash) {
+  public async getTransactionByHash(txHash: TxHash): Promise<any> {
     const result = await this.provider.request({ method: 'eth_getTransactionByHash', params: [txHash.toString()] });
     return result;
   }

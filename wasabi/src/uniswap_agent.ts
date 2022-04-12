@@ -26,9 +26,11 @@ export class UniswapAgent {
   public async run() {
     try {
       this.user = await this.agent.createUser();
-      const deposit = UniswapAgent.getRequiredFunding();
-      await this.agent.fundEthAddress(this.user, deposit);
-      await (await this.agent.sendDeposit(this.user!, await this.calcDeposit()))?.awaitSettlement();
+      const requiredFunding = UniswapAgent.getRequiredFunding();
+      await this.agent.fundEthAddress(this.user, requiredFunding);
+      const deposit = await this.calcDeposit();
+      const controller = await this.agent.sendDeposit(this.user!, deposit);
+      await controller.awaitSettlement();
       for (let i = 0; i < this.numTransfers; i++) {
         // we need to swap and amount of wei, plus the fee for the return swap
         const weiValueToSwap = 1000000n + (await this.getDefiFee(bridgeConfigs[1])).value / SAFE_DAI_TO_ETH_RATE;

@@ -13,7 +13,7 @@ export interface RevertError {
 
 export interface Receipt {
   status: boolean;
-  blockNum: number;
+  blockNum?: number;
   revertError?: RevertError;
 }
 
@@ -33,12 +33,16 @@ export interface FeeData {
 export interface Blockchain extends BlockSource, BlockchainStatusSource, EthereumSigner {
   getProvider(): EthereumProvider;
 
-  getTransactionReceipt(txHash: TxHash): Promise<Receipt>;
+  /*
+   * Timeout is only considered for pending txs. i.e. If there is at least 1 confirmation, the timeout disables.
+   */
+  getTransactionReceipt(txHash: TxHash, timeoutSeconds?: number): Promise<Receipt>;
 
   /**
    * Will consider if the escape hatch window is open or not, waiting additional confirmations if it is.
+   * Timeout is only considered for pending txs. i.e. If there is at least 1 confirmation, the timeout disables.
    */
-  getTransactionReceiptSafe(txHash: TxHash): Promise<Receipt>;
+  getTransactionReceiptSafe(txHash: TxHash, timeoutSeconds?: number): Promise<Receipt>;
 
   getUserPendingDeposit(assetId: number, account: EthAddress): Promise<bigint>;
 

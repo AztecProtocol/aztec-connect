@@ -2,6 +2,7 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import {
   Asset,
   EthereumProvider,
+  EthereumRpc,
   FeeData,
   PriceFeed,
   SendTxOptions,
@@ -22,6 +23,7 @@ import { RollupProcessor } from './rollup_processor';
  */
 export class Contracts {
   private readonly provider!: Web3Provider;
+  private readonly ethereumRpc!: EthereumRpc;
 
   constructor(
     private readonly rollupProcessor: RollupProcessor,
@@ -34,6 +36,7 @@ export class Contracts {
     private readonly confirmations: number,
   ) {
     this.provider = new Web3Provider(ethereumProvider);
+    this.ethereumRpc = new EthereumRpc(ethereumProvider);
   }
 
   static fromAddresses(
@@ -162,6 +165,10 @@ export class Contracts {
 
   public async getUserPendingDeposit(assetId: number, account: EthAddress) {
     return this.rollupProcessor.getUserPendingDeposit(assetId, account);
+  }
+
+  public async getTransactionByHash(txHash: TxHash) {
+    return this.ethereumRpc.getTransactionByHash(txHash);
   }
 
   public async getTransactionReceipt(txHash: TxHash) {

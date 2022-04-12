@@ -144,16 +144,9 @@ export class Agent {
       }
     }
     if (assetBalance == 0n) {
-      console.log(
-        `agent ${this.id} not withdrawing ${
-          assetInfo.name
-        } to address ${userData.address.toString()} as our balance is 0`,
-      );
       return;
     }
-    console.log(
-      `agent ${this.id} withdrawing ${assetBalance} ${assetInfo.name} to ${userData.address.toString()}`,
-    );
+    console.log(`agent ${this.id} withdrawing ${assetBalance} ${assetInfo.name} to ${userData.address.toString()}`);
     const controller = this.sdk.createWithdrawController(
       user.id,
       signer,
@@ -170,7 +163,6 @@ export class Agent {
     const fee = toBaseUnits('420', 12);
     const value = (await this.sdk.getPublicBalance(0, userData.address)) - fee;
     if (value <= 0) {
-      console.log(`agent ${this.id} not refunding ${this.fundingAccount.address} as balance after fees was <= 0`);
       return;
     }
 

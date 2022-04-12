@@ -12,6 +12,7 @@ import { Block } from '@aztec/barretenberg/block_source';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { InitHelpers } from '@aztec/barretenberg/environment';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { Timer } from '@aztec/barretenberg/timer';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { EventEmitter } from 'events';
 import { Contracts } from './contracts/contracts';
@@ -266,21 +267,26 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
 
   /**
    * Wait for given transaction to be mined, and return receipt.
+   * Timeout is only considered for pending txs. i.e. If there is at least 1 confirmation, the timeout disables.
+   * Timeout can be detected because Receipt blockNum will be undefined.
    */
-  public async getTransactionReceipt(txHash: TxHash) {
-    const confs = this.config.minConfirmation || EthereumBlockchain.DEFAULT_MIN_CONFIRMATIONS;
+  public async getTransactionReceipt(
+    txHash: TxHash,
+    timeoutSeconds?: number,
+    confs = this.config.minConfirmation || EthereumBlockchain.DEFAULT_MIN_CONFIRMATIONS,
+  ): Promise<Receipt> {
+    const timer = new Timer();
     this.log(`Getting tx receipt for ${txHash}... (${confs} confirmations)`);
-    let txReceipt = await this.contracts.getTransactionReceipt(txHash);
-    while (!txReceipt || txReceipt.confirmations < confs) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      txReceipt = await this.contracts.getTransactionReceipt(txHash);
-    }
-    return { status: !!txReceipt.status, blockNum: txReceipt.blockNumber } as Receipt;
-  }
 
-  public async getTransactionReceiptSafe(txHash: TxHash) {
-    const confs = this.getRequiredConfirmations();
-    this.log(`Getting tx receipt for ${txHash} (${confs} confs)...`);
+    let tx = await this.contracts.getTransactionByHash(txHash);
+    while (!tx) {
+      if (timeoutSeconds !== undefined && timer.s() > timeoutSeconds) {
+        return { status: false };
+      }
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      tx = await this.contracts.getTransactionByHash(txHash);
+    }
+
     let txReceipt = await this.contracts.getTransactionReceipt(txHash);
     while (!txReceipt || txReceipt.confirmations < confs) {
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -291,6 +297,11 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       receipt.revertError = await this.contracts.getRevertError(txHash);
     }
     return receipt;
+  }
+
+  public async getTransactionReceiptSafe(txHash: TxHash, timeoutSeconds?: number) {
+    const confs = this.getRequiredConfirmations();
+    return this.getTransactionReceipt(txHash, timeoutSeconds, confs);
   }
 
   /**

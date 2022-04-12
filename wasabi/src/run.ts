@@ -1,6 +1,7 @@
 import { AgentManager } from './agent_manager';
 import { ElementAgentManager } from './element_agent_manager';
 import {
+  AztecSdk,
   createAztecSdk,
   EthAddress,
   EthAsset,
@@ -31,9 +32,16 @@ async function initSdk(provider: EthereumProvider, serverUrl: string, minConfirm
 /**
  * Return the amount of wei this process will take from the primary funding account.
  * We add 10% per loop.
- * We will refund if we drop below 110% requirement.
+ * We will re-fund if we drop below 110% requirement.
  */
-export function getAgentRequiredFunding(agentType: string, numAgents: number, loops = 10) {
+async function getAgentRequiredFunding(
+  sdk: AztecSdk,
+  agentType: string,
+  numAgents: number,
+  numTransfers: number,
+  assetIds: number[],
+  loops = 10,
+) {
   const fundingBufferPercent = 10n * BigInt(loops);
   switch (agentType) {
     case 'uniswap': {
@@ -49,7 +57,7 @@ export function getAgentRequiredFunding(agentType: string, numAgents: number, lo
       return { fundingThreshold, toFund };
     }
     case 'payment': {
-      const value = PaymentAgent.getRequiredFunding() * BigInt(numAgents);
+      const value = (await PaymentAgent.getRequiredFunding(sdk, assetIds[0], numTransfers)) * BigInt(numAgents);
       const fundingThreshold = (value * 110n) / 100n;
       const toFund = (value * (100n + fundingBufferPercent)) / 100n;
       return { fundingThreshold, toFund };
@@ -98,7 +106,14 @@ export async function run(
     // Loop until we successfully fund process address. It may fail if other processes are also trying to fund
     // from the funding account (nonce races). Once this process address is funded, we don't need to worry about
     // other wasabi's interferring with our txs.
-    const { toFund, fundingThreshold } = getAgentRequiredFunding(agentType, numAgents);
+    const { toFund, fundingThreshold } = await getAgentRequiredFunding(
+      sdk,
+      agentType,
+      numAgents,
+      numTxsPerAgent,
+      assets,
+      loops,
+    );
     while ((await sdk.getPublicBalance(0, processAddress)) < fundingThreshold) {
       try {
         console.log(`funding process address ${processAddress} with ${toFund} wei...`);
@@ -139,9 +154,7 @@ export async function run(
   // We are exiting gracefully, refund the funding account from our process account.
   const fee = toBaseUnits('420', 12);
   const value = (await sdk.getPublicBalance(0, processAddress)) - fee;
-  if (value <= 0) {
-    console.log(`agent manager not refunding ${fundingAddress} as balance after fees was <= 0`);
-  } else {
+  if (value > 0) {
     console.log(`refunding funding address ${fundingAddress} with ${value} wei...`);
     const txHash = await asset.transfer(value, processAddress, fundingAddress);
     await sdk.getTransactionReceipt(txHash);

@@ -1,22 +1,8 @@
-import { UniswapAgent } from './uniswap_agent';
-import { AztecSdk, EthAddress, EthereumRpc, WalletProvider, AssetValue } from '@aztec/sdk';
-import { PaymentAgent } from './payment_agent';
-import { ElementAgent } from './element_agent';
-import { purchaseAssets } from './assets';
+import { AssetValue, AztecSdk, EthAddress, EthereumRpc, WalletProvider } from '@aztec/sdk';
 import { EthAddressAndNonce } from './agent';
-
-export function getAgentRequiredFunding(agentType: string) {
-  switch (agentType) {
-    case 'payment':
-      return PaymentAgent.getRequiredFunding();
-    case 'element':
-      return ElementAgent.getRequiredFunding();
-    case 'uniswap':
-      return UniswapAgent.getRequiredFunding();
-    default:
-      throw new Error(`Unknown agent type: ${agentType}`);
-  }
-}
+import { purchaseAssets } from './assets';
+import { PaymentAgent } from './payment_agent';
+import { UniswapAgent } from './uniswap_agent';
 
 export class AgentManager {
   public constructor(

@@ -97,6 +97,7 @@ describe('ethereum_blockchain', () => {
       getBlockNumber: jest.fn().mockImplementation(async () => blocks.length),
       getChainId: jest.fn().mockResolvedValue(999),
       getTransactionReceipt: jest.fn(),
+      getTransactionByHash: jest.fn().mockReturnValue({}),
       getAssets: jest.fn().mockImplementation(() => blockchainAssets),
       getSupportedBridges: jest.fn().mockImplementation(() => blockchainBridges),
     } as any;

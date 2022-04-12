@@ -155,7 +155,7 @@ DEFINITIONS
 resource "aws_ecs_service" "halloumi" {
   name                               = "${var.DEPLOY_TAG}-halloumi-inner"
   cluster                            = data.terraform_remote_state.setup_iac.outputs.ecs_cluster_id
-  desired_count                      = 4
+  desired_count                      = 8
   deployment_maximum_percent         = 100
   deployment_minimum_healthy_percent = 0
   platform_version                   = "1.4.0"

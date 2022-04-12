@@ -24,10 +24,10 @@ export class PaymentAgent {
 
   /**
    * We need enough ETH to deposit funds to the contract, plus calcDeposit().
-   * Could do a better estimate of the cost of depositPendingFundsToContact().
+   * depositPendingFundsToContact() requires ~50,000 gas. Assume 4 gwei gas price = 0.0002 eth.
    */
-  public static getRequiredFunding() {
-    return toBaseUnits('0.01', 18);
+  public static async getRequiredFunding(sdk: AztecSdk, assetId: number, numTransfers: number) {
+    return toBaseUnits('0.0002', 18) + (await PaymentAgent.calcDeposit(sdk, assetId, numTransfers));
   }
 
   public async run() {
@@ -35,8 +35,11 @@ export class PaymentAgent {
       this.userA = await this.agent.createUser();
       this.userB = await this.agent.createUser();
 
-      await this.agent.fundEthAddress(this.userA, PaymentAgent.getRequiredFunding());
-      await (await this.agent.sendDeposit(this.userA, await this.calcDeposit()))?.awaitSettlement();
+      const requiredFunding = await PaymentAgent.getRequiredFunding(this.sdk, this.assetId, this.numTransfers);
+      const deposit = await PaymentAgent.calcDeposit(this.sdk, this.assetId, this.numTransfers);
+      await this.agent.fundEthAddress(this.userA, requiredFunding);
+      const controller = await this.agent.sendDeposit(this.userA, deposit);
+      await controller.awaitSettlement();
 
       if (this.assetId != 0) {
         await this.agent.fundEthAddress(this.userA, BigInt(this.numTransfers), this.assetId);
@@ -77,15 +80,15 @@ export class PaymentAgent {
   /**
    * We transfer 1 wei numTransfers times. Calculate deposit large enough for all fees and transfers.
    */
-  private async calcDeposit() {
-    const assetDepositFee = (await this.sdk.getDepositFees(this.assetId))[TxSettlementTime.NEXT_ROLLUP];
-    const assetWithdrawFee = (await this.sdk.getWithdrawFees(this.assetId))[TxSettlementTime.NEXT_ROLLUP];
-    const transferFee = (await this.sdk.getTransferFees(this.assetId))[TxSettlementTime.NEXT_ROLLUP];
-    const ethDepositFee = (await this.sdk.getWithdrawFees(0))[TxSettlementTime.NEXT_ROLLUP];
-    const ethWithdrawFee = (await this.sdk.getWithdrawFees(0))[TxSettlementTime.NEXT_ROLLUP];
-    const transfers = BigInt(this.numTransfers);
+  private static async calcDeposit(sdk: AztecSdk, assetId: number, numTransfers: number) {
+    const assetDepositFee = (await sdk.getDepositFees(assetId))[TxSettlementTime.NEXT_ROLLUP];
+    const assetWithdrawFee = (await sdk.getWithdrawFees(assetId))[TxSettlementTime.NEXT_ROLLUP];
+    const transferFee = (await sdk.getTransferFees(assetId))[TxSettlementTime.NEXT_ROLLUP];
+    const ethDepositFee = (await sdk.getWithdrawFees(0))[TxSettlementTime.NEXT_ROLLUP];
+    const ethWithdrawFee = (await sdk.getWithdrawFees(0))[TxSettlementTime.NEXT_ROLLUP];
+    const transfers = BigInt(numTransfers);
     const ethFees = ethDepositFee.value + ethWithdrawFee.value + transferFee.value * transfers;
-    return this.assetId == 0 ? ethFees : ethFees + assetDepositFee.value + assetWithdrawFee.value;
+    return assetId == 0 ? ethFees : ethFees + assetDepositFee.value + assetWithdrawFee.value;
   }
 
   private async transfer(sender: UserData, recipient: UserData, assetId = 0, value = 1n) {
