@@ -145,6 +145,8 @@ export interface CoreSdkInterface {
 
   getSpendableSum(assetId: number, userId: AccountId): Promise<bigint>;
 
+  getSpendableSums(userId: AccountId): Promise<AssetValue[]>;
+
   getNotes(userId: AccountId): Promise<Note[]>;
 
   pickNotes(userId: AccountId, assetId: number, value: bigint): Promise<Note[] | null>;

@@ -529,6 +529,10 @@ export class AztecSdk extends EventEmitter {
     return this.core.getSpendableSum(assetId, userId);
   }
 
+  public async getSpendableSums(userId: AccountId) {
+    return this.core.getSpendableSums(userId);
+  }
+
   public async getNotes(userId: AccountId) {
     return this.core.getNotes(userId);
   }

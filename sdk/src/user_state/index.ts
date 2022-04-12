@@ -655,6 +655,14 @@ export class UserState extends EventEmitter {
     return notePicker ? notePicker.getSpendableSum(pendingNullifiers) : BigInt(0);
   }
 
+  public async getSpendableSums() {
+    const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
+    return this.notePickers.map(({ assetId, notePicker }) => ({
+      assetId,
+      value: notePicker.getSpendableSum(pendingNullifiers),
+    }));
+  }
+
   public async getMaxSpendableValue(assetId: number) {
     const { notePicker } = this.notePickers.find(np => np.assetId === assetId) || {};
     const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();

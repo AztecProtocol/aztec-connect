@@ -328,6 +328,11 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     return userState.getSpendableSum(assetId);
   }
 
+  public async getSpendableSums(userId: AccountId) {
+    const userState = this.getUserState(userId);
+    return userState.getSpendableSums();
+  }
+
   public async getNotes(userId: AccountId) {
     return this.db.getUserNotes(userId);
   }

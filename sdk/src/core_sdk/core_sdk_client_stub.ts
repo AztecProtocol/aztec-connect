@@ -335,6 +335,11 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     return BigInt(valueStr);
   }
 
+  public async getSpendableSums(userId: AccountId) {
+    const sums = await this.backend.getSpendableSums(userId.toString());
+    return sums.map(assetValueFromJson);
+  }
+
   public async getNotes(userId: AccountId) {
     const notes = await this.backend.getNotes(userId.toString());
     return notes.map(noteFromJson);

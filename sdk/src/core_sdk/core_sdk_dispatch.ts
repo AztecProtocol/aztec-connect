@@ -262,6 +262,10 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     return this.request('getSpendableSum', [assetId, userId]);
   }
 
+  public async getSpendableSums(userId: string) {
+    return this.request('getSpendableSums', [userId]);
+  }
+
   public async getNotes(userId: string) {
     return this.request('getNotes', [userId]);
   }

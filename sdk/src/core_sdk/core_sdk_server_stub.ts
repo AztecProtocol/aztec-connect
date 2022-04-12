@@ -332,6 +332,11 @@ export class CoreSdkServerStub {
     return sum.toString();
   }
 
+  public async getSpendableSums(userId: string) {
+    const sums = await this.core.getSpendableSums(AccountId.fromString(userId));
+    return sums.map(assetValueToJson);
+  }
+
   public async getNotes(userId: string) {
     const notes = await this.core.getNotes(AccountId.fromString(userId));
     return notes.map(noteToJson);

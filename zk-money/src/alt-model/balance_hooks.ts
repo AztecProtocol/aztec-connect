@@ -66,15 +66,14 @@ export function useSpendableBalance(assetId: number) {
 export function useSpendableBalances() {
   const { accountId } = useApp();
   const sdk = useSdk();
-  const balances = useBalances();
   const [spendableBalances, setSpendableBalances] = useState<AssetValue[]>();
   useEffect(() => {
-    if (sdk && balances && accountId) {
-      Promise.all(
-        balances?.map(({ assetId }) => sdk.getSpendableSum(assetId, accountId).then(value => ({ assetId, value }))),
-      ).then(setSpendableBalances);
+    if (sdk && accountId) {
+      const updateSpendableSums = () => sdk.getSpendableSums(accountId).then(setSpendableBalances);
+      updateSpendableSums();
+      return listenAccountUpdated(sdk, accountId, updateSpendableSums);
     }
-  }, [balances, accountId, sdk]);
+  }, [accountId, sdk]);
   return spendableBalances;
 }
 
