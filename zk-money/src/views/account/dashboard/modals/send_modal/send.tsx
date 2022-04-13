@@ -24,7 +24,7 @@ interface SendFormFields {
 export interface SendProps {
   theme: Theme;
   asset: RemoteAsset;
-  assetPrice: bigint;
+  assetUnitPrice: bigint;
   txAmountLimit: bigint;
   spendableBalance: bigint;
   form: SendFormValues;
@@ -51,7 +51,7 @@ function getDescription(sendMode: SendMode) {
 export const Send: React.FunctionComponent<SendProps> = ({
   theme,
   asset,
-  assetPrice,
+  assetUnitPrice,
   txAmountLimit,
   sendMode,
   form,
@@ -74,7 +74,7 @@ export const Send: React.FunctionComponent<SendProps> = ({
       <SendProgress
         theme={theme}
         asset={asset}
-        assetPrice={assetPrice}
+        assetUnitPrice={assetUnitPrice}
         txAmountLimit={txAmountLimit}
         form={form}
         onGoBack={onGoBack}

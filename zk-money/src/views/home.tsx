@@ -129,7 +129,7 @@ const getUnsupportedText = (status: SupportStatus) => {
 
 export interface HomeState {
   supportStatus: SupportStatus;
-  ethPrice?: bigint;
+  ethUnitPrice?: bigint;
 }
 
 interface HomeProps {
@@ -143,7 +143,7 @@ export const Home: React.FunctionComponent<HomeProps> = ({
   onLogin,
   onSignupAndShield,
   isLoggedIn,
-  homeState: { supportStatus, ethPrice },
+  homeState: { supportStatus, ethUnitPrice },
 }) => {
   const [showUnsupported, setShowUnsupported] = useState(false);
 
@@ -171,7 +171,7 @@ export const Home: React.FunctionComponent<HomeProps> = ({
       <ContentRoot>
         <ShieldCol>
           <ShieldSelectWrapper>
-            <ShieldSelect onSubmit={handleSignupAndShield} ethPrice={ethPrice} />
+            <ShieldSelect onSubmit={handleSignupAndShield} ethUnitPrice={ethUnitPrice} />
             {!isLoggedIn && (
               <LoginBlock>
                 <Text size="s">

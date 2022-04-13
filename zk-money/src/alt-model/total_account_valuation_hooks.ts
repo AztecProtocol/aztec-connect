@@ -1,6 +1,6 @@
 import { AssetValue, UserDefiInteractionResultState } from '@aztec/sdk';
 import { useMemo } from 'react';
-import { useAggregatedAssetsPrice } from './price_hooks';
+import { useAggregatedAssetsBulkPrice } from './price_hooks';
 import { useBridgeDataAdaptorsMethodCaches, useDefiRecipes } from './top_level_context';
 import { useDefiTxs } from './defi_txs_hooks';
 import { Obs, useMaybeObs } from 'app/util/obs';
@@ -40,10 +40,10 @@ export function useTotalValuation() {
       return unfinalisedPresentValues.filter((x): x is AssetValue => !!x).concat(balances);
     }
   }, [balances, unfinalisedPresentValues]);
-  return useAggregatedAssetsPrice(combinedAssetValues);
+  return useAggregatedAssetsBulkPrice(combinedAssetValues);
 }
 
 export function useTotalSpendableValuation() {
   const balances = useSpendableBalances();
-  return useAggregatedAssetsPrice(balances);
+  return useAggregatedAssetsBulkPrice(balances);
 }

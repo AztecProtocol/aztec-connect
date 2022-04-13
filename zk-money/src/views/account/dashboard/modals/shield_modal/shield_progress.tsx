@@ -10,7 +10,7 @@ interface ShieldProgressProps {
   theme: Theme;
   form: ShieldFormValues;
   asset: RemoteAsset;
-  assetPrice: bigint;
+  assetUnitPrice: bigint;
   txAmountLimit: bigint;
   providerState?: ProviderState;
   onChangeWallet(walletId: WalletId): void;
@@ -23,7 +23,7 @@ interface ShieldProgressProps {
 export const ShieldProgress: React.FunctionComponent<ShieldProgressProps> = ({
   theme,
   asset,
-  assetPrice,
+  assetUnitPrice,
   txAmountLimit,
   providerState,
   form,
@@ -53,11 +53,13 @@ export const ShieldProgress: React.FunctionComponent<ShieldProgressProps> = ({
   const items = [
     {
       title: 'Amount',
-      content: <AssetInfoRow asset={asset} value={toBaseUnits(amount.value, asset.decimals)} price={assetPrice} />,
+      content: (
+        <AssetInfoRow asset={asset} value={toBaseUnits(amount.value, asset.decimals)} unitPrice={assetUnitPrice} />
+      ),
     },
     {
       title: 'Fee',
-      content: <AssetInfoRow asset={asset} value={fee} price={assetPrice} />,
+      content: <AssetInfoRow asset={asset} value={fee} unitPrice={assetUnitPrice} />,
     },
     {
       title: 'Recipient',

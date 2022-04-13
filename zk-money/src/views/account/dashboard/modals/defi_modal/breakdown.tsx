@@ -1,7 +1,7 @@
 import { RemoteAsset } from 'alt-model/types';
 import styled from 'styled-components/macro';
-import { useAssetPrice } from 'alt-model';
-import { convertToPriceString, fromBaseUnits } from 'app';
+import { useAssetUnitPrice } from 'alt-model';
+import { formatValueAsBulkPrice, fromBaseUnits } from 'app';
 import { ShieldedAssetIcon, Text } from 'components';
 import { spacings } from 'styles';
 
@@ -17,14 +17,14 @@ interface RowProps {
   label: string;
   value: bigint;
   asset: RemoteAsset;
-  assetPrice: bigint;
+  assetUnitPrice: bigint;
 }
 
-function Row({ asset, value, label, assetPrice }: RowProps) {
+function Row({ asset, value, label, assetUnitPrice }: RowProps) {
   return (
     <>
       <Text text={label} />
-      <Text color="grey" size="s" text={`$${convertToPriceString(value, asset.decimals, assetPrice)}`} />
+      <Text color="grey" size="s" text={`$${formatValueAsBulkPrice(value, asset.decimals, assetUnitPrice)}`} />
       <ShieldedAssetIcon size="s" address={asset.address} />
       <Text size="s" weight="bold" italic text={`${fromBaseUnits(value, asset.decimals)} ${asset.symbol}`} />
     </>
@@ -38,13 +38,13 @@ interface BreakdownProps {
 }
 
 export function Breakdown({ asset, amount, fee }: BreakdownProps) {
-  const assetPrice = useAssetPrice(asset.id);
+  const assetUnitPrice = useAssetUnitPrice(asset.id);
 
   return (
     <Table>
-      <Row label="Amount" value={amount} asset={asset} assetPrice={assetPrice ?? 0n} />
-      <Row label="Gas Fee" value={fee} asset={asset} assetPrice={assetPrice ?? 0n} />
-      <Row label="Total Cost" value={amount + fee} asset={asset} assetPrice={assetPrice ?? 0n} />
+      <Row label="Amount" value={amount} asset={asset} assetUnitPrice={assetUnitPrice ?? 0n} />
+      <Row label="Gas Fee" value={fee} asset={asset} assetUnitPrice={assetUnitPrice ?? 0n} />
+      <Row label="Total Cost" value={amount + fee} asset={asset} assetUnitPrice={assetUnitPrice ?? 0n} />
     </Table>
   );
 }

@@ -1,8 +1,8 @@
-import { formatCost } from 'app';
+import { formatBulkPrice } from 'app';
 import { DefiSettlementTime, TxSettlementTime } from '@aztec/sdk';
 import { SpeedSwitch } from 'ui-components';
 import { Text } from 'components';
-import { useAmountCost } from 'alt-model';
+import { useAmountBulkPrice } from 'alt-model';
 import { DefiGasSavings } from './def_gas_savings';
 import { Amount } from 'alt-model/assets';
 import { DefiRecipe } from 'alt-model/defi/types';
@@ -59,9 +59,9 @@ const mapFeeSubLabel = (options: DefiOption[] | TxOption[], feeAmounts?: (Amount
 };
 
 function AmountDisplay({ feeAmount }: { feeAmount: Amount | undefined }) {
-  const feeCost = useAmountCost(feeAmount);
-  const feeCostStr = feeCost !== undefined ? `$${formatCost(feeCost)}` : undefined;
-  return <div className={style.amountDisplay}>{feeCostStr}</div>;
+  const feeBulkPrice = useAmountBulkPrice(feeAmount);
+  const feeBulkPriceStr = feeBulkPrice !== undefined ? `$${formatBulkPrice(feeBulkPrice)}` : undefined;
+  return <div className={style.amountDisplay}>{feeBulkPriceStr}</div>;
 }
 
 function renderBalanceIndicator(balanceType: BalanceType, asset?: RemoteAsset) {

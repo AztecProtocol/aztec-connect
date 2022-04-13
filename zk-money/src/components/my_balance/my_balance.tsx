@@ -1,4 +1,4 @@
-import { convertPriceToString } from 'app';
+import { formatBulkPrice } from 'app';
 import styled from 'styled-components/macro';
 import { Card, CardHeaderSize } from 'ui-components';
 import { InfoButton } from '..';
@@ -53,10 +53,10 @@ const Available = styled.h2`
 `;
 
 export function MyBalance() {
-  const totalBalance = useTotalValuation();
-  const totalBalanceStr = totalBalance !== undefined && convertPriceToString(totalBalance);
-  const totalSpendableBalance = useTotalSpendableValuation();
-  const totalSpendableBalanceStr = totalSpendableBalance !== undefined && convertPriceToString(totalSpendableBalance);
+  const totalValuation = useTotalValuation();
+  const totalValuationStr = totalValuation !== undefined && formatBulkPrice(totalValuation);
+  const totalSpendableValuation = useTotalSpendableValuation();
+  const totalSpendableValuationStr = totalSpendableValuation !== undefined && formatBulkPrice(totalSpendableValuation);
 
   return (
     <Card
@@ -65,10 +65,12 @@ export function MyBalance() {
       cardContent={
         <BalanceWrapper>
           <AmountWrapper>
-            <Amount>{totalBalanceStr ? `$${totalBalanceStr}` : 'Loading...'}</Amount>
+            <Amount>{totalValuationStr ? `$${totalValuationStr}` : 'Loading...'}</Amount>
           </AmountWrapper>
           <InformationWrapper>
-            <Available>{totalSpendableBalanceStr ? `Available $${totalSpendableBalanceStr}` : 'Loading...'}</Available>
+            <Available>
+              {totalSpendableValuationStr ? `Available $${totalSpendableValuationStr}` : 'Loading...'}
+            </Available>
             <InfoButton />
           </InformationWrapper>
         </BalanceWrapper>

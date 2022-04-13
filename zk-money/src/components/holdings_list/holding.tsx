@@ -4,8 +4,8 @@ import { Dropdown, DropdownOption } from '../dropdown';
 import sendToL1Icon from '../../images/l1_send.svg';
 import sendToL2Icon from '../../images/l2_send.svg';
 import ellipsisIcon from '../../images/ellipsis.svg';
-import { formatCost } from '../../app';
-import { useAmountCost } from '../../alt-model';
+import { formatBulkPrice } from '../../app';
+import { useAmountBulkPrice } from '../../alt-model';
 import { RemoteAsset } from 'alt-model/types';
 import style from './holding.module.scss';
 import { ShieldedAssetIcon } from '..';
@@ -32,8 +32,8 @@ export function Holding({ assetValue, onSend, onWidthdraw, onShield, onGoToEarn 
 
   const amount = useAmount(assetValue);
   const asset = amount?.info;
-  const cost = useAmountCost(amount);
-  const costStr = cost ? `$${formatCost(cost)}` : '';
+  const bulkPrice = useAmountBulkPrice(amount);
+  const bulkPriceStr = bulkPrice ? `$${formatBulkPrice(bulkPrice)}` : '';
   const shieldSupported = SHIELDABLE_ASSET_ADDRESSES.some(x => asset?.address.equals(x));
   const opts = shieldSupported ? DROPDOWN_OPTIONS : DROPDOWN_OPTIONS.filter(x => x.value !== 'shield');
 
@@ -64,7 +64,7 @@ export function Holding({ assetValue, onSend, onWidthdraw, onShield, onGoToEarn 
         <ShieldedAssetIcon address={asset.address} />
         <div className={style.holdingUnits}>{amount.format({ uniform: true })}</div>
       </div>
-      <div className={style.holdingAmount}>{costStr}</div>
+      <div className={style.holdingAmount}>{bulkPriceStr}</div>
       <div className={style.buttonsWrapper}>
         <div className={style.button} onClick={() => onWidthdraw?.(asset)}>
           <img className={style.buttonIcon} src={sendToL1Icon} alt="Send to L1 button" />

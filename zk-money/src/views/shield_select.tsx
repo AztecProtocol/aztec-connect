@@ -3,7 +3,7 @@ import styled from 'styled-components/macro';
 import { Button, Select, ShieldedAssetIcon, Text } from '../components';
 import { borderRadiuses, colours, defaultTextColour, fontSizes, inputSizes, spacings, themeColours } from '../styles';
 import arrowDownGradient from '../images/arrow_down_gradient.svg';
-import { convertToPriceString, formatBaseUnits, toBaseUnits } from '../app';
+import { formatValueAsBulkPrice, formatBaseUnits, toBaseUnits } from '../app';
 import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from 'alt-model/known_assets/known_asset_addresses';
 import { useRemoteAssetForId } from 'alt-model/top_level_context';
 
@@ -83,10 +83,10 @@ const AMOUNT_OPTS = ['0.01', '0.1', '1', '10'].map(x => toBaseUnits(x, 18));
 
 interface ShieldSelectProps {
   onSubmit: (value: bigint) => void;
-  ethPrice?: bigint;
+  ethUnitPrice?: bigint;
 }
 
-export const ShieldSelect: React.FunctionComponent<ShieldSelectProps> = ({ onSubmit, ethPrice }) => {
+export const ShieldSelect: React.FunctionComponent<ShieldSelectProps> = ({ onSubmit, ethUnitPrice }) => {
   const assetEth = useRemoteAssetForId(0);
   const items = useMemo(
     () =>
@@ -95,7 +95,7 @@ export const ShieldSelect: React.FunctionComponent<ShieldSelectProps> = ({ onSub
         const label = (
           <SelectItemContent>
             <Text color="grey" italic size="m">
-              {ethPrice !== undefined && `$${convertToPriceString(amount, assetEth.decimals, ethPrice)}`}
+              {ethUnitPrice !== undefined && `$${formatValueAsBulkPrice(amount, assetEth.decimals, ethUnitPrice)}`}
             </Text>
             <Text color={defaultTextColour} size="m">
               {formatBaseUnits(amount, assetEth.decimals)} {assetEth.symbol}
@@ -105,7 +105,7 @@ export const ShieldSelect: React.FunctionComponent<ShieldSelectProps> = ({ onSub
         const content = <SelectItem>{label}</SelectItem>;
         return { id: amount, label, content };
       }),
-    [ethPrice, assetEth],
+    [ethUnitPrice, assetEth],
   );
   const [selectedAmount, setSelectedAmount] = useState(AMOUNT_OPTS[1]);
   const selectedItem = items?.find(x => x.id === selectedAmount);

@@ -51,7 +51,7 @@ export function usePriceFeedObsCache() {
   return useTopLevelContext().priceFeedObsCache;
 }
 
-export function useGasPrice() {
+export function useGasUnitPrice() {
   const { gasPriceObs } = useTopLevelContext();
   return useObs(gasPriceObs);
 }

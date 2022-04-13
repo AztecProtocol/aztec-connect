@@ -49,23 +49,22 @@ export const formatBaseUnits = (
   }).format(baseUnitsToFloat(value, decimals));
 };
 
-export const convertToPrice = (value: bigint, decimals: number, priceBaseUnits: bigint) =>
-  (value * priceBaseUnits) / tenTo(decimals);
+export const convertToBulkPrice = (value: bigint, decimals: number, unitPriceBaseUnits: bigint) =>
+  (value * unitPriceBaseUnits) / tenTo(decimals);
 
 export const PRICE_DECIMALS = 8;
 
-export const convertToPriceString = (
+export const formatValueAsBulkPrice = (
   value: bigint,
-  decimals: number,
-  priceBaseUnits: bigint,
+  valueDecimals: number,
+  unitPriceBaseUnits: bigint,
   priceDecimals = PRICE_DECIMALS,
   precision = 2,
 ) =>
-  formatBaseUnits(convertToPrice(value, decimals, priceBaseUnits), priceDecimals, { precision, commaSeparated: true });
+  formatBaseUnits(convertToBulkPrice(value, valueDecimals, unitPriceBaseUnits), priceDecimals, {
+    precision,
+    commaSeparated: true,
+  });
 
-export const convertPriceToString = (price: bigint, priceDecimals = PRICE_DECIMALS, precision = 2) =>
-  formatBaseUnits(price, priceDecimals, { precision, commaSeparated: true });
-
-export function formatCost(baseUnits: bigint) {
-  return formatBaseUnits(baseUnits, PRICE_DECIMALS, { precision: 2 });
-}
+export const formatBulkPrice = (baseUnits: bigint, priceDecimals = PRICE_DECIMALS, precision = 2) =>
+  formatBaseUnits(baseUnits, priceDecimals, { precision, commaSeparated: true });

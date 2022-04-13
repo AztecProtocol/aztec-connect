@@ -1,7 +1,7 @@
 import { AssetValue, toBaseUnits } from '@aztec/sdk';
 import { getAssetPreferredFractionalDigits } from 'alt-model/known_assets/known_asset_display_data';
 import { RemoteAsset } from 'alt-model/types';
-import { baseUnitsToFloat, convertToPrice, formatBaseUnits } from 'app';
+import { baseUnitsToFloat, convertToBulkPrice, formatBaseUnits } from 'app';
 
 export class Amount {
   constructor(readonly baseUnits: bigint, readonly info: RemoteAsset) {}
@@ -50,7 +50,7 @@ export class Amount {
     return `${numStr} ${symbolPrefix}${this.info.symbol}`;
   }
 
-  toUsd(assetPrice: bigint) {
-    return convertToPrice(this.baseUnits, this.info.decimals, assetPrice);
+  toBulkPrice(assetUnitPrice: bigint) {
+    return convertToBulkPrice(this.baseUnits, this.info.decimals, assetUnitPrice);
   }
 }

@@ -3,7 +3,7 @@ import { isKnownAssetAddressString } from 'alt-model/known_assets/known_asset_ad
 import type { RemoteAsset } from 'alt-model/types';
 import { Card, CardHeaderSize } from 'ui-components';
 import { debounce } from 'lodash';
-import { useApp, useAssetPrice, useProviderState, useSendForm } from 'alt-model';
+import { useApp, useAssetUnitPrice, useProviderState, useSendForm } from 'alt-model';
 import { SendMode, SendStatus } from 'app';
 import { CloseButtonWhite, Modal } from 'components';
 import { Theme } from 'styles';
@@ -32,7 +32,7 @@ export function SendModal({ asset, onClose, sendMode = SendMode.SEND }: SendModa
   const { formValues, sendForm, processing, spendableBalance } = useSendForm(asset, sendMode);
   const generatingKey = formValues?.status.value === SendStatus.GENERATE_KEY;
   const theme = generatingKey ? Theme.GRADIENT : Theme.WHITE;
-  const assetPrice = useAssetPrice(asset.id);
+  const assetUnitPrice = useAssetUnitPrice(asset.id);
   const providerState = useProviderState();
   const canClose = !processing && !generatingKey;
   const overrideModalLayout = !generatingKey;
@@ -63,7 +63,7 @@ export function SendModal({ asset, onClose, sendMode = SendMode.SEND }: SendModa
           <SendLayout
             theme={theme}
             asset={asset}
-            assetPrice={assetPrice ?? 0n}
+            assetUnitPrice={assetUnitPrice ?? 0n}
             txAmountLimit={txAmountLimit}
             spendableBalance={spendableBalance}
             providerState={providerState}

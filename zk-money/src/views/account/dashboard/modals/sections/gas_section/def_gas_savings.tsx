@@ -1,7 +1,7 @@
 import type { Amount } from 'alt-model/assets';
-import { useAmountCost, useRollupProviderStatus } from 'alt-model';
-import { useGasCost } from 'alt-model/gas/gas_hooks';
-import { formatCost } from 'app';
+import { useAmountBulkPrice, useRollupProviderStatus } from 'alt-model';
+import { useGasBulkPrice } from 'alt-model/gas/gas_hooks';
+import { formatBulkPrice } from 'app';
 
 interface DefiGasSavingsProps {
   feeAmount?: Amount;
@@ -9,13 +9,13 @@ interface DefiGasSavingsProps {
 }
 
 export function DefiGasSavings({ feeAmount, bridgeAddressId }: DefiGasSavingsProps) {
-  const feeCost = useAmountCost(feeAmount);
+  const feeBulkPrice = useAmountBulkPrice(feeAmount);
   const rpStatus = useRollupProviderStatus();
   const bridgeStatus = rpStatus?.blockchainStatus.bridges.find(x => x.id === bridgeAddressId);
   const bridgeGas = bridgeStatus?.gasLimit !== undefined ? BigInt(bridgeStatus.gasLimit) : undefined;
-  const l1GasCost = useGasCost(bridgeGas);
-  if (l1GasCost === undefined || feeCost === undefined) return <></>;
-  const saving = l1GasCost - feeCost;
+  const l1GasBulkPrice = useGasBulkPrice(bridgeGas);
+  if (l1GasBulkPrice === undefined || feeBulkPrice === undefined) return <></>;
+  const saving = l1GasBulkPrice - feeBulkPrice;
   if (saving <= 0n) return <></>;
-  return <>You're saving {formatCost(saving)} compared to L1!</>;
+  return <>You're saving {formatBulkPrice(saving)} compared to L1!</>;
 }

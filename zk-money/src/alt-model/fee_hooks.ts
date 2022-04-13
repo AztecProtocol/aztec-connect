@@ -2,7 +2,7 @@ import createDebug from 'debug';
 import { useEffect, useMemo, useState } from 'react';
 import { AssetValue, EthAddress, TxSettlementTime } from '@aztec/sdk';
 import { Contract } from '@ethersproject/contracts';
-import { useSdk, useStableEthereumProvider, useGasPrice } from 'alt-model/top_level_context';
+import { useSdk, useStableEthereumProvider, useGasUnitPrice } from 'alt-model/top_level_context';
 import { listenPoll } from 'app/util';
 import { useRollupProviderStatus } from './rollup_provider_hooks';
 
@@ -60,14 +60,14 @@ async function getApproveProofGasEstimate(contract: Contract) {
   }
 }
 
-function costPlus10Percent(gas?: bigint, gasPrice?: bigint) {
-  if (gas === undefined || gasPrice === undefined) return undefined;
-  return (gas * gasPrice * 110n) / 100n;
+function costPlus10Percent(gas?: bigint, gasUnitPrice?: bigint) {
+  if (gas === undefined || gasUnitPrice === undefined) return undefined;
+  return (gas * gasUnitPrice * 110n) / 100n;
 }
 
 export function useEstimatedShieldingGasCosts(depositor?: EthAddress, assetId?: number) {
   const stableEthereumProvider = useStableEthereumProvider();
-  const gasPrice = useGasPrice();
+  const gasUnitPrice = useGasUnitPrice();
   const rpStatus = useRollupProviderStatus();
   const contractAddress = rpStatus?.blockchainStatus.feeDistributorContractAddress.toString();
   const [depositFundsGas, setDepositFundsGas] = useState<bigint>();
@@ -88,8 +88,8 @@ export function useEstimatedShieldingGasCosts(depositor?: EthAddress, assetId?: 
   }, [contract, fromAddressStr, assetId]);
 
   return {
-    depositFundsGasCost: costPlus10Percent(depositFundsGas, gasPrice),
-    approveProofGasCost: costPlus10Percent(approveProofGas, gasPrice),
+    depositFundsGasCost: costPlus10Percent(depositFundsGas, gasUnitPrice),
+    approveProofGasCost: costPlus10Percent(approveProofGas, gasUnitPrice),
   };
 }
 

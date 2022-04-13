@@ -1,5 +1,5 @@
 import { AssetValue } from '@aztec/sdk';
-import { convertToPrice } from 'app';
+import { convertToBulkPrice } from 'app';
 import { Obs, useMaybeObs } from 'app/util';
 import { mapToObj } from 'app/util/objects';
 import { useMemo } from 'react';
@@ -7,13 +7,13 @@ import { Amount } from './assets';
 import { useRollupProviderStatus } from './rollup_provider_hooks';
 import { usePriceFeedObsCache } from './top_level_context';
 
-export function useAssetPrice(assetId?: number) {
+export function useAssetUnitPrice(assetId?: number) {
   const priceFeedObsCache = usePriceFeedObsCache();
   const obs = assetId !== undefined ? priceFeedObsCache.get(assetId) : undefined;
   return useMaybeObs(obs);
 }
 
-export function useAssetPrices(assetIds?: number[]) {
+export function useAssetUnitPrices(assetIds?: number[]) {
   const priceFeedObsCache = usePriceFeedObsCache();
   const obs = useMemo(() => {
     if (assetIds) {
@@ -24,28 +24,28 @@ export function useAssetPrices(assetIds?: number[]) {
   return useMaybeObs(obs);
 }
 
-export function useAggregatedAssetsPrice(assetValues?: AssetValue[]) {
+export function useAggregatedAssetsBulkPrice(assetValues?: AssetValue[]) {
   const rpStatus = useRollupProviderStatus();
 
   const assetIds = useMemo(() => assetValues?.map(x => x.assetId), [assetValues]);
-  const prices = useAssetPrices(assetIds);
+  const unitPrices = useAssetUnitPrices(assetIds);
 
   if (!assetValues) return undefined;
 
-  let aggregatedPrice = 0n;
+  let aggregatedBulkPrice = 0n;
   assetValues?.forEach(({ assetId, value }) => {
-    const price = prices?.[assetId];
+    const unitPrice = unitPrices?.[assetId];
     const asset = rpStatus?.blockchainStatus.assets[assetId];
-    if (price !== undefined && asset !== undefined) {
-      aggregatedPrice += convertToPrice(value, asset.decimals, price);
+    if (unitPrice !== undefined && asset !== undefined) {
+      aggregatedBulkPrice += convertToBulkPrice(value, asset.decimals, unitPrice);
     }
   });
 
-  return aggregatedPrice;
+  return aggregatedBulkPrice;
 }
 
-export function useAmountCost(amount?: Amount) {
-  const price = useAssetPrice(amount?.id);
-  if (price === undefined || amount === undefined) return;
-  return convertToPrice(amount.baseUnits, amount.info.decimals, price);
+export function useAmountBulkPrice(amount?: Amount) {
+  const unitPrice = useAssetUnitPrice(amount?.id);
+  if (unitPrice === undefined || amount === undefined) return;
+  return convertToBulkPrice(amount.baseUnits, amount.info.decimals, unitPrice);
 }

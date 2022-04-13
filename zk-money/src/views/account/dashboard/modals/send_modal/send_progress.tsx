@@ -16,7 +16,7 @@ const formatRecipient = (input: string, truncate = false) => {
 interface SendProgressProps {
   theme: Theme;
   asset: RemoteAsset;
-  assetPrice: bigint;
+  assetUnitPrice: bigint;
   txAmountLimit: bigint;
   form: SendFormValues;
   onGoBack(): void;
@@ -27,7 +27,7 @@ interface SendProgressProps {
 export const SendProgress: React.FunctionComponent<SendProgressProps> = ({
   theme,
   asset,
-  assetPrice,
+  assetUnitPrice,
   txAmountLimit,
   form,
   onGoBack,
@@ -41,11 +41,13 @@ export const SendProgress: React.FunctionComponent<SendProgressProps> = ({
   const items = [
     {
       title: 'Amount',
-      content: <AssetInfoRow asset={asset} value={toBaseUnits(amount.value, asset.decimals)} price={assetPrice} />,
+      content: (
+        <AssetInfoRow asset={asset} value={toBaseUnits(amount.value, asset.decimals)} unitPrice={assetUnitPrice} />
+      ),
     },
     {
       title: 'Fee',
-      content: <AssetInfoRow asset={asset} value={fee} price={assetPrice} />,
+      content: <AssetInfoRow asset={asset} value={fee} unitPrice={assetUnitPrice} />,
     },
     {
       title: 'Recipient',

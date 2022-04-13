@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
 import { BridgeId } from '@aztec/sdk';
-import { useAggregatedAssetsPrice } from 'alt-model';
+import { useAggregatedAssetsBulkPrice } from 'alt-model';
 import { DefiRecipe } from './types';
 import { baseUnitsToFloat, PRICE_DECIMALS } from 'app';
 import { useAmount, useBridgeDataAdaptorsMethodCaches } from 'alt-model/top_level_context';
 import { useMaybeObs, useObs } from 'app/util';
 import { Amount } from 'alt-model/assets';
-import { useAmountCost } from 'alt-model/price_hooks';
+import { useAmountBulkPrice } from 'alt-model/price_hooks';
 
 export function useBridgeDataAdaptor(recipeId: string) {
   const { adaptorsObsCache } = useBridgeDataAdaptorsMethodCaches();
@@ -42,7 +42,7 @@ export function useDefaultBridgeMarket(recipeId: string) {
 
 function useLiquidity(recipeId: string, auxData?: bigint) {
   const market = useBridgeMarket(recipeId, auxData);
-  return useAggregatedAssetsPrice(market);
+  return useAggregatedAssetsBulkPrice(market);
 }
 
 export function useDefaultLiquidity(recipeId: string) {
@@ -64,12 +64,12 @@ export function useExpectedYield(recipe: DefiRecipe, auxData?: bigint) {
   const output = useExpectedYearlyOuput(recipe.id, auxData, inputAmount.baseUnits);
   const outputAmount = useAmount(output);
 
-  const inputCost = useAmountCost(inputAmount);
-  const outputCost = useAmountCost(outputAmount);
+  const inputBulkPrice = useAmountBulkPrice(inputAmount);
+  const outputBulkPrice = useAmountBulkPrice(outputAmount);
 
-  if (outputCost === undefined || inputCost === undefined) return undefined;
-  const diff = baseUnitsToFloat(outputCost - inputCost, PRICE_DECIMALS);
-  const divisor = baseUnitsToFloat(inputCost, PRICE_DECIMALS);
+  if (outputBulkPrice === undefined || inputBulkPrice === undefined) return undefined;
+  const diff = baseUnitsToFloat(outputBulkPrice - inputBulkPrice, PRICE_DECIMALS);
+  const divisor = baseUnitsToFloat(inputBulkPrice, PRICE_DECIMALS);
   return diff / divisor;
 }
 

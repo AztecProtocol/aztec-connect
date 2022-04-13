@@ -3,7 +3,7 @@ import { bindStyle } from '../../../util/classnames';
 import { ReactComponent as Logo } from '../../../images/zk_money.svg';
 import style from './navbar.module.scss';
 import { useTotalValuation } from 'alt-model/total_account_valuation_hooks';
-import { convertPriceToString } from 'app';
+import { formatBulkPrice } from 'app';
 
 const cx = bindStyle(style);
 
@@ -38,8 +38,8 @@ const LINKS: LinkItem[] = [
 
 export function Navbar({ isLoggedIn, accountComponent, theme, onChange, onLogin }: NavbarProps): JSX.Element {
   const location = useLocation();
-  const totalBalance = useTotalValuation();
-  const totalBalanceStr = totalBalance !== undefined ? convertPriceToString(totalBalance) : 'Balance';
+  const totalValuation = useTotalValuation();
+  const totalValuationStr = totalValuation !== undefined ? formatBulkPrice(totalValuation) : 'Balance';
 
   return (
     <div className={style.headerRoot}>
@@ -74,7 +74,7 @@ export function Navbar({ isLoggedIn, accountComponent, theme, onChange, onLogin 
                 gradient: theme === Theme.GRADIENT,
               })}
             >
-              ${totalBalanceStr}
+              ${totalValuationStr}
             </Link>
             <div className={style.accountComponent}>{accountComponent}</div>
           </div>

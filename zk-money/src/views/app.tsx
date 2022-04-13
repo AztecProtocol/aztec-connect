@@ -136,9 +136,9 @@ export class AppView extends PureComponent<AppProps, AppState> {
           break;
       }
     };
-    const ethPrice = this.app.priceFeedService.getPrice(0);
-    if (ethPrice !== 0n) this.setState({ homeState: { ...this.state.homeState, ethPrice } });
-    this.app.priceFeedService.subscribe(0, this.handleEthPriceChange);
+    const ethUnitPrice = this.app.priceFeedService.getPrice(0);
+    if (ethUnitPrice !== 0n) this.setState({ homeState: { ...this.state.homeState, ethUnitPrice } });
+    this.app.priceFeedService.subscribe(0, this.handleEthUnitPriceChange);
     getSupportStatus().then(supportStatus => {
       this.setState({ homeState: { ...this.state.homeState, supportStatus } });
     });
@@ -160,7 +160,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
   }
 
   componentWillUnmount() {
-    this.app.priceFeedService.unsubscribe(0, this.handleEthPriceChange);
+    this.app.priceFeedService.unsubscribe(0, this.handleEthUnitPriceChange);
     this.app.destroy();
     this.channel.close();
   }
@@ -247,8 +247,8 @@ export class AppView extends PureComponent<AppProps, AppState> {
     this.onUserSessionDataChange();
   };
 
-  private handleEthPriceChange = (_: number, ethPrice: bigint) => {
-    this.setState({ homeState: { ...this.state.homeState, ethPrice } });
+  private handleEthUnitPriceChange = (_: number, ethUnitPrice: bigint) => {
+    this.setState({ homeState: { ...this.state.homeState, ethUnitPrice } });
   };
 
   private handleLogin = () => {

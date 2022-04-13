@@ -1,7 +1,7 @@
 import type { RemoteAsset } from 'alt-model/types';
 import React from 'react';
 import styled from 'styled-components/macro';
-import { convertToPriceString, fromBaseUnits } from '../../app';
+import { formatValueAsBulkPrice, fromBaseUnits } from '../../app';
 import { ShieldedAssetIcon, Text } from '../../components';
 import { breakpoints, fontSizes, spacings } from '../../styles';
 
@@ -30,12 +30,14 @@ const IconWrapper = styled.div`
 interface AssetInfoRowProps {
   asset: RemoteAsset;
   value: bigint;
-  price: bigint;
+  unitPrice: bigint;
 }
 
-export const AssetInfoRow: React.FunctionComponent<AssetInfoRowProps> = ({ asset, value, price }) => (
+export const AssetInfoRow: React.FunctionComponent<AssetInfoRowProps> = ({ asset, value, unitPrice }) => (
   <FlexRow>
-    {!!price && <PriceValue text={`$${convertToPriceString(value, asset.decimals, price)}`} size="m" color="grey" />}
+    {!!unitPrice && (
+      <PriceValue text={`$${formatValueAsBulkPrice(value, asset.decimals, unitPrice)}`} size="m" color="grey" />
+    )}
     <IconWrapper>
       <ShieldedAssetIcon size="s" address={asset.address} />
     </IconWrapper>
