@@ -13,6 +13,7 @@ export class HttpJobWorker {
   private interruptableSleep = new InterruptableSleep();
   private abortController!: AbortController;
   private pingTimeout?: NodeJS.Timeout;
+  private pingId = 0;
 
   constructor(public readonly server: Server, private url = 'http://localhost:8082') {}
 
@@ -58,7 +59,7 @@ export class HttpJobWorker {
         this.log('received job:', Protocol.logUnpack(work).id);
         const { id, cmd, data } = Protocol.unpack(work);
 
-        this.pingTimeout = setTimeout(() => this.ping(id), 1000);
+        this.pingTimeout = setTimeout(() => this.ping(this.pingId, id), 1000);
 
         const repBuf = await this.process(cmd, data)
           .then(res => Protocol.pack(id, Command.ACK, res))
@@ -71,18 +72,19 @@ export class HttpJobWorker {
       } finally {
         clearTimeout(this.pingTimeout!);
         this.pingTimeout = undefined;
+        this.pingId++;
       }
     }
     this.log('exiting function loop');
   }
 
-  private async ping(jobId: Buffer) {
-    if (!this.pingTimeout) {
+  private async ping(pingId: number, jobId: Buffer) {
+    if (pingId != this.pingId) {
       return;
     }
     this.log(`ping job: ${jobId.toString('hex')}`);
     await fetch(`${this.url}/ping?job-id=${jobId.toString('hex')}`).catch(() => undefined);
-    this.pingTimeout = setTimeout(() => this.ping(jobId), 1000);
+    this.pingTimeout = setTimeout(() => this.ping(pingId, jobId), 1000);
   }
 
   private async process(cmd: number, data: Buffer) {
