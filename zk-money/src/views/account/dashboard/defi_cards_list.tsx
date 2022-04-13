@@ -99,8 +99,14 @@ export const DefiCardsList = ({ onSelect, isLoggedIn }: DefiCardsListProps) => {
       />
       <div className={style.defiCardsListWrapper}>
         {hasFilters && filteredRecipes?.length === 0 && <div className={style.noResults}>No results found</div>}
-        {filteredRecipes?.map((recipe, idx) => (
-          <DefiCard key={idx} className={style.defiCard} recipe={recipe} onSelect={onSelect} isLoggedIn={isLoggedIn} />
+        {filteredRecipes?.map(recipe => (
+          <DefiCard
+            key={recipe.id}
+            className={style.defiCard}
+            recipe={recipe}
+            onSelect={onSelect}
+            isLoggedIn={isLoggedIn}
+          />
         ))}
       </div>
     </Section>

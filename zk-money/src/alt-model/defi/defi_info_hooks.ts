@@ -1,7 +1,6 @@
-import { AssetValue, BridgeId } from '@aztec/sdk';
+import { useMemo } from 'react';
+import { BridgeId } from '@aztec/sdk';
 import { useAggregatedAssetsPrice } from 'alt-model';
-import { useEffect, useMemo, useState } from 'react';
-import { toAdaptorArgs } from './bridge_data_adaptors/bridge_adaptor_util';
 import { DefiRecipe } from './types';
 import { baseUnitsToFloat, PRICE_DECIMALS } from 'app';
 import { useAmount, useBridgeDataAdaptorsMethodCaches } from 'alt-model/top_level_context';
@@ -79,36 +78,25 @@ export function useDefaultExpectedYield(recipe: DefiRecipe) {
   return useExpectedYield(recipe, auxData);
 }
 
-export function useExpectedOutput(recipe: DefiRecipe, auxData?: bigint, inputValue?: bigint) {
-  const [output, setOutput] = useState<AssetValue>();
-  const dataAdaptor = useBridgeDataAdaptor(recipe.id);
-  const { valueEstimationInteractionAssets } = recipe;
-  useEffect(() => {
-    if (dataAdaptor && auxData !== undefined && inputValue !== undefined) {
-      const { inA, inB, outA, outB } = toAdaptorArgs(valueEstimationInteractionAssets);
-      const outputAssetId = valueEstimationInteractionAssets.outA.id;
-      dataAdaptor.adaptor.getExpectedOutput(inA, inB, outA, outB, auxData, inputValue).then(values => {
-        setOutput({ assetId: outputAssetId, value: values[0] });
-      });
-    }
-  }, [dataAdaptor, auxData, inputValue, valueEstimationInteractionAssets]);
-  return output;
+export function useExpectedOutput(recipeId: string, auxData?: bigint, inputValue?: bigint) {
+  const { expectedOutputObsCache } = useBridgeDataAdaptorsMethodCaches();
+  const obs =
+    auxData !== undefined && inputValue !== undefined
+      ? expectedOutputObsCache.get([recipeId, auxData, inputValue])
+      : undefined;
+  return useMaybeObs(obs);
 }
 
 export function useInteractionPresentValue(recipe: DefiRecipe, interactionNonce?: number) {
-  const [presentValue, setPresentValue] = useState<AssetValue>();
-  const dataAdaptor = useBridgeDataAdaptor(recipe.id);
-  useEffect(() => {
-    if (dataAdaptor && interactionNonce !== undefined) {
-      dataAdaptor.adaptor.getInteractionPresentValue(BigInt(interactionNonce)).then(values => {
-        setPresentValue({ assetId: Number(values[0].assetId), value: values[0].amount });
-      });
-    }
-  }, [recipe, dataAdaptor, interactionNonce]);
-  return presentValue;
+  const { interactionPresentValueObsCache } = useBridgeDataAdaptorsMethodCaches();
+  const obs =
+    interactionNonce !== undefined
+      ? interactionPresentValueObsCache.get([recipe.id, BigInt(interactionNonce)])
+      : undefined;
+  return useMaybeObs(obs);
 }
 
 export function useDefaultExpectedOutput(recipe: DefiRecipe, inputValue?: bigint) {
   const auxData = useDefaultAuxDataOption(recipe.id);
-  return useExpectedOutput(recipe, auxData, inputValue);
+  return useExpectedOutput(recipe.id, auxData, inputValue);
 }

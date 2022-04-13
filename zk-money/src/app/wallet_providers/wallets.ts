@@ -1,6 +1,5 @@
 import metamaskIcon from '../../images/metamask.png';
 import connectIcon from '../../images/connect.png';
-import hotIcon from '../../images/hot_wallet.svg';
 
 export enum WalletId {
   METAMASK,
