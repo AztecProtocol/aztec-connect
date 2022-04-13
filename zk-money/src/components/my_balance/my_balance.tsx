@@ -2,7 +2,7 @@ import { convertPriceToString } from 'app';
 import styled from 'styled-components/macro';
 import { Card, CardHeaderSize } from 'ui-components';
 import { InfoButton } from '..';
-import { useTotalBalance, useTotalSpendableBalance } from '../../alt-model';
+import { useTotalValuation, useTotalSpendableValuation } from '../../alt-model/total_account_valuation_hooks';
 import { gradients } from '../../styles';
 import style from './my_balance.module.scss';
 
@@ -53,9 +53,9 @@ const Available = styled.h2`
 `;
 
 export function MyBalance() {
-  const totalBalance = useTotalBalance();
+  const totalBalance = useTotalValuation();
   const totalBalanceStr = totalBalance !== undefined && convertPriceToString(totalBalance);
-  const totalSpendableBalance = useTotalSpendableBalance();
+  const totalSpendableBalance = useTotalSpendableValuation();
   const totalSpendableBalanceStr = totalSpendableBalance !== undefined && convertPriceToString(totalSpendableBalance);
 
   return (

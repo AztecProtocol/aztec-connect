@@ -2,20 +2,9 @@ import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { AssetValue, JoinSplitTx } from '@aztec/sdk';
 import { useEffect, useMemo, useState } from 'react';
 import { listenAccountUpdated } from './event_utils';
-import { useAggregatedAssetsPrice } from './price_hooks';
 import { useApp } from './app_context';
 import { useProviderState } from './provider_hooks';
 import { useSdk } from './top_level_context';
-
-export function useTotalBalance() {
-  const balances = useBalances();
-  return useAggregatedAssetsPrice(balances);
-}
-
-export function useTotalSpendableBalance() {
-  const balances = useSpendableBalances();
-  return useAggregatedAssetsPrice(balances);
-}
 
 export function useBalance(assetId?: number) {
   const { accountId } = useApp();

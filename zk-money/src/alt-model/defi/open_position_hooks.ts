@@ -1,8 +1,9 @@
-import { AssetValue, BridgeId, UserDefiInteractionResultState, UserDefiTx } from '@aztec/sdk';
+import { AssetValue, UserDefiInteractionResultState, UserDefiTx } from '@aztec/sdk';
 import { useSpendableBalances } from 'alt-model/balance_hooks';
 import { useDefiTxs } from 'alt-model/defi_txs_hooks';
 import { useDefiRecipes } from 'alt-model/top_level_context';
 import { useMemo } from 'react';
+import { exitingRecipeMatcher, recipeMatcher } from './recipe_matchers';
 import { DefiRecipe } from './types';
 
 export type DefiPosition_Pending = {
@@ -26,29 +27,6 @@ export type DefiPosition_Async = {
   recipe: DefiRecipe;
 };
 export type DefiPosition = DefiPosition_Pending | DefiPosition_PendingExit | DefiPosition_Closable | DefiPosition_Async;
-
-function recipeMatcher(bridgeId: BridgeId) {
-  return (recipe: DefiRecipe) => {
-    // TODO: Handle input and output assets B
-    return (
-      recipe.addressId === bridgeId.addressId &&
-      recipe.flow.enter.inA.id === bridgeId.inputAssetIdA &&
-      recipe.flow.enter.outA.id === bridgeId.outputAssetIdA
-    );
-  };
-}
-
-function exitingRecipeMatcher(bridgeId: BridgeId) {
-  return (recipe: DefiRecipe) => {
-    // TODO: Handle input and output assets B
-    return (
-      recipe.flow.type === 'closable' &&
-      recipe.addressId === bridgeId.addressId &&
-      recipe.flow.exit.inA.id === bridgeId.inputAssetIdA &&
-      recipe.flow.exit.outA.id === bridgeId.outputAssetIdA
-    );
-  };
-}
 
 function aggregatePositions(balances: AssetValue[], defiTxs: UserDefiTx[], recipes: DefiRecipe[]) {
   const positions: DefiPosition[] = [];

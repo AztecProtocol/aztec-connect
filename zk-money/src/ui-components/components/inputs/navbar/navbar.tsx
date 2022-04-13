@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { bindStyle } from '../../../util/classnames';
 import { ReactComponent as Logo } from '../../../images/zk_money.svg';
 import style from './navbar.module.scss';
-import { useTotalBalance } from 'alt-model';
+import { useTotalValuation } from 'alt-model/total_account_valuation_hooks';
 import { convertPriceToString } from 'app';
 
 const cx = bindStyle(style);
@@ -38,7 +38,7 @@ const LINKS: LinkItem[] = [
 
 export function Navbar({ isLoggedIn, accountComponent, theme, onChange, onLogin }: NavbarProps): JSX.Element {
   const location = useLocation();
-  const totalBalance = useTotalBalance();
+  const totalBalance = useTotalValuation();
   const totalBalanceStr = totalBalance !== undefined ? convertPriceToString(totalBalance) : 'Balance';
 
   return (
