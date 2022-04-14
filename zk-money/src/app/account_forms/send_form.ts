@@ -269,13 +269,13 @@ export class SendForm extends EventEmitter implements AccountForm {
       this.debounceUpdateRecipientStatus.cancel();
       this.debounceUpdateRecipientTxType.cancel();
 
-      const recipient = changes.recipient.value.input;
-      let valid = ValueAvailability.PENDING;
-      let txType = this.values.recipient.value.txType;
-
-      valid = await this.getFormValidity(recipient);
-
-      changes.recipient = { value: { input: recipient, txType, valid } };
+      changes.recipient = {
+        value: {
+          input: changes.recipient.value.input,
+          txType: this.values.recipient.value.txType,
+          valid: ValueAvailability.PENDING,
+        },
+      };
     }
 
     this.refreshValues(changes);
@@ -305,15 +305,15 @@ export class SendForm extends EventEmitter implements AccountForm {
   }
 
   async softValidation() {
-    this.updateFormStatus(FormStatus.LOCKED);
+    // calculates if the recipient is valid
+    const valid = await this.getFormValidity(this.values.recipient.value.input);
+    this.refreshValues({ recipient: { value: { ...this.values.recipient.value, valid } } });
 
+    // calculates which errors/warnings to show
     const validated = await this.validateValues();
-
     if (!isValidForm(validated)) {
       this.updateFormValues(mergeValues(validated, { submit: { value: false } }));
     }
-
-    this.updateFormStatus(FormStatus.ACTIVE);
   }
 
   async lock() {

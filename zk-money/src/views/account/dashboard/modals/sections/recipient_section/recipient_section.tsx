@@ -14,6 +14,9 @@ const getRecipientInputStatus = (recipient: RecipientInput) => {
   if (recipient.messageType === MessageType.WARNING) {
     return InputStatus.WARNING;
   }
+  if (recipient.messageType === MessageType.ERROR) {
+    return InputStatus.ERROR;
+  }
   if (recipient.value.valid === ValueAvailability.PENDING) {
     return InputStatus.LOADING;
   }
