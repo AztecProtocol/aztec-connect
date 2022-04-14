@@ -12,7 +12,7 @@ import { FaqHint, formatMaxAmount } from 'ui-components';
 import { DescriptionSection, RecipientSection } from '../sections';
 import { useAmounts } from 'alt-model/asset_hooks';
 import { PrivacyInformationSection } from '../sections/privacy_information_section';
-import { SettlementTimeInformationSection } from '../sections/settlement_time_information_section';
+import { TransactionSettlementTimeInformationSection } from '../sections/settlement_time_information_section';
 import style from './send.module.scss';
 import { MAX_MODE, StrOrMax } from 'alt-model/forms/constants';
 
@@ -136,7 +136,7 @@ export const Send: React.FunctionComponent<SendProps> = ({
             feeAmounts={feeAmounts}
           />
         }
-        rightPanel={<div />}
+        rightPanel={<TransactionSettlementTimeInformationSection selectedSpeed={fields.speed} />}
       />
       <div className={style.footer}>
         <FaqHint className={style.faqHint} />

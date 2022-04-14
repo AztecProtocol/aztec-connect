@@ -30,7 +30,7 @@ const ModalWrapper = styled.div`
   display: flex;
   flex-direction: column;
   width: 66vw;
-  max-width: 900px;
+  max-width: 950px;
   overflow-y: auto;
 `;
 

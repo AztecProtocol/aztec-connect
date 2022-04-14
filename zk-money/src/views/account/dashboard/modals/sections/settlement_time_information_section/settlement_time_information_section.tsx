@@ -1,12 +1,24 @@
 import moment from 'moment';
 import { ProgressBar } from 'ui-components';
+import { TxSettlementTime } from '@aztec/sdk';
+import { useRollupProviderStatus } from 'alt-model';
 import { DefiRecipe } from 'alt-model/defi/types';
 import { InformationSection } from '../information_section';
 import { useDefaultCountDownData } from 'features/defi/bridge_count_down/bridge_count_down_hooks';
 import style from './settlement_time_information_section.module.scss';
 
 interface SettlementTimeInformationSectionProps {
+  timeStr: string;
+  remainingSlots: number;
+  progress: number;
+}
+
+interface RecipeSettlementTimeInformationSectionProps {
   recipe: DefiRecipe;
+}
+
+interface TransactionSettlementTimeInformationSectionProps {
+  selectedSpeed: TxSettlementTime;
 }
 
 interface SettlementProgressBarProps {
@@ -25,17 +37,31 @@ function SettlementProgressBar(props: SettlementProgressBarProps) {
 }
 
 export function SettlementTimeInformationSection(props: SettlementTimeInformationSectionProps) {
-  const data = useDefaultCountDownData(props.recipe);
-  const progress = (data?.takenSlots ?? 0) / (data?.totalSlots ?? 1);
-  const remainingSlots = (data?.totalSlots ?? 0) - (data?.takenSlots ?? 0);
-  const timeStr = data?.nextBatch ? moment(data.nextBatch).fromNow(true) : '';
-
   return (
     <InformationSection
       title="Est Settlement"
-      subtitle={timeStr}
-      content={<SettlementProgressBar remainingSlots={remainingSlots} progress={progress} />}
+      subtitle={props.timeStr}
+      content={<SettlementProgressBar remainingSlots={props.remainingSlots} progress={props.progress} />}
       buttonLabel="Learn more"
     />
   );
+}
+
+export function RecipeSettlementTimeInformationSection(props: RecipeSettlementTimeInformationSectionProps) {
+  const data = useDefaultCountDownData(props.recipe);
+  const progress = (data?.takenSlots ?? 0) / (data?.totalSlots ?? 1);
+  const remainingSlots = (data?.totalSlots ?? 0) - (data?.takenSlots ?? 0);
+  const timeStr = data?.nextBatch ? moment(data.nextBatch).fromNow(false) : '';
+  return <SettlementTimeInformationSection remainingSlots={remainingSlots} progress={progress} timeStr={timeStr} />;
+}
+
+export function TransactionSettlementTimeInformationSection(props: TransactionSettlementTimeInformationSectionProps) {
+  const rpStatus = useRollupProviderStatus();
+  const takenSlots = rpStatus?.pendingTxCount || 0;
+  // const totalSlots = 0; --> needs implementation
+  // const progress = takenSlots / totalSlots;
+  // const remainingSlots = totalSlots - takenSlots;
+  const timeStr =
+    props.selectedSpeed === TxSettlementTime.INSTANT ? 'Now' : moment(rpStatus?.nextPublishTime).fromNow(false);
+  return <SettlementTimeInformationSection remainingSlots={0} progress={0} timeStr={timeStr} />;
 }

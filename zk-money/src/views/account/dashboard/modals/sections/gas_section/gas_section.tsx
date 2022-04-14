@@ -48,8 +48,8 @@ const DEFI_OPTIONS: DefiOption[] = [
 ];
 
 const TX_OPTIONS: TxOption[] = [
-  { value: TxSettlementTime.INSTANT, label: 'Instant' },
   { value: TxSettlementTime.NEXT_ROLLUP, label: 'Next Rollup' },
+  { value: TxSettlementTime.INSTANT, label: 'Instant' },
 ];
 
 const mapFeeSubLabel = (options: DefiOption[] | TxOption[], feeAmounts?: (Amount | undefined)[]) => {

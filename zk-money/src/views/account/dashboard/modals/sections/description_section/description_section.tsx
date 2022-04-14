@@ -8,7 +8,7 @@ interface DescriptionSectionProps {
 export function DescriptionSection({ text }: DescriptionSectionProps) {
   return (
     <div className={style.descriptionSection}>
-      <Text italic size="xs" text={text} />
+      <Text size="xs" text={text} />
     </div>
   );
 }

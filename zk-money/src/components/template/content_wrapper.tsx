@@ -5,7 +5,7 @@ export const ContentWrapper = styled.div`
   position: relative;
   padding: 0 20px;
   width: 100%;
-  max-width: 1000px;
+  max-width: 1100px;
 
   @media (max-width: ${breakpoints.m}) {
     padding: 0 ${spacings.l};

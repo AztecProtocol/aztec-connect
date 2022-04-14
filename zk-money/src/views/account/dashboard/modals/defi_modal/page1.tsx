@@ -13,7 +13,7 @@ import { DefiRecipe } from 'alt-model/defi/types';
 import { DefiSettlementTime } from '@aztec/sdk';
 import { FaqHint, Hyperlink, HyperlinkIcon } from 'ui-components';
 import { SplitSection } from '../sections/split_section';
-import { SettlementTimeInformationSection } from '../sections/settlement_time_information_section';
+import { RecipeSettlementTimeInformationSection } from '../sections/settlement_time_information_section';
 import { PrivacyInformationSection } from '../sections/privacy_information_section';
 import defiBridgeImage from 'images/defi_bridge.svg';
 import style from './page1.module.scss';
@@ -93,7 +93,7 @@ export function Page1({
             feeAmounts={validationResult?.feeAmounts}
           />
         }
-        rightPanel={<SettlementTimeInformationSection recipe={recipe} />}
+        rightPanel={<RecipeSettlementTimeInformationSection recipe={recipe} />}
       />
       <div className={style.footer}>
         <FaqHint className={style.faqHint} />

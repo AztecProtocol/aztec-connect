@@ -6,6 +6,7 @@ import { Button, InputTheme } from 'components';
 import { AmountSection, GasSection, GasSectionType, RecipientSection } from 'views/account/dashboard/modals/sections';
 import { ConnectedLegacyWalletSelect } from './connected_legacy_wallet_select';
 import { RemoteAsset } from 'alt-model/types';
+import { TransactionSettlementTimeInformationSection } from '../sections/settlement_time_information_section';
 import { SplitSection } from '../sections/split_section';
 import { useProviderState } from 'alt-model';
 import { useLegacyEthAccountState } from 'alt-model/assets/l1_balance_hooks';
@@ -116,7 +117,7 @@ export function ShieldPage1({
             onChangeSpeed={speed => onChangeSpeed(speed as TxSettlementTime)}
           />
         }
-        rightPanel={<div />}
+        rightPanel={<TransactionSettlementTimeInformationSection selectedSpeed={fields.speed} />}
       />
 
       {feedback.footer && <div className={style.errorMessage}>{feedback.footer}</div>}
