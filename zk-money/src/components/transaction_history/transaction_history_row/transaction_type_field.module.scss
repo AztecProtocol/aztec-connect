@@ -1,9 +1,20 @@
 @use '../../../ui-components/styles/mixins';
 
-.root {    
+.root {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+
+.top {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.bottom {
+  font-size: 14px;
 }
 
 .label {
@@ -11,5 +22,5 @@
   font-size: 18px;
   font-style: italic;
   letter-spacing: 1.5px;
-  width: fit-content
+  width: fit-content;
 }
