@@ -1,5 +1,5 @@
 .root {
-  padding: 18px 32px;
+  padding: 24px;
 }
 
 .item {
@@ -8,6 +8,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  letter-spacing: 0.06em;
+  font-size: 16px;
 }
 
 .item.faded {
@@ -37,7 +39,9 @@
 
 .progress {
   font-size: 13px;
-  font-style: italic;
-  color: #aaa;
   margin-top: 40px;
+}
+
+.itemDone {
+  font-weight: 500;
 }

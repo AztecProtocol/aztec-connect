@@ -1,47 +1,14 @@
 import { useState } from 'react';
-import styled from 'styled-components/macro';
 import { DefiComposerPhase, DefiComposerState, DefiFormValidationResult } from 'alt-model/defi/defi_form';
-import { Theme, themeColours } from 'styles';
-import { BorderBox, Button, Text } from 'components';
+import { BorderBox, Button } from 'components';
 import { DefiSubmissionSteps } from './defi_submission_steps';
 import { Disclaimer } from '../modal_molecules/disclaimer';
 import { TransactionComplete } from '../modal_molecules/transaction_complete';
 import { DefiRecipe } from 'alt-model/defi/types';
-import { BridgeCountDown } from 'features/defi/bridge_count_down';
 import { BridgeKeyStats } from 'features/defi/bridge_key_stats';
 import { CostBreakdown } from '../modal_molecules/cost_breakdown';
-
-const S = {
-  Root: styled.div`
-    display: grid;
-    gap: 10px;
-  `,
-
-  TopStats: styled.div`
-    display: grid;
-    grid-template-columns: 3fr 2fr 5fr;
-    gap: 10%;
-    padding: 20px 25px;
-  `,
-
-  Separator: styled.div`
-    width: 100%;
-    height: 1px;
-    background-color: ${themeColours[Theme.WHITE].border};
-  `,
-
-  Footer: styled.div`
-    display: flex;
-    justify-content: space-between;
-    /* align-items: center; */
-    justify-self: self-end;
-    align-self: end;
-  `,
-
-  BorderBox: styled(BorderBox)`
-    padding: 20px;
-  `,
-};
+import { VerticalSplitSection } from '../sections/vertical_split_section';
+import style from './page2.module.scss';
 
 interface Page2Props {
   recipe: DefiRecipe;
@@ -52,25 +19,31 @@ interface Page2Props {
 }
 
 export function Page2({ recipe, composerState, validationResult, onSubmit, onClose }: Page2Props) {
-  const asset = validationResult.input.depositAsset;
   const [riskChecked, setRiskChecked] = useState(false);
+  const asset = validationResult.input.depositAsset;
   const hasError = !!composerState?.error;
   const isIdle = composerState?.phase === DefiComposerPhase.IDLE;
   const showingDeclaration = isIdle && !hasError;
   const showingComplete = composerState?.phase === DefiComposerPhase.DONE;
   const canSubmit = riskChecked && isIdle;
+
   return (
-    <S.Root>
+    <div className={style.page2Wrapper}>
+      <VerticalSplitSection
+        topPanel={
+          <div className={style.topStats}>
+            <div className={style.description}>{recipe.shortDesc}</div>
+            <BridgeKeyStats recipe={recipe} compact />
+          </div>
+        }
+        bottomPanel={
+          <CostBreakdown
+            amount={validationResult.validPayload?.targetDepositAmount}
+            fee={validationResult.validPayload?.feeAmount}
+          />
+        }
+      />
       <BorderBox>
-        <S.TopStats>
-          <Text size="xxs" italic text={recipe.shortDesc} />
-          <BridgeCountDown recipe={recipe} compact />
-          <BridgeKeyStats recipe={recipe} compact />
-        </S.TopStats>
-        <S.Separator />
-        <CostBreakdown amount={validationResult.targetDepositAmount} fee={validationResult.input.feeAmount} />
-      </BorderBox>
-      <S.BorderBox>
         {showingDeclaration ? (
           <Disclaimer
             accepted={riskChecked}
@@ -83,14 +56,16 @@ export function Page2({ recipe, composerState, validationResult, onSubmit, onClo
         ) : (
           <DefiSubmissionSteps composerState={composerState} />
         )}
-      </S.BorderBox>
-      <S.Footer>
-        <Button
-          text={hasError ? 'Retry' : 'Confirm Submit'}
-          onClick={canSubmit ? onSubmit : undefined}
-          disabled={!canSubmit}
-        />
-      </S.Footer>
-    </S.Root>
+      </BorderBox>
+      {!showingComplete && (
+        <div className={style.footer}>
+          <Button
+            text={hasError ? 'Retry' : 'Confirm Submit'}
+            onClick={canSubmit ? onSubmit : undefined}
+            disabled={!canSubmit}
+          />
+        </div>
+      )}
+    </div>
   );
 }

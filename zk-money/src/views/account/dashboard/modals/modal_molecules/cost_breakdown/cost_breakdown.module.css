@@ -1,7 +1,51 @@
 .root {
-  padding: 32px 24px;
-  display: grid;
-  grid-template-columns: 1fr auto auto auto;
-  gap: 10px 20px;
+  display: flex;
   align-items: center;
+  flex-direction: column;
+}
+
+.row {
+  font-size: 20px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  height: 40px;
+  width: 100%;
+  border-radius: 5px;
+  padding: 0 20px;
+}
+
+.title {
+  font-weight: 500;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+}
+
+.values {
+  font-size: 16px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.value {
+  font-weight: 500;
+  width: 100px;
+  text-align: right;
+}
+
+.cost {
+  text-align: left;
+  font-weight: 400;
+}
+
+.shieldIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zebra {
+  background-color: #fafafa;
 }

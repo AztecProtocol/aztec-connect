@@ -25,7 +25,7 @@ const Root = styled.div`
   gap: 30px;
   grid-template-columns: 1fr 1fr;
   max-height: calc(100vh - 100px);
-  padding: 20px 40px;
+  padding: 30px 30px;
   overflow: auto;
 `;
 

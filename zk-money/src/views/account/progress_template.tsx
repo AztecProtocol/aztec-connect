@@ -79,7 +79,7 @@ const FeedbackMessage = styled(Text)`
 `;
 
 const ProgressTemplateWrapper = styled.div`
-  padding: 20px 40px;
+  padding: 30px 30px;
 `;
 
 const FeedbackTitle = styled(FeedbackMessage)`

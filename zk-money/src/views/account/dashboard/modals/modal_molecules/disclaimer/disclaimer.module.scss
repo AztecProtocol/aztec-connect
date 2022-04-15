@@ -20,4 +20,19 @@
   display: flex;
   gap: 20px;
   align-items: center;
+  justify-content: flex-end;
+  letter-spacing: 0.06em;
+  font-size: 16px;
+}
+
+.title {
+  font-weight: 500;
+  font-size: 18px;
+}
+
+.message {
+  line-height: 157%;
+  letter-spacing: 0.06em;
+  font-size: 16px;
+  margin: 35px 0 70px 0;
 }

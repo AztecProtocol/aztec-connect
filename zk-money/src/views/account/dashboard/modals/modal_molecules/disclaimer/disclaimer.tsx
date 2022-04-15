@@ -1,7 +1,7 @@
 import type { RemoteAsset } from 'alt-model/types';
 import { fromBaseUnits } from 'app';
 import { Checkbox, Spacer, Text } from 'components';
-import style from './disclaimer.module.css';
+import style from './disclaimer.module.scss';
 
 interface DisclaimerProps {
   transactionLimit: bigint;
@@ -15,21 +15,16 @@ export function Disclaimer({ transactionLimit, asset, accepted, onChangeAccepted
   return (
     <div className={style.root}>
       <div className={style.header}>
-        <Text text="Disclaimer" />
+        <div className={style.title}>Disclaimer</div>
         <div className={style.icon} />
       </div>
-      <Spacer size="m" />
       <div>
-        <Text
-          inline
-          size="s"
-          text={`This is experimental software that hasn’t yet been externally audited. Your private key is stored in the browser, for security amounts are capped at ${assetStr}. `}
-        />
-        <Text size="s" inline italic text="Use at your own risk" />
+        <div
+          className={style.message}
+        >{`This is experimental software that hasn’t yet been externally audited. Your private key is stored in the browser, for security amounts are capped at ${assetStr}. Use at your own risk.`}</div>
       </div>
-      <Spacer size="m" />
       <div className={style.checkboxRow}>
-        <Text size="s" text="I understand the risks" />
+        <div>I understand the risks</div>
         <Checkbox checked={accepted} onChangeValue={onChangeAccepted} />
       </div>
     </div>

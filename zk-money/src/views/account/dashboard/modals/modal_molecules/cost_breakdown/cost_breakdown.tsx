@@ -1,24 +1,38 @@
-import { fromBaseUnits } from '@aztec/sdk';
+import { EthAddress } from '@aztec/sdk';
 import { useAssetUnitPrice } from 'alt-model';
 import { Amount } from 'alt-model/assets/amount';
-import { formatBulkPrice, PRICE_DECIMALS } from 'app';
-import { ShieldedAssetIcon, Text } from 'components';
+import { formatBulkPrice } from 'app';
+import { ShieldedAssetIcon } from 'components';
+import { bindStyle } from 'ui-components/util/classnames';
 import style from './cost_breakdown.module.css';
+
+const cx = bindStyle(style);
+
+interface CostBreakdownProps {
+  amount?: Amount;
+  fee?: Amount;
+}
 
 interface RowProps {
   label: string;
-  amount?: Amount;
-  costStr: string;
+  cost?: string;
+  className?: string;
+  address?: EthAddress;
+  value?: string;
 }
 
-function Row({ label, amount, costStr }: RowProps) {
+function Row({ label, cost, address, value, className }: RowProps) {
   return (
-    <>
-      <Text text={label} />
-      <Text color="grey" size="s" text={costStr} />
-      {amount && <ShieldedAssetIcon size="s" address={amount.address} />}
-      {amount && <Text size="s" weight="bold" italic text={amount.format()} />}
-    </>
+    <div className={cx(style.row, className)}>
+      <div className={style.title}>{label}</div>
+      <div className={style.values}>
+        <div className={cx(style.value, style.cost)}>{cost}</div>
+        <div className={cx(style.value, style.shieldIcon)}>
+          {address && <ShieldedAssetIcon size="s" address={address} />}
+        </div>
+        <div className={cx(style.value)}>{value}</div>
+      </div>
+    </div>
   );
 }
 
@@ -27,25 +41,25 @@ function maybeBulkPriceStr(bulkPrice?: bigint) {
   return '$' + formatBulkPrice(bulkPrice);
 }
 
-interface CostBreakdownProps {
-  amount?: Amount;
-  fee?: Amount;
-}
-
 export function CostBreakdown({ amount, fee }: CostBreakdownProps) {
-  const isInOneAsset = amount && amount.id === fee?.id;
-  const total = isInOneAsset ? amount.add(fee.baseUnits) : undefined;
   const amountAssetUnitPrice = useAssetUnitPrice(amount?.id);
   const amountBulkPrice = amountAssetUnitPrice === undefined ? undefined : amount?.toBulkPrice(amountAssetUnitPrice);
   const feeAssetUnitPrice = useAssetUnitPrice(fee?.id);
   const feeBulkPrice = feeAssetUnitPrice === undefined ? undefined : fee?.toBulkPrice(feeAssetUnitPrice);
   const totalBulkPrice =
     amountBulkPrice !== undefined && feeBulkPrice !== undefined ? amountBulkPrice + feeBulkPrice : undefined;
+
   return (
     <div className={style.root}>
-      <Row label="Amount" amount={amount} costStr={maybeBulkPriceStr(amountBulkPrice)} />
-      <Row label="Gas Fee" amount={fee} costStr={maybeBulkPriceStr(feeBulkPrice)} />
-      <Row label="Total Cost" amount={total} costStr={maybeBulkPriceStr(totalBulkPrice)} />
+      <Row label="Recipient" value={'RECIPIENT'} />
+      <Row
+        className={style.zebra}
+        label="Amount"
+        cost={maybeBulkPriceStr(totalBulkPrice)}
+        address={amount?.address}
+        value={amount?.format()}
+      />
+      <Row label="Gas Fee" cost={maybeBulkPriceStr(feeBulkPrice)} address={fee?.address} value={fee?.format()} />
     </div>
   );
 }

@@ -30,7 +30,7 @@ export function SubmissionFlow({ labels, activeItem }: SubmissionFlowProps) {
           const status = idx < activeItem.idx ? StepStatus.DONE : activeItem.status;
           return (
             <div key={idx} className={cx(style.item, { faded, hidden })}>
-              <div className={style.itemName}>{label}</div>
+              <div className={cx(style.itemName, status === StepStatus.DONE && style.itemDone)}>{label}</div>
               <div className={cx(style.itemFieldContent, { faded })}>
                 {isCurrent && activeItem.fieldContent}
                 <StepStatusIndicator status={status} />
