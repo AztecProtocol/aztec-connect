@@ -3,7 +3,7 @@ import type { StrOrMax } from 'alt-model/forms/constants';
 import { TxSettlementTime, TxType } from '@aztec/sdk';
 import { ProviderStatus, SendMode, ValueAvailability } from 'app';
 import { Button, InputTheme } from 'components';
-import { AmountSection, GasSection, GasSectionType, RecipientSection } from 'views/account/dashboard/modals/sections';
+import { AmountSection, TxGasSection, RecipientSection } from 'views/account/dashboard/modals/sections';
 import { ConnectedLegacyWalletSelect } from './connected_legacy_wallet_select';
 import { RemoteAsset } from 'alt-model/types';
 import { TransactionSettlementTimeInformationSection } from '../sections/settlement_time_information_section';
@@ -109,12 +109,13 @@ export function ShieldPage1({
       />
       <SplitSection
         leftPanel={
-          <GasSection
+          <TxGasSection
             asset={validationResult.input.feeAmount?.info}
             balanceType={validationResult.targetAssetIsPayingFee ? 'L1' : 'L2'}
-            type={GasSectionType.TX}
             speed={fields.speed}
-            onChangeSpeed={speed => onChangeSpeed(speed as TxSettlementTime)}
+            onChangeSpeed={onChangeSpeed}
+            feeAmounts={validationResult.input.feeAmounts}
+            targetAssetIsErc20={asset.id !== 0}
           />
         }
         rightPanel={<TransactionSettlementTimeInformationSection selectedSpeed={fields.speed} />}

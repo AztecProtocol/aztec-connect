@@ -11,7 +11,7 @@ import { DefiComposer } from './defi_composer';
 import { useApp } from 'alt-model/app_context';
 import { useMaybeObs } from 'app/util';
 import { isKnownAssetAddressString } from 'alt-model/known_assets/known_asset_addresses';
-import { useDefiFeeAmount, useDefiFeeAmounts } from './defi-fee-hooks';
+import { useDefiFeeAmounts } from './defi_fee_hooks';
 import { useAwaitCorrectProvider } from './correct_provider_hooks';
 import { BridgeInteractionAssets, DefiRecipe } from '../types';
 import { useDefaultAuxDataOption } from '../defi_info_hooks';
@@ -57,8 +57,8 @@ export function useDefiForm(recipe: DefiRecipe, mode: DefiFormMode) {
   const interactionAssets = getInteractionAssets(recipe, mode);
   const depositAsset = interactionAssets.inA;
   const bridgeId = useDefiFormBridgeId(recipe, interactionAssets);
-  const feeAmount = useDefiFeeAmount(bridgeId, fields.speed);
   const feeAmounts = useDefiFeeAmounts(bridgeId);
+  const feeAmount = feeAmounts?.[fields.speed];
   const balanceInTargetAsset = useBalance(depositAsset.id);
   const balanceInFeePayingAsset = useBalance(feeAmount?.id);
   const targetAssetAddressStr = depositAsset.address.toString();

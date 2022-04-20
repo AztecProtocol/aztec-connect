@@ -53,7 +53,7 @@ const BoldLabels = styled.div<{ idx: number; optionCount: number }>`
 interface Option<T> {
   value: T;
   label: string;
-  sublabel?: React.Component;
+  sublabel?: React.ReactNode;
 }
 interface SpeedSwitchProps<T> {
   value: T;

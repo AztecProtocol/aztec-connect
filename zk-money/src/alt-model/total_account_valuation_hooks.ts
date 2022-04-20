@@ -28,7 +28,7 @@ function useUnfinalisedAsyncDefiAsyncPresentValues() {
       }
     }
     return Obs.combine(obsList);
-  }, [defiTxs]);
+  }, [defiTxs, interactionPresentValueObsCache, recipes]);
   return useMaybeObs(assetValuesObs);
 }
 

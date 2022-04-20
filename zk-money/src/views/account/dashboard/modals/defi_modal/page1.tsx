@@ -2,13 +2,7 @@ import type { StrOrMax } from 'alt-model/forms/constants';
 import styled from 'styled-components/macro';
 import { Button } from 'components';
 import { DefiFormFeedback, DefiFormFields, DefiFormValidationResult } from 'alt-model/defi/defi_form';
-import {
-  AmountSection,
-  DescriptionSection,
-  GasSection,
-  GasSectionType,
-  StatsSection,
-} from 'views/account/dashboard/modals/sections';
+import { AmountSection, DescriptionSection, StatsSection } from 'views/account/dashboard/modals/sections';
 import { DefiRecipe } from 'alt-model/defi/types';
 import { DefiSettlementTime } from '@aztec/sdk';
 import { FaqHint, Hyperlink, HyperlinkIcon } from 'ui-components';
@@ -17,6 +11,7 @@ import { RecipeSettlementTimeInformationSection } from '../sections/settlement_t
 import { PrivacyInformationSection } from '../sections/privacy_information_section';
 import defiBridgeImage from 'images/defi_bridge.svg';
 import style from './page1.module.scss';
+import { DefiGasSection } from './defi_gas_section';
 
 const Root = styled.div`
   display: flex;
@@ -83,12 +78,9 @@ export function Page1({
       />
       <SplitSection
         leftPanel={
-          <GasSection
-            asset={validationResult.input.depositAsset}
-            balanceType="L2"
-            type={GasSectionType.DEFI}
+          <DefiGasSection
             speed={fields.speed as DefiSettlementTime}
-            onChangeSpeed={speed => onChangeSpeed(speed as DefiSettlementTime)}
+            onChangeSpeed={onChangeSpeed}
             recipe={recipe}
             feeAmounts={validationResult?.feeAmounts}
           />

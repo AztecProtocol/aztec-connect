@@ -1,1 +1,1 @@
-export * from './gas_section';
+export * from './tx_gas_section';

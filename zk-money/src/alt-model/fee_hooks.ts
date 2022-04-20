@@ -1,10 +1,11 @@
 import createDebug from 'debug';
 import { useEffect, useMemo, useState } from 'react';
-import { AssetValue, EthAddress, TxSettlementTime } from '@aztec/sdk';
+import { AssetValue, EthAddress } from '@aztec/sdk';
 import { Contract } from '@ethersproject/contracts';
 import { useSdk, useStableEthereumProvider, useGasUnitPrice } from 'alt-model/top_level_context';
 import { listenPoll } from 'app/util';
 import { useRollupProviderStatus } from './rollup_provider_hooks';
+import { useAmounts } from './asset_hooks';
 
 const debug = createDebug('zm:fee_hooks');
 
@@ -95,7 +96,7 @@ export function useEstimatedShieldingGasCosts(depositor?: EthAddress, assetId?: 
 
 const DEPOSIT_FEE_POLL_INTERVAL = 1000 * 60 * 5;
 
-export function useDepositFee(assetId: number, speed: TxSettlementTime) {
+export function useDepositFeeAmounts(assetId: number) {
   const sdk = useSdk();
   const [fees, setFees] = useState<AssetValue[]>();
   useEffect(() => {
@@ -103,5 +104,5 @@ export function useDepositFee(assetId: number, speed: TxSettlementTime) {
       return listenPoll(() => sdk.getDepositFees(assetId).then(setFees), DEPOSIT_FEE_POLL_INTERVAL);
     }
   }, [sdk, assetId]);
-  return fees?.[speed];
+  return useAmounts(fees);
 }

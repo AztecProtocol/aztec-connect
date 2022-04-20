@@ -6,7 +6,7 @@ import { Button, InputTheme } from 'components';
 import { Theme } from 'styles';
 import { SplitSection } from '../sections/split_section';
 import { AmountSection } from 'views/account/dashboard/modals/sections/amount_section';
-import { GasSection, GasSectionType } from 'views/account/dashboard/modals/sections/gas_section';
+import { TxGasSection } from 'views/account/dashboard/modals/sections/gas_section';
 import { SendProgress } from './send_progress';
 import { FaqHint, formatMaxAmount } from 'ui-components';
 import { DescriptionSection, RecipientSection } from '../sections';
@@ -127,13 +127,13 @@ export const Send: React.FunctionComponent<SendProps> = ({
       />
       <SplitSection
         leftPanel={
-          <GasSection
+          <TxGasSection
             asset={asset}
             balanceType="L2"
-            type={GasSectionType.TX}
-            speed={fields.speed as TxSettlementTime}
-            onChangeSpeed={speed => setFields({ ...fields, speed: speed as TxSettlementTime })}
+            speed={fields.speed}
+            onChangeSpeed={speed => setFields({ ...fields, speed })}
             feeAmounts={feeAmounts}
+            targetAssetIsErc20={asset.id !== 0}
           />
         }
         rightPanel={<TransactionSettlementTimeInformationSection selectedSpeed={fields.speed} />}

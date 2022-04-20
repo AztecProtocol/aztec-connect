@@ -1,0 +1,15 @@
+.root {
+  text-align: center;
+  color: #939292;
+  font-size: 14px;
+  padding-top: 30px;
+  line-height: 160%;
+}
+
+.root p {
+  margin-bottom: 10px;
+}
+
+.root b {
+  font-weight: 500;
+}

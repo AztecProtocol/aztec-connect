@@ -25,6 +25,7 @@ interface ShieldFormValidationInputs {
   approveProofGasCost?: bigint;
   depositFundsGasCost?: bigint;
   feeAmount?: Amount;
+  feeAmounts?: (Amount | undefined)[];
   balanceInFeePayingAsset?: bigint;
   transactionLimit?: bigint;
   depositor?: EthAddress;

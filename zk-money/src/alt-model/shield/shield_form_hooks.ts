@@ -4,7 +4,7 @@ import { useBalance } from 'alt-model';
 import { useAmountFactory, useSdk } from 'alt-model/top_level_context';
 import { useState } from 'react';
 import { useL1Balances } from 'alt-model/assets/l1_balance_hooks';
-import { useDepositFee, useEstimatedShieldingGasCosts } from 'alt-model/fee_hooks';
+import { useDepositFeeAmounts, useEstimatedShieldingGasCosts } from 'alt-model/fee_hooks';
 import { useTrackedFieldChangeHandlers } from 'alt-model/form_fields_hooks';
 import { ShieldFormFields, validateShieldForm } from './shield_form_validation';
 import { getShieldFormFeedback } from './shield_form_feedback';
@@ -39,9 +39,9 @@ export function useShieldForm(preselectedAssetId?: number) {
   const targetAsset = useAsset(fields.assetId);
   const { l1Balance, l1PendingBalance } = useL1Balances(targetAsset);
   const { approveProofGasCost, depositFundsGasCost } = useEstimatedShieldingGasCosts(depositor, targetAsset?.id);
-  const fee = useDepositFee(fields.assetId, fields.speed);
-  const feeAmount = fee && amountFactory?.fromAssetValue(fee);
-  const balanceInFeePayingAsset = useBalance(fee?.assetId);
+  const feeAmounts = useDepositFeeAmounts(fields.assetId);
+  const feeAmount = feeAmounts?.[fields.speed];
+  const balanceInFeePayingAsset = useBalance(feeAmount?.id);
   const targetAssetAddressStr = targetAsset?.address.toString();
   const transactionLimit = isKnownAssetAddressString(targetAssetAddressStr)
     ? config.txAmountLimits[targetAssetAddressStr]
@@ -57,6 +57,7 @@ export function useShieldForm(preselectedAssetId?: number) {
     approveProofGasCost,
     depositFundsGasCost,
     feeAmount,
+    feeAmounts,
     balanceInFeePayingAsset,
     transactionLimit,
     depositor,
