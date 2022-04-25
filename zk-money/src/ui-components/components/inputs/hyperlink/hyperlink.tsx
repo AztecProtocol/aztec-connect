@@ -8,6 +8,7 @@ export enum HyperlinkIcon {
 }
 
 interface HyperlinkProps {
+  href?: string;
   label: string;
   icon?: HyperlinkIcon;
 }
@@ -25,9 +26,9 @@ export function Hyperlink(props: HyperlinkProps) {
   const icon = getIcon(props.icon);
 
   return (
-    <div className={style.actionButton}>
+    <a className={style.actionButton} href={props.href} target="_blank" rel="noreferrer">
       {props.label}
       {icon && <img className={style.icon} src={icon} />}
-    </div>
+    </a>
   );
 }

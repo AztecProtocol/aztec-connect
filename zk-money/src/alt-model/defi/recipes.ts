@@ -1,5 +1,5 @@
 import createDebug from 'debug';
-import { EthAddress } from '@aztec/sdk';
+import { EthAddress, RollupProviderStatus } from '@aztec/sdk';
 import { BridgeFlowAssets, DefiInvestmentType, DefiRecipe, KeyBridgeStat } from './types';
 import lidoLogo from '../../images/lido_white.svg';
 import lidoMiniLogo from '../../images/lido_mini_logo.png';
@@ -11,10 +11,12 @@ import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from 'alt-model/known_assets/kn
 import { RemoteAsset } from 'alt-model/types';
 import { RemoteAssetsObs } from 'alt-model/top_level_context/remote_assets_obs';
 import { createLidoAdaptor } from './bridge_data_adaptors/lido_adaptor';
+import { RemoteStatusObs } from 'alt-model/top_level_context/remote_status_obs';
+import { Obs } from 'app/util';
 
 const debug = createDebug('zm:recipes');
 
-interface CreateRecipeArgs extends Omit<DefiRecipe, 'closable' | 'flow' | 'valueEstimationInteractionAssets'> {
+interface CreateRecipeArgs extends Omit<DefiRecipe, 'address' | 'flow' | 'valueEstimationInteractionAssets'> {
   isAsync?: boolean;
   entryInputAssetAddressA: EthAddress;
   entryOutputAssetAddressA: EthAddress;
@@ -23,10 +25,16 @@ interface CreateRecipeArgs extends Omit<DefiRecipe, 'closable' | 'flow' | 'value
 
 function createRecipe(
   { isAsync, entryInputAssetAddressA, entryOutputAssetAddressA, openHandleAssetAddress, ...args }: CreateRecipeArgs,
+  status: RollupProviderStatus,
   assets: RemoteAsset[],
 ): DefiRecipe | undefined {
   const closable = !isAsync;
   const expectedYearlyOutDerivedFromExit = closable;
+  const address = status.blockchainStatus.bridges.find(x => x.id === args.addressId)?.address;
+  if (!address) {
+    debug(`Could not find remote bridge for recipe '${args.id}'`);
+    return;
+  }
   const entryInputAssetA = assets.find(x => x.address.equals(entryInputAssetAddressA));
   const entryOutputAssetA = assets.find(x => x.address.equals(entryOutputAssetAddressA));
   if (!entryInputAssetA || !entryOutputAssetA) {
@@ -45,7 +53,7 @@ function createRecipe(
       return;
     }
   }
-  return { ...args, flow, openHandleAsset, valueEstimationInteractionAssets };
+  return { ...args, address, flow, openHandleAsset, valueEstimationInteractionAssets };
 }
 
 const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
@@ -57,6 +65,7 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
     entryOutputAssetAddressA: KMAA.DAI,
     createAdaptor: createElementAdaptor,
     projectName: 'Element',
+    website: 'https://lido.fi/',
     name: 'Element Fixed Yield',
     investmentType: DefiInvestmentType.FIXED_YIELD,
     shortDesc: 'Deposit zkDAI into Element and receive a fixed yield back in xx Days as zkDAI',
@@ -77,6 +86,7 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
     entryOutputAssetAddressA: KMAA.wstETH,
     createAdaptor: createLidoAdaptor,
     projectName: 'Lido',
+    website: 'https://element.fi/',
     name: 'Lido Staking',
     investmentType: DefiInvestmentType.STAKING,
     shortDesc:
@@ -92,12 +102,12 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
   },
 ];
 
-export function createDefiRecipeObs(knownAssetsObs: RemoteAssetsObs) {
-  return knownAssetsObs.map(assets => {
-    if (!assets) return undefined;
+export function createDefiRecipeObs(remoteStatusObs: RemoteStatusObs, remoteAssetsObs: RemoteAssetsObs) {
+  return Obs.combine([remoteStatusObs, remoteAssetsObs]).map(([status, assets]) => {
+    if (!status || !assets) return undefined;
     const recipes: DefiRecipe[] = [];
     for (const args of CREATE_RECIPES_ARGS) {
-      const recipe = createRecipe(args, assets);
+      const recipe = createRecipe(args, status, assets);
       if (recipe) recipes.push(recipe);
     }
     return recipes;

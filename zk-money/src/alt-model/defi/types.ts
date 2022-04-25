@@ -1,3 +1,4 @@
+import type { EthAddress } from '@aztec/sdk';
 import type { RemoteAsset } from 'alt-model/types';
 import type { BridgeDataAdaptorCreator } from './bridge_data_adaptors/types';
 
@@ -35,11 +36,13 @@ export type BridgeFlowAssets =
 export interface DefiRecipe {
   id: string;
   addressId: number;
+  address: EthAddress;
   flow: BridgeFlowAssets;
   openHandleAsset?: RemoteAsset;
   valueEstimationInteractionAssets: BridgeInteractionAssets;
   createAdaptor: BridgeDataAdaptorCreator;
   projectName: string;
+  website: string;
   name: string;
   logo: string;
   miniLogo: string;

@@ -25,7 +25,7 @@ function createTopLevelContextValue(config: Config): TopLevelContextValue {
   const amountFactoryObs = createAmountFactoryObs(firstRemoteAssetsObs);
   const gasPriceObs = createGasPriceObs(stableEthereumProvider);
   const priceFeedObsCache = createPriceFeedObsCache(stableEthereumProvider, firstRemoteAssetsObs);
-  const defiRecipesObs = createDefiRecipeObs(firstRemoteAssetsObs);
+  const defiRecipesObs = createDefiRecipeObs(firstRemoteStatusObs, firstRemoteAssetsObs);
   const bridgeDataAdaptorsMethodCaches = createBridgeDataAdaptorsMethodCaches(
     defiRecipesObs,
     stableEthereumProvider,

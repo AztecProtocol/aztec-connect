@@ -43,6 +43,7 @@ export function Page1({
   onChangeSpeed,
   onNext,
 }: Page1Props) {
+  const etherscanHref = `https://etherscan.io/address/${recipe.address.toString()}`;
   return (
     <Root>
       <div className={style.descriptionWrapper}>
@@ -52,8 +53,8 @@ export function Page1({
       <div className={style.statsWrapper}>
         <StatsSection recipe={recipe} />
         <div className={style.links}>
-          <Hyperlink label={'View Contract'} icon={HyperlinkIcon.Open} />
-          <Hyperlink label={'View Website'} icon={HyperlinkIcon.Open} />
+          <Hyperlink href={etherscanHref} label={'View Contract'} icon={HyperlinkIcon.Open} />
+          <Hyperlink href={recipe.website} label={'View Website'} icon={HyperlinkIcon.Open} />
         </div>
       </div>
       <SplitSection
