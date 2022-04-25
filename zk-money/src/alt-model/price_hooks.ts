@@ -5,22 +5,22 @@ import { mapToObj } from 'app/util/objects';
 import { useMemo } from 'react';
 import { Amount } from './assets';
 import { useRollupProviderStatus } from './rollup_provider_hooks';
-import { usePriceFeedObsCache } from './top_level_context';
+import { usePriceFeedPollerCache } from './top_level_context';
 
 export function useAssetUnitPrice(assetId?: number) {
-  const priceFeedObsCache = usePriceFeedObsCache();
-  const obs = assetId !== undefined ? priceFeedObsCache.get(assetId) : undefined;
-  return useMaybeObs(obs);
+  const priceFeedPollerCache = usePriceFeedPollerCache();
+  const poller = assetId !== undefined ? priceFeedPollerCache.get(assetId) : undefined;
+  return useMaybeObs(poller?.obs);
 }
 
 export function useAssetUnitPrices(assetIds?: number[]) {
-  const priceFeedObsCache = usePriceFeedObsCache();
+  const priceFeedPollerCache = usePriceFeedPollerCache();
   const obs = useMemo(() => {
     if (assetIds) {
-      const deps = assetIds.map(assetId => priceFeedObsCache.get(assetId));
+      const deps = assetIds.map(assetId => priceFeedPollerCache.get(assetId).obs);
       return Obs.combine(deps).map(prices => mapToObj(assetIds, (_, idx) => prices[idx]));
     }
-  }, [priceFeedObsCache, assetIds]);
+  }, [priceFeedPollerCache, assetIds]);
   return useMaybeObs(obs);
 }
 

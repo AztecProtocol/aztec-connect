@@ -6,6 +6,7 @@ import { MapperObs } from './mapper_obs';
 import { PromiseObs } from './promise_obs';
 import { Emitter, EmitterObs } from './emitter_obs';
 import { FilterObs } from './filter_obs';
+import { ConstantObs } from './constant_obs';
 
 export class Obs<T> implements IObs<T> {
   constructor(protected readonly internalObs: IObs<T>) {}
@@ -16,6 +17,10 @@ export class Obs<T> implements IObs<T> {
 
   listen(listener: ObsListener<T>): ObsUnlisten {
     return this.internalObs.listen(listener);
+  }
+
+  static constant<T>(value: T) {
+    return new Obs(new ConstantObs(value));
   }
 
   static input<T>(intialValue: T) {

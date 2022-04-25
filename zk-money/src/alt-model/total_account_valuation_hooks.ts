@@ -8,7 +8,7 @@ import { recipeMatcher } from './defi/recipe_matchers';
 import { useBalances, useSpendableBalances } from './balance_hooks';
 
 function useUnfinalisedAsyncDefiAsyncPresentValues() {
-  const { interactionPresentValueObsCache } = useBridgeDataAdaptorsMethodCaches();
+  const { interactionPresentValuePollerCache } = useBridgeDataAdaptorsMethodCaches();
   const defiTxs = useDefiTxs();
   const recipes = useDefiRecipes();
   const assetValuesObs = useMemo(() => {
@@ -22,13 +22,16 @@ function useUnfinalisedAsyncDefiAsyncPresentValues() {
       ) {
         const recipe = recipes.find(recipeMatcher(tx.bridgeId));
         if (recipe) {
-          const obs = interactionPresentValueObsCache.get([recipe.id, BigInt(tx.interactionResult.interactionNonce)]);
-          obsList.push(obs);
+          const poller = interactionPresentValuePollerCache.get([
+            recipe.id,
+            BigInt(tx.interactionResult.interactionNonce),
+          ]);
+          obsList.push(poller.obs);
         }
       }
     }
     return Obs.combine(obsList);
-  }, [defiTxs, interactionPresentValueObsCache, recipes]);
+  }, [defiTxs, interactionPresentValuePollerCache, recipes]);
   return useMaybeObs(assetValuesObs);
 }
 

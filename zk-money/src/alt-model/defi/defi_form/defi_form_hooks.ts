@@ -15,6 +15,7 @@ import { useAwaitCorrectProvider } from './correct_provider_hooks';
 import { BridgeInteractionAssets, DefiRecipe } from '../types';
 import { useDefaultAuxDataOption } from '../defi_info_hooks';
 import { MAX_MODE } from 'alt-model/forms/constants';
+import { useRollupProviderStatusPoller } from 'alt-model/rollup_provider_hooks';
 import { useMaxSpendableValue } from 'alt-model/balance_hooks';
 
 const debug = createDebug('zm:defi_form_hooks');
@@ -52,6 +53,7 @@ export function useDefiForm(recipe: DefiRecipe, mode: DefiFormMode) {
   const [lockedComposer, setLockedComposer] = useState<DefiComposer>();
 
   const sdk = useSdk();
+  const rpStatusPoller = useRollupProviderStatusPoller();
   const awaitCorrectProvider = useAwaitCorrectProvider();
   const amountFactory = useAmountFactory();
   const interactionAssets = getInteractionAssets(recipe, mode);
@@ -118,7 +120,10 @@ export function useDefiForm(recipe: DefiRecipe, mode: DefiFormMode) {
       debug('Tried to resubmit form while in progress');
       return;
     }
-    lockedComposer.compose();
+    lockedComposer.compose().then(success => {
+      // Submitting a defi proof should affect `rpStatus.bridgeStatus`
+      if (success) rpStatusPoller.invalidate();
+    });
   };
 
   const unlock = () => {

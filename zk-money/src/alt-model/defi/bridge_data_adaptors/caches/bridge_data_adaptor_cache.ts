@@ -1,6 +1,6 @@
 import type { Provider } from '@ethersproject/providers';
 import type { DefiRecipesObs } from 'alt-model/defi/recipes';
-import type { RemoteStatusObs } from 'alt-model/top_level_context/remote_status_obs';
+import type { RemoteStatusObs } from 'alt-model/top_level_context/remote_status_poller';
 import type { Config } from 'config';
 import createDebug from 'debug';
 import { LazyInitCacheMap } from 'app/util/lazy_init_cache_map';

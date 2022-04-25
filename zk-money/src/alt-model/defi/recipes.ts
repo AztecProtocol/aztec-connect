@@ -11,7 +11,7 @@ import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from 'alt-model/known_assets/kn
 import { RemoteAsset } from 'alt-model/types';
 import { RemoteAssetsObs } from 'alt-model/top_level_context/remote_assets_obs';
 import { createLidoAdaptor } from './bridge_data_adaptors/lido_adaptor';
-import { RemoteStatusObs } from 'alt-model/top_level_context/remote_status_obs';
+import { RemoteStatusObs } from 'alt-model/top_level_context/remote_status_poller';
 import { Obs } from 'app/util';
 
 const debug = createDebug('zm:recipes');

@@ -47,13 +47,13 @@ export function useStableEthereumProvider() {
   return useTopLevelContext().stableEthereumProvider;
 }
 
-export function usePriceFeedObsCache() {
-  return useTopLevelContext().priceFeedObsCache;
+export function usePriceFeedPollerCache() {
+  return useTopLevelContext().priceFeedPollerCache;
 }
 
 export function useGasUnitPrice() {
-  const { gasPriceObs } = useTopLevelContext();
-  return useObs(gasPriceObs);
+  const { gasPricePoller } = useTopLevelContext();
+  return useObs(gasPricePoller.obs);
 }
 
 export function useBridgeDataAdaptorsMethodCaches() {

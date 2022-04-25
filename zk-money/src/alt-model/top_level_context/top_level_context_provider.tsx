@@ -1,20 +1,21 @@
 import { createAmountFactoryObs } from 'alt-model/assets/amount_factory_obs';
 import { createBridgeDataAdaptorsMethodCaches } from 'alt-model/defi/bridge_data_adaptors/caches/bridge_data_adaptors_method_caches';
 import { createDefiRecipeObs } from 'alt-model/defi/recipes';
-import { createPriceFeedObsCache } from 'alt-model/price_feeds';
+import { createPriceFeedPollerCache } from 'alt-model/price_feeds';
 import { useMemo } from 'react';
 import { JsonRpcProvider } from '@ethersproject/providers';
 import { Config } from '../../config';
 import { createRemoteAssetsObs } from './remote_assets_obs';
-import { createSdkRemoteStatusObs } from './remote_status_obs';
+import { createSdkRemoteStatusPoller } from './remote_status_poller';
 import { createSdkObs } from './sdk_obs';
 import { TopLevelContext, TopLevelContextValue } from './top_level_context';
-import { createGasPriceObs } from 'alt-model/gas/gas_price_obs';
+import { createGasPricePoller } from 'alt-model/gas/gas_price_obs';
 
 function createTopLevelContextValue(config: Config): TopLevelContextValue {
   const stableEthereumProvider = new JsonRpcProvider(config.ethereumHost);
   const sdkObs = createSdkObs(config);
-  const remoteStatusObs = createSdkRemoteStatusObs(sdkObs);
+  const remoteStatusPoller = createSdkRemoteStatusPoller(sdkObs);
+  const remoteStatusObs = remoteStatusPoller.obs;
   const remoteAssetsObs = createRemoteAssetsObs(remoteStatusObs);
 
   // Many remote status fields will never change, so we use firstRemoteStatusObs and firstRemoteAssetsObs as a
@@ -23,8 +24,8 @@ function createTopLevelContextValue(config: Config): TopLevelContextValue {
   const firstRemoteAssetsObs = createRemoteAssetsObs(firstRemoteStatusObs);
 
   const amountFactoryObs = createAmountFactoryObs(firstRemoteAssetsObs);
-  const gasPriceObs = createGasPriceObs(stableEthereumProvider);
-  const priceFeedObsCache = createPriceFeedObsCache(stableEthereumProvider, firstRemoteAssetsObs);
+  const gasPricePoller = createGasPricePoller(stableEthereumProvider);
+  const priceFeedPollerCache = createPriceFeedPollerCache(stableEthereumProvider, firstRemoteAssetsObs);
   const defiRecipesObs = createDefiRecipeObs(firstRemoteStatusObs, firstRemoteAssetsObs);
   const bridgeDataAdaptorsMethodCaches = createBridgeDataAdaptorsMethodCaches(
     defiRecipesObs,
@@ -37,11 +38,11 @@ function createTopLevelContextValue(config: Config): TopLevelContextValue {
     config,
     stableEthereumProvider,
     sdkObs,
-    remoteStatusObs,
+    remoteStatusPoller,
     remoteAssetsObs,
     amountFactoryObs,
-    priceFeedObsCache,
-    gasPriceObs,
+    priceFeedPollerCache,
+    gasPricePoller,
     bridgeDataAdaptorsMethodCaches,
     defiRecipesObs,
   };

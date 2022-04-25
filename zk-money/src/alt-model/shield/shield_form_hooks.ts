@@ -15,6 +15,7 @@ import { useProviderState } from 'alt-model/provider_hooks';
 import { useAliasIsValidRecipient } from 'alt-model/alias_hooks';
 import { isKnownAssetAddressString } from 'alt-model/known_assets/known_asset_addresses';
 import { useAsset } from 'alt-model/asset_hooks';
+import { useRollupProviderStatusPoller } from 'alt-model/rollup_provider_hooks';
 import { useMaxSpendableValue } from 'alt-model/balance_hooks';
 
 const debug = createDebug('zm:shield_form_hooks');
@@ -32,6 +33,7 @@ export function useShieldForm(preselectedAssetId?: number) {
   const [lockedComposer, setLockedComposer] = useState<ShieldComposer>();
 
   const sdk = useSdk();
+  const rpStatusPoller = useRollupProviderStatusPoller();
   const providerState = useProviderState();
   const depositor = providerState?.account;
   const currentNetwork = providerState?.network;
@@ -107,7 +109,10 @@ export function useShieldForm(preselectedAssetId?: number) {
       debug('Tried to resubmit form while in progress');
       return;
     }
-    lockedComposer.compose();
+    lockedComposer.compose().then(success => {
+      // Submitting a shield proof should affect `rpStatus.pendingTxCount`
+      if (success) rpStatusPoller.invalidate();
+    });
   };
 
   const unlock = () => {

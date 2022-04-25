@@ -47,9 +47,11 @@ export class DefiComposer {
 
       await controller.send();
       this.stateObs.setPhase(DefiComposerPhase.DONE);
+      return true;
     } catch (error) {
       debug('Compose failed with error:', error);
       this.stateObs.error(error?.message?.toString());
+      return false;
     }
   }
 }

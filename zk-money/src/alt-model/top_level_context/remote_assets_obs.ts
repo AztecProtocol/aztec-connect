@@ -1,4 +1,4 @@
-import type { RemoteStatusObs } from './remote_status_obs';
+import type { RemoteStatusObs } from './remote_status_poller';
 import type { Obs } from 'app/util';
 import type { RemoteAsset } from 'alt-model/types';
 

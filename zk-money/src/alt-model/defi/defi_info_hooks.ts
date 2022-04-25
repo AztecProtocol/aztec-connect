@@ -14,8 +14,8 @@ export function useBridgeDataAdaptor(recipeId: string) {
 }
 
 export function useDefaultAuxDataOption(recipeId: string) {
-  const { auxDataObsCache } = useBridgeDataAdaptorsMethodCaches();
-  const opts = useObs(auxDataObsCache.get(recipeId));
+  const { auxDataPollerCache } = useBridgeDataAdaptorsMethodCaches();
+  const opts = useObs(auxDataPollerCache.get(recipeId).obs);
   // TODO: don't assume last element is default choice
   return opts?.[opts?.length - 1];
 }
@@ -31,9 +31,9 @@ export function useDefaultBridgeId(recipe: DefiRecipe) {
 }
 
 function useBridgeMarket(recipeId: string, auxData?: bigint) {
-  const { marketSizeObsCache } = useBridgeDataAdaptorsMethodCaches();
-  const obs = auxData !== undefined ? marketSizeObsCache.get([recipeId, auxData]) : undefined;
-  return useMaybeObs(obs);
+  const { marketSizePollerCache } = useBridgeDataAdaptorsMethodCaches();
+  const poller = auxData !== undefined ? marketSizePollerCache.get([recipeId, auxData]) : undefined;
+  return useMaybeObs(poller?.obs);
 }
 export function useDefaultBridgeMarket(recipeId: string) {
   const auxData = useDefaultAuxDataOption(recipeId);
@@ -51,12 +51,12 @@ export function useDefaultLiquidity(recipeId: string) {
 }
 
 function useExpectedYearlyOuput(recipeId: string, auxData?: bigint, inputValue?: bigint) {
-  const { expectedYearlyOutputObsCache } = useBridgeDataAdaptorsMethodCaches();
-  const obs =
+  const { expectedYearlyOutputPollerCache } = useBridgeDataAdaptorsMethodCaches();
+  const poller =
     auxData === undefined || inputValue === undefined
       ? undefined
-      : expectedYearlyOutputObsCache.get([recipeId, auxData, inputValue]);
-  return useMaybeObs(obs);
+      : expectedYearlyOutputPollerCache.get([recipeId, auxData, inputValue]);
+  return useMaybeObs(poller?.obs);
 }
 
 export function useExpectedYield(recipe: DefiRecipe, auxData?: bigint) {
@@ -79,21 +79,21 @@ export function useDefaultExpectedYield(recipe: DefiRecipe) {
 }
 
 export function useExpectedOutput(recipeId: string, auxData?: bigint, inputValue?: bigint) {
-  const { expectedOutputObsCache } = useBridgeDataAdaptorsMethodCaches();
-  const obs =
+  const { expectedOutputPollerCache } = useBridgeDataAdaptorsMethodCaches();
+  const poller =
     auxData !== undefined && inputValue !== undefined
-      ? expectedOutputObsCache.get([recipeId, auxData, inputValue])
+      ? expectedOutputPollerCache.get([recipeId, auxData, inputValue])
       : undefined;
-  return useMaybeObs(obs);
+  return useMaybeObs(poller?.obs);
 }
 
 export function useInteractionPresentValue(recipe: DefiRecipe, interactionNonce?: number) {
-  const { interactionPresentValueObsCache } = useBridgeDataAdaptorsMethodCaches();
-  const obs =
+  const { interactionPresentValuePollerCache } = useBridgeDataAdaptorsMethodCaches();
+  const poller =
     interactionNonce !== undefined
-      ? interactionPresentValueObsCache.get([recipe.id, BigInt(interactionNonce)])
+      ? interactionPresentValuePollerCache.get([recipe.id, BigInt(interactionNonce)])
       : undefined;
-  return useMaybeObs(obs);
+  return useMaybeObs(poller?.obs);
 }
 
 export function useDefaultExpectedOutput(recipe: DefiRecipe, inputValue?: bigint) {

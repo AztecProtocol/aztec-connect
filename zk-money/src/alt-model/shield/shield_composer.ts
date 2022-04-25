@@ -56,9 +56,11 @@ export class ShieldComposer {
       await this.cachedSteps.sendProof.exec(() => this.sendProof(controller));
       await this.cleanup(controller);
       this.stateObs.setPhase(ShieldComposerPhase.DONE);
+      return true;
     } catch (error) {
       debug('Compose failed with error:', error);
       this.stateObs.error(error?.message?.toString());
+      return false;
     }
   }
 
