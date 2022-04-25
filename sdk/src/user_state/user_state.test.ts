@@ -3,6 +3,7 @@ import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxHash } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
+import { DefiInteractionEvent } from '@aztec/barretenberg/block_source/defi_interaction_event';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { Blake2s } from '@aztec/barretenberg/crypto';
@@ -346,7 +347,7 @@ describe('user state', () => {
   const createBlock = (
     rollupProofData: RollupProofData,
     offchainTxData: Buffer[],
-    interactionResult: DefiInteractionNote[] = [],
+    interactionResult: DefiInteractionEvent[] = [],
   ): Block =>
     new Block(
       TxHash.random(),
@@ -365,7 +366,7 @@ describe('user state', () => {
     {
       rollupId = 0,
       rollupSize = innerProofs.length,
-      interactionResult = [] as DefiInteractionNote[],
+      interactionResult = [] as DefiInteractionEvent[],
       bridgeIds = [] as BridgeId[],
     } = {},
   ) => {
@@ -890,7 +891,7 @@ describe('user state', () => {
     const defiProof = generateDefiDepositProof({ bridgeId, outputNoteValue, depositValue });
     const defiProofInteractionNonce = rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
     const interactionResult = [
-      new DefiInteractionNote(
+      new DefiInteractionEvent(
         bridgeId,
         defiProofInteractionNonce,
         totalInputValue,
@@ -898,7 +899,7 @@ describe('user state', () => {
         totalOutputValueB,
         result,
       ),
-      new DefiInteractionNote(BridgeId.random(), defiProofInteractionNonce + 1, 12n, 34n, 56n, result),
+      new DefiInteractionEvent(BridgeId.random(), defiProofInteractionNonce + 1, 12n, 34n, 56n, result),
     ];
     const block = createRollupBlock([defiProof], {
       rollupId,
@@ -965,7 +966,7 @@ describe('user state', () => {
       rollupId,
       bridgeIds: [bridgeId, BridgeId.random(), BridgeId.random()],
       interactionResult: [
-        new DefiInteractionNote(BridgeId.random(), defiProofInteractionNonce + 1, 12n, 34n, 56n, result),
+        new DefiInteractionEvent(BridgeId.random(), defiProofInteractionNonce + 1, 12n, 34n, 56n, result),
       ],
     });
     const txId = new TxId(defiProof.proofData.txId);
@@ -982,7 +983,7 @@ describe('user state', () => {
     const block2 = createRollupBlock([jsProof], {
       rollupId: rollupId + 1,
       interactionResult: [
-        new DefiInteractionNote(
+        new DefiInteractionEvent(
           bridgeId,
           defiProofInteractionNonce,
           totalInputValue,
@@ -1064,7 +1065,7 @@ describe('user state', () => {
     const defiProof = generateDefiDepositProof({ bridgeId, outputNoteValue, depositValue, txFee });
     const defiProofInteractionNonce = rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
     const interactionResult = [
-      new DefiInteractionNote(
+      new DefiInteractionEvent(
         bridgeId,
         defiProofInteractionNonce - 1,
         totalInputValue,
@@ -1072,7 +1073,7 @@ describe('user state', () => {
         totalOutputValueB,
         result,
       ),
-      new DefiInteractionNote(BridgeId.random(), defiProofInteractionNonce + 1, 12n, 34n, 56n, result),
+      new DefiInteractionEvent(BridgeId.random(), defiProofInteractionNonce + 1, 12n, 34n, 56n, result),
     ];
     const block = createRollupBlock([defiProof], {
       rollupId,
@@ -1263,7 +1264,7 @@ describe('user state', () => {
     const rollupId = 4;
     const defiProofInteractionNonce = rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
     const interactionResult = [
-      new DefiInteractionNote(
+      new DefiInteractionEvent(
         bridgeId,
         defiProofInteractionNonce,
         depositValue,

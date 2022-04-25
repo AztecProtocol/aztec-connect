@@ -129,8 +129,9 @@ export class PipelineCoordinator {
       BigInt(rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK),
     );
 
-    const defiInteractionNotes = lastRollup ? parseInteractionResult(lastRollup.interactionResult!) : [];
-
+    const defiInteractionNotes = lastRollup
+      ? parseInteractionResult(lastRollup.interactionResult!).map(d => d.toDefiInteractionNote())
+      : [];
     const interactionNoteStartIndex = BigInt(rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK);
     for (let i = 0; i < defiInteractionNotes.length; ++i) {
       await this.worldStateDb.put(

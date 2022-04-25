@@ -28,12 +28,18 @@ export class Deserializer {
     return this.exec((buf: Buffer, offset: number) => deserializeBigInt(buf, offset, width));
   }
 
-  public buffer() {
+  public vector() {
     return this.exec(deserializeBufferFromVector);
   }
 
+  public buffer(width: number) {
+    const buf = this.buf.slice(this.offset, this.offset + width);
+    this.offset += width;
+    return buf;
+  }
+
   public string() {
-    return this.buffer().toString();
+    return this.vector().toString();
   }
 
   public date() {

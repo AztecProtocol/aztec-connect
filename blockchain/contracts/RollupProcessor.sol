@@ -92,7 +92,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
     bytes32 private constant INIT_DEFI_ROOT = 0x2e4ab7889ab3139204945f9e722c7a8fdb84e66439d787bd066c3d896dba04ea;
 
     bytes32 private constant DEFI_BRIDGE_PROCESSED_SIGHASH =
-        0x1ccb5390975e3d07503983a09c3b6a5d11a0e40c4cb4094a7187655f643ef7b4;
+        0x692cf5822a02f5edf084dc7249b3a06293621e069f11975ed70908ed10ed2e2c;
 
     bytes32 private constant ASYNC_BRIDGE_PROCESSED_SIGHASH =
         0x38ce48f4c2f3454bcf130721f25a4262b2ff2c8e36af937b30edf01ba481eb1d;
@@ -213,7 +213,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         uint256 totalInputValue,
         uint256 totalOutputValueA,
         uint256 totalOutputValueB,
-        bool result
+        bool result,
+        bytes errorReason
     );
     event AsyncDefiBridgeProcessed(uint256 indexed bridgeId, uint256 indexed nonce, uint256 totalInputValue);
     event Deposit(uint256 assetId, address depositorAddress, uint256 depositValue);
@@ -1624,7 +1625,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
                 AztecTypes.AztecAsset memory outputAssetA,
                 AztecTypes.AztecAsset memory outputAssetB
             ) = getAztecAssetTypes(bridgeData, interactionNonce);
-
             assembly {
                 // call the following function of DefiBridgeProxy via delegatecall...
                 //     function convert(
@@ -1682,9 +1682,10 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
                     sload(defiBridgeProxy.slot),
                     sub(mPtr, 0x04),
                     0x244,
-                    mPtr,
-                    0x60
+                    0,
+                    0
                 )
+                returndatacopy(mPtr, 0, returndatasize())
 
                 switch success
                 case 1 {
@@ -1732,12 +1733,32 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
                     // prepare the data required to publish the DefiBridgeProcessed event, we will only publish it if isAsync == false
                     // async interactions that have failed, have their isAsync property modified to false above
                     // emit DefiBridgeProcessed(indexed bridgeId, indexed interactionNonce, totalInputValue, outputValueA, outputValueB, success)
+
                     {
                         mstore(mPtr, totalInputValue)
                         mstore(add(mPtr, 0x20), mload(bridgeResult)) // outputValueA
                         mstore(add(mPtr, 0x40), mload(add(bridgeResult, 0x20))) // outputValueB
                         mstore(add(mPtr, 0x60), mload(add(bridgeResult, 0x60))) // success
-                        log3(mPtr, 0x80, DEFI_BRIDGE_PROCESSED_SIGHASH, bridgeId, interactionNonce)
+                        mstore(add(mPtr, 0x80), 0xa0) // position in event data block of `bytes` object
+
+                        if mload(add(bridgeResult, 0x60)) {
+                            mstore(add(mPtr, 0xa0), 0)
+                            log3(mPtr, 0xc0, DEFI_BRIDGE_PROCESSED_SIGHASH, bridgeId, interactionNonce)
+                        }
+                        if iszero(mload(add(bridgeResult, 0x60))) {
+                            mstore(add(mPtr, 0xa0), returndatasize())
+                            let size := returndatasize()
+                            let remainder := mul(iszero(iszero(size)), sub(32, mod(size, 32)))
+                            returndatacopy(add(mPtr, 0xc0), 0, size)
+                            mstore(add(mPtr, add(0xc0, size)), 0)
+                            log3(
+                                mPtr,
+                                add(0xc0, add(size, remainder)),
+                                DEFI_BRIDGE_PROCESSED_SIGHASH,
+                                bridgeId,
+                                interactionNonce
+                            )
+                        }
                     }
                     // compute defiInteractionnHash
                     mstore(mPtr, bridgeId)
@@ -1971,7 +1992,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
             inputs.totalInputValue,
             outputValueA,
             outputValueB,
-            result
+            result,
+            ''
         );
 
         // clear the re-entrancy mutex if it was false at the start of this function

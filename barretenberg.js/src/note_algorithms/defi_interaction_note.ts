@@ -2,11 +2,10 @@ import { createHash } from 'crypto';
 import { toBigIntBE, toBufferBE } from '../bigint_buffer';
 import { BridgeId } from '../bridge_id';
 import { randomBytes } from '../crypto';
-import { numToUInt32BE } from '../serialize';
+import { numToUInt32BE, Deserializer, Serializer } from '../serialize';
 
 export class DefiInteractionNote {
   static EMPTY = new DefiInteractionNote(BridgeId.ZERO, 0, BigInt(0), BigInt(0), BigInt(0), false);
-  static LENGTH = DefiInteractionNote.EMPTY.toBuffer().length;
   static groupModulus = BigInt('21888242871839275222246405745257275088548364400416034343698204186575808495617');
 
   constructor(
@@ -19,9 +18,18 @@ export class DefiInteractionNote {
   ) {}
 
   static deserialize(buffer: Buffer, offset: number) {
+    const des = new Deserializer(buffer, offset);
+    const bridgeIdBuffer = des.buffer(32);
+    const bridgeId = BridgeId.fromBuffer(bridgeIdBuffer);
+    const totalInputValue = des.bigInt();
+    const totalOutputValueA = des.bigInt();
+    const totalOutputValueB = des.bigInt();
+    const nonce = des.uInt32();
+    const result = des.bool();
+
     return {
-      elem: DefiInteractionNote.fromBuffer(buffer.slice(offset, offset + DefiInteractionNote.LENGTH)),
-      adv: DefiInteractionNote.LENGTH,
+      elem: new DefiInteractionNote(bridgeId, nonce, totalInputValue, totalOutputValueA, totalOutputValueB, result),
+      adv: des.getOffset() - offset,
     };
   }
 
@@ -37,29 +45,18 @@ export class DefiInteractionNote {
   }
 
   static fromBuffer(buf: Buffer) {
-    const bridgeId = BridgeId.fromBuffer(buf.slice(0, 32));
-    let offset = 32;
-    const totalInputValue = toBigIntBE(buf.slice(offset, offset + 32));
-    offset += 32;
-    const totalOutputValueA = toBigIntBE(buf.slice(offset, offset + 32));
-    offset += 32;
-    const totalOutputValueB = toBigIntBE(buf.slice(offset, offset + 32));
-    offset += 32;
-    const nonce = buf.readUInt32BE(offset);
-    offset += 4;
-    const result = !!buf[offset];
-    return new DefiInteractionNote(bridgeId, nonce, totalInputValue, totalOutputValueA, totalOutputValueB, result);
+    return DefiInteractionNote.deserialize(buf, 0).elem;
   }
 
   toBuffer() {
-    return Buffer.concat([
-      this.bridgeId.toBuffer(),
-      toBufferBE(this.totalInputValue, 32),
-      toBufferBE(this.totalOutputValueA, 32),
-      toBufferBE(this.totalOutputValueB, 32),
-      numToUInt32BE(this.nonce),
-      Buffer.from([+this.result]),
-    ]);
+    const serializer = new Serializer();
+    serializer.buffer(this.bridgeId.toBuffer());
+    serializer.bigInt(this.totalInputValue);
+    serializer.bigInt(this.totalOutputValueA);
+    serializer.bigInt(this.totalOutputValueB);
+    serializer.uInt32(this.nonce);
+    serializer.bool(this.result);
+    return serializer.getBuffer();
   }
 
   equals(note: DefiInteractionNote) {

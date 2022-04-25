@@ -7,8 +7,8 @@ import {
   serializeBufferToVector,
   serializeDate,
 } from '../serialize';
-import { DefiInteractionNote } from '../note_algorithms';
 import { TxHash } from '../blockchain';
+import { DefiInteractionEvent } from './defi_interaction_event';
 
 export class Block {
   constructor(
@@ -18,7 +18,7 @@ export class Block {
     public rollupSize: number,
     public rollupProofData: Buffer,
     public offchainTxData: Buffer[],
-    public interactionResult: DefiInteractionNote[],
+    public interactionResult: DefiInteractionEvent[],
     public gasUsed: number,
     public gasPrice: bigint,
   ) {}
@@ -29,9 +29,9 @@ export class Block {
     const created = des.date();
     const rollupId = des.uInt32();
     const rollupSize = des.uInt32();
-    const rollupProofData = des.buffer();
+    const rollupProofData = des.vector();
     const offchainTxData = des.deserializeArray(deserializeBufferFromVector);
-    const interactionResult = des.deserializeArray(DefiInteractionNote.deserialize);
+    const interactionResult = des.deserializeArray(DefiInteractionEvent.deserialize);
     const gasUsed = des.uInt32();
     const gasPrice = des.bigInt();
     return {

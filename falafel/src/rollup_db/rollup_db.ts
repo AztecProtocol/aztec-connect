@@ -3,6 +3,7 @@ import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxHash, TxType } from '@aztec/barretenberg/blockchain';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
+import { serializeBufferArrayToVector } from '@aztec/barretenberg/serialize';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { Connection, In, IsNull, LessThan, MoreThanOrEqual, Not, Repository } from 'typeorm';
 import { AssetMetricsDao, ClaimDao, AccountDao, RollupDao, RollupProofDao, TxDao } from '../entity';
@@ -315,7 +316,7 @@ export class TypeOrmRollupDb implements RollupDb {
         gasUsed,
         gasPrice: toBufferBE(gasPrice, 32),
         ethTxHash,
-        interactionResult: Buffer.concat(interactionResult.map(r => r.toBuffer())),
+        interactionResult: serializeBufferArrayToVector(interactionResult.map(r => r.toBuffer())),
       };
       await transactionalEntityManager.update<RollupDao>(this.rollupRep.target, { id }, dao);
       await transactionalEntityManager.insert<AssetMetricsDao>(this.assetMetricsRep.target, assetMetrics);

@@ -1,6 +1,7 @@
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
+import { DefiInteractionEvent } from '@aztec/barretenberg/block_source/defi_interaction_event';
 import { DefiInteractionNote, TreeClaimNote } from '@aztec/barretenberg/note_algorithms';
 import { OffchainDefiClaimData } from '@aztec/barretenberg/offchain_tx_data';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
@@ -96,7 +97,7 @@ export class ClaimProofCreator {
     dataRoot: Buffer,
     defiRoot: Buffer,
     claim: ClaimDao,
-    interactionNote: DefiInteractionNote,
+    interactionEvent: DefiInteractionEvent,
     interactionNoteIndex: number,
   ) {
     const { id, depositValue, bridgeId, partialState, inputNullifier, interactionNonce, fee } = claim;
@@ -112,7 +113,7 @@ export class ClaimProofCreator {
       inputNullifier,
     );
     const interactionNotePath = await this.worldStateDb.getHashPath(RollupTreeId.DEFI, BigInt(interactionNoteIndex));
-    const { outputValueA, outputValueB } = this.getOutputValues(claimNote, interactionNote);
+    const { outputValueA, outputValueB } = this.getOutputValues(claimNote, interactionEvent);
 
     const claimProof = new ClaimProof(
       dataRoot,
@@ -122,7 +123,7 @@ export class ClaimProofCreator {
       claimNote,
       interactionNoteIndex,
       interactionNotePath,
-      interactionNote,
+      interactionEvent.toDefiInteractionNote(),
       outputValueA,
       outputValueB,
     );
@@ -135,9 +136,10 @@ export class ClaimProofCreator {
     return proof;
   }
 
-  private getOutputValues(claimNote: TreeClaimNote, interactionNote: DefiInteractionNote) {
+  private getOutputValues(claimNote: TreeClaimNote, interactionNote: DefiInteractionEvent) {
     const { totalInputValue, totalOutputValueA, totalOutputValueB, result } = interactionNote;
     const { value } = claimNote;
+
     const outputValueA = !result ? 0n : (totalOutputValueA * value) / totalInputValue;
     const outputValueB = !result ? 0n : (totalOutputValueB * value) / totalInputValue;
     return { outputValueA, outputValueB };

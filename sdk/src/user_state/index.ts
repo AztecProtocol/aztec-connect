@@ -30,6 +30,7 @@ import { Note } from '../note';
 import { NotePicker } from '../note_picker';
 import { ProofOutput } from '../proofs';
 import { UserData } from '../user';
+import { DefiInteractionEvent } from '@aztec/barretenberg/block_source/defi_interaction_event';
 
 const debug = createLogger('bb:user_state');
 
@@ -370,7 +371,7 @@ export class UserState extends EventEmitter {
     blockCreated: Date,
     noteStartIndex: number,
     treeNote2: TreeNote,
-    defiInteractionNotes: DefiInteractionNote[],
+    defiInteractionNotes: DefiInteractionEvent[],
   ) {
     const { noteCommitment1, noteCommitment2 } = proof;
     const note2 = await this.processNewNote(noteStartIndex + 1, noteCommitment2, treeNote2);
@@ -406,17 +407,17 @@ export class UserState extends EventEmitter {
     }
   }
 
-  private async processDefiInteractionResults(defiInteractionNotes: DefiInteractionNote[], blockCreated: Date) {
-    for (const note of defiInteractionNotes) {
-      const defiTxs = await this.db.getDefiTxsByNonce(this.user.id, note.nonce);
+  private async processDefiInteractionResults(defiInteractionEvents: DefiInteractionEvent[], blockCreated: Date) {
+    for (const event of defiInteractionEvents) {
+      const defiTxs = await this.db.getDefiTxsByNonce(this.user.id, event.nonce);
       for (const tx of defiTxs) {
-        const outputValueA = !note.result
+        const outputValueA = !event.result
           ? BigInt(0)
-          : (note.totalOutputValueA * tx.depositValue) / note.totalInputValue;
-        const outputValueB = !note.result
+          : (event.totalOutputValueA * tx.depositValue) / event.totalInputValue;
+        const outputValueB = !event.result
           ? BigInt(0)
-          : (note.totalOutputValueB * tx.depositValue) / note.totalInputValue;
-        await this.db.updateDefiTxFinalisationResult(tx.txId, note.result, outputValueA, outputValueB, blockCreated);
+          : (event.totalOutputValueB * tx.depositValue) / event.totalInputValue;
+        await this.db.updateDefiTxFinalisationResult(tx.txId, event.result, outputValueA, outputValueB, blockCreated);
       }
     }
   }

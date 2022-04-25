@@ -1,12 +1,10 @@
-import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
+import { DefiInteractionEvent } from '@aztec/barretenberg/block_source/defi_interaction_event';
+import { Deserializer } from '@aztec/barretenberg/serialize';
 
 export const parseInteractionResult = (buf: Buffer) => {
-  const numNotes = buf.length / DefiInteractionNote.LENGTH;
-  const notes: DefiInteractionNote[] = [];
-  for (let i = 0; i < numNotes; ++i) {
-    const startIndex = i * DefiInteractionNote.LENGTH;
-    const note = DefiInteractionNote.fromBuffer(buf.slice(startIndex, startIndex + DefiInteractionNote.LENGTH));
-    notes.push(note);
+  if (!buf.length) {
+    return [];
   }
-  return notes;
+  const des = new Deserializer(buf);
+  return des.deserializeArray(DefiInteractionEvent.deserialize);
 };

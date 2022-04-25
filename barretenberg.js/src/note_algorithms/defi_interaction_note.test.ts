@@ -8,7 +8,7 @@ describe('defi interaction note', () => {
   it('convert interaction note to and form buffer', () => {
     const note = DefiInteractionNote.random();
     const buf = note.toBuffer();
-    expect(buf.length).toBe(DefiInteractionNote.LENGTH);
+    expect(buf.length).toBe(DefiInteractionNote.deserialize(buf, 0).adv);
 
     const recovered = DefiInteractionNote.fromBuffer(buf);
     expect(recovered).toEqual(note);

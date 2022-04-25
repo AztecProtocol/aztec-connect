@@ -99,7 +99,7 @@ contract MockDefiBridge is IDefiBridge {
             bool
         )
     {
-        require(canConvert);
+        require(canConvert, 'MockDefiBridge: canConvert = false');
 
         uint256 modifiedReturnValueA = returnValueA;
         if (auxData == uint32(AUX_DATA_SELECTOR.CLOSE_LOAN) && inputAssetB.id > 0) {

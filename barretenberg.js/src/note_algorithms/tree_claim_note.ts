@@ -27,6 +27,13 @@ export class TreeClaimNote {
     );
   }
 
+  static deserialize(buf: Buffer, offset: number) {
+    return {
+      elem: TreeClaimNote.fromBuffer(buf.slice(offset, offset + TreeClaimNote.LENGTH)),
+      adv: TreeClaimNote.LENGTH,
+    };
+  }
+
   static fromBuffer(buf: Buffer) {
     const value = toBigIntBE(buf.slice(0, 32));
     let offset = 32;

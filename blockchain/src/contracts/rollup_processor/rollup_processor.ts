@@ -2,8 +2,8 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { EthereumProvider, EthereumSignature, SendTxOptions, TxHash } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { computeInteractionHashes } from '@aztec/barretenberg/note_algorithms';
 import { Timer } from '@aztec/barretenberg/timer';
-import { computeInteractionHashes, DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { sliceOffchainTxData } from '@aztec/barretenberg/offchain_tx_data';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { TransactionReceipt, TransactionResponse } from '@ethersproject/abstract-provider';
@@ -12,6 +12,7 @@ import createDebug from 'debug';
 import { Contract, Event, utils } from 'ethers';
 import { abi } from '../../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
 import { decodeErrorFromContractByTxHash } from '../decode_error';
+import { DefiInteractionEvent } from '@aztec/barretenberg/block_source/defi_interaction_event';
 import { solidityFormatSignatures } from './solidity_format_signatures';
 
 const fixEthersStackTrace = (err: Error) => {
@@ -440,7 +441,7 @@ export class RollupProcessor {
         .map(meta => {
           // assign the set of defi notes for this rollup and decode the block
           const hashesForThisRollup = this.extractDefiHashesFromRollupEvent(meta.event);
-          const defiNotesForThisRollup: DefiInteractionNote[] = [];
+          const defiNotesForThisRollup: DefiInteractionEvent[] = [];
           for (const hash of hashesForThisRollup) {
             if (!allDefiNotes[hash]) {
               console.log(`Unable to locate defi interaction note for hash ${hash}!`);
@@ -475,7 +476,7 @@ export class RollupProcessor {
   private async getDefiBridgeEventsForRollupEvents(rollupEvents: Event[]) {
     // retrieve all defi interaction notes from the DefiBridgeProcessed stream for the set of rollup events given
     const rollupHashes = rollupEvents.flatMap(ev => this.extractDefiHashesFromRollupEvent(ev));
-    const hashMapping: { [key: string]: DefiInteractionNote | undefined } = {};
+    const hashMapping: { [key: string]: DefiInteractionEvent | undefined } = {};
     for (const hash of rollupHashes) {
       hashMapping[hash] = undefined;
     }
@@ -496,25 +497,27 @@ export class RollupProcessor {
       const filter = this.rollupProcessor.filters.DefiBridgeProcessed();
       const defiBridgeEvents = await this.rollupProcessor.queryFilter(filter, startBlock, endBlock);
       // decode the retrieved events into actual defi interaction notes
-      const decodedNotes = defiBridgeEvents.map((log: { blockNumber: number; topics: string[]; data: string }) => {
+      const decodedEvents = defiBridgeEvents.map((log: { blockNumber: number; topics: string[]; data: string }) => {
         const {
-          args: { bridgeId, nonce, totalInputValue, totalOutputValueA, totalOutputValueB, result },
+          args: { bridgeId, nonce, totalInputValue, totalOutputValueA, totalOutputValueB, result, errorReason },
         } = this.contract.interface.parseLog(log);
-        return new DefiInteractionNote(
+
+        return new DefiInteractionEvent(
           BridgeId.fromBigInt(BigInt(bridgeId)),
           +nonce,
           BigInt(totalInputValue),
           BigInt(totalOutputValueA),
           BigInt(totalOutputValueB),
           result,
+          Buffer.from(errorReason.slice(2), 'hex'),
         );
       });
       this.log(
-        `found ${decodedNotes.length} notes between blocks ${startBlock} - ${endBlock}, nonces: `,
-        decodedNotes.map(note => note.nonce),
+        `found ${decodedEvents.length} notes between blocks ${startBlock} - ${endBlock}, nonces: `,
+        decodedEvents.map(note => note.nonce),
       );
       // compute the hash and store the notes against that hash in our mapping
-      for (const decodedNote of decodedNotes) {
+      for (const decodedNote of decodedEvents) {
         const noteHash = computeInteractionHashes([decodedNote])[0].toString('hex');
         if (Object.prototype.hasOwnProperty.call(hashMapping, noteHash) && hashMapping[noteHash] === undefined) {
           hashMapping[noteHash] = decodedNote;
@@ -572,7 +575,7 @@ export class RollupProcessor {
   private decodeBlock(
     rollupTx: TransactionResponse,
     receipt: TransactionReceipt,
-    interactionResult: DefiInteractionNote[],
+    interactionResult: DefiInteractionEvent[],
     offchainDataTxs: TransactionResponse[],
   ): Block {
     const rollupAbi = new utils.Interface(abi);

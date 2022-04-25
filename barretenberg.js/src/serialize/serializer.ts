@@ -1,3 +1,4 @@
+import { serializeBufferArrayToVector } from '.';
 import {
   boolToByte,
   numToInt32BE,
@@ -30,29 +31,36 @@ export class Serializer {
     this.buf.push(serializeBigInt(num));
   }
 
-  public buffer(buf: Buffer) {
+  /**
+   * The given buffer is of variable length. Prefixes the buffer with its length.
+   */
+  public vector(buf: Buffer) {
     this.buf.push(serializeBufferToVector(buf));
   }
 
+  /**
+   * Directly serializes a buffer that maybe of fixed, or variable length.
+   * It is assumed the corresponding deserialize function will handle variable length data, thus the length
+   * does not need to be prefixed here.
+   * If serializing a raw, variable length buffer, use vector().
+   */
+  public buffer(buf: Buffer) {
+    this.buf.push(buf);
+  }
+
   public string(str: string) {
-    this.buffer(Buffer.from(str));
+    this.vector(Buffer.from(str));
   }
 
   public date(date: Date) {
     this.buf.push(serializeDate(date));
   }
 
-  // public deserializeArray<T>(fn: DeserializeFn<T>) {
-  //   return this.exec((buf: Buffer, offset: number) => deserializeArrayFromVector(fn, buf, offset));
-  // }
-
-  // public exec<T>(fn: DeserializeFn<T>): T {
-  //   const { elem, adv } = fn(this.buf, this.offset);
-  //   this.offset += adv;
-  //   return elem;
-  // }
-
   public getBuffer() {
     return Buffer.concat(this.buf);
+  }
+
+  public serializeArray<T>(arr: T[]) {
+    this.buf.push(serializeBufferArrayToVector(arr.map((e: any) => e.toBuffer())));
   }
 }

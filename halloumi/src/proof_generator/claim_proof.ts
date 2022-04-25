@@ -1,7 +1,6 @@
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { DefiInteractionNote, TreeClaimNote } from '@aztec/barretenberg/note_algorithms';
-import { numToUInt32BE } from '@aztec/barretenberg/serialize';
-import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
+import { Deserializer, Serializer } from '@aztec/barretenberg/serialize';
 
 export class ClaimProof {
   constructor(
@@ -21,55 +20,52 @@ export class ClaimProof {
   ) {}
 
   public toBuffer() {
-    return Buffer.concat([
-      this.dataRoot,
-      this.defiRoot,
+    const serializer = new Serializer();
+    serializer.buffer(this.dataRoot);
+    serializer.buffer(this.defiRoot);
+    serializer.uInt32(this.claimNoteIndex);
+    serializer.buffer(this.claimNotePath.toBuffer());
+    serializer.buffer(this.claimNote.toBuffer());
+    serializer.uInt32(this.defiInteractionNoteIndex);
+    serializer.buffer(this.defiInteractionNotePath.toBuffer());
+    serializer.buffer(this.defiInteractionNote.toBuffer());
+    serializer.bigInt(this.outputValueA);
+    serializer.bigInt(this.outputValueB);
 
-      numToUInt32BE(this.claimNoteIndex),
-      this.claimNotePath.toBuffer(),
-      this.claimNote.toBuffer(),
+    return serializer.getBuffer();
+  }
 
-      numToUInt32BE(this.defiInteractionNoteIndex),
-      this.defiInteractionNotePath.toBuffer(),
-      this.defiInteractionNote.toBuffer(),
+  static deserialize(buffer: Buffer, offset: number) {
+    const des = new Deserializer(buffer, offset);
+    const dataRoot = des.buffer(32);
+    const defiRoot = des.buffer(32);
+    const claimNoteIndex = des.uInt32();
+    const claimNotePath = des.exec(HashPath.deserialize);
+    const claimNote = des.exec(TreeClaimNote.deserialize);
+    const defiInteractionNoteIndex = des.uInt32();
+    const defiInteractionNotePath = des.exec(HashPath.deserialize);
+    const defiInteractionNote = des.exec(DefiInteractionNote.deserialize);
+    const outputValueA = des.bigInt();
+    const outputValueB = des.bigInt();
 
-      toBufferBE(this.outputValueA, 32),
-      toBufferBE(this.outputValueB, 32),
-    ]);
+    return {
+      elem: new ClaimProof(
+        dataRoot,
+        defiRoot,
+        claimNoteIndex,
+        claimNotePath,
+        claimNote,
+        defiInteractionNoteIndex,
+        defiInteractionNotePath,
+        defiInteractionNote,
+        outputValueA,
+        outputValueB,
+      ),
+      adv: des.getOffset() - offset,
+    };
   }
 
   public static fromBuffer(buf: Buffer) {
-    const dataRoot = buf.slice(0, 32);
-    let offset = 32;
-    const defiRoot = buf.slice(offset, offset + 32);
-    offset += 32;
-    const claimNoteIndex = buf.readUInt32BE(offset);
-    offset += 4;
-    const claimNotePath = HashPath.deserialize(buf, offset);
-    offset += claimNotePath.adv;
-    const claimNote = TreeClaimNote.fromBuffer(buf.slice(offset));
-    offset += TreeClaimNote.LENGTH;
-    const defiInteractionNoteIndex = buf.readUInt32BE(offset);
-    offset += 4;
-    const defiInteractionNotePath = HashPath.deserialize(buf, offset);
-    offset += defiInteractionNotePath.adv;
-    const defiInteractionNote = DefiInteractionNote.fromBuffer(buf.slice(offset));
-    offset += DefiInteractionNote.LENGTH;
-    const outputValueA = toBigIntBE(buf.slice(offset, offset + 32));
-    offset += 32;
-    const outputValueB = toBigIntBE(buf.slice(offset, offset + 32));
-
-    return new ClaimProof(
-      dataRoot,
-      defiRoot,
-      claimNoteIndex,
-      claimNotePath.elem,
-      claimNote,
-      defiInteractionNoteIndex,
-      defiInteractionNotePath.elem,
-      defiInteractionNote,
-      outputValueA,
-      outputValueB,
-    );
+    return ClaimProof.deserialize(buf, 0).elem;
   }
 }
