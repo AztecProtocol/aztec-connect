@@ -3,7 +3,7 @@ import { getAssetPreferredFractionalDigits } from 'alt-model/known_assets/known_
 import { formatBaseUnits } from 'app';
 import { Text } from 'components';
 import { useL1Balances } from 'alt-model/assets/l1_balance_hooks';
-import { useBalance } from 'alt-model';
+import { useMaxSpendableValue } from 'alt-model';
 
 export function MiniL1BalanceIndicator({ asset }: { asset?: RemoteAsset }) {
   const { l1Balance } = useL1Balances(asset);
@@ -17,7 +17,7 @@ export function MiniL1BalanceIndicator({ asset }: { asset?: RemoteAsset }) {
 }
 
 export function MiniL2BalanceIndicator({ asset }: { asset?: RemoteAsset }) {
-  const balance = useBalance(asset?.id);
+  const balance = useMaxSpendableValue(asset?.id);
   const content =
     asset === undefined || balance === undefined
       ? 'Loading...'

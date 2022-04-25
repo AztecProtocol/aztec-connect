@@ -52,6 +52,25 @@ export function useSpendableBalance(assetId: number) {
   return spendableBalance;
 }
 
+// maxSpendableValue is the sum of the two highest avaiable notes
+export function useMaxSpendableValue(assetId?: number) {
+  const { accountId } = useApp();
+  const sdk = useSdk();
+  const [maxSpendableValue, setMaxSpendableValue] = useState<bigint>();
+  useEffect(() => {
+    if (sdk && accountId) {
+      if (assetId !== undefined) {
+        const updateMaxSpendableValue = () => sdk.getMaxSpendableValue(assetId, accountId).then(setMaxSpendableValue);
+        updateMaxSpendableValue();
+        return listenAccountUpdated(sdk, accountId, updateMaxSpendableValue);
+      } else {
+        setMaxSpendableValue(undefined);
+      }
+    }
+  }, [sdk, accountId, assetId]);
+  return maxSpendableValue;
+}
+
 export function useSpendableBalances() {
   const { accountId } = useApp();
   const sdk = useSdk();

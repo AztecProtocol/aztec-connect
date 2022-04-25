@@ -1,6 +1,5 @@
 import createDebug from 'debug';
 import { BridgeId, DefiSettlementTime } from '@aztec/sdk';
-import { useBalance } from 'alt-model';
 import { useAmountFactory, useSdk } from 'alt-model/top_level_context';
 import { useMemo, useState } from 'react';
 import { useTrackedFieldChangeHandlers } from 'alt-model/form_fields_hooks';
@@ -16,6 +15,7 @@ import { useAwaitCorrectProvider } from './correct_provider_hooks';
 import { BridgeInteractionAssets, DefiRecipe } from '../types';
 import { useDefaultAuxDataOption } from '../defi_info_hooks';
 import { MAX_MODE } from 'alt-model/forms/constants';
+import { useMaxSpendableValue } from 'alt-model/balance_hooks';
 
 const debug = createDebug('zm:defi_form_hooks');
 
@@ -59,8 +59,8 @@ export function useDefiForm(recipe: DefiRecipe, mode: DefiFormMode) {
   const bridgeId = useDefiFormBridgeId(recipe, interactionAssets);
   const feeAmounts = useDefiFeeAmounts(bridgeId);
   const feeAmount = feeAmounts?.[fields.speed];
-  const balanceInTargetAsset = useBalance(depositAsset.id);
-  const balanceInFeePayingAsset = useBalance(feeAmount?.id);
+  const balanceInTargetAsset = useMaxSpendableValue(depositAsset.id);
+  const balanceInFeePayingAsset = useMaxSpendableValue(feeAmount?.id);
   const targetAssetAddressStr = depositAsset.address.toString();
   const transactionLimit = isKnownAssetAddressString(targetAssetAddressStr)
     ? config.txAmountLimits[targetAssetAddressStr]

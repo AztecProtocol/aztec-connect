@@ -1,6 +1,5 @@
 import createDebug from 'debug';
 import { TxSettlementTime } from '@aztec/sdk';
-import { useBalance } from 'alt-model';
 import { useAmountFactory, useSdk } from 'alt-model/top_level_context';
 import { useState } from 'react';
 import { useL1Balances } from 'alt-model/assets/l1_balance_hooks';
@@ -16,6 +15,7 @@ import { useProviderState } from 'alt-model/provider_hooks';
 import { useAliasIsValidRecipient } from 'alt-model/alias_hooks';
 import { isKnownAssetAddressString } from 'alt-model/known_assets/known_asset_addresses';
 import { useAsset } from 'alt-model/asset_hooks';
+import { useMaxSpendableValue } from 'alt-model/balance_hooks';
 
 const debug = createDebug('zm:shield_form_hooks');
 
@@ -41,7 +41,7 @@ export function useShieldForm(preselectedAssetId?: number) {
   const { approveProofGasCost, depositFundsGasCost } = useEstimatedShieldingGasCosts(depositor, targetAsset?.id);
   const feeAmounts = useDepositFeeAmounts(fields.assetId);
   const feeAmount = feeAmounts?.[fields.speed];
-  const balanceInFeePayingAsset = useBalance(feeAmount?.id);
+  const balanceInFeePayingAsset = useMaxSpendableValue(feeAmount?.id);
   const targetAssetAddressStr = targetAsset?.address.toString();
   const transactionLimit = isKnownAssetAddressString(targetAssetAddressStr)
     ? config.txAmountLimits[targetAssetAddressStr]
