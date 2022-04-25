@@ -10,12 +10,6 @@ export enum DatabaseEvent {
   UPDATED_ACCOUNT = 'DATABASE_UPDATED_ACCOUNT',
 }
 
-export interface AccountV0 {
-  accountPublicKey: GrumpkinAddress;
-  alias: string;
-  timestamp: Date;
-}
-
 export interface LinkedAccount {
   accountPublicKey: GrumpkinAddress;
   signerAddress: EthAddress;
@@ -23,16 +17,6 @@ export interface LinkedAccount {
   version: AccountVersion;
   timestamp: Date;
 }
-
-class DexieAccountV0 {
-  constructor(public accountPublicKey: Uint8Array, public alias: string, public timestamp: Date) {}
-}
-
-const fromDexieAccountV0 = ({ accountPublicKey, alias, timestamp }: DexieAccountV0): AccountV0 => ({
-  accountPublicKey: new GrumpkinAddress(Buffer.from(accountPublicKey)),
-  alias,
-  timestamp,
-});
 
 class DexieLinkedAccount {
   constructor(
@@ -73,7 +57,6 @@ export interface Database {
 
 export class Database extends EventEmitter {
   private db!: Dexie;
-  private accountV0!: Dexie.Table<DexieAccountV0, Uint8Array>; // To be deprecated.
   private linkedAccount!: Dexie.Table<DexieLinkedAccount, Uint8Array>;
 
   constructor(private dbName = 'zk-money', private version = 2) {
@@ -99,12 +82,9 @@ export class Database extends EventEmitter {
   private createTables() {
     this.db = new Dexie(this.dbName);
     this.db.version(this.version).stores({
-      account: '&accountPublicKey',
       linkedAccount: '&accountPublicKey',
     });
 
-    this.accountV0 = this.db.table('account');
-    this.accountV0.mapToClass(DexieAccountV0);
     this.linkedAccount = this.db.table('linkedAccount');
     this.linkedAccount.mapToClass(DexieLinkedAccount);
   }
@@ -117,24 +97,6 @@ export class Database extends EventEmitter {
 
   async close() {
     await this.db?.close();
-  }
-
-  async getAccountV0(accountPublicKey: GrumpkinAddress) {
-    const account = await this.accountV0.get({ accountPublicKey: new Uint8Array(accountPublicKey.toBuffer()) });
-    return account ? fromDexieAccountV0(account) : undefined;
-  }
-
-  async getAccountV0s() {
-    const accounts = await this.accountV0.toArray();
-    return accounts.map(fromDexieAccountV0);
-  }
-
-  async deleteAccountV0(accountPublicKey: GrumpkinAddress) {
-    await this.accountV0.delete(new Uint8Array(accountPublicKey.toBuffer()));
-  }
-
-  async deleteAccountV0s() {
-    await this.accountV0.clear();
   }
 
   async addAccount(account: LinkedAccount) {
