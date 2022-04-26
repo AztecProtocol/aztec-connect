@@ -19,6 +19,7 @@ const createFeeTx = (fee: bigint, txRefNo: number) =>
 describe('groupUserTxs', () => {
   const feePayingAssetIds = [0];
   const garbageAssetId = 123;
+  const now = new Date();
 
   describe('account tx', () => {
     it('recover account tx without fee and deposit', () => {
@@ -437,7 +438,7 @@ describe('groupUserTxs', () => {
         bridgeId,
         success: true,
         outputValueA: 123n,
-        settled: new Date(),
+        settled: now,
         interactionNonce: 45,
         isAsync: true,
       });
@@ -472,8 +473,8 @@ describe('groupUserTxs', () => {
         outputValueB: 45n,
         interactionNonce: 678,
         isAsync: true,
-        settled: new Date(),
-        finalised: new Date(),
+        settled: now,
+        finalised: now,
       });
       expect(groupUserTxs([defiTx], feePayingAssetIds)).toEqual([
         new UserDefiTx(
@@ -507,9 +508,9 @@ describe('groupUserTxs', () => {
         outputValueB: 45n,
         interactionNonce: 678,
         isAsync: true,
-        settled: new Date(),
-        finalised: new Date(),
-        claimSettled: new Date(),
+        settled: now,
+        finalised: now,
+        claimSettled: now,
         claimTxId,
       });
       expect(groupUserTxs([defiTx], feePayingAssetIds)).toEqual([
