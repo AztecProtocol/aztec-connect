@@ -1,4 +1,4 @@
-import { AztecSdk, toBaseUnits, TxSettlementTime, WalletProvider } from '@aztec/sdk';
+import { AztecSdk, TxSettlementTime, WalletProvider } from '@aztec/sdk';
 import { Agent, EthAddressAndNonce, UserData } from './agent';
 
 /**
@@ -24,10 +24,10 @@ export class PaymentAgent {
 
   /**
    * We need enough ETH to deposit funds to the contract, plus calcDeposit().
-   * depositPendingFundsToContact() requires ~50,000 gas. Assume 4 gwei gas price = 0.0002 eth.
+   * depositPendingFundsToContact() requires ~50,000 gas. Assume 4 gwei gas price.
    */
   public static async getRequiredFunding(sdk: AztecSdk, assetId: number, numTransfers: number) {
-    return toBaseUnits('0.0002', 18) + (await PaymentAgent.calcDeposit(sdk, assetId, numTransfers));
+    return 50000n * 4n * 10n ** 9n + (await PaymentAgent.calcDeposit(sdk, assetId, numTransfers));
   }
 
   public async run() {

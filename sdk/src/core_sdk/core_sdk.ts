@@ -97,17 +97,18 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
    * each blocks until the first call completes.
    */
   public async init(options: CoreSdkOptions) {
+    if (this.initState !== SdkInitState.UNINITIALIZED) {
+      throw new Error('Already initialized.');
+    }
+
     try {
       // Take copy so we can modify internally.
       this.options = { useMutex: true, ...options };
 
-      if (this.initState !== SdkInitState.UNINITIALIZED) {
-        throw new Error('Already initialized.');
-      }
-
       this.serialQueue = this.options.useMutex
         ? new MutexSerialQueue(this.db, 'aztec_core_sdk')
         : new MemorySerialQueue();
+
       this.noteAlgos = new NoteAlgorithms(this.barretenberg);
       this.blake2s = new Blake2s(this.barretenberg);
       this.grumpkin = new Grumpkin(this.barretenberg);
@@ -149,21 +150,25 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
       this.updateInitState(SdkInitState.INITIALIZED);
     } catch (err) {
-      await this.destroy();
+      // If initialisation fails, we should destroy the components we've taken ownership of.
+      await this.leveldb.close();
+      await this.db.close();
+      await this.workerPool?.destroy();
+      this.serialQueue?.cancel();
       throw err;
     }
   }
 
   public async destroy() {
-    await this.serialQueue.push(async () => {
-      debug('Destroying...');
-      await this.stopReceivingBlocks();
-      await Promise.all(this.userStates.map(us => this.stopSyncingUserState(us)));
-      await this.leveldb.close();
-      await this.db.close();
-      await this.workerPool?.destroy();
-    });
-    await this.serialQueue.destroy();
+    debug('Destroying...');
+    // The serial queue will cancel itself. This ensures that anything currently in the queue finishes, and ensures
+    // that once the await to push() returns, nothing else is on, or can be added to the queue.
+    await this.serialQueue.push(async () => this.serialQueue.cancel());
+    await this.stopReceivingBlocks();
+    await Promise.all(this.userStates.map(us => this.stopSyncingUserState(us)));
+    await this.leveldb.close();
+    await this.db.close();
+    await this.workerPool?.destroy();
     this.updateInitState(SdkInitState.DESTROYED);
     this.emit(SdkEvent.DESTROYED);
     this.removeAllListeners();

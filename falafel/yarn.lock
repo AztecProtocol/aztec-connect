@@ -64,7 +64,8 @@
 "@aztec/blockchain@file:../blockchain/dest":
   version "2.0.0"
   dependencies:
-    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-1f715b1d-9fbc-493f-8521-95b7b5dca61b-1645743105976/node_modules/barretenberg.js/dest"
+    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-c243ec3d-edb5-48c6-8280-6d92f7d702ac-1650962515151/node_modules/barretenberg.js/dest"
+    "@aztec/bridge-clients" "0.1.32"
     "@ethersproject/experimental" "5.5.0"
     "@nomiclabs/hardhat-ethers" "^2.0.2"
     "@nomiclabs/hardhat-etherscan" "^2.1.8"
@@ -72,12 +73,20 @@
     "@openzeppelin/contracts-upgradeable" "^4.4.2"
     "@uniswap/v2-core" "^1.0.1"
     "@uniswap/v2-periphery" "^1.1.0-beta.0"
+    commander "^9.0.0"
     debug "^4.1.1"
     dotenv "^8.2.0"
     ethers "5.5.1"
     hardhat "^2.6.8"
     hardhat-upgrades "^0.0.0"
     typescript "^4.4.4"
+
+"@aztec/bridge-clients@0.1.32":
+  version "0.1.32"
+  resolved "https://registry.yarnpkg.com/@aztec/bridge-clients/-/bridge-clients-0.1.32.tgz#4dc9dadc0a4085f9afd13eea184b0db7f1b68550"
+  integrity sha512-BFi3WREEOhaaRx0tv3/sfNtwTBTbrkG1cj9WU3nHLXyDmXII3+AfoP+N6H8VYo8U1Oo6TDL571Uhh4pxYWRQQQ==
+  dependencies:
+    axios "^0.26.1"
 
 "@babel/code-frame@7.12.11":
   version "7.12.11"
@@ -2331,6 +2340,13 @@ aws4@^1.8.0:
   resolved "https://registry.yarnpkg.com/aws4/-/aws4-1.11.0.tgz#d61f46d83b2519250e2784daf5b09479a8b41c59"
   integrity sha512-xh1Rl34h6Fi1DC2WWKfxUTVqRsNnr6LsKz2+hfwDxQJWmrx8+c7ylaqBMcHfl1U1r2dsifOvKX3LQuLNZ+XSvA==
 
+axios@^0.26.1:
+  version "0.26.1"
+  resolved "https://registry.yarnpkg.com/axios/-/axios-0.26.1.tgz#1ede41c51fcf51bbbd6fd43669caaa4f0495aaa9"
+  integrity sha512-fPwcX4EvnSHuInCMItEhAGnaSEXRBjtzh9fOtsE6E1G6p7vl7edEeZe11QHf18+6+9gR5PbKV/sGKNaD8YaMeA==
+  dependencies:
+    follow-redirects "^1.14.8"
+
 babel-jest@^26.6.3:
   version "26.6.3"
   resolved "https://registry.yarnpkg.com/babel-jest/-/babel-jest-26.6.3.tgz#d87d25cb0037577a0c89f82e5755c5d293c01056"
@@ -2943,6 +2959,11 @@ commander@^2.20.3:
   version "2.20.3"
   resolved "https://registry.yarnpkg.com/commander/-/commander-2.20.3.tgz#fd485e84c03eb4881c20722ba48035e8531aeb33"
   integrity sha512-GpVkmM8vF2vQUkj2LvZmD35JxeJOLCwJ9cUkugyk2nuhbv3+mJvpLYYt+0+USMxE+oj+ey/lJEnhZw75x/OMcQ==
+
+commander@^9.0.0:
+  version "9.2.0"
+  resolved "https://registry.yarnpkg.com/commander/-/commander-9.2.0.tgz#6e21014b2ed90d8b7c9647230d8b7a94a4a419a9"
+  integrity sha512-e2i4wANQiSXgnrBlIatyHtP1odfUp0BbV5Y5nEGbxtIrStkEOAAzCUirvLBNXHLr7kwLvJl6V+4V3XV9x7Wd9w==
 
 compare-versions@^4.0.0:
   version "4.1.3"
@@ -4016,7 +4037,7 @@ flatted@^3.1.0:
   resolved "https://registry.yarnpkg.com/flatted/-/flatted-3.2.2.tgz#64bfed5cb68fe3ca78b3eb214ad97b63bedce561"
   integrity sha512-JaTY/wtrcSyvXJl4IMFHPKyFur1sE9AUqc0QnhOaJ0CxHtAoIV8pYDzeEfAaNEtGkOfq4gr3LBFmdXW5mOQFnA==
 
-follow-redirects@^1.12.1:
+follow-redirects@^1.12.1, follow-redirects@^1.14.8:
   version "1.14.9"
   resolved "https://registry.yarnpkg.com/follow-redirects/-/follow-redirects-1.14.9.tgz#dd4ea157de7bfaf9ea9b3fbd85aa16951f78d8d7"
   integrity sha512-MQDfihBQYMcyy5dhRDJUHcw7lb2Pv/TuE6xP1vyraLukNDHKbDxDNaOE3NbCAdKQApno+GPRyo1YAp89yCjK4w==
@@ -4403,8 +4424,8 @@ growly@^1.3.0:
 "halloumi@file:../halloumi/dest":
   version "1.0.0"
   dependencies:
-    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-halloumi-1.0.0-6777d2ac-edee-40d5-9756-01e442588c2c-1645743106172/barretenberg.js/dest"
-    "@aztec/blockchain" "file:../../.cache/yarn/v6/npm-halloumi-1.0.0-6777d2ac-edee-40d5-9756-01e442588c2c-1645743106172/blockchain/dest"
+    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-halloumi-1.0.0-ca11b022-e6b0-4244-b071-8bcc453e61dc-1650962515414/barretenberg.js/dest"
+    "@aztec/blockchain" "file:../../.cache/yarn/v6/npm-halloumi-1.0.0-ca11b022-e6b0-4244-b071-8bcc453e61dc-1650962515414/blockchain/dest"
     debug "^4.3.3"
     fs-extra "9.0.1"
     koa "^2.7.0"
@@ -8570,6 +8591,11 @@ typescript@^4.4.4:
   version "4.4.4"
   resolved "https://registry.yarnpkg.com/typescript/-/typescript-4.4.4.tgz#2cd01a1a1f160704d3101fd5a58ff0f9fcb8030c"
   integrity sha512-DqGhF5IKoBl8WNf8C1gu8q0xZSInh9j1kJJMqT3a94w1JzVaBU4EXOSMrz9yDqMT0xt3selp83fuFMQ0uzv6qA==
+
+typescript@^4.6.3:
+  version "4.6.3"
+  resolved "https://registry.yarnpkg.com/typescript/-/typescript-4.6.3.tgz#eefeafa6afdd31d725584c67a0eaba80f6fc6c6c"
+  integrity sha512-yNIatDa5iaofVozS/uQJEl3JRWLKKGJKh6Yaiv0GLGSuhpFJe7P3SbHZ8/yjAHRQwKRoA6YZqlfjXWmVzoVSMw==
 
 unbox-primitive@^1.0.1:
   version "1.0.1"

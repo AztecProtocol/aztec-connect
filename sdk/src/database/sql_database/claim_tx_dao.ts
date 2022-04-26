@@ -10,7 +10,7 @@ export class ClaimTxDao implements CoreClaimTx {
   public nullifier!: Buffer;
 
   @Column('blob', { transformer: [txIdTransformer] })
-  public txId!: TxId;
+  public defiTxId!: TxId;
 
   @Column('blob', { transformer: [accountIdTransformer] })
   public userId!: AccountId;

@@ -1,3 +1,6 @@
-Dockerfile
+.parcel-cache
+dest
+dist
 node_modules
-dest*
+**/.terraform
+Dockerfile

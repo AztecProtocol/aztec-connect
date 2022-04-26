@@ -12,7 +12,7 @@ export class MemorySerialQueue implements SerialQueue {
     return this.queue.length();
   }
 
-  public async destroy() {
+  public async cancel() {
     this.queue.cancel();
   }
 

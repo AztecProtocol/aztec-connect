@@ -331,14 +331,14 @@ class DexieClaimTx {
 const toDexieClaimTx = (claim: CoreClaimTx) =>
   new DexieClaimTx(
     new Uint8Array(claim.nullifier),
-    new Uint8Array(claim.txId.toBuffer()),
+    new Uint8Array(claim.defiTxId.toBuffer()),
     new Uint8Array(claim.userId.toBuffer()),
     new Uint8Array(claim.secret),
   );
 
 const fromDexieClaimTx = ({ nullifier, txId, userId, secret }: DexieClaimTx): CoreClaimTx => ({
   nullifier: Buffer.from(nullifier),
-  txId: new TxId(Buffer.from(txId)),
+  defiTxId: new TxId(Buffer.from(txId)),
   userId: AccountId.fromBuffer(Buffer.from(userId)),
   secret: Buffer.from(secret),
 });

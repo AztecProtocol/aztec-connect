@@ -5,8 +5,6 @@ import { SerialQueue } from './serial_queue';
 export class MutexSerialQueue implements SerialQueue {
   private readonly queue = new MemoryFifo<() => Promise<void>>();
   private readonly mutex: Mutex;
-  private fnPromise?: Promise<any>;
-  private flushing = false;
 
   constructor(db: MutexDatabase, name: string, expiry = 5000, tryLockInterval = 2000, pingInterval = 2000) {
     this.queue.process(fn => fn());
@@ -17,10 +15,8 @@ export class MutexSerialQueue implements SerialQueue {
     return this.queue.length();
   }
 
-  public async destroy() {
-    this.flushing = true;
+  public async cancel() {
     this.queue.cancel();
-    await this.fnPromise;
   }
 
   public async push<T>(fn: () => Promise<T>): Promise<T> {
@@ -28,11 +24,8 @@ export class MutexSerialQueue implements SerialQueue {
       this.queue.put(async () => {
         await this.mutex.lock();
         try {
-          if (!this.flushing) {
-            this.fnPromise = fn();
-            const res = await this.fnPromise;
-            resolve(res);
-          }
+          const res = await fn();
+          resolve(res);
         } catch (e) {
           reject(e);
         } finally {

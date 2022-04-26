@@ -919,7 +919,7 @@ describe('user state', () => {
 
     expect(db.addClaimTx).toHaveBeenCalledTimes(1);
     expect(db.addClaimTx.mock.calls[0][0]).toMatchObject({
-      txId: txId,
+      defiTxId: txId,
       userId: user.id,
       secret: partialStateSecret,
     });
@@ -1008,7 +1008,7 @@ describe('user state', () => {
     //claim should dhave been created
     expect(db.addClaimTx).toHaveBeenCalledTimes(1);
     expect(db.addClaimTx.mock.calls[0][0]).toMatchObject({
-      txId,
+      defiTxId: txId,
       secret: partialStateSecret,
       userId: user.id,
     });
@@ -1098,7 +1098,7 @@ describe('user state', () => {
 
     const txId = new TxId(defiProof.proofData.txId);
     expect(db.addClaimTx.mock.calls[0][0]).toMatchObject({
-      txId,
+      defiTxId: txId,
       userId: user.id,
     });
     expect(db.addNote).toHaveBeenCalledTimes(1);
@@ -1143,7 +1143,7 @@ describe('user state', () => {
     const nullifier2 = randomBytes(32);
     const success = true;
 
-    db.getClaimTx.mockImplementation(() => ({ txId, userId: user.id, secret }));
+    db.getClaimTx.mockImplementation(() => ({ defiTxId: txId, userId: user.id, secret }));
     db.getDefiTx.mockImplementation(() => ({ bridgeId, depositValue, outputValueA, outputValueB, success }));
 
     const claimProof = generateDefiClaimProof({ bridgeId, outputValueA, outputValueB, nullifier1, nullifier2 });
@@ -1178,7 +1178,7 @@ describe('user state', () => {
     const nullifier2 = randomBytes(32);
     const result = false;
 
-    db.getClaimTx.mockImplementation(() => ({ txId, userId: user.id, secret }));
+    db.getClaimTx.mockImplementation(() => ({ defiTxId: txId, userId: user.id, secret }));
     db.getDefiTx.mockImplementation(() => ({ bridgeId, depositValue, outputValueA, outputValueB, result }));
 
     const claimProof = generateDefiClaimProof({ bridgeId, outputValueA, outputValueB, nullifier1, nullifier2 });

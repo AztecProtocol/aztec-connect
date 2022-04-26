@@ -30,6 +30,11 @@ export interface FeeData {
   gasPrice: bigint;
 }
 
+export interface RollupTxs {
+  rollupProofTx: Buffer;
+  offchainDataTxs: Buffer[];
+}
+
 export interface Blockchain extends BlockSource, BlockchainStatusSource, EthereumSigner {
   getProvider(): EthereumProvider;
 
@@ -46,11 +51,7 @@ export interface Blockchain extends BlockSource, BlockchainStatusSource, Ethereu
 
   getUserPendingDeposit(assetId: number, account: EthAddress): Promise<bigint>;
 
-  createRollupTxs(
-    dataBuf: Buffer,
-    signatures: Buffer[],
-    offchainTxData: Buffer[],
-  ): Promise<{ rollupProofTx: Buffer; offchainDataTxs: Buffer[] }>;
+  createRollupTxs(dataBuf: Buffer, signatures: Buffer[], offchainTxData: Buffer[]): Promise<RollupTxs>;
 
   sendTx(tx: Buffer, options?: SendTxOptions): Promise<TxHash>;
 

@@ -424,14 +424,18 @@ export class UserState extends EventEmitter {
 
   private async handleDefiClaimTx(proof: InnerProofData, noteStartIndex: number, blockCreated: Date) {
     const { nullifier1 } = proof;
+    const claimTxId = new TxId(proof.txId);
+    this.debug(`found claim tx: ${claimTxId}`);
+
     const claim = await this.db.getClaimTx(nullifier1);
     if (!claim?.userId.equals(this.user.id)) {
       return;
     }
 
-    const { txId, userId, secret } = claim;
+    const { defiTxId, userId, secret } = claim;
     const { noteCommitment1, noteCommitment2, nullifier2 } = proof;
-    const { bridgeId, depositValue, outputValueA, outputValueB, success } = (await this.db.getDefiTx(txId))!;
+    const { bridgeId, depositValue, outputValueA, outputValueB, success } = (await this.db.getDefiTx(defiTxId))!;
+
     // When generating output notes, set creatorPubKey to 0 (it's a DeFi txn, recipient of note is same as creator of claim note)
     if (!success) {
       const treeNote = new TreeNote(
@@ -472,9 +476,8 @@ export class UserState extends EventEmitter {
 
     await this.refreshNotePicker();
 
-    const claimTxId = new TxId(proof.txId);
-    await this.db.settleDefiTx(txId, blockCreated, claimTxId);
-    this.debug(`settled defi tx: ${txId}`);
+    await this.db.settleDefiTx(defiTxId, blockCreated, claimTxId);
+    this.debug(`settled defi tx: ${defiTxId}`);
   }
 
   private async processNewNote(
@@ -530,15 +533,14 @@ export class UserState extends EventEmitter {
     return note;
   }
 
-  private async addClaim(index: number, txId: TxId, commitment: Buffer, noteSecret: Buffer) {
+  private async addClaim(index: number, defiTxId: TxId, commitment: Buffer, noteSecret: Buffer) {
     const nullifier = this.noteAlgos.claimNoteNullifier(commitment);
     await this.db.addClaimTx({
-      txId,
+      defiTxId,
       userId: this.user.id,
       secret: noteSecret,
       nullifier,
     });
-    this.debug(`successfully decrypted claim note at index ${index}.`);
   }
 
   private recoverPaymentTx(

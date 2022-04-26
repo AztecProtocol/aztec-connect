@@ -1,5 +1,7 @@
-import { Blockchain, EthereumRpc, TxHash } from '@aztec/barretenberg/blockchain';
+import { EthAddress } from '@aztec/barretenberg/address';
+import { Blockchain, EthereumRpc, RollupTxs, TxHash } from '@aztec/barretenberg/blockchain';
 import { JoinSplitProofData } from '@aztec/barretenberg/client_proofs';
+import { fromBaseUnits } from '@aztec/blockchain';
 import { RollupDao } from './entity';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
@@ -21,26 +23,64 @@ export class RollupPublisher {
     this.ethereumRpc = new EthereumRpc(blockchain.getProvider());
   }
 
-  private async awaitFeeBelowThreshold() {
-    // Wait until fee is below threshold.
-    while (!this.interrupted && this.maxProviderGasPrice) {
+  private async awaitGasPriceBelowThresholdAndSufficientBalance(rollupTxs: RollupTxs, signerAddress: EthAddress) {
+    while (!this.interrupted) {
       const { maxFeePerGas, maxPriorityFeePerGas, gasPrice } = await this.blockchain.getFeeData();
-      const fee = gasPrice ? gasPrice : maxFeePerGas + maxPriorityFeePerGas;
-      if (fee <= this.maxProviderGasPrice) {
-        break;
+      const currentGasPrice = gasPrice ? gasPrice : maxFeePerGas + maxPriorityFeePerGas;
+
+      if (this.maxProviderGasPrice) {
+        // Wait until gas price is below threshold.
+        if (currentGasPrice > this.maxProviderGasPrice) {
+          console.log(
+            `Gas price too high at ${currentGasPrice} wei. Waiting till below ${this.maxProviderGasPrice}...`,
+          );
+          await this.sleepOrInterrupted(60000);
+          continue;
+        }
       }
-      console.log(`Gas price too high at ${fee} wei. Waiting till below ${this.maxProviderGasPrice}...`);
-      await this.sleepOrInterrupted(60000);
+
+      // Estimate the total gas for all txs.
+      const currentBalance = await this.ethereumRpc.getBalance(signerAddress);
+      const { totalGas, estimateError } = await this.estimateTotalGas(rollupTxs);
+      if (totalGas === undefined) {
+        console.log(`Unable to estimate gas: ${estimateError.message}. Will retry...`);
+        await this.sleepOrInterrupted(60000);
+        continue;
+      }
+
+      // Wait until we have enough funds to send all txs.
+      const required = BigInt(totalGas) * currentGasPrice;
+      if (currentBalance < required) {
+        console.log(`Insufficient funds. Balance ${currentBalance}, required ${required} wei. Awaiting top up...`);
+        await this.sleepOrInterrupted(60000);
+        continue;
+      }
+
+      console.log(`Current gas price: ${currentGasPrice}`);
+      console.log(`Estimated total gas: ${totalGas}`);
+      console.log(`Estimated total cost: ${fromBaseUnits(required, 18, 3)} ETH`);
+      break;
+    }
+  }
+
+  private async estimateTotalGas(rollupTxs: RollupTxs) {
+    const { rollupProofTx, offchainDataTxs } = rollupTxs;
+    const txs = [...offchainDataTxs, rollupProofTx];
+    try {
+      const txsGas = await Promise.all(txs.map(tx => this.blockchain.estimateGas(tx)));
+      return { totalGas: txsGas.reduce((a, g) => a + g, 0) };
+    } catch (err) {
+      return { estimateError: err as Error };
     }
   }
 
   public async publishRollup(rollup: RollupDao) {
-    const { rollupProofTx, offchainDataTxs } = await this.createTxData(rollup);
-
-    await this.rollupDb.setCallData(rollup.id, rollupProofTx);
     console.log(`Publishing rollup: ${rollup.id}`);
-
     const endTimer = this.metrics.publishTimer();
+
+    const rollupTxs = await this.createTxData(rollup);
+    const { rollupProofTx, offchainDataTxs } = rollupTxs;
+    await this.rollupDb.setCallData(rollup.id, rollupProofTx);
 
     // TODO: We need to ensure a rollup provider always publishes the broadcast data, otherwise they could just
     // publish the rollup proof, and get all the fees, but without the broadcast data no clients are actually
@@ -57,12 +97,12 @@ export class RollupPublisher {
       })),
       { success: false, tx: rollupProofTx, name: 'rollup proof' },
     ];
-    const [defaultSigner] = await this.ethereumRpc.getAccounts();
+    const [defaultSignerAddress] = await this.ethereumRpc.getAccounts();
 
     mainLoop: while (!this.interrupted) {
-      await this.awaitFeeBelowThreshold();
+      await this.awaitGasPriceBelowThresholdAndSufficientBalance(rollupTxs, defaultSignerAddress);
 
-      let nonce = await this.ethereumRpc.getTransactionCount(defaultSigner);
+      let nonce = await this.ethereumRpc.getTransactionCount(defaultSignerAddress);
 
       // Send each tx (if we haven't already successfully received receipt).
       for (let i = 0; i < txStatuses.length; i++) {

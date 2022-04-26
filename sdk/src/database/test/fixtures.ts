@@ -33,7 +33,7 @@ export const randomNote = (): Note => ({
 
 export const randomClaimTx = (): CoreClaimTx => ({
   nullifier: randomBytes(32),
-  txId: TxId.random(),
+  defiTxId: TxId.random(),
   userId: AccountId.random(),
   secret: randomBytes(32),
 });

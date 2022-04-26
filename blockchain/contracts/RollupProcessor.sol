@@ -205,7 +205,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
     /*----------------------------------------
       EVENTS
       ----------------------------------------*/
-    event OffchainData(uint256 indexed rollupId, address sender);
+    event OffchainData(uint256 indexed rollupId, uint256 chunk, uint256 totalChunks, address sender);
     event RollupProcessed(uint256 indexed rollupId, bytes32[] nextExpectedDefiHashes, address sender);
     event DefiBridgeProcessed(
         uint256 indexed bridgeId,
@@ -966,13 +966,17 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
      * This maybe called multiple times to work around maximum tx size limits.
      * The data will need to be reconstructed by the client.
      * @param rollupId - the rollup id this data is related to.
+     * @param chunk - the chunk number, from 0 to totalChunks-1.
+     * @param totalChunks - the total number of chunks.
      * @param - the data.
      */
     function offchainData(
         uint256 rollupId,
+        uint256 chunk,
+        uint256 totalChunks,
         bytes calldata /* offchainTxData */
     ) external override whenNotPaused {
-        emit OffchainData(rollupId, msg.sender);
+        emit OffchainData(rollupId, chunk, totalChunks, msg.sender);
     }
 
     /**

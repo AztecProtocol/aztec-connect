@@ -23,6 +23,14 @@ export class EthereumRpc {
     return Number(result);
   }
 
+  public async getBalance(addr: EthAddress) {
+    const result = await this.provider.request({
+      method: 'eth_getBalance',
+      params: [addr.toString(), 'latest'],
+    });
+    return BigInt(result);
+  }
+
   /**
    * TODO: Return proper type with converted properties.
    */

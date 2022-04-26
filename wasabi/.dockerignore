@@ -1,3 +1,4 @@
-Dockerfile
 dest
 node_modules
+**/.terraform
+Dockerfile

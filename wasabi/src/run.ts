@@ -31,8 +31,11 @@ async function initSdk(provider: EthereumProvider, serverUrl: string, minConfirm
 
 /**
  * Return the amount of wei this process will take from the primary funding account.
- * We add 10% per loop.
- * We will re-fund if we drop below 110% requirement.
+ * In principle it's (cost to transfer the eth + the eth to transfer) * number of agents.
+ * Cost to transfer eth is assumed to be 21,000 gas with a 4 gwei gas price.
+ * We expect to get most, but not all of funds back from agents. By adding a little overhead, we can largely avoid
+ * the need to refund after each loop. Let's assume we loose 5% of funds per loop, and so add 5% per loop.
+ * We will re-fund if we drop below the basic requirement.
  */
 async function getAgentRequiredFunding(
   sdk: AztecSdk,
@@ -42,29 +45,29 @@ async function getAgentRequiredFunding(
   assetIds: number[],
   loops = 10,
 ) {
-  const fundingBufferPercent = 10n * BigInt(loops);
-  switch (agentType) {
-    case 'uniswap': {
-      const value = UniswapAgent.getRequiredFunding() * BigInt(numAgents);
-      const fundingThreshold = (value * 110n) / 100n;
-      const toFund = (value * (100n + fundingBufferPercent)) / 100n;
-      return { fundingThreshold, toFund };
+  const ethTransferEstimate = 21000n * (4n * 10n ** 9n);
+  const value = await (async () => {
+    switch (agentType) {
+      case 'uniswap':
+        return (ethTransferEstimate + (await UniswapAgent.getRequiredFunding(sdk, numTransfers))) * BigInt(numAgents);
+      case 'element':
+        return (
+          (ethTransferEstimate + ElementAgent.getRequiredFunding()) * BigInt(numAgents) +
+          ManualPaymentAgent.getRequiredFunding()
+        );
+      case 'payment':
+        return (
+          (ethTransferEstimate + (await PaymentAgent.getRequiredFunding(sdk, assetIds[0], numTransfers))) *
+          BigInt(numAgents)
+        );
+      default:
+        throw new Error(`Unknown agent type: ${agentType}`);
     }
-    case 'element': {
-      const value = ElementAgent.getRequiredFunding() * BigInt(numAgents) + ManualPaymentAgent.getRequiredFunding();
-      const fundingThreshold = (value * 110n) / 100n;
-      const toFund = (value * (100n + fundingBufferPercent)) / 100n;
-      return { fundingThreshold, toFund };
-    }
-    case 'payment': {
-      const value = (await PaymentAgent.getRequiredFunding(sdk, assetIds[0], numTransfers)) * BigInt(numAgents);
-      const fundingThreshold = (value * 110n) / 100n;
-      const toFund = (value * (100n + fundingBufferPercent)) / 100n;
-      return { fundingThreshold, toFund };
-    }
-    default:
-      throw new Error(`Unknown agent type: ${agentType}`);
-  }
+  })();
+  const fundingBufferPercent = 5n * BigInt(loops);
+  const fundingThreshold = value;
+  const toFund = (value * (100n + fundingBufferPercent)) / 100n;
+  return { fundingThreshold, toFund };
 }
 
 export async function run(

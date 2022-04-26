@@ -1,5 +1,5 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { EthereumProvider, EthereumSignature, SendTxOptions, TxHash } from '@aztec/barretenberg/blockchain';
+import { EthereumProvider, EthereumSignature, SendTxOptions, TxHash, RollupTxs } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { computeInteractionHashes } from '@aztec/barretenberg/note_algorithms';
@@ -163,24 +163,32 @@ export class RollupProcessor {
     const proofData = dataBuf.slice(broadcastDataLength);
     const encodedData = Buffer.concat([encodedBroadcastData, proofData]);
     const formattedSignatures = solidityFormatSignatures(signatures);
-    const rollupProofTx = await this.rollupProcessor.populateTransaction
+    const rollupProofTxRaw = await this.rollupProcessor.populateTransaction
       .processRollup(encodedData, formattedSignatures)
       .catch(fixEthersStackTrace);
+    const rollupProofTx = Buffer.from(rollupProofTxRaw.data!.slice(2), 'hex');
 
     const ocData = Buffer.concat(offchainTxData);
     const chunks = Math.ceil(ocData.length / offchainChunkSize);
-    const ocdChunks = Array.from({ length: chunks }).map((_, i) =>
-      ocData.slice(i * offchainChunkSize, (i + 1) * offchainChunkSize),
-    );
+    // We should always publish at least 1 chunk, even if it's 0 length.
+    // We want the log event to be emitted so we can can be sure things are working as intended.
+    const ocdChunks = chunks
+      ? Array.from({ length: chunks }).map((_, i) => ocData.slice(i * offchainChunkSize, (i + 1) * offchainChunkSize))
+      : [Buffer.alloc(0)];
 
-    const offchainDataTxs = await Promise.all(
-      ocdChunks.map(c => this.rollupProcessor.populateTransaction.offchainData(broadcastData.rollupId, c)),
+    const offchainDataTxsRaw = await Promise.all(
+      ocdChunks.map((c, i) =>
+        this.rollupProcessor.populateTransaction.offchainData(broadcastData.rollupId, i, ocdChunks.length, c),
+      ),
     ).catch(fixEthersStackTrace);
+    const offchainDataTxs = offchainDataTxsRaw.map(tx => Buffer.from(tx.data!.slice(2), 'hex'));
 
-    return {
-      rollupProofTx: Buffer.from(rollupProofTx.data!.slice(2), 'hex'),
-      offchainDataTxs: offchainDataTxs.map(tx => Buffer.from(tx.data!.slice(2), 'hex')),
+    const result: RollupTxs = {
+      rollupProofTx,
+      offchainDataTxs,
     };
+
+    return result;
   }
 
   public async sendRollupTxs({ rollupProofTx, offchainDataTxs }: { rollupProofTx: Buffer; offchainDataTxs: Buffer[] }) {
@@ -205,7 +213,7 @@ export class RollupProcessor {
     return TxHash.fromString(txResponse.hash);
   }
 
-  async depositPendingFunds(
+  public async depositPendingFunds(
     assetId: number,
     amount: bigint,
     proofHash: Buffer = Buffer.alloc(32),
@@ -546,13 +554,15 @@ export class RollupProcessor {
     // Key the offchain data event on the rollup id and sender.
     const offchainEventMap = offchainEvents.reduce<{ [key: string]: Event[] }>((a, e) => {
       const {
-        args: { rollupId, sender },
+        args: { rollupId, chunk, totalChunks, sender },
       } = this.contract.interface.parseLog(e);
       const key = `${rollupId}:${sender}`;
-      if (a[key]) {
-        a[key].push(e);
-      } else {
-        a[key] = [e];
+      if (!a[key]) {
+        a[key] = Array.from({ length: totalChunks });
+      }
+      // Store by chunk index. Copes with chunks being re-published.
+      if (!a[key][chunk]) {
+        a[key][chunk] = e;
       }
       return a;
     }, {});
@@ -563,8 +573,8 @@ export class RollupProcessor {
       } = rollupLog;
       const key = `${rollupId}:${sender}`;
       const offchainEvents = offchainEventMap[key];
-      if (!offchainEvents) {
-        console.log(`No offchain data found for rollup: ${rollupId}`);
+      if (!offchainEvents || offchainEvents.some(e => !e)) {
+        console.log(`Missing offchain data chunks for rollup: ${rollupId}`);
         return [];
       }
       this.log(`rollup ${rollupId} has ${offchainEvents.length} offchain data event(s).`);
@@ -583,7 +593,7 @@ export class RollupProcessor {
     const offchainTxDataBuf = Buffer.concat(
       offchainDataTxs
         .map(tx => rollupAbi.parseTransaction({ data: tx.data }))
-        .map(parsed => Buffer.from(parsed.args[1].slice(2), 'hex')),
+        .map(parsed => Buffer.from(parsed.args[3].slice(2), 'hex')),
     );
     const [proofData] = parsedRollupTx.args;
     const rollupProofData = RollupProofData.decode(Buffer.from(proofData.slice(2), 'hex'));
