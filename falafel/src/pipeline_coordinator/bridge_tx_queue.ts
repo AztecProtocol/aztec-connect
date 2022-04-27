@@ -1,3 +1,5 @@
+import { AssetValue } from '@aztec/barretenberg/asset';
+import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { BridgeConfig } from '@aztec/barretenberg/bridge_id';
 import { DefiDepositProofData, ProofData } from '@aztec/barretenberg/client_proofs';
 import { TxDao } from '../entity/tx';
@@ -6,29 +8,33 @@ import { RollupTimeout } from './publish_time_manager';
 
 export interface RollupTx {
   excessGas: bigint;
-  feeAsset: number;
+  fee: AssetValue;
   tx: TxDao;
   bridgeId?: bigint;
 }
 
-export function createRollupTx(rawTx: TxDao, proof: ProofData) {
-  const rollupTx = {
+export function createRollupTx(rawTx: TxDao, proof: ProofData): RollupTx {
+  return {
     tx: rawTx,
     excessGas: rawTx.excessGas,
-    feeAsset: proof.txFeeAssetId.readUInt32BE(28),
+    fee: {
+      assetId: proof.txFeeAssetId.readUInt32BE(28),
+      value: toBigIntBE(proof.txFee),
+    },
     bridgeId: undefined,
-  } as RollupTx;
-  return rollupTx;
+  };
 }
 
-export function createDefiRollupTx(rawTx: TxDao, proof: DefiDepositProofData) {
-  const rollupTx = {
+export function createDefiRollupTx(rawTx: TxDao, proof: DefiDepositProofData): RollupTx {
+  return {
     tx: rawTx,
     excessGas: rawTx.excessGas,
-    feeAsset: proof.txFeeAssetId,
+    fee: {
+      assetId: proof.txFeeAssetId,
+      value: proof.txFee,
+    },
     bridgeId: proof.bridgeId.toBigInt(),
-  } as RollupTx;
-  return rollupTx;
+  };
 }
 
 export class BridgeTxQueue {
@@ -61,11 +67,11 @@ export class BridgeTxQueue {
     let gasFromTxs = 0n;
     for (let i = 0; i < this._txQueue.length && txsToConsider.length < maxRemainingTransactions; i++) {
       const tx = this._txQueue[i];
-      if (feeResolver.isFeePayingAsset(tx.feeAsset)) {
-        if (!newAssets.has(tx.feeAsset) && newAssets.size === maxAssets) {
+      if (tx.fee.value && feeResolver.isFeePayingAsset(tx.fee.assetId)) {
+        if (!newAssets.has(tx.fee.assetId) && newAssets.size === maxAssets) {
           continue;
         }
-        newAssets.add(tx.feeAsset);
+        newAssets.add(tx.fee.assetId);
       }
       txsToConsider.push(tx);
       gasFromTxs += feeResolver.getSingleBridgeTxGas(this.bridgeId) + tx.excessGas;

@@ -10,7 +10,7 @@ import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { AccountData, InitHelpers } from '@aztec/barretenberg/environment';
 import { FftFactory } from '@aztec/barretenberg/fft';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
-import { NoteAlgorithms, TreeNote } from '@aztec/barretenberg/note_algorithms';
+import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
 import { Pippenger } from '@aztec/barretenberg/pippenger';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
@@ -21,6 +21,7 @@ import { WorldState } from '@aztec/barretenberg/world_state';
 import { EventEmitter } from 'events';
 import { LevelUp } from 'levelup';
 import { Alias, Database, SigningKey } from '../database';
+import { Note } from '../note';
 import {
   AccountProofCreator,
   AccountProofInput,
@@ -318,9 +319,9 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     return userState.getBalance(assetId);
   }
 
-  public async getMaxSpendableValue(assetId: number, userId: AccountId) {
+  public async getMaxSpendableValue(assetId: number, userId: AccountId, numNotes?: number) {
     const userState = this.getUserState(userId);
-    return userState.getMaxSpendableValue(assetId);
+    return userState.getMaxSpendableValue(assetId, numNotes);
   }
 
   public async getSpendableNotes(assetId: number, userId: AccountId) {
@@ -344,6 +345,10 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
   public async pickNotes(userId: AccountId, assetId: number, value: bigint) {
     return this.getUserState(userId).pickNotes(assetId, value);
+  }
+
+  public async pickNote(userId: AccountId, assetId: number, value: bigint) {
+    return this.getUserState(userId).pickNote(assetId, value);
   }
 
   public async getUserTxs(userId: AccountId) {
@@ -418,14 +423,23 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   ) {
     return this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
+
       const userState = this.getUserState(userId);
+      const user = userState.getUser();
+
+      const notes = privateInput ? await userState.pickNotes(assetId, privateInput) : [];
+      if (privateInput && !notes.length) {
+        throw new Error(`Failed to find no more than 2 notes that sum to ${privateInput}.`);
+      }
+
       return this.paymentProofCreator.createProofInput(
-        userState,
-        publicInput,
-        publicOutput,
+        user,
+        notes,
         privateInput,
         recipientPrivateOutput,
         senderPrivateOutput,
+        publicInput,
+        publicOutput,
         assetId,
         noteRecipient,
         publicOwner,
@@ -438,7 +452,12 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   public async createPaymentProof(input: JoinSplitProofInput, txRefNo: number) {
     return this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
-      return this.paymentProofCreator.createProof(input, txRefNo);
+
+      const { outputNotes } = input.tx;
+      const userId = new AccountId(outputNotes[1].ownerPubKey, outputNotes[1].nonce);
+      const userState = this.getUserState(userId);
+      const user = userState.getUser();
+      return this.paymentProofCreator.createProof(user, input, txRefNo);
     });
   }
 
@@ -505,28 +524,26 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     userId: AccountId,
     bridgeId: BridgeId,
     depositValue: bigint,
-    txFee: bigint,
-    inputNotes: TreeNote[] | undefined,
+    inputNotes: Note[],
     spendingPublicKey: GrumpkinAddress,
   ) {
     return this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
       const userState = this.getUserState(userId);
-      return this.defiDepositProofCreator.createProofInput(
-        userState,
-        bridgeId,
-        depositValue,
-        txFee,
-        inputNotes,
-        spendingPublicKey,
-      );
+      const user = userState.getUser();
+      return this.defiDepositProofCreator.createProofInput(user, bridgeId, depositValue, inputNotes, spendingPublicKey);
     });
   }
 
   public async createDefiProof(input: JoinSplitProofInput, txRefNo: number) {
     return this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
-      return this.defiDepositProofCreator.createProof(input, txRefNo);
+
+      const { outputNotes } = input.tx;
+      const userId = new AccountId(outputNotes[1].ownerPubKey, outputNotes[1].nonce);
+      const userState = this.getUserState(userId);
+      const user = userState.getUser();
+      return this.defiDepositProofCreator.createProof(user, input, txRefNo);
     });
   }
 

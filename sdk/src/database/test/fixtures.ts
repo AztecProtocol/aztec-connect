@@ -2,6 +2,7 @@ import { AccountAliasId, AccountId, AliasHash } from '@aztec/barretenberg/accoun
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
+import { TreeNote } from '@aztec/barretenberg/note_algorithms';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { randomBytes } from 'crypto';
 import { CoreAccountTx, CoreClaimTx, CoreDefiTx, CorePaymentTx } from '../../core_tx';
@@ -16,26 +17,31 @@ export const randomInt = () => {
 const inputOrDefault = <T>(inputValue: T | undefined, defaultValue: T) =>
   inputValue !== undefined ? inputValue : defaultValue;
 
-export const randomNote = (): Note => ({
-  assetId: randomInt(),
-  value: BigInt(randomInt()),
-  commitment: randomBytes(32),
-  secret: randomBytes(32),
-  nullifier: randomBytes(32),
-  nullified: false,
-  owner: AccountId.random(),
-  creatorPubKey: randomBytes(32),
-  inputNullifier: randomBytes(32),
-  index: randomInt(),
-  allowChain: false,
-  pending: false,
-});
+export const randomNote = (note: Partial<Note> = {}, treeNote: Partial<TreeNote> = {}) =>
+  new Note(
+    note.treeNote ||
+      new TreeNote(
+        treeNote.ownerPubKey || GrumpkinAddress.randomAddress(),
+        inputOrDefault(treeNote.value, BigInt(randomInt())),
+        inputOrDefault(treeNote.assetId, randomInt()),
+        inputOrDefault(treeNote.nonce, randomInt()),
+        treeNote.noteSecret || randomBytes(32),
+        treeNote.creatorPubKey || randomBytes(32),
+        treeNote.inputNullifier || randomBytes(32),
+      ),
+    note.commitment || randomBytes(32),
+    note.nullifier || randomBytes(32),
+    note.allowChain || false,
+    note.nullified || false,
+    note.index,
+  );
 
 export const randomClaimTx = (): CoreClaimTx => ({
   nullifier: randomBytes(32),
   defiTxId: TxId.random(),
   userId: AccountId.random(),
   secret: randomBytes(32),
+  interactionNonce: randomInt(),
 });
 
 export const randomUser = (): UserData => {

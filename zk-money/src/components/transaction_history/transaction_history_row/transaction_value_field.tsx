@@ -39,7 +39,7 @@ export function renderTransactionValueField(tx: UserTx) {
     }
     case ProofId.DEFI_CLAIM:
       if (tx.success) {
-        const outputValue = { assetId: tx.bridgeId.outputAssetIdA, value: tx.outputValueA };
+        const outputValue = tx.outputValueA || { assetId: tx.bridgeId.outputAssetIdA, value: 0n };
         return <ValueField assetValue={outputValue} />;
       } else {
         // Refund

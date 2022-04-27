@@ -1,5 +1,4 @@
 import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
-import { TreeNote } from '@aztec/barretenberg/note_algorithms';
 import {
   OffchainAccountData,
   OffchainDefiDepositData,
@@ -15,12 +14,13 @@ import {
   coreUserTxFromJson,
   coreUserTxToJson,
 } from '../core_tx';
+import { Note, noteFromJson, NoteJson, noteToJson } from '../note';
 
 export interface ProofOutput {
   tx: CorePaymentTx | CoreAccountTx | CoreDefiTx;
   proofData: ProofData;
   offchainTxData: OffchainJoinSplitData | OffchainAccountData | OffchainDefiDepositData;
-  outputNotes: TreeNote[];
+  outputNotes: Note[];
   signature?: Buffer;
 }
 
@@ -28,7 +28,7 @@ export interface ProofOutputJson {
   tx: CorePaymentTxJson | CoreAccountTxJson | CoreDefiTxJson;
   proofData: Uint8Array;
   offchainTxData: Uint8Array;
-  outputNotes: Uint8Array[];
+  outputNotes: NoteJson[];
   signature?: Uint8Array;
 }
 
@@ -42,7 +42,7 @@ export const proofOutputToJson = ({
   tx: coreUserTxToJson(tx),
   proofData: new Uint8Array(proofData.rawProofData),
   offchainTxData: new Uint8Array(offchainTxData.toBuffer()),
-  outputNotes: outputNotes.map(n => new Uint8Array(n.toBuffer())),
+  outputNotes: outputNotes.map(n => noteToJson(n)),
   signature: signature ? new Uint8Array(signature) : undefined,
 });
 
@@ -71,6 +71,6 @@ export const proofOutputFromJson = ({
   tx: coreUserTxFromJson(tx),
   proofData: new ProofData(Buffer.from(proofData)),
   offchainTxData: offchainTxDataFromBuffer(tx.proofId, Buffer.from(offchainTxData)),
-  outputNotes: outputNotes.map(n => TreeNote.fromBuffer(Buffer.from(n))),
+  outputNotes: outputNotes.map(n => noteFromJson(n)),
   signature: signature ? Buffer.from(signature) : undefined,
 });

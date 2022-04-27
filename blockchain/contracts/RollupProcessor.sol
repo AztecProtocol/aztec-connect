@@ -34,6 +34,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
     error PROOF_VERIFICATION_FAILED();
     error INCORRECT_STATE_HASH(bytes32 oldStateHash, bytes32 newStateHash);
     error INCORRECT_DATA_START_INDEX(uint256 providedIndex, uint256 expectedIndex);
+    error BRIDGE_WITH_IDENTICAL_INPUT_ASSETS(uint256 inputAssetId);
     error BRIDGE_WITH_IDENTICAL_OUTPUT_ASSETS(uint256 outputAssetId);
     error BRIDGE_ID_IS_INCONSISTENT();
     error INCORRECT_PREVIOUS_DEFI_INTERACTION_HASH(
@@ -107,9 +108,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
 
     // Bit offsets and bit masks used to convert a `uint256 bridgeId` into a BridgeData member
     uint256 private constant INPUT_ASSET_ID_A_SHIFT = 32;
-    uint256 private constant OUTPUT_ASSET_ID_A_SHIFT = 62;
-    uint256 private constant OUTPUT_ASSET_ID_B_SHIFT = 92;
-    uint256 private constant INPUT_ASSET_ID_B_SHIFT = 122;
+    uint256 private constant INPUT_ASSET_ID_B_SHIFT = 62;
+    uint256 private constant OUTPUT_ASSET_ID_A_SHIFT = 92;
+    uint256 private constant OUTPUT_ASSET_ID_B_SHIFT = 122;
     uint256 private constant BITCONFIG_SHIFT = 152;
     uint256 private constant AUX_DATA_SHIFT = 184;
     uint256 private constant MASK_THIRTY_TWO_BITS = 0xffffffff;
@@ -240,9 +241,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         uint256 bridgeAddressId;
         address bridgeAddress;
         uint256 inputAssetIdA;
+        uint256 inputAssetIdB;
         uint256 outputAssetIdA;
         uint256 outputAssetIdB;
-        uint256 inputAssetIdB;
         uint256 auxData;
         bool firstInputVirtual;
         bool secondInputVirtual;
@@ -1275,9 +1276,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
      * | bit range | parameter | description
      * | 0 - 32    | bridgeAddressId | The address ID. Bridge address = `supportedBridges[bridgeAddressId]`
      * | 32 - 62   | inputAssetIdA    | Input asset ID. Asset address = `supportedAssets[inputAssetIdA]`
-     * | 62 - 92   | outputAssetIdA  | First output asset ID |
-     * | 92 - 122  | outputAssetIdB  | Second output asset ID (if bridge has 2nd output asset) |
-     * | 122 - 154 | inputAssetIdB | Second input asset ID. If virtual, is defi interaction nonce of interaction that produced the note |
+     * | 62 - 92   | inputAssetIdB | Second input asset ID. If virtual, is defi interaction nonce of interaction that produced the note |
+     * | 92 - 122  | outputAssetIdA  | First output asset ID |
+     * | 122 - 154 | outputAssetIdB  | Second output asset ID (if bridge has 2nd output asset) |
      * | 154 - 186 | bitConfig | Bit-array that contains boolean bridge settings |
      * | 186 - 250 | auxData | 64 bits of custom data to be passed to the bridge contract. Structure is defined/checked by the bridge contract |
      *
@@ -1301,9 +1302,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         assembly {
             mstore(bridgeData, and(bridgeId, MASK_THIRTY_TWO_BITS)) // bridgeAddressId
             mstore(add(bridgeData, 0x40), and(shr(INPUT_ASSET_ID_A_SHIFT, bridgeId), MASK_THIRTY_BITS)) // inputAssetIdA
-            mstore(add(bridgeData, 0x60), and(shr(OUTPUT_ASSET_ID_A_SHIFT, bridgeId), MASK_THIRTY_BITS)) // outputAssetIdA
-            mstore(add(bridgeData, 0x80), and(shr(OUTPUT_ASSET_ID_B_SHIFT, bridgeId), MASK_THIRTY_BITS)) // outputAssetIdB
-            mstore(add(bridgeData, 0xa0), and(shr(INPUT_ASSET_ID_B_SHIFT, bridgeId), MASK_THIRTY_BITS)) // inputAssetIdB
+            mstore(add(bridgeData, 0x60), and(shr(INPUT_ASSET_ID_B_SHIFT, bridgeId), MASK_THIRTY_BITS)) // inputAssetIdB
+            mstore(add(bridgeData, 0x80), and(shr(OUTPUT_ASSET_ID_A_SHIFT, bridgeId), MASK_THIRTY_BITS)) // outputAssetIdA
+            mstore(add(bridgeData, 0xa0), and(shr(OUTPUT_ASSET_ID_B_SHIFT, bridgeId), MASK_THIRTY_BITS)) // outputAssetIdB
             mstore(add(bridgeData, 0xc0), and(shr(AUX_DATA_SHIFT, bridgeId), MASK_SIXTY_FOUR_BITS)) // auxData
 
             let bitConfig := and(shr(BITCONFIG_SHIFT, bridgeId), MASK_THIRTY_TWO_BITS)
@@ -1331,14 +1332,13 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
         }
         bridgeData.bridgeAddress = supportedBridges[bridgeData.bridgeAddressId - 1];
         bool bothOutputsReal = (!bridgeData.firstOutputVirtual && bridgeData.secondOutputReal);
-        bool bothOutputsVirtual = (bridgeData.firstOutputVirtual && bridgeData.secondOutputVirtual);
-        if ((bothOutputsReal || bothOutputsVirtual) && (bridgeData.outputAssetIdA == bridgeData.outputAssetIdB)) {
+        if (bothOutputsReal && bridgeData.outputAssetIdA == bridgeData.outputAssetIdB) {
             revert BRIDGE_WITH_IDENTICAL_OUTPUT_ASSETS(bridgeData.outputAssetIdA);
         }
         bool bothInputsReal = (!bridgeData.firstInputVirtual && bridgeData.secondInputReal);
         bool bothInputsVirtual = (bridgeData.firstInputVirtual && bridgeData.secondInputVirtual);
-        if ((bothInputsReal || bothInputsVirtual) && (bridgeData.outputAssetIdA == bridgeData.outputAssetIdB)) {
-            revert BRIDGE_WITH_IDENTICAL_OUTPUT_ASSETS(bridgeData.outputAssetIdA);
+        if ((bothInputsReal || bothInputsVirtual) && (bridgeData.inputAssetIdA == bridgeData.inputAssetIdB)) {
+            revert BRIDGE_WITH_IDENTICAL_INPUT_ASSETS(bridgeData.inputAssetIdA);
         }
         bridgeData.bridgeGasLimit = getBridgeGasLimit(bridgeData.bridgeAddressId);
     }

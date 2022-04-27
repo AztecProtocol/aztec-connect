@@ -5,19 +5,19 @@ import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { TxId } from '@aztec/barretenberg/tx_id';
 
 export enum UserDefiInteractionResultState {
-  PENDING,
-  AWAITING_FINALISATION,
-  AWAITING_SETTLEMENT,
-  SETTLED,
+  PENDING = 'PENDING',
+  AWAITING_FINALISATION = 'AWAITING_FINALISATION',
+  AWAITING_SETTLEMENT = 'AWAITING_SETTLEMENT',
+  SETTLED = 'SETTLED',
 }
 
 export interface UserDefiInteractionResult {
   state: UserDefiInteractionResultState;
-  isAsync: boolean;
-  interactionNonce: number;
-  success: boolean;
-  outputValueA: bigint;
-  outputValueB: bigint;
+  isAsync?: boolean;
+  interactionNonce?: number;
+  success?: boolean;
+  outputValueA?: AssetValue;
+  outputValueB?: AssetValue;
   claimSettled?: Date;
   finalised?: Date;
 }

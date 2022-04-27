@@ -46,18 +46,7 @@ export class JoinSplitTxFactory {
 
     const numInputNotes = inputNotes.length;
     const notes = [...inputNotes];
-    const inputTreeNotes = notes.map(
-      n =>
-        new TreeNote(
-          n.owner.publicKey,
-          n.value,
-          n.assetId,
-          n.owner.accountNonce,
-          n.secret,
-          n.creatorPubKey,
-          n.inputNullifier,
-        ),
-    );
+    const inputTreeNotes = notes.map(n => n.treeNote);
 
     // Add gibberish notes to ensure we have two notes.
     for (let i = notes.length; i < 2; ++i) {
@@ -71,10 +60,10 @@ export class JoinSplitTxFactory {
         this.grumpkin,
       );
       inputTreeNotes.push(treeNote);
-      notes.push(this.treeNoteToNote(treeNote, user.privateKey, { isRealNote: false }));
+      notes.push(this.generateNewNote(treeNote, user.privateKey, { gibberish: true }));
     }
 
-    const inputNoteIndices = notes.map(n => n.index);
+    const inputNoteIndices = notes.map(n => n.index || 0);
     const inputNotePaths = await Promise.all(inputNoteIndices.map(async idx => this.worldState.getHashPath(idx)));
     const inputNoteNullifiers = notes.map(n => n.nullifier);
 
@@ -122,28 +111,10 @@ export class JoinSplitTxFactory {
     return { tx, viewingKeys, partialStateSecretEphPubKey: claimNote.ephPubKey };
   }
 
-  treeNoteToNote(
-    note: TreeNote,
-    privateKey: Buffer,
-    { index = 0, allowChain = false, isRealNote = true, pending = true } = {},
-  ): Note {
-    const { ownerPubKey, value, assetId, nonce, noteSecret, inputNullifier, creatorPubKey } = note;
-    const commitment = this.noteAlgos.valueNoteCommitment(note);
-    const nullifier = this.noteAlgos.valueNoteNullifier(commitment, privateKey, isRealNote);
-    return {
-      assetId,
-      value,
-      secret: noteSecret,
-      commitment,
-      nullifier,
-      nullified: false,
-      owner: new AccountId(ownerPubKey, nonce),
-      creatorPubKey,
-      inputNullifier,
-      index,
-      allowChain,
-      pending,
-    };
+  generateNewNote(treeNote: TreeNote, privateKey: Buffer, { allowChain = false, gibberish = false } = {}) {
+    const commitment = this.noteAlgos.valueNoteCommitment(treeNote);
+    const nullifier = this.noteAlgos.valueNoteNullifier(commitment, privateKey, !gibberish);
+    return new Note(treeNote, commitment, nullifier, allowChain, false);
   }
 
   private createNote(assetId: number, value: bigint, owner: AccountId, inputNullifier: Buffer, sender?: AccountId) {

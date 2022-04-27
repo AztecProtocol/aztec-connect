@@ -1,15 +1,16 @@
 import { AccountId } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { JoinSplitProver, ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
+import { createLogger } from '@aztec/barretenberg/debug';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { OffchainJoinSplitData } from '@aztec/barretenberg/offchain_tx_data';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { WorldState } from '@aztec/barretenberg/world_state';
-import { createLogger } from '@aztec/barretenberg/debug';
 import { CorePaymentTx as PaymentTx } from '../core_tx';
 import { Database } from '../database';
-import { UserState } from '../user_state';
+import { Note } from '../note';
+import { UserData } from '../user';
 import { JoinSplitTxFactory } from './join_split_tx_factory';
 import { JoinSplitProofInput } from './proof_input';
 
@@ -29,12 +30,13 @@ export class PaymentProofCreator {
   }
 
   public async createProofInput(
-    userState: UserState,
-    publicInput: bigint,
-    publicOutput: bigint,
+    user: UserData,
+    inputNotes: Note[],
     privateInput: bigint,
     recipientPrivateOutput: bigint,
     senderPrivateOutput: bigint,
+    publicInput: bigint,
+    publicOutput: bigint,
     assetId: number,
     newNoteOwner: AccountId | undefined,
     publicOwner: EthAddress | undefined,
@@ -67,17 +69,10 @@ export class PaymentProofCreator {
       return ProofId.SEND;
     })();
 
-    const user = userState.getUser();
-
-    const notes = privateInput ? await userState.pickNotes(assetId, privateInput) : [];
-    if (!notes) {
-      throw new Error(`Failed to find no more than 2 notes that sum to ${privateInput}.`);
-    }
-
-    const totalInputNoteValue = notes.reduce((sum, note) => sum + note.value, BigInt(0));
+    const totalInputNoteValue = inputNotes.reduce((sum, note) => sum + note.value, BigInt(0));
     const changeValue = totalInputNoteValue > privateInput ? totalInputNoteValue - privateInput : BigInt(0);
 
-    const proofInput = await this.txFactory.createTx(user, proofId, assetId, notes, spendingPublicKey, {
+    const proofInput = await this.txFactory.createTx(user, proofId, assetId, inputNotes, spendingPublicKey, {
       publicValue: publicInput + publicOutput,
       publicOwner,
       outputNoteValue1: recipientPrivateOutput,
@@ -91,7 +86,7 @@ export class PaymentProofCreator {
     return { ...proofInput, signingData };
   }
 
-  public async createProof({ tx, signature, viewingKeys }: JoinSplitProofInput, txRefNo: number) {
+  public async createProof(user: UserData, { tx, signature, viewingKeys }: JoinSplitProofInput, txRefNo: number) {
     debug('creating proof...');
     const start = new Date().getTime();
     const proof = await this.prover.createProof(tx, signature!);
@@ -117,13 +112,21 @@ export class PaymentProofCreator {
       privateInput,
       recipientPrivateOutput,
       senderPrivateOutput,
-      !!(recipientPrivateOutput && newNoteOwner?.equals(userId)),
+      newNoteOwner?.equals(userId),
       true, // isSender
       txRefNo,
       new Date(),
     );
     const offchainTxData = new OffchainJoinSplitData(viewingKeys, txRefNo);
 
-    return { tx: coreTx, proofData, offchainTxData, outputNotes };
+    return {
+      tx: coreTx,
+      proofData,
+      offchainTxData,
+      outputNotes: [
+        this.txFactory.generateNewNote(outputNotes[0], user.privateKey, { allowChain: proofData.allowChainFromNote1 }),
+        this.txFactory.generateNewNote(outputNotes[1], user.privateKey, { allowChain: proofData.allowChainFromNote2 }),
+      ],
+    };
   }
 }

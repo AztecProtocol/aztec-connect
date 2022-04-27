@@ -1,16 +1,16 @@
-import { AccountId } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { JoinSplitProver, ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
+import { createLogger } from '@aztec/barretenberg/debug';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
-import { NoteAlgorithms, TreeNote } from '@aztec/barretenberg/note_algorithms';
+import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { OffchainDefiDepositData } from '@aztec/barretenberg/offchain_tx_data';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { WorldState } from '@aztec/barretenberg/world_state';
-import { createLogger } from '@aztec/barretenberg/debug';
 import { CoreDefiTx } from '../core_tx';
 import { Database } from '../database';
-import { UserState } from '../user_state';
+import { Note } from '../note';
+import { UserData } from '../user';
 import { JoinSplitTxFactory } from './join_split_tx_factory';
 import { JoinSplitProofInput } from './proof_input';
 
@@ -30,38 +30,24 @@ export class DefiDepositProofCreator {
   }
 
   public async createProofInput(
-    userState: UserState,
+    user: UserData,
     bridgeId: BridgeId,
     depositValue: bigint,
-    txFee: bigint,
-    inputNotes: TreeNote[] | undefined,
+    inputNotes: Note[],
     spendingPublicKey: GrumpkinAddress,
   ) {
-    const user = userState.getUser();
     const assetId = bridgeId.inputAssetIdA;
-    const privateInput = depositValue + txFee;
-
-    const notes = inputNotes
-      ? inputNotes.map(note =>
-          this.txFactory.treeNoteToNote(note, user.privateKey, {
-            allowChain: true,
-          }),
-        )
-      : await userState.pickNotes(assetId, privateInput);
-    if (!notes) {
-      throw new Error(`Failed to find no more than 2 notes that sum to ${privateInput}.`);
-    }
-
-    // verify that the selected notes sum exactly to the required private input as there will be no change note
-    const noteSum = notes.reduce((sum, n) => sum + n.value, BigInt(0));
-    if (noteSum !== privateInput) {
-      throw new Error(`Failed to find no more than 2 notes that sum to exact Defi input of ${privateInput}`);
-    }
-
-    const proofInput = await this.txFactory.createTx(user, ProofId.DEFI_DEPOSIT, assetId, notes, spendingPublicKey, {
-      bridgeId,
-      defiDepositValue: depositValue,
-    });
+    const proofInput = await this.txFactory.createTx(
+      user,
+      ProofId.DEFI_DEPOSIT,
+      assetId,
+      inputNotes,
+      spendingPublicKey,
+      {
+        bridgeId,
+        defiDepositValue: depositValue,
+      },
+    );
 
     const signingData = await this.prover.computeSigningData(proofInput.tx);
 
@@ -69,6 +55,7 @@ export class DefiDepositProofCreator {
   }
 
   public async createProof(
+    user: UserData,
     { tx, signature, partialStateSecretEphPubKey, viewingKeys }: JoinSplitProofInput,
     txRefNo: number,
   ) {
@@ -85,12 +72,20 @@ export class DefiDepositProofCreator {
       claimNote: { value: depositValue, bridgeId, partialStateSecret },
       inputNotes,
     } = tx;
-    const { ownerPubKey, nonce } = outputNotes[1];
-    const userId = new AccountId(ownerPubKey, nonce);
-    const privateInput = inputNotes.reduce((sum, n) => sum + n.value, BigInt(0));
+    const privateInput =
+      bridgeId.numInputAssets > 1 ? inputNotes[0].value : inputNotes.reduce((sum, n) => sum + n.value, BigInt(0));
     const txFee = privateInput - depositValue;
-    const coreTx = new CoreDefiTx(txId, userId, bridgeId, depositValue, txFee, partialStateSecret, txRefNo, new Date());
-    const partialState = this.noteAlgos.valueNotePartialCommitment(partialStateSecret, userId);
+    const coreTx = new CoreDefiTx(
+      txId,
+      user.id,
+      bridgeId,
+      depositValue,
+      txFee,
+      partialStateSecret,
+      txRefNo,
+      new Date(),
+    );
+    const partialState = this.noteAlgos.valueNotePartialCommitment(partialStateSecret, user.id);
     const offchainTxData = new OffchainDefiDepositData(
       bridgeId,
       partialState,
@@ -101,6 +96,14 @@ export class DefiDepositProofCreator {
       txRefNo,
     );
 
-    return { tx: coreTx, proofData, offchainTxData, outputNotes };
+    return {
+      tx: coreTx,
+      proofData,
+      offchainTxData,
+      outputNotes: [
+        this.txFactory.generateNewNote(outputNotes[0], user.privateKey, { allowChain: proofData.allowChainFromNote1 }),
+        this.txFactory.generateNewNote(outputNotes[1], user.privateKey, { allowChain: proofData.allowChainFromNote2 }),
+      ],
+    };
   }
 }

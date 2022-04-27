@@ -17,4 +17,7 @@ export class ClaimTxDao implements CoreClaimTx {
 
   @Column()
   public secret!: Buffer;
+
+  @Column()
+  public interactionNonce!: number;
 }

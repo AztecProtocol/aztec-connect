@@ -1,14 +1,27 @@
-import { BridgeId } from './';
+import { BridgeId } from './bridge_id';
+import {
+  ADDRESS_BIT_LEN,
+  ADDRESS_OFFSET,
+  INPUT_ASSET_ID_A_LEN,
+  INPUT_ASSET_ID_A_OFFSET,
+  INPUT_ASSET_ID_B_LEN,
+  INPUT_ASSET_ID_B_OFFSET,
+  OUTPUT_ASSET_ID_A_LEN,
+  OUTPUT_ASSET_ID_A_OFFSET,
+  OUTPUT_ASSET_ID_B_LEN,
+  OUTPUT_ASSET_ID_B_OFFSET,
+  virtualAssetIdFlag,
+} from './bridge_id_config';
 
 describe('bridge id', () => {
-  const virtualAssetId = 1 << 29;
+  const virtualAssetId = virtualAssetIdFlag + 1;
   const bridgeIds = [
     BridgeId.ZERO,
     new BridgeId(0, 1, 0),
     new BridgeId(67, 123, 456, 78, 90, 1),
     new BridgeId(67, 123, 456, undefined, virtualAssetId, 78),
     new BridgeId(67, 123, 456, virtualAssetId, undefined, 78),
-    new BridgeId(67, virtualAssetId, 456, virtualAssetId, 123, 78),
+    new BridgeId(67, virtualAssetId, 456, virtualAssetId + 1, 123, 78),
     new BridgeId(67, 123, virtualAssetId, undefined, 123, 78),
   ];
 
@@ -61,5 +74,25 @@ describe('bridge id', () => {
       secondInputReal: false,
       secondOutputReal: true,
     });
+  });
+
+  it('remove the 30th bit of a virtual asset when serialized', () => {
+    const addressId = virtualAssetIdFlag + 1;
+    const val = new BridgeId(
+      addressId,
+      virtualAssetIdFlag + 2,
+      virtualAssetIdFlag + 3,
+      virtualAssetIdFlag + 4,
+      virtualAssetIdFlag + 5,
+    ).toBigInt();
+
+    const getNumber = (val: bigint, offset: number, size: number) =>
+      Number((val >> BigInt(offset)) & ((BigInt(1) << BigInt(size)) - BigInt(1)));
+
+    expect(getNumber(val, ADDRESS_OFFSET, ADDRESS_BIT_LEN)).toEqual(addressId);
+    expect(getNumber(val, INPUT_ASSET_ID_A_OFFSET, INPUT_ASSET_ID_A_LEN)).toEqual(2);
+    expect(getNumber(val, OUTPUT_ASSET_ID_A_OFFSET, OUTPUT_ASSET_ID_A_LEN)).toEqual(3);
+    expect(getNumber(val, INPUT_ASSET_ID_B_OFFSET, INPUT_ASSET_ID_B_LEN)).toEqual(4);
+    expect(getNumber(val, OUTPUT_ASSET_ID_B_OFFSET, OUTPUT_ASSET_ID_B_LEN)).toEqual(5);
   });
 });

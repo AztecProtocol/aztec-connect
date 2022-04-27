@@ -2,12 +2,11 @@ import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { assetValueToJson } from '@aztec/barretenberg/asset';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { TreeNote } from '@aztec/barretenberg/note_algorithms';
 import { accountTxToJson, joinSplitTxToJson, rollupProviderStatusToJson } from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { EventEmitter } from 'events';
 import { coreUserTxToJson } from '../core_tx';
-import { noteToJson } from '../note';
+import { noteFromJson, NoteJson, noteToJson } from '../note';
 import {
   accountProofInputFromJson,
   AccountProofInputJson,
@@ -212,16 +211,14 @@ export class CoreSdkServerStub {
     userId: string,
     bridgeId: string,
     depositValue: string,
-    txFee: string,
-    inputNotes: Uint8Array[] | undefined,
+    inputNotes: NoteJson[],
     spendingPublicKey: string,
   ) {
     const proofInput = await this.core.createDefiProofInput(
       AccountId.fromString(userId),
       BridgeId.fromString(bridgeId),
       BigInt(depositValue),
-      BigInt(txFee),
-      inputNotes ? inputNotes.map(n => TreeNote.fromBuffer(Buffer.from(n))) : undefined,
+      inputNotes.map(n => noteFromJson(n)),
       GrumpkinAddress.fromString(spendingPublicKey),
     );
     return joinSplitProofInputToJson(proofInput);
@@ -317,8 +314,8 @@ export class CoreSdkServerStub {
     return balance.toString();
   }
 
-  public async getMaxSpendableValue(assetId: number, userId: string) {
-    const value = await this.core.getMaxSpendableValue(assetId, AccountId.fromString(userId));
+  public async getMaxSpendableValue(assetId: number, userId: string, numNotes?: number) {
+    const value = await this.core.getMaxSpendableValue(assetId, AccountId.fromString(userId), numNotes);
     return value.toString();
   }
 
@@ -343,8 +340,12 @@ export class CoreSdkServerStub {
   }
 
   public async pickNotes(userId: string, assetId: number, value: string) {
-    const notes = await this.core.pickNotes(AccountId.fromString(userId), assetId, BigInt(value));
-    return notes ? notes.map(noteToJson) : null;
+    return (await this.core.pickNotes(AccountId.fromString(userId), assetId, BigInt(value))).map(noteToJson);
+  }
+
+  public async pickNote(userId: string, assetId: number, value: string) {
+    const note = await this.core.pickNote(AccountId.fromString(userId), assetId, BigInt(value));
+    return note ? noteToJson(note) : undefined;
   }
 
   public async getUserTxs(userId: string) {

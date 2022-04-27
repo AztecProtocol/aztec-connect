@@ -6,4 +6,5 @@ export interface CoreClaimTx {
   userId: AccountId;
   secret: Buffer;
   nullifier: Buffer; // the nullifier of this claim's claim note
+  interactionNonce: number;
 }

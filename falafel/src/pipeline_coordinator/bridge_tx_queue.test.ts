@@ -38,15 +38,24 @@ const mockTx = (id: number, txType: TxType, txFeeAssetId: number, bridgeId: bigi
     ]),
   } as any as TxDao);
 
-const createRollupTx = (id: number, txType: TxType, txFeeAssetId: number, bridgeId: bigint, excessFee: bigint) => {
+const createRollupTx = (
+  id: number,
+  txType: TxType,
+  txFeeAssetId: number,
+  bridgeId: bigint,
+  excessFee: bigint,
+  txFee = 1n + excessFee,
+): RollupTx => {
   const tx = mockTx(id, txType, txFeeAssetId, bridgeId);
-  const rollupTx: RollupTx = {
+  return {
     tx,
     excessGas: excessFee,
-    feeAsset: txFeeAssetId,
+    fee: {
+      assetId: txFeeAssetId,
+      value: txFee,
+    },
     bridgeId,
   };
-  return rollupTx;
 };
 
 const getFullBridgeGas = () => bridgeConfig.fee!;

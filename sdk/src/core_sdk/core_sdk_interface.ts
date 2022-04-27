@@ -3,7 +3,6 @@ import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { SchnorrSignature } from '@aztec/barretenberg/crypto';
-import { TreeNote } from '@aztec/barretenberg/note_algorithms';
 import { AccountTx, JoinSplitTx, RollupProviderStatus } from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { CoreUserTx } from '../core_tx';
@@ -94,8 +93,7 @@ export interface CoreSdkInterface {
     userId: AccountId,
     bridgeId: BridgeId,
     depositValue: bigint,
-    txFee: bigint,
-    inputNotes: TreeNote[] | undefined,
+    inputNotes: Note[],
     spendingPublicKey: GrumpkinAddress,
   ): Promise<JoinSplitProofInput>;
 
@@ -139,7 +137,7 @@ export interface CoreSdkInterface {
 
   getBalance(assetId: number, userId: AccountId): Promise<bigint>;
 
-  getMaxSpendableValue(assetId: number, userId: AccountId): Promise<bigint>;
+  getMaxSpendableValue(assetId: number, userId: AccountId, numNotes?: number): Promise<bigint>;
 
   getSpendableNotes(assetId: number, userId: AccountId): Promise<Note[]>;
 
@@ -149,7 +147,9 @@ export interface CoreSdkInterface {
 
   getNotes(userId: AccountId): Promise<Note[]>;
 
-  pickNotes(userId: AccountId, assetId: number, value: bigint): Promise<Note[] | null>;
+  pickNotes(userId: AccountId, assetId: number, value: bigint): Promise<Note[]>;
+
+  pickNote(userId: AccountId, assetId: number, value: bigint): Promise<Note | undefined>;
 
   getUserTxs(userId: AccountId): Promise<CoreUserTx[]>;
 

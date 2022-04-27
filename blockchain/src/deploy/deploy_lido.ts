@@ -21,7 +21,6 @@ export const deployLidoBridge = async (
   );
   console.error(`LidoBridge contract address: ${bridge.address}`);
 
-  await rollup.setSupportedBridge(bridge.address, 500000n, { gasLimit });
   await rollup.setSupportedAsset(wstETH, 75000, { gasLimit });
   return bridge;
 };

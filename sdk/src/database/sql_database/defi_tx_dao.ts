@@ -35,20 +35,20 @@ export class DefiTxDao {
   public settled?: Date;
 
   @Index({ unique: false })
-  @Column()
-  public interactionNonce!: number;
+  @Column({ nullable: true })
+  public interactionNonce?: number;
 
-  @Column()
-  public isAsync!: boolean;
+  @Column({ nullable: true })
+  public isAsync?: boolean;
 
-  @Column()
-  public success!: boolean;
+  @Column({ nullable: true })
+  public success?: boolean;
 
-  @Column('text', { transformer: [bigintTransformer] })
-  public outputValueA!: bigint;
+  @Column('text', { transformer: [bigintTransformer], nullable: true })
+  public outputValueA?: bigint;
 
-  @Column('text', { transformer: [bigintTransformer] })
-  public outputValueB!: bigint;
+  @Column('text', { transformer: [bigintTransformer], nullable: true })
+  public outputValueB?: bigint;
 
   @Column({ nullable: true })
   public finalised?: Date;
@@ -65,6 +65,21 @@ export class DefiTxDao {
   afterLoad() {
     if (this.settled === null) {
       delete this.settled;
+    }
+    if (this.interactionNonce === null) {
+      delete this.interactionNonce;
+    }
+    if (this.isAsync === null) {
+      delete this.isAsync;
+    }
+    if (this.success === null) {
+      delete this.success;
+    }
+    if (this.outputValueA === null) {
+      delete this.outputValueA;
+    }
+    if (this.outputValueB === null) {
+      delete this.outputValueB;
     }
     if (this.finalised === null) {
       delete this.finalised;

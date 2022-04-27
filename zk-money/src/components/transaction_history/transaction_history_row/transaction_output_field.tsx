@@ -3,9 +3,9 @@ import { useAmount } from 'alt-model/asset_hooks';
 import { ShieldedAssetIcon } from 'components/shielded_asset_icon';
 
 export function DefiTransactionOutputField({ tx }: { tx: UserDefiTx }) {
-  const assetValue = {
+  const assetValue = tx.interactionResult.outputValueA || {
     assetId: tx.bridgeId.outputAssetIdA,
-    value: tx.interactionResult.outputValueA,
+    value: 0n,
   };
   const amount = useAmount(assetValue);
   if (tx.interactionResult.state !== UserDefiInteractionResultState.SETTLED || !tx.interactionResult.success)

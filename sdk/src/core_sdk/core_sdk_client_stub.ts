@@ -3,7 +3,6 @@ import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { assetValueFromJson } from '@aztec/barretenberg/asset';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { SchnorrSignature } from '@aztec/barretenberg/crypto';
-import { TreeNote } from '@aztec/barretenberg/note_algorithms';
 import {
   accountTxFromJson,
   joinSplitTxFromJson,
@@ -12,7 +11,7 @@ import {
 import { TxId } from '@aztec/barretenberg/tx_id';
 import EventEmitter from 'events';
 import { coreUserTxFromJson } from '../core_tx';
-import { noteFromJson } from '../note';
+import { Note, noteFromJson, noteToJson } from '../note';
 import {
   AccountProofInput,
   accountProofInputFromJson,
@@ -215,16 +214,14 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     userId: AccountId,
     bridgeId: BridgeId,
     depositValue: bigint,
-    txFee: bigint,
-    inputNotes: TreeNote[] | undefined,
+    inputNotes: Note[],
     spendingPublicKey: GrumpkinAddress,
   ) {
     const json = await this.backend.createDefiProofInput(
       userId.toString(),
       bridgeId.toString(),
       depositValue.toString(),
-      txFee.toString(),
-      inputNotes ? inputNotes.map(n => new Uint8Array(n.toBuffer())) : undefined,
+      inputNotes.map(n => noteToJson(n)),
       spendingPublicKey.toString(),
     );
     return joinSplitProofInputFromJson(json);
@@ -320,8 +317,8 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     return BigInt(balanceStr);
   }
 
-  public async getMaxSpendableValue(assetId: number, userId: AccountId) {
-    const valueStr = await this.backend.getMaxSpendableValue(assetId, userId.toString());
+  public async getMaxSpendableValue(assetId: number, userId: AccountId, numNotes?: number) {
+    const valueStr = await this.backend.getMaxSpendableValue(assetId, userId.toString(), numNotes);
     return BigInt(valueStr);
   }
 
@@ -346,8 +343,12 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
   }
 
   public async pickNotes(userId: AccountId, assetId: number, value: bigint) {
-    const notes = await this.backend.pickNotes(userId.toString(), assetId, value.toString());
-    return notes ? notes.map(noteFromJson) : null;
+    return (await this.backend.pickNotes(userId.toString(), assetId, value.toString())).map(noteFromJson);
+  }
+
+  public async pickNote(userId: AccountId, assetId: number, value: bigint) {
+    const note = await this.backend.pickNote(userId.toString(), assetId, value.toString());
+    return note ? noteFromJson(note) : undefined;
   }
 
   public async getUserTxs(userId: AccountId) {

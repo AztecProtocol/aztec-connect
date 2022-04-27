@@ -1,17 +1,19 @@
 import {
   AccountId,
+  AssetValue,
   AztecSdk,
   createAztecSdk,
   DefiController,
   DefiSettlementTime,
   EthAddress,
+  SchnorrSigner,
   toBaseUnits,
-  TxSettlementTime,
   WalletProvider,
 } from '@aztec/sdk';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
+import { batchDeposit } from './sdk_utils';
 
 jest.setTimeout(20 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
@@ -34,11 +36,11 @@ describe('end-to-end defi tests', () => {
   let sdk: AztecSdk;
   let accounts: EthAddress[] = [];
   const userIds: AccountId[] = [];
+  const signers: SchnorrSigner[] = [];
   const debug = createDebug('bb:e2e_defi');
 
   const flushClaim = async () => {
-    const signer = await sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[3])!);
-    await sdk.flushRollup(userIds[3], signer);
+    await sdk.flushRollup(userIds[3], signers[3]);
   };
 
   beforeAll(async () => {
@@ -58,7 +60,9 @@ describe('end-to-end defi tests', () => {
 
     for (let i = 0; i < accounts.length; i++) {
       const user = await sdk.addUser(provider.getPrivateKeyForAddress(accounts[i])!);
+      const signer = await sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[i])!);
       userIds.push(user.id);
+      signers.push(signer);
     }
   });
 
@@ -76,127 +80,38 @@ describe('end-to-end defi tests', () => {
     const bridgeAddressId = 1;
     const ethAssetId = 0;
     const daiAssetId = 1;
+    const btcAssetId = 2;
     const ethToDaiBridge = sdk.constructBridgeId(bridgeAddressId, ethAssetId, daiAssetId);
     const daiToEthBridge = sdk.constructBridgeId(bridgeAddressId, daiAssetId, ethAssetId);
     const ethToDaiFees = await sdk.getDefiFees(ethToDaiBridge);
     const daiToEthFees = await sdk.getDefiFees(daiToEthBridge);
 
+    const dummyBridgeAddressId = 2;
+    const daiAndEthToBtcBridge = sdk.constructBridgeId(dummyBridgeAddressId, daiAssetId, btcAssetId, ethAssetId);
+
     // Rollup 0.
-    // Shield.
+    // Shield eth to all users' accounts.
     {
-      const depositFees = await sdk.getDepositFees(shieldValue.assetId);
-
-      // Each account deposits funds to the contract in parallel. Await till they all complete.
-      const controllers = await Promise.all(
-        accounts.map(async (depositor, i) => {
-          debug(`shielding ${sdk.fromBaseUnits(shieldValue, true)} from ${depositor.toString()}...`);
-
-          const signer = await sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
-          // Last deposit pays for instant rollup to flush.
-          const fee = depositFees[i == accounts.length - 1 ? TxSettlementTime.INSTANT : TxSettlementTime.NEXT_ROLLUP];
-          const controller = sdk.createDepositController(userIds[i], signer, shieldValue, fee, depositor);
-          await controller.createProof();
-          await controller.depositFundsToContractWithProofApproval();
-          await controller.awaitDepositFundsToContract();
-          return controller;
-        }),
-      );
-
-      // Send to rollup provider, and be sure to send the "instant" one last.
-      for (const controller of controllers) {
-        await controller.send();
-      }
-
-      debug(`waiting for shields to settle...`);
-      await Promise.all(controllers.map(controller => controller.awaitSettlement()));
+      debug(`shielding ETH for all accounts...`);
+      await batchDeposit(accounts, userIds, shieldValue, sdk, provider);
+      debug(`${sdk.fromBaseUnits(shieldValue, true)} shielded for all account.`);
+      await debugBalance(ethAssetId, 0);
+      await debugBalance(ethAssetId, 1);
     }
 
     // Rollup 1.
-    // Account 0 swaps partial ETH to DAI.
-    {
-      const signer = await sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[0])!);
-      const { inputAssetIdA, outputAssetIdA } = ethToDaiBridge;
-
-      await debugBalance(inputAssetIdA, 0);
-      await debugBalance(outputAssetIdA, 0);
-
-      const depositValue = sdk.toBaseUnits(inputAssetIdA, '0.05');
-      const fee = ethToDaiFees[DefiSettlementTime.INSTANT];
-
-      debug(
-        `account 0 swapping ${sdk.fromBaseUnits(depositValue, true)} (fee: ${sdk.fromBaseUnits(fee)}) for ${
-          sdk.getAssetInfo(outputAssetIdA).symbol
-        }...`,
-      );
-
-      const controller = sdk.createDefiController(userIds[0], signer, ethToDaiBridge, depositValue, fee);
-      await controller.createProof();
-      await controller.send();
-
-      debug(`waiting for defi interaction to complete...`);
-      await controller.awaitDefiFinalisation();
-
-      debug('waiting for claim to settle...');
-      await flushClaim();
-      await controller.awaitSettlement();
-
-      const [defiTx] = await sdk.getDefiTxs(userIds[0]);
-      const expectedInputBalance = shieldValue.value - depositValue.value - fee.value;
-      expect(defiTx).toMatchObject({ bridgeId: ethToDaiBridge, depositValue, fee });
-      expect(defiTx.interactionResult).toMatchObject({ isAsync: false, success: true, outputValueB: 0n });
-      expect(await sdk.getBalance(inputAssetIdA, userIds[0])).toBe(expectedInputBalance);
-      expect(await sdk.getBalance(outputAssetIdA, userIds[0])).toBe(defiTx.interactionResult.outputValueA);
-    }
-
-    // Rollup 2.
-    // Account 0 swaps DAI to ETH.
-    // Accounts 1 and 2 swap ETH to DAI.
+    // Account 0 and 1 swap partial ETH to DAI.
     {
       const defiControllers: DefiController[] = [];
       const defiVerifications: Array<() => Promise<void>> = [];
-      {
-        const { inputAssetIdA, outputAssetIdA } = daiToEthBridge;
+      const { inputAssetIdA, outputAssetIdA } = ethToDaiBridge;
 
-        await debugBalance(inputAssetIdA, 0);
-        await debugBalance(outputAssetIdA, 0);
-        const initialEthBalance = await sdk.getBalanceAv(0, userIds[0]);
-        const initialDaiBalance = await sdk.getBalanceAv(1, userIds[0]);
-        const fee = daiToEthFees[DefiSettlementTime.NEXT_ROLLUP];
-
-        debug(
-          `account 0 swapping ${sdk.fromBaseUnits(initialDaiBalance, true)} (fee: ${sdk.fromBaseUnits(fee)}) for ${
-            sdk.getAssetInfo(outputAssetIdA).symbol
-          }...`,
-        );
-
-        const depositValue = { assetId: inputAssetIdA, value: initialDaiBalance.value - fee.value };
-        const signer = await sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[0])!);
-        const controller = sdk.createDefiController(userIds[0], signer, daiToEthBridge, depositValue, fee);
-        await controller.createProof();
-        await controller.send();
-        defiControllers.push(controller);
-
-        const verification = async () => {
-          const [defiTx] = await sdk.getDefiTxs(userIds[0]);
-          expect(defiTx).toMatchObject({ bridgeId: daiToEthBridge, depositValue, fee });
-          expect(defiTx.interactionResult).toMatchObject({ isAsync: false, success: true, outputValueB: 0n });
-          expect(await sdk.getBalance(0, userIds[0])).toBe(
-            initialEthBalance.value + defiTx.interactionResult.outputValueA,
-          );
-          expect(await sdk.getBalance(1, userIds[0])).toBe(0n);
-          await debugBalance(inputAssetIdA, 0);
-          await debugBalance(outputAssetIdA, 0);
-        };
-        defiVerifications.push(verification);
-      }
-
-      for (let i = 1; i < 3; i++) {
-        const { inputAssetIdA, outputAssetIdA } = ethToDaiBridge;
-
+      for (let i = 0; i < 2; ++i) {
         await debugBalance(inputAssetIdA, i);
         await debugBalance(outputAssetIdA, i);
+
         const depositValue = sdk.toBaseUnits(inputAssetIdA, '0.05');
-        const fee = ethToDaiFees[i == 2 ? DefiSettlementTime.INSTANT : DefiSettlementTime.DEADLINE];
+        const fee = ethToDaiFees[i === 1 ? DefiSettlementTime.INSTANT : DefiSettlementTime.DEADLINE];
 
         debug(
           `account ${i} swapping ${sdk.fromBaseUnits(depositValue, true)} (fee: ${sdk.fromBaseUnits(fee)}) for ${
@@ -204,36 +119,166 @@ describe('end-to-end defi tests', () => {
           }...`,
         );
 
-        const signer = await sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[i])!);
-        const controller = sdk.createDefiController(userIds[i], signer, ethToDaiBridge, depositValue, fee);
-
+        const controller = sdk.createDefiController(userIds[i], signers[i], ethToDaiBridge, depositValue, fee);
         await controller.createProof();
         await controller.send();
         defiControllers.push(controller);
 
         const verification = async () => {
-          const [defiTx] = await sdk.getDefiTxs(userIds[i]);
-          const expectedInputBalance = shieldValue.value - depositValue.value - fee.value;
-          expect(defiTx).toMatchObject({ bridgeId: ethToDaiBridge, depositValue, fee });
-          expect(defiTx.interactionResult).toMatchObject({ isAsync: false, success: true, outputValueB: 0n });
-          expect(await sdk.getBalance(inputAssetIdA, userIds[i])).toBe(expectedInputBalance);
-          expect(await sdk.getBalance(outputAssetIdA, userIds[i])).toBe(defiTx.interactionResult.outputValueA);
           await debugBalance(inputAssetIdA, i);
           await debugBalance(outputAssetIdA, i);
+
+          const [defiTx] = await sdk.getDefiTxs(userIds[i]);
+          expect(defiTx).toMatchObject({ bridgeId: ethToDaiBridge, depositValue, fee });
+          expect(defiTx.interactionResult).toMatchObject({
+            isAsync: false,
+            success: true,
+            outputValueB: undefined,
+          });
+          expect(await sdk.getBalance(inputAssetIdA, userIds[i])).toBe(
+            shieldValue.value - depositValue.value - fee.value,
+          );
+          expect(await sdk.getBalanceAv(outputAssetIdA, userIds[i])).toEqual(defiTx.interactionResult.outputValueA);
         };
         defiVerifications.push(verification);
       }
 
-      debug(`waiting for defi interactions to complete...`);
+      debug(`waiting for defi interaction to complete...`);
+      await Promise.all(defiControllers.map(c => c.awaitDefiFinalisation()));
 
+      debug('flushing claim...');
+      await flushClaim();
+      debug('waiting for claim to settle...');
+      await Promise.all(defiControllers.map(c => c.awaitSettlement()));
+
+      // Check results.
+      await Promise.all(defiVerifications.map(x => x()));
+    }
+
+    // Rollup 2.
+    // Accounts 0 swaps DAI and ETH to BTC.
+    // Account 0 and 1 swap DAI to ETH.
+    {
+      const defiControllers: DefiController[] = [];
+      const initialEthBalances: AssetValue[] = [];
+
+      for (let i = 0; i < 2; ++i) {
+        await debugBalance(0, i);
+        await debugBalance(1, i);
+        await debugBalance(2, i);
+        initialEthBalances.push(await sdk.getBalanceAv(0, userIds[i]));
+      }
+
+      // DAI and ETH to BTC
+      const depositDaiEthFee = (await sdk.getDefiFees(daiAndEthToBtcBridge))[DefiSettlementTime.NEXT_ROLLUP];
+      const depositDaiEthValue = {
+        assetId: daiAssetId,
+        value: await sdk.getBalance(ethAssetId, userIds[0]),
+      };
+      {
+        const account = 0;
+        const fee = depositDaiEthFee;
+        const { inputAssetIdB, outputAssetIdA } = daiAndEthToBtcBridge;
+
+        debug(
+          `account ${account} swapping ${sdk.fromBaseUnits(depositDaiEthValue, true)} and ${
+            sdk.getAssetInfo(inputAssetIdB!).symbol
+          } (fee: ${sdk.fromBaseUnits(fee)}) for ${sdk.getAssetInfo(outputAssetIdA).symbol}...`,
+        );
+
+        const controller = sdk.createDefiController(
+          userIds[account],
+          signers[account],
+          daiAndEthToBtcBridge,
+          depositDaiEthValue,
+          fee,
+        );
+        await controller.createProof();
+        await controller.send();
+        defiControllers.push(controller);
+      }
+
+      // DAI to ETH
+      const depositDaiValues: AssetValue[] = [];
+      const depositDaiFee0 = daiToEthFees[DefiSettlementTime.NEXT_ROLLUP];
+      const depositDaiFee1 = daiToEthFees[DefiSettlementTime.INSTANT];
+      {
+        const { inputAssetIdA, outputAssetIdA } = daiToEthBridge;
+
+        for (let i = 0; i < 2; ++i) {
+          const fee = i ? depositDaiFee1 : depositDaiFee0;
+          const daiBalance = await sdk.getSpendableSum(daiAssetId, userIds[i]);
+          const depositValue = {
+            assetId: inputAssetIdA,
+            value: daiBalance - fee.value,
+          };
+          depositDaiValues.push(depositValue);
+
+          debug(
+            `account ${i} swapping ${sdk.fromBaseUnits(depositValue, true)} (fee: ${sdk.fromBaseUnits(fee)}) for ${
+              sdk.getAssetInfo(outputAssetIdA).symbol
+            }...`,
+          );
+
+          const controller = sdk.createDefiController(userIds[i], signers[i], daiToEthBridge, depositValue, fee);
+          await controller.createProof();
+          await controller.send();
+          defiControllers.push(controller);
+        }
+      }
+
+      debug(`waiting for defi interactions to complete...`);
       await Promise.all(defiControllers.map(controller => controller.awaitDefiFinalisation()));
 
       debug(`waiting for claims to settle...`);
       await flushClaim();
       await Promise.all(defiControllers.map(controller => controller.awaitSettlement()));
 
-      // Check results.
-      await Promise.all(defiVerifications.map(x => x()));
+      // Check account 0 result.
+      {
+        await debugBalance(0, 0);
+        await debugBalance(1, 0);
+        await debugBalance(2, 0);
+
+        const [defiTx0, defiTx1] = await sdk.getDefiTxs(userIds[0]);
+        expect(defiTx0).toMatchObject({
+          bridgeId: daiAndEthToBtcBridge,
+          depositValue: depositDaiEthValue,
+          fee: depositDaiEthFee,
+        });
+        expect(defiTx0.interactionResult).toMatchObject({ isAsync: false, success: true, outputValueB: undefined });
+        expect(defiTx1).toMatchObject({
+          bridgeId: daiToEthBridge,
+          depositValue: depositDaiValues[0],
+          fee: depositDaiFee0,
+        });
+        expect(defiTx1.interactionResult).toMatchObject({ isAsync: false, success: true, outputValueB: undefined });
+        expect(await sdk.getBalance(0, userIds[0])).toBe(
+          initialEthBalances[0].value - depositDaiEthValue.value + defiTx1.interactionResult.outputValueA!.value,
+        );
+        expect(await sdk.getBalance(1, userIds[0])).toBe(0n);
+        expect(await sdk.getBalanceAv(2, userIds[0])).toEqual(defiTx0.interactionResult.outputValueA);
+      }
+
+      // Check account 1 result.
+      {
+        await debugBalance(0, 1);
+        await debugBalance(1, 1);
+        await debugBalance(2, 1);
+
+        const [defiTx] = await sdk.getDefiTxs(userIds[1]);
+        expect(defiTx).toMatchObject({
+          bridgeId: daiToEthBridge,
+          depositValue: depositDaiValues[1],
+          fee: depositDaiFee1,
+        });
+        expect(defiTx.interactionResult).toMatchObject({ isAsync: false, success: true, outputValueB: undefined });
+        expect(await sdk.getBalance(0, userIds[1])).toBe(
+          initialEthBalances[1].value + defiTx.interactionResult.outputValueA!.value,
+        );
+        expect(await sdk.getBalance(1, userIds[1])).toBe(0n);
+        expect(await sdk.getBalance(2, userIds[1])).toEqual(0n);
+      }
     }
   });
 });

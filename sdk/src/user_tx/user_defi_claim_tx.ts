@@ -12,9 +12,9 @@ export class UserDefiClaimTx {
     public readonly userId: AccountId,
     public readonly bridgeId: BridgeId,
     public readonly depositValue: AssetValue,
-    public readonly settled: Date,
     public readonly success: boolean,
-    public readonly outputValueA: bigint,
-    public readonly outputValueB: bigint,
+    public readonly outputValueA: AssetValue,
+    public readonly outputValueB: AssetValue | undefined,
+    public readonly settled: Date,
   ) {}
 }

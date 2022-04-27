@@ -1,5 +1,7 @@
 import { AssetValue } from '@aztec/barretenberg/asset';
+import { virtualAssetIdFlag } from '@aztec/barretenberg/bridge_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
+import { TxId } from '@aztec/barretenberg/tx_id';
 import { CoreAccountTx, CoreDefiTx, CorePaymentTx, CoreUserTx } from '../core_tx';
 import {
   UserAccountTx,
@@ -68,27 +70,36 @@ const toUserDefiTx = (tx: CoreDefiTx, fee: AssetValue) => {
       isAsync,
       interactionNonce,
       success,
-      outputValueA,
-      outputValueB,
+      outputValueA:
+        outputValueA !== undefined
+          ? {
+              assetId: bridgeId.firstOutputVirtual ? interactionNonce! + virtualAssetIdFlag : bridgeId.outputAssetIdA,
+              value: outputValueA,
+            }
+          : undefined,
+      outputValueB:
+        outputValueB !== undefined && bridgeId.outputAssetIdB !== undefined
+          ? {
+              assetId: bridgeId.secondOutputVirtual ? interactionNonce! + virtualAssetIdFlag : bridgeId.outputAssetIdB,
+              value: outputValueB,
+            }
+          : undefined,
       claimSettled,
       finalised,
     },
   );
 };
 
-const toUserDefiClaimTx = (tx: CoreDefiTx) => {
-  const { userId, bridgeId, depositValue, claimSettled, claimTxId } = tx;
-  return new UserDefiClaimTx(
-    claimTxId!,
+const toUserDefiClaimTx = (
+  claimTxId: TxId,
+  {
     userId,
     bridgeId,
-    { assetId: bridgeId.inputAssetIdA, value: depositValue },
-    claimSettled!,
-    tx.success,
-    tx.outputValueA,
-    tx.outputValueB,
-  );
-};
+    depositValue,
+    interactionResult: { success, outputValueA, outputValueB, claimSettled },
+  }: UserDefiTx,
+) =>
+  new UserDefiClaimTx(claimTxId!, userId, bridgeId, depositValue, success!, outputValueA!, outputValueB, claimSettled!);
 
 const getPaymentValue = ({
   proofId,
@@ -163,13 +174,7 @@ const getTotalFee = (txs: CoreUserTx[]) => {
     return emptyAssetValue;
   }
 
-  // If there's a defi deposit tx, the fee is stored in its offchain data.
-  // We don't need to add up the fee paid by the join split tx unless its input asset is a garbage asset.
-  const defiTx = txs.find(tx => tx.proofId === ProofId.DEFI_DEPOSIT) as CoreDefiTx;
-  const feeTxs = !defiTx
-    ? txs
-    : txs.filter(tx => tx === defiTx || (tx.proofId === ProofId.SEND && tx.assetId !== defiTx.bridgeId.inputAssetIdA));
-  const fees = feeTxs.map(getFee);
+  const fees = txs.map(getFee);
   const { assetId } = fees.find(fee => fee.value) || fees[0];
   if (fees.some(fee => fee.value && fee.assetId !== assetId)) {
     throw new Error('Inconsistent fee paying assets.');
@@ -203,8 +208,8 @@ const toUserTx = (txs: CoreUserTx[], feePayingAssetIds: number[]) => {
     }
     case ProofId.DEFI_DEPOSIT: {
       const userDefiTx = toUserDefiTx(primaryTx, fee);
-      if (primaryTx.claimTxId) {
-        return [userDefiTx, toUserDefiClaimTx(primaryTx)];
+      if (userDefiTx.interactionResult.claimSettled) {
+        return [userDefiTx, toUserDefiClaimTx(primaryTx.claimTxId!, userDefiTx)];
       }
       return [userDefiTx];
     }

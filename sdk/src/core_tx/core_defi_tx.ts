@@ -16,11 +16,11 @@ export class CoreDefiTx {
     public readonly txRefNo: number,
     public readonly created: Date,
     public readonly settled?: Date,
-    public readonly interactionNonce = 0,
-    public readonly isAsync = false,
-    public readonly success = false,
-    public readonly outputValueA = BigInt(0),
-    public readonly outputValueB = BigInt(0),
+    public readonly interactionNonce?: number,
+    public readonly isAsync?: boolean,
+    public readonly success?: boolean,
+    public readonly outputValueA?: bigint,
+    public readonly outputValueB?: bigint,
     public readonly finalised?: Date,
     public readonly claimSettled?: Date,
     public readonly claimTxId?: TxId,
@@ -38,11 +38,11 @@ export interface CoreDefiTxJson {
   txRefNo: number;
   created: Date;
   settled?: Date;
-  interactionNonce: number;
-  isAsync: boolean;
-  success: boolean;
-  outputValueA: string;
-  outputValueB: string;
+  interactionNonce?: number;
+  isAsync?: boolean;
+  success?: boolean;
+  outputValueA?: string;
+  outputValueB?: string;
   finalised?: Date;
   claimSettled?: Date;
   claimTxId?: string;
@@ -56,8 +56,8 @@ export const coreDefiTxToJson = (tx: CoreDefiTx): CoreDefiTxJson => ({
   depositValue: tx.depositValue.toString(),
   txFee: tx.txFee.toString(),
   partialStateSecret: tx.partialStateSecret.toString('hex'),
-  outputValueA: tx.outputValueA.toString(),
-  outputValueB: tx.outputValueB.toString(),
+  outputValueA: tx.outputValueA?.toString(),
+  outputValueB: tx.outputValueB?.toString(),
   claimTxId: tx.claimTxId?.toString(),
 });
 
@@ -75,8 +75,8 @@ export const coreDefiTxFromJson = (json: CoreDefiTxJson) =>
     json.interactionNonce,
     json.isAsync,
     json.success,
-    BigInt(json.outputValueA),
-    BigInt(json.outputValueB),
+    json.outputValueA ? BigInt(json.outputValueA) : undefined,
+    json.outputValueB ? BigInt(json.outputValueB) : undefined,
     json.finalised,
     json.claimSettled,
     json.claimTxId ? TxId.fromString(json.claimTxId) : undefined,

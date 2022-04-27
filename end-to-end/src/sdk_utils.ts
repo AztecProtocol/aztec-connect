@@ -1,5 +1,6 @@
 import {
   AccountId,
+  AssetValue,
   AztecSdk,
   BridgeId,
   DefiSettlementTime,
@@ -35,6 +36,38 @@ export async function depositTokensToAztec(
   await sdk.getTransactionReceipt(txHash);
   await tokenDepositController.send();
   return tokenDepositController;
+}
+
+export async function batchDeposit(
+  depositors: EthAddress[],
+  users: AccountId[],
+  shieldValue: AssetValue,
+  sdk: AztecSdk,
+  provider: WalletProvider,
+) {
+  const depositFees = await sdk.getDepositFees(shieldValue.assetId);
+
+  // Each account deposits funds to the contract in parallel. Await till they all complete.
+  const controllers = await Promise.all(
+    users.map(async (user, i) => {
+      const depositor = depositors[i];
+      const signer = await sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
+      // Last deposit pays for instant rollup to flush.
+      const fee = depositFees[i == users.length - 1 ? TxSettlementTime.INSTANT : TxSettlementTime.NEXT_ROLLUP];
+      const controller = sdk.createDepositController(user, signer, shieldValue, fee, depositor);
+      await controller.createProof();
+      await controller.depositFundsToContractWithProofApproval();
+      await controller.awaitDepositFundsToContract();
+      return controller;
+    }),
+  );
+
+  // Send to rollup provider, and be sure to send the "instant" one last.
+  for (const controller of controllers) {
+    await controller.send();
+  }
+
+  await Promise.all(controllers.map(controller => controller.awaitSettlement()));
 }
 
 export async function sendTokens(
@@ -95,7 +128,7 @@ export async function defiDepositTokens(
 ) {
   const tokenAssetId = sdk.getAssetIdByAddress(token);
   const defiSigner = await sdk.createSchnorrSigner((await sdk.getUserData(user)).privateKey);
-  const tokenDepositFee = (await sdk.getDefiFees(bridgeId, false, user, tokenQuantity))[settlementTime];
+  const tokenDepositFee = (await sdk.getDefiFees(bridgeId, user, tokenQuantity))[settlementTime];
   const tokenAssetValue = { assetId: tokenAssetId, value: tokenQuantity };
   const defiDepositController = sdk.createDefiController(user, defiSigner, bridgeId, tokenAssetValue, tokenDepositFee);
   await defiDepositController.createProof();

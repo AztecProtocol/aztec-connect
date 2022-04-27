@@ -1,13 +1,10 @@
+import { EthAddress } from '@aztec/barretenberg/address';
 import { InitHelpers } from '@aztec/barretenberg/environment';
 import { Contract, ContractFactory, Signer } from 'ethers';
-import { EthAddress } from '@aztec/barretenberg/address';
 import RollupProcessor from '../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
 import { addAsset } from './add_asset/add_asset';
 import { deployDefiBridgeProxy } from './deploy_defi_bridge_proxy';
-import { deployFeeDistributor } from './deploy_fee_distributor';
-import { deployPriceFeed } from './deploy_price_feed';
-import { createUniswapPair, deployUniswap, deployUniswapBridge } from './deploy_uniswap';
-import { deployMockVerifier, deployVerifier } from './deploy_verifier';
+import { deployDummyBridge } from './deploy_dummy_bridge';
 import {
   deployElementBridge,
   deployMockElementContractRegistry,
@@ -15,7 +12,11 @@ import {
   elementConfig,
   setupElementPools,
 } from './deploy_element';
+import { deployFeeDistributor } from './deploy_fee_distributor';
 import { deployLidoBridge } from './deploy_lido';
+import { deployPriceFeed } from './deploy_price_feed';
+import { createUniswapPair, deployUniswap, deployUniswapBridge } from './deploy_uniswap';
+import { deployMockVerifier, deployVerifier } from './deploy_verifier';
 
 const gasLimit = 5000000;
 
@@ -58,41 +59,78 @@ async function deployRollupProcessor(
 }
 
 async function deployErc20Contracts(signer: Signer, rollup: Contract) {
-  const asset0 = await addAsset(rollup, signer, false, 'DAI');
-  const asset1 = await addAsset(rollup, signer, false, 'BTC', 8);
+  const asset0 = await addAsset(rollup, signer, true, 'DAI');
+  const asset1 = await addAsset(rollup, signer, true, 'BTC', 8);
   return [asset0, asset1];
 }
 
-async function deployBridgeContracts(signer: Signer, rollup: Contract, uniswapRouter: Contract) {
-  const uniswapBridge = await deployUniswapBridge(signer, rollup, uniswapRouter);
-  await rollup.setSupportedBridge(uniswapBridge.address, 300000n, { gasLimit });
+async function deployBridgeContracts(
+  signer: Signer,
+  rollup: Contract,
+  uniswapRouter: Contract,
+  erc20Assets: Contract[],
+) {
+  // Uniswap
+  {
+    const uniswapBridge = await deployUniswapBridge(signer, rollup, uniswapRouter);
+    await rollup.setSupportedBridge(uniswapBridge.address, 300000n, { gasLimit });
+  }
+
+  // Dummy bridge for testing
+  {
+    const outputValueEth = 10n ** 15n; // 0.001
+    const outputValueToken = 10n ** 20n; // 100
+    const outputVirtualValueA = BigInt('0x123456789abcdef0123456789abcdef0123456789abcdef');
+    const outputVirtualValueB = 10n;
+    const dummyBridge = await deployDummyBridge(
+      rollup,
+      signer,
+      outputValueEth,
+      outputValueToken,
+      outputVirtualValueA,
+      outputVirtualValueB,
+    );
+
+    const topupTokenValue = outputValueToken * 100n;
+    await erc20Assets[0].mint(dummyBridge.address, topupTokenValue, { gasLimit });
+    await erc20Assets[1].mint(dummyBridge.address, topupTokenValue, { gasLimit });
+
+    await rollup.setSupportedBridge(dummyBridge.address, 300000n, { gasLimit });
+  }
 
   const chainId = await signer.getChainId();
-  if (!(chainId === 1 || chainId === 0xa57ec)) {
+  const isMainnet = chainId === 1 || chainId === 0xa57ec;
+
+  // Element
+  if (!isMainnet) {
     console.error(`We are neither mainnet nor mainnet-fork. Skipping ElementBridge deployment.`);
-    return;
+  } else {
+    for (const elementAsset of elementAssets) {
+      await rollup.setSupportedAsset(elementAsset, 0, { gasLimit });
+    }
+
+    const elementRegistry = await deployMockElementContractRegistry(signer, elementConfig);
+
+    const elementBridge = await deployElementBridge(
+      signer,
+      rollup.address,
+      elementConfig.trancheFactoryAddress,
+      elementConfig.trancheByteCodeHash,
+      elementConfig.balancerAddress,
+      elementRegistry.address,
+    );
+    await rollup.setSupportedBridge(elementBridge.address, 800000n, { gasLimit });
+
+    await setupElementPools(elementConfig, elementBridge);
   }
 
-  for (const elementAsset of elementAssets) {
-    await rollup.setSupportedAsset(elementAsset, 0, { gasLimit });
+  // Lido
+  if (!isMainnet) {
+    console.error(`We are neither mainnet nor mainnet-fork. Skipping LidoBridge deployment.`);
+  } else {
+    const lidoBridge = await deployLidoBridge(signer, rollup);
+    await rollup.setSupportedBridge(lidoBridge.address, 500000n, { gasLimit });
   }
-
-  const elementRegistry = await deployMockElementContractRegistry(signer, elementConfig);
-
-  const elementBridge = await deployElementBridge(
-    signer,
-    rollup.address,
-    elementConfig.trancheFactoryAddress,
-    elementConfig.trancheByteCodeHash,
-    elementConfig.balancerAddress,
-    elementRegistry.address,
-  );
-  await rollup.setSupportedBridge(elementBridge.address, 800000n, { gasLimit });
-
-  await setupElementPools(elementConfig, elementBridge);
-
-  // deploy and set the lido bridge on the rollup
-  await deployLidoBridge(signer, rollup);
 }
 
 /**
@@ -144,7 +182,8 @@ export async function deploy(
 
   const feeDistributor = await deployFeeDistributor(signer, rollup, uniswapRouter);
 
-  const [erc20Asset] = await deployErc20Contracts(signer, rollup);
+  const erc20Assets = await deployErc20Contracts(signer, rollup);
+  const [erc20Asset] = erc20Assets;
 
   const gasPrice = 20n * 10n ** 9n; // 20 gwei
   const daiPrice = 1n * 10n ** 15n; // 1000 DAI/ETH
@@ -153,7 +192,7 @@ export async function deploy(
 
   const priceFeeds = [await deployPriceFeed(signer, gasPrice), await deployPriceFeed(signer, daiPrice)];
 
-  await deployBridgeContracts(signer, rollup, uniswapRouter);
+  await deployBridgeContracts(signer, rollup, uniswapRouter, erc20Assets);
 
   const feePayingAssets = [EthAddress.ZERO.toString(), erc20Asset.address];
 

@@ -145,7 +145,7 @@ describe('end-to-end async defi tests', () => {
     const interactionsPerExpiry = 2;
 
     const user1 = userIds[0];
-    const elementBridgeId = 2;
+    const elementBridgeId = 3;
 
     // initialise the token store that we will use to acquire the input assets
     const usersEthereumAddress = accounts[0];
@@ -388,8 +388,8 @@ describe('end-to-end async defi tests', () => {
         }
         try {
           debug(
-            `finalising interaction with nonce ${nonce}, deposit of ${controller.value.value} ${
-              sdk.getAssetInfo(controller.value.assetId).name
+            `finalising interaction with nonce ${nonce}, deposit of ${controller.assetValue.value} ${
+              sdk.getAssetInfo(controller.assetValue.assetId).name
             } with expiry ${formatTime(controller.bridgeId.auxData)}`,
           );
           const txHash = await sdk.processAsyncDefiInteraction(nonce!);

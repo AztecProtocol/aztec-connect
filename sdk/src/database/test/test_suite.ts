@@ -38,8 +38,7 @@ export const databaseTestSuite = (
 
     describe('Note', () => {
       it('add note to db and get note by its commitment', async () => {
-        const note = randomNote();
-        note.value = 2899999999999990600n;
+        const note = randomNote(undefined, { value: 2899999999999990600n });
 
         await db.addNote(note);
 
@@ -48,14 +47,12 @@ export const databaseTestSuite = (
       });
 
       it('override existing note that has the same commitment', async () => {
-        const note = randomNote();
-        note.allowChain = true;
-        note.pending = true;
+        const note = randomNote({ allowChain: false });
         await db.addNote(note);
 
         expect(await db.getNote(note.commitment)).toEqual(note);
 
-        const note2 = { ...note, allowChain: false, pending: false };
+        const note2 = randomNote({ ...note, allowChain: true });
         await db.addNote(note2);
 
         expect(await db.getNote(note.commitment)).toEqual(note2);
@@ -88,12 +85,7 @@ export const databaseTestSuite = (
         const userId = AccountId.random();
         const userNotes: Note[] = [];
         for (let i = 0; i < 10; ++i) {
-          const note = randomNote();
-          note.owner = userId;
-          if (i % 2) {
-            note.allowChain = true;
-            note.pending = true;
-          }
+          const note = randomNote(undefined, { ownerPubKey: userId.publicKey, nonce: userId.accountNonce });
           await db.addNote(note);
           if (i % 3) {
             await db.nullifyNote(note.nullifier);
@@ -102,8 +94,8 @@ export const databaseTestSuite = (
           }
         }
         for (let i = 0; i < 5; ++i) {
-          const note = randomNote();
-          note.owner = AccountId.random();
+          const { publicKey, accountNonce } = AccountId.random();
+          const note = randomNote(undefined, { ownerPubKey: publicKey, nonce: accountNonce });
           await db.addNote(note);
         }
 
@@ -116,18 +108,16 @@ export const databaseTestSuite = (
         const userId = AccountId.random();
         const userPendingNotes: Note[] = [];
         for (let i = 0; i < 10; ++i) {
-          const note = randomNote();
-          note.owner = userId;
-          if (i % 2) {
-            note.pending = true;
+          const index = i % 2 ? i : undefined;
+          const note = randomNote({ index }, { ownerPubKey: userId.publicKey, nonce: userId.accountNonce });
+          if (index === undefined) {
             userPendingNotes.push(note);
           }
           await db.addNote(note);
         }
         for (let i = 0; i < 5; ++i) {
-          const note = randomNote();
-          note.owner = AccountId.random();
-          note.pending = true;
+          const { publicKey, accountNonce } = AccountId.random();
+          const note = randomNote(undefined, { ownerPubKey: publicKey, nonce: accountNonce });
           await db.addNote(note);
         }
 
@@ -140,8 +130,7 @@ export const databaseTestSuite = (
         const userId = AccountId.random();
         const notes: Note[] = [];
         for (let i = 0; i < 5; ++i) {
-          const note = randomNote();
-          note.owner = userId;
+          const note = randomNote(undefined, { ownerPubKey: userId.publicKey, nonce: userId.accountNonce });
           await db.addNote(note);
           notes.push(note);
         }
@@ -414,8 +403,8 @@ export const databaseTestSuite = (
         await db.addDefiTx(tx);
 
         const savedTx = (await db.getDefiTx(tx.txId))!;
-        expect(savedTx.outputValueA).toBe(0n);
-        expect(savedTx.outputValueB).toBe(0n);
+        expect(savedTx.outputValueA).toBe(undefined);
+        expect(savedTx.outputValueB).toBe(undefined);
         expect(savedTx.settled).toBeFalsy();
 
         const outputValueA = 123n;
@@ -1053,8 +1042,7 @@ export const databaseTestSuite = (
       const generateUserProfile = async (user: UserData) => {
         await db.addUser(user);
 
-        const note = randomNote();
-        note.owner = user.id;
+        const note = randomNote(undefined, { ownerPubKey: user.publicKey, nonce: user.nonce });
         await db.addNote(note);
 
         const signingKey = randomSigningKey();

@@ -29,6 +29,7 @@ import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { randomBytes } from 'crypto';
 import { CoreDefiTx, CorePaymentTx, PaymentProofId } from '../core_tx';
 import { Database } from '../database';
+import { Note } from '../note';
 import { UserData } from '../user';
 import { UserState } from './index';
 
@@ -117,7 +118,7 @@ describe('user state', () => {
 
   const createNote = (assetId: number, value: bigint, user: AccountId, inputNullifier: Buffer) => {
     const ephPrivKey = createEphemeralPrivKey();
-    const note = TreeNote.createFromEphPriv(
+    const treeNote = TreeNote.createFromEphPriv(
       user.publicKey,
       value,
       assetId,
@@ -126,7 +127,10 @@ describe('user state', () => {
       ephPrivKey,
       grumpkin,
     );
-    const viewingKey = note.createViewingKey(ephPrivKey, grumpkin);
+    const commitment = noteAlgos.valueNoteCommitment(treeNote);
+    const nullifier = Buffer.alloc(0);
+    const note = new Note(treeNote, commitment, nullifier, false, false);
+    const viewingKey = treeNote.createViewingKey(ephPrivKey, grumpkin);
     return { note, viewingKey };
   };
 
@@ -170,8 +174,8 @@ describe('user state', () => {
       createNote(assetId, outputNoteValue1, new AccountId(newNoteOwner.publicKey, noteCommitmentNonce), nullifier1),
       createNote(assetId, outputNoteValue2, new AccountId(proofSender.publicKey, noteCommitmentNonce), nullifier2),
     ];
-    const note1Commitment = createValidNoteCommitments ? noteAlgos.valueNoteCommitment(notes[0].note) : randomBytes(32);
-    const note2Commitment = createValidNoteCommitments ? noteAlgos.valueNoteCommitment(notes[1].note) : randomBytes(32);
+    const note1Commitment = createValidNoteCommitments ? notes[0].note.commitment : randomBytes(32);
+    const note2Commitment = createValidNoteCommitments ? notes[1].note.commitment : randomBytes(32);
     const viewingKeys = isPadding ? [] : notes.map(n => n.viewingKey);
     const proofData = new InnerProofData(
       proofId,
@@ -261,7 +265,7 @@ describe('user state', () => {
       nullifier1,
     );
     const partialClaimNoteCommitment = noteAlgos.claimNotePartialCommitment(partialClaimNote);
-    const changeNoteCommitment = noteAlgos.valueNoteCommitment(changeNote.note);
+    const changeNoteCommitment = changeNote.note.commitment;
     const viewingKeys = [changeNote.viewingKey];
     const proofData = new InnerProofData(
       ProofId.DEFI_DEPOSIT,
@@ -313,14 +317,10 @@ describe('user state', () => {
       createNote(assetId, outputValueA, noteRecipient.id, nullifier1),
       createNote(assetId, outputValueB, noteRecipient.id, nullifier2),
     ];
-    const noteCommitments = [
-      noteAlgos.valueNoteCommitment(notes[0].note),
-      noteAlgos.valueNoteCommitment(notes[1].note),
-    ];
     const proofData = new InnerProofData(
       ProofId.DEFI_CLAIM,
-      noteCommitments[0],
-      noteCommitments[1],
+      notes[0].note.commitment,
+      notes[1].note.commitment,
       nullifier1,
       nullifier2,
       Buffer.alloc(32),
@@ -435,7 +435,7 @@ describe('user state', () => {
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
       commitment: jsProof.proofData.noteCommitment2,
       value: outputNoteValue2,
-      allowChain: true,
+      allowChain: false,
       pending: true,
     });
     expect(db.addPaymentTx).toHaveBeenCalledTimes(1);
@@ -1120,9 +1120,9 @@ describe('user state', () => {
         settled: block.created,
         interactionNonce: defiProofInteractionNonce,
         isAsync: true,
-        success: false,
-        outputValueA: 0n,
-        outputValueB: 0n,
+        success: undefined,
+        outputValueA: undefined,
+        outputValueB: undefined,
       }),
     );
     // defi tx should have been updated
@@ -1155,13 +1155,17 @@ describe('user state', () => {
     expect(db.addNote).toHaveBeenCalledTimes(2);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
       commitment: claimProof.proofData.noteCommitment1,
-      value: outputValueA,
-      secret,
+      treeNote: expect.objectContaining({
+        value: outputValueA,
+        noteSecret: secret,
+      }),
     });
     expect(db.addNote.mock.calls[1][0]).toMatchObject({
       commitment: claimProof.proofData.noteCommitment2,
-      value: outputValueB,
-      secret,
+      treeNote: expect.objectContaining({
+        value: outputValueB,
+        noteSecret: secret,
+      }),
     });
     expect(db.settleDefiTx).toHaveBeenCalledTimes(1);
     expect(db.settleDefiTx).toHaveBeenCalledWith(txId, block.created, new TxId(claimProof.proofData.txId));
@@ -1190,8 +1194,10 @@ describe('user state', () => {
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
       commitment: claimProof.proofData.noteCommitment1,
-      value: depositValue,
-      secret,
+      treeNote: expect.objectContaining({
+        value: depositValue,
+        noteSecret: secret,
+      }),
     });
     expect(db.settleDefiTx).toHaveBeenCalledTimes(1);
     expect(db.settleDefiTx).toHaveBeenCalledWith(txId, block.created, new TxId(claimProof.proofData.txId));

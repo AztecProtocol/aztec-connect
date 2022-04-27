@@ -1,6 +1,6 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset, TxHash } from '@aztec/barretenberg/blockchain';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeId, virtualAssetIdFlag } from '@aztec/barretenberg/bridge_id';
 import {
   computeInteractionHashes,
   DefiInteractionNote,
@@ -37,8 +37,6 @@ describe('rollup_processor: defi bridge', () => {
   let addresses: EthAddress[];
   let rollupProvider: Signer;
   let assetAddresses: EthAddress[];
-
-  const virtualAssetIdOffset = 1 << 29;
 
   const numberOfBridgeCalls = RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
 
@@ -266,6 +264,37 @@ describe('rollup_processor: defi bridge', () => {
     await expectResult([new DefiInteractionNote(bridgeId, 0, inputValue, outputValueA, outputValueB, true)], txHash);
   });
 
+  it('process defi interaction data that has two input assets and one output asset', async () => {
+    const inputValue = 20n;
+    const outputValueA = 12n;
+    const bridgeId = await mockBridge({
+      inputAssetIdA: 1,
+      inputAssetIdB: 2,
+      outputAssetIdA: 0,
+      outputValueA,
+    });
+
+    const initialTokenBalance = 50n;
+    await topupToken(1, initialTokenBalance);
+    await topupToken(2, initialTokenBalance);
+
+    await expectBalance(0, 0n);
+    await expectBalance(1, initialTokenBalance);
+    await expectBalance(2, initialTokenBalance);
+
+    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+      defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
+    });
+    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const txHash = await rollupProcessor.sendTx(tx);
+
+    await expectBalance(0, outputValueA);
+    await expectBalance(1, initialTokenBalance - inputValue);
+    await expectBalance(2, initialTokenBalance - inputValue);
+
+    await expectResult([new DefiInteractionNote(bridgeId, 0, inputValue, outputValueA, 0n, true)], txHash);
+  });
+
   it('process defi interaction data that has two input assets and two output assets', async () => {
     const inputValue = 20n;
     const outputValueA = 12n;
@@ -305,10 +334,10 @@ describe('rollup_processor: defi bridge', () => {
     const outputValueA = 12n;
     const outputValueB = 7n;
     const bridgeId = await mockBridge({
-      inputAssetIdA: 1 + virtualAssetIdOffset,
-      inputAssetIdB: 2 + virtualAssetIdOffset,
-      outputAssetIdA: 0 + virtualAssetIdOffset,
-      outputAssetIdB: 2 + virtualAssetIdOffset,
+      inputAssetIdA: 1 + virtualAssetIdFlag,
+      inputAssetIdB: 2 + virtualAssetIdFlag,
+      outputAssetIdA: 0 + virtualAssetIdFlag,
+      outputAssetIdB: 2 + virtualAssetIdFlag,
       outputValueA,
       outputValueB,
     });
@@ -339,8 +368,8 @@ describe('rollup_processor: defi bridge', () => {
     const outputValueA = 12n;
     const outputValueB = 7n;
     const bridgeId = await mockBridge({
-      inputAssetIdA: 1 + virtualAssetIdOffset,
-      inputAssetIdB: 2 + virtualAssetIdOffset,
+      inputAssetIdA: 1 + virtualAssetIdFlag,
+      inputAssetIdB: 2 + virtualAssetIdFlag,
       outputAssetIdA: 0,
       outputAssetIdB: 2,
       outputValueA,

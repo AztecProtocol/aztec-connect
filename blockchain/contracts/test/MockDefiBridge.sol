@@ -108,7 +108,7 @@ contract MockDefiBridge is IDefiBridge {
                 'MockDefiBridge: INPUT_ASSET_A_NOT_VIRTUAL'
             );
             // get interest rate from the mapping interestRates
-            modifiedReturnValueA -= (returnValueA * interestRates[inputAssetB.id - (2**29)]) / 100;
+            modifiedReturnValueA -= (returnValueA * interestRates[inputAssetB.id]) / 100;
         }
 
         if (!isAsync) {

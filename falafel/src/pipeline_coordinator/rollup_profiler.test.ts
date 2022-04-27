@@ -71,15 +71,17 @@ describe('Profile Rollup', () => {
       ]),
     } as any as TxDao);
 
-  const createRollupTx = (rawTx: TxDao) => {
+  const createRollupTx = (rawTx: TxDao): RollupTx => {
     const proof = new ProofData(rawTx.proofData);
-    const rollupTx = {
+    return {
       tx: rawTx,
       excessGas: rawTx.excessGas,
-      feeAsset: proof.txFeeAssetId.readUInt32BE(28),
+      fee: {
+        assetId: proof.txFeeAssetId.readUInt32BE(28),
+        value: toBigIntBE(proof.txFee),
+      },
       bridgeId: toBigIntBE(proof.bridgeId),
-    } as RollupTx;
-    return rollupTx;
+    };
   };
 
   const getBridgeCost = (bridgeId: bigint) => {

@@ -1,10 +1,10 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeId, virtualAssetIdFlag, virtualAssetIdPlaceholder } from '@aztec/barretenberg/bridge_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { createTxRefNo } from '../controllers/create_tx_ref_no';
 import { randomCoreAccountTx, randomCoreDefiTx, randomCorePaymentTx } from '../core_tx/fixtures';
-import { UserAccountTx, UserDefiInteractionResultState, UserDefiTx, UserDefiClaimTx, UserPaymentTx } from '../user_tx';
+import { UserAccountTx, UserDefiClaimTx, UserDefiInteractionResultState, UserDefiTx, UserPaymentTx } from '../user_tx';
 import { groupUserTxs } from './group_user_txs';
 
 const createFeeTx = (fee: bigint, txRefNo: number) =>
@@ -421,11 +421,11 @@ describe('groupUserTxs', () => {
           undefined,
           {
             state: UserDefiInteractionResultState.PENDING,
-            isAsync: false,
-            interactionNonce: 0,
-            success: false,
-            outputValueA: 0n,
-            outputValueB: 0n,
+            isAsync: undefined,
+            interactionNonce: undefined,
+            success: undefined,
+            outputValueA: undefined,
+            outputValueB: undefined,
             claimSettled: undefined,
             finalised: undefined,
           },
@@ -456,8 +456,42 @@ describe('groupUserTxs', () => {
             isAsync: true,
             interactionNonce: 45,
             success: true,
-            outputValueA: 123n,
-            outputValueB: 0n,
+            outputValueA: { assetId: bridgeId.outputAssetIdA, value: 123n },
+            outputValueB: undefined,
+            claimSettled: undefined,
+            finalised: undefined,
+          },
+        ),
+      ]);
+    });
+
+    it('assign correct asset id for virtual output assets', () => {
+      const bridgeId = new BridgeId(0, 0, virtualAssetIdPlaceholder, 2, virtualAssetIdPlaceholder);
+      const defiTx = randomCoreDefiTx({
+        bridgeId,
+        success: true,
+        outputValueA: 23n,
+        outputValueB: 45n,
+        settled: new Date(),
+        interactionNonce: 678,
+        isAsync: true,
+      });
+      expect(groupUserTxs([defiTx], feePayingAssetIds)).toEqual([
+        new UserDefiTx(
+          defiTx.txId,
+          defiTx.userId,
+          bridgeId,
+          { assetId: 0, value: defiTx.depositValue },
+          { assetId: 0, value: defiTx.txFee },
+          defiTx.created,
+          defiTx.settled,
+          {
+            state: UserDefiInteractionResultState.AWAITING_FINALISATION,
+            isAsync: true,
+            interactionNonce: 678,
+            success: true,
+            outputValueA: { assetId: virtualAssetIdFlag + 678, value: 23n },
+            outputValueB: { assetId: virtualAssetIdFlag + 678, value: 45n },
             claimSettled: undefined,
             finalised: undefined,
           },
@@ -466,6 +500,7 @@ describe('groupUserTxs', () => {
     });
 
     it('recover finalised defi tx', () => {
+      const bridgeId = new BridgeId(0, 0, 1, 2, 3);
       const defiTx = randomCoreDefiTx({
         bridgeId,
         success: true,
@@ -490,8 +525,8 @@ describe('groupUserTxs', () => {
             isAsync: true,
             interactionNonce: 678,
             success: true,
-            outputValueA: 23n,
-            outputValueB: 45n,
+            outputValueA: { assetId: 1, value: 23n },
+            outputValueB: { assetId: 3, value: 45n },
             claimSettled: undefined,
             finalised: defiTx.finalised,
           },
@@ -501,6 +536,7 @@ describe('groupUserTxs', () => {
 
     it('recover settled defi tx and claim tx', () => {
       const claimTxId = TxId.random();
+      const bridgeId = new BridgeId(0, 0, 1, undefined, virtualAssetIdPlaceholder);
       const defiTx = randomCoreDefiTx({
         bridgeId,
         success: true,
@@ -527,8 +563,8 @@ describe('groupUserTxs', () => {
             isAsync: true,
             interactionNonce: 678,
             success: true,
-            outputValueA: 23n,
-            outputValueB: 45n,
+            outputValueA: { assetId: bridgeId.outputAssetIdA, value: 23n },
+            outputValueB: { assetId: virtualAssetIdFlag + 678, value: 45n },
             claimSettled: defiTx.claimSettled,
             finalised: defiTx.finalised,
           },
@@ -538,10 +574,10 @@ describe('groupUserTxs', () => {
           defiTx.userId,
           bridgeId,
           { assetId: 0, value: defiTx.depositValue },
-          defiTx.claimSettled!,
           true,
-          23n,
-          45n,
+          { assetId: bridgeId.outputAssetIdA, value: 23n },
+          { assetId: virtualAssetIdFlag + 678, value: 45n },
+          defiTx.claimSettled!,
         ),
       ]);
     });
@@ -554,7 +590,7 @@ describe('groupUserTxs', () => {
         recipientPrivateOutput: 10n,
         txRefNo,
       });
-      const defiTx = randomCoreDefiTx({ bridgeId, txFee: 20n, txRefNo });
+      const defiTx = randomCoreDefiTx({ bridgeId, txFee: 0n, txRefNo });
       expect(groupUserTxs([jsTx, defiTx], feePayingAssetIds)).toEqual([
         new UserDefiTx(
           defiTx.txId,
@@ -566,11 +602,11 @@ describe('groupUserTxs', () => {
           undefined,
           {
             state: UserDefiInteractionResultState.PENDING,
-            isAsync: false,
-            interactionNonce: 0,
-            success: false,
-            outputValueA: 0n,
-            outputValueB: 0n,
+            isAsync: undefined,
+            interactionNonce: undefined,
+            success: undefined,
+            outputValueA: undefined,
+            outputValueB: undefined,
             claimSettled: undefined,
             finalised: undefined,
           },
@@ -593,11 +629,11 @@ describe('groupUserTxs', () => {
           undefined,
           {
             state: UserDefiInteractionResultState.PENDING,
-            isAsync: false,
-            interactionNonce: 0,
-            success: false,
-            outputValueA: 0n,
-            outputValueB: 0n,
+            isAsync: undefined,
+            interactionNonce: undefined,
+            success: undefined,
+            outputValueA: undefined,
+            outputValueB: undefined,
             claimSettled: undefined,
             finalised: undefined,
           },
@@ -627,11 +663,11 @@ describe('groupUserTxs', () => {
           undefined,
           {
             state: UserDefiInteractionResultState.PENDING,
-            isAsync: false,
-            interactionNonce: 0,
-            success: false,
-            outputValueA: 0n,
-            outputValueB: 0n,
+            isAsync: undefined,
+            interactionNonce: undefined,
+            success: undefined,
+            outputValueA: undefined,
+            outputValueB: undefined,
             claimSettled: undefined,
             finalised: undefined,
           },

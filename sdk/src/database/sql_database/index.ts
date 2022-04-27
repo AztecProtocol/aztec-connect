@@ -21,7 +21,7 @@ import { ClaimTxDao } from './claim_tx_dao';
 import { DefiTxDao } from './defi_tx_dao';
 import { KeyDao } from './key_dao';
 import { MutexDao } from './mutex_dao';
-import { NoteDao } from './note_dao';
+import { NoteDao, noteDaoToNote, noteToNoteDao } from './note_dao';
 import { PaymentTxDao } from './payment_tx_dao';
 import { UserDataDao } from './user_data_dao';
 import { UserKeyDao } from './user_key_dao';
@@ -145,15 +145,17 @@ export class SQLDatabase implements Database {
   }
 
   async addNote(note: Note) {
-    await this.noteRep.save(note);
+    await this.noteRep.save(noteToNoteDao(note));
   }
 
   async getNote(commitment: Buffer) {
-    return this.noteRep.findOne({ commitment });
+    const note = await this.noteRep.findOne({ commitment });
+    return note ? noteDaoToNote(note) : undefined;
   }
 
   async getNoteByNullifier(nullifier: Buffer) {
-    return this.noteRep.findOne({ nullifier });
+    const note = await this.noteRep.findOne({ nullifier });
+    return note ? noteDaoToNote(note) : undefined;
   }
 
   async nullifyNote(nullifier: Buffer) {
@@ -161,11 +163,11 @@ export class SQLDatabase implements Database {
   }
 
   async getUserNotes(userId: AccountId) {
-    return this.noteRep.find({ where: { owner: userId, nullified: false } });
+    return (await this.noteRep.find({ where: { owner: userId, nullified: false } })).map(noteDaoToNote);
   }
 
   async getUserPendingNotes(userId: AccountId) {
-    return this.noteRep.find({ where: { owner: userId, pending: true } });
+    return (await this.noteRep.find({ where: { owner: userId, index: IsNull() } })).map(noteDaoToNote);
   }
 
   async removeNote(nullifier: Buffer) {

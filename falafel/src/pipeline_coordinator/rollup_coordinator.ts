@@ -90,8 +90,8 @@ export class RollupCoordinator {
     const addTxs = (txs: RollupTx[]) => {
       for (const tx of txs) {
         txsForRollup.push(tx);
-        if (this.feeResolver.isFeePayingAsset(tx.feeAsset)) {
-          assetIds.add(tx.feeAsset);
+        if (tx.fee.value && this.feeResolver.isFeePayingAsset(tx.fee.assetId)) {
+          assetIds.add(tx.fee.assetId);
         }
         if (!tx.bridgeId) {
           // this shouldn't be possible

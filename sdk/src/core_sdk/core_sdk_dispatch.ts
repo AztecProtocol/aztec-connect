@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
 import { DispatchMsg } from '../core_sdk_flavours/transport';
+import { NoteJson } from '../note';
 import { AccountProofInputJson, JoinSplitProofInputJson, ProofOutputJson } from '../proofs';
 import { CoreSdkOptions } from './core_sdk_options';
 import { CoreSdkSerializedInterface } from './core_sdk_serialized_interface';
@@ -163,11 +164,10 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     userId: string,
     bridgeId: string,
     depositValue: string,
-    txFee: string,
-    inputNotes: Uint8Array[] | undefined,
+    inputNotes: NoteJson[],
     spendingPublicKey: string,
   ) {
-    return this.request('createDefiProof', [userId, bridgeId, depositValue, txFee, inputNotes, spendingPublicKey]);
+    return this.request('createDefiProof', [userId, bridgeId, depositValue, inputNotes, spendingPublicKey]);
   }
 
   public async createDefiProof(input: JoinSplitProofInputJson, txRefNo: number) {
@@ -250,8 +250,8 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     return this.request('getBalance', [assetId, userId]);
   }
 
-  public async getMaxSpendableValue(assetId: number, userId: string) {
-    return this.request('getMaxSpendableValue', [assetId, userId]);
+  public async getMaxSpendableValue(assetId: number, userId: string, numNotes?: number) {
+    return this.request('getMaxSpendableValue', [assetId, userId, numNotes]);
   }
 
   public async getSpendableNotes(assetId: number, userId: string) {
@@ -272,6 +272,10 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
 
   public async pickNotes(userId: string, assetId: number, value: string) {
     return this.request('pickNotes', [userId, assetId, value]);
+  }
+
+  public async pickNote(userId: string, assetId: number, value: string) {
+    return this.request('pickNote', [userId, assetId, value]);
   }
 
   public async getUserTxs(userId: string) {
