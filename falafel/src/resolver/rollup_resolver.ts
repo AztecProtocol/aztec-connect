@@ -36,7 +36,7 @@ export class RollupResolver {
 
   @FieldResolver()
   ethTxHash(@Root() { ethTxHash }: RollupDao) {
-    return ethTxHash;
+    return ethTxHash?.toBuffer();
   }
 
   @FieldResolver()
