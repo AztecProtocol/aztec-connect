@@ -144,15 +144,7 @@ export class Contracts {
   }
 
   public async estimateGas(data: Buffer) {
-    const signer = this.provider.getSigner(0);
-    const from = await signer.getAddress();
-    const txRequest = {
-      to: this.rollupProcessor.address.toString(),
-      from,
-      data,
-    };
-    const estimate = await this.provider.estimateGas(txRequest);
-    return estimate.toNumber();
+    return this.rollupProcessor.estimateGas(data);
   }
 
   public async getRollupBlocksFrom(rollupId: number, minConfirmations = this.confirmations) {

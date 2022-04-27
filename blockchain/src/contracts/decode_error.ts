@@ -34,7 +34,7 @@ export function retrieveContractSelectors(contract: Contract, type?: string) {
   return extractFragmentsBySelector(contract, type);
 }
 
-export async function decodeErrorFromContract(contract: Contract, data: string) {
+export function decodeErrorFromContract(contract: Contract, data: string) {
   const errorMappings = extractFragmentsBySelector(contract, 'error');
   const fullData = data.slice(2);
   const sigHash = fullData.slice(0, 8);

@@ -11,7 +11,7 @@ import { Web3Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
 import { Contract, Event, utils } from 'ethers';
 import { abi } from '../../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
-import { decodeErrorFromContractByTxHash } from '../decode_error';
+import { decodeErrorFromContract, decodeErrorFromContractByTxHash } from '../decode_error';
 import { DefiInteractionEvent } from '@aztec/barretenberg/block_source/defi_interaction_event';
 import { solidityFormatSignatures } from './solidity_format_signatures';
 
@@ -618,6 +618,28 @@ export class RollupProcessor {
     const provider = options.provider ? new Web3Provider(options.provider) : this.provider;
     const ethSigner = provider.getSigner(signingAddress ? signingAddress.toString() : 0);
     return new Contract(this.rollupContractAddress.toString(), abi, ethSigner);
+  }
+
+  public async estimateGas(data: Buffer) {
+    const signer = this.provider.getSigner(0);
+    const from = await signer.getAddress();
+    const txRequest = {
+      to: this.rollupProcessor.address.toString(),
+      from,
+      data,
+    };
+    try {
+      const estimate = await this.provider.estimateGas(txRequest);
+      return estimate.toNumber();
+    } catch (err) {
+      const data = await this.provider.call(txRequest);
+      const revertError = decodeErrorFromContract(this.contract, data);
+      if (revertError) {
+        const message = `${revertError.name}(${revertError.params.join(', ')})`;
+        throw new Error(message);
+      }
+      throw err;
+    }
   }
 
   public async getRevertError(txHash: TxHash) {
