@@ -626,7 +626,7 @@ export class RollupProcessor {
     const txRequest = {
       to: this.address.toString(),
       from,
-      data,
+      data: `0x${data.toString('hex')}`,
     };
     try {
       const estimate = await this.provider.estimateGas(txRequest);
@@ -635,10 +635,12 @@ export class RollupProcessor {
       const rep = await this.ethereumProvider
         .request({ method: 'eth_call', params: [txRequest, 'latest'] })
         .catch(err => err);
-      const revertError = decodeErrorFromContract(this.contract, rep.data);
-      if (revertError) {
-        const message = `${revertError.name}(${revertError.params.join(', ')})`;
-        throw new Error(message);
+      if (rep.data) {
+        const revertError = decodeErrorFromContract(this.contract, rep.data);
+        if (revertError) {
+          const message = `${revertError.name}(${revertError.params.join(', ')})`;
+          throw new Error(message);
+        }
       }
       throw err;
     }
