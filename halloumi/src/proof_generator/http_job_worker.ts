@@ -1,28 +1,9 @@
 import { Server } from '../server';
 import { Command, Protocol } from './http_job_protocol';
 import { fetch } from '@aztec/barretenberg/iso_fetch';
+import { InterruptableSleep } from '@aztec/barretenberg/sleep';
 import debug from 'debug';
 import { randomBytes } from 'crypto';
-
-export class InterruptableSleep {
-  private interruptResolve = () => {};
-  private interruptPromise = new Promise<void>(resolve => (this.interruptResolve = resolve));
-  private timeouts: NodeJS.Timeout[] = [];
-
-  public async sleep(ms: number) {
-    let timeout!: NodeJS.Timeout;
-    const promise = new Promise(resolve => (timeout = setTimeout(resolve, ms)));
-    this.timeouts.push(timeout);
-    await Promise.race([promise, this.interruptPromise]);
-    clearTimeout(timeout);
-    this.timeouts.splice(this.timeouts.indexOf(timeout), 1);
-  }
-
-  public interrupt() {
-    this.interruptResolve();
-    this.interruptPromise = new Promise(resolve => (this.interruptResolve = resolve));
-  }
-}
 
 export class HttpJobWorker {
   private id = randomBytes(32);
@@ -32,6 +13,7 @@ export class HttpJobWorker {
   private interruptableSleep = new InterruptableSleep();
   private abortController!: AbortController;
   private pingTimeout?: NodeJS.Timeout;
+  private pingId = 0;
 
   constructor(public readonly server: Server, private url = 'http://localhost:8082') {}
 
@@ -77,7 +59,7 @@ export class HttpJobWorker {
         this.log('received job:', Protocol.logUnpack(work).id);
         const { id, cmd, data } = Protocol.unpack(work);
 
-        this.pingTimeout = setTimeout(() => this.ping(id), 1000);
+        this.pingTimeout = setTimeout(() => this.ping(this.pingId, id), 1000);
 
         const repBuf = await this.process(cmd, data)
           .then(res => Protocol.pack(id, Command.ACK, res))
@@ -90,18 +72,19 @@ export class HttpJobWorker {
       } finally {
         clearTimeout(this.pingTimeout!);
         this.pingTimeout = undefined;
+        this.pingId++;
       }
     }
     this.log('exiting function loop');
   }
 
-  private async ping(jobId: Buffer) {
-    if (!this.pingTimeout) {
+  private async ping(pingId: number, jobId: Buffer) {
+    if (pingId != this.pingId) {
       return;
     }
     this.log(`ping job: ${jobId.toString('hex')}`);
     await fetch(`${this.url}/ping?job-id=${jobId.toString('hex')}`).catch(() => undefined);
-    this.pingTimeout = setTimeout(() => this.ping(jobId), 1000);
+    this.pingTimeout = setTimeout(() => this.ping(pingId, jobId), 1000);
   }
 
   private async process(cmd: number, data: Buffer) {

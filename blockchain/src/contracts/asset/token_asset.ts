@@ -22,39 +22,42 @@ const fixEthersStackTrace = (err: Error) => {
 };
 
 export class TokenAsset implements Asset {
-  private erc20!: Contract;
-  private precision = 2;
+  private readonly precision = 2;
 
-  constructor(private ethereumProvider: EthereumProvider, private info: BlockchainAsset, private minConfirmations = 1) {
-    this.erc20 = new Contract(info.address.toString(), abi, new Web3Provider(ethereumProvider));
-  }
+  constructor(
+    private readonly info: BlockchainAsset,
+    private readonly erc20: Contract,
+    private readonly ethereumProvider: EthereumProvider,
+    private readonly minConfirmations = 1,
+  ) {}
 
-  get address() {
-    return this.info.address;
-  }
-
-  get contract() {
-    return this.erc20;
+  static new(info: BlockchainAsset, ethereumProvider: EthereumProvider, minConfirmations?: number) {
+    const erc20 = new Contract(info.address.toString(), abi, new Web3Provider(ethereumProvider));
+    return new TokenAsset(info, erc20, ethereumProvider, minConfirmations);
   }
 
   static async fromAddress(
     address: EthAddress,
     ethereumProvider: EthereumProvider,
-    permitSupport: boolean,
+    gasLimit: number,
     isFeePaying: boolean,
-    minConfirmations = 1,
+    minConfirmations?: number,
   ) {
-    const contract = new Contract(address.toString(), abi, new Web3Provider(ethereumProvider));
+    const erc20 = new Contract(address.toString(), abi, new Web3Provider(ethereumProvider));
     const info = {
       address,
-      name: await contract.name(),
-      symbol: await contract.symbol(),
-      decimals: +(await contract.decimals()),
-      permitSupport,
+      name: await erc20.name(),
+      symbol: await erc20.symbol(),
+      decimals: +(await erc20.decimals()),
+      gasLimit,
       isFeePaying,
       gasConstants: isFeePaying ? [5000, 0, 36000, 36000, 0, 36000, 36000] : [],
     };
-    return new TokenAsset(ethereumProvider, info, minConfirmations);
+    return new TokenAsset(info, erc20, ethereumProvider, minConfirmations);
+  }
+
+  get address() {
+    return this.info.address;
   }
 
   getStaticInfo() {

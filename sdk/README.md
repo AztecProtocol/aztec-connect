@@ -8,14 +8,28 @@ Under the hood the SDK keeps track of a users private balances across multiples 
 
 ## Installation
 
-The SDK requires a JavaScript context (Web Browser, WebView or NodeJs) with access to WebAssembly. Native iOS and Android bindings will be available in Q1 2021.
-
 To install the SDK from NPM use the following command.
 
 ```
 yarn add @aztec/sdk
 ```
 
-## Docs
+## Development
 
-Please see the documentation site [here](https://developers.aztec.network/).
+Run in different terminals:
+
+```
+yarn build:if:dev
+```
+
+```
+yarn build:sw:dev
+```
+
+Then, if making changes to a module outside the sdk (e.g. barretenberg.js), run:
+
+```
+touch ./package.json
+```
+
+This will force a rebuild.

@@ -5,7 +5,7 @@ import { TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
 import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
-import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { randomBytes } from 'crypto';
 import moment from 'moment';
@@ -62,7 +62,12 @@ export const randomRollupProof = (txs: TxDao[], dataStartIndex = 0, rollupSize =
     txs,
     dataStartIndex,
     rollupSize,
-    proofData: RollupProofData.randomData(0, txs.length, dataStartIndex).toBuffer(),
+    proofData: RollupProofData.randomData(
+      0,
+      txs.length,
+      dataStartIndex,
+      txs.map(tx => InnerProofData.fromBuffer(tx.proofData)),
+    ).toBuffer(),
     created: new Date(),
   });
 

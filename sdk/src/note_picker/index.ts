@@ -7,7 +7,6 @@ const noteSum = (notes: Note[]) => notes.reduce((sum, { value }) => sum + value,
 export class NotePicker {
   private readonly spendableNotes: SortedNotes;
   private readonly settledNotes: Note[];
-  private readonly numNotesPerTx = 2;
 
   constructor(readonly notes: Note[] = []) {
     this.spendableNotes = new SortedNotes(notes.filter(n => !n.pending || n.allowChain));
@@ -22,13 +21,18 @@ export class NotePicker {
 
   pick(value: bigint, excludeNullifiers?: Buffer[]) {
     const spendableNotes = this.getSpendableNotes(excludeNullifiers);
-    const notes = pick(spendableNotes, value);
-    const sum = noteSum(notes || []);
+    const notes = pick(spendableNotes, value) || [];
+    const sum = noteSum(notes);
     if (sum === value) {
       return notes;
     }
     const note = spendableNotes.find(n => n.value === value);
     return note ? [note] : notes;
+  }
+
+  pickOne(value: bigint, excludeNullifiers?: Buffer[]) {
+    const spendableNotes = this.getSpendableNotes(excludeNullifiers);
+    return spendableNotes.find(n => n.value >= value);
   }
 
   getSum() {
@@ -40,9 +44,9 @@ export class NotePicker {
     return noteSum(spendableNotes.notes);
   }
 
-  getMaxSpendableValue(excludeNullifiers?: Buffer[]) {
+  getMaxSpendableValue(excludeNullifiers?: Buffer[], numNotes = 2) {
     const spendableNotes = this.getSpendableNotes(excludeNullifiers);
-    const notes = spendableNotes.last(this.numNotesPerTx);
+    const notes = spendableNotes.last(numNotes);
     return noteSum(notes);
   }
 }

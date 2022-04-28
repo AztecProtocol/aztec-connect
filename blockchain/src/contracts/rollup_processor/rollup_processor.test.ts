@@ -1,8 +1,7 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { Asset } from '@aztec/barretenberg/blockchain';
+import { Asset, TxHash } from '@aztec/barretenberg/blockchain';
 import { DefiInteractionNote, packInteractionNotes } from '@aztec/barretenberg/note_algorithms';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
-import { TxHash } from '@aztec/barretenberg/blockchain';
 import { randomBytes } from 'crypto';
 import { Signer } from 'ethers';
 import { Result } from 'ethers/lib/utils';
@@ -20,7 +19,7 @@ import {
   DefiInteractionData,
   mergeInnerProofs,
 } from './fixtures/create_mock_proof';
-import { deployMockBridge, mockAsyncBridge, MockBridgeParams } from './fixtures/setup_defi_bridges';
+import { deployMockBridge, MockBridgeParams } from './fixtures/setup_defi_bridges';
 import {
   setupTestRollupProcessor,
   upgradeTestRollupProcessor,
@@ -85,7 +84,12 @@ describe('rollup_processor', () => {
   it('should get contract status', async () => {
     expect(rollupProcessor.address).toEqual(rollupProcessor.address);
     expect(await rollupProcessor.dataSize()).toBe(0);
-    expect(await rollupProcessor.getSupportedAssets()).toEqual(assets.map(a => a.getStaticInfo().address));
+    expect(await rollupProcessor.getSupportedAssets()).toEqual(
+      assets
+        .slice(1)
+        .map(a => a.getStaticInfo())
+        .map(({ address, gasLimit }) => ({ address, gasLimit })),
+    );
     expect(await rollupProcessor.getEscapeHatchStatus()).toEqual({ escapeOpen: true, blocksRemaining: 20 });
   });
 
@@ -119,21 +123,18 @@ describe('rollup_processor', () => {
     await expect(rollupProcessor.getSupportedAsset(assetIdB)).rejects.toThrow('INVALID_ASSET_ID');
   });
 
-  it('should set new supported asset', async () => {
+  it('should set new supported asset with default gas limit', async () => {
     const assetAddr = EthAddress.randomAddress();
-    const txHash = await rollupProcessor.setSupportedAsset(assetAddr, false, 0);
+    const txHash = await rollupProcessor.setSupportedAsset(assetAddr, 0);
 
     // Check event was emitted.
     const receipt = await ethers.provider.getTransactionReceipt(txHash.toString());
-    const assetBId = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args.assetId;
-    const assetBAddress = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
-      .assetAddress;
-    const assetBGasLimit = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
-      .assetGasLimit;
-    expect(assetBGasLimit.toNumber()).toBe(55000);
+    const parsed = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]);
+    const { assetId, assetAddress, assetGasLimit } = parsed.args;
+    expect(assetGasLimit.toNumber()).toBe(TestRollupProcessor.DEFAULT_ERC20_GAS_LIMIT);
 
-    expect(assetBId.toNumber()).toBe(2);
-    expect(assetBAddress).toBe(assetAddr.toString());
+    expect(assetId.toNumber()).toBe(2);
+    expect(assetAddress).toBe(assetAddr.toString());
 
     const supportedAssetBAddress = await rollupProcessor.getSupportedAsset(2);
     expect(supportedAssetBAddress).toEqual(assetAddr);
@@ -142,7 +143,7 @@ describe('rollup_processor', () => {
   it('should set new supported asset if not owner when the THIRD_PARTY_CONTRACTS flag is set', async () => {
     const assetAddr = EthAddress.randomAddress();
     const nonOwner = EthAddress.fromString(await signers[1].getAddress());
-    await expect(rollupProcessor.setSupportedAsset(assetAddr, false, 0, { signingAddress: nonOwner })).rejects.toThrow(
+    await expect(rollupProcessor.setSupportedAsset(assetAddr, 0, { signingAddress: nonOwner })).rejects.toThrow(
       'THIRD_PARTY_CONTRACTS_FLAG_NOT_SET',
     );
 
@@ -150,15 +151,13 @@ describe('rollup_processor', () => {
       signingAddress: EthAddress.fromString(await signers[0].getAddress()),
     });
 
-    await expect(
-      rollupProcessor.setSupportedAsset(assetAddr, false, 0, { signingAddress: nonOwner }),
-    ).resolves.toBeTruthy();
+    await expect(rollupProcessor.setSupportedAsset(assetAddr, 0, { signingAddress: nonOwner })).resolves.toBeTruthy();
   });
 
-  it('should set new supported asset with a custom gas limit', async () => {
+  it('should set new supported asset with a custom gas limit within pre-defined contract limits', async () => {
     const assetAddr = EthAddress.randomAddress();
-    const gasLimit = 1500000;
-    const txHash = await rollupProcessor.setSupportedAsset(assetAddr, false, gasLimit);
+    const gasLimit = 800000;
+    const txHash = await rollupProcessor.setSupportedAsset(assetAddr, gasLimit);
 
     // Check event was emitted.
     const receipt = await ethers.provider.getTransactionReceipt(txHash.toString());
@@ -175,9 +174,52 @@ describe('rollup_processor', () => {
     expect(supportedAssetBAddress).toEqual(assetAddr);
   });
 
-  it('should set new supported bridge with a custom gas limit', async () => {
+  it('should set new supported asset with a minimum gas limit', async () => {
+    const assetAddr = EthAddress.randomAddress();
+    const gasLimit = 10000;
+    const minimumGasLimit = 55000;
+    const txHash = await rollupProcessor.setSupportedAsset(assetAddr, gasLimit);
+
+    // Check event was emitted.
+    const receipt = await ethers.provider.getTransactionReceipt(txHash.toString());
+    const assetBId = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args.assetId;
+    const assetBAddress = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
+      .assetAddress;
+    const assetBGasLimit = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
+      .assetGasLimit;
+    expect(assetBGasLimit.toNumber()).toBe(minimumGasLimit);
+    expect(assetBId.toNumber()).toBe(2);
+    expect(assetBAddress).toBe(assetAddr.toString());
+
+    const supportedAssetBAddress = await rollupProcessor.getSupportedAsset(2);
+    expect(supportedAssetBAddress).toEqual(assetAddr);
+  });
+
+  it('should set new supported asset with a maximum gas limit', async () => {
+    const assetAddr = EthAddress.randomAddress();
+    const gasLimit = 1600000;
+    const maximumGasLimit = 1500000;
+    const txHash = await rollupProcessor.setSupportedAsset(assetAddr, gasLimit);
+
+    // Check event was emitted.
+    const receipt = await ethers.provider.getTransactionReceipt(txHash.toString());
+    const assetBId = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args.assetId;
+    const assetBAddress = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
+      .assetAddress;
+    const assetBGasLimit = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
+      .assetGasLimit;
+    expect(assetBGasLimit.toNumber()).toBe(maximumGasLimit);
+    expect(assetBId.toNumber()).toBe(2);
+    expect(assetBAddress).toBe(assetAddr.toString());
+
+    const supportedAssetBAddress = await rollupProcessor.getSupportedAsset(2);
+    expect(supportedAssetBAddress).toEqual(assetAddr);
+  });
+
+  it('should set new supported bridge with limit within pre-defined contract limits', async () => {
     const bridgeAddr = EthAddress.randomAddress();
-    const gasLimit = 15000000;
+    const gasLimit = 1500000;
+    const bridgeAddressId = 2;
     const txHash = await rollupProcessor.setSupportedBridge(bridgeAddr, gasLimit);
 
     // Check event was emitted.
@@ -189,6 +231,51 @@ describe('rollup_processor', () => {
     const bridgeGasLimit = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
       .bridgeGasLimit;
     expect(bridgeGasLimit.toNumber()).toBe(gasLimit);
+    expect(bridgeId.toNumber()).toBe(bridgeAddressId);
+    expect(bridgeAddress).toBe(bridgeAddr.toString());
+
+    const supportedAssetBAddress = await rollupProcessor.getSupportedBridge(bridgeAddressId);
+    expect(supportedAssetBAddress).toEqual(bridgeAddr);
+    expect(await rollupProcessor.getBridgeGasLimit(bridgeAddressId)).toBe(gasLimit);
+  });
+
+  it('should set new supported bridge with minimum gas limit', async () => {
+    const bridgeAddr = EthAddress.randomAddress();
+    const gasLimit = 20000;
+    const minimumGasLimit = 35000;
+    const txHash = await rollupProcessor.setSupportedBridge(bridgeAddr, gasLimit);
+
+    // Check event was emitted.
+    const receipt = await ethers.provider.getTransactionReceipt(txHash.toString());
+    const bridgeId = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
+      .bridgeAddressId;
+    const bridgeAddress = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
+      .bridgeAddress;
+    const bridgeGasLimit = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
+      .bridgeGasLimit;
+    expect(bridgeGasLimit.toNumber()).toBe(minimumGasLimit);
+    expect(bridgeId.toNumber()).toBe(2);
+    expect(bridgeAddress).toBe(bridgeAddr.toString());
+
+    const supportedAssetBAddress = await rollupProcessor.getSupportedBridge(2);
+    expect(supportedAssetBAddress).toEqual(bridgeAddr);
+  });
+
+  it('should set new supported bridge with maximum gas limit', async () => {
+    const bridgeAddr = EthAddress.randomAddress();
+    const gasLimit = 6000000;
+    const maximumGasLimit = 5000000;
+    const txHash = await rollupProcessor.setSupportedBridge(bridgeAddr, gasLimit);
+
+    // Check event was emitted.
+    const receipt = await ethers.provider.getTransactionReceipt(txHash.toString());
+    const bridgeId = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
+      .bridgeAddressId;
+    const bridgeAddress = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
+      .bridgeAddress;
+    const bridgeGasLimit = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
+      .bridgeGasLimit;
+    expect(bridgeGasLimit.toNumber()).toBe(maximumGasLimit);
     expect(bridgeId.toNumber()).toBe(2);
     expect(bridgeAddress).toBe(bridgeAddr.toString());
 
@@ -220,11 +307,6 @@ describe('rollup_processor', () => {
     await rollupProcessor.approveProof(proofHash, { signingAddress: addresses[1] });
     expect(await rollupProcessor.getProofApprovalStatus(addresses[0], proofHash)).toBe(false);
     expect(await rollupProcessor.getProofApprovalStatus(addresses[1], proofHash)).toBe(true);
-  });
-
-  it('should return whether an asset supports the permit ERC-2612 approval flow', async () => {
-    expect(await rollupProcessor.getAssetPermitSupport(0)).toBe(false);
-    expect(await rollupProcessor.getAssetPermitSupport(1)).toBe(true);
   });
 
   it('should allow any address to use escape hatch', async () => {
@@ -318,7 +400,7 @@ describe('rollup_processor', () => {
 
     // Deposit to contract.
     await assets[inputAssetId].approve(depositAmount, userAAddress, rollupProcessor.address);
-    await rollupProcessor.depositPendingFunds(inputAssetId, depositAmount, undefined, undefined, {
+    await rollupProcessor.depositPendingFunds(inputAssetId, depositAmount, undefined, {
       signingAddress: userAAddress,
     });
 
@@ -334,8 +416,9 @@ describe('rollup_processor', () => {
             : [],
         previousDefiInteractionHash: i === 3 ? previousDefiInteractionHash : undefined,
       });
-      const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, offchainTxData);
-      await rollupProcessor.sendTx(tx);
+      // Use a small chunk size to test offchain chunking.
+      const txs = await rollupProcessor.createRollupTxs(proofData, signatures, offchainTxData, 300);
+      await rollupProcessor.sendRollupTxs(txs);
     }
 
     const blocks = await rollupProcessor.getRollupBlocksFrom(0, 1);
@@ -403,178 +486,6 @@ describe('rollup_processor', () => {
         rollupSize: 2,
         offchainTxData,
         interactionResult: [],
-      });
-      expect(rollup).toMatchObject({
-        rollupId: 3,
-        dataStartIndex: 3 * numRealTxsInRollup,
-        innerProofData: [innerProofs[0], InnerProofData.PADDING],
-      });
-    }
-
-    {
-      const block = blocks[4];
-      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
-      const { innerProofs, offchainTxData } = innerProofOutputs[4];
-      expect(block).toMatchObject({
-        rollupId: 4,
-        rollupSize: 2,
-        offchainTxData,
-        interactionResult: [],
-      });
-      expect(rollup).toMatchObject({
-        rollupId: 4,
-        dataStartIndex: 4 * numRealTxsInRollup,
-        innerProofData: [innerProofs[0], InnerProofData.PADDING],
-      });
-    }
-  });
-
-  it('should extract defi notes from blocks between rollups', async () => {
-    const inputAssetIdA = 1;
-    const outputValueA = 7n;
-    const { bridgeId } = await mockAsyncBridge(signers[0], rollupProcessor, assetAddresses, {
-      inputAssetIdA,
-      outputAssetIdA: 0,
-      outputValueA,
-    });
-    const numberOfBridgeCalls = RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
-
-    const userAAddress = addresses[1];
-    const userA = signers[1];
-
-    const depositAmount = 30n;
-    const sendAmount = 6n;
-    const defiDepositAmount0 = 12n;
-    const defiDepositAmount1 = 8n;
-    const withdrawalAmount = 10n;
-
-    const innerProofOutputs = [
-      await createDepositProof(depositAmount, userAAddress, userA, inputAssetIdA),
-      mergeInnerProofs([createAccountProof(), createSendProof(inputAssetIdA, sendAmount)]),
-      mergeInnerProofs([
-        createDefiDepositProof(bridgeId, defiDepositAmount0),
-        createDefiDepositProof(bridgeId, defiDepositAmount1),
-      ]),
-      createWithdrawProof(withdrawalAmount, userAAddress, inputAssetIdA),
-      createDefiClaimProof(bridgeId),
-    ];
-
-    const expectedInteractionResult = [
-      new DefiInteractionNote(bridgeId, numberOfBridgeCalls * 2, 12n, outputValueA, 0n, true),
-      new DefiInteractionNote(bridgeId, numberOfBridgeCalls * 2 + 1, 8n, outputValueA, 0n, true),
-    ];
-    const previousDefiInteractionHash = packInteractionNotes(expectedInteractionResult, numberOfBridgeCalls);
-
-    // Deposit to contract.
-    await assets[inputAssetIdA].approve(depositAmount, userAAddress, rollupProcessor.address);
-    await rollupProcessor.depositPendingFunds(inputAssetIdA, depositAmount, undefined, undefined, {
-      signingAddress: userAAddress,
-    });
-
-    const txProofs = [];
-    for (let i = 0; i < innerProofOutputs.length; ++i) {
-      const proof = await createRollupProof(signers[0], innerProofOutputs[i], {
-        rollupId: i,
-        defiInteractionData:
-          i === 2
-            ? [
-                new DefiInteractionData(bridgeId, defiDepositAmount0),
-                new DefiInteractionData(bridgeId, defiDepositAmount1),
-              ]
-            : [],
-        previousDefiInteractionHash: i === 4 ? previousDefiInteractionHash : undefined,
-      });
-      txProofs.push(proof);
-    }
-
-    // send the first 3 txs, this will take us beyond the defi deposits
-    for (let i = 0; i < 3; i++) {
-      const tx = await rollupProcessor.createRollupProofTx(
-        txProofs[i].proofData,
-        txProofs[i].signatures,
-        txProofs[i].offchainTxData,
-      );
-      await rollupProcessor.sendTx(tx);
-    }
-
-    // now finalise the 2 defi deposits
-    await rollupProcessor.processAsyncDefiInteraction(expectedInteractionResult[0].nonce);
-    await rollupProcessor.processAsyncDefiInteraction(expectedInteractionResult[1].nonce);
-
-    // now send the last 2 tx rollups
-    for (let i = 3; i < txProofs.length; i++) {
-      const tx = await rollupProcessor.createRollupProofTx(
-        txProofs[i].proofData,
-        txProofs[i].signatures,
-        txProofs[i].offchainTxData,
-      );
-      await rollupProcessor.sendTx(tx);
-    }
-
-    const blocks = await rollupProcessor.getRollupBlocksFrom(0, 1);
-    expect(blocks.length).toBe(5);
-
-    {
-      const block = blocks[0];
-      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
-      const { innerProofs, offchainTxData } = innerProofOutputs[0];
-      expect(block).toMatchObject({
-        rollupId: 0,
-        rollupSize: 2,
-        interactionResult: [],
-        offchainTxData,
-      });
-      expect(rollup).toMatchObject({
-        rollupId: 0,
-        dataStartIndex: 0,
-        innerProofData: [innerProofs[0], InnerProofData.PADDING],
-      });
-    }
-
-    const numRealTxsInRollup = 4;
-
-    {
-      const block = blocks[1];
-      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
-      const { innerProofs, offchainTxData } = innerProofOutputs[1];
-      expect(block).toMatchObject({
-        rollupId: 1,
-        rollupSize: 2,
-        interactionResult: [],
-        offchainTxData,
-      });
-      expect(rollup).toMatchObject({
-        rollupId: 1,
-        dataStartIndex: 1 * numRealTxsInRollup,
-        innerProofData: innerProofs,
-      });
-    }
-
-    {
-      const block = blocks[2];
-      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
-      const { innerProofs, offchainTxData } = innerProofOutputs[2];
-      expect(block).toMatchObject({
-        rollupId: 2,
-        rollupSize: 2,
-        offchainTxData,
-      });
-      expect(rollup).toMatchObject({
-        rollupId: 2,
-        dataStartIndex: 2 * numRealTxsInRollup,
-        innerProofData: innerProofs,
-      });
-    }
-
-    {
-      const block = blocks[3];
-      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
-      const { innerProofs, offchainTxData } = innerProofOutputs[3];
-      expect(block).toMatchObject({
-        rollupId: 3,
-        rollupSize: 2,
-        offchainTxData,
-        interactionResult: expectedInteractionResult,
       });
       expect(rollup).toMatchObject({
         rollupId: 3,

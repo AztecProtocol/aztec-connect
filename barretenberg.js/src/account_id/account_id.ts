@@ -41,4 +41,8 @@ export class AccountId {
   toString() {
     return `${this.publicKey.toString()} (${this.accountNonce})`;
   }
+
+  toShortString() {
+    return `${this.publicKey.toString().slice(0, 10)}/${this.accountNonce}`;
+  }
 }

@@ -4,8 +4,14 @@ import { AssetValue } from '@aztec/barretenberg/asset';
 import { EthereumProvider, EthereumSigner, TxHash } from '@aztec/barretenberg/blockchain';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { TxId } from '@aztec/barretenberg/tx_id';
-import { ClientEthereumBlockchain, createPermitData, validateSignature, Web3Signer } from '@aztec/blockchain';
-import { CoreSdk } from '../core_sdk/core_sdk';
+import {
+  ClientEthereumBlockchain,
+  createPermitData,
+  createPermitDataNonStandard,
+  validateSignature,
+  Web3Signer,
+} from '@aztec/blockchain';
+import { CoreSdkInterface } from '../core_sdk';
 import { ProofOutput } from '../proofs';
 import { Signer } from '../signer';
 import { createTxRefNo } from './create_tx_ref_no';
@@ -28,7 +34,7 @@ export class DepositController {
     public readonly fee: AssetValue,
     public readonly from: EthAddress,
     public readonly to: AccountId,
-    private readonly core: CoreSdk,
+    private readonly core: CoreSdkInterface,
     private readonly blockchain: ClientEthereumBlockchain,
     private readonly provider: EthereumProvider,
   ) {
@@ -60,14 +66,14 @@ export class DepositController {
 
   async getPublicAllowance() {
     const { assetId } = this.publicInput;
-    const { rollupContractAddress } = this.core.getLocalStatus();
+    const { rollupContractAddress } = await this.core.getLocalStatus();
     return this.blockchain.getAsset(assetId).allowance(this.from, rollupContractAddress);
   }
 
   async approve() {
     const { assetId } = this.publicInput;
     const value = await this.getRequiredFunds();
-    const { rollupContractAddress } = this.core.getLocalStatus();
+    const { rollupContractAddress } = await this.core.getLocalStatus();
     return this.blockchain
       .getAsset(assetId)
       .approve(value, this.from, rollupContractAddress, { provider: this.provider });
@@ -76,28 +82,39 @@ export class DepositController {
   async depositFundsToContract() {
     const { assetId } = this.publicInput;
     const value = await this.getRequiredFunds();
-    this.txHash = await this.blockchain.depositPendingFunds(
-      assetId,
-      value,
-      this.from,
-      undefined,
-      undefined,
-      this.provider,
-    );
+    this.txHash = await this.blockchain.depositPendingFunds(assetId, value, undefined, {
+      signingAddress: this.from,
+      provider: this.provider,
+    });
     return this.txHash;
   }
 
   async depositFundsToContractWithPermit(deadline: bigint) {
     const { assetId } = this.publicInput;
     const value = await this.getRequiredFunds();
-    const permitArgs = await this.createPermitArgs(value, deadline);
-    this.txHash = await this.blockchain.depositPendingFunds(
+    const { signature } = await this.createPermitArgs(value, deadline);
+    this.txHash = await this.blockchain.depositPendingFundsPermit(assetId, value, deadline, signature, undefined, {
+      signingAddress: this.from,
+      provider: this.provider,
+    });
+    return this.txHash;
+  }
+
+  async depositFundsToContractWithNonStandardPermit(deadline: bigint) {
+    const { assetId } = this.publicInput;
+    const { signature, nonce } = await this.createPermitArgsNonStandard(deadline);
+    const value = await this.getRequiredFunds();
+    this.txHash = await this.blockchain.depositPendingFundsPermitNonStandard(
       assetId,
       value,
-      this.from,
+      nonce,
+      deadline,
+      signature,
       undefined,
-      permitArgs,
-      this.provider,
+      {
+        signingAddress: this.from,
+        provider: this.provider,
+      },
     );
     return this.txHash;
   }
@@ -106,29 +123,41 @@ export class DepositController {
     const { assetId } = this.publicInput;
     const value = await this.getRequiredFunds();
     const proofHash = this.getTxId().toBuffer();
-    this.txHash = await this.blockchain.depositPendingFunds(
-      assetId,
-      value,
-      this.from,
-      proofHash,
-      undefined,
-      this.provider,
-    );
+    this.txHash = await this.blockchain.depositPendingFunds(assetId, value, proofHash, {
+      signingAddress: this.from,
+      provider: this.provider,
+    });
     return this.txHash;
   }
 
   async depositFundsToContractWithPermitAndProofApproval(deadline: bigint) {
     const { assetId } = this.publicInput;
     const value = await this.getRequiredFunds();
-    const permitArgs = await this.createPermitArgs(value, deadline);
+    const { signature } = await this.createPermitArgs(value, deadline);
     const proofHash = this.getTxId().toBuffer();
-    this.txHash = await this.blockchain.depositPendingFunds(
+    this.txHash = await this.blockchain.depositPendingFundsPermit(assetId, value, deadline, signature, proofHash, {
+      signingAddress: this.from,
+      provider: this.provider,
+    });
+    return this.txHash;
+  }
+
+  async depositFundsToContractWithNonStandardPermitAndProofApproval(deadline: bigint) {
+    const { assetId } = this.publicInput;
+    const value = await this.getRequiredFunds();
+    const { signature, nonce } = await this.createPermitArgsNonStandard(deadline);
+    const proofHash = this.getTxId().toBuffer();
+    this.txHash = await this.blockchain.depositPendingFundsPermitNonStandard(
       assetId,
       value,
-      this.from,
+      nonce,
+      deadline,
+      signature,
       proofHash,
-      permitArgs,
-      this.provider,
+      {
+        signingAddress: this.from,
+        provider: this.provider,
+      },
     );
     return this.txHash;
   }
@@ -149,10 +178,10 @@ export class DepositController {
     if (this.requireFeePayingTx && !txRefNo) {
       txRefNo = createTxRefNo();
     }
+    const spendingPublicKey = this.userSigner.getPublicKey();
 
-    this.proofOutput = await this.core.createPaymentProof(
+    const proofInput = await this.core.createPaymentProofInput(
       this.userId,
-      this.userSigner,
       assetId,
       value, // publicInput,
       BigInt(0), // publicOutput
@@ -161,14 +190,15 @@ export class DepositController {
       senderPrivateOutput,
       this.to, // noteRecipient
       this.from, // publicOwner
+      spendingPublicKey,
       0, // allowChain
-      txRefNo,
     );
+    proofInput.signature = await this.userSigner.signMessage(proofInput.signingData);
+    this.proofOutput = await this.core.createPaymentProof(proofInput, txRefNo);
 
     if (this.requireFeePayingTx) {
-      this.feeProofOutput = await this.core.createPaymentProof(
+      const feeProofInput = await this.core.createPaymentProofInput(
         this.userId,
-        this.userSigner,
         this.fee.assetId,
         BigInt(0),
         BigInt(0),
@@ -177,9 +207,11 @@ export class DepositController {
         BigInt(0),
         undefined,
         undefined,
+        spendingPublicKey,
         2,
-        txRefNo,
       );
+      feeProofInput.signature = await this.userSigner.signMessage(feeProofInput.signingData);
+      this.feeProofOutput = await this.core.createPaymentProof(feeProofInput, txRefNo);
     }
   }
 
@@ -199,7 +231,10 @@ export class DepositController {
   }
 
   async approveProof() {
-    return this.blockchain.approveProof(this.from, this.getTxId().toBuffer(), this.provider);
+    return this.blockchain.approveProof(this.getTxId().toBuffer(), {
+      signingAddress: this.from,
+      provider: this.provider,
+    });
   }
 
   async sign() {
@@ -240,21 +275,40 @@ export class DepositController {
 
   private async createPermitArgs(value: bigint, deadline: bigint) {
     const { assetId } = this.publicInput;
-    const nonce = await this.blockchain.getAsset(assetId).getUserNonce(this.from);
-    const { rollupContractAddress, chainId, assets } = this.core.getLocalStatus();
-    const asset = assets[assetId];
+    const asset = this.blockchain.getAsset(assetId);
+    const nonce = await asset.getUserNonce(this.from);
+    const { rollupContractAddress, chainId } = await this.core.getLocalStatus();
     const permitData = createPermitData(
-      asset.name,
+      asset.getStaticInfo().name,
       this.from,
       rollupContractAddress,
       value,
       nonce,
       deadline,
+      asset.getStaticInfo().address,
       chainId,
-      asset.address,
     );
     const ethSigner = new Web3Signer(this.provider);
     const signature = await ethSigner.signTypedData(permitData, this.from);
-    return { approvalAmount: value, deadline, signature };
+    return { signature };
+  }
+
+  private async createPermitArgsNonStandard(deadline: bigint) {
+    const { assetId } = this.publicInput;
+    const asset = this.blockchain.getAsset(assetId);
+    const nonce = await asset.getUserNonce(this.from);
+    const { rollupContractAddress, chainId } = await this.core.getLocalStatus();
+    const permitData = createPermitDataNonStandard(
+      asset.getStaticInfo().name,
+      this.from,
+      rollupContractAddress,
+      nonce,
+      deadline,
+      asset.getStaticInfo().address,
+      chainId,
+    );
+    const ethSigner = new Web3Signer(this.provider);
+    const signature = await ethSigner.signTypedData(permitData, this.from);
+    return { signature, nonce };
   }
 }

@@ -23,8 +23,7 @@ export function bufferColumn(opts: any = {}): [any, any] {
  * we're using so the correct column types will be used. TypeORM seemingly decided projects would only ever want to
  * interact with one type of database, so we have to do this awkward stuff with Buffer types...
  */
-export function initEntities() {
-  const dbUrl = process.env.DB_URL;
+export function initEntities(dbUrl?: string) {
   if (dbUrl) {
     const url = new URL(dbUrl);
     db = url.protocol.slice(0, -1) as SupportedDb;

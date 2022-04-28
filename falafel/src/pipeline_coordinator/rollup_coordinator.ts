@@ -12,13 +12,8 @@ import { RollupPublisher } from '../rollup_publisher';
 import { TxFeeResolver } from '../tx_fee_resolver';
 import { BridgeTxQueue, createDefiRollupTx, createRollupTx, RollupTx } from './bridge_tx_queue';
 import { PublishTimeManager, RollupTimeouts } from './publish_time_manager';
-import { BridgeProfile, emptyProfile, profileRollup, RollupProfile } from './rollup_profiler';
+import { emptyProfile, profileRollup, RollupProfile } from './rollup_profiler';
 import { TxRollup } from 'halloumi/proof_generator';
-
-export interface TxPoolProfile {
-  nextRollupProfile: RollupProfile;
-  pendingBridgeStats: Map<bigint, BridgeProfile>;
-}
 
 export class RollupCoordinator {
   private innerProofs: RollupProofDao[] = [];
@@ -50,22 +45,19 @@ export class RollupCoordinator {
     }
   }
 
-  get processedTxs() {
+  getProccessedTxs() {
     return this.txs.map(rollupTx => rollupTx.tx);
   }
 
   interrupt() {
+    this.txs = [];
     this.rollupCreator.interrupt();
     this.rollupAggregator.interrupt();
     this.rollupPublisher.interrupt();
   }
 
-  async processPendingTxs(pendingTxs: TxDao[], flush = false): Promise<TxPoolProfile> {
-    const profile: TxPoolProfile = {
-      pendingBridgeStats: new Map(),
-      nextRollupProfile: emptyProfile(this.numInnerRollupTxs * this.numOuterRollupProofs),
-    };
-
+  async processPendingTxs(pendingTxs: TxDao[], flush = false): Promise<RollupProfile> {
+    let profile = emptyProfile(this.numInnerRollupTxs * this.numOuterRollupProofs);
     if (this.published) {
       return profile;
     }
@@ -76,29 +68,10 @@ export class RollupCoordinator {
     const assetIds = new Set<number>(this.rollupAssetIds);
 
     const txs = this.getNextTxsToRollup(pendingTxs, flush, assetIds, bridgeIds);
-    // get the pending bridge stats
-    for (const bi of this.bridgeQueues.keys()) {
-      const { gasAccrued, earliestTx, latestTx } = this.bridgeQueues.get(bi)!.profileBridgeQueue(this.feeResolver);
-      profile.pendingBridgeStats.set(bi, {
-        gasThreshold: this.feeResolver.getFullBridgeGas(bi),
-        gasAccrued,
-        earliestTx,
-        latestTx,
-        bridgeId: bi,
-        numTxs: this.bridgeResolver.defaultDeFiBatchSize,
-      });
-    }
 
-    try {
-      const rollupProfile = await this.aggregateAndPublish(txs, rollupTimeouts, flush);
-      this.published = rollupProfile.published;
-      profile.nextRollupProfile = rollupProfile;
-      return profile;
-    } catch (e) {
-      console.log('Error:', e);
-      // Probably being interrupted.
-      return profile;
-    }
+    profile = await this.aggregateAndPublish(txs, rollupTimeouts, flush);
+    this.published = profile.published;
+    return profile;
   }
 
   private handleNewDefiTx(
@@ -117,8 +90,8 @@ export class RollupCoordinator {
     const addTxs = (txs: RollupTx[]) => {
       for (const tx of txs) {
         txsForRollup.push(tx);
-        if (this.feeResolver.isFeePayingAsset(tx.feeAsset)) {
-          assetIds.add(tx.feeAsset);
+        if (tx.fee.value && this.feeResolver.isFeePayingAsset(tx.fee.assetId)) {
+          assetIds.add(tx.fee.assetId);
         }
         if (!tx.bridgeId) {
           // this shouldn't be possible
@@ -192,6 +165,7 @@ export class RollupCoordinator {
     const sortedTxs = [...pendingTxs].sort((a, b) =>
       a.txType === TxType.DEFI_CLAIM && a.txType !== b.txType ? -1 : 1,
     );
+
     const discardedCommitments: Buffer[] = [];
     for (let i = 0; i < sortedTxs.length && txs.length < remainingTxSlots; ++i) {
       const tx = sortedTxs[i];
@@ -263,13 +237,11 @@ export class RollupCoordinator {
       innerTxs.map(rollupTx => rollupTx.tx),
       rollup,
     );
-    this.txs = [...this.txs, ...innerTxs];
+
     return rollupProofDao;
   }
 
-  private async aggregateAndPublish(txs: RollupTx[], rollupTimeouts: RollupTimeouts, flush: boolean) {
-    const pendingTxs = [...txs];
-
+  private async aggregateAndPublish(pendingTxs: RollupTx[], rollupTimeouts: RollupTimeouts, flush: boolean) {
     const numRemainingSlots = (this.numOuterRollupProofs - this.innerProofs.length) * this.numInnerRollupTxs;
     if (pendingTxs.length > numRemainingSlots) {
       // this shouldn't happen!
@@ -278,9 +250,8 @@ export class RollupCoordinator {
 
     // We wait until the shouldPublish condition is met and then farm out all inner rollups to a number of
     // distributed halloumi instances.
-    const allRollupTxs = [...this.txs, ...pendingTxs];
     const rollupProfile = profileRollup(
-      allRollupTxs,
+      pendingTxs,
       this.feeResolver,
       this.numInnerRollupTxs,
       this.numInnerRollupTxs * this.numOuterRollupProofs,
@@ -298,7 +269,8 @@ export class RollupCoordinator {
     const shouldPublish = flush || profit || timedout;
 
     if (shouldPublish) {
-      const innerTxDaos: Promise<RollupProofDao>[] = [];
+      this.txs = [...pendingTxs];
+      const rollupProofPromises: Promise<RollupProofDao>[] = [];
 
       // We have to pass the firstInner flag in as nothing is in the DB yet so the previous
       // query to check DB size wont work.  Since we are doing all proofs in one hit now
@@ -320,20 +292,18 @@ export class RollupCoordinator {
         );
 
         firstInner = false;
-        innerTxDaos.push(this.buildInnerRollup(txs, rollup));
+        rollupProofPromises.push(this.buildInnerRollup(txs, rollup));
       }
 
       // This will call the proof generator (Halloumi) in parallel and populate the
       // this.innerProofs which is used below in the aggregator.
-      await Promise.all(innerTxDaos);
+      const rollupProofDaos = await Promise.all(rollupProofPromises);
 
       // Its important that the inner proofs are inserted into the DB in the same
       // order that we called createRollup() above as the first proof and following
       // proofs have different start indexes.
-      for (const dao of innerTxDaos) {
-        await this.rollupCreator.addRollupProof(await dao);
-        this.innerProofs.push(await dao);
-      }
+      await this.rollupCreator.addRollupProofs(rollupProofDaos);
+      this.innerProofs.push(...rollupProofDaos);
     }
 
     // here we either have

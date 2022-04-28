@@ -1,8 +1,9 @@
 import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { Timer } from '@aztec/barretenberg/timer';
+import { EthAddress } from '@aztec/barretenberg/address';
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
-import { ProofId } from '@aztec/barretenberg/client_proofs';
+import { ProofId, ProofData, JoinSplitProofData, DefiDepositProofData } from '@aztec/barretenberg/client_proofs';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
 import { DefiInteractionNote, NoteAlgorithms, TreeClaimNote } from '@aztec/barretenberg/note_algorithms';
 import { OffchainDefiDepositData } from '@aztec/barretenberg/offchain_tx_data';
@@ -18,6 +19,10 @@ import { AccountDao, ClaimDao } from './entity';
 import { parseInteractionResult } from './rollup_db/parse_interaction_result';
 import { getTxTypeFromInnerProofData } from './get_tx_type';
 import { RollupTimeout, RollupTimeouts } from './pipeline_coordinator/publish_time_manager';
+import { BridgeProfile } from './pipeline_coordinator/rollup_profiler';
+import { createDefiRollupTx, RollupTx } from './pipeline_coordinator/bridge_tx_queue';
+import { TxFeeResolver } from './tx_fee_resolver';
+import { BridgeResolver } from './bridge';
 
 const innerProofDataToTxDao = (tx: InnerProofData, offchainTxData: Buffer, created: Date, txType: TxType) => {
   const txDao = new TxDao();
@@ -46,11 +51,17 @@ const rollupDaoToBlockBuffer = (dao: RollupDao) => {
     toBigIntBE(dao.gasPrice!),
   ).toBuffer();
 };
-
+type TxPoolProfile = {
+  pendingBridgeStats: Map<bigint, BridgeProfile>;
+  pendingTxCount: number;
+};
 export class WorldState {
   private blockQueue = new MemoryFifo<Block>();
-  private pipeline!: RollupPipeline;
+  private pipeline?: RollupPipeline;
   private blockBufferCache: Buffer[] = [];
+  private txPoolProfile!: TxPoolProfile;
+  private txPoolProfileValidUntil!: Date;
+  private expireTxPoolAfter = 60; // 60 seconds
 
   constructor(
     public rollupDb: RollupDb,
@@ -59,7 +70,18 @@ export class WorldState {
     private pipelineFactory: RollupPipelineFactory,
     private noteAlgo: NoteAlgorithms,
     private metrics: Metrics,
-  ) {}
+    private feeResolver: TxFeeResolver,
+    private bridgeResolver: BridgeResolver,
+    expireTxPoolAfter?: number,
+  ) {
+    this.txPoolProfile = {
+      pendingTxCount: 0,
+      pendingBridgeStats: new Map(),
+    };
+    if (expireTxPoolAfter) {
+      this.expireTxPoolAfter = expireTxPoolAfter;
+    }
+  }
 
   public async start() {
     await this.worldStateDb.start();
@@ -92,19 +114,69 @@ export class WorldState {
     } as RollupTimeouts;
   }
 
-  public getTxPoolProfile() {
-    return this.pipeline.getTxPoolProfile();
+  public async getTxPoolProfile() {
+    // getPendingTxs from rollup db
+    // remove the tranasctions that we know are in the next rollup currently being built
+    if (!this.txPoolProfileValidUntil || new Date().getTime() > this.txPoolProfileValidUntil.getTime()) {
+      const pendingTxs = await this.rollupDb.getPendingTxs();
+      let processedTransactions: TxDao[] = [];
+      if (this.pipeline) {
+        processedTransactions = await this.pipeline.getProccessedTxs();
+      }
+
+      const pendingTransactionsNotInRollup = pendingTxs.filter(elem =>
+        processedTransactions.find(tx => tx.id.toString('hex') == elem.id.toString('hex')) ? false : true,
+      );
+
+      const txPoolProfile: Map<bigint, BridgeProfile> = new Map();
+
+      for (let i = 0; i < pendingTransactionsNotInRollup.length; i++) {
+        const tx = pendingTransactionsNotInRollup[i];
+        const proof = new ProofData(tx.proofData);
+        if (proof.proofId !== ProofId.DEFI_DEPOSIT) continue;
+        const defiProof = new DefiDepositProofData(proof);
+        const rollupTx: RollupTx = createDefiRollupTx(tx, defiProof);
+        const bridgeId = rollupTx.bridgeId!;
+        let bridgeProfile = txPoolProfile.get(rollupTx.bridgeId!);
+
+        if (!bridgeProfile) {
+          bridgeProfile = {
+            gasAccrued: this.feeResolver.getSingleBridgeTxGas(bridgeId!) + rollupTx.excessGas,
+            gasThreshold: this.feeResolver.getFullBridgeGas(bridgeId!),
+            bridgeId,
+            numTxs: this.bridgeResolver.getBridgeBatchSize(bridgeId!),
+            earliestTx: rollupTx.tx.created,
+            latestTx: rollupTx.tx.created,
+          };
+        } else {
+          bridgeProfile.gasAccrued! += this.feeResolver.getSingleBridgeTxGas(bridgeId) + rollupTx.excessGas;
+          if (bridgeProfile.earliestTx! > rollupTx.tx.created) {
+            bridgeProfile.earliestTx = rollupTx.tx.created;
+          }
+          if (bridgeProfile.latestTx! < rollupTx.tx.created) {
+            bridgeProfile.latestTx = rollupTx.tx.created;
+          }
+        }
+        txPoolProfile.set(bridgeId, bridgeProfile);
+      }
+      this.txPoolProfile = {
+        pendingBridgeStats: txPoolProfile,
+        pendingTxCount: pendingTransactionsNotInRollup.length,
+      };
+      this.txPoolProfileValidUntil = new Date(Date.now() + this.expireTxPoolAfter);
+    }
+    return this.txPoolProfile;
   }
 
   public async stop() {
     this.blockQueue.cancel();
     this.blockchain.stop();
-    await this.pipeline.stop();
+    await this.pipeline?.stop();
     this.worldStateDb.stop();
   }
 
   public flushTxs() {
-    this.pipeline.flushTxs();
+    this.pipeline?.flushTxs();
   }
 
   private async syncStateFromInitFiles() {
@@ -201,7 +273,7 @@ export class WorldState {
    * Called to purge all received, unsettled txs, and reset the rollup pipeline.
    */
   public async resetPipeline() {
-    await this.pipeline.stop();
+    await this.pipeline?.stop();
     await this.worldStateDb.rollback();
     await this.rollupDb.deleteUnsettledRollups();
     await this.rollupDb.deleteOrphanedRollupProofs();
@@ -212,6 +284,8 @@ export class WorldState {
   private async startNewPipeline() {
     this.pipeline = await this.pipelineFactory.create();
     this.pipeline.start().catch(async err => {
+      await this.pipeline?.stop();
+      this.pipeline = undefined;
       console.log('PIPELINE PANIC!');
       console.log(err);
     });
@@ -224,7 +298,7 @@ export class WorldState {
    * Starts a new pipeline.
    */
   private async handleBlock(block: Block) {
-    await this.pipeline.stop();
+    await this.pipeline?.stop();
     await this.updateDbs(block);
     await this.startNewPipeline();
   }
@@ -258,8 +332,103 @@ export class WorldState {
 
     await this.confirmOrAddRollupToDb(rollupProofData, offchainTxData, block);
 
+    await this.purgeInvalidTxs();
+
     this.printState();
     end();
+  }
+
+  private async purgeInvalidTxs() {
+    const pendingTxs = await this.rollupDb.getPendingTxs();
+    const txsToPurge = await this.validateTxs(pendingTxs);
+    if (!txsToPurge.length) {
+      return;
+    }
+    await this.rollupDb.deleteTxsById(txsToPurge);
+  }
+
+  private async validateTxs(txs: TxDao[]) {
+    const txsToPurge: TxDao[] = [];
+    const pendingDeposits: {
+      publicOwner: EthAddress;
+      publicAssetId: number;
+      contractValue: bigint;
+      accumulatedDeposit: bigint;
+    }[] = [];
+    const discardedCommitments: { [key: string]: number } = {};
+    const spentNoteNullifier = toBufferBE(1n, 32);
+
+    for (const tx of txs) {
+      const proof = new ProofData(tx.proofData);
+
+      const discardTx = () => {
+        discardedCommitments[proof.noteCommitment1.toString('hex')] = 1;
+        discardedCommitments[proof.noteCommitment2.toString('hex')] = 1;
+        txsToPurge.push(tx);
+      };
+
+      // first check to see if this tx chains from a tx that we have already discarded
+      // if it does then we need to discard this tx too
+      const backwardLink = proof.backwardLink.toString('hex');
+      if (discardedCommitments[backwardLink]) {
+        discardTx();
+        continue;
+      }
+
+      // now we test the txs nullifiers to see if they are already in the nullifier tree
+      // if they are then it means the txs note/s have already been spent by another tx
+      const nullifierIndices = [proof.nullifier1, proof.nullifier2].map(n => toBigIntBE(n)).filter(n => n != 0n);
+      let spentNotes = false;
+      for (const nullifierIndex of nullifierIndices) {
+        const value = await this.worldStateDb.get(RollupTreeId.NULL, nullifierIndex);
+        if (value.equals(spentNoteNullifier)) {
+          spentNotes = true;
+          break;
+        }
+      }
+
+      if (spentNotes) {
+        discardTx();
+        continue;
+      }
+
+      // now finally we need to check to check any DEPOSIT txs to ensure they aren't attempting to
+      // deposit more funds than have been sent to the smart contract
+      // this is done on an owner/asset combination basis
+      if (proof.proofId != ProofId.DEPOSIT) {
+        continue;
+      }
+
+      // extract the owner and asset
+      const joinSplitProof = new JoinSplitProofData(proof);
+      let index = pendingDeposits.findIndex(
+        d => d.publicOwner.equals(joinSplitProof.publicOwner) && d.publicAssetId === joinSplitProof.publicAssetId,
+      );
+      // if we haven't seen this owner and asset before, query the contract for the pending deposit
+      // and store the contract's deposit value
+      if (index < 0) {
+        const pendingDeposit = await this.blockchain.getUserPendingDeposit(
+          joinSplitProof.publicAssetId,
+          joinSplitProof.publicOwner,
+        );
+        pendingDeposits.push({
+          publicOwner: joinSplitProof.publicOwner,
+          publicAssetId: joinSplitProof.publicAssetId,
+          contractValue: pendingDeposit,
+          accumulatedDeposit: 0n,
+        });
+        index = pendingDeposits.length - 1;
+      }
+      // if the current accumulated value plus the new value exceed the contract value then reject the tx
+      // other we accept the tx but accumulate it's public value
+      const newTotalDeposit = pendingDeposits[index].accumulatedDeposit + joinSplitProof.publicValue;
+      if (newTotalDeposit > pendingDeposits[index].contractValue) {
+        discardTx();
+      } else {
+        pendingDeposits[index].accumulatedDeposit += joinSplitProof.publicValue;
+      }
+    }
+    return txsToPurge.map(tx => tx.id);
   }
 
   private async processDefiProofs(rollup: RollupProofData, offchainTxData: Buffer[], block: Block) {
@@ -307,9 +476,7 @@ export class WorldState {
 
     for (const defiNote of interactionResult) {
       console.log(
-        `Received defi interaction result ${defiNote.result} for nonce ${
-          defiNote.nonce
-        } and bridge ${defiNote.bridgeId.toBigInt()}`,
+        `Received defi note result ${defiNote.result}, input ${defiNote.totalInputValue}, outputs ${defiNote.totalOutputValueA}/${defiNote.totalOutputValueB}, for nonce ${defiNote.nonce}`,
       );
       await this.rollupDb.updateClaimsWithResultRollupId(defiNote.nonce, rollupId);
     }
@@ -380,7 +547,7 @@ export class WorldState {
       this.metrics.rollupReceived(rollupDao!);
     }
 
-    const rollupDao = await this.rollupDb.getRollup(rollup.rollupId);
+    const rollupDao = (await this.rollupDb.getRollup(rollup.rollupId))!;
     this.blockBufferCache.push(rollupDaoToBlockBuffer(rollupDao!));
   }
 

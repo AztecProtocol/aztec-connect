@@ -7,8 +7,7 @@ export interface Tx {
 }
 
 export interface TxGroupValidation {
-  hasNonPayingDefi: boolean;
-  hasNonFeePayingAssets: boolean;
+  hasFeelessTxs: boolean;
   feePayingAsset: number;
   gasRequired: bigint;
   gasProvided: bigint;

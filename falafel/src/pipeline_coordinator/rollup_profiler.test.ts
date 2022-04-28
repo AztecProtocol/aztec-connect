@@ -1,13 +1,13 @@
+import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxType } from '@aztec/barretenberg/blockchain';
-import { BridgeId, BitConfig, BridgeConfig } from '@aztec/barretenberg/bridge_id';
-import { TxDao } from '../entity/tx';
-import { BridgeProfile, profileRollup } from './rollup_profiler';
-import { TxFeeResolver } from '../tx_fee_resolver';
+import { BridgeConfig, BridgeId } from '@aztec/barretenberg/bridge_id';
+import { ProofData } from '@aztec/barretenberg/client_proofs';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { randomBytes } from 'crypto';
-import { ProofData } from '@aztec/barretenberg/client_proofs';
+import { TxDao } from '../entity/tx';
+import { TxFeeResolver } from '../tx_fee_resolver';
 import { RollupTx } from './bridge_tx_queue';
-import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
+import { BridgeProfile, profileRollup } from './rollup_profiler';
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;
@@ -46,15 +46,7 @@ describe('Profile Rollup', () => {
       txFeeAssetId = 0,
       excessGas = 0n,
       creationTime = new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id), // ensures txs are ordered by id
-      bridgeId = new BridgeId(
-        randomInt(),
-        1,
-        0,
-        1,
-        0,
-        new BitConfig(false, false, false, false, false, false),
-        0,
-      ).toBigInt(),
+      bridgeId = new BridgeId(randomInt(), 1, 0).toBigInt(),
       noteCommitment1 = randomBytes(32),
       noteCommitment2 = randomBytes(32),
       backwardLink = Buffer.alloc(32),
@@ -79,15 +71,17 @@ describe('Profile Rollup', () => {
       ]),
     } as any as TxDao);
 
-  const createRollupTx = (rawTx: TxDao) => {
+  const createRollupTx = (rawTx: TxDao): RollupTx => {
     const proof = new ProofData(rawTx.proofData);
-    const rollupTx = {
+    return {
       tx: rawTx,
       excessGas: rawTx.excessGas,
-      feeAsset: proof.txFeeAssetId.readUInt32BE(28),
+      fee: {
+        assetId: proof.txFeeAssetId.readUInt32BE(28),
+        value: toBigIntBE(proof.txFee),
+      },
       bridgeId: toBigIntBE(proof.bridgeId),
-    } as RollupTx;
-    return rollupTx;
+    };
   };
 
   const getBridgeCost = (bridgeId: bigint) => {

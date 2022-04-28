@@ -1,23 +1,20 @@
 import { AccountId } from '@aztec/barretenberg/account_id';
-import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
+import { TreeNote } from '@aztec/barretenberg/note_algorithms';
+import { AfterInsert, AfterLoad, AfterUpdate, Column, Entity, Index, PrimaryColumn } from 'typeorm';
 import { Note } from '../../note';
-import { bigintTransformer, accountIdTransformer } from './transformer';
+import { accountIdTransformer, bigintTransformer } from './transformer';
 
 @Entity({ name: 'note' })
-export class NoteDao implements Note {
+export class NoteDao {
   @PrimaryColumn()
   public commitment!: Buffer;
-
-  @Column()
-  public secret!: Buffer;
 
   @Index({ unique: true })
   @Column()
   public nullifier!: Buffer;
 
-  @Index({ unique: false })
   @Column()
-  public nullified!: boolean;
+  public noteSecret!: Buffer;
 
   @Column('blob', { transformer: [accountIdTransformer] })
   public owner!: AccountId;
@@ -29,9 +26,6 @@ export class NoteDao implements Note {
   public inputNullifier!: Buffer;
 
   @Column()
-  public index!: number;
-
-  @Column()
   public assetId!: number;
 
   @Column('text', { transformer: [bigintTransformer] })
@@ -41,6 +35,63 @@ export class NoteDao implements Note {
   public allowChain!: boolean;
 
   @Index({ unique: false })
+  @Column({ nullable: true })
+  public index?: number;
+
+  @Index({ unique: false })
   @Column()
-  public pending!: boolean;
+  public nullified!: boolean;
+
+  @AfterLoad()
+  @AfterInsert()
+  @AfterUpdate()
+  afterLoad() {
+    if (this.index === null) {
+      delete this.index;
+    }
+  }
 }
+
+export const noteToNoteDao = ({
+  treeNote: { noteSecret, ownerPubKey, nonce, creatorPubKey, inputNullifier, assetId },
+  commitment,
+  nullifier,
+  value,
+  allowChain,
+  index,
+  nullified,
+}: Note) => ({
+  commitment,
+  nullifier,
+  noteSecret,
+  owner: new AccountId(ownerPubKey, nonce),
+  creatorPubKey,
+  inputNullifier,
+  assetId,
+  value,
+  allowChain,
+  nullified,
+  index,
+});
+
+export const noteDaoToNote = ({
+  commitment,
+  nullifier,
+  noteSecret,
+  owner,
+  creatorPubKey,
+  inputNullifier,
+  assetId,
+  value,
+  allowChain,
+  index,
+  nullified,
+}: NoteDao) =>
+  new Note(
+    new TreeNote(owner.publicKey, value, assetId, owner.accountNonce, noteSecret, creatorPubKey, inputNullifier),
+    commitment,
+    nullifier,
+    allowChain,
+    nullified,
+    index,
+  );

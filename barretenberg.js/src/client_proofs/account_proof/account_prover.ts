@@ -6,7 +6,9 @@ import { AccountTx } from './account_tx';
 export class AccountProver {
   constructor(private prover: UnrolledProver, public readonly mock = false) {}
 
-  static circuitSize = 32 * 1024;
+  static getCircuitSize(proverless = false) {
+    return proverless ? 512 : 32 * 1024;
+  }
 
   public async computeKey() {
     const worker = this.prover.getWorker();

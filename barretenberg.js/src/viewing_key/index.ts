@@ -1,5 +1,6 @@
-import { createCipheriv, createHash, randomBytes } from 'crypto';
+import { createCipheriv, createHash } from 'crypto';
 import { GrumpkinAddress } from '../address';
+import { randomBytes } from '../crypto';
 import { Grumpkin } from '../ecc/grumpkin';
 import { numToUInt8 } from '../serialize';
 

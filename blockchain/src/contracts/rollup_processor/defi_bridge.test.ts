@@ -1,6 +1,6 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset, TxHash } from '@aztec/barretenberg/blockchain';
-import { BitConfig, BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeId, virtualAssetIdFlag } from '@aztec/barretenberg/bridge_id';
 import {
   computeInteractionHashes,
   DefiInteractionNote,
@@ -237,7 +237,6 @@ describe('rollup_processor: defi bridge', () => {
     const outputValueA = 12n;
     const outputValueB = 7n;
     const bridgeId = await mockBridge({
-      secondOutputAssetValid: true,
       inputAssetIdA: 1,
       outputAssetIdA: 0,
       outputAssetIdB: 2,
@@ -265,13 +264,42 @@ describe('rollup_processor: defi bridge', () => {
     await expectResult([new DefiInteractionNote(bridgeId, 0, inputValue, outputValueA, outputValueB, true)], txHash);
   });
 
+  it('process defi interaction data that has two input assets and one output asset', async () => {
+    const inputValue = 20n;
+    const outputValueA = 12n;
+    const bridgeId = await mockBridge({
+      inputAssetIdA: 1,
+      inputAssetIdB: 2,
+      outputAssetIdA: 0,
+      outputValueA,
+    });
+
+    const initialTokenBalance = 50n;
+    await topupToken(1, initialTokenBalance);
+    await topupToken(2, initialTokenBalance);
+
+    await expectBalance(0, 0n);
+    await expectBalance(1, initialTokenBalance);
+    await expectBalance(2, initialTokenBalance);
+
+    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+      defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
+    });
+    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const txHash = await rollupProcessor.sendTx(tx);
+
+    await expectBalance(0, outputValueA);
+    await expectBalance(1, initialTokenBalance - inputValue);
+    await expectBalance(2, initialTokenBalance - inputValue);
+
+    await expectResult([new DefiInteractionNote(bridgeId, 0, inputValue, outputValueA, 0n, true)], txHash);
+  });
+
   it('process defi interaction data that has two input assets and two output assets', async () => {
     const inputValue = 20n;
     const outputValueA = 12n;
     const outputValueB = 7n;
     const bridgeId = await mockBridge({
-      secondOutputAssetValid: true,
-      secondInputAssetValid: true,
       inputAssetIdA: 1,
       inputAssetIdB: 2,
       outputAssetIdA: 0,
@@ -306,14 +334,10 @@ describe('rollup_processor: defi bridge', () => {
     const outputValueA = 12n;
     const outputValueB = 7n;
     const bridgeId = await mockBridge({
-      firstOutputVirtual: true,
-      secondOutputVirtual: true,
-      firstInputVirtual: true,
-      secondInputVirtual: true,
-      inputAssetIdA: 1,
-      inputAssetIdB: 2,
-      outputAssetIdA: 0,
-      outputAssetIdB: 2,
+      inputAssetIdA: 1 + virtualAssetIdFlag,
+      inputAssetIdB: 2 + virtualAssetIdFlag,
+      outputAssetIdA: 0 + virtualAssetIdFlag,
+      outputAssetIdB: 2 + virtualAssetIdFlag,
       outputValueA,
       outputValueB,
     });
@@ -344,11 +368,8 @@ describe('rollup_processor: defi bridge', () => {
     const outputValueA = 12n;
     const outputValueB = 7n;
     const bridgeId = await mockBridge({
-      secondOutputAssetValid: true,
-      firstInputVirtual: true,
-      secondInputVirtual: true,
-      inputAssetIdA: 1,
-      inputAssetIdB: 2,
+      inputAssetIdA: 1 + virtualAssetIdFlag,
+      inputAssetIdB: 2 + virtualAssetIdFlag,
       outputAssetIdA: 0,
       outputAssetIdB: 2,
       outputValueA,
@@ -380,15 +401,7 @@ describe('rollup_processor: defi bridge', () => {
     // swap ETH for DAI
     const bridgeAddressId = 1;
     const inputAssetId = 0;
-    const bridgeId = new BridgeId(
-      bridgeAddressId,
-      inputAssetId,
-      1,
-      0,
-      0,
-      new BitConfig(false, false, false, false, false, false),
-      0,
-    );
+    const bridgeId = new BridgeId(bridgeAddressId, inputAssetId, 1);
     const outputValueA = 19n;
     const inputValue = 20n;
 
@@ -413,15 +426,7 @@ describe('rollup_processor: defi bridge', () => {
     // swap DAI for ETH
     const bridgeAddressId = 1;
     const inputAssetId = 1;
-    const bridgeId = new BridgeId(
-      bridgeAddressId,
-      inputAssetId,
-      0,
-      0,
-      0,
-      new BitConfig(false, false, false, false, false, false),
-      0,
-    );
+    const bridgeId = new BridgeId(bridgeAddressId, inputAssetId, 0);
     const outputValueA = 19n;
     // const bridgeId = await mockBridge({
     //   inputAssetId: 1,
@@ -460,15 +465,7 @@ describe('rollup_processor: defi bridge', () => {
       // 4: RenBTC to ETH
       const bridgeAddressId = 1;
       const inputAssetId = 0;
-      const bridgeId = new BridgeId(
-        bridgeAddressId,
-        inputAssetId,
-        1,
-        0,
-        0,
-        new BitConfig(false, false, false, false, false, false),
-        0,
-      );
+      const bridgeId = new BridgeId(bridgeAddressId, inputAssetId, 1);
       const outputValueA = 19n;
       const inputValue = 20n;
 
@@ -499,15 +496,7 @@ describe('rollup_processor: defi bridge', () => {
       // swap DAI for ETH
       const bridgeAddressId = 1;
       const inputAssetId = 1;
-      const bridgeId = new BridgeId(
-        bridgeAddressId,
-        inputAssetId,
-        0,
-        0,
-        0,
-        new BitConfig(false, false, false, false, false, false),
-        0,
-      );
+      const bridgeId = new BridgeId(bridgeAddressId, inputAssetId, 0);
       const outputValueA = 18n;
       const inputValue = 19n;
       await expectBalance(0, 0n);

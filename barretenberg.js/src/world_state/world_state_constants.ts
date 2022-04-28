@@ -5,19 +5,20 @@ const numberOfBridgeCalls = RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
 
 export class WorldStateConstants {
   public static EMPTY_DATA_ROOT = Buffer.from(
-    '11977941a807ca96cf02d1b15830a53296170bf8ac7d96e5cded7615d18ec607',
+    '18ceb5cd201e1cee669a5c3ad96d3c4e933a365b37046fc3178264bede32c68d',
     'hex',
   );
   public static EMPTY_NULL_ROOT = Buffer.from(
-    '1b831fad9b940f7d02feae1e9824c963ae45b3223e721138c6f73261e690c96a',
+    '298329c7d0936453f354e4a5eef4897296cc0bf5a66f2a528318508d2088dafa',
     'hex',
   );
+  // NOTE: root of the root_tree AFTER inserting the empty_data_root at index 0.
   public static EMPTY_ROOT_ROOT = Buffer.from(
-    '1b435f036fc17f4cc3862f961a8644839900a8e4f1d0b318a7046dd88b10be75',
+    '2fd2364bfe47ccb410eba3a958be9f39a8c6aca07db1abd15f5a211f51505071',
     'hex',
   );
   public static EMPTY_DEFI_ROOT = Buffer.from(
-    '0170467ae338aaf3fd093965165b8636446f09eeb15ab3d36df2e31dd718883d',
+    '2e4ab7889ab3139204945f9e722c7a8fdb84e66439d787bd066c3d896dba04ea',
     'hex',
   );
 

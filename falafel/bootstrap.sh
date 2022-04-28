@@ -3,6 +3,9 @@ set -e
 
 LINK_FOLDER="--link-folder `pwd`/../.yarn"
 
+yarn clean
+rm -rf node_modules
+
 pushd ../barretenberg/build
 make -j$(nproc) db_cli
 cd ../build-wasm

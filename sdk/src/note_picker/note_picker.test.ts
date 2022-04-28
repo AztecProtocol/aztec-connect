@@ -16,12 +16,8 @@ const randomNote = (value: bigint, allowChain = false, pending = false) =>
 
 const randomNotes = (values: bigint[]) => values.map(value => randomNote(value));
 
-const expectNoteValues = (notes: Note[] | null, values: bigint[] | null) => {
-  if (notes && values) {
-    expect(notes).toEqual(values.map(value => expect.objectContaining({ value })));
-  } else {
-    expect(notes).toBe(values);
-  }
+const expectNoteValues = (notes: Note[], values: bigint[] = []) => {
+  expect(notes).toEqual(values.map(value => expect.objectContaining({ value })));
 };
 
 describe('NotePicker', () => {
@@ -29,12 +25,20 @@ describe('NotePicker', () => {
 
   it('pick no more than 2 notes whose sum is equal to or larger than the required sum', () => {
     const notePicker = new NotePicker(notes);
+    expectNoteValues(notePicker.pick(20n), []);
     expectNoteValues(notePicker.pick(15n), [7n, 10n]);
     expectNoteValues(notePicker.pick(10n), [3n, 7n]);
     expectNoteValues(notePicker.pick(7n), [0n, 7n]);
-    expectNoteValues(notePicker.pick(1n), [0n, 1n]);
     expectNoteValues(notePicker.pick(0n), [0n]);
-    expectNoteValues(notePicker.pick(20n), null);
+  });
+
+  it('pick 1 note whose value is equal to or larger than the required sum', () => {
+    const notePicker = new NotePicker(notes);
+    expect(notePicker.pickOne(15n)?.value).toBe(undefined);
+    expect(notePicker.pickOne(10n)?.value).toBe(10n);
+    expect(notePicker.pickOne(5n)?.value).toBe(7n);
+    expect(notePicker.pickOne(2n)?.value).toBe(2n);
+    expect(notePicker.pickOne(0n)?.value).toBe(0n);
   });
 
   it('pick a pair of notes that contains at most one note with allowChain set to true', () => {
@@ -63,7 +67,7 @@ describe('NotePicker', () => {
     }
     {
       const excludeNullifiers = computeNullifiers([7n, 10n]);
-      expectNoteValues(notePicker.pick(10n, excludeNullifiers), null);
+      expectNoteValues(notePicker.pick(10n, excludeNullifiers), []);
     }
   });
 
@@ -116,6 +120,26 @@ describe('NotePicker', () => {
       // exclude all but 3n
       const excludeNullifiers = computeNullifiers([0n, 1n, 2n, 4n, 7n, 10n]);
       expect(notePicker.getMaxSpendableValue(excludeNullifiers)).toBe(3n);
+    }
+  });
+
+  it('find the value of the largest spendable note', () => {
+    const numNotes = 1;
+    const notePicker = new NotePicker([
+      ...notes,
+      randomNote(5n, false, true),
+      randomNote(4n, true, true),
+      randomNote(6n, false, true),
+    ]);
+    expect(notePicker.getMaxSpendableValue([], numNotes)).toBe(10n);
+    {
+      const excludeNullifiers = computeNullifiers([10n, 3n]);
+      expect(notePicker.getMaxSpendableValue(excludeNullifiers, numNotes)).toBe(7n);
+    }
+    {
+      // exclude all but 3n
+      const excludeNullifiers = computeNullifiers([0n, 1n, 2n, 4n, 7n, 10n]);
+      expect(notePicker.getMaxSpendableValue(excludeNullifiers, numNotes)).toBe(3n);
     }
   });
 });

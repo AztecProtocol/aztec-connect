@@ -36,10 +36,10 @@ describe('rollup_processor: withdraw', () => {
     );
 
     await assets[1].approve(depositAmount, userAddresses[1], rollupProcessor.address);
-    await rollupProcessor.depositPendingFunds(0, depositAmount, undefined, undefined, {
+    await rollupProcessor.depositPendingFunds(0, depositAmount, undefined, {
       signingAddress: userAddresses[0],
     });
-    await rollupProcessor.depositPendingFunds(1, depositAmount, undefined, undefined, {
+    await rollupProcessor.depositPendingFunds(1, depositAmount, undefined, {
       signingAddress: userAddresses[1],
     });
     const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
@@ -90,10 +90,11 @@ describe('rollup_processor: withdraw', () => {
     const FaultyERC20 = await ethers.getContractFactory('ERC20FaultyTransfer');
     const faultyERC20 = await FaultyERC20.deploy();
     const assetAddr = EthAddress.fromString(faultyERC20.address);
-    const asset = await TokenAsset.fromAddress(assetAddr, new EthersAdapter(ethers.provider), false, true);
+    const gasLimit = 55000;
+    const asset = await TokenAsset.fromAddress(assetAddr, new EthersAdapter(ethers.provider), gasLimit, true);
 
-    await rollupProcessor.setSupportedAsset(asset.address, false, 0);
-    const assetId = (await rollupProcessor.getSupportedAssets()).findIndex(a => a.equals(assetAddr));
+    await rollupProcessor.setSupportedAsset(asset.address, gasLimit);
+    const assetId = (await rollupProcessor.getSupportedAssets()).length;
 
     // Deposit.
     {
@@ -106,7 +107,7 @@ describe('rollup_processor: withdraw', () => {
       await asset.mint(depositAmount, userAddresses[0]);
       await asset.approve(depositAmount, userAddresses[0], rollupProcessor.address);
 
-      await rollupProcessor.depositPendingFunds(assetId, depositAmount, undefined, undefined, {
+      await rollupProcessor.depositPendingFunds(assetId, depositAmount, undefined, {
         signingAddress: userAddresses[0],
       });
       const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
@@ -123,6 +124,5 @@ describe('rollup_processor: withdraw', () => {
     await rollupProcessor.sendTx(tx);
     const postWithdrawalBalance = await asset.balanceOf(userAddresses[0]);
     expect(postWithdrawalBalance).toBe(preWithdrawalBalance);
-
   });
 });

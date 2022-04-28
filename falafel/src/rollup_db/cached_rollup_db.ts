@@ -127,8 +127,18 @@ export class CachedRollupDb extends SyncRollupDb {
     this.totalTxCount += txs.length;
   }
 
+  public async deleteTxsById(ids: Buffer[]) {
+    await super.deleteTxsById(ids);
+    await this.refresh();
+  }
+
   public async addRollupProof(rollupDao: RollupProofDao) {
     await super.addRollupProof(rollupDao);
+    await this.refresh();
+  }
+
+  public async addRollupProofs(rollupDaos: RollupProofDao[]) {
+    await super.addRollupProofs(rollupDaos);
     await this.refresh();
   }
 

@@ -15,10 +15,26 @@ export class EthereumRpc {
     return result.map(EthAddress.fromString);
   }
 
+  public async getTransactionCount(addr: EthAddress) {
+    const result = await this.provider.request({
+      method: 'eth_getTransactionCount',
+      params: [addr.toString(), 'latest'],
+    });
+    return Number(result);
+  }
+
+  public async getBalance(addr: EthAddress) {
+    const result = await this.provider.request({
+      method: 'eth_getBalance',
+      params: [addr.toString(), 'latest'],
+    });
+    return BigInt(result);
+  }
+
   /**
    * TODO: Return proper type with converted properties.
    */
-  public async getTransaction(txHash: TxHash) {
+  public async getTransactionByHash(txHash: TxHash): Promise<any> {
     const result = await this.provider.request({ method: 'eth_getTransactionByHash', params: [txHash.toString()] });
     return result;
   }

@@ -1,6 +1,6 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Blockchain, PriceFeed, TxType } from '@aztec/barretenberg/blockchain';
-import { BitConfig, BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { EthPriceFeed } from '@aztec/blockchain';
 import { BridgeResolver } from '../bridge';
 import { TxFeeResolver } from './index';
@@ -186,7 +186,7 @@ describe('tx fee resolver', () => {
 
   it('return correct defi fees', async () => {
     const assetId = 0;
-    const bridgeId = new BridgeId(0, assetId, 0, 0, 0, BitConfig.random(), 0).toBigInt();
+    const bridgeId = new BridgeId(0, assetId, 0).toBigInt();
     const defiFees = txFeeResolver.getDefiFees(bridgeId);
     const ethGasPriceMultiplier = ETHGasPrice / 2n + 2n * ETHGasPrice;
     expect(defiFees).toEqual([

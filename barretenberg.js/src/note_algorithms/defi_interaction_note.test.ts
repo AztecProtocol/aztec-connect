@@ -8,16 +8,10 @@ describe('defi interaction note', () => {
   it('convert interaction note to and form buffer', () => {
     const note = DefiInteractionNote.random();
     const buf = note.toBuffer();
-    expect(buf.length).toBe(DefiInteractionNote.LENGTH);
+    expect(buf.length).toBe(DefiInteractionNote.deserialize(buf, 0).adv);
 
     const recovered = DefiInteractionNote.fromBuffer(buf);
-    expect(recovered.equals(note)).toBe(true);
-    expect(recovered.bridgeId).toEqual(note.bridgeId);
-    expect(recovered.nonce).toBe(note.nonce);
-    expect(recovered.totalInputValue).toBe(note.totalInputValue);
-    expect(recovered.totalOutputValueA).toBe(note.totalOutputValueA);
-    expect(recovered.totalOutputValueB).toBe(note.totalOutputValueB);
-    expect(recovered.result).toBe(note.result);
+    expect(recovered).toEqual(note);
   });
 
   it('hash an array of empty interaction note', () => {

@@ -3,6 +3,7 @@ import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxHash, TxType } from '@aztec/barretenberg/blockchain';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
+import { serializeBufferArrayToVector } from '@aztec/barretenberg/serialize';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { Connection, In, IsNull, LessThan, MoreThanOrEqual, Not, Repository } from 'typeorm';
 import { AssetMetricsDao, ClaimDao, AccountDao, RollupDao, RollupProofDao, TxDao } from '../entity';
@@ -44,6 +45,10 @@ export class TypeOrmRollupDb implements RollupDb {
       await transactionalEntityManager.save(accountDaos);
       await transactionalEntityManager.save(txs);
     });
+  }
+
+  public async deleteTxsById(ids: Buffer[]) {
+    await this.txRep.delete({ id: In(ids) });
   }
 
   public async addAccounts(accounts: AccountDao[]) {
@@ -186,6 +191,12 @@ export class TypeOrmRollupDb implements RollupDb {
     await this.rollupProofRep.save(rollupDao);
   }
 
+  public async addRollupProofs(rollupDaos: RollupProofDao[]) {
+    for (const dao of rollupDaos) {
+      await this.rollupProofRep.save(dao);
+    }
+  }
+
   public async getRollupProof(id: Buffer, includeTxs = false) {
     return this.rollupProofRep.findOne({ id }, { relations: includeTxs ? ['txs'] : undefined });
   }
@@ -280,8 +291,8 @@ export class TypeOrmRollupDb implements RollupDb {
     });
   }
 
-  public async setCallData(id: number, callData: Buffer) {
-    await this.rollupRep.update({ id }, { callData });
+  public async setCallData(id: number, processRollupCalldata: Buffer) {
+    await this.rollupRep.update({ id }, { processRollupCalldata });
   }
 
   public async confirmSent(id: number, ethTxHash: TxHash) {
@@ -305,7 +316,7 @@ export class TypeOrmRollupDb implements RollupDb {
         gasUsed,
         gasPrice: toBufferBE(gasPrice, 32),
         ethTxHash,
-        interactionResult: Buffer.concat(interactionResult.map(r => r.toBuffer())),
+        interactionResult: serializeBufferArrayToVector(interactionResult.map(r => r.toBuffer())),
       };
       await transactionalEntityManager.update<RollupDao>(this.rollupRep.target, { id }, dao);
       await transactionalEntityManager.insert<AssetMetricsDao>(this.assetMetricsRep.target, assetMetrics);
@@ -389,5 +400,13 @@ export class TypeOrmRollupDb implements RollupDb {
     });
     const nullifiers = unsettledClaim.map(c => c.nullifier);
     await this.txRep.delete({ nullifier1: In(nullifiers) });
+  }
+
+  public async eraseDb() {
+    await this.accountRep.clear();
+    await this.assetMetricsRep.clear();
+    await this.claimRep.clear();
+    await this.rollupRep.clear();
+    await this.rollupProofRep.clear();
   }
 }

@@ -52,9 +52,13 @@ export const randomCoreDefiTx = (tx: Partial<CoreDefiTx> = {}) =>
     randomBytes(32),
     tx.txRefNo || 0,
     tx.created || new Date(),
+    tx.settled,
+    tx.interactionNonce,
+    tx.isAsync,
+    tx.success,
     tx.outputValueA,
     tx.outputValueB,
-    tx.result,
-    tx.settled,
-    tx.interactionNonce || 1
+    tx.finalised,
+    tx.claimSettled,
+    tx.claimTxId,
   );

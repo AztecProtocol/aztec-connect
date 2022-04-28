@@ -19,6 +19,10 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.addTxs(txs));
   }
 
+  public async deleteTxsById(ids: Buffer[]) {
+    return this.synchronise(() => this.rollupDb.deleteTxsById(ids));
+  }
+
   public async addAccounts(accounts: AccountDao[]) {
     return this.synchronise(() => this.rollupDb.addAccounts(accounts));
   }
@@ -111,6 +115,10 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.addRollupProof(rollupDao));
   }
 
+  public async addRollupProofs(rollupDaos: RollupProofDao[]) {
+    return this.synchronise(() => this.rollupDb.addRollupProofs(rollupDaos));
+  }
+
   public async getRollupProof(id: Buffer, includeTxs = false) {
     return this.synchronise(() => this.rollupDb.getRollupProof(id, includeTxs));
   }
@@ -159,8 +167,8 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.addRollup(rollup));
   }
 
-  public async setCallData(id: number, callData: Buffer) {
-    return this.synchronise(() => this.rollupDb.setCallData(id, callData));
+  public async setCallData(id: number, rollupProofCalldata: Buffer) {
+    return this.synchronise(() => this.rollupDb.setCallData(id, rollupProofCalldata));
   }
 
   public async confirmSent(id: number, txHash: TxHash) {
@@ -239,5 +247,9 @@ export class SyncRollupDb {
     } finally {
       release();
     }
+  }
+
+  public async eraseDb() {
+    return this.synchronise(() => this.rollupDb.eraseDb());
   }
 }

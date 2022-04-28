@@ -6,7 +6,7 @@ import memdown from 'memdown';
 import { AccountAliasId, AliasHash } from '../../account_id';
 import { GrumpkinAddress } from '../../address';
 import { Crs } from '../../crs';
-import { Blake2s, Pedersen, Schnorr } from '../../crypto';
+import { Blake2s, Pedersen, Schnorr, SinglePedersen } from '../../crypto';
 import { PooledFft } from '../../fft';
 import { MerkleTree } from '../../merkle_tree';
 import { NoteAlgorithms } from '../../note_algorithms';
@@ -34,7 +34,7 @@ describe('account proof', () => {
 
   beforeAll(async () => {
     EventEmitter.defaultMaxListeners = 32;
-    const circuitSize = AccountProver.circuitSize;
+    const circuitSize = AccountProver.getCircuitSize();
 
     crs = new Crs(circuitSize);
     await crs.download();
@@ -44,14 +44,14 @@ describe('account proof', () => {
     pool = new WorkerPool();
     await pool.init(barretenberg.module, Math.min(navigator.hardwareConcurrency, 8));
 
-    pippenger = new PooledPippenger();
-    await pippenger.init(crs.getData(), pool);
+    pippenger = new PooledPippenger(pool);
+    await pippenger.init(crs.getData());
 
     const fft = new PooledFft(pool);
     await fft.init(circuitSize);
 
     blake2s = new Blake2s(barretenberg);
-    pedersen = new Pedersen(barretenberg);
+    pedersen = new SinglePedersen(barretenberg);
     schnorr = new Schnorr(barretenberg);
 
     noteAlgos = new NoteAlgorithms(barretenberg);
@@ -129,8 +129,16 @@ describe('account proof', () => {
     // Check public inputs
     const accountProof = new ProofData(proof);
     const newAccountAliasId = new AccountAliasId(aliasHash, nonce + 1);
-    const noteCommitment1 = noteAlgos.accountNoteCommitment(newAccountAliasId, user.publicKey, signingKey0.publicKey.x());
-    const noteCommitment2 = noteAlgos.accountNoteCommitment(newAccountAliasId, user.publicKey, signingKey1.publicKey.x());
+    const noteCommitment1 = noteAlgos.accountNoteCommitment(
+      newAccountAliasId,
+      user.publicKey,
+      signingKey0.publicKey.x(),
+    );
+    const noteCommitment2 = noteAlgos.accountNoteCommitment(
+      newAccountAliasId,
+      user.publicKey,
+      signingKey1.publicKey.x(),
+    );
     const accountAliasIdNullifier = noteAlgos.accountAliasIdNullifier(accountAliasId);
     expect(accountProof.proofId).toBe(ProofId.ACCOUNT);
     expect(accountProof.noteCommitment1).toEqual(noteCommitment1);

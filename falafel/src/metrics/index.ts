@@ -17,6 +17,7 @@ export class Metrics {
   private rollupGasUsed: Gauge<string>;
   private rollupGasPrice: Gauge<string>;
   private rollupSize: Gauge<string>;
+  private rollupTxs: Gauge<string>;
   private totalDeposited: Gauge<string>;
   private totalWithdrawn: Gauge<string>;
   private totalDefiDeposited: Gauge<string>;
@@ -114,6 +115,11 @@ export class Metrics {
     this.rollupSize = new Gauge({
       name: 'rollup_size',
       help: 'Rollup size',
+    });
+
+    this.rollupTxs = new Gauge({
+      name: 'rollup_txs',
+      help: 'Number of txs in rollup',
     });
 
     this.rollupGasUsed = new Gauge({
@@ -274,6 +280,7 @@ export class Metrics {
     }
 
     this.rollupSize.set(rollup.rollupProof.rollupSize);
+    this.rollupTxs.set(rollup.rollupProof.txs.length);
     this.rollupGasUsed.set(rollup.gasUsed!);
     this.rollupGasPrice.set(Number(toBigIntBE(rollup.gasPrice!)));
   }

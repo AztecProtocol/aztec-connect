@@ -1,9 +1,8 @@
 import { EthAddress } from '../address';
 import { BlockSource } from '../block_source';
-import { Asset } from './asset';
 import { BlockchainStatusSource } from './blockchain_status';
 import { EthereumProvider } from './ethereum_provider';
-import { EthereumSignature, EthereumSigner } from './ethereum_signer';
+import { EthereumSigner } from './ethereum_signer';
 import { PriceFeed } from './price_feed';
 import { TxHash } from './tx_hash';
 
@@ -14,7 +13,7 @@ export interface RevertError {
 
 export interface Receipt {
   status: boolean;
-  blockNum: number;
+  blockNum?: number;
   revertError?: RevertError;
 }
 
@@ -22,6 +21,7 @@ export interface SendTxOptions {
   gasLimit?: number;
   signingAddress?: EthAddress;
   provider?: EthereumProvider;
+  nonce?: number;
 }
 
 export interface FeeData {
@@ -30,23 +30,30 @@ export interface FeeData {
   gasPrice: bigint;
 }
 
-export type PermitArgs = { deadline: bigint; approvalAmount: bigint; signature: EthereumSignature };
+export interface RollupTxs {
+  rollupProofTx: Buffer;
+  offchainDataTxs: Buffer[];
+}
 
 export interface Blockchain extends BlockSource, BlockchainStatusSource, EthereumSigner {
-  getTransactionReceipt(txHash: TxHash): Promise<Receipt>;
+  getProvider(): EthereumProvider;
+
+  /*
+   * Timeout is only considered for pending txs. i.e. If there is at least 1 confirmation, the timeout disables.
+   */
+  getTransactionReceipt(txHash: TxHash, timeoutSeconds?: number): Promise<Receipt>;
 
   /**
    * Will consider if the escape hatch window is open or not, waiting additional confirmations if it is.
+   * Timeout is only considered for pending txs. i.e. If there is at least 1 confirmation, the timeout disables.
    */
-  getTransactionReceiptSafe(txHash: TxHash): Promise<Receipt>;
+  getTransactionReceiptSafe(txHash: TxHash, timeoutSeconds?: number): Promise<Receipt>;
 
   getUserPendingDeposit(assetId: number, account: EthAddress): Promise<bigint>;
 
-  createRollupProofTx(proof: Buffer, signatures: Buffer[], offchainTxData: Buffer[]): Promise<Buffer>;
+  createRollupTxs(dataBuf: Buffer, signatures: Buffer[], offchainTxData: Buffer[]): Promise<RollupTxs>;
 
   sendTx(tx: Buffer, options?: SendTxOptions): Promise<TxHash>;
-
-  getAsset(assetId: number): Asset;
 
   getAssetPrice(assetId: number): Promise<bigint>;
 
@@ -68,5 +75,5 @@ export interface Blockchain extends BlockSource, BlockchainStatusSource, Ethereu
 
   getFeeData(): Promise<FeeData>;
 
-  getBridgeGas(bridgeId: bigint): bigint;
+  getBridgeGas(bridgeId: bigint): number;
 }

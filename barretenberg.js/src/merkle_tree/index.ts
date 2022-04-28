@@ -1,5 +1,8 @@
 import { LevelUp, LevelUpChain } from 'levelup';
 import { serializeBufferArrayToVector, deserializeArrayFromVector } from '../serialize';
+import { createLogger } from '../debug';
+
+const debug = createLogger('bb:merkle_tree');
 
 const MAX_DEPTH = 32;
 
@@ -37,7 +40,7 @@ export class HashPath {
 }
 
 export class MerkleTree {
-  public static ZERO_ELEMENT = Buffer.from('30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000000', 'hex');
+  public static ZERO_ELEMENT = Buffer.from('0000000000000000000000000000000000000000000000000000000000000000', 'hex');
   private root!: Buffer;
   private zeroHashes: Buffer[] = [];
 
@@ -201,6 +204,7 @@ export class MerkleTree {
   }
 
   public async updateElements(index: number, values: Buffer[]) {
+    debug(`update elements at index ${index} with ${values.length} leaves...`);
     const zeroBuf = Buffer.alloc(32, 0);
     return this.updateLeafHashes(
       index,

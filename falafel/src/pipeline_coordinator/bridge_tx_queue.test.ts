@@ -38,15 +38,24 @@ const mockTx = (id: number, txType: TxType, txFeeAssetId: number, bridgeId: bigi
     ]),
   } as any as TxDao);
 
-const createRollupTx = (id: number, txType: TxType, txFeeAssetId: number, bridgeId: bigint, excessFee: bigint) => {
+const createRollupTx = (
+  id: number,
+  txType: TxType,
+  txFeeAssetId: number,
+  bridgeId: bigint,
+  excessFee: bigint,
+  txFee = 1n + excessFee,
+): RollupTx => {
   const tx = mockTx(id, txType, txFeeAssetId, bridgeId);
-  const rollupTx: RollupTx = {
+  return {
     tx,
     excessGas: excessFee,
-    feeAsset: txFeeAssetId,
+    fee: {
+      assetId: txFeeAssetId,
+      value: txFee,
+    },
     bridgeId,
   };
-  return rollupTx;
 };
 
 const getFullBridgeGas = () => bridgeConfig.fee!;
@@ -328,22 +337,5 @@ describe('Bridge Tx Queue', () => {
     expect(txsForRollup.map(tx => tx.tx.id)).toEqual([2, 3, 1]);
     expect(assets.size).toEqual(1);
     expect(assets.has(1)).toBeTruthy();
-  });
-
-  it('should correctly calculate the accrued gas for the queue', () => {
-    const bridgeQ = new BridgeTxQueue(bridgeConfig, undefined);
-    const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 1, bridgeConfig.bridgeId, 0n);
-    const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, NON_FEE_PAYING_ASSET, bridgeConfig.bridgeId, 1200000n);
-    const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 1, bridgeConfig.bridgeId, 1200000n);
-    const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0n);
-    const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 2, bridgeConfig.bridgeId, 0n);
-    bridgeQ.addDefiTx(rollupTx1);
-    bridgeQ.addDefiTx(rollupTx2);
-    bridgeQ.addDefiTx(rollupTx3);
-    bridgeQ.addDefiTx(rollupTx4);
-    bridgeQ.addDefiTx(rollupTx5);
-    const baseBridgeFee = feeResolver.getFullBridgeGas(bridgeQ.bridgeId);
-    const { gasAccrued } = bridgeQ.profileBridgeQueue(feeResolver as any);
-    expect(gasAccrued).toBe(2400000n + BigInt(5n * (baseBridgeFee / BigInt(bridgeConfig.numTxs))));
   });
 });

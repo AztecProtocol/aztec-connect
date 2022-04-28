@@ -1,9 +1,7 @@
-Dockerfile
-node_modules
-dest
-build
-artifacts
 cache
-.env*
-docs
+dest
+node_modules
+./src/artifacts
+**/.terraform
 .redeploy
+Dockerfile

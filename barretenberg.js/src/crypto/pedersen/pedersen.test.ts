@@ -1,6 +1,6 @@
 import { BarretenbergWasm, WorkerPool } from '../../wasm';
 import { PooledPedersen } from './pooled_pedersen';
-import { Pedersen } from './pedersen';
+import { SinglePedersen } from './single_pedersen';
 
 describe('pedersen', () => {
   let barretenberg!: BarretenbergWasm;
@@ -18,7 +18,7 @@ describe('pedersen', () => {
   });
 
   it('hasher_consistency_and_benchmark', async () => {
-    const singlePedersen = new Pedersen(barretenberg);
+    const singlePedersen = new SinglePedersen(barretenberg);
     await singlePedersen.init();
     const start1 = new Date().getTime();
     const singleResults = await singlePedersen.hashToTree(values);

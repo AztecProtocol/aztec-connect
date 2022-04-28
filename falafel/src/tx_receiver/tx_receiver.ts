@@ -1,6 +1,7 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
+import { validateBridgeId } from '@aztec/barretenberg/bridge_id';
 import {
   AccountVerifier,
   DefiDepositProofData,
@@ -9,10 +10,10 @@ import {
   ProofData,
   ProofId,
 } from '@aztec/barretenberg/client_proofs';
-import { TxId } from '@aztec/barretenberg/tx_id';
 import { Crs } from '@aztec/barretenberg/crs';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
-import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
+import { OffchainAccountData, OffchainDefiDepositData } from '@aztec/barretenberg/offchain_tx_data';
+import { TxId } from '@aztec/barretenberg/tx_id';
 import { BarretenbergWasm, BarretenbergWorker, createWorker, destroyWorker } from '@aztec/barretenberg/wasm';
 import { Mutex } from 'async-mutex';
 import { ProofGenerator } from 'halloumi/proof_generator';
@@ -22,7 +23,8 @@ import { getTxTypeFromProofData } from '../get_tx_type';
 import { Metrics } from '../metrics';
 import { RollupDb } from '../rollup_db';
 import { TxFeeResolver } from '../tx_fee_resolver';
-import { TxFeeAllocator, Tx } from '.';
+import { Tx } from './interfaces';
+import { TxFeeAllocator } from './tx_fee_allocator';
 
 export class TxReceiver {
   private worker!: BarretenbergWorker;
@@ -78,7 +80,7 @@ export class TxReceiver {
       const feeAllocator = new TxFeeAllocator(this.txFeeResolver);
       const validation = feeAllocator.validateReceivedTxs(txs, txTypes);
       console.log(
-        `Gas Required/Provided: ${validation.gasRequired}/${validation.gasProvided}. Fee asset index: ${validation.feePayingAsset}. Non-fee assets/defi: ${validation.hasNonFeePayingAssets}/${validation.hasNonPayingDefi}`,
+        `Gas Required/Provided: ${validation.gasRequired}/${validation.gasProvided}. Fee asset index: ${validation.feePayingAsset}. Feeless txs: ${validation.hasFeelessTxs}.`,
       );
 
       if (validation.gasProvided < validation.gasRequired) {
@@ -149,7 +151,7 @@ export class TxReceiver {
         break;
       }
       case ProofId.DEFI_DEPOSIT:
-        await this.validateDefiBridgeTx(proof);
+        await this.validateDefiBridgeTx(proof, OffchainDefiDepositData.fromBuffer(offchainTxData));
         break;
       default:
         throw new Error('Unknown proof id.');
@@ -205,18 +207,37 @@ export class TxReceiver {
     }
   }
 
-  private async validateDefiBridgeTx(proofData: ProofData) {
+  private async validateDefiBridgeTx(proofData: ProofData, offchainData: OffchainDefiDepositData) {
     if (proofData.allowChainFromNote1 || proofData.allowChainFromNote2) {
       throw new Error('Cannot chain from a defi deposit tx.');
     }
 
-    const { bridgeId } = new DefiDepositProofData(proofData);
+    const { bridgeId, defiDepositValue, txFee } = new DefiDepositProofData(proofData);
+    try {
+      validateBridgeId(bridgeId);
+    } catch (e) {
+      throw new Error(`Invalid bridge id - ${e.message}`);
+    }
+
     const bridgeConfig = this.bridgeResolver.getBridgeConfig(bridgeId.toBigInt());
     const blockchainStatus = this.blockchain.getBlockchainStatus();
     if (!blockchainStatus.allowThirdPartyContracts && !bridgeConfig) {
       console.log(`Unrecognised Defi bridge: ${bridgeId.toString()}`);
       throw new Error('Unrecognised Defi-bridge');
     }
+
+    if (!bridgeId.equals(offchainData.bridgeId)) {
+      throw new Error(`Wrong bridgeId in offchain data. Expect ${bridgeId}. Got ${offchainData.bridgeId}.`);
+    }
+    if (defiDepositValue !== offchainData.depositValue) {
+      throw new Error(
+        `Wrong depositValue in offchain data. Expect ${defiDepositValue}. Got ${offchainData.depositValue}.`,
+      );
+    }
+    if (txFee !== offchainData.txFee) {
+      throw new Error(`Wrong txFee in offchain data. Expect ${txFee}. Got ${offchainData.txFee}.`);
+    }
+    // TODO - check partialState
 
     if (!(await this.joinSplitVerifier.verifyProof(proofData.rawProofData))) {
       throw new Error('Defi-bridge proof verification failed.');

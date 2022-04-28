@@ -1,6 +1,5 @@
-import { Pedersen } from './pedersen';
-import { WorkerPool } from '../../wasm/worker_pool';
-import { BarretenbergWasm } from '../../wasm';
+import { BarretenbergWasm, WorkerPool } from '../../wasm';
+import { SinglePedersen } from './single_pedersen';
 // import createDebug from 'debug';
 
 // const debug = createDebug('bb:pooled_pedersen');
@@ -8,8 +7,8 @@ import { BarretenbergWasm } from '../../wasm';
 /**
  * Multi-threaded implementation of pedersen.
  */
-export class PooledPedersen extends Pedersen {
-  public pool: Pedersen[] = [];
+export class PooledPedersen extends SinglePedersen {
+  public pool: SinglePedersen[] = [];
 
   /**
    * @param wasm Synchronous functions will use use this wasm directly on the calling thread.
@@ -17,7 +16,7 @@ export class PooledPedersen extends Pedersen {
    */
   constructor(wasm: BarretenbergWasm, pool: WorkerPool) {
     super(wasm);
-    this.pool = pool.workers.map(w => new Pedersen(wasm, w));
+    this.pool = pool.workers.map(w => new SinglePedersen(wasm, w));
   }
 
   public async init() {

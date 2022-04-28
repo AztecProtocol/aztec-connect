@@ -22,6 +22,19 @@ describe('tree_note', () => {
     noteAlgos = new NoteAlgorithms(wasm);
   });
 
+  it('should convert to and from buffer', () => {
+    const note = new TreeNote(
+      GrumpkinAddress.randomAddress(),
+      BigInt(123),
+      456,
+      789,
+      randomBytes(32),
+      randomBytes(32),
+      randomBytes(32),
+    );
+    expect(TreeNote.fromBuffer(note.toBuffer())).toEqual(note);
+  });
+
   it('should correctly batch decrypt notes', async () => {
     const receiver = createKeyPair();
 
@@ -49,8 +62,15 @@ describe('tree_note', () => {
     }
 
     const keyBuf = Buffer.concat(encryptedNotes.map(vk => vk.toBuffer()));
-    const decryptedNotes = await batchDecryptNotes(keyBuf, inputNullifiers, receiver.privKey, noteAlgos, grumpkin);
-    const recovered = recoverTreeNotes(decryptedNotes, noteCommitments, receiver.privKey, grumpkin, noteAlgos);
+    const decryptedNotes = await batchDecryptNotes(keyBuf, receiver.privKey, noteAlgos, grumpkin);
+    const recovered = recoverTreeNotes(
+      decryptedNotes,
+      inputNullifiers,
+      noteCommitments,
+      receiver.privKey,
+      grumpkin,
+      noteAlgos,
+    );
     for (let i = 0; i < numNotes; ++i) {
       expect(recovered[i]).toEqual(notes[i]);
     }
@@ -77,8 +97,15 @@ describe('tree_note', () => {
     }
 
     const keyBuf = Buffer.concat(encryptedNotes.map(vk => vk.toBuffer()));
-    const decryptedNotes = await batchDecryptNotes(keyBuf, inputNullifiers, receiver.privKey, noteAlgos, grumpkin);
-    const recovered = recoverTreeNotes(decryptedNotes, noteCommitments, receiver.privKey, grumpkin, noteAlgos);
+    const decryptedNotes = await batchDecryptNotes(keyBuf, receiver.privKey, noteAlgos, grumpkin);
+    const recovered = recoverTreeNotes(
+      decryptedNotes,
+      inputNullifiers,
+      noteCommitments,
+      receiver.privKey,
+      grumpkin,
+      noteAlgos,
+    );
     for (let i = 0; i < numNotes; ++i) {
       const note = recovered[i];
       if (i % 2) {
@@ -98,28 +125,25 @@ describe('tree_note', () => {
     const notes: TreeNote[] = [];
     const noteCommitments: Buffer[] = [];
     for (let i = 0; i < numNotes; ++i) {
-      const noteVersion = i % 4 ? 0 : 1;
       const ephPrivKey = grumpkin.getRandomFr();
       const inputNullifier = numToUInt32BE(i, 32);
       inputNullifiers.push(inputNullifier);
-      const note = TreeNote.createFromEphPriv(
-        receiver.pubKey,
-        BigInt(200),
-        0,
-        1,
-        inputNullifier,
-        ephPrivKey,
-        grumpkin,
-        noteVersion,
-      );
+      const note = TreeNote.createFromEphPriv(receiver.pubKey, BigInt(200), 0, 1, inputNullifier, ephPrivKey, grumpkin);
       notes.push(note);
       encryptedNotes.push(note.createViewingKey(ephPrivKey, grumpkin));
       noteCommitments.push(noteAlgos.valueNoteCommitment(note));
     }
 
     const keyBuf = Buffer.concat(encryptedNotes.map(vk => vk.toBuffer()));
-    const decryptedNotes = await batchDecryptNotes(keyBuf, inputNullifiers, receiver.privKey, noteAlgos, grumpkin);
-    const recovered = recoverTreeNotes(decryptedNotes, noteCommitments, receiver.privKey, grumpkin, noteAlgos);
+    const decryptedNotes = await batchDecryptNotes(keyBuf, receiver.privKey, noteAlgos, grumpkin);
+    const recovered = recoverTreeNotes(
+      decryptedNotes,
+      inputNullifiers,
+      noteCommitments,
+      receiver.privKey,
+      grumpkin,
+      noteAlgos,
+    );
     for (let i = 0; i < numNotes; ++i) {
       expect(recovered[i]).toEqual(notes[i]);
     }
@@ -152,9 +176,16 @@ describe('tree_note', () => {
     }
 
     const keyBuf = Buffer.concat(encryptedNotes.map(vk => vk.toBuffer()));
-    const decryptedNotes = await batchDecryptNotes(keyBuf, inputNullifiers, receiver.privKey, noteAlgos, grumpkin);
+    const decryptedNotes = await batchDecryptNotes(keyBuf, receiver.privKey, noteAlgos, grumpkin);
     const fakePrivKey = randomBytes(32);
-    const recovered = recoverTreeNotes(decryptedNotes, noteCommitments, fakePrivKey, grumpkin, noteAlgos);
+    const recovered = recoverTreeNotes(
+      decryptedNotes,
+      inputNullifiers,
+      noteCommitments,
+      fakePrivKey,
+      grumpkin,
+      noteAlgos,
+    );
     for (let i = 0; i < numNotes; ++i) {
       expect(recovered[i]).toBe(undefined);
     }

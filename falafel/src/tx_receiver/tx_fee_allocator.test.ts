@@ -125,8 +125,7 @@ describe('Tx Fee Allocator', () => {
     expect(validation.feePayingAsset).toEqual(0);
     expect(validation.gasProvided).toEqual(getTxGasWithBase(TxType.TRANSFER));
     expect(validation.gasRequired).toEqual(getTxGasWithBase(TxType.TRANSFER));
-    expect(validation.hasNonFeePayingAssets).toEqual(false);
-    expect(validation.hasNonPayingDefi).toEqual(false);
+    expect(validation.hasFeelessTxs).toEqual(false);
   });
 
   it('correctly validates multiple payments', () => {
@@ -135,8 +134,7 @@ describe('Tx Fee Allocator', () => {
     expect(validation.feePayingAsset).toEqual(0);
     expect(validation.gasProvided).toEqual(getTxGasWithBase(TxType.TRANSFER) * 2n);
     expect(validation.gasRequired).toEqual(getTxGasWithBase(TxType.TRANSFER) * 2n);
-    expect(validation.hasNonFeePayingAssets).toEqual(false);
-    expect(validation.hasNonPayingDefi).toEqual(false);
+    expect(validation.hasFeelessTxs).toEqual(false);
   });
 
   it('should throw if no fee paying assets', () => {
@@ -162,8 +160,7 @@ describe('Tx Fee Allocator', () => {
     expect(validation.feePayingAsset).toEqual(0);
     expect(validation.gasProvided).toEqual(getTxGasWithBase(TxType.TRANSFER));
     expect(validation.gasRequired).toEqual(getTxGasWithBase(TxType.TRANSFER) * 2n);
-    expect(validation.hasNonFeePayingAssets).toEqual(true);
-    expect(validation.hasNonPayingDefi).toEqual(false);
+    expect(validation.hasFeelessTxs).toEqual(true);
   });
 
   it('correctly detects non-paying DEFI', () => {
@@ -187,8 +184,7 @@ describe('Tx Fee Allocator', () => {
         getSingleBridgeCost(bridgeConfigs[0].bridgeId) +
         getTxGasWithBase(TxType.DEFI_CLAIM),
     );
-    expect(validation.hasNonFeePayingAssets).toEqual(true);
-    expect(validation.hasNonPayingDefi).toEqual(true);
+    expect(validation.hasFeelessTxs).toEqual(true);
   });
 
   it('correctly calculates gas', () => {
@@ -234,8 +230,7 @@ describe('Tx Fee Allocator', () => {
         getSingleBridgeCost(bridgeConfigs[0].bridgeId) +
         getTxGasWithBase(TxType.DEFI_CLAIM),
     );
-    expect(validation.hasNonFeePayingAssets).toEqual(false);
-    expect(validation.hasNonPayingDefi).toEqual(false);
+    expect(validation.hasFeelessTxs).toEqual(false);
   });
 
   it('excludes gas from non-paying assets', () => {
@@ -277,8 +272,7 @@ describe('Tx Fee Allocator', () => {
         getSingleBridgeCost(bridgeConfigs[0].bridgeId) +
         getTxGasWithBase(TxType.DEFI_CLAIM),
     );
-    expect(validation.hasNonFeePayingAssets).toEqual(true);
-    expect(validation.hasNonPayingDefi).toEqual(true);
+    expect(validation.hasFeelessTxs).toEqual(true);
   });
 
   it('correctly calculates gas with excess', () => {
@@ -326,8 +320,7 @@ describe('Tx Fee Allocator', () => {
         getSingleBridgeCost(bridgeConfigs[0].bridgeId) +
         getTxGasWithBase(TxType.DEFI_CLAIM),
     );
-    expect(validation.hasNonFeePayingAssets).toEqual(false);
-    expect(validation.hasNonPayingDefi).toEqual(false);
+    expect(validation.hasFeelessTxs).toEqual(false);
   });
 
   it('should not modify excess gas if none provided', () => {
@@ -389,8 +382,7 @@ describe('Tx Fee Allocator', () => {
         getTxGasWithBase(TxType.WITHDRAW_TO_CONTRACT) +
         getTxGasWithBase(TxType.WITHDRAW_TO_WALLET),
     );
-    expect(validation.hasNonFeePayingAssets).toEqual(false);
-    expect(validation.hasNonPayingDefi).toEqual(false);
+    expect(validation.hasFeelessTxs).toEqual(false);
 
     // no excess gas so nothing should be 'reallocated'
     txFeeAllocator.reallocateGas(txDaos, txs, txTypes, validation);
@@ -457,8 +449,7 @@ describe('Tx Fee Allocator', () => {
         getSingleBridgeCost(bridgeConfigs[0].bridgeId) +
         getTxGasWithBase(TxType.DEFI_CLAIM),
     );
-    expect(validation.hasNonFeePayingAssets).toEqual(false);
-    expect(validation.hasNonPayingDefi).toEqual(false);
+    expect(validation.hasFeelessTxs).toEqual(false);
 
     // no excess gas so nothing should be 'reallocated'
     txFeeAllocator.reallocateGas(txDaos, txs, txTypes, validation);
@@ -485,8 +476,7 @@ describe('Tx Fee Allocator', () => {
     expect(validation.gasProvided).toEqual(getTxGasWithBase(TxType.TRANSFER) + excessGas);
 
     expect(validation.gasRequired).toEqual(getTxGasWithBase(TxType.TRANSFER) * 2n);
-    expect(validation.hasNonFeePayingAssets).toEqual(true);
-    expect(validation.hasNonPayingDefi).toEqual(false);
+    expect(validation.hasFeelessTxs).toEqual(true);
 
     // no excess gas so nothing should be 'reallocated'
     txFeeAllocator.reallocateGas(txDaos, txs, txTypes, validation);
@@ -514,8 +504,7 @@ describe('Tx Fee Allocator', () => {
     expect(validation.gasProvided).toEqual(getTxGasWithBase(TxType.TRANSFER) + excessGas);
 
     expect(validation.gasRequired).toEqual(getTxGasWithBase(TxType.TRANSFER) * 2n);
-    expect(validation.hasNonFeePayingAssets).toEqual(true);
-    expect(validation.hasNonPayingDefi).toEqual(false);
+    expect(validation.hasFeelessTxs).toEqual(true);
 
     // no excess gas so nothing should be 'reallocated'
     txFeeAllocator.reallocateGas(txDaos, txs, txTypes, validation);
@@ -577,8 +566,7 @@ describe('Tx Fee Allocator', () => {
         getTxGasWithBase(TxType.WITHDRAW_TO_CONTRACT) * 3n +
         getTxGasWithBase(TxType.WITHDRAW_TO_WALLET) * 2n,
     );
-    expect(validation.hasNonFeePayingAssets).toEqual(true);
-    expect(validation.hasNonPayingDefi).toEqual(false);
+    expect(validation.hasFeelessTxs).toEqual(true);
 
     // no excess gas so nothing should be 'reallocated'
     txFeeAllocator.reallocateGas(txDaos, txs, txTypes, validation);
@@ -638,8 +626,7 @@ describe('Tx Fee Allocator', () => {
         getTxGasWithBase(TxType.WITHDRAW_TO_CONTRACT) * 3n +
         getTxGasWithBase(TxType.WITHDRAW_TO_WALLET) * 2n,
     );
-    expect(validation.hasNonFeePayingAssets).toEqual(true);
-    expect(validation.hasNonPayingDefi).toEqual(false);
+    expect(validation.hasFeelessTxs).toEqual(true);
 
     // no excess gas so nothing should be 'reallocated'
     txFeeAllocator.reallocateGas(txDaos, txs, txTypes, validation);
@@ -675,8 +662,7 @@ describe('Tx Fee Allocator', () => {
         getSingleBridgeCost(bridgeConfigs[0].bridgeId) +
         getTxGasWithBase(TxType.DEFI_CLAIM),
     );
-    expect(validation.hasNonFeePayingAssets).toEqual(false);
-    expect(validation.hasNonPayingDefi).toEqual(false);
+    expect(validation.hasFeelessTxs).toEqual(true);
 
     // no excess gas so nothing should be 'reallocated'
     txFeeAllocator.reallocateGas(txDaos, txs, txTypes, validation);
@@ -712,8 +698,7 @@ describe('Tx Fee Allocator', () => {
         getSingleBridgeCost(bridgeConfigs[0].bridgeId) +
         getTxGasWithBase(TxType.DEFI_CLAIM),
     );
-    expect(validation.hasNonFeePayingAssets).toEqual(true);
-    expect(validation.hasNonPayingDefi).toEqual(true);
+    expect(validation.hasFeelessTxs).toEqual(true);
 
     // no excess gas so nothing should be 'reallocated'
     txFeeAllocator.reallocateGas(txDaos, txs, txTypes, validation);

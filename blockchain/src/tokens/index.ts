@@ -12,7 +12,7 @@ import { EthAddress } from '@aztec/barretenberg/address';
 
 const getSigner = (ethereumProvider: EthereumProvider, spender: EthAddress) => {
   return new Web3Provider(ethereumProvider).getSigner(spender.toString());
-}
+};
 
 export async function purchaseTokens(
   tokenAddress: EthAddress,
@@ -41,27 +41,49 @@ export async function getTokenBalance(tokenAddress: EthAddress, owner: EthAddres
   return currentBalance.toBigInt();
 }
 
-export async function getTokenAllowance(tokenAddress: EthAddress, owner: EthAddress, spender: EthAddress, ethereumProvider: EthereumProvider) {
+export async function getTokenAllowance(
+  tokenAddress: EthAddress,
+  owner: EthAddress,
+  spender: EthAddress,
+  ethereumProvider: EthereumProvider,
+) {
   const tokenContract = new Contract(tokenAddress.toString(), ERC20Abi.abi, new Web3Provider(ethereumProvider));
   const currentBalance = await tokenContract.allowance(owner.toString(), spender.toString());
   return currentBalance.toBigInt();
 }
 
-export async function approveToken(tokenAddress: EthAddress, owner: EthAddress, spender: EthAddress, ethereumProvider: EthereumProvider, amount: bigint) {
+export async function approveToken(
+  tokenAddress: EthAddress,
+  owner: EthAddress,
+  spender: EthAddress,
+  ethereumProvider: EthereumProvider,
+  amount: bigint,
+) {
   const signer = getSigner(ethereumProvider, owner);
   const tokenContract = new Contract(tokenAddress.toString(), ERC20Abi.abi, signer);
   const approved = await tokenContract.approve(spender.toString(), amount);
   await approved.wait();
 }
 
-export async function transferToken(tokenAddress: EthAddress, spender: EthAddress, recipient: EthAddress, ethereumProvider: EthereumProvider, amount: bigint) {
+export async function transferToken(
+  tokenAddress: EthAddress,
+  spender: EthAddress,
+  recipient: EthAddress,
+  ethereumProvider: EthereumProvider,
+  amount: bigint,
+) {
   const signer = getSigner(ethereumProvider, spender);
   const tokenContract = new Contract(tokenAddress.toString(), ERC20Abi.abi, signer);
   const approved = await tokenContract.transfer(recipient.toString(), amount);
   await approved.wait();
 }
 
-export async function approveWeth(owner: EthAddress, spender: EthAddress, amount: bigint, ethereumProvider: EthereumProvider) {
+export async function approveWeth(
+  owner: EthAddress,
+  spender: EthAddress,
+  amount: bigint,
+  ethereumProvider: EthereumProvider,
+) {
   const signer = getSigner(ethereumProvider, owner);
   const wethContract = new Contract(MainnetAddresses.Tokens['WETH'], WETHabi.abi, signer);
   const approveTx = await wethContract.approve(spender.toString(), amount);

@@ -1,14 +1,14 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
-import { AssetValue } from '@aztec/barretenberg/asset';
+import { assetValueToJson } from '@aztec/barretenberg/asset';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
 import {
-  AssetValueServerResponse,
-  PendingTxServerResponse,
+  AccountTxJson,
+  JoinSplitTxJson,
+  PendingTxJson,
   rollupProviderStatusToJson,
   RuntimeConfig,
+  TxJson,
   runtimeConfigFromJson,
-  TxPostData,
-  TxServerResponse,
 } from '@aztec/barretenberg/rollup_provider';
 import { numToInt32BE, serializeBufferArrayToVector } from '@aztec/barretenberg/serialize';
 import cors from '@koa/cors';
@@ -27,19 +27,20 @@ import { JoinSplitTxResolver, RollupResolver, ServerStatusResolver, TxResolver }
 import { Server } from './server';
 import { Tx } from './tx_receiver';
 
-const toTxResponse = ({ proofData, offchainTxData }: TxDao): TxServerResponse => ({
+const toTxJson = ({ proofData, offchainTxData }: TxDao): AccountTxJson | JoinSplitTxJson => ({
   proofData: proofData.toString('hex'),
-  offchainData: offchainTxData.toString('hex'),
+  offchainTxData: offchainTxData.toString('hex'),
 });
 
-const toAssetValueResponse = ({ assetId, value }: AssetValue): AssetValueServerResponse => ({
-  assetId,
-  value: value.toString(),
+const toPendingTxJson = (proof: ProofData): PendingTxJson => ({
+  txId: proof.txId.toString('hex'),
+  noteCommitment1: proof.noteCommitment1.toString('hex'),
+  noteCommitment2: proof.noteCommitment2.toString('hex'),
 });
 
 const bufferFromHex = (hexStr: string) => Buffer.from(hexStr.replace(/^0x/i, ''), 'hex');
 
-const fromTxPostData = (data: TxPostData): Tx => ({
+const fromTxJson = (data: TxJson): Tx => ({
   proof: new ProofData(bufferFromHex(data.proofData)),
   offchainTxData: bufferFromHex(data.offchainTxData),
   depositSignature: data.depositSignature ? bufferFromHex(data.depositSignature) : undefined,
@@ -94,7 +95,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   router.post('/txs', recordMetric, checkReady, async (ctx: Koa.Context) => {
     const stream = new PromiseReadable(ctx.req);
     const postData = JSON.parse((await stream.readAll()) as string);
-    const txs = postData.map(fromTxPostData);
+    const txs = postData.map(fromTxJson);
     const txIds = await server.receiveTxs(txs);
     const response = {
       txIds: txIds.map(txId => txId.toString('hex')),
@@ -165,7 +166,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     const txFees = await server.getTxFees(assetId);
 
     ctx.set('content-type', 'application/json');
-    ctx.body = txFees.map(fees => fees.map(toAssetValueResponse));
+    ctx.body = txFees.map(fees => fees.map(assetValueToJson));
     ctx.status = 200;
   });
 
@@ -176,7 +177,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     const defiFees = await server.getDefiFees(bridgeId);
 
     ctx.set('content-type', 'application/json');
-    ctx.body = defiFees.map(toAssetValueResponse);
+    ctx.body = defiFees.map(assetValueToJson);
     ctx.status = 200;
   });
 
@@ -188,15 +189,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
 
   router.get('/get-pending-txs', recordMetric, async (ctx: Koa.Context) => {
     const txs = await server.getUnsettledTxs();
-    ctx.body = txs
-      .map(tx => new ProofData(tx.proofData))
-      .map(
-        (proof): PendingTxServerResponse => ({
-          txId: proof.txId.toString('hex'),
-          noteCommitment1: proof.noteCommitment1.toString('hex'),
-          noteCommitment2: proof.noteCommitment2.toString('hex'),
-        }),
-      );
+    ctx.body = txs.map(tx => new ProofData(tx.proofData)).map(toPendingTxJson);
     ctx.status = 200;
   });
 
@@ -231,13 +224,13 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
 
   router.get('/get-unsettled-account-txs', recordMetric, async (ctx: Koa.Context) => {
     const txs = await server.getUnsettledAccountTxs();
-    ctx.body = txs.map(toTxResponse);
+    ctx.body = txs.map(toTxJson);
     ctx.status = 200;
   });
 
   router.get('/get-unsettled-payment-txs', recordMetric, async (ctx: Koa.Context) => {
     const txs = await server.getUnsettledPaymentTxs();
-    ctx.body = txs.map(toTxResponse);
+    ctx.body = txs.map(toTxJson);
     ctx.status = 200;
   });
 

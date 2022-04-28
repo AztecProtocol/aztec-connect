@@ -1,8 +1,8 @@
 import createDebug from 'debug';
-import { WorkerPool } from '../wasm/worker_pool';
 import { MemoryFifo } from '../fifo';
+import { WorkerPool } from '../wasm/worker_pool';
+import { Fft, FftFactory } from './fft';
 import { SingleFft } from './single_fft';
-import { Fft } from './fft';
 
 const debug = createDebug('bb:fft');
 
@@ -51,5 +51,20 @@ export class PooledFft implements Fft {
 
   public async ifft(coefficients: Uint8Array): Promise<Uint8Array> {
     return await new Promise(resolve => this.queue.put({ coefficients, inverse: true, resolve }));
+  }
+}
+
+export class PooledFftFactory implements FftFactory {
+  private ffts: { [circuitSize: number]: PooledFft } = {};
+
+  constructor(private workerPool: WorkerPool) {}
+
+  public async createFft(circuitSize: number) {
+    if (!this.ffts[circuitSize]) {
+      const fft = new PooledFft(this.workerPool);
+      await fft.init(circuitSize);
+      this.ffts[circuitSize] = fft;
+    }
+    return this.ffts[circuitSize];
   }
 }

@@ -1,4 +1,4 @@
-import { randomBytes } from 'crypto';
+import { randomBytes } from '../crypto';
 import { Grumpkin } from '../ecc/grumpkin';
 
 export class GrumpkinAddress {

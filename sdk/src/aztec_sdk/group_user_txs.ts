@@ -1,7 +1,16 @@
 import { AssetValue } from '@aztec/barretenberg/asset';
+import { virtualAssetIdFlag } from '@aztec/barretenberg/bridge_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
+import { TxId } from '@aztec/barretenberg/tx_id';
 import { CoreAccountTx, CoreDefiTx, CorePaymentTx, CoreUserTx } from '../core_tx';
-import { UserAccountTx, UserDefiTx, UserPaymentTx } from '../user_tx';
+import {
+  UserAccountTx,
+  UserDefiClaimTx,
+  UserDefiInteractionResultState,
+  UserDefiTx,
+  UserPaymentTx,
+  UserTx,
+} from '../user_tx';
 
 const emptyAssetValue = { assetId: 0, value: BigInt(0) };
 
@@ -18,22 +27,79 @@ const toUserPaymentTx = (
   return new UserPaymentTx(txId, userId, proofId, value, fee, publicOwner, isSender, created, settled);
 };
 
-const toUserDefiTx = (
-  { txId, userId, bridgeId, depositValue, outputValueA, outputValueB, result, created, settled }: CoreDefiTx,
-  fee: AssetValue,
-) =>
-  new UserDefiTx(
+const getUserDefiInteractionResultState = ({ settled, finalised, claimSettled }: CoreDefiTx) => {
+  if (claimSettled) {
+    return UserDefiInteractionResultState.SETTLED;
+  }
+  if (finalised) {
+    return UserDefiInteractionResultState.AWAITING_SETTLEMENT;
+  }
+  if (settled) {
+    return UserDefiInteractionResultState.AWAITING_FINALISATION;
+  }
+  return UserDefiInteractionResultState.PENDING;
+};
+
+const toUserDefiTx = (tx: CoreDefiTx, fee: AssetValue) => {
+  const {
+    txId,
+    userId,
+    bridgeId,
+    depositValue,
+    created,
+    settled,
+    interactionNonce,
+    isAsync,
+    success,
+    outputValueA,
+    outputValueB,
+    finalised,
+    claimSettled,
+  } = tx;
+  const state = getUserDefiInteractionResultState(tx);
+  return new UserDefiTx(
     txId,
     userId,
     bridgeId,
     { assetId: bridgeId.inputAssetIdA, value: depositValue },
     fee,
-    outputValueA,
-    outputValueB,
-    result,
     created,
     settled,
+    {
+      state,
+      isAsync,
+      interactionNonce,
+      success,
+      outputValueA:
+        outputValueA !== undefined
+          ? {
+              assetId: bridgeId.firstOutputVirtual ? interactionNonce! + virtualAssetIdFlag : bridgeId.outputAssetIdA,
+              value: outputValueA,
+            }
+          : undefined,
+      outputValueB:
+        outputValueB !== undefined && bridgeId.outputAssetIdB !== undefined
+          ? {
+              assetId: bridgeId.secondOutputVirtual ? interactionNonce! + virtualAssetIdFlag : bridgeId.outputAssetIdB,
+              value: outputValueB,
+            }
+          : undefined,
+      claimSettled,
+      finalised,
+    },
   );
+};
+
+const toUserDefiClaimTx = (
+  claimTxId: TxId,
+  {
+    userId,
+    bridgeId,
+    depositValue,
+    interactionResult: { success, outputValueA, outputValueB, claimSettled },
+  }: UserDefiTx,
+) =>
+  new UserDefiClaimTx(claimTxId!, userId, bridgeId, depositValue, success!, outputValueA!, outputValueB, claimSettled!);
 
 const getPaymentValue = ({
   proofId,
@@ -108,13 +174,7 @@ const getTotalFee = (txs: CoreUserTx[]) => {
     return emptyAssetValue;
   }
 
-  // If there's a defi deposit tx, the fee is stored in its offchain data.
-  // We don't need to add up the fee paid by the join split tx unless its input asset is a garbage asset.
-  const defiTx = txs.find(tx => tx.proofId === ProofId.DEFI_DEPOSIT) as CoreDefiTx;
-  const feeTxs = !defiTx
-    ? txs
-    : txs.filter(tx => tx === defiTx || (tx.proofId === ProofId.SEND && tx.assetId !== defiTx.bridgeId.inputAssetIdA));
-  const fees = feeTxs.map(getFee);
+  const fees = txs.map(getFee);
   const { assetId } = fees.find(fee => fee.value) || fees[0];
   if (fees.some(fee => fee.value && fee.assetId !== assetId)) {
     throw new Error('Inconsistent fee paying assets.');
@@ -147,7 +207,11 @@ const toUserTx = (txs: CoreUserTx[], feePayingAssetIds: number[]) => {
       return [toUserAccountTx(primaryTx, fee)];
     }
     case ProofId.DEFI_DEPOSIT: {
-      return [toUserDefiTx(primaryTx, fee)];
+      const userDefiTx = toUserDefiTx(primaryTx, fee);
+      if (userDefiTx.interactionResult.claimSettled) {
+        return [userDefiTx, toUserDefiClaimTx(primaryTx.claimTxId!, userDefiTx)];
+      }
+      return [userDefiTx];
     }
     default: {
       const value = getPaymentValue(primaryTx);
@@ -173,7 +237,18 @@ const groupTxsByTxRefNo = (txs: CoreUserTx[]) => {
 
 const filterUndefined = <T>(ts: (T | undefined)[]): T[] => ts.filter((t: T | undefined): t is T => !!t);
 
+const bySettled = (tx1: UserTx, tx2: UserTx) => {
+  if (tx1.settled && tx2.settled) return tx2.settled.getTime() - tx1.settled.getTime();
+  if (!tx1.settled && !tx2.settled) return 0;
+  if (!tx1.settled) return -1;
+  if (!tx2.settled) return 1;
+
+  return 0;
+};
+
 export const groupUserTxs = (txs: CoreUserTx[], feePayingAssetIds: number[]) => {
   const txGroups = groupTxsByTxRefNo(txs);
-  return filterUndefined(txGroups.map(txs => toUserTx(txs, feePayingAssetIds))).flat();
+  return filterUndefined(txGroups.map(txs => toUserTx(txs, feePayingAssetIds)))
+    .flat()
+    .sort(bySettled);
 };

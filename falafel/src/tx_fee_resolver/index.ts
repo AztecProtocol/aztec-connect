@@ -25,17 +25,30 @@ export class TxFeeResolver {
     private readonly surplusRatios = [1, 0],
     private readonly freeAssets: number[] = [],
     private readonly freeTxTypes: TxType[] = [],
-    private readonly numSignificantFigures = 2,
+    private numSignificantFigures = 2,
     private readonly refreshInterval = 5 * 60 * 1000, // 5 mins
     private readonly minFeeDuration = refreshInterval * 2, // 10 mins
   ) {}
 
-  public setConf(baseTxGas: number, maxFeeGasPrice: bigint, feeGasPriceMultiplier: number, publishInterval: number) {
+  public setConf(
+    baseTxGas: number,
+    maxFeeGasPrice: bigint,
+    feeGasPriceMultiplier: number,
+    publishInterval: number,
+    numSignificantFigures: number,
+  ) {
     this.baseTxGas = baseTxGas;
     this.maxFeeGasPrice = maxFeeGasPrice;
     this.feeGasPriceMultiplier = feeGasPriceMultiplier;
     this.publishInterval = publishInterval;
-    this.feeCalculator.setConf(baseTxGas, maxFeeGasPrice, feeGasPriceMultiplier, publishInterval);
+    this.numSignificantFigures = numSignificantFigures;
+    this.feeCalculator.setConf(
+      baseTxGas,
+      maxFeeGasPrice,
+      feeGasPriceMultiplier,
+      publishInterval,
+      numSignificantFigures,
+    );
   }
 
   async start() {

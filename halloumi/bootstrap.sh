@@ -3,6 +3,10 @@ set -e
 
 LINK_FOLDER="--link-folder `pwd`/../.yarn"
 
+yarn unlink $LINK_FOLDER >/dev/null 2>&1 || true
+yarn clean
+rm -rf node_modules
+
 pushd ../barretenberg/build
 make -j$(nproc) rollup_cli
 popd

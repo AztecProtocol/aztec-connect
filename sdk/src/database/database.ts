@@ -1,23 +1,37 @@
 import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
+import { MutexDatabase } from '@aztec/barretenberg/mutex';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { CoreAccountTx, CoreClaimTx, CoreDefiTx, CorePaymentTx, CoreUserTx } from '../core_tx';
 import { Note } from '../note';
 import { UserData } from '../user';
 
-export interface SigningKey {
-  accountId: AccountId;
-  key: Buffer; // only contains x coordinate of a grumpkin address.
-  treeIndex: number;
+// export interface SigningKey {
+//   accountId: AccountId;
+//   key: Buffer; // only contains x coordinate of a grumpkin address.
+//   treeIndex: number;
+// }
+
+// export interface Alias {
+//   aliasHash: AliasHash;
+//   address: GrumpkinAddress;
+//   latestNonce: number;
+// }
+
+// Temporary workaround. Parcel can't find Alias and SigningKey if they are declared as interfaces :/
+export class SigningKey {
+  constructor(
+    public accountId: AccountId,
+    public key: Buffer, // only contains x coordinate of a grumpkin address.
+    public treeIndex: number,
+  ) {}
 }
 
-export interface Alias {
-  aliasHash: AliasHash;
-  address: GrumpkinAddress;
-  latestNonce: number;
+export class Alias {
+  constructor(public aliasHash: AliasHash, public address: GrumpkinAddress, public latestNonce: number) {}
 }
 
-export interface Database {
+export interface Database extends MutexDatabase {
   init(): Promise<void>;
   close(): Promise<void>;
   clear(): Promise<void>;
@@ -47,20 +61,26 @@ export interface Database {
   getAccountTxs(userId): Promise<CoreAccountTx[]>;
   settleAccountTx(txId: TxId, settled: Date): Promise<void>;
 
-  getDefiTxsByNonce(userId, interactionNonce: number): Promise<CoreDefiTx[]>;
-  updateDefiTxWithNonce(txId: TxId, interactionNonce: number): Promise<void>;
-  updateDefiTx(txId: TxId, outputValueA: bigint, outputValueB: bigint, result?: boolean): Promise<void>;
   addDefiTx(tx: CoreDefiTx): Promise<void>;
   getDefiTx(txId: TxId): Promise<CoreDefiTx | undefined>;
   getDefiTxs(userId): Promise<CoreDefiTx[]>;
-  settleDefiTx(txId: TxId, settled: Date): Promise<void>;
+  getDefiTxsByNonce(userId, interactionNonce: number): Promise<CoreDefiTx[]>;
+  settleDefiDeposit(txId: TxId, interactionNonce: number, isAsync: boolean, settled: Date): Promise<void>;
+  updateDefiTxFinalisationResult(
+    txId: TxId,
+    success: boolean,
+    outputValueA: bigint,
+    outputValueB: bigint,
+    finalised: Date,
+  ): Promise<void>;
+  settleDefiTx(txId: TxId, claimSettled: Date, claimTxId: TxId): Promise<void>;
 
   addClaimTx(tx: CoreClaimTx): Promise<void>;
   getClaimTx(nullifier: Buffer): Promise<CoreClaimTx | undefined>;
 
   getUserTxs(userId: AccountId): Promise<CoreUserTx[]>;
   isUserTxSettled(txId: TxId): Promise<boolean>;
-  getUnsettledUserTxs(userId: AccountId): Promise<TxId[]>;
+  getPendingUserTxs(userId: AccountId): Promise<TxId[]>;
   removeUserTx(txId: TxId, userId: AccountId): Promise<void>;
 
   addUserSigningKey(signingKey: SigningKey): Promise<void>;

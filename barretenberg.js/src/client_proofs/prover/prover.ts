@@ -1,7 +1,7 @@
-import { BarretenbergWorker } from '../../wasm/worker';
-import { Pippenger } from '../../pippenger';
 import createDebug from 'debug';
 import { Fft } from '../../fft';
+import { Pippenger } from '../../pippenger';
+import { BarretenbergWasm, BarretenbergWorker } from '../../wasm';
 
 const debug = createDebug('bb:prover');
 
@@ -35,7 +35,7 @@ class Timer {
  */
 export class Prover {
   constructor(
-    private wasm: BarretenbergWorker,
+    private wasm: BarretenbergWorker | BarretenbergWasm,
     private pippenger: Pippenger,
     private fft: Fft,
     private callPrefix = '',
@@ -45,7 +45,7 @@ export class Prover {
     return this.wasm;
   }
 
-  private proverCall(name: string, ...args: any[]) {
+  private async proverCall(name: string, ...args: any[]) {
     return this.wasm.call(this.callPrefix + name, ...args);
   }
 

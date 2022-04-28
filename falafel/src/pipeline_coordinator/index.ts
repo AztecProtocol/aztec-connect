@@ -9,10 +9,10 @@ import { RollupPublisher } from '../rollup_publisher';
 import { TxFeeResolver } from '../tx_fee_resolver';
 import { BridgeResolver } from '../bridge';
 import { PublishTimeManager } from './publish_time_manager';
-import { RollupCoordinator, TxPoolProfile } from './rollup_coordinator';
-import { emptyProfile } from './rollup_profiler';
+import { RollupCoordinator } from './rollup_coordinator';
 import { TxDao } from '../entity';
 import debug from 'debug';
+import { RollupProfile, emptyProfile } from './rollup_profiler';
 
 export class PipelineCoordinator {
   private flush = false;
@@ -21,7 +21,7 @@ export class PipelineCoordinator {
   private publishTimeManager!: PublishTimeManager;
   private rollupCoordinator!: RollupCoordinator;
   private log = debug('pipeline_coordinator');
-  private txPoolProfile!: TxPoolProfile;
+  private nextRollupProfile: RollupProfile;
 
   constructor(
     private rollupCreator: RollupCreator,
@@ -38,19 +38,16 @@ export class PipelineCoordinator {
     private flushAfterIdle: number,
     private bridgeResolver: BridgeResolver,
   ) {
-    this.txPoolProfile = {
-      nextRollupProfile: emptyProfile(numInnerRollupTxs * numOuterRollupProofs),
-      pendingBridgeStats: new Map(),
-    };
     this.publishTimeManager = new PublishTimeManager(this.publishInterval, this.bridgeResolver);
+    this.nextRollupProfile = emptyProfile(this.numInnerRollupTxs * this.numOuterRollupProofs);
   }
 
   public getNextPublishTime() {
     return this.publishTimeManager.calculateNextTimeouts();
   }
 
-  public getTxPoolProfile() {
-    return this.txPoolProfile;
+  public getProccessedTxs() {
+    return this.rollupCoordinator.getProccessedTxs();
   }
 
   /**
@@ -76,14 +73,11 @@ export class PipelineCoordinator {
         this.flush = this.flush || this.minTxWaitTimeExceeded(pendingTxs);
 
         this.log('Processing pending txs...');
-        this.txPoolProfile = await this.rollupCoordinator.processPendingTxs(pendingTxs, this.flush);
+        this.nextRollupProfile = await this.rollupCoordinator.processPendingTxs(pendingTxs, this.flush);
 
-        if (
-          this.txPoolProfile.nextRollupProfile.published || // rollup has been published so we exit this loop
-          (!this.txPoolProfile.nextRollupProfile.totalTxs && this.flush)
-        ) {
+        // we are in a flush state and this iteration produced no rollup-able txs, so we exit
+        if (this.nextRollupProfile.published) {
           console.log('Rollup published or we are in a flush state, exiting.');
-          // we are in a flush state and this iteration produced no rollup-able txs, so we exit
           this.running = false;
           break;
         }
@@ -122,8 +116,6 @@ export class PipelineCoordinator {
    * Constructs the RollupCoordinator.
    */
   private async init() {
-    this.flush = false;
-
     // Erase any outstanding rollups and proofs to release unsettled txs.
     await this.rollupDb.deleteUnsettledRollups();
     await this.rollupDb.deleteOrphanedRollupProofs();
@@ -137,8 +129,9 @@ export class PipelineCoordinator {
       BigInt(rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK),
     );
 
-
-    const defiInteractionNotes = lastRollup ? parseInteractionResult(lastRollup.interactionResult!) : [];
+    const defiInteractionNotes = lastRollup
+      ? parseInteractionResult(lastRollup.interactionResult!).map(d => d.toDefiInteractionNote())
+      : [];
     const interactionNoteStartIndex = BigInt(rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK);
     for (let i = 0; i < defiInteractionNotes.length; ++i) {
       await this.worldStateDb.put(

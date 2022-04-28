@@ -1,5 +1,5 @@
 import { Keccak } from 'sha3';
-import { randomBytes } from 'crypto';
+import { randomBytes } from '../crypto';
 
 const hash = new Keccak(256);
 

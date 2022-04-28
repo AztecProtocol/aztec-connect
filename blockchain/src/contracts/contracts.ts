@@ -2,6 +2,7 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import {
   Asset,
   EthereumProvider,
+  EthereumRpc,
   FeeData,
   PriceFeed,
   SendTxOptions,
@@ -21,21 +22,24 @@ import { RollupProcessor } from './rollup_processor';
  * Exposes a more holistic interface to clients, than having to deal with individual contract classes.
  */
 export class Contracts {
-  private provider!: Web3Provider;
+  private readonly provider!: Web3Provider;
+  private readonly ethereumRpc!: EthereumRpc;
 
   constructor(
-    private rollupProcessor: RollupProcessor,
-    private feeDistributor: FeeDistributor,
+    private readonly rollupProcessor: RollupProcessor,
+    private readonly feeDistributor: FeeDistributor,
     private assets: Asset[],
-    private gasPriceFeed: GasPriceFeed,
-    private priceFeeds: PriceFeed[],
-    private ethereumProvider: EthereumProvider,
-    private confirmations: number,
+    private readonly feePayingAssetAddresses: EthAddress[],
+    private readonly gasPriceFeed: GasPriceFeed,
+    private readonly priceFeeds: PriceFeed[],
+    private readonly ethereumProvider: EthereumProvider,
+    private readonly confirmations: number,
   ) {
     this.provider = new Web3Provider(ethereumProvider);
+    this.ethereumRpc = new EthereumRpc(ethereumProvider);
   }
 
-  static async fromAddresses(
+  static fromAddresses(
     rollupContractAddress: EthAddress,
     feeDistributorAddress: EthAddress,
     priceFeedContractAddresses: EthAddress[],
@@ -47,19 +51,7 @@ export class Contracts {
 
     const feeDistributor = new FeeDistributor(feeDistributorAddress, ethereumProvider);
 
-    const assetAddresses = await rollupProcessor.getSupportedAssets();
-    const tokenAssets = await Promise.all(
-      assetAddresses.slice(1).map(async (addr, i) =>
-        TokenAsset.fromAddress(
-          addr,
-          ethereumProvider,
-          await rollupProcessor.getAssetPermitSupport(i + 1),
-          feePayingAssetAddresses.some(feePayingAsset => addr.equals(feePayingAsset)),
-          confirmations,
-        ),
-      ),
-    );
-    const assets = [new EthAsset(ethereumProvider), ...tokenAssets];
+    const assets = [new EthAsset(ethereumProvider)];
 
     const [gasPriceFeedAddress, ...tokenPriceFeedAddresses] = priceFeedContractAddresses;
     const gasPriceFeed = new GasPriceFeed(gasPriceFeedAddress, ethereumProvider);
@@ -72,6 +64,7 @@ export class Contracts {
       rollupProcessor,
       feeDistributor,
       assets,
+      feePayingAssetAddresses,
       gasPriceFeed,
       priceFeeds,
       ethereumProvider,
@@ -79,17 +72,28 @@ export class Contracts {
     );
   }
 
-  public async setSupportedAsset(
-    assetAddress: EthAddress,
-    supportsPermit: boolean,
-    isFeePaying: boolean,
-    assetGasLimit = 0,
-    options: SendTxOptions = {},
-  ) {
-    const tx = await this.rollupProcessor.setSupportedAsset(assetAddress, supportsPermit, assetGasLimit, options);
-    const tokenAsset = await TokenAsset.fromAddress(assetAddress, this.ethereumProvider, supportsPermit, isFeePaying);
-    this.assets.push(tokenAsset);
-    return tx;
+  public async init() {
+    await this.updateAssets();
+  }
+
+  public getProvider() {
+    return this.ethereumProvider;
+  }
+
+  public async updateAssets() {
+    const supportedAssets = await this.rollupProcessor.getSupportedAssets();
+    const newAssets = await Promise.all(
+      supportedAssets.slice(this.assets.length - 1).map(async ({ address, gasLimit }) =>
+        TokenAsset.fromAddress(
+          address,
+          this.ethereumProvider,
+          gasLimit,
+          this.feePayingAssetAddresses.some(feePayingAsset => address.equals(feePayingAsset)),
+          this.confirmations,
+        ),
+      ),
+    );
+    this.assets = [...this.assets, ...newAssets];
   }
 
   public async getPerRollupState() {
@@ -131,8 +135,8 @@ export class Contracts {
     return this.rollupProcessor.verifier();
   }
 
-  public async createRollupProofTx(proofData: Buffer, signatures: Buffer[], offchainTxData: Buffer[]) {
-    return this.rollupProcessor.createRollupProofTx(proofData, signatures, offchainTxData);
+  async createRollupTxs(dataBuf: Buffer, signatures: Buffer[], offchainTxData: Buffer[]) {
+    return this.rollupProcessor.createRollupTxs(dataBuf, signatures, offchainTxData);
   }
 
   public async sendTx(data: Buffer, options: SendTxOptions = {}) {
@@ -140,15 +144,7 @@ export class Contracts {
   }
 
   public async estimateGas(data: Buffer) {
-    const signer = this.provider.getSigner(0);
-    const from = await signer.getAddress();
-    const txRequest = {
-      to: this.rollupProcessor.address.toString(),
-      from,
-      data,
-    };
-    const estimate = await this.provider.estimateGas(txRequest);
-    return estimate.toNumber();
+    return this.rollupProcessor.estimateGas(data);
   }
 
   public async getRollupBlocksFrom(rollupId: number, minConfirmations = this.confirmations) {
@@ -161,6 +157,10 @@ export class Contracts {
 
   public async getUserPendingDeposit(assetId: number, account: EthAddress) {
     return this.rollupProcessor.getUserPendingDeposit(assetId, account);
+  }
+
+  public async getTransactionByHash(txHash: TxHash) {
+    return this.ethereumRpc.getTransactionByHash(txHash);
   }
 
   public async getTransactionReceipt(txHash: TxHash) {
@@ -189,14 +189,6 @@ export class Contracts {
   public async signTypedData(data: TypedData, address: EthAddress) {
     const signer = new Web3Signer(this.ethereumProvider);
     return signer.signTypedData(data, address);
-  }
-
-  public getAssets() {
-    return this.assets;
-  }
-
-  public getAsset(assetId: number) {
-    return this.assets[assetId];
   }
 
   public async getAssetPrice(assetId: number) {
@@ -228,8 +220,8 @@ export class Contracts {
     };
   }
 
-  public async getBridgeGas(bridgeAddressId: number) {
-    return this.rollupProcessor.getBridgeGas(bridgeAddressId);
+  public getAssets() {
+    return this.assets.map(a => a.getStaticInfo());
   }
 
   public async getSupportedBridges() {

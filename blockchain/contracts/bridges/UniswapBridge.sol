@@ -13,8 +13,6 @@ import {IERC20Permit} from '../interfaces/IERC20Permit.sol';
 
 import {AztecTypes} from '../AztecTypes.sol';
 
-// import 'hardhat/console.sol';
-
 contract UniswapBridge is IDefiBridge {
     using SafeMath for uint256;
 
@@ -123,10 +121,18 @@ contract UniswapBridge is IDefiBridge {
         AztecTypes.AztecAsset memory, /*inputAssetB*/
         AztecTypes.AztecAsset memory, /*outputAssetA*/
         AztecTypes.AztecAsset memory, /*outputAssetB*/
-        uint256, /*totalInputValue*/
         uint256, /*interactionNonce*/
         uint64 /*auxData*/
-    ) external payable override returns (uint256, uint256, bool) {
+    )
+        external
+        payable
+        override
+        returns (
+            uint256,
+            uint256,
+            bool
+        )
+    {
         require(false);
         return (0, 0, false);
     }

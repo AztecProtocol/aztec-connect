@@ -1,9 +1,9 @@
-import { TxFeeResolver } from '../tx_fee_resolver';
-import { TxType } from '@aztec/barretenberg/blockchain';
-import { Tx, TxGroupValidation } from '.';
-import { DefiDepositProofData } from '@aztec/barretenberg/client_proofs';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
+import { TxType } from '@aztec/barretenberg/blockchain';
+import { DefiDepositProofData } from '@aztec/barretenberg/client_proofs';
 import { TxDao } from '../entity/tx';
+import { TxFeeResolver } from '../tx_fee_resolver';
+import { Tx, TxGroupValidation } from './interfaces';
 
 export class TxFeeAllocator {
   constructor(private txFeeResolver: TxFeeResolver) {}
@@ -14,8 +14,7 @@ export class TxFeeAllocator {
 
   public validateReceivedTxs(txs: Tx[], txTypes: TxType[]) {
     const result = {
-      hasNonPayingDefi: false,
-      hasNonFeePayingAssets: false,
+      hasFeelessTxs: false,
       gasProvided: 0n,
       gasRequired: 0n,
     } as TxGroupValidation;
@@ -27,13 +26,11 @@ export class TxFeeAllocator {
       const tx = txs[i];
       const feeAsset = tx.proof.txFeeAssetId.readUInt32BE(28);
       const isFeePayingAsset = this.assetIsFeePaying(feeAsset);
-      if (isFeePayingAsset) {
+      const txFee = toBigIntBE(tx.proof.txFee);
+      if (isFeePayingAsset && txFee) {
         feePayingAssets.add(feeAsset);
       } else {
-        if (txTypes[i] === TxType.DEFI_DEPOSIT) {
-          result.hasNonPayingDefi = true;
-        }
-        result.hasNonFeePayingAssets = true;
+        result.hasFeelessTxs = true;
       }
     }
 
@@ -68,9 +65,9 @@ export class TxFeeAllocator {
       // no excess gas to be allocated
       return;
     }
-    let providedGas = validation.gasProvided;
-    if (!validation.hasNonFeePayingAssets) {
-      // no non-fee paying assets. we simply calculate any excess gas for each tx and apply it to the DAO
+
+    if (!validation.hasFeelessTxs) {
+      // No feeless txs. We simply calculate any excess gas for each tx and apply it to the DAO.
       for (let i = 0; i < txs.length; i++) {
         const tx = txs[i];
         const fee = toBigIntBE(tx.proof.txFee);
@@ -91,8 +88,10 @@ export class TxFeeAllocator {
       }
       return;
     }
-    // we have at least one tx without a fee paying asset. we need to allocate excess gas from the
-    // fee paying txs to the non fee payers
+
+    // We have at least one tx without a fee. We need to allocate excess gas from the
+    // fee paying txs to the non fee payers.
+    let providedGas = validation.gasProvided;
     for (let i = 0; i < txs.length; i++) {
       const tx = txs[i];
       const txType = txTypes[i];
@@ -112,19 +111,19 @@ export class TxFeeAllocator {
       // no excess, we can return
       return;
     }
-    // if we have a non fee asset defi, allocate the excess gas to it
-    if (validation.hasNonPayingDefi) {
-      const defiIndex = txTypes.findIndex(tx => tx === TxType.DEFI_DEPOSIT);
-      if (defiIndex === -1) {
-        throw new Error(`Failed to allocate fee to Defi Deposit`);
-      }
+
+    // if we have a defi, allocate the excess gas to it
+    const defiIndex = txTypes.findIndex(tx => tx === TxType.DEFI_DEPOSIT);
+    if (defiIndex >= 0) {
       txDaos[defiIndex].excessGas = providedGas;
       return;
     }
-    // we have excess gas and no defi, find the first non-fee asset tx and allocate the excess to it
+
+    // We have excess gas and no defi, find the first feeless tx and allocate the excess to it.
     const nonFeeIndex = txs.findIndex(tx => {
       const feeAsset = tx.proof.txFeeAssetId.readUInt32BE(28);
-      return !this.assetIsFeePaying(feeAsset);
+      const txFee = toBigIntBE(tx.proof.txFee);
+      return !this.assetIsFeePaying(feeAsset) || !txFee;
     });
     if (nonFeeIndex === -1) {
       throw new Error(`Failed to allocate fee to tx`);

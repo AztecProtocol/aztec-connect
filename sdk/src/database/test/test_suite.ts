@@ -1,6 +1,5 @@
 import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
-import { BridgeId } from '../..';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { randomBytes } from 'crypto';
 import { CoreAccountTx, CoreDefiTx, CorePaymentTx, CoreUserTx } from '../../core_tx';
@@ -16,7 +15,6 @@ import {
   randomPaymentTx,
   randomSigningKey,
   randomUser,
-  randomInt
 } from './fixtures';
 
 const sort = (arr: any[], sortBy: string) => arr.sort((a, b) => (a[sortBy] < b[sortBy] ? -1 : 1));
@@ -40,8 +38,7 @@ export const databaseTestSuite = (
 
     describe('Note', () => {
       it('add note to db and get note by its commitment', async () => {
-        const note = randomNote();
-        note.value = 2899999999999990600n;
+        const note = randomNote(undefined, { value: 2899999999999990600n });
 
         await db.addNote(note);
 
@@ -50,14 +47,12 @@ export const databaseTestSuite = (
       });
 
       it('override existing note that has the same commitment', async () => {
-        const note = randomNote();
-        note.allowChain = true;
-        note.pending = true;
+        const note = randomNote({ allowChain: false });
         await db.addNote(note);
 
         expect(await db.getNote(note.commitment)).toEqual(note);
 
-        const note2 = { ...note, allowChain: false, pending: false };
+        const note2 = randomNote({ ...note, allowChain: true });
         await db.addNote(note2);
 
         expect(await db.getNote(note.commitment)).toEqual(note2);
@@ -90,12 +85,7 @@ export const databaseTestSuite = (
         const userId = AccountId.random();
         const userNotes: Note[] = [];
         for (let i = 0; i < 10; ++i) {
-          const note = randomNote();
-          note.owner = userId;
-          if (i % 2) {
-            note.allowChain = true;
-            note.pending = true;
-          }
+          const note = randomNote(undefined, { ownerPubKey: userId.publicKey, nonce: userId.accountNonce });
           await db.addNote(note);
           if (i % 3) {
             await db.nullifyNote(note.nullifier);
@@ -104,8 +94,8 @@ export const databaseTestSuite = (
           }
         }
         for (let i = 0; i < 5; ++i) {
-          const note = randomNote();
-          note.owner = AccountId.random();
+          const { publicKey, accountNonce } = AccountId.random();
+          const note = randomNote(undefined, { ownerPubKey: publicKey, nonce: accountNonce });
           await db.addNote(note);
         }
 
@@ -118,18 +108,16 @@ export const databaseTestSuite = (
         const userId = AccountId.random();
         const userPendingNotes: Note[] = [];
         for (let i = 0; i < 10; ++i) {
-          const note = randomNote();
-          note.owner = userId;
-          if (i % 2) {
-            note.pending = true;
+          const index = i % 2 ? i : undefined;
+          const note = randomNote({ index }, { ownerPubKey: userId.publicKey, nonce: userId.accountNonce });
+          if (index === undefined) {
             userPendingNotes.push(note);
           }
           await db.addNote(note);
         }
         for (let i = 0; i < 5; ++i) {
-          const note = randomNote();
-          note.owner = AccountId.random();
-          note.pending = true;
+          const { publicKey, accountNonce } = AccountId.random();
+          const note = randomNote(undefined, { ownerPubKey: publicKey, nonce: accountNonce });
           await db.addNote(note);
         }
 
@@ -142,8 +130,7 @@ export const databaseTestSuite = (
         const userId = AccountId.random();
         const notes: Note[] = [];
         for (let i = 0; i < 5; ++i) {
-          const note = randomNote();
-          note.owner = userId;
+          const note = randomNote(undefined, { ownerPubKey: userId.publicKey, nonce: userId.accountNonce });
           await db.addNote(note);
           notes.push(note);
         }
@@ -379,32 +366,6 @@ export const databaseTestSuite = (
         expect(await db.getDefiTx(tx2.txId)).toEqual(tx2);
       });
 
-      it('unspecified defi tx values are returned as undefined', async () => {
-        const tx1 = new CoreDefiTx(
-          TxId.random(),
-          AccountId.random(),
-          BridgeId.random(),
-          BigInt(randomInt()),
-          BigInt(randomInt()),
-          randomBytes(32),
-          randomInt(),
-          new Date(),
-           BigInt(0),
-           BigInt(0),
-          undefined,
-          undefined,
-          undefined,
-        );
-        await db.addDefiTx(tx1);
-        const retrieved = await db.getDefiTx(tx1.txId);
-        expect(retrieved).toBeDefined();
-        expect(retrieved!.interactionNonce).toBe(undefined);
-        expect(retrieved!.settled).toBe(undefined);
-        expect(retrieved!.result).toBe(undefined);
-
-        expect(await db.getDefiTx(tx1.txId)).toEqual(tx1);
-      });
-
       it('will override old data if try to add a defi tx with the same tx hash and user id', async () => {
         const tx = randomDefiTx();
         await db.addDefiTx(tx);
@@ -416,25 +377,25 @@ export const databaseTestSuite = (
         expect(savedTx).toEqual(newTx);
       });
 
-      it('update defi tx with interaction nonce', async () => {
+      it('update defi tx with interaction nonce and isAsync', async () => {
         const tx = randomDefiTx();
         await db.addDefiTx(tx);
 
         const savedTx = (await db.getDefiTx(tx.txId))!;
-        expect(savedTx.outputValueA).toBe(0n);
-        expect(savedTx.outputValueB).toBe(0n);
-        expect(savedTx.settled).toBeFalsy();
-        expect(savedTx.interactionNonce).toEqual(tx.interactionNonce);
+        expect(savedTx).toEqual(tx);
 
-        const newNonce = 32;
-        await db.updateDefiTxWithNonce(tx.txId, newNonce);
+        const interactionNonce = 32;
+        const isAsync = true;
+        const settled = new Date(tx.created.getTime() + 1000);
+        await db.settleDefiDeposit(tx.txId, interactionNonce, isAsync, settled);
 
         const settledTx = (await db.getDefiTx(tx.txId))!;
-        expect(settledTx.outputValueA).toEqual(0n);
-        expect(settledTx.outputValueB).toEqual(0n);
-        expect(settledTx.settled).toBeFalsy();
-        expect(settledTx.result).toBeFalsy();
-        expect(settledTx.interactionNonce).toEqual(newNonce);
+        expect(settledTx).toEqual({
+          ...tx,
+          interactionNonce,
+          isAsync,
+          settled,
+        });
       });
 
       it('update defi tx with interaction result', async () => {
@@ -442,20 +403,25 @@ export const databaseTestSuite = (
         await db.addDefiTx(tx);
 
         const savedTx = (await db.getDefiTx(tx.txId))!;
-        expect(savedTx.outputValueA).toBe(0n);
-        expect(savedTx.outputValueB).toBe(0n);
+        expect(savedTx.outputValueA).toBe(undefined);
+        expect(savedTx.outputValueB).toBe(undefined);
         expect(savedTx.settled).toBeFalsy();
 
         const outputValueA = 123n;
         const outputValueB = 456n;
-        const result = true;
-        await db.updateDefiTx(tx.txId, outputValueA, outputValueB, result);
+        const success = true;
+        const finalised = new Date(tx.created.getTime() + 123);
+        await db.updateDefiTxFinalisationResult(tx.txId, success, outputValueA, outputValueB, finalised);
 
         const settledTx = (await db.getDefiTx(tx.txId))!;
-        expect(settledTx.outputValueA).toEqual(outputValueA);
-        expect(settledTx.outputValueB).toEqual(outputValueB);
-        expect(settledTx.settled).toBeFalsy();
-        expect(settledTx.result).toEqual(result);
+        expect(settledTx).toEqual(
+          expect.objectContaining({
+            outputValueA,
+            outputValueB,
+            success,
+            finalised,
+          }),
+        );
       });
 
       it('settle defi tx by tx hash', async () => {
@@ -463,13 +429,16 @@ export const databaseTestSuite = (
         await db.addDefiTx(tx);
 
         const savedTx = (await db.getDefiTx(tx.txId))!;
-        expect(savedTx.settled).toBeFalsy();
+        expect(savedTx.claimSettled).toBeFalsy();
+        expect(savedTx.claimTxId).toBeFalsy();
 
         const settled = new Date();
-        await db.settleDefiTx(tx.txId, settled);
+        const claimTxId = TxId.random();
+        await db.settleDefiTx(tx.txId, settled, claimTxId);
 
         const settledTx = (await db.getDefiTx(tx.txId))!;
-        expect(settledTx.settled).toEqual(settled);
+        expect(settledTx.claimSettled).toEqual(settled);
+        expect(settledTx.claimTxId).toEqual(claimTxId);
       });
 
       it('get all txs for a user from newest to oldest with unsettled txs first', async () => {
@@ -514,15 +483,20 @@ export const databaseTestSuite = (
         const settledTxs1: CoreDefiTx[] = [];
         const now = Date.now();
         for (let i = 0; i < 10; ++i) {
-          const tx0 = randomDefiTx({ userId: userId0, settled: new Date(now + i) });
-          await db.addDefiTx(tx0);
-          settledTxs0.push({ ...tx0, interactionNonce: i % 2 });
-          await db.updateDefiTxWithNonce(tx0.txId, i % 2);
-
-          const tx1 = randomDefiTx({ userId: userId1, settled: new Date(now - i) });
-          await db.addDefiTx(tx1);
-          settledTxs1.push({ ...tx1, interactionNonce: i % 2 });
-          await db.updateDefiTxWithNonce(tx1.txId, i % 2);
+          {
+            const tx = randomDefiTx({ userId: userId0, created: new Date(now + i) });
+            await db.addDefiTx(tx);
+            const settledTx = { ...tx, interactionNonce: i % 2, isAsync: !(i % 3), settled: new Date(now + 10 + i) };
+            settledTxs0.push(settledTx);
+            await db.settleDefiDeposit(tx.txId, settledTx.interactionNonce, settledTx.isAsync, settledTx.settled);
+          }
+          {
+            const tx = randomDefiTx({ userId: userId1, created: new Date(now - i) });
+            await db.addDefiTx(tx);
+            const settledTx = { ...tx, interactionNonce: i % 2, isAsync: !(i % 3), settled: new Date(now + 10 - i) };
+            settledTxs1.push(settledTx);
+            await db.settleDefiDeposit(tx.txId, settledTx.interactionNonce, settledTx.isAsync, settledTx.settled);
+          }
         }
 
         expect(await db.getDefiTxs(userId0)).toEqual([...settledTxs0].reverse());
@@ -635,7 +609,7 @@ export const databaseTestSuite = (
 
         await db.settlePaymentTx(jsTx.txId, jsTx.userId, new Date());
         await db.settleAccountTx(accountTx.txId, new Date());
-        await db.settleDefiTx(defiTx.txId, new Date());
+        await db.settleDefiDeposit(defiTx.txId, 1, false, new Date());
 
         expect(await db.isUserTxSettled(jsTx.txId)).toBe(true);
         expect(await db.isUserTxSettled(accountTx.txId)).toBe(true);
@@ -658,8 +632,8 @@ export const databaseTestSuite = (
         expect(await db.isUserTxSettled(txId)).toBe(true);
       });
 
-      it('get unsettled user txs', async () => {
-        const unsettledTxIdes: TxId[] = [];
+      it('get pending user txs', async () => {
+        const pendingTxIdes: TxId[] = [];
         const userId = AccountId.random();
         for (let i = 0; i < 10; ++i) {
           const jsTx = randomPaymentTx({ userId: i % 3 ? userId : AccountId.random() });
@@ -667,7 +641,7 @@ export const databaseTestSuite = (
           if (i % 2) {
             await db.settlePaymentTx(jsTx.txId, jsTx.userId, new Date());
           } else if (i % 3) {
-            unsettledTxIdes.push(jsTx.txId);
+            pendingTxIdes.push(jsTx.txId);
           }
 
           const accountTx = randomAccountTx({ userId: i % 3 ? userId : AccountId.random() });
@@ -675,13 +649,21 @@ export const databaseTestSuite = (
           if (!(i % 2)) {
             await db.settleAccountTx(accountTx.txId, new Date());
           } else if (i % 3) {
-            unsettledTxIdes.push(accountTx.txId);
+            pendingTxIdes.push(accountTx.txId);
+          }
+
+          const defiTx = randomDefiTx({ userId: i % 3 ? userId : AccountId.random() });
+          await db.addDefiTx(defiTx);
+          if (!(i % 2)) {
+            await db.settleDefiDeposit(defiTx.txId, 12, false, new Date());
+          } else if (i % 3) {
+            pendingTxIdes.push(defiTx.txId);
           }
         }
 
-        const txIdes = await db.getUnsettledUserTxs(userId);
-        expect(txIdes.length).toBe(unsettledTxIdes.length);
-        expect(txIdes).toEqual(expect.arrayContaining(unsettledTxIdes));
+        const txIdes = await db.getPendingUserTxs(userId);
+        expect(txIdes.length).toBe(pendingTxIdes.length);
+        expect(txIdes).toEqual(expect.arrayContaining(pendingTxIdes));
       });
 
       it('remove tx by txId and userId', async () => {
@@ -691,7 +673,6 @@ export const databaseTestSuite = (
         const jsTx0 = randomPaymentTx({ userId: userA });
         await db.addPaymentTx(jsTx0);
         await db.addPaymentTx({ ...jsTx0, userId: userB });
-
         const jsTx1 = randomPaymentTx({ userId: userA });
         await db.addPaymentTx(jsTx1);
         await db.addPaymentTx({ ...jsTx1, userId: userB });
@@ -701,14 +682,22 @@ export const databaseTestSuite = (
         await db.addAccountTx(accountTx0);
         await db.addAccountTx(accountTx1);
 
+        const defiTx0 = randomDefiTx({ userId: userA });
+        const defiTx1 = randomDefiTx({ userId: userB });
+        await db.addDefiTx(defiTx0);
+        await db.addDefiTx(defiTx1);
+
         await db.removeUserTx(jsTx0.txId, userA);
         await db.removeUserTx(jsTx1.txId, userB);
         await db.removeUserTx(accountTx0.txId, userA);
+        await db.removeUserTx(defiTx0.txId, userA);
 
         expect(await db.getPaymentTxs(userA)).toEqual([expect.objectContaining({ ...jsTx1, userId: userA })]);
         expect(await db.getPaymentTxs(userB)).toEqual([expect.objectContaining({ ...jsTx0, userId: userB })]);
         expect(await db.getAccountTxs(userA)).toEqual([]);
         expect(await db.getAccountTxs(userB)).toEqual([accountTx1]);
+        expect(await db.getDefiTxs(userA)).toEqual([]);
+        expect(await db.getDefiTxs(userB)).toEqual([defiTx1]);
       });
     });
 
@@ -994,12 +983,66 @@ export const databaseTestSuite = (
       expect(dbKey).toEqual(keys[999]);
     });
 
+    describe('Mutex', () => {
+      const name = 'mutex-test';
+      const timeout = 10000000;
+
+      const sleep = async (time: number) => new Promise(resolve => setTimeout(resolve, time));
+
+      it('acquire and release locks', async () => {
+        expect(await db.acquireLock('mutex-1', timeout)).toBe(true);
+        expect(await db.acquireLock('mutex-2', timeout)).toBe(true);
+        expect(await db.acquireLock('mutex-1', timeout)).toBe(false);
+        expect(await db.acquireLock('mutex-2', timeout)).toBe(false);
+
+        await db.releaseLock('mutex-2');
+
+        expect(await db.acquireLock('mutex-1', timeout)).toBe(false);
+        expect(await db.acquireLock('mutex-2', timeout)).toBe(true);
+        expect(await db.acquireLock('mutex-1', timeout)).toBe(false);
+        expect(await db.acquireLock('mutex-2', timeout)).toBe(false);
+      });
+
+      it('only one instance can acquire the lock', async () => {
+        const result = await Promise.all([
+          db.acquireLock(name, timeout),
+          db.acquireLock(name, timeout),
+          db.acquireLock(name, timeout),
+          db.acquireLock(name, timeout),
+        ]);
+        expect(result).toEqual([true, false, false, false]);
+      });
+
+      it('can acquire again if expired', async () => {
+        expect(await db.acquireLock(name, 100)).toBe(true);
+
+        await sleep(200);
+
+        expect(await db.acquireLock(name, 100)).toBe(true);
+      });
+
+      it('can extend expiry time', async () => {
+        expect(await db.acquireLock('mutex-1', 100)).toBe(true);
+        expect(await db.acquireLock('mutex-2', 100)).toBe(true);
+
+        await sleep(200);
+        await db.extendLock('mutex-2', 10000000);
+
+        expect(await db.acquireLock('mutex-1', 100)).toBe(true);
+        expect(await db.acquireLock('mutex-2', 100)).toBe(false);
+      });
+
+      it('can not extend if lock does not exist', async () => {
+        await db.extendLock('mutex-1', 10000000);
+        expect(await db.acquireLock('mutex-1', 100)).toBe(true);
+      });
+    });
+
     describe('Reset and Cleanup', () => {
       const generateUserProfile = async (user: UserData) => {
         await db.addUser(user);
 
-        const note = randomNote();
-        note.owner = user.id;
+        const note = randomNote(undefined, { ownerPubKey: user.publicKey, nonce: user.nonce });
         await db.addNote(note);
 
         const signingKey = randomSigningKey();

@@ -2,10 +2,10 @@ import { AccountAliasId, AccountId } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { JoinSplitTx, ProofId } from '@aztec/barretenberg/client_proofs';
+import { randomBytes } from '@aztec/barretenberg/crypto';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { ClaimNoteTxData, deriveNoteSecret, NoteAlgorithms, TreeNote } from '@aztec/barretenberg/note_algorithms';
 import { WorldState } from '@aztec/barretenberg/world_state';
-import { randomBytes } from 'crypto';
 import { Database } from '../database';
 import { Note } from '../note';
 import { UserData } from '../user';
@@ -46,18 +46,7 @@ export class JoinSplitTxFactory {
 
     const numInputNotes = inputNotes.length;
     const notes = [...inputNotes];
-    const inputTreeNotes = notes.map(
-      n =>
-        new TreeNote(
-          n.owner.publicKey,
-          n.value,
-          n.assetId,
-          n.owner.accountNonce,
-          n.secret,
-          n.creatorPubKey,
-          n.inputNullifier,
-        ),
-    );
+    const inputTreeNotes = notes.map(n => n.treeNote);
 
     // Add gibberish notes to ensure we have two notes.
     for (let i = notes.length; i < 2; ++i) {
@@ -71,10 +60,10 @@ export class JoinSplitTxFactory {
         this.grumpkin,
       );
       inputTreeNotes.push(treeNote);
-      notes.push(this.treeNoteToNote(treeNote, user.privateKey, { isRealNote: false }));
+      notes.push(this.generateNewNote(treeNote, user.privateKey, { gibberish: true }));
     }
 
-    const inputNoteIndices = notes.map(n => n.index);
+    const inputNoteIndices = notes.map(n => n.index || 0);
     const inputNotePaths = await Promise.all(inputNoteIndices.map(async idx => this.worldState.getHashPath(idx)));
     const inputNoteNullifiers = notes.map(n => n.nullifier);
 
@@ -119,31 +108,13 @@ export class JoinSplitTxFactory {
     const viewingKeys =
       proofId === ProofId.DEFI_DEPOSIT ? [newNotes[1].viewingKey] : [newNotes[0].viewingKey, newNotes[1].viewingKey];
 
-    return { tx, outputNotes, viewingKeys, partialStateSecretEphPubKey: claimNote.ephPubKey };
+    return { tx, viewingKeys, partialStateSecretEphPubKey: claimNote.ephPubKey };
   }
 
-  treeNoteToNote(
-    note: TreeNote,
-    privateKey: Buffer,
-    { index = 0, allowChain = false, isRealNote = true, pending = true } = {},
-  ): Note {
-    const { ownerPubKey, value, assetId, nonce, noteSecret, inputNullifier, creatorPubKey } = note;
-    const commitment = this.noteAlgos.valueNoteCommitment(note);
-    const nullifier = this.noteAlgos.valueNoteNullifier(commitment, privateKey, isRealNote);
-    return {
-      assetId,
-      value,
-      secret: noteSecret,
-      commitment,
-      nullifier,
-      nullified: false,
-      owner: new AccountId(ownerPubKey, nonce),
-      creatorPubKey,
-      inputNullifier,
-      index,
-      allowChain,
-      pending,
-    };
+  generateNewNote(treeNote: TreeNote, privateKey: Buffer, { allowChain = false, gibberish = false } = {}) {
+    const commitment = this.noteAlgos.valueNoteCommitment(treeNote);
+    const nullifier = this.noteAlgos.valueNoteNullifier(commitment, privateKey, !gibberish);
+    return new Note(treeNote, commitment, nullifier, allowChain, false);
   }
 
   private createNote(assetId: number, value: bigint, owner: AccountId, inputNullifier: Buffer, sender?: AccountId) {
@@ -157,7 +128,6 @@ export class JoinSplitTxFactory {
       inputNullifier,
       ephPrivKey,
       this.grumpkin,
-      TreeNote.LATEST_VERSION,
       creatorPubKey,
     );
     const viewingKey = note.createViewingKey(ephPrivKey, this.grumpkin);

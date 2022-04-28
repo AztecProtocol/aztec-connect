@@ -1,7 +1,16 @@
 import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { TxId } from '@aztec/barretenberg/tx_id';
-import { Connection, ConnectionOptions, getConnection, IsNull, MoreThan, MoreThanOrEqual, Repository } from 'typeorm';
+import {
+  Connection,
+  ConnectionOptions,
+  getConnection,
+  IsNull,
+  LessThanOrEqual,
+  MoreThan,
+  MoreThanOrEqual,
+  Repository,
+} from 'typeorm';
 import { CoreAccountTx, CoreClaimTx, CoreDefiTx, CorePaymentTx } from '../../core_tx';
 import { Note } from '../../note';
 import { UserData } from '../../user';
@@ -11,7 +20,8 @@ import { AliasDao } from './alias_dao';
 import { ClaimTxDao } from './claim_tx_dao';
 import { DefiTxDao } from './defi_tx_dao';
 import { KeyDao } from './key_dao';
-import { NoteDao } from './note_dao';
+import { MutexDao } from './mutex_dao';
+import { NoteDao, noteDaoToNote, noteToNoteDao } from './note_dao';
 import { PaymentTxDao } from './payment_tx_dao';
 import { UserDataDao } from './user_data_dao';
 import { UserKeyDao } from './user_key_dao';
@@ -24,7 +34,18 @@ export const getOrmConfig = (memoryDb = false, identifier?: string): ConnectionO
     name: `aztec2-sdk${suffix}`,
     type: 'sqlite',
     database: memoryDb ? ':memory:' : `${dbPath}/aztec2-sdk.sqlite`,
-    entities: [AccountTxDao, AliasDao, ClaimTxDao, DefiTxDao, KeyDao, NoteDao, PaymentTxDao, UserDataDao, UserKeyDao],
+    entities: [
+      AccountTxDao,
+      AliasDao,
+      ClaimTxDao,
+      DefiTxDao,
+      KeyDao,
+      MutexDao,
+      NoteDao,
+      PaymentTxDao,
+      UserDataDao,
+      UserKeyDao,
+    ],
     synchronize: true,
     logging: false,
   };
@@ -71,11 +92,15 @@ const toCoreDefiTx = (tx: DefiTxDao) =>
     tx.partialStateSecret,
     tx.txRefNo,
     tx.created,
+    tx.settled,
+    tx.interactionNonce,
+    tx.isAsync,
+    tx.success,
     tx.outputValueA,
     tx.outputValueB,
-    tx.result,
-    tx.settled,
-    tx.interactionNonce
+    tx.finalised,
+    tx.claimSettled,
+    tx.claimTxId,
   );
 
 const sortUserTxs = (txs: any[]) => {
@@ -94,6 +119,7 @@ export class SQLDatabase implements Database {
   private paymentTxRep: Repository<PaymentTxDao>;
   private userDataRep: Repository<UserDataDao>;
   private userKeyRep: Repository<UserKeyDao>;
+  private mutex: Repository<MutexDao>;
 
   constructor(private connection: Connection) {
     this.accountTxRep = this.connection.getRepository(AccountTxDao);
@@ -105,6 +131,7 @@ export class SQLDatabase implements Database {
     this.paymentTxRep = this.connection.getRepository(PaymentTxDao);
     this.userDataRep = this.connection.getRepository(UserDataDao);
     this.userKeyRep = this.connection.getRepository(UserKeyDao);
+    this.mutex = this.connection.getRepository(MutexDao);
   }
 
   async init() {}
@@ -118,15 +145,17 @@ export class SQLDatabase implements Database {
   }
 
   async addNote(note: Note) {
-    await this.noteRep.save(note);
+    await this.noteRep.save(noteToNoteDao(note));
   }
 
   async getNote(commitment: Buffer) {
-    return this.noteRep.findOne({ commitment });
+    const note = await this.noteRep.findOne({ commitment });
+    return note ? noteDaoToNote(note) : undefined;
   }
 
   async getNoteByNullifier(nullifier: Buffer) {
-    return this.noteRep.findOne({ nullifier });
+    const note = await this.noteRep.findOne({ nullifier });
+    return note ? noteDaoToNote(note) : undefined;
   }
 
   async nullifyNote(nullifier: Buffer) {
@@ -134,11 +163,11 @@ export class SQLDatabase implements Database {
   }
 
   async getUserNotes(userId: AccountId) {
-    return this.noteRep.find({ where: { owner: userId, nullified: false } });
+    return (await this.noteRep.find({ where: { owner: userId, nullified: false } })).map(noteDaoToNote);
   }
 
   async getUserPendingNotes(userId: AccountId) {
-    return this.noteRep.find({ where: { owner: userId, pending: true } });
+    return (await this.noteRep.find({ where: { owner: userId, index: IsNull() } })).map(noteDaoToNote);
   }
 
   async removeNote(nullifier: Buffer) {
@@ -238,16 +267,22 @@ export class SQLDatabase implements Database {
     return sortUserTxs(txs).map(toCoreDefiTx);
   }
 
-  async updateDefiTxWithNonce(txId: TxId, interactionNonce: number): Promise<void> {
-    await this.defiTxRep.update({ txId }, { interactionNonce });
+  async settleDefiDeposit(txId: TxId, interactionNonce: number, isAsync: boolean, settled: Date) {
+    await this.defiTxRep.update({ txId }, { interactionNonce, isAsync, settled });
   }
 
-  async updateDefiTx(txId: TxId, outputValueA: bigint, outputValueB: bigint, result?: boolean) {
-    await this.defiTxRep.update({ txId }, { outputValueA, outputValueB, result });
+  async updateDefiTxFinalisationResult(
+    txId: TxId,
+    success: boolean,
+    outputValueA: bigint,
+    outputValueB: bigint,
+    finalised: Date,
+  ) {
+    await this.defiTxRep.update({ txId }, { success, outputValueA, outputValueB, finalised });
   }
 
-  async settleDefiTx(txId: TxId, settled: Date) {
-    await this.defiTxRep.update({ txId }, { settled });
+  async settleDefiTx(txId: TxId, claimSettled: Date, claimTxId: TxId) {
+    await this.defiTxRep.update({ txId }, { claimSettled, claimTxId });
   }
 
   async addClaimTx(tx: CoreClaimTx) {
@@ -284,16 +319,21 @@ export class SQLDatabase implements Database {
     return !!accountTx?.settled;
   }
 
-  async getUnsettledUserTxs(userId: AccountId) {
+  async getPendingUserTxs(userId: AccountId) {
     const unsettledTxs = await Promise.all([
       this.accountTxRep.find({ where: { userId, settled: IsNull() } }),
       this.paymentTxRep.find({ where: { userId, settled: IsNull() } }),
+      this.defiTxRep.find({ where: { userId, settled: IsNull() } }),
     ]);
     return unsettledTxs.flat().map(({ txId }) => txId);
   }
 
   async removeUserTx(txId: TxId, userId: AccountId) {
-    await Promise.all([this.accountTxRep.delete({ txId }), this.paymentTxRep.delete({ txId, userId })]);
+    await Promise.all([
+      this.accountTxRep.delete({ txId }),
+      this.paymentTxRep.delete({ txId, userId }),
+      this.defiTxRep.delete({ txId, userId }),
+    ]);
   }
 
   async addUserSigningKey(signingKey: SigningKey) {
@@ -414,5 +454,23 @@ export class SQLDatabase implements Database {
 
   async deleteKey(name: string) {
     await this.keyRep.delete({ name });
+  }
+
+  async acquireLock(name: string, timeout: number) {
+    await this.mutex.delete({ name, expiredAt: LessThanOrEqual(Date.now()) });
+    try {
+      await this.mutex.insert({ name, expiredAt: Date.now() + timeout });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async extendLock(name: string, timeout: number) {
+    await this.mutex.update(name, { expiredAt: Date.now() + timeout });
+  }
+
+  async releaseLock(name: string) {
+    await this.mutex.delete({ name });
   }
 }

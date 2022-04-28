@@ -1,6 +1,6 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset, TxHash } from '@aztec/barretenberg/blockchain';
-import { AUX_DATA_SELECTOR, BridgeId } from '@aztec/barretenberg/bridge_id';
+import { AUX_DATA_SELECTOR, BridgeId, virtualAssetIdFlag } from '@aztec/barretenberg/bridge_id';
 import {
   computeInteractionHashes,
   DefiInteractionNote,
@@ -101,10 +101,9 @@ describe('rollup_processor: defi bridge with loans', () => {
     const outputValueA = 10n;
     const outputValueB = 7n;
     const { bridgeId } = await mockBridge({
-      secondOutputVirtual: true,
       inputAssetIdA: 1,
       outputAssetIdA: 0,
-      outputAssetIdB: 2,
+      outputAssetIdB: 2 + virtualAssetIdFlag,
       outputValueA,
       outputValueB,
     });
@@ -148,13 +147,12 @@ describe('rollup_processor: defi bridge with loans', () => {
     // Note that we need a new bridge id as the input and output assets have changed
     {
       const { bridgeId: bridgeId2, contract: bridge2 } = await mockBridge({
-        secondInputVirtual: true,
         inputAssetIdA: 0,
         outputAssetIdA: 1,
         outputAssetIdB: 2,
         outputValueA: inputValue,
         outputValueB: BigInt(0),
-        inputAssetIdB: numberOfBridgeCalls,
+        inputAssetIdB: numberOfBridgeCalls + virtualAssetIdFlag,
         auxData: AUX_DATA_SELECTOR.CLOSE_LOAN,
       });
       await bridge2.recordInterestRate(numberOfBridgeCalls, 10); // interest rate = 10 %
@@ -185,18 +183,18 @@ describe('rollup_processor: defi bridge with loans', () => {
     const collateralValue1 = 100n;
     const loanValue1 = 10n;
     const { bridgeId: bridgeId1 } = await mockBridge({
-      secondOutputVirtual: true,
       inputAssetIdA: 1,
       outputAssetIdA: 0,
+      outputAssetIdB: virtualAssetIdFlag,
       outputValueA: loanValue1,
     });
 
     const collateralValue2 = 20n;
     const loanValue2 = 4n;
     const { bridgeId: bridgeId2 } = await mockBridge({
-      secondOutputVirtual: true,
       inputAssetIdA: 0,
       outputAssetIdA: 2,
+      outputAssetIdB: virtualAssetIdFlag,
       outputValueA: loanValue2,
     });
 
@@ -244,21 +242,19 @@ describe('rollup_processor: defi bridge with loans', () => {
     // Note that we need new bridge ids as the input and output assets have changed
     {
       const { bridgeId: repayBridgeId1, contract: repayBridge1 } = await mockBridge({
-        secondInputVirtual: true,
         inputAssetIdA: 0,
         outputAssetIdA: 1,
         outputValueA: collateralValue1,
-        inputAssetIdB: numberOfBridgeCalls,
+        inputAssetIdB: numberOfBridgeCalls + virtualAssetIdFlag,
         auxData: AUX_DATA_SELECTOR.CLOSE_LOAN,
       });
       await repayBridge1.recordInterestRate(numberOfBridgeCalls, 10); // interest rate = 10 %
 
       const { bridgeId: repayBridgeId2, contract: repayBridge2 } = await mockBridge({
-        secondInputVirtual: true,
         inputAssetIdA: 2,
         outputAssetIdA: 0,
         outputValueA: collateralValue2,
-        inputAssetIdB: 5,
+        inputAssetIdB: 5 + virtualAssetIdFlag,
         auxData: AUX_DATA_SELECTOR.CLOSE_LOAN,
       });
       await repayBridge2.recordInterestRate(5, 20); // interest rate = 20 %

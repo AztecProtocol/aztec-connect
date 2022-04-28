@@ -1,14 +1,14 @@
-import { EthereumBlockchainConfig, EthersAdapter, JsonRpcProvider, WalletProvider } from '@aztec/blockchain';
-import { BridgeId, BridgeConfig, BitConfig } from '@aztec/barretenberg/bridge_id';
+import { EthereumRpc } from '@aztec/barretenberg/blockchain';
+import { BridgeConfig } from '@aztec/barretenberg/bridge_id';
+import { EthereumBlockchainConfig, JsonRpcProvider, WalletProvider } from '@aztec/blockchain';
+import { ConnectionOptions } from 'typeorm';
+import { Configurator, ConfVars } from './configurator';
+import { AccountDao } from './entity/account';
+import { AssetMetricsDao } from './entity/asset_metrics';
+import { ClaimDao } from './entity/claim';
 import { RollupDao } from './entity/rollup';
 import { RollupProofDao } from './entity/rollup_proof';
 import { TxDao } from './entity/tx';
-import { ConnectionOptions } from 'typeorm';
-import { AccountDao } from './entity/account';
-import { ClaimDao } from './entity/claim';
-import { AssetMetricsDao } from './entity/asset_metrics';
-import { Configurator, ConfVars } from './configurator';
-import { EthereumRpc } from '@aztec/barretenberg/blockchain';
 
 function getEthereumBlockchainConfig({
   runtimeConfig: { gasLimit },
@@ -59,8 +59,9 @@ function getOrmConfig(dbUrl?: string, logging = false): ConnectionOptions {
   }
 }
 
+/* We might want these back for mainnet launch.
 function generateBridgeId(id: number, inputAsset: number, outputAsset: number, aux: number) {
-  return new BridgeId(id, inputAsset, outputAsset, 0, 0, BitConfig.EMPTY, aux);
+  return new BridgeId(id, inputAsset, outputAsset, undefined, undefined, aux);
 }
 
 function generateBridgeConfig(numTxs: number, fee: number, rollupFrequency: number, bridgeId: BridgeId) {
@@ -99,6 +100,7 @@ function generateBridgeIds(numTxs: number, fee: number, rollupFrequency: number)
     }),
   ];
 }
+*/
 
 function getPerChainBridgeConfig(chainId: number) {
   const perChainBridgeConfig: { [key: string]: any[] } = {
@@ -121,10 +123,7 @@ function getPerChainBridgeConfig(chainId: number) {
   });
 }
 
-export async function getConfig() {
-  const configurator = new Configurator();
-  await configurator.init();
-
+export async function getComponents(configurator: Configurator) {
   const confVars = configurator.getConfVars();
   const {
     runtimeConfig: { gasLimit },
@@ -156,5 +155,5 @@ export async function getConfig() {
     throw new Error('There should be one price feed contract address per fee paying asset.');
   }
 
-  return { configurator, ormConfig, provider, signingAddress, ethConfig, bridgeConfigs };
+  return { ormConfig, provider, signingAddress, ethConfig, bridgeConfigs };
 }

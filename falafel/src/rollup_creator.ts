@@ -66,8 +66,8 @@ export class RollupCreator {
     // TODO: Interrupt proof creation.
   }
 
-  public async addRollupProof(dao: RollupProofDao) {
-    await this.rollupDb.addRollupProof(dao);
+  public async addRollupProofs(daos: RollupProofDao[]) {
+    await this.rollupDb.addRollupProofs(daos);
   }
 
   public async createRollup(

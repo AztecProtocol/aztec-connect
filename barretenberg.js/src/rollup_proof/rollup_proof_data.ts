@@ -1,5 +1,5 @@
 import { createHash } from 'crypto';
-import { ProofId } from '../client_proofs';
+import { createTxId, ProofId } from '../client_proofs';
 import { numToUInt32BE } from '../serialize';
 import { decodeInnerProof } from './decode_inner_proof';
 import { encodeInnerProof } from './encode_inner_proof';
@@ -221,13 +221,11 @@ export class RollupProofData {
   encode() {
     let lastNonEmptyIndex = 0;
     this.innerProofData.forEach((p, i) => {
-        if (p.proofId !== ProofId.PADDING)
-        {
-            lastNonEmptyIndex = i;
-        }
+      if (p.proofId !== ProofId.PADDING) {
+        lastNonEmptyIndex = i;
+      }
     });
 
-    
     const numRealTxns = lastNonEmptyIndex + 1;
     const encodedInnerProof = this.innerProofData.filter((p, i) => i < numRealTxns).map(p => encodeInnerProof(p));
     return Buffer.concat([
@@ -264,6 +262,17 @@ export class RollupProofData {
     return proofData.readUInt32BE(RollupProofDataOffsets.ROLLUP_SIZE);
   }
 
+  static getTxIdsFromBuffer(proofData: Buffer) {
+    const rollupSize = RollupProofData.getRollupSizeFromBuffer(proofData);
+    const startIndex = RollupProofData.LENGTH_ROLLUP_HEADER_INPUTS;
+    return Array.from({ length: rollupSize })
+      .map((_, i) => {
+        const innerProofStart = startIndex + i * InnerProofData.LENGTH;
+        return createTxId(proofData.slice(innerProofStart, innerProofStart + InnerProofData.LENGTH));
+      })
+      .filter(id => !id.equals(InnerProofData.PADDING.txId));
+  }
+
   static fromBuffer(proofData: Buffer) {
     const {
       rollupId,
@@ -292,9 +301,8 @@ export class RollupProofData {
     }
 
     let startIndex = RollupProofData.LENGTH_ROLLUP_HEADER_INPUTS;
-    const innerProofSize = rollupSize;
     const innerProofData: InnerProofData[] = [];
-    for (let i = 0; i < innerProofSize; ++i) {
+    for (let i = 0; i < rollupSize; ++i) {
       const innerData = proofData.slice(startIndex, startIndex + InnerProofData.LENGTH);
       innerProofData[i] = InnerProofData.fromBuffer(innerData);
       startIndex += InnerProofData.LENGTH;
@@ -324,7 +332,13 @@ export class RollupProofData {
     );
   }
 
-  static randomData(rollupId: number, numTxs: number, dataStartIndex = 0, innerProofData?: InnerProofData[], bridgeIds: BridgeId[] = []) {
+  static randomData(
+    rollupId: number,
+    numTxs: number,
+    dataStartIndex = 0,
+    innerProofData?: InnerProofData[],
+    bridgeIds: BridgeId[] = [],
+  ) {
     const ipd =
       innerProofData === undefined
         ? new Array(numTxs).fill(0).map(() => InnerProofData.fromBuffer(Buffer.alloc(InnerProofData.LENGTH)))
@@ -342,7 +356,11 @@ export class RollupProofData {
       Buffer.alloc(32),
       Buffer.alloc(32),
       Buffer.alloc(32),
-      bridgeIds.map(b => b.toBuffer()).concat(new Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK - bridgeIds.length).fill(0).map(() => Buffer.alloc(32))),
+      bridgeIds
+        .map(b => b.toBuffer())
+        .concat(
+          new Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK - bridgeIds.length).fill(0).map(() => Buffer.alloc(32)),
+        ),
       new Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK).fill(BigInt(0)),
       new Array(RollupProofData.NUMBER_OF_ASSETS).fill(0),
       new Array(RollupProofData.NUMBER_OF_ASSETS).fill(BigInt(0)),

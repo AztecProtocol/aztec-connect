@@ -5,11 +5,14 @@ pragma solidity >=0.8.4 <0.8.11;
 interface IRollupProcessor {
     function defiBridgeProxy() external view returns (address);
 
-    function processRollup(
-        bytes calldata proofData,
-        bytes calldata signatures,
+    function offchainData(
+        uint256 rollupId,
+        uint256 chunk,
+        uint256 totalChunks,
         bytes calldata offchainTxData
     ) external;
+
+    function processRollup(bytes calldata proofData, bytes calldata signatures) external;
 
     function depositPendingFunds(
         uint256 assetId,
@@ -23,8 +26,18 @@ interface IRollupProcessor {
         uint256 amount,
         address owner,
         bytes32 proofHash,
-        address spender,
-        uint256 permitApprovalAmount,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
+
+    function depositPendingFundsPermitNonStandard(
+        uint256 assetId,
+        uint256 amount,
+        address owner,
+        bytes32 proofHash,
+        uint256 nonce,
         uint256 deadline,
         uint8 v,
         bytes32 r,
@@ -41,11 +54,7 @@ interface IRollupProcessor {
 
     function setVerifier(address verifierAddress) external;
 
-    function setSupportedAsset(
-        address linkedToken,
-        bool supportsPermit,
-        uint256 gasLimit
-    ) external;
+    function setSupportedAsset(address linkedToken, uint256 gasLimit) external;
 
     function setAllowThirdPartyContracts(bool _flag) external;
 
@@ -53,15 +62,13 @@ interface IRollupProcessor {
 
     function getSupportedAsset(uint256 assetId) external view returns (address);
 
-    function getSupportedAssets() external view returns (address[] memory);
+    function getSupportedAssets() external view returns (address[] memory, uint256[] memory);
 
     function getSupportedBridge(uint256 bridgeAddressId) external view returns (address);
 
     function getBridgeGasLimit(uint256 bridgeAddressId) external view returns (uint256);
 
-    function getSupportedBridges() external view returns (address[] memory);
-
-    function getAssetPermitSupport(uint256 assetId) external view returns (bool);
+    function getSupportedBridges() external view returns (address[] memory, uint256[] memory);
 
     function getEscapeHatchStatus() external view returns (bool, uint256);
 

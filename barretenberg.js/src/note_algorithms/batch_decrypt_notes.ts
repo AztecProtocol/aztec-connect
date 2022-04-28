@@ -7,7 +7,6 @@ import { DecryptedNote } from './decrypted_note';
 
 export const batchDecryptNotes = async (
   viewingKeys: Buffer,
-  inputNullifiers: Buffer[],
   privateKey: Buffer,
   noteAlgorithms: NoteAlgorithms,
   grumpkin: Grumpkin,
@@ -28,7 +27,7 @@ export const batchDecryptNotes = async (
         viewingKeys.slice((i + 1) * ViewingKey.SIZE - 64, (i + 1) * ViewingKey.SIZE),
       );
       const noteSecret = deriveNoteSecret(ephPubKey, privateKey, grumpkin);
-      notes[i] = { noteBuf: noteBuf.slice(1), ephPubKey, noteSecret, inputNullifier: inputNullifiers[i] };
+      notes[i] = { noteBuf: noteBuf.slice(1), ephPubKey, noteSecret };
     }
   }
   return notes;

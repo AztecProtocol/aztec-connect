@@ -31,14 +31,14 @@ interface IDefiBridge {
         AztecTypes.AztecAsset memory inputAssetB,
         AztecTypes.AztecAsset memory outputAssetA,
         AztecTypes.AztecAsset memory outputAssetB,
-        uint256 totalInputValue,
         uint256 interactionNonce,
         uint64 auxData
     )
-    external payable
-    returns (
-        uint256 outputValueA,
-        uint256 outputValueB,
-        bool interactionCompleted
-    );
+        external
+        payable
+        returns (
+            uint256 outputValueA,
+            uint256 outputValueB,
+            bool interactionCompleted
+        );
 }

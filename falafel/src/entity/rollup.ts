@@ -29,9 +29,9 @@ export class RollupDao {
   @Column()
   public created!: Date;
 
-  // Null until calldata computed.
+  // Null until computed.
   @Column(...bufferColumn({ nullable: true }))
-  public callData?: Buffer;
+  public processRollupCalldata?: Buffer;
 
   // Null until mined and events fetched.
   @Column(...bufferColumn({ nullable: true }))
@@ -57,8 +57,8 @@ export class RollupDao {
   @AfterInsert()
   @AfterUpdate()
   afterLoad() {
-    if (!this.callData) {
-      delete this.callData;
+    if (!this.processRollupCalldata) {
+      delete this.processRollupCalldata;
     }
     if (!this.interactionResult) {
       delete this.interactionResult;

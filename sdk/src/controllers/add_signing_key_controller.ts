@@ -2,7 +2,7 @@ import { AccountId } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { TxId } from '@aztec/barretenberg/tx_id';
-import { CoreSdk } from '../core_sdk/core_sdk';
+import { CoreSdkInterface } from '../core_sdk';
 import { ProofOutput } from '../proofs';
 import { Signer } from '../signer';
 import { createTxRefNo } from './create_tx_ref_no';
@@ -19,11 +19,11 @@ export class AddSigningKeyController {
     public readonly signingPublicKey1: GrumpkinAddress,
     public readonly signingPublicKey2: GrumpkinAddress | undefined,
     public readonly fee: AssetValue,
-    private readonly core: CoreSdk,
+    private readonly core: CoreSdkInterface,
   ) {}
 
   public async createProof() {
-    const user = this.core.getUserData(this.userId);
+    const user = await this.core.getUserData(this.userId);
     if (!user.aliasHash) {
       throw new Error('User not registered or not fully synced.');
     }
@@ -31,21 +31,23 @@ export class AddSigningKeyController {
     const requireFeePayingTx = this.fee.value;
     const txRefNo = requireFeePayingTx ? createTxRefNo() : 0;
 
-    this.proofOutput = await this.core.createAccountProof(
+    const signingPublicKey = this.userSigner.getPublicKey();
+
+    const proofInput = await this.core.createAccountProofInput(
       this.userId,
-      this.userSigner,
       user.aliasHash,
       false,
+      signingPublicKey,
       this.signingPublicKey1,
       this.signingPublicKey2,
       undefined,
-      txRefNo,
     );
+    proofInput.signature = await this.userSigner.signMessage(proofInput.signingData);
+    this.proofOutput = await this.core.createAccountProof(proofInput, txRefNo);
 
     if (requireFeePayingTx) {
-      this.feeProofOutput = await this.core.createPaymentProof(
+      const feeProofInput = await this.core.createPaymentProofInput(
         this.userId,
-        this.userSigner,
         this.fee.assetId,
         BigInt(0),
         BigInt(0),
@@ -54,9 +56,11 @@ export class AddSigningKeyController {
         BigInt(0),
         undefined,
         undefined,
+        signingPublicKey,
         2,
-        txRefNo,
       );
+      feeProofInput.signature = await this.userSigner.signMessage(feeProofInput.signingData);
+      this.feeProofOutput = await this.core.createPaymentProof(feeProofInput, txRefNo);
     }
   }
 

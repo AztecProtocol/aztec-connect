@@ -2,7 +2,7 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset } from '@aztec/barretenberg/blockchain';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
-import { createPermitData } from '../../create_permit_data';
+import { createPermitData, createPermitDataNonStandard } from '../../create_permit_data';
 import { EthersAdapter } from '../../provider';
 import { Web3Signer } from '../../signer';
 import { createDepositProof, createRollupProof, mergeInnerProofs } from './fixtures/create_mock_proof';
@@ -17,6 +17,7 @@ describe('rollup_processor: deposit', () => {
   let userSigners: Signer[];
   let userAddresses: EthAddress[];
   const depositAmount = 60n;
+  const chainId = 31337;
 
   beforeEach(async () => {
     const signers = await ethers.getSigners();
@@ -27,7 +28,7 @@ describe('rollup_processor: deposit', () => {
 
   it('should deposit eth and convert to notes', async () => {
     const ethAsset = assets[0];
-    await rollupProcessor.depositPendingFunds(0, depositAmount, undefined, undefined, {
+    await rollupProcessor.depositPendingFunds(0, depositAmount, undefined, {
       signingAddress: userAddresses[0],
     });
 
@@ -59,7 +60,7 @@ describe('rollup_processor: deposit', () => {
   it('should deposit erc20 and convert to notes', async () => {
     const erc20Asset = assets[1];
     await erc20Asset.approve(depositAmount, userAddresses[0], rollupProcessor.address);
-    await rollupProcessor.depositPendingFunds(1, depositAmount, undefined, undefined, {
+    await rollupProcessor.depositPendingFunds(1, depositAmount, undefined, {
       signingAddress: userAddresses[0],
     });
 
@@ -104,10 +105,10 @@ describe('rollup_processor: deposit', () => {
 
     await erc20A.approve(userADepositAmount, userAddresses[0], rollupProcessor.address);
     await erc20B.approve(userBDepositAmount, userAddresses[1], rollupProcessor.address);
-    await rollupProcessor.depositPendingFunds(1, userADepositAmount, undefined, undefined, {
+    await rollupProcessor.depositPendingFunds(1, userADepositAmount, undefined, {
       signingAddress: userAddresses[0],
     });
-    await rollupProcessor.depositPendingFunds(2, userBDepositAmount, undefined, undefined, {
+    await rollupProcessor.depositPendingFunds(2, userBDepositAmount, undefined, {
       signingAddress: userAddresses[1],
     });
 
@@ -129,30 +130,64 @@ describe('rollup_processor: deposit', () => {
 
   it('should deposit funds via permit flow', async () => {
     const asset = assets[1];
-    const userAddress = userAddresses[0];
+    const depositor = userAddresses[0];
     const deadline = 0xffffffffn;
-    const nonce = await asset.getUserNonce(userAddresses[0]);
+    const nonce = await asset.getUserNonce(depositor);
     const name = asset.getStaticInfo().name;
     const permitData = createPermitData(
       name,
-      userAddress,
+      depositor,
       rollupProcessor.address,
       depositAmount,
       nonce,
       deadline,
-      31337,
       asset.getStaticInfo().address,
+      chainId,
     );
     const signer = new Web3Signer(new EthersAdapter(ethers.provider));
-    const signature = await signer.signTypedData(permitData, userAddress);
-    const permitArgs = { deadline, approvalAmount: depositAmount, signature };
+    const signature = await signer.signTypedData(permitData, depositor);
 
-    await rollupProcessor.depositPendingFunds(1, depositAmount, undefined, permitArgs, {
-      signingAddress: userAddress,
+    await rollupProcessor.depositPendingFundsPermit(1, depositAmount, deadline, signature, undefined, {
+      signingAddress: depositor,
     });
 
-    expect(await rollupProcessor.getUserPendingDeposit(1, userAddress)).toBe(depositAmount);
-    expect(await asset.getUserNonce(userAddress)).toBe(1n);
+    expect(await rollupProcessor.getUserPendingDeposit(1, depositor)).toBe(depositAmount);
+    expect(await asset.getUserNonce(depositor)).toBe(nonce + 1n);
+  });
+
+  it('should deposit funds via non standard permit flow', async () => {
+    const assetId = 1;
+    const asset = assets[assetId];
+    const depositor = userAddresses[0];
+    const deadline = 0xffffffffn;
+    const nonce = await asset.getUserNonce(depositor);
+    const name = asset.getStaticInfo().name;
+    const permitData = createPermitDataNonStandard(
+      name,
+      depositor,
+      rollupProcessor.address,
+      nonce,
+      deadline,
+      asset.getStaticInfo().address,
+      chainId,
+    );
+    const signer = new Web3Signer(new EthersAdapter(ethers.provider));
+    const signature = await signer.signTypedData(permitData, depositor);
+
+    await rollupProcessor.depositPendingFundsPermitNonStandard(
+      assetId,
+      depositAmount,
+      nonce,
+      deadline,
+      signature,
+      undefined,
+      {
+        signingAddress: depositor,
+      },
+    );
+
+    expect(await rollupProcessor.getUserPendingDeposit(assetId, depositor)).toBe(depositAmount);
+    expect(await asset.getUserNonce(depositor)).toBe(nonce + 1n);
   });
 
   it('should deposit funds using proof approval', async () => {
@@ -160,7 +195,7 @@ describe('rollup_processor: deposit', () => {
     const signingAddress = userAddresses[0];
 
     await erc20.approve(depositAmount, userAddresses[0], rollupProcessor.address);
-    await rollupProcessor.depositPendingFunds(1, depositAmount, undefined, undefined, { signingAddress });
+    await rollupProcessor.depositPendingFunds(1, depositAmount, undefined, { signingAddress });
 
     const innerProofData = await createDepositProof(depositAmount, signingAddress, userSigners[0], 1);
     const { proofData } = await createRollupProof(rollupProvider, innerProofData);
@@ -178,7 +213,7 @@ describe('rollup_processor: deposit', () => {
     const signingAddress = userAddresses[0];
 
     await erc20.approve(depositAmount, userAddresses[0], rollupProcessor.address);
-    await rollupProcessor.depositPendingFunds(1, depositAmount, undefined, undefined, { signingAddress });
+    await rollupProcessor.depositPendingFunds(1, depositAmount, undefined, { signingAddress });
 
     const innerProofData = await createDepositProof(depositAmount, signingAddress, userSigners[0], 1);
     const { proofData } = await createRollupProof(rollupProvider, innerProofData);
@@ -196,7 +231,7 @@ describe('rollup_processor: deposit', () => {
     const erc20Asset = assets[1];
     await erc20Asset.mint(depositAmount, userAddresses[0]);
     await erc20Asset.approve(depositAmount, userAddresses[0], rollupProcessor.address);
-    await rollupProcessor.depositPendingFunds(1, depositAmount - 1n, undefined, undefined, {
+    await rollupProcessor.depositPendingFunds(1, depositAmount - 1n, undefined, {
       signingAddress: userAddresses[0],
     });
 
@@ -227,6 +262,35 @@ describe('rollup_processor: deposit', () => {
     ).rejects.toThrow('WRONG_PAYMENT_TYPE');
   });
 
+  it('should be able to deposit eth to another address', async () => {
+    const assetId = 0;
+    const value = 1n;
+    const depositor = userSigners[0];
+    const owner = userAddresses[1];
+    const proofHash = Buffer.alloc(32);
+    await rollupProcessor.contract
+      .connect(depositor)
+      .depositPendingFunds(assetId, value, owner.toString(), proofHash, { value });
+  });
+
+  it('should revert for depositing erc20 asset on behalf of others', async () => {
+    const assetId = 1;
+    const owner = userAddresses[0];
+    const erc20 = assets[assetId];
+    await erc20.approve(depositAmount, owner, rollupProcessor.address);
+
+    const proofHash = Buffer.alloc(32);
+    await expect(
+      rollupProcessor.contract
+        .connect(userSigners[1])
+        .depositPendingFunds(assetId, depositAmount, owner.toString(), proofHash),
+    ).rejects.toThrow('INVALID_DEPOSITOR');
+
+    await rollupProcessor.contract
+      .connect(userSigners[0])
+      .depositPendingFunds(assetId, depositAmount, owner.toString(), proofHash);
+  });
+
   it('should revert for depositing fund for an unknown asset', async () => {
     const unknownAssetId = 3;
     await expect(rollupProcessor.contract.getSupportedAsset(unknownAssetId)).rejects.toThrow();
@@ -244,7 +308,7 @@ describe('rollup_processor: deposit', () => {
     await erc20.approve(depositAmount, userAddresses[0], rollupProcessor.address);
     const innerProofData = await createDepositProof(depositAmount, signingAddress, userSigners[0], 1);
     const txId = innerProofData.innerProofs[0].txId;
-    await rollupProcessor.depositPendingFunds(1, depositAmount, txId, undefined, { signingAddress });
+    await rollupProcessor.depositPendingFunds(1, depositAmount, txId, { signingAddress });
 
     const { proofData } = await createRollupProof(rollupProvider, innerProofData);
 
@@ -262,7 +326,7 @@ describe('rollup_processor: deposit', () => {
 
     await rollupProcessor.stubReentrancyGuard(true);
     await expect(
-      rollupProcessor.depositPendingFunds(1, depositAmount, undefined, undefined, {
+      rollupProcessor.depositPendingFunds(1, depositAmount, undefined, {
         signingAddress,
       }),
     ).rejects.toThrow();
