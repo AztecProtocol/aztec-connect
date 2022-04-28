@@ -83,48 +83,4 @@ describe('rollup_processor: deposit', () => {
     expect(await asset.balanceOf(feeDistributor.address)).toBe(txFee);
     expect(await asset.balanceOf(rollupProcessor.address)).toBe(depositAmount);
   });
-
-  it('feeDistributor should topup the rollupProvider if the balance is below the FEE_LIMIT when a rollup is sent', async () => {
-    const txFee = 10n;
-    const publicInput = depositAmount + txFee;
-    const feeLimt = BigInt(4e17);
-    const transferEthCost = BigInt(21000) * 10n;
-
-    // User deposits funds.
-    await rollupProcessor.depositPendingFunds(0, publicInput, undefined, {
-      signingAddress: userAddresses[0],
-    });
-
-    const providerInitialBalance = await assets[0].balanceOf(rollupProviderAddress);
-
-    await assets[0].transfer(
-      providerInitialBalance - feeLimt - transferEthCost,
-      rollupProviderAddress,
-      EthAddress.ZERO,
-    );
-
-    const providerBalanceAfter = await assets[0].balanceOf(rollupProviderAddress);
-
-    expect(providerBalanceAfter).toBe(feeLimt);
-
-    // create rollup
-    const { proofData, signatures } = await createRollupProof(
-      rollupProvider,
-      await createDepositProof(depositAmount, userAddresses[0], userSigners[0], 0, txFee),
-      { feeDistributorAddress },
-    );
-
-    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
-    const txHash = await rollupProcessor.sendTx(tx);
-
-    const { gasPrice } = await ethers.provider.getTransaction(txHash.toString());
-    const { gasUsed } = await ethers.provider.getTransactionReceipt(txHash.toString());
-    const gasCost = BigInt(gasUsed.mul(gasPrice!).toString());
-    const feeDistributorETHBalance = await feeDistributor.txFeeBalance(EthAddress.ZERO);
-
-    expect(feeDistributorETHBalance).toBe(0n);
-    expect(await rollupProcessor.getUserPendingDeposit(0, userAddresses[0])).toBe(0n);
-    expect(await assets[0].balanceOf(rollupProcessor.address)).toBe(depositAmount);
-    expect(await assets[0].balanceOf(rollupProviderAddress)).toBe(providerBalanceAfter - gasCost + txFee);
-  });
 });

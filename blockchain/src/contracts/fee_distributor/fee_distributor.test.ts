@@ -18,7 +18,6 @@ describe('fee_distributor', () => {
 
   const initialUserTokenBalance = 10n ** 18n;
   const initialTotalSupply = 10n * 10n ** 18n;
-  const gasPrice = 10n;
 
   beforeEach(async () => {
     signers = await ethers.getSigners();
@@ -77,6 +76,10 @@ describe('fee_distributor', () => {
     const asset = assets[1];
     const assetAddr = asset.getStaticInfo().address;
     const weth = await feeDistributor.WETH();
+
+    const { maxFeePerGas } = await signers[0].getFeeData();
+    const gasPrice = maxFeePerGas!.toBigInt();
+
     const minOutputEth = (await feeDistributor.convertConstant()) * gasPrice;
     const amountsIn = await uniswapRouter.getAmountsIn(minOutputEth, [assetAddr.toString(), weth.toString()]);
     const convertThreshold = BigInt(amountsIn[0]);
@@ -84,7 +87,7 @@ describe('fee_distributor', () => {
     {
       const amount = convertThreshold - 1n;
       await asset.approve(amount, addresses[0], feeDistributor.address);
-      await feeDistributor.deposit(assetAddr, amount);
+      await feeDistributor.deposit(assetAddr, amount, { gasPrice });
 
       expect(await feeDistributor.txFeeBalance(assetAddr)).toBe(amount);
 
@@ -118,7 +121,7 @@ describe('fee_distributor', () => {
       'Ownable: caller is not the owner',
     );
     await feeDistributor.setFeeClaimer(userAddress);
-    expect(await (await feeDistributor.aztecFeeClaimer()).toString()).toBe(userAddress.toString());
+    expect((await feeDistributor.aztecFeeClaimer()).toString()).toBe(userAddress.toString());
   });
 
   it('reimburse eth to fee claimer if fee claimer is below threshold', async () => {
@@ -128,6 +131,8 @@ describe('fee_distributor', () => {
     const initialFeeDistributorBalance = 10n ** 18n;
     const toSend = 1000n;
     const feeLimit = await feeDistributor.feeLimit();
+    const { maxFeePerGas } = await signers[0].getFeeData();
+    const gasPrice = maxFeePerGas!.toBigInt();
 
     const initialUserBalance = await ethAsset.balanceOf(userAddress);
 
@@ -138,11 +143,10 @@ describe('fee_distributor', () => {
     // drain the fee claimer address
     await ethAsset.transfer(initialUserBalance - 25000n * gasPrice, userAddress, EthAddress.ZERO);
     const drainedUserBalance = await ethAsset.balanceOf(userAddress);
-
     expect(drainedUserBalance).toBeLessThan(await feeDistributor.feeLimit());
 
     await feeDistributor.setFeeClaimer(userAddress);
-    expect(await (await feeDistributor.aztecFeeClaimer()).toString()).toBe(userAddress.toString());
+    expect((await feeDistributor.aztecFeeClaimer()).toString()).toBe(userAddress.toString());
 
     await feeDistributor.deposit(assetAddr, initialFeeDistributorBalance);
 

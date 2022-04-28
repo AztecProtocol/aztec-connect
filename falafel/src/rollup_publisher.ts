@@ -25,15 +25,12 @@ export class RollupPublisher {
 
   private async awaitGasPriceBelowThresholdAndSufficientBalance(rollupTxs: RollupTxs, signerAddress: EthAddress) {
     while (!this.interrupted) {
-      const { maxFeePerGas, maxPriorityFeePerGas, gasPrice } = await this.blockchain.getFeeData();
-      const currentGasPrice = gasPrice ? gasPrice : maxFeePerGas + maxPriorityFeePerGas;
+      const { maxFeePerGas } = await this.blockchain.getFeeData();
 
       if (this.maxProviderGasPrice) {
         // Wait until gas price is below threshold.
-        if (currentGasPrice > this.maxProviderGasPrice) {
-          console.log(
-            `Gas price too high at ${currentGasPrice} wei. Waiting till below ${this.maxProviderGasPrice}...`,
-          );
+        if (maxFeePerGas > this.maxProviderGasPrice) {
+          console.log(`Gas price too high at ${maxFeePerGas} wei. Waiting till below ${this.maxProviderGasPrice}...`);
           await this.sleepOrInterrupted(60000);
           continue;
         }
@@ -49,14 +46,14 @@ export class RollupPublisher {
       }
 
       // Wait until we have enough funds to send all txs.
-      const required = BigInt(totalGas) * currentGasPrice;
+      const required = BigInt(totalGas) * maxFeePerGas;
       if (currentBalance < required) {
         console.log(`Insufficient funds. Balance ${currentBalance}, required ${required} wei. Awaiting top up...`);
         await this.sleepOrInterrupted(60000);
         continue;
       }
 
-      console.log(`Current gas price: ${currentGasPrice}`);
+      console.log(`Current gas price: ${maxFeePerGas}`);
       console.log(`Estimated total gas: ${totalGas}`);
       console.log(`Estimated total cost: ${fromBaseUnits(required, 18, 3)} ETH`);
       break;

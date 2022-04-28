@@ -49,12 +49,13 @@ export class FeeDistributor {
   }
 
   async deposit(asset: EthAddress, amount: bigint, options: SendTxOptions = this.defaults) {
-    const { gasLimit } = options;
+    const { gasLimit, gasPrice } = options;
     const contract = this.getContractWithSigner(options);
     const tx = await contract
       .deposit(asset.toString(), amount, {
         value: asset.equals(EthAddress.ZERO) ? amount : undefined,
         gasLimit,
+        gasPrice,
       })
       .catch(fixEthersStackTrace);
     return TxHash.fromString(tx.hash);

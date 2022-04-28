@@ -7,7 +7,7 @@ const config = {
   solidity: {
     version: '0.8.10',
     settings: {
-      evmVersion: 'berlin',
+      evmVersion: 'london',
       optimizer: { enabled: true, runs: 200 },
     },
   },
@@ -20,8 +20,7 @@ const config = {
     },
     hardhat: {
       blockGasLimit: 15000000,
-      gasPrice: 10,
-      hardfork: 'berlin',
+      hardfork: 'london',
     },
   },
   paths: {
