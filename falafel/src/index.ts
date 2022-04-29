@@ -1,12 +1,13 @@
+import 'log-timestamp';
+import 'reflect-metadata';
+import 'source-map-support/register';
+
 // initEntities must be happen before any entities are imported.
 import { Configurator } from './configurator';
 import { initEntities } from './entity/init_entities';
 const configurator = new Configurator();
 initEntities(configurator.getConfVars().dbUrl);
 
-import 'reflect-metadata';
-import 'source-map-support/register';
-import 'log-timestamp';
 import http from 'http';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { EthereumBlockchain } from '@aztec/blockchain';
