@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { bindStyle } from 'ui-components/util/classnames';
 import { InfoWrap } from 'ui-components';
-import { Button, InfoButton } from '../..';
+import { Button } from '../..';
 import { DefiRecipe } from '../../../alt-model/defi/types';
 import { DefiCardDescription } from './defi_card_description';
 import { DefiCardInfoContent } from './defi_card_info_content';
@@ -52,7 +52,6 @@ export const DefiCardContent = (props: DefiCardContentProps) => {
           text={`Deposit zk${props.recipe.flow.enter.inA.symbol}`}
           onClick={handleClickDeposit}
         />
-        <InfoButton className={style.infoButton} onClick={handleOpenInformation} />
       </div>
     </InfoWrap>
   );
