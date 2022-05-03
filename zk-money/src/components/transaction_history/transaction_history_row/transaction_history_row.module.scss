@@ -12,12 +12,13 @@
 }
 
 .segment {
-  padding: 0 20px;
+  padding: 0 40px;
 }
 
 .separator {
   width: 1px;
   height: 28px;
+  gap: 20px;
   background-color: #eee;
 }
 
@@ -25,19 +26,17 @@
   display: grid;
   grid-template-columns: 45px 1fr;
   align-items: center;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .fee {
-  font-size: 12px;
-  opacity: 0.7;
+  font-size: 14px;
 }
 
 .time {
-  font-size: 14px;
-  color: #c4c4c4;
+  font-size: 16px;
   display: flex;
-  justify-content: center;
+  justify-content: right;
   align-items: center;
   gap: 15px;
 }

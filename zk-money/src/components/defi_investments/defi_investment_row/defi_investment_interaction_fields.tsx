@@ -7,12 +7,11 @@ import type {
   DefiPosition_PendingExit,
 } from 'alt-model/defi/open_position_hooks';
 import moment from 'moment';
-import { StepStatusIndicator, StepStatus } from 'ui-components';
-import { MiniLink } from 'ui-components/components/atoms/mini_link';
+import { StepStatusIndicator, StepStatus, Hyperlink, HyperlinkIcon } from 'ui-components';
 import { useCountDownData } from 'features/defi/bridge_count_down/bridge_count_down_hooks';
-import style from './defi_investment_interaction_fields.module.scss';
 import { Button } from 'components/button';
 import { useExplorerTxLink } from 'alt-model/explorer_link_hooks';
+import style from './defi_investment_interaction_fields.module.scss';
 
 function PendingInteractionField({ position }: { position: DefiPosition_Pending | DefiPosition_PendingExit }) {
   const explorerLink = useExplorerTxLink(position.tx.txId);
@@ -20,9 +19,8 @@ function PendingInteractionField({ position }: { position: DefiPosition_Pending 
   const timeStr = data?.nextBatch ? moment(data.nextBatch).fromNow(true) : '';
   return (
     <>
-      {timeStr}
       <StepStatusIndicator status={StepStatus.RUNNING} />
-      <MiniLink href={explorerLink} />
+      <Hyperlink icon={HyperlinkIcon.Open} label={timeStr} href={explorerLink} />
     </>
   );
 }
@@ -36,7 +34,7 @@ function ClosableInteractionField({
 }) {
   return (
     <Button className={style.claimButton} onClick={() => onOpenDefiExitModal(position.recipe)}>
-      <div className={style.claimButtonContent}>Claim & Exit</div>
+      <div className={style.claimButtonContent}>{`Claim & Exit`}</div>
     </Button>
   );
 }

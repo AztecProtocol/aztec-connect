@@ -22,17 +22,17 @@ const ModalAnchor = styled.div`
 `;
 
 export function ShieldMore() {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isShieldModalOpen, setIsShieldModalOpen] = useState(false);
 
   return (
     <>
       <ShieldMoreWrapper>
         <div>Shield more funds from your L1 wallet for privacy and gas savings!</div>
         <ModalAnchor>
-          <ShieldMoreButton text="Shield more" onClick={() => setIsDropdownOpen(true)} />
+          <ShieldMoreButton text="Shield more" onClick={() => setIsShieldModalOpen(true)} />
         </ModalAnchor>
       </ShieldMoreWrapper>
-      {isDropdownOpen && <ShieldModal onClose={() => setIsDropdownOpen(false)} />}
+      {isShieldModalOpen && <ShieldModal onClose={() => setIsShieldModalOpen(false)} />}
     </>
   );
 }

@@ -2,13 +2,22 @@
 
 .actionButton {
   text-align: center;
-  font-weight: 500;
+  font-weight: 450;
+  height: 35px;
   font-size: 16px;
   white-space: nowrap;
   display: flex;
   align-items: center;
   cursor: pointer;
+}
+
+.gradient {
   @include mixins.gradient_font;
+}
+
+.gray {
+  color: black;
+  opacity: 0.7;
 }
 
 .icon {

@@ -15,17 +15,17 @@
 .lastSegment {
   display: flex;
   align-items: center;
-  padding: 0 20px;
+  padding: 0 40px;
 }
 
 .lastSegment {
-  justify-content: center;
+  justify-content: right;
   gap: 15px;
 }
 
 .logo {
-  height: 36px;
-  margin-right: 20px;
+  height: 20px;
+  margin-right: 10px;
 }
 
 .name {
@@ -33,15 +33,12 @@
 }
 
 .apy {
-  @include mixins.gradient_font;
+  // @include mixins.gradient_font;
   font-size: 16px;
-  font-style: italic;
-  letter-spacing: 1.5px;
 }
 
 .value {
   font-size: 16px;
-  letter-spacing: 1.5px;
   display: flex;
   align-items: center;
   gap: 16px;

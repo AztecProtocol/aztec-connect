@@ -1,5 +1,8 @@
+import { bindStyle } from 'ui-components/util/classnames';
 import infoIcon from '../../../images/info_icon.svg';
 import openIcon from '../../../images/open_icon.svg';
+import openIconBlack from '../../../images/open_icon_black.svg';
+import infoIconBlack from '../../../images/info_icon_black.svg';
 import style from './hyperlink.module.scss';
 
 export enum HyperlinkIcon {
@@ -7,26 +10,47 @@ export enum HyperlinkIcon {
   Open = 'Open',
 }
 
-interface HyperlinkProps {
-  href?: string;
-  label: string;
-  icon?: HyperlinkIcon;
+export enum HyperlinkTheme {
+  Gradient = 'Gradient',
+  Gray = 'Gray',
 }
 
-function getIcon(icon?: HyperlinkIcon) {
+interface HyperlinkProps {
+  label: string;
+  href?: string;
+  theme?: HyperlinkTheme;
+  icon?: HyperlinkIcon;
+  className?: string;
+  onClick?: () => void;
+}
+
+const cx = bindStyle(style);
+
+function getIcon(theme: HyperlinkTheme, icon?: HyperlinkIcon) {
   switch (icon) {
     case HyperlinkIcon.Info:
-      return infoIcon;
+      return theme === HyperlinkTheme.Gradient ? infoIcon : infoIconBlack;
     case HyperlinkIcon.Open:
-      return openIcon;
+      return theme === HyperlinkTheme.Gradient ? openIcon : openIconBlack;
   }
 }
 
 export function Hyperlink(props: HyperlinkProps) {
-  const icon = getIcon(props.icon);
+  const theme = props.theme || HyperlinkTheme.Gradient;
+  const icon = getIcon(theme, props.icon);
 
   return (
-    <a className={style.actionButton} href={props.href} target="_blank" rel="noreferrer">
+    <a
+      onClick={props.onClick}
+      className={cx(
+        style.actionButton,
+        props.className,
+        theme === HyperlinkTheme.Gradient ? style.gradient : style.gray,
+      )}
+      href={props.href}
+      target="_blank"
+      rel="noreferrer"
+    >
       {props.label}
       {icon && <img className={style.icon} src={icon} />}
     </a>

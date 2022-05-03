@@ -1,22 +1,16 @@
+import moment from 'moment';
 import type { TxId, UserTx } from '@aztec/sdk';
 import { useExplorerTxLink } from 'alt-model/explorer_link_hooks';
-import moment from 'moment';
-import { StepStatus, StepStatusIndicator } from 'ui-components';
-import { MiniLink } from 'ui-components/components/atoms/mini_link';
+import { Hyperlink, HyperlinkIcon, HyperlinkTheme, StepStatus, StepStatusIndicator } from 'ui-components';
 
-function ExplorerLink(props: { txId: TxId }) {
+function ExplorerLink(props: { txId: TxId; label: string }) {
   const link = useExplorerTxLink(props.txId);
-  return <MiniLink href={link} />;
+  return <Hyperlink theme={HyperlinkTheme.Gray} label={props.label} href={link} icon={HyperlinkIcon.Open} />;
 }
 
 function SettledField(props: { time: Date; txId: TxId }) {
   const timeStr = moment(props.time).fromNow();
-  return (
-    <>
-      {timeStr}
-      <ExplorerLink txId={props.txId} />
-    </>
-  );
+  return <ExplorerLink label={timeStr} txId={props.txId} />;
 }
 
 export function renderTransactionTimeField(tx: UserTx) {
@@ -24,7 +18,7 @@ export function renderTransactionTimeField(tx: UserTx) {
   return (
     <>
       <StepStatusIndicator status={StepStatus.RUNNING} />
-      <ExplorerLink txId={tx.txId} />
+      <ExplorerLink label={''} txId={tx.txId} />
     </>
   );
 }

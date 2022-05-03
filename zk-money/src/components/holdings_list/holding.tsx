@@ -1,23 +1,12 @@
 import type { AssetValue } from '@aztec/sdk';
-import { useState } from 'react';
-import { Dropdown, DropdownOption } from '../dropdown';
-import sendToL1Icon from '../../images/l1_send.svg';
-import sendToL2Icon from '../../images/l2_send.svg';
-import ellipsisIcon from '../../images/ellipsis.svg';
 import { formatBulkPrice } from '../../app';
 import { useAmountBulkPrice } from '../../alt-model';
 import { RemoteAsset } from 'alt-model/types';
-import style from './holding.module.scss';
 import { ShieldedAssetIcon } from '..';
 import { SHIELDABLE_ASSET_ADDRESSES } from 'alt-model/known_assets/known_asset_addresses';
 import { useAmount } from 'alt-model/asset_hooks';
-
-const DROPDOWN_OPTIONS = [
-  { value: 'widthdraw', label: 'Widthdraw to L1' },
-  { value: 'send', label: 'Send to Alias' },
-  { value: 'shield', label: 'Shield More' },
-  { value: 'earn', label: 'Go to Earning Opportunities' },
-];
+import { Hyperlink, HyperlinkIcon } from 'ui-components';
+import style from './holding.module.scss';
 
 interface HoldingProps {
   assetValue: AssetValue;
@@ -28,31 +17,11 @@ interface HoldingProps {
 }
 
 export function Holding({ assetValue, onSend, onWidthdraw, onShield, onGoToEarn }: HoldingProps) {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
   const amount = useAmount(assetValue);
   const asset = amount?.info;
   const bulkPrice = useAmountBulkPrice(amount);
   const bulkPriceStr = bulkPrice ? `$${formatBulkPrice(bulkPrice)}` : '';
   const shieldSupported = SHIELDABLE_ASSET_ADDRESSES.some(x => asset?.address.equals(x));
-  const opts = shieldSupported ? DROPDOWN_OPTIONS : DROPDOWN_OPTIONS.filter(x => x.value !== 'shield');
-
-  const handleDropdownToggle = () => {
-    setIsDropdownOpen(prevValue => !prevValue);
-  };
-
-  const handleDropdownClose = () => {
-    setIsDropdownOpen(false);
-  };
-
-  const handleDropdownClick = ({ value }: DropdownOption<string>) => {
-    if (asset) {
-      if (value === 'widthdraw') onWidthdraw?.(asset);
-      else if (value === 'send') onSend?.(asset);
-      else if (value === 'shield') onShield?.(asset);
-      else if (value === 'earn') onGoToEarn?.(asset);
-    }
-  };
 
   if (!asset) {
     return null;
@@ -66,18 +35,14 @@ export function Holding({ assetValue, onSend, onWidthdraw, onShield, onGoToEarn 
       </div>
       <div className={style.holdingAmount}>{bulkPriceStr}</div>
       <div className={style.buttonsWrapper}>
-        <div className={style.button} onClick={() => onWidthdraw?.(asset)}>
-          <img className={style.buttonIcon} src={sendToL1Icon} alt="Send to L1 button" />
-        </div>
-        {onSend && (
-          <div className={style.button} onClick={() => onSend(asset)}>
-            <img className={style.buttonIcon} src={sendToL2Icon} alt="Send on L2 button" />
-          </div>
-        )}
-        <div className={style.button} onClick={handleDropdownToggle}>
-          <img className={style.buttonIcon} src={ellipsisIcon} alt="More actions button" />
-        </div>
-        <Dropdown isOpen={isDropdownOpen} options={opts} onClick={handleDropdownClick} onClose={handleDropdownClose} />
+        {shieldSupported && <Hyperlink className={style.button} onClick={() => onShield?.(asset)} label={'Shield'} />}
+        <Hyperlink className={style.button} onClick={() => onSend?.(asset)} label={'Send'} />
+        <Hyperlink
+          className={style.button}
+          onClick={() => onGoToEarn?.(asset)}
+          label={'Earn'}
+          icon={HyperlinkIcon.Open}
+        />
       </div>
     </div>
   );

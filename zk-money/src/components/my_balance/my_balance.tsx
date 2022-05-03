@@ -47,8 +47,9 @@ const InformationWrapper = styled.div`
 
 const Available = styled.h2`
   font-size: 20px;
+  color: black;
+  opacity: 0.7;
   font-style: italic;
-  color: #c4c4c4;
   letter-spacing: 0.03em;
 `;
 
