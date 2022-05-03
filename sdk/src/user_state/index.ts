@@ -661,10 +661,12 @@ export class UserState extends EventEmitter {
 
   public async getSpendableSums() {
     const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
-    return this.notePickers.map(({ assetId, notePicker }) => ({
-      assetId,
-      value: notePicker.getSpendableSum(pendingNullifiers),
-    }));
+    return this.notePickers
+      .map(({ assetId, notePicker }) => ({
+        assetId,
+        value: notePicker.getSpendableSum(pendingNullifiers),
+      }))
+      .filter(assetValue => assetValue.value > BigInt(0));
   }
 
   public async getMaxSpendableValue(assetId: number, numNotes?: number) {
@@ -682,7 +684,9 @@ export class UserState extends EventEmitter {
   }
 
   public getBalances() {
-    return this.notePickers.map(({ assetId, notePicker }) => ({ assetId, value: notePicker.getSum() }));
+    return this.notePickers
+      .map(({ assetId, notePicker }) => ({ assetId, value: notePicker.getSum() }))
+      .filter(assetValue => assetValue.value > BigInt(0));
   }
 
   public async addProof({ tx, outputNotes }: ProofOutput) {
