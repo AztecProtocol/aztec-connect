@@ -207,7 +207,7 @@ export class Server {
     const status = this.blockchain.getBlockchainStatus();
     const nextPublish = this.worldState.getNextPublishTime();
     const txPoolProfile = await this.worldState.getTxPoolProfile();
-    const { runtimeConfig, proverless } = this.configurator.getConfVars();
+    const { runtimeConfig, proverless, numInnerRollupTxs, numOuterRollupProofs } = this.configurator.getConfVars();
 
     const bridgeStats: BridgeStatus[] = [];
     const fullSetOfBridges = [...txPoolProfile.pendingBridgeStats.values()];
@@ -231,8 +231,11 @@ export class Server {
 
     return {
       blockchainStatus: status,
-      pendingTxCount: await this.rollupDb.getUnsettledTxCount(),
       runtimeConfig,
+      numTxsPerRollup: numInnerRollupTxs * numOuterRollupProofs,
+      numUnsettledTxs: txPoolProfile.numTxs,
+      numTxsInNextRollup: txPoolProfile.numTxsInNextRollup,
+      pendingTxCount: txPoolProfile.pendingTxCount,
       nextPublishTime: nextPublish.baseTimeout ? nextPublish.baseTimeout.timeout : new Date(0),
       nextPublishNumber: nextPublish.baseTimeout ? nextPublish.baseTimeout.rollupNumber : 0,
       bridgeStatus: bridgeStats,

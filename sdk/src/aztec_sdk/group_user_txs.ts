@@ -183,15 +183,14 @@ const getTotalFee = (txs: CoreUserTx[]) => {
   return { assetId, value: fees.reduce((sum, fee) => sum + fee.value, BigInt(0)) };
 };
 
-const getPrimaryTx = (txs: CoreUserTx[], feePayingAssetIds: number[]) =>
+const getPrimaryTx = (txs: CoreUserTx[]) =>
   txs.find(tx => !tx.txRefNo) ||
-  txs.find(tx => [ProofId.ACCOUNT, ProofId.DEFI_DEPOSIT].includes(tx.proofId)) ||
+  txs.find(tx => [ProofId.ACCOUNT, ProofId.DEFI_DEPOSIT, ProofId.DEPOSIT, ProofId.WITHDRAW].includes(tx.proofId)) ||
   txs.find(tx => tx.proofId === ProofId.SEND && !tx.isSender) ||
-  txs.find(tx => [ProofId.DEPOSIT, ProofId.WITHDRAW].includes(tx.proofId)) ||
-  txs.find(tx => !feePayingAssetIds.includes((tx as CorePaymentTx).assetId));
+  txs.find(tx => !getFee(tx).value);
 
-const toUserTx = (txs: CoreUserTx[], feePayingAssetIds: number[]) => {
-  const primaryTx = getPrimaryTx(txs, feePayingAssetIds);
+const toUserTx = (txs: CoreUserTx[]) => {
+  const primaryTx = getPrimaryTx(txs);
   if (!primaryTx) {
     return;
   }
@@ -246,9 +245,9 @@ const bySettled = (tx1: UserTx, tx2: UserTx) => {
   return 0;
 };
 
-export const groupUserTxs = (txs: CoreUserTx[], feePayingAssetIds: number[]) => {
+export const groupUserTxs = (txs: CoreUserTx[]) => {
   const txGroups = groupTxsByTxRefNo(txs);
-  return filterUndefined(txGroups.map(txs => toUserTx(txs, feePayingAssetIds)))
+  return filterUndefined(txGroups.map(txs => toUserTx(txs)))
     .flat()
     .sort(bySettled);
 };

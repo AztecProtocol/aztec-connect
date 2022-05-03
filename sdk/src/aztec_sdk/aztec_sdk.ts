@@ -203,8 +203,10 @@ export class AztecSdk extends EventEmitter {
   }
 
   public isFeePayingAsset(assetId: number) {
-    const feePayingAssetIds = this.blockchain.getFeePayingAssetIds();
-    return feePayingAssetIds.includes(assetId);
+    if (isVirtualAsset(assetId)) {
+      return false;
+    }
+    return this.blockchain.getAsset(assetId)?.getStaticInfo().isFeePaying;
   }
 
   public isVirtualAsset(assetId: number) {
@@ -579,8 +581,7 @@ export class AztecSdk extends EventEmitter {
 
   public async getUserTxs(userId: AccountId) {
     const txs = await this.core.getUserTxs(userId);
-    const feePayingAssetIds = this.blockchain.getFeePayingAssetIds();
-    return groupUserTxs(txs, feePayingAssetIds);
+    return groupUserTxs(txs);
   }
 
   public async getPaymentTxs(userId: AccountId) {

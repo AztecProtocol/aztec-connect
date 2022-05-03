@@ -80,6 +80,9 @@ export interface RollupProviderStatus {
   blockchainStatus: BlockchainStatus;
   nextPublishTime: Date;
   nextPublishNumber: number;
+  numTxsPerRollup: number;
+  numTxsInNextRollup: number;
+  numUnsettledTxs: number;
   pendingTxCount: number;
   runtimeConfig: RuntimeConfig;
   bridgeStatus: BridgeStatus[];

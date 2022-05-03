@@ -51,10 +51,14 @@ const rollupDaoToBlockBuffer = (dao: RollupDao) => {
     toBigIntBE(dao.gasPrice!),
   ).toBuffer();
 };
+
 type TxPoolProfile = {
+  numTxsInNextRollup: number;
+  numTxs: number;
   pendingBridgeStats: Map<bigint, BridgeProfile>;
   pendingTxCount: number;
 };
+
 export class WorldState {
   private blockQueue = new MemoryFifo<Block>();
   private pipeline?: RollupPipeline;
@@ -75,6 +79,8 @@ export class WorldState {
     expireTxPoolAfter?: number,
   ) {
     this.txPoolProfile = {
+      numTxs: 0,
+      numTxsInNextRollup: 0,
       pendingTxCount: 0,
       pendingBridgeStats: new Map(),
     };
@@ -160,6 +166,8 @@ export class WorldState {
         txPoolProfile.set(bridgeId, bridgeProfile);
       }
       this.txPoolProfile = {
+        numTxs: await this.rollupDb.getUnsettledTxCount(),
+        numTxsInNextRollup: processedTransactions.length,
         pendingBridgeStats: txPoolProfile,
         pendingTxCount: pendingTransactionsNotInRollup.length,
       };

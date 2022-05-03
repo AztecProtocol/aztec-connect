@@ -67,10 +67,6 @@ export class ClientEthereumBlockchain {
     return assetId;
   }
 
-  public getFeePayingAssetIds() {
-    return this.assets.flatMap((asset, id) => (asset.getStaticInfo().isFeePaying ? [id] : []));
-  }
-
   public getBridgeAddressId(address: EthAddress, gasLimit?: number) {
     const index = this.bridges.findIndex(
       b => b.address.equals(address) && (gasLimit === undefined || b.gasLimit === gasLimit),

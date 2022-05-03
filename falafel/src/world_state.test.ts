@@ -287,6 +287,7 @@ describe('world_state', () => {
       getPendingTxs: jest.fn().mockImplementation(async () => {
         return pendingTxs;
       }),
+      getUnsettledTxCount: jest.fn().mockResolvedValue(0),
       deleteTxsById: jest.fn(),
     } as any;
 

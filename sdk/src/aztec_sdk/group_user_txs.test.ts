@@ -17,14 +17,13 @@ const createFeeTx = (fee: bigint, txRefNo: number) =>
   });
 
 describe('groupUserTxs', () => {
-  const feePayingAssetIds = [0];
   const garbageAssetId = 123;
-  const now = new Date();
+  const now = Date.now();
 
   describe('account tx', () => {
     it('recover account tx without fee and deposit', () => {
       const accountTx = randomCoreAccountTx();
-      expect(groupUserTxs([accountTx], feePayingAssetIds)).toEqual([
+      expect(groupUserTxs([accountTx])).toEqual([
         new UserAccountTx(
           accountTx.txId,
           accountTx.userId,
@@ -48,7 +47,7 @@ describe('groupUserTxs', () => {
         senderPrivateOutput: 80n,
         txRefNo,
       });
-      expect(groupUserTxs([accountTx, depositAndFeeTx], feePayingAssetIds)).toEqual([
+      expect(groupUserTxs([accountTx, depositAndFeeTx])).toEqual([
         new UserAccountTx(
           accountTx.txId,
           accountTx.userId,
@@ -81,7 +80,7 @@ describe('groupUserTxs', () => {
         publicValue: 20n,
         txRefNo,
       });
-      expect(groupUserTxs([accountTx, depositAndFeeTx], feePayingAssetIds)).toEqual([
+      expect(groupUserTxs([accountTx, depositAndFeeTx])).toEqual([
         new UserAccountTx(
           accountTx.txId,
           accountTx.userId,
@@ -99,7 +98,7 @@ describe('groupUserTxs', () => {
       const txRefNo = createTxRefNo();
       const accountTx = randomCoreAccountTx({ txRefNo });
       const feeTx = createFeeTx(20n, txRefNo);
-      expect(groupUserTxs([accountTx, feeTx], feePayingAssetIds)).toEqual([
+      expect(groupUserTxs([accountTx, feeTx])).toEqual([
         new UserAccountTx(
           accountTx.txId,
           accountTx.userId,
@@ -122,7 +121,7 @@ describe('groupUserTxs', () => {
         publicValue: 100n,
         senderPrivateOutput: 80n,
       });
-      expect(groupUserTxs([depositTx], feePayingAssetIds)).toEqual([
+      expect(groupUserTxs([depositTx])).toEqual([
         new UserPaymentTx(
           depositTx.txId,
           depositTx.userId,
@@ -147,7 +146,7 @@ describe('groupUserTxs', () => {
         txRefNo,
       });
       const feeTx = createFeeTx(20n, txRefNo);
-      expect(groupUserTxs([depositTx, feeTx], feePayingAssetIds)).toEqual([
+      expect(groupUserTxs([depositTx, feeTx])).toEqual([
         new UserPaymentTx(
           depositTx.txId,
           depositTx.userId,
@@ -169,7 +168,7 @@ describe('groupUserTxs', () => {
         recipientPrivateOutput: 80n,
         isRecipient: false,
       });
-      expect(groupUserTxs([depositTx], feePayingAssetIds)).toEqual([
+      expect(groupUserTxs([depositTx])).toEqual([
         new UserPaymentTx(
           depositTx.txId,
           depositTx.userId,
@@ -190,7 +189,7 @@ describe('groupUserTxs', () => {
         publicValue: 100n,
         isRecipient: false,
       });
-      expect(groupUserTxs([depositTx], feePayingAssetIds)).toEqual([
+      expect(groupUserTxs([depositTx])).toEqual([
         new UserPaymentTx(
           depositTx.txId,
           depositTx.userId,
@@ -213,7 +212,7 @@ describe('groupUserTxs', () => {
         isRecipient: true,
         isSender: false,
       });
-      expect(groupUserTxs([depositTx], feePayingAssetIds)).toEqual([
+      expect(groupUserTxs([depositTx])).toEqual([
         new UserPaymentTx(
           depositTx.txId,
           depositTx.userId,
@@ -236,7 +235,7 @@ describe('groupUserTxs', () => {
         publicValue: 80n,
         privateInput: 100n,
       });
-      expect(groupUserTxs([withdrawTx], feePayingAssetIds)).toEqual([
+      expect(groupUserTxs([withdrawTx])).toEqual([
         new UserPaymentTx(
           withdrawTx.txId,
           withdrawTx.userId,
@@ -261,7 +260,7 @@ describe('groupUserTxs', () => {
         txRefNo,
       });
       const feeTx = createFeeTx(20n, txRefNo);
-      expect(groupUserTxs([withdrawTx, feeTx], feePayingAssetIds)).toEqual([
+      expect(groupUserTxs([withdrawTx, feeTx])).toEqual([
         new UserPaymentTx(
           withdrawTx.txId,
           withdrawTx.userId,
@@ -283,7 +282,7 @@ describe('groupUserTxs', () => {
         privateInput: 100n,
         recipientPrivateOutput: 80n,
       });
-      expect(groupUserTxs([sendTx], feePayingAssetIds)).toEqual([
+      expect(groupUserTxs([sendTx])).toEqual([
         new UserPaymentTx(
           sendTx.txId,
           sendTx.userId,
@@ -302,7 +301,7 @@ describe('groupUserTxs', () => {
         proofId: ProofId.SEND,
         privateInput: 20n,
       });
-      expect(groupUserTxs([sendTx], feePayingAssetIds)).toEqual([
+      expect(groupUserTxs([sendTx])).toEqual([
         new UserPaymentTx(
           sendTx.txId,
           sendTx.userId,
@@ -323,7 +322,7 @@ describe('groupUserTxs', () => {
         recipientPrivateOutput: 80n,
         isRecipient: false,
       });
-      expect(groupUserTxs([sendTx], feePayingAssetIds)).toEqual([
+      expect(groupUserTxs([sendTx])).toEqual([
         new UserPaymentTx(
           sendTx.txId,
           sendTx.userId,
@@ -343,7 +342,7 @@ describe('groupUserTxs', () => {
         privateInput: 100n,
         isRecipient: false,
       });
-      expect(groupUserTxs([sendTx], feePayingAssetIds)).toEqual([
+      expect(groupUserTxs([sendTx])).toEqual([
         new UserPaymentTx(
           sendTx.txId,
           sendTx.userId,
@@ -364,7 +363,7 @@ describe('groupUserTxs', () => {
         isRecipient: true,
         isSender: false,
       });
-      expect(groupUserTxs([sendTx], feePayingAssetIds)).toEqual([
+      expect(groupUserTxs([sendTx])).toEqual([
         new UserPaymentTx(
           sendTx.txId,
           sendTx.userId,
@@ -389,7 +388,7 @@ describe('groupUserTxs', () => {
         txRefNo,
       });
       const feeTx = createFeeTx(20n, txRefNo);
-      expect(groupUserTxs([sendTx, feeTx], feePayingAssetIds)).toEqual([
+      expect(groupUserTxs([sendTx, feeTx])).toEqual([
         new UserPaymentTx(
           sendTx.txId,
           sendTx.userId,
@@ -410,7 +409,7 @@ describe('groupUserTxs', () => {
 
     it('recover defi tx', () => {
       const defiTx = randomCoreDefiTx({ bridgeId });
-      expect(groupUserTxs([defiTx], feePayingAssetIds)).toEqual([
+      expect(groupUserTxs([defiTx])).toEqual([
         new UserDefiTx(
           defiTx.txId,
           defiTx.userId,
@@ -438,11 +437,11 @@ describe('groupUserTxs', () => {
         bridgeId,
         success: true,
         outputValueA: 123n,
-        settled: now,
+        settled: new Date(),
         interactionNonce: 45,
         isAsync: true,
       });
-      expect(groupUserTxs([defiTx], feePayingAssetIds)).toEqual([
+      expect(groupUserTxs([defiTx])).toEqual([
         new UserDefiTx(
           defiTx.txId,
           defiTx.userId,
@@ -476,7 +475,7 @@ describe('groupUserTxs', () => {
         interactionNonce: 678,
         isAsync: true,
       });
-      expect(groupUserTxs([defiTx], feePayingAssetIds)).toEqual([
+      expect(groupUserTxs([defiTx])).toEqual([
         new UserDefiTx(
           defiTx.txId,
           defiTx.userId,
@@ -508,10 +507,10 @@ describe('groupUserTxs', () => {
         outputValueB: 45n,
         interactionNonce: 678,
         isAsync: true,
-        settled: now,
-        finalised: now,
+        settled: new Date(now),
+        finalised: new Date(now + 1),
       });
-      expect(groupUserTxs([defiTx], feePayingAssetIds)).toEqual([
+      expect(groupUserTxs([defiTx])).toEqual([
         new UserDefiTx(
           defiTx.txId,
           defiTx.userId,
@@ -544,12 +543,22 @@ describe('groupUserTxs', () => {
         outputValueB: 45n,
         interactionNonce: 678,
         isAsync: true,
-        settled: now,
-        finalised: now,
-        claimSettled: now,
+        settled: new Date(now),
+        finalised: new Date(now + 1),
+        claimSettled: new Date(now + 2),
         claimTxId,
       });
-      expect(groupUserTxs([defiTx], feePayingAssetIds)).toEqual([
+      expect(groupUserTxs([defiTx])).toEqual([
+        new UserDefiClaimTx(
+          claimTxId,
+          defiTx.userId,
+          bridgeId,
+          { assetId: 0, value: defiTx.depositValue },
+          true,
+          { assetId: bridgeId.outputAssetIdA, value: 23n },
+          { assetId: virtualAssetIdFlag + 678, value: 45n },
+          defiTx.claimSettled!,
+        ),
         new UserDefiTx(
           defiTx.txId,
           defiTx.userId,
@@ -569,16 +578,6 @@ describe('groupUserTxs', () => {
             finalised: defiTx.finalised,
           },
         ),
-        new UserDefiClaimTx(
-          claimTxId,
-          defiTx.userId,
-          bridgeId,
-          { assetId: 0, value: defiTx.depositValue },
-          true,
-          { assetId: bridgeId.outputAssetIdA, value: 23n },
-          { assetId: virtualAssetIdFlag + 678, value: 45n },
-          defiTx.claimSettled!,
-        ),
       ]);
     });
 
@@ -591,7 +590,7 @@ describe('groupUserTxs', () => {
         txRefNo,
       });
       const defiTx = randomCoreDefiTx({ bridgeId, txFee: 0n, txRefNo });
-      expect(groupUserTxs([jsTx, defiTx], feePayingAssetIds)).toEqual([
+      expect(groupUserTxs([jsTx, defiTx])).toEqual([
         new UserDefiTx(
           defiTx.txId,
           defiTx.userId,
@@ -618,7 +617,7 @@ describe('groupUserTxs', () => {
       const txRefNo = createTxRefNo();
       const defiTx = randomCoreDefiTx({ bridgeId: garbageBridgeId, txFee: 0n, txRefNo });
       const feeTx = createFeeTx(20n, txRefNo);
-      expect(groupUserTxs([defiTx, feeTx], feePayingAssetIds)).toEqual([
+      expect(groupUserTxs([defiTx, feeTx])).toEqual([
         new UserDefiTx(
           defiTx.txId,
           defiTx.userId,
@@ -652,7 +651,7 @@ describe('groupUserTxs', () => {
       });
       const defiTx = randomCoreDefiTx({ bridgeId: garbageBridgeId, txFee: 0n, txRefNo });
       const feeTx = createFeeTx(20n, txRefNo);
-      expect(groupUserTxs([jsTx, defiTx, feeTx], feePayingAssetIds)).toEqual([
+      expect(groupUserTxs([jsTx, defiTx, feeTx])).toEqual([
         new UserDefiTx(
           defiTx.txId,
           defiTx.userId,
