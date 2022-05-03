@@ -8,7 +8,7 @@ import { AmountInput } from 'ui-components';
 import downArrow from '../../../images/down_arrow.svg';
 import style from './amount_selection.module.scss';
 
-const SUPPORTED_FOR_SHIELDING = [KMAA.ETH, KMAA.DAI, KMAA.renBTC];
+const SUPPORTED_FOR_SHIELDING = [KMAA.ETH, KMAA.DAI];
 
 interface AmountSelectionProps {
   asset: RemoteAsset;
