@@ -1,9 +1,8 @@
-import type { RemoteAsset } from 'alt-model/types';
 import React from 'react';
-import { isAddress, SendFormValues, SendStatus, toBaseUnits } from 'app';
-import { Theme } from 'styles';
-import { AssetInfoRow } from 'views/account/asset_info_row';
-import { ProgressTemplate } from 'views/account/progress_template';
+import type { RemoteAsset } from 'alt-model/types';
+import { isAddress, SendFormValues } from 'app';
+import { Amount } from 'alt-model/assets';
+import { SendConfirmationPage } from './send_confirmation_page';
 
 const formatRecipient = (input: string, truncate = false) => {
   if (!isAddress(input)) {
@@ -14,23 +13,17 @@ const formatRecipient = (input: string, truncate = false) => {
 };
 
 interface SendProgressProps {
-  theme: Theme;
   asset: RemoteAsset;
-  assetUnitPrice: bigint;
   txAmountLimit: bigint;
   form: SendFormValues;
-  onGoBack(): void;
   onSubmit(): void;
   onClose(): void;
 }
 
 export const SendProgress: React.FunctionComponent<SendProgressProps> = ({
-  theme,
   asset,
-  assetUnitPrice,
   txAmountLimit,
   form,
-  onGoBack,
   onSubmit,
   onClose,
 }) => {
@@ -38,50 +31,21 @@ export const SendProgress: React.FunctionComponent<SendProgressProps> = ({
 
   const fee = fees.value[speed.value].fee;
 
-  const items = [
-    {
-      title: 'Amount',
-      content: (
-        <AssetInfoRow asset={asset} value={toBaseUnits(amount.value, asset.decimals)} unitPrice={assetUnitPrice} />
-      ),
-    },
-    {
-      title: 'Fee',
-      content: <AssetInfoRow asset={asset} value={fee} unitPrice={assetUnitPrice} />,
-    },
-    {
-      title: 'Recipient',
-      content: formatRecipient(recipient.value.input, true),
-    },
-  ];
-
-  const steps = [
-    {
-      status: SendStatus.CREATE_PROOF,
-      text: 'Create Proof',
-    },
-    {
-      status: SendStatus.SEND_PROOF,
-      text: 'Send Private Transaction',
-    },
-  ];
+  const items = {
+    amount: Amount.from(amount.value, asset),
+    fee: new Amount(fee, asset),
+    recipient: formatRecipient(recipient.value.input, true),
+  };
 
   return (
-    <ProgressTemplate
-      theme={theme}
-      action="Send"
+    <SendConfirmationPage
       asset={asset}
       txAmountLimit={txAmountLimit}
       items={items}
-      steps={steps}
       form={form as any}
       currentStatus={status.value}
-      confirmStatus={SendStatus.CONFIRM}
-      validateStatus={SendStatus.VALIDATE}
-      doneStatus={SendStatus.DONE}
       message={submit.message}
       messageType={submit.messageType}
-      onGoBack={onGoBack}
       onSubmit={onSubmit}
       onClose={onClose}
     />

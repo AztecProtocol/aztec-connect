@@ -1,32 +1,50 @@
 import { useState } from 'react';
 import { BorderBox, Button } from 'components';
+import { ShieldComposerPhase, ShieldComposerState, ShieldFormValidationResult } from 'alt-model/shield';
+import { CostBreakdown } from '../../modal_molecules/cost_breakdown';
 import { Disclaimer } from '../../modal_molecules/disclaimer';
 import { TransactionComplete } from '../../modal_molecules/transaction_complete';
-import { ShieldFormValidationResult, ShieldComposerPhase, ShieldComposerState } from 'alt-model/shield';
-import { CostBreakdown } from '../../modal_molecules/cost_breakdown';
+import { VerticalSplitSection } from '../../sections/vertical_split_section';
 import { ShieldSubmissionSteps } from './shield_submission_steps';
-import style from './shield_page2.module.css';
+import style from './shield_confirmation_page.module.scss';
 
-interface ShieldPage2Props {
+interface ShieldConfirmationPageProps {
   composerState: ShieldComposerState;
   validationResult: ShieldFormValidationResult;
   onSubmit: () => void;
   onClose: () => void;
 }
 
-export function ShieldPage2({ composerState, validationResult, onSubmit, onClose }: ShieldPage2Props) {
-  const asset = validationResult.input.targetAsset;
+export function ShieldConfirmationPage({
+  composerState,
+  validationResult,
+  onSubmit,
+  onClose,
+}: ShieldConfirmationPageProps) {
   const [riskChecked, setRiskChecked] = useState(false);
-  const hasError = !!composerState.error;
+  const hasError = !!composerState?.error;
+  const asset = validationResult.input.targetAsset;
   const isIdle = composerState.phase === ShieldComposerPhase.IDLE;
-  const showingDeclaration = isIdle && !hasError;
   const showingComplete = composerState.phase === ShieldComposerPhase.DONE;
+  const showingDeclaration = isIdle && !hasError;
   const canSubmit = riskChecked && isIdle;
+
   return (
-    <div className={style.root}>
-      <BorderBox>
-        <CostBreakdown amount={validationResult.targetL2OutputAmount} fee={validationResult.input.feeAmount} />
-      </BorderBox>
+    <div className={style.page2Wrapper}>
+      <VerticalSplitSection
+        topPanel={
+          <div className={style.topStats}>
+            <div className={style.description}>{'Details about your shield transaction'}</div>
+          </div>
+        }
+        bottomPanel={
+          <CostBreakdown
+            recipient={validationResult.input.fields.recipientAlias}
+            amount={validationResult.targetL2OutputAmount}
+            fee={validationResult.input.feeAmount}
+          />
+        }
+      />
       <BorderBox>
         {showingDeclaration ? (
           <Disclaimer
@@ -44,15 +62,15 @@ export function ShieldPage2({ composerState, validationResult, onSubmit, onClose
           />
         )}
       </BorderBox>
-      <div className={style.footer}>
-        {isIdle && (
+      {!showingComplete && (
+        <div className={style.footer}>
           <Button
             text={hasError ? 'Retry' : 'Confirm Submit'}
-            onClick={riskChecked ? onSubmit : undefined}
+            onClick={canSubmit ? onSubmit : undefined}
             disabled={!canSubmit}
           />
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

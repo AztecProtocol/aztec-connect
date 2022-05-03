@@ -1,7 +1,6 @@
+import React from 'react';
 import type { RemoteAsset } from 'alt-model/types';
-import React, { useState } from 'react';
-import { TxSettlementTime } from '@aztec/sdk';
-import { isValidForm, SendFormValues, SendMode, SendStatus, ValueAvailability } from 'app';
+import { isValidForm, SendFormValues, SendMode, SendStatus, ValueAvailability, WalletId } from 'app';
 import { Button, InputTheme } from 'components';
 import { Theme } from 'styles';
 import { SplitSection } from '../sections/split_section';
@@ -13,18 +12,12 @@ import { DescriptionSection, RecipientSection } from '../sections';
 import { useAmounts } from 'alt-model/asset_hooks';
 import { PrivacyInformationSection } from '../sections/privacy_information_section';
 import { TransactionSettlementTimeInformationSection } from '../sections/settlement_time_information_section';
-import style from './send.module.scss';
 import { MAX_MODE, StrOrMax } from 'alt-model/forms/constants';
-
-interface SendFormFields {
-  amountStr: string;
-  speed: TxSettlementTime;
-}
+import style from './send.module.scss';
 
 export interface SendProps {
   theme: Theme;
   asset: RemoteAsset;
-  assetUnitPrice: bigint;
   txAmountLimit: bigint;
   spendableBalance: bigint;
   form: SendFormValues;
@@ -32,7 +25,6 @@ export interface SendProps {
   explorerUrl: string;
   onChangeInputs(inputs: Partial<SendFormValues>): void;
   onValidate(): void;
-  onGoBack(): void;
   onSubmit(): void;
   onClose(): void;
 }
@@ -51,36 +43,21 @@ function getDescription(sendMode: SendMode) {
 export const Send: React.FunctionComponent<SendProps> = ({
   theme,
   asset,
-  assetUnitPrice,
   txAmountLimit,
   sendMode,
   form,
   onChangeInputs,
   onValidate,
-  onGoBack,
   onSubmit,
   onClose,
 }) => {
-  const [fields, setFields] = useState<SendFormFields>({
-    speed: TxSettlementTime.INSTANT,
-    amountStr: '',
-  });
   const { amount, fees, maxAmount, recipient, submit } = form;
   const inputTheme = theme === Theme.WHITE ? InputTheme.WHITE : InputTheme.LIGHT;
   const feeAmounts = useAmounts(fees.value.map(feeValue => ({ assetId: asset.id, value: feeValue.fee })));
 
   if (form.status.value !== SendStatus.NADA) {
     return (
-      <SendProgress
-        theme={theme}
-        asset={asset}
-        assetUnitPrice={assetUnitPrice}
-        txAmountLimit={txAmountLimit}
-        form={form}
-        onGoBack={onGoBack}
-        onSubmit={onSubmit}
-        onClose={onClose}
-      />
+      <SendProgress asset={asset} txAmountLimit={txAmountLimit} form={form} onSubmit={onSubmit} onClose={onClose} />
     );
   }
 
@@ -130,13 +107,13 @@ export const Send: React.FunctionComponent<SendProps> = ({
           <TxGasSection
             asset={asset}
             balanceType="L2"
-            speed={fields.speed}
-            onChangeSpeed={speed => setFields({ ...fields, speed })}
+            speed={form.speed.value}
+            onChangeSpeed={speed => onChangeInputs({ speed: { value: speed } })}
             feeAmounts={feeAmounts}
             targetAssetIsErc20={asset.id !== 0}
           />
         }
-        rightPanel={<TransactionSettlementTimeInformationSection selectedSpeed={fields.speed} />}
+        rightPanel={<TransactionSettlementTimeInformationSection selectedSpeed={form.speed.value} />}
       />
       <div className={style.footer}>
         <FaqHint className={style.faqHint} />

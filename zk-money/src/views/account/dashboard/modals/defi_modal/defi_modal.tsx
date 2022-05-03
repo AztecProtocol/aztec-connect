@@ -1,11 +1,11 @@
 import { Page1 } from './page1';
-import { Page2 } from './page2';
 import { useDefiForm, DefiComposerPhase, DefiFormMode } from 'alt-model/defi/defi_form';
 import { DefiRecipe } from 'alt-model/defi/types';
 import { Overlay } from 'components/overlay';
 import { DefiModalHeader } from './defi_modal_header';
 import { Card, CardHeaderSize } from 'ui-components';
 import { Modal } from 'components';
+import { DefiConfirmationPage } from './defi_confirmation_page';
 
 interface DefiModalProps {
   recipe: DefiRecipe;
@@ -25,7 +25,7 @@ export function DefiModal({ recipe, mode, onClose }: DefiModalProps) {
 
   const page =
     locked && composerState ? (
-      <Page2
+      <DefiConfirmationPage
         recipe={recipe}
         composerState={composerState}
         onSubmit={submit}
@@ -43,6 +43,7 @@ export function DefiModal({ recipe, mode, onClose }: DefiModalProps) {
         validationResult={validationResult}
       />
     );
+
   return (
     <Overlay>
       <Modal onClose={onClose}>

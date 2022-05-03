@@ -1,16 +1,16 @@
 import { useState } from 'react';
-import { DefiComposerPhase, DefiComposerState, DefiFormValidationResult } from 'alt-model/defi/defi_form';
 import { BorderBox, Button } from 'components';
-import { DefiSubmissionSteps } from './defi_submission_steps';
 import { Disclaimer } from '../modal_molecules/disclaimer';
 import { TransactionComplete } from '../modal_molecules/transaction_complete';
-import { DefiRecipe } from 'alt-model/defi/types';
-import { BridgeKeyStats } from 'features/defi/bridge_key_stats';
 import { CostBreakdown } from '../modal_molecules/cost_breakdown';
 import { VerticalSplitSection } from '../sections/vertical_split_section';
-import style from './page2.module.scss';
+import { DefiComposerPhase, DefiComposerState, DefiFormValidationResult } from 'alt-model/defi/defi_form';
+import { DefiRecipe } from 'alt-model/defi/types';
+import { BridgeKeyStats } from 'features/defi/bridge_key_stats';
+import { DefiSubmissionSteps } from './defi_submission_steps';
+import style from './defi_confirmation_page.module.scss';
 
-interface Page2Props {
+interface DefiConfirmationPageProps {
   recipe: DefiRecipe;
   composerState: DefiComposerState;
   validationResult: DefiFormValidationResult;
@@ -18,15 +18,22 @@ interface Page2Props {
   onClose: () => void;
 }
 
-export function Page2({ recipe, composerState, validationResult, onSubmit, onClose }: Page2Props) {
+export function DefiConfirmationPage({
+  recipe,
+  composerState,
+  validationResult,
+  onSubmit,
+  onClose,
+}: DefiConfirmationPageProps) {
   const [riskChecked, setRiskChecked] = useState(false);
-  const asset = validationResult.input.depositAsset;
-  const hasError = !!composerState?.error;
-  const isIdle = composerState?.phase === DefiComposerPhase.IDLE;
-  const showingDeclaration = isIdle && !hasError;
-  const showingComplete = composerState?.phase === DefiComposerPhase.DONE;
-  const canSubmit = riskChecked && isIdle;
 
+  const hasError = !!composerState?.error;
+  const isIdle = composerState.phase === DefiComposerPhase.IDLE;
+  const showingComplete = composerState.phase === DefiComposerPhase.DONE;
+  const showingDeclaration = isIdle && !hasError;
+  const asset = validationResult.input.depositAsset;
+
+  const canSubmit = riskChecked && isIdle;
   return (
     <div className={style.page2Wrapper}>
       <VerticalSplitSection
@@ -38,6 +45,7 @@ export function Page2({ recipe, composerState, validationResult, onSubmit, onClo
         }
         bottomPanel={
           <CostBreakdown
+            recipient={recipe.name}
             amount={validationResult.validPayload?.targetDepositAmount}
             fee={validationResult.validPayload?.feeAmount}
           />

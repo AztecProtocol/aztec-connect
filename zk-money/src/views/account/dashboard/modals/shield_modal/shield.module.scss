@@ -40,3 +40,12 @@
   flex-direction: column;
   gap: 20px;
 }
+
+.contentWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 30px 30px;
+  max-height: calc(100vh - 100px);
+  overflow: auto;
+}

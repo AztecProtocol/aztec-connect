@@ -1,7 +1,7 @@
 import { Card, CardHeaderSize } from 'ui-components';
 import { useShieldForm, ShieldComposerPhase } from 'alt-model/shield';
 import { CloseButtonWhite, Modal } from 'components';
-import { ShieldPage2 } from './shield_page2/shield_page2';
+import { ShieldConfirmationPage } from './shield_confirmation_page';
 import { ShieldPage1 } from './shield_page1';
 import { useRemoteAssets } from 'alt-model/top_level_context';
 import style from './shield_modal.module.scss';
@@ -35,7 +35,7 @@ export function ShieldModal(props: ShieldModalProps) {
 
   const cardContent =
     locked && composerState ? (
-      <ShieldPage2
+      <ShieldConfirmationPage
         composerState={composerState}
         validationResult={validationResult}
         onSubmit={submit}
@@ -64,7 +64,7 @@ export function ShieldModal(props: ShieldModalProps) {
             <CloseButtonWhite onClick={handleClose} />
           </div>
         }
-        cardContent={<div className={style.contentWrapper}>{cardContent}</div>}
+        cardContent={cardContent}
         headerSize={CardHeaderSize.LARGE}
       />
     </Modal>

@@ -80,7 +80,7 @@ export function ShieldPage1({
   }
 
   return (
-    <>
+    <div className={style.contentWrapper}>
       {walletSelect}
       <SplitSection
         leftPanel={
@@ -125,6 +125,6 @@ export function ShieldPage1({
       <div className={style.nextWrapper}>
         <Button theme="gradient" text="Next" onClick={onNext} disabled={!validationResult.isValid} />
       </div>
-    </>
+    </div>
   );
 }

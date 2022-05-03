@@ -24,8 +24,6 @@ const optionStyle = css`
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  width: 160px;
-  height: 160px;
   background: ${colours.white};
   border-radius: ${borderRadiuses.m};
   cursor: default;
@@ -37,6 +35,8 @@ const optionStyle = css`
 
 const StaticOption = styled.div`
   ${optionStyle}
+  width: 160px;
+  height: 160px;
   color: ${rgba(defaultTextColour, 0.5)};
   transition: all 0.2s ease-out;
 `;
@@ -49,10 +49,14 @@ const StaticText = styled(Text)`
 interface OptionRootProps {
   active: boolean;
   disabled: boolean;
+  size: 's' | 'm';
 }
 
 const OptionRoot = styled.div<OptionRootProps>`
   ${optionStyle}
+  width: ${({ size }) => (size === 's' ? `50px` : `160px`)};
+  height: ${({ size }) => (size === 's' ? `50px` : `160px`)};
+  margin: ${({ size }) => (size === 's' ? `12px` : `24px`)};
   color: ${defaultTextColour};
   box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s ease-out;
@@ -66,8 +70,9 @@ const OptionRoot = styled.div<OptionRootProps>`
     transform: scale(0.9);
   `};
 
-  ${({ active }) =>
+  ${({ active, size }) =>
     active &&
+    size === 'm' &&
     `
     transform: scale(1.1);
   `};
@@ -88,8 +93,12 @@ const OptionRoot = styled.div<OptionRootProps>`
   `}
 `;
 
-const IconRoot = styled.div`
-  margin-bottom: ${spacings.xs};
+interface IconRootProps {
+  size: 's' | 'm';
+}
+
+const IconRoot = styled.div<IconRootProps>`
+  margin-bottom: ${({ size }) => (size === 's' ? `0px` : spacings.xs)};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -105,6 +114,7 @@ interface OptionProps {
   onClick: () => Promise<void>;
   active: boolean;
   disabled: boolean;
+  size: 's' | 'm';
 }
 
 export const Option: React.FunctionComponent<OptionProps> = ({
@@ -115,12 +125,13 @@ export const Option: React.FunctionComponent<OptionProps> = ({
   onClick,
   active,
   disabled,
+  size,
 }) => (
-  <OptionRoot onClick={onClick} active={active} disabled={disabled}>
-    <IconRoot>
+  <OptionRoot size={size} onClick={onClick} active={active} disabled={disabled}>
+    <IconRoot size={size}>
       <img src={icon} alt={name} width={iconWidth} height={iconHeight} />
     </IconRoot>
-    <Text text={name} size="m" />
+    {size === 'm' && <Text text={name} size="m" />}
   </OptionRoot>
 );
 
@@ -129,6 +140,7 @@ interface WalletPickerProps {
   walletId?: WalletId;
   onSubmit: (walletId: WalletId) => any;
   moreComingSoon?: boolean;
+  size?: 's' | 'm';
 }
 
 export const WalletPicker: React.FunctionComponent<WalletPickerProps> = ({
@@ -136,6 +148,7 @@ export const WalletPicker: React.FunctionComponent<WalletPickerProps> = ({
   walletId,
   onSubmit,
   moreComingSoon,
+  size = 'm',
 }) => (
   <Root>
     <OptionsRoot>
@@ -144,9 +157,10 @@ export const WalletPicker: React.FunctionComponent<WalletPickerProps> = ({
           key={id}
           name={nameShort}
           icon={icon}
-          iconHeight={id === WalletId.CONNECT ? 60 : 80}
+          iconHeight={size === 's' ? 20 : id === WalletId.CONNECT ? 60 : 80}
           onClick={() => onSubmit(id)}
           active={walletId === id}
+          size={size}
           disabled={walletId !== undefined && walletId !== id}
         />
       ))}

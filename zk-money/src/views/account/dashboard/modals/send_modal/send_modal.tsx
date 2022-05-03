@@ -3,11 +3,11 @@ import { isKnownAssetAddressString } from 'alt-model/known_assets/known_asset_ad
 import type { RemoteAsset } from 'alt-model/types';
 import { Card, CardHeaderSize } from 'ui-components';
 import { debounce } from 'lodash';
-import { useApp, useAssetUnitPrice, useProviderState, useSendForm } from 'alt-model';
+import { useApp, useSendForm } from 'alt-model';
 import { SendMode, SendStatus } from 'app';
 import { CloseButtonWhite, Modal } from 'components';
 import { Theme } from 'styles';
-import { SendLayout } from './send_layout';
+import { Send } from './send';
 import style from './send_modal.module.scss';
 
 interface SendModalProps {
@@ -28,12 +28,10 @@ function getTitle(sendMode: SendMode) {
 }
 
 export function SendModal({ asset, onClose, sendMode = SendMode.SEND }: SendModalProps) {
-  const { config, userSession } = useApp();
+  const { config } = useApp();
   const { formValues, sendForm, processing, spendableBalance } = useSendForm(asset, sendMode);
   const generatingKey = formValues?.status.value === SendStatus.GENERATE_KEY;
   const theme = generatingKey ? Theme.GRADIENT : Theme.WHITE;
-  const assetUnitPrice = useAssetUnitPrice(asset.id);
-  const providerState = useProviderState();
   const canClose = !processing && !generatingKey;
   const overrideModalLayout = !generatingKey;
   const debouncedSoftValidation = useMemo(() => debounce(() => sendForm?.softValidation(), 300), [sendForm]);
@@ -60,13 +58,11 @@ export function SendModal({ asset, onClose, sendMode = SendMode.SEND }: SendModa
           </div>
         }
         cardContent={
-          <SendLayout
+          <Send
             theme={theme}
             asset={asset}
-            assetUnitPrice={assetUnitPrice ?? 0n}
             txAmountLimit={txAmountLimit}
             spendableBalance={spendableBalance}
-            providerState={providerState}
             sendMode={sendMode}
             form={formValues}
             explorerUrl={config.explorerUrl}
@@ -75,9 +71,6 @@ export function SendModal({ asset, onClose, sendMode = SendMode.SEND }: SendModa
               debouncedSoftValidation();
             }}
             onValidate={() => sendForm?.lock()}
-            onChangeWallet={walletId => userSession?.changeWallet(walletId)}
-            onDisconnectWallet={() => userSession?.disconnectWallet()}
-            onGoBack={() => sendForm?.unlock()}
             onSubmit={() => sendForm?.submit()}
             onClose={() => {
               if (canClose) onClose();

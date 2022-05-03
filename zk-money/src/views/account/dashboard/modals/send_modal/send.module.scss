@@ -1,3 +1,9 @@
+.sendWrapper {
+  display: flex;
+  justify-content: space-between;
+  flex-direction: column;
+}
+
 .faqHint {
   // align-self: end;
 }

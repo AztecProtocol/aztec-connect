@@ -11,6 +11,7 @@ const cx = bindStyle(style);
 interface CostBreakdownProps {
   amount?: Amount;
   fee?: Amount;
+  recipient?: string;
 }
 
 interface RowProps {
@@ -41,17 +42,16 @@ function maybeBulkPriceStr(bulkPrice?: bigint) {
   return '$' + formatBulkPrice(bulkPrice);
 }
 
-export function CostBreakdown({ amount, fee }: CostBreakdownProps) {
+export function CostBreakdown({ amount, fee, recipient }: CostBreakdownProps) {
   const amountAssetUnitPrice = useAssetUnitPrice(amount?.id);
   const amountBulkPrice = amountAssetUnitPrice === undefined ? undefined : amount?.toBulkPrice(amountAssetUnitPrice);
   const feeAssetUnitPrice = useAssetUnitPrice(fee?.id);
   const feeBulkPrice = feeAssetUnitPrice === undefined ? undefined : fee?.toBulkPrice(feeAssetUnitPrice);
-  const totalBulkPrice =
-    amountBulkPrice !== undefined && feeBulkPrice !== undefined ? amountBulkPrice + feeBulkPrice : undefined;
+  const totalBulkPrice = amountBulkPrice !== undefined && feeBulkPrice !== undefined ? amountBulkPrice : undefined;
 
   return (
     <div className={style.root}>
-      <Row label="Recipient" value={'RECIPIENT'} />
+      <Row label="Recipient" value={recipient} />
       <Row
         className={style.zebra}
         label="Amount"

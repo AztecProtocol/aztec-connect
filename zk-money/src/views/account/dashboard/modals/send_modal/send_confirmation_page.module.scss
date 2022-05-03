@@ -1,0 +1,34 @@
+.root {
+  display: grid;
+  gap: 10px;
+}
+
+.topStats {
+  display: flex;
+  flex-direction: row;
+  gap: 5%;
+  align-items: center;
+}
+
+.description {
+  font-size: 14px;
+  line-height: 150%;
+  letter-spacing: 0.03em;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  justify-self: self-end;
+  align-self: end;
+}
+
+.page2Wrapper {
+  grid-gap: 30px;
+  gap: 30px;
+  display: flex;
+  grid-template-columns: 1fr 1fr;
+  flex-direction: column;
+  padding: 30px 30px;
+  overflow: auto;
+}
