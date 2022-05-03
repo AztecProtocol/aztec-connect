@@ -1,0 +1,16 @@
+[book]
+authors = ["Aztec"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Aztec Connect"
+
+[output.html]
+additional-css = ["theme/css/style.css"]
+additional-js = ["theme/sidebar.js"]
+
+[build]
+build-dir = "dist"
+
+[preprocessor.katex]
+macros = "macros.txt"
