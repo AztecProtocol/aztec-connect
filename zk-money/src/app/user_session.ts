@@ -216,9 +216,9 @@ export class UserSession extends EventEmitter {
     this.rollupService?.destroy();
     this.shieldForAliasForm?.destroy();
     if (this.sdk) {
-      this.sdk.removeAllListeners();
+      this.sdk.off(SdkEvent.UPDATED_WORLD_STATE, this.handleWorldStateChange);
+      this.sdk.off(SdkEvent.UPDATED_USER_STATE, this.handleUserStateChange);
       await this.removeUnregisteredUsers();
-      await this.sdk.destroy();
     }
     debug('Session destroyed.');
   }
