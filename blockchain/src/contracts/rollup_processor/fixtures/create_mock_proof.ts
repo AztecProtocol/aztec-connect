@@ -38,7 +38,7 @@ const nullifierRoots = extendRoots([WorldStateConstants.EMPTY_NULL_ROOT]);
 const dataRootRoots = extendRoots([WorldStateConstants.EMPTY_ROOT_ROOT]);
 const defiRoots = extendRoots([WorldStateConstants.EMPTY_DEFI_ROOT]);
 
-class InnerProofOutput {
+export class InnerProofOutput {
   constructor(
     public innerProofs: InnerProofData[],
     public signatures: Buffer[],

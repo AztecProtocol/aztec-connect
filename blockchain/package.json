@@ -25,7 +25,7 @@
     },
     "testRegex": ".*\\.test\\.ts$",
     "rootDir": "./src",
-    "testTimeout": 60000,
+    "testTimeout": 90000,
     "slowTestThreshold": 60
   },
   "dependencies": {
