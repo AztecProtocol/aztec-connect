@@ -94,7 +94,7 @@ export const DefiCardsList = ({ onSelect, isLoggedIn }: DefiCardsListProps) => {
   return (
     <Section>
       <SectionTitle
-        label="Popular Investments"
+        label="Opportunities"
         sideComponent={<InvestmentsFilter recipes={recipes} filters={filters} onChangeFilters={changeFilters} />}
       />
       <div className={style.defiCardsListWrapper}>

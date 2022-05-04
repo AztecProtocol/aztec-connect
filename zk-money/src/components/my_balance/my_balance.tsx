@@ -6,25 +6,6 @@ import { useTotalValuation, useTotalSpendableValuation } from '../../alt-model/t
 import { gradients } from '../../styles';
 import style from './my_balance.module.scss';
 
-const BalanceWrapper = styled.div`
-  margin: auto;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  width: 100%;
-  padding: 30px 40px;
-  justify-content: space-around;
-  align-items: baseline;
-  display: flex;
-`;
-
-const AmountWrapper = styled.div`
-  width: 100%;
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-`;
-
 const Amount = styled.h1`
   font-size: 56px;
   height: 62px;
@@ -45,14 +26,6 @@ const InformationWrapper = styled.div`
   justify-content: space-between;
 `;
 
-const Available = styled.h2`
-  font-size: 20px;
-  color: black;
-  opacity: 0.7;
-  font-style: italic;
-  letter-spacing: 0.03em;
-`;
-
 export function MyBalance() {
   const totalValuation = useTotalValuation();
   const totalValuationStr = totalValuation !== undefined && formatBulkPrice(totalValuation);
@@ -62,19 +35,19 @@ export function MyBalance() {
   return (
     <Card
       className={style.myBalance}
-      cardHeader={'My Balance'}
+      cardHeader={'Net Worth'}
       cardContent={
-        <BalanceWrapper>
-          <AmountWrapper>
+        <div className={style.balanceWrapper}>
+          <div className={style.amountWrapper}>
             <Amount>{totalValuationStr ? `$${totalValuationStr}` : 'Loading...'}</Amount>
-          </AmountWrapper>
+          </div>
           <InformationWrapper>
-            <Available>
+            <h2 className={style.available}>
               {totalSpendableValuationStr ? `Available $${totalSpendableValuationStr}` : 'Loading...'}
-            </Available>
+            </h2>
             <InfoButton />
           </InformationWrapper>
-        </BalanceWrapper>
+        </div>
       }
       headerSize={CardHeaderSize.LARGE}
     />

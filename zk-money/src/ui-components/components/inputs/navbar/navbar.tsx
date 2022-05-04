@@ -33,7 +33,7 @@ interface LinkItem {
 
 const LINKS: LinkItem[] = [
   { url: '/earn', label: 'Earn' },
-  { url: '/trade', label: 'Trade', disabled: true },
+  { url: '/trade', label: 'Trade' },
 ];
 
 export function Navbar({ isLoggedIn, accountComponent, theme, onChange, onLogin }: NavbarProps): JSX.Element {
@@ -68,13 +68,13 @@ export function Navbar({ isLoggedIn, accountComponent, theme, onChange, onLogin 
           <div className={style.accountWrapper}>
             <Link
               to={'/balance'}
-              className={cx(style.link, style.balanceLink, {
+              className={cx(style.link, style.navLink, {
                 active: '/balance' === location.pathname,
                 white: theme === Theme.WHITE,
                 gradient: theme === Theme.GRADIENT,
               })}
             >
-              ${totalValuationStr}
+              Wallet
             </Link>
             <div className={style.accountComponent}>{accountComponent}</div>
           </div>

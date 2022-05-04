@@ -2,36 +2,19 @@ import { CardWrapper } from 'ui-components';
 import { useState } from 'react';
 import { ShieldModal } from 'views/account/dashboard/modals/shield_modal';
 import { Button } from '../button';
-import styled from 'styled-components/macro';
-
-const ShieldMoreWrapper = styled(CardWrapper)`
-  display: flex;
-  letter-spacing: 0.03em;
-  flex-basis: 33%;
-  padding: 30px;
-  line-height: 150%;
-  overflow: initial;
-`;
-
-const ShieldMoreButton = styled(Button)`
-  margin-top: 30px;
-`;
-
-const ModalAnchor = styled.div`
-  position: relative;
-`;
+import style from './shield_more.module.scss';
 
 export function ShieldMore() {
   const [isShieldModalOpen, setIsShieldModalOpen] = useState(false);
 
   return (
     <>
-      <ShieldMoreWrapper>
-        <div>Shield more funds from your L1 wallet for privacy and gas savings!</div>
-        <ModalAnchor>
-          <ShieldMoreButton text="Shield more" onClick={() => setIsShieldModalOpen(true)} />
-        </ModalAnchor>
-      </ShieldMoreWrapper>
+      <CardWrapper className={style.shieldMoreWrapper}>
+        <div>Shield additional funds from L1</div>
+        <div className={style.modalAnchor}>
+          <Button className={style.shieldMoreButton} text="Shield more" onClick={() => setIsShieldModalOpen(true)} />
+        </div>
+      </CardWrapper>
       {isShieldModalOpen && <ShieldModal onClose={() => setIsShieldModalOpen(false)} />}
     </>
   );

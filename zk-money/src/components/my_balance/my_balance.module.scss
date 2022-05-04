@@ -2,5 +2,31 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  flex-basis: 66%;
+  flex-basis: 62%;
+}
+
+.available {
+  font-size: 20px;
+  color: black;
+  opacity: 0.7;
+  letter-spacing: 0.03em;
+}
+
+.balanceWrapper {
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  padding: 30px 40px;
+  justify-content: space-around;
+  align-items: baseline;
+  display: flex;
+}
+
+.amountWrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
 }

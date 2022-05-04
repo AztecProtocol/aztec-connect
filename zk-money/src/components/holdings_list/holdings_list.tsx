@@ -7,7 +7,7 @@ import { DefiInvestments } from 'components/defi_investments';
 
 const VIEWS = [
   { label: 'Tokens', value: 'tokens' },
-  { label: 'Yield Positions', value: 'defi-positions' },
+  { label: 'Earn Positions', value: 'defi-positions' },
 ];
 
 type View = typeof VIEWS[number]['value'];

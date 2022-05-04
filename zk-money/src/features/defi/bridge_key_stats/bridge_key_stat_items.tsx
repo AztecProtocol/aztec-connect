@@ -53,9 +53,8 @@ export function getKeyStatItemProps(stat: KeyBridgeStat, recipe: DefiRecipe) {
     case KeyBridgeStat.BATCH_SIZE:
       return { label: 'Batch Size', value: <BatchSizeValue recipe={recipe} /> };
     case KeyBridgeStat.YIELD:
-      return { label: 'Current Yield', value: <YieldValue recipe={recipe} /> };
     case KeyBridgeStat.FIXED_YIELD:
-      return { label: 'Fixed Yield', value: <YieldValue recipe={recipe} /> };
+      return { label: recipe.roiType, value: <YieldValue recipe={recipe} /> };
     case KeyBridgeStat.MATURITY:
       return { label: 'Maturity', value: <MaturityValue recipe={recipe} /> };
   }

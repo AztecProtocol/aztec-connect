@@ -4,13 +4,13 @@ import { DefiInvestmentType } from '../../alt-model/defi/types';
 function getLabel(type: DefiInvestmentType) {
   switch (type) {
     case DefiInvestmentType.STAKING:
-      return 'STAKING';
+      return 'Staking';
     case DefiInvestmentType.BORROW:
-      return 'BORROW';
+      return 'Borrow';
     case DefiInvestmentType.FIXED_YIELD:
-      return 'FIXED YIELD';
+      return 'Fixed Yield';
     case DefiInvestmentType.YIELD:
-      return 'YIELD';
+      return 'Yield';
   }
 }
 

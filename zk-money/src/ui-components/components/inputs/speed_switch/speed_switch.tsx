@@ -27,6 +27,7 @@ const Cell = styled.div<{ height: number; idx: number; optionCount: number }>`
   transition: transform 0.2s;
   display: flex;
   flex-direction: column;
+  font-weight: 500;
 `;
 
 const Switch = styled.div<{ height: number }>`
@@ -43,7 +44,7 @@ const BoldLabels = styled.div<{ innerHeight: number; idx: number; optionCount: n
   height: ${({ innerHeight }) => `${innerHeight}px`};
   transform: translateX(${({ idx, optionCount }) => (-idx * 100) / optionCount}%);
   transition: transform 0.2s;
-  font-weight: 500;
+  font-weight: 450;
 `;
 
 interface Option<T> {
@@ -81,7 +82,7 @@ export function SpeedSwitch<T>({ value, onChangeValue, options, height = 52 }: S
             <BoldLabels idx={selectedIdx} optionCount={options.length} innerHeight={innerHeight}>
               {options.map((option, idx) => (
                 <Cell key={idx} idx={idx} optionCount={options.length} height={innerHeight}>
-                  <Text size="xs" color="gradient" weight="bold" text={option.label} />
+                  <Text size="xs" color="gradient" text={option.label} />
                   {option.sublabel}
                 </Cell>
               ))}

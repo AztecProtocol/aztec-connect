@@ -14,7 +14,7 @@ function getTxTypeLabel(tx: UserTx) {
     case ProofId.SEND:
       return 'Send';
     case ProofId.ACCOUNT:
-      return 'Register';
+      return 'Register Account';
     case ProofId.DEFI_DEPOSIT:
       return 'Defi Deposit';
     case ProofId.DEFI_CLAIM: {

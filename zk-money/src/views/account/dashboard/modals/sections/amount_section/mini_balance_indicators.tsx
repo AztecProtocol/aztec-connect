@@ -4,6 +4,7 @@ import { formatBaseUnits } from 'app';
 import { Text } from 'components';
 import { useL1Balances } from 'alt-model/assets/l1_balance_hooks';
 import { useMaxSpendableValue } from 'alt-model';
+import style from './mini_balance_indicators.module.scss';
 
 export function MiniL1BalanceIndicator({ asset }: { asset?: RemoteAsset }) {
   const { l1Balance } = useL1Balances(asset);
@@ -13,12 +14,7 @@ export function MiniL1BalanceIndicator({ asset }: { asset?: RemoteAsset }) {
       : `${formatBaseUnits(l1Balance, asset.decimals, {
           precision: getAssetPreferredFractionalDigits(asset.address),
         })} ${asset.symbol}`;
-  return (
-    <Text size="xxs">
-      <div>Available Balance: </div>
-      <div>{content}</div>
-    </Text>
-  );
+  return <BalanceIndicator availableBalance={content} />;
 }
 
 export function MiniL2BalanceIndicator({ asset }: { asset?: RemoteAsset }) {
@@ -29,5 +25,14 @@ export function MiniL2BalanceIndicator({ asset }: { asset?: RemoteAsset }) {
       : `${formatBaseUnits(balance, asset.decimals, {
           precision: getAssetPreferredFractionalDigits(asset.address),
         })} zk${asset.symbol}`;
-  return <Text size="xxs">Available Balance: {content}</Text>;
+  return <BalanceIndicator availableBalance={content} />;
+}
+
+function BalanceIndicator({ availableBalance }: { availableBalance: string }) {
+  return (
+    <Text size="xxs" className={style.balanceIndicator}>
+      <div>Available Balance</div>
+      <div>{availableBalance}</div>
+    </Text>
+  );
 }
