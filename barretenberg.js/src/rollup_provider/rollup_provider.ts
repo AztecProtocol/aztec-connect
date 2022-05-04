@@ -87,6 +87,7 @@ export interface RollupProviderStatus {
   runtimeConfig: RuntimeConfig;
   bridgeStatus: BridgeStatus[];
   proverless: boolean;
+  rollupSize: number;
 }
 
 export function rollupProviderStatusToJson(status: RollupProviderStatus) {

@@ -391,10 +391,10 @@ export class SQLDatabase implements Database {
     return await this.userKeyRep.find({ accountId });
   }
 
-  async getUserSigningKeyIndex(accountId: AccountId, key: GrumpkinAddress) {
+  async getUserSigningKey(accountId: AccountId, key: GrumpkinAddress) {
     const keyBuffer = key.toBuffer();
     const signingKey = await this.userKeyRep.findOne({ where: { accountId, key: keyBuffer.slice(0, 32) } });
-    return signingKey ? signingKey.treeIndex : undefined;
+    return signingKey ?? undefined;
   }
 
   async removeUserSigningKeys(accountId: AccountId) {

@@ -53,6 +53,10 @@ export class RollupDao {
   @Column({ nullable: true })
   public mined?: Date;
 
+  // Null until mined.
+  @Column(...bufferColumn({ nullable: true, length: 32 }))
+  public subtreeRoot?: Buffer;
+
   @AfterLoad()
   @AfterInsert()
   @AfterUpdate()
@@ -74,6 +78,9 @@ export class RollupDao {
     }
     if (!this.mined) {
       delete this.mined;
+    }
+    if (!this.subtreeRoot) {
+      delete this.subtreeRoot;
     }
   }
 }

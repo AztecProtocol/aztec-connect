@@ -166,6 +166,7 @@ export class CachedRollupDb extends SyncRollupDb {
     interactionResult: DefiInteractionNote[],
     txIds: Buffer[],
     assetMetrics: AssetMetricsDao[],
+    subtreeRoot: Buffer,
   ) {
     const rollup = await super.confirmMined(
       id,
@@ -176,6 +177,7 @@ export class CachedRollupDb extends SyncRollupDb {
       interactionResult,
       txIds,
       assetMetrics,
+      subtreeRoot,
     );
     this.rollups[rollup.id] = rollup;
     this.settledRollups[rollup.id] = rollup;

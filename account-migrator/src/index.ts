@@ -2,14 +2,11 @@ import { AccountData, InitHelpers } from '@aztec/barretenberg/environment';
 import { WorldStateDb, RollupTreeId } from '@aztec/barretenberg/world_state_db';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
-import { AccountAliasId, AccountId } from '@aztec/barretenberg/account_id';
+import { AccountId } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
-import { EthAddress } from '@aztec/barretenberg/address';
-import { RollupProcessor } from './rollup_processor';
-import { Web3Provider } from '@ethersproject/providers';
-import { ethers } from 'ethers';
-import { EthersAdapter } from '@aztec/blockchain';
-import { RollupProofData } from './rollup_proof';
+import { Timer } from '@aztec/barretenberg/timer';
+import { getAccountsLegacy } from './legacy_aztec';
+import { getAccountsConnect } from './aztec_connect';
 import { Command, InvalidArgumentError } from 'commander';
 import * as filePath from 'path';
 
@@ -28,7 +25,8 @@ program
   .requiredOption('-u, --url <url>', 'Infura URL')
   .option('-r, --rollupId <rollupId>', 'Id of first required rollup', parseAndCheckNumber, 0)
   .option('-c, --confirmations <confirmations>', 'Num confirmations required on rollups', parseAndCheckNumber, 0)
-  .option('-l, --logDuplicates', 'Log duplicate Public Key/Nonce/Signing Key combinations', false);
+  .option('-l, --logDuplicates', 'Log duplicate Public Key/Nonce/Signing Key combinations', false)
+  .option('-z, --aztecConnect', 'Connects to an aztec connect version of the rollup contract', false);
 program.parse(process.argv);
 const options = program.opts();
 
@@ -103,21 +101,10 @@ async function main() {
   console.log(`Accounts will be written to ${accountsFile}`);
   console.log(`Roots will be written to ${rootsFile}`);
 
-  const provider = new ethers.providers.JsonRpcProvider(options.url);
-  const web3Provider = new Web3Provider(new EthersAdapter(provider));
-  const rollupProcessor = new RollupProcessor(EthAddress.fromString(options.address), web3Provider);
-
   console.log(
     `Requesting blocks from rollupID ${options.rollupId} with at least ${options.confirmations} confirmations...`,
   );
-  const blocks = await rollupProcessor.getRollupBlocksFrom(options.rollupId, options.confirmations);
-  console.log(`Total num blocks returned: ${blocks.length}`);
-
-  const rollupProofs = blocks.map(block => RollupProofData.fromBuffer(block.rollupProofData));
-  const innerProofs = rollupProofs.map(outerProof => outerProof.innerProofData).flat();
-  console.log(`Total num inner proofs: ${innerProofs.length}`);
-  const accountProofs = innerProofs.filter(proof => proof.proofId === 1);
-  console.log(`Total num account proofs: ${accountProofs.length}`);
+  const accountProofs = options.aztecConnect ? await getAccountsConnect(options) : await getAccountsLegacy(options);
 
   const accounts = new Array<AccountData>(accountProofs.length);
 
@@ -128,12 +115,14 @@ async function main() {
   const duplicateKeys = new Set();
 
   console.log('Generating nullifiers, notes and account aliases etc...');
+  const parseTimer = new Timer();
   for (let i = 0; i < accountProofs.length; i++) {
-    const proof = accountProofs[i];
-    const accountAliasId = AccountAliasId.fromBuffer(proof.assetId);
-    const accountKey = new GrumpkinAddress(Buffer.concat([proof.publicInput, proof.publicOutput]));
-    const signingKey1 = proof.inputOwner;
-    const signingKey2 = proof.outputOwner;
+    const {
+      aliasId: accountAliasId,
+      accountKey,
+      spendingKeys: [signingKey1, signingKey2],
+    } = accountProofs[i];
+
     const aliasString = accountAliasId.aliasHash.toString();
     const oldNonce = migrations.get(aliasString) ?? 0; // if we haven't seen this account before, it's initial nonce is 0
     migrations.set(aliasString, accountAliasId.accountNonce);
@@ -171,34 +160,35 @@ async function main() {
       });
     }
   }
-  console.log('Completed generation, writing files...');
+  console.log(`Completed generation after ${parseTimer.s()}s, writing files...`);
   await writeAndVerifyAccounts(accountsFile, accounts);
   console.log('Completed writing files, now building new data and nullifier trees...');
 
   const merkleTree = new WorldStateDb(merkleDbPath);
   await merkleTree.start();
-  if (
-    (await merkleTree.getSize(RollupTreeId.DATA)) !== BigInt(0) ||
-    (await merkleTree.getSize(RollupTreeId.NULL)) !== BigInt(0)
-  ) {
+  if (merkleTree.getSize(RollupTreeId.DATA) !== BigInt(0) || merkleTree.getSize(RollupTreeId.NULL) !== BigInt(0)) {
     throw new Error('Ensure world_state.db is removed from disk and run again. Merkle trees are not empty');
   }
-  console.log('Generating data tree');
+  const dataTreeTimer = new Timer();
   const dataAndRootsRoots = await InitHelpers.populateDataAndRootsTrees(
     accounts,
     merkleTree,
     RollupTreeId.DATA,
     RollupTreeId.ROOT,
   );
+  console.log(`Completed data tree in ${dataTreeTimer.s()}s`);
   console.log('Generating nullifier tree');
+  const nullifierTimer = new Timer();
   const nullRoot = await InitHelpers.populateNullifierTree(accounts, merkleTree, RollupTreeId.NULL);
   merkleTree.stop();
+  console.log(`Completed nullifier tree in ${nullifierTimer.s()}s`);
   const roots = { dataRoot: dataAndRootsRoots.dataRoot, nullRoot, rootsRoot: dataAndRootsRoots.rootsRoot };
   console.log('Generated roots: ', {
     dataRoot: roots.dataRoot.toString('hex'),
     nullRoot: roots.nullRoot.toString('hex'),
     rootsRoot: roots.rootsRoot.toString('hex'),
   });
+  console.log(`Initial data size: ${dataAndRootsRoots.dataSize}`);
   await InitHelpers.writeRoots(roots, rootsFile);
   const newRoots = await InitHelpers.readRoots(rootsFile);
   if (!newRoots) {

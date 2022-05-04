@@ -28,6 +28,7 @@ class DexieNote {
     public index: number,
     public nullified: 0 | 1,
     public pending: 0 | 1,
+    public hashPath?: Uint8Array,
   ) {}
 }
 
@@ -45,6 +46,7 @@ const noteToDexieNote = (note: Note) =>
     note.index || 0,
     note.nullified ? 1 : 0,
     note.index === undefined ? 1 : 0,
+    note.hashPath ? new Uint8Array(note.hashPath) : undefined,
   );
 
 const dexieNoteToNote = ({
@@ -60,6 +62,7 @@ const dexieNoteToNote = ({
   nullified,
   index,
   pending,
+  hashPath,
 }: DexieNote) => {
   const ownerId = AccountId.fromBuffer(Buffer.from(owner));
   return new Note(
@@ -77,6 +80,7 @@ const dexieNoteToNote = ({
     allowChain,
     !!nullified,
     !pending ? index : undefined,
+    hashPath ? Buffer.from(hashPath) : undefined,
   );
 };
 
@@ -357,13 +361,19 @@ const fromDexieClaimTx = ({ nullifier, txId, userId, secret, interactionNonce }:
 });
 
 class DexieUserKey {
-  constructor(public accountId: Uint8Array, public key: Uint8Array, public treeIndex: number) {}
+  constructor(
+    public accountId: Uint8Array,
+    public key: Uint8Array,
+    public treeIndex: number,
+    public hashPath: Uint8Array,
+  ) {}
 }
 
 const dexieUserKeyToSigningKey = (userKey: DexieUserKey): SigningKey => ({
   ...userKey,
   accountId: AccountId.fromBuffer(Buffer.from(userKey.accountId)),
   key: Buffer.from(userKey.key),
+  hashPath: Buffer.from(userKey.hashPath),
 });
 
 class DexieAlias {
@@ -729,13 +739,21 @@ export class DexieDatabase implements Database {
     return value;
   }
 
-  async addUserSigningKey({ accountId, key, treeIndex }: SigningKey) {
-    await this.userKeys.put(new DexieUserKey(new Uint8Array(accountId.toBuffer()), new Uint8Array(key), treeIndex));
+  async addUserSigningKey({ accountId, key, treeIndex, hashPath }: SigningKey) {
+    await this.userKeys.put(
+      new DexieUserKey(new Uint8Array(accountId.toBuffer()), new Uint8Array(key), treeIndex, new Uint8Array(hashPath)),
+    );
   }
 
   async addUserSigningKeys(signingKeys: SigningKey[]) {
     const dbKeys = signingKeys.map(
-      key => new DexieUserKey(new Uint8Array(key.accountId.toBuffer()), new Uint8Array(key.key), key.treeIndex),
+      key =>
+        new DexieUserKey(
+          new Uint8Array(key.accountId.toBuffer()),
+          new Uint8Array(key.key),
+          key.treeIndex,
+          new Uint8Array(key.hashPath),
+        ),
     );
     await this.userKeys.bulkPut(dbKeys);
   }
@@ -745,12 +763,12 @@ export class DexieDatabase implements Database {
     return userKeys.map(dexieUserKeyToSigningKey);
   }
 
-  async getUserSigningKeyIndex(accountId: AccountId, signingKey: GrumpkinAddress) {
+  async getUserSigningKey(accountId: AccountId, signingKey: GrumpkinAddress) {
     const userKey = await this.userKeys.get({
       accountId: new Uint8Array(accountId.toBuffer()),
       key: new Uint8Array(signingKey.toBuffer().slice(0, 32)),
     });
-    return userKey ? userKey.treeIndex : undefined;
+    return userKey ? dexieUserKeyToSigningKey(userKey) : undefined;
   }
 
   async removeUserSigningKeys(accountId: AccountId) {

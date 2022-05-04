@@ -308,6 +308,7 @@ export class TypeOrmRollupDb implements RollupDb {
     interactionResult: DefiInteractionNote[],
     txIds: Buffer[],
     assetMetrics: AssetMetricsDao[],
+    subtreeRoot: Buffer,
   ) {
     await this.connection.transaction(async transactionalEntityManager => {
       await transactionalEntityManager.update<TxDao>(this.txRep.target, { id: In(txIds) }, { mined });
@@ -317,6 +318,7 @@ export class TypeOrmRollupDb implements RollupDb {
         gasPrice: toBufferBE(gasPrice, 32),
         ethTxHash,
         interactionResult: serializeBufferArrayToVector(interactionResult.map(r => r.toBuffer())),
+        subtreeRoot,
       };
       await transactionalEntityManager.update<RollupDao>(this.rollupRep.target, { id }, dao);
       await transactionalEntityManager.insert<AssetMetricsDao>(this.assetMetricsRep.target, assetMetrics);

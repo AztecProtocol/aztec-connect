@@ -21,6 +21,7 @@ export class Block {
     public interactionResult: DefiInteractionEvent[],
     public gasUsed: number,
     public gasPrice: bigint,
+    public subtreeRoot?: Buffer,
   ) {}
 
   static deserialize(buf: Buffer, offset = 0) {
@@ -34,6 +35,7 @@ export class Block {
     const interactionResult = des.deserializeArray(DefiInteractionEvent.deserialize);
     const gasUsed = des.uInt32();
     const gasPrice = des.bigInt();
+    const subtreeRoot = des.vector();
     return {
       elem: new Block(
         txHash,
@@ -45,6 +47,7 @@ export class Block {
         interactionResult,
         gasUsed,
         gasPrice,
+        subtreeRoot.equals(Buffer.alloc(0)) ? undefined : subtreeRoot,
       ),
       adv: des.getOffset() - offset,
     };
@@ -65,6 +68,7 @@ export class Block {
       serializeBufferArrayToVector(this.interactionResult.map(b => b.toBuffer())),
       numToUInt32BE(this.gasUsed),
       serializeBigInt(this.gasPrice),
+      serializeBufferToVector(this.subtreeRoot ?? Buffer.alloc(0)),
     ]);
   }
 }

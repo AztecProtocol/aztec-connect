@@ -29,7 +29,8 @@ export class PooledPedersen extends SinglePedersen {
       throw new Error('PooledPedersen::hashValuesToTree can only handle powers of 2.');
     }
 
-    const workers = this.pool.slice(0, Math.min(values.length / 2, this.pool.length));
+    const numWorkers = Math.min(values.length / 2, this.pool.length);
+    const workers = this.pool.slice(0, Math.max(numWorkers, 1));
     const numPerThread = values.length / workers.length;
 
     const results = await Promise.all(

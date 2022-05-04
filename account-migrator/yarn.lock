@@ -5,10 +5,12 @@
 "@aztec/barretenberg@file:../barretenberg.js/dest":
   version "2.0.0"
   dependencies:
+    "@types/detect-node" "^2.0.0"
     "@types/levelup" "^4.3.0"
     debug "^4.1.1"
     detect-node "^2.0.4"
     fs-extra "10.0.0"
+    is-node "^1.0.2"
     levelup "^5.0.0"
     memdown "^6.0.0"
     node-fetch "2.6.1"
@@ -20,13 +22,14 @@
 "@aztec/blockchain@file:../blockchain/dest":
   version "2.0.0"
   dependencies:
-    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-739e3df7-67c7-4211-a5bd-37d4730a9c6c-1648644164428/node_modules/barretenberg.js/dest"
-    "@aztec/bridge-clients" "0.1.27"
+    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-455b3a18-9415-4c55-8ad0-9a1aa1e96a0b-1651048275320/node_modules/barretenberg.js/dest"
+    "@aztec/bridge-clients" "0.1.32"
     "@ethersproject/experimental" "5.5.0"
     "@nomiclabs/hardhat-ethers" "^2.0.2"
     "@nomiclabs/hardhat-etherscan" "^2.1.8"
     "@nomiclabs/hardhat-waffle" "^2.0.1"
     "@openzeppelin/contracts-upgradeable" "^4.4.2"
+    "@types/detect-node" "^2.0.0"
     "@uniswap/v2-core" "^1.0.1"
     "@uniswap/v2-periphery" "^1.1.0-beta.0"
     commander "^9.0.0"
@@ -37,10 +40,12 @@
     hardhat-upgrades "^0.0.0"
     typescript "^4.4.4"
 
-"@aztec/bridge-clients@0.1.27":
-  version "0.1.27"
-  resolved "https://registry.yarnpkg.com/@aztec/bridge-clients/-/bridge-clients-0.1.27.tgz#b9f3ac71b93879d04d43fc108742ad64e4c2f14f"
-  integrity sha512-GZ+d0/FWfMTuEhZnrT/yyjeXEHqd6KctY93KtvWcXljNMc087ZKzWnB0YExVaYloQKC95HBfh8HzEVkr0icvnQ==
+"@aztec/bridge-clients@0.1.32":
+  version "0.1.32"
+  resolved "https://registry.yarnpkg.com/@aztec/bridge-clients/-/bridge-clients-0.1.32.tgz#4dc9dadc0a4085f9afd13eea184b0db7f1b68550"
+  integrity sha512-BFi3WREEOhaaRx0tv3/sfNtwTBTbrkG1cj9WU3nHLXyDmXII3+AfoP+N6H8VYo8U1Oo6TDL571Uhh4pxYWRQQQ==
+  dependencies:
+    axios "^0.26.1"
 
 "@cspotcode/source-map-consumer@0.8.0":
   version "0.8.0"
@@ -676,6 +681,11 @@
   resolved "https://registry.yarnpkg.com/@types/chai/-/chai-4.3.0.tgz#23509ebc1fa32f1b4d50d6a66c4032d5b8eaabdc"
   integrity sha512-/ceqdqeRraGolFTcfoXNiqjyQhZzbINDngeoAq9GoHa8PPK1yNzTaxWjA6BFWp5Ua9JpXEMSS4s5i9tS0hOJtw==
 
+"@types/detect-node@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@types/detect-node/-/detect-node-2.0.0.tgz#696e024ddd105c72bbc6a2e3f97902a2886f2c3f"
+  integrity sha512-+BozjlbPTACYITf1PWf62HLtDV79HbmZosUN1mv1gGrnjDCRwBXkDKka1sf6YQJvspmfPXVcy+X6tFW62KteeQ==
+
 "@types/json-schema@^7.0.7":
   version "7.0.9"
   resolved "https://registry.yarnpkg.com/@types/json-schema/-/json-schema-7.0.9.tgz#97edc9037ea0c38585320b28964dde3b39e4660d"
@@ -1002,6 +1012,13 @@ async@^2.4.0:
   integrity sha512-zflvls11DCy+dQWzTW2dzuilv8Z5X/pjfmZOWba6TNIVDm+2UDaJmXSOXlasHKfNBs8oo3M0aT50fDEWfKZjXg==
   dependencies:
     lodash "^4.17.14"
+
+axios@^0.26.1:
+  version "0.26.1"
+  resolved "https://registry.yarnpkg.com/axios/-/axios-0.26.1.tgz#1ede41c51fcf51bbbd6fd43669caaa4f0495aaa9"
+  integrity sha512-fPwcX4EvnSHuInCMItEhAGnaSEXRBjtzh9fOtsE6E1G6p7vl7edEeZe11QHf18+6+9gR5PbKV/sGKNaD8YaMeA==
+  dependencies:
+    follow-redirects "^1.14.8"
 
 balanced-match@^1.0.0:
   version "1.0.2"
@@ -1738,7 +1755,7 @@ flat@^4.1.0:
   dependencies:
     is-buffer "~2.0.3"
 
-follow-redirects@^1.12.1:
+follow-redirects@^1.12.1, follow-redirects@^1.14.8:
   version "1.14.9"
   resolved "https://registry.yarnpkg.com/follow-redirects/-/follow-redirects-1.14.9.tgz#dd4ea157de7bfaf9ea9b3fbd85aa16951f78d8d7"
   integrity sha512-MQDfihBQYMcyy5dhRDJUHcw7lb2Pv/TuE6xP1vyraLukNDHKbDxDNaOE3NbCAdKQApno+GPRyo1YAp89yCjK4w==
@@ -2157,6 +2174,11 @@ is-negative-zero@^2.0.1:
   version "2.0.2"
   resolved "https://registry.yarnpkg.com/is-negative-zero/-/is-negative-zero-2.0.2.tgz#7bf6f03a28003b8b3965de3ac26f664d765f3150"
   integrity sha512-dqJvarLawXsFbNDeJW7zAz8ItJ9cd28YufuuFzh0G8pNHjJMnY08Dv7sYX2uF5UpQOwieAeOExEYAWWfu7ZZUA==
+
+is-node@^1.0.2:
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/is-node/-/is-node-1.0.2.tgz#d7d002745ef7debbb7477e988956ab0a4fccb653"
+  integrity sha1-19ACdF733ru3R36YiVarCk/MtlM=
 
 is-number-object@^1.0.4:
   version "1.0.6"

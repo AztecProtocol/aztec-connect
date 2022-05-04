@@ -53,11 +53,15 @@ export class InitHelpers {
     return getInitData(chainId).initDataSize;
   }
 
+  public static getInitAccounts(chainId: number) {
+    return getInitData(chainId).initAccounts;
+  }
+
   public static getAccountDataFile(chainId: number) {
-    if (!getInitData(chainId).accounts) {
+    if (!getInitData(chainId).accountsData) {
       return undefined;
     }
-    const relPathToFile = getInitData(chainId).accounts;
+    const relPathToFile = getInitData(chainId).accountsData;
     const fullPath = pathTools.resolve(__dirname, relPathToFile);
     return fullPath;
   }
@@ -187,8 +191,8 @@ export class InitHelpers {
     merkleTree: WorldStateDb,
     dataTreeIndex: number,
     rootsTreeIndex: number,
+    rollupSize?: number,
   ) {
-    const stepSize = 1000;
     const entries = accounts.flatMap((account, index): PutEntry[] => {
       return [
         {
@@ -203,22 +207,27 @@ export class InitHelpers {
         },
       ];
     });
-    let i = 0;
-    while (i < entries.length) {
-      if (i % 1000 == 0) {
-        console.log(`Inserted ${i}/${entries.length} entries into data tree...`);
+    console.log(`Batch inserting ${entries.length} notes into data tree, this may take some time...`);
+    await merkleTree.batchPut(entries);
+    if (rollupSize) {
+      // we need to expand the data tree to have 'full' rollups worth of notes in
+      const numFullRollups = Math.floor(entries.length / rollupSize);
+      const additional = entries.length % rollupSize ? 1 : 0;
+      const notesRequired = (numFullRollups + additional) * rollupSize;
+      if (notesRequired > entries.length) {
+        console.log(`Inserting zero note into data tree at index ${notesRequired - 1}`);
+        await merkleTree.put(dataTreeIndex, BigInt(notesRequired - 1), Buffer.alloc(32, 0));
       }
-      await merkleTree.batchPut(entries.slice(i, i + stepSize));
-      i += stepSize;
     }
+
     const dataRoot = merkleTree.getRoot(dataTreeIndex);
     await merkleTree.put(rootsTreeIndex, BigInt(0), dataRoot);
     const rootsRoot = merkleTree.getRoot(rootsTreeIndex);
-    return { dataRoot, rootsRoot };
+    const dataSize = merkleTree.getSize(dataTreeIndex);
+    return { dataRoot, rootsRoot, dataSize };
   }
 
   public static async populateNullifierTree(accounts: AccountData[], merkleTree: WorldStateDb, nullTreeIndex: number) {
-    const stepSize = 1000;
     const emptyBuffer = Buffer.alloc(32, 0);
     const entries = accounts.flatMap((account): PutEntry[] => {
       const nullifiers: Array<PutEntry> = [];
@@ -231,14 +240,8 @@ export class InitHelpers {
       }
       return nullifiers;
     });
-    let i = 0;
-    while (i < entries.length) {
-      if (i % 1000 == 0) {
-        console.log(`Inserted ${i}/${entries.length} entries into nullifier tree...`);
-      }
-      await merkleTree.batchPut(entries.slice(i, i + stepSize));
-      i += stepSize;
-    }
+    console.log(`Batch inserting ${entries.length} notes into nullifier tree, this may take some time...`);
+    await merkleTree.batchPut(entries);
     const root = merkleTree.getRoot(nullTreeIndex);
     return root;
   }

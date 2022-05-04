@@ -345,6 +345,20 @@ jobs:
           working_directory: end-to-end
           command: cond_spot_run_tests end-to-end ./src/e2e.test.ts
 
+  e2e-migrated-accounts:
+    docker:
+      - image: aztecprotocol/build-image
+    resource_class: small
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker:
+          version: 19.03.13
+      - run:
+          name: 'Test'
+          working_directory: end-to-end
+          command: cond_spot_run_tests end-to-end ./src/e2e_migrated_accounts.test.ts
+
   e2e-account:
     docker:
       - image: aztecprotocol/build-image
@@ -688,6 +702,10 @@ workflows:
           requires:
             - end-to-end
           filters: *tag_filter
+      - e2e-migrated-accounts:
+          requires:
+            - end-to-end
+          filters: *tag_filter
       - e2e-account:
           requires:
             - end-to-end
@@ -721,6 +739,7 @@ workflows:
             - blockchain-tests
             - e2e-prover
             - e2e-payment
+            - e2e-migrated-accounts
             - e2e-account
             - e2e-defi
             - e2e-element

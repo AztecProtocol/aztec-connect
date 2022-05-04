@@ -42,10 +42,16 @@ export class NoteDao {
   @Column()
   public nullified!: boolean;
 
+  @Column({ nullable: true })
+  public hashPath?: Buffer;
+
   @AfterLoad()
   @AfterInsert()
   @AfterUpdate()
   afterLoad() {
+    if (!this.hashPath) {
+      delete this.hashPath;
+    }
     if (this.index === null) {
       delete this.index;
     }
@@ -60,6 +66,7 @@ export const noteToNoteDao = ({
   allowChain,
   index,
   nullified,
+  hashPath,
 }: Note) => ({
   commitment,
   nullifier,
@@ -72,6 +79,7 @@ export const noteToNoteDao = ({
   allowChain,
   nullified,
   index,
+  hashPath,
 });
 
 export const noteDaoToNote = ({
@@ -86,6 +94,7 @@ export const noteDaoToNote = ({
   allowChain,
   index,
   nullified,
+  hashPath,
 }: NoteDao) =>
   new Note(
     new TreeNote(owner.publicKey, value, assetId, owner.accountNonce, noteSecret, creatorPubKey, inputNullifier),
@@ -94,4 +103,5 @@ export const noteDaoToNote = ({
     allowChain,
     nullified,
     index,
+    hashPath,
   );

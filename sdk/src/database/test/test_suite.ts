@@ -769,18 +769,18 @@ export const databaseTestSuite = (
         expect(sort(savedSigningKeys1, 'key')).toEqual(sort(keys1, 'key'));
       });
 
-      it('get the index of a signing key', async () => {
+      it('retrieve a signing key', async () => {
         const accountId = AccountId.random();
         const signingKey = randomSigningKey();
         signingKey.accountId = accountId;
         await db.addUserSigningKey(signingKey);
 
         const fullKey = new GrumpkinAddress(Buffer.concat([signingKey.key, randomBytes(32)]));
-        const index0 = await db.getUserSigningKeyIndex(accountId, fullKey);
-        expect(index0).toEqual(signingKey.treeIndex);
+        const key1 = await db.getUserSigningKey(accountId, fullKey);
+        expect(key1).toEqual(signingKey);
 
-        const index1 = await db.getUserSigningKeyIndex(AccountId.random(), fullKey);
-        expect(index1).toBeUndefined();
+        const key2 = await db.getUserSigningKey(AccountId.random(), fullKey);
+        expect(key2).toBeUndefined();
       });
     });
 
@@ -1129,7 +1129,7 @@ export const databaseTestSuite = (
 
         expect(await db.getAliases(alias.aliasHash)).toEqual([]);
         expect(await db.getNote(note.commitment)).toBeUndefined();
-        expect(await db.getUserSigningKeyIndex(signingKey.accountId, fullKey)).toBeUndefined();
+        expect(await db.getUserSigningKey(signingKey.accountId, fullKey)).toBeUndefined();
         expect(await db.getPaymentTx(tx.txId, tx.userId)).toBeUndefined();
 
         expect(await db.getUser(user.id)).toEqual({
@@ -1167,7 +1167,7 @@ export const databaseTestSuite = (
         expect(await db.getNote(note.commitment)).toBeUndefined();
         expect(await db.getUser(user.id)).toBeUndefined();
         expect(await db.getKey(keyName)).toBeUndefined();
-        expect(await db.getUserSigningKeyIndex(signingKey.accountId, fullKey)).toBeUndefined();
+        expect(await db.getUserSigningKey(signingKey.accountId, fullKey)).toBeUndefined();
         expect(await db.getPaymentTx(tx.txId, tx.userId)).toBeUndefined();
       });
     });

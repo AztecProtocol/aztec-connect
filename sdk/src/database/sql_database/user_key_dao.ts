@@ -18,4 +18,7 @@ export class UserKeyDao implements SigningKey {
 
   @Column()
   public treeIndex!: number;
+
+  @Column()
+  public hashPath!: Buffer;
 }

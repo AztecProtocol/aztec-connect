@@ -30,4 +30,6 @@ export class WorldStateConstants {
 
   // value of a SHA256 of NUM_BRIDGE_CALLS of empty interaction hashes
   public static INITIAL_INTERACTION_HASH = packInteractionNotes([], numberOfBridgeCalls);
+  public static DATA_TREE_DEPTH = 32;
+  public static NUM_NEW_DATA_TREE_NOTES_PER_TX = 2;
 }

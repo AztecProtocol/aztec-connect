@@ -10,6 +10,7 @@ export async function createFundedWalletProvider(
   numAccountToFund = accounts,
   privateKey?: Buffer,
   initialBalance = 10n ** 18n,
+  mnemonic?: string,
 ) {
   const ethereumProvider = new JsonRpcProvider(host);
   const walletProvider = new WalletProvider(ethereumProvider);
@@ -18,7 +19,11 @@ export async function createFundedWalletProvider(
   const ethAsset = new EthAsset(walletProvider);
 
   for (let i = 0; i < accounts; ++i) {
-    walletProvider.addAccount(randomBytes(32));
+    if (!mnemonic) {
+      walletProvider.addAccount(randomBytes(32));
+    } else {
+      walletProvider.addAccountFromSeed(mnemonic, `m/44'/60'/0'/0/${i}`);
+    }
   }
 
   const funder = privateKey && privateKey.length ? walletProvider.addAccount(privateKey) : ganacheAccount;

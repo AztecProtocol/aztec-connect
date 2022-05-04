@@ -34,6 +34,7 @@ export const randomNote = (note: Partial<Note> = {}, treeNote: Partial<TreeNote>
     note.allowChain || false,
     note.nullified || false,
     note.index,
+    note.hashPath || randomBytes(32),
   );
 
 export const randomClaimTx = (): CoreClaimTx => ({
@@ -113,6 +114,7 @@ export const randomSigningKey = (): SigningKey => ({
   accountId: AccountId.random(),
   key: randomBytes(32),
   treeIndex: randomInt(),
+  hashPath: randomBytes(32),
 });
 
 export const randomAlias = (): Alias => ({

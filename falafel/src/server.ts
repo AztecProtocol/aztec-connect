@@ -240,6 +240,7 @@ export class Server {
       nextPublishNumber: nextPublish.baseTimeout ? nextPublish.baseTimeout.rollupNumber : 0,
       bridgeStatus: bridgeStats,
       proverless,
+      rollupSize: this.worldState.getRollupSize(),
     };
   }
 

@@ -59,7 +59,9 @@ export class AccountProofCreator {
     newSigningPubKey2: GrumpkinAddress | undefined,
   ): Promise<AccountProofInput> {
     const accountIndex =
-      nonce !== 0 ? await this.db.getUserSigningKeyIndex(new AccountId(accountPublicKey, nonce), signingPubKey) : 0;
+      nonce !== 0
+        ? (await this.db.getUserSigningKey(new AccountId(accountPublicKey, nonce), signingPubKey))?.treeIndex
+        : 0;
     if (accountIndex === undefined) {
       throw new Error('Unknown signing key.');
     }

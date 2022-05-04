@@ -86,6 +86,7 @@ export class DepositController {
       signingAddress: this.from,
       provider: this.provider,
     });
+
     return this.txHash;
   }
 

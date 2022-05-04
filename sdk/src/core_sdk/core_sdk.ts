@@ -17,9 +17,10 @@ import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupProvider } from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { BarretenbergWasm, WorkerPool } from '@aztec/barretenberg/wasm';
-import { WorldState } from '@aztec/barretenberg/world_state';
+import { WorldState, WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { EventEmitter } from 'events';
 import { LevelUp } from 'levelup';
+import { BlockContext } from '../block_context/block_context';
 import { Alias, Database, SigningKey } from '../database';
 import { Note } from '../note';
 import {
@@ -35,6 +36,9 @@ import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
 import { CoreSdkInterface } from './core_sdk_interface';
 import { CoreSdkOptions } from './core_sdk_options';
 import { SdkEvent, SdkStatus } from './sdk_status';
+import { HashPath } from '@aztec/barretenberg/merkle_tree';
+import { MemoryMerkleTree } from '@aztec/barretenberg/merkle_tree';
+import { Timer } from '@aztec/barretenberg/timer';
 
 const debug = createLogger('bb:core_sdk');
 
@@ -114,11 +118,18 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       this.blake2s = new Blake2s(this.barretenberg);
       this.grumpkin = new Grumpkin(this.barretenberg);
       this.schnorr = new Schnorr(this.barretenberg);
-      this.userStateFactory = new UserStateFactory(this.grumpkin, this.noteAlgos, this.db, this.rollupProvider);
+      this.userStateFactory = new UserStateFactory(
+        this.grumpkin,
+        this.noteAlgos,
+        this.db,
+        this.rollupProvider,
+        this.pedersen,
+      );
       this.worldState = new WorldState(this.leveldb, this.pedersen);
 
       const {
         blockchainStatus: { chainId, rollupContractAddress },
+        rollupSize,
       } = await this.getRemoteStatus();
 
       // Clear all data if contract changed.
@@ -136,7 +147,9 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       await this.initUserStates();
 
       // Allows us to query the merkle tree roots etc.
-      await this.worldState.init();
+      // 2 notes per tx
+      const subtreeDepth = Math.ceil(Math.log2(rollupSize * WorldStateConstants.NUM_NEW_DATA_TREE_NOTES_PER_TX));
+      await this.worldState.init(subtreeDepth);
 
       this.sdkStatus = {
         ...this.sdkStatus,
@@ -287,7 +300,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       const userState = this.userStateFactory.createUserState(user);
       await userState.init();
       this.userStates.push(userState);
-      this.startSyncingUserState(userState);
+      this.startSyncingUserState(userState, []);
 
       this.emit(SdkEvent.UPDATED_USERS);
 
@@ -394,8 +407,8 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
       await this.pippenger.init(crsData);
       await this.genesisSync();
-      await this.startReceivingBlocks();
-      this.userStates.forEach(us => this.startSyncingUserState(us));
+      const receivedBlockContexts = await this.startReceivingBlocks();
+      this.userStates.forEach(us => this.startSyncingUserState(us, receivedBlockContexts));
       await this.createJoinSplitProofCreators(forceCreate, proverless);
       await this.createAccountProofCreator(forceCreate, proverless);
 
@@ -741,11 +754,11 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     await Promise.all(this.userStates.map(us => us.init()));
   }
 
-  private async startSyncingUserState(userState: UserState) {
+  private async startSyncingUserState(userState: UserState, blockContexts: BlockContext[]) {
     userState.on(UserStateEvent.UPDATED_USER_STATE, (id: Buffer) => {
       this.emit(SdkEvent.UPDATED_USER_STATE, id);
     });
-    await userState.startSync();
+    await userState.startSync(blockContexts);
   }
 
   private async stopSyncingUserState(userState: UserState) {
@@ -828,14 +841,14 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     debug(`complete: ${new Date().getTime() - start}ms`);
   }
 
-  private async syncAliasesAndKeys(accounts: AccountData[]) {
+  private async syncAliasesAndKeys(accounts: AccountData[], hashPathMap: { [key: number]: HashPath }) {
     const aliases = new Array<Alias>();
     const uniqueSigningKeys = new Map<string, SigningKey>();
-    let index = 0;
 
     // There can be duplicate account/nonce/signing key combinations.
     // We need to just keep the most recent one.
     // This loop simulates upserts by keeping the most recent version before inserting into the DB.
+    let noteIndex = 0;
     for (let i = 0; i < accounts.length; i++) {
       const {
         alias: { address, nonce },
@@ -843,11 +856,14 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       } = accounts[i];
       const accountId = new AccountId(new GrumpkinAddress(address), nonce);
 
-      [signingKey1, signingKey2].forEach(key => {
+      const signingKeys = [signingKey1, signingKey2];
+      for (let j = 0; j < signingKeys.length; j++) {
+        const key = signingKeys[j];
         const keyVal = key.toString('hex') + ' - ' + accountId.toString();
-        const sk: SigningKey = { treeIndex: index++, key, accountId };
+        const sk: SigningKey = { treeIndex: noteIndex, key, accountId, hashPath: hashPathMap[noteIndex].toBuffer() };
         uniqueSigningKeys.set(keyVal, sk);
-      });
+        noteIndex++;
+      }
 
       aliases.push({
         aliasHash: new AliasHash(accounts[i].alias.aliasHash),
@@ -858,22 +874,43 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     const keys = [...uniqueSigningKeys.values()];
 
     debug(`synching with ${aliases.length} aliases`);
-    let start = new Date().getTime();
+    const aliasesTimer = new Timer();
     await this.db.setAliases(aliases);
-    debug(`aliases saved in ${new Date().getTime() - start}ms`);
+    debug(`aliases saved in ${aliasesTimer.s()}s`);
 
     debug(`synching with ${keys.length} signing keys`);
-    start = new Date().getTime();
+    const keysTimer = new Timer();
     await this.db.addUserSigningKeys(keys);
-    debug(`signing keys saved in ${new Date().getTime() - start}ms`);
+    debug(`signing keys saved in ${keysTimer.s()}s`);
   }
 
+  // Returns a mapping of tree index to hash path for all account notes
   private async syncCommitments(accounts: AccountData[]) {
-    const start = new Date().getTime();
+    const { rollupSize } = await this.getRemoteStatus();
     const commitments = accounts.flatMap(x => [x.notes.note1, x.notes.note2]);
-    debug(`synching with ${commitments.length} commitments`);
-    await this.worldState.processNoteCommitments(0, commitments);
-    debug(`note commitments saved in ${new Date().getTime() - start}ms`);
+    const size = 1 << Math.ceil(Math.log2(rollupSize));
+    // 2 notes per tx
+    const notesInSubtree = size * WorldStateConstants.NUM_NEW_DATA_TREE_NOTES_PER_TX;
+    let noteIndex = 0;
+    const hashPathMap: { [key: number]: HashPath } = {};
+    const roots: Buffer[] = [];
+    const subTreeTimer = new Timer();
+    debug(`building immutable sub-trees from commitments...`);
+    while (commitments.length > 0) {
+      const slice = commitments.splice(0, notesInSubtree);
+      const zeroNotes = Array(notesInSubtree - slice.length).fill(MemoryMerkleTree.ZERO_ELEMENT);
+      const fullTreeNotes = [...slice, ...zeroNotes];
+      const merkleSubTree = await MemoryMerkleTree.new(fullTreeNotes, this.pedersen);
+      for (let i = 0; i < notesInSubtree; i++) {
+        hashPathMap[noteIndex++] = merkleSubTree.getHashPath(i);
+      }
+      roots.push(merkleSubTree.getRoot());
+    }
+    debug(`${roots.length} sub-trees created in ${subTreeTimer.s()}s, adding roots to data tree...`);
+    const dataTreeTimer = new Timer();
+    await this.worldState.insertElements(0, roots);
+    debug(`data tree sync completed in ${dataTreeTimer.s()}s`);
+    return hashPathMap;
   }
 
   private async genesisSync() {
@@ -883,22 +920,30 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     }
 
     debug('initialising genesis state from server...');
+    const genesisTimer = new Timer();
     const initialState = await this.rollupProvider.getInitialWorldState();
     const accounts = InitHelpers.parseAccountTreeData(initialState.initialAccounts);
-    await this.syncAliasesAndKeys(accounts);
-    await this.syncCommitments(accounts);
+    const hashPathMap = await this.syncCommitments(accounts);
+    await this.syncAliasesAndKeys(accounts, hashPathMap);
+    debug(`genesis sync completed in ${genesisTimer.s()}s`);
   }
 
+  /**
+   * Kicks off the process of listening for blocks, also ensures we are fully synced
+   * Produces a set of block context objects that can be passed to user states for their sync process
+   * Returns the set of generated shared block contexts
+   */
   private async startReceivingBlocks() {
     this.rollupProvider.on('block', b => this.blockQueue.put(b));
     this.processBlocksPromise = this.processBlockQueue();
 
-    await this.sync();
+    const receivedBlockContexts = await this.sync();
 
     const syncedToRollup = await this.getSyncedToRollup();
     await this.rollupProvider.start(+syncedToRollup + 1);
 
-    debug('started processing blocks.');
+    debug(`started processing blocks, generated ${receivedBlockContexts.length} shared blocks...`);
+    return receivedBlockContexts;
   }
 
   private async stopReceivingBlocks() {
@@ -923,7 +968,11 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       await this.leveldb.put('verifierContractAddress', vca.toBuffer());
     }
 
-    await this.worldState.init();
+    const { rollupSize } = await this.getRemoteStatus();
+
+    // 2 notes per tx
+    const subtreeDepth = Math.ceil(Math.log2(rollupSize * WorldStateConstants.NUM_NEW_DATA_TREE_NOTES_PER_TX));
+    await this.worldState.init(subtreeDepth);
 
     const initialState = await this.rollupProvider.getInitialWorldState();
     const accounts = InitHelpers.parseAccountTreeData(initialState.initialAccounts);
@@ -960,7 +1009,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
           expectedDataSize,
         });
       }
-      return;
+      return [];
     }
 
     const rollups = blocks.map(b => RollupProofData.fromBuffer(b.rollupProofData));
@@ -971,7 +1020,11 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     const expectedDataSize = rollups[0].dataStartIndex + rollups.reduce((a, r) => a + r.rollupSize * 2, 0);
 
     debug('synchronising data...');
-    await this.worldState.processRollups(rollups);
+    debug(`adding ${blocks.length}, sub-roots to data tree starting at index ${rollups[0].dataStartIndex}...`);
+    await this.worldState.insertElements(
+      rollups[0].dataStartIndex,
+      blocks.map(block => block.subtreeRoot!),
+    );
     await this.processAliases(rollups, offchainTxData);
     await this.updateStatusRollupInfo(rollups[rollups.length - 1]);
     debug('done.');
@@ -991,13 +1044,15 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         expectedDataRoot: expectedDataRoot.toString('hex'),
         expectedDataSize,
       });
-      return;
+      return [];
     }
 
+    const blockContexts = blocks.map(block => new BlockContext(block, this.pedersen));
     // Forward the block on to each UserState for processing.
-    for (const block of blocks) {
-      this.userStates.forEach(us => us.processBlock(block));
+    for (const context of blockContexts) {
+      this.userStates.forEach(us => us.processBlock(context));
     }
+    return blockContexts;
   }
 
   private async updateStatusRollupInfo(rollup: RollupProofData) {
@@ -1024,12 +1079,13 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       await this.serialQueue.push(async () => {
         await this.worldState.syncFromDb().catch(() => {});
         const rollup = RollupProofData.fromBuffer(block.rollupProofData);
-        await this.worldState.processRollup(rollup);
+        await this.worldState.insertElement(rollup.dataStartIndex, block.subtreeRoot!);
         await this.processAliases([rollup], [block.offchainTxData]);
         await this.updateStatusRollupInfo(rollup);
 
+        const blockContext = new BlockContext(block, this.pedersen);
         // Forward the block on to each UserState for processing.
-        this.userStates.forEach(us => us.processBlock(block));
+        this.userStates.forEach(us => us.processBlock(blockContext));
       });
     }
   }

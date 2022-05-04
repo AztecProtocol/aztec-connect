@@ -211,7 +211,7 @@ describe('rollup_db', () => {
       const rollupProof = randomRollupProof([tx2], 1);
       const rollup = randomRollup(0, rollupProof);
       await rollupDb.addRollup(rollup);
-      await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random(), [], [tx2.id], []);
+      await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random(), [], [tx2.id], [], randomBytes(32));
     }
 
     const nullifiers = await rollupDb.getUnsettledNullifiers();
@@ -431,7 +431,17 @@ describe('rollup_db', () => {
     const settledRollups1 = await rollupDb.getSettledRollups();
     expect(settledRollups1.length).toBe(0);
 
-    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random(), [], [tx0.id, tx1.id], []);
+    await rollupDb.confirmMined(
+      rollup.id,
+      0,
+      0n,
+      new Date(),
+      TxHash.random(),
+      [],
+      [tx0.id, tx1.id],
+      [],
+      randomBytes(32),
+    );
 
     const settledRollups2 = await rollupDb.getSettledRollups();
     expect(settledRollups2.length).toBe(1);
@@ -454,7 +464,7 @@ describe('rollup_db', () => {
 
     expect(await rollupDb.getUnsettledTxCount()).toBe(1);
 
-    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random(), [], [tx0.id], []);
+    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random(), [], [tx0.id], [], randomBytes(32));
 
     expect(await rollupDb.getUnsettledTxCount()).toBe(0);
   });
@@ -475,7 +485,7 @@ describe('rollup_db', () => {
     await rollupDb.addRollup(rollup0);
     await rollupDb.addRollup(rollup1);
 
-    await rollupDb.confirmMined(rollup0.id, 0, 0n, new Date(), TxHash.random(), [], [tx0.id], []);
+    await rollupDb.confirmMined(rollup0.id, 0, 0n, new Date(), TxHash.random(), [], [tx0.id], [], randomBytes(32));
 
     const unsettledTxs = await rollupDb.getUnsettledTxs();
     expect(unsettledTxs.length).toBe(2);

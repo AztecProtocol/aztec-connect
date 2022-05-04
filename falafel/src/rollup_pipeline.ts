@@ -126,6 +126,12 @@ export class RollupPipelineFactory {
     this.gasLimit = gasLimit;
   }
 
+  public getRollupSize() {
+    const innerRollupSize = 1 << Math.ceil(Math.log2(this.numInnerRollupTxs));
+    const outerRollupSize = 1 << Math.ceil(Math.log2(innerRollupSize * this.numOuterRollupProofs));
+    return outerRollupSize;
+  }
+
   public async create() {
     return new RollupPipeline(
       this.proofGenerator,

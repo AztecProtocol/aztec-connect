@@ -19,6 +19,7 @@ import { AccountDao, ClaimDao } from './entity';
 import { parseInteractionResult } from './rollup_db/parse_interaction_result';
 import { getTxTypeFromInnerProofData } from './get_tx_type';
 import { RollupTimeout, RollupTimeouts } from './pipeline_coordinator/publish_time_manager';
+import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { BridgeProfile } from './pipeline_coordinator/rollup_profiler';
 import { createDefiRollupTx, RollupTx } from './pipeline_coordinator/bridge_tx_queue';
 import { TxFeeResolver } from './tx_fee_resolver';
@@ -49,6 +50,7 @@ const rollupDaoToBlockBuffer = (dao: RollupDao) => {
     parseInteractionResult(dao.interactionResult!),
     dao.gasUsed!,
     toBigIntBE(dao.gasPrice!),
+    dao.subtreeRoot,
   ).toBuffer();
 };
 
@@ -104,6 +106,10 @@ export class WorldState {
     this.blockQueue.process(block => this.handleBlock(block));
 
     await this.startNewPipeline();
+  }
+
+  public getRollupSize() {
+    return this.pipelineFactory.getRollupSize();
   }
 
   public getBlockBuffers(from: number) {
@@ -207,11 +213,14 @@ export class WorldState {
       return;
     }
     console.log(`Read ${accounts.length} accounts from file.`);
+    const numNotesPerRollup = WorldStateConstants.NUM_NEW_DATA_TREE_NOTES_PER_TX * this.getRollupSize();
+    console.log(`Populating data tree with rollup size of ${numNotesPerRollup}`);
     const { dataRoot, rootsRoot } = await InitHelpers.populateDataAndRootsTrees(
       accounts,
       this.worldStateDb,
       RollupTreeId.DATA,
       RollupTreeId.ROOT,
+      numNotesPerRollup,
     );
     const newNullRoot = await InitHelpers.populateNullifierTree(accounts, this.worldStateDb, RollupTreeId.NULL);
 
@@ -497,6 +506,11 @@ export class WorldState {
 
     // Get by rollup hash, as a competing rollup may have the same rollup number.
     const rollupProof = await this.rollupDb.getRollupProof(rollup.rollupHash, true);
+
+    // 2 notes per tx
+    const subtreeDepth = Math.ceil(Math.log2(rollup.rollupSize * WorldStateConstants.NUM_NEW_DATA_TREE_NOTES_PER_TX));
+    const lastIndex = this.worldStateDb.getSize(RollupTreeId.DATA) - 1n;
+    const subtreeRoot = await this.worldStateDb.getSubtreeRoot(RollupTreeId.DATA, lastIndex, subtreeDepth);
     if (rollupProof) {
       // Our rollup. Confirm mined and track settlement times.
       const txIds = rollupProof.txs.map(tx => tx.id);
@@ -509,6 +523,7 @@ export class WorldState {
         block.interactionResult,
         txIds,
         assetMetrics,
+        subtreeRoot,
       );
 
       for (const inner of rollup.innerProofData) {
@@ -549,6 +564,7 @@ export class WorldState {
         gasPrice: toBufferBE(block.gasPrice, 32),
         gasUsed: block.gasUsed,
         assetMetrics,
+        subtreeRoot,
       });
 
       await this.rollupDb.addRollup(rollupDao);

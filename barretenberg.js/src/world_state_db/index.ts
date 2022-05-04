@@ -5,6 +5,7 @@ import { toBigIntBE, toBufferBE } from '../bigint_buffer';
 import { ChildProcess, execSync, spawn } from 'child_process';
 import { PromiseReadable } from 'promise-readable';
 import { serializeBufferArrayToVector } from '../serialize';
+import { WorldStateConstants } from '../world_state/world_state_constants';
 
 enum Command {
   GET,
@@ -56,6 +57,16 @@ export class WorldStateDb {
 
   public getSize(treeId: number) {
     return this.sizes[treeId];
+  }
+
+  public async getSubtreeRoot(treeId: number, index: bigint, depth: number) {
+    const path = await this.getHashPath(treeId, index);
+
+    const hashPair = path.data[depth];
+    // figure out whether our root is the lhs or rhs of the hash pair
+    const isLeft = (index >> BigInt(depth)) % BigInt(2) == BigInt(0);
+    const subTreeRoot = hashPair[isLeft ? 0 : 1];
+    return subTreeRoot;
   }
 
   public async get(treeId: number, index: bigint): Promise<Buffer> {

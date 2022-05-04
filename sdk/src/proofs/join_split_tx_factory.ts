@@ -4,8 +4,9 @@ import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { JoinSplitTx, ProofId } from '@aztec/barretenberg/client_proofs';
 import { randomBytes } from '@aztec/barretenberg/crypto';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
+import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { ClaimNoteTxData, deriveNoteSecret, NoteAlgorithms, TreeNote } from '@aztec/barretenberg/note_algorithms';
-import { WorldState } from '@aztec/barretenberg/world_state';
+import { WorldState, WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { Database } from '../database';
 import { Note } from '../note';
 import { UserData } from '../user';
@@ -36,13 +37,13 @@ export class JoinSplitTxFactory {
     } = {},
   ) {
     const { id: accountId, aliasHash, privateKey, publicKey, nonce } = user;
-    const accountIndex = nonce !== 0 ? await this.db.getUserSigningKeyIndex(accountId, signingPubKey) : 0;
-    if (accountIndex === undefined) {
-      throw new Error('Unknown signing key.');
-    }
-
     const accountAliasId = aliasHash ? new AccountAliasId(aliasHash, nonce) : AccountAliasId.random();
-    const accountPath = await this.worldState.getHashPath(accountIndex);
+
+    const { path: accountPath, index: accountIndex } = await this.getAccountPathAndIndex(
+      nonce,
+      accountId,
+      signingPubKey,
+    );
 
     const numInputNotes = inputNotes.length;
     const notes = [...inputNotes];
@@ -64,7 +65,19 @@ export class JoinSplitTxFactory {
     }
 
     const inputNoteIndices = notes.map(n => n.index || 0);
-    const inputNotePaths = await Promise.all(inputNoteIndices.map(async idx => this.worldState.getHashPath(idx)));
+    // For each input note we need to
+    // Determine if there is a hash path stored with the note
+    // If there is then concatenate that path with the hash path returned from the data tree for that note's subtree
+    // If there isn't then generate a 'zero' hash path of the full data tree depth
+    const inputNotePaths = await Promise.all(
+      notes.map(async (note, index) => {
+        if (note.hashPath) {
+          const immutableHashPath = HashPath.fromBuffer(note.hashPath);
+          return await this.worldState.buildFullHashPath(inputNoteIndices[index], immutableHashPath);
+        }
+        return this.worldState.buildZeroHashPath(WorldStateConstants.DATA_TREE_DEPTH);
+      }),
+    );
     const inputNoteNullifiers = notes.map(n => n.nullifier);
 
     const newNotes = [
@@ -109,6 +122,26 @@ export class JoinSplitTxFactory {
       proofId === ProofId.DEFI_DEPOSIT ? [newNotes[1].viewingKey] : [newNotes[0].viewingKey, newNotes[1].viewingKey];
 
     return { tx, viewingKeys, partialStateSecretEphPubKey: claimNote.ephPubKey };
+  }
+
+  private async getAccountPathAndIndex(nonce: number, accountId: AccountId, signingPubKey: GrumpkinAddress) {
+    if (nonce === 0) {
+      return {
+        path: this.worldState.buildZeroHashPath(WorldStateConstants.DATA_TREE_DEPTH),
+        index: 0,
+      };
+    } else {
+      const signingKey = await this.db.getUserSigningKey(accountId, signingPubKey);
+      if (signingKey === undefined) {
+        throw new Error('Unknown signing key.');
+      }
+      const immutableHashPath = HashPath.fromBuffer(signingKey.hashPath);
+      const path = await this.worldState.buildFullHashPath(signingKey.treeIndex, immutableHashPath);
+      return {
+        path,
+        index: signingKey.treeIndex,
+      };
+    }
   }
 
   generateNewNote(treeNote: TreeNote, privateKey: Buffer, { allowChain = false, gibberish = false } = {}) {

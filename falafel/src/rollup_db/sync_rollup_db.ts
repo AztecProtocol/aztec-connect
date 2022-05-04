@@ -184,9 +184,20 @@ export class SyncRollupDb {
     interactionResult: DefiInteractionNote[],
     txIds: Buffer[],
     assetMetrics: AssetMetricsDao[],
+    subtreeRoot: Buffer,
   ) {
     return this.synchronise(() =>
-      this.rollupDb.confirmMined(id, gasUsed, gasPrice, mined, ethTxHash, interactionResult, txIds, assetMetrics),
+      this.rollupDb.confirmMined(
+        id,
+        gasUsed,
+        gasPrice,
+        mined,
+        ethTxHash,
+        interactionResult,
+        txIds,
+        assetMetrics,
+        subtreeRoot,
+      ),
     );
   }
 

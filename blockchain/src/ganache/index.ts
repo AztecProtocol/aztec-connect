@@ -388,7 +388,7 @@ async function main() {
 
   program
     .command('profileElement')
-    .description('extract events emitted from a contract')
+    .description('provides details of element defi interactions')
     .argument('<rollupAddress>', 'the address of the deployed rollup contract, as a hex string')
     .argument('<elementAddress>', 'the address of the deployed element bridge contract, as a hex string')
     .argument('<from>', 'the block number to search from')

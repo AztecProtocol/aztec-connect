@@ -1,69 +1,70 @@
-import { MerkleTree } from '../merkle_tree';
+import { MerkleTree, MemoryMerkleTree, HashPath } from '../merkle_tree';
+import { WorldStateConstants } from './world_state_constants';
 import { LevelUp } from 'levelup';
 import { Pedersen } from '../crypto/pedersen';
-import { RollupProofData } from '../rollup_proof';
 import createDebug from 'debug';
 
 const debug = createDebug('bb:world_state');
 
 export class WorldState {
   private tree!: MerkleTree;
+  private subTreeDepth = 0;
 
   constructor(private db: LevelUp, private pedersen: Pedersen) {}
 
-  public async init() {
+  public async init(subTreeDepth: number) {
+    const subTreeSize = 1 << subTreeDepth;
+    this.subTreeDepth = subTreeDepth;
+    const zeroNotes = Array(subTreeSize).fill(MemoryMerkleTree.ZERO_ELEMENT);
+    const subTree = await MemoryMerkleTree.new(zeroNotes, this.pedersen);
+    const treeSize = WorldStateConstants.DATA_TREE_DEPTH - subTreeDepth;
+    const subTreeRoot = subTree.getRoot();
+    debug(`initialising data tree with depth ${treeSize} and zero element of ${subTreeRoot.toString('hex')}`);
     try {
-      this.tree = await MerkleTree.fromName(this.db, this.pedersen, 'data');
+      this.tree = await MerkleTree.fromName(this.db, this.pedersen, 'data', subTreeRoot);
     } catch (e) {
-      this.tree = await MerkleTree.new(this.db, this.pedersen, 'data', 32);
+      this.tree = await MerkleTree.new(this.db, this.pedersen, 'data', treeSize, subTreeRoot);
     }
-    debug(`data size: ${this.tree.getSize()}`);
-    debug(`data root: ${this.tree.getRoot().toString('hex')}`);
+    this.logTreeStats();
   }
 
-  public async processRollup(rollup: RollupProofData) {
-    const { rollupId, dataStartIndex, innerProofData } = rollup;
-
-    debug(`processing rollup ${rollupId}, inner proof data length ${innerProofData.length}`);
-
-    const leaves = innerProofData.map(p => [p.noteCommitment1, p.noteCommitment2]).flat();
-    await this.tree.updateElements(dataStartIndex, leaves);
-
-    debug(`data size: ${this.tree.getSize()}`);
-    debug(`data root: ${this.tree.getRoot().toString('hex')}`);
+  // builds a hash path at index 0 for a 'zero' tree of the given depth
+  public buildZeroHashPath(depth = WorldStateConstants.DATA_TREE_DEPTH) {
+    let current = MemoryMerkleTree.ZERO_ELEMENT;
+    const bufs: Buffer[][] = [];
+    for (let i = 0; i < depth; i++) {
+      bufs.push([current, current]);
+      current = this.pedersen.compress(current, current);
+    }
+    return new HashPath(bufs);
   }
 
-  public async processRollups(rollups: RollupProofData[]) {
-    debug(`processing ${rollups.length} rollups from rollup ${rollups[0].rollupId}...`);
-
-    let dataStartIndex = rollups[0].dataStartIndex;
-    let leaves: Buffer[] = [];
-    for (const rollup of rollups) {
-      if (rollup.dataStartIndex > dataStartIndex + leaves.length) {
-        const padding = rollup.dataStartIndex - leaves.length;
-        leaves.push(...new Array(padding).fill(Buffer.alloc(64, 0)));
-      }
-      leaves.push(...rollup.innerProofData.map(p => [p.noteCommitment1, p.noteCommitment2]).flat());
-    }
-
-    // Slice off any entries that already exist. Assumes that the values being removed are the same as already existing.
-    const currentSize = this.tree.getSize();
-    if (currentSize > dataStartIndex) {
-      leaves = leaves.slice(currentSize - dataStartIndex);
-      dataStartIndex = currentSize;
-    }
-
-    await this.tree.updateElements(dataStartIndex, leaves);
-
-    debug(`data size: ${this.tree.getSize()}`);
-    debug(`data root: ${this.tree.getRoot().toString('hex')}`);
+  private convertNoteIndexToSubTreeIndex(noteIndex: number) {
+    return noteIndex >> this.subTreeDepth;
   }
 
-  public async processNoteCommitments(dataStartIndex: number, notes: Buffer[]): Promise<void> {
-    debug(`processing ${notes.length} note commitments with start index ${dataStartIndex}...`);
-    await this.tree.updateElements(dataStartIndex, notes);
+  public async buildFullHashPath(noteIndex: number, immutableHashPath: HashPath) {
+    const noteSubTreeIndex = this.convertNoteIndexToSubTreeIndex(noteIndex);
+    const mutablePath = await this.getHashPath(noteSubTreeIndex);
+    const fullHashPath = new HashPath(immutableHashPath.data.concat(mutablePath.data));
+    return fullHashPath;
+  }
 
-    debug(`data size: ${this.tree.getSize()}`);
+  public async insertElement(index: number, element: Buffer) {
+    const subRootIndex = this.convertNoteIndexToSubTreeIndex(index);
+    await this.tree.updateElement(subRootIndex, element);
+    this.logTreeStats();
+  }
+
+  public async insertElements(startIndex: number, elements: Buffer[]) {
+    const subRootIndex = this.convertNoteIndexToSubTreeIndex(startIndex);
+    await this.tree.updateElements(subRootIndex, elements);
+    this.logTreeStats();
+  }
+
+  public logTreeStats() {
+    const subTreeSize = 1 << this.subTreeDepth;
+    debug(`data size: ${this.tree.getSize() * subTreeSize}`);
     debug(`data root: ${this.tree.getRoot().toString('hex')}`);
   }
 

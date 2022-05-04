@@ -51,6 +51,7 @@ const blockTimer = {
 };
 
 const roots = [randomBytes(32), randomBytes(32), randomBytes(32), randomBytes(32)];
+const subTreeRoots = [randomBytes(32), randomBytes(32), randomBytes(32), randomBytes(32)];
 const EMPTY_BUFFER = Buffer.alloc(32);
 
 const nextRollupId = 2;
@@ -295,9 +296,10 @@ describe('world_state', () => {
       start: jest.fn(),
       rollback: jest.fn(),
       commit: jest.fn(),
-      getSize: jest.fn().mockResolvedValue(0),
+      getSize: jest.fn().mockReturnValue(1024n),
       put: jest.fn(),
       getRoot: jest.fn().mockImplementation((id: RollupTreeId) => roots[id]),
+      getSubtreeRoot: jest.fn().mockImplementation(async (id: RollupTreeId) => subTreeRoots[id]),
       get: jest.fn().mockImplementation((id: RollupTreeId, index: bigint) => {
         if (id == RollupTreeId.NULL) {
           return nullifiers[index.toString()] ?? Buffer.alloc(32);

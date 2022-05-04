@@ -1,20 +1,25 @@
 const initConfig = {
   '1': {
     initRoots: {
-      initDataRoot: '27717599bd488a4f20967dbeff581a8965fa9b2ba68aa8a73c5213baedf2169d',
-      initNullRoot: '1ccbf1f75b7704b101c66aef27f0ee7295d0dcc1742af9aaffb509d0dfca19a7',
-      initRootsRoot: '1b20394c4e0dab9360186819141aede9dadfad9a419242f449a0e0e038b481f1',
+      initDataRoot: '08c5976319928065d5686996484f28347f14ae2030afe1fd4a6c617cd3e13622',
+      initNullRoot: '11f101925e2161c75269195174fdd5f4aba7b460d0dd927b3726472a25d3221c',
+      initRootsRoot: '217683028fc9cb7c910195ff8103d9208ca63b0b43b4da06ed9ee1a9c0156e9c',
     },
-    initDataSize: 30288,
-    accounts: './data/mainnet/accounts',
+    initDataSize: 123544,
+    accountsData: './data/mainnet/accounts',
   },
   default: {
     initRoots: {
-      initDataRoot: '18ceb5cd201e1cee669a5c3ad96d3c4e933a365b37046fc3178264bede32c68d',
-      initNullRoot: '298329c7d0936453f354e4a5eef4897296cc0bf5a66f2a528318508d2088dafa',
-      initRootsRoot: '2fd2364bfe47ccb410eba3a958be9f39a8c6aca07db1abd15f5a211f51505071',
+      initDataRoot: '27f02a53c9a91e244f6f2d04d29c30684fb1f4b384ca72182f95325191315f8f',
+      initNullRoot: '23f0ce83b1262404c1f7e3e43c221fb1177ce198fe697691036f0fca58d69dba',
+      initRootsRoot: '18d5893d8b28a101fea70db8f4ed9027fcb40786c3bc8b4ca5552bf16d13f376',
     },
-    initDataSize: 0,
+    initDataSize: 8,
+    accountsData: './data/default/accounts',
+    initAccounts: {
+      mnemonic: 'once cost physical tongue reason coconut trick whip permit novel victory ritual',
+      aliases: ['account1', 'account2', 'account3', 'account4'],
+    },
   },
 };
 

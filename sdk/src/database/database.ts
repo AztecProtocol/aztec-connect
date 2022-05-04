@@ -24,6 +24,7 @@ export class SigningKey {
     public accountId: AccountId,
     public key: Buffer, // only contains x coordinate of a grumpkin address.
     public treeIndex: number,
+    public hashPath: Buffer,
   ) {}
 }
 
@@ -86,7 +87,7 @@ export interface Database extends MutexDatabase {
   addUserSigningKey(signingKey: SigningKey): Promise<void>;
   addUserSigningKeys(signingKeys: SigningKey[]): Promise<void>;
   getUserSigningKeys(accountId: AccountId): Promise<SigningKey[]>;
-  getUserSigningKeyIndex(accountId: AccountId, signingKey: GrumpkinAddress): Promise<number | undefined>;
+  getUserSigningKey(accountId: AccountId, signingKey: GrumpkinAddress): Promise<SigningKey | undefined>;
   removeUserSigningKeys(accountId: AccountId): Promise<void>;
 
   setAlias(alias: Alias): Promise<void>;

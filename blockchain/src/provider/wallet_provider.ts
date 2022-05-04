@@ -27,6 +27,10 @@ export class WalletProvider implements EthereumProvider {
     return this.addEthersWallet(new Wallet(privateKey, new Web3Provider(this.provider)));
   }
 
+  public addAccountFromSeed(mnemonic: string, path: string) {
+    return this.addEthersWallet(Wallet.fromMnemonic(mnemonic, path).connect(new Web3Provider(this.provider)));
+  }
+
   private addEthersWallet(wallet: Wallet) {
     this.accounts.push(wallet);
     return EthAddress.fromString(wallet.address);
