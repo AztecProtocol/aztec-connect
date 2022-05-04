@@ -1,20 +1,8 @@
-import { BridgeId, BridgeStatus, RollupProviderStatus } from '@aztec/sdk';
+import { BridgeId } from '@aztec/sdk';
 import { useRollupProviderStatus } from 'alt-model';
 import { useDefaultBridgeId } from 'alt-model/defi/defi_info_hooks';
 import { DefiRecipe } from 'alt-model/defi/types';
-
-function calcNextBatch(rpStatus: RollupProviderStatus, bridgeStatus?: BridgeStatus) {
-  if (!bridgeStatus) return;
-  if (bridgeStatus.nextPublishTime) return bridgeStatus.nextPublishTime;
-  const { rollupFrequency } = bridgeStatus;
-  const { nextPublishTime } = rpStatus;
-  const { publishInterval } = rpStatus.runtimeConfig;
-  if (rollupFrequency && nextPublishTime && publishInterval) {
-    const offset = nextPublishTime.getTime();
-    const wait = rollupFrequency * (publishInterval * 1000);
-    return new Date(offset + wait);
-  }
-}
+import { estimateDefiSettlementTimes } from 'alt-model/estimate_settlement_times';
 
 export function useCountDownData(bridgeId?: BridgeId) {
   const rpStatus = useRollupProviderStatus();
@@ -24,9 +12,9 @@ export function useCountDownData(bridgeId?: BridgeId) {
   const totalSlots = status?.numTxs ?? rpStatus.runtimeConfig.defaultDeFiBatchSize;
   const fraction = status ? Number(status.gasAccrued) / Number(status.gasThreshold) : 0;
   const takenSlots = Math.floor(totalSlots * Math.min(1, Math.max(0, fraction)));
-  const nextBatch = calcNextBatch(rpStatus, status);
+  const { batchSettlementTime } = estimateDefiSettlementTimes(rpStatus, status);
 
-  return { totalSlots, takenSlots, nextBatch };
+  return { totalSlots, takenSlots, nextBatch: batchSettlementTime };
 }
 
 export function useDefaultCountDownData(recipe: DefiRecipe) {

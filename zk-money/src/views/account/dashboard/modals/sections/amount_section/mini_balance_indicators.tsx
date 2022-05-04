@@ -13,7 +13,12 @@ export function MiniL1BalanceIndicator({ asset }: { asset?: RemoteAsset }) {
       : `${formatBaseUnits(l1Balance, asset.decimals, {
           precision: getAssetPreferredFractionalDigits(asset.address),
         })} ${asset.symbol}`;
-  return <Text text={content} size="xxs" />;
+  return (
+    <Text size="xxs">
+      <div>Available Balance: </div>
+      <div>{content}</div>
+    </Text>
+  );
 }
 
 export function MiniL2BalanceIndicator({ asset }: { asset?: RemoteAsset }) {
@@ -24,5 +29,5 @@ export function MiniL2BalanceIndicator({ asset }: { asset?: RemoteAsset }) {
       : `${formatBaseUnits(balance, asset.decimals, {
           precision: getAssetPreferredFractionalDigits(asset.address),
         })} zk${asset.symbol}`;
-  return <Text text={content} size="xxs" />;
+  return <Text size="xxs">Available Balance: {content}</Text>;
 }

@@ -1,4 +1,6 @@
+import { Amount } from 'alt-model/assets';
 import { TouchedFormFields } from 'alt-model/form_fields_hooks';
+import { assetIsSupportedForShielding } from 'alt-model/shield/shieldable_assets';
 import { DefiFormValidationResult, DefiFormFields } from './defi_form_validation';
 
 function getAmountInputFeedback(result: DefiFormValidationResult, touched: boolean) {
@@ -13,7 +15,18 @@ function getAmountInputFeedback(result: DefiFormValidationResult, touched: boole
     return `Transactions are capped at ${txLimitAmount?.format()}`;
   }
   if (result.insufficientTargetAssetBalance) {
-    return `Insufficient funds`;
+    const required = result.requiredInputInTargetAssetCoveringCosts;
+    const balance = result.input.balanceInTargetAsset;
+    const asset = result.input.depositAsset;
+    const requiredAmount = asset && required !== undefined ? new Amount(required, asset) : undefined;
+    const balanceAmount = asset && balance !== undefined ? new Amount(balance, asset) : undefined;
+    console.error("Couldn't correctly form feedback string for defi form issue named insufficientTargetAssetBalance");
+    const requiredStr = `Transaction requires ${requiredAmount?.format()}. You have ${balanceAmount?.format()} available.`;
+    if (assetIsSupportedForShielding(asset?.address)) {
+      return requiredStr + ` Please first shield more ${asset?.symbol}.`;
+    } else {
+      return requiredStr;
+    }
   }
   if (result.noAmount) {
     return `Amount must be non-zero`;

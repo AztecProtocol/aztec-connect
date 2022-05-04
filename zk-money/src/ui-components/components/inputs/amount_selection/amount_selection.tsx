@@ -1,14 +1,12 @@
 import type { RemoteAsset } from 'alt-model/types';
 import type { StrOrMax } from 'alt-model/forms/constants';
-import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from 'alt-model/known_assets/known_asset_addresses';
+import { assetIsSupportedForShielding } from 'alt-model/shield/shieldable_assets';
 import { useState, useMemo } from 'react';
 import { Dropdown, DropdownOption } from 'components/dropdown';
 import { ShieldedAssetIcon } from 'components';
 import { AmountInput } from 'ui-components';
 import downArrow from '../../../images/down_arrow.svg';
 import style from './amount_selection.module.scss';
-
-const SUPPORTED_FOR_SHIELDING = [KMAA.ETH, KMAA.DAI];
 
 interface AmountSelectionProps {
   asset: RemoteAsset;
@@ -29,9 +27,7 @@ export function AmountSelection(props: AmountSelectionProps) {
 
   const options = useMemo(
     () =>
-      props.assets
-        ?.filter(x => SUPPORTED_FOR_SHIELDING.some(addr => x.address.equals(addr)))
-        .map(x => ({ value: x.id, label: x.symbol })),
+      props.assets?.filter(x => assetIsSupportedForShielding(x.address)).map(x => ({ value: x.id, label: x.symbol })),
     [props.assets],
   ) as DropdownOption<number>[] | undefined;
 

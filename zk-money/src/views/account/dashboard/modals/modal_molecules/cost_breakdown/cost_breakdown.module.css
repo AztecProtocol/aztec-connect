@@ -15,6 +15,10 @@
   padding: 0 20px;
 }
 
+.row:nth-child(even) {
+  background-color: #fafafa;
+}
+
 .title {
   font-weight: 500;
   font-size: 18px;
@@ -27,25 +31,30 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-}
-
-.value {
   font-weight: 500;
-  width: 100px;
   text-align: right;
 }
 
 .cost {
+  width: 200px;
   text-align: left;
   font-weight: 400;
 }
 
-.shieldIcon {
+.assetIcon {
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.zebra {
-  background-color: #fafafa;
+.amount {
+  width: 140px;
+}
+
+.l1AssetIcon {
+  width: 20px;
+  height: 20px;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
 }

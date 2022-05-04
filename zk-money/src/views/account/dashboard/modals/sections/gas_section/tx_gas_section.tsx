@@ -7,6 +7,8 @@ import { MiniL1BalanceIndicator, MiniL2BalanceIndicator } from '../amount_sectio
 import { FeeBulkPriceSubLabel } from './fee_bulk_price_sub_label';
 import { TxGasSaving } from './tx_gas_saving';
 import { SectionInfo } from '../../modal_molecules/section_info';
+import { useRollupProviderStatus } from 'alt-model';
+import { estimateTxSettlementTimes } from 'alt-model/estimate_settlement_times';
 
 type BalanceType = 'L1' | 'L2';
 
@@ -25,17 +27,12 @@ function renderInfo(props: TxGasSectionProps) {
     case TxSettlementTime.NEXT_ROLLUP:
       return (
         <>
-          <p>Transaction will be queued into the next rollup.</p>
+          <p>Default speed. Join the next Aztec batch headed to Layer 1.</p>
           <TxGasSaving targetAssetIsErc20={props.targetAssetIsErc20} feeAmount={selectedFeeAmount} />
         </>
       );
     case TxSettlementTime.INSTANT:
-      return (
-        <>
-          <p>Tranaction will kick off a rollup ahead of schedule.</p>
-          <p>You’re getting fast settlement & privacy 😊</p>
-        </>
-      );
+      return <p>Fastest speed. Instant settlement to Ethereum.</p>;
   }
 }
 
@@ -46,31 +43,46 @@ interface TxGasSectionProps {
   asset?: RemoteAsset;
   balanceType: BalanceType;
   targetAssetIsErc20?: boolean;
+  deductionIsFromL1?: boolean;
 }
 
 export function TxGasSection(props: TxGasSectionProps) {
-  const { speed, onChangeSpeed, feeAmounts, asset, balanceType } = props;
+  const { speed, onChangeSpeed, feeAmounts, asset, balanceType, deductionIsFromL1 } = props;
+  const rpStatus = useRollupProviderStatus();
+  const { instantSettlementTime, nextSettlementTime } = estimateTxSettlementTimes(rpStatus);
 
   const options = [
     {
       value: TxSettlementTime.NEXT_ROLLUP,
       label: 'Slow',
-      sublabel: <FeeBulkPriceSubLabel feeAmount={feeAmounts?.[TxSettlementTime.NEXT_ROLLUP]} />,
+      sublabel: (
+        <FeeBulkPriceSubLabel
+          expectedTimeOfSettlement={nextSettlementTime}
+          feeAmount={feeAmounts?.[TxSettlementTime.NEXT_ROLLUP]}
+          deductionIsFromL1={deductionIsFromL1}
+        />
+      ),
     },
     {
       value: TxSettlementTime.INSTANT,
-      label: 'ASAP',
-      sublabel: <FeeBulkPriceSubLabel feeAmount={feeAmounts?.[TxSettlementTime.INSTANT]} />,
+      label: 'Instant',
+      sublabel: (
+        <FeeBulkPriceSubLabel
+          expectedTimeOfSettlement={instantSettlementTime}
+          feeAmount={feeAmounts?.[TxSettlementTime.INSTANT]}
+          deductionIsFromL1={deductionIsFromL1}
+        />
+      ),
     },
   ];
 
   return (
     <InputSection
-      title={'Gas Fee'}
+      title="Transaction Fee"
       titleComponent={renderBalanceIndicator(balanceType, asset)}
       component={
         <>
-          <SpeedSwitch value={speed} onChangeValue={onChangeSpeed} options={options} />
+          <SpeedSwitch value={speed} onChangeValue={onChangeSpeed} options={options} height={100} />
           <SectionInfo>{renderInfo(props)}</SectionInfo>
         </>
       }

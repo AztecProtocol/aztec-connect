@@ -40,8 +40,10 @@ export function ShieldConfirmationPage({
         bottomPanel={
           <CostBreakdown
             recipient={validationResult.input.fields.recipientAlias}
+            amountLabel="Shield Amount"
             amount={validationResult.targetL2OutputAmount}
             fee={validationResult.input.feeAmount}
+            deductionsAreFromL1
           />
         }
       />
@@ -65,7 +67,7 @@ export function ShieldConfirmationPage({
       {!showingComplete && (
         <div className={style.footer}>
           <Button
-            text={hasError ? 'Retry' : 'Confirm Submit'}
+            text={hasError ? 'Retry' : 'Confirm Transaction'}
             onClick={canSubmit ? onSubmit : undefined}
             disabled={!canSubmit}
           />

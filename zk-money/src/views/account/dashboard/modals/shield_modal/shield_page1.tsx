@@ -116,6 +116,7 @@ export function ShieldPage1({
             onChangeSpeed={onChangeSpeed}
             feeAmounts={validationResult.input.feeAmounts}
             targetAssetIsErc20={asset.id !== 0}
+            deductionIsFromL1
           />
         }
         rightPanel={<TransactionSettlementTimeInformationSection selectedSpeed={fields.speed} />}

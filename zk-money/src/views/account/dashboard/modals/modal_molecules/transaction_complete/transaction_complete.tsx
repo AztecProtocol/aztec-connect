@@ -9,7 +9,7 @@ export function TransactionComplete(props: TransactionCompleteProps) {
   return (
     <div className={style.root}>
       <DoneGradientIcon />
-      <div>Transaction Sent!</div>
+      <div>Transaction Confirmed!</div>
     </div>
   );
 }

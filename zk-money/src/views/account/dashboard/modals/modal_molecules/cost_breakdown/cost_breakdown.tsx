@@ -1,37 +1,45 @@
 import { EthAddress } from '@aztec/sdk';
-import { useAssetUnitPrice } from 'alt-model';
+import { useAmountBulkPrice } from 'alt-model';
 import { Amount } from 'alt-model/assets/amount';
+import { getAssetIcon } from 'alt-model/known_assets/known_asset_display_data';
 import { formatBulkPrice } from 'app';
 import { ShieldedAssetIcon } from 'components';
-import { bindStyle } from 'ui-components/util/classnames';
 import style from './cost_breakdown.module.css';
 
-const cx = bindStyle(style);
-
 interface CostBreakdownProps {
+  amountLabel: string;
   amount?: Amount;
   fee?: Amount;
   recipient?: string;
+  deductionsAreFromL1?: boolean;
 }
 
 interface RowProps {
   label: string;
   cost?: string;
-  className?: string;
   address?: EthAddress;
   value?: string;
+  assetIsZk?: boolean;
 }
 
-function Row({ label, cost, address, value, className }: RowProps) {
+function renderIcon(assetIsZk?: boolean, address?: EthAddress) {
+  if (!address) return;
+  if (assetIsZk) {
+    return <ShieldedAssetIcon size="s" address={address} />;
+  } else {
+    const src = getAssetIcon(address);
+    if (src) return <div className={style.l1AssetIcon} style={{ backgroundImage: `url(${src})` }} />;
+  }
+}
+
+function Row({ label, cost, address, value, assetIsZk }: RowProps) {
   return (
-    <div className={cx(style.row, className)}>
+    <div className={style.row}>
       <div className={style.title}>{label}</div>
       <div className={style.values}>
-        <div className={cx(style.value, style.cost)}>{cost}</div>
-        <div className={cx(style.value, style.shieldIcon)}>
-          {address && <ShieldedAssetIcon size="s" address={address} />}
-        </div>
-        <div className={cx(style.value)}>{value}</div>
+        <div className={style.cost}>{cost}</div>
+        <div className={style.assetIcon}>{renderIcon(assetIsZk, address)}</div>
+        <div className={style.amount}>{value}</div>
       </div>
     </div>
   );
@@ -42,24 +50,41 @@ function maybeBulkPriceStr(bulkPrice?: bigint) {
   return '$' + formatBulkPrice(bulkPrice);
 }
 
-export function CostBreakdown({ amount, fee, recipient }: CostBreakdownProps) {
-  const amountAssetUnitPrice = useAssetUnitPrice(amount?.id);
-  const amountBulkPrice = amountAssetUnitPrice === undefined ? undefined : amount?.toBulkPrice(amountAssetUnitPrice);
-  const feeAssetUnitPrice = useAssetUnitPrice(fee?.id);
-  const feeBulkPrice = feeAssetUnitPrice === undefined ? undefined : fee?.toBulkPrice(feeAssetUnitPrice);
-  const totalBulkPrice = amountBulkPrice !== undefined && feeBulkPrice !== undefined ? amountBulkPrice : undefined;
+export function CostBreakdown({ amountLabel, amount, fee, recipient, deductionsAreFromL1 }: CostBreakdownProps) {
+  const assetIsZk = !deductionsAreFromL1;
+  const layer = assetIsZk ? 'L2' : 'L1';
+  const amountBulkPrice = useAmountBulkPrice(amount);
+  const feeBulkPrice = useAmountBulkPrice(fee);
+  const totalBulkPrice =
+    amountBulkPrice !== undefined && feeBulkPrice !== undefined ? amountBulkPrice + feeBulkPrice : undefined;
+  const feeIsInSameAsset = fee && amount?.id === fee.id;
+  const totalAmount = feeIsInSameAsset ? amount?.add(fee?.baseUnits) : undefined;
+  const totalAddress = feeIsInSameAsset ? amount.address : undefined;
 
   return (
     <div className={style.root}>
       <Row label="Recipient" value={recipient} />
       <Row
-        className={style.zebra}
-        label="Amount"
-        cost={maybeBulkPriceStr(totalBulkPrice)}
+        label={amountLabel}
+        cost={maybeBulkPriceStr(amountBulkPrice)}
         address={amount?.address}
-        value={amount?.format()}
+        value={amount?.format({ layer })}
+        assetIsZk={assetIsZk}
       />
-      <Row label="Gas Fee" cost={maybeBulkPriceStr(feeBulkPrice)} address={fee?.address} value={fee?.format()} />
+      <Row
+        label="Transaction Fee"
+        cost={maybeBulkPriceStr(feeBulkPrice)}
+        address={fee?.address}
+        value={fee?.format({ layer })}
+        assetIsZk={assetIsZk}
+      />
+      <Row
+        label="Total"
+        cost={maybeBulkPriceStr(totalBulkPrice)}
+        address={totalAddress}
+        value={totalAmount?.format({ layer })}
+        assetIsZk={assetIsZk}
+      />
     </div>
   );
 }

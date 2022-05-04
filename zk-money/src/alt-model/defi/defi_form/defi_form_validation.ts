@@ -1,4 +1,4 @@
-import type { DefiSettlementTime } from '@aztec/sdk';
+import type { DefiSettlementTime, BridgeId } from '@aztec/sdk';
 import type { AmountFactory } from 'alt-model/assets/amount_factory';
 import type { DefiComposerPayload } from './defi_composer';
 import type { RemoteAsset } from 'alt-model/types';
@@ -20,12 +20,14 @@ interface DefiFormValidationInput {
   feeAmounts?: (Amount | undefined)[];
   balanceInFeePayingAsset?: bigint;
   transactionLimit?: bigint;
+  bridgeId?: BridgeId;
 }
 
 export interface DefiFormValidationResult {
   loading?: boolean;
   unrecognisedTargetAmount?: boolean;
   feeAmounts?: (Amount | undefined)[];
+  requiredInputInTargetAssetCoveringCosts?: bigint;
   insufficientTargetAssetBalance?: boolean;
   insufficientFeePayingAssetBalance?: boolean;
   mustAllowForFee?: boolean;
@@ -94,5 +96,6 @@ export function validateDefiForm(input: DefiFormValidationInput): DefiFormValida
     maxOutput,
     input,
     feeAmounts,
+    requiredInputInTargetAssetCoveringCosts,
   };
 }

@@ -46,7 +46,7 @@ export function useDefiForm(recipe: DefiRecipe, mode: DefiFormMode) {
   const { accountId, config } = useApp();
   const [fields, setFields] = useState<DefiFormFields>({
     amountStrOrMax: mode === 'exit' ? MAX_MODE : '',
-    speed: DefiSettlementTime.NEXT_ROLLUP,
+    speed: DefiSettlementTime.DEADLINE,
   });
   const [touchedFields, setters] = useTrackedFieldChangeHandlers(fields, setFields);
   const [attemptedLock, setAttemptedLock] = useState(false);
@@ -76,6 +76,7 @@ export function useDefiForm(recipe: DefiRecipe, mode: DefiFormMode) {
     balanceInTargetAsset,
     balanceInFeePayingAsset,
     transactionLimit,
+    bridgeId,
   });
 
   const feedback = getDefiFormFeedback(validationResult, touchedFields, attemptedLock);

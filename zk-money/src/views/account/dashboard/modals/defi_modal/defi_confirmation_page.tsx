@@ -46,6 +46,7 @@ export function DefiConfirmationPage({
         bottomPanel={
           <CostBreakdown
             recipient={recipe.name}
+            amountLabel="Amount"
             amount={validationResult.validPayload?.targetDepositAmount}
             fee={validationResult.validPayload?.feeAmount}
           />
@@ -68,7 +69,7 @@ export function DefiConfirmationPage({
       {!showingComplete && (
         <div className={style.footer}>
           <Button
-            text={hasError ? 'Retry' : 'Confirm Submit'}
+            text={hasError ? 'Retry' : 'Confirm Transaction'}
             onClick={canSubmit ? onSubmit : undefined}
             disabled={!canSubmit}
           />

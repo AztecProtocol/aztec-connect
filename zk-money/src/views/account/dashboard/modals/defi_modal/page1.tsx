@@ -83,6 +83,7 @@ export function Page1({
             speed={fields.speed as DefiSettlementTime}
             onChangeSpeed={onChangeSpeed}
             recipe={recipe}
+            bridgeId={validationResult.input.bridgeId}
             feeAmounts={validationResult?.feeAmounts}
           />
         }

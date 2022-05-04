@@ -3,21 +3,21 @@ import { GradientBorder } from 'ui-components';
 import { Text } from '../../../../components';
 import { borderRadiuses } from '../../../../styles';
 
-const Root = styled.div`
+const Root = styled.div<{ height: number }>`
   user-select: none;
   position: relative;
   width: 100%;
-  height: 52px;
+  height: ${({ height }) => `${height}px`};
   box-shadow: inset 0 0 10px #0004;
   border-radius: ${borderRadiuses.s};
 `;
 
-const Cell = styled.div<{ idx: number; optionCount: number }>`
+const Cell = styled.div<{ height: number; idx: number; optionCount: number }>`
   position: absolute;
   top: 0;
   left: 0;
   width: ${({ optionCount }) => 100 / optionCount}%;
-  height: 52px;
+  height: ${({ height }) => `${height}px`};
   text-align: center;
   cursor: pointer;
   display: flex;
@@ -29,22 +29,18 @@ const Cell = styled.div<{ idx: number; optionCount: number }>`
   flex-direction: column;
 `;
 
-const InnerCell = styled(Cell)`
-  height: 48px;
-`;
-
-const Switch = styled.div`
+const Switch = styled.div<{ height: number }>`
   position: relative;
   width: 100%;
-  height: 52px;
+  height: ${({ height }) => `${height}px`};
   overflow: hidden;
   border-radius: ${borderRadiuses.s};
   box-shadow: 0 0 10px #0004;
 `;
 
-const BoldLabels = styled.div<{ idx: number; optionCount: number }>`
+const BoldLabels = styled.div<{ innerHeight: number; idx: number; optionCount: number }>`
   width: ${({ optionCount }) => 100 * optionCount}%;
-  height: 48px;
+  height: ${({ innerHeight }) => `${innerHeight}px`};
   transform: translateX(${({ idx, optionCount }) => (-idx * 100) / optionCount}%);
   transition: transform 0.2s;
   font-weight: 500;
@@ -59,28 +55,35 @@ interface SpeedSwitchProps<T> {
   value: T;
   options: Option<T>[];
   onChangeValue: (value: T) => void;
-  className?: string;
+  height?: number;
 }
 
-export function SpeedSwitch<T>({ value, onChangeValue, options, className }: SpeedSwitchProps<T>) {
+export function SpeedSwitch<T>({ value, onChangeValue, options, height = 52 }: SpeedSwitchProps<T>) {
   const selectedIdx = options.findIndex(opt => opt.value === value);
+  const innerHeight = height - 4;
   return (
-    <Root className={className}>
+    <Root height={height}>
       {options.map((option, idx) => (
-        <Cell key={idx} idx={idx} onClick={() => onChangeValue(option.value)} optionCount={options.length}>
+        <Cell
+          key={idx}
+          idx={idx}
+          onClick={() => onChangeValue(option.value)}
+          optionCount={options.length}
+          height={height}
+        >
           <Text size="xs" color="gradient" text={option.label} />
           {option.sublabel}
         </Cell>
       ))}
-      <Cell idx={selectedIdx} optionCount={options.length}>
-        <Switch>
+      <Cell idx={selectedIdx} optionCount={options.length} height={height}>
+        <Switch height={height}>
           <GradientBorder>
-            <BoldLabels idx={selectedIdx} optionCount={options.length}>
+            <BoldLabels idx={selectedIdx} optionCount={options.length} innerHeight={innerHeight}>
               {options.map((option, idx) => (
-                <InnerCell key={idx} idx={idx} optionCount={options.length}>
+                <Cell key={idx} idx={idx} optionCount={options.length} height={innerHeight}>
                   <Text size="xs" color="gradient" weight="bold" text={option.label} />
                   {option.sublabel}
-                </InnerCell>
+                </Cell>
               ))}
             </BoldLabels>
           </GradientBorder>

@@ -41,7 +41,12 @@ export function SendConfirmationPage(props: SendConfirmationPageProps) {
           </div>
         }
         bottomPanel={
-          <CostBreakdown recipient={props.items.recipient} amount={props.items.amount} fee={props.items.fee} />
+          <CostBreakdown
+            recipient={props.items.recipient}
+            amountLabel="Amount"
+            amount={props.items.amount}
+            fee={props.items.fee}
+          />
         }
       />
       <BorderBox>
@@ -60,7 +65,7 @@ export function SendConfirmationPage(props: SendConfirmationPageProps) {
       </BorderBox>
       {!success && (
         <div className={style.footer}>
-          <Button text={failed ? 'Retry' : 'Confirm Submit'} onClick={props.onSubmit} disabled={!riskChecked} />
+          <Button text={failed ? 'Retry' : 'Confirm Transaction'} onClick={props.onSubmit} disabled={!riskChecked} />
         </div>
       )}
     </div>

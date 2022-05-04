@@ -60,7 +60,7 @@ export function ShieldModal(props: ShieldModalProps) {
       <Card
         cardHeader={
           <div className={style.sendHeader}>
-            <span className={style.headerLabel}>Shield</span>
+            <span className={style.headerLabel}>Shield Funds</span>
             <CloseButtonWhite onClick={handleClose} />
           </div>
         }

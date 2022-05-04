@@ -33,7 +33,7 @@ function getAmountInputFeedback(result: ShieldFormValidationResult, touched: boo
 
 function getWalletAccountFeedback(result: ShieldFormValidationResult) {
   if (result.mustDepositFromWalletAccountUsedToGenerateAztecKeys) {
-    const targetSymbol = result.targetL2OutputAmount?.info.symbol;
+    const targetSymbol = result.input.targetAsset?.symbol;
     const feeSymbol = result.input.feeAmount?.info.symbol;
     const addressStr = result.input.keyVault?.signerAddress.toString();
     const abbreviatedStr = `${addressStr?.slice(0, 8)}...${addressStr?.slice(-4)}`;

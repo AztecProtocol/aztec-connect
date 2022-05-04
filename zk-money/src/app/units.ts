@@ -43,7 +43,7 @@ export const formatBaseUnits = (
   // then we've got bigger problems anyway, such as fitting such a long string in the UI.
   return new Intl.NumberFormat('en-GB', {
     useGrouping: opts?.commaSeparated ?? false,
-    maximumFractionDigits: opts?.precision,
+    maximumFractionDigits: opts?.precision ?? 20,
     minimumFractionDigits: opts?.precision,
     signDisplay: opts?.showPlus ? 'exceptZero' : undefined,
   }).format(baseUnitsToFloat(value, decimals));
