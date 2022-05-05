@@ -43,6 +43,7 @@ export interface DefiRecipe {
   createAdaptor: BridgeDataAdaptorCreator;
   projectName: string;
   website: string;
+  websiteLabel: string;
   name: string;
   logo: string;
   miniLogo: string;

@@ -30,7 +30,6 @@ export interface DefiFormValidationResult {
   requiredInputInTargetAssetCoveringCosts?: bigint;
   insufficientTargetAssetBalance?: boolean;
   insufficientFeePayingAssetBalance?: boolean;
-  mustAllowForFee?: boolean;
   beyondTransactionLimit?: boolean;
   noAmount?: boolean;
   isValid?: boolean;
@@ -74,21 +73,14 @@ export function validateDefiForm(input: DefiFormValidationInput): DefiFormValida
   const noAmount = targetDepositAmount.baseUnits <= 0n;
   const insufficientTargetAssetBalance = balanceInTargetAsset < requiredInputInTargetAssetCoveringCosts;
   const insufficientFeePayingAssetBalance = balanceInFeePayingAsset < feeAmount.baseUnits;
-  const mustAllowForFee = insufficientTargetAssetBalance && balanceInTargetAsset >= targetDepositAmount.baseUnits;
 
   const isValid =
     !insufficientTargetAssetBalance && !insufficientFeePayingAssetBalance && !beyondTransactionLimit && !noAmount;
-  const validPayload = isValid
-    ? {
-        targetDepositAmount,
-        feeAmount,
-      }
-    : undefined;
+  const validPayload = isValid ? { targetDepositAmount, feeAmount } : undefined;
 
   return {
     insufficientTargetAssetBalance,
     insufficientFeePayingAssetBalance,
-    mustAllowForFee,
     beyondTransactionLimit,
     noAmount,
     isValid,

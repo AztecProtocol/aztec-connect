@@ -9,7 +9,7 @@ export function FaqHint({ className }: { className?: string }) {
       href="https://aztec-protocol.gitbook.io/zk-money/faq"
       target="_blank"
     >
-      <span className={style.label}>Need help?, check out the </span>
+      <span className={style.label}>Need help?</span>
       <img className={style.icon} src={faqIcon} alt="FAQ" />
     </Link>
   );

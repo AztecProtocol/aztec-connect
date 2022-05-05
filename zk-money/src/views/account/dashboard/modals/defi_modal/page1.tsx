@@ -54,7 +54,7 @@ export function Page1({
         <StatsSection recipe={recipe} />
         <div className={style.links}>
           <Hyperlink href={etherscanHref} label={'View Contract'} icon={HyperlinkIcon.Open} />
-          <Hyperlink href={recipe.website} label={recipe.projectName} icon={HyperlinkIcon.Open} />
+          <Hyperlink href={recipe.website} label={recipe.websiteLabel} icon={HyperlinkIcon.Open} />
         </div>
       </div>
       <SplitSection

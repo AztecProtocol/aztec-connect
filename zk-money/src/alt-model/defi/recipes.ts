@@ -66,6 +66,7 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
     createAdaptor: createElementAdaptor,
     projectName: 'Element',
     website: 'https://element.fi/',
+    websiteLabel: 'element.fi',
     name: 'Element Fixed Yield',
     investmentType: DefiInvestmentType.FIXED_YIELD,
     shortDesc:
@@ -89,6 +90,7 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
     createAdaptor: createLidoAdaptor,
     projectName: 'Lido',
     website: 'https://lido.fi/',
+    websiteLabel: 'lido.fi',
     name: 'Lido Staking',
     investmentType: DefiInvestmentType.STAKING,
     shortDesc: 'Stake zkETH with Lido to earn daily rewards.',

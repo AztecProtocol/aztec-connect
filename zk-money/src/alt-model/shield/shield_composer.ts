@@ -10,6 +10,8 @@ import { createSigningKeys, KeyVault } from '../../app/key_vault';
 
 const debug = createDebug('zm:shield_composer');
 
+const textDecoder = new TextDecoder();
+
 export interface ShieldComposerPayload {
   targetOutput: Amount;
   fee: Amount;
@@ -167,10 +169,9 @@ export class ShieldComposer {
     if (!(await sdk.isContract(depositor))) {
       this.stateObs.setPhase(ShieldComposerPhase.APPROVE_PROOF);
       const signingData = await controller.getSigningData();
-      const signingDataStr = signingData.toString('hex');
-      const abbreviatedStr = `0x${signingDataStr.slice(0, 8)}...${signingDataStr.slice(-4)}`;
+      const signingMessage = textDecoder.decode(signingData);
       await this.walletAccountEnforcer.ensure();
-      this.stateObs.setPrompt(`Please sign the following proof data in your wallet: ${abbreviatedStr}`);
+      this.stateObs.setPrompt(`Please sign the following message in your wallet: "${signingMessage}"`);
       try {
         await controller.sign();
       } catch (e) {

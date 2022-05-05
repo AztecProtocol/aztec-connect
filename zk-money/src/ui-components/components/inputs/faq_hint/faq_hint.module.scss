@@ -1,3 +1,5 @@
+@use '../../../styles/mixins';
+
 .link {
   color: black;
 }
@@ -7,12 +9,15 @@
 }
 
 .label {
-  font-size: 16px;
+  @include mixins.gradient_font;
+  font-size: 18px;
+  font-weight: 500;
   color: inherit;
   text-decoration: inherit;
 }
 
 .icon {
-  width: 25px;
-  margin-left: 5px;
+  width: 40px;
+  margin-left: 10px;
+  margin-bottom: -12.5px;
 }

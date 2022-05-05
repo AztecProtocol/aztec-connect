@@ -5,10 +5,6 @@ import { DefiFormValidationResult, DefiFormFields } from './defi_form_validation
 
 function getAmountInputFeedback(result: DefiFormValidationResult, touched: boolean) {
   if (!touched) return;
-  if (result.mustAllowForFee) {
-    const fee = result.input.feeAmount;
-    return `Please allow ${fee?.format()} for paying the transaction fee.`;
-  }
   if (result.beyondTransactionLimit) {
     const { transactionLimit } = result.input;
     const txLimitAmount = result.targetDepositAmount?.withBaseUnits(transactionLimit ?? 0n);

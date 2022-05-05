@@ -43,6 +43,8 @@ export function SettlementTimeInformationSection(props: SettlementTimeInformatio
       subtitle={props.timeStr}
       content={<SettlementProgressBar remainingSlots={props.remainingSlots} progress={props.progress} />}
       buttonLabel="Learn more"
+      // TODO: Update FAQ with more useful info about settlement times
+      helpLink="https://aztec-protocol.gitbook.io/zk-money/faq/faq-rollup"
     />
   );
 }

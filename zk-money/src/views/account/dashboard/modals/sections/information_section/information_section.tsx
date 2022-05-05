@@ -6,6 +6,7 @@ interface InformationSectionProps {
   subtitle: string;
   content: React.ReactNode;
   buttonLabel: string;
+  helpLink: string;
 }
 
 export function InformationSection(props: InformationSectionProps) {
@@ -16,7 +17,7 @@ export function InformationSection(props: InformationSectionProps) {
         <div className={style.subtitle}>{props.subtitle}</div>
       </div>
       <div className={style.content}>{props.content}</div>
-      <Hyperlink label={props.buttonLabel} icon={HyperlinkIcon.Info} />
+      <Hyperlink label={props.buttonLabel} icon={HyperlinkIcon.Info} href={props.helpLink} />
     </div>
   );
 }
