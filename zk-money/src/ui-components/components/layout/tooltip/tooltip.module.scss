@@ -1,0 +1,16 @@
+@use '../../../styles/mixins.scss';
+
+.tooltip {
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 15px 20px;
+  font-size: 16px;
+  min-width: 220px;
+  border: 1px solid #e9e6e6;
+  position: absolute;
+  bottom: 45px;
+  right: 0px;
+  border-radius: 10px;
+  line-height: 150%;
+  letter-spacing: 0.03em;
+  color: black;
+}

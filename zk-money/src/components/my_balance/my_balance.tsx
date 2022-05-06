@@ -1,7 +1,6 @@
 import { formatBulkPrice } from 'app';
 import styled from 'styled-components/macro';
-import { Card, CardHeaderSize } from 'ui-components';
-import { InfoButton } from '..';
+import { Card, CardHeaderSize, InfoTooltip } from 'ui-components';
 import { useTotalValuation, useTotalSpendableValuation } from '../../alt-model/total_account_valuation_hooks';
 import { gradients } from '../../styles';
 import style from './my_balance.module.scss';
@@ -45,7 +44,7 @@ export function MyBalance() {
             <h2 className={style.available}>
               {totalSpendableValuationStr ? `Available $${totalSpendableValuationStr}` : 'Loading...'}
             </h2>
-            <InfoButton />
+            <InfoTooltip text="[COPY-NEEDED]" />
           </InformationWrapper>
         </div>
       }
