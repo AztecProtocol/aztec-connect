@@ -14,11 +14,11 @@ function SettledField(props: { time: Date; txId: TxId }) {
 }
 
 export function renderTransactionTimeField(tx: UserTx) {
-  if (tx.settled) return <SettledField time={tx.settled} txId={tx.txId} />;
+  if (tx.settled && tx.txId) return <SettledField time={tx.settled} txId={tx.txId} />;
   return (
     <>
       <StepStatusIndicator status={StepStatus.RUNNING} />
-      <ExplorerLink label={''} txId={tx.txId} />
+      {tx.txId && <ExplorerLink label={''} txId={tx.txId} />}
     </>
   );
 }

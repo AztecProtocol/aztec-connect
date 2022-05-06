@@ -498,7 +498,7 @@ describe('groupUserTxs', () => {
       ]);
     });
 
-    it('recover finalised defi tx', () => {
+    it('recover finalised defi tx with pending claim', () => {
       const bridgeId = new BridgeId(0, 0, 1, 2, 3);
       const defiTx = randomCoreDefiTx({
         bridgeId,
@@ -511,6 +511,17 @@ describe('groupUserTxs', () => {
         finalised: new Date(now + 1),
       });
       expect(groupUserTxs([defiTx])).toEqual([
+        new UserDefiClaimTx(
+          undefined,
+          defiTx.txId,
+          defiTx.userId,
+          bridgeId,
+          { assetId: 0, value: defiTx.depositValue },
+          true,
+          { assetId: 1, value: 23n },
+          { assetId: 3, value: 45n },
+          undefined,
+        ),
         new UserDefiTx(
           defiTx.txId,
           defiTx.userId,
@@ -533,7 +544,7 @@ describe('groupUserTxs', () => {
       ]);
     });
 
-    it('recover settled defi tx and claim tx', () => {
+    it('recover settled defi tx and settled claim tx', () => {
       const claimTxId = TxId.random();
       const bridgeId = new BridgeId(0, 0, 1, undefined, virtualAssetIdPlaceholder);
       const defiTx = randomCoreDefiTx({
@@ -551,6 +562,7 @@ describe('groupUserTxs', () => {
       expect(groupUserTxs([defiTx])).toEqual([
         new UserDefiClaimTx(
           claimTxId,
+          defiTx.txId,
           defiTx.userId,
           bridgeId,
           { assetId: 0, value: defiTx.depositValue },

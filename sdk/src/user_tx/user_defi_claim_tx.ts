@@ -8,13 +8,14 @@ export class UserDefiClaimTx {
   public readonly proofId = ProofId.DEFI_CLAIM;
 
   constructor(
-    public readonly txId: TxId,
+    public readonly txId: TxId | undefined,
+    public readonly defiTxId: TxId,
     public readonly userId: AccountId,
     public readonly bridgeId: BridgeId,
     public readonly depositValue: AssetValue,
     public readonly success: boolean,
     public readonly outputValueA: AssetValue,
     public readonly outputValueB: AssetValue | undefined,
-    public readonly settled: Date,
+    public readonly settled?: Date,
   ) {}
 }

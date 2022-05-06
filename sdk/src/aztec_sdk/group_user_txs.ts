@@ -91,15 +91,26 @@ const toUserDefiTx = (tx: CoreDefiTx, fee: AssetValue) => {
 };
 
 const toUserDefiClaimTx = (
-  claimTxId: TxId,
+  claimTxId: TxId | undefined,
   {
+    txId,
     userId,
     bridgeId,
     depositValue,
     interactionResult: { success, outputValueA, outputValueB, claimSettled },
   }: UserDefiTx,
 ) =>
-  new UserDefiClaimTx(claimTxId!, userId, bridgeId, depositValue, success!, outputValueA!, outputValueB, claimSettled!);
+  new UserDefiClaimTx(
+    claimTxId,
+    txId,
+    userId,
+    bridgeId,
+    depositValue,
+    success!,
+    outputValueA!,
+    outputValueB,
+    claimSettled,
+  );
 
 const getPaymentValue = ({
   proofId,
@@ -207,8 +218,8 @@ const toUserTx = (txs: CoreUserTx[]) => {
     }
     case ProofId.DEFI_DEPOSIT: {
       const userDefiTx = toUserDefiTx(primaryTx, fee);
-      if (userDefiTx.interactionResult.claimSettled) {
-        return [userDefiTx, toUserDefiClaimTx(primaryTx.claimTxId!, userDefiTx)];
+      if (userDefiTx.interactionResult.finalised) {
+        return [userDefiTx, toUserDefiClaimTx(primaryTx.claimTxId, userDefiTx)];
       }
       return [userDefiTx];
     }
