@@ -41,6 +41,7 @@ export interface DefiRecipe {
   openHandleAsset?: RemoteAsset;
   valueEstimationInteractionAssets: BridgeInteractionAssets;
   createAdaptor: BridgeDataAdaptorCreator;
+  requiresAuxDataOpts?: boolean;
   projectName: string;
   website: string;
   websiteLabel: string;

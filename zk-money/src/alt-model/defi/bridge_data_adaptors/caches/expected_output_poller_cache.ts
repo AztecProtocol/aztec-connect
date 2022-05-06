@@ -1,10 +1,13 @@
 import type { RemoteAssetsObs } from 'alt-model/top_level_context/remote_assets_obs';
 import type { BridgeDataAdaptorObsCache } from './bridge_data_adaptor_cache';
 import type { DefiRecipesObs } from 'alt-model/defi/recipes';
+import createDebug from 'debug';
 import { Obs } from 'app/util';
 import { Poller } from 'app/util/poller';
 import { LazyInitDeepCacheMap } from 'app/util/lazy_init_cache_map';
 import { toAdaptorArgs } from '../bridge_adaptor_util';
+
+const debug = createDebug('expected_output_poller_cache');
 
 const POLL_INTERVAL = 5 * 60 * 1000;
 
@@ -20,10 +23,15 @@ export function createExpectedOutputPollerCache(
         if (!adaptor || !assets || !recipe) return undefined;
         const { valueEstimationInteractionAssets } = recipe;
         const { inA, inB, outA, outB } = toAdaptorArgs(valueEstimationInteractionAssets);
-        return () =>
-          adaptor.adaptor
-            .getExpectedOutput(inA, inB, outA, outB, auxData, inputAmount)
-            .then(values => ({ assetId: valueEstimationInteractionAssets.outA.id, value: values[0] }));
+        return async () => {
+          try {
+            const values = await adaptor.adaptor.getExpectedOutput(inA, inB, outA, outB, auxData, inputAmount);
+            return { assetId: valueEstimationInteractionAssets.outA.id, value: values[0] };
+          } catch (err) {
+            debug({ recipeId, inA, inB, outA, outB, auxData, inputAmount }, err);
+            throw new Error(`Failed to fetch bridge expected output for "${recipe.name}".`);
+          }
+        };
       },
     );
     return new Poller(pollObs, POLL_INTERVAL);

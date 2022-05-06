@@ -64,6 +64,7 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
     entryInputAssetAddressA: KMAA.DAI,
     entryOutputAssetAddressA: KMAA.DAI,
     createAdaptor: createElementAdaptor,
+    requiresAuxDataOpts: true,
     projectName: 'Element',
     website: 'https://element.fi/',
     websiteLabel: 'element.fi',

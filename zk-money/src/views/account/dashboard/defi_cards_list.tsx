@@ -1,7 +1,9 @@
+import { useMemo } from 'react';
 import { Select, Section, SectionTitle, SearchInput } from 'ui-components';
+import { Obs, useMaybeObs } from 'app/util';
 import { DefiCard } from '../../../components';
 import { DefiInvestmentType, DefiRecipe } from '../../../alt-model/defi/types';
-import { useDefiRecipes } from 'alt-model/top_level_context';
+import { useBridgeDataAdaptorsMethodCaches, useDefiRecipes } from 'alt-model/top_level_context';
 import style from './defi_cards_list.module.scss';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -83,12 +85,38 @@ function useRecipeFilters() {
   return { filters, changeFilters };
 }
 
+function useValidRecipesOnly(recipes?: DefiRecipe[]) {
+  const { auxDataPollerCache } = useBridgeDataAdaptorsMethodCaches();
+  const validRecipesObs = useMemo(() => {
+    if (!recipes) return;
+    // Each recipe in this list will have it's corresponding aux data opts checked
+    const recipesRequiringAuxDataOpts = recipes.filter(x => x.requiresAuxDataOpts);
+    // Lazy fetch the aux data opts for recipe in the above list
+    const recipesAuxDataOptsObs = Obs.combine(recipesRequiringAuxDataOpts.map(x => auxDataPollerCache.get(x.id).obs));
+    return recipesAuxDataOptsObs.map(recipesAuxDataOpts => {
+      let validRecipes = recipes;
+      // Check each item in the aforementioned list, and remove it from
+      // the complete recipe list if it doesn't have any aux data opts
+      for (let i = 0; i < recipesAuxDataOpts.length; i++) {
+        const recipe = recipesRequiringAuxDataOpts[i];
+        const auxDataOpts = recipesAuxDataOpts[i];
+        if (!auxDataOpts || auxDataOpts.length === 0) {
+          validRecipes = validRecipes.filter(x => x !== recipe);
+        }
+      }
+      return validRecipes;
+    });
+  }, [recipes, auxDataPollerCache]);
+  return useMaybeObs(validRecipesObs);
+}
+
 export const DefiCardsList = ({ onSelect, isLoggedIn }: DefiCardsListProps) => {
   const { filters, changeFilters } = useRecipeFilters();
 
   const hasFilters = Object.keys(filters).length > 0;
 
-  const recipes = useDefiRecipes();
+  const uncheckedRecipes = useDefiRecipes();
+  const recipes = useValidRecipesOnly(uncheckedRecipes);
   const filteredRecipes = filterRecipes(recipes, filters);
 
   return (
