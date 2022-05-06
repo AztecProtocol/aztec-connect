@@ -130,7 +130,7 @@ export class SendForm extends EventEmitter implements AccountForm {
   private readonly userId: AccountId;
   private readonly alias: string;
   private readonly asset: CutdownAsset;
-  private readonly sendMode: SendMode;
+  readonly sendMode: SendMode;
 
   private values: SendFormValues = initialSendFormValues;
   private formStatus = FormStatus.ACTIVE;

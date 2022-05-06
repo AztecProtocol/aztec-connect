@@ -52,18 +52,19 @@ interface Option<T> {
   label: string;
   sublabel?: React.ReactNode;
 }
-interface SpeedSwitchProps<T> {
+interface ToggleProps<T> {
   value: T;
   options: Option<T>[];
   onChangeValue: (value: T) => void;
   height?: number;
+  className?: string;
 }
 
-export function SpeedSwitch<T>({ value, onChangeValue, options, height = 52 }: SpeedSwitchProps<T>) {
+export function Toggle<T>({ value, onChangeValue, className, options, height = 52 }: ToggleProps<T>) {
   const selectedIdx = options.findIndex(opt => opt.value === value);
   const innerHeight = height - 4;
   return (
-    <Root height={height}>
+    <Root height={height} className={className}>
       {options.map((option, idx) => (
         <Cell
           key={idx}

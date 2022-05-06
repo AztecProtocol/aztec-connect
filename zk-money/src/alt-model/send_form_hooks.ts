@@ -67,7 +67,7 @@ export function useSendForm(asset: RemoteAsset, sendMode: SendMode) {
   const accountUtils = useMemo(() => sdk && new AccountUtils(sdk, requiredNetwork), [sdk, requiredNetwork]);
 
   const sendFormRef = useRef<SendForm>();
-  if (!sendFormRef.current) {
+  if (!sendFormRef.current || sendFormRef.current.sendMode !== sendMode) {
     sendFormRef.current = attemptCreateSendForm({
       ...app,
       sdk,

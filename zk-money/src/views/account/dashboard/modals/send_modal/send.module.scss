@@ -28,6 +28,19 @@
   overflow: auto;
 }
 
+.header {
+  display: flex;
+  gap: 18px;
+}
+
+.description {
+  width: 60%;
+}
+
+.toggle {
+  width: 40%;
+}
+
 .nextWrapper {
   display: flex;
   flex-direction: column;

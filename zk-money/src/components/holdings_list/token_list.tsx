@@ -13,7 +13,6 @@ import { Holding } from './holding';
 export function TokenList() {
   const navigate = useNavigate();
   const [sendModalAsset, setSendModalAsset] = useState<RemoteAsset | undefined>(undefined);
-  const [withdrawModalAsset, setWithdrawModalAsset] = useState<RemoteAsset | undefined>(undefined);
   const [shieldModalAsset, setShieldModalAsset] = useState<RemoteAsset | undefined>(undefined);
   const [page, setPage] = useState(1);
   const balances = useBalances();
@@ -34,7 +33,6 @@ export function TokenList() {
             key={idx}
             assetValue={balance}
             onSend={setSendModalAsset}
-            onWidthdraw={setWithdrawModalAsset}
             onShield={setShieldModalAsset}
             onGoToEarn={handleGoToEarn}
           />
@@ -48,16 +46,7 @@ export function TokenList() {
           onChangePage={setPage}
         />
       )}
-      {sendModalAsset && (
-        <SendModal sendMode={SendMode.SEND} asset={sendModalAsset} onClose={() => setSendModalAsset(undefined)} />
-      )}
-      {withdrawModalAsset && (
-        <SendModal
-          sendMode={SendMode.WIDTHDRAW}
-          asset={withdrawModalAsset}
-          onClose={() => setWithdrawModalAsset(undefined)}
-        />
-      )}
+      {sendModalAsset && <SendModal asset={sendModalAsset} onClose={() => setSendModalAsset(undefined)} />}
       {shieldModalAsset && (
         <ShieldModal preselectedAssetId={shieldModalAsset.id} onClose={() => setShieldModalAsset(undefined)} />
       )}

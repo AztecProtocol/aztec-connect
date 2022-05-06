@@ -1,7 +1,7 @@
 import type { Amount } from 'alt-model/assets';
 import type { DefiRecipe } from 'alt-model/defi/types';
 import { BridgeId, DefiSettlementTime } from '@aztec/sdk';
-import { SpeedSwitch } from 'ui-components';
+import { Toggle } from 'ui-components';
 import { InputSection } from '../sections/input_section';
 import { MiniL2BalanceIndicator } from '../sections/amount_section/mini_balance_indicators';
 import { FeeBulkPriceSubLabel } from '../sections/gas_section/fee_bulk_price_sub_label';
@@ -84,7 +84,7 @@ export function DefiGasSection(props: DefiGasSectionProps) {
       titleComponent={<MiniL2BalanceIndicator asset={feeAmounts?.[0]?.info} />}
       component={
         <>
-          <SpeedSwitch value={speed} onChangeValue={onChangeSpeed} options={options} height={100} />
+          <Toggle value={speed} onChangeValue={onChangeSpeed} options={options} height={100} />
           <SectionInfo>{renderInfo(props)}</SectionInfo>
         </>
       }

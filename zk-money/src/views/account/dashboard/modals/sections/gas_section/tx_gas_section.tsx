@@ -1,5 +1,5 @@
 import { TxSettlementTime } from '@aztec/sdk';
-import { SpeedSwitch } from 'ui-components';
+import { Toggle } from 'ui-components';
 import { Amount } from 'alt-model/assets';
 import { RemoteAsset } from 'alt-model/types';
 import { InputSection } from '../input_section';
@@ -82,7 +82,7 @@ export function TxGasSection(props: TxGasSectionProps) {
       titleComponent={renderBalanceIndicator(balanceType, asset)}
       component={
         <>
-          <SpeedSwitch value={speed} onChangeValue={onChangeSpeed} options={options} height={100} />
+          <Toggle value={speed} onChangeValue={onChangeSpeed} options={options} height={100} />
           <SectionInfo>{renderInfo(props)}</SectionInfo>
         </>
       }

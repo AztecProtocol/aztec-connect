@@ -7,7 +7,7 @@ import { SplitSection } from '../sections/split_section';
 import { AmountSection } from 'views/account/dashboard/modals/sections/amount_section';
 import { TxGasSection } from 'views/account/dashboard/modals/sections/gas_section';
 import { SendProgress } from './send_progress';
-import { FaqHint, formatMaxAmount } from 'ui-components';
+import { FaqHint, formatMaxAmount, Toggle } from 'ui-components';
 import { DescriptionSection, RecipientSection } from '../sections';
 import { useAmounts } from 'alt-model/asset_hooks';
 import { PrivacyInformationSection } from '../sections/privacy_information_section';
@@ -23,11 +23,17 @@ export interface SendProps {
   form: SendFormValues;
   sendMode: SendMode;
   explorerUrl: string;
+  onChangeSendMode(sendMode: SendMode): void;
   onChangeInputs(inputs: Partial<SendFormValues>): void;
   onValidate(): void;
   onSubmit(): void;
   onClose(): void;
 }
+
+const MODES = [
+  { label: 'Withdraw to L1', value: SendMode.WIDTHDRAW },
+  { label: 'Send to L2', value: SendMode.SEND },
+];
 
 function getDescription(sendMode: SendMode) {
   switch (sendMode) {
@@ -47,6 +53,7 @@ export const Send: React.FunctionComponent<SendProps> = ({
   sendMode,
   form,
   onChangeInputs,
+  onChangeSendMode,
   onValidate,
   onSubmit,
   onClose,
@@ -69,7 +76,10 @@ export const Send: React.FunctionComponent<SendProps> = ({
 
   return (
     <div className={style.root}>
-      <DescriptionSection text={getDescription(sendMode)} />
+      <div className={style.header}>
+        <DescriptionSection className={style.description} text={getDescription(sendMode)} />
+        <Toggle className={style.toggle} value={sendMode} options={MODES} onChangeValue={onChangeSendMode} />
+      </div>
       <SplitSection
         leftPanel={
           <>

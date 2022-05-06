@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { isKnownAssetAddressString } from 'alt-model/known_assets/known_asset_addresses';
 import type { RemoteAsset } from 'alt-model/types';
 import { Card, CardHeaderSize } from 'ui-components';
@@ -13,7 +13,6 @@ import style from './send_modal.module.scss';
 interface SendModalProps {
   onClose: () => void;
   asset: RemoteAsset;
-  sendMode?: SendMode;
 }
 
 function getTitle(sendMode: SendMode) {
@@ -27,7 +26,8 @@ function getTitle(sendMode: SendMode) {
   }
 }
 
-export function SendModal({ asset, onClose, sendMode = SendMode.SEND }: SendModalProps) {
+export function SendModal({ asset, onClose }: SendModalProps) {
+  const [sendMode, setSendMode] = useState(SendMode.SEND);
   const { config } = useApp();
   const { formValues, sendForm, processing, spendableBalance } = useSendForm(asset, sendMode);
   const generatingKey = formValues?.status.value === SendStatus.GENERATE_KEY;
@@ -66,6 +66,7 @@ export function SendModal({ asset, onClose, sendMode = SendMode.SEND }: SendModa
             sendMode={sendMode}
             form={formValues}
             explorerUrl={config.explorerUrl}
+            onChangeSendMode={setSendMode}
             onChangeInputs={async values => {
               sendForm?.changeValues(values);
               debouncedSoftValidation();

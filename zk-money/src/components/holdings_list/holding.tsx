@@ -11,12 +11,11 @@ import style from './holding.module.scss';
 interface HoldingProps {
   assetValue: AssetValue;
   onSend?: (asset: RemoteAsset) => void;
-  onWidthdraw?: (asset: RemoteAsset) => void;
   onShield?: (asset: RemoteAsset) => void;
   onGoToEarn?: (asset: RemoteAsset) => void;
 }
 
-export function Holding({ assetValue, onSend, onWidthdraw, onShield, onGoToEarn }: HoldingProps) {
+export function Holding({ assetValue, onSend, onShield, onGoToEarn }: HoldingProps) {
   const amount = useAmount(assetValue);
   const asset = amount?.info;
   const bulkPrice = useAmountBulkPrice(amount);
