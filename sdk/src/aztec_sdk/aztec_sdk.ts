@@ -225,33 +225,22 @@ export class AztecSdk extends EventEmitter {
     return this.blockchain.getBridgeAddressId(address, gasLimit);
   }
 
-  public constructBridgeId(
-    addressId: number,
-    inputAssetIdA: number,
-    outputAssetIdA: number,
-    inputAssetIdB?: number,
-    outputAssetIdB?: number,
-    auxData = 0,
-  ) {
-    return new BridgeId(addressId, inputAssetIdA, outputAssetIdA, inputAssetIdB, outputAssetIdB, auxData);
-  }
-
   public async setSupportedBridge(bridgeAddress: EthAddress, bridgeGasLimit?: number, options?: SendTxOptions) {
     return this.blockchain.setSupportedBridge(bridgeAddress, bridgeGasLimit, options);
   }
 
-  public async processAsyncDefiInteraction(interactionNonce: number) {
-    return this.blockchain.processAsyncDefiInteraction(interactionNonce);
+  public async processAsyncDefiInteraction(interactionNonce: number, options?: SendTxOptions) {
+    return this.blockchain.processAsyncDefiInteraction(interactionNonce, options);
   }
 
   private async getTransactionFees(assetId: number, txType: TxType) {
     const fees = await this.core.getTxFees(assetId);
-    const transactionFee = fees[txType];
+    const txSettlementFees = fees[txType];
     if (this.isFeePayingAsset(assetId)) {
-      return transactionFee;
+      return txSettlementFees;
     }
-    const [minTransferFee] = fees[TxType.TRANSFER];
-    return transactionFee.map(({ value, ...rest }) => ({ value: value + minTransferFee.value, ...rest }));
+    const [feeTxTransferFee] = fees[TxType.TRANSFER];
+    return txSettlementFees.map(({ value, ...rest }) => ({ value: value + feeTxTransferFee.value, ...rest }));
   }
 
   public async getDepositFees(assetId: number) {
@@ -554,6 +543,10 @@ export class AztecSdk extends EventEmitter {
   // Rename to getBalance().
   public async getBalanceAv(assetId: number, userId: AccountId) {
     return { assetId, value: await this.core.getBalance(assetId, userId) };
+  }
+
+  public async getFormattedBalance(assetId: number, userId: AccountId, symbol = true, precision?: number) {
+    return this.fromBaseUnits(await this.getBalanceAv(assetId, userId), symbol, precision);
   }
 
   public async getMaxSpendableValue(assetId: number, userId: AccountId, numNotes?: number) {

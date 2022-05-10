@@ -46,8 +46,8 @@ async function main() {
   const barretenberg = await BarretenbergWasm.new();
 
   const chainId = await blockchain.getChainId();
-  const { initDataRoot } = InitHelpers.getInitRoots(chainId);
-  const rollupDb = new CachedRollupDb(new TypeOrmRollupDb(connection, initDataRoot));
+  const { dataRoot } = InitHelpers.getInitRoots(chainId);
+  const rollupDb = new CachedRollupDb(new TypeOrmRollupDb(connection, dataRoot));
   if (configurator.getRollupContractChanged()) {
     await rollupDb.eraseDb();
   }

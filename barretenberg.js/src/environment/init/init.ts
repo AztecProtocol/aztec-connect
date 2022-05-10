@@ -39,13 +39,25 @@ export interface AccountData {
   signingKeys: SigningKeys;
 }
 
+export interface TreeInitData {
+  roots: Roots;
+  dataTreeSize: number;
+}
+
 export class InitHelpers {
-  public static getInitRoots(chainId: number) {
+  public static getInitData(chainId: number): TreeInitData {
+    return {
+      roots: InitHelpers.getInitRoots(chainId),
+      dataTreeSize: InitHelpers.getInitDataSize(chainId),
+    };
+  }
+
+  public static getInitRoots(chainId: number): Roots {
     const { initDataRoot, initNullRoot, initRootsRoot } = getInitData(chainId).initRoots;
     return {
-      initDataRoot: Buffer.from(initDataRoot, 'hex'),
-      initNullRoot: Buffer.from(initNullRoot, 'hex'),
-      initRootsRoot: Buffer.from(initRootsRoot, 'hex'),
+      dataRoot: Buffer.from(initDataRoot, 'hex'),
+      nullRoot: Buffer.from(initNullRoot, 'hex'),
+      rootsRoot: Buffer.from(initRootsRoot, 'hex'),
     };
   }
 
@@ -207,7 +219,7 @@ export class InitHelpers {
         },
       ];
     });
-    console.log(`Batch inserting ${entries.length} notes into data tree, this may take some time...`);
+    console.log(`Batch inserting ${entries.length} notes into data tree...`);
     await merkleTree.batchPut(entries);
     if (rollupSize) {
       // we need to expand the data tree to have 'full' rollups worth of notes in
@@ -215,7 +227,6 @@ export class InitHelpers {
       const additional = entries.length % rollupSize ? 1 : 0;
       const notesRequired = (numFullRollups + additional) * rollupSize;
       if (notesRequired > entries.length) {
-        console.log(`Inserting zero note into data tree at index ${notesRequired - 1}`);
         await merkleTree.put(dataTreeIndex, BigInt(notesRequired - 1), Buffer.alloc(32, 0));
       }
     }
@@ -240,7 +251,7 @@ export class InitHelpers {
       }
       return nullifiers;
     });
-    console.log(`Batch inserting ${entries.length} notes into nullifier tree, this may take some time...`);
+    console.log(`Batch inserting ${entries.length} notes into nullifier tree...`);
     await merkleTree.batchPut(entries);
     const root = merkleTree.getRoot(nullTreeIndex);
     return root;

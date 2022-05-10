@@ -196,6 +196,9 @@ export class Contracts {
   }
 
   public getPriceFeed(assetId: number) {
+    if (!this.priceFeeds[assetId]) {
+      throw new Error(`Unknown assetId: ${assetId}`);
+    }
     return this.priceFeeds[assetId];
   }
 

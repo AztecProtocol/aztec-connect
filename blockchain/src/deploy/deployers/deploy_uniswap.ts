@@ -2,14 +2,14 @@ import UniswapV2FactoryJson from '@uniswap/v2-core/build/UniswapV2Factory.json';
 import UniswapV2PairJson from '@uniswap/v2-core/build/UniswapV2Pair.json';
 import IWETH from '@uniswap/v2-periphery/build/IWETH.json';
 import UniswapV2Router02Json from '@uniswap/v2-periphery/build/UniswapV2Router02.json';
-import UniswapBridge from '../artifacts/contracts/bridges/UniswapBridge.sol/UniswapBridge.json';
+import UniswapBridge from '../../artifacts/contracts/bridges/UniswapBridge.sol/UniswapBridge.json';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Contract, ContractFactory, Signer } from 'ethers';
-import WETH9 from '../abis/WETH9.json';
+import WETH9 from '../../abis/WETH9.json';
 
 const gasLimit = 5000000;
 
-export const createUniswapPair = async (
+export const deployUniswapPair = async (
   owner: Signer,
   router: Contract,
   asset: Contract,
@@ -67,5 +67,6 @@ export const deployUniswapBridge = async (signer: Signer, rollupProcessor: Contr
   const defiBridgeLibrary = new ContractFactory(UniswapBridge.abi, UniswapBridge.bytecode, signer);
   const defiBridge = await defiBridgeLibrary.deploy(rollupProcessor.address, uniswapRouter.address);
   console.error(`UniswapBridge contract address: ${defiBridge.address}`);
+  await rollupProcessor.setSupportedBridge(defiBridge.address, 300000n, { gasLimit });
   return defiBridge;
 };

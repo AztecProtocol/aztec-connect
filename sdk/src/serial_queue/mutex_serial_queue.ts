@@ -15,7 +15,7 @@ export class MutexSerialQueue implements SerialQueue {
     return this.queue.length();
   }
 
-  public async cancel() {
+  public cancel() {
     this.queue.cancel();
   }
 

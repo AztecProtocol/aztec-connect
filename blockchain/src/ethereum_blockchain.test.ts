@@ -69,9 +69,9 @@ describe('ethereum_blockchain', () => {
   beforeAll(() => {
     const getInitRootsMock = jest.fn(() => {
       return {
-        initDataRoot: Buffer.alloc(32),
-        initNullRoot: Buffer.alloc(32),
-        initRootsRoot: Buffer.alloc(32),
+        dataRoot: Buffer.alloc(32),
+        nullRoot: Buffer.alloc(32),
+        rootsRoot: Buffer.alloc(32),
       };
     });
     const MockInitHelpers = InitHelpers as jest.Mocked<typeof InitHelpers>;

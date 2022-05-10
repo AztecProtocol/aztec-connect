@@ -1,6 +1,4 @@
-import LidoBridge, {
-  LidoBridge__factory,
-} from '@aztec/bridge-clients/client-dest/typechain-types/factories/LidoBridge__factory';
+import { LidoBridge__factory } from '@aztec/bridge-clients/client-dest/typechain-types/factories/LidoBridge__factory';
 import { Contract, Signer } from 'ethers';
 
 const gasLimit = 5000000;
@@ -22,5 +20,6 @@ export const deployLidoBridge = async (
   console.error(`LidoBridge contract address: ${bridge.address}`);
 
   await rollup.setSupportedAsset(wstETH, 75000, { gasLimit });
+  await rollup.setSupportedBridge(bridge.address, 500000n, { gasLimit });
   return bridge;
 };

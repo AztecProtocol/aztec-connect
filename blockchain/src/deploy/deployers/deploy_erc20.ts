@@ -4,7 +4,7 @@ import ERC20Mintable from '../../artifacts/contracts/test/ERC20Mintable.sol/ERC2
 
 const gasLimit = 5000000;
 
-export async function addAsset(
+export async function deployErc20(
   rollup: Contract,
   signer: Signer,
   supportsPermit: boolean,

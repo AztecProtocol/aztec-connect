@@ -182,10 +182,6 @@ resource "aws_ecs_task_definition" "falafel" {
         "value": "1"
       },
       {
-        "name": "FLUSH_AFTER_IDLE",
-        "value": "60"
-      },
-      {
         "name": "PROVERLESS",
         "value": "true"
       }

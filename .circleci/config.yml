@@ -428,7 +428,22 @@ jobs:
           name: 'Test'
           no_output_timeout: 15m
           working_directory: end-to-end
-          command: cond_spot_run_tests end-to-end ./src/e2e_element_defi.test.ts true
+          command: cond_spot_run_tests end-to-end ./src/e2e_element.test.ts true
+
+  e2e-lido:
+    docker:
+      - image: aztecprotocol/build-image
+    resource_class: small
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker:
+          version: 19.03.13
+      - run:
+          name: 'Test'
+          no_output_timeout: 15m
+          working_directory: end-to-end
+          command: cond_spot_run_tests end-to-end ./src/e2e_lido.test.ts true
 
   zk-money:
     docker:
@@ -726,6 +741,10 @@ workflows:
           requires:
             - end-to-end
           filters: *tag_filter
+      - e2e-lido:
+          requires:
+            - end-to-end
+          filters: *tag_filter
       - deploy:
           requires:
             - x86_64-linux-gcc
@@ -743,6 +762,7 @@ workflows:
             - e2e-account
             - e2e-defi
             - e2e-element
+            - e2e-lido
             - e2e-non-fee-assets
             - e2e-virtual-assets
             - wasabi

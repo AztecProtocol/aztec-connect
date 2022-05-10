@@ -11,10 +11,6 @@ cd ../../falafel
 export ETHEREUM_HOST=http://localhost:8545
 export HALLOUMI_HOST=http://localhost:8083
 
-# Deploy
-export INITIAL_ETH_SUPPLY=1000000000000000000000
-export VK=MockVerificationKey
-
 # Falafel
 export MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW=1
 export FEE_GAS_PRICE_MULTIPLIER=0.0001

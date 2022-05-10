@@ -1,5 +1,5 @@
 import { EthereumRpc } from '@aztec/barretenberg/blockchain';
-import { BridgeConfig } from '@aztec/barretenberg/bridge_id';
+import { BridgeConfig, BridgeId } from '@aztec/barretenberg/bridge_id';
 import { EthereumBlockchainConfig, JsonRpcProvider, WalletProvider } from '@aztec/blockchain';
 import { ConnectionOptions } from 'typeorm';
 import { Configurator, ConfVars } from './configurator';
@@ -59,68 +59,33 @@ function getOrmConfig(dbUrl?: string, logging = false): ConnectionOptions {
   }
 }
 
-/* We might want these back for mainnet launch.
-function generateBridgeId(id: number, inputAsset: number, outputAsset: number, aux: number) {
-  return new BridgeId(id, inputAsset, outputAsset, undefined, undefined, aux);
-}
-
-function generateBridgeConfig(numTxs: number, fee: number, rollupFrequency: number, bridgeId: BridgeId) {
-  const bridgeConfig = {
-    bridgeId: bridgeId.toBigInt(),
-    numTxs,
-    fee,
-    rollupFrequency,
-  };
-  return bridgeConfig;
-}
-
-function generateBridgeIds(numTxs: number, fee: number, rollupFrequency: number) {
-  const uniswapBridge = 1;
-  const elementBridge = 2;
-  const elementAssetIds = [3, 4, 5, 6, 8, 9];
-  const elementAuxDatas = new Map<number, Array<number>>([
-    [3, [1643382476]],
-    [4, [1643382446]],
-    [5, [1651264326]],
-    [6, [1643382514, 1650025565]],
-    [8, [1643382460, 1651267340]],
-    [9, [1644601070, 1651247155]],
-  ]);
-  return [
-    generateBridgeConfig(numTxs, fee, rollupFrequency, generateBridgeId(uniswapBridge, 0, 1, 0)),
-    generateBridgeConfig(numTxs, fee, rollupFrequency, generateBridgeId(uniswapBridge, 1, 0, 0)),
-    ...elementAssetIds.flatMap(assetId => {
-      const auxValues = elementAuxDatas.get(assetId);
-      return auxValues === undefined
-        ? []
-        : auxValues.map(aux => {
-            const generatedBridgeId = generateBridgeId(elementBridge, assetId, assetId, aux);
-            return generateBridgeConfig(numTxs, fee, rollupFrequency, generatedBridgeId);
-          });
-    }),
-  ];
-}
-*/
-
-function getPerChainBridgeConfig(chainId: number) {
-  const perChainBridgeConfig: { [key: string]: any[] } = {
-    1: [],
-    // 0xa57ec: generateBridgeIds(10, 1000000, 2),
-  };
-
-  const config = perChainBridgeConfig[chainId];
-  if (!config?.length) {
-    return [];
+function getPerChainBridgeConfig(chainId: number): BridgeConfig[] {
+  switch (chainId) {
+    case 1:
+    case 0xa57ec:
+      return [
+        {
+          bridgeId: new BridgeId(1, 1, 1, undefined, undefined, 1663361092).toBigInt(),
+          numTxs: 25,
+          fee: 500000n,
+          rollupFrequency: 3,
+        },
+        {
+          bridgeId: new BridgeId(2, 0, 2).toBigInt(),
+          numTxs: 50,
+          fee: 200000n,
+          rollupFrequency: 3,
+        },
+        {
+          bridgeId: new BridgeId(2, 2, 0).toBigInt(),
+          numTxs: 50,
+          fee: 200000n,
+          rollupFrequency: 3,
+        },
+      ];
+    default:
+      return [];
   }
-  return config.map(c => {
-    const bc: BridgeConfig = {
-      bridgeId: c.bridgeId,
-      numTxs: c.numTxs,
-      fee: c.fee === undefined ? undefined : BigInt(c.fee),
-      rollupFrequency: c.rollupFrequency,
-    };
-    return bc;
-  });
 }
 
 export async function getComponents(configurator: Configurator) {
@@ -146,8 +111,10 @@ export async function getComponents(configurator: Configurator) {
   console.log(`Database Url: ${dbUrl || 'none (local sqlite)'}`);
   console.log(`Ethereum host: ${ethereumHost}`);
   console.log(`Gas limit: ${gasLimit || 'default'}`);
-  console.log(`Rollup contract address: ${rollupContractAddress || 'none'}`);
-  console.log(`Fee distributor contract address: ${feeDistributorAddress || 'none'}`);
+  console.log(`Rollup provider address: ${rollupContractAddress || 'none'}`);
+  console.log(`Fee distributor address: ${feeDistributorAddress || 'none'}`);
+  console.log(`Fee paying asset addresses: ${feePayingAssetAddresses.map(a => a.toString()).join(',') || 'none'}`);
+  console.log(`Price feed addresses: ${priceFeedContractAddresses.map(a => a.toString()).join(',') || 'none'}`);
   console.log(`Signing address: ${signingAddress}`);
   console.log(`Proverless: ${proverless}`);
 

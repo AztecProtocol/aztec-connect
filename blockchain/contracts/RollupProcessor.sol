@@ -559,11 +559,10 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
     }
 
     /**
-     * @dev Set a flag that allows a third party dev to register Assets and bridges.
+     * @dev Set a flag that allows a third party dev to register assets and bridges.
      * Protected by onlyOwner
      * @param _flag - bool if the flag should be set or not
      */
-
     function setAllowThirdPartyContracts(bool _flag) external override onlyOwner {
         allowThirdPartyContracts = _flag;
     }
@@ -817,7 +816,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
      * @param linkedBridge - address of the bridge contract
      * @param gasLimit - uint256 gas limit to send to the bridge convert function
      */
-
     function setSupportedBridge(address linkedBridge, uint256 gasLimit)
         external
         override

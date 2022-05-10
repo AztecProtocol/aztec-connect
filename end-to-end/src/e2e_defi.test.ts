@@ -2,6 +2,7 @@ import {
   AccountId,
   AssetValue,
   AztecSdk,
+  BridgeId,
   createAztecSdk,
   DefiController,
   DefiSettlementTime,
@@ -81,13 +82,13 @@ describe('end-to-end defi tests', () => {
     const ethAssetId = 0;
     const daiAssetId = 1;
     const btcAssetId = 2;
-    const ethToDaiBridge = sdk.constructBridgeId(bridgeAddressId, ethAssetId, daiAssetId);
-    const daiToEthBridge = sdk.constructBridgeId(bridgeAddressId, daiAssetId, ethAssetId);
+    const ethToDaiBridge = new BridgeId(bridgeAddressId, ethAssetId, daiAssetId);
+    const daiToEthBridge = new BridgeId(bridgeAddressId, daiAssetId, ethAssetId);
     const ethToDaiFees = await sdk.getDefiFees(ethToDaiBridge);
     const daiToEthFees = await sdk.getDefiFees(daiToEthBridge);
 
     const dummyBridgeAddressId = 2;
-    const daiAndEthToBtcBridge = sdk.constructBridgeId(dummyBridgeAddressId, daiAssetId, btcAssetId, ethAssetId);
+    const daiAndEthToBtcBridge = new BridgeId(dummyBridgeAddressId, daiAssetId, btcAssetId, ethAssetId);
 
     // Rollup 0.
     // Shield eth to all users' accounts.

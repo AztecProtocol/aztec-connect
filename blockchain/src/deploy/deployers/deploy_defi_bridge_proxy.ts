@@ -1,5 +1,5 @@
 import { ContractFactory, Signer } from 'ethers';
-import DefiBridgeProxy from '../artifacts/contracts/DefiBridgeProxy.sol/DefiBridgeProxy.json';
+import DefiBridgeProxy from '../../artifacts/contracts/DefiBridgeProxy.sol/DefiBridgeProxy.json';
 
 export async function deployDefiBridgeProxy(signer: Signer) {
   console.error('Deploying DefiBridgeProxy...');

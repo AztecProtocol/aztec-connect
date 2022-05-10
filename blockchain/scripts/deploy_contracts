@@ -46,6 +46,11 @@ else
     REDEPLOY=1
   fi
 
+  if changed $LAST_COMMIT '.*src/deploy/.*$'; then
+    echo "Deployment scripts changed."
+    REDEPLOY=1
+  fi
+
   if changed $LAST_COMMIT 'blockchain/.redeploy'; then
     echo "Force deploy requested."
     REDEPLOY=1
@@ -60,7 +65,7 @@ fi
 
 if [ -n "$REDEPLOY" ]; then
   echo "Redeploying contracts..."
-  `docker run -e ESCAPE_BLOCK_LOWER=60 -e ESCAPE_BLOCK_UPPER=120 -e ETHEREUM_HOST=$TF_VAR_PUBLIC_ETHEREUM_HOST -e PRIVATE_KEY=$TF_VAR_PRIVATE_KEY -e VK=MockVerificationKey 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:$COMMIT_HASH`
+  `docker run -e ETHEREUM_HOST=$TF_VAR_PUBLIC_ETHEREUM_HOST -e PRIVATE_KEY=$TF_VAR_PRIVATE_KEY -e VK=MockVerificationKey 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:$COMMIT_HASH`
   if [ "$NETWORK" = "goerli" ]; then
     docker run -e ETHERSCAN_API_KEY=$ETHERSCAN_API_KEY 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:$COMMIT_HASH yarn verify:goerli $ROLLUP_CONTRACT_ADDRESS || true
   fi

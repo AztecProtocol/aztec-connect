@@ -1,16 +1,12 @@
 #!/usr/bin/env node
 import { ethers, Signer } from 'ethers';
 import { NonceManager } from '@ethersproject/experimental';
-import { deploy } from './deploy';
+import { deployDev } from './deploy_dev';
+import { InitHelpers, TreeInitData } from '@aztec/barretenberg/environment';
+import { deployMainnet } from './deploy_mainnet';
+import { deployMainnetE2e } from './deploy_mainnet_e2e';
 
-const {
-  ETHEREUM_HOST,
-  PRIVATE_KEY,
-  ESCAPE_BLOCK_LOWER = '4560', // window of 1hr every 20hrs (escape in last 240 blocks of every 4800)
-  ESCAPE_BLOCK_UPPER = '4800',
-  INITIAL_ETH_SUPPLY = '100000000000000000', // 0.1 ETH
-  VK,
-} = process.env;
+const { ETHEREUM_HOST, PRIVATE_KEY, VK } = process.env;
 
 async function getSigner() {
   if (!ETHEREUM_HOST) {
@@ -22,23 +18,48 @@ async function getSigner() {
   return new NonceManager(signer);
 }
 
+async function deploy(chainId: number, signer: Signer, treeInitData: TreeInitData, vk?: string) {
+  switch (chainId) {
+    case 1:
+    case 0xa57ec:
+      return deployMainnet(signer, treeInitData, vk);
+    case 0xe2e:
+      return deployMainnetE2e(signer, treeInitData, vk);
+    default:
+      return deployDev(signer, treeInitData, vk);
+  }
+}
+
+/**
+ * We add gasLimit to all txs, to prevent calls to estimateGas that may fail. If a gasLimit is provided the calldata
+ * is simply produced, there is nothing to fail. As long as all the txs are executed by the evm in order, things
+ * should succeed. The NonceManager ensures all the txs have sequentially increasing nonces.
+ * In some cases there maybe a "deployment sync point" which is required if we are making a "call" to the blockchain
+ * straight after, that assumes the state is up-to-date at that point.
+ * This drastically improves deployment times.
+ */
 async function main() {
   const signer = await getSigner();
 
-  const initialEthSupply = BigInt(INITIAL_ETH_SUPPLY);
+  const signerAddress = await signer.getAddress();
+  console.error(`Signer: ${signerAddress}`);
 
-  const { rollup, priceFeeds, feeDistributor, feePayingAssets } = await deploy(
-    +ESCAPE_BLOCK_LOWER,
-    +ESCAPE_BLOCK_UPPER,
-    signer,
-    initialEthSupply,
-    VK,
-  );
+  const chainId = await signer.getChainId();
+  console.error(`Chain id: ${chainId}`);
+
+  const treeInitData = InitHelpers.getInitData(chainId);
+  const { dataTreeSize, roots } = treeInitData;
+  console.error(`Initial data size: ${dataTreeSize}`);
+  console.error(`Initial data root: ${roots.dataRoot.toString('hex')}`);
+  console.error(`Initial null root: ${roots.nullRoot.toString('hex')}`);
+  console.error(`Initial root root: ${roots.rootsRoot.toString('hex')}`);
+
+  const { rollup, priceFeeds, feeDistributor, feePayingAssets } = await deploy(chainId, signer, treeInitData, VK);
 
   const envVars = {
     ROLLUP_CONTRACT_ADDRESS: rollup.address,
     FEE_DISTRIBUTOR_ADDRESS: feeDistributor.address,
-    PRICE_FEED_CONTRACT_ADDRESSES: priceFeeds.map(p => p.address).join(','),
+    PRICE_FEED_CONTRACT_ADDRESSES: priceFeeds.map(p => p).join(','),
     FEE_PAYING_ASSET_ADDRESSES: feePayingAssets.join(','),
   };
 

@@ -203,7 +203,11 @@ export class WorldState {
       return;
     }
     const accounts = await InitHelpers.readAccountTreeData(accountDataFile);
-    const { initDataRoot, initNullRoot, initRootsRoot } = InitHelpers.getInitRoots(chainId);
+    const {
+      dataRoot: initDataRoot,
+      nullRoot: initNullRoot,
+      rootsRoot: initRootsRoot,
+    } = InitHelpers.getInitRoots(chainId);
     if (accounts.length === 0) {
       console.log('No accounts read from file, continuing without syncing from file.');
       return;
@@ -214,7 +218,6 @@ export class WorldState {
     }
     console.log(`Read ${accounts.length} accounts from file.`);
     const numNotesPerRollup = WorldStateConstants.NUM_NEW_DATA_TREE_NOTES_PER_TX * this.getRollupSize();
-    console.log(`Populating data tree with rollup size of ${numNotesPerRollup}`);
     const { dataRoot, rootsRoot } = await InitHelpers.populateDataAndRootsTrees(
       accounts,
       this.worldStateDb,
