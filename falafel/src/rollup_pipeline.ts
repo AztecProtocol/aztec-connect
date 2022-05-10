@@ -83,8 +83,8 @@ export class RollupPipeline {
     return this.pipelineCoordinator.getNextPublishTime();
   }
 
-  public getProccessedTxs() {
-    return this.pipelineCoordinator.getProccessedTxs();
+  public getProcessedTxs() {
+    return this.pipelineCoordinator.getProcessedTxs();
   }
 
   public async start() {

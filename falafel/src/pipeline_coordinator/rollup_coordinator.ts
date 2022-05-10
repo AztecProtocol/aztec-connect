@@ -45,7 +45,7 @@ export class RollupCoordinator {
     }
   }
 
-  getProccessedTxs() {
+  getProcessedTxs() {
     return this.txs.map(rollupTx => rollupTx.tx);
   }
 

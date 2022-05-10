@@ -131,10 +131,7 @@ export class WorldState {
     // remove the tranasctions that we know are in the next rollup currently being built
     if (!this.txPoolProfileValidUntil || new Date().getTime() > this.txPoolProfileValidUntil.getTime()) {
       const pendingTxs = await this.rollupDb.getPendingTxs();
-      let processedTransactions: TxDao[] = [];
-      if (this.pipeline) {
-        processedTransactions = await this.pipeline.getProccessedTxs();
-      }
+      const processedTransactions = this.pipeline?.getProcessedTxs() || [];
 
       const pendingTransactionsNotInRollup = pendingTxs.filter(elem =>
         processedTransactions.find(tx => tx.id.toString('hex') == elem.id.toString('hex')) ? false : true,

@@ -322,7 +322,7 @@ describe('world_state', () => {
     } as any;
 
     pipeline = {
-      getProccessedTxs: jest.fn().mockImplementation(() => proccessedTxs),
+      getProcessedTxs: jest.fn().mockImplementation(() => proccessedTxs),
       start: jest.fn().mockImplementation(async () => {}),
       stop: jest.fn().mockImplementation(async () => {}),
     } as any;

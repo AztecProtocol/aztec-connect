@@ -179,7 +179,7 @@ describe('rollup_coordinator', () => {
     });
 
   const expectProcessedTxIds = (txIds: number[]) => {
-    expect(coordinator.getProccessedTxs().map(tx => tx.id)).toEqual(txIds.map(id => Buffer.from([id])));
+    expect(coordinator.getProcessedTxs().map(tx => tx.id)).toEqual(txIds.map(id => Buffer.from([id])));
   };
 
   beforeEach(() => {
@@ -273,7 +273,7 @@ describe('rollup_coordinator', () => {
     it('should do nothing if txs is empty', async () => {
       const rp = await coordinator.processPendingTxs([]);
       expect(rp.published).toBe(false);
-      expect(coordinator.getProccessedTxs()).toEqual([]);
+      expect(coordinator.getProcessedTxs()).toEqual([]);
       expect(rollupCreator.create).toHaveBeenCalledTimes(0);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
@@ -283,7 +283,7 @@ describe('rollup_coordinator', () => {
       const pendingTxs = [...Array(numInnerRollupTxs - 1)].map((_, i) => mockTx(i));
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
-      expect(coordinator.getProccessedTxs()).toEqual([]);
+      expect(coordinator.getProcessedTxs()).toEqual([]);
       expect(rollupCreator.create).toHaveBeenCalledTimes(0);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
@@ -293,7 +293,7 @@ describe('rollup_coordinator', () => {
       const pendingTxs = [...Array(numInnerRollupTxs * numOuterRollupProofs)].map((_, i) => mockTx(i));
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
-      expect(coordinator.getProccessedTxs()).toEqual(pendingTxs);
+      expect(coordinator.getProcessedTxs()).toEqual(pendingTxs);
       expect(rollupCreator.create).toHaveBeenCalledTimes(numOuterRollupProofs);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
@@ -360,7 +360,7 @@ describe('rollup_coordinator', () => {
         })
         .slice(0, numInnerRollupTxs * numOuterRollupProofs); // the rollup will only include the first 64 filtered txs
 
-      expect(coordinator.getProccessedTxs()).toEqual(expectedTxs);
+      expect(coordinator.getProcessedTxs()).toEqual(expectedTxs);
       expect(rollupCreator.create).toHaveBeenCalledTimes(2); // this is the # inner rollups that get created
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
@@ -415,7 +415,7 @@ describe('rollup_coordinator', () => {
       expect(rp.published).toBe(true);
 
       const expectedTxs = [...allTxs.slice(0, numTxsInRollup)];
-      expect(coordinator.getProccessedTxs()).toEqual(expectedTxs);
+      expect(coordinator.getProcessedTxs()).toEqual(expectedTxs);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(2);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
@@ -425,7 +425,7 @@ describe('rollup_coordinator', () => {
       // to be added (since the system is defined as only accepting 32 bridges per rollup)
       // see RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK
 
-      expect(coordinator.getProccessedTxs()).toEqual(allTxs.slice(0, numTxsInRollup));
+      expect(coordinator.getProcessedTxs()).toEqual(allTxs.slice(0, numTxsInRollup));
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(
         Array(numberOfBridgeCalls)
@@ -467,7 +467,7 @@ describe('rollup_coordinator', () => {
         })
         .slice(0, numInnerRollupTxs * numOuterRollupProofs); // the rollup will only include the first 64 filtered txs
 
-      expect(coordinator.getProccessedTxs()).toEqual(expectedTxs);
+      expect(coordinator.getProcessedTxs()).toEqual(expectedTxs);
       expect(rollupCreator.create).toHaveBeenCalledTimes(2);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
@@ -497,7 +497,7 @@ describe('rollup_coordinator', () => {
       ];
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
-      expect(coordinator.getProccessedTxs()).toEqual([
+      expect(coordinator.getProcessedTxs()).toEqual([
         pendingTxs[3],
         pendingTxs[5],
         pendingTxs[10],
@@ -1042,7 +1042,7 @@ describe('rollup_coordinator', () => {
       );
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
-      expect(coordinator.getProccessedTxs()).toEqual(pendingTxs);
+      expect(coordinator.getProcessedTxs()).toEqual(pendingTxs);
       expect(rollupCreator.create).toHaveBeenCalledTimes(numOuterRollupProofs);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
@@ -1795,7 +1795,7 @@ describe('rollup_coordinator', () => {
           return bid <= numberOfBridgeCalls || bid > 1000;
         });
 
-        expect(coordinator.getProccessedTxs()).toEqual(expectedTxs);
+        expect(coordinator.getProcessedTxs()).toEqual(expectedTxs);
 
         expect(rollupCreator.create).toHaveBeenCalledTimes(2);
         expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
@@ -1885,7 +1885,7 @@ describe('rollup_coordinator', () => {
     it('should do nothing if txs is empty', async () => {
       const rp = await coordinator.processPendingTxs([], flush);
       expect(rp.published).toBe(false);
-      expect(coordinator.getProccessedTxs()).toEqual([]);
+      expect(coordinator.getProcessedTxs()).toEqual([]);
       expect(rollupCreator.create).toHaveBeenCalledTimes(0);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
@@ -1895,7 +1895,7 @@ describe('rollup_coordinator', () => {
       const pendingTxs = [mockTx(0)];
       const rp = await coordinator.processPendingTxs(pendingTxs, flush);
       expect(rp.published).toBe(true);
-      expect(coordinator.getProccessedTxs()).toEqual(pendingTxs);
+      expect(coordinator.getProcessedTxs()).toEqual(pendingTxs);
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
@@ -1908,7 +1908,7 @@ describe('rollup_coordinator', () => {
       // all in one parallel batch.  So this should publish immediately due to flush=true
       // triggering the shouldPublish condition
       expect(rp.published).toBe(true);
-      expect(coordinator.getProccessedTxs()).toEqual(pendingTxs);
+      expect(coordinator.getProcessedTxs()).toEqual(pendingTxs);
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
