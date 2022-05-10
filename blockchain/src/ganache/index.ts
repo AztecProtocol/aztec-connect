@@ -103,9 +103,9 @@ export async function profileElement(
   from: number,
   to?: number,
 ) {
-  const convertEvents = await retrieveEvents(elementAddress, 'Element', provider, 'Convert', from, to);
-  const finaliseEvents = await retrieveEvents(elementAddress, 'Element', provider, 'Finalise', from, to);
-  const poolEvents = await retrieveEvents(elementAddress, 'Element', provider, 'PoolAdded', from, to);
+  const convertEvents = await retrieveEvents(elementAddress, 'Element', provider, 'LogConvert', from, to);
+  const finaliseEvents = await retrieveEvents(elementAddress, 'Element', provider, 'LogFinalise', from, to);
+  const poolEvents = await retrieveEvents(elementAddress, 'Element', provider, 'LogPoolAdded', from, to);
   const rollupBridgeEvents = await retrieveEvents(rollupAddress, 'Rollup', provider, 'DefiBridgeProcessed', from, to);
   const elementBridgeData = await createElementBridgeData(rollupAddress, elementAddress, provider);
 
@@ -116,6 +116,9 @@ export async function profileElement(
       inputValue?: bigint;
       presentValue?: bigint;
       finalValue?: bigint;
+      convertGas?: number;
+      finaliseGas?: number;
+      message?: string;
     };
   } = {};
   const pools: {
@@ -125,12 +128,15 @@ export async function profileElement(
     return {
       nonce: log.args.nonce,
       totalInputValue: log.args.totalInputValue.toBigInt(),
+      gasUsed: log.args.gasUsed,
     };
   });
   const finaliseLogs = finaliseEvents.map((log: LogDescription) => {
     return {
       nonce: log.args.nonce,
       success: log.args.success,
+      gasUsed: log.args.gasUsed,
+      message: log.args.message,
     };
   });
   const poolLogs = poolEvents.map((log: LogDescription) => {
@@ -157,6 +163,7 @@ export async function profileElement(
       finalised: false,
       success: undefined,
       inputValue: log.totalInputValue,
+      convertGas: Number(log.gasUsed),
     };
   }
 
@@ -166,11 +173,16 @@ export async function profileElement(
         finalised: true,
         success: log.success,
         inputValue: undefined,
+        finaliseGas: Number(log.gasUsed),
+        message: log.message,
       };
       continue;
     }
-    interactions[log.nonce.toString()].success = log.success;
-    interactions[log.nonce.toString()].finalised = true;
+    const interaction = interactions[log.nonce.toString()];
+    interaction.success = log.success;
+    interaction.finalised = true;
+    interaction.finaliseGas = Number(log.gasUsed);
+    interaction.message = log.message;
     const rollupLog = rollupLogs.find(x => x.nonce == log.nonce);
     if (rollupLog) {
       interactions[log.nonce.toString()].finalValue = rollupLog.outputValue;
@@ -179,7 +191,9 @@ export async function profileElement(
   for (const log of convertLogs) {
     if (!interactions[log.nonce.toString()]?.finalised) {
       const presentValue = await elementBridgeData.getInteractionPresentValue(log.nonce.toBigInt());
-      interactions[log.nonce.toString()].presentValue = presentValue[0].amount;
+      if (presentValue.length > 0) {
+        interactions[log.nonce.toString()].presentValue = presentValue[0].amount;
+      }
     }
   }
   const summary = {
