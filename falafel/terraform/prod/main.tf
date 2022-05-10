@@ -1,8 +1,13 @@
 terraform {
   backend "s3" {
     bucket = "aztec-terraform"
-    key    = "aztec/v2.2/falafel"
     region = "eu-west-2"
+  }
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "3.74.2"
+    }
   }
 }
 
@@ -30,7 +35,7 @@ provider "aws" {
 }
 
 resource "aws_service_discovery_service" "falafel" {
-  name = "falafel-mainnet"
+  name = "${var.DEPLOY_TAG}-falafel"
 
   health_check_custom_config {
     failure_threshold = 1
@@ -90,12 +95,12 @@ resource "aws_db_instance" "postgres" {
 
 # Configure an EFS filesystem.
 resource "aws_efs_file_system" "falafel_data_store" {
-  creation_token                  = "falafel-mainnet-data-store"
+  creation_token                  = "${var.DEPLOY_TAG}-falafel-data"
   throughput_mode                 = "provisioned"
   provisioned_throughput_in_mibps = 20
 
   tags = {
-    Name = "falafel-mainnet-data-store"
+    Name = "${var.DEPLOY_TAG}-falafel-data"
   }
 
   lifecycle_policy {
@@ -117,7 +122,7 @@ resource "aws_efs_mount_target" "private_az2" {
 
 # Define task definition and service.
 resource "aws_ecs_task_definition" "falafel" {
-  family                   = "falafel-mainnet"
+  family                   = "${var.DEPLOY_TAG}-falafel"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   cpu                      = "2048"
@@ -134,7 +139,7 @@ resource "aws_ecs_task_definition" "falafel" {
   container_definitions = <<DEFINITIONS
 [
   {
-    "name": "falafel-mainnet",
+    "name": "${var.DEPLOY_TAG}-falafel",
     "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/falafel:${var.DEPLOY_TAG}",
     "essential": true,
     "memoryReservation": 3840,
@@ -144,6 +149,10 @@ resource "aws_ecs_task_definition" "falafel" {
       }
     ],
     "environment": [
+      {
+        "name": "DEPLOY_TAG",
+        "value": "${var.DEPLOY_TAG}"
+      },
       {
         "name": "NODE_ENV",
         "value": "production"
@@ -158,23 +167,27 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "ETHEREUM_HOST",
-        "value": "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35"
+        "value": "http://ethereum.aztec.network:8545"
       },
       {
         "name": "ETHEREUM_POLL_INTERVAL",
         "value": "10000"
       },
       {
-        "name": "HALLOUMI_HOST",
-        "value": "http://halloumi-mainnet.local"
+        "name": "ROLLUP_CONTRACT_ADDRESS",
+        "value": ""
       },
       {
-        "name": "ROLLUP_CONTRACT_ADDRESS",
-        "value": "0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba"
+        "name": "FEE_DISTRIBUTOR_ADDRESS",
+        "value": ""
       },
       {
         "name": "PRICE_FEED_CONTRACT_ADDRESSES",
-        "value": "0x169E633A2D1E6c10dD91238Ba11c4A708dfEF37C,0x773616E4d11A78F511299002da57A0a94577F1f4,0xdeb288F737066589598e9214E782fa5A8eD689e8"
+        "value": ""
+      },
+      {
+        "name": "FEE_PAYING_ASSET_ADDRESSES",
+        "value": ""
       },
       {
         "name": "PRIVATE_KEY",
@@ -186,7 +199,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "API_PREFIX",
-        "value": "/falafel-mainnet"
+        "value": "/${var.DEPLOY_TAG}/falafel"
       },
       {
         "name": "NUM_INNER_ROLLUP_TXS",
@@ -194,7 +207,15 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "NUM_OUTER_ROLLUP_PROOFS",
-        "value": "4"
+        "value": "32"
+      },
+      {
+        "name": "MIN_CONFIRMATION",
+        "value": "3"
+      },
+      {
+        "name": "PROOF_GENERATOR_MODE",
+        "value": "split"
       }
     ],
     "mountPoints": [
@@ -206,7 +227,7 @@ resource "aws_ecs_task_definition" "falafel" {
     "logConfiguration": {
       "logDriver": "awslogs",
       "options": {
-        "awslogs-group": "/fargate/service/falafel-mainnet",
+        "awslogs-group": "/fargate/service/${var.DEPLOY_TAG}/falafel",
         "awslogs-region": "eu-west-2",
         "awslogs-stream-prefix": "ecs"
       }
@@ -224,14 +245,18 @@ resource "aws_ecs_task_definition" "falafel" {
     ],
     "environment": [
       {
+        "name": "DEPLOY_TAG",
+        "value": "${var.DEPLOY_TAG}"
+      },
+      {
         "name": "SERVICE",
-        "value": "falafel-mainnet"
+        "value": "${var.DEPLOY_TAG}-falafel"
       }
     ],
     "logConfiguration": {
       "logDriver": "awslogs",
       "options": {
-        "awslogs-group": "/fargate/service/falafel-mainnet",
+        "awslogs-group": "/fargate/service/${var.DEPLOY_TAG}/falafel",
         "awslogs-region": "eu-west-2",
         "awslogs-stream-prefix": "ecs"
       }
@@ -241,12 +266,8 @@ resource "aws_ecs_task_definition" "falafel" {
 DEFINITIONS
 }
 
-data "aws_ecs_task_definition" "falafel" {
-  task_definition = aws_ecs_task_definition.falafel.family
-}
-
 resource "aws_ecs_service" "falafel" {
-  name                               = "falafel-mainnet"
+  name                               = "${var.DEPLOY_TAG}-falafel"
   cluster                            = data.terraform_remote_state.setup_iac.outputs.ecs_cluster_id
   launch_type                        = "FARGATE"
   desired_count                      = 1
@@ -264,28 +285,28 @@ resource "aws_ecs_service" "falafel" {
 
   load_balancer {
     target_group_arn = aws_alb_target_group.falafel.arn
-    container_name   = "falafel-mainnet"
+    container_name   = "${var.DEPLOY_TAG}-falafel"
     container_port   = 80
   }
 
   service_registries {
     registry_arn   = aws_service_discovery_service.falafel.arn
-    container_name = "falafel-mainnet"
+    container_name = "${var.DEPLOY_TAG}-falafel"
     container_port = 80
   }
 
-  task_definition = "${aws_ecs_task_definition.falafel.family}:${max(aws_ecs_task_definition.falafel.revision, data.aws_ecs_task_definition.falafel.revision)}"
+  task_definition = aws_ecs_task_definition.falafel.family
 }
 
 # Logs
 resource "aws_cloudwatch_log_group" "falafel_logs" {
-  name              = "/fargate/service/falafel-mainnet"
+  name              = "/fargate/service/${var.DEPLOY_TAG}/falafel"
   retention_in_days = "14"
 }
 
 # Configure ALB to route /falafel to server.
 resource "aws_alb_target_group" "falafel" {
-  name                 = "falafel-mainnet"
+  name                 = "${var.DEPLOY_TAG}-falafel"
   port                 = "80"
   protocol             = "HTTP"
   target_type          = "ip"
@@ -293,7 +314,7 @@ resource "aws_alb_target_group" "falafel" {
   deregistration_delay = 5
 
   health_check {
-    path                = "/falafel-mainnet"
+    path                = "/${var.DEPLOY_TAG}/falafel"
     matcher             = "200"
     interval            = 30
     healthy_threshold   = 2
@@ -302,7 +323,7 @@ resource "aws_alb_target_group" "falafel" {
   }
 
   tags = {
-    name = "falafel-mainnet"
+    name = "${var.DEPLOY_TAG}-falafel"
   }
 }
 
@@ -317,7 +338,7 @@ resource "aws_lb_listener_rule" "api" {
 
   condition {
     path_pattern {
-      values = ["/falafel-mainnet*"]
+      values = ["/${var.DEPLOY_TAG}/falafel*"]
     }
   }
 }
@@ -358,46 +379,46 @@ resource "aws_lb_listener_rule" "api" {
 #   }
 # }
 
-resource "aws_wafregional_ipset" "ipset" {
-  name = "tfIPSet"
+# resource "aws_wafregional_ipset" "ipset" {
+#   name = "tfIPSet"
 
-  ip_set_descriptor {
-    type  = "IPV4"
-    value = "194.127.172.110/32"
-  }
-}
+#   ip_set_descriptor {
+#     type  = "IPV4"
+#     value = "194.127.172.110/32"
+#   }
+# }
 
-resource "aws_wafregional_rule" "wafrule" {
-  name        = "tfWAFRule"
-  metric_name = "tfWAFRule"
+# resource "aws_wafregional_rule" "wafrule" {
+#   name        = "tfWAFRule"
+#   metric_name = "tfWAFRule"
 
-  predicate {
-    data_id = aws_wafregional_ipset.ipset.id
-    negated = false
-    type    = "IPMatch"
-  }
-}
+#   predicate {
+#     data_id = aws_wafregional_ipset.ipset.id
+#     negated = false
+#     type    = "IPMatch"
+#   }
+# }
 
-resource "aws_wafregional_web_acl" "wafacl" {
-  name        = "tfWebACL"
-  metric_name = "tfWebACL"
+# resource "aws_wafregional_web_acl" "wafacl" {
+#   name        = "tfWebACL"
+#   metric_name = "tfWebACL"
 
-  default_action {
-    type = "ALLOW"
-  }
+#   default_action {
+#     type = "ALLOW"
+#   }
 
-  rule {
-    action {
-      type = "BLOCK"
-    }
+#   rule {
+#     action {
+#       type = "BLOCK"
+#     }
 
-    priority = 1
-    rule_id  = aws_wafregional_rule.wafrule.id
-    type     = "REGULAR"
-  }
-}
+#     priority = 1
+#     rule_id  = aws_wafregional_rule.wafrule.id
+#     type     = "REGULAR"
+#   }
+# }
 
-resource "aws_wafregional_web_acl_association" "acl_association" {
-  resource_arn = data.terraform_remote_state.aztec2_iac.outputs.alb_arn
-  web_acl_id   = aws_wafregional_web_acl.wafacl.id
-}
+# resource "aws_wafregional_web_acl_association" "acl_association" {
+#   resource_arn = data.terraform_remote_state.aztec2_iac.outputs.alb_arn
+#   web_acl_id   = aws_wafregional_web_acl.wafacl.id
+# }

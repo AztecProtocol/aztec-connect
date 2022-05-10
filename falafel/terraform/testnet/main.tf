@@ -159,6 +159,10 @@ resource "aws_ecs_task_definition" "falafel" {
     ],
     "environment": [
       {
+        "name": "DEPLOY_TAG",
+        "value": "${var.DEPLOY_TAG}"
+      },
+      {
         "name": "NODE_ENV",
         "value": "production"
       },
@@ -253,6 +257,10 @@ resource "aws_ecs_task_definition" "falafel" {
       }
     ],
     "environment": [
+      {
+        "name": "DEPLOY_TAG",
+        "value": "${var.DEPLOY_TAG}"
+      },
       {
         "name": "SERVICE",
         "value": "${var.DEPLOY_TAG}-falafel"

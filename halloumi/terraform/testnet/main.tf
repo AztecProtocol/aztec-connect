@@ -136,7 +136,7 @@ resource "aws_ecs_task_definition" "halloumi_inner" {
     "environment": [
       {
         "name": "SERVICE",
-        "value": "${var.DEPLOY_TAG}-halloumi"
+        "value": "${var.DEPLOY_TAG}-halloumi-inner"
       }
     ],
     "logConfiguration": {
@@ -260,7 +260,7 @@ resource "aws_ecs_task_definition" "halloumi_outer" {
     "environment": [
       {
         "name": "SERVICE",
-        "value": "${var.DEPLOY_TAG}-halloumi"
+        "value": "${var.DEPLOY_TAG}-halloumi-outer"
       }
     ],
     "logConfiguration": {
