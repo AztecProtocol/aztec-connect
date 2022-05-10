@@ -1,0 +1,11 @@
+.row {
+  display: flex;
+  flex-direction: row;
+  justify-content: right;
+  width: 100%;
+  gap: 15px;
+}
+
+.ticks {
+  width: 20px;
+}
