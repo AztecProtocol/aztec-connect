@@ -180,9 +180,6 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, OwnableUpg
 
     mapping(address => bool) public rollupProviders;
 
-    // we need a way to register ERC20 Gas Limits for withdrawals to a specific asset id
-    mapping(uint256 => uint256) public assetGasLimit;
-
     // map defiInteractionNonce to PendingDefiBridgeInteraction
     mapping(uint256 => PendingDefiBridgeInteraction) public pendingDefiInteractions;
 

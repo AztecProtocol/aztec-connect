@@ -97,7 +97,6 @@ describe('end-to-end async defi tests', () => {
     };
     const assetSpecs: AssetSpec[] = [daiSpec, lusdSpec].sort((a, b) => a.expiry - b.expiry);
 
-    // Should be 0, but our contract starts indexing bridges from 1. Fix?
     const elementBridgeId = 1;
 
     // Initialise the token store that we will use to acquire the input assets.
