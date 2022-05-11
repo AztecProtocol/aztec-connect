@@ -41,7 +41,7 @@ export async function deployDev(signer: Signer, { dataTreeSize, roots }: TreeIni
 
   const gasPrice = 20n * 10n ** 9n; // 20 gwei
   const daiPrice = 1n * 10n ** 15n; // 1000 DAI/ETH
-  const initialEthSupply = 1n * 10n ** 21n; // 1000 ETH
+  const initialEthSupply = 1n * 10n ** 17n; // 0.1 ETH
   const initialTokenSupply = (initialEthSupply * 10n ** 18n) / daiPrice;
   await deployUniswapPair(signer, uniswapRouter, asset0, initialTokenSupply, initialEthSupply);
   await deployUniswapBridge(signer, rollup, uniswapRouter);
