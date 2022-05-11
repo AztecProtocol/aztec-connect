@@ -1,12 +1,7 @@
-import styled from 'styled-components/macro';
 import { useApp } from 'alt-model';
 import { WalletId, wallets } from 'app';
 import { Select } from 'components';
-
-const PlaceHolder = styled.div`
-  color: #aaa;
-  margin-left: 20px;
-`;
+import style from './wallet_dropdown_select.module.scss';
 
 const ITEMS = (window.ethereum ? wallets : wallets.filter(w => w.id !== WalletId.METAMASK)).map(wallet => ({
   id: wallet.id,
@@ -17,9 +12,10 @@ export function WalletDropdownSelect() {
   const { userSession } = useApp();
   return (
     <Select
+      className={style.select}
       items={ITEMS}
       onSelect={id => userSession?.changeWallet(id)}
-      trigger={<PlaceHolder>Connect a wallet</PlaceHolder>}
+      trigger={<div className={style.trigger}>Connect a wallet</div>}
     />
   );
 }

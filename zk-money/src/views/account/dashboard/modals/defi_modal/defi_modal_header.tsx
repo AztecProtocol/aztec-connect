@@ -11,7 +11,7 @@ interface DefiModalHeaderProps {
   onForward?: () => void;
 }
 
-export function DefiModalHeader({ recipe, onClose, closeDisabled, onBack, onForward }: DefiModalHeaderProps) {
+export function DefiModalHeader({ recipe, onClose, closeDisabled, onBack }: DefiModalHeaderProps) {
   const { logo, investmentType, flow } = recipe;
   return (
     <div className={style.root}>
@@ -21,7 +21,7 @@ export function DefiModalHeader({ recipe, onClose, closeDisabled, onBack, onForw
             <BackButton disabled={!onBack} onClick={onBack} />
           </div>
         )}
-        <img className={style.logo} src={logo} />
+        <img alt={`${recipe.name} logo`} className={style.logo} src={logo} />
       </div>
       <div className={style.rightSegment}>
         <div className={style.tags}>

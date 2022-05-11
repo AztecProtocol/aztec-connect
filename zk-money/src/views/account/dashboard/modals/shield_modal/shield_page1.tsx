@@ -1,15 +1,16 @@
 import type { ShieldFormFeedback, ShieldFormFields, ShieldFormValidationResult } from 'alt-model/shield';
 import type { StrOrMax } from 'alt-model/forms/constants';
 import { TxSettlementTime, TxType } from '@aztec/sdk';
-import { ProviderStatus, SendMode, ValueAvailability } from 'app';
+import { ProviderStatus, SendMode, ValueAvailability, WalletId } from 'app';
 import { Button, InputTheme } from 'components';
 import { AmountSection, TxGasSection, RecipientSection } from 'views/account/dashboard/modals/sections';
-import { ConnectedLegacyWalletSelect } from './connected_legacy_wallet_select';
 import { RemoteAsset } from 'alt-model/types';
 import { TransactionSettlementTimeInformationSection } from '../sections/settlement_time_information_section';
 import { SplitSection } from '../sections/split_section';
 import { useProviderState } from 'alt-model';
 import { useLegacyEthAccountState } from 'alt-model/assets/l1_balance_hooks';
+import { WalletDropdownSelect } from '../defi_modal/wallet_dropdown_select';
+import { WalletAccountIndicator } from 'ui-components';
 import style from './shield.module.scss';
 
 function toLegacyRecipientInput({ recipientAlias }: ShieldFormFields, { input }: ShieldFormValidationResult) {
@@ -51,6 +52,8 @@ export function ShieldPage1({
   const providerState = useProviderState();
   const asset = validationResult.input.targetAsset;
   const ethAccount = useLegacyEthAccountState(asset);
+  const address = providerState?.account;
+  const walletId = providerState?.walletId;
 
   if (!asset) {
     return <>Loading...</>;
@@ -64,16 +67,13 @@ export function ShieldPage1({
     !ethAccount?.ethAddress || ethAccount.ethAddress.toString() !== providerState?.account?.toString();
   const isWalletDisconnected = feedback.walletAccount || isWalletInitialising || isProviderSwitching;
 
-  const walletSelect = (
-    <ConnectedLegacyWalletSelect className={style.walletSelect} asset={asset} errorFeedback={feedback.walletAccount} />
-  );
-
   if (isWalletDisconnected) {
     return (
       <div className={style.errorAlert}>
-        {walletSelect}
+        <WalletDropdownSelect />
         <div className={style.connectLabel}>
-          {isProviderSwitching ? 'Swiching provider, please wait...' : 'Please connect a wallet to shield'}
+          {feedback.walletAccount ??
+            (isProviderSwitching ? 'Swiching provider, please wait...' : 'Please connect a wallet to shield')}
         </div>
       </div>
     );
@@ -81,7 +81,11 @@ export function ShieldPage1({
 
   return (
     <div className={style.contentWrapper}>
-      {walletSelect}
+      <WalletAccountIndicator
+        className={style.walletAccountIndicator}
+        address={address?.toString() ?? ''}
+        wallet={walletId === WalletId.METAMASK ? 'metamask' : 'wallet-connect'}
+      />
       <SplitSection
         leftPanel={
           <>

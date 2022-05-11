@@ -50,8 +50,8 @@ interface ItemProps {
 
 const Item = styled.div<ItemProps>`
   display: flex;
-  padding: ${spacings.xs} ${spacings.s};
-  font-size: ${fontSizes.xs};
+  padding: 10px 20px;
+  font-size: 16px;
   cursor: default;
   ${({ disabled }) => !disabled && activeItemStyle}
 

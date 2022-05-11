@@ -30,7 +30,7 @@ export function ShieldModal(props: ShieldModalProps) {
   };
 
   if (!assets) {
-    return <div />;
+    return null;
   }
 
   const cardContent =

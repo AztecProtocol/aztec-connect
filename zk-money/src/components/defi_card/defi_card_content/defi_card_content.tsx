@@ -20,10 +20,6 @@ interface DefiCardContentProps {
 export const DefiCardContent = (props: DefiCardContentProps) => {
   const [isInformationOpen, setIsInformationOpen] = useState(false);
 
-  const handleOpenInformation = () => {
-    setIsInformationOpen(true);
-  };
-
   const handleCloseInformation = () => {
     setIsInformationOpen(false);
   };

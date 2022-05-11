@@ -56,7 +56,7 @@ function PrivacyContent(props: PrivacyContentProps) {
   if (txToAlias) {
     return (
       <div className={style.fullPrivacyWrapper}>
-        <img src={fullPrivacy} />
+        <img alt="Full privacy" src={fullPrivacy} />
         <div className={style.text}>Payments to Alias are end to end encrypted!</div>
       </div>
     );
