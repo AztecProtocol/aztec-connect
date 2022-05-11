@@ -60,7 +60,7 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
   {
     id: 'element-finance.DAI-to-DAI',
     isAsync: true,
-    addressId: 2,
+    addressId: 1,
     entryInputAssetAddressA: KMAA.DAI,
     entryOutputAssetAddressA: KMAA.DAI,
     createAdaptor: createElementAdaptor,
@@ -84,7 +84,7 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
   },
   {
     id: 'lido-finance.ETH-to-wStETH',
-    addressId: 3,
+    addressId: 2,
     openHandleAssetAddress: KMAA.wstETH,
     entryInputAssetAddressA: KMAA.ETH,
     entryOutputAssetAddressA: KMAA.wstETH,
