@@ -18,6 +18,14 @@ const UsernameRoot = styled.div`
   display: flex;
   align-items: center;
   cursor: pointer;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  border-radius: 18px;
+  height: 36px;
+  padding: 14px;
+
+  &:hover {
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+  }
 `;
 
 const UserName = styled(Text)`
@@ -112,6 +120,7 @@ const Dropdown = styled.div`
   background: ${colours.white};
   border-radius: ${borderRadiuses.s};
   z-index: 99;
+  color: black;
 
   @media (max-width: ${breakpoints.s}) {
     position: fixed;
@@ -230,7 +239,7 @@ export const UserAccount: React.FunctionComponent<UserAccountProps> = ({ account
                 <Text text={`Account Nonce: ${userId.accountNonce}`} nowrap />
               </DropdownItem>
               <DropdownItem>
-                <TextLink text="Sign out" onClick={onLogout} color="indigo" weight="semibold" nowrap />
+                <TextLink text="Switch user" onClick={onLogout} color="indigo" weight="semibold" nowrap />
               </DropdownItem>
             </DropdownItemRoot>
           </Dropdown>
