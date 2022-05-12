@@ -49,11 +49,15 @@ async function main() {
   const chainId = await blockchain.getChainId();
   const { dataRoot } = InitHelpers.getInitRoots(chainId);
   const rollupDb = new CachedRollupDb(new TypeOrmRollupDb(connection, dataRoot));
-  if (configurator.getRollupContractChanged()) {
-    await rollupDb.eraseDb();
-  }
-  await rollupDb.init();
   const worldStateDb = new WorldStateDb();
+
+  if (configurator.getRollupContractChanged()) {
+    console.log('Erasing databases...');
+    await rollupDb.eraseDb();
+    worldStateDb.destroy();
+  }
+
+  await rollupDb.init();
   const metrics = new Metrics(worldStateDb, rollupDb, blockchain);
   const server = new Server(configurator, signingAddress, blockchain, rollupDb, worldStateDb, metrics, barretenberg);
 
@@ -64,8 +68,9 @@ async function main() {
   };
   const shutdownAndClearDb = async () => {
     await server.stop();
+    await rollupDb.eraseDb();
     await connection.close();
-    await emptyDir('./data');
+    worldStateDb.destroy();
     process.exit(0);
   };
   process.once('SIGINT', shutdown);

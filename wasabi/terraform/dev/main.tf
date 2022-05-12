@@ -83,7 +83,15 @@ resource "aws_ecs_task_definition" "wasabi" {
       },
       {
         "name": "NUM_AGENTS",
-        "value": "3"
+        "value": "16"
+      },
+      {
+        "name": "NUM_TXS_PER_AGENT",
+        "value": "140"
+      },
+      {
+        "name": "NUM_CONCURRENT_TXS",
+        "value": "14"
       }
     ],
     "logConfiguration": {

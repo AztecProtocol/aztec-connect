@@ -29,7 +29,7 @@ if [ -n "$COMMIT_TAG" ]; then
 
   # Extract the version tag from the commit tag, if it has one, e.g. testnet.
   # If we have one, we look something like v2.1.123-testnet.0. This is a "non production" release.
-  VERSION_TAG=$(echo "$COMMIT_TAG" | grep -oP ".*-\K(.*)(?=\.\d+)")
+  VERSION_TAG=$(echo "$COMMIT_TAG" | grep -oP ".*-\K(.*)(?=\.\d+)" || true)
   if [ -z "$VERSION_TAG" ]; then
     # If we don't have one, we look something like v2.1.123. This is a production release.
     VERSION_TAG=prod

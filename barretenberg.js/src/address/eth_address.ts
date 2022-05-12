@@ -12,6 +12,14 @@ function sha3(input: string) {
   return hash.digest('hex');
 }
 
+export interface EthAddress {
+  isZero(): boolean;
+  equals(rhs: EthAddress): boolean;
+  toString(): string;
+  toBuffer(): Buffer;
+  toBuffer32(): Buffer;
+}
+
 export class EthAddress {
   public static ZERO = new EthAddress(Buffer.alloc(20));
 
